@@ -5,9 +5,9 @@
 import { useMemo } from "react";
 import type { NoiseFunction3D } from "simplex-noise";
 
-import { useWorld } from "./WorldContext";
 import { useSharedState } from "../../hooks";
 import { PlayerState } from "../../Types";
+import { useWorld } from "./WorldContext";
 
 const TAU = 2 * Math.PI; // Radius ratio to world size
 
@@ -21,11 +21,18 @@ export enum Terrain {
 /**
  * Calculate terrain, internal before we get into React.
  */
-export const getTerrain = (x: number, y: number, z: number, circumference: number, climate: number, land3D: NoiseFunction3D): Terrain => {
-    const angle = 2 * Math.PI * x / circumference;
-    const distance = (circumference / 1000) + Math.min(0, z / 10);
-    const xPos = Math.cos(angle) * distance / TAU;
-    const yPos = Math.sin(angle) * distance / TAU;
+export const getTerrain = (
+    x: number,
+    y: number,
+    z: number,
+    circumference: number,
+    climate: number,
+    land3D: NoiseFunction3D,
+): Terrain => {
+    const angle = (2 * Math.PI * x) / circumference;
+    const distance = circumference / 1000 + Math.min(0, z / 10);
+    const xPos = (Math.cos(angle) * distance) / TAU;
+    const yPos = (Math.sin(angle) * distance) / TAU;
     const value = land3D(xPos, yPos, y / 1000) + 1;
 
     switch (true) {
@@ -38,7 +45,7 @@ export const getTerrain = (x: number, y: number, z: number, circumference: numbe
         default:
             return Terrain.WATER;
     }
-}
+};
 
 /**
  * Find the value at the specified position.

@@ -87,4 +87,4 @@ export interface IWorld {
 
 export const WorldContext = createContext<IWorld>({} as any);
 
-export const useWorld = () => useContext(WorldContext)
+export const useWorld = () => useContext(WorldContext);

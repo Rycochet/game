@@ -175,5 +175,5 @@ export const Player: FunctionComponent<PropsWithChildren> = ({ children }) => {
         console.info(`Move: ${playerX}, ${playerY}, ${playerZ}, ${playerTravel}`);
     }, [playerX, playerY, playerZ, playerTravel]);
 
-    return <>{children}</>;
+    return children;
 };

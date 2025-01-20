@@ -2,8 +2,8 @@
  * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
-import { Direction, Tile } from "../../../../Types";
 import { type Alea } from "../../../../common";
+import { Direction, Tile } from "../../../../Types";
 import type { Coordinate2D } from "../../../World/WorldContext";
 
 const MIN_ROOM_SIZE = 3;
@@ -19,7 +19,7 @@ interface Rect {
     y: number;
     width: number;
     height: number;
-};
+}
 
 export function DigRooms(rng: Alea, width: number, height: number) {
     const tiles: Tile[] = new Array(width * height).fill(Tile.UNUSED);
@@ -33,7 +33,7 @@ export function DigRooms(rng: Alea, width: number, height: number) {
 
         // place the first room where we come in
         if (!makeRoom(Math.floor(width / 2), Math.floor(height / 2), Direction.DOWN, true)) {
-            console.log("Unable to place the first room.")
+            console.log("Unable to place the first room.");
             return;
         }
 
@@ -85,10 +85,12 @@ export function DigRooms(rng: Alea, width: number, height: number) {
             for (let x = 1; x < width - 1; x++) {
                 for (let y = 1; y < height - 1; y++) {
                     if (getTile(x, y) === Tile.CORRIDOOR) {
-                        if ((getTile(x - 1, y) === Tile.WALL ? 1 : 0)
-                            + (getTile(x, y - 1) === Tile.WALL ? 1 : 0)
-                            + (getTile(x + 1, y) === Tile.WALL ? 1 : 0)
-                            + (getTile(x, y + 1) === Tile.WALL ? 1 : 0) === 3
+                        if (
+                            (getTile(x - 1, y) === Tile.WALL ? 1 : 0) +
+                                (getTile(x, y - 1) === Tile.WALL ? 1 : 0) +
+                                (getTile(x + 1, y) === Tile.WALL ? 1 : 0) +
+                                (getTile(x, y + 1) === Tile.WALL ? 1 : 0) ===
+                            3
                         ) {
                             changed = true;
                             setTile(x, y, Tile.WALL);
@@ -98,15 +100,16 @@ export function DigRooms(rng: Alea, width: number, height: number) {
             }
             for (let x = 0; x < width; x++) {
                 for (let y = 0; y < height; y++) {
-                    if (getTile(x, y) === Tile.WALL
-                        && (getTile(x - 1, y - 1) === Tile.WALL || getTile(x - 1, y - 1) === Tile.UNUSED)
-                        && (getTile(x, y - 1) === Tile.WALL || getTile(x, y - 1) === Tile.UNUSED)
-                        && (getTile(x + 1, y - 1) === Tile.WALL || getTile(x + 1, y - 1) === Tile.UNUSED)
-                        && (getTile(x - 1, y) === Tile.WALL || getTile(x - 1, y) === Tile.UNUSED)
-                        && (getTile(x + 1, y) === Tile.WALL || getTile(x + 1, y) === Tile.UNUSED)
-                        && (getTile(x - 1, y + 1) === Tile.WALL || getTile(x - 1, y + 1) === Tile.UNUSED)
-                        && (getTile(x, y + 1) === Tile.WALL || getTile(x, y + 1) === Tile.UNUSED)
-                        && (getTile(x + 1, y + 1) === Tile.WALL || getTile(x + 1, y + 1) === Tile.UNUSED)
+                    if (
+                        getTile(x, y) === Tile.WALL &&
+                        (getTile(x - 1, y - 1) === Tile.WALL || getTile(x - 1, y - 1) === Tile.UNUSED) &&
+                        (getTile(x, y - 1) === Tile.WALL || getTile(x, y - 1) === Tile.UNUSED) &&
+                        (getTile(x + 1, y - 1) === Tile.WALL || getTile(x + 1, y - 1) === Tile.UNUSED) &&
+                        (getTile(x - 1, y) === Tile.WALL || getTile(x - 1, y) === Tile.UNUSED) &&
+                        (getTile(x + 1, y) === Tile.WALL || getTile(x + 1, y) === Tile.UNUSED) &&
+                        (getTile(x - 1, y + 1) === Tile.WALL || getTile(x - 1, y + 1) === Tile.UNUSED) &&
+                        (getTile(x, y + 1) === Tile.WALL || getTile(x, y + 1) === Tile.UNUSED) &&
+                        (getTile(x + 1, y + 1) === Tile.WALL || getTile(x + 1, y + 1) === Tile.UNUSED)
                     ) {
                         changed = true;
                         setTile(x, y, Tile.UNUSED);
@@ -149,17 +152,14 @@ export function DigRooms(rng: Alea, width: number, height: number) {
             }
 
             let r = rng.uint(exits.length);
-            let x = exits[r].width === 1
-                ? exits[r].x
-                : rng.uint(exits[r].x + exits[r].width - 1, exits[r].x);
-            let y = exits[r].height === 1
-                ? exits[r].y
-                : rng.uint(exits[r].y + exits[r].height - 1, exits[r].y);
+            let x = exits[r].width === 1 ? exits[r].x : rng.uint(exits[r].x + exits[r].width - 1, exits[r].x);
+            let y = exits[r].height === 1 ? exits[r].y : rng.uint(exits[r].y + exits[r].height - 1, exits[r].y);
 
-            if (createFeature(x, y, Direction.NORTH)
-                || createFeature(x, y, Direction.SOUTH)
-                || createFeature(x, y, Direction.EAST)
-                || createFeature(x, y, Direction.WEST)
+            if (
+                createFeature(x, y, Direction.NORTH) ||
+                createFeature(x, y, Direction.SOUTH) ||
+                createFeature(x, y, Direction.EAST) ||
+                createFeature(x, y, Direction.WEST)
             ) {
                 exits.splice(r, 1);
                 return true;
@@ -170,15 +170,16 @@ export function DigRooms(rng: Alea, width: number, height: number) {
     }
 
     function createFeature(x: number, y: number, dir: Direction) {
-        const dx = dir === Direction.NORTH ? -1
+        const dx =
+            dir === Direction.NORTH ? -1
             : dir === Direction.SOUTH ? 1
-                : 0;
-        const dy = dir === Direction.WEST ? -1
+            : 0;
+        const dy =
+            dir === Direction.WEST ? -1
             : dir === Direction.EAST ? 1
-                : 0;
+            : 0;
 
-        if (getTile(x + dx, y + dy) === Tile.FLOOR
-            && getTile(x + dx, y + dy) === Tile.CORRIDOOR) {
+        if (getTile(x + dx, y + dy) === Tile.FLOOR && getTile(x + dx, y + dy) === Tile.CORRIDOOR) {
             return false;
         }
 
@@ -191,7 +192,8 @@ export function DigRooms(rng: Alea, width: number, height: number) {
         } else if (makeCorridor(x, y, dir)) {
             if (getTile(x + dx, y + dy) === Tile.FLOOR) {
                 setTile(x, y, Tile.CLOSEDDOOR);
-            } else {// don't place a door between corridors
+            } else {
+                // don't place a door between corridors
                 setTile(x, y, Tile.CORRIDOOR);
             }
 
@@ -225,16 +227,20 @@ export function DigRooms(rng: Alea, width: number, height: number) {
         if (placeRect(room, Tile.FLOOR)) {
             rooms.push(room);
 
-            if (dir !== Direction.SOUTH || firstRoom) {// NORTH side
+            if (dir !== Direction.SOUTH || firstRoom) {
+                // NORTH side
                 exits.push({ x: room.x, y: room.y - 1, width: room.width, height: 1 });
             }
-            if (dir !== Direction.NORTH || firstRoom) {// SOUTH side
+            if (dir !== Direction.NORTH || firstRoom) {
+                // SOUTH side
                 exits.push({ x: room.x, y: room.y + room.height, width: room.width, height: 1 });
             }
-            if (dir !== Direction.EAST || firstRoom) {// WEST side
+            if (dir !== Direction.EAST || firstRoom) {
+                // WEST side
                 exits.push({ x: room.x - 1, y: room.y, width: 1, height: room.height });
             }
-            if (dir !== Direction.WEST || firstRoom) {// EAST side
+            if (dir !== Direction.WEST || firstRoom) {
+                // EAST side
                 exits.push({ x: room.x + room.width, y: room.y, width: 1, height: room.height });
             }
 
@@ -252,20 +258,23 @@ export function DigRooms(rng: Alea, width: number, height: number) {
             height: 0,
         };
 
-        if (rng.bool()) { // horizontal corridor
+        if (rng.bool()) {
+            // horizontal corridor
             corridor.width = rng.uint(MAX_CORRIDOR_LENGTH, MIN_CORRIDOR_LENGTH);
             corridor.height = 1;
 
             if (dir === Direction.NORTH) {
                 corridor.y = y - 1;
 
-                if (rng.bool()) {// WEST
+                if (rng.bool()) {
+                    // WEST
                     corridor.x = x - corridor.width + 1;
                 }
             } else if (dir === Direction.SOUTH) {
                 corridor.y = y + 1;
 
-                if (rng.bool()) {// WEST
+                if (rng.bool()) {
+                    // WEST
                     corridor.x = x - corridor.width + 1;
                 }
             } else if (dir === Direction.WEST) {
@@ -273,7 +282,8 @@ export function DigRooms(rng: Alea, width: number, height: number) {
             } else if (dir === Direction.EAST) {
                 corridor.x = x + 1;
             }
-        } else {// vertical corridor
+        } else {
+            // vertical corridor
             corridor.width = 1;
             corridor.height = rng.uint(MAX_CORRIDOR_LENGTH, MIN_CORRIDOR_LENGTH);
 
@@ -284,13 +294,15 @@ export function DigRooms(rng: Alea, width: number, height: number) {
             } else if (dir === Direction.WEST) {
                 corridor.x = x - 1;
 
-                if (rng.bool()) {// NORTH
+                if (rng.bool()) {
+                    // NORTH
                     corridor.y = y - corridor.height + 1;
                 }
             } else if (dir === Direction.EAST) {
                 corridor.x = x + 1;
 
-                if (rng.bool()) {// NORTH
+                if (rng.bool()) {
+                    // NORTH
                     corridor.y = y - corridor.height + 1;
                 }
             }
@@ -321,11 +333,7 @@ export function DigRooms(rng: Alea, width: number, height: number) {
     }
 
     function placeRect(rect: Rect, tile: Tile) {
-        if (rect.x < 1
-            || rect.y < 1
-            || rect.x + rect.width > width - 1
-            || rect.y + rect.height > height - 1
-        ) {
+        if (rect.x < 1 || rect.y < 1 || rect.x + rect.width > width - 1 || rect.y + rect.height > height - 1) {
             return false;
         }
 
@@ -339,11 +347,7 @@ export function DigRooms(rng: Alea, width: number, height: number) {
 
         for (let y = rect.y - 1; y < rect.y + rect.height + 1; ++y) {
             for (let x = rect.x - 1; x < rect.x + rect.width + 1; ++x) {
-                if (x === rect.x - 1
-                    || y === rect.y - 1
-                    || x === rect.x + rect.width
-                    || y === rect.y + rect.height
-                ) {
+                if (x === rect.x - 1 || y === rect.y - 1 || x === rect.x + rect.width || y === rect.y + rect.height) {
                     setTile(x, y, Tile.WALL);
                 } else {
                     setTile(x, y, tile);
@@ -389,4 +393,4 @@ export function DigRooms(rng: Alea, width: number, height: number) {
         up,
         down,
     };
-};
+}

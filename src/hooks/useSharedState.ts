@@ -2,7 +2,7 @@
  * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
-import { useState, useEffect, useCallback, type Dispatch, type SetStateAction, useRef } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 /**
  * Used as a key for a shared state. This allows direct string, as well as enum,
@@ -28,22 +28,27 @@ const watchers = new Map<SharedKey, Set<(value: any) => void>>();
 export function getSharedState<S = any>(key: SharedKey): S | undefined;
 export function getSharedState<S = any>(key: SharedKey, def: S): S;
 export function getSharedState<S = any>(key: SharedKey, def?: S) {
-    return states.has(key) ? states.get(key) as S : def;
+    return states.has(key) ? (states.get(key) as S) : def;
 }
 
 /**
  * Set the current value of a state and ensure watchers are updated.
- *
- * NOTE: This does not support passing a function as a value!
  */
-export function setSharedState<S = any>(key: SharedKey, value: S) {
-    states.set(key, value)
-    watchers.get(key)?.forEach((set) => set(value));
+export function setSharedState<S = any>(key: SharedKey, value: SetStateAction<S>) {
+    const oldValue = states.get(key);
+
+    if (value instanceof Function) {
+        value = value(oldValue);
+    }
+    if (value !== oldValue) {
+        states.set(key, value);
+        watchers.get(key)?.forEach((set) => set(value));
+    }
 }
 
 /**
  * Returns a shared stateful value, and a function to update it. If any of the
- * instances with the same key update then all will get the updated values.
+ * instances with the same key update then all will get the updated value.
  */
 export function useSharedState<S>(key: SharedKey, initialState?: S | (() => S)): [S, Dispatch<SetStateAction<S>>] {
     const refKey = useRef(key);
@@ -54,27 +59,17 @@ export function useSharedState<S>(key: SharedKey, initialState?: S | (() => S)):
 
     const hasInitialState = arguments.length > 1;
     const [state, setState] = useState<S>(states.has(key) ? states.get(key) : initialState);
-    const setStateShared = useCallback((value: S) => {
-        const oldValue = states.get(key);
-
-        if (value instanceof Function) {
-            value = value(oldValue);
-        }
-        if (value !== oldValue) {
-            setState(value);
-            setSharedState(key, value);
-        }
-    }, []);
+    const setStateShared = useCallback((value: SetStateAction<S>) => setSharedState(key, value), []);
 
     useEffect(() => {
         if (hasInitialState && !states.has(key)) {
-            setSharedState(key, initialState);
+            // Set the shared initial state before we add our own watcher
+            setSharedState(key, initialState instanceof Function ? initialState() : initialState);
         }
         // If we're the first watcher then make sure we can watch
         if (!watchers.has(key)) {
             watchers.set(key, new Set());
         }
-        // Only add a watcher after we have notified everything else
         watchers.get(key)?.add(setState);
 
         return () => {
@@ -85,7 +80,7 @@ export function useSharedState<S>(key: SharedKey, initialState?: S | (() => S)):
                 states.delete(key);
                 watchers.delete(key);
             }
-        }
+        };
     }, []);
 
     return [state, setStateShared as typeof setState];

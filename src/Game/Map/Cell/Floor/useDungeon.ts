@@ -2,7 +2,7 @@
  * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
-import { Alea } from "../../../../common"
+import { Alea } from "../../../../common";
 import { getWorld } from "../../../World/World";
 import { DigRooms } from "./DigRooms";
 
@@ -22,9 +22,10 @@ export const useDungeon = (x: number, y: number, z: number) => {
         grid1[y] = [];
         grid2[y] = [];
         for (x = 0; x < width; x++) {
-            grid1[y][x] = x < 5 || x >= width - 5 || y < 5 || y >= height - 5
-                ? 1
-                : rng() > 0.1 ? 1 : 0;
+            grid1[y][x] =
+                x < 5 || x >= width - 5 || y < 5 || y >= height - 5 ? 1
+                : rng() > 0.1 ? 1
+                : 0;
             grid2[y][x] = 0;
         }
     }
@@ -38,17 +39,30 @@ export const useDungeon = (x: number, y: number, z: number) => {
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
             // Not including centre tile
-            const count = !x || !y || x === width - 1 || y === height - 1
-                ? 8
-                : grid1[y - 1][x - 1] + grid1[y - 1][x] + grid1[y - 1][x + 1] + grid1[y][x - 1] + grid1[y][x + 1] + grid1[y + 1][x - 1] + grid1[y + 1][x] + grid1[y + 1][x + 1];
+            const count =
+                !x || !y || x === width - 1 || y === height - 1 ?
+                    8
+                :   grid1[y - 1][x - 1] +
+                    grid1[y - 1][x] +
+                    grid1[y - 1][x + 1] +
+                    grid1[y][x - 1] +
+                    grid1[y][x + 1] +
+                    grid1[y + 1][x - 1] +
+                    grid1[y + 1][x] +
+                    grid1[y + 1][x + 1];
 
             grid2[y][x] = count > 6 ? 1 : 0;
         }
     }
 
-    console.log("grid", startX, startY, grid2.map((row) => row.toString().replace(/[^10]/g, "")));
+    console.log(
+        "grid",
+        startX,
+        startY,
+        grid2.map((row) => row.toString().replace(/[^10]/g, "")),
+    );
 
     DigRooms(rng, width, height);
 
     return grid1;
-}
+};

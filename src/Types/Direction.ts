@@ -22,19 +22,30 @@ export enum Direction {
 export namespace Direction {
     export function Reverse(dir: Direction) {
         switch (dir) {
-            case Direction.NORTH: return Direction.SOUTH;
-            case Direction.NORTHEAST: return Direction.SOUTHWEST;
-            case Direction.EAST: return Direction.WEST;
-            case Direction.SOUTHEAST: return Direction.NORTHWEST;
-            case Direction.SOUTH: return Direction.NORTH;
-            case Direction.SOUTHWEST: return Direction.NORTHEAST;
-            case Direction.WEST: return Direction.EAST;
-            case Direction.NORTHWEST: return Direction.SOUTHEAST;
+            case Direction.NORTH:
+                return Direction.SOUTH;
+            case Direction.NORTHEAST:
+                return Direction.SOUTHWEST;
+            case Direction.EAST:
+                return Direction.WEST;
+            case Direction.SOUTHEAST:
+                return Direction.NORTHWEST;
+            case Direction.SOUTH:
+                return Direction.NORTH;
+            case Direction.SOUTHWEST:
+                return Direction.NORTHEAST;
+            case Direction.WEST:
+                return Direction.EAST;
+            case Direction.NORTHWEST:
+                return Direction.SOUTHEAST;
 
-            case Direction.UP: return Direction.DOWN;
-            case Direction.DOWN: return Direction.UP;
+            case Direction.UP:
+                return Direction.DOWN;
+            case Direction.DOWN:
+                return Direction.UP;
 
-            case Direction.NONE: return Direction.NONE;
+            case Direction.NONE:
+                return Direction.NONE;
         }
     }
 }

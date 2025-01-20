@@ -2,10 +2,10 @@
  * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
+import { getSharedState, useWeakKey } from "../../hooks";
 import { getTerrain, Terrain } from "../World/useTerrain";
 import { getWorld } from "../World/World";
 import { type Coordinate3D } from "../World/WorldContext";
-import { getSharedState, useWeakKey } from "../../hooks";
 
 export interface MapGrid {
     x: number;
@@ -38,7 +38,7 @@ const renderMapGrid = (key: Coordinate3D, x: number, y: number, z: number) => {
     cache.set(key, data);
 
     return data;
-}
+};
 
 /**
  * Cache of coordinates to data, this allows us to do the expensive procedural

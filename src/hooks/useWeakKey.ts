@@ -20,7 +20,7 @@ setInterval(() => {
                 keys.delete(key.toString());
                 count.delete(key);
             }
-        })
+        });
         triggerCleanup = false;
     }
 }, 5000);
@@ -63,7 +63,7 @@ export const useWeakKey = <T extends WeakKey>(key: T) => {
         return () => {
             count.set(key, (count.get(key) || 1) - 1);
             triggerCleanup = true;
-        }
+        };
     });
 
     return key;

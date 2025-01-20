@@ -145,20 +145,22 @@ export const Alea = (...args: any[]): Alea => {
     const rng = (() => {
         const t = 2091639 * s0 + c * 2.3283064365386963e-10;
 
-        return s0 = s1, s1 = s2, s2 = t - (c = t | 0);
+        return (s0 = s1), (s1 = s2), (s2 = t - (c = t | 0));
     }) as any as Alea;
 
     Object.defineProperties(rng, {
         version: { value: ALEA_VERSION },
         next: { value: rng },
-        bool: { value: () => (rng() * 10 & 1) === 1 },
+        bool: { value: () => ((rng() * 10) & 1) === 1 },
         abs: { value: (max = 1, min = 0) => Math.abs(rng() * (max - min)) + min },
         int: { value: (max = 0x100000000, min = -max) => Math.round(rng() * (max - min) + min) },
         uint: { value: (max = 0x100000000, min = 0) => Math.floor(Math.abs(rng()) * (max - min) + min) },
         frac: { value: (max = 0x100000000, min = -max) => rng() * (max - min) + min },
         ufrac: { value: (max = 0x100000000, min = 0) => Math.abs(rng() * (max - min)) + min },
-        fract53: { value: () => rng() + (rng() * 0x200000 | 0) * 1.1102230246251565e-16 }, // 2^-53
-        exportState: { value: () => Object.defineProperty([s0, s1, s2, c] as AleaState, "version", { value: ALEA_VERSION }) },
+        fract53: { value: () => rng() + ((rng() * 0x200000) | 0) * 1.1102230246251565e-16 }, // 2^-53
+        exportState: {
+            value: () => Object.defineProperty([s0, s1, s2, c] as AleaState, "version", { value: ALEA_VERSION }),
+        },
         importState: {
             value: (state: AleaState) => {
                 if (state.version === ALEA_VERSION) {
@@ -187,7 +189,7 @@ export const Alea = (...args: any[]): Alea => {
         s2 = mash(" ");
 
         if (!args.length) {
-            args = [+new Date];
+            args = [+new Date()];
         }
 
         for (const arg of args) {
@@ -201,4 +203,4 @@ export const Alea = (...args: any[]): Alea => {
     }
 
     return rng;
-}
+};
