@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Game. All rights reserved.
+ * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
 export { Game } from "./Game";

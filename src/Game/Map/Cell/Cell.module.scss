@@ -1,0 +1,72 @@
+/*
+ * Copyright (c) 2025 Hall of Worlds. All rights reserved.
+ */
+
+.cell {
+    width: 64px;
+    height: 64px;
+    position: absolute;
+    background-size: cover;
+    top: calc(var(--deltaY) * 1px + var(--top) * 64px - 32px);
+    left: calc(var(--deltaX) * 1px + var(--left) * 64px - 32px);
+    filter: grayscale(var(--fog, 0)) brightness(var(--rain, 1));
+
+    img {
+        position: absolute;
+        width: 64px;
+        height: 64px;
+        object-fit: cover;
+
+        &.WATER {
+            animation: 4s linear 0s infinite water;
+        }
+    }
+
+    &.terrainWater {
+        background-color: rgb(74, 149, 181);
+        background-image: url("./Terrain/shallow_water.png");
+    }
+
+    &.terrainSand {
+        background-color: rgb(203, 186, 99);
+        background-image: url("./Terrain/sand1.png");
+    }
+
+    &.terrainDirt {
+        background-color: rgb(100 85 55);
+        background-image: url("./images/Dirt_02-64x64.png");
+    }
+
+    &.terrainGrass {
+        background-color: rgb(115, 148, 36);
+        background-image: url("./Terrain/grass1.png");
+    }
+
+    &.terrainRock {
+        background-color: rgb(123, 123, 123);
+        background-image: url("./Terrain/pedestal_full.png");
+    }
+
+    &.player {
+        z-index: 1;
+        outline: 2px solid rgba(0, 210, 25, 0.75);
+
+        &:hover {
+            border-radius: 4px;
+        }
+    }
+
+    &:hover {
+        z-index: 1;
+        outline: 4px dashed rgb(210 0 0 / 0.75);
+    }
+}
+
+@keyframes water {
+    from {
+        object-position: 0 0px;
+    }
+    to {
+        object-position: 0 1984px;
+    }
+}

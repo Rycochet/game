@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Game. All rights reserved.
+ * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
 import React from "react";
@@ -8,7 +8,14 @@ import invariant from "tiny-invariant";
 
 import { Game } from "./Game";
 
+// CSS Reset
 import "./index.css";
+
+declare module "react" {
+    interface CSSProperties {
+        [key: `--${string}`]: string | number;
+    }
+}
 
 function init() {
     if (document.readyState === "complete") {

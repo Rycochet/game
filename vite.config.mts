@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Game. All rights reserved.
+ * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
 /// <reference types="node" />
@@ -15,12 +15,13 @@ export default defineConfig({
     build: {
         cssMinify: "lightningcss",
         outDir: "dist",
+        assetsInlineLimit: 64000,
     },
     css: {
-        modules: {
-            localsConvention: "camelCaseOnly",
-        },
         transformer: "lightningcss",
+        lightningcss: {
+            cssModules: true,
+        },
     },
     plugins: [
         react(),
