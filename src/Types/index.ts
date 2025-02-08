@@ -7,3 +7,5 @@ export { Direction } from "./Direction";
 export { PlayerState } from "./PlayerState";
 export { Rarity } from "./Rarity";
 export { Tile } from "./Tile";
+export { type Point } from "./Point";
+export { Grid } from "./Grid";

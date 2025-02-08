@@ -6,6 +6,7 @@ import React, { useMemo, type FunctionComponent, type PropsWithChildren } from "
 import { createNoise3D } from "simplex-noise";
 
 import { Alea } from "../../common";
+import { WorldMap } from "../../WorldMap";
 import { getTerrain, Terrain } from "./useTerrain";
 import { WorldContext, type Coordinate2D, type IWorld } from "./WorldContext";
 
@@ -55,5 +56,9 @@ export const World: FunctionComponent<PropsWithChildren<{ seed: number }>> = ({ 
         gates,
     });
 
-    return <WorldContext.Provider value={world}>{children}</WorldContext.Provider>;
+    return (
+        <WorldContext.Provider value={world}>
+            {children}
+        </WorldContext.Provider>
+    );
 };

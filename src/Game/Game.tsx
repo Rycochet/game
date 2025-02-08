@@ -4,6 +4,7 @@
 
 import React, { FunctionComponent } from "react";
 
+import { WorldMap } from "../WorldMap";
 import { Map } from "./Map/Map";
 import { Player } from "./Player/Player";
 import { World } from "./World/World";
@@ -15,6 +16,7 @@ export const Game: FunctionComponent = () => {
         <World seed={12345}>
             <Player>
                 <Map />
+                <WorldMap />
             </Player>
         </World>
     );

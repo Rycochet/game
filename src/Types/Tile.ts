@@ -10,6 +10,7 @@
 export enum Tile {
     UNUSED = " ",
     FLOOR = ".",
+    ENTRY = "?", // Used for Rooms, this is otherwise a Floor
     CORRIDOOR = ",",
     WALL = "#",
     CLOSEDDOOR = "+",

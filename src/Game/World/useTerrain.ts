@@ -33,7 +33,7 @@ export const getTerrain = (
     const distance = circumference / 1000 + Math.min(0, z / 10);
     const xPos = (Math.cos(angle) * distance) / TAU;
     const yPos = (Math.sin(angle) * distance) / TAU;
-    const value = land3D(xPos, yPos, y / 1000) + 1;
+    const value = land3D(xPos, yPos, y / 1000) + 1 - z / 10;
 
     switch (true) {
         case value >= 1.6:
