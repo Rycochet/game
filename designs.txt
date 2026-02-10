@@ -1,0 +1,176 @@
+Web based, preferably on Facebook
+
+
+Town, buildings in it, support a party who explore the dungeons under it
+Party gets raw materials (ore, skins and gems) for making equipment by exploring
+Make equipment and possibly have wizards enchant it in the town
+PvP arena, doesn't damage target, but your own party suffers damage
+Global market for selling equipment
+
+
+
+
+
+
+Town
+====
+Buildings can level up to greater forms allowing better contents - costs gold
+
+
+Bar -> Tavern -> Inn
+--------------------
+Recruit party members here
+Party members rest here to heal, takes 12 hours to heal to full from minimum health
+Selection to recruit depends on building level
+Costs gold to hire characters
+
+
+Resurrection Shrine
+-------------------
+Party members who die come back here, otherwise they stay dead
+Takes 24 hours to recover, but no loss of equipment / levels / exp
+
+
+Armoursmith
+-----------
+Creates metal armour
+Higher levels allow higher level ores to be worked
+
+
+Weaponsmith
+-----------
+Creates metal weapons
+Higher levels allow higher level ores to be worked
+
+
+Tailor
+------
+Creates leather armour, robes and cloaks
+Higher levels allow higher level skins to be worked
+
+
+Jeweller
+--------
+Creates rings and polishes gems
+Can insert gems into weapons and armour, one gem, level matches (or lower than) the plus on it
+Higher levels allow higher level gems to be worked
+
+
+Arena
+-----
+Gives access to PvP (?) fights with your party
+Your party suffers real damage that requires time to heal
+You get gold and experience as rewards for winning
+Party members can only fight arena battles with similar levels of other party members
+
+
+Workshop
+--------
+Can assign a wizard here and they can enchant a weapon
+Time is 4 hours per plus to enchant, can only go up one level at a time (so 12 hours total to +2)
+Can only enchant to wizard level / 10 rounded down (so level 10 for +1), max level +5
+
+
+Chapel
+------
+Can assign a cleric here and they can create potions from raw ingredients
+
+
+Monastary
+---------
+Increases heal rate in Tavern etc
+
+
+Black Market
+------------
+Allows trade between players
+
+
+Fletcher
+--------
+Creates ranged weapons
+
+
+
+
+
+
+
+
+Heroes
+======
+Each class has different strengths, weaknesses and equipment limits
+Heroes are assigned a secondary profession, in one of the other buildings, and they gain exp in it while not adventuring
+* Must remember to assign a hero to a building to man it and to gain exp
+* Can only heal while in Tavern
+Can only work in certain buildings depending on class (stats?)
+Stats: Str, Dex, Int, Con (start with a single 3, a single 2 and two at 1)
+* Strength = hit hard
+* Dexterity = dodge + hit often
+* Intelligence = use magic + spot stuff
+* Constitution = health + resistences
+* Every level get one stat point to spend
+* Health = 10 + (2 x con)
+Magic: Divine, Wild, Arcane
+* Divine = healing + curing
+* Wild = animal control + alteration
+* Arcane = damage + protection
+Combat:
+* attack = rand(dex) + weapon_plus
+* defense = rand(dex + armour) + armour_plus
+* damage = (rand(str) + weapon) * (attack / defense)
+
+
+Fighter 3,1,1,2
+-------
+Heavy armour, all weapons, no magic
+
+
+Thief 1,3,2,1
+-----
+Light armour, small weapons, no magic, traps + chests
+
+
+Paladin 3,1,1,2
+-------
+Heavy armour, sharp weapons, no jewelry, divine magic / 2
+
+
+Cleric 2,1,3,1
+------
+Medium armour, blunt weapons, divine magic
+
+
+Ranger 1,3,1,2
+------
+Medium armour, ranged weapons, wild magic / 2
+
+
+Druid 1,1,3,2
+-----
+No armour, no weapons, wild magic
+
+
+Wizard 1,2,3,1
+------
+No armour, no weapons, arcane magic
+
+
+Spellsword 3,1,2,1
+----------
+Medium armour, sharp weapons, arcane magic / 2
+
+
+
+
+
+
+Dungeons
+========
+Dungeons are in level bands, one building per band
+Each dungeon is 10 (???) "levels" deep, each has 5x4 (20) (???) rooms, random room has stairs down
+Once a floor is cleared it will stay cleared for 2 hours
+Each room has a random chance of a monster encounter (level appropriate)
+- Winning an encounter gives a chance of a treasure, but always gives gold and party experience
+Each room has a chance of ores
+Roguelike exploration - click room or explore?

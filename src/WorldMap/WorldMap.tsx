@@ -2,11 +2,13 @@
  * Copyright (c) 2025 Hall of Worlds. All rights reserved.
  */
 
-import React, { useEffect, useLayoutEffect, useMemo, useState, type FunctionComponent } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type FunctionComponent } from "react";
 
+import { hsl2rgb } from "../common";
 import { useWorld } from "../Game/World/WorldContext";
-import { useSharedState } from "../hooks";
+import { useInterval, useSharedState } from "../hooks";
 import { PlayerState } from "../Types";
+import { Surface } from "./Surface";
 
 export const COLOR_WATER_DEEP = "#000064";
 export const COLOR_WATER = "hsl(232 100% 29%)"; // #001493
@@ -31,156 +33,177 @@ const MAX_MAP_HEIGHT = 400;
 
 const SCALE = 20;
 
-let direction = -0.01;
+let direction = -1;
+
+export function setCoord(
+    screenX: number,
+    screenY: number,
+    width: number,
+    height: number,
+    mapX: number,
+    mapY: number,
+    coordMap?: Uint32Array,
+) {
+    if (coordMap) {
+        for (let left = 0; left < width; left++) {
+            for (let top = 0; top < height; top++) {
+                const offset = Math.floor(screenY + top) * (MAX_MAP_WIDTH * 2) + Math.floor(screenX + left) * 2;
+
+                coordMap[offset] = mapX;
+                coordMap[offset + 1] = mapY;
+            }
+        }
+    }
+}
 
 export const WorldMap: FunctionComponent = () => {
-    const { circumference, climate, land3D, weather3D } = useWorld();
+    const { circumference, water, tilt, climate, land3D, weather3D } = useWorld();
     const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
-    const [playerX] = useSharedState<number>(PlayerState.X);
+    const [playerX, setPlayerX] = useSharedState<number>(PlayerState.X);
     const [playerY] = useSharedState<number>(PlayerState.Y);
+    const [time] = useSharedState<number>("time");
+    const tide = Math.cos((time * Math.PI) / 6) * (4 * tilt); // Earth axis 25 degrees gives 1m tides
+    const coordMap = useRef<Uint32Array | undefined>(undefined); // screenX,screenY => mapX,mapY
 
-    const [snow, setSnow] = useState(1.5);
-    const [weatherDelta, setWeatherDelta] = useState(0);
+    console.log("tide", time, tide);
 
-    useLayoutEffect(() => {
-        if (canvas) {
-            canvas.width = Math.floor(canvas.offsetWidth / 2);
-            canvas.height = Math.floor(canvas.offsetHeight / 2);
+    const surface = useMemo(() => new Surface(land3D, circumference / 1000), []);
+
+    const [snow, setSnow] = useState(128);
+
+    useEffect(() => {
+        var ctx = canvas?.getContext("2d"); //, { alpha: false });
+
+        if (ctx) {
+            coordMap.current = new Uint32Array(ctx.canvas.width * ctx.canvas.height * 2);
         }
     }, [canvas]);
 
-    // useEffect(() => {
-    //     const timer = setInterval(() => setWeatherDelta((old) => old + 0.01), 100);
+    // useInterval(() => setWeatherDelta((old) => old + 0.01), 100);
 
-    //     return () => clearInterval(timer);
-    // }, []);
+    // useInterval(() => {
+    //     setSnow((old) => {
+    //         if (old < 0) {
+    //             direction = 1;
+    //         } else if (old > 128) {
+    //             direction = -1;
+    //         }
 
-    // useEffect(() => {
-    //     const timer = setInterval(
-    //         () =>
-    //             setSnow((old) => {
-    //                 if (old < 0) {
-    //                     direction = 0.01;
-    //                 } else if (old > 1.5) {
-    //                     direction = -0.01;
-    //                 }
-    //                 console.log(old + direction);
-
-    //                 return old + direction;
-    //             }),
-    //         100,
-    //     );
-
-    //     return () => clearInterval(timer);
-    // }, []);
+    //         return old + direction;
+    //     });
+    //     setPlayerX((old) => old + 1);
+    // }, 166);
 
     useEffect(() => {
-        var ctx = canvas?.getContext("2d");
+        var ctx = canvas?.getContext("2d"); //, { alpha: false });
 
-        if (!canvas || !ctx) {
+        if (!ctx) {
             return;
         }
 
-        console.time("Draw world map");
+        const imageData = ctx.createImageData(ctx.canvas.width, ctx.canvas.height);
+        coordMap.current?.fill(0);
 
-        // ctx.fillStyle = "#000000";
-        // ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        console.time("Calculate surface");
+        for (let x = 0; x < MAX_MAP_WIDTH; x++) {
+            let top = MAX_MAP_HEIGHT + 64;
+            let first = true;
 
-        const distance = circumference / 1000;
+            for (let y = MAX_MAP_HEIGHT; y >= 0; y -= 2) {
+                const shiftX = (MAX_MAP_HEIGHT - y) / 6;
 
-        for (let y = 0; y <= MAX_MAP_HEIGHT; y++) {
-            let lastHeight = 0;
-
-            const maxWidth = MAX_MAP_WIDTH + 0.6 * (y - MAX_MAP_HEIGHT / 2);
-            const deltaY = (y * 100) / MAX_MAP_HEIGHT - 50;
-            const left = (150 - maxWidth + MAX_MAP_WIDTH) / 2;
-            const zPos = (playerY + deltaY * SCALE) / 1000;
-
-            for (let x = 0; x < maxWidth; x++) {
-                const deltaX = (x * 100) / maxWidth - 50;
-                const angle = (TAU * (playerX + deltaX * SCALE)) / circumference;
-                const xPos = (Math.cos(angle) * distance) / TAU;
-                const yPos = (Math.sin(angle) * distance) / TAU;
-
-                let height =
-                    (land3D(xPos, yPos, zPos) +
-                        land3D(xPos * 2, yPos * 2, zPos * 2) / 2 +
-                        land3D(xPos * 4, yPos * 4, zPos * 4) / 4 +
-                        land3D(xPos * 8, yPos * 8, zPos * 8) / 8 +
-                        land3D(xPos * 16, yPos * 16, zPos * 16) / 16 +
-                        land3D(xPos * 32, yPos * 32, zPos * 32) / 32 +
-                        land3D(xPos * 64, yPos * 64, zPos * 64) / 64 +
-                        land3D(xPos * 128, yPos * 128, zPos * 128) / 128 +
-                        1) /
-                    2;
-
-                if (x > 0) {
-                    const diff = height - lastHeight;
-                    let jitter = land3D(xPos * 32, yPos * 32, zPos * 32) / 10;
-                    let drawHeight = 4;
-
-                    if (y + 2 > MAX_MAP_HEIGHT) {
-                        drawHeight = Math.ceil(Math.max(0.3, height) * 20);
-                        if (height < 0.3) {
-                            ctx.fillStyle = `hsl(232 100% ${height * 50 + Math.max(0, 0.5 - snow) * 200 + 30}%)`; // #001493
-                            ctx.fillRect(
-                                left + x,
-                                y / 2 + 30 - Math.ceil(0.3 * 20),
-                                1,
-                                Math.floor((0.3 - height) * 20),
-                            );
-                        }
-                        ctx.fillStyle = "#000";
-                        `hsl(38 100% 15%)`; // #583800
-                        ctx.fillRect(left + x, y / 2 + 30 - Math.ceil(height * 20), 1, Math.ceil(height * 20) + 1);
-                    } else {
-                        // const weather = Math.max(0, weather3D(xPos + weatherDelta, yPos, zPos));
-
-                        if (height + jitter > snow) {
-                            // Snow from top down
-                            ctx.fillStyle = `hsl(0 0% ${75 - diff * 2000}%)`; // #8c8c8c
-                        } else if (height + jitter > 0.8) {
-                            ctx.fillStyle = `hsl(0 0% ${55 - diff * 2000}%)`; // #8c8c8c
-                        } else if (height + jitter > 0.6) {
-                            ctx.fillStyle = `hsl(38 44% ${39 - diff * 1000}%)`; // #917038
-                        } else if (height + Math.abs(jitter) > 0.3) {
-                            ctx.fillStyle = `hsl(77 60% ${27 - diff * 1000}%)`; // #586f1c
-                        } else if (height > 0.28) {
-                            ctx.fillStyle = `hsl(60 100% ${45 - diff * 200}%)`; // #e5e600
-                        } else {
-                            ctx.fillStyle = `hsl(232 100% ${height * 50 + Math.max(0, 0.5 - snow) * 200 + 15}%)`; // #001493
-                        }
-                        height = Math.max(0.3, height);
-
-                        ctx.fillRect(
-                            left + x,
-                            y / 2 + 30 - Math.ceil(height * 20),
-                            1,
-                            Math.min(Math.floor(height * 20), 4),
-                        );
-
-                        // if (weather >= 0) {
-                        //     ctx.fillStyle = `hsl(0 0% 100% / ${weather / 2})`;
-                        //     ctx.fillRect(left + x, y / 2, 1, 1);
-                        // }
-                    }
+                if (x < shiftX || x > MAX_MAP_WIDTH - shiftX) {
+                    continue;
                 }
-                lastHeight = height;
+
+                const deltaX = (4 * shiftX + MAX_MAP_WIDTH) / MAX_MAP_WIDTH;
+                const xPos = playerX + deltaX * (x - MAX_MAP_WIDTH / 2);
+                const yPos = playerY + y - MAX_MAP_HEIGHT / 2;
+
+                const { height, jitter } = surface.get(xPos, yPos);
+
+                // TODO: Time of day
+                const diff = (height - surface.get(xPos - 1, yPos).height) / 64;
+
+                let h = 0;
+                let s = 0;
+                let l = 0;
+
+                if (height + jitter > Math.min(snow, 90)) {
+                    // #8c8c8c
+                    h = 0;
+                    s = 0;
+                } else if (height + jitter > 80) {
+                    // #917038
+                    h = 36;
+                    s = 0.4;
+                } else if (height + Math.abs(jitter) > water + tide) {
+                    if (height < water) {
+                        // #e5e600
+                        h = 60;
+                        s = 0.7;
+                    } else {
+                        // #536e11
+                        h = 80;
+                        s = 0.4;
+                    }
+                } else {
+                    // #001493
+                    h = 232;
+                    s = 1;
+                }
+                if (height > water + tide) {
+                    l = (64 - h / 2 - diff * (2000 - s * 2000)) / 100;
+                } else {
+                    l = (height / 2 + Math.max(0, 0.5 - snow / 128) * 200 + 15) / 100;
+                }
+
+                let bottom = top;
+
+                top = Math.ceil(y / 2 - Math.max(height, water + tide) / 2);
+
+                if (first) {
+                    first = false;
+
+                    const waterBottom = Math.ceil(y / 2 - height / 2);
+
+                    if (top !== waterBottom) {
+                        hsl2rgb(h, s, l / 2, 1, imageData, x, top + 64, 1, waterBottom - top);
+                    }
+                    hsl2rgb(38, 1, 0.15, 1, imageData, x, waterBottom + 64, 1, Math.ceil(y / 2) - waterBottom);
+                } else if (bottom > top) {
+                    hsl2rgb(h, s, l, 1, imageData, x, top + 64, 1, bottom - top);
+                    setCoord(x, top + 64, 1, bottom - top, playerX + y, playerY + y, coordMap.current);
+                }
             }
         }
-        console.timeEnd("Draw world map");
-    }, [canvas, playerX, playerY, snow, weatherDelta]);
+        console.timeEnd("Calculate surface");
+
+        console.info(surface.get(playerX, playerY));
+        surface.stats();
+
+        ctx.putImageData(imageData, 0, 0);
+    }, [canvas, playerX, playerY, snow, tide]);
 
     return (
         <canvas
             ref={setCanvas}
-            width={MAX_MAP_WIDTH * 1.5}
-            height={MAX_MAP_HEIGHT * 1.5}
+            width={MAX_MAP_WIDTH}
+            height={Math.ceil(MAX_MAP_HEIGHT / 2) + 64}
+            onClick={(e) => {
+                // const offset = Math.floor(screenY + top) * (MAX_MAP_WIDTH * 2) + Math.floor(screenX + left) * 2;
+                const offset = Math.floor(e.clientY / 2) * (MAX_MAP_WIDTH * 2) + Math.floor(e.clientX / 2) * 2;
+
+                console.log(e.clientX, e.clientY, coordMap.current?.[offset], coordMap.current?.[offset + 1]);
+            }}
             style={{
                 position: "absolute",
-                width: "100%",
+                width: MAX_MAP_WIDTH * 2,
+                height: MAX_MAP_HEIGHT + 64,
                 zIndex: 1,
+                background: "black",
+                border: "0.5rem solid black",
+                boxSizing: "content-box",
             }}
         />
     );

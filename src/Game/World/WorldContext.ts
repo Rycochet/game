@@ -63,13 +63,25 @@ export interface IWorld {
     density: number;
 
     /**
-     * Used to specify how "strong" the seasons are. With a low tilt there is
-     * little to no change in weather, while a high tilt can result in half the
-     * planet being snowed under. (Earth is 23.44 degrees)
+     * Used to specify how "strong" the seasons are, and how hight the tides
+     * are. With a low tilt there is little to no change in weather, while a
+     * high tilt can result in half the planet being snowed under. (Earth is
+     * 23.44 degrees).
+     *
+     * Tide is 1m at 0.25.
      *
      * @default 0.25
      */
     tilt: number;
+
+    /**
+     * How high the water table is. Earth is about 71% water, but due to the
+     * random nature of generation this doesn't look good (lots of islands).
+     * This should be in the range 20-60.
+     *
+     * @default 40
+     */
+    water: number;
 
     /**
      * How rainy the planet is in general. Wet (higher) planets have more water,

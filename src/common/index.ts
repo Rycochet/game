@@ -3,3 +3,4 @@
  */
 
 export { Alea } from "./Alea";
+export { hsl2rgb } from "./hsl2rgb";

@@ -6,6 +6,7 @@ import React, { useMemo, type FunctionComponent, type PropsWithChildren } from "
 import { createNoise3D } from "simplex-noise";
 
 import { Alea } from "../../common";
+import { useInterval, useSharedState } from "../../hooks";
 import { WorldMap } from "../../WorldMap";
 import { getTerrain, Terrain } from "./useTerrain";
 import { WorldContext, type Coordinate2D, type IWorld } from "./WorldContext";
@@ -18,6 +19,7 @@ let currentWorld: IWorld;
 export const getWorld = () => currentWorld!;
 
 export const World: FunctionComponent<PropsWithChildren<{ seed: number }>> = ({ children, seed }) => {
+    const [, setTime] = useSharedState("time", 0);
     const radius = Alea(seed, "radius").uint(6500000, 500); // Earth is 6378km
     const land3D = createNoise3D(Alea(seed, "land"));
     const circumference = Math.floor(2 * radius * Math.PI);
@@ -52,13 +54,16 @@ export const World: FunctionComponent<PropsWithChildren<{ seed: number }>> = ({ 
         year: Alea(seed, "year").uint(265) + 100,
         density: Alea(seed, "density").abs(1.5, 0.5),
         tilt: Alea(seed, "tilt").abs(1),
+        water: Alea(seed, "sealevel").abs(60, 20),
         climate,
         gates,
     });
 
-    return (
-        <WorldContext.Provider value={world}>
-            {children}
-        </WorldContext.Provider>
-    );
+    useInterval(() => {
+        const datetime = Math.floor(Date.now() / 60000);
+
+        setTime(datetime % 24);
+    }, 60000);
+
+    return <WorldContext.Provider value={world}>{children}</WorldContext.Provider>;
 };
