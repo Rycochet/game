@@ -1,0 +1,56 @@
+{
+    // Run these from Terminal > Run Task... (or Ctrl+Shift+B for the default build).
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run (native)",
+            "type": "cargo",
+            "command": "run",
+            "problemMatcher": ["$rustc"],
+            "group": "build"
+        },
+        {
+            "label": "Build (native)",
+            "type": "cargo",
+            "command": "build",
+            "problemMatcher": ["$rustc"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Serve (web)",
+            "detail": "Builds to WebAssembly and serves on http://localhost:3000, rebuilding on change",
+            "type": "shell",
+            "command": "trunk serve",
+            "isBackground": true,
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            "label": "Release build (native)",
+            "type": "cargo",
+            "command": "build",
+            "args": ["--release"],
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            "label": "Release build (web)",
+            "detail": "Outputs the browser version into dist/",
+            "type": "shell",
+            "command": "trunk build --release",
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            "label": "Test",
+            "detail": "cargo xtask test: formatting + lint (native and web), as run by CI",
+            "type": "shell",
+            "command": "cargo xtask test",
+            "problemMatcher": ["$rustc"],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        }
+    ]
+}

@@ -1,0 +1,44 @@
+# Runs `cargo xtask test` on every branch and pull request.
+# In GitHub branch protection, make the "All tests passed" check required.
+name: Test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# A newer push to the same branch cancels the older, still-running check.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      # Rust itself comes from rust-toolchain.toml on the first cargo command.
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo xtask test
+
+  # Single check to require in branch protection, so the OS list above can
+  # change without editing the protection rules.
+  all-passed:
+    name: All tests passed
+    if: always()
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - if: needs.test.result != 'success'
+        run: exit 1

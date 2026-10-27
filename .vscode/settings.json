@@ -1,1 +1,13 @@
-{}
+{
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true
+    },
+    // Show Clippy (the Rust linter) suggestions as you type.
+    "rust-analyzer.check.command": "clippy",
+    // Keep rust-analyzer's builds separate so they don't block `cargo run`.
+    "rust-analyzer.cargo.targetDir": true,
+    "files.exclude": {
+        "target": true
+    }
+}

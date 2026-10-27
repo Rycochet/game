@@ -2,15 +2,36 @@
 
 ## Development
 
-1. Install NodeJS <https://nodejs.org/en>
-2. Install Visual Studio Code <https://code.visualstudio.com/> as an editor
-3. Open a terminal within VSCode and run `npm ci`
-4. ...
-5. Profit
+The game is written in [Rust](https://www.rust-lang.org/) using the [Bevy](https://bevy.org/) game engine. It builds as a native app (Windows, macOS, Linux) and as WebAssembly for the browser.
 
-To run this open a terminal and run `npm start`, this will allow you to open the app in a browser window on <http://localhost:3000/>, this will automatically update on code changes.
+### One-time setup (Windows)
 
-Source code is inside `src/`, output code in `dist/` (local only), anything inside `public/` will automatically be copied over.
+1. Install the Visual Studio C++ Build Tools (with the "Desktop development with C++" workload): <https://visualstudio.microsoft.com/visual-cpp-build-tools/>
+2. Install Rust: `winget install Rustlang.Rustup` (or <https://rustup.rs/>), then open a new terminal.
+3. Install Trunk, the web build tool: `cargo install --locked trunk`
+4. Install Visual Studio Code <https://code.visualstudio.com/> and accept the recommended extensions when you open this folder.
+
+`rust-toolchain.toml` makes Rust download the correct compiler and WebAssembly target automatically on the first build.
+
+On Linux you also need some system libraries, see <https://bevy.org/learn/quick-start/getting-started/setup/>.
+
+### Running
+
+| What                      | Command                 | VSCode                                     |
+| ------------------------- | ----------------------- | ------------------------------------------ |
+| Run natively              | `cargo run`             | Task "Run (native)", or F5 to debug        |
+| Run in a browser          | `trunk serve`           | Task "Serve (web)", then <http://localhost:3000/> |
+| Release build (native)    | `cargo build --release` | Task "Release build (native)"             |
+| Release build (web)       | `trunk build --release` | Task "Release build (web)", output in `dist/` |
+| Test (what CI runs)       | `cargo xtask test`      | Task "Test"                               |
+| Lint                      | `cargo clippy`          | Shown automatically in the editor         |
+| Format                    | `cargo fmt`             | Automatic on save                         |
+
+The first build downloads and compiles Bevy, which takes several minutes. Later builds are much faster.
+
+`cargo xtask test` checks formatting and type-checks/lints the native and web builds with warnings treated as errors. GitHub runs it on every branch (the "Test" workflow) and it must pass before merging.
+
+Source code is inside `src/`, images/sounds/fonts go in `assets/`. Build output goes in `target/` (native) and `dist/` (web), both local only.
 
 ## Overview
 

@@ -1,0 +1,9 @@
+# Settings for `trunk serve` / `trunk build` (the browser build).
+[build]
+target = "index.html"
+dist = "dist"
+
+[serve]
+addresses = ["127.0.0.1"]
+port = 3000
+open = false
