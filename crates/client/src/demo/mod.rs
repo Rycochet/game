@@ -6,10 +6,12 @@
 //!   frozen) and rises back, as in the prototype.
 //! - K / C: cycle the player's token shape / attitude colour; X toggles
 //!   its "completed" state.
+//! - M: switch between the world map and the dungeon view, each keeping its
+//!   own player position.
 
 use bevy::prelude::*;
 
-use crate::common::{NORMAL_SNOW_LINE, Token, Weather};
+use crate::common::{GameView, NORMAL_SNOW_LINE, Token, Weather};
 use crate::player::{MapPosition, Player, PlayerSystems};
 
 /// How fast the snow line moves during the temperature cycle, in height units
@@ -22,8 +24,17 @@ impl Plugin for DemoPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AutoWalk>()
             .init_resource::<TemperatureCycle>()
+            .init_resource::<OtherViewPosition>()
             .add_systems(Update, (toggle_modes, temperature_cycle, cycle_token))
-            .add_systems(Update, auto_walk.in_set(PlayerSystems::Input));
+            .add_systems(
+                Update,
+                (
+                    switch_view,
+                    // It ignores walls, so only on the world map.
+                    auto_walk.run_if(in_state(GameView::WorldMap)),
+                )
+                    .in_set(PlayerSystems::Input),
+            );
     }
 }
 
@@ -61,6 +72,30 @@ fn auto_walk(walk: Res<AutoWalk>, mut player: Single<&mut MapPosition, With<Play
     if walk.0 {
         player.x += 1;
     }
+}
+
+/// The player's position in the view not on screen, swapped in by `switch_view`.
+/// Both views start the player at `(0, 0)` (the test room's centre).
+#[derive(Resource, Default)]
+struct OtherViewPosition(MapPosition);
+
+/// M switches between the world map and the dungeon view. Their grids are
+/// unrelated, so each keeps its own player position.
+fn switch_view(
+    keys: Res<ButtonInput<KeyCode>>,
+    view: Res<State<GameView>>,
+    mut next: ResMut<NextState<GameView>>,
+    mut other: ResMut<OtherViewPosition>,
+    mut player: Single<&mut MapPosition, With<Player>>,
+) {
+    if !keys.just_pressed(KeyCode::KeyM) {
+        return;
+    }
+    next.set(match view.get() {
+        GameView::WorldMap => GameView::Dungeon,
+        GameView::Dungeon => GameView::WorldMap,
+    });
+    std::mem::swap(&mut **player, &mut other.0);
 }
 
 /// K and C cycle the player's token through its shapes and attitudes, and X

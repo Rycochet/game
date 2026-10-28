@@ -22,14 +22,17 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
+| shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Floor/wall grid, test room, line of sight / light reach |
 | server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server: `ServerPlugin`, standalone binary |
-| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world, clock, weather, view stats, view facing, frame cap, `Token` |
+| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world and dungeon, `GameView` state, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |
 | client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks   |
 | client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
-| client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window cut to the camera (turn, tilt, zoom), edge faces, orbit camera, light, click picking, entity tokens |
-| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X token shape/colour/completed  |
+| client: view3d      | `crates/client/src/view3d/`     | `docs/context/client/view3d.md`       | Shared 3D camera (turn, tilt, zoom), entity tokens, `ViewGrid` |
+| client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window cut to the camera, edge faces, sun, click picking |
+| client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: floor/wall meshes, sight, see-through walls, grid light |
+| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X token shape/colour/completed, M world map / dungeon |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text                                     |
-| client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position, travel, walk, snow, camera view, screenshots |
+| client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start view and position, travel, walk, snow, camera view, screenshots |
 
 Also: `docs/context/decisions.md` is the log of architecture decisions. Check it before proposing a structural change, and follow what it records.
 

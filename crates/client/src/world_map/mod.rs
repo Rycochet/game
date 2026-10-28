@@ -5,25 +5,26 @@
 //! with flat earth faces on its edges. Right-drag turns and tilts the view
 //! around the player and the wheel zooms; the window stays lined up with the
 //! camera, so the world turns inside it. Home returns to the starting view.
+//! The camera and tokens come from `view3d`; this module draws the terrain
+//! while `GameView::WorldMap` is current.
 
-mod camera;
 mod picking;
 mod terrain;
-mod token;
 
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::light_consts;
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{CurrentWorld, GameClock, ViewFacing, ViewStats, Weather};
+use crate::common::{CurrentWorld, GameClock, GameView, ViewStats, Weather};
 use crate::player::{MapPosition, Player, PlayerSystems, SmoothPosition, TravelTo};
 use crate::surface_style::SurfaceStyle;
-pub use camera::OrbitCamera;
+use crate::view3d::{
+    OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, View3dSystems, ViewCamera,
+    ViewGrid,
+};
 use terrain::{HeightCache, TerrainGrid, ViewSquare};
-use token::{IconAnchor, TokenAssets, TokenView};
 
 /// World height units per 3D unit of height. 1.0 keeps the prototype's
 /// proportions.
@@ -32,21 +33,6 @@ pub const HEIGHT_SCALE: f32 = 1.0;
 /// Grid units from the player to each edge of the window (400×400, as the
 /// prototype).
 pub const HALF_SIZE: i64 = 200;
-
-/// Vertical field of view. Narrow (a "long lens" from far away) flattens the
-/// perspective, so the map's sides stay closer to vertical.
-pub const CAMERA_FOV_DEGREES: f32 = 20.0;
-
-/// Starting camera distance from the point it looks at; with the narrow field
-/// of view this frames the whole 400×400 window.
-pub const CAMERA_DISTANCE: f32 = 1100.0;
-
-/// Starting camera angle above the horizon.
-pub const CAMERA_PITCH_DEGREES: f32 = 34.0;
-
-/// In the starting view, the camera looks this far from the player towards
-/// itself (south at first), so the near edge and its face fit on screen.
-const LOOK_AHEAD: f32 = 40.0;
 
 /// How much of the prototype's slope shading is baked into the terrain
 /// colours (1.0 = the same as the prototype).
@@ -61,31 +47,36 @@ pub struct WorldMapPlugin;
 
 impl Plugin for WorldMapPlugin {
     fn build(&self, app: &mut App) {
+        let in_view = in_state(GameView::WorldMap);
         app.init_resource::<TerrainGrid>()
             .add_systems(Startup, spawn_view)
+            .add_systems(OnEnter(GameView::WorldMap), show_scene)
+            .add_systems(OnExit(GameView::WorldMap), hide_scene)
             .add_systems(
                 Update,
-                (camera::control_with_mouse, pick_on_click)
-                    .chain()
-                    .in_set(PlayerSystems::Input),
+                pick_on_click
+                    .in_set(PlayerSystems::Input)
+                    .run_if(in_view.clone()),
             )
             .add_systems(
                 Update,
-                (
-                    update_terrain,
-                    token::resize_tokens,
-                    token::sync_tokens,
-                    token::sync_icons,
-                    place_camera_and_tokens,
-                )
-                    .chain()
-                    .after(PlayerSystems::Travel),
+                update_terrain
+                    .after(PlayerSystems::Travel)
+                    .run_if(in_view.clone()),
+            )
+            .add_systems(
+                Update,
+                rest_tokens_on_terrain
+                    .after(View3dSystems::Place)
+                    .run_if(in_view),
             );
     }
 }
 
+/// Everything this view draws (terrain, edge faces, sun), hidden while
+/// another view is current.
 #[derive(Component)]
-struct ViewCamera;
+struct WorldMapScene;
 
 /// Entities that sit at the player's position: terrain and edge faces.
 #[derive(Component)]
@@ -97,52 +88,34 @@ struct Terrain;
 #[derive(Component)]
 struct EdgeFaces;
 
+/// Spawns the scene, hidden unless this is the current view.
 fn spawn_view(
     mut commands: Commands,
+    view: Res<State<GameView>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    // Everything starts at the origin; the systems below move it to the player.
-    let orbit = OrbitCamera::new(
-        CAMERA_PITCH_DEGREES.to_radians(),
-        CAMERA_DISTANCE,
-        LOOK_AHEAD,
-    );
-    commands.spawn((
-        ViewCamera,
-        orbit,
-        Camera3d::default(),
-        Projection::Perspective(PerspectiveProjection {
-            fov: CAMERA_FOV_DEGREES.to_radians(),
-            // The camera is far away, so draw well beyond the default range.
-            far: CAMERA_DISTANCE * 2.0,
-            ..default()
-        }),
-        orbit.transform(Vec3::ZERO),
-        // The default tonemapping desaturates colours (pastel); show the
-        // surface colours as authored instead.
-        Tonemapping::None,
-        // Dithering only works with tonemapping.
-        DebandDither::Disabled,
-    ));
-
+    let visibility = if *view.get() == GameView::WorldMap {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
+    // Everything starts at the origin; `update_terrain` moves it to the player.
     // Low sun from the east, matching the prototype's shading. It stays in the
     // east when the view turns, like the slope shading baked into the terrain.
     commands.spawn((
+        WorldMapScene,
         DirectionalLight {
             illuminance: SUN_LUX,
             shadow_maps_enabled: true,
             ..default()
         },
         Transform::from_xyz(1.0, 0.6, 0.3).looking_at(Vec3::ZERO, Vec3::Y),
+        visibility,
     ));
-    commands.insert_resource(GlobalAmbientLight {
-        brightness: AMBIENT_BRIGHTNESS,
-        ..default()
-    });
 
     commands.spawn((
+        WorldMapScene,
         Terrain,
         FollowsPlayer,
         // Placeholder until the first update cuts the real window.
@@ -156,9 +129,11 @@ fn spawn_view(
         // The mesh is replaced as the player moves, so its bounds go stale.
         NoFrustumCulling,
         Transform::default(),
+        visibility,
     ));
 
     commands.spawn((
+        WorldMapScene,
         EdgeFaces,
         FollowsPlayer,
         // Placeholder until the first update builds the real faces.
@@ -171,16 +146,37 @@ fn spawn_view(
         })),
         NoFrustumCulling,
         Transform::default(),
-    ));
-
-    commands.insert_resource(TokenAssets::new(
-        &mut meshes,
-        &mut materials,
-        window.physical_height() as f32,
-        orbit.distance,
+        visibility,
     ));
 
     commands.init_resource::<HeightCache>();
+}
+
+/// Becoming the current view: shows the scene, sets the sun's ambient fill,
+/// and tells `view3d` the grid is 1 unit per point with the camera looking at
+/// sea level, so it doesn't bob over hills.
+fn show_scene(
+    mut commands: Commands,
+    world: Res<CurrentWorld>,
+    mut scene: Query<&mut Visibility, With<WorldMapScene>>,
+) {
+    for mut visibility in &mut scene {
+        *visibility = Visibility::Inherited;
+    }
+    commands.insert_resource(GlobalAmbientLight {
+        brightness: AMBIENT_BRIGHTNESS,
+        ..default()
+    });
+    commands.insert_resource(ViewGrid {
+        cell_size: 1.0,
+        floor: world.params.sea_level as f32 * HEIGHT_SCALE,
+    });
+}
+
+fn hide_scene(mut scene: Query<&mut Visibility, With<WorldMapScene>>) {
+    for mut visibility in &mut scene {
+        *visibility = Visibility::Hidden;
+    }
 }
 
 /// When the player reaches a new grid point, the hour, weather or style change,
@@ -260,69 +256,33 @@ fn update_terrain(
     stats.summary = format!("World map: fill {fill_ms:.1} ms, cut window {cut_ms:.1} ms");
 }
 
-/// Every frame: the camera follows the player's exact position, so travelling
-/// looks smooth (the terrain itself moves a whole step at a time). Tokens sit
-/// at their owners' exact positions, with icon anchors facing the camera. Also
-/// tells other modules which way the view is turned (`ViewFacing`).
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-fn place_camera_and_tokens(
-    player: Single<&SmoothPosition, With<Player>>,
+/// Every frame, after `view3d` has placed the tokens: lifts each one onto the
+/// highest ground under it, so it never sinks into a slope.
+fn rest_tokens_on_terrain(
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
-    assets: Res<TokenAssets>,
     positions: Query<&SmoothPosition>,
-    mut facing: ResMut<ViewFacing>,
-    camera: Single<
-        (&OrbitCamera, &mut Transform),
-        (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>),
-    >,
-    mut views: Query<(&TokenView, &mut Transform), Without<IconAnchor>>,
-    mut anchors: Query<&mut Transform, (With<IconAnchor>, Without<ViewCamera>, Without<TokenView>)>,
+    mut views: Query<(&TokenView, &mut Transform)>,
 ) {
     let Some(mut cache) = cache else {
         return;
     };
-    let (orbit, mut camera) = camera.into_inner();
-
-    // The camera looks at sea level, so it doesn't bob over hills.
-    let target = Vec3::new(
-        player.x as f32,
-        world.params.sea_level as f32 * HEIGHT_SCALE,
-        player.y as f32,
-    );
-    *camera = orbit.transform(target);
-    // Only write when it changes, so change detection stays meaningful.
-    facing.set_if_neq(ViewFacing(orbit.quarter_turns()));
-
     let water_level = world.params.water_level(clock.hour as f64);
     for (view, mut transform) in &mut views {
         let Ok(position) = positions.get(view.owner) else {
             continue;
         };
-        // Rest on the highest ground under the token, so it never sinks in.
         let ground = terrain::highest_shown_height(
             &mut cache,
             &world.surface,
             &style,
             water_level,
             (position.x, position.y),
-            (token::DIAMETER / 2.0) as f64,
+            (TOKEN_DIAMETER / 2.0) as f64,
         );
-        transform.translation = Vec3::new(
-            position.x as f32,
-            ground + token::HALF_THICKNESS,
-            position.y as f32,
-        );
-    }
-
-    // Token views never rotate, so turning each anchor to the camera's
-    // rotation makes it face the screen; it sits above the token on screen,
-    // whatever the camera's angle.
-    for mut anchor in &mut anchors {
-        anchor.rotation = camera.rotation;
-        anchor.translation = assets.icon_offset(camera.rotation, orbit.pitch, orbit.home_pitch());
+        transform.translation.y = ground + TOKEN_HALF_THICKNESS;
     }
 }
 

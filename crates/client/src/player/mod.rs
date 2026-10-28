@@ -4,13 +4,18 @@
 use bevy::math::DVec2;
 use bevy::prelude::*;
 
-use crate::common::{Icon, Token, ViewFacing};
+use crate::common::{CurrentDungeon, GameView, Icon, LightSource, Token, ViewFacing};
 
 /// While a key is held, how often the player takes another step.
 const STEP_REPEAT_SECONDS: f32 = 0.05;
 
-/// Travel speed towards a clicked point, in grid units per second.
+/// How far the player's light reaches in dungeons, in cells.
+const LIGHT_RADIUS: u32 = 6;
+
+/// Travel speed towards a clicked point, in grid units per second: world map
+/// points, or dungeon cells (which are much bigger on screen).
 const TRAVEL_SPEED: f64 = 60.0;
+const DUNGEON_TRAVEL_SPEED: f64 = 12.0;
 
 pub struct PlayerPlugin;
 
@@ -44,8 +49,9 @@ pub enum PlayerSystems {
 #[derive(Component)]
 pub struct Player;
 
-/// Position on the world grid (1 unit is about 1 km). `y` increases southwards
-/// (towards the viewer on the world map). While travelling, this is the
+/// Position on the current view's grid: the world grid (1 unit is about 1 km)
+/// or a dungeon's cells. `y` increases southwards (towards the viewer in the
+/// starting view). While travelling, this is the
 /// nearest grid point to `SmoothPosition`.
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MapPosition {
@@ -90,14 +96,21 @@ fn spawn_player(mut commands: Commands) {
         // A white circle (no attitude): drawn as a cylinder on the map.
         Token::default(),
         Icon("monsters/humanarcher.png".into()),
+        LightSource {
+            radius: LIGHT_RADIUS,
+            colour: Color::WHITE,
+        },
     ));
 }
 
 /// Steps one grid unit when a key is pressed, then repeats while it's held.
+/// In a dungeon, walls block the step.
 fn move_player(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     facing: Res<ViewFacing>,
+    view: Res<State<GameView>>,
+    dungeon: Res<CurrentDungeon>,
     mut repeat: ResMut<StepRepeat>,
     mut player: Single<&mut MapPosition, With<Player>>,
 ) {
@@ -128,8 +141,12 @@ fn move_player(
     if (dx != 0 || dy != 0) && (just_pressed || repeat.0.just_finished()) {
         // The keys mean screen directions, so follow the way the map is turned.
         let (dx, dy) = facing.screen_to_grid(dx, dy);
-        player.x += dx;
-        player.y += dy;
+        let (x, y) = (player.x + dx, player.y + dy);
+        if *view.get() == GameView::Dungeon && !dungeon.level.is_open(x, y) {
+            return;
+        }
+        player.x = x;
+        player.y = y;
     }
 }
 
@@ -149,6 +166,7 @@ const MOVE_KEYS: [KeyCode; 8] = [
 /// cancels any travel and jumps there.
 fn travel(
     time: Res<Time>,
+    view: Res<State<GameView>>,
     mut requests: MessageReader<TravelTo>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
@@ -171,7 +189,11 @@ fn travel(
         return;
     };
     let from = DVec2::new(smooth.x, smooth.y);
-    let step = TRAVEL_SPEED * time.delta_secs_f64();
+    let speed = match view.get() {
+        GameView::WorldMap => TRAVEL_SPEED,
+        GameView::Dungeon => DUNGEON_TRAVEL_SPEED,
+    };
+    let step = speed * time.delta_secs_f64();
     let now = if from.distance(target) <= step {
         // Arrived: land exactly on the grid point.
         travel.target = None;

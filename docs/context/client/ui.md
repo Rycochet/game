@@ -4,7 +4,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Files
 
-- `crates/client/src/ui/mod.rs`: `UiPlugin`; spawns and updates the status text (controls including right-drag, wheel and Home for the map camera, demo keys with their state, snow line, position, hour, `ViewStats` line).
+- `crates/client/src/ui/mod.rs`: `UiPlugin`; spawns and updates the status text (controls including M to switch views, right-drag, wheel and Home for the camera, demo keys with their state, snow line, position, hour, `ViewStats` line).
 
 ## Public API
 
@@ -21,4 +21,4 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 ## Notes
 
 - Reads other modules' public resources/components; never mutates them. Views report through `common::ViewStats` so `ui` doesn't depend on any view module.
-- Bevy UI draws on the world map's camera (the only one).
+- Bevy UI draws on `view3d`'s camera (the only one).
