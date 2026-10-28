@@ -2,9 +2,11 @@
 //! See `docs/context/client/world_map.md`.
 //!
 //! Like the prototype, it shows a fixed square window of terrain around the
-//! player with a flat front face. The window is one mesh that moves with the
+//! player with flat earth faces on its edges. Right-drag turns the view around
+//! the player; Home turns it back to north. The window is one mesh that moves with the
 //! player; each step reuses cached heights and only samples the new edge.
 
+mod camera;
 mod picking;
 mod terrain;
 mod token;
@@ -16,9 +18,10 @@ use bevy::prelude::*;
 use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{CurrentWorld, GameClock, ViewStats, Weather};
+use crate::common::{CurrentWorld, GameClock, ViewFacing, ViewStats, Weather};
 use crate::player::{MapPosition, Player, PlayerSystems, SmoothPosition, TravelTo};
 use crate::surface_style::SurfaceStyle;
+pub use camera::OrbitCamera;
 use terrain::HeightCache;
 use token::{IconAnchor, TokenAssets, TokenView};
 
@@ -38,12 +41,12 @@ pub const CAMERA_FOV_DEGREES: f32 = 20.0;
 /// this frames the whole 400×400 window.
 pub const CAMERA_DISTANCE: f32 = 1100.0;
 
-/// Camera angle above the horizon, looking north.
+/// Camera angle above the horizon.
 pub const CAMERA_PITCH_DEGREES: f32 = 34.0;
 
-/// The camera looks this far south of the player, so the front edge and its
-/// face fit on screen.
-const LOOK_SOUTH: f32 = 40.0;
+/// The camera looks this far from the player towards itself (south in the
+/// default view), so the near edge and its face fit on screen.
+const LOOK_AHEAD: f32 = 40.0;
 
 /// How much of the prototype's slope shading is baked into the terrain
 /// colours (1.0 = the same as the prototype).
@@ -59,7 +62,12 @@ pub struct WorldMapPlugin;
 impl Plugin for WorldMapPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_view)
-            .add_systems(Update, pick_on_click.in_set(PlayerSystems::Input))
+            .add_systems(
+                Update,
+                (camera::turn_with_mouse, pick_on_click)
+                    .chain()
+                    .in_set(PlayerSystems::Input),
+            )
             .add_systems(
                 Update,
                 (
@@ -78,7 +86,7 @@ impl Plugin for WorldMapPlugin {
 #[derive(Component)]
 struct ViewCamera;
 
-/// Entities that sit at the player's position: terrain and front face.
+/// Entities that sit at the player's position: terrain and edge faces.
 #[derive(Component)]
 struct FollowsPlayer;
 
@@ -86,7 +94,7 @@ struct FollowsPlayer;
 struct Terrain;
 
 #[derive(Component)]
-struct FrontFace;
+struct EdgeFaces;
 
 fn spawn_view(
     mut commands: Commands,
@@ -95,8 +103,15 @@ fn spawn_view(
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
     // Everything starts at the origin; the systems below move it to the player.
+    let orbit = OrbitCamera {
+        yaw: 0.0,
+        pitch: CAMERA_PITCH_DEGREES.to_radians(),
+        distance: CAMERA_DISTANCE,
+        look_ahead: LOOK_AHEAD,
+    };
     commands.spawn((
         ViewCamera,
+        orbit,
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
             fov: CAMERA_FOV_DEGREES.to_radians(),
@@ -104,7 +119,7 @@ fn spawn_view(
             far: CAMERA_DISTANCE * 3.0,
             ..default()
         }),
-        Transform::from_translation(camera_offset()).looking_at(Vec3::ZERO, Vec3::Y),
+        orbit.transform(Vec3::ZERO),
         // The default tonemapping desaturates colours (pastel); show the
         // surface colours as authored instead.
         Tonemapping::None,
@@ -112,7 +127,8 @@ fn spawn_view(
         DebandDither::Disabled,
     ));
 
-    // Low sun from the east, matching the prototype's shading.
+    // Low sun from the east, matching the prototype's shading. It stays in the
+    // east when the view turns, like the slope shading baked into the terrain.
     commands.spawn((
         DirectionalLight {
             illuminance: SUN_LUX,
@@ -142,9 +158,9 @@ fn spawn_view(
     ));
 
     commands.spawn((
-        FrontFace,
+        EdgeFaces,
         FollowsPlayer,
-        // Placeholder until the first update builds the real face.
+        // Placeholder until the first update builds the real faces.
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
         // Unlit, so the colours match the prototype exactly.
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -166,7 +182,7 @@ fn spawn_view(
 }
 
 /// When the player reaches a new grid point (or the hour, weather or style
-/// changes), moves the terrain there and rebuilds its heights and front face.
+/// changes), moves the terrain there and rebuilds its heights and edge faces.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn follow_player(
     player: Single<Ref<MapPosition>, With<Player>>,
@@ -179,7 +195,7 @@ fn follow_player(
     mut stats: ResMut<ViewStats>,
     mut followers: Query<&mut Transform, With<FollowsPlayer>>,
     terrain: Single<&Mesh3d, With<Terrain>>,
-    front: Single<&Mesh3d, With<FrontFace>>,
+    faces: Single<&Mesh3d, With<EdgeFaces>>,
 ) {
     // The cache is inserted by `spawn_view`'s commands, so it can be missing
     // on the very first frame.
@@ -212,7 +228,7 @@ fn follow_player(
             centre,
         );
     }
-    let front_mesh = terrain::build_front(
+    let faces_mesh = terrain::build_edges(
         &mut cache,
         &world.surface,
         &style,
@@ -220,8 +236,8 @@ fn follow_player(
         weather.snow_line,
         centre,
     );
-    if let Some(mut mesh) = meshes.get_mut(&front.0) {
-        *mesh = front_mesh;
+    if let Some(mut mesh) = meshes.get_mut(&faces.0) {
+        *mesh = faces_mesh;
     }
 
     let ms = start.elapsed().as_secs_f32() * 1000.0;
@@ -230,7 +246,8 @@ fn follow_player(
 
 /// Every frame: the camera follows the player's exact position, so travelling
 /// looks smooth (the terrain itself moves a whole step at a time). Tokens sit
-/// at their owners' exact positions, with icon anchors facing the camera.
+/// at their owners' exact positions, with icon anchors facing the camera. Also
+/// tells other modules which way the view is turned (`ViewFacing`).
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn place_camera_and_tokens(
     player: Single<&SmoothPosition, With<Player>>,
@@ -239,22 +256,28 @@ fn place_camera_and_tokens(
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
     positions: Query<&SmoothPosition>,
-    mut camera: Single<&mut Transform, (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>)>,
+    mut facing: ResMut<ViewFacing>,
+    camera: Single<
+        (&OrbitCamera, &mut Transform),
+        (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>),
+    >,
     mut views: Query<(&TokenView, &mut Transform), Without<IconAnchor>>,
     mut anchors: Query<&mut Transform, (With<IconAnchor>, Without<ViewCamera>, Without<TokenView>)>,
 ) {
     let Some(mut cache) = cache else {
         return;
     };
-    let (x, y) = (player.x as f32, player.y as f32);
+    let (orbit, mut camera) = camera.into_inner();
 
     // The camera looks at sea level, so it doesn't bob over hills.
     let target = Vec3::new(
-        x,
+        player.x as f32,
         world.params.sea_level as f32 * HEIGHT_SCALE,
-        y + LOOK_SOUTH,
+        player.y as f32,
     );
-    **camera = Transform::from_translation(target + camera_offset()).looking_at(target, Vec3::Y);
+    *camera = orbit.transform(target);
+    // Only write when it changes, so change detection stays meaningful.
+    facing.set_if_neq(ViewFacing(orbit.quarter_turns()));
 
     let water_level = world.params.water_level(clock.hour as f64);
     for (view, mut transform) in &mut views {
@@ -318,10 +341,4 @@ fn pick_on_click(
     ) {
         travel.write(TravelTo { x, y });
     }
-}
-
-/// Camera position relative to the point it looks at: south and above.
-fn camera_offset() -> Vec3 {
-    let pitch = CAMERA_PITCH_DEGREES.to_radians();
-    Vec3::new(0.0, pitch.sin(), pitch.cos()) * CAMERA_DISTANCE
 }

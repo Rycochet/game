@@ -127,3 +127,7 @@ Entity icons come from David E. Gervais's tiles library (<http://pousse.rapiere.
 ## 2026-10-28: Native releases ship the assets folder
 
 All assets must be in the native builds. Release executables load `assets/` from their own folder, so `cargo xtask package` assembles `target/package/` (client, server, `assets/`) and the Build workflow uploads that. Assets stay files beside the executable rather than embedded in it, so art can be replaced (the Gervais tiles are planned to be replaced by commissioned artwork) without rebuilding, and the executable stays small. Native debug builds read the source `crates/client/assets/` directly.
+
+## 2026-10-28: World map camera turns around the player
+
+Chosen by the owner: right-drag turns the world map view around the player (rotation only: no tilt or zoom), the view stays where it is left, and Home turns it back to north. The camera is a reusable `OrbitCamera` (yaw, pitch, distance, look-ahead around a target) in `world_map/camera.rs`, since future 3D views will build on the world map renderer. The slab gets earth faces on all four edges (only the ones towards the camera show). The sun and the baked slope shading stay fixed to the world (sun in the east), so lighting is consistent rather than identical from every side. Arrow keys / WASD follow the camera (owner's choice): each steps in the grid direction nearest to its screen direction, through `common::ViewFacing`, so steps stay on the grid.

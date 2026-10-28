@@ -1,4 +1,4 @@
-//! The terrain window mesh and the front face, both rebuilt from a height
+//! The terrain window mesh and its edge faces, both rebuilt from a height
 //! cache whenever the player moves.
 
 use bevy::asset::RenderAssetUsages;
@@ -12,7 +12,7 @@ use crate::surface_style::{SurfaceStyle, hsl_to_rgba};
 /// Vertices along each side of the window.
 const SIDE: usize = (2 * HALF_SIZE + 1) as usize;
 
-/// Bottom of the front face, as a fraction of the water level (0 = height 0,
+/// Bottom of the edge faces, as a fraction of the water level (0 = height 0,
 /// as in the prototype; raised to make the face shorter).
 const FRONT_BASE: f32 = 0.3;
 
@@ -154,9 +154,20 @@ pub fn update_terrain(
     }
 }
 
-/// The flat front face along the window's southern edge: water depth (where
-/// underwater) above earth, down to `FRONT_BASE` × the water level.
-pub fn build_front(
+/// The window's four edges, each as (first corner, step along the edge), in
+/// grid offsets from the centre. Each is walked so its face points outwards:
+/// south, north, east, west.
+const EDGES: [((i64, i64), (i64, i64)); 4] = [
+    ((-HALF_SIZE, HALF_SIZE), (1, 0)),
+    ((HALF_SIZE, -HALF_SIZE), (-1, 0)),
+    ((HALF_SIZE, HALF_SIZE), (0, -1)),
+    ((-HALF_SIZE, -HALF_SIZE), (0, 1)),
+];
+
+/// Flat faces down all four edges of the window (one mesh): water depth
+/// (where underwater) above earth, down to `FRONT_BASE` × the water level.
+/// They face outwards, so only the sides towards the camera are drawn.
+pub fn build_edges(
     cache: &mut HeightCache,
     surface: &Surface,
     style: &SurfaceStyle,
@@ -168,36 +179,40 @@ pub fn build_front(
     let base = water_top * FRONT_BASE;
     let (h, s, l) = style.earth_face;
     let earth_colour = linear(hsl_to_rgba(h, s, l));
-    let z = HALF_SIZE as f32;
 
-    let mut positions = Vec::with_capacity(SIDE * 4);
-    let mut colours = Vec::with_capacity(SIDE * 4);
-    for dx in -HALF_SIZE..=HALF_SIZE {
-        let sample = cache.get(surface, cx + dx, cy + HALF_SIZE);
-        let west = cache.get(surface, cx + dx - 1, cy + HALF_SIZE).height;
-        let ground = (sample.height as f32 * HEIGHT_SCALE).max(base);
-        // Half the surface lightness, like the prototype's front slice (this
-        // also ices over with the water).
-        let (band, lightness) = style.shade(sample, west, water_level, snow_line, 0.0);
-        let water_colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness / 2.0));
-        let x = dx as f32;
-        // Earth strip: ground down to the base.
-        positions.extend_from_slice(&[[x, ground, z], [x, base, z]]);
-        colours.extend_from_slice(&[earth_colour, earth_colour]);
-        // Water strip: water surface down to the ground (zero height on land).
-        positions.extend_from_slice(&[[x, water_top.max(ground), z], [x, ground, z]]);
-        colours.extend_from_slice(&[water_colour, water_colour]);
-    }
+    let mut positions = Vec::with_capacity(EDGES.len() * SIDE * 4);
+    let mut colours = Vec::with_capacity(EDGES.len() * SIDE * 4);
+    let mut indices = Vec::with_capacity(EDGES.len() * (SIDE - 1) * 12);
+    for ((start_x, start_z), (step_x, step_z)) in EDGES {
+        let first = positions.len() as u32;
+        for i in 0..SIDE as i64 {
+            let (dx, dz) = (start_x + step_x * i, start_z + step_z * i);
+            let sample = cache.get(surface, cx + dx, cy + dz);
+            let west = cache.get(surface, cx + dx - 1, cy + dz).height;
+            let ground = (sample.height as f32 * HEIGHT_SCALE).max(base);
+            // Half the surface lightness, like the prototype's front slice
+            // (this also ices over with the water).
+            let (band, lightness) = style.shade(sample, west, water_level, snow_line, 0.0);
+            let water_colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness / 2.0));
+            let (x, z) = (dx as f32, dz as f32);
+            // Earth strip: ground down to the base.
+            positions.extend_from_slice(&[[x, ground, z], [x, base, z]]);
+            colours.extend_from_slice(&[earth_colour, earth_colour]);
+            // Water strip: water surface down to the ground (zero height on
+            // land).
+            positions.extend_from_slice(&[[x, water_top.max(ground), z], [x, ground, z]]);
+            colours.extend_from_slice(&[water_colour, water_colour]);
+        }
 
-    let mut indices = Vec::with_capacity((SIDE - 1) * 12);
-    for column in 0..SIDE as u32 - 1 {
-        let here = column * 4;
-        let next = here + 4;
-        for strip in [0, 2] {
-            let (top, bottom) = (here + strip, here + strip + 1);
-            let (next_top, next_bottom) = (next + strip, next + strip + 1);
-            // Facing south (towards the camera).
-            indices.extend_from_slice(&[top, bottom, next_top, next_top, bottom, next_bottom]);
+        for column in 0..SIDE as u32 - 1 {
+            let here = first + column * 4;
+            let next = here + 4;
+            for strip in [0, 2] {
+                let (top, bottom) = (here + strip, here + strip + 1);
+                let (next_top, next_bottom) = (next + strip, next + strip + 1);
+                // Anticlockwise seen from outside, so the face points out.
+                indices.extend_from_slice(&[top, bottom, next_top, next_top, bottom, next_bottom]);
+            }
         }
     }
 

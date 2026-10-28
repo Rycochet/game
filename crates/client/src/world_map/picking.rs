@@ -16,7 +16,8 @@ const STEP: f32 = 0.5;
 const MAX_HEIGHT: f32 = 128.0 * HEIGHT_SCALE;
 
 /// The grid point the ray first hits on the terrain window centred on
-/// `centre`, or `None` if it misses (or only hits the front face).
+/// `centre`, or `None` if it misses (or only hits an edge face). Works from
+/// any direction, so it follows the camera when the view turns.
 pub fn pick(
     ray: Ray3d,
     centre: (i64, i64),
@@ -49,7 +50,7 @@ pub fn pick(
             style.shown_height(cache.get(surface, x, z), water_level) as f32 * HEIGHT_SCALE;
         if point.y <= ground {
             // Below the surface on the very first sample inside the window
-            // means the ray came through the front face, not the top.
+            // means the ray came through an edge face, not the top.
             return entered.then_some((x, z));
         }
         entered = true;
@@ -93,7 +94,7 @@ mod tests {
     }
 
     #[test]
-    fn through_the_front_face_misses() {
+    fn through_an_edge_face_misses() {
         let (surface, style, mut cache, water) = setup();
         // Low and level from the south: enters the window below the surface.
         let hit = pick(
@@ -105,6 +106,37 @@ mod tests {
             water,
         );
         assert_eq!(hit, None);
+    }
+
+    #[test]
+    fn through_the_north_face_misses() {
+        let (surface, style, mut cache, water) = setup();
+        // As above, from the north (the view turned round).
+        let hit = pick(
+            ray(Vec3::new(0.0, 5.0, -600.0), Vec3::new(0.0, 4.0, 0.0)),
+            (0, 0),
+            &mut cache,
+            &surface,
+            &style,
+            water,
+        );
+        assert_eq!(hit, None);
+    }
+
+    #[test]
+    fn from_the_east_hits_the_top() {
+        let (surface, style, mut cache, water) = setup();
+        // Looking west from high up: lands somewhere on the window.
+        let hit = pick(
+            ray(Vec3::new(900.0, 600.0, 0.0), Vec3::new(0.0, 0.0, 0.0)),
+            (0, 0),
+            &mut cache,
+            &surface,
+            &style,
+            water,
+        );
+        let (x, y) = hit.expect("should hit the terrain");
+        assert!(x.abs() <= HALF_SIZE && y.abs() <= 1);
     }
 
     #[test]

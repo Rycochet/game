@@ -10,6 +10,8 @@
 //! - `GAME_TOKEN=shape,attitude[,1]`: the player's token, as numbers (indexes
 //!   into `TokenShape::ALL` and `Attitude::ALL`), e.g. `3,2` is a blue
 //!   hexagon; a third value of `1` makes it completed.
+//! - `GAME_YAW=degrees`: start with the map view turned (positive moves the
+//!   camera towards the east; 90 looks west, 180 looks south).
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 
@@ -22,6 +24,7 @@ use bevy::window::PrimaryWindow;
 use crate::common::{Attitude, Token, TokenShape, Weather};
 use crate::demo::AutoWalk;
 use crate::player::{MapPosition, Player, TravelTo};
+use crate::world_map::OrbitCamera;
 
 /// Time between taking the screenshot and quitting, so it can be saved.
 const SAVE_SECONDS: f32 = 2.0;
@@ -78,6 +81,17 @@ impl Plugin for DevToolsPlugin {
                     **token = new_token;
                 },
             );
+        }
+
+        if let Some(degrees) = env::var("GAME_YAW")
+            .ok()
+            .and_then(|v| v.parse::<f32>().ok())
+        {
+            app.add_systems(PostStartup, move |mut cameras: Query<&mut OrbitCamera>| {
+                for mut camera in &mut cameras {
+                    camera.yaw = degrees.to_radians();
+                }
+            });
         }
 
         if let Ok(path) = env::var("GAME_SCREENSHOT") {
