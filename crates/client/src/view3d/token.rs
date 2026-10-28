@@ -1,7 +1,7 @@
-//! Tokens: how entities with a `common::Token` are drawn on the world map.
+//! Tokens: how entities with a `common::Token` are drawn in the 3D views.
 //!
 //! Each token is a flat prism (its shape extruded upwards) in its attitude's
-//! colour, with a black outline, resting on the terrain at its owner's exact
+//! colour, with a black outline, standing on the ground at its owner's exact
 //! position. Above it sits an icon anchor that always faces the camera,
 //! showing the entity's 2D `Icon` if it has one.
 //!

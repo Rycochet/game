@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
+use shared::dungeon::Level;
 use shared::rng::Seed;
 use shared::surface::Surface;
 use shared::world::WorldParams;
@@ -35,6 +36,10 @@ impl Plugin for CommonPlugin {
                 surface: Surface::new(&params),
                 params,
             })
+            .insert_resource(CurrentDungeon {
+                level: Level::test_room(),
+            })
+            .init_state::<GameView>()
             .init_resource::<GameClock>()
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()
@@ -49,6 +54,36 @@ pub struct CurrentWorld {
     pub params: WorldParams,
     pub surface: Surface,
 }
+
+/// Which view is on screen: the world's surface, or a dungeon or building.
+/// Each view shows its scene only while it is the current one.
+#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum GameView {
+    WorldMap,
+    /// The starting view while the dungeon view is being tested.
+    #[default]
+    Dungeon,
+}
+
+/// The dungeon or building the player is in (the test room for now). Its
+/// rules (walls block movement, sight and light) live in `shared::dungeon`.
+#[derive(Resource)]
+pub struct CurrentDungeon {
+    pub level: Level,
+}
+
+/// Gives out light in dungeons, `radius` cells (straight-line distance), in
+/// `colour`. Put it on any entity with a position.
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+pub struct LightSource {
+    pub radius: u32,
+    pub colour: Color,
+}
+
+/// Shares its sight with the player in dungeons: what it can see is shown
+/// too. The player always counts; put this on allies or summoned eyes.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct SharesSight;
 
 /// In-game time of day, in whole hours (`0..24`). Only changes once per hour,
 /// so systems can redraw on `is_changed()`.

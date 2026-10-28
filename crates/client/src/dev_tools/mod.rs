@@ -1,6 +1,7 @@
 //! Developer helpers, controlled by environment variables. Native only; does
 //! nothing unless a variable is set. See `docs/context/client/dev_tools.md`.
 //!
+//! - `GAME_PLACE=world`: start on the world map rather than in the dungeon.
 //! - `GAME_POS=x,y`: starting grid position.
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked).
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
@@ -24,10 +25,10 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{Attitude, Token, TokenShape, Weather};
+use crate::common::{Attitude, GameView, Token, TokenShape, Weather};
 use crate::demo::AutoWalk;
 use crate::player::{MapPosition, Player, TravelTo};
-use crate::world_map::OrbitCamera;
+use crate::view3d::OrbitCamera;
 
 /// Time between taking the screenshot and quitting, so it can be saved.
 const SAVE_SECONDS: f32 = 2.0;
@@ -36,6 +37,12 @@ pub struct DevToolsPlugin;
 
 impl Plugin for DevToolsPlugin {
     fn build(&self, app: &mut App) {
+        if env::var("GAME_PLACE").is_ok_and(|place| place == "world") {
+            app.add_systems(Startup, |mut next: ResMut<NextState<GameView>>| {
+                next.set(GameView::WorldMap);
+            });
+        }
+
         if let Some((x, y)) = env::var("GAME_POS").ok().and_then(|pos| parse_pos(&pos)) {
             app.add_systems(
                 PostStartup,

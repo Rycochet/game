@@ -7,9 +7,11 @@ mod common;
 mod demo;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
+mod dungeon_map;
 mod player;
 mod surface_style;
 mod ui;
+mod view3d;
 mod world_map;
 
 use bevy::prelude::*;
@@ -46,7 +48,9 @@ fn main() {
         common::CommonPlugin,
         surface_style::SurfaceStylePlugin,
         player::PlayerPlugin,
+        view3d::View3dPlugin,
         world_map::WorldMapPlugin,
+        dungeon_map::DungeonMapPlugin,
         demo::DemoPlugin,
         ui::UiPlugin,
     ));

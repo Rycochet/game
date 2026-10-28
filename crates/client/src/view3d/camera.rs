@@ -1,6 +1,5 @@
 //! A camera that circles a point, turned and tilted by dragging with the right
-//! mouse button and zoomed with the wheel. Nothing here is specific to the
-//! world map, so other 3D views can use it too.
+//! mouse button and zoomed with the wheel. Shared by every 3D view.
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
