@@ -4,8 +4,8 @@
 use bevy::prelude::*;
 use shared::surface::Surface;
 
-use super::terrain::HeightCache;
-use super::{HALF_SIZE, HEIGHT_SCALE};
+use super::HEIGHT_SCALE;
+use super::terrain::{HeightCache, ViewSquare};
 use crate::surface_style::SurfaceStyle;
 
 /// Distance between samples along the ray, in grid units. Under one unit, so
@@ -15,14 +15,13 @@ const STEP: f32 = 0.5;
 /// Highest the terrain can be drawn (surface heights stay under 128).
 const MAX_HEIGHT: f32 = 128.0 * HEIGHT_SCALE;
 
-/// The grid point the ray first hits on the terrain window centred on
-/// `centre` and lined up with `axes` (the camera's right and
-/// towards-the-camera directions along the ground), or `None` if it misses (or only hits an edge face). Works from
+/// The grid point the ray first hits on the terrain window `square` centred
+/// on `centre`, or `None` if it misses (or only hits an edge face). Works from
 /// any direction, so it follows the camera when the view turns.
 pub fn pick(
     ray: Ray3d,
     centre: (i64, i64),
-    (right, towards): (Vec2, Vec2),
+    square: ViewSquare,
     cache: &mut HeightCache,
     surface: &Surface,
     style: &SurfaceStyle,
@@ -34,7 +33,6 @@ pub fn pick(
     }
     // Skip the empty air above the highest possible terrain.
     let start = ((ray.origin.y - MAX_HEIGHT) / -direction.y).max(0.0);
-    let half = HALF_SIZE as f32;
     let mut entered = false;
 
     let mut t = start;
@@ -44,7 +42,7 @@ pub fn pick(
         let (x, z) = (point.x.round() as i64, point.z.round() as i64);
         // Position across and along the window.
         let offset = Vec2::new(point.x - centre.0 as f32, point.z - centre.1 as f32);
-        if offset.dot(right).abs() > half || offset.dot(towards).abs() > half {
+        if !square.contains(offset) {
             if entered {
                 return None; // Passed over the far edge.
             }
@@ -64,6 +62,7 @@ pub fn pick(
 
 #[cfg(test)]
 mod tests {
+    use super::super::HALF_SIZE;
     use super::*;
     use shared::rng::Seed;
     use shared::world::WorldParams;
@@ -79,8 +78,12 @@ mod tests {
         )
     }
 
-    /// The window's axes in the starting view, looking north.
-    const NORTH_VIEW: (Vec2, Vec2) = (Vec2::X, Vec2::Y);
+    /// The window in the starting view, looking north.
+    const NORTH_VIEW: ViewSquare = ViewSquare {
+        right: Vec2::X,
+        towards: Vec2::Y,
+        half: HALF_SIZE as f32,
+    };
 
     fn ray(origin: Vec3, towards: Vec3) -> Ray3d {
         Ray3d::new(origin, Dir3::new(towards - origin).unwrap())
@@ -158,13 +161,29 @@ mod tests {
         // from the centre, while the turned window reaches only 200).
         let down = ray(Vec3::new(190.0, 500.0, 190.0), Vec3::new(190.0, 0.0, 190.0));
         let diagonal = std::f32::consts::FRAC_1_SQRT_2;
-        let turned = (
-            Vec2::new(diagonal, -diagonal),
-            Vec2::new(diagonal, diagonal),
-        );
-        let mut hit = |axes| pick(down, (0, 0), axes, &mut cache, &surface, &style, water);
+        let turned = ViewSquare {
+            right: Vec2::new(diagonal, -diagonal),
+            towards: Vec2::new(diagonal, diagonal),
+            ..NORTH_VIEW
+        };
+        let mut hit = |square| pick(down, (0, 0), square, &mut cache, &surface, &style, water);
         assert_eq!(hit(NORTH_VIEW), Some((190, 190)));
         assert_eq!(hit(turned), None);
+    }
+
+    #[test]
+    fn zoomed_window_is_smaller() {
+        let (surface, style, mut cache, water) = setup();
+        // Straight down at (150, 0): inside the starting view's window, but
+        // outside it zoomed in to 0.6 (reaching 120).
+        let down = ray(Vec3::new(150.0, 500.0, 0.0), Vec3::new(150.0, 0.0, 0.0));
+        let zoomed = ViewSquare {
+            half: 120.0,
+            ..NORTH_VIEW
+        };
+        let mut hit = |square| pick(down, (0, 0), square, &mut cache, &surface, &style, water);
+        assert_eq!(hit(NORTH_VIEW), Some((150, 0)));
+        assert_eq!(hit(zoomed), None);
     }
 
     #[test]

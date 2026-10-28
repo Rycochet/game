@@ -60,6 +60,15 @@ const ICON_GAP_PIXELS: f32 = 1.0;
 /// stand on the token rather than float above it.
 const ICON_SHADOW_PIXELS: f32 = 3.0;
 
+/// Looking straight down, the icon's feet (the bottom of the main picture,
+/// less its shadow) sit this many screen pixels above the near edge of the
+/// token (owner's choice). Tilting from the starting view to straight down
+/// slides them there smoothly.
+const FEET_ABOVE_EDGE_PIXELS: f32 = 2.0;
+
+/// Grid units per icon art pixel.
+const ICON_PIXEL: f32 = ICON_ART_SIZE / ICON_ART_PIXELS;
+
 /// The root of a drawn token. It never rotates, so children can rely on
 /// world axes. `owner` is the entity with the `Token`.
 #[derive(Component)]
@@ -95,9 +104,6 @@ pub struct TokenAssets {
     outline: [Handle<StandardMaterial>; 2],
     /// One square for every icon.
     icon_quad: Handle<Mesh>,
-    /// How far the icon's centre is drawn above the token's top, in grid
-    /// units, measured up the screen.
-    icon_lift: f32,
     /// One material per icon file, made the first time it is shown.
     icon_materials: HashMap<String, Handle<StandardMaterial>>,
 }
@@ -111,11 +117,32 @@ fn outline_width(window_height: f32, camera_distance: f32) -> f32 {
 }
 
 impl TokenAssets {
-    /// Where a token's icon anchor goes, relative to the token's centre: on
-    /// its top, then `icon_lift` up the screen (the camera's "up", so the gap
-    /// looks the same at any tilt). `camera_rotation` is the camera's.
-    pub fn icon_offset(&self, camera_rotation: Quat) -> Vec3 {
-        Vec3::Y * HALF_THICKNESS + camera_rotation * Vec3::Y * self.icon_lift
+    /// Where a token's icon anchor (the centre of its main picture) goes,
+    /// relative to the token's centre: on the token's top, then up the screen
+    /// (along the camera's "up"). In the starting view (`home_pitch`) the
+    /// feet stand `ICON_GAP_PIXELS` above the top's centre; as `pitch` rises
+    /// to straight down they slide to `FEET_ABOVE_EDGE_PIXELS` above the
+    /// token's near edge, so the icon covers less of the map below it.
+    pub fn icon_offset(&self, camera_rotation: Quat, pitch: f32, home_pitch: f32) -> Vec3 {
+        // Grid units per screen pixel at the camera's distance.
+        let screen_pixel = outline_width(self.window_height, self.camera_distance) / OUTLINE_PIXELS;
+        let feet_at_start = ICON_GAP_PIXELS * ICON_PIXEL;
+        // The near edge of the token (with its outline) is this far up the
+        // screen from the top's centre: below it, and further below the more
+        // the camera looks down.
+        let near_edge = -(DIAMETER / 2.0 + OUTLINE_PIXELS * screen_pixel) * pitch.sin();
+        let feet_looking_down = near_edge + FEET_ABOVE_EDGE_PIXELS * screen_pixel;
+        // 0 at the starting tilt (or lower), 1 looking straight down.
+        let towards_down =
+            ((pitch.sin() - home_pitch.sin()) / (1.0 - home_pitch.sin())).clamp(0.0, 1.0);
+        let feet = feet_at_start + (feet_looking_down - feet_at_start) * towards_down;
+        // From the feet up to the centre of the main picture.
+        let centre = feet + (ICON_ART_PIXELS / 2.0 - ICON_SHADOW_PIXELS) * ICON_PIXEL;
+        // Looking down, the icon lies nearly flat over the token and would
+        // dip into its top, so bring it towards the camera (the camera's +Z),
+        // which doesn't move it on screen.
+        let forward = DIAMETER / 2.0 * towards_down;
+        Vec3::Y * HALF_THICKNESS + camera_rotation * Vec3::new(0.0, centre, forward)
     }
 
     /// `window_height` is in physical pixels.
@@ -126,12 +153,6 @@ impl TokenAssets {
         camera_distance: f32,
     ) -> Self {
         let outline = outline_width(window_height, camera_distance);
-        // Grid units per icon pixel.
-        let icon_pixel = ICON_ART_SIZE / ICON_ART_PIXELS;
-        // From the token's top: the gap and half the main picture less its
-        // shadow.
-        let lift_pixels = ICON_GAP_PIXELS + ICON_ART_PIXELS / 2.0 - ICON_SHADOW_PIXELS;
-        let icon_lift = lift_pixels * icon_pixel;
         Self {
             window_height,
             camera_distance,
@@ -156,8 +177,7 @@ impl TokenAssets {
                     ..fade(Color::BLACK, completed)
                 })
             }),
-            icon_quad: meshes.add(Rectangle::from_length(ICON_FILE_PIXELS * icon_pixel)),
-            icon_lift,
+            icon_quad: meshes.add(Rectangle::from_length(ICON_FILE_PIXELS * ICON_PIXEL)),
             icon_materials: HashMap::default(),
         }
     }

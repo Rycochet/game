@@ -14,7 +14,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_SNOW=n`: start with `Weather::snow_line` at `n` (128 normal, 0 frozen), for screenshots of the temperature states.
 - `GAME_TOKEN=shape,attitude[,1]`: the player's token, as indexes into `TokenShape::ALL` / `Attitude::ALL` (e.g. `3,3` red hexagon, `4,0` white octagon); a third value `1` makes it completed.
 - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) one second after starting, e.g. to check that pixel-sized things (token outlines, icons) follow resizes.
-- `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the world map camera turned by `yaw` degrees (90 puts the camera in the east looking west, 180 looks south), tilted to `pitch` degrees above the horizon and zoomed (`zoom` 2 = twice as close). Sets `OrbitCamera` fields directly, so the limits don't apply.
+- `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the world map camera turned by `yaw` degrees (90 puts the camera in the east looking west, 180 looks south), tilted to `pitch` degrees above the horizon and zoomed in (the distance is divided by `zoom`: 1.6667 is the closest the wheel allows). Sets `OrbitCamera` fields directly, so the limits don't apply.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
 
 ## Depends on

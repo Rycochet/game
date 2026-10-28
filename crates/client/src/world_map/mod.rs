@@ -22,7 +22,7 @@ use crate::common::{CurrentWorld, GameClock, ViewFacing, ViewStats, Weather};
 use crate::player::{MapPosition, Player, PlayerSystems, SmoothPosition, TravelTo};
 use crate::surface_style::SurfaceStyle;
 pub use camera::OrbitCamera;
-use terrain::{HeightCache, TerrainGrid};
+use terrain::{HeightCache, TerrainGrid, ViewSquare};
 use token::{IconAnchor, TokenAssets, TokenView};
 
 /// World height units per 3D unit of height. 1.0 keeps the prototype's
@@ -115,9 +115,8 @@ fn spawn_view(
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
             fov: CAMERA_FOV_DEGREES.to_radians(),
-            // The camera is far away, so draw well beyond the default range,
-            // even when zoomed right out.
-            far: orbit.max_distance() * 2.0,
+            // The camera is far away, so draw well beyond the default range.
+            far: CAMERA_DISTANCE * 2.0,
             ..default()
         }),
         orbit.transform(Vec3::ZERO),
@@ -203,8 +202,8 @@ fn update_terrain(
     mut followers: Query<&mut Transform, With<FollowsPlayer>>,
     terrain: Single<&Mesh3d, With<Terrain>>,
     faces: Single<&Mesh3d, With<EdgeFaces>>,
-    // `Local` keeps a value between runs of this system: the yaw last cut.
-    mut cut_yaw: Local<Option<f32>>,
+    // `Local` keeps a value between runs of this system: the square last cut.
+    mut cut: Local<Option<(f32, f32)>>,
 ) {
     // The cache is inserted by `spawn_view`'s commands, so it can be missing
     // on the very first frame.
@@ -214,16 +213,17 @@ fn update_terrain(
     // A new hour, weather or style changes how every point is drawn.
     let redraw_all =
         clock.is_changed() || weather.is_changed() || style.is_changed() || cache.is_added();
-    let turned = *cut_yaw != Some(orbit.yaw);
-    if !(player.is_changed() || redraw_all || turned) {
+    // Turning or zooming changes the square.
+    let reframed = *cut != Some((orbit.yaw, orbit.distance));
+    if !(player.is_changed() || redraw_all || reframed) {
         return;
     }
-    *cut_yaw = Some(orbit.yaw);
+    *cut = Some((orbit.yaw, orbit.distance));
 
     let start = Instant::now();
     let centre = (player.x, player.y);
     let water_level = world.params.water_level(clock.hour as f64);
-    let axes = orbit.ground_axes();
+    let square = view_square(&orbit);
     for mut transform in &mut followers {
         transform.translation = Vec3::new(player.x as f32, 0.0, player.y as f32);
     }
@@ -234,14 +234,14 @@ fn update_terrain(
         water_level,
         weather.snow_line,
         centre,
-        axes,
+        square,
         redraw_all,
     );
     let fill_ms = start.elapsed().as_secs_f32() * 1000.0;
 
     let start = Instant::now();
     if let Some(mut mesh) = meshes.get_mut(&terrain.0) {
-        *mesh = terrain::build_window(&grid, axes);
+        *mesh = terrain::build_window(&grid, square);
     }
     let faces_mesh = terrain::build_edges(
         &grid,
@@ -251,7 +251,7 @@ fn update_terrain(
         water_level,
         weather.snow_line,
         centre,
-        axes,
+        square,
     );
     if let Some(mut mesh) = meshes.get_mut(&faces.0) {
         *mesh = faces_mesh;
@@ -322,7 +322,7 @@ fn place_camera_and_tokens(
     // whatever the camera's angle.
     for mut anchor in &mut anchors {
         anchor.rotation = camera.rotation;
-        anchor.translation = assets.icon_offset(camera.rotation);
+        anchor.translation = assets.icon_offset(camera.rotation, orbit.pitch, orbit.home_pitch());
     }
 }
 
@@ -353,12 +353,24 @@ fn pick_on_click(
     if let Some((x, y)) = picking::pick(
         ray,
         (player.x, player.y),
-        orbit.ground_axes(),
+        view_square(orbit),
         &mut cache,
         &world.surface,
         &style,
         water_level,
     ) {
         travel.write(TravelTo { x, y });
+    }
+}
+
+/// The window of terrain on show: lined up with the camera, and smaller when
+/// zoomed in, by as much as the camera moved in, so it keeps its size on
+/// screen and zooming shows less of the world rather than a bigger map.
+fn view_square(orbit: &OrbitCamera) -> ViewSquare {
+    let (right, towards) = orbit.ground_axes();
+    ViewSquare {
+        right,
+        towards,
+        half: HALF_SIZE as f32 * orbit.zoom(),
     }
 }

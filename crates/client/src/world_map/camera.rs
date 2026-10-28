@@ -15,9 +15,9 @@ const RADIANS_PER_PIXEL: f32 = 0.005;
 const MIN_PITCH_DEGREES: f32 = 10.0;
 const MAX_PITCH_DEGREES: f32 = 85.0;
 
-/// Closest and furthest zoom, as multiples of the starting distance.
-const MIN_ZOOM: f32 = 0.3;
-const MAX_ZOOM: f32 = 2.0;
+/// Closest zoom, as a fraction of the starting distance (owner's choice). The
+/// starting view is also the furthest out.
+const MIN_ZOOM: f32 = 0.6;
 
 /// Distance multiplier per wheel notch (scrolling towards the screen zooms
 /// in).
@@ -99,15 +99,20 @@ impl OrbitCamera {
         );
     }
 
-    fn zoom(&mut self, notches: f32) {
+    fn zoom_by(&mut self, notches: f32) {
         let home = self.home.2;
-        self.distance =
-            (self.distance * ZOOM_PER_NOTCH.powf(notches)).clamp(home * MIN_ZOOM, home * MAX_ZOOM);
+        self.distance = (self.distance * ZOOM_PER_NOTCH.powf(notches)).clamp(home * MIN_ZOOM, home);
     }
 
-    /// The furthest this camera can zoom out, for setting draw distances.
-    pub fn max_distance(&self) -> f32 {
-        self.home.2 * MAX_ZOOM
+    /// The distance as a fraction of the starting one: 1 in the starting
+    /// view (the furthest out), smaller when zoomed in.
+    pub fn zoom(&self) -> f32 {
+        self.distance / self.home.2
+    }
+
+    /// The starting pitch, in radians.
+    pub fn home_pitch(&self) -> f32 {
+        self.home.1
     }
 }
 
@@ -139,7 +144,7 @@ pub fn control_with_mouse(
             camera.turn(motion.delta);
         }
         if notches != 0.0 {
-            camera.zoom(notches);
+            camera.zoom_by(notches);
         }
     }
 }
@@ -188,8 +193,10 @@ mod tests {
         let mut camera = camera(0.0);
         camera.turn(Vec2::new(0.0, 10_000.0));
         assert_eq!(camera.pitch, MAX_PITCH_DEGREES.to_radians());
-        camera.zoom(-100.0);
-        assert_eq!(camera.distance, 100.0 * MAX_ZOOM);
+        camera.zoom_by(-100.0);
+        assert_eq!(camera.distance, 100.0);
+        camera.zoom_by(100.0);
+        assert!((camera.zoom() - MIN_ZOOM).abs() < 1e-6);
         camera.reset();
         assert_eq!((camera.pitch, camera.distance), (30f32.to_radians(), 100.0));
     }

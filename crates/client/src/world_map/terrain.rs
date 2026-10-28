@@ -115,8 +115,8 @@ impl TerrainGrid {
         (z.rem_euclid(STORE_SIDE) * STORE_SIDE + x.rem_euclid(STORE_SIDE)) as usize
     }
 
-    /// Makes sure every point the window around `centre`, lined up with
-    /// `axes`, needs is worked out. `redraw_all` throws away what is kept
+    /// Makes sure every point the window `square` around `centre` needs is
+    /// worked out. `redraw_all` throws away what is kept
     /// first (for a new hour, weather or style).
     #[allow(clippy::too_many_arguments)]
     pub fn fill(
@@ -127,7 +127,7 @@ impl TerrainGrid {
         water_level: f64,
         snow_line: f64,
         centre: (i64, i64),
-        axes: (Vec2, Vec2),
+        square: ViewSquare,
         redraw_all: bool,
     ) {
         if redraw_all {
@@ -141,7 +141,7 @@ impl TerrainGrid {
             style.shown_height(cache.get(surface, x, z), water_level) as f32 * HEIGHT_SCALE
         };
 
-        let (reach_x, reach_z) = window_reach(axes);
+        let (reach_x, reach_z) = square.reach();
         for dz in -reach_z..=reach_z {
             for dx in -reach_x..=reach_x {
                 let i = self.slot(dx, dz);
@@ -199,13 +199,13 @@ impl TerrainGrid {
     }
 
     /// The point at `(dx, dz)` from the centre, ready for clipping.
-    fn corner(&self, dx: i64, dz: i64, axes: (Vec2, Vec2)) -> Corner {
+    fn corner(&self, dx: i64, dz: i64, square: ViewSquare) -> Corner {
         let i = self.slot(dx, dz);
         Corner {
             position: Vec3::new(dx as f32, self.shown[i], dz as f32),
             normal: Vec3::from(self.normals[i]),
             colour: Vec4::from(self.colours[i]),
-            inside: inside_window(Vec2::new(dx as f32, dz as f32), axes),
+            inside: square.inside(Vec2::new(dx as f32, dz as f32)),
         }
     }
 }
@@ -233,30 +233,58 @@ impl Corner {
     }
 }
 
-/// How far `point` (relative to the centre) is inside each side of the
-/// window: right, left, near and far. `axes` are the camera's right and
-/// towards-the-camera directions along the ground.
-fn inside_window(point: Vec2, (right, towards): (Vec2, Vec2)) -> [f32; 4] {
-    let half = HALF_SIZE as f32;
-    let (u, v) = (point.dot(right), point.dot(towards));
-    [half - u, half + u, half - v, half + v]
+/// The square window of terrain on show, centred on the player and lined up
+/// with the camera, in grid units relative to the centre.
+#[derive(Clone, Copy, Debug)]
+pub struct ViewSquare {
+    /// The camera's right and towards-the-camera directions along the ground,
+    /// as (x, z).
+    pub right: Vec2,
+    pub towards: Vec2,
+    /// From the centre to each side: `HALF_SIZE` in the starting view, less
+    /// when zoomed in.
+    pub half: f32,
 }
 
-/// How far the window lined up with `axes` reaches from the centre along x
-/// and z (its bounding box), plus one for the squares around its edge. Only
-/// grid points within this are drawn.
-fn window_reach((right, towards): (Vec2, Vec2)) -> (i64, i64) {
-    let half = HALF_SIZE as f32;
-    let reach = |a: f32, b: f32| ((half * (a.abs() + b.abs())).ceil() as i64 + 1).min(REACH);
-    (reach(right.x, towards.x), reach(right.y, towards.y))
+impl ViewSquare {
+    /// How far `point` is inside each side: right, left, near and far
+    /// (negative outside).
+    fn inside(&self, point: Vec2) -> [f32; 4] {
+        let (u, v) = (point.dot(self.right), point.dot(self.towards));
+        [self.half - u, self.half + u, self.half - v, self.half + v]
+    }
+
+    /// Whether `point` is on or inside the square.
+    pub fn contains(&self, point: Vec2) -> bool {
+        self.inside(point).iter().all(|&d| d >= 0.0)
+    }
+
+    /// The point `u` halves to the right and `v` halves towards the camera.
+    fn at(&self, u: f32, v: f32) -> Vec2 {
+        (self.right * u + self.towards * v) * self.half
+    }
+
+    /// How far the square reaches from the centre along x and z (its bounding
+    /// box), plus one for the grid squares around its edge. Only grid points
+    /// within this are drawn.
+    fn reach(&self) -> (i64, i64) {
+        let reach =
+            |a: f32, b: f32| ((self.half * (a.abs() + b.abs())).ceil() as i64 + 1).min(REACH);
+        (
+            reach(self.right.x, self.towards.x),
+            reach(self.right.y, self.towards.y),
+        )
+    }
+
+    /// How much of the starting view's width is on show (1 = all of it).
+    fn zoom(&self) -> f32 {
+        self.half / HALF_SIZE as f32
+    }
 }
 
-/// The terrain mesh: the `HALF_SIZE` square window lined up with `axes`
-/// (see `inside_window`), cut out of the grid.
-pub fn build_window(grid: &TerrainGrid, axes: (Vec2, Vec2)) -> Mesh {
-    let (right, towards) = axes;
-    let half = HALF_SIZE as f32;
-    let (reach_x, reach_z) = window_reach(axes);
+/// The terrain mesh: the window `square`, cut out of the grid.
+pub fn build_window(grid: &TerrainGrid, square: ViewSquare) -> Mesh {
+    let (reach_x, reach_z) = square.reach();
     let width = (2 * reach_x + 1) as usize;
     let local = |dx: i64, dz: i64| (dz + reach_z) as usize * width + (dx + reach_x) as usize;
 
@@ -265,20 +293,20 @@ pub fn build_window(grid: &TerrainGrid, axes: (Vec2, Vec2)) -> Mesh {
     for dz in -reach_z..=reach_z {
         for dx in -reach_x..=reach_x {
             let point = Vec2::new(dx as f32, dz as f32);
-            inside.push(inside_window(point, axes).iter().all(|&d| d >= 0.0));
+            inside.push(square.contains(point));
         }
     }
     // Squares near the window's corners need clipping even when none of
     // their points are inside (a corner can poke into a triangle).
-    let corners = [(1.0, 1.0), (1.0, -1.0), (-1.0, 1.0), (-1.0, -1.0)]
-        .map(|(u, v)| right * u * half + towards * v * half);
+    let corners =
+        [(1.0, 1.0), (1.0, -1.0), (-1.0, 1.0), (-1.0, -1.0)].map(|(u, v)| square.at(u, v));
     let near_corner = |x: i64, z: i64| {
         corners
             .iter()
             .any(|c| (c.x - x as f32).abs() <= 2.0 && (c.y - z as f32).abs() <= 2.0)
     };
 
-    let expected = (4 * HALF_SIZE * HALF_SIZE) as usize;
+    let expected = (4.0 * square.half * square.half) as usize;
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(expected);
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(expected);
     let mut colours: Vec<[f32; 4]> = Vec::with_capacity(expected);
@@ -317,7 +345,7 @@ pub fn build_window(grid: &TerrainGrid, axes: (Vec2, Vec2)) -> Mesh {
                 }
                 // Crosses the border: cut off the parts outside each side in
                 // turn, then fan the remaining polygon into triangles.
-                let clipped = clip(&triangle.map(|(dx, dz)| grid.corner(dx, dz, axes)));
+                let clipped = clip(&triangle.map(|(dx, dz)| grid.corner(dx, dz, square)));
                 let first = positions.len() as u32;
                 for c in &clipped {
                     positions.push(c.position.to_array());
@@ -367,7 +395,9 @@ fn clip(polygon: &[Corner]) -> Vec<Corner> {
 }
 
 /// Flat faces down the window's four edges (one mesh): water depth (where
-/// underwater) above earth, down to `FRONT_BASE` × the water level. They face
+/// underwater) above earth, down to `FRONT_BASE` × the water level in the
+/// starting view (the depth below the water shrinks with the zoom, so the
+/// frame keeps its shape on screen). They face
 /// outwards, so only the sides towards the camera are drawn. The top of each
 /// face follows the terrain exactly, at every point where the edge crosses a
 /// triangle.
@@ -380,21 +410,20 @@ pub fn build_edges(
     water_level: f64,
     snow_line: f64,
     (cx, cy): (i64, i64),
-    (right, towards): (Vec2, Vec2),
+    square: ViewSquare,
 ) -> Mesh {
     let water_top = water_level as f32 * HEIGHT_SCALE;
-    let base = water_top * FRONT_BASE;
+    let base = water_top - water_top * (1.0 - FRONT_BASE) * square.zoom();
     let (h, s, l) = style.earth_face;
     let earth_colour = linear(hsl_to_rgba(h, s, l));
-    let half = HALF_SIZE as f32;
-    let corner = |u: f32, v: f32| right * u + towards * v;
     // Each edge from one corner to the next, walked so its face points
     // outwards: near, far, right, left.
+    let corner = |u, v| square.at(u, v);
     let edges = [
-        (corner(-half, half), corner(half, half)),
-        (corner(half, -half), corner(-half, -half)),
-        (corner(half, half), corner(half, -half)),
-        (corner(-half, -half), corner(-half, half)),
+        (corner(-1.0, 1.0), corner(1.0, 1.0)),
+        (corner(1.0, -1.0), corner(-1.0, -1.0)),
+        (corner(1.0, 1.0), corner(1.0, -1.0)),
+        (corner(-1.0, -1.0), corner(-1.0, 1.0)),
     ];
 
     let mut positions = Vec::new();
@@ -516,13 +545,17 @@ mod tests {
 
     #[test]
     fn clipping_keeps_the_inside_part() {
-        let axes = (Vec2::X, Vec2::Y);
         let half = HALF_SIZE as f32;
+        let square = ViewSquare {
+            right: Vec2::X,
+            towards: Vec2::Y,
+            half,
+        };
         let at = |x: f32, z: f32| Corner {
             position: Vec3::new(x, 0.0, z),
             normal: Vec3::Y,
             colour: Vec4::ONE,
-            inside: inside_window(Vec2::new(x, z), axes),
+            inside: square.inside(Vec2::new(x, z)),
         };
         // A triangle sticking out of the right side by half its width.
         let clipped = clip(&[

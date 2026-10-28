@@ -12,8 +12,9 @@
 //!   hexagon; a third value of `1` makes it completed.
 //! - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the map view turned by `yaw`
 //!   degrees (positive moves the camera towards the east; 90 looks west, 180
-//!   looks south), tilted to `pitch` degrees above the horizon and zoomed
-//!   (`zoom` 2 = twice as close).
+//!   looks south), tilted to `pitch` degrees above the horizon and zoomed in
+//!   (the camera distance is divided by `zoom`; 1.6667 is the wheel's
+//!   closest).
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 
