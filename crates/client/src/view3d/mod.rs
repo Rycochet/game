@@ -12,8 +12,8 @@ use bevy::prelude::*;
 use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::ViewFacing;
-use crate::player::{Player, PlayerSystems, SmoothPosition};
+use crate::common::{SmoothPosition, ViewFacing};
+use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, TokenView};
 use token::{IconAnchor, TokenAssets};
@@ -143,7 +143,7 @@ fn place_camera_and_tokens(
         (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>),
     >,
     mut views: Query<(&TokenView, &mut Transform), Without<IconAnchor>>,
-    mut anchors: Query<&mut Transform, (With<IconAnchor>, Without<ViewCamera>, Without<TokenView>)>,
+    mut anchors: Query<(&IconAnchor, &mut Transform), (Without<ViewCamera>, Without<TokenView>)>,
 ) {
     let (orbit, mut camera) = camera.into_inner();
     let size = grid.cell_size;
@@ -167,8 +167,12 @@ fn place_camera_and_tokens(
     // Token views never rotate, so turning each anchor to the camera's
     // rotation makes it face the screen; it sits above the token on screen,
     // whatever the camera's angle.
-    for mut anchor in &mut anchors {
-        anchor.rotation = camera.rotation;
-        anchor.translation = assets.icon_offset(camera.rotation, orbit.pitch, orbit.home_pitch());
+    // Scaling the anchor scales its icon by the owner's `TokenSize`.
+    for (anchor, mut transform) in &mut anchors {
+        let scale = anchor.scale();
+        transform.rotation = camera.rotation;
+        transform.scale = Vec3::splat(scale);
+        transform.translation =
+            assets.icon_offset(camera.rotation, orbit.pitch, orbit.home_pitch(), scale);
     }
 }

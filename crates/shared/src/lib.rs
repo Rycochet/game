@@ -5,6 +5,7 @@
 //! `docs/context/architecture.md` for the rules.
 
 pub mod dungeon;
+pub mod feature;
 pub mod rng;
 pub mod surface;
 pub mod world;

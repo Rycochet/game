@@ -46,9 +46,9 @@ const ICON_FILE_PIXELS: f32 = 54.0;
 /// ...with the main picture in the central square this size.
 const ICON_ART_PIXELS: f32 = 32.0;
 
-/// Width of that central square in grid units. Icons scale with the map, like
-/// the token itself, so their pixels aren't whole screen pixels (a blockier,
-/// retro look).
+/// Width of that central square in grid units, at `TokenSize::Default` (each
+/// token's size scales it). Icons scale with the map, like the token itself,
+/// so their pixels aren't whole screen pixels (a blockier, retro look).
 const ICON_ART_SIZE: f32 = DIAMETER * 1.5;
 
 /// Gap, in icon pixels, between the top of the token and the bottom of the
@@ -69,7 +69,7 @@ const FEET_ABOVE_EDGE_PIXELS: f32 = 2.0;
 /// what was needed (owner's judgement).
 const ICON_SLIDE: f32 = 0.5;
 
-/// Grid units per icon art pixel.
+/// Grid units per icon art pixel, at `TokenSize::Default`.
 const ICON_PIXEL: f32 = ICON_ART_SIZE / ICON_ART_PIXELS;
 
 /// The root of a drawn token. It never rotates, so children can rely on
@@ -79,15 +79,24 @@ pub struct TokenView {
     pub owner: Entity,
     body: Entity,
     outline: Entity,
+    anchor: Entity,
 }
 
 /// A point above each token that is turned to face the camera every frame.
 /// The icon is its child: a flat quad in its XY plane, so it always shows the
 /// same face to the camera, however the map is rotated. `shown` is the icon
-/// path currently displayed.
-#[derive(Component, Default)]
+/// path currently displayed; `scale` the owner's `TokenSize` scale.
+#[derive(Component)]
 pub struct IconAnchor {
     shown: Option<String>,
+    scale: f32,
+}
+
+impl IconAnchor {
+    /// How big the icon is drawn, relative to `TokenSize::Default`.
+    pub fn scale(&self) -> f32 {
+        self.scale
+    }
 }
 
 /// Meshes and materials shared by all tokens. The outlines, sized in screen
@@ -125,11 +134,20 @@ impl TokenAssets {
     /// (along the camera's "up"). In the starting view (`home_pitch`) the
     /// feet stand `ICON_GAP_PIXELS` above the top's centre; as `pitch` rises
     /// to straight down they slide `ICON_SLIDE` of the way to
-    /// `FEET_ABOVE_EDGE_PIXELS` above the token's near edge.
-    pub fn icon_offset(&self, camera_rotation: Quat, pitch: f32, home_pitch: f32) -> Vec3 {
-        // Grid units per screen pixel at the camera's distance.
+    /// `FEET_ABOVE_EDGE_PIXELS` above the token's near edge. `scale` is the
+    /// icon's size (`TokenSize::scale`).
+    pub fn icon_offset(
+        &self,
+        camera_rotation: Quat,
+        pitch: f32,
+        home_pitch: f32,
+        scale: f32,
+    ) -> Vec3 {
+        // Grid units per screen pixel at the camera's distance, and per icon
+        // art pixel at this size.
         let screen_pixel = outline_width(self.window_height, self.camera_distance) / OUTLINE_PIXELS;
-        let feet_at_start = ICON_GAP_PIXELS * ICON_PIXEL;
+        let icon_pixel = ICON_PIXEL * scale;
+        let feet_at_start = ICON_GAP_PIXELS * icon_pixel;
         // The near edge of the token (with its outline) is this far up the
         // screen from the top's centre: below it, and further below the more
         // the camera looks down.
@@ -140,11 +158,16 @@ impl TokenAssets {
             ((pitch.sin() - home_pitch.sin()) / (1.0 - home_pitch.sin())).clamp(0.0, 1.0);
         let feet = feet_at_start + (feet_looking_down - feet_at_start) * towards_down * ICON_SLIDE;
         // From the feet up to the centre of the main picture.
-        let centre = feet + (ICON_ART_PIXELS / 2.0 - ICON_SHADOW_PIXELS) * ICON_PIXEL;
-        // Looking down, the icon lies nearly flat over the token and would
-        // dip into its top, so bring it towards the camera (the camera's +Z),
-        // which doesn't move it on screen.
-        let forward = DIAMETER / 2.0 * towards_down;
+        let centre = feet + (ICON_ART_PIXELS / 2.0 - ICON_SHADOW_PIXELS) * icon_pixel;
+        // The icon stands over the token's centre, so its lower part would be
+        // inside the token and hidden by the token's near half. Bring it
+        // towards the camera (the camera's +Z, which barely moves it on
+        // screen) until it is in front of the whole token: the near edge of
+        // the top, with its outline, is `radius × cos(pitch)` nearer the
+        // camera than the top's centre. Plus a little, so looking straight
+        // down it lies just above the top rather than in it.
+        let radius = DIAMETER / 2.0 + OUTLINE_PIXELS * screen_pixel;
+        let forward = radius * pitch.cos() + HALF_THICKNESS;
         Vec3::Y * HALF_THICKNESS + camera_rotation * Vec3::new(0.0, centre, forward)
     }
 
@@ -252,6 +275,7 @@ pub fn sync_tokens(
     tokens: Query<Ref<Token>>,
     views: Query<(Entity, &TokenView)>,
     mut parts: Query<(&mut Mesh3d, &mut MeshMaterial3d<StandardMaterial>)>,
+    mut anchors: Query<&mut IconAnchor>,
 ) {
     for (view, token_view) in &views {
         match tokens.get(token_view.owner) {
@@ -266,6 +290,9 @@ pub fn sync_tokens(
                 if let Ok((mut mesh, mut material)) = parts.get_mut(token_view.outline) {
                     mesh.0 = assets.outlines[shape].clone();
                     material.0 = assets.outline[completed].clone();
+                }
+                if let Ok(mut anchor) = anchors.get_mut(token_view.anchor) {
+                    anchor.scale = token.size.scale();
                 }
             }
             Ok(_) => {}
@@ -298,7 +325,10 @@ fn spawn_view(commands: &mut Commands, assets: &TokenAssets, owner: Entity, toke
         .id();
     let anchor = commands
         .spawn((
-            IconAnchor::default(),
+            IconAnchor {
+                shown: None,
+                scale: token.size.scale(),
+            },
             // Placed each frame by `place_camera_and_tokens`.
             Transform::default(),
             Visibility::default(),
@@ -311,6 +341,7 @@ fn spawn_view(commands: &mut Commands, assets: &TokenAssets, owner: Entity, toke
                 owner,
                 body,
                 outline,
+                anchor,
             },
             Transform::default(),
             Visibility::default(),

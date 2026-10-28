@@ -14,7 +14,7 @@ The dungeon (and building) view: `shared::dungeon` cells drawn in 3D through `vi
 
 ## Depends on
 
-- `common` (`CurrentDungeon`, `GameView`, `LightSource`, `SharesSight`, `ViewStats`), `player` (`MapPosition`, `SmoothPosition`, `Player`, `PlayerSystems`, `TravelTo`), `view3d` (`ViewCamera`, `ViewGrid`, `View3dSystems`, `TOKEN_DIAMETER`), `shared::dungeon`.
+- `common` (`CurrentDungeon`, `GameView`, `LightSource`, `SharesSight`, `ViewStats`, `MapPosition`, `SmoothPosition`), `player` (`Player`, `PlayerSystems`, `TravelTo`), `view3d` (`ViewCamera`, `ViewGrid`, `View3dSystems`, `TOKEN_DIAMETER`), `shared::dungeon`.
 
 ## Used by
 

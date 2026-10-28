@@ -20,7 +20,7 @@ Deterministic randomness. The only source of randomness allowed in shared code.
 
 ## Used by
 
-- `shared::world` (world settings), `shared::surface` (noise seed).
+- `shared::world` (world settings), `shared::surface` (noise seed), `shared::feature` (per-chunk features).
 
 ## Notes
 

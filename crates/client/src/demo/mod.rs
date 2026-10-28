@@ -5,14 +5,14 @@
 //! - T: temperature cycle: the snow line falls from normal to 0 (everything
 //!   frozen) and rises back, as in the prototype.
 //! - K / C: cycle the player's token shape / attitude colour; X toggles
-//!   its "completed" state.
+//!   its "completed" state; Z cycles its icon size.
 //! - M: switch between the world map and the dungeon view, each keeping its
 //!   own player position.
 
 use bevy::prelude::*;
 
-use crate::common::{GameView, NORMAL_SNOW_LINE, Token, Weather};
-use crate::player::{MapPosition, Player, PlayerSystems};
+use crate::common::{GameView, MapPosition, NORMAL_SNOW_LINE, Token, Weather};
+use crate::player::{Player, PlayerSystems};
 
 /// How fast the snow line moves during the temperature cycle, in height units
 /// per second (the prototype moved 1 unit every 166 ms).
@@ -109,6 +109,9 @@ fn cycle_token(keys: Res<ButtonInput<KeyCode>>, mut token: Single<&mut Token, Wi
     }
     if keys.just_pressed(KeyCode::KeyX) {
         token.completed = !token.completed;
+    }
+    if keys.just_pressed(KeyCode::KeyZ) {
+        token.size = token.size.next();
     }
 }
 
