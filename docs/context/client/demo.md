@@ -13,7 +13,7 @@ Demo modes toggled by keys, for showing off and testing the views. Works in nati
 
 ## Depends on
 
-- `common` (`Weather`, `NORMAL_SNOW_LINE`), `player` (`MapPosition`, `Player`).
+- `common` (`Weather`, `NORMAL_SNOW_LINE`), `player` (`MapPosition`, `Player`, `PlayerSystems`: `auto_walk` runs in `Input`).
 
 ## Used by
 
@@ -22,4 +22,4 @@ Demo modes toggled by keys, for showing off and testing the views. Works in nati
 ## Notes
 
 - Ported from the prototype's commented-out snow animation in `WorldMap.tsx`. What the snow line does to colours lives in `surface_style`.
-- During a cycle the weather changes every frame, so both views rebuild every frame (~38 ms slice, ~13+ ms mesh).
+- During a cycle the weather changes every frame, so the world map rebuilds every frame (~13+ ms).

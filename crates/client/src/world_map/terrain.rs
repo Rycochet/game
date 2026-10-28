@@ -13,7 +13,7 @@ use crate::surface_style::{SurfaceStyle, hsl_to_rgba};
 const SIDE: usize = (2 * HALF_SIZE + 1) as usize;
 
 /// Bottom of the front face, as a fraction of the water level (0 = height 0,
-/// as in the slice view; raised to make the face shorter).
+/// as in the prototype; raised to make the face shorter).
 const FRONT_BASE: f32 = 0.3;
 
 /// Undoes the sun's dimming of flat frozen water (lit flat ice measured at
@@ -138,7 +138,7 @@ pub fn update_terrain(
             let (dx, dz) = offset(i);
             let sample = cache.get(surface, cx + dx, cy + dz);
             let west = cache.get(surface, cx + dx - 1, cy + dz).height;
-            // The slice view's strong slope shading, baked in per vertex
+            // The prototype's strong slope shading, baked in per vertex
             // because real lighting alone is much smoother.
             let (band, lightness) =
                 style.shade(sample, west, water_level, snow_line, SLOPE_SHADING);
@@ -176,7 +176,7 @@ pub fn build_front(
         let sample = cache.get(surface, cx + dx, cy + HALF_SIZE);
         let west = cache.get(surface, cx + dx - 1, cy + HALF_SIZE).height;
         let ground = (sample.height as f32 * HEIGHT_SCALE).max(base);
-        // Half the surface lightness, like the slice view's front slice (this
+        // Half the surface lightness, like the prototype's front slice (this
         // also ices over with the water).
         let (band, lightness) = style.shade(sample, west, water_level, snow_line, 0.0);
         let water_colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness / 2.0));
@@ -208,6 +208,30 @@ pub fn build_front(
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colours)
     .with_inserted_indices(Indices::U32(indices))
+}
+
+/// The highest drawn surface within `radius` of a fractional position, so
+/// something that wide can rest on top without sinking into a slope.
+pub fn highest_shown_height(
+    cache: &mut HeightCache,
+    surface: &Surface,
+    style: &SurfaceStyle,
+    water_level: f64,
+    (x, y): (f64, f64),
+    radius: f64,
+) -> f32 {
+    let mut highest = f64::MIN;
+    let reach = radius.ceil() as i64;
+    for dy in -reach..=reach {
+        for dx in -reach..=reach {
+            let (px, py) = (x.round() as i64 + dx, y.round() as i64 + dy);
+            if (px as f64 - x).hypot(py as f64 - y) <= radius {
+                let sample = cache.get(surface, px, py);
+                highest = highest.max(style.shown_height(sample, water_level));
+            }
+        }
+    }
+    highest as f32 * HEIGHT_SCALE
 }
 
 /// Grid offset from the window centre of vertex `i`.

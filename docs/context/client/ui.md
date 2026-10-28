@@ -21,4 +21,4 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 ## Notes
 
 - Reads other modules' public resources/components; never mutates them. Views report through `common::ViewStats` so `ui` doesn't depend on any view module.
-- Bevy UI draws on whichever camera is active, so it works in both views.
+- Bevy UI draws on the world map's camera (the only one).

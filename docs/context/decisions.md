@@ -41,19 +41,15 @@ All shared randomness is seeded and derived by hashing (seed, purpose, coordinat
 
 ## 2026-10-27: Noise library: `fastnoise-lite`
 
-Chosen by the owner. The old prototype used Perlin noise via `simplex-noise`; the results matter, not the library. Uses OpenSimplex2 with f64 coordinates; internally only `sqrt`/`floor`, so it's deterministic across platforms.
+Chosen by the owner. The old prototype used Perlin noise via `simplex-noise`; the results matter, not the library. Uses OpenSimplex2 with f64 coordinates; internally only `sqrt`/`floor`, so it's deterministic across platforms; golden tests guard that.
 
-- **Chosen: `fastnoise-lite`** (MIT). Single-file port of FastNoise Lite, which also exists for C#, JS and GLSL, so a client-only shader could reproduce the same noise for visuals. Offers OpenSimplex2 (fewer grid-aligned artefacts than classic Perlin), Perlin, cellular/Voronoi (useful for biomes/regions), fractal layering and domain warping built in.
-- Alternative: `noise` (MIT/Apache-2.0). Larger, composable set of noise functions in f64; slower and updated less often.
-
-Either way, golden tests guard cross-platform determinism.
+- **`fastnoise-lite`** (MIT). Single-file port of FastNoise Lite, which also exists for C#, JS and GLSL, so a client-only shader could reproduce the same noise for visuals. Offers OpenSimplex2 (fewer grid-aligned artefacts than classic Perlin), Perlin, cellular/Voronoi (useful for biomes/regions), fractal layering and domain warping built in.
 
 ## 2026-10-27: Random number generation: own SplitMix64 in `shared::rng`
 
 Chosen by the owner. A small hand-written hash turns (seed, purpose, coordinates) into a value, and the same SplitMix64 generator provides sequences, so there's no dependency.
 
 - `rand_pcg` (MIT OR Apache-2.0) can be added if a sequence ever needs better statistical quality; PCG's output is documented as reproducible across platforms and versions.
-- Alternative: `rand_chacha` (MIT OR Apache-2.0). Same guarantees, slower; only needed if numbers must be unpredictable to players.
 - Never `rand::rngs::StdRng`, `thread_rng`, or `std`'s `DefaultHasher`: their output isn't guaranteed stable.
 
 ## Open: networking library (decide with a small prototype)
@@ -76,9 +72,9 @@ Day-to-day building, running and testing use the native Windows build: it rebuil
 
 The world map is inspired by Legend (1992): a square slab of terrain seen from the south in perspective on black, with an earth cut-away at the front and clear colour bands (water, beach, grass, hills, snowy mountains). It should be recognisable to people who know that style, but look modern rather than retro.
 
-## 2026-10-27: Two world-map renderers while the look is decided
+## 2026-10-28: The world map is a 3D renderer
 
-`slice_view` is a faithful port of the prototype's CPU slice renderer (the original look and a performance baseline). `mesh_view` renders the same `shared::surface` data as a lit 3D mesh on the GPU, with the same composition: a fixed 400×400 window around the player that moves one step at a time, a flat front face, and the camera aimed at sea level so it doesn't bob. Its camera uses a narrow field of view from far away for flat, near-isometric perspective, and it bakes the slice view's strong slope shading into the vertex colours under a harsh sun, keeping the old look's surface variety. Water is drawn as part of the terrain at the water surface (as the slice view does), and tonemapping is off so the original palette isn't washed out. Brightness is tuned to roughly match the slice view. Tab switches between them; both use `surface_style` for colours. Which one continues is still to be decided.
+`world_map` renders `shared::surface` as a lit 3D mesh on the GPU with the prototype's composition: a fixed 400×400 window around the player, a flat front face, and the camera aimed at sea level so it doesn't bob. A narrow field of view from far away gives flat, near-isometric perspective; the prototype's strong slope shading is baked into the vertex colours under a harsh sun, keeping the old look's surface variety; water is drawn as part of the terrain at the water surface; tonemapping is off so the original palette isn't washed out. A faithful port of the prototype's CPU slice renderer served as the visual reference and performance baseline while this was tuned, then was removed at the owner's request (it is in this branch's git history).
 
 ## 2026-10-27: Frame rate capped at ~30 fps
 
@@ -86,8 +82,28 @@ Not a twitch game: the client updates about 30 times a second while focused (inp
 
 ## 2026-10-27: Native dev tools for visual checks
 
-`dev_tools` (native only, inert by default) lets environment variables choose the starting view and position and save a screenshot, then quit, so changes can be checked visually without a person watching.
+`dev_tools` (native only, inert by default) lets environment variables set the starting position and state and save a screenshot, then quit, so changes can be checked visually without a person watching.
 
 ## 2026-10-27: Temperature demo and shared colour formula
 
-The prototype's snow-line animation is back as a demo (T key; G toggles auto-walk), driven by a `Weather::snow_line` resource that both views read. Both views now get colours from one function, `SurfaceStyle::shade`, so they can't drift apart. At the owner's request the beaches are about half as wide (`shore_jitter` 0.5) and sand is a brighter, fixed yellow.
+The prototype's snow-line animation is back as a demo (T key; G toggles auto-walk), driven by a `Weather::snow_line` resource. Colours come from one function, `SurfaceStyle::shade`, ported from the prototype. At the owner's request the beaches are about half as wide (`shore_jitter` 0.5) and sand is a brighter, fixed yellow.
+
+## 2026-10-28: Click to travel, smooth positions
+
+Left-clicking the 3D map sends the player travelling to the clicked grid point at constant speed (`player::TravelTo`). The position is fractional while moving (`SmoothPosition`) but always ends on a whole grid point (`MapPosition`); a new click re-targets from the current position. Clicks are found by walking the camera ray against the drawn terrain heights rather than using a physics or picking library. The player is shown as a flat white cylinder with a black outline, made with the inverted-hull technique to avoid a custom shader.
+
+## 2026-10-28: The game is called Hall of Worlds
+
+Domains (not live yet): `hallofworlds.com` landing page / adverts / email, `hallofworlds.app` the owner's server running the Docker image, `hallofworlds.wiki` game documentation (to be part of this repo later). Binaries are `hall-of-worlds` (client) and `hall-of-worlds-server`.
+
+## 2026-10-28: Server crate; native clients embed it, the web client never does
+
+`crates/server` is the authoritative server: a library (`ServerPlugin`) plus a standalone headless binary. Native clients link it for single player; the web client depends on it only through a non-wasm target dependency, so browser builds contain no server code (which will include filesystem access) and only connect to a server. The server uses Bevy without default features so it stays headless.
+
+## 2026-10-28: Docker image published to GHCR on every merge
+
+A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 8080 by static-web-server (MIT OR Apache-2.0, a small Rust static file server, run alongside the game server by `docker/entrypoint.sh`). The Docker workflow test-builds it on PRs and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master`. The Build workflow keeps native (client + server, three OSes) and web release builds as artifacts.
+
+## 2026-10-28: Licence: CC BY-NC 4.0
+
+The project is licensed under Creative Commons Attribution-NonCommercial 4.0 (`LICENSE`, SPDX `CC-BY-NC-4.0`), chosen by the owner: free to share and adapt with attribution, not for commercial use. It is not an OSI open-source licence (non-commercial clause), and Creative Commons doesn't recommend its licences for software; the owner accepted this. Dependencies must still be OSI-licensed (see `CLAUDE.md`).

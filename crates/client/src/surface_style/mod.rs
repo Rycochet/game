@@ -56,7 +56,7 @@ pub struct SurfaceStyle {
     /// shading. 0.933 is `#eee`.
     pub ice_lightness: f64,
     /// Colour (hue, saturation, lightness) of the cut-away earth under the
-    /// front-most slice.
+    /// front face.
     pub earth_face: (f64, f64, f64),
 }
 
@@ -162,8 +162,8 @@ impl SurfaceStyle {
     }
 
     /// The height a point should be drawn at: anything below the water is
-    /// drawn at the water surface (coloured by depth by `band`), as the slice
-    /// view does. This keeps shore sand, which is just below the water by
+    /// drawn at the water surface (coloured by depth by `band`), as the
+    /// prototype did. This keeps shore sand, which is just below the water by
     /// definition, visible at the waterline.
     pub fn shown_height(&self, sample: SurfaceSample, water_level: f64) -> f64 {
         sample.height.max(water_level)

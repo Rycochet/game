@@ -1,6 +1,6 @@
-# Game: guide for Claude
+# Hall of Worlds: guide for Claude
 
-Multiplayer roguelike with an infinite, procedurally generated world, written in Rust with the Bevy engine. Client/server: the client builds natively (Windows/macOS/Linux) and to WebAssembly (browser); the server builds natively only. Design notes are in `README.md` and `designs.txt`.
+**Hall of Worlds** is a multiplayer roguelike with an infinite, procedurally generated world, written in Rust with the Bevy engine. Client/server: the client builds natively (Windows/macOS/Linux) and to WebAssembly (browser); the server builds natively only. Design notes are in `README.md` and `designs.txt`.
 
 ## Core rules (always apply)
 
@@ -21,20 +21,20 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
-| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world, clock, weather, view state/stats, frame cap |
-| client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player grid position, keyboard movement             |
+| server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server: `ServerPlugin`, standalone binary |
+| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world, clock, weather, view stats, frame cap |
+| client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks   |
 | client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
-| client: slice_view  | `crates/client/src/slice_view/` | `docs/context/client/slice_view.md`   | Original CPU-drawn slice map (prototype port)       |
-| client: mesh_view   | `crates/client/src/mesh_view/`  | `docs/context/client/mesh_view.md`    | 3D terrain window mesh, front face, camera, light, water |
+| client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window, front face, camera, light, click picking, player marker |
 | client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle  |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text                                     |
-| client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start view/position, walk, screenshots |
+| client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position, travel, walk, snow, screenshots |
 
 Also: `docs/context/decisions.md` is the log of architecture decisions. Check it before proposing a structural change, and follow what it records.
 
 If a task touches a module not listed here, it doesn't exist yet: create it (see "Adding a module").
 
-Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `game`), `xtask` (helper commands). There is no `crates/server` yet; it arrives with networking (see `architecture.md`).
+Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`, a placeholder until networking), `xtask` (helper commands).
 
 ## Module rules
 
@@ -71,10 +71,12 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 ## Commands
 
-- Native: `cargo run` · Web: `trunk serve` (http://localhost:3000) · Format: `cargo fmt`
+- Native: `cargo run` · Server: `cargo run -p server` · Web: `trunk serve` (http://localhost:3000) · Format: `cargo fmt`
+- Docker isn't installed on the owner's machine: the Docker workflow test-builds the image on every PR instead.
 - **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI runs it on every branch and it must pass before merging.
 - **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: CI type-checks wasm on every push, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
-- **Checking visuals:** run the native build with `dev_tools` environment variables to start in a view/position and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`).
+- **Leave the game running for the owner** after finishing a change: start the native build in the background (`./target/debug/hall-of-worlds.exe` with `run_in_background`) and don't close it, so the owner can see and play with the changes. Before rebuilding, close it if it's still running (`taskkill //IM hall-of-worlds.exe //F`): Windows locks the running executable and the build fails with "Access is denied".
+- **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`).
 - Bevy compiles slowly the first time (15+ min clean); incremental builds take seconds. Run long builds in the background.
 
 ## Conventions

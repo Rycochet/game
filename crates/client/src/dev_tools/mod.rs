@@ -1,8 +1,8 @@
 //! Developer helpers, controlled by environment variables. Native only; does
 //! nothing unless a variable is set. See `docs/context/client/dev_tools.md`.
 //!
-//! - `GAME_VIEW=mesh|slices`: which view to start in.
 //! - `GAME_POS=x,y`: starting grid position.
+//! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked).
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
 //! - `GAME_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
@@ -13,9 +13,9 @@ use std::env;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 
-use crate::common::{MapView, Weather};
+use crate::common::Weather;
 use crate::demo::AutoWalk;
-use crate::player::{MapPosition, Player};
+use crate::player::{MapPosition, Player, TravelTo};
 
 /// Time between taking the screenshot and quitting, so it can be saved.
 const SAVE_SECONDS: f32 = 2.0;
@@ -24,12 +24,6 @@ pub struct DevToolsPlugin;
 
 impl Plugin for DevToolsPlugin {
     fn build(&self, app: &mut App) {
-        match env::var("GAME_VIEW").as_deref() {
-            Ok("mesh") => app.insert_state(MapView::Mesh),
-            Ok("slices") => app.insert_state(MapView::Slices),
-            _ => app,
-        };
-
         if let Some((x, y)) = env::var("GAME_POS").ok().and_then(|pos| parse_pos(&pos)) {
             app.add_systems(
                 PostStartup,
@@ -37,6 +31,12 @@ impl Plugin for DevToolsPlugin {
                     **player = MapPosition { x, y };
                 },
             );
+        }
+
+        if let Some((x, y)) = env::var("GAME_TRAVEL").ok().and_then(|pos| parse_pos(&pos)) {
+            app.add_systems(PostStartup, move |mut travel: MessageWriter<TravelTo>| {
+                travel.write(TravelTo { x, y });
+            });
         }
 
         if env::var("GAME_WALK").is_ok() {

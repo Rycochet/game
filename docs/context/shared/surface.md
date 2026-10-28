@@ -17,11 +17,11 @@ The planet surface height at any integer grid position (1 unit ≈ 1 km). Ported
 
 ## Used by
 
-- Client `common` (`CurrentWorld`), `slice_view`, `mesh_view`.
+- Client `common` (`CurrentWorld`), `world_map`.
 
 ## Notes
 
 - Algorithm: point mapped onto a cylinder in noise space (east-west wraps, north-south doesn't), 7 octaves summed (`128 + Σ noise·64/2^i`, halved); jitter is octave 5 × 8.
 - Change from the prototype: wraps at an integer `width` (prototype used a fractional circumference, leaving a seam), and uses OpenSimplex2 instead of `simplex-noise`, so exact terrain differs from the old one but has the same character.
-- No caching. ~37 ms for a full slice-view redraw natively (debug build); add caching only if profiling shows a need.
+- No caching here; the client's `world_map` keeps its own `HeightCache`. Add caching in shared code only if profiling shows a need.
 - Heights are floats; when movement validation uses them, compare via quantised/integer values or the same thresholds on both sides (see `architecture.md`).

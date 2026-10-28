@@ -17,7 +17,7 @@ A world's global settings, all generated from its seed. Ported from the TypeScri
 
 ## Used by
 
-- `shared::surface` (circumference); client `common` (`CurrentWorld`), `slice_view`, `mesh_view` (water level).
+- `shared::surface` (circumference); client `common` (`CurrentWorld`), `world_map` (water level).
 
 ## Notes
 

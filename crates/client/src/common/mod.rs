@@ -38,8 +38,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<GameClock>()
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()
-            .init_state::<MapView>()
-            .add_systems(Update, (advance_clock, switch_view));
+            .add_systems(Update, advance_clock);
     }
 }
 
@@ -76,17 +75,6 @@ impl Default for Weather {
     }
 }
 
-/// Which way the world is drawn. Each view module spawns its own camera and
-/// entities on entering its state and they are removed on leaving it.
-#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub enum MapView {
-    /// The original stylised slices (`slice_view`).
-    #[default]
-    Slices,
-    /// A lit 3D terrain mesh (`mesh_view`).
-    Mesh,
-}
-
 /// A line of performance info from the active view, shown by the UI.
 #[derive(Resource, Default)]
 pub struct ViewStats {
@@ -97,18 +85,4 @@ fn advance_clock(time: Res<Time>, mut clock: ResMut<GameClock>) {
     let hour = (time.elapsed_secs() / SECONDS_PER_HOUR) as u32 % 24;
     // Only write when it changes, so change detection stays meaningful.
     clock.set_if_neq(GameClock { hour });
-}
-
-/// Tab switches between the views.
-fn switch_view(
-    keys: Res<ButtonInput<KeyCode>>,
-    view: Res<State<MapView>>,
-    mut next: ResMut<NextState<MapView>>,
-) {
-    if keys.just_pressed(KeyCode::Tab) {
-        next.set(match view.get() {
-            MapView::Slices => MapView::Mesh,
-            MapView::Mesh => MapView::Slices,
-        });
-    }
 }

@@ -48,7 +48,7 @@ fn update_status_text(
         TemperatureCycle::Warming => "warming",
     };
     text.0 = format!(
-        "Arrow keys / WASD to move, Tab to switch view\n\
+        "Arrow keys / WASD or click to move\n\
          G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})\n\
          Position {}, {}  Hour {}\n{}",
         on_off(walk.0),

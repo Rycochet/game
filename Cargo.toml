@@ -1,7 +1,7 @@
 # Workspace: shared game rules, the client app, and helper commands.
 # See docs/context/architecture.md for what goes where.
 [workspace]
-members = ["crates/client", "crates/shared", "xtask"]
+members = ["crates/client", "crates/server", "crates/shared", "xtask"]
 resolver = "3"
 
 [workspace.package]
@@ -9,12 +9,16 @@ version = "0.1.0"
 edition = "2024"
 authors = ["Ryc O'Chet <rycochet@rycochet.com>"]
 repository = "https://github.com/Rycochet/game"
+license = "CC-BY-NC-4.0"
 publish = false
 
 # Versions are set once here; crates opt in with `name.workspace = true`.
 [workspace.dependencies]
 shared = { path = "crates/shared" }
-bevy = "0.20"
+server = { path = "crates/server" }
+# Default features off here so the headless server can stay lean; the client
+# turns them back on.
+bevy = { version = "0.20", default-features = false }
 fastnoise-lite = { version = "1.1", features = ["f64"] }
 
 # Compile our own code with light optimisation so it still builds quickly...

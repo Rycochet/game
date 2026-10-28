@@ -3,13 +3,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug game",
+            "name": "Debug Hall of Worlds",
             "type": "lldb",
             "request": "launch",
             "cargo": {
-                "args": ["build", "--bin=game", "--package=client"],
+                "args": ["build", "--bin=hall-of-worlds", "--package=client"],
                 "filter": {
-                    "name": "game",
+                    "name": "hall-of-worlds",
                     "kind": "bin"
                 }
             },

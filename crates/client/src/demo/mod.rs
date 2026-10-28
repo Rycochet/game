@@ -8,7 +8,7 @@
 use bevy::prelude::*;
 
 use crate::common::{NORMAL_SNOW_LINE, Weather};
-use crate::player::{MapPosition, Player};
+use crate::player::{MapPosition, Player, PlayerSystems};
 
 /// How fast the snow line moves during the temperature cycle, in height units
 /// per second (the prototype moved 1 unit every 166 ms).
@@ -20,7 +20,8 @@ impl Plugin for DemoPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AutoWalk>()
             .init_resource::<TemperatureCycle>()
-            .add_systems(Update, (toggle_modes, auto_walk, temperature_cycle));
+            .add_systems(Update, (toggle_modes, temperature_cycle))
+            .add_systems(Update, auto_walk.in_set(PlayerSystems::Input));
     }
 }
 

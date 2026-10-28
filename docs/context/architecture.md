@@ -12,7 +12,7 @@ The game is client/server, like an MMO. The **server is authoritative**: it owns
 
 ## Crate layout (Cargo workspace)
 
-`shared` and `client` exist; `server` is added with networking.
+All three exist; `server` is a placeholder (startup only) until networking.
 
 | Crate            | Runs on                         | Contains                                                                                       |
 | ---------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -22,7 +22,7 @@ The game is client/server, like an MMO. The **server is authoritative**: it owns
 
 Both `client` and `server` are Bevy apps. `shared` is currently plain Rust (no Bevy); if shared ECS systems are needed it may depend on the non-rendering parts of Bevy only (e.g. `bevy_ecs`, `bevy_math`), which keeps the server lean.
 
-A single-player / offline mode, if wanted, can run the server plugins inside the client process (not in the browser if the server code needs native-only crates).
+Native clients embed the server (`ServerPlugin`) for single player. The web client never includes server code (it will need filesystem access): it only connects to a server, such as the Docker image.
 
 ## Shared vs client-only: deciding per feature
 
