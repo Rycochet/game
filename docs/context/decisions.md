@@ -74,7 +74,7 @@ The world map is inspired by Legend (1992): a square slab of terrain seen from t
 
 ## 2026-10-28: The world map is a 3D renderer
 
-`world_map` renders `shared::surface` as a lit 3D mesh on the GPU with the prototype's composition: a fixed 400×400 window around the player, a flat front face, and the camera aimed at sea level so it doesn't bob. A narrow field of view from far away gives flat, near-isometric perspective; the prototype's strong slope shading is baked into the vertex colours under a harsh sun, keeping the old look's surface variety; water is drawn as part of the terrain at the water surface; tonemapping is off so the original palette isn't washed out. A faithful port of the prototype's CPU slice renderer served as the visual reference and performance baseline while this was tuned, then was removed at the owner's request (it is in this branch's git history).
+`world_map` renders `shared::surface` as a lit 3D mesh on the GPU with the prototype's composition: a 400×400 window around the player with flat earth faces at its edges (it turns and zooms with the camera, see the camera entry below), and the camera aimed at sea level so it doesn't bob. A narrow field of view from far away gives flat, near-isometric perspective; the prototype's strong slope shading is baked into the vertex colours under a harsh sun, keeping the old look's surface variety; water is drawn as part of the terrain at the water surface; tonemapping is off so the original palette isn't washed out. A faithful port of the prototype's CPU slice renderer served as the visual reference and performance baseline while this was tuned, then was removed at the owner's request (it is in the history of Rycochet/game#2).
 
 ## 2026-10-27: Frame rate capped at ~30 fps
 
