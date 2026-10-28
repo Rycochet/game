@@ -10,9 +10,9 @@ The game is client/server, like an MMO. The **server is authoritative**: it owns
 - The server checks each intent (is the target cell walkable? is it adjacent? does the player own the item? cooldowns?) and then broadcasts the outcome.
 - The client may run the same validation locally to predict the result, but treats it only as a guess.
 
-## Planned crate layout (Cargo workspace)
+## Crate layout (Cargo workspace)
 
-Not done yet: the code is still a single crate in `src/`. This is the target.
+`shared` and `client` exist; `server` is added with networking.
 
 | Crate            | Runs on                         | Contains                                                                                       |
 | ---------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -20,7 +20,7 @@ Not done yet: the code is still a single crate in `src/`. This is the target.
 | `crates/client`  | native + browser                | Bevy app with rendering, input, UI, audio; uses `shared` for prediction; talks to the server.   |
 | `crates/server`  | native only (never wasm)        | Headless Bevy app (no window) running `shared` rules authoritatively; networking, persistence.  |
 
-Both `client` and `server` are Bevy apps so the same ECS systems from `shared` can run in both. `shared` depends only on the non-rendering parts of Bevy (e.g. `bevy_ecs`, `bevy_app`, `bevy_math`), which keeps the server lean.
+Both `client` and `server` are Bevy apps. `shared` is currently plain Rust (no Bevy); if shared ECS systems are needed it may depend on the non-rendering parts of Bevy only (e.g. `bevy_ecs`, `bevy_math`), which keeps the server lean.
 
 A single-player / offline mode, if wanted, can run the server plugins inside the client process (not in the browser if the server code needs native-only crates).
 

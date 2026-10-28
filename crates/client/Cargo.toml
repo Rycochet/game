@@ -1,0 +1,17 @@
+[package]
+name = "client"
+description = "The game client: native app and browser (WebAssembly)"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# The executable is called "game" rather than "client".
+[[bin]]
+name = "game"
+path = "src/main.rs"
+
+[dependencies]
+shared.workspace = true
+bevy.workspace = true

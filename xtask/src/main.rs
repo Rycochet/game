@@ -10,8 +10,9 @@ const USAGE: &str = "\
 Usage: cargo xtask <task>
 
 Tasks:
-  test    Check formatting, then type-check and lint (warnings are errors)
-          for both native and the browser (wasm). This is what CI runs.";
+  test    Check formatting, type-check and lint (warnings are errors) for
+          both native and the browser (wasm), then run the tests. This is
+          what CI runs.";
 
 fn main() -> ExitCode {
     match env::args().nth(1).as_deref() {
@@ -38,13 +39,13 @@ fn test() -> ExitCode {
                 "warnings",
             ],
         ),
-        // Only the game itself runs in the browser; helper/server crates don't.
+        // Only the client (and the shared crate it uses) runs in the browser.
         (
             "Lint (web)",
             &[
                 "clippy",
                 "--package",
-                "game",
+                "client",
                 "--target",
                 "wasm32-unknown-unknown",
                 "--",
@@ -52,7 +53,7 @@ fn test() -> ExitCode {
                 "warnings",
             ],
         ),
-        // Add ("Tests", &["test", "--workspace"]) once there are real tests.
+        ("Tests", &["test", "--workspace"]),
     ];
 
     let mut failed = Vec::new();

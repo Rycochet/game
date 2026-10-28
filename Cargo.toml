@@ -1,18 +1,21 @@
-[package]
-name = "game"
+# Workspace: shared game rules, the client app, and helper commands.
+# See docs/context/architecture.md for what goes where.
+[workspace]
+members = ["crates/client", "crates/shared", "xtask"]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-description = "Multiplayer roguelike with an infinite world"
 authors = ["Ryc O'Chet <rycochet@rycochet.com>"]
 repository = "https://github.com/Rycochet/game"
 publish = false
 
-[dependencies]
+# Versions are set once here; crates opt in with `name.workspace = true`.
+[workspace.dependencies]
+shared = { path = "crates/shared" }
 bevy = "0.20"
-
-# Project helper commands, run as `cargo xtask <task>` (see .cargo/config.toml).
-[workspace]
-members = ["xtask"]
+fastnoise-lite = { version = "1.1", features = ["f64"] }
 
 # Compile our own code with light optimisation so it still builds quickly...
 [profile.dev]

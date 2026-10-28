@@ -29,9 +29,9 @@ On Linux you also need some system libraries, see <https://bevy.org/learn/quick-
 
 The first build downloads and compiles Bevy, which takes several minutes. Later builds are much faster.
 
-`cargo xtask test` checks formatting and type-checks/lints the native and web builds with warnings treated as errors. GitHub runs it on every branch (the "Test" workflow) and it must pass before merging.
+`cargo xtask test` checks formatting, type-checks/lints the native and web builds with warnings treated as errors, and runs the tests. GitHub runs it on every branch (the "Test" workflow) and it must pass before merging.
 
-Source code is inside `src/`, images/sounds/fonts go in `assets/`. Build output goes in `target/` (native) and `dist/` (web), both local only.
+Source code is in `crates/`: `shared` holds game rules and world generation used by both client and (later) server, `client` is the game app. Images/sounds/fonts go in `crates/client/assets/`. Press Tab in the game to switch between the two world map views. Build output goes in `target/` (native) and `dist/` (web), both local only.
 
 ## Overview
 

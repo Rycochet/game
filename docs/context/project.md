@@ -2,12 +2,13 @@
 
 ## Layout
 
-- `src/main.rs`: creates the window (and binds it to `<canvas id="game">` on the web) and registers each module's plugin. No game logic.
-- `src/<module>/`: one folder per feature module; see the table in `CLAUDE.md`.
-- `assets/`: images, sounds, fonts. Loaded by Bevy's `AssetServer` natively; copied into `dist/` by Trunk for the web.
-- `index.html` + `Trunk.toml`: the web build. Trunk compiles to wasm and serves on port 3000.
+- `Cargo.toml`: workspace root (members `crates/client`, `crates/shared`, `xtask`); shared dependency versions (`[workspace.dependencies]`) and build profiles live here.
+- `crates/shared/`: library crate `shared` (plain Rust): rules and world generation. See `CLAUDE.md` table.
+- `crates/client/`: Bevy app, package `client`, binary `game`. `src/main.rs` creates the window (bound to `<canvas id="game">` on the web) and registers each module's plugin; no game logic.
+- `crates/client/assets/`: images, sounds, fonts. Loaded by Bevy's `AssetServer` natively (relative to the client crate); copied into `dist/` by Trunk for the web.
+- `index.html` + `Trunk.toml`: the web build (points Trunk at `crates/client`). Serves on port 3000.
 - `docs/context/`: context files for Claude (this folder).
-- `xtask/`: helper commands, run as `cargo xtask <task>` via the alias in `.cargo/config.toml`. The root `Cargo.toml` is a workspace containing the game and `xtask`. `xtask test` = fmt check + clippy `-D warnings` for native (`--workspace --all-targets`) and for `wasm32-unknown-unknown` (game crate only).
+- `xtask/`: helper commands, run as `cargo xtask <task>` via the alias in `.cargo/config.toml`. `xtask test` = fmt check + clippy `-D warnings` for native (`--workspace --all-targets`) and for `wasm32-unknown-unknown` (`client` package, which pulls in `shared`) + `cargo test --workspace`.
 - `README.md` (human setup + game design), `designs.txt` (older design notes).
 
 ## Tooling

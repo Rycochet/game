@@ -7,7 +7,7 @@
             "type": "lldb",
             "request": "launch",
             "cargo": {
-                "args": ["build", "--bin=game", "--package=game"],
+                "args": ["build", "--bin=game", "--package=client"],
                 "filter": {
                     "name": "game",
                     "kind": "bin"
