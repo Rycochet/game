@@ -1,0 +1,3 @@
+[alias]
+# `cargo xtask test` etc. runs the helper program in xtask/.
+xtask = "run --quiet --package xtask --"

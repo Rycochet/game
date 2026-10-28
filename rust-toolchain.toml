@@ -1,0 +1,6 @@
+# Anyone building this project automatically gets the same Rust toolchain,
+# including the WebAssembly target needed for browser builds.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]

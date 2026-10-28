@@ -1,0 +1,57 @@
+# Builds the server image (game server + web client on port 8080).
+# Pull requests (ready for review, not drafts): build only, to catch
+# Dockerfile breakage before merging.
+# master (after every merge): build and publish to the GitHub Container
+# Registry as ghcr.io/rycochet/hall-of-worlds:latest (plus a commit tag).
+name: Docker
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Registry image names must be lowercase.
+  IMAGE: ghcr.io/rycochet/hall-of-worlds
+
+jobs:
+  docker:
+    name: Docker image
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          # x86-64 only for now; add linux/arm64 here later (same tags).
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

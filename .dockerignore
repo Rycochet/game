@@ -1,0 +1,6 @@
+# Keep the Docker build context small: only sources are needed.
+.git
+target
+dist
+node_modules
+.vscode

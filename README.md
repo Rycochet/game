@@ -1,16 +1,58 @@
-# game
+# Hall of Worlds
+
+A multiplayer roguelike with an infinite, procedurally generated world.
+
+- <https://hallofworlds.com>: landing page and email (not live yet)
+- <https://hallofworlds.app>: the game, running the Docker image (not live yet)
+- <https://hallofworlds.wiki>: game documentation (not live yet; planned to live in this repo)
 
 ## Development
 
-1. Install NodeJS <https://nodejs.org/en>
-2. Install Visual Studio Code <https://code.visualstudio.com/> as an editor
-3. Open a terminal within VSCode and run `npm ci`
-4. ...
-5. Profit
+The game is written in [Rust](https://www.rust-lang.org/) using the [Bevy](https://bevy.org/) game engine. It has two parts:
 
-To run this open a terminal and run `npm start`, this will allow you to open the app in a browser window on <http://localhost:3000/>, this will automatically update on code changes.
+- **Client** (`hall-of-worlds`): the game itself, as a native app (Windows, macOS, Linux) or WebAssembly in the browser. Native clients include the server for single player; the browser client only connects to a server.
+- **Server** (`hall-of-worlds-server`): the authoritative game server, native only. The Docker image runs it alongside the web client.
 
-Source code is inside `src/`, output code in `dist/` (local only), anything inside `public/` will automatically be copied over.
+### One-time setup (Windows)
+
+1. Install the Visual Studio C++ Build Tools (with the "Desktop development with C++" workload): <https://visualstudio.microsoft.com/visual-cpp-build-tools/>
+2. Install Rust: `winget install Rustlang.Rustup` (or <https://rustup.rs/>), then open a new terminal.
+3. Install Trunk, the web build tool: `cargo install --locked trunk`
+4. Install Visual Studio Code <https://code.visualstudio.com/> and accept the recommended extensions when you open this folder.
+
+`rust-toolchain.toml` makes Rust download the correct compiler and WebAssembly target automatically on the first build.
+
+On Linux you also need some system libraries, see <https://bevy.org/learn/quick-start/getting-started/setup/>.
+
+### Running
+
+| What                      | Command                 | VSCode                                     |
+| ------------------------- | ----------------------- | ------------------------------------------ |
+| Run natively              | `cargo run`             | Task "Run (native)", or F5 to debug        |
+| Run the standalone server | `cargo run -p server`   |                                            |
+| Run in a browser          | `trunk serve`           | Task "Serve (web)", then <http://localhost:3000/> |
+| Release build (native)    | `cargo build --release` | Task "Release build (native)"             |
+| Release build (web)       | `trunk build --release` | Task "Release build (web)", output in `dist/` |
+| Test (what CI runs)       | `cargo xtask test`      | Task "Test"                               |
+| Lint                      | `cargo clippy`          | Shown automatically in the editor         |
+| Format                    | `cargo fmt`             | Automatic on save                         |
+
+The first build downloads and compiles Bevy, which takes several minutes. Later builds are much faster.
+
+`cargo xtask test` checks formatting, type-checks/lints the native and web builds with warnings treated as errors, and runs the tests. GitHub runs it on every branch (the "Test" workflow) and it must pass before merging.
+
+Source code is in `crates/`: `shared` holds game rules and world generation used by both sides, `client` is the game app, `server` is the game server. Images/sounds/fonts go in `crates/client/assets/`. In the game, click the map or use the arrow keys to move; G and T start demo modes. Build output goes in `target/` (native) and `dist/` (web), both local only.
+
+### Docker
+
+The `Dockerfile` builds an x86-64 image with the game server and the web client (served on port 8080):
+
+```bash
+docker build -t hall-of-worlds .
+docker run -p 8080:8080 hall-of-worlds
+```
+
+Every merge to `master` publishes it as `ghcr.io/rycochet/hall-of-worlds:latest`.
 
 ## Overview
 
@@ -56,3 +98,7 @@ Multiplayer roguelike with infinite world
 * Some changes are temporary (growth / monsters /doors etc), and will be forgotten / reset after a period of time (1 hour?).
 * Some changes are per-player (unique monster rewards / quests etc) and must be saved for the individual player.
 * Some changes are permanent (digging etc) and must be saved for everyone.
+
+## Licence
+
+Hall of Worlds is licensed under [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/) (CC BY-NC 4.0): you may share and adapt it with attribution, but not for commercial purposes. See [LICENSE](LICENSE). Third-party dependencies keep their own licences.

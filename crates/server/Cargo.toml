@@ -1,0 +1,23 @@
+[package]
+name = "server"
+description = "Hall of Worlds game server: the authoritative game simulation (native only)"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+# The standalone (dedicated / Docker) server. Native clients link the library
+# instead, for single player.
+[[bin]]
+name = "hall-of-worlds-server"
+path = "src/main.rs"
+
+[dependencies]
+shared.workspace = true
+# Headless: no rendering, windowing, audio or input.
+bevy = { workspace = true, features = ["std", "bevy_log", "multi_threaded"] }

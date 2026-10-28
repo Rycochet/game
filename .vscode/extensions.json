@@ -1,12 +1,10 @@
 {
-  "recommendations": [
-    "editorconfig.editorconfig",
-    "dbaeumer.vscode-eslint",
-    "meezilla.json",
-    "devine-davies.make-hidden",
-    "shd101wyy.markdown-preview-enhanced",
-    "davidanson.vscode-markdownlint",
-    "esbenp.prettier-vscode",
-    "vitest.explorer"
-  ]
+    "recommendations": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "tamasfe.even-better-toml",
+        "fill-labs.dependi",
+        "editorconfig.editorconfig",
+        "davidanson.vscode-markdownlint"
+    ]
 }

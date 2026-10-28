@@ -1,0 +1,13 @@
+[package]
+name = "shared"
+description = "Game rules and world generation used by both client and server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fastnoise-lite.workspace = true
+libm = "0.2"
