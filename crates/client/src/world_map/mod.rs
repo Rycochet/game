@@ -13,7 +13,7 @@ use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::light_consts;
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use bevy::render::view::Tonemapping;
+use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
 use crate::common::{CurrentWorld, GameClock, ViewStats, Weather};
@@ -101,6 +101,8 @@ fn spawn_view(
         // The default tonemapping desaturates colours (pastel); show the
         // surface colours as authored instead.
         Tonemapping::None,
+        // Dithering only works with tonemapping.
+        DebandDither::Disabled,
     ));
 
     // Low sun from the east, matching the prototype's shading.

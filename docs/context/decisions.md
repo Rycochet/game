@@ -62,7 +62,7 @@ The browser can only use WebSockets or WebTransport (no raw UDP), so the transpo
 
 ## 2026-10-27: Test command `cargo xtask test`, required in CI
 
-One command, identical locally and in CI: formatting check, clippy with warnings as errors for native and wasm (type-check only), then `cargo test --workspace`. Implemented as an `xtask` helper crate (the usual Rust pattern) because cargo aliases can't chain commands and scripts would differ between Windows and Unix. The GitHub "Test" workflow runs it on every branch on all three OSes; its "All tests passed" check must pass before merging.
+One command, identical locally and in CI: formatting check, clippy with warnings as errors for native and wasm (type-check only), then `cargo test --workspace`. Implemented as an `xtask` helper crate (the usual Rust pattern) because cargo aliases can't chain commands and scripts would differ between Windows and Unix. The GitHub "Test" workflow runs it on all three OSes for ready-for-review PRs (drafts skipped) and on `master`; its "All tests passed" check must pass before merging.
 
 ## 2026-10-27: Develop on native; browser checked occasionally
 
@@ -107,3 +107,11 @@ A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the sa
 ## 2026-10-28: Licence: CC BY-NC 4.0
 
 The project is licensed under Creative Commons Attribution-NonCommercial 4.0 (`LICENSE`, SPDX `CC-BY-NC-4.0`), chosen by the owner: free to share and adapt with attribution, not for commercial use. It is not an OSI open-source licence (non-commercial clause), and Creative Commons doesn't recommend its licences for software; the owner accepted this. Dependencies must still be OSI-licensed (see `CLAUDE.md`).
+
+## 2026-10-28: Tests run only on ready PRs and master
+
+To avoid running CI on every push, the Test workflow (and the Docker PR build) runs on pull requests that are ready for review, skipping drafts, plus pushes to `master`. Iterate on a draft PR, then mark it ready to test. GitHub's merge queue would run checks only at merge time, but it isn't available to personally owned repositories.
+
+## 2026-10-28: Client memory optimisations measured but not adopted
+
+Trimming Bevy features and a few render/thread settings cut memory by about 25% in Task Manager terms, but the owner judged it not worth the upkeep for now. Measurements, versions and the exact changes are in `optimisations.md`.

@@ -18,6 +18,7 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | ------------------- | ------------------------------- | ------------------------------------- | --------------------------------------------------- |
 | (project)           | root files                      | `docs/context/project.md`             | Build, tooling, folder layout, CI                   |
 | (design)            | n/a                             | `docs/context/architecture.md`        | Client/server split, trust and determinism rules    |
+| (performance)       | n/a                             | `docs/context/optimisations.md`       | Measured optimisations tried but not adopted (memory) |
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
@@ -73,7 +74,7 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 - Native: `cargo run` · Server: `cargo run -p server` · Web: `trunk serve` (http://localhost:3000) · Format: `cargo fmt`
 - Docker isn't installed on the owner's machine: the Docker workflow test-builds the image on every PR instead.
-- **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI runs it on every branch and it must pass before merging.
+- **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI runs it on ready-for-review PRs (not drafts) and on `master`, and it must pass before merging.
 - **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: CI type-checks wasm on every push, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
 - **Leave the game running for the owner** after finishing a change: start the native build in the background (`./target/debug/hall-of-worlds.exe` with `run_in_background`) and don't close it, so the owner can see and play with the changes. Before rebuilding, close it if it's still running (`taskkill //IM hall-of-worlds.exe //F`): Windows locks the running executable and the build fails with "Access is denied".
 - **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`).

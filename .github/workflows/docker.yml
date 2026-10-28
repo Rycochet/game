@@ -1,5 +1,6 @@
 # Builds the server image (game server + web client on port 8080).
-# Pull requests: build only, to catch Dockerfile breakage before merging.
+# Pull requests (ready for review, not drafts): build only, to catch
+# Dockerfile breakage before merging.
 # master (after every merge): build and publish to the GitHub Container
 # Registry as ghcr.io/rycochet/hall-of-worlds:latest (plus a commit tag).
 name: Docker
@@ -8,6 +9,7 @@ on:
   push:
     branches: [master]
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -21,6 +23,7 @@ env:
 jobs:
   docker:
     name: Docker image
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

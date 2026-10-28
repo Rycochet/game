@@ -39,6 +39,6 @@
 
 ## CI
 
-- `.github/workflows/test.yml`: on every branch push and PR, runs `cargo xtask test` on Windows, macOS and Linux. The `All tests passed` job aggregates them and is the check to require in GitHub branch protection.
+- `.github/workflows/test.yml`: runs `cargo xtask test` on Windows, macOS and Linux for pull requests that are ready for review (draft PRs are skipped) and on pushes to `master` (which warms the cache PRs reuse). Not on plain branch pushes. Builds without debug info (`CARGO_PROFILE_DEV_DEBUG=0`) and frees disk on the Linux runner first: with debug info the build folder filled the runner's disk. The `All tests passed` job aggregates them and is the check to require in GitHub branch protection.
 - `.github/workflows/build.yml`: on push to `master` (or manually), release builds of client + server for the three OSes and the web client, uploaded as workflow artifacts (`hall-of-worlds-<OS>`, `hall-of-worlds-web`).
-- `.github/workflows/docker.yml`: on PRs builds the image without pushing; on push to `master` (every merge) or manually, publishes `ghcr.io/rycochet/hall-of-worlds:latest` and `:sha-<commit>` using `GITHUB_TOKEN` (`packages: write`). Uses the GitHub Actions layer cache.
+- `.github/workflows/docker.yml`: on ready (non-draft) PRs builds the image without pushing; on push to `master` (every merge) or manually, publishes `ghcr.io/rycochet/hall-of-worlds:latest` and `:sha-<commit>` using `GITHUB_TOKEN` (`packages: write`). Uses the GitHub Actions layer cache.
