@@ -29,9 +29,10 @@
         },
         {
             "label": "Release build (native)",
+            "detail": "cargo xtask package: client, server and assets in target/package/",
             "type": "cargo",
-            "command": "build",
-            "args": ["--release"],
+            "command": "xtask",
+            "args": ["package"],
             "problemMatcher": ["$rustc"]
         },
         {

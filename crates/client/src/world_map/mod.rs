@@ -5,9 +5,9 @@
 //! player with a flat front face. The window is one mesh that moves with the
 //! player; each step reuses cached heights and only samples the new edge.
 
-mod marker;
 mod picking;
 mod terrain;
+mod token;
 
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::light_consts;
@@ -20,6 +20,7 @@ use crate::common::{CurrentWorld, GameClock, ViewStats, Weather};
 use crate::player::{MapPosition, Player, PlayerSystems, SmoothPosition, TravelTo};
 use crate::surface_style::SurfaceStyle;
 use terrain::HeightCache;
+use token::{IconAnchor, TokenAssets, TokenView};
 
 /// World height units per 3D unit of height. 1.0 keeps the prototype's
 /// proportions.
@@ -38,7 +39,7 @@ pub const CAMERA_FOV_DEGREES: f32 = 20.0;
 pub const CAMERA_DISTANCE: f32 = 1100.0;
 
 /// Camera angle above the horizon, looking north.
-const CAMERA_PITCH_DEGREES: f32 = 34.0;
+pub const CAMERA_PITCH_DEGREES: f32 = 34.0;
 
 /// The camera looks this far south of the player, so the front edge and its
 /// face fit on screen.
@@ -61,7 +62,13 @@ impl Plugin for WorldMapPlugin {
             .add_systems(Update, pick_on_click.in_set(PlayerSystems::Input))
             .add_systems(
                 Update,
-                (follow_player, place_camera_and_marker)
+                (
+                    follow_player,
+                    token::resize_tokens,
+                    token::sync_tokens,
+                    token::sync_icons,
+                    place_camera_and_tokens,
+                )
                     .chain()
                     .after(PlayerSystems::Travel),
             );
@@ -149,12 +156,11 @@ fn spawn_view(
         Transform::default(),
     ));
 
-    marker::spawn(
-        &mut commands,
+    commands.insert_resource(TokenAssets::new(
         &mut meshes,
         &mut materials,
         window.physical_height() as f32,
-    );
+    ));
 
     commands.init_resource::<HeightCache>();
 }
@@ -222,17 +228,20 @@ fn follow_player(
     stats.summary = format!("World map: update {ms:.1} ms");
 }
 
-/// Every frame: the camera and marker follow the player's exact position, so
-/// travelling looks smooth (the terrain itself moves a whole step at a time).
-#[allow(clippy::type_complexity)]
-fn place_camera_and_marker(
+/// Every frame: the camera follows the player's exact position, so travelling
+/// looks smooth (the terrain itself moves a whole step at a time). Tokens sit
+/// at their owners' exact positions, with icon anchors facing the camera.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+fn place_camera_and_tokens(
     player: Single<&SmoothPosition, With<Player>>,
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
-    mut camera: Single<&mut Transform, (With<ViewCamera>, Without<marker::Marker>)>,
-    mut marker: Single<&mut Transform, With<marker::Marker>>,
+    positions: Query<&SmoothPosition>,
+    mut camera: Single<&mut Transform, (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>)>,
+    mut views: Query<(&TokenView, &mut Transform), Without<IconAnchor>>,
+    mut anchors: Query<&mut Transform, (With<IconAnchor>, Without<ViewCamera>, Without<TokenView>)>,
 ) {
     let Some(mut cache) = cache else {
         return;
@@ -248,16 +257,31 @@ fn place_camera_and_marker(
     **camera = Transform::from_translation(target + camera_offset()).looking_at(target, Vec3::Y);
 
     let water_level = world.params.water_level(clock.hour as f64);
-    // Rest on the highest ground under the marker, so it never sinks in.
-    let ground = terrain::highest_shown_height(
-        &mut cache,
-        &world.surface,
-        &style,
-        water_level,
-        (player.x, player.y),
-        (marker::DIAMETER / 2.0) as f64,
-    );
-    marker.translation = Vec3::new(x, ground + marker::HALF_THICKNESS, y);
+    for (view, mut transform) in &mut views {
+        let Ok(position) = positions.get(view.owner) else {
+            continue;
+        };
+        // Rest on the highest ground under the token, so it never sinks in.
+        let ground = terrain::highest_shown_height(
+            &mut cache,
+            &world.surface,
+            &style,
+            water_level,
+            (position.x, position.y),
+            (token::DIAMETER / 2.0) as f64,
+        );
+        transform.translation = Vec3::new(
+            position.x as f32,
+            ground + token::HALF_THICKNESS,
+            position.y as f32,
+        );
+    }
+
+    // Token views never rotate, so turning each anchor to the camera's
+    // rotation makes it face the screen.
+    for mut anchor in &mut anchors {
+        anchor.rotation = camera.rotation;
+    }
 }
 
 /// A left click on the terrain sends the player travelling there.

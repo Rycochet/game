@@ -90,7 +90,7 @@ The prototype's snow-line animation is back as a demo (T key; G toggles auto-wal
 
 ## 2026-10-28: Click to travel, smooth positions
 
-Left-clicking the 3D map sends the player travelling to the clicked grid point at constant speed (`player::TravelTo`). The position is fractional while moving (`SmoothPosition`) but always ends on a whole grid point (`MapPosition`); a new click re-targets from the current position. Clicks are found by walking the camera ray against the drawn terrain heights rather than using a physics or picking library. The player is shown as a flat white cylinder with a black outline, made with the inverted-hull technique to avoid a custom shader.
+Left-clicking the 3D map sends the player travelling to the clicked grid point at constant speed (`player::TravelTo`). The position is fractional while moving (`SmoothPosition`) but always ends on a whole grid point (`MapPosition`); a new click re-targets from the current position. Clicks are found by walking the camera ray against the drawn terrain heights rather than using a physics or picking library. The player is shown as a flat white cylinder with a black outline (now a token, see "Entity tokens"), made with the inverted-hull technique to avoid a custom shader.
 
 ## 2026-10-28: The game is called Hall of Worlds
 
@@ -115,3 +115,15 @@ To avoid running CI on every push, the Test workflow (and the Docker PR build) r
 ## 2026-10-28: Client memory optimisations measured but not adopted
 
 Trimming Bevy features and a few render/thread settings cut memory by about 25% in Task Manager terms, but the owner judged it not worth the upkeep for now. Measurements, versions and the exact changes are in `optimisations.md`.
+
+## 2026-10-28: Entity tokens
+
+Every entity shown on the map is a "token": a base shape (circle, triangle, square, hexagon, octagon; polygons show a flat side to the camera except the triangle) extruded upwards, coloured by its attitude to the player (white none, green friendly, blue neutral, red unfriendly), with the inverted-hull black outline. Tokens can also be "completed" (probably mostly for white ones; to be judged in play): about 30% darker and slightly see-through (opacity 0.9). This replaces the player-only marker; the player is a white circle (cylinder). The `Token` component lives in client `common` so any module can give an entity one, and `world_map` decides how to draw it, on separate view entities so game entities carry no rendering components. Each token has an anchor above it that always faces the camera, showing the entity's 2D `Icon`: pixel art sized relative to the token (it scales with the map, for a blockier retro look; may change with new artwork), while the outline stays a fixed width in screen pixels. `Token` is client-only for now; attitude may move to `shared` once the server decides it.
+
+## 2026-10-28: Third-party art: David E. Gervais tiles, credited in `ATTRIBUTION.md`
+
+Entity icons come from David E. Gervais's tiles library (<http://pousse.rapiere.free.fr/tome/>), licensed CC BY 3.0, chosen by the owner. They are kept as individual files (easier to add and edit; a spritesheet can be packed at build time or by Bevy later if the web build needs fewer downloads) in `crates/client/assets/`, in the same folders as the original zips, with lower-case names and the magenta background turned into real transparency. Every third-party asset is credited in `crates/client/assets/ATTRIBUTION.md`, which ships with the web build. The CC BY-NC project licence and the dependency rule (OSI licences) are about code; art may use other licences that allow this use, recorded there.
+
+## 2026-10-28: Native releases ship the assets folder
+
+All assets must be in the native builds. Release executables load `assets/` from their own folder, so `cargo xtask package` assembles `target/package/` (client, server, `assets/`) and the Build workflow uploads that. Assets stay files beside the executable rather than embedded in it, so art can be replaced (the Gervais tiles are planned to be replaced by commissioned artwork) without rebuilding, and the executable stays small. Native debug builds read the source `crates/client/assets/` directly.

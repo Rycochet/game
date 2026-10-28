@@ -4,6 +4,8 @@
 use bevy::math::DVec2;
 use bevy::prelude::*;
 
+use crate::common::{Icon, Token};
+
 /// While a key is held, how often the player takes another step.
 const STEP_REPEAT_SECONDS: f32 = 0.05;
 
@@ -85,6 +87,9 @@ fn spawn_player(mut commands: Commands) {
         MapPosition::default(),
         SmoothPosition::default(),
         Travel::default(),
+        // A white circle (no attitude): drawn as a cylinder on the map.
+        Token::default(),
+        Icon("monsters/humanarcher.png".into()),
     ));
 }
 

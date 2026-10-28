@@ -50,6 +50,7 @@ fn update_status_text(
     text.0 = format!(
         "Arrow keys / WASD or click to move\n\
          G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})\n\
+         K / C / X: token shape / colour / completed\n\
          Position {}, {}  Hour {}\n{}",
         on_off(walk.0),
         weather.snow_line,

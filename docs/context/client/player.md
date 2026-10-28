@@ -4,7 +4,7 @@ The player's position on the world grid: keyboard steps and travelling to a clic
 
 ## Files
 
-- `crates/client/src/player/mod.rs`: `PlayerPlugin`; spawns the player, `move_player` (arrows/WASD: one step on press, repeating every 50 ms while held), `travel` (constant-speed travel, `TRAVEL_SPEED` 60 units/s).
+- `crates/client/src/player/mod.rs`: `PlayerPlugin`; spawns the player (with a default `Token`: white circle, and `Icon` `monsters/humanarcher.png`), `move_player` (arrows/WASD: one step on press, repeating every 50 ms while held), `travel` (constant-speed travel, `TRAVEL_SPEED` 60 units/s).
 
 ## Public API
 
@@ -16,11 +16,11 @@ The player's position on the world grid: keyboard steps and travelling to a clic
 
 ## Depends on
 
-- Nothing beyond Bevy.
+- `common` (`Token`, `Icon`).
 
 ## Used by
 
-- `world_map` (centre of view, clicks), `ui` (position readout), `demo` (auto-walk), `dev_tools` (`GAME_POS`, `GAME_TRAVEL`).
+- `world_map` (centre of view, clicks, token positions), `ui` (position readout), `demo` (auto-walk), `dev_tools` (`GAME_POS`, `GAME_TRAVEL`).
 
 ## Notes
 

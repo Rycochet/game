@@ -23,11 +23,11 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
 | server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server: `ServerPlugin`, standalone binary |
-| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world, clock, weather, view stats, frame cap |
+| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world, clock, weather, view stats, frame cap, `Token` |
 | client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks   |
 | client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
-| client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window, front face, camera, light, click picking, player marker |
-| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle  |
+| client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window, front face, camera, light, click picking, entity tokens |
+| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X token shape/colour/completed  |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text                                     |
 | client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position, travel, walk, snow, screenshots |
 
@@ -73,6 +73,7 @@ When the owner says a branch is ready to merge (or asks for a PR):
 ## Commands
 
 - Native: `cargo run` · Server: `cargo run -p server` · Web: `trunk serve` (http://localhost:3000) · Format: `cargo fmt`
+- Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
 - Docker isn't installed on the owner's machine: the Docker workflow test-builds the image on every PR instead.
 - **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI runs it on ready-for-review PRs (not drafts) and on `master`, and it must pass before merging.
 - **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: CI type-checks wasm on every push, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
