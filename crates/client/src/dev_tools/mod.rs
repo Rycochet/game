@@ -10,8 +10,10 @@
 //! - `GAME_TOKEN=shape,attitude[,1]`: the player's token, as numbers (indexes
 //!   into `TokenShape::ALL` and `Attitude::ALL`), e.g. `3,2` is a blue
 //!   hexagon; a third value of `1` makes it completed.
-//! - `GAME_YAW=degrees`: start with the map view turned (positive moves the
-//!   camera towards the east; 90 looks west, 180 looks south).
+//! - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the map view turned by `yaw`
+//!   degrees (positive moves the camera towards the east; 90 looks west, 180
+//!   looks south), tilted to `pitch` degrees above the horizon and zoomed
+//!   (`zoom` 2 = twice as close).
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 
@@ -83,13 +85,22 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
-        if let Some(degrees) = env::var("GAME_YAW")
-            .ok()
-            .and_then(|v| v.parse::<f32>().ok())
-        {
+        if let Ok(view) = env::var("GAME_VIEW") {
+            let numbers: Vec<f32> = view
+                .split(',')
+                .filter_map(|n| n.trim().parse().ok())
+                .collect();
             app.add_systems(PostStartup, move |mut cameras: Query<&mut OrbitCamera>| {
                 for mut camera in &mut cameras {
-                    camera.yaw = degrees.to_radians();
+                    if let Some(yaw) = numbers.first() {
+                        camera.yaw = yaw.to_radians();
+                    }
+                    if let Some(pitch) = numbers.get(1) {
+                        camera.pitch = pitch.to_radians();
+                    }
+                    if let Some(zoom) = numbers.get(2) {
+                        camera.distance /= zoom;
+                    }
                 }
             });
         }

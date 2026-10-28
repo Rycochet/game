@@ -16,11 +16,13 @@ const STEP: f32 = 0.5;
 const MAX_HEIGHT: f32 = 128.0 * HEIGHT_SCALE;
 
 /// The grid point the ray first hits on the terrain window centred on
-/// `centre`, or `None` if it misses (or only hits an edge face). Works from
+/// `centre` and lined up with `axes` (the camera's right and
+/// towards-the-camera directions along the ground), or `None` if it misses (or only hits an edge face). Works from
 /// any direction, so it follows the camera when the view turns.
 pub fn pick(
     ray: Ray3d,
     centre: (i64, i64),
+    (right, towards): (Vec2, Vec2),
     cache: &mut HeightCache,
     surface: &Surface,
     style: &SurfaceStyle,
@@ -40,7 +42,9 @@ pub fn pick(
         let point = ray.origin + direction * t;
         t += STEP;
         let (x, z) = (point.x.round() as i64, point.z.round() as i64);
-        if (x - centre.0).abs() as f32 > half || (z - centre.1).abs() as f32 > half {
+        // Position across and along the window.
+        let offset = Vec2::new(point.x - centre.0 as f32, point.z - centre.1 as f32);
+        if offset.dot(right).abs() > half || offset.dot(towards).abs() > half {
             if entered {
                 return None; // Passed over the far edge.
             }
@@ -75,6 +79,9 @@ mod tests {
         )
     }
 
+    /// The window's axes in the starting view, looking north.
+    const NORTH_VIEW: (Vec2, Vec2) = (Vec2::X, Vec2::Y);
+
     fn ray(origin: Vec3, towards: Vec3) -> Ray3d {
         Ray3d::new(origin, Dir3::new(towards - origin).unwrap())
     }
@@ -85,6 +92,7 @@ mod tests {
         let hit = pick(
             ray(Vec3::new(10.0, 500.0, -20.0), Vec3::new(10.0, 0.0, -20.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,
@@ -100,6 +108,7 @@ mod tests {
         let hit = pick(
             ray(Vec3::new(0.0, 5.0, 600.0), Vec3::new(0.0, 4.0, 0.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,
@@ -115,6 +124,7 @@ mod tests {
         let hit = pick(
             ray(Vec3::new(0.0, 5.0, -600.0), Vec3::new(0.0, 4.0, 0.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,
@@ -130,6 +140,7 @@ mod tests {
         let hit = pick(
             ray(Vec3::new(900.0, 600.0, 0.0), Vec3::new(0.0, 0.0, 0.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,
@@ -140,11 +151,29 @@ mod tests {
     }
 
     #[test]
+    fn turned_window_has_turned_edges() {
+        let (surface, style, mut cache, water) = setup();
+        // Straight down at (190, 190): inside the square window looking
+        // north, but outside it turned 45° (the corner direction is ~269
+        // from the centre, while the turned window reaches only 200).
+        let down = ray(Vec3::new(190.0, 500.0, 190.0), Vec3::new(190.0, 0.0, 190.0));
+        let diagonal = std::f32::consts::FRAC_1_SQRT_2;
+        let turned = (
+            Vec2::new(diagonal, -diagonal),
+            Vec2::new(diagonal, diagonal),
+        );
+        let mut hit = |axes| pick(down, (0, 0), axes, &mut cache, &surface, &style, water);
+        assert_eq!(hit(NORTH_VIEW), Some((190, 190)));
+        assert_eq!(hit(turned), None);
+    }
+
+    #[test]
     fn over_the_map_misses() {
         let (surface, style, mut cache, water) = setup();
         let hit = pick(
             ray(Vec3::new(0.0, 500.0, 600.0), Vec3::new(0.0, 300.0, -600.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,
