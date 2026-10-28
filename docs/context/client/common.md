@@ -13,6 +13,7 @@ Shared building blocks for the client modules. Keep it small.
 - `ViewStats` (resource): `summary` line written by `world_map`, shown by `ui` (so `ui` needn't depend on the map).
 - `Token` (component): `shape: TokenShape` (`Circle`, `Triangle`, `Square`, `Hexagon`, `Octagon`) and `attitude: Attitude` (`None` white, `Friendly` green, `Neutral` blue, `Unfriendly` red; `Attitude::colour()`), and `completed: bool` (secondary state: drawn ~30% darker and slightly see-through). How an entity is shown on maps; set by its owning module (`player`), drawn by `world_map`. Both enums have `ALL` and `next()`.
 - `Icon(String)` (component): a 2D picture shown above an entity's token, always facing the camera; asset path such as `monsters/humanarcher.png` (54×54 art, main picture in the central 32×32). Set by the owning module, drawn by `world_map`.
+- `ViewFacing(u8)` (resource): which compass direction is nearest the top of the screen, in quarter turns clockwise from north (0 north, 1 east, 2 south, 3 west). Written by `world_map` from its camera; `screen_to_grid(dx, dy)` turns a screen direction into a grid step (used by `player` for keys).
 - `Weather` (resource): `snow_line` (`NORMAL_SNOW_LINE` = 128 normally, 0 = frozen). Changed by `demo`; read by `world_map` and `ui`.
 
 ## Depends on

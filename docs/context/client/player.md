@@ -4,7 +4,7 @@ The player's position on the world grid: keyboard steps and travelling to a clic
 
 ## Files
 
-- `crates/client/src/player/mod.rs`: `PlayerPlugin`; spawns the player (with a default `Token`: white circle, and `Icon` `monsters/humanarcher.png`), `move_player` (arrows/WASD: one step on press, repeating every 50 ms while held), `travel` (constant-speed travel, `TRAVEL_SPEED` 60 units/s).
+- `crates/client/src/player/mod.rs`: `PlayerPlugin`; spawns the player (with a default `Token`: white circle, and `Icon` `monsters/humanarcher.png`), `move_player` (arrows/WASD: one step on press, repeating every 50 ms while held; directions are screen directions, turned to grid steps with `common::ViewFacing`), `travel` (constant-speed travel, `TRAVEL_SPEED` 60 units/s).
 
 ## Public API
 
@@ -16,7 +16,7 @@ The player's position on the world grid: keyboard steps and travelling to a clic
 
 ## Depends on
 
-- `common` (`Token`, `Icon`).
+- `common` (`Token`, `Icon`, `ViewFacing`).
 
 ## Used by
 

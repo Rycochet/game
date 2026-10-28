@@ -10,6 +10,11 @@
 //! - `GAME_TOKEN=shape,attitude[,1]`: the player's token, as numbers (indexes
 //!   into `TokenShape::ALL` and `Attitude::ALL`), e.g. `3,2` is a blue
 //!   hexagon; a third value of `1` makes it completed.
+//! - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the map view turned by `yaw`
+//!   degrees (positive moves the camera towards the east; 90 looks west, 180
+//!   looks south), tilted to `pitch` degrees above the horizon and zoomed in
+//!   (the camera distance is divided by `zoom`; 1.6667 is the wheel's
+//!   closest).
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 
@@ -22,6 +27,7 @@ use bevy::window::PrimaryWindow;
 use crate::common::{Attitude, Token, TokenShape, Weather};
 use crate::demo::AutoWalk;
 use crate::player::{MapPosition, Player, TravelTo};
+use crate::world_map::OrbitCamera;
 
 /// Time between taking the screenshot and quitting, so it can be saved.
 const SAVE_SECONDS: f32 = 2.0;
@@ -78,6 +84,26 @@ impl Plugin for DevToolsPlugin {
                     **token = new_token;
                 },
             );
+        }
+
+        if let Ok(view) = env::var("GAME_VIEW") {
+            let numbers: Vec<f32> = view
+                .split(',')
+                .filter_map(|n| n.trim().parse().ok())
+                .collect();
+            app.add_systems(PostStartup, move |mut cameras: Query<&mut OrbitCamera>| {
+                for mut camera in &mut cameras {
+                    if let Some(yaw) = numbers.first() {
+                        camera.yaw = yaw.to_radians();
+                    }
+                    if let Some(pitch) = numbers.get(1) {
+                        camera.pitch = pitch.to_radians();
+                    }
+                    if let Some(zoom) = numbers.get(2) {
+                        camera.distance /= zoom;
+                    }
+                }
+            });
         }
 
         if let Ok(path) = env::var("GAME_SCREENSHOT") {

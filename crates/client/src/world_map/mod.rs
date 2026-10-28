@@ -1,10 +1,12 @@
 //! The world map: the surface as a lit 3D terrain mesh, rendered by the GPU.
 //! See `docs/context/client/world_map.md`.
 //!
-//! Like the prototype, it shows a fixed square window of terrain around the
-//! player with a flat front face. The window is one mesh that moves with the
-//! player; each step reuses cached heights and only samples the new edge.
+//! Like the prototype, it shows a square window of terrain around the player
+//! with flat earth faces on its edges. Right-drag turns and tilts the view
+//! around the player and the wheel zooms; the window stays lined up with the
+//! camera, so the world turns inside it. Home returns to the starting view.
 
+mod camera;
 mod picking;
 mod terrain;
 mod token;
@@ -16,10 +18,11 @@ use bevy::prelude::*;
 use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{CurrentWorld, GameClock, ViewStats, Weather};
+use crate::common::{CurrentWorld, GameClock, ViewFacing, ViewStats, Weather};
 use crate::player::{MapPosition, Player, PlayerSystems, SmoothPosition, TravelTo};
 use crate::surface_style::SurfaceStyle;
-use terrain::HeightCache;
+pub use camera::OrbitCamera;
+use terrain::{HeightCache, TerrainGrid, ViewSquare};
 use token::{IconAnchor, TokenAssets, TokenView};
 
 /// World height units per 3D unit of height. 1.0 keeps the prototype's
@@ -34,16 +37,16 @@ pub const HALF_SIZE: i64 = 200;
 /// perspective, so the map's sides stay closer to vertical.
 pub const CAMERA_FOV_DEGREES: f32 = 20.0;
 
-/// Camera distance from the point it looks at; with the narrow field of view
-/// this frames the whole 400×400 window.
+/// Starting camera distance from the point it looks at; with the narrow field
+/// of view this frames the whole 400×400 window.
 pub const CAMERA_DISTANCE: f32 = 1100.0;
 
-/// Camera angle above the horizon, looking north.
+/// Starting camera angle above the horizon.
 pub const CAMERA_PITCH_DEGREES: f32 = 34.0;
 
-/// The camera looks this far south of the player, so the front edge and its
-/// face fit on screen.
-const LOOK_SOUTH: f32 = 40.0;
+/// In the starting view, the camera looks this far from the player towards
+/// itself (south at first), so the near edge and its face fit on screen.
+const LOOK_AHEAD: f32 = 40.0;
 
 /// How much of the prototype's slope shading is baked into the terrain
 /// colours (1.0 = the same as the prototype).
@@ -58,12 +61,18 @@ pub struct WorldMapPlugin;
 
 impl Plugin for WorldMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_view)
-            .add_systems(Update, pick_on_click.in_set(PlayerSystems::Input))
+        app.init_resource::<TerrainGrid>()
+            .add_systems(Startup, spawn_view)
+            .add_systems(
+                Update,
+                (camera::control_with_mouse, pick_on_click)
+                    .chain()
+                    .in_set(PlayerSystems::Input),
+            )
             .add_systems(
                 Update,
                 (
-                    follow_player,
+                    update_terrain,
                     token::resize_tokens,
                     token::sync_tokens,
                     token::sync_icons,
@@ -78,7 +87,7 @@ impl Plugin for WorldMapPlugin {
 #[derive(Component)]
 struct ViewCamera;
 
-/// Entities that sit at the player's position: terrain and front face.
+/// Entities that sit at the player's position: terrain and edge faces.
 #[derive(Component)]
 struct FollowsPlayer;
 
@@ -86,7 +95,7 @@ struct FollowsPlayer;
 struct Terrain;
 
 #[derive(Component)]
-struct FrontFace;
+struct EdgeFaces;
 
 fn spawn_view(
     mut commands: Commands,
@@ -95,16 +104,22 @@ fn spawn_view(
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
     // Everything starts at the origin; the systems below move it to the player.
+    let orbit = OrbitCamera::new(
+        CAMERA_PITCH_DEGREES.to_radians(),
+        CAMERA_DISTANCE,
+        LOOK_AHEAD,
+    );
     commands.spawn((
         ViewCamera,
+        orbit,
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
             fov: CAMERA_FOV_DEGREES.to_radians(),
             // The camera is far away, so draw well beyond the default range.
-            far: CAMERA_DISTANCE * 3.0,
+            far: CAMERA_DISTANCE * 2.0,
             ..default()
         }),
-        Transform::from_translation(camera_offset()).looking_at(Vec3::ZERO, Vec3::Y),
+        orbit.transform(Vec3::ZERO),
         // The default tonemapping desaturates colours (pastel); show the
         // surface colours as authored instead.
         Tonemapping::None,
@@ -112,7 +127,8 @@ fn spawn_view(
         DebandDither::Disabled,
     ));
 
-    // Low sun from the east, matching the prototype's shading.
+    // Low sun from the east, matching the prototype's shading. It stays in the
+    // east when the view turns, like the slope shading baked into the terrain.
     commands.spawn((
         DirectionalLight {
             illuminance: SUN_LUX,
@@ -129,22 +145,23 @@ fn spawn_view(
     commands.spawn((
         Terrain,
         FollowsPlayer,
-        Mesh3d(meshes.add(terrain::new_terrain_mesh())),
+        // Placeholder until the first update cuts the real window.
+        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
         // Colours come from the mesh's vertex colours.
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::WHITE,
             perceptual_roughness: 1.0,
             ..default()
         })),
-        // Heights change as the player moves, so the initial bounds go stale.
+        // The mesh is replaced as the player moves, so its bounds go stale.
         NoFrustumCulling,
         Transform::default(),
     ));
 
     commands.spawn((
-        FrontFace,
+        EdgeFaces,
         FollowsPlayer,
-        // Placeholder until the first update builds the real face.
+        // Placeholder until the first update builds the real faces.
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
         // Unlit, so the colours match the prototype exactly.
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -160,77 +177,93 @@ fn spawn_view(
         &mut meshes,
         &mut materials,
         window.physical_height() as f32,
+        orbit.distance,
     ));
 
     commands.init_resource::<HeightCache>();
 }
 
-/// When the player reaches a new grid point (or the hour, weather or style
-/// changes), moves the terrain there and rebuilds its heights and front face.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-fn follow_player(
+/// When the player reaches a new grid point, the hour, weather or style change,
+/// or the view turns: moves the terrain to the player, works out any grid
+/// points the window now needs, and cuts the window (lined up with the camera)
+/// and its edge faces out of the grid.
+#[allow(clippy::too_many_arguments)]
+fn update_terrain(
     player: Single<Ref<MapPosition>, With<Player>>,
+    orbit: Single<&OrbitCamera, With<ViewCamera>>,
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
     weather: Res<Weather>,
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
+    mut grid: ResMut<TerrainGrid>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut stats: ResMut<ViewStats>,
     mut followers: Query<&mut Transform, With<FollowsPlayer>>,
     terrain: Single<&Mesh3d, With<Terrain>>,
-    front: Single<&Mesh3d, With<FrontFace>>,
+    faces: Single<&Mesh3d, With<EdgeFaces>>,
+    // `Local` keeps a value between runs of this system: the square last cut.
+    mut cut: Local<Option<(f32, f32)>>,
 ) {
     // The cache is inserted by `spawn_view`'s commands, so it can be missing
     // on the very first frame.
     let Some(mut cache) = cache else {
         return;
     };
-    let changed =
-        player.is_changed() || clock.is_changed() || weather.is_changed() || style.is_changed();
-    if !(changed || cache.is_added()) {
+    // A new hour, weather or style changes how every point is drawn.
+    let redraw_all =
+        clock.is_changed() || weather.is_changed() || style.is_changed() || cache.is_added();
+    // Turning or zooming changes the square.
+    let reframed = *cut != Some((orbit.yaw, orbit.distance));
+    if !(player.is_changed() || redraw_all || reframed) {
         return;
     }
+    *cut = Some((orbit.yaw, orbit.distance));
 
     let start = Instant::now();
     let centre = (player.x, player.y);
     let water_level = world.params.water_level(clock.hour as f64);
-    let ground = Vec3::new(player.x as f32, 0.0, player.y as f32);
-
+    let square = view_square(&orbit);
     for mut transform in &mut followers {
-        transform.translation = ground;
+        transform.translation = Vec3::new(player.x as f32, 0.0, player.y as f32);
     }
-
-    if let Some(mut mesh) = meshes.get_mut(&terrain.0) {
-        terrain::update_terrain(
-            &mut mesh,
-            &mut cache,
-            &world.surface,
-            &style,
-            water_level,
-            weather.snow_line,
-            centre,
-        );
-    }
-    let front_mesh = terrain::build_front(
+    grid.fill(
         &mut cache,
         &world.surface,
         &style,
         water_level,
         weather.snow_line,
         centre,
+        square,
+        redraw_all,
     );
-    if let Some(mut mesh) = meshes.get_mut(&front.0) {
-        *mesh = front_mesh;
-    }
+    let fill_ms = start.elapsed().as_secs_f32() * 1000.0;
 
-    let ms = start.elapsed().as_secs_f32() * 1000.0;
-    stats.summary = format!("World map: update {ms:.1} ms");
+    let start = Instant::now();
+    if let Some(mut mesh) = meshes.get_mut(&terrain.0) {
+        *mesh = terrain::build_window(&grid, square);
+    }
+    let faces_mesh = terrain::build_edges(
+        &grid,
+        &mut cache,
+        &world.surface,
+        &style,
+        water_level,
+        weather.snow_line,
+        centre,
+        square,
+    );
+    if let Some(mut mesh) = meshes.get_mut(&faces.0) {
+        *mesh = faces_mesh;
+    }
+    let cut_ms = start.elapsed().as_secs_f32() * 1000.0;
+    stats.summary = format!("World map: fill {fill_ms:.1} ms, cut window {cut_ms:.1} ms");
 }
 
 /// Every frame: the camera follows the player's exact position, so travelling
 /// looks smooth (the terrain itself moves a whole step at a time). Tokens sit
-/// at their owners' exact positions, with icon anchors facing the camera.
+/// at their owners' exact positions, with icon anchors facing the camera. Also
+/// tells other modules which way the view is turned (`ViewFacing`).
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn place_camera_and_tokens(
     player: Single<&SmoothPosition, With<Player>>,
@@ -238,23 +271,30 @@ fn place_camera_and_tokens(
     clock: Res<GameClock>,
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
+    assets: Res<TokenAssets>,
     positions: Query<&SmoothPosition>,
-    mut camera: Single<&mut Transform, (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>)>,
+    mut facing: ResMut<ViewFacing>,
+    camera: Single<
+        (&OrbitCamera, &mut Transform),
+        (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>),
+    >,
     mut views: Query<(&TokenView, &mut Transform), Without<IconAnchor>>,
     mut anchors: Query<&mut Transform, (With<IconAnchor>, Without<ViewCamera>, Without<TokenView>)>,
 ) {
     let Some(mut cache) = cache else {
         return;
     };
-    let (x, y) = (player.x as f32, player.y as f32);
+    let (orbit, mut camera) = camera.into_inner();
 
     // The camera looks at sea level, so it doesn't bob over hills.
     let target = Vec3::new(
-        x,
+        player.x as f32,
         world.params.sea_level as f32 * HEIGHT_SCALE,
-        y + LOOK_SOUTH,
+        player.y as f32,
     );
-    **camera = Transform::from_translation(target + camera_offset()).looking_at(target, Vec3::Y);
+    *camera = orbit.transform(target);
+    // Only write when it changes, so change detection stays meaningful.
+    facing.set_if_neq(ViewFacing(orbit.quarter_turns()));
 
     let water_level = world.params.water_level(clock.hour as f64);
     for (view, mut transform) in &mut views {
@@ -278,9 +318,11 @@ fn place_camera_and_tokens(
     }
 
     // Token views never rotate, so turning each anchor to the camera's
-    // rotation makes it face the screen.
+    // rotation makes it face the screen; it sits above the token on screen,
+    // whatever the camera's angle.
     for mut anchor in &mut anchors {
         anchor.rotation = camera.rotation;
+        anchor.translation = assets.icon_offset(camera.rotation, orbit.pitch, orbit.home_pitch());
     }
 }
 
@@ -289,7 +331,7 @@ fn place_camera_and_tokens(
 fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
+    camera: Single<(&Camera, &GlobalTransform, &OrbitCamera), With<ViewCamera>>,
     player: Single<&MapPosition, With<Player>>,
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
@@ -303,7 +345,7 @@ fn pick_on_click(
     let (Some(cursor), Some(mut cache)) = (window.cursor_position(), cache) else {
         return;
     };
-    let (camera, camera_transform) = *camera;
+    let (camera, camera_transform, orbit) = *camera;
     let Ok(ray) = camera.viewport_to_world(camera_transform, cursor) else {
         return;
     };
@@ -311,6 +353,7 @@ fn pick_on_click(
     if let Some((x, y)) = picking::pick(
         ray,
         (player.x, player.y),
+        view_square(orbit),
         &mut cache,
         &world.surface,
         &style,
@@ -320,8 +363,14 @@ fn pick_on_click(
     }
 }
 
-/// Camera position relative to the point it looks at: south and above.
-fn camera_offset() -> Vec3 {
-    let pitch = CAMERA_PITCH_DEGREES.to_radians();
-    Vec3::new(0.0, pitch.sin(), pitch.cos()) * CAMERA_DISTANCE
+/// The window of terrain on show: lined up with the camera, and smaller when
+/// zoomed in, by as much as the camera moved in, so it keeps its size on
+/// screen and zooming shows less of the world rather than a bigger map.
+fn view_square(orbit: &OrbitCamera) -> ViewSquare {
+    let (right, towards) = orbit.ground_axes();
+    ViewSquare {
+        right,
+        towards,
+        half: HALF_SIZE as f32 * orbit.zoom(),
+    }
 }

@@ -1,28 +1,46 @@
-//! The terrain window mesh and the front face, both rebuilt from a height
-//! cache whenever the player moves.
+//! The terrain around the player, drawn as a square window lined up with the
+//! camera, with flat faces down its edges.
+//!
+//! Two stages, so stepping and turning the view stay cheap:
+//! - `TerrainGrid::fill` works out heights, normals and colours for the grid
+//!   points the window covers. Points already worked out are kept, so a step
+//!   or a turn only adds the newly covered ones.
+//! - `build_window` and `build_edges` then cut the window out of that grid:
+//!   whole triangles inside it are kept, ones crossing its border are clipped
+//!   to it, so its outline is exact.
 
 use bevy::asset::RenderAssetUsages;
-use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::surface::{Surface, SurfaceSample};
 
 use super::{HALF_SIZE, HEIGHT_SCALE, SLOPE_SHADING};
 use crate::surface_style::{SurfaceStyle, hsl_to_rgba};
 
-/// Vertices along each side of the window.
-const SIDE: usize = (2 * HALF_SIZE + 1) as usize;
+/// The furthest grid units from the player `TerrainGrid` may need. The
+/// window's corners are `HALF_SIZE × √2` (about 283) away, so this covers it
+/// at any angle.
+const REACH: i64 = 284;
 
-/// Bottom of the front face, as a fraction of the water level (0 = height 0,
-/// as in the prototype; raised to make the face shorter).
+/// Side length of `TerrainGrid`'s wrapping store: more than the `2 × REACH`
+/// it must hold, so moving never evicts points still in view.
+const STORE_SIDE: i64 = 640;
+
+/// Bottom of the edge faces, as a fraction of the water level (0 = height 0,
+/// as in the prototype; raised to make the faces shorter).
 const FRONT_BASE: f32 = 0.3;
 
 /// Undoes the sun's dimming of flat frozen water (lit flat ice measured at
 /// ~71% of its colour in linear light).
 const ICE_BOOST: f32 = 1.41;
 
-/// Cache side length: larger than the window (plus a 1-unit border for
-/// normals) so moving never evicts samples still in view.
-const CACHE_SIDE: i64 = 512;
+/// Cache side length: larger than `TerrainGrid`'s reach (plus a 1-unit
+/// border for normals) so moving never evicts samples still in view.
+const CACHE_SIDE: i64 = 640;
+
+// Checked when compiling: the wrapping stores must be big enough.
+const _: () = assert!(STORE_SIDE > 2 * REACH + 1);
+const _: () = assert!(CACHE_SIDE > 2 * REACH + 3);
 
 /// Surface samples by grid position, stored in a wrapping 2D grid. Moving one
 /// step only samples the new edge; everything else is reused.
@@ -59,27 +77,285 @@ impl HeightCache {
     }
 }
 
-/// An empty mesh for the terrain window: a fixed grid of `SIDE`×`SIDE`
-/// vertices, centred on the entity. Heights are filled in by `update_terrain`.
-pub fn new_terrain_mesh() -> Mesh {
-    let mut positions = Vec::with_capacity(SIDE * SIDE);
-    for z in 0..SIDE {
-        for x in 0..SIDE {
-            positions.push([
-                x as f32 - HALF_SIZE as f32,
-                0.0,
-                z as f32 - HALF_SIZE as f32,
-            ]);
+/// What to draw at each grid point near the player: drawn height, ground
+/// height, normal and colour. Like `HeightCache`, it is a wrapping 2D grid
+/// keyed by world position, so a step only works out the new edge.
+/// Everything is cleared when the hour, weather or style change.
+#[derive(Resource)]
+pub struct TerrainGrid {
+    keys: Vec<Option<(i64, i64)>>,
+    /// Drawn height: the water surface where underwater.
+    shown: Vec<f32>,
+    /// Ground height (below the water where underwater).
+    ground: Vec<f32>,
+    normals: Vec<[f32; 3]>,
+    colours: Vec<[f32; 4]>,
+    /// The grid point the window is centred on (the player's).
+    centre: (i64, i64),
+}
+
+impl Default for TerrainGrid {
+    fn default() -> Self {
+        let len = (STORE_SIDE * STORE_SIDE) as usize;
+        Self {
+            keys: vec![None; len],
+            shown: vec![0.0; len],
+            ground: vec![0.0; len],
+            normals: vec![[0.0, 1.0, 0.0]; len],
+            colours: vec![[0.0; 4]; len],
+            centre: (0, 0),
+        }
+    }
+}
+
+impl TerrainGrid {
+    /// Where the point at `(dx, dz)` from the centre is kept.
+    fn slot(&self, dx: i64, dz: i64) -> usize {
+        let (x, z) = (self.centre.0 + dx, self.centre.1 + dz);
+        (z.rem_euclid(STORE_SIDE) * STORE_SIDE + x.rem_euclid(STORE_SIDE)) as usize
+    }
+
+    /// Makes sure every point the window `square` around `centre` needs is
+    /// worked out. `redraw_all` throws away what is kept
+    /// first (for a new hour, weather or style).
+    #[allow(clippy::too_many_arguments)]
+    pub fn fill(
+        &mut self,
+        cache: &mut HeightCache,
+        surface: &Surface,
+        style: &SurfaceStyle,
+        water_level: f64,
+        snow_line: f64,
+        centre: (i64, i64),
+        square: ViewSquare,
+        redraw_all: bool,
+    ) {
+        if redraw_all {
+            self.keys.fill(None);
+        }
+        self.centre = centre;
+        // Water is part of the terrain: underwater points sit at the surface.
+        // (The cache is passed in rather than captured, so the loop below can
+        // use it too: Rust allows only one mutable borrow at a time.)
+        let shown_at = |cache: &mut HeightCache, x: i64, z: i64| {
+            style.shown_height(cache.get(surface, x, z), water_level) as f32 * HEIGHT_SCALE
+        };
+
+        let (reach_x, reach_z) = square.reach();
+        for dz in -reach_z..=reach_z {
+            for dx in -reach_x..=reach_x {
+                let i = self.slot(dx, dz);
+                let (x, z) = (centre.0 + dx, centre.1 + dz);
+                if self.keys[i] == Some((x, z)) {
+                    continue;
+                }
+                self.keys[i] = Some((x, z));
+                self.shown[i] = shown_at(cache, x, z);
+
+                // Slope from the neighbours either side (central differences).
+                let slope_x = shown_at(cache, x + 1, z) - shown_at(cache, x - 1, z);
+                let slope_z = shown_at(cache, x, z + 1) - shown_at(cache, x, z - 1);
+                self.normals[i] = Vec3::new(-slope_x, 2.0, -slope_z).normalize().to_array();
+
+                let sample = cache.get(surface, x, z);
+                self.ground[i] = sample.height as f32 * HEIGHT_SCALE;
+                // The prototype's strong slope shading, baked in per point
+                // because real lighting alone is much smoother.
+                let west = cache.get(surface, x - 1, z).height;
+                let (band, lightness) =
+                    style.shade(sample, west, water_level, snow_line, SLOPE_SHADING);
+                let mut colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness));
+                if style.is_frozen_water(sample, water_level, snow_line) {
+                    // Brighter than white, so after the sun dims this flat
+                    // surface it shows at the style's ice colour.
+                    for channel in &mut colour[..3] {
+                        *channel *= ICE_BOOST;
+                    }
+                }
+                self.colours[i] = colour;
+            }
         }
     }
 
-    let mut indices = Vec::with_capacity((SIDE - 1) * (SIDE - 1) * 6);
-    for z in 0..SIDE - 1 {
-        for x in 0..SIDE - 1 {
-            let i = (z * SIDE + x) as u32;
-            let below = i + SIDE as u32;
+    /// The height of the drawn triangles at a point (relative to the centre),
+    /// reading `values` (`shown` or `ground`). Each grid square is split into
+    /// two triangles along the diagonal from its north-east to its south-west
+    /// corner, as `build_window` draws it.
+    fn height_at(&self, values: &[f32], point: Vec2) -> f32 {
+        let (x, z) = (point.x.floor(), point.y.floor());
+        let (fx, fz) = (point.x - x, point.y - z);
+        let (x, z) = (x as i64, z as i64);
+        let north_west = values[self.slot(x, z)];
+        let north_east = values[self.slot(x + 1, z)];
+        let south_west = values[self.slot(x, z + 1)];
+        let south_east = values[self.slot(x + 1, z + 1)];
+        if fx + fz <= 1.0 {
+            north_west + fx * (north_east - north_west) + fz * (south_west - north_west)
+        } else {
+            south_east
+                + (1.0 - fx) * (south_west - south_east)
+                + (1.0 - fz) * (north_east - south_east)
+        }
+    }
+
+    /// The point at `(dx, dz)` from the centre, ready for clipping.
+    fn corner(&self, dx: i64, dz: i64, square: ViewSquare) -> Corner {
+        let i = self.slot(dx, dz);
+        Corner {
+            position: Vec3::new(dx as f32, self.shown[i], dz as f32),
+            normal: Vec3::from(self.normals[i]),
+            colour: Vec4::from(self.colours[i]),
+            inside: square.inside(Vec2::new(dx as f32, dz as f32)),
+        }
+    }
+}
+
+/// A corner of a triangle being clipped to the window.
+#[derive(Clone, Copy)]
+struct Corner {
+    position: Vec3,
+    normal: Vec3,
+    colour: Vec4,
+    /// Distance inside each of the window's four sides (negative outside).
+    inside: [f32; 4],
+}
+
+impl Corner {
+    fn lerp(self, other: Self, t: f32) -> Self {
+        Self {
+            position: self.position.lerp(other.position, t),
+            normal: self.normal.lerp(other.normal, t),
+            colour: self.colour.lerp(other.colour, t),
+            inside: std::array::from_fn(|k| {
+                self.inside[k] + (other.inside[k] - self.inside[k]) * t
+            }),
+        }
+    }
+}
+
+/// The square window of terrain on show, centred on the player and lined up
+/// with the camera, in grid units relative to the centre.
+#[derive(Clone, Copy, Debug)]
+pub struct ViewSquare {
+    /// The camera's right and towards-the-camera directions along the ground,
+    /// as (x, z).
+    pub right: Vec2,
+    pub towards: Vec2,
+    /// From the centre to each side: `HALF_SIZE` in the starting view, less
+    /// when zoomed in.
+    pub half: f32,
+}
+
+impl ViewSquare {
+    /// How far `point` is inside each side: right, left, near and far
+    /// (negative outside).
+    fn inside(&self, point: Vec2) -> [f32; 4] {
+        let (u, v) = (point.dot(self.right), point.dot(self.towards));
+        [self.half - u, self.half + u, self.half - v, self.half + v]
+    }
+
+    /// Whether `point` is on or inside the square.
+    pub fn contains(&self, point: Vec2) -> bool {
+        self.inside(point).iter().all(|&d| d >= 0.0)
+    }
+
+    /// The point `u` halves to the right and `v` halves towards the camera.
+    fn at(&self, u: f32, v: f32) -> Vec2 {
+        (self.right * u + self.towards * v) * self.half
+    }
+
+    /// How far the square reaches from the centre along x and z (its bounding
+    /// box), plus one for the grid squares around its edge. Only grid points
+    /// within this are drawn.
+    fn reach(&self) -> (i64, i64) {
+        let reach =
+            |a: f32, b: f32| ((self.half * (a.abs() + b.abs())).ceil() as i64 + 1).min(REACH);
+        (
+            reach(self.right.x, self.towards.x),
+            reach(self.right.y, self.towards.y),
+        )
+    }
+
+    /// How much of the starting view's width is on show (1 = all of it).
+    fn zoom(&self) -> f32 {
+        self.half / HALF_SIZE as f32
+    }
+}
+
+/// The terrain mesh: the window `square`, cut out of the grid.
+pub fn build_window(grid: &TerrainGrid, square: ViewSquare) -> Mesh {
+    let (reach_x, reach_z) = square.reach();
+    let width = (2 * reach_x + 1) as usize;
+    let local = |dx: i64, dz: i64| (dz + reach_z) as usize * width + (dx + reach_x) as usize;
+
+    // Which points in the box are inside the window.
+    let mut inside = Vec::with_capacity(width * (2 * reach_z + 1) as usize);
+    for dz in -reach_z..=reach_z {
+        for dx in -reach_x..=reach_x {
+            let point = Vec2::new(dx as f32, dz as f32);
+            inside.push(square.contains(point));
+        }
+    }
+    // Squares near the window's corners need clipping even when none of
+    // their points are inside (a corner can poke into a triangle).
+    let corners =
+        [(1.0, 1.0), (1.0, -1.0), (-1.0, 1.0), (-1.0, -1.0)].map(|(u, v)| square.at(u, v));
+    let near_corner = |x: i64, z: i64| {
+        corners
+            .iter()
+            .any(|c| (c.x - x as f32).abs() <= 2.0 && (c.y - z as f32).abs() <= 2.0)
+    };
+
+    let expected = (4.0 * square.half * square.half) as usize;
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(expected);
+    let mut normals: Vec<[f32; 3]> = Vec::with_capacity(expected);
+    let mut colours: Vec<[f32; 4]> = Vec::with_capacity(expected);
+    let mut indices: Vec<u32> = Vec::with_capacity(expected * 6);
+    // Points already added to the mesh (by box position), so whole
+    // triangles share them.
+    let mut added = vec![u32::MAX; inside.len()];
+
+    for z in -reach_z..reach_z {
+        for x in -reach_x..reach_x {
             // Two triangles per square, wound anticlockwise seen from above.
-            indices.extend_from_slice(&[i, below, i + 1, i + 1, below, below + 1]);
+            for triangle in [
+                [(x, z), (x, z + 1), (x + 1, z)],
+                [(x + 1, z), (x, z + 1), (x + 1, z + 1)],
+            ] {
+                let count = triangle
+                    .iter()
+                    .filter(|&&(dx, dz)| inside[local(dx, dz)])
+                    .count();
+                if count == 3 {
+                    for (dx, dz) in triangle {
+                        let j = local(dx, dz);
+                        if added[j] == u32::MAX {
+                            let i = grid.slot(dx, dz);
+                            positions.push([dx as f32, grid.shown[i], dz as f32]);
+                            normals.push(grid.normals[i]);
+                            colours.push(grid.colours[i]);
+                            added[j] = positions.len() as u32 - 1;
+                        }
+                        indices.push(added[j]);
+                    }
+                    continue;
+                }
+                if count == 0 && !near_corner(x, z) {
+                    continue;
+                }
+                // Crosses the border: cut off the parts outside each side in
+                // turn, then fan the remaining polygon into triangles.
+                let clipped = clip(&triangle.map(|(dx, dz)| grid.corner(dx, dz, square)));
+                let first = positions.len() as u32;
+                for c in &clipped {
+                    positions.push(c.position.to_array());
+                    normals.push(c.normal.normalize().to_array());
+                    colours.push(c.colour.to_array());
+                }
+                for k in 1..clipped.len().saturating_sub(1) as u32 {
+                    indices.extend_from_slice(&[first, first + k, first + k + 1]);
+                }
+            }
         }
     }
 
@@ -88,116 +364,103 @@ pub fn new_terrain_mesh() -> Mesh {
         RenderAssetUsages::default(),
     )
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; SIDE * SIDE])
-    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0.0; 4]; SIDE * SIDE])
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colours)
     .with_inserted_indices(Indices::U32(indices))
 }
 
-/// Fills the terrain mesh with heights, normals and colours for the window
-/// centred on `(cx, cy)`.
-pub fn update_terrain(
-    mesh: &mut Mesh,
-    cache: &mut HeightCache,
-    surface: &Surface,
-    style: &SurfaceStyle,
-    water_level: f64,
-    snow_line: f64,
-    (cx, cy): (i64, i64),
-) {
-    // Water is part of the terrain: underwater points sit at the surface.
-    let mut height = |dx: i64, dz: i64| {
-        let sample = cache.get(surface, cx + dx, cy + dz);
-        style.shown_height(sample, water_level) as f32 * HEIGHT_SCALE
-    };
-
-    if let Some(VertexAttributeValues::Float32x3(positions)) =
-        mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
-    {
-        for (i, position) in positions.iter_mut().enumerate() {
-            let (dx, dz) = offset(i);
-            position[1] = height(dx, dz);
-        }
-    }
-
-    if let Some(VertexAttributeValues::Float32x3(normals)) =
-        mesh.attribute_mut(Mesh::ATTRIBUTE_NORMAL)
-    {
-        for (i, normal) in normals.iter_mut().enumerate() {
-            let (dx, dz) = offset(i);
-            // Slope from the neighbours either side (central differences).
-            let slope_x = height(dx + 1, dz) - height(dx - 1, dz);
-            let slope_z = height(dx, dz + 1) - height(dx, dz - 1);
-            *normal = Vec3::new(-slope_x, 2.0, -slope_z).normalize().to_array();
-        }
-    }
-
-    if let Some(VertexAttributeValues::Float32x4(colours)) =
-        mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR)
-    {
-        for (i, colour) in colours.iter_mut().enumerate() {
-            let (dx, dz) = offset(i);
-            let sample = cache.get(surface, cx + dx, cy + dz);
-            let west = cache.get(surface, cx + dx - 1, cy + dz).height;
-            // The prototype's strong slope shading, baked in per vertex
-            // because real lighting alone is much smoother.
-            let (band, lightness) =
-                style.shade(sample, west, water_level, snow_line, SLOPE_SHADING);
-            *colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness));
-            if style.is_frozen_water(sample, water_level, snow_line) {
-                // Brighter than white, so after the sun dims this flat surface
-                // it shows at the style's ice colour.
-                for channel in &mut colour[..3] {
-                    *channel *= ICE_BOOST;
-                }
+/// Cuts a polygon down to the part inside all four sides of the window
+/// (Sutherland–Hodgman clipping), keeping its winding.
+fn clip(polygon: &[Corner]) -> Vec<Corner> {
+    let mut polygon = polygon.to_vec();
+    for side in 0..4 {
+        let mut kept = Vec::with_capacity(polygon.len() + 1);
+        for (i, &a) in polygon.iter().enumerate() {
+            let b = polygon[(i + 1) % polygon.len()];
+            let (da, db) = (a.inside[side], b.inside[side]);
+            if da >= 0.0 {
+                kept.push(a);
+            }
+            // The edge crosses this side: add the crossing point.
+            if (da >= 0.0) != (db >= 0.0) {
+                kept.push(a.lerp(b, da / (da - db)));
             }
         }
+        polygon = kept;
+        if polygon.is_empty() {
+            break;
+        }
     }
+    polygon
 }
 
-/// The flat front face along the window's southern edge: water depth (where
-/// underwater) above earth, down to `FRONT_BASE` × the water level.
-pub fn build_front(
+/// Flat faces down the window's four edges (one mesh): water depth (where
+/// underwater) above earth, down to `FRONT_BASE` × the water level in the
+/// starting view (the depth below the water shrinks with the zoom, so the
+/// frame keeps its shape on screen). They face
+/// outwards, so only the sides towards the camera are drawn. The top of each
+/// face follows the terrain exactly, at every point where the edge crosses a
+/// triangle.
+#[allow(clippy::too_many_arguments)]
+pub fn build_edges(
+    grid: &TerrainGrid,
     cache: &mut HeightCache,
     surface: &Surface,
     style: &SurfaceStyle,
     water_level: f64,
     snow_line: f64,
     (cx, cy): (i64, i64),
+    square: ViewSquare,
 ) -> Mesh {
     let water_top = water_level as f32 * HEIGHT_SCALE;
-    let base = water_top * FRONT_BASE;
+    let base = water_top - water_top * (1.0 - FRONT_BASE) * square.zoom();
     let (h, s, l) = style.earth_face;
     let earth_colour = linear(hsl_to_rgba(h, s, l));
-    let z = HALF_SIZE as f32;
+    // Each edge from one corner to the next, walked so its face points
+    // outwards: near, far, right, left.
+    let corner = |u, v| square.at(u, v);
+    let edges = [
+        (corner(-1.0, 1.0), corner(1.0, 1.0)),
+        (corner(1.0, -1.0), corner(-1.0, -1.0)),
+        (corner(1.0, 1.0), corner(1.0, -1.0)),
+        (corner(-1.0, -1.0), corner(-1.0, 1.0)),
+    ];
 
-    let mut positions = Vec::with_capacity(SIDE * 4);
-    let mut colours = Vec::with_capacity(SIDE * 4);
-    for dx in -HALF_SIZE..=HALF_SIZE {
-        let sample = cache.get(surface, cx + dx, cy + HALF_SIZE);
-        let west = cache.get(surface, cx + dx - 1, cy + HALF_SIZE).height;
-        let ground = (sample.height as f32 * HEIGHT_SCALE).max(base);
-        // Half the surface lightness, like the prototype's front slice (this
-        // also ices over with the water).
-        let (band, lightness) = style.shade(sample, west, water_level, snow_line, 0.0);
-        let water_colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness / 2.0));
-        let x = dx as f32;
-        // Earth strip: ground down to the base.
-        positions.extend_from_slice(&[[x, ground, z], [x, base, z]]);
-        colours.extend_from_slice(&[earth_colour, earth_colour]);
-        // Water strip: water surface down to the ground (zero height on land).
-        positions.extend_from_slice(&[[x, water_top.max(ground), z], [x, ground, z]]);
-        colours.extend_from_slice(&[water_colour, water_colour]);
-    }
+    let mut positions = Vec::new();
+    let mut colours = Vec::new();
+    let mut indices = Vec::new();
+    for (start, end) in edges {
+        let first = positions.len() as u32;
+        let stops = crossings(start, end);
+        for &t in &stops {
+            let point = start.lerp(end, t);
+            let ground = grid.height_at(&grid.ground, point).max(base);
+            let top = grid.height_at(&grid.shown, point).max(ground);
+            // Half the surface lightness of the nearest point, like the
+            // prototype's front slice (this also ices over with the water).
+            let (x, z) = (cx + point.x.round() as i64, cy + point.y.round() as i64);
+            let sample = cache.get(surface, x, z);
+            let west = cache.get(surface, x - 1, z).height;
+            let (band, lightness) = style.shade(sample, west, water_level, snow_line, 0.0);
+            let water_colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness / 2.0));
+            // Earth strip: ground down to the base.
+            positions.extend_from_slice(&[[point.x, ground, point.y], [point.x, base, point.y]]);
+            colours.extend_from_slice(&[earth_colour, earth_colour]);
+            // Water strip: water surface down to the ground (zero height on
+            // land).
+            positions.extend_from_slice(&[[point.x, top, point.y], [point.x, ground, point.y]]);
+            colours.extend_from_slice(&[water_colour, water_colour]);
+        }
 
-    let mut indices = Vec::with_capacity((SIDE - 1) * 12);
-    for column in 0..SIDE as u32 - 1 {
-        let here = column * 4;
-        let next = here + 4;
-        for strip in [0, 2] {
-            let (top, bottom) = (here + strip, here + strip + 1);
-            let (next_top, next_bottom) = (next + strip, next + strip + 1);
-            // Facing south (towards the camera).
-            indices.extend_from_slice(&[top, bottom, next_top, next_top, bottom, next_bottom]);
+        for column in 0..stops.len() as u32 - 1 {
+            let here = first + column * 4;
+            let next = here + 4;
+            for strip in [0, 2] {
+                let (top, bottom) = (here + strip, here + strip + 1);
+                let (next_top, next_bottom) = (next + strip, next + strip + 1);
+                // Anticlockwise seen from outside, so the face points out.
+                indices.extend_from_slice(&[top, bottom, next_top, next_top, bottom, next_bottom]);
+            }
         }
     }
 
@@ -208,6 +471,28 @@ pub fn build_front(
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colours)
     .with_inserted_indices(Indices::U32(indices))
+}
+
+/// Fractions (0 to 1, in order) along the line from `start` to `end` where it
+/// crosses a grid line or a triangle's diagonal, plus both ends: the points
+/// where the terrain under the line changes slope.
+fn crossings(start: Vec2, end: Vec2) -> Vec<f32> {
+    let mut stops = vec![0.0, 1.0];
+    // Lines x = k, z = k, and the diagonals x + z = k.
+    let measures: [fn(Vec2) -> f32; 3] = [|p| p.x, |p| p.y, |p| p.x + p.y];
+    for measure in measures {
+        let (a, b) = (measure(start), measure(end));
+        if (b - a).abs() < 1e-6 {
+            continue;
+        }
+        let (low, high) = (a.min(b), a.max(b));
+        for k in low.ceil() as i64..=high.floor() as i64 {
+            stops.push((k as f32 - a) / (b - a));
+        }
+    }
+    stops.sort_by(f32::total_cmp);
+    stops.dedup_by(|a, b| (*a - *b).abs() < 1e-6);
+    stops
 }
 
 /// The highest drawn surface within `radius` of a fractional position, so
@@ -234,12 +519,51 @@ pub fn highest_shown_height(
     highest as f32 * HEIGHT_SCALE
 }
 
-/// Grid offset from the window centre of vertex `i`.
-fn offset(i: usize) -> (i64, i64) {
-    ((i % SIDE) as i64 - HALF_SIZE, (i / SIDE) as i64 - HALF_SIZE)
-}
-
 /// sRGB bytes to the linear floats meshes use.
 fn linear([r, g, b, _]: [u8; 4]) -> [f32; 4] {
     Color::srgb_u8(r, g, b).to_linear().to_f32_array()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn grid_reaches_the_window_corners() {
+        let corner = HALF_SIZE as f32 * std::f32::consts::SQRT_2;
+        // The corner plus one square for the triangles around it.
+        assert!(REACH as f32 >= corner + 1.0);
+    }
+
+    #[test]
+    fn crossings_include_ends_and_grid_lines() {
+        let stops = crossings(Vec2::new(0.5, 0.5), Vec2::new(2.5, 0.5));
+        // x = 1, x = 2 and the diagonals x + z = 1, 2, 3 (z is 0.5): the
+        // diagonals fall at x = 0.5 (the start), 1.5 and 2.5 (the end).
+        assert_eq!(stops, [0.0, 0.25, 0.5, 0.75, 1.0]);
+    }
+
+    #[test]
+    fn clipping_keeps_the_inside_part() {
+        let half = HALF_SIZE as f32;
+        let square = ViewSquare {
+            right: Vec2::X,
+            towards: Vec2::Y,
+            half,
+        };
+        let at = |x: f32, z: f32| Corner {
+            position: Vec3::new(x, 0.0, z),
+            normal: Vec3::Y,
+            colour: Vec4::ONE,
+            inside: square.inside(Vec2::new(x, z)),
+        };
+        // A triangle sticking out of the right side by half its width.
+        let clipped = clip(&[
+            at(half - 1.0, 0.0),
+            at(half - 1.0, 1.0),
+            at(half + 1.0, 0.0),
+        ]);
+        assert!(clipped.len() >= 3);
+        assert!(clipped.iter().all(|c| c.position.x <= half + 1e-4));
+    }
 }

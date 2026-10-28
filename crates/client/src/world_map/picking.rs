@@ -4,8 +4,8 @@
 use bevy::prelude::*;
 use shared::surface::Surface;
 
-use super::terrain::HeightCache;
-use super::{HALF_SIZE, HEIGHT_SCALE};
+use super::HEIGHT_SCALE;
+use super::terrain::{HeightCache, ViewSquare};
 use crate::surface_style::SurfaceStyle;
 
 /// Distance between samples along the ray, in grid units. Under one unit, so
@@ -15,11 +15,13 @@ const STEP: f32 = 0.5;
 /// Highest the terrain can be drawn (surface heights stay under 128).
 const MAX_HEIGHT: f32 = 128.0 * HEIGHT_SCALE;
 
-/// The grid point the ray first hits on the terrain window centred on
-/// `centre`, or `None` if it misses (or only hits the front face).
+/// The grid point the ray first hits on the terrain window `square` centred
+/// on `centre`, or `None` if it misses (or only hits an edge face). Works from
+/// any direction, so it follows the camera when the view turns.
 pub fn pick(
     ray: Ray3d,
     centre: (i64, i64),
+    square: ViewSquare,
     cache: &mut HeightCache,
     surface: &Surface,
     style: &SurfaceStyle,
@@ -31,7 +33,6 @@ pub fn pick(
     }
     // Skip the empty air above the highest possible terrain.
     let start = ((ray.origin.y - MAX_HEIGHT) / -direction.y).max(0.0);
-    let half = HALF_SIZE as f32;
     let mut entered = false;
 
     let mut t = start;
@@ -39,7 +40,9 @@ pub fn pick(
         let point = ray.origin + direction * t;
         t += STEP;
         let (x, z) = (point.x.round() as i64, point.z.round() as i64);
-        if (x - centre.0).abs() as f32 > half || (z - centre.1).abs() as f32 > half {
+        // Position across and along the window.
+        let offset = Vec2::new(point.x - centre.0 as f32, point.z - centre.1 as f32);
+        if !square.contains(offset) {
             if entered {
                 return None; // Passed over the far edge.
             }
@@ -49,7 +52,7 @@ pub fn pick(
             style.shown_height(cache.get(surface, x, z), water_level) as f32 * HEIGHT_SCALE;
         if point.y <= ground {
             // Below the surface on the very first sample inside the window
-            // means the ray came through the front face, not the top.
+            // means the ray came through an edge face, not the top.
             return entered.then_some((x, z));
         }
         entered = true;
@@ -59,6 +62,7 @@ pub fn pick(
 
 #[cfg(test)]
 mod tests {
+    use super::super::HALF_SIZE;
     use super::*;
     use shared::rng::Seed;
     use shared::world::WorldParams;
@@ -74,6 +78,13 @@ mod tests {
         )
     }
 
+    /// The window in the starting view, looking north.
+    const NORTH_VIEW: ViewSquare = ViewSquare {
+        right: Vec2::X,
+        towards: Vec2::Y,
+        half: HALF_SIZE as f32,
+    };
+
     fn ray(origin: Vec3, towards: Vec3) -> Ray3d {
         Ray3d::new(origin, Dir3::new(towards - origin).unwrap())
     }
@@ -84,6 +95,7 @@ mod tests {
         let hit = pick(
             ray(Vec3::new(10.0, 500.0, -20.0), Vec3::new(10.0, 0.0, -20.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,
@@ -93,12 +105,13 @@ mod tests {
     }
 
     #[test]
-    fn through_the_front_face_misses() {
+    fn through_an_edge_face_misses() {
         let (surface, style, mut cache, water) = setup();
         // Low and level from the south: enters the window below the surface.
         let hit = pick(
             ray(Vec3::new(0.0, 5.0, 600.0), Vec3::new(0.0, 4.0, 0.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,
@@ -108,11 +121,78 @@ mod tests {
     }
 
     #[test]
+    fn through_the_north_face_misses() {
+        let (surface, style, mut cache, water) = setup();
+        // As above, from the north (the view turned round).
+        let hit = pick(
+            ray(Vec3::new(0.0, 5.0, -600.0), Vec3::new(0.0, 4.0, 0.0)),
+            (0, 0),
+            NORTH_VIEW,
+            &mut cache,
+            &surface,
+            &style,
+            water,
+        );
+        assert_eq!(hit, None);
+    }
+
+    #[test]
+    fn from_the_east_hits_the_top() {
+        let (surface, style, mut cache, water) = setup();
+        // Looking west from high up: lands somewhere on the window.
+        let hit = pick(
+            ray(Vec3::new(900.0, 600.0, 0.0), Vec3::new(0.0, 0.0, 0.0)),
+            (0, 0),
+            NORTH_VIEW,
+            &mut cache,
+            &surface,
+            &style,
+            water,
+        );
+        let (x, y) = hit.expect("should hit the terrain");
+        assert!(x.abs() <= HALF_SIZE && y.abs() <= 1);
+    }
+
+    #[test]
+    fn turned_window_has_turned_edges() {
+        let (surface, style, mut cache, water) = setup();
+        // Straight down at (190, 190): inside the square window looking
+        // north, but outside it turned 45° (the corner direction is ~269
+        // from the centre, while the turned window reaches only 200).
+        let down = ray(Vec3::new(190.0, 500.0, 190.0), Vec3::new(190.0, 0.0, 190.0));
+        let diagonal = std::f32::consts::FRAC_1_SQRT_2;
+        let turned = ViewSquare {
+            right: Vec2::new(diagonal, -diagonal),
+            towards: Vec2::new(diagonal, diagonal),
+            ..NORTH_VIEW
+        };
+        let mut hit = |square| pick(down, (0, 0), square, &mut cache, &surface, &style, water);
+        assert_eq!(hit(NORTH_VIEW), Some((190, 190)));
+        assert_eq!(hit(turned), None);
+    }
+
+    #[test]
+    fn zoomed_window_is_smaller() {
+        let (surface, style, mut cache, water) = setup();
+        // Straight down at (150, 0): inside the starting view's window, but
+        // outside it zoomed in to 0.6 (reaching 120).
+        let down = ray(Vec3::new(150.0, 500.0, 0.0), Vec3::new(150.0, 0.0, 0.0));
+        let zoomed = ViewSquare {
+            half: 120.0,
+            ..NORTH_VIEW
+        };
+        let mut hit = |square| pick(down, (0, 0), square, &mut cache, &surface, &style, water);
+        assert_eq!(hit(NORTH_VIEW), Some((150, 0)));
+        assert_eq!(hit(zoomed), None);
+    }
+
+    #[test]
     fn over_the_map_misses() {
         let (surface, style, mut cache, water) = setup();
         let hit = pick(
             ray(Vec3::new(0.0, 500.0, 600.0), Vec3::new(0.0, 300.0, -600.0)),
             (0, 0),
+            NORTH_VIEW,
             &mut cache,
             &surface,
             &style,

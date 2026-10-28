@@ -4,7 +4,7 @@
 use bevy::math::DVec2;
 use bevy::prelude::*;
 
-use crate::common::{Icon, Token};
+use crate::common::{Icon, Token, ViewFacing};
 
 /// While a key is held, how often the player takes another step.
 const STEP_REPEAT_SECONDS: f32 = 0.05;
@@ -97,6 +97,7 @@ fn spawn_player(mut commands: Commands) {
 fn move_player(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
+    facing: Res<ViewFacing>,
     mut repeat: ResMut<StepRepeat>,
     mut player: Single<&mut MapPosition, With<Player>>,
 ) {
@@ -125,6 +126,8 @@ fn move_player(
     repeat.0.tick(time.delta());
 
     if (dx != 0 || dy != 0) && (just_pressed || repeat.0.just_finished()) {
+        // The keys mean screen directions, so follow the way the map is turned.
+        let (dx, dy) = facing.screen_to_grid(dx, dy);
         player.x += dx;
         player.y += dy;
     }

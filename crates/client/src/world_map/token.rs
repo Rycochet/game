@@ -17,7 +17,8 @@ use bevy::prelude::*;
 use bevy::render::render_resource::Face;
 use bevy::window::PrimaryWindow;
 
-use super::{CAMERA_DISTANCE, CAMERA_FOV_DEGREES, CAMERA_PITCH_DEGREES};
+use super::CAMERA_FOV_DEGREES;
+use super::camera::OrbitCamera;
 use crate::common::{Attitude, Icon, Token, TokenShape};
 
 /// Token width in grid units: the diameter of the circle every shape fits in.
@@ -59,6 +60,18 @@ const ICON_GAP_PIXELS: f32 = 1.0;
 /// stand on the token rather than float above it.
 const ICON_SHADOW_PIXELS: f32 = 3.0;
 
+/// Tilting from the starting view to straight down slides the icon's feet
+/// (the bottom of the main picture, less its shadow) smoothly down towards a
+/// point this many screen pixels above the near edge of the token...
+const FEET_ABOVE_EDGE_PIXELS: f32 = 2.0;
+
+/// ...but only this fraction of the way: the full slide looked about double
+/// what was needed (owner's judgement).
+const ICON_SLIDE: f32 = 0.5;
+
+/// Grid units per icon art pixel.
+const ICON_PIXEL: f32 = ICON_ART_SIZE / ICON_ART_PIXELS;
+
 /// The root of a drawn token. It never rotates, so children can rely on
 /// world axes. `owner` is the entity with the `Token`.
 #[derive(Component)]
@@ -78,11 +91,13 @@ pub struct IconAnchor {
 }
 
 /// Meshes and materials shared by all tokens. The outlines, sized in screen
-/// pixels, are rebuilt when the window height changes.
+/// pixels, are rebuilt when the window height or the camera's zoom changes.
 #[derive(Resource)]
 pub struct TokenAssets {
-    /// The window height (physical pixels) the outlines were made for.
+    /// The window height (physical pixels) and camera distance the outlines
+    /// were made for.
     window_height: f32,
+    camera_distance: f32,
     /// Indexed by `TokenShape as usize`.
     bodies: [Handle<Mesh>; TokenShape::ALL.len()],
     outlines: [Handle<Mesh>; TokenShape::ALL.len()],
@@ -92,38 +107,58 @@ pub struct TokenAssets {
     outline: [Handle<StandardMaterial>; 2],
     /// One square for every icon.
     icon_quad: Handle<Mesh>,
-    /// Icon height above the token's centre, in grid units.
-    icon_lift: f32,
     /// One material per icon file, made the first time it is shown.
     icon_materials: HashMap<String, Handle<StandardMaterial>>,
 }
 
 /// The outline width in grid units that shows as `OUTLINE_PIXELS` in a window
-/// `window_height` physical pixels high.
-fn outline_width(window_height: f32) -> f32 {
+/// `window_height` physical pixels high, seen from `camera_distance`.
+fn outline_width(window_height: f32, camera_distance: f32) -> f32 {
     // Grid units per pixel at the camera's distance.
-    let visible_height = 2.0 * CAMERA_DISTANCE * (CAMERA_FOV_DEGREES.to_radians() / 2.0).tan();
+    let visible_height = 2.0 * camera_distance * (CAMERA_FOV_DEGREES.to_radians() / 2.0).tan();
     OUTLINE_PIXELS * visible_height / window_height
 }
 
 impl TokenAssets {
+    /// Where a token's icon anchor (the centre of its main picture) goes,
+    /// relative to the token's centre: on the token's top, then up the screen
+    /// (along the camera's "up"). In the starting view (`home_pitch`) the
+    /// feet stand `ICON_GAP_PIXELS` above the top's centre; as `pitch` rises
+    /// to straight down they slide `ICON_SLIDE` of the way to
+    /// `FEET_ABOVE_EDGE_PIXELS` above the token's near edge.
+    pub fn icon_offset(&self, camera_rotation: Quat, pitch: f32, home_pitch: f32) -> Vec3 {
+        // Grid units per screen pixel at the camera's distance.
+        let screen_pixel = outline_width(self.window_height, self.camera_distance) / OUTLINE_PIXELS;
+        let feet_at_start = ICON_GAP_PIXELS * ICON_PIXEL;
+        // The near edge of the token (with its outline) is this far up the
+        // screen from the top's centre: below it, and further below the more
+        // the camera looks down.
+        let near_edge = -(DIAMETER / 2.0 + OUTLINE_PIXELS * screen_pixel) * pitch.sin();
+        let feet_looking_down = near_edge + FEET_ABOVE_EDGE_PIXELS * screen_pixel;
+        // 0 at the starting tilt (or lower), 1 looking straight down.
+        let towards_down =
+            ((pitch.sin() - home_pitch.sin()) / (1.0 - home_pitch.sin())).clamp(0.0, 1.0);
+        let feet = feet_at_start + (feet_looking_down - feet_at_start) * towards_down * ICON_SLIDE;
+        // From the feet up to the centre of the main picture.
+        let centre = feet + (ICON_ART_PIXELS / 2.0 - ICON_SHADOW_PIXELS) * ICON_PIXEL;
+        // Looking down, the icon lies nearly flat over the token and would
+        // dip into its top, so bring it towards the camera (the camera's +Z),
+        // which doesn't move it on screen.
+        let forward = DIAMETER / 2.0 * towards_down;
+        Vec3::Y * HALF_THICKNESS + camera_rotation * Vec3::new(0.0, centre, forward)
+    }
+
     /// `window_height` is in physical pixels.
     pub fn new(
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<StandardMaterial>,
         window_height: f32,
+        camera_distance: f32,
     ) -> Self {
-        let outline = outline_width(window_height);
-        // Grid units per icon pixel.
-        let icon_pixel = ICON_ART_SIZE / ICON_ART_PIXELS;
-        // From the token's centre up to its top, then the gap and half the
-        // main picture less its shadow. The quad faces the camera, so heights
-        // in it look shortened by the camera's pitch: divide by its cosine.
-        let lift_pixels = ICON_GAP_PIXELS + ICON_ART_PIXELS / 2.0 - ICON_SHADOW_PIXELS;
-        let icon_lift =
-            HALF_THICKNESS + lift_pixels * icon_pixel / CAMERA_PITCH_DEGREES.to_radians().cos();
+        let outline = outline_width(window_height, camera_distance);
         Self {
             window_height,
+            camera_distance,
             bodies: TokenShape::ALL.map(|shape| meshes.add(prism(shape, 0.0))),
             outlines: TokenShape::ALL.map(|shape| meshes.add(prism(shape, outline))),
             colours: [false, true].map(|completed| {
@@ -145,8 +180,7 @@ impl TokenAssets {
                     ..fade(Color::BLACK, completed)
                 })
             }),
-            icon_quad: meshes.add(Rectangle::from_length(ICON_FILE_PIXELS * icon_pixel)),
-            icon_lift,
+            icon_quad: meshes.add(Rectangle::from_length(ICON_FILE_PIXELS * ICON_PIXEL)),
             icon_materials: HashMap::default(),
         }
     }
@@ -265,7 +299,8 @@ fn spawn_view(commands: &mut Commands, assets: &TokenAssets, owner: Entity, toke
     let anchor = commands
         .spawn((
             IconAnchor::default(),
-            Transform::from_xyz(0.0, assets.icon_lift, 0.0),
+            // Placed each frame by `place_camera_and_tokens`.
+            Transform::default(),
             Visibility::default(),
         ))
         .id();
@@ -337,24 +372,28 @@ pub fn sync_icons(
     }
 }
 
-/// When the window's height changes, rebuilds the outline meshes (keeping
-/// their handles, so every token picks them up) so outlines stay
-/// `OUTLINE_PIXELS` wide. Icons scale with the map, so they are left alone.
+/// When the window's height or the camera's zoom changes, rebuilds the
+/// outline meshes (keeping their handles, so every token picks them up) so
+/// outlines stay `OUTLINE_PIXELS` wide. Icons scale with the map, so they are
+/// left alone.
 pub fn resize_tokens(
     window: Single<&Window, With<PrimaryWindow>>,
+    camera: Single<&OrbitCamera>,
     mut assets: ResMut<TokenAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let height = window.physical_height() as f32;
+    let distance = camera.distance;
     // Minimised windows have no height; keep the old sizes.
-    if height == 0.0 || height == assets.window_height {
+    if height == 0.0 || (height == assets.window_height && distance == assets.camera_distance) {
         return;
     }
-    let outline = outline_width(height);
+    let outline = outline_width(height, distance);
     for shape in TokenShape::ALL {
         if let Some(mut mesh) = meshes.get_mut(&assets.outlines[shape as usize]) {
             *mesh = prism(shape, outline);
         }
     }
     assets.window_height = height;
+    assets.camera_distance = distance;
 }

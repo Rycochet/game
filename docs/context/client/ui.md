@@ -4,7 +4,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Files
 
-- `crates/client/src/ui/mod.rs`: `UiPlugin`; spawns and updates the status text (controls and demo keys with their state, snow line, position, hour, `ViewStats` line).
+- `crates/client/src/ui/mod.rs`: `UiPlugin`; spawns and updates the status text (controls including right-drag, wheel and Home for the map camera, demo keys with their state, snow line, position, hour, `ViewStats` line).
 
 ## Public API
 
