@@ -4,10 +4,12 @@
 //! - G: walk east one step per frame, until pressed again.
 //! - T: temperature cycle: the snow line falls from normal to 0 (everything
 //!   frozen) and rises back, as in the prototype.
+//! - K / C: cycle the player's token shape / attitude colour; X toggles
+//!   its "completed" state.
 
 use bevy::prelude::*;
 
-use crate::common::{NORMAL_SNOW_LINE, Weather};
+use crate::common::{NORMAL_SNOW_LINE, Token, Weather};
 use crate::player::{MapPosition, Player, PlayerSystems};
 
 /// How fast the snow line moves during the temperature cycle, in height units
@@ -20,7 +22,7 @@ impl Plugin for DemoPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AutoWalk>()
             .init_resource::<TemperatureCycle>()
-            .add_systems(Update, (toggle_modes, temperature_cycle))
+            .add_systems(Update, (toggle_modes, temperature_cycle, cycle_token))
             .add_systems(Update, auto_walk.in_set(PlayerSystems::Input));
     }
 }
@@ -58,6 +60,20 @@ fn toggle_modes(
 fn auto_walk(walk: Res<AutoWalk>, mut player: Single<&mut MapPosition, With<Player>>) {
     if walk.0 {
         player.x += 1;
+    }
+}
+
+/// K and C cycle the player's token through its shapes and attitudes, and X
+/// toggles it completed, to show them all.
+fn cycle_token(keys: Res<ButtonInput<KeyCode>>, mut token: Single<&mut Token, With<Player>>) {
+    if keys.just_pressed(KeyCode::KeyK) {
+        token.shape = token.shape.next();
+    }
+    if keys.just_pressed(KeyCode::KeyC) {
+        token.attitude = token.attitude.next();
+    }
+    if keys.just_pressed(KeyCode::KeyX) {
+        token.completed = !token.completed;
     }
 }
 

@@ -5,6 +5,11 @@
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked).
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
 //! - `GAME_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
+//! - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) a second after
+//!   starting, to check that views handle resizing.
+//! - `GAME_TOKEN=shape,attitude[,1]`: the player's token, as numbers (indexes
+//!   into `TokenShape::ALL` and `Attitude::ALL`), e.g. `3,2` is a blue
+//!   hexagon; a third value of `1` makes it completed.
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 
@@ -12,8 +17,9 @@ use std::env;
 
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
+use bevy::window::PrimaryWindow;
 
-use crate::common::Weather;
+use crate::common::{Attitude, Token, TokenShape, Weather};
 use crate::demo::AutoWalk;
 use crate::player::{MapPosition, Player, TravelTo};
 
@@ -43,8 +49,35 @@ impl Plugin for DevToolsPlugin {
             app.insert_resource(AutoWalk(true));
         }
 
+        if let Some((width, height)) = env::var("GAME_WINDOW_SIZE")
+            .ok()
+            .and_then(|size| parse_pos(&size))
+        {
+            let (width, height) = (width as f32, height as f32);
+            app.add_systems(
+                Update,
+                move |time: Res<Time>,
+                      mut done: Local<bool>,
+                      mut window: Single<&mut Window, With<PrimaryWindow>>| {
+                    if !*done && time.elapsed_secs() > 1.0 {
+                        *done = true;
+                        window.resolution.set(width, height);
+                    }
+                },
+            );
+        }
+
         if let Some(snow_line) = env::var("GAME_SNOW").ok().and_then(|v| v.parse().ok()) {
             app.insert_resource(Weather { snow_line });
+        }
+
+        if let Some(new_token) = env::var("GAME_TOKEN").ok().and_then(|t| parse_token(&t)) {
+            app.add_systems(
+                PostStartup,
+                move |mut token: Single<&mut Token, With<Player>>| {
+                    **token = new_token;
+                },
+            );
         }
 
         if let Ok(path) = env::var("GAME_SCREENSHOT") {
@@ -84,6 +117,19 @@ fn screenshot_then_quit(
     } else if plan.taken && now >= plan.at + SAVE_SECONDS {
         exit.write(AppExit::Success);
     }
+}
+
+/// `shape,attitude` or `shape,attitude,completed`, all numbers.
+fn parse_token(text: &str) -> Option<Token> {
+    let mut numbers = text.split(',').map(|n| n.trim().parse::<usize>().ok());
+    let shape = *TokenShape::ALL.get(numbers.next()??)?;
+    let attitude = *Attitude::ALL.get(numbers.next()??)?;
+    let completed = numbers.next().flatten() == Some(1);
+    Some(Token {
+        shape,
+        attitude,
+        completed,
+    })
 }
 
 fn parse_pos(text: &str) -> Option<(i64, i64)> {

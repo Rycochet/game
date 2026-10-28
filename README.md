@@ -102,3 +102,5 @@ Multiplayer roguelike with infinite world
 ## Licence
 
 Hall of Worlds is licensed under [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/) (CC BY-NC 4.0): you may share and adapt it with attribution, but not for commercial purposes. See [LICENSE](LICENSE). Third-party dependencies keep their own licences.
+
+Some artwork is by other people and used under its own licence, credited in [crates/client/assets/ATTRIBUTION.md](crates/client/assets/ATTRIBUTION.md): the monster icons are by David E. Gervais ([tiles library](http://pousse.rapiere.free.fr/tome/), CC BY 3.0).

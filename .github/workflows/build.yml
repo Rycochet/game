@@ -1,7 +1,8 @@
 # Release builds after changes land on master (or on demand), kept as
 # downloadable artifacts on the workflow run:
-# - native: client (with the embedded single-player server) and the standalone
-#   server, for Windows, macOS and Linux
+# - native: client (with the embedded single-player server), the standalone
+#   server and the game assets (`cargo xtask package`), for Windows, macOS and
+#   Linux
 # - web: the browser client (no server code)
 name: Build
 
@@ -27,15 +28,11 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked --package client --package server
+      - run: cargo xtask package
       - uses: actions/upload-artifact@v4
         with:
           name: hall-of-worlds-${{ runner.os }}
-          path: |
-            target/release/hall-of-worlds
-            target/release/hall-of-worlds.exe
-            target/release/hall-of-worlds-server
-            target/release/hall-of-worlds-server.exe
+          path: target/package
           if-no-files-found: error
 
   web:
