@@ -60,11 +60,14 @@ const ICON_GAP_PIXELS: f32 = 1.0;
 /// stand on the token rather than float above it.
 const ICON_SHADOW_PIXELS: f32 = 3.0;
 
-/// Looking straight down, the icon's feet (the bottom of the main picture,
-/// less its shadow) sit this many screen pixels above the near edge of the
-/// token (owner's choice). Tilting from the starting view to straight down
-/// slides them there smoothly.
+/// Tilting from the starting view to straight down slides the icon's feet
+/// (the bottom of the main picture, less its shadow) smoothly down towards a
+/// point this many screen pixels above the near edge of the token...
 const FEET_ABOVE_EDGE_PIXELS: f32 = 2.0;
+
+/// ...but only this fraction of the way: the full slide looked about double
+/// what was needed (owner's judgement).
+const ICON_SLIDE: f32 = 0.5;
 
 /// Grid units per icon art pixel.
 const ICON_PIXEL: f32 = ICON_ART_SIZE / ICON_ART_PIXELS;
@@ -121,8 +124,8 @@ impl TokenAssets {
     /// relative to the token's centre: on the token's top, then up the screen
     /// (along the camera's "up"). In the starting view (`home_pitch`) the
     /// feet stand `ICON_GAP_PIXELS` above the top's centre; as `pitch` rises
-    /// to straight down they slide to `FEET_ABOVE_EDGE_PIXELS` above the
-    /// token's near edge, so the icon covers less of the map below it.
+    /// to straight down they slide `ICON_SLIDE` of the way to
+    /// `FEET_ABOVE_EDGE_PIXELS` above the token's near edge.
     pub fn icon_offset(&self, camera_rotation: Quat, pitch: f32, home_pitch: f32) -> Vec3 {
         // Grid units per screen pixel at the camera's distance.
         let screen_pixel = outline_width(self.window_height, self.camera_distance) / OUTLINE_PIXELS;
@@ -135,7 +138,7 @@ impl TokenAssets {
         // 0 at the starting tilt (or lower), 1 looking straight down.
         let towards_down =
             ((pitch.sin() - home_pitch.sin()) / (1.0 - home_pitch.sin())).clamp(0.0, 1.0);
-        let feet = feet_at_start + (feet_looking_down - feet_at_start) * towards_down;
+        let feet = feet_at_start + (feet_looking_down - feet_at_start) * towards_down * ICON_SLIDE;
         // From the feet up to the centre of the main picture.
         let centre = feet + (ICON_ART_PIXELS / 2.0 - ICON_SHADOW_PIXELS) * ICON_PIXEL;
         // Looking down, the icon lies nearly flat over the token and would
