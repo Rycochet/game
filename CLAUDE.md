@@ -60,7 +60,7 @@ Context files are summaries, not documentation: a few lines per item, enough to 
 
 When the owner says a branch is ready to merge (or asks for a PR):
 
-1. Run `cargo xtask test`; it must pass (CI requires it too).
+1. Run `cargo xtask test`; it must pass (CI only runs `cargo check --release` for now, so this local run is the real test).
 2. Check every context file the branch touched still matches the code.
 3. Tidy `docs/context/decisions.md` following the maintenance rules at its top: fix outdated entries freely, but **ask before removing anything**, listing what and why.
 
@@ -74,9 +74,9 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 - Native: `cargo run` · Server: `cargo run -p server` · Web: `trunk serve` (http://localhost:3000) · Format: `cargo fmt`
 - Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
-- Docker isn't installed on the owner's machine: the Docker workflow test-builds the image on every PR instead.
-- **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI runs it on ready-for-review PRs (not drafts) and on `master`, and it must pass before merging.
-- **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: CI type-checks wasm on every push, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
+- Docker isn't installed on the owner's machine, and the Docker workflow only builds the image after merging to `master`: take extra care with `Dockerfile` changes.
+- **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
+- **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: `cargo xtask test` type-checks wasm, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
 - **Leave the game running for the owner** after finishing a change: start the native build in the background (`./target/debug/hall-of-worlds.exe` with `run_in_background`) and don't close it, so the owner can see and play with the changes. Before rebuilding, close it if it's still running (`taskkill //IM hall-of-worlds.exe //F`): Windows locks the running executable and the build fails with "Access is denied".
 - **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`).
 - Bevy compiles slowly the first time (15+ min clean); incremental builds take seconds. Run long builds in the background.

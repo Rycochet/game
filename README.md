@@ -33,13 +33,13 @@ On Linux you also need some system libraries, see <https://bevy.org/learn/quick-
 | Run in a browser          | `trunk serve`           | Task "Serve (web)", then <http://localhost:3000/> |
 | Release build (native)    | `cargo build --release` | Task "Release build (native)"             |
 | Release build (web)       | `trunk build --release` | Task "Release build (web)", output in `dist/` |
-| Test (what CI runs)       | `cargo xtask test`      | Task "Test"                               |
+| Test (before merging)     | `cargo xtask test`      | Task "Test"                               |
 | Lint                      | `cargo clippy`          | Shown automatically in the editor         |
 | Format                    | `cargo fmt`             | Automatic on save                         |
 
 The first build downloads and compiles Bevy, which takes several minutes. Later builds are much faster.
 
-`cargo xtask test` checks formatting, type-checks/lints the native and web builds with warnings treated as errors, and runs the tests. GitHub runs it on every branch (the "Test" workflow) and it must pass before merging.
+`cargo xtask test` checks formatting, type-checks/lints the native and web builds with warnings treated as errors, and runs the tests. Run it before merging: GitHub's "Check" workflow only runs `cargo check --release` for now.
 
 Source code is in `crates/`: `shared` holds game rules and world generation used by both sides, `client` is the game app, `server` is the game server. Images/sounds/fonts go in `crates/client/assets/`. In the game, click the map or use the arrow keys to move; G and T start demo modes. Build output goes in `target/` (native) and `dist/` (web), both local only.
 

@@ -1,4 +1,4 @@
-# Release builds after changes land on master (or on demand), kept as
+# Release builds on demand only (Actions tab > Build > Run workflow), kept as
 # downloadable artifacts on the workflow run:
 # - native: client (with the embedded single-player server), the standalone
 #   server and the game assets (`cargo xtask package`), for Windows, macOS and
@@ -6,9 +6,8 @@
 # - web: the browser client (no server code)
 name: Build
 
+# Not run on every merge for now: it was too much CI work per change.
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
 
 env:

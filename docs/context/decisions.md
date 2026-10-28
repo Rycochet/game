@@ -33,7 +33,7 @@ Rules, world generation, RNG, validation and protocol types go in `shared`, used
 
 ## 2026-10-27: Deterministic generation
 
-All shared randomness is seeded and derived by hashing (seed, purpose, coordinates) so results are independent of generation order. Authoritative state uses integers (grid positions). Shared code avoids platform-dependent float functions (or uses `libm`). Golden-value tests run natively on all three OSes in CI (running them under wasm too is still to add). Rules: `architecture.md`.
+All shared randomness is seeded and derived by hashing (seed, purpose, coordinates) so results are independent of generation order. Authoritative state uses integers (grid positions). Shared code avoids platform-dependent float functions (or uses `libm`). Golden-value tests run natively via `cargo xtask test` (CI ran them on all three OSes until it was cut down to `cargo check`; running them under wasm too is still to add). Rules: `architecture.md`.
 
 ## 2026-10-27: Network message encoding: `postcard` + `serde`
 
@@ -60,13 +60,13 @@ The browser can only use WebSockets or WebTransport (no raw UDP), so the transpo
 - Alternative: `lightyear` (MIT OR Apache-2.0). Includes client prediction, rollback and interpolation; more powerful, more complex. Worth it if movement becomes real-time and fast-paced.
 - Alternative: hand-rolled WebSockets (`tokio-tungstenite`, MIT, on the server; the browser's WebSocket on the client) with `postcard` messages. Full control and simple to understand, but we'd write reconnection, replication and interest management ourselves.
 
-## 2026-10-27: Test command `cargo xtask test`, required in CI
+## 2026-10-27: Test command `cargo xtask test`
 
-One command, identical locally and in CI: formatting check, clippy with warnings as errors for native and wasm (type-check only), then `cargo test --workspace`. Implemented as an `xtask` helper crate (the usual Rust pattern) because cargo aliases can't chain commands and scripts would differ between Windows and Unix. The GitHub "Test" workflow runs it on all three OSes for ready-for-review PRs (drafts skipped) and on `master`; its "All tests passed" check must pass before merging.
+One command, identical locally and in CI: formatting check, clippy with warnings as errors for native and wasm (type-check only), then `cargo test --workspace`. Implemented as an `xtask` helper crate (the usual Rust pattern) because cargo aliases can't chain commands and scripts would differ between Windows and Unix. It must pass locally before merging; CI no longer runs it (see "CI cut down to `cargo check`").
 
 ## 2026-10-27: Develop on native; browser checked occasionally
 
-Day-to-day building, running and testing use the native Windows build: it rebuilds about 3× faster than the web build, and Bevy produces an equivalent web client. CI type-checks wasm on every push. Browser testing and web performance are not tasks until later in development; avoid premature optimisation, but keep tracking performance numbers.
+Day-to-day building, running and testing use the native Windows build: it rebuilds about 3× faster than the web build, and Bevy produces an equivalent web client. `cargo xtask test` type-checks wasm. Browser testing and web performance are not tasks until later in development; avoid premature optimisation, but keep tracking performance numbers.
 
 ## 2026-10-27: World map style: Legend (1992) as the reference, modern look
 
@@ -102,15 +102,15 @@ Domains (not live yet): `hallofworlds.com` landing page / adverts / email, `hall
 
 ## 2026-10-28: Docker image published to GHCR on every merge
 
-A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 8080 by static-web-server (MIT OR Apache-2.0, a small Rust static file server, run alongside the game server by `docker/entrypoint.sh`). The Docker workflow test-builds it on PRs and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master`. The Build workflow keeps native (client + server, three OSes) and web release builds as artifacts.
+A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 8080 by static-web-server (MIT OR Apache-2.0, a small Rust static file server, run alongside the game server by `docker/entrypoint.sh`). The Docker workflow builds and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master` (no PR builds). The Build workflow, run manually, keeps native (client + server, three OSes) and web release builds as artifacts.
 
 ## 2026-10-28: Licence: CC BY-NC 4.0
 
 The project is licensed under Creative Commons Attribution-NonCommercial 4.0 (`LICENSE`, SPDX `CC-BY-NC-4.0`), chosen by the owner: free to share and adapt with attribution, not for commercial use. It is not an OSI open-source licence (non-commercial clause), and Creative Commons doesn't recommend its licences for software; the owner accepted this. Dependencies must still be OSI-licensed (see `CLAUDE.md`).
 
-## 2026-10-28: Tests run only on ready PRs and master
+## 2026-10-28: CI runs only on ready PRs and master
 
-To avoid running CI on every push, the Test workflow (and the Docker PR build) runs on pull requests that are ready for review, skipping drafts, plus pushes to `master`. Iterate on a draft PR, then mark it ready to test. GitHub's merge queue would run checks only at merge time, but it isn't available to personally owned repositories.
+To avoid running CI on every push, the Check workflow runs on pull requests that are ready for review, skipping drafts, plus pushes to `master`. Iterate on a draft PR, then mark it ready to test. GitHub's merge queue would run checks only at merge time, but it isn't available to personally owned repositories.
 
 ## 2026-10-28: Client memory optimisations measured but not adopted
 
@@ -133,3 +133,7 @@ All assets must be in the native builds. Release executables load `assets/` from
 Chosen by the owner: right-drag turns (sideways) and tilts (up and down) the world map view around the player, the mouse wheel zooms, the view stays where it is left, and Home returns to the starting view (turn, tilt and zoom). The camera is a reusable `OrbitCamera` in `world_map/camera.rs`, since future 3D views will build on the world map renderer. Zoom can't go further out than the starting view, nor further in than 0.6 of its distance (owner's limits); tilt is 10°–85° (adjustable). Zooming changes what is in the frame, not the frame's size: the window shrinks as the camera moves in. As the camera tilts towards straight down, token icons slide down, half the way from standing on the token's centre to standing a couple of pixels above its near edge (the full slide looked too much).
 
 Also the owner's choice: the map's outline stays the same on screen and the view into the world turns (and zooms), rather than the square slab rotating. The terrain window is a square lined up with the camera, cut out of the world-aligned terrain on the CPU (triangles crossing its border are clipped, so edges are exact; no custom shader), with earth faces down its edges. Per-point heights, normals and colours are kept in a wrapping store keyed by world position, so stepping and turning only work out newly covered points. The sun and the baked slope shading stay fixed to the world (sun in the east), so lighting is consistent rather than identical from every side. Arrow keys / WASD follow the camera (owner's choice): each steps in the grid direction nearest to its screen direction, through `common::ViewFacing`, so steps stay on the grid.
+
+## 2026-10-28: CI cut down to `cargo check`
+
+The repo is public with auto-merge enabled, and the full CI (`cargo xtask test` on three OSes, Docker test builds on PRs, release builds of every merge) was too much work. For now, the owner's call: PRs and `master` run only `cargo check --release --workspace` on Linux (still reported as the required "All tests passed" check, so auto-merge keeps working); the Docker image is built and published only on merge to `master`; the Build workflow is manual. `cargo xtask test` stays the local must-pass test before merging. Restore the full test workflow later (from git history).

@@ -9,7 +9,7 @@
 - `crates/client/assets/`: images, sounds, fonts. `ATTRIBUTION.md` credits third-party art (required by its licences; add an entry with any new third-party asset). `monsters/`: David E. Gervais's Dungeon Odyssey monster tiles (CC BY 3.0), 932 54×54 RGBA PNGs with lower-case names. Loaded by Bevy's `AssetServer`: native debug builds read this folder directly (`ASSET_FOLDER` in `main.rs`, an absolute compile-time path, so the exe works from `target/debug`); release builds look for `assets/` next to the executable, so every native release must ship it (`cargo xtask package` does); Trunk copies it into `dist/` for the web (and so the Docker image).
 - `index.html` + `Trunk.toml`: the web build (points Trunk at `crates/client`). Serves on port 3000.
 - `docs/context/`: context files for Claude (this folder).
-- `xtask/`: helper commands, run as `cargo xtask <task>` via the alias in `.cargo/config.toml`. `xtask test` = fmt check + clippy `-D warnings` for native (`--workspace --all-targets`) and for `wasm32-unknown-unknown` (`client` package, which pulls in `shared`) + `cargo test --workspace`. `xtask package` = release build of client + server, then `target/package/` with both executables and `assets/` (the layout players get; used by the Build workflow and the VSCode "Release build (native)" task).
+- `xtask/`: helper commands, run as `cargo xtask <task>` via the alias in `.cargo/config.toml`. `xtask test` = fmt check + clippy `-D warnings` for native (`--workspace --all-targets`) and for `wasm32-unknown-unknown` (`client` package, which pulls in `shared`) + `cargo test --workspace`. `xtask package` = release build of client + server, then `target/package/` with both executables and `assets/` (the layout players get; used by the manual Build workflow and the VSCode "Release build (native)" task).
 - `Dockerfile`, `docker/entrypoint.sh`, `.dockerignore`: the server image (see Docker below).
 - `LICENSE`: CC BY-NC 4.0 (official legal text); `license = "CC-BY-NC-4.0"` in `Cargo.toml` for every crate.
 - `README.md` (human setup, domains, game design, licence), `designs.txt` (older design notes).
@@ -31,7 +31,7 @@
 
 - Multi-stage `Dockerfile`, x86-64 only (`linux/amd64`; ARM can be added later under the same tags): a `tools` stage `cargo install`s Trunk 0.22.1 and static-web-server 2.44.1; `build` compiles `hall-of-worlds-server` (release) and the web client (`trunk build --release`); the runtime is `debian:trixie-slim` (same Debian as the `rust:1.99-trixie` builder, so glibc matches), non-root user `hall`.
 - `docker/entrypoint.sh` runs static-web-server (web client on port 8080) and the game server together; if either exits the container stops, and `docker stop` stops both. `.gitattributes` forces LF endings for `*.sh`.
-- Not testable locally (no Docker on the owner's machine); the Docker workflow builds it on every PR.
+- Not testable locally (no Docker on the owner's machine), and CI only builds it after merging to `master`.
 
 ## Domains
 
@@ -39,6 +39,6 @@
 
 ## CI
 
-- `.github/workflows/test.yml`: runs `cargo xtask test` on Windows, macOS and Linux for pull requests that are ready for review (draft PRs are skipped) and on pushes to `master` (which warms the cache PRs reuse). Not on plain branch pushes. Builds without debug info (`CARGO_PROFILE_DEV_DEBUG=0`) and frees disk on the Linux runner first: with debug info the build folder filled the runner's disk. The `All tests passed` job aggregates them and is the check to require in GitHub branch protection.
-- `.github/workflows/build.yml`: on push to `master` (or manually), `cargo xtask package` for the three OSes (client, server and assets) and the web client, uploaded as workflow artifacts (`hall-of-worlds-<OS>` = `target/package`, `hall-of-worlds-web` = `dist`).
-- `.github/workflows/docker.yml`: on ready (non-draft) PRs builds the image without pushing; on push to `master` (every merge) or manually, publishes `ghcr.io/rycochet/hall-of-worlds:latest` and `:sha-<commit>` using `GITHUB_TOKEN` (`packages: write`). Uses the GitHub Actions layer cache.
+- `.github/workflows/test.yml` ("Check"): only `cargo check --release --workspace` on Linux, for pull requests that are ready for review (draft PRs are skipped) and on pushes to `master` (which warms the cache PRs reuse). Cut down from `cargo xtask test` on three OSes, which was too much work per PR; run that locally. The `All tests passed` job keeps its old name because it is the check required in branch protection (what auto-merge waits for).
+- `.github/workflows/build.yml`: manual only (Run workflow in the Actions tab), `cargo xtask package` for the three OSes (client, server and assets) and the web client, uploaded as workflow artifacts (`hall-of-worlds-<OS>` = `target/package`, `hall-of-worlds-web` = `dist`).
+- `.github/workflows/docker.yml`: on push to `master` (every merge) or manually, builds and publishes `ghcr.io/rycochet/hall-of-worlds:latest` and `:sha-<commit>` using `GITHUB_TOKEN` (`packages: write`). Uses the GitHub Actions layer cache.
