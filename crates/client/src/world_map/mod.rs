@@ -8,6 +8,7 @@
 //! The camera and tokens come from `view3d`; this module draws the terrain
 //! while `GameView::WorldMap` is current.
 
+mod features;
 mod picking;
 mod terrain;
 
@@ -17,13 +18,16 @@ use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::common::{CurrentWorld, GameClock, GameView, ViewStats, Weather};
-use crate::player::{MapPosition, Player, PlayerSystems, SmoothPosition, TravelTo};
+use crate::common::{
+    CurrentWorld, GameClock, GameView, MapPosition, SmoothPosition, ViewStats, Weather,
+};
+use crate::player::{Player, PlayerSystems, TravelTo};
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{
     OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, View3dSystems, ViewCamera,
     ViewGrid,
 };
+use features::SpawnedFeatures;
 use terrain::{HeightCache, TerrainGrid, ViewSquare};
 
 /// World height units per 3D unit of height. 1.0 keeps the prototype's
@@ -49,9 +53,13 @@ impl Plugin for WorldMapPlugin {
     fn build(&self, app: &mut App) {
         let in_view = in_state(GameView::WorldMap);
         app.init_resource::<TerrainGrid>()
+            .init_resource::<SpawnedFeatures>()
             .add_systems(Startup, spawn_view)
             .add_systems(OnEnter(GameView::WorldMap), show_scene)
-            .add_systems(OnExit(GameView::WorldMap), hide_scene)
+            .add_systems(
+                OnExit(GameView::WorldMap),
+                (hide_scene, features::despawn_all),
+            )
             .add_systems(
                 Update,
                 pick_on_click
@@ -60,13 +68,14 @@ impl Plugin for WorldMapPlugin {
             )
             .add_systems(
                 Update,
-                update_terrain
+                (update_terrain, features::spawn_nearby)
                     .after(PlayerSystems::Travel)
+                    .before(View3dSystems::Place)
                     .run_if(in_view.clone()),
             )
             .add_systems(
                 Update,
-                rest_tokens_on_terrain
+                (rest_tokens_on_terrain, hide_tokens_outside_window)
                     .after(View3dSystems::Place)
                     .run_if(in_view),
             );
@@ -173,9 +182,17 @@ fn show_scene(
     });
 }
 
-fn hide_scene(mut scene: Query<&mut Visibility, With<WorldMapScene>>) {
+/// Leaving the view: hides the scene, and shows every token again (other
+/// views draw all of them).
+fn hide_scene(
+    mut scene: Query<&mut Visibility, (With<WorldMapScene>, Without<TokenView>)>,
+    mut tokens: Query<&mut Visibility, With<TokenView>>,
+) {
     for mut visibility in &mut scene {
         *visibility = Visibility::Hidden;
+    }
+    for mut visibility in &mut tokens {
+        *visibility = Visibility::Inherited;
     }
 }
 
@@ -283,6 +300,36 @@ fn rest_tokens_on_terrain(
             (TOKEN_DIAMETER / 2.0) as f64,
         );
         transform.translation.y = ground + TOKEN_HALF_THICKNESS;
+    }
+}
+
+/// Every frame: hides tokens that aren't wholly inside the terrain window,
+/// so none hang over its edges or float beyond them.
+fn hide_tokens_outside_window(
+    player: Single<&MapPosition, With<Player>>,
+    orbit: Single<&OrbitCamera, With<ViewCamera>>,
+    positions: Query<&SmoothPosition>,
+    mut views: Query<(&TokenView, &mut Visibility)>,
+) {
+    let square = view_square(&orbit);
+    let inner = ViewSquare {
+        half: square.half - TOKEN_DIAMETER / 2.0,
+        ..square
+    };
+    for (view, mut visibility) in &mut views {
+        let Ok(position) = positions.get(view.owner) else {
+            continue;
+        };
+        // Relative to the window's centre, the player's grid point.
+        let offset = Vec2::new(
+            (position.x - player.x as f64) as f32,
+            (position.y - player.y as f64) as f32,
+        );
+        visibility.set_if_neq(if inner.contains(offset) {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        });
     }
 }
 

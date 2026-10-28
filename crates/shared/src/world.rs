@@ -45,6 +45,12 @@ impl WorldParams {
         libm::cos(hour * PI / 6.0) * 4.0 * self.tilt
     }
 
+    /// The highest the water gets (high tide): ground above this is always
+    /// dry land.
+    pub fn high_water(&self) -> f64 {
+        self.sea_level + 4.0 * self.tilt
+    }
+
     /// The water height at a time of day.
     pub fn water_level(&self, hour: f64) -> f64 {
         self.sea_level + self.tide(hour)

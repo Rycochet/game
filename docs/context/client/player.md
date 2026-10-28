@@ -9,18 +9,16 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 ## Public API
 
 - `Player` (component): marks the single player entity.
-- `MapPosition { x: i64, y: i64 }` (component): position on the current view's grid; `y` increases southwards (towards the viewer). While travelling it is the nearest grid point to `SmoothPosition`.
-- `SmoothPosition { x: f64, y: f64 }` (component): exact position, fractional while travelling, equal to `MapPosition` when still. For smooth drawing only.
 - `TravelTo { x, y }` (message): travel to a grid point at constant speed, always ending exactly on it. A new one replaces the current journey from wherever the player is.
 - `PlayerSystems` (system set): `Input` then `Travel`, chained. Systems that change `MapPosition` or send `TravelTo` go in `Input`; systems drawing the position run `.after(PlayerSystems::Travel)`.
 
 ## Depends on
 
-- `common` (`Token`, `Icon`, `LightSource`, `ViewFacing`, `GameView`, `CurrentDungeon`).
+- `common` (`Token`, `Icon`, `LightSource`, `ViewFacing`, `GameView`, `CurrentDungeon`, `MapPosition`, `SmoothPosition`: the player's position components, in `common` because other entities (world map features) have them too).
 
 ## Used by
 
-- `view3d` (camera and token positions), `world_map` (centre of view, clicks, token heights), `dungeon_map` (sight and light), `ui` (position readout), `demo` (auto-walk, view switch), `dev_tools` (`GAME_POS`, `GAME_TRAVEL`).
+- `view3d` (the camera follows the `Player`), `world_map` (centre of view, clicks), `dungeon_map` (sight and light), `ui` (position readout), `demo` (auto-walk, view switch), `dev_tools` (`GAME_POS`, `GAME_TRAVEL`), all with `common::MapPosition` / `SmoothPosition` on the `Player`.
 
 ## Notes
 

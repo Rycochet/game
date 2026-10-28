@@ -8,9 +8,10 @@
 //! - `GAME_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
 //! - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) a second after
 //!   starting, to check that views handle resizing.
-//! - `GAME_TOKEN=shape,attitude[,1]`: the player's token, as numbers (indexes
-//!   into `TokenShape::ALL` and `Attitude::ALL`), e.g. `3,2` is a blue
-//!   hexagon; a third value of `1` makes it completed.
+//! - `GAME_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as
+//!   numbers (indexes into `TokenShape::ALL` and `Attitude::ALL`), e.g. `3,2`
+//!   is a blue hexagon; a third value of `1` makes it completed, a fourth is
+//!   an index into `TokenSize::ALL` (`0` tiny ... `5` titan).
 //! - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the map view turned by `yaw`
 //!   degrees (positive moves the camera towards the east; 90 looks west, 180
 //!   looks south), tilted to `pitch` degrees above the horizon and zoomed in
@@ -25,9 +26,9 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{Attitude, GameView, Token, TokenShape, Weather};
+use crate::common::{Attitude, GameView, MapPosition, Token, TokenShape, TokenSize, Weather};
 use crate::demo::AutoWalk;
-use crate::player::{MapPosition, Player, TravelTo};
+use crate::player::{Player, TravelTo};
 use crate::view3d::OrbitCamera;
 
 /// Time between taking the screenshot and quitting, so it can be saved.
@@ -158,10 +159,16 @@ fn parse_token(text: &str) -> Option<Token> {
     let shape = *TokenShape::ALL.get(numbers.next()??)?;
     let attitude = *Attitude::ALL.get(numbers.next()??)?;
     let completed = numbers.next().flatten() == Some(1);
+    let size = numbers
+        .next()
+        .flatten()
+        .and_then(|n| TokenSize::ALL.get(n).copied())
+        .unwrap_or_default();
     Some(Token {
         shape,
         attitude,
         completed,
+        size,
     })
 }
 

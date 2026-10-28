@@ -4,7 +4,9 @@
 use bevy::math::DVec2;
 use bevy::prelude::*;
 
-use crate::common::{CurrentDungeon, GameView, Icon, LightSource, Token, ViewFacing};
+use crate::common::{
+    CurrentDungeon, GameView, Icon, LightSource, MapPosition, SmoothPosition, Token, ViewFacing,
+};
 
 /// While a key is held, how often the player takes another step.
 const STEP_REPEAT_SECONDS: f32 = 0.05;
@@ -48,25 +50,6 @@ pub enum PlayerSystems {
 /// Marks the entity the keyboard controls.
 #[derive(Component)]
 pub struct Player;
-
-/// Position on the current view's grid: the world grid (1 unit is about 1 km)
-/// or a dungeon's cells. `y` increases southwards (towards the viewer in the
-/// starting view). While travelling, this is the
-/// nearest grid point to `SmoothPosition`.
-#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct MapPosition {
-    pub x: i64,
-    pub y: i64,
-}
-
-/// The exact position, fractional while travelling. Equal to `MapPosition`
-/// whenever the player is standing still. Read it for smooth drawing; change
-/// `MapPosition` or send `TravelTo` to move.
-#[derive(Component, Clone, Copy, Debug, Default, PartialEq)]
-pub struct SmoothPosition {
-    pub x: f64,
-    pub y: f64,
-}
 
 /// Ask the player to travel to a grid point at constant speed. A new request
 /// replaces the current one, starting from wherever the player is.

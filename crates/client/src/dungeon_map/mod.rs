@@ -21,8 +21,10 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::window::PrimaryWindow;
 use shared::dungeon::Sight;
 
-use crate::common::{CurrentDungeon, GameView, LightSource, SharesSight, ViewStats};
-use crate::player::{MapPosition, Player, PlayerSystems, SmoothPosition, TravelTo};
+use crate::common::{
+    CurrentDungeon, GameView, LightSource, MapPosition, SharesSight, SmoothPosition, ViewStats,
+};
+use crate::player::{Player, PlayerSystems, TravelTo};
 use crate::view3d::{TOKEN_DIAMETER, View3dSystems, ViewCamera, ViewGrid};
 use mesh::{LightGrid, View, WallFace};
 

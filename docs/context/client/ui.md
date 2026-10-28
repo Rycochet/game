@@ -12,7 +12,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Depends on
 
-- `common` (`GameClock`, `ViewStats`, `Weather`), `demo` (`AutoWalk`, `TemperatureCycle`), `player` (`MapPosition`, `Player`).
+- `common` (`GameClock`, `ViewStats`, `Weather`, `MapPosition`), `demo` (`AutoWalk`, `TemperatureCycle`), `player` (`Player`).
 
 ## Used by
 

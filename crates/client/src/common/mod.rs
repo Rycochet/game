@@ -8,6 +8,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use shared::dungeon::Level;
+use shared::feature::FeatureMap;
 use shared::rng::Seed;
 use shared::surface::Surface;
 use shared::world::WorldParams;
@@ -27,13 +28,15 @@ pub struct CommonPlugin;
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
         let params = WorldParams::from_seed(Seed::new(WORLD_SEED));
+        let surface = Surface::new(&params);
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(WinitSettings {
                 focused_mode: UpdateMode::reactive(Duration::from_secs_f64(1.0 / FOCUSED_FPS)),
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
             })
             .insert_resource(CurrentWorld {
-                surface: Surface::new(&params),
+                features: FeatureMap::new(&params),
+                surface,
                 params,
             })
             .insert_resource(CurrentDungeon {
@@ -48,11 +51,12 @@ impl Plugin for CommonPlugin {
     }
 }
 
-/// The world the player is in, and its surface generator.
+/// The world the player is in, its surface generator and its features.
 #[derive(Resource)]
 pub struct CurrentWorld {
     pub params: WorldParams,
     pub surface: Surface,
+    pub features: FeatureMap,
 }
 
 /// Which view is on screen: the world's surface, or a dungeon or building.
@@ -70,6 +74,35 @@ pub enum GameView {
 #[derive(Resource)]
 pub struct CurrentDungeon {
     pub level: Level,
+}
+
+/// Position on the current view's grid: the world grid (1 unit is about 1 km)
+/// or a dungeon's cells. `y` increases southwards (towards the viewer in the
+/// starting view). For the player while travelling, this is the nearest grid
+/// point to `SmoothPosition`.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MapPosition {
+    pub x: i64,
+    pub y: i64,
+}
+
+/// The exact position, fractional while travelling (the player). Equal to
+/// `MapPosition` whenever the entity is standing still. Read it for smooth
+/// drawing; anything with a `Token` needs one to be drawn. To move the
+/// player, change `MapPosition` or send `player::TravelTo`.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq)]
+pub struct SmoothPosition {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl From<MapPosition> for SmoothPosition {
+    fn from(position: MapPosition) -> Self {
+        Self {
+            x: position.x as f64,
+            y: position.y as f64,
+        }
+    }
 }
 
 /// Gives out light in dungeons, `radius` cells (straight-line distance), in
@@ -153,6 +186,51 @@ pub struct Token {
     /// Secondary state, e.g. a place already dealt with: drawn about 30%
     /// darker and slightly see-through.
     pub completed: bool,
+    /// How big the entity's `Icon` is drawn (the base stays the same).
+    pub size: TokenSize,
+}
+
+/// How big an entity's icon is drawn above its token, relative to the
+/// `Default` size. The token's base is the same size whatever this is.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TokenSize {
+    /// Half size: world map features, whose pictures fill the whole tile.
+    Tiny,
+    Small,
+    /// Characters such as the player.
+    #[default]
+    Default,
+    Large,
+    Giant,
+    Titan,
+}
+
+impl TokenSize {
+    pub const ALL: [Self; 6] = [
+        Self::Tiny,
+        Self::Small,
+        Self::Default,
+        Self::Large,
+        Self::Giant,
+        Self::Titan,
+    ];
+
+    /// The next size in `ALL`, wrapping round (for demos).
+    pub fn next(self) -> Self {
+        Self::ALL[(self as usize + 1) % Self::ALL.len()]
+    }
+
+    /// Icon scale relative to `Default`.
+    pub fn scale(self) -> f32 {
+        match self {
+            Self::Tiny => 0.5,
+            Self::Small => 0.75,
+            Self::Default => 1.0,
+            Self::Large => 1.25,
+            Self::Giant => 1.5,
+            Self::Titan => 2.0,
+        }
+    }
 }
 
 /// A 2D picture shown above an entity's token, always facing the camera. The

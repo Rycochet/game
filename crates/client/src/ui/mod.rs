@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::common::{GameClock, ViewStats, Weather};
+use crate::common::{GameClock, MapPosition, ViewStats, Weather};
 use crate::demo::{AutoWalk, TemperatureCycle};
-use crate::player::{MapPosition, Player};
+use crate::player::Player;
 
 pub struct UiPlugin;
 
@@ -51,7 +51,7 @@ fn update_status_text(
         "Arrow keys / WASD or click to move  M: world map / dungeon\n\
          Right-drag: turn / tilt map  Wheel: zoom  Home: reset view\n\
          G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})\n\
-         K / C / X: token shape / colour / completed\n\
+         K / C / X / Z: token shape / colour / completed / size\n\
          Position {}, {}  Hour {}\n{}",
         on_off(walk.0),
         weather.snow_line,
