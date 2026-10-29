@@ -43,6 +43,12 @@ pub const DEFAULT_WORLD_SEED: u64 = 12345;
 /// leaves).
 const SAVE_EVERY: Duration = Duration::from_secs(5);
 
+/// The server sends what is visible from every walkable cell within this
+/// many steps of the player in a site, so the client can work out sight
+/// itself and keep up while moving (more covers more latency, for more
+/// sent). A candidate for a `ServerOptions` setting.
+const LEVEL_PRELOAD_STEPS: i64 = 3;
+
 pub struct ServerPlugin {
     pub world_seed: WorldSeed,
     pub options: ServerOptions,

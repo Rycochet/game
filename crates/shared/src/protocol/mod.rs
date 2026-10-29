@@ -8,10 +8,7 @@
 mod level;
 mod link;
 
-pub use level::{
-    ENTER_REACH, LEVEL_CHUNK_SIZE, LEVEL_PRELOAD_STEPS, LevelChunk, LevelInfo, SeenStairs,
-    level_chunk,
-};
+pub use level::{ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, SeenStairs, level_chunk};
 pub use link::{ClientLink, Link, LinkError, ServerLink, local_pair};
 
 use serde::{Deserialize, Serialize};

@@ -11,11 +11,6 @@ use crate::site::StairsDirection;
 /// `u64` mask.
 pub const LEVEL_CHUNK_SIZE: i64 = 8;
 
-/// The server sends what is visible from every walkable cell within this
-/// many steps of the player, so the client can work out sight itself and
-/// keep up while moving.
-pub const LEVEL_PRELOAD_STEPS: i64 = 2;
-
 /// How close (each way, in world map grid points) the player must be to a
 /// feature to enter it.
 pub const ENTER_REACH: i64 = 2;

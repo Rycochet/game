@@ -11,15 +11,15 @@ use shared::dungeon::{Cell, Level, Sight};
 use shared::feature::{ChunkPos, Feature, FeatureKind};
 use shared::movement::{Step, step_on_level};
 use shared::protocol::{
-    ENTER_REACH, LEVEL_PRELOAD_STEPS, LevelChunk, LevelInfo, SeenStairs, ServerMessage, level_chunk,
+    ENTER_REACH, LevelChunk, LevelInfo, SeenStairs, ServerMessage, level_chunk,
 };
 use shared::rng::Seed;
 use shared::site::{Exit, Site, SiteLevel, leads_out};
 
-use crate::ServerWorld;
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, VisitSave, now};
 use crate::world_map::look_around;
+use crate::{LEVEL_PRELOAD_STEPS, ServerWorld};
 
 /// A player's stay on a site level.
 pub(crate) struct Visit {
