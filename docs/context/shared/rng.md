@@ -8,7 +8,7 @@ Deterministic randomness. The only source of randomness allowed in shared code.
 
 ## Public API
 
-- `Seed::new(u64)`, `.value()`.
+- `Seed::new(u64)`, `.value()`. Serde-serialisable (sent in `protocol::WorldInfo`).
 - `Seed::derive("purpose") -> Seed`: independent seed per purpose (e.g. `"land"`, `"radius"`). Always derive rather than reusing a seed for two things.
 - `Seed::at(&[i64]) -> u64`: hash of seed + coordinates, for position-based randomness in the infinite world.
 - `Seed::rng() -> Rng`: SplitMix64 sequence: `next_u64`, `next_f64` (`0..1`), `range_f64(min, max)`, `range_u64(min, max)` (max excluded).
@@ -16,7 +16,7 @@ Deterministic randomness. The only source of randomness allowed in shared code.
 
 ## Depends on
 
-- Nothing.
+- `serde` (derive only).
 
 ## Used by
 

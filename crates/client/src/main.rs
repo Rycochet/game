@@ -4,6 +4,7 @@
 //! plugin. Game logic lives in the modules themselves.
 
 mod common;
+mod connection;
 mod demo;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
@@ -47,6 +48,7 @@ fn main() {
     )
     .add_plugins((
         common::CommonPlugin,
+        connection::ConnectionPlugin,
         surface_style::SurfaceStylePlugin,
         player::PlayerPlugin,
         view3d::View3dPlugin,
@@ -57,9 +59,10 @@ fn main() {
         ui::UiPlugin,
     ));
 
-    // Native only: the embedded server (single player) and developer tools.
+    // Native only: developer tools. (The embedded single-player server is
+    // started by `connection`.)
     #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugins((server::ServerPlugin, dev_tools::DevToolsPlugin));
+    app.add_plugins(dev_tools::DevToolsPlugin);
 
     app.run();
 }

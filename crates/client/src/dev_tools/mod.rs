@@ -1,5 +1,6 @@
 //! Developer helpers, controlled by environment variables. Native only; does
 //! nothing unless a variable is set. See `docs/context/client/dev_tools.md`.
+//! Starting positions and states are applied once connected to the server.
 //!
 //! - `GAME_POS=x,y`: starting grid position on the world map.
 //! - `GAME_ENTER=kind[,seed[,level]]`: start inside a site, as if the feature
@@ -35,7 +36,7 @@ use shared::feature::{ChunkPos, Feature, FeatureKind};
 use shared::rng::Seed;
 use shared::site::Exit;
 
-use crate::common::{Attitude, MapPosition, Token, TokenShape, TokenSize, Weather};
+use crate::common::{Attitude, GameView, MapPosition, Token, TokenShape, TokenSize, Weather};
 use crate::demo::AutoWalk;
 use crate::player::{Player, TravelTo};
 use crate::site::{EnterFeature, TakeExit};
@@ -50,7 +51,7 @@ impl Plugin for DevToolsPlugin {
     fn build(&self, app: &mut App) {
         if let Some((x, y)) = env::var("GAME_POS").ok().and_then(|pos| parse_pos(&pos)) {
             app.add_systems(
-                PostStartup,
+                OnExit(GameView::Connecting),
                 move |mut player: Single<&mut MapPosition, With<Player>>| {
                     **player = MapPosition { x, y };
                 },
@@ -69,7 +70,7 @@ impl Plugin for DevToolsPlugin {
             let seed = Seed::new(numbers.get(1).copied().unwrap_or(1));
             let level = numbers.get(2).copied().unwrap_or(0) as u32;
             app.add_systems(
-                PostStartup,
+                OnExit(GameView::Connecting),
                 move |player: Single<&MapPosition, With<Player>>,
                       mut enter: MessageWriter<EnterFeature>,
                       mut exits: MessageWriter<TakeExit>| {
@@ -103,9 +104,12 @@ impl Plugin for DevToolsPlugin {
         }
 
         if let Some((x, y)) = env::var("GAME_TRAVEL").ok().and_then(|pos| parse_pos(&pos)) {
-            app.add_systems(PostStartup, move |mut travel: MessageWriter<TravelTo>| {
-                travel.write(TravelTo { x, y });
-            });
+            app.add_systems(
+                OnExit(GameView::Connecting),
+                move |mut travel: MessageWriter<TravelTo>| {
+                    travel.write(TravelTo { x, y });
+                },
+            );
         }
 
         if env::var("GAME_WALK").is_ok() {
@@ -136,7 +140,7 @@ impl Plugin for DevToolsPlugin {
 
         if let Some(new_token) = env::var("GAME_TOKEN").ok().and_then(|t| parse_token(&t)) {
             app.add_systems(
-                PostStartup,
+                OnExit(GameView::Connecting),
                 move |mut token: Single<&mut Token, With<Player>>| {
                     **token = new_token;
                 },
@@ -148,19 +152,22 @@ impl Plugin for DevToolsPlugin {
                 .split(',')
                 .filter_map(|n| n.trim().parse().ok())
                 .collect();
-            app.add_systems(PostStartup, move |mut cameras: Query<&mut OrbitCamera>| {
-                for mut camera in &mut cameras {
-                    if let Some(yaw) = numbers.first() {
-                        camera.yaw = yaw.to_radians();
+            app.add_systems(
+                OnExit(GameView::Connecting),
+                move |mut cameras: Query<&mut OrbitCamera>| {
+                    for mut camera in &mut cameras {
+                        if let Some(yaw) = numbers.first() {
+                            camera.yaw = yaw.to_radians();
+                        }
+                        if let Some(pitch) = numbers.get(1) {
+                            camera.pitch = pitch.to_radians();
+                        }
+                        if let Some(zoom) = numbers.get(2) {
+                            camera.distance /= zoom;
+                        }
                     }
-                    if let Some(pitch) = numbers.get(1) {
-                        camera.pitch = pitch.to_radians();
-                    }
-                    if let Some(zoom) = numbers.get(2) {
-                        camera.distance /= zoom;
-                    }
-                }
-            });
+                },
+            );
         }
 
         if let Ok(path) = env::var("GAME_SCREENSHOT") {

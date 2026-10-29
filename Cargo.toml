@@ -20,6 +20,9 @@ server = { path = "crates/server" }
 # turns them back on.
 bevy = { version = "0.20", default-features = false }
 fastnoise-lite = { version = "1.1", features = ["f64"] }
+# Network (and in-process) messages: serde types encoded with postcard.
+serde = { version = "1", features = ["derive"] }
+postcard = { version = "1", default-features = false, features = ["alloc"] }
 
 # Compile our own code with light optimisation so it still builds quickly...
 [profile.dev]

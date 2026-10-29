@@ -1,12 +1,54 @@
-//! A world's global settings, all generated from its seed.
+//! A world's seeds and its global settings.
+//!
+//! Each world has one secret seed, kept by the server. Everything else comes
+//! from it one way (hashed, so it can't be worked back): the public terrain
+//! seed the client generates the world map from, the secret seeds for
+//! features and sites, and the world's public id.
 
 use crate::rng::Seed;
 use core::f64::consts::PI;
+use serde::{Deserialize, Serialize};
+
+/// The world map generator's version (`WorldParams`, `surface`). Bump it only
+/// when the generated terrain changes in a way that matters, not for
+/// cosmetic changes: existing worlds keep the version they were made with.
+pub const WORLD_MAP_VERSION: u32 = 1;
+
+/// A world's secret seed. Only the server has it; never send it to a client.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WorldSeed(Seed);
+
+impl WorldSeed {
+    pub const fn new(value: u64) -> Self {
+        Self(Seed::new(value))
+    }
+
+    /// The public seed the world map terrain comes from (`WorldParams`).
+    pub fn terrain(self) -> Seed {
+        self.0.derive("terrain")
+    }
+
+    /// The secret seed world map features (and so their sites) come from.
+    pub fn features(self) -> Seed {
+        self.0.derive("features")
+    }
+
+    /// The world's public id: the same seed is the same world on any server.
+    pub fn id(self) -> WorldId {
+        WorldId(self.0.derive("id").value())
+    }
+}
+
+/// Which world this is, safe to share: it identifies the world without
+/// revealing its seed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct WorldId(pub u64);
 
 /// Settings that shape a whole world. Ported from the TypeScript prototype's
 /// `IWorld`; the ranges are the same.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorldParams {
+    /// The public terrain seed (`WorldSeed::terrain`) these came from.
     pub seed: Seed,
     /// Planet radius in metres, `500..6_500_000` (Earth is about 6_378_000).
     pub radius: u64,
@@ -67,6 +109,21 @@ mod tests {
         assert_eq!(format!("{world:?}"), GOLDEN_WORLD);
         assert_eq!(world.water_level(2.0), GOLDEN_WATER_AT_2);
     }
+
+    // Golden values: if these change, every world gets a new terrain and id.
+    #[test]
+    fn golden_world_seed() {
+        let seed = WorldSeed::new(12345);
+        assert_eq!(seed.terrain().value(), GOLDEN_TERRAIN_SEED);
+        assert_eq!(seed.id(), WorldId(GOLDEN_WORLD_ID));
+        // Each purpose gets its own seed, none of them the secret one.
+        let derived = [seed.terrain(), seed.features(), Seed::new(seed.id().0)];
+        assert!(derived.iter().all(|&d| d != seed.0));
+        assert!(derived[0] != derived[1] && derived[1] != derived[2]);
+    }
+
+    const GOLDEN_TERRAIN_SEED: u64 = 15274154617967521790;
+    const GOLDEN_WORLD_ID: u64 = 13205059784687644427;
 
     const GOLDEN_WORLD: &str = "WorldParams { seed: Seed(12345), radius: 4239010, circumference: 26634485, year: 152, density: 1.2471431745178077, tilt: 0.38362863605768616, sea_level: 50.762015892761944, climate: 0.19909579997428872 }";
     const GOLDEN_WATER_AT_2: f64 = 51.52927316487732;

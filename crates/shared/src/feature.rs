@@ -139,15 +139,18 @@ pub struct FeatureMap {
 }
 
 impl FeatureMap {
-    pub fn new(world: &WorldParams) -> Self {
-        Self::with_water(world, world.high_water())
+    /// `seed` is the world's secret features seed (`WorldSeed::features`):
+    /// the terrain is public, but where features are and what is inside
+    /// them isn't.
+    pub fn new(world: &WorldParams, seed: Seed) -> Self {
+        Self::with_water(world, seed, world.high_water())
     }
 
     /// As `new`, with features only where the ground is above `land_above`.
-    fn with_water(world: &WorldParams, land_above: f64) -> Self {
+    fn with_water(world: &WorldParams, seed: Seed, land_above: f64) -> Self {
         let surface = Surface::new(world);
         Self {
-            seed: world.seed.derive("features"),
+            seed,
             width: surface.width(),
             surface,
             land_above,
@@ -250,8 +253,14 @@ mod tests {
         WorldParams::from_seed(Seed::new(12345))
     }
 
+    // The seed the golden values were made with (from before the secret
+    // world seed existed), so they still hold.
+    fn seed() -> Seed {
+        world().seed.derive("features")
+    }
+
     fn map() -> FeatureMap {
-        FeatureMap::new(&world())
+        FeatureMap::new(&world(), seed())
     }
 
     // Golden values: if these change, every world's features move.
@@ -269,7 +278,7 @@ mod tests {
     #[test]
     fn about_the_right_share_of_chunks_have_one() {
         // With no sea, so every chunk has land.
-        let map = FeatureMap::with_water(&world(), f64::NEG_INFINITY);
+        let map = FeatureMap::with_water(&world(), seed(), f64::NEG_INFINITY);
         let count = (0..100)
             .flat_map(|y| (0..100).map(move |x| ChunkPos { x, y }))
             .filter(|&chunk| map.in_chunk(chunk).is_some())

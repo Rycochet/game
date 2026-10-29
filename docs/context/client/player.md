@@ -24,6 +24,7 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 ## Notes
 
 - A direct change to `MapPosition` (keyboard, demo walk, dev tools) cancels travel and jumps there: `travel` notices because `MapPosition` differs from the value it last set (private `Travel` component).
+- `move_player` and `travel` don't run while `GameView::Connecting` (there is no world yet).
 - Keys count if "pressed" **or** "just pressed": a tap released within one frame is otherwise lost.
 - Movement is applied directly on the client; the only check is the dungeon's walkable cells (`shared::dungeon::Level::is_walkable`, the rule the server will use). Travel and other direct `MapPosition` changes don't check walls yet. Under the client/server architecture it becomes an intent sent to the server (see `architecture.md`); `TravelTo` is already intent-shaped.
 - Systems use `Single<..., With<Player>>`, assuming one player entity. Multiplayer will need local vs remote players.

@@ -34,8 +34,15 @@ impl Plugin for PlayerPlugin {
             (PlayerSystems::Input, PlayerSystems::Travel).chain(),
         )
         .add_systems(Startup, spawn_player)
-        .add_systems(Update, move_player.in_set(PlayerSystems::Input))
-        .add_systems(Update, travel.in_set(PlayerSystems::Travel));
+        // Nowhere to move until the server has said which world this is.
+        .add_systems(
+            Update,
+            (
+                move_player.in_set(PlayerSystems::Input),
+                travel.in_set(PlayerSystems::Travel),
+            )
+                .run_if(not(in_state(GameView::Connecting))),
+        );
     }
 }
 
@@ -185,6 +192,8 @@ fn travel(
     let speed = match view.get() {
         GameView::WorldMap => TRAVEL_SPEED,
         GameView::Dungeon => DUNGEON_TRAVEL_SPEED,
+        // Travel doesn't run while connecting.
+        GameView::Connecting => return,
     };
     let step = speed * time.delta_secs_f64();
     let now = if from.distance(target) <= step {

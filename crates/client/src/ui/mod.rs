@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::common::{GameClock, MapPosition, ViewStats, Weather};
+use crate::common::{GameClock, GameView, MapPosition, ViewStats, Weather};
 use crate::demo::{AutoWalk, TemperatureCycle};
 use crate::player::Player;
 
@@ -39,8 +39,13 @@ fn update_status_text(
     walk: Res<AutoWalk>,
     cycle: Res<TemperatureCycle>,
     stats: Res<ViewStats>,
+    view: Res<State<GameView>>,
     mut text: Single<&mut Text, With<StatusText>>,
 ) {
+    if *view.get() == GameView::Connecting {
+        text.0 = "Connecting to the server...".into();
+        return;
+    }
     let on_off = |on: bool| if on { "on" } else { "off" };
     let cycle = match *cycle {
         TemperatureCycle::Off => "off",

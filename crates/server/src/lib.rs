@@ -3,28 +3,79 @@
 //!
 //! Native only. It runs either as the standalone `hall-of-worlds-server`
 //! binary (dedicated / Docker) or embedded in a native client for single
-//! player. The web client never includes it.
-//!
-//! For now it only starts up; it gains the authoritative game state and
-//! command validation when networking is added (see
-//! `docs/context/architecture.md`).
+//! player, on its own thread with its own Bevy world. The web client never
+//! includes it. Clients talk to it only through messages
+//! (`shared::protocol`), even when embedded.
 
+mod connections;
+mod embedded;
+
+use std::time::Duration;
+
+use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
+use shared::protocol::WorldInfo;
+use shared::world::{WORLD_MAP_VERSION, WorldSeed};
 
-/// Simulation ticks per second for the standalone server.
+pub use connections::Connections;
+pub use embedded::start_embedded;
+
+/// Simulation ticks per second.
 pub const TICKS_PER_SECOND: f64 = 20.0;
 
-pub struct ServerPlugin;
+/// The world every server runs until worlds can be created and saved.
+pub const DEFAULT_WORLD_SEED: u64 = 12345;
+
+pub struct ServerPlugin {
+    pub world_seed: WorldSeed,
+}
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, announce);
+        app.insert_resource(ServerWorld {
+            seed: self.world_seed,
+        })
+        .init_resource::<Connections>()
+        .add_systems(Startup, announce)
+        .add_systems(Update, connections::handle_messages);
     }
 }
 
-fn announce() {
+/// A headless server (no window) ticking `TICKS_PER_SECOND` times a second.
+/// Add a log plugin if nothing else in the process has one.
+pub fn headless_app(world_seed: WorldSeed) -> App {
+    let mut app = App::new();
+    app.add_plugins(
+        MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+            1.0 / TICKS_PER_SECOND,
+        ))),
+    )
+    .add_plugins(ServerPlugin { world_seed });
+    app
+}
+
+/// The world this server runs.
+#[derive(Resource)]
+pub struct ServerWorld {
+    pub seed: WorldSeed,
+}
+
+impl ServerWorld {
+    /// What a joining client is told about the world.
+    pub fn info(&self) -> WorldInfo {
+        WorldInfo {
+            id: self.seed.id(),
+            terrain_seed: self.seed.terrain(),
+            world_map_version: WORLD_MAP_VERSION,
+            features_seed: self.seed.features(),
+        }
+    }
+}
+
+fn announce(world: Res<ServerWorld>) {
     info!(
-        "Hall of Worlds server {} started (no networking yet)",
-        env!("CARGO_PKG_VERSION")
+        "Hall of Worlds server {} started, world {:?}",
+        env!("CARGO_PKG_VERSION"),
+        world.seed.id()
     );
 }

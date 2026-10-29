@@ -1,6 +1,6 @@
 # client: dev_tools
 
-Developer helpers driven by environment variables. Compiled for native only (`#[cfg(not(target_arch = "wasm32"))]` in `main.rs`) and inert unless a variable is set.
+Developer helpers driven by environment variables. Compiled for native only (`#[cfg(not(target_arch = "wasm32"))]` in `main.rs`) and inert unless a variable is set. Starting states (position, site, travel, token, view) are applied on leaving `GameView::Connecting`, once the server has said which world it is.
 
 ## Files
 
@@ -21,7 +21,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Depends on
 
-- `common` (`Weather`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `site` (`EnterFeature`, `TakeExit`), `shared` (`feature`, `rng`, `site::Exit`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`).
+- `common` (`GameView`, `Weather`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `site` (`EnterFeature`, `TakeExit`), `shared` (`feature`, `rng`, `site::Exit`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`).
 
 ## Used by
 

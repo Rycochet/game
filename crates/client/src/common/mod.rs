@@ -9,13 +9,10 @@ use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use shared::dungeon::Level;
 use shared::feature::{Feature, FeatureMap};
-use shared::rng::Seed;
+use shared::protocol::WorldInfo;
 use shared::site::{Site, Stairs};
 use shared::surface::Surface;
 use shared::world::WorldParams;
-
-/// Fixed seed until the server tells the client which world it is in.
-const WORLD_SEED: u64 = 12345;
 
 /// Real seconds per in-game hour.
 const SECONDS_PER_HOUR: f32 = 60.0;
@@ -28,17 +25,10 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
-        let params = WorldParams::from_seed(Seed::new(WORLD_SEED));
-        let surface = Surface::new(&params);
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(WinitSettings {
                 focused_mode: UpdateMode::reactive(Duration::from_secs_f64(1.0 / FOCUSED_FPS)),
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
-            })
-            .insert_resource(CurrentWorld {
-                features: FeatureMap::new(&params),
-                surface,
-                params,
             })
             .insert_resource(CurrentDungeon {
                 site: None,
@@ -56,6 +46,7 @@ impl Plugin for CommonPlugin {
 }
 
 /// The world the player is in, its surface generator and its features.
+/// Only exists once the server has said which world it is (`connection`).
 #[derive(Resource)]
 pub struct CurrentWorld {
     pub params: WorldParams,
@@ -63,11 +54,26 @@ pub struct CurrentWorld {
     pub features: FeatureMap,
 }
 
+impl CurrentWorld {
+    /// The world a server has told the client about.
+    pub fn new(info: &WorldInfo) -> Self {
+        let params = WorldParams::from_seed(info.terrain_seed);
+        Self {
+            surface: Surface::new(&params),
+            features: FeatureMap::new(&params, info.features_seed),
+            params,
+        }
+    }
+}
+
 /// Which view is on screen: the world's surface, or a dungeon or building.
 /// Each view shows its scene only while it is the current one.
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameView {
+    /// Waiting for the server to say which world this is: nothing to show
+    /// yet, and no `CurrentWorld`.
     #[default]
+    Connecting,
     WorldMap,
     /// Inside a site (a building or cave): `CurrentDungeon`.
     Dungeon,

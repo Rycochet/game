@@ -12,11 +12,13 @@ World map features: the world grid is cut into chunks, and each chunk has at mos
 - `FeatureKind`: 34 kinds (`Boulders` … `Mausoleum`), named after the tiles `l2_terrain066`–`099` and in their order; `ALL`. All equally likely for now.
 - `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded.
 - `Feature { kind, chunk, x, y, seed }`: `x, y` its exact world grid position; `seed` is what its map is generated from.
-- `FeatureMap::new(&WorldParams)` (keeps its own `Surface`), `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Feature>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Feature>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`).
+- `FeatureMap::new(&WorldParams, features_seed)` (the secret `WorldSeed::features`; keeps its own `Surface`), `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Feature>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Feature>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`).
 
 ## Depends on
 
 - `shared::rng`, `shared::surface` (ground height), `shared::world` (`high_water`).
+
+The tests pass the old `terrain.derive("features")` seed, so the golden values didn't change.
 
 ## Used by
 
@@ -24,6 +26,6 @@ World map features: the world grid is cut into chunks, and each chunk has at mos
 
 ## Notes
 
-- Per chunk: `Seed::new(world.derive("features").at(&[cx, cy])).rng()`, then in order: the chance roll, the kind, the map seed, then up to `LAND_TRIES` `x`/`y` spots until one is above `WorldParams::high_water()`. Changing that order or any constant changes every world (golden test).
+- Per chunk: `Seed::new(features_seed.at(&[cx, cy])).rng()`, then in order: the chance roll, the kind, the map seed, then up to `LAND_TRIES` `x`/`y` spots until one is above `WorldParams::high_water()`. Changing that order or any constant changes every world (golden test).
 - East–west the world wraps at `width`, rarely a whole number of chunks, so the last column takes the remainder (wider). North–south there's no wrap.
 - Land is judged by the float surface height against `high_water`, as the server will; a spot exactly at the threshold could in theory differ across platforms if the noise isn't bit-identical (the surface golden tests guard that).
