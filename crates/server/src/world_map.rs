@@ -1,18 +1,35 @@
-//! Sending each player the world map chunks coming into their sight.
+//! Sending each player the world map chunks coming into their sight, and
+//! remembering the features they have seen.
 
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
 
 use crate::ServerWorld;
 use crate::connections::Client;
+use crate::storage::KnownFeature;
 
 /// The player says they are at `(x, y)` on the world map (ignored inside a
-/// site): sends the chunks within sight, plus a margin, that the client
-/// hasn't been sent yet. `false` if the client has gone.
+/// site): the features now in sight are known from now on, and the chunks
+/// within sight, plus a margin, that the client hasn't been sent yet are
+/// sent. `false` if the client has gone.
 pub(crate) fn moved_to(client: &mut Client, world: &ServerWorld, x: i64, y: i64) -> bool {
     if client.visit.is_some() {
         return true;
     }
-    client.world_position = Some((x, y));
+    if client.world_position() != (x, y) {
+        client.character.world_position = (x, y);
+        client.unsaved = true;
+    }
+    let sight = WORLD_MAP_SIGHT;
+    for chunk in world
+        .features
+        .chunks_in_area((x - sight, y - sight), (x + sight, y + sight))
+    {
+        let known = &mut client.character.features;
+        if world.features.in_chunk(chunk).is_some() && !known.contains_key(&chunk) {
+            known.insert(chunk, KnownFeature::default());
+            client.unsaved = true;
+        }
+    }
     let reach = WORLD_MAP_SIGHT + WORLD_MAP_PRELOAD;
     let chunks = world
         .features
@@ -72,5 +89,21 @@ mod tests {
         assert!(!more.is_empty());
         let all: BTreeSet<_> = first.iter().chain(&more).collect();
         assert_eq!(all.len(), first.len() + more.len());
+    }
+
+    #[test]
+    fn features_in_sight_are_known() {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::WorldMapPosition { x: 0, y: 0 }]);
+        let known = &test.client.character.features;
+        assert!(!known.is_empty());
+        // Only chunks with a feature, and only those in sight, not the
+        // preload margin beyond it.
+        for chunk in known.keys() {
+            assert!(test.world.features.in_chunk(*chunk).is_some());
+            // (East-west, chunk numbers wrap round the planet.)
+            assert!(chunk.y.abs() * 64 <= WORLD_MAP_SIGHT + 64);
+        }
+        assert!(known.len() < test.client.world_chunks.len());
     }
 }

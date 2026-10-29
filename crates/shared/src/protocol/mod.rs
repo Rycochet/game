@@ -22,7 +22,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 3;
+pub const PROTOCOL_VERSION: u32 = 4;
 
 /// How far from the player (east–west and north–south, in grid points) the
 /// client may show anything on the world map: the corners of its window
@@ -67,8 +67,10 @@ pub enum ClientMessage {
 /// From the server to a client.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ServerMessage {
-    /// The answer to `Hello`: the world the player is in.
-    Welcome(WorldInfo),
+    /// The answer to `Hello`: the world the player is in, and where they
+    /// are on its world map (where they left off). If they were in a site,
+    /// `EnterLevel` follows.
+    Welcome { world: WorldInfo, x: i64, y: i64 },
     /// The server won't talk to this client, and why.
     Refused(String),
     /// A world map chunk, as this player knows it.
@@ -152,11 +154,15 @@ mod tests {
             },
         ];
         let server = vec![
-            ServerMessage::Welcome(WorldInfo {
-                id: WorldId(7),
-                terrain_seed: Seed::new(8),
-                world_map_version: 1,
-            }),
+            ServerMessage::Welcome {
+                world: WorldInfo {
+                    id: WorldId(7),
+                    terrain_seed: Seed::new(8),
+                    world_map_version: 1,
+                },
+                x: -4,
+                y: 9,
+            },
             ServerMessage::Refused("no".into()),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 1, y: -2 },

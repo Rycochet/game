@@ -8,7 +8,7 @@ A world's seeds and global settings. Each world has one secret seed (server only
 
 ## Public API
 
-- `WorldSeed::new(u64)` (secret: never send it to a client): `.terrain()` (public terrain seed, for `WorldParams`), `.features()` (secret, for `FeatureMap`), `.id() -> WorldId`.
+- `WorldSeed::new(u64)` (secret: never send it to a client; serde, for the server's save): `.terrain()` (public terrain seed, for `WorldParams`), `.features()` (secret, for `FeatureMap`), `.id() -> WorldId`.
 - `WorldId(u64)` (serde): the world's public id; the same seed is the same world on any server.
 - `WORLD_MAP_VERSION` (1): the world map generator's version (see "Generator versions" in `architecture.md`); bump only for changes that matter.
 - `WorldParams::from_seed(Seed)` (given the terrain seed): fields `seed` (the terrain seed), `radius` (m), `circumference` (m), `year` (days), `density`, `tilt`, `sea_level` (surface height units, `20..60`), `climate`.

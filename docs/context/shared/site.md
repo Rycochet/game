@@ -4,19 +4,20 @@ Sites: the maps world map features lead to (buildings, caves, crypts), each one 
 
 ## Files
 
-- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_feature`: the kind → generator table). Tests: connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`SITE_KINDS=20,4 SITE_SEED=1 cargo test -p shared print_sites -- --ignored --nocapture`).
+- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_feature`: the kind → generator table). Tests: only runnable versions make sites, connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`SITE_KINDS=20,4 SITE_SEED=1 cargo test -p shared print_sites -- --ignored --nocapture`).
 - `crates/shared/src/site/building.rs`: `BuildingOptions`, `Outline`, the building `Plan` (outlines per floor, stairs) and BSP floor generation.
 - `crates/shared/src/site/cave.rs`: `CaveOptions`, `CaveEntrance`, the cave `Plan` and level generation.
 - `crates/shared/src/site/grid.rs`: helpers both use: `roll`, `chance`, `Reach` (flood fill over walkable cells), `all_reached`, `door_nearby`, `hide_some_doors` (secret doors only where nothing depends on them), `dig_to_unreached` (fallback join).
 
 ## Public API
 
-- `Site::new(kind, seed)`, `.kind()`, `.is_building()` (floors go up; otherwise levels go down), `.levels()`, `.level(index) -> SiteLevel` (0 is the one entered from the world map).
+- `Site::new(kind, seed)` (the generator's current version), `Site::with_version(kind, seed, version) -> Option<Site>` (`None` if that version can't run any more), `.kind()`, `.is_building()` (floors go up; otherwise levels go down), `.levels()`, `.level(index) -> SiteLevel` (0 is the one entered from the world map).
 - `leads_out(level, x, y)`: whether arriving there leaves for the world map: `Ground` on the very edge of the level (beside its rectangle's edge).
 - `SiteLevel { level, stairs, entrance }`; `arrival(from: Exit)`: where you arrive coming from the world map (the entrance) or another level (the stairs leading back there); `arrive(from)`: the same, falling back to the first stairs or the entrance (dev tools' jumps between levels).
 - `Site::stairs_descend(index, level, stairs) -> (dx, dy)`: the way a staircase goes down, agreeing with the other end (generates the other level to look). Only for looks; moved here from the client so the server can send it.
 - `Stairs { x, y, direction, to: Exit }`; `Exit::{WorldMap, Level(n)}`. `StairsDirection` is serde-serialisable (sent in `protocol::SeenStairs`).
-- `Generator::{Building(BuildingOptions), Cave(CaveOptions)}`, `Generator::for_feature(kind)`: the options per feature kind (wrappers for tuning a generator).
+- `Generator::{Building(BuildingOptions), Cave(CaveOptions)}`, `Generator::for_feature(kind)`: the options per feature kind (wrappers for tuning a generator); `.version()`.
+- `BUILDING_VERSION`, `CAVE_VERSION` (both 1): bump when the generator's output changes in a way that matters (not looks), keeping the old version runnable in `with_version` while saved sites use it. The server saves the version each site was first made with.
 - `BuildingOptions { width, height, outlines, square, max_floors, size_per_floor }`, `Outline::{Rectangle, CutCorners, RoundCorners, Circle}`.
 - `CaveOptions { size, levels, entrance, doors, water_percent, lava_percent }`, `CaveEntrance::{Hole, Opening, Either}`.
 

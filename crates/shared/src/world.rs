@@ -14,8 +14,9 @@ use serde::{Deserialize, Serialize};
 /// cosmetic changes: existing worlds keep the version they were made with.
 pub const WORLD_MAP_VERSION: u32 = 1;
 
-/// A world's secret seed. Only the server has it; never send it to a client.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// A world's secret seed. Only the server has it (and saves it); never send
+/// it to a client.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldSeed(Seed);
 
 impl WorldSeed {

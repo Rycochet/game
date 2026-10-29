@@ -19,5 +19,8 @@ path = "src/main.rs"
 
 [dependencies]
 shared.workspace = true
+serde.workspace = true
+ron.workspace = true
+dirs.workspace = true
 # Headless: no rendering, windowing, audio or input.
 bevy = { workspace = true, features = ["std", "bevy_log", "multi_threaded"] }

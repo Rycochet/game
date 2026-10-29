@@ -6,6 +6,11 @@
 //! kind (`Generator::for_feature`); everything else comes from the feature's
 //! map seed. Each level is generated on its own from the seed, so the client
 //! and the server agree on it whichever levels were visited first.
+//!
+//! Each generator has a version (`Generator::version`), bumped whenever what
+//! it makes changes in a way that matters. A saved site keeps the version it
+//! was first made with, so every version still in use must stay runnable
+//! (`Site::with_version`).
 
 mod building;
 mod cave;
@@ -101,6 +106,14 @@ pub enum Generator {
 }
 
 impl Generator {
+    /// Its current version (`BUILDING_VERSION`, `CAVE_VERSION`).
+    pub fn version(&self) -> u32 {
+        match self {
+            Self::Building(_) => BUILDING_VERSION,
+            Self::Cave(_) => CAVE_VERSION,
+        }
+    }
+
     /// The generator for each kind of world map feature.
     pub fn for_feature(kind: FeatureKind) -> Self {
         use FeatureKind::*;
@@ -170,6 +183,14 @@ impl Generator {
     }
 }
 
+/// The building generator's version: bump it when its output changes in a
+/// way that matters (not for looks), and keep the old one runnable while
+/// saved sites use it.
+pub const BUILDING_VERSION: u32 = 1;
+
+/// The cave generator's version (as `BUILDING_VERSION`).
+pub const CAVE_VERSION: u32 = 1;
+
 /// A feature's map: its plan, from which any level can be generated.
 #[derive(Clone, Debug)]
 pub struct Site {
@@ -184,13 +205,26 @@ enum Plan {
 }
 
 impl Site {
-    /// The site a feature leads to, from its kind and map seed.
+    /// The site a feature leads to, from its kind and map seed, made with
+    /// the current version of its generator.
     pub fn new(kind: FeatureKind, seed: Seed) -> Self {
+        let version = Generator::for_feature(kind).version();
+        Self::with_version(kind, seed, version).expect("the current version runs")
+    }
+
+    /// The same, made with an older (or the current) version of its
+    /// generator: `None` if that version can no longer be run.
+    pub fn with_version(kind: FeatureKind, seed: Seed, version: u32) -> Option<Self> {
         let plan = match Generator::for_feature(kind) {
-            Generator::Building(options) => Plan::Building(building::Plan::new(&options, seed)),
-            Generator::Cave(options) => Plan::Cave(cave::Plan::new(&options, seed)),
+            Generator::Building(options) if version == BUILDING_VERSION => {
+                Plan::Building(building::Plan::new(&options, seed))
+            }
+            Generator::Cave(options) if version == CAVE_VERSION => {
+                Plan::Cave(cave::Plan::new(&options, seed))
+            }
+            _ => return None,
         };
-        Self { kind, plan }
+        Some(Self { kind, plan })
     }
 
     pub fn kind(&self) -> FeatureKind {
@@ -287,6 +321,15 @@ mod tests {
     use super::*;
     use crate::dungeon::Cell;
     use grid::Reach;
+
+    #[test]
+    fn only_runnable_versions_make_sites() {
+        let seed = Seed::new(3);
+        assert!(Site::with_version(FeatureKind::Castle, seed, BUILDING_VERSION).is_some());
+        assert!(Site::with_version(FeatureKind::Castle, seed, BUILDING_VERSION + 1).is_none());
+        assert!(Site::with_version(FeatureKind::RockCave, seed, CAVE_VERSION).is_some());
+        assert!(Site::with_version(FeatureKind::RockCave, seed, 0).is_none());
+    }
 
     #[test]
     fn stairs_go_down_the_same_way_on_both_levels() {

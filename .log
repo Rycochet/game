@@ -1,0 +1,10 @@
+[2m2026-10-29T22:22:47.602257Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Windows 11 Home", kernel: "26200", cpu: "13th Gen Intel(R) Core(TM) i9-13905H", core_count: "14", memory: "31.7 GiB" }
+[2m2026-10-29T22:22:48.062857Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "NVIDIA GeForce RTX 4060 Laptop GPU", vendor: 4318, device: 10464, device_type: DiscreteGpu, device_pci_bus_id: "0000:01:00.0", driver: "NVIDIA", driver_info: "617.42", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+[2m2026-10-29T22:22:48.477077Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+[2m2026-10-29T22:22:48.477134Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+[2m2026-10-29T22:22:48.477651Z[0m [32m INFO[0m [2mserver[0m[2m:[0m Hall of Worlds server 0.1.0 started, world WorldId(13205059784687644427)
+[2m2026-10-29T22:22:48.478637Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Hall of Worlds (67v0)
+[2m2026-10-29T22:22:48.921095Z[0m [32m INFO[0m [2mhall_of_worlds::connection[0m[2m:[0m Joined world WorldId(13205059784687644427)
+[2m2026-10-29T22:22:58.215820Z[0m [32m INFO[0m [2mbevy_window::system[0m[2m:[0m No windows are open, exiting
+[2m2026-10-29T22:22:58.215859Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Closing window 67v0
+[2m2026-10-29T22:22:58.241520Z[0m [32m INFO[0m [2mserver::connections[0m[2m:[0m A client left (Closed)

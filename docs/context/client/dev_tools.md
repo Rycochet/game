@@ -18,6 +18,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) one second after starting, e.g. to check that pixel-sized things (token outlines, icons) follow resizes.
 - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the camera turned by `yaw` degrees (90 puts the camera in the east looking west, 180 looks south), tilted to `pitch` degrees above the horizon and zoomed in (the distance is divided by `zoom`: 1.6667 is the closest the wheel allows). Sets `OrbitCamera` fields directly, so the limits don't apply.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
+- `HALL_OF_WORLDS_SERVER_DATA=folder` (read by the server, not this module): where the embedded server saves. Set it to a scratch folder for test runs, or they move the owner's saved character (the saved position and site win unless `GAME_POS` / `GAME_ENTER` are set).
 
 ## Depends on
 

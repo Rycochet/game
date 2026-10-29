@@ -5,7 +5,8 @@
 //! thread, with its own Bevy world) and talk to it through an in-process
 //! `Link`, using the same messages a network connection will. The web client
 //! has no server to talk to until networking exists, so it stays
-//! `GameView::Connecting`.
+//! `GameView::Connecting`. The embedded server saves in its own data folder;
+//! on quitting, the client hangs up and waits for it to save.
 //!
 //! It reports where the player is (TEMPORARY, until movement goes through
 //! the server), and the server sends what comes into sight. Other modules
@@ -25,9 +26,16 @@ pub struct ConnectionPlugin;
 impl Plugin for ConnectionPlugin {
     fn build(&self, app: &mut App) {
         #[cfg(not(target_arch = "wasm32"))]
-        app.insert_resource(ServerConnection(server::start_embedded(
-            shared::world::WorldSeed::new(server::DEFAULT_WORLD_SEED),
-        )));
+        {
+            let (link, embedded) = server::start_embedded(
+                shared::world::WorldSeed::new(server::DEFAULT_WORLD_SEED),
+                Some(server::default_data_folder()),
+            );
+            app.insert_resource(ServerConnection {
+                link,
+                _embedded: Some(embedded),
+            });
+        }
 
         app.add_message::<ToServer>()
             .add_message::<FromServer>()
@@ -48,7 +56,12 @@ impl Plugin for ConnectionPlugin {
                     .after(PlayerSystems::Travel),
             )
             // Last, so everything written this frame goes, in order.
-            .add_systems(Last, send.run_if(resource_exists::<ServerConnection>));
+            .add_systems(
+                Last,
+                (send, hang_up_on_exit)
+                    .chain()
+                    .run_if(resource_exists::<ServerConnection>),
+            );
     }
 }
 
@@ -61,14 +74,22 @@ pub struct ToServer(pub ClientMessage);
 #[derive(Message, Clone, Debug)]
 pub struct FromServer(pub ServerMessage);
 
-/// The link to the server. Removed if the connection is lost.
+/// The link to the server. Removed if the connection is lost, and on
+/// quitting.
 // The web client never makes one yet.
 #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 #[derive(Resource)]
-pub struct ServerConnection(ClientLink);
+pub struct ServerConnection {
+    link: ClientLink,
+    /// The single-player server, if it is ours. Dropping it waits for it to
+    /// save and stop, so it must come after `link` (fields are dropped in
+    /// order): the server stops once the link is gone.
+    #[cfg(not(target_arch = "wasm32"))]
+    _embedded: Option<server::EmbeddedServer>,
+}
 
 fn say_hello(connection: Res<ServerConnection>) {
-    connection.0.send(&ClientMessage::Hello {
+    connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
     });
 }
@@ -80,10 +101,11 @@ fn receive(
     mut world: Option<ResMut<CurrentWorld>>,
     mut next_view: ResMut<NextState<GameView>>,
     mut from_server: MessageWriter<FromServer>,
+    mut player: Query<&mut MapPosition, With<Player>>,
 ) {
     loop {
-        match connection.0.receive() {
-            Ok(Some(ServerMessage::Welcome(info))) => {
+        match connection.link.receive() {
+            Ok(Some(ServerMessage::Welcome { world: info, x, y })) => {
                 if info.world_map_version != WORLD_MAP_VERSION {
                     error!(
                         "The world needs world map version {}; this client has {WORLD_MAP_VERSION}",
@@ -93,6 +115,11 @@ fn receive(
                 }
                 info!("Joined world {:?}", info.id);
                 commands.insert_resource(CurrentWorld::new(&info));
+                // Where the player left off (`EnterLevel` follows if they
+                // were in a site).
+                for mut position in &mut player {
+                    *position = MapPosition { x, y };
+                }
                 next_view.set(GameView::WorldMap);
             }
             Ok(Some(ServerMessage::Refused(reason))) => {
@@ -162,6 +189,28 @@ fn report_site_position(
 /// Sends what other systems wrote this frame.
 fn send(connection: Res<ServerConnection>, mut to_server: MessageReader<ToServer>) {
     for message in to_server.read() {
-        connection.0.send(&message.0);
+        connection.link.send(&message.0);
     }
+}
+
+/// Quitting: says exactly where the player is on the world map (it is only
+/// reported every few steps), then hangs up, so the server knows the player
+/// has gone (and an embedded one saves and stops; this waits for it).
+fn hang_up_on_exit(
+    mut commands: Commands,
+    mut exit: MessageReader<AppExit>,
+    connection: Res<ServerConnection>,
+    view: Res<State<GameView>>,
+    player: Single<&MapPosition, With<Player>>,
+) {
+    if exit.read().next().is_none() {
+        return;
+    }
+    if *view.get() == GameView::WorldMap {
+        connection.link.send(&ClientMessage::WorldMapPosition {
+            x: player.x,
+            y: player.y,
+        });
+    }
+    commands.remove_resource::<ServerConnection>();
 }

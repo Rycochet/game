@@ -1,8 +1,10 @@
 //! Players in sites: entering them, moving about, taking stairs and leaving,
 //! and sending each player the cells of their level as they come to see
-//! them (or are about to).
+//! them (or are about to). What a player has seen is kept with their
+//! character; each site keeps its generator version, when its levels were
+//! last visited and players' changes (`storage::SiteSave`).
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::VecDeque;
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
@@ -15,17 +17,13 @@ use shared::site::{Exit, Site, SiteLevel, leads_out};
 
 use crate::ServerWorld;
 use crate::connections::Client;
-
-/// Cells of a level by chunk: one bit per cell (see `level_chunk`).
-pub(crate) type CellMasks = BTreeMap<(i64, i64), u64>;
-
-/// A site level: the site's map seed and the level's index.
-pub(crate) type LevelKey = (u64, u32);
+use crate::storage::{CellMasks, SiteId, VisitSave, now};
 
 /// A player's stay on a site level.
 pub(crate) struct Visit {
     /// The feature the site is behind.
     feature: Feature,
+    id: SiteId,
     site: Site,
     index: u32,
     level: SiteLevel,
@@ -38,44 +36,113 @@ pub(crate) struct Visit {
 }
 
 impl Visit {
-    fn key(&self) -> LevelKey {
-        (self.feature.seed.value(), self.index)
+    /// What is saved with the character.
+    pub(crate) fn save(&self) -> VisitSave {
+        VisitSave {
+            site: self.id,
+            level: self.index,
+            position: self.position,
+        }
     }
 }
 
+/// Where on a level a player arrives.
+enum Arrival {
+    /// Coming from the world map or another level.
+    From(Exit),
+    /// Back where they were (a saved visit), if it is still walkable.
+    At((i64, i64)),
+}
+
 /// Enters the site of the feature in `chunk`, if the player is at it.
-pub(crate) fn enter_feature(client: &mut Client, world: &ServerWorld, chunk: ChunkPos) -> bool {
+pub(crate) fn enter_feature(client: &mut Client, world: &mut ServerWorld, chunk: ChunkPos) -> bool {
     let Some(feature) = world.features.in_chunk(chunk) else {
         warn!("A client tried to enter {chunk:?}, which has no feature");
         return true;
     };
-    let near = client.world_position.is_some_and(|(x, y)| {
-        // East-west, the nearer way round the planet.
-        let dx = (feature.x - x).rem_euclid(world.width);
-        dx.min(world.width - dx) <= ENTER_REACH && (feature.y - y).abs() <= ENTER_REACH
-    });
+    let (x, y) = client.world_position();
+    // East-west, the nearer way round the planet.
+    let dx = (feature.x - x).rem_euclid(world.width);
+    let near = dx.min(world.width - dx) <= ENTER_REACH && (feature.y - y).abs() <= ENTER_REACH;
     if client.visit.is_some() || !near {
         warn!("A client tried to enter {chunk:?} from elsewhere");
         return true;
     }
-    let site = Site::new(feature.kind, feature.seed);
-    enter_level(client, feature, site, 0, Exit::WorldMap)
+    client.character.features.entry(chunk).or_default().visited = true;
+    client.unsaved = true;
+    let id = SiteId::Feature(chunk);
+    enter_site(client, world, feature, id, 0, Arrival::From(Exit::WorldMap))
 }
 
 /// Developer tools: enters a made-up site at any level, where the player
 /// stands on the world map.
-pub(crate) fn dev_enter(client: &mut Client, kind: FeatureKind, seed: u64, level: u32) -> bool {
-    let (x, y) = client.world_position.unwrap_or((0, 0));
-    let feature = Feature {
+pub(crate) fn dev_enter(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    kind: FeatureKind,
+    seed: u64,
+    level: u32,
+) -> bool {
+    leave(client, world);
+    client.visit = None;
+    let feature = dev_feature(client, kind, seed);
+    let id = SiteId::Dev { kind, seed };
+    enter_site(
+        client,
+        world,
+        feature,
+        id,
+        level,
+        Arrival::From(Exit::WorldMap),
+    )
+}
+
+/// The made-up feature of a dev tools site: where the player stands.
+fn dev_feature(client: &Client, kind: FeatureKind, seed: u64) -> Feature {
+    let (x, y) = client.world_position();
+    Feature {
         kind,
         chunk: ChunkPos { x: 0, y: 0 },
         x,
         y,
         seed: Seed::new(seed),
+    }
+}
+
+/// A client coming back: puts the player back on the level they were on
+/// when they left, if it is still there.
+pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitSave) -> bool {
+    let feature = match saved.site {
+        SiteId::Feature(chunk) => world.features.in_chunk(chunk),
+        SiteId::Dev { kind, seed } => Some(dev_feature(client, kind, seed)),
     };
-    let site = Site::new(kind, feature.seed);
-    let index = level.min(site.levels() - 1);
-    enter_level(client, feature, site, index, Exit::WorldMap)
+    let Some(feature) = feature else {
+        warn!("A character was in {:?}, which isn't there", saved.site);
+        client.unsaved = true;
+        return true;
+    };
+    let at = Arrival::At(saved.position);
+    enter_site(client, world, feature, saved.site, saved.level, at)
+}
+
+/// Generates the site (with the generator version it was first made with)
+/// and puts the player on level `index` (or its last level, if there are
+/// fewer).
+fn enter_site(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    feature: Feature,
+    id: SiteId,
+    index: u32,
+    arrival: Arrival,
+) -> bool {
+    let version = world.site(id, feature.kind).version;
+    let Some(site) = Site::with_version(feature.kind, feature.seed, version) else {
+        error!("{id:?} needs generator version {version}, which this server can't run");
+        return true;
+    };
+    let index = index.min(site.levels() - 1);
+    enter_level(client, world, feature, id, site, index, arrival)
 }
 
 /// The player says they are at `(x, y)` on their level: accepted if it is a
@@ -88,14 +155,17 @@ pub(crate) fn moved_to(client: &mut Client, x: i64, y: i64) -> bool {
         warn!("A client said it was on an unwalkable cell ({x}, {y})");
         return true;
     }
-    visit.position = (x, y);
+    if visit.position != (x, y) {
+        visit.position = (x, y);
+        client.unsaved = true;
+    }
     update_sight(client)
 }
 
 /// Uses what the player stands on: stairs to another level, or ground on
 /// the edge of the level back to the world map.
-pub(crate) fn use_exit(client: &mut Client) -> bool {
-    let Some(visit) = client.visit.take() else {
+pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = &client.visit else {
         return true;
     };
     let (x, y) = visit.position;
@@ -103,29 +173,63 @@ pub(crate) fn use_exit(client: &mut Client) -> bool {
     let exit = match stairs {
         Some(stairs) => stairs.to,
         None if leads_out(&visit.level.level, x, y) => Exit::WorldMap,
-        None => {
-            client.visit = Some(visit);
-            return true;
-        }
+        None => return true,
     };
+    leave(client, world);
+    let visit = client.visit.take().expect("checked above");
+    client.unsaved = true;
     match exit {
         Exit::Level(index) => {
-            let from = Exit::Level(visit.index);
-            enter_level(client, visit.feature, visit.site, index, from)
+            let from = Arrival::From(Exit::Level(visit.index));
+            enter_level(
+                client,
+                world,
+                visit.feature,
+                visit.id,
+                visit.site,
+                index,
+                from,
+            )
         }
         Exit::WorldMap => {
             let (x, y) = (visit.feature.x, visit.feature.y);
-            client.world_position = Some((x, y));
+            client.character.world_position = (x, y);
             client.link.send(&ServerMessage::LeftSite { x, y })
         }
     }
 }
 
-/// Puts the player on level `index` of `site`, arriving from `from`: tells
-/// the client about the level, sends what the player remembers of it, then
-/// what they see.
-fn enter_level(client: &mut Client, feature: Feature, site: Site, index: u32, from: Exit) -> bool {
-    let level = site.level(index);
+/// The player is leaving their level (or the server): it was last visited
+/// now. The visit itself is left alone (saved with the character).
+pub(crate) fn leave(client: &Client, world: &mut ServerWorld) {
+    if let Some(visit) = &client.visit {
+        let site = world.site_mut(visit.id, visit.feature.kind);
+        site.levels.entry(visit.index).or_default().last_visit = now();
+    }
+}
+
+/// Puts the player on level `index` of `site`: generates it, with players'
+/// changes over it, tells the client about it, sends what the player
+/// remembers of it, then what they see.
+fn enter_level(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    feature: Feature,
+    id: SiteId,
+    site: Site,
+    index: u32,
+    arrival: Arrival,
+) -> bool {
+    let mut level = site.level(index);
+    let saved = world
+        .site_mut(id, feature.kind)
+        .levels
+        .entry(index)
+        .or_default();
+    saved.last_visit = now();
+    for (&(x, y), &cell) in &saved.changes {
+        level.level.set(x, y, cell);
+    }
     let stairs = level
         .stairs
         .iter()
@@ -133,10 +237,15 @@ fn enter_level(client: &mut Client, feature: Feature, site: Site, index: u32, fr
             x: stairs.x,
             y: stairs.y,
             direction: stairs.direction,
+            // Only for looks: the other level is generated without changes.
             descends: site.stairs_descend(index, &level.level, stairs),
         })
         .collect();
-    let position = level.arrive(from);
+    let position = match arrival {
+        Arrival::At((x, y)) if level.level.is_walkable(x, y) => (x, y),
+        Arrival::At(_) => level.arrive(Exit::WorldMap),
+        Arrival::From(from) => level.arrive(from),
+    };
     let info = LevelInfo {
         kind: site.kind(),
         building: site.is_building(),
@@ -147,6 +256,7 @@ fn enter_level(client: &mut Client, feature: Feature, site: Site, index: u32, fr
     };
     let mut visit = Visit {
         feature,
+        id,
         site,
         index,
         level,
@@ -157,20 +267,27 @@ fn enter_level(client: &mut Client, feature: Feature, site: Site, index: u32, fr
     if !client.link.send(&ServerMessage::EnterLevel(info)) {
         return false;
     }
-    let remembered = client.memory.get(&visit.key()).cloned().unwrap_or_default();
+    let remembered = memory(client, &visit).clone();
     if !send_cells(client, &visit, &remembered, true) {
         return false;
     }
     visit.sent = remembered;
     client.visit = Some(visit);
+    client.unsaved = true;
     update_sight(client)
+}
+
+/// What the character remembers of the visit's level.
+fn memory<'a>(client: &'a mut Client, visit: &Visit) -> &'a mut CellMasks {
+    let site = client.character.memory.entry(visit.id).or_default();
+    site.entry(visit.index).or_default()
 }
 
 /// Works out what the player sees (remembered from now on) and what they
 /// could see within `LEVEL_PRELOAD_STEPS`, and sends the cells of that the
 /// client doesn't have yet.
 fn update_sight(client: &mut Client) -> bool {
-    let Some(visit) = &client.visit else {
+    let Some(visit) = client.visit.take() else {
         return true;
     };
     let level = &visit.level.level;
@@ -183,14 +300,17 @@ fn update_sight(client: &mut Client) -> bool {
         loaded.add_glimpses(level, nx, ny, None);
     }
 
-    let memory = client.memory.entry(visit.key()).or_default();
+    let memory = memory(client, &visit);
+    let mut learnt = false;
     let mut new = CellMasks::new();
     let (min_x, min_y, width, height) = level.bounds();
     for cy in min_y..min_y + height {
         for cx in min_x..min_x + width {
             let (chunk, bit) = level_chunk(cx, cy);
             if seen.is_seen(cx, cy) {
-                *memory.entry(chunk).or_default() |= 1 << bit;
+                let mask = memory.entry(chunk).or_default();
+                learnt |= *mask & (1 << bit) == 0;
+                *mask |= 1 << bit;
             }
             let sent = visit.sent.get(&chunk).copied().unwrap_or(0);
             if loaded.is_seen(cx, cy) && sent & (1 << bit) == 0 {
@@ -198,14 +318,13 @@ fn update_sight(client: &mut Client) -> bool {
             }
         }
     }
-    if !send_cells(client, visit, &new, false) {
-        return false;
-    }
-    let visit = client.visit.as_mut().expect("still there");
+    client.unsaved |= learnt;
+    let sent = send_cells(client, &visit, &new, false);
+    let visit = client.visit.insert(visit);
     for (chunk, mask) in new {
         *visit.sent.entry(chunk).or_default() |= mask;
     }
-    true
+    sent
 }
 
 /// The walkable cells the player could reach within `steps` steps (in any
@@ -274,8 +393,12 @@ fn send_cells(client: &Client, visit: &Visit, masks: &CellMasks, remembered: boo
 mod tests {
     use shared::protocol::{ClientMessage, ServerMessage};
 
+    use shared::world::WorldSeed;
+
     use super::*;
-    use crate::connections::tests::TestClient;
+    use crate::connections::tests::{HELLO, TestClient};
+    use crate::storage::tests::TestFolder;
+    use crate::storage::{CharacterName, Storage};
 
     /// A castle with more than one floor.
     fn castle_seed() -> u64 {
@@ -386,6 +509,105 @@ mod tests {
         let answers = test.send(&[ClientMessage::UseExit]);
         assert!(matches!(answers[..], [ServerMessage::LeftSite { .. }]));
         assert!(test.client.visit.is_none());
+    }
+
+    /// A world saved in `folder`.
+    fn saved_world(folder: &TestFolder) -> ServerWorld {
+        let seed = WorldSeed::new(1);
+        ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap()
+    }
+
+    #[test]
+    fn coming_back_resumes_the_visit_with_its_memory() {
+        let folder = TestFolder::new();
+        let mut test = TestClient::of(saved_world(&folder));
+        let first = cells(&enter(&mut test, 1));
+        let position = test.client.visit.as_ref().unwrap().position;
+        test.leave();
+
+        // Another connection, even another server, on the same data.
+        let mut test = TestClient::of(saved_world(&folder));
+        let answers = test.send(&[]);
+        assert!(answers.is_empty(), "the welcome was read: {answers:?}");
+        let visit = test.client.visit.as_ref().expect("back in the site");
+        assert_eq!((visit.index, visit.position), (1, position));
+        // What was seen came back remembered.
+        let memory = &test.client.character.memory;
+        let id = SiteId::Dev {
+            kind: FeatureKind::Castle,
+            seed: castle_seed(),
+        };
+        let seen: u32 = memory[&id][&1].values().map(|m| m.count_ones()).sum();
+        assert!(seen > 0 && seen as usize <= first.len());
+    }
+
+    #[test]
+    fn welcome_sends_the_level_after_the_world() {
+        let folder = TestFolder::new();
+        let mut test = TestClient::of(saved_world(&folder));
+        test.send(&[ClientMessage::WorldMapPosition { x: 70, y: -3 }]);
+        enter(&mut test, 0);
+        let world = test.leave();
+        let (end, link) = shared::protocol::local_pair();
+        let mut client = Client::new(link, CharacterName::new("tester").unwrap());
+        let mut world = world;
+        let options = crate::ServerOptions {
+            dev_tools: true,
+            exit_when_alone: false,
+        };
+        crate::connections::answer(&mut client, HELLO, &mut world, &options);
+        let answers: Vec<_> = std::iter::from_fn(|| end.receive().unwrap()).collect();
+        assert!(matches!(
+            answers[..],
+            [
+                ServerMessage::Welcome { x: 70, y: -3, .. },
+                ServerMessage::EnterLevel(_),
+                ..
+            ]
+        ));
+    }
+
+    #[test]
+    fn changes_are_applied_over_the_generated_level() {
+        let mut test = TestClient::new();
+        enter(&mut test, 0);
+        let (x, y) = test.client.visit.as_ref().unwrap().position;
+        let id = SiteId::Dev {
+            kind: FeatureKind::Castle,
+            seed: castle_seed(),
+        };
+        let level = test.world.site_mut(id, FeatureKind::Castle).levels.entry(0);
+        level.or_default().changes.insert((x + 1, y), Cell::Water);
+        enter(&mut test, 0);
+        let level = &test.client.visit.as_ref().unwrap().level.level;
+        assert_eq!(level.cell(x + 1, y), Cell::Water);
+    }
+
+    #[test]
+    fn sites_keep_the_generator_version_they_were_made_with() {
+        let mut test = TestClient::new();
+        let id = SiteId::Dev {
+            kind: FeatureKind::Castle,
+            seed: castle_seed(),
+        };
+        // A site made by a generator version this server can't run.
+        test.world.site_mut(id, FeatureKind::Castle).version = 99;
+        let answers = enter(&mut test, 0);
+        assert!(answers.is_empty(), "{answers:?}");
+        assert!(test.client.visit.is_none());
+    }
+
+    #[test]
+    fn levels_record_when_they_were_last_visited() {
+        let mut test = TestClient::new();
+        enter(&mut test, 0);
+        let id = SiteId::Dev {
+            kind: FeatureKind::Castle,
+            seed: castle_seed(),
+        };
+        let mut world = test.leave();
+        let last = world.site(id, FeatureKind::Castle).levels[&0].last_visit;
+        assert!(last > 0);
     }
 
     #[test]
