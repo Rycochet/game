@@ -8,8 +8,9 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use shared::dungeon::Level;
-use shared::feature::FeatureMap;
+use shared::feature::{Feature, FeatureMap};
 use shared::rng::Seed;
+use shared::site::{Site, Stairs};
 use shared::surface::Surface;
 use shared::world::WorldParams;
 
@@ -40,7 +41,10 @@ impl Plugin for CommonPlugin {
                 params,
             })
             .insert_resource(CurrentDungeon {
+                site: None,
+                index: 0,
                 level: Level::test_room(),
+                stairs: Vec::new(),
             })
             .init_state::<GameView>()
             .init_resource::<GameClock>()
@@ -63,18 +67,53 @@ pub struct CurrentWorld {
 /// Each view shows its scene only while it is the current one.
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameView {
-    WorldMap,
-    /// The starting view while the dungeon view is being tested.
     #[default]
+    WorldMap,
+    /// Inside a site (a building or cave): `CurrentDungeon`.
     Dungeon,
 }
 
-/// The dungeon or building the player is in (the test room for now). Its
-/// rules (walls block movement, sight and light) live in `shared::dungeon`.
+/// The level of a site the player is in. Its rules (walls block movement,
+/// sight and light) live in `shared::dungeon`; sites and their levels in
+/// `shared::site`. Set by `site` when the player enters or changes level.
 #[derive(Resource)]
 pub struct CurrentDungeon {
+    /// The site, `None` before any has been entered (the level is then the
+    /// test room).
+    pub site: Option<Site>,
+    /// Which of the site's levels this is.
+    pub index: u32,
     pub level: Level,
+    pub stairs: Vec<Stairs>,
 }
+
+impl CurrentDungeon {
+    /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3".
+    pub fn describe(&self) -> String {
+        let Some(site) = &self.site else {
+            return "Test room".into();
+        };
+        let what = if site.is_building() { "floor" } else { "level" };
+        format!(
+            "{:?}, {what} {} of {}",
+            site.kind(),
+            self.index + 1,
+            site.levels()
+        )
+    }
+}
+
+/// Clicking this entity's token sends the player to it; arriving uses it:
+/// entering a world map feature's site. Needs `Clickable`. (Stairs are cells
+/// of the level, not entities: see `site`.)
+#[derive(Component, Clone, Copy, Debug)]
+pub enum Portal {
+    Feature(Feature),
+}
+
+/// Its token can be clicked (`view3d::ClickedToken`).
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct Clickable;
 
 /// Position on the current view's grid: the world grid (1 unit is about 1 km)
 /// or a dungeon's cells. `y` increases southwards (towards the viewer in the

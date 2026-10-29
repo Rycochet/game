@@ -9,6 +9,7 @@ mod demo;
 mod dev_tools;
 mod dungeon_map;
 mod player;
+mod site;
 mod surface_style;
 mod ui;
 mod view3d;
@@ -51,6 +52,7 @@ fn main() {
         view3d::View3dPlugin,
         world_map::WorldMapPlugin,
         dungeon_map::DungeonMapPlugin,
+        site::SitePlugin,
         demo::DemoPlugin,
         ui::UiPlugin,
     ));

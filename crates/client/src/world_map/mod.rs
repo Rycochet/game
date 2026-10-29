@@ -24,8 +24,8 @@ use crate::common::{
 use crate::player::{Player, PlayerSystems, TravelTo};
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{
-    OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, View3dSystems, ViewCamera,
-    ViewGrid,
+    ClickedToken, OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, View3dSystems,
+    ViewCamera, ViewGrid,
 };
 use features::SpawnedFeatures;
 use terrain::{HeightCache, TerrainGrid, ViewSquare};
@@ -64,6 +64,7 @@ impl Plugin for WorldMapPlugin {
                 Update,
                 pick_on_click
                     .in_set(PlayerSystems::Input)
+                    .after(View3dSystems::Click)
                     .run_if(in_view.clone()),
             )
             .add_systems(
@@ -333,10 +334,12 @@ fn hide_tokens_outside_window(
     }
 }
 
-/// A left click on the terrain sends the player travelling there.
+/// A left click on the terrain sends the player travelling there (unless it
+/// was on a clickable token, such as a feature: `site` handles those).
 #[allow(clippy::too_many_arguments)]
 fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
+    clicked: Res<ClickedToken>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform, &OrbitCamera), With<ViewCamera>>,
     player: Single<&MapPosition, With<Player>>,
@@ -346,7 +349,7 @@ fn pick_on_click(
     cache: Option<ResMut<HeightCache>>,
     mut travel: MessageWriter<TravelTo>,
 ) {
-    if !mouse.just_pressed(MouseButton::Left) {
+    if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
         return;
     }
     let (Some(cursor), Some(mut cache)) = (window.cursor_position(), cache) else {

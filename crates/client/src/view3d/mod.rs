@@ -15,7 +15,9 @@ use bevy::window::PrimaryWindow;
 use crate::common::{SmoothPosition, ViewFacing};
 use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
-pub use token::{DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, TokenView};
+pub use token::{
+    ClickedToken, DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, TokenView,
+};
 use token::{IconAnchor, TokenAssets};
 
 /// Vertical field of view. Narrow (a "long lens" from far away) flattens the
@@ -38,10 +40,15 @@ pub struct View3dPlugin;
 impl Plugin for View3dPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ViewGrid>()
+            .init_resource::<ClickedToken>()
+            .configure_sets(Update, View3dSystems::Click.in_set(PlayerSystems::Input))
             .add_systems(Startup, spawn_camera)
             .add_systems(
                 Update,
-                camera::control_with_mouse.in_set(PlayerSystems::Input),
+                (
+                    camera::control_with_mouse.in_set(PlayerSystems::Input),
+                    token::click_tokens.in_set(View3dSystems::Click),
+                ),
             )
             .add_systems(
                 Update,
@@ -58,11 +65,14 @@ impl Plugin for View3dPlugin {
     }
 }
 
-/// `Place` puts the camera and tokens in position each frame. A view that
-/// adjusts token heights (the world map rests them on the terrain) runs
+/// `Click` (part of `PlayerSystems::Input`) finds the clicked token
+/// (`ClickedToken`); systems handling clicks run after it. `Place` puts the
+/// camera and tokens in position each frame. A view that adjusts token
+/// heights (the world map rests them on the terrain) runs
 /// `.after(View3dSystems::Place)`.
 #[derive(SystemSet, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum View3dSystems {
+    Click,
     Place,
 }
 

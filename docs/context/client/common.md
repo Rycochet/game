@@ -11,8 +11,10 @@ Shared building blocks for the client modules. Keep it small.
 - `CurrentWorld` (resource): `params: WorldParams`, `surface: Surface`, `features: FeatureMap` (`shared::feature`). Fixed seed `12345` until a server supplies one.
 - `MapPosition { x: i64, y: i64 }` (component): position on the current view's grid; `y` increases southwards (towards the viewer). For the travelling player, the nearest grid point to `SmoothPosition`.
 - `SmoothPosition { x: f64, y: f64 }` (component): exact position, fractional while the player travels, equal to `MapPosition` when still (`From<MapPosition>`). Anything with a `Token` needs one: `view3d` draws tokens there.
-- `GameView` (Bevy state): `WorldMap` or `Dungeon` (the default for now, while the dungeon view is tested). Each view shows its scene and runs its systems only while current (`OnEnter`/`OnExit`, `in_state`). Switched by `demo` (M) and `dev_tools` (`GAME_PLACE`).
-- `CurrentDungeon` (resource): `level: shared::dungeon::Level`, the test room for now. Read by `player` (walls block steps) and `dungeon_map`.
+- `GameView` (Bevy state): `WorldMap` (the default) or `Dungeon` (inside a site). Each view shows its scene and runs its systems only while current (`OnEnter`/`OnExit`, `in_state`). Switched by `site`.
+- `CurrentDungeon` (resource): `site: Option<shared::site::Site>`, `index` (level), `level: shared::dungeon::Level`, `stairs`; `describe()` for the HUD ("Castle, floor 2 of 3"). The test room until a site is entered. Written by `site`; read by `player` (walkable cells) and `dungeon_map`.
+- `Portal` (component): `Feature(Feature)`: clicking it sends the player there and arriving enters its site (`site`). World map features have one; stairs are cells of the level, not entities.
+- `Clickable` (component, marker): its token can be clicked (`view3d::ClickedToken`).
 - `LightSource` (component): `radius` (cells) and `colour`; lights dungeons. The player has one (6 cells, white).
 - `SharesSight` (component, marker): its sight is added to the player's in dungeons. Nothing has it yet.
 - `GameClock` (resource): `hour` `0..24`; 1 real minute = 1 game hour; only changes on the hour (use `is_changed()`).
@@ -24,7 +26,7 @@ Shared building blocks for the client modules. Keep it small.
 
 ## Depends on
 
-- `shared` (`Seed`, `WorldParams`, `Surface`, `feature::FeatureMap`, `dungeon::Level`).
+- `shared` (`Seed`, `WorldParams`, `Surface`, `feature::{Feature, FeatureMap}`, `dungeon::Level`, `site::{Site, Stairs}`).
 
 ## Used by
 
@@ -33,6 +35,6 @@ Shared building blocks for the client modules. Keep it small.
 ## Notes
 
 - The camera belongs to `view3d`, not here.
-- `MapPosition` is the position in the current view's grid; the world map and dungeon grids are unrelated (`demo` keeps the other view's position when switching).
+- `MapPosition` is the position in the current view's grid; the world map and dungeon grids are unrelated (`site` keeps the world map position while inside a site).
 - Frame rate: `WinitSettings` reactive mode, about 30 fps (`FOCUSED_FPS`) while focused and 1 fps unfocused; input wakes it immediately. Not a twitch game, so this saves GPU and power.
 - The clock will become server-driven.

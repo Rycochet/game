@@ -1,8 +1,13 @@
 //! Developer helpers, controlled by environment variables. Native only; does
 //! nothing unless a variable is set. See `docs/context/client/dev_tools.md`.
 //!
-//! - `GAME_PLACE=world`: start on the world map rather than in the dungeon.
-//! - `GAME_POS=x,y`: starting grid position.
+//! - `GAME_POS=x,y`: starting grid position on the world map.
+//! - `GAME_ENTER=kind[,seed[,level]]`: start inside a site, as if the feature
+//!   at the starting position were entered: `kind` is an index into
+//!   `FeatureKind::ALL`, `seed` its map seed (default 1), `level` the level
+//!   (default 0, the way in).
+//! - `GAME_MOVE=dx,dy`: a second after starting, move the player by this
+//!   much (e.g. off the stairs they arrived on, to see them).
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked).
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
 //! - `GAME_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
@@ -26,9 +31,14 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{Attitude, GameView, MapPosition, Token, TokenShape, TokenSize, Weather};
+use shared::feature::{ChunkPos, Feature, FeatureKind};
+use shared::rng::Seed;
+use shared::site::Exit;
+
+use crate::common::{Attitude, MapPosition, Token, TokenShape, TokenSize, Weather};
 use crate::demo::AutoWalk;
 use crate::player::{Player, TravelTo};
+use crate::site::{EnterFeature, TakeExit};
 use crate::view3d::OrbitCamera;
 
 /// Time between taking the screenshot and quitting, so it can be saved.
@@ -38,17 +48,56 @@ pub struct DevToolsPlugin;
 
 impl Plugin for DevToolsPlugin {
     fn build(&self, app: &mut App) {
-        if env::var("GAME_PLACE").is_ok_and(|place| place == "world") {
-            app.add_systems(Startup, |mut next: ResMut<NextState<GameView>>| {
-                next.set(GameView::WorldMap);
-            });
-        }
-
         if let Some((x, y)) = env::var("GAME_POS").ok().and_then(|pos| parse_pos(&pos)) {
             app.add_systems(
                 PostStartup,
                 move |mut player: Single<&mut MapPosition, With<Player>>| {
                     **player = MapPosition { x, y };
+                },
+            );
+        }
+
+        if let Ok(enter) = env::var("GAME_ENTER") {
+            let numbers: Vec<u64> = enter
+                .split(',')
+                .filter_map(|n| n.trim().parse().ok())
+                .collect();
+            let kind = numbers
+                .first()
+                .and_then(|&k| FeatureKind::ALL.get(k as usize).copied())
+                .unwrap_or(FeatureKind::Castle);
+            let seed = Seed::new(numbers.get(1).copied().unwrap_or(1));
+            let level = numbers.get(2).copied().unwrap_or(0) as u32;
+            app.add_systems(
+                PostStartup,
+                move |player: Single<&MapPosition, With<Player>>,
+                      mut enter: MessageWriter<EnterFeature>,
+                      mut exits: MessageWriter<TakeExit>| {
+                    enter.write(EnterFeature(Feature {
+                        kind,
+                        chunk: ChunkPos { x: 0, y: 0 },
+                        x: player.x,
+                        y: player.y,
+                        seed,
+                    }));
+                    if level > 0 {
+                        exits.write(TakeExit(Exit::Level(level)));
+                    }
+                },
+            );
+        }
+
+        if let Some((dx, dy)) = env::var("GAME_MOVE").ok().and_then(|pos| parse_pos(&pos)) {
+            app.add_systems(
+                Update,
+                move |time: Res<Time>,
+                      mut done: Local<bool>,
+                      mut player: Single<&mut MapPosition, With<Player>>| {
+                    if !*done && time.elapsed_secs() > 1.0 {
+                        *done = true;
+                        player.x += dx;
+                        player.y += dy;
+                    }
                 },
             );
         }
