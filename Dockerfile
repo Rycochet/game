@@ -1,19 +1,20 @@
 # syntax=docker/dockerfile:1
-# Hall of Worlds server image: the game server plus the web client.
+# Hall of Worlds server image: the game server, which also serves the web
+# client, on one port.
 #
 #   docker build -t hall-of-worlds .
-#   docker run -p 8080:8080 hall-of-worlds
+#   docker run -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
 #
-# Port 8080 serves the web client (static files). The game server's own port
-# is added when networking lands.
+# Port 8080 serves the web client's files and the game's WebSocket (`/ws`),
+# so one HTTP(S) port (or a proxy in front of it) is all it needs. Saves go
+# in /data: mount a volume there to keep them.
 #
 # x86-64 only for now; ARM can be added later as another platform under the
 # same tag.
 
 # --- Tools: built once and cached as their own layer -----------------------
 FROM rust:1.99-trixie AS tools
-RUN cargo install --locked trunk --version 0.22.1 \
- && cargo install --locked static-web-server --version 2.44.1
+RUN cargo install --locked trunk --version 0.22.1
 
 # --- Build the server and the web client ------------------------------------
 FROM rust:1.99-trixie AS build
@@ -29,12 +30,15 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 # --- Runtime -----------------------------------------------------------------
 FROM debian:trixie-slim
-COPY --from=tools /usr/local/cargo/bin/static-web-server /usr/local/bin/
 COPY --from=build /usr/local/bin/hall-of-worlds-server /usr/local/bin/
 COPY --from=build /srv/web /srv/web
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh \
- && useradd --system --no-create-home hall
+RUN useradd --system --no-create-home hall \
+ && mkdir /data \
+ && chown hall /data
 USER hall
+ENV HALL_OF_WORLDS_ADDRESS=0.0.0.0:8080 \
+    HALL_OF_WORLDS_WEB=/srv/web \
+    HALL_OF_WORLDS_SERVER_DATA=/data
+VOLUME /data
 EXPOSE 8080
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/hall-of-worlds-server"]

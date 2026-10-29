@@ -10,6 +10,7 @@
 
 mod connections;
 mod embedded;
+mod network;
 mod sites;
 mod storage;
 mod world_map;
@@ -29,6 +30,7 @@ use shared::world::{WORLD_MAP_VERSION, WorldParams, WorldSeed};
 
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
+pub use network::NetworkPlugin;
 pub use storage::{CharacterName, DATA_FOLDER_VARIABLE, default_data_folder};
 
 use storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved, WorldSave};

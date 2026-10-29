@@ -3,10 +3,11 @@
 //!
 //! Native clients start an embedded server for single player (on its own
 //! thread, with its own Bevy world) and talk to it through an in-process
-//! `Link`, using the same messages a network connection will. The web client
-//! has no server to talk to until networking exists, so it stays
-//! `GameView::Connecting`. The embedded server saves in its own data folder;
-//! on quitting, the client hangs up and waits for it to save.
+//! `Link`, using the same messages a network connection carries; the web
+//! client connects to the server it was loaded from over a WebSocket
+//! (`socket`). A lost connection is tried again every few seconds
+//! (`ServerStatus` says how it is going). The embedded server saves in its own
+//! data folder; on quitting, the client hangs up and waits for it to save.
 //!
 //! It sends the player's steps (`player::Stepped`); the server checks them,
 //! sends what comes into sight and says where it has the player, and the
@@ -14,41 +15,41 @@
 //! send with `ToServer` and read the server's map messages as `FromServer`.
 
 mod prediction;
+mod socket;
+
+use std::time::Duration;
 
 use bevy::prelude::*;
 use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage};
 use shared::world::WORLD_MAP_VERSION;
 
-use crate::common::{CurrentWorld, GameView, MapPosition};
+use crate::common::{CurrentWorld, GameView, MapPosition, ServerStatus};
 use crate::player::{Player, PlayerSystems, Stepped};
 use prediction::{Prediction, correction};
+use socket::Target;
+
+/// How long to wait before trying to connect again.
+const RETRY_EVERY: Duration = Duration::from_secs(2);
 
 pub struct ConnectionPlugin;
 
 impl Plugin for ConnectionPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let (link, embedded) = server::start_embedded(
-                shared::world::WorldSeed::new(server::DEFAULT_WORLD_SEED),
-                Some(server::default_data_folder()),
-            );
-            app.insert_resource(ServerConnection {
-                link,
-                _embedded: Some(embedded),
-            });
-        }
-
         app.add_message::<ToServer>()
             .add_message::<FromServer>()
             .init_resource::<Prediction>()
-            .add_systems(
-                Startup,
-                say_hello.run_if(resource_exists::<ServerConnection>),
-            )
+            .insert_resource(Connecting {
+                target: Target::choose(),
+                guest: socket::guest(),
+                retry: None,
+            })
             .add_systems(
                 PreUpdate,
-                receive.run_if(resource_exists::<ServerConnection>),
+                (
+                    connect.run_if(not(resource_exists::<ServerConnection>)),
+                    receive.run_if(resource_exists::<ServerConnection>),
+                )
+                    .chain(),
             )
             .add_systems(Update, send_steps.after(PlayerSystems::Travel))
             // After this frame's steps, which were still on the last map.
@@ -60,6 +61,8 @@ impl Plugin for ConnectionPlugin {
                     .chain()
                     .run_if(resource_exists::<ServerConnection>),
             );
+        #[cfg(target_arch = "wasm32")]
+        app.add_systems(Last, pump_socket.after(send));
     }
 }
 
@@ -67,15 +70,14 @@ impl Plugin for ConnectionPlugin {
 #[derive(Message, Clone, Debug)]
 pub struct ToServer(pub ClientMessage);
 
-/// A message from the server about maps (`EnterLevel`, `LevelCells`,
-/// `OnWorldMap`, `Teleported`), for `site`. The rest are handled here.
+/// A message from the server about maps (`Welcome`, `EnterLevel`,
+/// `LevelCells`, `OnWorldMap`, `Teleported`), for `site`. The rest are
+/// handled here.
 #[derive(Message, Clone, Debug)]
 pub struct FromServer(pub ServerMessage);
 
-/// The link to the server. Removed if the connection is lost, and on
-/// quitting.
-// The web client never makes one yet.
-#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+/// The link to the server. Removed if the connection is lost (and tried
+/// again), and on quitting.
 #[derive(Resource)]
 pub struct ServerConnection {
     link: ClientLink,
@@ -86,10 +88,80 @@ pub struct ServerConnection {
     _embedded: Option<server::EmbeddedServer>,
 }
 
-fn say_hello(connection: Res<ServerConnection>) {
+/// How to connect, and when to try again.
+#[derive(Resource)]
+struct Connecting {
+    target: Target,
+    guest: u64,
+    /// Counting down to the next try; `None` to try now.
+    retry: Option<Timer>,
+}
+
+/// Connects (or tries again, every `RETRY_EVERY`), and says hello: the
+/// link holds what is sent until the socket is open.
+fn connect(world: &mut World) {
+    if matches!(world.resource::<ServerStatus>(), ServerStatus::Refused(_)) {
+        return;
+    }
+    let delta = world.resource::<Time>().delta();
+    let mut connecting = world.resource_mut::<Connecting>();
+    if let Some(retry) = &mut connecting.retry
+        && !retry.tick(delta).is_finished()
+    {
+        return;
+    }
+    connecting.retry = Some(Timer::new(RETRY_EVERY, TimerMode::Once));
+    let guest = connecting.guest;
+    let connection = match &connecting.target {
+        #[cfg(not(target_arch = "wasm32"))]
+        Target::Embedded => {
+            let (link, embedded) = server::start_embedded(
+                shared::world::WorldSeed::new(server::DEFAULT_WORLD_SEED),
+                Some(server::default_data_folder()),
+            );
+            ServerConnection {
+                link,
+                _embedded: Some(embedded),
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        Target::Url(url) => {
+            info!("Connecting to {url}");
+            ServerConnection {
+                link: socket::open(url),
+                _embedded: None,
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        Target::Url(url) => {
+            info!("Connecting to {url}");
+            let Some((link, socket)) = socket::BrowserSocket::open(url) else {
+                warn!("Can't open a WebSocket to {url}");
+                return;
+            };
+            world.insert_non_send(socket);
+            ServerConnection { link }
+        }
+    };
     connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
+        guest,
     });
+    world.insert_resource(connection);
+    // Steps start again from the server's word.
+    world.insert_resource(Prediction::default());
+}
+
+/// Web: sends what the link has sent; drops the socket once it has closed,
+/// so the link reports the connection lost.
+#[cfg(target_arch = "wasm32")]
+fn pump_socket(world: &mut World) {
+    let open = world
+        .get_non_send::<socket::BrowserSocket>()
+        .is_none_or(|socket| socket.pump());
+    if !open {
+        world.remove_non_send::<socket::BrowserSocket>();
+    }
 }
 
 /// Handles every message that has arrived since the last frame.
@@ -97,6 +169,7 @@ fn say_hello(connection: Res<ServerConnection>) {
 fn receive(
     mut commands: Commands,
     connection: Res<ServerConnection>,
+    mut status: ResMut<ServerStatus>,
     mut world: Option<ResMut<CurrentWorld>>,
     view: Res<State<GameView>>,
     mut next_view: ResMut<NextState<GameView>>,
@@ -118,16 +191,22 @@ fn receive(
                     continue;
                 }
                 info!("Joined world {:?}", info.id);
+                *status = ServerStatus::Connected;
                 joined = Some(CurrentWorld::new(&info));
                 // Where the player left off (`EnterLevel` follows if they
                 // were in a site).
                 for mut position in &mut player {
                     *position = MapPosition { x, y };
                 }
-                next_view.set(GameView::WorldMap);
+                // (Connected again on the world map: nothing to set up.)
+                if *view.get() != GameView::WorldMap {
+                    next_view.set(GameView::WorldMap);
+                }
+                from_server.write(FromServer(ServerMessage::Welcome { world: info, x, y }));
             }
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");
+                *status = ServerStatus::Refused(reason);
             }
             Ok(Some(ServerMessage::WorldChunk(chunk))) => {
                 match joined.as_mut().or(world.as_deref_mut()) {
@@ -162,8 +241,17 @@ fn receive(
             }
             Ok(None) => break,
             Err(error) => {
-                error!("Lost the connection to the server ({error:?})");
+                if status.is_connected() {
+                    warn!("Lost the connection to the server ({error:?})");
+                }
+                if !matches!(*status, ServerStatus::Refused(_)) {
+                    *status = ServerStatus::Connecting;
+                }
                 commands.remove_resource::<ServerConnection>();
+                #[cfg(target_arch = "wasm32")]
+                commands.queue(|world: &mut World| {
+                    world.remove_non_send::<socket::BrowserSocket>();
+                });
                 break;
             }
         }

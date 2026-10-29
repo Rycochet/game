@@ -27,6 +27,13 @@ postcard = { version = "1", default-features = false, features = ["alloc"] }
 # it), in the user's data folder.
 ron = "0.12"
 dirs = "6"
+# Networking: the server's WebSockets and web client files on one port
+# (axum, tower-http and tokio: MIT), and native clients' WebSockets
+# (tungstenite: MIT/Apache-2.0).
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "ws"] }
+tower-http = { version = "0.7", features = ["fs"] }
+tokio = { version = "1", features = ["rt", "net", "time", "sync", "macros", "signal"] }
+tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
 
 # Compile our own code with light optimisation so it still builds quickly...
 [profile.dev]

@@ -31,6 +31,7 @@ impl Plugin for CommonPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
             })
             .init_resource::<CurrentDungeon>()
+            .init_resource::<ServerStatus>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
             .init_resource::<Weather>()
@@ -106,12 +107,32 @@ impl KnownFeatures {
     }
 }
 
+/// Whether the client is connected to the server (set by `connection`).
+/// While it isn't, the player can't move, and the last view stays on show.
+#[derive(Resource, Clone, Debug, Default, PartialEq, Eq)]
+pub enum ServerStatus {
+    /// Trying to connect (or to connect again after losing the connection).
+    #[default]
+    Connecting,
+    /// Welcomed by the server.
+    Connected,
+    /// The server won't have this client, and why: no more tries.
+    Refused(String),
+}
+
+impl ServerStatus {
+    pub fn is_connected(&self) -> bool {
+        *self == Self::Connected
+    }
+}
+
 /// Which view is on screen: the world's surface, or a dungeon or building.
 /// Each view shows its scene only while it is the current one.
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameView {
     /// Waiting for the server to say which world this is: nothing to show
-    /// yet, and no `CurrentWorld`.
+    /// yet, and no `CurrentWorld`. Only until the first `Welcome`: losing the
+    /// connection later keeps the view (`ServerStatus` says).
     #[default]
     Connecting,
     WorldMap,

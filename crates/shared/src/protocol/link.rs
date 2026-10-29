@@ -1,10 +1,11 @@
-//! A connection between a client and the server: an in-process channel of
+//! A connection between a client and the server: a channel of
 //! postcard-encoded messages.
 //!
-//! Single player uses it directly. Carrying bytes rather than the messages
-//! themselves means nothing can be shared between the two sides by accident,
-//! and a network transport can later pass the same bytes to and from a
-//! socket.
+//! Single player uses an in-process pair (`local_pair`). Over the network,
+//! each side has a `Link` whose other end is a `Wire`, which carries the
+//! same bytes to and from a WebSocket, one message per WebSocket message.
+//! Carrying bytes rather than the messages themselves means nothing can be
+//! shared between the two sides by accident.
 
 use std::marker::PhantomData;
 use std::sync::Mutex;
@@ -40,6 +41,45 @@ pub enum LinkError {
     /// A message couldn't be decoded: the other side is a different version
     /// or isn't playing by the rules.
     Garbled,
+}
+
+/// The far end of a `Link`, carrying its bytes somewhere else (a socket).
+pub struct Wire {
+    /// Bytes from the socket, for the `Link` to receive.
+    to_link: Sender<Vec<u8>>,
+    /// Bytes the `Link` sent, for the socket.
+    from_link: Receiver<Vec<u8>>,
+}
+
+impl Wire {
+    /// Hands the `Link` a message that arrived. `false` once it has gone.
+    pub fn deliver(&self, bytes: Vec<u8>) -> bool {
+        self.to_link.send(bytes).is_ok()
+    }
+
+    /// The next message the `Link` sent, if there is one yet; `Err` once it
+    /// has gone (and everything it sent was taken).
+    pub fn take(&self) -> Result<Option<Vec<u8>>, LinkError> {
+        match self.from_link.try_recv() {
+            Ok(bytes) => Ok(Some(bytes)),
+            Err(TryRecvError::Empty) => Ok(None),
+            Err(TryRecvError::Disconnected) => Err(LinkError::Closed),
+        }
+    }
+
+    /// Its two halves, to be used on different threads: where to send bytes
+    /// for the `Link`, and where the bytes it sends arrive (`recv` waits for
+    /// the next; it fails once the `Link` has gone).
+    pub fn into_parts(self) -> (Sender<Vec<u8>>, Receiver<Vec<u8>>) {
+        (self.to_link, self.from_link)
+    }
+}
+
+/// A `Link` and the `Wire` that carries its bytes.
+pub fn wired<Out: Serialize, In: DeserializeOwned>() -> (Link<Out, In>, Wire) {
+    let (to_link, incoming) = mpsc::channel();
+    let (outgoing, from_link) = mpsc::channel();
+    (Link::new(outgoing, incoming), Wire { to_link, from_link })
 }
 
 /// Both ends of a new in-process connection.

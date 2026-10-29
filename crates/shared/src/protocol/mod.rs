@@ -9,7 +9,7 @@ mod level;
 mod link;
 
 pub use level::{ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, SeenStairs, level_chunk};
-pub use link::{ClientLink, Link, LinkError, ServerLink, local_pair};
+pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
 
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +20,11 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 6;
+pub const PROTOCOL_VERSION: u32 = 7;
+
+/// Where a server's WebSocket is, beside the web client's files: what
+/// network clients connect to.
+pub const SOCKET_PATH: &str = "/ws";
 
 /// How far from the player (east–west and north–south, in grid points) the
 /// client may show anything on the world map: the corners of its window
@@ -34,8 +38,10 @@ pub const WORLD_MAP_PRELOAD: i64 = CHUNK_SIZE;
 /// From a client to the server.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ClientMessage {
-    /// The first message on a new connection.
-    Hello { protocol: u32 },
+    /// The first message on a new connection. `guest` names the character
+    /// on servers without accounts (yet): a random number the client keeps,
+    /// so it gets the same character back. The embedded server ignores it.
+    Hello { protocol: u32, guest: u64 },
     /// The player takes a step on the map they are on: the server checks
     /// it, moves them and sends what comes into sight, then (once a tick)
     /// `Position`. `map` counts the maps the client has been put on
@@ -157,6 +163,7 @@ mod tests {
         let client = vec![
             ClientMessage::Hello {
                 protocol: PROTOCOL_VERSION,
+                guest: 0x1234_5678_9abc_def0,
             },
             ClientMessage::Step {
                 map: 2,
@@ -251,6 +258,34 @@ mod tests {
         let (client, server) = local_pair();
         drop(server);
         assert_eq!(client.receive(), Err(LinkError::Closed));
-        assert!(!client.send(&ClientMessage::Hello { protocol: 1 }));
+        assert!(!client.send(&ClientMessage::UseExit));
+    }
+
+    #[test]
+    fn wires_carry_the_bytes_both_ways() {
+        // Two wired links joined by their wires, as over a socket.
+        let (client, client_wire) = wired::<ClientMessage, ServerMessage>();
+        let (server, server_wire) = wired::<ServerMessage, ClientMessage>();
+        let (to_server, to_client) = every_message();
+        for message in &to_server {
+            assert!(client.send(message));
+            let bytes = client_wire.take().unwrap().unwrap();
+            assert!(server_wire.deliver(bytes));
+            assert_eq!(server.receive(), Ok(Some(message.clone())));
+        }
+        for message in &to_client {
+            assert!(server.send(message));
+            let bytes = server_wire.take().unwrap().unwrap();
+            assert!(client_wire.deliver(bytes));
+            assert_eq!(client.receive(), Ok(Some(message.clone())));
+        }
+        // Garbage from the socket is noticed, not misread.
+        assert!(server_wire.deliver(vec![0xff, 0xff, 0xff]));
+        assert_eq!(server.receive(), Err(LinkError::Garbled));
+        // Either side going is noticed by the other.
+        drop(client);
+        assert_eq!(client_wire.take(), Err(LinkError::Closed));
+        drop(server_wire);
+        assert_eq!(server.receive(), Err(LinkError::Closed));
     }
 }

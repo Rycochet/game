@@ -10,7 +10,8 @@ use bevy::prelude::*;
 use shared::movement::{Step, step_on_level, steps_between};
 
 use crate::common::{
-    CurrentDungeon, GameView, Icon, LightSource, MapPosition, SmoothPosition, Token, ViewFacing,
+    CurrentDungeon, GameView, Icon, LightSource, MapPosition, ServerStatus, SmoothPosition, Token,
+    ViewFacing,
 };
 
 /// While a key is held, how often the player takes another step.
@@ -49,7 +50,9 @@ impl Plugin for PlayerPlugin {
                 // After everything in `Input` asked for its steps.
                 (take_steps, travel).chain().in_set(PlayerSystems::Travel),
             )
-                .run_if(not(in_state(GameView::Connecting))),
+                .run_if(not(in_state(GameView::Connecting)))
+                // Nobody to tell while the connection is down.
+                .run_if(|status: Res<ServerStatus>| status.is_connected()),
         );
     }
 }

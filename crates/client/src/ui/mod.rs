@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::common::{GameClock, GameView, MapPosition, ViewStats, Weather};
+use crate::common::{GameClock, GameView, MapPosition, ServerStatus, ViewStats, Weather};
 use crate::demo::{AutoWalk, TemperatureCycle};
 use crate::player::Player;
 
@@ -10,13 +10,48 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_status_text)
-            .add_systems(Update, update_status_text);
+        app.add_systems(Startup, (spawn_status_text, spawn_connection_text))
+            .add_systems(Update, (update_status_text, update_connection_text));
     }
 }
 
 #[derive(Component)]
 struct StatusText;
+
+/// Bottom left, in red: "Connecting..." while not connected to the server,
+/// or why the server refused.
+#[derive(Component)]
+struct ConnectionText;
+
+const CONNECTION_COLOUR: Color = Color::srgb(1.0, 0.2, 0.2);
+
+fn spawn_connection_text(mut commands: Commands) {
+    commands.spawn((
+        ConnectionText,
+        Text::new(""),
+        TextColor(CONNECTION_COLOUR),
+        Node {
+            position_type: PositionType::Absolute,
+            bottom: px(12),
+            left: px(12),
+            ..default()
+        },
+    ));
+}
+
+fn update_connection_text(
+    status: Res<ServerStatus>,
+    mut text: Single<&mut Text, With<ConnectionText>>,
+) {
+    if !status.is_changed() {
+        return;
+    }
+    text.0 = match &*status {
+        ServerStatus::Connecting => "Connecting...".into(),
+        ServerStatus::Connected => String::new(),
+        ServerStatus::Refused(reason) => format!("The server refused: {reason}"),
+    };
+}
 
 fn spawn_status_text(mut commands: Commands) {
     commands.spawn((
@@ -42,8 +77,9 @@ fn update_status_text(
     view: Res<State<GameView>>,
     mut text: Single<&mut Text, With<StatusText>>,
 ) {
+    // Nothing to say before the first welcome (`ConnectionText` says why).
     if *view.get() == GameView::Connecting {
-        text.0 = "Connecting to the server...".into();
+        text.0 = String::new();
         return;
     }
     let on_off = |on: bool| if on { "on" } else { "off" };

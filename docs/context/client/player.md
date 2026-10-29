@@ -26,7 +26,7 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 ## Notes
 
 - Any other change to `MapPosition` (a step, the server putting the player somewhere) cancels travel and jumps there: `travel` notices because `MapPosition` differs from the value it last set (private `Travel` component).
-- `move_player` and `travel` don't run while `GameView::Connecting` (there is no world yet).
+- `move_player` and `travel` don't run while `GameView::Connecting` (there is no world yet), nor while `common::ServerStatus` isn't `Connected`.
 - Keys count if "pressed" **or** "just pressed": a tap released within one frame is otherwise lost.
 - Movement is predicted: steps are shown at once and the server checks them again (`connection` moves the player back if it refused one). Unknown cells count as wall here, so the client is stricter than the server. Travel goes in a straight line and doesn't check walls (TEMPORARY, until pathfinding, which gets its own session; useful for testing the server's refusals): the server refuses the step into the wall and the journey ends there.
 - Systems use `Single<..., With<Player>>`, assuming one player entity. Multiplayer will need local vs remote players.

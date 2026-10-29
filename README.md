@@ -11,7 +11,7 @@ A multiplayer roguelike with an infinite, procedurally generated world.
 The game is written in [Rust](https://www.rust-lang.org/) using the [Bevy](https://bevy.org/) game engine. It has two parts:
 
 - **Client** (`hall-of-worlds`): the game itself, as a native app (Windows, macOS, Linux) or WebAssembly in the browser. Native clients include the server for single player; the browser client only connects to a server.
-- **Server** (`hall-of-worlds-server`): the authoritative game server, native only. The Docker image runs it alongside the web client.
+- **Server** (`hall-of-worlds-server`): the authoritative game server, native only. Players connect over WebSockets, on the same port that serves the web client. The Docker image runs it.
 
 ### One-time setup (Windows)
 
@@ -45,12 +45,14 @@ Source code is in `crates/`: `shared` holds game rules and world generation used
 
 ### Docker
 
-The `Dockerfile` builds an x86-64 image with the game server and the web client (served on port 8080):
+The `Dockerfile` builds an x86-64 image with the game server, which serves the web client and the game (WebSockets) on port 8080, and saves in `/data`:
 
 ```bash
 docker build -t hall-of-worlds .
-docker run -p 8080:8080 hall-of-worlds
+docker run -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
 ```
+
+It works behind an HTTPS proxy (such as Cloudflare) that passes WebSockets: nothing but that one port is needed.
 
 Every merge to `master` publishes it as `ghcr.io/rycochet/hall-of-worlds:latest`.
 

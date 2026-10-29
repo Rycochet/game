@@ -46,7 +46,8 @@ pub fn start_embedded(
             // Made on the thread itself: a Bevy `App` can't move between
             // threads.
             let mut app = headless_app(world_seed, options, data);
-            let name = CharacterName::new(PLAYER).expect("a fine name");
+            let name = CharacterName::new(PLAYER);
+            assert!(name.is_some(), "a fine name");
             app.world_mut()
                 .resource_mut::<Connections>()
                 .add(server, name);
@@ -72,7 +73,8 @@ mod tests {
         let seed = WorldSeed::new(99);
         let (client, server) = start_embedded(seed, Some(folder.0.clone()));
         assert!(client.send(&ClientMessage::Hello {
-            protocol: PROTOCOL_VERSION
+            protocol: PROTOCOL_VERSION,
+            guest: 0,
         }));
         assert!(client.send(&ClientMessage::DevTeleport { x: 5, y: 6 }));
         let deadline = Instant::now() + Duration::from_secs(10);

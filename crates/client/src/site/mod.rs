@@ -110,6 +110,9 @@ fn change_map(
 ) {
     for FromServer(message) in from_server.read() {
         match message {
+            // Joined (or joined again): where the player is on the world map,
+            // and the way back to it if a level follows.
+            &ServerMessage::Welcome { x, y, .. } => world_return.0 = MapPosition { x, y },
             ServerMessage::EnterLevel(info) => {
                 if *view.get() == GameView::WorldMap {
                     world_return.0 = **player;

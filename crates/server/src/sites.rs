@@ -421,9 +421,9 @@ mod tests {
     use shared::world::WorldSeed;
 
     use super::*;
-    use crate::connections::tests::{HELLO, TestClient};
+    use crate::connections::tests::TestClient;
+    use crate::storage::Storage;
     use crate::storage::tests::TestFolder;
-    use crate::storage::{CharacterName, Storage};
 
     /// A castle with more than one floor.
     fn castle_seed() -> u64 {
@@ -690,18 +690,9 @@ mod tests {
         let mut test = TestClient::of(saved_world(&folder));
         test.send(&[ClientMessage::DevTeleport { x: 70, y: -3 }]);
         enter(&mut test, 0);
-        let world = test.leave();
-        let (end, link) = shared::protocol::local_pair();
-        let mut client = Client::new(link, CharacterName::new("tester").unwrap());
-        let mut world = world;
-        let options = crate::ServerOptions {
-            dev_tools: true,
-            exit_when_alone: false,
-        };
-        crate::connections::answer(&mut client, HELLO, &mut world, &options);
-        let answers: Vec<_> = std::iter::from_fn(|| end.receive().unwrap()).collect();
+        let test = TestClient::of(test.leave());
         assert!(matches!(
-            answers[..],
+            test.welcome[..],
             [
                 ServerMessage::Welcome { x: 70, y: -3, .. },
                 ServerMessage::EnterLevel(_),

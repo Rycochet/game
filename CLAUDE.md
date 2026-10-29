@@ -27,9 +27,9 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes) |
 | shared: site        | `crates/shared/src/site/`       | `docs/context/shared/site.md`         | Sites behind features: building (BSP) and cave generators, levels, stairs |
-| server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server in its own Bevy world: connections, world map chunks, site visits and level cells, saves (world, sites, characters), embedded single player, standalone binary |
-| client: connection  | `crates/client/src/connection/` | `docs/context/client/connection.md`   | Connecting to the server (embedded on native), sending steps and putting refused ones right, `ToServer` / `FromServer` |
-| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world (and its features) and dungeon, `MapPosition` / `SmoothPosition`, `GameView` state (incl. `Connecting`), `Portal` / `Clickable`, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |
+| server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server in its own Bevy world: WebSocket networking (and the web client's files) on one port, connections, world map chunks, site visits and level cells, saves (world, sites, characters), embedded single player, standalone binary |
+| client: connection  | `crates/client/src/connection/` | `docs/context/client/connection.md`   | Connecting to the server (embedded on native, WebSocket on the web), reconnecting, sending steps and putting refused ones right, `ToServer` / `FromServer` |
+| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world (and its features) and dungeon, `MapPosition` / `SmoothPosition`, `GameView` state (incl. `Connecting`), `ServerStatus`, `Portal` / `Clickable`, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |
 | client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks (announced as `Stepped`) |
 | client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
 | client: view3d      | `crates/client/src/view3d/`     | `docs/context/client/view3d.md`       | Shared 3D camera (turn, tilt, zoom), entity tokens, token clicks, `ViewGrid` |
@@ -37,7 +37,7 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: textured floor/wall meshes by theme, 3D stairs, sight, see-through walls, grid light, memory in grey |
 | client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Asking the server to enter sites, take stairs, leave; applying its level messages |
 | client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size, Esc back to the start |
-| client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text                                     |
+| client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, red connection status              |
 | client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, travel, walk, snow, camera view, screenshots |
 
 Also: `docs/context/decisions.md` is the log of architecture decisions. Check it before proposing a structural change, and follow what it records.
@@ -81,7 +81,7 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 ## Commands
 
-- Native: `cargo run` · Server: `cargo run -p server` · Web: `trunk serve` (http://localhost:3000) · Format: `cargo fmt`
+- Native: `cargo run` · Server: `cargo run -p server` (with `HALL_OF_WORLDS_WEB=dist` after `trunk build`, it serves the web client too, on http://localhost:8080) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
 - Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
 - Docker isn't installed on the owner's machine, and the Docker workflow only builds the image after merging to `master`: take extra care with `Dockerfile` changes.
 - **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
