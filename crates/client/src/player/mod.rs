@@ -28,6 +28,7 @@ impl Plugin for PlayerPlugin {
             TimerMode::Repeating,
         )))
         .add_message::<TravelTo>()
+        .add_message::<Arrived>()
         .configure_sets(
             Update,
             (PlayerSystems::Input, PlayerSystems::Travel).chain(),
@@ -55,6 +56,14 @@ pub struct Player;
 /// replaces the current one, starting from wherever the player is.
 #[derive(Message, Clone, Copy, Debug)]
 pub struct TravelTo {
+    pub x: i64,
+    pub y: i64,
+}
+
+/// The player has finished travelling to a grid point (sent once, when it
+/// gets there). Not sent for keyboard steps or other direct moves.
+#[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Arrived {
     pub x: i64,
     pub y: i64,
 }
@@ -87,7 +96,7 @@ fn spawn_player(mut commands: Commands) {
 }
 
 /// Steps one grid unit when a key is pressed, then repeats while it's held.
-/// In a dungeon, walls block the step.
+/// In a dungeon, only walkable cells can be stepped on.
 fn move_player(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
@@ -125,7 +134,7 @@ fn move_player(
         // The keys mean screen directions, so follow the way the map is turned.
         let (dx, dy) = facing.screen_to_grid(dx, dy);
         let (x, y) = (player.x + dx, player.y + dy);
-        if *view.get() == GameView::Dungeon && !dungeon.level.is_open(x, y) {
+        if *view.get() == GameView::Dungeon && !dungeon.level.is_walkable(x, y) {
             return;
         }
         player.x = x;
@@ -151,6 +160,7 @@ fn travel(
     time: Res<Time>,
     view: Res<State<GameView>>,
     mut requests: MessageReader<TravelTo>,
+    mut arrived: MessageWriter<Arrived>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
@@ -180,6 +190,10 @@ fn travel(
     let now = if from.distance(target) <= step {
         // Arrived: land exactly on the grid point.
         travel.target = None;
+        arrived.write(Arrived {
+            x: target.x as i64,
+            y: target.y as i64,
+        });
         target
     } else {
         from + (target - from).normalize() * step

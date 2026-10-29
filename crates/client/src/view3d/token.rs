@@ -17,9 +17,9 @@ use bevy::prelude::*;
 use bevy::render::render_resource::Face;
 use bevy::window::PrimaryWindow;
 
-use super::CAMERA_FOV_DEGREES;
 use super::camera::OrbitCamera;
-use crate::common::{Attitude, Icon, Token, TokenShape};
+use super::{CAMERA_FOV_DEGREES, ViewCamera};
+use crate::common::{Attitude, Clickable, Icon, Token, TokenShape};
 
 /// Token width in grid units: the diameter of the circle every shape fits in.
 pub const DIAMETER: f32 = 16.0;
@@ -427,4 +427,72 @@ pub fn resize_tokens(
     }
     assets.window_height = height;
     assets.camera_distance = distance;
+}
+
+/// The `Clickable` token the left mouse button was just pressed on, if any
+/// (nearest the camera when several overlap). Set every frame in
+/// `View3dSystems::Click`; views ignore a click on the ground under it.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ClickedToken(pub Option<Entity>);
+
+/// Finds the clickable token under the cursor on a left click: within the
+/// token's circle on screen, or its icon's main picture.
+pub fn click_tokens(
+    mouse: Res<ButtonInput<MouseButton>>,
+    window: Single<&Window, With<PrimaryWindow>>,
+    camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
+    views: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
+    anchors: Query<(&IconAnchor, &GlobalTransform)>,
+    clickable: Query<(), With<Clickable>>,
+    mut clicked: ResMut<ClickedToken>,
+) {
+    clicked.set_if_neq(ClickedToken(None));
+    if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+    let Some(cursor) = window.cursor_position() else {
+        return;
+    };
+    let (camera, camera_transform) = *camera;
+    let right = camera_transform.right();
+    let eye = camera_transform.translation();
+    // Whether the cursor is within `half` (3D units, across the screen) of a
+    // point: as a circle or a square.
+    let near = |point: Vec3, half: f32, square: bool| {
+        let (Ok(centre), Ok(side)) = (
+            camera.world_to_viewport(camera_transform, point),
+            camera.world_to_viewport(camera_transform, point + right * half),
+        ) else {
+            return false;
+        };
+        let reach = centre.distance(side);
+        let offset = cursor - centre;
+        if square {
+            offset.x.abs() <= reach && offset.y.abs() <= reach
+        } else {
+            offset.length() <= reach
+        }
+    };
+
+    let mut best: Option<(f32, Entity)> = None;
+    for (view, transform, visibility) in &views {
+        if !visibility.get() || clickable.get(view.owner).is_err() {
+            continue;
+        }
+        let base = transform.translation();
+        let mut hit = near(base, DIAMETER / 2.0, false);
+        if let Ok((anchor, anchor_transform)) = anchors.get(view.anchor) {
+            hit |= anchor.shown.is_some()
+                && near(
+                    anchor_transform.translation(),
+                    ICON_ART_SIZE * anchor.scale / 2.0,
+                    true,
+                );
+        }
+        let distance = eye.distance(base);
+        if hit && best.is_none_or(|(d, _)| distance < d) {
+            best = Some((distance, view.owner));
+        }
+    }
+    clicked.0 = best.map(|(_, owner)| owner);
 }

@@ -13,7 +13,8 @@ use shared::feature::{Feature, FeatureKind};
 
 use super::HALF_SIZE;
 use crate::common::{
-    CurrentWorld, Icon, MapPosition, SmoothPosition, Token, TokenShape, TokenSize,
+    Clickable, CurrentWorld, Icon, MapPosition, Portal, SmoothPosition, Token, TokenShape,
+    TokenSize,
 };
 use crate::player::Player;
 use crate::view3d::TOKEN_DIAMETER;
@@ -25,12 +26,6 @@ const RANGE: i64 = (HALF_SIZE as f32 * std::f32::consts::SQRT_2 + TOKEN_DIAMETER
 
 /// The tile number of the first `FeatureKind`; the rest follow in order.
 const FIRST_TILE: usize = 66;
-
-/// A feature on the world map, on an entity with its `Token`, `Icon` and
-/// position. Keeps what entering it will need: its kind and map seed.
-#[derive(Component, Clone, Copy, Debug)]
-#[expect(dead_code, reason = "read once features can be entered")]
-pub struct WorldFeature(pub Feature);
 
 /// The feature entities that exist, by their position.
 #[derive(Resource, Default)]
@@ -79,7 +74,9 @@ pub(super) fn spawn_nearby(
             };
             commands
                 .spawn((
-                    WorldFeature(feature),
+                    // Clicking it travels there and enters its site.
+                    Portal::Feature(feature),
+                    Clickable,
                     at,
                     SmoothPosition::from(at),
                     Token {

@@ -7,5 +7,6 @@
 pub mod dungeon;
 pub mod feature;
 pub mod rng;
+pub mod site;
 pub mod surface;
 pub mod world;

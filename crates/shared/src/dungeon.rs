@@ -3,7 +3,8 @@
 //!
 //! Walls block movement, sight and light; floors block nothing. Sight uses
 //! symmetric shadowcasting with exact integer fractions, so the client and the
-//! server always agree on what a character can see.
+//! server always agree on what a character can see. Levels are made by the
+//! generators in `crate::site`.
 
 /// One grid cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -12,7 +13,43 @@ pub enum Cell {
     Floor,
     /// Solid: blocks movement, sight and light.
     Wall,
+    /// A doorway. Doors are open for now (opening and closing them comes
+    /// with mobs), so it behaves like floor.
+    Door,
+    /// A hidden door: a wall until someone finds it (finding comes later).
+    /// Generators only put them where nothing depends on them.
+    SecretDoor,
+    /// Outside ground round a building or cave mouth: walkable, and the way
+    /// back to the world map.
+    Ground,
+    /// Seen and lit across, but not walkable (for now: swimming later).
+    Water,
+    /// As water, hotter.
+    Lava,
 }
+
+impl Cell {
+    /// Whether it can be walked on.
+    pub fn is_walkable(self) -> bool {
+        matches!(self, Self::Floor | Self::Door | Self::Ground)
+    }
+
+    /// Whether sight and light pass through it.
+    pub fn is_open(self) -> bool {
+        matches!(
+            self,
+            Self::Floor | Self::Door | Self::Ground | Self::Water | Self::Lava
+        )
+    }
+}
+
+/// Which room of a level a cell belongs to, as planned by its generator
+/// (corridors, walls and outside ground belong to none). For mobs later.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RoomId(pub u16);
+
+/// Stored for cells in no room.
+const NO_ROOM: u16 = u16::MAX;
 
 /// A rectangular grid of cells. Coordinates are `x` east and `y` south, like
 /// the world grid; everything outside the rectangle counts as wall.
@@ -25,6 +62,8 @@ pub struct Level {
     height: i64,
     /// Row by row from the north, `width * height` cells.
     cells: Vec<Cell>,
+    /// The room of each cell, in the same order, `NO_ROOM` for none.
+    rooms: Vec<u16>,
 }
 
 impl Level {
@@ -37,6 +76,7 @@ impl Level {
             width,
             height,
             cells: vec![Cell::Wall; (width * height) as usize],
+            rooms: vec![NO_ROOM; (width * height) as usize],
         }
     }
 
@@ -82,9 +122,32 @@ impl Level {
         }
     }
 
-    /// Whether `(x, y)` can be walked on, seen across and lit through.
+    /// Whether `(x, y)` can be seen across and lit through.
     pub fn is_open(&self, x: i64, y: i64) -> bool {
-        self.cell(x, y) == Cell::Floor
+        self.cell(x, y).is_open()
+    }
+
+    /// Whether `(x, y)` can be walked on.
+    pub fn is_walkable(&self, x: i64, y: i64) -> bool {
+        self.cell(x, y).is_walkable()
+    }
+
+    /// The room `(x, y)` is part of, if any.
+    pub fn room(&self, x: i64, y: i64) -> Option<RoomId> {
+        let room = self.index(x, y).map_or(NO_ROOM, |i| self.rooms[i]);
+        (room != NO_ROOM).then_some(RoomId(room))
+    }
+
+    /// Puts a cell in a room (or none); does nothing outside the level.
+    pub fn set_room(&mut self, x: i64, y: i64, room: Option<RoomId>) {
+        if let Some(i) = self.index(x, y) {
+            self.rooms[i] = room.map_or(NO_ROOM, |r| r.0);
+        }
+    }
+
+    /// Whether `(x, y)` is inside the level's rectangle.
+    pub fn contains(&self, x: i64, y: i64) -> bool {
+        self.index(x, y).is_some()
     }
 }
 
@@ -130,8 +193,22 @@ impl Sight {
 
     /// Adds everything seen from `(x, y)`, out to `radius` cells (straight-line
     /// distance between cell centres; `None` for no limit). Several calls
-    /// combine, e.g. for allies sharing their sight.
+    /// combine, e.g. for allies sharing their sight. Open cells count as seen
+    /// when their centre is, so seeing is symmetric (if A sees B, B sees A):
+    /// the rule for the game.
     pub fn add_view(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>) {
+        self.add(level, x, y, radius, false);
+    }
+
+    /// As `add_view`, but open cells count as seen when any part of them is
+    /// in view (as walls always do), e.g. a side opening glimpsed from a long
+    /// corridor. Not symmetric, so only for drawing what a viewer can make
+    /// out, never for game rules.
+    pub fn add_glimpses(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>) {
+        self.add(level, x, y, radius, true);
+    }
+
+    fn add(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>, partly: bool) {
         // Nothing can be seen from inside a wall or outside the level.
         if !level.is_open(x, y) {
             return;
@@ -141,6 +218,7 @@ impl Sight {
             sight: self,
             origin: (x, y),
             radius_squared: radius.map(|r| (r as i64) * (r as i64)),
+            partly,
         };
         scan.reveal(x, y);
         for quadrant in Quadrant::ALL {
@@ -164,6 +242,8 @@ struct Scan<'a> {
     sight: &'a mut Sight,
     origin: (i64, i64),
     radius_squared: Option<i64>,
+    /// Reveal open cells partly in view, not only those whose centre is.
+    partly: bool,
 }
 
 /// A quarter of the view: rows run away from the origin in this direction.
@@ -264,7 +344,7 @@ impl Scan<'_> {
         for col in row.columns() {
             let (x, y) = quadrant.cell(self.origin, row.depth, col);
             let open = self.level.is_open(x, y);
-            if !open || row.is_symmetric(col) {
+            if !open || self.partly || row.is_symmetric(col) {
                 self.reveal(x, y);
             }
             if previous_open == Some(false) && open {
@@ -345,6 +425,22 @@ mod tests {
                 "   ##############",
             ]
         );
+    }
+
+    /// A long corridor with a side opening far along it: the opening's
+    /// centre is out of view from the corridor's end, but part of it shows.
+    #[test]
+    fn glimpses_show_side_openings() {
+        let mut level = Level::new(-1, -2, 12, 4);
+        for x in 0..10 {
+            level.set(x, 0, Cell::Floor);
+        }
+        level.set(8, -1, Cell::Floor);
+        let mut sight = Sight::new(&level);
+        sight.add_view(&level, 0, 0, None);
+        assert!(!sight.is_seen(8, -1));
+        sight.add_glimpses(&level, 0, 0, None);
+        assert!(sight.is_seen(8, -1));
     }
 
     #[test]
