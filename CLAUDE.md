@@ -24,12 +24,13 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
 | shared: feature     | `crates/shared/src/feature.rs`  | `docs/context/shared/feature.md`      | World map chunks and their features (kind, position, map seed) |
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, ground, water, lava), rooms, line of sight / light reach |
+| shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes) |
 | shared: site        | `crates/shared/src/site/`       | `docs/context/shared/site.md`         | Sites behind features: building (BSP) and cave generators, levels, stairs |
 | server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server in its own Bevy world: connections, world map chunks, site visits and level cells, saves (world, sites, characters), embedded single player, standalone binary |
-| client: connection  | `crates/client/src/connection/` | `docs/context/client/connection.md`   | Connecting to the server (embedded on native), position reports, `ToServer` / `FromServer` |
+| client: connection  | `crates/client/src/connection/` | `docs/context/client/connection.md`   | Connecting to the server (embedded on native), sending steps and putting refused ones right, `ToServer` / `FromServer` |
 | client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world (and its features) and dungeon, `MapPosition` / `SmoothPosition`, `GameView` state (incl. `Connecting`), `Portal` / `Clickable`, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |
-| client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks   |
+| client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks (announced as `Stepped`) |
 | client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
 | client: view3d      | `crates/client/src/view3d/`     | `docs/context/client/view3d.md`       | Shared 3D camera (turn, tilt, zoom), entity tokens, token clicks, `ViewGrid` |
 | client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window cut to the camera, edge faces, sun, click picking, feature tokens |

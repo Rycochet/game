@@ -17,12 +17,13 @@ pub use link::{ClientLink, Link, LinkError, ServerLink, local_pair};
 use serde::{Deserialize, Serialize};
 
 use crate::feature::{CHUNK_SIZE, ChunkPos, Feature, FeatureKind};
+use crate::movement::Step;
 use crate::rng::Seed;
 use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 4;
+pub const PROTOCOL_VERSION: u32 = 5;
 
 /// How far from the player (east–west and north–south, in grid points) the
 /// client may show anything on the world map: the corners of its window
@@ -33,28 +34,26 @@ pub const WORLD_MAP_SIGHT: i64 = 300;
 /// chunks, so the client already has them when they come into sight.
 pub const WORLD_MAP_PRELOAD: i64 = CHUNK_SIZE;
 
-/// The client reports its world map position again once it is this far
-/// (either way) from the last one it reported. Must stay below
-/// `WORLD_MAP_PRELOAD`, so nothing comes into sight before it is sent.
-pub const WORLD_MAP_REPORT_DISTANCE: i64 = 16;
-
 /// From a client to the server.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ClientMessage {
     /// The first message on a new connection.
     Hello { protocol: u32 },
-    /// TEMPORARY, until movement goes through the server: where the player
-    /// is on the world map, so the server knows which chunks to send.
-    WorldMapPosition { x: i64, y: i64 },
+    /// The player takes a step on the map they are on: the server checks
+    /// it, moves them and sends what comes into sight, then (once a tick)
+    /// `Position`. `map` counts the maps the client has been put on
+    /// (`EnterLevel`, `OnWorldMap`) since `Welcome`, so a step meant for the
+    /// last map is ignored on the next; `number` counts the client's steps.
+    Step { map: u32, number: u32, step: Step },
     /// Go into the site of the feature in this world map chunk (the player
     /// must be at it).
     EnterSite { chunk: ChunkPos },
-    /// TEMPORARY, until movement goes through the server: where the player
-    /// is on the current site level. Only walkable cells are accepted.
-    SitePosition { x: i64, y: i64 },
     /// Use what the player stands on: stairs, or outside ground at the edge
     /// of the level (back to the world map).
     UseExit,
+    /// Developer tools: jump to a point on the world map (answered with
+    /// `OnWorldMap`). Only an embedded (single-player) server accepts it.
+    DevTeleport { x: i64, y: i64 },
     /// Developer tools: go straight into a site of any kind and seed, at
     /// any level. Only an embedded (single-player) server accepts it.
     DevEnterSite {
@@ -79,8 +78,15 @@ pub enum ServerMessage {
     EnterLevel(LevelInfo),
     /// Cells of the current level.
     LevelCells(LevelChunk),
-    /// The player is back on the world map, here.
-    LeftSite { x: i64, y: i64 },
+    /// The player is on the world map, here: back out of a site, or moved
+    /// by dev tools.
+    OnWorldMap { x: i64, y: i64 },
+    /// Where the server has the player on map `map` (see
+    /// `ClientMessage::Step`) once it has dealt with step `step`: the client
+    /// adds the steps it took since, and moves the player there if it shows
+    /// them elsewhere (a step the server refused). Sent once a tick, when
+    /// steps have arrived.
+    Position { map: u32, step: u32, x: i64, y: i64 },
 }
 
 /// What a player knows of one world map chunk. The terrain itself isn't
@@ -130,23 +136,22 @@ mod tests {
     use crate::dungeon::Cell;
     use crate::site::StairsDirection;
 
-    #[test]
-    fn positions_are_reported_before_chunks_come_into_sight() {
-        const { assert!(WORLD_MAP_REPORT_DISTANCE < WORLD_MAP_PRELOAD) };
-    }
-
     /// One of every message, so a message that can't be sent fails here.
     fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         let client = vec![
             ClientMessage::Hello {
                 protocol: PROTOCOL_VERSION,
             },
-            ClientMessage::WorldMapPosition { x: -3, y: 4 },
+            ClientMessage::Step {
+                map: 2,
+                number: 9,
+                step: Step::new(-1, 1).unwrap(),
+            },
             ClientMessage::EnterSite {
                 chunk: ChunkPos { x: 2, y: -1 },
             },
-            ClientMessage::SitePosition { x: 5, y: -6 },
             ClientMessage::UseExit,
+            ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevEnterSite {
                 kind: FeatureKind::Crypt,
                 seed: 3,
@@ -197,7 +202,13 @@ mod tests {
                 }],
                 remembered: true,
             }),
-            ServerMessage::LeftSite { x: 100, y: -4 },
+            ServerMessage::OnWorldMap { x: 100, y: -4 },
+            ServerMessage::Position {
+                map: 1,
+                step: 30,
+                x: -2,
+                y: 5,
+            },
         ];
         (client, server)
     }

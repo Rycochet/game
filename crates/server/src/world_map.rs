@@ -1,24 +1,39 @@
 //! Sending each player the world map chunks coming into their sight, and
 //! remembering the features they have seen.
 
+use shared::movement::{Step, step_on_world_map};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
 
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::storage::KnownFeature;
 
-/// The player says they are at `(x, y)` on the world map (ignored inside a
-/// site): the features now in sight are known from now on, and the chunks
-/// within sight, plus a margin, that the client hasn't been sent yet are
-/// sent. `false` if the client has gone.
-pub(crate) fn moved_to(client: &mut Client, world: &ServerWorld, x: i64, y: i64) -> bool {
+/// The player takes a step on the world map (anywhere goes, so far). `false`
+/// if the client has gone.
+pub(crate) fn stepped(client: &mut Client, world: &ServerWorld, step: Step) -> bool {
+    client.character.world_position = step_on_world_map(client.world_position(), step);
+    client.unsaved = true;
+    look_around(client, world)
+}
+
+/// Developer tools: puts the player at `(x, y)` on the world map (not from
+/// inside a site).
+pub(crate) fn teleport(client: &mut Client, world: &ServerWorld, x: i64, y: i64) -> bool {
     if client.visit.is_some() {
         return true;
     }
-    if client.world_position() != (x, y) {
-        client.character.world_position = (x, y);
-        client.unsaved = true;
-    }
+    client.character.world_position = (x, y);
+    client.unsaved = true;
+    client.changed_map();
+    client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
+}
+
+/// The player is somewhere new on the world map: the features now in sight
+/// are known from now on, and the chunks within sight, plus a margin, that
+/// the client hasn't been sent yet are sent. `false` if the client has
+/// gone.
+pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
+    let (x, y) = client.world_position();
     let sight = WORLD_MAP_SIGHT;
     for chunk in world
         .features
@@ -69,32 +84,39 @@ mod tests {
     }
 
     #[test]
-    fn chunks_in_sight_are_sent_once() {
-        let at = ClientMessage::WorldMapPosition { x: 0, y: 0 };
+    fn chunks_in_sight_are_sent_on_joining_and_once() {
         let mut test = TestClient::new();
-        let first = chunks(&test.send(std::slice::from_ref(&at)));
+        let first = chunks(&test.welcome);
         // Sight plus preload either way, 64 points per chunk: 11-12 chunks.
         let side = first.iter().filter(|c| c.y == 0).count();
         assert!((11..=13).contains(&side), "{side}");
         assert_eq!(first.len(), side * side);
-        // Reporting the same place again sends nothing new.
-        assert!(chunks(&test.send(&[at])).is_empty());
+        // Stepping there and back sends nothing new.
+        assert!(chunks(&test.steps(&[(1, 0), (-1, 0)])).is_empty());
+        assert_eq!(test.client.world_position(), (0, 0));
     }
 
     #[test]
     fn moving_sends_only_the_new_chunks() {
         let mut test = TestClient::new();
-        let first = chunks(&test.send(&[ClientMessage::WorldMapPosition { x: 0, y: 0 }]));
-        let more = chunks(&test.send(&[ClientMessage::WorldMapPosition { x: 0, y: 64 }]));
+        let first = chunks(&test.welcome);
+        let more = chunks(&test.walk_to((0, 64)));
         assert!(!more.is_empty());
         let all: BTreeSet<_> = first.iter().chain(&more).collect();
         assert_eq!(all.len(), first.len() + more.len());
     }
 
     #[test]
-    fn features_in_sight_are_known() {
+    fn dev_teleports_say_where_and_send_what_is_there() {
         let mut test = TestClient::new();
-        test.send(&[ClientMessage::WorldMapPosition { x: 0, y: 0 }]);
+        let answers = test.send(&[ClientMessage::DevTeleport { x: 5000, y: 20 }]);
+        assert_eq!(answers[0], ServerMessage::OnWorldMap { x: 5000, y: 20 });
+        assert!(!chunks(&answers).is_empty());
+    }
+
+    #[test]
+    fn features_in_sight_are_known() {
+        let test = TestClient::new();
         let known = &test.client.character.features;
         assert!(!known.is_empty());
         // Only chunks with a feature, and only those in sight, not the

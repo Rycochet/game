@@ -8,18 +8,20 @@
 //! `GameView::Connecting`. The embedded server saves in its own data folder;
 //! on quitting, the client hangs up and waits for it to save.
 //!
-//! It reports where the player is (TEMPORARY, until movement goes through
-//! the server), and the server sends what comes into sight. Other modules
+//! It sends the player's steps (`player::Stepped`); the server checks them,
+//! sends what comes into sight and says where it has the player, and the
+//! player is moved back if a step was refused (`prediction`). Other modules
 //! send with `ToServer` and read the server's map messages as `FromServer`.
 
+mod prediction;
+
 use bevy::prelude::*;
-use shared::protocol::{
-    ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage, WORLD_MAP_REPORT_DISTANCE,
-};
+use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage};
 use shared::world::WORLD_MAP_VERSION;
 
 use crate::common::{CurrentWorld, GameView, MapPosition};
-use crate::player::{Player, PlayerSystems};
+use crate::player::{Player, PlayerSystems, Stepped};
+use prediction::{Prediction, correction};
 
 pub struct ConnectionPlugin;
 
@@ -39,6 +41,7 @@ impl Plugin for ConnectionPlugin {
 
         app.add_message::<ToServer>()
             .add_message::<FromServer>()
+            .init_resource::<Prediction>()
             .add_systems(
                 Startup,
                 say_hello.run_if(resource_exists::<ServerConnection>),
@@ -47,14 +50,9 @@ impl Plugin for ConnectionPlugin {
                 PreUpdate,
                 receive.run_if(resource_exists::<ServerConnection>),
             )
-            .add_systems(
-                Update,
-                (
-                    report_world_map_position.run_if(in_state(GameView::WorldMap)),
-                    report_site_position.run_if(in_state(GameView::Dungeon)),
-                )
-                    .after(PlayerSystems::Travel),
-            )
+            .add_systems(Update, send_steps.after(PlayerSystems::Travel))
+            // After this frame's steps, which were still on the last map.
+            .add_systems(PostUpdate, count_map_changes)
             // Last, so everything written this frame goes, in order.
             .add_systems(
                 Last,
@@ -70,7 +68,7 @@ impl Plugin for ConnectionPlugin {
 pub struct ToServer(pub ClientMessage);
 
 /// A message from the server about maps (`EnterLevel`, `LevelCells`,
-/// `LeftSite`), for `site`. The rest are handled here.
+/// `OnWorldMap`), for `site`. The rest are handled here.
 #[derive(Message, Clone, Debug)]
 pub struct FromServer(pub ServerMessage);
 
@@ -95,14 +93,20 @@ fn say_hello(connection: Res<ServerConnection>) {
 }
 
 /// Handles every message that has arrived since the last frame.
+#[allow(clippy::too_many_arguments)]
 fn receive(
     mut commands: Commands,
     connection: Res<ServerConnection>,
     mut world: Option<ResMut<CurrentWorld>>,
+    view: Res<State<GameView>>,
     mut next_view: ResMut<NextState<GameView>>,
     mut from_server: MessageWriter<FromServer>,
+    mut prediction: ResMut<Prediction>,
     mut player: Query<&mut MapPosition, With<Player>>,
 ) {
+    // A world joined now: its chunks follow straight away, before the
+    // resource can be added.
+    let mut joined: Option<CurrentWorld> = None;
     loop {
         match connection.link.receive() {
             Ok(Some(ServerMessage::Welcome { world: info, x, y })) => {
@@ -114,7 +118,7 @@ fn receive(
                     continue;
                 }
                 info!("Joined world {:?}", info.id);
-                commands.insert_resource(CurrentWorld::new(&info));
+                joined = Some(CurrentWorld::new(&info));
                 // Where the player left off (`EnterLevel` follows if they
                 // were in a site).
                 for mut position in &mut player {
@@ -125,64 +129,74 @@ fn receive(
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");
             }
-            Ok(Some(ServerMessage::WorldChunk(chunk))) => match world.as_mut() {
-                Some(world) => world.features.insert(chunk.chunk, chunk.feature),
-                None => warn!("A world map chunk arrived before the world"),
-            },
+            Ok(Some(ServerMessage::WorldChunk(chunk))) => {
+                match joined.as_mut().or(world.as_deref_mut()) {
+                    Some(world) => world.features.insert(chunk.chunk, chunk.feature),
+                    None => warn!("A world map chunk arrived before the world"),
+                }
+            }
+            Ok(Some(ServerMessage::Position { map, step, x, y })) => {
+                let Some(predicted) = prediction.confirmed(map, step, (x, y)) else {
+                    continue;
+                };
+                // The world map wraps; site levels don't.
+                let width = match view.get() {
+                    GameView::WorldMap => world.as_ref().map(|w| w.surface.width()),
+                    _ => None,
+                };
+                for mut position in &mut player {
+                    let shown = (position.x, position.y);
+                    if let Some((x, y)) = correction(shown, predicted, width) {
+                        info!("The server has the player at ({x}, {y}): a step was refused");
+                        *position = MapPosition { x, y };
+                    }
+                }
+            }
             Ok(Some(
                 message @ (ServerMessage::EnterLevel(_)
                 | ServerMessage::LevelCells(_)
-                | ServerMessage::LeftSite { .. }),
+                | ServerMessage::OnWorldMap { .. }),
             )) => {
                 from_server.write(FromServer(message));
             }
-            Ok(None) => return,
+            Ok(None) => break,
             Err(error) => {
                 error!("Lost the connection to the server ({error:?})");
                 commands.remove_resource::<ServerConnection>();
-                return;
+                break;
             }
         }
     }
-}
-
-/// Tells the server where the player is on the world map: on coming to it,
-/// and whenever they are `WORLD_MAP_REPORT_DISTANCE` from the last report.
-fn report_world_map_position(
-    mut to_server: MessageWriter<ToServer>,
-    player: Single<&MapPosition, With<Player>>,
-    view: Res<State<GameView>>,
-    mut reported: Local<Option<MapPosition>>,
-) {
-    // The view has changed since this last ran: back from a site, whose
-    // positions are on another grid.
-    if view.is_changed() {
-        *reported = None;
-    }
-    let far = |last: &MapPosition| {
-        (player.x - last.x).abs() >= WORLD_MAP_REPORT_DISTANCE
-            || (player.y - last.y).abs() >= WORLD_MAP_REPORT_DISTANCE
-    };
-    if reported.as_ref().is_none_or(far) {
-        to_server.write(ToServer(ClientMessage::WorldMapPosition {
-            x: player.x,
-            y: player.y,
-        }));
-        *reported = Some(**player);
+    if let Some(world) = joined {
+        commands.insert_resource(world);
     }
 }
 
-/// Tells the server where the player is in a site, whenever they move to
-/// another cell.
-fn report_site_position(
+/// Sends the steps the player took this frame, keeping them until the
+/// server confirms them.
+fn send_steps(
+    mut stepped: MessageReader<Stepped>,
+    mut prediction: ResMut<Prediction>,
     mut to_server: MessageWriter<ToServer>,
-    player: Single<Ref<MapPosition>, With<Player>>,
 ) {
-    if player.is_changed() {
-        to_server.write(ToServer(ClientMessage::SitePosition {
-            x: player.x,
-            y: player.y,
-        }));
+    for &Stepped(step) in stepped.read() {
+        to_server.write(ToServer(prediction.step(step)));
+    }
+}
+
+/// The server has put the player on another map (applied by `site` this
+/// frame): steps from now on are on it.
+fn count_map_changes(
+    mut from_server: MessageReader<FromServer>,
+    mut prediction: ResMut<Prediction>,
+) {
+    for FromServer(message) in from_server.read() {
+        if matches!(
+            message,
+            ServerMessage::EnterLevel(_) | ServerMessage::OnWorldMap { .. }
+        ) {
+            prediction.changed_map();
+        }
     }
 }
 
@@ -193,24 +207,10 @@ fn send(connection: Res<ServerConnection>, mut to_server: MessageReader<ToServer
     }
 }
 
-/// Quitting: says exactly where the player is on the world map (it is only
-/// reported every few steps), then hangs up, so the server knows the player
-/// has gone (and an embedded one saves and stops; this waits for it).
-fn hang_up_on_exit(
-    mut commands: Commands,
-    mut exit: MessageReader<AppExit>,
-    connection: Res<ServerConnection>,
-    view: Res<State<GameView>>,
-    player: Single<&MapPosition, With<Player>>,
-) {
-    if exit.read().next().is_none() {
-        return;
+/// Quitting: hangs up, so the server knows the player has gone (and an
+/// embedded one saves and stops; this waits for it).
+fn hang_up_on_exit(mut commands: Commands, mut exit: MessageReader<AppExit>) {
+    if exit.read().next().is_some() {
+        commands.remove_resource::<ServerConnection>();
     }
-    if *view.get() == GameView::WorldMap {
-        connection.link.send(&ClientMessage::WorldMapPosition {
-            x: player.x,
-            y: player.y,
-        });
-    }
-    commands.remove_resource::<ServerConnection>();
 }

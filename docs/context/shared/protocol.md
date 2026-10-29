@@ -10,10 +10,10 @@ The messages between clients and the server, and the `Link` that carries them. C
 
 ## Public API
 
-- `PROTOCOL_VERSION` (4): bump whenever a message changes; the server refuses other versions.
-- `WORLD_MAP_SIGHT` (300): how far (each way) the client may show anything on the world map. `WORLD_MAP_PRELOAD` (one chunk, 64): how much further the server sends. `WORLD_MAP_REPORT_DISTANCE` (16): how far the player moves before the client reports again; must stay below the preload.
-- `ClientMessage::Hello { protocol }`: the first message on a connection. `ClientMessage::WorldMapPosition { x, y }` and `SitePosition { x, y }`: TEMPORARY, until movement goes through the server: where the player is (the server accepts only walkable site cells). `EnterSite { chunk }` (the player must be within `ENTER_REACH` of its feature), `UseExit` (the stairs or edge ground the player stands on), `DevEnterSite { kind, seed, level }` (only an embedded server accepts it).
-- `ServerMessage::Welcome { world: WorldInfo, x, y }` (the world, and where the player is on its world map: where they left off; `EnterLevel` follows if they were in a site), `Refused(reason)`, `WorldChunk(WorldChunk)`, `EnterLevel(LevelInfo)` (the player is now on this level: kind, building or not, index of how many, bounds, arrival cell), `LevelCells(LevelChunk)`, `LeftSite { x, y }` (back on the world map, at the feature).
+- `PROTOCOL_VERSION` (5): bump whenever a message changes; the server refuses other versions.
+- `WORLD_MAP_SIGHT` (300): how far (each way) the client may show anything on the world map. `WORLD_MAP_PRELOAD` (one chunk, 64): how much further the server sends.
+- `ClientMessage::Hello { protocol }`: the first message on a connection. `ClientMessage::Step { map, number, step }`: a step (`movement::Step`) on the current map; `map` counts the maps the server has put the player on since `Welcome` (each `EnterLevel` and `OnWorldMap`), so steps meant for the last map are ignored; `number` counts the client's steps. `EnterSite { chunk }` (the player must be within `ENTER_REACH` of its feature), `UseExit` (the stairs or edge ground the player stands on), `DevTeleport { x, y }` (to a world map point, answered with `OnWorldMap`) and `DevEnterSite { kind, seed, level }`: only an embedded server accepts them.
+- `ServerMessage::Welcome { world: WorldInfo, x, y }` (the world, and where the player is on its world map: where they left off; `EnterLevel` follows if they were in a site), `Refused(reason)`, `WorldChunk(WorldChunk)`, `EnterLevel(LevelInfo)` (the player is now on this level: kind, building or not, index of how many, bounds, arrival cell), `LevelCells(LevelChunk)`, `OnWorldMap { x, y }` (on the world map: out of a site, at the feature, or teleported), `Position { map, step, x, y }` (where the server has the player once it has dealt with step `step`, sent once a tick when steps arrived: the client adds its later steps and moves the player there if it shows them elsewhere).
 - `WorldInfo { id, terrain_seed, world_map_version }`.
 - `WorldChunk { chunk, feature: Option<SeenFeature> }`: what the player knows of a world map chunk (no terrain: the client generates it). `SeenFeature { kind, chunk, x, y }` (`From<Feature>`): never the map seed. Later: the chunk's changes and per-player state (visited, attitude).
 - `LevelChunk { chunk, mask: u64, cells, stairs, remembered }`: some cells of an 8×8 chunk (bit `row × 8 + column`), as the player would see them (secret doors are wall), with the stairs on them; `remembered` for cells seen on an earlier visit, sent on arriving. `SeenStairs { x, y, direction, descends }`: where stairs lead stays with the server.
@@ -21,11 +21,11 @@ The messages between clients and the server, and the `Link` that carries them. C
 
 ## Depends on
 
-- `shared::rng` (`Seed`), `shared::world` (`WorldId`), `shared::feature` (`ChunkPos`, `Feature`, `FeatureKind`, `CHUNK_SIZE`), `shared::dungeon` (`Cell`), `shared::site` (`StairsDirection`), `serde`, `postcard`, `std::sync::mpsc`.
+- `shared::movement` (`Step`), `shared::rng` (`Seed`), `shared::world` (`WorldId`), `shared::feature` (`ChunkPos`, `Feature`, `FeatureKind`, `CHUNK_SIZE`), `shared::dungeon` (`Cell`), `shared::site` (`StairsDirection`), `serde`, `postcard`, `std::sync::mpsc`.
 
 ## Used by
 
-- `server` (`connections`, `world_map`, `sites`, `embedded`), client `connection` (messages, `WORLD_MAP_REPORT_DISTANCE`), `common` (`WorldInfo`, `SeenFeature`, `LevelInfo`, `LevelChunk`, `SeenStairs`), `site`, `dev_tools`, `dungeon_map` (`SeenStairs`), `world_map` (`SeenFeature`, `WORLD_MAP_SIGHT`).
+- `server` (`connections`, `world_map`, `sites`, `embedded`), client `connection` (messages), `common` (`WorldInfo`, `SeenFeature`, `LevelInfo`, `LevelChunk`, `SeenStairs`), `site`, `dev_tools`, `dungeon_map` (`SeenStairs`), `world_map` (`SeenFeature`, `WORLD_MAP_SIGHT`).
 
 ## Notes
 

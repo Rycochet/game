@@ -8,12 +8,12 @@ Demo modes toggled by keys, for showing off and testing the views. Works in nati
 
 ## Public API
 
-- `AutoWalk(bool)` (resource): while on, the player walks east one step per frame (world map only: it ignores walls). **G** toggles.
+- `AutoWalk(bool)` (resource): while on, the player walks east one step per frame (a `player::TakeStep`; world map only). **G** toggles.
 - `TemperatureCycle` (resource): `Off`, `Cooling`, `Warming`. **T** starts a cycle: `Weather::snow_line` falls from `NORMAL_SNOW_LINE` (128) to 0 (everything frozen), then rises back and stops. T during a cycle skips to warming.
 
 ## Depends on
 
-- `common` (`Weather`, `NORMAL_SNOW_LINE`, `Token`, `GameView`, `MapPosition`), `player` (`Player`, `PlayerSystems`: `auto_walk` runs in `Input`).
+- `common` (`Weather`, `NORMAL_SNOW_LINE`, `Token`, `GameView`), `player` (`Player`, `PlayerSystems`, `TakeStep`: `auto_walk` runs in `Input`), `shared::movement`.
 
 ## Used by
 

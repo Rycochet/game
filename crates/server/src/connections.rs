@@ -45,6 +45,11 @@ pub struct Client {
     pub(crate) visit: Option<Visit>,
     /// The world map chunks it has been sent on this connection.
     pub(crate) world_chunks: BTreeSet<ChunkPos>,
+    /// How many maps the player has been put on since `Welcome` (see
+    /// `ClientMessage::Step`).
+    map: u32,
+    /// The last step dealt with this tick, to send `Position` for.
+    last_step: Option<u32>,
 }
 
 impl Client {
@@ -57,12 +62,35 @@ impl Client {
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),
+            map: 0,
+            last_step: None,
         }
     }
 
     /// Where the player is on the world map (at the feature, in a site).
     pub(crate) fn world_position(&self) -> (i64, i64) {
         self.character.world_position
+    }
+
+    /// The player is being put on another map (the message saying so is
+    /// sent next): steps the client took on the last one no longer count.
+    pub(crate) fn changed_map(&mut self) {
+        self.map += 1;
+        self.last_step = None;
+    }
+
+    /// If steps arrived this tick, tells the client where the player is
+    /// after the last of them. `false` if the client has gone.
+    fn send_position(&mut self) -> bool {
+        let Some(step) = self.last_step.take() else {
+            return true;
+        };
+        let (x, y) = match &self.visit {
+            Some(visit) => visit.position(),
+            None => self.world_position(),
+        };
+        let map = self.map;
+        self.link.send(&ServerMessage::Position { map, step, x, y })
     }
 
     /// Saves the character if anything changed (only once welcomed: before
@@ -92,7 +120,7 @@ pub(crate) fn handle_messages(
                         break false;
                     }
                 }
-                Ok(None) => break true,
+                Ok(None) => break client.send_position(),
                 Err(error) => {
                     info!("A client left ({error:?})");
                     break false;
@@ -135,14 +163,24 @@ pub(crate) fn answer(
         ClientMessage::Hello { .. } if client.welcomed => refuse(client, "hello again?".into()),
         ClientMessage::Hello { .. } => welcome(client, world),
         _ if !client.welcomed => refuse(client, "say hello first".into()),
-        ClientMessage::WorldMapPosition { x, y } => world_map::moved_to(client, world, x, y),
+        // Meant for a map the player has since left.
+        ClientMessage::Step { map, .. } if map != client.map => true,
+        ClientMessage::Step { number, step, .. } => {
+            client.last_step = Some(number);
+            match client.visit {
+                Some(_) => sites::stepped(client, step),
+                None => world_map::stepped(client, world, step),
+            }
+        }
         ClientMessage::EnterSite { chunk } => sites::enter_feature(client, world, chunk),
-        ClientMessage::SitePosition { x, y } => sites::moved_to(client, x, y),
         ClientMessage::UseExit => sites::use_exit(client, world),
+        ClientMessage::DevTeleport { x, y } if options.dev_tools => {
+            world_map::teleport(client, world, x, y)
+        }
         ClientMessage::DevEnterSite { kind, seed, level } if options.dev_tools => {
             sites::dev_enter(client, world, kind, seed, level)
         }
-        ClientMessage::DevEnterSite { .. } => {
+        ClientMessage::DevEnterSite { .. } | ClientMessage::DevTeleport { .. } => {
             refuse(client, "this server doesn't allow dev tools".into())
         }
     }
@@ -167,12 +205,13 @@ fn welcome(client: &mut Client, world: &mut ServerWorld) -> bool {
     }
     match client.character.visit.take() {
         Some(visit) => sites::resume(client, world, visit),
-        None => true,
+        None => world_map::look_around(client, world),
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use shared::movement::{Step, steps_between};
     use shared::protocol::{ClientLink, local_pair};
     use shared::world::WorldSeed;
 
@@ -183,6 +222,9 @@ pub(crate) mod tests {
         pub world: ServerWorld,
         pub client: Client,
         pub end: ClientLink,
+        /// The answers to `Hello`.
+        pub welcome: Vec<ServerMessage>,
+        next_step: u32,
     }
 
     impl TestClient {
@@ -198,12 +240,15 @@ pub(crate) mod tests {
                 world,
                 client: Client::new(server_link, CharacterName::new("tester").unwrap()),
                 end,
+                welcome: Vec::new(),
+                next_step: 0,
             };
-            test.send(&[HELLO]);
+            test.welcome = test.send(&[HELLO]);
             test
         }
 
-        /// Sends messages, and returns everything answered since last time.
+        /// Sends messages (in one tick), and returns everything answered
+        /// since last time.
         pub fn send(&mut self, messages: &[ClientMessage]) -> Vec<ServerMessage> {
             let options = ServerOptions {
                 dev_tools: true,
@@ -212,7 +257,43 @@ pub(crate) mod tests {
             for message in messages {
                 answer(&mut self.client, message.clone(), &mut self.world, &options);
             }
+            self.client.send_position();
             std::iter::from_fn(|| self.end.receive().unwrap()).collect()
+        }
+
+        /// Takes steps (`(dx, dy)`) on the current map, numbered on from
+        /// the last ones, and returns the answers.
+        pub fn steps(&mut self, steps: &[(i64, i64)]) -> Vec<ServerMessage> {
+            let messages: Vec<_> = steps
+                .iter()
+                .map(|&(dx, dy)| {
+                    self.next_step += 1;
+                    ClientMessage::Step {
+                        map: self.client.map,
+                        number: self.next_step,
+                        step: Step::new(dx, dy).expect("a step"),
+                    }
+                })
+                .collect();
+            self.send(&messages)
+        }
+
+        /// How many maps the player has been put on (`Step::map`).
+        pub fn client_map(&self) -> u32 {
+            self.client.map
+        }
+
+        /// Walks along the steps from where the player is to `to`.
+        pub fn walk_to(&mut self, to: (i64, i64)) -> Vec<ServerMessage> {
+            let from = match &self.client.visit {
+                Some(visit) => visit.position(),
+                None => self.client.world_position(),
+            };
+            let steps: Vec<_> = steps_between(from, to)
+                .into_iter()
+                .map(|s| (s.dx(), s.dy()))
+                .collect();
+            self.steps(&steps)
         }
 
         /// The client leaves: saves it (as `handle_messages` does), and
@@ -238,8 +319,41 @@ pub(crate) mod tests {
             dev_tools: false,
             exit_when_alone: false,
         };
-        let message = ClientMessage::WorldMapPosition { x: 0, y: 0 };
+        let message = ClientMessage::UseExit;
         assert!(!answer(&mut client, message, &mut world, &options));
         assert!(matches!(end.receive(), Ok(Some(ServerMessage::Refused(_)))));
+    }
+
+    #[test]
+    fn steps_are_answered_with_the_position_once_a_tick() {
+        let mut test = TestClient::new();
+        let answers = test.steps(&[(1, 0), (1, 1), (0, 1)]);
+        let positions: Vec<_> = answers
+            .iter()
+            .filter(|a| matches!(a, ServerMessage::Position { .. }))
+            .collect();
+        assert_eq!(
+            positions,
+            [&ServerMessage::Position {
+                map: 0,
+                step: 3,
+                x: 2,
+                y: 2
+            }]
+        );
+        // Nothing moved, nothing to say.
+        assert!(test.send(&[]).is_empty());
+    }
+
+    #[test]
+    fn steps_meant_for_another_map_are_ignored() {
+        let mut test = TestClient::new();
+        let stale = ClientMessage::Step {
+            map: 7,
+            number: 1,
+            step: Step::new(1, 0).unwrap(),
+        };
+        assert!(test.send(&[stale]).is_empty());
+        assert_eq!(test.client.world_position(), (0, 0));
     }
 }

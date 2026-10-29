@@ -9,6 +9,7 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::feature::{ChunkPos, Feature, FeatureKind};
+use shared::movement::{Step, step_on_level};
 use shared::protocol::{
     ENTER_REACH, LEVEL_PRELOAD_STEPS, LevelChunk, LevelInfo, SeenStairs, ServerMessage, level_chunk,
 };
@@ -18,6 +19,7 @@ use shared::site::{Exit, Site, SiteLevel, leads_out};
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, VisitSave, now};
+use crate::world_map::look_around;
 
 /// A player's stay on a site level.
 pub(crate) struct Visit {
@@ -36,6 +38,11 @@ pub(crate) struct Visit {
 }
 
 impl Visit {
+    /// Where the player is on the level.
+    pub(crate) fn position(&self) -> (i64, i64) {
+        self.position
+    }
+
     /// What is saved with the character.
     pub(crate) fn save(&self) -> VisitSave {
         VisitSave {
@@ -145,20 +152,20 @@ fn enter_site(
     enter_level(client, world, feature, id, site, index, arrival)
 }
 
-/// The player says they are at `(x, y)` on their level: accepted if it is a
-/// walkable cell, then sends what they now see or are about to.
-pub(crate) fn moved_to(client: &mut Client, x: i64, y: i64) -> bool {
+/// The player takes a step on their level: taken if it leads onto a
+/// walkable cell (otherwise `Position` puts the client right), then sends
+/// what they now see or are about to.
+pub(crate) fn stepped(client: &mut Client, step: Step) -> bool {
     let Some(visit) = &mut client.visit else {
         return true;
     };
-    if !visit.level.level.is_walkable(x, y) {
-        warn!("A client said it was on an unwalkable cell ({x}, {y})");
+    let Some(position) = step_on_level(&visit.level.level, visit.position, step) else {
+        let (x, y) = step.from(visit.position);
+        info!("Refused a step onto an unwalkable cell ({x}, {y})");
         return true;
-    }
-    if visit.position != (x, y) {
-        visit.position = (x, y);
-        client.unsaved = true;
-    }
+    };
+    visit.position = position;
+    client.unsaved = true;
     update_sight(client)
 }
 
@@ -194,7 +201,8 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
         Exit::WorldMap => {
             let (x, y) = (visit.feature.x, visit.feature.y);
             client.character.world_position = (x, y);
-            client.link.send(&ServerMessage::LeftSite { x, y })
+            client.changed_map();
+            client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
         }
     }
 }
@@ -264,6 +272,7 @@ fn enter_level(
         position,
         sent: CellMasks::new(),
     };
+    client.changed_map();
     if !client.link.send(&ServerMessage::EnterLevel(info)) {
         return false;
     }
@@ -416,6 +425,67 @@ mod tests {
         }])
     }
 
+    /// The steps of a shortest walk from `from` to `to` on `level`.
+    fn path(level: &Level, from: (i64, i64), to: (i64, i64)) -> Vec<(i64, i64)> {
+        let mut came_from = std::collections::BTreeMap::from([(from, from)]);
+        let mut queue = VecDeque::from([from]);
+        while let Some(at) = queue.pop_front() {
+            if at == to {
+                break;
+            }
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    let Some(step) = Step::new(dx, dy) else {
+                        continue;
+                    };
+                    if let Some(next) = step_on_level(level, at, step)
+                        && !came_from.contains_key(&next)
+                    {
+                        came_from.insert(next, at);
+                        queue.push_back(next);
+                    }
+                }
+            }
+        }
+        let mut steps = Vec::new();
+        let mut at = to;
+        while at != from {
+            let back = came_from[&at];
+            steps.push((at.0 - back.0, at.1 - back.1));
+            at = back;
+        }
+        steps.reverse();
+        steps
+    }
+
+    /// Walks the player to `to` on their level.
+    fn walk(test: &mut TestClient, to: (i64, i64)) -> Vec<ServerMessage> {
+        let visit = test.client.visit.as_ref().unwrap();
+        let steps = path(&visit.level.level, visit.position, to);
+        test.steps(&steps)
+    }
+
+    /// A walkable cell next to the player, and the step there.
+    fn walkable_neighbour(test: &TestClient) -> (i64, i64) {
+        let visit = test.client.visit.as_ref().unwrap();
+        [
+            (1, 0),
+            (0, 1),
+            (-1, 0),
+            (0, -1),
+            (1, 1),
+            (-1, -1),
+            (1, -1),
+            (-1, 1),
+        ]
+        .into_iter()
+        .find(|&(dx, dy)| {
+            let step = Step::new(dx, dy).unwrap();
+            step_on_level(&visit.level.level, visit.position, step).is_some()
+        })
+        .expect("room to move")
+    }
+
     fn cells(answers: &[ServerMessage]) -> Vec<(i64, i64, Cell, bool)> {
         answers
             .iter()
@@ -454,10 +524,10 @@ mod tests {
     fn cells_are_sent_once_and_remembered_next_time() {
         let mut test = TestClient::new();
         let first = cells(&enter(&mut test, 0));
-        // Standing still sends nothing more.
-        let visit = test.client.visit.as_ref().unwrap();
-        let (x, y) = visit.position;
-        assert!(cells(&test.send(&[ClientMessage::SitePosition { x, y }])).is_empty());
+        // A step there and back: back where everything was sent already.
+        let (dx, dy) = walkable_neighbour(&test);
+        test.steps(&[(dx, dy)]);
+        assert!(cells(&test.steps(&[(-dx, -dy)])).is_empty());
         // Coming back: what was seen arrives remembered, before anything new.
         let again = cells(&enter(&mut test, 0));
         assert!(again.iter().any(|&(_, _, _, remembered)| remembered));
@@ -466,17 +536,34 @@ mod tests {
     }
 
     #[test]
-    fn unwalkable_positions_are_ignored() {
+    fn steps_into_walls_are_refused() {
         let mut test = TestClient::new();
         enter(&mut test, 0);
-        let before = test.client.visit.as_ref().unwrap().position;
-        let (min_x, min_y, _, _) = test.client.visit.as_ref().unwrap().level.level.bounds();
-        // The level's corner is wall (or ground outside a building).
-        test.send(&[ClientMessage::SitePosition {
-            x: min_x - 5,
-            y: min_y - 5,
-        }]);
-        assert_eq!(test.client.visit.as_ref().unwrap().position, before);
+        let visit = test.client.visit.as_ref().unwrap();
+        let (x, y) = visit.position;
+        let level = visit.level.level.clone();
+        let (dx, dy) = [
+            (1, 0),
+            (0, 1),
+            (-1, 0),
+            (0, -1),
+            (1, 1),
+            (-1, -1),
+            (1, -1),
+            (-1, 1),
+        ]
+        .into_iter()
+        .find(|&(dx, dy)| !level.is_walkable(x + dx, y + dy))
+        .expect("a wall nearby");
+        let answers = test.steps(&[(dx, dy)]);
+        assert_eq!(test.client.visit.as_ref().unwrap().position, (x, y));
+        // The client is told where the player still is.
+        assert!(answers.contains(&ServerMessage::Position {
+            map: test.client_map(),
+            step: 1,
+            x,
+            y
+        }));
     }
 
     #[test]
@@ -486,10 +573,11 @@ mod tests {
         // A castle has floors above: take the first stairs.
         let visit = test.client.visit.as_ref().unwrap();
         let stairs = visit.level.stairs[0];
-        test.send(&[ClientMessage::SitePosition {
-            x: stairs.x,
-            y: stairs.y,
-        }]);
+        walk(&mut test, (stairs.x, stairs.y));
+        assert_eq!(
+            test.client.visit.as_ref().unwrap().position,
+            (stairs.x, stairs.y)
+        );
         let answers = test.send(&[ClientMessage::UseExit]);
         let Some(ServerMessage::EnterLevel(info)) = answers.first() else {
             panic!("{answers:?}");
@@ -505,10 +593,22 @@ mod tests {
         while !leads_out(&level, out.0, out.1) && level.is_walkable(out.0, out.1 + 1) {
             out.1 += 1;
         }
-        test.send(&[ClientMessage::SitePosition { x: out.0, y: out.1 }]);
+        walk(&mut test, out);
         let answers = test.send(&[ClientMessage::UseExit]);
-        assert!(matches!(answers[..], [ServerMessage::LeftSite { .. }]));
+        assert!(matches!(
+            answers[..],
+            [ServerMessage::OnWorldMap { .. }, ..]
+        ));
         assert!(test.client.visit.is_none());
+        // Steps taken in the site before leaving don't count out here.
+        let stale = ClientMessage::Step {
+            map: test.client_map() - 1,
+            number: 99,
+            step: Step::new(1, 0).unwrap(),
+        };
+        let at = test.client.world_position();
+        test.send(&[stale]);
+        assert_eq!(test.client.world_position(), at);
     }
 
     /// A world saved in `folder`.
@@ -545,7 +645,7 @@ mod tests {
     fn welcome_sends_the_level_after_the_world() {
         let folder = TestFolder::new();
         let mut test = TestClient::of(saved_world(&folder));
-        test.send(&[ClientMessage::WorldMapPosition { x: 70, y: -3 }]);
+        test.send(&[ClientMessage::DevTeleport { x: 70, y: -3 }]);
         enter(&mut test, 0);
         let world = test.leave();
         let (end, link) = shared::protocol::local_pair();

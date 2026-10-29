@@ -74,7 +74,7 @@ mod tests {
         assert!(client.send(&ClientMessage::Hello {
             protocol: PROTOCOL_VERSION
         }));
-        assert!(client.send(&ClientMessage::WorldMapPosition { x: 5, y: 6 }));
+        assert!(client.send(&ClientMessage::DevTeleport { x: 5, y: 6 }));
         let deadline = Instant::now() + Duration::from_secs(10);
         let answer = loop {
             if let Some(message) = client.receive().expect("still connected") {

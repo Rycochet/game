@@ -80,9 +80,7 @@ fn use_on_arrival(
     let target = heading.0.take().and_then(|entity| portals.get(entity).ok());
     match target {
         Some((position, Portal::Feature(feature))) if (position.x, position.y) == (x, y) => {
-            // Positions are only reported every few steps: say exactly
-            // where, so the server knows the player is at the feature.
-            to_server.write(ToServer(ClientMessage::WorldMapPosition { x, y }));
+            // After the steps there, so the server has the player at it.
             to_server.write(ToServer(ClientMessage::EnterSite {
                 chunk: feature.chunk,
             }));
@@ -100,7 +98,7 @@ fn use_on_arrival(
 }
 
 /// What the server says about maps: the player is on a new level (and its
-/// cells), or back on the world map.
+/// cells), or on the world map (out of a site, or moved by dev tools).
 fn change_map(
     mut from_server: MessageReader<FromServer>,
     mut dungeon: ResMut<CurrentDungeon>,
@@ -122,14 +120,20 @@ fn change_map(
                 next.set(GameView::Dungeon);
             }
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
-            &ServerMessage::LeftSite { x, y } => {
-                // The world wraps east-west: come out in the same copy of
-                // the planet the player went in from.
+            &ServerMessage::OnWorldMap { x, y } => {
+                // The world wraps east-west: stay in the same copy of the
+                // planet the player went in from (or is on).
                 let width = world.as_ref().map_or(i64::MAX, |w| w.surface.width());
-                let from = world_return.0.x;
+                let from = match view.get() {
+                    GameView::WorldMap => player.x,
+                    _ => world_return.0.x,
+                };
                 let shift = (from - x + width / 2).div_euclid(width) * width;
                 **player = MapPosition { x: x + shift, y };
-                next.set(GameView::WorldMap);
+                // (Moved on the world map: no need to set it up again.)
+                if *view.get() != GameView::WorldMap {
+                    next.set(GameView::WorldMap);
+                }
             }
             _ => {}
         }

@@ -9,8 +9,10 @@
 
 use bevy::prelude::*;
 
-use crate::common::{GameView, MapPosition, NORMAL_SNOW_LINE, Token, Weather};
-use crate::player::{Player, PlayerSystems};
+use shared::movement::Step;
+
+use crate::common::{GameView, NORMAL_SNOW_LINE, Token, Weather};
+use crate::player::{Player, PlayerSystems, TakeStep};
 
 /// How fast the snow line moves during the temperature cycle, in height units
 /// per second (the prototype moved 1 unit every 166 ms).
@@ -25,7 +27,7 @@ impl Plugin for DemoPlugin {
             .add_systems(Update, (toggle_modes, temperature_cycle, cycle_token))
             .add_systems(
                 Update,
-                // It ignores walls, so only on the world map.
+                // Only on the world map: in a site it would stop at a wall.
                 auto_walk
                     .run_if(in_state(GameView::WorldMap))
                     .in_set(PlayerSystems::Input),
@@ -63,9 +65,9 @@ fn toggle_modes(
     }
 }
 
-fn auto_walk(walk: Res<AutoWalk>, mut player: Single<&mut MapPosition, With<Player>>) {
+fn auto_walk(walk: Res<AutoWalk>, mut steps: MessageWriter<TakeStep>) {
     if walk.0 {
-        player.x += 1;
+        steps.write(TakeStep(Step::new(1, 0).expect("a step")));
     }
 }
 

@@ -1,8 +1,13 @@
 //! The player-controlled character: keyboard steps and travelling to a
 //! clicked point. See `docs/context/client/player.md`.
+//!
+//! Every step the player takes is announced (`Stepped`), for `connection` to
+//! send to the server, which checks it: what is shown here is a prediction
+//! the server may put right.
 
 use bevy::math::DVec2;
 use bevy::prelude::*;
+use shared::movement::{Step, step_on_level, steps_between};
 
 use crate::common::{
     CurrentDungeon, GameView, Icon, LightSource, MapPosition, SmoothPosition, Token, ViewFacing,
@@ -29,6 +34,8 @@ impl Plugin for PlayerPlugin {
         )))
         .add_message::<TravelTo>()
         .add_message::<Arrived>()
+        .add_message::<TakeStep>()
+        .add_message::<Stepped>()
         .configure_sets(
             Update,
             (PlayerSystems::Input, PlayerSystems::Travel).chain(),
@@ -39,16 +46,17 @@ impl Plugin for PlayerPlugin {
             Update,
             (
                 move_player.in_set(PlayerSystems::Input),
-                travel.in_set(PlayerSystems::Travel),
+                // After everything in `Input` asked for its steps.
+                (take_steps, travel).chain().in_set(PlayerSystems::Travel),
             )
                 .run_if(not(in_state(GameView::Connecting))),
         );
     }
 }
 
-/// Ordering for anything that moves the player. Put systems that change
-/// `MapPosition` or send `TravelTo` in `Input`; systems that draw the player's
-/// position should run `.after(PlayerSystems::Travel)`.
+/// Ordering for anything that moves the player. Put systems that send
+/// `TakeStep` or `TravelTo` in `Input`; systems that draw the player's
+/// position (or read `Stepped`) should run `.after(PlayerSystems::Travel)`.
 #[derive(SystemSet, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PlayerSystems {
     Input,
@@ -74,6 +82,16 @@ pub struct Arrived {
     pub x: i64,
     pub y: i64,
 }
+
+/// Ask the player to take a step (keyboard, demo walk, dev tools): taken
+/// unless it leads into a wall in a site.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct TakeStep(pub Step);
+
+/// The player has taken a step, by `TakeStep` or travelling: for the server.
+/// Not sent when the position is set from elsewhere (the server's word).
+#[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Stepped(pub Step);
 
 /// Travel state, private to this module.
 #[derive(Component, Default)]
@@ -103,15 +121,12 @@ fn spawn_player(mut commands: Commands) {
 }
 
 /// Steps one grid unit when a key is pressed, then repeats while it's held.
-/// In a dungeon, only walkable cells can be stepped on.
 fn move_player(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     facing: Res<ViewFacing>,
-    view: Res<State<GameView>>,
-    dungeon: Res<CurrentDungeon>,
     mut repeat: ResMut<StepRepeat>,
-    mut player: Single<&mut MapPosition, With<Player>>,
+    mut steps: MessageWriter<TakeStep>,
 ) {
     // A key tapped and released within one frame is "just pressed" but no
     // longer "pressed", so count either or quick taps get lost.
@@ -140,12 +155,31 @@ fn move_player(
     if (dx != 0 || dy != 0) && (just_pressed || repeat.0.just_finished()) {
         // The keys mean screen directions, so follow the way the map is turned.
         let (dx, dy) = facing.screen_to_grid(dx, dy);
-        let (x, y) = (player.x + dx, player.y + dy);
-        if *view.get() == GameView::Dungeon && !dungeon.level.is_walkable(x, y) {
-            return;
+        if let Some(step) = Step::new(dx, dy) {
+            steps.write(TakeStep(step));
         }
-        player.x = x;
-        player.y = y;
+    }
+}
+
+/// Takes the steps asked for this frame, in order: in a dungeon, only onto
+/// walkable cells the client knows of (the server's rule, `shared::movement`).
+fn take_steps(
+    mut requests: MessageReader<TakeStep>,
+    view: Res<State<GameView>>,
+    dungeon: Res<CurrentDungeon>,
+    mut stepped: MessageWriter<Stepped>,
+    mut player: Single<&mut MapPosition, With<Player>>,
+) {
+    for &TakeStep(step) in requests.read() {
+        let from = (player.x, player.y);
+        let to = match view.get() {
+            GameView::Dungeon => step_on_level(&dungeon.level, from, step),
+            _ => Some(step.from(from)),
+        };
+        if let Some((x, y)) = to {
+            **player = MapPosition { x, y };
+            stepped.write(Stepped(step));
+        }
     }
 }
 
@@ -161,13 +195,16 @@ const MOVE_KEYS: [KeyCode; 8] = [
 ];
 
 /// Moves towards the requested point at constant speed, always ending exactly
-/// on it. A direct change to `MapPosition` (keyboard, demo walk, dev tools)
-/// cancels any travel and jumps there.
+/// on it, announcing each step. Any other change to `MapPosition` (a step,
+/// the server) cancels travel and jumps there. Walls don't stop it (TEMPORARY
+/// until pathfinding: the server refuses the step into the wall, and puts
+/// the player back, which ends the journey).
 fn travel(
     time: Res<Time>,
     view: Res<State<GameView>>,
     mut requests: MessageReader<TravelTo>,
     mut arrived: MessageWriter<Arrived>,
+    mut stepped: MessageWriter<Stepped>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
@@ -213,6 +250,10 @@ fn travel(
         x: now.x.round() as i64,
         y: now.y.round() as i64,
     };
+    // Normally one step a frame, but a slow frame may cover more.
+    for step in steps_between((tile.x, tile.y), (nearest.x, nearest.y)) {
+        stepped.write(Stepped(step));
+    }
     tile.set_if_neq(nearest);
     travel.last = nearest;
 }
