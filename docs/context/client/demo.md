@@ -4,16 +4,17 @@ Demo modes toggled by keys, for showing off and testing the views. Works in nati
 
 ## Files
 
-- `crates/client/src/demo/mod.rs`: `DemoPlugin`; `toggle_modes` (keys), `auto_walk`, `temperature_cycle`, `cycle_token` (**K** next shape, **C** next attitude, **X** toggle completed, **Z** next icon size, for the player's `Token`), (The M view switch is gone: the dungeon view is reached by entering sites.) Constant `SNOW_LINE_SPEED` (6 units/s, as the prototype).
+- `crates/client/src/demo/mod.rs`: `DemoPlugin`; `toggle_modes` (keys), `auto_walk`, `temperature_cycle`, `back_to_start` (**Esc**), `cycle_token` (**K** next shape, **C** next attitude, **X** toggle completed, **Z** next icon size, for the player's `Token`), (The M view switch is gone: the dungeon view is reached by entering sites.) Constant `SNOW_LINE_SPEED` (6 units/s, as the prototype).
 
 ## Public API
 
+- **Esc**: asks the server to put the player back where new characters start, out of any site (`DevBackToStart`; only the embedded server allows it).
 - `AutoWalk(bool)` (resource): while on, the player walks east one step per frame (a `player::TakeStep`; world map only). **G** toggles.
 - `TemperatureCycle` (resource): `Off`, `Cooling`, `Warming`. **T** starts a cycle: `Weather::snow_line` falls from `NORMAL_SNOW_LINE` (128) to 0 (everything frozen), then rises back and stops. T during a cycle skips to warming.
 
 ## Depends on
 
-- `common` (`Weather`, `NORMAL_SNOW_LINE`, `Token`, `GameView`), `player` (`Player`, `PlayerSystems`, `TakeStep`: `auto_walk` runs in `Input`), `shared::movement`.
+- `common` (`Weather`, `NORMAL_SNOW_LINE`, `Token`, `GameView`), `connection` (`ToServer`), `player` (`Player`, `PlayerSystems`, `TakeStep`: `auto_walk` runs in `Input`), `shared::movement`.
 
 ## Used by
 

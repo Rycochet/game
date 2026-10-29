@@ -4,13 +4,13 @@ The client's connection to the server: joining, sending the player's steps and p
 
 ## Files
 
-- `crates/client/src/connection/mod.rs`: `ConnectionPlugin`; `say_hello` (Startup), `receive` (PreUpdate: `Welcome` makes `common::CurrentWorld` (added after the loop, so the chunks that follow in the same batch go into it), puts the player where the server says and moves to `GameView::WorldMap`, after checking `WORLD_MAP_VERSION`; `WorldChunk` goes into `CurrentWorld::features`; `Position` goes through the `Prediction`, and moves the player if the result differs from where they are shown; `EnterLevel`, `LevelCells` and `OnWorldMap` are passed on as `FromServer`; `Refused` and a lost connection are logged), `send_steps` (Update after `PlayerSystems::Travel`: each `player::Stepped` becomes a `Step` message), `count_map_changes` (PostUpdate: `EnterLevel` and `OnWorldMap` start a new map for steps), `send` (`Last`): sends every `ToServer` written this frame, in order. `hang_up_on_exit` (`Last`, after `send`): on `AppExit`, removes `ServerConnection`.
+- `crates/client/src/connection/mod.rs`: `ConnectionPlugin`; `say_hello` (Startup), `receive` (PreUpdate: `Welcome` makes `common::CurrentWorld` (added after the loop, so the chunks that follow in the same batch go into it), puts the player where the server says and moves to `GameView::WorldMap`, after checking `WORLD_MAP_VERSION`; `WorldChunk` goes into `CurrentWorld::features`; `Position` goes through the `Prediction`, and moves the player if the result differs from where they are shown; `EnterLevel`, `LevelCells`, `OnWorldMap` and `Teleported` are passed on as `FromServer`; `Refused` and a lost connection are logged), `send_steps` (Update after `PlayerSystems::Travel`: each `player::Stepped` becomes a `Step` message), `count_map_changes` (PostUpdate: `EnterLevel`, `OnWorldMap` and `Teleported` start a new map for steps), `send` (`Last`): sends every `ToServer` written this frame, in order. `hang_up_on_exit` (`Last`, after `send`): on `AppExit`, removes `ServerConnection`.
 - `crates/client/src/connection/prediction.rs`: `Prediction` (resource: map count, last step number, steps not yet confirmed; `step`, `changed_map`, `confirmed(map, step, at) -> Option<predicted>`), `correction(shown, predicted, width)` (where to move the player, if anywhere; on the world map the same place on another copy of the planet counts, and a move stays on the player's copy). Tests: confirmed steps forgotten and later ones added, a refused step moves the player back, positions from a left map ignored, the world map wraps.
 
 ## Public API
 
 - `ToServer(ClientMessage)` (message): send this to the server (at the end of the frame).
-- `FromServer(ServerMessage)` (message): a map message from the server (`EnterLevel`, `LevelCells`, `OnWorldMap`), read by `site`.
+- `FromServer(ServerMessage)` (message): a map message from the server (`EnterLevel`, `LevelCells`, `OnWorldMap`, `Teleported`), read by `site`.
 - `ServerConnection` (resource): the link to the server, and the embedded server (native); missing on the web, removed if the connection is lost and on quitting.
 
 ## Depends on
@@ -19,7 +19,7 @@ The client's connection to the server: joining, sending the player's steps and p
 
 ## Used by
 
-- `site` (`ToServer`, `FromServer`), `dev_tools` (`ToServer`); other modules see `CurrentWorld` and `GameView`.
+- `site` (`ToServer`, `FromServer`), `dev_tools`, `demo`, `world_map` and `dungeon_map` (`ToServer`: dev tools messages); other modules see `CurrentWorld` and `GameView`.
 
 ## Notes
 

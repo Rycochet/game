@@ -23,7 +23,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 5;
+pub const PROTOCOL_VERSION: u32 = 6;
 
 /// How far from the player (east–west and north–south, in grid points) the
 /// client may show anything on the world map: the corners of its window
@@ -51,9 +51,14 @@ pub enum ClientMessage {
     /// Use what the player stands on: stairs, or outside ground at the edge
     /// of the level (back to the world map).
     UseExit,
-    /// Developer tools: jump to a point on the world map (answered with
-    /// `OnWorldMap`). Only an embedded (single-player) server accepts it.
+    /// Developer tools: jump to a point on the map the player is on (in a
+    /// site, only onto a walkable cell), answered with `Teleported`. Only an
+    /// embedded (single-player) server accepts it; others ignore it.
     DevTeleport { x: i64, y: i64 },
+    /// Developer tools: back to where new characters start on the world map,
+    /// from anywhere (out of a site too), answered with `OnWorldMap`. Only
+    /// an embedded server accepts it; others ignore it.
+    DevBackToStart,
     /// Developer tools: go straight into a site of any kind and seed, at
     /// any level. Only an embedded (single-player) server accepts it.
     DevEnterSite {
@@ -61,6 +66,17 @@ pub enum ClientMessage {
         seed: u64,
         level: u32,
     },
+}
+
+impl ClientMessage {
+    /// Whether it is a developer tools message (`Dev...`), which only an
+    /// embedded server accepts.
+    pub fn is_dev_tool(&self) -> bool {
+        matches!(
+            self,
+            Self::DevTeleport { .. } | Self::DevBackToStart | Self::DevEnterSite { .. }
+        )
+    }
 }
 
 /// From the server to a client.
@@ -78,9 +94,12 @@ pub enum ServerMessage {
     EnterLevel(LevelInfo),
     /// Cells of the current level.
     LevelCells(LevelChunk),
-    /// The player is on the world map, here: back out of a site, or moved
-    /// by dev tools.
+    /// The player is on the world map, here: back out of a site, or sent
+    /// back to the start by dev tools.
     OnWorldMap { x: i64, y: i64 },
+    /// Developer tools: the player has jumped to here, on the map they are
+    /// on (`DevTeleport`).
+    Teleported { x: i64, y: i64 },
     /// Where the server has the player on map `map` (see
     /// `ClientMessage::Step`) once it has dealt with step `step`: the client
     /// adds the steps it took since, and moves the player there if it shows
@@ -152,6 +171,7 @@ mod tests {
             },
             ClientMessage::UseExit,
             ClientMessage::DevTeleport { x: -3, y: 4 },
+            ClientMessage::DevBackToStart,
             ClientMessage::DevEnterSite {
                 kind: FeatureKind::Crypt,
                 seed: 3,
@@ -203,6 +223,7 @@ mod tests {
                 remembered: true,
             }),
             ServerMessage::OnWorldMap { x: 100, y: -4 },
+            ServerMessage::Teleported { x: 6, y: -7 },
             ServerMessage::Position {
                 map: 1,
                 step: 30,

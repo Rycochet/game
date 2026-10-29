@@ -174,14 +174,19 @@ pub(crate) fn answer(
         }
         ClientMessage::EnterSite { chunk } => sites::enter_feature(client, world, chunk),
         ClientMessage::UseExit => sites::use_exit(client, world),
-        ClientMessage::DevTeleport { x, y } if options.dev_tools => {
-            world_map::teleport(client, world, x, y)
+        // Dev tools are only for the embedded server; elsewhere a stray key
+        // or click is ignored rather than ending the game.
+        _ if message.is_dev_tool() && !options.dev_tools => {
+            warn!("A client asked for dev tools ({message:?}), which this server doesn't allow");
+            true
         }
-        ClientMessage::DevEnterSite { kind, seed, level } if options.dev_tools => {
+        ClientMessage::DevTeleport { x, y } => match client.visit {
+            Some(_) => sites::teleport(client, x, y),
+            None => world_map::teleport(client, world, x, y),
+        },
+        ClientMessage::DevBackToStart => world_map::back_to_start(client, world),
+        ClientMessage::DevEnterSite { kind, seed, level } => {
             sites::dev_enter(client, world, kind, seed, level)
-        }
-        ClientMessage::DevEnterSite { .. } | ClientMessage::DevTeleport { .. } => {
-            refuse(client, "this server doesn't allow dev tools".into())
         }
     }
 }
@@ -224,6 +229,8 @@ pub(crate) mod tests {
         pub end: ClientLink,
         /// The answers to `Hello`.
         pub welcome: Vec<ServerMessage>,
+        /// Whether the server allows dev tools (it does, unless set).
+        pub dev_tools: bool,
         next_step: u32,
     }
 
@@ -241,6 +248,7 @@ pub(crate) mod tests {
                 client: Client::new(server_link, CharacterName::new("tester").unwrap()),
                 end,
                 welcome: Vec::new(),
+                dev_tools: true,
                 next_step: 0,
             };
             test.welcome = test.send(&[HELLO]);
@@ -251,7 +259,7 @@ pub(crate) mod tests {
         /// since last time.
         pub fn send(&mut self, messages: &[ClientMessage]) -> Vec<ServerMessage> {
             let options = ServerOptions {
-                dev_tools: true,
+                dev_tools: self.dev_tools,
                 exit_when_alone: false,
             };
             for message in messages {

@@ -135,6 +135,18 @@ fn change_map(
                     next.set(GameView::WorldMap);
                 }
             }
+            &ServerMessage::Teleported { x, y } => {
+                // Dev tools, on the map the player is on: on the world map,
+                // on the copy of the planet they are on.
+                let shift = match (view.get(), world.as_ref()) {
+                    (GameView::WorldMap, Some(world)) => {
+                        let width = world.surface.width();
+                        (player.x - x + width / 2).div_euclid(width) * width
+                    }
+                    _ => 0,
+                };
+                **player = MapPosition { x: x + shift, y };
+            }
             _ => {}
         }
     }

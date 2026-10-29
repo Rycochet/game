@@ -169,6 +169,22 @@ pub(crate) fn stepped(client: &mut Client, step: Step) -> bool {
     update_sight(client)
 }
 
+/// Developer tools: puts the player on `(x, y)` on their level, if it is
+/// walkable (through walls, unlike a step).
+pub(crate) fn teleport(client: &mut Client, x: i64, y: i64) -> bool {
+    let Some(visit) = &mut client.visit else {
+        return true;
+    };
+    if !visit.level.level.is_walkable(x, y) {
+        info!("Refused a teleport onto an unwalkable cell ({x}, {y})");
+        return true;
+    }
+    visit.position = (x, y);
+    client.unsaved = true;
+    client.changed_map();
+    client.link.send(&ServerMessage::Teleported { x, y }) && update_sight(client)
+}
+
 /// Uses what the player stands on: stairs to another level, or ground on
 /// the edge of the level back to the world map.
 pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
@@ -533,6 +549,33 @@ mod tests {
         assert!(again.iter().any(|&(_, _, _, remembered)| remembered));
         let remembered: Vec<_> = again.iter().filter(|c| c.3).collect();
         assert!(remembered.len() <= first.len());
+    }
+
+    #[test]
+    fn dev_teleports_go_through_walls_but_not_into_them() {
+        let mut test = TestClient::new();
+        enter(&mut test, 0);
+        let level = test.client.visit.as_ref().unwrap().level.level.clone();
+        let start = test.client.visit.as_ref().unwrap().position;
+        // Somewhere walkable, more than a step away.
+        let (min_x, min_y, width, height) = level.bounds();
+        let far = (min_y..min_y + height)
+            .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
+            .find(|&(x, y)| level.is_walkable(x, y) && (x - start.0).abs() > 3)
+            .unwrap();
+        let answers = test.send(&[ClientMessage::DevTeleport { x: far.0, y: far.1 }]);
+        assert_eq!(answers[0], ServerMessage::Teleported { x: far.0, y: far.1 });
+        assert_eq!(test.client.visit.as_ref().unwrap().position, far);
+        // Not into a wall.
+        let (wx, wy) = (min_x - 1, min_y - 1);
+        assert!(
+            test.send(&[ClientMessage::DevTeleport { x: wx, y: wy }])
+                .is_empty()
+        );
+        // Back to the start leaves the site.
+        let answers = test.send(&[ClientMessage::DevBackToStart]);
+        assert!(matches!(answers[0], ServerMessage::OnWorldMap { .. }));
+        assert!(test.client.visit.is_none());
     }
 
     #[test]

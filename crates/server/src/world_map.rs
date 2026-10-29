@@ -4,9 +4,9 @@
 use shared::movement::{Step, step_on_world_map};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
 
-use crate::ServerWorld;
 use crate::connections::Client;
 use crate::storage::KnownFeature;
+use crate::{ServerWorld, sites};
 
 /// The player takes a step on the world map (anywhere goes, so far). `false`
 /// if the client has gone.
@@ -16,13 +16,24 @@ pub(crate) fn stepped(client: &mut Client, world: &ServerWorld, step: Step) -> b
     look_around(client, world)
 }
 
-/// Developer tools: puts the player at `(x, y)` on the world map (not from
-/// inside a site).
+/// Where new characters start on the world map (`CharacterSave`'s default).
+pub(crate) const START: (i64, i64) = (0, 0);
+
+/// Developer tools: puts the player at `(x, y)` on the world map.
 pub(crate) fn teleport(client: &mut Client, world: &ServerWorld, x: i64, y: i64) -> bool {
-    if client.visit.is_some() {
-        return true;
-    }
     client.character.world_position = (x, y);
+    client.unsaved = true;
+    client.changed_map();
+    client.link.send(&ServerMessage::Teleported { x, y }) && look_around(client, world)
+}
+
+/// Developer tools: puts the player back where new characters start, out of
+/// any site.
+pub(crate) fn back_to_start(client: &mut Client, world: &mut ServerWorld) -> bool {
+    sites::leave(client, world);
+    client.visit = None;
+    let (x, y) = START;
+    client.character.world_position = START;
     client.unsaved = true;
     client.changed_map();
     client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
@@ -110,8 +121,24 @@ mod tests {
     fn dev_teleports_say_where_and_send_what_is_there() {
         let mut test = TestClient::new();
         let answers = test.send(&[ClientMessage::DevTeleport { x: 5000, y: 20 }]);
-        assert_eq!(answers[0], ServerMessage::OnWorldMap { x: 5000, y: 20 });
+        assert_eq!(answers[0], ServerMessage::Teleported { x: 5000, y: 20 });
         assert!(!chunks(&answers).is_empty());
+        // And back to the start.
+        let answers = test.send(&[ClientMessage::DevBackToStart]);
+        let (x, y) = START;
+        assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
+        assert_eq!(test.client.world_position(), START);
+    }
+
+    #[test]
+    fn dev_tools_are_ignored_where_not_allowed() {
+        let mut test = TestClient::new();
+        test.dev_tools = false;
+        assert!(
+            test.send(&[ClientMessage::DevTeleport { x: 50, y: 0 }])
+                .is_empty()
+        );
+        assert_eq!(test.client.world_position(), START);
     }
 
     #[test]

@@ -24,11 +24,13 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::window::PrimaryWindow;
 use shared::dungeon::Sight;
+use shared::protocol::ClientMessage;
 use shared::site::StairsDirection;
 
 use crate::common::{
     CurrentDungeon, GameView, LightSource, MapPosition, SharesSight, SmoothPosition, ViewStats,
 };
+use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
 use crate::view3d::{ClickedToken, TOKEN_DIAMETER, TokenView, View3dSystems, ViewCamera, ViewGrid};
 use mesh::{LightGrid, Surface, View, WallFace};
@@ -482,15 +484,19 @@ fn update_meshes(
 /// travelling there (in
 /// a straight line for now: walls don't stop travel until there is
 /// pathfinding). Clicks on clickable tokens are left to `site`; so is using
-/// stairs, by arriving on their cell.
+/// stairs, by arriving on their cell. Ctrl+click asks the server to teleport
+/// the player there (dev tools).
+#[allow(clippy::too_many_arguments)]
 fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
     clicked: Res<ClickedToken>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
     mut travel: MessageWriter<TravelTo>,
+    mut to_server: MessageWriter<ToServer>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
         return;
@@ -509,7 +515,13 @@ fn pick_on_click(
         &shown.solid_faces,
         &shown.stairs_up,
     ) {
-        travel.write(TravelTo { x, y });
+        // Dev tools: ctrl+click jumps there instead (through walls), if the
+        // server allows it.
+        if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
+            to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
+        } else {
+            travel.write(TravelTo { x, y });
+        }
     }
 }
 

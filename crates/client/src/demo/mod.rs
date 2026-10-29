@@ -6,12 +6,16 @@
 //!   frozen) and rises back, as in the prototype.
 //! - K / C: cycle the player's token shape / attitude colour; X toggles
 //!   its "completed" state; Z cycles its icon size.
+//! - Esc: back to the starting point on the world map, out of any site
+//!   (dev tools: only the embedded server allows it).
 
 use bevy::prelude::*;
 
 use shared::movement::Step;
+use shared::protocol::ClientMessage;
 
 use crate::common::{GameView, NORMAL_SNOW_LINE, Token, Weather};
+use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TakeStep};
 
 /// How fast the snow line moves during the temperature cycle, in height units
@@ -24,7 +28,10 @@ impl Plugin for DemoPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AutoWalk>()
             .init_resource::<TemperatureCycle>()
-            .add_systems(Update, (toggle_modes, temperature_cycle, cycle_token))
+            .add_systems(
+                Update,
+                (toggle_modes, temperature_cycle, cycle_token, back_to_start),
+            )
             .add_systems(
                 Update,
                 // Only on the world map: in a site it would stop at a wall.
@@ -68,6 +75,13 @@ fn toggle_modes(
 fn auto_walk(walk: Res<AutoWalk>, mut steps: MessageWriter<TakeStep>) {
     if walk.0 {
         steps.write(TakeStep(Step::new(1, 0).expect("a step")));
+    }
+}
+
+/// Esc: asks the server to put the player back where new characters start.
+fn back_to_start(keys: Res<ButtonInput<KeyCode>>, mut to_server: MessageWriter<ToServer>) {
+    if keys.just_pressed(KeyCode::Escape) {
+        to_server.write(ToServer(ClientMessage::DevBackToStart));
     }
 }
 

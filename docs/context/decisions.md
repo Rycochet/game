@@ -196,3 +196,8 @@ Step 4 of the map data design. The server keeps its data in its own folder (`Hal
 ## 2026-10-29: Movement is steps, predicted by the client and confirmed by the server
 
 The client never tells the server where the player is, only the steps they take (`ClientMessage::Step`, one cell in 8 directions, checked with `shared::movement` on both sides). It shows each step at once and keeps the unconfirmed ones; once a tick the server sends `Position` (where it has the player after the last step it handled), and the client adds its later steps and moves the player if that differs. This keeps a fast-feeling game over a network without trusting the client. Steps carry how many map changes (`EnterLevel`, `OnWorldMap`) the client has seen, so a step sent just before going down stairs isn't applied on the next level. Click travel stays a straight line that ignores walls until pathfinding, which the owner wants in its own session (and is useful now for testing refused steps). No speed limit yet. Dev tools' starting position is a `DevTeleport` the embedded server answers.
+
+## 2026-10-29: Dev tools teleports: ctrl+click and Esc
+
+At the owner's request, since steps can no longer go through walls: ctrl+click on either map asks the server to teleport the player there (`DevTeleport`, through walls but onto a walkable cell in a site, answered with `Teleported`), and Esc puts them back where new characters start on the world map, out of any site (`DevBackToStart`). Like all dev tools messages, only the embedded server accepts them; other servers now ignore dev tools messages with a warning instead of disconnecting, so a stray key or click doesn't end the game.
+

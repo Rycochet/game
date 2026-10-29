@@ -68,7 +68,7 @@ impl Plugin for ConnectionPlugin {
 pub struct ToServer(pub ClientMessage);
 
 /// A message from the server about maps (`EnterLevel`, `LevelCells`,
-/// `OnWorldMap`), for `site`. The rest are handled here.
+/// `OnWorldMap`, `Teleported`), for `site`. The rest are handled here.
 #[derive(Message, Clone, Debug)]
 pub struct FromServer(pub ServerMessage);
 
@@ -155,7 +155,8 @@ fn receive(
             Ok(Some(
                 message @ (ServerMessage::EnterLevel(_)
                 | ServerMessage::LevelCells(_)
-                | ServerMessage::OnWorldMap { .. }),
+                | ServerMessage::OnWorldMap { .. }
+                | ServerMessage::Teleported { .. }),
             )) => {
                 from_server.write(FromServer(message));
             }
@@ -193,7 +194,9 @@ fn count_map_changes(
     for FromServer(message) in from_server.read() {
         if matches!(
             message,
-            ServerMessage::EnterLevel(_) | ServerMessage::OnWorldMap { .. }
+            ServerMessage::EnterLevel(_)
+                | ServerMessage::OnWorldMap { .. }
+                | ServerMessage::Teleported { .. }
         ) {
             prediction.changed_map();
         }

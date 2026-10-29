@@ -34,3 +34,4 @@ The dungeon (and building) view: `shared::dungeon` cells drawn in 3D through `vi
 - The see-through mesh is one mesh with `AlphaMode::Blend`, so its faces don't sort against each other; with one picture at 50% this hasn't shown.
 - Clicks: travel uses the world map's straight-line rules (through walls) until pathfinding (planned as a separate task); `player` travels at 12 cells/s here.
 - Rebuilding everything is ~0.1 ms for the test room and for a 50 × 66 castle floor; it happens every frame while the camera moves (dragging, travelling). Bigger levels may need to rebuild only what changed.
+- Ctrl+click on the map (not a token) sends `DevTeleport` instead of `TravelTo` (dev tools: only the embedded server allows it; through walls in a site, but onto a walkable cell). Uses `connection::ToServer`.

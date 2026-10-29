@@ -17,10 +17,12 @@ use bevy::light::light_consts;
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use shared::protocol::ClientMessage;
 
 use crate::common::{
     CurrentWorld, GameClock, GameView, MapPosition, SmoothPosition, ViewStats, Weather,
 };
+use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{
@@ -335,10 +337,12 @@ fn hide_tokens_outside_window(
 }
 
 /// A left click on the terrain sends the player travelling there (unless it
-/// was on a clickable token, such as a feature: `site` handles those).
+/// was on a clickable token, such as a feature: `site` handles those);
+/// ctrl+click asks the server to teleport them (dev tools).
 #[allow(clippy::too_many_arguments)]
 fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
     clicked: Res<ClickedToken>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform, &OrbitCamera), With<ViewCamera>>,
@@ -348,6 +352,7 @@ fn pick_on_click(
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
     mut travel: MessageWriter<TravelTo>,
+    mut to_server: MessageWriter<ToServer>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
         return;
@@ -369,7 +374,13 @@ fn pick_on_click(
         &style,
         water_level,
     ) {
-        travel.write(TravelTo { x, y });
+        // Dev tools: ctrl+click jumps there instead (through walls), if the
+        // server allows it.
+        if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
+            to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
+        } else {
+            travel.write(TravelTo { x, y });
+        }
     }
 }
 
