@@ -17,7 +17,7 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | Module              | Source                          | Context file                          | Covers                                              |
 | ------------------- | ------------------------------- | ------------------------------------- | --------------------------------------------------- |
 | (project)           | root files                      | `docs/context/project.md`             | Build, tooling, folder layout, CI                   |
-| (design)            | n/a                             | `docs/context/architecture.md`        | Client/server split, trust and determinism rules    |
+| (design)            | n/a                             | `docs/context/architecture.md`        | Client/server split, trust, determinism, map data flow |
 | (performance)       | n/a                             | `docs/context/optimisations.md`       | Measured optimisations tried but not adopted (memory) |
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
