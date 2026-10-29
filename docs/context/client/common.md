@@ -12,7 +12,8 @@ Shared building blocks for the client modules. Keep it small.
 - `MapPosition { x: i64, y: i64 }` (component): position on the current view's grid; `y` increases southwards (towards the viewer). For the travelling player, the nearest grid point to `SmoothPosition`.
 - `SmoothPosition { x: f64, y: f64 }` (component): exact position, fractional while the player travels, equal to `MapPosition` when still (`From<MapPosition>`). Anything with a `Token` needs one: `view3d` draws tokens there.
 - `GameView` (Bevy state): `WorldMap` (the default) or `Dungeon` (inside a site). Each view shows its scene and runs its systems only while current (`OnEnter`/`OnExit`, `in_state`). Switched by `site`.
-- `CurrentDungeon` (resource): `site: Option<shared::site::Site>`, `index` (level), `level: shared::dungeon::Level`, `stairs`; `describe()` for the HUD ("Castle, floor 2 of 3"). The test room until a site is entered. Written by `site`; read by `player` (walkable cells) and `dungeon_map`.
+- `CurrentDungeon` (resource): `site: Option<shared::site::Site>`, `index` (level), `level: shared::dungeon::Level`, `stairs: Vec<LevelStairs>`; `describe()` for the HUD ("Castle, floor 2 of 3"). The test room until a site is entered. Written by `site`; read by `player` (walkable cells) and `dungeon_map`.
+- `LevelStairs { stairs, descends }`: a staircase of the current level and the way it goes down (a grid step from top to bottom), the same on both levels it joins. Worked out by `site`, drawn by `dungeon_map`.
 - `Portal` (component): `Feature(Feature)`: clicking it sends the player there and arriving enters its site (`site`). World map features have one; stairs are cells of the level, not entities.
 - `Clickable` (component, marker): its token can be clicked (`view3d::ClickedToken`).
 - `LightSource` (component): `radius` (cells) and `colour`; lights dungeons. The player has one (6 cells, white).

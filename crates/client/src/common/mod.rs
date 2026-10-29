@@ -84,7 +84,16 @@ pub struct CurrentDungeon {
     /// Which of the site's levels this is.
     pub index: u32,
     pub level: Level,
-    pub stairs: Vec<Stairs>,
+    pub stairs: Vec<LevelStairs>,
+}
+
+/// A staircase of the current level, with the way it goes down (a grid
+/// step from its top end to its bottom end). Both levels a staircase joins
+/// draw it going the same way, so arriving by it matches leaving by it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LevelStairs {
+    pub stairs: Stairs,
+    pub descends: (i64, i64),
 }
 
 impl CurrentDungeon {

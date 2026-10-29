@@ -287,7 +287,7 @@ fn update_meshes(
         .chain(sharers.iter().map(|position| position.into_inner()))
         .map(|position| {
             let mut sight = Sight::new(level);
-            sight.add_view(level, position.x, position.y, None);
+            sight.add_glimpses(level, position.x, position.y, None);
             View {
                 cell: (position.x, position.y),
                 sight,
@@ -296,7 +296,7 @@ fn update_meshes(
         .collect();
     let mut sight = Sight::new(level);
     for view in &views {
-        sight.add_view(level, view.cell.0, view.cell.1, None);
+        sight.add_glimpses(level, view.cell.0, view.cell.1, None);
     }
     let mut light = LightGrid::new(level);
     for (position, source) in &lights {
@@ -314,8 +314,8 @@ fn update_meshes(
     shown.stairs_up = dungeon
         .stairs
         .iter()
-        .filter(|stairs| stairs.direction == StairsDirection::Up)
-        .map(|stairs| (stairs.x, stairs.y))
+        .filter(|found| found.stairs.direction == StairsDirection::Up)
+        .map(|found| (found.stairs.x, found.stairs.y))
         .collect();
 
     // An empty mesh is hidden rather than drawn with no triangles.
