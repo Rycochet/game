@@ -5,19 +5,24 @@
 //! player may know (`ServerMessage`). Every message is encoded with postcard,
 //! also in single player, where the link is an in-process channel.
 
+mod level;
 mod link;
 
+pub use level::{
+    ENTER_REACH, LEVEL_CHUNK_SIZE, LEVEL_PRELOAD_STEPS, LevelChunk, LevelInfo, SeenStairs,
+    level_chunk,
+};
 pub use link::{ClientLink, Link, LinkError, ServerLink, local_pair};
 
 use serde::{Deserialize, Serialize};
 
-use crate::feature::{CHUNK_SIZE, ChunkPos, Feature};
+use crate::feature::{CHUNK_SIZE, ChunkPos, Feature, FeatureKind};
 use crate::rng::Seed;
 use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 2;
+pub const PROTOCOL_VERSION: u32 = 3;
 
 /// How far from the player (east–west and north–south, in grid points) the
 /// client may show anything on the world map: the corners of its window
@@ -41,6 +46,22 @@ pub enum ClientMessage {
     /// TEMPORARY, until movement goes through the server: where the player
     /// is on the world map, so the server knows which chunks to send.
     WorldMapPosition { x: i64, y: i64 },
+    /// Go into the site of the feature in this world map chunk (the player
+    /// must be at it).
+    EnterSite { chunk: ChunkPos },
+    /// TEMPORARY, until movement goes through the server: where the player
+    /// is on the current site level. Only walkable cells are accepted.
+    SitePosition { x: i64, y: i64 },
+    /// Use what the player stands on: stairs, or outside ground at the edge
+    /// of the level (back to the world map).
+    UseExit,
+    /// Developer tools: go straight into a site of any kind and seed, at
+    /// any level. Only an embedded (single-player) server accepts it.
+    DevEnterSite {
+        kind: FeatureKind,
+        seed: u64,
+        level: u32,
+    },
 }
 
 /// From the server to a client.
@@ -52,6 +73,12 @@ pub enum ServerMessage {
     Refused(String),
     /// A world map chunk, as this player knows it.
     WorldChunk(WorldChunk),
+    /// The player is now on this site level; its cells follow.
+    EnterLevel(LevelInfo),
+    /// Cells of the current level.
+    LevelCells(LevelChunk),
+    /// The player is back on the world map, here.
+    LeftSite { x: i64, y: i64 },
 }
 
 /// What a player knows of one world map chunk. The terrain itself isn't
@@ -60,10 +87,29 @@ pub enum ServerMessage {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorldChunk {
     pub chunk: ChunkPos,
-    /// Its feature, if it has one. TEMPORARY: until the server sends sites,
-    /// this includes the feature's secret map seed, so the client can
-    /// generate the site itself.
-    pub feature: Option<Feature>,
+    /// Its feature, if it has one.
+    pub feature: Option<SeenFeature>,
+}
+
+/// A world map feature as a player knows it: what and where it is, not
+/// the seed its site comes from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SeenFeature {
+    pub kind: FeatureKind,
+    pub chunk: ChunkPos,
+    pub x: i64,
+    pub y: i64,
+}
+
+impl From<Feature> for SeenFeature {
+    fn from(feature: Feature) -> Self {
+        Self {
+            kind: feature.kind,
+            chunk: feature.chunk,
+            x: feature.x,
+            y: feature.y,
+        }
+    }
 }
 
 /// What a client is told about a world when it joins.
@@ -79,7 +125,8 @@ pub struct WorldInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::feature::FeatureKind;
+    use crate::dungeon::Cell;
+    use crate::site::StairsDirection;
 
     #[test]
     fn positions_are_reported_before_chunks_come_into_sight() {
@@ -93,6 +140,16 @@ mod tests {
                 protocol: PROTOCOL_VERSION,
             },
             ClientMessage::WorldMapPosition { x: -3, y: 4 },
+            ClientMessage::EnterSite {
+                chunk: ChunkPos { x: 2, y: -1 },
+            },
+            ClientMessage::SitePosition { x: 5, y: -6 },
+            ClientMessage::UseExit,
+            ClientMessage::DevEnterSite {
+                kind: FeatureKind::Crypt,
+                seed: 3,
+                level: 1,
+            },
         ];
         let server = vec![
             ServerMessage::Welcome(WorldInfo {
@@ -103,18 +160,38 @@ mod tests {
             ServerMessage::Refused("no".into()),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 1, y: -2 },
-                feature: Some(Feature {
+                feature: Some(SeenFeature {
                     kind: FeatureKind::Castle,
                     chunk: ChunkPos { x: 1, y: -2 },
                     x: 70,
                     y: -100,
-                    seed: Seed::new(9),
                 }),
             }),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 0, y: 0 },
                 feature: None,
             }),
+            ServerMessage::EnterLevel(LevelInfo {
+                kind: FeatureKind::RockCave,
+                building: false,
+                index: 1,
+                levels: 3,
+                bounds: (-20, -10, 40, 30),
+                arrival: (4, 5),
+            }),
+            ServerMessage::LevelCells(LevelChunk {
+                chunk: (-1, 2),
+                mask: 0b101,
+                cells: vec![Cell::Floor, Cell::Door],
+                stairs: vec![SeenStairs {
+                    x: -6,
+                    y: 16,
+                    direction: StairsDirection::Down,
+                    descends: (0, 1),
+                }],
+                remembered: true,
+            }),
+            ServerMessage::LeftSite { x: 100, y: -4 },
         ];
         (client, server)
     }

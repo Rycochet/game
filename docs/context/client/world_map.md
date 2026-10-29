@@ -15,7 +15,7 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with it
 
 ## Depends on
 
-- `common` (`CurrentWorld`, `GameClock`, `GameView`, `ViewStats`, `Weather`, `MapPosition`, `SmoothPosition`, `Token`, `Icon`, `Portal`, `Clickable`), `player` (`Player`, `TravelTo`, `PlayerSystems`), `shared::feature`, `surface_style`, `view3d` (`OrbitCamera`, `ViewCamera`, `ViewGrid`, `TokenView`, `View3dSystems`, `ClickedToken`, token size).
+- `common` (`CurrentWorld`, `GameClock`, `GameView`, `ViewStats`, `Weather`, `MapPosition`, `SmoothPosition`, `Token`, `Icon`, `Portal`, `Clickable`), `player` (`Player`, `TravelTo`, `PlayerSystems`), `shared::feature`, `shared::protocol` (`SeenFeature`, `WORLD_MAP_SIGHT`), `surface_style`, `view3d` (`OrbitCamera`, `ViewCamera`, `ViewGrid`, `TokenView`, `View3dSystems`, `ClickedToken`, token size).
 
 ## Used by
 
@@ -33,7 +33,7 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with it
 - Edge face bottom is `FRONT_BASE` (0.3) × the water level in the starting view rather than 0 (shorter than the prototype's), closer to the water when zoomed in; where the ground is below that, the water strip stops at the base.
 - Camera (see `view3d.md`): looks at **sea level** (`ViewGrid::floor`), so it doesn't bob over hills. Tokens rest on the highest drawn ground within their radius (`rest_tokens_on_terrain`), so they never sink into slopes (they float a little over the low side).
 - Token placement reads the owner's `common::SmoothPosition`. Features only exist as entities while the world map is current (other views draw every token), so the dungeon view never sees them.
-- Features are only on dry land (decided in `shared::feature`). Their `Portal` carries the kind and map seed `site` enters them with.
+- Features are only on dry land (decided in `shared::feature`). Their `Portal` carries the `SeenFeature` (kind, chunk, position: never the map seed); `site` asks the server to enter its chunk.
 - The sun, terrain and edge faces are hidden (not despawned) in other views, so the terrain grid and cut are kept for coming back.
 - Performance (native dev build, shown in the HUD): a step fills ~1 ms (only the new edge) and cuts the window in ~9–12 ms in the starting view (more at diagonal angles, less zoomed in: ~4 ms at 0.6); turning costs the same cut every frame while dragging. A full refill (new hour, weather or style, e.g. every frame of the temperature demo) is ~15 ms facing north and ~28 ms at 45°, plus the cut. The very first fill is ~100 ms (sampling everything). Measured before this change: ~12 ms per step, full update in place.
 - Terrain and edge faces use `NoFrustumCulling` because their meshes are replaced after the bounds are computed. `HeightCache` is inserted by commands at startup, so systems take it as `Option` for the first frame.

@@ -9,13 +9,12 @@ Shared building blocks for the client modules. Keep it small.
 ## Public API
 
 - `CurrentWorld` (resource): `params: WorldParams`, `surface: Surface`, `features: KnownFeatures`; `CurrentWorld::new(&WorldInfo)`. Only exists once the server has welcomed the client (inserted by `connection`, which also adds the chunks the server sends, marking it changed).
-- `KnownFeatures`: the world map chunks the server has sent and their features (`None`: known to have none). `insert(chunk, feature)`, `in_area(min, max)` (as `FeatureMap::in_area`: any planet-width frame). Unit test.
+- `KnownFeatures`: the world map chunks the server has sent and their features (`protocol::SeenFeature`, no map seed; `None`: known to have none). `insert(chunk, feature)`, `in_area(min, max)` (as `FeatureMap::in_area`: any planet-width frame). Unit test.
 - `MapPosition { x: i64, y: i64 }` (component): position on the current view's grid; `y` increases southwards (towards the viewer). For the travelling player, the nearest grid point to `SmoothPosition`.
 - `SmoothPosition { x: f64, y: f64 }` (component): exact position, fractional while the player travels, equal to `MapPosition` when still (`From<MapPosition>`). Anything with a `Token` needs one: `view3d` draws tokens there.
 - `GameView` (Bevy state): `Connecting` (the default: waiting for the server, no `CurrentWorld` yet; `connection` moves on to `WorldMap`), `WorldMap` or `Dungeon` (inside a site). Each view shows its scene and runs its systems only while current (`OnEnter`/`OnExit`, `in_state`). Switched by `site`.
-- `CurrentDungeon` (resource): `site: Option<shared::site::Site>`, `index` (level), `level: shared::dungeon::Level`, `stairs: Vec<LevelStairs>`; `describe()` for the HUD ("Castle, floor 2 of 3"). The test room until a site is entered. Written by `site`; read by `player` (walkable cells) and `dungeon_map`.
-- `LevelStairs { stairs, descends }`: a staircase of the current level and the way it goes down (a grid step from top to bottom), the same on both levels it joins. Worked out by `site`, drawn by `dungeon_map`.
-- `Portal` (component): `Feature(Feature)`: clicking it sends the player there and arriving enters its site (`site`). World map features have one; stairs are cells of the level, not entities.
+- `CurrentDungeon` (resource): the site level as far as the server has told: `info: Option<LevelInfo>` (kind, floor/level, bounds...), `level` (`shared::dungeon::Level`: unknown cells are wall), `known` (cells sent), `remembered` (cells seen now or before, drawn in grey when out of sight; includes what is in sight), `stairs: Vec<SeenStairs>` (known stairs, with the way they go down). `enter(info)`, `add(&LevelChunk)`, `describe()` for the HUD ("Castle, floor 2 of 3"). Changed by `site`; read by `player` (walkable cells) and `dungeon_map` (which adds to `remembered` without marking it changed).
+- `Portal` (component): `Feature(SeenFeature)`: clicking it sends the player there and arriving enters its site (`site`). World map features have one; stairs are cells of the level, not entities.
 - `Clickable` (component, marker): its token can be clicked (`view3d::ClickedToken`).
 - `LightSource` (component): `radius` (cells) and `colour`; lights dungeons. The player has one (6 cells, white).
 - `SharesSight` (component, marker): its sight is added to the player's in dungeons. Nothing has it yet.
@@ -28,7 +27,7 @@ Shared building blocks for the client modules. Keep it small.
 
 ## Depends on
 
-- `shared` (`protocol::WorldInfo`, `WorldParams`, `Surface`, `feature::{Feature, ChunkPos, CHUNK_SIZE}`, `dungeon::Level`, `site::{Site, Stairs}`).
+- `shared` (`protocol::{WorldInfo, SeenFeature, LevelInfo, LevelChunk, SeenStairs}`, `WorldParams`, `Surface`, `feature::{ChunkPos, CHUNK_SIZE}`, `dungeon::{Level, Sight}`).
 
 ## Used by
 

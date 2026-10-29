@@ -5,7 +5,7 @@ use std::thread;
 use shared::protocol::{ClientLink, local_pair};
 use shared::world::WorldSeed;
 
-use crate::{Connections, headless_app};
+use crate::{Connections, ServerOptions, headless_app};
 
 /// Starts a server on its own thread, with its own Bevy world, and returns
 /// the client's end of its one connection. The client's log is used, and the
@@ -17,7 +17,8 @@ pub fn start_embedded(world_seed: WorldSeed) -> ClientLink {
         .spawn(move || {
             // Made on the thread itself: a Bevy `App` can't move between
             // threads.
-            let mut app = headless_app(world_seed);
+            // Single player: the player's own server, so dev tools are fine.
+            let mut app = headless_app(world_seed, ServerOptions { dev_tools: true });
             app.world_mut().resource_mut::<Connections>().add(server);
             app.run();
         })

@@ -9,7 +9,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 ## Public API
 
 - `GAME_POS=x,y`: starting grid position on the world map.
-- `GAME_ENTER=kind[,seed[,level]]`: start inside a site, as if the feature at the starting position were entered: `kind` indexes `FeatureKind::ALL` (e.g. 20 castle, 4 rock cave, 29 crypt, 15 stone tower), `seed` its map seed (default 1), `level` (default 0; other levels arrive on their first stairs).
+- `GAME_ENTER=kind[,seed[,level]]`: start inside a made-up site at the starting position (sends `DevEnterSite`, which only the embedded server accepts): `kind` indexes `FeatureKind::ALL` (e.g. 20 castle, 4 rock cave, 29 crypt, 15 stone tower), `seed` its map seed (default 1), `level` (default 0; other levels arrive on their first stairs).
 - `GAME_MOVE=dx,dy`: a second after starting, move the player by this much (e.g. off the stairs they arrived on, to look at them).
 - `GAME_TRAVEL=x,y`: start travelling there (as if clicked); combine with `GAME_SCREENSHOT_DELAY` to catch it mid-journey.
 - `GAME_WALK=1`: start with `demo::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
@@ -21,7 +21,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Depends on
 
-- `common` (`GameView`, `Weather`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `site` (`EnterFeature`, `TakeExit`), `shared` (`feature`, `rng`, `site::Exit`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`).
+- `common` (`GameView`, `Weather`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`feature::FeatureKind`, `protocol::ClientMessage`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`).
 
 ## Used by
 

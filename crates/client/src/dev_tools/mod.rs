@@ -3,10 +3,10 @@
 //! Starting positions and states are applied once connected to the server.
 //!
 //! - `GAME_POS=x,y`: starting grid position on the world map.
-//! - `GAME_ENTER=kind[,seed[,level]]`: start inside a site, as if the feature
-//!   at the starting position were entered: `kind` is an index into
-//!   `FeatureKind::ALL`, `seed` its map seed (default 1), `level` the level
-//!   (default 0, the way in).
+//! - `GAME_ENTER=kind[,seed[,level]]`: start inside a made-up site at the
+//!   starting position (the embedded server allows it): `kind` is an index
+//!   into `FeatureKind::ALL`, `seed` its map seed (default 1), `level` the
+//!   level (default 0, the way in).
 //! - `GAME_MOVE=dx,dy`: a second after starting, move the player by this
 //!   much (e.g. off the stairs they arrived on, to see them).
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked).
@@ -32,14 +32,13 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
-use shared::feature::{ChunkPos, Feature, FeatureKind};
-use shared::rng::Seed;
-use shared::site::Exit;
+use shared::feature::FeatureKind;
+use shared::protocol::ClientMessage;
 
 use crate::common::{Attitude, GameView, MapPosition, Token, TokenShape, TokenSize, Weather};
+use crate::connection::ToServer;
 use crate::demo::AutoWalk;
 use crate::player::{Player, TravelTo};
-use crate::site::{EnterFeature, TakeExit};
 use crate::view3d::OrbitCamera;
 
 /// Time between taking the screenshot and quitting, so it can be saved.
@@ -67,23 +66,18 @@ impl Plugin for DevToolsPlugin {
                 .first()
                 .and_then(|&k| FeatureKind::ALL.get(k as usize).copied())
                 .unwrap_or(FeatureKind::Castle);
-            let seed = Seed::new(numbers.get(1).copied().unwrap_or(1));
+            let seed = numbers.get(1).copied().unwrap_or(1);
             let level = numbers.get(2).copied().unwrap_or(0) as u32;
             app.add_systems(
                 OnExit(GameView::Connecting),
                 move |player: Single<&MapPosition, With<Player>>,
-                      mut enter: MessageWriter<EnterFeature>,
-                      mut exits: MessageWriter<TakeExit>| {
-                    enter.write(EnterFeature(Feature {
-                        kind,
-                        chunk: ChunkPos { x: 0, y: 0 },
+                      mut to_server: MessageWriter<ToServer>| {
+                    // Where to come back out, then the site.
+                    to_server.write(ToServer(ClientMessage::WorldMapPosition {
                         x: player.x,
                         y: player.y,
-                        seed,
                     }));
-                    if level > 0 {
-                        exits.write(TakeExit(Exit::Level(level)));
-                    }
+                    to_server.write(ToServer(ClientMessage::DevEnterSite { kind, seed, level }));
                 },
             );
         }

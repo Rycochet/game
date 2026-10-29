@@ -2,11 +2,14 @@
 //! running `ServerPlugin` at a fixed tick rate.
 
 use bevy::log::LogPlugin;
-use server::{DEFAULT_WORLD_SEED, headless_app};
+use server::{DEFAULT_WORLD_SEED, ServerOptions, headless_app};
 use shared::world::WorldSeed;
 
 fn main() {
-    let mut app = headless_app(WorldSeed::new(DEFAULT_WORLD_SEED));
+    let mut app = headless_app(
+        WorldSeed::new(DEFAULT_WORLD_SEED),
+        ServerOptions { dev_tools: false },
+    );
     app.add_plugins(LogPlugin::default());
     app.run();
 }

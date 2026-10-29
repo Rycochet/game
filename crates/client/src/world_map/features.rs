@@ -9,7 +9,8 @@
 use std::collections::BTreeMap;
 
 use bevy::prelude::*;
-use shared::feature::{Feature, FeatureKind};
+use shared::feature::FeatureKind;
+use shared::protocol::SeenFeature;
 
 use super::HALF_SIZE;
 use crate::common::{
@@ -58,7 +59,8 @@ pub(super) fn spawn_nearby(
         (player.x + RANGE, player.y + RANGE),
     );
 
-    let wanted: BTreeMap<(i64, i64), Feature> = near.into_iter().map(|f| ((f.x, f.y), f)).collect();
+    let wanted: BTreeMap<(i64, i64), SeenFeature> =
+        near.into_iter().map(|f| ((f.x, f.y), f)).collect();
     spawned.entities.retain(|position, entity| {
         let keep = wanted.contains_key(position);
         if !keep {

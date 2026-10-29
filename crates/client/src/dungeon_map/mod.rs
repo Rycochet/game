@@ -4,7 +4,8 @@
 //!
 //! Only what the player (or anything sharing its sight) can see is drawn:
 //! floors, stairs, and only the wall sides someone sees (never their tops).
-//! A seen side facing away from the camera is drawn half see-through. Walls
+//! A seen side facing away from the camera is drawn half see-through. What
+//! was seen before but is out of sight now is drawn dim and grey. Walls
 //! and floors use tile pictures chosen by the kind of place (`theme`). Light
 //! is dull everywhere, and brighter near light sources, which walls block.
 //! Left-click a seen walkable cell to travel there.
@@ -13,11 +14,14 @@ mod mesh;
 mod picking;
 mod theme;
 
+use std::collections::BTreeMap;
+
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::image::{ImageLoaderSettings, ImageSampler};
 use bevy::light::NotShadowCaster;
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
+use bevy::render::render_resource::TextureFormat;
 use bevy::window::PrimaryWindow;
 use shared::dungeon::Sight;
 use shared::site::StairsDirection;
@@ -72,7 +76,8 @@ impl Plugin for DungeonMapPlugin {
                     .after(PlayerSystems::Travel)
                     .after(View3dSystems::Place)
                     .run_if(in_view),
-            );
+            )
+            .add_systems(Update, grey_pictures);
     }
 }
 
@@ -90,17 +95,28 @@ struct Shown {
     stairs_up: Vec<(i64, i64)>,
 }
 
-/// The materials of the solid meshes (in `Surface::ALL` order) and of the
-/// see-through walls, so their pictures can follow the theme.
+/// The materials of the solid meshes (in `Surface::ALL` order), of the
+/// remembered ones and of the see-through walls, so their pictures can
+/// follow the theme.
 #[derive(Resource)]
 struct SurfaceMaterials {
     solid: Vec<Handle<StandardMaterial>>,
+    memory: Vec<Handle<StandardMaterial>>,
     see_through: Handle<StandardMaterial>,
+    /// Pictures waiting to load so a grey copy can be made for the
+    /// remembered surface, by surface index.
+    to_grey: Vec<(usize, Handle<Image>)>,
+    /// Grey copies already made, by the picture they copy.
+    greys: BTreeMap<AssetId<Image>, Handle<Image>>,
 }
 
 /// The mesh of one kind of surface (floors, solid walls...).
 #[derive(Component)]
 struct SolidPart(Surface);
+
+/// The mesh of one kind of surface remembered but out of sight.
+#[derive(Component)]
+struct MemoryPart(Surface);
 
 /// The mesh of half see-through walls.
 #[derive(Component)]
@@ -120,17 +136,19 @@ fn spawn_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let theme = Theme::of(None);
-    // Unlit: the light is in the vertex colours, worked out on the grid.
-    let solid: Vec<Handle<StandardMaterial>> = Surface::ALL
+    let pictures: Vec<Handle<Image>> = Surface::ALL
         .iter()
-        .map(|&surface| {
-            materials.add(StandardMaterial {
-                base_color_texture: Some(load_tile(&asset_server, theme.picture(surface))),
-                unlit: true,
-                ..default()
-            })
-        })
+        .map(|&surface| load_tile(&asset_server, theme.picture(surface)))
         .collect();
+    // Unlit: the light is in the vertex colours, worked out on the grid.
+    // Memory shows the coloured pictures until their grey copies are made.
+    let unlit = |picture: &Handle<Image>| StandardMaterial {
+        base_color_texture: Some(picture.clone()),
+        unlit: true,
+        ..default()
+    };
+    let solid: Vec<_> = pictures.iter().map(|p| materials.add(unlit(p))).collect();
+    let memory: Vec<_> = pictures.iter().map(|p| materials.add(unlit(p))).collect();
     let see_through = materials.add(StandardMaterial {
         base_color: Color::srgba(1.0, 1.0, 1.0, SEE_THROUGH_ALPHA),
         base_color_texture: Some(load_tile(&asset_server, theme.wall)),
@@ -159,6 +177,15 @@ fn spawn_scene(
             NotShadowCaster,
         ));
     }
+    for (&surface, material) in Surface::ALL.iter().zip(&memory) {
+        commands.entity(scene).with_child((
+            MemoryPart(surface),
+            Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
+            MeshMaterial3d(material.clone()),
+            NoFrustumCulling,
+            NotShadowCaster,
+        ));
+    }
     commands.entity(scene).with_child((
         SeeThroughPart,
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
@@ -166,7 +193,13 @@ fn spawn_scene(
         NoFrustumCulling,
         NotShadowCaster,
     ));
-    commands.insert_resource(SurfaceMaterials { solid, see_through });
+    commands.insert_resource(SurfaceMaterials {
+        solid,
+        memory,
+        see_through,
+        to_grey: pictures.into_iter().enumerate().collect(),
+        greys: BTreeMap::new(),
+    });
 }
 
 /// Loads a tile picture, sampled pixel by pixel to keep the pixel art crisp.
@@ -183,21 +216,74 @@ fn load_tile(asset_server: &AssetServer, path: &'static str) -> Handle<Image> {
 fn apply_theme(
     dungeon: Res<CurrentDungeon>,
     asset_server: Res<AssetServer>,
-    surfaces: Res<SurfaceMaterials>,
+    mut surfaces: ResMut<SurfaceMaterials>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if !dungeon.is_changed() {
         return;
     }
-    let theme = Theme::of(dungeon.site.as_ref().map(|site| site.kind()));
+    let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     for surface in [Surface::Floor, Surface::Wall] {
+        let picture = load_tile(&asset_server, theme.picture(surface));
         if let Some(mut material) = materials.get_mut(&surfaces.solid[surface as usize]) {
-            material.base_color_texture = Some(load_tile(&asset_server, theme.picture(surface)));
+            material.base_color_texture = Some(picture.clone());
         }
+        surfaces.to_grey.push((surface as usize, picture));
     }
     if let Some(mut material) = materials.get_mut(&surfaces.see_through) {
         material.base_color_texture = Some(load_tile(&asset_server, theme.wall));
     }
+}
+
+/// Gives remembered surfaces grey copies of their pictures, once the
+/// pictures have loaded (each is copied once).
+fn grey_pictures(
+    mut surfaces: ResMut<SurfaceMaterials>,
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    if surfaces.to_grey.is_empty() {
+        return;
+    }
+    let surfaces = &mut *surfaces;
+    surfaces.to_grey.retain(|(index, picture)| {
+        let grey = match surfaces.greys.get(&picture.id()) {
+            Some(grey) => grey.clone(),
+            None => {
+                let Some(image) = images.get(picture) else {
+                    // Not loaded yet: try again next frame.
+                    return true;
+                };
+                // Made first: `images` can't be added to while borrowed.
+                let copy = greyed(image);
+                let grey = images.add(copy);
+                surfaces.greys.insert(picture.id(), grey.clone());
+                grey
+            }
+        };
+        if let Some(mut material) = materials.get_mut(&surfaces.memory[*index]) {
+            material.base_color_texture = Some(grey);
+        }
+        false
+    });
+}
+
+/// A grey copy of an 8-bit RGBA picture (anything else is copied as it is).
+fn greyed(image: &Image) -> Image {
+    let mut grey = image.clone();
+    let rgba = matches!(
+        image.texture_descriptor.format,
+        TextureFormat::Rgba8UnormSrgb | TextureFormat::Rgba8Unorm
+    );
+    if let (true, Some(data)) = (rgba, grey.data.as_mut()) {
+        for pixel in data.as_chunks_mut::<4>().0 {
+            let [r, g, b] = [pixel[0], pixel[1], pixel[2]].map(f32::from);
+            // Rec. 601 weights on the stored values: good enough for looks.
+            let luma = (0.299 * r + 0.587 * g + 0.114 * b) as u8;
+            pixel[..3].fill(luma);
+        }
+    }
+    grey
 }
 
 /// Becoming the current view: shows the scene, sets the dim fill light for
@@ -252,15 +338,23 @@ fn hide_unseen_tokens(
 
 /// When anyone who sees or gives light moves, the level changes, or the
 /// camera moves (turning, zooming or following the player): works out what
-/// is seen and how it is lit, and rebuilds the meshes.
+/// is seen (and so remembered from now on) and how it is lit, and rebuilds
+/// the meshes.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn update_meshes(
-    dungeon: Res<CurrentDungeon>,
+    mut dungeon: ResMut<CurrentDungeon>,
     player: Single<Ref<MapPosition>, With<Player>>,
     sharers: Query<Ref<MapPosition>, (With<SharesSight>, Without<Player>)>,
     lights: Query<(Ref<MapPosition>, Ref<LightSource>)>,
     camera: Single<&Transform, With<ViewCamera>>,
-    mut solid: Query<(&SolidPart, &Mesh3d, &mut Visibility), Without<SeeThroughPart>>,
+    mut solid: Query<
+        (&SolidPart, &Mesh3d, &mut Visibility),
+        (Without<SeeThroughPart>, Without<MemoryPart>),
+    >,
+    mut memory: Query<
+        (&MemoryPart, &Mesh3d, &mut Visibility),
+        (Without<SeeThroughPart>, Without<SolidPart>),
+    >,
     see_through: Single<(&Mesh3d, &mut Visibility), With<SeeThroughPart>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut stats: ResMut<ViewStats>,
@@ -298,6 +392,18 @@ fn update_meshes(
     for view in &views {
         sight.add_glimpses(level, view.cell.0, view.cell.1, None);
     }
+    // What is in sight is remembered from now on (only cells the server has
+    // sent: the rest are wall here until it does). Not a change that needs
+    // anything redrawn, so it doesn't mark the level changed.
+    let mut remembered = dungeon.remembered.clone();
+    let (min_x, min_y, width, height) = level.bounds();
+    for y in min_y..min_y + height {
+        for x in min_x..min_x + width {
+            if sight.is_seen(x, y) && dungeon.known.is_seen(x, y) {
+                remembered.insert(x, y);
+            }
+        }
+    }
     let mut light = LightGrid::new(level);
     for (position, source) in &lights {
         let colour = LinearRgba::from(source.colour);
@@ -308,14 +414,23 @@ fn update_meshes(
             Vec3::new(colour.red, colour.green, colour.blue),
         );
     }
-    let built = mesh::build(level, &views, &sight, &light, &dungeon.stairs, camera);
+    let built = mesh::build(
+        level,
+        &views,
+        &sight,
+        &remembered,
+        &light,
+        &dungeon.stairs,
+        camera,
+    );
+    dungeon.bypass_change_detection().remembered = remembered;
     shown.sight = Some(sight);
     shown.solid_faces = built.solid_faces;
     shown.stairs_up = dungeon
         .stairs
         .iter()
-        .filter(|found| found.stairs.direction == StairsDirection::Up)
-        .map(|found| (found.stairs.x, found.stairs.y))
+        .filter(|found| found.direction == StairsDirection::Up)
+        .map(|found| (found.x, found.y))
         .collect();
 
     // An empty mesh is hidden rather than drawn with no triangles.
@@ -340,6 +455,18 @@ fn update_meshes(
             *stored = mesh;
         }
     }
+    let mut memory_meshes: Vec<Option<Mesh>> = built.memory.into_iter().map(Some).collect();
+    for (part, handle, mut visibility) in &mut memory {
+        let i = part.0 as usize;
+        visibility.set_if_neq(shown_if(built.has_memory[i]));
+        if !built.has_memory[i] {
+            continue;
+        }
+        if let (Some(mut stored), Some(mesh)) = (meshes.get_mut(&handle.0), memory_meshes[i].take())
+        {
+            *stored = mesh;
+        }
+    }
     let (see_through_mesh, mut see_through_visibility) = see_through.into_inner();
     see_through_visibility.set_if_neq(shown_if(built.has_see_through));
     if built.has_see_through
@@ -351,7 +478,8 @@ fn update_meshes(
     stats.summary = format!("{}: sight, light and meshes {ms:.2} ms", dungeon.describe());
 }
 
-/// A left click on a seen walkable cell sends the player travelling there (in
+/// A left click on a seen (or remembered) walkable cell sends the player
+/// travelling there (in
 /// a straight line for now: walls don't stop travel until there is
 /// pathfinding). Clicks on clickable tokens are left to `site`; so is using
 /// stairs, by arriving on their cell.
@@ -367,7 +495,7 @@ fn pick_on_click(
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
         return;
     }
-    let (Some(cursor), Some(sight)) = (window.cursor_position(), &shown.sight) else {
+    let Some(cursor) = window.cursor_position() else {
         return;
     };
     let (camera, camera_transform) = *camera;
@@ -377,7 +505,7 @@ fn pick_on_click(
     if let Some((x, y)) = picking::pick(
         ray,
         &dungeon.level,
-        sight,
+        &dungeon.remembered,
         &shown.solid_faces,
         &shown.stairs_up,
     ) {

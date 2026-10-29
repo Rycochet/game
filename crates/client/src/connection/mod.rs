@@ -7,9 +7,9 @@
 //! has no server to talk to until networking exists, so it stays
 //! `GameView::Connecting`.
 //!
-//! On the world map it reports where the player is (TEMPORARY, until
-//! movement goes through the server), and the server sends the chunks
-//! coming into sight.
+//! It reports where the player is (TEMPORARY, until movement goes through
+//! the server), and the server sends what comes into sight. Other modules
+//! send with `ToServer` and read the server's map messages as `FromServer`.
 
 use bevy::prelude::*;
 use shared::protocol::{
@@ -29,23 +29,37 @@ impl Plugin for ConnectionPlugin {
             shared::world::WorldSeed::new(server::DEFAULT_WORLD_SEED),
         )));
 
-        app.add_systems(
-            Startup,
-            say_hello.run_if(resource_exists::<ServerConnection>),
-        )
-        .add_systems(
-            PreUpdate,
-            receive.run_if(resource_exists::<ServerConnection>),
-        )
-        .add_systems(
-            Update,
-            report_world_map_position
-                .after(PlayerSystems::Travel)
-                .run_if(resource_exists::<ServerConnection>)
-                .run_if(in_state(GameView::WorldMap)),
-        );
+        app.add_message::<ToServer>()
+            .add_message::<FromServer>()
+            .add_systems(
+                Startup,
+                say_hello.run_if(resource_exists::<ServerConnection>),
+            )
+            .add_systems(
+                PreUpdate,
+                receive.run_if(resource_exists::<ServerConnection>),
+            )
+            .add_systems(
+                Update,
+                (
+                    report_world_map_position.run_if(in_state(GameView::WorldMap)),
+                    report_site_position.run_if(in_state(GameView::Dungeon)),
+                )
+                    .after(PlayerSystems::Travel),
+            )
+            // Last, so everything written this frame goes, in order.
+            .add_systems(Last, send.run_if(resource_exists::<ServerConnection>));
     }
 }
+
+/// A message for the server, sent at the end of the frame.
+#[derive(Message, Clone, Debug)]
+pub struct ToServer(pub ClientMessage);
+
+/// A message from the server about maps (`EnterLevel`, `LevelCells`,
+/// `LeftSite`), for `site`. The rest are handled here.
+#[derive(Message, Clone, Debug)]
+pub struct FromServer(pub ServerMessage);
 
 /// The link to the server. Removed if the connection is lost.
 // The web client never makes one yet.
@@ -65,6 +79,7 @@ fn receive(
     connection: Res<ServerConnection>,
     mut world: Option<ResMut<CurrentWorld>>,
     mut next_view: ResMut<NextState<GameView>>,
+    mut from_server: MessageWriter<FromServer>,
 ) {
     loop {
         match connection.0.receive() {
@@ -87,6 +102,13 @@ fn receive(
                 Some(world) => world.features.insert(chunk.chunk, chunk.feature),
                 None => warn!("A world map chunk arrived before the world"),
             },
+            Ok(Some(
+                message @ (ServerMessage::EnterLevel(_)
+                | ServerMessage::LevelCells(_)
+                | ServerMessage::LeftSite { .. }),
+            )) => {
+                from_server.write(FromServer(message));
+            }
             Ok(None) => return,
             Err(error) => {
                 error!("Lost the connection to the server ({error:?})");
@@ -100,7 +122,7 @@ fn receive(
 /// Tells the server where the player is on the world map: on coming to it,
 /// and whenever they are `WORLD_MAP_REPORT_DISTANCE` from the last report.
 fn report_world_map_position(
-    connection: Res<ServerConnection>,
+    mut to_server: MessageWriter<ToServer>,
     player: Single<&MapPosition, With<Player>>,
     view: Res<State<GameView>>,
     mut reported: Local<Option<MapPosition>>,
@@ -115,10 +137,31 @@ fn report_world_map_position(
             || (player.y - last.y).abs() >= WORLD_MAP_REPORT_DISTANCE
     };
     if reported.as_ref().is_none_or(far) {
-        connection.0.send(&ClientMessage::WorldMapPosition {
+        to_server.write(ToServer(ClientMessage::WorldMapPosition {
             x: player.x,
             y: player.y,
-        });
+        }));
         *reported = Some(**player);
+    }
+}
+
+/// Tells the server where the player is in a site, whenever they move to
+/// another cell.
+fn report_site_position(
+    mut to_server: MessageWriter<ToServer>,
+    player: Single<Ref<MapPosition>, With<Player>>,
+) {
+    if player.is_changed() {
+        to_server.write(ToServer(ClientMessage::SitePosition {
+            x: player.x,
+            y: player.y,
+        }));
+    }
+}
+
+/// Sends what other systems wrote this frame.
+fn send(connection: Res<ServerConnection>, mut to_server: MessageReader<ToServer>) {
+    for message in to_server.read() {
+        connection.0.send(&message.0);
     }
 }

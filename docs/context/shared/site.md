@@ -13,8 +13,9 @@ Sites: the maps world map features lead to (buildings, caves, crypts), each one 
 
 - `Site::new(kind, seed)`, `.kind()`, `.is_building()` (floors go up; otherwise levels go down), `.levels()`, `.level(index) -> SiteLevel` (0 is the one entered from the world map).
 - `leads_out(level, x, y)`: whether arriving there leaves for the world map: `Ground` on the very edge of the level (beside its rectangle's edge).
-- `SiteLevel { level, stairs, entrance }`; `arrival(from: Exit)`: where you arrive coming from the world map (the entrance) or another level (the stairs leading back there).
-- `Stairs { x, y, direction, to: Exit }`; `Exit::{WorldMap, Level(n)}`.
+- `SiteLevel { level, stairs, entrance }`; `arrival(from: Exit)`: where you arrive coming from the world map (the entrance) or another level (the stairs leading back there); `arrive(from)`: the same, falling back to the first stairs or the entrance (dev tools' jumps between levels).
+- `Site::stairs_descend(index, level, stairs) -> (dx, dy)`: the way a staircase goes down, agreeing with the other end (generates the other level to look). Only for looks; moved here from the client so the server can send it.
+- `Stairs { x, y, direction, to: Exit }`; `Exit::{WorldMap, Level(n)}`. `StairsDirection` is serde-serialisable (sent in `protocol::SeenStairs`).
 - `Generator::{Building(BuildingOptions), Cave(CaveOptions)}`, `Generator::for_feature(kind)`: the options per feature kind (wrappers for tuning a generator).
 - `BuildingOptions { width, height, outlines, square, max_floors, size_per_floor }`, `Outline::{Rectangle, CutCorners, RoundCorners, Circle}`.
 - `CaveOptions { size, levels, entrance, doors, water_percent, lava_percent }`, `CaveEntrance::{Hole, Opening, Either}`.
@@ -25,7 +26,7 @@ Sites: the maps world map features lead to (buildings, caves, crypts), each one 
 
 ## Used by
 
-- Client `common` (`CurrentDungeon`), `site` (entering, stairs), `dev_tools` (`GAME_ENTER`).
+- `server` (`sites`: everything about sites), `shared::protocol` (`StairsDirection`); client `site` (`leads_out`), `dungeon_map` (`StairsDirection`).
 
 ## Notes
 

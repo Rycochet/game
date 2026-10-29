@@ -8,10 +8,10 @@ Dungeons and buildings as rules: a grid of cells (floor, wall, doors, outside gr
 
 ## Public API
 
-- `Cell` (`Floor`, `Wall`, `Door`, `SecretDoor`, `Ground`, `Water`, `Lava`): `is_walkable()` (floor, door, ground), `is_open()` (sight and light pass: those plus water and lava). Doors are open for now; secret doors act as wall until finding them exists.
+- `Cell` (`Floor`, `Wall`, `Door`, `SecretDoor`, `Ground`, `Water`, `Lava`; serde, sent in `protocol::LevelChunk`): `is_walkable()` (floor, door, ground), `is_open()` (sight and light pass: those plus water and lava). Doors are open for now; secret doors act as wall until finding them exists.
 - `RoomId(u16)`: the planned room a cell is in.
 - `Level`: rectangle of cells (`new(min_x, min_y, width, height)` all wall, `set`, `cell`, `is_open`, `is_walkable`, `room`, `set_room`, `contains`, `bounds`). Outside the rectangle counts as wall, in no room. `test_room()`: 15 × 7 floor cells (east–west × north–south) walled round, centred on `(0, 0)`, with a 1 × 3 wall at `x = -2`, `y = -1..=1` (for tests, and shown before any site is entered).
-- `Sight`: cells seen, sized to a level. `add_view(level, x, y, radius)` adds what is seen from a cell (`radius` in cells, straight-line between centres, or `None`); calls combine (shared sight, several lights). `add_glimpses(...)`: the same, but open cells count when any part of them is in view (side openings glimpsed from a corridor); not symmetric, so for drawing only, never game rules. `is_seen(x, y)`.
+- `Sight`: cells seen, sized to a level. `add_view(level, x, y, radius)` adds what is seen from a cell (`radius` in cells, straight-line between centres, or `None`); calls combine (shared sight, several lights). `add_glimpses(...)`: the same, but open cells count when any part of them is in view (side openings glimpsed from a corridor); not symmetric, so for drawing only, never game rules. `is_seen(x, y)`, `insert(x, y)` (count a cell as seen: used as a set of cells, e.g. remembered or known ones).
 
 ## Depends on
 
@@ -19,7 +19,7 @@ Dungeons and buildings as rules: a grid of cells (floor, wall, doors, outside gr
 
 ## Used by
 
-- `shared::site` (generators), client `common` (`CurrentDungeon`), `player` (only walkable cells can be stepped on), `dungeon_map` (sight, light reach, cell colours), `site` (ground leads out).
+- `shared::site` (generators), `server` (`sites`: sight and preloading), client `common` (`CurrentDungeon`), `player` (only walkable cells can be stepped on), `dungeon_map` (sight, light reach, cell colours), `site` (ground leads out).
 
 ## Notes
 

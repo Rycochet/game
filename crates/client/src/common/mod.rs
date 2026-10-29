@@ -8,10 +8,9 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
-use shared::dungeon::Level;
-use shared::feature::{CHUNK_SIZE, ChunkPos, Feature};
-use shared::protocol::WorldInfo;
-use shared::site::{Site, Stairs};
+use shared::dungeon::{Level, Sight};
+use shared::feature::{CHUNK_SIZE, ChunkPos};
+use shared::protocol::{LevelChunk, LevelInfo, SeenFeature, SeenStairs, WorldInfo};
 use shared::surface::Surface;
 use shared::world::WorldParams;
 
@@ -31,12 +30,7 @@ impl Plugin for CommonPlugin {
                 focused_mode: UpdateMode::reactive(Duration::from_secs_f64(1.0 / FOCUSED_FPS)),
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
             })
-            .insert_resource(CurrentDungeon {
-                site: None,
-                index: 0,
-                level: Level::test_room(),
-                stairs: Vec::new(),
-            })
+            .init_resource::<CurrentDungeon>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
             .init_resource::<Weather>()
@@ -75,7 +69,7 @@ pub struct KnownFeatures {
     width: i64,
     /// By chunk, north-south first (so an area's rows can be looked up);
     /// `None` for a chunk known to have no feature.
-    chunks: BTreeMap<(i64, i64), Option<Feature>>,
+    chunks: BTreeMap<(i64, i64), Option<SeenFeature>>,
 }
 
 impl KnownFeatures {
@@ -87,14 +81,14 @@ impl KnownFeatures {
     }
 
     /// What the server says is in a chunk.
-    pub fn insert(&mut self, chunk: ChunkPos, feature: Option<Feature>) {
+    pub fn insert(&mut self, chunk: ChunkPos, feature: Option<SeenFeature>) {
         self.chunks.insert((chunk.y, chunk.x), feature);
     }
 
     /// Every known feature whose position is within `min..=max` (world grid
     /// points, in any planet-width frame: the features are given in the
     /// same one), like `shared::feature::FeatureMap::in_area`.
-    pub fn in_area(&self, min: (i64, i64), max: (i64, i64)) -> Vec<Feature> {
+    pub fn in_area(&self, min: (i64, i64), max: (i64, i64)) -> Vec<SeenFeature> {
         let rows =
             (min.1.div_euclid(CHUNK_SIZE), i64::MIN)..=(max.1.div_euclid(CHUNK_SIZE), i64::MAX);
         let mut found = Vec::new();
@@ -103,7 +97,7 @@ impl KnownFeatures {
             for copy in min.0.div_euclid(self.width)..=max.0.div_euclid(self.width) {
                 let x = feature.x + copy * self.width;
                 if (min.0..=max.0).contains(&x) && (min.1..=max.1).contains(&feature.y) {
-                    found.push(Feature { x, ..feature });
+                    found.push(SeenFeature { x, ..feature });
                 }
             }
         }
@@ -125,41 +119,76 @@ pub enum GameView {
     Dungeon,
 }
 
-/// The level of a site the player is in. Its rules (walls block movement,
-/// sight and light) live in `shared::dungeon`; sites and their levels in
-/// `shared::site`. Set by `site` when the player enters or changes level.
+/// The site level the player is on, as far as the server has told: unknown
+/// cells are wall until their cells arrive. Its rules (walls block
+/// movement, sight and light) live in `shared::dungeon`. Changed by `site`
+/// when the server says the player has arrived, or sends cells.
 #[derive(Resource)]
 pub struct CurrentDungeon {
-    /// The site, `None` before any has been entered (the level is then the
-    /// test room).
-    pub site: Option<Site>,
-    /// Which of the site's levels this is.
-    pub index: u32,
+    /// What the level is; `None` before any has been entered.
+    pub info: Option<LevelInfo>,
+    /// The cells the server has sent; the rest are wall.
     pub level: Level,
-    pub stairs: Vec<LevelStairs>,
+    /// Which cells the server has sent.
+    pub known: Sight,
+    /// Which cells the player has seen, now or before: drawn even when out
+    /// of sight (in grey). Includes what is in sight now.
+    pub remembered: Sight,
+    /// The level's known stairs.
+    pub stairs: Vec<SeenStairs>,
 }
 
-/// A staircase of the current level, with the way it goes down (a grid
-/// step from its top end to its bottom end). Both levels a staircase joins
-/// draw it going the same way, so arriving by it matches leaving by it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct LevelStairs {
-    pub stairs: Stairs,
-    pub descends: (i64, i64),
+impl Default for CurrentDungeon {
+    fn default() -> Self {
+        let level = Level::new(0, 0, 1, 1);
+        Self {
+            info: None,
+            known: Sight::new(&level),
+            remembered: Sight::new(&level),
+            level,
+            stairs: Vec::new(),
+        }
+    }
 }
 
 impl CurrentDungeon {
+    /// Arriving on a level: nothing of it known yet.
+    pub fn enter(&mut self, info: LevelInfo) {
+        let (min_x, min_y, width, height) = info.bounds;
+        self.level = Level::new(min_x, min_y, width, height);
+        self.known = Sight::new(&self.level);
+        self.remembered = Sight::new(&self.level);
+        self.stairs.clear();
+        self.info = Some(info);
+    }
+
+    /// Cells the server has sent.
+    pub fn add(&mut self, chunk: &LevelChunk) {
+        for (x, y, cell) in chunk.cells() {
+            self.level.set(x, y, cell);
+            self.known.insert(x, y);
+            if chunk.remembered {
+                self.remembered.insert(x, y);
+            }
+        }
+        for stairs in &chunk.stairs {
+            if !self.stairs.contains(stairs) {
+                self.stairs.push(*stairs);
+            }
+        }
+    }
+
     /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3".
     pub fn describe(&self) -> String {
-        let Some(site) = &self.site else {
-            return "Test room".into();
+        let Some(info) = &self.info else {
+            return "Nowhere".into();
         };
-        let what = if site.is_building() { "floor" } else { "level" };
+        let what = if info.building { "floor" } else { "level" };
         format!(
             "{:?}, {what} {} of {}",
-            site.kind(),
-            self.index + 1,
-            site.levels()
+            info.kind,
+            info.index + 1,
+            info.levels
         )
     }
 }
@@ -169,7 +198,7 @@ impl CurrentDungeon {
 /// of the level, not entities: see `site`.)
 #[derive(Component, Clone, Copy, Debug)]
 pub enum Portal {
-    Feature(Feature),
+    Feature(SeenFeature),
 }
 
 /// Its token can be clicked (`view3d::ClickedToken`).
@@ -403,7 +432,6 @@ impl Attitude {
 #[cfg(test)]
 mod tests {
     use shared::feature::FeatureKind;
-    use shared::rng::Seed;
 
     use super::*;
 
@@ -411,12 +439,11 @@ mod tests {
     fn known_features_are_found_in_any_frame() {
         let mut known = KnownFeatures::new(1000);
         let chunk = ChunkPos { x: 0, y: 1 };
-        let feature = Feature {
+        let feature = SeenFeature {
             kind: FeatureKind::Crypt,
             chunk,
             x: 10,
             y: 70,
-            seed: Seed::new(1),
         };
         known.insert(chunk, Some(feature));
         known.insert(ChunkPos { x: 1, y: 1 }, None);

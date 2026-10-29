@@ -9,6 +9,8 @@
 
 mod connections;
 mod embedded;
+mod sites;
+mod world_map;
 
 use std::time::Duration;
 
@@ -16,6 +18,7 @@ use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
 use shared::feature::FeatureMap;
 use shared::protocol::WorldInfo;
+use shared::surface::Surface;
 use shared::world::{WORLD_MAP_VERSION, WorldParams, WorldSeed};
 
 pub use connections::Connections;
@@ -29,11 +32,21 @@ pub const DEFAULT_WORLD_SEED: u64 = 12345;
 
 pub struct ServerPlugin {
     pub world_seed: WorldSeed,
+    pub options: ServerOptions,
+}
+
+/// How a server is run.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct ServerOptions {
+    /// Whether clients may use developer tools (`DevEnterSite`): only for
+    /// the embedded single-player server.
+    pub dev_tools: bool,
 }
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ServerWorld::new(self.world_seed))
+            .insert_resource(self.options)
             .init_resource::<Connections>()
             .add_systems(Startup, announce)
             .add_systems(Update, connections::handle_messages);
@@ -42,14 +55,17 @@ impl Plugin for ServerPlugin {
 
 /// A headless server (no window) ticking `TICKS_PER_SECOND` times a second.
 /// Add a log plugin if nothing else in the process has one.
-pub fn headless_app(world_seed: WorldSeed) -> App {
+pub fn headless_app(world_seed: WorldSeed, options: ServerOptions) -> App {
     let mut app = App::new();
     app.add_plugins(
         MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
             1.0 / TICKS_PER_SECOND,
         ))),
     )
-    .add_plugins(ServerPlugin { world_seed });
+    .add_plugins(ServerPlugin {
+        world_seed,
+        options,
+    });
     app
 }
 
@@ -58,6 +74,8 @@ pub fn headless_app(world_seed: WorldSeed) -> App {
 pub struct ServerWorld {
     pub seed: WorldSeed,
     pub features: FeatureMap,
+    /// The world's width in grid points: `x` wraps at this.
+    pub width: i64,
 }
 
 impl ServerWorld {
@@ -65,6 +83,7 @@ impl ServerWorld {
         let params = WorldParams::from_seed(seed.terrain());
         Self {
             features: FeatureMap::new(&params, seed.features()),
+            width: Surface::new(&params).width(),
             seed,
         }
     }

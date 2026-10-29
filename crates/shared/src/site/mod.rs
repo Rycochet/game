@@ -11,6 +11,8 @@ mod building;
 mod cave;
 mod grid;
 
+use serde::{Deserialize, Serialize};
+
 use crate::dungeon::Level;
 use crate::feature::FeatureKind;
 use crate::rng::Seed;
@@ -28,7 +30,7 @@ pub enum Exit {
 }
 
 /// Which way a staircase goes, for its picture.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum StairsDirection {
     Up,
     Down,
@@ -75,6 +77,15 @@ impl SiteLevel {
                 Exit::WorldMap => self.entrance,
                 Exit::Level(_) => None,
             })
+    }
+
+    /// As `arrival`, but somewhere even if nothing leads there (a jump
+    /// between levels, from dev tools): the first stairs or the entrance.
+    pub fn arrive(&self, from: Exit) -> (i64, i64) {
+        self.arrival(from)
+            .or_else(|| self.stairs.first().map(|s| (s.x, s.y)))
+            .or(self.entrance)
+            .unwrap_or((0, 0))
     }
 }
 
@@ -209,6 +220,66 @@ impl Site {
             Plan::Cave(plan) => plan.level(index),
         }
     }
+
+    /// The way `stairs` on level `index` (`level`) go down, as a grid step
+    /// from their top end to their bottom end, agreeing with the matching
+    /// stairs on the level they lead to (generated again to look). Only for
+    /// looks: both ends of a staircase are drawn running the same way.
+    pub fn stairs_descend(&self, index: u32, level: &Level, stairs: Stairs) -> (i64, i64) {
+        let other = match stairs.to {
+            Exit::Level(to) => {
+                let other = self.level(to);
+                let back = other
+                    .stairs
+                    .iter()
+                    .find(|s| s.to == Exit::Level(index))
+                    .map(|s| (s.x, s.y));
+                back.map(|cell| (other.level, cell))
+            }
+            Exit::WorldMap => None,
+        };
+        let here = Some((level, (stairs.x, stairs.y)));
+        let other = other.as_ref().map(|(level, cell)| (level, *cell));
+        match stairs.direction {
+            StairsDirection::Down => descent_way(here, other),
+            StairsDirection::Up => descent_way(other, here),
+        }
+    }
+}
+
+/// The four sides of a cell, as grid steps (`y` south), in the order ties
+/// are settled.
+const SIDES: [(i64, i64); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
+
+/// The way a staircase goes down between the cell `upper` (its top, on the
+/// level above) and `lower` (its bottom, on the level below), either unknown
+/// (the world map). Best is walkable floor to step on at the top end of the
+/// upper level and off at the bottom end of the lower one; then a wall at
+/// the far end of each (stairs run up against a wall). Ties go to the first
+/// of `SIDES`.
+fn descent_way(
+    upper: Option<(&Level, (i64, i64))>,
+    lower: Option<(&Level, (i64, i64))>,
+) -> (i64, i64) {
+    let score = |(dx, dy): (i64, i64)| {
+        let mut score = 0;
+        if let Some((level, (x, y))) = upper {
+            score += 2 * level.is_walkable(x - dx, y - dy) as u32;
+            score += !level.is_walkable(x + dx, y + dy) as u32;
+        }
+        if let Some((level, (x, y))) = lower {
+            score += 2 * level.is_walkable(x + dx, y + dy) as u32;
+            score += !level.is_walkable(x - dx, y - dy) as u32;
+        }
+        score
+    };
+    let mut best = SIDES[0];
+    for side in SIDES {
+        if score(side) > score(best) {
+            best = side;
+        }
+    }
+    best
 }
 
 #[cfg(test)]
@@ -216,6 +287,22 @@ mod tests {
     use super::*;
     use crate::dungeon::Cell;
     use grid::Reach;
+
+    #[test]
+    fn stairs_go_down_the_same_way_on_both_levels() {
+        let level = Level::test_room();
+        // Down stairs alone, against the north wall, open to the south:
+        // you step on from the south, so they go down northwards.
+        assert_eq!(descent_way(Some((&level, (0, -3))), None), (0, -1));
+        // Up stairs alone against the east wall climb east, so they go down
+        // westwards.
+        assert_eq!(descent_way(None, Some((&level, (7, 0)))), (-1, 0));
+        // Together, both levels count: there is floor to step on at the top
+        // and off at the bottom.
+        let (dx, dy) = descent_way(Some((&level, (0, -3))), Some((&level, (7, 0))));
+        assert!(level.is_walkable(-dx, -3 - dy));
+        assert!(level.is_walkable(7 + dx, dy));
+    }
 
     /// A number summing up a level (cells, rooms, stairs), for golden tests.
     fn fingerprint(site_level: &SiteLevel) -> u64 {
