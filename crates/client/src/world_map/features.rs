@@ -1,6 +1,6 @@
 //! The world map's features (caves, houses, castles, crypts...) as entities
 //! with octagonal tokens and a picture of what they are. Which chunks have
-//! one, and where, comes from `shared::feature`.
+//! one, and where, is what the server has sent (`common::CurrentWorld`).
 //!
 //! Only features near the player exist as entities, and only while the world
 //! map is the current view: they are spawned as the player moves and
@@ -41,15 +41,15 @@ fn icon(kind: FeatureKind) -> String {
     format!("terrain/l2_terrain{:03}.png", FIRST_TILE + kind as usize)
 }
 
-/// When the player reaches a new grid point (or the view has just become
-/// current): spawns the features now in range and despawns those that left it.
+/// When the player reaches a new grid point, the server has sent more of the
+/// world, or the view has just become current: spawns the features now in range and despawns those that left it.
 pub(super) fn spawn_nearby(
     mut commands: Commands,
     world: Res<CurrentWorld>,
     player: Single<Ref<MapPosition>, With<Player>>,
     mut spawned: ResMut<SpawnedFeatures>,
 ) {
-    if spawned.ready && !player.is_changed() {
+    if spawned.ready && !player.is_changed() && !world.is_changed() {
         return;
     }
     spawned.ready = true;
@@ -103,6 +103,11 @@ pub(super) fn despawn_all(mut commands: Commands, mut spawned: ResMut<SpawnedFea
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn features_are_shown_only_as_far_as_the_server_sends() {
+        const { assert!(RANGE <= shared::protocol::WORLD_MAP_SIGHT) };
+    }
 
     #[test]
     fn icons_cover_the_chosen_tiles() {

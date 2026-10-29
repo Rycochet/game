@@ -8,7 +8,8 @@ Shared building blocks for the client modules. Keep it small.
 
 ## Public API
 
-- `CurrentWorld` (resource): `params: WorldParams`, `surface: Surface`, `features: FeatureMap` (`shared::feature`); `CurrentWorld::new(&WorldInfo)`. Only exists once the server has welcomed the client (inserted by `connection`).
+- `CurrentWorld` (resource): `params: WorldParams`, `surface: Surface`, `features: KnownFeatures`; `CurrentWorld::new(&WorldInfo)`. Only exists once the server has welcomed the client (inserted by `connection`, which also adds the chunks the server sends, marking it changed).
+- `KnownFeatures`: the world map chunks the server has sent and their features (`None`: known to have none). `insert(chunk, feature)`, `in_area(min, max)` (as `FeatureMap::in_area`: any planet-width frame). Unit test.
 - `MapPosition { x: i64, y: i64 }` (component): position on the current view's grid; `y` increases southwards (towards the viewer). For the travelling player, the nearest grid point to `SmoothPosition`.
 - `SmoothPosition { x: f64, y: f64 }` (component): exact position, fractional while the player travels, equal to `MapPosition` when still (`From<MapPosition>`). Anything with a `Token` needs one: `view3d` draws tokens there.
 - `GameView` (Bevy state): `Connecting` (the default: waiting for the server, no `CurrentWorld` yet; `connection` moves on to `WorldMap`), `WorldMap` or `Dungeon` (inside a site). Each view shows its scene and runs its systems only while current (`OnEnter`/`OnExit`, `in_state`). Switched by `site`.
@@ -27,7 +28,7 @@ Shared building blocks for the client modules. Keep it small.
 
 ## Depends on
 
-- `shared` (`protocol::WorldInfo`, `WorldParams`, `Surface`, `feature::{Feature, FeatureMap}`, `dungeon::Level`, `site::{Site, Stairs}`).
+- `shared` (`protocol::WorldInfo`, `WorldParams`, `Surface`, `feature::{Feature, ChunkPos, CHUNK_SIZE}`, `dungeon::Level`, `site::{Site, Stairs}`).
 
 ## Used by
 

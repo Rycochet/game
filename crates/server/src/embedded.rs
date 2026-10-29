@@ -49,6 +49,9 @@ mod tests {
             assert!(Instant::now() < deadline, "no answer from the server");
             thread::sleep(Duration::from_millis(10));
         };
-        assert_eq!(answer, ServerMessage::Welcome(ServerWorld { seed }.info()));
+        assert_eq!(
+            answer,
+            ServerMessage::Welcome(ServerWorld::new(seed).info())
+        );
     }
 }

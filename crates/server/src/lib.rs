@@ -14,8 +14,9 @@ use std::time::Duration;
 
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
+use shared::feature::FeatureMap;
 use shared::protocol::WorldInfo;
-use shared::world::{WORLD_MAP_VERSION, WorldSeed};
+use shared::world::{WORLD_MAP_VERSION, WorldParams, WorldSeed};
 
 pub use connections::Connections;
 pub use embedded::start_embedded;
@@ -32,12 +33,10 @@ pub struct ServerPlugin {
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ServerWorld {
-            seed: self.world_seed,
-        })
-        .init_resource::<Connections>()
-        .add_systems(Startup, announce)
-        .add_systems(Update, connections::handle_messages);
+        app.insert_resource(ServerWorld::new(self.world_seed))
+            .init_resource::<Connections>()
+            .add_systems(Startup, announce)
+            .add_systems(Update, connections::handle_messages);
     }
 }
 
@@ -58,16 +57,24 @@ pub fn headless_app(world_seed: WorldSeed) -> App {
 #[derive(Resource)]
 pub struct ServerWorld {
     pub seed: WorldSeed,
+    pub features: FeatureMap,
 }
 
 impl ServerWorld {
+    pub fn new(seed: WorldSeed) -> Self {
+        let params = WorldParams::from_seed(seed.terrain());
+        Self {
+            features: FeatureMap::new(&params, seed.features()),
+            seed,
+        }
+    }
+
     /// What a joining client is told about the world.
     pub fn info(&self) -> WorldInfo {
         WorldInfo {
             id: self.seed.id(),
             terrain_seed: self.seed.terrain(),
             world_map_version: WORLD_MAP_VERSION,
-            features_seed: self.seed.features(),
         }
     }
 }

@@ -10,9 +10,9 @@ World map features: the world grid is cut into chunks, and each chunk has at mos
 
 - Constants: `CHUNK_SIZE` (64 grid points), `EDGE_MARGIN` (8: features stand at least this far inside their chunk, so two are at least 16 apart, a token's width), `FEATURE_CHANCE_PERCENT` (80, the owner's choice), `LAND_TRIES` (8 random spots tried for dry land; a chunk with none has no feature, so seas and coasts have fewer).
 - `FeatureKind`: 34 kinds (`Boulders` … `Mausoleum`), named after the tiles `l2_terrain066`–`099` and in their order; `ALL`. All equally likely for now.
-- `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded.
+- `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded. `FeatureKind`, `ChunkPos` and `Feature` are serde-serialisable (sent in `protocol::WorldChunk`).
 - `Feature { kind, chunk, x, y, seed }`: `x, y` its exact world grid position; `seed` is what its map is generated from.
-- `FeatureMap::new(&WorldParams, features_seed)` (the secret `WorldSeed::features`; keeps its own `Surface`), `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Feature>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Feature>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`).
+- `FeatureMap::new(&WorldParams, features_seed)` (the secret `WorldSeed::features`; keeps its own `Surface`), `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Feature>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Feature>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
 
 ## Depends on
 
@@ -22,7 +22,7 @@ The tests pass the old `terrain.derive("features")` seed, so the golden values d
 
 ## Used by
 
-- `shared::site` (`FeatureKind` picks the generator), client `common` (`CurrentWorld::features`, `Portal`), `world_map` (feature tokens), `site` (entering).
+- `shared::site` (`FeatureKind` picks the generator), `shared::protocol` (`WorldChunk`), `server` (`ServerWorld::features`: what it sends); client `common` (`KnownFeatures`, `Portal`), `world_map` (feature tokens), `site` (entering).
 
 ## Notes
 
