@@ -1,2 +1,4 @@
 # Shell scripts run inside Linux containers: always LF line endings.
 *.sh text eol=lf
+# Git hooks are shell scripts too, without the extension.
+.githooks/* text eol=lf

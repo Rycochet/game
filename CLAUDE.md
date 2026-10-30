@@ -10,6 +10,12 @@
 
 The project owner is new to Rust: explain Rust concepts briefly when they come up, and prefer clear code over clever code.
 
+## Tech stack
+
+Rust stable (pinned in `rust-toolchain.toml`), Bevy 0.20, Trunk for the web build, WebSockets between client and server, postcard for messages. Details: `docs/context/project.md`.
+
+Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`: the networked server, also serving the web client), `xtask` (helper commands).
+
 ## How to load context (read this first)
 
 **Do not read the whole codebase.** Each feature module has a short context file in `docs/context/`. Read only the ones relevant to the task, then open only the source files they point to.
@@ -43,8 +49,6 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 Also: `docs/context/decisions.md` is the log of architecture decisions. Check it before proposing a structural change, and follow what it records.
 
 If a task touches a module not listed here, it doesn't exist yet: create it (see "Adding a module").
-
-Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`: the networked server, also serving the web client), `xtask` (helper commands).
 
 ## Module rules
 
@@ -83,8 +87,12 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 - Native: `cargo run` · Server: `cargo run -p server` (with `HALL_OF_WORLDS_WEB=dist` after `trunk build`, it serves the web client too, on http://localhost:8080) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
 - Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
-- Docker isn't installed on the owner's machine, and the Docker workflow only builds the image after merging to `master`: take extra care with `Dockerfile` changes.
 - **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
+- **Lint: `cargo xtask lint`**: the same without the tests. The pre-commit hook in `.githooks/` runs it (turn on once per clone with `cargo xtask hooks`). It checks the files on disk, not only what's staged. Fix what it reports rather than skipping it with `--no-verify`.
+
+## Development workflow
+
+- Docker isn't installed on the owner's machine, and the Docker workflow only builds the image after merging to `master`: take extra care with `Dockerfile` changes.
 - **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: `cargo xtask test` type-checks wasm, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
 - **Leave the game running for the owner** after finishing a change: start the native build in the background (`./target/debug/hall-of-worlds.exe` with `run_in_background`) and don't close it, so the owner can see and play with the changes. Before rebuilding, close it if it's still running (`taskkill //IM hall-of-worlds.exe //F`): Windows locks the running executable and the build fails with "Access is denied".
 - **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`). Always set `HALL_OF_WORLDS_SERVER_DATA` to a scratch folder in the same command (shell variables don't carry between commands), or the run saves over the owner's character.

@@ -14,15 +14,53 @@ Usage: cargo xtask <task>
 
 Tasks:
   test    Check formatting, type-check and lint (warnings are errors) for
-          both native and the browser (wasm), then run the tests. This is
-          what CI runs.
+          both native and the browser (wasm), then run the tests. Run this
+          before merging.
+  lint    The same checks without the tests. The pre-commit hook runs this.
+  hooks   Turn on the pre-commit hook for this checkout (once per clone).
   package Release build of the native client and server, put together
           with the game assets in target/package/ (what the Build
           workflow uploads).";
 
+/// A named cargo command: what `lint` and `test` are made of.
+type Check = (&'static str, &'static [&'static str]);
+
+const LINTS: &[Check] = &[
+    ("Formatting", &["fmt", "--all", "--check"]),
+    (
+        "Lint (native)",
+        &[
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ],
+    ),
+    // Only the client (and the shared crate it uses) runs in the browser.
+    (
+        "Lint (web)",
+        &[
+            "clippy",
+            "--package",
+            "client",
+            "--target",
+            "wasm32-unknown-unknown",
+            "--",
+            "-D",
+            "warnings",
+        ],
+    ),
+];
+
+const TESTS: Check = ("Tests", &["test", "--workspace"]);
+
 fn main() -> ExitCode {
     match env::args().nth(1).as_deref() {
-        Some("test") => test(),
+        Some("test") => run_checks(LINTS.iter().chain([&TESTS])),
+        Some("lint") => run_checks(LINTS),
+        Some("hooks") => hooks(),
         Some("package") => package(),
         _ => {
             eprintln!("{USAGE}");
@@ -31,38 +69,25 @@ fn main() -> ExitCode {
     }
 }
 
-/// Runs every check, even if an earlier one fails, then reports all failures.
-fn test() -> ExitCode {
-    let checks: &[(&str, &[&str])] = &[
-        ("Formatting", &["fmt", "--all", "--check"]),
-        (
-            "Lint (native)",
-            &[
-                "clippy",
-                "--workspace",
-                "--all-targets",
-                "--",
-                "-D",
-                "warnings",
-            ],
-        ),
-        // Only the client (and the shared crate it uses) runs in the browser.
-        (
-            "Lint (web)",
-            &[
-                "clippy",
-                "--package",
-                "client",
-                "--target",
-                "wasm32-unknown-unknown",
-                "--",
-                "-D",
-                "warnings",
-            ],
-        ),
-        ("Tests", &["test", "--workspace"]),
-    ];
+/// Points git at the hooks kept in the repository (`.githooks/`). Git doesn't
+/// do this by itself when cloning, so that a clone can't run code on its own.
+fn hooks() -> ExitCode {
+    let installed = Command::new("git")
+        .args(["config", "core.hooksPath", ".githooks"])
+        .current_dir(workspace_root())
+        .status()
+        .is_ok_and(|status| status.success());
+    if installed {
+        println!("==> Pre-commit hook on: each commit runs `cargo xtask lint` first");
+        ExitCode::SUCCESS
+    } else {
+        eprintln!("==> FAILED: git config core.hooksPath .githooks");
+        ExitCode::FAILURE
+    }
+}
 
+/// Runs every check, even if an earlier one fails, then reports all failures.
+fn run_checks<'a>(checks: impl IntoIterator<Item = &'a Check>) -> ExitCode {
     let mut failed = Vec::new();
     for (name, args) in checks {
         println!("==> {name}: cargo {}", args.join(" "));
