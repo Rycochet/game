@@ -19,6 +19,7 @@ The game is written in [Rust](https://www.rust-lang.org/) using the [Bevy](https
 2. Install Rust: `winget install Rustlang.Rustup` (or <https://rustup.rs/>), then open a new terminal.
 3. Install Trunk, the web build tool: `cargo install --locked trunk`
 4. Install Visual Studio Code <https://code.visualstudio.com/> and accept the recommended extensions when you open this folder.
+5. Turn on the pre-commit lint check: `cargo xtask hooks`
 
 `rust-toolchain.toml` makes Rust download the correct compiler and WebAssembly target automatically on the first build.
 

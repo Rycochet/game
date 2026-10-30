@@ -1,0 +1,5 @@
+#!/bin/sh
+# Checks formatting and lints before each commit. Turn on with `cargo xtask hooks`.
+# Checks the files on disk, including changes not staged for this commit.
+# Skip once with `git commit --no-verify`.
+exec cargo xtask lint
