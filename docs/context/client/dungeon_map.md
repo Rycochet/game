@@ -41,6 +41,6 @@ The dungeon (and building) view: `shared::dungeon` cells drawn in 3D through `vi
 - Tokens can't use baked light, so they get real lights: a `PointLight` (no shadows) `TOKEN_LIGHT_HEIGHT` above each light source, range (radius + 1) cells, plus a dim ambient. Tuned by eye. The player arriving by stairs stands on them (the token isn't raised or lowered).
 - Sight and light use `MapPosition` (whole cells). Drawing (and hiding tokens, and click picking) uses glimpses, which are more generous than the game's symmetric sight; light keeps the symmetric rule.
 - The see-through mesh is one mesh with `AlphaMode::Blend`, so its faces don't sort against each other; with one picture at 50% this hasn't shown.
-- Clicks: travel uses the world map's straight-line rules (through walls) until pathfinding (planned as a separate task); `player` travels at 12 cells/s here.
+- Clicks: `TravelTo`; `player` finds the route (`shared::pathfinding`) and travels at 12 cells/s here.
 - Rebuilding everything (with sight) is about 1 ms for a 50 × 66 castle floor; it happens every frame while the camera moves (dragging, travelling). Bigger levels may need to rebuild only what changed.
 - Ctrl+click on the map (not a token) sends `DevTeleport` instead of `TravelTo` (dev tools: only the embedded server allows it; through walls in a site, but onto a walkable cell). Alt+click sends `DevSetCell` (floor → wall → door → window → floor), to try wall shapes. Uses `connection::ToServer`.

@@ -27,7 +27,7 @@ The client's connection to the server: joining, sending the player's steps and p
 - `receive` runs in `PreUpdate`, so the state changes on the same frame `Welcome` arrives, and `OnEnter(GameView::WorldMap)` already finds `CurrentWorld`. `dev_tools` starting positions apply after it (on leaving `Connecting`), so they win over the saved one.
 - `ServerConnection`'s fields are dropped in order: the link first (the server sees its client leave, saves and stops), then the `EmbeddedServer`, whose drop waits for that. Swapping them would hang on quitting.
 - Map changes are counted in `PostUpdate`, after `site` has applied them: steps taken earlier in that frame were still on the last map. Steps sent just before a map change are never confirmed; the server ignores them.
-- Corrections cancel travel (any direct change to `MapPosition` does, `player`). With straight-line travel through walls (until pathfinding), a journey stops where the server refused the step.
+- Corrections cancel travel (any direct change to `MapPosition` does, `player`). A journey stops where the server refused a step (memory can be out of date).
 - Reconnecting keeps the view on show: `Welcome` replaces `CurrentWorld` (feature tokens respawn), the player is put where the server says, and `EnterLevel` follows if they are in a site. Movement waits for `ServerStatus::Connected`.
 - `dev_tools` start-up states run on leaving `GameView::Connecting`, which only happens on the first welcome.
 - Native `wss://` isn't supported yet (no TLS in `tungstenite` here); browsers handle `wss://` themselves.
