@@ -8,32 +8,12 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::SeenStairs;
-use shared::site::StairsDirection;
 
 use super::liquid::build_cell;
+use super::stairs::{build_stairs, hides_viewer};
 use super::theme::Shape;
 use super::walls::{Layers, Scene, build_opening, build_wall};
-use super::{AMBIENT_LIGHT, CELL_SIZE, WALL_HEIGHT};
-
-/// Steps in a flight of stairs.
-const STAIR_STEPS: usize = 4;
-
-/// Half the width of a staircase (across the way it runs): half a cell wide,
-/// centred, with floor either side.
-const STAIRS_HALF_WIDTH: f32 = CELL_SIZE / 4.0;
-
-/// How high stairs up climb within their cell (they carry on through the
-/// ceiling), and how deep the hole for stairs down is.
-pub const STAIRS_UP_HEIGHT: f32 = WALL_HEIGHT * 0.75;
-const STAIRS_DOWN_DEPTH: f32 = CELL_SIZE * 0.5;
-
-/// Shading on stairs (they are unlit, so this gives them their shape):
-/// risers and sides darker than treads; inside the hole, `RIM_SHADE` at the
-/// top and darker the deeper, down to `DEEPEST_SHADE` at the bottom.
-const RISER_SHADE: f32 = 0.6;
-const SIDE_SHADE: f32 = 0.8;
-const RIM_SHADE: f32 = 0.6;
-const DEEPEST_SHADE: f32 = 0.05;
+use super::{AMBIENT_LIGHT, CELL_SIZE};
 
 /// The kinds of surface, each drawn with its own tile picture.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -176,6 +156,10 @@ pub struct DungeonMeshes {
     /// camera and what is seen), drawn half see-through.
     pub see_through: Mesh,
     pub has_see_through: bool,
+    /// Stairs in the way of a viewer, by surface (in `Surface::ALL` order),
+    /// drawn half see-through.
+    pub stairs_through: Vec<Mesh>,
+    pub has_stairs_through: Vec<bool>,
     /// The solid wall sides, which block clicks.
     pub solid_faces: Vec<WallFace>,
 }
@@ -200,6 +184,7 @@ pub fn build(
         solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
         memory: Surface::ALL.iter().map(|_| Builder::default()).collect(),
         see_through: Builder::default(),
+        stairs_through: Surface::ALL.iter().map(|_| Builder::default()).collect(),
         solid_faces: Vec::new(),
     };
     let scene = Scene {
@@ -234,6 +219,7 @@ pub fn build(
         solid,
         memory,
         see_through,
+        stairs_through,
         solid_faces,
     } = layers;
     DungeonMeshes {
@@ -243,6 +229,11 @@ pub fn build(
         memory: memory.into_iter().map(Builder::into_mesh).collect(),
         has_see_through: !see_through.indices.is_empty(),
         see_through: see_through.into_mesh(),
+        has_stairs_through: stairs_through
+            .iter()
+            .map(|b| !b.indices.is_empty())
+            .collect(),
+        stairs_through: stairs_through.into_iter().map(Builder::into_mesh).collect(),
         solid_faces,
     }
 }
@@ -264,7 +255,7 @@ fn build_open_cell(
     if !scene.sight.is_seen(x, y) {
         let grey = Vec3::splat(MEMORY_SHADE);
         match stairs {
-            Some(found) => build_stairs(&mut layers.memory, found, grey, &|_| grey),
+            Some(found) => build_stairs(&mut layers.memory, None, found, grey, &|_| grey),
             None => {
                 let half = CELL_SIZE / 2.0;
                 layers.memory[surface as usize].quad(
@@ -283,108 +274,12 @@ fn build_open_cell(
         Some(found) => {
             let lit = with_ambient(light.at(x, y));
             let floor_colour = |p| with_ambient(floor_light(p));
-            build_stairs(&mut layers.solid, found, lit, &floor_colour);
+            let through = hides_viewer(found, scene.views, scene.camera)
+                .then_some(&mut layers.stairs_through[..]);
+            build_stairs(&mut layers.solid, through, found, lit, &floor_colour);
         }
         None => {
             layers.solid[surface as usize].face(centre, Vec3::Y, CELL_SIZE / 2.0, floor_light);
-        }
-    }
-}
-
-// A flight of steps half a cell wide down the middle of the stairs' cell,
-/// running the way they go down (`SeenStairs::descends`): stairs up stand
-/// on the floor and climb to `STAIRS_UP_HEIGHT`; stairs down go into a hole
-/// `STAIRS_DOWN_DEPTH` deep with floor either side. Stairs up are built of
-/// the wall's masonry, so they stand out from the floor; the steps down are
-/// floor going down between walls. `lit` is the colour at the stairs' cell
-/// and `floor_colour` the colour at a point on the floor (light with the
-/// ambient, or memory's grey).
-fn build_stairs(
-    solid: &mut [Builder],
-    stairs: &SeenStairs,
-    lit: Vec3,
-    floor_colour: &impl Fn(Vec3) -> Vec3,
-) {
-    let (dx, dy) = stairs.descends;
-    let centre = Vec3::new(
-        stairs.x as f32 * CELL_SIZE,
-        0.0,
-        stairs.y as f32 * CELL_SIZE,
-    );
-    let descends = Vec3::new(dx as f32, 0.0, dy as f32);
-    let across = Vec3::Y.cross(descends);
-    let half = CELL_SIZE / 2.0;
-    let width = STAIRS_HALF_WIDTH;
-    let run = CELL_SIZE / STAIR_STEPS as f32;
-    let [floor, wall] = [Surface::Floor as usize, Surface::Wall as usize];
-
-    match stairs.direction {
-        StairsDirection::Up => {
-            // On the whole floor, climbing against the way down.
-            solid[floor].quad(centre, Vec3::Y, Vec3::NEG_Z, (half, half), floor_colour);
-            let forward = -descends;
-            let rise = STAIRS_UP_HEIGHT / STAIR_STEPS as f32;
-            for step in 0..STAIR_STEPS {
-                let i = step as f32;
-                let along = -half + (i + 0.5) * run;
-                let top = (i + 1.0) * rise;
-                let at = centre + forward * along;
-                solid[wall].rect(at + Vec3::Y * top, Vec3::Y, forward, width, run / 2.0, lit);
-                let front = centre + forward * (-half + i * run) + Vec3::Y * (top - rise / 2.0);
-                let riser = lit * RISER_SHADE;
-                solid[wall].rect(front, -forward, Vec3::Y, width, rise / 2.0, riser);
-                for side in [across, -across] {
-                    let middle = at + side * width + Vec3::Y * (top / 2.0);
-                    let shade = lit * SIDE_SHADE;
-                    solid[wall].rect(middle, side, Vec3::Y, run / 2.0, top / 2.0, shade);
-                }
-            }
-            let back = centre + forward * half + Vec3::Y * (STAIRS_UP_HEIGHT / 2.0);
-            let shade = lit * SIDE_SHADE;
-            solid[wall].rect(back, forward, Vec3::Y, width, STAIRS_UP_HEIGHT / 2.0, shade);
-        }
-        StairsDirection::Down => {
-            // Floor either side of the hole.
-            let strip = (half - width) / 2.0;
-            for side in [across, -across] {
-                let middle = centre + side * (width + strip);
-                solid[floor].quad(middle, Vec3::Y, descends, (strip, half), floor_colour);
-            }
-            let forward = descends;
-            let drop = STAIRS_DOWN_DEPTH / STAIR_STEPS as f32;
-            // Darker the deeper.
-            let at_height = move |y: f32| {
-                let depth = -y / STAIRS_DOWN_DEPTH;
-                lit * (RIM_SHADE + (DEEPEST_SHADE - RIM_SHADE) * depth)
-            };
-            for step in 0..STAIR_STEPS {
-                let i = step as f32;
-                let top = -(i + 1.0) * drop;
-                let shade = at_height(top);
-                let at = centre + forward * (-half + (i + 0.5) * run);
-                let tread = at + Vec3::Y * top;
-                solid[floor].rect(tread, Vec3::Y, forward, width, run / 2.0, shade);
-                if step + 1 < STAIR_STEPS {
-                    // The drop to the next step down, facing down the stairs.
-                    let edge = centre + forward * (-half + (i + 1.0) * run);
-                    let middle = edge + Vec3::Y * (top - drop / 2.0);
-                    let riser = shade * RISER_SHADE;
-                    solid[wall].rect(middle, forward, Vec3::Y, width, drop / 2.0, riser);
-                }
-            }
-            // The sides of the hole, facing in (the near ones face away from
-            // the camera, so they are culled and don't hide the steps): the
-            // long sides beside the steps, and the short ones at each end.
-            let depth = STAIRS_DOWN_DEPTH / 2.0;
-            for (outwards, reach, size) in [
-                (across, width, (half, depth)),
-                (-across, width, (half, depth)),
-                (forward, half, (width, depth)),
-                (-forward, half, (width, depth)),
-            ] {
-                let middle = centre + outwards * reach - Vec3::Y * depth;
-                solid[wall].quad(middle, -outwards, Vec3::Y, size, |p| at_height(p.y));
-            }
         }
     }
 }
@@ -415,7 +310,7 @@ pub struct Builder {
     pub positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     uvs: Vec<[f32; 2]>,
-    colours: Vec<[f32; 4]>,
+    pub colours: Vec<[f32; 4]>,
     pub indices: Vec<u32>,
 }
 
@@ -435,24 +330,9 @@ impl Builder {
         });
     }
 
-    /// A rectangle `2 × half_across` by `2 × half_up` (along `up`), in
-    /// `colour` (the vertex colour: light with the ambient, and any shading).
-    /// The picture keeps its scale (one per cell), so small parts show part
-    /// of it.
-    fn rect(
-        &mut self,
-        centre: Vec3,
-        normal: Vec3,
-        up: Vec3,
-        half_across: f32,
-        half_up: f32,
-        colour: Vec3,
-    ) {
-        self.quad(centre, normal, up, (half_across, half_up), |_| colour);
-    }
-
-    /// A rectangle as `rect`, with each corner's vertex colour from
-    /// `colour_at` its position.
+    /// A rectangle `2 × half_across` by `2 × half_up` (along `up`), with each
+    /// corner's vertex colour from `colour_at` its position. The picture keeps
+    /// its scale (one per cell), so small parts show part of it.
     fn quad(
         &mut self,
         centre: Vec3,
@@ -544,6 +424,7 @@ impl Builder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dungeon_map::WALL_HEIGHT;
 
     /// What each viewer sees from its cell.
     fn views_from(level: &Level, cells: &[(i64, i64)]) -> Vec<View> {

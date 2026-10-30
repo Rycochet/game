@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::dungeon::Cell;
 use crate::feature::FeatureKind;
-use crate::site::StairsDirection;
+use crate::site::{StairsDirection, StairsStyle};
 
 /// Level chunks are this many cells on a side: 64 cells, one bit each of a
 /// `u64` mask.
@@ -91,6 +91,8 @@ pub struct SeenStairs {
     /// The way it goes down, as a grid step from its top end to its bottom
     /// end (`Site::stairs_descend`), the same on both levels it joins.
     pub descends: (i64, i64),
+    /// What it is built as (`Site::stairs_style`), the same at both ends.
+    pub style: StairsStyle,
 }
 
 #[cfg(test)]

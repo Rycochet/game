@@ -41,6 +41,64 @@ pub enum StairsDirection {
     Down,
 }
 
+/// What a way between two levels is built as. Only for looks: all are used
+/// the same way.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum StairsStyle {
+    /// Winding round a central column.
+    Spiral,
+    /// Two flights side by side, turning back half way up.
+    Turning,
+    /// A wooden ladder leaning from the middle of the bottom.
+    Ladder,
+    /// A thick pole, leaning like a ladder, with rungs out of alternate sides.
+    LogLadder,
+    /// Hanging straight down, with sagging rope for rungs.
+    RopeLadder,
+    /// Hanging straight down, with wooden slats for rungs.
+    SlatLadder,
+    /// A single hanging rope with knots.
+    KnottedRope,
+}
+
+impl StairsStyle {
+    pub const ALL: [Self; 7] = [
+        Self::Spiral,
+        Self::Turning,
+        Self::Ladder,
+        Self::LogLadder,
+        Self::RopeLadder,
+        Self::SlatLadder,
+        Self::KnottedRope,
+    ];
+
+    /// The next one, going round `ALL` (dev tools, to show them all).
+    pub fn next(self) -> Self {
+        let index = Self::ALL.iter().position(|&style| style == self);
+        Self::ALL[(index.unwrap_or(0) + 1) % Self::ALL.len()]
+    }
+
+    /// The styles that suit a kind of place.
+    fn choices(kind: FeatureKind) -> &'static [Self] {
+        use FeatureKind::*;
+        use StairsStyle::*;
+        match kind {
+            Castle | Fort | StoneTower | StoneCottage | Warehouse | ArcheryRange | AdobeHouse
+            | AdobeStore | StonePyramid | SandPyramid => &[Spiral, Turning],
+            ThatchedHut | StiltHut | GreenStiltHut | RedTent | BlueTent | GreenTent
+            | RedRoofCottage | GreyRoofCottage | SnowyCottage | WoodenTower => {
+                &[Turning, Ladder, LogLadder]
+            }
+            Crypt | MossyCrypt | BloodyCrypt | Mausoleum | Grave | Ruins | Barrel | Barrels => {
+                &[Spiral, Turning, Ladder]
+            }
+            GrassyCave | EarthCave | RockCave | Boulders | IceCave | IceShelter => {
+                &[Ladder, LogLadder, RopeLadder, SlatLadder, KnottedRope]
+            }
+        }
+    }
+}
+
 /// A staircase on a walkable cell. Using it takes you to `to`, where you
 /// arrive on the matching staircase.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -195,6 +253,7 @@ pub const CAVE_VERSION: u32 = 1;
 #[derive(Clone, Debug)]
 pub struct Site {
     kind: FeatureKind,
+    seed: Seed,
     plan: Plan,
 }
 
@@ -224,7 +283,7 @@ impl Site {
             }
             _ => return None,
         };
-        Some(Self { kind, plan })
+        Some(Self { kind, seed, plan })
     }
 
     pub fn kind(&self) -> FeatureKind {
@@ -253,6 +312,20 @@ impl Site {
             Plan::Building(plan) => plan.level(index),
             Plan::Cave(plan) => plan.level(index),
         }
+    }
+
+    /// What `stairs` on level `index` are built as, the same at both ends:
+    /// it depends on the site's seed and the upper of the two levels joined
+    /// (the world map counts as above everything). Only for looks; it draws
+    /// nothing from the generators' random sequences.
+    pub fn stairs_style(&self, index: u32, stairs: Stairs) -> StairsStyle {
+        let upper = match stairs.to {
+            Exit::WorldMap => -1,
+            Exit::Level(to) => i64::from(index.min(to)),
+        };
+        let choices = StairsStyle::choices(self.kind);
+        let hash = self.seed.derive("stairs style").at(&[upper]);
+        choices[(hash % choices.len() as u64) as usize]
     }
 
     /// The way `stairs` on level `index` (`level`) go down, as a grid step
@@ -329,6 +402,31 @@ mod tests {
         assert!(Site::with_version(FeatureKind::Castle, seed, BUILDING_VERSION + 1).is_none());
         assert!(Site::with_version(FeatureKind::RockCave, seed, CAVE_VERSION).is_some());
         assert!(Site::with_version(FeatureKind::RockCave, seed, 0).is_none());
+    }
+
+    /// Both ends of a staircase are built the same, as something that suits
+    /// the place, and sites differ.
+    #[test]
+    fn stairs_are_the_same_style_at_both_ends() {
+        let mut seen = std::collections::HashSet::new();
+        for seed in 0..30 {
+            for kind in FeatureKind::ALL {
+                let site = Site::new(kind, Seed::new(seed));
+                for index in 0..site.levels() {
+                    for stairs in site.level(index).stairs {
+                        let style = site.stairs_style(index, stairs);
+                        assert!(StairsStyle::choices(kind).contains(&style));
+                        seen.insert(style);
+                        if let Exit::Level(to) = stairs.to {
+                            let back = site.level(to).stairs;
+                            let back = back.iter().find(|s| s.to == Exit::Level(index));
+                            assert_eq!(site.stairs_style(to, *back.unwrap()), style);
+                        }
+                    }
+                }
+            }
+        }
+        assert_eq!(seen.len(), StairsStyle::ALL.len());
     }
 
     #[test]

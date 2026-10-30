@@ -13,6 +13,7 @@
 mod liquid;
 mod mesh;
 mod picking;
+mod stairs;
 mod theme;
 mod walls;
 
@@ -27,7 +28,6 @@ use bevy::render::render_resource::TextureFormat;
 use bevy::window::PrimaryWindow;
 use shared::dungeon::{Cell, Sight};
 use shared::protocol::ClientMessage;
-use shared::site::StairsDirection;
 
 use crate::common::{
     CurrentDungeon, GameView, LightSource, MapPosition, SharesSight, SmoothPosition, ViewStats,
@@ -96,13 +96,12 @@ impl Plugin for DungeonMapPlugin {
 #[derive(Component)]
 struct DungeonScene;
 
-/// What was last drawn, for click picking: the combined sight, the solid
-/// wall sides, and the cells with stairs up (which stand above the floor).
+/// What was last drawn, for click picking: the combined sight and the solid
+/// wall sides.
 #[derive(Resource, Default)]
 struct Shown {
     sight: Option<Sight>,
     solid_faces: Vec<WallFace>,
-    stairs_up: Vec<(i64, i64)>,
 }
 
 /// The materials of the solid meshes (in `Surface::ALL` order), of the
@@ -113,6 +112,8 @@ struct SurfaceMaterials {
     solid: Vec<Handle<StandardMaterial>>,
     memory: Vec<Handle<StandardMaterial>>,
     see_through: Handle<StandardMaterial>,
+    /// Of stairs in the way of a viewer, in `Surface::ALL` order.
+    stairs_through: Vec<Handle<StandardMaterial>>,
     /// Pictures waiting to load so a grey copy can be made for the
     /// remembered surface, by surface index.
     to_grey: Vec<(usize, Handle<Image>)>,
@@ -131,6 +132,10 @@ struct MemoryPart(Surface);
 /// The mesh of half see-through walls.
 #[derive(Component)]
 struct SeeThroughPart;
+
+/// The mesh of one kind of surface of stairs in the way of a viewer.
+#[derive(Component)]
+struct StairsThroughPart(Surface);
 
 /// A real light for tokens, following `owner`'s `LightSource`.
 #[derive(Component)]
@@ -210,6 +215,17 @@ fn spawn_scene(
         cull_mode: None,
         ..default()
     });
+    // Back faces stay culled, so a model doesn't show its far side as well.
+    let stairs_through: Vec<_> = pictures
+        .iter()
+        .map(|picture| {
+            materials.add(StandardMaterial {
+                base_color: Color::srgba(1.0, 1.0, 1.0, SEE_THROUGH_ALPHA),
+                alpha_mode: AlphaMode::Blend,
+                ..unlit(picture)
+            })
+        })
+        .collect();
     let visibility = if *view.get() == GameView::Dungeon {
         Visibility::Inherited
     } else {
@@ -245,10 +261,20 @@ fn spawn_scene(
         NoFrustumCulling,
         NotShadowCaster,
     ));
+    for (&surface, material) in Surface::ALL.iter().zip(&stairs_through) {
+        commands.entity(scene).with_child((
+            StairsThroughPart(surface),
+            Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
+            MeshMaterial3d(material.clone()),
+            NoFrustumCulling,
+            NotShadowCaster,
+        ));
+    }
     commands.insert_resource(SurfaceMaterials {
         solid,
         memory,
         see_through,
+        stairs_through,
         to_grey: pictures.into_iter().enumerate().collect(),
         greys: BTreeMap::new(),
     });
@@ -278,6 +304,9 @@ fn apply_theme(
     for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
         if let Some(mut material) = materials.get_mut(&surfaces.solid[surface as usize]) {
+            material.base_color_texture = Some(picture.clone());
+        }
+        if let Some(mut material) = materials.get_mut(&surfaces.stairs_through[surface as usize]) {
             material.base_color_texture = Some(picture.clone());
         }
         surfaces.to_grey.push((surface as usize, picture));
@@ -408,6 +437,14 @@ fn update_meshes(
         (Without<SeeThroughPart>, Without<SolidPart>),
     >,
     see_through: Single<(&Mesh3d, &mut Visibility), With<SeeThroughPart>>,
+    mut stairs_through: Query<
+        (&StairsThroughPart, &Mesh3d, &mut Visibility),
+        (
+            Without<SeeThroughPart>,
+            Without<SolidPart>,
+            Without<MemoryPart>,
+        ),
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut stats: ResMut<ViewStats>,
     mut shown: ResMut<Shown>,
@@ -490,12 +527,6 @@ fn update_meshes(
     shown.sight = Some(sight.clone());
     dungeon.bypass_change_detection().remembered = remembered;
     shown.solid_faces = built.solid_faces;
-    shown.stairs_up = dungeon
-        .stairs
-        .iter()
-        .filter(|found| found.direction == StairsDirection::Up)
-        .map(|found| (found.x, found.y))
-        .collect();
 
     // An empty mesh is hidden rather than drawn with no triangles.
     let shown_if = |has_faces: bool| {
@@ -527,6 +558,20 @@ fn update_meshes(
             continue;
         }
         if let (Some(mut stored), Some(mesh)) = (meshes.get_mut(&handle.0), memory_meshes[i].take())
+        {
+            *stored = mesh;
+        }
+    }
+    let mut through_meshes: Vec<Option<Mesh>> =
+        built.stairs_through.into_iter().map(Some).collect();
+    for (part, handle, mut visibility) in &mut stairs_through {
+        let i = part.0 as usize;
+        visibility.set_if_neq(shown_if(built.has_stairs_through[i]));
+        if !built.has_stairs_through[i] {
+            continue;
+        }
+        if let (Some(mut stored), Some(mesh)) =
+            (meshes.get_mut(&handle.0), through_meshes[i].take())
         {
             *stored = mesh;
         }
@@ -583,13 +628,9 @@ fn pick_on_click(
         }
         return;
     }
-    if let Some((x, y)) = picking::pick(
-        ray,
-        &dungeon.level,
-        &dungeon.remembered,
-        &shown.solid_faces,
-        &shown.stairs_up,
-    ) {
+    if let Some((x, y)) =
+        picking::pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces)
+    {
         // Dev tools: ctrl+click jumps there instead (through walls), if the
         // server allows it.
         if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {

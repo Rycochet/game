@@ -296,6 +296,7 @@ fn enter_level(
             direction: stairs.direction,
             // Only for looks: the other level is generated without changes.
             descends: site.stairs_descend(index, &level.level, stairs),
+            style: site.stairs_style(index, stairs),
         })
         .collect();
     let position = match arrival {
