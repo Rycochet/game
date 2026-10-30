@@ -8,11 +8,14 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
+use shared::climate::Climate;
 use shared::dungeon::{Level, Sight};
 use shared::feature::{CHUNK_SIZE, ChunkPos};
 use shared::movement::{WorldConditions, WorldGround};
 use shared::protocol::{LevelChunk, LevelInfo, SeenFeature, SeenStairs, WorldInfo};
+use shared::river::Rivers;
 use shared::surface::Surface;
+use shared::weather::WeatherField;
 use shared::world::WorldParams;
 
 /// Frame rate cap while the window has focus. Not a twitch game, so this saves
@@ -32,6 +35,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerStatus>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
+            .init_resource::<ServerClock>()
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>();
@@ -45,6 +49,9 @@ impl Plugin for CommonPlugin {
 pub struct CurrentWorld {
     pub params: WorldParams,
     pub surface: Surface,
+    pub climate: Climate,
+    pub rivers: Rivers,
+    pub weather: WeatherField,
     /// The ground as far as walking goes (the server's rules).
     pub ground: WorldGround,
     pub features: KnownFeatures,
@@ -56,6 +63,9 @@ impl CurrentWorld {
         let params = WorldParams::from_seed(info.terrain_seed);
         let surface = Surface::new(&params);
         Self {
+            climate: Climate::new(&params),
+            rivers: Rivers::new(&params),
+            weather: WeatherField::new(&params),
             features: KnownFeatures::new(surface.width()),
             ground: WorldGround::new(&params),
             surface,
@@ -284,8 +294,17 @@ pub struct GameClock {
     pub hour: u32,
 }
 
-/// Snow line for normal weather: above every mountain cap, so only the
-/// style's `mountain_height` applies.
+/// The server's clock as well as the client can tell, always running: game
+/// hours since the world began. Unlike `GameClock` it changes every frame.
+#[derive(Resource, Default)]
+pub struct ServerClock {
+    pub hours: f64,
+    /// How long the last `Ping` took to come back, in milliseconds.
+    pub round_trip_ms: Option<f64>,
+}
+
+/// Snow line for normal weather: above every height there is, so only the
+/// temperature brings snow.
 pub const NORMAL_SNOW_LINE: f64 = shared::world::NORMAL_SNOW_LINE as f64;
 
 /// Global weather. `snow_line` is the height above which everything is snow;

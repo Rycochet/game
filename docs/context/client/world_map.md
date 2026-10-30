@@ -9,9 +9,13 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with it
 - `crates/client/src/world_map/picking.rs`: `pick(ray, centre, square, ...) -> Option<(x, y)>`: walks the camera ray in 0.5-unit steps until it is below the drawn surface; misses if it passes over or comes in through an edge face. Inside/outside uses the current `ViewSquare`. Unit tests.
 - `crates/client/src/world_map/terrain.rs`: `HeightCache` (wrapping 640×640 grid of surface samples). `ViewSquare` (the window on show: `right`, `towards`, `half`; `contains`). `TerrainGrid` (resource: wrapping 640×640 store of per-point drawn height, ground height, normal and colour with baked slope shading, keyed by world position; `fill` works out only points the window's bounding box needs that aren't kept yet, `redraw_all` clears it). `build_window` (the terrain mesh: whole triangles inside the turned square are copied, ones crossing its border are clipped by `clip` (Sutherland–Hodgman), so the outline is exact). `build_edges` (one unlit mesh with faces down all four window edges: water depth strip over earth down to `FRONT_BASE` × water level in the starting view, the depth below the water scaled by the zoom so the frame keeps its shape; columns at every grid line and triangle diagonal the edge crosses (`crossings`), heights from the triangles (`height_at`), so the face top meets the terrain exactly; wound to face outwards, so back-face culling hides the far ones). `highest_shown_height` (max drawn height within a radius, for resting tokens). Unit tests.
 
+- `crates/client/src/world_map/rivers.rs`: `KnownRivers` (resource: chunks around the player and their rivers, traced once and kept until well out of reach), `DrawnRiver` (smoothed course, temperature, and width per point: 1 px at the source plus 1 px per chunk run, up to 4 px; pixels at the starting zoom, so they scale with the map). `terrain::build_rivers` makes the meshes: the strips, and dark see-through banks either side (`BANK_WIDTH`, `BANK_ALPHA`) so they look set into the ground.
+- `crates/client/src/world_map/sky.rs`: `spawn`, `update` (every frame: the time and window for the shaders; once a second, or at once after a teleport, samples `shared::weather` onto a 100�100 texture with 10-point spacing, about 1.8 ms: red cover, green rain, blue temperature. Two such textures, a second apart, are faded between, so the sky changes smoothly), `TerrainMaterial` (`ExtendedMaterial<StandardMaterial, TerrainSky>`), `CloudMaterial`, `PrecipitationMaterial`, `SkyAssets`, `SkyHourOffset`.
+- `crates/client/assets/shaders/`: `terrain.wesl` (standard lighting plus cloud shadows and water ripples), `clouds.wesl` (the sheet), `precipitation.wesl`. `struct Sky` in each must match `SkyParams` in `sky.rs`.
+
 ## Public API
 
-- `WorldMapPlugin` only.
+- `WorldMapPlugin`; `sky::SkyHourOffset` (dev tools).
 
 ## Depends on
 
@@ -22,6 +26,9 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with it
 - Nothing.
 
 ## Notes
+
+- Sky (owner's design): clouds are one sheet at `CLOUD_HEIGHT` (170, may change), straight above the window and exactly its shape, drawn in chunky blocks (`BLOCK` in `clouds.wesl`, about 8 screen pixels), so they end in a hard edge and don't move relative to the map when the camera turns. Being high and nearer the camera, the sheet shows further up the screen and wider than the map. Clicks pass through. Under them the terrain is slightly darkened straight below (`SHADOW`), not along the sun's direction, and not real shadows. Water is marked by vertex alpha 0 (frozen water isn't), and flowing rivers count as water.
+- Precipitation is `DROPS` quads placed by the vertex shader from random numbers in their positions, each at a fixed place on the map (a pattern repeating every `DROP_TILE`, so walking doesn't move them): how many show follows rain; temperature picks snow (below 0.2), sleet (below 0.3), otherwise rain, or hail where rain is above 0.8. Time comes from `common::ServerClock`, so clients agree to within their latency.
 
 - World `x` → 3D `+X`, world `y` (south) → `+Z`. The terrain and edge faces sit at the player's grid point (`MapPosition`) and move a whole step at a time; the camera and tokens follow `SmoothPosition`, so travel looks smooth (the window edges shift by under one unit relative to the camera).
 - Turning and zooming (owner's choice): the window is a square lined up with the camera, cut out of the world-aligned terrain, rather than the slab itself turning on screen. Zooming moves the camera in and shrinks the square by the same factor, so the square keeps its size on screen and shows less of the world (a true zoom: hills look taller). Each turn or zoom step re-cuts the window. Grid triangles are split along the north-east/south-west diagonal; the edge faces and `TerrainGrid::height_at` follow that same split.

@@ -20,6 +20,7 @@
 //!   once at `GAME_POS` if set, otherwise two seconds after starting.
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
 //! - `GAME_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
+//! - `GAME_SKY_HOUR=n`: draw the weather this many game hours ahead.
 //! - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) a second after
 //!   starting, to check that views handle resizing.
 //! - `GAME_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as
@@ -198,6 +199,10 @@ impl Plugin for DevToolsPlugin {
                     }
                 },
             );
+        }
+
+        if let Some(hours) = env::var("GAME_SKY_HOUR").ok().and_then(|v| v.parse().ok()) {
+            app.insert_resource(crate::world_map::sky::SkyHourOffset(hours));
         }
 
         if let Some(snow_line) = env::var("GAME_SNOW").ok().and_then(|v| v.parse().ok()) {

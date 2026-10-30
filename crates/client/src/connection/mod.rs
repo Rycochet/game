@@ -21,9 +21,12 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage};
+use shared::world::GAME_HOUR_SECONDS;
 use shared::world::WORLD_MAP_VERSION;
 
-use crate::common::{CurrentWorld, GameClock, GameView, MapPosition, ServerStatus, Weather};
+use crate::common::{
+    CurrentWorld, GameClock, GameView, MapPosition, ServerClock, ServerStatus, Weather,
+};
 use crate::player::{Player, PlayerSystems, Stepped};
 use prediction::{Prediction, correction};
 use socket::Target;
@@ -52,6 +55,13 @@ impl Plugin for ConnectionPlugin {
                     .chain(),
             )
             .add_systems(Update, send_steps.after(PlayerSystems::Travel))
+            .add_systems(
+                Update,
+                (
+                    run_clock,
+                    send_pings.run_if(resource_exists::<CurrentWorld>),
+                ),
+            )
             // After this frame's steps, which were still on the last map.
             .add_systems(PostUpdate, count_map_changes)
             // Last, so everything written this frame goes, in order.
@@ -63,6 +73,33 @@ impl Plugin for ConnectionPlugin {
             );
         #[cfg(target_arch = "wasm32")]
         app.add_systems(Last, pump_socket.after(send));
+    }
+}
+
+/// Seconds between asking the server's clock.
+const PING_EVERY: f64 = 1.0;
+
+/// How much of what the clock is out by is put right at each answer.
+const CLOCK_EASING: f64 = 0.1;
+
+/// Game hours the clock can be out by before it jumps (5 real seconds).
+const CLOCK_JUMP_HOURS: f64 = 5.0 / GAME_HOUR_SECONDS as f64;
+
+/// The clock keeps running between the server's answers.
+fn run_clock(time: Res<Time<Real>>, mut clock: ResMut<ServerClock>) {
+    clock.hours += time.delta_secs_f64() / GAME_HOUR_SECONDS as f64;
+}
+
+/// Asks the server's clock now and then, once in a world.
+fn send_pings(
+    time: Res<Time<Real>>,
+    mut to_server: MessageWriter<ToServer>,
+    mut last: Local<Option<f64>>,
+) {
+    let now = time.elapsed_secs_f64();
+    if last.is_none_or(|last| now - last >= PING_EVERY) {
+        *last = Some(now);
+        to_server.write(ToServer(ClientMessage::Ping { sent: now }));
     }
 }
 
@@ -176,6 +213,8 @@ fn receive(
     mut from_server: MessageWriter<FromServer>,
     mut prediction: ResMut<Prediction>,
     mut clock: ResMut<GameClock>,
+    mut server_clock: ResMut<ServerClock>,
+    time: Res<Time<Real>>,
     mut weather: ResMut<Weather>,
     mut player: Query<&mut MapPosition, With<Player>>,
 ) {
@@ -187,6 +226,22 @@ fn receive(
             Ok(Some(ServerMessage::Hour(hour))) => {
                 clock.set_if_neq(GameClock { hour });
             }
+            Ok(Some(ServerMessage::Pong {
+                sent,
+                clock: server_hours,
+            })) => {
+                // The clock was read about half the round trip ago.
+                let round_trip = time.elapsed_secs_f64() - sent;
+                server_clock.round_trip_ms = Some(round_trip * 1000.0);
+                let hours = server_hours + round_trip / 2.0 / GAME_HOUR_SECONDS as f64;
+                let behind = hours - server_clock.hours;
+                // Far out: jump. Otherwise ease, so clouds never visibly jerk.
+                server_clock.hours += if behind.abs() > CLOCK_JUMP_HOURS {
+                    behind
+                } else {
+                    behind * CLOCK_EASING
+                };
+            }
             Ok(Some(ServerMessage::SnowLine(snow_line))) => {
                 weather.set_if_neq(Weather {
                     snow_line: snow_line as f64,
@@ -194,12 +249,13 @@ fn receive(
             }
             Ok(Some(ServerMessage::Welcome {
                 world: info,
-                hour,
+                clock: hours,
                 snow_line,
                 x,
                 y,
             })) => {
-                clock.set_if_neq(GameClock { hour });
+                clock.set_if_neq(GameClock { hour: hours as u32 });
+                server_clock.hours = hours;
                 weather.set_if_neq(Weather {
                     snow_line: snow_line as f64,
                 });
@@ -224,7 +280,7 @@ fn receive(
                 }
                 from_server.write(FromServer(ServerMessage::Welcome {
                     world: info,
-                    hour,
+                    clock: hours,
                     snow_line,
                     x,
                     y,

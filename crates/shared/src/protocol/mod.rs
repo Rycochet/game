@@ -21,7 +21,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 9;
+pub const PROTOCOL_VERSION: u32 = 10;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -43,6 +43,9 @@ pub enum ClientMessage {
     /// on servers without accounts (yet): a random number the client keeps,
     /// so it gets the same character back. The embedded server ignores it.
     Hello { protocol: u32, guest: u64 },
+    /// Asks the server's clock, now and then. `sent` is the client's own time,
+    /// handed back in `Pong` so it can tell how long the round trip took.
+    Ping { sent: f64 },
     /// The player takes a step on the map they are on: the server checks
     /// it, moves them and sends what comes into sight, then (once a tick)
     /// `Position`. `map` counts the maps the client has been put on
@@ -96,12 +99,12 @@ impl ClientMessage {
 /// From the server to a client.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ServerMessage {
-    /// The answer to `Hello`: the world the player is in, the hour there
-    /// (`0..24`) and its snow line, and where they are on its world map (where
-    /// they left off). If they were in a site, `EnterLevel` follows.
+    /// The answer to `Hello`: the world the player is in, its clock (in game
+    /// hours since it began) and snow line, and where they are on its world
+    /// map (where they left off). If they were in a site, `EnterLevel` follows.
     Welcome {
         world: WorldInfo,
-        hour: u32,
+        clock: f64,
         snow_line: u32,
         x: i64,
         y: i64,
@@ -109,9 +112,11 @@ pub enum ServerMessage {
     /// The snow line has moved: above it everything is frozen, and ice can be
     /// walked on.
     SnowLine(u32),
-    /// A new hour has begun (`0..24`). The tide, and so where can be walked
-    /// on the world map, follows it.
+    /// A new whole hour has begun on the clock (`% 24` is the time of day).
+    /// The tide, and so where can be walked on the world map, follows it.
     Hour(u32),
+    /// The answer to `Ping`: its `sent`, and the world's clock when answering.
+    Pong { sent: f64, clock: f64 },
     /// The server won't talk to this client, and why.
     Refused(String),
     /// A world map chunk, as this player knows it.
@@ -212,13 +217,17 @@ mod tests {
                     terrain_seed: Seed::new(8),
                     world_map_version: 1,
                 },
-                hour: 5,
+                clock: 5.25,
                 snow_line: 128,
                 x: -4,
                 y: 9,
             },
             ServerMessage::SnowLine(40),
             ServerMessage::Hour(6),
+            ServerMessage::Pong {
+                sent: 1.5,
+                clock: 6.75,
+            },
             ServerMessage::Refused("no".into()),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 1, y: -2 },

@@ -19,7 +19,8 @@ Shared building blocks for the client modules. Keep it small.
 - `Clickable` (component, marker): its token can be clicked (`view3d::ClickedToken`).
 - `LightSource` (component): `radius` (cells) and `colour`; lights dungeons. The player has one (6 cells, white).
 - `SharesSight` (component, marker): its sight is added to the player's in dungeons. Nothing has it yet.
-- `GameClock` (resource): `hour` `0..24`, set by `connection` from the server's `Welcome` and `Hour`; only changes on the hour (use `is_changed()`).
+- `ServerClock` (resource): `hours` (float, always running: game hours since the world began, as near the server's as `connection` can keep it; changes every frame), `round_trip_ms`.
+- `GameClock` (resource): `hour` counting up for ever (`% 24` is the time of day; tides use it as is), set by `connection` from the server's `Welcome` and `Hour`; only changes on the hour (use `is_changed()`).
 - `ViewStats` (resource): `summary` line written by the current view, shown by `ui` (so `ui` needn't depend on the map).
 - `Token` (component): `shape: TokenShape` (`Circle`, `Triangle`, `Square`, `Hexagon`, `Octagon`) and `attitude: Attitude` (`None` white, `Friendly` green, `Neutral` blue, `Unfriendly` red; `Attitude::colour()`), and `completed: bool` (secondary state: drawn ~30% darker and slightly see-through), and `size: TokenSize` (how big its `Icon` is drawn; the base never changes: `Tiny` 0.5, `Small` 0.75, `Default` 1, `Large` 1.25, `Giant` 1.5, `Titan` 2; `scale()`). World map features are `Tiny`, the player `Default`. How an entity is shown on maps; set by its owning module (`player`), drawn by `view3d`. The enums have `ALL` and `next()`.
 - `Icon(String)` (component): a 2D picture shown above an entity's token, always facing the camera; asset path such as `monsters/humanarcher.png` or `terrain/l2_terrain086.png` (54×54 art, main picture in the central 32×32). Set by the owning module, drawn by `view3d`.

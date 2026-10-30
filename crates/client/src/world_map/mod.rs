@@ -10,10 +10,12 @@
 
 mod features;
 mod picking;
+mod rivers;
+pub mod sky;
 mod terrain;
 
 use bevy::camera::visibility::NoFrustumCulling;
-use bevy::light::light_consts;
+use bevy::light::{NotShadowCaster, light_consts};
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -30,6 +32,7 @@ use crate::view3d::{
     ViewCamera, ViewGrid,
 };
 use features::SpawnedFeatures;
+use rivers::KnownRivers;
 use terrain::{HeightCache, TerrainGrid, ViewSquare};
 
 /// World height units per 3D unit of height. 1.0 keeps the prototype's
@@ -56,6 +59,13 @@ impl Plugin for WorldMapPlugin {
         let in_view = in_state(GameView::WorldMap);
         app.init_resource::<TerrainGrid>()
             .init_resource::<SpawnedFeatures>()
+            .init_resource::<KnownRivers>()
+            .init_resource::<sky::SkyHourOffset>()
+            .add_plugins((
+                MaterialPlugin::<sky::TerrainMaterial>::default(),
+                MaterialPlugin::<sky::CloudMaterial>::default(),
+                MaterialPlugin::<sky::PrecipitationMaterial>::default(),
+            ))
             .add_systems(Startup, spawn_view)
             .add_systems(OnEnter(GameView::WorldMap), show_scene)
             .add_systems(
@@ -71,7 +81,7 @@ impl Plugin for WorldMapPlugin {
             )
             .add_systems(
                 Update,
-                (update_terrain, features::spawn_nearby)
+                (update_terrain, sky::update, features::spawn_nearby)
                     .after(PlayerSystems::Travel)
                     .before(View3dSystems::Place)
                     .run_if(in_view.clone()),
@@ -100,18 +110,44 @@ struct Terrain;
 #[derive(Component)]
 struct EdgeFaces;
 
+#[derive(Component)]
+struct RiverStrips;
+
+#[derive(Component)]
+struct RiverBanks;
+
+/// The meshes of the rivers' strips and banks.
+type RiverMeshes<'w, 's> = (
+    Single<'w, 's, &'static Mesh3d, With<RiverStrips>>,
+    Single<'w, 's, &'static Mesh3d, With<RiverBanks>>,
+);
+
 /// Spawns the scene, hidden unless this is the current view.
+#[allow(clippy::too_many_arguments)]
 fn spawn_view(
     mut commands: Commands,
     view: Res<State<GameView>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+    mut terrain_materials: ResMut<Assets<sky::TerrainMaterial>>,
+    mut clouds: ResMut<Assets<sky::CloudMaterial>>,
+    mut precipitation: ResMut<Assets<sky::PrecipitationMaterial>>,
 ) {
     let visibility = if *view.get() == GameView::WorldMap {
         Visibility::Inherited
     } else {
         Visibility::Hidden
     };
+    sky::spawn(
+        &mut commands,
+        visibility,
+        &mut images,
+        &mut meshes,
+        &mut terrain_materials,
+        &mut clouds,
+        &mut precipitation,
+    );
     // Everything starts at the origin; `update_terrain` moves it to the player.
     // Low sun from the east, matching the prototype's shading. It stays in the
     // east when the view turns, like the slope shading baked into the terrain.
@@ -132,13 +168,38 @@ fn spawn_view(
         FollowsPlayer,
         // Placeholder until the first update cuts the real window.
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
-        // Colours come from the mesh's vertex colours.
+        // The mesh is replaced as the player moves, so its bounds go stale.
+        NoFrustumCulling,
+        Transform::default(),
+        visibility,
+    ));
+
+    commands.spawn((
+        WorldMapScene,
+        RiverBanks,
+        FollowsPlayer,
+        // Placeholder until the first update builds the real banks.
+        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
+        // See-through by vertex alpha, dark whatever the light.
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::WHITE,
-            perceptual_roughness: 1.0,
+            unlit: true,
+            alpha_mode: AlphaMode::Blend,
+            cull_mode: None,
             ..default()
         })),
-        // The mesh is replaced as the player moves, so its bounds go stale.
+        NoFrustumCulling,
+        NotShadowCaster,
+        Transform::default(),
+        visibility,
+    ));
+
+    commands.spawn((
+        WorldMapScene,
+        RiverStrips,
+        FollowsPlayer,
+        // Placeholder until the first update builds the real strips.
+        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
         NoFrustumCulling,
         Transform::default(),
         visibility,
@@ -162,6 +223,26 @@ fn spawn_view(
     ));
 
     commands.init_resource::<HeightCache>();
+    commands.queue(attach_terrain_materials);
+}
+
+/// Terrain and rivers are drawn with the sky's materials, made in `sky::spawn`.
+/// (`Commands` run in order, so its resource exists by now.)
+fn attach_terrain_materials(world: &mut World) {
+    let assets = world.resource::<sky::SkyAssets>();
+    let (terrain, rivers) = (assets.terrain.clone(), assets.rivers.clone());
+    let mut query = world.query_filtered::<Entity, With<Terrain>>();
+    for entity in query.iter(world).collect::<Vec<_>>() {
+        world
+            .entity_mut(entity)
+            .insert(MeshMaterial3d(terrain.clone()));
+    }
+    let mut query = world.query_filtered::<Entity, With<RiverStrips>>();
+    for entity in query.iter(world).collect::<Vec<_>>() {
+        world
+            .entity_mut(entity)
+            .insert(MeshMaterial3d(rivers.clone()));
+    }
 }
 
 /// Becoming the current view: shows the scene, sets the sun's ambient fill,
@@ -213,11 +294,14 @@ fn update_terrain(
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
     mut grid: ResMut<TerrainGrid>,
+    mut known_rivers: ResMut<KnownRivers>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut stats: ResMut<ViewStats>,
     mut followers: Query<&mut Transform, With<FollowsPlayer>>,
     terrain: Single<&Mesh3d, With<Terrain>>,
     faces: Single<&Mesh3d, With<EdgeFaces>>,
+    // Together, as Bevy limits how many things a system can ask for.
+    (river_strips, river_banks): RiverMeshes,
     // `Local` keeps a value between runs of this system: the square last cut.
     mut cut: Local<Option<(f32, f32)>>,
 ) {
@@ -246,6 +330,7 @@ fn update_terrain(
     grid.fill(
         &mut cache,
         &world.surface,
+        &world.climate,
         &style,
         water_level,
         weather.snow_line,
@@ -271,6 +356,22 @@ fn update_terrain(
     );
     if let Some(mut mesh) = meshes.get_mut(&faces.0) {
         *mesh = faces_mesh;
+    }
+    known_rivers.update(&world.rivers, &world.climate, &world.surface, centre);
+    let (river_mesh, bank_mesh) = terrain::build_rivers(
+        &grid,
+        &known_rivers,
+        world.surface.width(),
+        &style,
+        water_level,
+        weather.snow_line,
+        square,
+    );
+    if let Some(mut mesh) = meshes.get_mut(&river_strips.0) {
+        *mesh = river_mesh;
+    }
+    if let Some(mut mesh) = meshes.get_mut(&river_banks.0) {
+        *mesh = bank_mesh;
     }
     let cut_ms = start.elapsed().as_secs_f32() * 1000.0;
     stats.summary = format!("World map: fill {fill_ms:.1} ms, cut window {cut_ms:.1} ms");

@@ -8,6 +8,8 @@ The client's connection to the server: joining, sending the player's steps and p
 - `crates/client/src/connection/socket.rs`: `Target::{Embedded, Url}` and `choose()` (native: `HALL_OF_WORLDS_SERVER` or embedded; web: `ws(s)://<the page's host>/ws`), `open(url)` (native: a "socket" thread running `tungstenite`, plain `ws://` only, polling reads every 2 ms between sends), `BrowserSocket` (web: the browser `WebSocket`, binary messages as `ArrayBuffer`s so they stay in order; incoming go straight to the link, `pump()` sends outgoing once open; dropping it closes it), `guest()` (web: random, kept in local storage as `hall-of-worlds-guest`; native: new each run).
 - `crates/client/src/connection/prediction.rs`: `Prediction` (resource: map count, last step number, steps not yet confirmed; `step`, `changed_map`, `confirmed(map, step, at) -> Option<predicted>`), `correction(shown, predicted, width)` (where to move the player, if anywhere; on the world map the same place on another copy of the planet counts, and a move stays on the player's copy). Tests: confirmed steps forgotten and later ones added, a refused step moves the player back, positions from a left map ignored, the world map wraps.
 
+Also keeps `common::ServerClock`: runs it in real time, sends `Ping` once a second once in a world, and on each `Pong` eases it towards the server's clock plus half the round trip (jumping if over 5 s out).
+
 ## Public API
 
 - `ToServer(ClientMessage)` (message): send this to the server (at the end of the frame).

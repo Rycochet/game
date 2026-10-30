@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 use bevy::prelude::*;
 use shared::feature::ChunkPos;
 use shared::protocol::{ClientMessage, PROTOCOL_VERSION, ServerLink, ServerMessage};
+use shared::world::GAME_HOUR_SECONDS;
 
 use crate::sites::{self, Visit};
 use crate::storage::{CharacterName, CharacterSave};
@@ -199,13 +200,31 @@ pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResM
     world.save_sites();
 }
 
-/// A new game hour: saved, and told to everyone playing (the tide follows it).
-/// A client that has gone is noticed when its messages are next read.
-pub(crate) fn next_hour(connections: Res<Connections>, mut world: ResMut<ServerWorld>) {
-    world.hour = (world.hour + 1) % 24;
-    world.save();
-    for client in connections.0.iter().filter(|client| client.welcomed) {
-        client.link.send(&ServerMessage::Hour(world.hour));
+/// Every tick: runs the clock, in real time however the server is doing.
+pub(crate) fn run_clock(
+    time: Res<Time<Real>>,
+    connections: Res<Connections>,
+    mut world: ResMut<ServerWorld>,
+) {
+    advance_clock(
+        &connections,
+        &mut world,
+        time.delta_secs_f64() / GAME_HOUR_SECONDS as f64,
+    );
+}
+
+/// Moves the clock on. A new whole hour is saved, and told to everyone playing
+/// (the tide follows it). A client that has gone is noticed when its messages
+/// are next read.
+fn advance_clock(connections: &Connections, world: &mut ServerWorld, hours: f64) {
+    world.clock += hours;
+    let hour = world.clock as u32;
+    if hour != world.hour {
+        world.hour = hour;
+        world.save();
+        for client in connections.0.iter().filter(|client| client.welcomed) {
+            client.link.send(&ServerMessage::Hour(hour));
+        }
     }
 }
 
@@ -240,6 +259,10 @@ pub(crate) fn answer(
             true
         }
         _ if !client.welcomed => refuse(client, "say hello first".into()),
+        ClientMessage::Ping { sent } => client.link.send(&ServerMessage::Pong {
+            sent,
+            clock: world.clock,
+        }),
         // Meant for a map the player has since left.
         ClientMessage::Step { map, .. } if map != client.map => true,
         ClientMessage::Step { number, step, .. } => {
@@ -283,7 +306,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld) -> bool {
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
-        hour: world.hour,
+        clock: world.clock,
         snow_line: world.snow_line,
         x,
         y,
@@ -407,7 +430,6 @@ pub(crate) mod tests {
 
     /// Runs `handle_messages` once over these connections.
     fn tick(connections: Connections, world: ServerWorld) -> (Connections, ServerWorld) {
-        use bevy::ecs::system::RunSystemOnce;
         let mut app = World::new();
         app.insert_resource(connections);
         app.insert_resource(world);
@@ -415,7 +437,7 @@ pub(crate) mod tests {
             dev_tools: false,
             exit_when_alone: false,
         });
-        app.run_system_once(handle_messages).unwrap();
+        bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
         (
             app.remove_resource::<Connections>().unwrap(),
             app.remove_resource::<ServerWorld>().unwrap(),
@@ -465,8 +487,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn every_hour_is_told_saved_and_wraps() {
-        use bevy::ecs::system::RunSystemOnce;
+    fn every_hour_is_told_and_saved() {
         let folder = crate::storage::tests::TestFolder::new();
         let seed = WorldSeed::new(1);
         let open = || {
@@ -480,16 +501,18 @@ pub(crate) mod tests {
         let (connections, mut world) = tick(connections, open());
         answers(&end);
 
-        world.hour = 23;
-        let mut app = World::new();
-        app.insert_resource(connections);
-        app.insert_resource(world);
-        app.run_system_once(next_hour).unwrap();
-        assert_eq!(answers(&end), [ServerMessage::Hour(0)]);
-        app.run_system_once(next_hour).unwrap();
-        assert_eq!(answers(&end), [ServerMessage::Hour(1)]);
+        world.clock = 40.5;
+        world.hour = 40;
+        // Part of an hour says nothing; the next whole hour is told.
+        advance_clock(&connections, &mut world, 0.25);
+        assert_eq!(answers(&end), []);
+        advance_clock(&connections, &mut world, 0.5);
+        assert_eq!(answers(&end), [ServerMessage::Hour(41)]);
+        advance_clock(&connections, &mut world, 1.0);
+        assert_eq!(answers(&end), [ServerMessage::Hour(42)]);
         // A restart carries on from there, and new players are told.
-        assert_eq!(open().hour, 1);
+        assert_eq!(open().hour, 42);
+        assert_eq!(open().clock, 42.25);
     }
 
     #[test]
