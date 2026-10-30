@@ -154,11 +154,9 @@ impl SurfaceStyle {
         (band, lightness)
     }
 
-    /// Whether a point is frozen water: underwater, with the snow line below
-    /// it. Freezing spreads from the shallows as the snow line falls.
+    /// Whether a point is frozen water (the same rule as walking on it).
     pub fn is_frozen_water(&self, sample: SurfaceSample, water_level: f64, snow_line: f64) -> bool {
-        sample.height <= water_level
-            && self.kind(sample, water_level, snow_line) == SurfaceKind::Mountain
+        sample.is_frozen(water_level, snow_line)
     }
 
     /// The height a point should be drawn at: anything below the water is

@@ -15,7 +15,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_STAIRS=n`: draw all stairs as this style (an index into `StairsStyle::ALL`: 0 spiral, 1 turning, 2 ladder, 3 log ladder, 4 rope ladder, 5 slat ladder, 6 knotted rope).
 - `GAME_TRAVEL=x,y`: start travelling there (as if clicked), on either map, once the player is at `GAME_POS` if that is set, otherwise two seconds after starting (the server's answer, or putting the player back in their site, would end an earlier journey); combine with `GAME_SCREENSHOT_DELAY` to catch it mid-journey.
 - `GAME_WALK=1`: start with `demo::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
-- `GAME_SNOW=n`: start with `Weather::snow_line` at `n` (128 normal, 0 frozen), for screenshots of the temperature states.
+- `GAME_SNOW=n`: once connected, ask the server (`DevSnowLine`) for the snow line at `n` (128 normal, 0 frozen), for screenshots of the temperature states.
 - `GAME_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as indexes into `TokenShape::ALL` / `Attitude::ALL` (e.g. `3,3` red hexagon, `4,0` white octagon); a third value `1` makes it completed; a fourth is an index into `TokenSize::ALL` (default 2, `Default`).
 - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) one second after starting, e.g. to check that pixel-sized things (token outlines, icons) follow resizes.
 - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the camera turned by `yaw` degrees (90 puts the camera in the east looking west, 180 looks south), tilted to `pitch` degrees above the horizon and zoomed in (the distance is divided by `zoom`: 1.6667 is the closest the wheel allows). Sets `OrbitCamera` fields directly, so the limits don't apply.
@@ -26,7 +26,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Depends on
 
-- `common` (`GameView`, `Weather`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`feature::FeatureKind`, `protocol::ClientMessage`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`).
+- `common` (`GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`feature::FeatureKind`, `protocol::ClientMessage`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`).
 
 ## Used by
 

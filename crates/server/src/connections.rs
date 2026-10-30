@@ -199,6 +199,16 @@ pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResM
     world.save_sites();
 }
 
+/// A new game hour: saved, and told to everyone playing (the tide follows it).
+/// A client that has gone is noticed when its messages are next read.
+pub(crate) fn next_hour(connections: Res<Connections>, mut world: ResMut<ServerWorld>) {
+    world.hour = (world.hour + 1) % 24;
+    world.save();
+    for client in connections.0.iter().filter(|client| client.welcomed) {
+        client.link.send(&ServerMessage::Hour(world.hour));
+    }
+}
+
 /// Answers one message; `false` if the client should be disconnected.
 pub(crate) fn answer(
     client: &mut Client,
@@ -256,6 +266,10 @@ pub(crate) fn answer(
             sites::dev_enter(client, world, kind, seed, level)
         }
         ClientMessage::DevSetCell { x, y, cell } => sites::set_cell(client, world, x, y, cell),
+        ClientMessage::DevSnowLine(snow_line) => {
+            world.snow_line = snow_line;
+            client.link.send(&ServerMessage::SnowLine(snow_line))
+        }
     }
 }
 
@@ -269,6 +283,8 @@ fn welcome(client: &mut Client, world: &mut ServerWorld) -> bool {
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
+        hour: world.hour,
+        snow_line: world.snow_line,
         x,
         y,
     };
@@ -446,6 +462,34 @@ pub(crate) mod tests {
             ServerMessage::Welcome { x: 1, .. }
         ));
         assert_eq!(connections.0.len(), 1);
+    }
+
+    #[test]
+    fn every_hour_is_told_saved_and_wraps() {
+        use bevy::ecs::system::RunSystemOnce;
+        let folder = crate::storage::tests::TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let open = || {
+            let storage = crate::storage::Storage::in_folder(&folder.0, seed.id());
+            ServerWorld::open(seed, storage).unwrap()
+        };
+        let mut connections = Connections::default();
+        let (end, link) = local_pair();
+        connections.add(link, None);
+        end.send(&HELLO);
+        let (connections, mut world) = tick(connections, open());
+        answers(&end);
+
+        world.hour = 23;
+        let mut app = World::new();
+        app.insert_resource(connections);
+        app.insert_resource(world);
+        app.run_system_once(next_hour).unwrap();
+        assert_eq!(answers(&end), [ServerMessage::Hour(0)]);
+        app.run_system_once(next_hour).unwrap();
+        assert_eq!(answers(&end), [ServerMessage::Hour(1)]);
+        // A restart carries on from there, and new players are told.
+        assert_eq!(open().hour, 1);
     }
 
     #[test]

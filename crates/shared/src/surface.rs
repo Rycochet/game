@@ -14,6 +14,9 @@ const ZOOM: f64 = 256.0;
 /// Number of noise layers, each double the detail and half the strength.
 const OCTAVES: u32 = 7;
 
+/// How many of the largest layers make up `broad_height`.
+const BROAD_OCTAVES: u32 = 3;
+
 /// The layer also used for `jitter`.
 const JITTER_OCTAVE: u32 = 5;
 
@@ -25,6 +28,14 @@ pub struct SurfaceSample {
     /// Small-scale variation, `-8..8`, used to roughen the edges between
     /// terrain bands. Not part of the physical height.
     pub jitter: f64,
+}
+
+impl SurfaceSample {
+    /// Whether this point is ice: under water, with the snow line below it.
+    /// Freezing spreads from the shallows as the snow line falls.
+    pub fn is_frozen(&self, water_level: f64, snow_line: f64) -> bool {
+        self.height <= water_level && self.height + self.jitter > snow_line
+    }
 }
 
 /// Generates surface samples for one world.
@@ -51,15 +62,36 @@ impl Surface {
         self.width
     }
 
-    pub fn sample(&self, x: i64, y: i64) -> SurfaceSample {
+    /// The height from only the largest noise layers: hills and mountains
+    /// without the small bumps on them, on the same scale as `sample`'s
+    /// height. It is what walking counts as climbing.
+    pub fn broad_height(&self, x: i64, y: i64) -> f64 {
+        let (nx, ny, nz) = self.noise_position(x, y);
+        let mut height = 128.0;
+        for octave in 0..BROAD_OCTAVES {
+            let scale = (1u32 << octave) as f64;
+            let value = self.noise.get_noise_3d(nx * scale, ny * scale, nz * scale) as f64;
+            height += value * 64.0 / scale;
+        }
+        height / 2.0
+    }
+
+    /// Where a grid position is in noise space.
+    fn noise_position(&self, x: i64, y: i64) -> (f64, f64, f64) {
         // Wrap first so huge `x` values don't lose float precision.
         let angle = TAU * x.rem_euclid(self.width) as f64 / self.width as f64;
         // Radius chosen so one grid unit east is the same noise distance as
         // one unit south.
         let radius = self.width as f64 / (ZOOM * TAU);
-        let nx = libm::cos(angle) * radius;
-        let ny = libm::sin(angle) * radius;
-        let nz = y as f64 / ZOOM;
+        (
+            libm::cos(angle) * radius,
+            libm::sin(angle) * radius,
+            y as f64 / ZOOM,
+        )
+    }
+
+    pub fn sample(&self, x: i64, y: i64) -> SurfaceSample {
+        let (nx, ny, nz) = self.noise_position(x, y);
 
         let mut height = 128.0;
         let mut jitter = 0.0;

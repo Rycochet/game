@@ -10,7 +10,10 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 use crate::dungeon::Level;
-use crate::movement::{DIAGONAL_COST, STRAIGHT_COST, Step, step_cost, step_on_level};
+use crate::movement::{
+    DIAGONAL_COST, STRAIGHT_COST, Step, WorldConditions, WorldGround, step_cost, step_on_level,
+    world_step_cost,
+};
 
 /// The order steps are tried in, so equally quick routes always come out the
 /// same.
@@ -134,6 +137,102 @@ pub fn find_path(
     Path::through(from, cells, end == to)
 }
 
+/// How far a route on the world map may go from where it starts, each way, in
+/// points. More than the view shows, and the ground is infinite, so this is what
+/// keeps the search's cost bounded.
+pub const WORLD_ROUTE_REACH: i64 = 320;
+
+/// The quickest route across the world map in these `conditions`: legal
+/// steps, slopes costing extra. If the goal can't be reached within
+/// `WORLD_ROUTE_REACH`, the route goes to the nearest point that can,
+/// straight-line, so check `reached`.
+pub fn find_world_path(
+    ground: &WorldGround,
+    conditions: WorldConditions,
+    from: (i64, i64),
+    to: (i64, i64),
+) -> Path {
+    /// Not looked at yet (a height the ground never has, water being `None`).
+    const UNKNOWN: Option<i32> = Some(i32::MIN);
+
+    let side = 2 * WORLD_ROUTE_REACH + 1;
+    let (min_x, min_y) = (from.0 - WORLD_ROUTE_REACH, from.1 - WORLD_ROUTE_REACH);
+    let inside = |(x, y): (i64, i64)| {
+        (x - from.0).abs() <= WORLD_ROUTE_REACH && (y - from.1).abs() <= WORLD_ROUTE_REACH
+    };
+    let index = |(x, y): (i64, i64)| ((y - min_y) * side + (x - min_x)) as usize;
+
+    // Sampling the ground is the slow part, so each point is only sampled once.
+    let mut elevations = vec![UNKNOWN; (side * side) as usize];
+    let mut elevation = |point: (i64, i64)| {
+        let known = &mut elevations[index(point)];
+        if *known == UNKNOWN {
+            *known = ground.elevation(point.0, point.1, conditions);
+        }
+        *known
+    };
+
+    // As in `find_path`.
+    let mut best = vec![u32::MAX; (side * side) as usize];
+    let mut came_from = vec![from; best.len()];
+    best[index(from)] = 0;
+    let mut open = BinaryHeap::new();
+    open.push(Reverse((estimate(from, to), estimate(from, to), from)));
+    let mut nearest = (distance_squared(from, to), from);
+
+    while let Some(Reverse((total, left, at))) = open.pop() {
+        let cost = total - left;
+        if cost > best[index(at)] {
+            continue;
+        }
+        nearest = nearest.min((distance_squared(at, to), at));
+        if at == to {
+            break;
+        }
+        let here = elevation(at);
+        for (dx, dy) in DIRECTIONS {
+            let next = (at.0 + dx, at.1 + dy);
+            if !inside(next) {
+                continue;
+            }
+            // The rule of `step_on_world_map`, with the samples kept.
+            let there = elevation(next);
+            if here.is_some() && there.is_none() {
+                continue;
+            }
+            let next_cost = cost + world_step_cost(at, next, (here, there));
+            if next_cost >= best[index(next)] {
+                continue;
+            }
+            best[index(next)] = next_cost;
+            came_from[index(next)] = at;
+            let left = estimate(next, to);
+            open.push(Reverse((next_cost + left, left, next)));
+        }
+    }
+
+    let end = nearest.1;
+    let mut cells = Vec::new();
+    let mut at = end;
+    while at != from {
+        cells.push(at);
+        at = came_from[index(at)];
+    }
+    cells.reverse();
+    let mut steps = Vec::with_capacity(cells.len());
+    let mut at = from;
+    for &cell in &cells {
+        steps.push(Step::new(cell.0 - at.0, cell.1 - at.1).expect("cells of a path differ"));
+        at = cell;
+    }
+    Path {
+        steps,
+        cells,
+        cost: best[index(end)],
+        reached: end == to,
+    }
+}
+
 /// The same route, as quick and as legal, with its diagonals spread out along
 /// each stretch instead of bunched together, which looks like walking in a
 /// line. A separate step because only what is drawn cares: anything that
@@ -247,6 +346,9 @@ fn distance_squared(a: (i64, i64), b: (i64, i64)) -> i64 {
 mod tests {
     use super::*;
     use crate::dungeon::Cell;
+    use crate::movement::step_on_world_map;
+    use crate::rng::Seed;
+    use crate::world::WorldParams;
 
     fn anywhere(_: i64, _: i64) -> bool {
         true
@@ -450,6 +552,135 @@ mod tests {
         let straight = straighten(&level, (0, 0), &path, allowed);
         assert!(straight.cells.iter().all(|&(x, y)| allowed(x, y)));
         assert_eq!(straight.cost, path.cost);
+    }
+
+    fn ground() -> WorldGround {
+        WorldGround::new(&WorldParams::from_seed(Seed::new(12345)))
+    }
+
+    /// How high the water is in these tests.
+    fn water() -> WorldConditions {
+        WorldConditions {
+            water: WorldParams::from_seed(Seed::new(12345)).water_level(0.0),
+            snow_line: 128.0,
+        }
+    }
+
+    /// Every step is legal on the world map, lands where it says, and adds up.
+    fn assert_walkable_on_world_map(ground: &WorldGround, from: (i64, i64), path: &Path) {
+        let mut at = from;
+        let mut cost = 0;
+        for (&step, &cell) in path.steps.iter().zip(&path.cells) {
+            assert_eq!(
+                step_on_world_map(ground, water(), at, step),
+                Some(cell),
+                "from {at:?}"
+            );
+            let ends = (
+                ground.elevation(at.0, at.1, water()),
+                ground.elevation(cell.0, cell.1, water()),
+            );
+            cost += world_step_cost(at, cell, ends);
+            at = cell;
+        }
+        assert_eq!(cost, path.cost);
+    }
+
+    /// A dry point, and water some way east of it with dry ground beyond.
+    fn across_water(ground: &WorldGround) -> ((i64, i64), (i64, i64)) {
+        for y in (0..4000).step_by(16) {
+            let dry = |x| ground.elevation(x, y, water()).is_some();
+            for x in (0..4000).step_by(4) {
+                if dry(x) && !dry(x + 20) && !dry(x + 40) && dry(x + 80) {
+                    return ((x, y), (x + 80, y));
+                }
+            }
+        }
+        panic!("no water to cross");
+    }
+
+    #[test]
+    fn world_routes_go_round_a_summit() {
+        let world = WorldParams::from_seed(crate::world::WorldSeed::new(12345).terrain());
+        let surface = crate::surface::Surface::new(&world);
+        let ground = WorldGround::new(&world);
+        let conditions = WorldConditions {
+            water: world.water_level(0.0),
+            snow_line: 128.0,
+        };
+        // The highest of the broad land round the start.
+        let height = |(x, y): (i64, i64)| surface.broad_height(x, y);
+        let (mut peak, mut top) = ((0, 0), 0.0);
+        for y in (-1500..1500).step_by(16) {
+            for x in (-1500..1500).step_by(16) {
+                if height((x, y)) > top {
+                    (peak, top) = ((x, y), height((x, y)));
+                }
+            }
+        }
+        let path = find_world_path(
+            &ground,
+            conditions,
+            (peak.0 - 150, peak.1),
+            (peak.0 + 150, peak.1),
+        );
+        assert!(path.reached);
+        let highest = path.cells.iter().map(|&p| height(p)).fold(0.0, f64::max);
+        assert!(highest < top - 5.0, "{highest} against a summit of {top}");
+    }
+
+    #[test]
+    fn world_routes_go_round_water() {
+        let ground = ground();
+        let (from, to) = across_water(&ground);
+        let path = find_world_path(&ground, water(), from, to);
+        assert_walkable_on_world_map(&ground, from, &path);
+        assert!(
+            path.cells
+                .iter()
+                .all(|&(x, y)| ground.elevation(x, y, water()).is_some())
+        );
+        if path.reached {
+            assert_eq!(path.cells.last(), Some(&to));
+            assert!(path.cells.iter().any(|c| c.1 != to.1), "it had to go round");
+        }
+    }
+
+    #[test]
+    fn world_routes_stop_at_the_nearest_shore_for_a_click_on_water() {
+        let ground = ground();
+        let (from, to) = across_water(&ground);
+        let wet = (to.0 - 40, to.1);
+        let path = find_world_path(&ground, water(), from, wet);
+        assert!(!path.reached);
+        assert_walkable_on_world_map(&ground, from, &path);
+        let end = path.cells.last().copied().unwrap_or(from);
+        assert!(ground.elevation(end.0, end.1, water()).is_some());
+    }
+
+    #[test]
+    fn world_routes_stay_within_reach_and_repeat_exactly() {
+        let ground = ground();
+        let (from, _) = across_water(&ground);
+        let far = (from.0 + 10 * WORLD_ROUTE_REACH, from.1);
+        let path = find_world_path(&ground, water(), from, far);
+        assert!(!path.reached);
+        assert!(
+            path.cells
+                .iter()
+                .all(|c| (c.0 - from.0).abs() <= WORLD_ROUTE_REACH)
+        );
+        assert_eq!(path, find_world_path(&ground, water(), from, far));
+    }
+
+    #[test]
+    fn world_routes_start_from_water_too() {
+        let ground = ground();
+        let (from, to) = across_water(&ground);
+        let wet = (from.0 + 20, from.1);
+        let path = find_world_path(&ground, water(), wet, to);
+        assert_walkable_on_world_map(&ground, wet, &path);
+        assert!(!path.cells.is_empty());
     }
 
     #[test]

@@ -47,7 +47,7 @@ use shared::protocol::ClientMessage;
 use shared::site::StairsStyle;
 
 use crate::common::{
-    Attitude, CurrentDungeon, GameView, MapPosition, Token, TokenShape, TokenSize, Weather,
+    Attitude, CurrentDungeon, GameView, MapPosition, Token, TokenShape, TokenSize,
 };
 use crate::connection::ToServer;
 use crate::demo::AutoWalk;
@@ -201,7 +201,18 @@ impl Plugin for DevToolsPlugin {
         }
 
         if let Some(snow_line) = env::var("GAME_SNOW").ok().and_then(|v| v.parse().ok()) {
-            app.insert_resource(Weather { snow_line });
+            // Asked of the server once there is one to ask.
+            app.add_systems(
+                Update,
+                move |view: Res<State<GameView>>,
+                      mut done: Local<bool>,
+                      mut to_server: MessageWriter<ToServer>| {
+                    if !*done && *view.get() != GameView::Connecting {
+                        *done = true;
+                        to_server.write(ToServer(ClientMessage::DevSnowLine(snow_line)));
+                    }
+                },
+            );
         }
 
         if let Some(new_token) = env::var("GAME_TOKEN").ok().and_then(|t| parse_token(&t)) {

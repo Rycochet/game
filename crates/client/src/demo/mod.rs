@@ -119,25 +119,37 @@ fn cycle_stairs(keys: Res<ButtonInput<KeyCode>>, mut dungeon: ResMut<CurrentDung
     }
 }
 
+/// Moves the snow line by asking the server, whose word `Weather` holds, as it
+/// decides where ice can be walked on (dev tools: only the embedded server
+/// allows it). `line` keeps the fractions between whole heights.
 fn temperature_cycle(
     time: Res<Time>,
     mut cycle: ResMut<TemperatureCycle>,
-    mut weather: ResMut<Weather>,
+    weather: Res<Weather>,
+    mut line: Local<f64>,
+    mut to_server: MessageWriter<ToServer>,
 ) {
     let step = SNOW_LINE_SPEED * time.delta_secs_f64();
     match *cycle {
-        TemperatureCycle::Off => {}
+        TemperatureCycle::Off => {
+            *line = weather.snow_line;
+            return;
+        }
         TemperatureCycle::Cooling => {
-            weather.snow_line = (weather.snow_line - step).max(0.0);
-            if weather.snow_line == 0.0 {
+            *line = (*line - step).max(0.0);
+            if *line == 0.0 {
                 *cycle = TemperatureCycle::Warming;
             }
         }
         TemperatureCycle::Warming => {
-            weather.snow_line = (weather.snow_line + step).min(NORMAL_SNOW_LINE);
-            if weather.snow_line == NORMAL_SNOW_LINE {
+            *line = (*line + step).min(NORMAL_SNOW_LINE);
+            if *line == NORMAL_SNOW_LINE {
                 *cycle = TemperatureCycle::Off;
             }
         }
+    }
+    let whole = line.round();
+    if whole != weather.snow_line {
+        to_server.write(ToServer(ClientMessage::DevSnowLine(whole as u32)));
     }
 }

@@ -10,7 +10,7 @@ Demo modes toggled by keys, for showing off and testing the views. Works in nati
 
 - **Esc**: asks the server to put the player back where new characters start, out of any site (`DevBackToStart`; only the embedded server allows it).
 - `AutoWalk(bool)` (resource): while on, the player walks east one step per frame (a `player::TakeStep`; world map only). **G** toggles.
-- `TemperatureCycle` (resource): `Off`, `Cooling`, `Warming`. **T** starts a cycle: `Weather::snow_line` falls from `NORMAL_SNOW_LINE` (128) to 0 (everything frozen), then rises back and stops. T during a cycle skips to warming.
+- `TemperatureCycle` (resource): `Off`, `Cooling`, `Warming`. **T** starts a cycle, asking the server (`DevSnowLine`, dev tools) to move it a whole height at a time: `Weather::snow_line` falls from `NORMAL_SNOW_LINE` (128) to 0 (everything frozen), then rises back and stops. T during a cycle skips to warming.
 
 ## Depends on
 
