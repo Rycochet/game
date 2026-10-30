@@ -15,6 +15,7 @@ use shared::movement::{WorldConditions, WorldGround};
 use shared::protocol::{LevelChunk, LevelInfo, SeenFeature, SeenStairs, WorldInfo};
 use shared::river::Rivers;
 use shared::surface::Surface;
+use shared::vegetation::Vegetation;
 use shared::weather::WeatherField;
 use shared::world::WorldParams;
 
@@ -51,6 +52,7 @@ pub struct CurrentWorld {
     pub surface: Surface,
     pub climate: Climate,
     pub rivers: Rivers,
+    pub vegetation: Vegetation,
     pub weather: WeatherField,
     /// The ground as far as walking goes (the server's rules).
     pub ground: WorldGround,
@@ -65,6 +67,7 @@ impl CurrentWorld {
         Self {
             climate: Climate::new(&params),
             rivers: Rivers::new(&params),
+            vegetation: Vegetation::new(&params),
             weather: WeatherField::new(&params),
             features: KnownFeatures::new(surface.width()),
             ground: WorldGround::new(&params),

@@ -14,10 +14,11 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::climate::{Climate, ClimateSample};
 use shared::surface::{Surface, SurfaceSample};
+use shared::vegetation::{Cover, Vegetation};
 
 use super::rivers::KnownRivers;
 use super::{HALF_SIZE, HEIGHT_SCALE, SLOPE_SHADING};
-use crate::surface_style::{SurfaceStyle, hsl_to_rgba};
+use crate::surface_style::{SurfaceKind, SurfaceStyle, hsl_to_rgba};
 
 /// The furthest grid units from the player `TerrainGrid` may need. The
 /// window's corners are `HALF_SIZE × √2` (about 283) away, so this covers it
@@ -52,6 +53,8 @@ pub struct HeightCache {
     samples: Vec<SurfaceSample>,
     climate_keys: Vec<Option<(i64, i64)>>,
     climates: Vec<ClimateSample>,
+    cover_keys: Vec<Option<(i64, i64)>>,
+    covers: Vec<Cover>,
 }
 
 impl Default for HeightCache {
@@ -68,6 +71,8 @@ impl Default for HeightCache {
             ],
             climate_keys: vec![None; len],
             climates: vec![ClimateSample::default(); len],
+            cover_keys: vec![None; len],
+            covers: vec![Cover::default(); len],
         }
     }
 }
@@ -98,6 +103,25 @@ impl HeightCache {
         }
         self.climates[index]
     }
+
+    /// What grows at a point, kept like the climate.
+    pub fn cover(
+        &mut self,
+        vegetation: &Vegetation,
+        climate: &Climate,
+        surface: &Surface,
+        x: i64,
+        y: i64,
+    ) -> Cover {
+        let index = (y.rem_euclid(CACHE_SIDE) * CACHE_SIDE + x.rem_euclid(CACHE_SIDE)) as usize;
+        if self.cover_keys[index] != Some((x, y)) {
+            let place = self.climate(climate, surface, x, y);
+            let height = self.get(surface, x, y).height;
+            self.cover_keys[index] = Some((x, y));
+            self.covers[index] = vegetation.cover(x, y, height, place);
+        }
+        self.covers[index]
+    }
 }
 
 /// What to draw at each grid point near the player: drawn height, ground
@@ -113,6 +137,9 @@ pub struct TerrainGrid {
     ground: Vec<f32>,
     normals: Vec<[f32; 3]>,
     colours: Vec<[f32; 4]>,
+    /// What the shader grows here: trees, low growth, how narrow the trees
+    /// are and how lush. No trees or growth except on open land.
+    covers: Vec<Vec4>,
     /// The grid point the window is centred on (the player's).
     centre: (i64, i64),
 }
@@ -126,6 +153,7 @@ impl Default for TerrainGrid {
             ground: vec![0.0; len],
             normals: vec![[0.0, 1.0, 0.0]; len],
             colours: vec![[0.0; 4]; len],
+            covers: vec![Vec4::ZERO; len],
             centre: (0, 0),
         }
     }
@@ -147,6 +175,8 @@ impl TerrainGrid {
         cache: &mut HeightCache,
         surface: &Surface,
         climate: &Climate,
+        vegetation: &Vegetation,
+        rivers: &KnownRivers,
         style: &SurfaceStyle,
         water_level: f64,
         snow_line: f64,
@@ -161,8 +191,22 @@ impl TerrainGrid {
         // Water is part of the terrain: underwater points sit at the surface.
         // (The cache is passed in rather than captured, so the loop below can
         // use it too: Rust allows only one mutable borrow at a time.)
+        let lift_at = |cache: &mut HeightCache, x: i64, z: i64| {
+            canopy_lift(
+                cache,
+                surface,
+                climate,
+                vegetation,
+                rivers,
+                style,
+                water_level,
+                snow_line,
+                (x, z),
+            )
+        };
         let shown_at = |cache: &mut HeightCache, x: i64, z: i64| {
             style.shown_height(cache.get(surface, x, z), water_level) as f32 * HEIGHT_SCALE
+                + lift_at(cache, x, z)
         };
 
         let (reach_x, reach_z) = square.reach();
@@ -185,7 +229,9 @@ impl TerrainGrid {
                 self.ground[i] = sample.height as f32 * HEIGHT_SCALE;
                 // The prototype's strong slope shading, baked in per point
                 // because real lighting alone is much smoother.
-                let west = cache.get(surface, x - 1, z).height;
+                // Woods count as raised ground, so their sunlit edges show.
+                let west = cache.get(surface, x - 1, z).height
+                    + ((lift_at(cache, x - 1, z) - lift_at(cache, x, z)) * CANOPY_SHADING) as f64;
                 let place = cache.climate(climate, surface, x, z);
                 let (band, lightness) =
                     style.shade(sample, place, west, water_level, snow_line, SLOPE_SHADING);
@@ -204,6 +250,22 @@ impl TerrainGrid {
                     colour[3] = 0.0;
                 }
                 self.colours[i] = colour;
+
+                // Snow, shore and water change with the weather and tide, so
+                // what shows is decided here rather than in `shared`.
+                let cover = cache.cover(vegetation, climate, surface, x, z);
+                let open_land =
+                    style.kind(sample, place, water_level, snow_line) == SurfaceKind::Land;
+                self.covers[i] = Vec4::new(
+                    if open_land {
+                        cover.trees * rivers.open_at(x, z)
+                    } else {
+                        0.0
+                    },
+                    if open_land { cover.growth } else { 0.0 },
+                    cover.narrow,
+                    cover.lush,
+                );
             }
         }
     }
@@ -236,6 +298,7 @@ impl TerrainGrid {
             position: Vec3::new(dx as f32, self.shown[i], dz as f32),
             normal: Vec3::from(self.normals[i]),
             colour: Vec4::from(self.colours[i]),
+            cover: self.covers[i],
             inside: square.inside(Vec2::new(dx as f32, dz as f32)),
         }
     }
@@ -247,6 +310,7 @@ struct Corner {
     position: Vec3,
     normal: Vec3,
     colour: Vec4,
+    cover: Vec4,
     /// Distance inside each of the window's four sides (negative outside).
     inside: [f32; 4],
 }
@@ -257,6 +321,7 @@ impl Corner {
             position: self.position.lerp(other.position, t),
             normal: self.normal.lerp(other.normal, t),
             colour: self.colour.lerp(other.colour, t),
+            cover: self.cover.lerp(other.cover, t),
             inside: std::array::from_fn(|k| {
                 self.inside[k] + (other.inside[k] - self.inside[k]) * t
             }),
@@ -341,6 +406,10 @@ pub fn build_window(grid: &TerrainGrid, square: ViewSquare) -> Mesh {
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(expected);
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(expected);
     let mut colours: Vec<[f32; 4]> = Vec::with_capacity(expected);
+    // Two pairs of numbers, in the mesh's texture coordinate slots, as those
+    // reach the shader without a vertex shader of our own.
+    let mut growing: Vec<[f32; 2]> = Vec::with_capacity(expected);
+    let mut kinds: Vec<[f32; 2]> = Vec::with_capacity(expected);
     let mut indices: Vec<u32> = Vec::with_capacity(expected * 6);
     // Points already added to the mesh (by box position), so whole
     // triangles share them.
@@ -365,6 +434,8 @@ pub fn build_window(grid: &TerrainGrid, square: ViewSquare) -> Mesh {
                             positions.push([dx as f32, grid.shown[i], dz as f32]);
                             normals.push(grid.normals[i]);
                             colours.push(grid.colours[i]);
+                            growing.push(grid.covers[i].xy().to_array());
+                            kinds.push(grid.covers[i].zw().to_array());
                             added[j] = positions.len() as u32 - 1;
                         }
                         indices.push(added[j]);
@@ -382,6 +453,8 @@ pub fn build_window(grid: &TerrainGrid, square: ViewSquare) -> Mesh {
                     positions.push(c.position.to_array());
                     normals.push(c.normal.normalize().to_array());
                     colours.push(c.colour.to_array());
+                    growing.push(c.cover.xy().to_array());
+                    kinds.push(c.cover.zw().to_array());
                 }
                 for k in 1..clipped.len().saturating_sub(1) as u32 {
                     indices.extend_from_slice(&[first, first + k, first + k + 1]);
@@ -397,6 +470,8 @@ pub fn build_window(grid: &TerrainGrid, square: ViewSquare) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
     .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colours)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, growing)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, kinds)
     .with_inserted_indices(Indices::U32(indices))
 }
 
@@ -498,6 +573,7 @@ pub fn build_rivers(
                     position: Vec3::new(at.x, grid.height_at(&grid.shown, at) + RIVER_LIFT, at.y),
                     normal: Vec3::Y,
                     colour,
+                    cover: Vec4::ZERO,
                     inside: square.inside(at),
                 }
             };
@@ -584,14 +660,18 @@ pub fn build_edges(
         let stops = crossings(start, end);
         for &t in &stops {
             let point = start.lerp(end, t);
-            let ground = grid.height_at(&grid.ground, point).max(base);
-            let top = grid.height_at(&grid.shown, point).max(ground);
+            let shown = grid.height_at(&grid.shown, point);
+            // Earth all the way up on land, including under raised woods.
+            let under = grid.height_at(&grid.ground, point);
+            let ground = (if under >= water_top { shown } else { under }).max(base);
+            let top = shown.max(ground);
             // Half the surface lightness of the nearest point, like the
             // prototype's front slice (this also ices over with the water).
             let (x, z) = (cx + point.x.round() as i64, cy + point.y.round() as i64);
             let sample = cache.get(surface, x, z);
             let west = cache.get(surface, x - 1, z).height;
-            // Only the water strip uses this, and water has no biome colour.
+            // Only the water strip uses this: nearly all water, which has no
+            // biome colour, with a sliver of shore at most.
             let (band, lightness) = style.shade(
                 sample,
                 ClimateSample::default(),
@@ -653,13 +733,62 @@ fn crossings(start: Vec2, end: Vec2) -> Vec<f32> {
     stops
 }
 
+/// How far the drawn surface is raised at a point for the trees on it: taller
+/// in rainforest. None except on open land.
+#[allow(clippy::too_many_arguments)]
+pub fn canopy_lift(
+    cache: &mut HeightCache,
+    surface: &Surface,
+    climate: &Climate,
+    vegetation: &Vegetation,
+    rivers: &KnownRivers,
+    style: &SurfaceStyle,
+    water_level: f64,
+    snow_line: f64,
+    (x, z): (i64, i64),
+) -> f32 {
+    let cover = cache.cover(vegetation, climate, surface, x, z);
+    if cover.trees <= 0.0 {
+        return 0.0;
+    }
+    let sample = cache.get(surface, x, z);
+    let place = cache.climate(climate, surface, x, z);
+    if style.kind(sample, place, water_level, snow_line) != SurfaceKind::Land {
+        return 0.0;
+    }
+    let t = ((cover.trees - CANOPY_FROM) / (CANOPY_FULL - CANOPY_FROM)).clamp(0.0, 1.0);
+    // Down to the ground towards the shore, or sand and water stretch up a wall.
+    let shore = ((sample.height - water_level) as f32 / CANOPY_SHORE).clamp(0.0, 1.0);
+    let height = CANOPY_HEIGHT + CANOPY_LUSH * cover.lush;
+    t * t * (3.0 - 2.0 * t) * height * shore * rivers.open_at(x, z)
+}
+
+/// Height above the water at which the canopy reaches its full height.
+const CANOPY_SHORE: f32 = 4.0;
+/// How much of the canopy's height counts in the baked slope shading, which is
+/// strong enough to turn woods' edges white at full height.
+const CANOPY_SHADING: f32 = 0.2;
+
+/// How high woods stand above the ground, plus how much more in rainforest.
+const CANOPY_HEIGHT: f32 = 2.5;
+const CANOPY_LUSH: f32 = 1.5;
+/// How much tree cover it takes for the canopy to start rising, and to be full
+/// height.
+const CANOPY_FROM: f32 = 0.2;
+const CANOPY_FULL: f32 = 0.7;
+
 /// The highest drawn surface within `radius` of a fractional position, so
 /// something that wide can rest on top without sinking into a slope.
+#[allow(clippy::too_many_arguments)]
 pub fn highest_shown_height(
     cache: &mut HeightCache,
     surface: &Surface,
+    climate: &Climate,
+    vegetation: &Vegetation,
+    rivers: &KnownRivers,
     style: &SurfaceStyle,
     water_level: f64,
+    snow_line: f64,
     (x, y): (f64, f64),
     radius: f64,
 ) -> f32 {
@@ -670,7 +799,18 @@ pub fn highest_shown_height(
             let (px, py) = (x.round() as i64 + dx, y.round() as i64 + dy);
             if (px as f64 - x).hypot(py as f64 - y) <= radius {
                 let sample = cache.get(surface, px, py);
-                highest = highest.max(style.shown_height(sample, water_level));
+                let lift = canopy_lift(
+                    cache,
+                    surface,
+                    climate,
+                    vegetation,
+                    rivers,
+                    style,
+                    water_level,
+                    snow_line,
+                    (px, py),
+                );
+                highest = highest.max(style.shown_height(sample, water_level) + lift as f64);
             }
         }
     }
@@ -713,6 +853,7 @@ mod tests {
             position: Vec3::new(x, 0.0, z),
             normal: Vec3::Y,
             colour: Vec4::ONE,
+            cover: Vec4::ZERO,
             inside: square.inside(Vec2::new(x, z)),
         };
         // A triangle sticking out of the right side by half its width.

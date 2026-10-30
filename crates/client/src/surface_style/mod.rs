@@ -29,7 +29,8 @@ pub enum SurfaceKind {
     Snow,
     /// Open land, coloured by its biome.
     Land,
-    Sand,
+    /// Land just below the water, showing where the tide has reached.
+    Shore,
     Water,
 }
 
@@ -39,12 +40,8 @@ pub struct SurfaceStyle {
     /// Degrees added to biome hues, as much as each biome takes. 0 is green
     /// plants; later chosen per world, with green the most likely.
     pub base_hue_rotation: f64,
-    /// Land just below the water: beaches.
-    pub sand: Band,
-    /// Fixed lightness for sand (other bands get theirs from height/slope).
-    pub sand_lightness: f64,
-    /// How much of the jitter can lift an underwater point into sand.
-    /// Smaller means narrower beaches (1.0 was the prototype).
+    /// How much of the jitter can lift an underwater point into shore.
+    /// Smaller means a narrower shore (1.0 was the prototype).
     pub shore_jitter: f64,
     pub water: Band,
     /// Snow line below which water starts to ice over (turning icy blue).
@@ -66,11 +63,6 @@ impl Default for SurfaceStyle {
                 saturation: 0.0,
             },
             base_hue_rotation: 0.0,
-            sand: Band {
-                hue: 57.0,
-                saturation: 1.0,
-            },
-            sand_lightness: 0.5,
             shore_jitter: 0.5,
             water: Band {
                 hue: 232.0,
@@ -99,7 +91,7 @@ impl SurfaceStyle {
             SurfaceKind::Snow
         } else if height + jitter.abs() * self.shore_jitter > water_level {
             if height < water_level {
-                SurfaceKind::Sand
+                SurfaceKind::Shore
             } else {
                 SurfaceKind::Land
             }
@@ -125,10 +117,9 @@ impl SurfaceStyle {
 
     pub fn band(&self, kind: SurfaceKind) -> Band {
         match kind {
-            // Open land's colour comes from its biome (`living_colour`); the
-            // band only matters when asked for by kind alone.
-            SurfaceKind::Snow | SurfaceKind::Land => self.snow,
-            SurfaceKind::Sand => self.sand,
+            // Land's and shore's colours come from the biome (`living_colour`);
+            // the band only matters when asked for by kind alone.
+            SurfaceKind::Snow | SurfaceKind::Land | SurfaceKind::Shore => self.snow,
             SurfaceKind::Water => self.water,
         }
     }
@@ -159,10 +150,18 @@ impl SurfaceStyle {
                 colour.lightness - shade,
             );
         }
+        if kind == SurfaceKind::Shore {
+            let colour = self.living_colour(climate, sample);
+            return (
+                Band {
+                    hue: (colour.hue + SHORE_HUE_TURN).rem_euclid(360.0),
+                    saturation: colour.saturation,
+                },
+                colour.lightness * SHORE_LIGHTNESS,
+            );
+        }
         let band = self.band(kind);
-        let lightness = if kind == SurfaceKind::Sand {
-            self.sand_lightness
-        } else if self.is_frozen_water(sample, water_level, snow_line) {
+        let lightness = if self.is_frozen_water(sample, water_level, snow_line) {
             self.ice_lightness
         } else if sample.height > water_level {
             let slope = (sample.height - west_height) / 64.0;
@@ -212,7 +211,7 @@ impl SurfaceStyle {
 
     /// The height a point should be drawn at: anything below the water is
     /// drawn at the water surface (coloured by depth by `band`), as the
-    /// prototype did. This keeps shore sand, which is just below the water by
+    /// prototype did. This keeps the shore, which is just below the water by
     /// definition, visible at the waterline.
     pub fn shown_height(&self, sample: SurfaceSample, water_level: f64) -> f64 {
         sample.height.max(water_level)
@@ -235,6 +234,12 @@ const RIVER_FREEZE_AT_SEA: f64 = 4.0;
 /// Snow is around 90.
 const TUNDRA_FROM: f64 = 76.0;
 const TUNDRA_FULL: f64 = 84.0;
+
+/// The shore is the biome's colour turned this many degrees round the colour
+/// wheel (the way red goes to yellow), and this much of its lightness, so it
+/// marks the tide in every biome and with any base hue.
+const SHORE_HUE_TURN: f64 = 30.0;
+const SHORE_LIGHTNESS: f64 = 0.8;
 
 /// How far a unit of surface jitter (`-8..8`) moves a point on the diagram.
 const BIOME_JITTER: f64 = 0.008;
@@ -308,5 +313,26 @@ mod tests {
         assert_eq!(hsl_to_rgba(0.0, 0.0, 0.55), [140, 140, 140, 255]); // #8c8c8c
         assert_eq!(hsl_to_rgba(232.0, 1.0, 0.29), [0, 20, 148, 255]); // ~#001493
         assert_eq!(hsl_to_rgba(0.0, 1.0, 0.5), [255, 0, 0, 255]);
+    }
+
+    #[test]
+    fn shore_is_the_biome_colour_turned_and_darkened() {
+        let style = SurfaceStyle::default();
+        let climate = ClimateSample {
+            temperature: 0.6,
+            moisture: 0.65,
+        };
+        let shade = |height| {
+            let sample = SurfaceSample {
+                height,
+                jitter: 2.0,
+            };
+            style.shade(sample, climate, height, 50.0, 128.0, 0.0)
+        };
+        let (land, land_lightness) = shade(50.5);
+        let (shore, shore_lightness) = shade(49.5);
+        assert_eq!(shore.hue, land.hue + SHORE_HUE_TURN);
+        assert_eq!(shore.saturation, land.saturation);
+        assert!((shore_lightness - land_lightness * SHORE_LIGHTNESS).abs() < 1e-9);
     }
 }

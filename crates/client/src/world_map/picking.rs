@@ -17,7 +17,9 @@ const MAX_HEIGHT: f32 = 128.0 * HEIGHT_SCALE;
 
 /// The grid point the ray first hits on the terrain window `square` centred
 /// on `centre`, or `None` if it misses (or only hits an edge face). Works from
-/// any direction, so it follows the camera when the view turns.
+/// any direction, so it follows the camera when the view turns. `lift` is how
+/// far the woods raise the drawn surface at a point.
+#[allow(clippy::too_many_arguments)]
 pub fn pick(
     ray: Ray3d,
     centre: (i64, i64),
@@ -26,6 +28,7 @@ pub fn pick(
     surface: &Surface,
     style: &SurfaceStyle,
     water_level: f64,
+    mut lift: impl FnMut(&mut HeightCache, i64, i64) -> f32,
 ) -> Option<(i64, i64)> {
     let direction = *ray.direction;
     if direction.y >= 0.0 {
@@ -48,8 +51,9 @@ pub fn pick(
             }
             continue;
         }
-        let ground =
-            style.shown_height(cache.get(surface, x, z), water_level) as f32 * HEIGHT_SCALE;
+        let ground = style.shown_height(cache.get(surface, x, z), water_level) as f32
+            * HEIGHT_SCALE
+            + lift(cache, x, z);
         if point.y <= ground {
             // Below the surface on the very first sample inside the window
             // means the ray came through an edge face, not the top.
@@ -78,6 +82,10 @@ mod tests {
         )
     }
 
+    fn no_lift(_: &mut HeightCache, _: i64, _: i64) -> f32 {
+        0.0
+    }
+
     /// The window in the starting view, looking north.
     const NORTH_VIEW: ViewSquare = ViewSquare {
         right: Vec2::X,
@@ -100,6 +108,7 @@ mod tests {
             &surface,
             &style,
             water,
+            no_lift,
         );
         assert_eq!(hit, Some((10, -20)));
     }
@@ -116,6 +125,7 @@ mod tests {
             &surface,
             &style,
             water,
+            no_lift,
         );
         assert_eq!(hit, None);
     }
@@ -132,6 +142,7 @@ mod tests {
             &surface,
             &style,
             water,
+            no_lift,
         );
         assert_eq!(hit, None);
     }
@@ -148,6 +159,7 @@ mod tests {
             &surface,
             &style,
             water,
+            no_lift,
         );
         let (x, y) = hit.expect("should hit the terrain");
         assert!(x.abs() <= HALF_SIZE && y.abs() <= 1);
@@ -166,7 +178,18 @@ mod tests {
             towards: Vec2::new(diagonal, diagonal),
             ..NORTH_VIEW
         };
-        let mut hit = |square| pick(down, (0, 0), square, &mut cache, &surface, &style, water);
+        let mut hit = |square| {
+            pick(
+                down,
+                (0, 0),
+                square,
+                &mut cache,
+                &surface,
+                &style,
+                water,
+                no_lift,
+            )
+        };
         assert_eq!(hit(NORTH_VIEW), Some((190, 190)));
         assert_eq!(hit(turned), None);
     }
@@ -181,9 +204,42 @@ mod tests {
             half: 120.0,
             ..NORTH_VIEW
         };
-        let mut hit = |square| pick(down, (0, 0), square, &mut cache, &surface, &style, water);
+        let mut hit = |square| {
+            pick(
+                down,
+                (0, 0),
+                square,
+                &mut cache,
+                &surface,
+                &style,
+                water,
+                no_lift,
+            )
+        };
         assert_eq!(hit(NORTH_VIEW), Some((150, 0)));
         assert_eq!(hit(zoomed), None);
+    }
+
+    /// A slanting ray coming from the east meets raised woods further east
+    /// than it meets the ground.
+    #[test]
+    fn raised_woods_are_hit_first() {
+        let (surface, style, mut cache, water) = setup();
+        let from_east = ray(Vec3::new(900.0, 600.0, 0.0), Vec3::new(0.0, 0.0, 0.0));
+        let mut hit = |lift: f32| {
+            pick(
+                from_east,
+                (0, 0),
+                NORTH_VIEW,
+                &mut cache,
+                &surface,
+                &style,
+                water,
+                |_: &mut HeightCache, _: i64, _: i64| lift,
+            )
+            .expect("should hit the terrain")
+        };
+        assert!(hit(10.0).0 > hit(0.0).0);
     }
 
     #[test]
@@ -197,6 +253,7 @@ mod tests {
             &surface,
             &style,
             water,
+            no_lift,
         );
         assert_eq!(hit, None);
     }
