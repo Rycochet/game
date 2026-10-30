@@ -3,16 +3,17 @@
 //! `docs/context/client/dungeon_map.md`.
 //!
 //! Only what the player (or anything sharing its sight) can see is drawn:
-//! floors, stairs, and only the wall sides someone sees (never their tops).
+//! floors, stairs, and thin walls with only the faces someone sees (`walls`).
 //! A seen side facing away from the camera is drawn half see-through. What
-//! was seen before but is out of sight now is drawn dim and grey. Walls
-//! and floors use tile pictures chosen by the kind of place (`theme`). Light
-//! is dull everywhere, and brighter near light sources, which walls block.
-//! Left-click a seen walkable cell to travel there.
+//! was seen before but is out of sight now is drawn dim, grey and half
+//! see-through. Walls and floors use tile pictures chosen by the kind of place
+//! (`theme`). Light is dull everywhere, and brighter near light sources, which
+//! walls block. Left-click a seen walkable cell to travel there.
 
 mod mesh;
 mod picking;
 mod theme;
+mod walls;
 
 use std::collections::BTreeMap;
 
@@ -23,7 +24,7 @@ use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::window::PrimaryWindow;
-use shared::dungeon::Sight;
+use shared::dungeon::{Cell, Sight};
 use shared::protocol::ClientMessage;
 use shared::site::StairsDirection;
 
@@ -43,17 +44,23 @@ pub const CELL_SIZE: f32 = TOKEN_DIAMETER * 1.5;
 const WALL_HEIGHT: f32 = CELL_SIZE;
 
 /// The dull light everywhere, as a fraction of full light.
-const AMBIENT_LIGHT: f32 = 0.2;
+const AMBIENT_LIGHT: f32 = 0.1;
 
 /// Opacity of wall sides facing away from the camera.
 const SEE_THROUGH_ALPHA: f32 = 0.5;
+
+/// Opacity of what is remembered but out of sight.
+const MEMORY_ALPHA: f32 = 0.5;
+
+/// Draws a wall's fade across the floor after the floor, before the walls.
+const BLEND_DEPTH_BIAS: f32 = -0.5;
 
 /// Tokens are lit by real lights (the tiles' light is baked into their
 /// colours): a point light this high above each light source, and a dim
 /// ambient fill so tokens in the dark are still visible.
 const TOKEN_LIGHT_HEIGHT: f32 = CELL_SIZE;
 const TOKEN_LIGHT_LUMENS: f32 = 1.0e8;
-const TOKEN_AMBIENT_BRIGHTNESS: f32 = 300.0;
+const TOKEN_AMBIENT_BRIGHTNESS: f32 = 150.0;
 
 pub struct DungeonMapPlugin;
 
@@ -149,8 +156,40 @@ fn spawn_scene(
         unlit: true,
         ..default()
     };
-    let solid: Vec<_> = pictures.iter().map(|p| materials.add(unlit(p))).collect();
-    let memory: Vec<_> = pictures.iter().map(|p| materials.add(unlit(p))).collect();
+    let solid: Vec<_> = Surface::ALL
+        .iter()
+        .zip(&pictures)
+        .map(|(&surface, picture)| {
+            materials.add(if surface == Surface::WallBlend {
+                StandardMaterial {
+                    alpha_mode: AlphaMode::Blend,
+                    depth_bias: BLEND_DEPTH_BIAS,
+                    ..unlit(picture)
+                }
+            } else {
+                unlit(picture)
+            })
+        })
+        .collect();
+    // Blended meshes don't sort against each other by themselves: floors are
+    // pushed back so they are always drawn before the walls standing on them,
+    // with the wall's fade across the floor in between.
+    let memory: Vec<_> = Surface::ALL
+        .iter()
+        .zip(&pictures)
+        .map(|(&surface, picture)| {
+            materials.add(StandardMaterial {
+                base_color: Color::srgba(1.0, 1.0, 1.0, MEMORY_ALPHA),
+                alpha_mode: AlphaMode::Blend,
+                depth_bias: match surface {
+                    Surface::Wall => 0.0,
+                    Surface::WallBlend => BLEND_DEPTH_BIAS,
+                    _ => -1.0,
+                },
+                ..unlit(picture)
+            })
+        })
+        .collect();
     let see_through = materials.add(StandardMaterial {
         base_color: Color::srgba(1.0, 1.0, 1.0, SEE_THROUGH_ALPHA),
         base_color_texture: Some(load_tile(&asset_server, theme.wall)),
@@ -225,7 +264,7 @@ fn apply_theme(
         return;
     }
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
-    for surface in [Surface::Floor, Surface::Wall] {
+    for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
         if let Some(mut material) = materials.get_mut(&surfaces.solid[surface as usize]) {
             material.base_color_texture = Some(picture.clone());
@@ -363,12 +402,16 @@ fn update_meshes(
     mut shown: ResMut<Shown>,
     // The camera position last built for.
     mut built_for: Local<Option<Vec3>>,
+    // What the viewers saw when last worked out, kept while only the camera
+    // moves.
+    mut seen: Local<Option<(Vec<View>, Sight)>>,
 ) {
     let camera = camera.translation;
-    let changed = *built_for != Some(camera)
-        || dungeon.is_changed()
+    let looked_again = dungeon.is_changed()
         || player.is_changed()
-        || sharers.iter().any(|position| position.is_changed())
+        || sharers.iter().any(|position| position.is_changed());
+    let changed = *built_for != Some(camera)
+        || looked_again
         || lights
             .iter()
             .any(|(position, light)| position.is_changed() || light.is_changed());
@@ -379,21 +422,27 @@ fn update_meshes(
 
     let start = Instant::now();
     let level = &dungeon.level;
-    let views: Vec<View> = std::iter::once(&**player)
-        .chain(sharers.iter().map(|position| position.into_inner()))
-        .map(|position| {
-            let mut sight = Sight::new(level);
-            sight.add_glimpses(level, position.x, position.y, None);
-            View {
-                cell: (position.x, position.y),
-                sight,
-            }
-        })
-        .collect();
-    let mut sight = Sight::new(level);
-    for view in &views {
-        sight.add_glimpses(level, view.cell.0, view.cell.1, None);
+    if looked_again || seen.is_none() {
+        let views: Vec<View> = std::iter::once(&**player)
+            .chain(sharers.iter().map(|position| position.into_inner()))
+            .map(|position| {
+                let mut sight = Sight::new(level);
+                sight.add_glimpses(level, position.x, position.y, None);
+                View {
+                    cell: (position.x, position.y),
+                    sight,
+                }
+            })
+            .collect();
+        let mut sight = Sight::new(level);
+        for view in &views {
+            sight.add_glimpses(level, view.cell.0, view.cell.1, None);
+        }
+        *seen = Some((views, sight));
     }
+    let Some((views, sight)) = &*seen else {
+        return;
+    };
     // What is in sight is remembered from now on (only cells the server has
     // sent: the rest are wall here until it does). Not a change that needs
     // anything redrawn, so it doesn't mark the level changed.
@@ -416,17 +465,19 @@ fn update_meshes(
             Vec3::new(colour.red, colour.green, colour.blue),
         );
     }
+    let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     let built = mesh::build(
         level,
-        &views,
-        &sight,
+        views,
+        sight,
         &remembered,
         &light,
         &dungeon.stairs,
         camera,
+        theme.shape,
     );
+    shown.sight = Some(sight.clone());
     dungeon.bypass_change_detection().remembered = remembered;
-    shown.sight = Some(sight);
     shown.solid_faces = built.solid_faces;
     shown.stairs_up = dungeon
         .stairs
@@ -485,7 +536,8 @@ fn update_meshes(
 /// a straight line for now: walls don't stop travel until there is
 /// pathfinding). Clicks on clickable tokens are left to `site`; so is using
 /// stairs, by arriving on their cell. Ctrl+click asks the server to teleport
-/// the player there (dev tools).
+/// the player there, and Alt+click changes the cell (floor, wall, door, window,
+/// and round again) to try walls out (dev tools).
 #[allow(clippy::too_many_arguments)]
 fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
@@ -508,6 +560,18 @@ fn pick_on_click(
     let Ok(ray) = camera.viewport_to_world(camera_transform, cursor) else {
         return;
     };
+    if keys.any_pressed([KeyCode::AltLeft, KeyCode::AltRight]) {
+        if let Some((x, y)) = picking::floor_cell(ray) {
+            let cell = match dungeon.level.cell(x, y) {
+                Cell::Floor => Cell::Wall,
+                Cell::Wall => Cell::Door,
+                Cell::Door => Cell::Window,
+                _ => Cell::Floor,
+            };
+            to_server.write(ToServer(ClientMessage::DevSetCell { x, y, cell }));
+        }
+        return;
+    }
     if let Some((x, y)) = picking::pick(
         ray,
         &dungeon.level,

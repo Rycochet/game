@@ -73,7 +73,7 @@ There are several worlds and players move between them, so every map is addresse
 
 **Three states per cell, all on the client:**
 
-- **loaded**: sent by the server, not necessarily seen. The server sends what is visible from every cell within K steps of the player (K is `LEVEL_PRELOAD_STEPS` on the server, now 3, to become a server option; more for latency, along a click-travel route), so the client can work out sight itself with the shared shadowcasting: everything in sight, including the walls that stop it, is loaded. Loaded-but-unseen cells are never drawn.
+- **loaded**: sent by the server, not necessarily seen. The server sends what is visible from every cell within K steps of the player (K is `LEVEL_PRELOAD_STEPS` on the server, now 3, to become a server option; more for latency, along a click-travel route), so the client can work out sight itself with the shared sight rules: everything in sight, including the walls that stop it and the cells beside those (which decide a wall's shape), is loaded. Loaded-but-unseen cells are never drawn.
 - **visible**: in sight now, worked out by the client from loaded cells (the server works it out too and is authoritative). Drawn normally.
 - **seen**: remembered. Drawn in greyscale (or similar): "not now, but you remember it". Remembered floor can be clicked to travel back; the server checks every step, and memory can be out of date (a door you remember open may be closed now) until seen again.
 

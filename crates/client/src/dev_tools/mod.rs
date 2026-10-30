@@ -8,7 +8,10 @@
 //!   starting position (the embedded server allows it): `kind` is an index
 //!   into `FeatureKind::ALL`, `seed` its map seed (default 1), `level` the
 //!   level (default 0, the way in).
-//! - `GAME_MOVE=dx,dy`: a second after starting, step the player this far
+//! - `GAME_CELLS=x,y,kind;...`: on arriving in a site, change cells of the
+//!   level, from where the player stands (`kind`: `floor`, `wall`, `door` or
+//!   `window`), to look at walls the generators don't make.
+//! - `GAME_MOVE=dx,dy`: two seconds after starting, step the player this far
 //!   (e.g. off the stairs they arrived on, to see them).
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked),
 //!   once at `GAME_POS` (if set).
@@ -34,6 +37,7 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
+use shared::dungeon::Cell;
 use shared::feature::FeatureKind;
 use shared::movement::steps_between;
 use shared::protocol::ClientMessage;
@@ -94,13 +98,32 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
+        if let Ok(cells) = env::var("GAME_CELLS") {
+            let cells: Vec<(i64, i64, Cell)> = cells.split(';').filter_map(parse_cell).collect();
+            app.add_systems(
+                Update,
+                move |view: Res<State<GameView>>,
+                      mut done: Local<bool>,
+                      player: Single<&MapPosition, With<Player>>,
+                      mut to_server: MessageWriter<ToServer>| {
+                    if !*done && view.get() == &GameView::Dungeon {
+                        *done = true;
+                        for &(dx, dy, cell) in &cells {
+                            let (x, y) = (player.x + dx, player.y + dy);
+                            to_server.write(ToServer(ClientMessage::DevSetCell { x, y, cell }));
+                        }
+                    }
+                },
+            );
+        }
+
         if let Some((dx, dy)) = env::var("GAME_MOVE").ok().and_then(|pos| parse_pos(&pos)) {
             app.add_systems(
                 Update,
                 (move |time: Res<Time>,
                        mut done: Local<bool>,
                        mut steps: MessageWriter<TakeStep>| {
-                    if !*done && time.elapsed_secs() > 1.0 {
+                    if !*done && time.elapsed_secs() > 2.0 {
                         *done = true;
                         for step in steps_between((0, 0), (dx, dy)) {
                             steps.write(TakeStep(step));
@@ -245,6 +268,20 @@ fn parse_token(text: &str) -> Option<Token> {
         completed,
         size,
     })
+}
+
+/// `dx,dy,kind`, as in `GAME_CELLS`.
+fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
+    let (position, kind) = text.rsplit_once(',')?;
+    let (dx, dy) = parse_pos(position)?;
+    let cell = match kind.trim() {
+        "floor" => Cell::Floor,
+        "wall" => Cell::Wall,
+        "door" => Cell::Door,
+        "window" => Cell::Window,
+        _ => return None,
+    };
+    Some((dx, dy, cell))
 }
 
 fn parse_pos(text: &str) -> Option<(i64, i64)> {

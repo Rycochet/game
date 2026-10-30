@@ -91,7 +91,7 @@ fn update_status_text(
     text.0 = format!(
         "Arrow keys / WASD or click to move  Click a place or stairs to go in\n\
          Right-drag: turn / tilt map  Wheel: zoom  Home: reset view\n\
-         Ctrl+click: teleport  Esc: back to the start\n\
+         Ctrl+click: teleport  Alt+click: change a site's cell  Esc: back to the start\n\
          G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})\n\
          K / C / X / Z: token shape / colour / completed / size\n\
          Position {}, {}  Hour {}\n{}",

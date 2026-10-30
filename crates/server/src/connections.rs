@@ -255,6 +255,7 @@ pub(crate) fn answer(
         ClientMessage::DevEnterSite { kind, seed, level } => {
             sites::dev_enter(client, world, kind, seed, level)
         }
+        ClientMessage::DevSetCell { x, y, cell } => sites::set_cell(client, world, x, y, cell),
     }
 }
 

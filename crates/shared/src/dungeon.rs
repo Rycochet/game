@@ -1,10 +1,12 @@
 //! Dungeons and buildings: a grid of floor and wall cells, and what can be
 //! seen (or lit) from a cell.
 //!
-//! Walls block movement, sight and light; floors block nothing. Sight uses
-//! symmetric shadowcasting with exact integer fractions, so the client and the
-//! server always agree on what a character can see. Levels are made by the
-//! generators in `crate::site`.
+//! A wall takes up only a thin slice of its cell, running through the middle
+//! towards the walls next to it (`WallShape`). It blocks movement in the whole
+//! cell, but sight and light only where it really stands, so they pass beside
+//! a column or the end of a wall. Sight follows straight lines in exact
+//! integers, so the client and the server always agree on what a character can
+//! see. Levels are made by the generators in `crate::site`.
 
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +30,9 @@ pub enum Cell {
     Water,
     /// As water, hotter.
     Lava,
+    /// Blocks movement but not sight or light. Joins the walls either side
+    /// of it, like a door.
+    Window,
 }
 
 impl Cell {
@@ -40,8 +45,62 @@ impl Cell {
     pub fn is_open(self) -> bool {
         matches!(
             self,
-            Self::Floor | Self::Door | Self::Ground | Self::Water | Self::Lava
+            Self::Floor | Self::Door | Self::Ground | Self::Water | Self::Lava | Self::Window
         )
+    }
+
+    /// Whether it is a wall (a hidden door looks and acts like one).
+    pub fn is_wall(self) -> bool {
+        matches!(self, Self::Wall | Self::SecretDoor)
+    }
+
+    /// Whether it is a hole in a wall, which joins the walls either side.
+    pub fn is_opening(self) -> bool {
+        matches!(self, Self::Door | Self::Window)
+    }
+}
+
+/// Cells measured in units for sight's exact arithmetic: a cell is this wide,
+/// with its centre on a multiple of it.
+pub const CELL_UNITS: i64 = 40;
+
+/// Half a wall's thickness, in units: it covers 45% to 55% of its cell.
+pub const WALL_HALF_UNITS: i64 = 2;
+
+/// How far past the centre a wall joined to only one other goes, in units: it
+/// stops 60% of the way across its cell.
+pub const WALL_END_UNITS: i64 = 4;
+
+/// Half a cell, in units.
+const HALF_CELL: i64 = CELL_UNITS / 2;
+
+/// Which of a wall cell's four sides the wall runs out to, because it joins
+/// another wall (or a door or window in line with it) there.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WallShape {
+    pub north: bool,
+    pub east: bool,
+    pub south: bool,
+    pub west: bool,
+}
+
+impl WallShape {
+    /// How far the wall reaches from the cell's centre towards each side, in
+    /// units, as `[north, east, south, west]`: to the cell's edge where it
+    /// joins something, otherwise just its thickness, except that a wall
+    /// joined on one side only carries on a little past the centre.
+    pub fn reach(self) -> [i64; 4] {
+        let sides = [self.north, self.east, self.south, self.west];
+        let joined = sides.iter().filter(|&&side| side).count();
+        std::array::from_fn(|i| {
+            if sides[i] {
+                HALF_CELL
+            } else if joined == 1 && sides[(i + 2) % 4] {
+                WALL_END_UNITS
+            } else {
+                WALL_HALF_UNITS
+            }
+        })
     }
 }
 
@@ -147,6 +206,33 @@ impl Level {
         }
     }
 
+    /// The shape of the wall at `(x, y)`, if there is a wall.
+    pub fn wall_shape(&self, x: i64, y: i64) -> Option<WallShape> {
+        self.cell(x, y).is_wall().then(|| WallShape {
+            north: self.joins_wall(x, y - 1, false),
+            east: self.joins_wall(x + 1, y, true),
+            south: self.joins_wall(x, y + 1, false),
+            west: self.joins_wall(x - 1, y, true),
+        })
+    }
+
+    /// Whether a wall beside `(x, y)`, to its east or west (`east_west`) or
+    /// north or south, joins it: walls join walls, and openings in line.
+    fn joins_wall(&self, x: i64, y: i64, east_west: bool) -> bool {
+        let cell = self.cell(x, y);
+        cell.is_wall() || (cell.is_opening() && self.opening_runs_east_west(x, y) == east_west)
+    }
+
+    /// Whether the door or window at `(x, y)` is in a wall running east-west
+    /// (rather than north-south): the way with more walls beside it.
+    pub fn opening_runs_east_west(&self, x: i64, y: i64) -> bool {
+        let solid = |x, y| {
+            let cell = self.cell(x, y);
+            (cell.is_wall() || cell.is_opening()) as u8
+        };
+        solid(x - 1, y) + solid(x + 1, y) >= solid(x, y - 1) + solid(x, y + 1)
+    }
+
     /// Whether `(x, y)` is inside the level's rectangle.
     pub fn contains(&self, x: i64, y: i64) -> bool {
         self.index(x, y).is_some()
@@ -154,8 +240,7 @@ impl Level {
 }
 
 /// The cells that can be seen (or lit) from one or more points in a level.
-/// Walls are seen when their face is: they block what is behind them, not
-/// themselves.
+/// A wall is seen when an open cell touching it (corners too) is.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Sight {
     min_x: i64,
@@ -202,14 +287,14 @@ impl Sight {
     /// Adds everything seen from `(x, y)`, out to `radius` cells (straight-line
     /// distance between cell centres; `None` for no limit). Several calls
     /// combine, e.g. for allies sharing their sight. Open cells count as seen
-    /// when their centre is, so seeing is symmetric (if A sees B, B sees A):
-    /// the rule for the game.
+    /// when a straight line between the centres misses every wall, so seeing
+    /// is symmetric (if A sees B, B sees A): the rule for the game.
     pub fn add_view(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>) {
         self.add(level, x, y, radius, false);
     }
 
-    /// As `add_view`, but open cells count as seen when any part of them is
-    /// in view (as walls always do), e.g. a side opening glimpsed from a long
+    /// As `add_view`, but open cells count as seen when a line reaches near
+    /// any of their corners too, e.g. a side opening glimpsed from a long
     /// corridor. Not symmetric, so only for drawing what a viewer can make
     /// out, never for game rules.
     pub fn add_glimpses(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>) {
@@ -221,154 +306,112 @@ impl Sight {
         if !level.is_open(x, y) {
             return;
         }
-        let mut scan = Scan {
-            level,
-            sight: self,
-            origin: (x, y),
-            radius_squared: radius.map(|r| (r as i64) * (r as i64)),
-            partly,
+        let from = (x * CELL_UNITS, y * CELL_UNITS);
+        for cy in self.min_y..self.min_y + self.height {
+            for cx in self.min_x..self.min_x + self.width {
+                let (dx, dy) = (cx - x, cy - y);
+                let in_reach = radius.is_none_or(|r| dx * dx + dy * dy <= i64::from(r).pow(2));
+                if !in_reach || !level.is_open(cx, cy) || self.is_seen(cx, cy) {
+                    continue;
+                }
+                let centre = (cx * CELL_UNITS, cy * CELL_UNITS);
+                let seen = clear_line(level, from, centre)
+                    || (partly
+                        && GLIMPSE_POINTS.iter().any(|(ox, oy)| {
+                            clear_line(level, from, (centre.0 + ox, centre.1 + oy))
+                        }));
+                if seen {
+                    self.reveal(level, cx, cy);
+                }
+            }
+        }
+    }
+
+    /// Counts an open cell as seen, and the walls touching it.
+    fn reveal(&mut self, level: &Level, x: i64, y: i64) {
+        self.mark(x, y);
+        for ny in y - 1..=y + 1 {
+            for nx in x - 1..=x + 1 {
+                if !level.is_open(nx, ny) {
+                    self.mark(nx, ny);
+                }
+            }
+        }
+    }
+}
+
+/// The points near an open cell's corners that count for glimpses, in units
+/// from its centre.
+const GLIMPSE_POINTS: [(i64, i64); 4] = [(-16, -16), (16, -16), (-16, 16), (16, 16)];
+
+/// Whether the straight line between two points (in units) misses every wall.
+/// Goes through the cells it crosses, column by column from `from`.
+fn clear_line(level: &Level, from: (i64, i64), to: (i64, i64)) -> bool {
+    let (dx, dy) = (to.0 - from.0, to.1 - from.1);
+    let (first, last) = (cell_of(from.0), cell_of(to.0));
+    let step = if last >= first { 1 } else { -1 };
+    let mut column = first;
+    loop {
+        // The part of the line in this column.
+        let left = (column * CELL_UNITS - HALF_CELL).max(from.0.min(to.0));
+        let right = (column * CELL_UNITS + HALF_CELL).min(from.0.max(to.0));
+        let (y1, y2) = if dx == 0 {
+            (from.1, to.1)
+        } else {
+            (
+                from.1 + (left - from.0) * dy / dx,
+                from.1 + (right - from.0) * dy / dx,
+            )
         };
-        scan.reveal(x, y);
-        for quadrant in Quadrant::ALL {
-            scan.scan(
-                quadrant,
-                Row {
-                    depth: 1,
-                    start: Slope::new(-1, 1),
-                    end: Slope::new(1, 1),
-                },
-            );
-        }
-    }
-}
-
-/// Symmetric shadowcasting (after Albert Ford's description). Each quadrant
-/// is scanned row by row away from the origin; walls narrow the range of
-/// slopes still visible. Slopes are exact fractions, so there are no floats.
-struct Scan<'a> {
-    level: &'a Level,
-    sight: &'a mut Sight,
-    origin: (i64, i64),
-    radius_squared: Option<i64>,
-    /// Reveal open cells partly in view, not only those whose centre is.
-    partly: bool,
-}
-
-/// A quarter of the view: rows run away from the origin in this direction.
-#[derive(Clone, Copy)]
-enum Quadrant {
-    North,
-    East,
-    South,
-    West,
-}
-
-impl Quadrant {
-    const ALL: [Self; 4] = [Self::North, Self::East, Self::South, Self::West];
-
-    /// The cell `depth` rows out and `col` across from `origin`.
-    fn cell(self, (x, y): (i64, i64), depth: i64, col: i64) -> (i64, i64) {
-        match self {
-            Self::North => (x + col, y - depth),
-            Self::South => (x + col, y + depth),
-            Self::East => (x + depth, y + col),
-            Self::West => (x - depth, y + col),
-        }
-    }
-}
-
-/// A fraction `num / den`, with `den > 0`.
-#[derive(Clone, Copy)]
-struct Slope {
-    num: i64,
-    den: i64,
-}
-
-impl Slope {
-    fn new(num: i64, den: i64) -> Self {
-        Self { num, den }
-    }
-
-    /// The slope of the near-side edge of the cell at `(depth, col)`.
-    fn of_edge(depth: i64, col: i64) -> Self {
-        Self::new(2 * col - 1, 2 * depth)
-    }
-}
-
-/// One row of a quadrant, between two slopes.
-#[derive(Clone, Copy)]
-struct Row {
-    depth: i64,
-    start: Slope,
-    end: Slope,
-}
-
-impl Row {
-    /// The columns this row covers: `depth × start` rounded with ties up, to
-    /// `depth × end` rounded with ties down.
-    fn columns(&self) -> std::ops::RangeInclusive<i64> {
-        // floor(n + 1/2) and ceil(n - 1/2) for n = depth × num / den.
-        let first =
-            (2 * self.depth * self.start.num + self.start.den).div_euclid(2 * self.start.den);
-        let last = -(-(2 * self.depth * self.end.num - self.end.den)).div_euclid(2 * self.end.den);
-        first..=last
-    }
-
-    /// Whether a floor cell's centre lies within the row's slopes, so that
-    /// seeing it is symmetric (it could see back).
-    fn is_symmetric(&self, col: i64) -> bool {
-        col * self.start.den >= self.depth * self.start.num
-            && col * self.end.den <= self.depth * self.end.num
-    }
-
-    fn next(&self) -> Self {
-        Self {
-            depth: self.depth + 1,
-            ..*self
-        }
-    }
-}
-
-impl Scan<'_> {
-    fn reveal(&mut self, x: i64, y: i64) {
-        if let Some(limit) = self.radius_squared {
-            let (dx, dy) = (x - self.origin.0, y - self.origin.1);
-            if dx * dx + dy * dy > limit {
-                return;
+        // One unit more each way, as the divisions above round.
+        let (top, bottom) = (cell_of(y1.min(y2) - 1), cell_of(y1.max(y2) + 1));
+        for row in top..=bottom {
+            if let Some(shape) = level.wall_shape(column, row)
+                && line_hits_wall(from, to, (column, row), shape)
+            {
+                return false;
             }
         }
-        self.sight.mark(x, y);
+        if column == last {
+            return true;
+        }
+        column += step;
     }
+}
 
-    fn scan(&mut self, quadrant: Quadrant, mut row: Row) {
-        // Rows beyond the radius can't show anything. Without a radius, the
-        // level's edge (all wall beyond) stops the scan.
-        if let Some(limit) = self.radius_squared
-            && row.depth * row.depth > limit
-        {
-            return;
-        }
-        let mut previous_open: Option<bool> = None;
-        for col in row.columns() {
-            let (x, y) = quadrant.cell(self.origin, row.depth, col);
-            let open = self.level.is_open(x, y);
-            if !open || self.partly || row.is_symmetric(col) {
-                self.reveal(x, y);
-            }
-            if previous_open == Some(false) && open {
-                row.start = Slope::of_edge(row.depth, col);
-            }
-            if previous_open == Some(true) && !open {
-                let mut next = row.next();
-                next.end = Slope::of_edge(row.depth, col);
-                self.scan(quadrant, next);
-            }
-            previous_open = Some(open);
-        }
-        if previous_open == Some(true) {
-            self.scan(quadrant, row.next());
-        }
+/// The cell a coordinate (in units) is in.
+fn cell_of(units: i64) -> i64 {
+    (units + HALF_CELL).div_euclid(CELL_UNITS)
+}
+
+/// Whether a line touches the wall in `cell`. The wall is two bars crossing
+/// at the cell's centre.
+fn line_hits_wall(from: (i64, i64), to: (i64, i64), cell: (i64, i64), shape: WallShape) -> bool {
+    let (cx, cy) = (cell.0 * CELL_UNITS, cell.1 * CELL_UNITS);
+    let [north, east, south, west] = shape.reach();
+    let t = WALL_HALF_UNITS;
+    line_hits_box(from, to, (cx - west, cy - t), (cx + east, cy + t))
+        || line_hits_box(from, to, (cx - t, cy - north), (cx + t, cy + south))
+}
+
+/// Whether a line touches a box given by its smallest and largest corners:
+/// their ranges overlap, and the box's corners aren't all on one side of it.
+fn line_hits_box(from: (i64, i64), to: (i64, i64), low: (i64, i64), high: (i64, i64)) -> bool {
+    if from.0.max(to.0) < low.0
+        || from.0.min(to.0) > high.0
+        || from.1.max(to.1) < low.1
+        || from.1.min(to.1) > high.1
+    {
+        return false;
     }
+    let side = |x: i64, y: i64| (to.0 - from.0) * (y - from.1) - (to.1 - from.1) * (x - from.0);
+    let sides = [
+        side(low.0, low.1),
+        side(high.0, low.1),
+        side(low.0, high.1),
+        side(high.0, high.1),
+    ];
+    !(sides.iter().all(|&s| s > 0) || sides.iter().all(|&s| s < 0))
 }
 
 #[cfg(test)]
@@ -422,33 +465,155 @@ mod tests {
         assert_eq!(
             rows,
             [
-                "   ##############",
-                "    ............#",
-                "      ..........#",
+                "  ###############",
+                "   .............#",
+                "     ...........#",
                 "      #.........#",
                 "      #.........#",
                 "      #.........#",
-                "      ..........#",
-                "    ............#",
-                "   ##############",
+                "     ...........#",
+                "   .............#",
+                "  ###############",
             ]
         );
     }
 
-    /// A long corridor with a side opening far along it: the opening's
-    /// centre is out of view from the corridor's end, but part of it shows.
+    /// A wall's end hides a far cell's centre, but one of its corners shows.
     #[test]
-    fn glimpses_show_side_openings() {
-        let mut level = Level::new(-1, -2, 12, 4);
-        for x in 0..10 {
-            level.set(x, 0, Cell::Floor);
+    fn glimpses_show_parts_of_cells() {
+        let mut level = Level::test_room();
+        level.set(4, -1, Cell::Wall);
+        level.set(4, 0, Cell::Wall);
+        let mut sight = Sight::new(&level);
+        sight.add_view(&level, 2, 0, None);
+        assert!(!sight.is_seen(6, 0));
+        sight.add_glimpses(&level, 2, 0, None);
+        assert!(sight.is_seen(6, 0));
+    }
+
+    /// A floor with walls placed by a picture: `#` wall, `+` door, `W` window.
+    fn drawn(rows: &[&str]) -> Level {
+        let mut level = Level::new(0, 0, rows[0].len() as i64, rows.len() as i64);
+        for (y, row) in rows.iter().enumerate() {
+            for (x, mark) in row.chars().enumerate() {
+                let cell = match mark {
+                    '#' => Cell::Wall,
+                    '+' => Cell::Door,
+                    'W' => Cell::Window,
+                    _ => Cell::Floor,
+                };
+                level.set(x as i64, y as i64, cell);
+            }
         }
-        level.set(8, -1, Cell::Floor);
+        level
+    }
+
+    #[test]
+    fn walls_take_their_shape_from_their_neighbours() {
+        let level = drawn(&[
+            ".....", //
+            ".#...", //
+            ".....", //
+            ".###.", //
+            "...#.", //
+            ".###.", //
+            "...#.", //
+            ".#+#.", //
+        ]);
+        let shape = |x, y| level.wall_shape(x, y).unwrap();
+        let reach = |x, y| shape(x, y).reach();
+        // A column.
+        assert_eq!(reach(1, 1), [2, 2, 2, 2]);
+        // The end of a wall stops 60% of the way across.
+        assert_eq!(reach(1, 3), [2, 20, 2, 4]);
+        // Straight on, and a corner.
+        assert_eq!(reach(2, 3), [2, 20, 2, 20]);
+        assert_eq!(reach(3, 3), [2, 2, 20, 20]);
+        // A T.
+        assert_eq!(reach(3, 5), [20, 2, 20, 20]);
+        // Walls join a door in line with them.
+        assert!(shape(1, 7).east && shape(3, 7).west);
+        // Not one they stand beside.
+        assert!(level.opening_runs_east_west(2, 7));
+        assert!(!shape(2, 5).south);
+        assert_eq!(level.wall_shape(2, 7), None);
+    }
+
+    #[test]
+    fn walls_block_only_where_they_stand() {
+        let mut level = Level::test_room();
+        // Beside a column, along a line that crosses its cell off centre.
+        level.set(2, 0, Cell::Wall);
+        assert!(clear_line(&level, (0, -10), (160, 30)));
         let mut sight = Sight::new(&level);
         sight.add_view(&level, 0, 0, None);
-        assert!(!sight.is_seen(8, -1));
-        sight.add_glimpses(&level, 0, 0, None);
-        assert!(sight.is_seen(8, -1));
+        // Straight through it is hidden, the cells either side are not.
+        assert!(!sight.is_seen(4, 0));
+        assert!(sight.is_seen(4, 1));
+        // Seen from beside it, past its cell's corner.
+        let mut sight = Sight::new(&level);
+        sight.add_view(&level, 1, 1, None);
+        assert!(sight.is_seen(3, 0));
+        assert!(sight.is_seen(2, 0));
+    }
+
+    #[test]
+    fn doors_and_windows_let_sight_through_but_walls_do_not() {
+        let level = drawn(&[
+            "...", //
+            "#W#", //
+            "...", //
+            "#+#", //
+            "...", //
+            "###", //
+            "...", //
+        ]);
+        let mut sight = Sight::new(&level);
+        sight.add_view(&level, 1, 2, None);
+        assert!(sight.is_seen(1, 0));
+        assert!(sight.is_seen(1, 4));
+        assert!(!sight.is_seen(1, 6));
+        // Windows can't be walked through; both can be seen across.
+        assert!(!level.is_walkable(1, 1) && level.is_open(1, 1));
+        assert!(level.is_walkable(1, 3) && level.is_open(1, 3));
+        // Walls touching what is seen are seen.
+        assert!(sight.is_seen(1, 5));
+    }
+
+    /// Sight is the same both ways, also past thin walls.
+    #[test]
+    fn seeing_is_mutual() {
+        let level = drawn(&[
+            "........", //
+            ".#..##..", //
+            "....#...", //
+            "..#.....", //
+            ".....W#.", //
+            ".##+##..", //
+            "........", //
+        ]);
+        let (_, _, width, height) = level.bounds();
+        let view = |x, y| {
+            let mut sight = Sight::new(&level);
+            sight.add_view(&level, x, y, None);
+            sight
+        };
+        for y in 0..height {
+            for x in 0..width {
+                if !level.is_open(x, y) {
+                    continue;
+                }
+                let sight = view(x, y);
+                for oy in 0..height {
+                    for ox in 0..width {
+                        if level.is_open(ox, oy) {
+                            let back = view(ox, oy).is_seen(x, y);
+                            assert_eq!(sight.is_seen(ox, oy), back, "{x},{y} {ox},{oy}");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
