@@ -17,31 +17,34 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 | Module              | Source                          | Context file                          | Covers                                              |
 | ------------------- | ------------------------------- | ------------------------------------- | --------------------------------------------------- |
 | (project)           | root files                      | `docs/context/project.md`             | Build, tooling, folder layout, CI                   |
-| (design)            | n/a                             | `docs/context/architecture.md`        | Client/server split, trust and determinism rules    |
+| (design)            | n/a                             | `docs/context/architecture.md`        | Client/server split, trust, determinism, map data flow |
 | (performance)       | n/a                             | `docs/context/optimisations.md`       | Measured optimisations tried but not adopted (memory) |
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
 | shared: feature     | `crates/shared/src/feature.rs`  | `docs/context/shared/feature.md`      | World map chunks and their features (kind, position, map seed) |
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, ground, water, lava), rooms, line of sight / light reach |
+| shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
+| shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes) |
 | shared: site        | `crates/shared/src/site/`       | `docs/context/shared/site.md`         | Sites behind features: building (BSP) and cave generators, levels, stairs |
-| server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server: `ServerPlugin`, standalone binary |
-| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world (and its features) and dungeon, `MapPosition` / `SmoothPosition`, `GameView` state, `Portal` / `Clickable`, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |
-| client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks   |
+| server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server in its own Bevy world: WebSocket networking (and the web client's files) on one port, connections, world map chunks, site visits and level cells, saves (world, sites, characters), embedded single player, standalone binary |
+| client: connection  | `crates/client/src/connection/` | `docs/context/client/connection.md`   | Connecting to the server (embedded on native, WebSocket on the web), reconnecting, sending steps and putting refused ones right, `ToServer` / `FromServer` |
+| client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world (and its features) and dungeon, `MapPosition` / `SmoothPosition`, `GameView` state (incl. `Connecting`), `ServerStatus`, `Portal` / `Clickable`, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |
+| client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks (announced as `Stepped`) |
 | client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
 | client: view3d      | `crates/client/src/view3d/`     | `docs/context/client/view3d.md`       | Shared 3D camera (turn, tilt, zoom), entity tokens, token clicks, `ViewGrid` |
 | client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window cut to the camera, edge faces, sun, click picking, feature tokens |
-| client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: textured floor/wall meshes by theme, 3D stairs, sight, see-through walls, grid light |
-| client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Entering sites, stairs between levels, leaving by stairs or border ground |
-| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size |
-| client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text                                     |
+| client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: textured floor/wall meshes by theme, 3D stairs, sight, see-through walls, grid light, memory in grey |
+| client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Asking the server to enter sites, take stairs, leave; applying its level messages |
+| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size, Esc back to the start |
+| client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, red connection status              |
 | client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, travel, walk, snow, camera view, screenshots |
 
 Also: `docs/context/decisions.md` is the log of architecture decisions. Check it before proposing a structural change, and follow what it records.
 
 If a task touches a module not listed here, it doesn't exist yet: create it (see "Adding a module").
 
-Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`, a placeholder until networking), `xtask` (helper commands).
+Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`: the networked server, also serving the web client), `xtask` (helper commands).
 
 ## Module rules
 
@@ -78,13 +81,13 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 ## Commands
 
-- Native: `cargo run` · Server: `cargo run -p server` · Web: `trunk serve` (http://localhost:3000) · Format: `cargo fmt`
+- Native: `cargo run` · Server: `cargo run -p server` (with `HALL_OF_WORLDS_WEB=dist` after `trunk build`, it serves the web client too, on http://localhost:8080) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
 - Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
 - Docker isn't installed on the owner's machine, and the Docker workflow only builds the image after merging to `master`: take extra care with `Dockerfile` changes.
 - **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
 - **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: `cargo xtask test` type-checks wasm, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
 - **Leave the game running for the owner** after finishing a change: start the native build in the background (`./target/debug/hall-of-worlds.exe` with `run_in_background`) and don't close it, so the owner can see and play with the changes. Before rebuilding, close it if it's still running (`taskkill //IM hall-of-worlds.exe //F`): Windows locks the running executable and the build fails with "Access is denied".
-- **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`).
+- **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`). Always set `HALL_OF_WORLDS_SERVER_DATA` to a scratch folder in the same command (shell variables don't carry between commands), or the run saves over the owner's character.
 - Bevy compiles slowly the first time (15+ min clean); incremental builds take seconds. Run long builds in the background.
 
 ## Conventions

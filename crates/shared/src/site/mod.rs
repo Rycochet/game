@@ -6,10 +6,17 @@
 //! kind (`Generator::for_feature`); everything else comes from the feature's
 //! map seed. Each level is generated on its own from the seed, so the client
 //! and the server agree on it whichever levels were visited first.
+//!
+//! Each generator has a version (`Generator::version`), bumped whenever what
+//! it makes changes in a way that matters. A saved site keeps the version it
+//! was first made with, so every version still in use must stay runnable
+//! (`Site::with_version`).
 
 mod building;
 mod cave;
 mod grid;
+
+use serde::{Deserialize, Serialize};
 
 use crate::dungeon::Level;
 use crate::feature::FeatureKind;
@@ -28,7 +35,7 @@ pub enum Exit {
 }
 
 /// Which way a staircase goes, for its picture.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum StairsDirection {
     Up,
     Down,
@@ -76,6 +83,15 @@ impl SiteLevel {
                 Exit::Level(_) => None,
             })
     }
+
+    /// As `arrival`, but somewhere even if nothing leads there (a jump
+    /// between levels, from dev tools): the first stairs or the entrance.
+    pub fn arrive(&self, from: Exit) -> (i64, i64) {
+        self.arrival(from)
+            .or_else(|| self.stairs.first().map(|s| (s.x, s.y)))
+            .or(self.entrance)
+            .unwrap_or((0, 0))
+    }
 }
 
 /// How a site is generated, with the options that tune it.
@@ -90,6 +106,14 @@ pub enum Generator {
 }
 
 impl Generator {
+    /// Its current version (`BUILDING_VERSION`, `CAVE_VERSION`).
+    pub fn version(&self) -> u32 {
+        match self {
+            Self::Building(_) => BUILDING_VERSION,
+            Self::Cave(_) => CAVE_VERSION,
+        }
+    }
+
     /// The generator for each kind of world map feature.
     pub fn for_feature(kind: FeatureKind) -> Self {
         use FeatureKind::*;
@@ -159,6 +183,14 @@ impl Generator {
     }
 }
 
+/// The building generator's version: bump it when its output changes in a
+/// way that matters (not for looks), and keep the old one runnable while
+/// saved sites use it.
+pub const BUILDING_VERSION: u32 = 1;
+
+/// The cave generator's version (as `BUILDING_VERSION`).
+pub const CAVE_VERSION: u32 = 1;
+
 /// A feature's map: its plan, from which any level can be generated.
 #[derive(Clone, Debug)]
 pub struct Site {
@@ -173,13 +205,26 @@ enum Plan {
 }
 
 impl Site {
-    /// The site a feature leads to, from its kind and map seed.
+    /// The site a feature leads to, from its kind and map seed, made with
+    /// the current version of its generator.
     pub fn new(kind: FeatureKind, seed: Seed) -> Self {
+        let version = Generator::for_feature(kind).version();
+        Self::with_version(kind, seed, version).expect("the current version runs")
+    }
+
+    /// The same, made with an older (or the current) version of its
+    /// generator: `None` if that version can no longer be run.
+    pub fn with_version(kind: FeatureKind, seed: Seed, version: u32) -> Option<Self> {
         let plan = match Generator::for_feature(kind) {
-            Generator::Building(options) => Plan::Building(building::Plan::new(&options, seed)),
-            Generator::Cave(options) => Plan::Cave(cave::Plan::new(&options, seed)),
+            Generator::Building(options) if version == BUILDING_VERSION => {
+                Plan::Building(building::Plan::new(&options, seed))
+            }
+            Generator::Cave(options) if version == CAVE_VERSION => {
+                Plan::Cave(cave::Plan::new(&options, seed))
+            }
+            _ => return None,
         };
-        Self { kind, plan }
+        Some(Self { kind, plan })
     }
 
     pub fn kind(&self) -> FeatureKind {
@@ -209,6 +254,66 @@ impl Site {
             Plan::Cave(plan) => plan.level(index),
         }
     }
+
+    /// The way `stairs` on level `index` (`level`) go down, as a grid step
+    /// from their top end to their bottom end, agreeing with the matching
+    /// stairs on the level they lead to (generated again to look). Only for
+    /// looks: both ends of a staircase are drawn running the same way.
+    pub fn stairs_descend(&self, index: u32, level: &Level, stairs: Stairs) -> (i64, i64) {
+        let other = match stairs.to {
+            Exit::Level(to) => {
+                let other = self.level(to);
+                let back = other
+                    .stairs
+                    .iter()
+                    .find(|s| s.to == Exit::Level(index))
+                    .map(|s| (s.x, s.y));
+                back.map(|cell| (other.level, cell))
+            }
+            Exit::WorldMap => None,
+        };
+        let here = Some((level, (stairs.x, stairs.y)));
+        let other = other.as_ref().map(|(level, cell)| (level, *cell));
+        match stairs.direction {
+            StairsDirection::Down => descent_way(here, other),
+            StairsDirection::Up => descent_way(other, here),
+        }
+    }
+}
+
+/// The four sides of a cell, as grid steps (`y` south), in the order ties
+/// are settled.
+const SIDES: [(i64, i64); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
+
+/// The way a staircase goes down between the cell `upper` (its top, on the
+/// level above) and `lower` (its bottom, on the level below), either unknown
+/// (the world map). Best is walkable floor to step on at the top end of the
+/// upper level and off at the bottom end of the lower one; then a wall at
+/// the far end of each (stairs run up against a wall). Ties go to the first
+/// of `SIDES`.
+fn descent_way(
+    upper: Option<(&Level, (i64, i64))>,
+    lower: Option<(&Level, (i64, i64))>,
+) -> (i64, i64) {
+    let score = |(dx, dy): (i64, i64)| {
+        let mut score = 0;
+        if let Some((level, (x, y))) = upper {
+            score += 2 * level.is_walkable(x - dx, y - dy) as u32;
+            score += !level.is_walkable(x + dx, y + dy) as u32;
+        }
+        if let Some((level, (x, y))) = lower {
+            score += 2 * level.is_walkable(x + dx, y + dy) as u32;
+            score += !level.is_walkable(x - dx, y - dy) as u32;
+        }
+        score
+    };
+    let mut best = SIDES[0];
+    for side in SIDES {
+        if score(side) > score(best) {
+            best = side;
+        }
+    }
+    best
 }
 
 #[cfg(test)]
@@ -216,6 +321,31 @@ mod tests {
     use super::*;
     use crate::dungeon::Cell;
     use grid::Reach;
+
+    #[test]
+    fn only_runnable_versions_make_sites() {
+        let seed = Seed::new(3);
+        assert!(Site::with_version(FeatureKind::Castle, seed, BUILDING_VERSION).is_some());
+        assert!(Site::with_version(FeatureKind::Castle, seed, BUILDING_VERSION + 1).is_none());
+        assert!(Site::with_version(FeatureKind::RockCave, seed, CAVE_VERSION).is_some());
+        assert!(Site::with_version(FeatureKind::RockCave, seed, 0).is_none());
+    }
+
+    #[test]
+    fn stairs_go_down_the_same_way_on_both_levels() {
+        let level = Level::test_room();
+        // Down stairs alone, against the north wall, open to the south:
+        // you step on from the south, so they go down northwards.
+        assert_eq!(descent_way(Some((&level, (0, -3))), None), (0, -1));
+        // Up stairs alone against the east wall climb east, so they go down
+        // westwards.
+        assert_eq!(descent_way(None, Some((&level, (7, 0)))), (-1, 0));
+        // Together, both levels count: there is floor to step on at the top
+        // and off at the bottom.
+        let (dx, dy) = descent_way(Some((&level, (0, -3))), Some((&level, (7, 0))));
+        assert!(level.is_walkable(-dx, -3 - dy));
+        assert!(level.is_walkable(7 + dx, dy));
+    }
 
     /// A number summing up a level (cells, rooms, stairs), for golden tests.
     fn fingerprint(site_level: &SiteLevel) -> u64 {

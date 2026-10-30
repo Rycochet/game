@@ -1,15 +1,16 @@
 //! Builds the dungeon's meshes from what is seen and lit: floors, walls and
 //! stairs as textured quads, one mesh per kind of surface (each has its own
-//! tile picture), with the light in their vertex colours.
+//! tile picture), with the light in their vertex colours. What is only
+//! remembered goes into a second set of meshes, drawn with grey pictures.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
+use shared::protocol::SeenStairs;
 use shared::site::StairsDirection;
 
 use super::{AMBIENT_LIGHT, CELL_SIZE, WALL_HEIGHT};
-use crate::common::LevelStairs;
 
 /// Steps in a flight of stairs.
 const STAIR_STEPS: usize = 4;
@@ -154,12 +155,19 @@ pub struct WallFace {
     pub normal: Vec3,
 }
 
+/// How bright remembered (out of sight) surfaces are drawn, on their grey
+/// pictures.
+const MEMORY_SHADE: f32 = 0.45;
+
 /// The meshes the dungeon is drawn with.
 pub struct DungeonMeshes {
     /// One per `Surface` (in `Surface::ALL` order): floors, wall sides facing
     /// the camera, stairs...
     pub solid: Vec<Mesh>,
     pub has_solid: Vec<bool>,
+    /// The same for what is remembered but out of sight.
+    pub memory: Vec<Mesh>,
+    pub has_memory: Vec<bool>,
     /// Wall sides facing away from the camera (the wall stands between the
     /// camera and what is seen), drawn half see-through.
     pub see_through: Mesh,
@@ -169,30 +177,44 @@ pub struct DungeonMeshes {
 }
 
 /// Builds the meshes for everything in `sight` (all the views combined), lit
-/// by `light`, with `stairs` drawn in 3D. `camera` is the camera's position.
+/// by `light`, and for the rest of `remembered` (which includes what is in
+/// sight) in grey, with `stairs` drawn in 3D. Only remembered cells are
+/// drawn: cells the client doesn't know may be in sight as wall. `camera` is
+/// the camera's position.
 pub fn build(
     level: &Level,
     views: &[View],
     sight: &Sight,
+    remembered: &Sight,
     light: &LightGrid,
-    stairs: &[LevelStairs],
+    stairs: &[SeenStairs],
     camera: Vec3,
 ) -> DungeonMeshes {
     let mut solid: Vec<Builder> = Surface::ALL.iter().map(|_| Builder::default()).collect();
+    let mut memory: Vec<Builder> = Surface::ALL.iter().map(|_| Builder::default()).collect();
     let mut see_through = Builder::default();
     let mut solid_faces = Vec::new();
     let (min_x, min_y, width, height) = level.bounds();
 
     for y in min_y..min_y + height {
         for x in min_x..min_x + width {
-            if !sight.is_seen(x, y) {
+            if !remembered.is_seen(x, y) {
                 continue;
             }
             let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
+            let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
+            if !sight.is_seen(x, y) {
+                build_remembered(&mut memory, level, remembered, (x, y), found, camera);
+                continue;
+            }
             if level.is_open(x, y) {
                 let floor_light = |p| corner_light(level, light, p).unwrap_or(light.at(x, y));
-                match stairs.iter().find(|s| (s.stairs.x, s.stairs.y) == (x, y)) {
-                    Some(found) => build_stairs(&mut solid, light, found, &floor_light),
+                match found {
+                    Some(found) => {
+                        let lit = with_ambient(light.at(x, y));
+                        let floor_colour = |p| with_ambient(floor_light(p));
+                        build_stairs(&mut solid, found, lit, &floor_colour);
+                    }
                     None => {
                         let surface = Surface::of_flat(level.cell(x, y));
                         solid[surface as usize].face(centre, Vec3::Y, CELL_SIZE / 2.0, floor_light);
@@ -202,7 +224,16 @@ pub fn build(
             }
 
             // Only the sides someone sees; never the top.
-            for (dx, dy) in visible_sides(level, views, (x, y)) {
+            let sides = visible_sides(level, views, (x, y));
+            // Sides facing only remembered cells (the outside of a wall seen
+            // from inside) are drawn as memory.
+            for side in SIDES.into_iter().filter(|side| !sides.contains(side)) {
+                let (nx, ny) = (x + side.0, y + side.1);
+                if !sight.is_seen(nx, ny) {
+                    grey_wall_side(&mut memory, level, remembered, (x, y), side, camera);
+                }
+            }
+            for (dx, dy) in sides {
                 let normal = Vec3::new(dx as f32, 0.0, dy as f32);
                 let middle = centre + normal * (CELL_SIZE / 2.0) + Vec3::Y * (WALL_HEIGHT / 2.0);
                 let builder = if faces_camera(middle, normal, camera) {
@@ -225,27 +256,82 @@ pub fn build(
     DungeonMeshes {
         has_solid: solid.iter().map(|b| !b.indices.is_empty()).collect(),
         solid: solid.into_iter().map(Builder::into_mesh).collect(),
+        has_memory: memory.iter().map(|b| !b.indices.is_empty()).collect(),
+        memory: memory.into_iter().map(Builder::into_mesh).collect(),
         has_see_through: !see_through.indices.is_empty(),
         see_through: see_through.into_mesh(),
         solid_faces,
     }
 }
 
+/// A remembered cell out of sight, evenly shaded on the grey pictures: a
+/// floor (or stairs), or a wall's sides that face a remembered open cell and
+/// the camera (sides facing away are left out, so memory stays quiet).
+fn build_remembered(
+    memory: &mut [Builder],
+    level: &Level,
+    remembered: &Sight,
+    (x, y): (i64, i64),
+    stairs: Option<&SeenStairs>,
+    camera: Vec3,
+) {
+    let grey = Vec3::splat(MEMORY_SHADE);
+    let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
+    if level.is_open(x, y) {
+        match stairs {
+            Some(found) => build_stairs(memory, found, grey, &|_| grey),
+            None => {
+                let surface = Surface::of_flat(level.cell(x, y));
+                let half = CELL_SIZE / 2.0;
+                memory[surface as usize].quad(centre, Vec3::Y, Vec3::NEG_Z, (half, half), |_| grey);
+            }
+        }
+        return;
+    }
+    for side in SIDES {
+        grey_wall_side(memory, level, remembered, (x, y), side, camera);
+    }
+}
+
+/// One side of the wall at `(x, y)`, as memory, if it faces a remembered
+/// open cell and the camera.
+fn grey_wall_side(
+    memory: &mut [Builder],
+    level: &Level,
+    remembered: &Sight,
+    (x, y): (i64, i64),
+    (dx, dy): (i64, i64),
+    camera: Vec3,
+) {
+    let (nx, ny) = (x + dx, y + dy);
+    if !level.is_open(nx, ny) || !remembered.is_seen(nx, ny) {
+        return;
+    }
+    let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
+    let normal = Vec3::new(dx as f32, 0.0, dy as f32);
+    let middle = centre + normal * (CELL_SIZE / 2.0) + Vec3::Y * (WALL_HEIGHT / 2.0);
+    if faces_camera(middle, normal, camera) {
+        let grey = Vec3::splat(MEMORY_SHADE);
+        let half = (CELL_SIZE / 2.0, WALL_HEIGHT / 2.0);
+        memory[Surface::Wall as usize].quad(middle, normal, Vec3::Y, half, |_| grey);
+    }
+}
+
 /// A flight of steps half a cell wide down the middle of the stairs' cell,
-/// running the way they go down (`LevelStairs::descends`): stairs up stand
+/// running the way they go down (`SeenStairs::descends`): stairs up stand
 /// on the floor and climb to `STAIRS_UP_HEIGHT`; stairs down go into a hole
 /// `STAIRS_DOWN_DEPTH` deep with floor either side. Stairs up are built of
 /// the wall's masonry, so they stand out from the floor; the steps down are
-/// floor going down between walls. `floor_light` is the light at a point on
-/// the floor.
+/// floor going down between walls. `lit` is the colour at the stairs' cell
+/// and `floor_colour` the colour at a point on the floor (light with the
+/// ambient, or memory's grey).
 fn build_stairs(
     solid: &mut [Builder],
-    light: &LightGrid,
-    found: &LevelStairs,
-    floor_light: &impl Fn(Vec3) -> Vec3,
+    stairs: &SeenStairs,
+    lit: Vec3,
+    floor_colour: &impl Fn(Vec3) -> Vec3,
 ) {
-    let stairs = found.stairs;
-    let (dx, dy) = found.descends;
+    let (dx, dy) = stairs.descends;
     let centre = Vec3::new(
         stairs.x as f32 * CELL_SIZE,
         0.0,
@@ -256,9 +342,7 @@ fn build_stairs(
     let half = CELL_SIZE / 2.0;
     let width = STAIRS_HALF_WIDTH;
     let run = CELL_SIZE / STAIR_STEPS as f32;
-    let lit = with_ambient(light.at(stairs.x, stairs.y));
     let [floor, wall] = [Surface::Floor as usize, Surface::Wall as usize];
-    let floor_colour = |p: Vec3| with_ambient(floor_light(p));
 
     match stairs.direction {
         StairsDirection::Up => {
@@ -535,15 +619,24 @@ mod tests {
         let views = views_from(&level, &[(0, 0)]);
         let light = LightGrid::new(&level);
         let camera = Vec3::new(0.0, 600.0, 900.0);
-        let meshes = build(&level, &views, &views[0].sight, &light, &[], camera);
+        let sight = &views[0].sight;
+        let meshes = build(&level, &views, sight, sight, &light, &[], camera);
         assert!(meshes.has_solid.iter().any(|&has| has));
         // The south wall's inner sides face away from the camera.
         assert!(meshes.has_see_through);
         assert!(!meshes.solid_faces.is_empty());
+        // Everything is in sight, so nothing is only remembered.
+        assert!(meshes.has_memory.iter().all(|&has| !has));
 
         let nothing = Sight::new(&level);
-        let meshes = build(&level, &[], &nothing, &light, &[], camera);
+        let meshes = build(&level, &[], &nothing, &nothing, &light, &[], camera);
         assert!(meshes.has_solid.iter().all(|&has| !has));
         assert!(!meshes.has_see_through);
+
+        // Remembered, but out of sight: drawn in the grey meshes only.
+        let meshes = build(&level, &[], &nothing, sight, &light, &[], camera);
+        assert!(meshes.has_solid.iter().all(|&has| !has));
+        assert!(meshes.has_memory[Surface::Floor as usize]);
+        assert!(meshes.has_memory[Surface::Wall as usize]);
     }
 }

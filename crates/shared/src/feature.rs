@@ -7,6 +7,10 @@
 //! seed its map is generated from. Features stand only on dry land (above
 //! high tide), so a chunk that is all sea has none.
 
+use std::collections::BTreeSet;
+
+use serde::{Deserialize, Serialize};
+
 use crate::rng::Seed;
 use crate::surface::Surface;
 use crate::world::WorldParams;
@@ -27,7 +31,7 @@ pub const LAND_TRIES: u32 = 8;
 
 /// What a feature is. The order matches the Dungeon Odyssey terrain tiles
 /// `l2_terrain066` to `l2_terrain099` the client shows them with.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum FeatureKind {
     Boulders,
     Ruins,
@@ -107,14 +111,14 @@ impl FeatureKind {
 /// A chunk's position: chunk `(x, y)` covers world grid points from
 /// `(x × CHUNK_SIZE, y × CHUNK_SIZE)`. East–west it wraps round the planet,
 /// so `x` is always `0..FeatureMap::columns()`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ChunkPos {
     pub x: i64,
     pub y: i64,
 }
 
 /// One feature on the world map.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Feature {
     pub kind: FeatureKind,
     /// The chunk it is in.
@@ -139,15 +143,18 @@ pub struct FeatureMap {
 }
 
 impl FeatureMap {
-    pub fn new(world: &WorldParams) -> Self {
-        Self::with_water(world, world.high_water())
+    /// `seed` is the world's secret features seed (`WorldSeed::features`):
+    /// the terrain is public, but where features are and what is inside
+    /// them isn't.
+    pub fn new(world: &WorldParams, seed: Seed) -> Self {
+        Self::with_water(world, seed, world.high_water())
     }
 
     /// As `new`, with features only where the ground is above `land_above`.
-    fn with_water(world: &WorldParams, land_above: f64) -> Self {
+    fn with_water(world: &WorldParams, seed: Seed, land_above: f64) -> Self {
         let surface = Surface::new(world);
         Self {
-            seed: world.seed.derive("features"),
+            seed,
             width: surface.width(),
             surface,
             land_above,
@@ -207,6 +214,31 @@ impl FeatureMap {
         })
     }
 
+    /// Every chunk with any point within `min..=max` (world grid points, in
+    /// any planet-width frame), each once, sorted.
+    pub fn chunks_in_area(&self, min: (i64, i64), max: (i64, i64)) -> Vec<ChunkPos> {
+        let mut chunks = BTreeSet::new();
+        // An area wider than the planet covers every column.
+        let (west, east) = if max.0 - min.0 >= self.width {
+            (0, self.width - 1)
+        } else {
+            (min.0, max.0)
+        };
+        let (first, last) = (self.chunk_at(west, min.1), self.chunk_at(east, max.1));
+        for cy in first.y..=last.y {
+            // Across the seam at x = 0, the columns wrap round.
+            let mut cx = first.x;
+            loop {
+                chunks.insert(ChunkPos { x: cx, y: cy });
+                if cx == last.x {
+                    break;
+                }
+                cx = (cx + 1) % self.columns();
+            }
+        }
+        chunks.into_iter().collect()
+    }
+
     /// Every feature whose position is within `min..=max` (world grid
     /// points, in any planet-width frame: the features are given in the same
     /// one), sorted by position.
@@ -250,8 +282,14 @@ mod tests {
         WorldParams::from_seed(Seed::new(12345))
     }
 
+    // The seed the golden values were made with (from before the secret
+    // world seed existed), so they still hold.
+    fn seed() -> Seed {
+        world().seed.derive("features")
+    }
+
     fn map() -> FeatureMap {
-        FeatureMap::new(&world())
+        FeatureMap::new(&world(), seed())
     }
 
     // Golden values: if these change, every world's features move.
@@ -269,7 +307,7 @@ mod tests {
     #[test]
     fn about_the_right_share_of_chunks_have_one() {
         // With no sea, so every chunk has land.
-        let map = FeatureMap::with_water(&world(), f64::NEG_INFINITY);
+        let map = FeatureMap::with_water(&world(), seed(), f64::NEG_INFINITY);
         let count = (0..100)
             .flat_map(|y| (0..100).map(move |x| ChunkPos { x, y }))
             .filter(|&chunk| map.in_chunk(chunk).is_some())
@@ -310,6 +348,23 @@ mod tests {
                 assert!(inside_x >= EDGE_MARGIN && inside_y >= EDGE_MARGIN);
                 assert!(inside_y < CHUNK_SIZE - EDGE_MARGIN);
             }
+        }
+    }
+
+    #[test]
+    fn chunks_in_an_area_wrap_and_cover_it() {
+        let map = map();
+        let last = map.columns() - 1;
+        // Across the seam: the last column, then the first two.
+        let chunks = map.chunks_in_area((-10, 0), (100, 63));
+        let columns: Vec<i64> = chunks.iter().map(|c| c.x).collect();
+        assert_eq!(columns, vec![0, 1, last]);
+        assert!(chunks.iter().all(|c| c.y == 0));
+        // Every feature found in an area is in one of its chunks.
+        let (min, max) = ((26634 - 300, -200), (26634 + 300, 200));
+        let chunks = map.chunks_in_area(min, max);
+        for feature in map.in_area(min, max) {
+            assert!(chunks.contains(&feature.chunk));
         }
     }
 

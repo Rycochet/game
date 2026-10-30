@@ -4,13 +4,15 @@
 
 - `Cargo.toml`: workspace root (members `crates/client`, `crates/server`, `crates/shared`, `xtask`); Bevy's default features are off at workspace level (the client turns them on, the server stays headless); shared dependency versions (`[workspace.dependencies]`) and build profiles live here.
 - `crates/shared/`: library crate `shared` (plain Rust): rules and world generation. See `CLAUDE.md` table.
-- `crates/server/`: package `server`, library `ServerPlugin` + binary `hall-of-worlds-server` (native only). See `docs/context/server/server.md`.
-- `crates/client/`: Bevy app, package `client`, binary `hall-of-worlds` (window title "Hall of Worlds"). Native builds depend on `server` (target-specific dependency) and add `ServerPlugin` for single player; the wasm build doesn't. `src/main.rs` creates the window (bound to `<canvas id="game">` on the web) and registers each module's plugin; no game logic.
+- `crates/server/`: package `server`, library (`ServerPlugin`, `start_embedded`) + binary `hall-of-worlds-server` (native only). See `docs/context/server/server.md`.
+- Running a networked server locally: `trunk build` (the web client into `dist/`), then `HALL_OF_WORLDS_WEB=dist cargo run -p server` and open http://localhost:8080; a native client joins it with `HALL_OF_WORLDS_SERVER=ws://localhost:8080/ws`.
+- Saved data (not in the repository): the server saves in `Hall of Worlds/server` in the user's data folder (`%APPDATA%` on Windows), or wherever `HALL_OF_WORLDS_SERVER_DATA` points; the embedded single-player server too. The client will keep its own data beside it (`Hall of Worlds/client`), never in the server's folder.
+- `crates/client/`: Bevy app, package `client`, binary `hall-of-worlds` (window title "Hall of Worlds"). Native builds depend on `server` (target-specific dependency) and start the embedded server for single player (`connection` module); the wasm build doesn't. `src/main.rs` creates the window (bound to `<canvas id="game">` on the web) and registers each module's plugin; no game logic.
 - `crates/client/assets/`: images, sounds, fonts. `ATTRIBUTION.md` credits third-party art (required by its licences; add an entry with any new third-party asset). `monsters/`: David E. Gervais's Dungeon Odyssey monster tiles (CC BY 3.0), 932 54×54 RGBA PNGs with lower-case names. `terrain/`: the same artist's Dungeon Odyssey terrain tiles, 960 54×54 RGBA PNGs, same treatment (`l2_terrain066`–`099` are the world map feature pictures). `angbandtk/`: the same artist's flat AngbandTk tiles, three spritesheets (`dg_features32`, `dg_grounds32`, `dg_extra132`) split into 432 32×32 PNGs named `<sheet>_<row>_<column>.png`, used for dungeon walls and floors (`dungeon_map::theme`). Loaded by Bevy's `AssetServer`: native debug builds read this folder directly (`ASSET_FOLDER` in `main.rs`, an absolute compile-time path, so the exe works from `target/debug`); release builds look for `assets/` next to the executable, so every native release must ship it (`cargo xtask package` does); Trunk copies it into `dist/` for the web (and so the Docker image).
 - `index.html` + `Trunk.toml`: the web build (points Trunk at `crates/client`). Serves on port 3000.
 - `docs/context/`: context files for Claude (this folder).
 - `xtask/`: helper commands, run as `cargo xtask <task>` via the alias in `.cargo/config.toml`. `xtask test` = fmt check + clippy `-D warnings` for native (`--workspace --all-targets`) and for `wasm32-unknown-unknown` (`client` package, which pulls in `shared`) + `cargo test --workspace`. `xtask package` = release build of client + server, then `target/package/` with both executables and `assets/` (the layout players get; used by the manual Build workflow and the VSCode "Release build (native)" task).
-- `Dockerfile`, `docker/entrypoint.sh`, `.dockerignore`: the server image (see Docker below).
+- `Dockerfile`, `.dockerignore`: the server image (see Docker below).
 - `LICENSE`: CC BY-NC 4.0 (official legal text); `license = "CC-BY-NC-4.0"` in `Cargo.toml` for every crate.
 - `README.md` (human setup, domains, game design, licence), `designs.txt` (older design notes).
 
@@ -29,8 +31,8 @@
 
 ## Docker
 
-- Multi-stage `Dockerfile`, x86-64 only (`linux/amd64`; ARM can be added later under the same tags): a `tools` stage `cargo install`s Trunk 0.22.1 and static-web-server 2.44.1; `build` compiles `hall-of-worlds-server` (release) and the web client (`trunk build --release`); the runtime is `debian:trixie-slim` (same Debian as the `rust:1.99-trixie` builder, so glibc matches), non-root user `hall`.
-- `docker/entrypoint.sh` runs static-web-server (web client on port 8080) and the game server together; if either exits the container stops, and `docker stop` stops both. `.gitattributes` forces LF endings for `*.sh`.
+- Multi-stage `Dockerfile`, x86-64 only (`linux/amd64`; ARM can be added later under the same tags): a `tools` stage `cargo install`s Trunk 0.22.1; `build` compiles `hall-of-worlds-server` (release) and the web client (`trunk build --release`, into `/srv/web`); the runtime is `debian:trixie-slim` (same Debian as the `rust:1.99-trixie` builder, so glibc matches), non-root user `hall`.
+- One process, one port: the game server is the entrypoint and serves both the web client and the game's WebSocket on 8080 (`HALL_OF_WORLDS_ADDRESS=0.0.0.0:8080`, `HALL_OF_WORLDS_WEB=/srv/web`). Saves go in `/data` (`HALL_OF_WORLDS_SERVER_DATA`, a `VOLUME`, owned by `hall`): mount a volume there to keep them across updates. The server handles SIGTERM (it is PID 1), saving everyone before it stops.
 - Not testable locally (no Docker on the owner's machine), and CI only builds it after merging to `master`.
 
 ## Domains

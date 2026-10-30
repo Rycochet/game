@@ -11,3 +11,5 @@ publish.workspace = true
 [dependencies]
 fastnoise-lite.workspace = true
 libm = "0.2"
+postcard.workspace = true
+serde.workspace = true

@@ -6,6 +6,8 @@
 
 pub mod dungeon;
 pub mod feature;
+pub mod movement;
+pub mod protocol;
 pub mod rng;
 pub mod site;
 pub mod surface;

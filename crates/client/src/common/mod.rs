@@ -3,19 +3,16 @@
 //! Keep this small: only types that genuinely need to be shared between
 //! feature modules belong here. See `docs/context/client/common.md`.
 
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
-use shared::dungeon::Level;
-use shared::feature::{Feature, FeatureMap};
-use shared::rng::Seed;
-use shared::site::{Site, Stairs};
+use shared::dungeon::{Level, Sight};
+use shared::feature::{CHUNK_SIZE, ChunkPos};
+use shared::protocol::{LevelChunk, LevelInfo, SeenFeature, SeenStairs, WorldInfo};
 use shared::surface::Surface;
 use shared::world::WorldParams;
-
-/// Fixed seed until the server tells the client which world it is in.
-const WORLD_SEED: u64 = 12345;
 
 /// Real seconds per in-game hour.
 const SECONDS_PER_HOUR: f32 = 60.0;
@@ -28,24 +25,13 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
-        let params = WorldParams::from_seed(Seed::new(WORLD_SEED));
-        let surface = Surface::new(&params);
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(WinitSettings {
                 focused_mode: UpdateMode::reactive(Duration::from_secs_f64(1.0 / FOCUSED_FPS)),
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
             })
-            .insert_resource(CurrentWorld {
-                features: FeatureMap::new(&params),
-                surface,
-                params,
-            })
-            .insert_resource(CurrentDungeon {
-                site: None,
-                index: 0,
-                level: Level::test_room(),
-                stairs: Vec::new(),
-            })
+            .init_resource::<CurrentDungeon>()
+            .init_resource::<ServerStatus>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
             .init_resource::<Weather>()
@@ -55,59 +41,175 @@ impl Plugin for CommonPlugin {
     }
 }
 
-/// The world the player is in, its surface generator and its features.
+/// The world the player is in, its surface generator and the features the
+/// server has told the client about. Only exists once the server has said
+/// which world it is (`connection`).
 #[derive(Resource)]
 pub struct CurrentWorld {
     pub params: WorldParams,
     pub surface: Surface,
-    pub features: FeatureMap,
+    pub features: KnownFeatures,
+}
+
+impl CurrentWorld {
+    /// The world a server has told the client about.
+    pub fn new(info: &WorldInfo) -> Self {
+        let params = WorldParams::from_seed(info.terrain_seed);
+        let surface = Surface::new(&params);
+        Self {
+            features: KnownFeatures::new(surface.width()),
+            surface,
+            params,
+        }
+    }
+}
+
+/// The world map chunks the server has sent, and their features.
+pub struct KnownFeatures {
+    /// The world's width: `x` wraps at this.
+    width: i64,
+    /// By chunk, north-south first (so an area's rows can be looked up);
+    /// `None` for a chunk known to have no feature.
+    chunks: BTreeMap<(i64, i64), Option<SeenFeature>>,
+}
+
+impl KnownFeatures {
+    fn new(width: i64) -> Self {
+        Self {
+            width,
+            chunks: BTreeMap::new(),
+        }
+    }
+
+    /// What the server says is in a chunk.
+    pub fn insert(&mut self, chunk: ChunkPos, feature: Option<SeenFeature>) {
+        self.chunks.insert((chunk.y, chunk.x), feature);
+    }
+
+    /// Every known feature whose position is within `min..=max` (world grid
+    /// points, in any planet-width frame: the features are given in the
+    /// same one), like `shared::feature::FeatureMap::in_area`.
+    pub fn in_area(&self, min: (i64, i64), max: (i64, i64)) -> Vec<SeenFeature> {
+        let rows =
+            (min.1.div_euclid(CHUNK_SIZE), i64::MIN)..=(max.1.div_euclid(CHUNK_SIZE), i64::MAX);
+        let mut found = Vec::new();
+        for feature in self.chunks.range(rows).filter_map(|(_, feature)| *feature) {
+            // Each copy of the planet the area overlaps.
+            for copy in min.0.div_euclid(self.width)..=max.0.div_euclid(self.width) {
+                let x = feature.x + copy * self.width;
+                if (min.0..=max.0).contains(&x) && (min.1..=max.1).contains(&feature.y) {
+                    found.push(SeenFeature { x, ..feature });
+                }
+            }
+        }
+        found.sort_by_key(|feature| (feature.y, feature.x));
+        found
+    }
+}
+
+/// Whether the client is connected to the server (set by `connection`).
+/// While it isn't, the player can't move, and the last view stays on show.
+#[derive(Resource, Clone, Debug, Default, PartialEq, Eq)]
+pub enum ServerStatus {
+    /// Trying to connect (or to connect again after losing the connection).
+    #[default]
+    Connecting,
+    /// Welcomed by the server.
+    Connected,
+    /// The server won't have this client, and why: no more tries.
+    Refused(String),
+}
+
+impl ServerStatus {
+    pub fn is_connected(&self) -> bool {
+        *self == Self::Connected
+    }
 }
 
 /// Which view is on screen: the world's surface, or a dungeon or building.
 /// Each view shows its scene only while it is the current one.
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameView {
+    /// Waiting for the server to say which world this is: nothing to show
+    /// yet, and no `CurrentWorld`. Only until the first `Welcome`: losing the
+    /// connection later keeps the view (`ServerStatus` says).
     #[default]
+    Connecting,
     WorldMap,
     /// Inside a site (a building or cave): `CurrentDungeon`.
     Dungeon,
 }
 
-/// The level of a site the player is in. Its rules (walls block movement,
-/// sight and light) live in `shared::dungeon`; sites and their levels in
-/// `shared::site`. Set by `site` when the player enters or changes level.
+/// The site level the player is on, as far as the server has told: unknown
+/// cells are wall until their cells arrive. Its rules (walls block
+/// movement, sight and light) live in `shared::dungeon`. Changed by `site`
+/// when the server says the player has arrived, or sends cells.
 #[derive(Resource)]
 pub struct CurrentDungeon {
-    /// The site, `None` before any has been entered (the level is then the
-    /// test room).
-    pub site: Option<Site>,
-    /// Which of the site's levels this is.
-    pub index: u32,
+    /// What the level is; `None` before any has been entered.
+    pub info: Option<LevelInfo>,
+    /// The cells the server has sent; the rest are wall.
     pub level: Level,
-    pub stairs: Vec<LevelStairs>,
+    /// Which cells the server has sent.
+    pub known: Sight,
+    /// Which cells the player has seen, now or before: drawn even when out
+    /// of sight (in grey). Includes what is in sight now.
+    pub remembered: Sight,
+    /// The level's known stairs.
+    pub stairs: Vec<SeenStairs>,
 }
 
-/// A staircase of the current level, with the way it goes down (a grid
-/// step from its top end to its bottom end). Both levels a staircase joins
-/// draw it going the same way, so arriving by it matches leaving by it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct LevelStairs {
-    pub stairs: Stairs,
-    pub descends: (i64, i64),
+impl Default for CurrentDungeon {
+    fn default() -> Self {
+        let level = Level::new(0, 0, 1, 1);
+        Self {
+            info: None,
+            known: Sight::new(&level),
+            remembered: Sight::new(&level),
+            level,
+            stairs: Vec::new(),
+        }
+    }
 }
 
 impl CurrentDungeon {
+    /// Arriving on a level: nothing of it known yet.
+    pub fn enter(&mut self, info: LevelInfo) {
+        let (min_x, min_y, width, height) = info.bounds;
+        self.level = Level::new(min_x, min_y, width, height);
+        self.known = Sight::new(&self.level);
+        self.remembered = Sight::new(&self.level);
+        self.stairs.clear();
+        self.info = Some(info);
+    }
+
+    /// Cells the server has sent.
+    pub fn add(&mut self, chunk: &LevelChunk) {
+        for (x, y, cell) in chunk.cells() {
+            self.level.set(x, y, cell);
+            self.known.insert(x, y);
+            if chunk.remembered {
+                self.remembered.insert(x, y);
+            }
+        }
+        for stairs in &chunk.stairs {
+            if !self.stairs.contains(stairs) {
+                self.stairs.push(*stairs);
+            }
+        }
+    }
+
     /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3".
     pub fn describe(&self) -> String {
-        let Some(site) = &self.site else {
-            return "Test room".into();
+        let Some(info) = &self.info else {
+            return "Nowhere".into();
         };
-        let what = if site.is_building() { "floor" } else { "level" };
+        let what = if info.building { "floor" } else { "level" };
         format!(
             "{:?}, {what} {} of {}",
-            site.kind(),
-            self.index + 1,
-            site.levels()
+            info.kind,
+            info.index + 1,
+            info.levels
         )
     }
 }
@@ -117,7 +219,7 @@ impl CurrentDungeon {
 /// of the level, not entities: see `site`.)
 #[derive(Component, Clone, Copy, Debug)]
 pub enum Portal {
-    Feature(Feature),
+    Feature(SeenFeature),
 }
 
 /// Its token can be clicked (`view3d::ClickedToken`).
@@ -350,7 +452,32 @@ impl Attitude {
 
 #[cfg(test)]
 mod tests {
+    use shared::feature::FeatureKind;
+
     use super::*;
+
+    #[test]
+    fn known_features_are_found_in_any_frame() {
+        let mut known = KnownFeatures::new(1000);
+        let chunk = ChunkPos { x: 0, y: 1 };
+        let feature = SeenFeature {
+            kind: FeatureKind::Crypt,
+            chunk,
+            x: 10,
+            y: 70,
+        };
+        known.insert(chunk, Some(feature));
+        known.insert(ChunkPos { x: 1, y: 1 }, None);
+        let found =
+            |min, max| -> Vec<i64> { known.in_area(min, max).iter().map(|f| f.x).collect() };
+        assert_eq!(found((0, 64), (100, 127)), [10]);
+        // From west of the seam, and a whole planet east.
+        assert_eq!(found((-50, 0), (50, 100)), [10]);
+        assert_eq!(found((900, 0), (1100, 100)), [1010]);
+        // Outside the area, or rows that weren't sent.
+        assert!(found((20, 0), (500, 100)).is_empty());
+        assert!(found((0, 128), (100, 300)).is_empty());
+    }
 
     #[test]
     fn screen_up_follows_the_view() {

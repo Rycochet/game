@@ -16,7 +16,23 @@ path = "src/main.rs"
 shared.workspace = true
 bevy = { workspace = true, features = ["default"] }
 
-# Native clients embed the server for single player; the web client only
-# ever connects to a server.
+# Native clients embed the server for single player (or connect to one over
+# a WebSocket); the web client only ever connects to a server.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 server.workspace = true
+tungstenite.workspace = true
+
+# The browser's WebSocket, location and storage.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "BinaryType",
+    "Crypto",
+    "Event",
+    "Location",
+    "MessageEvent",
+    "Storage",
+    "WebSocket",
+    "Window",
+] }

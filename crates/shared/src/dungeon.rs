@@ -6,8 +6,10 @@
 //! server always agree on what a character can see. Levels are made by the
 //! generators in `crate::site`.
 
+use serde::{Deserialize, Serialize};
+
 /// One grid cell.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Cell {
     /// Open: can be walked on, seen across and lit through.
     Floor,
@@ -182,6 +184,12 @@ impl Sight {
         (0..self.width).contains(&col)
             && (0..self.height).contains(&row)
             && self.seen[(row * self.width + col) as usize]
+    }
+
+    /// Counts `(x, y)` as seen, e.g. a cell remembered from earlier.
+    /// Nothing happens outside the level.
+    pub fn insert(&mut self, x: i64, y: i64) {
+        self.mark(x, y);
     }
 
     fn mark(&mut self, x: i64, y: i64) {

@@ -3,6 +3,8 @@
 //! Never use any other source of randomness in shared code. Everything here is
 //! plain integer arithmetic, so results are identical on every platform.
 
+use serde::{Deserialize, Serialize};
+
 /// The SplitMix64 increment ("golden ratio" constant).
 const GOLDEN_GAMMA: u64 = 0x9e37_79b9_7f4a_7c15;
 
@@ -10,7 +12,7 @@ const GOLDEN_GAMMA: u64 = 0x9e37_79b9_7f4a_7c15;
 ///
 /// Derive a separate seed for each purpose (`world.derive("land")`) so that
 /// changing how one thing is generated never shifts the results of another.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Seed(u64);
 
 impl Seed {
