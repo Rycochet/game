@@ -28,6 +28,9 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
+| shared: climate     | `crates/shared/src/climate.rs`  | `docs/context/shared/climate.md`      | Temperature, moisture and Whittaker biomes at any world map position |
+| shared: river       | `crates/shared/src/river.rs`    | `docs/context/shared/river.md`        | Rivers running downhill from a chunk's source, more where wet (visual only for now) |
+| shared: weather     | `crates/shared/src/weather.rs`  | `docs/context/shared/weather.md`      | Cloud cover and rain at any place and time (4D simplex noise) |
 | shared: feature     | `crates/shared/src/feature.rs`  | `docs/context/shared/feature.md`      | World map chunks and their features (kind, position, map seed) |
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, windows, ground, water, lava), wall shapes, rooms, line of sight / light reach |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
@@ -38,9 +41,9 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: connection  | `crates/client/src/connection/` | `docs/context/client/connection.md`   | Connecting to the server (embedded on native, WebSocket on the web), reconnecting, sending steps and putting refused ones right, `ToServer` / `FromServer` |
 | client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world (and its features) and dungeon, `MapPosition` / `SmoothPosition`, `GameView` state (incl. `Connecting`), `ServerStatus`, `Portal` / `Clickable`, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |
 | client: player      | `crates/client/src/player/`     | `docs/context/client/player.md`       | Player position, keyboard steps, travel to clicks along found routes (announced as `Stepped`) |
-| client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
+| client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds, biome colours |
 | client: view3d      | `crates/client/src/view3d/`     | `docs/context/client/view3d.md`       | Shared 3D camera (turn, tilt, zoom), entity tokens, token clicks, `ViewGrid` |
-| client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window cut to the camera, edge faces, sun, click picking, feature tokens |
+| client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window cut to the camera, edge faces, sun, click picking, feature tokens, rivers, clouds, moving water, precipitation |
 | client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: textured floors and thin 3D walls, doors and windows by theme, 3D stairs in seven styles, liquid channels, sight, see-through walls, grid light, memory in grey |
 | client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Asking the server to enter sites, take stairs, leave; applying its level messages |
 | client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size, B stairs style, Esc back to the start |

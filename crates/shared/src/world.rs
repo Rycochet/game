@@ -65,11 +65,18 @@ pub struct WorldParams {
     pub sea_level: f64,
     /// How wet the planet is, `0.0..1.0`.
     pub climate: f64,
+    /// How much warmer than usual the planet is on average, `-0.1..0.1` of
+    /// `shared::climate`'s temperature scale.
+    pub warmth: f64,
 }
 
 /// The snow line in normal weather: above every height there is, so nothing is
 /// frozen.
 pub const NORMAL_SNOW_LINE: u32 = 128;
+
+/// Real seconds in a game hour, by the server's clock. Clients use it to run
+/// smoothly between the server's hours.
+pub const GAME_HOUR_SECONDS: u64 = 60;
 
 impl WorldParams {
     pub fn from_seed(seed: Seed) -> Self {
@@ -83,6 +90,7 @@ impl WorldParams {
             tilt: seed.derive("tilt").rng().range_f64(0.0, 1.0),
             sea_level: seed.derive("sealevel").rng().range_f64(20.0, 60.0),
             climate: seed.derive("climate").rng().range_f64(0.0, 1.0),
+            warmth: seed.derive("warmth").rng().range_f64(-0.1, 0.1),
         }
     }
 
@@ -130,6 +138,6 @@ mod tests {
     const GOLDEN_TERRAIN_SEED: u64 = 15274154617967521790;
     const GOLDEN_WORLD_ID: u64 = 13205059784687644427;
 
-    const GOLDEN_WORLD: &str = "WorldParams { seed: Seed(12345), radius: 4239010, circumference: 26634485, year: 152, density: 1.2471431745178077, tilt: 0.38362863605768616, sea_level: 50.762015892761944, climate: 0.19909579997428872 }";
+    const GOLDEN_WORLD: &str = "WorldParams { seed: Seed(12345), radius: 4239010, circumference: 26634485, year: 152, density: 1.2471431745178077, tilt: 0.38362863605768616, sea_level: 50.762015892761944, climate: 0.19909579997428872, warmth: -0.015898052726041195 }";
     const GOLDEN_WATER_AT_2: f64 = 51.52927316487732;
 }

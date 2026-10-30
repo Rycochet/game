@@ -90,7 +90,7 @@ mod tests {
             next_answer(),
             ServerMessage::Welcome {
                 world,
-                hour: 0,
+                clock: 0.0,
                 snow_line: shared::world::NORMAL_SNOW_LINE,
                 x: 0,
                 y: 0

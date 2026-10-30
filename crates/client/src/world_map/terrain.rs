@@ -12,15 +12,17 @@
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
+use shared::climate::{Climate, ClimateSample};
 use shared::surface::{Surface, SurfaceSample};
 
+use super::rivers::KnownRivers;
 use super::{HALF_SIZE, HEIGHT_SCALE, SLOPE_SHADING};
 use crate::surface_style::{SurfaceStyle, hsl_to_rgba};
 
 /// The furthest grid units from the player `TerrainGrid` may need. The
 /// window's corners are `HALF_SIZE × √2` (about 283) away, so this covers it
-/// at any angle.
-const REACH: i64 = 284;
+/// at any angle, with a little to spare.
+pub const REACH: i64 = 287;
 
 /// Side length of `TerrainGrid`'s wrapping store: more than the `2 × REACH`
 /// it must hold, so moving never evicts points still in view.
@@ -48,6 +50,8 @@ const _: () = assert!(CACHE_SIDE > 2 * REACH + 3);
 pub struct HeightCache {
     keys: Vec<Option<(i64, i64)>>,
     samples: Vec<SurfaceSample>,
+    climate_keys: Vec<Option<(i64, i64)>>,
+    climates: Vec<ClimateSample>,
 }
 
 impl Default for HeightCache {
@@ -62,6 +66,8 @@ impl Default for HeightCache {
                 };
                 len
             ],
+            climate_keys: vec![None; len],
+            climates: vec![ClimateSample::default(); len],
         }
     }
 }
@@ -74,6 +80,23 @@ impl HeightCache {
             self.samples[index] = surface.sample(x, y);
         }
         self.samples[index]
+    }
+
+    /// The climate at a point, kept so a new hour needn't work it out again.
+    pub fn climate(
+        &mut self,
+        climate: &Climate,
+        surface: &Surface,
+        x: i64,
+        y: i64,
+    ) -> ClimateSample {
+        let index = (y.rem_euclid(CACHE_SIDE) * CACHE_SIDE + x.rem_euclid(CACHE_SIDE)) as usize;
+        if self.climate_keys[index] != Some((x, y)) {
+            let height = self.get(surface, x, y).height;
+            self.climate_keys[index] = Some((x, y));
+            self.climates[index] = climate.sample(x, y, height);
+        }
+        self.climates[index]
     }
 }
 
@@ -123,6 +146,7 @@ impl TerrainGrid {
         &mut self,
         cache: &mut HeightCache,
         surface: &Surface,
+        climate: &Climate,
         style: &SurfaceStyle,
         water_level: f64,
         snow_line: f64,
@@ -162,8 +186,9 @@ impl TerrainGrid {
                 // The prototype's strong slope shading, baked in per point
                 // because real lighting alone is much smoother.
                 let west = cache.get(surface, x - 1, z).height;
+                let place = cache.climate(climate, surface, x, z);
                 let (band, lightness) =
-                    style.shade(sample, west, water_level, snow_line, SLOPE_SHADING);
+                    style.shade(sample, place, west, water_level, snow_line, SLOPE_SHADING);
                 let mut colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness));
                 if style.is_frozen_water(sample, water_level, snow_line) {
                     // Brighter than white, so after the sun dims this flat
@@ -171,6 +196,12 @@ impl TerrainGrid {
                     for channel in &mut colour[..3] {
                         *channel *= ICE_BOOST;
                     }
+                }
+                // Alpha below 1 tells the shader this is moving water.
+                if sample.height <= water_level
+                    && !style.is_frozen_water(sample, water_level, snow_line)
+                {
+                    colour[3] = 0.0;
                 }
                 self.colours[i] = colour;
             }
@@ -265,11 +296,11 @@ impl ViewSquare {
     }
 
     /// How far the square reaches from the centre along x and z (its bounding
-    /// box), plus one for the grid squares around its edge. Only grid points
-    /// within this are drawn.
+    /// box), plus a little for the grid squares around its edge and rivers
+    /// crossing it. Only grid points within this are drawn.
     fn reach(&self) -> (i64, i64) {
         let reach =
-            |a: f32, b: f32| ((self.half * (a.abs() + b.abs())).ceil() as i64 + 1).min(REACH);
+            |a: f32, b: f32| ((self.half * (a.abs() + b.abs())).ceil() as i64 + 3).min(REACH);
         (
             reach(self.right.x, self.towards.x),
             reach(self.right.y, self.towards.y),
@@ -369,6 +400,125 @@ pub fn build_window(grid: &TerrainGrid, square: ViewSquare) -> Mesh {
     .with_inserted_indices(Indices::U32(indices))
 }
 
+/// How far rivers are drawn above the ground, so it doesn't poke through them.
+const RIVER_LIFT: f32 = 0.25;
+
+/// The dark, fading edge each side of a river, which makes it look set into
+/// the ground: its width in grid units, and its darkness next to the water.
+const BANK_WIDTH: f32 = 0.6;
+const BANK_ALPHA: f32 = 0.6;
+
+/// A mesh being built out of triangles clipped to the window.
+#[derive(Default)]
+struct ClippedMesh {
+    positions: Vec<[f32; 3]>,
+    colours: Vec<[f32; 4]>,
+    indices: Vec<u32>,
+}
+
+impl ClippedMesh {
+    fn add(&mut self, triangle: [Corner; 3]) {
+        let clipped = clip(&triangle);
+        let first = self.positions.len() as u32;
+        for c in &clipped {
+            self.positions.push(c.position.to_array());
+            self.colours.push(c.colour.to_array());
+        }
+        for k in 1..clipped.len().saturating_sub(1) as u32 {
+            self.indices
+                .extend_from_slice(&[first, first + k, first + k + 1]);
+        }
+    }
+
+    fn into_mesh(self) -> Mesh {
+        let normals = vec![[0.0, 1.0, 0.0]; self.positions.len()];
+        Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, self.positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, self.colours)
+        .with_inserted_indices(Indices::U32(self.indices))
+    }
+}
+
+/// The rivers' meshes, the strips and their banks: a thin strip along each
+/// river, resting on the drawn terrain and cut to the window, with a dark edge
+/// fading out each side. Parts under the water aren't drawn, so a river's mouth
+/// moves with the tide; frozen parts are white.
+pub fn build_rivers(
+    grid: &TerrainGrid,
+    rivers: &KnownRivers,
+    world_width: i64,
+    style: &SurfaceStyle,
+    water_level: f64,
+    snow_line: f64,
+    square: ViewSquare,
+) -> (Mesh, Mesh) {
+    let mut flowing = Vec4::from(linear(hsl_to_rgba(style.water.hue - 20.0, 0.9, 0.5)));
+    // Moving water, as far as the shader goes.
+    flowing.w = 0.0;
+    let mut frozen = Vec4::from(linear(hsl_to_rgba(0.0, 0.0, style.ice_lightness)));
+    frozen *= Vec4::new(ICE_BOOST, ICE_BOOST, ICE_BOOST, 1.0);
+    let water = water_level as f32 * HEIGHT_SCALE;
+    let bank_inner = Vec4::new(0.0, 0.0, 0.0, BANK_ALPHA);
+    let bank_outer = Vec4::ZERO;
+    let mut strips = ClippedMesh::default();
+    let mut banks = ClippedMesh::default();
+
+    for river in rivers.rivers() {
+        // The way round the planet that is nearest the player.
+        let mut east = (river.source.0 - grid.centre.0).rem_euclid(world_width);
+        if east > world_width / 2 {
+            east -= world_width;
+        }
+        let offset = Vec2::new(east as f32, (river.source.1 - grid.centre.1) as f32);
+        // Whether a point is near enough the window to have heights kept.
+        let near = |point: Vec2| square.inside(point).iter().all(|&d| d >= -1.0);
+
+        for i in 0..river.points.len().saturating_sub(1) {
+            let (a, b) = (river.points[i] + offset, river.points[i + 1] + offset);
+            if !near(a) || !near(b) {
+                continue;
+            }
+            let under_water = |point: Vec2| grid.height_at(&grid.ground, point) <= water;
+            if under_water(a) || under_water(b) {
+                continue;
+            }
+            let ground = grid.height_at(&grid.ground, a) as f64 / HEIGHT_SCALE as f64;
+            let frozen_here =
+                style.river_is_frozen(river.temperatures[i], ground, water_level, snow_line);
+            let colour = if frozen_here { frozen } else { flowing };
+            let side = (b - a).perp().normalize_or_zero();
+            // A corner this far across from the river's middle.
+            let corner = |point: Vec2, across: f32, colour: Vec4| {
+                let at = point + side * across;
+                Corner {
+                    position: Vec3::new(at.x, grid.height_at(&grid.shown, at) + RIVER_LIFT, at.y),
+                    normal: Vec3::Y,
+                    colour,
+                    inside: square.inside(at),
+                }
+            };
+            let (wa, wb) = (river.widths[i] / 2.0, river.widths[i + 1] / 2.0);
+            let (a0, a1) = (corner(a, -wa, colour), corner(a, wa, colour));
+            let (b0, b1) = (corner(b, -wb, colour), corner(b, wb, colour));
+            strips.add([a0, a1, b1]);
+            strips.add([a0, b1, b0]);
+            for sign in [-1.0, 1.0] {
+                let inner_a = corner(a, wa * sign, bank_inner);
+                let inner_b = corner(b, wb * sign, bank_inner);
+                let outer_a = corner(a, (wa + BANK_WIDTH) * sign, bank_outer);
+                let outer_b = corner(b, (wb + BANK_WIDTH) * sign, bank_outer);
+                banks.add([inner_a, outer_a, outer_b]);
+                banks.add([inner_a, outer_b, inner_b]);
+            }
+        }
+    }
+    (strips.into_mesh(), banks.into_mesh())
+}
+
 /// Cuts a polygon down to the part inside all four sides of the window
 /// (Sutherland–Hodgman clipping), keeping its winding.
 fn clip(polygon: &[Corner]) -> Vec<Corner> {
@@ -441,7 +591,15 @@ pub fn build_edges(
             let (x, z) = (cx + point.x.round() as i64, cy + point.y.round() as i64);
             let sample = cache.get(surface, x, z);
             let west = cache.get(surface, x - 1, z).height;
-            let (band, lightness) = style.shade(sample, west, water_level, snow_line, 0.0);
+            // Only the water strip uses this, and water has no biome colour.
+            let (band, lightness) = style.shade(
+                sample,
+                ClimateSample::default(),
+                west,
+                water_level,
+                snow_line,
+                0.0,
+            );
             let water_colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness / 2.0));
             // Earth strip: ground down to the base.
             positions.extend_from_slice(&[[point.x, ground, point.y], [point.x, base, point.y]]);

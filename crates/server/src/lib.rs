@@ -46,9 +46,6 @@ pub const DEFAULT_WORLD_SEED: u64 = 12345;
 /// leaves).
 const SAVE_EVERY: Duration = Duration::from_secs(5);
 
-/// How long an in-game hour takes.
-const GAME_HOUR: Duration = Duration::from_secs(60);
-
 /// The server sends what is visible from every walkable cell within this
 /// many steps of the player in a site, so the client can work out sight
 /// itself and keep up while moving (more covers more latency, for more
@@ -89,7 +86,7 @@ impl Plugin for ServerPlugin {
                 Update,
                 (
                     connections::handle_messages,
-                    connections::next_hour.run_if(on_timer(GAME_HOUR)),
+                    connections::run_clock,
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),
                     exit_when_alone.run_if(|options: Res<ServerOptions>| options.exit_when_alone),
                 )
@@ -126,7 +123,10 @@ pub struct ServerWorld {
     /// The ground as far as walking goes.
     pub(crate) ground: WorldGround,
     params: WorldParams,
-    /// The hour of the day (`0..24`). The tide follows it.
+    /// Game hours since the world began, always running.
+    pub(crate) clock: f64,
+    /// The clock's whole hours. The tide follows this, so it moves once an
+    /// hour rather than all the time.
     pub(crate) hour: u32,
     /// Above it everything is frozen (not saved: normal weather on starting).
     pub(crate) snow_line: u32,
@@ -145,7 +145,7 @@ impl ServerWorld {
     /// The world saved in `storage`, or a new one (saved straight away). An
     /// error if the save can't be read or was made by a newer server.
     fn open(seed: WorldSeed, storage: Storage) -> Result<Self, String> {
-        let hour = match storage.load_world()? {
+        let clock = match storage.load_world()? {
             Some(save) => {
                 if save.format > SAVE_FORMAT {
                     return Err(format!(
@@ -163,9 +163,10 @@ impl ServerWorld {
                         save.world_map_version
                     ));
                 }
-                save.hour % 24
+                // Saves from before the clock only have whole hours.
+                save.clock.max(save.hour as f64)
             }
-            None => 0,
+            None => 0.0,
         };
         let params = WorldParams::from_seed(seed.terrain());
         let world = Self {
@@ -173,7 +174,8 @@ impl ServerWorld {
             width: Surface::new(&params).width(),
             ground: WorldGround::new(&params),
             params,
-            hour,
+            clock,
+            hour: clock as u32,
             snow_line: NORMAL_SNOW_LINE,
             seed,
             storage,
@@ -191,6 +193,7 @@ impl ServerWorld {
             seed: self.seed,
             world_map_version: WORLD_MAP_VERSION,
             hour: self.hour,
+            clock: self.clock,
         });
     }
 

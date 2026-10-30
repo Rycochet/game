@@ -154,9 +154,12 @@ pub struct WorldSave {
     pub seed: WorldSeed,
     /// The world map generator it was made with (`WORLD_MAP_VERSION`).
     pub world_map_version: u32,
-    /// The hour it was last (`0..24`).
+    /// Its clock's whole hours (`% 24` is the time of day).
     #[serde(default)]
     pub hour: u32,
+    /// Its clock: game hours since it began.
+    #[serde(default)]
+    pub clock: f64,
 }
 
 /// A site's file: made the first time anyone enters it.

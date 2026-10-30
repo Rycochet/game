@@ -2,7 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::common::{GameClock, GameView, MapPosition, ServerStatus, ViewStats, Weather};
+use crate::common::{
+    GameClock, GameView, MapPosition, ServerClock, ServerStatus, ViewStats, Weather,
+};
 use crate::demo::{AutoWalk, TemperatureCycle};
 use crate::player::Player;
 
@@ -70,6 +72,7 @@ fn spawn_status_text(mut commands: Commands) {
 fn update_status_text(
     player: Single<&MapPosition, With<Player>>,
     clock: Res<GameClock>,
+    server_clock: Res<ServerClock>,
     weather: Res<Weather>,
     walk: Res<AutoWalk>,
     cycle: Res<TemperatureCycle>,
@@ -94,12 +97,15 @@ fn update_status_text(
          Ctrl+click: teleport  Alt+click: change a site's cell  Esc: back to the start\n\
          G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})\n\
          K / C / X / Z: token shape / colour / completed / size  B: stairs style\n\
-         Position {}, {}  Hour {}\n{}",
+         Position {}, {}  Hour {}  Ping {}\n{}",
         on_off(walk.0),
         weather.snow_line,
         player.x,
         player.y,
-        clock.hour,
+        clock.hour % 24,
+        server_clock
+            .round_trip_ms
+            .map_or("-".to_string(), |ms| format!("{ms:.0} ms")),
         stats.summary
     );
 }

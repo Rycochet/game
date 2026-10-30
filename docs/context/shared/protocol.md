@@ -8,6 +8,8 @@ The messages between clients and the server, and the `Link` that carries them. C
 - `crates/shared/src/protocol/level.rs`: site levels as sent: `LEVEL_CHUNK_SIZE` (8), `ENTER_REACH` (2), `level_chunk(x, y) -> (chunk, bit)`, `LevelInfo`, `LevelChunk` (`positions()`, `cells()`), `SeenStairs`. Test: cells come back where they were.
 - `crates/shared/src/protocol/link.rs`: `Link`, `ClientLink`, `ServerLink`, `LinkError`, `local_pair`, `Wire`, `wired`. Tests (in `mod.rs`): every message survives the link and a wire, garbled bytes and closed ends noticed.
 
+`Welcome` carries the world's float clock; `Hour` says a new whole hour has begun (the tide); `Ping { sent }` is answered by `Pong { sent, clock }`.
+
 ## Public API
 
 - `SOCKET_PATH` (`/ws`): where a server's WebSocket is.
