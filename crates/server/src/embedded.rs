@@ -78,7 +78,7 @@ mod tests {
         }));
         assert!(client.send(&ClientMessage::DevTeleport { x: 5, y: 6 }));
         let deadline = Instant::now() + Duration::from_secs(10);
-        let answer = loop {
+        let next_answer = || loop {
             if let Some(message) = client.receive().expect("still connected") {
                 break message;
             }
@@ -86,7 +86,11 @@ mod tests {
             thread::sleep(Duration::from_millis(10));
         };
         let world = ServerWorld::new(seed).info();
-        assert_eq!(answer, ServerMessage::Welcome { world, x: 0, y: 0 });
+        assert_eq!(next_answer(), ServerMessage::Welcome { world, x: 0, y: 0 });
+        // Not leaving before the teleport is dealt with: a server still
+        // welcoming a client that has gone doesn't read what it sent next.
+        let teleported = ServerMessage::Teleported { x: 5, y: 6 };
+        while next_answer() != teleported {}
 
         // Leaving: the server saves and stops, so dropping it returns.
         drop(client);

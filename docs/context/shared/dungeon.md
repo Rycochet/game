@@ -8,7 +8,7 @@ Dungeons and buildings as rules: a grid of cells (floor, wall, doors, windows, o
 
 ## Public API
 
-- `Cell` (`Floor`, `Wall`, `Door`, `SecretDoor`, `Ground`, `Water`, `Lava`, `Window`; serde, sent in `protocol::LevelChunk`): `is_walkable()` (floor, door, ground), `is_open()` (sight and light pass the whole cell: those plus water, lava and windows), `is_wall()` (wall, secret door), `is_opening()` (door, window). Doors are open for now; secret doors act as wall until finding them exists.
+- `Cell` (`Floor`, `Wall`, `Door`, `SecretDoor`, `Ground`, `Water`, `Lava`, `Window`; serde, sent in `protocol::LevelChunk`): `is_walkable()` (floor, door, ground), `is_liquid()` (water, lava: jumped over, see `movement`), `is_open()` (sight and light pass the whole cell: those plus water, lava and windows), `is_wall()` (wall, secret door), `is_opening()` (door, window). Doors are open for now; secret doors act as wall until finding them exists.
 - `WallShape { north, east, south, west }`: which sides a wall runs out to; `reach()` how far it goes from the centre each way, in `CELL_UNITS` (40 a cell): `WALL_HALF_UNITS` (2: it covers 45–55% of the cell), to the edge where joined, `WALL_END_UNITS` (4: stopping 60% across) past the centre if joined on one side only. A column has no sides.
 - `RoomId(u16)`: the planned room a cell is in.
 - `Level`: rectangle of cells (`new(min_x, min_y, width, height)` all wall, `set`, `cell`, `is_open`, `is_walkable`, `wall_shape`, `opening_runs_east_west`, `room`, `set_room`, `contains`, `bounds`). Outside the rectangle counts as wall, in no room. `test_room()`: 15 × 7 floor cells (east–west × north–south) walled round, centred on `(0, 0)`, with a 1 × 3 wall at `x = -2`, `y = -1..=1` (for tests, and shown before any site is entered).

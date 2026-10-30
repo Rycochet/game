@@ -54,11 +54,17 @@ impl From<Step> for (i8, i8) {
     }
 }
 
-/// Where `step` from `(x, y)` leads on a site level, if it can be taken:
-/// onto a walkable cell. (Cutting a wall's corner diagonally is allowed.)
+/// Where `step` from `(x, y)` leads on a site level, if it can be taken: onto
+/// a walkable cell, or over one cell of liquid onto a walkable cell beyond it
+/// (a jump, landing two cells away; nobody stops on liquid). (Cutting a wall's
+/// corner diagonally is allowed.)
 pub fn step_on_level(level: &Level, from: (i64, i64), step: Step) -> Option<(i64, i64)> {
     let (x, y) = step.from(from);
-    level.is_walkable(x, y).then_some((x, y))
+    if level.is_walkable(x, y) {
+        return Some((x, y));
+    }
+    let (far_x, far_y) = step.from((x, y));
+    (level.cell(x, y).is_liquid() && level.is_walkable(far_x, far_y)).then_some((far_x, far_y))
 }
 
 /// Where `step` from `(x, y)` leads on the world map: anywhere, for now
@@ -108,7 +114,25 @@ mod tests {
         assert_eq!(step_on_level(&level, (0, 0), east), Some((1, 0)));
         level.set(1, 0, Cell::Wall);
         assert_eq!(step_on_level(&level, (0, 0), east), None);
-        level.set(1, 0, Cell::Water);
+    }
+
+    #[test]
+    fn one_cell_of_liquid_is_jumped() {
+        let mut level = Level::test_room();
+        let east = Step::new(1, 0).unwrap();
+        for liquid in [Cell::Water, Cell::Lava] {
+            level.set(1, 0, liquid);
+            assert_eq!(step_on_level(&level, (0, 0), east), Some((2, 0)));
+        }
+        // Diagonally too, across a corner.
+        let north_west = Step::new(-1, -1).unwrap();
+        level.set(3, 1, Cell::Water);
+        assert_eq!(step_on_level(&level, (4, 2), north_west), Some((2, 0)));
+        // Two wide can't be crossed, so it can't be stepped onto at all.
+        level.set(2, 0, Cell::Water);
+        assert_eq!(step_on_level(&level, (0, 0), east), None);
+        // Nor with a wall to land on.
+        level.set(2, 0, Cell::Wall);
         assert_eq!(step_on_level(&level, (0, 0), east), None);
     }
 

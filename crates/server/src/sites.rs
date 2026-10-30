@@ -432,18 +432,23 @@ fn add_masks(masks: &mut CellMasks, more: CellMasks) {
 }
 
 /// The walkable cells the player could reach within `steps` steps (in any
-/// of 8 directions), including where they stand.
+/// of 8 directions, a jump over liquid counting as one), including where they
+/// stand.
 fn nearby_cells(level: &Level, from: (i64, i64), steps: i64) -> Vec<(i64, i64)> {
     let mut found = vec![from];
     let mut queue = VecDeque::from([(from, 0)]);
-    while let Some(((x, y), distance)) = queue.pop_front() {
+    while let Some((at, distance)) = queue.pop_front() {
         if distance == steps {
             continue;
         }
         for dy in -1..=1 {
             for dx in -1..=1 {
-                let next = (x + dx, y + dy);
-                if level.is_walkable(next.0, next.1) && !found.contains(&next) {
+                let Some(step) = Step::new(dx, dy) else {
+                    continue;
+                };
+                if let Some(next) = step_on_level(level, at, step)
+                    && !found.contains(&next)
+                {
                     found.push(next);
                     queue.push_back((next, distance + 1));
                 }

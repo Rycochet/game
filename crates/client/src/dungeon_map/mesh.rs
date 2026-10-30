@@ -10,6 +10,7 @@ use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::SeenStairs;
 use shared::site::StairsDirection;
 
+use super::liquid::build_cell;
 use super::theme::Shape;
 use super::walls::{Layers, Scene, build_opening, build_wall};
 use super::{AMBIENT_LIGHT, CELL_SIZE, WALL_HEIGHT};
@@ -254,6 +255,10 @@ fn build_open_cell(
     stairs: Option<&SeenStairs>,
 ) {
     let Scene { level, light, .. } = *scene;
+    if level.cell(x, y).is_liquid() {
+        build_cell(layers, scene, (x, y));
+        return;
+    }
     let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
     let surface = Surface::of_flat(level.cell(x, y));
     if !scene.sight.is_seen(x, y) {
@@ -692,6 +697,31 @@ mod tests {
             let blends = meshes.has_solid[Surface::WallBlend as usize];
             assert_eq!(blends, shape == Shape::Natural);
         }
+    }
+
+    /// The ground under a solid wall is filled, so the curve never shows the
+    /// background; see-through walls keep their dark band.
+    #[test]
+    fn the_ground_is_filled_only_under_solid_walls() {
+        let level = room_with_wall();
+        let views = views_from(&level, &[(0, 3)]);
+        let sight = &views[0].sight;
+        let light = LightGrid::new(&level);
+        let shape = Shape::Natural;
+        let filled = |camera: Vec3| {
+            let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+            let solid = &meshes.solid[Surface::Wall as usize];
+            solid
+                .attribute(Mesh::ATTRIBUTE_POSITION)
+                .and_then(|values| values.as_float3())
+                .is_some_and(|positions| {
+                    positions
+                        .iter()
+                        .any(|p| p[0].abs() < 0.01 && p[1].abs() < 0.01 && p[2].abs() < 0.01)
+                })
+        };
+        assert!(filled(Vec3::new(0.0, 600.0, 900.0)));
+        assert!(!filled(Vec3::new(0.0, 600.0, -900.0)));
     }
 
     #[test]

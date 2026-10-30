@@ -92,9 +92,23 @@ pub struct Arrived {
 pub struct TakeStep(pub Step);
 
 /// The player has taken a step, by `TakeStep` or travelling: for the server.
+/// `moved` is how far it took them, which is two cells for a jump over liquid.
 /// Not sent when the position is set from elsewhere (the server's word).
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Stepped(pub Step);
+pub struct Stepped {
+    pub step: Step,
+    pub moved: (i64, i64),
+}
+
+impl Stepped {
+    /// The step from `from` that ended at `to`.
+    fn between(step: Step, from: (i64, i64), to: (i64, i64)) -> Self {
+        Self {
+            step,
+            moved: (to.0 - from.0, to.1 - from.1),
+        }
+    }
+}
 
 /// Travel state, private to this module.
 #[derive(Component, Default)]
@@ -102,6 +116,10 @@ struct Travel {
     target: Option<DVec2>,
     /// The `MapPosition` this module last set, to notice other changes.
     last: MapPosition,
+    /// The cell a jump over liquid is landing on. The player is already there
+    /// as far as the game goes, and is shown getting there: until they land
+    /// they can't take another step or change direction.
+    jump: Option<MapPosition>,
 }
 
 #[derive(Resource)]
@@ -165,23 +183,36 @@ fn move_player(
 }
 
 /// Takes the steps asked for this frame, in order: in a dungeon, only onto
-/// walkable cells the client knows of (the server's rule, `shared::movement`).
+/// walkable cells the client knows of, or over liquid to one (the server's
+/// rule, `shared::movement`). Steps are ignored until a jump has landed.
 fn take_steps(
     mut requests: MessageReader<TakeStep>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
     mut stepped: MessageWriter<Stepped>,
-    mut player: Single<&mut MapPosition, With<Player>>,
+    player: Single<(&mut MapPosition, &mut Travel), With<Player>>,
 ) {
+    let (mut position, mut travel) = player.into_inner();
     for &TakeStep(step) in requests.read() {
-        let from = (player.x, player.y);
+        if travel.jump.is_some() {
+            continue;
+        }
+        let from = (position.x, position.y);
         let to = match view.get() {
             GameView::Dungeon => step_on_level(&dungeon.level, from, step),
             _ => Some(step.from(from)),
         };
-        if let Some((x, y)) = to {
-            **player = MapPosition { x, y };
-            stepped.write(Stepped(step));
+        let Some((x, y)) = to else {
+            continue;
+        };
+        *position = MapPosition { x, y };
+        stepped.write(Stepped::between(step, from, (x, y)));
+        if (x, y) != step.from(from) {
+            // A jump replaces any journey, as a step does, and is shown in
+            // `travel` instead of jumping there at once.
+            travel.target = None;
+            travel.last = *position;
+            travel.jump = Some(*position);
         }
     }
 }
@@ -201,10 +232,16 @@ const MOVE_KEYS: [KeyCode; 8] = [
 /// on it, announcing each step. Any other change to `MapPosition` (a step,
 /// the server) cancels travel and jumps there. Walls don't stop it (TEMPORARY
 /// until pathfinding: the server refuses the step into the wall, and puts
-/// the player back, which ends the journey).
+/// the player back, which ends the journey). Reaching the edge of a liquid
+/// cell starts a jump over it if it can be crossed, and ends the journey there
+/// if not. A jump is shown from here too: straight to the cell it lands on,
+/// whatever is asked for meanwhile. A journey carries on from that cell's
+/// edge; otherwise the jump ends on its centre.
+#[allow(clippy::too_many_arguments)]
 fn travel(
     time: Res<Time>,
     view: Res<State<GameView>>,
+    dungeon: Res<CurrentDungeon>,
     mut requests: MessageReader<TravelTo>,
     mut arrived: MessageWriter<Arrived>,
     mut stepped: MessageWriter<Stepped>,
@@ -214,6 +251,7 @@ fn travel(
 
     if *tile != travel.last {
         travel.target = None;
+        travel.jump = None;
         travel.last = *tile;
         *smooth = SmoothPosition {
             x: tile.x as f64,
@@ -225,9 +263,6 @@ fn travel(
         travel.target = Some(DVec2::new(request.x as f64, request.y as f64));
     }
 
-    let Some(target) = travel.target else {
-        return;
-    };
     let from = DVec2::new(smooth.x, smooth.y);
     let speed = match view.get() {
         GameView::WorldMap => TRAVEL_SPEED,
@@ -235,28 +270,83 @@ fn travel(
         // Travel doesn't run while connecting.
         GameView::Connecting => return,
     };
-    let step = speed * time.delta_secs_f64();
-    let now = if from.distance(target) <= step {
-        // Arrived: land exactly on the grid point.
+    let distance = speed * time.delta_secs_f64();
+
+    if let Some(landing) = travel.jump {
+        let to = DVec2::new(landing.x as f64, landing.y as f64);
+        let now = towards(from, to, distance);
+        *smooth = SmoothPosition { x: now.x, y: now.y };
+        let over_its_edge = nearest_cell(now) == landing;
+        if now == to || (travel.target.is_some() && over_its_edge) {
+            travel.jump = None;
+        }
+        return;
+    }
+
+    let Some(target) = travel.target else {
+        return;
+    };
+    let now = towards(from, target, distance);
+    let nearest = nearest_cell(now);
+    // Normally one step a frame, but a slow frame may cover more.
+    let mut at = (tile.x, tile.y);
+    for step in steps_between(at, (nearest.x, nearest.y)) {
+        let next = step.from(at);
+        let liquid =
+            *view.get() == GameView::Dungeon && dungeon.level.cell(next.0, next.1).is_liquid();
+        if !liquid {
+            stepped.write(Stepped::between(step, at, next));
+            at = next;
+            continue;
+        }
+        // The edge of the liquid: the journey can't go on the way it was.
+        if let Some(landing) = step_on_level(&dungeon.level, at, step) {
+            stepped.write(Stepped::between(step, at, landing));
+            at = landing;
+            travel.jump = Some(MapPosition {
+                x: landing.0,
+                y: landing.1,
+            });
+        } else {
+            travel.target = None;
+            *smooth = SmoothPosition {
+                x: at.0 as f64,
+                y: at.1 as f64,
+            };
+        }
+        let stopped_at = MapPosition { x: at.0, y: at.1 };
+        tile.set_if_neq(stopped_at);
+        travel.last = stopped_at;
+        return;
+    }
+
+    if now == target {
+        // Arrived: exactly on the grid point.
         travel.target = None;
         arrived.write(Arrived {
             x: target.x as i64,
             y: target.y as i64,
         });
-        target
-    } else {
-        from + (target - from).normalize() * step
-    };
-
-    *smooth = SmoothPosition { x: now.x, y: now.y };
-    let nearest = MapPosition {
-        x: now.x.round() as i64,
-        y: now.y.round() as i64,
-    };
-    // Normally one step a frame, but a slow frame may cover more.
-    for step in steps_between((tile.x, tile.y), (nearest.x, nearest.y)) {
-        stepped.write(Stepped(step));
     }
+    *smooth = SmoothPosition { x: now.x, y: now.y };
     tile.set_if_neq(nearest);
     travel.last = nearest;
+}
+
+/// `distance` along the straight line from one point to another, stopping
+/// exactly on it.
+fn towards(from: DVec2, to: DVec2, distance: f64) -> DVec2 {
+    if from.distance(to) <= distance {
+        to
+    } else {
+        from + (to - from).normalize() * distance
+    }
+}
+
+/// The grid point a position is nearest: its cell, in a dungeon.
+fn nearest_cell(position: DVec2) -> MapPosition {
+    MapPosition {
+        x: position.x.round() as i64,
+        y: position.y.round() as i64,
+    }
 }

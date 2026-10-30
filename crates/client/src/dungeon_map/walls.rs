@@ -12,6 +12,7 @@
 use bevy::prelude::*;
 use shared::dungeon::{CELL_UNITS, Cell, Level, Sight, WALL_HALF_UNITS};
 
+use super::liquid::{self, FULL_DEPTH, Outline, outline_at, surfaces_near};
 use super::mesh::{
     Builder, LightGrid, MEMORY_SHADE, Surface, View, WallFace, faces_camera, with_ambient,
 };
@@ -100,7 +101,7 @@ pub struct Layers {
 }
 
 impl Layers {
-    fn builder(&mut self, layer: Layer, surface: Surface) -> &mut Builder {
+    pub(super) fn builder(&mut self, layer: Layer, surface: Surface) -> &mut Builder {
         match layer {
             Layer::Solid => &mut self.solid[surface as usize],
             Layer::Memory => &mut self.memory[surface as usize],
@@ -174,6 +175,16 @@ pub fn build_wall(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)) {
     let turned_away = tile.turned_away(reach);
     for quarter in QUARTERS {
         tile.build_wall_quarter(layers, quarter, reach, turned_away);
+    }
+    // A wall's curve lets the camera see in under it from the side, as far as
+    // its foot. See-through walls keep their dark band, and the far side of a
+    // wall stays dark.
+    if !turned_away.contains(&true) {
+        for quarter in QUARTERS {
+            if tile.quarter_in(scene.sight, quarter) {
+                tile.fill_foot(layers, quarter, reach);
+            }
+        }
     }
 }
 
@@ -284,7 +295,7 @@ fn face_uv(across: f32, height: f32) -> [f32; 2] {
 }
 
 /// The picture coordinates for a point on something flat, from the centre.
-fn flat_uv(east: f32, south: f32) -> [f32; 2] {
+pub(super) fn flat_uv(east: f32, south: f32) -> [f32; 2] {
     [
         (east / CELL_SIZE + 0.5).clamp(0.0, 1.0),
         (south / CELL_SIZE + 0.5).clamp(0.0, 1.0),
@@ -390,11 +401,12 @@ impl<'a> Tile<'a> {
         fade_from: &[Patch],
     ) {
         let level = self.scene.level;
+        // Liquid is drawn for itself, with this floor round it.
         let surface = self
             .around_corner((sx, sz))
             .iter()
             .map(|&(x, y)| level.cell(x, y))
-            .find(|cell| cell.is_open())
+            .find(|cell| cell.is_open() && !cell.is_liquid())
             .map_or(Surface::Floor, Surface::of_flat);
         let point = |east: f32, south: f32| {
             let (e, s) = (sx * east, sz * south);
@@ -613,7 +625,10 @@ impl<'a> Tile<'a> {
         } else {
             Layer::Solid
         };
-        self.floor_quarter(layers, floor_layer, quarter, &foot, &foot);
+        match outline_at(scene.level, (self.x, self.y), quarter) {
+            Some(outline) => self.wet_quarter(layers, floor_layer, quarter, outline, &foot),
+            None => self.floor_quarter(layers, floor_layer, quarter, &foot, &foot),
+        }
         let top_layer = if remembered {
             Layer::Memory
         } else if !faces.contains(&Some(Layer::Solid))
@@ -624,6 +639,106 @@ impl<'a> Tile<'a> {
             Layer::Solid
         };
         self.wall_top(layers, top_layer, quarter, (east_west, north_south), reach);
+    }
+
+    /// The ground under a wall's foot in a quarter, shaded like the wall's top.
+    fn fill_foot(&self, layers: &mut Layers, quarter: (f32, f32), reach: [f32; 4]) {
+        let (sx, sz) = quarter;
+        for patch in self.wall_foot(Self::quarter_sides(quarter), reach) {
+            let point = |east: f32, south: f32| {
+                let (e, s) = (sx * east, sz * south);
+                (self.centre + Vec3::new(e, 0.0, s), flat_uv(e, s), TOP_SHADE)
+            };
+            let corners = [
+                point(patch.east.0, patch.south.0),
+                point(patch.east.1, patch.south.0),
+                point(patch.east.1, patch.south.1),
+                point(patch.east.0, patch.south.1),
+            ];
+            self.add(layers, Layer::Solid, Surface::Wall, Vec3::Y, corners);
+        }
+    }
+
+    /// A quarter of a wall's cell that liquid reaches: the liquid up to the
+    /// wall, with the floor beside it stopping at the wall's foot and fading
+    /// from it as usual. (The liquid runs on under the wall, out of sight.)
+    fn wet_quarter(
+        &self,
+        layers: &mut Layers,
+        layer: Layer,
+        quarter: (f32, f32),
+        outline: Outline,
+        foot: &[Patch],
+    ) {
+        let (liquid, floor) = surfaces_near(self.scene.level, (self.x, self.y));
+        let straight = outline.straight_shore();
+        if let Some((east, south)) = straight {
+            let mut dry = foot.to_vec();
+            dry.push(Patch {
+                east: (0.0, east),
+                south: (0.0, south),
+            });
+            self.floor_quarter(layers, layer, quarter, &dry, foot);
+        }
+        let drawn = liquid::Quarter {
+            layer,
+            centre: self.centre,
+            quarter,
+            outline,
+            liquid,
+            floor,
+            with_floor: straight.is_none(),
+            colour: &|point| self.colour(layer, point, 1.0),
+        };
+        drawn.build_in_wall(layers);
+        drawn.close_behind_wall(layers, self.scene.level, (self.x, self.y));
+    }
+
+    /// Where a face stands in liquid, carries it on down to the bed: straight
+    /// down from its foot, whatever curve it has above. The picture starts
+    /// again from its top at the floor, so it repeats and isn't stretched.
+    fn face_under_liquid(
+        &self,
+        layers: &mut Layers,
+        layer: Layer,
+        quarter: (f32, f32),
+        (facing, running): (usize, usize),
+        reach: [f32; 4],
+    ) {
+        let Some(outline) = outline_at(self.scene.level, (self.x, self.y), quarter) else {
+            return;
+        };
+        let (plane, from, to) = self.face_at(facing, running, reach, 0.0);
+        let along_east = facing.is_multiple_of(2);
+        let Some((from, to)) = outline.span_along(along_east, plane, (from, to)) else {
+            return;
+        };
+        let (sx, sz) = quarter;
+        let (normal, turned) = if along_east {
+            (Vec3::Z * sz, 1.0)
+        } else {
+            (Vec3::X * sx, SIDEWAYS_SHADE)
+        };
+        let corner = |along: f32, depth: f32| {
+            let (east, south) = if along_east {
+                (sx * along, sz * plane)
+            } else {
+                (sx * plane, sz * along)
+            };
+            let across = if along_east { east } else { south };
+            (
+                self.centre + Vec3::new(east, -depth, south),
+                [across / CELL_SIZE + 0.5, depth / CELL_SIZE],
+                turned * liquid::depth_shade(depth),
+            )
+        };
+        let corners = [
+            corner(from, 0.0),
+            corner(to, 0.0),
+            corner(to, FULL_DEPTH),
+            corner(from, FULL_DEPTH),
+        ];
+        self.add(layers, layer, Surface::Wall, normal, corners);
     }
 
     /// Where a wall's face stands from the cell's centre, and between which
@@ -709,7 +824,35 @@ impl<'a> Tile<'a> {
             });
         }
 
-        let shape = scene.shape;
+        for corners in self.face_pieces(quarter, facing, running, reach) {
+            self.add(layers, layer, Surface::Wall, normal, corners);
+        }
+        if layer != Layer::Memory {
+            self.face_under_liquid(layers, layer, quarter, (facing, running), reach);
+        }
+        Some(layer)
+    }
+
+    /// The pieces a face towards side `facing` is cut into, each four corners
+    /// of `(position, picture coordinates, shade)`.
+    fn face_pieces(
+        &self,
+        (sx, sz): (f32, f32),
+        facing: usize,
+        running: usize,
+        reach: [f32; 4],
+    ) -> Vec<[(Vec3, [f32; 2], f32); 4]> {
+        let shape = self.scene.shape;
+        let faces_south_or_north = facing.is_multiple_of(2);
+        let place = |along: f32, out: f32, height: f32| {
+            let (east, south) = if faces_south_or_north {
+                (sx * along, sz * out)
+            } else {
+                (sx * out, sz * along)
+            };
+            self.centre + Vec3::new(east, height, south)
+        };
+        let (_, from, to) = self.face_at(facing, running, reach, WALL_HEIGHT / 2.0);
         let turned = if faces_south_or_north {
             1.0
         } else {
@@ -720,6 +863,7 @@ impl<'a> Tile<'a> {
             _ => 1,
         };
         let cuts = heights(shape, 0.0, WALL_HEIGHT);
+        let mut pieces = Vec::new();
         // Only points inside the face wander, so faces still meet each other.
         let corner = |band: usize, segment: usize| {
             let height = cuts[band];
@@ -747,16 +891,15 @@ impl<'a> Tile<'a> {
         };
         for band in 0..cuts.len() - 1 {
             for segment in 0..segments {
-                let corners = [
+                pieces.push([
                     corner(band, segment),
                     corner(band, segment + 1),
                     corner(band + 1, segment + 1),
                     corner(band + 1, segment),
-                ];
-                self.add(layers, layer, Surface::Wall, normal, corners);
+                ]);
             }
         }
-        Some(layer)
+        pieces
     }
 
     /// The top of a wall in a quarter: the part running one way, then what
