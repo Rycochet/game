@@ -327,11 +327,14 @@ fn update_terrain(
     for mut transform in &mut followers {
         transform.translation = Vec3::new(player.x as f32, 0.0, player.y as f32);
     }
+    // First, as woods are cleared round them.
+    known_rivers.update(&world.rivers, &world.climate, &world.surface, centre);
     grid.fill(
         &mut cache,
         &world.surface,
         &world.climate,
         &world.vegetation,
+        &known_rivers,
         &style,
         water_level,
         weather.snow_line,
@@ -358,7 +361,6 @@ fn update_terrain(
     if let Some(mut mesh) = meshes.get_mut(&faces.0) {
         *mesh = faces_mesh;
     }
-    known_rivers.update(&world.rivers, &world.climate, &world.surface, centre);
     let (river_mesh, bank_mesh) = terrain::build_rivers(
         &grid,
         &known_rivers,
@@ -380,10 +382,13 @@ fn update_terrain(
 
 /// Every frame, after `view3d` has placed the tokens: lifts each one onto the
 /// highest ground under it, so it never sinks into a slope.
+#[allow(clippy::too_many_arguments)]
 fn rest_tokens_on_terrain(
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
+    weather: Res<Weather>,
     style: Res<SurfaceStyle>,
+    known_rivers: Res<KnownRivers>,
     cache: Option<ResMut<HeightCache>>,
     positions: Query<&SmoothPosition>,
     mut views: Query<(&TokenView, &mut Transform)>,
@@ -399,8 +404,12 @@ fn rest_tokens_on_terrain(
         let ground = terrain::highest_shown_height(
             &mut cache,
             &world.surface,
+            &world.climate,
+            &world.vegetation,
+            &known_rivers,
             &style,
             water_level,
+            weather.snow_line,
             (position.x, position.y),
             (TOKEN_DIAMETER / 2.0) as f64,
         );
@@ -451,7 +460,9 @@ fn pick_on_click(
     player: Single<&MapPosition, With<Player>>,
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
+    weather: Res<Weather>,
     style: Res<SurfaceStyle>,
+    known_rivers: Res<KnownRivers>,
     cache: Option<ResMut<HeightCache>>,
     mut travel: MessageWriter<TravelTo>,
     mut to_server: MessageWriter<ToServer>,
@@ -475,6 +486,19 @@ fn pick_on_click(
         &world.surface,
         &style,
         water_level,
+        |cache: &mut HeightCache, x: i64, z: i64| {
+            terrain::canopy_lift(
+                cache,
+                &world.surface,
+                &world.climate,
+                &world.vegetation,
+                &known_rivers,
+                &style,
+                water_level,
+                weather.snow_line,
+                (x, z),
+            )
+        },
     ) {
         // Dev tools: ctrl+click jumps there instead (through walls), if the
         // server allows it.

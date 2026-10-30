@@ -59,7 +59,7 @@ impl Vegetation {
     }
 
     /// What grows at a position with this climate and ground height, ignoring
-    /// whether it is land: callers leave out water, sand and snow.
+    /// whether it is land: callers leave out water, shore and snow.
     pub fn cover(&self, x: i64, y: i64, height: f64, climate: ClimateSample) -> Cover {
         let ClimateSample {
             temperature,

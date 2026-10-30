@@ -176,6 +176,7 @@ impl TerrainGrid {
         surface: &Surface,
         climate: &Climate,
         vegetation: &Vegetation,
+        rivers: &KnownRivers,
         style: &SurfaceStyle,
         water_level: f64,
         snow_line: f64,
@@ -190,8 +191,22 @@ impl TerrainGrid {
         // Water is part of the terrain: underwater points sit at the surface.
         // (The cache is passed in rather than captured, so the loop below can
         // use it too: Rust allows only one mutable borrow at a time.)
+        let lift_at = |cache: &mut HeightCache, x: i64, z: i64| {
+            canopy_lift(
+                cache,
+                surface,
+                climate,
+                vegetation,
+                rivers,
+                style,
+                water_level,
+                snow_line,
+                (x, z),
+            )
+        };
         let shown_at = |cache: &mut HeightCache, x: i64, z: i64| {
             style.shown_height(cache.get(surface, x, z), water_level) as f32 * HEIGHT_SCALE
+                + lift_at(cache, x, z)
         };
 
         let (reach_x, reach_z) = square.reach();
@@ -214,7 +229,9 @@ impl TerrainGrid {
                 self.ground[i] = sample.height as f32 * HEIGHT_SCALE;
                 // The prototype's strong slope shading, baked in per point
                 // because real lighting alone is much smoother.
-                let west = cache.get(surface, x - 1, z).height;
+                // Woods count as raised ground, so their sunlit edges show.
+                let west = cache.get(surface, x - 1, z).height
+                    + ((lift_at(cache, x - 1, z) - lift_at(cache, x, z)) * CANOPY_SHADING) as f64;
                 let place = cache.climate(climate, surface, x, z);
                 let (band, lightness) =
                     style.shade(sample, place, west, water_level, snow_line, SLOPE_SHADING);
@@ -234,13 +251,17 @@ impl TerrainGrid {
                 }
                 self.colours[i] = colour;
 
-                // Snow, sand and water change with the weather and tide, so
+                // Snow, shore and water change with the weather and tide, so
                 // what shows is decided here rather than in `shared`.
                 let cover = cache.cover(vegetation, climate, surface, x, z);
                 let open_land =
                     style.kind(sample, place, water_level, snow_line) == SurfaceKind::Land;
                 self.covers[i] = Vec4::new(
-                    if open_land { cover.trees } else { 0.0 },
+                    if open_land {
+                        cover.trees * rivers.open_at(x, z)
+                    } else {
+                        0.0
+                    },
                     if open_land { cover.growth } else { 0.0 },
                     cover.narrow,
                     cover.lush,
@@ -639,14 +660,18 @@ pub fn build_edges(
         let stops = crossings(start, end);
         for &t in &stops {
             let point = start.lerp(end, t);
-            let ground = grid.height_at(&grid.ground, point).max(base);
-            let top = grid.height_at(&grid.shown, point).max(ground);
+            let shown = grid.height_at(&grid.shown, point);
+            // Earth all the way up on land, including under raised woods.
+            let under = grid.height_at(&grid.ground, point);
+            let ground = (if under >= water_top { shown } else { under }).max(base);
+            let top = shown.max(ground);
             // Half the surface lightness of the nearest point, like the
             // prototype's front slice (this also ices over with the water).
             let (x, z) = (cx + point.x.round() as i64, cy + point.y.round() as i64);
             let sample = cache.get(surface, x, z);
             let west = cache.get(surface, x - 1, z).height;
-            // Only the water strip uses this, and water has no biome colour.
+            // Only the water strip uses this: nearly all water, which has no
+            // biome colour, with a sliver of shore at most.
             let (band, lightness) = style.shade(
                 sample,
                 ClimateSample::default(),
@@ -708,13 +733,62 @@ fn crossings(start: Vec2, end: Vec2) -> Vec<f32> {
     stops
 }
 
+/// How far the drawn surface is raised at a point for the trees on it: taller
+/// in rainforest. None except on open land.
+#[allow(clippy::too_many_arguments)]
+pub fn canopy_lift(
+    cache: &mut HeightCache,
+    surface: &Surface,
+    climate: &Climate,
+    vegetation: &Vegetation,
+    rivers: &KnownRivers,
+    style: &SurfaceStyle,
+    water_level: f64,
+    snow_line: f64,
+    (x, z): (i64, i64),
+) -> f32 {
+    let cover = cache.cover(vegetation, climate, surface, x, z);
+    if cover.trees <= 0.0 {
+        return 0.0;
+    }
+    let sample = cache.get(surface, x, z);
+    let place = cache.climate(climate, surface, x, z);
+    if style.kind(sample, place, water_level, snow_line) != SurfaceKind::Land {
+        return 0.0;
+    }
+    let t = ((cover.trees - CANOPY_FROM) / (CANOPY_FULL - CANOPY_FROM)).clamp(0.0, 1.0);
+    // Down to the ground towards the shore, or sand and water stretch up a wall.
+    let shore = ((sample.height - water_level) as f32 / CANOPY_SHORE).clamp(0.0, 1.0);
+    let height = CANOPY_HEIGHT + CANOPY_LUSH * cover.lush;
+    t * t * (3.0 - 2.0 * t) * height * shore * rivers.open_at(x, z)
+}
+
+/// Height above the water at which the canopy reaches its full height.
+const CANOPY_SHORE: f32 = 4.0;
+/// How much of the canopy's height counts in the baked slope shading, which is
+/// strong enough to turn woods' edges white at full height.
+const CANOPY_SHADING: f32 = 0.2;
+
+/// How high woods stand above the ground, plus how much more in rainforest.
+const CANOPY_HEIGHT: f32 = 2.5;
+const CANOPY_LUSH: f32 = 1.5;
+/// How much tree cover it takes for the canopy to start rising, and to be full
+/// height.
+const CANOPY_FROM: f32 = 0.2;
+const CANOPY_FULL: f32 = 0.7;
+
 /// The highest drawn surface within `radius` of a fractional position, so
 /// something that wide can rest on top without sinking into a slope.
+#[allow(clippy::too_many_arguments)]
 pub fn highest_shown_height(
     cache: &mut HeightCache,
     surface: &Surface,
+    climate: &Climate,
+    vegetation: &Vegetation,
+    rivers: &KnownRivers,
     style: &SurfaceStyle,
     water_level: f64,
+    snow_line: f64,
     (x, y): (f64, f64),
     radius: f64,
 ) -> f32 {
@@ -725,7 +799,18 @@ pub fn highest_shown_height(
             let (px, py) = (x.round() as i64 + dx, y.round() as i64 + dy);
             if (px as f64 - x).hypot(py as f64 - y) <= radius {
                 let sample = cache.get(surface, px, py);
-                highest = highest.max(style.shown_height(sample, water_level));
+                let lift = canopy_lift(
+                    cache,
+                    surface,
+                    climate,
+                    vegetation,
+                    rivers,
+                    style,
+                    water_level,
+                    snow_line,
+                    (px, py),
+                );
+                highest = highest.max(style.shown_height(sample, water_level) + lift as f64);
             }
         }
     }

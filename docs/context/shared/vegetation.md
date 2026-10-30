@@ -22,6 +22,6 @@ What grows at any world map position, from the public terrain seed, so the clien
 ## Notes
 
 - Smooth functions of temperature and moisture rather than a table by `Biome`, so cover has no hard edges at biome borders. Patch noise (`ZOOM` 45) against how wooded the climate is decides which parts are actually woods, so wetter places have more of their area wooded, with clearings left.
-- It ignores water, sand and snow, which change with the tide and weather: the caller leaves those out.
+- It ignores water, shore and snow, which change with the tide and weather: the caller leaves those out.
 - Trees stop by height (`TREE_LINE_FROM` to `TREE_LINE_TO`), a little below where `surface_style` fades to tundra's colours.
-- Planned on top (not built): fields and roads come from the server as draped meshes, since working them out here would reveal features, and they clear cover around them. See `decisions.md`.
+- Planned on top (not built): fields and roads come from the server as draped meshes, since working them out here would reveal features, and they clear cover around them as the client already does round rivers. See `decisions.md`.
