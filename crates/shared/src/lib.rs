@@ -14,5 +14,6 @@ pub mod river;
 pub mod rng;
 pub mod site;
 pub mod surface;
+pub mod vegetation;
 pub mod weather;
 pub mod world;

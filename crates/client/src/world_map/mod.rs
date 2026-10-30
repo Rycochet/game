@@ -331,6 +331,7 @@ fn update_terrain(
         &mut cache,
         &world.surface,
         &world.climate,
+        &world.vegetation,
         &style,
         water_level,
         weather.snow_line,
