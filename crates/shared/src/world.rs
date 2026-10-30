@@ -67,6 +67,10 @@ pub struct WorldParams {
     pub climate: f64,
 }
 
+/// The snow line in normal weather: above every height there is, so nothing is
+/// frozen.
+pub const NORMAL_SNOW_LINE: u32 = 128;
+
 impl WorldParams {
     pub fn from_seed(seed: Seed) -> Self {
         let radius = seed.derive("radius").rng().range_u64(500, 6_500_000);

@@ -21,7 +21,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 7;
+pub const PROTOCOL_VERSION: u32 = 9;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -73,6 +73,9 @@ pub enum ClientMessage {
     /// Developer tools: change a cell of the level the player is on (not the
     /// one they stand on). Only an embedded server accepts it.
     DevSetCell { x: i64, y: i64, cell: Cell },
+    /// Developer tools: set the snow line (which freezes water), answered
+    /// with `SnowLine`. Only an embedded server accepts it.
+    DevSnowLine(u32),
 }
 
 impl ClientMessage {
@@ -85,6 +88,7 @@ impl ClientMessage {
                 | Self::DevBackToStart
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
+                | Self::DevSnowLine(_)
         )
     }
 }
@@ -92,10 +96,22 @@ impl ClientMessage {
 /// From the server to a client.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ServerMessage {
-    /// The answer to `Hello`: the world the player is in, and where they
-    /// are on its world map (where they left off). If they were in a site,
-    /// `EnterLevel` follows.
-    Welcome { world: WorldInfo, x: i64, y: i64 },
+    /// The answer to `Hello`: the world the player is in, the hour there
+    /// (`0..24`) and its snow line, and where they are on its world map (where
+    /// they left off). If they were in a site, `EnterLevel` follows.
+    Welcome {
+        world: WorldInfo,
+        hour: u32,
+        snow_line: u32,
+        x: i64,
+        y: i64,
+    },
+    /// The snow line has moved: above it everything is frozen, and ice can be
+    /// walked on.
+    SnowLine(u32),
+    /// A new hour has begun (`0..24`). The tide, and so where can be walked
+    /// on the world map, follows it.
+    Hour(u32),
     /// The server won't talk to this client, and why.
     Refused(String),
     /// A world map chunk, as this player knows it.
@@ -181,6 +197,7 @@ mod tests {
             },
             ClientMessage::UseExit,
             ClientMessage::DevTeleport { x: -3, y: 4 },
+            ClientMessage::DevSnowLine(40),
             ClientMessage::DevBackToStart,
             ClientMessage::DevEnterSite {
                 kind: FeatureKind::Crypt,
@@ -195,9 +212,13 @@ mod tests {
                     terrain_seed: Seed::new(8),
                     world_map_version: 1,
                 },
+                hour: 5,
+                snow_line: 128,
                 x: -4,
                 y: 9,
             },
+            ServerMessage::SnowLine(40),
+            ServerMessage::Hour(6),
             ServerMessage::Refused("no".into()),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 1, y: -2 },

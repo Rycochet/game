@@ -1,6 +1,7 @@
 //! Sending each player the world map chunks coming into their sight, and
 //! remembering the features they have seen.
 
+use bevy::prelude::*;
 use shared::movement::{Step, step_on_world_map};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
 
@@ -8,10 +9,20 @@ use crate::connections::Client;
 use crate::storage::KnownFeature;
 use crate::{ServerWorld, sites};
 
-/// The player takes a step on the world map (anywhere goes, so far). `false`
-/// if the client has gone.
+/// The player takes a step on the world map, unless it leads into water (a
+/// refused step is left for `Position` to put right). `false` if the client
+/// has gone.
 pub(crate) fn stepped(client: &mut Client, world: &ServerWorld, step: Step) -> bool {
-    client.character.world_position = step_on_world_map(client.world_position(), step);
+    let conditions = world.conditions();
+    let Some(to) = step_on_world_map(&world.ground, conditions, client.world_position(), step)
+    else {
+        info!(
+            "Refused a step into water from {:?}",
+            client.world_position()
+        );
+        return true;
+    };
+    client.character.world_position = to;
     client.unsaved = true;
     look_around(client, world)
 }
@@ -105,6 +116,28 @@ mod tests {
         // Stepping there and back sends nothing new.
         assert!(chunks(&test.steps(&[(1, 0), (-1, 0)])).is_empty());
         assert_eq!(test.client.world_position(), (0, 0));
+    }
+
+    #[test]
+    fn steps_into_water_are_refused() {
+        let mut test = TestClient::new();
+        let ground = &test.world.ground;
+        let conditions = test.world.conditions();
+        let (x, y) = (0..4000)
+            .flat_map(|y| (0..4000).map(move |x| (x, y)))
+            .find(|&(x, y)| {
+                ground.elevation(x, y, conditions).is_some()
+                    && ground.elevation(x + 1, y, conditions).is_none()
+            })
+            .expect("a shore somewhere");
+        test.send(&[ClientMessage::DevTeleport { x, y }]);
+        test.steps(&[(1, 0)]);
+        assert_eq!(test.client.world_position(), (x, y));
+        // Frozen over, it can be walked on.
+        let answers = test.send(&[ClientMessage::DevSnowLine(0)]);
+        assert_eq!(answers, [ServerMessage::SnowLine(0)]);
+        test.steps(&[(1, 0)]);
+        assert_eq!(test.client.world_position(), (x + 1, y));
     }
 
     #[test]

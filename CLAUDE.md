@@ -31,7 +31,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: feature     | `crates/shared/src/feature.rs`  | `docs/context/shared/feature.md`      | World map chunks and their features (kind, position, map seed) |
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, windows, ground, water, lava), wall shapes, rooms, line of sight / light reach |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
-| shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level (A*), spreading diagonals out |
+| shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes) |
 | shared: site        | `crates/shared/src/site/`       | `docs/context/shared/site.md`         | Sites behind features: building (BSP) and cave generators, levels, stairs |
 | server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server in its own Bevy world: WebSocket networking (and the web client's files) on one port, connections, world map chunks, site visits and level cells, saves (world, sites, characters), embedded single player, standalone binary |

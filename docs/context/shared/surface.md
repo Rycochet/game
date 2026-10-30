@@ -8,8 +8,8 @@ The planet surface height at any integer grid position (1 unit ≈ 1 km). Ported
 
 ## Public API
 
-- `Surface::new(&WorldParams)`, `.width()` (grid units around the equator; `x` wraps at this), `.sample(x, y) -> SurfaceSample`.
-- `SurfaceSample { height, jitter }`: `height` roughly `0.5..127.5` centred on 64; `jitter` `-8..8`, small-scale noise used only to roughen colour-band edges (not physical height).
+- `Surface::new(&WorldParams)`, `.width()` (grid units around the equator; `x` wraps at this), `.sample(x, y) -> SurfaceSample`, `.broad_height(x, y)` (only the 3 largest layers: hills and mountains without small bumps, what walking counts as climbing).
+- `SurfaceSample { height, jitter }`: `height` roughly `0.5..127.5` centred on 64; `jitter` `-8..8`, small-scale noise used only to roughen colour-band edges (not physical height). `.is_frozen(water_level, snow_line)`: whether it is ice (used for both drawing and walking).
 
 ## Depends on
 
@@ -17,7 +17,7 @@ The planet surface height at any integer grid position (1 unit ≈ 1 km). Ported
 
 ## Used by
 
-- Client `common` (`CurrentWorld`), `world_map`.
+- `shared::movement` (`WorldGround`), client `common` (`CurrentWorld`), `world_map`, `surface_style`.
 
 ## Notes
 

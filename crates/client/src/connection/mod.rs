@@ -23,7 +23,7 @@ use bevy::prelude::*;
 use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage};
 use shared::world::WORLD_MAP_VERSION;
 
-use crate::common::{CurrentWorld, GameView, MapPosition, ServerStatus};
+use crate::common::{CurrentWorld, GameClock, GameView, MapPosition, ServerStatus, Weather};
 use crate::player::{Player, PlayerSystems, Stepped};
 use prediction::{Prediction, correction};
 use socket::Target;
@@ -175,6 +175,8 @@ fn receive(
     mut next_view: ResMut<NextState<GameView>>,
     mut from_server: MessageWriter<FromServer>,
     mut prediction: ResMut<Prediction>,
+    mut clock: ResMut<GameClock>,
+    mut weather: ResMut<Weather>,
     mut player: Query<&mut MapPosition, With<Player>>,
 ) {
     // A world joined now: its chunks follow straight away, before the
@@ -182,7 +184,25 @@ fn receive(
     let mut joined: Option<CurrentWorld> = None;
     loop {
         match connection.link.receive() {
-            Ok(Some(ServerMessage::Welcome { world: info, x, y })) => {
+            Ok(Some(ServerMessage::Hour(hour))) => {
+                clock.set_if_neq(GameClock { hour });
+            }
+            Ok(Some(ServerMessage::SnowLine(snow_line))) => {
+                weather.set_if_neq(Weather {
+                    snow_line: snow_line as f64,
+                });
+            }
+            Ok(Some(ServerMessage::Welcome {
+                world: info,
+                hour,
+                snow_line,
+                x,
+                y,
+            })) => {
+                clock.set_if_neq(GameClock { hour });
+                weather.set_if_neq(Weather {
+                    snow_line: snow_line as f64,
+                });
                 if info.world_map_version != WORLD_MAP_VERSION {
                     error!(
                         "The world needs world map version {}; this client has {WORLD_MAP_VERSION}",
@@ -202,7 +222,13 @@ fn receive(
                 if *view.get() != GameView::WorldMap {
                     next_view.set(GameView::WorldMap);
                 }
-                from_server.write(FromServer(ServerMessage::Welcome { world: info, x, y }));
+                from_server.write(FromServer(ServerMessage::Welcome {
+                    world: info,
+                    hour,
+                    snow_line,
+                    x,
+                    y,
+                }));
             }
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");

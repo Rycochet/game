@@ -9,12 +9,12 @@ use bevy::math::DVec2;
 use std::collections::VecDeque;
 
 use bevy::prelude::*;
-use shared::movement::{Step, step_on_level, steps_between};
-use shared::pathfinding::{find_path, straighten};
+use shared::movement::{Step, step_cost, step_on_level, step_on_world_map, world_step_cost};
+use shared::pathfinding::{find_path, find_world_path, straighten};
 
 use crate::common::{
-    CurrentDungeon, GameView, Icon, LightSource, MapPosition, ServerStatus, SmoothPosition, Token,
-    ViewFacing,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, Icon, LightSource, MapPosition,
+    ServerStatus, SmoothPosition, Token, ViewFacing, Weather,
 };
 
 /// While a key is held, how often the player takes another step.
@@ -73,10 +73,10 @@ pub enum PlayerSystems {
 #[derive(Component)]
 pub struct Player;
 
-/// Ask the player to travel to a grid point at constant speed: in a dungeon,
-/// by the quickest way through the cells they know, as far towards it as they
-/// can get. A new request replaces the current one, starting from wherever the
-/// player is.
+/// Ask the player to travel to a grid point, by the quickest way, as far
+/// towards it as they can get: in a dungeon, through the cells they know; on
+/// the world map, round water and easing off on slopes. A new request replaces
+/// the current one, starting from wherever the player is.
 #[derive(Message, Clone, Copy, Debug)]
 pub struct TravelTo {
     pub x: i64,
@@ -119,10 +119,11 @@ impl Stepped {
 /// Travel state, private to this module.
 #[derive(Component, Default)]
 struct Travel {
-    /// Where a journey on the world map is going, in a straight line.
-    target: Option<DVec2>,
-    /// The cells a journey in a dungeon has still to reach, in order.
+    /// The points a journey has still to reach, in order.
     route: VecDeque<(i64, i64)>,
+    /// Where the journey was asked to go, to find a new route if the tide cuts
+    /// this one.
+    goal: (i64, i64),
     /// Whether the route ends where the journey was asked to go.
     route_arrives: bool,
     /// The `MapPosition` this module last set, to notice other changes.
@@ -194,12 +195,17 @@ fn move_player(
 }
 
 /// Takes the steps asked for this frame, in order: in a dungeon, only onto
-/// walkable cells the client knows of, or over liquid to one (the server's
-/// rule, `shared::movement`). Steps are ignored until a jump has landed.
+/// walkable cells the client knows of, or over liquid to one; on the world map,
+/// not into open water (the server's rules, `shared::movement`). Steps are
+/// ignored until a jump has landed.
+#[allow(clippy::too_many_arguments)]
 fn take_steps(
     mut requests: MessageReader<TakeStep>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
+    world: Option<Res<CurrentWorld>>,
+    clock: Res<GameClock>,
+    weather: Res<Weather>,
     mut stepped: MessageWriter<Stepped>,
     player: Single<(&mut MapPosition, &mut Travel), With<Player>>,
 ) {
@@ -211,7 +217,14 @@ fn take_steps(
         let from = (position.x, position.y);
         let to = match view.get() {
             GameView::Dungeon => step_on_level(&dungeon.level, from, step),
-            _ => Some(step.from(from)),
+            _ => world.as_ref().and_then(|world| {
+                step_on_world_map(
+                    &world.ground,
+                    world.conditions(&clock, &weather),
+                    from,
+                    step,
+                )
+            }),
         };
         let Some((x, y)) = to else {
             continue;
@@ -221,7 +234,6 @@ fn take_steps(
         if (x, y) != step.from(from) {
             // A jump replaces any journey, as a step does, and is shown in
             // `travel` instead of jumping there at once.
-            travel.target = None;
             travel.route.clear();
             travel.last = *position;
             travel.jump = Some(*position);
@@ -240,9 +252,9 @@ const MOVE_KEYS: [KeyCode; 8] = [
     KeyCode::KeyS,
 ];
 
-/// Moves along the journey at constant speed, always ending exactly on its last
-/// point, announcing each step. On the world map that is a straight line; in a
-/// dungeon, the route found when it was asked for. Any other change to
+/// Moves along the route found when the journey was asked for, always ending
+/// exactly on its last point, announcing each step: at constant speed, except
+/// that world map slopes are slower, by what they cost. Any other change to
 /// `MapPosition` (a step, the server) cancels travel and jumps there. A step
 /// is taken on leaving a cell, and a jump is shown from here too: straight to
 /// the cell it lands on, whatever is asked for meanwhile. A journey carries on
@@ -252,6 +264,9 @@ fn travel(
     time: Res<Time>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
+    world: Option<Res<CurrentWorld>>,
+    clock: Res<GameClock>,
+    weather: Res<Weather>,
     mut requests: MessageReader<TravelTo>,
     mut arrived: MessageWriter<Arrived>,
     mut stepped: MessageWriter<Stepped>,
@@ -259,8 +274,13 @@ fn travel(
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
 
+    // On the world map, the ground and the conditions now; in a dungeon, `None`.
+    let ground = (*view.get() == GameView::WorldMap)
+        .then_some(world.as_ref())
+        .flatten()
+        .map(|world| (&world.ground, world.conditions(&clock, &weather)));
+
     if *tile != travel.last {
-        travel.target = None;
         travel.route.clear();
         travel.jump = None;
         travel.last = *tile;
@@ -271,22 +291,24 @@ fn travel(
     }
 
     if let Some(request) = requests.read().last() {
-        if *view.get() == GameView::Dungeon {
-            // Only through cells the player has seen, so that a route gives
-            // nothing away (and memory may be out of date: the server checks).
-            let from = (tile.x, tile.y);
-            let to = (request.x, request.y);
-            let known = |x, y| dungeon.remembered.is_seen(x, y);
-            let path = find_path(&dungeon.level, from, to, None, known);
-            let path = straighten(&dungeon.level, from, &path, known);
-            travel.route_arrives = path.reached;
-            travel.route = path.cells.into();
-            if travel.route.is_empty() {
-                // Nowhere to go: back to the middle of this cell.
-                travel.route.push_back(from);
+        let from = (tile.x, tile.y);
+        let to = (request.x, request.y);
+        let path = match ground {
+            Some((ground, conditions)) => find_world_path(ground, conditions, from, to),
+            None => {
+                // Only through cells the player has seen, so that a route gives
+                // nothing away (and memory may be out of date: the server checks).
+                let known = |x, y| dungeon.remembered.is_seen(x, y);
+                let path = find_path(&dungeon.level, from, to, None, known);
+                straighten(&dungeon.level, from, &path, known)
             }
-        } else {
-            travel.target = Some(DVec2::new(request.x as f64, request.y as f64));
+        };
+        travel.goal = to;
+        travel.route_arrives = path.reached;
+        travel.route = path.cells.into();
+        if travel.route.is_empty() {
+            // Nowhere to go: back to the middle of this cell.
+            travel.route.push_back(from);
         }
     }
 
@@ -317,8 +339,19 @@ fn travel(
         // Normally part of one step a frame, but a slow frame may cover more.
         while let Some(&next) = travel.route.front() {
             let to = DVec2::new(next.0 as f64, next.1 as f64);
-            let moved = towards(now, to, left);
-            left -= now.distance(moved);
+            // How much longer this step takes than on flat ground.
+            let slowness = match ground {
+                Some((ground, conditions)) if next != at => {
+                    let ends = (
+                        ground.elevation(at.0, at.1, conditions),
+                        ground.elevation(next.0, next.1, conditions),
+                    );
+                    world_step_cost(at, next, ends) as f64 / step_cost(at, next) as f64
+                }
+                _ => 1.0,
+            };
+            let moved = towards(now, to, left / slowness);
+            left = (left - now.distance(moved) * slowness).max(0.0);
             now = moved;
             let out_of_cell = (now - DVec2::new(at.0 as f64, at.1 as f64))
                 .abs()
@@ -328,7 +361,21 @@ fn travel(
                 let step = Step::new((next.0 - at.0).signum(), (next.1 - at.1).signum())
                     .expect("the next cell isn't this one");
                 // The route was legal when it was found, but cells can change.
-                if step_on_level(&dungeon.level, at, step) != Some(next) {
+                let legal = match ground {
+                    Some((ground, conditions)) => step_on_world_map(ground, conditions, at, step),
+                    None => step_on_level(&dungeon.level, at, step),
+                };
+                if legal != Some(next) {
+                    // The tide or a thaw has cut the way: find another from here.
+                    if let Some((ground, conditions)) = ground {
+                        let path = find_world_path(ground, conditions, at, travel.goal);
+                        travel.route_arrives = path.reached;
+                        travel.route = path.cells.into();
+                        if travel.route.is_empty() {
+                            travel.route.push_back(at);
+                        }
+                        continue;
+                    }
                     travel.route.clear();
                     now = DVec2::new(at.0 as f64, at.1 as f64);
                     break;
@@ -353,33 +400,7 @@ fn travel(
         let reached = MapPosition { x: at.0, y: at.1 };
         tile.set_if_neq(reached);
         travel.last = reached;
-        return;
     }
-
-    let Some(target) = travel.target else {
-        return;
-    };
-    let now = towards(from, target, distance);
-    let nearest = nearest_cell(now);
-    // Normally one step a frame, but a slow frame may cover more.
-    let mut at = (tile.x, tile.y);
-    for step in steps_between(at, (nearest.x, nearest.y)) {
-        let next = step.from(at);
-        stepped.write(Stepped::between(step, at, next));
-        at = next;
-    }
-
-    if now == target {
-        // Arrived: exactly on the grid point.
-        travel.target = None;
-        arrived.write(Arrived {
-            x: target.x as i64,
-            y: target.y as i64,
-        });
-    }
-    *smooth = SmoothPosition { x: now.x, y: now.y };
-    tile.set_if_neq(nearest);
-    travel.last = nearest;
 }
 
 /// `distance` along the straight line from one point to another, stopping

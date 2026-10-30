@@ -10,12 +10,10 @@ use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use shared::dungeon::{Level, Sight};
 use shared::feature::{CHUNK_SIZE, ChunkPos};
+use shared::movement::{WorldConditions, WorldGround};
 use shared::protocol::{LevelChunk, LevelInfo, SeenFeature, SeenStairs, WorldInfo};
 use shared::surface::Surface;
 use shared::world::WorldParams;
-
-/// Real seconds per in-game hour.
-const SECONDS_PER_HOUR: f32 = 60.0;
 
 /// Frame rate cap while the window has focus. Not a twitch game, so this saves
 /// GPU and battery; input still wakes the app immediately.
@@ -36,8 +34,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<GameClock>()
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()
-            .init_resource::<ViewFacing>()
-            .add_systems(Update, advance_clock);
+            .init_resource::<ViewFacing>();
     }
 }
 
@@ -48,6 +45,8 @@ impl Plugin for CommonPlugin {
 pub struct CurrentWorld {
     pub params: WorldParams,
     pub surface: Surface,
+    /// The ground as far as walking goes (the server's rules).
+    pub ground: WorldGround,
     pub features: KnownFeatures,
 }
 
@@ -58,8 +57,17 @@ impl CurrentWorld {
         let surface = Surface::new(&params);
         Self {
             features: KnownFeatures::new(surface.width()),
+            ground: WorldGround::new(&params),
             surface,
             params,
+        }
+    }
+
+    /// What decides where can be walked now.
+    pub fn conditions(&self, clock: &GameClock, weather: &Weather) -> WorldConditions {
+        WorldConditions {
+            water: self.params.water_level(clock.hour as f64),
+            snow_line: weather.snow_line,
         }
     }
 }
@@ -268,8 +276,9 @@ pub struct LightSource {
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct SharesSight;
 
-/// In-game time of day, in whole hours (`0..24`). Only changes once per hour,
-/// so systems can redraw on `is_changed()`.
+/// In-game time of day, in whole hours (`0..24`), as the server says
+/// (`connection`). Only changes once per hour, so systems can redraw on
+/// `is_changed()`.
 #[derive(Resource, Default, PartialEq)]
 pub struct GameClock {
     pub hour: u32,
@@ -277,7 +286,7 @@ pub struct GameClock {
 
 /// Snow line for normal weather: above every mountain cap, so only the
 /// style's `mountain_height` applies.
-pub const NORMAL_SNOW_LINE: f64 = 128.0;
+pub const NORMAL_SNOW_LINE: f64 = shared::world::NORMAL_SNOW_LINE as f64;
 
 /// Global weather. `snow_line` is the height above which everything is snow;
 /// as it falls towards 0 the water ices over (see `surface_style`).
@@ -318,12 +327,6 @@ impl ViewFacing {
         }
         (x, y)
     }
-}
-
-fn advance_clock(time: Res<Time>, mut clock: ResMut<GameClock>) {
-    let hour = (time.elapsed_secs() / SECONDS_PER_HOUR) as u32 % 24;
-    // Only write when it changes, so change detection stays meaningful.
-    clock.set_if_neq(GameClock { hour });
 }
 
 /// How an entity is shown on maps: a flat shape extruded upwards (a "token",

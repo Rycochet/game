@@ -23,10 +23,11 @@ use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
 use shared::feature::{FeatureKind, FeatureMap};
+use shared::movement::{WorldConditions, WorldGround};
 use shared::protocol::WorldInfo;
 use shared::site::Generator;
 use shared::surface::Surface;
-use shared::world::{WORLD_MAP_VERSION, WorldParams, WorldSeed};
+use shared::world::{NORMAL_SNOW_LINE, WORLD_MAP_VERSION, WorldParams, WorldSeed};
 
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
@@ -44,6 +45,9 @@ pub const DEFAULT_WORLD_SEED: u64 = 12345;
 /// How often what has changed is saved (it is also saved when a client
 /// leaves).
 const SAVE_EVERY: Duration = Duration::from_secs(5);
+
+/// How long an in-game hour takes.
+const GAME_HOUR: Duration = Duration::from_secs(60);
 
 /// The server sends what is visible from every walkable cell within this
 /// many steps of the player in a site, so the client can work out sight
@@ -85,6 +89,7 @@ impl Plugin for ServerPlugin {
                 Update,
                 (
                     connections::handle_messages,
+                    connections::next_hour.run_if(on_timer(GAME_HOUR)),
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),
                     exit_when_alone.run_if(|options: Res<ServerOptions>| options.exit_when_alone),
                 )
@@ -118,6 +123,13 @@ pub struct ServerWorld {
     pub features: FeatureMap,
     /// The world's width in grid points: `x` wraps at this.
     pub width: i64,
+    /// The ground as far as walking goes.
+    pub(crate) ground: WorldGround,
+    params: WorldParams,
+    /// The hour of the day (`0..24`). The tide follows it.
+    pub(crate) hour: u32,
+    /// Above it everything is frozen (not saved: normal weather on starting).
+    pub(crate) snow_line: u32,
     pub(crate) storage: Storage,
     /// The sites entered so far (loaded when first needed).
     sites: BTreeMap<SiteId, SiteSave>,
@@ -133,7 +145,7 @@ impl ServerWorld {
     /// The world saved in `storage`, or a new one (saved straight away). An
     /// error if the save can't be read or was made by a newer server.
     fn open(seed: WorldSeed, storage: Storage) -> Result<Self, String> {
-        match storage.load_world()? {
+        let hour = match storage.load_world()? {
             Some(save) => {
                 if save.format > SAVE_FORMAT {
                     return Err(format!(
@@ -151,22 +163,43 @@ impl ServerWorld {
                         save.world_map_version
                     ));
                 }
+                save.hour % 24
             }
-            None => storage.save_world(&WorldSave {
-                format: SAVE_FORMAT,
-                seed,
-                world_map_version: WORLD_MAP_VERSION,
-            }),
-        }
+            None => 0,
+        };
         let params = WorldParams::from_seed(seed.terrain());
-        Ok(Self {
+        let world = Self {
             features: FeatureMap::new(&params, seed.features()),
             width: Surface::new(&params).width(),
+            ground: WorldGround::new(&params),
+            params,
+            hour,
+            snow_line: NORMAL_SNOW_LINE,
             seed,
             storage,
             sites: BTreeMap::new(),
             unsaved_sites: Unsaved::default(),
-        })
+        };
+        world.save();
+        Ok(world)
+    }
+
+    /// Saves `world.ron`.
+    fn save(&self) {
+        self.storage.save_world(&WorldSave {
+            format: SAVE_FORMAT,
+            seed: self.seed,
+            world_map_version: WORLD_MAP_VERSION,
+            hour: self.hour,
+        });
+    }
+
+    /// What decides where can be walked now.
+    pub(crate) fn conditions(&self) -> WorldConditions {
+        WorldConditions {
+            water: self.params.water_level(self.hour as f64),
+            snow_line: self.snow_line as f64,
+        }
     }
 
     /// What is saved about a site (for a `kind` of feature): loaded, or new
