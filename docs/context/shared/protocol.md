@@ -32,4 +32,4 @@ The messages between clients and the server, and the `Link` that carries them. C
 
 - A `Link` carries postcard-encoded bytes, not the messages, also in single player: nothing can be shared between client and server by accident, and over the network the same bytes are one WebSocket binary message each.
 - When adding a message, add one of it to the round-trip test (`every_message`).
-- Compiles for wasm: the web client has the types, but no link until networking.
+- Compiles for wasm: the web client uses the same types and `wired()` links over the browser's WebSocket.

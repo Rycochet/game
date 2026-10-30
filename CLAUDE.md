@@ -44,7 +44,7 @@ Also: `docs/context/decisions.md` is the log of architecture decisions. Check it
 
 If a task touches a module not listed here, it doesn't exist yet: create it (see "Adding a module").
 
-Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`, a placeholder until networking), `xtask` (helper commands).
+Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`: the networked server, also serving the web client), `xtask` (helper commands).
 
 ## Module rules
 
