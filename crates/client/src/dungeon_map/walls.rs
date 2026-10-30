@@ -96,6 +96,8 @@ pub struct Layers {
     pub solid: Vec<Builder>,
     pub memory: Vec<Builder>,
     pub see_through: Builder,
+    /// Stairs in the way of a viewer, by surface.
+    pub stairs_through: Vec<Builder>,
     /// The solid wall faces, which block clicks.
     pub solid_faces: Vec<WallFace>,
 }

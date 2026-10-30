@@ -162,7 +162,7 @@ pub struct WorldInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::site::StairsDirection;
+    use crate::site::{StairsDirection, StairsStyle};
 
     /// One of every message, so a message that can't be sent fails here.
     fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
@@ -229,6 +229,7 @@ mod tests {
                     y: 16,
                     direction: StairsDirection::Down,
                     descends: (0, 1),
+                    style: StairsStyle::Spiral,
                 }],
                 remembered: true,
             }),

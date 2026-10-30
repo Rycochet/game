@@ -6,6 +6,8 @@
 //!   frozen) and rises back, as in the prototype.
 //! - K / C: cycle the player's token shape / attitude colour; X toggles
 //!   its "completed" state; Z cycles its icon size.
+//! - B: cycle what the current level's stairs are built as (only what is
+//!   drawn; the next level goes back to its own).
 //! - Esc: back to the starting point on the world map, out of any site
 //!   (dev tools: only the embedded server allows it).
 
@@ -14,7 +16,7 @@ use bevy::prelude::*;
 use shared::movement::Step;
 use shared::protocol::ClientMessage;
 
-use crate::common::{GameView, NORMAL_SNOW_LINE, Token, Weather};
+use crate::common::{CurrentDungeon, GameView, NORMAL_SNOW_LINE, Token, Weather};
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TakeStep};
 
@@ -30,7 +32,13 @@ impl Plugin for DemoPlugin {
             .init_resource::<TemperatureCycle>()
             .add_systems(
                 Update,
-                (toggle_modes, temperature_cycle, cycle_token, back_to_start),
+                (
+                    toggle_modes,
+                    temperature_cycle,
+                    cycle_token,
+                    cycle_stairs,
+                    back_to_start,
+                ),
             )
             .add_systems(
                 Update,
@@ -99,6 +107,15 @@ fn cycle_token(keys: Res<ButtonInput<KeyCode>>, mut token: Single<&mut Token, Wi
     }
     if keys.just_pressed(KeyCode::KeyZ) {
         token.size = token.size.next();
+    }
+}
+
+/// B moves every staircase on the level to the next style, to show them all.
+fn cycle_stairs(keys: Res<ButtonInput<KeyCode>>, mut dungeon: ResMut<CurrentDungeon>) {
+    if keys.just_pressed(KeyCode::KeyB) {
+        for stairs in &mut dungeon.stairs {
+            stairs.style = stairs.style.next();
+        }
     }
 }
 

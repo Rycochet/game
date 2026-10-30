@@ -14,6 +14,8 @@
 //!   don't make.
 //! - `GAME_MOVE=dx,dy`: two seconds after starting, step the player this far
 //!   (e.g. off the stairs they arrived on, to see them).
+//! - `GAME_STAIRS=n`: draw all stairs as this style (an index into
+//!   `StairsStyle::ALL`).
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked),
 //!   once at `GAME_POS` if set, otherwise two seconds after starting.
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
@@ -42,8 +44,11 @@ use shared::dungeon::Cell;
 use shared::feature::FeatureKind;
 use shared::movement::steps_between;
 use shared::protocol::ClientMessage;
+use shared::site::StairsStyle;
 
-use crate::common::{Attitude, GameView, MapPosition, Token, TokenShape, TokenSize, Weather};
+use crate::common::{
+    Attitude, CurrentDungeon, GameView, MapPosition, Token, TokenShape, TokenSize, Weather,
+};
 use crate::connection::ToServer;
 use crate::demo::AutoWalk;
 use crate::player::{Player, PlayerSystems, TakeStep, TravelTo};
@@ -116,6 +121,20 @@ impl Plugin for DevToolsPlugin {
                     }
                 },
             );
+        }
+
+        if let Some(style) = env::var("GAME_STAIRS")
+            .ok()
+            .and_then(|n| n.trim().parse::<usize>().ok())
+            .and_then(|n| StairsStyle::ALL.get(n).copied())
+        {
+            app.add_systems(Update, move |mut dungeon: ResMut<CurrentDungeon>| {
+                if dungeon.stairs.iter().any(|stairs| stairs.style != style) {
+                    for stairs in &mut dungeon.stairs {
+                        stairs.style = style;
+                    }
+                }
+            });
         }
 
         if let Some((dx, dy)) = env::var("GAME_MOVE").ok().and_then(|pos| parse_pos(&pos)) {

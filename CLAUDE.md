@@ -40,11 +40,11 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: surface_style | `crates/client/src/surface_style/` | `docs/context/client/surface_style.md` | Planet colour bands and thresholds              |
 | client: view3d      | `crates/client/src/view3d/`     | `docs/context/client/view3d.md`       | Shared 3D camera (turn, tilt, zoom), entity tokens, token clicks, `ViewGrid` |
 | client: world_map   | `crates/client/src/world_map/`  | `docs/context/client/world_map.md`    | 3D terrain window cut to the camera, edge faces, sun, click picking, feature tokens |
-| client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: textured floors and thin 3D walls, doors and windows by theme, 3D stairs, liquid channels, sight, see-through walls, grid light, memory in grey |
+| client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: textured floors and thin 3D walls, doors and windows by theme, 3D stairs in seven styles, liquid channels, sight, see-through walls, grid light, memory in grey |
 | client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Asking the server to enter sites, take stairs, leave; applying its level messages |
-| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size, Esc back to the start |
+| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size, B stairs style, Esc back to the start |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, red connection status              |
-| client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, travel, walk, snow, camera view, screenshots |
+| client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, stairs style, travel, walk, snow, camera view, screenshots |
 
 Also: `docs/context/decisions.md` is the log of architecture decisions. Check it before proposing a structural change, and follow what it records.
 

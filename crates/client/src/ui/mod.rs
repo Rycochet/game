@@ -93,7 +93,7 @@ fn update_status_text(
          Right-drag: turn / tilt map  Wheel: zoom  Home: reset view\n\
          Ctrl+click: teleport  Alt+click: change a site's cell  Esc: back to the start\n\
          G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})\n\
-         K / C / X / Z: token shape / colour / completed / size\n\
+         K / C / X / Z: token shape / colour / completed / size  B: stairs style\n\
          Position {}, {}  Hour {}\n{}",
         on_off(walk.0),
         weather.snow_line,
