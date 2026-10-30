@@ -67,6 +67,25 @@ pub fn step_on_level(level: &Level, from: (i64, i64), step: Step) -> Option<(i64
     (level.cell(x, y).is_liquid() && level.is_walkable(far_x, far_y)).then_some((far_x, far_y))
 }
 
+/// What a step costs per cell it covers, in units of time: walking is timed by
+/// distance, so a diagonal takes about 1.414 times as long as a straight step.
+/// Whole numbers, because game state is (99 / 70 is within 0.01% of the root).
+pub const STRAIGHT_COST: u32 = 70;
+pub const DIAGONAL_COST: u32 = 99;
+
+/// What moving from one point to another by a single step costs: a jump over
+/// liquid covers two cells, so it costs two steps' worth. Only for a step
+/// `step_on_level` has allowed. (Terrain costs will go here.)
+pub fn step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
+    let (dx, dy) = (to.0 - from.0, to.1 - from.1);
+    let per_cell = if dx != 0 && dy != 0 {
+        DIAGONAL_COST
+    } else {
+        STRAIGHT_COST
+    };
+    per_cell * dx.abs().max(dy.abs()) as u32
+}
+
 /// Where `step` from `(x, y)` leads on the world map: anywhere, for now
 /// (no terrain stops anyone yet).
 pub fn step_on_world_map(from: (i64, i64), step: Step) -> (i64, i64) {
@@ -134,6 +153,14 @@ mod tests {
         // Nor with a wall to land on.
         level.set(2, 0, Cell::Wall);
         assert_eq!(step_on_level(&level, (0, 0), east), None);
+    }
+
+    #[test]
+    fn steps_cost_the_distance_they_cover() {
+        assert_eq!(step_cost((0, 0), (1, 0)), STRAIGHT_COST);
+        assert_eq!(step_cost((0, 0), (-1, 1)), DIAGONAL_COST);
+        assert_eq!(step_cost((0, 0), (0, -2)), 2 * STRAIGHT_COST);
+        assert_eq!(step_cost((0, 0), (2, 2)), 2 * DIAGONAL_COST);
     }
 
     #[test]

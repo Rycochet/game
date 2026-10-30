@@ -6,8 +6,11 @@
 //! the server may put right.
 
 use bevy::math::DVec2;
+use std::collections::VecDeque;
+
 use bevy::prelude::*;
 use shared::movement::{Step, step_on_level, steps_between};
+use shared::pathfinding::{find_path, straighten};
 
 use crate::common::{
     CurrentDungeon, GameView, Icon, LightSource, MapPosition, ServerStatus, SmoothPosition, Token,
@@ -70,8 +73,10 @@ pub enum PlayerSystems {
 #[derive(Component)]
 pub struct Player;
 
-/// Ask the player to travel to a grid point at constant speed. A new request
-/// replaces the current one, starting from wherever the player is.
+/// Ask the player to travel to a grid point at constant speed: in a dungeon,
+/// by the quickest way through the cells they know, as far towards it as they
+/// can get. A new request replaces the current one, starting from wherever the
+/// player is.
 #[derive(Message, Clone, Copy, Debug)]
 pub struct TravelTo {
     pub x: i64,
@@ -79,7 +84,8 @@ pub struct TravelTo {
 }
 
 /// The player has finished travelling to a grid point (sent once, when it
-/// gets there). Not sent for keyboard steps or other direct moves.
+/// gets there). Not sent for keyboard steps or other direct moves, nor for a
+/// journey that stopped short of where it was asked to go.
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Arrived {
     pub x: i64,
@@ -113,7 +119,12 @@ impl Stepped {
 /// Travel state, private to this module.
 #[derive(Component, Default)]
 struct Travel {
+    /// Where a journey on the world map is going, in a straight line.
     target: Option<DVec2>,
+    /// The cells a journey in a dungeon has still to reach, in order.
+    route: VecDeque<(i64, i64)>,
+    /// Whether the route ends where the journey was asked to go.
+    route_arrives: bool,
     /// The `MapPosition` this module last set, to notice other changes.
     last: MapPosition,
     /// The cell a jump over liquid is landing on. The player is already there
@@ -211,6 +222,7 @@ fn take_steps(
             // A jump replaces any journey, as a step does, and is shown in
             // `travel` instead of jumping there at once.
             travel.target = None;
+            travel.route.clear();
             travel.last = *position;
             travel.jump = Some(*position);
         }
@@ -228,15 +240,13 @@ const MOVE_KEYS: [KeyCode; 8] = [
     KeyCode::KeyS,
 ];
 
-/// Moves towards the requested point at constant speed, always ending exactly
-/// on it, announcing each step. Any other change to `MapPosition` (a step,
-/// the server) cancels travel and jumps there. Walls don't stop it (TEMPORARY
-/// until pathfinding: the server refuses the step into the wall, and puts
-/// the player back, which ends the journey). Reaching the edge of a liquid
-/// cell starts a jump over it if it can be crossed, and ends the journey there
-/// if not. A jump is shown from here too: straight to the cell it lands on,
-/// whatever is asked for meanwhile. A journey carries on from that cell's
-/// edge; otherwise the jump ends on its centre.
+/// Moves along the journey at constant speed, always ending exactly on its last
+/// point, announcing each step. On the world map that is a straight line; in a
+/// dungeon, the route found when it was asked for. Any other change to
+/// `MapPosition` (a step, the server) cancels travel and jumps there. A step
+/// is taken on leaving a cell, and a jump is shown from here too: straight to
+/// the cell it lands on, whatever is asked for meanwhile. A journey carries on
+/// from that cell's edge; otherwise the jump ends on its centre.
 #[allow(clippy::too_many_arguments)]
 fn travel(
     time: Res<Time>,
@@ -251,6 +261,7 @@ fn travel(
 
     if *tile != travel.last {
         travel.target = None;
+        travel.route.clear();
         travel.jump = None;
         travel.last = *tile;
         *smooth = SmoothPosition {
@@ -260,7 +271,23 @@ fn travel(
     }
 
     if let Some(request) = requests.read().last() {
-        travel.target = Some(DVec2::new(request.x as f64, request.y as f64));
+        if *view.get() == GameView::Dungeon {
+            // Only through cells the player has seen, so that a route gives
+            // nothing away (and memory may be out of date: the server checks).
+            let from = (tile.x, tile.y);
+            let to = (request.x, request.y);
+            let known = |x, y| dungeon.remembered.is_seen(x, y);
+            let path = find_path(&dungeon.level, from, to, None, known);
+            let path = straighten(&dungeon.level, from, &path, known);
+            travel.route_arrives = path.reached;
+            travel.route = path.cells.into();
+            if travel.route.is_empty() {
+                // Nowhere to go: back to the middle of this cell.
+                travel.route.push_back(from);
+            }
+        } else {
+            travel.target = Some(DVec2::new(request.x as f64, request.y as f64));
+        }
     }
 
     let from = DVec2::new(smooth.x, smooth.y);
@@ -277,9 +304,55 @@ fn travel(
         let now = towards(from, to, distance);
         *smooth = SmoothPosition { x: now.x, y: now.y };
         let over_its_edge = nearest_cell(now) == landing;
-        if now == to || (travel.target.is_some() && over_its_edge) {
+        if now == to || (!travel.route.is_empty() && over_its_edge) {
             travel.jump = None;
         }
+        return;
+    }
+
+    if !travel.route.is_empty() {
+        let mut now = from;
+        let mut left = distance;
+        let mut at = (tile.x, tile.y);
+        // Normally part of one step a frame, but a slow frame may cover more.
+        while let Some(&next) = travel.route.front() {
+            let to = DVec2::new(next.0 as f64, next.1 as f64);
+            let moved = towards(now, to, left);
+            left -= now.distance(moved);
+            now = moved;
+            let out_of_cell = (now - DVec2::new(at.0 as f64, at.1 as f64))
+                .abs()
+                .max_element()
+                >= 0.5;
+            if next != at && out_of_cell {
+                let step = Step::new((next.0 - at.0).signum(), (next.1 - at.1).signum())
+                    .expect("the next cell isn't this one");
+                // The route was legal when it was found, but cells can change.
+                if step_on_level(&dungeon.level, at, step) != Some(next) {
+                    travel.route.clear();
+                    now = DVec2::new(at.0 as f64, at.1 as f64);
+                    break;
+                }
+                stepped.write(Stepped::between(step, at, next));
+                let jumped = next != step.from(at);
+                at = next;
+                if jumped {
+                    travel.jump = Some(MapPosition { x: at.0, y: at.1 });
+                    break;
+                }
+            }
+            if now != to {
+                break;
+            }
+            travel.route.pop_front();
+            if travel.route.is_empty() && travel.route_arrives {
+                arrived.write(Arrived { x: at.0, y: at.1 });
+            }
+        }
+        *smooth = SmoothPosition { x: now.x, y: now.y };
+        let reached = MapPosition { x: at.0, y: at.1 };
+        tile.set_if_neq(reached);
+        travel.last = reached;
         return;
     }
 
@@ -292,32 +365,8 @@ fn travel(
     let mut at = (tile.x, tile.y);
     for step in steps_between(at, (nearest.x, nearest.y)) {
         let next = step.from(at);
-        let liquid =
-            *view.get() == GameView::Dungeon && dungeon.level.cell(next.0, next.1).is_liquid();
-        if !liquid {
-            stepped.write(Stepped::between(step, at, next));
-            at = next;
-            continue;
-        }
-        // The edge of the liquid: the journey can't go on the way it was.
-        if let Some(landing) = step_on_level(&dungeon.level, at, step) {
-            stepped.write(Stepped::between(step, at, landing));
-            at = landing;
-            travel.jump = Some(MapPosition {
-                x: landing.0,
-                y: landing.1,
-            });
-        } else {
-            travel.target = None;
-            *smooth = SmoothPosition {
-                x: at.0 as f64,
-                y: at.1 as f64,
-            };
-        }
-        let stopped_at = MapPosition { x: at.0, y: at.1 };
-        tile.set_if_neq(stopped_at);
-        travel.last = stopped_at;
-        return;
+        stepped.write(Stepped::between(step, at, next));
+        at = next;
     }
 
     if now == target {
