@@ -603,6 +603,7 @@ mod pictures {
                                 Cell::Ground => ',',
                                 Cell::Water => '~',
                                 Cell::Lava => '^',
+                                Cell::Window => 'W',
                             }
                         })
                         .collect();

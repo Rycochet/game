@@ -10,6 +10,8 @@ use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::SeenStairs;
 use shared::site::StairsDirection;
 
+use super::theme::Shape;
+use super::walls::{Layers, Scene, build_opening, build_wall};
 use super::{AMBIENT_LIGHT, CELL_SIZE, WALL_HEIGHT};
 
 /// Steps in a flight of stairs.
@@ -41,32 +43,31 @@ pub enum Surface {
     Ground,
     Water,
     Lava,
+    /// The wall's picture fading out across the floor beside a natural wall.
+    WallBlend,
 }
 
 impl Surface {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Floor,
         Self::Wall,
         Self::Door,
         Self::Ground,
         Self::Water,
         Self::Lava,
+        Self::WallBlend,
     ];
 
-    /// The surface a flat (open) cell is drawn with.
-    fn of_flat(cell: Cell) -> Self {
+    /// The surface the floor of a cell is drawn with.
+    pub fn of_flat(cell: Cell) -> Self {
         match cell {
-            Cell::Door => Self::Door,
             Cell::Ground => Self::Ground,
             Cell::Water => Self::Water,
             Cell::Lava => Self::Lava,
-            Cell::Floor | Cell::Wall | Cell::SecretDoor => Self::Floor,
+            Cell::Floor | Cell::Wall | Cell::SecretDoor | Cell::Door | Cell::Window => Self::Floor,
         }
     }
 }
-
-/// The four sides of a cell, as grid steps (`y` south).
-const SIDES: [(i64, i64); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
 
 /// How much light reaches each cell of a level, as linear RGB from 0 (only
 /// the dull ambient light) to 1 (fully lit).
@@ -127,7 +128,7 @@ impl LightGrid {
     /// north-west corner of cell `(x, y)`): the average over the open cells
     /// around it, so light fades smoothly across floors without leaking out
     /// of walls. `None` if no open cell touches it.
-    fn corner(&self, level: &Level, x: i64, y: i64) -> Option<Vec3> {
+    pub fn corner(&self, level: &Level, x: i64, y: i64) -> Option<Vec3> {
         let mut total = Vec3::ZERO;
         let mut count = 0.0;
         for (cx, cy) in [(x - 1, y - 1), (x, y - 1), (x - 1, y), (x, y)] {
@@ -147,17 +148,19 @@ pub struct View {
     pub sight: Sight,
 }
 
-/// A wall side drawn solid, kept for click picking: its centre and the way
-/// it faces.
+/// A piece of wall drawn solid, kept for click picking: its centre, the way
+/// it faces, and half its size along the wall and up it.
 #[derive(Clone, Copy, Debug)]
 pub struct WallFace {
     pub centre: Vec3,
     pub normal: Vec3,
+    pub half_across: f32,
+    pub half_up: f32,
 }
 
 /// How bright remembered (out of sight) surfaces are drawn, on their grey
 /// pictures.
-const MEMORY_SHADE: f32 = 0.45;
+pub const MEMORY_SHADE: f32 = 0.3;
 
 /// The meshes the dungeon is drawn with.
 pub struct DungeonMeshes {
@@ -180,7 +183,8 @@ pub struct DungeonMeshes {
 /// by `light`, and for the rest of `remembered` (which includes what is in
 /// sight) in grey, with `stairs` drawn in 3D. Only remembered cells are
 /// drawn: cells the client doesn't know may be in sight as wall. `camera` is
-/// the camera's position.
+/// the camera's position, `shape` how the place's walls are built.
+#[allow(clippy::too_many_arguments)]
 pub fn build(
     level: &Level,
     views: &[View],
@@ -189,11 +193,23 @@ pub fn build(
     light: &LightGrid,
     stairs: &[SeenStairs],
     camera: Vec3,
+    shape: Shape,
 ) -> DungeonMeshes {
-    let mut solid: Vec<Builder> = Surface::ALL.iter().map(|_| Builder::default()).collect();
-    let mut memory: Vec<Builder> = Surface::ALL.iter().map(|_| Builder::default()).collect();
-    let mut see_through = Builder::default();
-    let mut solid_faces = Vec::new();
+    let mut layers = Layers {
+        solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
+        memory: Surface::ALL.iter().map(|_| Builder::default()).collect(),
+        see_through: Builder::default(),
+        solid_faces: Vec::new(),
+    };
+    let scene = Scene {
+        level,
+        views,
+        sight,
+        remembered,
+        light,
+        camera,
+        shape,
+    };
     let (min_x, min_y, width, height) = level.bounds();
 
     for y in min_y..min_y + height {
@@ -201,58 +217,24 @@ pub fn build(
             if !remembered.is_seen(x, y) {
                 continue;
             }
-            let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
-            let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
-            if !sight.is_seen(x, y) {
-                build_remembered(&mut memory, level, remembered, (x, y), found, camera);
-                continue;
-            }
-            if level.is_open(x, y) {
-                let floor_light = |p| corner_light(level, light, p).unwrap_or(light.at(x, y));
-                match found {
-                    Some(found) => {
-                        let lit = with_ambient(light.at(x, y));
-                        let floor_colour = |p| with_ambient(floor_light(p));
-                        build_stairs(&mut solid, found, lit, &floor_colour);
-                    }
-                    None => {
-                        let surface = Surface::of_flat(level.cell(x, y));
-                        solid[surface as usize].face(centre, Vec3::Y, CELL_SIZE / 2.0, floor_light);
-                    }
-                }
-                continue;
-            }
-
-            // Only the sides someone sees; never the top.
-            let sides = visible_sides(level, views, (x, y));
-            // Sides facing only remembered cells (the outside of a wall seen
-            // from inside) are drawn as memory.
-            for side in SIDES.into_iter().filter(|side| !sides.contains(side)) {
-                let (nx, ny) = (x + side.0, y + side.1);
-                if !sight.is_seen(nx, ny) {
-                    grey_wall_side(&mut memory, level, remembered, (x, y), side, camera);
-                }
-            }
-            for (dx, dy) in sides {
-                let normal = Vec3::new(dx as f32, 0.0, dy as f32);
-                let middle = centre + normal * (CELL_SIZE / 2.0) + Vec3::Y * (WALL_HEIGHT / 2.0);
-                let builder = if faces_camera(middle, normal, camera) {
-                    solid_faces.push(WallFace {
-                        centre: middle,
-                        normal,
-                    });
-                    &mut solid[Surface::Wall as usize]
-                } else {
-                    &mut see_through
-                };
-                let (nx, ny) = (x + dx, y + dy);
-                builder.face(middle, normal, CELL_SIZE / 2.0, |p| {
-                    corner_light(level, light, p).unwrap_or(light.at(nx, ny))
-                });
+            let cell = level.cell(x, y);
+            if cell.is_wall() {
+                build_wall(&mut layers, &scene, (x, y));
+            } else if cell.is_opening() {
+                build_opening(&mut layers, &scene, (x, y));
+            } else {
+                let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
+                build_open_cell(&mut layers, &scene, (x, y), found);
             }
         }
     }
 
+    let Layers {
+        solid,
+        memory,
+        see_through,
+        solid_faces,
+    } = layers;
     DungeonMeshes {
         has_solid: solid.iter().map(|b| !b.indices.is_empty()).collect(),
         solid: solid.into_iter().map(Builder::into_mesh).collect(),
@@ -264,60 +246,47 @@ pub fn build(
     }
 }
 
-/// A remembered cell out of sight, evenly shaded on the grey pictures: a
-/// floor (or stairs), or a wall's sides that face a remembered open cell and
-/// the camera (sides facing away are left out, so memory stays quiet).
-fn build_remembered(
-    memory: &mut [Builder],
-    level: &Level,
-    remembered: &Sight,
+/// A flat open cell, or stairs: lit if in sight, otherwise as memory.
+fn build_open_cell(
+    layers: &mut Layers,
+    scene: &Scene,
     (x, y): (i64, i64),
     stairs: Option<&SeenStairs>,
-    camera: Vec3,
 ) {
-    let grey = Vec3::splat(MEMORY_SHADE);
+    let Scene { level, light, .. } = *scene;
     let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
-    if level.is_open(x, y) {
+    let surface = Surface::of_flat(level.cell(x, y));
+    if !scene.sight.is_seen(x, y) {
+        let grey = Vec3::splat(MEMORY_SHADE);
         match stairs {
-            Some(found) => build_stairs(memory, found, grey, &|_| grey),
+            Some(found) => build_stairs(&mut layers.memory, found, grey, &|_| grey),
             None => {
-                let surface = Surface::of_flat(level.cell(x, y));
                 let half = CELL_SIZE / 2.0;
-                memory[surface as usize].quad(centre, Vec3::Y, Vec3::NEG_Z, (half, half), |_| grey);
+                layers.memory[surface as usize].quad(
+                    centre,
+                    Vec3::Y,
+                    Vec3::NEG_Z,
+                    (half, half),
+                    |_| grey,
+                );
             }
         }
         return;
     }
-    for side in SIDES {
-        grey_wall_side(memory, level, remembered, (x, y), side, camera);
+    let floor_light = |p| corner_light(level, light, p).unwrap_or(light.at(x, y));
+    match stairs {
+        Some(found) => {
+            let lit = with_ambient(light.at(x, y));
+            let floor_colour = |p| with_ambient(floor_light(p));
+            build_stairs(&mut layers.solid, found, lit, &floor_colour);
+        }
+        None => {
+            layers.solid[surface as usize].face(centre, Vec3::Y, CELL_SIZE / 2.0, floor_light);
+        }
     }
 }
 
-/// One side of the wall at `(x, y)`, as memory, if it faces a remembered
-/// open cell and the camera.
-fn grey_wall_side(
-    memory: &mut [Builder],
-    level: &Level,
-    remembered: &Sight,
-    (x, y): (i64, i64),
-    (dx, dy): (i64, i64),
-    camera: Vec3,
-) {
-    let (nx, ny) = (x + dx, y + dy);
-    if !level.is_open(nx, ny) || !remembered.is_seen(nx, ny) {
-        return;
-    }
-    let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
-    let normal = Vec3::new(dx as f32, 0.0, dy as f32);
-    let middle = centre + normal * (CELL_SIZE / 2.0) + Vec3::Y * (WALL_HEIGHT / 2.0);
-    if faces_camera(middle, normal, camera) {
-        let grey = Vec3::splat(MEMORY_SHADE);
-        let half = (CELL_SIZE / 2.0, WALL_HEIGHT / 2.0);
-        memory[Surface::Wall as usize].quad(middle, normal, Vec3::Y, half, |_| grey);
-    }
-}
-
-/// A flight of steps half a cell wide down the middle of the stairs' cell,
+// A flight of steps half a cell wide down the middle of the stairs' cell,
 /// running the way they go down (`SeenStairs::descends`): stairs up stand
 /// on the floor and climb to `STAIRS_UP_HEIGHT`; stairs down go into a hole
 /// `STAIRS_DOWN_DEPTH` deep with floor either side. Stairs up are built of
@@ -416,7 +385,7 @@ fn build_stairs(
 }
 
 /// A vertex colour: `light` on top of the dull ambient light.
-fn with_ambient(light: Vec3) -> Vec3 {
+pub fn with_ambient(light: Vec3) -> Vec3 {
     AMBIENT_LIGHT + (Vec3::ONE - AMBIENT_LIGHT) * light
 }
 
@@ -427,27 +396,7 @@ fn corner_light(level: &Level, light: &LightGrid, position: Vec3) -> Option<Vec3
     light.corner(level, x, y)
 }
 
-/// The sides of the wall at `wall` that someone sees, as grid steps
-/// outwards. A viewer sees a side when it sees the wall and the open cell in
-/// front of that side, and stands on that side of the wall, so one viewer
-/// sees at most two sides.
-pub fn visible_sides(level: &Level, views: &[View], (x, y): (i64, i64)) -> Vec<(i64, i64)> {
-    SIDES
-        .into_iter()
-        .filter(|&(dx, dy)| {
-            let (nx, ny) = (x + dx, y + dy);
-            level.is_open(nx, ny)
-                && views.iter().any(|view| {
-                    let (vx, vy) = view.cell;
-                    view.sight.is_seen(x, y)
-                        && view.sight.is_seen(nx, ny)
-                        && dx * (vx - x) + dy * (vy - y) > 0
-                })
-        })
-        .collect()
-}
-
-/// Whether a wall side (centred on `centre`, facing `normal`) faces the
+// Whether a wall side (centred on `centre`, facing `normal`) faces the
 /// camera at `camera`: the camera is in front of the side's plane. Measured
 /// from the camera's real position (not just the way it looks), so a side
 /// square-on to the view turns away only once the camera passes its plane.
@@ -457,12 +406,12 @@ pub fn faces_camera(centre: Vec3, normal: Vec3, camera: Vec3) -> bool {
 
 /// Collects quads into one mesh.
 #[derive(Default)]
-struct Builder {
-    positions: Vec<[f32; 3]>,
+pub struct Builder {
+    pub positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     uvs: Vec<[f32; 2]>,
     colours: Vec<[f32; 4]>,
-    indices: Vec<u32>,
+    pub indices: Vec<u32>,
 }
 
 impl Builder {
@@ -529,6 +478,51 @@ impl Builder {
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
     }
 
+    /// Any four-cornered surface, with its picture coordinates and vertex
+    /// colours. The corners go round it either way: `normal` says which side
+    /// is the front.
+    pub fn free(
+        &mut self,
+        positions: [Vec3; 4],
+        normal: Vec3,
+        uvs: [[f32; 2]; 4],
+        colours: [Vec3; 4],
+    ) {
+        self.faded(positions, normal, uvs, colours, [1.0; 4]);
+    }
+
+    /// A surface as `free`, with an opacity at each corner (which only shows
+    /// on a blended material).
+    pub fn faded(
+        &mut self,
+        mut positions: [Vec3; 4],
+        normal: Vec3,
+        mut uvs: [[f32; 2]; 4],
+        mut colours: [Vec3; 4],
+        mut opacity: [f32; 4],
+    ) {
+        if (positions[1] - positions[0])
+            .cross(positions[2] - positions[0])
+            .dot(normal)
+            < 0.0
+        {
+            positions.reverse();
+            uvs.reverse();
+            colours.reverse();
+            opacity.reverse();
+        }
+        let first = self.positions.len() as u32;
+        for i in 0..4 {
+            let lit = colours[i];
+            self.positions.push(positions[i].to_array());
+            self.normals.push(normal.to_array());
+            self.uvs.push(uvs[i]);
+            self.colours.push([lit.x, lit.y, lit.z, opacity[i]]);
+        }
+        self.indices
+            .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
+    }
+
     fn into_mesh(self) -> Mesh {
         Mesh::new(
             PrimitiveTopology::TriangleList,
@@ -561,21 +555,192 @@ mod tests {
             .collect()
     }
 
+    /// The solid faces of a level seen by viewers, with the camera straight
+    /// above a point well to the south, so it sees everything facing south.
+    fn faces_seen(level: &Level, cells: &[(i64, i64)]) -> Vec<WallFace> {
+        let views = views_from(level, cells);
+        let mut sight = Sight::new(level);
+        for view in &views {
+            sight.add_view(level, view.cell.0, view.cell.1, None);
+        }
+        let light = LightGrid::new(level);
+        let camera = Vec3::new(0.0, 600.0, 2000.0);
+        build(
+            level,
+            &views,
+            &sight,
+            &sight,
+            &light,
+            &[],
+            camera,
+            Shape::Built,
+        )
+        .solid_faces
+    }
+
+    /// A row of wall with floor all round it, in a big room.
+    fn room_with_wall() -> Level {
+        let mut level = Level::new(-8, -8, 17, 17);
+        for y in -7..=7 {
+            for x in -7..=7 {
+                level.set(x, y, Cell::Floor);
+            }
+        }
+        for x in -2..=2 {
+            level.set(x, 0, Cell::Wall);
+        }
+        level
+    }
+
     #[test]
-    fn only_sides_facing_a_viewer_are_seen() {
-        let level = Level::test_room();
-        let views = views_from(&level, &[(0, 0)]);
-        // The north wall shows its south side; the short wall its east side.
-        assert_eq!(visible_sides(&level, &views, (0, -4)), [(0, 1)]);
-        assert_eq!(visible_sides(&level, &views, (-2, -1)), [(1, 0)]);
-        // A corner shows nothing.
-        assert!(visible_sides(&level, &views, (8, -4)).is_empty());
-        // Diagonally off its end, two sides.
-        let views = views_from(&level, &[(-1, -2)]);
-        assert_eq!(visible_sides(&level, &views, (-2, -1)), [(0, -1), (1, 0)]);
-        // A second viewer adds the sides it sees.
-        let views = views_from(&level, &[(0, 0), (-4, 0)]);
-        assert_eq!(visible_sides(&level, &views, (-2, 0)), [(1, 0), (-1, 0)]);
+    fn only_the_side_of_a_wall_facing_a_viewer_is_drawn() {
+        let level = room_with_wall();
+        let thin = CELL_SIZE * 0.05;
+        // From the south, the wall's south faces show.
+        let on_wall =
+            |face: &&WallFace| face.centre.z.abs() < CELL_SIZE && face.centre.x.abs() < 24.0;
+        let south = faces_seen(&level, &[(0, 3)]);
+        let south: Vec<_> = south.iter().filter(on_wall).collect();
+        assert!(!south.is_empty());
+        for face in south {
+            assert_eq!(face.normal, Vec3::Z);
+            assert!((face.centre.z - thin).abs() < 0.01);
+        }
+        // From the north it shows none (those faces are turned from the
+        // camera, so aren't solid).
+        let north = faces_seen(&level, &[(0, -3)]);
+        assert_eq!(north.iter().filter(on_wall).count(), 0);
+    }
+
+    /// A viewer in line with a wall sees both its sides, both see-through,
+    /// whichever way the camera is.
+    #[test]
+    fn walls_seen_side_on_are_drawn_see_through() {
+        let mut level = room_with_wall();
+        for x in -2..=2 {
+            level.set(x, 0, Cell::Floor);
+        }
+        for y in -5..=-1 {
+            level.set(0, y, Cell::Wall);
+        }
+        let views = views_from(&level, &[(0, 3)]);
+        let sight = &views[0].sight;
+        let light = LightGrid::new(&level);
+        // East of the wall's line, so its east sides face the camera.
+        let camera = Vec3::new(500.0, 600.0, 900.0);
+        let shape = Shape::Built;
+        let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+        assert!(meshes.has_see_through);
+        let on_the_wall = meshes
+            .solid_faces
+            .iter()
+            .filter(|face| face.centre.x.abs() < CELL_SIZE)
+            .filter(|face| (-6.0 * CELL_SIZE..-CELL_SIZE / 2.0).contains(&face.centre.z));
+        assert_eq!(on_the_wall.count(), 0);
+    }
+
+    /// The far side of a column, or of a wall's end, shows from round the
+    /// corner: it is drawn as memory, not left as a hole.
+    #[test]
+    fn remembered_far_sides_are_drawn_as_memory() {
+        let mut level = room_with_wall();
+        for x in -2..=2 {
+            level.set(x, 0, Cell::Floor);
+        }
+        level.set(0, 0, Cell::Wall);
+        let views = views_from(&level, &[(0, 3)]);
+        let sight = &views[0].sight;
+        let light = LightGrid::new(&level);
+        // North of the column, so its north side faces the camera.
+        let camera = Vec3::new(0.0, 600.0, -900.0);
+        let shape = Shape::Built;
+        let north_side = |meshes: &DungeonMeshes| {
+            meshes.memory[Surface::Wall as usize]
+                .attribute(Mesh::ATTRIBUTE_POSITION)
+                .and_then(|values| values.as_float3())
+                .unwrap()
+                .iter()
+                .any(|p| (p[2] + CELL_SIZE * 0.05).abs() < 0.01 && p[1] < 0.01)
+        };
+        let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+        assert!(north_side(&meshes));
+    }
+
+    /// The floor of a wall's cell, seen from the south, stops at the wall's
+    /// foot; only natural walls fade into the floor.
+    #[test]
+    fn floors_stop_at_the_foot_of_the_wall() {
+        use super::super::walls::half_thickness;
+        let level = room_with_wall();
+        let views = views_from(&level, &[(0, 3)]);
+        let sight = &views[0].sight;
+        let light = LightGrid::new(&level);
+        let camera = Vec3::new(0.0, 600.0, 900.0);
+        for shape in [Shape::Built, Shape::Natural] {
+            let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+            let positions = meshes.solid[Surface::Floor as usize]
+                .attribute(Mesh::ATTRIBUTE_POSITION)
+                .and_then(|values| values.as_float3())
+                .unwrap();
+            let foot = half_thickness(shape, 0.0);
+            // The wall's cell: x within -2..=2 and z on row 0.
+            let in_cell = positions
+                .iter()
+                .filter(|p| p[0].abs() < 2.0 * CELL_SIZE && p[2].abs() < CELL_SIZE / 2.0 - 0.01);
+            let nearest = in_cell.map(|p| p[2].abs()).fold(f32::MAX, f32::min);
+            assert!((nearest - foot).abs() < 0.01, "{shape:?}: {nearest}");
+            let blends = meshes.has_solid[Surface::WallBlend as usize];
+            assert_eq!(blends, shape == Shape::Natural);
+        }
+    }
+
+    #[test]
+    fn a_door_is_a_wall_with_a_hole() {
+        let mut level = room_with_wall();
+        level.set(0, 0, Cell::Door);
+        let faces = faces_seen(&level, &[(0, 3)]);
+        // Beside the hole and above it, not across the bottom of it.
+        let at_door = |x: f32| {
+            faces.iter().any(|face| {
+                let across = (face.centre.x - x).abs() <= face.half_across;
+                let up = (face.centre.y - 2.0).abs() <= face.half_up;
+                face.normal == Vec3::Z && face.centre.z.abs() < CELL_SIZE && across && up
+            })
+        };
+        assert!(at_door(CELL_SIZE * 0.45));
+        assert!(!at_door(0.0));
+        assert!(
+            faces
+                .iter()
+                .any(|face| { face.centre.x.abs() < 0.01 && face.centre.y > WALL_HEIGHT * 0.78 })
+        );
+    }
+
+    #[test]
+    fn a_window_has_a_taller_sill_than_lintel() {
+        let mut level = room_with_wall();
+        level.set(0, 0, Cell::Window);
+        let faces = faces_seen(&level, &[(0, 3)]);
+        let mut over_hole: Vec<_> = faces
+            .iter()
+            .filter(|face| face.centre.x.abs() < 0.01 && face.normal == Vec3::Z)
+            .filter(|face| face.centre.z.abs() < CELL_SIZE)
+            .collect();
+        over_hole.sort_by(|a, b| a.centre.y.total_cmp(&b.centre.y));
+        let [sill, lintel] = over_hole[..] else {
+            panic!("{over_hole:?}");
+        };
+        assert!(sill.half_up > lintel.half_up);
+    }
+
+    #[test]
+    fn natural_walls_are_narrowest_half_way_up() {
+        use super::super::walls::half_thickness;
+        let middle = half_thickness(Shape::Natural, WALL_HEIGHT / 2.0);
+        assert!((middle - CELL_SIZE * 0.05).abs() < 0.01);
+        assert!(half_thickness(Shape::Natural, 0.0) > middle * 2.0);
+        assert!(half_thickness(Shape::Natural, WALL_HEIGHT) > middle * 2.0);
+        assert_eq!(half_thickness(Shape::Built, 0.0), middle);
     }
 
     #[test]
@@ -620,21 +785,42 @@ mod tests {
         let light = LightGrid::new(&level);
         let camera = Vec3::new(0.0, 600.0, 900.0);
         let sight = &views[0].sight;
-        let meshes = build(&level, &views, sight, sight, &light, &[], camera);
+        let shape = Shape::Built;
+        let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
         assert!(meshes.has_solid.iter().any(|&has| has));
         // The south wall's inner sides face away from the camera.
         assert!(meshes.has_see_through);
         assert!(!meshes.solid_faces.is_empty());
-        // Everything is in sight, so nothing is only remembered.
-        assert!(meshes.has_memory.iter().all(|&has| !has));
+        // In a plain room everything is in sight, so nothing is only
+        // remembered. (The short wall above has a far side, drawn as memory.)
+        let mut room = Level::new(-4, -4, 9, 9);
+        for y in -3..=3 {
+            for x in -3..=3 {
+                room.set(x, y, Cell::Floor);
+            }
+        }
+        let room_views = views_from(&room, &[(0, 0)]);
+        let room_sight = &room_views[0].sight;
+        let room_light = LightGrid::new(&room);
+        let plain = build(
+            &room,
+            &room_views,
+            room_sight,
+            room_sight,
+            &room_light,
+            &[],
+            camera,
+            shape,
+        );
+        assert!(plain.has_memory.iter().all(|&has| !has));
 
         let nothing = Sight::new(&level);
-        let meshes = build(&level, &[], &nothing, &nothing, &light, &[], camera);
+        let meshes = build(&level, &[], &nothing, &nothing, &light, &[], camera, shape);
         assert!(meshes.has_solid.iter().all(|&has| !has));
         assert!(!meshes.has_see_through);
 
         // Remembered, but out of sight: drawn in the grey meshes only.
-        let meshes = build(&level, &[], &nothing, sight, &light, &[], camera);
+        let meshes = build(&level, &[], &nothing, sight, &light, &[], camera, shape);
         assert!(meshes.has_solid.iter().all(|&has| !has));
         assert!(meshes.has_memory[Surface::Floor as usize]);
         assert!(meshes.has_memory[Surface::Wall as usize]);

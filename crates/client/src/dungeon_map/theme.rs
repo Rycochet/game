@@ -12,32 +12,48 @@ const GROUND: &str = "angbandtk/dg_grounds32_01_00.png";
 const WATER: &str = "angbandtk/dg_grounds32_02_00.png";
 const LAVA: &str = "angbandtk/dg_grounds32_04_00.png";
 
-/// A site's wall and floor pictures.
+/// How a place's walls, doors and windows are made.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shape {
+    /// Straight walls, square doors, framed windows: buildings.
+    Built,
+    /// Walls curved like a letter C, arched doors, windows that are lines of
+    /// columns: dungeons and caves.
+    Natural,
+}
+
+/// A site's wall and floor pictures and how its walls are made.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Theme {
     pub wall: &'static str,
     pub floor: &'static str,
+    pub shape: Shape,
 }
 
 const STONE: Theme = Theme {
     wall: "angbandtk/dg_extra132_11_00.png",
     floor: "angbandtk/dg_grounds32_03_03.png",
+    shape: Shape::Built,
 };
 const WOOD: Theme = Theme {
     wall: "angbandtk/dg_extra132_12_03.png",
     floor: "angbandtk/dg_extra132_12_04.png",
+    shape: Shape::Built,
 };
 const CRYPT: Theme = Theme {
     wall: "angbandtk/dg_extra132_12_00.png",
     floor: "angbandtk/dg_features32_10_00.png",
+    shape: Shape::Natural,
 };
 const CAVE: Theme = Theme {
     wall: "angbandtk/dg_features32_00_06.png",
     floor: "angbandtk/dg_grounds32_04_06.png",
+    shape: Shape::Natural,
 };
 const ICE: Theme = Theme {
     wall: "angbandtk/dg_grounds32_11_06.png",
     floor: "angbandtk/dg_grounds32_09_03.png",
+    shape: Shape::Natural,
 };
 
 impl Theme {
@@ -65,7 +81,7 @@ impl Theme {
     pub fn picture(self, surface: Surface) -> &'static str {
         match surface {
             Surface::Floor => self.floor,
-            Surface::Wall => self.wall,
+            Surface::Wall | Surface::WallBlend => self.wall,
             Surface::Door => DOOR,
             Surface::Ground => GROUND,
             Surface::Water => WATER,

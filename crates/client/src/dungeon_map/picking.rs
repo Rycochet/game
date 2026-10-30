@@ -5,8 +5,8 @@
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
 
+use super::CELL_SIZE;
 use super::mesh::{STAIRS_UP_HEIGHT, WallFace};
-use super::{CELL_SIZE, WALL_HEIGHT};
 
 /// The seen walkable cell the ray first lands on, if no solid wall side is hit
 /// first. See-through sides don't block: the floor shows through them.
@@ -43,7 +43,44 @@ pub fn pick(
     if blocked {
         return None;
     }
-    (level.is_walkable(x, y) && sight.is_seen(x, y)).then_some((x, y))
+    let can_go = |&(x, y): &(i64, i64)| level.is_walkable(x, y) && sight.is_seen(x, y);
+    if can_go(&(x, y)) {
+        return Some((x, y));
+    }
+    // A wall takes up only the middle of its cell, so the rest looks like the
+    // floor beside it: a click there means the cell on that side.
+    let (ox, oz) = (
+        point.x - x as f32 * CELL_SIZE,
+        point.z - y as f32 * CELL_SIZE,
+    );
+    let beyond = |offset: f32| {
+        if offset.abs() <= CELL_SIZE * 0.05 {
+            0
+        } else {
+            offset.signum() as i64
+        }
+    };
+    let sideways = (x + beyond(ox), y);
+    let ahead = (x, y + beyond(oz));
+    let tries = if ox.abs() > oz.abs() {
+        [sideways, ahead]
+    } else {
+        [ahead, sideways]
+    };
+    tries.into_iter().find(can_go)
+}
+
+/// The cell under the point the ray reaches the floor at, walkable or not.
+pub fn floor_cell(ray: Ray3d) -> Option<(i64, i64)> {
+    let direction = *ray.direction;
+    if direction.y >= 0.0 {
+        return None;
+    }
+    let point = ray.origin + direction * (-ray.origin.y / direction.y);
+    Some((
+        (point.x / CELL_SIZE).round() as i64,
+        (point.z / CELL_SIZE).round() as i64,
+    ))
 }
 
 /// How far along the ray it enters the block of stairs up on `cell`, if it
@@ -81,12 +118,13 @@ fn hits_face(origin: Vec3, direction: Vec3, face: &WallFace) -> Option<f32> {
     // Sideways along the side, and up it.
     let across = offset.dot(Vec3::Y.cross(face.normal)).abs();
     let up = offset.y.abs();
-    (distance > 0.0 && across <= CELL_SIZE / 2.0 && up <= WALL_HEIGHT / 2.0).then_some(distance)
+    (distance > 0.0 && across <= face.half_across && up <= face.half_up).then_some(distance)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dungeon_map::WALL_HEIGHT;
 
     fn setup() -> (Level, Sight) {
         let level = Level::test_room();
@@ -139,6 +177,15 @@ mod tests {
     }
 
     #[test]
+    fn clicks_beside_a_wall_mean_the_cell_beside_it() {
+        let (level, sight) = setup();
+        // East of the short wall's line, in its cell.
+        let above = Vec3::new(-2.0 * CELL_SIZE + 6.0, 500.0, 0.0);
+        let down = ray(above, above.with_y(0.0));
+        assert_eq!(pick(down, &level, &sight, &[], &[]), Some((-1, 0)));
+    }
+
+    #[test]
     fn solid_sides_block_clicks() {
         let (level, sight) = setup();
         // Looking from the east, just over the floor, at the short wall's
@@ -146,6 +193,8 @@ mod tests {
         let face = WallFace {
             centre: Vec3::new(-1.5 * CELL_SIZE, WALL_HEIGHT / 2.0, 0.0),
             normal: Vec3::X,
+            half_across: CELL_SIZE / 2.0,
+            half_up: WALL_HEIGHT / 2.0,
         };
         let from = Vec3::new(4.0 * CELL_SIZE, WALL_HEIGHT * 0.9, 0.0);
         let through = ray(from, Vec3::new(-1.5 * CELL_SIZE, WALL_HEIGHT / 2.0, 0.0));

@@ -13,6 +13,7 @@ pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired}
 
 use serde::{Deserialize, Serialize};
 
+use crate::dungeon::Cell;
 use crate::feature::{CHUNK_SIZE, ChunkPos, Feature, FeatureKind};
 use crate::movement::Step;
 use crate::rng::Seed;
@@ -69,6 +70,9 @@ pub enum ClientMessage {
         seed: u64,
         level: u32,
     },
+    /// Developer tools: change a cell of the level the player is on (not the
+    /// one they stand on). Only an embedded server accepts it.
+    DevSetCell { x: i64, y: i64, cell: Cell },
 }
 
 impl ClientMessage {
@@ -77,7 +81,10 @@ impl ClientMessage {
     pub fn is_dev_tool(&self) -> bool {
         matches!(
             self,
-            Self::DevTeleport { .. } | Self::DevBackToStart | Self::DevEnterSite { .. }
+            Self::DevTeleport { .. }
+                | Self::DevBackToStart
+                | Self::DevEnterSite { .. }
+                | Self::DevSetCell { .. }
         )
     }
 }
@@ -155,7 +162,6 @@ pub struct WorldInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dungeon::Cell;
     use crate::site::StairsDirection;
 
     /// One of every message, so a message that can't be sent fails here.

@@ -35,6 +35,10 @@ pub(crate) struct Visit {
     position: (i64, i64),
     /// The cells the client has been sent on this visit.
     sent: CellMasks,
+    /// The cells already looked out from for what to send, and what was seen
+    /// from them, so each step only looks from the cells that are new.
+    looked_from: Sight,
+    loaded: Sight,
 }
 
 impl Visit {
@@ -232,6 +236,35 @@ pub(crate) fn leave(client: &Client, world: &mut ServerWorld) {
     }
 }
 
+/// Developer tools: changes a cell of the player's level (kept as a player's
+/// change), and sends it again with what can be seen now.
+pub(crate) fn set_cell(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    x: i64,
+    y: i64,
+    cell: Cell,
+) -> bool {
+    let Some(visit) = &mut client.visit else {
+        return true;
+    };
+    if !visit.level.level.contains(x, y) || visit.position == (x, y) {
+        return true;
+    }
+    visit.level.level.set(x, y, cell);
+    let site = world.site_mut(visit.id, visit.feature.kind);
+    let saved = site.levels.entry(visit.index).or_default();
+    saved.changes.insert((x, y), cell);
+    // Everything may look different from everywhere now.
+    visit.looked_from = Sight::new(&visit.level.level);
+    visit.loaded = Sight::new(&visit.level.level);
+    let (chunk, bit) = level_chunk(x, y);
+    if let Some(mask) = visit.sent.get_mut(&chunk) {
+        *mask &= !(1 << bit);
+    }
+    update_sight(client)
+}
+
 /// Puts the player on level `index` of `site`: generates it, with players'
 /// changes over it, tells the client about it, sends what the player
 /// remembers of it, then what they see.
@@ -278,7 +311,11 @@ fn enter_level(
         bounds: level.level.bounds(),
         arrival: position,
     };
+    let looked_from = Sight::new(&level.level);
+    let loaded = Sight::new(&level.level);
     let mut visit = Visit {
+        looked_from,
+        loaded,
         feature,
         id,
         site,
@@ -296,7 +333,18 @@ fn enter_level(
     if !send_cells(client, &visit, &remembered, true) {
         return false;
     }
+    // Their neighbours too, not as remembered: they shape what is.
+    let level = &visit.level.level;
+    let is_remembered = |x, y| {
+        let (chunk, bit) = level_chunk(x, y);
+        remembered.get(&chunk).is_some_and(|m| m & (1 << bit) != 0)
+    };
+    let neighbours = beside(level, is_remembered, &remembered);
+    if !send_cells(client, &visit, &neighbours, false) {
+        return false;
+    }
     visit.sent = remembered;
+    add_masks(&mut visit.sent, neighbours);
     client.visit = Some(visit);
     client.unsaved = true;
     update_sight(client)
@@ -312,17 +360,20 @@ fn memory<'a>(client: &'a mut Client, visit: &Visit) -> &'a mut CellMasks {
 /// could see within `LEVEL_PRELOAD_STEPS`, and sends the cells of that the
 /// client doesn't have yet.
 fn update_sight(client: &mut Client) -> bool {
-    let Some(visit) = client.visit.take() else {
+    let Some(mut visit) = client.visit.take() else {
         return true;
     };
+    let (looked_from, loaded) = (&mut visit.looked_from, &mut visit.loaded);
     let level = &visit.level.level;
     let (x, y) = visit.position;
     // What the client draws: glimpses, the more generous sight.
     let mut seen = Sight::new(level);
     seen.add_glimpses(level, x, y, None);
-    let mut loaded = Sight::new(level);
     for (nx, ny) in nearby_cells(level, (x, y), LEVEL_PRELOAD_STEPS) {
-        loaded.add_glimpses(level, nx, ny, None);
+        if !looked_from.is_seen(nx, ny) {
+            looked_from.insert(nx, ny);
+            loaded.add_glimpses(level, nx, ny, None);
+        }
     }
 
     let memory = memory(client, &visit);
@@ -338,18 +389,46 @@ fn update_sight(client: &mut Client) -> bool {
                 *mask |= 1 << bit;
             }
             let sent = visit.sent.get(&chunk).copied().unwrap_or(0);
-            if loaded.is_seen(cx, cy) && sent & (1 << bit) == 0 {
+            if visit.loaded.is_seen(cx, cy) && sent & (1 << bit) == 0 {
                 *new.entry(chunk).or_default() |= 1 << bit;
             }
         }
     }
     client.unsaved |= learnt;
+    // Their neighbours too: a wall's shape depends on what is beside it.
+    let extra = beside(level, |cx, cy| visit.loaded.is_seen(cx, cy), &visit.sent);
+    add_masks(&mut new, extra);
     let sent = send_cells(client, &visit, &new, false);
     let visit = client.visit.insert(visit);
-    for (chunk, mask) in new {
-        *visit.sent.entry(chunk).or_default() |= mask;
-    }
+    add_masks(&mut visit.sent, new);
     sent
+}
+
+/// The cells next to any cell for which `is_in` holds, on `level`, that
+/// `except` doesn't include.
+fn beside(level: &Level, is_in: impl Fn(i64, i64) -> bool, except: &CellMasks) -> CellMasks {
+    let mut found = CellMasks::new();
+    let (min_x, min_y, width, height) = level.bounds();
+    for y in min_y..min_y + height {
+        for x in min_x..min_x + width {
+            let (chunk, bit) = level_chunk(x, y);
+            let done = except.get(&chunk).is_some_and(|m| m & (1 << bit) != 0);
+            let next_to = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+                .iter()
+                .any(|(dx, dy)| is_in(x + dx, y + dy));
+            if !done && !is_in(x, y) && next_to {
+                *found.entry(chunk).or_default() |= 1 << bit;
+            }
+        }
+    }
+    found
+}
+
+/// Adds the cells in `more` to `masks`.
+fn add_masks(masks: &mut CellMasks, more: CellMasks) {
+    for (chunk, mask) in more {
+        *masks.entry(chunk).or_default() |= mask;
+    }
 }
 
 /// The walkable cells the player could reach within `steps` steps (in any
@@ -715,6 +794,57 @@ mod tests {
         enter(&mut test, 0);
         let level = &test.client.visit.as_ref().unwrap().level.level;
         assert_eq!(level.cell(x + 1, y), Cell::Water);
+    }
+
+    #[test]
+    fn dev_tools_change_cells_and_keep_the_change() {
+        let mut test = TestClient::new();
+        enter(&mut test, 0);
+        let (x, y) = test.client.visit.as_ref().unwrap().position;
+        let (dx, dy) = walkable_neighbour(&test);
+        let (nx, ny) = (x + dx, y + dy);
+        let answers = test.send(&[ClientMessage::DevSetCell {
+            x: nx,
+            y: ny,
+            cell: Cell::Window,
+        }]);
+        assert!(
+            cells(&answers)
+                .iter()
+                .any(|&sent| (sent.0, sent.1, sent.2) == (nx, ny, Cell::Window))
+        );
+        // Not where the player stands.
+        test.send(&[ClientMessage::DevSetCell {
+            x,
+            y,
+            cell: Cell::Wall,
+        }]);
+        // Windows can't be stepped on; and the change is there next time.
+        enter(&mut test, 0);
+        let level = &test.client.visit.as_ref().unwrap().level.level;
+        assert_eq!(level.cell(nx, ny), Cell::Window);
+        assert!(level.is_walkable(x, y));
+        assert!(!level.is_walkable(nx, ny));
+    }
+
+    #[test]
+    fn walls_arrive_with_what_shapes_them() {
+        let mut test = TestClient::new();
+        let sent = cells(&enter(&mut test, 0));
+        let is_sent = |x, y| sent.iter().any(|&(cx, cy, _, _)| (cx, cy) == (x, y));
+        let visit = test.client.visit.as_ref().unwrap();
+        let level = &visit.level.level;
+        let mut sight = Sight::new(level);
+        sight.add_glimpses(level, visit.position.0, visit.position.1, None);
+        let seen_wall =
+            |&&(x, y, cell, _): &&(i64, i64, Cell, bool)| cell.is_wall() && sight.is_seen(x, y);
+        let walls: Vec<_> = sent.iter().filter(seen_wall).collect();
+        assert!(!walls.is_empty());
+        for &&(x, y, _, _) in &walls {
+            for (nx, ny) in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)] {
+                assert!(!level.contains(nx, ny) || is_sent(nx, ny), "{nx}, {ny}");
+            }
+        }
     }
 
     #[test]
