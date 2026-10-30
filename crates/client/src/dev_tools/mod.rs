@@ -9,12 +9,13 @@
 //!   into `FeatureKind::ALL`, `seed` its map seed (default 1), `level` the
 //!   level (default 0, the way in).
 //! - `GAME_CELLS=x,y,kind;...`: on arriving in a site, change cells of the
-//!   level, from where the player stands (`kind`: `floor`, `wall`, `door` or
-//!   `window`), to look at walls the generators don't make.
+//!   level, from where the player stands (`kind`: `floor`, `wall`, `door`,
+//!   `window`, `water` or `lava`), to look at walls and liquids the generators
+//!   don't make.
 //! - `GAME_MOVE=dx,dy`: two seconds after starting, step the player this far
 //!   (e.g. off the stairs they arrived on, to see them).
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked),
-//!   once at `GAME_POS` (if set).
+//!   once at `GAME_POS` if set, otherwise two seconds after starting.
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
 //! - `GAME_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
 //! - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) a second after
@@ -138,19 +139,23 @@ impl Plugin for DevToolsPlugin {
             let start = env::var("GAME_POS").ok().and_then(|pos| parse_pos(&pos));
             app.add_systems(
                 Update,
-                (move |mut done: Local<bool>,
+                (move |time: Res<Time>,
+                       mut done: Local<bool>,
                        player: Single<&MapPosition, With<Player>>,
                        mut travel: MessageWriter<TravelTo>| {
-                    // Not before the server has moved the player to `GAME_POS`:
-                    // that would end the journey.
-                    let ready = start.is_none_or(|(sx, sy)| (player.x, player.y) == (sx, sy));
+                    // Not before the server has moved the player to `GAME_POS`
+                    // or back into their site: that would end the journey.
+                    let ready = match start {
+                        Some((sx, sy)) => (player.x, player.y) == (sx, sy),
+                        None => time.elapsed_secs() > 2.0,
+                    };
                     if !*done && ready {
                         *done = true;
                         travel.write(TravelTo { x, y });
                     }
                 })
                 .in_set(PlayerSystems::Input)
-                .run_if(in_state(GameView::WorldMap)),
+                .run_if(not(in_state(GameView::Connecting))),
             );
         }
 
@@ -279,6 +284,8 @@ fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
         "wall" => Cell::Wall,
         "door" => Cell::Door,
         "window" => Cell::Window,
+        "water" => Cell::Water,
+        "lava" => Cell::Lava,
         _ => return None,
     };
     Some((dx, dy, cell))

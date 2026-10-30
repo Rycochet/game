@@ -10,6 +10,7 @@
 //! (`theme`). Light is dull everywhere, and brighter near light sources, which
 //! walls block. Left-click a seen walkable cell to travel there.
 
+mod liquid;
 mod mesh;
 mod picking;
 mod theme;
@@ -160,10 +161,20 @@ fn spawn_scene(
         .iter()
         .zip(&pictures)
         .map(|(&surface, picture)| {
+            let opacity = liquid::opacity(surface);
             materials.add(if surface == Surface::WallBlend {
                 StandardMaterial {
                     alpha_mode: AlphaMode::Blend,
                     depth_bias: BLEND_DEPTH_BIAS,
+                    ..unlit(picture)
+                }
+            } else if opacity < 1.0 {
+                // A surface with the bed showing through it, drawn before
+                // anything blended that stands in it.
+                StandardMaterial {
+                    base_color: Color::srgba(1.0, 1.0, 1.0, opacity),
+                    alpha_mode: AlphaMode::Blend,
+                    depth_bias: -1.0,
                     ..unlit(picture)
                 }
             } else {

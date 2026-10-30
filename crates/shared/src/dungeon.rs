@@ -26,7 +26,8 @@ pub enum Cell {
     /// Outside ground round a building or cave mouth: walkable, and the way
     /// back to the world map.
     Ground,
-    /// Seen and lit across, but not walkable (for now: swimming later).
+    /// Seen and lit across, but not walkable: it can only be jumped over
+    /// (`movement`; swimming later).
     Water,
     /// As water, hotter.
     Lava,
@@ -39,6 +40,11 @@ impl Cell {
     /// Whether it can be walked on.
     pub fn is_walkable(self) -> bool {
         matches!(self, Self::Floor | Self::Door | Self::Ground)
+    }
+
+    /// Whether it is a liquid: not walkable, but one cell of it can be jumped.
+    pub fn is_liquid(self) -> bool {
+        matches!(self, Self::Water | Self::Lava)
     }
 
     /// Whether sight and light pass through it.

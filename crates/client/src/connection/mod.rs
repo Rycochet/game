@@ -268,8 +268,8 @@ fn send_steps(
     mut prediction: ResMut<Prediction>,
     mut to_server: MessageWriter<ToServer>,
 ) {
-    for &Stepped(step) in stepped.read() {
-        to_server.write(ToServer(prediction.step(step)));
+    for &Stepped { step, moved } in stepped.read() {
+        to_server.write(ToServer(prediction.step(step, moved)));
     }
 }
 
