@@ -55,6 +55,11 @@ const SECRET_DOOR_PERCENT: u32 = 10;
 /// Percentage chance of a second mouth on the east or west side.
 const SECOND_MOUTH_PERCENT: u32 = 35;
 
+/// One floor cell in this many of a natural cave's top level is open to the
+/// sky, and how far (counting diagonals as 1) one stays from liquid and stairs.
+const CELLS_PER_SKYLIGHT: u64 = 1500;
+const SKYLIGHT_CLEARANCE: i64 = 2;
+
 /// Which ways in a cave may have.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CaveEntrance {
@@ -89,6 +94,8 @@ pub struct Plan {
     options: CaveOptions,
     levels: u32,
     opening: bool,
+    /// Whether natural caves have skylights (not generator version 1).
+    skylights: bool,
 }
 
 /// One cave as planned: centre and radii.
@@ -109,7 +116,7 @@ impl Cave {
 }
 
 impl Plan {
-    pub fn new(options: &CaveOptions, seed: Seed) -> Self {
+    pub fn new(options: &CaveOptions, seed: Seed, skylights: bool) -> Self {
         let mut rng = seed.derive("cave").rng();
         let levels = roll(&mut rng, options.levels.0 as i64, options.levels.1 as i64).max(1) as u32;
         let opening = match options.entrance {
@@ -122,6 +129,7 @@ impl Plan {
             options: *options,
             levels,
             opening,
+            skylights,
         }
     }
 
@@ -232,11 +240,46 @@ impl Plan {
             );
         }
 
+        if self.skylights && index == 0 && !self.options.doors {
+            open_skylights(&mut level, self.seed.derive("skylight"), &stairs);
+        }
+
         SiteLevel {
             level,
             stairs,
             entrance,
             buildings: Vec::new(),
+        }
+    }
+}
+
+/// Very rarely, a floor cell is open to the sky: outside ground, away from
+/// liquid and stairs and off the level's edge (so it is no way out). Chosen by
+/// a hash of its position, so nothing else about the level changes.
+fn open_skylights(level: &mut Level, seed: Seed, stairs: &[Stairs]) {
+    let (min_x, min_y, width, height) = level.bounds();
+    for y in min_y..min_y + height {
+        for x in min_x..min_x + width {
+            if level.cell(x, y) != Cell::Floor
+                || !seed.at(&[x, y]).is_multiple_of(CELLS_PER_SKYLIGHT)
+            {
+                continue;
+            }
+            let reach = -SKYLIGHT_CLEARANCE..=SKYLIGHT_CLEARANCE;
+            let clear = reach.clone().all(|dy| {
+                reach.clone().all(|dx| {
+                    let (nx, ny) = (x + dx, y + dy);
+                    let cell = level.cell(nx, ny);
+                    level.contains(nx, ny)
+                        && !cell.is_liquid()
+                        && !cell.is_outside()
+                        && !stairs.iter().any(|s| (s.x, s.y) == (nx, ny))
+                })
+            });
+            if clear {
+                level.set(x, y, Cell::Ground);
+                level.set_room(x, y, None);
+            }
         }
     }
 }

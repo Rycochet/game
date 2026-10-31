@@ -14,7 +14,7 @@ use shared::protocol::{
     ENTER_REACH, LevelChunk, LevelInfo, SeenStairs, ServerMessage, level_chunk,
 };
 use shared::rng::Seed;
-use shared::site::{Exit, Site, SiteLevel, leads_out};
+use shared::site::{Exit, Generator, Site, SiteLevel, leads_out};
 
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, VisitSave, now};
@@ -98,11 +98,12 @@ pub(crate) fn dev_enter(
     kind: PoiKind,
     seed: u64,
     level: u32,
+    ruin: u8,
 ) -> bool {
     leave(client, world);
     client.visit = None;
     let poi = dev_poi(client, kind, seed);
-    let id = SiteId::Dev { kind, seed };
+    let id = SiteId::Dev { kind, seed, ruin };
     enter_site(client, world, poi, id, level, Arrival::From(Exit::WorldMap))
 }
 
@@ -123,7 +124,7 @@ fn dev_poi(client: &Client, kind: PoiKind, seed: u64) -> Poi {
 pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitSave) -> bool {
     let poi = match saved.site {
         SiteId::Poi(chunk) => world.pois.in_chunk(chunk),
-        SiteId::Dev { kind, seed } => Some(dev_poi(client, kind, seed)),
+        SiteId::Dev { kind, seed, .. } => Some(dev_poi(client, kind, seed)),
     };
     let Some(poi) = poi else {
         warn!("A character was in {:?}, which isn't there", saved.site);
@@ -146,7 +147,11 @@ fn enter_site(
     arrival: Arrival,
 ) -> bool {
     let version = world.site(id, poi.kind).version;
-    let Some(site) = Site::with_version(poi.kind, poi.seed, version) else {
+    let generator = match id {
+        SiteId::Dev { ruin, .. } => Generator::for_poi(poi.kind).with_ruin(ruin),
+        SiteId::Poi(_) => Generator::for_poi(poi.kind),
+    };
+    let Some(site) = Site::with_generator(poi.kind, poi.seed, version, generator) else {
         error!("{id:?} needs generator version {version}, which this server can't run");
         return true;
     };
@@ -548,6 +553,7 @@ mod tests {
             kind: PoiKind::Village,
             seed: 4,
             level: 0,
+            ruin: 0,
         }]);
         let site = Site::new(PoiKind::Village, Seed::new(4)).level(0);
         let looks = answers.iter().find_map(|message| match message {
@@ -585,6 +591,7 @@ mod tests {
             kind: PoiKind::Castle,
             seed: castle_seed(),
             level,
+            ruin: 0,
         }])
     }
 
@@ -826,6 +833,7 @@ mod tests {
         let id = SiteId::Dev {
             kind: PoiKind::Castle,
             seed: castle_seed(),
+            ruin: 0,
         };
         let seen: u32 = memory[&id][&1].values().map(|m| m.count_ones()).sum();
         assert!(seen > 0 && seen as usize <= first.len());
@@ -856,6 +864,7 @@ mod tests {
         let id = SiteId::Dev {
             kind: PoiKind::Castle,
             seed: castle_seed(),
+            ruin: 0,
         };
         let level = test.world.site_mut(id, PoiKind::Castle).levels.entry(0);
         level.or_default().changes.insert((x + 1, y), Cell::Water);
@@ -921,6 +930,7 @@ mod tests {
         let id = SiteId::Dev {
             kind: PoiKind::Castle,
             seed: castle_seed(),
+            ruin: 0,
         };
         // A site made by a generator version this server can't run.
         test.world.site_mut(id, PoiKind::Castle).version = 99;
@@ -936,6 +946,7 @@ mod tests {
         let id = SiteId::Dev {
             kind: PoiKind::Castle,
             seed: castle_seed(),
+            ruin: 0,
         };
         let mut world = test.leave();
         let last = world.site(id, PoiKind::Castle).levels[&0].last_visit;

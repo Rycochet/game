@@ -14,6 +14,7 @@ const LINE: [u8; 3] = [200, 200, 200];
 const HATCH: [u8; 3] = [70, 55, 40];
 const DOOR: [u8; 3] = [150, 95, 45];
 const HOUSE_DOOR: [u8; 3] = [175, 60, 45];
+const HOLE: [u8; 3] = [90, 80, 70];
 
 /// A walkable tile's colour, by what it is: pale, so hatching and doors show.
 fn ground_colour(cell: Cell) -> [u8; 3] {
@@ -28,6 +29,7 @@ fn ground_colour(cell: Cell) -> [u8; 3] {
         Cell::DressedStone => [222, 226, 232],
         Cell::Water => [150, 195, 240],
         Cell::Lava => [240, 140, 120],
+        Cell::Hole => HOLE,
         _ => WHITE,
     }
 }
@@ -137,7 +139,7 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             && level.room(x, y).is_some()
             && level.room(x, y) != room;
         dungeon.remembered.is_seen(x, y)
-            && (cell.is_walkable() || cell.is_liquid() || other_building)
+            && (cell.is_walkable() || cell.is_liquid() || cell == Cell::Hole || other_building)
     };
     match level.cell(x, y) {
         Cell::Door => CellLook::Door {
@@ -150,7 +152,9 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
                 east_west: building.is_none_or(|b| b.faces.0 == 0),
             },
         },
-        cell if cell.is_walkable() || cell.is_liquid() => CellLook::Floor(ground_colour(cell)),
+        cell if cell.is_walkable() || cell.is_liquid() || cell == Cell::Hole => {
+            CellLook::Floor(ground_colour(cell))
+        }
         cell if cell.is_wall() || cell == Cell::Window => CellLook::Wall(Sides {
             north: shows(x, y - 1),
             east: shows(x + 1, y),
@@ -421,6 +425,8 @@ mod tests {
             panic!("lava should show");
         };
         assert!(lava[0] > lava[2]);
+        dungeon.level.set(2, 2, Cell::Hole);
+        assert_eq!(look_of(&dungeon, 2, 2), CellLook::Floor(HOLE));
         dungeon.level.set(2, 2, Cell::Cobblestone);
         assert!(matches!(look_of(&dungeon, 2, 2), CellLook::Floor(c) if c != WHITE));
     }

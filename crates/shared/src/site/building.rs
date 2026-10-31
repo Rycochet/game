@@ -13,11 +13,13 @@
 //! same amount on every side, so its walls stand on the floor below). Stairs
 //! between two floors are on the same cell of both, chosen before either is
 //! generated, and the splits avoid them, so each floor can be generated on
-//! its own.
+//! its own. A ruined building's floors depend on each other (see `ruin`), so
+//! they are all made together at the start and kept.
 
 use serde::{Deserialize, Serialize};
 
 use super::grid::{self, Reach, STEPS, chance, roll};
+use super::ruin;
 use super::{Exit, SiteLevel, Stairs, StairsDirection};
 use crate::dungeon::{Cell, Level, RoomId};
 use crate::rng::{Rng, Seed};
@@ -90,11 +92,14 @@ pub struct BuildingOptions {
     /// Bigger buildings have more floors: up to one per this many cells of
     /// the ground floor's shorter side.
     pub size_per_floor: i64,
+    /// How ruined it is, 0 (a normal building) to 5. The damage has its own
+    /// seed, so the floorplan is the same at every level.
+    pub ruin: u8,
 }
 
 /// One floor's outline, in level coordinates.
 #[derive(Clone, Copy, Debug)]
-struct Shape {
+pub(super) struct Shape {
     outline: Outline,
     x: i64,
     y: i64,
@@ -106,7 +111,7 @@ struct Shape {
 
 impl Shape {
     /// Whether `(x, y)` is inside the outline (outer wall included).
-    fn contains(&self, x: i64, y: i64) -> bool {
+    pub(super) fn contains(&self, x: i64, y: i64) -> bool {
         let (cx, cy) = (x - self.x, y - self.y);
         if cx < 0 || cy < 0 || cx >= self.width || cy >= self.height {
             return false;
@@ -162,6 +167,9 @@ pub struct Plan {
     floors: Vec<Shape>,
     /// `stairs[n]` joins floor `n` to floor `n + 1`.
     stairs: Vec<(i64, i64)>,
+    /// A ruined building's floors, all of them, from the ground up; empty if
+    /// it isn't ruined.
+    ruined: Vec<SiteLevel>,
 }
 
 impl Plan {
@@ -234,13 +242,19 @@ impl Plan {
         }
         floors.truncate(stairs.len() + 1);
 
-        Self {
+        let mut plan = Self {
             seed,
             width: width + 2 * BORDER,
             height: height + 2 * BORDER,
             floors,
             stairs,
+            ruined: Vec::new(),
+        };
+        if options.ruin > 0 {
+            let intact = (0..plan.floors()).map(|n| plan.intact_level(n)).collect();
+            plan.ruined = ruin::ruin_floors(seed, options.ruin, intact, &plan.floors, &plan.stairs);
         }
+        plan
     }
 
     /// The ground floor's size in cells, without the border round it.
@@ -254,11 +268,23 @@ impl Plan {
     }
 
     pub fn floors(&self) -> u32 {
-        self.floors.len() as u32
+        if self.ruined.is_empty() {
+            self.floors.len() as u32
+        } else {
+            self.ruined.len() as u32
+        }
     }
 
-    /// Generates floor `index` (0 the ground floor).
+    /// Floor `index` (0 the ground floor).
     pub fn level(&self, index: u32) -> SiteLevel {
+        match self.ruined.get(index as usize) {
+            Some(floor) => floor.clone(),
+            None => self.intact_level(index),
+        }
+    }
+
+    /// Generates floor `index` as it is before any ruin.
+    fn intact_level(&self, index: u32) -> SiteLevel {
         let n = index as usize;
         let shape = self.floors[n];
         let mut rng = Seed::new(self.seed.derive("building floor").at(&[index as i64])).rng();

@@ -10,6 +10,7 @@ use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::SeenStairs;
 use shared::site::BuildingLook;
 
+use super::holes::build_hole;
 use super::liquid::build_cell;
 use super::stairs::{build_stairs, hides_viewer};
 use super::theme::Shape;
@@ -226,6 +227,8 @@ pub fn build(
                 town::build_hedges(&mut layers, &scene, (x, y));
             } else if cell.is_opening() {
                 build_opening(&mut layers, &scene, (x, y));
+            } else if cell == Cell::Hole {
+                build_hole(&mut layers, &scene, (x, y));
             } else {
                 let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
                 build_open_cell(&mut layers, &scene, (x, y), found);
@@ -310,7 +313,7 @@ pub fn with_ambient(light: Vec3) -> Vec3 {
 }
 
 /// The light at the grid corner nearest a vertex's (x, z) position.
-fn corner_light(level: &Level, light: &LightGrid, position: Vec3) -> Option<Vec3> {
+pub(super) fn corner_light(level: &Level, light: &LightGrid, position: Vec3) -> Option<Vec3> {
     let x = (position.x / CELL_SIZE + 0.5).round() as i64;
     let y = (position.z / CELL_SIZE + 0.5).round() as i64;
     light.corner(level, x, y)

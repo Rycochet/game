@@ -283,7 +283,7 @@ fn heights(shape: Shape, low: f32, high: f32) -> Vec<f32> {
 
 /// A number from -1 to 1 that depends only on the numbers given: for looks,
 /// so it needn't be the same as anything in `shared`.
-fn noise(a: i64, b: i64, c: i64) -> f32 {
+pub(super) fn noise(a: i64, b: i64, c: i64) -> f32 {
     let mixed =
         (a.wrapping_mul(73_856_093) ^ b.wrapping_mul(19_349_663) ^ c.wrapping_mul(83_492_791))
             .wrapping_mul(2_654_435_761);

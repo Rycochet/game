@@ -76,7 +76,14 @@ impl Storage {
             // Named from when pois were called features: saved worlds have
             // these files, so the name stays.
             SiteId::Poi(chunk) => format!("feature_{}_{}.ron", chunk.x, chunk.y),
-            SiteId::Dev { kind, seed } => format!("dev_{}_{seed}.ron", kind as usize),
+            SiteId::Dev {
+                kind,
+                seed,
+                ruin: 0,
+            } => format!("dev_{}_{seed}.ron", kind as usize),
+            SiteId::Dev { kind, seed, ruin } => {
+                format!("dev_{}_{seed}_ruin{ruin}.ron", kind as usize)
+            }
         };
         Some(self.folder.as_ref()?.join("sites").join(name))
     }
@@ -145,8 +152,14 @@ pub enum SiteId {
     /// files saved when pois were called features.)
     #[serde(alias = "Feature")]
     Poi(ChunkPos),
-    /// Developer tools: a site of this kind and map seed.
-    Dev { kind: PoiKind, seed: u64 },
+    /// Developer tools: a site of this kind and map seed, a building ruined
+    /// this much.
+    Dev {
+        kind: PoiKind,
+        seed: u64,
+        #[serde(default)]
+        ruin: u8,
+    },
 }
 
 /// `world.ron`.
