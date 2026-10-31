@@ -15,6 +15,7 @@ Colours and thresholds for drawing a planet's surface. Swap the resource for oth
 - `river_is_frozen(temperature, ground, water_level, snow_line)`: rivers freeze before the land around them is snow, more so the higher up; where one meets the sea, about when the shallows do.
 - Open land (`Land`) takes its colour from its climate: `living_colour` blends the biome colours around it on a 10�10 cut of the Whittaker diagram, with `jitter` roughening the joins, and its own lightness instead of the hue-based formula below (`SeasonalForest` is the prototype's grass). High ground also fades to tundra's colours whatever the biome (`TUNDRA_FROM` 76 to `TUNDRA_FULL` 84, purely a look: `shared::climate` still says the biome below). There are no hill or mountain bands: high ground goes through that to snow, so how much there is follows the planet's warmth and the local climate.
 - `shade(sample, climate, west_height, water_level, snow_line, slope_strength) -> (Band, lightness)`: **the colour formula** (ported from the prototype). Land `(64 - hue/2 - slope·(2000 - sat·2000)·slope_strength)/100` with slope = (height - west)/64; shore the biome colour with its hue turned `SHORE_HUE_TURN` (30) and lightness times `SHORE_LIGHTNESS` (0.8); frozen water `ice_lightness` (flat); other underwater `(height/2 + 15)/100 + ice`, ice = `(ice_start - snow_line)/ice_start` clamped `0..1` (icy blue).
+- `ground_colour(sample, climate, water_level, snow_line) -> [u8; 4]`: `shade` on level ground, as bytes: the land's plain colour, for `dungeon_map`'s outside ground.
 - `is_frozen_water(sample, water_level, snow_line)`: underwater with the snow line below the point, so freezing spreads from the shallows.
 - `SurfaceStyle::shown_height(sample, water_level)`: the height to draw a point at: `max(height, water)`, so water is a flat surface and the shore shows at the waterline.
 - `Band { hue, saturation }`: lightness is decided by each view.
@@ -26,7 +27,7 @@ Colours and thresholds for drawing a planet's surface. Swap the resource for oth
 
 ## Used by
 
-- `world_map`.
+- `world_map`, `dungeon_map` (`ground_colour`).
 
 ## Notes
 

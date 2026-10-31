@@ -174,6 +174,20 @@ impl SurfaceStyle {
         (band, lightness)
     }
 
+    /// The plain colour of a point, as `shade` gives it on level ground: what
+    /// a view showing that place close up paints its outside ground with.
+    pub fn ground_colour(
+        &self,
+        sample: SurfaceSample,
+        climate: ClimateSample,
+        water_level: f64,
+        snow_line: f64,
+    ) -> [u8; 4] {
+        let (band, lightness) =
+            self.shade(sample, climate, sample.height, water_level, snow_line, 0.0);
+        hsl_to_rgba(band.hue, band.saturation, lightness)
+    }
+
     /// The colour of open land at a climate: a smooth blend of the biome
     /// colours around it on the diagram, so biomes merge into each other.
     /// `jitter` roughens where they meet. The base hue rotation is applied
@@ -313,6 +327,28 @@ mod tests {
         assert_eq!(hsl_to_rgba(0.0, 0.0, 0.55), [140, 140, 140, 255]); // #8c8c8c
         assert_eq!(hsl_to_rgba(232.0, 1.0, 0.29), [0, 20, 148, 255]); // ~#001493
         assert_eq!(hsl_to_rgba(0.0, 1.0, 0.5), [255, 0, 0, 255]);
+    }
+
+    #[test]
+    fn ground_colour_follows_the_biome_or_snow() {
+        let style = SurfaceStyle::default();
+        let colour = |temperature, moisture| {
+            let climate = ClimateSample {
+                temperature,
+                moisture,
+            };
+            let sample = SurfaceSample {
+                height: 60.0,
+                jitter: 0.0,
+            };
+            style.ground_colour(sample, climate, 50.0, 128.0)
+        };
+        let [r, g, b, _] = colour(0.9, 0.05);
+        assert!(r > g && g > b, "desert is sandy: {r} {g} {b}");
+        let [r, g, b, _] = colour(0.45, 0.95);
+        assert!(g > r && g > b, "rainforest is green: {r} {g} {b}");
+        let [r, g, b, _] = colour(0.0, 0.5);
+        assert!(r == g && g == b, "snow has no hue: {r} {g} {b}");
     }
 
     #[test]

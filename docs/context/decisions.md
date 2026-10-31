@@ -157,7 +157,7 @@ Asked for by the owner: every world map feature is the entrance to a site of one
 
 ## 2026-10-29: Dungeon walls and floors from the AngbandTk tiles; stairs in 3D
 
-The owner's choice: David E. Gervais's flat AngbandTk tiles (same source and licence as the other art, CC BY 3.0, credited in `ATTRIBUTION.md`), whose `dg_features32`, `dg_grounds32` and `dg_extra132` sheets have wall and floor textures. The sheets are split into one PNG per tile in `assets/angbandtk/` (the owner's suggestion), and the dungeon view draws each kind of surface with its own picture: walls and floors themed by the kind of place (stone, wood, crypt, cave, ice; a client-only, visual choice in `dungeon_map::theme`), doors, outside ground, water and lava the same everywhere. Light stays baked into vertex colours.
+The owner's choice: David E. Gervais's flat AngbandTk tiles (same source and licence as the other art, CC BY 3.0, credited in `ATTRIBUTION.md`), whose `dg_features32`, `dg_grounds32` and `dg_extra132` sheets have wall and floor textures. The sheets are split into one PNG per tile in `assets/angbandtk/` (the owner's suggestion), and the dungeon view draws each kind of surface with its own picture: walls and floors themed by the kind of place (stone, wood, crypt, cave, ice; a client-only, visual choice in `dungeon_map::theme`), doors, water and lava the same everywhere (outside ground's picture too, painted the local land's colour: see "A site's outside shares the world map's land and weather"). Light stays baked into vertex colours.
 
 The stairs tokens (Gervais `l2_stairsiron…` pictures) didn't read well (owner), so stairs are now part of the level's 3D drawing, half a cell wide down the middle of their cell with floor round them (owner's follow-up): stairs up are a short flight of masonry steps, stairs down a hole in the floor with steps going down, darker the deeper. Both ends of a staircase run the same way (owner: if the top is in the west going down, the bottom is in the west going up), worked out from both levels (by the server since step 3 of the map data plan, `Site::stairs_descend`). Stairs are cells of the level rather than entities: arriving on one by a click takes it.
 
@@ -252,3 +252,7 @@ Asked for by the owner, chosen from several options after a proposal. Tree cover
 ## 2026-10-30: No sand colour: the shore comes from the biome
 
 The owner's call: the fixed yellow sand was meant to mark the water's edge and the tide, but it detracted from the map. Shore points (just below the water) now show the biome's colour turned 30 degrees round the colour wheel and darkened 20%, so they still mark the tide. This also means shores follow a world's base hue. Colour only: where the shore is, and drawn heights, are unchanged. Deserts are still a biome.
+
+## 2026-10-31: A site's outside shares the world map's land and weather
+
+Asked for by the owner: `Cell::Ground` is the world outside, so it matches the place the site was entered from (`common::WorldReturn`, moved from `site`). The client works it out itself from the public seed, so nothing is added to the protocol: the ground takes the land's colour there (biome or snow, one colour per site), and the weather there falls on outside cells in sight, with the world map's rules. Purely visual. Clouds and daylight aren't carried over.

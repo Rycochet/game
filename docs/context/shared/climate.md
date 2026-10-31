@@ -19,7 +19,7 @@ Temperature, moisture and the biome they make, at any world map position, follow
 
 ## Used by
 
-- Client `common` (`CurrentWorld::climate`), `surface_style` (colours), `world_map` (`HeightCache::climate`; `sky`: temperature decides rain or snow).
+- Client `common` (`CurrentWorld::climate`), `surface_style` (colours), `world_map` (`HeightCache::climate`; `sky`: temperature decides rain or snow), `dungeon_map` (ground colour outside, rain or snow).
 
 ## Notes
 
