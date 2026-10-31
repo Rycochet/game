@@ -124,8 +124,7 @@ pub const FORGET_BEFORE: u32 = 2;
 const RUINED_PERCENT: u64 = 30;
 const MOST_RUIN: u64 = 5;
 
-/// Of the places in outside walls a window could go, how many have one, in the
-/// kinds of building that have them.
+/// Of the places in outside walls a window could go, how many have one.
 const WINDOWS_PERCENT: u32 = 30;
 
 /// Where a way out of a level leads.
@@ -315,6 +314,16 @@ impl Generator {
         }
     }
 
+    /// How ruined it is (0 for any that can't be).
+    pub fn ruin(&self) -> u8 {
+        match self {
+            Self::Building(options) => options.ruin,
+            Self::Farm(options) => options.house.ruin,
+            Self::Herbalist(options) => options.house.ruin,
+            _ => 0,
+        }
+    }
+
     /// The generator of one poi's site: its kind's, ruined as its map seed says.
     pub fn for_site(kind: PoiKind, seed: Seed) -> Self {
         let sturdy = !matches!(
@@ -334,11 +343,19 @@ impl Generator {
     pub fn for_poi(kind: PoiKind) -> Self {
         use Outline::*;
         use PoiKind::*;
-        let windows_percent = match kind {
-            Castle | Fort | StoneTower | WoodenTower | RedTent | BlueTent | GreenTent
-            | IceShelter | StonePyramid | SandPyramid => 0,
-            _ => WINDOWS_PERCENT,
-        };
+        let ground_windows = !matches!(
+            kind,
+            Castle
+                | Fort
+                | StoneTower
+                | WoodenTower
+                | RedTent
+                | BlueTent
+                | GreenTent
+                | IceShelter
+                | StonePyramid
+                | SandPyramid
+        );
         let building = |width, height, outlines, max_floors, size_per_floor| {
             Self::Building(BuildingOptions {
                 width,
@@ -353,7 +370,8 @@ impl Generator {
                 ruin: 0,
                 basement_percent: 0,
                 basement_size: None,
-                windows_percent,
+                windows_percent: WINDOWS_PERCENT,
+                ground_windows,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -393,7 +411,8 @@ impl Generator {
                     ruin: 0,
                     basement_percent: 50,
                     basement_size: None,
-                    windows_percent,
+                    windows_percent: WINDOWS_PERCENT,
+                    ground_windows,
                 },
                 fields: (1, 8),
             }),
@@ -411,7 +430,8 @@ impl Generator {
                     ruin: 0,
                     basement_percent: 100,
                     basement_size: Some(((8, 16), (8, 16))),
-                    windows_percent,
+                    windows_percent: WINDOWS_PERCENT,
+                    ground_windows,
                 },
                 strips: (3, 5),
                 length: (7, 12),
@@ -476,7 +496,8 @@ impl Generator {
                 ruin: 0,
                 basement_percent: 0,
                 basement_size: None,
-                windows_percent,
+                windows_percent: WINDOWS_PERCENT,
+                ground_windows,
             }),
         }
     }
@@ -960,8 +981,9 @@ mod tests {
         }
     }
 
-    /// Windows are only in outside walls, with wall on either side of them
-    /// and the inside on one side; forts and the like, and basements, have none.
+    /// Windows are only in outside walls, with wall on either side of them, the
+    /// inside on one side and nothing of the building's at a diagonal; basements
+    /// have none, and forts and the like none on the ground floor.
     #[test]
     fn windows_are_set_in_outside_walls() {
         let windows = |level: &Level| {
@@ -995,12 +1017,18 @@ mod tests {
                                         || level.is_walkable(x - dy, y - dx))
                             });
                             assert!(straight, "{kind:?} floor {index}: ({x}, {y})");
+                            if index == 0 {
+                                for (dx, dy) in [(1, 1), (1, -1), (-1, 1), (-1, -1)] {
+                                    assert!(!level.cell(x + dx, y + dy).is_wall());
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        assert!(found > 500, "{found}");
+        assert!(found > 100, "{found}");
+        let mut above = 0;
         for kind in [
             PoiKind::Castle,
             PoiKind::Fort,
@@ -1009,9 +1037,13 @@ mod tests {
         ] {
             for n in 0..5 {
                 let site = Site::new(kind, Seed::new(n));
-                assert!((0..site.levels()).all(|i| windows(&site.level(i).level).is_empty()));
+                assert!(windows(&site.level(0).level).is_empty());
+                above += (1..site.levels())
+                    .map(|i| windows(&site.level(i).level).len())
+                    .sum::<usize>();
             }
         }
+        assert!(above > 0);
     }
 
     /// Caves: no room is a plain rectangle.
@@ -1083,7 +1115,7 @@ mod tests {
     }
 
     const GOLDEN_LEVELS: [u64; 3] = [
-        11165579872550593912,
+        18086710199301873350,
         4540973389226848185,
         16348176066830501790,
     ];

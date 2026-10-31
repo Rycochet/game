@@ -83,8 +83,13 @@ pub enum CellLook {
     Wall(Sides),
     /// A dungeon's door in a wall running east-west, or north-south.
     Door { east_west: bool },
-    /// A window in a wall running east-west, or north-south.
-    Window { east_west: bool },
+    /// A window in a wall running east-west, or north-south, with the colours
+    /// of what it is known to look onto, to the north or west and the south or
+    /// east.
+    Window {
+        east_west: bool,
+        sides: [[u8; 3]; 2],
+    },
     /// A town house's door, the same way.
     HouseDoor { east_west: bool },
     /// A shop's door: a walkable-looking cell carrying its sign's picture.
@@ -158,9 +163,27 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
         Cell::Door => CellLook::Door {
             east_west: level.opening_runs_east_west(x, y),
         },
-        Cell::Window => CellLook::Window {
-            east_west: level.opening_runs_east_west(x, y),
-        },
+        Cell::Window => {
+            let east_west = level.opening_runs_east_west(x, y);
+            let side = |sign: i64| {
+                let (sx, sy) = if east_west {
+                    (x, y + sign)
+                } else {
+                    (x + sign, y)
+                };
+                let cell = level.cell(sx, sy);
+                let known = dungeon.remembered.is_seen(sx, sy);
+                if known && (cell.is_walkable() || cell.is_jumpable()) {
+                    ground_colour(cell)
+                } else {
+                    WHITE
+                }
+            };
+            CellLook::Window {
+                east_west,
+                sides: [side(-1), side(1)],
+            }
+        }
         Cell::BuildingDoor => match dungeon.buildings.iter().find(|b| b.door == (x, y)) {
             Some(building) if building.kind != BuildingKind::House => CellLook::Sign(building.kind),
             // A door facing north or south is in a wall running east-west.
@@ -227,10 +250,16 @@ pub fn colour_at(look: CellLook, u: f64, v: f64, line: f64) -> Option<[u8; 3]> {
                 floor(WHITE)
             })
         }
-        CellLook::Window { east_west } => {
+        CellLook::Window { east_west, sides } => {
             let (_, across) = along_across(east_west);
-            let on_line = (DOOR_HALF_WIDTH - DOOR_OUTLINE..=DOOR_HALF_WIDTH).contains(&across);
-            Some(if on_line { HATCH } else { floor(WHITE) })
+            let signed = if east_west { v } else { u };
+            Some(if across < DOOR_HALF_WIDTH - DOOR_OUTLINE {
+                floor(WHITE)
+            } else if across <= DOOR_HALF_WIDTH {
+                HATCH
+            } else {
+                floor(sides[usize::from(signed > 0.0)])
+            })
         }
         CellLook::Door { east_west } => {
             let (along, across) = along_across(east_west);
@@ -312,6 +341,28 @@ mod tests {
     use shared::site::{BuildingLook, Rect, RoofKind, WallKind};
 
     use super::*;
+
+    /// White between the lines; beyond them, what is known to be there.
+    #[test]
+    fn a_window_shows_what_it_looks_onto() {
+        let mut dungeon = dungeon();
+        dungeon.level.set(2, 1, Cell::Window);
+        dungeon.level.set(2, 0, Cell::Ground);
+        let look = look_of(&dungeon, 2, 1);
+        assert_eq!(
+            look,
+            CellLook::Window {
+                east_west: true,
+                sides: [ground_colour(Cell::Ground), WHITE],
+            }
+        );
+        let at = |v: f64| colour_at(look, 0.0, v, 0.0);
+        assert_eq!(at(0.0), Some(WHITE));
+        assert_eq!(at(-DOOR_HALF_WIDTH + 0.01), Some(HATCH));
+        assert_eq!(at(DOOR_HALF_WIDTH - 0.01), Some(HATCH));
+        assert_eq!(at(-0.4), Some(ground_colour(Cell::Ground)));
+        assert_eq!(at(0.4), Some(WHITE));
+    }
 
     /// A 5 × 5 level, all remembered: wall but for a floor in the middle.
     fn dungeon() -> CurrentDungeon {

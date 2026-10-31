@@ -1,7 +1,8 @@
 //! Debug area for looking at every kind of poi: a flat plain, far beyond where
 //! anyone would walk, with one poi per chunk. Each kind is a column running east
 //! in `PoiKind::ALL`'s order, so new kinds join the east end, and each has
-//! `VARIANTS` seeds running south. The plain's weather is the normal weather.
+//! `VARIANTS` seeds running south and, where it can be ruined, one for each level
+//! of ruin running north. The plain's weather is the normal weather.
 //!
 //! The terrain, climate, plant cover, rivers and pois all ask here first, so
 //! client and server agree. Turn off `ENABLED` and the land carries on as normal.
@@ -9,6 +10,7 @@
 use crate::climate::ClimateSample;
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
 use crate::rng::Seed;
+use crate::site::Generator;
 
 /// Whether the showcase exists.
 pub const ENABLED: bool = true;
@@ -17,9 +19,15 @@ pub const ENABLED: bool = true;
 /// enough for drawing, whose floats lose detail far from the origin.
 const FIRST_ROW: i64 = 1000;
 
+/// How many levels of ruin there are, in rows running north of `FIRST_ROW`.
+const RUIN_LEVELS: i64 = 5;
+
+/// Seeds tried for each level of ruin: far more than it takes.
+const RUIN_TRIES: i64 = 2000;
+
 /// Everything from here south is plain: room to arrive and look north of the
-/// first row.
-const PLAIN_FROM: i64 = (FIRST_ROW - 4) * CHUNK_SIZE;
+/// northernmost row.
+const PLAIN_FROM: i64 = (FIRST_ROW - RUIN_LEVELS - 4) * CHUNK_SIZE;
 
 /// How many of each kind, running south.
 pub const VARIANTS: i64 = 8;
@@ -33,8 +41,11 @@ pub const CLIMATE: ClimateSample = ClimateSample {
     moisture: 0.2,
 };
 
-/// Where the key takes you: just north of the first poi.
-pub const ARRIVAL: (i64, i64) = (CHUNK_SIZE / 2, FIRST_ROW * CHUNK_SIZE - CHUNK_SIZE / 4);
+/// Where the key takes you: just north of the northernmost row.
+pub const ARRIVAL: (i64, i64) = (
+    CHUNK_SIZE / 2,
+    (FIRST_ROW - RUIN_LEVELS) * CHUNK_SIZE - CHUNK_SIZE / 4,
+);
 
 /// For the pois' map seeds.
 const SEEDS: Seed = Seed::new(0x706f_6973);
@@ -54,17 +65,34 @@ pub fn chunk_in_plain(chunk: ChunkPos) -> bool {
 /// are, so variants stay as they are when kinds are added.
 pub fn poi_at(chunk: ChunkPos) -> Option<Poi> {
     let row = chunk.y - FIRST_ROW;
-    if !(0..VARIANTS).contains(&row) {
-        return None;
-    }
     let kind: PoiKind = *PoiKind::ALL.get(usize::try_from(chunk.x).ok()?)?;
+    let seed = match row {
+        0..VARIANTS => Seed::new(SEEDS.at(&[kind as i64, row])),
+        row if (-RUIN_LEVELS..0).contains(&row) => seed_ruined(kind, -row as u8)?,
+        _ => return None,
+    };
     Some(Poi {
         kind,
         chunk,
         x: chunk.x * CHUNK_SIZE + CHUNK_SIZE / 2,
         y: chunk.y * CHUNK_SIZE + CHUNK_SIZE / 2,
-        seed: Seed::new(SEEDS.at(&[kind as i64, row])),
+        seed,
     })
+}
+
+/// The first map seed making a poi of this kind exactly this ruined, if it can
+/// be ruined at all. Found rather than forced, so the model and the site agree
+/// just as a real poi's do: both go by its seed.
+fn seed_ruined(kind: PoiKind, ruin: u8) -> Option<Seed> {
+    (0..RUIN_TRIES)
+        .map(|n| {
+            Seed::new(
+                SEEDS
+                    .derive("ruined")
+                    .at(&[kind as i64, i64::from(ruin), n]),
+            )
+        })
+        .find(|&seed| Generator::for_site(kind, seed).ruin() == ruin)
 }
 
 #[cfg(test)]
@@ -102,8 +130,39 @@ mod tests {
         }
         let empty = |x, y| pois.in_chunk(ChunkPos { x, y }).is_none();
         assert!(empty(0, FIRST_ROW - 1));
+        assert!(empty(0, FIRST_ROW - RUIN_LEVELS - 1));
         assert!(empty(0, FIRST_ROW + VARIANTS));
         assert!(empty(PoiKind::ALL.len() as i64, FIRST_ROW));
+    }
+
+    /// North of the first row: each level of ruin in turn, counting up, for
+    /// everything that can be ruined, and nothing for what can't.
+    #[test]
+    fn ruins_run_north_counting_up() {
+        let pois = PoiMap::new(&world(), Seed::new(1));
+        let mut columns = 0;
+        for (column, kind) in PoiKind::ALL.into_iter().enumerate() {
+            let at = |ruin: i64| {
+                pois.in_chunk(ChunkPos {
+                    x: column as i64,
+                    y: FIRST_ROW - ruin,
+                })
+            };
+            if at(1).is_none() {
+                assert!((1..=RUIN_LEVELS).all(|ruin| at(ruin).is_none()), "{kind:?}");
+                continue;
+            }
+            columns += 1;
+            for ruin in 1..=RUIN_LEVELS {
+                let poi = at(ruin).expect("every level of ruin");
+                assert_eq!(poi.kind, kind);
+                let generator = Generator::for_site(kind, poi.seed);
+                assert_eq!(i64::from(generator.ruin()), ruin, "{kind:?}");
+            }
+        }
+        // Buildings, farms and huts, without tents and ice shelters.
+        assert!(columns > 15, "{columns}");
+        assert!(ARRIVAL.1 >= PLAIN_FROM);
     }
 
     #[test]

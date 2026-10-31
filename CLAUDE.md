@@ -33,7 +33,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: vegetation  | `crates/shared/src/vegetation.rs` | `docs/context/shared/vegetation.md` | Tree cover and low growth at any world map position, from climate and patch noise (visual only for now) |
 | shared: weather     | `crates/shared/src/weather.rs`  | `docs/context/shared/weather.md`      | Cloud cover and rain at any place and time (4D simplex noise) |
 | shared: poi     | `crates/shared/src/poi.rs`  | `docs/context/shared/poi.md`      | World map chunks and their pois (kind, position, map seed) |
-| shared: showcase    | `crates/shared/src/showcase.rs` | `docs/context/shared/showcase.md`     | Debug plain far south with every kind of poi, 8 seeds each, behind `ENABLED` (P to go, Esc to return) |
+| shared: showcase    | `crates/shared/src/showcase.rs` | `docs/context/shared/showcase.md`     | Debug plain far south with every kind of poi, 8 seeds and each level of ruin, behind `ENABLED` (P to go, Esc to return) |
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, windows, ground, water, lava, roads, gardens, holes, fields, fences, herb beds), wall shapes, rooms, line of sight / light reach |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |

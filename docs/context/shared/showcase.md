@@ -8,7 +8,7 @@ A debug area for looking at every kind of poi: from far south of any pole, the w
 
 ## Public API
 
-- `ENABLED`, `VARIANTS` (8), `FLAT_HEIGHT`, `CLIMATE`, `ARRIVAL` (just north of the first poi), `in_plain(y)`, `chunk_in_plain(chunk)`, `poi_at(chunk)`.
+- `ENABLED`, `VARIANTS` (8), `FLAT_HEIGHT`, `CLIMATE`, `ARRIVAL` (just north of the northernmost row), `in_plain(y)`, `chunk_in_plain(chunk)`, `poi_at(chunk)`.
 
 ## Depends on
 
@@ -21,5 +21,6 @@ A debug area for looking at every kind of poi: from far south of any pole, the w
 ## Notes
 
 - One poi in the middle of each chunk: columns east from chunk `x` 0 in `PoiKind::ALL`'s order, so new kinds go on the end by themselves; rows south from chunk `y` 1000. A variant's seed comes from its kind and row, so adding kinds moves none. About 30% of variants come out ruined, as their seeds say.
+- North of those, row by row, ruin 1 to 5 (owner), for kinds that can be ruined; nothing for caves, towns, tents and ice shelters. Each seed is the first found that gives exactly that ruin (`Generator::for_site`), so model and site still agree.
 - Row 1000 is far enough (64,000 points) to be past the poles of any planet by a long way, and no further: drawing is in floats, which lose detail far from the origin.
 - All clients and the server agree, as this is in `shared`, but it means any world has the plain, reachable by walking if you went far enough. Turn off `ENABLED` before a real release.
