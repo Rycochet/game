@@ -9,7 +9,7 @@ use super::mesh::Surface;
 /// Pictures shared by every theme.
 const DOOR: &str = "angbandtk/dg_extra132_12_05.png";
 /// All of a town's roads, gardens, walls, roofs and doors.
-const TOWN: &str = "town_atlas.png";
+pub const TOWN_ATLAS: &str = "town_atlas.png";
 const GROUND: &str = "angbandtk/dg_grounds32_01_00.png";
 const WATER: &str = "angbandtk/dg_grounds32_02_00.png";
 const LAVA: &str = "angbandtk/dg_grounds32_04_00.png";
@@ -88,7 +88,7 @@ impl Theme {
             Surface::Ground => GROUND,
             Surface::Water => WATER,
             Surface::Lava => LAVA,
-            Surface::Town => TOWN,
+            Surface::Town => TOWN_ATLAS,
         }
     }
 }

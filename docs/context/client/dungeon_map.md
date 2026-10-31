@@ -16,7 +16,7 @@ The dungeon (and building) view: `shared::dungeon` cells drawn in 3D through `vi
 
 ## Public API
 
-- `DungeonMapPlugin`, `CELL_SIZE`.
+- `DungeonMapPlugin`, `CELL_SIZE`; `TOWN_ATLAS` and `door_picture(kind)` (where a building kind's door picture is in it), for `minimap`.
 
 ## Depends on
 
@@ -26,7 +26,7 @@ The dungeon (and building) view: `shared::dungeon` cells drawn in 3D through `vi
 
 ## Used by
 
-- Nothing.
+- `minimap` (`TOWN_ATLAS`, `door_picture`).
 
 ## Notes
 

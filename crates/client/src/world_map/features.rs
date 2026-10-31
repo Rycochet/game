@@ -38,7 +38,7 @@ pub(super) struct SpawnedFeatures {
 }
 
 /// The picture shown above a feature's token.
-fn icon(kind: FeatureKind) -> String {
+pub fn icon(kind: FeatureKind) -> String {
     let town = match kind {
         FeatureKind::Hamlet => Some("l2_town03"),
         FeatureKind::Village => Some("l2_town01"),

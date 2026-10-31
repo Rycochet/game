@@ -15,7 +15,7 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with it
 
 ## Public API
 
-- `WorldMapPlugin`; `sky::SkyHourOffset` (dev tools).
+- `WorldMapPlugin`; `sky::SkyHourOffset` (dev tools); `HALF_SIZE` and `feature_icon(kind)` (`minimap`).
 
 ## Depends on
 
@@ -23,7 +23,7 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with it
 
 ## Used by
 
-- Nothing.
+- `minimap` (`HALF_SIZE`, `feature_icon`).
 
 ## Notes
 

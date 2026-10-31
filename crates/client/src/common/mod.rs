@@ -109,6 +109,12 @@ impl KnownFeatures {
         self.chunks.insert((chunk.y, chunk.x), feature);
     }
 
+    /// Whether the server has sent a chunk (numbered as it does, wrapped round
+    /// the planet).
+    pub fn is_known(&self, chunk: ChunkPos) -> bool {
+        self.chunks.contains_key(&(chunk.y, chunk.x))
+    }
+
     /// Every known feature whose position is within `min..=max` (world grid
     /// points, in any planet-width frame: the features are given in the
     /// same one), like `shared::feature::FeatureMap::in_area`.

@@ -19,6 +19,9 @@ mod theme;
 mod town;
 mod walls;
 
+pub use theme::TOWN_ATLAS;
+pub use town::door_picture;
+
 use std::collections::BTreeMap;
 
 use bevy::camera::visibility::NoFrustumCulling;

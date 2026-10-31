@@ -14,6 +14,8 @@ mod rivers;
 pub mod sky;
 mod terrain;
 
+pub use features::icon as feature_icon;
+
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::{NotShadowCaster, light_consts};
 use bevy::platform::time::Instant;

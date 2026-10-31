@@ -9,7 +9,7 @@ Shared building blocks for the client modules. Keep it small.
 ## Public API
 
 - `CurrentWorld` (resource): `params: WorldParams`, `surface: Surface`, `vegetation: Vegetation`, `ground: WorldGround` (walking rules), `features: KnownFeatures`; `CurrentWorld::new(&WorldInfo)`. Only exists once the server has welcomed the client (inserted by `connection`, which also adds the chunks the server sends, marking it changed).
-- `KnownFeatures`: the world map chunks the server has sent and their features (`protocol::SeenFeature`, no map seed; `None`: known to have none). `insert(chunk, feature)`, `in_area(min, max)` (as `FeatureMap::in_area`: any planet-width frame). Unit test.
+- `KnownFeatures`: the world map chunks the server has sent and their features (`protocol::SeenFeature`, no map seed; `None`: known to have none). `insert(chunk, feature)`, `is_known(chunk)`, `in_area(min, max)` (as `FeatureMap::in_area`: any planet-width frame). Unit test.
 - `MapPosition { x: i64, y: i64 }` (component): position on the current view's grid; `y` increases southwards (towards the viewer). For the travelling player, the nearest grid point to `SmoothPosition`.
 - `SmoothPosition { x: f64, y: f64 }` (component): exact position, fractional while the player travels, equal to `MapPosition` when still (`From<MapPosition>`). Anything with a `Token` needs one: `view3d` draws tokens there.
 - `WorldReturn(MapPosition)` (resource): where the player stood on the world map before entering a site. Set by `site` (the way back out); `dungeon_map` reads it for the biome and weather outside.
