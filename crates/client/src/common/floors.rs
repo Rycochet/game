@@ -175,6 +175,7 @@ mod tests {
             building: false,
             index,
             levels: 3,
+            basement: false,
             bounds,
             arrival: (1, 1),
             entering_site,

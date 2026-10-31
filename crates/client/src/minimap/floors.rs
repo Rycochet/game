@@ -52,7 +52,7 @@ pub(super) fn buttons(
     if floors.len() < 2 {
         return Vec::new();
     }
-    floors.sort_unstable();
+    floors.sort_unstable_by_key(|&floor| info.storey(floor));
     if info.building {
         floors.reverse();
     }
@@ -122,6 +122,12 @@ pub(super) fn show_buttons(
 
     let shown = levels.showing();
     let current = dungeon.info.as_ref().map(|info| info.index);
+    let storey = |floor: u32| {
+        dungeon
+            .info
+            .as_ref()
+            .map_or(floor as i32, |i| i.storey(floor))
+    };
     let now = (floors, shown, current, first.0);
     if *drawn == now {
         return;
@@ -129,7 +135,10 @@ pub(super) fn show_buttons(
     commands.entity(entity).despawn_children();
     commands.entity(entity).with_children(|column| {
         for &floor in &now.0 {
-            let number = (floor + first.0).to_string();
+            let number = match storey(floor) {
+                ..0 => "B".to_string(),
+                up => (up + first.0 as i32).to_string(),
+            };
             let size = Node {
                 width: px(BUTTON_WIDTH),
                 height: px(BUTTON),

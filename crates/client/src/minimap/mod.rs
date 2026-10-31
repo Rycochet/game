@@ -678,7 +678,9 @@ fn draw_maps(
         .info
         .as_ref()
         .zip(levels.showing())
-        .is_some_and(|(info, shown)| (info.index > shown) == info.building);
+        .is_some_and(|(info, shown)| {
+            (info.storey(info.index) > info.storey(shown)) == info.building
+        });
     let players_level = &*dungeon;
     let dungeon = levels.shown(players_level);
     *minimap.1 = if full.open {
@@ -1113,6 +1115,7 @@ mod tests {
             building: true,
             index: 1,
             levels: 3,
+            basement: false,
             bounds: (0, 0, 5, 5),
             arrival: (2, 2),
             entering_site: true,
@@ -1353,6 +1356,7 @@ mod tests {
             building: true,
             index: 0,
             levels: 3,
+            basement: false,
             bounds: (0, 0, 400, 400),
             arrival: (100, 100),
             entering_site: true,

@@ -8,6 +8,7 @@
 //!   its "completed" state; Z cycles its icon size.
 //! - B: cycle what the current level's stairs are built as (only what is
 //!   drawn; the next level goes back to its own).
+//! - F: cycle what is growing in the current level's fields (only what is drawn).
 //! - Esc: back to the starting point on the world map, out of any site
 //!   (dev tools: only the embedded server allows it).
 
@@ -37,6 +38,7 @@ impl Plugin for DemoPlugin {
                     temperature_cycle,
                     cycle_token,
                     cycle_stairs,
+                    cycle_fields,
                     back_to_start,
                 ),
             )
@@ -115,6 +117,15 @@ fn cycle_stairs(keys: Res<ButtonInput<KeyCode>>, mut dungeon: ResMut<CurrentDung
     if keys.just_pressed(KeyCode::KeyB) {
         for stairs in &mut dungeon.stairs {
             stairs.style = stairs.style.next();
+        }
+    }
+}
+
+/// F moves every field on the level to its next stage, to show them all.
+fn cycle_fields(keys: Res<ButtonInput<KeyCode>>, mut dungeon: ResMut<CurrentDungeon>) {
+    if keys.just_pressed(KeyCode::KeyF) {
+        for field in &mut dungeon.fields {
+            field.variety = field.variety.wrapping_add(1);
         }
     }
 }

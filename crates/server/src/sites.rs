@@ -366,6 +366,7 @@ fn enter_level(
         building: site.is_building(),
         index,
         levels: site.levels(),
+        basement: site.has_basement(),
         bounds: level.level.bounds(),
         arrival: position,
         entering_site,
@@ -395,6 +396,12 @@ fn enter_level(
     if visit.is_town() {
         let looks = visit.level.buildings.iter().map(|b| b.look.clone());
         let message = ServerMessage::Buildings(looks.collect());
+        if !client.link.send(&message) {
+            return false;
+        }
+    }
+    if !visit.level.fields.is_empty() {
+        let message = ServerMessage::Fields(visit.level.fields.clone());
         if !client.link.send(&message) {
             return false;
         }

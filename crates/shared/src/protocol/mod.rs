@@ -24,7 +24,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 13;
+pub const PROTOCOL_VERSION: u32 = 14;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -140,6 +140,9 @@ pub enum ServerMessage {
     /// A town's buildings, sent after `EnterLevel` and before its cells:
     /// players know a town's layout from the start.
     Buildings(Vec<crate::site::BuildingLook>),
+    /// A farm's fields, sent after `EnterLevel` on its ground floor: what is
+    /// needed to choose what grows in them.
+    Fields(Vec<crate::site::FieldLook>),
     /// The player is on the world map, here: back out of a site, or sent
     /// back to the start by dev tools.
     OnWorldMap { x: i64, y: i64 },
@@ -268,6 +271,7 @@ mod tests {
                 building: false,
                 index: 1,
                 levels: 3,
+                basement: false,
                 bounds: (-20, -10, 40, 30),
                 arrival: (4, 5),
                 entering_site: true,
@@ -296,6 +300,16 @@ mod tests {
                 }],
                 door: (2, -2),
                 faces: (0, -1),
+            }]),
+            ServerMessage::Fields(vec![crate::site::FieldLook {
+                rect: crate::site::Rect {
+                    x: -12,
+                    y: 3,
+                    width: 8,
+                    height: 9,
+                },
+                livestock: true,
+                variety: 77,
             }]),
             ServerMessage::LevelCells(LevelChunk {
                 chunk: (-1, 2),

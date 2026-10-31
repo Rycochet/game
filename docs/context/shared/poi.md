@@ -9,14 +9,14 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 ## Public API
 
 - Constants: `CHUNK_SIZE` (64 grid points), `EDGE_MARGIN` (8: pois stand at least this far inside their chunk, so two are at least 16 apart, a token's width), `POI_CHANCE_PERCENT` (80, the owner's choice), `LAND_TRIES` (8 random spots tried for dry land; a chunk with none has no poi, so seas and coasts have fewer).
-- `PoiKind`: 38 kinds: 34 (`Boulders` … `Mausoleum`) named after the tiles `l2_terrain066`–`099` and in their order, all equally likely, then the towns (`Hamlet`, `Village`, `Town`, `City`; `is_town()`), with their own odds; `ALL`.
+- `PoiKind`: 39 kinds: 34 (`Boulders` … `Mausoleum`) named after the tiles `l2_terrain066`–`099` and in their order, all equally likely, then the towns (`Hamlet`, `Village`, `Town`, `City`; `is_town()`) and `Farm`, with their own odds; `ALL`.
 - `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded. `PoiKind`, `ChunkPos` and `Poi` are serde-serialisable (sent in `protocol::WorldChunk`).
 - `Poi { kind, chunk, x, y, seed }`: `x, y` its exact world grid position; `seed` is what its map is generated from.
 - `PoiMap::new(&WorldParams, pois_seed)` (the secret `WorldSeed::pois`; keeps its own `Surface`), `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Poi>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Poi>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
 
 ## Depends on
 
-- `shared::rng`, `shared::surface` (ground height), `shared::world` (`high_water`).
+- `shared::rng`, `shared::climate` (where farms stand), `shared::surface` (ground height), `shared::world` (`high_water`).
 
 The tests pass the old `terrain.derive("features")` seed, so the golden values didn't change.
 
@@ -27,6 +27,7 @@ The tests pass the old `terrain.derive("features")` seed, so the golden values d
 ## Notes
 
 - Towns replace what a chunk rolled, by a separate hash (`town_at`, `TOWNS_PER_THOUSAND`: 30, 15, 5, 2 per 1000 by size), so other chunks keep their poi and the kind says the town's size before any visit.
+- Farms replace what a chunk rolled in the same way (`farm_at`, `FARMS_PER_THOUSAND`: 60), if the poi's spot is grassland, woodland, seasonal forest or savanna; a town wins. New kinds should do this too: adding to the plain roll would move every poi.
 - Per chunk: `Seed::new(pois_seed.at(&[cx, cy])).rng()`, then in order: the chance roll, the kind, the map seed, then up to `LAND_TRIES` `x`/`y` spots until one is above `WorldParams::high_water()`. Changing that order or any constant changes every world (golden test).
 - East–west the world wraps at `width`, rarely a whole number of chunks, so the last column takes the remainder (wider). North–south there's no wrap.
 - Land is judged by the float surface height against `high_water`, as the server will; a spot exactly at the threshold could in theory differ across platforms if the noise isn't bit-identical (the surface golden tests guard that).

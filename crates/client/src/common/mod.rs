@@ -17,7 +17,7 @@ use shared::movement::{WorldConditions, WorldGround};
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::protocol::{LevelChunk, LevelInfo, SeenPoi, SeenStairs, WorldInfo};
 use shared::river::Rivers;
-use shared::site::BuildingLook;
+use shared::site::{BuildingLook, FieldLook};
 use shared::surface::Surface;
 use shared::vegetation::Vegetation;
 use shared::weather::WeatherField;
@@ -202,6 +202,8 @@ pub struct CurrentDungeon {
     pub stairs: Vec<SeenStairs>,
     /// A town's buildings (none anywhere else).
     pub buildings: Vec<BuildingLook>,
+    /// A farm's fields (none anywhere else).
+    pub fields: Vec<FieldLook>,
 }
 
 impl Default for CurrentDungeon {
@@ -214,6 +216,7 @@ impl Default for CurrentDungeon {
             level,
             stairs: Vec::new(),
             buildings: Vec::new(),
+            fields: Vec::new(),
         }
     }
 }
@@ -227,6 +230,7 @@ impl CurrentDungeon {
         self.remembered = Sight::new(&self.level);
         self.stairs.clear();
         self.buildings.clear();
+        self.fields.clear();
         self.info = Some(info);
     }
 
@@ -283,7 +287,9 @@ impl CurrentDungeon {
     pub fn describe(&self) -> String {
         let name = self.floor_name(FirstFloor(1));
         match &self.info {
-            Some(info) if !info.kind.is_town() => format!("{name} of {}", info.levels),
+            Some(info) if !info.kind.is_town() && info.storey(info.index) >= 0 => {
+                format!("{name} of {}", info.levels)
+            }
             _ => name,
         }
     }
@@ -299,6 +305,9 @@ impl CurrentDungeon {
         }
         let what = if info.building { "floor" } else { "level" };
         let ruined = if info.ruined { "Ruined" } else { "" };
+        if info.storey(info.index) < 0 {
+            return format!("{ruined}{:?}, basement", info.kind);
+        }
         format!("{ruined}{:?}, {what} {}", info.kind, info.index + first.0)
     }
 }

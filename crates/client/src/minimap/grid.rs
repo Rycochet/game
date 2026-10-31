@@ -30,6 +30,9 @@ fn ground_colour(cell: Cell) -> [u8; 3] {
         Cell::Water => [150, 195, 240],
         Cell::Lava => [240, 140, 120],
         Cell::Hole => HOLE,
+        Cell::Field => [214, 222, 160],
+        Cell::Fence => [150, 110, 70],
+        Cell::FieldGate => [226, 238, 214],
         _ => WHITE,
     }
 }
@@ -146,7 +149,7 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             && level.room(x, y).is_some()
             && level.room(x, y) != room;
         dungeon.remembered.is_seen(x, y)
-            && (cell.is_walkable() || cell.is_liquid() || cell == Cell::Hole || other_building)
+            && (cell.is_walkable() || cell.is_jumpable() || other_building)
     };
     match level.cell(x, y) {
         Cell::Door => CellLook::Door {
@@ -159,9 +162,7 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
                 east_west: building.is_none_or(|b| b.faces.0 == 0),
             },
         },
-        cell if cell.is_walkable() || cell.is_liquid() || cell == Cell::Hole => {
-            CellLook::Floor(ground_colour(cell))
-        }
+        cell if cell.is_walkable() || cell.is_jumpable() => CellLook::Floor(ground_colour(cell)),
         cell if cell.is_wall() || cell == Cell::Window => CellLook::Wall(Sides {
             north: shows(x, y - 1),
             east: shows(x + 1, y),
@@ -313,6 +314,7 @@ mod tests {
             building: false,
             index: 0,
             levels: 1,
+            basement: false,
             bounds: (0, 0, 5, 5),
             arrival: (2, 2),
             entering_site: true,

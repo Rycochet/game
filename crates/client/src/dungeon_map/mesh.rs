@@ -8,8 +8,9 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::SeenStairs;
-use shared::site::BuildingLook;
+use shared::site::{BuildingLook, FieldLook};
 
+use super::field;
 use super::holes::build_hole;
 use super::liquid::build_cell;
 use super::stairs::{build_stairs, hides_viewer};
@@ -48,7 +49,7 @@ impl Surface {
     /// The surface the floor of a cell is drawn with.
     pub fn of_flat(cell: Cell) -> Self {
         match cell {
-            Cell::Ground => Self::Ground,
+            Cell::Ground | Cell::Field | Cell::Fence | Cell::FieldGate => Self::Ground,
             Cell::Water => Self::Water,
             Cell::Lava => Self::Lava,
             _ => Self::Floor,
@@ -87,6 +88,20 @@ impl LightGrid {
         let (col, row) = (x - self.min_x, y - self.min_y);
         ((0..self.width).contains(&col) && (0..self.height).contains(&row))
             .then_some((row * self.width + col) as usize)
+    }
+
+    /// Full light on everything out in the open: a farm has fixed light there
+    /// for now, as a town does, while its house stays dark inside.
+    pub fn light_outside(&mut self, level: &Level) {
+        let (min_x, min_y, width, height) = level.bounds();
+        for y in min_y..min_y + height {
+            for x in min_x..min_x + width {
+                let cell = level.cell(x, y);
+                if let (true, Some(i)) = (cell.is_outside() || cell.is_liquid(), self.index(x, y)) {
+                    self.light[i] = Vec3::ONE;
+                }
+            }
+        }
     }
 
     /// The light at a cell (none outside the level).
@@ -189,6 +204,8 @@ pub fn build(
     light: &LightGrid,
     stairs: &[SeenStairs],
     buildings: &[BuildingLook],
+    fields: &[FieldLook],
+    ruined: bool,
     camera: Vec3,
     shape: Shape,
 ) -> DungeonMeshes {
@@ -208,6 +225,8 @@ pub fn build(
         camera,
         shape,
         buildings,
+        fields,
+        ruined,
     };
     let (min_x, min_y, width, height) = level.bounds();
 
@@ -229,9 +248,12 @@ pub fn build(
                 build_opening(&mut layers, &scene, (x, y));
             } else if cell == Cell::Hole {
                 build_hole(&mut layers, &scene, (x, y));
+            } else if cell == Cell::Field && field::build_field(&mut layers, &scene, (x, y)) {
+                // Drawn: anything else of a field is the land's own ground.
             } else {
                 let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
                 build_open_cell(&mut layers, &scene, (x, y), found);
+                field::build_fence(&mut layers, &scene, (x, y));
             }
         }
     }
@@ -431,7 +453,7 @@ impl Builder {
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
     }
 
-    fn into_mesh(self) -> Mesh {
+    pub(super) fn into_mesh(self) -> Mesh {
         Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
@@ -482,6 +504,8 @@ mod tests {
             &light,
             &[],
             &[],
+            &[],
+            false,
             camera,
             Shape::Built,
         )
@@ -547,6 +571,8 @@ mod tests {
             &light,
             &[],
             &[],
+            &[],
+            false,
             camera,
             shape,
         );
@@ -590,6 +616,8 @@ mod tests {
             &light,
             &[],
             &[],
+            &[],
+            false,
             camera,
             shape,
         );
@@ -615,6 +643,8 @@ mod tests {
                 &light,
                 &[],
                 &[],
+                &[],
+                false,
                 camera,
                 shape,
             );
@@ -652,6 +682,8 @@ mod tests {
                 &light,
                 &[],
                 &[],
+                &[],
+                false,
                 camera,
                 shape,
             );
@@ -769,6 +801,8 @@ mod tests {
             &light,
             &[],
             &[],
+            &[],
+            false,
             camera,
             shape,
         );
@@ -795,6 +829,8 @@ mod tests {
             &room_light,
             &[],
             &[],
+            &[],
+            false,
             camera,
             shape,
         );
@@ -809,6 +845,8 @@ mod tests {
             &light,
             &[],
             &[],
+            &[],
+            false,
             camera,
             shape,
         );
@@ -824,6 +862,8 @@ mod tests {
             &light,
             &[],
             &[],
+            &[],
+            false,
             camera,
             shape,
         );

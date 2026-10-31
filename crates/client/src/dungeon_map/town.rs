@@ -31,6 +31,9 @@ const FIRST_WALL_TILE: usize = 8;
 const FIRST_ROOF_TILE: usize = 13;
 const WINDOW_TILE: usize = 18;
 const FIRST_DOOR_TILE: usize = 20;
+pub(super) const PLOUGHED_TILE: usize = 43;
+pub(super) const GRASS_TILE: usize = 44;
+pub(super) const FENCE_TILE: usize = 45;
 
 const HALF_CELL: f32 = CELL_SIZE / 2.0;
 
@@ -72,7 +75,7 @@ const ARCH_PERCENT: u64 = 50;
 const ARCH_RUN: i64 = 3;
 
 /// Picture coordinates in a tile of the atlas, from coordinates in that tile.
-fn atlas_uv(tile: usize, u: f32, v: f32) -> [f32; 2] {
+pub(super) fn atlas_uv(tile: usize, u: f32, v: f32) -> [f32; 2] {
     let (column, row) = (tile as f32 % COLUMNS, (tile as f32 / COLUMNS).floor());
     [
         (column + u.clamp(0.0, 1.0)) / COLUMNS,
@@ -106,13 +109,13 @@ fn roof_tile(kind: RoofKind) -> usize {
     FIRST_ROOF_TILE + RoofKind::ALL.iter().position(|&k| k == kind).unwrap_or(0)
 }
 
-fn cell_centre(x: i64, y: i64) -> Vec3 {
+pub(super) fn cell_centre(x: i64, y: i64) -> Vec3 {
     Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE)
 }
 
 /// Adds a four-cornered surface to the town's mesh in a layer. See-through
 /// faces always turn towards the camera: the material culls back faces.
-fn emit(
+pub(super) fn emit(
     layers: &mut Layers,
     scene: &Scene,
     layer: Layer,
@@ -147,7 +150,7 @@ pub fn build_flat(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)) {
     flat_patch(layers, scene, layer, cell_centre(x, y), patch, tile);
 }
 
-fn flat_layer(scene: &Scene, x: i64, y: i64) -> Layer {
+pub(super) fn flat_layer(scene: &Scene, x: i64, y: i64) -> Layer {
     if scene.sight.is_seen(x, y) {
         Layer::Solid
     } else {
@@ -155,7 +158,7 @@ fn flat_layer(scene: &Scene, x: i64, y: i64) -> Layer {
     }
 }
 
-fn layer_colour(layer: Layer) -> Vec3 {
+pub(super) fn layer_colour(layer: Layer) -> Vec3 {
     match layer {
         Layer::Memory => Vec3::splat(MEMORY_SHADE),
         _ => Vec3::ONE,
@@ -163,7 +166,7 @@ fn layer_colour(layer: Layer) -> Vec3 {
 }
 
 /// A flat piece of a tile, as distances from `centre` (`x` east, `y` south).
-fn flat_patch(
+pub(super) fn flat_patch(
     layers: &mut Layers,
     scene: &Scene,
     layer: Layer,
@@ -905,6 +908,8 @@ mod tests {
             &light,
             &[],
             &buildings,
+            &[],
+            false,
             camera,
             Shape::Built,
         );

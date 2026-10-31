@@ -9,7 +9,7 @@ How characters move: one step at a time to one of the 8 neighbouring grid points
 ## Public API
 
 - `Step` (serde, as `(i8, i8)`): `dx` and `dy` each -1, 0 or 1, not both 0. `Step::new(dx, dy) -> Option<Step>` is the only way to make one; decoding anything else from a message fails (the link reports it garbled). `.dx()`, `.dy()`, `.from((x, y))`.
-- `step_on_level(level, from, step) -> Option<(x, y)>`: onto a walkable cell (`Level::is_walkable`), or over one liquid or hole cell onto a walkable one beyond it (a jump: two cells away, one `Step`, nobody stops there); what can't be crossed can't be stepped onto. Cutting a wall's corner diagonally is allowed.
+- `step_on_level(level, from, step) -> Option<(x, y)>`: onto a walkable cell (`Level::is_walkable`), or over one liquid, hole or fence cell onto a walkable one beyond it (a jump: two cells away, one `Step`, nobody stops there); what can't be crossed can't be stepped onto. Cutting a wall's corner diagonally is allowed.
 - `STRAIGHT_COST` (70), `DIAGONAL_COST` (99), `step_cost(from, to)`: the time a step takes, by the distance it covers (a jump is two cells' worth). Pathfinding uses it now; walking speed and terrain costs are to use it too.
 - `WorldConditions { water, snow_line }`: what decides where can be walked now, as the server says (the hour's `WorldParams::water_level`, the weather).
 - `WorldGround::new(&WorldParams)`, `.elevation(x, y, conditions) -> Option<i32>`: in whole quarters of `Surface::broad_height`, `None` for open water (ice counts as ground).

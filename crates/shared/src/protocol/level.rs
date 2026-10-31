@@ -39,6 +39,8 @@ pub struct LevelInfo {
     /// Which level this is, of how many.
     pub index: u32,
     pub levels: u32,
+    /// Whether the site's last level is a basement.
+    pub basement: bool,
     /// The level's rectangle: `(min_x, min_y, width, height)`.
     pub bounds: (i64, i64, i64, i64),
     /// Where the player arrives.
@@ -47,6 +49,17 @@ pub struct LevelInfo {
     /// rather than taken its stairs: what a client kept of its other levels
     /// is out of date, and `RememberedLevel`s follow.
     pub entering_site: bool,
+}
+
+impl LevelInfo {
+    /// How high level `index` of this site is: its index, but -1 for a basement.
+    pub fn storey(&self, index: u32) -> i32 {
+        if self.basement && index + 1 == self.levels {
+            -1
+        } else {
+            index as i32
+        }
+    }
 }
 
 /// What the player remembers of another level of the site they are on, for
@@ -115,6 +128,23 @@ pub struct SeenStairs {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_basement_is_below_the_ground_whatever_its_index() {
+        let info = |basement| LevelInfo {
+            kind: PoiKind::Farm,
+            ruined: false,
+            building: true,
+            index: 0,
+            levels: 3,
+            basement,
+            bounds: (0, 0, 1, 1),
+            arrival: (0, 0),
+            entering_site: true,
+        };
+        assert_eq!([0, 1, 2].map(|n| info(true).storey(n)), [0, 1, -1]);
+        assert_eq!([0, 1, 2].map(|n| info(false).storey(n)), [0, 1, 2]);
+    }
 
     #[test]
     fn cells_come_back_where_they_were() {

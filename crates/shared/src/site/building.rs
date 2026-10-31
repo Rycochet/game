@@ -118,6 +118,8 @@ pub struct BuildingOptions {
     /// How ruined it is, 0 (a normal building) to 5. The damage has its own
     /// seed, so the floorplan is the same at every level.
     pub ruin: u8,
+    /// Percentage chance of a basement under the ground floor.
+    pub basement_percent: u32,
 }
 
 /// One floor's outline, in level coordinates.
@@ -191,6 +193,10 @@ pub struct Plan {
     /// `stairs[n]` are the staircases joining floor `n` to floor `n + 1`, at
     /// least one each.
     stairs: Vec<Vec<(i64, i64)>>,
+    /// Where the stairs down to the basement are, if it has one. The basement
+    /// is the last level, the size of the ground floor, and is never ruined:
+    /// nothing above it comes down that far.
+    basement: Option<(i64, i64)>,
     /// A ruined building's floors, all of them, from the ground up; empty if
     /// it isn't ruined.
     ruined: Vec<SiteLevel>,
@@ -316,19 +322,63 @@ impl Plan {
         }
         stairs.reverse();
 
+        // (No draw at all for buildings that can't have one.)
+        let basement = if options.basement_percent > 0 && chance(&mut rng, options.basement_percent)
+        {
+            let shape = floors[0];
+            let above = stairs.first().cloned().unwrap_or_default();
+            (0..100).find_map(|_| {
+                let x = roll(&mut rng, shape.x, shape.x + shape.width - 1);
+                let y = roll(&mut rng, shape.y, shape.y + shape.height - 1);
+                let clear = above
+                    .iter()
+                    .all(|&(sx, sy)| (sx - x).abs() > 2 || (sy - y).abs() > 2);
+                ((-1..=1).all(|dy| (-1..=1).all(|dx| shape.is_interior(x + dx, y + dy))) && clear)
+                    .then_some((x, y))
+            })
+        } else {
+            None
+        };
+
         let mut plan = Self {
             seed,
             width: width + 2 * BORDER,
             height: height + 2 * BORDER,
             floors,
             stairs,
+            basement,
             ruined: Vec::new(),
         };
         if options.ruin > 0 {
-            let intact = (0..plan.floors()).map(|n| plan.intact_level(n)).collect();
-            plan.ruined = ruin::ruin_floors(seed, options.ruin, intact, &plan.floors, &plan.stairs);
+            let storeys = plan.floors.len() as u32;
+            let intact = (0..storeys).map(|n| plan.intact_level(n)).collect();
+            plan.ruined = ruin::ruin_floors(
+                seed,
+                options.ruin,
+                intact,
+                &plan.floors,
+                &plan.stairs,
+                basement,
+            );
+            // Floors may have been lost: the basement is still the last level.
+            let last = plan.ruined.len() as u32;
+            for stairs in &mut plan.ruined[0].stairs {
+                if stairs.direction == StairsDirection::Down {
+                    stairs.to = Exit::Level(last);
+                }
+            }
         }
         plan
+    }
+
+    /// Whether it has a basement, its last level.
+    pub fn has_basement(&self) -> bool {
+        self.basement.is_some()
+    }
+
+    /// The ground floor's outline, in level coordinates.
+    pub(super) fn ground(&self) -> Shape {
+        self.floors[0]
     }
 
     /// Each floor's width, from the ground up.
@@ -347,7 +397,13 @@ impl Plan {
         self.floors[0].outline
     }
 
+    /// How many levels it has: its floors, and any basement.
     pub fn floors(&self) -> u32 {
+        self.storeys() + u32::from(self.has_basement())
+    }
+
+    /// How many floors it has above the ground, and on it.
+    fn storeys(&self) -> u32 {
         if self.ruined.is_empty() {
             self.floors.len() as u32
         } else {
@@ -355,23 +411,47 @@ impl Plan {
         }
     }
 
-    /// Floor `index` (0 the ground floor).
+    /// Level `index` (0 the ground floor, then up, the last any basement).
     pub fn level(&self, index: u32) -> SiteLevel {
+        if index >= self.storeys() {
+            return self.basement_level();
+        }
         match self.ruined.get(index as usize) {
             Some(floor) => floor.clone(),
             None => self.intact_level(index),
         }
     }
 
+    /// The basement, under the ground floor's outline.
+    fn basement_level(&self) -> SiteLevel {
+        let (x, y) = self.basement.expect("a basement");
+        let stairs = vec![Stairs {
+            x,
+            y,
+            direction: StairsDirection::Up,
+            to: Exit::Level(0),
+        }];
+        // (Not one of the floors' seeds: the floor count can change with ruin.)
+        let rng = self.seed.derive("building basement").rng();
+        self.fill_floor(self.floors[0], rng, stairs, false)
+    }
+
     /// Generates floor `index` as it is before any ruin.
     fn intact_level(&self, index: u32) -> SiteLevel {
         let n = index as usize;
         let shape = self.floors[n];
-        let mut rng = Seed::new(self.seed.derive("building floor").at(&[index as i64])).rng();
-        let mut level = Level::new(0, 0, self.width, self.height);
+        let rng = Seed::new(self.seed.derive("building floor").at(&[index as i64])).rng();
 
         // Stairs down to the floor below and up to the one above.
         let mut stairs = Vec::new();
+        if let (0, Some((x, y))) = (n, self.basement) {
+            stairs.push(Stairs {
+                x,
+                y,
+                direction: StairsDirection::Down,
+                to: Exit::Level(self.floors.len() as u32),
+            });
+        }
         if n > 0 {
             for &(x, y) in &self.stairs[n - 1] {
                 stairs.push(Stairs {
@@ -392,9 +472,22 @@ impl Plan {
                 });
             }
         }
+        self.fill_floor(shape, rng, stairs, n == 0)
+    }
+
+    /// Splits an outline into rooms round its stairs, with the ground outside
+    /// and the doors out if it is on the ground.
+    fn fill_floor(
+        &self,
+        shape: Shape,
+        mut rng: Rng,
+        stairs: Vec<Stairs>,
+        on_ground: bool,
+    ) -> SiteLevel {
+        let mut level = Level::new(0, 0, self.width, self.height);
         let required: Vec<(i64, i64)> = stairs.iter().map(|s| (s.x, s.y)).collect();
 
-        if n == 0 {
+        if on_ground {
             for y in 0..self.height {
                 for x in 0..self.width {
                     if !shape.contains(x, y) {
@@ -426,7 +519,7 @@ impl Plan {
         // The way in: doors in the outer wall on the ground floor.
         let mut entrances = Vec::new();
         let mut entrance = None;
-        if n == 0 {
+        if on_ground {
             entrances = add_entrances(&mut level, &shape, &mut rng);
             entrance = entrances.first().map(|&(_, outside)| outside);
         }
@@ -450,6 +543,7 @@ impl Plan {
             stairs,
             entrance,
             buildings: Vec::new(),
+            fields: Vec::new(),
         }
     }
 }

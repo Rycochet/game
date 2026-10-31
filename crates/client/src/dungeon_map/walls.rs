@@ -11,7 +11,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{CELL_UNITS, Cell, Level, Sight, WALL_HALF_UNITS};
-use shared::site::BuildingLook;
+use shared::site::{BuildingLook, FieldLook};
 
 use super::liquid::{self, FULL_DEPTH, Outline, outline_at, surfaces_near};
 use super::mesh::{
@@ -124,6 +124,10 @@ pub struct Scene<'a> {
     pub shape: Shape,
     /// A town's buildings.
     pub buildings: &'a [BuildingLook],
+    /// A farm's fields.
+    pub fields: &'a [FieldLook],
+    /// Whether the place is a ruin.
+    pub ruined: bool,
 }
 
 /// A rectangle of floor in a quarter of a cell, as distances from the cell's

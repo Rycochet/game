@@ -3,10 +3,13 @@ picture a town's roads, gardens, walls, roofs and doors are drawn from. The
 order must match `dungeon_map::town` in the client. Run from the repository's
 root: python tools/make_town_atlas.py (needs Pillow)."""
 
+import random
+
 from PIL import Image, ImageDraw
 
 TILES = "crates/client/assets/angbandtk/"
 OUT = "crates/client/assets/town_atlas.png"
+CROPS = "crates/client/assets/field_crops.png"
 COLUMNS, ROWS, SIZE = 8, 6, 32
 
 
@@ -74,6 +77,43 @@ def diamond(d):
     d.line((16, 22, 18, 15), fill=(70, 160, 200, 255))
 
 
+def furrows():
+    """Bare earth in ridges, one every quarter of a cell, so they meet the next
+    cell's."""
+    shades = [(84, 60, 38), (110, 80, 50), (132, 98, 62), (110, 80, 50)]
+    rng = random.Random(1)
+    out = Image.new("RGBA", (SIZE, SIZE))
+    for y in range(SIZE):
+        for x in range(SIZE):
+            r, g, b = shades[x // 2 % len(shades)]
+            d = rng.randint(-5, 5)
+            out.putpixel((x, y), (r + d, g + d, b + d, 255))
+    return out
+
+
+def crop(height, colour):
+    """Blades this high from the bottom of a tile, on nothing."""
+    rng = random.Random(height)
+    out = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    for x in range(SIZE):
+        if x % 2 == 1 and rng.random() < 0.5:
+            continue
+        tall = height - rng.randint(0, height // 3)
+        shade = rng.uniform(0.75, 1.1)
+        blade = tuple(min(255, int(c * shade)) for c in colour) + (255,)
+        for y in range(SIZE - tall, SIZE):
+            out.putpixel((x, y), blade)
+    return out
+
+
+# Crops as they grow, standing in a field: `dungeon_map::field` must match.
+crops = Image.new("RGBA", (3 * SIZE, SIZE))
+for index, (height, colour) in enumerate(
+    [(6, (88, 158, 62)), (12, (150, 178, 62)), (18, (222, 196, 72))]
+):
+    crops.paste(crop(height, colour), (index * SIZE, 0))
+crops.save(CROPS)
+
 atlas = [
     # Roads, poorest first (the order of the cells).
     tile("g", 1, 5),
@@ -124,6 +164,11 @@ atlas = [
     signed(diamond),  # Gem cutter
     tile("f", 8, 0),  # Black market
     tile("f", 2, 6),  # Cathedral
+    # A farm's fields: ploughed with furrows running north to south, grass, and
+    # the wood of fences.
+    furrows(),
+    tinted(tile("g", 10, 3), (70, 130, 50)),
+    tile("e", 12, 3),
 ]
 
 sheet = Image.new("RGBA", (COLUMNS * SIZE, ROWS * SIZE))

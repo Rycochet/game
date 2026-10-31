@@ -19,6 +19,10 @@ use shared::site::{CaveEntrance, Outline, PoiLook};
 /// How far a model reaches from its centre.
 const REACH: f32 = 8.0;
 
+/// How big a farmhouse is on its model, against a building alone: its fields
+/// have to fit round it.
+const FARMHOUSE_SHARE: f32 = 0.55;
+
 /// How far the hovered outline stands off a model.
 const OUTLINE_WIDTH: f32 = 0.5;
 
@@ -361,6 +365,20 @@ pub fn build(kind: PoiKind, look: PoiLook, variety: u64) -> PoiModel {
             }
         }
         PoiLook::Cave { entrance } => underground(&mut model, kind, entrance),
+        PoiLook::Farm {
+            width,
+            height,
+            ruin,
+            fields,
+        } => {
+            let half = Vec2::new(half_size(width), half_size(height)) * FARMHOUSE_SHARE;
+            farm_fields(&mut model, fields, ruin, variety);
+            if ruin > 0 {
+                ruined(&mut model, kind, Outline::Rectangle, half, 2, ruin, variety);
+            } else {
+                building(&mut model, kind, Outline::Rectangle, half, 2);
+            }
+        }
     }
     model
 }
@@ -396,6 +414,30 @@ fn town(model: &mut PoiModel, buildings: u16, variety: u64) {
         for corner in circle(Vec2::splat(REACH * 0.92), 8) {
             model.block(corner, Vec2::splat(0.6), 2.6, STONE);
         }
+    }
+}
+
+/// Flat patches round a farmhouse, one per field, up to its eight places.
+fn farm_fields(model: &mut PoiModel, fields: u8, ruin: u8, variety: u64) {
+    const PLACES: [(f32, f32, f32); 8] = [
+        (0.0, 5.5, 1.7),
+        (-4.0, 4.0, 1.5),
+        (4.0, 4.0, 1.5),
+        (-5.5, 0.0, 1.7),
+        (5.5, 0.0, 1.7),
+        (-4.0, -4.0, 1.5),
+        (0.0, -5.5, 1.7),
+        (4.0, -4.0, 1.5),
+    ];
+    let mut number = variety;
+    for &(x, z, half) in PLACES.iter().take(usize::from(fields)) {
+        let colour = if ruin > 0 {
+            MOSS
+        } else {
+            [EARTH, GRASS, THATCH][(hashed(&mut number) * 3.0) as usize % 3]
+        };
+        let shape = rectangle(Vec2::splat(half));
+        model.prism(Vec2::new(x, z), &shape, (-FOUNDATION, 0.1), colour);
     }
 }
 
@@ -464,6 +506,7 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
             model.doorway(at.x, half.y, 0.4, 1.3);
         }
         WoodenTower => walls_and_roof(model, WOOD, THATCH, rise),
+        Farm => walls_and_roof(model, PLASTER, THATCH, rise),
         Castle | Fort => {
             let (colour, wall_height) = if kind == Castle {
                 (STONE, 2.6)

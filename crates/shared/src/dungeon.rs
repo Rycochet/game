@@ -53,12 +53,23 @@ pub enum Cell {
     /// lit across, and not out in the weather. Not walkable: as with liquid,
     /// one cell of it can only be jumped over (`movement`).
     Hole,
+    /// Walkable outside ground, sown: a farm's field. What grows there is only
+    /// looks, and the client's to choose.
+    Field,
+    /// Round a field: seen and lit across, and not walkable: as with liquid,
+    /// it can only be jumped over (`movement`).
+    Fence,
+    /// The way through a fence: walkable.
+    FieldGate,
 }
 
 impl Cell {
     /// Whether it can be walked on.
     pub fn is_walkable(self) -> bool {
-        matches!(self, Self::Floor | Self::Door | Self::Ground | Self::Garden) || self.is_road()
+        matches!(
+            self,
+            Self::Floor | Self::Door | Self::Ground | Self::Garden | Self::Field | Self::FieldGate
+        ) || self.is_road()
     }
 
     /// Whether it is a road's surface.
@@ -76,7 +87,10 @@ impl Cell {
 
     /// Whether it is out in the open: weather falls on it.
     pub fn is_outside(self) -> bool {
-        matches!(self, Self::Ground | Self::Garden) || self.is_road()
+        matches!(
+            self,
+            Self::Ground | Self::Garden | Self::Field | Self::Fence | Self::FieldGate
+        ) || self.is_road()
     }
 
     /// Whether it is a liquid: not walkable, but one cell of it can be jumped.
@@ -84,14 +98,18 @@ impl Cell {
         matches!(self, Self::Water | Self::Lava)
     }
 
-    /// Whether one cell of it can be jumped over: liquid, or a hole.
+    /// Whether one cell of it can be jumped over: liquid, a hole or a fence.
     pub fn is_jumpable(self) -> bool {
-        self.is_liquid() || self == Self::Hole
+        self.is_liquid() || matches!(self, Self::Hole | Self::Fence)
     }
 
     /// Whether sight and light pass through it.
     pub fn is_open(self) -> bool {
-        self.is_walkable() || matches!(self, Self::Water | Self::Lava | Self::Window | Self::Hole)
+        self.is_walkable()
+            || matches!(
+                self,
+                Self::Water | Self::Lava | Self::Window | Self::Hole | Self::Fence
+            )
     }
 
     /// Whether it is a wall (a hidden door looks and acts like one, and so do

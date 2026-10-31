@@ -252,6 +252,7 @@ impl Plan {
             stairs,
             entrance,
             buildings: Vec::new(),
+            fields: Vec::new(),
         }
     }
 }
