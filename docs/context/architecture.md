@@ -77,7 +77,7 @@ There are several worlds and players move between them, so every map is addresse
 - **visible**: in sight now, worked out by the client from loaded cells (the server works it out too and is authoritative). Drawn normally.
 - **seen**: remembered. Drawn in greyscale (or similar): "not now, but you remember it". Remembered floor can be clicked to travel back; the server checks every step, and memory can be out of date (a door you remember open may be closed now) until seen again.
 
-**What is sent is what the player would see, not the truth**: a secret door is sent as wall until found; `RoomId` never leaves the server.
+**What is sent is what the player would see, not the truth**: a secret door is sent as wall until found; `RoomId` never leaves the server, except that a town's buildings are public (`Buildings`), as a town's whole layout is known from the start.
 
 **Messages** (`shared`, `serde` + `postcard`):
 

@@ -9,11 +9,12 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use shared::climate::Climate;
-use shared::dungeon::{Level, Sight};
+use shared::dungeon::{Level, RoomId, Sight};
 use shared::feature::{CHUNK_SIZE, ChunkPos};
 use shared::movement::{WorldConditions, WorldGround};
 use shared::protocol::{LevelChunk, LevelInfo, SeenFeature, SeenStairs, WorldInfo};
 use shared::river::Rivers;
+use shared::site::BuildingLook;
 use shared::surface::Surface;
 use shared::vegetation::Vegetation;
 use shared::weather::WeatherField;
@@ -179,6 +180,8 @@ pub struct CurrentDungeon {
     pub remembered: Sight,
     /// The level's known stairs.
     pub stairs: Vec<SeenStairs>,
+    /// A town's buildings (none anywhere else).
+    pub buildings: Vec<BuildingLook>,
 }
 
 impl Default for CurrentDungeon {
@@ -190,6 +193,7 @@ impl Default for CurrentDungeon {
             remembered: Sight::new(&level),
             level,
             stairs: Vec::new(),
+            buildings: Vec::new(),
         }
     }
 }
@@ -202,7 +206,34 @@ impl CurrentDungeon {
         self.known = Sight::new(&self.level);
         self.remembered = Sight::new(&self.level);
         self.stairs.clear();
+        self.buildings.clear();
         self.info = Some(info);
+    }
+
+    /// A town's buildings: their cells are marked as theirs on the level.
+    pub fn add_buildings(&mut self, buildings: &[BuildingLook]) {
+        for building in buildings {
+            for rect in &building.rects {
+                for y in rect.y..rect.y + rect.height {
+                    for x in rect.x..rect.x + rect.width {
+                        self.level.set_room(x, y, Some(RoomId(building.id)));
+                    }
+                }
+            }
+        }
+        self.buildings = buildings.to_vec();
+    }
+
+    /// Whether the level is a town.
+    pub fn is_town(&self) -> bool {
+        self.info.as_ref().is_some_and(|info| info.kind.is_town())
+    }
+
+    /// The building whose door faces a cell, if any.
+    pub fn door_facing(&self, x: i64, y: i64) -> Option<&BuildingLook> {
+        self.buildings
+            .iter()
+            .find(|b| (b.door.0 + b.faces.0, b.door.1 + b.faces.1) == (x, y))
     }
 
     /// Cells the server has sent.
@@ -226,6 +257,9 @@ impl CurrentDungeon {
         let Some(info) = &self.info else {
             return "Nowhere".into();
         };
+        if info.kind.is_town() {
+            return format!("{:?}", info.kind);
+        }
         let what = if info.building { "floor" } else { "level" };
         format!(
             "{:?}, {what} {} of {}",

@@ -67,10 +67,14 @@ pub enum FeatureKind {
     BloodyCrypt,
     Grave,
     Mausoleum,
+    Hamlet,
+    Village,
+    Town,
+    City,
 }
 
 impl FeatureKind {
-    pub const ALL: [Self; 34] = [
+    pub const ALL: [Self; 38] = [
         Self::Boulders,
         Self::Ruins,
         Self::GrassyCave,
@@ -105,8 +109,30 @@ impl FeatureKind {
         Self::BloodyCrypt,
         Self::Grave,
         Self::Mausoleum,
+        Self::Hamlet,
+        Self::Village,
+        Self::Town,
+        Self::City,
     ];
+
+    /// How many of `ALL` come from the chunk's plain roll: towns have their
+    /// own (`FeatureMap::town_at`), so they can be rarer the bigger they are.
+    const ROLLED: u64 = 34;
+
+    /// Whether it is a town of any size.
+    pub fn is_town(self) -> bool {
+        matches!(self, Self::Hamlet | Self::Village | Self::Town | Self::City)
+    }
 }
+
+/// Of each 1000 features, how many are towns of each size, by a separate hash
+/// so every other chunk keeps the feature it had before towns existed.
+const TOWNS_PER_THOUSAND: [(FeatureKind, u64); 4] = [
+    (FeatureKind::Hamlet, 30),
+    (FeatureKind::Village, 15),
+    (FeatureKind::Town, 5),
+    (FeatureKind::City, 2),
+];
 
 /// A chunk's position: chunk `(x, y)` covers world grid points from
 /// `(x × CHUNK_SIZE, y × CHUNK_SIZE)`. East–west it wraps round the planet,
@@ -186,7 +212,8 @@ impl FeatureMap {
         if rng.range_u64(0, 100) >= FEATURE_CHANCE_PERCENT {
             return None;
         }
-        let kind = FeatureKind::ALL[rng.range_u64(0, FeatureKind::ALL.len() as u64) as usize];
+        let kind = FeatureKind::ALL[rng.range_u64(0, FeatureKind::ROLLED) as usize];
+        let kind = self.town_at(chunk).unwrap_or(kind);
         let seed = Seed::new(rng.next_u64());
         // The last column is wider (see `columns`).
         let west = chunk.x * CHUNK_SIZE;
@@ -211,6 +238,18 @@ impl FeatureMap {
                 y,
                 seed,
             })
+        })
+    }
+
+    /// The town a chunk with a feature has instead of what it rolled, if any.
+    fn town_at(&self, chunk: ChunkPos) -> Option<FeatureKind> {
+        let mut left = self.seed.derive("towns").at(&[chunk.x, chunk.y]) % 1000;
+        TOWNS_PER_THOUSAND.iter().find_map(|&(kind, count)| {
+            if left < count {
+                return Some(kind);
+            }
+            left -= count;
+            None
         })
     }
 
@@ -302,7 +341,7 @@ mod tests {
         assert_eq!(format!("{found:?}"), GOLDEN_FEATURES);
     }
 
-    const GOLDEN_FEATURES: &str = "[Some((GreenTent, 26575, -174, 2668159104225416170)), Some((ArcheryRange, 25, -143, 836672284536475144)), Some((Boulders, 76, -161, 13866251810797213691)), Some((Crypt, 151, -138, 9653634252034210361))]";
+    const GOLDEN_FEATURES: &str = "[Some((GreenTent, 26575, -174, 2668159104225416170)), Some((ArcheryRange, 25, -143, 836672284536475144)), Some((City, 76, -161, 13866251810797213691)), Some((Crypt, 151, -138, 9653634252034210361))]";
 
     #[test]
     fn about_the_right_share_of_chunks_have_one() {

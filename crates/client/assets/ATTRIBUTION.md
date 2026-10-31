@@ -16,6 +16,10 @@ Artwork in this folder made by other people, with the licence it is used under.
 - Licence: [Creative Commons Attribution 3.0](http://creativecommons.org/licenses/by/3.0/) (CC BY 3.0)
 - Changes: the solid magenta (`#ff00ff`) background was made transparent, the images converted to RGBA PNG, and the file and folder names lower-cased.
 
+## `town_atlas.png`: from the AngbandTk tiles below
+
+Made by `tools/make_town_atlas.py` from those tiles (same artist and licence): some tinted, and four shop signs (saw, scissors, hide, gem) drawn over a door by Claude.
+
 ## `angbandtk/`: AngbandTk flat tiles by David E. Gervais
 
 - Artist: **David E. Gervais**

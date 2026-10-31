@@ -34,12 +34,45 @@ pub enum Cell {
     /// Blocks movement but not sight or light. Joins the walls either side
     /// of it, like a door.
     Window,
+    /// Road surfaces in a town, poorest first: walkable outside ground, the
+    /// land's own beyond them.
+    DirtTrack,
+    GravelTrack,
+    WoodenBoards,
+    Cobblestone,
+    Flagstones,
+    DressedStone,
+    /// Walkable outside ground, planted: a town's garden.
+    Garden,
+    /// The door of a town's solid building: part of its wall, with nothing
+    /// behind it to go into. Used from the cell it faces.
+    BuildingDoor,
+    /// A window in a town's solid building, for looks: part of its wall.
+    BlindWindow,
 }
 
 impl Cell {
     /// Whether it can be walked on.
     pub fn is_walkable(self) -> bool {
-        matches!(self, Self::Floor | Self::Door | Self::Ground)
+        matches!(self, Self::Floor | Self::Door | Self::Ground | Self::Garden) || self.is_road()
+    }
+
+    /// Whether it is a road's surface.
+    pub fn is_road(self) -> bool {
+        matches!(
+            self,
+            Self::DirtTrack
+                | Self::GravelTrack
+                | Self::WoodenBoards
+                | Self::Cobblestone
+                | Self::Flagstones
+                | Self::DressedStone
+        )
+    }
+
+    /// Whether it is out in the open: weather falls on it.
+    pub fn is_outside(self) -> bool {
+        matches!(self, Self::Ground | Self::Garden) || self.is_road()
     }
 
     /// Whether it is a liquid: not walkable, but one cell of it can be jumped.
@@ -49,15 +82,16 @@ impl Cell {
 
     /// Whether sight and light pass through it.
     pub fn is_open(self) -> bool {
-        matches!(
-            self,
-            Self::Floor | Self::Door | Self::Ground | Self::Water | Self::Lava | Self::Window
-        )
+        self.is_walkable() || matches!(self, Self::Water | Self::Lava | Self::Window)
     }
 
-    /// Whether it is a wall (a hidden door looks and acts like one).
+    /// Whether it is a wall (a hidden door looks and acts like one, and so do
+    /// the doors and windows of a town's solid buildings).
     pub fn is_wall(self) -> bool {
-        matches!(self, Self::Wall | Self::SecretDoor)
+        matches!(
+            self,
+            Self::Wall | Self::SecretDoor | Self::BuildingDoor | Self::BlindWindow
+        )
     }
 
     /// Whether it is a hole in a wall, which joins the walls either side.
@@ -111,7 +145,9 @@ impl WallShape {
 }
 
 /// Which room of a level a cell belongs to, as planned by its generator
-/// (corridors, walls and outside ground belong to none). For mobs later.
+/// (corridors, walls and outside ground belong to none). For mobs later. In a
+/// town it is the building instead, whose walls have it too: walls of different
+/// buildings don't join, leaving a gap that can be seen along.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RoomId(pub u16);
 
@@ -215,11 +251,20 @@ impl Level {
     /// The shape of the wall at `(x, y)`, if there is a wall.
     pub fn wall_shape(&self, x: i64, y: i64) -> Option<WallShape> {
         self.cell(x, y).is_wall().then(|| WallShape {
-            north: self.joins_wall(x, y - 1, false),
-            east: self.joins_wall(x + 1, y, true),
-            south: self.joins_wall(x, y + 1, false),
-            west: self.joins_wall(x - 1, y, true),
+            north: self.same_building((x, y), (x, y - 1)) && self.joins_wall(x, y - 1, false),
+            east: self.same_building((x, y), (x + 1, y)) && self.joins_wall(x + 1, y, true),
+            south: self.same_building((x, y), (x, y + 1)) && self.joins_wall(x, y + 1, false),
+            west: self.same_building((x, y), (x - 1, y)) && self.joins_wall(x - 1, y, true),
         })
+    }
+
+    /// Whether two cells aren't walls of different buildings of a town. Walls
+    /// elsewhere are in no room.
+    fn same_building(&self, a: (i64, i64), b: (i64, i64)) -> bool {
+        match (self.room(a.0, a.1), self.room(b.0, b.1)) {
+            (Some(a), Some(b)) => a == b,
+            _ => true,
+        }
     }
 
     /// Whether a wall beside `(x, y)`, to its east or west (`east_west`) or

@@ -4,9 +4,47 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
+use shared::site::BuildingLook;
 
-use super::CELL_SIZE;
 use super::mesh::WallFace;
+use super::{CELL_SIZE, WALL_HEIGHT};
+
+/// The cell in front of a town's door, if the ray hits the door before any
+/// other solid wall piece.
+pub fn door_front(
+    ray: Ray3d,
+    buildings: &[BuildingLook],
+    solid_faces: &[WallFace],
+) -> Option<(i64, i64)> {
+    let direction = *ray.direction;
+    let mut nearest: Option<(f32, (i64, i64))> = None;
+    for building in buildings {
+        let (dx, dy) = building.faces;
+        let normal = Vec3::new(dx as f32, 0.0, dy as f32);
+        let centre = Vec3::new(
+            building.door.0 as f32 * CELL_SIZE,
+            WALL_HEIGHT / 2.0,
+            building.door.1 as f32 * CELL_SIZE,
+        ) + normal * CELL_SIZE * 0.05;
+        let face = WallFace {
+            centre,
+            normal,
+            half_across: CELL_SIZE / 2.0,
+            half_up: WALL_HEIGHT / 2.0,
+        };
+        if let Some(distance) = hits_face(ray.origin, direction, &face)
+            && nearest.is_none_or(|(best, _)| distance < best)
+        {
+            nearest = Some((distance, (building.door.0 + dx, building.door.1 + dy)));
+        }
+    }
+    let (distance, front) = nearest?;
+    // A door stands just in front of its own wall, so that doesn't count.
+    let blocked = solid_faces
+        .iter()
+        .any(|face| hits_face(ray.origin, direction, face).is_some_and(|d| d < distance - 0.5));
+    (!blocked).then_some(front)
+}
 
 /// The seen walkable cell the ray first lands on, if no solid wall side is hit
 /// first. See-through sides don't block: the floor shows through them.

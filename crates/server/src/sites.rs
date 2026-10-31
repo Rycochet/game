@@ -47,6 +47,11 @@ impl Visit {
         self.position
     }
 
+    /// Whether the site is a town, whose layout players always know.
+    fn is_town(&self) -> bool {
+        self.site.kind().is_town()
+    }
+
     /// What is saved with the character.
     pub(crate) fn save(&self) -> VisitSave {
         VisitSave {
@@ -330,7 +335,19 @@ fn enter_level(
     if !client.link.send(&ServerMessage::EnterLevel(info)) {
         return false;
     }
-    let remembered = memory(client, &visit).clone();
+    if visit.is_town() {
+        let looks = visit.level.buildings.iter().map(|b| b.look.clone());
+        let message = ServerMessage::Buildings(looks.collect());
+        if !client.link.send(&message) {
+            return false;
+        }
+    }
+    // A town's layout is known from the start, and so isn't kept as memory.
+    let remembered = if visit.is_town() {
+        all_cells(&visit.level.level)
+    } else {
+        memory(client, &visit).clone()
+    };
     if !send_cells(client, &visit, &remembered, true) {
         return false;
     }
@@ -364,6 +381,20 @@ fn update_sight(client: &mut Client) -> bool {
     let Some(mut visit) = client.visit.take() else {
         return true;
     };
+    if visit.is_town() {
+        // The client has it all, except any cell that has just changed.
+        let mut new = all_cells(&visit.level.level);
+        for (chunk, sent) in &visit.sent {
+            if let Some(mask) = new.get_mut(chunk) {
+                *mask &= !sent;
+            }
+        }
+        new.retain(|_, mask| *mask != 0);
+        let sent = send_cells(client, &visit, &new, true);
+        let visit = client.visit.insert(visit);
+        add_masks(&mut visit.sent, new);
+        return sent;
+    }
     let (looked_from, loaded) = (&mut visit.looked_from, &mut visit.loaded);
     let level = &visit.level.level;
     let (x, y) = visit.position;
@@ -403,6 +434,19 @@ fn update_sight(client: &mut Client) -> bool {
     let visit = client.visit.insert(visit);
     add_masks(&mut visit.sent, new);
     sent
+}
+
+/// Every cell of a level.
+fn all_cells(level: &Level) -> CellMasks {
+    let mut masks = CellMasks::new();
+    let (min_x, min_y, width, height) = level.bounds();
+    for y in min_y..min_y + height {
+        for x in min_x..min_x + width {
+            let (chunk, bit) = level_chunk(x, y);
+            *masks.entry(chunk).or_default() |= 1 << bit;
+        }
+    }
+    masks
 }
 
 /// The cells next to any cell for which `is_in` holds, on `level`, that
@@ -509,6 +553,39 @@ mod tests {
     use crate::connections::tests::TestClient;
     use crate::storage::Storage;
     use crate::storage::tests::TestFolder;
+
+    /// A town arrives whole and remembered, with its buildings, and nothing
+    /// of it is kept in the character's memory.
+    #[test]
+    fn towns_are_known_at_once() {
+        let mut test = TestClient::new();
+        let answers = test.send(&[ClientMessage::DevEnterSite {
+            kind: FeatureKind::Village,
+            seed: 4,
+            level: 0,
+        }]);
+        let site = Site::new(FeatureKind::Village, Seed::new(4)).level(0);
+        let looks = answers.iter().find_map(|message| match message {
+            ServerMessage::Buildings(looks) => Some(looks),
+            _ => None,
+        });
+        assert_eq!(looks.unwrap().len(), site.buildings.len());
+        let mut cells = 0;
+        for answer in &answers {
+            if let ServerMessage::LevelCells(chunk) = answer {
+                assert!(chunk.remembered);
+                cells += chunk.cells.len() as i64;
+            }
+        }
+        let (_, _, width, height) = site.level.bounds();
+        assert_eq!(cells, width * height);
+        let memory = test.client.character.memory.values();
+        assert!(
+            memory
+                .flat_map(|levels| levels.values())
+                .all(|m| m.is_empty())
+        );
+    }
 
     /// A castle with more than one floor.
     fn castle_seed() -> u64 {

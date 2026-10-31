@@ -156,8 +156,9 @@ impl ServerWorld {
                 if save.seed != seed {
                     return Err("its saved seed isn't the one asked for".into());
                 }
-                // Only one world map version exists so far.
-                if save.world_map_version != WORLD_MAP_VERSION {
+                // Version 1 differs only in having no towns: its worlds carry on
+                // with some features turned into towns.
+                if save.world_map_version != WORLD_MAP_VERSION && save.world_map_version != 1 {
                     return Err(format!(
                         "it was made with world map version {}; this server has {WORLD_MAP_VERSION}",
                         save.world_map_version

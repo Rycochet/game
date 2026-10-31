@@ -117,6 +117,7 @@ fn change_map(
                 dungeon.enter(info.clone());
                 next.set(GameView::Dungeon);
             }
+            ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
             &ServerMessage::OnWorldMap { x, y } => {
                 // The world wraps east-west: stay in the same copy of the
