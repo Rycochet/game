@@ -121,10 +121,12 @@ fn cycle_stairs(keys: Res<ButtonInput<KeyCode>>, mut dungeon: ResMut<CurrentDung
     }
 }
 
-/// F moves every field on the level to its next stage, to show them all.
+/// F moves every field on the level to its next stage, to show them all (so
+/// pasture is drawn as crops, which alone go through every stage).
 fn cycle_fields(keys: Res<ButtonInput<KeyCode>>, mut dungeon: ResMut<CurrentDungeon>) {
     if keys.just_pressed(KeyCode::KeyF) {
         for field in &mut dungeon.fields {
+            field.livestock = false;
             field.variety = field.variety.wrapping_add(1);
         }
     }

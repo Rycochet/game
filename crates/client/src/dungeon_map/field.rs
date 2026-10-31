@@ -33,10 +33,10 @@ const RAIL_HEIGHTS: [f32; 2] = [CELL_SIZE * 0.25, CELL_SIZE * 0.5];
 const POST_HALF: f32 = CELL_SIZE * 0.05;
 const RAIL_HALF: f32 = CELL_SIZE * 0.025;
 
-/// How far a gate's posts stand from the middle of its cell, and how far its
-/// open leaf reaches into the field.
+/// How far a gate's posts stand from the middle of its cell. Its leaf is as long
+/// as the gap between them, and has a bar this thick upright at its open end.
 const GATE_POST: f32 = CELL_SIZE * 0.42;
-const GATE_LEAF: f32 = CELL_SIZE * 0.75;
+const GATE_END_HALF: f32 = CELL_SIZE * 0.035;
 
 /// The sides of a fence's wood are darker than its top.
 const WOOD_SIDE_SHADE: f32 = 0.8;
@@ -238,7 +238,8 @@ pub fn build_fence(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)) {
         }
         return;
     }
-    // A gate's cell: a post each side, and its leaf standing open, into the field.
+    // A gate's cell: a post each side, and its leaf standing open at 45 degrees,
+    // into the field.
     let inward = sides
         .into_iter()
         .find(|side| level.cell(x + side.0, y + side.1) == Cell::Field)
@@ -250,8 +251,76 @@ pub fn build_fence(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)) {
         rails(layers, scene, layer, at, centre + along * sign * HALF_CELL);
     }
     let hinge = centre + along * GATE_POST;
-    let end = hinge + way(inward) * GATE_LEAF;
-    rails(layers, scene, layer, hinge, end);
+    let open = (way(inward) - along).normalize();
+    let end = hinge + open * GATE_POST * 2.0;
+    for height in RAIL_HEIGHTS {
+        slanted_rail(layers, scene, layer, hinge, end, height);
+    }
+    let thick = Vec3::new(GATE_END_HALF, 0.0, GATE_END_HALF);
+    let (bottom, top) = (
+        RAIL_HEIGHTS[0] - RAIL_HALF * 2.0,
+        RAIL_HEIGHTS[1] + RAIL_HALF * 2.0,
+    );
+    wood(
+        layers,
+        scene,
+        layer,
+        end - thick + Vec3::Y * bottom,
+        end + thick + Vec3::Y * top,
+    );
+}
+
+/// A rail at `height` between two points on the ground, whichever way they lie:
+/// its top and both sides.
+fn slanted_rail(
+    layers: &mut Layers,
+    scene: &Scene,
+    layer: Layer,
+    from: Vec3,
+    to: Vec3,
+    height: f32,
+) {
+    let uvs = [(0.1, 0.5), (0.9, 0.5), (0.9, 0.1), (0.1, 0.1)];
+    let uvs = uvs.map(|(u, v)| town::atlas_uv(FENCE_TILE, u, v));
+    let top = town::layer_colour(layer);
+    let across = (to - from).cross(Vec3::Y).normalize() * RAIL_HALF;
+    let up = Vec3::Y * RAIL_HALF;
+    let (from, to) = (from + Vec3::Y * height, to + Vec3::Y * height);
+    let faces = [
+        (
+            [
+                from - across + up,
+                to - across + up,
+                to + across + up,
+                from + across + up,
+            ],
+            Vec3::Y,
+            top,
+        ),
+        (
+            [
+                from + across - up,
+                to + across - up,
+                to + across + up,
+                from + across + up,
+            ],
+            across.normalize(),
+            top * WOOD_SIDE_SHADE,
+        ),
+        (
+            [
+                from - across - up,
+                to - across - up,
+                to - across + up,
+                from - across + up,
+            ],
+            -across.normalize(),
+            top * WOOD_SIDE_SHADE,
+        ),
+    ];
+    for (corners, normal, colour) in faces {
+        town::emit(layers, scene, layer, corners, normal, uvs, [colour; 4]);
+    }
 }
 
 /// Everything standing in the fields, wherever anyone can see it: nothing is

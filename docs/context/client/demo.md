@@ -4,7 +4,7 @@ Demo modes toggled by keys, for showing off and testing the views. Works in nati
 
 ## Files
 
-- `crates/client/src/demo/mod.rs`: `DemoPlugin`; `toggle_modes` (keys), `auto_walk`, `temperature_cycle`, `back_to_start` (**Esc**), `cycle_token` (**K** next shape, **C** next attitude, **X** toggle completed, **Z** next icon size, for the player's `Token`), `cycle_stairs` (**B**: every staircase on the level drawn as the next `StairsStyle`, until the level changes), `cycle_fields` (**F**: every field on the level drawn as its next stage, until the level changes), (The M view switch is gone: the dungeon view is reached by entering sites.) Constant `SNOW_LINE_SPEED` (6 units/s, as the prototype).
+- `crates/client/src/demo/mod.rs`: `DemoPlugin`; `toggle_modes` (keys), `auto_walk`, `temperature_cycle`, `back_to_start` (**Esc**), `cycle_token` (**K** next shape, **C** next attitude, **X** toggle completed, **Z** next icon size, for the player's `Token`), `cycle_stairs` (**B**: every staircase on the level drawn as the next `StairsStyle`, until the level changes), `cycle_fields` (**F**: every field on the level drawn as its next stage, pasture as crops too so all five show, until the level changes), (The M view switch is gone: the dungeon view is reached by entering sites.) Constant `SNOW_LINE_SPEED` (6 units/s, as the prototype).
 
 ## Public API
 

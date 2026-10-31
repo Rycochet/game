@@ -59,9 +59,10 @@ struct Remains {
 
 /// What is left of the floor in the quarter of cell `(x, y)` lying towards
 /// `(sx, sy)`: `None` if it is all hole. Which cells count as hole decides the
-/// shape; see the module's notes on how quarters meet.
+/// shape, and off the level's edge counts as hole, so no floor is left along it;
+/// see the module's notes on how quarters meet.
 fn remains(level: &Level, (x, y): (i64, i64), (sx, sy): (i64, i64)) -> Option<Remains> {
-    let is_hole = |x, y| level.cell(x, y) == Cell::Hole;
+    let is_hole = |x, y| !level.contains(x, y) || level.cell(x, y) == Cell::Hole;
     let side_open = is_hole(x + sx, y);
     let end_open = is_hole(x, y + sy);
     let corner = (HALF_CELL, HALF_CELL);
@@ -339,6 +340,26 @@ mod tests {
         }
         let open = level_of(&["OOO", "OOO", "OOO"]);
         assert!(remains(&open, (1, 1), (1, 1)).is_none());
+    }
+
+    /// A hole on the level's edge, or in its corner, has no floor along the
+    /// edge: only where it meets floor inside the level.
+    #[test]
+    fn nothing_is_left_along_the_levels_edge() {
+        let mut level = Level::new(0, 0, 3, 3);
+        for y in 0..3 {
+            for x in 0..3 {
+                level.set(x, y, Cell::Hole);
+            }
+        }
+        for quarter in QUARTERS {
+            assert!(remains(&level, (0, 0), quarter).is_none(), "{quarter:?}");
+            assert!(remains(&level, (1, 0), quarter).is_none(), "{quarter:?}");
+        }
+        level.set(1, 1, Cell::Floor);
+        // Towards the floor, a bite of it; off the edge, still nothing.
+        assert!(remains(&level, (0, 0), (1, 1)).is_some());
+        assert!(remains(&level, (0, 0), (-1, -1)).is_none());
     }
 
     /// In every arrangement of the three cells round a quarter, the floor's
