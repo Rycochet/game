@@ -299,7 +299,9 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
 /// The minimap's round part across, in logical pixels.
 fn minimap_across(window: &Window) -> f32 {
-    (window.height() * MINIMAP_OF_HEIGHT).round()
+    // Never nothing: a minimised window has no height, and the scale of the
+    // maps is worked out from this.
+    (window.height() * MINIMAP_OF_HEIGHT).round().max(1.0)
 }
 
 /// The picture holding it, notch included.
@@ -1225,5 +1227,12 @@ mod tests {
             "Stone tower, floor 2 of 3"
         );
         assert_eq!(words("Crypt"), "Crypt");
+    }
+
+    #[test]
+    fn a_minimised_window_still_gives_the_maps_a_scale() {
+        let mut window = Window::default();
+        window.resolution.set(800.0, 0.0);
+        assert_eq!(minimap_across(&window), 1.0);
     }
 }
