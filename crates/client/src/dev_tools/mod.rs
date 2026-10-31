@@ -18,8 +18,7 @@
 //!   `StairsStyle::ALL`).
 //! - `GAME_FIELDS=n`: draw every field as this stage (its `variety`: for crops
 //!   0 ploughed, 1 grass, 2 short, 3 tall, 4 ripe).
-//! - `GAME_HERBS=n`: draw herb patches `n` stages further on (0 bare, 1 dots, 2
-//!   stalks, 3 full grown, at a world starting on a new cycle; 4 on, new plants).
+//! - `GAME_HERBS=n`: draw every herb tile `n` stages (game days) further on.
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked),
 //!   once at `GAME_POS` if set, otherwise two seconds after starting.
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).

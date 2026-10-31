@@ -14,7 +14,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_MOVE=dx,dy`: two seconds after starting, step the player this far (`player::TakeStep`s, so not into walls; e.g. off the stairs they arrived on, to look at them).
 - `GAME_STAIRS=n`: draw all stairs as this style (an index into `StairsStyle::ALL`: 0 spiral, 1 turning, 2 ladder, 3 log ladder, 4 rope ladder, 5 slat ladder, 6 knotted rope).
 - `GAME_FIELDS=n`: draw every field as this stage (its `variety`: for crops 0 ploughed, 1 grass, 2 short, 3 tall, 4 ripe; pasture alternates grass and short).
-- `GAME_HERBS=n`: draw herb patches `n` stages further on than the clock says (`common::HerbGrowthShift`).
+- `GAME_HERBS=n`: draw every herb tile `n` stages (game days) further on than the clock says (`common::HerbGrowthShift`).
 - `GAME_TRAVEL=x,y`: start travelling there (as if clicked), on either map, once the player is at `GAME_POS` if that is set, otherwise two seconds after starting (the server's answer, or putting the player back in their site, would end an earlier journey); combine with `GAME_SCREENSHOT_DELAY` to catch it mid-journey.
 - `GAME_WALK=1`: start with `demo::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
 - `GAME_SNOW=n`: once connected, ask the server (`DevSnowLine`) for the snow line at `n` (128 normal, 0 frozen), for screenshots of the temperature states.

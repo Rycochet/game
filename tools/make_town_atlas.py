@@ -257,7 +257,8 @@ def plants():
             else:
                 cap, spot = colours[column][way]
                 shape = herb_shapes[column]
-            for x in (9, 23):
+            # Where the planes of a `#` cross: a quarter and three quarters across.
+            for x in (8, 24):
                 shape(draw, x, cap + (255,), spot + (255,))
             sheet.paste(tile_image, place)
     sheet.save(PLANTS)

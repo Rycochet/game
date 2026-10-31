@@ -794,7 +794,7 @@ fn update_crops(
 }
 
 /// Builds what grows in a herbalist's patch again when what is seen changes,
-/// or it moves on a stage.
+/// or an hour passes: some tile may move on a stage in any of them.
 #[allow(clippy::too_many_arguments)]
 fn update_herbs(
     dungeon: Res<CurrentDungeon>,
