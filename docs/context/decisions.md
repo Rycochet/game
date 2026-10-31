@@ -292,3 +292,7 @@ Pois are small 3D models standing on the land, with no token base: placeholders 
 The owner's design. `BuildingOptions::ruin` (0 to 5) damages a building's finished floors with its own seed, so the floorplan doesn't change. A ruined building's floors depend on the floor below, so they are made together and kept rather than each generated alone; unruined buildings still generate per level. The ground floor loses cells to `Cell::Ground`; floors above lose them to the new `Cell::Hole` (open to sight and light, not walkable, not outside), which underground dungeons can use later. Holes are drawn as geometry, with dark through them, because the client doesn't have the level below. One cell of hole can be jumped, as liquid can (owner's). Ruined places are named "Ruined ..." (owner's), through `LevelInfo::ruined` and `PoiLook`. `for_poi` passes ruin 0: which pois are ruined is decided with poi visibility.
 
 Generator versions: building and cave are now 2. Version 1 of each stays runnable, and cheaply (ignore `ruin`, no skylights), rather than leaving saved sites unable to be entered, which is what an unrunnable version does.
+
+## 2026-10-31: Which buildings are ruined
+
+Each building's `ruin` comes from its poi's map seed (`Generator::for_site`), so the world map's model and the site agree. Claude's first numbers, to tune by eye: 30% of buildings are ruined, evenly from 1 to 5; tents and ice shelters never are. A site saved before ruins keeps its version 1 and stays whole, even if its model now shows it ruined.

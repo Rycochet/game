@@ -58,7 +58,7 @@ impl PoiLook {
 
     /// The look of the site a poi of this kind and map seed leads to.
     pub fn of(kind: PoiKind, seed: Seed) -> Self {
-        match Generator::for_poi(kind) {
+        match Generator::for_site(kind, seed) {
             Generator::Building(options) => {
                 let plan = building::Plan::new(&options, seed);
                 let (width, height) = plan.footprint();
@@ -79,6 +79,11 @@ impl PoiLook {
         }
     }
 }
+
+/// Of each 100 buildings that can be ruined, how many are, evenly from 1 to
+/// `MOST_RUIN`.
+const RUINED_PERCENT: u64 = 30;
+const MOST_RUIN: u64 = 5;
 
 /// Where a way out of a level leads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -242,6 +247,21 @@ impl Generator {
             Self::Building(options) => Self::Building(BuildingOptions { ruin, ..options }),
             other => other,
         }
+    }
+
+    /// The generator of one poi's site: its kind's, ruined as its map seed says.
+    pub fn for_site(kind: PoiKind, seed: Seed) -> Self {
+        let sturdy = !matches!(
+            kind,
+            PoiKind::RedTent | PoiKind::BlueTent | PoiKind::GreenTent | PoiKind::IceShelter
+        );
+        if !sturdy {
+            return Self::for_poi(kind);
+        }
+        let roll = seed.derive("how ruined").at(&[0]) % 100;
+        let ruin = roll.saturating_sub(100 - RUINED_PERCENT) * MOST_RUIN / RUINED_PERCENT;
+        let ruined = roll >= 100 - RUINED_PERCENT;
+        Self::for_poi(kind).with_ruin(if ruined { ruin as u8 + 1 } else { 0 })
     }
 
     /// The generator for each kind of world map poi.
@@ -906,5 +926,26 @@ mod pictures {
                 }
             }
         }
+    }
+
+    #[test]
+    fn about_a_third_of_sturdy_buildings_are_ruined_at_every_level() {
+        let mut counts = [0; 6];
+        for seed in 0..3000 {
+            let look = PoiLook::of(PoiKind::Castle, Seed::new(seed));
+            let PoiLook::Building { ruin, .. } = look else {
+                panic!("a castle is a building");
+            };
+            counts[ruin as usize] += 1;
+        }
+        assert!((1900..2300).contains(&counts[0]), "{counts:?}");
+        for count in &counts[1..] {
+            assert!((100..260).contains(count), "{counts:?}");
+        }
+    }
+
+    #[test]
+    fn tents_are_never_ruined() {
+        assert!((0..300).all(|seed| !PoiLook::of(PoiKind::RedTent, Seed::new(seed)).is_ruined()));
     }
 }
