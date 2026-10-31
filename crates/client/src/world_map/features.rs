@@ -39,6 +39,16 @@ pub(super) struct SpawnedFeatures {
 
 /// The picture shown above a feature's token.
 fn icon(kind: FeatureKind) -> String {
+    let town = match kind {
+        FeatureKind::Hamlet => Some("l2_town03"),
+        FeatureKind::Village => Some("l2_town01"),
+        FeatureKind::Town => Some("l2_town02"),
+        FeatureKind::City => Some("l2_town"),
+        _ => None,
+    };
+    if let Some(town) = town {
+        return format!("terrain/{town}.png");
+    }
     format!("terrain/l2_terrain{:03}.png", FIRST_TILE + kind as usize)
 }
 
@@ -114,9 +124,7 @@ mod tests {
     #[test]
     fn icons_cover_the_chosen_tiles() {
         assert_eq!(icon(FeatureKind::ALL[0]), "terrain/l2_terrain066.png");
-        assert_eq!(
-            icon(*FeatureKind::ALL.last().unwrap()),
-            "terrain/l2_terrain099.png"
-        );
+        assert_eq!(icon(FeatureKind::Mausoleum), "terrain/l2_terrain099.png");
+        assert_eq!(icon(FeatureKind::City), "terrain/l2_town.png");
     }
 }

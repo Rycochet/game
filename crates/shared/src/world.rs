@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// The world map generator's version (`WorldParams`, `surface`). Bump it only
 /// when the generated terrain changes in a way that matters, not for
 /// cosmetic changes: existing worlds keep the version they were made with.
-pub const WORLD_MAP_VERSION: u32 = 1;
+pub const WORLD_MAP_VERSION: u32 = 2;
 
 /// A world's secret seed. Only the server has it (and saves it); never send
 /// it to a client.

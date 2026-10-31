@@ -329,6 +329,7 @@ impl Plan {
             level,
             stairs,
             entrance,
+            buildings: Vec::new(),
         }
     }
 }

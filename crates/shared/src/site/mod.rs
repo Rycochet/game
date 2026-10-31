@@ -15,6 +15,7 @@
 mod building;
 mod cave;
 mod grid;
+mod town;
 
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +25,7 @@ use crate::rng::Seed;
 
 pub use building::{BuildingOptions, Outline};
 pub use cave::{CaveEntrance, CaveOptions};
+pub use town::{BuildingKind, BuildingLook, Rect, RoofKind, TownBuilding, TownOptions, WallKind};
 
 /// Where a way out of a level leads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -95,6 +97,8 @@ impl StairsStyle {
             GrassyCave | EarthCave | RockCave | Boulders | IceCave | IceShelter => {
                 &[Ladder, LogLadder, RopeLadder, SlatLadder, KnottedRope]
             }
+            // Towns have no stairs yet.
+            Hamlet | Village | Town | City => &[Turning],
         }
     }
 }
@@ -116,12 +120,15 @@ pub struct SiteLevel {
     pub stairs: Vec<Stairs>,
     /// Where you arrive from the world map, on the level you enter by.
     pub entrance: Option<(i64, i64)>,
+    /// A town's buildings (no other level has any).
+    pub buildings: Vec<TownBuilding>,
 }
 
-/// Whether walking to `(x, y)` leaves for the world map: outside ground on
-/// the very edge of the level (beside the edge, not just any ground).
+/// Whether walking to `(x, y)` leaves for the world map: outside ground or
+/// road on the very edge of the level (beside the edge, not just any ground).
 pub fn leads_out(level: &Level, x: i64, y: i64) -> bool {
-    level.cell(x, y) == crate::dungeon::Cell::Ground
+    let cell = level.cell(x, y);
+    (cell == crate::dungeon::Cell::Ground || cell.is_road())
         && grid::STEPS
             .iter()
             .any(|(dx, dy)| !level.contains(x + dx, y + dy))
@@ -161,6 +168,8 @@ pub enum Generator {
     /// Irregular caves joined by winding passages, possibly several levels
     /// deep. Also used for dug dungeons such as crypts (with doors).
     Cave(CaveOptions),
+    /// Roads with solid buildings along them.
+    Town(TownOptions),
 }
 
 impl Generator {
@@ -169,6 +178,7 @@ impl Generator {
         match self {
             Self::Building(_) => BUILDING_VERSION,
             Self::Cave(_) => CAVE_VERSION,
+            Self::Town(_) => TOWN_VERSION,
         }
     }
 
@@ -196,7 +206,12 @@ impl Generator {
                 lava_percent,
             })
         };
+        let town = |buildings| Self::Town(TownOptions { buildings });
         match kind {
+            Hamlet => town((3, 8)),
+            Village => town((9, 25)),
+            Town => town((26, 60)),
+            City => town((61, 150)),
             // Natural caves: walk in from the side.
             GrassyCave | EarthCave => cave((40, 70), (1, 3), CaveEntrance::Opening, false, 30, 0),
             RockCave => cave((45, 80), (1, 4), CaveEntrance::Opening, false, 25, 15),
@@ -249,6 +264,9 @@ pub const BUILDING_VERSION: u32 = 1;
 /// The cave generator's version (as `BUILDING_VERSION`).
 pub const CAVE_VERSION: u32 = 1;
 
+/// The town generator's version (as `BUILDING_VERSION`).
+pub const TOWN_VERSION: u32 = 1;
+
 /// A feature's map: its plan, from which any level can be generated.
 #[derive(Clone, Debug)]
 pub struct Site {
@@ -261,6 +279,7 @@ pub struct Site {
 enum Plan {
     Building(building::Plan),
     Cave(cave::Plan),
+    Town(town::Plan),
 }
 
 impl Site {
@@ -280,6 +299,9 @@ impl Site {
             }
             Generator::Cave(options) if version == CAVE_VERSION => {
                 Plan::Cave(cave::Plan::new(&options, seed))
+            }
+            Generator::Town(options) if version == TOWN_VERSION => {
+                Plan::Town(town::Plan::new(&options, seed))
             }
             _ => return None,
         };
@@ -301,6 +323,7 @@ impl Site {
         match &self.plan {
             Plan::Building(plan) => plan.floors(),
             Plan::Cave(plan) => plan.levels(),
+            Plan::Town(_) => 1,
         }
     }
 
@@ -311,6 +334,7 @@ impl Site {
         match &self.plan {
             Plan::Building(plan) => plan.level(index),
             Plan::Cave(plan) => plan.level(index),
+            Plan::Town(plan) => plan.level(),
         }
     }
 
@@ -580,7 +604,7 @@ mod tests {
     /// Caves: no room is a plain rectangle.
     #[test]
     fn cave_rooms_are_not_rectangles() {
-        for site in every_site(4).filter(|site| !site.is_building()) {
+        for site in every_site(4).filter(|site| !site.is_building() && !site.kind().is_town()) {
             for index in 0..site.levels() {
                 let level = site.level(index).level;
                 let (min_x, min_y, width, height) = level.bounds();
@@ -608,7 +632,8 @@ mod tests {
     /// Rooms are only on floor-like cells, and some exist.
     #[test]
     fn rooms_are_marked() {
-        for site in every_site(2) {
+        // (In towns, rooms are buildings: tested in `town`.)
+        for site in every_site(2).filter(|site| !site.kind().is_town()) {
             let level = site.level(0).level;
             let (min_x, min_y, width, height) = level.bounds();
             let mut any = false;
@@ -702,6 +727,11 @@ mod pictures {
                                 Cell::Water => '~',
                                 Cell::Lava => '^',
                                 Cell::Window => 'W',
+                                Cell::BlindWindow => 'w',
+                                Cell::BuildingDoor => '+',
+                                Cell::Garden => '"',
+                                cell if cell.is_road() => '=',
+                                cell => panic!("no letter for {cell:?}"),
                             }
                         })
                         .collect();

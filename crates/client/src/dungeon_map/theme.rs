@@ -8,6 +8,8 @@ use super::mesh::Surface;
 
 /// Pictures shared by every theme.
 const DOOR: &str = "angbandtk/dg_extra132_12_05.png";
+/// All of a town's roads, gardens, walls, roofs and doors.
+const TOWN: &str = "town_atlas.png";
 const GROUND: &str = "angbandtk/dg_grounds32_01_00.png";
 const WATER: &str = "angbandtk/dg_grounds32_02_00.png";
 const LAVA: &str = "angbandtk/dg_grounds32_04_00.png";
@@ -66,7 +68,7 @@ impl Theme {
         };
         match kind {
             Castle | Fort | StoneTower | StoneCottage | Warehouse | ArcheryRange | AdobeHouse
-            | AdobeStore | StonePyramid | SandPyramid => STONE,
+            | AdobeStore | StonePyramid | SandPyramid | Hamlet | Village | Town | City => STONE,
             ThatchedHut | StiltHut | GreenStiltHut | RedTent | BlueTent | GreenTent
             | RedRoofCottage | GreyRoofCottage | SnowyCottage | WoodenTower => WOOD,
             Crypt | MossyCrypt | BloodyCrypt | Mausoleum | Grave | Ruins | Barrel | Barrels => {
@@ -86,6 +88,7 @@ impl Theme {
             Surface::Ground => GROUND,
             Surface::Water => WATER,
             Surface::Lava => LAVA,
+            Surface::Town => TOWN,
         }
     }
 }

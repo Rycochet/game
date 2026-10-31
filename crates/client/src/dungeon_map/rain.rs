@@ -12,7 +12,7 @@ use bevy::render::render_resource::{
     AsBindGroup, RenderPipelineDescriptor, ShaderType, SpecializedMeshPipelineError,
 };
 use bevy::shader::ShaderRef;
-use shared::dungeon::Cell;
+
 use shared::rng::Seed;
 
 use super::{CELL_SIZE, Shown};
@@ -163,7 +163,7 @@ pub fn update(
         let mut cells = Vec::new();
         for y in min_y..min_y + height {
             for x in min_x..min_x + width {
-                if level.cell(x, y) == Cell::Ground
+                if level.cell(x, y).is_outside()
                     && sight.is_seen(x, y)
                     && dungeon.known.is_seen(x, y)
                 {

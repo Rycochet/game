@@ -8,10 +8,12 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::SeenStairs;
+use shared::site::BuildingLook;
 
 use super::liquid::build_cell;
 use super::stairs::{build_stairs, hides_viewer};
 use super::theme::Shape;
+use super::town;
 use super::walls::{Layers, Scene, build_opening, build_wall};
 use super::{AMBIENT_LIGHT, CELL_SIZE};
 
@@ -26,10 +28,12 @@ pub enum Surface {
     Lava,
     /// The wall's picture fading out across the floor beside a natural wall.
     WallBlend,
+    /// A town's roads, gardens, buildings and hedges, from one picture.
+    Town,
 }
 
 impl Surface {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Floor,
         Self::Wall,
         Self::Door,
@@ -37,6 +41,7 @@ impl Surface {
         Self::Water,
         Self::Lava,
         Self::WallBlend,
+        Self::Town,
     ];
 
     /// The surface the floor of a cell is drawn with.
@@ -45,7 +50,7 @@ impl Surface {
             Cell::Ground => Self::Ground,
             Cell::Water => Self::Water,
             Cell::Lava => Self::Lava,
-            Cell::Floor | Cell::Wall | Cell::SecretDoor | Cell::Door | Cell::Window => Self::Floor,
+            _ => Self::Floor,
         }
     }
 }
@@ -62,13 +67,18 @@ pub struct LightGrid {
 
 impl LightGrid {
     pub fn new(level: &Level) -> Self {
+        Self::filled(level, Vec3::ZERO)
+    }
+
+    /// The same light on every cell: a town has fixed light, for now.
+    pub fn filled(level: &Level, light: Vec3) -> Self {
         let (min_x, min_y, width, height) = level.bounds();
         Self {
             min_x,
             min_y,
             width,
             height,
-            light: vec![Vec3::ZERO; (width * height) as usize],
+            light: vec![light; (width * height) as usize],
         }
     }
 
@@ -177,6 +187,7 @@ pub fn build(
     remembered: &Sight,
     light: &LightGrid,
     stairs: &[SeenStairs],
+    buildings: &[BuildingLook],
     camera: Vec3,
     shape: Shape,
 ) -> DungeonMeshes {
@@ -195,6 +206,7 @@ pub fn build(
         light,
         camera,
         shape,
+        buildings,
     };
     let (min_x, min_y, width, height) = level.bounds();
 
@@ -205,7 +217,13 @@ pub fn build(
             }
             let cell = level.cell(x, y);
             if cell.is_wall() {
-                build_wall(&mut layers, &scene, (x, y));
+                // A town's buildings are drawn whole, below.
+                if level.room(x, y).is_none() {
+                    build_wall(&mut layers, &scene, (x, y));
+                }
+            } else if cell.is_road() || cell == Cell::Garden {
+                town::build_flat(&mut layers, &scene, (x, y));
+                town::build_hedges(&mut layers, &scene, (x, y));
             } else if cell.is_opening() {
                 build_opening(&mut layers, &scene, (x, y));
             } else {
@@ -214,6 +232,8 @@ pub fn build(
             }
         }
     }
+
+    town::build_buildings(&mut layers, &scene);
 
     let Layers {
         solid,
@@ -458,6 +478,7 @@ mod tests {
             &sight,
             &light,
             &[],
+            &[],
             camera,
             Shape::Built,
         )
@@ -515,7 +536,17 @@ mod tests {
         // East of the wall's line, so its east sides face the camera.
         let camera = Vec3::new(500.0, 600.0, 900.0);
         let shape = Shape::Built;
-        let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+        let meshes = build(
+            &level,
+            &views,
+            sight,
+            sight,
+            &light,
+            &[],
+            &[],
+            camera,
+            shape,
+        );
         assert!(meshes.has_see_through);
         let on_the_wall = meshes
             .solid_faces
@@ -548,7 +579,17 @@ mod tests {
                 .iter()
                 .any(|p| (p[2] + CELL_SIZE * 0.05).abs() < 0.01 && p[1] < 0.01)
         };
-        let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+        let meshes = build(
+            &level,
+            &views,
+            sight,
+            sight,
+            &light,
+            &[],
+            &[],
+            camera,
+            shape,
+        );
         assert!(north_side(&meshes));
     }
 
@@ -563,7 +604,17 @@ mod tests {
         let light = LightGrid::new(&level);
         let camera = Vec3::new(0.0, 600.0, 900.0);
         for shape in [Shape::Built, Shape::Natural] {
-            let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+            let meshes = build(
+                &level,
+                &views,
+                sight,
+                sight,
+                &light,
+                &[],
+                &[],
+                camera,
+                shape,
+            );
             let positions = meshes.solid[Surface::Floor as usize]
                 .attribute(Mesh::ATTRIBUTE_POSITION)
                 .and_then(|values| values.as_float3())
@@ -590,7 +641,17 @@ mod tests {
         let light = LightGrid::new(&level);
         let shape = Shape::Natural;
         let filled = |camera: Vec3| {
-            let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+            let meshes = build(
+                &level,
+                &views,
+                sight,
+                sight,
+                &light,
+                &[],
+                &[],
+                camera,
+                shape,
+            );
             let solid = &meshes.solid[Surface::Wall as usize];
             solid
                 .attribute(Mesh::ATTRIBUTE_POSITION)
@@ -697,7 +758,17 @@ mod tests {
         let camera = Vec3::new(0.0, 600.0, 900.0);
         let sight = &views[0].sight;
         let shape = Shape::Built;
-        let meshes = build(&level, &views, sight, sight, &light, &[], camera, shape);
+        let meshes = build(
+            &level,
+            &views,
+            sight,
+            sight,
+            &light,
+            &[],
+            &[],
+            camera,
+            shape,
+        );
         assert!(meshes.has_solid.iter().any(|&has| has));
         // The south wall's inner sides face away from the camera.
         assert!(meshes.has_see_through);
@@ -720,18 +791,39 @@ mod tests {
             room_sight,
             &room_light,
             &[],
+            &[],
             camera,
             shape,
         );
         assert!(plain.has_memory.iter().all(|&has| !has));
 
         let nothing = Sight::new(&level);
-        let meshes = build(&level, &[], &nothing, &nothing, &light, &[], camera, shape);
+        let meshes = build(
+            &level,
+            &[],
+            &nothing,
+            &nothing,
+            &light,
+            &[],
+            &[],
+            camera,
+            shape,
+        );
         assert!(meshes.has_solid.iter().all(|&has| !has));
         assert!(!meshes.has_see_through);
 
         // Remembered, but out of sight: drawn in the grey meshes only.
-        let meshes = build(&level, &[], &nothing, sight, &light, &[], camera, shape);
+        let meshes = build(
+            &level,
+            &[],
+            &nothing,
+            sight,
+            &light,
+            &[],
+            &[],
+            camera,
+            shape,
+        );
         assert!(meshes.has_solid.iter().all(|&has| !has));
         assert!(meshes.has_memory[Surface::Floor as usize]);
         assert!(meshes.has_memory[Surface::Wall as usize]);

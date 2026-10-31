@@ -16,6 +16,7 @@ mod picking;
 mod rain;
 mod stairs;
 mod theme;
+mod town;
 mod walls;
 
 use std::collections::BTreeMap;
@@ -59,6 +60,9 @@ const MEMORY_ALPHA: f32 = 0.5;
 
 /// Draws a wall's fade across the floor after the floor, before the walls.
 const BLEND_DEPTH_BIAS: f32 = -0.5;
+
+/// A town's fixed light on tokens: it is out in the open.
+const TOWN_AMBIENT_BRIGHTNESS: f32 = 1500.0;
 
 /// Tokens are lit by real lights (the tiles' light is baked into their
 /// colours): a point light this high above each light source, and a dim
@@ -211,9 +215,15 @@ fn spawn_scene(
         .map(|(&surface, picture)| {
             materials.add(StandardMaterial {
                 base_color: Color::srgba(1.0, 1.0, 1.0, MEMORY_ALPHA),
-                alpha_mode: AlphaMode::Blend,
+                // Solid even as memory: a whole town is remembered at once,
+                // and blended meshes wouldn't sort.
+                alpha_mode: if surface == Surface::Town {
+                    AlphaMode::Opaque
+                } else {
+                    AlphaMode::Blend
+                },
                 depth_bias: match surface {
-                    Surface::Wall => 0.0,
+                    Surface::Wall | Surface::Town => 0.0,
                     Surface::WallBlend => BLEND_DEPTH_BIAS,
                     _ => -1.0,
                 },
@@ -309,6 +319,7 @@ fn load_tile(asset_server: &AssetServer, path: &'static str) -> Handle<Image> {
 
 /// The wall and floor pictures for the kind of place the player is in.
 fn apply_theme(
+    mut commands: Commands,
     dungeon: Res<CurrentDungeon>,
     asset_server: Res<AssetServer>,
     mut surfaces: ResMut<SurfaceMaterials>,
@@ -317,6 +328,14 @@ fn apply_theme(
     if !dungeon.is_changed() {
         return;
     }
+    commands.insert_resource(GlobalAmbientLight {
+        brightness: if dungeon.is_town() {
+            TOWN_AMBIENT_BRIGHTNESS
+        } else {
+            TOKEN_AMBIENT_BRIGHTNESS
+        },
+        ..default()
+    });
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
@@ -592,8 +611,14 @@ fn update_meshes(
             }
         }
     }
-    let mut light = LightGrid::new(level);
-    for (position, source) in &lights {
+    // Out in the open, a town has fixed light for now.
+    let is_town = dungeon.is_town();
+    let mut light = if is_town {
+        LightGrid::filled(level, Vec3::ONE)
+    } else {
+        LightGrid::new(level)
+    };
+    for (position, source) in lights.iter().filter(|_| !is_town) {
         let colour = LinearRgba::from(source.colour);
         light.add_light(
             level,
@@ -610,6 +635,7 @@ fn update_meshes(
         &remembered,
         &light,
         &dungeon.stairs,
+        &dungeon.buildings,
         camera,
         theme.shape,
     );
@@ -673,7 +699,13 @@ fn update_meshes(
         *stored = built.see_through;
     }
     let ms = start.elapsed().as_secs_f32() * 1000.0;
-    stats.summary = format!("{}: sight, light and meshes {ms:.2} ms", dungeon.describe());
+    let place = dungeon.describe();
+    let at_door = dungeon
+        .door_facing(player.x, player.y)
+        .map_or(String::new(), |b| {
+            format!(", at the door of: {}", b.kind.name())
+        });
+    stats.summary = format!("{place}{at_door}: sight, light and meshes {ms:.2} ms");
 }
 
 /// A left click on a seen (or remembered) walkable cell sends the player
@@ -717,9 +749,10 @@ fn pick_on_click(
         }
         return;
     }
-    if let Some((x, y)) =
-        picking::pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces)
-    {
+    let door = picking::door_front(ray, &dungeon.buildings, &shown.solid_faces);
+    let picked = door
+        .or_else(|| picking::pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces));
+    if let Some((x, y)) = picked {
         // Dev tools: ctrl+click jumps there instead (through walls), if the
         // server allows it.
         if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {

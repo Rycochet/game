@@ -184,6 +184,21 @@ pub struct LevelSave {
     /// level every time; a reset never undoes them.
     #[serde(default)]
     pub changes: BTreeMap<(i64, i64), Cell>,
+    /// A town's buildings that players have dealt with, by `RoomId`.
+    #[serde(default)]
+    pub buildings: BTreeMap<u16, BuildingSave>,
+}
+
+/// What players have done with a town's building.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct BuildingSave {
+    /// Trades made by players, on top of the number it was generated with.
+    #[serde(default)]
+    pub trades: u32,
+    /// The server's clock (game hours) when last interacted with, which will
+    /// decide when its stock refreshes.
+    #[serde(default)]
+    pub last_interaction: Option<f64>,
 }
 
 /// Cells of a level by chunk: one bit per cell (see
@@ -357,6 +372,13 @@ pub(crate) mod tests {
                 LevelSave {
                     last_visit: 99,
                     changes: BTreeMap::from([((1, 2), Cell::Floor)]),
+                    buildings: BTreeMap::from([(
+                        4,
+                        BuildingSave {
+                            trades: 2,
+                            last_interaction: Some(12.5),
+                        },
+                    )]),
                 },
             )]),
         };
