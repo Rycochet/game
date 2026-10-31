@@ -8,6 +8,7 @@ Shared building blocks for the client modules. Keep it small.
 
 ## Public API
 
+- `floors.rs`: `OtherLevels` (the site's other known levels, each a `CurrentDungeon`, for the maps: `entering`, `add`, `show`, `show_own`, `showing`, `shown`, `floors`, `spot`), `CurrentDungeon::floor_name` (for the full map's title; `describe` adds "of Y" for the HUD), `FirstFloor` (the first floor's number, 0 or 1, from the locale by `sys-locale`: the EU, UK and Latin America count from 0).
 - `CurrentWorld` (resource): `params: WorldParams`, `surface: Surface`, `vegetation: Vegetation`, `ground: WorldGround` (walking rules), `pois: KnownPois`; `CurrentWorld::new(&WorldInfo)`. Only exists once the server has welcomed the client (inserted by `connection`, which also adds the chunks the server sends, marking it changed).
 - `KnownPois`: the world map chunks the server has sent and their pois (`protocol::SeenPoi`, no map seed; `None`: known to have none). `insert(chunk, poi)`, `is_known(chunk)`, `in_area(min, max)` (as `PoiMap::in_area`: any planet-width frame). Unit test.
 - `MapPosition { x: i64, y: i64 }` (component): position on the current view's grid; `y` increases southwards (towards the viewer). For the travelling player, the nearest grid point to `SmoothPosition`.

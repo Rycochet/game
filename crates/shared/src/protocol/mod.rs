@@ -8,7 +8,9 @@
 mod level;
 mod link;
 
-pub use level::{ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, SeenStairs, level_chunk};
+pub use level::{
+    ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, level_chunk,
+};
 pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
 
 use serde::{Deserialize, Serialize};
@@ -22,7 +24,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 12;
+pub const PROTOCOL_VERSION: u32 = 13;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -132,6 +134,9 @@ pub enum ServerMessage {
     EnterLevel(LevelInfo),
     /// Cells of the current level.
     LevelCells(LevelChunk),
+    /// Another level of this site that the player knows, sent after
+    /// `EnterLevel` on coming into the site.
+    RememberedLevel(RememberedLevel),
     /// A town's buildings, sent after `EnterLevel` and before its cells:
     /// players know a town's layout from the start.
     Buildings(Vec<crate::site::BuildingLook>),
@@ -265,6 +270,18 @@ mod tests {
                 levels: 3,
                 bounds: (-20, -10, 40, 30),
                 arrival: (4, 5),
+                entering_site: true,
+            }),
+            ServerMessage::RememberedLevel(RememberedLevel {
+                index: 2,
+                bounds: (-20, -10, 40, 30),
+                chunks: vec![LevelChunk {
+                    chunk: (0, 0),
+                    mask: 1,
+                    cells: vec![Cell::Floor],
+                    stairs: Vec::new(),
+                    remembered: true,
+                }],
             }),
             ServerMessage::Buildings(vec![crate::site::BuildingLook {
                 id: 3,

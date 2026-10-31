@@ -35,6 +35,10 @@
 //! - `GAME_MAP=dx,dy`: two seconds after starting, open the full map, moved
 //!   this many grid points from the player (`0,0` to centre it on them).
 //! - `GAME_MAP_ZOOM=n`: the full map opened by `GAME_MAP` at this zoom.
+//! - `GAME_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the
+//!   locale says.
+//! - `GAME_SHOW_FLOOR=n`: three seconds after starting, look at this known
+//!   floor (an index, from 0) on the maps.
 //! - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look
 //!   at what hovering shows.
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
@@ -53,7 +57,8 @@ use shared::protocol::ClientMessage;
 use shared::site::StairsStyle;
 
 use crate::common::{
-    Attitude, CurrentDungeon, GameView, MapPosition, Token, TokenShape, TokenSize,
+    Attitude, CurrentDungeon, FirstFloor, GameView, MapPosition, OtherLevels, Token, TokenShape,
+    TokenSize,
 };
 use crate::connection::ToServer;
 use crate::demo::AutoWalk;
@@ -167,6 +172,28 @@ impl Plugin for DevToolsPlugin {
                     let at = Vec2::new(x as f32, y as f32);
                     if window.cursor_position() != Some(at) {
                         window.set_cursor_position(Some(at));
+                    }
+                },
+            );
+        }
+
+        if let Some(first) = env::var("GAME_FIRST_FLOOR")
+            .ok()
+            .and_then(|n| n.parse().ok())
+        {
+            app.insert_resource(FirstFloor(first));
+        }
+
+        if let Some(floor) = env::var("GAME_SHOW_FLOOR")
+            .ok()
+            .and_then(|n| n.parse().ok())
+        {
+            app.add_systems(
+                Update,
+                move |time: Res<Time>, mut done: Local<bool>, mut levels: ResMut<OtherLevels>| {
+                    if !*done && time.elapsed_secs() > 3.0 {
+                        *done = true;
+                        levels.show(floor);
                     }
                 },
             );

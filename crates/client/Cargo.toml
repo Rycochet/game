@@ -15,6 +15,8 @@ path = "src/main.rs"
 [dependencies]
 shared.workspace = true
 bevy = { workspace = true, features = ["default"] }
+# The player's locale, for how floors are numbered, on native and in browsers.
+sys-locale = { version = "0.3", features = ["js"] }
 
 # Native clients embed the server for single player (or connect to one over
 # a WebSocket); the web client only ever connects to a server.

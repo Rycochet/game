@@ -4,7 +4,7 @@ Moving between maps: entering a world map poi's site, taking stairs between its 
 
 ## Files
 
-- `crates/client/src/site/mod.rs`: `SitePlugin`. `follow_clicked_portal` (in `PlayerSystems::Input`, after `View3dSystems::Click`: a click on a `Portal`'s token sends `TravelTo` and remembers it in private `Heading`). In `PostUpdate`: `change_map` (reads `connection::FromServer`: `Welcome` keeps the world map position as the way back out; `EnterLevel` resets `CurrentDungeon`, puts the player on the arrival cell and switches to `GameView::Dungeon`; `LevelCells` go into `CurrentDungeon`; `OnWorldMap` puts the player on the world map, in the copy of the planet they went in from (or are on); `Teleported` (dev tools) moves them on the current map, on the world map in the copy they are on), then `use_on_arrival` (on `player::Arrived`: at the poi heading for, sends `EnterSite` (after the steps there, so the server has the player at it); in a site, on known stairs or on ground at the edge of the level (`shared::site::leads_out`), sends `UseExit`). `common::WorldReturn` keeps the world map position.
+- `crates/client/src/site/mod.rs`: `SitePlugin`. `follow_clicked_portal` (in `PlayerSystems::Input`, after `View3dSystems::Click`: a click on a `Portal`'s token sends `TravelTo` and remembers it in private `Heading`). In `PostUpdate`: `change_map` (reads `connection::FromServer`: `Welcome` keeps the world map position as the way back out; `EnterLevel` resets `CurrentDungeon`, puts the player on the arrival cell and switches to `GameView::Dungeon`; `LevelCells` go into `CurrentDungeon`, `RememberedLevel` into `OtherLevels`, which also keeps the level left by stairs and is emptied on `OnWorldMap`; `OnWorldMap` puts the player on the world map, in the copy of the planet they went in from (or are on); `Teleported` (dev tools) moves them on the current map, on the world map in the copy they are on), then `use_on_arrival` (on `player::Arrived`: at the poi heading for, sends `EnterSite` (after the steps there, so the server has the player at it); in a site, on known stairs or on ground at the edge of the level (`shared::site::leads_out`), sends `UseExit`). `common::WorldReturn` keeps the world map position.
 
 ## Public API
 
@@ -12,7 +12,7 @@ Moving between maps: entering a world map poi's site, taking stairs between its 
 
 ## Depends on
 
-- `common` (`CurrentDungeon`, `CurrentWorld`, `GameView`, `Portal`, `MapPosition`), `connection` (`ToServer`, `FromServer`), `player` (`Player`, `Arrived`, `TravelTo`, `PlayerSystems`), `view3d` (`ClickedToken`, `View3dSystems`), `shared::protocol`, `shared::site::leads_out`.
+- `common` (`OtherLevels`, `CurrentDungeon`, `CurrentWorld`, `GameView`, `Portal`, `MapPosition`), `connection` (`ToServer`, `FromServer`), `player` (`Player`, `Arrived`, `TravelTo`, `PlayerSystems`), `view3d` (`ClickedToken`, `View3dSystems`), `shared::protocol`, `shared::site::leads_out`.
 
 ## Used by
 
@@ -24,4 +24,4 @@ Moving between maps: entering a world map poi's site, taking stairs between its 
 - Arriving means travel ended (`Arrived`), so keyboard steps onto stairs or ground don't use them, and passing over stairs on the way somewhere doesn't either. Clicking the cell the player stands on uses it at once (e.g. the stairs just arrived by).
 - Leaving by ground needs a cell on the very edge of the level (owner's rule): ground with walls or more ground on all four sides doesn't count, so a building's outside can be walked round to another door. The server checks it again.
 - The way each staircase goes down is worked out by the server (`shared::site::Site::stairs_descend`) and arrives with its cell.
-- What the player has seen of a level is remembered by the server for the connection, and sent again (`remembered`) on coming back to it.
+- What the player has seen of a level is remembered by the server with the character, and sent again (`remembered`) on coming back to it. On coming into a site (`LevelInfo::entering_site`) the server also sends what is remembered of its other levels.

@@ -3,6 +3,7 @@
 //! a picture. See `docs/context/client/minimap.md`.
 
 mod canvas;
+mod floors;
 mod frame;
 mod grid;
 mod projection;
@@ -23,7 +24,8 @@ use shared::protocol::SeenPoi;
 use shared::site::StairsDirection;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, Portal, SmoothPosition, Token, Weather,
+    CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels, Portal,
+    SmoothPosition, Token, Weather,
 };
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
 use crate::player::{Player, PlayerSystems};
@@ -61,12 +63,15 @@ const ICON_PIXELS: f32 = 16.0;
 /// How solid a completed poi's picture is.
 const COMPLETED_OPACITY: f32 = 0.5;
 
-/// The player's dot, across, and its outline; the arrow to it, in the same
-/// style, and how far inside the map's edge it sits.
+/// The player's dot, across, and its outline; how far inside the map's edge
+/// the arrow to it, in the same style and as wide, sits.
 const DOT_PIXELS: f32 = 10.0;
 const DOT_OUTLINE: f32 = 1.0;
-const ARROW_PIXELS: f32 = 14.0;
 const ARROW_INSET: f32 = 12.0;
+/// The little arrow beside them on another floor, saying which way their floor is.
+const FLOOR_HINT_PIXELS: f32 = 4.9;
+/// The player's dot and arrow on another floor, against their usual size.
+const OTHER_FLOOR_SIZE: f32 = 0.8;
 
 /// The full map's parchment against the window's shorter side, the margin
 /// left bare on it, and the title's height above the map.
@@ -110,8 +115,13 @@ impl Plugin for MinimapPlugin {
         app.init_resource::<FullMap>()
             .init_resource::<WorldTiles>()
             .init_resource::<Sprites>()
-            .add_systems(Startup, spawn_maps)
-            .add_systems(PreUpdate, take_input.after(InputSystems))
+            .add_systems(Startup, (spawn_maps, floors::spawn_column))
+            .add_systems(
+                PreUpdate,
+                (take_input, floors::back_to_own_floor)
+                    .chain()
+                    .after(InputSystems),
+            )
             .add_systems(
                 Update,
                 draw_maps
@@ -121,7 +131,11 @@ impl Plugin for MinimapPlugin {
             )
             .add_systems(
                 Update,
-                (name_what_is_hovered, name_hovered_token)
+                (
+                    name_what_is_hovered,
+                    name_hovered_token,
+                    floors::show_buttons,
+                )
                     .run_if(not(in_state(GameView::Connecting))),
             );
     }
@@ -138,6 +152,9 @@ pub struct FullMap {
     pub zoom: f32,
     /// Where the cursor was last frame, while dragging.
     drag_from: Option<Vec2>,
+    /// The floor just changed to, keeping the map's offset from the player
+    /// even if nothing known shows there.
+    kept_on: Option<u32>,
 }
 
 impl Default for FullMap {
@@ -147,6 +164,7 @@ impl Default for FullMap {
             centre: None,
             zoom: OPENING_ZOOM,
             drag_from: None,
+            kept_on: None,
         }
     }
 }
@@ -437,6 +455,7 @@ fn take_input(
     camera: Single<&OrbitCamera>,
     world: Option<Res<CurrentWorld>>,
     dungeon: Res<CurrentDungeon>,
+    mut levels: ResMut<OtherLevels>,
     player: Single<&SmoothPosition, With<Player>>,
     mut full: ResMut<FullMap>,
 ) {
@@ -449,6 +468,26 @@ fn take_input(
         full.set_open(open);
     }
     let cursor = window.cursor_position();
+    // A floor's button: that floor, round the player's place.
+    let buttons = floors::buttons(view, full.open, &dungeon, &levels);
+    let button = cursor.and_then(|at| floors::under(&window, at, buttons.len()));
+    if let Some(row) = button
+        && mouse.clear_just_pressed(MouseButton::Left)
+    {
+        // The map stays as far from the player's place as it was dragged, so
+        // floors can be compared by going up and down.
+        let from = levels.spot(&dungeon, (player.x, player.y));
+        levels.show(buttons[row]);
+        let to = levels.spot(&dungeon, (player.x, player.y));
+        full.centre = full
+            .centre
+            .map(|at| (at.0 - from.0 + to.0, at.1 - from.1 + to.1));
+        full.kept_on = Some(buttons[row]);
+        full.drag_from = None;
+        return;
+    }
+    let spot = levels.spot(&dungeon, (player.x, player.y));
+    let shown = levels.shown(&dungeon);
     if !full.open {
         let middle = Vec2::new(
             window.width() - CORNER_GAP - minimap_picture_size(&window) / 2.0,
@@ -501,7 +540,7 @@ fn take_input(
         if let Some(from_middle) = over_map
             && before != after
         {
-            let centre = full.centre.unwrap_or((player.x, player.y));
+            let centre = full.centre.unwrap_or(spot);
             full.centre = Some((
                 centre.0 + f64::from(from_middle.x) * (before - after),
                 centre.1 + f64::from(from_middle.y) * (before - after),
@@ -515,21 +554,31 @@ fn take_input(
         (area.x / 2.0 - KEEP_KNOWN_INSIDE).max(1.0) * scale,
         (area.y / 2.0 - KEEP_KNOWN_INSIDE).max(1.0) * scale,
     );
-    let known = |at| shows_known(view, world.as_deref(), &dungeon, at, half);
+    let known = |at| shows_known(view, world.as_deref(), shown, at, half);
     // Zoomed in, or somewhere else now (down the stairs, say): back towards
-    // the player until something known shows.
-    if let Some(at) = full.centre.filter(|&at| !known(at)) {
-        full.centre = Some(projection::slide((player.x, player.y), at, known));
+    // the player until something known shows. Another floor may show nothing
+    // round the player's place: then the map is free until it finds something.
+    let shown_floor = shown.info.as_ref().map(|info| info.index);
+    if full.centre.is_some_and(known) {
+        full.kept_on = None;
+    }
+    let kept = full.kept_on.is_some() && full.kept_on == shown_floor;
+    if let Some(at) = full.centre.filter(|&at| !kept && !known(at) && known(spot)) {
+        full.centre = Some(projection::slide(spot, at, known));
     }
     if let (Some(from), Some(to)) = (full.drag_from, cursor) {
         full.drag_from = cursor;
-        let centre = full.centre.unwrap_or((player.x, player.y));
+        let centre = full.centre.unwrap_or(spot);
         // The land moves with the cursor, so the centre goes the other way.
         let wanted = (
             centre.0 - f64::from(to.x - from.x) * scale,
             centre.1 - f64::from(to.y - from.y) * scale,
         );
-        full.centre = Some(projection::slide(centre, wanted, known));
+        full.centre = Some(if known(centre) {
+            projection::slide(centre, wanted, known)
+        } else {
+            wanted
+        });
     }
 }
 
@@ -537,6 +586,7 @@ fn take_input(
 #[derive(Clone, PartialEq)]
 struct DrawnFrom {
     view: GameView,
+    floor: Option<u32>,
     open: bool,
     centre: (f64, f64),
     player: (f64, f64),
@@ -555,6 +605,8 @@ struct Sources<'w, 's> {
     camera: Single<'w, 's, &'static OrbitCamera>,
     world: Option<Res<'w, CurrentWorld>>,
     dungeon: Res<'w, CurrentDungeon>,
+    levels: Res<'w, OtherLevels>,
+    first_floor: Res<'w, FirstFloor>,
     style: Res<'w, SurfaceStyle>,
     clock: Res<'w, GameClock>,
     weather: Res<'w, Weather>,
@@ -602,6 +654,8 @@ fn draw_maps(
         camera,
         world,
         dungeon,
+        levels,
+        first_floor,
         style,
         clock,
         weather,
@@ -617,6 +671,16 @@ fn draw_maps(
     } = &mut screen;
     let view = *view.get();
     let scale = window.scale_factor();
+    let on_other_floor = levels.showing().is_some();
+    let spot = levels.spot(&dungeon, (player.x, player.y));
+    // Which way the player's floor is from the one shown.
+    let player_is_up = dungeon
+        .info
+        .as_ref()
+        .zip(levels.showing())
+        .is_some_and(|(info, shown)| (info.index > shown) == info.building);
+    let players_level = &*dungeon;
+    let dungeon = levels.shown(players_level);
     *minimap.1 = if full.open {
         Visibility::Hidden
     } else {
@@ -649,7 +713,7 @@ fn draw_maps(
         let area = full_map_area(&window);
         picture.width = px(area.x);
         picture.height = px(area.y);
-        let name = location_title(view, world.as_deref(), &dungeon, &player);
+        let name = location_title(view, world.as_deref(), dungeon, *first_floor, &player);
         if title.0 != name {
             title.0 = name;
         }
@@ -665,10 +729,7 @@ fn draw_maps(
         ((across.y * scale).round() as u32).max(1),
     );
 
-    let centre = full
-        .centre
-        .filter(|_| full.open)
-        .unwrap_or((player.x, player.y));
+    let centre = full.centre.filter(|_| full.open).unwrap_or(spot);
     let zoom = if full.open { full.zoom } else { 1.0 };
     let units = units_per_pixel(view, &window, &camera) / f64::from(scale * zoom);
     let water_and_snow = world.as_deref().map_or((0, 0), |world| {
@@ -677,6 +738,7 @@ fn draw_maps(
     });
     let now = DrawnFrom {
         view,
+        floor: levels.showing(),
         open: full.open,
         centre,
         player: (player.x, player.y),
@@ -718,7 +780,7 @@ fn draw_maps(
     let looks = (view != GameView::WorldMap).then(|| {
         let cell = |at: f64| (at + 0.5).floor() as i64;
         Looks::of(
-            &dungeon,
+            dungeon,
             (cell(grid_box.0.0), cell(grid_box.0.1)),
             (cell(grid_box.1.0), cell(grid_box.1.1)),
         )
@@ -829,17 +891,33 @@ fn draw_maps(
         }
     }
 
-    let player_at = projection.to_picture(player.x, player.y);
-    // The dot grows with the map; the arrow, off the map, needn't.
+    let player_at = projection.to_picture(spot.0, spot.1);
+    // The dot grows with the map.
     let (dot, outline) = (DOT_PIXELS * zoom * scale, DOT_OUTLINE * zoom * scale);
     if full.open {
         let picture_size = (size.0 as f32, size.1 as f32);
-        match frame::arrow_place(picture_size, player_at, ARROW_INSET * scale) {
+        // On another floor they are smaller, with what says which way beside
+        // them. The arrow is as wide as the dot, outline included, so what is
+        // beside it stays put as it moves round the edge.
+        let (dot, hint) = if on_other_floor {
+            (
+                dot * OTHER_FLOOR_SIZE,
+                Some(FLOOR_HINT_PIXELS * zoom * scale),
+            )
+        } else {
+            (dot, None)
+        };
+        let arrow_place = frame::arrow_place(picture_size, player_at, ARROW_INSET * zoom * scale);
+        let mark = arrow_place.map_or(player_at, |(place, _)| place);
+        match arrow_place {
             Some((place, direction)) => {
-                let outline = DOT_OUTLINE * scale;
-                frame::arrow(&mut canvas, place, direction, ARROW_PIXELS * scale, outline)
+                let arrow = dot - 2.0 * outline;
+                frame::arrow(&mut canvas, place, direction, arrow, outline)
             }
             None => frame::player_dot(&mut canvas, player_at, dot, outline),
+        }
+        if let Some(hint) = hint {
+            frame::floor_hint(&mut canvas, mark, dot / 2.0, hint, player_is_up);
         }
         let length = (window.height() * COMPASS_OF_HEIGHT).max(COMPASS_MIN_LENGTH);
         let foot = (
@@ -871,6 +949,7 @@ fn name_what_is_hovered(
     player: Single<&SmoothPosition, With<Player>>,
     world: Option<Res<CurrentWorld>>,
     dungeon: Res<CurrentDungeon>,
+    levels: Res<OtherLevels>,
     full: Res<FullMap>,
     mut holder: Single<&mut Visibility, With<HoverBox>>,
     mut text: Single<&mut Text, With<HoverText>>,
@@ -889,7 +968,9 @@ fn name_what_is_hovered(
             }
             let (right, down) = Projection::NORTH_UP;
             let map = Projection {
-                centre: full.centre.unwrap_or((player.x, player.y)),
+                centre: full
+                    .centre
+                    .unwrap_or(levels.spot(&dungeon, (player.x, player.y))),
                 middle: (area.x / 2.0, area.y / 2.0),
                 units_per_pixel: units_per_pixel(view, &window, &camera) / f64::from(full.zoom),
                 right,
@@ -899,7 +980,7 @@ fn name_what_is_hovered(
             hovered_name(
                 view,
                 world.as_deref(),
-                &dungeon,
+                levels.shown(&dungeon),
                 spot,
                 ICON_PIXELS * full.zoom / 2.0,
                 map.units_per_pixel,
@@ -982,11 +1063,13 @@ fn hovered_name(
         .map(|poi| poi_name(&poi))
 }
 
-/// The full map's title: where the player is, with the floor or level.
+/// The full map's title: the place, with the floor or level being looked at,
+/// numbered as its button is.
 fn location_title(
     view: GameView,
     world: Option<&CurrentWorld>,
     dungeon: &CurrentDungeon,
+    first_floor: FirstFloor,
     player: &SmoothPosition,
 ) -> String {
     match (view, world) {
@@ -996,7 +1079,7 @@ fn location_title(
             let biome = world.climate.sample(x, y, height).biome();
             format!("World map: {}", words(&format!("{biome:?}")))
         }
-        _ => words(&dungeon.describe()),
+        _ => words(&dungeon.floor_name(first_floor)),
     }
 }
 
@@ -1032,11 +1115,16 @@ mod tests {
             levels: 3,
             bounds: (0, 0, 5, 5),
             arrival: (2, 2),
+            entering_site: true,
         });
         assert_eq!(
             words(&dungeon.describe()),
             "Ruined stone tower, floor 2 of 3"
         );
+        let player = SmoothPosition::default();
+        let title = |first| location_title(GameView::Dungeon, None, &dungeon, first, &player);
+        assert_eq!(title(FirstFloor(1)), "Ruined stone tower, floor 2");
+        assert_eq!(title(FirstFloor(0)), "Ruined stone tower, floor 1");
     }
 
     /// A level with a little remembered, a window, and the player on it.
@@ -1055,6 +1143,7 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<AccumulatedMouseScroll>()
+            .init_resource::<OtherLevels>()
             .init_resource::<FullMap>();
         app.world_mut().spawn((Window::default(), PrimaryWindow));
         app.world_mut().spawn(OrbitCamera::new(0.5, 100.0, 0.0));
@@ -1254,6 +1343,64 @@ mod tests {
         let (x, y) = app.world().resource::<FullMap>().centre.expect("moved");
         assert!((x - 101.0).abs() < 1e-6, "{x}");
         assert!((y - 100.5).abs() < 1e-6, "{y}");
+    }
+
+    /// A second floor beside the app's, known round the player's place.
+    fn add_floor(app: &mut App) {
+        let info = shared::protocol::LevelInfo {
+            kind: shared::poi::PoiKind::StoneTower,
+            ruined: false,
+            building: true,
+            index: 0,
+            levels: 3,
+            bounds: (0, 0, 400, 400),
+            arrival: (100, 100),
+            entering_site: true,
+        };
+        let mut other = CurrentDungeon::default();
+        other.enter(shared::protocol::LevelInfo {
+            index: 2,
+            ..info.clone()
+        });
+        other.remembered.insert(100, 100);
+        app.world_mut().resource_mut::<CurrentDungeon>().info = Some(info);
+        let mut levels = app.world_mut().resource_mut::<OtherLevels>();
+        levels.insert_for_tests(2, other);
+    }
+
+    #[test]
+    fn clicking_a_floors_button_on_the_full_map_shows_it_round_the_player() {
+        let mut app = app();
+        add_floor(&mut app);
+        let dungeon = app.world().resource::<CurrentDungeon>();
+        let levels = app.world().resource::<OtherLevels>();
+        // A building's floors go up: the highest on top.
+        let buttons = floors::buttons(GameView::Dungeon, true, dungeon, levels);
+        assert_eq!(buttons, [2, 0]);
+        // Only on the full map, and only in a site.
+        assert!(floors::buttons(GameView::Dungeon, false, dungeon, levels).is_empty());
+        assert!(floors::buttons(GameView::WorldMap, true, dungeon, levels).is_empty());
+        let window = Window::default();
+        let on_button = |row: usize| {
+            let (corner, _) = floors::column(&window, 2);
+            let down = row as f32 * (floors::BUTTON + floors::BUTTON_GAP);
+            corner + Vec2::new(5.0, 5.0 + down)
+        };
+        app.world_mut().resource_mut::<FullMap>().set_open(true);
+        click(&mut app, on_button(0));
+        assert_eq!(app.world().resource::<OtherLevels>().showing(), Some(2));
+
+        // A dragged map stays where it was, even with nothing known there.
+        app.world_mut().resource_mut::<FullMap>().centre = Some((300.0, 300.0));
+        click(&mut app, on_button(1));
+        assert_eq!(app.world().resource::<OtherLevels>().showing(), None);
+        let full = app.world().resource::<FullMap>();
+        assert!(full.open);
+        assert_eq!(full.centre, Some((300.0, 300.0)));
+        assert_eq!(full.drag_from, None);
+        step(&mut app);
+        let full = app.world().resource::<FullMap>();
+        assert_eq!(full.centre, Some((300.0, 300.0)));
     }
 
     #[test]

@@ -11,7 +11,7 @@ use shared::dungeon::{Cell, Level, Sight};
 use shared::movement::{Step, step_on_level};
 use shared::poi::{ChunkPos, Poi, PoiKind};
 use shared::protocol::{
-    ENTER_REACH, LevelChunk, LevelInfo, SeenStairs, ServerMessage, level_chunk,
+    ENTER_REACH, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, ServerMessage, level_chunk,
 };
 use shared::rng::Seed;
 use shared::site::{Exit, Generator, Site, SiteLevel, leads_out};
@@ -156,7 +156,8 @@ fn enter_site(
         return true;
     };
     let index = index.min(site.levels() - 1);
-    enter_level(client, world, poi, id, site, index, arrival)
+    let new = NewVisit { poi, id, site };
+    enter_level(client, world, new, index, arrival, true)
 }
 
 /// The player takes a step on their level: taken if it leads onto a
@@ -217,7 +218,12 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
             } else {
                 Arrival::From(Exit::Level(visit.index))
             };
-            enter_level(client, world, visit.poi, visit.id, visit.site, index, from)
+            let new = NewVisit {
+                poi: visit.poi,
+                id: visit.id,
+                site: visit.site,
+            };
+            enter_level(client, world, new, index, from, false)
         }
         Exit::WorldMap => {
             let (x, y) = (visit.poi.x, visit.poi.y);
@@ -266,25 +272,23 @@ pub(crate) fn set_cell(
     update_sight(client)
 }
 
-/// Puts the player on level `index` of `site`: generates it, with players'
-/// changes over it, tells the client about it, sends what the player
-/// remembers of it, then what they see.
-fn enter_level(
-    client: &mut Client,
-    world: &mut ServerWorld,
+/// The site a player is going to a level of.
+struct NewVisit {
     poi: Poi,
     id: SiteId,
     site: Site,
-    index: u32,
-    arrival: Arrival,
-) -> bool {
+}
+
+/// Level `index` of a site with players' changes over it, and its stairs as
+/// players see them.
+fn level_of(world: &mut ServerWorld, new: &NewVisit, index: u32) -> (SiteLevel, Vec<SeenStairs>) {
+    let site = &new.site;
     let mut level = site.level(index);
     let saved = world
-        .site_mut(id, poi.kind)
+        .site_mut(new.id, new.poi.kind)
         .levels
         .entry(index)
         .or_default();
-    saved.last_visit = now();
     for (&(x, y), &cell) in &saved.changes {
         level.level.set(x, y, cell);
     }
@@ -300,6 +304,57 @@ fn enter_level(
             style: site.stairs_style(index, stairs),
         })
         .collect();
+    (level, stairs)
+}
+
+/// Sends what the character remembers of the site's levels other than
+/// `index`, for the maps.
+fn send_other_levels(client: &Client, world: &mut ServerWorld, new: &NewVisit, index: u32) -> bool {
+    let Some(memory) = client.character.memory.get(&new.id) else {
+        return true;
+    };
+    for (&other, remembered) in memory {
+        // (A level may be gone, if the generator has changed.)
+        let known = remembered.values().any(|&mask| mask != 0);
+        if other == index || other >= new.site.levels() || !known {
+            continue;
+        }
+        let (level, stairs) = level_of(world, new, other);
+        let level = &level.level;
+        let is_remembered = |x, y| {
+            let (chunk, bit) = level_chunk(x, y);
+            remembered.get(&chunk).is_some_and(|m| m & (1 << bit) != 0)
+        };
+        let neighbours = beside(level, is_remembered, remembered);
+        let mut chunks = level_chunks(level, &stairs, remembered, true);
+        chunks.extend(level_chunks(level, &stairs, &neighbours, false));
+        let message = ServerMessage::RememberedLevel(RememberedLevel {
+            index: other,
+            bounds: level.bounds(),
+            chunks,
+        });
+        if !client.link.send(&message) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Puts the player on level `index` of a site: generates it, tells the client
+/// about it, sends what the player remembers of it, then what they see. On
+/// coming into the site, also what they remember of its other levels.
+fn enter_level(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    new: NewVisit,
+    index: u32,
+    arrival: Arrival,
+    entering_site: bool,
+) -> bool {
+    let (level, stairs) = level_of(world, &new, index);
+    let saved = world.site_mut(new.id, new.poi.kind).levels.entry(index);
+    saved.or_default().last_visit = now();
+    let site = &new.site;
     let position = match arrival {
         Arrival::At((x, y)) if level.level.is_walkable(x, y) => (x, y),
         Arrival::At(_) => level.arrive(Exit::WorldMap),
@@ -313,9 +368,18 @@ fn enter_level(
         levels: site.levels(),
         bounds: level.level.bounds(),
         arrival: position,
+        entering_site,
     };
     let looked_from = Sight::new(&level.level);
     let loaded = Sight::new(&level.level);
+    client.changed_map();
+    if !client.link.send(&ServerMessage::EnterLevel(info)) {
+        return false;
+    }
+    if entering_site && !send_other_levels(client, world, &new, index) {
+        return false;
+    }
+    let NewVisit { poi, id, site } = new;
     let mut visit = Visit {
         looked_from,
         loaded,
@@ -328,10 +392,6 @@ fn enter_level(
         position,
         sent: CellMasks::new(),
     };
-    client.changed_map();
-    if !client.link.send(&ServerMessage::EnterLevel(info)) {
-        return false;
-    }
     if visit.is_town() {
         let looks = visit.level.buildings.iter().map(|b| b.look.clone());
         let message = ServerMessage::Buildings(looks.collect());
@@ -503,7 +563,20 @@ fn nearby_cells(level: &Level, from: (i64, i64), steps: i64) -> Vec<(i64, i64)> 
 /// Sends the cells in `masks` as the player would see them, a chunk at a
 /// time, with any stairs on them.
 fn send_cells(client: &Client, visit: &Visit, masks: &CellMasks, remembered: bool) -> bool {
-    let level = &visit.level.level;
+    level_chunks(&visit.level.level, &visit.stairs, masks, remembered)
+        .into_iter()
+        .all(|chunk| client.link.send(&ServerMessage::LevelCells(chunk)))
+}
+
+/// The cells in `masks` as the player would see them, a chunk at a time, with
+/// any stairs on them.
+fn level_chunks(
+    level: &Level,
+    stairs: &[SeenStairs],
+    masks: &CellMasks,
+    remembered: bool,
+) -> Vec<LevelChunk> {
+    let mut chunks = Vec::with_capacity(masks.len());
     for (&chunk, &mask) in masks {
         let message = LevelChunk {
             chunk,
@@ -522,22 +595,18 @@ fn send_cells(client: &Client, visit: &Visit, masks: &CellMasks, remembered: boo
                 cell => cell,
             })
             .collect();
-        let stairs = visit
-            .stairs
+        let stairs = stairs
             .iter()
             .filter(|s| positions.contains(&(s.x, s.y)))
             .copied()
             .collect();
-        let message = LevelChunk {
+        chunks.push(LevelChunk {
             cells,
             stairs,
             ..message
-        };
-        if !client.link.send(&ServerMessage::LevelCells(message)) {
-            return false;
-        }
+        });
     }
-    true
+    chunks
 }
 
 #[cfg(test)]
@@ -813,6 +882,48 @@ mod tests {
         let at = test.client.world_position();
         test.send(&[stale]);
         assert_eq!(test.client.world_position(), at);
+    }
+
+    #[test]
+    fn coming_into_a_site_tells_what_is_remembered_of_its_other_levels() {
+        let mut test = TestClient::new();
+        let remembered = |answers: &[ServerMessage]| -> Vec<u32> {
+            let levels = answers.iter().filter_map(|message| match message {
+                ServerMessage::RememberedLevel(level) => Some(level.index),
+                _ => None,
+            });
+            levels.collect()
+        };
+        // Nothing yet, and nothing of the level the player is going to.
+        let answers = enter(&mut test, 0);
+        assert_eq!(remembered(&answers), [] as [u32; 0]);
+        let answers = enter(&mut test, 0);
+        assert_eq!(remembered(&answers), [] as [u32; 0]);
+
+        enter(&mut test, 1);
+        let answers = enter(&mut test, 0);
+        let Some(ServerMessage::EnterLevel(info)) = answers.first() else {
+            panic!("{answers:?}");
+        };
+        assert!(info.entering_site);
+        assert_eq!(remembered(&answers), [1]);
+        let level = answers.iter().find_map(|message| match message {
+            ServerMessage::RememberedLevel(level) => Some(level),
+            _ => None,
+        });
+        let chunks = &level.expect("found above").chunks;
+        assert!(chunks.iter().any(|chunk| chunk.remembered));
+
+        // Taking stairs tells nothing new: the client keeps what it has.
+        let visit = test.client.visit.as_ref().unwrap();
+        let stairs = visit.level.stairs[0];
+        walk(&mut test, (stairs.x, stairs.y));
+        let answers = test.send(&[ClientMessage::UseExit]);
+        let Some(ServerMessage::EnterLevel(info)) = answers.first() else {
+            panic!("{answers:?}");
+        };
+        assert!(!info.entering_site);
+        assert_eq!(remembered(&answers), [] as [u32; 0]);
     }
 
     /// A world saved in `folder`.

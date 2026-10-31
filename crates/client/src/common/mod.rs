@@ -3,6 +3,9 @@
 //! Keep this small: only types that genuinely need to be shared between
 //! feature modules belong here. See `docs/context/client/common.md`.
 
+mod floors;
+pub use floors::{FirstFloor, OtherLevels};
+
 use std::collections::BTreeMap;
 use std::time::Duration;
 
@@ -34,6 +37,8 @@ impl Plugin for CommonPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
             })
             .init_resource::<CurrentDungeon>()
+            .init_resource::<OtherLevels>()
+            .init_resource::<FirstFloor>()
             .init_resource::<WorldReturn>()
             .init_resource::<ServerStatus>()
             .init_state::<GameView>()
@@ -267,8 +272,25 @@ impl CurrentDungeon {
         }
     }
 
+    /// Whether any of the level has been seen.
+    pub fn remembers_anything(&self) -> bool {
+        let (min_x, min_y, width, height) = self.level.bounds();
+        (min_y..min_y + height)
+            .any(|y| (min_x..min_x + width).any(|x| self.remembered.is_seen(x, y)))
+    }
+
     /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3".
     pub fn describe(&self) -> String {
+        let name = self.floor_name(FirstFloor(1));
+        match &self.info {
+            Some(info) if !info.kind.is_town() => format!("{name} of {}", info.levels),
+            _ => name,
+        }
+    }
+
+    /// What the level is called, e.g. "Castle, floor 2", counting floors from
+    /// `first`.
+    pub fn floor_name(&self, first: FirstFloor) -> String {
         let Some(info) = &self.info else {
             return "Nowhere".into();
         };
@@ -277,12 +299,7 @@ impl CurrentDungeon {
         }
         let what = if info.building { "floor" } else { "level" };
         let ruined = if info.ruined { "Ruined" } else { "" };
-        format!(
-            "{ruined}{:?}, {what} {} of {}",
-            info.kind,
-            info.index + 1,
-            info.levels
-        )
+        format!("{ruined}{:?}, {what} {}", info.kind, info.index + first.0)
     }
 }
 

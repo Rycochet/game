@@ -315,6 +315,7 @@ mod tests {
             levels: 1,
             bounds: (0, 0, 5, 5),
             arrival: (2, 2),
+            entering_site: true,
         });
         for y in 0..5 {
             for x in 0..5 {
