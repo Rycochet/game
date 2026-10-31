@@ -291,8 +291,14 @@ Pois are small 3D models standing on the land, with no token base: placeholders 
 
 The owner's design. `BuildingOptions::ruin` (0 to 5) damages a building's finished floors with its own seed, so the floorplan doesn't change. A ruined building's floors depend on the floor below, so they are made together and kept rather than each generated alone; unruined buildings still generate per level. The ground floor loses cells to `Cell::Ground`; floors above lose them to the new `Cell::Hole` (open to sight and light, not walkable, not outside), which underground dungeons can use later. Holes are drawn as geometry, with dark through them, because the client doesn't have the level below. One cell of hole can be jumped, as liquid can (owner's). Ruined places are named "Ruined ..." (owner's), through `LevelInfo::ruined` and `PoiLook`. `for_poi` passes ruin 0: which pois are ruined is decided with poi visibility.
 
-Generator versions: building and cave are now 2. Version 1 of each stays runnable, and cheaply (ignore `ruin`, no skylights), rather than leaving saved sites unable to be entered, which is what an unrunnable version does.
+Generator versions: their old code was removed with the first `FORGET_BEFORE` bump (see "Starting clean in development").
 
 ## 2026-10-31: Which buildings are ruined
 
-Each building's `ruin` comes from its poi's map seed (`Generator::for_site`), so the world map's model and the site agree. Claude's first numbers, to tune by eye: 30% of buildings are ruined, evenly from 1 to 5; tents and ice shelters never are. A site saved before ruins keeps its version 1 and stays whole, even if its model now shows it ruined.
+Each building's `ruin` comes from its poi's map seed (`Generator::for_site`), so the world map's model and the site agree. Claude's first numbers, to tune by eye: 30% of buildings are ruined, evenly from 1 to 5; tents and ice shelters never are.
+
+## 2026-10-31: Starting clean in development
+
+The owner's request: a way to make everyone forget everything from before a point. `shared::site::FORGET_BEFORE` is a number set in the code; bumping it makes servers ignore (and save over) characters and sites saved under a lower one, and raises every generator version with it, so all sites are made new. Clients keep nothing between connections but their guest id, so forgetting on the server is enough for them. Old files aren't deleted until saved over. The world map version isn't raised: a mismatch there refuses the world, and the world comes from its seed anyway.
+
+First used straight away (owner): `FORGET_BEFORE` is 1, as ruins and pois had just changed, so nothing saved under the earlier generators is kept and their old version code is deleted: a clean sheet. The one old version still accepted is world map version 1, in `ServerWorld::open`: it isn't generator code, and removing it would refuse those worlds rather than clean them.

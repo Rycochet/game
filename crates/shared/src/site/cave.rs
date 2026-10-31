@@ -94,8 +94,6 @@ pub struct Plan {
     options: CaveOptions,
     levels: u32,
     opening: bool,
-    /// Whether natural caves have skylights (not generator version 1).
-    skylights: bool,
 }
 
 /// One cave as planned: centre and radii.
@@ -116,7 +114,7 @@ impl Cave {
 }
 
 impl Plan {
-    pub fn new(options: &CaveOptions, seed: Seed, skylights: bool) -> Self {
+    pub fn new(options: &CaveOptions, seed: Seed) -> Self {
         let mut rng = seed.derive("cave").rng();
         let levels = roll(&mut rng, options.levels.0 as i64, options.levels.1 as i64).max(1) as u32;
         let opening = match options.entrance {
@@ -129,7 +127,6 @@ impl Plan {
             options: *options,
             levels,
             opening,
-            skylights,
         }
     }
 
@@ -138,6 +135,16 @@ impl Plan {
     }
 
     pub fn level(&self, index: u32) -> SiteLevel {
+        let mut made = self.without_skylights(index);
+        if index == 0 && !self.options.doors {
+            let seed = self.seed.derive("skylight");
+            open_skylights(&mut made.level, seed, &made.stairs);
+        }
+        made
+    }
+
+    /// The level before any skylights are opened in it.
+    pub(super) fn without_skylights(&self, index: u32) -> SiteLevel {
         let mut rng = Seed::new(self.seed.derive("cave level").at(&[index as i64])).rng();
         let width = roll(&mut rng, self.options.size.0, self.options.size.1);
         let height = roll(&mut rng, self.options.size.0, self.options.size.1);
@@ -238,10 +245,6 @@ impl Plan {
                 &[arrival],
                 |_, _| false,
             );
-        }
-
-        if self.skylights && index == 0 && !self.options.doors {
-            open_skylights(&mut level, self.seed.derive("skylight"), &stairs);
         }
 
         SiteLevel {

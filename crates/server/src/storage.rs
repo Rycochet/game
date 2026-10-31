@@ -23,6 +23,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use shared::dungeon::Cell;
 use shared::poi::{ChunkPos, PoiKind};
+use shared::site::FORGET_BEFORE;
 use shared::world::{WorldId, WorldSeed};
 
 /// Overrides where the server keeps its data (a folder path).
@@ -51,12 +52,17 @@ pub fn default_data_folder() -> PathBuf {
 #[derive(Resource, Clone, Debug, Default)]
 pub struct Storage {
     folder: Option<PathBuf>,
+    /// Files saved before this are ignored (`FORGET_BEFORE`).
+    forget_before: u32,
 }
 
 impl Storage {
     /// Nothing is read or written.
     pub fn none() -> Self {
-        Self { folder: None }
+        Self {
+            folder: None,
+            forget_before: FORGET_BEFORE,
+        }
     }
 
     /// The files of world `id` in the data folder `data`.
@@ -64,6 +70,7 @@ impl Storage {
         let folder = data.join("worlds").join(format!("{:016x}", id.0));
         Self {
             folder: Some(folder),
+            forget_before: FORGET_BEFORE,
         }
     }
 
@@ -108,27 +115,56 @@ impl Storage {
         }
     }
 
+    /// Whether a file saved under `forgotten_to` still counts.
+    fn not_forgotten(&self, forgotten_to: u32, what: &str) -> bool {
+        let kept = forgotten_to >= self.forget_before;
+        if !kept {
+            info!("Forgetting {what}: saved before {}", self.forget_before);
+        }
+        kept
+    }
+
     /// A saved site, if it has been entered before. A broken file is put
-    /// aside (and logged), so the site starts again.
+    /// aside (and logged), so the site starts again; one from before
+    /// `forget_before` is ignored, and saved over.
     pub fn load_site(&self, site: SiteId) -> Option<SiteSave> {
-        read_or_put_aside(&self.site_file(site)?)
+        let save: SiteSave = read_or_put_aside(&self.site_file(site)?)?;
+        self.not_forgotten(save.forgotten_to, &format!("{site:?}"))
+            .then_some(save)
     }
 
     pub fn save_site(&self, site: SiteId, save: &SiteSave) {
         if let Some(file) = self.site_file(site) {
-            write(&file, save);
+            let forgotten_to = self.forget_before;
+            write(
+                &file,
+                &SiteSave {
+                    forgotten_to,
+                    ..save.clone()
+                },
+            );
         }
     }
 
     /// A saved character, if they have played in this world before. A
-    /// broken file is put aside (and logged), so they start again.
+    /// broken file is put aside (and logged), so they start again; one from
+    /// before `forget_before` is ignored, and saved over.
     pub fn load_character(&self, name: &CharacterName) -> Option<CharacterSave> {
-        read_or_put_aside(&self.character_file(name)?)
+        let save: CharacterSave = read_or_put_aside(&self.character_file(name)?)?;
+        self.not_forgotten(save.forgotten_to, &name.0)
+            .then_some(save)
     }
 
     pub fn save_character(&self, name: &CharacterName, save: &CharacterSave) {
         if let Some(file) = self.character_file(name) {
-            write(&file, save);
+            let forgotten_to = self.forget_before;
+            write(
+                &file,
+                &CharacterSave {
+                    forgotten_to,
+                    ..save.clone()
+                },
+            );
         }
     }
 }
@@ -182,6 +218,9 @@ pub struct WorldSave {
 /// A site's file: made the first time anyone enters it.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct SiteSave {
+    /// The `FORGET_BEFORE` it was saved under.
+    #[serde(default)]
+    pub forgotten_to: u32,
     /// The generator version it was first made with (`Generator::version`):
     /// it is always generated with this one.
     pub version: u32,
@@ -225,6 +264,9 @@ pub type CellMasks = BTreeMap<(i64, i64), u64>;
 /// A character's file, for one world.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct CharacterSave {
+    /// The `FORGET_BEFORE` it was saved under.
+    #[serde(default)]
+    pub forgotten_to: u32,
     /// Where they are on the world map (at the poi, while in a site).
     #[serde(default)]
     pub world_position: (i64, i64),
@@ -378,6 +420,28 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn what_was_saved_before_forget_before_is_forgotten() {
+        let folder = TestFolder::new();
+        let mut storage = Storage::in_folder(&folder.0, WorldId(5));
+        let name = CharacterName::new("someone").unwrap();
+        let site = SiteId::Poi(ChunkPos { x: 1, y: 2 });
+        storage.save_character(&name, &CharacterSave::default());
+        storage.save_site(site, &SiteSave::default());
+        assert!(storage.load_character(&name).is_some());
+        assert!(storage.load_site(site).is_some());
+
+        storage.forget_before += 1;
+        assert_eq!(storage.load_character(&name), None);
+        assert_eq!(storage.load_site(site), None);
+
+        // Saved again, it is remembered from now on.
+        storage.save_character(&name, &CharacterSave::default());
+        storage.save_site(site, &SiteSave::default());
+        assert!(storage.load_character(&name).is_some());
+        assert!(storage.load_site(site).is_some());
+    }
+
+    #[test]
     fn saves_are_read_back() {
         let folder = TestFolder::new();
         let storage = Storage::in_folder(&folder.0, WorldId(5));
@@ -386,6 +450,7 @@ pub(crate) mod tests {
 
         let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
         let character = CharacterSave {
+            forgotten_to: FORGET_BEFORE,
             world_position: (-40, 7),
             visit: Some(VisitSave {
                 site,
@@ -408,6 +473,7 @@ pub(crate) mod tests {
         assert_eq!(storage.load_character(&name), Some(character));
 
         let save = SiteSave {
+            forgotten_to: FORGET_BEFORE,
             version: 1,
             levels: BTreeMap::from([(
                 0,
