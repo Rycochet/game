@@ -68,11 +68,13 @@ pub enum ClientMessage {
     /// an embedded server accepts it; others ignore it.
     DevBackToStart,
     /// Developer tools: go straight into a site of any kind and seed, at
-    /// any level. Only an embedded (single-player) server accepts it.
+    /// any level, a building ruined this much (0 to 5). Only an embedded
+    /// (single-player) server accepts it.
     DevEnterSite {
         kind: PoiKind,
         seed: u64,
         level: u32,
+        ruin: u8,
     },
     /// Developer tools: change a cell of the level the player is on (not the
     /// one they stand on). Only an embedded server accepts it.
@@ -219,6 +221,7 @@ mod tests {
                 kind: PoiKind::Crypt,
                 seed: 3,
                 level: 1,
+                ruin: 2,
             },
         ];
         let server = vec![
@@ -256,6 +259,7 @@ mod tests {
             }),
             ServerMessage::EnterLevel(LevelInfo {
                 kind: PoiKind::RockCave,
+                ruined: true,
                 building: false,
                 index: 1,
                 levels: 3,

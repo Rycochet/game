@@ -57,16 +57,16 @@ impl From<Step> for (i8, i8) {
 }
 
 /// Where `step` from `(x, y)` leads on a site level, if it can be taken: onto
-/// a walkable cell, or over one cell of liquid onto a walkable cell beyond it
-/// (a jump, landing two cells away; nobody stops on liquid). (Cutting a wall's
-/// corner diagonally is allowed.)
+/// a walkable cell, or over one cell of liquid or hole onto a walkable cell
+/// beyond it (a jump, landing two cells away; nobody stops there). (Cutting a
+/// wall's corner diagonally is allowed.)
 pub fn step_on_level(level: &Level, from: (i64, i64), step: Step) -> Option<(i64, i64)> {
     let (x, y) = step.from(from);
     if level.is_walkable(x, y) {
         return Some((x, y));
     }
     let (far_x, far_y) = step.from((x, y));
-    (level.cell(x, y).is_liquid() && level.is_walkable(far_x, far_y)).then_some((far_x, far_y))
+    (level.cell(x, y).is_jumpable() && level.is_walkable(far_x, far_y)).then_some((far_x, far_y))
 }
 
 /// What a step costs per cell it covers, in units of time: walking is timed by
@@ -75,8 +75,8 @@ pub fn step_on_level(level: &Level, from: (i64, i64), step: Step) -> Option<(i64
 pub const STRAIGHT_COST: u32 = 70;
 pub const DIAGONAL_COST: u32 = 99;
 
-/// What moving from one point to another by a single step costs: a jump over
-/// liquid covers two cells, so it costs two steps' worth. Only for a step
+/// What moving from one point to another by a single step costs: a jump
+/// covers two cells, so it costs two steps' worth. Only for a step
 /// `step_on_level` has allowed. (Terrain costs will go here.)
 pub fn step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
     let (dx, dy) = (to.0 - from.0, to.1 - from.1);
@@ -208,19 +208,24 @@ mod tests {
     fn one_cell_of_liquid_is_jumped() {
         let mut level = Level::test_room();
         let east = Step::new(1, 0).unwrap();
-        for liquid in [Cell::Water, Cell::Lava] {
+        for liquid in [Cell::Water, Cell::Lava, Cell::Hole] {
             level.set(1, 0, liquid);
             assert_eq!(step_on_level(&level, (0, 0), east), Some((2, 0)));
         }
         // Diagonally too, across a corner.
         let north_west = Step::new(-1, -1).unwrap();
-        level.set(3, 1, Cell::Water);
-        assert_eq!(step_on_level(&level, (4, 2), north_west), Some((2, 0)));
+        for liquid in [Cell::Water, Cell::Hole] {
+            level.set(3, 1, liquid);
+            assert_eq!(step_on_level(&level, (4, 2), north_west), Some((2, 0)));
+        }
         // Two wide can't be crossed, so it can't be stepped onto at all.
         level.set(2, 0, Cell::Water);
         assert_eq!(step_on_level(&level, (0, 0), east), None);
         // Nor with a wall to land on.
         level.set(2, 0, Cell::Wall);
+        assert_eq!(step_on_level(&level, (0, 0), east), None);
+        // Holes the same.
+        level.set(2, 0, Cell::Hole);
         assert_eq!(step_on_level(&level, (0, 0), east), None);
     }
 

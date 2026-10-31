@@ -417,17 +417,19 @@ mod tests {
     }
 
     #[test]
-    fn it_jumps_one_cell_of_liquid_when_that_is_quicker() {
-        let mut level = empty_room();
-        for y in 0..20 {
-            level.set(10, y, Cell::Water);
+    fn it_jumps_one_cell_of_liquid_or_hole_when_that_is_quicker() {
+        for gap in [Cell::Water, Cell::Hole] {
+            let mut level = empty_room();
+            for y in 0..20 {
+                level.set(10, y, gap);
+            }
+            let path = find_path(&level, (8, 5), (12, 5), None, anywhere);
+            assert!(path.reached);
+            assert_walkable(&level, (8, 5), &path);
+            // The jump counts for the distance it covers.
+            assert_eq!(path.cost, 4 * STRAIGHT_COST);
+            assert_eq!(path.cells, vec![(9, 5), (11, 5), (12, 5)]);
         }
-        let path = find_path(&level, (8, 5), (12, 5), None, anywhere);
-        assert!(path.reached);
-        assert_walkable(&level, (8, 5), &path);
-        // The jump counts for the distance it covers.
-        assert_eq!(path.cost, 4 * STRAIGHT_COST);
-        assert_eq!(path.cells, vec![(9, 5), (11, 5), (12, 5)]);
     }
 
     #[test]

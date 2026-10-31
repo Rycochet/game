@@ -15,6 +15,7 @@
 mod building;
 mod cave;
 mod grid;
+mod ruin;
 mod town;
 
 use serde::{Deserialize, Serialize};
@@ -38,6 +39,8 @@ pub enum PoiLook {
         width: u16,
         height: u16,
         floors: u8,
+        /// How ruined it is (`BuildingOptions::ruin`).
+        ruin: u8,
     },
     Cave {
         entrance: CaveEntrance,
@@ -48,6 +51,11 @@ pub enum PoiLook {
 }
 
 impl PoiLook {
+    /// Whether it is a ruin, and is named as one.
+    pub fn is_ruined(self) -> bool {
+        matches!(self, Self::Building { ruin, .. } if ruin > 0)
+    }
+
     /// The look of the site a poi of this kind and map seed leads to.
     pub fn of(kind: PoiKind, seed: Seed) -> Self {
         match Generator::for_poi(kind) {
@@ -59,6 +67,7 @@ impl PoiLook {
                     width: width as u16,
                     height: height as u16,
                     floors: plan.floors() as u8,
+                    ruin: options.ruin,
                 }
             }
             Generator::Cave(options) => Self::Cave {
@@ -226,6 +235,15 @@ impl Generator {
         }
     }
 
+    /// The same generator, with a building ruined this much (0 to 5). Other
+    /// generators take no notice.
+    pub fn with_ruin(self, ruin: u8) -> Self {
+        match self {
+            Self::Building(options) => Self::Building(BuildingOptions { ruin, ..options }),
+            other => other,
+        }
+    }
+
     /// The generator for each kind of world map poi.
     pub fn for_poi(kind: PoiKind) -> Self {
         use Outline::*;
@@ -238,6 +256,7 @@ impl Generator {
                 square: false,
                 max_floors,
                 size_per_floor,
+                ruin: 0,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -295,6 +314,7 @@ impl Generator {
                 square: true,
                 max_floors: 5,
                 size_per_floor: 6,
+                ruin: 0,
             }),
         }
     }
@@ -303,10 +323,14 @@ impl Generator {
 /// The building generator's version: bump it when its output changes in a
 /// way that matters (not for looks), and keep the old one runnable while
 /// saved sites use it.
-pub const BUILDING_VERSION: u32 = 1;
+///
+/// 2: ruined buildings. A version 1 site has no ruin, whatever its options say.
+pub const BUILDING_VERSION: u32 = 2;
 
 /// The cave generator's version (as `BUILDING_VERSION`).
-pub const CAVE_VERSION: u32 = 1;
+///
+/// 2: skylights. A version 1 site has none.
+pub const CAVE_VERSION: u32 = 2;
 
 /// The town generator's version (as `BUILDING_VERSION`).
 pub const TOWN_VERSION: u32 = 1;
@@ -317,6 +341,7 @@ pub struct Site {
     kind: PoiKind,
     seed: Seed,
     plan: Plan,
+    ruined: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -337,19 +362,45 @@ impl Site {
     /// The same, made with an older (or the current) version of its
     /// generator: `None` if that version can no longer be run.
     pub fn with_version(kind: PoiKind, seed: Seed, version: u32) -> Option<Self> {
-        let plan = match Generator::for_poi(kind) {
+        Self::with_generator(kind, seed, version, Generator::for_poi(kind))
+    }
+
+    /// The same, with options other than the kind's own (a ruined building).
+    pub fn with_generator(
+        kind: PoiKind,
+        seed: Seed,
+        version: u32,
+        generator: Generator,
+    ) -> Option<Self> {
+        let ruined = version >= 2 && matches!(generator, Generator::Building(o) if o.ruin > 0);
+        let plan = match generator {
+            // Version 1 is the same floorplan with no ruin.
+            Generator::Building(options) if version == 1 => {
+                let options = BuildingOptions { ruin: 0, ..options };
+                Plan::Building(building::Plan::new(&options, seed))
+            }
             Generator::Building(options) if version == BUILDING_VERSION => {
                 Plan::Building(building::Plan::new(&options, seed))
             }
-            Generator::Cave(options) if version == CAVE_VERSION => {
-                Plan::Cave(cave::Plan::new(&options, seed))
+            Generator::Cave(options) if version == 1 || version == CAVE_VERSION => {
+                Plan::Cave(cave::Plan::new(&options, seed, version >= 2))
             }
             Generator::Town(options) if version == TOWN_VERSION => {
                 Plan::Town(town::Plan::new(&options, seed))
             }
             _ => return None,
         };
-        Some(Self { kind, seed, plan })
+        Some(Self {
+            kind,
+            seed,
+            plan,
+            ruined,
+        })
+    }
+
+    /// Whether it is a ruined building, and is named as one.
+    pub fn is_ruined(&self) -> bool {
+        self.ruined
     }
 
     pub fn kind(&self) -> PoiKind {
@@ -470,6 +521,70 @@ mod tests {
         assert!(Site::with_version(PoiKind::Castle, seed, BUILDING_VERSION + 1).is_none());
         assert!(Site::with_version(PoiKind::RockCave, seed, CAVE_VERSION).is_some());
         assert!(Site::with_version(PoiKind::RockCave, seed, 0).is_none());
+    }
+
+    /// Sites saved before ruin and skylights go on as they were.
+    #[test]
+    fn version_1_buildings_have_no_ruin() {
+        let seed = Seed::new(3);
+        let ruined = Generator::for_poi(PoiKind::Castle).with_ruin(5);
+        let old = Site::with_generator(PoiKind::Castle, seed, 1, ruined).unwrap();
+        let new = Site::with_generator(PoiKind::Castle, seed, BUILDING_VERSION, ruined).unwrap();
+        let plain = Site::with_version(PoiKind::Castle, seed, BUILDING_VERSION).unwrap();
+        assert_eq!(old.level(0), plain.level(0));
+        assert_ne!(new.level(0), plain.level(0));
+        assert!(new.is_ruined() && !old.is_ruined() && !plain.is_ruined());
+    }
+
+    /// Skylights: only on the top level of natural caves, walkable, in the
+    /// middle of the cave, and they change nothing else.
+    #[test]
+    fn skylights_open_a_few_floor_cells_of_natural_caves() {
+        let mut lights = 0;
+        for n in 0..150 {
+            let seed = Seed::new(n);
+            for kind in [PoiKind::RockCave, PoiKind::GrassyCave, PoiKind::Boulders] {
+                let (new, old) = (
+                    Site::new(kind, seed),
+                    Site::with_version(kind, seed, 1).unwrap(),
+                );
+                assert_eq!(new.levels(), old.levels());
+                for index in 0..new.levels() {
+                    let (now, then) = (new.level(index), old.level(index));
+                    let (min_x, min_y, width, height) = now.level.bounds();
+                    assert_eq!(now.stairs, then.stairs);
+                    for y in min_y..min_y + height {
+                        for x in min_x..min_x + width {
+                            let cell = now.level.cell(x, y);
+                            if cell == then.level.cell(x, y) {
+                                continue;
+                            }
+                            lights += 1;
+                            assert_eq!((index, cell), (0, Cell::Ground));
+                            assert_eq!(then.level.cell(x, y), Cell::Floor);
+                            assert_eq!(now.level.room(x, y), None);
+                            assert!(!leads_out(&now.level, x, y));
+                            for (dx, dy) in (-2..=2).flat_map(|d| (-2..=2).map(move |e| (d, e))) {
+                                let near = now.level.cell(x + dx, y + dy);
+                                assert!(!near.is_liquid());
+                                assert!(!now.stairs.iter().any(|s| (s.x, s.y) == (x + dx, y + dy)));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // About one per 1500 floor cells, in a few hundred caves.
+        assert!((10..400).contains(&lights), "{lights}");
+        // Dug dungeons have none.
+        for n in 0..100 {
+            let level = Site::new(PoiKind::Crypt, Seed::new(n)).level(0).level;
+            let (min_x, min_y, width, height) = level.bounds();
+            assert!(
+                (min_y..min_y + height)
+                    .all(|y| { (min_x..min_x + width).all(|x| level.cell(x, y) != Cell::Ground) })
+            );
+        }
     }
 
     /// Both ends of a staircase are built the same, as something that suits
@@ -725,7 +840,8 @@ mod pictures {
     use super::*;
     use crate::dungeon::Cell;
 
-    /// Prints levels as text: `cargo test -p shared print_sites -- --ignored --nocapture`.
+    /// Prints levels as text: `cargo test -p shared print_sites -- --ignored --nocapture`
+    /// (`SITE_KINDS`, `SITE_SEED`, `SITE_RUIN` choose what).
     #[test]
     #[ignore]
     fn print_sites() {
@@ -734,11 +850,21 @@ mod pictures {
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(1);
+        let ruin: u8 = std::env::var("SITE_RUIN")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
         for kind in kinds
             .split(',')
             .map(|k| PoiKind::ALL[k.parse::<usize>().unwrap()])
         {
-            let site = Site::new(kind, Seed::new(seed));
+            let site = Site::with_generator(
+                kind,
+                Seed::new(seed),
+                Generator::for_poi(kind).version(),
+                Generator::for_poi(kind).with_ruin(ruin),
+            )
+            .expect("the current version runs");
             for index in 0..site.levels() {
                 let site_level = site.level(index);
                 let level = &site_level.level;
@@ -766,6 +892,7 @@ mod pictures {
                                 Cell::Ground => ',',
                                 Cell::Water => '~',
                                 Cell::Lava => '^',
+                                Cell::Hole => ' ',
                                 Cell::Window => 'W',
                                 Cell::BlindWindow => 'w',
                                 Cell::BuildingDoor => '+',

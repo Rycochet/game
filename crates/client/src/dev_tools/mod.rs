@@ -111,11 +111,17 @@ impl Plugin for DevToolsPlugin {
                 .unwrap_or(PoiKind::Castle);
             let seed = numbers.get(1).copied().unwrap_or(1);
             let level = numbers.get(2).copied().unwrap_or(0) as u32;
+            let ruin = numbers.get(3).copied().unwrap_or(0) as u8;
             app.add_systems(
                 OnExit(GameView::Connecting),
                 (move |mut to_server: MessageWriter<ToServer>| {
                     // Where the player is (after `GAME_POS`), as its way out.
-                    to_server.write(ToServer(ClientMessage::DevEnterSite { kind, seed, level }));
+                    to_server.write(ToServer(ClientMessage::DevEnterSite {
+                        kind,
+                        seed,
+                        level,
+                        ruin,
+                    }));
                 })
                 .in_set(Start::Enter),
             );
@@ -370,6 +376,8 @@ fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
         "window" => Cell::Window,
         "water" => Cell::Water,
         "lava" => Cell::Lava,
+        "hole" => Cell::Hole,
+        "ground" => Cell::Ground,
         _ => return None,
     };
     Some((dx, dy, cell))

@@ -31,6 +31,8 @@ pub fn level_chunk(x: i64, y: i64) -> ((i64, i64), u32) {
 pub struct LevelInfo {
     /// The kind of place (for its look and name).
     pub kind: PoiKind,
+    /// Whether it is a ruined building (for its name).
+    pub ruined: bool,
     /// Whether its levels are a building's floors (going up) rather than a
     /// cave's depths.
     pub building: bool,

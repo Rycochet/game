@@ -289,9 +289,12 @@ pub(crate) fn answer(
             None => world_map::teleport(client, world, x, y),
         },
         ClientMessage::DevBackToStart => world_map::back_to_start(client, world),
-        ClientMessage::DevEnterSite { kind, seed, level } => {
-            sites::dev_enter(client, world, kind, seed, level)
-        }
+        ClientMessage::DevEnterSite {
+            kind,
+            seed,
+            level,
+            ruin,
+        } => sites::dev_enter(client, world, kind, seed, level, ruin),
         ClientMessage::DevSetCell { x, y, cell } => sites::set_cell(client, world, x, y, cell),
         ClientMessage::DevRevealPois => world_map::reveal_pois(client, world),
         ClientMessage::DevSnowLine(snow_line) => {

@@ -4,7 +4,7 @@ Finding a way across one level of a site or the world map: the quickest route of
 
 ## Files
 
-- `crates/shared/src/pathfinding.rs`: `Path`, `find_path` (A*), `straighten`, `find_world_path`, `WORLD_ROUTE_REACH`. Tests: straight lines, walls, liquid jumps, nearest cell when unreachable, allowed cells, limit, determinism, straightening; on the world map: round water, clicks on water, the reach, starting in water.
+- `crates/shared/src/pathfinding.rs`: `Path`, `find_path` (A*), `straighten`, `find_world_path`, `WORLD_ROUTE_REACH`. Tests: straight lines, walls, jumps over liquid and holes, nearest cell when unreachable, allowed cells, limit, determinism, straightening; on the world map: round water, clicks on water, the reach, starting in water.
 
 ## Public API
 

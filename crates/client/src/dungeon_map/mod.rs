@@ -10,6 +10,7 @@
 //! (`theme`). Light is dull everywhere, and brighter near light sources, which
 //! walls block. Left-click a seen walkable cell to travel there.
 
+mod holes;
 mod liquid;
 mod mesh;
 mod picking;

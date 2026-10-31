@@ -306,6 +306,7 @@ pub fn build(kind: PoiKind, look: PoiLook, variety: u64) -> PoiModel {
             width,
             height,
             floors,
+            ruin: _,
         } => {
             let half = Vec2::new(half_size(width), half_size(height));
             building(&mut model, kind, outline, half, floors);
@@ -573,6 +574,7 @@ mod tests {
                 width: 15,
                 height: 15,
                 floors,
+                ruin: 0,
             };
             let model = build(PoiKind::StoneTower, look, 0);
             let top = model.corners.iter().flatten().map(|c| c.y);

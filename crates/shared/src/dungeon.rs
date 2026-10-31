@@ -49,6 +49,10 @@ pub enum Cell {
     BuildingDoor,
     /// A window in a town's solid building, for looks: part of its wall.
     BlindWindow,
+    /// A gap in the floor, or open air beyond a ruined floor's edge: seen and
+    /// lit across, and not out in the weather. Not walkable: as with liquid,
+    /// one cell of it can only be jumped over (`movement`).
+    Hole,
 }
 
 impl Cell {
@@ -80,9 +84,14 @@ impl Cell {
         matches!(self, Self::Water | Self::Lava)
     }
 
+    /// Whether one cell of it can be jumped over: liquid, or a hole.
+    pub fn is_jumpable(self) -> bool {
+        self.is_liquid() || self == Self::Hole
+    }
+
     /// Whether sight and light pass through it.
     pub fn is_open(self) -> bool {
-        self.is_walkable() || matches!(self, Self::Water | Self::Lava | Self::Window)
+        self.is_walkable() || matches!(self, Self::Water | Self::Lava | Self::Window | Self::Hole)
     }
 
     /// Whether it is a wall (a hidden door looks and acts like one, and so do
@@ -468,6 +477,16 @@ fn line_hits_box(from: (i64, i64), to: (i64, i64), low: (i64, i64), high: (i64, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A hole is seen and lit across, but nothing else.
+    #[test]
+    fn holes_are_open_but_not_walkable() {
+        let hole = Cell::Hole;
+        assert!(hole.is_open());
+        assert!(!hole.is_walkable() && !hole.is_outside() && !hole.is_liquid());
+        assert!(!hole.is_wall() && !hole.is_opening());
+        assert!(hole.is_jumpable());
+    }
 
     /// The room as a picture, `#` wall, `.` floor.
     fn picture(level: &Level, mark: impl Fn(i64, i64) -> char) -> Vec<String> {
