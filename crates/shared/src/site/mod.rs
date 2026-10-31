@@ -85,7 +85,7 @@ impl PoiLook {
 /// to them), so anyone connecting starts again, as nothing is kept on a client.
 /// Every generator version goes up with it, so sites are made as new whatever
 /// else has changed. The world itself stays: it comes from its seed.
-pub const FORGET_BEFORE: u32 = 1;
+pub const FORGET_BEFORE: u32 = 2;
 
 /// Of each 100 buildings that can be ruined, how many are, evenly from 1 to
 /// `MOST_RUIN`.
@@ -281,7 +281,10 @@ impl Generator {
                 height,
                 outlines,
                 square: false,
+                min_floors: 1,
                 max_floors,
+                same_size: false,
+                taper: None,
                 size_per_floor,
                 ruin: 0,
             })
@@ -297,6 +300,13 @@ impl Generator {
             })
         };
         let town = |buildings| Self::Town(TownOptions { buildings });
+        let at_least_three_floors = |generator| match generator {
+            Self::Building(options) => Self::Building(BuildingOptions {
+                min_floors: 3,
+                ..options
+            }),
+            other => other,
+        };
         match kind {
             Hamlet => town((3, 8)),
             Village => town((9, 25)),
@@ -324,22 +334,40 @@ impl Generator {
             }
             Warehouse => building((20, 32), (14, 22), &[Rectangle], 1, 10),
             ArcheryRange => building((16, 26), (10, 14), &[Rectangle, RoundCorners], 1, 10),
-            // Towers are narrow but tall.
-            StoneTower | WoodenTower => building((13, 19), (13, 19), &[Circle], 6, 3),
-            Castle => building(
+            // Towers are narrow but tall, the same all the way up.
+            StoneTower | WoodenTower => match building((13, 19), (13, 19), &[Circle], 8, 2) {
+                Self::Building(options) => Self::Building(BuildingOptions {
+                    min_floors: 5,
+                    same_size: true,
+                    ..options
+                }),
+                other => other,
+            },
+            // Always a keep above the walls.
+            Castle => at_least_three_floors(building(
                 (40, 70),
                 (36, 60),
                 &[Rectangle, CutCorners, RoundCorners],
                 4,
                 12,
-            ),
-            Fort => building((30, 50), (26, 44), &[Rectangle, CutCorners], 3, 12),
+            )),
+            Fort => at_least_three_floors(building(
+                (30, 50),
+                (26, 44),
+                &[Rectangle, CutCorners],
+                3,
+                12,
+            )),
             StonePyramid | SandPyramid => Self::Building(BuildingOptions {
                 width: (25, 45),
                 height: (25, 45),
                 outlines: &[Rectangle],
                 square: true,
-                max_floors: 5,
+                min_floors: 1,
+                max_floors: 1,
+                same_size: false,
+                // Stepping in until no room fits at the top.
+                taper: Some((3, 4)),
                 size_per_floor: 6,
                 ruin: 0,
             }),
@@ -713,7 +741,17 @@ mod tests {
                         .arrival(Exit::Level(index as u32))
                         .expect("a way back");
                     if site.is_building() {
-                        assert_eq!(back, (stairs.x, stairs.y), "{:?}", site.kind());
+                        let there = &levels[to as usize].stairs;
+                        let spot = (stairs.x, stairs.y);
+                        assert!(
+                            there
+                                .iter()
+                                .any(|s| (s.x, s.y) == spot && s.to == Exit::Level(index as u32)),
+                            "{:?}",
+                            site.kind()
+                        );
+                    } else {
+                        assert!(levels[to as usize].level.is_walkable(back.0, back.1));
                     }
                 }
             }
@@ -845,7 +883,7 @@ mod tests {
     }
 
     const GOLDEN_LEVELS: [u64; 3] = [
-        16250830485420571163,
+        11165579872550593912,
         4540973389226848185,
         16348176066830501790,
     ];
@@ -943,5 +981,81 @@ mod pictures {
     #[test]
     fn tents_are_never_ruined() {
         assert!((0..300).all(|seed| !PoiLook::of(PoiKind::RedTent, Seed::new(seed)).is_ruined()));
+    }
+
+    fn floors_of(kind: PoiKind) -> impl Iterator<Item = Site> {
+        (0..60).map(move |n| Site::new(kind, Seed::new(n * 31 + 7)))
+    }
+
+    #[test]
+    fn castles_and_forts_have_at_least_three_floors() {
+        for kind in [PoiKind::Castle, PoiKind::Fort] {
+            assert!(floors_of(kind).all(|site| site.levels() >= 3), "{kind:?}");
+        }
+    }
+
+    /// Each floor is 3 or 4 cells smaller per side, and the top leaves no room
+    /// for another: its walls and a 3 by 3 room at most one step from too small.
+    #[test]
+    fn pyramids_step_in_until_no_room_fits() {
+        for kind in [PoiKind::StonePyramid, PoiKind::SandPyramid] {
+            for site in floors_of(kind) {
+                assert!(site.levels() >= 3, "{}", site.levels());
+                let plan = building_plan(&site);
+                let sizes = plan.floor_widths();
+                for pair in sizes.windows(2) {
+                    let by = (pair[0] - pair[1]) / 2;
+                    assert!((3..=4).contains(&by), "{sizes:?}");
+                }
+                let top = sizes[sizes.len() - 1];
+                assert!((5..11).contains(&top), "{sizes:?}");
+            }
+        }
+    }
+
+    /// At least 5 floors, all alike, except that a tower with more may have a
+    /// top about half the size.
+    #[test]
+    fn towers_are_tall_and_the_same_all_the_way_up() {
+        for kind in [PoiKind::StoneTower, PoiKind::WoodenTower] {
+            let mut small_tops = 0;
+            for site in floors_of(kind) {
+                let sizes = building_plan(&site).floor_widths();
+                assert!(sizes.len() >= 5, "{sizes:?}");
+                let (top, rest) = sizes.split_last().unwrap();
+                assert!(rest.iter().all(|&size| size == sizes[0]), "{sizes:?}");
+                if *top != sizes[0] {
+                    small_tops += 1;
+                    assert!(sizes.len() > 5, "{sizes:?}");
+                    assert!((sizes[0] / 3..=sizes[0] * 2 / 3).contains(top), "{sizes:?}");
+                }
+            }
+            assert!(small_tops > 0);
+        }
+    }
+
+    fn building_plan(site: &Site) -> &building::Plan {
+        match &site.plan {
+            Plan::Building(plan) => plan,
+            _ => panic!("a building"),
+        }
+    }
+
+    #[test]
+    fn only_big_buildings_may_have_extra_stairs() {
+        let most_stairs_up = |kind| {
+            floors_of(kind)
+                .flat_map(|site| {
+                    (0..site.levels()).map(move |index| {
+                        let level = site.level(index);
+                        let up = |s: &&Stairs| s.direction == StairsDirection::Up;
+                        level.stairs.iter().filter(up).count()
+                    })
+                })
+                .max()
+                .unwrap()
+        };
+        assert_eq!(most_stairs_up(PoiKind::StoneCottage), 1);
+        assert!(most_stairs_up(PoiKind::Castle) > 1);
     }
 }

@@ -15,7 +15,7 @@ use std::collections::BTreeSet;
 
 use super::building::Shape;
 use super::grid::{self, Reach, STEPS, chance};
-use super::{SiteLevel, Stairs, StairsDirection};
+use super::{SiteLevel, StairsDirection};
 use crate::dungeon::{Cell, Level};
 use crate::rng::{Rng, Seed};
 
@@ -58,13 +58,14 @@ fn cells_of(level: &Level) -> impl Iterator<Item = (i64, i64)> + use<> {
 
 /// Ruins a building's floors (all of them, intact, from the ground up), given
 /// each floor's outline and `stairs[n]` joining floor `n` to floor `n + 1`.
-/// Floors above one whose stairs can no longer be walked between are dropped.
+/// Floors above one with no way left from its stairs down to any stairs up are
+/// dropped.
 pub(super) fn ruin_floors(
     seed: Seed,
     ruin: u8,
     floors: Vec<SiteLevel>,
     shapes: &[Shape],
-    stairs: &[(i64, i64)],
+    stairs: &[Vec<(i64, i64)>],
 ) -> Vec<SiteLevel> {
     let seed = seed.derive("ruin");
     let mut kept: Vec<SiteLevel> = Vec::new();
@@ -74,7 +75,7 @@ pub(super) fn ruin_floors(
             stairs
                 .iter()
                 .enumerate()
-                .any(|(n, &spot)| index <= n + 1 && near(spot, x, y))
+                .any(|(n, spots)| index <= n + 1 && spots.iter().any(|&s| near(s, x, y)))
         };
         let below = kept.last().map(|floor| &floor.level);
         let level = &mut floor.level;
@@ -215,29 +216,30 @@ fn open_lone_doors(level: &mut Level) {
     }
 }
 
-/// Whether the way you arrive on a floor can still be walked to its stairs up.
+/// Whether a way you arrive on a floor can still be walked to some stairs up.
 fn stairs_connect(floor: &SiteLevel) -> bool {
-    let at = |stairs: &Stairs| (stairs.x, stairs.y);
-    let up = floor
-        .stairs
-        .iter()
-        .find(|s| s.direction == StairsDirection::Up);
-    let down = floor
-        .stairs
-        .iter()
-        .find(|s| s.direction == StairsDirection::Down);
-    let (Some(up), Some(from)) = (up.map(at), down.map(at).or(floor.entrance)) else {
-        return true;
+    let at = |direction| {
+        floor
+            .stairs
+            .iter()
+            .filter(move |s| s.direction == direction)
+            .map(|s| (s.x, s.y))
     };
+    let ups: Vec<_> = at(StairsDirection::Up).collect();
+    let mut ways_in: Vec<_> = at(StairsDirection::Down).collect();
+    ways_in.extend(floor.entrance.filter(|_| ways_in.is_empty()));
+    if ups.is_empty() || ways_in.is_empty() {
+        return true;
+    }
     let mut reach = Reach::new(&floor.level);
-    reach.spread(&floor.level, &[from]);
-    reach.is(up.0, up.1)
+    reach.spread(&floor.level, &ways_in);
+    ups.iter().any(|&(x, y)| reach.is(x, y))
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::building::{BuildingOptions, Outline, Plan};
-    use super::super::{Exit, Generator};
+    use super::super::{Exit, Generator, Stairs};
     use super::*;
     use crate::poi::PoiKind;
 
@@ -353,12 +355,10 @@ mod tests {
                 let whole = intact.level(n as u32).level;
                 let stairs: Vec<_> = (n - 1..all.len() - 1)
                     .chain(n..n)
-                    .map(|k| {
-                        let s = all[k]
-                            .stairs
-                            .iter()
-                            .find(|s| s.to == Exit::Level(k as u32 + 1));
-                        (s.unwrap().x, s.unwrap().y)
+                    .flat_map(|k| {
+                        let up = Exit::Level(k as u32 + 1);
+                        let stairs = all[k].stairs.iter().filter(move |s| s.to == up);
+                        stairs.map(|s| (s.x, s.y))
                     })
                     .collect();
                 for (x, y) in cells_of(level) {
@@ -387,8 +387,8 @@ mod tests {
         for (ruin, plan, intact) in ruined_plans(3) {
             let all = floors(&plan);
             for (n, floor) in all.iter().enumerate() {
-                let expected = usize::from(n > 0) + usize::from(n + 1 < all.len());
-                assert_eq!(floor.stairs.len(), expected, "ruin {ruin} floor {n}");
+                let least = usize::from(n > 0) + usize::from(n + 1 < all.len());
+                assert!(floor.stairs.len() >= least, "ruin {ruin} floor {n}");
                 assert!(stairs_connect(floor), "ruin {ruin} floor {n}");
                 for stairs in &floor.stairs {
                     assert_eq!(floor.level.cell(stairs.x, stairs.y), Cell::Floor);

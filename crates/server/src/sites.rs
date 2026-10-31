@@ -210,7 +210,13 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
     client.unsaved = true;
     match exit {
         Exit::Level(index) => {
-            let from = Arrival::From(Exit::Level(visit.index));
+            // A building's stairs are on the same cell of both floors, and it
+            // may have several: arrive at the ones taken.
+            let from = if visit.site.is_building() {
+                Arrival::At((x, y))
+            } else {
+                Arrival::From(Exit::Level(visit.index))
+            };
             enter_level(client, world, visit.poi, visit.id, visit.site, index, from)
         }
         Exit::WorldMap => {

@@ -10,8 +10,9 @@
 //! Doors are then added until everything can be reached from the way in.
 //!
 //! Every floor has the same outline, the same size or smaller (shrunk the
-//! same amount on every side, so its walls stand on the floor below). Stairs
-//! between two floors are on the same cell of both, chosen before either is
+//! same amount on every side, so its walls stand on the floor below). Bigger
+//! buildings may have several staircases between two floors. Each is on the
+//! same cell of both floors, chosen before either is
 //! generated, and the splits avoid them, so each floor can be generated on
 //! its own. A ruined building's floors depend on each other (see `ruin`), so
 //! they are all made together at the start and kept.
@@ -46,6 +47,20 @@ const WIDE_CORRIDOR_SPAN: i64 = 24;
 
 /// A floor narrower than this isn't built.
 const MIN_FLOOR_SIZE: i64 = 9;
+
+/// The smallest floor a tapering building has: a smallest room and its walls.
+const MIN_TAPERED_FLOOR: i64 = MIN_ROOM + 2;
+
+/// Up to one extra staircase between two floors per this many cells of the
+/// upper floor (at most `MOST_EXTRA_STAIRS`), each with this percentage chance,
+/// at least `MIN_STAIRS_GAP` cells from the others between those floors.
+const CELLS_PER_EXTRA_STAIRS: i64 = 300;
+const MOST_EXTRA_STAIRS: i64 = 3;
+const EXTRA_STAIRS_PERCENT: u32 = 50;
+const MIN_STAIRS_GAP: i64 = 8;
+
+/// Percentage chance that a building of `same_size` floors has a small top.
+const SMALL_TOP_PERCENT: u32 = 50;
 
 /// Percentage chance that a floor is the same size as the one below.
 const SAME_SIZE_PERCENT: u64 = 50;
@@ -87,8 +102,16 @@ pub struct BuildingOptions {
     pub outlines: &'static [Outline],
     /// Square: the height is the width.
     pub square: bool,
+    /// At least this many floors, whatever its size.
+    pub min_floors: u32,
     /// At most this many floors.
     pub max_floors: u32,
+    /// Every floor is the same size as the ground floor. Above `min_floors`,
+    /// the top one may be about half the size.
+    pub same_size: bool,
+    /// Floors go on up, each smaller by this many cells per side (an inclusive
+    /// range), until no room fits at the top: instead of the other floor rules.
+    pub taper: Option<(i64, i64)>,
     /// Bigger buildings have more floors: up to one per this many cells of
     /// the ground floor's shorter side.
     pub size_per_floor: i64,
@@ -165,8 +188,9 @@ pub struct Plan {
     width: i64,
     height: i64,
     floors: Vec<Shape>,
-    /// `stairs[n]` joins floor `n` to floor `n + 1`.
-    stairs: Vec<(i64, i64)>,
+    /// `stairs[n]` are the staircases joining floor `n` to floor `n + 1`, at
+    /// least one each.
+    stairs: Vec<Vec<(i64, i64)>>,
     /// A ruined building's floors, all of them, from the ground up; empty if
     /// it isn't ruined.
     ruined: Vec<SiteLevel>,
@@ -193,54 +217,104 @@ impl Plan {
         };
 
         // Bigger buildings may have more floors.
+        let least = options.min_floors.max(1) as i64;
         let most = (width.min(height) / options.size_per_floor.max(1))
-            .clamp(1, options.max_floors.max(1) as i64);
-        let wanted = roll(&mut rng, 1, most);
+            .clamp(1, options.max_floors.max(1) as i64)
+            .max(least);
+        let wanted = roll(&mut rng, least, most);
         let mut floors = vec![ground];
-        while (floors.len() as i64) < wanted {
+        while options.taper.is_some() || (floors.len() as i64) < wanted {
             let below = floors[floors.len() - 1];
-            // Half the time the same size; otherwise a cell smaller on each
-            // side for every 10 in the roll above 50.
-            let roll = rng.range_u64(0, 100);
-            let by = if roll < SAME_SIZE_PERCENT {
-                0
+            let smallest = |floor: Shape| floor.width.min(floor.height);
+            let above = if let Some((fewest, greatest)) = options.taper {
+                let by = roll(&mut rng, fewest, greatest);
+                if smallest(below.shrunk(by)) >= MIN_TAPERED_FLOOR {
+                    below.shrunk(by)
+                } else {
+                    // The bigger step may not fit where the smaller one does.
+                    below.shrunk(fewest)
+                }
             } else {
-                ((roll - SAME_SIZE_PERCENT) / 10 + 1) as i64
+                // Half the time the same size; otherwise a cell smaller on each
+                // side for every 10 in the roll above 50.
+                let roll = rng.range_u64(0, 100);
+                let by = if options.same_size || roll < SAME_SIZE_PERCENT {
+                    0
+                } else {
+                    ((roll - SAME_SIZE_PERCENT) / 10 + 1) as i64
+                };
+                // Leaving room for the floors it must have.
+                let needed = least - floors.len() as i64;
+                let by = if needed > 0 {
+                    by.min((smallest(below) - MIN_FLOOR_SIZE) / (2 * needed))
+                } else {
+                    by
+                };
+                below.shrunk(by)
             };
-            let above = below.shrunk(by);
-            if above.width.min(above.height) < MIN_FLOOR_SIZE {
+            let too_small = if options.taper.is_some() {
+                MIN_TAPERED_FLOOR
+            } else {
+                MIN_FLOOR_SIZE
+            };
+            if smallest(above) < too_small {
                 break;
             }
             floors.push(above);
         }
+        if options.same_size && floors.len() as i64 > least && chance(&mut rng, SMALL_TOP_PERCENT) {
+            let top = floors.len() - 1;
+            floors[top] = floors[top].shrunk(floors[top].width.min(floors[top].height) / 4);
+        }
 
         // Stairs: on cells well inside both floors (not next to an outer
-        // wall), never next to the previous stairs.
-        let mut stairs: Vec<(i64, i64)> = Vec::new();
-        for pair in floors.windows(2) {
-            let above = pair[1];
-            let fits = |x: i64, y: i64| {
-                (-1..=1).all(|dy| (-1..=1).all(|dx| above.is_interior(x + dx, y + dy)))
-                    && stairs
-                        .last()
-                        .is_none_or(|&(sx, sy)| (sx - x).abs() > 2 || (sy - y).abs() > 2)
+        // wall), never next to those on the floor above. From the top down,
+        // as small floors have the fewest places for them.
+        let mut stairs: Vec<Vec<(i64, i64)>> = Vec::new();
+        for pair in (0..floors.len() - 1).rev() {
+            let above = floors[pair + 1];
+            let clear_of = |spots: &[(i64, i64)], gap: i64, x: i64, y: i64| {
+                spots
+                    .iter()
+                    .all(|&(sx, sy)| (sx - x).abs() > gap || (sy - y).abs() > gap)
             };
+            let upper = stairs.last().cloned().unwrap_or_default();
+            let inside = |x: i64, y: i64| {
+                (-1..=1).all(|dy| (-1..=1).all(|dx| above.is_interior(x + dx, y + dy)))
+                    && clear_of(&upper, 2, x, y)
+            };
+            let cells = above.width * above.height;
             let random = (0..100).find_map(|_| {
                 let x = roll(&mut rng, above.x, above.x + above.width - 1);
                 let y = roll(&mut rng, above.y, above.y + above.height - 1);
-                fits(x, y).then_some((x, y))
+                inside(x, y).then_some((x, y))
             });
             let found = random.or_else(|| {
                 (above.y..above.y + above.height)
                     .flat_map(|y| (above.x..above.x + above.width).map(move |x| (x, y)))
-                    .find(|&(x, y)| fits(x, y))
+                    .find(|&(x, y)| inside(x, y))
             });
-            match found {
-                Some(spot) => stairs.push(spot),
-                None => break,
+            let Some(first) = found else {
+                // No way up from here: what is above goes.
+                floors.truncate(pair + 1);
+                stairs.clear();
+                continue;
+            };
+            let mut here = vec![first];
+            for _ in 0..(cells / CELLS_PER_EXTRA_STAIRS).min(MOST_EXTRA_STAIRS) {
+                if !chance(&mut rng, EXTRA_STAIRS_PERCENT) {
+                    continue;
+                }
+                let extra = (0..100).find_map(|_| {
+                    let x = roll(&mut rng, above.x, above.x + above.width - 1);
+                    let y = roll(&mut rng, above.y, above.y + above.height - 1);
+                    (inside(x, y) && clear_of(&here, MIN_STAIRS_GAP, x, y)).then_some((x, y))
+                });
+                here.extend(extra);
             }
+            stairs.push(here);
         }
-        floors.truncate(stairs.len() + 1);
+        stairs.reverse();
 
         let mut plan = Self {
             seed,
@@ -255,6 +329,12 @@ impl Plan {
             plan.ruined = ruin::ruin_floors(seed, options.ruin, intact, &plan.floors, &plan.stairs);
         }
         plan
+    }
+
+    /// Each floor's width, from the ground up.
+    #[cfg(test)]
+    pub fn floor_widths(&self) -> Vec<i64> {
+        self.floors.iter().map(|floor| floor.width).collect()
     }
 
     /// The ground floor's size in cells, without the border round it.
@@ -293,22 +373,24 @@ impl Plan {
         // Stairs down to the floor below and up to the one above.
         let mut stairs = Vec::new();
         if n > 0 {
-            let (x, y) = self.stairs[n - 1];
-            stairs.push(Stairs {
-                x,
-                y,
-                direction: StairsDirection::Down,
-                to: Exit::Level(index - 1),
-            });
+            for &(x, y) in &self.stairs[n - 1] {
+                stairs.push(Stairs {
+                    x,
+                    y,
+                    direction: StairsDirection::Down,
+                    to: Exit::Level(index - 1),
+                });
+            }
         }
         if n + 1 < self.floors.len() {
-            let (x, y) = self.stairs[n];
-            stairs.push(Stairs {
-                x,
-                y,
-                direction: StairsDirection::Up,
-                to: Exit::Level(index + 1),
-            });
+            for &(x, y) in &self.stairs[n] {
+                stairs.push(Stairs {
+                    x,
+                    y,
+                    direction: StairsDirection::Up,
+                    to: Exit::Level(index + 1),
+                });
+            }
         }
         let required: Vec<(i64, i64)> = stairs.iter().map(|s| (s.x, s.y)).collect();
 
