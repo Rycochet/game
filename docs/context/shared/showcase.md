@@ -8,7 +8,7 @@ A debug area for looking at every kind of poi: from far south of any pole, the w
 
 ## Public API
 
-- `ENABLED`, `VARIANTS` (8), `FLAT_HEIGHT`, `CLIMATE`, `ARRIVAL` (just north of the northernmost row), `in_plain(y)`, `chunk_in_plain(chunk)`, `poi_at(chunk)`.
+- `ENABLED`, `VARIANTS` (8), `FLAT_HEIGHT`, `CLIMATE`, `ARRIVAL` (first column, just north of the unruined rows), `in_plain(y)`, `chunk_in_plain(chunk)`, `poi_at(chunk)`.
 
 ## Depends on
 

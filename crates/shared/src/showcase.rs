@@ -41,11 +41,9 @@ pub const CLIMATE: ClimateSample = ClimateSample {
     moisture: 0.2,
 };
 
-/// Where the key takes you: just north of the northernmost row.
-pub const ARRIVAL: (i64, i64) = (
-    CHUNK_SIZE / 2,
-    (FIRST_ROW - RUIN_LEVELS) * CHUNK_SIZE - CHUNK_SIZE / 4,
-);
+/// Where the key takes you: in the first column, just north of the unruined
+/// rows, which every kind has.
+pub const ARRIVAL: (i64, i64) = (CHUNK_SIZE / 2, FIRST_ROW * CHUNK_SIZE - CHUNK_SIZE / 4);
 
 /// For the pois' map seeds.
 const SEEDS: Seed = Seed::new(0x706f_6973);
