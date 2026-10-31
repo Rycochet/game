@@ -9,6 +9,7 @@ mod demo;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
 mod dungeon_map;
+mod minimap;
 mod player;
 mod site;
 mod surface_style;
@@ -56,6 +57,7 @@ fn main() {
         dungeon_map::DungeonMapPlugin,
         site::SitePlugin,
         demo::DemoPlugin,
+        minimap::MinimapPlugin,
         ui::UiPlugin,
     ));
 

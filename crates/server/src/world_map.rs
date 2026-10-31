@@ -1,6 +1,8 @@
 //! Sending each player the world map chunks coming into their sight, and
 //! remembering the features they have seen.
 
+use std::collections::btree_map::Entry;
+
 use bevy::prelude::*;
 use shared::movement::{Step, step_on_world_map};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
@@ -50,11 +52,25 @@ pub(crate) fn back_to_start(client: &mut Client, world: &mut ServerWorld) -> boo
     client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
 }
 
-/// The player is somewhere new on the world map: the features now in sight
-/// are known from now on, and the chunks within sight, plus a margin, that
+/// The player is somewhere new on the world map: the chunks now in sight are
+/// known from now on (their land as well as any feature, for the player's
+/// map), a new connection is sent all they know, and the chunks within sight, plus a margin, that
 /// the client hasn't been sent yet are sent. `false` if the client has
 /// gone.
 pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
+    if client.world_chunks.is_empty() {
+        let known: Vec<_> = client.character.features.keys().copied().collect();
+        for chunk in known {
+            client.world_chunks.insert(chunk);
+            let feature = world.features.in_chunk(chunk).map(Into::into);
+            if !client
+                .link
+                .send(&ServerMessage::WorldChunk(WorldChunk { chunk, feature }))
+            {
+                return false;
+            }
+        }
+    }
     let (x, y) = client.world_position();
     let sight = WORLD_MAP_SIGHT;
     for chunk in world
@@ -62,8 +78,8 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
         .chunks_in_area((x - sight, y - sight), (x + sight, y + sight))
     {
         let known = &mut client.character.features;
-        if world.features.in_chunk(chunk).is_some() && !known.contains_key(&chunk) {
-            known.insert(chunk, KnownFeature::default());
+        if let Entry::Vacant(entry) = known.entry(chunk) {
+            entry.insert(KnownFeature::default());
             client.unsaved = true;
         }
     }
@@ -175,14 +191,26 @@ mod tests {
     }
 
     #[test]
+    fn a_new_connection_is_sent_all_the_character_knows() {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevTeleport { x: 5000, y: 20 }]);
+        let known: BTreeSet<_> = test.client.character.features.keys().copied().collect();
+        assert!(known.contains(&ChunkPos { x: 0, y: 0 }));
+        // As it is when a character joins again.
+        test.client.world_chunks.clear();
+        let TestClient { client, world, .. } = &mut test;
+        assert!(look_around(client, world));
+        let sent: BTreeSet<_> = chunks(&test.send(&[])).into_iter().collect();
+        assert!(known.is_subset(&sent));
+    }
+
+    #[test]
     fn features_in_sight_are_known() {
         let test = TestClient::new();
         let known = &test.client.character.features;
         assert!(!known.is_empty());
-        // Only chunks with a feature, and only those in sight, not the
-        // preload margin beyond it.
+        // Only those in sight, not the preload margin beyond it.
         for chunk in known.keys() {
-            assert!(test.world.features.in_chunk(*chunk).is_some());
             // (East-west, chunk numbers wrap round the planet.)
             assert!(chunk.y.abs() * 64 <= WORLD_MAP_SIGHT + 64);
         }

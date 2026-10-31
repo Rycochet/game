@@ -12,7 +12,7 @@ use std::collections::BTreeSet;
 
 use bevy::prelude::*;
 use shared::dungeon::{CELL_UNITS, Cell, RoomId, WALL_HALF_UNITS};
-use shared::site::{BuildingLook, RoofKind, WallKind};
+use shared::site::{BuildingKind, BuildingLook, RoofKind, WallKind};
 
 use super::mesh::{MEMORY_SHADE, Surface, WallFace, faces_camera};
 use super::walls::{Layer, Layers, Scene};
@@ -21,6 +21,8 @@ use super::{CELL_SIZE, WALL_HEIGHT};
 /// Tiles across and down the atlas.
 const COLUMNS: f32 = 8.0;
 const ROWS: f32 = 6.0;
+/// Pixels across a tile of the atlas.
+const ATLAS_TILE_PIXELS: u32 = 32;
 
 /// Where things are in the atlas: the order `make_town_atlas.py` puts them.
 const GARDEN_TILE: usize = 6;
@@ -633,6 +635,14 @@ fn build_door_or_window(
     }
 }
 
+/// Where a kind of building's door picture is in the atlas: left, top and
+/// size, in pixels (the maps show it as a shop's sign).
+pub fn door_picture(kind: BuildingKind) -> (u32, u32, u32) {
+    let tile = (FIRST_DOOR_TILE + kind as usize) as u32;
+    let (columns, size) = (COLUMNS as u32, ATLAS_TILE_PIXELS);
+    ((tile % columns) * size, (tile / columns) * size, size)
+}
+
 fn kind_index(building: &BuildingLook) -> usize {
     building.kind as usize
 }
@@ -837,7 +847,7 @@ impl Hedge {
 #[cfg(test)]
 mod tests {
     use shared::dungeon::{Level, Sight};
-    use shared::site::{BuildingKind, Rect as CellRect};
+    use shared::site::Rect as CellRect;
 
     use super::super::mesh::{LightGrid, View, build};
     use super::super::theme::Shape;

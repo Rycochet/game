@@ -32,6 +32,11 @@
 //!   looks south), tilted to `pitch` degrees above the horizon and zoomed in
 //!   (the camera distance is divided by `zoom`; 1.6667 is the wheel's
 //!   closest).
+//! - `GAME_MAP=dx,dy`: two seconds after starting, open the full map, moved
+//!   this many grid points from the player (`0,0` to centre it on them).
+//! - `GAME_MAP_ZOOM=n`: the full map opened by `GAME_MAP` at this zoom.
+//! - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look
+//!   at what hovering shows.
 //! - `GAME_SCREENSHOT=path.png`: save a screenshot after `GAME_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 
@@ -52,6 +57,7 @@ use crate::common::{
 };
 use crate::connection::ToServer;
 use crate::demo::AutoWalk;
+use crate::minimap::FullMap;
 use crate::player::{Player, PlayerSystems, TakeStep, TravelTo};
 use crate::view3d::OrbitCamera;
 
@@ -136,6 +142,38 @@ impl Plugin for DevToolsPlugin {
                     }
                 }
             });
+        }
+
+        if let Some((x, y)) = env::var("GAME_CURSOR").ok().and_then(|pos| parse_pos(&pos)) {
+            app.add_systems(
+                Update,
+                move |mut window: Single<&mut Window, With<PrimaryWindow>>| {
+                    let at = Vec2::new(x as f32, y as f32);
+                    if window.cursor_position() != Some(at) {
+                        window.set_cursor_position(Some(at));
+                    }
+                },
+            );
+        }
+
+        if let Some((dx, dy)) = env::var("GAME_MAP").ok().and_then(|pos| parse_pos(&pos)) {
+            let zoom = env::var("GAME_MAP_ZOOM").ok().and_then(|n| n.parse().ok());
+            app.add_systems(
+                Update,
+                move |time: Res<Time>,
+                      mut done: Local<bool>,
+                      player: Single<&MapPosition, With<Player>>,
+                      mut map: ResMut<FullMap>| {
+                    if !*done && time.elapsed_secs() > 2.0 {
+                        *done = true;
+                        map.open = true;
+                        map.centre = Some(((player.x + dx) as f64, (player.y + dy) as f64));
+                        if let Some(zoom) = zoom {
+                            map.zoom = zoom;
+                        }
+                    }
+                },
+            );
         }
 
         if let Some((dx, dy)) = env::var("GAME_MOVE").ok().and_then(|pos| parse_pos(&pos)) {

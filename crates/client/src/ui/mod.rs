@@ -17,6 +17,26 @@ impl Plugin for UiPlugin {
     }
 }
 
+/// A box standing up from what is behind it, for anything shown in one: lit
+/// along its top and left, in shade along its bottom and right. Put text or
+/// anything else inside it as children.
+pub fn raised_box() -> impl Bundle {
+    (
+        Node {
+            border: UiRect::all(px(3)),
+            padding: UiRect::axes(px(14), px(5)),
+            ..default()
+        },
+        BackgroundColor(Color::srgb(0.75, 0.65, 0.48)),
+        BorderColor {
+            top: Color::srgb(0.95, 0.87, 0.7),
+            left: Color::srgb(0.95, 0.87, 0.7),
+            right: Color::srgb(0.42, 0.32, 0.2),
+            bottom: Color::srgb(0.42, 0.32, 0.2),
+        },
+    )
+}
+
 #[derive(Component)]
 struct StatusText;
 
@@ -96,7 +116,7 @@ fn update_status_text(
          Right-drag: turn / tilt map  Wheel: zoom  Home: reset view\n\
          Ctrl+click: teleport  Alt+click: change a site's cell  Esc: back to the start\n\
          G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})\n\
-         K / C / X / Z: token shape / colour / completed / size  B: stairs style\n\
+         M: map  K / C / X / Z: token shape / colour / completed / size  B: stairs style\n\
          Position {}, {}  Hour {}  Ping {}\n{}",
         on_off(walk.0),
         weather.snow_line,
