@@ -325,7 +325,7 @@ Basements are the last level of a site, so existing levels keep their indexes (`
 
 The owner's design: a one-storey hut of 5 to 8 a side over a basement that can be larger, with one herb patch outside of 3 to 5 parallel strips 7 to 12 long. Each tile (`Cell::HerbBed`) grows herbs or mushrooms, chosen by the client: the same for every client, as it comes from a hash of the place and the server's clock. Every game day a tile moves on a stage (plain ground, green or grey dots, stalks, full grown). The owner chose a fixed list of plants in a mixed order, each with all 4 stages, and each tile starting at a random hour in it, so tiles are at different stages and don't all change at once. Unlike fields, this depends only on time, not season. Upright plants stand in a `#` through the middle of the two plants in each picture, to look more solid.
 
-Claude's choices: 5 shapes of each with 3 colours, so 30 plants in the list; walkable strips with ground between, no fence or track; huts in forest biomes only, by their own hash; a ruin's patch grows on. World map version stays 3, unreleased on this branch.
+Claude's choices: 5 shapes of each with 3 colours, so 30 plants in the list; walkable strips with ground between, no fence or track; huts in forest biomes only, by their own hash; a ruin's patch grows on. Farms and huts share world map version 3.
 
 ## 2026-10-31: A showcase plain for looking at pois
 
