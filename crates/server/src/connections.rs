@@ -59,6 +59,9 @@ pub struct Client {
     pub(crate) visit: Option<Visit>,
     /// The world map chunks it has been sent on this connection.
     pub(crate) world_chunks: BTreeSet<ChunkPos>,
+    /// Every poi is shown, whether known or not: from the start while
+    /// `ALL_POIS_KNOWN`, otherwise by developer tools.
+    pub(crate) reveal_pois: bool,
     /// How many maps the player has been put on since `Welcome` (see
     /// `ClientMessage::Step`).
     map: u32,
@@ -78,6 +81,7 @@ impl Client {
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),
+            reveal_pois: world_map::ALL_POIS_KNOWN,
             map: 0,
             last_step: None,
         }
@@ -289,6 +293,7 @@ pub(crate) fn answer(
             sites::dev_enter(client, world, kind, seed, level)
         }
         ClientMessage::DevSetCell { x, y, cell } => sites::set_cell(client, world, x, y, cell),
+        ClientMessage::DevRevealPois => world_map::reveal_pois(client, world),
         ClientMessage::DevSnowLine(snow_line) => {
             world.snow_line = snow_line;
             client.link.send(&ServerMessage::SnowLine(snow_line))

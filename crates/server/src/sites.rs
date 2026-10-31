@@ -18,7 +18,7 @@ use shared::site::{Exit, Site, SiteLevel, leads_out};
 
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, VisitSave, now};
-use crate::world_map::look_around;
+use crate::world_map::{self, look_around};
 use crate::{LEVEL_PRELOAD_STEPS, ServerWorld};
 
 /// A player's stay on a site level.
@@ -72,8 +72,8 @@ enum Arrival {
 
 /// Enters the site of the poi in `chunk`, if the player is at it.
 pub(crate) fn enter_poi(client: &mut Client, world: &mut ServerWorld, chunk: ChunkPos) -> bool {
-    let Some(poi) = world.pois.in_chunk(chunk) else {
-        warn!("A client tried to enter {chunk:?}, which has no poi");
+    let Some(poi) = world_map::known_poi(client, world, chunk) else {
+        warn!("A client tried to enter {chunk:?}, with no poi it knows of");
         return true;
     };
     let (x, y) = client.world_position();

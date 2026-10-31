@@ -17,11 +17,12 @@ use crate::dungeon::Cell;
 use crate::movement::Step;
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
 use crate::rng::Seed;
+use crate::site::PoiLook;
 use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 11;
+pub const PROTOCOL_VERSION: u32 = 12;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -79,6 +80,9 @@ pub enum ClientMessage {
     /// Developer tools: set the snow line (which freezes water), answered
     /// with `SnowLine`. Only an embedded server accepts it.
     DevSnowLine(u32),
+    /// Developer tools: show every poi, known or not, for this connection.
+    /// Only an embedded server accepts it.
+    DevRevealPois,
 }
 
 impl ClientMessage {
@@ -92,6 +96,7 @@ impl ClientMessage {
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
                 | Self::DevSnowLine(_)
+                | Self::DevRevealPois
         )
     }
 }
@@ -157,6 +162,7 @@ pub struct WorldChunk {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SeenPoi {
     pub kind: PoiKind,
+    pub look: PoiLook,
     pub chunk: ChunkPos,
     pub x: i64,
     pub y: i64,
@@ -166,6 +172,7 @@ impl From<Poi> for SeenPoi {
     fn from(poi: Poi) -> Self {
         Self {
             kind: poi.kind,
+            look: PoiLook::of(poi.kind, poi.seed),
             chunk: poi.chunk,
             x: poi.x,
             y: poi.y,
@@ -207,6 +214,7 @@ mod tests {
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevBackToStart,
+            ClientMessage::DevRevealPois,
             ClientMessage::DevEnterSite {
                 kind: PoiKind::Crypt,
                 seed: 3,
@@ -236,6 +244,7 @@ mod tests {
                 chunk: ChunkPos { x: 1, y: -2 },
                 poi: Some(SeenPoi {
                     kind: PoiKind::Castle,
+                    look: PoiLook::Town { buildings: 9 },
                     chunk: ChunkPos { x: 1, y: -2 },
                     x: 70,
                     y: -100,

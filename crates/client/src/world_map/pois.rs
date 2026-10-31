@@ -1,32 +1,47 @@
 //! The world map's pois (caves, houses, castles, crypts...) as entities
-//! with octagonal tokens and a picture of what they are. Which chunks have
-//! one, and where, is what the server has sent (`common::CurrentWorld`).
+//! showing a model of what they are (`poi_model`), on an invisible token that
+//! places them and takes clicks. Which chunks have one, and where, is what the
+//! server has sent (`common::CurrentWorld`).
 //!
 //! Only pois near the player exist as entities, and only while the world
 //! map is the current view: they are spawned as the player moves and
 //! despawned when they fall out of range or the view changes.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use bevy::prelude::*;
 use shared::poi::PoiKind;
 use shared::protocol::SeenPoi;
+use shared::site::PoiLook;
 
 use super::HALF_SIZE;
-use crate::common::{
-    Clickable, CurrentWorld, Icon, MapPosition, Portal, SmoothPosition, Token, TokenShape,
-    TokenSize,
-};
+use super::poi_model;
+use crate::common::{Clickable, CurrentWorld, MapPosition, Portal, SmoothPosition, Token};
 use crate::player::Player;
-use crate::view3d::TOKEN_DIAMETER;
+use crate::view3d::{TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView};
 
 /// Pois exist this far from the player (each way, east–west and
 /// north–south): the corners of the window when it is turned 45°, plus a
 /// token's radius.
 const RANGE: i64 = (HALF_SIZE as f32 * std::f32::consts::SQRT_2 + TOKEN_DIAMETER / 2.0) as i64 + 1;
 
-/// The tile number of the first `PoiKind`; the rest follow in order.
-const FIRST_TILE: usize = 66;
+/// How many versions of each town's model there are.
+const VARIETIES: u64 = 8;
+
+/// Which model an entity shows.
+#[derive(Component, Clone, Copy)]
+pub(super) struct PoiShape {
+    kind: PoiKind,
+    look: PoiLook,
+    variety: u64,
+}
+
+/// The models' meshes, each made once, and their one material.
+#[derive(Resource, Default)]
+pub(super) struct PoiMeshes {
+    meshes: HashMap<(PoiKind, PoiLook, u64), Handle<Mesh>>,
+    material: Option<Handle<StandardMaterial>>,
+}
 
 /// The poi entities that exist, by their position.
 #[derive(Resource, Default)]
@@ -37,19 +52,14 @@ pub(super) struct SpawnedPois {
     ready: bool,
 }
 
-/// The picture shown above a poi's token.
-pub fn icon(kind: PoiKind) -> String {
-    let town = match kind {
-        PoiKind::Hamlet => Some("l2_town03"),
-        PoiKind::Village => Some("l2_town01"),
-        PoiKind::Town => Some("l2_town02"),
-        PoiKind::City => Some("l2_town"),
-        _ => None,
-    };
-    if let Some(town) = town {
-        return format!("terrain/{town}.png");
-    }
-    format!("terrain/l2_terrain{:03}.png", FIRST_TILE + kind as usize)
+/// The name of a poi's picture on the maps, for `minimap`'s store of them.
+pub fn picture_name(kind: PoiKind, look: PoiLook) -> String {
+    format!("poi:{kind:?}:{look:?}")
+}
+
+/// A poi's picture on the maps: its model drawn at an isometric angle.
+pub fn picture(kind: PoiKind, look: PoiLook, size: u32) -> Vec<u8> {
+    poi_model::build(kind, look, 0).picture(size)
 }
 
 /// When the player reaches a new grid point, the server has sent more of the
@@ -88,15 +98,62 @@ pub(super) fn spawn_nearby(
                     at,
                     SmoothPosition::from(at),
                     Token {
-                        shape: TokenShape::Octagon,
-                        // The pictures fill the whole tile, unlike characters.
-                        size: TokenSize::Tiny,
+                        no_base: true,
                         ..default()
                     },
-                    Icon(icon(poi.kind)),
+                    PoiShape {
+                        kind: poi.kind,
+                        look: poi.look,
+                        variety: (poi.x ^ poi.y).rem_euclid(VARIETIES as i64) as u64,
+                    },
                 ))
                 .id()
         });
+    }
+}
+
+/// Gives each new poi's token view its model, as a child so it goes where the
+/// view goes and is hidden with it.
+pub(super) fn add_models(
+    mut commands: Commands,
+    mut store: ResMut<PoiMeshes>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    views: Query<(Entity, &TokenView), Added<TokenView>>,
+    shapes: Query<&PoiShape>,
+) {
+    for (view, token_view) in &views {
+        let Ok(shape) = shapes.get(token_view.owner) else {
+            continue;
+        };
+        let store = &mut *store;
+        let mesh = store
+            .meshes
+            .entry((shape.kind, shape.look, shape.variety))
+            .or_insert_with(|| {
+                let model = poi_model::build(shape.kind, shape.look, shape.variety);
+                meshes.add(model.mesh())
+            })
+            .clone();
+        // White, so what shows is the mesh's own colours.
+        let material = store
+            .material
+            .get_or_insert_with(|| {
+                materials.add(StandardMaterial {
+                    perceptual_roughness: 0.9,
+                    ..default()
+                })
+            })
+            .clone();
+        let model = commands
+            .spawn((
+                Mesh3d(mesh),
+                MeshMaterial3d(material),
+                // The view stands half a token's thickness above the ground.
+                Transform::from_xyz(0.0, -TOKEN_HALF_THICKNESS, 0.0),
+            ))
+            .id();
+        commands.entity(view).add_child(model);
     }
 }
 
@@ -115,12 +172,5 @@ mod tests {
     #[test]
     fn pois_are_shown_only_as_far_as_the_server_sends() {
         const { assert!(RANGE <= shared::protocol::WORLD_MAP_SIGHT) };
-    }
-
-    #[test]
-    fn icons_cover_the_chosen_tiles() {
-        assert_eq!(icon(PoiKind::ALL[0]), "terrain/l2_terrain066.png");
-        assert_eq!(icon(PoiKind::Mausoleum), "terrain/l2_terrain099.png");
-        assert_eq!(icon(PoiKind::City), "terrain/l2_town.png");
     }
 }

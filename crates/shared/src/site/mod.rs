@@ -27,6 +27,50 @@ pub use building::{BuildingOptions, Outline};
 pub use cave::{CaveEntrance, CaveOptions};
 pub use town::{BuildingKind, BuildingLook, Rect, RoofKind, TownBuilding, TownOptions, WallKind};
 
+/// What a site looks like from outside, for choosing a poi's model. Worked
+/// out without generating any level, and holding nothing a look from outside
+/// wouldn't show, so the server can send it to whoever knows of the poi.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PoiLook {
+    Building {
+        outline: Outline,
+        /// Its ground floor, in cells.
+        width: u16,
+        height: u16,
+        floors: u8,
+    },
+    Cave {
+        entrance: CaveEntrance,
+    },
+    Town {
+        buildings: u16,
+    },
+}
+
+impl PoiLook {
+    /// The look of the site a poi of this kind and map seed leads to.
+    pub fn of(kind: PoiKind, seed: Seed) -> Self {
+        match Generator::for_poi(kind) {
+            Generator::Building(options) => {
+                let plan = building::Plan::new(&options, seed);
+                let (width, height) = plan.footprint();
+                Self::Building {
+                    outline: plan.outline(),
+                    width: width as u16,
+                    height: height as u16,
+                    floors: plan.floors() as u8,
+                }
+            }
+            Generator::Cave(options) => Self::Cave {
+                entrance: options.entrance,
+            },
+            Generator::Town(options) => Self::Town {
+                buildings: town::Plan::new(&options, seed).target() as u16,
+            },
+        }
+    }
+}
+
 /// Where a way out of a level leads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Exit {

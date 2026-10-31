@@ -15,6 +15,8 @@
 //! generated, and the splits avoid them, so each floor can be generated on
 //! its own.
 
+use serde::{Deserialize, Serialize};
+
 use super::grid::{self, Reach, STEPS, chance, roll};
 use super::{Exit, SiteLevel, Stairs, StairsDirection};
 use crate::dungeon::{Cell, Level, RoomId};
@@ -62,7 +64,7 @@ const SECRET_DOOR_PERCENT: u32 = 8;
 type Spot = (i64, i64);
 
 /// The shape of a building seen from above.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Outline {
     Rectangle,
     /// Corners cut off at 45°.
@@ -239,6 +241,16 @@ impl Plan {
             floors,
             stairs,
         }
+    }
+
+    /// The ground floor's size in cells, without the border round it.
+    pub fn footprint(&self) -> (i64, i64) {
+        (self.floors[0].width, self.floors[0].height)
+    }
+
+    /// The shape of the ground floor.
+    pub fn outline(&self) -> Outline {
+        self.floors[0].outline
     }
 
     pub fn floors(&self) -> u32 {

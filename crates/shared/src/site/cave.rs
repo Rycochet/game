@@ -14,6 +14,8 @@
 //! south edge, sometimes another on the east or west. Every level's size is
 //! its own, unrelated to the levels above and below.
 
+use serde::{Deserialize, Serialize};
+
 use super::grid::{self, Reach, STEPS, chance, roll};
 use super::{Exit, SiteLevel, Stairs, StairsDirection};
 use crate::dungeon::{Cell, Level, RoomId};
@@ -54,7 +56,7 @@ const SECRET_DOOR_PERCENT: u32 = 10;
 const SECOND_MOUTH_PERCENT: u32 = 35;
 
 /// Which ways in a cave may have.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CaveEntrance {
     /// A hole in the ground: stairs down from the world map.
     Hole,

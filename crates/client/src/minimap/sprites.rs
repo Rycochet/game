@@ -8,6 +8,9 @@ use bevy::render::render_resource::TextureFormat;
 
 use super::canvas::Sprite;
 
+/// How many times bigger `Sprites::make` has pictures drawn, to smooth them.
+const OVERSAMPLE: u32 = 3;
+
 /// Part of a picture: left, top, and the width and height of a square. `None`
 /// is the whole picture.
 pub type Part = Option<(u32, u32, u32)>;
@@ -47,7 +50,19 @@ impl Sprites {
         true
     }
 
-    /// A sprite `prepare` has made.
+    /// Gets ready to stamp a picture worked out rather than loaded: `draw` is
+    /// asked for it `OVERSAMPLE` times the size, as RGBA, the first time.
+    pub fn make(&mut self, name: &str, size: u32, draw: impl FnOnce(u32) -> Vec<u8>) {
+        self.scaled
+            .entry((name.to_string(), None, size))
+            .or_insert_with(|| {
+                let big = size * OVERSAMPLE;
+                let pixels = shrink_pixels(&draw(big), big, (0, 0, big), size);
+                Sprite { size, pixels }
+            });
+    }
+
+    /// A sprite `prepare` or `make` has made.
     pub fn get(&self, path: &str, part: Part, size: u32) -> Option<&Sprite> {
         self.scaled.get(&(path.to_string(), part, size))
     }
