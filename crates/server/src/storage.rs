@@ -22,7 +22,7 @@ use bevy::prelude::*;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use shared::dungeon::Cell;
-use shared::feature::{ChunkPos, FeatureKind};
+use shared::poi::{ChunkPos, PoiKind};
 use shared::world::{WorldId, WorldSeed};
 
 /// Overrides where the server keeps its data (a folder path).
@@ -73,7 +73,9 @@ impl Storage {
 
     fn site_file(&self, site: SiteId) -> Option<PathBuf> {
         let name = match site {
-            SiteId::Feature(chunk) => format!("feature_{}_{}.ron", chunk.x, chunk.y),
+            // Named from when pois were called features: saved worlds have
+            // these files, so the name stays.
+            SiteId::Poi(chunk) => format!("feature_{}_{}.ron", chunk.x, chunk.y),
             SiteId::Dev { kind, seed } => format!("dev_{}_{seed}.ron", kind as usize),
         };
         Some(self.folder.as_ref()?.join("sites").join(name))
@@ -136,13 +138,15 @@ impl CharacterName {
     }
 }
 
-/// Which site: a world map feature's, or a made-up one (dev tools).
+/// Which site: a world map poi's, or a made-up one (dev tools).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SiteId {
-    /// The site of the feature in this world map chunk.
-    Feature(ChunkPos),
+    /// The site of the poi in this world map chunk. (`alias`: its name in
+    /// files saved when pois were called features.)
+    #[serde(alias = "Feature")]
+    Poi(ChunkPos),
     /// Developer tools: a site of this kind and map seed.
-    Dev { kind: FeatureKind, seed: u64 },
+    Dev { kind: PoiKind, seed: u64 },
 }
 
 /// `world.ron`.
@@ -208,16 +212,17 @@ pub type CellMasks = BTreeMap<(i64, i64), u64>;
 /// A character's file, for one world.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct CharacterSave {
-    /// Where they are on the world map (at the feature, while in a site).
+    /// Where they are on the world map (at the poi, while in a site).
     #[serde(default)]
     pub world_position: (i64, i64),
     /// The site level they are on, if any.
     #[serde(default)]
     pub visit: Option<VisitSave>,
-    /// The world map chunks whose feature they have seen, and what they
-    /// know of it.
-    #[serde(default)]
-    pub features: BTreeMap<ChunkPos, KnownFeature>,
+    /// The world map chunks whose poi they have seen, and what they
+    /// know of it. (`alias`: its name in files saved when pois were called
+    /// features.)
+    #[serde(default, alias = "features")]
+    pub pois: BTreeMap<ChunkPos, KnownPoi>,
     /// The cells they have seen of each site level.
     #[serde(default)]
     pub memory: BTreeMap<SiteId, BTreeMap<u32, CellMasks>>,
@@ -231,9 +236,9 @@ pub struct VisitSave {
     pub position: (i64, i64),
 }
 
-/// What a character knows of a feature they have seen.
+/// What a character knows of a poi they have seen.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct KnownFeature {
+pub struct KnownPoi {
     /// Whether they have been inside.
     #[serde(default)]
     pub visited: bool,
@@ -342,13 +347,27 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn characters_saved_when_pois_were_features_still_load() {
+        let text = "(
+            visit: Some((site: Feature((x: -2, y: 3)), level: 1, position: (3, -4))),
+            features: {(x: 1, y: 1): (visited: true)},
+            memory: {Feature((x: -2, y: 3)): {}},
+        )";
+        let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
+        let save: CharacterSave = ron::from_str(text).unwrap();
+        assert_eq!(save.visit.unwrap().site, site);
+        assert!(save.pois[&ChunkPos { x: 1, y: 1 }].visited);
+        assert!(save.memory.contains_key(&site));
+    }
+
+    #[test]
     fn saves_are_read_back() {
         let folder = TestFolder::new();
         let storage = Storage::in_folder(&folder.0, WorldId(5));
         let name = CharacterName::new("someone").unwrap();
         assert_eq!(storage.load_character(&name), None);
 
-        let site = SiteId::Feature(ChunkPos { x: -2, y: 3 });
+        let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
         let character = CharacterSave {
             world_position: (-40, 7),
             visit: Some(VisitSave {
@@ -356,7 +375,7 @@ pub(crate) mod tests {
                 level: 1,
                 position: (3, -4),
             }),
-            features: BTreeMap::from([(ChunkPos { x: 1, y: 1 }, KnownFeature { visited: true })]),
+            pois: BTreeMap::from([(ChunkPos { x: 1, y: 1 }, KnownPoi { visited: true })]),
             memory: BTreeMap::from([(
                 site,
                 BTreeMap::from([(1, CellMasks::from([((0, -1), 7)]))]),

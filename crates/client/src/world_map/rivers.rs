@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use shared::climate::Climate;
-use shared::feature::{CHUNK_SIZE, ChunkPos};
+use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::river::{MAX_LENGTH, River, Rivers};
 use shared::surface::Surface;
 

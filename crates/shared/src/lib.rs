@@ -6,9 +6,9 @@
 
 pub mod climate;
 pub mod dungeon;
-pub mod feature;
 pub mod movement;
 pub mod pathfinding;
+pub mod poi;
 pub mod protocol;
 pub mod river;
 pub mod rng;

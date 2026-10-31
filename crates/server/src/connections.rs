@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 
 use bevy::prelude::*;
-use shared::feature::ChunkPos;
+use shared::poi::ChunkPos;
 use shared::protocol::{ClientMessage, PROTOCOL_VERSION, ServerLink, ServerMessage};
 use shared::world::GAME_HOUR_SECONDS;
 
@@ -51,7 +51,7 @@ pub struct Client {
     /// Whether it is to be disconnected (and was saved).
     gone: bool,
     /// What is saved about the character: where they are on the world map,
-    /// the features and cells they know (`visit` is filled in on saving).
+    /// the pois and cells they know (`visit` is filled in on saving).
     pub(crate) character: CharacterSave,
     /// Whether `character` (or the visit) changed since it was saved.
     pub(crate) unsaved: bool,
@@ -83,7 +83,7 @@ impl Client {
         }
     }
 
-    /// Where the player is on the world map (at the feature, in a site).
+    /// Where the player is on the world map (at the poi, in a site).
     pub(crate) fn world_position(&self) -> (i64, i64) {
         self.character.world_position
     }
@@ -272,7 +272,7 @@ pub(crate) fn answer(
                 None => world_map::stepped(client, world, step),
             }
         }
-        ClientMessage::EnterSite { chunk } => sites::enter_feature(client, world, chunk),
+        ClientMessage::EnterSite { chunk } => sites::enter_poi(client, world, chunk),
         ClientMessage::UseExit => sites::use_exit(client, world),
         // Dev tools are only for the embedded server; elsewhere a stray key
         // or click is ignored rather than ending the game.

@@ -22,8 +22,8 @@ use std::time::Duration;
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
-use shared::feature::{FeatureKind, FeatureMap};
 use shared::movement::{WorldConditions, WorldGround};
+use shared::poi::{PoiKind, PoiMap};
 use shared::protocol::WorldInfo;
 use shared::site::Generator;
 use shared::surface::Surface;
@@ -117,7 +117,7 @@ pub fn headless_app(world_seed: WorldSeed, options: ServerOptions, data: Option<
 #[derive(Resource)]
 pub struct ServerWorld {
     pub seed: WorldSeed,
-    pub features: FeatureMap,
+    pub pois: PoiMap,
     /// The world's width in grid points: `x` wraps at this.
     pub width: i64,
     /// The ground as far as walking goes.
@@ -157,7 +157,7 @@ impl ServerWorld {
                     return Err("its saved seed isn't the one asked for".into());
                 }
                 // Version 1 differs only in having no towns: its worlds carry on
-                // with some features turned into towns.
+                // with some pois turned into towns.
                 if save.world_map_version != WORLD_MAP_VERSION && save.world_map_version != 1 {
                     return Err(format!(
                         "it was made with world map version {}; this server has {WORLD_MAP_VERSION}",
@@ -171,7 +171,7 @@ impl ServerWorld {
         };
         let params = WorldParams::from_seed(seed.terrain());
         let world = Self {
-            features: FeatureMap::new(&params, seed.features()),
+            pois: PoiMap::new(&params, seed.pois()),
             width: Surface::new(&params).width(),
             ground: WorldGround::new(&params),
             params,
@@ -206,14 +206,14 @@ impl ServerWorld {
         }
     }
 
-    /// What is saved about a site (for a `kind` of feature): loaded, or new
+    /// What is saved about a site (for a `kind` of poi): loaded, or new
     /// (made with its generator's current version) if nobody has been in.
-    pub(crate) fn site(&mut self, id: SiteId, kind: FeatureKind) -> &mut SiteSave {
+    pub(crate) fn site(&mut self, id: SiteId, kind: PoiKind) -> &mut SiteSave {
         if !self.sites.contains_key(&id) {
             let save = self.storage.load_site(id).unwrap_or_else(|| {
                 self.unsaved_sites.mark(id);
                 SiteSave {
-                    version: Generator::for_feature(kind).version(),
+                    version: Generator::for_poi(kind).version(),
                     ..default()
                 }
             });
@@ -223,7 +223,7 @@ impl ServerWorld {
     }
 
     /// `site`, to be saved: something about it is changing.
-    pub(crate) fn site_mut(&mut self, id: SiteId, kind: FeatureKind) -> &mut SiteSave {
+    pub(crate) fn site_mut(&mut self, id: SiteId, kind: PoiKind) -> &mut SiteSave {
         self.unsaved_sites.mark(id);
         self.site(id, kind)
     }

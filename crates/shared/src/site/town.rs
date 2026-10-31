@@ -66,7 +66,7 @@ const SQUARE_POSSIBLE: i64 = 10;
 const SQUARE_CERTAIN: i64 = 50;
 
 /// How a town is generated: its number of buildings, at most and at least.
-/// The feature's kind decides these, so its size is known before any visit.
+/// The poi's kind decides these, so its size is known before any visit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TownOptions {
     pub buildings: (i64, i64),

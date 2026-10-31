@@ -257,7 +257,7 @@ pub fn draw(canvas: &mut Canvas, view: &Projection, looks: &Looks, parchment: [u
 #[cfg(test)]
 mod tests {
     use shared::dungeon::{Level, RoomId};
-    use shared::feature::FeatureKind;
+    use shared::poi::PoiKind;
     use shared::protocol::LevelInfo;
     use shared::site::{BuildingLook, Rect, RoofKind, WallKind};
 
@@ -270,7 +270,7 @@ mod tests {
             ..Default::default()
         };
         dungeon.enter(LevelInfo {
-            kind: FeatureKind::Crypt,
+            kind: PoiKind::Crypt,
             building: false,
             index: 0,
             levels: 1,

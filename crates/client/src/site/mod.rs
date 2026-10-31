@@ -1,8 +1,8 @@
-//! Moving between maps: entering a world map feature's site, taking stairs
+//! Moving between maps: entering a world map poi's site, taking stairs
 //! between its levels, and leaving again. See `docs/context/client/site.md`.
 //!
 //! The server decides all of it: clicking a `Portal` token (a world map
-//! feature) sends the player travelling to it, and arriving asks the server
+//! poi) sends the player travelling to it, and arriving asks the server
 //! to go in. Inside, arriving (by a click) on stairs or on outside ground at
 //! the very edge of the level asks the server to use it. The server answers
 //! with the level the player is now on and its cells as they come into
@@ -74,11 +74,9 @@ fn use_on_arrival(
     };
     let target = heading.0.take().and_then(|entity| portals.get(entity).ok());
     match target {
-        Some((position, Portal::Feature(feature))) if (position.x, position.y) == (x, y) => {
+        Some((position, Portal::Poi(poi))) if (position.x, position.y) == (x, y) => {
             // After the steps there, so the server has the player at it.
-            to_server.write(ToServer(ClientMessage::EnterSite {
-                chunk: feature.chunk,
-            }));
+            to_server.write(ToServer(ClientMessage::EnterSite { chunk: poi.chunk }));
         }
         _ => {
             if *view.get() != GameView::Dungeon {

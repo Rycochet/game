@@ -2,7 +2,7 @@
 //! place (stone buildings, wooden huts, crypts, caves, ice), the rest the
 //! same everywhere. All from the AngbandTk tiles (`assets/angbandtk/`).
 
-use shared::feature::FeatureKind;
+use shared::poi::PoiKind;
 
 use super::mesh::Surface;
 
@@ -61,8 +61,8 @@ const ICE: Theme = Theme {
 impl Theme {
     /// The theme for a kind of place (stone when there is none: the test
     /// room).
-    pub fn of(kind: Option<FeatureKind>) -> Self {
-        use FeatureKind::*;
+    pub fn of(kind: Option<PoiKind>) -> Self {
+        use PoiKind::*;
         let Some(kind) = kind else {
             return STONE;
         };
@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn pictures_exist() {
         let assets = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/");
-        let kinds = FeatureKind::ALL.into_iter().map(Some).chain([None]);
+        let kinds = PoiKind::ALL.into_iter().map(Some).chain([None]);
         for theme in kinds.map(Theme::of) {
             for surface in Surface::ALL {
                 let path = format!("{assets}{}", theme.picture(surface));

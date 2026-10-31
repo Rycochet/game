@@ -6,7 +6,7 @@
 //!   server moves the player there).
 //! - `GAME_ENTER=kind[,seed[,level]]`: start inside a made-up site at the
 //!   starting position (the embedded server allows it): `kind` is an index
-//!   into `FeatureKind::ALL`, `seed` its map seed (default 1), `level` the
+//!   into `PoiKind::ALL`, `seed` its map seed (default 1), `level` the
 //!   level (default 0, the way in).
 //! - `GAME_CELLS=x,y,kind;...`: on arriving in a site, change cells of the
 //!   level, from where the player stands (`kind`: `floor`, `wall`, `door`,
@@ -47,8 +47,8 @@ use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
 use shared::dungeon::Cell;
-use shared::feature::FeatureKind;
 use shared::movement::steps_between;
+use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
 use shared::site::StairsStyle;
 
@@ -97,8 +97,8 @@ impl Plugin for DevToolsPlugin {
                 .collect();
             let kind = numbers
                 .first()
-                .and_then(|&k| FeatureKind::ALL.get(k as usize).copied())
-                .unwrap_or(FeatureKind::Castle);
+                .and_then(|&k| PoiKind::ALL.get(k as usize).copied())
+                .unwrap_or(PoiKind::Castle);
             let seed = numbers.get(1).copied().unwrap_or(1);
             let level = numbers.get(2).copied().unwrap_or(0) as u32;
             app.add_systems(

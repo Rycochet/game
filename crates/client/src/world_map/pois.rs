@@ -1,16 +1,16 @@
-//! The world map's features (caves, houses, castles, crypts...) as entities
+//! The world map's pois (caves, houses, castles, crypts...) as entities
 //! with octagonal tokens and a picture of what they are. Which chunks have
 //! one, and where, is what the server has sent (`common::CurrentWorld`).
 //!
-//! Only features near the player exist as entities, and only while the world
+//! Only pois near the player exist as entities, and only while the world
 //! map is the current view: they are spawned as the player moves and
 //! despawned when they fall out of range or the view changes.
 
 use std::collections::BTreeMap;
 
 use bevy::prelude::*;
-use shared::feature::FeatureKind;
-use shared::protocol::SeenFeature;
+use shared::poi::PoiKind;
+use shared::protocol::SeenPoi;
 
 use super::HALF_SIZE;
 use crate::common::{
@@ -20,30 +20,30 @@ use crate::common::{
 use crate::player::Player;
 use crate::view3d::TOKEN_DIAMETER;
 
-/// Features exist this far from the player (each way, east–west and
+/// Pois exist this far from the player (each way, east–west and
 /// north–south): the corners of the window when it is turned 45°, plus a
 /// token's radius.
 const RANGE: i64 = (HALF_SIZE as f32 * std::f32::consts::SQRT_2 + TOKEN_DIAMETER / 2.0) as i64 + 1;
 
-/// The tile number of the first `FeatureKind`; the rest follow in order.
+/// The tile number of the first `PoiKind`; the rest follow in order.
 const FIRST_TILE: usize = 66;
 
-/// The feature entities that exist, by their position.
+/// The poi entities that exist, by their position.
 #[derive(Resource, Default)]
-pub(super) struct SpawnedFeatures {
+pub(super) struct SpawnedPois {
     entities: BTreeMap<(i64, i64), Entity>,
     /// Whether `entities` matches the player's position: false when the
     /// view has just become current.
     ready: bool,
 }
 
-/// The picture shown above a feature's token.
-pub fn icon(kind: FeatureKind) -> String {
+/// The picture shown above a poi's token.
+pub fn icon(kind: PoiKind) -> String {
     let town = match kind {
-        FeatureKind::Hamlet => Some("l2_town03"),
-        FeatureKind::Village => Some("l2_town01"),
-        FeatureKind::Town => Some("l2_town02"),
-        FeatureKind::City => Some("l2_town"),
+        PoiKind::Hamlet => Some("l2_town03"),
+        PoiKind::Village => Some("l2_town01"),
+        PoiKind::Town => Some("l2_town02"),
+        PoiKind::City => Some("l2_town"),
         _ => None,
     };
     if let Some(town) = town {
@@ -53,24 +53,23 @@ pub fn icon(kind: FeatureKind) -> String {
 }
 
 /// When the player reaches a new grid point, the server has sent more of the
-/// world, or the view has just become current: spawns the features now in range and despawns those that left it.
+/// world, or the view has just become current: spawns the pois now in range and despawns those that left it.
 pub(super) fn spawn_nearby(
     mut commands: Commands,
     world: Res<CurrentWorld>,
     player: Single<Ref<MapPosition>, With<Player>>,
-    mut spawned: ResMut<SpawnedFeatures>,
+    mut spawned: ResMut<SpawnedPois>,
 ) {
     if spawned.ready && !player.is_changed() && !world.is_changed() {
         return;
     }
     spawned.ready = true;
-    let near = world.features.in_area(
+    let near = world.pois.in_area(
         (player.x - RANGE, player.y - RANGE),
         (player.x + RANGE, player.y + RANGE),
     );
 
-    let wanted: BTreeMap<(i64, i64), SeenFeature> =
-        near.into_iter().map(|f| ((f.x, f.y), f)).collect();
+    let wanted: BTreeMap<(i64, i64), SeenPoi> = near.into_iter().map(|f| ((f.x, f.y), f)).collect();
     spawned.entities.retain(|position, entity| {
         let keep = wanted.contains_key(position);
         if !keep {
@@ -78,16 +77,13 @@ pub(super) fn spawn_nearby(
         }
         keep
     });
-    for (position, feature) in wanted {
+    for (position, poi) in wanted {
         spawned.entities.entry(position).or_insert_with(|| {
-            let at = MapPosition {
-                x: feature.x,
-                y: feature.y,
-            };
+            let at = MapPosition { x: poi.x, y: poi.y };
             commands
                 .spawn((
                     // Clicking it travels there and enters its site.
-                    Portal::Feature(feature),
+                    Portal::Poi(poi),
                     Clickable,
                     at,
                     SmoothPosition::from(at),
@@ -97,15 +93,15 @@ pub(super) fn spawn_nearby(
                         size: TokenSize::Tiny,
                         ..default()
                     },
-                    Icon(icon(feature.kind)),
+                    Icon(icon(poi.kind)),
                 ))
                 .id()
         });
     }
 }
 
-/// Leaving the world map: features only exist while it is on screen.
-pub(super) fn despawn_all(mut commands: Commands, mut spawned: ResMut<SpawnedFeatures>) {
+/// Leaving the world map: pois only exist while it is on screen.
+pub(super) fn despawn_all(mut commands: Commands, mut spawned: ResMut<SpawnedPois>) {
     spawned.ready = false;
     for entity in std::mem::take(&mut spawned.entities).into_values() {
         commands.entity(entity).despawn();
@@ -117,14 +113,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn features_are_shown_only_as_far_as_the_server_sends() {
+    fn pois_are_shown_only_as_far_as_the_server_sends() {
         const { assert!(RANGE <= shared::protocol::WORLD_MAP_SIGHT) };
     }
 
     #[test]
     fn icons_cover_the_chosen_tiles() {
-        assert_eq!(icon(FeatureKind::ALL[0]), "terrain/l2_terrain066.png");
-        assert_eq!(icon(FeatureKind::Mausoleum), "terrain/l2_terrain099.png");
-        assert_eq!(icon(FeatureKind::City), "terrain/l2_town.png");
+        assert_eq!(icon(PoiKind::ALL[0]), "terrain/l2_terrain066.png");
+        assert_eq!(icon(PoiKind::Mausoleum), "terrain/l2_terrain099.png");
+        assert_eq!(icon(PoiKind::City), "terrain/l2_town.png");
     }
 }

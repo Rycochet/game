@@ -1,5 +1,5 @@
 //! Sending each player the world map chunks coming into their sight, and
-//! remembering the features they have seen.
+//! remembering the pois they have seen.
 
 use std::collections::btree_map::Entry;
 
@@ -8,7 +8,7 @@ use shared::movement::{Step, step_on_world_map};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
 
 use crate::connections::Client;
-use crate::storage::KnownFeature;
+use crate::storage::KnownPoi;
 use crate::{ServerWorld, sites};
 
 /// The player takes a step on the world map, unless it leads into water (a
@@ -53,19 +53,19 @@ pub(crate) fn back_to_start(client: &mut Client, world: &mut ServerWorld) -> boo
 }
 
 /// The player is somewhere new on the world map: the chunks now in sight are
-/// known from now on (their land as well as any feature, for the player's
+/// known from now on (their land as well as any poi, for the player's
 /// map), a new connection is sent all they know, and the chunks within sight, plus a margin, that
 /// the client hasn't been sent yet are sent. `false` if the client has
 /// gone.
 pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
     if client.world_chunks.is_empty() {
-        let known: Vec<_> = client.character.features.keys().copied().collect();
+        let known: Vec<_> = client.character.pois.keys().copied().collect();
         for chunk in known {
             client.world_chunks.insert(chunk);
-            let feature = world.features.in_chunk(chunk).map(Into::into);
+            let poi = world.pois.in_chunk(chunk).map(Into::into);
             if !client
                 .link
-                .send(&ServerMessage::WorldChunk(WorldChunk { chunk, feature }))
+                .send(&ServerMessage::WorldChunk(WorldChunk { chunk, poi }))
             {
                 return false;
             }
@@ -74,25 +74,25 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
     let (x, y) = client.world_position();
     let sight = WORLD_MAP_SIGHT;
     for chunk in world
-        .features
+        .pois
         .chunks_in_area((x - sight, y - sight), (x + sight, y + sight))
     {
-        let known = &mut client.character.features;
+        let known = &mut client.character.pois;
         if let Entry::Vacant(entry) = known.entry(chunk) {
-            entry.insert(KnownFeature::default());
+            entry.insert(KnownPoi::default());
             client.unsaved = true;
         }
     }
     let reach = WORLD_MAP_SIGHT + WORLD_MAP_PRELOAD;
     let chunks = world
-        .features
+        .pois
         .chunks_in_area((x - reach, y - reach), (x + reach, y + reach));
     for chunk in chunks {
         if client.world_chunks.insert(chunk) {
-            let feature = world.features.in_chunk(chunk).map(Into::into);
+            let poi = world.pois.in_chunk(chunk).map(Into::into);
             if !client
                 .link
-                .send(&ServerMessage::WorldChunk(WorldChunk { chunk, feature }))
+                .send(&ServerMessage::WorldChunk(WorldChunk { chunk, poi }))
             {
                 return false;
             }
@@ -105,7 +105,7 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
 mod tests {
     use std::collections::BTreeSet;
 
-    use shared::feature::ChunkPos;
+    use shared::poi::ChunkPos;
     use shared::protocol::ClientMessage;
 
     use super::*;
@@ -194,7 +194,7 @@ mod tests {
     fn a_new_connection_is_sent_all_the_character_knows() {
         let mut test = TestClient::new();
         test.send(&[ClientMessage::DevTeleport { x: 5000, y: 20 }]);
-        let known: BTreeSet<_> = test.client.character.features.keys().copied().collect();
+        let known: BTreeSet<_> = test.client.character.pois.keys().copied().collect();
         assert!(known.contains(&ChunkPos { x: 0, y: 0 }));
         // As it is when a character joins again.
         test.client.world_chunks.clear();
@@ -205,9 +205,9 @@ mod tests {
     }
 
     #[test]
-    fn features_in_sight_are_known() {
+    fn pois_in_sight_are_known() {
         let test = TestClient::new();
-        let known = &test.client.character.features;
+        let known = &test.client.character.pois;
         assert!(!known.is_empty());
         // Only those in sight, not the preload margin beyond it.
         for chunk in known.keys() {

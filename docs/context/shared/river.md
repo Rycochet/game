@@ -1,6 +1,6 @@
 # shared: river
 
-Rivers on the world map, from their chunk's position alone. Only something to look at for now: they don't affect walking, routes or features (the owner's choice), so features can stand on them and no `WORLD_MAP_VERSION` bump was needed. In `shared` because they will probably matter to the rules later. Drawn by client `world_map`.
+Rivers on the world map, from their chunk's position alone. Only something to look at for now: they don't affect walking, routes or pois (the owner's choice), so pois can stand on them and no `WORLD_MAP_VERSION` bump was needed. In `shared` because they will probably matter to the rules later. Drawn by client `world_map`.
 
 ## Files
 
@@ -14,7 +14,7 @@ Rivers on the world map, from their chunk's position alone. Only something to lo
 
 ## Depends on
 
-- `shared::feature` (`CHUNK_SIZE`, `ChunkPos`, `EDGE_MARGIN`, `LAND_TRIES`), `shared::climate`, `shared::rng`, `shared::surface`, `shared::world`.
+- `shared::poi` (`CHUNK_SIZE`, `ChunkPos`, `EDGE_MARGIN`, `LAND_TRIES`), `shared::climate`, `shared::rng`, `shared::surface`, `shared::world`.
 
 ## Used by
 

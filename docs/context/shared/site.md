@@ -1,10 +1,10 @@
 # shared: site
 
-Sites: the maps world map features lead to (buildings, caves, crypts, towns), each one or more levels (`dungeon::Level`) joined by stairs. The feature's kind picks the generator and its options; its map seed decides everything else. Each level is generated on its own, so the client and server agree whichever levels were visited first. Shapes only (walls, doors, floors, ground, water, lava); mobs, items and decorations come later.
+Sites: the maps world map pois lead to (buildings, caves, crypts, towns), each one or more levels (`dungeon::Level`) joined by stairs. The poi's kind picks the generator and its options; its map seed decides everything else. Each level is generated on its own, so the client and server agree whichever levels were visited first. Shapes only (walls, doors, floors, ground, water, lava); mobs, items and decorations come later.
 
 ## Files
 
-- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_feature`: the kind → generator table). Tests: only runnable versions make sites, connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`SITE_KINDS=20,4 SITE_SEED=1 cargo test -p shared print_sites -- --ignored --nocapture`).
+- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_poi`: the kind → generator table). Tests: only runnable versions make sites, connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`SITE_KINDS=20,4 SITE_SEED=1 cargo test -p shared print_sites -- --ignored --nocapture`).
 - `crates/shared/src/site/building.rs`: `BuildingOptions`, `Outline`, the building `Plan` (outlines per floor, stairs) and BSP floor generation.
 - `crates/shared/src/site/cave.rs`: `CaveOptions`, `CaveEntrance`, the cave `Plan` and level generation.
 - `crates/shared/src/site/town.rs`: `TownOptions`, `BuildingKind`, `WallKind`, `RoofKind`, `Rect`, `BuildingLook`, `TownBuilding`, the town `Plan` and generation. Tests: buildings' shapes, gardens, doors, reach, numbers, kinds, squares, roads.
@@ -18,15 +18,15 @@ Sites: the maps world map features lead to (buildings, caves, crypts, towns), ea
 - `Site::stairs_descend(index, level, stairs) -> (dx, dy)`: the way a staircase goes down, agreeing with the other end (generates the other level to look). Only for looks; moved here from the client so the server can send it.
 - `Site::stairs_style(index, stairs) -> StairsStyle`: what a staircase is built as (`Spiral`, `Turning`, `Ladder`, `LogLadder`, `RopeLadder`, `SlatLadder`, `KnottedRope`): from a hash of the seed and the upper level joined, among those suiting the kind (`StairsStyle::choices`), the same at both ends. Only for looks; draws nothing from the generators' sequences, so sites and their golden tests are unchanged.
 - `Stairs { x, y, direction, to: Exit }`; `Exit::{WorldMap, Level(n)}`. `StairsDirection` is serde-serialisable (sent in `protocol::SeenStairs`).
-- `Generator::{Building(BuildingOptions), Cave(CaveOptions), Town(TownOptions)}`, `Generator::for_feature(kind)`: the options per feature kind (wrappers for tuning a generator); `.version()`.
+- `Generator::{Building(BuildingOptions), Cave(CaveOptions), Town(TownOptions)}`, `Generator::for_poi(kind)`: the options per poi kind (wrappers for tuning a generator); `.version()`.
 - `BUILDING_VERSION`, `CAVE_VERSION`, `TOWN_VERSION` (all 1): bump when the generator's output changes in a way that matters (not looks), keeping the old version runnable in `with_version` while saved sites use it. The server saves the version each site was first made with.
 - `BuildingOptions { width, height, outlines, square, max_floors, size_per_floor }`, `Outline::{Rectangle, CutCorners, RoundCorners, Circle}`.
-- `TownOptions { buildings: (min, max) }` (from the feature's kind: Hamlet 3–8, Village 9–25, Town 26–60, City 61–150). `BuildingLook { id, kind, walls, roof, rects, door, faces }`: what players are sent (`id` is the building's `RoomId`). `TownBuilding { look, quality (0–1000), trades (10–1000, higher in bigger towns) }`: the numbers stay on the server. `BuildingKind::ALL` (23, `name()`), `WallKind::ALL`, `RoofKind::ALL`.
+- `TownOptions { buildings: (min, max) }` (from the poi's kind: Hamlet 3–8, Village 9–25, Town 26–60, City 61–150). `BuildingLook { id, kind, walls, roof, rects, door, faces }`: what players are sent (`id` is the building's `RoomId`). `TownBuilding { look, quality (0–1000), trades (10–1000, higher in bigger towns) }`: the numbers stay on the server. `BuildingKind::ALL` (23, `name()`), `WallKind::ALL`, `RoofKind::ALL`.
 - `CaveOptions { size, levels, entrance, doors, water_percent, lava_percent }`, `CaveEntrance::{Hole, Opening, Either}`.
 
 ## Depends on
 
-- `shared::dungeon` (`Level`, `Cell`, `RoomId`), `shared::rng`, `shared::feature` (`FeatureKind`).
+- `shared::dungeon` (`Level`, `Cell`, `RoomId`), `shared::rng`, `shared::poi` (`PoiKind`).
 
 ## Used by
 
