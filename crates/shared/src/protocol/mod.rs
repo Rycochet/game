@@ -14,8 +14,8 @@ pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired}
 use serde::{Deserialize, Serialize};
 
 use crate::dungeon::Cell;
-use crate::feature::{CHUNK_SIZE, ChunkPos, Feature, FeatureKind};
 use crate::movement::Step;
+use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
 use crate::rng::Seed;
 use crate::world::WorldId;
 
@@ -52,7 +52,7 @@ pub enum ClientMessage {
     /// (`EnterLevel`, `OnWorldMap`) since `Welcome`, so a step meant for the
     /// last map is ignored on the next; `number` counts the client's steps.
     Step { map: u32, number: u32, step: Step },
-    /// Go into the site of the feature in this world map chunk (the player
+    /// Go into the site of the poi in this world map chunk (the player
     /// must be at it).
     EnterSite { chunk: ChunkPos },
     /// Use what the player stands on: stairs, or outside ground at the edge
@@ -69,7 +69,7 @@ pub enum ClientMessage {
     /// Developer tools: go straight into a site of any kind and seed, at
     /// any level. Only an embedded (single-player) server accepts it.
     DevEnterSite {
-        kind: FeatureKind,
+        kind: PoiKind,
         seed: u64,
         level: u32,
     },
@@ -148,27 +148,27 @@ pub enum ServerMessage {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorldChunk {
     pub chunk: ChunkPos,
-    /// Its feature, if it has one.
-    pub feature: Option<SeenFeature>,
+    /// Its poi, if it has one.
+    pub poi: Option<SeenPoi>,
 }
 
-/// A world map feature as a player knows it: what and where it is, not
+/// A world map poi as a player knows it: what and where it is, not
 /// the seed its site comes from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SeenFeature {
-    pub kind: FeatureKind,
+pub struct SeenPoi {
+    pub kind: PoiKind,
     pub chunk: ChunkPos,
     pub x: i64,
     pub y: i64,
 }
 
-impl From<Feature> for SeenFeature {
-    fn from(feature: Feature) -> Self {
+impl From<Poi> for SeenPoi {
+    fn from(poi: Poi) -> Self {
         Self {
-            kind: feature.kind,
-            chunk: feature.chunk,
-            x: feature.x,
-            y: feature.y,
+            kind: poi.kind,
+            chunk: poi.chunk,
+            x: poi.x,
+            y: poi.y,
         }
     }
 }
@@ -208,7 +208,7 @@ mod tests {
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevBackToStart,
             ClientMessage::DevEnterSite {
-                kind: FeatureKind::Crypt,
+                kind: PoiKind::Crypt,
                 seed: 3,
                 level: 1,
             },
@@ -234,8 +234,8 @@ mod tests {
             ServerMessage::Refused("no".into()),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 1, y: -2 },
-                feature: Some(SeenFeature {
-                    kind: FeatureKind::Castle,
+                poi: Some(SeenPoi {
+                    kind: PoiKind::Castle,
                     chunk: ChunkPos { x: 1, y: -2 },
                     x: 70,
                     y: -100,
@@ -243,10 +243,10 @@ mod tests {
             }),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 0, y: 0 },
-                feature: None,
+                poi: None,
             }),
             ServerMessage::EnterLevel(LevelInfo {
-                kind: FeatureKind::RockCave,
+                kind: PoiKind::RockCave,
                 building: false,
                 index: 1,
                 levels: 3,

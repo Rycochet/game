@@ -1,14 +1,14 @@
 //! Rivers on the world map. For now only something to look at: they change
-//! nothing about walking, routes or features.
+//! nothing about walking, routes or pois.
 //!
-//! Like features, a river comes from its chunk's position alone: some chunks
+//! Like pois, a river comes from its chunk's position alone: some chunks
 //! have a source, and water runs downhill from it until it reaches the sea or
 //! a low point, where it ends. Each is traced on its own, so the order chunks
 //! are looked at doesn't matter; rivers merge because downhill leads them into
 //! the same valleys. See `docs/context/shared/river.md`.
 
 use crate::climate::{Biome, Climate};
-use crate::feature::{CHUNK_SIZE, ChunkPos, EDGE_MARGIN, LAND_TRIES};
+use crate::poi::{CHUNK_SIZE, ChunkPos, EDGE_MARGIN, LAND_TRIES};
 use crate::rng::Seed;
 use crate::surface::Surface;
 use crate::world::WorldParams;
@@ -76,7 +76,7 @@ impl Rivers {
         }
     }
 
-    /// Chunk columns round the planet (as `FeatureMap::columns`).
+    /// Chunk columns round the planet (as `PoiMap::columns`).
     pub fn columns(&self) -> i64 {
         (self.width / CHUNK_SIZE).max(1)
     }

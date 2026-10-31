@@ -1,6 +1,6 @@
 # shared: world
 
-A world's seeds and global settings. Each world has one secret seed (server only); the public terrain seed, the secret features seed and the public world id are derived from it one way. Ported from the TypeScript prototype's `IWorld` / `World.tsx` (same ranges; gates not ported yet).
+A world's seeds and global settings. Each world has one secret seed (server only); the public terrain seed, the secret pois seed and the public world id are derived from it one way. Ported from the TypeScript prototype's `IWorld` / `World.tsx` (same ranges; gates not ported yet).
 
 ## Files
 
@@ -8,7 +8,7 @@ A world's seeds and global settings. Each world has one secret seed (server only
 
 ## Public API
 
-- `WorldSeed::new(u64)` (secret: never send it to a client; serde, for the server's save): `.terrain()` (public terrain seed, for `WorldParams`), `.features()` (secret, for `FeatureMap`), `.id() -> WorldId`.
+- `WorldSeed::new(u64)` (secret: never send it to a client; serde, for the server's save): `.terrain()` (public terrain seed, for `WorldParams`), `.pois()` (secret, for `PoiMap`), `.id() -> WorldId`.
 - `WorldId(u64)` (serde): the world's public id; the same seed is the same world on any server.
 - `WORLD_MAP_VERSION` (1): the world map generator's version (see "Generator versions" in `architecture.md`); bump only for changes that matter.
 - `GAME_HOUR_SECONDS` (60): real seconds in a game hour.
@@ -21,8 +21,8 @@ A world's seeds and global settings. Each world has one secret seed (server only
 
 ## Used by
 
-- `shared::surface` (circumference), `shared::feature` (`high_water`), `shared::protocol` (`WorldId`); `server` (`WorldSeed`); client `common` (`CurrentWorld`), `world_map` (water level), `connection` (`WORLD_MAP_VERSION`).
+- `shared::surface` (circumference), `shared::poi` (`high_water`), `shared::protocol` (`WorldId`); `server` (`WorldSeed`); client `common` (`CurrentWorld`), `world_map` (water level), `connection` (`WORLD_MAP_VERSION`).
 
 ## Notes
 
-- Not ported yet from the prototype: gate positions (needs the old terrain classifier `getTerrain`, which belongs with the roguelike map work). Weather is in `shared::weather`. World map features are in `shared::feature` instead (one per chunk, not noise).
+- Not ported yet from the prototype: gate positions (needs the old terrain classifier `getTerrain`, which belongs with the roguelike map work). Weather is in `shared::weather`. World map pois are in `shared::poi` instead (one per chunk, not noise).

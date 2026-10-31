@@ -8,13 +8,13 @@
 //! The camera and tokens come from `view3d`; this module draws the terrain
 //! while `GameView::WorldMap` is current.
 
-mod features;
 mod picking;
+mod pois;
 mod rivers;
 pub mod sky;
 mod terrain;
 
-pub use features::icon as feature_icon;
+pub use pois::icon as poi_icon;
 
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::{NotShadowCaster, light_consts};
@@ -33,7 +33,7 @@ use crate::view3d::{
     ClickedToken, OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, View3dSystems,
     ViewCamera, ViewGrid,
 };
-use features::SpawnedFeatures;
+use pois::SpawnedPois;
 use rivers::KnownRivers;
 use terrain::{HeightCache, TerrainGrid, ViewSquare};
 
@@ -60,7 +60,7 @@ impl Plugin for WorldMapPlugin {
     fn build(&self, app: &mut App) {
         let in_view = in_state(GameView::WorldMap);
         app.init_resource::<TerrainGrid>()
-            .init_resource::<SpawnedFeatures>()
+            .init_resource::<SpawnedPois>()
             .init_resource::<KnownRivers>()
             .init_resource::<sky::SkyHourOffset>()
             .add_plugins((
@@ -70,10 +70,7 @@ impl Plugin for WorldMapPlugin {
             ))
             .add_systems(Startup, spawn_view)
             .add_systems(OnEnter(GameView::WorldMap), show_scene)
-            .add_systems(
-                OnExit(GameView::WorldMap),
-                (hide_scene, features::despawn_all),
-            )
+            .add_systems(OnExit(GameView::WorldMap), (hide_scene, pois::despawn_all))
             .add_systems(
                 Update,
                 pick_on_click
@@ -83,7 +80,7 @@ impl Plugin for WorldMapPlugin {
             )
             .add_systems(
                 Update,
-                (update_terrain, sky::update, features::spawn_nearby)
+                (update_terrain, sky::update, pois::spawn_nearby)
                     .after(PlayerSystems::Travel)
                     .before(View3dSystems::Place)
                     .run_if(in_view.clone()),
@@ -450,7 +447,7 @@ fn hide_tokens_outside_window(
 }
 
 /// A left click on the terrain sends the player travelling there (unless it
-/// was on a clickable token, such as a feature: `site` handles those);
+/// was on a clickable token, such as a poi: `site` handles those);
 /// ctrl+click asks the server to teleport them (dev tools).
 #[allow(clippy::too_many_arguments)]
 fn pick_on_click(

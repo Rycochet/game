@@ -292,7 +292,7 @@ fn receive(
             }
             Ok(Some(ServerMessage::WorldChunk(chunk))) => {
                 match joined.as_mut().or(world.as_deref_mut()) {
-                    Some(world) => world.features.insert(chunk.chunk, chunk.feature),
+                    Some(world) => world.pois.insert(chunk.chunk, chunk.poi),
                     None => warn!("A world map chunk arrived before the world"),
                 }
             }

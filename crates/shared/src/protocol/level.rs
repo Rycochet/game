@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::dungeon::Cell;
-use crate::feature::FeatureKind;
+use crate::poi::PoiKind;
 use crate::site::{StairsDirection, StairsStyle};
 
 /// Level chunks are this many cells on a side: 64 cells, one bit each of a
@@ -12,7 +12,7 @@ use crate::site::{StairsDirection, StairsStyle};
 pub const LEVEL_CHUNK_SIZE: i64 = 8;
 
 /// How close (each way, in world map grid points) the player must be to a
-/// feature to enter it.
+/// poi to enter it.
 pub const ENTER_REACH: i64 = 2;
 
 /// The chunk a cell is in, and its bit in that chunk's mask.
@@ -30,7 +30,7 @@ pub fn level_chunk(x: i64, y: i64) -> ((i64, i64), u32) {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LevelInfo {
     /// The kind of place (for its look and name).
-    pub kind: FeatureKind,
+    pub kind: PoiKind,
     /// Whether its levels are a building's floors (going up) rather than a
     /// cave's depths.
     pub building: bool,

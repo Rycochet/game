@@ -1,9 +1,9 @@
-//! Sites: the maps that world map features lead to. A site is one or more
+//! Sites: the maps that world map pois lead to. A site is one or more
 //! levels (the floors of a building, the depths of a cave), each a
 //! `dungeon::Level` with stairs between them.
 //!
-//! Which generator makes a site, and its options, comes from the feature's
-//! kind (`Generator::for_feature`); everything else comes from the feature's
+//! Which generator makes a site, and its options, comes from the poi's
+//! kind (`Generator::for_poi`); everything else comes from the poi's
 //! map seed. Each level is generated on its own from the seed, so the client
 //! and the server agree on it whichever levels were visited first.
 //!
@@ -20,7 +20,7 @@ mod town;
 use serde::{Deserialize, Serialize};
 
 use crate::dungeon::Level;
-use crate::feature::FeatureKind;
+use crate::poi::PoiKind;
 use crate::rng::Seed;
 
 pub use building::{BuildingOptions, Outline};
@@ -30,7 +30,7 @@ pub use town::{BuildingKind, BuildingLook, Rect, RoofKind, TownBuilding, TownOpt
 /// Where a way out of a level leads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Exit {
-    /// Back out to the world map, at the feature.
+    /// Back out to the world map, at the poi.
     WorldMap,
     /// Another level of the same site, by index.
     Level(u32),
@@ -81,8 +81,8 @@ impl StairsStyle {
     }
 
     /// The styles that suit a kind of place.
-    fn choices(kind: FeatureKind) -> &'static [Self] {
-        use FeatureKind::*;
+    fn choices(kind: PoiKind) -> &'static [Self] {
+        use PoiKind::*;
         use StairsStyle::*;
         match kind {
             Castle | Fort | StoneTower | StoneCottage | Warehouse | ArcheryRange | AdobeHouse
@@ -182,10 +182,10 @@ impl Generator {
         }
     }
 
-    /// The generator for each kind of world map feature.
-    pub fn for_feature(kind: FeatureKind) -> Self {
-        use FeatureKind::*;
+    /// The generator for each kind of world map poi.
+    pub fn for_poi(kind: PoiKind) -> Self {
         use Outline::*;
+        use PoiKind::*;
         let building = |width, height, outlines, max_floors, size_per_floor| {
             Self::Building(BuildingOptions {
                 width,
@@ -267,10 +267,10 @@ pub const CAVE_VERSION: u32 = 1;
 /// The town generator's version (as `BUILDING_VERSION`).
 pub const TOWN_VERSION: u32 = 1;
 
-/// A feature's map: its plan, from which any level can be generated.
+/// A poi's map: its plan, from which any level can be generated.
 #[derive(Clone, Debug)]
 pub struct Site {
-    kind: FeatureKind,
+    kind: PoiKind,
     seed: Seed,
     plan: Plan,
 }
@@ -283,17 +283,17 @@ enum Plan {
 }
 
 impl Site {
-    /// The site a feature leads to, from its kind and map seed, made with
+    /// The site a poi leads to, from its kind and map seed, made with
     /// the current version of its generator.
-    pub fn new(kind: FeatureKind, seed: Seed) -> Self {
-        let version = Generator::for_feature(kind).version();
+    pub fn new(kind: PoiKind, seed: Seed) -> Self {
+        let version = Generator::for_poi(kind).version();
         Self::with_version(kind, seed, version).expect("the current version runs")
     }
 
     /// The same, made with an older (or the current) version of its
     /// generator: `None` if that version can no longer be run.
-    pub fn with_version(kind: FeatureKind, seed: Seed, version: u32) -> Option<Self> {
-        let plan = match Generator::for_feature(kind) {
+    pub fn with_version(kind: PoiKind, seed: Seed, version: u32) -> Option<Self> {
+        let plan = match Generator::for_poi(kind) {
             Generator::Building(options) if version == BUILDING_VERSION => {
                 Plan::Building(building::Plan::new(&options, seed))
             }
@@ -308,7 +308,7 @@ impl Site {
         Some(Self { kind, seed, plan })
     }
 
-    pub fn kind(&self) -> FeatureKind {
+    pub fn kind(&self) -> PoiKind {
         self.kind
     }
 
@@ -422,10 +422,10 @@ mod tests {
     #[test]
     fn only_runnable_versions_make_sites() {
         let seed = Seed::new(3);
-        assert!(Site::with_version(FeatureKind::Castle, seed, BUILDING_VERSION).is_some());
-        assert!(Site::with_version(FeatureKind::Castle, seed, BUILDING_VERSION + 1).is_none());
-        assert!(Site::with_version(FeatureKind::RockCave, seed, CAVE_VERSION).is_some());
-        assert!(Site::with_version(FeatureKind::RockCave, seed, 0).is_none());
+        assert!(Site::with_version(PoiKind::Castle, seed, BUILDING_VERSION).is_some());
+        assert!(Site::with_version(PoiKind::Castle, seed, BUILDING_VERSION + 1).is_none());
+        assert!(Site::with_version(PoiKind::RockCave, seed, CAVE_VERSION).is_some());
+        assert!(Site::with_version(PoiKind::RockCave, seed, 0).is_none());
     }
 
     /// Both ends of a staircase are built the same, as something that suits
@@ -434,7 +434,7 @@ mod tests {
     fn stairs_are_the_same_style_at_both_ends() {
         let mut seen = std::collections::HashSet::new();
         for seed in 0..30 {
-            for kind in FeatureKind::ALL {
+            for kind in PoiKind::ALL {
                 let site = Site::new(kind, Seed::new(seed));
                 for index in 0..site.levels() {
                     for stairs in site.level(index).stairs {
@@ -491,7 +491,7 @@ mod tests {
     }
 
     fn every_site(count: u64) -> impl Iterator<Item = Site> {
-        FeatureKind::ALL.into_iter().flat_map(move |kind| {
+        PoiKind::ALL.into_iter().flat_map(move |kind| {
             (0..count).map(move |n| Site::new(kind, Seed::new(n * 7919 + 13)))
         })
     }
@@ -659,17 +659,13 @@ mod tests {
     #[test]
     fn golden_levels() {
         let seed = Seed::new(12345);
-        let values: Vec<u64> = [
-            FeatureKind::Castle,
-            FeatureKind::RockCave,
-            FeatureKind::Crypt,
-        ]
-        .into_iter()
-        .map(|kind| {
-            let site = Site::new(kind, seed);
-            fingerprint(&site.level(site.levels() - 1)) ^ site.levels() as u64
-        })
-        .collect();
+        let values: Vec<u64> = [PoiKind::Castle, PoiKind::RockCave, PoiKind::Crypt]
+            .into_iter()
+            .map(|kind| {
+                let site = Site::new(kind, seed);
+                fingerprint(&site.level(site.levels() - 1)) ^ site.levels() as u64
+            })
+            .collect();
         assert_eq!(values, GOLDEN_LEVELS);
     }
 
@@ -696,7 +692,7 @@ mod pictures {
             .unwrap_or(1);
         for kind in kinds
             .split(',')
-            .map(|k| FeatureKind::ALL[k.parse::<usize>().unwrap()])
+            .map(|k| PoiKind::ALL[k.parse::<usize>().unwrap()])
         {
             let site = Site::new(kind, Seed::new(seed));
             for index in 0..site.levels() {

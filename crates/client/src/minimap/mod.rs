@@ -19,7 +19,7 @@ use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::window::PrimaryWindow;
-use shared::protocol::SeenFeature;
+use shared::protocol::SeenPoi;
 use shared::site::StairsDirection;
 
 use crate::common::{
@@ -30,7 +30,7 @@ use crate::player::{Player, PlayerSystems};
 use crate::surface_style::SurfaceStyle;
 use crate::ui::raised_box;
 use crate::view3d::{OrbitCamera, View3dSystems};
-use crate::world_map::{self, feature_icon};
+use crate::world_map::{self, poi_icon};
 use canvas::Canvas;
 use frame::RoundFrame;
 use grid::{CellLook, Looks};
@@ -56,9 +56,9 @@ const SIGN_PIXELS: f32 = 10.0;
 /// How big stairs are drawn: a little smaller than the player's dot, for more
 /// of a gap round them in their square.
 const STAIRS_PIXELS: f32 = 8.0;
-/// How big a feature's picture is drawn.
+/// How big a poi's picture is drawn.
 const ICON_PIXELS: f32 = 16.0;
-/// How solid a completed feature's picture is.
+/// How solid a completed poi's picture is.
 const COMPLETED_OPACITY: f32 = 0.5;
 
 /// The player's dot, across, and its outline; the arrow to it, in the same
@@ -526,7 +526,7 @@ struct Sources<'w, 's> {
     style: Res<'w, SurfaceStyle>,
     clock: Res<'w, GameClock>,
     weather: Res<'w, Weather>,
-    features: Query<'w, 's, (&'static Portal, &'static Token)>,
+    pois: Query<'w, 's, (&'static Portal, &'static Token)>,
     asset_server: Res<'w, AssetServer>,
     full: Res<'w, FullMap>,
 }
@@ -573,7 +573,7 @@ fn draw_maps(
         style,
         clock,
         weather,
-        features,
+        pois,
         asset_server,
         full,
     } = sources;
@@ -710,25 +710,25 @@ fn draw_maps(
         }
         (None, Some(world)) => {
             let width = world.surface.width();
-            let completed: BTreeSet<_> = features
+            let completed: BTreeSet<_> = pois
                 .iter()
                 .filter(|(_, token)| token.completed)
-                .map(|(Portal::Feature(feature), _)| (feature.x.rem_euclid(width), feature.y))
+                .map(|(Portal::Poi(poi), _)| (poi.x.rem_euclid(width), poi.y))
                 .collect();
             let ((min_x, min_y), (max_x, max_y)) = grid_box;
             let area = (
                 (min_x.floor() as i64, min_y.floor() as i64),
                 (max_x.ceil() as i64, max_y.ceil() as i64),
             );
-            for feature in world.features.in_area(area.0, area.1) {
-                let at = projection.to_picture(feature.x as f64, feature.y as f64);
-                let opacity = if completed.contains(&(feature.x.rem_euclid(width), feature.y)) {
+            for poi in world.pois.in_area(area.0, area.1) {
+                let at = projection.to_picture(poi.x as f64, poi.y as f64);
+                let opacity = if completed.contains(&(poi.x.rem_euclid(width), poi.y)) {
                     COMPLETED_OPACITY
                 } else {
                     1.0
                 };
                 let icon = ICON_PIXELS * zoom;
-                busy |= prepare(feature_icon(feature.kind), None, icon, at, opacity);
+                busy |= prepare(poi_icon(poi.kind), None, icon, at, opacity);
             }
         }
         (None, None) => {}
@@ -884,8 +884,8 @@ fn name_what_is_hovered(
     }
 }
 
-/// The name of a shop door or world map feature at a grid position.
-/// `icon_reach` is how far a feature's picture reaches, in logical pixels.
+/// The name of a shop door or world map poi at a grid position.
+/// `icon_reach` is how far a poi's picture reaches, in logical pixels.
 fn hovered_name(
     view: GameView,
     world: Option<&CurrentWorld>,
@@ -904,19 +904,14 @@ fn hovered_name(
     let reach = f64::from(icon_reach) * units_per_pixel;
     let min = ((x - reach).floor() as i64, (y - reach).floor() as i64);
     let max = ((x + reach).ceil() as i64, (y + reach).ceil() as i64);
-    let distance = |feature: &SeenFeature| (feature.x as f64 - x).hypot(feature.y as f64 - y);
+    let distance = |poi: &SeenPoi| (poi.x as f64 - x).hypot(poi.y as f64 - y);
     world?
-        .features
+        .pois
         .in_area(min, max)
         .into_iter()
-        .filter(|feature| {
-            (feature.x as f64 - x)
-                .abs()
-                .max((feature.y as f64 - y).abs())
-                <= reach
-        })
+        .filter(|poi| (poi.x as f64 - x).abs().max((poi.y as f64 - y).abs()) <= reach)
         .min_by(|a, b| distance(a).total_cmp(&distance(b)))
-        .map(|feature| words(&format!("{:?}", feature.kind)))
+        .map(|poi| words(&format!("{:?}", poi.kind)))
 }
 
 /// The full map's title: where the player is, with the floor or level.

@@ -10,9 +10,9 @@ use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use shared::climate::Climate;
 use shared::dungeon::{Level, RoomId, Sight};
-use shared::feature::{CHUNK_SIZE, ChunkPos};
 use shared::movement::{WorldConditions, WorldGround};
-use shared::protocol::{LevelChunk, LevelInfo, SeenFeature, SeenStairs, WorldInfo};
+use shared::poi::{CHUNK_SIZE, ChunkPos};
+use shared::protocol::{LevelChunk, LevelInfo, SeenPoi, SeenStairs, WorldInfo};
 use shared::river::Rivers;
 use shared::site::BuildingLook;
 use shared::surface::Surface;
@@ -45,7 +45,7 @@ impl Plugin for CommonPlugin {
     }
 }
 
-/// The world the player is in, its surface generator and the features the
+/// The world the player is in, its surface generator and the pois the
 /// server has told the client about. Only exists once the server has said
 /// which world it is (`connection`).
 #[derive(Resource)]
@@ -58,7 +58,7 @@ pub struct CurrentWorld {
     pub weather: WeatherField,
     /// The ground as far as walking goes (the server's rules).
     pub ground: WorldGround,
-    pub features: KnownFeatures,
+    pub pois: KnownPois,
 }
 
 impl CurrentWorld {
@@ -71,7 +71,7 @@ impl CurrentWorld {
             rivers: Rivers::new(&params),
             vegetation: Vegetation::new(&params),
             weather: WeatherField::new(&params),
-            features: KnownFeatures::new(surface.width()),
+            pois: KnownPois::new(surface.width()),
             ground: WorldGround::new(&params),
             surface,
             params,
@@ -87,16 +87,16 @@ impl CurrentWorld {
     }
 }
 
-/// The world map chunks the server has sent, and their features.
-pub struct KnownFeatures {
+/// The world map chunks the server has sent, and their pois.
+pub struct KnownPois {
     /// The world's width: `x` wraps at this.
     width: i64,
     /// By chunk, north-south first (so an area's rows can be looked up);
-    /// `None` for a chunk known to have no feature.
-    chunks: BTreeMap<(i64, i64), Option<SeenFeature>>,
+    /// `None` for a chunk known to have no poi.
+    chunks: BTreeMap<(i64, i64), Option<SeenPoi>>,
 }
 
-impl KnownFeatures {
+impl KnownPois {
     fn new(width: i64) -> Self {
         Self {
             width,
@@ -105,8 +105,8 @@ impl KnownFeatures {
     }
 
     /// What the server says is in a chunk.
-    pub fn insert(&mut self, chunk: ChunkPos, feature: Option<SeenFeature>) {
-        self.chunks.insert((chunk.y, chunk.x), feature);
+    pub fn insert(&mut self, chunk: ChunkPos, poi: Option<SeenPoi>) {
+        self.chunks.insert((chunk.y, chunk.x), poi);
     }
 
     /// Whether the server has sent a chunk (numbered as it does, wrapped round
@@ -115,23 +115,23 @@ impl KnownFeatures {
         self.chunks.contains_key(&(chunk.y, chunk.x))
     }
 
-    /// Every known feature whose position is within `min..=max` (world grid
-    /// points, in any planet-width frame: the features are given in the
-    /// same one), like `shared::feature::FeatureMap::in_area`.
-    pub fn in_area(&self, min: (i64, i64), max: (i64, i64)) -> Vec<SeenFeature> {
+    /// Every known poi whose position is within `min..=max` (world grid
+    /// points, in any planet-width frame: the pois are given in the
+    /// same one), like `shared::poi::PoiMap::in_area`.
+    pub fn in_area(&self, min: (i64, i64), max: (i64, i64)) -> Vec<SeenPoi> {
         let rows =
             (min.1.div_euclid(CHUNK_SIZE), i64::MIN)..=(max.1.div_euclid(CHUNK_SIZE), i64::MAX);
         let mut found = Vec::new();
-        for feature in self.chunks.range(rows).filter_map(|(_, feature)| *feature) {
+        for poi in self.chunks.range(rows).filter_map(|(_, poi)| *poi) {
             // Each copy of the planet the area overlaps.
             for copy in min.0.div_euclid(self.width)..=max.0.div_euclid(self.width) {
-                let x = feature.x + copy * self.width;
-                if (min.0..=max.0).contains(&x) && (min.1..=max.1).contains(&feature.y) {
-                    found.push(SeenFeature { x, ..feature });
+                let x = poi.x + copy * self.width;
+                if (min.0..=max.0).contains(&x) && (min.1..=max.1).contains(&poi.y) {
+                    found.push(SeenPoi { x, ..poi });
                 }
             }
         }
-        found.sort_by_key(|feature| (feature.y, feature.x));
+        found.sort_by_key(|poi| (poi.y, poi.x));
         found
     }
 }
@@ -277,11 +277,11 @@ impl CurrentDungeon {
 }
 
 /// Clicking this entity's token sends the player to it; arriving uses it:
-/// entering a world map feature's site. Needs `Clickable`. (Stairs are cells
+/// entering a world map poi's site. Needs `Clickable`. (Stairs are cells
 /// of the level, not entities: see `site`.)
 #[derive(Component, Clone, Copy, Debug)]
 pub enum Portal {
-    Feature(SeenFeature),
+    Poi(SeenPoi),
 }
 
 /// Its token can be clicked (`view3d::ClickedToken`).
@@ -415,7 +415,7 @@ pub struct Token {
 /// `Default` size. The token's base is the same size whatever this is.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TokenSize {
-    /// Half size: world map features, whose pictures fill the whole tile.
+    /// Half size: world map pois, whose pictures fill the whole tile.
     Tiny,
     Small,
     /// Characters such as the player.
@@ -523,21 +523,21 @@ impl Attitude {
 
 #[cfg(test)]
 mod tests {
-    use shared::feature::FeatureKind;
+    use shared::poi::PoiKind;
 
     use super::*;
 
     #[test]
-    fn known_features_are_found_in_any_frame() {
-        let mut known = KnownFeatures::new(1000);
+    fn known_pois_are_found_in_any_frame() {
+        let mut known = KnownPois::new(1000);
         let chunk = ChunkPos { x: 0, y: 1 };
-        let feature = SeenFeature {
-            kind: FeatureKind::Crypt,
+        let poi = SeenPoi {
+            kind: PoiKind::Crypt,
             chunk,
             x: 10,
             y: 70,
         };
-        known.insert(chunk, Some(feature));
+        known.insert(chunk, Some(poi));
         known.insert(ChunkPos { x: 1, y: 1 }, None);
         let found =
             |min, max| -> Vec<i64> { known.in_area(min, max).iter().map(|f| f.x).collect() };

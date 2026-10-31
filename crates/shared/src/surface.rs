@@ -8,7 +8,7 @@ use crate::world::WorldParams;
 use core::f64::consts::TAU;
 use fastnoise_lite::{FastNoiseLite, NoiseType};
 
-/// Grid units per unit of noise space: higher gives larger, smoother features.
+/// Grid units per unit of noise space: higher gives larger, smoother pois.
 const ZOOM: f64 = 256.0;
 
 /// Number of noise layers, each double the detail and half the strength.

@@ -3,7 +3,7 @@
 //! Each world has one secret seed, kept by the server. Everything else comes
 //! from it one way (hashed, so it can't be worked back): the public terrain
 //! seed the client generates the world map from, the secret seeds for
-//! features and sites, and the world's public id.
+//! pois and sites, and the world's public id.
 
 use crate::rng::Seed;
 use core::f64::consts::PI;
@@ -29,8 +29,10 @@ impl WorldSeed {
         self.0.derive("terrain")
     }
 
-    /// The secret seed world map features (and so their sites) come from.
-    pub fn features(self) -> Seed {
+    /// The secret seed world map pois (and so their sites) come from. Its
+    /// name is from when pois were called features: changing it would move
+    /// every poi in every world.
+    pub fn pois(self) -> Seed {
         self.0.derive("features")
     }
 
@@ -130,7 +132,7 @@ mod tests {
         assert_eq!(seed.terrain().value(), GOLDEN_TERRAIN_SEED);
         assert_eq!(seed.id(), WorldId(GOLDEN_WORLD_ID));
         // Each purpose gets its own seed, none of them the secret one.
-        let derived = [seed.terrain(), seed.features(), Seed::new(seed.id().0)];
+        let derived = [seed.terrain(), seed.pois(), Seed::new(seed.id().0)];
         assert!(derived.iter().all(|&d| d != seed.0));
         assert!(derived[0] != derived[1] && derived[1] != derived[2]);
     }

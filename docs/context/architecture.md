@@ -26,7 +26,7 @@ Native clients embed the server for single player, on its own thread with its ow
 
 **Networking is WebSockets only**, on one port: the server serves the web client's files and the game's WebSocket (`/ws`) together, so it works behind an HTTPS proxy (Cloudflare and the like pass WebSockets) with no second port to open. One game message (postcard bytes) per WebSocket binary message; the same `Link` type as single player, its bytes carried by a `Wire`. Clients reconnect by themselves. No accounts yet: a client sends a random guest number in `Hello` (kept in the browser's local storage), which names its character; the newest connection for a character wins.
 
-## Shared vs client-only: deciding per feature
+## Shared vs client-only: deciding per poi
 
 Ask: **can this affect game state the server must validate?**
 
@@ -55,7 +55,7 @@ Agreed design, built in steps (build order at the end). The client never generat
 **Seeds and world identity.** Each world has one secret world seed, kept on the server. Everything else is derived from it one way (hashed, so it can't be worked back):
 
 - the **terrain seed**, sent to the client: surface, tides, weather. The client generates world map terrain itself; it isn't secret.
-- features and sites (and later loot, mobs) use the secret seed: the client only knows what it has been sent.
+- pois and sites (and later loot, mobs) use the secret seed: the client only knows what it has been sent.
 - the **world id**, public: the same seed gives the same world (and the same dungeons) on any server, so players can share worlds they enjoy. It keys any client cache, together with the generator version.
 
 **Generator versions.** Every map generator (the world map, each site generator) has its own version, a plain incrementing number (the apps keep semver). It changes only when the generator's output changes in a way that matters (not for cosmetic changes); later, tests will check that a golden-test change comes with a version bump. The server stores the version each map was generated with: a world records its world map version, and each site level the version it was first generated with. Already generated maps keep their old version for everything that depends on it; only maps generated afterwards use the new one.
@@ -67,7 +67,7 @@ Generators are needed again after the first time, so every version still in use 
 
 **Persistence comes first.** The world is big, with no starting area to farm, so it is persistent rather than reset for loot. Changes that aren't the generator's (a player mining through a wall, breaking a door to get somewhere) are stored as an overlay on the generated base, applied whenever the map is generated, and a reset never undoes them; only the generator's spawns come back.
 
-There are several worlds and players move between them, so every map is addressed with its world: the world map, or a site level (world id, feature chunk, level).
+There are several worlds and players move between them, so every map is addressed with its world: the world map, or a site level (world id, poi chunk, level).
 
 **The server pushes; the client never asks.** The client sends intents (step, travel, take stairs); the server validates each step and sends whatever that makes visible, plus a margin. It already knows where everyone is, so a client's "I already have…" list isn't needed (later, perhaps on reconnect with a cache).
 
@@ -81,11 +81,11 @@ There are several worlds and players move between them, so every map is addresse
 
 **Messages** (`shared`, `serde` + `postcard`):
 
-- World map, per 64-point feature chunk: not chunk data but the changes to the public base, plus the secrets now visible to this player: the chunk's terrain changes, and its feature if known (kind, position, and per-player state such as visited or its attitude). Never the feature's map seed.
+- World map, per 64-point poi chunk: not chunk data but the changes to the public base, plus the secrets now visible to this player: the chunk's terrain changes, and its poi if known (kind, position, and per-player state such as visited or its attitude). Never the poi's map seed.
 - Site levels: on entering, the level's size, theme and stairs directions (the client won't have the other level to work them out from). Cells come in 8×8 chunks: `{ level, chunk, version, mask: u64, cells }`, one mask bit per cell, only the masked cells included; a delta the client merges into what it knows. When a chunk with a newer version comes into view, its visible cells are sent again.
 - Entities (mobs, items, other players) are separate: replicated each tick while visible, not kept in chunk memory.
 
-**Knowledge kept on the server**, per character: for each site level, each chunk's seen mask (`u64`) and the version it was seen at; for the world map, the features known and their per-player state. It is what makes playing on another machine work: entering a level sends what the character remembers of it. The loaded-but-unseen set is per session.
+**Knowledge kept on the server**, per character: for each site level, each chunk's seen mask (`u64`) and the version it was seen at; for the world map, the pois known and their per-player state. It is what makes playing on another machine work: entering a level sends what the character remembers of it. The loaded-but-unseen set is per session.
 
 **Single player without a network stack.** Native clients run the embedded server in its own Bevy world (its own `App` or `SubApp`), talking to the client only through an in-process channel carrying the same message types a network transport will. They share no components or resources, even in one process, or single player would work while multiplayer broke. Tests round-trip every message through `postcard`. This also makes it easy to later open a single-player game to other players (the server accepts network clients beside the local one).
 
@@ -93,7 +93,7 @@ There are several worlds and players move between them, so every map is addresse
 
 **Cheating.** It's an open source game: by default the server doesn't try to stop hacked clients from reading what they've been sent (the loaded margin, remembered maps). The server is still authoritative over every rule. A server option for stricter play is planned (below).
 
-**Build order:** (1) seed split, message types, in-process transport, server in its own world (done); (2) world map features from the server, terrain still generated by the client (done); (3) site levels in 8×8 chunks with loaded/visible/seen, the dungeon view drawing known cells and memory in greyscale (done); (4) persistence on the server (done: RON files in the server's data folder: each world's seed and world map version, each entered site's generator version (one per site, so its levels agree on stairs) and per level the last visit and the overlay of changes, and per character their position, current visit, features seen and cells seen; the player resumes where they left off). Chunk versions (for changes) come with the first thing that changes cells. Then movement through the server (done): the client sends one-cell steps (`shared::movement`, the same rules on both sides), predicts them, and the server says once a tick where it has the player, so a refused step is put right; steps carry a count of map changes so they can't land on the next map. No speed limit yet; on the world map water stops steps, following the tide by the server's clock (`Welcome`, `Hour`; `Ping`/`Pong` keep clients' running clocks in step), and ice by its snow line (`SnowLine`) can be walked on. Click travel follows `shared::pathfinding` in sites and on the world map.
+**Build order:** (1) seed split, message types, in-process transport, server in its own world (done); (2) world map pois from the server, terrain still generated by the client (done); (3) site levels in 8×8 chunks with loaded/visible/seen, the dungeon view drawing known cells and memory in greyscale (done); (4) persistence on the server (done: RON files in the server's data folder: each world's seed and world map version, each entered site's generator version (one per site, so its levels agree on stairs) and per level the last visit and the overlay of changes, and per character their position, current visit, pois seen and cells seen; the player resumes where they left off). Chunk versions (for changes) come with the first thing that changes cells. Then movement through the server (done): the client sends one-cell steps (`shared::movement`, the same rules on both sides), predicts them, and the server says once a tick where it has the player, so a refused step is put right; steps carry a count of map changes so they can't land on the next map. No speed limit yet; on the world map water stops steps, following the tide by the server's clock (`Welcome`, `Hour`; `Ping`/`Pong` keep clients' running clocks in step), and ice by its snow line (`SnowLine`) can be walked on. Click travel follows `shared::pathfinding` in sites and on the world map.
 
 **Later:**
 

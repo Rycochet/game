@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use shared::feature::{CHUNK_SIZE, ChunkPos};
 use shared::movement::WorldConditions;
+use shared::poi::{CHUNK_SIZE, ChunkPos};
 
 use super::canvas::Canvas;
 use super::projection::Projection;
@@ -34,7 +34,7 @@ pub struct WorldTiles {
     tiles: HashMap<(i64, i64), Tile>,
 }
 
-/// How many columns of chunks go round the planet. As `shared::feature`
+/// How many columns of chunks go round the planet. As `shared::poi`
 /// numbers them: what is left over past the last whole chunk belongs to it.
 fn columns(width: i64) -> i64 {
     (width / CHUNK_SIZE).max(1)
@@ -86,7 +86,7 @@ impl WorldTiles {
             for &x in &columns {
                 let key = (x, y);
                 let up_to_date = self.tiles.get(&key).is_some_and(|t| t.made_for == made_for);
-                if !up_to_date && world.features.is_known(ChunkPos { x, y }) {
+                if !up_to_date && world.pois.is_known(ChunkPos { x, y }) {
                     // The shorter way round the planet.
                     let half = (width / 2) as f64;
                     let east = (x * CHUNK_SIZE) as f64 - middle.0;
@@ -207,7 +207,7 @@ pub fn shows_known(world: &CurrentWorld, (min, max): ((f64, f64), (f64, f64))) -
     (row(min.1)..=row(max.1)).any(|y| {
         columns
             .iter()
-            .any(|&x| world.features.is_known(ChunkPos { x, y }))
+            .any(|&x| world.pois.is_known(ChunkPos { x, y }))
     })
 }
 
