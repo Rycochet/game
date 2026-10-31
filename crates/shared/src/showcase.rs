@@ -1,8 +1,8 @@
 //! Debug area for looking at every kind of poi: a flat plain, far beyond where
 //! anyone would walk, with one poi per chunk. Each kind is a column running east
 //! in `PoiKind::ALL`'s order, so new kinds join the east end, and each has
-//! `VARIANTS` seeds running south and, where it can be ruined, one for each level
-//! of ruin running north. The plain's weather is the normal weather.
+//! `VARIANTS` unruined seeds running south and, where it can be ruined, one for
+//! each level of ruin running north. The plain's weather is the normal weather.
 //!
 //! The terrain, climate, plant cover, rivers and pois all ask here first, so
 //! client and server agree. Turn off `ENABLED` and the land carries on as normal.
@@ -66,11 +66,10 @@ pub fn chunk_in_plain(chunk: ChunkPos) -> bool {
 pub fn poi_at(chunk: ChunkPos) -> Option<Poi> {
     let row = chunk.y - FIRST_ROW;
     let kind: PoiKind = *PoiKind::ALL.get(usize::try_from(chunk.x).ok()?)?;
-    let seed = match row {
-        0..VARIANTS => Seed::new(SEEDS.at(&[kind as i64, row])),
-        row if (-RUIN_LEVELS..0).contains(&row) => seed_ruined(kind, -row as u8)?,
-        _ => return None,
-    };
+    if !(-RUIN_LEVELS..VARIANTS).contains(&row) {
+        return None;
+    }
+    let seed = seed_for(kind, row)?;
     Some(Poi {
         kind,
         chunk,
@@ -80,18 +79,14 @@ pub fn poi_at(chunk: ChunkPos) -> Option<Poi> {
     })
 }
 
-/// The first map seed making a poi of this kind exactly this ruined, if it can
-/// be ruined at all. Found rather than forced, so the model and the site agree
-/// just as a real poi's do: both go by its seed.
-fn seed_ruined(kind: PoiKind, ruin: u8) -> Option<Seed> {
+/// The first map seed for this row making a poi of this kind exactly as ruined
+/// as the row says: none south of `FIRST_ROW`, counting up to the north. `None`
+/// if it can't be, as with what can't be ruined at all. Found rather than forced,
+/// so the model and the site agree just as a real poi's do: both go by its seed.
+fn seed_for(kind: PoiKind, row: i64) -> Option<Seed> {
+    let ruin = (-row).max(0) as u8;
     (0..RUIN_TRIES)
-        .map(|n| {
-            Seed::new(
-                SEEDS
-                    .derive("ruined")
-                    .at(&[kind as i64, i64::from(ruin), n]),
-            )
-        })
+        .map(|n| Seed::new(SEEDS.at(&[kind as i64, row, n])))
         .find(|&seed| Generator::for_site(kind, seed).ruin() == ruin)
 }
 
@@ -110,7 +105,7 @@ mod tests {
     }
 
     /// Every kind in order running east, with 8 different seeds running south,
-    /// and nothing beyond them.
+    /// none of them ruined, and nothing beyond them.
     #[test]
     fn every_kind_has_a_column_of_variants() {
         let pois = PoiMap::new(&world(), Seed::new(1));
@@ -124,6 +119,7 @@ mod tests {
                 let poi = pois.in_chunk(chunk).expect("a poi in every chunk");
                 assert_eq!((poi.kind, poi.chunk), (kind, chunk));
                 assert_eq!(pois.chunk_at(poi.x, poi.y), chunk);
+                assert_eq!(Generator::for_site(kind, poi.seed).ruin(), 0, "{kind:?}");
                 seeds.insert(poi.seed.value());
             }
             assert_eq!(seeds.len() as i64, VARIANTS);

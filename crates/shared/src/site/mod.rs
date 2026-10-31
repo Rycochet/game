@@ -345,16 +345,7 @@ impl Generator {
         use PoiKind::*;
         let ground_windows = !matches!(
             kind,
-            Castle
-                | Fort
-                | StoneTower
-                | WoodenTower
-                | RedTent
-                | BlueTent
-                | GreenTent
-                | IceShelter
-                | StonePyramid
-                | SandPyramid
+            Castle | Fort | StoneTower | WoodenTower | RedTent | BlueTent | GreenTent | IceShelter
         );
         let building = |width, height, outlines, max_floors, size_per_floor| {
             Self::Building(BuildingOptions {
@@ -496,7 +487,7 @@ impl Generator {
                 ruin: 0,
                 basement_percent: 0,
                 basement_size: None,
-                windows_percent: WINDOWS_PERCENT,
+                windows_percent: 0,
                 ground_windows,
             }),
         }
@@ -1044,6 +1035,22 @@ mod tests {
             }
         }
         assert!(above > 0);
+    }
+
+    #[test]
+    fn pyramids_never_have_windows() {
+        for kind in [PoiKind::StonePyramid, PoiKind::SandPyramid] {
+            for n in 0..10 {
+                let site = Site::new(kind, Seed::new(n));
+                for index in 0..site.levels() {
+                    let level = site.level(index).level;
+                    let (min_x, min_y, width, height) = level.bounds();
+                    assert!((min_y..min_y + height).all(|y| {
+                        (min_x..min_x + width).all(|x| level.cell(x, y) != Cell::Window)
+                    }));
+                }
+            }
+        }
     }
 
     /// Caves: no room is a plain rectangle.

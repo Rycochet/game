@@ -29,7 +29,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
 - `GAME_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
-- Not here, but also dev tools the embedded server allows: ctrl+click teleports (`world_map`, `dungeon_map`), alt+click changes a site's cell (`dungeon_map`), Esc goes back to the start (`demo`).
+- Not here, but also dev tools the embedded server allows: ctrl+click teleports (`world_map`, `dungeon_map`), and on a poi on the full map goes into it (`minimap`), alt+click changes a site's cell (`dungeon_map`), Esc goes back to the start (`demo`).
 - `HALL_OF_WORLDS_SERVER=ws://host:port/ws` (read by `connection`): join that server instead of starting single player (a new guest each run; dev tools messages are ignored by such servers).
 - `HALL_OF_WORLDS_SERVER_DATA=folder` (read by the server, not this module): where the embedded server saves. Set it to a scratch folder for test runs, or they move the owner's saved character (the saved position and site win unless `GAME_POS` / `GAME_ENTER` are set).
 

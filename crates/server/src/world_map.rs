@@ -293,6 +293,20 @@ mod tests {
         assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
     }
 
+    /// What ctrl+click on the full map sends: from anywhere on the world map,
+    /// into the poi.
+    #[test]
+    fn teleporting_to_a_poi_then_entering_goes_in() {
+        let mut test = TestClient::new();
+        let chunk = ChunkPos { x: 3, y: 1000 };
+        let poi = test.world.pois.in_chunk(chunk).unwrap();
+        test.send(&[
+            ClientMessage::DevTeleport { x: poi.x, y: poi.y },
+            ClientMessage::EnterSite { chunk },
+        ]);
+        assert!(test.client.visit.is_some());
+    }
+
     #[test]
     fn dev_tools_reveal_every_poi() {
         let mut test = TestClient::new();
