@@ -23,6 +23,15 @@ const LIGHT: (f32, f32) = (
 const STAIRS_STEPS: u32 = 4;
 const STAIRS_INK: [u8; 3] = [70, 55, 40];
 
+/// The arrow beside the player's mark on another floor, against its height: its
+/// shaft's width, its head's width and height, its black edge and its gap from
+/// the mark (a little more than the edge, so they nearly touch).
+const HINT_SHAFT: f32 = 0.34;
+const HINT_HEAD_WIDTH: f32 = 0.95;
+const HINT_HEAD_HEIGHT: f32 = 0.5;
+const HINT_EDGE: f32 = 0.1;
+const HINT_GAP: f32 = 0.13;
+
 /// How wide the notch's base is, against how far it sticks out.
 const NOTCH_BASE: f32 = 0.9;
 /// How far inside the circle its base starts, in pixels, so they join.
@@ -227,6 +236,38 @@ pub fn player_dot(canvas: &mut Canvas, centre: (f32, f32), size: f32, outline: f
     canvas.disc(centre, size / 2.0 - outline, WHITE);
 }
 
+/// A little arrow, head and shaft, `size` tall beside a mark `reach` across
+/// each way, up or down: which way the player's floor is. On its right, or its
+/// left if that is off the picture.
+pub fn floor_hint(canvas: &mut Canvas, mark: (f32, f32), reach: f32, size: f32, up: bool) {
+    let half_head = size * HINT_HEAD_WIDTH / 2.0;
+    let side = reach + size * HINT_GAP + half_head;
+    let goes_off = mark.0 + side + half_head > canvas.width as f32;
+    let x = mark.0 + if goes_off { -side } else { side };
+    let half_shaft = size * HINT_SHAFT / 2.0;
+    // Worked out pointing up, then turned over for down.
+    let at = |across: f32, from_tip: f32| {
+        let down = from_tip - size / 2.0;
+        (x + across, mark.1 + if up { down } else { -down })
+    };
+    let neck = size * HINT_HEAD_HEIGHT;
+    let corners = [
+        at(0.0, 0.0),
+        at(half_head, neck),
+        at(half_shaft, neck),
+        at(half_shaft, size),
+        at(-half_shaft, size),
+        at(-half_shaft, neck),
+        at(-half_head, neck),
+    ];
+    let centre = (x, mark.1);
+    let edge = size * HINT_EDGE;
+    canvas.shape(centre, size + edge, BLACK, |x, y| {
+        polygon_distance(&corners, x, y) - edge
+    });
+    canvas.shape(centre, size, WHITE, |x, y| polygon_distance(&corners, x, y));
+}
+
 /// Where to put the arrow to a player off the map: on the edge of the box
 /// `inset` inside the picture, towards `target` from the picture's middle.
 /// `None` if the target is inside that box.
@@ -250,15 +291,8 @@ pub fn arrow_place(
     ))
 }
 
-/// A white arrowhead with a black outline, in the dot's style, pointing along
-/// `direction` (a unit vector).
-pub fn arrow(
-    canvas: &mut Canvas,
-    centre: (f32, f32),
-    direction: (f32, f32),
-    size: f32,
-    outline: f32,
-) {
+/// The corners of an arrowhead pointing along `direction` (a unit vector).
+fn arrow_corners(centre: (f32, f32), direction: (f32, f32), size: f32) -> [(f32, f32); 4] {
     let (along_x, along_y) = direction;
     let (across_x, across_y) = (-along_y, along_x);
     let at = |along: f32, across: f32| {
@@ -268,12 +302,24 @@ pub fn arrow(
         )
     };
     // A notched back makes it an arrowhead rather than a triangle.
-    let corners = [
+    [
         at(size * 0.6, 0.0),
         at(-size * 0.5, size * 0.5),
         at(-size * 0.2, 0.0),
         at(-size * 0.5, -size * 0.5),
-    ];
+    ]
+}
+
+/// A white arrowhead with a black outline, in the dot's style, pointing along
+/// `direction` (a unit vector).
+pub fn arrow(
+    canvas: &mut Canvas,
+    centre: (f32, f32),
+    direction: (f32, f32),
+    size: f32,
+    outline: f32,
+) {
+    let corners = arrow_corners(centre, direction, size);
     canvas.shape(centre, size + outline, BLACK, |x, y| {
         polygon_distance(&corners, x, y) - outline
     });
@@ -360,6 +406,23 @@ mod tests {
             .map(|&x| height_of(false, x))
             .collect();
         assert_eq!(up, [20, 40, 60, 80]);
+    }
+
+    #[test]
+    fn the_arrow_beside_the_mark_is_white_edged_in_black_and_points_its_way() {
+        let mut pixels = vec![100; 4 * 40 * 40];
+        let mut canvas = Canvas {
+            pixels: &mut pixels,
+            width: 40,
+            height: 40,
+        };
+        floor_hint(&mut canvas, (10.0, 20.0), 5.0, 16.0, true);
+        let colour = |x: usize, y: usize| pixels[(y * 40 + x) * 4];
+        let white = |y: usize| (0..40).filter(|&x| colour(x, y) == 255).count();
+        // Up: the head, at the top, is wider than the shaft.
+        assert!(white(19) > white(25), "{} {}", white(19), white(25));
+        assert!(white(25) > 0);
+        assert!((0..40).any(|x| colour(x, 25) == 0));
     }
 
     #[test]

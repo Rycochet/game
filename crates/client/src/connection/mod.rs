@@ -108,7 +108,7 @@ fn send_pings(
 pub struct ToServer(pub ClientMessage);
 
 /// A message from the server about maps (`Welcome`, `EnterLevel`, `Buildings`,
-/// `LevelCells`, `OnWorldMap`, `Teleported`), for `site`. The rest are
+/// `LevelCells`, `RememberedLevel`, `OnWorldMap`, `Teleported`), for `site`. The rest are
 /// handled here.
 #[derive(Message, Clone, Debug)]
 pub struct FromServer(pub ServerMessage);
@@ -317,6 +317,7 @@ fn receive(
                 message @ (ServerMessage::EnterLevel(_)
                 | ServerMessage::Buildings(_)
                 | ServerMessage::LevelCells(_)
+                | ServerMessage::RememberedLevel(_)
                 | ServerMessage::OnWorldMap { .. }
                 | ServerMessage::Teleported { .. }),
             )) => {

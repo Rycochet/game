@@ -22,6 +22,8 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the camera turned by `yaw` degrees (90 puts the camera in the east looking west, 180 looks south), tilted to `pitch` degrees above the horizon and zoomed in (the distance is divided by `zoom`: 1.6667 is the closest the wheel allows). Sets `OrbitCamera` fields directly, so the limits don't apply.
 - `GAME_MAP=dx,dy`: two seconds after starting, open the full map, moved this many grid points from the player, without the limits on dragging (`0,0` centres it on them; far enough off shows the arrow).
 - `GAME_MAP_ZOOM=n`: the map `GAME_MAP` opens at this zoom.
+- `GAME_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the locale says.
+- `GAME_SHOW_FLOOR=n`: three seconds after starting, look at this known floor (an index, from 0); needs the full map open (`GAME_MAP`), as closed it goes straight back.
 - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
 - `GAME_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
@@ -31,7 +33,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Depends on
 
-- `common` (`GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`).
+- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`).
 
 ## Used by
 

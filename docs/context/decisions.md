@@ -306,3 +306,7 @@ First used straight away (owner): `FORGET_BEFORE` is 1, as ruins and pois had ju
 ## 2026-10-31: Extra building rules
 
 The owner's rules: towers have at least 5 floors, all the same size, though one with more may have a top about half the size; castles and forts have at least 3 floors; pyramids go on up, 3 to 4 cells smaller per side each floor, until a 3 by 3 room no longer fits; and buildings with more than one floor may have more than one staircase between two floors, more likely the bigger they are. The staircases needn't connect on the other floor, as everything only has to be reachable from some way in. Generated floors are still connected for now, so that freedom is only used when ruin cuts one off. `FORGET_BEFORE` went to 2 for this, as what buildings generate has changed.
+
+## 2026-10-31: Other floors on the full map, numbered by locale
+
+The owner's design: buttons on the full map (not the corner minimap) for the floors the player knows, numbered from 0 in the EU, UK and Latin America and otherwise from 1. Knowledge stays the server's: it sends what the character remembers of a site's other levels on coming into the site (`RememberedLevel`), and the client keeps the level it leaves by stairs, so taking stairs doesn't generate or send every known level again. The locale comes from `sys-locale` (MIT/Apache-2.0, already in the build through Bevy), which covers native and browsers; it gives the language setting's region, which is usually but not always where the player is.

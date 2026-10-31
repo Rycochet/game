@@ -43,6 +43,21 @@ pub struct LevelInfo {
     pub bounds: (i64, i64, i64, i64),
     /// Where the player arrives.
     pub arrival: (i64, i64),
+    /// Whether they have just come into the site (or back to it, on joining)
+    /// rather than taken its stairs: what a client kept of its other levels
+    /// is out of date, and `RememberedLevel`s follow.
+    pub entering_site: bool,
+}
+
+/// What the player remembers of another level of the site they are on, for
+/// the maps. Only what they have seen, and the neighbours that shape it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RememberedLevel {
+    /// Which level it is.
+    pub index: u32,
+    /// Its rectangle: `(min_x, min_y, width, height)`.
+    pub bounds: (i64, i64, i64, i64),
+    pub chunks: Vec<LevelChunk>,
 }
 
 /// Some cells of one chunk of the current level.

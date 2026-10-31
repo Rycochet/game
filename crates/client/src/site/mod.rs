@@ -13,7 +13,9 @@ use bevy::prelude::*;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::site::leads_out;
 
-use crate::common::{CurrentDungeon, CurrentWorld, GameView, MapPosition, Portal, WorldReturn};
+use crate::common::{
+    CurrentDungeon, CurrentWorld, GameView, MapPosition, OtherLevels, Portal, WorldReturn,
+};
 use crate::connection::{FromServer, ToServer};
 use crate::player::{Arrived, Player, PlayerSystems, TravelTo};
 use crate::view3d::{ClickedToken, View3dSystems};
@@ -92,9 +94,11 @@ fn use_on_arrival(
 
 /// What the server says about maps: the player is on a new level (and its
 /// cells), or on the world map (out of a site, or moved by dev tools).
+#[allow(clippy::too_many_arguments)]
 fn change_map(
     mut from_server: MessageReader<FromServer>,
     mut dungeon: ResMut<CurrentDungeon>,
+    mut others: ResMut<OtherLevels>,
     world: Option<Res<CurrentWorld>>,
     mut world_return: ResMut<WorldReturn>,
     mut next: ResMut<NextState<GameView>>,
@@ -112,12 +116,15 @@ fn change_map(
                 }
                 let (x, y) = info.arrival;
                 **player = MapPosition { x, y };
+                others.entering(&mut dungeon, info);
                 dungeon.enter(info.clone());
                 next.set(GameView::Dungeon);
             }
             ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
+            ServerMessage::RememberedLevel(remembered) => others.add(&dungeon, remembered),
             &ServerMessage::OnWorldMap { x, y } => {
+                *others = OtherLevels::default();
                 // The world wraps east-west: stay in the same copy of the
                 // planet the player went in from (or is on).
                 let width = world.as_ref().map_or(i64::MAX, |w| w.surface.width());
