@@ -320,3 +320,9 @@ What grows is cosmetic and client-side: five stages (ploughed, flat grass, 6, 12
 Claude's additions, agreed by the owner: 3 × 3 places round the house, dirt tracks joining the door, gates and the edge, ponds in a third of farms with room, climate limits (grassland, woodland, seasonal forest, savanna), fixed light outside with the house dark inside. Farms replace what a chunk rolled by their own hash, as towns do, rather than joining the roll, so the kind can be added without moving every other poi; world map version 3 for this, and older worlds carry on with some pois turned into farms (`ServerWorld::open` now accepts any version up to the current one). A site saved under the poi it was before regenerates as a farm.
 
 Basements are the last level of a site, so existing levels keep their indexes (`LevelInfo::basement`, `storey`). The floor buttons show "B", and sort by storey.
+
+## 2026-10-31: Herbalists' huts: a patch that grows by the clock
+
+The owner's design: a one-storey hut of 5 to 8 a side over a basement that can be larger, with one herb patch outside of 3 to 5 parallel strips 7 to 12 long. Each tile (`Cell::HerbBed`) grows a herb or a mushroom, chosen by the client: the same for every client, as it comes from a hash of the place and the server's clock. Every 2 game days the patch moves on a stage (plain ground, green or grey dots, stalks, full grown), and each 4-stage cycle may bring something different in shape and colour. Unlike fields, this depends only on time, not season.
+
+Claude's choices: 5 shapes of each with 3 colours; the whole patch at one stage rather than staggered; walkable strips with ground between, no fence or track; huts in forest biomes only, by their own hash; a ruin's patch grows on. World map version stays 3, unreleased on this branch.

@@ -61,6 +61,9 @@ pub enum Cell {
     Fence,
     /// The way through a fence: walkable.
     FieldGate,
+    /// Walkable outside ground, tended: a strip of a herbalist's patch. What
+    /// grows there is only looks, and the client's to choose.
+    HerbBed,
 }
 
 impl Cell {
@@ -68,7 +71,13 @@ impl Cell {
     pub fn is_walkable(self) -> bool {
         matches!(
             self,
-            Self::Floor | Self::Door | Self::Ground | Self::Garden | Self::Field | Self::FieldGate
+            Self::Floor
+                | Self::Door
+                | Self::Ground
+                | Self::Garden
+                | Self::Field
+                | Self::FieldGate
+                | Self::HerbBed
         ) || self.is_road()
     }
 
@@ -89,7 +98,12 @@ impl Cell {
     pub fn is_outside(self) -> bool {
         matches!(
             self,
-            Self::Ground | Self::Garden | Self::Field | Self::Fence | Self::FieldGate
+            Self::Ground
+                | Self::Garden
+                | Self::Field
+                | Self::Fence
+                | Self::FieldGate
+                | Self::HerbBed
         ) || self.is_road()
     }
 

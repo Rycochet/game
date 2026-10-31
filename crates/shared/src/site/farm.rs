@@ -123,11 +123,11 @@ impl Plan {
 
 /// A rectangle by its edges, the far ones excluded.
 #[derive(Clone, Copy, Debug)]
-struct Plot {
-    x0: i64,
-    y0: i64,
-    x1: i64,
-    y1: i64,
+pub(super) struct Plot {
+    pub x0: i64,
+    pub y0: i64,
+    pub x1: i64,
+    pub y1: i64,
 }
 
 /// The ground floor, with everything round the house.
@@ -228,7 +228,7 @@ fn choose_plots(options: &FarmOptions, rng: &mut Rng, width: i64, height: i64) -
 }
 
 /// The house's level on bare ground reaching round all the plots.
-fn surroundings(house: &Level, plots: &[Plot]) -> Level {
+pub(super) fn surroundings(house: &Level, plots: &[Plot]) -> Level {
     let (_, _, width, height) = house.bounds();
     let edge = |near: fn(&Plot) -> i64, pick: fn(i64, i64) -> i64, house: i64, out: i64| {
         plots.iter().map(|plot| near(plot) + out).fold(house, pick)

@@ -43,6 +43,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerStatus>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
+            .init_resource::<HerbGrowthShift>()
             .init_resource::<ServerClock>()
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()
@@ -378,6 +379,11 @@ pub struct SharesSight;
 pub struct GameClock {
     pub hour: u32,
 }
+
+/// Stages added to how far herbs have grown by the clock, to look at them
+/// (demo key, dev tools): only what this client draws.
+#[derive(Resource, Default)]
+pub struct HerbGrowthShift(pub u32);
 
 /// The server's clock as well as the client can tell, always running: game
 /// hours since the world began. Unlike `GameClock` it changes every frame.

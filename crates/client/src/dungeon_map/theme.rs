@@ -70,7 +70,8 @@ impl Theme {
             Castle | Fort | StoneTower | StoneCottage | Warehouse | ArcheryRange | AdobeHouse
             | AdobeStore | StonePyramid | SandPyramid | Hamlet | Village | Town | City => STONE,
             ThatchedHut | StiltHut | GreenStiltHut | RedTent | BlueTent | GreenTent
-            | RedRoofCottage | GreyRoofCottage | SnowyCottage | WoodenTower | Farm => WOOD,
+            | RedRoofCottage | GreyRoofCottage | SnowyCottage | WoodenTower | Farm
+            | HerbalistHut => WOOD,
             Crypt | MossyCrypt | BloodyCrypt | Mausoleum | Grave | Ruins | Barrel | Barrels => {
                 CRYPT
             }

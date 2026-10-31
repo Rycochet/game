@@ -120,6 +120,9 @@ pub struct BuildingOptions {
     pub ruin: u8,
     /// Percentage chance of a basement under the ground floor.
     pub basement_percent: u32,
+    /// How big a basement is, if not the size of the ground floor: walls
+    /// included, inclusive ranges, never smaller than the ground floor.
+    pub basement_size: Option<((i64, i64), (i64, i64))>,
 }
 
 /// One floor's outline, in level coordinates.
@@ -194,9 +197,11 @@ pub struct Plan {
     /// least one each.
     stairs: Vec<Vec<(i64, i64)>>,
     /// Where the stairs down to the basement are, if it has one. The basement
-    /// is the last level, the size of the ground floor, and is never ruined:
-    /// nothing above it comes down that far.
+    /// is the last level, and is never ruined: nothing above it comes down
+    /// that far.
     basement: Option<(i64, i64)>,
+    /// Its outline, which reaches at least as far as the ground floor's.
+    basement_shape: Shape,
     /// A ruined building's floors, all of them, from the ground up; empty if
     /// it isn't ruined.
     ruined: Vec<SiteLevel>,
@@ -340,6 +345,27 @@ impl Plan {
             None
         };
 
+        let basement_shape = match options.basement_size.filter(|_| basement.is_some()) {
+            Some((wide, tall)) => {
+                let ground = floors[0];
+                let width = roll(&mut rng, wide.0.max(ground.width), wide.1.max(ground.width));
+                let height = roll(
+                    &mut rng,
+                    tall.0.max(ground.height),
+                    tall.1.max(ground.height),
+                );
+                Shape {
+                    outline: Outline::Rectangle,
+                    x: ground.x - roll(&mut rng, 0, width - ground.width),
+                    y: ground.y - roll(&mut rng, 0, height - ground.height),
+                    width,
+                    height,
+                    corner: ground.corner,
+                }
+            }
+            None => floors[0],
+        };
+
         let mut plan = Self {
             seed,
             width: width + 2 * BORDER,
@@ -347,6 +373,7 @@ impl Plan {
             floors,
             stairs,
             basement,
+            basement_shape,
             ruined: Vec::new(),
         };
         if options.ruin > 0 {
@@ -422,7 +449,7 @@ impl Plan {
         }
     }
 
-    /// The basement, under the ground floor's outline.
+    /// The basement.
     fn basement_level(&self) -> SiteLevel {
         let (x, y) = self.basement.expect("a basement");
         let stairs = vec![Stairs {
@@ -433,7 +460,7 @@ impl Plan {
         }];
         // (Not one of the floors' seeds: the floor count can change with ruin.)
         let rng = self.seed.derive("building basement").rng();
-        self.fill_floor(self.floors[0], rng, stairs, false)
+        self.fill_floor(self.basement_shape, rng, stairs, false)
     }
 
     /// Generates floor `index` as it is before any ruin.
@@ -484,7 +511,11 @@ impl Plan {
         stairs: Vec<Stairs>,
         on_ground: bool,
     ) -> SiteLevel {
-        let mut level = Level::new(0, 0, self.width, self.height);
+        // (A bigger basement can reach past the ground floor's level.)
+        let (x0, y0) = (shape.x.min(0), shape.y.min(0));
+        let x1 = (shape.x + shape.width).max(self.width);
+        let y1 = (shape.y + shape.height).max(self.height);
+        let mut level = Level::new(x0, y0, x1 - x0, y1 - y0);
         let required: Vec<(i64, i64)> = stairs.iter().map(|s| (s.x, s.y)).collect();
 
         if on_ground {

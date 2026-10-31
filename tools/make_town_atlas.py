@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw
 TILES = "crates/client/assets/angbandtk/"
 OUT = "crates/client/assets/town_atlas.png"
 CROPS = "crates/client/assets/field_crops.png"
+PLANTS = "crates/client/assets/herb_plants.png"
 COLUMNS, ROWS, SIZE = 8, 6, 32
 
 
@@ -113,6 +114,156 @@ for index, (height, colour) in enumerate(
 ):
     crops.paste(crop(height, colour), (index * SIZE, 0))
 crops.save(CROPS)
+
+STEM_GREEN = (70, 130, 60, 255)
+STEM_GREY = (172, 170, 160, 255)
+GROUND = SIZE - 1
+
+
+def leafy(d, x, leaf, flower):
+    """Big leaves up a stem."""
+    d.line((x, GROUND, x, 15), fill=STEM_GREEN)
+    for y, side in [(26, -1), (23, 1), (19, -1), (16, 1)]:
+        d.ellipse((x + (1 if side > 0 else -6), y - 2, x + (6 if side > 0 else -1), y + 2), fill=leaf)
+    d.point((x, 14), fill=flower)
+
+
+def fern(d, x, leaf, flower):
+    """Fronds getting shorter towards the top."""
+    d.line((x, GROUND, x, 12), fill=leaf)
+    for y in range(28, 12, -3):
+        reach = max(2, (y - 10) // 3)
+        d.line((x, y, x - reach, y - 2), fill=leaf)
+        d.line((x, y, x + reach, y - 2), fill=leaf)
+    d.point((x, 11), fill=flower)
+
+
+def daisy(d, x, leaf, flower):
+    """A big flower on a stem."""
+    d.line((x, GROUND, x, 15), fill=STEM_GREEN)
+    d.line((x, 27, x - 4, 24), fill=leaf, width=2)
+    d.line((x, 25, x + 4, 22), fill=leaf, width=2)
+    d.ellipse((x - 5, 9, x + 5, 19), fill=flower)
+    d.ellipse((x - 1, 13, x + 1, 15), fill=(240, 205, 70, 255))
+
+
+def spike(d, x, leaf, flower):
+    """A spike of little flowers over thin leaves."""
+    d.line((x, GROUND, x, 10), fill=STEM_GREEN)
+    d.line((x, GROUND, x - 4, 22), fill=leaf)
+    d.line((x, GROUND, x + 4, 22), fill=leaf)
+    for y in range(10, 21, 2):
+        d.line((x - 2, y, x + 2, y), fill=flower)
+
+
+def bells(d, x, leaf, flower):
+    """Hanging flowers from a bent stem, over round leaves."""
+    d.line((x, GROUND, x, 13), fill=STEM_GREEN)
+    d.line((x, 13, x + 6, 15), fill=STEM_GREEN)
+    d.ellipse((x - 6, 23, x, 28), fill=leaf)
+    d.ellipse((x, 24, x + 6, 29), fill=leaf)
+    for bx in (x + 2, x + 6):
+        d.polygon([(bx - 2, 19), (bx + 2, 19), (bx, 15)], fill=flower)
+
+
+def dome(d, x, cap, spot):
+    """A round cap with spots."""
+    d.rectangle((x - 1, 20, x + 1, GROUND), fill=STEM_GREY)
+    d.pieslice((x - 7, 11, x + 7, 27), 180, 360, fill=cap)
+    d.point([(x - 3, 15), (x + 3, 16), (x, 13)], fill=spot)
+
+
+def flat(d, x, cap, spot):
+    """A wide flat cap."""
+    d.rectangle((x - 1, 19, x, GROUND), fill=STEM_GREY)
+    d.ellipse((x - 8, 15, x + 7, 20), fill=cap)
+    d.line((x - 5, 16, x + 4, 16), fill=spot)
+
+
+def cone(d, x, cap, spot):
+    """A pointed hat."""
+    d.line((x, GROUND, x, 18), fill=STEM_GREY, width=2)
+    d.polygon([(x - 5, 19), (x + 6, 19), (x, 7)], fill=cap)
+    d.point((x, 13), fill=spot)
+
+
+def puffs(d, x, cap, spot):
+    """Puffballs with hardly any stem, in a huddle."""
+    for px, py, r in [(x - 4, 25, 4), (x + 4, 26, 3), (x, 21, 3)]:
+        d.ellipse((px - r, py - r, px + r, py + r), fill=cap)
+        d.point((px - 1, py - 1), fill=spot)
+    d.rectangle((x - 5, 29, x + 5, GROUND), fill=STEM_GREY)
+
+
+def inkcap(d, x, cap, spot):
+    """A tall thin stem and a narrow bell."""
+    d.line((x, GROUND, x, 10), fill=STEM_GREY)
+    d.ellipse((x - 3, 5, x + 3, 15), fill=cap)
+    d.line((x - 2, 15, x + 2, 15), fill=spot)
+
+
+def plants():
+    """A column per shape, herbs then mushrooms; rows of dots, of stalks, then
+    of full grown plants in three colours each: `dungeon_map::herbs` must match."""
+    colours = [
+        [((62, 140, 70), (225, 225, 240)), ((120, 170, 60), (240, 200, 60)), ((46, 120, 112), (215, 90, 120))],
+        [((86, 150, 56), (190, 220, 110)), ((40, 112, 72), (120, 180, 90)), ((132, 158, 72), (90, 150, 110))],
+        [((70, 140, 62), (245, 245, 245)), ((96, 150, 80), (235, 150, 60)), ((60, 128, 92), (210, 90, 200))],
+        [((110, 150, 110), (130, 90, 200)), ((84, 134, 64), (225, 80, 80)), ((130, 170, 90), (90, 130, 230))],
+        [((54, 124, 60), (120, 150, 240)), ((104, 160, 70), (245, 150, 190)), ((70, 136, 100), (250, 230, 120))],
+    ]
+    caps = [
+        [((200, 45, 40), (250, 245, 235)), ((60, 90, 200), (210, 230, 255)), ((236, 150, 40), (255, 235, 180))],
+        [((150, 100, 60), (215, 180, 130)), ((120, 60, 160), (215, 180, 235)), ((90, 170, 130), (205, 240, 215))],
+        [((230, 200, 70), (150, 110, 40)), ((215, 90, 130), (250, 200, 215)), ((70, 60, 55), (170, 160, 150))],
+        [((225, 220, 200), (160, 150, 120)), ((240, 170, 120), (170, 90, 60)), ((170, 210, 90), (100, 140, 50))],
+        [((55, 50, 60), (200, 200, 210)), ((90, 200, 215), (30, 110, 130)), ((180, 40, 90), (240, 150, 190))],
+    ]
+    herb_shapes = [leafy, fern, daisy, spike, bells]
+    mushroom_shapes = [dome, flat, cone, puffs, inkcap]
+    sheet = Image.new("RGBA", (10 * SIZE, 5 * SIZE), (0, 0, 0, 0))
+    d = ImageDraw.Draw(sheet)
+
+    def at(column, row):
+        """Draws on one tile, in the tile's own coordinates."""
+        out = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+        return out, ImageDraw.Draw(out), (column * SIZE, row * SIZE)
+
+    for column in range(10):
+        mushroom = column >= 5
+        rng = random.Random(column + 1)
+        # Dots on the ground.
+        tile_image, draw, place = at(column, 0)
+        greens = [(86, 150, 60), (112, 170, 70), (60, 125, 60)]
+        greys = [(170, 170, 165), (140, 140, 138), (195, 195, 188)]
+        for _ in range(14):
+            x, y = rng.randint(2, 28), rng.randint(2, 28)
+            colour = rng.choice(greys if mushroom else greens) + (255,)
+            draw.rectangle((x, y, x + 1, y + 1), fill=colour)
+        sheet.paste(tile_image, place)
+        # Stalks.
+        tile_image, draw, place = at(column, 1)
+        for x in range(4, 30, 5):
+            tall = rng.randint(6, 11)
+            stalk = STEM_GREY if mushroom else STEM_GREEN
+            draw.line((x, GROUND, x, GROUND - tall), fill=stalk, width=2 if mushroom else 1)
+        sheet.paste(tile_image, place)
+        # Full grown, in each colour: two to a tile.
+        for way in range(3):
+            tile_image, draw, place = at(column, 2 + way)
+            if mushroom:
+                cap, spot = caps[column - 5][way]
+                shape = mushroom_shapes[column - 5]
+            else:
+                cap, spot = colours[column][way]
+                shape = herb_shapes[column]
+            for x in (9, 23):
+                shape(draw, x, cap + (255,), spot + (255,))
+            sheet.paste(tile_image, place)
+    sheet.save(PLANTS)
+
+
+plants()
 
 atlas = [
     # Roads, poorest first (the order of the cells).

@@ -156,7 +156,8 @@ impl ServerWorld {
                 if save.seed != seed {
                     return Err("its saved seed isn't the one asked for".into());
                 }
-                // Older versions differ only in having no towns (1) or farms (2):
+                // Older versions differ only in having no towns (1), or no farms or
+                // herbalists' huts (2):
                 // their worlds carry on with some pois turned into those.
                 if !(1..=WORLD_MAP_VERSION).contains(&save.world_map_version) {
                     return Err(format!(

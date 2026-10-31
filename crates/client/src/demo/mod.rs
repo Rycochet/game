@@ -9,6 +9,7 @@
 //! - B: cycle what the current level's stairs are built as (only what is
 //!   drawn; the next level goes back to its own).
 //! - F: cycle what is growing in the current level's fields (only what is drawn).
+//! - H: move what grows in herb patches on a stage (only what is drawn).
 //! - Esc: back to the starting point on the world map, out of any site
 //!   (dev tools: only the embedded server allows it).
 
@@ -17,7 +18,7 @@ use bevy::prelude::*;
 use shared::movement::Step;
 use shared::protocol::ClientMessage;
 
-use crate::common::{CurrentDungeon, GameView, NORMAL_SNOW_LINE, Token, Weather};
+use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, NORMAL_SNOW_LINE, Token, Weather};
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TakeStep};
 
@@ -39,6 +40,7 @@ impl Plugin for DemoPlugin {
                     cycle_token,
                     cycle_stairs,
                     cycle_fields,
+                    cycle_herbs,
                     back_to_start,
                 ),
             )
@@ -129,6 +131,13 @@ fn cycle_fields(keys: Res<ButtonInput<KeyCode>>, mut dungeon: ResMut<CurrentDung
             field.livestock = false;
             field.variety = field.variety.wrapping_add(1);
         }
+    }
+}
+
+/// H moves herb patches on a stage, without waiting two game days.
+fn cycle_herbs(keys: Res<ButtonInput<KeyCode>>, mut shift: ResMut<HerbGrowthShift>) {
+    if keys.just_pressed(KeyCode::KeyH) {
+        shift.0 = shift.0.wrapping_add(1);
     }
 }
 

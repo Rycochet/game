@@ -73,10 +73,11 @@ pub enum PoiKind {
     Town,
     City,
     Farm,
+    HerbalistHut,
 }
 
 impl PoiKind {
-    pub const ALL: [Self; 39] = [
+    pub const ALL: [Self; 40] = [
         Self::Boulders,
         Self::Ruins,
         Self::GrassyCave,
@@ -116,10 +117,11 @@ impl PoiKind {
         Self::Town,
         Self::City,
         Self::Farm,
+        Self::HerbalistHut,
     ];
 
     /// How many of `ALL` come from the chunk's plain roll: the rest have their
-    /// own (`PoiMap::town_at`, `PoiMap::farm_at`), so they can be rarer, or
+    /// own (`PoiMap::town_at`, `PoiMap::kept_to_land`), so they can be rarer, or
     /// keep to the land that suits them, and every other chunk keeps its poi.
     const ROLLED: u64 = 34;
 
@@ -141,6 +143,9 @@ const TOWNS_PER_THOUSAND: [(PoiKind, u64); 4] = [
 /// Of each 1000 pois on land that suits one, how many are farms, by a separate
 /// hash for the same reason.
 const FARMS_PER_THOUSAND: u64 = 60;
+
+/// The same for herbalists' huts.
+const HUTS_PER_THOUSAND: u64 = 40;
 
 /// A chunk's position: chunk `(x, y)` covers world grid points from
 /// `(x × CHUNK_SIZE, y × CHUNK_SIZE)`. East–west it wraps round the planet,
@@ -244,10 +249,10 @@ impl PoiMap {
                 + rng.range_u64(0, (CHUNK_SIZE - 2 * EDGE_MARGIN) as u64) as i64;
             let height = self.surface.sample(x, y).height;
             (height > self.land_above).then(|| Poi {
-                kind: if kind.is_town() || !self.farm_at(chunk, x, y, height) {
+                kind: if kind.is_town() {
                     kind
                 } else {
-                    PoiKind::Farm
+                    self.kept_to_land(chunk, x, y, height).unwrap_or(kind)
                 },
                 chunk,
                 x,
@@ -257,13 +262,31 @@ impl PoiMap {
         })
     }
 
-    /// Whether a chunk's poi, standing here, is a farm instead of what it rolled.
-    fn farm_at(&self, chunk: ChunkPos, x: i64, y: i64, height: f64) -> bool {
-        self.seed.derive("farms").at(&[chunk.x, chunk.y]) % 1000 < FARMS_PER_THOUSAND
-            && matches!(
-                self.climate.sample(x, y, height).biome(),
-                Biome::Grassland | Biome::Woodland | Biome::SeasonalForest | Biome::Savanna
-            )
+    /// What a chunk's poi, standing here, is instead of what it rolled, if
+    /// anything: a farm on open land, a herbalist's hut in the woods.
+    fn kept_to_land(&self, chunk: ChunkPos, x: i64, y: i64, height: f64) -> Option<PoiKind> {
+        let roll = |name: &str| self.seed.derive(name).at(&[chunk.x, chunk.y]) % 1000;
+        let (farm, hut) = (
+            roll("farms") < FARMS_PER_THOUSAND,
+            roll("huts") < HUTS_PER_THOUSAND,
+        );
+        if !farm && !hut {
+            return None;
+        }
+        match self.climate.sample(x, y, height).biome() {
+            Biome::Grassland | Biome::Savanna if farm => Some(PoiKind::Farm),
+            Biome::Woodland | Biome::SeasonalForest if farm => Some(PoiKind::Farm),
+            Biome::BorealForest
+            | Biome::Woodland
+            | Biome::SeasonalForest
+            | Biome::TemperateRainforest
+            | Biome::TropicalRainforest
+                if hut =>
+            {
+                Some(PoiKind::HerbalistHut)
+            }
+            _ => None,
+        }
     }
 
     /// The town a chunk with a poi has instead of what it rolled, if any.

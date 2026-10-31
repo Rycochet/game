@@ -33,6 +33,7 @@ fn ground_colour(cell: Cell) -> [u8; 3] {
         Cell::Field => [214, 222, 160],
         Cell::Fence => [150, 110, 70],
         Cell::FieldGate => [226, 238, 214],
+        Cell::HerbBed => [205, 222, 180],
         _ => WHITE,
     }
 }

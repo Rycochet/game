@@ -49,7 +49,9 @@ impl Surface {
     /// The surface the floor of a cell is drawn with.
     pub fn of_flat(cell: Cell) -> Self {
         match cell {
-            Cell::Ground | Cell::Field | Cell::Fence | Cell::FieldGate => Self::Ground,
+            Cell::Ground | Cell::Field | Cell::Fence | Cell::FieldGate | Cell::HerbBed => {
+                Self::Ground
+            }
             Cell::Water => Self::Water,
             Cell::Lava => Self::Lava,
             _ => Self::Floor,

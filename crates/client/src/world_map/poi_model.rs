@@ -507,6 +507,7 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
         }
         WoodenTower => walls_and_roof(model, WOOD, THATCH, rise),
         Farm => walls_and_roof(model, PLASTER, THATCH, rise),
+        HerbalistHut => walls_and_roof(model, WOOD, MOSS, rise),
         Castle | Fort => {
             let (colour, wall_height) = if kind == Castle {
                 (STONE, 2.6)
@@ -554,9 +555,8 @@ fn ruined(
 ) {
     use PoiKind::*;
     let walls = match kind {
-        ThatchedHut | StiltHut | GreenStiltHut | Warehouse | WoodenTower | Fort | ArcheryRange => {
-            WOOD
-        }
+        ThatchedHut | StiltHut | GreenStiltHut | Warehouse | WoodenTower | Fort | ArcheryRange
+        | HerbalistHut => WOOD,
         AdobeHouse | AdobeStore => ADOBE,
         SandPyramid => SAND,
         _ => STONE,

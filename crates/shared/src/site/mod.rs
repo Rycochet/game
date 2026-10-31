@@ -16,6 +16,7 @@ mod building;
 mod cave;
 mod farm;
 mod grid;
+mod herbalist;
 mod ruin;
 mod town;
 
@@ -28,6 +29,7 @@ use crate::rng::Seed;
 pub use building::{BuildingOptions, Outline};
 pub use cave::{CaveEntrance, CaveOptions};
 pub use farm::{FarmOptions, FieldLook};
+pub use herbalist::HerbalistOptions;
 pub use town::{BuildingKind, BuildingLook, Rect, RoofKind, TownBuilding, TownOptions, WallKind};
 
 /// What a site looks like from outside, for choosing a poi's model. Worked
@@ -85,6 +87,17 @@ impl PoiLook {
             Generator::Town(options) => Self::Town {
                 buildings: town::Plan::new(&options, seed).target() as u16,
             },
+            Generator::Herbalist(options) => {
+                let plan = building::Plan::new(&options.house, seed);
+                let (width, height) = plan.footprint();
+                Self::Building {
+                    outline: plan.outline(),
+                    width: width as u16,
+                    height: height as u16,
+                    floors: 1,
+                    ruin: options.house.ruin,
+                }
+            }
             Generator::Farm(options) => {
                 let plan = farm::Plan::new(&options, seed);
                 let (width, height) = plan.footprint();
@@ -181,7 +194,7 @@ impl StairsStyle {
             GrassyCave | EarthCave | RockCave | Boulders | IceCave | IceShelter => {
                 &[Ladder, LogLadder, RopeLadder, SlatLadder, KnottedRope]
             }
-            Farm => &[Turning, Ladder],
+            Farm | HerbalistHut => &[Turning, Ladder],
             // Towns have no stairs yet.
             Hamlet | Village | Town | City => &[Turning],
         }
@@ -259,6 +272,8 @@ pub enum Generator {
     Town(TownOptions),
     /// A farmhouse in the middle of fenced fields.
     Farm(FarmOptions),
+    /// A small hut over a basement, with a herb patch outside.
+    Herbalist(HerbalistOptions),
 }
 
 impl Generator {
@@ -269,6 +284,7 @@ impl Generator {
             Self::Cave(_) => CAVE_VERSION,
             Self::Town(_) => TOWN_VERSION,
             Self::Farm(_) => FARM_VERSION,
+            Self::Herbalist(_) => HERBALIST_VERSION,
         }
     }
 
@@ -278,6 +294,13 @@ impl Generator {
         match self {
             Self::Building(options) => Self::Building(BuildingOptions { ruin, ..options }),
             Self::Farm(options) => Self::Farm(FarmOptions {
+                house: BuildingOptions {
+                    ruin,
+                    ..options.house
+                },
+                ..options
+            }),
+            Self::Herbalist(options) => Self::Herbalist(HerbalistOptions {
                 house: BuildingOptions {
                     ruin,
                     ..options.house
@@ -320,6 +343,7 @@ impl Generator {
                 size_per_floor,
                 ruin: 0,
                 basement_percent: 0,
+                basement_size: None,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -358,8 +382,27 @@ impl Generator {
                     size_per_floor: 5,
                     ruin: 0,
                     basement_percent: 50,
+                    basement_size: None,
                 },
                 fields: (1, 8),
+            }),
+            HerbalistHut => Self::Herbalist(HerbalistOptions {
+                house: BuildingOptions {
+                    width: (5, 8),
+                    height: (5, 8),
+                    outlines: &[Rectangle],
+                    square: false,
+                    min_floors: 1,
+                    max_floors: 1,
+                    same_size: false,
+                    taper: None,
+                    size_per_floor: 5,
+                    ruin: 0,
+                    basement_percent: 100,
+                    basement_size: Some(((8, 16), (8, 16))),
+                },
+                strips: (3, 5),
+                length: (7, 12),
             }),
             // Natural caves: walk in from the side.
             GrassyCave | EarthCave => cave((40, 70), (1, 3), CaveEntrance::Opening, false, 30, 0),
@@ -420,6 +463,7 @@ impl Generator {
                 size_per_floor: 6,
                 ruin: 0,
                 basement_percent: 0,
+                basement_size: None,
             }),
         }
     }
@@ -440,6 +484,9 @@ pub const TOWN_VERSION: u32 = 1 + FORGET_BEFORE;
 /// The farm generator's version (as `BUILDING_VERSION`).
 pub const FARM_VERSION: u32 = 1 + FORGET_BEFORE;
 
+/// The herbalist's hut generator's version (as `BUILDING_VERSION`).
+pub const HERBALIST_VERSION: u32 = 1 + FORGET_BEFORE;
+
 /// A poi's map: its plan, from which any level can be generated.
 #[derive(Clone, Debug)]
 pub struct Site {
@@ -455,6 +502,7 @@ enum Plan {
     Cave(cave::Plan),
     Town(town::Plan),
     Farm(farm::Plan),
+    Herbalist(herbalist::Plan),
 }
 
 impl Site {
@@ -481,6 +529,7 @@ impl Site {
         let ruined = match generator {
             Generator::Building(options) => options.ruin > 0,
             Generator::Farm(options) => options.house.ruin > 0,
+            Generator::Herbalist(options) => options.house.ruin > 0,
             _ => false,
         };
         let plan = match generator {
@@ -495,6 +544,9 @@ impl Site {
             }
             Generator::Farm(options) if version == FARM_VERSION => {
                 Plan::Farm(farm::Plan::new(&options, seed))
+            }
+            Generator::Herbalist(options) if version == HERBALIST_VERSION => {
+                Plan::Herbalist(herbalist::Plan::new(&options, seed))
             }
             _ => return None,
         };
@@ -518,7 +570,10 @@ impl Site {
     /// Whether its levels are a building's floors (going up from the ground)
     /// rather than a cave's depths (going down).
     pub fn is_building(&self) -> bool {
-        matches!(self.plan, Plan::Building(_) | Plan::Farm(_))
+        matches!(
+            self.plan,
+            Plan::Building(_) | Plan::Farm(_) | Plan::Herbalist(_)
+        )
     }
 
     /// Whether its last level is a basement: below the ground floor, whatever
@@ -527,6 +582,7 @@ impl Site {
         match &self.plan {
             Plan::Building(plan) => plan.has_basement(),
             Plan::Farm(plan) => plan.has_basement(),
+            Plan::Herbalist(plan) => plan.house().has_basement(),
             _ => false,
         }
     }
@@ -538,6 +594,7 @@ impl Site {
             Plan::Cave(plan) => plan.levels(),
             Plan::Town(_) => 1,
             Plan::Farm(plan) => plan.levels(),
+            Plan::Herbalist(plan) => plan.house().floors(),
         }
     }
 
@@ -550,6 +607,7 @@ impl Site {
             Plan::Cave(plan) => plan.level(index),
             Plan::Town(plan) => plan.level(),
             Plan::Farm(plan) => plan.level(index),
+            Plan::Herbalist(plan) => plan.level(index),
         }
     }
 
@@ -1029,6 +1087,7 @@ mod pictures {
                                 Cell::Field => ':',
                                 Cell::Fence => '|',
                                 Cell::FieldGate => '/',
+                                Cell::HerbBed => ';',
                                 cell if cell.is_road() => '=',
                                 cell => panic!("no letter for {cell:?}"),
                             }

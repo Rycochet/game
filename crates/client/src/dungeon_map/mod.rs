@@ -11,6 +11,7 @@
 //! walls block. Left-click a seen walkable cell to travel there.
 
 mod field;
+mod herbs;
 mod holes;
 mod liquid;
 mod mesh;
@@ -39,8 +40,8 @@ use shared::protocol::ClientMessage;
 use shared::surface::SurfaceSample;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, LightSource, MapPosition, SharesSight,
-    SmoothPosition, ViewStats, Weather, WorldReturn,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, LightSource, MapPosition,
+    SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -101,6 +102,7 @@ impl Plugin for DungeonMapPlugin {
                     colour_ground,
                     update_meshes,
                     update_crops,
+                    update_herbs,
                     hide_unseen_tokens,
                     sync_lights,
                     rain::update,
@@ -167,6 +169,10 @@ struct StairsThroughPart(Surface);
 /// The mesh of crops standing in fields.
 #[derive(Component)]
 struct CropPart;
+
+/// The mesh of what grows in a herbalist's patch.
+#[derive(Component)]
+struct HerbPart;
 
 /// A real light for tokens, following `owner`'s `LightSource`.
 #[derive(Component)]
@@ -313,6 +319,20 @@ fn spawn_scene(
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color_texture: Some(load_tile(&asset_server, field::CROPS_PICTURE)),
+            unlit: true,
+            alpha_mode: AlphaMode::Mask(0.5),
+            // Seen from both sides.
+            cull_mode: None,
+            ..default()
+        })),
+        NoFrustumCulling,
+        NotShadowCaster,
+    ));
+    commands.entity(scene).with_child((
+        HerbPart,
+        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color_texture: Some(load_tile(&asset_server, herbs::HERBS_PICTURE)),
             unlit: true,
             alpha_mode: AlphaMode::Mask(0.5),
             // Seen from both sides.
@@ -658,7 +678,7 @@ fn update_meshes(
     if dungeon
         .info
         .as_ref()
-        .is_some_and(|i| i.kind == PoiKind::Farm)
+        .is_some_and(|i| matches!(i.kind, PoiKind::Farm | PoiKind::HerbalistHut))
     {
         light.light_outside(level);
     }
@@ -770,6 +790,39 @@ fn update_crops(
     });
     if any && let Some(mut stored) = meshes.get_mut(&handle.0) {
         *stored = crops.into_mesh();
+    }
+}
+
+/// Builds what grows in a herbalist's patch again when what is seen changes,
+/// or it moves on a stage.
+#[allow(clippy::too_many_arguments)]
+fn update_herbs(
+    dungeon: Res<CurrentDungeon>,
+    shown: Res<Shown>,
+    clock: Res<GameClock>,
+    shift: Res<HerbGrowthShift>,
+    place: Res<WorldReturn>,
+    part: Single<(&Mesh3d, &mut Visibility), With<HerbPart>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut built: Local<(u64, u32)>,
+) {
+    let grown = herbs::growth(clock.hour, shift.0);
+    let now = (shown.looks, grown);
+    let Some(sight) = shown.sight.as_ref().filter(|_| *built != now) else {
+        return;
+    };
+    *built = now;
+    let at = (place.0.x, place.0.y);
+    let plants = herbs::build_plants(&dungeon.level, sight, &dungeon.remembered, at, grown);
+    let (handle, mut visibility) = part.into_inner();
+    let any = !plants.indices.is_empty();
+    visibility.set_if_neq(if any {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    });
+    if any && let Some(mut stored) = meshes.get_mut(&handle.0) {
+        *stored = plants.into_mesh();
     }
 }
 
