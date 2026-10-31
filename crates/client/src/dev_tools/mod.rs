@@ -16,6 +16,9 @@
 //!   (e.g. off the stairs they arrived on, to see them).
 //! - `GAME_STAIRS=n`: draw all stairs as this style (an index into
 //!   `StairsStyle::ALL`).
+//! - `GAME_FIELDS=n`: draw every field as this stage (its `variety`: for crops
+//!   0 ploughed, 1 grass, 2 short, 3 tall, 4 ripe).
+//! - `GAME_HERBS=n`: draw every herb tile `n` stages (game days) further on.
 //! - `GAME_TRAVEL=x,y`: start travelling to a grid position (as if clicked),
 //!   once at `GAME_POS` if set, otherwise two seconds after starting.
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
@@ -163,6 +166,26 @@ impl Plugin for DevToolsPlugin {
                     }
                 }
             });
+        }
+
+        if let Some(variety) = env::var("GAME_FIELDS")
+            .ok()
+            .and_then(|n| n.trim().parse::<u32>().ok())
+        {
+            app.add_systems(Update, move |mut dungeon: ResMut<CurrentDungeon>| {
+                if dungeon.fields.iter().any(|f| f.variety != variety) {
+                    for field in &mut dungeon.fields {
+                        field.variety = variety;
+                    }
+                }
+            });
+        }
+
+        if let Some(stages) = env::var("GAME_HERBS")
+            .ok()
+            .and_then(|n| n.trim().parse::<u32>().ok())
+        {
+            app.insert_resource(crate::common::HerbGrowthShift(stages));
         }
 
         if let Some((x, y)) = env::var("GAME_CURSOR").ok().and_then(|pos| parse_pos(&pos)) {

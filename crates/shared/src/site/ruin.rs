@@ -57,15 +57,16 @@ fn cells_of(level: &Level) -> impl Iterator<Item = (i64, i64)> + use<> {
 }
 
 /// Ruins a building's floors (all of them, intact, from the ground up), given
-/// each floor's outline and `stairs[n]` joining floor `n` to floor `n + 1`.
-/// Floors above one with no way left from its stairs down to any stairs up are
-/// dropped.
+/// each floor's outline and `stairs[n]` joining floor `n` to floor `n + 1`, and
+/// any stairs from the ground floor down to a basement. Floors above one with
+/// no way left from its stairs down to any stairs up are dropped.
 pub(super) fn ruin_floors(
     seed: Seed,
     ruin: u8,
     floors: Vec<SiteLevel>,
     shapes: &[Shape],
     stairs: &[Vec<(i64, i64)>],
+    basement: Option<(i64, i64)>,
 ) -> Vec<SiteLevel> {
     let seed = seed.derive("ruin");
     let mut kept: Vec<SiteLevel> = Vec::new();
@@ -76,6 +77,7 @@ pub(super) fn ruin_floors(
                 .iter()
                 .enumerate()
                 .any(|(n, spots)| index <= n + 1 && spots.iter().any(|&s| near(s, x, y)))
+                || (index == 0 && basement.is_some_and(|s| near(s, x, y)))
         };
         let below = kept.last().map(|floor| &floor.level);
         let level = &mut floor.level;
@@ -226,7 +228,10 @@ fn stairs_connect(floor: &SiteLevel) -> bool {
             .map(|s| (s.x, s.y))
     };
     let ups: Vec<_> = at(StairsDirection::Up).collect();
-    let mut ways_in: Vec<_> = at(StairsDirection::Down).collect();
+    // (A basement's stairs are no way in: come by the entrance.)
+    let mut ways_in: Vec<_> = at(StairsDirection::Down)
+        .filter(|_| floor.entrance.is_none())
+        .collect();
     ways_in.extend(floor.entrance.filter(|_| ways_in.is_empty()));
     if ups.is_empty() || ways_in.is_empty() {
         return true;
@@ -300,8 +305,13 @@ mod tests {
                 for (x, y) in cells_of(&floor.level) {
                     let (now, then) = (floor.level.cell(x, y), whole.level.cell(x, y));
                     let lone_door = then == Cell::Door && now == Cell::Floor;
+                    // Windows go in after ruin, wherever a wall then fits one.
+                    let window_moved = matches!(
+                        (then, now),
+                        (Cell::Window, Cell::Wall) | (Cell::Wall, Cell::Window)
+                    );
                     assert!(
-                        now == then || is_gap(now) || lone_door,
+                        now == then || is_gap(now) || lone_door || window_moved,
                         "ruin {ruin} floor {n}: {then:?} became {now:?}"
                     );
                 }
@@ -430,6 +440,7 @@ mod tests {
             ],
             entrance: None,
             buildings: Vec::new(),
+            fields: Vec::new(),
         };
         assert!(stairs_connect(&floor));
         floor.level.set(4, 1, Cell::Hole);

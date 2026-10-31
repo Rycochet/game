@@ -20,13 +20,14 @@ use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::window::PrimaryWindow;
-use shared::protocol::SeenPoi;
+use shared::protocol::{ClientMessage, SeenPoi};
 use shared::site::StairsDirection;
 
 use crate::common::{
     CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels, Portal,
     SmoothPosition, Token, Weather,
 };
+use crate::connection::ToServer;
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
 use crate::player::{Player, PlayerSystems};
 use crate::surface_style::SurfaceStyle;
@@ -118,7 +119,7 @@ impl Plugin for MinimapPlugin {
             .add_systems(Startup, (spawn_maps, floors::spawn_column))
             .add_systems(
                 PreUpdate,
-                (take_input, floors::back_to_own_floor)
+                (go_into_clicked_poi, take_input, floors::back_to_own_floor)
                     .chain()
                     .after(InputSystems),
             )
@@ -441,6 +442,43 @@ fn shows_known(
     }
 }
 
+/// Developer tools: ctrl+click on a poi on the full map teleports there, enters
+/// it and closes the map. Elsewhere on the map, ctrl+click is an ordinary click.
+#[allow(clippy::too_many_arguments)]
+fn go_into_clicked_poi(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut mouse: ResMut<ButtonInput<MouseButton>>,
+    window: Single<&Window, With<PrimaryWindow>>,
+    view: Res<State<GameView>>,
+    camera: Single<&OrbitCamera>,
+    player: Single<&SmoothPosition, With<Player>>,
+    world: Option<Res<CurrentWorld>>,
+    mut full: ResMut<FullMap>,
+    mut to_server: MessageWriter<ToServer>,
+) {
+    let view = *view.get();
+    let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
+    if !full.open || view != GameView::WorldMap || !ctrl || !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+    let centre = (player.x, player.y);
+    let poi = window
+        .cursor_position()
+        .and_then(|cursor| spot_on_full_map(&window, cursor, view, &camera, &full, centre))
+        .and_then(|(spot, units_per_pixel)| {
+            let reach = ICON_PIXELS * full.zoom / 2.0;
+            hovered_poi(world.as_deref(), spot, reach, units_per_pixel)
+        });
+    let Some(poi) = poi else {
+        return;
+    };
+    mouse.clear_just_pressed(MouseButton::Left);
+    let (x, y) = (poi.x, poi.y);
+    to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
+    to_server.write(ToServer(ClientMessage::EnterSite { chunk: poi.chunk }));
+    full.set_open(false);
+}
+
 /// The maps get the input first, in `PreUpdate`: what they use is taken away
 /// before the game's systems look. M or clicking the minimap opens the full
 /// map; M, Esc, its close button or clicking outside it closes it. While it is
@@ -678,7 +716,9 @@ fn draw_maps(
         .info
         .as_ref()
         .zip(levels.showing())
-        .is_some_and(|(info, shown)| (info.index > shown) == info.building);
+        .is_some_and(|(info, shown)| {
+            (info.storey(info.index) > info.storey(shown)) == info.building
+        });
     let players_level = &*dungeon;
     let dungeon = levels.shown(players_level);
     *minimap.1 = if full.open {
@@ -959,31 +999,16 @@ fn name_what_is_hovered(
         .cursor_position()
         .filter(|_| full.open)
         .and_then(|cursor| {
-            let corner = full_map_corner(&window)
-                + Vec2::new(FULL_MAP_MARGIN, FULL_MAP_MARGIN + TITLE_HEIGHT);
-            let area = full_map_area(&window);
-            let at = cursor - corner;
-            if at.x < 0.0 || at.y < 0.0 || at.x >= area.x || at.y >= area.y {
-                return None;
-            }
-            let (right, down) = Projection::NORTH_UP;
-            let map = Projection {
-                centre: full
-                    .centre
-                    .unwrap_or(levels.spot(&dungeon, (player.x, player.y))),
-                middle: (area.x / 2.0, area.y / 2.0),
-                units_per_pixel: units_per_pixel(view, &window, &camera) / f64::from(full.zoom),
-                right,
-                down,
-            };
-            let spot = map.to_grid(at.x, at.y);
+            let centre = levels.spot(&dungeon, (player.x, player.y));
+            let (spot, units_per_pixel) =
+                spot_on_full_map(&window, cursor, view, &camera, &full, centre)?;
             hovered_name(
                 view,
                 world.as_deref(),
                 levels.shown(&dungeon),
                 spot,
                 ICON_PIXELS * full.zoom / 2.0,
-                map.units_per_pixel,
+                units_per_pixel,
             )
         });
     let shown = if name.is_some() {
@@ -997,6 +1022,35 @@ fn name_what_is_hovered(
     {
         text.0 = name;
     }
+}
+
+/// The grid position under the cursor on the open full map, if it is over the
+/// picture, and the grid units per pixel there. `player_spot` is the map's middle
+/// unless it has been dragged.
+fn spot_on_full_map(
+    window: &Window,
+    cursor: Vec2,
+    view: GameView,
+    camera: &OrbitCamera,
+    full: &FullMap,
+    player_spot: (f64, f64),
+) -> Option<((f64, f64), f64)> {
+    let corner =
+        full_map_corner(window) + Vec2::new(FULL_MAP_MARGIN, FULL_MAP_MARGIN + TITLE_HEIGHT);
+    let area = full_map_area(window);
+    let at = cursor - corner;
+    if at.x < 0.0 || at.y < 0.0 || at.x >= area.x || at.y >= area.y {
+        return None;
+    }
+    let (right, down) = Projection::NORTH_UP;
+    let map = Projection {
+        centre: full.centre.unwrap_or(player_spot),
+        middle: (area.x / 2.0, area.y / 2.0),
+        units_per_pixel: units_per_pixel(view, window, camera) / f64::from(full.zoom),
+        right,
+        down,
+    };
+    Some((map.to_grid(at.x, at.y), map.units_per_pixel))
 }
 
 /// Names the poi the mouse is over on the world map, in a box like the full
@@ -1050,6 +1104,16 @@ fn hovered_name(
             _ => None,
         };
     }
+    hovered_poi(world, (x, y), icon_reach, units_per_pixel).map(|poi| poi_name(&poi))
+}
+
+/// The world map poi whose picture is at a grid position, the nearest if several.
+fn hovered_poi(
+    world: Option<&CurrentWorld>,
+    (x, y): (f64, f64),
+    icon_reach: f32,
+    units_per_pixel: f64,
+) -> Option<SeenPoi> {
     let reach = f64::from(icon_reach) * units_per_pixel;
     let min = ((x - reach).floor() as i64, (y - reach).floor() as i64);
     let max = ((x + reach).ceil() as i64, (y + reach).ceil() as i64);
@@ -1060,7 +1124,6 @@ fn hovered_name(
         .into_iter()
         .filter(|poi| (poi.x as f64 - x).abs().max((poi.y as f64 - y).abs()) <= reach)
         .min_by(|a, b| distance(a).total_cmp(&distance(b)))
-        .map(|poi| poi_name(&poi))
 }
 
 /// The full map's title: the place, with the floor or level being looked at,
@@ -1113,6 +1176,7 @@ mod tests {
             building: true,
             index: 1,
             levels: 3,
+            basement: false,
             bounds: (0, 0, 5, 5),
             arrival: (2, 2),
             entering_site: true,
@@ -1179,6 +1243,79 @@ mod tests {
         keys.release(KeyCode::KeyM);
         keys.clear();
         assert!(app.world().resource::<FullMap>().open);
+    }
+
+    /// A world map with the full map open and a poi at its middle, under the
+    /// mouse, ready for a click with `ctrl` held or not.
+    fn poi_under_the_mouse(ctrl: bool) -> App {
+        let mut app = app();
+        let chunk = shared::poi::ChunkPos { x: 1, y: 1 };
+        let mut world = CurrentWorld::new(&shared::protocol::WorldInfo {
+            id: shared::world::WorldId(1),
+            terrain_seed: shared::rng::Seed::new(1),
+            world_map_version: shared::world::WORLD_MAP_VERSION,
+        });
+        let poi = SeenPoi {
+            kind: shared::poi::PoiKind::Crypt,
+            look: shared::site::PoiLook::Cave {
+                entrance: shared::site::CaveEntrance::Hole,
+            },
+            chunk,
+            x: 100,
+            y: 100,
+        };
+        world.pois.insert(chunk, Some(poi));
+        app.insert_resource(world)
+            .insert_resource(State::new(GameView::WorldMap))
+            .add_message::<ToServer>();
+        app.world_mut().resource_mut::<FullMap>().set_open(true);
+        let mut windows = app.world_mut().query::<&Window>();
+        let window = windows.single(app.world()).expect("a window");
+        let corner =
+            full_map_corner(window) + Vec2::new(FULL_MAP_MARGIN, FULL_MAP_MARGIN + TITLE_HEIGHT);
+        let middle = corner + full_map_area(window) / 2.0;
+        set_cursor(&mut app, middle);
+        if ctrl {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keys.press(KeyCode::ControlLeft);
+        }
+        let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
+        mouse.press(MouseButton::Left);
+        app.world_mut()
+            .run_system_once(go_into_clicked_poi)
+            .expect("the system runs");
+        app
+    }
+
+    fn sent(app: &mut App) -> Vec<ClientMessage> {
+        let mut messages = app.world_mut().resource_mut::<Messages<ToServer>>();
+        messages.drain().map(|message| message.0).collect()
+    }
+
+    #[test]
+    fn ctrl_click_on_a_poi_teleports_in_and_closes_the_map() {
+        let mut app = poi_under_the_mouse(true);
+        assert_eq!(
+            sent(&mut app),
+            [
+                ClientMessage::DevTeleport { x: 100, y: 100 },
+                ClientMessage::EnterSite {
+                    chunk: shared::poi::ChunkPos { x: 1, y: 1 },
+                },
+            ]
+        );
+        assert!(!app.world().resource::<FullMap>().open);
+        let mouse = app.world().resource::<ButtonInput<MouseButton>>();
+        assert!(!mouse.just_pressed(MouseButton::Left));
+    }
+
+    #[test]
+    fn a_plain_click_on_a_poi_is_left_for_the_map() {
+        let mut app = poi_under_the_mouse(false);
+        assert!(sent(&mut app).is_empty());
+        assert!(app.world().resource::<FullMap>().open);
+        let mouse = app.world().resource::<ButtonInput<MouseButton>>();
+        assert!(mouse.just_pressed(MouseButton::Left));
     }
 
     #[test]
@@ -1353,6 +1490,7 @@ mod tests {
             building: true,
             index: 0,
             levels: 3,
+            basement: false,
             bounds: (0, 0, 400, 400),
             arrival: (100, 100),
             entering_site: true,

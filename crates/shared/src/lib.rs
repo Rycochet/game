@@ -12,6 +12,7 @@ pub mod poi;
 pub mod protocol;
 pub mod river;
 pub mod rng;
+pub mod showcase;
 pub mod site;
 pub mod surface;
 pub mod vegetation;

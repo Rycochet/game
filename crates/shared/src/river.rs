@@ -88,6 +88,9 @@ impl Rivers {
 
     /// The river starting in a chunk, if it has one.
     pub fn in_chunk(&self, chunk: ChunkPos) -> Option<River> {
+        if crate::showcase::chunk_in_plain(chunk) {
+            return None;
+        }
         let source = self.source(chunk)?;
         Some(self.trace(source))
     }

@@ -61,6 +61,9 @@ impl Vegetation {
     /// What grows at a position with this climate and ground height, ignoring
     /// whether it is land: callers leave out water, shore and snow.
     pub fn cover(&self, x: i64, y: i64, height: f64, climate: ClimateSample) -> Cover {
+        if crate::showcase::in_plain(y) {
+            return Cover::default();
+        }
         let ClimateSample {
             temperature,
             moisture,

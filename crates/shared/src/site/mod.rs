@@ -14,7 +14,9 @@
 
 mod building;
 mod cave;
+mod farm;
 mod grid;
+mod herbalist;
 mod ruin;
 mod town;
 
@@ -26,6 +28,8 @@ use crate::rng::Seed;
 
 pub use building::{BuildingOptions, Outline};
 pub use cave::{CaveEntrance, CaveOptions};
+pub use farm::{FarmOptions, FieldLook};
+pub use herbalist::HerbalistOptions;
 pub use town::{BuildingKind, BuildingLook, Rect, RoofKind, TownBuilding, TownOptions, WallKind};
 
 /// What a site looks like from outside, for choosing a poi's model. Worked
@@ -48,12 +52,19 @@ pub enum PoiLook {
     Town {
         buildings: u16,
     },
+    Farm {
+        /// The farmhouse's ground floor, in cells.
+        width: u16,
+        height: u16,
+        ruin: u8,
+        fields: u8,
+    },
 }
 
 impl PoiLook {
     /// Whether it is a ruin, and is named as one.
     pub fn is_ruined(self) -> bool {
-        matches!(self, Self::Building { ruin, .. } if ruin > 0)
+        matches!(self, Self::Building { ruin, .. } | Self::Farm { ruin, .. } if ruin > 0)
     }
 
     /// The look of the site a poi of this kind and map seed leads to.
@@ -76,6 +87,27 @@ impl PoiLook {
             Generator::Town(options) => Self::Town {
                 buildings: town::Plan::new(&options, seed).target() as u16,
             },
+            Generator::Herbalist(options) => {
+                let plan = building::Plan::new(&options.house, seed);
+                let (width, height) = plan.footprint();
+                Self::Building {
+                    outline: plan.outline(),
+                    width: width as u16,
+                    height: height as u16,
+                    floors: 1,
+                    ruin: options.house.ruin,
+                }
+            }
+            Generator::Farm(options) => {
+                let plan = farm::Plan::new(&options, seed);
+                let (width, height) = plan.footprint();
+                Self::Farm {
+                    width: width as u16,
+                    height: height as u16,
+                    ruin: options.house.ruin,
+                    fields: plan.fields() as u8,
+                }
+            }
         }
     }
 }
@@ -91,6 +123,9 @@ pub const FORGET_BEFORE: u32 = 2;
 /// `MOST_RUIN`.
 const RUINED_PERCENT: u64 = 30;
 const MOST_RUIN: u64 = 5;
+
+/// Of the places in outside walls a window could go, how many have one.
+const WINDOWS_PERCENT: u32 = 30;
 
 /// Where a way out of a level leads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -162,6 +197,7 @@ impl StairsStyle {
             GrassyCave | EarthCave | RockCave | Boulders | IceCave | IceShelter => {
                 &[Ladder, LogLadder, RopeLadder, SlatLadder, KnottedRope]
             }
+            Farm | HerbalistHut => &[Turning, Ladder],
             // Towns have no stairs yet.
             Hamlet | Village | Town | City => &[Turning],
         }
@@ -187,6 +223,8 @@ pub struct SiteLevel {
     pub entrance: Option<(i64, i64)>,
     /// A town's buildings (no other level has any).
     pub buildings: Vec<TownBuilding>,
+    /// A farm's fields, on its ground floor (no other level has any).
+    pub fields: Vec<FieldLook>,
 }
 
 /// Whether walking to `(x, y)` leaves for the world map: outside ground or
@@ -235,6 +273,10 @@ pub enum Generator {
     Cave(CaveOptions),
     /// Roads with solid buildings along them.
     Town(TownOptions),
+    /// A farmhouse in the middle of fenced fields.
+    Farm(FarmOptions),
+    /// A small hut over a basement, with a herb patch outside.
+    Herbalist(HerbalistOptions),
 }
 
 impl Generator {
@@ -244,6 +286,8 @@ impl Generator {
             Self::Building(_) => BUILDING_VERSION,
             Self::Cave(_) => CAVE_VERSION,
             Self::Town(_) => TOWN_VERSION,
+            Self::Farm(_) => FARM_VERSION,
+            Self::Herbalist(_) => HERBALIST_VERSION,
         }
     }
 
@@ -252,7 +296,31 @@ impl Generator {
     pub fn with_ruin(self, ruin: u8) -> Self {
         match self {
             Self::Building(options) => Self::Building(BuildingOptions { ruin, ..options }),
+            Self::Farm(options) => Self::Farm(FarmOptions {
+                house: BuildingOptions {
+                    ruin,
+                    ..options.house
+                },
+                ..options
+            }),
+            Self::Herbalist(options) => Self::Herbalist(HerbalistOptions {
+                house: BuildingOptions {
+                    ruin,
+                    ..options.house
+                },
+                ..options
+            }),
             other => other,
+        }
+    }
+
+    /// How ruined it is (0 for any that can't be).
+    pub fn ruin(&self) -> u8 {
+        match self {
+            Self::Building(options) => options.ruin,
+            Self::Farm(options) => options.house.ruin,
+            Self::Herbalist(options) => options.house.ruin,
+            _ => 0,
         }
     }
 
@@ -275,6 +343,10 @@ impl Generator {
     pub fn for_poi(kind: PoiKind) -> Self {
         use Outline::*;
         use PoiKind::*;
+        let ground_windows = !matches!(
+            kind,
+            Castle | Fort | StoneTower | WoodenTower | RedTent | BlueTent | GreenTent | IceShelter
+        );
         let building = |width, height, outlines, max_floors, size_per_floor| {
             Self::Building(BuildingOptions {
                 width,
@@ -287,6 +359,10 @@ impl Generator {
                 taper: None,
                 size_per_floor,
                 ruin: 0,
+                basement_percent: 0,
+                basement_size: None,
+                windows_percent: WINDOWS_PERCENT,
+                ground_windows,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -312,6 +388,45 @@ impl Generator {
             Village => town((9, 25)),
             Town => town((26, 60)),
             City => town((61, 150)),
+            Farm => Self::Farm(FarmOptions {
+                house: BuildingOptions {
+                    width: (13, 19),
+                    height: (13, 17),
+                    outlines: &[Rectangle, Rectangle, CutCorners],
+                    square: false,
+                    min_floors: 2,
+                    max_floors: 2,
+                    same_size: true,
+                    taper: None,
+                    size_per_floor: 5,
+                    ruin: 0,
+                    basement_percent: 50,
+                    basement_size: None,
+                    windows_percent: WINDOWS_PERCENT,
+                    ground_windows,
+                },
+                fields: (1, 8),
+            }),
+            HerbalistHut => Self::Herbalist(HerbalistOptions {
+                house: BuildingOptions {
+                    width: (5, 8),
+                    height: (5, 8),
+                    outlines: &[Rectangle],
+                    square: false,
+                    min_floors: 1,
+                    max_floors: 1,
+                    same_size: false,
+                    taper: None,
+                    size_per_floor: 5,
+                    ruin: 0,
+                    basement_percent: 100,
+                    basement_size: Some(((8, 16), (8, 16))),
+                    windows_percent: WINDOWS_PERCENT,
+                    ground_windows,
+                },
+                strips: (3, 5),
+                length: (7, 12),
+            }),
             // Natural caves: walk in from the side.
             GrassyCave | EarthCave => cave((40, 70), (1, 3), CaveEntrance::Opening, false, 30, 0),
             RockCave => cave((45, 80), (1, 4), CaveEntrance::Opening, false, 25, 15),
@@ -370,6 +485,10 @@ impl Generator {
                 taper: Some((3, 4)),
                 size_per_floor: 6,
                 ruin: 0,
+                basement_percent: 0,
+                basement_size: None,
+                windows_percent: 0,
+                ground_windows,
             }),
         }
     }
@@ -387,6 +506,12 @@ pub const CAVE_VERSION: u32 = 1 + FORGET_BEFORE;
 /// The town generator's version (as `BUILDING_VERSION`).
 pub const TOWN_VERSION: u32 = 1 + FORGET_BEFORE;
 
+/// The farm generator's version (as `BUILDING_VERSION`).
+pub const FARM_VERSION: u32 = 1 + FORGET_BEFORE;
+
+/// The herbalist's hut generator's version (as `BUILDING_VERSION`).
+pub const HERBALIST_VERSION: u32 = 1 + FORGET_BEFORE;
+
 /// A poi's map: its plan, from which any level can be generated.
 #[derive(Clone, Debug)]
 pub struct Site {
@@ -401,6 +526,8 @@ enum Plan {
     Building(building::Plan),
     Cave(cave::Plan),
     Town(town::Plan),
+    Farm(farm::Plan),
+    Herbalist(herbalist::Plan),
 }
 
 impl Site {
@@ -424,7 +551,12 @@ impl Site {
         version: u32,
         generator: Generator,
     ) -> Option<Self> {
-        let ruined = matches!(generator, Generator::Building(o) if o.ruin > 0);
+        let ruined = match generator {
+            Generator::Building(options) => options.ruin > 0,
+            Generator::Farm(options) => options.house.ruin > 0,
+            Generator::Herbalist(options) => options.house.ruin > 0,
+            _ => false,
+        };
         let plan = match generator {
             Generator::Building(options) if version == BUILDING_VERSION => {
                 Plan::Building(building::Plan::new(&options, seed))
@@ -434,6 +566,12 @@ impl Site {
             }
             Generator::Town(options) if version == TOWN_VERSION => {
                 Plan::Town(town::Plan::new(&options, seed))
+            }
+            Generator::Farm(options) if version == FARM_VERSION => {
+                Plan::Farm(farm::Plan::new(&options, seed))
+            }
+            Generator::Herbalist(options) if version == HERBALIST_VERSION => {
+                Plan::Herbalist(herbalist::Plan::new(&options, seed))
             }
             _ => return None,
         };
@@ -457,7 +595,21 @@ impl Site {
     /// Whether its levels are a building's floors (going up from the ground)
     /// rather than a cave's depths (going down).
     pub fn is_building(&self) -> bool {
-        matches!(self.plan, Plan::Building(_))
+        matches!(
+            self.plan,
+            Plan::Building(_) | Plan::Farm(_) | Plan::Herbalist(_)
+        )
+    }
+
+    /// Whether its last level is a basement: below the ground floor, whatever
+    /// its index says.
+    pub fn has_basement(&self) -> bool {
+        match &self.plan {
+            Plan::Building(plan) => plan.has_basement(),
+            Plan::Farm(plan) => plan.has_basement(),
+            Plan::Herbalist(plan) => plan.house().has_basement(),
+            _ => false,
+        }
     }
 
     /// How many levels it has.
@@ -466,6 +618,8 @@ impl Site {
             Plan::Building(plan) => plan.floors(),
             Plan::Cave(plan) => plan.levels(),
             Plan::Town(_) => 1,
+            Plan::Farm(plan) => plan.levels(),
+            Plan::Herbalist(plan) => plan.house().floors(),
         }
     }
 
@@ -477,6 +631,8 @@ impl Site {
             Plan::Building(plan) => plan.level(index),
             Plan::Cave(plan) => plan.level(index),
             Plan::Town(plan) => plan.level(),
+            Plan::Farm(plan) => plan.level(index),
+            Plan::Herbalist(plan) => plan.level(index),
         }
     }
 
@@ -710,6 +866,8 @@ mod tests {
                 let level = &site_level.level;
                 let start = if index == 0 {
                     site_level.arrival(Exit::WorldMap)
+                } else if site.has_basement() && index + 1 == levels.len() {
+                    site_level.arrival(Exit::Level(0))
                 } else {
                     site_level.arrival(Exit::Level(index as u32 - 1))
                 }
@@ -777,7 +935,7 @@ mod tests {
                             level.cell(x, y) == Cell::Door
                                 && grid::STEPS
                                     .iter()
-                                    .any(|(dx, dy)| level.cell(x + dx, y + dy) == Cell::Ground)
+                                    .any(|(dx, dy)| level.cell(x + dx, y + dy).is_outside())
                         })
                         .count();
                     assert!(entrances >= 1, "{:?}: no way in", site.kind());
@@ -809,6 +967,87 @@ mod tests {
                         "{:?} floor {index}: thick wall at ({x}, {y})",
                         site.kind()
                     );
+                }
+            }
+        }
+    }
+
+    /// Windows are only in outside walls, with wall on either side of them, the
+    /// inside on one side and nothing of the building's at a diagonal; basements
+    /// have none, and forts and the like none on the ground floor.
+    #[test]
+    fn windows_are_set_in_outside_walls() {
+        let windows = |level: &Level| {
+            let (min_x, min_y, width, height) = level.bounds();
+            (min_y..min_y + height)
+                .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
+                .filter(|&(x, y)| level.cell(x, y) == Cell::Window)
+                .collect::<Vec<_>>()
+        };
+        let mut found = 0;
+        for ruin in [0, 3, 5] {
+            for n in 0..40 {
+                for kind in [PoiKind::RedRoofCottage, PoiKind::Warehouse, PoiKind::Farm] {
+                    let generator = Generator::for_poi(kind).with_ruin(ruin);
+                    let site =
+                        Site::with_generator(kind, Seed::new(n), generator.version(), generator)
+                            .expect("the current version runs");
+                    let storeys = site.levels() - u32::from(site.has_basement());
+                    for index in 0..site.levels() {
+                        let level = site.level(index).level;
+                        let spots = windows(&level);
+                        if index >= storeys {
+                            assert!(spots.is_empty());
+                        }
+                        found += spots.len();
+                        for (x, y) in spots {
+                            let straight = [(1, 0), (0, 1)].iter().any(|&(dx, dy)| {
+                                level.cell(x + dx, y + dy) == Cell::Wall
+                                    && level.cell(x - dx, y - dy) == Cell::Wall
+                                    && (level.is_walkable(x + dy, y + dx)
+                                        || level.is_walkable(x - dy, y - dx))
+                            });
+                            assert!(straight, "{kind:?} floor {index}: ({x}, {y})");
+                            if index == 0 {
+                                for (dx, dy) in [(1, 1), (1, -1), (-1, 1), (-1, -1)] {
+                                    assert!(!level.cell(x + dx, y + dy).is_wall());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(found > 100, "{found}");
+        let mut above = 0;
+        for kind in [
+            PoiKind::Castle,
+            PoiKind::Fort,
+            PoiKind::StoneTower,
+            PoiKind::WoodenTower,
+        ] {
+            for n in 0..5 {
+                let site = Site::new(kind, Seed::new(n));
+                assert!(windows(&site.level(0).level).is_empty());
+                above += (1..site.levels())
+                    .map(|i| windows(&site.level(i).level).len())
+                    .sum::<usize>();
+            }
+        }
+        assert!(above > 0);
+    }
+
+    #[test]
+    fn pyramids_never_have_windows() {
+        for kind in [PoiKind::StonePyramid, PoiKind::SandPyramid] {
+            for n in 0..10 {
+                let site = Site::new(kind, Seed::new(n));
+                for index in 0..site.levels() {
+                    let level = site.level(index).level;
+                    let (min_x, min_y, width, height) = level.bounds();
+                    assert!((min_y..min_y + height).all(|y| {
+                        (min_x..min_x + width).all(|x| level.cell(x, y) != Cell::Window)
+                    }));
                 }
             }
         }
@@ -883,7 +1122,7 @@ mod tests {
     }
 
     const GOLDEN_LEVELS: [u64; 3] = [
-        11165579872550593912,
+        18086710199301873350,
         4540973389226848185,
         16348176066830501790,
     ];
@@ -951,6 +1190,10 @@ mod pictures {
                                 Cell::BlindWindow => 'w',
                                 Cell::BuildingDoor => '+',
                                 Cell::Garden => '"',
+                                Cell::Field => ':',
+                                Cell::Fence => '|',
+                                Cell::FieldGate => '/',
+                                Cell::HerbBed => ';',
                                 cell if cell.is_road() => '=',
                                 cell => panic!("no letter for {cell:?}"),
                             }

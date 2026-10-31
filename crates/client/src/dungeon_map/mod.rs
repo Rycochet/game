@@ -10,6 +10,8 @@
 //! (`theme`). Light is dull everywhere, and brighter near light sources, which
 //! walls block. Left-click a seen walkable cell to travel there.
 
+mod field;
+mod herbs;
 mod holes;
 mod liquid;
 mod mesh;
@@ -33,12 +35,13 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::window::PrimaryWindow;
 use shared::dungeon::{Cell, Sight};
+use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
 use shared::surface::SurfaceSample;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, LightSource, MapPosition, SharesSight,
-    SmoothPosition, ViewStats, Weather, WorldReturn,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, LightSource, MapPosition,
+    SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -98,6 +101,8 @@ impl Plugin for DungeonMapPlugin {
                     apply_theme,
                     colour_ground,
                     update_meshes,
+                    update_crops,
+                    update_herbs,
                     hide_unseen_tokens,
                     sync_lights,
                     rain::update,
@@ -122,6 +127,8 @@ struct DungeonScene;
 struct Shown {
     sight: Option<Sight>,
     solid_faces: Vec<WallFace>,
+    /// Counts the times sight was worked out again, or the level changed.
+    looks: u64,
 }
 
 /// The materials of the solid meshes (in `Surface::ALL` order), of the
@@ -158,6 +165,14 @@ struct SeeThroughPart;
 /// The mesh of one kind of surface of stairs in the way of a viewer.
 #[derive(Component)]
 struct StairsThroughPart(Surface);
+
+/// The mesh of crops standing in fields.
+#[derive(Component)]
+struct CropPart;
+
+/// The mesh of what grows in a herbalist's patch.
+#[derive(Component)]
+struct HerbPart;
 
 /// A real light for tokens, following `owner`'s `LightSource`.
 #[derive(Component)]
@@ -299,6 +314,34 @@ fn spawn_scene(
             NotShadowCaster,
         ));
     }
+    commands.entity(scene).with_child((
+        CropPart,
+        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color_texture: Some(load_tile(&asset_server, field::CROPS_PICTURE)),
+            unlit: true,
+            alpha_mode: AlphaMode::Mask(0.5),
+            // Seen from both sides.
+            cull_mode: None,
+            ..default()
+        })),
+        NoFrustumCulling,
+        NotShadowCaster,
+    ));
+    commands.entity(scene).with_child((
+        HerbPart,
+        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color_texture: Some(load_tile(&asset_server, herbs::HERBS_PICTURE)),
+            unlit: true,
+            alpha_mode: AlphaMode::Mask(0.5),
+            // Seen from both sides.
+            cull_mode: None,
+            ..default()
+        })),
+        NoFrustumCulling,
+        NotShadowCaster,
+    ));
     rain::spawn(&mut commands, scene, &mut meshes, &mut rain_materials);
     commands.insert_resource(SurfaceMaterials {
         solid,
@@ -599,6 +642,7 @@ fn update_meshes(
             sight.add_glimpses(level, view.cell.0, view.cell.1, None);
         }
         *seen = Some((views, sight));
+        shown.looks += 1;
     }
     let Some((views, sight)) = &*seen else {
         return;
@@ -631,6 +675,14 @@ fn update_meshes(
             Vec3::new(colour.red, colour.green, colour.blue),
         );
     }
+    if dungeon
+        .info
+        .as_ref()
+        .is_some_and(|i| matches!(i.kind, PoiKind::Farm | PoiKind::HerbalistHut))
+    {
+        light.light_outside(level);
+    }
+    let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     let built = mesh::build(
         level,
@@ -640,6 +692,8 @@ fn update_meshes(
         &light,
         &dungeon.stairs,
         &dungeon.buildings,
+        &dungeon.fields,
+        ruined,
         camera,
         theme.shape,
     );
@@ -710,6 +764,66 @@ fn update_meshes(
             format!(", at the door of: {}", b.kind.name())
         });
     stats.summary = format!("{place}{at_door}: sight, light and meshes {ms:.2} ms");
+}
+
+/// Builds the crops again when what is seen changes: never for the camera, as
+/// fields can hold many more faces than everything else put together.
+fn update_crops(
+    dungeon: Res<CurrentDungeon>,
+    shown: Res<Shown>,
+    part: Single<(&Mesh3d, &mut Visibility), With<CropPart>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut built: Local<u64>,
+) {
+    let Some(sight) = shown.sight.as_ref().filter(|_| *built != shown.looks) else {
+        return;
+    };
+    *built = shown.looks;
+    let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
+    let crops = field::build_crops(&dungeon.fields, sight, &dungeon.remembered, ruined);
+    let (handle, mut visibility) = part.into_inner();
+    let any = !crops.indices.is_empty();
+    visibility.set_if_neq(if any {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    });
+    if any && let Some(mut stored) = meshes.get_mut(&handle.0) {
+        *stored = crops.into_mesh();
+    }
+}
+
+/// Builds what grows in a herbalist's patch again when what is seen changes,
+/// or an hour passes: some tile may move on a stage in any of them.
+#[allow(clippy::too_many_arguments)]
+fn update_herbs(
+    dungeon: Res<CurrentDungeon>,
+    shown: Res<Shown>,
+    clock: Res<GameClock>,
+    shift: Res<HerbGrowthShift>,
+    place: Res<WorldReturn>,
+    part: Single<(&Mesh3d, &mut Visibility), With<HerbPart>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut built: Local<(u64, u32)>,
+) {
+    let grown = herbs::growth(clock.hour, shift.0);
+    let now = (shown.looks, grown);
+    let Some(sight) = shown.sight.as_ref().filter(|_| *built != now) else {
+        return;
+    };
+    *built = now;
+    let at = (place.0.x, place.0.y);
+    let plants = herbs::build_plants(&dungeon.level, sight, &dungeon.remembered, at, grown);
+    let (handle, mut visibility) = part.into_inner();
+    let any = !plants.indices.is_empty();
+    visibility.set_if_neq(if any {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    });
+    if any && let Some(mut stored) = meshes.get_mut(&handle.0) {
+        *stored = plants.into_mesh();
+    }
 }
 
 /// A left click on a seen (or remembered) walkable cell sends the player

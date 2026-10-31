@@ -6,6 +6,7 @@
 //! cools the air, so climbing a hill moves through colder biomes by itself.
 //! See `docs/context/shared/climate.md`.
 
+use crate::showcase;
 use crate::world::WorldParams;
 use core::f64::consts::TAU;
 use fastnoise_lite::{FastNoiseLite, NoiseType};
@@ -146,6 +147,9 @@ impl Climate {
 
     /// The climate at a position whose ground is at `height`.
     pub fn sample(&self, x: i64, y: i64, height: f64) -> ClimateSample {
+        if showcase::in_plain(y) {
+            return showcase::CLIMATE;
+        }
         // Poles are a quarter of the way round from the equator.
         let latitude = (y.abs() as f64 / (self.width as f64 / 4.0)).min(1.0);
         let climb = (height - COOLING_FROM).max(0.0) / COOLING_HEIGHT;

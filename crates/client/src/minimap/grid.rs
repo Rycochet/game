@@ -30,6 +30,10 @@ fn ground_colour(cell: Cell) -> [u8; 3] {
         Cell::Water => [150, 195, 240],
         Cell::Lava => [240, 140, 120],
         Cell::Hole => HOLE,
+        Cell::Field => [214, 222, 160],
+        Cell::Fence => [150, 110, 70],
+        Cell::FieldGate => [226, 238, 214],
+        Cell::HerbBed => [205, 222, 180],
         _ => WHITE,
     }
 }
@@ -79,6 +83,13 @@ pub enum CellLook {
     Wall(Sides),
     /// A dungeon's door in a wall running east-west, or north-south.
     Door { east_west: bool },
+    /// A window in a wall running east-west, or north-south, with the colours
+    /// of what it is known to look onto, to the north or west and the south or
+    /// east.
+    Window {
+        east_west: bool,
+        sides: [[u8; 3]; 2],
+    },
     /// A town house's door, the same way.
     HouseDoor { east_west: bool },
     /// A shop's door: a walkable-looking cell carrying its sign's picture.
@@ -146,12 +157,33 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             && level.room(x, y).is_some()
             && level.room(x, y) != room;
         dungeon.remembered.is_seen(x, y)
-            && (cell.is_walkable() || cell.is_liquid() || cell == Cell::Hole || other_building)
+            && (cell.is_walkable() || cell.is_jumpable() || cell == Cell::Window || other_building)
     };
     match level.cell(x, y) {
         Cell::Door => CellLook::Door {
             east_west: level.opening_runs_east_west(x, y),
         },
+        Cell::Window => {
+            let east_west = level.opening_runs_east_west(x, y);
+            let side = |sign: i64| {
+                let (sx, sy) = if east_west {
+                    (x, y + sign)
+                } else {
+                    (x + sign, y)
+                };
+                let cell = level.cell(sx, sy);
+                let known = dungeon.remembered.is_seen(sx, sy);
+                if known && (cell.is_walkable() || cell.is_jumpable()) {
+                    ground_colour(cell)
+                } else {
+                    WHITE
+                }
+            };
+            CellLook::Window {
+                east_west,
+                sides: [side(-1), side(1)],
+            }
+        }
         Cell::BuildingDoor => match dungeon.buildings.iter().find(|b| b.door == (x, y)) {
             Some(building) if building.kind != BuildingKind::House => CellLook::Sign(building.kind),
             // A door facing north or south is in a wall running east-west.
@@ -159,10 +191,8 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
                 east_west: building.is_none_or(|b| b.faces.0 == 0),
             },
         },
-        cell if cell.is_walkable() || cell.is_liquid() || cell == Cell::Hole => {
-            CellLook::Floor(ground_colour(cell))
-        }
-        cell if cell.is_wall() || cell == Cell::Window => CellLook::Wall(Sides {
+        cell if cell.is_walkable() || cell.is_jumpable() => CellLook::Floor(ground_colour(cell)),
+        cell if cell.is_wall() => CellLook::Wall(Sides {
             north: shows(x, y - 1),
             east: shows(x + 1, y),
             south: shows(x, y + 1),
@@ -170,15 +200,15 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             cut: [(1, -1), (1, 1), (-1, 1), (-1, -1)].map(|(dx, dy)| {
                 let open = |x: i64, y: i64| {
                     let cell = level.cell(x, y);
-                    ((cell.is_walkable() || cell.is_jumpable()) && dungeon.remembered.is_seen(x, y))
-                        .then_some(cell)
+                    ((cell.is_walkable() || cell.is_jumpable() || cell == Cell::Window)
+                        && dungeon.remembered.is_seen(x, y))
+                    .then_some(cell)
                 };
                 let beside = open(x + dx, y)?;
                 open(x, y + dy)?;
                 let wall = level.cell(x + dx, y + dy);
-                ((wall.is_wall() || wall == Cell::Window)
-                    && dungeon.remembered.is_seen(x + dx, y + dy))
-                .then(|| ground_colour(beside))
+                (wall.is_wall() && dungeon.remembered.is_seen(x + dx, y + dy))
+                    .then(|| ground_colour(beside))
             }),
         }),
         _ => CellLook::Empty,
@@ -218,6 +248,17 @@ pub fn colour_at(look: CellLook, u: f64, v: f64, line: f64) -> Option<[u8; 3]> {
                 HATCH
             } else {
                 floor(WHITE)
+            })
+        }
+        CellLook::Window { east_west, sides } => {
+            let (_, across) = along_across(east_west);
+            let signed = if east_west { v } else { u };
+            Some(if across < DOOR_HALF_WIDTH - DOOR_OUTLINE {
+                floor(WHITE)
+            } else if across <= DOOR_HALF_WIDTH {
+                HATCH
+            } else {
+                floor(sides[usize::from(signed > 0.0)])
             })
         }
         CellLook::Door { east_west } => {
@@ -301,6 +342,28 @@ mod tests {
 
     use super::*;
 
+    /// White between the lines; beyond them, what is known to be there.
+    #[test]
+    fn a_window_shows_what_it_looks_onto() {
+        let mut dungeon = dungeon();
+        dungeon.level.set(2, 1, Cell::Window);
+        dungeon.level.set(2, 0, Cell::Ground);
+        let look = look_of(&dungeon, 2, 1);
+        assert_eq!(
+            look,
+            CellLook::Window {
+                east_west: true,
+                sides: [ground_colour(Cell::Ground), WHITE],
+            }
+        );
+        let at = |v: f64| colour_at(look, 0.0, v, 0.0);
+        assert_eq!(at(0.0), Some(WHITE));
+        assert_eq!(at(-DOOR_HALF_WIDTH + 0.01), Some(HATCH));
+        assert_eq!(at(DOOR_HALF_WIDTH - 0.01), Some(HATCH));
+        assert_eq!(at(-0.4), Some(ground_colour(Cell::Ground)));
+        assert_eq!(at(0.4), Some(WHITE));
+    }
+
     /// A 5 × 5 level, all remembered: wall but for a floor in the middle.
     fn dungeon() -> CurrentDungeon {
         let mut dungeon = CurrentDungeon {
@@ -313,6 +376,7 @@ mod tests {
             building: false,
             index: 0,
             levels: 1,
+            basement: false,
             bounds: (0, 0, 5, 5),
             arrival: (2, 2),
             entering_site: true,

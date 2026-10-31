@@ -11,7 +11,9 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
+use crate::climate::{Biome, Climate};
 use crate::rng::Seed;
+use crate::showcase;
 use crate::surface::Surface;
 use crate::world::WorldParams;
 
@@ -71,10 +73,12 @@ pub enum PoiKind {
     Village,
     Town,
     City,
+    Farm,
+    HerbalistHut,
 }
 
 impl PoiKind {
-    pub const ALL: [Self; 38] = [
+    pub const ALL: [Self; 40] = [
         Self::Boulders,
         Self::Ruins,
         Self::GrassyCave,
@@ -113,10 +117,13 @@ impl PoiKind {
         Self::Village,
         Self::Town,
         Self::City,
+        Self::Farm,
+        Self::HerbalistHut,
     ];
 
-    /// How many of `ALL` come from the chunk's plain roll: towns have their
-    /// own (`PoiMap::town_at`), so they can be rarer the bigger they are.
+    /// How many of `ALL` come from the chunk's plain roll: the rest have their
+    /// own (`PoiMap::town_at`, `PoiMap::kept_to_land`), so they can be rarer, or
+    /// keep to the land that suits them, and every other chunk keeps its poi.
     const ROLLED: u64 = 34;
 
     /// Whether it is a town of any size.
@@ -133,6 +140,13 @@ const TOWNS_PER_THOUSAND: [(PoiKind, u64); 4] = [
     (PoiKind::Town, 5),
     (PoiKind::City, 2),
 ];
+
+/// Of each 1000 pois on land that suits one, how many are farms, by a separate
+/// hash for the same reason.
+const FARMS_PER_THOUSAND: u64 = 60;
+
+/// The same for herbalists' huts.
+const HUTS_PER_THOUSAND: u64 = 40;
 
 /// A chunk's position: chunk `(x, y)` covers world grid points from
 /// `(x × CHUNK_SIZE, y × CHUNK_SIZE)`. East–west it wraps round the planet,
@@ -164,6 +178,8 @@ pub struct PoiMap {
     width: i64,
     /// Its own copy of the surface, to keep pois on land.
     surface: Surface,
+    /// What grows where, as farms only stand where crops would.
+    climate: Climate,
     /// Pois stand only where the ground is above this: high tide.
     land_above: f64,
 }
@@ -183,6 +199,7 @@ impl PoiMap {
             seed,
             width: surface.width(),
             surface,
+            climate: Climate::new(world),
             land_above,
         }
     }
@@ -208,6 +225,9 @@ impl PoiMap {
             x: chunk.x.rem_euclid(self.columns()),
             y: chunk.y,
         };
+        if showcase::chunk_in_plain(chunk) {
+            return showcase::poi_at(chunk);
+        }
         let mut rng = Seed::new(self.seed.at(&[chunk.x, chunk.y])).rng();
         if rng.range_u64(0, 100) >= POI_CHANCE_PERCENT {
             return None;
@@ -231,14 +251,46 @@ impl PoiMap {
             let y = north
                 + EDGE_MARGIN
                 + rng.range_u64(0, (CHUNK_SIZE - 2 * EDGE_MARGIN) as u64) as i64;
-            (self.surface.sample(x, y).height > self.land_above).then_some(Poi {
-                kind,
+            let height = self.surface.sample(x, y).height;
+            (height > self.land_above).then(|| Poi {
+                kind: if kind.is_town() {
+                    kind
+                } else {
+                    self.kept_to_land(chunk, x, y, height).unwrap_or(kind)
+                },
                 chunk,
                 x,
                 y,
                 seed,
             })
         })
+    }
+
+    /// What a chunk's poi, standing here, is instead of what it rolled, if
+    /// anything: a farm on open land, a herbalist's hut in the woods.
+    fn kept_to_land(&self, chunk: ChunkPos, x: i64, y: i64, height: f64) -> Option<PoiKind> {
+        let roll = |name: &str| self.seed.derive(name).at(&[chunk.x, chunk.y]) % 1000;
+        let (farm, hut) = (
+            roll("farms") < FARMS_PER_THOUSAND,
+            roll("huts") < HUTS_PER_THOUSAND,
+        );
+        if !farm && !hut {
+            return None;
+        }
+        match self.climate.sample(x, y, height).biome() {
+            Biome::Grassland | Biome::Savanna if farm => Some(PoiKind::Farm),
+            Biome::Woodland | Biome::SeasonalForest if farm => Some(PoiKind::Farm),
+            Biome::BorealForest
+            | Biome::Woodland
+            | Biome::SeasonalForest
+            | Biome::TemperateRainforest
+            | Biome::TropicalRainforest
+                if hut =>
+            {
+                Some(PoiKind::HerbalistHut)
+            }
+            _ => None,
+        }
     }
 
     /// The town a chunk with a poi has instead of what it rolled, if any.

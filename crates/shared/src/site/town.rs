@@ -1200,6 +1200,7 @@ impl Town {
             stairs: Vec::new(),
             entrance: Some(entrance),
             buildings,
+            fields: Vec::new(),
         }
     }
 

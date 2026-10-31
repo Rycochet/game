@@ -316,6 +316,7 @@ fn receive(
             Ok(Some(
                 message @ (ServerMessage::EnterLevel(_)
                 | ServerMessage::Buildings(_)
+                | ServerMessage::Fields(_)
                 | ServerMessage::LevelCells(_)
                 | ServerMessage::RememberedLevel(_)
                 | ServerMessage::OnWorldMap { .. }

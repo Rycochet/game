@@ -4,6 +4,7 @@
 //! east or west eventually returns to the start. North/south does not wrap.
 //! One grid unit is about 1 km.
 
+use crate::showcase;
 use crate::world::WorldParams;
 use core::f64::consts::TAU;
 use fastnoise_lite::{FastNoiseLite, NoiseType};
@@ -66,6 +67,9 @@ impl Surface {
     /// without the small bumps on them, on the same scale as `sample`'s
     /// height. It is what walking counts as climbing.
     pub fn broad_height(&self, x: i64, y: i64) -> f64 {
+        if showcase::in_plain(y) {
+            return showcase::FLAT_HEIGHT;
+        }
         let (nx, ny, nz) = self.noise_position(x, y);
         let mut height = 128.0;
         for octave in 0..BROAD_OCTAVES {
@@ -91,6 +95,12 @@ impl Surface {
     }
 
     pub fn sample(&self, x: i64, y: i64) -> SurfaceSample {
+        if showcase::in_plain(y) {
+            return SurfaceSample {
+                height: showcase::FLAT_HEIGHT,
+                jitter: 0.0,
+            };
+        }
         let (nx, ny, nz) = self.noise_position(x, y);
 
         let mut height = 128.0;

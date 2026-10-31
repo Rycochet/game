@@ -121,6 +121,7 @@ fn change_map(
                 next.set(GameView::Dungeon);
             }
             ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),
+            ServerMessage::Fields(fields) => dungeon.fields.clone_from(fields),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
             ServerMessage::RememberedLevel(remembered) => others.add(&dungeon, remembered),
             &ServerMessage::OnWorldMap { x, y } => {

@@ -310,3 +310,27 @@ The owner's rules: towers have at least 5 floors, all the same size, though one 
 ## 2026-10-31: Other floors on the full map, numbered by locale
 
 The owner's design: buttons on the full map (not the corner minimap) for the floors the player knows, numbered from 0 in the EU, UK and Latin America and otherwise from 1. Knowledge stays the server's: it sends what the character remembers of a site's other levels on coming into the site (`RememberedLevel`), and the client keeps the level it leaves by stairs, so taking stairs doesn't generate or send every known level again. The locale comes from `sys-locale` (MIT/Apache-2.0, already in the build through Bevy), which covers native and browsers; it gives the language setting's region, which is usually but not always where the player is.
+
+## 2026-10-31: Farms: fields, fences you jump, and looks chosen by the client
+
+The owner's design: a farm poi is a farmhouse of 2 floors, sometimes with a basement, in the middle of 1 to 8 rectangular fields, one of which may be a pond. `Cell::Field` is walkable like a garden. Fences began as looks, like hedges, but the owner chose to make them cells that work like water: they can't be stepped on, one can be jumped, sight passes, and only the gate (`Cell::FieldGate`, never on a corner, nearest the front door) is walked through. So a fence takes a cell of its own, and fields need a walkable gap between them to land in. A jump costs its distance, so click travel hops fences rather than going round by a gate, as it does over water; the owner accepted that.
+
+What grows is cosmetic and client-side: five stages (ploughed, flat grass, 6, 12 and 18 pixels tall), chosen from a number the server sends with each field (`FieldLook`, `ServerMessage::Fields`), since the client may not know a whole field's cells; a livestock field stays at flat or short grass. The time of the in-game year is to decide it later. Crops have a mesh of their own, rebuilt only when sight changes, not with the camera as everything else is. Ruined fields are, by a hash of each cell, 20% the land's own, 20% ploughed and 60% flat grass (owner), and fences lose stretches.
+
+Claude's additions, agreed by the owner: 3 × 3 places round the house, dirt tracks joining the door, gates and the edge, ponds in a third of farms with room, climate limits (grassland, woodland, seasonal forest, savanna), fixed light outside with the house dark inside. Farms replace what a chunk rolled by their own hash, as towns do, rather than joining the roll, so the kind can be added without moving every other poi; world map version 3 for this, and older worlds carry on with some pois turned into farms (`ServerWorld::open` now accepts any version up to the current one). A site saved under the poi it was before regenerates as a farm.
+
+Basements are the last level of a site, so existing levels keep their indexes (`LevelInfo::basement`, `storey`). The floor buttons show "B", and sort by storey.
+
+## 2026-10-31: Herbalists' huts: a patch that grows by the clock
+
+The owner's design: a one-storey hut of 5 to 8 a side over a basement that can be larger, with one herb patch outside of 3 to 5 parallel strips 7 to 12 long. Each tile (`Cell::HerbBed`) grows herbs or mushrooms, chosen by the client: the same for every client, as it comes from a hash of the place and the server's clock. Every game day a tile moves on a stage (plain ground, green or grey dots, stalks, full grown). The owner chose a fixed list of plants in a mixed order, each with all 4 stages, and each tile starting at a random hour in it, so tiles are at different stages and don't all change at once. Unlike fields, this depends only on time, not season. Upright plants stand in a `#` through the middle of the two plants in each picture, to look more solid.
+
+Claude's choices: 5 shapes of each with 3 colours, so 30 plants in the list; walkable strips with ground between, no fence or track; huts in forest biomes only, by their own hash; a ruin's patch grows on. Farms and huts share world map version 3.
+
+## 2026-10-31: A showcase plain for looking at pois
+
+The owner asked for an area of the world map outside the normal generators, reached by a key press (P; Esc comes back), with one poi per chunk: every kind in order running east, new kinds at the end, 8 unruined seeds of each running south, and one for each level of ruin running north, counting up. `shared::showcase`, behind a flag on for now. Claude's choice: coordinates in the existing world rather than a second planet, which isn't supported; far south of the poles (chunk row 1000), since `y` is unbounded and nobody walks that far, and not further because drawing uses floats. The surface, climate, vegetation, rivers and pois each ask it first. Weather carries on as normal.
+
+## 2026-10-31: Windows in outside walls
+
+The owner's rules: most buildings have windows in their outside walls, each with wall on either side and no wall at a diagonal, which looks tight; castles, towers and forts only above the ground floor, pyramids never. Drawn already; on the maps a pair of parallel lines right across the cell, white between them and beyond them the colour of what is known to be there, with walls beside them hatched as beside a door. Placed by hashes after any ruin, drawing nothing from the floors' sequences, so no generator version changed.
