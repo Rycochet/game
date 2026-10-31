@@ -50,7 +50,8 @@ pub enum Cell {
     /// A window in a town's solid building, for looks: part of its wall.
     BlindWindow,
     /// A gap in the floor, or open air beyond a ruined floor's edge: seen and
-    /// lit across, not walkable, and not out in the weather.
+    /// lit across, and not out in the weather. Not walkable: as with liquid,
+    /// one cell of it can only be jumped over (`movement`).
     Hole,
 }
 
@@ -81,6 +82,11 @@ impl Cell {
     /// Whether it is a liquid: not walkable, but one cell of it can be jumped.
     pub fn is_liquid(self) -> bool {
         matches!(self, Self::Water | Self::Lava)
+    }
+
+    /// Whether one cell of it can be jumped over: liquid, or a hole.
+    pub fn is_jumpable(self) -> bool {
+        self.is_liquid() || self == Self::Hole
     }
 
     /// Whether sight and light pass through it.
@@ -479,6 +485,7 @@ mod tests {
         assert!(hole.is_open());
         assert!(!hole.is_walkable() && !hole.is_outside() && !hole.is_liquid());
         assert!(!hole.is_wall() && !hole.is_opening());
+        assert!(hole.is_jumpable());
     }
 
     /// The room as a picture, `#` wall, `.` floor.

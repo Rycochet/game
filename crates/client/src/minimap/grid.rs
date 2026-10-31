@@ -41,6 +41,9 @@ const HATCH_STROKES: f64 = 3.0;
 /// How much of a stroke's width is drawn.
 const HATCH_SOLID: f64 = 0.4;
 
+/// How far along each side a corner is cut away, in cells.
+const CORNER_CUT: f64 = 0.4;
+
 /// A door's rectangle: half its length along the wall, half its width across,
 /// and the half width of the line it covers, all in cells.
 const DOOR_HALF_LENGTH: f64 = 0.28;
@@ -58,6 +61,10 @@ pub struct Sides {
     pub east: bool,
     pub south: bool,
     pub west: bool,
+    /// Corners cut away because the wall only touches another wall there, with
+    /// a way between them: `[north-east, south-east, south-west, north-west]`,
+    /// each in the colour of the floor it opens onto.
+    pub cut: [Option<[u8; 3]>; 4],
 }
 
 /// What a cell looks like on the map.
@@ -160,6 +167,19 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             east: shows(x + 1, y),
             south: shows(x, y + 1),
             west: shows(x - 1, y),
+            cut: [(1, -1), (1, 1), (-1, 1), (-1, -1)].map(|(dx, dy)| {
+                let open = |x: i64, y: i64| {
+                    let cell = level.cell(x, y);
+                    ((cell.is_walkable() || cell.is_jumpable()) && dungeon.remembered.is_seen(x, y))
+                        .then_some(cell)
+                };
+                let beside = open(x + dx, y)?;
+                open(x, y + dy)?;
+                let wall = level.cell(x + dx, y + dy);
+                ((wall.is_wall() || wall == Cell::Window)
+                    && dungeon.remembered.is_seen(x + dx, y + dy))
+                .then(|| ground_colour(beside))
+            }),
         }),
         _ => CellLook::Empty,
     }
@@ -186,7 +206,9 @@ pub fn colour_at(look: CellLook, u: f64, v: f64, line: f64) -> Option<[u8; 3]> {
     match look {
         CellLook::Empty => None,
         CellLook::Floor(colour) => Some(floor(colour)),
-        CellLook::Wall(sides) => hatched(sides, u, v).then_some(HATCH),
+        CellLook::Wall(sides) => {
+            cut_colour(sides, u, v).or_else(|| hatched(sides, u, v).then_some(HATCH))
+        }
         CellLook::Sign(_) => Some(floor(WHITE)),
         CellLook::HouseDoor { east_west } => {
             let (along, across) = along_across(east_west);
@@ -212,6 +234,18 @@ pub fn colour_at(look: CellLook, u: f64, v: f64, line: f64) -> Option<[u8; 3]> {
             })
         }
     }
+}
+
+/// The colour of a corner cut away from a wall, if the point is in one.
+fn cut_colour(sides: Sides, u: f64, v: f64) -> Option<[u8; 3]> {
+    let corner = match (u > 0.0, v > 0.0) {
+        (true, false) => 0,
+        (true, true) => 1,
+        (false, true) => 2,
+        (false, false) => 3,
+    };
+    let from_corner = (0.5 - u.abs()) + (0.5 - v.abs());
+    sides.cut[corner].filter(|_| from_corner < CORNER_CUT)
 }
 
 /// Whether a point in a wall cell is on a stroke of the hatching along a side.
@@ -314,6 +348,25 @@ mod tests {
         assert_eq!(wall_sides(&dungeon, 2, 1), Sides::default());
         // Anything not remembered is bare parchment.
         assert_eq!(look_of(&dungeon, 0, 0), CellLook::Empty);
+    }
+
+    /// Walls meeting only at a corner, with a way between them, each lose that
+    /// corner; walls with no way between them keep theirs.
+    #[test]
+    fn corners_are_cut_where_a_diagonal_goes_between_walls() {
+        let mut dungeon = dungeon();
+        dungeon.level.set(2, 2, Cell::Wall);
+        dungeon.level.set(2, 1, Cell::Floor);
+        dungeon.level.set(1, 2, Cell::Floor);
+        let look = look_of(&dungeon, 2, 2);
+        let cut = wall_sides(&dungeon, 2, 2).cut;
+        assert_eq!(cut, [None, None, None, Some(WHITE)]);
+        assert_eq!(wall_sides(&dungeon, 1, 1).cut[1], Some(WHITE));
+        // The corner shows floor; the rest of the wall doesn't.
+        assert_eq!(colour_at(look, -0.45, -0.45, 0.05), Some(WHITE));
+        assert_ne!(colour_at(look, 0.45, 0.45, 0.05), Some(WHITE));
+        dungeon.level.set(1, 2, Cell::Wall);
+        assert_eq!(wall_sides(&dungeon, 2, 2).cut, [None; 4]);
     }
 
     #[test]
