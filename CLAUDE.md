@@ -33,6 +33,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: vegetation  | `crates/shared/src/vegetation.rs` | `docs/context/shared/vegetation.md` | Tree cover and low growth at any world map position, from climate and patch noise (visual only for now) |
 | shared: weather     | `crates/shared/src/weather.rs`  | `docs/context/shared/weather.md`      | Cloud cover and rain at any place and time (4D simplex noise) |
 | shared: poi     | `crates/shared/src/poi.rs`  | `docs/context/shared/poi.md`      | World map chunks and their pois (kind, position, map seed) |
+| shared: showcase    | `crates/shared/src/showcase.rs` | `docs/context/shared/showcase.md`     | Debug plain far south with every kind of poi, 8 seeds each, behind `ENABLED` (P to go, Esc to return) |
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, windows, ground, water, lava, roads, gardens, holes, fields, fences, herb beds), wall shapes, rooms, line of sight / light reach |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |
@@ -48,7 +49,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: towns (roads, gardens with hedges, buildings with roofs and door signs), farms (fields, crops by stage, fences, gates), herb patches growing by the clock, textured floors and thin 3D walls, doors and windows by theme, 3D stairs in seven styles, liquid channels, holes in the floor, sight, see-through walls, grid light, memory in grey, outside ground and precipitation following the world map |
 | client: minimap     | `crates/client/src/minimap/`    | `docs/context/client/minimap.md`      | Round minimap and M full map: known land with poi pictures, or remembered cells as a grid; drag, title, arrow to the player, floor buttons |
 | client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Asking the server to enter sites, take stairs, leave; applying its level messages |
-| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size, B stairs style, F field stage, H herb stage, Esc back to the start |
+| client: demo        | `crates/client/src/demo/`       | `docs/context/client/demo.md`         | Demo keys: G auto-walk, T temperature (snow) cycle, K/C/X/Z token shape/colour/completed/size, B stairs style, F field stage, H herb stage, P poi showcase, Esc back to the start |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, red connection status              |
 | client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, stairs style, travel, walk, snow, camera view, screenshots |
 

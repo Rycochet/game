@@ -83,6 +83,8 @@ pub enum CellLook {
     Wall(Sides),
     /// A dungeon's door in a wall running east-west, or north-south.
     Door { east_west: bool },
+    /// A window in a wall running east-west, or north-south.
+    Window { east_west: bool },
     /// A town house's door, the same way.
     HouseDoor { east_west: bool },
     /// A shop's door: a walkable-looking cell carrying its sign's picture.
@@ -150,10 +152,13 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             && level.room(x, y).is_some()
             && level.room(x, y) != room;
         dungeon.remembered.is_seen(x, y)
-            && (cell.is_walkable() || cell.is_jumpable() || other_building)
+            && (cell.is_walkable() || cell.is_jumpable() || cell == Cell::Window || other_building)
     };
     match level.cell(x, y) {
         Cell::Door => CellLook::Door {
+            east_west: level.opening_runs_east_west(x, y),
+        },
+        Cell::Window => CellLook::Window {
             east_west: level.opening_runs_east_west(x, y),
         },
         Cell::BuildingDoor => match dungeon.buildings.iter().find(|b| b.door == (x, y)) {
@@ -164,7 +169,7 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             },
         },
         cell if cell.is_walkable() || cell.is_jumpable() => CellLook::Floor(ground_colour(cell)),
-        cell if cell.is_wall() || cell == Cell::Window => CellLook::Wall(Sides {
+        cell if cell.is_wall() => CellLook::Wall(Sides {
             north: shows(x, y - 1),
             east: shows(x + 1, y),
             south: shows(x, y + 1),
@@ -172,15 +177,15 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             cut: [(1, -1), (1, 1), (-1, 1), (-1, -1)].map(|(dx, dy)| {
                 let open = |x: i64, y: i64| {
                     let cell = level.cell(x, y);
-                    ((cell.is_walkable() || cell.is_jumpable()) && dungeon.remembered.is_seen(x, y))
-                        .then_some(cell)
+                    ((cell.is_walkable() || cell.is_jumpable() || cell == Cell::Window)
+                        && dungeon.remembered.is_seen(x, y))
+                    .then_some(cell)
                 };
                 let beside = open(x + dx, y)?;
                 open(x, y + dy)?;
                 let wall = level.cell(x + dx, y + dy);
-                ((wall.is_wall() || wall == Cell::Window)
-                    && dungeon.remembered.is_seen(x + dx, y + dy))
-                .then(|| ground_colour(beside))
+                (wall.is_wall() && dungeon.remembered.is_seen(x + dx, y + dy))
+                    .then(|| ground_colour(beside))
             }),
         }),
         _ => CellLook::Empty,
@@ -221,6 +226,11 @@ pub fn colour_at(look: CellLook, u: f64, v: f64, line: f64) -> Option<[u8; 3]> {
             } else {
                 floor(WHITE)
             })
+        }
+        CellLook::Window { east_west } => {
+            let (_, across) = along_across(east_west);
+            let on_line = (DOOR_HALF_WIDTH - DOOR_OUTLINE..=DOOR_HALF_WIDTH).contains(&across);
+            Some(if on_line { HATCH } else { floor(WHITE) })
         }
         CellLook::Door { east_west } => {
             let (along, across) = along_across(east_west);

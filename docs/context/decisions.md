@@ -326,3 +326,11 @@ Basements are the last level of a site, so existing levels keep their indexes (`
 The owner's design: a one-storey hut of 5 to 8 a side over a basement that can be larger, with one herb patch outside of 3 to 5 parallel strips 7 to 12 long. Each tile (`Cell::HerbBed`) grows herbs or mushrooms, chosen by the client: the same for every client, as it comes from a hash of the place and the server's clock. Every game day a tile moves on a stage (plain ground, green or grey dots, stalks, full grown). The owner chose a fixed list of plants in a mixed order, each with all 4 stages, and each tile starting at a random hour in it, so tiles are at different stages and don't all change at once. Unlike fields, this depends only on time, not season. Upright plants stand in a `#` through the middle of the two plants in each picture, to look more solid.
 
 Claude's choices: 5 shapes of each with 3 colours, so 30 plants in the list; walkable strips with ground between, no fence or track; huts in forest biomes only, by their own hash; a ruin's patch grows on. World map version stays 3, unreleased on this branch.
+
+## 2026-10-31: A showcase plain for looking at pois
+
+The owner asked for an area of the world map outside the normal generators, reached by a key press (P; Esc comes back), with one poi per chunk: every kind in order running east, new kinds at the end, and 8 seeds of each running south. `shared::showcase`, behind a flag on for now. Claude's choice: coordinates in the existing world rather than a second planet, which isn't supported; far south of the poles (chunk row 1000), since `y` is unbounded and nobody walks that far, and not further because drawing uses floats. The surface, climate, vegetation, rivers and pois each ask it first. Weather carries on as normal.
+
+## 2026-10-31: Windows in outside walls
+
+The owner's rules: most buildings have windows in their outside walls, each with wall on either side, not castles, towers or forts. Drawn already; on the maps a pair of parallel lines right across the cell, with walls beside them hatched as beside a door. Placed by hashes after any ruin, drawing nothing from the floors' sequences, so no generator version changed.

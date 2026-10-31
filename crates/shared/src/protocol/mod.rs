@@ -24,7 +24,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 14;
+pub const PROTOCOL_VERSION: u32 = 15;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -69,6 +69,10 @@ pub enum ClientMessage {
     /// from anywhere (out of a site too), answered with `OnWorldMap`. Only
     /// an embedded server accepts it; others ignore it.
     DevBackToStart,
+    /// Developer tools: to the plain with every kind of poi (`shared::showcase`),
+    /// from anywhere, answered with `OnWorldMap`. Only an embedded server accepts
+    /// it, and only while the showcase is on.
+    DevToShowcase,
     /// Developer tools: go straight into a site of any kind and seed, at
     /// any level, a building ruined this much (0 to 5). Only an embedded
     /// (single-player) server accepts it.
@@ -97,6 +101,7 @@ impl ClientMessage {
             self,
             Self::DevTeleport { .. }
                 | Self::DevBackToStart
+                | Self::DevToShowcase
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
                 | Self::DevSnowLine(_)
@@ -224,6 +229,7 @@ mod tests {
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevBackToStart,
+            ClientMessage::DevToShowcase,
             ClientMessage::DevRevealPois,
             ClientMessage::DevEnterSite {
                 kind: PoiKind::Crypt,

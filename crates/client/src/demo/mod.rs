@@ -10,6 +10,7 @@
 //!   drawn; the next level goes back to its own).
 //! - F: cycle what is growing in the current level's fields (only what is drawn).
 //! - H: move what grows in herb patches on a stage (only what is drawn).
+//! - P: to the plain with every kind of poi (`shared::showcase`; dev tools).
 //! - Esc: back to the starting point on the world map, out of any site
 //!   (dev tools: only the embedded server allows it).
 
@@ -42,6 +43,7 @@ impl Plugin for DemoPlugin {
                     cycle_fields,
                     cycle_herbs,
                     back_to_start,
+                    to_showcase,
                 ),
             )
             .add_systems(
@@ -94,6 +96,13 @@ fn auto_walk(walk: Res<AutoWalk>, mut steps: MessageWriter<TakeStep>) {
 fn back_to_start(keys: Res<ButtonInput<KeyCode>>, mut to_server: MessageWriter<ToServer>) {
     if keys.just_pressed(KeyCode::Escape) {
         to_server.write(ToServer(ClientMessage::DevBackToStart));
+    }
+}
+
+/// P: asks the server to put the player on the plain with every kind of poi.
+fn to_showcase(keys: Res<ButtonInput<KeyCode>>, mut to_server: MessageWriter<ToServer>) {
+    if shared::showcase::ENABLED && keys.just_pressed(KeyCode::KeyP) {
+        to_server.write(ToServer(ClientMessage::DevToShowcase));
     }
 }
 

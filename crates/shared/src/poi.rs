@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::climate::{Biome, Climate};
 use crate::rng::Seed;
+use crate::showcase;
 use crate::surface::Surface;
 use crate::world::WorldParams;
 
@@ -224,6 +225,9 @@ impl PoiMap {
             x: chunk.x.rem_euclid(self.columns()),
             y: chunk.y,
         };
+        if showcase::chunk_in_plain(chunk) {
+            return showcase::poi_at(chunk);
+        }
         let mut rng = Seed::new(self.seed.at(&[chunk.x, chunk.y])).rng();
         if rng.range_u64(0, 100) >= POI_CHANCE_PERCENT {
             return None;

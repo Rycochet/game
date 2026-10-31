@@ -289,6 +289,7 @@ pub(crate) fn answer(
             None => world_map::teleport(client, world, x, y),
         },
         ClientMessage::DevBackToStart => world_map::back_to_start(client, world),
+        ClientMessage::DevToShowcase => world_map::to_showcase(client, world),
         ClientMessage::DevEnterSite {
             kind,
             seed,

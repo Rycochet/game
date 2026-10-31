@@ -123,6 +123,9 @@ pub struct BuildingOptions {
     /// How big a basement is, if not the size of the ground floor: walls
     /// included, inclusive ranges, never smaller than the ground floor.
     pub basement_size: Option<((i64, i64), (i64, i64))>,
+    /// Of the places in outside walls a window could go, what percentage have
+    /// one, on every floor above ground and on it.
+    pub windows_percent: u32,
 }
 
 /// One floor's outline, in level coordinates.
@@ -202,6 +205,7 @@ pub struct Plan {
     basement: Option<(i64, i64)>,
     /// Its outline, which reaches at least as far as the ground floor's.
     basement_shape: Shape,
+    windows_percent: u32,
     /// A ruined building's floors, all of them, from the ground up; empty if
     /// it isn't ruined.
     ruined: Vec<SiteLevel>,
@@ -374,6 +378,7 @@ impl Plan {
             stairs,
             basement,
             basement_shape,
+            windows_percent: options.windows_percent,
             ruined: Vec::new(),
         };
         if options.ruin > 0 {
@@ -393,6 +398,15 @@ impl Plan {
                 if stairs.direction == StairsDirection::Down {
                     stairs.to = Exit::Level(last);
                 }
+            }
+            for (index, floor) in plan.ruined.iter_mut().enumerate() {
+                add_windows(
+                    &mut floor.level,
+                    &plan.floors[index],
+                    seed,
+                    plan.windows_percent,
+                    index as i64,
+                );
             }
         }
         plan
@@ -445,7 +459,18 @@ impl Plan {
         }
         match self.ruined.get(index as usize) {
             Some(floor) => floor.clone(),
-            None => self.intact_level(index),
+            None => {
+                let mut floor = self.intact_level(index);
+                let shape = &self.floors[index as usize];
+                add_windows(
+                    &mut floor.level,
+                    shape,
+                    self.seed,
+                    self.windows_percent,
+                    i64::from(index),
+                );
+                floor
+            }
         }
     }
 
@@ -575,6 +600,39 @@ impl Plan {
             entrance,
             buildings: Vec::new(),
             fields: Vec::new(),
+        }
+    }
+}
+
+/// Puts windows in a floor's outside walls: a straight wall between the inside
+/// and the outside of its outline, with wall on either side along it. After any
+/// ruin, as what is left decides where they fit. By hashes, not the floor's
+/// sequence: where they go changes nothing else.
+fn add_windows(level: &mut Level, shape: &Shape, seed: Seed, percent: u32, floor: i64) {
+    if percent == 0 {
+        return;
+    }
+    let hashes = seed.derive("building windows");
+    let (min_x, min_y, width, height) = level.bounds();
+    for y in min_y..min_y + height {
+        for x in min_x..min_x + width {
+            let fits = STEPS.iter().any(|&(dx, dy)| {
+                let beside = |sign: i64| {
+                    let (bx, by) = (x + dy * sign, y + dx * sign);
+                    level.cell(bx, by) == Cell::Wall && shape.contains(bx, by)
+                };
+                !shape.contains(x + dx, y + dy)
+                    && level.is_walkable(x - dx, y - dy)
+                    && beside(1)
+                    && beside(-1)
+            });
+            if level.cell(x, y) == Cell::Wall
+                && shape.contains(x, y)
+                && fits
+                && hashes.at(&[floor, x, y]) % 100 < u64::from(percent)
+            {
+                level.set(x, y, Cell::Window);
+            }
         }
     }
 }

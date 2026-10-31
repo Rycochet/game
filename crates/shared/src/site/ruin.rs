@@ -305,8 +305,13 @@ mod tests {
                 for (x, y) in cells_of(&floor.level) {
                     let (now, then) = (floor.level.cell(x, y), whole.level.cell(x, y));
                     let lone_door = then == Cell::Door && now == Cell::Floor;
+                    // Windows go in after ruin, wherever a wall then fits one.
+                    let window_moved = matches!(
+                        (then, now),
+                        (Cell::Window, Cell::Wall) | (Cell::Wall, Cell::Window)
+                    );
                     assert!(
-                        now == then || is_gap(now) || lone_door,
+                        now == then || is_gap(now) || lone_door || window_moved,
                         "ruin {ruin} floor {n}: {then:?} became {now:?}"
                     );
                 }

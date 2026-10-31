@@ -124,6 +124,10 @@ pub const FORGET_BEFORE: u32 = 2;
 const RUINED_PERCENT: u64 = 30;
 const MOST_RUIN: u64 = 5;
 
+/// Of the places in outside walls a window could go, how many have one, in the
+/// kinds of building that have them.
+const WINDOWS_PERCENT: u32 = 30;
+
 /// Where a way out of a level leads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Exit {
@@ -330,6 +334,11 @@ impl Generator {
     pub fn for_poi(kind: PoiKind) -> Self {
         use Outline::*;
         use PoiKind::*;
+        let windows_percent = match kind {
+            Castle | Fort | StoneTower | WoodenTower | RedTent | BlueTent | GreenTent
+            | IceShelter | StonePyramid | SandPyramid => 0,
+            _ => WINDOWS_PERCENT,
+        };
         let building = |width, height, outlines, max_floors, size_per_floor| {
             Self::Building(BuildingOptions {
                 width,
@@ -344,6 +353,7 @@ impl Generator {
                 ruin: 0,
                 basement_percent: 0,
                 basement_size: None,
+                windows_percent,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -383,6 +393,7 @@ impl Generator {
                     ruin: 0,
                     basement_percent: 50,
                     basement_size: None,
+                    windows_percent,
                 },
                 fields: (1, 8),
             }),
@@ -400,6 +411,7 @@ impl Generator {
                     ruin: 0,
                     basement_percent: 100,
                     basement_size: Some(((8, 16), (8, 16))),
+                    windows_percent,
                 },
                 strips: (3, 5),
                 length: (7, 12),
@@ -464,6 +476,7 @@ impl Generator {
                 ruin: 0,
                 basement_percent: 0,
                 basement_size: None,
+                windows_percent,
             }),
         }
     }
@@ -943,6 +956,60 @@ mod tests {
                         site.kind()
                     );
                 }
+            }
+        }
+    }
+
+    /// Windows are only in outside walls, with wall on either side of them
+    /// and the inside on one side; forts and the like, and basements, have none.
+    #[test]
+    fn windows_are_set_in_outside_walls() {
+        let windows = |level: &Level| {
+            let (min_x, min_y, width, height) = level.bounds();
+            (min_y..min_y + height)
+                .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
+                .filter(|&(x, y)| level.cell(x, y) == Cell::Window)
+                .collect::<Vec<_>>()
+        };
+        let mut found = 0;
+        for ruin in [0, 3, 5] {
+            for n in 0..40 {
+                for kind in [PoiKind::RedRoofCottage, PoiKind::Warehouse, PoiKind::Farm] {
+                    let generator = Generator::for_poi(kind).with_ruin(ruin);
+                    let site =
+                        Site::with_generator(kind, Seed::new(n), generator.version(), generator)
+                            .expect("the current version runs");
+                    let storeys = site.levels() - u32::from(site.has_basement());
+                    for index in 0..site.levels() {
+                        let level = site.level(index).level;
+                        let spots = windows(&level);
+                        if index >= storeys {
+                            assert!(spots.is_empty());
+                        }
+                        found += spots.len();
+                        for (x, y) in spots {
+                            let straight = [(1, 0), (0, 1)].iter().any(|&(dx, dy)| {
+                                level.cell(x + dx, y + dy) == Cell::Wall
+                                    && level.cell(x - dx, y - dy) == Cell::Wall
+                                    && (level.is_walkable(x + dy, y + dx)
+                                        || level.is_walkable(x - dy, y - dx))
+                            });
+                            assert!(straight, "{kind:?} floor {index}: ({x}, {y})");
+                        }
+                    }
+                }
+            }
+        }
+        assert!(found > 500, "{found}");
+        for kind in [
+            PoiKind::Castle,
+            PoiKind::Fort,
+            PoiKind::StoneTower,
+            PoiKind::WoodenTower,
+        ] {
+            for n in 0..5 {
+                let site = Site::new(kind, Seed::new(n));
+                assert!((0..site.levels()).all(|i| windows(&site.level(i).level).is_empty()));
             }
         }
     }

@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use shared::movement::{Step, step_on_world_map};
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
+use shared::showcase;
 
 use crate::connections::Client;
 use crate::storage::KnownPoi;
@@ -44,10 +45,20 @@ pub(crate) fn teleport(client: &mut Client, world: &ServerWorld, x: i64, y: i64)
 /// Developer tools: puts the player back where new characters start, out of
 /// any site.
 pub(crate) fn back_to_start(client: &mut Client, world: &mut ServerWorld) -> bool {
+    go_to(client, world, START)
+}
+
+/// Developer tools: puts the player on the plain with every kind of poi, out of
+/// any site.
+pub(crate) fn to_showcase(client: &mut Client, world: &mut ServerWorld) -> bool {
+    !showcase::ENABLED || go_to(client, world, showcase::ARRIVAL)
+}
+
+/// Puts the player somewhere on the world map, out of any site.
+fn go_to(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)) -> bool {
     sites::leave(client, world);
     client.visit = None;
-    let (x, y) = START;
-    client.character.world_position = START;
+    client.character.world_position = (x, y);
     client.unsaved = true;
     client.changed_map();
     client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
@@ -264,6 +275,22 @@ mod tests {
         let TestClient { client, world, .. } = &mut test;
         assert!(look_around(client, world));
         assert!(pois(&test.send(&[])).iter().any(|poi| poi.chunk == chunk));
+    }
+
+    #[test]
+    fn the_key_goes_to_the_showcase_and_esc_comes_back() {
+        let mut test = TestClient::new();
+        let answers = test.send(&[ClientMessage::DevToShowcase]);
+        let (x, y) = showcase::ARRIVAL;
+        assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
+        assert!(
+            pois(&answers)
+                .iter()
+                .any(|poi| poi.kind == shared::poi::PoiKind::ALL[0])
+        );
+        let answers = test.send(&[ClientMessage::DevBackToStart]);
+        let (x, y) = START;
+        assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
     }
 
     #[test]
