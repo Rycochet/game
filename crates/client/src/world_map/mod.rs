@@ -9,12 +9,13 @@
 //! while `GameView::WorldMap` is current.
 
 mod picking;
+mod poi_model;
 mod pois;
 mod rivers;
 pub mod sky;
 mod terrain;
 
-pub use pois::icon as poi_icon;
+pub use pois::{picture as poi_picture, picture_name as poi_picture_name};
 
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::{NotShadowCaster, light_consts};
@@ -24,7 +25,7 @@ use bevy::window::PrimaryWindow;
 use shared::protocol::ClientMessage;
 
 use crate::common::{
-    CurrentWorld, GameClock, GameView, MapPosition, SmoothPosition, ViewStats, Weather,
+    CurrentWorld, GameClock, GameView, MapPosition, SmoothPosition, Token, ViewStats, Weather,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -33,7 +34,7 @@ use crate::view3d::{
     ClickedToken, OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, View3dSystems,
     ViewCamera, ViewGrid,
 };
-use pois::SpawnedPois;
+use pois::{PoiMeshes, SpawnedPois};
 use rivers::KnownRivers;
 use terrain::{HeightCache, TerrainGrid, ViewSquare};
 
@@ -54,6 +55,9 @@ pub const SLOPE_SHADING: f64 = 1.0;
 const SUN_LUX: f32 = light_consts::lux::FULL_DAYLIGHT * 0.2;
 const AMBIENT_BRIGHTNESS: f32 = 60.0;
 
+/// How far round its middle the ground decides where a token with no base rests.
+const NO_BASE_RADIUS: f32 = 2.0;
+
 pub struct WorldMapPlugin;
 
 impl Plugin for WorldMapPlugin {
@@ -61,6 +65,7 @@ impl Plugin for WorldMapPlugin {
         let in_view = in_state(GameView::WorldMap);
         app.init_resource::<TerrainGrid>()
             .init_resource::<SpawnedPois>()
+            .init_resource::<PoiMeshes>()
             .init_resource::<KnownRivers>()
             .init_resource::<sky::SkyHourOffset>()
             .add_plugins((
@@ -87,7 +92,11 @@ impl Plugin for WorldMapPlugin {
             )
             .add_systems(
                 Update,
-                (rest_tokens_on_terrain, hide_tokens_outside_window)
+                (
+                    pois::add_models,
+                    rest_tokens_on_terrain,
+                    hide_tokens_outside_window,
+                )
                     .after(View3dSystems::Place)
                     .run_if(in_view),
             );
@@ -314,7 +323,8 @@ fn update_terrain(
         clock.is_changed() || weather.is_changed() || style.is_changed() || cache.is_added();
     // Turning or zooming changes the square.
     let reframed = *cut != Some((orbit.yaw, orbit.distance));
-    if !(player.is_changed() || redraw_all || reframed) {
+    // More of the world, which may have pois the woods make way for.
+    if !(player.is_changed() || redraw_all || reframed || world.is_changed()) {
         return;
     }
     *cut = Some((orbit.yaw, orbit.distance));
@@ -327,7 +337,13 @@ fn update_terrain(
         transform.translation = Vec3::new(player.x as f32, 0.0, player.y as f32);
     }
     // First, as woods are cleared round them.
-    known_rivers.update(&world.rivers, &world.climate, &world.surface, centre);
+    let clearings_moved = known_rivers.update(
+        &world.rivers,
+        &world.climate,
+        &world.surface,
+        &world.pois,
+        centre,
+    );
     grid.fill(
         &mut cache,
         &world.surface,
@@ -339,7 +355,7 @@ fn update_terrain(
         weather.snow_line,
         centre,
         square,
-        redraw_all,
+        redraw_all || clearings_moved,
     );
     let fill_ms = start.elapsed().as_secs_f32() * 1000.0;
 
@@ -380,7 +396,8 @@ fn update_terrain(
 }
 
 /// Every frame, after `view3d` has placed the tokens: lifts each one onto the
-/// highest ground under it, so it never sinks into a slope.
+/// highest ground under it, so it never sinks into a slope. One with no base
+/// has only its middle to rest: a poi's model goes on into the ground.
 #[allow(clippy::too_many_arguments)]
 fn rest_tokens_on_terrain(
     world: Res<CurrentWorld>,
@@ -389,7 +406,7 @@ fn rest_tokens_on_terrain(
     style: Res<SurfaceStyle>,
     known_rivers: Res<KnownRivers>,
     cache: Option<ResMut<HeightCache>>,
-    positions: Query<&SmoothPosition>,
+    owners: Query<(&SmoothPosition, &Token)>,
     mut views: Query<(&TokenView, &mut Transform)>,
 ) {
     let Some(mut cache) = cache else {
@@ -397,8 +414,13 @@ fn rest_tokens_on_terrain(
     };
     let water_level = world.params.water_level(clock.hour as f64);
     for (view, mut transform) in &mut views {
-        let Ok(position) = positions.get(view.owner) else {
+        let Ok((position, token)) = owners.get(view.owner) else {
             continue;
+        };
+        let radius = if token.no_base {
+            NO_BASE_RADIUS
+        } else {
+            TOKEN_DIAMETER / 2.0
         };
         let ground = terrain::highest_shown_height(
             &mut cache,
@@ -410,7 +432,7 @@ fn rest_tokens_on_terrain(
             water_level,
             weather.snow_line,
             (position.x, position.y),
-            (TOKEN_DIAMETER / 2.0) as f64,
+            radius as f64,
         );
         transform.translation.y = ground + TOKEN_HALF_THICKNESS;
     }

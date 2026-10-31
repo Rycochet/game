@@ -5,6 +5,7 @@ use std::collections::btree_map::Entry;
 
 use bevy::prelude::*;
 use shared::movement::{Step, step_on_world_map};
+use shared::poi::{ChunkPos, Poi};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
 
 use crate::connections::Client;
@@ -52,6 +53,28 @@ pub(crate) fn back_to_start(client: &mut Client, world: &mut ServerWorld) -> boo
     client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
 }
 
+/// TODO: for now every character knows of every poi (the owner's choice). Turn
+/// this off once characters have means of learning of them: see `decisions.md`.
+pub(crate) const ALL_POIS_KNOWN: bool = true;
+
+/// The poi of a chunk, if this client may know of it: towns are seen by all,
+/// anything else only once the character has learned of it.
+pub(crate) fn known_poi(client: &Client, world: &ServerWorld, chunk: ChunkPos) -> Option<Poi> {
+    let seen = client.character.pois.get(&chunk);
+    world.pois.in_chunk(chunk).filter(|poi| {
+        poi.kind.is_town()
+            || client.reveal_pois
+            || seen.is_some_and(|seen| seen.known || seen.visited)
+    })
+}
+
+/// Developer tools: shows every poi, on this connection only.
+pub(crate) fn reveal_pois(client: &mut Client, world: &ServerWorld) -> bool {
+    client.reveal_pois = true;
+    client.world_chunks.clear();
+    look_around(client, world)
+}
+
 /// The player is somewhere new on the world map: the chunks now in sight are
 /// known from now on (their land as well as any poi, for the player's
 /// map), a new connection is sent all they know, and the chunks within sight, plus a margin, that
@@ -62,7 +85,7 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
         let known: Vec<_> = client.character.pois.keys().copied().collect();
         for chunk in known {
             client.world_chunks.insert(chunk);
-            let poi = world.pois.in_chunk(chunk).map(Into::into);
+            let poi = known_poi(client, world, chunk).map(Into::into);
             if !client
                 .link
                 .send(&ServerMessage::WorldChunk(WorldChunk { chunk, poi }))
@@ -89,7 +112,7 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
         .chunks_in_area((x - reach, y - reach), (x + reach, y + reach));
     for chunk in chunks {
         if client.world_chunks.insert(chunk) {
-            let poi = world.pois.in_chunk(chunk).map(Into::into);
+            let poi = known_poi(client, world, chunk).map(Into::into);
             if !client
                 .link
                 .send(&ServerMessage::WorldChunk(WorldChunk { chunk, poi }))
@@ -202,6 +225,64 @@ mod tests {
         assert!(look_around(client, world));
         let sent: BTreeSet<_> = chunks(&test.send(&[])).into_iter().collect();
         assert!(known.is_subset(&sent));
+    }
+
+    /// The pois a client was told of in these answers.
+    fn pois(answers: &[ServerMessage]) -> Vec<shared::protocol::SeenPoi> {
+        answers
+            .iter()
+            .filter_map(|answer| match answer {
+                ServerMessage::WorldChunk(chunk) => chunk.poi,
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// A chunk in reach whose poi isn't a town.
+    fn hidden_chunk(test: &TestClient) -> ChunkPos {
+        let hidden = |chunk: &&ChunkPos| {
+            let poi = test.world.pois.in_chunk(**chunk);
+            poi.is_some_and(|poi| !poi.kind.is_town())
+        };
+        *test.client.world_chunks.iter().find(hidden).unwrap()
+    }
+
+    #[test]
+    fn only_towns_are_seen_until_a_poi_is_known() {
+        let mut test = TestClient::new();
+        test.client.reveal_pois = false;
+        let chunk = hidden_chunk(&test);
+        test.client.world_chunks.clear();
+        let TestClient { client, world, .. } = &mut test;
+        assert!(look_around(client, world));
+        let seen = pois(&test.send(&[]));
+        assert!(seen.iter().all(|poi| poi.kind.is_town()));
+
+        // Once learned of, it is sent.
+        test.client.character.pois.entry(chunk).or_default().known = true;
+        test.client.world_chunks.clear();
+        let TestClient { client, world, .. } = &mut test;
+        assert!(look_around(client, world));
+        assert!(pois(&test.send(&[])).iter().any(|poi| poi.chunk == chunk));
+    }
+
+    #[test]
+    fn dev_tools_reveal_every_poi() {
+        let mut test = TestClient::new();
+        test.client.reveal_pois = false;
+        let answers = test.send(&[ClientMessage::DevRevealPois]);
+        assert!(pois(&answers).iter().any(|poi| !poi.kind.is_town()));
+    }
+
+    #[test]
+    fn a_poi_not_known_of_cannot_be_entered() {
+        let mut test = TestClient::new();
+        test.client.reveal_pois = false;
+        let chunk = hidden_chunk(&test);
+        let poi = test.world.pois.in_chunk(chunk).unwrap();
+        test.send(&[ClientMessage::DevTeleport { x: poi.x, y: poi.y }]);
+        test.send(&[ClientMessage::EnterSite { chunk }]);
+        assert!(test.client.visit.is_none());
     }
 
     #[test]

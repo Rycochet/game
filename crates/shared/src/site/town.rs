@@ -303,6 +303,11 @@ pub struct Plan {
 }
 
 impl Plan {
+    /// How many buildings it aims to have.
+    pub fn target(&self) -> i64 {
+        self.target
+    }
+
     pub fn new(options: &TownOptions, seed: Seed) -> Self {
         let mut rng = Seed::new(seed.derive("town size").at(&[0])).rng();
         Self {

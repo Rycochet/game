@@ -239,6 +239,10 @@ pub struct VisitSave {
 /// What a character knows of a poi they have seen.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KnownPoi {
+    /// Whether they have learned where the chunk's poi is. Towns are always
+    /// known, and nothing teaches a character the others yet.
+    #[serde(default)]
+    pub known: bool,
     /// Whether they have been inside.
     #[serde(default)]
     pub visited: bool,
@@ -375,7 +379,13 @@ pub(crate) mod tests {
                 level: 1,
                 position: (3, -4),
             }),
-            pois: BTreeMap::from([(ChunkPos { x: 1, y: 1 }, KnownPoi { visited: true })]),
+            pois: BTreeMap::from([(
+                ChunkPos { x: 1, y: 1 },
+                KnownPoi {
+                    known: true,
+                    visited: true,
+                },
+            )]),
             memory: BTreeMap::from([(
                 site,
                 BTreeMap::from([(1, CellMasks::from([((0, -1), 7)]))]),

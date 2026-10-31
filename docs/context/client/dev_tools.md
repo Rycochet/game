@@ -23,6 +23,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_MAP=dx,dy`: two seconds after starting, open the full map, moved this many grid points from the player, without the limits on dragging (`0,0` centres it on them; far enough off shows the arrow).
 - `GAME_MAP_ZOOM=n`: the map `GAME_MAP` opens at this zoom.
 - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
+- `GAME_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
 - Not here, but also dev tools the embedded server allows: ctrl+click teleports (`world_map`, `dungeon_map`), alt+click changes a site's cell (`dungeon_map`), Esc goes back to the start (`demo`).
 - `HALL_OF_WORLDS_SERVER=ws://host:port/ws` (read by `connection`): join that server instead of starting single player (a new guest each run; dev tools messages are ignored by such servers).

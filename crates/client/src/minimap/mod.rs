@@ -30,7 +30,7 @@ use crate::player::{Player, PlayerSystems};
 use crate::surface_style::SurfaceStyle;
 use crate::ui::raised_box;
 use crate::view3d::{OrbitCamera, View3dSystems};
-use crate::world_map::{self, poi_icon};
+use crate::world_map::{self, poi_picture, poi_picture_name};
 use canvas::Canvas;
 use frame::RoundFrame;
 use grid::{CellLook, Looks};
@@ -727,8 +727,10 @@ fn draw_maps(
                 } else {
                     1.0
                 };
-                let icon = ICON_PIXELS * zoom;
-                busy |= prepare(poi_icon(poi.kind), None, icon, at, opacity);
+                let pixels = ((ICON_PIXELS * zoom) * scale).round().max(1.0) as u32;
+                let name = poi_picture_name(poi.kind, poi.look);
+                sprites.make(&name, pixels, |size| poi_picture(poi.kind, poi.look, size));
+                stamps.push((name, None, pixels, at, opacity));
             }
         }
         (None, None) => {}

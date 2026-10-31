@@ -310,10 +310,16 @@ pub fn sync_tokens(
 
 fn spawn_view(commands: &mut Commands, assets: &TokenAssets, owner: Entity, token: &Token) {
     let (shape, completed) = (token.shape as usize, token.completed as usize);
+    let base = if token.no_base {
+        Visibility::Hidden
+    } else {
+        Visibility::Inherited
+    };
     let body = commands
         .spawn((
             Mesh3d(assets.bodies[shape].clone()),
             MeshMaterial3d(assets.colours[completed][token.attitude as usize].clone()),
+            base,
         ))
         .id();
     let outline = commands
@@ -321,6 +327,7 @@ fn spawn_view(commands: &mut Commands, assets: &TokenAssets, owner: Entity, toke
             Mesh3d(assets.outlines[shape].clone()),
             MeshMaterial3d(assets.outline[completed].clone()),
             NotShadowCaster,
+            base,
         ))
         .id();
     let anchor = commands

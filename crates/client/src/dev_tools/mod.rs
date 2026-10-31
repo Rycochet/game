@@ -90,6 +90,16 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
+        if env::var("GAME_REVEAL_POIS").is_ok() {
+            app.add_systems(
+                OnExit(GameView::Connecting),
+                (|mut to_server: MessageWriter<ToServer>| {
+                    to_server.write(ToServer(ClientMessage::DevRevealPois));
+                })
+                .in_set(Start::Enter),
+            );
+        }
+
         if let Ok(enter) = env::var("GAME_ENTER") {
             let numbers: Vec<u64> = enter
                 .split(',')
@@ -345,6 +355,7 @@ fn parse_token(text: &str) -> Option<Token> {
         attitude,
         completed,
         size,
+        ..default()
     })
 }
 

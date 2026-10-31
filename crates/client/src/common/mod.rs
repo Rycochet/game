@@ -97,7 +97,7 @@ pub struct KnownPois {
 }
 
 impl KnownPois {
-    fn new(width: i64) -> Self {
+    pub fn new(width: i64) -> Self {
         Self {
             width,
             chunks: BTreeMap::new(),
@@ -409,6 +409,9 @@ pub struct Token {
     pub completed: bool,
     /// How big the entity's `Icon` is drawn (the base stays the same).
     pub size: TokenSize,
+    /// Draws no base: the view shows something else there, such as a world
+    /// map poi's model. It can still be clicked.
+    pub no_base: bool,
 }
 
 /// How big an entity's icon is drawn above its token, relative to the
@@ -533,6 +536,9 @@ mod tests {
         let chunk = ChunkPos { x: 0, y: 1 };
         let poi = SeenPoi {
             kind: PoiKind::Crypt,
+            look: shared::site::PoiLook::Cave {
+                entrance: shared::site::CaveEntrance::Hole,
+            },
             chunk,
             x: 10,
             y: 70,

@@ -10,7 +10,7 @@ The maps: the round minimap always in the window's top-right corner, and the ful
 - `crates/client/src/minimap/grid.rs`: site levels. `Looks::of` works out each cell in view as a `CellLook` (`Empty`, `Floor` with its colour from `ground_colour`, `Wall` with the `Sides` it is hatched along, `Door`, `HouseDoor`, `Sign`); `colour_at` is the drawing of a cell (grid line, hatching, door); `draw` samples it per pixel (four samples when turned).
 - `crates/client/src/minimap/world.rs`: world map. `WorldTiles` keeps a chunk's colours (one per point, averaged by `draw` where a pixel covers more, from `SurfaceStyle::ground_colour`), worked out for chunks in view, nearest first, within a time budget per redraw; `shows_known`.
 - `crates/client/src/minimap/frame.rs`: `RoundFrame` (cuts the picture round, ridged border and notch), `compass` (the same ridge, through `ridged`), `stairs_icon`, `player_dot`, `arrow_place`, `arrow`.
-- `crates/client/src/minimap/sprites.rs`: `Sprites`: small copies of pictures, averaged down once per size, read from loaded `Image`s.
+- `crates/client/src/minimap/sprites.rs`: `Sprites`: small copies of pictures, averaged down once per size, read from loaded `Image`s (`prepare`) or drawn by the caller (`make`: a poi's model, from `world_map::poi_picture`, which is why there are no icon files for pois).
 
 ## Public API
 

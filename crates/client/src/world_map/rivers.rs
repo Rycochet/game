@@ -1,6 +1,7 @@
 //! Rivers near the player, kept ready to draw: traced once from their chunk,
 //! then smoothed, with a width at every point. `terrain::build_rivers` turns
-//! them into the mesh.
+//! them into the mesh. Woods are also cleared round them, and round the pois
+//! this character knows of.
 
 use std::collections::BTreeMap;
 
@@ -9,6 +10,8 @@ use shared::climate::Climate;
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::river::{MAX_LENGTH, River, Rivers};
 use shared::surface::Surface;
+
+use crate::common::KnownPois;
 
 /// World map grid units per screen pixel in the starting view (a 400-point
 /// window is about 1250 pixels wide), so widths can be given in pixels.
@@ -34,6 +37,12 @@ const CHUNK_REACH: i64 = (MAX_LENGTH as i64 + super::terrain::REACH) / CHUNK_SIZ
 /// by `CLEARED_TO`. Wider than the river, as grid points are a unit apart.
 const CLEARED: f32 = 1.2;
 const CLEARED_TO: f32 = 4.0;
+
+/// The same round a poi: nothing grows under its model. Only pois the server
+/// has told this character of clear anything, so the woods give nothing away;
+/// a character learning of one, or another character playing, changes them.
+const POI_CLEARED: f32 = 8.0;
+const POI_CLEARED_TO: f32 = 13.0;
 
 /// Side of the wrapping store of clearings. It is rebuilt each time the player
 /// enters a chunk, so it must hold what the window can need from anywhere in
@@ -103,24 +112,52 @@ pub struct KnownRivers {
     /// How much of the woods grow at each point near the player, `0..=1`.
     /// Empty until the first update.
     open: Vec<f32>,
+    /// The pois `open` is cleared round, sorted.
+    cleared_pois: Vec<(i64, i64)>,
 }
 
 impl KnownRivers {
-    /// Makes sure every chunk whose river could reach the window is known.
+    /// Makes sure every chunk whose river could reach the window is known, and
+    /// the woods are cleared round them and `pois`. `true` if that changed the
+    /// woods where the window can be, so what is drawn there is out of date.
     pub fn update(
         &mut self,
         rivers: &Rivers,
         climate: &Climate,
         surface: &Surface,
+        pois: &KnownPois,
         (x, y): (i64, i64),
-    ) {
+    ) -> bool {
         let columns = rivers.columns();
         let here = ChunkPos {
             x: x.rem_euclid(rivers.width()).div_euclid(CHUNK_SIZE),
             y: y.div_euclid(CHUNK_SIZE),
         };
+        let reach = CLEARING_SIDE / 2 - 1;
+        let near_pois: Vec<(i64, i64)> = pois
+            .in_area((x - reach, y - reach), (x + reach, y + reach))
+            .iter()
+            .map(|poi| (poi.x, poi.y))
+            .collect();
+        let window = super::terrain::REACH + CHUNK_SIZE + POI_CLEARED_TO as i64;
+        let in_window =
+            |&(px, py): &(i64, i64)| (px - x).abs() <= window && (py - y).abs() <= window;
+        let outdated = near_pois
+            .iter()
+            .filter(|poi| in_window(poi))
+            .any(|poi| !self.cleared_pois.contains(poi))
+            || self
+                .cleared_pois
+                .iter()
+                .filter(|poi| in_window(poi))
+                .any(|poi| !near_pois.contains(poi));
+        if self.around == Some(here) && !outdated {
+            return false;
+        }
+        self.cleared_pois = near_pois;
         if self.around == Some(here) {
-            return;
+            self.clear_woods((x, y), rivers.width());
+            return true;
         }
         self.around = Some(here);
         for dy in -CHUNK_REACH..=CHUNK_REACH {
@@ -142,11 +179,12 @@ impl KnownRivers {
             let east = (chunk.x - here.x).rem_euclid(columns);
             east.min(columns - east) <= keep && (chunk.y - here.y).abs() <= keep
         });
-        self.clear_round_rivers((x, y), rivers.width());
+        self.clear_woods((x, y), rivers.width());
+        outdated
     }
 
     /// Works out `open` for the points around `centre`.
-    fn clear_round_rivers(&mut self, centre: (i64, i64), world_width: i64) {
+    fn clear_woods(&mut self, centre: (i64, i64), world_width: i64) {
         let mut open = std::mem::take(&mut self.open);
         open.clear();
         open.resize((CLEARING_SIDE * CLEARING_SIDE) as usize, 1.0);
@@ -172,6 +210,22 @@ impl KnownRivers {
                         let slot = clearing_slot(centre.0 + dx, centre.1 + dy);
                         open[slot] = open[slot].min(t * t * (3.0 - 2.0 * t));
                     }
+                }
+            }
+        }
+        let reach = POI_CLEARED_TO.ceil() as i64;
+        for &(x, y) in &self.cleared_pois {
+            let (nx, ny) = (x - centre.0, y - centre.1);
+            for dy in ny - reach..=ny + reach {
+                for dx in nx - reach..=nx + reach {
+                    if dx.abs() > limit || dy.abs() > limit {
+                        continue;
+                    }
+                    let distance = ((dx - nx) as f32).hypot((dy - ny) as f32);
+                    let t =
+                        ((distance - POI_CLEARED) / (POI_CLEARED_TO - POI_CLEARED)).clamp(0.0, 1.0);
+                    let slot = clearing_slot(centre.0 + dx, centre.1 + dy);
+                    open[slot] = open[slot].min(t * t * (3.0 - 2.0 * t));
                 }
             }
         }
@@ -210,10 +264,25 @@ mod tests {
             }),
         );
         assert_eq!(known.open_at(105, 50), 1.0);
-        known.clear_round_rivers((90, 40), 100_000);
+        known.clear_woods((90, 40), 100_000);
         assert_eq!(known.open_at(105, 50), 0.0);
         let part_way = known.open_at(105, 53);
         assert!(part_way > 0.0 && part_way < 1.0, "{part_way}");
         assert_eq!(known.open_at(105, 60), 1.0);
+    }
+
+    #[test]
+    fn woods_are_cleared_only_round_pois_passed_in() {
+        let mut known = KnownRivers {
+            cleared_pois: vec![(100, 50)],
+            ..default()
+        };
+        known.clear_woods((90, 40), 100_000);
+        assert_eq!(known.open_at(100, 50), 0.0);
+        assert_eq!(known.open_at(100, 70), 1.0);
+        // Another character, who doesn't know of it.
+        known.cleared_pois.clear();
+        known.clear_woods((90, 40), 100_000);
+        assert_eq!(known.open_at(100, 50), 1.0);
     }
 }
