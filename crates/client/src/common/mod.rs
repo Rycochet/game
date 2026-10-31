@@ -87,6 +87,9 @@ impl CurrentWorld {
     }
 }
 
+/// How many times round the planet `KnownPois::in_area` will look.
+const MOST_PLANETS_IN_AN_AREA: i64 = 8;
+
 /// The world map chunks the server has sent, and their pois.
 pub struct KnownPois {
     /// The world's width: `x` wraps at this.
@@ -119,6 +122,12 @@ impl KnownPois {
     /// points, in any planet-width frame: the pois are given in the
     /// same one), like `shared::poi::PoiMap::in_area`.
     pub fn in_area(&self, min: (i64, i64), max: (i64, i64)) -> Vec<SeenPoi> {
+        // Nothing asks for more than a few planets on purpose: far more means
+        // a broken position, which would take for ever or overflow below.
+        if max.0.saturating_sub(min.0) > MOST_PLANETS_IN_AN_AREA * self.width {
+            warn!("Asked for the pois of an area far too wide: {min:?} to {max:?}");
+            return Vec::new();
+        }
         let rows =
             (min.1.div_euclid(CHUNK_SIZE), i64::MIN)..=(max.1.div_euclid(CHUNK_SIZE), i64::MAX);
         let mut found = Vec::new();
@@ -530,6 +539,24 @@ mod tests {
     use shared::poi::PoiKind;
 
     use super::*;
+
+    #[test]
+    fn an_impossibly_wide_area_finds_no_pois() {
+        let mut known = KnownPois::new(1000);
+        let chunk = ChunkPos { x: 0, y: 1 };
+        let poi = SeenPoi {
+            kind: PoiKind::Crypt,
+            look: shared::site::PoiLook::Cave {
+                entrance: shared::site::CaveEntrance::Hole,
+            },
+            chunk,
+            x: 10,
+            y: 70,
+        };
+        known.insert(chunk, Some(poi));
+        let found = known.in_area((i64::MIN, i64::MIN), (i64::MAX, i64::MAX));
+        assert!(found.is_empty());
+    }
 
     #[test]
     fn known_pois_are_found_in_any_frame() {
