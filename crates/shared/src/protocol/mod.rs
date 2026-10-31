@@ -259,6 +259,7 @@ mod tests {
             }),
             ServerMessage::EnterLevel(LevelInfo {
                 kind: PoiKind::RockCave,
+                ruined: true,
                 building: false,
                 index: 1,
                 levels: 3,

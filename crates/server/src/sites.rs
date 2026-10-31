@@ -301,6 +301,7 @@ fn enter_level(
     };
     let info = LevelInfo {
         kind: site.kind(),
+        ruined: site.is_ruined(),
         building: site.is_building(),
         index,
         levels: site.levels(),

@@ -267,8 +267,9 @@ impl CurrentDungeon {
             return format!("{:?}", info.kind);
         }
         let what = if info.building { "floor" } else { "level" };
+        let ruined = if info.ruined { "Ruined" } else { "" };
         format!(
-            "{:?}, {what} {} of {}",
+            "{ruined}{:?}, {what} {} of {}",
             info.kind,
             info.index + 1,
             info.levels

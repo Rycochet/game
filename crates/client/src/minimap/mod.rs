@@ -913,7 +913,10 @@ fn hovered_name(
         .into_iter()
         .filter(|poi| (poi.x as f64 - x).abs().max((poi.y as f64 - y).abs()) <= reach)
         .min_by(|a, b| distance(a).total_cmp(&distance(b)))
-        .map(|poi| words(&format!("{:?}", poi.kind)))
+        .map(|poi| {
+            let ruined = if poi.look.is_ruined() { "Ruined" } else { "" };
+            words(&format!("{ruined}{:?}", poi.kind))
+        })
 }
 
 /// The full map's title: where the player is, with the floor or level.
@@ -954,6 +957,24 @@ mod tests {
     use shared::dungeon::Level;
 
     use super::*;
+
+    #[test]
+    fn ruined_places_are_named_as_ruins() {
+        let mut dungeon = CurrentDungeon::default();
+        dungeon.enter(shared::protocol::LevelInfo {
+            kind: shared::poi::PoiKind::StoneTower,
+            ruined: true,
+            building: true,
+            index: 1,
+            levels: 3,
+            bounds: (0, 0, 5, 5),
+            arrival: (2, 2),
+        });
+        assert_eq!(
+            words(&dungeon.describe()),
+            "Ruined stone tower, floor 2 of 3"
+        );
+    }
 
     /// A level with a little remembered, a window, and the player on it.
     fn app() -> App {

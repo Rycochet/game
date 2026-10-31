@@ -14,7 +14,7 @@ const LINE: [u8; 3] = [200, 200, 200];
 const HATCH: [u8; 3] = [70, 55, 40];
 const DOOR: [u8; 3] = [150, 95, 45];
 const HOUSE_DOOR: [u8; 3] = [175, 60, 45];
-const HOLE: [u8; 3] = [90, 80, 70];
+const HOLE: [u8; 3] = [0, 0, 0];
 
 /// A walkable tile's colour, by what it is: pale, so hatching and doors show.
 fn ground_colour(cell: Cell) -> [u8; 3] {
@@ -275,6 +275,7 @@ mod tests {
         };
         dungeon.enter(LevelInfo {
             kind: PoiKind::Crypt,
+            ruined: false,
             building: false,
             index: 0,
             levels: 1,

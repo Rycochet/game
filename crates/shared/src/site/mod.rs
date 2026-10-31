@@ -39,6 +39,8 @@ pub enum PoiLook {
         width: u16,
         height: u16,
         floors: u8,
+        /// How ruined it is (`BuildingOptions::ruin`).
+        ruin: u8,
     },
     Cave {
         entrance: CaveEntrance,
@@ -49,6 +51,11 @@ pub enum PoiLook {
 }
 
 impl PoiLook {
+    /// Whether it is a ruin, and is named as one.
+    pub fn is_ruined(self) -> bool {
+        matches!(self, Self::Building { ruin, .. } if ruin > 0)
+    }
+
     /// The look of the site a poi of this kind and map seed leads to.
     pub fn of(kind: PoiKind, seed: Seed) -> Self {
         match Generator::for_poi(kind) {
@@ -60,6 +67,7 @@ impl PoiLook {
                     width: width as u16,
                     height: height as u16,
                     floors: plan.floors() as u8,
+                    ruin: options.ruin,
                 }
             }
             Generator::Cave(options) => Self::Cave {
@@ -333,6 +341,7 @@ pub struct Site {
     kind: PoiKind,
     seed: Seed,
     plan: Plan,
+    ruined: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -363,6 +372,7 @@ impl Site {
         version: u32,
         generator: Generator,
     ) -> Option<Self> {
+        let ruined = version >= 2 && matches!(generator, Generator::Building(o) if o.ruin > 0);
         let plan = match generator {
             // Version 1 is the same floorplan with no ruin.
             Generator::Building(options) if version == 1 => {
@@ -380,7 +390,17 @@ impl Site {
             }
             _ => return None,
         };
-        Some(Self { kind, seed, plan })
+        Some(Self {
+            kind,
+            seed,
+            plan,
+            ruined,
+        })
+    }
+
+    /// Whether it is a ruined building, and is named as one.
+    pub fn is_ruined(&self) -> bool {
+        self.ruined
     }
 
     pub fn kind(&self) -> PoiKind {
@@ -513,6 +533,7 @@ mod tests {
         let plain = Site::with_version(PoiKind::Castle, seed, BUILDING_VERSION).unwrap();
         assert_eq!(old.level(0), plain.level(0));
         assert_ne!(new.level(0), plain.level(0));
+        assert!(new.is_ruined() && !old.is_ruined() && !plain.is_ruined());
     }
 
     /// Skylights: only on the top level of natural caves, walkable, in the
