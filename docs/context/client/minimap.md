@@ -10,7 +10,7 @@ The maps: the round minimap always in the window's top-right corner, and the ful
 - `crates/client/src/minimap/grid.rs`: site levels. `Looks::of` works out each cell in view as a `CellLook` (`Empty`, `Floor` with its colour from `ground_colour`, `Wall` with the `Sides` it is hatched along, `Door`, `HouseDoor`, `Sign`); `colour_at` is the drawing of a cell (grid line, hatching, door); `draw` samples it per pixel (four samples when turned).
 - `crates/client/src/minimap/world.rs`: world map. `WorldTiles` keeps a chunk's colours (one per point, averaged by `draw` where a pixel covers more, from `SurfaceStyle::ground_colour`), worked out for chunks in view, nearest first, within a time budget per redraw; `shows_known`.
 - `crates/client/src/minimap/frame.rs`: `RoundFrame` (cuts the picture round, ridged border and notch), `compass` (the same ridge, through `ridged`), `stairs_icon`, `player_dot`, `arrow_place`, `arrow`.
-- `crates/client/src/minimap/sprites.rs`: `Sprites`: small copies of pictures, averaged down once per size, read from loaded `Image`s (`prepare`) or drawn by the caller (`make`: a poi's model, from `world_map::poi_picture`, which is why there are no icon files for pois).
+- `crates/client/src/minimap/sprites.rs`: `Sprites`: small copies of pictures, averaged down once per size, read from loaded `Image`s (`prepare`) or drawn by the caller (`make`: a poi's model, from `world_map::poi_picture`, which is why there are no icon files for pois, with a solid black border by `with_border`).
 
 ## Public API
 
@@ -38,5 +38,6 @@ The maps: the round minimap always in the window's top-right corner, and the ful
 - Hatching (owner's): inside remembered wall cells, reaching a quarter of a cell in from each side that meets something open, including a dungeon door (so its sides don't look open), or a wall of a different building (so touching buildings are hatched on both sides). Town doors, house or shop, have none, and nothing hatches towards them.
 - Touching corners (owner's): where two walls meet only at a corner with open cells either side, you can walk between them, so each loses a triangle at that corner (`Sides::cut`, `CORNER_CUT`) in the floor's colour.
 - A shop's sign is its door picture from the town atlas (`door_picture`); a house has its own look, a red diamond on the line of its wall (the diamond is Claude's choice), so it differs from a dungeon's door.
+- Hovering a poi on the world map itself names it in a box near the bottom of the window (`name_hovered_token`, from `view3d::HoveredToken`), like the full map's box.
 - Pois' completed look reads `Token::completed` on their entities, which exist only near the player, and nothing marks them completed yet. It should move to the server's per-player poi state once something does.
 - `dungeon_map` adds to `remembered` without marking it changed, so maps redraw at least every `REDRAW_SECONDS`.

@@ -94,6 +94,7 @@ impl Plugin for WorldMapPlugin {
                 Update,
                 (
                     pois::add_models,
+                    pois::outline_hovered,
                     rest_tokens_on_terrain,
                     hide_tokens_outside_window,
                 )

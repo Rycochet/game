@@ -7,6 +7,7 @@
 //! `y` 0 and the poi at the origin. Every model stays within `REACH` of its
 //! centre, the size of the base it replaced.
 
+use std::collections::HashMap;
 use std::f32::consts::TAU;
 
 use bevy::asset::RenderAssetUsages;
@@ -17,6 +18,13 @@ use shared::site::{CaveEntrance, Outline, PoiLook};
 
 /// How far a model reaches from its centre.
 const REACH: f32 = 8.0;
+
+/// How far the hovered outline stands off a model.
+const OUTLINE_WIDTH: f32 = 0.5;
+
+/// How much of a picture's edge is left clear on each side, as a share of its
+/// size, for the border the maps draw round it.
+const PICTURE_MARGIN: f32 = 0.06;
 
 /// How wide each piece of a ruined building's wall is.
 const WALL_STONE: f32 = 1.2;
@@ -173,6 +181,38 @@ impl PoiModel {
         .with_inserted_indices(Indices::U32(indices))
     }
 
+    /// Its outline when hovered: the same triangles pushed out along the
+    /// normals, for drawing from the inside as a black shell round the model.
+    /// Corners in the same place move together, so the shell has no gaps.
+    pub fn outline_mesh(&self) -> Mesh {
+        let key = |corner: Vec3| (corner * 1000.0).as_ivec3().to_array();
+        let mut outwards: HashMap<[i32; 3], Vec3> = HashMap::new();
+        for [a, b, c] in &self.corners {
+            let normal = (*b - *a).cross(*c - *a).normalize_or_zero();
+            for corner in [*a, *b, *c] {
+                *outwards.entry(key(corner)).or_default() += normal;
+            }
+        }
+        let positions: Vec<[f32; 3]> = self
+            .corners
+            .iter()
+            .flatten()
+            .map(|&corner| {
+                let out = outwards[&key(corner)].normalize_or_zero();
+                (corner + out * OUTLINE_WIDTH).to_array()
+            })
+            .collect();
+        let normals = vec![[0.0, 1.0, 0.0]; positions.len()];
+        let indices = (0..positions.len() as u32).collect();
+        Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+        .with_inserted_indices(Indices::U32(indices))
+    }
+
     /// The model seen from the south-east from above, `size` pixels square, as
     /// RGBA with a see-through background: an isometric picture for the maps.
     pub fn picture(&self, size: u32) -> Vec<u8> {
@@ -189,11 +229,13 @@ impl PoiModel {
             (min, max) = (min.min(at), max.max(at));
         }
         let span = (max - min).max_element().max(PICTURE_SPAN);
-        let scale = size as f32 / span;
+        let margin = size as f32 * PICTURE_MARGIN;
+        let room = size as f32 - 2.0 * margin;
+        let scale = room / span;
         // Centred, with the feet near the bottom.
         let offset = Vec2::new(
             (size as f32 - (max.x - min.x) * scale) / 2.0 - min.x * scale,
-            size as f32 - max.y * scale,
+            size as f32 - margin - max.y * scale,
         );
         let light = Vec3::from(PICTURE_LIGHT).normalize();
 

@@ -29,7 +29,7 @@ use crate::dungeon_map::{TOWN_ATLAS, door_picture};
 use crate::player::{Player, PlayerSystems};
 use crate::surface_style::SurfaceStyle;
 use crate::ui::raised_box;
-use crate::view3d::{OrbitCamera, View3dSystems};
+use crate::view3d::{HoveredToken, OrbitCamera, View3dSystems};
 use crate::world_map::{self, poi_picture, poi_picture_name};
 use canvas::Canvas;
 use frame::RoundFrame;
@@ -121,7 +121,8 @@ impl Plugin for MinimapPlugin {
             )
             .add_systems(
                 Update,
-                name_what_is_hovered.run_if(not(in_state(GameView::Connecting))),
+                (name_what_is_hovered, name_hovered_token)
+                    .run_if(not(in_state(GameView::Connecting))),
             );
     }
 }
@@ -176,6 +177,13 @@ struct HoverBox;
 
 #[derive(Component)]
 struct HoverText;
+
+/// The box naming the poi the mouse is over on the world map itself.
+#[derive(Component)]
+struct WorldHoverBox;
+
+#[derive(Component)]
+struct WorldHoverText;
 
 /// The pictures the maps are drawn in.
 #[derive(Resource)]
@@ -293,6 +301,28 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                         TextColor(INK),
                     ));
                 });
+        });
+    commands
+        .spawn((
+            WorldHoverBox,
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: px(FULL_MAP_MARGIN + HOVER_LIFT),
+                left: px(0),
+                right: px(0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            GlobalZIndex(10),
+            Visibility::Hidden,
+        ))
+        .with_children(|holder| {
+            holder.spawn(raised_box()).with_child((
+                WorldHoverText,
+                Text::new(""),
+                TextFont::from_font_size(18.0),
+                TextColor(INK),
+            ));
         });
     commands.insert_resource(MapPictures { minimap, full });
 }
@@ -888,6 +918,40 @@ fn name_what_is_hovered(
     }
 }
 
+/// Names the poi the mouse is over on the world map, in a box like the full
+/// map's near the bottom of the window. The full map covers it when open.
+fn name_hovered_token(
+    view: Res<State<GameView>>,
+    full: Res<FullMap>,
+    hovered: Res<HoveredToken>,
+    portals: Query<&Portal>,
+    mut holder: Single<&mut Visibility, With<WorldHoverBox>>,
+    mut text: Single<&mut Text, With<WorldHoverText>>,
+) {
+    let name = hovered
+        .0
+        .filter(|_| !full.open && *view.get() == GameView::WorldMap)
+        .and_then(|token| portals.get(token).ok())
+        .map(|Portal::Poi(poi)| poi_name(poi));
+    let shown = if name.is_some() {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
+    holder.set_if_neq(shown);
+    if let Some(name) = name
+        && text.0 != name
+    {
+        text.0 = name;
+    }
+}
+
+/// What a poi is called.
+fn poi_name(poi: &SeenPoi) -> String {
+    let ruined = if poi.look.is_ruined() { "Ruined" } else { "" };
+    words(&format!("{ruined}{:?}", poi.kind))
+}
+
 /// The name of a shop door or world map poi at a grid position.
 /// `icon_reach` is how far a poi's picture reaches, in logical pixels.
 fn hovered_name(
@@ -915,10 +979,7 @@ fn hovered_name(
         .into_iter()
         .filter(|poi| (poi.x as f64 - x).abs().max((poi.y as f64 - y).abs()) <= reach)
         .min_by(|a, b| distance(a).total_cmp(&distance(b)))
-        .map(|poi| {
-            let ruined = if poi.look.is_ruined() { "Ruined" } else { "" };
-            words(&format!("{ruined}{:?}", poi.kind))
-        })
+        .map(|poi| poi_name(&poi))
 }
 
 /// The full map's title: where the player is, with the floor or level.

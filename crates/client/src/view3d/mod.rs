@@ -16,7 +16,8 @@ use crate::common::{SmoothPosition, ViewFacing};
 use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{
-    ClickedToken, DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, TokenView,
+    ClickedToken, DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, HoveredToken,
+    TokenView,
 };
 use token::{IconAnchor, TokenAssets};
 
@@ -41,13 +42,14 @@ impl Plugin for View3dPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ViewGrid>()
             .init_resource::<ClickedToken>()
+            .init_resource::<HoveredToken>()
             .configure_sets(Update, View3dSystems::Click.in_set(PlayerSystems::Input))
             .add_systems(Startup, spawn_camera)
             .add_systems(
                 Update,
                 (
                     camera::control_with_mouse.in_set(PlayerSystems::Input),
-                    token::click_tokens.in_set(View3dSystems::Click),
+                    token::find_token_under_cursor.in_set(View3dSystems::Click),
                 ),
             )
             .add_systems(
