@@ -11,6 +11,9 @@ use super::canvas::Sprite;
 /// How many times bigger `Sprites::make` has pictures drawn, to smooth them.
 const OVERSAMPLE: u32 = 3;
 
+/// How opaque a pixel must be to have a border drawn round it.
+const SOLID: u8 = 128;
+
 /// Part of a picture: left, top, and the width and height of a square. `None`
 /// is the whole picture.
 pub type Part = Option<(u32, u32, u32)>;
@@ -58,7 +61,10 @@ impl Sprites {
             .or_insert_with(|| {
                 let big = size * OVERSAMPLE;
                 let pixels = shrink_pixels(&draw(big), big, (0, 0, big), size);
-                Sprite { size, pixels }
+                Sprite {
+                    size,
+                    pixels: with_border(&pixels, size),
+                }
             });
     }
 
@@ -66,6 +72,28 @@ impl Sprites {
     pub fn get(&self, path: &str, part: Part, size: u32) -> Option<&Sprite> {
         self.scaled.get(&(path.to_string(), part, size))
     }
+}
+
+/// A square RGBA picture with a solid black line round what shows in it: each
+/// clear pixel touching a solid one, diagonally too.
+fn with_border(pixels: &[u8], size: u32) -> Vec<u8> {
+    let size = size as i64;
+    let solid = |x: i64, y: i64| {
+        (0..size).contains(&x)
+            && (0..size).contains(&y)
+            && pixels[((y * size + x) * 4 + 3) as usize] >= SOLID
+    };
+    let mut bordered = pixels.to_vec();
+    for y in 0..size {
+        for x in 0..size {
+            let touching = (-1..=1).any(|dy| (-1..=1).any(|dx| solid(x + dx, y + dy)));
+            if touching && !solid(x, y) {
+                let at = ((y * size + x) * 4) as usize;
+                bordered[at..at + 4].copy_from_slice(&[0, 0, 0, 255]);
+            }
+        }
+    }
+    bordered
 }
 
 /// A picture scaled to `size` by averaging what falls in each new pixel.
@@ -135,6 +163,21 @@ mod tests {
         ];
         let pixels = shrink_pixels(&data, 2, (0, 0, 2), 1);
         assert_eq!(pixels, [150, 0, 0, 127]);
+    }
+
+    #[test]
+    fn a_border_goes_round_what_is_solid() {
+        let mut pixels = vec![0; 3 * 3 * 4];
+        pixels[16..20].copy_from_slice(&[9, 9, 9, 255]);
+        let bordered = with_border(&pixels, 3);
+        for (i, pixel) in bordered.chunks(4).enumerate() {
+            let expected = if i == 4 {
+                [9, 9, 9, 255]
+            } else {
+                [0, 0, 0, 255]
+            };
+            assert_eq!(pixel, expected);
+        }
     }
 
     #[test]

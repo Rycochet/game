@@ -442,25 +442,49 @@ pub fn resize_tokens(
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClickedToken(pub Option<Entity>);
 
-/// Finds the clickable token under the cursor on a left click: within the
-/// token's circle on screen, or its icon's main picture.
-pub fn click_tokens(
+/// The clickable token the mouse is over (nearest the camera when several
+/// overlap), if any. Set every frame in `View3dSystems::Click`.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HoveredToken(pub Option<Entity>);
+
+/// Finds the clickable token under the cursor: within the token's circle on
+/// screen, or its icon's main picture. A left click on it is `ClickedToken`.
+#[allow(clippy::too_many_arguments)]
+pub fn find_token_under_cursor(
     mouse: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     views: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
     anchors: Query<(&IconAnchor, &GlobalTransform)>,
     clickable: Query<(), With<Clickable>>,
+    mut hovered: ResMut<HoveredToken>,
     mut clicked: ResMut<ClickedToken>,
 ) {
-    clicked.set_if_neq(ClickedToken(None));
-    if !mouse.just_pressed(MouseButton::Left) {
-        return;
-    }
-    let Some(cursor) = window.cursor_position() else {
-        return;
-    };
-    let (camera, camera_transform) = *camera;
+    let found = window.cursor_position().and_then(|cursor| {
+        let (camera, camera_transform) = *camera;
+        token_at(
+            cursor,
+            camera,
+            camera_transform,
+            &views,
+            &anchors,
+            &clickable,
+        )
+    });
+    hovered.set_if_neq(HoveredToken(found));
+    let pressed = mouse.just_pressed(MouseButton::Left);
+    clicked.set_if_neq(ClickedToken(found.filter(|_| pressed)));
+}
+
+/// The clickable token at a point on the screen.
+fn token_at(
+    cursor: Vec2,
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+    views: &Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
+    anchors: &Query<(&IconAnchor, &GlobalTransform)>,
+    clickable: &Query<(), With<Clickable>>,
+) -> Option<Entity> {
     let right = camera_transform.right();
     let eye = camera_transform.translation();
     // Whether the cursor is within `half` (3D units, across the screen) of a
@@ -482,7 +506,7 @@ pub fn click_tokens(
     };
 
     let mut best: Option<(f32, Entity)> = None;
-    for (view, transform, visibility) in &views {
+    for (view, transform, visibility) in views {
         if !visibility.get() || clickable.get(view.owner).is_err() {
             continue;
         }
@@ -501,5 +525,5 @@ pub fn click_tokens(
             best = Some((distance, view.owner));
         }
     }
-    clicked.0 = best.map(|(_, owner)| owner);
+    best.map(|(_, owner)| owner)
 }

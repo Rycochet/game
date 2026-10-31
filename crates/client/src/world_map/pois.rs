@@ -18,7 +18,9 @@ use super::HALF_SIZE;
 use super::poi_model;
 use crate::common::{Clickable, CurrentWorld, MapPosition, Portal, SmoothPosition, Token};
 use crate::player::Player;
-use crate::view3d::{TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView};
+use crate::view3d::{HoveredToken, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView};
+use bevy::light::NotShadowCaster;
+use bevy::render::render_resource::Face;
 
 /// Pois exist this far from the player (each way, east–west and
 /// north–south): the corners of the window when it is turned 45°, plus a
@@ -36,11 +38,21 @@ pub(super) struct PoiShape {
     variety: u64,
 }
 
+/// A model and its outline.
+type ModelMeshes = (Handle<Mesh>, Handle<Mesh>);
+
 /// The models' meshes, each made once, and their one material.
 #[derive(Resource, Default)]
 pub(super) struct PoiMeshes {
-    meshes: HashMap<(PoiKind, PoiLook, u64), Handle<Mesh>>,
+    meshes: HashMap<(PoiKind, PoiLook, u64), ModelMeshes>,
     material: Option<Handle<StandardMaterial>>,
+    outline_material: Option<Handle<StandardMaterial>>,
+}
+
+/// The black shell round a poi's model, shown while the mouse is over it.
+#[derive(Component)]
+pub(super) struct PoiOutline {
+    owner: Entity,
 }
 
 /// The poi entities that exist, by their position.
@@ -127,12 +139,12 @@ pub(super) fn add_models(
             continue;
         };
         let store = &mut *store;
-        let mesh = store
+        let (mesh, outline_mesh) = store
             .meshes
             .entry((shape.kind, shape.look, shape.variety))
             .or_insert_with(|| {
                 let model = poi_model::build(shape.kind, shape.look, shape.variety);
-                meshes.add(model.mesh())
+                (meshes.add(model.mesh()), meshes.add(model.outline_mesh()))
             })
             .clone();
         // White, so what shows is the mesh's own colours.
@@ -153,7 +165,46 @@ pub(super) fn add_models(
                 Transform::from_xyz(0.0, -TOKEN_HALF_THICKNESS, 0.0),
             ))
             .id();
-        commands.entity(view).add_child(model);
+        // Drawn from inside, so only what stands out past the model shows.
+        let outline_material = store
+            .outline_material
+            .get_or_insert_with(|| {
+                materials.add(StandardMaterial {
+                    base_color: Color::BLACK,
+                    unlit: true,
+                    cull_mode: Some(Face::Front),
+                    ..default()
+                })
+            })
+            .clone();
+        let outline = commands
+            .spawn((
+                PoiOutline {
+                    owner: token_view.owner,
+                },
+                Mesh3d(outline_mesh),
+                MeshMaterial3d(outline_material),
+                NotShadowCaster,
+                Transform::from_xyz(0.0, -TOKEN_HALF_THICKNESS, 0.0),
+                Visibility::Hidden,
+            ))
+            .id();
+        commands.entity(view).add_children(&[model, outline]);
+    }
+}
+
+/// Shows the outline of the poi the mouse is over.
+pub(super) fn outline_hovered(
+    hovered: Res<HoveredToken>,
+    mut outlines: Query<(&PoiOutline, &mut Visibility)>,
+) {
+    for (outline, mut visibility) in &mut outlines {
+        let shown = if hovered.0 == Some(outline.owner) {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+        visibility.set_if_neq(shown);
     }
 }
 
