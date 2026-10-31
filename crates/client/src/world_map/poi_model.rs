@@ -18,6 +18,9 @@ use shared::site::{CaveEntrance, Outline, PoiLook};
 /// How far a model reaches from its centre.
 const REACH: f32 = 8.0;
 
+/// How wide each piece of a ruined building's wall is.
+const WALL_STONE: f32 = 1.2;
+
 /// How far walls carry on below the ground, so a model on a slope never floats.
 const FOUNDATION: f32 = 8.0;
 
@@ -306,10 +309,14 @@ pub fn build(kind: PoiKind, look: PoiLook, variety: u64) -> PoiModel {
             width,
             height,
             floors,
-            ruin: _,
+            ruin,
         } => {
             let half = Vec2::new(half_size(width), half_size(height));
-            building(&mut model, kind, outline, half, floors);
+            if ruin > 0 {
+                ruined(&mut model, kind, outline, half, floors, ruin, variety);
+            } else {
+                building(&mut model, kind, outline, half, floors);
+            }
         }
         PoiLook::Cave { entrance } => underground(&mut model, kind, entrance),
     }
@@ -447,6 +454,54 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
         // Not buildings (`Generator::for_poi`), but still something to see.
         _ => flat(model, STONE),
     }
+}
+
+/// What is left of a building: no roof, and broken walls round a bare floor,
+/// with more of them gone and the rest lower the more ruined it is.
+fn ruined(
+    model: &mut PoiModel,
+    kind: PoiKind,
+    outline: Outline,
+    half: Vec2,
+    floors: u8,
+    ruin: u8,
+    variety: u64,
+) {
+    use PoiKind::*;
+    let walls = match kind {
+        ThatchedHut | StiltHut | GreenStiltHut | Warehouse | WoodenTower | Fort | ArcheryRange => {
+            WOOD
+        }
+        AdobeHouse | AdobeStore => ADOBE,
+        SandPyramid => SAND,
+        _ => STONE,
+    };
+    let shape = ring(outline, half);
+    model.prism(Vec2::ZERO, &shape, (-FOUNDATION, 0.1), EARTH);
+    let full = FLOOR * f32::from(floors.max(1));
+    let harm = f32::from(ruin);
+    let mut number = variety;
+    for (i, &from) in shape.iter().enumerate() {
+        let to = shape[(i + 1) % shape.len()];
+        let stones = (from.distance(to) / WALL_STONE).ceil().max(1.0) as usize;
+        for stone in 0..stones {
+            let (gone, low) = (hashed(&mut number), hashed(&mut number));
+            if gone < harm * 0.14 {
+                continue;
+            }
+            let at = from.lerp(to, (stone as f32 + 0.5) / stones as f32);
+            let height = (full * (1.0 - low * harm * 0.17)).max(0.4);
+            model.block(at, Vec2::splat(WALL_STONE / 2.0), height, walls);
+        }
+    }
+}
+
+/// The next of a run of numbers from `0..1`. Only for how a model looks.
+fn hashed(number: &mut u64) -> f32 {
+    *number = number
+        .wrapping_mul(6_364_136_223_846_793_005)
+        .wrapping_add(1_442_695_040_888_963_407);
+    (*number >> 40) as f32 / (1u64 << 24) as f32
 }
 
 /// What stands over a cave or dungeon: its mouth, or the way down.
@@ -593,5 +648,20 @@ mod tests {
         assert!(triangles(5) < triangles(20));
         assert!(triangles(20) < triangles(40));
         assert!(triangles(40) < triangles(100));
+    }
+
+    #[test]
+    fn the_more_ruined_the_less_is_left() {
+        let triangles = |ruin| {
+            let look = PoiLook::Building {
+                outline: Outline::Rectangle,
+                width: 30,
+                height: 30,
+                floors: 2,
+                ruin,
+            };
+            build(PoiKind::Castle, look, 1).corners.len()
+        };
+        assert!(triangles(5) < triangles(1));
     }
 }

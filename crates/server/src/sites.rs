@@ -149,7 +149,7 @@ fn enter_site(
     let version = world.site(id, poi.kind).version;
     let generator = match id {
         SiteId::Dev { ruin, .. } => Generator::for_poi(poi.kind).with_ruin(ruin),
-        SiteId::Poi(_) => Generator::for_poi(poi.kind),
+        SiteId::Poi(_) => Generator::for_site(poi.kind, poi.seed),
     };
     let Some(site) = Site::with_generator(poi.kind, poi.seed, version, generator) else {
         error!("{id:?} needs generator version {version}, which this server can't run");
