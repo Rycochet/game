@@ -80,6 +80,13 @@ impl PoiLook {
     }
 }
 
+/// Development tool: bump this to start clean. Every server forgets all it has
+/// saved from before (characters and what they know, sites and players' changes
+/// to them), so anyone connecting starts again, as nothing is kept on a client.
+/// Every generator version goes up with it, so sites are made as new whatever
+/// else has changed. The world itself stays: it comes from its seed.
+pub const FORGET_BEFORE: u32 = 1;
+
 /// Of each 100 buildings that can be ruined, how many are, evenly from 1 to
 /// `MOST_RUIN`.
 const RUINED_PERCENT: u64 = 30;
@@ -342,18 +349,15 @@ impl Generator {
 
 /// The building generator's version: bump it when its output changes in a
 /// way that matters (not for looks), and keep the old one runnable while
-/// saved sites use it.
-///
-/// 2: ruined buildings. A version 1 site has no ruin, whatever its options say.
-pub const BUILDING_VERSION: u32 = 2;
+/// saved sites use it. Bumping `FORGET_BEFORE` ends that: no old version is left
+/// in use, so all the code for them can go.
+pub const BUILDING_VERSION: u32 = 1 + FORGET_BEFORE;
 
 /// The cave generator's version (as `BUILDING_VERSION`).
-///
-/// 2: skylights. A version 1 site has none.
-pub const CAVE_VERSION: u32 = 2;
+pub const CAVE_VERSION: u32 = 1 + FORGET_BEFORE;
 
 /// The town generator's version (as `BUILDING_VERSION`).
-pub const TOWN_VERSION: u32 = 1;
+pub const TOWN_VERSION: u32 = 1 + FORGET_BEFORE;
 
 /// A poi's map: its plan, from which any level can be generated.
 #[derive(Clone, Debug)]
@@ -392,18 +396,13 @@ impl Site {
         version: u32,
         generator: Generator,
     ) -> Option<Self> {
-        let ruined = version >= 2 && matches!(generator, Generator::Building(o) if o.ruin > 0);
+        let ruined = matches!(generator, Generator::Building(o) if o.ruin > 0);
         let plan = match generator {
-            // Version 1 is the same floorplan with no ruin.
-            Generator::Building(options) if version == 1 => {
-                let options = BuildingOptions { ruin: 0, ..options };
-                Plan::Building(building::Plan::new(&options, seed))
-            }
             Generator::Building(options) if version == BUILDING_VERSION => {
                 Plan::Building(building::Plan::new(&options, seed))
             }
-            Generator::Cave(options) if version == 1 || version == CAVE_VERSION => {
-                Plan::Cave(cave::Plan::new(&options, seed, version >= 2))
+            Generator::Cave(options) if version == CAVE_VERSION => {
+                Plan::Cave(cave::Plan::new(&options, seed))
             }
             Generator::Town(options) if version == TOWN_VERSION => {
                 Plan::Town(town::Plan::new(&options, seed))
@@ -543,17 +542,14 @@ mod tests {
         assert!(Site::with_version(PoiKind::RockCave, seed, 0).is_none());
     }
 
-    /// Sites saved before ruin and skylights go on as they were.
     #[test]
-    fn version_1_buildings_have_no_ruin() {
+    fn only_a_ruined_generator_makes_a_ruin() {
         let seed = Seed::new(3);
         let ruined = Generator::for_poi(PoiKind::Castle).with_ruin(5);
-        let old = Site::with_generator(PoiKind::Castle, seed, 1, ruined).unwrap();
         let new = Site::with_generator(PoiKind::Castle, seed, BUILDING_VERSION, ruined).unwrap();
         let plain = Site::with_version(PoiKind::Castle, seed, BUILDING_VERSION).unwrap();
-        assert_eq!(old.level(0), plain.level(0));
         assert_ne!(new.level(0), plain.level(0));
-        assert!(new.is_ruined() && !old.is_ruined() && !plain.is_ruined());
+        assert!(new.is_ruined() && !plain.is_ruined());
     }
 
     /// Skylights: only on the top level of natural caves, walkable, in the
@@ -564,13 +560,13 @@ mod tests {
         for n in 0..150 {
             let seed = Seed::new(n);
             for kind in [PoiKind::RockCave, PoiKind::GrassyCave, PoiKind::Boulders] {
-                let (new, old) = (
-                    Site::new(kind, seed),
-                    Site::with_version(kind, seed, 1).unwrap(),
-                );
+                let Generator::Cave(options) = Generator::for_poi(kind) else {
+                    panic!("{kind:?} is a cave");
+                };
+                let (new, old) = (Site::new(kind, seed), cave::Plan::new(&options, seed));
                 assert_eq!(new.levels(), old.levels());
                 for index in 0..new.levels() {
-                    let (now, then) = (new.level(index), old.level(index));
+                    let (now, then) = (new.level(index), old.without_skylights(index));
                     let (min_x, min_y, width, height) = now.level.bounds();
                     assert_eq!(now.stairs, then.stairs);
                     for y in min_y..min_y + height {
