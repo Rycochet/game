@@ -33,6 +33,7 @@ impl Plugin for CommonPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
             })
             .init_resource::<CurrentDungeon>()
+            .init_resource::<WorldReturn>()
             .init_resource::<ServerStatus>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
@@ -256,6 +257,11 @@ pub struct MapPosition {
     pub x: i64,
     pub y: i64,
 }
+
+/// Where the player stood on the world map before entering a site: the way
+/// back out, and the place whose biome and weather the site's outside shares.
+#[derive(Resource, Default)]
+pub struct WorldReturn(pub MapPosition);
 
 /// The exact position, fractional while travelling (the player). Equal to
 /// `MapPosition` whenever the entity is standing still. Read it for smooth

@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::site::leads_out;
 
-use crate::common::{CurrentDungeon, CurrentWorld, GameView, MapPosition, Portal};
+use crate::common::{CurrentDungeon, CurrentWorld, GameView, MapPosition, Portal, WorldReturn};
 use crate::connection::{FromServer, ToServer};
 use crate::player::{Arrived, Player, PlayerSystems, TravelTo};
 use crate::view3d::{ClickedToken, View3dSystems};
@@ -23,7 +23,6 @@ pub struct SitePlugin;
 impl Plugin for SitePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Heading>()
-            .init_resource::<WorldReturn>()
             .add_systems(
                 Update,
                 follow_clicked_portal
@@ -39,10 +38,6 @@ impl Plugin for SitePlugin {
 /// The portal the player is travelling to, to use on arrival.
 #[derive(Resource, Default)]
 struct Heading(Option<Entity>);
-
-/// Where the player stood on the world map before entering a site.
-#[derive(Resource, Default)]
-struct WorldReturn(MapPosition);
 
 /// A click on a portal's token: travel to it, to use it there.
 fn follow_clicked_portal(

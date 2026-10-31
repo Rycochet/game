@@ -13,6 +13,7 @@
 mod liquid;
 mod mesh;
 mod picking;
+mod rain;
 mod stairs;
 mod theme;
 mod walls;
@@ -28,12 +29,15 @@ use bevy::render::render_resource::TextureFormat;
 use bevy::window::PrimaryWindow;
 use shared::dungeon::{Cell, Sight};
 use shared::protocol::ClientMessage;
+use shared::surface::SurfaceSample;
 
 use crate::common::{
-    CurrentDungeon, GameView, LightSource, MapPosition, SharesSight, SmoothPosition, ViewStats,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, LightSource, MapPosition, SharesSight,
+    SmoothPosition, ViewStats, Weather, WorldReturn,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
+use crate::surface_style::SurfaceStyle;
 use crate::view3d::{ClickedToken, TOKEN_DIAMETER, TokenView, View3dSystems, ViewCamera, ViewGrid};
 use mesh::{LightGrid, Surface, View, WallFace};
 use theme::Theme;
@@ -69,6 +73,7 @@ impl Plugin for DungeonMapPlugin {
     fn build(&self, app: &mut App) {
         let in_view = in_state(GameView::Dungeon);
         app.init_resource::<Shown>()
+            .add_plugins(MaterialPlugin::<rain::RainMaterial>::default())
             .add_systems(Startup, spawn_scene)
             .add_systems(OnEnter(GameView::Dungeon), show_scene)
             .add_systems(OnExit(GameView::Dungeon), hide_scene)
@@ -81,7 +86,14 @@ impl Plugin for DungeonMapPlugin {
             )
             .add_systems(
                 Update,
-                (apply_theme, update_meshes, hide_unseen_tokens, sync_lights)
+                (
+                    apply_theme,
+                    colour_ground,
+                    update_meshes,
+                    hide_unseen_tokens,
+                    sync_lights,
+                    rain::update,
+                )
                     .chain()
                     .after(PlayerSystems::Travel)
                     .after(View3dSystems::Place)
@@ -114,6 +126,8 @@ struct SurfaceMaterials {
     see_through: Handle<StandardMaterial>,
     /// Of stairs in the way of a viewer, in `Surface::ALL` order.
     stairs_through: Vec<Handle<StandardMaterial>>,
+    /// The outside ground's picture as drawn, for `colour_ground` to copy.
+    ground_picture: Handle<Image>,
     /// Pictures waiting to load so a grey copy can be made for the
     /// remembered surface, by surface index.
     to_grey: Vec<(usize, Handle<Image>)>,
@@ -149,6 +163,7 @@ fn spawn_scene(
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rain_materials: ResMut<Assets<rain::RainMaterial>>,
 ) {
     let theme = Theme::of(None);
     let pictures: Vec<Handle<Image>> = Surface::ALL
@@ -270,11 +285,13 @@ fn spawn_scene(
             NotShadowCaster,
         ));
     }
+    rain::spawn(&mut commands, scene, &mut meshes, &mut rain_materials);
     commands.insert_resource(SurfaceMaterials {
         solid,
         memory,
         see_through,
         stairs_through,
+        ground_picture: pictures[Surface::Ground as usize].clone(),
         to_grey: pictures.into_iter().enumerate().collect(),
         greys: BTreeMap::new(),
     });
@@ -314,6 +331,78 @@ fn apply_theme(
     if let Some(mut material) = materials.get_mut(&surfaces.see_through) {
         material.base_color_texture = Some(load_tile(&asset_server, theme.wall));
     }
+}
+
+/// Paints the outside ground the colour of the land the site stands on (its
+/// biome, or snow), once the picture has loaded and whenever that changes.
+#[allow(clippy::too_many_arguments)]
+fn colour_ground(
+    world: Option<Res<CurrentWorld>>,
+    place: Res<WorldReturn>,
+    style: Res<SurfaceStyle>,
+    clock: Res<GameClock>,
+    weather: Res<Weather>,
+    surfaces: Res<SurfaceMaterials>,
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut painted: Local<Option<[u8; 4]>>,
+) {
+    let Some(world) = world else {
+        return;
+    };
+    let MapPosition { x, y } = place.0;
+    // No jitter: it only roughens edges on the map, and here one point's would
+    // paint the whole site.
+    let sample = SurfaceSample {
+        jitter: 0.0,
+        ..world.surface.sample(x, y)
+    };
+    let climate = world.climate.sample(x, y, sample.height);
+    let conditions = world.conditions(&clock, &weather);
+    let colour = style.ground_colour(sample, climate, conditions.water, conditions.snow_line);
+    if *painted == Some(colour) {
+        return;
+    }
+    let Some(picture) = images.get(&surfaces.ground_picture) else {
+        return;
+    };
+    // Made first: `images` can't be added to while borrowed.
+    let copy = recoloured(picture, colour);
+    let copy = images.add(copy);
+    let ground = Surface::Ground as usize;
+    for handle in [&surfaces.solid[ground], &surfaces.stairs_through[ground]] {
+        if let Some(mut material) = materials.get_mut(handle) {
+            material.base_color_texture = Some(copy.clone());
+        }
+    }
+    *painted = Some(colour);
+}
+
+/// A copy of an 8-bit RGBA picture in one colour, keeping its detail: each
+/// pixel is the colour, lighter or darker as the pixel is against the picture's
+/// average (anything else is copied as it is).
+fn recoloured(image: &Image, colour: [u8; 4]) -> Image {
+    let mut copy = image.clone();
+    let rgba = matches!(
+        image.texture_descriptor.format,
+        TextureFormat::Rgba8UnormSrgb | TextureFormat::Rgba8Unorm
+    );
+    if let (true, Some(data)) = (rgba, copy.data.as_mut()) {
+        let luma = |pixel: &[u8; 4]| {
+            let [r, g, b] = [pixel[0], pixel[1], pixel[2]].map(f32::from);
+            0.299 * r + 0.587 * g + 0.114 * b
+        };
+        let pixels = data.as_chunks_mut::<4>().0;
+        let total: f32 = pixels.iter().map(luma).sum();
+        let average = (total / pixels.len().max(1) as f32).max(1.0);
+        for pixel in pixels {
+            let scale = luma(pixel) / average;
+            for (channel, base) in pixel[..3].iter_mut().zip(colour) {
+                *channel = (f32::from(base) * scale).clamp(0.0, 255.0) as u8;
+            }
+        }
+    }
+    copy
 }
 
 /// Gives remembered surfaces grey copies of their pictures, once the

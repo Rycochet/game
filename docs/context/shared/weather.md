@@ -17,7 +17,7 @@ Cloud cover and rain at any place and time, from the public terrain seed and the
 
 ## Used by
 
-- Client `common` (`CurrentWorld::weather`), `world_map::sky`.
+- Client `common` (`CurrentWorld::weather`), `world_map::sky`, `dungeon_map::rain`.
 
 ## Notes
 
