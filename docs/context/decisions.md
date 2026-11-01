@@ -372,3 +372,7 @@ The owner asked for a more accurate ping that keeps going while the window is fr
 ## 2026-11-01: The server times connections itself, with WebSocket pings
 
 The owner asked whether the server could use the ping, suggesting the client hand back its last pong with the time it held it. That number would come from the client, and the server must not trust clients, so the server times its own WebSocket pings instead, once a second, on the network thread. Clients answer in their network code, including browsers, without any game code, so a frozen game doesn't count and no message changed. The numbers in the pings can't be guessed, so a client can look slower but not faster, and latency must never earn it anything. Checked first: pings and their payloads pass through Cloudflare. For now it logs connections in trouble and drops silent ones after 30 s, as nothing timed them out before; scaling how much is preloaded can follow when needed.
+
+## 2026-11-01: A copy of the loading screen in the page, for the download
+
+The owner saw 5-6 seconds of black page while the wasm downloaded. `index.html` now shows the same screen saying "Downloading...", until the game has drawn its own and removes it, which also covers compiling the wasm and starting the graphics. It needs no JavaScript beyond showing the title once its font has loaded, as the owner wants no flash of another font there. The fonts come from the same server as the page, so nothing needs the internet. The cost is colours and sizes kept in two places.
