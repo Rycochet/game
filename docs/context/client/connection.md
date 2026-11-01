@@ -17,7 +17,7 @@ Also keeps `common::ServerClock`: `run_clock` runs it in real time, and `apply_p
 ## Public API
 
 - `ToServer(ClientMessage)` (message): send this to the server (at the end of the frame).
-- `FromServer(ServerMessage)` (message): a map message from the server (`Welcome`, `EnterLevel`, `LevelCells`, `OnWorldMap`, `Teleported`), read by `site`.
+- `FromServer(ServerMessage)` (message): a map message from the server (`Welcome`, `EnterLevel`, `LevelCells`, `OnWorldMap`, `Teleported`), read by `site`; `Inventory`, read by `inventory`.
 - `ServerConnection` (resource): the link to the server, and the embedded server (native); removed while disconnected and on quitting.
 
 ## Depends on
@@ -26,7 +26,7 @@ Also keeps `common::ServerClock`: `run_clock` runs it in real time, and `apply_p
 
 ## Used by
 
-- `site` (`ToServer`, `FromServer`), `dev_tools`, `debug_menu`, `world_map` and `dungeon_map` (`ToServer`: dev tools messages); other modules see `CurrentWorld` and `GameView`.
+- `site` and `inventory` (`ToServer`, `FromServer`), `dev_tools`, `debug_menu`, `world_map` and `dungeon_map` (`ToServer`: dev tools messages); other modules see `CurrentWorld` and `GameView`.
 
 ## Notes
 

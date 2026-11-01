@@ -10,6 +10,7 @@ mod debug_menu;
 mod dev_tools;
 mod dungeon_map;
 mod fonts;
+mod inventory;
 mod loading_screen;
 mod minimap;
 mod player;
@@ -75,7 +76,7 @@ fn main() {
         loading_screen::LoadingScreenPlugin,
     ));
     // (Apart: a tuple of plugins can only be so long.)
-    app.add_plugins(system_menu::SystemMenuPlugin);
+    app.add_plugins((system_menu::SystemMenuPlugin, inventory::InventoryPlugin));
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

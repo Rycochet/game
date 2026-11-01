@@ -453,6 +453,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "atomic"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a89cbf775b137e9b968e67227ef7f775587cde3fd31b0d8599dbd0f598a48340"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2320,6 +2329,7 @@ dependencies = [
  "sys-locale",
  "time",
  "tungstenite 0.30.0",
+ "uuid",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -5679,6 +5689,7 @@ dependencies = [
  "tokio-rustls",
  "tower-http",
  "tungstenite 0.30.0",
+ "uuid",
  "x509-parser",
 ]
 
@@ -5721,6 +5732,7 @@ dependencies = [
  "libm",
  "postcard",
  "serde",
+ "uuid",
 ]
 
 [[package]]
@@ -6509,6 +6521,7 @@ version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
 dependencies = [
+ "atomic",
  "getrandom 0.4.3",
  "js-sys",
  "serde_core",

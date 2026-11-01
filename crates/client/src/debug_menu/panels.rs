@@ -7,6 +7,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::dungeon::Cell;
+use shared::item::ItemKind;
 use shared::poi::PoiKind;
 use shared::rng::Seed;
 use shared::site::{Generator, MAX_RUIN, StairsStyle};
@@ -88,6 +89,7 @@ impl OpenPanels {
             .with_children(|content| match action {
                 DebugAction::ShowWidgets => spawn_every_widget(content),
                 DebugAction::SunsAndMoons => {}
+                DebugAction::GiveItem => spawn_give_buttons(content),
                 _ => spawn_step_buttons(content, action),
             });
         if action == DebugAction::SunsAndMoons {
@@ -118,6 +120,35 @@ fn spawn_step_buttons(content: &mut ChildSpawnerCommands, action: DebugAction) {
                     .insert((StepButton { action, forward }, Pressable));
             }
         });
+}
+
+/// A button for each kind of item.
+fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
+    for kind in ItemKind::ALL {
+        let node = Node {
+            padding: BUTTON_PADDING,
+            ..default()
+        };
+        spawn_button(content, ButtonState::Normal, kind.def().name, FONT, node)
+            .insert((GiveButton(kind), Pressable));
+    }
+}
+
+/// Asks the server for an item of this kind.
+#[derive(Component, Clone, Copy)]
+pub(super) struct GiveButton(ItemKind);
+
+/// What Give Item's buttons do.
+pub(super) fn press_give_buttons(
+    mut pressed: MessageReader<ButtonPressed>,
+    buttons: Query<&GiveButton>,
+    mut to_server: MessageWriter<ToServer>,
+) {
+    for press in pressed.read() {
+        if let Ok(&GiveButton(kind)) = buttons.get(press.0) {
+            to_server.write(ToServer(ClientMessage::DevGiveItem(kind)));
+        }
+    }
 }
 
 /// One of each thing `widgets` makes, to see how they look together.

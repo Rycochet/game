@@ -16,6 +16,7 @@ pub enum DebugAction {
     ForgetMap,
     ForgetMapOnServer,
     GeneratePoi,
+    GiveItem,
     HerbsState,
     ResetView,
     RevealMap,
@@ -50,7 +51,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 18] = [
+    pub(super) const ALL: [Self; 19] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::CycleTemperature,
@@ -58,6 +59,7 @@ impl DebugAction {
         Self::ForgetMap,
         Self::ForgetMapOnServer,
         Self::GeneratePoi,
+        Self::GiveItem,
         Self::HerbsState,
         Self::ResetView,
         Self::RevealMap,
@@ -80,6 +82,7 @@ impl DebugAction {
             Self::ForgetMap => "Forget Map",
             Self::ForgetMapOnServer => "Forget Map (Server)",
             Self::GeneratePoi => "Generate POI",
+            Self::GiveItem => "Give Item",
             Self::HerbsState => "Herbs State",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
@@ -138,6 +141,7 @@ impl DebugAction {
                 | Self::ForgetMap
                 | Self::ForgetMapOnServer
                 | Self::GeneratePoi
+                | Self::GiveItem
                 | Self::RevealMap
                 | Self::TeleportMode
                 | Self::TeleportToPoiShowcase

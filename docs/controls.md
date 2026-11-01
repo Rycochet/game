@@ -31,6 +31,11 @@ Everything can be done with a mouse or by touch, and on touch screens a tap is a
 | Move and zoom the full map | Drag, mouse wheel | Drag, pinch |
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
 | Close what is on top | Esc, or click outside it | Tap outside it |
+| Open or close your pockets | I, or click the bag at the bottom left | Tap the bag |
+| Pick up an item, and put it down | Press on it, drag, let go | Slide a finger from it, let go |
+| Turn an item you are holding | Right-click | Tap with a second finger |
+| Open a bag | Double-click it | Double-tap it |
+| Destroy an item, and all that is in it | Drop it on the bin in your pockets | The same |
 | Open the [debug menu](debug-menu) | Backtick (`` ` ``), or click the warning button at the top left | Tap the warning button |
 
 Esc goes to whatever is on top first: a text box, a dropdown, the debug menu or the full map, and only then the system menu.

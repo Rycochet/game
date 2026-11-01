@@ -32,6 +32,7 @@ rcgen.workspace = true
 x509-parser.workspace = true
 time.workspace = true
 instant-acme.workspace = true
+uuid = { workspace = true, features = ["std", "rng", "v6"] }
 # Headless: no rendering, windowing, audio or input.
 bevy = { workspace = true, features = ["std", "bevy_log", "multi_threaded"] }
 

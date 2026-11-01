@@ -7,6 +7,8 @@
 pub mod celestial;
 pub mod climate;
 pub mod dungeon;
+pub mod id;
+pub mod item;
 pub mod movement;
 pub mod pathfinding;
 pub mod poi;

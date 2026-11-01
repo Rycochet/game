@@ -140,6 +140,11 @@ pub struct TouchGesture {
     pub tilt: f32,
     /// The point between two fingers, in logical window pixels.
     pub centre: Vec2,
+    /// Where the first finger of this contact is, while it stays down, however
+    /// many have joined it.
+    pub first_finger: Option<Vec2>,
+    /// Another finger touched and lifted, while the first stayed down.
+    pub other_finger_tapped: bool,
 }
 
 impl Default for TouchGesture {
@@ -151,6 +156,8 @@ impl Default for TouchGesture {
             twist: 0.0,
             tilt: 0.0,
             centre: Vec2::ZERO,
+            first_finger: None,
+            other_finger_tapped: false,
         }
     }
 }

@@ -57,6 +57,7 @@ impl Plugin for DebugMenuPlugin {
                     panels::press_generate_buttons,
                     panels::update_generate_buttons,
                     panels::press_panel_buttons,
+                    panels::press_give_buttons,
                     panels::update_panel_buttons,
                     temperature_cycle,
                     menu::show_menu,
@@ -197,6 +198,7 @@ fn run_actions(
                 open.toggle(action, &mut commands, &mut raise, &nodes);
             }
             DebugAction::FieldsState
+            | DebugAction::GiveItem
             | DebugAction::HerbsState
             | DebugAction::ShowWidgets
             | DebugAction::StairsStyle => open.open(action, &mut commands, &mut raise, &nodes),

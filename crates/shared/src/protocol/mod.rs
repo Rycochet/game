@@ -18,6 +18,8 @@ pub use login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMet
 use serde::{Deserialize, Serialize};
 
 use crate::dungeon::Cell;
+use crate::id::Id;
+use crate::item::{Holder, Inventory, ItemKind, Rotation};
 use crate::movement::Step;
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
 use crate::rng::Seed;
@@ -26,7 +28,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 21;
+pub const PROTOCOL_VERSION: u32 = 23;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -74,6 +76,21 @@ pub enum ClientMessage {
     /// with just this player on it pauses (`Welcome`'s `can_pause`); others
     /// ignore it.
     SetPaused(bool),
+    /// Moves something the character carries to this place in this grid, turned
+    /// this way, answered with Inventory, whether or not it could go.
+    MoveItem {
+        item: Id,
+        to: Holder,
+        x: u8,
+        y: u8,
+        rotation: Rotation,
+    },
+    /// Destroys something the character carries and all that is in it, for good,
+    /// answered with `Inventory`.
+    DestroyItem { item: Id },
+    /// Developer tools: a new item of this kind in the character's pockets if
+    /// there is room, answered with Inventory.
+    DevGiveItem(ItemKind),
     /// Developer tools: jump to a point on the map the player is on (in a
     /// site, only onto a walkable cell), answered with `Teleported`. Only an
     /// embedded (single-player) server accepts it; others ignore it.
@@ -143,6 +160,7 @@ impl ClientMessage {
                 | Self::DevForgetMap
                 | Self::DevForgetMapOnServer
                 | Self::DevGenerateSite { .. }
+                | Self::DevGiveItem(_)
         )
     }
 
@@ -259,6 +277,9 @@ pub enum ServerMessage {
     /// them elsewhere (a step the server refused). Sent once a tick, when
     /// steps have arrived.
     Position { map: u32, step: u32, x: i64, y: i64 },
+    /// Everything the character carries, as the server has it: after Welcome,
+    /// and whenever it is asked to change, so a move it refused is put right.
+    Inventory(Inventory),
 }
 
 /// What a player knows of one world map chunk. The terrain itself isn't
@@ -352,6 +373,17 @@ mod tests {
             },
             ClientMessage::UseExit,
             ClientMessage::SetPaused(true),
+            ClientMessage::MoveItem {
+                item: Id(uuid::Uuid::from_u128(7)),
+                to: Holder::Inside(Id(uuid::Uuid::from_u128(8))),
+                x: 2,
+                y: 3,
+                rotation: Rotation::Quarter,
+            },
+            ClientMessage::DestroyItem {
+                item: Id(uuid::Uuid::from_u128(7)),
+            },
+            ClientMessage::DevGiveItem(ItemKind::Pouch),
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevSetTime { minutes: 90.5 },
@@ -493,6 +525,12 @@ mod tests {
                 x: -2,
                 y: 5,
             },
+            ServerMessage::Inventory({
+                let mut inventory = Inventory::default();
+                let pouch = crate::item::Item::new(Id(uuid::Uuid::from_u128(1)), ItemKind::Pouch);
+                inventory.give(pouch).unwrap();
+                inventory
+            }),
         ];
         (client, server)
     }

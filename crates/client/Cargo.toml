@@ -55,5 +55,6 @@ web-sys = { version = "0.3", features = [
 ] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+uuid.workspace = true
 rcgen.workspace = true
 time.workspace = true

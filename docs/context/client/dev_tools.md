@@ -29,6 +29,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - `HOW_DEBUG_MAP_ZOOM=n`: the map `HOW_DEBUG_MAP` opens at this zoom.
 - `HOW_DEBUG_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the locale says.
 - `HOW_DEBUG_SHOW_FLOOR=n`: three seconds after starting, look at this known floor (an index, from 0); needs the full map open (`HOW_DEBUG_MAP`), as closed it goes straight back.
+- `HOW_DEBUG_INVENTORY=true`: have a few items and, two seconds after starting, show the pockets and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at this index in the pockets; with `HOW_DEBUG_CURSOR` to place it. Items are saved, so keep to a scratch data folder.
 - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
 - `HOW_DEBUG_PANEL=1`: open the debug menu's Show Widgets panel; `HOW_DEBUG_PANEL=suns`: its Suns and Moons panel; `HOW_DEBUG_PANEL=generate`: Generate POI's submenu.
 - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
@@ -43,7 +44,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 
 ## Depends on
 
-- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `loading_screen` (`HoldLoadingScreen`), `system_menu` (`SystemMenu`).
+- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `inventory` (`InventoryDebug`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `loading_screen` (`HoldLoadingScreen`), `system_menu` (`SystemMenu`).
 
 ## Used by
 
