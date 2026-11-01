@@ -19,7 +19,7 @@ mod storage;
 mod world_map;
 
 use clock::{Repeating, WorldClock};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -159,6 +159,26 @@ pub struct ServerWorld {
     /// The sites entered so far (loaded when first needed).
     sites: BTreeMap<SiteId, SiteSave>,
     unsaved_sites: Unsaved<SiteId>,
+    /// Sites forgotten since `connections::handle_messages` last looked, for
+    /// putting out anyone else in them.
+    forgotten: Forgotten,
+}
+
+/// Which sites have been forgotten.
+#[derive(Default)]
+pub(crate) struct Forgotten {
+    all: bool,
+    sites: BTreeSet<SiteId>,
+}
+
+impl Forgotten {
+    pub(crate) fn is_empty(&self) -> bool {
+        !self.all && self.sites.is_empty()
+    }
+
+    pub(crate) fn includes(&self, id: SiteId) -> bool {
+        self.all || self.sites.contains(&id)
+    }
 }
 
 impl ServerWorld {
@@ -222,6 +242,7 @@ impl ServerWorld {
             storage,
             sites: BTreeMap::new(),
             unsaved_sites: Unsaved::default(),
+            forgotten: Forgotten::default(),
         };
         save_world(&world.storage, seed, clock);
         Ok(world)
@@ -264,6 +285,28 @@ impl ServerWorld {
                 self.storage.save_site(id, save);
             }
         }
+    }
+
+    /// Forgets a site: it is made anew when next entered, with its generator's
+    /// current version and no players' changes.
+    pub(crate) fn forget_site(&mut self, id: SiteId) {
+        self.sites.remove(&id);
+        self.unsaved_sites.unmark(&id);
+        self.storage.remove_site(id);
+        self.forgotten.sites.insert(id);
+    }
+
+    /// Forgets every site, as `forget_site`.
+    pub(crate) fn forget_sites(&mut self) {
+        self.sites.clear();
+        self.unsaved_sites.take();
+        self.storage.remove_sites();
+        self.forgotten.all = true;
+    }
+
+    /// The sites forgotten since this was last asked.
+    pub(crate) fn take_forgotten(&mut self) -> Forgotten {
+        std::mem::take(&mut self.forgotten)
     }
 
     /// What a joining client is told about the world.

@@ -297,6 +297,10 @@ Generator versions: their old code was removed with the first `FORGET_BEFORE` bu
 
 Each building's `ruin` comes from its poi's map seed (`Generator::for_site`), so the world map's model and the site agree. Claude's first numbers, to tune by eye: 30% of buildings are ruined, evenly from 1 to 5; tents and ice shelters never are.
 
+## 2026-11-01: Forgetting sites, and when a generator change reaches players
+
+The owner's request: Forget Map (Server) makes the server forget a site, or on the world map every site, so they are made anew with the current generators; plain Forget Map on the world map forgets the character's memory of every site. Claude's choices, agreed in planning: a version bump alone still leaves a site as it is while the old version can run, so players' changes survive; a version that can't run any more is remade instead of refusing entry. Characters record the version they knew: their memory of a changed site is dropped, and anyone in one when it changes, or loading into one, is put out at its poi to go in again. Whoever asks for the forgetting stays and arrives on the new map, since a made-up dev site has no way back in.
+
 ## 2026-10-31: Starting clean in development
 
 The owner's request: a way to make everyone forget everything from before a point. `shared::site::FORGET_BEFORE` is a number set in the code; bumping it makes servers ignore (and save over) characters and sites saved under a lower one, and raises every generator version with it, so all sites are made new. Clients keep nothing between connections but their guest id, so forgetting on the server is enough for them. Old files aren't deleted until saved over. The world map version isn't raised: a mismatch there refuses the world, and the world comes from its seed anyway.

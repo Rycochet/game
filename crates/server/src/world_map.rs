@@ -86,13 +86,22 @@ pub(crate) fn reveal_pois(client: &mut Client, world: &ServerWorld) -> bool {
     look_around(client, world)
 }
 
-/// Developer tools: the character forgets the whole world map, and is told again
-/// what is in sight.
+/// Developer tools: the character forgets the whole world map and every site
+/// on it, and is told again what is in sight.
 pub(crate) fn forget(client: &mut Client, world: &ServerWorld) -> bool {
     client.character.pois.clear();
+    client.character.memory.clear();
+    client.character.site_versions.clear();
     client.world_chunks.clear();
     client.unsaved = true;
     client.link.send(&ServerMessage::ForgetWorldMap) && look_around(client, world)
+}
+
+/// Developer tools: as `forget`, and the server forgets every site, to be made
+/// anew when next entered.
+pub(crate) fn forget_on_server(client: &mut Client, world: &mut ServerWorld) -> bool {
+    world.forget_sites();
+    forget(client, world)
 }
 
 /// The player is somewhere new on the world map: the chunks now in sight are

@@ -148,9 +148,6 @@ fn run_actions(
     for &action in actions.read() {
         match action {
             DebugAction::AutoWalk => walk.0 = !walk.0,
-            DebugAction::BackToStart => {
-                to_server.write(ToServer(ClientMessage::DevBackToStart));
-            }
             DebugAction::ChangeCellMode => *mode = toggled(*mode, ClickMode::ChangeCell),
             DebugAction::CycleTemperature => {
                 *cycle = match *cycle {
@@ -167,10 +164,16 @@ fn run_actions(
             DebugAction::ForgetMap => {
                 to_server.write(ToServer(ClientMessage::DevForgetMap));
             }
+            DebugAction::ForgetMapOnServer => {
+                to_server.write(ToServer(ClientMessage::DevForgetMapOnServer));
+            }
+            DebugAction::TeleportToStart => {
+                to_server.write(ToServer(ClientMessage::DevBackToStart));
+            }
             DebugAction::RevealMap => {
                 to_server.write(ToServer(ClientMessage::DevRevealMap));
             }
-            DebugAction::PoiShowcase => {
+            DebugAction::TeleportToPoiShowcase => {
                 to_server.write(ToServer(ClientMessage::DevToShowcase));
             }
             DebugAction::ResetView => {

@@ -47,6 +47,11 @@ impl Visit {
         self.position
     }
 
+    /// Which site it is.
+    pub(crate) fn id(&self) -> SiteId {
+        self.id
+    }
+
     /// Whether the site is a town, whose layout players always know.
     fn is_town(&self) -> bool {
         self.site.kind().is_town()
@@ -122,22 +127,90 @@ fn dev_poi(client: &Client, kind: PoiKind, seed: u64) -> Poi {
 /// A client coming back: puts the player back on the level they were on
 /// when they left, if it is still there.
 pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitSave) -> bool {
-    let poi = match saved.site {
+    let id = saved.site;
+    let poi = match id {
         SiteId::Poi(chunk) => world.pois.in_chunk(chunk),
         SiteId::Dev { kind, seed, .. } => Some(dev_poi(client, kind, seed)),
     };
     let Some(poi) = poi else {
-        warn!("A character was in {:?}, which isn't there", saved.site);
+        warn!("A character was in {id:?}, which isn't there");
         client.unsaved = true;
-        return true;
+        return world_map::look_around(client, world);
     };
+    // Their map is the version they knew (a save from before these were
+    // recorded knew the one saved with the site).
+    let saved_version = world.site(id, poi.kind).version;
+    let knew = client.character.site_versions.get(&id).copied();
+    let knew = knew.unwrap_or(saved_version);
+    let site = make_site(world, &poi, id);
+    if site.is_none() || world.site(id, poi.kind).version != knew {
+        info!("A character was in {id:?}, which has changed: putting them out");
+        return leave_for_poi(client, world, poi, id);
+    }
     let at = Arrival::At(saved.position);
-    enter_site(client, world, poi, saved.site, saved.level, at)
+    enter_site(client, world, poi, id, saved.level, at)
 }
 
-/// Generates the site (with the generator version it was first made with)
-/// and puts the player on level `index` (or its last level, if there are
-/// fewer).
+/// Developer tools: the server forgets the site the player is on, and they
+/// arrive on it again as first made, on the same level and cell if they can.
+pub(crate) fn forget_site(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = client.visit.take() else {
+        return true;
+    };
+    let Visit {
+        poi,
+        id,
+        index,
+        position,
+        ..
+    } = visit;
+    world.forget_site(id);
+    client.character.memory.remove(&id);
+    client.character.site_versions.remove(&id);
+    enter_site(client, world, poi, id, index, Arrival::At(position))
+}
+
+/// Puts the player out of the site they are on, which is no longer what they
+/// are looking at, at its poi. They can go in again.
+pub(crate) fn put_out(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = client.visit.take() else {
+        return true;
+    };
+    leave_for_poi(client, world, visit.poi, visit.id)
+}
+
+/// The character forgets a site that has changed, and is on the world map at
+/// its poi.
+fn leave_for_poi(client: &mut Client, world: &mut ServerWorld, poi: Poi, id: SiteId) -> bool {
+    client.character.memory.remove(&id);
+    client.character.site_versions.remove(&id);
+    client.character.world_position = (poi.x, poi.y);
+    client.unsaved = true;
+    client.changed_map();
+    let (x, y) = (poi.x, poi.y);
+    client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
+}
+
+/// Generates a site with the generator version it was first made with. If this
+/// server can't run that one any more, the site is forgotten and made anew.
+fn make_site(world: &mut ServerWorld, poi: &Poi, id: SiteId) -> Option<Site> {
+    let generator = match id {
+        SiteId::Dev { ruin, .. } => Generator::for_poi(poi.kind).with_ruin(ruin),
+        SiteId::Poi(_) => Generator::for_site(poi.kind, poi.seed),
+    };
+    let version = world.site(id, poi.kind).version;
+    let site = Site::with_generator(poi.kind, poi.seed, version, generator);
+    if site.is_some() {
+        return site;
+    }
+    warn!("{id:?} needs generator version {version}, which this server can't run: remaking it");
+    world.forget_site(id);
+    let version = world.site(id, poi.kind).version;
+    Site::with_generator(poi.kind, poi.seed, version, generator)
+}
+
+/// Generates the site and puts the player on level `index` (or its last level,
+/// if there are fewer). What they remember of it goes if its map has changed.
 fn enter_site(
     client: &mut Client,
     world: &mut ServerWorld,
@@ -146,15 +219,16 @@ fn enter_site(
     index: u32,
     arrival: Arrival,
 ) -> bool {
-    let version = world.site(id, poi.kind).version;
-    let generator = match id {
-        SiteId::Dev { ruin, .. } => Generator::for_poi(poi.kind).with_ruin(ruin),
-        SiteId::Poi(_) => Generator::for_site(poi.kind, poi.seed),
-    };
-    let Some(site) = Site::with_generator(poi.kind, poi.seed, version, generator) else {
-        error!("{id:?} needs generator version {version}, which this server can't run");
+    let Some(site) = make_site(world, &poi, id) else {
+        error!("{id:?} can't be made by this server");
         return true;
     };
+    let version = world.site(id, poi.kind).version;
+    let known = client.character.site_versions.insert(id, version);
+    if known.is_some_and(|known| known != version) {
+        client.character.memory.remove(&id);
+    }
+    client.unsaved = true;
     let index = index.min(site.levels() - 1);
     let new = NewVisit { poi, id, site };
     enter_level(client, world, new, index, arrival, true)
@@ -1151,11 +1225,137 @@ mod tests {
             seed: castle_seed(),
             ruin: 0,
         };
-        // A site made by a generator version this server can't run.
+        let current = test.world.site_mut(id, PoiKind::Castle).version;
+        enter(&mut test, 0);
+        assert_eq!(test.world.site(id, PoiKind::Castle).version, current);
+        assert_eq!(test.client.character.site_versions[&id], current);
+    }
+
+    fn castle_id() -> SiteId {
+        SiteId::Dev {
+            kind: PoiKind::Castle,
+            seed: castle_seed(),
+            ruin: 0,
+        }
+    }
+
+    #[test]
+    fn a_site_whose_version_cannot_run_is_made_anew() {
+        let mut test = TestClient::new();
+        let id = castle_id();
+        let current = test.world.site(id, PoiKind::Castle).version;
         test.world.site_mut(id, PoiKind::Castle).version = 99;
         let answers = enter(&mut test, 0);
-        assert!(answers.is_empty(), "{answers:?}");
+        assert!(matches!(answers[0], ServerMessage::EnterLevel(_)));
+        assert_eq!(test.world.site(id, PoiKind::Castle).version, current);
+    }
+
+    #[test]
+    fn memory_of_another_version_of_a_site_is_dropped() {
+        let mut test = TestClient::new();
+        let id = castle_id();
+        enter(&mut test, 0);
+        assert!(!test.client.character.memory[&id].is_empty());
+        test.send(&[ClientMessage::DevBackToStart]);
+        let current = test.world.site(id, PoiKind::Castle).version;
+        test.client.character.site_versions.insert(id, current + 1);
+        let unseen = std::collections::BTreeMap::from([(7, CellMasks::from([((100, 100), 1)]))]);
+        test.client.character.memory.insert(id, unseen);
+        enter(&mut test, 0);
+        assert!(!test.client.character.memory[&id].contains_key(&7));
+    }
+
+    #[test]
+    fn coming_back_to_a_changed_site_puts_the_player_out_with_the_map_sent() {
+        let folder = TestFolder::new();
+        let mut test = TestClient::of(saved_world(&folder));
+        test.send(&[ClientMessage::DevTeleport { x: 70, y: -3 }]);
+        enter(&mut test, 1);
+        let id = castle_id();
+        let current = test.world.site(id, PoiKind::Castle).version;
+        test.client.character.site_versions.insert(id, current + 1);
+        test.client.unsaved = true;
+
+        let test = TestClient::of(test.leave());
         assert!(test.client.visit.is_none());
+        assert!(!test.client.character.memory.contains_key(&id));
+        assert!(matches!(
+            test.welcome[1],
+            ServerMessage::OnWorldMap { x: 70, y: -3 }
+        ));
+        assert!(
+            test.welcome
+                .iter()
+                .any(|answer| matches!(answer, ServerMessage::WorldChunk(_)))
+        );
+    }
+
+    #[test]
+    fn coming_back_to_a_site_that_cannot_run_puts_the_player_out() {
+        let folder = TestFolder::new();
+        let mut test = TestClient::of(saved_world(&folder));
+        enter(&mut test, 0);
+        let id = castle_id();
+        // Made, and known, at a version the server has since retired.
+        test.client.character.site_versions.insert(id, 99);
+        test.client.unsaved = true;
+        let mut world = test.leave();
+        world.site_mut(id, PoiKind::Castle).version = 99;
+        world.save_sites();
+
+        let test = TestClient::of(world);
+        assert!(test.client.visit.is_none());
+        assert!(matches!(test.welcome[1], ServerMessage::OnWorldMap { .. }));
+    }
+
+    /// A player's change on a level of the castle, saved.
+    fn change_castle(test: &mut TestClient, level: u32) {
+        let save = test.world.site_mut(castle_id(), PoiKind::Castle);
+        let level = save.levels.entry(level).or_default();
+        level.changes.insert((1, 1), Cell::Floor);
+        test.world.save_sites();
+    }
+
+    #[test]
+    fn forgetting_on_the_server_deletes_the_save_and_keeps_the_player_there() {
+        let folder = TestFolder::new();
+        let mut test = TestClient::of(saved_world(&folder));
+        enter(&mut test, 1);
+        change_castle(&mut test, 1);
+        let position = test.client.visit.as_ref().unwrap().position;
+
+        let answers = test.send(&[ClientMessage::DevForgetMapOnServer]);
+        assert!(matches!(answers[0], ServerMessage::EnterLevel(_)));
+        let visit = test.client.visit.as_ref().unwrap();
+        assert_eq!((visit.index, visit.position), (1, position));
+        let site = test.world.site(castle_id(), PoiKind::Castle);
+        assert!(site.levels[&1].changes.is_empty());
+    }
+
+    #[test]
+    fn forgetting_the_world_map_forgets_every_site() {
+        let folder = TestFolder::new();
+        let mut test = TestClient::of(saved_world(&folder));
+        enter(&mut test, 0);
+        change_castle(&mut test, 0);
+        test.send(&[ClientMessage::DevBackToStart]);
+        test.world.save_sites();
+        let id = castle_id();
+
+        // Only the character's memory...
+        test.send(&[ClientMessage::DevForgetMap]);
+        assert!(test.client.character.memory.is_empty());
+        assert!(
+            !test.world.site(id, PoiKind::Castle).levels[&0]
+                .changes
+                .is_empty()
+        );
+
+        // ...and the server's, on disk too.
+        let answers = test.send(&[ClientMessage::DevForgetMapOnServer]);
+        assert_eq!(answers[0], ServerMessage::ForgetWorldMap);
+        assert!(test.world.storage.load_site(id).is_none());
+        assert!(test.world.site(id, PoiKind::Castle).levels.is_empty());
     }
 
     #[test]
