@@ -93,7 +93,8 @@ mod tests {
                 clock: 0.0,
                 snow_line: shared::world::NORMAL_SNOW_LINE,
                 x: 0,
-                y: 0
+                y: 0,
+                dev_tools: true,
             }
         );
         // Not leaving before the teleport is dealt with: a server still

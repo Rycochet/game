@@ -12,7 +12,9 @@ use shared::dungeon::Cell;
 use shared::movement::Step;
 use shared::protocol::ClientMessage;
 
-use crate::common::{ClickMode, CurrentDungeon, DebugInfo, GameView, NORMAL_SNOW_LINE, Weather};
+use crate::common::{
+    ClickMode, CurrentDungeon, DebugInfo, GameView, NORMAL_SNOW_LINE, ServerDevTools, Weather,
+};
 use crate::connection::ToServer;
 use crate::player::{PlayerSystems, TakeStep};
 use crate::view3d::OrbitCamera;
@@ -85,6 +87,7 @@ struct FactSources<'w> {
     cycle: Res<'w, TemperatureCycle>,
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
+    server_dev_tools: Res<'w, ServerDevTools>,
 }
 
 impl FactSources<'_> {
@@ -99,6 +102,8 @@ impl FactSources<'_> {
             teleporting: *self.mode == ClickMode::Teleport,
             changing_cells: *self.mode == ClickMode::ChangeCell,
             showing_info: self.info.0,
+            in_town: *self.view.get() == GameView::Dungeon && self.dungeon.is_town(),
+            dev_tools: self.server_dev_tools.0,
         }
     }
 }
@@ -151,6 +156,12 @@ fn run_actions(
                         TemperatureCycle::Off
                     }
                 };
+            }
+            DebugAction::ForgetMap => {
+                to_server.write(ToServer(ClientMessage::DevForgetMap));
+            }
+            DebugAction::RevealMap => {
+                to_server.write(ToServer(ClientMessage::DevRevealMap));
             }
             DebugAction::PoiShowcase => {
                 to_server.write(ToServer(ClientMessage::DevToShowcase));

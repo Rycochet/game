@@ -47,6 +47,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()
             .init_resource::<ClickMode>()
+            .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
             .init_resource::<TouchGesture>();
@@ -91,6 +92,10 @@ pub enum ClickMode {
     /// Changes the cell there, to try walls out (in a site).
     ChangeCell,
 }
+
+/// Whether the server accepts developer tools messages (from its `Welcome`).
+#[derive(Resource, Default, Clone, Copy, Debug)]
+pub struct ServerDevTools(pub bool);
 
 /// Whether the status text with position, hour, ping and stats is on show.
 #[derive(Resource, Clone, Copy, Debug)]
@@ -207,6 +212,10 @@ impl KnownPois {
     }
 
     /// What the server says is in a chunk.
+    pub fn forget_all(&mut self) {
+        *self = Self::new(self.width);
+    }
+
     pub fn insert(&mut self, chunk: ChunkPos, poi: Option<SeenPoi>) {
         self.chunks.insert((chunk.y, chunk.x), poi);
     }

@@ -91,6 +91,13 @@ pub enum ClientMessage {
     /// Developer tools: show every poi, known or not, for this connection.
     /// Only an embedded server accepts it.
     DevRevealPois,
+    /// Developer tools: the character knows the whole of the level they are on,
+    /// answered as if arriving there again. Not in towns, known already.
+    DevRevealMap,
+    /// Developer tools: the character forgets the level they are on, answered
+    /// as if arriving there for the first time; or on the world map, all of it,
+    /// answered with `ForgetWorldMap` and what is in sight. Not in towns.
+    DevForgetMap,
 }
 
 impl ClientMessage {
@@ -106,6 +113,8 @@ impl ClientMessage {
                 | Self::DevSetCell { .. }
                 | Self::DevSnowLine(_)
                 | Self::DevRevealPois
+                | Self::DevRevealMap
+                | Self::DevForgetMap
         )
     }
 }
@@ -122,7 +131,12 @@ pub enum ServerMessage {
         snow_line: u32,
         x: i64,
         y: i64,
+        /// Whether this server accepts developer tools messages.
+        dev_tools: bool,
     },
+    /// Everything the client knows of the world map is forgotten; the chunks
+    /// it may know again follow (`DevForgetMap`).
+    ForgetWorldMap,
     /// The snow line has moved: above it everything is frozen, and ice can be
     /// walked on.
     SnowLine(u32),
@@ -231,6 +245,8 @@ mod tests {
             ClientMessage::DevBackToStart,
             ClientMessage::DevToShowcase,
             ClientMessage::DevRevealPois,
+            ClientMessage::DevRevealMap,
+            ClientMessage::DevForgetMap,
             ClientMessage::DevEnterSite {
                 kind: PoiKind::Crypt,
                 seed: 3,
@@ -249,7 +265,9 @@ mod tests {
                 snow_line: 128,
                 x: -4,
                 y: 9,
+                dev_tools: true,
             },
+            ServerMessage::ForgetWorldMap,
             ServerMessage::SnowLine(40),
             ServerMessage::Hour(6),
             ServerMessage::Pong {

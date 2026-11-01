@@ -26,15 +26,19 @@ fn main() {
         .expect("HALL_OF_WORLDS_ADDRESS is an address and port, such as 0.0.0.0:8080");
     let web = env::var_os("HALL_OF_WORLDS_WEB").map(Into::into);
     let data = default_data_folder();
+    let dev_tools = env::var("HALL_OF_WORLDS_DEV_TOOLS").is_ok_and(|value| value == "1");
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {
-            dev_tools: false,
+            dev_tools,
             exit_when_alone: false,
         },
         Some(data.clone()),
     );
     app.add_plugins((LogPlugin::default(), NetworkPlugin { address, web }));
     bevy::log::info!("Saving in {}", data.display());
+    if dev_tools {
+        bevy::log::warn!("Dev tools are on: anyone connected can teleport and change the world");
+    }
     app.run();
 }

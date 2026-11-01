@@ -215,6 +215,7 @@ fn receive(
     mut from_server: MessageWriter<FromServer>,
     mut prediction: ResMut<Prediction>,
     mut clock: ResMut<GameClock>,
+    mut server_dev_tools: ResMut<crate::common::ServerDevTools>,
     mut server_clock: ResMut<ServerClock>,
     time: Res<Time<Real>>,
     mut weather: ResMut<Weather>,
@@ -255,7 +256,9 @@ fn receive(
                 snow_line,
                 x,
                 y,
+                dev_tools,
             })) => {
+                server_dev_tools.0 = dev_tools;
                 clock.set_if_neq(GameClock { hour: hours as u32 });
                 server_clock.hours = hours;
                 weather.set_if_neq(Weather {
@@ -286,11 +289,17 @@ fn receive(
                     snow_line,
                     x,
                     y,
+                    dev_tools,
                 }));
             }
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");
                 *status = ServerStatus::Refused(reason);
+            }
+            Ok(Some(ServerMessage::ForgetWorldMap)) => {
+                if let Some(world) = joined.as_mut().or(world.as_deref_mut()) {
+                    world.pois.forget_all();
+                }
             }
             Ok(Some(ServerMessage::WorldChunk(chunk))) => {
                 match joined.as_mut().or(world.as_deref_mut()) {

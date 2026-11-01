@@ -432,6 +432,54 @@ fn enter_level(
     update_sight(client)
 }
 
+/// Sends the level the player is on again, as if arriving where they stand.
+fn arrive_again(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = client.visit.take() else {
+        return true;
+    };
+    let Visit {
+        poi,
+        id,
+        site,
+        index,
+        position,
+        ..
+    } = visit;
+    let new = NewVisit { poi, id, site };
+    enter_level(client, world, new, index, Arrival::At(position), false)
+}
+
+/// Developer tools: the character knows the whole of the level they are on. A
+/// secret door stays a wall, as it does when seen.
+pub(crate) fn reveal_level(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = client.visit.take() else {
+        return true;
+    };
+    // A town is known already.
+    if !visit.is_town() {
+        *memory(client, &visit) = all_cells(&visit.level.level);
+        client.visit = Some(visit);
+        return arrive_again(client, world);
+    }
+    client.visit = Some(visit);
+    true
+}
+
+/// Developer tools: the character forgets the level they are on.
+pub(crate) fn forget_level(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = client.visit.take() else {
+        return true;
+    };
+    // A town would only be sent whole again.
+    if !visit.is_town() {
+        memory(client, &visit).clear();
+        client.visit = Some(visit);
+        return arrive_again(client, world);
+    }
+    client.visit = Some(visit);
+    true
+}
+
 /// What the character remembers of the visit's level.
 fn memory<'a>(client: &'a mut Client, visit: &Visit) -> &'a mut CellMasks {
     let site = client.character.memory.entry(visit.id).or_default();
@@ -786,6 +834,40 @@ mod tests {
         assert!(again.iter().any(|&(_, _, _, remembered)| remembered));
         let remembered: Vec<_> = again.iter().filter(|c| c.3).collect();
         assert!(remembered.len() <= first.len());
+    }
+
+    #[test]
+    fn revealing_sends_the_whole_level_remembered_and_keeps_the_place() {
+        let mut test = TestClient::new();
+        enter(&mut test, 0);
+        let start = test.client.visit.as_ref().unwrap().position;
+        let answers = test.send(&[ClientMessage::DevRevealMap]);
+        let ServerMessage::EnterLevel(info) = &answers[0] else {
+            panic!("{:?}", answers[0]);
+        };
+        assert_eq!(info.arrival, start);
+        assert!(!info.entering_site);
+        let (_, _, width, height) = info.bounds;
+        let sent = cells(&answers);
+        let remembered = sent.iter().filter(|cell| cell.3).count();
+        assert_eq!(remembered, (width * height) as usize);
+        assert!(sent.iter().all(|&(_, _, cell, _)| cell != Cell::SecretDoor));
+    }
+
+    #[test]
+    fn forgetting_a_level_leaves_only_what_is_in_sight() {
+        let mut test = TestClient::new();
+        enter(&mut test, 0);
+        test.send(&[ClientMessage::DevRevealMap]);
+        let answers = test.send(&[ClientMessage::DevForgetMap]);
+        assert!(matches!(answers[0], ServerMessage::EnterLevel(_)));
+        let sent = cells(&answers);
+        assert!(sent.iter().all(|cell| !cell.3), "nothing remembered");
+        let ServerMessage::EnterLevel(info) = &answers[0] else {
+            unreachable!();
+        };
+        let (_, _, width, height) = info.bounds;
+        assert!(sent.len() < (width * height) as usize);
     }
 
     #[test]
