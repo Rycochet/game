@@ -49,6 +49,9 @@
 //!   locale says.
 //! - `HOW_DEBUG_SHOW_FLOOR=n`: three seconds after starting, look at this known
 //!   floor (an index, from 0) on the maps.
+//! - `HOW_DEBUG_INVENTORY=true`: two seconds after starting, have a few items and
+//!   show the pockets and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at
+//!   this index in the pockets, under the cursor (see `HOW_DEBUG_CURSOR`).
 //! - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look
 //!   at what hovering shows.
 //! - `HOW_DEBUG_SCREENSHOT=path.png`: save a screenshot after `HOW_DEBUG_SCREENSHOT_DELAY`
@@ -61,6 +64,7 @@ use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
 use shared::dungeon::Cell;
+use shared::item::ItemKind;
 use shared::movement::steps_between;
 use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
@@ -72,6 +76,7 @@ use crate::common::{
 };
 use crate::connection::ToServer;
 use crate::debug_menu::{AutoWalk, DebugAction, DebugMenu};
+use crate::inventory::InventoryDebug;
 use crate::minimap::FullMap;
 use crate::player::{Player, PlayerSystems, TakeStep, TravelTo};
 use crate::system_menu::SystemMenu;
@@ -217,6 +222,35 @@ impl Plugin for DevToolsPlugin {
                     if !*sent {
                         *sent = true;
                         actions.write(action);
+                    }
+                },
+            );
+        }
+
+        if server::option_on("HOW_DEBUG_INVENTORY", false) {
+            let hold = env::var("HOW_DEBUG_HOLD").ok().and_then(|n| n.parse().ok());
+            app.add_systems(
+                Update,
+                move |time: Res<Time<Real>>,
+                      view: Res<State<GameView>>,
+                      mut step: Local<u8>,
+                      mut to_server: MessageWriter<ToServer>,
+                      mut debug: MessageWriter<InventoryDebug>| {
+                    if *view.get() == GameView::Connecting {
+                        return;
+                    }
+                    if *step == 0 {
+                        *step = 1;
+                        for kind in [ItemKind::Backpack, ItemKind::Pouch, ItemKind::Boomerang] {
+                            to_server.write(ToServer(ClientMessage::DevGiveItem(kind)));
+                        }
+                    } else if *step == 1 && time.elapsed_secs() > 2.0 {
+                        *step = 2;
+                        debug.write(InventoryDebug::OpenPockets);
+                        match hold {
+                            Some(index) => debug.write(InventoryDebug::PickUp(index)),
+                            None => debug.write(InventoryDebug::OpenBags),
+                        };
                     }
                 },
             );

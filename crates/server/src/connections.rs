@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
+use shared::item::{Inventory, Item};
 use shared::poi::ChunkPos;
 use shared::protocol::{
     CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerLink, ServerMessage,
@@ -85,6 +86,8 @@ pub struct Client {
     pub(crate) character: CharacterWorldSave,
     /// What the character knows of other worlds, kept for saving.
     other_worlds: BTreeMap<WorldId, CharacterWorldSave>,
+    /// What the character carries.
+    inventory: Inventory,
     /// Whether `character` (or the visit) changed since it was saved.
     pub(crate) unsaved: bool,
     /// The site level the player is on, if any.
@@ -111,6 +114,7 @@ impl Client {
             gone: false,
             character: CharacterWorldSave::default(),
             other_worlds: BTreeMap::new(),
+            inventory: Inventory::default(),
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),
@@ -156,9 +160,13 @@ impl Client {
             return;
         }
         self.character.visit = self.visit.as_ref().map(Visit::save);
-        world
-            .storage
-            .save_character(id, world.seed.id(), &self.character, &self.other_worlds);
+        world.storage.save_character(
+            id,
+            world.seed.id(),
+            &self.character,
+            &self.other_worlds,
+            &self.inventory,
+        );
         self.unsaved = false;
     }
 
@@ -425,6 +433,31 @@ pub(crate) fn answer(
                 clock: world.clock.minutes(),
             })
         }
+        ClientMessage::MoveItem {
+            item,
+            to,
+            x,
+            y,
+            rotation,
+        } => {
+            match client.inventory.move_item(item, to, x, y, rotation) {
+                Ok(()) => client.unsaved = true,
+                Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
+            }
+            client
+                .link
+                .send(&ServerMessage::Inventory(client.inventory.clone()))
+        }
+        ClientMessage::DestroyItem { item } => {
+            if client.inventory.destroy(item) {
+                client.unsaved = true;
+            } else {
+                warn!("Refused destroying {item:?}, which isn't carried");
+            }
+            client
+                .link
+                .send(&ServerMessage::Inventory(client.inventory.clone()))
+        }
         // Dev tools are only for the embedded server; elsewhere a stray key
         // or click is ignored rather than ending the game.
         _ if message.is_dev_tool() && !options.dev_tools => {
@@ -457,6 +490,15 @@ pub(crate) fn answer(
             Some(_) => sites::forget_site(client, world),
             None => world_map::forget_on_server(client, world),
         },
+        ClientMessage::DevGiveItem(kind) => {
+            match client.inventory.give(Item::new(crate::ids::new_id(), kind)) {
+                Ok(()) => client.unsaved = true,
+                Err(item) => info!("No room for a new {:?}", item.kind),
+            }
+            client
+                .link
+                .send(&ServerMessage::Inventory(client.inventory.clone()))
+        }
         ClientMessage::DevSnowLine(snow_line) => {
             world.snow_line = snow_line;
             client.link.send(&ServerMessage::SnowLine(snow_line))
@@ -478,6 +520,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
         .as_ref()
         .expect("decided before joining");
     (client.character, client.other_worlds) = world.storage.load_character(id, world.seed.id());
+    client.inventory = world.storage.load_inventory(id);
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
@@ -488,7 +531,11 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
         dev_tools: options.dev_tools,
         can_pause: options.pausable,
     };
-    if !client.link.send(&welcome) {
+    if !client.link.send(&welcome)
+        || !client
+            .link
+            .send(&ServerMessage::Inventory(client.inventory.clone()))
+    {
         return false;
     }
     match client.character.visit.take() {
@@ -499,11 +546,13 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use shared::item::{Holder, ItemKind, Rotation};
     use shared::movement::{Step, steps_between};
     use shared::protocol::{ClientLink, Credentials, GuestToken, local_pair};
     use shared::world::WorldSeed;
 
     use super::*;
+    use crate::storage::{Storage, tests::TestFolder};
 
     /// A server world, a client connected to it, and the client's end.
     pub(crate) struct TestClient {
@@ -618,6 +667,98 @@ pub(crate) mod tests {
     };
 
     const GUEST: ClientMessage = ClientMessage::Login(Credentials::Guest(GuestToken([1; 32])));
+
+    /// What the last `Inventory` among these answers says.
+    fn inventory(answers: &[ServerMessage]) -> Inventory {
+        answers
+            .iter()
+            .rev()
+            .find_map(|answer| match answer {
+                ServerMessage::Inventory(inventory) => Some(inventory.clone()),
+                _ => None,
+            })
+            .expect("an inventory among the answers")
+    }
+
+    #[test]
+    fn a_character_is_told_what_they_carry_on_joining() {
+        assert_eq!(inventory(&TestClient::new().welcome), Inventory::default());
+    }
+
+    #[test]
+    fn items_move_by_the_rules_and_a_refused_move_is_put_right() {
+        let mut test = TestClient::new();
+        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Pouch)]);
+        let pouch = inventory(&answers).pockets[0].item.id;
+        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Stone)]);
+        let carried = inventory(&answers);
+        let stone = carried.pockets[1].item.id;
+
+        // Too big for the pouch: the answer still says where it really is.
+        let refused = ClientMessage::MoveItem {
+            item: stone,
+            to: Holder::Inside(pouch),
+            x: 0,
+            y: 0,
+            rotation: Rotation::None,
+        };
+        assert_eq!(inventory(&test.send(&[refused])), carried);
+
+        let answers = test.send(&[ClientMessage::MoveItem {
+            item: stone,
+            to: Holder::Pockets,
+            x: 4,
+            y: 2,
+            rotation: Rotation::None,
+        }]);
+        let carried = inventory(&answers);
+        let (_, placed) = carried.placed(stone).expect("still carried");
+        assert_eq!((placed.x, placed.y), (4, 2));
+        assert!(test.client.unsaved);
+    }
+
+    #[test]
+    fn destroying_takes_what_is_carried_and_only_that() {
+        let mut test = TestClient::new();
+        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Coin)]);
+        let coin = inventory(&answers).pockets[0].item.id;
+        let destroy = ClientMessage::DestroyItem { item: coin };
+        assert!(
+            inventory(&test.send(std::slice::from_ref(&destroy)))
+                .pockets
+                .is_empty()
+        );
+        assert!(test.client.unsaved);
+        // Gone already, so nothing changes, and the client is still told.
+        test.client.unsaved = false;
+        assert!(inventory(&test.send(&[destroy])).pockets.is_empty());
+        assert!(!test.client.unsaved);
+    }
+
+    #[test]
+    fn giving_an_item_needs_dev_tools_and_room() {
+        let mut test = TestClient::new();
+        test.dev_tools = false;
+        let give = ClientMessage::DevGiveItem(ItemKind::Coin);
+        assert!(test.send(std::slice::from_ref(&give)).is_empty());
+
+        test.dev_tools = true;
+        let answers = test.send(&vec![give; 30]);
+        // Six by four pockets, and no more.
+        assert_eq!(inventory(&answers).pockets.len(), 24);
+    }
+
+    #[test]
+    fn what_is_carried_comes_back_with_its_ids_after_a_restart() {
+        let folder = TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
+        let mut test = TestClient::of(open());
+        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Backpack)]);
+        let carried = inventory(&answers);
+        test.leave();
+        assert_eq!(inventory(&TestClient::of(open()).welcome), carried);
+    }
 
     /// Runs `handle_messages` once over these connections.
     fn tick(connections: Connections, world: ServerWorld) -> (Connections, ServerWorld) {

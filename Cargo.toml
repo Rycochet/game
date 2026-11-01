@@ -26,6 +26,7 @@ postcard = { version = "1", default-features = false, features = ["alloc"] }
 # The server's saved data: RON files, readable by people (Bevy already uses
 # it), in the user's data folder.
 ron = "0.12"
+uuid = { version = "1", default-features = false }
 dirs = "6"
 # Networking: the server's WebSockets and web client files on one port
 # (axum, tower-http and tokio: MIT), and native clients' WebSockets

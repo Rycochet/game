@@ -25,6 +25,7 @@ use bevy::prelude::*;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use shared::dungeon::Cell;
+use shared::item::Inventory;
 use shared::poi::{ChunkPos, PoiKind};
 use shared::protocol::CharacterId;
 use shared::site::FORGET_BEFORE;
@@ -198,6 +199,15 @@ impl Storage {
         (here, worlds)
     }
 
+    /// What a character carries, which goes with them from world to world. Nothing
+    /// if they are new, or their file was broken and has been put aside.
+    pub fn load_inventory(&self, id: &CharacterId) -> Inventory {
+        self.character_file(id)
+            .as_deref()
+            .and_then(read_or_put_aside::<CharacterSave>)
+            .map_or_else(Inventory::default, |save| save.inventory)
+    }
+
     /// Saves a character who is in `world`, knowing `here` of it.
     pub fn save_character(
         &self,
@@ -205,6 +215,7 @@ impl Storage {
         world: WorldId,
         here: &CharacterWorldSave,
         others: &BTreeMap<WorldId, CharacterWorldSave>,
+        inventory: &Inventory,
     ) {
         if let Some(file) = self.character_file(id) {
             let mut worlds = others.clone();
@@ -216,7 +227,14 @@ impl Storage {
                     ..here.clone()
                 },
             );
-            write(&file, &CharacterSave { world, worlds });
+            write(
+                &file,
+                &CharacterSave {
+                    world,
+                    worlds,
+                    inventory: inventory.clone(),
+                },
+            );
         }
     }
 }
@@ -310,6 +328,9 @@ pub struct CharacterSave {
     /// What they know of each world they have been to, kept for going back.
     #[serde(default)]
     pub worlds: BTreeMap<WorldId, CharacterWorldSave>,
+    /// What they carry, wherever they go.
+    #[serde(default)]
+    pub inventory: Inventory,
 }
 
 /// What a character knows of one world, and where they are in it.
@@ -491,7 +512,7 @@ pub(crate) mod tests {
             ..default()
         };
         let none = BTreeMap::new();
-        storage.save_character(&id, world, &character, &none);
+        storage.save_character(&id, world, &character, &none, &Inventory::default());
         storage.save_site(site, &SiteSave::default());
         assert_eq!(storage.load_character(&id, world).0.world_position, (3, 4));
         assert!(storage.load_site(site).is_some());
@@ -501,7 +522,7 @@ pub(crate) mod tests {
         assert_eq!(storage.load_site(site), None);
 
         // Saved again, it is remembered from now on.
-        storage.save_character(&id, world, &character, &none);
+        storage.save_character(&id, world, &character, &none, &Inventory::default());
         storage.save_site(site, &SiteSave::default());
         assert_eq!(storage.load_character(&id, world).0.world_position, (3, 4));
         assert!(storage.load_site(site).is_some());
@@ -518,7 +539,7 @@ pub(crate) mod tests {
             ..default()
         };
         let in_first = Storage::in_folder(&folder.0, first);
-        in_first.save_character(&id, first, &at(1), &BTreeMap::new());
+        in_first.save_character(&id, first, &at(1), &BTreeMap::new(), &Inventory::default());
         assert!(folder.0.join("characters/someone.ron").exists());
 
         // Into another world: new to them, and the first is kept.
@@ -526,7 +547,7 @@ pub(crate) mod tests {
         let (here, others) = in_second.load_character(&id, second);
         assert_eq!(here, CharacterWorldSave::default());
         assert_eq!(others, BTreeMap::from([(first, at(1))]));
-        in_second.save_character(&id, second, &at(2), &others);
+        in_second.save_character(&id, second, &at(2), &others, &Inventory::default());
 
         let file = fs::read_to_string(folder.0.join("characters/someone.ron")).unwrap();
         let save: CharacterSave = ron::from_str(&file).unwrap();
@@ -568,7 +589,13 @@ pub(crate) mod tests {
                 BTreeMap::from([(1, CellMasks::from([((0, -1), 7)]))]),
             )]),
         };
-        storage.save_character(&id, world, &character, &BTreeMap::new());
+        storage.save_character(
+            &id,
+            world,
+            &character,
+            &BTreeMap::new(),
+            &Inventory::default(),
+        );
         assert_eq!(storage.load_character(&id, world).0, character);
 
         let save = SiteSave {

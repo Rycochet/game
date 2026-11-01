@@ -58,6 +58,8 @@ struct Tracker {
     moved: bool,
     /// The system took the touches back (a browser gesture, say).
     canceled: bool,
+    /// The finger that landed first in this contact.
+    first: Option<u64>,
 }
 
 impl Tracker {
@@ -77,7 +79,24 @@ impl Tracker {
             }
             _ => None,
         };
-        let gesture = self.gesture(down);
+        // Fingers are in a steady order, so the first of several landing in one
+        // frame is the same one each time.
+        if self.first.is_none() {
+            self.first = down.first().map(|finger| finger.id);
+        }
+        let first_finger = down
+            .iter()
+            .find(|finger| Some(finger.id) == self.first)
+            .map(|finger| finger.at);
+        let other_finger_tapped = first_finger.is_some()
+            && lifted
+                .iter()
+                .any(|finger| finger.at.distance(finger.start) <= TAP_SLOP);
+        let gesture = TouchGesture {
+            first_finger,
+            other_finger_tapped,
+            ..self.gesture(down)
+        };
         let position = match down {
             [finger] if !self.several => Some(finger.at),
             _ => tap,
@@ -86,6 +105,7 @@ impl Tracker {
         self.last = down.to_vec();
         if down.is_empty() {
             (self.several, self.moved, self.canceled) = (false, false, false);
+            self.first = None;
         }
         Reading {
             position,
@@ -233,7 +253,7 @@ mod tests {
         let spot = (50.0, 60.0);
         tracker.read(&[finger(1, spot, spot)], &[], false);
         let wobble = tracker.read(&[finger(1, spot, (54.0, 60.0))], &[], false);
-        assert_eq!(wobble.gesture, TouchGesture::default());
+        assert_eq!(wobble.gesture.drag, Vec2::ZERO);
     }
 
     #[test]
@@ -245,9 +265,37 @@ mod tests {
         assert_eq!(both.position, None);
         // One lifted: the other neither drags nor taps, however it moves.
         let one = tracker.read(&[finger(2, b, (150.0, 10.0))], &[finger(1, a, a)], false);
-        assert_eq!(one.gesture, TouchGesture::default());
+        assert_eq!(one.gesture.drag, Vec2::ZERO);
         assert_eq!(one.position, None);
         assert!(!tracker.read(&[], &[finger(2, b, b)], false).tap);
+    }
+
+    #[test]
+    fn the_first_finger_is_followed_and_a_second_tapping_is_told() {
+        let mut tracker = Tracker::default();
+        let (a, b) = ((10.0, 10.0), (100.0, 10.0));
+        let held = tracker.read(&[finger(1, a, a)], &[], false);
+        assert_eq!(held.gesture.first_finger, Some(Vec2::from(a)));
+        assert!(!held.gesture.other_finger_tapped);
+
+        let moved = (40.0, 10.0);
+        let both = tracker.read(&[finger(1, a, moved), finger(2, b, b)], &[], false);
+        assert_eq!(both.gesture.first_finger, Some(Vec2::from(moved)));
+        let tapped = tracker.read(&[finger(1, a, moved)], &[finger(2, b, b)], false);
+        assert!(tapped.gesture.other_finger_tapped);
+        assert_eq!(tapped.gesture.first_finger, Some(Vec2::from(moved)));
+
+        // A second finger sliding away first isn't a tap.
+        let slid = tracker.read(
+            &[finger(1, a, moved)],
+            &[finger(3, b, (200.0, 10.0))],
+            false,
+        );
+        assert!(!slid.gesture.other_finger_tapped);
+
+        let up = tracker.read(&[], &[finger(1, a, moved)], false);
+        assert_eq!(up.gesture.first_finger, None);
+        assert!(!up.gesture.other_finger_tapped);
     }
 
     #[test]

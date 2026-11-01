@@ -36,6 +36,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: poi     | `crates/shared/src/poi.rs`  | `docs/context/shared/poi.md`      | World map chunks and their pois (kind, position, map seed) |
 | shared: showcase    | `crates/shared/src/showcase.rs` | `docs/context/shared/showcase.md`     | Debug plain far south with every kind of poi, 8 seeds and each level of ruin, behind `ENABLED` (P to go, Esc to return) |
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, windows, ground, covered ground, water, lava, roads, gardens, holes, fields, fences, herb beds), wall shapes, rooms, line of sight / light reach |
+| shared: item        | `crates/shared/src/item.rs`, `id.rs` | `docs/context/shared/item.md`       | UUID v6 `Id`s, kinds of item, shapes and grid inventories with nested bags: the rules moves are checked by |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes) |
@@ -52,6 +53,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Asking the server to enter sites, take stairs, leave; applying its level messages |
 | client: debug_menu  | `crates/client/src/debug_menu/`  | `docs/context/client/debug_menu.md`   | Backtick or warning button: full-screen filtered list of debug actions (toggles, Teleport Mode, Cycle Temperature, World Time, Suns and Moons, Stairs/Fields/Herbs panels, Show Widgets) |
 | client: system_menu | `crates/client/src/system_menu/` | `docs/context/client/system_menu.md` | Esc or gear button: small menu (Settings, Logout, Quit), quit requester and web ended page, Settings layer with tabs; asks a single-player server to pause while open |
+| client: inventory   | `crates/client/src/inventory/` | `docs/context/client/inventory.md`  | Grids of what is carried in moveable panels; picking items up, holding, turning and dropping them |
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |
 | client: widgets     | `crates/client/src/widgets/`    | `docs/context/client/widgets.md`      | Interface pieces: panels with titles, buttons by state, tooltips, moveable panels; taking clicks on them |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, click mode text                    |

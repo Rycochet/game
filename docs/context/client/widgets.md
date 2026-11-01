@@ -38,7 +38,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Used by
 
-- `minimap`, `debug_menu`, `system_menu`.
+- `minimap`, `debug_menu`, `system_menu`, `inventory`.
 
 ## Notes
 
