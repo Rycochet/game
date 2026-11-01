@@ -10,6 +10,8 @@
 //!
 //! `Ping` is the exception: it is answered here, without waiting for the
 //! game's next tick, so a round trip measures the network and not the tick.
+//! The server also times its own WebSocket pings (`latency`), to log connections
+//! having trouble and to drop those that have gone silent.
 
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
@@ -17,7 +19,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axum::Router;
 use axum::extract::State;
@@ -31,13 +33,22 @@ use tower_http::services::ServeDir;
 
 use crate::ServerWorld;
 use crate::connections::{self, Connections};
+use crate::latency::{Latency, Pings};
 
 /// The largest message a client may send (they are all tiny).
 const MAX_MESSAGE: usize = 64 * 1024;
 
-/// How often an idle connection is pinged, so proxies (which drop idle
-/// WebSockets, Cloudflare after 100 s) keep it open.
-const PING_EVERY: Duration = Duration::from_secs(30);
+/// How often a connection is pinged, to time it. This also keeps it open
+/// through proxies (which drop idle WebSockets, Cloudflare after 100 s).
+const PING_EVERY: Duration = Duration::from_secs(1);
+
+/// A ping unanswered for this long means the connection is in trouble.
+const NO_ANSWER_AFTER: Duration = Duration::from_secs(5);
+
+/// A connection with nothing heard for this long, or that can't take what is
+/// sent, is dropped: the player leaves and is saved, and a client still there
+/// connects again. A frozen game doesn't count, as its network code still answers.
+const SILENT_AFTER: Duration = Duration::from_secs(30);
 
 /// Listens on `address` for game clients (and serves the web client from
 /// `web`, if given).
@@ -71,11 +82,16 @@ impl SharedClock {
     }
 }
 
-/// What every WebSocket needs: where to hand its link, and the clock.
+/// What every WebSocket needs: where to hand its link, the clock, the number
+/// for the next connection (to tell them apart in the log), and how often to
+/// ping and when to give up (shorter in tests).
 #[derive(Clone)]
 struct Sockets {
     new_connections: Sender<ServerLink>,
     clock: SharedClock,
+    connections: Arc<AtomicU64>,
+    ping_every: Duration,
+    silent_after: Duration,
 }
 
 impl Plugin for NetworkPlugin {
@@ -91,6 +107,9 @@ impl Plugin for NetworkPlugin {
         let sockets = Sockets {
             new_connections,
             clock: clock.clone(),
+            connections: Arc::default(),
+            ping_every: PING_EVERY,
+            silent_after: SILENT_AFTER,
         };
         thread::Builder::new()
             .name("network".into())
@@ -198,13 +217,42 @@ async fn upgrade(upgrade: WebSocketUpgrade, State(sockets): State<Sockets>) -> R
         .on_upgrade(move |socket| carry(socket, sockets))
 }
 
+/// Sends a message; `false` if it failed or the client isn't taking it.
+async fn send(socket: &mut WebSocket, message: Message, limit: Duration) -> bool {
+    matches!(
+        tokio::time::timeout(limit, socket.send(message)).await,
+        Ok(Ok(()))
+    )
+}
+
+/// Logs a connection going into trouble or coming out of it.
+fn log_trouble(number: u64, latency: &Latency, troubled: bool) {
+    let round_trip = latency.smoothed_ms().unwrap_or_default();
+    let jitter = latency.jitter_ms();
+    if troubled {
+        warn!(
+            "Connection {number} is in trouble: round trips {round_trip:.0} ms, varying by {jitter:.0} ms"
+        );
+    } else {
+        info!(
+            "Connection {number} is over its trouble: round trips {round_trip:.0} ms, varying by {jitter:.0} ms"
+        );
+    }
+}
+
 /// Carries one client's messages between its WebSocket and its link, until
-/// either side goes. Pings are answered here instead.
+/// either side goes or the client falls silent. Pings are answered here
+/// instead, and this times its own.
 async fn carry(mut socket: WebSocket, sockets: Sockets) {
     let (link, wire) = wired();
     if sockets.new_connections.send(link).is_err() {
         return;
     }
+    let number = sockets.connections.fetch_add(1, Ordering::Relaxed) + 1;
+    let limit = sockets.silent_after;
+    let mut pings = Pings::new();
+    let mut latency = Latency::default();
+    let mut last_heard = Instant::now();
     let (to_link, from_link) = wire.into_parts();
     // `from_link` only has a waiting `recv`: a thread waits on it and passes
     // what the game sends to this task. It ends when the game drops the link.
@@ -216,43 +264,75 @@ async fn carry(mut socket: WebSocket, sockets: Sockets) {
             }
         }
     });
-    let mut ping = tokio::time::interval(PING_EVERY);
+    let mut ping = tokio::time::interval(sockets.ping_every);
+    // After a hold-up, carry on rather than sending the missed ones in a burst.
+    ping.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     loop {
         tokio::select! {
-            incoming = socket.recv() => match incoming {
-                Some(Ok(Message::Binary(bytes))) => {
-                    if let Some(sent) = ClientMessage::read_ping(&bytes) {
-                        let pong = ServerMessage::pong_bytes(sent, sockets.clock.hours());
-                        if socket.send(Message::Binary(pong.into())).await.is_err() {
+            incoming = socket.recv() => {
+                last_heard = Instant::now();
+                match incoming {
+                    Some(Ok(Message::Binary(bytes))) => {
+                        if let Some(sent) = ClientMessage::read_ping(&bytes) {
+                            let pong = ServerMessage::pong_bytes(sent, sockets.clock.hours());
+                            if !send(&mut socket, Message::Binary(pong.into()), limit).await {
+                                break;
+                            }
+                        } else if to_link.send(bytes.to_vec()).is_err() {
                             break;
                         }
-                    } else if to_link.send(bytes.to_vec()).is_err() {
-                        break;
                     }
+                    Some(Ok(Message::Pong(payload))) => {
+                        if let Some(round_trip) = pings.answered(&payload, last_heard)
+                            && let Some(troubled) = latency.measured(round_trip)
+                        {
+                            log_trouble(number, &latency, troubled);
+                        }
+                    }
+                    // Text isn't part of the game; pings are answered by the
+                    // library.
+                    Some(Ok(Message::Text(_) | Message::Ping(_))) => {}
+                    Some(Ok(Message::Close(_)) | Err(_)) | None => break,
                 }
-                // Text isn't part of the game; pings and pongs are answered
-                // by the library.
-                Some(Ok(Message::Text(_) | Message::Ping(_) | Message::Pong(_))) => {}
-                Some(Ok(Message::Close(_)) | Err(_)) | None => break,
-            },
+            }
             outgoing = to_socket.recv() => match outgoing {
                 Some(bytes) => {
-                    if socket.send(Message::Binary(bytes.into())).await.is_err() {
+                    if !send(&mut socket, Message::Binary(bytes.into()), limit).await {
+                        warn!("Connection {number} isn't taking what is sent: dropping it");
                         break;
                     }
                 }
                 // The game has dropped this client.
                 None => {
-                    let _ = socket.send(Message::Close(None)).await;
+                    send(&mut socket, Message::Close(None), limit).await;
                     break;
                 }
             },
             _ = ping.tick() => {
-                if socket.send(Message::Ping(Vec::new().into())).await.is_err() {
+                let now = Instant::now();
+                if now.duration_since(last_heard) >= limit {
+                    warn!("Connection {number} has gone silent: dropping it");
+                    break;
+                }
+                if pings
+                    .waiting_since()
+                    .is_some_and(|sent| now.duration_since(sent) >= NO_ANSWER_AFTER)
+                    && let Some(troubled) = latency.no_answer()
+                {
+                    log_trouble(number, &latency, troubled);
+                }
+                let payload = pings.next(now).to_vec();
+                if !send(&mut socket, Message::Ping(payload.into()), limit).await {
                     break;
                 }
             }
         }
+    }
+    if let Some(round_trip) = latency.smoothed_ms() {
+        info!(
+            "Connection {number} ended: round trips {round_trip:.0} ms, varying by {:.0} ms",
+            latency.jitter_ms()
+        );
     }
     // Dropping `to_link` tells the game the client has gone.
 }
@@ -265,7 +345,10 @@ mod tests {
     use tungstenite::Message as WsMessage;
 
     /// A web server with no game running: nothing ever reads its links.
-    fn serve_without_a_game() -> (SocketAddr, Receiver<ServerLink>) {
+    fn serve_without_a_game(
+        ping_every: Duration,
+        silent_after: Duration,
+    ) -> (SocketAddr, Receiver<ServerLink>) {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let (new_connections, accepted) = mpsc::channel();
@@ -274,14 +357,60 @@ mod tests {
         let sockets = Sockets {
             new_connections,
             clock,
+            connections: Arc::default(),
+            ping_every,
+            silent_after,
         };
         thread::spawn(move || serve(listener, None, sockets, Arc::default()));
         (address, accepted)
     }
 
     #[test]
+    fn a_silent_client_is_dropped() {
+        let (address, accepted) =
+            serve_without_a_game(Duration::from_millis(50), Duration::from_millis(300));
+        // Never read from, so it never answers a ping.
+        let (_socket, _) = tungstenite::connect(format!("ws://{address}{SOCKET_PATH}")).unwrap();
+        let link = accepted.recv_timeout(Duration::from_secs(5)).unwrap();
+
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while link.receive() != Err(shared::protocol::LinkError::Closed) {
+            assert!(Instant::now() < deadline, "the client wasn't dropped");
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    #[test]
+    fn a_client_answering_pings_stays() {
+        let (address, accepted) =
+            serve_without_a_game(Duration::from_millis(50), Duration::from_millis(300));
+        let (mut socket, _) = tungstenite::connect(format!("ws://{address}{SOCKET_PATH}")).unwrap();
+        if let tungstenite::stream::MaybeTlsStream::Plain(stream) = socket.get_mut() {
+            stream
+                .set_read_timeout(Some(Duration::from_millis(10)))
+                .unwrap();
+        }
+        let link = accepted.recv_timeout(Duration::from_secs(5)).unwrap();
+
+        // Reading is all it takes: the library answers. Sending nothing else.
+        let end = Instant::now() + Duration::from_secs(1);
+        while Instant::now() < end {
+            match socket.read() {
+                Ok(_) => {}
+                Err(tungstenite::Error::Io(error))
+                    if matches!(
+                        error.kind(),
+                        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                    ) => {}
+                Err(error) => panic!("the client was dropped: {error}"),
+            }
+        }
+        assert!(link.receive().is_ok());
+    }
+
+    #[test]
     fn pings_are_answered_without_the_game_and_the_rest_reach_it() {
-        let (address, accepted) = serve_without_a_game();
+        let (address, accepted) = serve_without_a_game(PING_EVERY, SILENT_AFTER);
         let url = format!("ws://{address}{SOCKET_PATH}");
         let (mut socket, _) = tungstenite::connect(url).unwrap();
 

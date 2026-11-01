@@ -10,6 +10,7 @@
 
 mod connections;
 mod embedded;
+mod latency;
 mod network;
 mod sites;
 mod storage;
