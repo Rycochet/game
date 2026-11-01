@@ -24,7 +24,7 @@ Both `client` and `server` are Bevy apps. `shared` is currently plain Rust (no B
 
 Native clients embed the server for single player, on its own thread with its own Bevy world (`server::start_embedded`). The web client never includes server code (it uses the filesystem): it only connects to a server, such as the Docker image.
 
-**Networking is WebSockets only**, on one port: the server serves the web client's files and the game's WebSocket (`/ws`) together, so it works behind an HTTPS proxy (Cloudflare and the like pass WebSockets) with no second port to open. One game message (postcard bytes) per WebSocket binary message; the same `Link` type as single player, its bytes carried by a `Wire`. Clients reconnect by themselves. No accounts yet: a client sends a random guest number in `Hello` (kept in the browser's local storage), which names its character; the newest connection for a character wins.
+**Networking is WebSockets only**, on one port: the server serves the web client's files and the game's WebSocket (`/ws`) together, over TLS (port 8081, with a certificate of its own, the admin's, or later one from Let's Encrypt), or as plain HTTP on 8080 when `HOW_BEHIND_PROXY=1` says an HTTPS proxy (Cloudflare and the like pass WebSockets) looks after that. The plain port otherwise only answers with an error. One game message (postcard bytes) per WebSocket binary message; the same `Link` type as single player, its bytes carried by a `Wire`. Clients reconnect by themselves. No accounts yet: a client sends a random guest number in `Hello` (kept in the browser's local storage), which names its character; the newest connection for a character wins.
 
 ## Shared vs client-only: deciding per poi
 
@@ -100,4 +100,4 @@ There are several worlds and players move between them, so every map is addresse
 - Client cache, in the client's data folder, keyed by world id and generator version (perhaps shared by the players on one computer): keep only the generated base there, separately from a server's changes and from what each character has seen, which the server still decides. Preload it when entering a map.
 - Hack detection / prevention, chosen by the server owner (off by default; maybe on for a Steam release): smaller loaded margin, never sending unseen cells, checks on client behaviour.
 - Opening a single-player game to other players.
-- TLS for the server's own connections: the server generates a certificate and shares the public one with clients as part of the handshake (so a server not behind an HTTPS proxy is still encrypted, and native clients can connect with `wss://`).
+- Let's Encrypt certificates for the server (`HOW_LETS_ENCRYPT_DOMAIN`), falling back to its own.

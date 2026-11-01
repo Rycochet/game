@@ -2,8 +2,8 @@
 //! bytes there (one game message per WebSocket binary message).
 //!
 //! - Native: the embedded single-player server, or a server named by
-//!   `HOW_SERVER` (`ws://host:port/ws`; plain `ws://` only, no
-//!   TLS yet), through a thread running `tungstenite`.
+//!   `HOW_SERVER` (`wss://host:port/ws`, checked by `trust`, or plain
+//!   `ws://`), through a thread running `tungstenite`.
 //! - Web: the server the page came from (`wss://` on an `https` page),
 //!   through the browser's `WebSocket`.
 //!
@@ -56,12 +56,16 @@ impl Target {
 /// when either side goes. It doesn't depend on the game's frames, so the
 /// connection and its timing carry on while the window is frozen.
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn open(url: &str) -> (ClientLink, LatestPong) {
+pub(super) fn open(url: &str) -> (ClientLink, LatestPong, Refusal) {
+    use std::net::TcpStream;
     use std::thread;
     use std::time::{Duration, Instant};
 
+    use tungstenite::client::IntoClientRequest;
+    use tungstenite::handshake::HandshakeError;
+    use tungstenite::http::StatusCode;
     use tungstenite::stream::MaybeTlsStream;
-    use tungstenite::{Message, connect};
+    use tungstenite::{Message, client_tls_with_config};
 
     use super::ping::PING_EVERY;
 
@@ -73,19 +77,67 @@ pub(super) fn open(url: &str) -> (ClientLink, LatestPong) {
     let url = url.to_owned();
     let latest = LatestPong::default();
     let pinger = Pinger::new(latest.clone());
+    let refusal = Refusal::default();
+    let refused = refusal.clone();
     thread::Builder::new()
         .name("socket".into())
         .spawn(move || {
-            let mut socket = match connect(&url) {
-                Ok((socket, _)) => socket,
+            let request = match url.as_str().into_client_request() {
+                Ok(request) => request,
+                Err(error) => {
+                    refused.set(format!("{url} is not a server's address: {error}"));
+                    return;
+                }
+            };
+            let host = request.uri().host().unwrap_or_default();
+            let host = host.trim_matches(['[', ']']).to_owned();
+            let secure = request.uri().scheme_str() == Some("wss");
+            let port = request
+                .uri()
+                .port_u16()
+                .unwrap_or(if secure { 443 } else { 80 });
+            let connector = if secure {
+                match super::trust::connector(&host, port, refused.clone()) {
+                    Ok(connector) => Some(connector),
+                    Err(error) => {
+                        refused.set(error);
+                        return;
+                    }
+                }
+            } else {
+                bevy::log::warn!("{url} isn't secure: use wss:// unless a VPN protects it");
+                None
+            };
+            let stream = match TcpStream::connect((host.as_str(), port)) {
+                Ok(stream) => stream,
                 Err(error) => {
                     bevy::log::info!("Can't connect to {url}: {error}");
                     return;
                 }
             };
-            if let MaybeTlsStream::Plain(stream) = socket.get_mut() {
-                let _ = stream.set_read_timeout(Some(POLL));
-                let _ = stream.set_nodelay(true);
+            let _ = stream.set_nodelay(true);
+            let mut socket = match client_tls_with_config(request, stream, None, connector) {
+                Ok((socket, _)) => socket,
+                Err(HandshakeError::Failure(tungstenite::Error::Http(response)))
+                    if response.status() == StatusCode::UPGRADE_REQUIRED =>
+                {
+                    let body = response.body().as_deref().unwrap_or_default();
+                    refused.set(String::from_utf8_lossy(body).trim().to_owned());
+                    return;
+                }
+                Err(error) => {
+                    bevy::log::info!("Can't connect to {url}: {error}");
+                    return;
+                }
+            };
+            // (Only once it is set up: setting up waits for the server.)
+            let tcp = match socket.get_ref() {
+                MaybeTlsStream::Plain(stream) => Some(stream),
+                MaybeTlsStream::Rustls(stream) => Some(&stream.sock),
+                _ => None,
+            };
+            if let Some(tcp) = tcp {
+                let _ = tcp.set_read_timeout(Some(POLL));
             }
             let mut next_ping = Instant::now();
             loop {
@@ -128,7 +180,24 @@ pub(super) fn open(url: &str) -> (ClientLink, LatestPong) {
             }
         })
         .expect("the socket thread can start");
-    (link, latest)
+    (link, latest, refusal)
+}
+
+/// Why a connection must not be tried again, if it mustn't: left here by the
+/// socket's thread, for when the link reports it closed.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Debug, Default)]
+pub(super) struct Refusal(std::sync::Arc<std::sync::Mutex<Option<String>>>);
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Refusal {
+    pub fn set(&self, reason: String) {
+        *self.0.lock().expect("never poisoned") = Some(reason);
+    }
+
+    pub fn take(&self) -> Option<String> {
+        self.0.lock().expect("never poisoned").take()
+    }
 }
 
 /// Web: a browser WebSocket and the link whose bytes it carries. Incoming

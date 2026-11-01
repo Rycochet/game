@@ -3,11 +3,19 @@
 # client, on one port.
 #
 #   docker build -t hall-of-worlds .
-#   docker run -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
+#   docker run -p 8081:8081 -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
 #
-# Port 8080 serves the web client's files and the game's WebSocket (`/ws`),
-# so one HTTP(S) port (or a proxy in front of it) is all it needs. Saves go
-# in /data: mount a volume there to keep them.
+# Port 8081 serves the web client's files and the game's WebSocket (`/ws`) over
+# HTTPS, with a self-signed certificate kept in /data unless HOW_TLS_CERTIFICATE
+# and HOW_TLS_KEY name your own (readable by the `hall` user). Port 8080 only
+# answers that connections must be secure.
+#
+# Behind a reverse proxy that looks after TLS, set HOW_BEHIND_PROXY=1: port 8080
+# then serves everything, and 8081 isn't used:
+#
+#   docker run -p 8080:8080 -e HOW_BEHIND_PROXY=1 -v hall-of-worlds:/data hall-of-worlds
+#
+# Saves go in /data: mount a volume there to keep them.
 #
 # x86-64 only for now; ARM can be added later as another platform under the
 # same tag.
@@ -40,5 +48,5 @@ ENV HOW_ADDRESS=0.0.0.0:8080 \
     HOW_WEB=/srv/web \
     HOW_DATA=/data
 VOLUME /data
-EXPOSE 8080
+EXPOSE 8080 8081
 ENTRYPOINT ["/usr/local/bin/hall-of-worlds-server"]

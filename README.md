@@ -46,11 +46,11 @@ Source code is in `crates/`: `shared` holds game rules and world generation used
 
 ### Docker
 
-The `Dockerfile` builds an x86-64 image with the game server, which serves the web client and the game (WebSockets) on port 8080, and saves in `/data`:
+The `Dockerfile` builds an x86-64 image with the game server, which serves the web client and the game (WebSockets) securely on port 8081 with a self-signed certificate (or your own), and saves in `/data`. Behind a reverse proxy that looks after TLS, add `-e HOW_BEHIND_PROXY=1` and use port 8080 alone:
 
 ```bash
 docker build -t hall-of-worlds .
-docker run -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
+docker run -p 8081:8081 -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
 ```
 
 It works behind an HTTPS proxy (such as Cloudflare) that passes WebSockets: nothing but that one port is needed.

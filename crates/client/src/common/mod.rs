@@ -270,7 +270,8 @@ pub enum ServerStatus {
     Connecting,
     /// Welcomed by the server.
     Connected,
-    /// The server won't have this client, and why: no more tries.
+    /// Not connecting any more (the server won't have this client, or this
+    /// client won't trust the server), and the words saying why.
     Refused(String),
 }
 

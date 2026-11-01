@@ -33,7 +33,20 @@ dirs = "6"
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "ws"] }
 tower-http = { version = "0.7", features = ["fs"] }
 tokio = { version = "1", features = ["rt", "net", "time", "sync", "macros", "signal"] }
-tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+tungstenite = { version = "0.30", default-features = false, features = ["handshake", "__rustls-tls"] }
+# TLS. rustls (Apache-2.0/ISC/MIT), with ring (OSI-approved, needs no build
+# tools beyond a C compiler) as its cryptography; tokio-rustls (MIT/Apache-2.0)
+# for the server's connections; rcgen (MIT/Apache-2.0) makes its certificate,
+# x509-parser (MIT/Apache-2.0) reads certificates, and time (MIT/Apache-2.0)
+# dates them. rustls-platform-verifier (MIT/Apache-2.0) checks a server's
+# certificate with the operating system's certificate authorities.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+ring = "0.17"
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
+x509-parser = "0.18"
+time = "0.3"
+rustls-platform-verifier = "0.7"
 
 # Compile our own code with light optimisation so it still builds quickly...
 [profile.dev]

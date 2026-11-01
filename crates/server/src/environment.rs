@@ -18,6 +18,11 @@ const OUR_CRATES: [&str; 4] = [
     "shared",
 ];
 
+/// Logs turned off. The operating system's certificate check logs an error for
+/// every self-signed certificate, which is normal here; `connection::trust`
+/// says what matters.
+const SILENCED: &str = "rustls_platform_verifier=off";
+
 /// The start of the variable names used before `HOW_`.
 const OLD_PREFIX: &str = "HALL_OF_WORLDS_";
 
@@ -38,12 +43,13 @@ fn log_plugin_for(value: Option<&str>) -> LogPlugin {
         let ours = OUR_CRATES.map(|name| format!("{name}={level}")).join(",");
         LogPlugin {
             level: Level::INFO,
-            filter: format!("{DEFAULT_FILTER},{ours}"),
+            filter: format!("{DEFAULT_FILTER},{SILENCED},{ours}"),
             ..Default::default()
         }
     } else {
         LogPlugin {
             level,
+            filter: format!("{DEFAULT_FILTER},{SILENCED}"),
             ..Default::default()
         }
     }
@@ -87,7 +93,7 @@ mod tests {
         for value in [None, Some("loud"), Some("")] {
             let plugin = log_plugin_for(value);
             assert_eq!(plugin.level, Level::INFO);
-            assert_eq!(plugin.filter, DEFAULT_FILTER);
+            assert_eq!(plugin.filter, format!("{DEFAULT_FILTER},{SILENCED}"));
         }
     }
 
@@ -95,7 +101,7 @@ mod tests {
     fn quieter_levels_apply_to_everything() {
         let plugin = log_plugin_for(Some("WARN"));
         assert_eq!(plugin.level, Level::WARN);
-        assert_eq!(plugin.filter, DEFAULT_FILTER);
+        assert_eq!(plugin.filter, format!("{DEFAULT_FILTER},{SILENCED}"));
     }
 
     #[test]

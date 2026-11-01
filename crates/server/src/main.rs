@@ -4,7 +4,17 @@
 //!
 //! Set by environment variables:
 //!
-//! - `HOW_ADDRESS`: where to listen (default `0.0.0.0:8080`).
+//! - `HOW_ADDRESS`: the plain port (default `0.0.0.0:8080`), which only answers
+//!   that connections must be secure, unless `HOW_BEHIND_PROXY` is set.
+//! - `HOW_TLS_ADDRESS`: the secure port for HTTPS and `wss://` (default
+//!   `0.0.0.0:8081`).
+//! - `HOW_BEHIND_PROXY`: `1` turns TLS off and serves everything on the plain
+//!   port, for a server behind a reverse proxy that looks after TLS.
+//! - `HOW_TLS_CERTIFICATE` and `HOW_TLS_KEY`: the paths of your own PEM
+//!   certificate and private key. Without them, a self-signed certificate is
+//!   made and kept in the data folder.
+//! - `HOW_TLS_NAMES`: names and addresses a made certificate covers as well as
+//!   this machine, separated by commas.
 //! - `HOW_WEB`: the web client's folder (`trunk build`'s `dist`) to
 //!   serve; without it, only the game's WebSockets are served.
 //! - `HOW_DATA`: where to save (default: the user's data
@@ -15,9 +25,10 @@
 
 use std::env;
 use std::net::SocketAddr;
+use std::process;
 
 use server::{
-    DEFAULT_WORLD_SEED, NetworkPlugin, ServerOptions, default_data_folder, headless_app,
+    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerOptions, default_data_folder, headless_app,
     log_plugin, refuse_old_variables,
 };
 use shared::world::WorldSeed;
@@ -32,6 +43,11 @@ fn main() {
         .expect("HOW_ADDRESS is an address and port, such as 0.0.0.0:8080");
     let web = env::var_os("HOW_WEB").map(Into::into);
     let data = default_data_folder();
+    let security = Security::from_environment(&data).unwrap_or_else(|error| {
+        // Logging hasn't started yet.
+        eprintln!("{error}");
+        process::exit(1);
+    });
     let dev_tools = env::var("HOW_DEBUG_TOOLS").is_ok_and(|value| value == "1");
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
@@ -41,7 +57,14 @@ fn main() {
         },
         Some(data.clone()),
     );
-    app.add_plugins((log_plugin(), NetworkPlugin { address, web }));
+    app.add_plugins((
+        log_plugin(),
+        NetworkPlugin {
+            address,
+            web,
+            security,
+        },
+    ));
     bevy::log::info!("Saving in {}", data.display());
     if dev_tools {
         bevy::log::warn!("Dev tools are on: anyone connected can teleport and change the world");
