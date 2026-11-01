@@ -1,5 +1,5 @@
-//! What both native programs read from the environment before anything else:
-//! the log level, and a refusal to run on the old variable names.
+//! What both native programs read from the environment: the log level, a
+//! refusal to run on the old variable names, and yes-or-no options.
 
 use std::env;
 use std::process;
@@ -25,6 +25,29 @@ const SILENCED: &str = "rustls_platform_verifier=off";
 
 /// The start of the variable names used before `HOW_`.
 const OLD_PREFIX: &str = "HALL_OF_WORLDS_";
+
+/// The values that turn on an option that is off by default.
+const TRUE_VALUES: [&str; 4] = ["1", "on", "true", "yes"];
+
+/// The values that turn off an option that is on by default.
+const FALSE_VALUES: [&str; 4] = ["0", "off", "no", "false"];
+
+/// Whether a yes-or-no option is on. Only the values that change it count, in
+/// any case; anything else, or not being set, leaves `default`.
+pub fn option_on(variable: &str, default: bool) -> bool {
+    option_value(env::var(variable).ok().as_deref(), default)
+}
+
+fn option_value(value: Option<&str>, default: bool) -> bool {
+    let Some(value) = value else {
+        return default;
+    };
+    let changes_it = if default { FALSE_VALUES } else { TRUE_VALUES };
+    let changed = changes_it
+        .iter()
+        .any(|word| word.eq_ignore_ascii_case(value));
+    default != changed
+}
 
 /// The logging settings `LOG_LEVEL` asks for.
 pub fn log_plugin() -> LogPlugin {
@@ -87,6 +110,33 @@ fn replacement(old: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn options_off_by_default_turn_on_with_their_words_in_any_case() {
+        for value in ["1", "on", "true", "yes", "ON", "True", "yEs"] {
+            assert!(option_value(Some(value), false), "{value}");
+        }
+    }
+
+    #[test]
+    fn options_on_by_default_turn_off_with_their_words_in_any_case() {
+        for value in ["0", "off", "no", "false", "OFF", "False", "nO"] {
+            assert!(!option_value(Some(value), true), "{value}");
+        }
+    }
+
+    #[test]
+    fn anything_else_leaves_an_option_at_its_default() {
+        for default in [false, true] {
+            assert_eq!(option_value(None, default), default);
+            for value in ["", "maybe", "2", " true", "y", "n"] {
+                assert_eq!(option_value(Some(value), default), default, "{value}");
+            }
+        }
+        // The other side's words don't count either.
+        assert!(!option_value(Some("off"), false));
+        assert!(option_value(Some("on"), true));
+    }
 
     #[test]
     fn unset_or_unknown_levels_log_as_usual() {

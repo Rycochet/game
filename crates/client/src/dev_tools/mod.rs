@@ -21,7 +21,7 @@
 //! - `HOW_DEBUG_HERBS=n`: draw every herb tile `n` stages (game days) further on.
 //! - `HOW_DEBUG_TRAVEL=x,y`: start travelling to a grid position (as if clicked),
 //!   once at `HOW_DEBUG_POS` if set, otherwise two seconds after starting.
-//! - `HOW_DEBUG_WALK=1`: start with auto-walk on (as if G was pressed).
+//! - `HOW_DEBUG_WALK=true`: start with auto-walk on (as if G was pressed).
 //! - `HOW_DEBUG_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
 //! - `HOW_DEBUG_TIME=n`: once connected, ask the server to move the clock to `n` game
 //!   hours since the world began.
@@ -106,11 +106,11 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
-        if env::var("HOW_DEBUG_LOADING_HOLD").is_ok() {
+        if server::option_on("HOW_DEBUG_LOADING_HOLD", false) {
             app.insert_resource(crate::loading_screen::HoldLoadingScreen(true));
         }
 
-        if env::var("HOW_DEBUG_REVEAL_POIS").is_ok() {
+        if server::option_on("HOW_DEBUG_REVEAL_POIS", false) {
             app.add_systems(
                 OnExit(GameView::Connecting),
                 (|mut to_server: MessageWriter<ToServer>| {
@@ -334,7 +334,7 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
-        if env::var("HOW_DEBUG_WALK").is_ok() {
+        if server::option_on("HOW_DEBUG_WALK", false) {
             app.insert_resource(AutoWalk(true));
         }
 

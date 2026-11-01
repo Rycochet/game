@@ -8,6 +8,8 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Public API
 
+Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work as well as `true`.
+
 - `HOW_DEBUG_POS=x,y`: starting grid position on the world map (sends `DevTeleport`; the server answers with `Teleported`). Sent before `HOW_DEBUG_ENTER` (system sets `Start::Place`, then `Start::Enter`).
 - `HOW_DEBUG_ENTER=kind[,seed[,level[,ruin]]]`: start inside a made-up site at the starting position (sends `DevEnterSite`, which only the embedded server accepts): `kind` indexes `PoiKind::ALL` (e.g. 20 castle, 4 rock cave, 29 crypt, 15 stone tower, 38 farm, 39 herbalist's hut), `seed` its map seed (default 1), `level` (default 0; other levels arrive on their first stairs), `ruin` a building's ruin, 0 to 5 (default 0; saved apart from the unruined site, and asking for a level past the top lands on the top one).
 - `HOW_DEBUG_CELLS=x,y,kind;...`: on arriving in a site, change cells from where the player stands (`DevSetCell`; `kind`: `floor`, `wall`, `door`, `window`, `water`, `lava`, `hole`, `ground`, `covered`), to look at walls and liquids the generators don't make.
@@ -16,7 +18,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `HOW_DEBUG_FIELDS=n`: draw every field as this stage (its `variety`: for crops 0 ploughed, 1 grass, 2 short, 3 tall, 4 ripe; pasture alternates grass and short).
 - `HOW_DEBUG_HERBS=n`: draw every herb tile `n` stages (game days) further on than the clock says (`common::HerbGrowthShift`).
 - `HOW_DEBUG_TRAVEL=x,y`: start travelling there (as if clicked), on either map, once the player is at `HOW_DEBUG_POS` if that is set, otherwise two seconds after starting (the server's answer, or putting the player back in their site, would end an earlier journey); combine with `HOW_DEBUG_SCREENSHOT_DELAY` to catch it mid-journey.
-- `HOW_DEBUG_WALK=1`: start with `debug_menu::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
+- `HOW_DEBUG_WALK=true`: start with `debug_menu::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
 - `HOW_DEBUG_SNOW=n`: once connected, ask the server (`DevSnowLine`) for the snow line at `n` (128 normal, 0 frozen), for screenshots of the temperature states.
 - `HOW_DEBUG_TIME=n`: once connected, ask the server (`DevSetTime`) to move the clock to `n` game hours since the world began, for looking at another time of day. Saved like any other time, so keep to a scratch data folder.
 - `HOW_DEBUG_CELESTIAL=n`: the suns and moons of terrain seed `n`, not this world's. 272 has two suns and two moons, 142 two suns and five moons, 144 one blue sun and no moons.
@@ -30,8 +32,8 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
 - `HOW_DEBUG_PANEL=1`: open the debug menu's Show Widgets panel; `HOW_DEBUG_PANEL=suns`: its Suns and Moons panel; `HOW_DEBUG_PANEL=generate`: Generate POI's submenu.
 - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
-- `HOW_DEBUG_LOADING_HOLD=1`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
-- `HOW_DEBUG_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
+- `HOW_DEBUG_LOADING_HOLD=true`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
+- `HOW_DEBUG_REVEAL_POIS=true`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `HOW_DEBUG_SCREENSHOT=path.png` (+ optional `HOW_DEBUG_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
 - Not here, but also dev tools the embedded server allows: the debug menu's Teleport Mode (`world_map`, `dungeon_map`; on a poi on the full map it goes into it, `minimap`), Change Cell Mode (`dungeon_map`) and Teleport to Start (`debug_menu`).
 - `LOG_LEVEL=debug` (read by `server::log_plugin`): log more from our crates; see `docs/context/server/server.md`.
