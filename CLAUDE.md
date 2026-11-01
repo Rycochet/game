@@ -53,6 +53,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |
 | client: widgets     | `crates/client/src/widgets/`    | `docs/context/client/widgets.md`      | Interface pieces: panels with titles, buttons by state, tooltips, moveable panels; taking clicks on them |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, click mode text                    |
+| client: fonts       | `crates/client/src/fonts/`      | `docs/context/client/fonts.md`        | The default font for all text: Lexend, built into the program |
 | client: loading_screen | `crates/client/src/loading_screen/` | `docs/context/client/loading_screen.md` | Full-screen title and step bar until the game takes input, and while the connection is lost; server refusals |
 | client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, stairs style, travel, walk, snow, camera view, screenshots |
 

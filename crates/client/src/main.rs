@@ -9,6 +9,7 @@ mod debug_menu;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
 mod dungeon_map;
+mod fonts;
 mod loading_screen;
 mod minimap;
 mod player;
@@ -51,6 +52,7 @@ fn main() {
             }),
     )
     .add_plugins((
+        fonts::FontsPlugin,
         common::CommonPlugin,
         connection::ConnectionPlugin,
         surface_style::SurfaceStylePlugin,

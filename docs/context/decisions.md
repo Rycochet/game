@@ -360,3 +360,7 @@ A full-screen title and step bar (`loading_screen`) covers the game from the fir
 The owner's choice, so a tablet can use the debug menu: `HALL_OF_WORLDS_DEV_TOOLS=1` makes a standalone server accept dev tools messages, from anyone connected, so it is only for private test servers; it stays off by default, and the server logs a warning when on. `Welcome` says whether they are accepted, and the debug menu disables what would be refused. The server still checks every message.
 
 Two more entries, the owner's: Reveal Map (a site's floor is all known, and saved so) and Forget Map (the current floor, or all of the world map, is forgotten, in the save too). Both answer by sending the level again as if arriving, or for the world map a new `ForgetWorldMap` and the chunks in sight. Secret doors stay walls when revealed. Forgetting the world map also forgets which pois were visited or known. Both are refused in towns, which arrive whole.
+
+## 2026-11-01: Lexend as the default font
+
+The owner's choice, replacing Bevy's Fira Mono for all text. It sits at Bevy's default font id (`fonts`), so `TextFont::from_font_size` needs no font named, and new text gets it too. It is built into the program, like the loading screen's title font, so text never waits for it. The variable font was taken over a single weight, so later code can use any weight with no more files. Bevy's own font stays compiled in, as turning it off means listing Bevy's other features by hand.
