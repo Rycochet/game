@@ -41,7 +41,8 @@
             }
             /* The download's loading screen, until the game has drawn its own: the
                colours and sizes are copied from crates/client/src/loading_screen. */
-            #loading {
+            #loading,
+            #ended {
                 position: fixed;
                 inset: 0;
                 display: flex;
@@ -52,15 +53,24 @@
                 user-select: none;
                 -webkit-user-select: none;
             }
+            /* After quitting, the same screen with a button in place of the bar:
+               shown by crates/client/src/system_menu. */
+            #ended[hidden] {
+                display: none;
+            }
             #loading-title {
                 /* Hidden until its font has loaded, so it never shows in another. */
                 visibility: hidden;
+            }
+            #loading-title,
+            #ended-title {
                 font: min(17.35vw, 20.83vh) / 1.2 "Cinzel Decorative", serif;
                 text-align: center;
                 color: #edbf61;
                 text-shadow: 3px 3px #591f0d;
             }
-            #loading-bar {
+            #loading-bar,
+            #reload {
                 position: absolute;
                 left: 32px;
                 right: 32px;
@@ -70,6 +80,11 @@
                 font: 18px/32px "Lexend", sans-serif;
                 color: #f2ebd9;
                 background: #211c29;
+            }
+            #reload {
+                padding: 0;
+                border: 1px solid #edbf61;
+                cursor: pointer;
             }
             #loading-bar span {
                 animation: 2s step-end infinite;
@@ -97,6 +112,10 @@
         <div id="loading">
             <div id="loading-title">Hall of<br />Worlds</div>
             <div id="loading-bar">Downloading<span style="animation-name: dot1">.</span><span style="animation-name: dot2">.</span><span style="animation-name: dot3">.</span></div>
+        </div>
+        <div id="ended" hidden>
+            <div id="ended-title">Hall of<br />Worlds</div>
+            <button id="reload" type="button" onclick="location.reload()">Click to reload</button>
         </div>
         <script>
             // If the font can't load, the title still shows, in the fallback.

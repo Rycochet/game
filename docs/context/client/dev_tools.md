@@ -32,6 +32,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
 - `HOW_DEBUG_PANEL=1`: open the debug menu's Show Widgets panel; `HOW_DEBUG_PANEL=suns`: its Suns and Moons panel; `HOW_DEBUG_PANEL=generate`: Generate POI's submenu.
 - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
+- `HOW_DEBUG_SYSTEM_MENU=menu`: start with the system menu open; `quit`: at its requester; `settings`: at its settings.
 - `HOW_DEBUG_LOADING_HOLD=true`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
 - `HOW_DEBUG_REVEAL_POIS=true`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `HOW_DEBUG_SCREENSHOT=path.png` (+ optional `HOW_DEBUG_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
@@ -42,7 +43,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 
 ## Depends on
 
-- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `loading_screen` (`HoldLoadingScreen`).
+- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `loading_screen` (`HoldLoadingScreen`), `system_menu` (`SystemMenu`).
 
 ## Used by
 

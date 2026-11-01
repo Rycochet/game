@@ -8,6 +8,7 @@ mod fullscreen;
 mod moveable;
 mod slider;
 mod soft_keyboard;
+mod tabs;
 mod text_box;
 
 use bevy::input::InputSystems;
@@ -19,10 +20,12 @@ pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
     LAYER_EDGE, darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer,
+    spawn_sized_layer,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
+pub use tabs::{TabChosen, spawn_tabs};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, spawn_text_box};
 
 /// The inside of panels, the colour of parchment.
@@ -65,12 +68,18 @@ impl Plugin for WidgetsPlugin {
             .add_message::<TextEdited>()
             .add_message::<SoftKeyPressed>()
             .add_message::<DropdownChosen>()
+            .add_message::<TabChosen>()
             .init_resource::<TextFocus>()
             .init_resource::<text_box::PressedThisFrame>()
             .init_resource::<dropdown::OpenList>()
             .configure_sets(
                 PreUpdate,
-                (WidgetSystems::Presses, WidgetSystems::Modal).chain(),
+                (
+                    WidgetSystems::Presses,
+                    WidgetSystems::Front,
+                    WidgetSystems::Modal,
+                )
+                    .chain(),
             )
             .init_resource::<moveable::Dragging>()
             .init_resource::<slider::HeldSlider>()
@@ -91,6 +100,8 @@ impl Plugin for WidgetsPlugin {
             .add_systems(
                 Update,
                 (
+                    // First, to restyle them in the same frame.
+                    tabs::press_tabs.before(show_button_states),
                     show_button_states,
                     moveable::place_panels,
                     slider::hold_sliders,
@@ -110,6 +121,8 @@ impl Plugin for WidgetsPlugin {
 pub enum WidgetSystems {
     /// Presses on widgets become `ButtonPressed`.
     Presses,
+    /// As `Modal`, for what stays in front of everything that is in `Modal`.
+    Front,
     /// Something covering the screen reads them, and takes all other input.
     Modal,
 }

@@ -732,7 +732,8 @@ mod tests {
             Some(tungstenite::Connector::Rustls(trusting_client())),
         )
         .unwrap();
-        assert!(accepted.recv_timeout(Duration::from_secs(5)).is_ok());
+        // Kept: the socket closes when the link goes, maybe before the answer.
+        let _link = accepted.recv_timeout(Duration::from_secs(5)).unwrap();
 
         socket
             .send(WsMessage::Binary(ClientMessage::ping_bytes(2.5).into()))

@@ -67,6 +67,7 @@ fn main() {
         ServerOptions {
             dev_tools,
             exit_when_alone: false,
+            pausable: false,
             guests,
         },
         Some(data.clone()),

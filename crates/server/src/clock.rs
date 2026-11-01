@@ -1,7 +1,8 @@
 //! The world's clock: game minutes since the world began, running in real time
 //! whatever the server is doing, as it is worked out from when it was last set
 //! rather than added to each tick. The network thread answers pings from it,
-//! and its own thread saves it.
+//! and its own thread saves it. It can be stopped (`pause`), for single player:
+//! anything going by the world's time should go by this.
 
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
@@ -15,11 +16,22 @@ use shared::world::GAME_MINUTE_SECONDS;
 #[derive(Clone)]
 pub(crate) struct WorldClock(Arc<Mutex<Set>>);
 
-/// The time it was last set to, and when.
+/// The time it was last set to, when, and whether it has stopped there.
 #[derive(Clone, Copy)]
 struct Set {
     minutes: f64,
     at: Instant,
+    paused: bool,
+}
+
+impl Set {
+    fn minutes(&self) -> f64 {
+        if self.paused {
+            self.minutes
+        } else {
+            self.minutes + self.at.elapsed().as_secs_f64() / GAME_MINUTE_SECONDS as f64
+        }
+    }
 }
 
 impl WorldClock {
@@ -27,19 +39,38 @@ impl WorldClock {
         Self(Arc::new(Mutex::new(Set {
             minutes,
             at: Instant::now(),
+            paused: false,
         })))
     }
 
     pub fn minutes(&self) -> f64 {
-        let set = *self.0.lock().expect("never poisoned");
-        set.minutes + set.at.elapsed().as_secs_f64() / GAME_MINUTE_SECONDS as f64
+        self.0.lock().expect("never poisoned").minutes()
     }
 
     /// Moves it to another time, which can be earlier. Not before the world began.
+    /// If it has stopped, it stays stopped there.
     pub fn set(&self, minutes: f64) {
-        *self.0.lock().expect("never poisoned") = Set {
-            minutes: minutes.max(0.0),
+        let mut set = self.0.lock().expect("never poisoned");
+        set.minutes = minutes.max(0.0);
+        set.at = Instant::now();
+    }
+
+    /// Stops it where it is, until `resume`.
+    pub fn pause(&self) {
+        self.set_paused(true);
+    }
+
+    /// Starts it again from where it stopped.
+    pub fn resume(&self) {
+        self.set_paused(false);
+    }
+
+    fn set_paused(&self, paused: bool) {
+        let mut set = self.0.lock().expect("never poisoned");
+        *set = Set {
+            minutes: set.minutes(),
             at: Instant::now(),
+            paused,
         };
     }
 }
@@ -95,6 +126,25 @@ mod tests {
         assert!(clock.minutes() >= 30.0 && clock.minutes() < 40.0);
         other.set(-5.0);
         assert!(clock.minutes() >= 0.0 && clock.minutes() < 10.0);
+    }
+
+    #[test]
+    fn a_paused_clock_stands_still_and_carries_on_from_there() {
+        let clock = WorldClock::new(100.0);
+        clock.pause();
+        let stopped = clock.minutes();
+        thread::sleep(Duration::from_millis(20));
+        assert_eq!(clock.minutes(), stopped);
+        // Twice makes no difference, and being moved doesn't start it.
+        clock.pause();
+        assert_eq!(clock.minutes(), stopped);
+        clock.set(200.0);
+        assert_eq!(clock.minutes(), 200.0);
+
+        clock.resume();
+        assert!(clock.minutes() < 200.0 + 1.0);
+        thread::sleep(Duration::from_millis(20));
+        assert!(clock.minutes() > 200.0);
     }
 
     #[test]

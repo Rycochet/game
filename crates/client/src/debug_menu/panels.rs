@@ -22,7 +22,8 @@ use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TextBox,
     raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown,
-    spawn_icon_button, spawn_moveable_panel, spawn_slider, spawn_text_box, spawn_tooltip,
+    spawn_icon_button, spawn_moveable_panel, spawn_slider, spawn_tabs, spawn_text_box,
+    spawn_tooltip,
 };
 
 const FONT: f32 = 16.0;
@@ -145,6 +146,7 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
         };
         spawn_check_button(content, ButtonState::Normal, on, label, FONT, node).insert(Pressable);
     }
+    spawn_tabs(content, &["Tab", "Other tab", "Third tab"], 0, FONT);
     spawn_close_button(content, default());
     spawn_slider(content, 0.5, None, 160.0);
     let kinds = || PoiKind::ALL.map(kind_name).to_vec();

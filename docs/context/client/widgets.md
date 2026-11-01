@@ -11,11 +11,12 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/dropdown.rs`: `Dropdown`, `DropdownChosen`, `spawn_dropdown`, and the open list. Unit tests.
 - `crates/client/src/widgets/filter_list.rs`: `matches_filter`, `next_highlight`, `HighlightStep`, shared by the debug menu and dropdowns with search. Unit tests.
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
+- `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `TabChosen`, `press_tabs`. Unit test.
 - `crates/client/src/widgets/moveable.rs`: `spawn_moveable_panel`, `place_panels` (keeps them on the screen), `take_presses` (`PreUpdate`, takes clicks and touches for widgets). Unit tests.
 
 ## Public API
 
-- `WidgetsPlugin`; `WidgetSystems` (system sets, `Presses` then `Modal`): anything covering the screen reads presses in `Modal`; anything else taking clicks in `PreUpdate` runs after both.
+- `WidgetsPlugin`; `WidgetSystems` (system sets, `Presses`, `Front`, then `Modal`): anything covering the screen reads presses in `Modal`, or `Front` to be ahead of those (the system menu); anything else taking clicks in `PreUpdate` runs after both.
 - `INK`, `PARCHMENT`, `CLOSE_PIXELS`, `BUTTON_PADDING`.
 - `panel()`, `panel_title(text)`: a parchment panel, placed by absolute position, and the writing for its title.
 - `raised_box()`, `spawn_tooltip(holder, marker)`: a box standing up from what is behind it; a named box, with `marker` on its text.
@@ -25,8 +26,10 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `spawn_slider(parent, value, track, width)`: a track (a picture, or plain) with a mark along it. Values are `0..=1`. `SliderMoved(entity, value)` says the player moved it; add a marker to tell which.
 - `spawn_text_box(parent, TextBox { text, prefix, digits_only, takes_keys }, font_size, node)`: a click or tap gives it the keyboard. `takes_keys` keeps all keys from the game while it has them (Return, Esc or a click elsewhere gives them up); off for a box in something that reads keys itself, which sets `TextFocus` to its box and reads `TextEdited(entity)` and `SoftKeyPressed`.
 - `spawn_dropdown(parent, Dropdown { options, selected, searchable }, font_size, node)`: `DropdownChosen(entity, index)` says what the player chose. With `searchable`, the open list has a text box with the keyboard, narrowing it as letters are typed.
+- `spawn_tabs(parent, labels, selected, font_size)`: a row of buttons of which one is chosen, like radio buttons; returns the row. `TabChosen(row, index)` says the player chose another.
 - `stops_presses(entity)`: put it on a node for presses on it to go no further.
 - `spawn_fullscreen_layer(commands, depth, content)`: a hidden, centred full-screen panel, 90% of the window for depth 0 and 75% for depth 1 (`layer_share`), darkening everything outside it. Returns the layer (show and hide it; a press outside the panel is its `ButtonPressed`, which should close only that layer) and the panel to fill. `LAYER_EDGE`.
+- `spawn_sized_layer(commands, depth, width, height, content)`: the same with a panel of this size rather than its depth's (`Val::Auto` fits its contents).
 - `darkening(depth)`, `leaves_presses(entity)`, `layer_z(depth)`: for a panel placing itself, as the full map does: the darkening alone, with presses on it hidden from widgets underneath but left for its owner to read from the mouse.
 
 ## Depends on
@@ -35,7 +38,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Used by
 
-- `minimap`, `debug_menu`.
+- `minimap`, `debug_menu`, `system_menu`.
 
 ## Notes
 
