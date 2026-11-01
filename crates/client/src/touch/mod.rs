@@ -100,6 +100,7 @@ impl Tracker {
             [finger] if !self.several && self.moved => before(finger)
                 .map(|last| TouchGesture {
                     drag: finger.at - last.at,
+                    drag_start: finger.start,
                     ..default()
                 })
                 .unwrap_or_default(),

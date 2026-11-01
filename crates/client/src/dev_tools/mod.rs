@@ -38,6 +38,7 @@
 //! - `GAME_MAP=dx,dy`: two seconds after starting, open the full map, moved
 //!   this many grid points from the player (`0,0` to centre it on them).
 //! - `GAME_MAP_ZOOM=n`: the full map opened by `GAME_MAP` at this zoom.
+//! - `GAME_PANEL=1`: show a moveable panel with a button in each state.
 //! - `GAME_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the
 //!   locale says.
 //! - `GAME_SHOW_FLOOR=n`: three seconds after starting, look at this known
@@ -68,6 +69,7 @@ use crate::demo::AutoWalk;
 use crate::minimap::FullMap;
 use crate::player::{Player, PlayerSystems, TakeStep, TravelTo};
 use crate::view3d::OrbitCamera;
+use crate::widgets::{BUTTON_PADDING, ButtonState, Pressable, spawn_button, spawn_moveable_panel};
 
 /// Time between taking the screenshot and quitting, so it can be saved.
 const SAVE_SECONDS: f32 = 2.0;
@@ -186,6 +188,10 @@ impl Plugin for DevToolsPlugin {
             .and_then(|n| n.trim().parse::<u32>().ok())
         {
             app.insert_resource(crate::common::HerbGrowthShift(stages));
+        }
+
+        if env::var("GAME_PANEL").is_ok() {
+            app.add_systems(Startup, spawn_sample_panel);
         }
 
         if let Some((x, y)) = env::var("GAME_CURSOR").ok().and_then(|pos| parse_pos(&pos)) {
@@ -436,4 +442,23 @@ fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
 fn parse_pos(text: &str) -> Option<(i64, i64)> {
     let (x, y) = text.split_once(',')?;
     Some((x.trim().parse().ok()?, y.trim().parse().ok()?))
+}
+
+/// A moveable panel showing how each kind of button looks.
+fn spawn_sample_panel(mut commands: Commands) {
+    let (_, content) = spawn_moveable_panel(&mut commands, "Sample Panel", Vec2::new(60.0, 180.0));
+    commands.entity(content).with_children(|content| {
+        for (state, label) in [
+            (ButtonState::Normal, "Normal"),
+            (ButtonState::Selected, "Selected"),
+            (ButtonState::Active, "Active"),
+            (ButtonState::Disabled, "Disabled"),
+        ] {
+            let node = Node {
+                padding: BUTTON_PADDING,
+                ..default()
+            };
+            spawn_button(content, state, label, 16.0, node).insert(Pressable);
+        }
+    });
 }

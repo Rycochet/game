@@ -70,6 +70,8 @@ pub struct PointerPosition(pub Option<Vec2>);
 pub struct TouchGesture {
     /// How far one finger slid, in logical pixels.
     pub drag: Vec2,
+    /// Where the sliding finger landed, in logical window pixels.
+    pub drag_start: Vec2,
     /// How much the gap between two fingers grew: 1 when it didn't.
     pub pinch: f32,
     /// How far two fingers turned, in radians, clockwise on the screen.
@@ -84,6 +86,7 @@ impl Default for TouchGesture {
     fn default() -> Self {
         Self {
             drag: Vec2::ZERO,
+            drag_start: Vec2::ZERO,
             pinch: 1.0,
             twist: 0.0,
             tilt: 0.0,

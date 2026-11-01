@@ -4,9 +4,9 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use super::{CORNER_GAP, FullMap, INK, full_map_area, full_map_picture_corner};
+use super::{CORNER_GAP, FullMap, full_map_area, full_map_picture_corner};
 use crate::common::{CurrentDungeon, FirstFloor, GameView, OtherLevels};
-use crate::ui::raised_box;
+use crate::widgets::{ButtonState, spawn_button};
 
 /// A button's height and width (all the same, with room for "-10"), and the
 /// gap between two.
@@ -16,9 +16,7 @@ pub(super) const BUTTON_GAP: f32 = 4.0;
 /// How far either side of a button still counts as on it.
 const SIDE_REACH: f32 = 10.0;
 
-/// The floor being looked at: darker, and flat where the others stand up.
-const SHOWN_BACKGROUND: Color = Color::srgb(0.42, 0.32, 0.2);
-const SHOWN_TEXT: Color = Color::srgb(0.95, 0.87, 0.7);
+const FONT: f32 = 16.0;
 
 #[derive(Component)]
 pub(super) struct FloorColumn;
@@ -142,36 +140,20 @@ pub(super) fn show_buttons(
                 ..0 => "B".to_string(),
                 up => (up + first.0 as i32).to_string(),
             };
+            let state = if Some(floor) == shown.or(current) {
+                ButtonState::Selected
+            } else if Some(floor) == current {
+                // The player's floor is flat, shown or not.
+                ButtonState::Active
+            } else {
+                ButtonState::Normal
+            };
             let size = Node {
                 width: px(BUTTON_WIDTH),
                 height: px(BUTTON),
-                border: UiRect::all(px(2)),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
                 ..default()
             };
-            let text = (
-                TextFont::from_font_size(16.0),
-                TextLayout::justify(Justify::Center),
-            );
-            if Some(floor) == shown.or(current) {
-                column
-                    .spawn((
-                        size,
-                        BackgroundColor(SHOWN_BACKGROUND),
-                        BorderColor::from(INK),
-                    ))
-                    .with_child((Text::new(number), text, TextColor(SHOWN_TEXT)));
-            } else {
-                // (Inserted over the box's own size and padding.)
-                let mut button = column.spawn(raised_box());
-                button.insert(size);
-                // The player's floor is flat, shown or not.
-                if Some(floor) == current {
-                    button.insert(BorderColor::from(INK));
-                }
-                button.with_child((Text::new(number), text, TextColor(INK)));
-            }
+            spawn_button(column, state, number, FONT, size);
         }
     });
     *drawn = now;

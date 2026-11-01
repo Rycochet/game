@@ -9,7 +9,6 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 ## Public API
 
 - `UiPlugin`.
-- `raised_box()`: a bundle for a box standing up from what is behind it (lit top and left, in shade bottom and right); put its contents in as children. Used by `minimap`.
 
 ## Depends on
 
@@ -17,7 +16,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Used by
 
-- `minimap` (`raised_box`).
+- Nothing.
 
 ## Notes
 
