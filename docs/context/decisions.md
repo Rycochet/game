@@ -271,7 +271,7 @@ Asked for by the owner: a round minimap in the top-right corner whose contents a
 
 What the world map knows is now the chunks a character has seen, saved with them whether or not a chunk has a poi (`CharacterSave::pois`, which held only chunks with one) and all sent again on connecting, so the map survives a restart. Worlds saved earlier only remember their chunks with pois, so old explored land shows gaps until walked again.
 
-Claude's choices, easily changed: the full map keeps north at the top, the minimap hides while it is open, the keyboard still walks under it, and rivers aren't drawn (the owner's list was walkable tiles and biome colours). `ui::raised_box` is the shared raised box, for the map's hover name first and other things later (owner).
+Claude's choices, easily changed: the full map keeps north at the top, the minimap hides while it is open, the keyboard still walks under it, and rivers aren't drawn (the owner's list was walkable tiles and biome colours). `widgets::raised_box` is the shared raised box, for the map's hover name first and other things later (owner).
 
 ## 2026-10-31: World map features are now called pois
 
@@ -338,3 +338,9 @@ The owner's rules: most buildings have windows in their outside walls, each with
 ## 2026-10-31: Touch: taps are clicks, two fingers move the camera
 
 Asked for by the owner, after the web client loaded and drew well on an iPad. A new `touch` module makes a tap a left mouse click for one frame, on lifting, so all existing click code works and the start of a pinch doesn't walk the player. Readers of the cursor use `common::PointerPosition` (finger, otherwise mouse) rather than faking the cursor: `Window::set_cursor_position` moves the real mouse on native and fails in browsers. Two fingers pinch to zoom and twist to turn; moving both up or down tilts, Claude's addition since tilt was otherwise out of reach on a tablet. One finger on the main view only taps; on the full map it drags. Target: browsers on tablets and phones, not native mobile apps.
+
+## 2026-11-01: A small widget library
+
+The owner's request, for consistency as more interface arrives: a `widgets` module holds panels with titles, buttons (normal, selected, active, disabled), tooltips and moveable panels, and other modules use those rather than styling Bevy's `Node`s. A moveable panel fits its contents and has a title with three thick stripes running from it to just inside the panel's edge; the bar moves it, and a close button sits on the right, where the stripes stop (owner's choice). `widgets` takes clicks on its pieces in `PreUpdate`, before the maps, so nothing under them sees them, the same way the maps keep input from the game. It tests against laid-out nodes, as Bevy's own `Interaction` doesn't take the click away from other systems and reacts to a finger landing rather than a tap.
+
+Rule (owner): anything said about clicking or other mouse actions also has to work by touch; if how is unclear, ask before building it.

@@ -27,6 +27,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the locale says.
 - `GAME_SHOW_FLOOR=n`: three seconds after starting, look at this known floor (an index, from 0); needs the full map open (`GAME_MAP`), as closed it goes straight back.
 - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
+- `GAME_PANEL=1`: show a moveable panel (`widgets`) with a button in each state.
 - `GAME_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
 - Not here, but also dev tools the embedded server allows: ctrl+click teleports (`world_map`, `dungeon_map`), and on a poi on the full map goes into it (`minimap`), alt+click changes a site's cell (`dungeon_map`), Esc goes back to the start (`demo`).

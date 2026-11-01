@@ -31,8 +31,10 @@ use crate::connection::ToServer;
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
 use crate::player::{Player, PlayerSystems};
 use crate::surface_style::SurfaceStyle;
-use crate::ui::raised_box;
 use crate::view3d::{HoveredToken, OrbitCamera, View3dSystems};
+use crate::widgets::{
+    CLOSE_PIXELS, PARCHMENT, WidgetSystems, panel, panel_title, spawn_close_button, spawn_tooltip,
+};
 use crate::world_map::{self, poi_picture, poi_picture_name};
 use canvas::Canvas;
 use frame::RoundFrame;
@@ -40,10 +42,6 @@ use grid::{CellLook, Looks};
 use projection::Projection;
 use sprites::Sprites;
 use world::WorldTiles;
-
-/// The inside of the maps, the colour of parchment.
-const PARCHMENT: [u8; 3] = [240, 225, 190];
-const INK: Color = Color::srgb(0.25, 0.17, 0.1);
 
 /// The minimap's size against the window's height, its border and notch, and
 /// its gap from the window's corner. Lengths are in logical pixels.
@@ -79,8 +77,6 @@ const OTHER_FLOOR_SIZE: f32 = 0.8;
 const FULL_MAP_OF_WINDOW: f32 = 0.9;
 const FULL_MAP_MARGIN: f32 = 20.0;
 const TITLE_HEIGHT: f32 = 34.0;
-/// The close button, across.
-const CLOSE_PIXELS: f32 = 28.0;
 /// How far round the close button still counts as on it, for fingers.
 const CLOSE_REACH: f32 = 10.0;
 /// How far the box naming what is under the mouse sits above the margin.
@@ -124,7 +120,8 @@ impl Plugin for MinimapPlugin {
                 (go_into_clicked_poi, take_input, floors::back_to_own_floor)
                     .chain()
                     .after(InputSystems)
-                    .after(PointerSystems),
+                    .after(PointerSystems)
+                    .after(WidgetSystems),
             )
             .add_systems(
                 Update,
@@ -245,24 +242,12 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         GlobalZIndex(10),
         Visibility::Hidden,
     ));
-    let [red, green, blue] = PARCHMENT;
     commands
-        .spawn((
-            FullMapPanel,
-            Node {
-                position_type: PositionType::Absolute,
-                ..default()
-            },
-            BackgroundColor(Color::srgb_u8(red, green, blue)),
-            GlobalZIndex(20),
-            Visibility::Hidden,
-        ))
+        .spawn((panel(), FullMapPanel, GlobalZIndex(20), Visibility::Hidden))
         .with_children(|panel| {
             panel.spawn((
                 FullMapTitle,
-                Text::new(""),
-                TextFont::from_font_size(24.0),
-                TextColor(INK),
+                panel_title(""),
                 TextLayout::justify(Justify::Center),
                 Node {
                     position_type: PositionType::Absolute,
@@ -282,26 +267,15 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                     ..default()
                 },
             ));
-            panel
-                .spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        top: px(FULL_MAP_MARGIN),
-                        right: px(FULL_MAP_MARGIN),
-                        width: px(CLOSE_PIXELS),
-                        height: px(CLOSE_PIXELS),
-                        border: UiRect::all(px(2)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BorderColor::from(INK),
-                ))
-                .with_child((
-                    Text::new("X"),
-                    TextFont::from_font_size(18.0),
-                    TextColor(INK),
-                ));
+            spawn_close_button(
+                panel,
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: px(FULL_MAP_MARGIN),
+                    right: px(FULL_MAP_MARGIN),
+                    ..default()
+                },
+            );
             panel
                 .spawn((
                     HoverBox,
@@ -315,14 +289,7 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                     },
                     Visibility::Hidden,
                 ))
-                .with_children(|holder| {
-                    holder.spawn(raised_box()).with_child((
-                        HoverText,
-                        Text::new(""),
-                        TextFont::from_font_size(18.0),
-                        TextColor(INK),
-                    ));
-                });
+                .with_children(|holder| spawn_tooltip(holder, HoverText));
         });
     commands
         .spawn((
@@ -338,14 +305,7 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
             GlobalZIndex(10),
             Visibility::Hidden,
         ))
-        .with_children(|holder| {
-            holder.spawn(raised_box()).with_child((
-                WorldHoverText,
-                Text::new(""),
-                TextFont::from_font_size(18.0),
-                TextColor(INK),
-            ));
-        });
+        .with_children(|holder| spawn_tooltip(holder, WorldHoverText));
     commands.insert_resource(MapPictures { minimap, full });
 }
 

@@ -16,6 +16,7 @@ mod surface_style;
 mod touch;
 mod ui;
 mod view3d;
+mod widgets;
 mod world_map;
 
 use bevy::prelude::*;
@@ -53,6 +54,7 @@ fn main() {
         connection::ConnectionPlugin,
         surface_style::SurfaceStylePlugin,
         touch::TouchPlugin,
+        widgets::WidgetsPlugin,
         player::PlayerPlugin,
         view3d::View3dPlugin,
         world_map::WorldMapPlugin,
