@@ -46,7 +46,7 @@ Source code is in `crates/`: `shared` holds game rules and world generation used
 
 ### Docker
 
-The `Dockerfile` builds an x86-64 image with the game server, which serves the web client and the game (WebSockets) securely on port 8081 with a self-signed certificate (or your own), and saves in `/data`. Behind a reverse proxy that looks after TLS, add `-e HOW_BEHIND_PROXY=true` and use port 8080 alone:
+The `Dockerfile` builds an x86-64 image with the game server, which serves the web client and the game (WebSockets) securely on port 8081 with a self-signed certificate (or your own), and saves in `/data`. To use a certificate from Let's Encrypt, add `-e HOW_LETS_ENCRYPT_DOMAIN=game.example.com` (which accepts its terms) and publish `-p 443:8081`: the domain's public port 443 must reach this server. Behind a reverse proxy that looks after TLS, add `-e HOW_BEHIND_PROXY=true` and use port 8080 alone:
 
 ```bash
 docker build -t hall-of-worlds .

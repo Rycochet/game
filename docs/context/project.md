@@ -33,7 +33,7 @@
 ## Docker
 
 - Multi-stage `Dockerfile`, x86-64 only (`linux/amd64`; ARM can be added later under the same tags): a `tools` stage `cargo install`s Trunk 0.22.1; `build` compiles `hall-of-worlds-server` (release) and the web client (`trunk build --release`, into `/srv/web`); the runtime is `debian:trixie-slim` (same Debian as the `rust:1.99-trixie` builder, so glibc matches), non-root user `hall`.
-- One process: the game server is the entrypoint and serves both the web client and the game's WebSocket on one port: 8081 over TLS, or 8080 with `HOW_BEHIND_PROXY=true` (without it, 8080 only answers with an error) (`HOW_ADDRESS=0.0.0.0:8080`, `HOW_WEB=/srv/web`). The generated certificate is kept in `/data/tls`. Saves go in `/data` (`HOW_DATA`, a `VOLUME`, owned by `hall`): mount a volume there to keep them across updates. The server handles SIGTERM (it is PID 1), saving everyone before it stops.
+- One process: the game server is the entrypoint and serves both the web client and the game's WebSocket on one port: 8081 over TLS, or 8080 with `HOW_BEHIND_PROXY=true` (without it, 8080 only answers with an error) (`HOW_ADDRESS=0.0.0.0:8080`, `HOW_WEB=/srv/web`). The generated certificate is kept in `/data/tls`, and anything from Let's Encrypt in `/data/tls/acme`. The image installs `ca-certificates` so the server can check Let's Encrypt's website. Saves go in `/data` (`HOW_DATA`, a `VOLUME`, owned by `hall`): mount a volume there to keep them across updates. The server handles SIGTERM (it is PID 1), saving everyone before it stops.
 - Not testable locally (no Docker on the owner's machine), and CI only builds it after merging to `master`.
 
 ## Domains

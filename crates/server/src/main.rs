@@ -13,6 +13,12 @@
 //! - `HOW_TLS_CERTIFICATE` and `HOW_TLS_KEY`: the paths of your own PEM
 //!   certificate and private key. Without them, a self-signed certificate is
 //!   made and kept in the data folder.
+//! - `HOW_LETS_ENCRYPT_DOMAIN`: get a certificate for this domain from Let's
+//!   Encrypt, which accepts its terms. The domain's public port 443 must reach
+//!   the secure port. A self-signed certificate is used until it comes.
+//! - `HOW_LETS_ENCRYPT_EMAIL`: where Let's Encrypt can write to you (optional).
+//! - `HOW_DEBUG_LETS_ENCRYPT_STAGING`: `true` uses Let's Encrypt's test service,
+//!   whose certificates nobody trusts, to try things without its rate limits.
 //! - `HOW_TLS_NAMES`: names and addresses a made certificate covers as well as
 //!   this machine, separated by commas.
 //! - `HOW_WEB`: the web client's folder (`trunk build`'s `dist`) to

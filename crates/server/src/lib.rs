@@ -14,6 +14,7 @@ mod connections;
 mod embedded;
 mod environment;
 mod latency;
+mod lets_encrypt;
 mod network;
 mod sites;
 mod storage;
