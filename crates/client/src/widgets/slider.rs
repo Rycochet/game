@@ -4,6 +4,7 @@
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
+use super::fullscreen::Darkening;
 use super::{ButtonPressed, INK, LIT_EDGE, Pressable};
 use crate::common::{PointerPosition, TouchGesture};
 
@@ -150,11 +151,16 @@ pub(super) fn drag_sliders(
         &InheritedVisibility,
     )>,
     entities: Query<Entity, With<Slider>>,
+    layers: Query<&InheritedVisibility, With<Darkening>>,
     mut moved: MessageWriter<SliderMoved>,
 ) {
     let Some(at) = pointer.0.filter(|_| gesture.drag != Vec2::ZERO) else {
         return;
     };
+    // Sliders are all on moveable panels, under any full-screen layer.
+    if layers.iter().any(|visible| visible.get()) {
+        return;
+    }
     for entity in &entities {
         let Ok((_, node, transform, visible)) = sliders.get(entity) else {
             continue;

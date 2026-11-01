@@ -6,7 +6,7 @@ use bevy::window::PrimaryWindow;
 
 use super::{CORNER_GAP, FullMap, full_map_area, full_map_picture_corner};
 use crate::common::{CurrentDungeon, FirstFloor, GameView, OtherLevels};
-use crate::widgets::{ButtonState, spawn_button};
+use crate::widgets::{ButtonState, layer_z, spawn_button};
 
 /// A button's height and width (all the same, with room for "-10"), and the
 /// gap between two.
@@ -31,7 +31,7 @@ pub(super) fn spawn_column(mut commands: Commands) {
             ..default()
         },
         // Over the full map.
-        GlobalZIndex(25),
+        GlobalZIndex(layer_z(super::FULL_MAP_LAYER) + 2),
     ));
 }
 
