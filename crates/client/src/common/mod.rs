@@ -12,7 +12,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use shared::climate::Climate;
-use shared::dungeon::{Level, RoomId, Sight};
+use shared::dungeon::{Cell, Level, RoomId, Sight};
 use shared::movement::{WorldConditions, WorldGround};
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::protocol::{LevelChunk, LevelInfo, SeenPoi, SeenStairs, WorldInfo};
@@ -48,8 +48,32 @@ impl Plugin for CommonPlugin {
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()
+            .init_resource::<ClickMode>()
+            .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
             .init_resource::<TouchGesture>();
+    }
+}
+
+/// What a click on the map does (dev tools), chosen in the debug menu.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClickMode {
+    /// Travels there.
+    #[default]
+    Normal,
+    /// Asks the server to put the player there, even through walls.
+    Teleport,
+    /// Changes the cell there, to try walls out (in a site).
+    ChangeCell,
+}
+
+/// Whether the status text with position, hour, ping and stats is on show.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct DebugInfo(pub bool);
+
+impl Default for DebugInfo {
+    fn default() -> Self {
+        Self(true)
     }
 }
 
@@ -294,6 +318,14 @@ impl CurrentDungeon {
     }
 
     /// Whether the level is a town.
+    pub fn level_has(&self, cell: Cell) -> bool {
+        let (min_x, min_y, max_x, max_y) = match self.info.as_ref() {
+            Some(info) => info.bounds,
+            None => return false,
+        };
+        (min_y..=max_y).any(|y| (min_x..=max_x).any(|x| self.level.cell(x, y) == cell))
+    }
+
     pub fn is_town(&self) -> bool {
         self.info.as_ref().is_some_and(|info| info.kind.is_town())
     }
@@ -425,7 +457,7 @@ pub struct GameClock {
 }
 
 /// Stages added to how far herbs have grown by the clock, to look at them
-/// (demo key, dev tools): only what this client draws.
+/// (debug menu, dev tools): only what this client draws.
 #[derive(Resource, Default)]
 pub struct HerbGrowthShift(pub u32);
 
@@ -502,6 +534,7 @@ pub struct Token {
 
 /// How big an entity's icon is drawn above its token, relative to the
 /// `Default` size. The token's base is the same size whatever this is.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TokenSize {
     /// Half size: world map pois, whose pictures fill the whole tile.
@@ -516,6 +549,7 @@ pub enum TokenSize {
 }
 
 impl TokenSize {
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub const ALL: [Self; 6] = [
         Self::Tiny,
         Self::Small,
@@ -524,11 +558,6 @@ impl TokenSize {
         Self::Giant,
         Self::Titan,
     ];
-
-    /// The next size in `ALL`, wrapping round (for demos).
-    pub fn next(self) -> Self {
-        Self::ALL[(self as usize + 1) % Self::ALL.len()]
-    }
 
     /// Icon scale relative to `Default`.
     pub fn scale(self) -> f32 {
@@ -570,11 +599,6 @@ impl TokenShape {
         Self::Hexagon,
         Self::Octagon,
     ];
-
-    /// The next shape in `ALL`, wrapping round (for demos).
-    pub fn next(self) -> Self {
-        Self::ALL[(self as usize + 1) % Self::ALL.len()]
-    }
 }
 
 /// How an entity feels about the player, shown as the token's colour.
@@ -593,11 +617,6 @@ pub enum Attitude {
 
 impl Attitude {
     pub const ALL: [Self; 4] = [Self::None, Self::Friendly, Self::Neutral, Self::Unfriendly];
-
-    /// The next attitude in `ALL`, wrapping round (for demos).
-    pub fn next(self) -> Self {
-        Self::ALL[(self as usize + 1) % Self::ALL.len()]
-    }
 
     /// The colour every view uses for this attitude.
     pub fn colour(self) -> Color {

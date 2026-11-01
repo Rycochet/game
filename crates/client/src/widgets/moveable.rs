@@ -6,7 +6,7 @@ use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 use bevy::window::PrimaryWindow;
 
 use super::{
-    ButtonPressed, ButtonState, INK, Pressable, panel, panel_title, raised_border,
+    ButtonPressed, ButtonState, INK, Pressable, RaisePanel, panel, panel_title, raised_border,
     spawn_close_button,
 };
 use crate::common::{PointerPosition, TouchGesture};
@@ -46,7 +46,6 @@ pub(super) enum PanelPart {
 /// A moveable panel with this title, at this place. Returns the panel, and the
 /// entity to put its contents in; the panel fits them. It is despawned when
 /// closed.
-#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (Entity, Entity) {
     let root = commands
         .spawn((
@@ -101,6 +100,11 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
         .id();
     commands.entity(root).add_children(&[bar, content]);
     (root, content)
+}
+
+/// Put this on a node for presses on it to go no further. `entity` is the node.
+pub fn stops_presses(entity: Entity) -> impl Bundle {
+    PanelPart::Body(entity)
 }
 
 /// Lines running from the title out to the edge of the panel.
@@ -168,7 +172,7 @@ pub(super) struct Dragging {
 /// What this takes from the mouse: a press on a widget, and it is gone, so
 /// nothing under the widget sees it. A tap arrives as a press (see `touch`), so
 /// buttons work by touch; moving a panel by touch comes from `TouchGesture`.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn take_presses(
     mut commands: Commands,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
@@ -183,50 +187,66 @@ pub(super) fn take_presses(
     )>,
     buttons: Query<
         (
-            Entity,
+            &ComputedStackIndex,
             &ComputedNode,
             &UiGlobalTransform,
             &InheritedVisibility,
-            &ButtonState,
+            Entity,
+            Option<&ButtonState>,
         ),
         With<Pressable>,
     >,
+    mut raised: MessageReader<RaisePanel>,
     mut panels: Query<(&mut MoveablePanel, &mut GlobalZIndex)>,
     mut pressed: MessageWriter<ButtonPressed>,
     mut dragging: ResMut<Dragging>,
 ) {
     let dragging = &mut *dragging;
-    let part_at = |at: Vec2| {
+    // The part in front at a point, and how far in front it is.
+    let stacked_part_at = |at: Vec2| {
         parts
             .iter()
             .filter(|(_, node, transform, visible, ..)| {
                 visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
             })
             .max_by_key(|(stack, ..)| stack.0)
-            .map(|(.., part)| *part)
+            .map(|(stack, .., part)| (stack.0, *part))
     };
+    let part_at = |at: Vec2| stacked_part_at(at).map(|(_, part)| part);
     let mut raise = |panel: Entity, panels: &mut Query<(&mut MoveablePanel, &mut GlobalZIndex)>| {
         if let Ok((_, mut z)) = panels.get_mut(panel) {
             dragging.top_z = dragging.top_z.max(FIRST_PANEL_Z) + 1;
             z.0 = dragging.top_z;
         }
     };
+    for panel in raised.read() {
+        raise(panel.0, &mut panels);
+    }
 
     if mouse.just_pressed(MouseButton::Left) {
         let button = pointer.0.and_then(|at| {
-            buttons.iter().find(|(_, node, transform, visible, _)| {
-                visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
-            })
+            buttons
+                .iter()
+                .filter(|(_, node, transform, visible, ..)| {
+                    visible.get()
+                        && node.contains_point(**transform, at / node.inverse_scale_factor)
+                })
+                .max_by_key(|(stack, ..)| stack.0)
         });
-        let part = pointer.0.and_then(part_at);
-        if let Some((entity, .., state)) = button {
+        let stacked = pointer.0.and_then(stacked_part_at);
+        // Only what is in front: a button hidden by another panel gets nothing.
+        let button = button.filter(|(stack, ..)| stacked.is_none_or(|(part, _)| stack.0 > part));
+        let part = stacked.map(|(_, part)| part);
+        if let Some((.., entity, state)) = button {
             mouse.clear_just_pressed(MouseButton::Left);
-            if *state != ButtonState::Disabled {
+            if !state.is_some_and(|state| state.is_disabled()) {
                 pressed.write(ButtonPressed(entity));
             }
         } else if part.is_some() {
             mouse.clear_just_pressed(MouseButton::Left);
         }
+        // A press on a button in a panel is a press on the panel, but its
+        // title bar and close button don't have buttons on them.
         match part {
             Some(PanelPart::Close(panel)) => {
                 commands.entity(panel).despawn();
@@ -319,7 +339,8 @@ mod tests {
             .init_resource::<PointerPosition>()
             .init_resource::<TouchGesture>()
             .init_resource::<Dragging>()
-            .add_message::<ButtonPressed>();
+            .add_message::<ButtonPressed>()
+            .add_message::<RaisePanel>();
         let world = app.world_mut();
         let root = world
             .spawn((
@@ -409,6 +430,20 @@ mod tests {
             .world_mut()
             .get_mut::<ButtonState>(button)
             .expect("a state") = ButtonState::Disabled;
+        test.click(120.0, 160.0);
+        assert!(!test.still_pressed());
+        assert!(test.presses().is_empty());
+    }
+
+    #[test]
+    fn a_button_under_another_panel_gets_nothing() {
+        let mut test = test();
+        let root = test.root;
+        // Another panel's body, in front of the button.
+        test.app.world_mut().spawn((
+            PanelPart::Body(root),
+            laid_out(Vec2::new(110.0, 150.0), Vec2::new(80.0, 30.0), 5),
+        ));
         test.click(120.0, 160.0);
         assert!(!test.still_pressed());
         assert!(test.presses().is_empty());

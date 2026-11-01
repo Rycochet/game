@@ -5,7 +5,7 @@
 
 mod common;
 mod connection;
-mod demo;
+mod debug_menu;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
 mod dungeon_map;
@@ -60,7 +60,7 @@ fn main() {
         world_map::WorldMapPlugin,
         dungeon_map::DungeonMapPlugin,
         site::SitePlugin,
-        demo::DemoPlugin,
+        debug_menu::DebugMenuPlugin,
         minimap::MinimapPlugin,
         ui::UiPlugin,
     ));

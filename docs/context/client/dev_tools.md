@@ -16,7 +16,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_FIELDS=n`: draw every field as this stage (its `variety`: for crops 0 ploughed, 1 grass, 2 short, 3 tall, 4 ripe; pasture alternates grass and short).
 - `GAME_HERBS=n`: draw every herb tile `n` stages (game days) further on than the clock says (`common::HerbGrowthShift`).
 - `GAME_TRAVEL=x,y`: start travelling there (as if clicked), on either map, once the player is at `GAME_POS` if that is set, otherwise two seconds after starting (the server's answer, or putting the player back in their site, would end an earlier journey); combine with `GAME_SCREENSHOT_DELAY` to catch it mid-journey.
-- `GAME_WALK=1`: start with `demo::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
+- `GAME_WALK=1`: start with `debug_menu::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
 - `GAME_SNOW=n`: once connected, ask the server (`DevSnowLine`) for the snow line at `n` (128 normal, 0 frozen), for screenshots of the temperature states.
 - `GAME_SKY_HOUR=n`: draw the weather `n` game hours ahead (`world_map::sky::SkyHourOffset`).
 - `GAME_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as indexes into `TokenShape::ALL` / `Attitude::ALL` (e.g. `3,3` red hexagon, `4,0` white octagon); a third value `1` makes it completed; a fourth is an index into `TokenSize::ALL` (default 2, `Default`).
@@ -27,16 +27,17 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the locale says.
 - `GAME_SHOW_FLOOR=n`: three seconds after starting, look at this known floor (an index, from 0); needs the full map open (`GAME_MAP`), as closed it goes straight back.
 - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
-- `GAME_PANEL=1`: show a moveable panel (`widgets`) with a button in each state.
+- `GAME_PANEL=1`: open the debug menu's Show Widgets panel.
+- `GAME_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
 - `GAME_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
-- Not here, but also dev tools the embedded server allows: ctrl+click teleports (`world_map`, `dungeon_map`), and on a poi on the full map goes into it (`minimap`), alt+click changes a site's cell (`dungeon_map`), Esc goes back to the start (`demo`).
+- Not here, but also dev tools the embedded server allows: the debug menu's Teleport Mode (`world_map`, `dungeon_map`; on a poi on the full map it goes into it, `minimap`), Change Cell Mode (`dungeon_map`) and Back to Start (`debug_menu`).
 - `HALL_OF_WORLDS_SERVER=ws://host:port/ws` (read by `connection`): join that server instead of starting single player (a new guest each run; dev tools messages are ignored by such servers).
 - `HALL_OF_WORLDS_SERVER_DATA=folder` (read by the server, not this module): where the embedded server saves. Set it to a scratch folder for test runs, or they move the owner's saved character (the saved position and site win unless `GAME_POS` / `GAME_ENTER` are set).
 
 ## Depends on
 
-- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `demo` (`AutoWalk`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`).
+- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`).
 
 ## Used by
 

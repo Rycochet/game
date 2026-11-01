@@ -22,7 +22,7 @@ Also keeps `common::ServerClock`: runs it in real time, sends `Ping` once a seco
 
 ## Used by
 
-- `site` (`ToServer`, `FromServer`), `dev_tools`, `demo`, `world_map` and `dungeon_map` (`ToServer`: dev tools messages); other modules see `CurrentWorld` and `GameView`.
+- `site` (`ToServer`, `FromServer`), `dev_tools`, `debug_menu`, `world_map` and `dungeon_map` (`ToServer`: dev tools messages); other modules see `CurrentWorld` and `GameView`.
 
 ## Notes
 

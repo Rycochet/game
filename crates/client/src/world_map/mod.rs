@@ -24,8 +24,8 @@ use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 
 use crate::common::{
-    CurrentWorld, GameClock, GameView, MapPosition, PointerPosition, SmoothPosition, Token,
-    ViewStats, Weather,
+    ClickMode, CurrentWorld, GameClock, GameView, MapPosition, PointerPosition, SmoothPosition,
+    Token, ViewStats, Weather,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -470,12 +470,12 @@ fn hide_tokens_outside_window(
 }
 
 /// A left click on the terrain sends the player travelling there (unless it
-/// was on a clickable token, such as a poi: `site` handles those);
-/// ctrl+click asks the server to teleport them (dev tools).
+/// was on a clickable token, such as a poi: `site` handles those); in Teleport
+/// Mode it asks the server to teleport them (dev tools).
 #[allow(clippy::too_many_arguments)]
 fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
+    mode: Res<ClickMode>,
     clicked: Res<ClickedToken>,
     pointer: Res<PointerPosition>,
     camera: Single<(&Camera, &GlobalTransform, &OrbitCamera), With<ViewCamera>>,
@@ -522,9 +522,9 @@ fn pick_on_click(
             )
         },
     ) {
-        // Dev tools: ctrl+click jumps there instead (through walls), if the
+        // Dev tools: Teleport Mode jumps there instead (through walls), if the
         // server allows it.
-        if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
+        if *mode == ClickMode::Teleport {
             to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
         } else {
             travel.write(TravelTo { x, y });

@@ -9,9 +9,7 @@ use bevy::prelude::*;
 
 use crate::common::PointerSystems;
 
-// (Only `dev_tools` makes one until the debug menu does, and it is native only.)
-#[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
-pub use moveable::spawn_moveable_panel;
+pub use moveable::{spawn_moveable_panel, stops_presses};
 
 /// The inside of panels, the colour of parchment.
 pub const PARCHMENT: [u8; 3] = [240, 225, 190];
@@ -31,6 +29,9 @@ const TITLE_FONT: f32 = 24.0;
 const TOOLTIP_FONT: f32 = 18.0;
 const CLOSE_FONT: f32 = 18.0;
 const BUTTON_BORDER: f32 = 2.0;
+const CHECK_PIXELS: f32 = 18.0;
+const CHECK_MARK_PIXELS: f32 = 10.0;
+const CHECK_GAP: f32 = 8.0;
 
 const RAISED_BACKGROUND: Color = Color::srgb(0.75, 0.65, 0.48);
 const LIT_EDGE: Color = Color::srgb(0.95, 0.87, 0.7);
@@ -45,11 +46,16 @@ pub struct WidgetsPlugin;
 impl Plugin for WidgetsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<ButtonPressed>()
+            .add_message::<RaisePanel>()
+            .configure_sets(
+                PreUpdate,
+                (WidgetSystems::Presses, WidgetSystems::Modal).chain(),
+            )
             .init_resource::<moveable::Dragging>()
             .add_systems(
                 PreUpdate,
                 moveable::take_presses
-                    .in_set(WidgetSystems)
+                    .in_set(WidgetSystems::Presses)
                     .after(InputSystems)
                     .after(PointerSystems),
             )
@@ -59,16 +65,25 @@ impl Plugin for WidgetsPlugin {
 
 /// Where widgets take what they use of the mouse and fingers, in `PreUpdate`,
 /// so nothing underneath them sees it. Anything else taking clicks there runs
-/// after this.
+/// after these.
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct WidgetSystems;
+pub enum WidgetSystems {
+    /// Presses on widgets become `ButtonPressed`.
+    Presses,
+    /// Something covering the screen reads them, and takes all other input.
+    Modal,
+}
+
+/// Brings this moveable panel to the front.
+#[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RaisePanel(pub Entity);
 
 /// A button marked `Pressable` was clicked or tapped, unless it was disabled.
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ButtonPressed(pub Entity);
 
-/// Put this on a button (from `spawn_button`) for clicks on it to be sent as
-/// `ButtonPressed` and go no further.
+/// Put this on a button (from `spawn_button`), or any node, for clicks on it to
+/// be sent as `ButtonPressed` and go no further.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Pressable;
 
@@ -85,9 +100,16 @@ pub enum ButtonState {
     Active,
     /// Can't be used now: grey, and clicks do nothing.
     Disabled,
+    /// As `Disabled`, but with the keyboard on it: a dark border.
+    DisabledSelected,
 }
 
 impl ButtonState {
+    /// Whether clicks on it do nothing.
+    pub fn is_disabled(self) -> bool {
+        matches!(self, Self::Disabled | Self::DisabledSelected)
+    }
+
     /// Its background, border and text colours.
     fn colours(self) -> (Color, BorderColor, Color) {
         match self {
@@ -99,6 +121,7 @@ impl ButtonState {
                 BorderColor::from(DISABLED_EDGE),
                 DISABLED_TEXT,
             ),
+            Self::DisabledSelected => (DISABLED_BACKGROUND, BorderColor::from(INK), DISABLED_TEXT),
         }
     }
 }
@@ -149,10 +172,14 @@ pub fn panel_title(title: impl Into<String>) -> impl Bundle {
 
 /// A named box, such as what is under the pointer; `marker` goes on its text,
 /// to find it and change what it says. Hide the holder to hide it.
-pub fn spawn_tooltip(holder: &mut ChildSpawnerCommands, marker: impl Bundle) {
+pub fn spawn_tooltip(
+    holder: &mut ChildSpawnerCommands,
+    marker: impl Bundle,
+    text: impl Into<String>,
+) {
     holder.spawn(raised_box()).with_child((
         marker,
-        Text::new(""),
+        Text::new(text),
         TextFont::from_font_size(TOOLTIP_FONT),
         TextColor(INK),
     ));
@@ -185,6 +212,87 @@ pub fn spawn_button<'a>(
         TextLayout::justify(Justify::Center),
         TextColor(text),
     ));
+    button
+}
+
+/// A button showing a picture rather than words, which fills it.
+pub fn spawn_icon_button<'a>(
+    parent: &'a mut ChildSpawnerCommands,
+    state: ButtonState,
+    icon: Handle<Image>,
+    node: Node,
+) -> EntityCommands<'a> {
+    let (background, border, _) = state.colours();
+    let mut button = parent.spawn((
+        state,
+        Node {
+            border: UiRect::all(px(BUTTON_BORDER)),
+            ..node
+        },
+        BackgroundColor(background),
+        border,
+    ));
+    button.with_child((
+        ImageNode::new(icon),
+        Node {
+            width: percent(100),
+            height: percent(100),
+            ..default()
+        },
+    ));
+    button
+}
+
+/// A button with its words on the left, after a checkbox if `checked` says
+/// whether it is ticked, or the same space if it has none, so words line up.
+pub fn spawn_check_button<'a>(
+    parent: &'a mut ChildSpawnerCommands,
+    state: ButtonState,
+    checked: Option<bool>,
+    label: impl Into<String>,
+    font_size: f32,
+    node: Node,
+) -> EntityCommands<'a> {
+    let (background, border, text) = state.colours();
+    let mut button = parent.spawn((
+        state,
+        Node {
+            border: UiRect::all(px(BUTTON_BORDER)),
+            padding: UiRect::horizontal(px(CHECK_GAP)),
+            column_gap: px(CHECK_GAP),
+            align_items: AlignItems::Center,
+            ..node
+        },
+        BackgroundColor(background),
+        border,
+    ));
+    button.with_children(|inside| {
+        let mut slot = inside.spawn(Node {
+            width: px(CHECK_PIXELS),
+            height: px(CHECK_PIXELS),
+            flex_shrink: 0.0,
+            border: UiRect::all(px(checked.map_or(0.0, |_| BUTTON_BORDER))),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        });
+        slot.insert(BorderColor::from(INK));
+        if checked == Some(true) {
+            slot.with_child((
+                Node {
+                    width: px(CHECK_MARK_PIXELS),
+                    height: px(CHECK_MARK_PIXELS),
+                    ..default()
+                },
+                BackgroundColor(INK),
+            ));
+        }
+        inside.spawn((
+            Text::new(label),
+            TextFont::from_font_size(font_size),
+            TextColor(text),
+        ));
+    });
     button
 }
 
