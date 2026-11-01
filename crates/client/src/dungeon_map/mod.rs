@@ -10,6 +10,7 @@
 //! (`theme`). Light is dull everywhere, and brighter near light sources, which
 //! walls block. Left-click a seen walkable cell to travel there.
 
+mod daylight;
 mod field;
 mod herbs;
 pub use field::CROP_STAGES;
@@ -48,7 +49,8 @@ use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{ClickedToken, TOKEN_DIAMETER, TokenView, View3dSystems, ViewCamera, ViewGrid};
-use mesh::{LightGrid, Surface, View, WallFace};
+use daylight::{OutsideLight, Spill, TownLights};
+use mesh::{Surface, View, WallFace};
 use theme::Theme;
 
 /// Size of a cell in 3D units: about the size of a token's picture.
@@ -69,9 +71,6 @@ const MEMORY_ALPHA: f32 = 0.5;
 /// Draws a wall's fade across the floor after the floor, before the walls.
 const BLEND_DEPTH_BIAS: f32 = -0.5;
 
-/// A town's fixed light on tokens: it is out in the open.
-const TOWN_AMBIENT_BRIGHTNESS: f32 = 1500.0;
-
 /// Tokens are lit by real lights (the tiles' light is baked into their
 /// colours): a point light this high above each light source, and a dim
 /// ambient fill so tokens in the dark are still visible.
@@ -85,6 +84,8 @@ impl Plugin for DungeonMapPlugin {
     fn build(&self, app: &mut App) {
         let in_view = in_state(GameView::Dungeon);
         app.init_resource::<Shown>()
+            .init_resource::<OutsideLight>()
+            .init_resource::<TownLights>()
             .add_plugins(MaterialPlugin::<rain::RainMaterial>::default())
             .add_systems(Startup, spawn_scene)
             .add_systems(OnEnter(GameView::Dungeon), show_scene)
@@ -101,6 +102,10 @@ impl Plugin for DungeonMapPlugin {
                 (
                     apply_theme,
                     colour_ground,
+                    daylight::update_outside,
+                    daylight::update_town_lights,
+                    daylight::tint_outside,
+                    daylight::token_ambient,
                     update_meshes,
                     update_crops,
                     update_herbs,
@@ -367,7 +372,6 @@ fn load_tile(asset_server: &AssetServer, path: &'static str) -> Handle<Image> {
 
 /// The wall and floor pictures for the kind of place the player is in.
 fn apply_theme(
-    mut commands: Commands,
     dungeon: Res<CurrentDungeon>,
     asset_server: Res<AssetServer>,
     mut surfaces: ResMut<SurfaceMaterials>,
@@ -376,14 +380,6 @@ fn apply_theme(
     if !dungeon.is_changed() {
         return;
     }
-    commands.insert_resource(GlobalAmbientLight {
-        brightness: if dungeon.is_town() {
-            TOWN_AMBIENT_BRIGHTNESS
-        } else {
-            TOKEN_AMBIENT_BRIGHTNESS
-        },
-        ..default()
-    });
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
@@ -573,8 +569,8 @@ fn hide_unseen_tokens(
     }
 }
 
-/// When anyone who sees or gives light moves, the level changes, or the
-/// camera moves (turning, zooming or following the player): works out what
+/// When anyone who sees or gives light moves, the level or the light outside
+/// changes, or the camera moves (turning, zooming or following the player): works out what
 /// is seen (and so remembered from now on) and how it is lit, and rebuilds
 /// the meshes.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
@@ -609,6 +605,9 @@ fn update_meshes(
     // What the viewers saw when last worked out, kept while only the camera
     // moves.
     mut seen: Local<Option<(Vec<View>, Sight)>>,
+    // Together, as Bevy limits how many things a system can ask for.
+    (outside, mut spill): (Res<OutsideLight>, Local<Spill>),
+    (town_lights, mut window_glow): (Res<TownLights>, Local<Spill>),
 ) {
     let camera = camera.translation;
     let looked_again = dungeon.is_changed()
@@ -616,6 +615,8 @@ fn update_meshes(
         || sharers.iter().any(|position| position.is_changed());
     let changed = *built_for != Some(camera)
         || looked_again
+        || outside.is_changed()
+        || town_lights.is_changed()
         || lights
             .iter()
             .any(|(position, light)| position.is_changed() || light.is_changed());
@@ -660,14 +661,26 @@ fn update_meshes(
             }
         }
     }
-    // Out in the open, a town has fixed light for now.
+    // The light from outside, with what spills in kept unless it has changed.
     let is_town = dungeon.is_town();
-    let mut light = if is_town {
-        LightGrid::filled(level, Vec3::ONE)
-    } else {
-        LightGrid::new(level)
-    };
-    for (position, source) in lights.iter().filter(|_| !is_town) {
+    // All in the open apart from their buildings, so their water is too.
+    let open_air = dungeon.info.as_ref().is_some_and(|i| {
+        matches!(
+            i.kind,
+            PoiKind::Farm | PoiKind::HerbalistHut | PoiKind::StiltHut | PoiKind::GreenStiltHut
+        )
+    });
+    if !is_town && (dungeon.is_changed() || outside.is_changed()) {
+        *spill = Spill::work_out(level, &dungeon.stairs, outside.travel, open_air);
+    }
+    let mut light = daylight::light_from_outside(level, &spill, outside.light, is_town, open_air);
+    if is_town {
+        if dungeon.is_changed() || town_lights.is_changed() {
+            *window_glow = Spill::from_windows(level, &dungeon.buildings, &town_lights.0);
+        }
+        light.add(daylight::WINDOW_LIGHT, |x, y| window_glow.at(x, y));
+    }
+    for (position, source) in &lights {
         let colour = LinearRgba::from(source.colour);
         light.add_light(
             level,
@@ -675,14 +688,6 @@ fn update_meshes(
             source.radius,
             Vec3::new(colour.red, colour.green, colour.blue),
         );
-    }
-    if dungeon.info.as_ref().is_some_and(|i| {
-        matches!(
-            i.kind,
-            PoiKind::Farm | PoiKind::HerbalistHut | PoiKind::StiltHut | PoiKind::GreenStiltHut
-        )
-    }) {
-        light.light_outside(level);
     }
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
@@ -694,6 +699,7 @@ fn update_meshes(
         &light,
         &dungeon.stairs,
         &dungeon.buildings,
+        &town_lights.0,
         &dungeon.fields,
         ruined,
         camera,

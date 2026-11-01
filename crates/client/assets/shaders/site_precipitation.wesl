@@ -10,6 +10,7 @@ struct Weather {
     temperature: f32,
     time: f32,
     fall_height: f32,
+    light: vec4<f32>,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> weather: Weather;
@@ -72,7 +73,7 @@ fn vertex(in: Vertex) -> Output {
         + view_right * in.corner.x * size.x
         + vec3<f32>(0.0, 1.0, 0.0) * in.corner.y * size.y;
     out.clip = view.clip_from_world * vec4<f32>(place, 1.0);
-    out.colour = colour;
+    out.colour = vec4<f32>(colour.rgb * weather.light.rgb, colour.a);
     return out;
 }
 

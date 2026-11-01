@@ -11,10 +11,10 @@
 use std::collections::BTreeSet;
 
 use bevy::prelude::*;
-use shared::dungeon::{CELL_UNITS, Cell, RoomId, WALL_HALF_UNITS};
+use shared::dungeon::{CELL_UNITS, Cell, Level, RoomId, WALL_HALF_UNITS};
 use shared::site::{BuildingKind, BuildingLook, RoofKind, WallKind};
 
-use super::mesh::{MEMORY_SHADE, Surface, WallFace, faces_camera};
+use super::mesh::{MEMORY_SHADE, Surface, WallFace, corner_light, faces_camera, with_ambient};
 use super::walls::{Layer, Layers, Scene};
 use super::{CELL_SIZE, WALL_HEIGHT};
 
@@ -30,6 +30,7 @@ const HEDGE_TILE: usize = 7;
 const FIRST_WALL_TILE: usize = 8;
 const FIRST_ROOF_TILE: usize = 13;
 const WINDOW_TILE: usize = 18;
+const LIT_WINDOW_TILE: usize = 19;
 const FIRST_DOOR_TILE: usize = 20;
 pub(super) const PLOUGHED_TILE: usize = 43;
 pub(super) const GRASS_TILE: usize = 44;
@@ -113,9 +114,38 @@ pub(super) fn cell_centre(x: i64, y: i64) -> Vec3 {
     Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE)
 }
 
+/// The colour for the light at a point, on top of the ambient: from the open
+/// cells round its grid corner, or inside a building, its own cell.
+fn light_at(scene: &Scene, point: Vec3) -> Vec3 {
+    let cell = |at: f32| (at / CELL_SIZE).round() as i64;
+    let here = corner_light(scene.level, scene.light, point)
+        .unwrap_or_else(|| scene.light.at(cell(point.x), cell(point.z)));
+    with_ambient(here)
+}
+
 /// Adds a four-cornered surface to the town's mesh in a layer. See-through
 /// faces always turn towards the camera: the material culls back faces.
 pub(super) fn emit(
+    layers: &mut Layers,
+    scene: &Scene,
+    layer: Layer,
+    positions: [Vec3; 4],
+    normal: Vec3,
+    uvs: [[f32; 2]; 4],
+    colours: [Vec3; 4],
+) {
+    // Everything of a town's or farm's in view takes the light where it stands.
+    let lit = |i: usize| colours[i] * light_at(scene, positions[i]);
+    let colours = if layer == Layer::Memory {
+        colours
+    } else {
+        std::array::from_fn(lit)
+    };
+    emit_as_given(layers, scene, layer, positions, normal, uvs, colours);
+}
+
+/// As `emit`, in just these colours, whatever the light.
+fn emit_as_given(
     layers: &mut Layers,
     scene: &Scene,
     layer: Layer,
@@ -359,23 +389,31 @@ fn wall_face(
 fn strip(layers: &mut Layers, scene: &Scene, centre: Vec3, patch: Rect, neighbours: &[(i64, i64)]) {
     let seen = neighbours.iter().any(|&(x, y)| scene.sight.is_seen(x, y));
     let layer = if seen { Layer::Solid } else { Layer::Memory };
-    ground_patch(layers, layer, centre, patch);
+    ground_patch(layers, scene, layer, centre, patch);
 }
 
 /// A piece of the land's own ground.
-fn ground_patch(layers: &mut Layers, layer: Layer, centre: Vec3, patch: Rect) {
+fn ground_patch(layers: &mut Layers, scene: &Scene, layer: Layer, centre: Vec3, patch: Rect) {
     let corners = [
         (patch.min.x, patch.min.y),
         (patch.max.x, patch.min.y),
         (patch.max.x, patch.max.y),
         (patch.min.x, patch.max.y),
     ];
+    let positions = corners.map(|(east, south)| centre + Vec3::new(east, 0.0, south));
+    let colours = positions.map(|at| {
+        if layer == Layer::Memory {
+            layer_colour(layer)
+        } else {
+            light_at(scene, at)
+        }
+    });
     let builder = layers.builder(layer, Surface::Ground);
     builder.free(
-        corners.map(|(east, south)| centre + Vec3::new(east, 0.0, south)),
+        positions,
         Vec3::Y,
         corners.map(|(east, south)| [east / CELL_SIZE + 0.5, south / CELL_SIZE + 0.5]),
-        [layer_colour(layer); 4],
+        colours,
     );
 }
 
@@ -573,6 +611,14 @@ impl Roof {
     }
 }
 
+/// Which way a town's window faces, as a grid step: to the first walkable cell
+/// beside it. `None` if nothing is, and then it isn't drawn.
+pub(super) fn window_faces(level: &Level, (x, y): (i64, i64)) -> Option<(i64, i64)> {
+    [(0, -1), (1, 0), (0, 1), (-1, 0)]
+        .into_iter()
+        .find(|&(dx, dy)| level.is_walkable(x + dx, y + dy))
+}
+
 /// The door or window on a wall cell, if it has one.
 fn build_door_or_window(
     layers: &mut Layers,
@@ -586,10 +632,7 @@ fn build_door_or_window(
     let (faces, door) = match cell {
         Cell::BuildingDoor if building.door == (x, y) => (building.faces, true),
         Cell::BlindWindow => {
-            let open = [(0, -1), (1, 0), (0, 1), (-1, 0)]
-                .into_iter()
-                .find(|&(dx, dy)| level.is_walkable(x + dx, y + dy));
-            let Some(faces) = open else {
+            let Some(faces) = window_faces(level, (x, y)) else {
                 return;
             };
             (faces, false)
@@ -615,8 +658,15 @@ fn build_door_or_window(
         let tile = FIRST_DOOR_TILE + kind_index(building);
         upright(layers, scene, layer, &piece, (0.0, WALL_HEIGHT), tile);
     } else {
-        let colour = layer_colour(layer) * side_shade(normal);
-        emit(
+        let on = layer != Layer::Memory && scene.lit_buildings.contains(&building.id);
+        let (tile, colour) = if on {
+            // Giving light, so it doesn't take any.
+            (LIT_WINDOW_TILE, Vec3::ONE)
+        } else {
+            (WINDOW_TILE, layer_colour(layer) * side_shade(normal))
+        };
+        let draw = if on { emit_as_given } else { emit };
+        draw(
             layers,
             scene,
             layer,
@@ -628,10 +678,10 @@ fn build_door_or_window(
             ],
             normal,
             [
-                atlas_uv(WINDOW_TILE, 0.0, 1.0),
-                atlas_uv(WINDOW_TILE, 1.0, 1.0),
-                atlas_uv(WINDOW_TILE, 1.0, 0.0),
-                atlas_uv(WINDOW_TILE, 0.0, 0.0),
+                atlas_uv(tile, 0.0, 1.0),
+                atlas_uv(tile, 1.0, 1.0),
+                atlas_uv(tile, 1.0, 0.0),
+                atlas_uv(tile, 0.0, 0.0),
             ],
             [colour; 4],
         );
@@ -908,6 +958,7 @@ mod tests {
             &light,
             &[],
             &buildings,
+            &BTreeSet::new(),
             &[],
             false,
             camera,

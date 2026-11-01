@@ -65,15 +65,14 @@ fn on_path(sideways: f32, up: f32, circle: f32, radius: f32, lift: f32) -> Vec2 
 }
 
 /// Where those above the horizon go, above a circle of `circle` pixels at
-/// `middle`: `right` is east's and south's share of the way right on the picture,
-/// and `trim` is pixels for each size given here.
-pub fn icons(bodies: &[BodyNow], right: Vec2, middle: Vec2, circle: f32, trim: f32) -> Vec<Icon> {
+/// `middle`, always left to right as they cross the sky, however the world turns
+/// and wherever the camera looks; `trim` is pixels for each size given here.
+pub fn icons(bodies: &[BodyNow], middle: Vec2, circle: f32, trim: f32) -> Vec<Icon> {
     let mut icons = Vec::new();
     for (number, now) in bodies.iter().enumerate().filter(|(_, now)| now.is_up()) {
         let radius = radius(now) * trim;
-        let ground = Vec2::new(now.direction[0] as f32, now.direction[2] as f32);
         let at = on_path(
-            ground.dot(right),
+            now.along as f32,
             now.direction[1] as f32,
             circle,
             radius,
@@ -225,19 +224,13 @@ mod tests {
             direction,
             lit: 1.0,
             waxing: true,
+            along: direction[0],
             light: [0.0; 3],
         }
     }
 
-    fn at(direction: [f64; 3], right: Vec2) -> Vec2 {
-        icons(
-            &[body(BodyKind::Sun, direction)],
-            right,
-            Vec2::ZERO,
-            100.0,
-            1.0,
-        )[0]
-        .at
+    fn at(direction: [f64; 3]) -> Vec2 {
+        icons(&[body(BodyKind::Sun, direction)], Vec2::ZERO, 100.0, 1.0)[0].at
     }
 
     #[test]
@@ -246,21 +239,19 @@ mod tests {
         let sun_radius = radius(&body(BodyKind::Sun, [0.0, 1.0, 0.0]));
         for direction in [[1.0, 0.001, 0.0], [0.0, 0.001, 1.0], [0.0, 0.001, -1.0]] {
             assert!(
-                at(direction, Vec2::X).length() + sun_radius <= 100.0,
+                at(direction).length() + sun_radius <= 100.0,
                 "{direction:?}"
             );
         }
-        for step in 0..100 {
-            let turn = f32::from(step as u8) * 0.1;
-            let right = Vec2::from_angle(turn);
-            for up in [0.01, 0.1, 0.25, 0.6, 0.9] {
-                let flat = (1.0_f64 - up * up).sqrt();
-                let found = at([flat, up, 0.0], right);
+        for up in [0.01, 0.1, 0.25, 0.6, 0.9] {
+            let flat = (1.0_f64 - up * up).sqrt();
+            for way in [flat, -flat] {
+                let found = at([way, up, 0.0]);
                 assert!(found.y <= 0.0, "{found}");
             }
         }
         // Straight overhead: at the top of the circle, lifted.
-        let top = at([0.0, 1.0, 0.0], Vec2::X);
+        let top = at([0.0, 1.0, 0.0]);
         assert!((top - Vec2::new(0.0, -100.0 - LIFT)).length() < 0.01);
         assert!(top.y.abs() + SUN_LARGEST <= 100.0 + BAND);
     }
@@ -269,21 +260,25 @@ mod tests {
     fn once_risen_they_keep_to_a_circle_as_big_as_the_map() {
         let centre = Vec2::new(0.0, -LIFT);
         for (east, up) in [(0.95, 0.31), (0.8, 0.6), (0.3, 0.95), (-0.8, 0.6)] {
-            let found = at([east, up, 0.0], Vec2::X);
+            let found = at([east, up, 0.0]);
             assert!((found.distance(centre) - 100.0).abs() < 0.01);
             assert_eq!(found.x > 0.0, east > 0.0);
         }
         // Low to the side, it is still partly behind the map's edge.
-        let low = at([0.95, 0.31, 0.0], Vec2::X);
+        let low = at([0.95, 0.31, 0.0]);
         assert!(low.length() - 100.0 < radius(&body(BodyKind::Sun, [0.0, 1.0, 0.0])));
     }
 
     #[test]
-    fn they_turn_with_the_map() {
-        // East on the picture's left: the sun goes that way.
-        assert!(at([0.8, 0.6, 0.0], Vec2::NEG_X).x < 0.0);
-        // South straight at the viewer: neither way.
-        assert!(at([0.0, 0.6, 0.8], Vec2::X).x.abs() < 0.01);
+    fn they_go_by_their_way_across_the_sky_not_the_compass() {
+        // Early on its way it is on the left, whichever way the world turns.
+        let mut early = body(BodyKind::Sun, [0.8, 0.6, 0.0]);
+        early.along = -0.8;
+        let found = icons(&[early], Vec2::ZERO, 100.0, 1.0)[0].at;
+        assert!(found.x < 0.0);
+        early.along = 0.8;
+        let found = icons(&[early], Vec2::ZERO, 100.0, 1.0)[0].at;
+        assert!(found.x > 0.0);
     }
 
     #[test]
@@ -292,12 +287,12 @@ mod tests {
             body(BodyKind::Sun, [1.0, -0.1, 0.0]),
             body(BodyKind::Moon, [1.0, 0.0001, 0.0]),
         ];
-        let shown = icons(&now, Vec2::X, Vec2::ZERO, 100.0, 1.0);
+        let shown = icons(&now, Vec2::ZERO, 100.0, 1.0);
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].number, 1);
         assert_eq!(under(&shown, Vec2::ZERO, 100.0, shown[0].at), None);
         let high = [body(BodyKind::Moon, [0.5, 0.86, 0.0])];
-        let shown = icons(&high, Vec2::X, Vec2::ZERO, 100.0, 1.0);
+        let shown = icons(&high, Vec2::ZERO, 100.0, 1.0);
         assert_eq!(under(&shown, Vec2::ZERO, 100.0, shown[0].at), Some(0));
         assert_eq!(under(&shown, Vec2::ZERO, 100.0, Vec2::ZERO), None);
     }

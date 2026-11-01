@@ -123,6 +123,8 @@ pub struct SeenStairs {
     pub descends: (i64, i64),
     /// What it is built as (`Site::stairs_style`), the same at both ends.
     pub style: StairsStyle,
+    /// Its top end is out in the open, so daylight comes down it.
+    pub open_to_sky: bool,
 }
 
 #[cfg(test)]

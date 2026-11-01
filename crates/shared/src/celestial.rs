@@ -172,6 +172,9 @@ pub struct BodyNow {
     pub lit: f64,
     /// Whether a moon's lit part is growing. Never for suns.
     pub waxing: bool,
+    /// How far along its way across the sky it is, whichever way that goes on the
+    /// world: negative before its highest point, positive after, always rising.
+    pub along: f64,
     /// The light it gives now, linear RGB, faded near the horizon: zero below
     /// it. Noon's main sun gives its colour on flat ground, so more than 1 here.
     pub light: [f64; 3],
@@ -326,6 +329,11 @@ impl Celestial {
         let angle = TAU * (hours - sun.noon) / sun.period;
         let across = libm::sin(angle);
         let east = if self.rises_in_east { -across } else { across };
+        // A quarter turn of a sine over the time it is up, as how far east it is
+        // comes back a little before a long day's end.
+        let from_noon = (angle + PI).rem_euclid(TAU) - PI;
+        let half_day = PI * self.daylight_hours / DAY_HOURS;
+        let along = libm::sin((from_noon / half_day).clamp(-1.0, 1.0) * PI / 2.0);
         let up = libm::cos(angle) + rise_of(self.daylight_hours);
         let direction = unit([east, up, self.lean]);
         BodyNow {
@@ -333,6 +341,7 @@ impl Celestial {
             direction,
             lit: 1.0,
             waxing: false,
+            along,
             light: scaled(sun.body.colour, sun.strength * fade(direction)),
         }
     }
@@ -528,6 +537,14 @@ fn from_hue(hue: f64, richness: f64) -> [f64; 3] {
     [channel(0.0), channel(2.0), channel(4.0)]
 }
 
+/// The way a moon is going at the top of its orbit.
+fn moon_way_over(moon: &Moon) -> [f64; 3] {
+    let axis = unit(cross(moon.across[0], moon.across[1]));
+    let up = axis[1];
+    let top = unit([-axis[0] * up, 1.0 - up * up, -axis[2] * up]);
+    cross(axis, top)
+}
+
 fn moon_direction(moon: &Moon, hours: f64) -> [f64; 3] {
     let angle = TAU * (hours / moon.period + moon.start);
     let (sine, cosine) = (libm::sin(angle), libm::cos(angle));
@@ -563,6 +580,7 @@ fn moon_at(moon: &Moon, suns: &[BodyNow], suns_later: &[BodyNow], hours: f64) ->
         direction,
         lit,
         waxing: lit_by(later, suns_later) > lit,
+        along: dot(direction, moon_way_over(moon)),
         light,
     }
 }
@@ -759,6 +777,7 @@ mod tests {
             direction: [0.0, -1.0, 0.0],
             lit: 1.0,
             waxing: false,
+            along: 0.0,
             light: [0.0; 3],
         };
         let full = moon_at(&moon([0.0, 1.0, 0.0]), &[sun], &[sun], 0.0);
@@ -796,6 +815,35 @@ mod tests {
         }
         assert!(seen.len() >= 6, "{seen:?}");
         assert_eq!(world.at(0.0)[0].phase(), None);
+    }
+
+    /// While above the horizon, everything goes one way along its path, from
+    /// before its top to after it, in worlds turning either way.
+    #[test]
+    fn bodies_keep_going_along_their_way_over_the_sky() {
+        let mut ways = [false; 2];
+        for seed in 0..300 {
+            let world = world(seed);
+            ways[usize::from(world.rises_in_east)] = true;
+            let count = world.bodies().len();
+            for number in 0..count {
+                let mut last: Option<BodyNow> = None;
+                for step in 0..3000 {
+                    let now = world.at(f64::from(step) * 0.05)[number];
+                    if let Some(last) = last.filter(|last| last.is_up() && now.is_up()) {
+                        assert!(
+                            now.along > last.along,
+                            "world {seed} body {number} step {step}"
+                        );
+                    }
+                    last = Some(now);
+                }
+            }
+            // The main sun at noon is at the top of its way.
+            assert!(world.at(12.0)[0].along.abs() < 1e-9);
+            assert!(world.at(9.0)[0].along < 0.0 && world.at(15.0)[0].along > 0.0);
+        }
+        assert_eq!(ways, [true; 2]);
     }
 
     #[test]
@@ -844,5 +892,5 @@ mod tests {
         assert_eq!(format!("{:?}", world.at(9.5)), GOLDEN_SKY);
     }
 
-    const GOLDEN_SKY: &str = "[BodyNow { body: Body { kind: Sun, colour: [0.7919773309346745, 0.8613182206231162, 1.0], colour_name: Some(Blue), size: 0.8387194116696959 }, direction: [-0.4142466559940582, 0.7847245973775617, 0.46109328152594464], lit: 1.0, waxing: false, light: [0.8848544385542069, 0.9623271030074982, 1.1172724319140812] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.6229742931451838, 0.9630333796082404], colour_name: Some(Violet), size: 0.38467303853895163 }, direction: [-0.5682175123423905, 0.7765099767964616, 0.27232538369198017], lit: 0.014851955962146002, waxing: false, light: [0.00034810470657831426, 0.00023584729793441146, 0.0004232904641828701] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.7892538947659659, 0.6835815888213319], colour_name: Some(Orange), size: 0.975111596324884 }, direction: [0.3830264755924152, 0.863143928178815, 0.32904905142439983], lit: 0.16480742912403212, waxing: false, light: [0.024821508610915713, 0.02130569919414452, 0.021424257526623178] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.9869641784394392, 0.9994370279804488], colour_name: None, size: 0.981384194948326 }, direction: [-0.20199164293217609, 0.4677803293887748, -0.8604539148742888], lit: 0.47299821297354117, waxing: true, light: [0.07215731511971289, 0.07745200046741861, 0.09105903635547749] }]";
+    const GOLDEN_SKY: &str = "[BodyNow { body: Body { kind: Sun, colour: [0.7919773309346745, 0.8613182206231162, 1.0], colour_name: Some(Blue), size: 0.8387194116696959 }, direction: [-0.4142466559940582, 0.7847245973775617, 0.46109328152594464], lit: 1.0, waxing: false, along: -0.5057405771498451, light: [0.8848544385542069, 0.9623271030074982, 1.1172724319140812] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.6229742931451838, 0.9630333796082404], colour_name: Some(Violet), size: 0.38467303853895163 }, direction: [-0.5682175123423905, 0.7765099767964616, 0.27232538369198017], lit: 0.014851955962146002, waxing: false, along: -0.4487949123033693, light: [0.00034810470657831426, 0.00023584729793441146, 0.0004232904641828701] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.7892538947659659, 0.6835815888213319], colour_name: Some(Orange), size: 0.975111596324884 }, direction: [0.3830264755924152, 0.863143928178815, 0.32904905142439983], lit: 0.16480742912403212, waxing: false, along: 0.5016809540028195, light: [0.024821508610915713, 0.02130569919414452, 0.021424257526623178] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.9869641784394392, 0.9994370279804488], colour_name: None, size: 0.981384194948326 }, direction: [-0.20199164293217609, 0.4677803293887748, -0.8604539148742888], lit: 0.47299821297354117, waxing: true, along: 0.8323854186958036, light: [0.07215731511971289, 0.07745200046741861, 0.09105903635547749] }]";
 }

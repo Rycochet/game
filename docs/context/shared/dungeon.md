@@ -8,6 +8,7 @@ Dungeons and buildings as rules: a grid of cells (floor, wall, doors, windows, o
 
 ## Public API
 
+- `line_is_clear(level, from, to)`: the rule sight goes by, between the middles of two cells (`dungeon_map` spills light with it).
 - `Cell` (`Floor`, `Wall`, `Door`, `SecretDoor`, `Ground`, `Water`, `Lava`, `Window`, roads `DirtTrack`…`DressedStone`, `Garden`, `BuildingDoor`, `BlindWindow`, `Hole`, `Field`, `Fence`, `FieldGate`, `HerbBed`, `CoveredGround`; serde, sent in `protocol::LevelChunk`; new ones go at the end): `is_walkable()` (floor, door, ground, covered ground, road, garden, field, gate, herb bed), `is_road()`, `is_outside()` (ground, road, garden, field, fence, gate, herb bed: weather falls), `is_liquid()` (water, lava), `is_jumpable()` (liquid, holes and fences: jumped over, see `movement`), `is_open()` (sight and light pass the whole cell: those plus water, lava, windows, holes and fences), `is_wall()` (wall, secret door, and a town building's door and window, which are only looks on a wall), `is_opening()` (door, window). Doors are open for now; secret doors act as wall until finding them exists.
 - `WallShape { north, east, south, west }`: which sides a wall runs out to; `reach()` how far it goes from the centre each way, in `CELL_UNITS` (40 a cell): `WALL_HALF_UNITS` (2: it covers 45–55% of the cell), to the edge where joined, `WALL_END_UNITS` (4: stopping 60% across) past the centre if joined on one side only. A column has no sides.
 - `RoomId(u16)`: the planned room a cell is in; in a town, the building, on all its cells.

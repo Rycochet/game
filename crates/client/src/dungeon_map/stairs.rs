@@ -845,6 +845,7 @@ mod tests {
     fn build(direction: StairsDirection, style: StairsStyle) -> Vec<Builder> {
         let mut meshes: Vec<Builder> = Surface::ALL.iter().map(|_| Builder::default()).collect();
         let stairs = SeenStairs {
+            open_to_sky: false,
             x: 0,
             y: 0,
             direction,
@@ -877,6 +878,7 @@ mod tests {
             let mut meshes: Vec<Builder> =
                 Surface::ALL.iter().map(|_| Builder::default()).collect();
             let stairs = SeenStairs {
+                open_to_sky: false,
                 x: 0,
                 y: 0,
                 direction: StairsDirection::Up,
@@ -972,6 +974,7 @@ mod tests {
         use shared::dungeon::{Level, Sight};
         let level = Level::test_room();
         let stairs = SeenStairs {
+            open_to_sky: false,
             x: 0,
             y: 0,
             direction: StairsDirection::Up,
@@ -1002,6 +1005,7 @@ mod tests {
         let mut meshes: Vec<Builder> = Surface::ALL.iter().map(|_| Builder::default()).collect();
         let mut through: Vec<Builder> = Surface::ALL.iter().map(|_| Builder::default()).collect();
         let stairs = SeenStairs {
+            open_to_sky: false,
             x: 0,
             y: 0,
             direction: StairsDirection::Down,

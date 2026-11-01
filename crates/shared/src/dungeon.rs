@@ -440,6 +440,16 @@ impl Sight {
 /// from its centre.
 const GLIMPSE_POINTS: [(i64, i64); 4] = [(-16, -16), (16, -16), (-16, 16), (16, 16)];
 
+/// Whether the straight line between the middles of two cells misses every wall:
+/// the rule sight goes by, for something else that travels the same way.
+pub fn line_is_clear(level: &Level, from: (i64, i64), to: (i64, i64)) -> bool {
+    clear_line(
+        level,
+        (from.0 * CELL_UNITS, from.1 * CELL_UNITS),
+        (to.0 * CELL_UNITS, to.1 * CELL_UNITS),
+    )
+}
+
 /// Whether the straight line between two points (in units) misses every wall.
 /// Goes through the cells it crosses, column by column from `from`.
 fn clear_line(level: &Level, from: (i64, i64), to: (i64, i64)) -> bool {

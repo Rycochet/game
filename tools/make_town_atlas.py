@@ -31,10 +31,10 @@ def tinted(picture, colour):
     return out
 
 
-def window():
-    """A black pane in a dark wooden frame."""
+def window(pane=(0, 0, 0, 255)):
+    """A pane, black unless told otherwise, in a dark wooden frame."""
     out = Image.new("RGBA", (SIZE, SIZE), (70, 45, 25, 255))
-    ImageDraw.Draw(out).rectangle((3, 3, SIZE - 4, SIZE - 4), fill=(0, 0, 0, 255))
+    ImageDraw.Draw(out).rectangle((3, 3, SIZE - 4, SIZE - 4), fill=pane)
     return out
 
 
@@ -289,9 +289,9 @@ atlas = [
     tinted(tile("e", 12, 3), (120, 85, 50)),
     tinted(tile("e", 13, 3), (175, 75, 45)),
     tinted(tile("e", 11, 3), (70, 75, 90)),
-    # A blind window, and one spare.
+    # A blind window, dark and with a light on behind it.
     window(),
-    window(),
+    window((255, 240, 190, 255)),
     # Doors, in the order of `BuildingKind`.
     tile("f", 3, 1),  # House: a plain door
     tile("f", 9, 0),  # Shrine
