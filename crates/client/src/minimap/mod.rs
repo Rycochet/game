@@ -972,19 +972,19 @@ fn draw_maps(
         frame::player_dot(&mut canvas, player_at, dot, outline);
         let trim = scale * minimap_trim(&window);
         // North on the picture: the grid's north is `-y`.
-        RoundFrame {
+        let round = RoundFrame {
             centre: projection.middle,
             radius: clip,
             border: BORDER * trim,
             notch: NOTCH * trim,
             north: (-grid_right.1 as f32, -grid_down.1 as f32),
-        }
-        .draw(&mut canvas);
+        };
+        round.draw(&mut canvas);
         // Last, as they are outside what that cuts off.
         if under_the_sky(view, players_level) {
             let middle = Vec2::from(projection.middle);
             let icons = sky::icons(&sky_now.bodies, middle, clip, trim);
-            sky::draw(&mut canvas, &icons, &sky_now.bodies, middle, clip, trim);
+            sky::draw(&mut canvas, &icons, &sky_now.bodies, &round, trim);
         }
     }
 }
