@@ -100,6 +100,10 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
+        if env::var("GAME_LOADING_HOLD").is_ok() {
+            app.insert_resource(crate::loading_screen::HoldLoadingScreen(true));
+        }
+
         if env::var("GAME_REVEAL_POIS").is_ok() {
             app.add_systems(
                 OnExit(GameView::Connecting),

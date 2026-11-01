@@ -25,7 +25,7 @@ use shared::world::GAME_HOUR_SECONDS;
 use shared::world::WORLD_MAP_VERSION;
 
 use crate::common::{
-    CurrentWorld, GameClock, GameView, MapPosition, ServerClock, ServerStatus, Weather,
+    CurrentWorld, GameClock, GameView, LoadingStep, MapPosition, ServerClock, ServerStatus, Weather,
 };
 use crate::player::{Player, PlayerSystems, Stepped};
 use prediction::{Prediction, correction};
@@ -137,7 +137,9 @@ struct Connecting {
 /// Connects (or tries again, every `RETRY_EVERY`), and says hello: the
 /// link holds what is sent until the socket is open.
 fn connect(world: &mut World) {
-    if matches!(world.resource::<ServerStatus>(), ServerStatus::Refused(_)) {
+    if matches!(world.resource::<ServerStatus>(), ServerStatus::Refused(_))
+        || *world.resource::<LoadingStep>() == LoadingStep::Starting
+    {
         return;
     }
     let delta = world.resource::<Time>().delta();

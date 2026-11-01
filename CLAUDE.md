@@ -52,7 +52,8 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: debug_menu  | `crates/client/src/debug_menu/`  | `docs/context/client/debug_menu.md`   | Backtick or warning button: full-screen filtered list of debug actions (toggles, Teleport Mode, Cycle Temperature, Stairs/Fields/Herbs panels, Show Widgets) |
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |
 | client: widgets     | `crates/client/src/widgets/`    | `docs/context/client/widgets.md`      | Interface pieces: panels with titles, buttons by state, tooltips, moveable panels; taking clicks on them |
-| client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, red connection status              |
+| client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, click mode text                    |
+| client: loading_screen | `crates/client/src/loading_screen/` | `docs/context/client/loading_screen.md` | Full-screen title and step bar until the game takes input, and while the connection is lost; server refusals |
 | client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, stairs style, travel, walk, snow, camera view, screenshots |
 
 Also: `docs/context/decisions.md` is the log of architecture decisions. Check it before proposing a structural change, and follow what it records.

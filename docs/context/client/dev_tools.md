@@ -29,6 +29,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
 - `GAME_PANEL=1`: open the debug menu's Show Widgets panel.
 - `GAME_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
+- `GAME_LOADING_HOLD=1`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
 - `GAME_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `GAME_SCREENSHOT=path.png` (+ optional `GAME_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
 - Not here, but also dev tools the embedded server allows: the debug menu's Teleport Mode (`world_map`, `dungeon_map`; on a poi on the full map it goes into it, `minimap`), Change Cell Mode (`dungeon_map`) and Back to Start (`debug_menu`).
@@ -37,7 +38,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Depends on
 
-- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`).
+- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `loading_screen` (`HoldLoadingScreen`).
 
 ## Used by
 

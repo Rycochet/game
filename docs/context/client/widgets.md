@@ -31,5 +31,5 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - By touch: a tap arrives as a click (`touch`), so buttons and close buttons just work. A title bar moves by `TouchGesture::drag`, using where the finger landed (`drag_start`), since by the time a drag is known the finger may have left a thin bar. A drag starting anywhere else on a panel is taken and does nothing.
 - Close buttons on moveable panels have a margin that also counts as on them, for fingers.
 - The minimap's close and floor buttons look like widgets but keep their own hit tests from its layout constants (and the tests built on them), so they aren't `Pressable`.
-- Layers: maps 10, warning button 15, full map 20 to 25, moveable panels from 30 up, debug menu above all.
+- Layers: maps 10, warning button 15, full map 20 to 25, moveable panels from 30 up, debug menu above those, loading screen above all.
 - Only the front-most thing under the pointer gets a press: a button under another panel gets nothing.

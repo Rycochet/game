@@ -2,6 +2,13 @@
 
 Artwork in this folder made by other people, with the licence it is used under.
 
+## `fonts/CinzelDecorative-Bold.ttf`: Cinzel Decorative by Natanael Gama
+
+- Designer: **Natanael Gama**
+- Source: Google Fonts, <https://github.com/google/fonts/tree/main/ofl/cinzeldecorative>
+- Licence: [SIL Open Font License 1.1](https://openfontlicense.org), in `fonts/CinzelDecorative-OFL.txt`
+- Changes: none.
+
 ## `monsters/`: Dungeon Odyssey monster tiles by David E. Gervais
 
 - Artist: **David E. Gervais**
