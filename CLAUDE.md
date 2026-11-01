@@ -97,7 +97,7 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 ## Commands
 
-- Native: `cargo run` · Server: `cargo run -p server` (with `HOW_WEB=dist` after `trunk build`, it serves the web client too, on https://localhost:8081 with a self-signed certificate, or http://localhost:8080 with `HOW_BEHIND_PROXY=1`) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
+- Native: `cargo run` · Server: `cargo run -p server` (with `HOW_WEB=dist` after `trunk build`, it serves the web client too, on https://localhost:8081 with a self-signed certificate, or http://localhost:8080 with `HOW_BEHIND_PROXY=true`) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
 - Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
 - **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
 - **Lint: `cargo xtask lint`**: the same without the tests. The pre-commit hook in `.githooks/` runs it (turn on once per clone with `cargo xtask hooks`). It checks the files on disk, not only what's staged. Fix what it reports rather than skipping it with `--no-verify`.
@@ -116,4 +116,5 @@ When the owner says a branch is ready to merge (or asks for a PR):
 - Client and shared code must compile for `wasm32-unknown-unknown` as well as native: no threads, blocking file IO or native-only crates without a `#[cfg(target_arch = "wasm32")]` alternative. Server code is native-only and may use them.
 - Dependencies must be open source under an OSI-approved licence; MIT (or MIT/Apache-2.0 dual) preferred. When suggesting a library, give the licence and the reason, and offer alternatives where sensible: the owner cares about results, not specific libraries.
 - Environment variables: all start `HOW_`; ones only for debugging and development start `HOW_DEBUG_` (those a real deployment can ignore). No `HOW_CLIENT_` / `HOW_SERVER_` prefixes: the native client embeds the server, so the split would not hold. Logging uses the usual `LOG_LEVEL` (and `RUST_LOG` for per-crate filters), so put noisy lines at `debug` or `trace` rather than behind a flag.
+- Boolean options: read them with `server::option_on`. Off by default, `1`, `on`, `true` or `yes` turn them on; on by default, `0`, `off`, `no` or `false` turn them off; any case. Documentation and examples always use `true` / `false`.
 - Git: the owner uses branches and PRs on GitHub (`Rycochet/game`, default branch `master`). Don't push or open PRs unless asked.

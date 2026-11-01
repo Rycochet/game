@@ -8,7 +8,7 @@
 //!   that connections must be secure, unless `HOW_BEHIND_PROXY` is set.
 //! - `HOW_TLS_ADDRESS`: the secure port for HTTPS and `wss://` (default
 //!   `0.0.0.0:8081`).
-//! - `HOW_BEHIND_PROXY`: `1` turns TLS off and serves everything on the plain
+//! - `HOW_BEHIND_PROXY`: `true` turns TLS off and serves everything on the plain
 //!   port, for a server behind a reverse proxy that looks after TLS.
 //! - `HOW_TLS_CERTIFICATE` and `HOW_TLS_KEY`: the paths of your own PEM
 //!   certificate and private key. Without them, a self-signed certificate is
@@ -19,7 +19,7 @@
 //!   serve; without it, only the game's WebSockets are served.
 //! - `HOW_DATA`: where to save (default: the user's data
 //!   folder).
-//! - `HOW_DEBUG_TOOLS`: `1` accepts dev tools messages from anyone connected.
+//! - `HOW_DEBUG_TOOLS`: `true` accepts dev tools messages from anyone connected.
 //! - `LOG_LEVEL`: how much to log (see `environment`); `debug` adds every
 //!   connection's every round trip, for looking into network trouble.
 
@@ -29,7 +29,7 @@ use std::process;
 
 use server::{
     DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerOptions, default_data_folder, headless_app,
-    log_plugin, refuse_old_variables,
+    log_plugin, option_on, refuse_old_variables,
 };
 use shared::world::WorldSeed;
 
@@ -48,7 +48,7 @@ fn main() {
         eprintln!("{error}");
         process::exit(1);
     });
-    let dev_tools = env::var("HOW_DEBUG_TOOLS").is_ok_and(|value| value == "1");
+    let dev_tools = option_on("HOW_DEBUG_TOOLS", false);
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {

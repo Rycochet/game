@@ -10,10 +10,10 @@
 # and HOW_TLS_KEY name your own (readable by the `hall` user). Port 8080 only
 # answers that connections must be secure.
 #
-# Behind a reverse proxy that looks after TLS, set HOW_BEHIND_PROXY=1: port 8080
+# Behind a reverse proxy that looks after TLS, set HOW_BEHIND_PROXY=true: port 8080
 # then serves everything, and 8081 isn't used:
 #
-#   docker run -p 8080:8080 -e HOW_BEHIND_PROXY=1 -v hall-of-worlds:/data hall-of-worlds
+#   docker run -p 8080:8080 -e HOW_BEHIND_PROXY=true -v hall-of-worlds:/data hall-of-worlds
 #
 # Saves go in /data: mount a volume there to keep them.
 #

@@ -26,6 +26,8 @@ use x509_parser::certificate::X509Certificate;
 use x509_parser::extensions::GeneralName;
 use x509_parser::prelude::FromDer;
 
+use crate::environment::option_on;
+
 /// Where secure connections are taken, unless `HOW_TLS_ADDRESS` says.
 const DEFAULT_TLS_ADDRESS: &str = "0.0.0.0:8081";
 
@@ -74,7 +76,7 @@ impl Security {
     pub fn from_environment(data: &Path) -> Result<Self, String> {
         Self::from_settings(
             Settings {
-                behind_proxy: env::var("HOW_BEHIND_PROXY").is_ok_and(|value| value == "1"),
+                behind_proxy: option_on("HOW_BEHIND_PROXY", false),
                 address: env::var("HOW_TLS_ADDRESS").ok(),
                 certificate: env::var_os("HOW_TLS_CERTIFICATE").map(Into::into),
                 key: env::var_os("HOW_TLS_KEY").map(Into::into),
@@ -88,7 +90,7 @@ impl Security {
         if settings.behind_proxy {
             if settings.certificate.is_some() || settings.key.is_some() {
                 return Err(
-                    "HOW_BEHIND_PROXY=1 uses no certificate, so it can't be set with HOW_TLS_CERTIFICATE or HOW_TLS_KEY"
+                    "HOW_BEHIND_PROXY=true uses no certificate, so it can't be set with HOW_TLS_CERTIFICATE or HOW_TLS_KEY"
                         .into(),
                 );
             }
