@@ -125,14 +125,14 @@ impl SurfaceStyle {
     }
 
     /// Band and lightness for a point, as the prototype worked them out.
-    /// Land is shaded by its slope towards the western neighbour (lit from the
-    /// east), scaled by `slope_strength` (1.0 = prototype). Underwater points
+    /// Land is shaded by its slope against `away_height`, the height a step
+    /// further from the light, scaled by `slope_strength` (1.0 = prototype). Underwater points
     /// get lighter with height, and with ice as the snow line falls.
     pub fn shade(
         &self,
         sample: SurfaceSample,
         climate: ClimateSample,
-        west_height: f64,
+        away_height: f64,
         water_level: f64,
         snow_line: f64,
         slope_strength: f64,
@@ -140,7 +140,7 @@ impl SurfaceStyle {
         let kind = self.kind(sample, climate, water_level, snow_line);
         if kind == SurfaceKind::Land {
             let colour = self.living_colour(climate, sample);
-            let slope = (sample.height - west_height) / 64.0;
+            let slope = (sample.height - away_height) / 64.0;
             let shade = slope * BIOME_SLOPE_SHADE * slope_strength / 100.0;
             return (
                 Band {
@@ -164,7 +164,7 @@ impl SurfaceStyle {
         let lightness = if self.is_frozen_water(sample, water_level, snow_line) {
             self.ice_lightness
         } else if sample.height > water_level {
-            let slope = (sample.height - west_height) / 64.0;
+            let slope = (sample.height - away_height) / 64.0;
             let shade = slope * (2000.0 - band.saturation * 2000.0) * slope_strength;
             (64.0 - band.hue / 2.0 - shade) / 100.0
         } else {

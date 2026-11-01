@@ -32,6 +32,7 @@ use shared::protocol::{ClientMessage, SOCKET_PATH, ServerLink, ServerMessage, wi
 use tower_http::services::ServeDir;
 
 use crate::ServerWorld;
+use crate::clock::WorldClock;
 use crate::connections::{self, Connections};
 use crate::latency::{Latency, Pings};
 
@@ -69,29 +70,13 @@ struct NewConnections(Mutex<Receiver<ServerLink>>);
 #[derive(Resource, Clone, Default)]
 struct StopAsked(Arc<AtomicBool>);
 
-/// The world's clock as of the last tick, for answering pings on the network
-/// thread: the bits of a float, as there is no atomic float. Being up to a tick
-/// old doesn't matter, as clients ease towards it.
-#[derive(Resource, Clone, Default)]
-struct SharedClock(Arc<AtomicU64>);
-
-impl SharedClock {
-    fn set(&self, hours: f64) {
-        self.0.store(hours.to_bits(), Ordering::Relaxed);
-    }
-
-    fn hours(&self) -> f64 {
-        f64::from_bits(self.0.load(Ordering::Relaxed))
-    }
-}
-
 /// What every WebSocket needs: where to hand its link, the clock, the number
 /// for the next connection (to tell them apart in the log), and how often to
 /// ping and when to give up (shorter in tests).
 #[derive(Clone)]
 struct Sockets {
     new_connections: Sender<ServerLink>,
-    clock: SharedClock,
+    clock: WorldClock,
     connections: Arc<AtomicU64>,
     ping_every: Duration,
     silent_after: Duration,
@@ -107,10 +92,10 @@ impl Plugin for NetworkPlugin {
         let web = self.web.clone();
         let stop = StopAsked::default();
         let stop_asked = stop.0.clone();
-        let clock = SharedClock::default();
+        let clock = app.world().resource::<ServerWorld>().clock.clone();
         let sockets = Sockets {
             new_connections,
-            clock: clock.clone(),
+            clock,
             connections: Arc::default(),
             ping_every: PING_EVERY,
             silent_after: SILENT_AFTER,
@@ -123,21 +108,14 @@ impl Plugin for NetworkPlugin {
         info!("Listening on {}", self.address);
         app.insert_resource(NewConnections(Mutex::new(accepted)))
             .insert_resource(stop)
-            .insert_resource(clock)
             .add_systems(
                 Update,
                 (
                     accept_connections.before(connections::handle_messages),
                     stop_when_asked.after(connections::handle_messages),
-                    share_clock.after(connections::run_clock),
                 ),
             );
     }
-}
-
-/// Every tick: lets the network thread see the clock.
-fn share_clock(world: Res<ServerWorld>, clock: Res<SharedClock>) {
-    clock.set(world.clock);
 }
 
 /// Lets the connections that arrived join (as guests, named by their hello).
@@ -279,7 +257,7 @@ async fn carry(mut socket: WebSocket, sockets: Sockets) {
                 match incoming {
                     Some(Ok(Message::Binary(bytes))) => {
                         if let Some(sent) = ClientMessage::read_ping(&bytes) {
-                            let pong = ServerMessage::pong_bytes(sent, sockets.clock.hours());
+                            let pong = ServerMessage::pong_bytes(sent, sockets.clock.minutes());
                             if !send(&mut socket, Message::Binary(pong.into()), limit).await {
                                 break;
                             }
@@ -360,8 +338,7 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let (new_connections, accepted) = mpsc::channel();
-        let clock = SharedClock::default();
-        clock.set(6.75);
+        let clock = WorldClock::new(405.0);
         let sockets = Sockets {
             new_connections,
             clock,
@@ -432,7 +409,9 @@ mod tests {
                 break bytes;
             }
         };
-        assert_eq!(ServerMessage::read_pong(&answer), Some((1.5, 6.75)));
+        let (sent, clock) = ServerMessage::read_pong(&answer).unwrap();
+        assert_eq!(sent, 1.5);
+        assert!((405.0..465.0).contains(&clock), "{clock}");
 
         let hello = ClientMessage::Hello {
             protocol: PROTOCOL_VERSION,

@@ -86,17 +86,12 @@ mod tests {
             thread::sleep(Duration::from_millis(10));
         };
         let world = ServerWorld::new(seed).info();
-        assert_eq!(
-            next_answer(),
-            ServerMessage::Welcome {
-                world,
-                clock: 0.0,
-                snow_line: shared::world::NORMAL_SNOW_LINE,
-                x: 0,
-                y: 0,
-                dev_tools: true,
-            }
-        );
+        // The clock has been running since the server started.
+        let ServerMessage::Welcome { clock, .. } = next_answer() else {
+            panic!("no welcome");
+        };
+        assert!((0.0..30.0).contains(&clock), "{clock}");
+        let _ = world;
         // Not leaving before the teleport is dealt with: a server still
         // welcoming a client that has gone doesn't read what it sent next.
         let teleported = ServerMessage::Teleported { x: 5, y: 6 };

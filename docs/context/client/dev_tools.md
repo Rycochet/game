@@ -18,7 +18,8 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_TRAVEL=x,y`: start travelling there (as if clicked), on either map, once the player is at `GAME_POS` if that is set, otherwise two seconds after starting (the server's answer, or putting the player back in their site, would end an earlier journey); combine with `GAME_SCREENSHOT_DELAY` to catch it mid-journey.
 - `GAME_WALK=1`: start with `debug_menu::AutoWalk` on (one step east per frame); with a screenshot, the HUD shows the per-step update cost.
 - `GAME_SNOW=n`: once connected, ask the server (`DevSnowLine`) for the snow line at `n` (128 normal, 0 frozen), for screenshots of the temperature states.
-- `GAME_SKY_HOUR=n`: draw the weather `n` game hours ahead (`world_map::sky::SkyHourOffset`).
+- `GAME_TIME=n`: once connected, ask the server (`DevSetTime`) to move the clock to `n` game hours since the world began, for looking at another time of day. Saved like any other time, so keep to a scratch data folder.
+- `GAME_CELESTIAL=n`: the suns and moons of terrain seed `n`, not this world's. 272 has two suns and two moons, 142 two suns and five moons, 144 one blue sun and no moons.
 - `GAME_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as indexes into `TokenShape::ALL` / `Attitude::ALL` (e.g. `3,3` red hexagon, `4,0` white octagon); a third value `1` makes it completed; a fourth is an index into `TokenSize::ALL` (default 2, `Default`).
 - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) one second after starting, e.g. to check that pixel-sized things (token outlines, icons) follow resizes.
 - `GAME_VIEW=yaw[,pitch[,zoom]]`: start with the camera turned by `yaw` degrees (90 puts the camera in the east looking west, 180 looks south), tilted to `pitch` degrees above the horizon and zoomed in (the distance is divided by `zoom`: 1.6667 is the closest the wheel allows). Sets `OrbitCamera` fields directly, so the limits don't apply.
@@ -27,7 +28,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `GAME_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the locale says.
 - `GAME_SHOW_FLOOR=n`: three seconds after starting, look at this known floor (an index, from 0); needs the full map open (`GAME_MAP`), as closed it goes straight back.
 - `GAME_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
-- `GAME_PANEL=1`: open the debug menu's Show Widgets panel.
+- `GAME_PANEL=1`: open the debug menu's Show Widgets panel; `GAME_PANEL=suns`: its Suns and Moons panel.
 - `GAME_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
 - `GAME_LOADING_HOLD=1`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
 - `GAME_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.

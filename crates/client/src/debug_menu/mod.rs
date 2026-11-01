@@ -2,6 +2,7 @@
 //! actions to filter and choose from. See `docs/context/client/debug_menu.md`.
 
 mod actions;
+mod bodies;
 mod menu;
 mod panels;
 mod soft_keyboard;
@@ -47,7 +48,10 @@ impl Plugin for DebugMenuPlugin {
             .add_systems(
                 Update,
                 (
+                    panels::forget_closed,
                     run_actions,
+                    bodies::fill_panels,
+                    bodies::apply_sliders,
                     panels::press_panel_buttons,
                     panels::update_panel_buttons,
                     temperature_cycle,
@@ -88,6 +92,7 @@ struct FactSources<'w> {
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
     server_dev_tools: Res<'w, ServerDevTools>,
+    panels: Res<'w, OpenPanels>,
 }
 
 impl FactSources<'_> {
@@ -103,6 +108,8 @@ impl FactSources<'_> {
             changing_cells: *self.mode == ClickMode::ChangeCell,
             showing_info: self.info.0,
             in_town: *self.view.get() == GameView::Dungeon && self.dungeon.is_town(),
+            world_time_open: self.panels.is_open(DebugAction::WorldTime),
+            suns_and_moons_open: self.panels.is_open(DebugAction::SunsAndMoons),
             dev_tools: self.server_dev_tools.0,
         }
     }
@@ -173,6 +180,9 @@ fn run_actions(
             }
             DebugAction::ShowDebugInfo => info.0 = !info.0,
             DebugAction::TeleportMode => *mode = toggled(*mode, ClickMode::Teleport),
+            DebugAction::WorldTime | DebugAction::SunsAndMoons => {
+                open.toggle(action, &mut commands, &mut raise, &nodes);
+            }
             DebugAction::FieldsState
             | DebugAction::HerbsState
             | DebugAction::ShowWidgets

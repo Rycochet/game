@@ -25,7 +25,7 @@ The dungeon (and building) view: `shared::dungeon` cells drawn in 3D through `vi
 
 - `shared::site` (`BuildingLook`, for towns).
 
-- `common` (`CurrentDungeon` incl. `known` and `remembered`, `CurrentWorld`, `GameClock`, `ServerClock`, `Weather`, `WorldReturn`, `GameView`, `LightSource`, `SharesSight`, `ViewStats`, `MapPosition`, `SmoothPosition`), `surface_style` (`SurfaceStyle`), `world_map` (`sky::SkyHourOffset`), `player` (`Player`, `PlayerSystems`, `TravelTo`), `view3d` (`ViewCamera`, `ViewGrid`, `View3dSystems`, `ClickedToken`, `TokenView`, `TOKEN_DIAMETER`), `shared::dungeon`, `shared::site` (`StairsDirection`), `shared::protocol` (`SeenStairs`), `shared::poi` (`PoiKind`, for themes). Pictures: `assets/angbandtk/`.
+- `common` (`CurrentDungeon` incl. `known` and `remembered`, `CurrentWorld`, `GameClock`, `ServerClock`, `Weather`, `WorldReturn`, `GameView`, `LightSource`, `SharesSight`, `ViewStats`, `MapPosition`, `SmoothPosition`), `surface_style` (`SurfaceStyle`), `player` (`Player`, `PlayerSystems`, `TravelTo`), `view3d` (`ViewCamera`, `ViewGrid`, `View3dSystems`, `ClickedToken`, `TokenView`, `TOKEN_DIAMETER`), `shared::dungeon`, `shared::site` (`StairsDirection`), `shared::protocol` (`SeenStairs`), `shared::poi` (`PoiKind`, for themes). Pictures: `assets/angbandtk/`.
 
 ## Used by
 

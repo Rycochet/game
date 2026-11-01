@@ -3,6 +3,7 @@
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
 mod moveable;
+mod slider;
 
 use bevy::input::InputSystems;
 use bevy::prelude::*;
@@ -10,6 +11,7 @@ use bevy::prelude::*;
 use crate::common::PointerSystems;
 
 pub use moveable::{spawn_moveable_panel, stops_presses};
+pub use slider::{SliderMoved, spawn_slider};
 
 /// The inside of panels, the colour of parchment.
 pub const PARCHMENT: [u8; 3] = [240, 225, 190];
@@ -47,19 +49,30 @@ impl Plugin for WidgetsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<ButtonPressed>()
             .add_message::<RaisePanel>()
+            .add_message::<SliderMoved>()
             .configure_sets(
                 PreUpdate,
                 (WidgetSystems::Presses, WidgetSystems::Modal).chain(),
             )
             .init_resource::<moveable::Dragging>()
+            .init_resource::<slider::HeldSlider>()
             .add_systems(
                 PreUpdate,
-                moveable::take_presses
+                (slider::drag_sliders, moveable::take_presses)
+                    .chain()
                     .in_set(WidgetSystems::Presses)
                     .after(InputSystems)
                     .after(PointerSystems),
             )
-            .add_systems(Update, (show_button_states, moveable::place_panels));
+            .add_systems(
+                Update,
+                (
+                    show_button_states,
+                    moveable::place_panels,
+                    slider::hold_sliders,
+                    slider::place_marks,
+                ),
+            );
     }
 }
 

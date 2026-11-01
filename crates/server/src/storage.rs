@@ -32,7 +32,7 @@ pub const DATA_FOLDER_VARIABLE: &str = "HALL_OF_WORLDS_SERVER_DATA";
 /// Bump when a save changes in a way older servers can't read (adding a
 /// field with a default doesn't need it). A server refuses a world saved
 /// with a newer format than its own.
-pub const SAVE_FORMAT: u32 = 1;
+pub const SAVE_FORMAT: u32 = 2;
 
 /// The server's data folder: `HALL_OF_WORLDS_SERVER_DATA` if set, otherwise
 /// `Hall of Worlds/server` in the user's data folder (`%APPDATA%` on
@@ -57,6 +57,11 @@ pub struct Storage {
 }
 
 impl Storage {
+    /// Whether anything is saved at all.
+    pub fn saves(&self) -> bool {
+        self.folder.is_some()
+    }
+
     /// Nothing is read or written.
     pub fn none() -> Self {
         Self {
@@ -207,10 +212,10 @@ pub struct WorldSave {
     pub seed: WorldSeed,
     /// The world map generator it was made with (`WORLD_MAP_VERSION`).
     pub world_map_version: u32,
-    /// Its clock's whole hours (`% 24` is the time of day).
-    #[serde(default)]
+    /// Only in saves before format 2: its clock's whole hours.
+    #[serde(default, skip_serializing)]
     pub hour: u32,
-    /// Its clock: game hours since it began.
+    /// Its clock: game minutes since it began (before format 2, hours).
     #[serde(default)]
     pub clock: f64,
 }
@@ -251,8 +256,9 @@ pub struct BuildingSave {
     /// Trades made by players, on top of the number it was generated with.
     #[serde(default)]
     pub trades: u32,
-    /// The server's clock (game hours) when last interacted with, which will
-    /// decide when its stock refreshes.
+    /// The server's clock (game minutes) when last interacted with, which will
+    /// decide when its stock refreshes. The clock can be moved back (dev tools),
+    /// so this can be in the future: count that as no time having passed.
     #[serde(default)]
     pub last_interaction: Option<f64>,
 }

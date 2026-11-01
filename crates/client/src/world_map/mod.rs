@@ -8,6 +8,7 @@
 //! The camera and tokens come from `view3d`; this module draws the terrain
 //! while `GameView::WorldMap` is current.
 
+mod lights;
 mod picking;
 mod poi_model;
 mod pois;
@@ -18,9 +19,10 @@ mod terrain;
 pub use pois::{picture as poi_picture, picture_name as poi_picture_name};
 
 use bevy::camera::visibility::NoFrustumCulling;
-use bevy::light::{NotShadowCaster, light_consts};
+use bevy::light::NotShadowCaster;
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
+use shared::celestial::brightest;
 use shared::protocol::ClientMessage;
 
 use crate::common::{
@@ -50,11 +52,6 @@ pub const HALF_SIZE: i64 = 200;
 /// colours (1.0 = the same as the prototype).
 pub const SLOPE_SHADING: f64 = 1.0;
 
-/// A harsh, spotlight-like sun with little ambient fill, so slopes facing away
-/// go properly dark. Tuned so overall brightness is close to the prototype.
-const SUN_LUX: f32 = light_consts::lux::FULL_DAYLIGHT * 0.2;
-const AMBIENT_BRIGHTNESS: f32 = 60.0;
-
 pub struct WorldMapPlugin;
 
 impl Plugin for WorldMapPlugin {
@@ -64,7 +61,6 @@ impl Plugin for WorldMapPlugin {
             .init_resource::<SpawnedPois>()
             .init_resource::<PoiMeshes>()
             .init_resource::<KnownRivers>()
-            .init_resource::<sky::SkyHourOffset>()
             .add_plugins((
                 MaterialPlugin::<sky::TerrainMaterial>::default(),
                 MaterialPlugin::<sky::CloudMaterial>::default(),
@@ -82,7 +78,12 @@ impl Plugin for WorldMapPlugin {
             )
             .add_systems(
                 Update,
-                (update_terrain, sky::update, pois::spawn_nearby)
+                (
+                    update_terrain,
+                    sky::update,
+                    lights::update,
+                    pois::spawn_nearby,
+                )
                     .after(PlayerSystems::Travel)
                     .before(View3dSystems::Place)
                     .run_if(in_view.clone()),
@@ -155,18 +156,7 @@ fn spawn_view(
         &mut precipitation,
     );
     // Everything starts at the origin; `update_terrain` moves it to the player.
-    // Low sun from the east, matching the prototype's shading. It stays in the
-    // east when the view turns, like the slope shading baked into the terrain.
-    commands.spawn((
-        WorldMapScene,
-        DirectionalLight {
-            illuminance: SUN_LUX,
-            shadow_maps_enabled: true,
-            ..default()
-        },
-        Transform::from_xyz(1.0, 0.6, 0.3).looking_at(Vec3::ZERO, Vec3::Y),
-        visibility,
-    ));
+    lights::spawn(&mut commands);
 
     commands.spawn((
         WorldMapScene,
@@ -251,8 +241,8 @@ fn attach_terrain_materials(world: &mut World) {
     }
 }
 
-/// Becoming the current view: shows the scene, sets the sun's ambient fill,
-/// and tells `view3d` the grid is 1 unit per point with the camera looking at
+/// Becoming the current view: shows the scene, adds the ambient fill (`lights`
+/// keeps it up to date), and tells `view3d` the grid is 1 unit per point with the camera looking at
 /// sea level, so it doesn't bob over hills.
 fn show_scene(
     mut commands: Commands,
@@ -262,10 +252,7 @@ fn show_scene(
     for mut visibility in &mut scene {
         *visibility = Visibility::Inherited;
     }
-    commands.insert_resource(GlobalAmbientLight {
-        brightness: AMBIENT_BRIGHTNESS,
-        ..default()
-    });
+    commands.insert_resource(GlobalAmbientLight::default());
     commands.insert_resource(ViewGrid {
         cell_size: 1.0,
         floor: world.params.sea_level as f32 * HEIGHT_SCALE,
@@ -331,6 +318,7 @@ fn update_terrain(
     let centre = (player.x, player.y);
     let water_level = world.params.water_level(clock.hour as f64);
     let square = view_square(&orbit);
+    let light_from = light_from(&world, clock.hour as f64);
     for mut transform in &mut followers {
         transform.translation = Vec3::new(player.x as f32, 0.0, player.y as f32);
     }
@@ -351,6 +339,7 @@ fn update_terrain(
         &style,
         water_level,
         weather.snow_line,
+        light_from,
         centre,
         square,
         redraw_all || clearings_moved,
@@ -391,6 +380,21 @@ fn update_terrain(
     }
     let cut_ms = start.elapsed().as_secs_f32() * 1000.0;
     stats.summary = format!("World map: fill {fill_ms:.1} ms, cut window {cut_ms:.1} ms");
+}
+
+/// Which way along the ground the brightest light is at an hour, `(east, south)`,
+/// for the slope shading baked into the terrain: length 1. It moves once an hour,
+/// when the terrain is redrawn anyway.
+fn light_from(world: &CurrentWorld, hours: f64) -> (f64, f64) {
+    let bodies = world.celestial.at(hours);
+    let [east, _, south] = bodies[brightest(&bodies)].direction;
+    let length = (east * east + south * south).sqrt();
+    if length < 1e-3 {
+        // Straight overhead.
+        (1.0, 0.0)
+    } else {
+        (east / length, south / length)
+    }
 }
 
 /// Every frame, after `view3d` has placed the tokens: lifts each one onto the

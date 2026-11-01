@@ -27,6 +27,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | (performance)       | n/a                             | `docs/context/optimisations.md`       | Measured optimisations tried but not adopted (memory) |
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
+| shared: celestial   | `crates/shared/src/celestial.rs` | `docs/context/shared/celestial.md`   | Suns and moons from the seed: colours and names, where they are and the light they give at any time |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
 | shared: climate     | `crates/shared/src/climate.rs`  | `docs/context/shared/climate.md`      | Temperature, moisture and Whittaker biomes at any world map position |
 | shared: river       | `crates/shared/src/river.rs`    | `docs/context/shared/river.md`        | Rivers running downhill from a chunk's source, more where wet (visual only for now) |
@@ -49,7 +50,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: dungeon_map | `crates/client/src/dungeon_map/` | `docs/context/client/dungeon_map.md` | Dungeon view: towns (roads, gardens with hedges, buildings with roofs and door signs), farms (fields, crops by stage, fences, gates), herb patches growing by the clock, textured floors and thin 3D walls, doors and windows by theme, 3D stairs in seven styles, liquid channels, holes in the floor, sight, see-through walls, grid light, memory in grey, outside ground and precipitation following the world map |
 | client: minimap     | `crates/client/src/minimap/`    | `docs/context/client/minimap.md`      | Round minimap and M full map: known land with poi pictures, or remembered cells as a grid; drag, title, arrow to the player, floor buttons |
 | client: site        | `crates/client/src/site/`       | `docs/context/client/site.md`         | Asking the server to enter sites, take stairs, leave; applying its level messages |
-| client: debug_menu  | `crates/client/src/debug_menu/`  | `docs/context/client/debug_menu.md`   | Backtick or warning button: full-screen filtered list of debug actions (toggles, Teleport Mode, Cycle Temperature, Stairs/Fields/Herbs panels, Show Widgets) |
+| client: debug_menu  | `crates/client/src/debug_menu/`  | `docs/context/client/debug_menu.md`   | Backtick or warning button: full-screen filtered list of debug actions (toggles, Teleport Mode, Cycle Temperature, World Time, Suns and Moons, Stairs/Fields/Herbs panels, Show Widgets) |
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |
 | client: widgets     | `crates/client/src/widgets/`    | `docs/context/client/widgets.md`      | Interface pieces: panels with titles, buttons by state, tooltips, moveable panels; taking clicks on them |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, click mode text                    |

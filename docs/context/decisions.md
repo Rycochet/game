@@ -384,3 +384,11 @@ The owner's choice: the status text labels its numbers with symbols, and sits be
 ## 2026-11-01: Covered ground, and stilt huts on pillars
 
 The owner's design: `Cell::CoveredGround` looks like the land's own ground but gets no weather or outside light, for places with something built over them. Stilt huts are its first use: the covered outline with lone pillars and one ladder, and a first floor of the same outline over it. Plain ground round most sites had no outside light, so stilt huts now get the farm's, or the shade wouldn't show. Huts already saved stay single-storey until the next `FORGET_BEFORE`, through their own `STILTS_VERSION`, rather than wiping saves. Castle courtyards can use the cell once castles have them.
+
+## 2026-11-01: Suns and moons from the terrain seed
+
+The owner's design: a world has 1 to 3 suns and 0 to 5 moons (`shared::celestial`), which only make light. They come from the public seed, so clients work them out themselves and the server can too, later for quests (`bodies()`, `at(hours)`, with colour names), with no messages. Moon light uses real phases rather than "the brightest sun not up", since it costs one dot product. No time zones: one time of day for the whole planet, like tides. Baked things follow the light once a game hour, which the owner is happy with. Outside light in sites comes from the same source (a second PR).
+
+## 2026-11-01: The world's clock counts minutes, on its own thread
+
+The owner's choice: game minutes since the world began (one a real second) rather than hours, so the numbers sent and saved are easy to read; the tide, weather and sky keep their per-hour rates through `MINUTES_PER_HOUR`. It is worked out from when it was last set, so server load can't slow it, and saved every 10 real seconds on its own thread (it used to be saved only on each new hour, so short runs lost their time). Nothing passes while the server is off. Dev tools can move it either way (`DevSetTime`); anything later comparing against old times must allow for a time in the future. Save format 2 converts older clocks. Disk use is to be looked at later.

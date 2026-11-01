@@ -23,8 +23,8 @@ use std::time::Duration;
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage};
-use shared::world::GAME_HOUR_SECONDS;
 use shared::world::WORLD_MAP_VERSION;
+use shared::world::{GAME_MINUTE_SECONDS, MINUTES_PER_HOUR};
 
 use crate::common::{
     CurrentWorld, GameClock, GameView, LoadingStep, MapPosition, ServerClock, ServerStatus, Weather,
@@ -82,12 +82,12 @@ impl Plugin for ConnectionPlugin {
 /// How much of what the clock is out by is put right at each answer.
 const CLOCK_EASING: f64 = 0.1;
 
-/// Game hours the clock can be out by before it jumps (5 real seconds).
-const CLOCK_JUMP_HOURS: f64 = 5.0 / GAME_HOUR_SECONDS as f64;
+/// Game minutes the clock can be out by before it jumps (5 real seconds).
+const CLOCK_JUMP_MINUTES: f64 = 5.0 / GAME_MINUTE_SECONDS as f64;
 
 /// The clock keeps running between the server's answers.
 fn run_clock(time: Res<Time<Real>>, mut clock: ResMut<ServerClock>) {
-    clock.hours += time.delta_secs_f64() / GAME_HOUR_SECONDS as f64;
+    clock.minutes += time.delta_secs_f64() / GAME_MINUTE_SECONDS as f64;
 }
 
 /// Puts the clock right from the server's latest answer. After `run_clock`, so
@@ -100,9 +100,9 @@ fn apply_pong(connection: Option<Res<ServerConnection>>, mut clock: ResMut<Serve
     // The server read its clock about half the round trip before the answer
     // arrived, and the answer may have been waiting for this frame since.
     let ago = pong.round_trip / 2.0 + pong.received.elapsed().as_secs_f64();
-    let behind = pong.clock + ago / GAME_HOUR_SECONDS as f64 - clock.hours;
+    let behind = pong.clock + ago / GAME_MINUTE_SECONDS as f64 - clock.minutes;
     // Far out: jump. Otherwise ease, so clouds never visibly jerk.
-    clock.hours += if behind.abs() > CLOCK_JUMP_HOURS {
+    clock.minutes += if behind.abs() > CLOCK_JUMP_MINUTES {
         behind
     } else {
         behind * CLOCK_EASING
@@ -267,6 +267,9 @@ fn receive(
             Ok(Some(ServerMessage::Hour(hour))) => {
                 clock.set_if_neq(GameClock { hour });
             }
+            Ok(Some(ServerMessage::Clock(minutes))) => {
+                server_clock.minutes = minutes;
+            }
             // Only from an embedded server: a socket takes them first.
             Ok(Some(ServerMessage::Pong { sent, clock })) => {
                 connection.pongs.set(TimedPong {
@@ -282,15 +285,17 @@ fn receive(
             }
             Ok(Some(ServerMessage::Welcome {
                 world: info,
-                clock: hours,
+                clock: minutes,
                 snow_line,
                 x,
                 y,
                 dev_tools,
             })) => {
                 server_dev_tools.0 = dev_tools;
-                clock.set_if_neq(GameClock { hour: hours as u32 });
-                server_clock.hours = hours;
+                clock.set_if_neq(GameClock {
+                    hour: (minutes / MINUTES_PER_HOUR) as u32,
+                });
+                server_clock.minutes = minutes;
                 weather.set_if_neq(Weather {
                     snow_line: snow_line as f64,
                 });
@@ -315,7 +320,7 @@ fn receive(
                 }
                 from_server.write(FromServer(ServerMessage::Welcome {
                     world: info,
-                    clock: hours,
+                    clock: minutes,
                     snow_line,
                     x,
                     y,

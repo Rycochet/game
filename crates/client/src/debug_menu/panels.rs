@@ -7,12 +7,17 @@ use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::site::StairsStyle;
 
+use shared::protocol::ClientMessage;
+use shared::world::MINUTES_PER_HOUR;
+
 use super::actions::DebugAction;
-use crate::common::{CurrentDungeon, GameView, HerbGrowthShift};
+use super::bodies::BodiesToShow;
+use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
+use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, RaisePanel, raised_box, spawn_button,
-    spawn_check_button, spawn_close_button, spawn_moveable_panel, spawn_tooltip,
+    spawn_check_button, spawn_close_button, spawn_moveable_panel, spawn_slider, spawn_tooltip,
 };
 
 const FONT: f32 = 16.0;
@@ -21,8 +26,7 @@ const CHECK_ROW: f32 = 34.0;
 const FIRST_AT: Vec2 = Vec2::new(60.0, 110.0);
 const NEXT_AT: Vec2 = Vec2::new(30.0, 30.0);
 
-/// The panels open, by what opened them. Closed ones are noticed when opening
-/// them again.
+/// The panels open, by what opened them.
 #[derive(Resource, Default)]
 pub(super) struct OpenPanels {
     panels: HashMap<DebugAction, Entity>,
@@ -37,6 +41,24 @@ pub(super) struct StepButton {
 }
 
 impl OpenPanels {
+    pub(super) fn is_open(&self, action: DebugAction) -> bool {
+        self.panels.contains_key(&action)
+    }
+
+    /// Closes this action's panel if it is open, otherwise opens it.
+    pub(super) fn toggle(
+        &mut self,
+        action: DebugAction,
+        commands: &mut Commands,
+        raise: &mut MessageWriter<RaisePanel>,
+        nodes: &Query<(), With<Node>>,
+    ) {
+        match self.panels.remove(&action) {
+            Some(panel) if nodes.contains(panel) => commands.entity(panel).despawn(),
+            _ => self.open(action, commands, raise, nodes),
+        }
+    }
+
     /// Opens this action's panel, or if it is open already, brings it to the
     /// front. `nodes` says which panels are still there: closing despawns them.
     pub(super) fn open(
@@ -55,13 +77,16 @@ impl OpenPanels {
         let at = FIRST_AT + NEXT_AT * (self.opened % 8) as f32;
         self.opened += 1;
         let (panel, content) = spawn_moveable_panel(commands, action.name(), at);
-        commands.entity(content).with_children(|content| {
-            if action == DebugAction::ShowWidgets {
-                spawn_every_widget(content);
-            } else {
-                spawn_step_buttons(content, action);
-            }
-        });
+        commands
+            .entity(content)
+            .with_children(|content| match action {
+                DebugAction::ShowWidgets => spawn_every_widget(content),
+                DebugAction::SunsAndMoons => {}
+                _ => spawn_step_buttons(content, action),
+            });
+        if action == DebugAction::SunsAndMoons {
+            commands.entity(content).insert(BodiesToShow);
+        }
         self.panels.insert(action, panel);
     }
 }
@@ -73,7 +98,12 @@ fn spawn_step_buttons(content: &mut ChildSpawnerCommands, action: DebugAction) {
             ..default()
         })
         .with_children(|row| {
-            for (label, forward) in [("Previous", false), ("Next", true)] {
+            let [back, on] = if action == DebugAction::WorldTime {
+                ["-1 hour", "+1 hour"]
+            } else {
+                ["Previous", "Next"]
+            };
+            for (label, forward) in [(back, false), (on, true)] {
                 let node = Node {
                     padding: BUTTON_PADDING,
                     ..default()
@@ -111,6 +141,7 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
         spawn_check_button(content, ButtonState::Normal, on, label, FONT, node).insert(Pressable);
     }
     spawn_close_button(content, default());
+    spawn_slider(content, 0.5, None, 160.0);
     content.spawn(raised_box()).with_child((
         Text::new("Raised box"),
         TextFont::from_font_size(FONT),
@@ -127,13 +158,22 @@ pub(super) struct SampleTooltip;
 
 /// Whether a panel's buttons can do anything here.
 fn can_step(action: DebugAction, view: GameView, dungeon: &CurrentDungeon) -> bool {
-    view == GameView::Dungeon
-        && match action {
-            DebugAction::StairsStyle => !dungeon.stairs.is_empty(),
-            DebugAction::FieldsState => !dungeon.fields.is_empty(),
-            DebugAction::HerbsState => dungeon.level_has(Cell::HerbBed),
-            _ => true,
-        }
+    action == DebugAction::WorldTime
+        || view == GameView::Dungeon
+            && match action {
+                DebugAction::StairsStyle => !dungeon.stairs.is_empty(),
+                DebugAction::FieldsState => !dungeon.fields.is_empty(),
+                DebugAction::HerbsState => dungeon.level_has(Cell::HerbBed),
+                _ => true,
+            }
+}
+
+/// Forgets panels closed by their own close buttons.
+pub(super) fn forget_closed(mut open: ResMut<OpenPanels>, nodes: Query<(), With<Node>>) {
+    let closed = open.panels.values().any(|&panel| !nodes.contains(panel));
+    if closed {
+        open.panels.retain(|_, panel| nodes.contains(*panel));
+    }
 }
 
 /// The style before this one, going round.
@@ -150,6 +190,8 @@ pub(super) fn press_panel_buttons(
     buttons: Query<&StepButton>,
     mut dungeon: ResMut<CurrentDungeon>,
     mut shift: ResMut<HerbGrowthShift>,
+    clock: Res<ServerClock>,
+    mut to_server: MessageWriter<ToServer>,
 ) {
     for press in pressed.read() {
         let Ok(&StepButton { action, forward }) = buttons.get(press.0) else {
@@ -177,6 +219,16 @@ pub(super) fn press_panel_buttons(
                 // Back is nearly all the way round, as the shift can't go below 0.
                 let by = if forward { 1 } else { HERB_STAGES - 1 };
                 shift.0 = (shift.0 + by) % HERB_STAGES;
+            }
+            DebugAction::WorldTime => {
+                let by = if forward {
+                    MINUTES_PER_HOUR
+                } else {
+                    -MINUTES_PER_HOUR
+                };
+                to_server.write(ToServer(ClientMessage::DevSetTime {
+                    minutes: clock.minutes + by,
+                }));
             }
             _ => {}
         }

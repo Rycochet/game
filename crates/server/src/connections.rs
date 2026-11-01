@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 use bevy::prelude::*;
 use shared::poi::ChunkPos;
 use shared::protocol::{ClientMessage, PROTOCOL_VERSION, ServerLink, ServerMessage};
-use shared::world::GAME_HOUR_SECONDS;
+use shared::world::MINUTES_PER_HOUR;
 
 use crate::sites::{self, Visit};
 use crate::storage::{CharacterName, CharacterSave};
@@ -204,29 +204,20 @@ pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResM
     world.save_sites();
 }
 
-/// Every tick: runs the clock, in real time however the server is doing.
-pub(crate) fn run_clock(
-    time: Res<Time<Real>>,
-    connections: Res<Connections>,
-    mut world: ResMut<ServerWorld>,
-) {
-    advance_clock(
-        &connections,
-        &mut world,
-        time.delta_secs_f64() / GAME_HOUR_SECONDS as f64,
-    );
-}
-
-/// Moves the clock on. A new whole hour is saved, and told to everyone playing
-/// (the tide follows it). A client that has gone is noticed when its messages
-/// are next read.
-fn advance_clock(connections: &Connections, world: &mut ServerWorld, hours: f64) {
-    world.clock += hours;
-    let hour = world.clock as u32;
-    if hour != world.hour {
-        world.hour = hour;
-        world.save();
-        for client in connections.0.iter().filter(|client| client.welcomed) {
+/// Every tick: tells everyone playing if the clock was moved, or has reached a
+/// new whole hour (the tide follows it). A client that has gone is noticed when
+/// its messages are next read.
+pub(crate) fn tell_the_time(connections: Res<Connections>, mut world: ResMut<ServerWorld>) {
+    let minutes = world.clock.minutes();
+    let hour = (minutes / MINUTES_PER_HOUR) as u32;
+    let moved = std::mem::take(&mut world.clock_moved);
+    let new_hour = hour != world.hour;
+    world.hour = hour;
+    for client in connections.0.iter().filter(|client| client.welcomed) {
+        if moved {
+            client.link.send(&ServerMessage::Clock(minutes));
+        }
+        if new_hour {
             client.link.send(&ServerMessage::Hour(hour));
         }
     }
@@ -265,7 +256,7 @@ pub(crate) fn answer(
         _ if !client.welcomed => refuse(client, "say hello first".into()),
         ClientMessage::Ping { sent } => client.link.send(&ServerMessage::Pong {
             sent,
-            clock: world.clock,
+            clock: world.clock.minutes(),
         }),
         // Meant for a map the player has since left.
         ClientMessage::Step { map, .. } if map != client.map => true,
@@ -307,6 +298,11 @@ pub(crate) fn answer(
             world.snow_line = snow_line;
             client.link.send(&ServerMessage::SnowLine(snow_line))
         }
+        ClientMessage::DevSetTime { minutes } => {
+            world.clock.set(minutes);
+            world.clock_moved = true;
+            true
+        }
     }
 }
 
@@ -320,7 +316,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, dev_tools: bool) -> boo
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
-        clock: world.clock,
+        clock: world.clock.minutes(),
         snow_line: world.snow_line,
         x,
         y,
@@ -502,7 +498,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn every_hour_is_told_and_saved() {
+    fn the_hour_and_moved_clocks_are_told_and_a_restart_carries_on() {
         let folder = crate::storage::tests::TestFolder::new();
         let seed = WorldSeed::new(1);
         let open = || {
@@ -516,18 +512,66 @@ pub(crate) mod tests {
         let (connections, mut world) = tick(connections, open());
         answers(&end);
 
-        world.clock = 40.5;
+        let tell = |connections: Connections, world: ServerWorld| {
+            let mut app = World::new();
+            app.insert_resource(connections);
+            app.insert_resource(world);
+            bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, tell_the_time).unwrap();
+            (
+                app.remove_resource::<Connections>().unwrap(),
+                app.remove_resource::<ServerWorld>().unwrap(),
+            )
+        };
+        // Within an hour says nothing; the next whole hour is told.
         world.hour = 40;
-        // Part of an hour says nothing; the next whole hour is told.
-        advance_clock(&connections, &mut world, 0.25);
+        world.clock.set(40.25 * MINUTES_PER_HOUR);
+        let (connections, world) = tell(connections, world);
         assert_eq!(answers(&end), []);
-        advance_clock(&connections, &mut world, 0.5);
+        world.clock.set(41.0 * MINUTES_PER_HOUR);
+        let (connections, mut world) = tell(connections, world);
         assert_eq!(answers(&end), [ServerMessage::Hour(41)]);
-        advance_clock(&connections, &mut world, 1.0);
-        assert_eq!(answers(&end), [ServerMessage::Hour(42)]);
-        // A restart carries on from there, and new players are told.
-        assert_eq!(open().hour, 42);
-        assert_eq!(open().clock, 42.25);
+        // Moved by a dev tool, back as well: told the new time and hour.
+        let keep = connections;
+        let mut client = keep.0.into_iter().next().unwrap();
+        let options = ServerOptions {
+            dev_tools: true,
+            exit_when_alone: false,
+        };
+        assert!(answer(
+            &mut client,
+            ClientMessage::DevSetTime { minutes: 1200.0 },
+            &mut world,
+            &options
+        ));
+        let connections = Connections(vec![client]);
+        let (_connections, world) = tell(connections, world);
+        let told = answers(&end);
+        assert!(
+            matches!(told[0], ServerMessage::Clock(minutes) if (1200.0..1210.0).contains(&minutes))
+        );
+        assert_eq!(told[1], ServerMessage::Hour(20));
+        // Saved on stopping, and a restart carries on from there.
+        drop(world);
+        let restarted = open();
+        assert_eq!(restarted.hour, 20);
+        assert!((1200.0..1210.0).contains(&restarted.clock.minutes()));
+    }
+
+    #[test]
+    fn saves_before_format_2_counted_hours() {
+        let folder = crate::storage::tests::TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let storage = crate::storage::Storage::in_folder(&folder.0, seed.id());
+        storage.save_world(&crate::storage::WorldSave {
+            format: 1,
+            seed,
+            world_map_version: shared::world::WORLD_MAP_VERSION,
+            hour: 0,
+            clock: 2.5,
+        });
+        let world = ServerWorld::open(seed, storage).unwrap();
+        assert!((150.0..160.0).contains(&world.clock.minutes()));
+        assert_eq!(world.hour, 2);
     }
 
     #[test]

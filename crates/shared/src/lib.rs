@@ -4,6 +4,7 @@
 //! results on every platform, including WebAssembly. See
 //! `docs/context/architecture.md` for the rules.
 
+pub mod celestial;
 pub mod climate;
 pub mod dungeon;
 pub mod movement;

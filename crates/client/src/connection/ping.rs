@@ -17,7 +17,7 @@ pub(super) const PING_EVERY: Duration = Duration::from_secs(1);
 pub(super) struct TimedPong {
     /// Seconds it took to come back.
     pub round_trip: f64,
-    /// The world's clock when the server answered, in game hours.
+    /// The world's clock when the server answered, in game minutes.
     pub clock: f64,
     /// When it arrived, as the game may only see it much later.
     pub received: Instant,

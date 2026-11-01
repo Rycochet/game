@@ -76,9 +76,16 @@ pub struct WorldParams {
 /// frozen.
 pub const NORMAL_SNOW_LINE: u32 = 128;
 
-/// Real seconds in a game hour, by the server's clock. Clients use it to run
-/// smoothly between the server's hours.
-pub const GAME_HOUR_SECONDS: u64 = 60;
+/// Real seconds in a game minute, by the server's clock. Clients use it to run
+/// smoothly between the server's answers.
+pub const GAME_MINUTE_SECONDS: u64 = 1;
+
+/// Game minutes in a game hour. The clock counts minutes; the tide, weather and
+/// the sky's rates go by hours.
+pub const MINUTES_PER_HOUR: f64 = 60.0;
+
+/// Real seconds in a game hour.
+pub const GAME_HOUR_SECONDS: u64 = 60 * GAME_MINUTE_SECONDS;
 
 impl WorldParams {
     pub fn from_seed(seed: Seed) -> Self {

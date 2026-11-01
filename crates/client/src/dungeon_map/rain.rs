@@ -17,7 +17,6 @@ use shared::rng::Seed;
 
 use super::{CELL_SIZE, Shown};
 use crate::common::{CurrentDungeon, CurrentWorld, ServerClock, WorldReturn};
-use crate::world_map::sky::SkyHourOffset;
 
 /// Quads of precipitation per cell, shown in proportion to how hard it is
 /// falling: the same density as on the world map.
@@ -140,7 +139,6 @@ fn drops_mesh(cells: &[(i64, i64)]) -> Mesh {
 pub fn update(
     time: Res<Time>,
     clock: Res<ServerClock>,
-    offset: Res<SkyHourOffset>,
     world: Option<Res<CurrentWorld>>,
     place: Res<WorldReturn>,
     dungeon: Res<CurrentDungeon>,
@@ -188,7 +186,7 @@ pub fn update(
 
     let (x, y) = (place.0.x, place.0.y);
     // Worked out as `world_map::sky` does, so it matches the map outside.
-    let weather = world.weather.sample(x, y, clock.hours + offset.0);
+    let weather = world.weather.sample(x, y, clock.hours());
     let temperature = world.climate.sample(x, y, world.params.sea_level);
     if let Some(mut material) = materials.get_mut(&material.0) {
         material.params = RainParams {

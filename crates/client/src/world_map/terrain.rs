@@ -180,6 +180,7 @@ impl TerrainGrid {
         style: &SurfaceStyle,
         water_level: f64,
         snow_line: f64,
+        light_from: (f64, f64),
         centre: (i64, i64),
         square: ViewSquare,
         redraw_all: bool,
@@ -230,11 +231,20 @@ impl TerrainGrid {
                 // The prototype's strong slope shading, baked in per point
                 // because real lighting alone is much smoother.
                 // Woods count as raised ground, so their sunlit edges show.
-                let west = cache.get(surface, x - 1, z).height
-                    + ((lift_at(cache, x - 1, z) - lift_at(cache, x, z)) * CANOPY_SHADING) as f64;
+                // It is shaded by the height a step away from the light: a step
+                // along each axis, in the amounts the light comes from that way.
+                let (from_east, from_south) = light_from;
+                let lift_here = lift_at(cache, x, z);
+                let mut height_at = |x: i64, z: i64| {
+                    cache.get(surface, x, z).height
+                        + ((lift_at(cache, x, z) - lift_here) * CANOPY_SHADING) as f64
+                };
+                let across = height_at(x - from_east.signum() as i64, z) - sample.height;
+                let along = height_at(x, z - from_south.signum() as i64) - sample.height;
+                let away = sample.height + across * from_east.abs() + along * from_south.abs();
                 let place = cache.climate(climate, surface, x, z);
                 let (band, lightness) =
-                    style.shade(sample, place, west, water_level, snow_line, SLOPE_SHADING);
+                    style.shade(sample, place, away, water_level, snow_line, SLOPE_SHADING);
                 let mut colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness));
                 if style.is_frozen_water(sample, water_level, snow_line) {
                     // Brighter than white, so after the sun dims this flat

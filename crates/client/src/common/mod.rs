@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
+use shared::celestial::{BodyNow, Celestial, flat_light};
 use shared::climate::Climate;
 use shared::dungeon::{Cell, Level, RoomId, Sight};
 use shared::movement::{WorldConditions, WorldGround};
@@ -21,7 +22,7 @@ use shared::site::{BuildingLook, FieldLook};
 use shared::surface::Surface;
 use shared::vegetation::Vegetation;
 use shared::weather::WeatherField;
-use shared::world::WorldParams;
+use shared::world::{MINUTES_PER_HOUR, WorldParams};
 
 /// Frame rate cap while the window has focus. Not a twitch game, so this saves
 /// GPU and battery; input still wakes the app immediately.
@@ -43,6 +44,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<GameClock>()
             .init_resource::<HerbGrowthShift>()
             .init_resource::<ServerClock>()
+            .init_resource::<SkyNow>()
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()
@@ -50,7 +52,11 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
-            .init_resource::<TouchGesture>();
+            .init_resource::<TouchGesture>()
+            .add_systems(
+                PreUpdate,
+                update_sky.run_if(resource_exists::<CurrentWorld>),
+            );
     }
 }
 
@@ -160,6 +166,7 @@ pub struct CurrentWorld {
     pub rivers: Rivers,
     pub vegetation: Vegetation,
     pub weather: WeatherField,
+    pub celestial: Celestial,
     /// The ground as far as walking goes (the server's rules).
     pub ground: WorldGround,
     pub pois: KnownPois,
@@ -175,6 +182,7 @@ impl CurrentWorld {
             rivers: Rivers::new(&params),
             vegetation: Vegetation::new(&params),
             weather: WeatherField::new(&params),
+            celestial: Celestial::from_seed(params.seed),
             pois: KnownPois::new(surface.width()),
             ground: WorldGround::new(&params),
             surface,
@@ -360,6 +368,15 @@ impl CurrentDungeon {
         (min_y..=max_y).any(|y| (min_x..=max_x).any(|x| self.level.cell(x, y) == cell))
     }
 
+    /// Whether any cell known on this level is out in the open, under the sky.
+    pub fn knows_outside(&self) -> bool {
+        let (min_x, min_y, width, height) = self.level.bounds();
+        (min_y..min_y + height).any(|y| {
+            (min_x..min_x + width)
+                .any(|x| self.known.is_seen(x, y) && self.level.cell(x, y).is_outside())
+        })
+    }
+
     pub fn is_town(&self) -> bool {
         self.info.as_ref().is_some_and(|info| info.kind.is_town())
     }
@@ -496,15 +513,46 @@ pub struct GameClock {
 pub struct HerbGrowthShift(pub u32);
 
 /// The server's clock as well as the client can tell, always running: game
-/// hours since the world began. Unlike `GameClock` it changes every frame.
+/// minutes since the world began. Unlike `GameClock` it changes every frame.
 #[derive(Resource, Default)]
 pub struct ServerClock {
-    pub hours: f64,
+    pub minutes: f64,
     /// How long the last `Ping` took to come back, in milliseconds.
     pub round_trip_ms: Option<f64>,
     /// The server is in this process: `round_trip_ms` says nothing about a
     /// network, only how long it waited for the server's tick, so it shows as a dash.
     pub local_server: bool,
+}
+
+impl ServerClock {
+    /// The same in game hours, which the tide, weather and sky go by.
+    pub fn hours(&self) -> f64 {
+        self.minutes / MINUTES_PER_HOUR
+    }
+}
+
+/// The dull light everywhere, however dark it gets, as a fraction of full light.
+pub const NIGHT_LIGHT: f32 = 0.1;
+
+/// The suns and moons as they are this frame (`shared::celestial`).
+#[derive(Resource, Default)]
+pub struct SkyNow {
+    /// In the order of `Celestial::bodies`.
+    pub bodies: Vec<BodyNow>,
+    /// The light they give flat ground together, linear RGB.
+    pub flat: Vec3,
+}
+
+impl SkyNow {
+    /// How much to multiply what isn't really lit by, to match what is.
+    pub fn lit(&self) -> Vec3 {
+        Vec3::splat(NIGHT_LIGHT) + self.flat.min(Vec3::ONE) * (1.0 - NIGHT_LIGHT)
+    }
+}
+
+fn update_sky(world: Res<CurrentWorld>, clock: Res<ServerClock>, mut sky: ResMut<SkyNow>) {
+    sky.bodies = world.celestial.at(clock.hours());
+    sky.flat = Vec3::from_array(flat_light(&sky.bodies).map(|channel| channel as f32));
 }
 
 /// Snow line for normal weather: above every height there is, so only the

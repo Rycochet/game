@@ -18,6 +18,7 @@ struct Sky {
     right: vec2<f32>,
     towards: vec2<f32>,
     centre: vec2<f32>,
+    light: vec4<f32>,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> sky: Sky;
@@ -36,6 +37,11 @@ fn sky_at(place: vec2<f32>) -> vec4<f32> {
 
 // How much a full cloud darkens the ground straight below it.
 const SHADOW: f32 = 0.2;
+
+// Round the player the ground is lightened, in grid units: fully out to one world
+// map chunk, then fading away. Added after lighting, so shadows don't matter.
+const GLOW_FULL: f32 = 64.0;
+const GLOW_END: f32 = 96.0;
 
 fn hash(p: vec2<f32>) -> f32 {
     return fract(sin(dot(p, vec2<f32>(127.1, 311.7))) * 43758.5453);
@@ -195,6 +201,8 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
 
     var out: FragmentOutput;
     out.color = apply_pbr_lighting(pbr_input);
+    let glow = sky.light.a * (1.0 - smoothstep(GLOW_FULL, GLOW_END, distance(in.world_position.xz, sky.centre)));
+    out.color = vec4<f32>(out.color.rgb + colour * glow, out.color.a);
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
     return out;
 }
