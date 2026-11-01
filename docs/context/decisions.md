@@ -354,3 +354,9 @@ Browsers can't raise the on-screen keyboard from a canvas, and only focus an inp
 ## 2026-11-01: A loading screen until the game takes input
 
 A full-screen title and step bar (`loading_screen`) covers the game from the first frame until a few frames after the server's welcome, and takes all input (owner). It replaces the red "Connecting..." line, so it also comes back while the connection is lost and shows a server's refusal. Steps are `common::LoadingStep`, with fixed places on the bar until startup work is timed. The title uses Cinzel Decorative (OFL), built into the program to be there on the first frame. The web page stays black until the wasm has loaded: a browser splash waits until web work is asked for.
+
+## 2026-11-01: Standalone servers can opt in to dev tools
+
+The owner's choice, so a tablet can use the debug menu: `HALL_OF_WORLDS_DEV_TOOLS=1` makes a standalone server accept dev tools messages, from anyone connected, so it is only for private test servers; it stays off by default, and the server logs a warning when on. `Welcome` says whether they are accepted, and the debug menu disables what would be refused. The server still checks every message.
+
+Two more entries, the owner's: Reveal Map (a site's floor is all known, and saved so) and Forget Map (the current floor, or all of the world map, is forgotten, in the save too). Both answer by sending the level again as if arriving, or for the world map a new `ForgetWorldMap` and the chunks in sight. Secret doors stay walls when revealed. Forgetting the world map also forgets which pois were visited or known. Both are refused in towns, which arrive whole.

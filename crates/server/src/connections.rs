@@ -170,7 +170,7 @@ pub(crate) fn handle_messages(
         };
         if !stay {
             client.disconnect(&mut world);
-        } else if client.joining && !join(clients, i, &mut world) {
+        } else if client.joining && !join(clients, i, &mut world, options.dev_tools) {
             clients[i].disconnect(&mut world);
         }
     }
@@ -182,7 +182,7 @@ pub(crate) fn handle_messages(
 /// they left it): the newest connection wins, for coming back after a
 /// connection drops before the server has noticed. `false` if the client
 /// has gone.
-fn join(clients: &mut [Client], i: usize, world: &mut ServerWorld) -> bool {
+fn join(clients: &mut [Client], i: usize, world: &mut ServerWorld, dev_tools: bool) -> bool {
     let name = clients[i].name.clone();
     for (j, other) in clients.iter_mut().enumerate() {
         if j != i && !other.gone && other.welcomed && other.name == name {
@@ -193,7 +193,7 @@ fn join(clients: &mut [Client], i: usize, world: &mut ServerWorld) -> bool {
             other.disconnect(world);
         }
     }
-    welcome(&mut clients[i], world)
+    welcome(&mut clients[i], world, dev_tools)
 }
 
 /// Saves every character and site that has changed.
@@ -298,6 +298,11 @@ pub(crate) fn answer(
         } => sites::dev_enter(client, world, kind, seed, level, ruin),
         ClientMessage::DevSetCell { x, y, cell } => sites::set_cell(client, world, x, y, cell),
         ClientMessage::DevRevealPois => world_map::reveal_pois(client, world),
+        ClientMessage::DevRevealMap => sites::reveal_level(client, world),
+        ClientMessage::DevForgetMap => match client.visit {
+            Some(_) => sites::forget_level(client, world),
+            None => world_map::forget(client, world),
+        },
         ClientMessage::DevSnowLine(snow_line) => {
             world.snow_line = snow_line;
             client.link.send(&ServerMessage::SnowLine(snow_line))
@@ -307,7 +312,7 @@ pub(crate) fn answer(
 
 /// Loads the character (or starts a new one), and tells the client the
 /// world and where they are; back into the site level they were on, if any.
-fn welcome(client: &mut Client, world: &mut ServerWorld) -> bool {
+fn welcome(client: &mut Client, world: &mut ServerWorld, dev_tools: bool) -> bool {
     client.joining = false;
     client.welcomed = true;
     let name = client.name.as_ref().expect("named on hello");
@@ -319,6 +324,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld) -> bool {
         snow_line: world.snow_line,
         x,
         y,
+        dev_tools,
     };
     if !client.link.send(&welcome) {
         return false;
@@ -380,7 +386,7 @@ pub(crate) mod tests {
             for message in messages {
                 answer(&mut self.client, message.clone(), &mut self.world, &options);
                 if self.client.joining {
-                    welcome(&mut self.client, &mut self.world);
+                    welcome(&mut self.client, &mut self.world, options.dev_tools);
                 }
             }
             self.client.send_position();

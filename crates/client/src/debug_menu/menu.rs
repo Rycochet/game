@@ -460,6 +460,8 @@ mod tests {
             teleporting: false,
             changing_cells: false,
             showing_info: false,
+            in_town: false,
+            dev_tools: true,
         }
     }
 

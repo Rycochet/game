@@ -11,9 +11,11 @@ pub enum DebugAction {
     ChangeCellMode,
     CycleTemperature,
     FieldsState,
+    ForgetMap,
     HerbsState,
     PoiShowcase,
     ResetView,
+    RevealMap,
     ShowDebugInfo,
     ShowWidgets,
     StairsStyle,
@@ -32,19 +34,24 @@ pub(super) struct Facts {
     pub teleporting: bool,
     pub changing_cells: bool,
     pub showing_info: bool,
+    pub in_town: bool,
+    /// Whether the server accepts developer tools messages.
+    pub dev_tools: bool,
 }
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 12] = [
+    pub(super) const ALL: [Self; 14] = [
         Self::AutoWalk,
         Self::BackToStart,
         Self::ChangeCellMode,
         Self::CycleTemperature,
         Self::FieldsState,
+        Self::ForgetMap,
         Self::HerbsState,
         Self::PoiShowcase,
         Self::ResetView,
+        Self::RevealMap,
         Self::ShowDebugInfo,
         Self::ShowWidgets,
         Self::StairsStyle,
@@ -58,9 +65,11 @@ impl DebugAction {
             Self::ChangeCellMode => "Change Cell Mode",
             Self::CycleTemperature => "Cycle Temperature",
             Self::FieldsState => "Fields State",
+            Self::ForgetMap => "Forget Map",
             Self::HerbsState => "Herbs State",
             Self::PoiShowcase => "Poi Showcase",
             Self::ResetView => "Reset View",
+            Self::RevealMap => "Reveal Map",
             Self::ShowDebugInfo => "Show Debug Info",
             Self::ShowWidgets => "Show Widgets",
             Self::StairsStyle => "Stairs Style",
@@ -70,16 +79,36 @@ impl DebugAction {
 
     /// Whether it can be used now.
     pub(super) fn is_available(self, facts: &Facts) -> bool {
+        if self.needs_server_dev_tools() && !facts.dev_tools {
+            return false;
+        }
         match self {
             // In a site it would stop at a wall.
             Self::AutoWalk => facts.view == GameView::WorldMap,
             Self::ChangeCellMode => facts.view == GameView::Dungeon,
+            // A town is known from the start, and would only come straight back.
+            Self::ForgetMap => !facts.in_town,
+            Self::RevealMap => facts.view == GameView::Dungeon && !facts.in_town,
             Self::FieldsState => facts.view == GameView::Dungeon && facts.has_fields,
             Self::HerbsState => facts.view == GameView::Dungeon && facts.has_herbs,
             Self::StairsStyle => facts.view == GameView::Dungeon && facts.has_stairs,
             Self::PoiShowcase => shared::showcase::ENABLED,
             _ => true,
         }
+    }
+
+    /// Whether it does nothing unless the server accepts dev tools.
+    fn needs_server_dev_tools(self) -> bool {
+        matches!(
+            self,
+            Self::BackToStart
+                | Self::ChangeCellMode
+                | Self::CycleTemperature
+                | Self::ForgetMap
+                | Self::PoiShowcase
+                | Self::RevealMap
+                | Self::TeleportMode
+        )
     }
 
     /// For one that toggles, whether it is on.
@@ -152,6 +181,8 @@ mod tests {
             teleporting: false,
             changing_cells: false,
             showing_info: true,
+            in_town: false,
+            dev_tools: true,
         }
     }
 
@@ -189,6 +220,32 @@ mod tests {
             ..site
         };
         assert!(DebugAction::StairsStyle.is_available(&stairs));
+    }
+
+    #[test]
+    fn reveal_needs_a_site_and_neither_map_option_works_in_a_town() {
+        assert!(!DebugAction::RevealMap.is_available(&facts(GameView::WorldMap)));
+        assert!(DebugAction::ForgetMap.is_available(&facts(GameView::WorldMap)));
+        assert!(DebugAction::RevealMap.is_available(&facts(GameView::Dungeon)));
+        let town = Facts {
+            in_town: true,
+            ..facts(GameView::Dungeon)
+        };
+        assert!(!DebugAction::RevealMap.is_available(&town));
+        assert!(!DebugAction::ForgetMap.is_available(&town));
+    }
+
+    #[test]
+    fn what_the_server_must_allow_is_disabled_when_it_does_not() {
+        let refused = Facts {
+            dev_tools: false,
+            ..facts(GameView::Dungeon)
+        };
+        assert!(!DebugAction::TeleportMode.is_available(&refused));
+        assert!(!DebugAction::BackToStart.is_available(&refused));
+        assert!(!DebugAction::RevealMap.is_available(&refused));
+        assert!(DebugAction::ResetView.is_available(&refused));
+        assert!(DebugAction::ShowDebugInfo.is_available(&refused));
     }
 
     #[test]

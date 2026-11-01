@@ -86,6 +86,15 @@ pub(crate) fn reveal_pois(client: &mut Client, world: &ServerWorld) -> bool {
     look_around(client, world)
 }
 
+/// Developer tools: the character forgets the whole world map, and is told again
+/// what is in sight.
+pub(crate) fn forget(client: &mut Client, world: &ServerWorld) -> bool {
+    client.character.pois.clear();
+    client.world_chunks.clear();
+    client.unsaved = true;
+    client.link.send(&ServerMessage::ForgetWorldMap) && look_around(client, world)
+}
+
 /// The player is somewhere new on the world map: the chunks now in sight are
 /// known from now on (their land as well as any poi, for the player's
 /// map), a new connection is sent all they know, and the chunks within sight, plus a margin, that
@@ -166,6 +175,22 @@ mod tests {
         // Stepping there and back sends nothing new.
         assert!(chunks(&test.steps(&[(1, 0), (-1, 0)])).is_empty());
         assert_eq!(test.client.world_position(), (0, 0));
+    }
+
+    #[test]
+    fn forgetting_keeps_only_what_is_in_sight() {
+        let mut test = TestClient::new();
+        // Far off, then back: the first place is out of sight.
+        test.send(&[ClientMessage::DevTeleport { x: 6400, y: 0 }]);
+        let far = ChunkPos { x: 100, y: 0 };
+        test.send(&[ClientMessage::DevTeleport { x: 0, y: 0 }]);
+        assert!(test.client.character.pois.contains_key(&far));
+
+        let answers = test.send(&[ClientMessage::DevForgetMap]);
+        assert_eq!(answers[0], ServerMessage::ForgetWorldMap);
+        assert!(chunks(&answers).contains(&ChunkPos { x: 0, y: 0 }));
+        assert!(!chunks(&answers).contains(&far));
+        assert!(!test.client.character.pois.contains_key(&far));
     }
 
     #[test]
