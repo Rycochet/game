@@ -77,6 +77,9 @@ const PLANT_ROWS: [f32; 2] = [-0.25, 0.25];
 /// For choosing where each tile starts.
 const STARTS: Seed = Seed::new(0x68_6572_6273);
 
+/// How many stages a shift can go before everything looks the same again.
+pub const HERB_STAGES: u32 = (LIST_HOURS / HOURS_PER_STAGE as u64) as u32;
+
 /// The hour to grow by: the clock's, and whole stages more to look at them.
 pub fn growth(hour: u32, shift: u32) -> u32 {
     hour.wrapping_add(shift.wrapping_mul(HOURS_PER_STAGE))

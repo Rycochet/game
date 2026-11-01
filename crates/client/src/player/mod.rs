@@ -92,7 +92,7 @@ pub struct Arrived {
     pub y: i64,
 }
 
-/// Ask the player to take a step (keyboard, demo walk, dev tools): taken
+/// Ask the player to take a step (keyboard, auto walk, dev tools): taken
 /// unless it leads into a wall in a site.
 #[derive(Message, Clone, Copy, Debug)]
 pub struct TakeStep(pub Step);

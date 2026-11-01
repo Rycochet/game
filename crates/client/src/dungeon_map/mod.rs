@@ -12,6 +12,8 @@
 
 mod field;
 mod herbs;
+pub use field::CROP_STAGES;
+pub use herbs::HERB_STAGES;
 mod holes;
 mod liquid;
 mod mesh;
@@ -39,8 +41,8 @@ use shared::protocol::ClientMessage;
 use shared::surface::SurfaceSample;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, LightSource, MapPosition,
-    PointerPosition, SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
+    ClickMode, CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, LightSource,
+    MapPosition, PointerPosition, SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -829,13 +831,13 @@ fn update_herbs(
 /// travelling there (in
 /// a straight line for now: walls don't stop travel until there is
 /// pathfinding). Clicks on clickable tokens are left to `site`; so is using
-/// stairs, by arriving on their cell. Ctrl+click asks the server to teleport
-/// the player there, and Alt+click changes the cell (floor, wall, door, window,
-/// and round again) to try walls out (dev tools).
+/// stairs, by arriving on their cell. In Teleport Mode it asks the server to teleport
+/// the player there, and in Change Cell Mode it changes the cell (floor, wall,
+/// door, window, and round again) to try walls out (dev tools).
 #[allow(clippy::too_many_arguments)]
 fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
+    mode: Res<ClickMode>,
     clicked: Res<ClickedToken>,
     pointer: Res<PointerPosition>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
@@ -854,7 +856,7 @@ fn pick_on_click(
     let Ok(ray) = camera.viewport_to_world(camera_transform, cursor) else {
         return;
     };
-    if keys.any_pressed([KeyCode::AltLeft, KeyCode::AltRight]) {
+    if *mode == ClickMode::ChangeCell {
         if let Some((x, y)) = picking::floor_cell(ray) {
             let cell = match dungeon.level.cell(x, y) {
                 Cell::Floor => Cell::Wall,
@@ -870,9 +872,9 @@ fn pick_on_click(
     let picked = door
         .or_else(|| picking::pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces));
     if let Some((x, y)) = picked {
-        // Dev tools: ctrl+click jumps there instead (through walls), if the
+        // Dev tools: Teleport Mode jumps there instead (through walls), if the
         // server allows it.
-        if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
+        if *mode == ClickMode::Teleport {
             to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
         } else {
             travel.write(TravelTo { x, y });

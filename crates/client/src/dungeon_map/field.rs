@@ -376,6 +376,10 @@ fn cell_crops(crops: &mut Builder, centre: Vec3, tile: f32, pixels: f32) {
     }
 }
 
+/// How many stages a field of crops goes through (`FieldLook::variety`, going
+/// round).
+pub const CROP_STAGES: usize = Stage::CROPS.len();
+
 #[cfg(test)]
 mod tests {
     use super::*;

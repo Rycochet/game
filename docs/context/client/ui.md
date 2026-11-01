@@ -4,7 +4,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Files
 
-- `crates/client/src/ui/mod.rs`: `UiPlugin`; spawns and updates the status text (controls including clicking places and stairs, right-drag, wheel and Home for the camera, ctrl+click and Esc (dev tools), M for the map, demo keys with their state, snow line, position, hour, `ViewStats` line), empty while `GameView::Connecting`; and a red line bottom left from `common::ServerStatus`: "Connecting..." while not connected, or why the server refused.
+- `crates/client/src/ui/mod.rs`: `UiPlugin`; the status text (position, hour, ping, snow line, `ViewStats` line; below the warning button, empty while `GameView::Connecting` or with `common::DebugInfo` off), the mode text beside the warning button (`common::ClickMode`, in red), and a red line bottom left from `common::ServerStatus`: "Connecting..." while not connected, or why the server refused.
 
 ## Public API
 
@@ -12,7 +12,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Depends on
 
-- `common` (`GameView`, `GameClock`, `ViewStats`, `Weather`, `MapPosition`), `demo` (`AutoWalk`, `TemperatureCycle`), `player` (`Player`).
+- `common` (`ClickMode`, `DebugInfo`, `GameView`, `GameClock`, `ViewStats`, `Weather`, `MapPosition`), `player` (`Player`).
 
 ## Used by
 

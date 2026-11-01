@@ -16,7 +16,7 @@ A debug area for looking at every kind of poi: from far south of any pole, the w
 
 ## Used by
 
-- `shared::surface`, `climate`, `vegetation`, `river` and `poi` (each asks first), `server` (`world_map::to_showcase`, for `DevToShowcase`), client `demo` (P).
+- `shared::surface`, `climate`, `vegetation`, `river` and `poi` (each asks first), `server` (`world_map::to_showcase`, for `DevToShowcase`), client `debug_menu` (Poi Showcase).
 
 ## Notes
 

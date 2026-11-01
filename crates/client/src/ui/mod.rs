@@ -3,22 +3,36 @@
 use bevy::prelude::*;
 
 use crate::common::{
-    GameClock, GameView, MapPosition, ServerClock, ServerStatus, ViewStats, Weather,
+    ClickMode, DebugInfo, GameClock, GameView, MapPosition, ServerClock, ServerStatus, ViewStats,
+    Weather,
 };
-use crate::demo::{AutoWalk, TemperatureCycle};
 use crate::player::Player;
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_status_text, spawn_connection_text))
-            .add_systems(Update, (update_status_text, update_connection_text));
+        app.add_systems(
+            Startup,
+            (spawn_status_text, spawn_mode_text, spawn_connection_text),
+        )
+        .add_systems(
+            Update,
+            (update_status_text, update_mode_text, update_connection_text),
+        );
     }
 }
 
 #[derive(Component)]
 struct StatusText;
+
+/// Beside the warning button, in red: the mode clicks are in, if any.
+#[derive(Component)]
+struct ModeText;
+
+/// Where the status text and mode text go, to clear the warning button.
+const STATUS_TOP: f32 = 52.0;
+const MODE_LEFT: f32 = 56.0;
 
 /// Bottom left, in red: "Connecting..." while not connected to the server,
 /// or why the server refused.
@@ -55,13 +69,27 @@ fn update_connection_text(
     };
 }
 
+fn spawn_mode_text(mut commands: Commands) {
+    commands.spawn((
+        ModeText,
+        Text::new(""),
+        TextColor(CONNECTION_COLOUR),
+        Node {
+            position_type: PositionType::Absolute,
+            top: px(16),
+            left: px(MODE_LEFT),
+            ..default()
+        },
+    ));
+}
+
 fn spawn_status_text(mut commands: Commands) {
     commands.spawn((
         StatusText,
         Text::new(""),
         Node {
             position_type: PositionType::Absolute,
-            top: px(12),
+            top: px(STATUS_TOP),
             left: px(12),
             ..default()
         },
@@ -74,38 +102,38 @@ fn update_status_text(
     clock: Res<GameClock>,
     server_clock: Res<ServerClock>,
     weather: Res<Weather>,
-    walk: Res<AutoWalk>,
-    cycle: Res<TemperatureCycle>,
     stats: Res<ViewStats>,
+    info: Res<DebugInfo>,
     view: Res<State<GameView>>,
     mut text: Single<&mut Text, With<StatusText>>,
 ) {
     // Nothing to say before the first welcome (`ConnectionText` says why).
-    if *view.get() == GameView::Connecting {
+    if !info.0 || *view.get() == GameView::Connecting {
         text.0 = String::new();
         return;
     }
-    let on_off = |on: bool| if on { "on" } else { "off" };
-    let cycle = match *cycle {
-        TemperatureCycle::Off => "off",
-        TemperatureCycle::Cooling => "cooling",
-        TemperatureCycle::Warming => "warming",
-    };
     text.0 = format!(
-        "Arrow keys / WASD or click to move  Click a place or stairs to go in\n\
-         Right-drag: turn / tilt map  Wheel: zoom  Home: reset view\n\
-         Ctrl+click: teleport  Alt+click: change a site's cell  Esc: back to the start\n\
-         G: walk ({})  T: temperature cycle ({cycle}, snow line {:.0})  P: poi showcase\n\
-         M: map  K / C / X / Z: token shape / colour / completed / size  B: stairs style\n\
-         Position {}, {}  Hour {}  Ping {}\n{}",
-        on_off(walk.0),
-        weather.snow_line,
+        "Position {}, {}  Hour {}  Ping {}  Snow line {:.0}\n{}",
         player.x,
         player.y,
         clock.hour % 24,
         server_clock
             .round_trip_ms
             .map_or("-".to_string(), |ms| format!("{ms:.0} ms")),
+        weather.snow_line,
         stats.summary
     );
+}
+
+/// Says when clicks don't do what they usually do, as it is easy to forget.
+fn update_mode_text(mode: Res<ClickMode>, mut text: Single<&mut Text, With<ModeText>>) {
+    if !mode.is_changed() {
+        return;
+    }
+    text.0 = match *mode {
+        ClickMode::Normal => "",
+        ClickMode::Teleport => "Teleport Mode",
+        ClickMode::ChangeCell => "Change Cell Mode",
+    }
+    .into();
 }

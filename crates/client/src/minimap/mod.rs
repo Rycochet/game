@@ -24,8 +24,8 @@ use shared::protocol::{ClientMessage, SeenPoi};
 use shared::site::StairsDirection;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels, PointerPosition,
-    PointerSystems, Portal, SmoothPosition, Token, TouchGesture, Weather,
+    ClickMode, CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels,
+    PointerPosition, PointerSystems, Portal, SmoothPosition, Token, TouchGesture, Weather,
 };
 use crate::connection::ToServer;
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
@@ -121,7 +121,7 @@ impl Plugin for MinimapPlugin {
                     .chain()
                     .after(InputSystems)
                     .after(PointerSystems)
-                    .after(WidgetSystems),
+                    .after(WidgetSystems::Modal),
             )
             .add_systems(
                 Update,
@@ -289,7 +289,7 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                     },
                     Visibility::Hidden,
                 ))
-                .with_children(|holder| spawn_tooltip(holder, HoverText));
+                .with_children(|holder| spawn_tooltip(holder, HoverText, ""));
         });
     commands
         .spawn((
@@ -305,7 +305,7 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
             GlobalZIndex(10),
             Visibility::Hidden,
         ))
-        .with_children(|holder| spawn_tooltip(holder, WorldHoverText));
+        .with_children(|holder| spawn_tooltip(holder, WorldHoverText, ""));
     commands.insert_resource(MapPictures { minimap, full });
 }
 
@@ -405,11 +405,12 @@ fn shows_known(
     }
 }
 
-/// Developer tools: ctrl+click on a poi on the full map teleports there, enters
-/// it and closes the map. Elsewhere on the map, ctrl+click is an ordinary click.
+/// Developer tools: in Teleport Mode, a click on a poi on the full map teleports
+/// there, enters it and closes the map. Elsewhere on the map, it is an ordinary
+/// click.
 #[allow(clippy::too_many_arguments)]
 fn go_into_clicked_poi(
-    keys: Res<ButtonInput<KeyCode>>,
+    mode: Res<ClickMode>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
     view: Res<State<GameView>>,
@@ -421,8 +422,12 @@ fn go_into_clicked_poi(
     pointer: Res<PointerPosition>,
 ) {
     let view = *view.get();
-    let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
-    if !full.open || view != GameView::WorldMap || !ctrl || !mouse.just_pressed(MouseButton::Left) {
+    let teleporting = *mode == ClickMode::Teleport;
+    if !full.open
+        || view != GameView::WorldMap
+        || !teleporting
+        || !mouse.just_pressed(MouseButton::Left)
+    {
         return;
     }
     let centre = (player.x, player.y);
@@ -1186,6 +1191,7 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<AccumulatedMouseScroll>()
+            .init_resource::<ClickMode>()
             .init_resource::<PointerPosition>()
             .init_resource::<TouchGesture>()
             .init_resource::<OtherLevels>()
@@ -1225,8 +1231,8 @@ mod tests {
     }
 
     /// A world map with the full map open and a poi at its middle, under the
-    /// mouse, ready for a click with `ctrl` held or not.
-    fn poi_under_the_mouse(ctrl: bool) -> App {
+    /// mouse, ready for a click in Teleport Mode or not.
+    fn poi_under_the_mouse(teleporting: bool) -> App {
         let mut app = app();
         let chunk = shared::poi::ChunkPos { x: 1, y: 1 };
         let mut world = CurrentWorld::new(&shared::protocol::WorldInfo {
@@ -1254,9 +1260,8 @@ mod tests {
             full_map_corner(window) + Vec2::new(FULL_MAP_MARGIN, FULL_MAP_MARGIN + TITLE_HEIGHT);
         let middle = corner + full_map_area(window) / 2.0;
         set_cursor(&mut app, middle);
-        if ctrl {
-            let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
-            keys.press(KeyCode::ControlLeft);
+        if teleporting {
+            *app.world_mut().resource_mut::<ClickMode>() = ClickMode::Teleport;
         }
         let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
         mouse.press(MouseButton::Left);
@@ -1272,7 +1277,7 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_click_on_a_poi_teleports_in_and_closes_the_map() {
+    fn a_click_on_a_poi_in_teleport_mode_goes_in_and_closes_the_map() {
         let mut app = poi_under_the_mouse(true);
         assert_eq!(
             sent(&mut app),
