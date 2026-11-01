@@ -38,13 +38,21 @@ pub(super) struct PoiShape {
     variety: u64,
 }
 
+/// How far above the ground a poi's flat base lies, so the ground doesn't
+/// show through it, and how far its model stands, so the base doesn't show
+/// through what lies flat in the model (a farm's fields).
+const BASE_LIFT: f32 = 0.2;
+const MODEL_LIFT: f32 = BASE_LIFT * 2.0;
+
 /// A model and its outline.
 type ModelMeshes = (Handle<Mesh>, Handle<Mesh>);
 
-/// The models' meshes, each made once, and their one material.
+/// The models' meshes, each made once, the two flat bases (`false`: round;
+/// `true`: octagonal, for towns), and their one material.
 #[derive(Resource, Default)]
 pub(super) struct PoiMeshes {
     meshes: HashMap<(PoiKind, PoiLook, u64), ModelMeshes>,
+    bases: HashMap<bool, Handle<Mesh>>,
     material: Option<Handle<StandardMaterial>>,
     outline_material: Option<Handle<StandardMaterial>>,
 }
@@ -157,12 +165,26 @@ pub(super) fn add_models(
                 })
             })
             .clone();
+        let town = shape.kind.is_town();
+        let base_mesh = store
+            .bases
+            .entry(town)
+            .or_insert_with(|| meshes.add(poi_model::base_mesh(town)))
+            .clone();
+        let base = commands
+            .spawn((
+                Mesh3d(base_mesh),
+                MeshMaterial3d(material.clone()),
+                NotShadowCaster,
+                // The view stands half a token's thickness above the ground.
+                Transform::from_xyz(0.0, BASE_LIFT - TOKEN_HALF_THICKNESS, 0.0),
+            ))
+            .id();
         let model = commands
             .spawn((
                 Mesh3d(mesh),
                 MeshMaterial3d(material),
-                // The view stands half a token's thickness above the ground.
-                Transform::from_xyz(0.0, -TOKEN_HALF_THICKNESS, 0.0),
+                Transform::from_xyz(0.0, MODEL_LIFT - TOKEN_HALF_THICKNESS, 0.0),
             ))
             .id();
         // Drawn from inside, so only what stands out past the model shows.
@@ -185,11 +207,11 @@ pub(super) fn add_models(
                 Mesh3d(outline_mesh),
                 MeshMaterial3d(outline_material),
                 NotShadowCaster,
-                Transform::from_xyz(0.0, -TOKEN_HALF_THICKNESS, 0.0),
+                Transform::from_xyz(0.0, MODEL_LIFT - TOKEN_HALF_THICKNESS, 0.0),
                 Visibility::Hidden,
             ))
             .id();
-        commands.entity(view).add_children(&[model, outline]);
+        commands.entity(view).add_children(&[base, model, outline]);
     }
 }
 

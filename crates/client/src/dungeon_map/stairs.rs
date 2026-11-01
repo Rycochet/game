@@ -112,6 +112,9 @@ const RISER_SHADE: f32 = 0.6;
 const FRONT_SHADE: f32 = 0.45;
 /// Treads are the floor's picture made brighter, to stand out from the floor.
 const TREAD_TINT: f32 = 1.35;
+/// The circle of floor under a ladder going up, the size of the hole it comes
+/// through, is the floor's picture made this much brighter, to show it is a way out.
+const LADDER_LIGHT_TINT: f32 = 1.6;
 
 /// Inside the hole: how bright the side is at the top and the bottom, and how
 /// bright the model is at the bottom (it is full bright at the floor). Vertex
@@ -154,8 +157,11 @@ pub fn build_stairs(
         };
         floor_with_hole(meshes, centre, hole, floor_colour);
         shaft(meshes, centre, hole, lit);
-    } else {
+    } else if matches!(stairs.style, StairsStyle::Spiral | StairsStyle::Turning) {
         floor_whole(meshes, centre, floor_colour);
+    } else {
+        floor_with_hole(meshes, centre, Hole::Round, floor_colour);
+        light_under_ladder(meshes, centre, floor_colour);
     }
     let mut model = Model {
         meshes,
@@ -279,6 +285,22 @@ fn floor_with_hole(
             Vec3::Y,
             corners.map(|p| floor_uv(p, centre)),
             corners.map(colour),
+        );
+    }
+}
+
+/// Fills the round hole `floor_with_hole` leaves with brighter floor.
+fn light_under_ladder(meshes: &mut [Builder], centre: Vec3, colour: &impl Fn(Vec3) -> Vec3) {
+    let outline = hole_outline(Hole::Round);
+    for (i, &a) in outline.iter().enumerate() {
+        let b = outline[(i + 1) % outline.len()];
+        // A triangle, as a quad with two corners the same.
+        let corners = [centre, centre + a, centre + b, centre + b];
+        meshes[Surface::Floor as usize].free(
+            corners,
+            Vec3::Y,
+            corners.map(|p| floor_uv(p, centre)),
+            corners.map(|p| colour(p) * LADDER_LIGHT_TINT),
         );
     }
 }
@@ -824,6 +846,48 @@ mod tests {
         meshes
             .iter()
             .flat_map(|mesh| mesh.positions.iter().map(|&p| Vec3::from_array(p)))
+    }
+
+    /// Ladders going up have a brighter circle of floor as wide as the hole
+    /// above, and the floor still covers the whole cell; stairs have no circle.
+    #[test]
+    fn only_ladders_going_up_have_light_under_them() {
+        let half = CELL_SIZE / 2.0;
+        for style in StairsStyle::ALL {
+            let mut meshes: Vec<Builder> =
+                Surface::ALL.iter().map(|_| Builder::default()).collect();
+            let stairs = SeenStairs {
+                x: 0,
+                y: 0,
+                direction: StairsDirection::Up,
+                descends: (0, 1),
+                style,
+            };
+            // Only the floor comes straight from `floor_colour`.
+            build_stairs(&mut meshes, None, &stairs, Vec3::ONE, &|_| Vec3::ONE);
+            let floor = &meshes[Surface::Floor as usize];
+            let flat = || {
+                floor
+                    .positions
+                    .iter()
+                    .zip(&floor.colours)
+                    .filter(|(p, _)| p[1] == 0.0)
+            };
+            let lit: Vec<_> = flat().filter(|(_, c)| c[0] == LADDER_LIGHT_TINT).collect();
+            if matches!(style, StairsStyle::Spiral | StairsStyle::Turning) {
+                assert!(lit.is_empty(), "{style:?}");
+                continue;
+            }
+            let reach = lit
+                .iter()
+                .map(|(p, _)| Vec3::from_array(**p).length())
+                .fold(0.0, f32::max);
+            assert!((reach - ROUND_RADIUS).abs() < 0.001, "{style:?}: {reach}");
+            let furthest = flat()
+                .map(|(p, _)| p[0].abs().max(p[2].abs()))
+                .fold(0.0, f32::max);
+            assert!((furthest - half).abs() < 0.001, "{style:?}: {furthest}");
+        }
     }
 
     /// Every model leaves a border of floor round it inside its cell, apart
