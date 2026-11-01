@@ -13,6 +13,8 @@ use crate::ui::raised_box;
 pub(super) const BUTTON: f32 = 26.0;
 const BUTTON_WIDTH: f32 = 36.0;
 pub(super) const BUTTON_GAP: f32 = 4.0;
+/// How far either side of a button still counts as on it.
+const SIDE_REACH: f32 = 10.0;
 
 /// The floor being looked at: darker, and flat where the others stand up.
 const SHOWN_BACKGROUND: Color = Color::srgb(0.42, 0.32, 0.2);
@@ -79,13 +81,14 @@ pub(super) fn column(window: &Window, count: usize) -> (Vec2, Vec2) {
 /// Which button, counted from the top, is at a point on the window.
 pub(super) fn under(window: &Window, at: Vec2, count: usize) -> Option<usize> {
     let (corner, size) = column(window, count);
-    let from = at - corner;
-    if count == 0 || from.x < 0.0 || from.y < 0.0 || from.x >= size.x || from.y >= size.y {
+    // Half the gap each way belongs to the nearest button, and a little to the
+    // sides, for fingers.
+    let from = at - corner + Vec2::new(SIDE_REACH, BUTTON_GAP / 2.0);
+    let reach = size + Vec2::new(2.0 * SIDE_REACH, BUTTON_GAP);
+    if count == 0 || from.x < 0.0 || from.y < 0.0 || from.x >= reach.x || from.y >= reach.y {
         return None;
     }
-    let row = (from.y / (BUTTON + BUTTON_GAP)) as usize;
-    // Not in the gap below a button.
-    (from.y - row as f32 * (BUTTON + BUTTON_GAP) < BUTTON).then_some(row)
+    Some(((from.y / (BUTTON + BUTTON_GAP)) as usize).min(count - 1))
 }
 
 /// The corner minimap always shows the player's floor, so closing the full

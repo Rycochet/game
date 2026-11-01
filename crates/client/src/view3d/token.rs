@@ -19,7 +19,7 @@ use bevy::window::PrimaryWindow;
 
 use super::camera::OrbitCamera;
 use super::{CAMERA_FOV_DEGREES, ViewCamera};
-use crate::common::{Attitude, Clickable, Icon, Token, TokenShape};
+use crate::common::{Attitude, Clickable, Icon, PointerPosition, Token, TokenShape};
 
 /// Token width in grid units: the diameter of the circle every shape fits in.
 pub const DIAMETER: f32 = 16.0;
@@ -452,7 +452,7 @@ pub struct HoveredToken(pub Option<Entity>);
 #[allow(clippy::too_many_arguments)]
 pub fn find_token_under_cursor(
     mouse: Res<ButtonInput<MouseButton>>,
-    window: Single<&Window, With<PrimaryWindow>>,
+    pointer: Res<PointerPosition>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     views: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
     anchors: Query<(&IconAnchor, &GlobalTransform)>,
@@ -460,7 +460,7 @@ pub fn find_token_under_cursor(
     mut hovered: ResMut<HoveredToken>,
     mut clicked: ResMut<ClickedToken>,
 ) {
-    let found = window.cursor_position().and_then(|cursor| {
+    let found = pointer.0.and_then(|cursor| {
         let (camera, camera_transform) = *camera;
         token_at(
             cursor,

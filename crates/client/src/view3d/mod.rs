@@ -48,7 +48,8 @@ impl Plugin for View3dPlugin {
             .add_systems(
                 Update,
                 (
-                    camera::control_with_mouse.in_set(PlayerSystems::Input),
+                    (camera::control_with_mouse, camera::control_with_touch)
+                        .in_set(PlayerSystems::Input),
                     token::find_token_under_cursor.in_set(View3dSystems::Click),
                 ),
             )
