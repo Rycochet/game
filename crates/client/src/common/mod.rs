@@ -32,10 +32,8 @@ pub struct CommonPlugin;
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::BLACK))
-            .insert_resource(WinitSettings {
-                focused_mode: UpdateMode::reactive(Duration::from_secs_f64(1.0 / FOCUSED_FPS)),
-                unfocused_mode: UpdateMode::reactive_low_power(Duration::from_secs(1)),
-            })
+            .insert_resource(frame_settings(true))
+            .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()
             .init_resource::<OtherLevels>()
             .init_resource::<FirstFloor>()
@@ -53,6 +51,33 @@ impl Plugin for CommonPlugin {
             .init_resource::<PointerPosition>()
             .init_resource::<TouchGesture>();
     }
+}
+
+/// How often frames run. Out of focus they are a second apart, except while
+/// loading, which shouldn't wait for them.
+pub fn frame_settings(loading: bool) -> WinitSettings {
+    let focused = UpdateMode::reactive(Duration::from_secs_f64(1.0 / FOCUSED_FPS));
+    WinitSettings {
+        focused_mode: focused,
+        unfocused_mode: if loading {
+            focused
+        } else {
+            UpdateMode::reactive_low_power(Duration::from_secs(1))
+        },
+    }
+}
+
+/// What the loading screen is waiting for (set by `loading_screen`). New
+/// startup work gets a step here.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum LoadingStep {
+    /// The screen's first frames: `connection` waits for it to be on show.
+    #[default]
+    Starting,
+    /// For the server's welcome (again, if the connection was lost).
+    Connecting,
+    /// The game can take input: the screen is gone.
+    Ready,
 }
 
 /// What a click on the map does (dev tools), chosen in the debug menu.

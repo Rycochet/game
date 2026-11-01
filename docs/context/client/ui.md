@@ -4,7 +4,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Files
 
-- `crates/client/src/ui/mod.rs`: `UiPlugin`; the status text (position, hour, ping, snow line, `ViewStats` line; below the warning button, empty while `GameView::Connecting` or with `common::DebugInfo` off), the mode text beside the warning button (`common::ClickMode`, in red), and a red line bottom left from `common::ServerStatus`: "Connecting..." while not connected, or why the server refused.
+- `crates/client/src/ui/mod.rs`: `UiPlugin`; the status text (position, hour, ping, snow line, `ViewStats` line; below the warning button, empty while `GameView::Connecting` or with `common::DebugInfo` off), and the mode text beside the warning button (`common::ClickMode`, in red). Connecting and refusals are on `loading_screen`.
 
 ## Public API
 

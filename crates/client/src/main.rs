@@ -9,6 +9,7 @@ mod debug_menu;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
 mod dungeon_map;
+mod loading_screen;
 mod minimap;
 mod player;
 mod site;
@@ -63,6 +64,7 @@ fn main() {
         debug_menu::DebugMenuPlugin,
         minimap::MinimapPlugin,
         ui::UiPlugin,
+        loading_screen::LoadingScreenPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is
