@@ -380,3 +380,7 @@ The owner saw 5-6 seconds of black page while the wasm downloaded. `index.html` 
 ## 2026-11-01: Symbols for the status text, from Noto Emoji
 
 The owner's choice: the status text labels its numbers with symbols, and sits beside the warning button, with the mode clicks are in (in red) on its first line, shown even when the rest is hidden. Lexend has no symbols, so Noto Emoji is built in as a fallback (SIL OFL 1.1), one colour like the rest of the text. The 419 KB version 1.05 already on hand lacks World Map (U+1F5FA), so the owner chose Round Pin (U+1F4CD) for position over downloading the current 2 MB font. The snow line only shows during Cycle Temperature, and single player's ping is a dash.
+
+## 2026-11-01: Covered ground, and stilt huts on pillars
+
+The owner's design: `Cell::CoveredGround` looks like the land's own ground but gets no weather or outside light, for places with something built over them. Stilt huts are its first use: the covered outline with lone pillars and one ladder, and a first floor of the same outline over it. Plain ground round most sites had no outside light, so stilt huts now get the farm's, or the shade wouldn't show. Huts already saved stay single-storey until the next `FORGET_BEFORE`, through their own `STILTS_VERSION`, rather than wiping saves. Castle courtyards can use the cell once castles have them.

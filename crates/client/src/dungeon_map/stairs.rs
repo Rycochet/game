@@ -135,10 +135,12 @@ enum Hole {
 /// stairs' cell and `floor_colour` the colour at a point on the floor (light
 /// with the ambient, or memory's grey). If `through` is given, what stands
 /// above the floor goes there instead of `meshes`, to be drawn see-through.
+/// `floor` is the surface of the cell they stand on.
 pub fn build_stairs(
     meshes: &mut [Builder],
     through: Option<&mut [Builder]>,
     stairs: &SeenStairs,
+    floor: Surface,
     lit: Vec3,
     floor_colour: &impl Fn(Vec3) -> Vec3,
 ) {
@@ -155,13 +157,13 @@ pub fn build_stairs(
             StairsStyle::Turning => Hole::Square,
             _ => Hole::Round,
         };
-        floor_with_hole(meshes, centre, hole, floor_colour);
+        floor_with_hole(meshes, floor, centre, hole, floor_colour);
         shaft(meshes, centre, hole, lit);
     } else if matches!(stairs.style, StairsStyle::Spiral | StairsStyle::Turning) {
-        floor_whole(meshes, centre, floor_colour);
+        floor_whole(meshes, floor, centre, floor_colour);
     } else {
-        floor_with_hole(meshes, centre, Hole::Round, floor_colour);
-        light_under_ladder(meshes, centre, floor_colour);
+        floor_with_hole(meshes, floor, centre, Hole::Round, floor_colour);
+        light_under_ladder(meshes, floor, centre, floor_colour);
     }
     let mut model = Model {
         meshes,
@@ -238,11 +240,16 @@ fn floor_uv(point: Vec3, centre: Vec3) -> [f32; 2] {
 }
 
 /// The floor of a whole cell.
-fn floor_whole(meshes: &mut [Builder], centre: Vec3, colour: &impl Fn(Vec3) -> Vec3) {
+fn floor_whole(
+    meshes: &mut [Builder],
+    floor: Surface,
+    centre: Vec3,
+    colour: &impl Fn(Vec3) -> Vec3,
+) {
     let half = CELL_SIZE / 2.0;
     let corners = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
         .map(|(x, z)| centre + Vec3::new(x * half, 0.0, z * half));
-    meshes[Surface::Floor as usize].free(
+    meshes[floor as usize].free(
         corners,
         Vec3::Y,
         corners.map(|p| floor_uv(p, centre)),
@@ -269,6 +276,7 @@ fn hole_outline(hole: Hole) -> Vec<Vec3> {
 /// out to the edge of the cell.
 fn floor_with_hole(
     meshes: &mut [Builder],
+    floor: Surface,
     centre: Vec3,
     hole: Hole,
     colour: &impl Fn(Vec3) -> Vec3,
@@ -280,7 +288,7 @@ fn floor_with_hole(
     for (i, &a) in outline.iter().enumerate() {
         let b = outline[(i + 1) % outline.len()];
         let corners = [a, b, to_edge(b), to_edge(a)].map(|p| centre + p);
-        meshes[Surface::Floor as usize].free(
+        meshes[floor as usize].free(
             corners,
             Vec3::Y,
             corners.map(|p| floor_uv(p, centre)),
@@ -290,13 +298,18 @@ fn floor_with_hole(
 }
 
 /// Fills the round hole `floor_with_hole` leaves with brighter floor.
-fn light_under_ladder(meshes: &mut [Builder], centre: Vec3, colour: &impl Fn(Vec3) -> Vec3) {
+fn light_under_ladder(
+    meshes: &mut [Builder],
+    floor: Surface,
+    centre: Vec3,
+    colour: &impl Fn(Vec3) -> Vec3,
+) {
     let outline = hole_outline(Hole::Round);
     for (i, &a) in outline.iter().enumerate() {
         let b = outline[(i + 1) % outline.len()];
         // A triangle, as a quad with two corners the same.
         let corners = [centre, centre + a, centre + b, centre + b];
-        meshes[Surface::Floor as usize].free(
+        meshes[floor as usize].free(
             corners,
             Vec3::Y,
             corners.map(|p| floor_uv(p, centre)),
@@ -838,7 +851,14 @@ mod tests {
             descends: (0, 1),
             style,
         };
-        build_stairs(&mut meshes, None, &stairs, Vec3::ONE, &|_| Vec3::ONE);
+        build_stairs(
+            &mut meshes,
+            None,
+            &stairs,
+            Surface::Floor,
+            Vec3::ONE,
+            &|_| Vec3::ONE,
+        );
         meshes
     }
 
@@ -864,7 +884,14 @@ mod tests {
                 style,
             };
             // Only the floor comes straight from `floor_colour`.
-            build_stairs(&mut meshes, None, &stairs, Vec3::ONE, &|_| Vec3::ONE);
+            build_stairs(
+                &mut meshes,
+                None,
+                &stairs,
+                Surface::Floor,
+                Vec3::ONE,
+                &|_| Vec3::ONE,
+            );
             let floor = &meshes[Surface::Floor as usize];
             let flat = || {
                 floor
@@ -982,7 +1009,14 @@ mod tests {
             style: StairsStyle::Spiral,
         };
         let colour = |_| Vec3::ONE;
-        build_stairs(&mut meshes, Some(&mut through), &stairs, Vec3::ONE, &colour);
+        build_stairs(
+            &mut meshes,
+            Some(&mut through),
+            &stairs,
+            Surface::Floor,
+            Vec3::ONE,
+            &colour,
+        );
         assert!(all_points(&meshes).all(|p| p.y <= 0.01));
         assert!(all_points(&through).any(|p| p.y > 0.01));
     }

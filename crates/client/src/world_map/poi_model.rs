@@ -504,8 +504,9 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
             for post in circle(half * 0.8, 4) {
                 model.block(post, Vec2::splat(0.2), 1.5, WOOD);
             }
-            model.prism(at, &shape, (1.5, 1.5 + height), WOOD);
-            model.cone(at, &ring(outline, half * 1.08), 1.5 + height, rise, roof);
+            // One storey on its posts: the ground under it counts as a floor.
+            model.prism(at, &shape, (1.5, 1.5 + FLOOR), WOOD);
+            model.cone(at, &ring(outline, half * 1.08), 1.5 + FLOOR, rise, roof);
         }
         RedTent | BlueTent | GreenTent => {
             let cloth = match kind {

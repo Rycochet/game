@@ -187,10 +187,9 @@ impl StairsStyle {
         match kind {
             Castle | Fort | StoneTower | StoneCottage | Warehouse | ArcheryRange | AdobeHouse
             | AdobeStore | StonePyramid | SandPyramid => &[Spiral, Turning],
-            ThatchedHut | StiltHut | GreenStiltHut | RedTent | BlueTent | GreenTent
-            | RedRoofCottage | GreyRoofCottage | SnowyCottage | WoodenTower => {
-                &[Turning, Ladder, LogLadder]
-            }
+            StiltHut | GreenStiltHut => &[Ladder, LogLadder],
+            ThatchedHut | RedTent | BlueTent | GreenTent | RedRoofCottage | GreyRoofCottage
+            | SnowyCottage | WoodenTower => &[Turning, Ladder, LogLadder],
             Crypt | MossyCrypt | BloodyCrypt | Mausoleum | Grave | Ruins | Barrel | Barrels => {
                 &[Spiral, Turning, Ladder]
             }
@@ -283,6 +282,7 @@ impl Generator {
     /// Its current version (`BUILDING_VERSION`, `CAVE_VERSION`).
     pub fn version(&self) -> u32 {
         match self {
+            Self::Building(options) if options.stilts => STILTS_VERSION,
             Self::Building(_) => BUILDING_VERSION,
             Self::Cave(_) => CAVE_VERSION,
             Self::Town(_) => TOWN_VERSION,
@@ -363,6 +363,7 @@ impl Generator {
                 basement_size: None,
                 windows_percent: WINDOWS_PERCENT,
                 ground_windows,
+                stilts: false,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -404,6 +405,7 @@ impl Generator {
                     basement_size: None,
                     windows_percent: WINDOWS_PERCENT,
                     ground_windows,
+                    stilts: false,
                 },
                 fields: (1, 8),
             }),
@@ -423,6 +425,7 @@ impl Generator {
                     basement_size: Some(((8, 16), (8, 16))),
                     windows_percent: WINDOWS_PERCENT,
                     ground_windows,
+                    stilts: false,
                 },
                 strips: (3, 5),
                 length: (7, 12),
@@ -441,8 +444,19 @@ impl Generator {
             Grave => cave((18, 28), (1, 1), CaveEntrance::Hole, true, 0, 0),
             Barrel | Barrels => cave((20, 35), (1, 2), CaveEntrance::Hole, true, 10, 0),
             // Round, one room or a few: tents, huts, an igloo.
-            ThatchedHut | StiltHut | GreenStiltHut | RedTent | BlueTent | GreenTent
-            | IceShelter => building((9, 13), (9, 13), &[Circle], 1, 10),
+            ThatchedHut | RedTent | BlueTent | GreenTent | IceShelter => {
+                building((9, 13), (9, 13), &[Circle], 1, 10)
+            }
+            // The same, up on pillars: the ground, and the hut over it.
+            StiltHut | GreenStiltHut => match building((9, 13), (9, 13), &[Circle], 2, 10) {
+                Self::Building(options) => Self::Building(BuildingOptions {
+                    min_floors: 2,
+                    same_size: true,
+                    stilts: true,
+                    ..options
+                }),
+                other => other,
+            },
             AdobeHouse | AdobeStore | RedRoofCottage | GreyRoofCottage | StoneCottage
             | SnowyCottage => {
                 building((11, 19), (9, 15), &[Rectangle, Rectangle, CutCorners], 2, 5)
@@ -489,6 +503,7 @@ impl Generator {
                 basement_size: None,
                 windows_percent: 0,
                 ground_windows,
+                stilts: false,
             }),
         }
     }
@@ -499,6 +514,10 @@ impl Generator {
 /// saved sites use it. Bumping `FORGET_BEFORE` ends that: no old version is left
 /// in use, so all the code for them can go.
 pub const BUILDING_VERSION: u32 = 1 + FORGET_BEFORE;
+
+/// The version of buildings on stilts (as `BUILDING_VERSION`). A stilt hut saved
+/// under `BUILDING_VERSION` is still the plain hut it was first made as.
+pub const STILTS_VERSION: u32 = 1 + BUILDING_VERSION;
 
 /// The cave generator's version (as `BUILDING_VERSION`).
 pub const CAVE_VERSION: u32 = 1 + FORGET_BEFORE;
@@ -558,7 +577,17 @@ impl Site {
             _ => false,
         };
         let plan = match generator {
-            Generator::Building(options) if version == BUILDING_VERSION => {
+            Generator::Building(options) if version == generator.version() => {
+                Plan::Building(building::Plan::new(&options, seed))
+            }
+            Generator::Building(options) if options.stilts && version == BUILDING_VERSION => {
+                let options = BuildingOptions {
+                    min_floors: 1,
+                    max_floors: 1,
+                    same_size: false,
+                    stilts: false,
+                    ..options
+                };
                 Plan::Building(building::Plan::new(&options, seed))
             }
             Generator::Cave(options) if version == CAVE_VERSION => {
@@ -787,6 +816,61 @@ mod tests {
         }
     }
 
+    /// Stilt huts: the first floor's outline over covered ground, lone pillars
+    /// and one ladder. Ruined, ground is covered only under what is left above.
+    #[test]
+    fn stilt_huts_stand_on_pillars_over_covered_ground() {
+        for seed in 0..100 {
+            for ruin in 0..=5 {
+                let kind = PoiKind::StiltHut;
+                let generator = Generator::for_poi(kind).with_ruin(ruin);
+                let site =
+                    Site::with_generator(kind, Seed::new(seed), generator.version(), generator)
+                        .expect("the current version runs");
+                assert_eq!(site.levels(), 2);
+                let (ground, above) = (site.level(0), site.level(1));
+                assert_eq!(ground.stairs.len(), 1);
+                assert!(leads_out(&ground.level, 0, 0));
+                let (min_x, min_y, width, height) = ground.level.bounds();
+                let cells = (min_y..min_y + height)
+                    .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)));
+                let mut pillars = 0;
+                for (x, y) in cells {
+                    let up = above.level.cell(x, y);
+                    match ground.level.cell(x, y) {
+                        Cell::CoveredGround => {
+                            assert!(up != Cell::Hole, "open above ({x}, {y})");
+                        }
+                        Cell::Wall => {
+                            pillars += 1;
+                            for (dx, dy) in (-1..=1).flat_map(|d| (-1..=1).map(move |e| (d, e))) {
+                                assert!(
+                                    (dx, dy) == (0, 0)
+                                        || ground.level.cell(x + dx, y + dy) != Cell::Wall
+                                );
+                            }
+                        }
+                        Cell::Ground if ruin == 0 => {
+                            assert_eq!(up, Cell::Wall, "floor over open ground");
+                        }
+                        cell => assert_eq!(cell, Cell::Ground),
+                    }
+                }
+                assert!(ruin > 0 || pillars >= 4, "{pillars} pillars");
+            }
+        }
+    }
+
+    /// A stilt hut saved before they had stilts stays as it was.
+    #[test]
+    fn saved_stilt_huts_keep_their_floors() {
+        let seed = Seed::new(3);
+        let old = Site::with_version(PoiKind::StiltHut, seed, BUILDING_VERSION).unwrap();
+        assert_eq!(old.levels(), 1);
+        assert_eq!(old.level(0), Site::new(PoiKind::ThatchedHut, seed).level(0));
+        assert_eq!(Site::new(PoiKind::StiltHut, seed).levels(), 2);
+    }
+
     /// Both ends of a staircase are built the same, as something that suits
     /// the place, and sites differ.
     #[test]
@@ -891,7 +975,10 @@ mod tests {
                     assert!(ground || stairs_out, "{:?}: no way out", site.kind());
                 }
                 for stairs in &site_level.stairs {
-                    assert_eq!(level.cell(stairs.x, stairs.y), Cell::Floor);
+                    assert!(matches!(
+                        level.cell(stairs.x, stairs.y),
+                        Cell::Floor | Cell::CoveredGround
+                    ));
                     let Exit::Level(to) = stairs.to else {
                         continue;
                     };
@@ -929,7 +1016,8 @@ mod tests {
                     (min_y..min_y + height)
                         .flat_map(move |y| (min_x..min_x + width).map(move |x| (x, y)))
                 };
-                if index == 0 {
+                if index == 0 && !matches!(site.kind(), PoiKind::StiltHut | PoiKind::GreenStiltHut)
+                {
                     let entrances = cells()
                         .filter(|&(x, y)| {
                             level.cell(x, y) == Cell::Door
@@ -1086,7 +1174,9 @@ mod tests {
     fn rooms_are_marked() {
         // (In towns, rooms are buildings: tested in `town`.)
         for site in every_site(2).filter(|site| !site.kind().is_town()) {
-            let level = site.level(0).level;
+            // (A stilt hut's rooms are upstairs.)
+            let on_stilts = matches!(site.kind(), PoiKind::StiltHut | PoiKind::GreenStiltHut);
+            let level = site.level(u32::from(on_stilts)).level;
             let (min_x, min_y, width, height) = level.bounds();
             let mut any = false;
             for y in min_y..min_y + height {
@@ -1183,6 +1273,7 @@ mod pictures {
                                 Cell::Door => '+',
                                 Cell::SecretDoor => 'S',
                                 Cell::Ground => ',',
+                                Cell::CoveredGround => '_',
                                 Cell::Water => '~',
                                 Cell::Lava => '^',
                                 Cell::Hole => ' ',
