@@ -34,7 +34,8 @@ use crate::player::{Player, PlayerSystems};
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{HoveredToken, OrbitCamera, View3dSystems};
 use crate::widgets::{
-    CLOSE_PIXELS, PARCHMENT, WidgetSystems, panel, panel_title, spawn_close_button, spawn_tooltip,
+    CLOSE_PIXELS, PARCHMENT, WidgetSystems, darkening, layer_z, leaves_presses, panel, panel_title,
+    spawn_close_button, spawn_tooltip,
 };
 use crate::world_map::{self, poi_picture, poi_picture_name};
 use canvas::Canvas;
@@ -111,6 +112,9 @@ const FULL_MAP_BUDGET_MS: f64 = 10.0;
 /// without marking anything changed (`dungeon_map` adds to it).
 const REDRAW_SECONDS: f32 = 0.25;
 
+/// Which full-screen layer the full map is.
+const FULL_MAP_LAYER: i32 = 0;
+
 pub struct MinimapPlugin;
 
 impl Plugin for MinimapPlugin {
@@ -140,6 +144,7 @@ impl Plugin for MinimapPlugin {
                     name_what_is_hovered,
                     name_hovered_token,
                     floors::show_buttons,
+                    show_darkening,
                 )
                     .run_if(not(in_state(GameView::Connecting))),
             );
@@ -187,6 +192,11 @@ struct Minimap;
 
 #[derive(Component)]
 struct FullMapPanel;
+
+/// Darkens everything outside the full map, and stops widgets under it being
+/// used; presses there are left for `take_input`, which closes the map.
+#[derive(Component)]
+struct FullMapDarkening;
 
 #[derive(Component)]
 struct FullMapPicture;
@@ -246,8 +256,21 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         GlobalZIndex(10),
         Visibility::Hidden,
     ));
+    let behind = commands
+        .spawn((
+            darkening(FULL_MAP_LAYER),
+            FullMapDarkening,
+            Visibility::Hidden,
+        ))
+        .id();
+    commands.entity(behind).insert(leaves_presses(behind));
     commands
-        .spawn((panel(), FullMapPanel, GlobalZIndex(20), Visibility::Hidden))
+        .spawn((
+            panel(),
+            FullMapPanel,
+            GlobalZIndex(layer_z(FULL_MAP_LAYER) + 1),
+            Visibility::Hidden,
+        ))
         .with_children(|panel| {
             panel.spawn((
                 FullMapTitle,
@@ -461,6 +484,15 @@ fn go_into_clicked_poi(
     to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
     to_server.write(ToServer(ClientMessage::EnterSite { chunk: poi.chunk }));
     full.set_open(false);
+}
+
+/// The darkening shows while the full map does.
+fn show_darkening(full: Res<FullMap>, mut behind: Single<&mut Visibility, With<FullMapDarkening>>) {
+    behind.set_if_neq(if full.open {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    });
 }
 
 /// The maps get the input first, in `PreUpdate`: what they use is taken away

@@ -297,6 +297,10 @@ Generator versions: their old code was removed with the first `FORGET_BEFORE` bu
 
 Each building's `ruin` comes from its poi's map seed (`Generator::for_site`), so the world map's model and the site agree. Claude's first numbers, to tune by eye: 30% of buildings are ruined, evenly from 1 to 5; tents and ice shelters never are.
 
+## 2026-11-01: Full-screen panels are layers
+
+The owner's design: a full-screen panel (the debug menu, the full map) darkens everything outside it, and a second one above it is smaller and darkens again, so some areas are darkened twice. Clicks outside do nothing but close the top layer. The menu is now 90% of the window; a second layer will be 75% (Claude's number). Claude's choices: the full map keeps its own size and stands above moveable panels, so they are darkened and blocked too; the debug menu doesn't open over it, as it would be the bigger.
+
 ## 2026-11-01: Forgetting sites, and when a generator change reaches players
 
 The owner's request: Forget Map (Server) makes the server forget a site, or on the world map every site, so they are made anew with the current generators; plain Forget Map on the world map forgets the character's memory of every site. Claude's choices, agreed in planning: a version bump alone still leaves a site as it is while the old version can run, so players' changes survive; a version that can't run any more is remade instead of refusing entry. Characters record the version they knew: their memory of a changed site is dropped, and anyone in one when it changes, or loading into one, is put out at its poi to go in again. Whoever asks for the forgetting stays and arrives on the new map, since a made-up dev site has no way back in.

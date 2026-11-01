@@ -1,6 +1,6 @@
 # client: debug_menu
 
-The debug menu: backtick or the warning button top left opens a full-screen list of actions, filtered by typing, chosen by click, tap, arrow keys and Return. Replaces the old demo keys. Works in native and web builds.
+The debug menu: backtick or the warning button top left opens a full-screen layer (`widgets`, 90% of the window) listing actions, filtered by typing, chosen by click, tap, arrow keys and Return. Replaces the old demo keys. Works in native and web builds.
 
 ## Files
 
@@ -19,7 +19,7 @@ The debug menu: backtick or the warning button top left opens a full-screen list
 
 ## Depends on
 
-- `common` (`ClickMode`, `DebugInfo`, `CurrentDungeon`, `GameView`, `HerbGrowthShift`, `TouchGesture`, `Weather`), `connection` (`ToServer`), `player` (`TakeStep`, `PlayerSystems`), `view3d` (`OrbitCamera`), `widgets`, `dungeon_map` (`CROP_STAGES`, `HERB_STAGES`), `shared::movement`, `shared::showcase`, `shared::site`.
+- `common` (`ClickMode`, `DebugInfo`, `CurrentDungeon`, `GameView`, `HerbGrowthShift`, `TouchGesture`, `Weather`), `connection` (`ToServer`), `player` (`TakeStep`, `PlayerSystems`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `widgets`, `dungeon_map` (`CROP_STAGES`, `HERB_STAGES`), `shared::movement`, `shared::showcase`, `shared::site`.
 
 ## Used by
 
@@ -28,8 +28,8 @@ The debug menu: backtick or the warning button top left opens a full-screen list
 ## Notes
 
 - Owner's design, after RimWorld's: choosing an entry closes the menu; a toggle shows its new state for `TOGGLE_SECONDS` (1) first. Disabled entries stay visible and do nothing. Columns fill top to bottom, then overflow into the next.
-- Claude's choices: Return with nothing highlighted takes the first entry that can be used; arrow keys can highlight disabled entries; Esc and its close button close it too; turning Cycle Temperature off puts the snow line straight back; only one of Teleport and Change Cell Mode can be on. Reset View is here as tablets have no Home key (Home still works).
-- While open it takes all input: `take_input` clears keys, wheel and gestures, and its root stops presses, so nothing behind it reacts.
+- Claude's choices: Return with nothing highlighted takes the first entry that can be used; arrow keys can highlight disabled entries; Esc, its close button and a click outside it close it too; backtick does nothing over the full map, as the menu would be the bigger of the two (owner's rule: a layer above is smaller); turning Cycle Temperature off puts the snow line straight back; only one of Teleport and Change Cell Mode can be on. Reset View is here as tablets have no Home key (Home still works).
+- While open it takes all input: `take_input` clears keys, wheel and gestures, and its layer stops presses, so nothing behind it reacts.
 - On-screen keyboard: browsers only allow focusing an input during the tap, so a `pointerup` listener on the canvas focuses the hidden input if the tap is on the filter box, whose place is sent each frame. With it focused the game's keys see nothing, so the input's Return and Escape come through `take_keys`, and arrow keys on an attached keyboard don't work until tapping elsewhere is added. Untested on a real iPad.
 - Panels stay open with greyed buttons where they can't act. Stairs, fields and herbs changes are only what is drawn; the next level goes back to its own, except herbs (`HerbGrowthShift` stays).
 - Suns and Moons (`bodies.rs`): a row per sun, a gap, a row per moon: a swatch of its colour and a slider along its kind's colours (`shared::celestial::colour_along`), and for suns a slider for intensity (`MOST_INTENSITY`; above about 1.15 on flat ground `world_map`'s cap holds it). Only this client's drawing, until the world is joined again. A generated body can be paler than anything on its slider: the mark goes to the nearest, and the swatch shows it exactly until it is moved.

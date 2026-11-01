@@ -2,6 +2,7 @@
 //! buttons, tooltips and panels that can be moved about. Use these rather than
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
+mod fullscreen;
 mod moveable;
 mod slider;
 
@@ -10,6 +11,9 @@ use bevy::prelude::*;
 
 use crate::common::PointerSystems;
 
+pub use fullscreen::{
+    LAYER_EDGE, darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer,
+};
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use slider::{SliderMoved, spawn_slider};
 

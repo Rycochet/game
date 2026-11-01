@@ -12,16 +12,17 @@ use bevy::window::PrimaryWindow;
 use super::actions::{DebugAction, Facts, Step, next_highlight};
 use super::{FactSources, soft_keyboard};
 use crate::common::{GameView, TouchGesture};
+use crate::minimap::FullMap;
 use crate::widgets::{
-    ButtonPressed, ButtonState, INK, Pressable, panel, panel_title, spawn_check_button,
-    spawn_close_button, spawn_icon_button, stops_presses,
+    ButtonPressed, ButtonState, INK, LAYER_EDGE, Pressable, layer_share, panel_title,
+    spawn_check_button, spawn_close_button, spawn_fullscreen_layer, spawn_icon_button,
 };
 
 /// How long a toggled entry stays on show before the menu closes.
 const TOGGLE_SECONDS: f32 = 1.0;
 
-/// Above every panel, however many times they have been brought to the front.
-const MENU_Z: i32 = 1_000_000;
+/// Which full-screen layer it is.
+const MENU_LAYER: i32 = 0;
 
 const WARNING_BUTTON: f32 = 34.0;
 const CORNER_GAP: f32 = 10.0;
@@ -143,22 +144,18 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
                 .insert((WarningButton, Pressable));
         });
 
-    let root = commands
-        .spawn((panel(), MenuRoot, GlobalZIndex(MENU_Z), Visibility::Hidden))
-        .id();
-    commands.entity(root).insert((
-        stops_presses(root),
+    let (layer, list) = spawn_fullscreen_layer(
+        &mut commands,
+        MENU_LAYER,
         Node {
-            position_type: PositionType::Absolute,
-            width: percent(100),
-            height: percent(100),
             padding: UiRect::all(px(MARGIN)),
             flex_direction: FlexDirection::Column,
             row_gap: px(GAP * 3.0),
             ..default()
         },
-    ));
-    commands.entity(root).with_children(|root| {
+    );
+    commands.entity(layer).insert(MenuRoot);
+    commands.entity(list).with_children(|root| {
         root.spawn(Node {
             height: px(TITLE_ROW),
             min_height: px(TITLE_ROW),
@@ -212,7 +209,8 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
 
 /// How many entries fit in a column in a window this tall.
 fn rows_in(window_height: f32) -> usize {
-    let room = window_height - 2.0 * MARGIN - TITLE_ROW - FILTER_HEIGHT - 2.0 * GAP * 3.0;
+    let inside = window_height * layer_share(MENU_LAYER) - 2.0 * (LAYER_EDGE + MARGIN);
+    let room = inside - TITLE_ROW - FILTER_HEIGHT - 2.0 * GAP * 3.0;
     (((room + GAP) / (ROW + GAP)).floor() as usize).max(1)
 }
 
@@ -238,6 +236,9 @@ fn return_chooses(
     .filter(|action| action.is_available(facts))
 }
 
+/// Presses on these close the menu: its close button, and its layer outside it.
+type ClosesMenu = Or<(With<MenuClose>, With<MenuRoot>)>;
+
 /// The menu gets input after the widgets have looked for presses on it, and
 /// before the maps and the game: while it is open, it has all of it.
 #[allow(clippy::too_many_arguments)]
@@ -250,7 +251,8 @@ pub(super) fn take_input(
     mut pressed: MessageReader<ButtonPressed>,
     entries: Query<&MenuEntry>,
     warning: Query<(), With<WarningButton>>,
-    close: Query<(), With<MenuClose>>,
+    close: Query<(), ClosesMenu>,
+    full_map: Res<FullMap>,
     window: Single<&Window, With<PrimaryWindow>>,
     sources: FactSources,
     // Real time: game time is capped per frame, so it runs slow when unfocused.
@@ -259,8 +261,10 @@ pub(super) fn take_input(
     mut actions: MessageWriter<DebugAction>,
 ) {
     let presses: Vec<Entity> = pressed.read().map(|press| press.0).collect();
-    let toggled = keys.just_pressed(KeyCode::Backquote)
-        || presses.iter().any(|&entity| warning.contains(entity));
+    // Not over the full map: it would be the bigger of the two.
+    let toggled = !full_map.open
+        && (keys.just_pressed(KeyCode::Backquote)
+            || presses.iter().any(|&entity| warning.contains(entity)));
     let typed: Vec<KeyboardInput> = typed.read().cloned().collect();
     if toggled {
         let open = !menu.open;
@@ -497,7 +501,7 @@ mod tests {
 
     #[test]
     fn columns_hold_what_fits() {
-        assert_eq!(rows_in(720.0), 15);
+        assert_eq!(rows_in(720.0), 13);
         assert_eq!(rows_in(10.0), 1);
     }
 }

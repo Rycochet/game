@@ -11,7 +11,8 @@ use super::{
 };
 use crate::common::{PointerPosition, TouchGesture};
 
-/// Above the full map (20 to 25); a panel clicked on goes above the others.
+/// Above the maps, below full-screen layers; a panel clicked on goes above the
+/// others.
 const FIRST_PANEL_Z: i32 = 30;
 
 const EDGE: f32 = 3.0;
@@ -41,6 +42,9 @@ pub(super) enum PanelPart {
     Body(Entity),
     TitleBar(Entity),
     Close(Entity),
+    /// Stops it reaching widgets under it, but leaves it for its owner to read
+    /// from the mouse and fingers.
+    LeftForOwner(Entity),
 }
 
 /// A moveable panel with this title, at this place. Returns the panel, and the
@@ -242,7 +246,7 @@ pub(super) fn take_presses(
             if !state.is_some_and(|state| state.is_disabled()) {
                 pressed.write(ButtonPressed(entity));
             }
-        } else if part.is_some() {
+        } else if part.is_some_and(|part| !matches!(part, PanelPart::LeftForOwner(_))) {
             mouse.clear_just_pressed(MouseButton::Left);
         }
         // A press on a button in a panel is a press on the panel, but its
@@ -257,7 +261,7 @@ pub(super) fn take_presses(
                 dragging.from = pointer.0;
             }
             Some(PanelPart::Body(panel)) => raise(panel, &mut panels),
-            None => {}
+            Some(PanelPart::LeftForOwner(_)) | None => {}
         }
     }
     if !mouse.pressed(MouseButton::Left) {
@@ -277,8 +281,8 @@ pub(super) fn take_presses(
                 start,
                 match part_at(start) {
                     Some(PanelPart::TitleBar(panel)) => Some(panel),
+                    Some(PanelPart::LeftForOwner(_)) | None => None,
                     Some(_) => Some(Entity::PLACEHOLDER),
-                    None => None,
                 },
             ));
         }
@@ -447,6 +451,28 @@ mod tests {
         test.click(120.0, 160.0);
         assert!(!test.still_pressed());
         assert!(test.presses().is_empty());
+    }
+
+    #[test]
+    fn a_part_left_for_its_owner_hides_what_is_under_it_and_keeps_the_press() {
+        let mut test = test();
+        let root = test.root;
+        test.app.world_mut().spawn((
+            PanelPart::LeftForOwner(root),
+            laid_out(Vec2::ZERO, Vec2::new(800.0, 600.0), 5),
+        ));
+        // On the button, and on the title bar, which would have started a drag.
+        test.click(120.0, 160.0);
+        assert!(test.still_pressed());
+        assert!(test.presses().is_empty());
+        let start = Vec2::new(120.0, 110.0);
+        test.click(start.x, start.y);
+        assert!(test.still_pressed());
+        // A finger's drag is left too.
+        let drag = Vec2::new(5.0, 5.0);
+        touch_drag(&mut test, start, drag);
+        assert_eq!(test.app.world().resource::<TouchGesture>().drag, drag);
+        assert_eq!(test.panel_at(), Vec2::new(100.0, 100.0));
     }
 
     #[test]
