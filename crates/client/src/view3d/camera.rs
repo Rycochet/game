@@ -1,10 +1,13 @@
 //! A camera that circles a point, turned and tilted by dragging with the right
-//! mouse button and zoomed with the wheel. Shared by every 3D view.
+//! mouse button and zoomed with the wheel, or by two fingers. Shared by every
+//! 3D view.
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
+
+use crate::common::TouchGesture;
 
 /// Turn or tilt per pixel of mouse movement while right-dragging.
 const RADIANS_PER_PIXEL: f32 = 0.005;
@@ -103,6 +106,19 @@ impl OrbitCamera {
         self.distance = (self.distance * ZOOM_PER_NOTCH.powf(notches)).clamp(home * MIN_ZOOM, home);
     }
 
+    /// Moves in by a pinch: fingers twice as far apart halve the distance.
+    fn zoom_by_pinch(&mut self, pinch: f32) {
+        let home = self.home.2;
+        self.distance = (self.distance / pinch).clamp(home * MIN_ZOOM, home);
+    }
+
+    /// Turns by an angle in radians, clockwise on the screen: the map follows
+    /// the fingers. (Positive yaw swings the camera anticlockwise seen from
+    /// above, which turns the scene clockwise.)
+    fn twist(&mut self, radians: f32) {
+        self.yaw = (self.yaw + radians).rem_euclid(TAU);
+    }
+
     /// The distance as a fraction of the starting one: 1 in the starting
     /// view (the furthest out), smaller when zoomed in.
     pub fn zoom(&self) -> f32 {
@@ -148,9 +164,44 @@ pub fn control_with_mouse(
     }
 }
 
+/// Two fingers do what the mouse does: pinching zooms, twisting turns, and
+/// moving both up or down tilts, in the same direction as right-dragging.
+pub fn control_with_touch(gesture: Res<TouchGesture>, mut cameras: Query<&mut OrbitCamera>) {
+    if gesture.pinch == 1.0 && gesture.twist == 0.0 && gesture.tilt == 0.0 {
+        // Leave the cameras untouched, so their change detection stays quiet.
+        return;
+    }
+    for mut camera in &mut cameras {
+        camera.zoom_by_pinch(gesture.pinch);
+        camera.twist(gesture.twist);
+        camera.turn(Vec2::new(0.0, gesture.tilt));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_clockwise_twist_turns_the_same_way_as_dragging_left() {
+        // Dragging right swings the near side right: anticlockwise on screen.
+        let (mut twisted, mut dragged) = (camera(40.0), camera(40.0));
+        twisted.twist(0.1);
+        dragged.turn(Vec2::new(-10.0, 0.0));
+        assert!(twisted.yaw > camera(40.0).yaw);
+        assert!(dragged.yaw > camera(40.0).yaw);
+    }
+
+    #[test]
+    fn a_pinch_keeps_to_the_zoom_limits() {
+        let mut camera = camera(0.0);
+        camera.zoom_by_pinch(0.5);
+        assert_eq!(camera.zoom(), 1.0);
+        camera.zoom_by_pinch(1.25);
+        assert!((camera.zoom() - 0.8).abs() < 1e-5);
+        camera.zoom_by_pinch(100.0);
+        assert!((camera.zoom() - MIN_ZOOM).abs() < 1e-5);
+    }
 
     fn camera(yaw_degrees: f32) -> OrbitCamera {
         let mut camera = OrbitCamera::new(30f32.to_radians(), 100.0, 0.0);

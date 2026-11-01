@@ -334,3 +334,7 @@ The owner asked for an area of the world map outside the normal generators, reac
 ## 2026-10-31: Windows in outside walls
 
 The owner's rules: most buildings have windows in their outside walls, each with wall on either side and no wall at a diagonal, which looks tight; castles, towers and forts only above the ground floor, pyramids never. Drawn already; on the maps a pair of parallel lines right across the cell, white between them and beyond them the colour of what is known to be there, with walls beside them hatched as beside a door. Placed by hashes after any ruin, drawing nothing from the floors' sequences, so no generator version changed.
+
+## 2026-10-31: Touch: taps are clicks, two fingers move the camera
+
+Asked for by the owner, after the web client loaded and drew well on an iPad. A new `touch` module makes a tap a left mouse click for one frame, on lifting, so all existing click code works and the start of a pinch doesn't walk the player. Readers of the cursor use `common::PointerPosition` (finger, otherwise mouse) rather than faking the cursor: `Window::set_cursor_position` moves the real mouse on native and fails in browsers. Two fingers pinch to zoom and twist to turn; moving both up or down tilts, Claude's addition since tilt was otherwise out of reach on a tablet. One finger on the main view only taps; on the full map it drags. Target: browsers on tablets and phones, not native mobile apps.

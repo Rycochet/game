@@ -13,6 +13,7 @@ mod minimap;
 mod player;
 mod site;
 mod surface_style;
+mod touch;
 mod ui;
 mod view3d;
 mod world_map;
@@ -51,6 +52,7 @@ fn main() {
         common::CommonPlugin,
         connection::ConnectionPlugin,
         surface_style::SurfaceStylePlugin,
+        touch::TouchPlugin,
         player::PlayerPlugin,
         view3d::View3dPlugin,
         world_map::WorldMapPlugin,

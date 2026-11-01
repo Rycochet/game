@@ -33,7 +33,6 @@ use bevy::light::NotShadowCaster;
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
-use bevy::window::PrimaryWindow;
 use shared::dungeon::{Cell, Sight};
 use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
@@ -41,7 +40,7 @@ use shared::surface::SurfaceSample;
 
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, LightSource, MapPosition,
-    SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
+    PointerPosition, SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -838,7 +837,7 @@ fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     clicked: Res<ClickedToken>,
-    window: Single<&Window, With<PrimaryWindow>>,
+    pointer: Res<PointerPosition>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
@@ -848,7 +847,7 @@ fn pick_on_click(
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
         return;
     }
-    let Some(cursor) = window.cursor_position() else {
+    let Some(cursor) = pointer.0 else {
         return;
     };
     let (camera, camera_transform) = *camera;

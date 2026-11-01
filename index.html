@@ -14,14 +14,25 @@
                 height: 100%;
                 background: #000;
                 overflow: hidden;
+                overscroll-behavior: none;
             }
             #game {
                 display: block;
                 width: 100%;
                 height: 100%;
                 outline: none;
+                /* The game has its own gestures: the browser mustn't scroll or
+                   zoom the page, or select or offer to save the picture. */
+                touch-action: none;
+                user-select: none;
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
             }
         </style>
+        <script>
+            // Safari's own pinch zoom, which it may start despite touch-action.
+            document.addEventListener("gesturestart", (event) => event.preventDefault());
+        </script>
     </head>
     <body>
         <canvas id="game"></canvas>

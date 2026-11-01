@@ -24,8 +24,8 @@ use shared::protocol::{ClientMessage, SeenPoi};
 use shared::site::StairsDirection;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels, Portal,
-    SmoothPosition, Token, Weather,
+    CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels, PointerPosition,
+    PointerSystems, Portal, SmoothPosition, Token, TouchGesture, Weather,
 };
 use crate::connection::ToServer;
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
@@ -81,6 +81,8 @@ const FULL_MAP_MARGIN: f32 = 20.0;
 const TITLE_HEIGHT: f32 = 34.0;
 /// The close button, across.
 const CLOSE_PIXELS: f32 = 28.0;
+/// How far round the close button still counts as on it, for fingers.
+const CLOSE_REACH: f32 = 10.0;
 /// How far the box naming what is under the mouse sits above the margin.
 const HOVER_LIFT: f32 = 12.0;
 
@@ -121,7 +123,8 @@ impl Plugin for MinimapPlugin {
                 PreUpdate,
                 (go_into_clicked_poi, take_input, floors::back_to_own_floor)
                     .chain()
-                    .after(InputSystems),
+                    .after(InputSystems)
+                    .after(PointerSystems),
             )
             .add_systems(
                 Update,
@@ -399,10 +402,10 @@ fn over_full_map(window: &Window, at: Vec2) -> OverFullMap {
     if !inside(0.0, side, at.x) || !inside(0.0, side, at.y) {
         OverFullMap::Outside
     } else if inside(
-        side - FULL_MAP_MARGIN - CLOSE_PIXELS,
-        side - FULL_MAP_MARGIN,
+        side - FULL_MAP_MARGIN - CLOSE_PIXELS - CLOSE_REACH,
+        side,
         at.x,
-    ) && inside(FULL_MAP_MARGIN, FULL_MAP_MARGIN + CLOSE_PIXELS, at.y)
+    ) && inside(0.0, FULL_MAP_MARGIN + CLOSE_PIXELS + CLOSE_REACH, at.y)
     {
         OverFullMap::CloseButton
     } else {
@@ -455,6 +458,7 @@ fn go_into_clicked_poi(
     world: Option<Res<CurrentWorld>>,
     mut full: ResMut<FullMap>,
     mut to_server: MessageWriter<ToServer>,
+    pointer: Res<PointerPosition>,
 ) {
     let view = *view.get();
     let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
@@ -462,8 +466,8 @@ fn go_into_clicked_poi(
         return;
     }
     let centre = (player.x, player.y);
-    let poi = window
-        .cursor_position()
+    let poi = pointer
+        .0
         .and_then(|cursor| spot_on_full_map(&window, cursor, view, &camera, &full, centre))
         .and_then(|(spot, units_per_pixel)| {
             let reach = ICON_PIXELS * full.zoom / 2.0;
@@ -482,7 +486,8 @@ fn go_into_clicked_poi(
 /// The maps get the input first, in `PreUpdate`: what they use is taken away
 /// before the game's systems look. M or clicking the minimap opens the full
 /// map; M, Esc, its close button or clicking outside it closes it. While it is
-/// open the mouse is the map's: dragging moves it and the wheel zooms it.
+/// open the mouse and fingers are the map's: dragging moves it, and the wheel
+/// or a pinch zooms it.
 #[allow(clippy::too_many_arguments)]
 fn take_input(
     mut keys: ResMut<ButtonInput<KeyCode>>,
@@ -496,6 +501,8 @@ fn take_input(
     mut levels: ResMut<OtherLevels>,
     player: Single<&SmoothPosition, With<Player>>,
     mut full: ResMut<FullMap>,
+    pointer: Res<PointerPosition>,
+    mut gesture: ResMut<TouchGesture>,
 ) {
     let view = *view.get();
     if view == GameView::Connecting {
@@ -505,7 +512,7 @@ fn take_input(
         let open = !full.open;
         full.set_open(open);
     }
-    let cursor = window.cursor_position();
+    let cursor = pointer.0;
     // A floor's button: that floor, round the player's place.
     let buttons = floors::buttons(view, full.open, &dungeon, &levels);
     let button = cursor.and_then(|at| floors::under(&window, at, buttons.len()));
@@ -564,15 +571,23 @@ fn take_input(
         MouseScrollUnit::Pixel => scroll.delta.y / PIXELS_PER_NOTCH,
     };
     scroll.delta = Vec2::ZERO;
+    // The fingers are the map's too: the camera gets none of this.
+    let touch = std::mem::take(&mut *gesture);
     let unzoomed = units_per_pixel(view, &window, &camera);
-    if notches != 0.0 {
+    if notches != 0.0 || touch.pinch != 1.0 {
         let before = unzoomed / f64::from(full.zoom);
-        full.zoom = (full.zoom * ZOOM_PER_NOTCH.powf(notches)).clamp(MIN_ZOOM, MAX_ZOOM);
+        let factor = ZOOM_PER_NOTCH.powf(notches) * touch.pinch;
+        full.zoom = (full.zoom * factor).clamp(MIN_ZOOM, MAX_ZOOM);
         let after = unzoomed / f64::from(full.zoom);
-        // Towards the mouse: what is under it stays under it.
+        // Towards the mouse, or between the fingers: what is there stays there.
         let area = full_map_area(&window);
         let middle = full_map_picture_corner(&window) + area / 2.0;
-        let over_map = cursor.map(|at| at - middle).filter(|from_middle| {
+        let towards = if touch.pinch != 1.0 {
+            Some(touch.centre)
+        } else {
+            cursor
+        };
+        let over_map = towards.map(|at| at - middle).filter(|from_middle| {
             from_middle.x.abs() <= area.x / 2.0 && from_middle.y.abs() <= area.y / 2.0
         });
         if let Some(from_middle) = over_map
@@ -604,13 +619,19 @@ fn take_input(
     if let Some(at) = full.centre.filter(|&at| !kept && !known(at) && known(spot)) {
         full.centre = Some(projection::slide(spot, at, known));
     }
-    if let (Some(from), Some(to)) = (full.drag_from, cursor) {
-        full.drag_from = cursor;
+    let moved = match (full.drag_from, cursor) {
+        (Some(from), Some(to)) => {
+            full.drag_from = cursor;
+            Some(to - from)
+        }
+        _ => (touch.drag != Vec2::ZERO).then_some(touch.drag),
+    };
+    if let Some(moved) = moved {
         let centre = full.centre.unwrap_or(spot);
         // The land moves with the cursor, so the centre goes the other way.
         let wanted = (
-            centre.0 - f64::from(to.x - from.x) * scale,
-            centre.1 - f64::from(to.y - from.y) * scale,
+            centre.0 - f64::from(moved.x) * scale,
+            centre.1 - f64::from(moved.y) * scale,
         );
         full.centre = Some(if known(centre) {
             projection::slide(centre, wanted, known)
@@ -993,24 +1014,22 @@ fn name_what_is_hovered(
     full: Res<FullMap>,
     mut holder: Single<&mut Visibility, With<HoverBox>>,
     mut text: Single<&mut Text, With<HoverText>>,
+    pointer: Res<PointerPosition>,
 ) {
     let view = *view.get();
-    let name = window
-        .cursor_position()
-        .filter(|_| full.open)
-        .and_then(|cursor| {
-            let centre = levels.spot(&dungeon, (player.x, player.y));
-            let (spot, units_per_pixel) =
-                spot_on_full_map(&window, cursor, view, &camera, &full, centre)?;
-            hovered_name(
-                view,
-                world.as_deref(),
-                levels.shown(&dungeon),
-                spot,
-                ICON_PIXELS * full.zoom / 2.0,
-                units_per_pixel,
-            )
-        });
+    let name = pointer.0.filter(|_| full.open).and_then(|cursor| {
+        let centre = levels.spot(&dungeon, (player.x, player.y));
+        let (spot, units_per_pixel) =
+            spot_on_full_map(&window, cursor, view, &camera, &full, centre)?;
+        hovered_name(
+            view,
+            world.as_deref(),
+            levels.shown(&dungeon),
+            spot,
+            ICON_PIXELS * full.zoom / 2.0,
+            units_per_pixel,
+        )
+    });
     let shown = if name.is_some() {
         Visibility::Inherited
     } else {
@@ -1207,6 +1226,8 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<AccumulatedMouseScroll>()
+            .init_resource::<PointerPosition>()
+            .init_resource::<TouchGesture>()
             .init_resource::<OtherLevels>()
             .init_resource::<FullMap>();
         app.world_mut().spawn((Window::default(), PrimaryWindow));
@@ -1223,9 +1244,7 @@ mod tests {
     }
 
     fn set_cursor(app: &mut App, at: Vec2) {
-        let mut windows = app.world_mut().query::<&mut Window>();
-        let mut window = windows.single_mut(app.world_mut()).expect("a window");
-        window.set_cursor_position(Some(at));
+        app.world_mut().resource_mut::<PointerPosition>().0 = Some(at);
     }
 
     fn press_key(app: &mut App, key: KeyCode) {
@@ -1462,6 +1481,45 @@ mod tests {
         // Opening again starts over.
         app.world_mut().resource_mut::<FullMap>().set_open(true);
         assert_eq!(app.world().resource::<FullMap>().zoom, OPENING_ZOOM);
+    }
+
+    #[test]
+    fn fingers_on_the_open_map_are_kept_from_the_camera() {
+        let mut app = app();
+        open_map(&mut app);
+        // In a 1280 × 720 window, the map's picture is 608 × 574, at (336, 90).
+        let middle = Vec2::new(640.0, 377.0);
+        *app.world_mut().resource_mut::<TouchGesture>() = TouchGesture {
+            pinch: 1.25,
+            twist: 0.5,
+            centre: middle + Vec2::new(110.0, 55.0),
+            ..default()
+        };
+        step(&mut app);
+        // As the wheel's notch does: the same place stays between the fingers.
+        let full = app.world().resource::<FullMap>();
+        assert_eq!(full.zoom, OPENING_ZOOM * 1.25);
+        let (x, y) = full.centre.expect("moved");
+        assert!((x - 101.0).abs() < 1e-6, "{x}");
+        assert!((y - 100.5).abs() < 1e-6, "{y}");
+        assert_eq!(
+            *app.world().resource::<TouchGesture>(),
+            TouchGesture::default()
+        );
+
+        // One finger drags it: the land follows, so the centre goes the other way.
+        app.world_mut().resource_mut::<TouchGesture>().drag = Vec2::new(11.0, 0.0);
+        step(&mut app);
+        let (dragged, _) = app.world().resource::<FullMap>().centre.expect("moved");
+        assert!(dragged < x, "{dragged}");
+    }
+
+    #[test]
+    fn fingers_are_left_for_the_camera_while_the_map_is_closed() {
+        let mut app = app();
+        app.world_mut().resource_mut::<TouchGesture>().twist = 0.5;
+        step(&mut app);
+        assert_eq!(app.world().resource::<TouchGesture>().twist, 0.5);
     }
 
     #[test]

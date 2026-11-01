@@ -21,11 +21,11 @@ use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::{NotShadowCaster, light_consts};
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use shared::protocol::ClientMessage;
 
 use crate::common::{
-    CurrentWorld, GameClock, GameView, MapPosition, SmoothPosition, Token, ViewStats, Weather,
+    CurrentWorld, GameClock, GameView, MapPosition, PointerPosition, SmoothPosition, Token,
+    ViewStats, Weather,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -477,7 +477,7 @@ fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     clicked: Res<ClickedToken>,
-    window: Single<&Window, With<PrimaryWindow>>,
+    pointer: Res<PointerPosition>,
     camera: Single<(&Camera, &GlobalTransform, &OrbitCamera), With<ViewCamera>>,
     player: Single<&MapPosition, With<Player>>,
     world: Res<CurrentWorld>,
@@ -492,7 +492,7 @@ fn pick_on_click(
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
         return;
     }
-    let (Some(cursor), Some(mut cache)) = (window.cursor_position(), cache) else {
+    let (Some(cursor), Some(mut cache)) = (pointer.0, cache) else {
         return;
     };
     let (camera, camera_transform, orbit) = *camera;
