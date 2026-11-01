@@ -10,7 +10,7 @@ The client's connection to the server: joining, sending the player's steps and p
 
 - `crates/client/src/connection/ping.rs`: `PING_EVERY` (1 s), `Pinger` (makes `Ping`s, spots and times `Pong`s in incoming bytes), `LatestPong` (where the game picks up the newest `TimedPong`; older ones are dropped). Tests: timed, other messages left alone, only the latest kept.
 
-Also keeps `common::ServerClock`: `run_clock` runs it in real time, and `apply_pong` (after it) eases it towards the server's clock plus half the round trip and however long the answer waited for this frame (jumping if over 5 s out). Over a network, the socket sends the pings and times them, so slow or frozen frames don't count and it carries on while the window is frozen; the game only sees the result. Single player has no socket: `send_local_pings` sends them once in a world, and `ServerClock::local_server` makes the HUD say `local` as there is no network to time.
+Also keeps `common::ServerClock`: `run_clock` runs it in real time, and `apply_pong` (after it) eases it towards the server's clock plus half the round trip and however long the answer waited for this frame (jumping if over 5 s out). Over a network, the socket sends the pings and times them, so slow or frozen frames don't count and it carries on while the window is frozen; the game only sees the result. Single player has no socket: `send_local_pings` sends them once in a world, and `ServerClock::local_server` makes the HUD show a dash as there is no network to time.
 
 ## Public API
 

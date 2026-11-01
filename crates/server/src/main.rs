@@ -9,6 +9,8 @@
 //!   serve; without it, only the game's WebSockets are served.
 //! - `HALL_OF_WORLDS_SERVER_DATA`: where to save (default: the user's data
 //!   folder).
+//! - `HALL_OF_WORLDS_LOG_PINGS`: `1` logs every connection's every round trip, a
+//!   line a second for each client, for looking into network trouble (default off).
 
 use std::env;
 use std::net::SocketAddr;
@@ -27,6 +29,7 @@ fn main() {
     let web = env::var_os("HALL_OF_WORLDS_WEB").map(Into::into);
     let data = default_data_folder();
     let dev_tools = env::var("HALL_OF_WORLDS_DEV_TOOLS").is_ok_and(|value| value == "1");
+    let log_pings = env::var("HALL_OF_WORLDS_LOG_PINGS").is_ok_and(|value| value == "1");
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {
@@ -35,7 +38,14 @@ fn main() {
         },
         Some(data.clone()),
     );
-    app.add_plugins((LogPlugin::default(), NetworkPlugin { address, web }));
+    app.add_plugins((
+        LogPlugin::default(),
+        NetworkPlugin {
+            address,
+            web,
+            log_pings,
+        },
+    ));
     bevy::log::info!("Saving in {}", data.display());
     if dev_tools {
         bevy::log::warn!("Dev tools are on: anyone connected can teleport and change the world");

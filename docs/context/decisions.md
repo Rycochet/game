@@ -367,7 +367,7 @@ The owner's choice, replacing Bevy's Fira Mono for all text. It sits at Bevy's d
 
 ## 2026-11-01: Pings are timed where the bytes are carried
 
-The owner asked for a more accurate ping that keeps going while the window is frozen. The number used to include the game on both sides: a frame on the client (a second apart out of focus) and up to a 20 Hz tick on the server. Now the server's network thread answers `Ping` itself, from a copy of the clock set each tick, and the client's socket (its thread on native, the browser's callback on the web) sends pings and times the answers, handing the game only the latest. These two messages are recognised from their bytes, by size first, so other messages are not decoded twice. Single player has no network, so it shows `local`. The browser has no thread for this: a busy page still delays its timing (a Web Worker could fix that, left until the owner takes up web performance).
+The owner asked for a more accurate ping that keeps going while the window is frozen. The number used to include the game on both sides: a frame on the client (a second apart out of focus) and up to a 20 Hz tick on the server. Now the server's network thread answers `Ping` itself, from a copy of the clock set each tick, and the client's socket (its thread on native, the browser's callback on the web) sends pings and times the answers, handing the game only the latest. These two messages are recognised from their bytes, by size first, so other messages are not decoded twice. Single player has no network, so it shows a dash. The browser has no thread for this: a busy page still delays its timing (a Web Worker could fix that, left until the owner takes up web performance).
 
 ## 2026-11-01: The server times connections itself, with WebSocket pings
 
@@ -376,3 +376,7 @@ The owner asked whether the server could use the ping, suggesting the client han
 ## 2026-11-01: A copy of the loading screen in the page, for the download
 
 The owner saw 5-6 seconds of black page while the wasm downloaded. `index.html` now shows the same screen saying "Downloading...", until the game has drawn its own and removes it, which also covers compiling the wasm and starting the graphics. It needs no JavaScript beyond showing the title once its font has loaded, as the owner wants no flash of another font there. The fonts come from the same server as the page, so nothing needs the internet. The cost is colours and sizes kept in two places.
+
+## 2026-11-01: Symbols for the status text, from Noto Emoji
+
+The owner's choice: the status text labels its numbers with symbols, and sits beside the warning button, with the mode clicks are in (in red) on its first line, shown even when the rest is hidden. Lexend has no symbols, so Noto Emoji is built in as a fallback (SIL OFL 1.1), one colour like the rest of the text. The 419 KB version 1.05 already on hand lacks World Map (U+1F5FA), so the owner chose Round Pin (U+1F4CD) for position over downloading the current 2 MB font. The snow line only shows during Cycle Temperature, and single player's ping is a dash.

@@ -55,6 +55,9 @@ const SILENT_AFTER: Duration = Duration::from_secs(30);
 pub struct NetworkPlugin {
     pub address: SocketAddr,
     pub web: Option<PathBuf>,
+    /// Whether to log every connection's every round trip: a line a second
+    /// for each client, for looking into network trouble.
+    pub log_pings: bool,
 }
 
 /// Connections the web server has accepted, waiting to join the game.
@@ -92,6 +95,7 @@ struct Sockets {
     connections: Arc<AtomicU64>,
     ping_every: Duration,
     silent_after: Duration,
+    log_pings: bool,
 }
 
 impl Plugin for NetworkPlugin {
@@ -110,6 +114,7 @@ impl Plugin for NetworkPlugin {
             connections: Arc::default(),
             ping_every: PING_EVERY,
             silent_after: SILENT_AFTER,
+            log_pings: self.log_pings,
         };
         thread::Builder::new()
             .name("network".into())
@@ -283,10 +288,13 @@ async fn carry(mut socket: WebSocket, sockets: Sockets) {
                         }
                     }
                     Some(Ok(Message::Pong(payload))) => {
-                        if let Some(round_trip) = pings.answered(&payload, last_heard)
-                            && let Some(troubled) = latency.measured(round_trip)
-                        {
-                            log_trouble(number, &latency, troubled);
+                        if let Some(round_trip) = pings.answered(&payload, last_heard) {
+                            if sockets.log_pings {
+                                info!("Connection {number} ping: {:.1} ms", round_trip.as_secs_f64() * 1000.0);
+                            }
+                            if let Some(troubled) = latency.measured(round_trip) {
+                                log_trouble(number, &latency, troubled);
+                            }
                         }
                     }
                     // Text isn't part of the game; pings are answered by the
@@ -360,6 +368,7 @@ mod tests {
             connections: Arc::default(),
             ping_every,
             silent_after,
+            log_pings: false,
         };
         thread::spawn(move || serve(listener, None, sockets, Arc::default()));
         (address, accepted)
