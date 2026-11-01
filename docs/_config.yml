@@ -1,0 +1,18 @@
+# The user documentation at https://hallofworlds.wiki, built by
+# .github/workflows/docs.yml. Pages are Markdown; see "User documentation" in
+# CLAUDE.md for which ones must change along with the code.
+title: Hall of Worlds
+description: Documentation for Hall of Worlds, a multiplayer roguelike with an infinite, procedurally generated world.
+url: https://hallofworlds.wiki
+
+remote_theme: just-the-docs/just-the-docs@v0.10.1
+plugins:
+  - jekyll-remote-theme
+color_scheme: dark
+search_enabled: true
+aux_links:
+  GitHub: https://github.com/Rycochet/game
+
+# Notes for Claude, not for players.
+exclude:
+  - context

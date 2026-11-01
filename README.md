@@ -3,8 +3,8 @@
 A multiplayer roguelike with an infinite, procedurally generated world.
 
 - <https://hallofworlds.com>: landing page and email (not live yet)
-- <https://hallofworlds.app>: the game, running the Docker image (not live yet)
-- <https://hallofworlds.wiki>: game documentation (not live yet; planned to live in this repo)
+- <https://hallofworlds.app>: the game, running the Docker image
+- <https://hallofworlds.wiki>: game documentation, from [`docs/`](docs/)
 
 ## Development
 
@@ -42,7 +42,7 @@ The first build downloads and compiles Bevy, which takes several minutes. Later 
 
 `cargo xtask test` checks formatting, type-checks/lints the native and web builds with warnings treated as errors, and runs the tests. Run it before merging: GitHub's "Check" workflow only runs `cargo check --release` for now.
 
-Source code is in `crates/`: `shared` holds game rules and world generation used by both sides, `client` is the game app, `server` is the game server. Images/sounds/fonts go in `crates/client/assets/`. In the game, click the map or use the arrow keys to move; G and T start demo modes. Build output goes in `target/` (native) and `dist/` (web), both local only.
+Source code is in `crates/`: `shared` holds game rules and world generation used by both sides, `client` is the game app, `server` is the game server. Images/sounds/fonts go in `crates/client/assets/`. In the game, click the map or use the arrow keys to move (see [Controls](docs/controls.md)). Build output goes in `target/` (native) and `dist/` (web), both local only.
 
 ### Docker
 

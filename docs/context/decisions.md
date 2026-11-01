@@ -434,3 +434,7 @@ Logins are kept apart from accounts (`logins/<hash>.ron` → account id), so tha
 ## 2026-11-01: Pausing is single player only, and the server stops the clock
 
 While the system menu is open, the client asks the server to pause and only stops once told. Only a server with `ServerOptions::pausable` obeys: the embedded one, not any networked one, whatever its dev tools setting, and turning on play with others must turn it off. Pausing stops `WorldClock`, and on the client `ServerClock` and `Time<Virtual>`; ticks, saves and pings carry on, with the pong's clock ignored while paused. Anything going by game time must go by these, so it stops too.
+
+## 2026-11-01: User documentation is Jekyll in `docs/`, kept in step by a rule and tests
+
+The site at `hallofworlds.wiki` is Markdown in `docs/`, built by GitHub Pages' Jekyll with the Just the Docs theme (MIT; sidebar and search with no code of our own) and deployed by a workflow, with `docs/context/` left out. It stays simple while the game changes quickly. `CLAUDE.md` says which changes must update which page; the server variables and debug menu entries (the owner's two must-haves) are also checked by tests, which read the pages.

@@ -82,6 +82,23 @@ Whenever a change affects a module, update its `docs/context/<crate>/<module>.md
 
 Context files are summaries, not documentation: a few lines per item, enough to decide which file to open. Don't paste code into them. Also update the table above and `docs/context/project.md` when modules or tooling change, and add an entry to `decisions.md` when a structural decision is made (including decisions the owner makes in conversation).
 
+## User documentation
+
+`docs/` (except `docs/context/`) is the players' and server hosts' site, https://hallofworlds.wiki, in Markdown, published by Jekyll when it reaches `master`. Keep it plain and free of screenshots and fine detail while the game is changing quickly.
+
+Update these **in the same PR** as the change:
+
+| When this changes | Update |
+| ------------------------------------------------------------- | ------------------------------------------------- |
+| A server environment variable (added, removed, default, meaning), or a native client's connection variable | `docs/environment-variables.md`, checked by a test for server variables |
+| A debug menu entry (added, removed, renamed, what it does, whether it needs the server) | `docs/debug-menu.md`, checked by a test for names |
+| How a server is run or secured, its ports, the Docker image | `docs/hosting/` (the page and `docker-compose.yml`) |
+| When the game pauses, or who may pause it | `docs/client.md`, `docs/controls.md`, `docs/hosting/index.md` |
+| Where saves or other files are kept | `docs/saves.md` |
+| Third-party art or fonts | `docs/credits.md` |
+
+Everything else (the introduction, installation, the client's description, controls) is updated by hand when the owner asks, or when a change would make a page plainly wrong. Never put the owner's own server addresses in these pages.
+
 ## Before a branch is merged
 
 When the owner says a branch is ready to merge (or asks for a PR):
