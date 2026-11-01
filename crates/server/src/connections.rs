@@ -1,58 +1,90 @@
 //! Connected clients: reading their messages, answering them, and saving
 //! their characters.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
 use shared::poi::ChunkPos;
-use shared::protocol::{ClientMessage, PROTOCOL_VERSION, ServerLink, ServerMessage};
-use shared::world::MINUTES_PER_HOUR;
+use shared::protocol::{
+    CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerLink, ServerMessage,
+};
+use shared::world::{MINUTES_PER_HOUR, WorldId};
 
+use crate::accounts::{AccountId, Accounts, LoginKey, MAX_CHARACTERS};
 use crate::sites::{self, Visit};
-use crate::storage::{CharacterName, CharacterSave};
+use crate::storage::CharacterWorldSave;
 use crate::{ServerOptions, ServerWorld, world_map};
 
-/// The clients connected to this server.
+/// The clients connected to this server, and the accounts they log in to.
 #[derive(Resource, Default)]
-pub struct Connections(Vec<Client>);
+pub struct Connections {
+    clients: Vec<Client>,
+    accounts: Accounts,
+}
 
 impl Connections {
-    /// A newly connected client, playing the character `name` if given
-    /// (decided by whoever accepted the connection: the embedded server's
-    /// one player, later a logged-in account's character); otherwise the
-    /// guest its `Hello` names.
-    pub fn add(&mut self, link: ServerLink, name: Option<CharacterName>) {
-        self.0.push(Client::new(link, name));
+    pub(crate) fn new(accounts: Accounts) -> Self {
+        Self {
+            clients: Vec::new(),
+            accounts,
+        }
+    }
+
+    /// A newly connected client, which must log in.
+    pub fn add(&mut self, link: ServerLink) {
+        self.clients.push(Client::new(link, None));
+    }
+
+    /// A newly connected client that needs no login, playing this character:
+    /// the embedded server's one player.
+    pub fn add_playing(&mut self, link: ServerLink, character: CharacterId) {
+        self.clients.push(Client::new(link, Some(character)));
     }
 
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.clients.is_empty()
     }
 
     /// Disconnects everyone, saving them (the server is stopping).
     pub(crate) fn disconnect_all(&mut self, world: &mut ServerWorld) {
-        for client in &mut self.0 {
+        for client in &mut self.clients {
             client.disconnect(world);
         }
-        self.0.clear();
+        self.clients.clear();
     }
+}
+
+/// How far a client has got, from connecting to playing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Phase {
+    /// Nothing heard yet: `Hello` comes first.
+    Greeting,
+    /// Told how to log in; `Login` comes next.
+    LoggingIn,
+    /// Logged in and told its characters; choosing or making one.
+    Choosing,
+    /// Its character is decided, and `handle_messages` will welcome it.
+    Joining,
+    /// Welcomed, with its character loaded.
+    Playing,
 }
 
 /// One connected client: its character, where it is and what it has been
 /// sent.
 pub struct Client {
     pub(crate) link: ServerLink,
-    /// Its character: given when it connected, or from its `Hello`.
-    name: Option<CharacterName>,
-    /// Whether it has said `Hello` and is waiting to be welcomed.
-    joining: bool,
-    /// Whether it has been welcomed (with its character loaded).
-    welcomed: bool,
+    phase: Phase,
+    /// The account it logged in to (none on an embedded server).
+    account: Option<AccountId>,
+    /// Its character: given when it connected, or decided by logging in.
+    character_id: Option<CharacterId>,
     /// Whether it is to be disconnected (and was saved).
     gone: bool,
-    /// What is saved about the character: where they are on the world map,
-    /// the pois and cells they know (`visit` is filled in on saving).
-    pub(crate) character: CharacterSave,
+    /// What the character knows of this world and where they are in it: the
+    /// pois and cells they know (`visit` is filled in on saving).
+    pub(crate) character: CharacterWorldSave,
+    /// What the character knows of other worlds, kept for saving.
+    other_worlds: BTreeMap<WorldId, CharacterWorldSave>,
     /// Whether `character` (or the visit) changed since it was saved.
     pub(crate) unsaved: bool,
     /// The site level the player is on, if any.
@@ -70,14 +102,15 @@ pub struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(link: ServerLink, name: Option<CharacterName>) -> Self {
+    pub(crate) fn new(link: ServerLink, character_id: Option<CharacterId>) -> Self {
         Self {
             link,
-            name,
-            joining: false,
-            welcomed: false,
+            phase: Phase::Greeting,
+            account: None,
+            character_id,
             gone: false,
-            character: CharacterSave::default(),
+            character: CharacterWorldSave::default(),
+            other_worlds: BTreeMap::new(),
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),
@@ -116,14 +149,16 @@ impl Client {
     /// Saves the character if anything changed (only once welcomed: before
     /// that nothing has been loaded).
     fn save(&mut self, world: &mut ServerWorld) {
-        let Some(name) = &self.name else {
+        let Some(id) = &self.character_id else {
             return;
         };
-        if !self.welcomed || !self.unsaved {
+        if self.phase != Phase::Playing || !self.unsaved {
             return;
         }
         self.character.visit = self.visit.as_ref().map(Visit::save);
-        world.storage.save_character(name, &self.character);
+        world
+            .storage
+            .save_character(id, world.seed.id(), &self.character, &self.other_worlds);
         self.unsaved = false;
     }
 
@@ -144,7 +179,7 @@ pub(crate) fn handle_messages(
     mut world: ResMut<ServerWorld>,
     options: Res<ServerOptions>,
 ) {
-    let clients = &mut connections.0;
+    let Connections { clients, accounts } = &mut *connections;
     for i in 0..clients.len() {
         let client = &mut clients[i];
         if client.gone {
@@ -153,11 +188,11 @@ pub(crate) fn handle_messages(
         let stay = loop {
             match client.link.receive() {
                 Ok(Some(message)) => {
-                    if !answer(client, message, &mut world, &options) {
+                    if !answer(client, message, &mut world, accounts, &options) {
                         break false;
                     }
                     // The rest once it has been welcomed (below).
-                    if client.joining {
+                    if client.phase == Phase::Joining {
                         break true;
                     }
                 }
@@ -170,7 +205,9 @@ pub(crate) fn handle_messages(
         };
         if !stay {
             client.disconnect(&mut world);
-        } else if client.joining && !join(clients, i, &mut world, options.dev_tools) {
+        } else if client.phase == Phase::Joining
+            && !join(clients, i, &mut world, accounts, options.dev_tools)
+        {
             clients[i].disconnect(&mut world);
         }
         put_out_of_forgotten_sites(clients, i, &mut world);
@@ -196,28 +233,40 @@ fn put_out_of_forgotten_sites(clients: &mut [Client], i: usize, world: &mut Serv
     }
 }
 
-/// Welcomes client `i`, which has said hello. Anyone else playing its
-/// character is disconnected first (and saved, so the character loads as
-/// they left it): the newest connection wins, for coming back after a
-/// connection drops before the server has noticed. `false` if the client
-/// has gone.
-fn join(clients: &mut [Client], i: usize, world: &mut ServerWorld, dev_tools: bool) -> bool {
-    let name = clients[i].name.clone();
+/// Welcomes client `i`, whose character is decided. Anyone else playing that
+/// account or character is disconnected first (and saved, so the character
+/// loads as they left it): the newest connection wins, for coming back after a
+/// connection drops before the server has noticed. One character per account
+/// is online at a time. `false` if the client has gone.
+fn join(
+    clients: &mut [Client],
+    i: usize,
+    world: &mut ServerWorld,
+    accounts: &mut Accounts,
+    dev_tools: bool,
+) -> bool {
+    let account = clients[i].account.clone();
+    let character = clients[i].character_id.clone();
     for (j, other) in clients.iter_mut().enumerate() {
-        if j != i && !other.gone && other.welcomed && other.name == name {
-            info!("{name:?} connected again: dropping the older connection");
+        let same_account = account.is_some() && other.account == account;
+        let same = same_account || other.character_id == character;
+        if j != i && !other.gone && other.phase == Phase::Playing && same {
+            info!("{character:?} connected again: dropping the older connection");
             other.link.send(&ServerMessage::Refused(
-                "this character is playing somewhere else now".into(),
+                "this account is playing somewhere else now".into(),
             ));
             other.disconnect(world);
         }
+    }
+    if let (Some(account), Some(character)) = (&account, &character) {
+        accounts.played(account, character);
     }
     welcome(&mut clients[i], world, dev_tools)
 }
 
 /// Saves every character and site that has changed.
 pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
-    for client in &mut connections.0 {
+    for client in &mut connections.clients {
         client.save(&mut world);
     }
     world.save_sites();
@@ -232,7 +281,8 @@ pub(crate) fn tell_the_time(connections: Res<Connections>, mut world: ResMut<Ser
     let moved = std::mem::take(&mut world.clock_moved);
     let new_hour = hour != world.hour;
     world.hour = hour;
-    for client in connections.0.iter().filter(|client| client.welcomed) {
+    let playing = |client: &&Client| client.phase == Phase::Playing;
+    for client in connections.clients.iter().filter(playing) {
         if moved {
             client.link.send(&ServerMessage::Clock(minutes));
         }
@@ -242,11 +292,32 @@ pub(crate) fn tell_the_time(connections: Res<Connections>, mut world: ResMut<Ser
     }
 }
 
+/// A client has logged in: a guest goes straight to their one character, anyone
+/// else is told theirs to choose from.
+fn logged_in(client: &mut Client, key: &LoginKey, accounts: &mut Accounts) -> bool {
+    let id = accounts.log_in(key);
+    let account = accounts.account(&id);
+    let answered = if account.guest {
+        client.character_id = Some(accounts.guest_character(&id));
+        client.phase = Phase::Joining;
+        true
+    } else {
+        client.phase = Phase::Choosing;
+        client.link.send(&ServerMessage::Characters {
+            list: account.characters.clone(),
+            can_create: account.characters.len() < MAX_CHARACTERS,
+        })
+    };
+    client.account = Some(id);
+    answered
+}
+
 /// Answers one message; `false` if the client should be disconnected.
 pub(crate) fn answer(
     client: &mut Client,
     message: ClientMessage,
     world: &mut ServerWorld,
+    accounts: &mut Accounts,
     options: &ServerOptions,
 ) -> bool {
     let refuse = |client: &Client, reason: String| {
@@ -261,18 +332,69 @@ pub(crate) fn answer(
                  the game needs updating (reload the page)"
             ),
         ),
-        ClientMessage::Hello { .. } if client.welcomed || client.joining => {
+        ClientMessage::Hello { .. } if client.phase != Phase::Greeting => {
             refuse(client, "hello again?".into())
         }
-        ClientMessage::Hello { guest, .. } => {
-            if client.name.is_none() {
-                client.name = CharacterName::new(&format!("guest-{guest:016x}"));
-            }
-            // Welcomed by `handle_messages`, which can see other clients.
-            client.joining = true;
+        // Needs no login: welcomed by `handle_messages`, which can see other
+        // clients.
+        ClientMessage::Hello { .. } if client.character_id.is_some() => {
+            client.phase = Phase::Joining;
             true
         }
-        _ if !client.welcomed => refuse(client, "say hello first".into()),
+        ClientMessage::Hello { .. } => {
+            client.phase = Phase::LoggingIn;
+            let methods = if options.guests {
+                vec![LoginMethod::Guest]
+            } else {
+                Vec::new()
+            };
+            client.link.send(&ServerMessage::LoginOptions { methods })
+        }
+        ClientMessage::Login(_) if client.phase != Phase::LoggingIn => {
+            refuse(client, "not the time to log in".into())
+        }
+        ClientMessage::Login(credentials) => {
+            let key = LoginKey::from(&credentials);
+            if matches!(key, LoginKey::Guest(_)) && !options.guests {
+                return refuse(client, "this server doesn't take guests".into());
+            }
+            logged_in(client, &key, accounts)
+        }
+        ClientMessage::ChooseCharacter { id } => {
+            let Some(account) = client
+                .account
+                .clone()
+                .filter(|_| client.phase == Phase::Choosing)
+            else {
+                return refuse(client, "not the time to choose a character".into());
+            };
+            // A client can ask for anything: only its own will do.
+            let characters = &accounts.account(&account).characters;
+            if !characters.iter().any(|character| character.id == id) {
+                return refuse(client, "that isn't one of this account's characters".into());
+            }
+            client.character_id = Some(id);
+            client.phase = Phase::Joining;
+            true
+        }
+        ClientMessage::CreateCharacter { name } => {
+            let Some(account) = client
+                .account
+                .clone()
+                .filter(|_| client.phase == Phase::Choosing)
+            else {
+                return refuse(client, "not the time to make a character".into());
+            };
+            match accounts.create_character(&account, &name) {
+                Ok(id) => {
+                    client.character_id = Some(id);
+                    client.phase = Phase::Joining;
+                    true
+                }
+                Err(reason) => refuse(client, reason),
+            }
+        }
+        _ if client.phase != Phase::Playing => refuse(client, "say hello first".into()),
         ClientMessage::Ping { sent } => client.link.send(&ServerMessage::Pong {
             sent,
             clock: world.clock.minutes(),
@@ -335,10 +457,12 @@ pub(crate) fn answer(
 /// Loads the character (or starts a new one), and tells the client the
 /// world and where they are; back into the site level they were on, if any.
 fn welcome(client: &mut Client, world: &mut ServerWorld, dev_tools: bool) -> bool {
-    client.joining = false;
-    client.welcomed = true;
-    let name = client.name.as_ref().expect("named on hello");
-    client.character = world.storage.load_character(name).unwrap_or_default();
+    client.phase = Phase::Playing;
+    let id = client
+        .character_id
+        .as_ref()
+        .expect("decided before joining");
+    (client.character, client.other_worlds) = world.storage.load_character(id, world.seed.id());
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
@@ -360,7 +484,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, dev_tools: bool) -> boo
 #[cfg(test)]
 pub(crate) mod tests {
     use shared::movement::{Step, steps_between};
-    use shared::protocol::{ClientLink, local_pair};
+    use shared::protocol::{ClientLink, Credentials, GuestToken, local_pair};
     use shared::world::WorldSeed;
 
     use super::*;
@@ -368,6 +492,7 @@ pub(crate) mod tests {
     /// A server world, a client connected to it, and the client's end.
     pub(crate) struct TestClient {
         pub world: ServerWorld,
+        accounts: Accounts,
         pub client: Client,
         pub end: ClientLink,
         /// The answers to `Hello`.
@@ -388,7 +513,8 @@ pub(crate) mod tests {
             let (end, server_link) = local_pair();
             let mut test = Self {
                 world,
-                client: Client::new(server_link, CharacterName::new("tester")),
+                accounts: Accounts::default(),
+                client: Client::new(server_link, CharacterId::new("tester")),
                 end,
                 welcome: Vec::new(),
                 dev_tools: true,
@@ -404,10 +530,17 @@ pub(crate) mod tests {
             let options = ServerOptions {
                 dev_tools: self.dev_tools,
                 exit_when_alone: false,
+                guests: true,
             };
             for message in messages {
-                answer(&mut self.client, message.clone(), &mut self.world, &options);
-                if self.client.joining {
+                answer(
+                    &mut self.client,
+                    message.clone(),
+                    &mut self.world,
+                    &mut self.accounts,
+                    &options,
+                );
+                if self.client.phase == Phase::Joining {
                     welcome(&mut self.client, &mut self.world, options.dev_tools);
                 }
             }
@@ -462,17 +595,28 @@ pub(crate) mod tests {
 
     pub(crate) const HELLO: ClientMessage = ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
-        guest: 1,
     };
+
+    const GUEST: ClientMessage = ClientMessage::Login(Credentials::Guest(GuestToken([1; 32])));
 
     /// Runs `handle_messages` once over these connections.
     fn tick(connections: Connections, world: ServerWorld) -> (Connections, ServerWorld) {
+        tick_with(connections, world, true)
+    }
+
+    /// `tick`, on a server that does or doesn't take guests.
+    fn tick_with(
+        connections: Connections,
+        world: ServerWorld,
+        guests: bool,
+    ) -> (Connections, ServerWorld) {
         let mut app = World::new();
         app.insert_resource(connections);
         app.insert_resource(world);
         app.insert_resource(ServerOptions {
             dev_tools: true,
             exit_when_alone: false,
+            guests,
         });
         bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
         (
@@ -485,16 +629,157 @@ pub(crate) mod tests {
         std::iter::from_fn(|| end.receive().ok().flatten()).collect()
     }
 
+    /// A client that has logged in to an account that isn't a guest's, and been
+    /// told its characters, with the list.
+    fn logged_in_to_account(
+        connections: &mut Connections,
+        key: &'static str,
+    ) -> (ClientLink, Vec<ServerMessage>) {
+        let (end, link) = local_pair();
+        connections.add(link);
+        let client = connections.clients.last_mut().unwrap();
+        client.phase = Phase::LoggingIn;
+        assert!(logged_in(
+            client,
+            &LoginKey::Test(key),
+            &mut connections.accounts
+        ));
+        let told = answers(&end);
+        (end, told)
+    }
+
     #[test]
-    fn guests_are_named_by_their_hello_and_the_newest_connection_wins() {
+    fn logging_in_comes_after_hello_and_before_anything_else() {
+        let world = ServerWorld::new(WorldSeed::new(1));
+        let mut connections = Connections::default();
+        let (too_soon, link) = local_pair();
+        connections.add(link);
+        too_soon.send(&GUEST);
+        let (end, link) = local_pair();
+        connections.add(link);
+        end.send(&HELLO);
+        end.send(&ClientMessage::UseExit);
+        let (mut connections, world) = tick(connections, world);
+        assert!(matches!(
+            answers(&too_soon)[..],
+            [ServerMessage::Refused(_)]
+        ));
+        let told = answers(&end);
+        assert_eq!(
+            told[0],
+            ServerMessage::LoginOptions {
+                methods: vec![LoginMethod::Guest]
+            }
+        );
+        assert!(matches!(told[1], ServerMessage::Refused(_)));
+        assert!(connections.clients.is_empty());
+
+        // Logged in, a second login is refused.
+        let (end, link) = local_pair();
+        connections.add(link);
+        end.send(&HELLO);
+        end.send(&GUEST);
+        let (connections, world) = tick(connections, world);
+        assert!(matches!(answers(&end)[1], ServerMessage::Welcome { .. }));
+        end.send(&GUEST);
+        let (connections, _world) = tick(connections, world);
+        assert!(matches!(answers(&end)[..], [ServerMessage::Refused(_)]));
+        assert!(connections.clients.is_empty());
+    }
+
+    #[test]
+    fn a_server_can_turn_guests_away() {
+        let world = ServerWorld::new(WorldSeed::new(1));
+        let mut connections = Connections::default();
+        let (end, link) = local_pair();
+        connections.add(link);
+        end.send(&HELLO);
+        end.send(&GUEST);
+        let (connections, _world) = tick_with(connections, world, false);
+        let told = answers(&end);
+        assert_eq!(
+            told[0],
+            ServerMessage::LoginOptions {
+                methods: Vec::new()
+            }
+        );
+        assert!(matches!(told[1], ServerMessage::Refused(_)));
+        assert!(connections.clients.is_empty());
+    }
+
+    #[test]
+    fn accounts_choose_or_make_a_character_and_only_their_own() {
+        let world = ServerWorld::new(WorldSeed::new(1));
+        let mut connections = Connections::default();
+
+        // New: nothing to choose, and room to make one.
+        let (end, told) = logged_in_to_account(&mut connections, "someone");
+        assert_eq!(
+            told,
+            [ServerMessage::Characters {
+                list: Vec::new(),
+                can_create: true
+            }]
+        );
+        end.send(&ClientMessage::CreateCharacter {
+            name: "Some One".into(),
+        });
+        let (connections, world) = tick(connections, world);
+        assert!(matches!(answers(&end)[0], ServerMessage::Welcome { .. }));
+        let mut connections = connections;
+
+        // Back later: there they are. (Dropping the first connection is `join`'s
+        // job, when this one chooses.)
+        let (second, told) = logged_in_to_account(&mut connections, "someone");
+        let [ServerMessage::Characters { list, can_create }] = &told[..] else {
+            panic!("no characters: {told:?}");
+        };
+        assert!(*can_create);
+        assert_eq!(list[0].name, "Some One");
+        assert!(list[0].last_played > 0);
+        let theirs = list[0].id.clone();
+
+        // Someone else's can't be chosen.
+        let (other, _) = logged_in_to_account(&mut connections, "someone else");
+        other.send(&ClientMessage::ChooseCharacter { id: theirs.clone() });
+        // Their own can, and an account plays one at a time.
+        second.send(&ClientMessage::ChooseCharacter { id: theirs });
+        let (connections, _world) = tick(connections, world);
+        assert!(matches!(answers(&other)[..], [ServerMessage::Refused(_)]));
+        assert!(matches!(answers(&second)[0], ServerMessage::Welcome { .. }));
+        assert!(matches!(answers(&end)[..], [ServerMessage::Refused(_)]));
+        assert_eq!(connections.clients.len(), 1);
+    }
+
+    #[test]
+    fn choosing_is_only_for_accounts_about_to_choose() {
+        let world = ServerWorld::new(WorldSeed::new(1));
+        let mut connections = Connections::default();
+        let (end, link) = local_pair();
+        connections.add(link);
+        end.send(&HELLO);
+        end.send(&GUEST);
+        let (connections, world) = tick(connections, world);
+        answers(&end);
+        end.send(&ClientMessage::CreateCharacter {
+            name: "Another".into(),
+        });
+        let (connections, _world) = tick(connections, world);
+        assert!(matches!(answers(&end)[..], [ServerMessage::Refused(_)]));
+        assert!(connections.clients.is_empty());
+    }
+
+    #[test]
+    fn guests_come_back_by_their_token_and_the_newest_connection_wins() {
         let folder = crate::storage::tests::TestFolder::new();
         let seed = WorldSeed::new(1);
         let storage = crate::storage::Storage::in_folder(&folder.0, seed.id());
         let world = ServerWorld::open(seed, storage).unwrap();
-        let mut connections = Connections::default();
+        let mut connections = Connections::new(Accounts::in_folder(&folder.0));
         let (first, link) = local_pair();
-        connections.add(link, None);
+        connections.add(link);
         first.send(&HELLO);
+        first.send(&GUEST);
         let step = |n| ClientMessage::Step {
             map: 0,
             number: n,
@@ -502,7 +787,7 @@ pub(crate) mod tests {
         };
         let (connections, world) = tick(connections, world);
         assert!(matches!(
-            answers(&first)[0],
+            answers(&first)[1],
             ServerMessage::Welcome { x: 0, .. }
         ));
         first.send(&step(1));
@@ -512,24 +797,25 @@ pub(crate) mod tests {
         // The same guest again (a reconnect): the old connection goes, and
         // the character comes back where it was.
         let (second, link) = local_pair();
-        connections.add(link, None);
+        connections.add(link);
         second.send(&HELLO);
+        second.send(&GUEST);
         let (connections, _world) = tick(connections, world);
         assert!(matches!(answers(&first)[..], [ServerMessage::Refused(_)]));
         assert!(matches!(
-            answers(&second)[0],
+            answers(&second)[1],
             ServerMessage::Welcome { x: 1, .. }
         ));
-        assert_eq!(connections.0.len(), 1);
+        assert_eq!(connections.clients.len(), 1);
     }
 
     #[test]
     fn forgetting_a_site_on_the_server_puts_only_others_out_at_the_poi() {
         let mut connections = Connections::default();
         let (first, link) = local_pair();
-        connections.add(link, CharacterName::new("first"));
+        connections.add_playing(link, CharacterId::new("first").unwrap());
         let (second, link) = local_pair();
-        connections.add(link, CharacterName::new("second"));
+        connections.add_playing(link, CharacterId::new("second").unwrap());
         first.send(&HELLO);
         second.send(&HELLO);
         let world = ServerWorld::new(WorldSeed::new(1));
@@ -549,9 +835,9 @@ pub(crate) mod tests {
         first.send(&ClientMessage::DevForgetMapOnServer);
         let (connections, _world) = tick(connections, world);
         // The one who asked is still in it, arriving afresh.
-        assert!(connections.0[0].visit.is_some());
+        assert!(connections.clients[0].visit.is_some());
         assert!(matches!(answers(&first)[0], ServerMessage::EnterLevel(_)));
-        assert!(connections.0[1].visit.is_none());
+        assert!(connections.clients[1].visit.is_none());
         assert!(matches!(
             answers(&second)[0],
             ServerMessage::OnWorldMap { x: 0, y: 0 }
@@ -568,7 +854,7 @@ pub(crate) mod tests {
         };
         let mut connections = Connections::default();
         let (end, link) = local_pair();
-        connections.add(link, None);
+        connections.add_playing(link, CharacterId::new("tester").unwrap());
         end.send(&HELLO);
         let (connections, mut world) = tick(connections, open());
         answers(&end);
@@ -592,19 +878,19 @@ pub(crate) mod tests {
         let (connections, mut world) = tell(connections, world);
         assert_eq!(answers(&end), [ServerMessage::Hour(41)]);
         // Moved by a dev tool, back as well: told the new time and hour.
-        let keep = connections;
-        let mut client = keep.0.into_iter().next().unwrap();
+        let mut connections = connections;
         let options = ServerOptions {
             dev_tools: true,
             exit_when_alone: false,
+            guests: true,
         };
         assert!(answer(
-            &mut client,
+            &mut connections.clients[0],
             ClientMessage::DevSetTime { minutes: 1200.0 },
             &mut world,
+            &mut connections.accounts,
             &options
         ));
-        let connections = Connections(vec![client]);
         let (_connections, world) = tell(connections, world);
         let told = answers(&end);
         assert!(
@@ -638,14 +924,22 @@ pub(crate) mod tests {
     #[test]
     fn messages_before_hello_are_refused() {
         let (end, server_link) = local_pair();
-        let mut client = Client::new(server_link, CharacterName::new("x"));
+        let mut client = Client::new(server_link, CharacterId::new("x"));
         let mut world = ServerWorld::new(WorldSeed::new(1));
+        let mut accounts = Accounts::default();
         let options = ServerOptions {
             dev_tools: false,
             exit_when_alone: false,
+            guests: true,
         };
         let message = ClientMessage::UseExit;
-        assert!(!answer(&mut client, message, &mut world, &options));
+        assert!(!answer(
+            &mut client,
+            message,
+            &mut world,
+            &mut accounts,
+            &options
+        ));
         assert!(matches!(end.receive(), Ok(Some(ServerMessage::Refused(_)))));
     }
 

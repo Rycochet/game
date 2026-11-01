@@ -36,24 +36,26 @@ enum KnownServer {
 
 /// The file of servers this client has met.
 #[derive(Debug)]
-struct KnownServers(Option<PathBuf>);
+pub(super) struct KnownServers(Option<PathBuf>);
 
 impl KnownServers {
     /// `HOW_KNOWN_SERVERS`, or `Hall of Worlds/client` in the user's data
     /// folder, beside the server's own data and separate from it.
+    pub(super) fn path() -> Option<PathBuf> {
+        env::var_os("HOW_KNOWN_SERVERS")
+            .map(Into::into)
+            .or_else(|| {
+                dirs::data_dir().map(|folder| {
+                    folder
+                        .join("Hall of Worlds")
+                        .join("client")
+                        .join("known_servers.ron")
+                })
+            })
+    }
+
     fn from_environment() -> Self {
-        Self(
-            env::var_os("HOW_KNOWN_SERVERS")
-                .map(Into::into)
-                .or_else(|| {
-                    dirs::data_dir().map(|folder| {
-                        folder
-                            .join("Hall of Worlds")
-                            .join("client")
-                            .join("known_servers.ron")
-                    })
-                }),
-        )
+        Self(Self::path())
     }
 
     /// A file that can't be read is an error, not an empty list: that would
@@ -88,7 +90,7 @@ impl KnownServers {
 }
 
 /// Writes all of a file or none of it.
-fn write_through_new(path: &Path, text: &str) -> io::Result<()> {
+pub(super) fn write_through_new(path: &Path, text: &str) -> io::Result<()> {
     if let Some(folder) = path.parent() {
         fs::create_dir_all(folder)?;
     }

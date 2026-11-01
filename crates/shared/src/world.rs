@@ -44,7 +44,7 @@ impl WorldSeed {
 
 /// Which world this is, safe to share: it identifies the world without
 /// revealing its seed.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct WorldId(pub u64);
 
 /// Settings that shape a whole world. Ported from the TypeScript prototype's

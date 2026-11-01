@@ -302,38 +302,3 @@ impl Drop for BrowserSocket {
         let _ = self.socket.close();
     }
 }
-
-/// The guest number this client plays as on servers without accounts
-/// (`ClientMessage::Hello`): kept in the browser's local storage, so the
-/// same browser gets the same character back.
-#[cfg(target_arch = "wasm32")]
-pub(super) fn guest() -> u64 {
-    const KEY: &str = "hall-of-worlds-guest";
-    let window = web_sys::window().expect("a window");
-    let storage = window.local_storage().ok().flatten();
-    let saved = storage
-        .as_ref()
-        .and_then(|storage| storage.get_item(KEY).ok().flatten())
-        .and_then(|text| u64::from_str_radix(&text, 16).ok());
-    if let Some(guest) = saved {
-        return guest;
-    }
-    let mut bytes = [0u8; 8];
-    if let Ok(crypto) = window.crypto() {
-        let _ = crypto.get_random_values_with_u8_array(&mut bytes);
-    }
-    let guest = u64::from_le_bytes(bytes);
-    if let Some(storage) = storage {
-        let _ = storage.set_item(KEY, &format!("{guest:016x}"));
-    }
-    guest
-}
-
-/// Native: a new guest number each run (only for testing against a server;
-/// single player ignores it).
-#[cfg(not(target_arch = "wasm32"))]
-pub(super) fn guest() -> u64 {
-    use std::hash::{BuildHasher, RandomState};
-    // `RandomState` starts from the system's randomness.
-    RandomState::new().hash_one(std::time::SystemTime::now())
-}

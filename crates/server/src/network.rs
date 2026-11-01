@@ -159,12 +159,12 @@ impl Plugin for NetworkPlugin {
     }
 }
 
-/// Lets the connections that arrived join (as guests, named by their hello).
+/// Lets the connections that arrived join (they log in from there).
 fn accept_connections(new: Res<NewConnections>, mut connections: ResMut<Connections>) {
     let accepted = new.0.lock().expect("never poisoned");
     for link in accepted.try_iter() {
         info!("A client connected");
-        connections.add(link, None);
+        connections.add(link);
     }
 }
 
@@ -738,7 +738,6 @@ mod tests {
 
         let hello = ClientMessage::Hello {
             protocol: PROTOCOL_VERSION,
-            guest: 1,
         };
         let bytes = postcard_bytes(&hello);
         socket.send(WsMessage::Binary(bytes.into())).unwrap();

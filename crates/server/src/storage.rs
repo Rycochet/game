@@ -7,8 +7,11 @@
 //! - `worlds/<world id>/world.ron`: the world (`WorldSave`).
 //! - `worlds/<world id>/sites/<site>.ron`: a site that has been entered
 //!   (`SiteSave`).
-//! - `worlds/<world id>/characters/<name>.ron`: what a character knows of
-//!   the world and where they are in it (`CharacterSave`).
+//! - `characters/<id>.ron`: a character, who belongs to the server and can move
+//!   between its worlds: the world they are in, and what they know of each
+//!   world they have been to (`CharacterSave`).
+//!
+//! Accounts are in `accounts`, which uses `read_or_put_aside` and `write`.
 //!
 //! Files are RON, readable by people. Fields added later must have
 //! `#[serde(default)]`, so older saves still load.
@@ -23,6 +26,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use shared::dungeon::Cell;
 use shared::poi::{ChunkPos, PoiKind};
+use shared::protocol::CharacterId;
 use shared::site::FORGET_BEFORE;
 use shared::world::{WorldId, WorldSeed};
 
@@ -48,10 +52,12 @@ pub fn default_data_folder() -> PathBuf {
     }
 }
 
-/// Where one world's files are, or nowhere (tests: nothing is saved).
+/// Where one world's files and the server's characters are, or nowhere (tests:
+/// nothing is saved).
 #[derive(Resource, Clone, Debug, Default)]
 pub struct Storage {
     folder: Option<PathBuf>,
+    characters: Option<PathBuf>,
     /// Files saved before this are ignored (`FORGET_BEFORE`).
     forget_before: u32,
 }
@@ -66,6 +72,7 @@ impl Storage {
     pub fn none() -> Self {
         Self {
             folder: None,
+            characters: None,
             forget_before: FORGET_BEFORE,
         }
     }
@@ -75,6 +82,7 @@ impl Storage {
         let folder = data.join("worlds").join(format!("{:016x}", id.0));
         Self {
             folder: Some(folder),
+            characters: Some(data.join("characters")),
             forget_before: FORGET_BEFORE,
         }
     }
@@ -100,13 +108,9 @@ impl Storage {
         Some(self.folder.as_ref()?.join("sites").join(name))
     }
 
-    fn character_file(&self, name: &CharacterName) -> Option<PathBuf> {
-        Some(
-            self.folder
-                .as_ref()?
-                .join("characters")
-                .join(format!("{}.ron", name.0)),
-        )
+    fn character_file(&self, id: &CharacterId) -> Option<PathBuf> {
+        let file = format!("{}.ron", id.as_str());
+        Some(self.characters.as_ref()?.join(file))
     }
 
     /// The saved world, if there is one.
@@ -173,38 +177,47 @@ impl Storage {
         }
     }
 
-    /// A saved character, if they have played in this world before. A
-    /// broken file is put aside (and logged), so they start again; one from
-    /// before `forget_before` is ignored, and saved over.
-    pub fn load_character(&self, name: &CharacterName) -> Option<CharacterSave> {
-        let save: CharacterSave = read_or_put_aside(&self.character_file(name)?)?;
-        self.not_forgotten(save.forgotten_to, &name.0)
-            .then_some(save)
+    /// What a character knows of `world` (nothing if they haven't been there),
+    /// and of the other worlds they have been to. Being given `world` is how
+    /// they come to be in it, wherever their file says they were: a server only
+    /// runs one world so far. A broken file is put aside (and logged), so they
+    /// start again; knowledge from before `forget_before` is ignored, and saved
+    /// over.
+    pub fn load_character(
+        &self,
+        id: &CharacterId,
+        world: WorldId,
+    ) -> (CharacterWorldSave, BTreeMap<WorldId, CharacterWorldSave>) {
+        let file = self.character_file(id);
+        let save = file.as_deref().and_then(read_or_put_aside::<CharacterSave>);
+        let mut worlds = save.map_or_else(BTreeMap::new, |save| save.worlds);
+        let here = worlds
+            .remove(&world)
+            .filter(|here| self.not_forgotten(here.forgotten_to, id.as_str()))
+            .unwrap_or_default();
+        (here, worlds)
     }
 
-    pub fn save_character(&self, name: &CharacterName, save: &CharacterSave) {
-        if let Some(file) = self.character_file(name) {
+    /// Saves a character who is in `world`, knowing `here` of it.
+    pub fn save_character(
+        &self,
+        id: &CharacterId,
+        world: WorldId,
+        here: &CharacterWorldSave,
+        others: &BTreeMap<WorldId, CharacterWorldSave>,
+    ) {
+        if let Some(file) = self.character_file(id) {
+            let mut worlds = others.clone();
             let forgotten_to = self.forget_before;
-            write(
-                &file,
-                &CharacterSave {
+            worlds.insert(
+                world,
+                CharacterWorldSave {
                     forgotten_to,
-                    ..save.clone()
+                    ..here.clone()
                 },
             );
+            write(&file, &CharacterSave { world, worlds });
         }
-    }
-}
-
-/// A character's name: also their file name, so only letters, digits, `-`
-/// and `_`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CharacterName(String);
-
-impl CharacterName {
-    pub fn new(name: &str) -> Option<Self> {
-        let fine = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_';
-        (!name.is_empty() && name.len() <= 32 && name.chars().all(fine)).then(|| Self(name.into()))
     }
 }
 
@@ -289,9 +302,19 @@ pub struct BuildingSave {
 /// `shared::protocol::level_chunk`).
 pub type CellMasks = BTreeMap<(i64, i64), u64>;
 
-/// A character's file, for one world.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// A character's file.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CharacterSave {
+    /// The world they are in.
+    pub world: WorldId,
+    /// What they know of each world they have been to, kept for going back.
+    #[serde(default)]
+    pub worlds: BTreeMap<WorldId, CharacterWorldSave>,
+}
+
+/// What a character knows of one world, and where they are in it.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct CharacterWorldSave {
     /// The `FORGET_BEFORE` it was saved under.
     #[serde(default)]
     pub forgotten_to: u32,
@@ -382,7 +405,7 @@ fn read<T: DeserializeOwned>(file: &Path) -> Result<Option<T>, String> {
 
 /// Reads a file; one that can't be read is renamed `<name>.broken` (so it
 /// isn't lost when the new one is saved) and counts as none.
-fn read_or_put_aside<T: DeserializeOwned>(file: &Path) -> Option<T> {
+pub(crate) fn read_or_put_aside<T: DeserializeOwned>(file: &Path) -> Option<T> {
     match read(file) {
         Ok(found) => found,
         Err(error) => {
@@ -398,7 +421,7 @@ fn read_or_put_aside<T: DeserializeOwned>(file: &Path) -> Option<T> {
 
 /// Writes a file (and its folder), through a temporary file so a crash
 /// never leaves half of one. Failures are logged: the game goes on.
-fn write<T: Serialize>(file: &Path, value: &T) {
+pub(crate) fn write<T: Serialize>(file: &Path, value: &T) {
     let result = (|| {
         // Nested no deeper than a line per map entry.
         let pretty = ron::ser::PrettyConfig::default().depth_limit(2);
@@ -450,7 +473,7 @@ pub(crate) mod tests {
             memory: {Feature((x: -2, y: 3)): {}},
         )";
         let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
-        let save: CharacterSave = ron::from_str(text).unwrap();
+        let save: CharacterWorldSave = ron::from_str(text).unwrap();
         assert_eq!(save.visit.unwrap().site, site);
         assert!(save.pois[&ChunkPos { x: 1, y: 1 }].visited);
         assert!(save.memory.contains_key(&site));
@@ -459,34 +482,72 @@ pub(crate) mod tests {
     #[test]
     fn what_was_saved_before_forget_before_is_forgotten() {
         let folder = TestFolder::new();
-        let mut storage = Storage::in_folder(&folder.0, WorldId(5));
-        let name = CharacterName::new("someone").unwrap();
+        let world = WorldId(5);
+        let mut storage = Storage::in_folder(&folder.0, world);
+        let id = CharacterId::new("someone").unwrap();
         let site = SiteId::Poi(ChunkPos { x: 1, y: 2 });
-        storage.save_character(&name, &CharacterSave::default());
+        let character = CharacterWorldSave {
+            world_position: (3, 4),
+            ..default()
+        };
+        let none = BTreeMap::new();
+        storage.save_character(&id, world, &character, &none);
         storage.save_site(site, &SiteSave::default());
-        assert!(storage.load_character(&name).is_some());
+        assert_eq!(storage.load_character(&id, world).0.world_position, (3, 4));
         assert!(storage.load_site(site).is_some());
 
         storage.forget_before += 1;
-        assert_eq!(storage.load_character(&name), None);
+        assert_eq!(storage.load_character(&id, world).0.world_position, (0, 0));
         assert_eq!(storage.load_site(site), None);
 
         // Saved again, it is remembered from now on.
-        storage.save_character(&name, &CharacterSave::default());
+        storage.save_character(&id, world, &character, &none);
         storage.save_site(site, &SiteSave::default());
-        assert!(storage.load_character(&name).is_some());
+        assert_eq!(storage.load_character(&id, world).0.world_position, (3, 4));
         assert!(storage.load_site(site).is_some());
+    }
+
+    #[test]
+    fn a_character_keeps_what_they_know_of_other_worlds() {
+        let folder = TestFolder::new();
+        let (first, second) = (WorldId(5), WorldId(6));
+        let id = CharacterId::new("someone").unwrap();
+        let at = |x| CharacterWorldSave {
+            forgotten_to: FORGET_BEFORE,
+            world_position: (x, 0),
+            ..default()
+        };
+        let in_first = Storage::in_folder(&folder.0, first);
+        in_first.save_character(&id, first, &at(1), &BTreeMap::new());
+        assert!(folder.0.join("characters/someone.ron").exists());
+
+        // Into another world: new to them, and the first is kept.
+        let in_second = Storage::in_folder(&folder.0, second);
+        let (here, others) = in_second.load_character(&id, second);
+        assert_eq!(here, CharacterWorldSave::default());
+        assert_eq!(others, BTreeMap::from([(first, at(1))]));
+        in_second.save_character(&id, second, &at(2), &others);
+
+        let file = fs::read_to_string(folder.0.join("characters/someone.ron")).unwrap();
+        let save: CharacterSave = ron::from_str(&file).unwrap();
+        assert_eq!(save.world, second);
+        // And back, where they were.
+        assert_eq!(in_first.load_character(&id, first).0, at(1));
     }
 
     #[test]
     fn saves_are_read_back() {
         let folder = TestFolder::new();
-        let storage = Storage::in_folder(&folder.0, WorldId(5));
-        let name = CharacterName::new("someone").unwrap();
-        assert_eq!(storage.load_character(&name), None);
+        let world = WorldId(5);
+        let storage = Storage::in_folder(&folder.0, world);
+        let id = CharacterId::new("someone").unwrap();
+        assert_eq!(
+            storage.load_character(&id, world).0,
+            CharacterWorldSave::default()
+        );
 
         let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
-        let character = CharacterSave {
+        let character = CharacterWorldSave {
             forgotten_to: FORGET_BEFORE,
             site_versions: BTreeMap::from([(site, 3)]),
             world_position: (-40, 7),
@@ -507,8 +568,8 @@ pub(crate) mod tests {
                 BTreeMap::from([(1, CellMasks::from([((0, -1), 7)]))]),
             )]),
         };
-        storage.save_character(&name, &character);
-        assert_eq!(storage.load_character(&name), Some(character));
+        storage.save_character(&id, world, &character, &BTreeMap::new());
+        assert_eq!(storage.load_character(&id, world).0, character);
 
         let save = SiteSave {
             forgotten_to: FORGET_BEFORE,
@@ -534,7 +595,7 @@ pub(crate) mod tests {
 
     #[test]
     fn missing_fields_take_their_defaults() {
-        let save: CharacterSave = ron::from_str("(world_position: (1, 2))").unwrap();
+        let save: CharacterWorldSave = ron::from_str("(world_position: (1, 2))").unwrap();
         assert_eq!(save.world_position, (1, 2));
         assert!(save.visit.is_none() && save.memory.is_empty());
     }
@@ -542,21 +603,17 @@ pub(crate) mod tests {
     #[test]
     fn broken_files_are_put_aside() {
         let folder = TestFolder::new();
-        let storage = Storage::in_folder(&folder.0, WorldId(5));
-        let name = CharacterName::new("broken").unwrap();
-        let file = storage.character_file(&name).unwrap();
+        let world = WorldId(5);
+        let storage = Storage::in_folder(&folder.0, world);
+        let id = CharacterId::new("broken").unwrap();
+        let file = storage.character_file(&id).unwrap();
         fs::create_dir_all(file.parent().unwrap()).unwrap();
         fs::write(&file, "not a save").unwrap();
-        assert_eq!(storage.load_character(&name), None);
+        assert_eq!(
+            storage.load_character(&id, world).0,
+            CharacterWorldSave::default()
+        );
         assert!(!file.exists());
         assert!(file.with_extension("ron.broken").exists());
-    }
-
-    #[test]
-    fn character_names_are_safe_file_names() {
-        assert!(CharacterName::new("player_1").is_some());
-        for bad in ["", "../x", "a b", "a/b", "C:"] {
-            assert!(CharacterName::new(bad).is_none(), "{bad}");
-        }
     }
 }

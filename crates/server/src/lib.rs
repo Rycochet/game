@@ -5,9 +5,10 @@
 //! binary (dedicated / Docker) or embedded in a native client for single
 //! player, on its own thread with its own Bevy world. The web client never
 //! includes it. Clients talk to it only through messages
-//! (`shared::protocol`), even when embedded. It saves its world, sites and
-//! characters in its own data folder (`storage`).
+//! (`shared::protocol`), even when embedded. It saves its world, sites,
+//! characters (`storage`) and accounts (`accounts`) in its own data folder.
 
+mod accounts;
 mod clock;
 mod connections;
 mod embedded;
@@ -36,11 +37,13 @@ use shared::world::{
     MINUTES_PER_HOUR, NORMAL_SNOW_LINE, WORLD_MAP_VERSION, WorldParams, WorldSeed,
 };
 
+pub use accounts::new_guest_token;
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
 pub use environment::{log_plugin, option_on, refuse_old_variables};
 pub use network::NetworkPlugin;
-pub use storage::{CharacterName, DATA_FOLDER_VARIABLE, default_data_folder};
+pub use shared::protocol::CharacterId;
+pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
 pub use tls::{CertificateFacts, CertificateSource, Security, certificate_facts};
 
 use storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved, WorldSave};
@@ -77,6 +80,8 @@ pub struct ServerOptions {
     /// Whether the server stops (after saving) once its last client has
     /// left: the embedded server, whose one client is the game.
     pub exit_when_alone: bool,
+    /// Whether clients may play without an account (`HOW_GUESTS`).
+    pub guests: bool,
 }
 
 impl Plugin for ServerPlugin {
@@ -89,7 +94,10 @@ impl Plugin for ServerPlugin {
             .unwrap_or_else(|error| panic!("The server can't open its world: {error}"));
         app.insert_resource(world)
             .insert_resource(self.options)
-            .init_resource::<Connections>()
+            .insert_resource(Connections::new(match &self.data {
+                Some(data) => accounts::Accounts::in_folder(data),
+                None => accounts::Accounts::default(),
+            }))
             .add_systems(Startup, announce)
             .add_systems(
                 Update,

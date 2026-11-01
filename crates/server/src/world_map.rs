@@ -31,7 +31,7 @@ pub(crate) fn stepped(client: &mut Client, world: &ServerWorld, step: Step) -> b
     look_around(client, world)
 }
 
-/// Where new characters start on the world map (`CharacterSave`'s default).
+/// Where new characters start on the world map (`CharacterWorldSave`'s default).
 pub(crate) const START: (i64, i64) = (0, 0);
 
 /// Developer tools: puts the player at `(x, y)` on the world map.
