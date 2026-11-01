@@ -4,7 +4,7 @@ Sites: the maps world map pois lead to (buildings, caves, crypts, towns, farms, 
 
 ## Files
 
-- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_poi`: the kind → generator table). Tests: only runnable versions make sites, connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`SITE_KINDS=20,4 SITE_SEED=1 SITE_RUIN=0 cargo test -p shared print_sites -- --ignored --nocapture`).
+- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_poi`: the kind → generator table). Tests: only runnable versions make sites, connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`HOW_DEBUG_SITE_KINDS=20,4 HOW_DEBUG_SITE_SEED=1 HOW_DEBUG_SITE_RUIN=0 cargo test -p shared print_sites -- --ignored --nocapture`).
 - `crates/shared/src/site/building.rs`: `BuildingOptions`, `Outline`, the building `Plan` (outlines per floor, stairs) and BSP floor generation.
 - `crates/shared/src/site/ruin.rs`: damage to a building's finished floors (`MAX_RUIN`, `ruin_floors`). Tests: floorplan kept, eaten ground floor connected, upper floors supported, stairs kept and connected, floors dropped.
 - `crates/shared/src/site/cave.rs`: `CaveOptions`, `CaveEntrance`, the cave `Plan` and level generation.

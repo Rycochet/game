@@ -13,7 +13,7 @@ What every 3D view shares: the one camera (orbiting the player: turn, tilt, zoom
 - `View3dPlugin`, `View3dSystems::Click` (systems handling clicks run after it) and `::Place` (views that adjust token heights run after it).
 - `ClickedToken(Option<Entity>)` (resource): the `common::Clickable` entity whose token the left button was just pressed on, this frame only. Views skip their ground click when it is set; `site` uses it.
 - `HoveredToken(Option<Entity>)` (resource): the `common::Clickable` entity the mouse is over, every frame; `world_map` outlines it and `minimap` names it.
-- `ViewCamera` (marker on the camera), `OrbitCamera` (read or set `yaw` (0 looks north, positive moves the camera east), `pitch`, `distance`; used by `dev_tools` `GAME_VIEW`, `world_map` and `dungeon_map`).
+- `ViewCamera` (marker on the camera), `OrbitCamera` (read or set `yaw` (0 looks north, positive moves the camera east), `pitch`, `distance`; used by `dev_tools` `HOW_DEBUG_VIEW`, `world_map` and `dungeon_map`).
 - `ViewGrid` (resource, set by the current view on entering): `cell_size` (3D units per grid step) and `floor` (height the camera looks at and tokens stand on).
 - `TokenView` (`owner`), `TOKEN_DIAMETER`, `TOKEN_HALF_THICKNESS`: for views that place tokens themselves (the world map rests them on the terrain) or size things to them.
 

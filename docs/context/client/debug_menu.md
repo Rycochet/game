@@ -13,8 +13,8 @@ The debug menu: backtick or the warning button top left opens a full-screen list
 ## Public API
 
 - `DebugMenuPlugin`.
-- `DebugAction` (message): do this, as if chosen. Used by `dev_tools` (`GAME_PANEL`).
-- `DebugMenu` (resource): `open`, `filter`; `open_with` (native, for `GAME_DEBUG_MENU`).
+- `DebugAction` (message): do this, as if chosen. Used by `dev_tools` (`HOW_DEBUG_PANEL`).
+- `DebugMenu` (resource): `open`, `filter`; `open_with` (native, for `HOW_DEBUG_MENU`).
 - `AutoWalk(bool)` (resource): the player walks east one step per frame on the world map. `TemperatureCycle` (resource): `Off`, `Cooling`, `Warming`; the snow line falls to 0 and back through the server (`DevSnowLine`), and it turns itself off at the end.
 
 ## Depends on
@@ -35,6 +35,6 @@ The debug menu: backtick or the warning button top left opens a full-screen list
 - Suns and Moons (`bodies.rs`): a row per sun, a gap, a row per moon: a swatch of its colour and a slider along its kind's colours (`shared::celestial::colour_along`), and for suns a slider for intensity (`MOST_INTENSITY`; above about 1.15 on flat ground `world_map`'s cap holds it). Only this client's drawing, until the world is joined again. A generated body can be paler than anything on its slider: the mark goes to the nearest, and the swatch shows it exactly until it is moved.
 - World Time and Suns and Moons toggle their panels, and their entries have checkboxes saying whether they are open (`OpenPanels::toggle`, `forget_closed` for close buttons).
 - World Time's panel asks the server to move the world's clock an hour either way (`DevSetTime`), on either map, for everyone playing. It stops at the world's beginning.
-- Back to Start, Change Cell Mode, Cycle Temperature, Forget Map, Poi Showcase, Reveal Map and Teleport Mode need the server's dev tools (`common::ServerDevTools`, from `Welcome`), and are disabled where it refuses them. The embedded server always allows them; a standalone one with `HALL_OF_WORLDS_DEV_TOOLS=1`.
+- Back to Start, Change Cell Mode, Cycle Temperature, Forget Map, Poi Showcase, Reveal Map and Teleport Mode need the server's dev tools (`common::ServerDevTools`, from `Welcome`), and are disabled where it refuses them. The embedded server always allows them; a standalone one with `HOW_DEBUG_TOOLS=1`.
 - Reveal Map and Forget Map are answered by the server sending the level again as if arriving where the player stands (`EnterLevel`), or for forgetting the world map `ForgetWorldMap` and the chunks in sight. Both are disabled in towns, which arrive whole.
 - Drilling down through several layers isn't built, as nothing uses it yet.

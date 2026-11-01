@@ -27,14 +27,14 @@ use shared::site::FORGET_BEFORE;
 use shared::world::{WorldId, WorldSeed};
 
 /// Overrides where the server keeps its data (a folder path).
-pub const DATA_FOLDER_VARIABLE: &str = "HALL_OF_WORLDS_SERVER_DATA";
+pub const DATA_FOLDER_VARIABLE: &str = "HOW_DATA";
 
 /// Bump when a save changes in a way older servers can't read (adding a
 /// field with a default doesn't need it). A server refuses a world saved
 /// with a newer format than its own.
 pub const SAVE_FORMAT: u32 = 2;
 
-/// The server's data folder: `HALL_OF_WORLDS_SERVER_DATA` if set, otherwise
+/// The server's data folder: `HOW_DATA` if set, otherwise
 /// `Hall of Worlds/server` in the user's data folder (`%APPDATA%` on
 /// Windows), otherwise `server-data` here. A client keeps its own data
 /// beside it, never in it.

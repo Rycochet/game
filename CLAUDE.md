@@ -97,7 +97,7 @@ When the owner says a branch is ready to merge (or asks for a PR):
 
 ## Commands
 
-- Native: `cargo run` · Server: `cargo run -p server` (with `HALL_OF_WORLDS_WEB=dist` after `trunk build`, it serves the web client too, on http://localhost:8080) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
+- Native: `cargo run` · Server: `cargo run -p server` (with `HOW_WEB=dist` after `trunk build`, it serves the web client too, on http://localhost:8080) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
 - Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
 - **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native and for wasm (type-check only), then `cargo test --workspace`. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
 - **Lint: `cargo xtask lint`**: the same without the tests. The pre-commit hook in `.githooks/` runs it (turn on once per clone with `cargo xtask hooks`). It checks the files on disk, not only what's staged. Fix what it reports rather than skipping it with `--no-verify`.
@@ -107,7 +107,7 @@ When the owner says a branch is ready to merge (or asks for a PR):
 - Docker isn't installed on the owner's machine, and the Docker workflow only builds the image after merging to `master`: take extra care with `Dockerfile` changes.
 - **Develop and test on the native (Windows) build.** Trust Bevy to produce an equivalent web build: `cargo xtask test` type-checks wasm, and the owner tests in the browser occasionally. Don't make browser testing or web performance a task until the owner asks (later in development).
 - **Leave the game running for the owner** after finishing a change: start the native build in the background (`./target/debug/hall-of-worlds.exe` with `run_in_background`) and don't close it, so the owner can see and play with the changes. Before rebuilding, close it if it's still running (`taskkill //IM hall-of-worlds.exe //F`): Windows locks the running executable and the build fails with "Access is denied".
-- **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`). Always set `HALL_OF_WORLDS_SERVER_DATA` to a scratch folder in the same command (shell variables don't carry between commands), or the run saves over the owner's character.
+- **Checking visuals:** run the native build with `dev_tools` environment variables to set the start position/state and save a screenshot, then read the image (see `docs/context/client/dev_tools.md`). Always set `HOW_DATA` to a scratch folder in the same command (shell variables don't carry between commands), or the run saves over the owner's character.
 - Bevy compiles slowly the first time (15+ min clean); incremental builds take seconds. Run long builds in the background.
 
 ## Conventions
@@ -115,4 +115,5 @@ When the owner says a branch is ready to merge (or asks for a PR):
 - Bevy version is pinned in `Cargo.toml` (currently 0.20). Bevy changes its API between versions: check the compiler errors and docs.rs for the pinned version rather than assuming older APIs.
 - Client and shared code must compile for `wasm32-unknown-unknown` as well as native: no threads, blocking file IO or native-only crates without a `#[cfg(target_arch = "wasm32")]` alternative. Server code is native-only and may use them.
 - Dependencies must be open source under an OSI-approved licence; MIT (or MIT/Apache-2.0 dual) preferred. When suggesting a library, give the licence and the reason, and offer alternatives where sensible: the owner cares about results, not specific libraries.
+- Environment variables: all start `HOW_`; ones only for debugging and development start `HOW_DEBUG_` (those a real deployment can ignore). No `HOW_CLIENT_` / `HOW_SERVER_` prefixes: the native client embeds the server, so the split would not hold. Logging uses the usual `LOG_LEVEL` (and `RUST_LOG` for per-crate filters), so put noisy lines at `debug` or `trace` rather than behind a flag.
 - Git: the owner uses branches and PRs on GitHub (`Rycochet/game`, default branch `master`). Don't push or open PRs unless asked.

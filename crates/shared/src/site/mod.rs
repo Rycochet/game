@@ -1224,16 +1224,16 @@ mod pictures {
     use crate::dungeon::Cell;
 
     /// Prints levels as text: `cargo test -p shared print_sites -- --ignored --nocapture`
-    /// (`SITE_KINDS`, `SITE_SEED`, `SITE_RUIN` choose what).
+    /// (`HOW_DEBUG_SITE_KINDS`, `HOW_DEBUG_SITE_SEED`, `HOW_DEBUG_SITE_RUIN` choose what).
     #[test]
     #[ignore]
     fn print_sites() {
-        let kinds = std::env::var("SITE_KINDS").unwrap_or("20,4,29".into());
-        let seed: u64 = std::env::var("SITE_SEED")
+        let kinds = std::env::var("HOW_DEBUG_SITE_KINDS").unwrap_or("20,4,29".into());
+        let seed: u64 = std::env::var("HOW_DEBUG_SITE_SEED")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(1);
-        let ruin: u8 = std::env::var("SITE_RUIN")
+        let ruin: u8 = std::env::var("HOW_DEBUG_SITE_RUIN")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);

@@ -21,7 +21,7 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 
 ## Used by
 
-- `connection` (`Stepped`; sets the position on joining and on corrections), `site` (`Arrived`; sets the position on entering and changing levels), `view3d` (the camera follows the `Player`), `world_map` (centre of view, clicks), `dungeon_map` (sight and light), `ui` (position readout), `debug_menu` (auto walk: `TakeStep`), `dev_tools` (`GAME_MOVE`: `TakeStep`; `GAME_TRAVEL`), all with `common::MapPosition` / `SmoothPosition` on the `Player`.
+- `connection` (`Stepped`; sets the position on joining and on corrections), `site` (`Arrived`; sets the position on entering and changing levels), `view3d` (the camera follows the `Player`), `world_map` (centre of view, clicks), `dungeon_map` (sight and light), `ui` (position readout), `debug_menu` (auto walk: `TakeStep`), `dev_tools` (`HOW_DEBUG_MOVE`: `TakeStep`; `HOW_DEBUG_TRAVEL`), all with `common::MapPosition` / `SmoothPosition` on the `Player`.
 
 ## Notes
 

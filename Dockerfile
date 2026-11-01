@@ -36,9 +36,9 @@ RUN useradd --system --no-create-home hall \
  && mkdir /data \
  && chown hall /data
 USER hall
-ENV HALL_OF_WORLDS_ADDRESS=0.0.0.0:8080 \
-    HALL_OF_WORLDS_WEB=/srv/web \
-    HALL_OF_WORLDS_SERVER_DATA=/data
+ENV HOW_ADDRESS=0.0.0.0:8080 \
+    HOW_WEB=/srv/web \
+    HOW_DATA=/data
 VOLUME /data
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/hall-of-worlds-server"]
