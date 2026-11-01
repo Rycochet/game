@@ -19,6 +19,8 @@
 //!   serve; without it, only the game's WebSockets are served.
 //! - `HOW_DATA`: where to save (default: the user's data
 //!   folder).
+//! - `HOW_GUESTS`: `true` (the default) lets clients play without an account.
+//!   `false` stops the server from starting, until there is another way in.
 //! - `HOW_DEBUG_TOOLS`: `true` accepts dev tools messages from anyone connected.
 //! - `LOG_LEVEL`: how much to log (see `environment`); `debug` adds every
 //!   connection's every round trip, for looking into network trouble.
@@ -48,12 +50,18 @@ fn main() {
         eprintln!("{error}");
         process::exit(1);
     });
+    let guests = option_on("HOW_GUESTS", true);
+    if !guests {
+        eprintln!("HOW_GUESTS is false, which leaves no way to log in to this server yet");
+        process::exit(1);
+    }
     let dev_tools = option_on("HOW_DEBUG_TOOLS", false);
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {
             dev_tools,
             exit_when_alone: false,
+            guests,
         },
         Some(data.clone()),
     );

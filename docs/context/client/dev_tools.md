@@ -37,7 +37,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - `HOW_DEBUG_SCREENSHOT=path.png` (+ optional `HOW_DEBUG_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
 - Not here, but also dev tools the embedded server allows: the debug menu's Teleport Mode (`world_map`, `dungeon_map`; on a poi on the full map it goes into it, `minimap`), Change Cell Mode (`dungeon_map`) and Teleport to Start (`debug_menu`).
 - `LOG_LEVEL=debug` (read by `server::log_plugin`): log more from our crates; see `docs/context/server/server.md`.
-- `HOW_SERVER=wss://host:port/ws`, or `ws://` (read by `connection`): join that server instead of starting single player (a new guest each run; dev tools messages are ignored by such servers).
+- `HOW_SERVER=wss://host:port/ws`, or `ws://` (read by `connection`): join that server instead of starting single player (the same guest each run, unless `HOW_DEBUG_GUEST=<slot>` names another, for several clients on one computer; dev tools messages are ignored by such servers).
 - `HOW_DATA=folder` (read by the server, not this module): where the embedded server saves. Set it to a scratch folder for test runs, or they move the owner's saved character (the saved position and site win unless `HOW_DEBUG_POS` / `HOW_DEBUG_ENTER` are set).
 
 ## Depends on

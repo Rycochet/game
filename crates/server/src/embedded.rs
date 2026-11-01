@@ -6,10 +6,10 @@ use std::thread::{self, JoinHandle};
 use shared::protocol::{ClientLink, local_pair};
 use shared::world::WorldSeed;
 
-use crate::{CharacterName, Connections, ServerOptions, headless_app};
+use crate::{CharacterId, Connections, ServerOptions, headless_app};
 
-/// The single player's character name (until there are characters to
-/// choose from).
+/// The single player's character, who has no account (until there are
+/// characters to choose from here).
 const PLAYER: &str = "player";
 
 /// A running embedded server. Dropping it waits for the server to finish:
@@ -42,15 +42,15 @@ pub fn start_embedded(
             let options = ServerOptions {
                 dev_tools: true,
                 exit_when_alone: true,
+                guests: false,
             };
             // Made on the thread itself: a Bevy `App` can't move between
             // threads.
             let mut app = headless_app(world_seed, options, data);
-            let name = CharacterName::new(PLAYER);
-            assert!(name.is_some(), "a fine name");
+            let character = CharacterId::new(PLAYER).expect("a fine id");
             app.world_mut()
                 .resource_mut::<Connections>()
-                .add(server, name);
+                .add_playing(server, character);
             app.run();
         })
         .expect("the server thread can start");
@@ -74,7 +74,6 @@ mod tests {
         let (client, server) = start_embedded(seed, Some(folder.0.clone()));
         assert!(client.send(&ClientMessage::Hello {
             protocol: PROTOCOL_VERSION,
-            guest: 0,
         }));
         assert!(client.send(&ClientMessage::DevTeleport { x: 5, y: 6 }));
         let deadline = Instant::now() + Duration::from_secs(10);
@@ -100,11 +99,8 @@ mod tests {
         // Leaving: the server saves and stops, so dropping it returns.
         drop(client);
         drop(server);
-        let saved = folder
-            .0
-            .join("worlds")
-            .join(format!("{:016x}", seed.id().0));
-        let character = std::fs::read_to_string(saved.join("characters/player.ron")).unwrap();
+        let saved = folder.0.join("characters/player.ron");
+        let character = std::fs::read_to_string(saved).unwrap();
         assert!(character.contains("world_position: (5, 6)"), "{character}");
     }
 }

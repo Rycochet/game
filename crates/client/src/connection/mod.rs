@@ -14,6 +14,7 @@
 //! player is moved back if a step was refused (`prediction`). Other modules
 //! send with `ToServer` and read the server's map messages as `FromServer`.
 
+mod guest;
 mod ping;
 mod prediction;
 mod socket;
@@ -24,7 +25,10 @@ use std::time::Duration;
 
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage};
+use shared::protocol::{
+    ClientLink, ClientMessage, Credentials, GuestToken, LoginMethod, PROTOCOL_VERSION,
+    ServerMessage,
+};
 use shared::world::WORLD_MAP_VERSION;
 use shared::world::{GAME_MINUTE_SECONDS, MINUTES_PER_HOUR};
 
@@ -48,7 +52,7 @@ impl Plugin for ConnectionPlugin {
             .init_resource::<Prediction>()
             .insert_resource(Connecting {
                 target: Target::choose(),
-                guest: socket::guest(),
+                guest: None,
                 retry: None,
             })
             .add_systems(
@@ -163,7 +167,8 @@ pub struct ServerConnection {
 #[derive(Resource)]
 struct Connecting {
     target: Target,
-    guest: u64,
+    /// The token to log in as a guest with, once one is needed.
+    guest: Option<GuestToken>,
     /// Counting down to the next try; `None` to try now.
     retry: Option<Timer>,
 }
@@ -184,7 +189,6 @@ fn connect(world: &mut World) {
         return;
     }
     connecting.retry = Some(Timer::new(RETRY_EVERY, TimerMode::Once));
-    let guest = connecting.guest;
     let connection = match &connecting.target {
         #[cfg(not(target_arch = "wasm32"))]
         Target::Embedded => {
@@ -230,7 +234,6 @@ fn connect(world: &mut World) {
     world.resource_mut::<ServerClock>().local_server = connection.local;
     connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
-        guest,
     });
     world.insert_resource(connection);
     // Steps start again from the server's word.
@@ -249,11 +252,48 @@ fn pump_socket(world: &mut World) {
     }
 }
 
+/// Ends the connection and doesn't try again, saying why.
+fn give_up(commands: &mut Commands, status: &mut ServerStatus, reason: String) {
+    warn!("Not connecting again: {reason}");
+    *status = ServerStatus::Refused(reason);
+    hang_up(commands);
+}
+
+/// Ends the connection.
+fn hang_up(commands: &mut Commands) {
+    commands.remove_resource::<ServerConnection>();
+    #[cfg(target_arch = "wasm32")]
+    commands.queue(|world: &mut World| {
+        world.remove_non_send::<socket::BrowserSocket>();
+    });
+}
+
+/// Logs in as a guest, the only way there is so far. `Err` says why it can't.
+fn log_in(
+    connection: &ServerConnection,
+    connecting: &mut Connecting,
+    methods: &[LoginMethod],
+) -> Result<(), String> {
+    if !methods.contains(&LoginMethod::Guest) {
+        return Err("This server needs an account, which this version can't log in to".into());
+    }
+    let token = match connecting.guest {
+        Some(token) => token,
+        None => guest::token(&connecting.target)?,
+    };
+    connecting.guest = Some(token);
+    connection
+        .link
+        .send(&ClientMessage::Login(Credentials::Guest(token)));
+    Ok(())
+}
+
 /// Handles every message that has arrived since the last frame.
 #[allow(clippy::too_many_arguments)]
 fn receive(
     mut commands: Commands,
     connection: Res<ServerConnection>,
+    mut connecting: ResMut<Connecting>,
     mut status: ResMut<ServerStatus>,
     mut world: Option<ResMut<CurrentWorld>>,
     view: Res<State<GameView>>,
@@ -290,6 +330,18 @@ fn receive(
                 weather.set_if_neq(Weather {
                     snow_line: snow_line as f64,
                 });
+            }
+            Ok(Some(ServerMessage::LoginOptions { methods })) => {
+                if let Err(reason) = log_in(&connection, &mut connecting, &methods) {
+                    give_up(&mut commands, &mut status, reason);
+                    break;
+                }
+            }
+            // Nothing logs in to an account yet, so nothing should send this.
+            Ok(Some(ServerMessage::Characters { .. })) => {
+                let reason = "This version can't choose a character on this server".to_owned();
+                give_up(&mut commands, &mut status, reason);
+                break;
             }
             Ok(Some(ServerMessage::Welcome {
                 world: info,
@@ -391,11 +443,7 @@ fn receive(
                     warn!("Not connecting again: {reason}");
                     *status = ServerStatus::Refused(reason);
                 }
-                commands.remove_resource::<ServerConnection>();
-                #[cfg(target_arch = "wasm32")]
-                commands.queue(|world: &mut World| {
-                    world.remove_non_send::<socket::BrowserSocket>();
-                });
+                hang_up(&mut commands);
                 break;
             }
         }

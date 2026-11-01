@@ -7,11 +7,13 @@
 
 mod level;
 mod link;
+mod login;
 
 pub use level::{
     ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, level_chunk,
 };
 pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
+pub use login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
 
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +26,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 19;
+pub const PROTOCOL_VERSION: u32 = 20;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -42,10 +44,17 @@ pub const WORLD_MAP_PRELOAD: i64 = CHUNK_SIZE;
 /// From a client to the server.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ClientMessage {
-    /// The first message on a new connection. `guest` names the character
-    /// on servers without accounts (yet): a random number the client keeps,
-    /// so it gets the same character back. The embedded server ignores it.
-    Hello { protocol: u32, guest: u64 },
+    /// The first message on a new connection, answered with `LoginOptions`
+    /// (an embedded server, which has no logins: with `Welcome`).
+    Hello { protocol: u32 },
+    /// Logs in, once `LoginOptions` has arrived. A guest is answered with
+    /// `Welcome`, anyone else with `Characters`.
+    Login(Credentials),
+    /// Plays this character of the account's, answered with `Welcome`.
+    ChooseCharacter { id: CharacterId },
+    /// Makes a new character and plays them, answered with `Welcome`. The
+    /// server checks the name and how many the account has.
+    CreateCharacter { name: String },
     /// Asks the server's clock, now and then. `sent` is the client's own time,
     /// handed back in `Pong` so it can tell how long the round trip took.
     Ping { sent: f64 },
@@ -179,7 +188,14 @@ impl ServerMessage {
 /// From the server to a client.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ServerMessage {
-    /// The answer to `Hello`: the world the player is in, its clock (in game
+    /// The answer to `Hello`: the ways to log in here.
+    LoginOptions { methods: Vec<LoginMethod> },
+    /// The account's characters, to choose from or add to (if `can_create`).
+    Characters {
+        list: Vec<CharacterSummary>,
+        can_create: bool,
+    },
+    /// The player is in the game: the world they are in, its clock (in game
     /// hours since it began) and snow line, and where they are on its world
     /// map (where they left off). If they were in a site, `EnterLevel` follows.
     Welcome {
@@ -309,7 +325,13 @@ mod tests {
         let client = vec![
             ClientMessage::Hello {
                 protocol: PROTOCOL_VERSION,
-                guest: 0x1234_5678_9abc_def0,
+            },
+            ClientMessage::Login(Credentials::Guest(GuestToken([7; 32]))),
+            ClientMessage::ChooseCharacter {
+                id: CharacterId::new("someone").unwrap(),
+            },
+            ClientMessage::CreateCharacter {
+                name: "Some One".into(),
             },
             ClientMessage::Step {
                 map: 2,
@@ -342,6 +364,17 @@ mod tests {
             },
         ];
         let server = vec![
+            ServerMessage::LoginOptions {
+                methods: vec![LoginMethod::Guest],
+            },
+            ServerMessage::Characters {
+                list: vec![CharacterSummary {
+                    id: CharacterId::new("someone").unwrap(),
+                    name: "Some One".into(),
+                    last_played: 99,
+                }],
+                can_create: true,
+            },
             ServerMessage::Welcome {
                 world: WorldInfo {
                     id: WorldId(7),
