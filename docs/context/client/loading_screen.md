@@ -4,7 +4,7 @@ The screen covering everything from the first frame until the game can take inpu
 
 ## Files
 
-- `crates/client/src/loading_screen/mod.rs`: `LoadingScreenPlugin`; `next_step` (from frames run and frames since the welcome), `title_font_size`, `bar_shows`, `take_all_input` (`PreUpdate`, before the widgets: clears keys, mouse, wheel and fingers while up), `keep_frame_rate`. Unit tests.
+- `crates/client/src/loading_screen/mod.rs`: `LoadingScreenPlugin`; `next_step` (from frames run and frames since the welcome), `title_font_size`, `bar_shows`, `take_all_input` (`PreUpdate`, before the widgets: clears keys, mouse, wheel and fingers while up), `keep_frame_rate`, `remove_page_screen` (web only). Unit tests.
 
 ## Public API
 
@@ -26,4 +26,4 @@ The screen covering everything from the first frame until the game can take inpu
 - `connection` waits out `Starting`, or the word would never be seen: it would connect before the first frame is drawn.
 - The title's font is built in with `include_bytes!` to be there on the first frame. `TITLE_EMS_WIDE` is measured from the font: change it with the font or the words.
 - While up, frames keep their focused rate even out of focus (`common::frame_settings`).
-- The web page stays black until the wasm has loaded: this screen starts after that.
+- On the web, `index.html` has its own copy of this screen saying "Downloading...", for until the wasm has loaded and started. `remove_page_screen` removes it when `Starting` ends, so there is no gap. Its colours, sizes and words are copied: change them in both places. Its fonts come from the same server as the page, and its title stays hidden until its font has loaded.

@@ -62,6 +62,9 @@ impl Plugin for LoadingScreenPlugin {
                 Update,
                 (update_step, show_screen, fit_title, keep_frame_rate).chain(),
             );
+
+        #[cfg(target_arch = "wasm32")]
+        app.add_systems(Update, remove_page_screen.after(update_step));
     }
 }
 
@@ -240,6 +243,22 @@ fn fit_title(
     if size != *last {
         *last = size;
         title.font_size = title_font_size(size).into();
+    }
+}
+
+/// Removes the screen in `index.html`, shown during the download, once this one
+/// has certainly been drawn to take its place.
+#[cfg(target_arch = "wasm32")]
+fn remove_page_screen(step: Res<LoadingStep>, mut removed: Local<bool>) {
+    if *removed || *step == LoadingStep::Starting {
+        return;
+    }
+    *removed = true;
+    let screen = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.get_element_by_id("loading"));
+    if let Some(screen) = screen {
+        screen.remove();
     }
 }
 
