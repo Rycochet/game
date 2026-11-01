@@ -1,7 +1,7 @@
-//! Typing into the filter on a device with no keyboard. A canvas can't raise the
+//! Typing into text boxes on a device with no keyboard. A canvas can't raise the
 //! on-screen keyboard, so in the browser a hidden HTML input takes the typing.
 //! Browsers only let it take focus during the tap itself, not a frame later, so
-//! a listener on the canvas does that, using the box's place sent each frame.
+//! a listener on the canvas does that, using the boxes' places sent each frame.
 //! Native builds have real keys, and all of this does nothing.
 
 use bevy::math::Rect;
@@ -9,7 +9,7 @@ use bevy::math::Rect;
 /// A key pressed in the hidden input, which the game's own keys don't see.
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Key {
+pub enum Key {
     Return,
     Escape,
 }
@@ -18,7 +18,7 @@ pub(super) enum Key {
 mod platform {
     use super::{Key, Rect};
 
-    pub fn set_box(_place: Option<Rect>) {}
+    pub fn set_boxes(_places: Vec<Rect>) {}
     pub fn show_text(_text: &str) {}
     pub fn typed(_current: &str) -> Option<String> {
         None
@@ -41,7 +41,7 @@ mod platform {
 
     struct Hidden {
         input: HtmlInputElement,
-        place: Rc<RefCell<Option<Rect>>>,
+        places: Rc<RefCell<Vec<Rect>>>,
         keys: Rc<RefCell<Vec<Key>>>,
     }
 
@@ -70,19 +70,16 @@ mod platform {
         input.set_attribute("autocapitalize", "off").ok()?;
         document.body()?.append_child(&input).ok()?;
 
-        let place = Rc::new(RefCell::new(None::<Rect>));
+        let places = Rc::new(RefCell::new(Vec::<Rect>::new()));
         let on_lift = {
-            let (place, input, canvas) = (place.clone(), input.clone(), canvas.clone());
+            let (places, input, canvas) = (places.clone(), input.clone(), canvas.clone());
             Closure::<dyn FnMut(PointerEvent)>::new(move |event: PointerEvent| {
                 let corner = canvas.get_bounding_client_rect();
                 let at = bevy::math::Vec2::new(
                     event.client_x() as f32 - corner.left() as f32,
                     event.client_y() as f32 - corner.top() as f32,
                 );
-                if place
-                    .borrow()
-                    .is_some_and(|box_at: Rect| box_at.contains(at))
-                {
+                if places.borrow().iter().any(|place| place.contains(at)) {
                     let _ = input.focus();
                 }
             })
@@ -109,18 +106,22 @@ mod platform {
             .ok()?;
         on_key.forget();
 
-        Some(Hidden { input, place, keys })
+        Some(Hidden {
+            input,
+            places,
+            keys,
+        })
     }
 
-    /// Where the filter box is, in logical pixels; `None` when the menu is shut,
-    /// which also puts the on-screen keyboard away.
-    pub fn set_box(place: Option<Rect>) {
+    /// Where text boxes are, in logical pixels; none puts the on-screen keyboard
+    /// away.
+    pub fn set_boxes(places: Vec<Rect>) {
         HIDDEN.with(|hidden| {
             if let Some(hidden) = hidden {
-                if place.is_none() && hidden.place.borrow().is_some() {
+                if places.is_empty() && !hidden.places.borrow().is_empty() {
                     let _ = hidden.input.blur();
                 }
-                *hidden.place.borrow_mut() = place;
+                *hidden.places.borrow_mut() = places;
             }
         });
     }
@@ -150,4 +151,4 @@ mod platform {
     }
 }
 
-pub(super) use platform::{set_box, show_text, take_keys, typed};
+pub(super) use platform::{set_boxes, show_text, take_keys, typed};
