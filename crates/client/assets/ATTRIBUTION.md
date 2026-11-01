@@ -16,6 +16,13 @@ Artwork in this folder made by other people, with the licence it is used under.
 - Licence: [SIL Open Font License 1.1](https://openfontlicense.org), in `fonts/Lexend-OFL.txt`
 - Changes: none, but the file renamed from `Lexend[wght].ttf`.
 
+## `fonts/NotoEmoji.ttf`: Noto Emoji by Google
+
+- Copyright 2013 Google Inc.
+- Source: Noto Emoji 1.05, <https://github.com/googlefonts/noto-emoji>, as included with the `bevy_replicon_renet2` crate
+- Licence: [SIL Open Font License 1.1](https://openfontlicense.org), in `fonts/NotoEmoji-OFL.txt`
+- Changes: none, but the file renamed from `NotoEmoji-Regular.ttf`.
+
 ## `monsters/`: Dungeon Odyssey monster tiles by David E. Gervais
 
 - Artist: **David E. Gervais**

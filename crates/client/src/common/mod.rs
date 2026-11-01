@@ -503,7 +503,7 @@ pub struct ServerClock {
     /// How long the last `Ping` took to come back, in milliseconds.
     pub round_trip_ms: Option<f64>,
     /// The server is in this process: `round_trip_ms` says nothing about a
-    /// network, only how long it waited for the server's tick.
+    /// network, only how long it waited for the server's tick, so it shows as a dash.
     pub local_server: bool,
 }
 
