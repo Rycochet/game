@@ -19,7 +19,9 @@ pub enum DebugAction {
     ShowDebugInfo,
     ShowWidgets,
     StairsStyle,
+    SunsAndMoons,
     TeleportMode,
+    WorldTime,
 }
 
 /// The state of the game that the menu depends on.
@@ -35,13 +37,15 @@ pub(super) struct Facts {
     pub changing_cells: bool,
     pub showing_info: bool,
     pub in_town: bool,
+    pub world_time_open: bool,
+    pub suns_and_moons_open: bool,
     /// Whether the server accepts developer tools messages.
     pub dev_tools: bool,
 }
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 14] = [
+    pub(super) const ALL: [Self; 16] = [
         Self::AutoWalk,
         Self::BackToStart,
         Self::ChangeCellMode,
@@ -55,7 +59,9 @@ impl DebugAction {
         Self::ShowDebugInfo,
         Self::ShowWidgets,
         Self::StairsStyle,
+        Self::SunsAndMoons,
         Self::TeleportMode,
+        Self::WorldTime,
     ];
 
     pub(super) fn name(self) -> &'static str {
@@ -73,7 +79,9 @@ impl DebugAction {
             Self::ShowDebugInfo => "Show Debug Info",
             Self::ShowWidgets => "Show Widgets",
             Self::StairsStyle => "Stairs Style",
+            Self::SunsAndMoons => "Suns and Moons",
             Self::TeleportMode => "Teleport Mode",
+            Self::WorldTime => "World Time",
         }
     }
 
@@ -108,6 +116,7 @@ impl DebugAction {
                 | Self::PoiShowcase
                 | Self::RevealMap
                 | Self::TeleportMode
+                | Self::WorldTime
         )
     }
 
@@ -118,6 +127,8 @@ impl DebugAction {
             Self::ChangeCellMode => Some(facts.changing_cells),
             Self::CycleTemperature => Some(facts.cycling),
             Self::ShowDebugInfo => Some(facts.showing_info),
+            Self::SunsAndMoons => Some(facts.suns_and_moons_open),
+            Self::WorldTime => Some(facts.world_time_open),
             Self::TeleportMode => Some(facts.teleporting),
             _ => None,
         }
@@ -182,6 +193,8 @@ mod tests {
             changing_cells: false,
             showing_info: true,
             in_town: false,
+            world_time_open: false,
+            suns_and_moons_open: true,
             dev_tools: true,
         }
     }
@@ -254,6 +267,10 @@ mod tests {
         assert_eq!(DebugAction::ShowDebugInfo.is_on(&site), Some(true));
         assert_eq!(DebugAction::TeleportMode.is_on(&site), Some(false));
         assert_eq!(DebugAction::ResetView.is_on(&site), None);
+        // Panels that open and close show which.
+        assert_eq!(DebugAction::SunsAndMoons.is_on(&site), Some(true));
+        assert_eq!(DebugAction::WorldTime.is_on(&site), Some(false));
+        assert_eq!(DebugAction::FieldsState.is_on(&site), None);
     }
 
     #[test]

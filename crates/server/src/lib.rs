@@ -8,6 +8,7 @@
 //! (`shared::protocol`), even when embedded. It saves its world, sites and
 //! characters in its own data folder (`storage`).
 
+mod clock;
 mod connections;
 mod embedded;
 mod latency;
@@ -16,6 +17,7 @@ mod sites;
 mod storage;
 mod world_map;
 
+use clock::{Repeating, WorldClock};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -28,7 +30,9 @@ use shared::poi::{PoiKind, PoiMap};
 use shared::protocol::WorldInfo;
 use shared::site::Generator;
 use shared::surface::Surface;
-use shared::world::{NORMAL_SNOW_LINE, WORLD_MAP_VERSION, WorldParams, WorldSeed};
+use shared::world::{
+    MINUTES_PER_HOUR, NORMAL_SNOW_LINE, WORLD_MAP_VERSION, WorldParams, WorldSeed,
+};
 
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
@@ -87,7 +91,7 @@ impl Plugin for ServerPlugin {
                 Update,
                 (
                     connections::handle_messages,
-                    connections::run_clock,
+                    connections::tell_the_time,
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),
                     exit_when_alone.run_if(|options: Res<ServerOptions>| options.exit_when_alone),
                 )
@@ -114,6 +118,20 @@ pub fn headless_app(world_seed: WorldSeed, options: ServerOptions, data: Option<
     app
 }
 
+/// Saves `world.ron`.
+fn save_world(storage: &Storage, seed: WorldSeed, clock: f64) {
+    storage.save_world(&WorldSave {
+        format: SAVE_FORMAT,
+        seed,
+        world_map_version: WORLD_MAP_VERSION,
+        hour: 0,
+        clock,
+    });
+}
+
+/// How often the clock is saved, in real time. A crash loses this much of it.
+const CLOCK_SAVE_EVERY: Duration = Duration::from_secs(10);
+
 /// The world this server runs.
 #[derive(Resource)]
 pub struct ServerWorld {
@@ -124,11 +142,15 @@ pub struct ServerWorld {
     /// The ground as far as walking goes.
     pub(crate) ground: WorldGround,
     params: WorldParams,
-    /// Game hours since the world began, always running.
-    pub(crate) clock: f64,
+    /// Game minutes since the world began, always running.
+    pub(crate) clock: WorldClock,
     /// The clock's whole hours. The tide follows this, so it moves once an
     /// hour rather than all the time.
     pub(crate) hour: u32,
+    /// `clock` has been moved, which everyone playing needs telling.
+    pub(crate) clock_moved: bool,
+    /// Saves the clock (`None`: nowhere to save it).
+    _clock_saver: Option<Repeating>,
     /// Above it everything is frozen (not saved: normal weather on starting).
     pub(crate) snow_line: u32,
     pub(crate) storage: Storage,
@@ -166,38 +188,41 @@ impl ServerWorld {
                         save.world_map_version
                     ));
                 }
-                // Saves from before the clock only have whole hours.
-                save.clock.max(save.hour as f64)
+                // Saves before format 2 counted hours (the oldest only whole ones).
+                if save.format < 2 {
+                    save.clock.max(save.hour as f64) * MINUTES_PER_HOUR
+                } else {
+                    save.clock
+                }
             }
             None => 0.0,
         };
         let params = WorldParams::from_seed(seed.terrain());
+        let world_clock = WorldClock::new(clock);
+        let save_clock = world_clock.clone();
+        let save_to = storage.clone();
+        let clock_saver = storage.saves().then(|| {
+            Repeating::start(CLOCK_SAVE_EVERY, move || {
+                save_world(&save_to, seed, save_clock.minutes());
+            })
+        });
         let world = Self {
             pois: PoiMap::new(&params, seed.pois()),
             width: Surface::new(&params).width(),
             ground: WorldGround::new(&params),
             params,
-            clock,
-            hour: clock as u32,
+            clock: world_clock,
+            hour: (clock / MINUTES_PER_HOUR) as u32,
+            clock_moved: false,
+            _clock_saver: clock_saver,
             snow_line: NORMAL_SNOW_LINE,
             seed,
             storage,
             sites: BTreeMap::new(),
             unsaved_sites: Unsaved::default(),
         };
-        world.save();
+        save_world(&world.storage, seed, clock);
         Ok(world)
-    }
-
-    /// Saves `world.ron`.
-    fn save(&self) {
-        self.storage.save_world(&WorldSave {
-            format: SAVE_FORMAT,
-            seed: self.seed,
-            world_map_version: WORLD_MAP_VERSION,
-            hour: self.hour,
-            clock: self.clock,
-        });
     }
 
     /// What decides where can be walked now.

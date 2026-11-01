@@ -23,7 +23,7 @@ use shared::rng::Seed;
 use shared::world::GAME_HOUR_SECONDS;
 
 use super::{FollowsPlayer, WorldMapScene, view_square};
-use crate::common::{CurrentWorld, MapPosition, ServerClock};
+use crate::common::{CurrentWorld, MapPosition, ServerClock, SkyNow};
 use crate::player::Player;
 use crate::view3d::{OrbitCamera, ViewCamera};
 
@@ -42,6 +42,10 @@ const SKY_REACH: i64 = 180;
 
 /// Height of the cloud sheet, above the highest ground there is.
 const CLOUD_HEIGHT: f32 = 170.0;
+
+/// How much of the ground's own colour is added round the player, in the dark.
+/// None in full light, where it would only clip.
+const PLAYER_GLOW: f32 = 0.35;
 
 /// Quads of precipitation over the shader's `DROP_TILE`, shown in proportion to
 /// how hard it is falling. About half are over the window.
@@ -66,6 +70,9 @@ pub struct SkyParams {
     right: Vec2,
     towards: Vec2,
     centre: Vec2,
+    /// `rgb`: what to multiply colours by to look lit by the sky (`SkyNow::lit`).
+    /// `a`: how strong the glow round the player is.
+    light: Vec4,
 }
 
 /// Adds the sky to the terrain's standard material.
@@ -176,11 +183,6 @@ pub struct SkyAssets {
     precipitation: Handle<PrecipitationMaterial>,
     cloud_sheet: Handle<Mesh>,
 }
-
-/// Added to the server's game hours when working out the weather. Dev tools
-/// use it to look at another time's sky.
-#[derive(Resource, Default)]
-pub struct SkyHourOffset(pub f64);
 
 /// Makes the sky's assets and spawns the cloud sheet and precipitation.
 #[allow(clippy::too_many_arguments)]
@@ -372,7 +374,7 @@ pub fn update(
     time: Res<Time>,
     world: Res<CurrentWorld>,
     clock: Res<ServerClock>,
-    offset: Res<SkyHourOffset>,
+    sky_now: Res<SkyNow>,
     assets: Option<ResMut<SkyAssets>>,
     player: Single<&MapPosition, With<Player>>,
     orbit: Single<&OrbitCamera, With<ViewCamera>>,
@@ -387,7 +389,7 @@ pub fn update(
         return;
     };
     let (px, py) = (player.x, player.y);
-    let hours = clock.hours + offset.0;
+    let hours = clock.hours();
     let interval = SKY_INTERVAL / GAME_HOUR_SECONDS as f64;
 
     // The texture snaps to whole spacings, so clouds stay put as the player
@@ -455,6 +457,9 @@ pub fn update(
         right: square.right,
         towards: square.towards,
         centre: Vec2::new(px as f32, py as f32),
+        light: sky_now
+            .lit()
+            .extend(PLAYER_GLOW * (1.0 - sky_now.flat.max_element().min(1.0))),
     };
     let [older, newer] = &assets.moments;
     // Writing to these also tells Bevy to pick up changed textures.

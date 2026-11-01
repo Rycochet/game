@@ -32,10 +32,10 @@ const HINT_HEAD_HEIGHT: f32 = 0.5;
 const HINT_EDGE: f32 = 0.1;
 const HINT_GAP: f32 = 0.13;
 
-/// How wide the notch's base is, against how far it sticks out.
-const NOTCH_BASE: f32 = 0.9;
-/// How far inside the circle its base starts, in pixels, so they join.
-const NOTCH_OVERLAP: f32 = 2.0;
+/// How wide the notch's base is, against how long it is, and how far along the
+/// border it spreads as it grows out of it, against the same.
+const NOTCH_BASE: f32 = 0.6;
+const NOTCH_SPREAD: f32 = 0.5;
 
 /// The ridge's colour at a point: lit on one side going out from its middle,
 /// on the other side coming in, so it stands up from the map. `facing` is how
@@ -45,8 +45,9 @@ fn ridge_colour(facing: f32, outer: bool) -> [u8; 3] {
     BORDER.map(|channel| (channel * shade).clamp(0.0, 255.0) as u8)
 }
 
-/// The minimap's outline around `centre`: a circle of `radius` with a notch
-/// sticking out `notch` towards `north` (a unit vector on the picture).
+/// The minimap's outline around `centre`: a circle of `radius`, with a notch from
+/// the inside of its border to `notch` beyond it, towards `north` (a unit vector
+/// on the picture).
 #[derive(Clone, Copy, Debug)]
 pub struct RoundFrame {
     pub centre: (f32, f32),
@@ -60,8 +61,8 @@ impl RoundFrame {
     fn notch_corners(&self) -> [(f32, f32); 3] {
         let (north_x, north_y) = self.north;
         let (across_x, across_y) = (-north_y, north_x);
-        let base = self.radius - NOTCH_OVERLAP;
-        let half = self.notch * NOTCH_BASE;
+        let base = self.radius - self.border;
+        let half = (self.border + self.notch) * NOTCH_BASE;
         let at = |along: f32, across: f32| {
             (
                 self.centre.0 + north_x * along + across_x * across,
@@ -75,21 +76,25 @@ impl RoundFrame {
         ]
     }
 
-    /// Distance from the outline, negative inside.
+    /// Distance from the outline, negative inside: the circle and the notch run
+    /// smoothly into each other, so the notch grows out of the border.
     pub fn distance(&self, x: f32, y: f32) -> f32 {
         let circle = (x - self.centre.0).hypot(y - self.centre.1) - self.radius;
-        circle.min(polygon_distance(&self.notch_corners(), x, y))
+        let notch = polygon_distance(&self.notch_corners(), x, y);
+        let spread = (self.border + self.notch).max(0.01) * NOTCH_SPREAD;
+        let near = (spread - (circle - notch).abs()).max(0.0) / spread;
+        circle.min(notch) - near * near * spread / 4.0
     }
 
     /// Cuts the picture to the outline and draws the border on it.
     pub fn draw(&self, canvas: &mut Canvas) {
+        let inner = self.radius - self.border;
         for y in 0..canvas.height {
             for x in 0..canvas.width {
                 let (px, py) = (x as f32 + 0.5, y as f32 + 0.5);
-                let (dx, dy) = (px - self.centre.0, py - self.centre.1);
-                let from_centre = dx.hypot(dy);
+                let from_centre = (px - self.centre.0).hypot(py - self.centre.1);
                 // Well inside the border: nothing to do, the usual case.
-                if from_centre < self.radius - self.border - 1.0 {
+                if from_centre < inner - 1.0 {
                     continue;
                 }
                 let distance = self.distance(px, py);
@@ -98,14 +103,23 @@ impl RoundFrame {
                     canvas.pixels[at..at + 4].fill(0);
                     continue;
                 }
-                if distance < -self.border - 0.5 {
-                    continue;
-                }
-                let facing = (dx * LIGHT.0 + dy * LIGHT.1) / from_centre.max(1.0);
-                let colour = ridge_colour(facing, distance > -self.border / 2.0);
-                canvas.blend(x, y, colour, (distance + self.border + 0.5).clamp(0.0, 1.0));
+                // The way out, which round the notch isn't straight from the middle.
+                let (out_x, out_y) = (
+                    self.distance(px + 0.5, py) - self.distance(px - 0.5, py),
+                    self.distance(px, py + 0.5) - self.distance(px, py - 0.5),
+                );
+                let facing = (out_x * LIGHT.0 + out_y * LIGHT.1) / out_x.hypot(out_y).max(0.01);
+                let colour = if distance < -self.border {
+                    // Deep in the notch: as deep in the compass.
+                    BORDER.map(|channel| channel as u8)
+                } else {
+                    ridge_colour(facing, distance > -self.border / 2.0)
+                };
+                canvas.blend(x, y, colour, (from_centre - inner + 0.5).clamp(0.0, 1.0));
                 // The outer edge fades out over the picture's transparency.
-                canvas.pixels[at + 3] = ((0.5 - distance).clamp(0.0, 1.0) * 255.0) as u8;
+                if from_centre >= inner {
+                    canvas.pixels[at + 3] = ((0.5 - distance).clamp(0.0, 1.0) * 255.0) as u8;
+                }
             }
         }
     }
@@ -113,7 +127,7 @@ impl RoundFrame {
 
 /// Distance from a point to a line with rounded ends, `half` to each side of
 /// it, negative inside.
-fn line_distance(from: (f32, f32), to: (f32, f32), half: f32, x: f32, y: f32) -> f32 {
+pub fn line_distance(from: (f32, f32), to: (f32, f32), half: f32, x: f32, y: f32) -> f32 {
     let (along_x, along_y) = (to.0 - from.0, to.1 - from.1);
     let (at_x, at_y) = (x - from.0, y - from.1);
     let length = along_x * along_x + along_y * along_y;
@@ -331,7 +345,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_outline_is_a_circle_with_a_notch_towards_north() {
+    fn the_notch_runs_from_inside_the_border_to_just_past_it_towards_north() {
         let frame = RoundFrame {
             centre: (50.0, 50.0),
             radius: 30.0,
@@ -339,11 +353,17 @@ mod tests {
             notch: 10.0,
             north: (1.0, 0.0),
         };
+        let corners = frame.notch_corners();
+        assert_eq!(corners[0], (90.0, 50.0));
+        // Its base is on the inside line of the border.
+        assert_eq!(corners[1].0, 75.0);
+        assert_eq!(corners[2].0, 75.0);
         assert!(frame.distance(50.0, 50.0) < 0.0);
-        // Inside the notch to the east, past the circle...
+        // Out past the circle on that side, not on the other, and its foot spreads
+        // along the border.
         assert!(frame.distance(85.0, 50.0) < 0.0);
-        // ...but not the same way round to the west.
         assert!(frame.distance(15.0, 50.0) > 0.0);
+        assert!(frame.distance(80.0, 54.0) < 0.0);
     }
 
     #[test]

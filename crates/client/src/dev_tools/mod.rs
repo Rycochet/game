@@ -23,7 +23,9 @@
 //!   once at `GAME_POS` if set, otherwise two seconds after starting.
 //! - `GAME_WALK=1`: start with auto-walk on (as if G was pressed).
 //! - `GAME_SNOW=n`: start with the snow line at `n` (128 normal, 0 frozen).
-//! - `GAME_SKY_HOUR=n`: draw the weather this many game hours ahead.
+//! - `GAME_TIME=n`: once connected, ask the server to move the clock to `n` game
+//!   hours since the world began.
+//! - `GAME_CELESTIAL=n`: the suns and moons of terrain seed `n`, not this world's.
 //! - `GAME_WINDOW_SIZE=w,h`: resize the window (logical pixels) a second after
 //!   starting, to check that views handle resizing.
 //! - `GAME_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as
@@ -38,7 +40,7 @@
 //! - `GAME_MAP=dx,dy`: two seconds after starting, open the full map, moved
 //!   this many grid points from the player (`0,0` to centre it on them).
 //! - `GAME_MAP_ZOOM=n`: the full map opened by `GAME_MAP` at this zoom.
-//! - `GAME_PANEL=1`: open the Show Widgets panel.
+//! - `GAME_PANEL=1`: open the Show Widgets panel; `suns`: Suns and Moons.
 //! - `GAME_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
 //! - `GAME_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the
 //!   locale says.
@@ -194,13 +196,18 @@ impl Plugin for DevToolsPlugin {
             app.insert_resource(crate::common::HerbGrowthShift(stages));
         }
 
-        if env::var("GAME_PANEL").is_ok() {
+        if let Ok(panel) = env::var("GAME_PANEL") {
+            let action = if panel == "suns" {
+                DebugAction::SunsAndMoons
+            } else {
+                DebugAction::ShowWidgets
+            };
             app.add_systems(
                 Update,
-                |mut actions: MessageWriter<DebugAction>, mut sent: Local<bool>| {
+                move |mut actions: MessageWriter<DebugAction>, mut sent: Local<bool>| {
                     if !*sent {
                         *sent = true;
-                        actions.write(DebugAction::ShowWidgets);
+                        actions.write(action);
                     }
                 },
             );
@@ -327,8 +334,34 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
-        if let Some(hours) = env::var("GAME_SKY_HOUR").ok().and_then(|v| v.parse().ok()) {
-            app.insert_resource(crate::world_map::sky::SkyHourOffset(hours));
+        if let Some(hours) = env::var("GAME_TIME")
+            .ok()
+            .and_then(|v| v.parse::<f64>().ok())
+        {
+            // Asked of the server once there is one to ask.
+            app.add_systems(
+                Update,
+                move |view: Res<State<GameView>>,
+                      mut done: Local<bool>,
+                      mut to_server: MessageWriter<ToServer>| {
+                    if !*done && *view.get() != GameView::Connecting {
+                        *done = true;
+                        to_server.write(ToServer(ClientMessage::DevSetTime {
+                            minutes: hours * shared::world::MINUTES_PER_HOUR,
+                        }));
+                    }
+                },
+            );
+        }
+
+        if let Some(seed) = env::var("GAME_CELESTIAL").ok().and_then(|v| v.parse().ok()) {
+            app.add_systems(
+                OnExit(GameView::Connecting),
+                move |mut world: ResMut<crate::common::CurrentWorld>| {
+                    let seed = shared::rng::Seed::new(seed);
+                    world.celestial = shared::celestial::Celestial::from_seed(seed);
+                },
+            );
         }
 
         if let Some(snow_line) = env::var("GAME_SNOW").ok().and_then(|v| v.parse().ok()) {

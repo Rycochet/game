@@ -7,6 +7,7 @@ mod floors;
 mod frame;
 mod grid;
 mod projection;
+mod sky;
 mod sprites;
 mod world;
 
@@ -25,7 +26,7 @@ use shared::site::StairsDirection;
 
 use crate::common::{
     ClickMode, CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels,
-    PointerPosition, PointerSystems, Portal, SmoothPosition, Token, TouchGesture, Weather,
+    PointerPosition, PointerSystems, Portal, SkyNow, SmoothPosition, Token, TouchGesture, Weather,
 };
 use crate::connection::ToServer;
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
@@ -47,7 +48,10 @@ use world::WorldTiles;
 /// its gap from the window's corner. Lengths are in logical pixels.
 const MINIMAP_OF_HEIGHT: f32 = 0.2;
 const BORDER: f32 = 5.0;
-const NOTCH: f32 = 12.0;
+const NOTCH: f32 = 6.0;
+/// The window height at which the sizes round the minimap (`BORDER`, `NOTCH`,
+/// and the suns and moons) are as given: the height a window opens at.
+const MINIMAP_BASE_HEIGHT: f32 = 720.0;
 const CORNER_GAP: f32 = 10.0;
 
 /// A grid square, plus the grid line shared with the next one.
@@ -316,9 +320,20 @@ fn minimap_across(window: &Window) -> f32 {
     (window.height() * MINIMAP_OF_HEIGHT).round().max(1.0)
 }
 
-/// The picture holding it, notch included.
+/// How much bigger than given the sizes round the minimap are in this window.
+fn minimap_trim(window: &Window) -> f32 {
+    minimap_across(window) / (MINIMAP_BASE_HEIGHT * MINIMAP_OF_HEIGHT)
+}
+
+/// The picture holding it, with the suns and moons round it (more than the
+/// notch needs).
 fn minimap_picture_size(window: &Window) -> f32 {
-    minimap_across(window) + 2.0 * (NOTCH + 1.0)
+    minimap_across(window) + 2.0 * (sky::BAND.max(NOTCH) * minimap_trim(window) + 1.0)
+}
+
+/// Whether the sky can be seen here, so the minimap shows what is in it.
+fn under_the_sky(view: GameView, dungeon: &CurrentDungeon) -> bool {
+    view != GameView::Dungeon || dungeon.knows_outside()
 }
 
 /// The full map's parchment, across, in logical pixels.
@@ -634,6 +649,7 @@ struct Sources<'w, 's> {
     style: Res<'w, SurfaceStyle>,
     clock: Res<'w, GameClock>,
     weather: Res<'w, Weather>,
+    sky: Res<'w, SkyNow>,
     pois: Query<'w, 's, (&'static Portal, &'static Token)>,
     asset_server: Res<'w, AssetServer>,
     full: Res<'w, FullMap>,
@@ -683,6 +699,7 @@ fn draw_maps(
         style,
         clock,
         weather,
+        sky: sky_now,
         pois,
         asset_server,
         full,
@@ -953,15 +970,22 @@ fn draw_maps(
         frame::compass(&mut canvas, foot, length * scale, COMPASS_LINE * scale);
     } else {
         frame::player_dot(&mut canvas, player_at, dot, outline);
+        let trim = scale * minimap_trim(&window);
         // North on the picture: the grid's north is `-y`.
         RoundFrame {
             centre: projection.middle,
             radius: clip,
-            border: BORDER * scale,
-            notch: NOTCH * scale,
+            border: BORDER * trim,
+            notch: NOTCH * trim,
             north: (-grid_right.1 as f32, -grid_down.1 as f32),
         }
         .draw(&mut canvas);
+        // Last, as they are outside what that cuts off.
+        if under_the_sky(view, players_level) {
+            let middle = Vec2::from(projection.middle);
+            let icons = sky::icons(&sky_now.bodies, right, middle, clip, trim);
+            sky::draw(&mut canvas, &icons, &sky_now.bodies, middle, clip, trim);
+        }
     }
 }
 
@@ -1037,21 +1061,54 @@ fn spot_on_full_map(
     Some((map.to_grid(at.x, at.y), map.units_per_pixel))
 }
 
-/// Names the poi the mouse is over on the world map, in a box like the full
-/// map's near the bottom of the window. The full map covers it when open.
+/// Names the sun or moon by the minimap that the pointer is on, if any.
+fn hovered_body(
+    view: GameView,
+    dungeon: &CurrentDungeon,
+    sky_now: &SkyNow,
+    window: &Window,
+    camera: &OrbitCamera,
+    at: Vec2,
+) -> Option<String> {
+    if !under_the_sky(view, dungeon) {
+        return None;
+    }
+    let (right, _) = camera.ground_axes();
+    let middle = Vec2::new(
+        window.width() - CORNER_GAP - minimap_picture_size(window) / 2.0,
+        CORNER_GAP + minimap_picture_size(window) / 2.0,
+    );
+    let circle = minimap_across(window) / 2.0;
+    let trim = minimap_trim(window);
+    let icons = sky::icons(&sky_now.bodies, right, middle, circle, trim);
+    sky::under(&icons, middle, circle, at).map(|number| sky::name(&sky_now.bodies[number]))
+}
+
+/// Names what the pointer is over in a box like the full map's near the bottom
+/// of the window: a sun or moon by the minimap, or a poi on the world map. The
+/// full map covers it when open.
+#[allow(clippy::too_many_arguments)]
 fn name_hovered_token(
     view: Res<State<GameView>>,
     full: Res<FullMap>,
     hovered: Res<HoveredToken>,
     portals: Query<&Portal>,
+    (sky_now, dungeon, pointer): (Res<SkyNow>, Res<CurrentDungeon>, Res<PointerPosition>),
+    (window, camera): (Single<&Window, With<PrimaryWindow>>, Single<&OrbitCamera>),
     mut holder: Single<&mut Visibility, With<WorldHoverBox>>,
     mut text: Single<&mut Text, With<WorldHoverText>>,
 ) {
-    let name = hovered
+    let body = pointer
         .0
-        .filter(|_| !full.open && *view.get() == GameView::WorldMap)
-        .and_then(|token| portals.get(token).ok())
-        .map(|Portal::Poi(poi)| poi_name(poi));
+        .filter(|_| !full.open)
+        .and_then(|at| hovered_body(*view.get(), &dungeon, &sky_now, &window, &camera, at));
+    let name = body.or_else(|| {
+        hovered
+            .0
+            .filter(|_| !full.open && *view.get() == GameView::WorldMap)
+            .and_then(|token| portals.get(token).ok())
+            .map(|Portal::Poi(poi)| poi_name(poi))
+    });
     let shown = if name.is_some() {
         Visibility::Inherited
     } else {
@@ -1400,7 +1457,7 @@ mod tests {
         let mouse = app.world().resource::<ButtonInput<MouseButton>>();
         assert!(mouse.just_pressed(MouseButton::Left));
 
-        let size = 720.0 * MINIMAP_OF_HEIGHT + 2.0 * (NOTCH + 1.0);
+        let size = minimap_picture_size(&Window::default());
         let on = Vec2::new(1280.0 - CORNER_GAP - size / 2.0, CORNER_GAP + size / 2.0);
         click(&mut app, on);
         assert!(app.world().resource::<FullMap>().open);

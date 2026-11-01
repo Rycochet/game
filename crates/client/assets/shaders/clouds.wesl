@@ -14,6 +14,7 @@ struct Sky {
     right: vec2<f32>,
     towards: vec2<f32>,
     centre: vec2<f32>,
+    light: vec4<f32>,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> sky: Sky;
@@ -74,5 +75,5 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let thickness = smoothstep(0.2, 0.85, cell.r + (detail - 0.5) * 0.4);
 
     let colour = mix(vec3<f32>(0.9, 0.92, 0.95), vec3<f32>(0.3, 0.32, 0.36), cell.g);
-    return vec4<f32>(colour, thickness * MOST_OPAQUE);
+    return vec4<f32>(colour * sky.light.rgb, thickness * MOST_OPAQUE);
 }

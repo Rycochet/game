@@ -461,6 +461,8 @@ mod tests {
             changing_cells: false,
             showing_info: false,
             in_town: false,
+            world_time_open: false,
+            suns_and_moons_open: false,
             dev_tools: true,
         }
     }

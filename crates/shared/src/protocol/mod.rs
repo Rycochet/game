@@ -24,7 +24,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 15;
+pub const PROTOCOL_VERSION: u32 = 16;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -88,6 +88,9 @@ pub enum ClientMessage {
     /// Developer tools: set the snow line (which freezes water), answered
     /// with `SnowLine`. Only an embedded server accepts it.
     DevSnowLine(u32),
+    /// Developer tools: move the world's clock to this many game minutes since
+    /// the world began, answered with `Clock` to everyone playing.
+    DevSetTime { minutes: f64 },
     /// Developer tools: show every poi, known or not, for this connection.
     /// Only an embedded server accepts it.
     DevRevealPois,
@@ -112,6 +115,7 @@ impl ClientMessage {
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
                 | Self::DevSnowLine(_)
+                | Self::DevSetTime { .. }
                 | Self::DevRevealPois
                 | Self::DevRevealMap
                 | Self::DevForgetMap
@@ -185,7 +189,10 @@ pub enum ServerMessage {
     /// A new whole hour has begun on the clock (`% 24` is the time of day).
     /// The tide, and so where can be walked on the world map, follows it.
     Hour(u32),
-    /// The answer to `Ping`: its `sent`, and the world's clock when answering.
+    /// The world's clock has been moved: game minutes since the world began.
+    Clock(f64),
+    /// The answer to `Ping`: its `sent`, and the world's clock (game minutes)
+    /// when answering.
     Pong { sent: f64, clock: f64 },
     /// The server won't talk to this client, and why.
     Refused(String),
@@ -304,6 +311,7 @@ mod tests {
             ClientMessage::UseExit,
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
+            ClientMessage::DevSetTime { minutes: 90.5 },
             ClientMessage::DevBackToStart,
             ClientMessage::DevToShowcase,
             ClientMessage::DevRevealPois,
@@ -332,6 +340,7 @@ mod tests {
             ServerMessage::ForgetWorldMap,
             ServerMessage::SnowLine(40),
             ServerMessage::Hour(6),
+            ServerMessage::Clock(405.0),
             ServerMessage::Pong {
                 sent: 1.5,
                 clock: 6.75,

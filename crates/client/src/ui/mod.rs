@@ -101,9 +101,10 @@ fn update_status_text(
         _ => "-".to_string(),
     };
     let mut status = format!(
-        "{POSITION_ICON} {},{}  {HOUR_ICON} {}  {PING_ICON} {ping}",
+        "{POSITION_ICON} {},{}  {HOUR_ICON} {}d{:02}h  {PING_ICON} {ping}",
         player.x,
         player.y,
+        clock.hour / 24,
         clock.hour % 24
     );
     if *cycle != TemperatureCycle::Off {
