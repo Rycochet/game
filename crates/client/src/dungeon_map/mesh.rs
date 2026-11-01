@@ -49,9 +49,12 @@ impl Surface {
     /// The surface the floor of a cell is drawn with.
     pub fn of_flat(cell: Cell) -> Self {
         match cell {
-            Cell::Ground | Cell::Field | Cell::Fence | Cell::FieldGate | Cell::HerbBed => {
-                Self::Ground
-            }
+            Cell::Ground
+            | Cell::CoveredGround
+            | Cell::Field
+            | Cell::Fence
+            | Cell::FieldGate
+            | Cell::HerbBed => Self::Ground,
             Cell::Water => Self::Water,
             Cell::Lava => Self::Lava,
             _ => Self::Floor,
@@ -302,7 +305,7 @@ fn build_open_cell(
     if !scene.sight.is_seen(x, y) {
         let grey = Vec3::splat(MEMORY_SHADE);
         match stairs {
-            Some(found) => build_stairs(&mut layers.memory, None, found, grey, &|_| grey),
+            Some(found) => build_stairs(&mut layers.memory, None, found, surface, grey, &|_| grey),
             None => {
                 let half = CELL_SIZE / 2.0;
                 layers.memory[surface as usize].quad(
@@ -323,7 +326,14 @@ fn build_open_cell(
             let floor_colour = |p| with_ambient(floor_light(p));
             let through = hides_viewer(found, scene.views, scene.camera)
                 .then_some(&mut layers.stairs_through[..]);
-            build_stairs(&mut layers.solid, through, found, lit, &floor_colour);
+            build_stairs(
+                &mut layers.solid,
+                through,
+                found,
+                surface,
+                lit,
+                &floor_colour,
+            );
         }
         None => {
             layers.solid[surface as usize].face(centre, Vec3::Y, CELL_SIZE / 2.0, floor_light);

@@ -450,6 +450,7 @@ fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
         "lava" => Cell::Lava,
         "hole" => Cell::Hole,
         "ground" => Cell::Ground,
+        "covered" => Cell::CoveredGround,
         _ => return None,
     };
     Some((dx, dy, cell))

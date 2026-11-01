@@ -108,7 +108,23 @@ pub(super) fn ruin_floors(
             break;
         }
     }
+    uncover_ground(&mut kept);
     kept
+}
+
+/// Ground is only covered where the floor above is still there.
+fn uncover_ground(floors: &mut [SiteLevel]) {
+    let Some((ground, above)) = floors.split_first_mut() else {
+        return;
+    };
+    let above = above.first();
+    for (x, y) in cells_of(&ground.level) {
+        if ground.level.cell(x, y) == Cell::CoveredGround
+            && above.is_none_or(|floor| floor.level.cell(x, y) == Cell::Hole)
+        {
+            ground.level.set(x, y, Cell::Ground);
+        }
+    }
 }
 
 /// Turns a cell into a gap in the floor.

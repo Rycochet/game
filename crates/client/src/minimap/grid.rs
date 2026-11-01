@@ -20,6 +20,7 @@ const HOLE: [u8; 3] = [0, 0, 0];
 fn ground_colour(cell: Cell) -> [u8; 3] {
     match cell {
         Cell::Ground => [226, 238, 214],
+        Cell::CoveredGround => [190, 202, 180],
         Cell::Garden => [200, 230, 190],
         Cell::DirtTrack => [222, 205, 180],
         Cell::GravelTrack => [218, 212, 198],

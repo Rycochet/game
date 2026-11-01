@@ -676,11 +676,12 @@ fn update_meshes(
             Vec3::new(colour.red, colour.green, colour.blue),
         );
     }
-    if dungeon
-        .info
-        .as_ref()
-        .is_some_and(|i| matches!(i.kind, PoiKind::Farm | PoiKind::HerbalistHut))
-    {
+    if dungeon.info.as_ref().is_some_and(|i| {
+        matches!(
+            i.kind,
+            PoiKind::Farm | PoiKind::HerbalistHut | PoiKind::StiltHut | PoiKind::GreenStiltHut
+        )
+    }) {
         light.light_outside(level);
     }
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);

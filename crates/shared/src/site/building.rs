@@ -71,6 +71,10 @@ const SAME_SIZE_PERCENT: u64 = 50;
 const CELLS_PER_EXTRA_ENTRANCE: i64 = 25;
 const MIN_ENTRANCE_GAP: i64 = 6;
 
+/// How far apart pillars under a building on stilts are, at least: the larger
+/// of the distances across and along.
+const PILLAR_SPACING: i64 = 4;
+
 /// Extra doors (making loops) per this many rooms.
 const ROOMS_PER_EXTRA_DOOR: u16 = 6;
 
@@ -128,6 +132,9 @@ pub struct BuildingOptions {
     pub windows_percent: u32,
     /// Whether the ground floor has them too.
     pub ground_windows: bool,
+    /// Raised on pillars: the ground floor is only covered ground and lone
+    /// pillars, with one staircase up to the floors above.
+    pub stilts: bool,
 }
 
 /// One floor's outline, in level coordinates.
@@ -209,6 +216,7 @@ pub struct Plan {
     basement_shape: Shape,
     windows_percent: u32,
     ground_windows: bool,
+    stilts: bool,
     /// A ruined building's floors, all of them, from the ground up; empty if
     /// it isn't ruined.
     ruined: Vec<SiteLevel>,
@@ -320,7 +328,7 @@ impl Plan {
             };
             let mut here = vec![first];
             for _ in 0..(cells / CELLS_PER_EXTRA_STAIRS).min(MOST_EXTRA_STAIRS) {
-                if !chance(&mut rng, EXTRA_STAIRS_PERCENT) {
+                if options.stilts || !chance(&mut rng, EXTRA_STAIRS_PERCENT) {
                     continue;
                 }
                 let extra = (0..100).find_map(|_| {
@@ -383,6 +391,7 @@ impl Plan {
             basement_shape,
             windows_percent: options.windows_percent,
             ground_windows: options.ground_windows,
+            stilts: options.stilts,
             ruined: Vec::new(),
         };
         if options.ruin > 0 {
@@ -532,7 +541,37 @@ impl Plan {
                 });
             }
         }
+        if n == 0 && self.stilts {
+            return self.ground_under_stilts(shape, stairs);
+        }
         self.fill_floor(shape, rng, stairs, n == 0)
+    }
+
+    /// The ground under a building on stilts: the outside ground, covered ground
+    /// across the outline, and lone pillars round its edge. You arrive south of
+    /// it.
+    fn ground_under_stilts(&self, shape: Shape, stairs: Vec<Stairs>) -> SiteLevel {
+        let mut level = Level::new(0, 0, self.width, self.height);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let cell = if shape.contains(x, y) {
+                    Cell::CoveredGround
+                } else {
+                    Cell::Ground
+                };
+                level.set(x, y, cell);
+            }
+        }
+        for (x, y) in pillars(&shape) {
+            level.set(x, y, Cell::Wall);
+        }
+        SiteLevel {
+            level,
+            stairs,
+            entrance: Some((shape.x + shape.width / 2, shape.y + shape.height)),
+            buildings: Vec::new(),
+            fields: Vec::new(),
+        }
     }
 
     /// Splits an outline into rooms round its stairs, with the ground outside
@@ -610,6 +649,40 @@ impl Plan {
             fields: Vec::new(),
         }
     }
+}
+
+/// Where pillars stand round an outline's edge: going round it from the east,
+/// each edge cell at least `PILLAR_SPACING` from those already chosen, so none
+/// touch. In integers, like everything both sides work out.
+fn pillars(shape: &Shape) -> Vec<Spot> {
+    // From the centre, in half cells so that it stays whole.
+    let from_centre = |(x, y): Spot| {
+        (
+            2 * (x - shape.x) + 1 - shape.width,
+            2 * (y - shape.y) + 1 - shape.height,
+        )
+    };
+    let later_half = |(dx, dy): Spot| dy < 0 || (dy == 0 && dx < 0);
+    let mut edge: Vec<Spot> = (shape.y..shape.y + shape.height)
+        .flat_map(|y| (shape.x..shape.x + shape.width).map(move |x| (x, y)))
+        .filter(|&(x, y)| shape.contains(x, y) && !shape.is_interior(x, y))
+        .collect();
+    edge.sort_by(|&a, &b| {
+        let (a, b) = (from_centre(a), from_centre(b));
+        later_half(a)
+            .cmp(&later_half(b))
+            .then((b.0 * a.1 - b.1 * a.0).cmp(&0))
+    });
+    let mut chosen: Vec<Spot> = Vec::new();
+    for (x, y) in edge {
+        let clear = chosen
+            .iter()
+            .all(|&(cx, cy)| (cx - x).abs().max((cy - y).abs()) >= PILLAR_SPACING);
+        if clear {
+            chosen.push((x, y));
+        }
+    }
+    chosen
 }
 
 /// Puts windows in a floor's outside walls: a straight wall between the inside

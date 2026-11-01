@@ -64,6 +64,9 @@ pub enum Cell {
     /// Walkable outside ground, tended: a strip of a herbalist's patch. What
     /// grows there is only looks, and the client's to choose.
     HerbBed,
+    /// Walkable ground like `Ground`, but with something built over it: the
+    /// weather and the light of outside don't reach it. Under a stilt hut, say.
+    CoveredGround,
 }
 
 impl Cell {
@@ -78,6 +81,7 @@ impl Cell {
                 | Self::Field
                 | Self::FieldGate
                 | Self::HerbBed
+                | Self::CoveredGround
         ) || self.is_road()
     }
 
@@ -516,6 +520,7 @@ mod tests {
         let hole = Cell::Hole;
         assert!(hole.is_open());
         assert!(!hole.is_walkable() && !hole.is_outside() && !hole.is_liquid());
+        assert!(Cell::CoveredGround.is_walkable() && !Cell::CoveredGround.is_outside());
         assert!(!hole.is_wall() && !hole.is_opening());
         assert!(hole.is_jumpable());
     }
