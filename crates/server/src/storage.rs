@@ -138,6 +138,28 @@ impl Storage {
             .then_some(save)
     }
 
+    /// Deletes a site's file, if it has one.
+    pub fn remove_site(&self, site: SiteId) {
+        if let Some(file) = self.site_file(site)
+            && let Err(error) = fs::remove_file(&file)
+            && error.kind() != io::ErrorKind::NotFound
+        {
+            warn!("Can't delete {}: {error}", file.display());
+        }
+    }
+
+    /// Deletes every site's file.
+    pub fn remove_sites(&self) {
+        if let Some(folder) = &self.folder {
+            let sites = folder.join("sites");
+            if let Err(error) = fs::remove_dir_all(&sites)
+                && error.kind() != io::ErrorKind::NotFound
+            {
+                warn!("Can't delete {}: {error}", sites.display());
+            }
+        }
+    }
+
     pub fn save_site(&self, site: SiteId, save: &SiteSave) {
         if let Some(file) = self.site_file(site) {
             let forgotten_to = self.forget_before;
@@ -287,6 +309,10 @@ pub struct CharacterSave {
     /// The cells they have seen of each site level.
     #[serde(default)]
     pub memory: BTreeMap<SiteId, BTreeMap<u32, CellMasks>>,
+    /// The generator version of each site as they last knew it: when a site's
+    /// has changed, so has its map, and what they remember of it means nothing.
+    #[serde(default)]
+    pub site_versions: BTreeMap<SiteId, u32>,
 }
 
 /// Where in a site a character is.
@@ -329,6 +355,11 @@ impl<K: Ord> Default for Unsaved<K> {
 impl<K: Ord> Unsaved<K> {
     pub fn mark(&mut self, key: K) {
         self.0.insert(key);
+    }
+
+    /// No longer marked.
+    pub fn unmark(&mut self, key: &K) {
+        self.0.remove(key);
     }
 
     /// Everything marked, forgetting it.
@@ -457,6 +488,7 @@ pub(crate) mod tests {
         let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
         let character = CharacterSave {
             forgotten_to: FORGET_BEFORE,
+            site_versions: BTreeMap::from([(site, 3)]),
             world_position: (-40, 7),
             visit: Some(VisitSave {
                 site,

@@ -24,7 +24,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 17;
+pub const PROTOCOL_VERSION: u32 = 18;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -101,6 +101,11 @@ pub enum ClientMessage {
     /// as if arriving there for the first time; or on the world map, all of it,
     /// answered with `ForgetWorldMap` and what is in sight. Not in towns.
     DevForgetMap,
+    /// Developer tools: as `DevForgetMap`, and the server forgets it too: the
+    /// site's save, or on the world map every site's, so they are made anew
+    /// with their generators' current versions. Anyone else in a forgotten site
+    /// is put out at its poi (`OnWorldMap`). Towns too.
+    DevForgetMapOnServer,
 }
 
 impl ClientMessage {
@@ -119,6 +124,7 @@ impl ClientMessage {
                 | Self::DevRevealPois
                 | Self::DevRevealMap
                 | Self::DevForgetMap
+                | Self::DevForgetMapOnServer
         )
     }
 
@@ -317,6 +323,7 @@ mod tests {
             ClientMessage::DevRevealPois,
             ClientMessage::DevRevealMap,
             ClientMessage::DevForgetMap,
+            ClientMessage::DevForgetMapOnServer,
             ClientMessage::DevEnterSite {
                 kind: PoiKind::Crypt,
                 seed: 3,

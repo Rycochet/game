@@ -7,13 +7,12 @@ use crate::common::GameView;
 #[derive(bevy::prelude::Message, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DebugAction {
     AutoWalk,
-    BackToStart,
     ChangeCellMode,
     CycleTemperature,
     FieldsState,
     ForgetMap,
+    ForgetMapOnServer,
     HerbsState,
-    PoiShowcase,
     ResetView,
     RevealMap,
     ShowDebugInfo,
@@ -21,6 +20,8 @@ pub enum DebugAction {
     StairsStyle,
     SunsAndMoons,
     TeleportMode,
+    TeleportToPoiShowcase,
+    TeleportToStart,
     WorldTime,
 }
 
@@ -45,15 +46,14 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 16] = [
+    pub(super) const ALL: [Self; 17] = [
         Self::AutoWalk,
-        Self::BackToStart,
         Self::ChangeCellMode,
         Self::CycleTemperature,
         Self::FieldsState,
         Self::ForgetMap,
+        Self::ForgetMapOnServer,
         Self::HerbsState,
-        Self::PoiShowcase,
         Self::ResetView,
         Self::RevealMap,
         Self::ShowDebugInfo,
@@ -61,19 +61,20 @@ impl DebugAction {
         Self::StairsStyle,
         Self::SunsAndMoons,
         Self::TeleportMode,
+        Self::TeleportToPoiShowcase,
+        Self::TeleportToStart,
         Self::WorldTime,
     ];
 
     pub(super) fn name(self) -> &'static str {
         match self {
             Self::AutoWalk => "Auto Walk",
-            Self::BackToStart => "Back to Start",
             Self::ChangeCellMode => "Change Cell Mode",
             Self::CycleTemperature => "Cycle Temperature",
             Self::FieldsState => "Fields State",
             Self::ForgetMap => "Forget Map",
+            Self::ForgetMapOnServer => "Forget Map (Server)",
             Self::HerbsState => "Herbs State",
-            Self::PoiShowcase => "Poi Showcase",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
             Self::ShowDebugInfo => "Show Debug Info",
@@ -81,6 +82,8 @@ impl DebugAction {
             Self::StairsStyle => "Stairs Style",
             Self::SunsAndMoons => "Suns and Moons",
             Self::TeleportMode => "Teleport Mode",
+            Self::TeleportToPoiShowcase => "Teleport to POI Showcase",
+            Self::TeleportToStart => "Teleport to Start",
             Self::WorldTime => "World Time",
         }
     }
@@ -100,7 +103,7 @@ impl DebugAction {
             Self::FieldsState => facts.view == GameView::Dungeon && facts.has_fields,
             Self::HerbsState => facts.view == GameView::Dungeon && facts.has_herbs,
             Self::StairsStyle => facts.view == GameView::Dungeon && facts.has_stairs,
-            Self::PoiShowcase => shared::showcase::ENABLED,
+            Self::TeleportToPoiShowcase => shared::showcase::ENABLED,
             _ => true,
         }
     }
@@ -109,13 +112,14 @@ impl DebugAction {
     fn needs_server_dev_tools(self) -> bool {
         matches!(
             self,
-            Self::BackToStart
-                | Self::ChangeCellMode
+            Self::ChangeCellMode
                 | Self::CycleTemperature
                 | Self::ForgetMap
-                | Self::PoiShowcase
+                | Self::ForgetMapOnServer
                 | Self::RevealMap
                 | Self::TeleportMode
+                | Self::TeleportToPoiShowcase
+                | Self::TeleportToStart
                 | Self::WorldTime
         )
     }
@@ -246,6 +250,8 @@ mod tests {
         };
         assert!(!DebugAction::RevealMap.is_available(&town));
         assert!(!DebugAction::ForgetMap.is_available(&town));
+        // A town's generator can change like any other.
+        assert!(DebugAction::ForgetMapOnServer.is_available(&town));
     }
 
     #[test]
@@ -255,7 +261,8 @@ mod tests {
             ..facts(GameView::Dungeon)
         };
         assert!(!DebugAction::TeleportMode.is_available(&refused));
-        assert!(!DebugAction::BackToStart.is_available(&refused));
+        assert!(!DebugAction::TeleportToStart.is_available(&refused));
+        assert!(!DebugAction::ForgetMapOnServer.is_available(&refused));
         assert!(!DebugAction::RevealMap.is_available(&refused));
         assert!(DebugAction::ResetView.is_available(&refused));
         assert!(DebugAction::ShowDebugInfo.is_available(&refused));

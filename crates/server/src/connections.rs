@@ -173,8 +173,27 @@ pub(crate) fn handle_messages(
         } else if client.joining && !join(clients, i, &mut world, options.dev_tools) {
             clients[i].disconnect(&mut world);
         }
+        put_out_of_forgotten_sites(clients, i, &mut world);
     }
     clients.retain(|client| !client.gone);
+}
+
+/// Puts anyone but client `i` (who did the forgetting, and has been dealt with)
+/// out of any site just forgotten: what they are on is no longer that site.
+fn put_out_of_forgotten_sites(clients: &mut [Client], i: usize, world: &mut ServerWorld) {
+    let forgotten = world.take_forgotten();
+    if forgotten.is_empty() {
+        return;
+    }
+    for (j, other) in clients.iter_mut().enumerate() {
+        let inside = other
+            .visit
+            .as_ref()
+            .is_some_and(|visit| forgotten.includes(visit.id()));
+        if j != i && !other.gone && inside && !sites::put_out(other, world) {
+            other.disconnect(world);
+        }
+    }
 }
 
 /// Welcomes client `i`, which has said hello. Anyone else playing its
@@ -293,6 +312,10 @@ pub(crate) fn answer(
         ClientMessage::DevForgetMap => match client.visit {
             Some(_) => sites::forget_level(client, world),
             None => world_map::forget(client, world),
+        },
+        ClientMessage::DevForgetMapOnServer => match client.visit {
+            Some(_) => sites::forget_site(client, world),
+            None => world_map::forget_on_server(client, world),
         },
         ClientMessage::DevSnowLine(snow_line) => {
             world.snow_line = snow_line;
@@ -445,7 +468,7 @@ pub(crate) mod tests {
         app.insert_resource(connections);
         app.insert_resource(world);
         app.insert_resource(ServerOptions {
-            dev_tools: false,
+            dev_tools: true,
             exit_when_alone: false,
         });
         bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
@@ -495,6 +518,41 @@ pub(crate) mod tests {
             ServerMessage::Welcome { x: 1, .. }
         ));
         assert_eq!(connections.0.len(), 1);
+    }
+
+    #[test]
+    fn forgetting_a_site_on_the_server_puts_only_others_out_at_the_poi() {
+        let mut connections = Connections::default();
+        let (first, link) = local_pair();
+        connections.add(link, CharacterName::new("first"));
+        let (second, link) = local_pair();
+        connections.add(link, CharacterName::new("second"));
+        first.send(&HELLO);
+        second.send(&HELLO);
+        let world = ServerWorld::new(WorldSeed::new(1));
+        let (connections, world) = tick(connections, world);
+        let enter = ClientMessage::DevEnterSite {
+            kind: shared::poi::PoiKind::Castle,
+            seed: 5,
+            level: 0,
+            ruin: 0,
+        };
+        first.send(&enter);
+        second.send(&enter);
+        let (connections, world) = tick(connections, world);
+        answers(&first);
+        answers(&second);
+
+        first.send(&ClientMessage::DevForgetMapOnServer);
+        let (connections, _world) = tick(connections, world);
+        // The one who asked is still in it, arriving afresh.
+        assert!(connections.0[0].visit.is_some());
+        assert!(matches!(answers(&first)[0], ServerMessage::EnterLevel(_)));
+        assert!(connections.0[1].visit.is_none());
+        assert!(matches!(
+            answers(&second)[0],
+            ServerMessage::OnWorldMap { x: 0, y: 0 }
+        ));
     }
 
     #[test]
