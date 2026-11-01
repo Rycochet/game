@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use shared::celestial::{BodyKind, BodyNow};
 
 use super::canvas::{Canvas, polygon_distance};
+use super::frame::RoundFrame;
 
 /// How far their circle is lifted above the minimap's, in logical pixels at the
 /// minimap's base size, and the room that leaves for them.
@@ -93,17 +94,10 @@ fn srgb(colour: [f64; 3], shade: f32) -> [u8; 3] {
     [red, green, blue]
 }
 
-/// Draws them in order, so moons go over suns, and only outside the circle:
-/// inside it they are behind the map.
-pub fn draw(
-    canvas: &mut Canvas,
-    icons: &[Icon],
-    bodies: &[BodyNow],
-    middle: Vec2,
-    circle: f32,
-    trim: f32,
-) {
-    let behind_map = |x: f32, y: f32| circle - (x - middle.x).hypot(y - middle.y);
+/// Draws them in order, so moons go over suns, and only outside the map's outline
+/// (its border and notch too): inside it they are behind the map.
+pub fn draw(canvas: &mut Canvas, icons: &[Icon], bodies: &[BodyNow], map: &RoundFrame, trim: f32) {
+    let behind_map = |x: f32, y: f32| -map.distance(x, y);
     for icon in icons {
         let now = &bodies[icon.number];
         match now.body.kind {
@@ -132,7 +126,7 @@ fn draw_sun(
     let distance = |x: f32, y: f32| polygon_distance(&corners, x, y).max(behind_map(x, y));
     let outline = OUTLINE * trim;
     canvas.shape(centre.into(), reach + outline, BLACK, |x, y| {
-        polygon_distance(&corners, x, y).max(behind_map(x, y)) - outline
+        (polygon_distance(&corners, x, y) - outline).max(behind_map(x, y))
     });
     canvas.shape(
         centre.into(),
@@ -295,6 +289,52 @@ mod tests {
         let shown = icons(&high, Vec2::ZERO, 100.0, 1.0);
         assert_eq!(under(&shown, Vec2::ZERO, 100.0, shown[0].at), Some(0));
         assert_eq!(under(&shown, Vec2::ZERO, 100.0, Vec2::ZERO), None);
+    }
+
+    #[test]
+    fn nothing_is_drawn_on_the_border_or_notch() {
+        const SIZE: u32 = 80;
+        let map = RoundFrame {
+            centre: (40.0, 60.0),
+            radius: 30.0,
+            border: 3.0,
+            notch: 6.0,
+            north: (0.0, -1.0),
+        };
+        // Straddling the top of the outline, over the notch, and off to its side.
+        for x in [40.0, 48.0, 56.0] {
+            let at = Vec2::new(x, 28.0);
+            for kind in [BodyKind::Sun, BodyKind::Moon] {
+                let mut pixels = vec![0; (SIZE * SIZE * 4) as usize];
+                let mut canvas = Canvas {
+                    pixels: &mut pixels,
+                    width: SIZE,
+                    height: SIZE,
+                };
+                let shown = [Icon {
+                    number: 0,
+                    at,
+                    radius: 10.0,
+                }];
+                draw(
+                    &mut canvas,
+                    &shown,
+                    &[body(kind, [0.0, 1.0, 0.0])],
+                    &map,
+                    1.0,
+                );
+                let mut drawn = 0;
+                for (index, pixel) in pixels.as_chunks::<4>().0.iter().enumerate() {
+                    if pixel[3] > 0 {
+                        drawn += 1;
+                        let (x, y) = (index as u32 % SIZE, index as u32 / SIZE);
+                        let distance = map.distance(x as f32 + 0.5, y as f32 + 0.5);
+                        assert!(distance >= -0.5, "{kind:?} at {x},{y}: {distance}");
+                    }
+                }
+                assert!(drawn > 0, "{kind:?} at {at}");
+            }
+        }
     }
 
     #[test]
