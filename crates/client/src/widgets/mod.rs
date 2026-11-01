@@ -82,8 +82,8 @@ pub struct RaisePanel(pub Entity);
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ButtonPressed(pub Entity);
 
-/// Put this on a button (from `spawn_button`) for clicks on it to be sent as
-/// `ButtonPressed` and go no further.
+/// Put this on a button (from `spawn_button`), or any node, for clicks on it to
+/// be sent as `ButtonPressed` and go no further.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Pressable;
 

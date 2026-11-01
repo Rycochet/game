@@ -192,7 +192,7 @@ pub(super) fn take_presses(
             &UiGlobalTransform,
             &InheritedVisibility,
             Entity,
-            &ButtonState,
+            Option<&ButtonState>,
         ),
         With<Pressable>,
     >,
@@ -239,7 +239,7 @@ pub(super) fn take_presses(
         let part = stacked.map(|(_, part)| part);
         if let Some((.., entity, state)) = button {
             mouse.clear_just_pressed(MouseButton::Left);
-            if !state.is_disabled() {
+            if !state.is_some_and(|state| state.is_disabled()) {
                 pressed.write(ButtonPressed(entity));
             }
         } else if part.is_some() {

@@ -171,7 +171,6 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
             bar.spawn((
                 MenuClose,
                 Pressable,
-                ButtonState::Normal,
                 Node {
                     position_type: PositionType::Absolute,
                     right: px(0),
