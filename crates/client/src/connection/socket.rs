@@ -2,7 +2,7 @@
 //! bytes there (one game message per WebSocket binary message).
 //!
 //! - Native: the embedded single-player server, or a server named by
-//!   `HALL_OF_WORLDS_SERVER` (`ws://host:port/ws`; plain `ws://` only, no
+//!   `HOW_SERVER` (`ws://host:port/ws`; plain `ws://` only, no
 //!   TLS yet), through a thread running `tungstenite`.
 //! - Web: the server the page came from (`wss://` on an `https` page),
 //!   through the browser's `WebSocket`.
@@ -28,10 +28,10 @@ pub(super) enum Target {
 }
 
 impl Target {
-    /// Native: `HALL_OF_WORLDS_SERVER` if set, otherwise single player.
+    /// Native: `HOW_SERVER` if set, otherwise single player.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn choose() -> Self {
-        match std::env::var("HALL_OF_WORLDS_SERVER") {
+        match std::env::var("HOW_SERVER") {
             Ok(url) => Self::Url(url),
             Err(_) => Self::Embedded,
         }

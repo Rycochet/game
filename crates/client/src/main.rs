@@ -33,25 +33,30 @@ const ASSET_FOLDER: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");
 const ASSET_FOLDER: &str = "assets";
 
 fn main() {
-    let mut app = App::new();
-    app.add_plugins(
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Hall of Worlds".into(),
-                    // In the browser, draw into the <canvas id="game"> in index.html.
-                    canvas: Some("#game".into()),
-                    fit_canvas_to_parent: true,
-                    ..default()
-                }),
-                ..default()
-            })
-            .set(AssetPlugin {
-                file_path: ASSET_FOLDER.into(),
+    #[cfg(not(target_arch = "wasm32"))]
+    server::refuse_old_variables();
+
+    let plugins = DefaultPlugins
+        .set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Hall of Worlds".into(),
+                // In the browser, draw into the <canvas id="game"> in index.html.
+                canvas: Some("#game".into()),
+                fit_canvas_to_parent: true,
                 ..default()
             }),
-    )
-    .add_plugins((
+            ..default()
+        })
+        .set(AssetPlugin {
+            file_path: ASSET_FOLDER.into(),
+            ..default()
+        });
+    // The web has no environment to read `LOG_LEVEL` from.
+    #[cfg(not(target_arch = "wasm32"))]
+    let plugins = plugins.set(server::log_plugin());
+
+    let mut app = App::new();
+    app.add_plugins(plugins).add_plugins((
         fonts::FontsPlugin,
         common::CommonPlugin,
         connection::ConnectionPlugin,

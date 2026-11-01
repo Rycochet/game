@@ -9,7 +9,7 @@ The screen covering everything from the first frame until the game can take inpu
 ## Public API
 
 - `LoadingScreenPlugin`.
-- `HoldLoadingScreen(bool)` (resource): keeps the screen up, for `GAME_LOADING_HOLD`.
+- `HoldLoadingScreen(bool)` (resource): keeps the screen up, for `HOW_DEBUG_LOADING_HOLD`.
 - It writes `common::LoadingStep`, which is what others read.
 
 ## Depends on

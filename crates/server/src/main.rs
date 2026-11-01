@@ -4,32 +4,35 @@
 //!
 //! Set by environment variables:
 //!
-//! - `HALL_OF_WORLDS_ADDRESS`: where to listen (default `0.0.0.0:8080`).
-//! - `HALL_OF_WORLDS_WEB`: the web client's folder (`trunk build`'s `dist`) to
+//! - `HOW_ADDRESS`: where to listen (default `0.0.0.0:8080`).
+//! - `HOW_WEB`: the web client's folder (`trunk build`'s `dist`) to
 //!   serve; without it, only the game's WebSockets are served.
-//! - `HALL_OF_WORLDS_SERVER_DATA`: where to save (default: the user's data
+//! - `HOW_DATA`: where to save (default: the user's data
 //!   folder).
-//! - `HALL_OF_WORLDS_LOG_PINGS`: `1` logs every connection's every round trip, a
-//!   line a second for each client, for looking into network trouble (default off).
+//! - `HOW_DEBUG_TOOLS`: `1` accepts dev tools messages from anyone connected.
+//! - `LOG_LEVEL`: how much to log (see `environment`); `debug` adds every
+//!   connection's every round trip, for looking into network trouble.
 
 use std::env;
 use std::net::SocketAddr;
 
-use bevy::log::LogPlugin;
-use server::{DEFAULT_WORLD_SEED, NetworkPlugin, ServerOptions, default_data_folder, headless_app};
+use server::{
+    DEFAULT_WORLD_SEED, NetworkPlugin, ServerOptions, default_data_folder, headless_app,
+    log_plugin, refuse_old_variables,
+};
 use shared::world::WorldSeed;
 
 const DEFAULT_ADDRESS: &str = "0.0.0.0:8080";
 
 fn main() {
-    let address: SocketAddr = env::var("HALL_OF_WORLDS_ADDRESS")
+    refuse_old_variables();
+    let address: SocketAddr = env::var("HOW_ADDRESS")
         .unwrap_or_else(|_| DEFAULT_ADDRESS.into())
         .parse()
-        .expect("HALL_OF_WORLDS_ADDRESS is an address and port, such as 0.0.0.0:8080");
-    let web = env::var_os("HALL_OF_WORLDS_WEB").map(Into::into);
+        .expect("HOW_ADDRESS is an address and port, such as 0.0.0.0:8080");
+    let web = env::var_os("HOW_WEB").map(Into::into);
     let data = default_data_folder();
-    let dev_tools = env::var("HALL_OF_WORLDS_DEV_TOOLS").is_ok_and(|value| value == "1");
-    let log_pings = env::var("HALL_OF_WORLDS_LOG_PINGS").is_ok_and(|value| value == "1");
+    let dev_tools = env::var("HOW_DEBUG_TOOLS").is_ok_and(|value| value == "1");
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {
@@ -38,14 +41,7 @@ fn main() {
         },
         Some(data.clone()),
     );
-    app.add_plugins((
-        LogPlugin::default(),
-        NetworkPlugin {
-            address,
-            web,
-            log_pings,
-        },
-    ));
+    app.add_plugins((log_plugin(), NetworkPlugin { address, web }));
     bevy::log::info!("Saving in {}", data.display());
     if dev_tools {
         bevy::log::warn!("Dev tools are on: anyone connected can teleport and change the world");

@@ -11,6 +11,7 @@
 mod clock;
 mod connections;
 mod embedded;
+mod environment;
 mod latency;
 mod network;
 mod sites;
@@ -36,6 +37,7 @@ use shared::world::{
 
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
+pub use environment::{log_plugin, refuse_old_variables};
 pub use network::NetworkPlugin;
 pub use storage::{CharacterName, DATA_FOLDER_VARIABLE, default_data_folder};
 

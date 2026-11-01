@@ -25,7 +25,7 @@ The maps: the round minimap always in the window's top-right corner, and the ful
 
 ## Used by
 
-- `dev_tools` (`GAME_MAP`).
+- `dev_tools` (`HOW_DEBUG_MAP`).
 
 ## Notes
 
