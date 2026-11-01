@@ -162,6 +162,37 @@ mod tests {
         assert!(plugin.filter.contains("server=DEBUG"));
     }
 
+    /// Every `HOW_` name in this crate's source files.
+    fn variables_in_the_source() -> std::collections::BTreeSet<String> {
+        let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut names = std::collections::BTreeSet::new();
+        for file in std::fs::read_dir(folder).unwrap() {
+            let source = std::fs::read_to_string(file.unwrap().path()).unwrap();
+            let is_part = |c: char| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_';
+            for (start, _) in source.match_indices("HOW_") {
+                let rest = &source[start..];
+                let end = rest.find(|c| !is_part(c)).unwrap_or(rest.len());
+                names.insert(rest[..end].to_owned());
+            }
+        }
+        // The prefix alone, where the source talks about the names in general.
+        names.remove("HOW_");
+        names
+    }
+
+    #[test]
+    fn the_user_documentation_lists_every_server_variable() {
+        let page = include_str!("../../../docs/environment-variables.md");
+        let names = variables_in_the_source();
+        assert!(names.contains("HOW_DATA"), "{names:?}");
+        for name in names {
+            assert!(
+                page.contains(&format!("`{name}`")),
+                "{name} is missing from docs/environment-variables.md"
+            );
+        }
+    }
+
     #[test]
     fn old_variables_name_their_replacements() {
         assert_eq!(replacement("HALL_OF_WORLDS_SERVER_DATA"), "HOW_DATA");

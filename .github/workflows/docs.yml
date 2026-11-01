@@ -1,0 +1,50 @@
+# Builds the user documentation in docs/ with Jekyll. Pull requests only check
+# that it builds; master (or running it by hand) also publishes it to GitHub
+# Pages, at https://hallofworlds.wiki (the domain is set in the repository's
+# Pages settings, so there is no CNAME file).
+name: Docs
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "!docs/context/**"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [master]
+    paths:
+      - "docs/**"
+      - "!docs/context/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,5 +1,6 @@
 # Keep the Docker build context small: only sources are needed.
 .git
+.claude
 target
 dist
 node_modules

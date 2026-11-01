@@ -1,0 +1,19 @@
+# Hall of Worlds server, with a self-signed certificate: https://<this computer>:8081
+services:
+  hall-of-worlds:
+    image: ghcr.io/rycochet/hall-of-worlds:latest
+    restart: unless-stopped
+    ports:
+      - "8081:8081" # The game and the web client, over HTTPS.
+      - "8080:8080" # Only answers that connections must be secure.
+    environment:
+      # Other names or addresses this server is reached by, so the certificate
+      # covers them. Change this, or remove it if you only use localhost.
+      HOW_TLS_NAMES: game.example.com,192.168.0.10
+    volumes:
+      - saves:/data # Saves and the certificate.
+    # Time to save everyone before stopping.
+    stop_grace_period: 30s
+
+volumes:
+  saves:

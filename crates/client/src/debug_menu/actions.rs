@@ -183,6 +183,18 @@ pub(super) fn kind_name(kind: PoiKind) -> String {
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_user_documentation_lists_every_entry() {
+        let page = include_str!("../../../../docs/debug-menu.md");
+        for action in DebugAction::ALL {
+            let name = action.name();
+            assert!(
+                page.contains(&format!("| {name} |")),
+                "{name} is missing from docs/debug-menu.md"
+            );
+        }
+    }
+
     fn facts(view: GameView) -> Facts {
         Facts {
             view,
