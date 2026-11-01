@@ -10,7 +10,7 @@ A world's suns and moons, and where they are at any time, from the public terrai
 
 - `Celestial::from_seed(terrain seed)`.
 - `bodies() -> Vec<Body>`: every sun, then every moon, whatever the time: `kind`, `colour` (linear RGB), `colour_name` (`Option<ColourName>`: `None` when too near white to have a name), `size`. Use this to ask what a world has.
-- `at(hours) -> Vec<BodyNow>`: the same order, at a time: `body`, `direction` (unit, `[east, up, south]`), `lit` (how much of a moon's face we see is lit), `waxing`, `phase()` (`MoonPhase`: for later, as nothing else reads the name yet), `light` (linear RGB, faded near the horizon, zero below it), `is_up()`, `flat_light()`. Everything goes through this, so what is said matches what is seen.
+- `at(hours) -> Vec<BodyNow>`: the same order, at a time: `body`, `direction` (unit, `[east, up, south]`), `lit` (how much of a moon's face we see is lit), `waxing`, `along` (how far along its way across the sky: negative before its top, positive after, always rising, whichever way that goes on the world), `phase()` (`MoonPhase`: for later, as nothing else reads the name yet), `light` (linear RGB, faded near the horizon, zero below it), `is_up()`, `flat_light()`. Everything goes through this, so what is said matches what is seen.
 - `set_colour(number, colour)`, `sun_strength(number)`, `set_sun_strength(number, strength)`, `colour_along(kind, 0..=1)`: for the debug menu's panel.
 - `flat_light(&bodies)`: their light together on flat ground. `brightest(&bodies)`: the index of the one lighting flat ground most.
 

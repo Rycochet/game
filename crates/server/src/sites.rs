@@ -14,7 +14,7 @@ use shared::protocol::{
     ENTER_REACH, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, ServerMessage, level_chunk,
 };
 use shared::rng::Seed;
-use shared::site::{Exit, Generator, Site, SiteLevel, leads_out};
+use shared::site::{Exit, Generator, Site, SiteLevel, StairsDirection, leads_out};
 
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, VisitSave, now};
@@ -302,6 +302,18 @@ fn level_of(world: &mut ServerWorld, new: &NewVisit, index: u32) -> (SiteLevel, 
             // Only for looks: the other level is generated without changes.
             descends: site.stairs_descend(index, &level.level, stairs),
             style: site.stairs_style(index, stairs),
+            open_to_sky: match stairs.to {
+                Exit::WorldMap => true,
+                // Also only for looks, and only worth generating going up.
+                Exit::Level(other) => {
+                    stairs.direction == StairsDirection::Up
+                        && site
+                            .level(other)
+                            .level
+                            .cell(stairs.x, stairs.y)
+                            .is_outside()
+                }
+            },
         })
         .collect();
     (level, stairs)
@@ -1144,6 +1156,31 @@ mod tests {
         let answers = enter(&mut test, 0);
         assert!(answers.is_empty(), "{answers:?}");
         assert!(test.client.visit.is_none());
+    }
+
+    #[test]
+    fn only_stairs_up_into_the_open_are_open_to_the_sky() {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevEnterSite {
+            kind: PoiKind::Grave,
+            seed: 1,
+            level: 0,
+            ruin: 0,
+        }]);
+        let visit = test.client.visit.as_ref().unwrap();
+        let out = visit
+            .level
+            .stairs
+            .iter()
+            .position(|stairs| stairs.to == Exit::WorldMap)
+            .unwrap();
+        assert!(visit.stairs[out].open_to_sky);
+
+        // A castle's stairs lead to more castle.
+        let mut test = TestClient::new();
+        enter(&mut test, 0);
+        let visit = test.client.visit.as_ref().unwrap();
+        assert!(visit.stairs.iter().all(|stairs| !stairs.open_to_sky));
     }
 
     #[test]

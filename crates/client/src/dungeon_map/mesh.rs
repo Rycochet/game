@@ -5,6 +5,8 @@
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
+use std::collections::BTreeSet;
+
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::SeenStairs;
@@ -77,7 +79,7 @@ impl LightGrid {
         Self::filled(level, Vec3::ZERO)
     }
 
-    /// The same light on every cell: a town has fixed light, for now.
+    /// The same light on every cell.
     pub fn filled(level: &Level, light: Vec3) -> Self {
         let (min_x, min_y, width, height) = level.bounds();
         Self {
@@ -95,16 +97,20 @@ impl LightGrid {
             .then_some((row * self.width + col) as usize)
     }
 
-    /// Full light on everything out in the open: a farm has fixed light there
-    /// for now, as a town does, while its house stays dark inside.
-    pub fn light_outside(&mut self, level: &Level) {
-        let (min_x, min_y, width, height) = level.bounds();
-        for y in min_y..min_y + height {
-            for x in min_x..min_x + width {
-                let cell = level.cell(x, y);
-                if let (true, Some(i)) = (cell.is_outside() || cell.is_liquid(), self.index(x, y)) {
-                    self.light[i] = Vec3::ONE;
-                }
+    /// Sets the light on a cell.
+    pub fn set(&mut self, x: i64, y: i64, light: Vec3) {
+        if let Some(i) = self.index(x, y) {
+            self.light[i] = light;
+        }
+    }
+
+    /// Adds as much of `colour` as `by` says at each cell.
+    pub fn add(&mut self, colour: Vec3, by: impl Fn(i64, i64) -> f32) {
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let i = (row * self.width + col) as usize;
+                let amount = by(col + self.min_x, row + self.min_y);
+                self.light[i] = (self.light[i] + colour * amount).min(Vec3::ONE);
             }
         }
     }
@@ -209,6 +215,7 @@ pub fn build(
     light: &LightGrid,
     stairs: &[SeenStairs],
     buildings: &[BuildingLook],
+    lit_buildings: &BTreeSet<u16>,
     fields: &[FieldLook],
     ruined: bool,
     camera: Vec3,
@@ -230,6 +237,7 @@ pub fn build(
         camera,
         shape,
         buildings,
+        lit_buildings,
         fields,
         ruined,
     };
@@ -516,6 +524,7 @@ mod tests {
             &light,
             &[],
             &[],
+            &BTreeSet::new(),
             &[],
             false,
             camera,
@@ -583,6 +592,7 @@ mod tests {
             &light,
             &[],
             &[],
+            &BTreeSet::new(),
             &[],
             false,
             camera,
@@ -628,6 +638,7 @@ mod tests {
             &light,
             &[],
             &[],
+            &BTreeSet::new(),
             &[],
             false,
             camera,
@@ -655,6 +666,7 @@ mod tests {
                 &light,
                 &[],
                 &[],
+                &BTreeSet::new(),
                 &[],
                 false,
                 camera,
@@ -694,6 +706,7 @@ mod tests {
                 &light,
                 &[],
                 &[],
+                &BTreeSet::new(),
                 &[],
                 false,
                 camera,
@@ -813,6 +826,7 @@ mod tests {
             &light,
             &[],
             &[],
+            &BTreeSet::new(),
             &[],
             false,
             camera,
@@ -841,6 +855,7 @@ mod tests {
             &room_light,
             &[],
             &[],
+            &BTreeSet::new(),
             &[],
             false,
             camera,
@@ -857,6 +872,7 @@ mod tests {
             &light,
             &[],
             &[],
+            &BTreeSet::new(),
             &[],
             false,
             camera,
@@ -874,6 +890,7 @@ mod tests {
             &light,
             &[],
             &[],
+            &BTreeSet::new(),
             &[],
             false,
             camera,

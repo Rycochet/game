@@ -396,3 +396,7 @@ The owner's choice: game minutes since the world began (one a real second) rathe
 ## 2026-11-01: Environment variables start `HOW_`, and logging uses `LOG_LEVEL`
 
 The owner's convention: every variable starts `HOW_`, and those only for debugging and development start `HOW_DEBUG_`, replacing `HALL_OF_WORLDS_*`, `GAME_*` and `SITE_*`. There are no `HOW_CLIENT_` / `HOW_SERVER_` prefixes, as there are few settings and the native client embeds the server, so reads both sides' (`HOW_DATA`). Noisy logging goes at a lower level instead of behind a flag: `LOG_LEVEL`, with `debug` and `trace` kept to our crates so Bevy's lines don't bury them, and `RUST_LOG` overriding it. Both programs refuse to start if a `HALL_OF_WORLDS_*` variable is set, because ignoring the old data folder would quietly save somewhere else; that check goes at the next save wipe.
+
+## 2026-11-01: Outside light in sites follows the sky
+
+The owner's design: every site's open cells take the world map's flat-ground light at its place, once a game hour, and spill it through openings and down stairs open to the sky. Each cell takes the strongest spill rather than adding them up, and a low light stretches it along its way. No shadows from mountains, and holes don't light the level below. The server says which stairs are open to the sky (`SeenStairs::open_to_sky`), as the client doesn't know where stairs lead. Town windows light up at night, building by building, on the client only, as flavour.

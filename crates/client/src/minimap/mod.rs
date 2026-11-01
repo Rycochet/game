@@ -983,7 +983,7 @@ fn draw_maps(
         // Last, as they are outside what that cuts off.
         if under_the_sky(view, players_level) {
             let middle = Vec2::from(projection.middle);
-            let icons = sky::icons(&sky_now.bodies, right, middle, clip, trim);
+            let icons = sky::icons(&sky_now.bodies, middle, clip, trim);
             sky::draw(&mut canvas, &icons, &sky_now.bodies, middle, clip, trim);
         }
     }
@@ -1067,20 +1067,18 @@ fn hovered_body(
     dungeon: &CurrentDungeon,
     sky_now: &SkyNow,
     window: &Window,
-    camera: &OrbitCamera,
     at: Vec2,
 ) -> Option<String> {
     if !under_the_sky(view, dungeon) {
         return None;
     }
-    let (right, _) = camera.ground_axes();
     let middle = Vec2::new(
         window.width() - CORNER_GAP - minimap_picture_size(window) / 2.0,
         CORNER_GAP + minimap_picture_size(window) / 2.0,
     );
     let circle = minimap_across(window) / 2.0;
     let trim = minimap_trim(window);
-    let icons = sky::icons(&sky_now.bodies, right, middle, circle, trim);
+    let icons = sky::icons(&sky_now.bodies, middle, circle, trim);
     sky::under(&icons, middle, circle, at).map(|number| sky::name(&sky_now.bodies[number]))
 }
 
@@ -1094,14 +1092,14 @@ fn name_hovered_token(
     hovered: Res<HoveredToken>,
     portals: Query<&Portal>,
     (sky_now, dungeon, pointer): (Res<SkyNow>, Res<CurrentDungeon>, Res<PointerPosition>),
-    (window, camera): (Single<&Window, With<PrimaryWindow>>, Single<&OrbitCamera>),
+    window: Single<&Window, With<PrimaryWindow>>,
     mut holder: Single<&mut Visibility, With<WorldHoverBox>>,
     mut text: Single<&mut Text, With<WorldHoverText>>,
 ) {
     let body = pointer
         .0
         .filter(|_| !full.open)
-        .and_then(|at| hovered_body(*view.get(), &dungeon, &sky_now, &window, &camera, at));
+        .and_then(|at| hovered_body(*view.get(), &dungeon, &sky_now, &window, at));
     let name = body.or_else(|| {
         hovered
             .0

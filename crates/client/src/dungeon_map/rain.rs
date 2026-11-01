@@ -15,6 +15,7 @@ use bevy::shader::ShaderRef;
 
 use shared::rng::Seed;
 
+use super::daylight::OutsideLight;
 use super::{CELL_SIZE, Shown};
 use crate::common::{CurrentDungeon, CurrentWorld, ServerClock, WorldReturn};
 
@@ -33,6 +34,8 @@ struct RainParams {
     /// Seconds, for things moving.
     time: f32,
     fall_height: f32,
+    /// What to multiply colours by to look lit (`OutsideLight::lit`).
+    light: Vec4,
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -143,6 +146,7 @@ pub fn update(
     place: Res<WorldReturn>,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
+    outside_light: Res<OutsideLight>,
     part: Single<(&Mesh3d, &MeshMaterial3d<RainMaterial>, &mut Visibility), With<RainPart>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<RainMaterial>>,
@@ -194,6 +198,7 @@ pub fn update(
             temperature: temperature.temperature as f32,
             time: time.elapsed_secs(),
             fall_height: FALL_HEIGHT,
+            light: outside_light.lit().extend(1.0),
         };
     }
 }

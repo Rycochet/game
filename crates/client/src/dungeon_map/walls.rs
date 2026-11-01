@@ -9,6 +9,8 @@
 //! stops at the wall's foot, and beside natural walls the wall's picture fades
 //! out across it.
 
+use std::collections::BTreeSet;
+
 use bevy::prelude::*;
 use shared::dungeon::{CELL_UNITS, Cell, Level, Sight, WALL_HALF_UNITS};
 use shared::site::{BuildingLook, FieldLook};
@@ -124,6 +126,8 @@ pub struct Scene<'a> {
     pub shape: Shape,
     /// A town's buildings.
     pub buildings: &'a [BuildingLook],
+    /// Which of them (by `id`) have their lights on.
+    pub lit_buildings: &'a BTreeSet<u16>,
     /// A farm's fields.
     pub fields: &'a [FieldLook],
     /// Whether the place is a ruin.
