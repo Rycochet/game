@@ -83,6 +83,10 @@ pub struct ServerOptions {
     pub exit_when_alone: bool,
     /// Whether clients may play without an account (`HOW_GUESTS`).
     pub guests: bool,
+    /// Whether a client may stop the world's clock: only the embedded server,
+    /// whose one client is the only one playing. Separate from `dev_tools`, so
+    /// a test server with those on can't be stopped by anyone connected.
+    pub pausable: bool,
 }
 
 impl Plugin for ServerPlugin {

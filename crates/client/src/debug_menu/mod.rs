@@ -119,8 +119,12 @@ impl FactSources<'_> {
     }
 }
 
-fn auto_walk(walk: Res<AutoWalk>, mut steps: MessageWriter<TakeStep>) {
-    if walk.0 {
+fn auto_walk(
+    walk: Res<AutoWalk>,
+    clock: Res<crate::common::ServerClock>,
+    mut steps: MessageWriter<TakeStep>,
+) {
+    if walk.0 && !clock.paused {
         steps.write(TakeStep(Step::new(1, 0).expect("a step")));
     }
 }

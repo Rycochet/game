@@ -206,7 +206,7 @@ pub(crate) fn handle_messages(
         if !stay {
             client.disconnect(&mut world);
         } else if client.phase == Phase::Joining
-            && !join(clients, i, &mut world, accounts, options.dev_tools)
+            && !join(clients, i, &mut world, accounts, &options)
         {
             clients[i].disconnect(&mut world);
         }
@@ -243,7 +243,7 @@ fn join(
     i: usize,
     world: &mut ServerWorld,
     accounts: &mut Accounts,
-    dev_tools: bool,
+    options: &ServerOptions,
 ) -> bool {
     let account = clients[i].account.clone();
     let character = clients[i].character_id.clone();
@@ -261,7 +261,7 @@ fn join(
     if let (Some(account), Some(character)) = (&account, &character) {
         accounts.played(account, character);
     }
-    welcome(&mut clients[i], world, dev_tools)
+    welcome(&mut clients[i], world, options)
 }
 
 /// Saves every character and site that has changed.
@@ -410,6 +410,21 @@ pub(crate) fn answer(
         }
         ClientMessage::EnterSite { chunk } => sites::enter_poi(client, world, chunk),
         ClientMessage::UseExit => sites::use_exit(client, world),
+        ClientMessage::SetPaused(_) if !options.pausable => {
+            warn!("A client asked to pause, which this server doesn't allow");
+            true
+        }
+        ClientMessage::SetPaused(paused) => {
+            if paused {
+                world.clock.pause();
+            } else {
+                world.clock.resume();
+            }
+            client.link.send(&ServerMessage::Paused {
+                paused,
+                clock: world.clock.minutes(),
+            })
+        }
         // Dev tools are only for the embedded server; elsewhere a stray key
         // or click is ignored rather than ending the game.
         _ if message.is_dev_tool() && !options.dev_tools => {
@@ -456,7 +471,7 @@ pub(crate) fn answer(
 
 /// Loads the character (or starts a new one), and tells the client the
 /// world and where they are; back into the site level they were on, if any.
-fn welcome(client: &mut Client, world: &mut ServerWorld, dev_tools: bool) -> bool {
+fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions) -> bool {
     client.phase = Phase::Playing;
     let id = client
         .character_id
@@ -470,7 +485,8 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, dev_tools: bool) -> boo
         snow_line: world.snow_line,
         x,
         y,
-        dev_tools,
+        dev_tools: options.dev_tools,
+        can_pause: options.pausable,
     };
     if !client.link.send(&welcome) {
         return false;
@@ -499,6 +515,8 @@ pub(crate) mod tests {
         pub welcome: Vec<ServerMessage>,
         /// Whether the server allows dev tools (it does, unless set).
         pub dev_tools: bool,
+        /// Whether the server pauses when asked (it doesn't, unless set).
+        pub pausable: bool,
         next_step: u32,
     }
 
@@ -518,6 +536,7 @@ pub(crate) mod tests {
                 end,
                 welcome: Vec::new(),
                 dev_tools: true,
+                pausable: false,
                 next_step: 0,
             };
             test.welcome = test.send(&[HELLO]);
@@ -530,6 +549,7 @@ pub(crate) mod tests {
             let options = ServerOptions {
                 dev_tools: self.dev_tools,
                 exit_when_alone: false,
+                pausable: self.pausable,
                 guests: true,
             };
             for message in messages {
@@ -541,7 +561,7 @@ pub(crate) mod tests {
                     &options,
                 );
                 if self.client.phase == Phase::Joining {
-                    welcome(&mut self.client, &mut self.world, options.dev_tools);
+                    welcome(&mut self.client, &mut self.world, &options);
                 }
             }
             self.client.send_position();
@@ -616,6 +636,7 @@ pub(crate) mod tests {
         app.insert_resource(ServerOptions {
             dev_tools: true,
             exit_when_alone: false,
+            pausable: false,
             guests,
         });
         bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
@@ -882,6 +903,7 @@ pub(crate) mod tests {
         let options = ServerOptions {
             dev_tools: true,
             exit_when_alone: false,
+            pausable: false,
             guests: true,
         };
         assert!(answer(
@@ -922,6 +944,59 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_pausable_server_stops_its_clock_when_asked() {
+        let mut test = TestClient::new();
+        test.pausable = true;
+        let answers = test.send(&[ClientMessage::SetPaused(true)]);
+        let stopped = test.world.clock.minutes();
+        assert_eq!(
+            answers,
+            vec![ServerMessage::Paused {
+                paused: true,
+                clock: stopped,
+            }]
+        );
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        assert_eq!(test.world.clock.minutes(), stopped);
+
+        // Pings are still answered, with the clock where it stopped.
+        let answers = test.send(&[ClientMessage::Ping { sent: 1.5 }]);
+        assert_eq!(
+            answers,
+            vec![ServerMessage::Pong {
+                sent: 1.5,
+                clock: stopped,
+            }]
+        );
+
+        let answers = test.send(&[ClientMessage::SetPaused(false)]);
+        assert!(matches!(
+            answers[..],
+            [ServerMessage::Paused { paused: false, .. }]
+        ));
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        assert!(test.world.clock.minutes() > stopped);
+    }
+
+    #[test]
+    fn other_servers_never_pause() {
+        // Dev tools being on makes no difference.
+        let mut test = TestClient::new();
+        let answers = test.send(&[ClientMessage::SetPaused(true)]);
+        assert!(answers.is_empty());
+        let before = test.world.clock.minutes();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        assert!(test.world.clock.minutes() > before);
+        assert!(matches!(
+            test.welcome[0],
+            ServerMessage::Welcome {
+                can_pause: false,
+                ..
+            }
+        ));
+    }
+
+    #[test]
     fn messages_before_hello_are_refused() {
         let (end, server_link) = local_pair();
         let mut client = Client::new(server_link, CharacterId::new("x"));
@@ -930,6 +1005,7 @@ pub(crate) mod tests {
         let options = ServerOptions {
             dev_tools: false,
             exit_when_alone: false,
+            pausable: false,
             guests: true,
         };
         let message = ClientMessage::UseExit;

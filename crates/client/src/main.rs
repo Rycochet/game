@@ -15,6 +15,7 @@ mod minimap;
 mod player;
 mod site;
 mod surface_style;
+mod system_menu;
 mod touch;
 mod ui;
 mod view3d;
@@ -73,6 +74,8 @@ fn main() {
         ui::UiPlugin,
         loading_screen::LoadingScreenPlugin,
     ));
+    // (Apart: a tuple of plugins can only be so long.)
+    app.add_plugins(system_menu::SystemMenuPlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

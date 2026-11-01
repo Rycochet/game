@@ -43,6 +43,8 @@
 //! - `HOW_DEBUG_PANEL=1`: open the Show Widgets panel; `suns`: Suns and Moons;
 //!   `generate`: Generate POI's submenu.
 //! - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
+//! - `HOW_DEBUG_SYSTEM_MENU=menu`: start with the system menu open; `quit`: at
+//!   its requester; `settings`: at its settings.
 //! - `HOW_DEBUG_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the
 //!   locale says.
 //! - `HOW_DEBUG_SHOW_FLOOR=n`: three seconds after starting, look at this known
@@ -72,6 +74,7 @@ use crate::connection::ToServer;
 use crate::debug_menu::{AutoWalk, DebugAction, DebugMenu};
 use crate::minimap::FullMap;
 use crate::player::{Player, PlayerSystems, TakeStep, TravelTo};
+use crate::system_menu::SystemMenu;
 use crate::view3d::OrbitCamera;
 
 /// Time between taking the screenshot and quitting, so it can be saved.
@@ -222,6 +225,13 @@ impl Plugin for DevToolsPlugin {
         if let Ok(filter) = env::var("HOW_DEBUG_MENU") {
             app.insert_resource(DebugMenu::open_with(filter));
         }
+
+        match env::var("HOW_DEBUG_SYSTEM_MENU").as_deref() {
+            Ok("menu") => app.insert_resource(SystemMenu::Menu),
+            Ok("quit") => app.insert_resource(SystemMenu::Confirming),
+            Ok("settings") => app.insert_resource(SystemMenu::Settings),
+            _ => app,
+        };
 
         if let Some((x, y)) = env::var("HOW_DEBUG_CURSOR")
             .ok()
@@ -463,7 +473,8 @@ struct ScreenshotPlan {
 
 fn screenshot_then_quit(
     mut commands: Commands,
-    time: Res<Time>,
+    // Real time, to work while the game is paused.
+    time: Res<Time<Real>>,
     mut plan: ResMut<ScreenshotPlan>,
     mut exit: MessageWriter<AppExit>,
 ) {

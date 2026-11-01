@@ -26,7 +26,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 20;
+pub const PROTOCOL_VERSION: u32 = 21;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -70,6 +70,10 @@ pub enum ClientMessage {
     /// Use what the player stands on: stairs, or outside ground at the edge
     /// of the level (back to the world map).
     UseExit,
+    /// Stop or restart the world's clock, answered with `Paused`. Only a server
+    /// with just this player on it pauses (`Welcome`'s `can_pause`); others
+    /// ignore it.
+    SetPaused(bool),
     /// Developer tools: jump to a point on the map the player is on (in a
     /// site, only onto a walkable cell), answered with `Teleported`. Only an
     /// embedded (single-player) server accepts it; others ignore it.
@@ -206,6 +210,8 @@ pub enum ServerMessage {
         y: i64,
         /// Whether this server accepts developer tools messages.
         dev_tools: bool,
+        /// Whether this server pauses when asked: only single player's.
+        can_pause: bool,
     },
     /// Everything the client knows of the world map is forgotten; the chunks
     /// it may know again follow (`DevForgetMap`).
@@ -218,6 +224,9 @@ pub enum ServerMessage {
     Hour(u32),
     /// The world's clock has been moved: game minutes since the world began.
     Clock(f64),
+    /// The world's clock has stopped or started again, at this many game
+    /// minutes. While stopped, the clock in `Pong` says nothing new.
+    Paused { paused: bool, clock: f64 },
     /// The answer to `Ping`: its `sent`, and the world's clock (game minutes)
     /// when answering.
     Pong { sent: f64, clock: f64 },
@@ -342,6 +351,7 @@ mod tests {
                 chunk: ChunkPos { x: 2, y: -1 },
             },
             ClientMessage::UseExit,
+            ClientMessage::SetPaused(true),
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevSetTime { minutes: 90.5 },
@@ -386,11 +396,16 @@ mod tests {
                 x: -4,
                 y: 9,
                 dev_tools: true,
+                can_pause: true,
             },
             ServerMessage::ForgetWorldMap,
             ServerMessage::SnowLine(40),
             ServerMessage::Hour(6),
             ServerMessage::Clock(405.0),
+            ServerMessage::Paused {
+                paused: true,
+                clock: 405.0,
+            },
             ServerMessage::Pong {
                 sent: 1.5,
                 clock: 6.75,

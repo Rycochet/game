@@ -430,3 +430,7 @@ The owner's design: a player has an account with one or more characters. A clien
 Characters are saved at `<data>/characters/<id>.ron`, as they will move between worlds and a server will one day run several at once (not built): the file says which world they are in and keeps what they know of each. Old character files were left behind rather than moved (the owner: nothing important is lost).
 
 Logins are kept apart from accounts (`logins/<hash>.ron` → account id), so that several ways in can lead to one account, or a guest could become a full one, and no secret is stored. Guest tokens are 32 secure random bytes, one per server per client, so a server can't use one on another. One account plays one character at a time, the newest connection winning, so items can't be passed between its own characters later. Names are 1 to 24 characters and not unique, to be looked at again when players can see each other.
+
+## 2026-11-01: Pausing is single player only, and the server stops the clock
+
+While the system menu is open, the client asks the server to pause and only stops once told. Only a server with `ServerOptions::pausable` obeys: the embedded one, not any networked one, whatever its dev tools setting, and turning on play with others must turn it off. Pausing stops `WorldClock`, and on the client `ServerClock` and `Time<Virtual>`; ticks, saves and pings carry on, with the pong's clock ignored while paused. Anything going by game time must go by these, so it stops too.

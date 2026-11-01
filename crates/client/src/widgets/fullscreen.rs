@@ -68,6 +68,19 @@ pub fn spawn_fullscreen_layer(
     depth: i32,
     content: Node,
 ) -> (Entity, Entity) {
+    let share = percent(layer_share(depth) * 100.0);
+    spawn_sized_layer(commands, depth, share, share, content)
+}
+
+/// As `spawn_fullscreen_layer`, with a panel of this size rather than its depth's
+/// (`Val::Auto` fits its contents).
+pub fn spawn_sized_layer(
+    commands: &mut Commands,
+    depth: i32,
+    width: Val,
+    height: Val,
+    content: Node,
+) -> (Entity, Entity) {
     let layer = commands
         .spawn((darkening(depth), Pressable, Visibility::Hidden))
         .id();
@@ -79,14 +92,13 @@ pub fn spawn_fullscreen_layer(
         align_items: AlignItems::Center,
         ..default()
     });
-    let share = layer_share(depth) * 100.0;
     let panel_entity = commands.spawn((panel(), raised_border())).id();
     commands.entity(panel_entity).insert((
         stops_presses(panel_entity),
         Node {
             position_type: PositionType::Relative,
-            width: percent(share),
-            height: percent(share),
+            width,
+            height,
             border: UiRect::all(px(LAYER_EDGE)),
             ..content
         },

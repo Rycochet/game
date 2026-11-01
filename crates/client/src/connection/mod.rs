@@ -60,6 +60,7 @@ impl Plugin for ConnectionPlugin {
                 (
                     connect.run_if(not(resource_exists::<ServerConnection>)),
                     receive.run_if(resource_exists::<ServerConnection>),
+                    stop_game_time,
                 )
                     .chain(),
             )
@@ -93,7 +94,21 @@ const CLOCK_JUMP_MINUTES: f64 = 5.0 / GAME_MINUTE_SECONDS as f64;
 
 /// The clock keeps running between the server's answers.
 fn run_clock(time: Res<Time<Real>>, mut clock: ResMut<ServerClock>) {
-    clock.minutes += time.delta_secs_f64() / GAME_MINUTE_SECONDS as f64;
+    if !clock.paused {
+        clock.minutes += time.delta_secs_f64() / GAME_MINUTE_SECONDS as f64;
+    }
+}
+
+/// Everything going by `Time` stops while the server's clock has: travel, and
+/// clouds, water and rain moving. What goes by `Time<Real>`, as menus do, doesn't.
+fn stop_game_time(clock: Res<ServerClock>, mut time: ResMut<Time<Virtual>>) {
+    if clock.paused != time.is_paused() {
+        if clock.paused {
+            time.pause();
+        } else {
+            time.unpause();
+        }
+    }
 }
 
 /// Puts the clock right from the server's latest answer. After `run_clock`, so
@@ -103,6 +118,10 @@ fn apply_pong(connection: Option<Res<ServerConnection>>, mut clock: ResMut<Serve
         return;
     };
     clock.round_trip_ms = Some(pong.round_trip * 1000.0);
+    // `Paused` said exactly where it stopped, and the time below hasn't passed.
+    if clock.paused {
+        return;
+    }
     // The server read its clock about half the round trip before the answer
     // arrived, and the answer may have been waiting for this frame since.
     let ago = pong.round_trip / 2.0 + pong.received.elapsed().as_secs_f64();
@@ -318,6 +337,16 @@ fn receive(
             Ok(Some(ServerMessage::Clock(minutes))) => {
                 server_clock.minutes = minutes;
             }
+            Ok(Some(ServerMessage::Paused {
+                paused,
+                clock: minutes,
+            })) => {
+                server_clock.paused = paused;
+                server_clock.minutes = minutes;
+                // An answer from before this could wrongly count the pause as
+                // time passed.
+                connection.pongs.take();
+            }
             // Only from an embedded server: a socket takes them first.
             Ok(Some(ServerMessage::Pong { sent, clock })) => {
                 connection.pongs.set(TimedPong {
@@ -350,8 +379,11 @@ fn receive(
                 x,
                 y,
                 dev_tools,
+                can_pause,
             })) => {
                 server_dev_tools.0 = dev_tools;
+                server_clock.can_pause = can_pause;
+                server_clock.paused = false;
                 clock.set_if_neq(GameClock {
                     hour: (minutes / MINUTES_PER_HOUR) as u32,
                 });
@@ -385,6 +417,7 @@ fn receive(
                     x,
                     y,
                     dev_tools,
+                    can_pause,
                 }));
             }
             Ok(Some(ServerMessage::Refused(reason))) => {

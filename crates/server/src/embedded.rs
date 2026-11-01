@@ -42,6 +42,7 @@ pub fn start_embedded(
             let options = ServerOptions {
                 dev_tools: true,
                 exit_when_alone: true,
+                pausable: true,
                 guests: false,
             };
             // Made on the thread itself: a Bevy `App` can't move between

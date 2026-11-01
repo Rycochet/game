@@ -513,11 +513,15 @@ pub struct GameClock {
 #[derive(Resource, Default)]
 pub struct HerbGrowthShift(pub u32);
 
-/// The server's clock as well as the client can tell, always running: game
-/// minutes since the world began. Unlike `GameClock` it changes every frame.
+/// The server's clock as well as the client can tell: game minutes since the
+/// world began. Unlike `GameClock` it changes every frame, unless paused.
 #[derive(Resource, Default)]
 pub struct ServerClock {
     pub minutes: f64,
+    /// The server says the clock has stopped. Game time (`Time`) stops with it.
+    pub paused: bool,
+    /// The server would stop it if asked (`ClientMessage::SetPaused`).
+    pub can_pause: bool,
     /// How long the last `Ping` took to come back, in milliseconds.
     pub round_trip_ms: Option<f64>,
     /// The server is in this process: `round_trip_ms` says nothing about a
