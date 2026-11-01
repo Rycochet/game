@@ -8,9 +8,15 @@
 //!   through the browser's `WebSocket`.
 //!
 //! When a WebSocket closes, its link reports `Closed`, as an in-process link
-//! does when the server goes.
+//! does when the server goes. Both also send pings and time the answers
+//! (`ping`), which never reach the link.
 
 use shared::protocol::ClientLink;
+
+use super::ping::LatestPong;
+#[cfg(target_arch = "wasm32")]
+use super::ping::PING_EVERY;
+use super::ping::Pinger;
 
 /// Where to connect.
 pub(super) enum Target {
@@ -45,15 +51,19 @@ impl Target {
     }
 }
 
-/// Native: a link carried over a WebSocket by a thread of its own. The
-/// thread ends (and the link reports `Closed`) when either side goes.
+/// Native: a link carried over a WebSocket by a thread of its own, and where
+/// the answers to its pings go. The thread ends (and the link reports `Closed`)
+/// when either side goes. It doesn't depend on the game's frames, so the
+/// connection and its timing carry on while the window is frozen.
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn open(url: &str) -> ClientLink {
+pub(super) fn open(url: &str) -> (ClientLink, LatestPong) {
     use std::thread;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use tungstenite::stream::MaybeTlsStream;
     use tungstenite::{Message, connect};
+
+    use super::ping::PING_EVERY;
 
     // How long a read waits before checking for something to send.
     const POLL: Duration = Duration::from_millis(2);
@@ -61,6 +71,8 @@ pub(super) fn open(url: &str) -> ClientLink {
     let (link, wire) = shared::protocol::wired();
     let (to_link, from_link) = wire.into_parts();
     let url = url.to_owned();
+    let latest = LatestPong::default();
+    let pinger = Pinger::new(latest.clone());
     thread::Builder::new()
         .name("socket".into())
         .spawn(move || {
@@ -75,6 +87,7 @@ pub(super) fn open(url: &str) -> ClientLink {
                 let _ = stream.set_read_timeout(Some(POLL));
                 let _ = stream.set_nodelay(true);
             }
+            let mut next_ping = Instant::now();
             loop {
                 // Everything the game has sent, then whatever has arrived.
                 loop {
@@ -91,9 +104,15 @@ pub(super) fn open(url: &str) -> ClientLink {
                         }
                     }
                 }
+                if Instant::now() >= next_ping {
+                    next_ping = Instant::now() + PING_EVERY;
+                    if socket.send(Message::Binary(pinger.ping().into())).is_err() {
+                        return;
+                    }
+                }
                 match socket.read() {
                     Ok(Message::Binary(bytes)) => {
-                        if to_link.send(bytes.to_vec()).is_err() {
+                        if !pinger.took_pong(&bytes) && to_link.send(bytes.to_vec()).is_err() {
                             return;
                         }
                     }
@@ -109,18 +128,22 @@ pub(super) fn open(url: &str) -> ClientLink {
             }
         })
         .expect("the socket thread can start");
-    link
+    (link, latest)
 }
 
 /// Web: a browser WebSocket and the link whose bytes it carries. Incoming
 /// messages go straight to the link; outgoing ones wait in the link until
 /// `pump` sends them (once the socket is open). Dropping it closes the
-/// socket, and the link reports `Closed`.
+/// socket, and the link reports `Closed`. There are no threads here: pings go
+/// from `pump`, and their answers are timed as soon as the browser hands them
+/// over, between frames.
 #[cfg(target_arch = "wasm32")]
 pub(super) struct BrowserSocket {
     socket: web_sys::WebSocket,
     from_link: std::sync::mpsc::Receiver<Vec<u8>>,
     closed: std::rc::Rc<std::cell::Cell<bool>>,
+    pinger: Pinger,
+    next_ping: std::cell::Cell<bevy::platform::time::Instant>,
     // Kept alive as long as the socket uses them; dropping them drops the
     // sender to the link.
     _on_message: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::MessageEvent)>,
@@ -129,7 +152,7 @@ pub(super) struct BrowserSocket {
 
 #[cfg(target_arch = "wasm32")]
 impl BrowserSocket {
-    pub fn open(url: &str) -> Option<(ClientLink, Self)> {
+    pub fn open(url: &str) -> Option<(ClientLink, LatestPong, Self)> {
         use std::cell::Cell;
         use std::rc::Rc;
 
@@ -142,13 +165,19 @@ impl BrowserSocket {
         socket.set_binary_type(web_sys::BinaryType::Arraybuffer);
         let (link, wire) = shared::protocol::wired();
         let (to_link, from_link) = wire.into_parts();
-        let on_message = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(
-            move |event: web_sys::MessageEvent| {
+        let latest = LatestPong::default();
+        let pinger = Pinger::new(latest.clone());
+        let on_message = {
+            let pinger = pinger.clone();
+            Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
                 if let Ok(buffer) = event.data().dyn_into::<js_sys::ArrayBuffer>() {
-                    let _ = to_link.send(js_sys::Uint8Array::new(&buffer).to_vec());
+                    let bytes = js_sys::Uint8Array::new(&buffer).to_vec();
+                    if !pinger.took_pong(&bytes) {
+                        let _ = to_link.send(bytes);
+                    }
                 }
-            },
-        );
+            })
+        };
         let closed = Rc::new(Cell::new(false));
         let on_close = {
             let closed = closed.clone();
@@ -159,18 +188,21 @@ impl BrowserSocket {
         // An error is followed by a close.
         Some((
             link,
+            latest,
             Self {
                 socket,
                 from_link,
                 closed,
+                pinger,
+                next_ping: Cell::new(bevy::platform::time::Instant::now()),
                 _on_message: on_message,
                 _on_close: on_close,
             },
         ))
     }
 
-    /// Sends what the link has sent, once the socket is open. `false` once
-    /// the socket has closed.
+    /// Sends what the link has sent, and a ping when one is due, once the
+    /// socket is open. `false` once the socket has closed.
     pub fn pump(&self) -> bool {
         if self.closed.get() {
             return false;
@@ -178,6 +210,13 @@ impl BrowserSocket {
         if self.socket.ready_state() == web_sys::WebSocket::OPEN {
             for bytes in self.from_link.try_iter() {
                 if self.socket.send_with_u8_array(&bytes).is_err() {
+                    return false;
+                }
+            }
+            let now = bevy::platform::time::Instant::now();
+            if now >= self.next_ping.get() {
+                self.next_ping.set(now + PING_EVERY);
+                if self.socket.send_with_u8_array(&self.pinger.ping()).is_err() {
                     return false;
                 }
             }

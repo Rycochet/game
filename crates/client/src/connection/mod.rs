@@ -14,11 +14,13 @@
 //! player is moved back if a step was refused (`prediction`). Other modules
 //! send with `ToServer` and read the server's map messages as `FromServer`.
 
+mod ping;
 mod prediction;
 mod socket;
 
 use std::time::Duration;
 
+use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage};
 use shared::world::GAME_HOUR_SECONDS;
@@ -28,6 +30,7 @@ use crate::common::{
     CurrentWorld, GameClock, GameView, LoadingStep, MapPosition, ServerClock, ServerStatus, Weather,
 };
 use crate::player::{Player, PlayerSystems, Stepped};
+use ping::{LatestPong, PING_EVERY, TimedPong};
 use prediction::{Prediction, correction};
 use socket::Target;
 
@@ -58,8 +61,8 @@ impl Plugin for ConnectionPlugin {
             .add_systems(
                 Update,
                 (
-                    run_clock,
-                    send_pings.run_if(resource_exists::<CurrentWorld>),
+                    (run_clock, apply_pong).chain(),
+                    send_local_pings.run_if(resource_exists::<CurrentWorld>),
                 ),
             )
             // After this frame's steps, which were still on the last map.
@@ -76,9 +79,6 @@ impl Plugin for ConnectionPlugin {
     }
 }
 
-/// Seconds between asking the server's clock.
-const PING_EVERY: f64 = 1.0;
-
 /// How much of what the clock is out by is put right at each answer.
 const CLOCK_EASING: f64 = 0.1;
 
@@ -90,14 +90,38 @@ fn run_clock(time: Res<Time<Real>>, mut clock: ResMut<ServerClock>) {
     clock.hours += time.delta_secs_f64() / GAME_HOUR_SECONDS as f64;
 }
 
-/// Asks the server's clock now and then, once in a world.
-fn send_pings(
+/// Puts the clock right from the server's latest answer. After `run_clock`, so
+/// the clock has caught up with any long frame the answer waited through.
+fn apply_pong(connection: Option<Res<ServerConnection>>, mut clock: ResMut<ServerClock>) {
+    let Some(pong) = connection.and_then(|connection| connection.pongs.take()) else {
+        return;
+    };
+    clock.round_trip_ms = Some(pong.round_trip * 1000.0);
+    // The server read its clock about half the round trip before the answer
+    // arrived, and the answer may have been waiting for this frame since.
+    let ago = pong.round_trip / 2.0 + pong.received.elapsed().as_secs_f64();
+    let behind = pong.clock + ago / GAME_HOUR_SECONDS as f64 - clock.hours;
+    // Far out: jump. Otherwise ease, so clouds never visibly jerk.
+    clock.hours += if behind.abs() > CLOCK_JUMP_HOURS {
+        behind
+    } else {
+        behind * CLOCK_EASING
+    };
+}
+
+/// Single player only, once in a world: asks the embedded server's clock now
+/// and then. Over a network, the socket does this (`ping`).
+fn send_local_pings(
     time: Res<Time<Real>>,
+    connection: Option<Res<ServerConnection>>,
     mut to_server: MessageWriter<ToServer>,
     mut last: Local<Option<f64>>,
 ) {
+    if !connection.is_some_and(|connection| connection.local) {
+        return;
+    }
     let now = time.elapsed_secs_f64();
-    if last.is_none_or(|last| now - last >= PING_EVERY) {
+    if last.is_none_or(|last| now - last >= PING_EVERY.as_secs_f64()) {
         *last = Some(now);
         to_server.write(ToServer(ClientMessage::Ping { sent: now }));
     }
@@ -118,6 +142,10 @@ pub struct FromServer(pub ServerMessage);
 #[derive(Resource)]
 pub struct ServerConnection {
     link: ClientLink,
+    /// The latest answer to a ping.
+    pongs: LatestPong,
+    /// Whether the server is in this process, with no network to time.
+    local: bool,
     /// The single-player server, if it is ours. Dropping it waits for it to
     /// save and stop, so it must come after `link` (fields are dropped in
     /// order): the server stops once the link is gone.
@@ -160,28 +188,38 @@ fn connect(world: &mut World) {
             );
             ServerConnection {
                 link,
+                pongs: LatestPong::default(),
+                local: true,
                 _embedded: Some(embedded),
             }
         }
         #[cfg(not(target_arch = "wasm32"))]
         Target::Url(url) => {
             info!("Connecting to {url}");
+            let (link, pongs) = socket::open(url);
             ServerConnection {
-                link: socket::open(url),
+                link,
+                pongs,
+                local: false,
                 _embedded: None,
             }
         }
         #[cfg(target_arch = "wasm32")]
         Target::Url(url) => {
             info!("Connecting to {url}");
-            let Some((link, socket)) = socket::BrowserSocket::open(url) else {
+            let Some((link, pongs, socket)) = socket::BrowserSocket::open(url) else {
                 warn!("Can't open a WebSocket to {url}");
                 return;
             };
             world.insert_non_send(socket);
-            ServerConnection { link }
+            ServerConnection {
+                link,
+                pongs,
+                local: false,
+            }
         }
     };
+    world.resource_mut::<ServerClock>().local_server = connection.local;
     connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
         guest,
@@ -229,21 +267,13 @@ fn receive(
             Ok(Some(ServerMessage::Hour(hour))) => {
                 clock.set_if_neq(GameClock { hour });
             }
-            Ok(Some(ServerMessage::Pong {
-                sent,
-                clock: server_hours,
-            })) => {
-                // The clock was read about half the round trip ago.
-                let round_trip = time.elapsed_secs_f64() - sent;
-                server_clock.round_trip_ms = Some(round_trip * 1000.0);
-                let hours = server_hours + round_trip / 2.0 / GAME_HOUR_SECONDS as f64;
-                let behind = hours - server_clock.hours;
-                // Far out: jump. Otherwise ease, so clouds never visibly jerk.
-                server_clock.hours += if behind.abs() > CLOCK_JUMP_HOURS {
-                    behind
-                } else {
-                    behind * CLOCK_EASING
-                };
+            // Only from an embedded server: a socket takes them first.
+            Ok(Some(ServerMessage::Pong { sent, clock })) => {
+                connection.pongs.set(TimedPong {
+                    round_trip: time.elapsed_secs_f64() - sent,
+                    clock,
+                    received: Instant::now(),
+                });
             }
             Ok(Some(ServerMessage::SnowLine(snow_line))) => {
                 weather.set_if_neq(Weather {

@@ -364,3 +364,7 @@ Two more entries, the owner's: Reveal Map (a site's floor is all known, and save
 ## 2026-11-01: Lexend as the default font
 
 The owner's choice, replacing Bevy's Fira Mono for all text. It sits at Bevy's default font id (`fonts`), so `TextFont::from_font_size` needs no font named, and new text gets it too. It is built into the program, like the loading screen's title font, so text never waits for it. The variable font was taken over a single weight, so later code can use any weight with no more files. Bevy's own font stays compiled in, as turning it off means listing Bevy's other features by hand.
+
+## 2026-11-01: Pings are timed where the bytes are carried
+
+The owner asked for a more accurate ping that keeps going while the window is frozen. The number used to include the game on both sides: a frame on the client (a second apart out of focus) and up to a 20 Hz tick on the server. Now the server's network thread answers `Ping` itself, from a copy of the clock set each tick, and the client's socket (its thread on native, the browser's callback on the web) sends pings and times the answers, handing the game only the latest. These two messages are recognised from their bytes, by size first, so other messages are not decoded twice. Single player has no network, so it shows `local`. The browser has no thread for this: a busy page still delays its timing (a Web Worker could fix that, left until the owner takes up web performance).
