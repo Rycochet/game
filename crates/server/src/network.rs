@@ -43,6 +43,7 @@ use crate::ServerWorld;
 use crate::clock::WorldClock;
 use crate::connections::{self, Connections};
 use crate::latency::{Latency, Pings};
+use crate::lets_encrypt::is_domain_check;
 use crate::tls::{Certificates, Security};
 
 /// The largest message a client may send (they are all tiny).
@@ -82,6 +83,9 @@ pub struct NetworkPlugin {
 struct SecurePort {
     listener: TcpListener,
     certificates: Arc<Certificates>,
+    /// Whether to get certificates from Let's Encrypt, if they are from there
+    /// (tests answer its checks without asking it for anything).
+    ask_lets_encrypt: bool,
 }
 
 /// Connections the web server has accepted, waiting to join the game.
@@ -127,6 +131,7 @@ impl Plugin for NetworkPlugin {
                 Some(SecurePort {
                     listener,
                     certificates: Arc::new(certificates),
+                    ask_lets_encrypt: true,
                 })
             }
         };
@@ -297,11 +302,15 @@ impl TlsListener {
         let SecurePort {
             listener,
             certificates,
+            ask_lets_encrypt,
         } = secure;
         listener.set_nonblocking(true).expect("can be non-blocking");
         let address = listener.local_addr().expect("a bound port has an address");
         let listener = tokio::net::TcpListener::from_std(listener).expect("a tokio listener");
         let acceptor = TlsAcceptor::from(Arc::new(certificates.server_config()));
+        if let Some(issuing) = certificates.issuing().filter(|_| ask_lets_encrypt) {
+            tokio::spawn(issuing.run());
+        }
         let (finished, ready) = tokio::sync::mpsc::channel(16);
         tokio::spawn(async move {
             loop {
@@ -319,6 +328,8 @@ impl TlsListener {
                 let finished = finished.clone();
                 tokio::spawn(async move {
                     match tokio::time::timeout(HANDSHAKE_LIMIT, acceptor.accept(stream)).await {
+                        // Dropped: the handshake was all a domain check wanted.
+                        Ok(Ok(stream)) if is_domain_check(stream.get_ref().1.alpn_protocol()) => {}
                         Ok(Ok(stream)) => {
                             let _ = finished.send((stream, peer)).await;
                         }
@@ -501,8 +512,13 @@ mod tests {
     use shared::protocol::PROTOCOL_VERSION;
     use tungstenite::Message as WsMessage;
 
+    use rustls::sign::CertifiedKey;
+
+    use crate::lets_encrypt::DOMAIN_CHECK_PROTOCOL;
+    use crate::lets_encrypt::tests::expect_check;
     use crate::storage::tests::TestFolder;
     use crate::tls::CertificateSource;
+    use crate::tls::tests::lets_encrypt_certificates;
 
     /// A web server with no game running: nothing ever reads its links.
     fn serve_without_a_game(
@@ -532,9 +548,19 @@ mod tests {
             folder: folder.0.join("tls"),
             names: Vec::new(),
         };
+        let certificates = Arc::new(Certificates::load(&source).unwrap());
+        let (plain, secure, accepted) = serve_with(certificates);
+        (plain, secure, accepted, folder)
+    }
+
+    /// A server with no game running, using these certificates.
+    fn serve_with(
+        certificates: Arc<Certificates>,
+    ) -> (SocketAddr, SocketAddr, Receiver<ServerLink>) {
         let secure = SecurePort {
             listener: TcpListener::bind("127.0.0.1:0").unwrap(),
-            certificates: Arc::new(Certificates::load(&source).unwrap()),
+            certificates,
+            ask_lets_encrypt: false,
         };
         let secure_address = secure.listener.local_addr().unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -548,7 +574,52 @@ mod tests {
             silent_after: SILENT_AFTER,
         };
         thread::spawn(move || serve(listener, Some(secure), None, sockets, Arc::default()));
-        (plain_address, secure_address, accepted, folder)
+        (plain_address, secure_address, accepted)
+    }
+
+    /// Certificates using Let's Encrypt, as if it were checking the domain now;
+    /// and the answer to the check.
+    fn expecting_a_check(folder: &TestFolder) -> (Arc<Certificates>, Arc<CertifiedKey>) {
+        let certificates = lets_encrypt_certificates(&folder.0);
+        let answer = expect_check(&certificates.issuing().unwrap());
+        (Arc::new(certificates), answer)
+    }
+
+    /// A client with these protocols connecting by this name.
+    fn connect_as(
+        secure: SocketAddr,
+        name: &'static str,
+        protocols: &[&[u8]],
+    ) -> rustls::StreamOwned<rustls::ClientConnection, TcpStream> {
+        let mut config = (*trusting_client()).clone();
+        config.alpn_protocols = protocols.iter().map(|protocol| protocol.to_vec()).collect();
+        let name = ServerName::try_from(name).unwrap();
+        let connection = rustls::ClientConnection::new(Arc::new(config), name).unwrap();
+        rustls::StreamOwned::new(connection, TcpStream::connect(secure).unwrap())
+    }
+
+    #[test]
+    fn a_domain_check_gets_its_answer_and_nothing_else_does() {
+        let folder = TestFolder::new();
+        let (certificates, answer) = expecting_a_check(&folder);
+        let (_, secure, _accepted) = serve_with(certificates);
+
+        // The check: the special certificate, then the connection closes.
+        let mut check = connect_as(secure, "game.example.com", &[DOMAIN_CHECK_PROTOCOL]);
+        let mut nothing = Vec::new();
+        let _ = check.read_to_end(&mut nothing);
+        assert!(nothing.is_empty());
+        assert_eq!(check.conn.peer_certificates().unwrap()[0], answer.cert[0]);
+
+        // Asking about another domain gets nowhere.
+        let mut other = connect_as(secure, "other.example.com", &[DOMAIN_CHECK_PROTOCOL]);
+        assert!(other.read_to_end(&mut nothing).is_err());
+
+        // Anyone else gets the ordinary certificate and the game.
+        let mut player = connect_as(secure, "game.example.com", &[b"http/1.1"]);
+        let page = ask(&mut player, CERTIFICATE_PATH);
+        assert!(page.starts_with("HTTP/1.1 200"), "{page}");
+        assert_ne!(player.conn.peer_certificates().unwrap()[0], answer.cert[0]);
     }
 
     /// Accepts any certificate: these tests are about the server. The real

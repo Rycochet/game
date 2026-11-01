@@ -47,6 +47,11 @@ rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem
 x509-parser = "0.18"
 time = "0.3"
 rustls-platform-verifier = "0.7"
+# Let's Encrypt certificates for the server: instant-acme (Apache-2.0), which
+# checks Let's Encrypt's website with the operating system's authorities.
+# rustls-acme was tried, but always brings in webpki-roots, whose licence isn't
+# OSI-approved.
+instant-acme = { version = "0.8", default-features = false, features = ["ring", "hyper-rustls", "rcgen"] }
 
 # Compile our own code with light optimisation so it still builds quickly...
 [profile.dev]

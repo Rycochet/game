@@ -7,8 +7,9 @@
 #
 # Port 8081 serves the web client's files and the game's WebSocket (`/ws`) over
 # HTTPS, with a self-signed certificate kept in /data unless HOW_TLS_CERTIFICATE
-# and HOW_TLS_KEY name your own (readable by the `hall` user). Port 8080 only
-# answers that connections must be secure.
+# and HOW_TLS_KEY name your own (readable by the `hall` user), or
+# HOW_LETS_ENCRYPT_DOMAIN asks Let's Encrypt for one (publish it as -p 443:8081).
+# Port 8080 only answers that connections must be secure.
 #
 # Behind a reverse proxy that looks after TLS, set HOW_BEHIND_PROXY=true: port 8080
 # then serves everything, and 8081 isn't used:
@@ -40,6 +41,10 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:trixie-slim
 COPY --from=build /usr/local/bin/hall-of-worlds-server /usr/local/bin/
 COPY --from=build /srv/web /srv/web
+# Certificate authorities: the server checks Let's Encrypt's website with them.
+RUN apt-get update \
+ && apt-get install --yes --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 RUN useradd --system --no-create-home hall \
  && mkdir /data \
  && chown hall /data

@@ -1,6 +1,6 @@
 //! The server's certificate: which one to use (`Security`), making and keeping
-//! a self-signed one in the data folder, or loading the admin's own files and
-//! noticing when they are replaced.
+//! a self-signed one in the data folder, loading the admin's own files and
+//! noticing when they are replaced, or one from Let's Encrypt (`lets_encrypt`).
 //!
 //! A certificate holds the public key and is given to anyone who connects; the
 //! private key proves the server owns it and never leaves the server. Clients
@@ -27,6 +27,7 @@ use x509_parser::extensions::GeneralName;
 use x509_parser::prelude::FromDer;
 
 use crate::environment::option_on;
+use crate::lets_encrypt::{self, DOMAIN_CHECK_PROTOCOL, Issuing};
 
 /// Where secure connections are taken, unless `HOW_TLS_ADDRESS` says.
 const DEFAULT_TLS_ADDRESS: &str = "0.0.0.0:8081";
@@ -59,6 +60,15 @@ pub enum CertificateSource {
     Generated { folder: PathBuf, names: Vec<String> },
     /// The admin's own files.
     Files { certificate: PathBuf, key: PathBuf },
+    /// From Let's Encrypt, with a certificate made here (kept in `folder`,
+    /// covering `names`) until it comes and if it runs out.
+    LetsEncrypt {
+        domain: String,
+        email: Option<String>,
+        staging: bool,
+        folder: PathBuf,
+        names: Vec<String>,
+    },
 }
 
 /// What the environment says, before it is checked.
@@ -68,11 +78,16 @@ struct Settings {
     certificate: Option<PathBuf>,
     key: Option<PathBuf>,
     names: Option<String>,
+    domain: Option<String>,
+    email: Option<String>,
+    staging: bool,
 }
 
 impl Security {
     /// Works it out from `HOW_BEHIND_PROXY`, `HOW_TLS_ADDRESS`,
-    /// `HOW_TLS_CERTIFICATE`, `HOW_TLS_KEY` and `HOW_TLS_NAMES`.
+    /// `HOW_TLS_CERTIFICATE`, `HOW_TLS_KEY`, `HOW_TLS_NAMES`,
+    /// `HOW_LETS_ENCRYPT_DOMAIN`, `HOW_LETS_ENCRYPT_EMAIL` and
+    /// `HOW_DEBUG_LETS_ENCRYPT_STAGING`.
     pub fn from_environment(data: &Path) -> Result<Self, String> {
         Self::from_settings(
             Settings {
@@ -81,6 +96,9 @@ impl Security {
                 certificate: env::var_os("HOW_TLS_CERTIFICATE").map(Into::into),
                 key: env::var_os("HOW_TLS_KEY").map(Into::into),
                 names: env::var("HOW_TLS_NAMES").ok(),
+                domain: env::var("HOW_LETS_ENCRYPT_DOMAIN").ok(),
+                email: env::var("HOW_LETS_ENCRYPT_EMAIL").ok(),
+                staging: option_on("HOW_DEBUG_LETS_ENCRYPT_STAGING", false),
             },
             data,
         )
@@ -88,35 +106,69 @@ impl Security {
 
     fn from_settings(settings: Settings, data: &Path) -> Result<Self, String> {
         if settings.behind_proxy {
-            if settings.certificate.is_some() || settings.key.is_some() {
+            if settings.certificate.is_some() || settings.key.is_some() || settings.domain.is_some()
+            {
                 return Err(
-                    "HOW_BEHIND_PROXY=true uses no certificate, so it can't be set with HOW_TLS_CERTIFICATE or HOW_TLS_KEY"
+                    "HOW_BEHIND_PROXY=true uses no certificate, so it can't be set with HOW_TLS_CERTIFICATE, HOW_TLS_KEY or HOW_LETS_ENCRYPT_DOMAIN"
                         .into(),
                 );
             }
             return Ok(Self::BehindProxy);
         }
+        if settings.domain.is_some() && (settings.certificate.is_some() || settings.key.is_some()) {
+            return Err(
+                "Use either HOW_LETS_ENCRYPT_DOMAIN or your own HOW_TLS_CERTIFICATE and HOW_TLS_KEY, not both"
+                    .into(),
+            );
+        }
+        if settings.email.is_some() && settings.domain.is_none() {
+            return Err("HOW_LETS_ENCRYPT_EMAIL needs HOW_LETS_ENCRYPT_DOMAIN".into());
+        }
         let address = settings.address.as_deref().unwrap_or(DEFAULT_TLS_ADDRESS);
         let address = address.parse().map_err(|_| {
             format!("HOW_TLS_ADDRESS={address} is not an address and port, such as 0.0.0.0:8081")
         })?;
-        let source = match (settings.certificate, settings.key) {
-            (Some(certificate), Some(key)) => CertificateSource::Files { certificate, key },
-            (None, None) => CertificateSource::Generated {
-                folder: data.join("tls"),
-                names: settings
-                    .names
-                    .unwrap_or_default()
-                    .split(',')
-                    .map(str::trim)
-                    .filter(|name| !name.is_empty())
-                    .map(Into::into)
-                    .collect(),
-            },
+        let folder = data.join("tls");
+        let names = settings
+            .names
+            .unwrap_or_default()
+            .split(',')
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+            .map(Into::into)
+            .collect();
+        let source = match (settings.certificate, settings.key, settings.domain) {
+            (Some(certificate), Some(key), _) => CertificateSource::Files { certificate, key },
+            (None, None, Some(domain)) => {
+                let domain = domain.trim().to_owned();
+                if !is_domain(&domain) {
+                    return Err(format!(
+                        "HOW_LETS_ENCRYPT_DOMAIN={domain} is not a domain name, such as game.example.com"
+                    ));
+                }
+                CertificateSource::LetsEncrypt {
+                    domain,
+                    email: settings.email,
+                    staging: settings.staging,
+                    folder,
+                    names,
+                }
+            }
+            (None, None, None) => CertificateSource::Generated { folder, names },
             _ => return Err("HOW_TLS_CERTIFICATE and HOW_TLS_KEY must be set together".into()),
         };
         Ok(Self::Tls { address, source })
     }
+}
+
+/// Whether Let's Encrypt could be asked about this name: it needs a real domain,
+/// which an address or a name like `localhost` isn't.
+fn is_domain(name: &str) -> bool {
+    name.contains('.')
+        && name.parse::<IpAddr>().is_err()
+        && name.split('.').all(|part| {
+            !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+        })
 }
 
 /// What a client or a log needs to know about a certificate.
@@ -186,14 +238,19 @@ pub(crate) struct Certificates {
     current: RwLock<Current>,
     /// The admin's files, to notice when they are replaced.
     files: Option<(PathBuf, PathBuf)>,
+    /// Getting a certificate from Let's Encrypt, if it is being used.
+    issuing: Option<Arc<Issuing>>,
 }
 
 #[derive(Debug)]
-struct Current {
+pub(crate) struct Current {
     key: Arc<CertifiedKey>,
+    /// When it is valid, in seconds since 1970.
+    pub not_before: i64,
+    pub not_after: i64,
     /// Certificates only, never a key, even if they share a file.
     public_pem: String,
-    fingerprint: String,
+    pub fingerprint: String,
     changed: (Option<SystemTime>, Option<SystemTime>),
 }
 
@@ -201,39 +258,66 @@ impl Certificates {
     /// Loads or makes the certificate. An `Err` should stop the server: an
     /// admin who named files wants those files used, not something else.
     pub fn load(source: &CertificateSource) -> Result<Self, String> {
-        let (certificate, key, files) = match source {
+        let now = OffsetDateTime::now_utc();
+        let (certificate, key, files, issuing) = match source {
             CertificateSource::Generated { folder, names } => {
-                let (certificate, key) = generated(folder, names, OffsetDateTime::now_utc())?;
-                (certificate, key, None)
+                let (certificate, key) = generated(folder, names, now)?;
+                (certificate, key, None, None)
             }
             CertificateSource::Files { certificate, key } => (
                 certificate.clone(),
                 key.clone(),
                 Some((certificate.clone(), key.clone())),
+                None,
             ),
+            CertificateSource::LetsEncrypt {
+                domain,
+                email,
+                staging,
+                folder,
+                names,
+            } => {
+                let (certificate, key) = generated(folder, names, now)?;
+                let issuing = Issuing::new(
+                    domain.clone(),
+                    email.clone(),
+                    *staging,
+                    lets_encrypt::folder_within(folder),
+                )?;
+                (certificate, key, None, Some(Arc::new(issuing)))
+            }
         };
         Ok(Self {
             current: RwLock::new(read_pair(&certificate, &key)?),
             files,
+            issuing,
         })
+    }
+
+    /// Getting a certificate from Let's Encrypt, to be run, if it is being used.
+    pub fn issuing(&self) -> Option<Arc<Issuing>> {
+        self.issuing.clone()
+    }
+
+    /// Does something with the certificate being given out.
+    fn with_in_use<T>(&self, using: impl Fn(&Current) -> T) -> T {
+        if let Some(issuing) = &self.issuing {
+            let now = OffsetDateTime::now_utc().unix_timestamp();
+            if let Some(answer) = issuing.with_issued(now, &using) {
+                return answer;
+            }
+        }
+        using(&self.current.read().expect("never poisoned"))
     }
 
     /// The public certificate (and any others in its chain), as PEM.
     pub fn public_pem(&self) -> String {
-        self.current
-            .read()
-            .expect("never poisoned")
-            .public_pem
-            .clone()
+        self.with_in_use(|current| current.public_pem.clone())
     }
 
     /// The fingerprint of the public key, for checking by hand.
     pub fn fingerprint(&self) -> String {
-        self.current
-            .read()
-            .expect("never poisoned")
-            .fingerprint
-            .clone()
+        self.with_in_use(|current| current.fingerprint.clone())
     }
 
     /// Whether there are files to keep an eye on.
@@ -272,13 +356,24 @@ impl Certificates {
             .with_no_client_auth()
             .with_cert_resolver(self.clone());
         config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        if self.issuing.is_some() {
+            config.alpn_protocols.push(DOMAIN_CHECK_PROTOCOL.to_vec());
+        }
         config
     }
 }
 
 impl ResolvesServerCert for Certificates {
-    fn resolve(&self, _: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        Some(self.current.read().expect("never poisoned").key.clone())
+    fn resolve(&self, hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+        if let Some(issuing) = &self.issuing {
+            let checking = hello
+                .alpn()
+                .is_some_and(|mut offered| offered.any(|name| name == DOMAIN_CHECK_PROTOCOL));
+            if checking {
+                return issuing.check_answer(hello.server_name());
+            }
+        }
+        Some(self.with_in_use(|current| current.key.clone()))
     }
 }
 
@@ -287,7 +382,7 @@ fn modified(path: &Path) -> Option<SystemTime> {
 }
 
 /// Reads a certificate and its key, checking that they belong together.
-fn read_pair(certificate: &Path, key: &Path) -> Result<Current, String> {
+pub(crate) fn read_pair(certificate: &Path, key: &Path) -> Result<Current, String> {
     let changed = (modified(certificate), modified(key));
     let chain: Vec<CertificateDer> = CertificateDer::pem_file_iter(certificate)
         .and_then(|items| items.collect())
@@ -322,6 +417,8 @@ fn read_pair(certificate: &Path, key: &Path) -> Result<Current, String> {
         .map_err(|error| format!("Can't read {}: {error}", certificate.display()))?;
     Ok(Current {
         key: Arc::new(pair),
+        not_before: facts.not_before,
+        not_after: facts.not_after,
         public_pem: only_certificates(&text),
         fingerprint: facts.key_fingerprint,
         changed,
@@ -406,9 +503,21 @@ fn certificate_will_do(path: &Path, key: &KeyPair, wanted: &[String], now: Offse
         && facts.not_after > (now + RENEW_WITHIN).unix_timestamp()
 }
 
+/// Makes a folder that only this user can use (on Unix; on Windows the user's
+/// data folder is already private).
+pub(crate) fn create_private_folder(folder: &Path) -> io::Result<()> {
+    fs::create_dir_all(folder)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(folder, fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
+}
+
 /// Writes a private key that only this user can read (on Unix; on Windows the
 /// user's data folder is already private).
-fn write_private(path: &Path, contents: &str) -> io::Result<()> {
+pub(crate) fn write_private(path: &Path, contents: &str) -> io::Result<()> {
     use std::io::Write;
 
     let new = path.with_extension("pem.new");
@@ -424,7 +533,7 @@ fn write_private(path: &Path, contents: &str) -> io::Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use crate::storage::tests::TestFolder;
@@ -436,6 +545,16 @@ mod tests {
             certificate: None,
             key: None,
             names: None,
+            domain: None,
+            email: None,
+            staging: false,
+        }
+    }
+
+    fn lets_encrypt_settings() -> Settings {
+        Settings {
+            domain: Some("game.example.com".into()),
+            ..settings()
         }
     }
 
@@ -448,7 +567,7 @@ mod tests {
     }
 
     /// A key and certificate of their own, as an admin might have.
-    fn own_files(folder: &Path, name: &str) -> (PathBuf, PathBuf) {
+    pub(crate) fn own_files(folder: &Path, name: &str) -> (PathBuf, PathBuf) {
         generated(&folder.join(name), &[], now()).unwrap()
     }
 
@@ -508,6 +627,127 @@ mod tests {
             ..settings()
         };
         assert!(Security::from_settings(bad_address, data).is_err());
+    }
+
+    #[test]
+    fn lets_encrypt_is_chosen_by_naming_a_domain() {
+        let data = Path::new("data");
+        let chosen = Settings {
+            email: Some("admin@example.com".into()),
+            names: Some("other.example.com".into()),
+            ..lets_encrypt_settings()
+        };
+        let Security::Tls { source, .. } = Security::from_settings(chosen, data).unwrap() else {
+            panic!("TLS is on");
+        };
+        assert_eq!(
+            source,
+            CertificateSource::LetsEncrypt {
+                domain: "game.example.com".into(),
+                email: Some("admin@example.com".into()),
+                staging: false,
+                folder: data.join("tls"),
+                names: vec!["other.example.com".into()],
+            }
+        );
+    }
+
+    #[test]
+    fn lets_encrypt_settings_that_disagree_are_refused() {
+        let data = Path::new("data");
+        let proxied = Settings {
+            behind_proxy: true,
+            ..lets_encrypt_settings()
+        };
+        assert!(Security::from_settings(proxied, data).is_err());
+        let with_files = Settings {
+            certificate: Some("c.pem".into()),
+            key: Some("k.pem".into()),
+            ..lets_encrypt_settings()
+        };
+        assert!(Security::from_settings(with_files, data).is_err());
+        let with_half_the_files = Settings {
+            key: Some("k.pem".into()),
+            ..lets_encrypt_settings()
+        };
+        assert!(Security::from_settings(with_half_the_files, data).is_err());
+        let email_alone = Settings {
+            email: Some("admin@example.com".into()),
+            ..settings()
+        };
+        assert!(Security::from_settings(email_alone, data).is_err());
+    }
+
+    #[test]
+    fn only_real_domains_can_be_asked_for() {
+        assert!(is_domain("game.example.com"));
+        for name in [
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "a..b",
+            "a b.com",
+            "https://a.com",
+        ] {
+            assert!(!is_domain(name), "{name}");
+        }
+    }
+
+    /// Certificates using Let's Encrypt, with nothing asked of it.
+    pub(crate) fn lets_encrypt_certificates(folder: &Path) -> Certificates {
+        Certificates::load(&CertificateSource::LetsEncrypt {
+            domain: "game.example.com".into(),
+            email: None,
+            staging: true,
+            folder: folder.join("tls"),
+            names: Vec::new(),
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn until_lets_encrypt_answers_the_self_signed_certificate_is_used() {
+        let folder = TestFolder::new();
+        let loaded = Arc::new(lets_encrypt_certificates(&folder.0));
+
+        assert!(folder.0.join("tls/acme").is_dir());
+        assert!(
+            loaded
+                .server_config()
+                .alpn_protocols
+                .contains(&DOMAIN_CHECK_PROTOCOL.to_vec())
+        );
+        assert_eq!(
+            loaded.fingerprint(),
+            read_facts(&folder.0.join("tls/certificate.pem")).key_fingerprint
+        );
+    }
+
+    #[test]
+    fn domain_checks_are_only_offered_when_lets_encrypt_is_used() {
+        let folder = TestFolder::new();
+        let (certificate, key) = own_files(folder.0.as_path(), "own");
+        let loaded = Arc::new(use_files(&certificate, &key).unwrap());
+        assert_eq!(
+            loaded.server_config().alpn_protocols,
+            [b"http/1.1".to_vec()]
+        );
+    }
+
+    #[test]
+    fn the_issued_certificate_is_the_one_made_public_while_it_lasts() {
+        let folder = TestFolder::new();
+        let loaded = lets_encrypt_certificates(&folder.0);
+        let own_pem = loaded.public_pem();
+        let (certificate, key) = own_files(folder.0.as_path(), "issued");
+
+        lets_encrypt::tests::hold_issued(&loaded.issuing().unwrap(), &certificate, &key);
+
+        assert_ne!(loaded.public_pem(), own_pem);
+        assert_eq!(
+            loaded.fingerprint(),
+            read_facts(&certificate).key_fingerprint
+        );
     }
 
     #[test]
