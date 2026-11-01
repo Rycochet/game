@@ -25,6 +25,12 @@ dirs.workspace = true
 axum.workspace = true
 tower-http.workspace = true
 tokio.workspace = true
+rustls.workspace = true
+ring.workspace = true
+tokio-rustls.workspace = true
+rcgen.workspace = true
+x509-parser.workspace = true
+time.workspace = true
 # Headless: no rendering, windowing, audio or input.
 bevy = { workspace = true, features = ["std", "bevy_log", "multi_threaded"] }
 

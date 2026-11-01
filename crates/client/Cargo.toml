@@ -23,6 +23,12 @@ sys-locale = { version = "0.3", features = ["js"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 server.workspace = true
 tungstenite.workspace = true
+rustls.workspace = true
+rustls-platform-verifier.workspace = true
+# The servers this client has met.
+serde.workspace = true
+ron.workspace = true
+dirs.workspace = true
 
 # The browser's WebSocket, location and storage.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -47,3 +53,7 @@ web-sys = { version = "0.3", features = [
     "WebSocket",
     "Window",
 ] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+rcgen.workspace = true
+time.workspace = true

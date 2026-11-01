@@ -1,6 +1,6 @@
 # client: loading_screen
 
-The screen covering everything from the first frame until the game can take input: "Hall of Worlds" and, at the bottom, a bar saying what is happening. It comes back while the connection is lost, and shows why if the server refuses.
+The screen covering everything from the first frame until the game can take input: "Hall of Worlds" and, at the bottom, a bar saying what is happening. It comes back while the connection is lost, and shows why if the server refuses or the client won't trust it.
 
 ## Files
 

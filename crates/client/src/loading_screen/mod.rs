@@ -105,7 +105,7 @@ fn title_font_size(window: Vec2) -> f32 {
 /// What the bar says, and how full it is.
 fn bar_shows(step: LoadingStep, status: &ServerStatus) -> (String, f32) {
     if let ServerStatus::Refused(reason) = status {
-        return (format!("The server refused: {reason}"), 0.0);
+        return (reason.clone(), 0.0);
     }
     match step {
         LoadingStep::Starting => ("Starting...".into(), 0.0),
@@ -316,6 +316,6 @@ mod tests {
     fn a_refusal_is_said_on_the_bar() {
         let refused = ServerStatus::Refused("too old".into());
         let (words, _) = bar_shows(LoadingStep::Connecting, &refused);
-        assert_eq!(words, "The server refused: too old");
+        assert_eq!(words, "too old");
     }
 }

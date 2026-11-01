@@ -16,6 +16,7 @@ mod latency;
 mod network;
 mod sites;
 mod storage;
+mod tls;
 mod world_map;
 
 use clock::{Repeating, WorldClock};
@@ -40,6 +41,7 @@ pub use embedded::{EmbeddedServer, start_embedded};
 pub use environment::{log_plugin, refuse_old_variables};
 pub use network::NetworkPlugin;
 pub use storage::{CharacterName, DATA_FOLDER_VARIABLE, default_data_folder};
+pub use tls::{CertificateFacts, CertificateSource, Security, certificate_facts};
 
 use storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved, WorldSave};
 

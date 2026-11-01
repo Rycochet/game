@@ -17,6 +17,8 @@
 mod ping;
 mod prediction;
 mod socket;
+#[cfg(not(target_arch = "wasm32"))]
+mod trust;
 
 use std::time::Duration;
 
@@ -151,6 +153,10 @@ pub struct ServerConnection {
     /// order): the server stops once the link is gone.
     #[cfg(not(target_arch = "wasm32"))]
     _embedded: Option<server::EmbeddedServer>,
+    /// Why the socket gave up for good, if it did (a certificate that fails
+    /// its checks, say).
+    #[cfg(not(target_arch = "wasm32"))]
+    refusal: socket::Refusal,
 }
 
 /// How to connect, and when to try again.
@@ -190,17 +196,19 @@ fn connect(world: &mut World) {
                 link,
                 pongs: LatestPong::default(),
                 local: true,
+                refusal: socket::Refusal::default(),
                 _embedded: Some(embedded),
             }
         }
         #[cfg(not(target_arch = "wasm32"))]
         Target::Url(url) => {
             info!("Connecting to {url}");
-            let (link, pongs) = socket::open(url);
+            let (link, pongs, refusal) = socket::open(url);
             ServerConnection {
                 link,
                 pongs,
                 local: false,
+                refusal,
                 _embedded: None,
             }
         }
@@ -329,7 +337,7 @@ fn receive(
             }
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");
-                *status = ServerStatus::Refused(reason);
+                *status = ServerStatus::Refused(format!("The server refused: {reason}"));
             }
             Ok(Some(ServerMessage::ForgetWorldMap)) => {
                 if let Some(world) = joined.as_mut().or(world.as_deref_mut()) {
@@ -377,6 +385,11 @@ fn receive(
                 }
                 if !matches!(*status, ServerStatus::Refused(_)) {
                     *status = ServerStatus::Connecting;
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                if let Some(reason) = connection.refusal.take() {
+                    warn!("Not connecting again: {reason}");
+                    *status = ServerStatus::Refused(reason);
                 }
                 commands.remove_resource::<ServerConnection>();
                 #[cfg(target_arch = "wasm32")]

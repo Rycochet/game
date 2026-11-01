@@ -2,6 +2,10 @@
 //! and the game itself as WebSockets on `/ws`, so a single HTTPS port (or a
 //! proxy such as Cloudflare in front of it) is all a server needs.
 //!
+//! That port is the secure one (HTTPS and `wss://`), and the plain port only
+//! answers with an error saying so. Behind a proxy (`Security::BehindProxy`)
+//! the plain port serves everything and the proxy looks after TLS.
+//!
 //! The web server runs on its own thread (with a small `tokio` runtime, as
 //! the web libraries need). Each WebSocket becomes a `ServerLink` handed to
 //! the Bevy world through a channel (`NewConnections`), exactly like the
@@ -13,6 +17,7 @@
 //! The server also times its own WebSocket pings (`latency`), to log connections
 //! having trouble and to drop those that have gone silent.
 
+use std::io;
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -24,17 +29,21 @@ use std::time::{Duration, Instant};
 use axum::Router;
 use axum::extract::State;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::response::Response;
+use axum::http::{StatusCode, header};
+use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use axum::serve::ListenerExt;
+use axum::serve::{Listener, ListenerExt};
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, SOCKET_PATH, ServerLink, ServerMessage, wired};
+use tokio_rustls::TlsAcceptor;
+use tokio_rustls::server::TlsStream;
 use tower_http::services::ServeDir;
 
 use crate::ServerWorld;
 use crate::clock::WorldClock;
 use crate::connections::{self, Connections};
 use crate::latency::{Latency, Pings};
+use crate::tls::{Certificates, Security};
 
 /// The largest message a client may send (they are all tiny).
 const MAX_MESSAGE: usize = 64 * 1024;
@@ -51,11 +60,28 @@ const NO_ANSWER_AFTER: Duration = Duration::from_secs(5);
 /// connects again. A frozen game doesn't count, as its network code still answers.
 const SILENT_AFTER: Duration = Duration::from_secs(30);
 
-/// Listens on `address` for game clients (and serves the web client from
-/// `web`, if given).
+/// Where a certificate can be asked for (only on the secure port).
+const CERTIFICATE_PATH: &str = "/certificate";
+
+/// How often the admin's certificate files are checked for a replacement.
+const CHECK_FILES_EVERY: Duration = Duration::from_secs(60 * 60);
+
+/// How long a client gets to finish setting up a secure connection.
+const HANDSHAKE_LIMIT: Duration = Duration::from_secs(10);
+
+/// Listens for game clients (and serves the web client from `web`, if given):
+/// on `address` behind a proxy, otherwise securely on the address in `security`,
+/// with `address` only answering that it isn't secure.
 pub struct NetworkPlugin {
     pub address: SocketAddr,
     pub web: Option<PathBuf>,
+    pub security: Security,
+}
+
+/// The secure port, and the certificate it uses.
+struct SecurePort {
+    listener: TcpListener,
+    certificates: Arc<Certificates>,
 }
 
 /// Connections the web server has accepted, waiting to join the game.
@@ -84,6 +110,26 @@ impl Plugin for NetworkPlugin {
         // Bound here, so a port in use stops the server straight away.
         let listener = TcpListener::bind(self.address)
             .unwrap_or_else(|error| panic!("Can't listen on {}: {error}", self.address));
+        let secure = match &self.security {
+            Security::BehindProxy => {
+                info!("Behind a proxy: connections here aren't secured");
+                None
+            }
+            Security::Tls { address, source } => {
+                let certificates =
+                    Certificates::load(source).unwrap_or_else(|error| panic!("{error}"));
+                let listener = TcpListener::bind(address)
+                    .unwrap_or_else(|error| panic!("Can't listen on {address}: {error}"));
+                info!(
+                    "Listening securely on {address}: key fingerprint {}",
+                    certificates.fingerprint()
+                );
+                Some(SecurePort {
+                    listener,
+                    certificates: Arc::new(certificates),
+                })
+            }
+        };
         let (new_connections, accepted) = mpsc::channel();
         let web = self.web.clone();
         let stop = StopAsked::default();
@@ -98,7 +144,7 @@ impl Plugin for NetworkPlugin {
         };
         thread::Builder::new()
             .name("network".into())
-            .spawn(move || serve(listener, web, sockets, stop_asked))
+            .spawn(move || serve(listener, secure, web, sockets, stop_asked))
             .expect("the network thread can start");
         info!("Listening on {}", self.address);
         app.insert_resource(NewConnections(Mutex::new(accepted)))
@@ -151,10 +197,50 @@ async fn stop_signal() {
     let _ = tokio::signal::ctrl_c().await;
 }
 
+/// The routes that serve the game: its WebSockets, the certificate if there
+/// is one, and the web client's files.
+fn game_routes(
+    web: Option<PathBuf>,
+    sockets: Sockets,
+    certificates: Option<Arc<Certificates>>,
+) -> Router {
+    let mut router = Router::new()
+        .route(SOCKET_PATH, get(upgrade))
+        .with_state(sockets);
+    if let Some(certificates) = certificates {
+        router = router.route(
+            CERTIFICATE_PATH,
+            get(move || async move {
+                (
+                    [(header::CONTENT_TYPE, "application/x-pem-file")],
+                    certificates.public_pem(),
+                )
+            }),
+        );
+    }
+    if let Some(web) = web {
+        info!("Serving the web client from {}", web.display());
+        router = router.fallback_service(ServeDir::new(web));
+    }
+    router
+}
+
+/// What the plain port answers when the secure one is in use, to everything.
+async fn use_the_secure_port(secure_port: u16) -> impl IntoResponse {
+    (
+        StatusCode::UPGRADE_REQUIRED,
+        [(header::UPGRADE, "TLS/1.3")],
+        format!(
+            "This server only takes secure connections: use https:// or wss:// on port {secure_port}.\n"
+        ),
+    )
+}
+
 /// Runs the web server (the game's WebSockets, and the web client's files)
 /// until asked to stop.
 fn serve(
     listener: TcpListener,
+    secure: Option<SecurePort>,
     web: Option<PathBuf>,
     sockets: Sockets,
     stop_asked: Arc<AtomicBool>,
@@ -171,21 +257,105 @@ fn serve(
             .tap_io(|stream| {
                 let _ = stream.set_nodelay(true);
             });
-        let mut router = Router::new()
-            .route(SOCKET_PATH, get(upgrade))
-            .with_state(sockets);
-        if let Some(web) = web {
-            info!("Serving the web client from {}", web.display());
-            router = router.fallback_service(ServeDir::new(web));
-        }
         tokio::spawn(async move {
             stop_signal().await;
             stop_asked.store(true, Ordering::Relaxed);
         });
-        if let Err(error) = axum::serve(listener, router).await {
+        let Some(secure) = secure else {
+            if let Err(error) = axum::serve(listener, game_routes(web, sockets, None)).await {
+                error!("The web server stopped: {error}");
+            }
+            return;
+        };
+        let port = secure
+            .listener
+            .local_addr()
+            .expect("a bound port has an address")
+            .port();
+        let refusing = Router::new().fallback(move || use_the_secure_port(port));
+        let plain = axum::serve(listener, refusing);
+        let routes = game_routes(web, sockets, Some(secure.certificates.clone()));
+        let secured = axum::serve(TlsListener::start(secure), routes);
+        let (plain, secured) = tokio::join!(plain.into_future(), secured.into_future());
+        if let Err(error) = plain.and(secured) {
             error!("The web server stopped: {error}");
         }
     });
+}
+
+/// Hands over connections once their TLS handshake is done, so a slow client
+/// doesn't hold up anyone else.
+struct TlsListener {
+    ready: tokio::sync::mpsc::Receiver<(TlsStream<tokio::net::TcpStream>, SocketAddr)>,
+    address: SocketAddr,
+}
+
+impl TlsListener {
+    /// Starts accepting on the secure port, and checking for replaced
+    /// certificate files.
+    fn start(secure: SecurePort) -> Self {
+        let SecurePort {
+            listener,
+            certificates,
+        } = secure;
+        listener.set_nonblocking(true).expect("can be non-blocking");
+        let address = listener.local_addr().expect("a bound port has an address");
+        let listener = tokio::net::TcpListener::from_std(listener).expect("a tokio listener");
+        let acceptor = TlsAcceptor::from(Arc::new(certificates.server_config()));
+        let (finished, ready) = tokio::sync::mpsc::channel(16);
+        tokio::spawn(async move {
+            loop {
+                let (stream, peer) = match listener.accept().await {
+                    Ok(accepted) => accepted,
+                    // Out of file handles, say: try again shortly.
+                    Err(error) => {
+                        warn!("Can't accept a connection: {error}");
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        continue;
+                    }
+                };
+                let _ = stream.set_nodelay(true);
+                let acceptor = acceptor.clone();
+                let finished = finished.clone();
+                tokio::spawn(async move {
+                    match tokio::time::timeout(HANDSHAKE_LIMIT, acceptor.accept(stream)).await {
+                        Ok(Ok(stream)) => {
+                            let _ = finished.send((stream, peer)).await;
+                        }
+                        Ok(Err(error)) => debug!("A secure connection failed: {error}"),
+                        Err(_) => debug!("A secure connection took too long to set up"),
+                    }
+                });
+            }
+        });
+        if certificates.watches_files() {
+            tokio::spawn(async move {
+                let mut check = tokio::time::interval(CHECK_FILES_EVERY);
+                loop {
+                    check.tick().await;
+                    certificates.reload_if_changed();
+                }
+            });
+        }
+        Self { ready, address }
+    }
+}
+
+impl Listener for TlsListener {
+    type Io = TlsStream<tokio::net::TcpStream>;
+    type Addr = SocketAddr;
+
+    async fn accept(&mut self) -> (Self::Io, Self::Addr) {
+        match self.ready.recv().await {
+            Some(accepted) => accepted,
+            // The accepting task never ends while this runs.
+            None => std::future::pending().await,
+        }
+    }
+
+    fn local_addr(&self) -> io::Result<Self::Addr> {
+        Ok(self.address)
+    }
 }
 
 /// A request to open a WebSocket.
@@ -320,8 +490,19 @@ async fn carry(mut socket: WebSocket, sockets: Sockets) {
 mod tests {
     use super::*;
 
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+
+    use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+    use rustls::crypto::ring::default_provider;
+    use rustls::pki_types::pem::PemObject;
+    use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+    use rustls::{DigitallySignedStruct, SignatureScheme};
     use shared::protocol::PROTOCOL_VERSION;
     use tungstenite::Message as WsMessage;
+
+    use crate::storage::tests::TestFolder;
+    use crate::tls::CertificateSource;
 
     /// A web server with no game running: nothing ever reads its links.
     fn serve_without_a_game(
@@ -339,8 +520,158 @@ mod tests {
             ping_every,
             silent_after,
         };
-        thread::spawn(move || serve(listener, None, sockets, Arc::default()));
+        thread::spawn(move || serve(listener, None, None, sockets, Arc::default()));
         (address, accepted)
+    }
+
+    /// A server with TLS on and no game running: its plain and secure
+    /// addresses, its links, and the folder keeping its certificate.
+    fn serve_securely() -> (SocketAddr, SocketAddr, Receiver<ServerLink>, TestFolder) {
+        let folder = TestFolder::new();
+        let source = CertificateSource::Generated {
+            folder: folder.0.join("tls"),
+            names: Vec::new(),
+        };
+        let secure = SecurePort {
+            listener: TcpListener::bind("127.0.0.1:0").unwrap(),
+            certificates: Arc::new(Certificates::load(&source).unwrap()),
+        };
+        let secure_address = secure.listener.local_addr().unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let plain_address = listener.local_addr().unwrap();
+        let (new_connections, accepted) = mpsc::channel();
+        let sockets = Sockets {
+            new_connections,
+            clock: WorldClock::new(405.0),
+            connections: Arc::default(),
+            ping_every: PING_EVERY,
+            silent_after: SILENT_AFTER,
+        };
+        thread::spawn(move || serve(listener, Some(secure), None, sockets, Arc::default()));
+        (plain_address, secure_address, accepted, folder)
+    }
+
+    /// Accepts any certificate: these tests are about the server. The real
+    /// checks are the client's (`connection::trust`).
+    #[derive(Debug)]
+    struct AcceptAnything;
+
+    impl ServerCertVerifier for AcceptAnything {
+        fn verify_server_cert(
+            &self,
+            _: &CertificateDer<'_>,
+            _: &[CertificateDer<'_>],
+            _: &ServerName<'_>,
+            _: &[u8],
+            _: UnixTime,
+        ) -> Result<ServerCertVerified, rustls::Error> {
+            Ok(ServerCertVerified::assertion())
+        }
+
+        fn verify_tls12_signature(
+            &self,
+            _: &[u8],
+            _: &CertificateDer<'_>,
+            _: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+
+        fn verify_tls13_signature(
+            &self,
+            _: &[u8],
+            _: &CertificateDer<'_>,
+            _: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+
+        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+            default_provider()
+                .signature_verification_algorithms
+                .supported_schemes()
+        }
+    }
+
+    fn trusting_client() -> Arc<rustls::ClientConfig> {
+        Arc::new(
+            rustls::ClientConfig::builder_with_provider(Arc::new(default_provider()))
+                .with_safe_default_protocol_versions()
+                .unwrap()
+                .dangerous()
+                .with_custom_certificate_verifier(Arc::new(AcceptAnything))
+                .with_no_client_auth(),
+        )
+    }
+
+    /// Asks for a path over HTTP on any stream; the whole answer.
+    fn ask(mut stream: impl Read + Write, path: &str) -> String {
+        write!(
+            stream,
+            "GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
+        )
+        .unwrap();
+        let mut answer = Vec::new();
+        // A peer closing without TLS's goodbye is fine here.
+        let _ = stream.read_to_end(&mut answer);
+        String::from_utf8_lossy(&answer).into_owned()
+    }
+
+    #[test]
+    fn the_plain_port_says_to_use_the_secure_one() {
+        let (plain, secure, _accepted, _folder) = serve_securely();
+        for path in ["/", SOCKET_PATH] {
+            let answer = ask(TcpStream::connect(plain).unwrap(), path);
+            assert!(answer.starts_with("HTTP/1.1 426"), "{answer}");
+            assert!(
+                answer.contains(&format!("port {}", secure.port())),
+                "{answer}"
+            );
+        }
+        let url = format!("ws://{plain}{SOCKET_PATH}");
+        assert!(tungstenite::connect(url).is_err());
+    }
+
+    #[test]
+    fn the_certificate_can_be_asked_for_and_is_the_one_in_use() {
+        let (_, secure, _accepted, folder) = serve_securely();
+        let name = ServerName::try_from("localhost").unwrap();
+        let connection = rustls::ClientConnection::new(trusting_client(), name).unwrap();
+        let mut stream = rustls::StreamOwned::new(connection, TcpStream::connect(secure).unwrap());
+
+        let answer = ask(&mut stream, CERTIFICATE_PATH);
+
+        assert!(answer.starts_with("HTTP/1.1 200"), "{answer}");
+        assert!(answer.contains("BEGIN CERTIFICATE"), "{answer}");
+        assert!(!answer.contains("PRIVATE KEY"), "{answer}");
+        let on_disk = std::fs::read_to_string(folder.0.join("tls/certificate.pem")).unwrap();
+        let from_disk = CertificateDer::from_pem_slice(on_disk.as_bytes()).unwrap();
+        assert_eq!(stream.conn.peer_certificates().unwrap()[0], from_disk);
+    }
+
+    #[test]
+    fn the_game_works_over_a_secure_websocket() {
+        let (_, secure, accepted, _folder) = serve_securely();
+        let url = format!("wss://localhost:{}{SOCKET_PATH}", secure.port());
+        let stream = TcpStream::connect(secure).unwrap();
+        let (mut socket, _) = tungstenite::client_tls_with_config(
+            url,
+            stream,
+            None,
+            Some(tungstenite::Connector::Rustls(trusting_client())),
+        )
+        .unwrap();
+        assert!(accepted.recv_timeout(Duration::from_secs(5)).is_ok());
+
+        socket
+            .send(WsMessage::Binary(ClientMessage::ping_bytes(2.5).into()))
+            .unwrap();
+        let answer = loop {
+            if let WsMessage::Binary(bytes) = socket.read().unwrap() {
+                break bytes;
+            }
+        };
+        assert_eq!(ServerMessage::read_pong(&answer).unwrap().0, 2.5);
     }
 
     #[test]
