@@ -77,9 +77,11 @@ fn update_status_text(
         player.x,
         player.y,
         clock.hour % 24,
-        server_clock
-            .round_trip_ms
-            .map_or("-".to_string(), |ms| format!("{ms:.0} ms")),
+        match server_clock.round_trip_ms {
+            _ if server_clock.local_server => "local".to_string(),
+            Some(ms) => format!("{ms:.0} ms"),
+            None => "-".to_string(),
+        },
         weather.snow_line,
         stats.summary
     );

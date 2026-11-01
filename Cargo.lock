@@ -5304,6 +5304,7 @@ dependencies = [
  "shared",
  "tokio",
  "tower-http",
+ "tungstenite 0.30.0",
 ]
 
 [[package]]

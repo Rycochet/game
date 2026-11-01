@@ -117,6 +117,48 @@ impl ClientMessage {
                 | Self::DevForgetMap
         )
     }
+
+    /// A `Ping` as sent, for whoever carries the bytes to time it exactly.
+    pub fn ping_bytes(sent: f64) -> Vec<u8> {
+        postcard::to_allocvec(&Self::Ping { sent }).expect("messages always encode")
+    }
+
+    /// The `sent` of a `Ping`, if these bytes are one. Only decodes messages
+    /// of a `Ping`'s size, so it can be asked of every message.
+    pub fn read_ping(bytes: &[u8]) -> Option<f64> {
+        if bytes.len() != PING_BYTES {
+            return None;
+        }
+        match postcard::from_bytes(bytes) {
+            Ok(Self::Ping { sent }) => Some(sent),
+            _ => None,
+        }
+    }
+}
+
+/// The size of a `Ping` as sent: its kind, then a float.
+const PING_BYTES: usize = 9;
+
+/// The size of a `Pong` as sent: its kind, then two floats.
+const PONG_BYTES: usize = 17;
+
+impl ServerMessage {
+    /// A `Pong` as sent, for whoever carries the bytes to answer straight away.
+    pub fn pong_bytes(sent: f64, clock: f64) -> Vec<u8> {
+        postcard::to_allocvec(&Self::Pong { sent, clock }).expect("messages always encode")
+    }
+
+    /// The `sent` and `clock` of a `Pong`, if these bytes are one. Only decodes
+    /// messages of a `Pong`'s size, so it can be asked of every message.
+    pub fn read_pong(bytes: &[u8]) -> Option<(f64, f64)> {
+        if bytes.len() != PONG_BYTES {
+            return None;
+        }
+        match postcard::from_bytes(bytes) {
+            Ok(Self::Pong { sent, clock }) => Some((sent, clock)),
+            _ => None,
+        }
+    }
 }
 
 /// From the server to a client.
@@ -223,6 +265,26 @@ pub struct WorldInfo {
 mod tests {
     use super::*;
     use crate::site::{StairsDirection, StairsStyle};
+
+    #[test]
+    fn pings_and_pongs_are_recognised_from_their_bytes() {
+        let ping = ClientMessage::ping_bytes(1.5);
+        assert_eq!(ClientMessage::read_ping(&ping), Some(1.5));
+        let pong = ServerMessage::pong_bytes(1.5, 6.75);
+        assert_eq!(ServerMessage::read_pong(&pong), Some((1.5, 6.75)));
+
+        // Whatever else is sent, however long, isn't taken for one.
+        let (client, server) = every_message();
+        for message in client {
+            let bytes = postcard::to_allocvec(&message).unwrap();
+            assert_eq!(ClientMessage::read_ping(&bytes), None, "{message:?}");
+        }
+        for message in server {
+            let bytes = postcard::to_allocvec(&message).unwrap();
+            let is_pong = matches!(message, ServerMessage::Pong { .. });
+            assert_eq!(ServerMessage::read_pong(&bytes).is_some(), is_pong);
+        }
+    }
 
     /// One of every message, so a message that can't be sent fails here.
     fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {

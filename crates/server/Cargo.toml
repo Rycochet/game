@@ -27,3 +27,6 @@ tower-http.workspace = true
 tokio.workspace = true
 # Headless: no rendering, windowing, audio or input.
 bevy = { workspace = true, features = ["std", "bevy_log", "multi_threaded"] }
+
+[dev-dependencies]
+tungstenite.workspace = true

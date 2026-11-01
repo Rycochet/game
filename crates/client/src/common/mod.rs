@@ -502,6 +502,9 @@ pub struct ServerClock {
     pub hours: f64,
     /// How long the last `Ping` took to come back, in milliseconds.
     pub round_trip_ms: Option<f64>,
+    /// The server is in this process: `round_trip_ms` says nothing about a
+    /// network, only how long it waited for the server's tick.
+    pub local_server: bool,
 }
 
 /// Snow line for normal weather: above every height there is, so only the
