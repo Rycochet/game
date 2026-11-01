@@ -25,7 +25,7 @@ use shared::protocol::ClientMessage;
 
 use crate::common::{
     ClickMode, CurrentWorld, GameClock, GameView, MapPosition, PointerPosition, SmoothPosition,
-    Token, ViewStats, Weather,
+    ViewStats, Weather,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
@@ -54,9 +54,6 @@ pub const SLOPE_SHADING: f64 = 1.0;
 /// go properly dark. Tuned so overall brightness is close to the prototype.
 const SUN_LUX: f32 = light_consts::lux::FULL_DAYLIGHT * 0.2;
 const AMBIENT_BRIGHTNESS: f32 = 60.0;
-
-/// How far round its middle the ground decides where a token with no base rests.
-const NO_BASE_RADIUS: f32 = 2.0;
 
 pub struct WorldMapPlugin;
 
@@ -397,8 +394,8 @@ fn update_terrain(
 }
 
 /// Every frame, after `view3d` has placed the tokens: lifts each one onto the
-/// highest ground under it, so it never sinks into a slope. One with no base
-/// has only its middle to rest: a poi's model goes on into the ground.
+/// highest ground under it, so it never sinks into a slope. A poi's flat base
+/// is the same size, so it rests the same way.
 #[allow(clippy::too_many_arguments)]
 fn rest_tokens_on_terrain(
     world: Res<CurrentWorld>,
@@ -407,7 +404,7 @@ fn rest_tokens_on_terrain(
     style: Res<SurfaceStyle>,
     known_rivers: Res<KnownRivers>,
     cache: Option<ResMut<HeightCache>>,
-    owners: Query<(&SmoothPosition, &Token)>,
+    owners: Query<&SmoothPosition>,
     mut views: Query<(&TokenView, &mut Transform)>,
 ) {
     let Some(mut cache) = cache else {
@@ -415,14 +412,10 @@ fn rest_tokens_on_terrain(
     };
     let water_level = world.params.water_level(clock.hour as f64);
     for (view, mut transform) in &mut views {
-        let Ok((position, token)) = owners.get(view.owner) else {
+        let Ok(position) = owners.get(view.owner) else {
             continue;
         };
-        let radius = if token.no_base {
-            NO_BASE_RADIUS
-        } else {
-            TOKEN_DIAMETER / 2.0
-        };
+        let radius = TOKEN_DIAMETER / 2.0;
         let ground = terrain::highest_shown_height(
             &mut cache,
             &world.surface,

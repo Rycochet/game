@@ -19,6 +19,50 @@ use shared::site::{CaveEntrance, Outline, PoiLook};
 /// How far a model reaches from its centre.
 const REACH: f32 = 8.0;
 
+/// The flat base under a poi: its sides, its rim's width, and its colour,
+/// which undoes the sun's dimming of flat ground so it shows white.
+const BASE_ROUND_SIDES: usize = 32;
+const BASE_RIM: f32 = 0.5;
+const BASE_WHITE: f32 = 1.41;
+
+/// The flat base under a poi, lying at height 0: white with a thin black rim,
+/// the size of a token. Octagonal with a flat side towards the camera in the
+/// starting view for towns, otherwise round.
+pub fn base_mesh(town: bool) -> Mesh {
+    let (sides, turn) = if town {
+        (8, TAU / 16.0)
+    } else {
+        (BASE_ROUND_SIDES, 0.0)
+    };
+    let corner = |i: usize, radius: f32| {
+        let angle = i as f32 / sides as f32 * TAU + turn;
+        [angle.cos() * radius, 0.0, angle.sin() * radius]
+    };
+    let white = [BASE_WHITE, BASE_WHITE, BASE_WHITE, 1.0];
+    let black = [0.0, 0.0, 0.0, 1.0];
+    let inner = REACH - BASE_RIM;
+    let mut positions = Vec::new();
+    let mut colours = Vec::new();
+    for i in 0..sides {
+        // Going round this way looks clockwise from above, so each triangle
+        // is listed backwards to face up.
+        let (a, b) = (corner(i, inner), corner(i + 1, inner));
+        let (outer_a, outer_b) = (corner(i, REACH), corner(i + 1, REACH));
+        positions.extend([[0.0; 3], b, a]);
+        colours.extend([white; 3]);
+        positions.extend([a, b, outer_b, a, outer_b, outer_a]);
+        colours.extend([black; 6]);
+    }
+    let normals = vec![[0.0, 1.0, 0.0]; positions.len()];
+    Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colours)
+}
+
 /// How big a farmhouse is on its model, against a building alone: its fields
 /// have to fit round it.
 const FARMHOUSE_SHARE: f32 = 0.55;
@@ -32,9 +76,6 @@ const PICTURE_MARGIN: f32 = 0.06;
 
 /// How wide each piece of a ruined building's wall is.
 const WALL_STONE: f32 = 1.2;
-
-/// How far walls carry on below the ground, so a model on a slope never floats.
-const FOUNDATION: f32 = 8.0;
 
 /// One floor's height.
 const FLOOR: f32 = 2.2;
@@ -121,9 +162,9 @@ impl PoiModel {
         }
     }
 
-    /// A box `half` wide each way, from below the ground to `height`.
+    /// A box `half` wide each way, from the ground to `height`.
     fn block(&mut self, at: Vec2, half: Vec2, height: f32, colour: Rgb) {
-        self.prism(at, &rectangle(half), (-FOUNDATION, height), colour);
+        self.prism(at, &rectangle(half), (0.0, height), colour);
     }
 
     /// A dark opening on the south face, at `z` in front of `x`.
@@ -407,7 +448,7 @@ fn town(model: &mut PoiModel, buildings: u16, variety: u64) {
     }
     if big {
         let keep = rectangle(Vec2::splat(1.3));
-        model.prism(Vec2::ZERO, &keep, (-FOUNDATION, 4.5), DARK_STONE);
+        model.prism(Vec2::ZERO, &keep, (0.0, 4.5), DARK_STONE);
         model.battlements(Vec2::ZERO, &keep, 4.5, DARK_STONE);
     }
     if buildings >= 61 {
@@ -437,7 +478,7 @@ fn farm_fields(model: &mut PoiModel, fields: u8, ruin: u8, variety: u64) {
             [EARTH, GRASS, THATCH][(hashed(&mut number) * 3.0) as usize % 3]
         };
         let shape = rectangle(Vec2::splat(half));
-        model.prism(Vec2::new(x, z), &shape, (-FOUNDATION, 0.1), colour);
+        model.prism(Vec2::new(x, z), &shape, (0.0, 0.1), colour);
     }
 }
 
@@ -447,12 +488,12 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
     let height = FLOOR * f32::from(floors.max(1));
     let shape = ring(outline, half);
     let walls_and_roof = |model: &mut PoiModel, walls, roof, rise| {
-        model.prism(at, &shape, (-FOUNDATION, height), walls);
+        model.prism(at, &shape, (0.0, height), walls);
         model.cone(at, &ring(outline, half * 1.08), height, rise, roof);
         model.doorway(at.x, half.y, 0.5, 1.4);
     };
     let flat = |model: &mut PoiModel, walls| {
-        model.prism(at, &shape, (-FOUNDATION, height), walls);
+        model.prism(at, &shape, (0.0, height), walls);
         model.doorway(at.x, half.y, 0.5, 1.4);
     };
     let rise = half.min_element() * 0.8;
@@ -472,11 +513,11 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
                 BlueTent => [58, 84, 164],
                 _ => MOSS,
             };
-            model.prism(at, &shape, (-FOUNDATION, 0.05), EARTH);
+            model.prism(at, &shape, (0.0, 0.05), EARTH);
             model.cone(at, &shape, 0.05, half.min_element() * 1.3, cloth);
         }
         IceShelter => {
-            model.prism(at, &shape, (-FOUNDATION, 0.05), SNOW);
+            model.prism(at, &shape, (0.0, 0.05), SNOW);
             let lower = ring(outline, half * 0.75);
             model.prism(at, &shape, (0.05, 0.9), ICE);
             model.prism(at, &lower, (0.9, 1.5), SNOW);
@@ -489,7 +530,7 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
         SnowyCottage => walls_and_roof(model, PLASTER, SNOW, rise),
         Warehouse => walls_and_roof(model, WOOD, GREY_ROOF, rise * 0.6),
         ArcheryRange => {
-            model.prism(at, &shape, (-FOUNDATION, 0.1), GRASS);
+            model.prism(at, &shape, (0.0, 0.1), GRASS);
             model.block(
                 Vec2::new(0.0, -half.y * 0.7),
                 Vec2::new(half.x * 0.8, 0.4),
@@ -501,7 +542,7 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
             }
         }
         StoneTower => {
-            model.prism(at, &shape, (-FOUNDATION, height), STONE);
+            model.prism(at, &shape, (0.0, height), STONE);
             model.battlements(at, &shape, height, STONE);
             model.doorway(at.x, half.y, 0.4, 1.3);
         }
@@ -514,7 +555,7 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
             } else {
                 (WOOD, 1.8)
             };
-            model.prism(at, &shape, (-FOUNDATION, wall_height), colour);
+            model.prism(at, &shape, (0.0, wall_height), colour);
             model.battlements(at, &shape, wall_height, colour);
             model.doorway(at.x, half.y, 0.7, 1.6);
             let keep = ring(outline, half * 0.5);
@@ -527,11 +568,7 @@ fn building(model: &mut PoiModel, kind: PoiKind, outline: Outline, half: Vec2, f
             let step = half.min_element() / f32::from(steps);
             for i in 0..steps {
                 let side = half.min_element() - step * f32::from(i);
-                let from = if i == 0 {
-                    -FOUNDATION
-                } else {
-                    f32::from(i) * 1.1
-                };
+                let from = if i == 0 { 0.0 } else { f32::from(i) * 1.1 };
                 let to = f32::from(i + 1) * 1.1;
                 model.prism(at, &rectangle(Vec2::splat(side)), (from, to), colour);
             }
@@ -562,7 +599,7 @@ fn ruined(
         _ => STONE,
     };
     let shape = ring(outline, half);
-    model.prism(Vec2::ZERO, &shape, (-FOUNDATION, 0.1), EARTH);
+    model.prism(Vec2::ZERO, &shape, (0.0, 0.1), EARTH);
     let full = FLOOR * f32::from(floors.max(1));
     let harm = f32::from(ruin);
     let mut number = variety;
@@ -631,7 +668,7 @@ fn underground(model: &mut PoiModel, kind: PoiKind, entrance: CaveEntrance) {
             };
             for &spot in spots {
                 let round = circle(Vec2::splat(1.1), 8);
-                model.prism(spot, &round, (-FOUNDATION, 2.6), WOOD);
+                model.prism(spot, &round, (0.0, 2.6), WOOD);
             }
         }
         Boulders => {
@@ -641,7 +678,7 @@ fn underground(model: &mut PoiModel, kind: PoiKind, entrance: CaveEntrance) {
                 (Vec2::new(0.2, -2.2), 2.6, 2.6),
             ] {
                 let round = circle(Vec2::splat(size), 6);
-                model.prism(spot, &round, (-FOUNDATION, height * 0.5), ROCK);
+                model.prism(spot, &round, (0.0, height * 0.5), ROCK);
                 model.cone(spot, &round, height * 0.5, height * 0.8, ROCK);
             }
         }
@@ -663,7 +700,7 @@ fn underground(model: &mut PoiModel, kind: PoiKind, entrance: CaveEntrance) {
                 _ => ROCK,
             };
             let base = circle(Vec2::new(5.5, 4.5), 9);
-            model.prism(at, &base, (-FOUNDATION, 1.4), colour);
+            model.prism(at, &base, (0.0, 1.4), colour);
             model.cone(at, &base, 1.4, 3.4, colour);
             if entrance == CaveEntrance::Opening {
                 model.doorway(at.x, 4.5, 1.3, 1.3);
