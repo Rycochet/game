@@ -18,6 +18,7 @@ mod farm;
 mod grid;
 mod herbalist;
 mod ruin;
+pub use ruin::MAX_RUIN;
 mod town;
 
 use serde::{Deserialize, Serialize};
@@ -324,13 +325,22 @@ impl Generator {
         }
     }
 
-    /// The generator of one poi's site: its kind's, ruined as its map seed says.
-    pub fn for_site(kind: PoiKind, seed: Seed) -> Self {
-        let sturdy = !matches!(
+    /// Whether this kind of poi can be a ruin: buildings, except those too flimsy
+    /// to leave one.
+    pub fn can_be_ruined(kind: PoiKind) -> bool {
+        Self::is_sturdy(kind) && Self::for_poi(kind).with_ruin(1).ruin() > 0
+    }
+
+    fn is_sturdy(kind: PoiKind) -> bool {
+        !matches!(
             kind,
             PoiKind::RedTent | PoiKind::BlueTent | PoiKind::GreenTent | PoiKind::IceShelter
-        );
-        if !sturdy {
+        )
+    }
+
+    /// The generator of one poi's site: its kind's, ruined as its map seed says.
+    pub fn for_site(kind: PoiKind, seed: Seed) -> Self {
+        if !Self::is_sturdy(kind) {
             return Self::for_poi(kind);
         }
         let roll = seed.derive("how ruined").at(&[0]) % 100;
@@ -745,6 +755,14 @@ mod tests {
     use super::*;
     use crate::dungeon::Cell;
     use grid::Reach;
+
+    #[test]
+    fn only_sturdy_buildings_can_be_ruined() {
+        assert!(Generator::can_be_ruined(PoiKind::Castle));
+        assert!(!Generator::can_be_ruined(PoiKind::RockCave));
+        assert!(!Generator::can_be_ruined(PoiKind::RedTent));
+        assert!(!Generator::can_be_ruined(PoiKind::IceShelter));
+    }
 
     #[test]
     fn only_runnable_versions_make_sites() {

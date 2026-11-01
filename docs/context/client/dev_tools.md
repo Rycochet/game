@@ -28,7 +28,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 - `HOW_DEBUG_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the locale says.
 - `HOW_DEBUG_SHOW_FLOOR=n`: three seconds after starting, look at this known floor (an index, from 0); needs the full map open (`HOW_DEBUG_MAP`), as closed it goes straight back.
 - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
-- `HOW_DEBUG_PANEL=1`: open the debug menu's Show Widgets panel; `HOW_DEBUG_PANEL=suns`: its Suns and Moons panel.
+- `HOW_DEBUG_PANEL=1`: open the debug menu's Show Widgets panel; `HOW_DEBUG_PANEL=suns`: its Suns and Moons panel; `HOW_DEBUG_PANEL=generate`: Generate POI's submenu.
 - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
 - `HOW_DEBUG_LOADING_HOLD=1`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
 - `HOW_DEBUG_REVEAL_POIS=1`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.

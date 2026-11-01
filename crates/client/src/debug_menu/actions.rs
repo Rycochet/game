@@ -1,7 +1,10 @@
 //! What the debug menu offers, and when each is possible. No Bevy systems here,
 //! so it can be tested alone.
 
+use shared::poi::PoiKind;
+
 use crate::common::GameView;
+use crate::widgets::matches_filter;
 
 /// One entry in the debug menu. Sending it does what it says.
 #[derive(bevy::prelude::Message, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -12,6 +15,7 @@ pub enum DebugAction {
     FieldsState,
     ForgetMap,
     ForgetMapOnServer,
+    GeneratePoi,
     HerbsState,
     ResetView,
     RevealMap,
@@ -46,13 +50,14 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 17] = [
+    pub(super) const ALL: [Self; 18] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::CycleTemperature,
         Self::FieldsState,
         Self::ForgetMap,
         Self::ForgetMapOnServer,
+        Self::GeneratePoi,
         Self::HerbsState,
         Self::ResetView,
         Self::RevealMap,
@@ -74,6 +79,7 @@ impl DebugAction {
             Self::FieldsState => "Fields State",
             Self::ForgetMap => "Forget Map",
             Self::ForgetMapOnServer => "Forget Map (Server)",
+            Self::GeneratePoi => "Generate POI",
             Self::HerbsState => "Herbs State",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
@@ -85,6 +91,21 @@ impl DebugAction {
             Self::TeleportToPoiShowcase => "Teleport to POI Showcase",
             Self::TeleportToStart => "Teleport to Start",
             Self::WorldTime => "World Time",
+        }
+    }
+
+    /// Whether choosing it opens a submenu, rather than doing something.
+    pub(super) fn has_submenu(self) -> bool {
+        self == Self::GeneratePoi
+    }
+
+    /// What the menu's entry says: an entry with a submenu ends in "...", and its
+    /// plain `name` is the submenu's title.
+    pub(super) fn label(self) -> String {
+        if self.has_submenu() {
+            format!("{}...", self.name())
+        } else {
+            self.name().to_owned()
         }
     }
 
@@ -116,6 +137,7 @@ impl DebugAction {
                 | Self::CycleTemperature
                 | Self::ForgetMap
                 | Self::ForgetMapOnServer
+                | Self::GeneratePoi
                 | Self::RevealMap
                 | Self::TeleportMode
                 | Self::TeleportToPoiShowcase
@@ -141,44 +163,20 @@ impl DebugAction {
     /// Whether its name matches what has been typed: anywhere in it, whatever
     /// the case.
     pub(super) fn matches(self, filter: &str) -> bool {
-        self.name().to_lowercase().contains(&filter.to_lowercase())
+        matches_filter(self.name(), filter)
     }
 }
 
-/// How many entries fit in a column, for the arrow keys and the layout.
-pub(super) fn next_highlight(
-    highlight: Option<usize>,
-    count: usize,
-    rows: usize,
-    step: Step,
-) -> Option<usize> {
-    if count == 0 {
-        return None;
-    }
-    let last = count - 1;
-    Some(match (highlight, step) {
-        (None, Step::Up) => last,
-        (None, _) => 0,
-        (Some(at), Step::Up) => at.saturating_sub(1),
-        (Some(at), Step::Down) => (at + 1).min(last),
-        (Some(at), Step::Left) => at.checked_sub(rows).unwrap_or(at),
-        (Some(at), Step::Right) => {
-            if at + rows <= last {
-                at + rows
-            } else {
-                at
-            }
+/// A kind of poi as a name, with spaces between its words.
+pub(super) fn kind_name(kind: PoiKind) -> String {
+    let mut name = String::new();
+    for letter in format!("{kind:?}").chars() {
+        if letter.is_uppercase() && !name.is_empty() {
+            name.push(' ');
         }
-    })
-}
-
-/// A press of an arrow key.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Step {
-    Up,
-    Down,
-    Left,
-    Right,
+        name.push(letter);
+    }
+    name
 }
 
 #[cfg(test)]
@@ -201,6 +199,21 @@ mod tests {
             suns_and_moons_open: true,
             dev_tools: true,
         }
+    }
+
+    #[test]
+    fn entries_with_submenus_end_in_dots_and_only_those() {
+        for action in DebugAction::ALL {
+            assert_eq!(action.label().ends_with("..."), action.has_submenu());
+            assert!(!action.name().ends_with("..."));
+        }
+        assert_eq!(DebugAction::GeneratePoi.label(), "Generate POI...");
+    }
+
+    #[test]
+    fn the_kinds_list_says_their_names_with_spaces() {
+        assert_eq!(kind_name(PoiKind::StoneTower), "Stone Tower");
+        assert_eq!(kind_name(PoiKind::Castle), "Castle");
     }
 
     #[test]
@@ -278,21 +291,5 @@ mod tests {
         assert_eq!(DebugAction::SunsAndMoons.is_on(&site), Some(true));
         assert_eq!(DebugAction::WorldTime.is_on(&site), Some(false));
         assert_eq!(DebugAction::FieldsState.is_on(&site), None);
-    }
-
-    #[test]
-    fn arrows_move_through_the_columns_and_stop_at_the_ends() {
-        let go = |from, step| next_highlight(from, 10, 4, step);
-        assert_eq!(go(None, Step::Down), Some(0));
-        assert_eq!(go(None, Step::Up), Some(9));
-        assert_eq!(go(Some(3), Step::Down), Some(4));
-        assert_eq!(go(Some(9), Step::Down), Some(9));
-        assert_eq!(go(Some(0), Step::Up), Some(0));
-        assert_eq!(go(Some(1), Step::Right), Some(5));
-        assert_eq!(go(Some(5), Step::Left), Some(1));
-        assert_eq!(go(Some(1), Step::Left), Some(1));
-        // No such row in the next column: stays.
-        assert_eq!(go(Some(7), Step::Right), Some(7));
-        assert_eq!(next_highlight(None, 0, 4, Step::Down), None);
     }
 }

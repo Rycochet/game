@@ -14,7 +14,7 @@ use shared::protocol::{
     ENTER_REACH, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, ServerMessage, level_chunk,
 };
 use shared::rng::Seed;
-use shared::site::{Exit, Generator, Site, SiteLevel, StairsDirection, leads_out};
+use shared::site::{Exit, Generator, MAX_RUIN, Site, SiteLevel, StairsDirection, leads_out};
 
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, VisitSave, now};
@@ -110,6 +110,30 @@ pub(crate) fn dev_enter(
     let poi = dev_poi(client, kind, seed);
     let id = SiteId::Dev { kind, seed, ruin };
     enter_site(client, world, poi, id, level, Arrival::From(Exit::WorldMap))
+}
+
+/// Developer tools: a made-up site as if new, whatever anyone has done there or
+/// remembers of it, and the player in it. It is on no map: leaving it comes back
+/// to where they stand now.
+pub(crate) fn generate(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    kind: PoiKind,
+    seed: u64,
+    ruin: u8,
+) -> bool {
+    let ruin = if Generator::can_be_ruined(kind) {
+        ruin.min(MAX_RUIN)
+    } else {
+        0
+    };
+    leave(client, world);
+    client.visit = None;
+    let id = SiteId::Dev { kind, seed, ruin };
+    world.forget_site(id);
+    client.character.memory.remove(&id);
+    client.character.site_versions.remove(&id);
+    dev_enter(client, world, kind, seed, 0, ruin)
 }
 
 /// The made-up poi of a dev tools site: where the player stands.
@@ -1306,6 +1330,57 @@ mod tests {
         let test = TestClient::of(world);
         assert!(test.client.visit.is_none());
         assert!(matches!(test.welcome[1], ServerMessage::OnWorldMap { .. }));
+    }
+
+    #[test]
+    fn generating_a_site_starts_it_afresh_where_the_player_stands() {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevTeleport { x: 70, y: -3 }]);
+        let generate = ClientMessage::DevGenerateSite {
+            kind: PoiKind::Castle,
+            seed: castle_seed(),
+            ruin: 0,
+        };
+        assert!(matches!(
+            test.send(std::slice::from_ref(&generate))[0],
+            ServerMessage::EnterLevel(_)
+        ));
+        change_castle(&mut test, 0);
+        let seen: u32 = test.client.character.memory[&castle_id()][&0]
+            .values()
+            .map(|mask| mask.count_ones())
+            .sum();
+        assert!(seen > 0);
+        test.send(&[ClientMessage::DevRevealMap]);
+
+        // Again, from inside it: as new.
+        test.send(&[generate]);
+        let site = test.world.site(castle_id(), PoiKind::Castle);
+        assert!(site.levels[&0].changes.is_empty());
+        let again: u32 = test.client.character.memory[&castle_id()][&0]
+            .values()
+            .map(|mask| mask.count_ones())
+            .sum();
+        assert_eq!(again, seen);
+
+        // Out of it is where the player stood.
+        assert_eq!(test.client.world_position(), (70, -3));
+    }
+
+    #[test]
+    fn generating_a_kind_that_cannot_be_ruined_ignores_the_ruin() {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevGenerateSite {
+            kind: PoiKind::RedTent,
+            seed: 3,
+            ruin: 5,
+        }]);
+        let id = SiteId::Dev {
+            kind: PoiKind::RedTent,
+            seed: 3,
+            ruin: 0,
+        };
+        assert!(test.client.character.memory.contains_key(&id));
     }
 
     /// A player's change on a level of the castle, saved.

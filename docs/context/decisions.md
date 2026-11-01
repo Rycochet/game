@@ -297,6 +297,10 @@ Generator versions: their old code was removed with the first `FORGET_BEFORE` bu
 
 Each building's `ruin` comes from its poi's map seed (`Generator::for_site`), so the world map's model and the site agree. Claude's first numbers, to tune by eye: 30% of buildings are ruined, evenly from 1 to 5; tents and ice shelters never are.
 
+## 2026-11-01: Generate POI, and "..." on entries with submenus
+
+The owner's design: Generate POI makes a site of any kind, ruin and seed and goes straight into it, using the current biome and location for outside light, without adding it to the world map. It is a submenu listing the kinds, then a panel. Any debug option with a submenu ends in "...", and its plain name is the submenu's title. The Dropdown and Dropdown With Search widgets were kept (owner), though only Show Widgets uses them. Filtering and arrow-key movement are shared code in `widgets`, with each list drawing its own rows, as the menu's grid and a small list have little else in common (Claude's choice, agreed).
+
 ## 2026-11-01: Full-screen panels are layers
 
 The owner's design: a full-screen panel (the debug menu, the full map) darkens everything outside it, and a second one above it is smaller and darkens again, so some areas are darkened twice. Clicks outside do nothing but close the top layer. The menu is now 90% of the window; a second layer will be 75% (Claude's number). Claude's choices: the full map keeps its own size and stands above moveable panels, so they are darkened and blocked too; the debug menu doesn't open over it, as it would be the bigger.

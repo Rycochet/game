@@ -3,21 +3,26 @@
 
 use std::collections::HashMap;
 
+use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::dungeon::Cell;
-use shared::site::StairsStyle;
+use shared::poi::PoiKind;
+use shared::rng::Seed;
+use shared::site::{Generator, MAX_RUIN, StairsStyle};
 
 use shared::protocol::ClientMessage;
 use shared::world::MINUTES_PER_HOUR;
 
-use super::actions::DebugAction;
+use super::actions::{DebugAction, kind_name};
 use super::bodies::BodiesToShow;
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::widgets::{
-    BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, RaisePanel, raised_box, spawn_button,
-    spawn_check_button, spawn_close_button, spawn_moveable_panel, spawn_slider, spawn_tooltip,
+    BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TextBox,
+    raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown,
+    spawn_icon_button, spawn_moveable_panel, spawn_slider, spawn_text_box, spawn_tooltip,
 };
 
 const FONT: f32 = 16.0;
@@ -142,6 +147,29 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
     }
     spawn_close_button(content, default());
     spawn_slider(content, 0.5, None, 160.0);
+    let kinds = || PoiKind::ALL.map(kind_name).to_vec();
+    for searchable in [false, true] {
+        let dropdown = Dropdown {
+            options: kinds(),
+            selected: 0,
+            searchable,
+        };
+        let node = Node {
+            padding: BUTTON_PADDING,
+            ..default()
+        };
+        spawn_dropdown(content, dropdown, FONT, node);
+    }
+    let text_box = TextBox {
+        text: "Text box".into(),
+        takes_keys: true,
+        ..default()
+    };
+    let node = Node {
+        height: px(CHECK_ROW),
+        ..default()
+    };
+    spawn_text_box(content, text_box, FONT, node);
     content.spawn(raised_box()).with_child((
         Text::new("Raised box"),
         TextFont::from_font_size(FONT),
@@ -155,6 +183,230 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
 /// The sample tooltip's text.
 #[derive(Component)]
 pub(super) struct SampleTooltip;
+
+/// Open the Generate POI panel for this kind (the submenu chose it).
+#[derive(Message, Clone, Copy, Debug)]
+pub(super) struct GenerateKind(pub PoiKind);
+
+/// What the Generate POI panel is set to, besides its seed box.
+#[derive(Resource, Default)]
+pub(super) struct GenerateForm {
+    kind: Option<PoiKind>,
+    ruin: u8,
+    seeds_made: i64,
+}
+
+#[derive(Component, Clone, Copy)]
+pub(super) struct RuinButton(u8);
+
+#[derive(Component)]
+pub(super) struct SeedBox;
+
+#[derive(Component)]
+pub(super) struct NewSeedButton;
+
+#[derive(Component)]
+pub(super) struct GenerateButton;
+
+/// The most digits of a seed the new seed button makes: enough for many, and
+/// short enough to write down and type in again.
+const NEW_SEEDS: u64 = 1_000_000_000;
+const SEED_WIDTH: f32 = 240.0;
+
+/// A seed to try. `now` is any number that keeps changing, `made` how many so far.
+fn new_seed(now: u64, made: i64) -> u64 {
+    Seed::new(now).at(&[made]) % NEW_SEEDS
+}
+
+/// A round arrow, drawn here as there is no such letter in the font.
+fn new_seed_icon() -> Image {
+    const SIZE: usize = 32;
+    const INK_BYTES: [u8; 4] = [64, 43, 26, 255];
+    let mut bytes = vec![0; SIZE * SIZE * 4];
+    let middle = (SIZE as f32 - 1.0) / 2.0;
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let (dx, dy) = (x as f32 - middle, y as f32 - middle);
+            let reach = dx.hypot(dy);
+            // Clockwise from the top, leaving a gap for the arrow's head.
+            let round = dx.atan2(-dy).rem_euclid(std::f32::consts::TAU);
+            let ring = (8.0..12.0).contains(&reach) && round > 0.9;
+            // The head, pointing round the ring at the top right.
+            let head_along = dx + 2.0;
+            let head =
+                (0.0..8.0).contains(&head_along) && (dy + 10.0).abs() < (8.0 - head_along) * 0.9;
+            if ring || head {
+                bytes[(y * SIZE + x) * 4..][..4].copy_from_slice(&INK_BYTES);
+            }
+        }
+    }
+    Image::new(
+        Extent3d {
+            width: SIZE as u32,
+            height: SIZE as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        bytes,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    )
+}
+
+fn row() -> Node {
+    Node {
+        column_gap: px(4),
+        align_items: AlignItems::Center,
+        ..default()
+    }
+}
+
+fn words(text: impl Into<String>) -> impl Bundle {
+    (
+        Text::new(text),
+        TextFont::from_font_size(FONT),
+        TextColor(INK),
+    )
+}
+
+/// Opens the Generate POI panel for the kind chosen, in place of any open.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn open_generate_panel(
+    mut kinds: MessageReader<GenerateKind>,
+    mut commands: Commands,
+    mut open: ResMut<OpenPanels>,
+    mut form: ResMut<GenerateForm>,
+    mut images: ResMut<Assets<Image>>,
+    nodes: Query<(), With<Node>>,
+    time: Res<Time<Real>>,
+) {
+    let Some(&GenerateKind(kind)) = kinds.read().last() else {
+        return;
+    };
+    let action = DebugAction::GeneratePoi;
+    if let Some(panel) = open.panels.remove(&action)
+        && nodes.contains(panel)
+    {
+        commands.entity(panel).despawn();
+    }
+    let at = FIRST_AT + NEXT_AT * (open.opened % 8) as f32;
+    open.opened += 1;
+    let (panel, content) = spawn_moveable_panel(&mut commands, action.name(), at);
+    open.panels.insert(action, panel);
+    form.kind = Some(kind);
+    form.ruin = 0;
+    form.seeds_made += 1;
+    let seed = new_seed(time.elapsed().as_nanos() as u64, form.seeds_made);
+    let icon = images.add(new_seed_icon());
+    commands.entity(content).with_children(|content| {
+        content.spawn(words(kind_name(kind)));
+        content.spawn(row()).with_children(|row| {
+            row.spawn(words("Ruin"));
+            for ruin in 0..=MAX_RUIN {
+                let node = Node {
+                    padding: BUTTON_PADDING,
+                    ..default()
+                };
+                spawn_button(row, ButtonState::Normal, ruin.to_string(), FONT, node)
+                    .insert((RuinButton(ruin), Pressable));
+            }
+        });
+        content.spawn(row()).with_children(|row| {
+            row.spawn(words("Seed"));
+            let text_box = TextBox {
+                text: seed.to_string(),
+                digits_only: true,
+                takes_keys: true,
+                ..default()
+            };
+            let node = Node {
+                width: px(SEED_WIDTH),
+                height: px(CHECK_ROW),
+                ..default()
+            };
+            spawn_text_box(row, text_box, FONT, node).insert(SeedBox);
+            let node = Node {
+                width: px(CHECK_ROW),
+                height: px(CHECK_ROW),
+                ..default()
+            };
+            spawn_icon_button(row, ButtonState::Normal, icon, node)
+                .insert((NewSeedButton, Pressable));
+        });
+        let node = Node {
+            padding: BUTTON_PADDING,
+            ..default()
+        };
+        spawn_button(content, ButtonState::Normal, "Generate", FONT, node)
+            .insert((GenerateButton, Pressable));
+    });
+}
+
+/// What the Generate POI panel's buttons do.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn press_generate_buttons(
+    mut pressed: MessageReader<ButtonPressed>,
+    ruins: Query<&RuinButton>,
+    new_seed_button: Query<(), With<NewSeedButton>>,
+    generate: Query<(), With<GenerateButton>>,
+    mut seed_box: Query<&mut TextBox, With<SeedBox>>,
+    mut form: ResMut<GenerateForm>,
+    time: Res<Time<Real>>,
+    mut to_server: MessageWriter<ToServer>,
+) {
+    for press in pressed.read() {
+        if let Ok(ruin) = ruins.get(press.0) {
+            form.ruin = ruin.0;
+        }
+        let Ok(mut seed) = seed_box.single_mut() else {
+            continue;
+        };
+        if new_seed_button.contains(press.0) {
+            form.seeds_made += 1;
+            let new = new_seed(time.elapsed().as_nanos() as u64, form.seeds_made);
+            seed.text = new.to_string();
+        }
+        if generate.contains(press.0)
+            && let (Some(kind), Ok(seed)) = (form.kind, seed.text.parse())
+        {
+            to_server.write(ToServer(ClientMessage::DevGenerateSite {
+                kind,
+                seed,
+                ruin: form.ruin,
+            }));
+        }
+    }
+}
+
+/// Shows the ruin chosen, and greys what can't be used: ruin for kinds that have
+/// none, and Generate without a seed.
+pub(super) fn update_generate_buttons(
+    form: Res<GenerateForm>,
+    mut ruins: Query<(&RuinButton, &mut ButtonState), Without<GenerateButton>>,
+    mut generate: Query<&mut ButtonState, With<GenerateButton>>,
+    seed_box: Query<&TextBox, With<SeedBox>>,
+) {
+    let can_ruin = form.kind.is_some_and(Generator::can_be_ruined);
+    for (button, mut state) in &mut ruins {
+        let chosen = button.0 == form.ruin;
+        state.set_if_neq(match (can_ruin, chosen) {
+            (true, true) => ButtonState::Selected,
+            (true, false) => ButtonState::Normal,
+            (false, true) => ButtonState::DisabledSelected,
+            (false, false) => ButtonState::Disabled,
+        });
+    }
+    let has_seed = seed_box
+        .single()
+        .is_ok_and(|seed| seed.text.parse::<u64>().is_ok());
+    for mut state in &mut generate {
+        state.set_if_neq(if has_seed {
+            ButtonState::Normal
+        } else {
+            ButtonState::Disabled
+        });
+    }
+}
 
 /// Whether a panel's buttons can do anything here.
 fn can_step(action: DebugAction, view: GameView, dungeon: &CurrentDungeon) -> bool {
@@ -253,6 +505,13 @@ pub(super) fn update_panel_buttons(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn new_seeds_are_short_and_differ() {
+        let seeds: Vec<u64> = (0..50).map(|made| new_seed(12345, made)).collect();
+        assert!(seeds.iter().all(|&seed| seed < NEW_SEEDS));
+        assert!(seeds.iter().any(|&seed| seed != seeds[0]));
+    }
 
     #[test]
     fn previous_undoes_next_for_every_style() {

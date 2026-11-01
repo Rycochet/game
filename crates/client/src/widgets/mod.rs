@@ -2,20 +2,28 @@
 //! buttons, tooltips and panels that can be moved about. Use these rather than
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
+mod dropdown;
+mod filter_list;
 mod fullscreen;
 mod moveable;
 mod slider;
+mod soft_keyboard;
+mod text_box;
 
 use bevy::input::InputSystems;
 use bevy::prelude::*;
 
 use crate::common::PointerSystems;
 
+pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
+pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
     LAYER_EDGE, darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use slider::{SliderMoved, spawn_slider};
+pub use soft_keyboard::Key as SoftKey;
+pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, spawn_text_box};
 
 /// The inside of panels, the colour of parchment.
 pub const PARCHMENT: [u8; 3] = [240, 225, 190];
@@ -54,6 +62,12 @@ impl Plugin for WidgetsPlugin {
         app.add_message::<ButtonPressed>()
             .add_message::<RaisePanel>()
             .add_message::<SliderMoved>()
+            .add_message::<TextEdited>()
+            .add_message::<SoftKeyPressed>()
+            .add_message::<DropdownChosen>()
+            .init_resource::<TextFocus>()
+            .init_resource::<text_box::PressedThisFrame>()
+            .init_resource::<dropdown::OpenList>()
             .configure_sets(
                 PreUpdate,
                 (WidgetSystems::Presses, WidgetSystems::Modal).chain(),
@@ -62,7 +76,13 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<slider::HeldSlider>()
             .add_systems(
                 PreUpdate,
-                (slider::drag_sliders, moveable::take_presses)
+                (
+                    text_box::note_press,
+                    slider::drag_sliders,
+                    moveable::take_presses,
+                    text_box::take_text,
+                    dropdown::run_dropdowns,
+                )
                     .chain()
                     .in_set(WidgetSystems::Presses)
                     .after(InputSystems)
@@ -75,6 +95,9 @@ impl Plugin for WidgetsPlugin {
                     moveable::place_panels,
                     slider::hold_sliders,
                     slider::place_marks,
+                    text_box::show_text_boxes,
+                    text_box::place_soft_keyboard,
+                    dropdown::show_dropdowns,
                 ),
             );
     }

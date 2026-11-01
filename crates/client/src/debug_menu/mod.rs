@@ -5,7 +5,6 @@ mod actions;
 mod bodies;
 mod menu;
 mod panels;
-mod soft_keyboard;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -37,7 +36,9 @@ impl Plugin for DebugMenuPlugin {
             .init_resource::<TemperatureCycle>()
             .init_resource::<DebugMenu>()
             .init_resource::<OpenPanels>()
+            .init_resource::<panels::GenerateForm>()
             .add_message::<DebugAction>()
+            .add_message::<panels::GenerateKind>()
             .add_systems(Startup, menu::spawn_menu)
             .add_systems(
                 PreUpdate,
@@ -52,6 +53,9 @@ impl Plugin for DebugMenuPlugin {
                     run_actions,
                     bodies::fill_panels,
                     bodies::apply_sliders,
+                    panels::open_generate_panel,
+                    panels::press_generate_buttons,
+                    panels::update_generate_buttons,
                     panels::press_panel_buttons,
                     panels::update_panel_buttons,
                     temperature_cycle,
@@ -140,6 +144,7 @@ fn run_actions(
     mut mode: ResMut<ClickMode>,
     mut info: ResMut<DebugInfo>,
     mut open: ResMut<OpenPanels>,
+    mut menu: ResMut<DebugMenu>,
     mut raise: MessageWriter<crate::widgets::RaisePanel>,
     nodes: Query<(), With<Node>>,
     mut cameras: Query<&mut OrbitCamera>,
@@ -167,6 +172,7 @@ fn run_actions(
             DebugAction::ForgetMapOnServer => {
                 to_server.write(ToServer(ClientMessage::DevForgetMapOnServer));
             }
+            DebugAction::GeneratePoi => menu.open_submenu(),
             DebugAction::TeleportToStart => {
                 to_server.write(ToServer(ClientMessage::DevBackToStart));
             }
