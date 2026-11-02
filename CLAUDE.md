@@ -40,6 +40,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: item        | `crates/shared/src/item.rs`, `id.rs` | `docs/context/shared/item.md`       | UUID v6 `Id`s, kinds of item, shapes and grid inventories with nested bags: the rules moves are checked by |
 | shared: creature    | `crates/shared/src/creature.rs`, `wear.rs`, `sheet.rs` | `docs/context/shared/creature.md` | Kinds of creature and their bodies, sizes, stats, skills, looks, what they can carry, layers of clothes and the rules for wearing them |
 | shared: energy      | `crates/shared/src/energy.rs` | `docs/context/shared/energy.md` | Time for actions: energy by speed and ticks, worked out by formula; action costs |
+| shared: shop        | `crates/shared/src/shop.rs`     | `docs/context/shared/shop.md`       | What town shops sell, make times, biased rolls, and catching stock up on opening |
 | shared: mob         | `crates/shared/src/mob.rs`    | `docs/context/shared/mob.md`        | Who is on a site level from its seed, and what a player learns of what is on the map |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |

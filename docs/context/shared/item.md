@@ -10,7 +10,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 ## Public API
 
 - `Id(Uuid)`: something's id for good, for items, mobs, characters and accounts (the last two wrapped in `CharacterId` and `AccountId`). Prints as the usual UUID text, which also names files. `Id::for_test` is for tests in any crate.
-- `ItemKind::{ALL, def()}`, `ItemDef { name, weight (grams), shape, container, wear, has_quality }`, `WearDef` (see `creature.md`), `ContainerDef { width, height, max_total, max_each }`. To add a kind: add it to the enum, `ALL` (alphabetical by name) and `def`. Saved by name.
+- `ItemKind::{ALL, def()}`, `ItemDef { name, weight (grams), shape, container, wear, has_quality, make_percent }`, `WearDef` (see `creature.md`), `ContainerDef { width, height, max_total, max_each }`. To add a kind: add it to the enum, `ALL` (alphabetical by name) and `def`. Saved by name.
 - `Shape`: up to `MAX_SHAPE_SIDE` (8) a side, as bits of a `u64`, gaps allowed. `rectangle`, `has`, `cells`, `size`, `turned`, `smaller_than`.
 - `Rotation::{None, Quarter, Half, ThreeQuarters}`: clockwise; `next`, `turn_cell`.
 - `Quality::{ALL, odds, roll}` (Poor to Artifact, odds out of `ODDS_OUT_OF`), `Drop { quality, kind, weight }`, `roll_drop` (both rolls: quality, then the item at it; a table without that quality takes the nearest below, or else above).
