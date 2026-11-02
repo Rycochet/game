@@ -517,10 +517,10 @@ pub(super) fn show_aim(
     for (entity, _) in &layers {
         commands.entity(entity).despawn_related::<Children>();
     }
-    let (Some((aim, rotation)), Some(held)) = (aim, held) else {
+    let (Some((aim, rotation)), Some(_)) = (aim, held) else {
         return;
     };
-    let Some(item) = carried.0.find(held.id) else {
+    let Some(item) = holding.item(&carried.0) else {
         return;
     };
     let (holder, cells, allowed) = match aim {
@@ -576,7 +576,7 @@ pub(super) fn show_held(
 ) {
     let (entity, mut node, mut visibility) = held_item.into_inner();
     let held = holding.held.map(|held| held.item);
-    let item = held.and_then(|held| carried.0.find(held.id));
+    let item = held.and_then(|_| holding.item(&carried.0));
     let (Some(held), Some(item)) = (held, item) else {
         visibility.set_if_neq(Visibility::Hidden);
         if drawn.take().is_some() {
@@ -633,7 +633,10 @@ pub(super) fn show_tooltip(
             .map(|cell| cell.id)
     };
     let name = shown.and_then(|id| {
-        let item = carried.0.find(id)?;
+        let item = match holding.held {
+            Some(_) => holding.item(&carried.0)?,
+            None => carried.0.find(id)?,
+        };
         let words = format!("{}{}", item.name(), worn_notes(&carried.0, id));
         Some((words, item.quality, item.set))
     });

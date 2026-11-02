@@ -13,7 +13,8 @@ use shared::shop::DOOR_REACH;
 use shared::site::BuildingLook;
 
 use crate::common::{
-    CurrentDungeon, GameView, GaveItem, HeldOverGifts, MapPosition, PointerSystems, TakesGifts,
+    CurrentDungeon, GameView, GaveItem, HeldOverGifts, HeldStock, MapPosition, PointerSystems,
+    StockCell, TakesGifts, TookItem,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::dungeon_map::DoorClicked;
@@ -53,7 +54,7 @@ impl Plugin for TradePlugin {
                     (change_of_mind, follow_clicked_door)
                         .chain()
                         .in_set(PlayerSystems::Input),
-                    (note_gifts, read_server, show_gift_aim).chain(),
+                    (note_gifts, read_server, draw_grids, show_gift_aim).chain(),
                     close_when_left.after(PlayerSystems::Travel),
                 ),
             );
@@ -72,6 +73,8 @@ struct OpenTrade {
     stock: Vec<Placed>,
     /// Gifts on their way, and where they were dropped.
     gifts: Vec<Gift>,
+    /// Its grid needs drawing again.
+    changed: bool,
 }
 
 /// Something given, and where in the grid it was let go.
@@ -206,21 +209,68 @@ fn cell_in_grid(corner: Vec2, node: &ComputedNode, transform: &UiGlobalTransform
     (cell.x as i32, cell.y as i32)
 }
 
-/// Notes where things given were let go, for when they come back as stock.
+/// Everything in a grid but this.
+fn others(stock: &[Placed], item: Id) -> Vec<Placed> {
+    let others = stock.iter().filter(|placed| placed.item.id != item);
+    others.cloned().collect()
+}
+
+/// Notes where things given were let go, for when they come back as stock, moves
+/// what is theirs already, and takes away what was taken.
 fn note_gifts(
     mut gave: MessageReader<GaveItem>,
+    mut took: MessageReader<TookItem>,
     grids: Query<(&TradeGrid, &ComputedNode, &UiGlobalTransform)>,
     mut open: ResMut<OpenTrades>,
 ) {
     for GaveItem(gift) in gave.read() {
         let grid = grids.iter().find(|(grid, ..)| grid.0 == gift.to);
         let trade = open.0.iter_mut().find(|trade| trade.with == gift.to);
-        if let (Some((_, node, transform)), Some(trade)) = (grid, trade) {
+        let (Some((_, node, transform)), Some(trade)) = (grid, trade) else {
+            continue;
+        };
+        let wanted = cell_in_grid(gift.corner, node, transform);
+        let rest = others(&trade.stock, gift.item);
+        let moved = trade
+            .stock
+            .iter_mut()
+            .find(|placed| placed.item.id == gift.item);
+        if let Some(placed) = moved {
+            let shape = placed.item.kind.def().shape.turned(gift.rotation);
+            (placed.x, placed.y) = landing(&rest, shape, wanted);
+            placed.rotation = gift.rotation;
+            trade.changed = true;
+        } else {
             trade.gifts.push(Gift {
                 item: gift.item,
                 rotation: gift.rotation,
-                wanted: cell_in_grid(gift.corner, node, transform),
+                wanted,
             });
+        }
+    }
+    for took in took.read() {
+        if let Some(trade) = open.0.iter_mut().find(|trade| trade.with == took.with) {
+            trade.stock.retain(|placed| placed.item.id != took.item);
+            trade.changed = true;
+        }
+    }
+}
+
+/// Draws grids again when what is in them changes, or something is picked up from
+/// them or put back. What is held isn't drawn where it was.
+fn draw_grids(
+    held: Res<HeldStock>,
+    mut open: ResMut<OpenTrades>,
+    mut commands: Commands,
+    mut drawn_without: Local<Option<Id>>,
+) {
+    let picked_up = *drawn_without != held.0;
+    *drawn_without = held.0;
+    for trade in &mut open.0 {
+        if trade.changed || picked_up {
+            trade.changed = false;
+            commands.entity(trade.holder).despawn_related::<Children>();
+            draw_grid(&mut commands, trade, held.0);
         }
     }
 }
@@ -254,9 +304,7 @@ fn read_server(
                 if let Some(trade) = open.0.iter_mut().find(|trade| trade.with == *with) {
                     trade.stock = restocked(&trade.stock, items, &trade.gifts);
                     trade.gifts.clear();
-                    commands.entity(trade.holder).despawn_related::<Children>();
-                    draw_grid(&mut commands, trade.holder, *with, &trade.stock);
-                    raise.write(RaisePanel(trade.panel));
+                    trade.changed = true;
                     continue;
                 }
                 let building = keepers.0.iter().find(|(_, keeper)| *keeper == with);
@@ -273,7 +321,6 @@ fn read_server(
                     holder = spawn_scroll_area(content, MOST_HEIGHT);
                 });
                 let stock = arranged(items);
-                draw_grid(&mut commands, holder, *with, &stock);
                 raise.write(RaisePanel(panel));
                 open.0.push(OpenTrade {
                     with: *with,
@@ -282,6 +329,7 @@ fn read_server(
                     holder,
                     stock,
                     gifts: Vec::new(),
+                    changed: true,
                 });
             }
             _ => {}
@@ -289,29 +337,25 @@ fn read_server(
     }
 }
 
-fn draw_grid(commands: &mut Commands, holder: Entity, with: Id, stock: &[Placed]) {
+fn draw_grid(commands: &mut Commands, trade: &OpenTrade, without: Option<Id>) {
+    let with = trade.with;
     let gifts = TakesGifts(with);
-    commands.entity(holder).with_children(|holder| {
+    commands.entity(trade.holder).with_children(|holder| {
         let grid = (TradeGrid(with), gifts);
-        spawn_item_grid(
-            holder,
-            COLUMNS as u8,
-            rows_for(stock),
-            grid,
-            gifts,
-            |grid| {
-                grid.spawn((covering(), Floating)).with_children(|layer| {
-                    for placed in stock {
-                        spawn_stock_item(layer, placed, gifts);
-                    }
-                });
-                grid.spawn((TradeAim(with), covering(), Floating));
-            },
-        );
+        let rows = rows_for(&trade.stock);
+        spawn_item_grid(holder, COLUMNS as u8, rows, grid, gifts, |grid| {
+            grid.spawn((covering(), Floating)).with_children(|layer| {
+                let shown = trade.stock.iter();
+                for placed in shown.filter(|placed| Some(placed.item.id) != without) {
+                    spawn_stock_item(layer, placed, with);
+                }
+            });
+            grid.spawn((TradeAim(with), covering(), Floating));
+        });
     });
 }
 
-fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, gifts: TakesGifts) {
+fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, with: Id) {
     let name = ItemName {
         words: placed.item.name().to_owned(),
         quality: placed.item.quality,
@@ -322,8 +366,19 @@ fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, gifts: Ta
         ItemLook::of(&placed.item),
         placed.shape(),
         (placed.x as f32, placed.y as f32),
-        false,
-        |_, _| (name.clone(), gifts),
+        true,
+        |x, y| {
+            (
+                name.clone(),
+                TakesGifts(with),
+                StockCell {
+                    with,
+                    item: placed.item.clone(),
+                    rotation: placed.rotation,
+                    grip: (x, y),
+                },
+            )
+        },
     );
 }
 
@@ -342,10 +397,17 @@ fn show_gift_aim(
     let aim = held.0.and_then(|gift| {
         let trade = open.0.iter().find(|trade| trade.with == gift.to)?;
         let (_, node, transform) = grids.iter().find(|(grid, ..)| grid.0 == gift.to)?;
-        let item = carried.0.find(gift.item)?;
+        let theirs = trade
+            .stock
+            .iter()
+            .find(|placed| placed.item.id == gift.item);
+        let item = theirs
+            .map(|placed| &placed.item)
+            .or(carried.0.find(gift.item))?;
         let shape = item.kind.def().shape.turned(gift.rotation);
         let wanted = cell_in_grid(gift.corner, node, transform);
-        Some((gift.to, landing(&trade.stock, shape, wanted), shape))
+        let rest = others(&trade.stock, gift.item);
+        Some((gift.to, landing(&rest, shape, wanted), shape))
     });
     if *drawn == aim && new_aims.is_empty() {
         return;
@@ -516,6 +578,7 @@ mod tests {
         starts(open_on_arrival);
         starts(note_gifts);
         starts(read_server);
+        starts(draw_grids);
         starts(show_gift_aim);
         starts(close_on_escape);
         starts(close_when_left);

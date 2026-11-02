@@ -419,6 +419,52 @@ pub(crate) fn give_to_keeper(
     Ok(record.carried.clone())
 }
 
+/// What a keeper on the player's level has.
+pub(crate) fn keeper_stock(
+    client: &Client,
+    world: &mut ServerWorld,
+    with: Id,
+) -> Option<Vec<Item>> {
+    keeper_building(client, world, with)?;
+    let visit = client.visit.as_ref()?;
+    let level = world
+        .site(visit.id, visit.poi.kind)
+        .levels
+        .get(&visit.index)?;
+    Some(level.records.get(&with)?.carried.clone())
+}
+
+/// Takes something from a shop's keeper, from beside its door, if it is still there
+/// and can go where it is asked to. Free, until there is payment.
+pub(crate) fn take_from_keeper(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    with: Id,
+    item: Id,
+    (to, x, y, rotation): (shared::item::Holder, u8, u8, shared::item::Rotation),
+) -> Result<(), &'static str> {
+    let building = keeper_building(client, world, with).ok_or("no such keeper here")?;
+    let visit = client.visit.as_ref().ok_or("not in a site")?;
+    let town = visit.level.buildings.iter().find(|b| b.look.id == building);
+    let door = town.ok_or("no such building here")?.look.door;
+    let (at_x, at_y) = visit.position;
+    if (at_x - door.0).abs().max((at_y - door.1).abs()) > DOOR_REACH {
+        return Err("too far away");
+    }
+    let (id, kind, index) = (visit.id, visit.poi.kind, visit.index);
+    let level = world.site_mut(id, kind).levels.entry(index).or_default();
+    let carried = &mut level.records.entry(with).or_default().carried;
+    let place = carried.iter().position(|one| one.id == item);
+    let place = place.ok_or("they don't have that")?;
+    let taken = carried[place].clone();
+    client
+        .inventory
+        .add(taken, to, x, y, rotation)
+        .map_err(|_| "it can't go there")?;
+    carried.remove(place);
+    Ok(())
+}
+
 /// Opens trading with a shop's keeper for a player beside its door: its stock is
 /// caught up and sent. Anything else is refused, with no answer. `false` if the
 /// client has gone.
@@ -1144,6 +1190,47 @@ mod tests {
             test.client.inventory.find(item).is_none(),
             "no longer theirs"
         );
+    }
+
+    #[test]
+    fn taking_from_a_keeper_needs_reach_room_and_it_still_being_there() {
+        use shared::item::{Holder, Rotation};
+        let (mut test, with, front) = in_a_village();
+        let near = ClientMessage::DevTeleport {
+            x: front.0,
+            y: front.1,
+        };
+        test.send(std::slice::from_ref(&near));
+        let open = ClientMessage::OpenTrade { with };
+        let stock = stock_in(&test.send(&[open])).unwrap();
+        let item = stock[0].id;
+        let take = |x: u8| ClientMessage::TakeItem {
+            with,
+            item,
+            to: Holder::Pockets,
+            x,
+            y: 0,
+            rotation: Rotation::None,
+        };
+        // Clear the pockets, for room.
+        test.client.inventory.pockets.clear();
+        // Set directly, as a teleport only goes somewhere walkable.
+        test.client.visit.as_mut().unwrap().position = (front.0 + 40, front.1);
+        test.send(&[take(0)]);
+        assert!(test.client.inventory.find(item).is_none(), "out of reach");
+        test.client.visit.as_mut().unwrap().position = front;
+        // Off the end of the pockets.
+        test.send(&[take(200)]);
+        assert!(test.client.inventory.find(item).is_none(), "no room there");
+        let answers = test.send(&[take(0)]);
+        assert!(test.client.inventory.find(item).is_some());
+        let left = stock_in(&answers).expect("the stock comes back");
+        assert!(left.iter().all(|one| one.id != item));
+        assert_eq!(left.len(), stock.len() - 1);
+        // Taken twice, it isn't copied.
+        test.client.inventory.pockets.clear();
+        test.send(&[take(0)]);
+        assert!(test.client.inventory.find(item).is_none(), "already gone");
     }
 
     #[test]

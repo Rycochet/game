@@ -941,6 +941,58 @@ impl Inventory {
         }
     }
 
+    /// Whether something not carried could be put here.
+    pub fn check_add(
+        &self,
+        item: &Item,
+        holder: Holder,
+        x: u8,
+        y: u8,
+        rotation: Rotation,
+    ) -> Result<(), MoveRefused> {
+        self.may_hold(holder, item)?;
+        if self.grid(holder).is_none() {
+            return Err(MoveRefused::NoSuchGrid);
+        }
+        let shape = item.kind.def().shape.turned(rotation);
+        if self.has_room(holder, shape, x, y, None) {
+            Ok(())
+        } else {
+            Err(MoveRefused::NoRoom)
+        }
+    }
+
+    /// Puts something not carried here, if it can go.
+    pub fn add(
+        &mut self,
+        item: Item,
+        holder: Holder,
+        x: u8,
+        y: u8,
+        rotation: Rotation,
+    ) -> Result<(), MoveRefused> {
+        self.check_add(&item, holder, x, y, rotation)?;
+        self.grid_mut(holder).expect("checked above").push(Placed {
+            item,
+            x,
+            y,
+            rotation,
+        });
+        Ok(())
+    }
+
+    /// The first place something not carried fits in this container, turning if it
+    /// must, as `first_place_for`.
+    pub fn first_place_for_new(
+        &self,
+        item: &Item,
+        holder: Holder,
+        turned_from: Rotation,
+    ) -> Option<(u8, u8, Rotation)> {
+        self.may_hold(holder, item).ok()?;
+        self.first_room(holder, item.kind.def().shape, turned_from, None)
+    }
+
     /// Moves a carried item here, if it can go.
     pub fn move_item(
         &mut self,
@@ -1084,6 +1136,42 @@ impl Inventory {
             }
             None => Err(item),
         }
+    }
+}
+
+#[cfg(test)]
+mod add_tests {
+    use super::*;
+
+    #[test]
+    fn something_new_goes_by_the_same_rules_as_a_move() {
+        let mut inventory = Inventory::default();
+        let stone = Item::new(Id::for_test(1), ItemKind::Stone);
+        let coin = Item::new(Id::for_test(2), ItemKind::Coin);
+        assert!(
+            inventory
+                .add(stone.clone(), Holder::Pockets, 0, 0, Rotation::None)
+                .is_ok()
+        );
+        assert_eq!(
+            inventory.check_add(&coin, Holder::Pockets, 1, 1, Rotation::None),
+            Err(MoveRefused::NoRoom)
+        );
+        assert_eq!(
+            inventory.check_add(&coin, Holder::Inside(Id::for_test(9)), 0, 0, Rotation::None),
+            inventory.check_move(
+                stone.id,
+                Holder::Inside(Id::for_test(9)),
+                0,
+                0,
+                Rotation::None
+            ),
+        );
+        assert!(
+            inventory
+                .add(coin, Holder::Pockets, 2, 0, Rotation::None)
+                .is_ok()
+        );
     }
 }
 

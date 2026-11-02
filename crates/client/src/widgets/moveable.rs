@@ -2,9 +2,10 @@
 //! the taking of clicks and touches for widgets.
 
 use bevy::prelude::*;
-use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
+use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use bevy::window::PrimaryWindow;
 
+use super::item::shown_at;
 use super::{
     ButtonPressed, ButtonState, INK, Pressable, RaisePanel, panel, panel_title, raised_border,
     spawn_close_button,
@@ -213,6 +214,7 @@ pub(super) fn take_presses(
             &InheritedVisibility,
             Entity,
             Option<&ButtonState>,
+            Option<&CalculatedClip>,
         ),
         With<Pressable>,
     >,
@@ -247,9 +249,8 @@ pub(super) fn take_presses(
         let button = pointer.0.and_then(|at| {
             buttons
                 .iter()
-                .filter(|(_, node, transform, visible, ..)| {
-                    visible.get()
-                        && node.contains_point(**transform, at / node.inverse_scale_factor)
+                .filter(|(_, node, transform, visible, .., clip)| {
+                    visible.get() && shown_at(at, node, transform, *clip)
                 })
                 .max_by_key(|(stack, ..)| stack.0)
         });
@@ -257,7 +258,7 @@ pub(super) fn take_presses(
         // Only what is in front: a button hidden by another panel gets nothing.
         let button = button.filter(|(stack, ..)| stacked.is_none_or(|(part, _)| stack.0 > part));
         let part = stacked.map(|(_, part)| part);
-        if let Some((.., entity, state)) = button {
+        if let Some((.., entity, state, _)) = button {
             mouse.clear_just_pressed(MouseButton::Left);
             if !state.is_some_and(|state| state.is_disabled()) {
                 pressed.write(ButtonPressed(entity));
