@@ -48,6 +48,16 @@ impl Surface {
         Self::Town,
     ];
 
+    /// Whether the mask cuts this surface at the edge of sight, rather than it
+    /// being in sight or not a whole cell at a time. Those drawn in sight also
+    /// go in the memory meshes, for the part of the cell out of sight.
+    pub fn cut_at_sight(self) -> bool {
+        matches!(
+            self,
+            Self::Floor | Self::Ground | Self::Water | Self::Lava | Self::WallBlend
+        )
+    }
+
     /// The surface the floor of a cell is drawn with.
     pub fn of_flat(cell: Cell) -> Self {
         match cell {
@@ -205,7 +215,8 @@ pub struct DungeonMeshes {
 /// by `light`, and for the rest of `remembered` (which includes what is in
 /// sight) in grey, with `stairs` drawn in 3D. Only remembered cells are
 /// drawn: cells the client doesn't know may be in sight as wall. `camera` is
-/// the camera's position, `shape` how the place's walls are built.
+/// the camera's position, `shape` how the place's walls are built. Cells in
+/// `cut` are in sight only in part, so they are drawn in grey as well.
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     level: &Level,
@@ -220,6 +231,7 @@ pub fn build(
     ruined: bool,
     camera: Vec3,
     shape: Shape,
+    cut: &Sight,
 ) -> DungeonMeshes {
     let mut layers = Layers {
         solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
@@ -244,33 +256,40 @@ pub fn build(
 
     for y in min_y..min_y + height {
         for x in min_x..min_x + width {
-            if !remembered.is_seen(x, y) {
-                continue;
-            }
-            let cell = level.cell(x, y);
-            if cell.is_wall() {
-                // A town's buildings are drawn whole, below.
-                if level.room(x, y).is_none() {
-                    build_wall(&mut layers, &scene, (x, y));
-                }
-            } else if cell.is_road() || cell == Cell::Garden {
-                town::build_flat(&mut layers, &scene, (x, y));
-                town::build_hedges(&mut layers, &scene, (x, y));
-            } else if cell.is_opening() {
-                build_opening(&mut layers, &scene, (x, y));
-            } else if cell == Cell::Hole {
-                build_hole(&mut layers, &scene, (x, y));
-            } else if cell == Cell::Field && field::build_field(&mut layers, &scene, (x, y)) {
-                // Drawn: anything else of a field is the land's own ground.
-            } else {
-                let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
-                build_open_cell(&mut layers, &scene, (x, y), found);
-                field::build_fence(&mut layers, &scene, (x, y));
+            if remembered.is_seen(x, y) {
+                build_cell_at(&mut layers, &scene, stairs, (x, y));
             }
         }
     }
 
     town::build_buildings(&mut layers, &scene);
+
+    // What is in sight again as memory, for what the mask cuts: the part of a
+    // cell the lines don't reach shows as remembered.
+    let nothing_seen = Sight::new(level);
+    let as_memory = Scene {
+        sight: &nothing_seen,
+        ..scene
+    };
+    let mut greys = Layers {
+        solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
+        memory: Surface::ALL.iter().map(|_| Builder::default()).collect(),
+        see_through: Builder::default(),
+        stairs_through: Surface::ALL.iter().map(|_| Builder::default()).collect(),
+        solid_faces: Vec::new(),
+    };
+    for y in min_y..min_y + height {
+        for x in min_x..min_x + width {
+            if remembered.is_seen(x, y) && cut.is_seen(x, y) {
+                build_cell_at(&mut greys, &as_memory, stairs, (x, y));
+            }
+        }
+    }
+    for (surface, grey) in Surface::ALL.iter().zip(&greys.memory) {
+        if surface.cut_at_sight() {
+            layers.memory[*surface as usize].append(grey);
+        }
+    }
 
     let Layers {
         solid,
@@ -292,6 +311,31 @@ pub fn build(
             .collect(),
         stairs_through: stairs_through.into_iter().map(Builder::into_mesh).collect(),
         solid_faces,
+    }
+}
+
+/// Whatever stands at a remembered cell.
+fn build_cell_at(layers: &mut Layers, scene: &Scene, stairs: &[SeenStairs], (x, y): (i64, i64)) {
+    let level = scene.level;
+    let cell = level.cell(x, y);
+    if cell.is_wall() {
+        // A town's buildings are drawn whole, in `build`.
+        if level.room(x, y).is_none() {
+            build_wall(layers, scene, (x, y));
+        }
+    } else if cell.is_road() || cell == Cell::Garden {
+        town::build_flat(layers, scene, (x, y));
+        town::build_hedges(layers, scene, (x, y));
+    } else if cell.is_opening() {
+        build_opening(layers, scene, (x, y));
+    } else if cell == Cell::Hole {
+        build_hole(layers, scene, (x, y));
+    } else if cell == Cell::Field && field::build_field(layers, scene, (x, y)) {
+        // Drawn: anything else of a field is the land's own ground.
+    } else {
+        let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
+        build_open_cell(layers, scene, (x, y), found);
+        field::build_fence(layers, scene, (x, y));
     }
 }
 
@@ -472,6 +516,16 @@ impl Builder {
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
     }
 
+    /// Adds everything in another builder.
+    fn append(&mut self, other: &Builder) {
+        let first = self.positions.len() as u32;
+        self.positions.extend_from_slice(&other.positions);
+        self.normals.extend_from_slice(&other.normals);
+        self.uvs.extend_from_slice(&other.uvs);
+        self.colours.extend_from_slice(&other.colours);
+        self.indices.extend(other.indices.iter().map(|i| first + i));
+    }
+
     pub(super) fn into_mesh(self) -> Mesh {
         Mesh::new(
             PrimitiveTopology::TriangleList,
@@ -528,6 +582,7 @@ mod tests {
             false,
             camera,
             Shape::Built,
+            &Sight::new(level),
         )
         .solid_faces
     }
@@ -596,6 +651,7 @@ mod tests {
             false,
             camera,
             shape,
+            &Sight::new(&level),
         );
         assert!(meshes.has_see_through);
         let on_the_wall = meshes
@@ -642,6 +698,7 @@ mod tests {
             false,
             camera,
             shape,
+            &Sight::new(&level),
         );
         assert!(north_side(&meshes));
     }
@@ -664,6 +721,7 @@ mod tests {
             false,
             Vec3::new(0.0, 600.0, 900.0),
             Shape::Built,
+            &Sight::new(level),
         );
         meshes.memory[Surface::Wall as usize]
             .attribute(Mesh::ATTRIBUTE_POSITION)
@@ -724,6 +782,7 @@ mod tests {
                 false,
                 camera,
                 shape,
+                &Sight::new(&level),
             );
             let positions = meshes.solid[Surface::Floor as usize]
                 .attribute(Mesh::ATTRIBUTE_POSITION)
@@ -764,6 +823,7 @@ mod tests {
                 false,
                 camera,
                 shape,
+                &Sight::new(&level),
             );
             let solid = &meshes.solid[Surface::Wall as usize];
             solid
@@ -884,6 +944,7 @@ mod tests {
             false,
             camera,
             shape,
+            &Sight::new(&level),
         );
         assert!(meshes.has_solid.iter().any(|&has| has));
         // The south wall's inner sides face away from the camera.
@@ -913,8 +974,30 @@ mod tests {
             false,
             camera,
             shape,
+            &Sight::new(&room),
         );
         assert!(plain.has_memory.iter().all(|&has| !has));
+
+        // Cells the mask cuts have a remembered copy of what it cuts, only.
+        let cut = build(
+            &room,
+            &room_views,
+            room_sight,
+            room_sight,
+            &room_light,
+            &[],
+            &[],
+            &BTreeSet::new(),
+            &[],
+            false,
+            camera,
+            shape,
+            room_sight,
+        );
+        assert!(cut.has_memory[Surface::Floor as usize]);
+        for (surface, has) in Surface::ALL.iter().zip(&cut.has_memory) {
+            assert!(!has || surface.cut_at_sight(), "{surface:?}");
+        }
 
         let nothing = Sight::new(&level);
         let meshes = build(
@@ -930,6 +1013,7 @@ mod tests {
             false,
             camera,
             shape,
+            &Sight::new(&level),
         );
         assert!(meshes.has_solid.iter().all(|&has| !has));
         assert!(!meshes.has_see_through);
@@ -948,6 +1032,7 @@ mod tests {
             false,
             camera,
             shape,
+            &Sight::new(&level),
         );
         assert!(meshes.has_solid.iter().all(|&has| !has));
         assert!(meshes.has_memory[Surface::Floor as usize]);

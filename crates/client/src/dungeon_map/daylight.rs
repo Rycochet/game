@@ -12,6 +12,7 @@ use shared::rng::Seed;
 use shared::site::BuildingLook;
 
 use super::mesh::{LightGrid, with_ambient};
+use super::sight_lines::SurfaceMaterial;
 use super::town::window_faces;
 use super::{CropPart, HerbPart, Surface, SurfaceMaterials, TOKEN_AMBIENT_BRIGHTNESS};
 use crate::common::{
@@ -148,6 +149,7 @@ pub(super) fn tint_outside(
     outside: Res<OutsideLight>,
     surfaces: Res<SurfaceMaterials>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
     plants: Query<&MeshMaterial3d<StandardMaterial>, Or<(With<CropPart>, With<HerbPart>)>>,
 ) {
     if !outside.is_changed() {
@@ -159,8 +161,8 @@ pub(super) fn tint_outside(
         material.base_color = Color::linear_rgba(by.x, by.y, by.z, alpha);
     };
     for surface in [Surface::Ground, Surface::Town] {
-        if let Some(mut material) = materials.get_mut(&surfaces.memory[surface as usize]) {
-            tint(&mut material, Vec3::splat(lit.max_element()));
+        if let Some(mut material) = surface_materials.get_mut(&surfaces.memory[surface as usize]) {
+            tint(&mut material.base, Vec3::splat(lit.max_element()));
         }
     }
     for plant in &plants {

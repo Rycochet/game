@@ -303,6 +303,13 @@ impl Level {
         })
     }
 
+    /// Where the wall at `(x, y)` stands, if there is a wall: two bars crossing
+    /// at the cell's centre, each its `(smallest, largest)` corners in units.
+    /// What blocks sight, and all that does.
+    pub fn wall_bars(&self, x: i64, y: i64) -> Option<[WallBar; 2]> {
+        self.wall_shape(x, y).map(|shape| bars_of((x, y), shape))
+    }
+
     /// Whether two cells aren't walls of different buildings of a town. Walls
     /// elsewhere are in no room.
     fn same_building(&self, a: (i64, i64), b: (i64, i64)) -> bool {
@@ -424,7 +431,7 @@ impl Sight {
     }
 
     /// Counts an open cell as seen, and the walls touching it.
-    fn reveal(&mut self, level: &Level, x: i64, y: i64) {
+    pub fn reveal(&mut self, level: &Level, x: i64, y: i64) {
         self.mark(x, y);
         for ny in y - 1..=y + 1 {
             for nx in x - 1..=x + 1 {
@@ -493,11 +500,23 @@ fn cell_of(units: i64) -> i64 {
 /// Whether a line touches the wall in `cell`. The wall is two bars crossing
 /// at the cell's centre.
 fn line_hits_wall(from: (i64, i64), to: (i64, i64), cell: (i64, i64), shape: WallShape) -> bool {
+    bars_of(cell, shape)
+        .iter()
+        .any(|&(low, high)| line_hits_box(from, to, low, high))
+}
+
+/// A bar of wall: its smallest and largest corners, in units.
+pub type WallBar = ((i64, i64), (i64, i64));
+
+/// The two bars of a wall of this shape in `cell`.
+fn bars_of(cell: (i64, i64), shape: WallShape) -> [WallBar; 2] {
     let (cx, cy) = (cell.0 * CELL_UNITS, cell.1 * CELL_UNITS);
     let [north, east, south, west] = shape.reach();
     let t = WALL_HALF_UNITS;
-    line_hits_box(from, to, (cx - west, cy - t), (cx + east, cy + t))
-        || line_hits_box(from, to, (cx - t, cy - north), (cx + t, cy + south))
+    [
+        ((cx - west, cy - t), (cx + east, cy + t)),
+        ((cx - t, cy - north), (cx + t, cy + south)),
+    ]
 }
 
 /// Whether a line touches a box given by its smallest and largest corners:
