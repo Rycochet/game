@@ -52,7 +52,6 @@ pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SightMask>;
 /// Which part of a surface to show. Values match `sight_mask.wesl`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MaskSide {
-    All,
     InSight,
     OutOfSight,
 }
@@ -60,7 +59,6 @@ pub enum MaskSide {
 impl MaskSide {
     fn value(self) -> f32 {
         match self {
-            Self::All => 0.0,
             Self::InSight => 1.0,
             Self::OutOfSight => -1.0,
         }
@@ -758,6 +756,42 @@ mod tests {
         assert!(touched.is_seen(-7, 2) && touched.is_seen(1, -2));
         assert!(touched.is_seen(2, 0), "the wall itself");
         assert!(!touched.is_seen(3, 0) && !touched.is_seen(7, 2));
+    }
+
+    /// What the lines reach beyond what the server sends is rare: it sends what
+    /// glimpses see and the cells beside them, and more besides, from nearby
+    /// cells. Anything it hasn't sent is wall here, so this is at worst a small
+    /// piece missing from the edge of sight, never something revealed.
+    #[test]
+    fn lines_rarely_reach_past_what_is_sent() {
+        let level = scattered();
+        let map = WallMap::of(&level);
+        let (min_x, min_y, width, height) = level.bounds();
+        let (mut touched_cells, mut unsent) = (0, 0);
+        for (vx, vy) in [(0, 0), (-5, 2), (3, -3), (6, 1), (-12, -12), (10, 14)] {
+            if !level.is_open(vx, vy) {
+                continue;
+            }
+            let from = point(vx, vy);
+            let mut touched = Sight::new(&level);
+            touch_cells(&level, from, &map.outline(from), &mut touched);
+            let mut sent = Sight::new(&level);
+            sent.add_glimpses(&level, vx, vy, None);
+            for y in min_y..min_y + height {
+                for x in min_x..min_x + width {
+                    if !level.is_open(x, y) || !touched.is_seen(x, y) {
+                        continue;
+                    }
+                    touched_cells += 1;
+                    let beside = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]
+                        .iter()
+                        .any(|(dx, dy)| sent.is_seen(x + dx, y + dy));
+                    unsent += i32::from(!beside);
+                }
+            }
+        }
+        assert!(touched_cells > 100);
+        assert!(unsent * 20 <= touched_cells, "{unsent} of {touched_cells}");
     }
 
     /// A viewer moving between cells still gets a whole outline round it.

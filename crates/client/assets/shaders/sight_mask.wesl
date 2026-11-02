@@ -11,7 +11,7 @@ import bevy_pbr::render::{
 struct Mask {
     origin: vec2<f32>,
     per_unit: vec2<f32>,
-    // 1 only in sight, -1 only out of sight, 0 everywhere.
+    // 1 only in sight, -1 only out of sight.
     side: f32,
 }
 
@@ -19,12 +19,24 @@ struct Mask {
 @group(constants::MATERIAL_BIND_GROUP) @binding(101) var mask_picture: texture_2d<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(102) var mask_sampler: sampler;
 
+// How far in front of an upright surface the mask is read, in world units (a
+// tenth of a cell): a wall's side stands right on the edge of what is in sight.
+const IN_FRONT: f32 = 2.4;
+
+// Tops, facing up over the floor: sight stops at the wall below them, so they go
+// by the cell, as they always did. Match `RAISED` in mesh.rs.
+const RAISED: f32 = 1.0;
+const RAISED_NORMAL: f32 = 0.5;
+
 @fragment
 fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> FragmentOutput {
     // Sampled before anything can return, as derivatives need every fragment.
-    let place = (in.world_position.xz - mask.origin) * mask.per_unit;
+    let normal = normalize(in.world_normal);
+    let at = in.world_position.xz + normal.xz * IN_FRONT;
+    let place = (at - mask.origin) * mask.per_unit;
     let in_sight = textureSample(mask_picture, mask_sampler, place).r > 0.5;
-    if (mask.side > 0.5 && !in_sight) || (mask.side < -0.5 && in_sight) {
+    let raised = in.world_position.y > RAISED && normal.y > RAISED_NORMAL;
+    if !raised && ((mask.side > 0.0 && !in_sight) || (mask.side < 0.0 && in_sight)) {
         discard;
     }
 

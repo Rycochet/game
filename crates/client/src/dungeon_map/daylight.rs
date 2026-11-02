@@ -148,9 +148,8 @@ pub(super) fn update_outside(
 pub(super) fn tint_outside(
     outside: Res<OutsideLight>,
     surfaces: Res<SurfaceMaterials>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
-    plants: Query<&MeshMaterial3d<StandardMaterial>, Or<(With<CropPart>, With<HerbPart>)>>,
+    mut materials: ResMut<Assets<SurfaceMaterial>>,
+    plants: Query<&MeshMaterial3d<SurfaceMaterial>, Or<(With<CropPart>, With<HerbPart>)>>,
 ) {
     if !outside.is_changed() {
         return;
@@ -161,13 +160,13 @@ pub(super) fn tint_outside(
         material.base_color = Color::linear_rgba(by.x, by.y, by.z, alpha);
     };
     for surface in [Surface::Ground, Surface::Town] {
-        if let Some(mut material) = surface_materials.get_mut(&surfaces.memory[surface as usize]) {
+        if let Some(mut material) = materials.get_mut(&surfaces.memory[surface as usize]) {
             tint(&mut material.base, Vec3::splat(lit.max_element()));
         }
     }
     for plant in &plants {
         if let Some(mut material) = materials.get_mut(&plant.0) {
-            tint(&mut material, lit);
+            tint(&mut material.base, lit);
         }
     }
 }

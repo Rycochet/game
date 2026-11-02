@@ -48,16 +48,6 @@ impl Surface {
         Self::Town,
     ];
 
-    /// Whether the mask cuts this surface at the edge of sight, rather than it
-    /// being in sight or not a whole cell at a time. Those drawn in sight also
-    /// go in the memory meshes, for the part of the cell out of sight.
-    pub fn cut_at_sight(self) -> bool {
-        matches!(
-            self,
-            Self::Floor | Self::Ground | Self::Water | Self::Lava | Self::WallBlend
-        )
-    }
-
     /// The surface the floor of a cell is drawn with.
     pub fn of_flat(cell: Cell) -> Self {
         match cell {
@@ -186,6 +176,12 @@ pub struct WallFace {
     pub half_up: f32,
 }
 
+/// Anything facing up with a normal over `RAISED_NORMAL`, this far over the
+/// floor, is a top (of a wall or a roof), which the mask doesn't cut, as sight
+/// stops at the wall below it. Match `sight_mask.wesl`.
+const RAISED: f32 = 1.0;
+const RAISED_NORMAL: f32 = 0.5;
+
 /// How bright remembered (out of sight) surfaces are drawn, on their grey
 /// pictures.
 pub const MEMORY_SHADE: f32 = 0.3;
@@ -216,7 +212,7 @@ pub struct DungeonMeshes {
 /// sight) in grey, with `stairs` drawn in 3D. Only remembered cells are
 /// drawn: cells the client doesn't know may be in sight as wall. `camera` is
 /// the camera's position, `shape` how the place's walls are built. Cells in
-/// `cut` are in sight only in part, so they are drawn in grey as well.
+/// `cut` are in sight only in part, so what is lit there is copied in grey too.
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     level: &Level,
@@ -256,40 +252,22 @@ pub fn build(
 
     for y in min_y..min_y + height {
         for x in min_x..min_x + width {
-            if remembered.is_seen(x, y) {
-                build_cell_at(&mut layers, &scene, stairs, (x, y));
+            if !remembered.is_seen(x, y) {
+                continue;
+            }
+            let before = sizes(&layers.solid);
+            build_cell_at(&mut layers, &scene, stairs, (x, y));
+            if cut.is_seen(x, y) {
+                copy_as_memory(&mut layers, &before);
             }
         }
     }
 
+    // Buildings are drawn whole, not by the cell, and only the parts in sight
+    // are lit, so all of those may be cut.
+    let before = sizes(&layers.solid);
     town::build_buildings(&mut layers, &scene);
-
-    // What is in sight again as memory, for what the mask cuts: the part of a
-    // cell the lines don't reach shows as remembered.
-    let nothing_seen = Sight::new(level);
-    let as_memory = Scene {
-        sight: &nothing_seen,
-        ..scene
-    };
-    let mut greys = Layers {
-        solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
-        memory: Surface::ALL.iter().map(|_| Builder::default()).collect(),
-        see_through: Builder::default(),
-        stairs_through: Surface::ALL.iter().map(|_| Builder::default()).collect(),
-        solid_faces: Vec::new(),
-    };
-    for y in min_y..min_y + height {
-        for x in min_x..min_x + width {
-            if remembered.is_seen(x, y) && cut.is_seen(x, y) {
-                build_cell_at(&mut greys, &as_memory, stairs, (x, y));
-            }
-        }
-    }
-    for (surface, grey) in Surface::ALL.iter().zip(&greys.memory) {
-        if surface.cut_at_sight() {
-            layers.memory[*surface as usize].append(grey);
-        }
-    }
+    copy_as_memory(&mut layers, &before);
 
     let Layers {
         solid,
@@ -311,6 +289,24 @@ pub fn build(
             .collect(),
         stairs_through: stairs_through.into_iter().map(Builder::into_mesh).collect(),
         solid_faces,
+    }
+}
+
+/// How much each builder holds so far: its vertices and indices.
+fn sizes(builders: &[Builder]) -> Vec<(usize, usize)> {
+    builders
+        .iter()
+        .map(|builder| (builder.positions.len(), builder.indices.len()))
+        .collect()
+}
+
+/// Copies what was lit since `before` into the memory meshes, in grey, for the
+/// part of it the mask says is out of sight. Tops stay out: the mask doesn't cut
+/// them (`Builder::copy_grey`).
+fn copy_as_memory(layers: &mut Layers, before: &[(usize, usize)]) {
+    for (i, &from) in before.iter().enumerate() {
+        let Layers { solid, memory, .. } = &mut *layers;
+        solid[i].copy_grey(from, &mut memory[i]);
     }
 }
 
@@ -516,14 +512,30 @@ impl Builder {
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
     }
 
-    /// Adds everything in another builder.
-    fn append(&mut self, other: &Builder) {
-        let first = self.positions.len() as u32;
-        self.positions.extend_from_slice(&other.positions);
-        self.normals.extend_from_slice(&other.normals);
-        self.uvs.extend_from_slice(&other.uvs);
-        self.colours.extend_from_slice(&other.colours);
-        self.indices.extend(other.indices.iter().map(|i| first + i));
+    /// Copies what was added since `(vertices, indices)` into `into` at the
+    /// even shade of memory, keeping its opacity, without any raised top: the
+    /// shader never cuts those (`RAISED` in `sight_mask.wesl`), so they would
+    /// show twice.
+    fn copy_grey(&self, (vertices, indices): (usize, usize), into: &mut Builder) {
+        let first = into.positions.len() as u32;
+        for i in vertices..self.positions.len() {
+            let [_, _, _, alpha] = self.colours[i];
+            into.positions.push(self.positions[i]);
+            into.normals.push(self.normals[i]);
+            into.uvs.push(self.uvs[i]);
+            into.colours
+                .push([MEMORY_SHADE, MEMORY_SHADE, MEMORY_SHADE, alpha]);
+        }
+        for triangle in self.indices[indices..].as_chunks::<3>().0 {
+            let raised = triangle.iter().all(|&i| {
+                let i = i as usize;
+                self.positions[i][1] > RAISED && self.normals[i][1] > RAISED_NORMAL
+            });
+            if !raised {
+                into.indices
+                    .extend(triangle.iter().map(|&i| i - vertices as u32 + first));
+            }
+        }
     }
 
     pub(super) fn into_mesh(self) -> Mesh {
@@ -978,7 +990,8 @@ mod tests {
         );
         assert!(plain.has_memory.iter().all(|&has| !has));
 
-        // Cells the mask cuts have a remembered copy of what it cuts, only.
+        // Cells the mask cuts have a remembered copy of what is lit, in the
+        // same places, apart from raised tops.
         let cut = build(
             &room,
             &room_views,
@@ -995,9 +1008,7 @@ mod tests {
             room_sight,
         );
         assert!(cut.has_memory[Surface::Floor as usize]);
-        for (surface, has) in Surface::ALL.iter().zip(&cut.has_memory) {
-            assert!(!has || surface.cut_at_sight(), "{surface:?}");
-        }
+        assert!(cut.has_memory[Surface::Wall as usize]);
 
         let nothing = Sight::new(&level);
         let meshes = build(
