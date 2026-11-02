@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::energy::{CHANGE_MAP_COST, Energy, NORMAL_SPEED, dressing_cost, site_step_cost};
+use shared::id::Id;
 use shared::item::{Inventory, Item, ItemKind, Made};
 use shared::movement::{Step, world_step_cost};
 use shared::poi::ChunkPos;
@@ -78,7 +79,7 @@ enum Action {
 
 /// How far a client has got, from connecting to playing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Phase {
+pub(crate) enum Phase {
     /// Nothing heard yet: `Hello` comes first.
     Greeting,
     /// Told how to log in; `Login` comes next.
@@ -95,7 +96,7 @@ enum Phase {
 /// sent.
 pub struct Client {
     pub(crate) link: ServerLink,
-    phase: Phase,
+    pub(crate) phase: Phase,
     /// The account it logged in to (none on an embedded server).
     account: Option<AccountId>,
     /// Its character: given when it connected, or decided by logging in.
@@ -108,9 +109,13 @@ pub struct Client {
     /// What the character knows of other worlds, kept for saving.
     other_worlds: BTreeMap<WorldId, CharacterWorldSave>,
     /// What the character carries.
-    inventory: Inventory,
+    pub(crate) inventory: Inventory,
+    /// What others know this character by while they are playing.
+    pub(crate) entity_id: Id,
+    /// Who the client has been told is in sight, and where.
+    pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
     /// What the character is like.
-    sheet: Sheet,
+    pub(crate) sheet: Sheet,
     /// How much it can do now, and how fast that comes back.
     energy: Energy,
     speed: u32,
@@ -145,6 +150,8 @@ impl Client {
             character: CharacterWorldSave::default(),
             other_worlds: BTreeMap::new(),
             inventory: Inventory::default(),
+            entity_id: crate::ids::new_id(),
+            seen_entities: BTreeMap::new(),
             sheet: Sheet::default(),
             energy: Energy::default(),
             speed: NORMAL_SPEED,
@@ -170,6 +177,8 @@ impl Client {
         self.map += 1;
         self.last_step = None;
         self.waiting.clear();
+        // The client forgets them too.
+        self.seen_entities.clear();
     }
 
     /// What it carries has changed, which can change how fast it goes.
@@ -403,6 +412,12 @@ pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResM
         client.save(&mut world);
     }
     world.save_sites();
+}
+
+/// Every tick: tells everyone who has come into or gone out of their sight, or
+/// moved. Who is on a level stays while it is in use.
+pub(crate) fn sync_entities(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
+    crate::entities::sync(&mut connections.clients, &mut world);
 }
 
 /// Every tick: tells everyone playing if the clock was moved, or has reached a
@@ -898,6 +913,7 @@ pub(crate) mod tests {
             }
             self.let_time_pass();
             self.client.send_position();
+            crate::entities::sync(std::slice::from_mut(&mut self.client), &mut self.world);
             std::iter::from_fn(|| self.end.receive().unwrap()).collect()
         }
 
@@ -1236,6 +1252,24 @@ pub(crate) mod tests {
         let carried = inventory(&answers);
         test.leave();
         assert_eq!(inventory(&TestClient::of(open()).welcome), carried);
+    }
+
+    /// One real tick's messages and sight, in place.
+    pub(crate) fn tick_both(connections: &mut Connections, world: &mut ServerWorld) {
+        let mut app = World::new();
+        app.insert_resource(std::mem::take(connections));
+        let seed = world.seed;
+        app.insert_resource(std::mem::replace(world, ServerWorld::new(seed)));
+        app.insert_resource(ServerOptions {
+            dev_tools: true,
+            exit_when_alone: false,
+            pausable: false,
+            guests: true,
+        });
+        bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
+        bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, sync_entities).unwrap();
+        *connections = app.remove_resource::<Connections>().unwrap();
+        *world = app.remove_resource::<ServerWorld>().unwrap();
     }
 
     /// Runs `handle_messages` once over these connections.

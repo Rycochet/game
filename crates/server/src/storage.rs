@@ -17,6 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::dungeon::Cell;
+use shared::id::Id;
 use shared::item::Inventory;
 use shared::poi::{ChunkPos, PoiKind};
 use shared::protocol::CharacterId;
@@ -312,6 +313,10 @@ pub struct LevelSave {
     /// A town's buildings that players have dealt with, by `RoomId`.
     #[serde(default)]
     pub buildings: BTreeMap<u16, BuildingSave>,
+    /// The ids of the level's mobs, by which of its spawns they are. A mob keeps its
+    /// id while it lives, so what it remembers stays with it.
+    #[serde(default)]
+    pub mobs: BTreeMap<u32, Id>,
 }
 
 /// What players have done with a town's building.
@@ -613,6 +618,7 @@ pub(crate) mod tests {
                 0,
                 LevelSave {
                     last_visit: 99,
+                    mobs: BTreeMap::new(),
                     changes: BTreeMap::from([((1, 2), Cell::Floor)]),
                     buildings: BTreeMap::from([(
                         4,

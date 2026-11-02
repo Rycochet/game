@@ -461,7 +461,10 @@ fn receive(
                 | ServerMessage::OnWorldMap { .. }
                 | ServerMessage::Teleported { .. }
                 | ServerMessage::Inventory(_)
-                | ServerMessage::Sheet(_)),
+                | ServerMessage::Sheet(_)
+                | ServerMessage::EntitySeen(_)
+                | ServerMessage::EntityMoved { .. }
+                | ServerMessage::EntityGone { .. }),
             )) => {
                 from_server.write(FromServer(message));
             }
