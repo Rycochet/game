@@ -7,6 +7,10 @@ nav_order: 9
 
 Hall of Worlds is licensed under [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/) (CC BY-NC 4.0): you may share and adapt it with attribution, but not for commercial purposes. See the [licence](https://github.com/Rycochet/game/blob/master/LICENSE) for the legal text.
 
+## Code
+
+- **Claude Code (Opus 5.5):** code and placeholder 3D images. This game would not have been possible without it.
+
 ## Artwork and fonts by other people
 
 These keep their own licences. The [attribution file](https://github.com/Rycochet/game/blob/master/crates/client/assets/ATTRIBUTION.md) has the sources and any changes made.
