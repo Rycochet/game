@@ -24,7 +24,7 @@ mod storage;
 mod tls;
 mod world_map;
 
-use clock::{Repeating, WorldClock};
+use clock::{ActionClock, Repeating, WorldClock};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -54,7 +54,7 @@ use save_queue::SaveQueue;
 use storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved, WorldSave};
 
 /// Simulation ticks per second.
-pub const TICKS_PER_SECOND: f64 = 20.0;
+pub const TICKS_PER_SECOND: f64 = shared::energy::ACTION_TICKS_PER_SECOND;
 
 /// The world every server runs until worlds can be created and chosen.
 pub const DEFAULT_WORLD_SEED: u64 = 12345;
@@ -113,6 +113,7 @@ impl Plugin for ServerPlugin {
             .add_systems(
                 Update,
                 (
+                    advance_action_clock,
                     connections::handle_messages,
                     connections::tell_the_time,
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),
@@ -120,6 +121,48 @@ impl Plugin for ServerPlugin {
                 )
                     .chain(),
             );
+    }
+}
+
+/// Moves the action clock on by real time, so that a slow frame doesn't slow
+/// everyone down, unless the world's clock is paused.
+fn advance_action_clock(time: Res<Time>, world: Res<ServerWorld>, mut owed: Local<f64>) {
+    if world.clock.is_paused() {
+        return;
+    }
+    *owed += time.delta_secs_f64() * shared::energy::ACTION_TICKS_PER_SECOND;
+    let whole = owed.floor();
+    *owed -= whole;
+    world.action_clock.advance(whole as u64);
+}
+
+#[cfg(test)]
+mod action_clock_tests {
+    use std::time::Duration;
+
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::world::WorldSeed;
+
+    use super::*;
+
+    fn after_a_second(paused: bool) -> u64 {
+        let mut app = World::new();
+        let world = ServerWorld::new(WorldSeed::new(1));
+        if paused {
+            world.clock.pause();
+        }
+        app.insert_resource(world);
+        let mut time = Time::<()>::default();
+        time.advance_by(Duration::from_secs(1));
+        app.insert_resource(time);
+        app.run_system_once(advance_action_clock).unwrap();
+        app.resource::<ServerWorld>().action_clock.ticks()
+    }
+
+    #[test]
+    fn it_goes_by_real_time_and_stops_when_paused() {
+        assert_eq!(after_a_second(false), TICKS_PER_SECOND as u64);
+        assert_eq!(after_a_second(true), 0);
     }
 }
 
@@ -142,13 +185,14 @@ pub fn headless_app(world_seed: WorldSeed, options: ServerOptions, data: Option<
 }
 
 /// Saves `world.ron`.
-fn save_world(storage: &Storage, seed: WorldSeed, clock: f64) {
+fn save_world(storage: &Storage, seed: WorldSeed, clock: f64, action_ticks: u64) {
     storage.save_world(&WorldSave {
         format: SAVE_FORMAT,
         seed,
         world_map_version: WORLD_MAP_VERSION,
         hour: 0,
         clock,
+        action_ticks,
     });
 }
 
@@ -167,6 +211,8 @@ pub struct ServerWorld {
     params: WorldParams,
     /// Game minutes since the world began, always running.
     pub(crate) clock: WorldClock,
+    /// What creatures' energy goes by.
+    pub(crate) action_clock: ActionClock,
     /// The clock's whole hours. The tide follows this, so it moves once an
     /// hour rather than all the time.
     pub(crate) hour: u32,
@@ -214,7 +260,9 @@ impl ServerWorld {
     /// The world saved in `storage`, or a new one (saved straight away). An
     /// error if the save can't be read or was made by a newer server.
     fn open(seed: WorldSeed, storage: Storage) -> Result<Self, String> {
-        let clock = match storage.load_world()? {
+        let saved = storage.load_world()?;
+        let saved_ticks = saved.as_ref().map_or(0, |save| save.action_ticks);
+        let clock = match saved {
             Some(save) => {
                 if save.format > SAVE_FORMAT {
                     return Err(format!(
@@ -247,9 +295,11 @@ impl ServerWorld {
         let world_clock = WorldClock::new(clock);
         let save_clock = world_clock.clone();
         let save_to = storage.clone();
+        let action_clock = ActionClock::new(saved_ticks);
+        let save_ticks = action_clock.clone();
         let clock_saver = storage.saves().then(|| {
             Repeating::start(CLOCK_SAVE_EVERY, move || {
-                save_world(&save_to, seed, save_clock.minutes());
+                save_world(&save_to, seed, save_clock.minutes(), save_ticks.ticks());
             })
         });
         let world = Self {
@@ -258,6 +308,7 @@ impl ServerWorld {
             ground: WorldGround::new(&params),
             params,
             clock: world_clock,
+            action_clock,
             hour: (clock / MINUTES_PER_HOUR) as u32,
             clock_moved: false,
             _clock_saver: clock_saver,
@@ -269,7 +320,7 @@ impl ServerWorld {
             unreachable_sites: BTreeSet::new(),
             forgotten: Forgotten::default(),
         };
-        save_world(&world.storage, seed, clock);
+        save_world(&world.storage, seed, clock, saved_ticks);
         Ok(world)
     }
 

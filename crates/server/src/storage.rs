@@ -279,6 +279,9 @@ pub struct WorldSave {
     /// Its clock: game minutes since it began (before format 2, hours).
     #[serde(default)]
     pub clock: f64,
+    /// Its action clock: ticks since it began (`clock::ActionClock`).
+    #[serde(default)]
+    pub action_ticks: u64,
 }
 
 /// A site's file: made the first time anyone enters it.

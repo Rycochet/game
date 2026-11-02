@@ -21,5 +21,6 @@ The character panel: what the character is like, from `C` or the person button a
 
 ## Notes
 
+- It writes `common::PlayerSpeed` for `player`, from the sheet and what is carried.
 - The weight and load (`Sheet::load`) are worked out here from `Carried`, so they follow a move before the server answers.
 - Appearance is only shown as words: the token's picture doesn't change with it yet, nor with the creature's kind. That comes when entities have their looks.

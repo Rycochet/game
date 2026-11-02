@@ -1,11 +1,13 @@
 //! Connected clients: reading their messages, answering them, and saving
 //! their characters.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
+use shared::energy::{CHANGE_MAP_COST, Energy, NORMAL_SPEED, dressing_cost, site_step_cost};
 use shared::item::{Inventory, Item, ItemKind, Made};
+use shared::movement::{Step, world_step_cost};
 use shared::poi::ChunkPos;
 use shared::protocol::{
     CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerLink, ServerMessage,
@@ -60,6 +62,20 @@ impl Connections {
 /// What a client is told when saves can't be reached. Nothing has been lost.
 const SAVES_TROUBLE: &str = "the server can't reach its saves just now: try again soon";
 
+/// The most things a client can be waiting to do: a second or so of the quickest
+/// steps. A client sending more is going faster than it can, and they are dropped,
+/// and put right by `Position`.
+const MOST_WAITING: usize = 64;
+
+/// Something that takes time, waiting its turn. Things that depend on where the
+/// player is have to wait behind the steps that lead there.
+#[derive(Clone, Copy, Debug)]
+enum Action {
+    Step { number: u32, step: Step },
+    EnterSite { chunk: ChunkPos },
+    UseExit,
+}
+
 /// How far a client has got, from connecting to playing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Phase {
@@ -95,6 +111,11 @@ pub struct Client {
     inventory: Inventory,
     /// What the character is like.
     sheet: Sheet,
+    /// How much it can do now, and how fast that comes back.
+    energy: Energy,
+    speed: u32,
+    /// What it has asked to do and hasn't had the energy for yet, in order.
+    waiting: VecDeque<Action>,
     /// What a character being made here asked to be, for when they first join.
     starting_as: Option<(CreatureKind, Appearance)>,
     /// Whether `character` (or the visit) changed since it was saved.
@@ -125,6 +146,9 @@ impl Client {
             other_worlds: BTreeMap::new(),
             inventory: Inventory::default(),
             sheet: Sheet::default(),
+            energy: Energy::default(),
+            speed: NORMAL_SPEED,
+            waiting: VecDeque::new(),
             starting_as: None,
             unsaved: false,
             visit: None,
@@ -145,6 +169,19 @@ impl Client {
     pub(crate) fn changed_map(&mut self) {
         self.map += 1;
         self.last_step = None;
+        self.waiting.clear();
+    }
+
+    /// What it carries has changed, which can change how fast it goes.
+    fn update_speed(&mut self, tick: u64) {
+        self.energy.settle(tick, self.speed);
+        self.speed = self.sheet.speed(&self.inventory);
+    }
+
+    /// It has put this on or taken it off, which takes longer the heavier it is.
+    fn spend_dressing(&mut self, item: shared::id::Id, tick: u64) {
+        let grams = self.inventory.find(item).map_or(0, Item::total_weight);
+        self.energy.spend(tick, self.speed, dressing_cost(grams));
     }
 
     /// If steps arrived this tick, tells the client where the player is
@@ -225,7 +262,7 @@ pub(crate) fn handle_messages(
                         break true;
                     }
                 }
-                Ok(None) => break client.send_position(),
+                Ok(None) => break act(client, &mut world) && client.send_position(),
                 Err(error) => {
                     info!("A client left ({error:?})");
                     break false;
@@ -242,6 +279,71 @@ pub(crate) fn handle_messages(
         put_out_of_forgotten_sites(clients, i, &mut world);
     }
     clients.retain(|client| !client.gone);
+}
+
+/// Does what a client has asked, as far as it has the energy, in order. `false` if
+/// the client has gone.
+fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let tick = world.action_clock.ticks();
+    while client.energy.ready(tick, client.speed) {
+        let Some(action) = client.waiting.pop_front() else {
+            break;
+        };
+        let map = client.map;
+        let (stayed, cost) = match action {
+            Action::Step { number, step } => {
+                client.last_step = Some(number);
+                step_taken(client, world, step)
+            }
+            Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
+            Action::UseExit => (sites::use_exit(client, world), 0),
+        };
+        if !stayed {
+            return false;
+        }
+        let cost = if client.map == map {
+            cost
+        } else {
+            CHANGE_MAP_COST
+        };
+        client.energy.spend(tick, client.speed, cost);
+    }
+    true
+}
+
+/// Takes a step, if it is allowed: whether the client is still there, and what it
+/// cost, which is nothing if it was refused.
+fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Step) -> (bool, u32) {
+    match &client.visit {
+        Some(visit) => {
+            let from = visit.position();
+            let stayed = sites::stepped(client, step);
+            let to = client.visit.as_ref().map_or(from, Visit::position);
+            (
+                stayed,
+                if to == from {
+                    0
+                } else {
+                    site_step_cost(from, to)
+                },
+            )
+        }
+        None => {
+            let from = client.world_position();
+            let stayed = world_map::stepped(client, world, step);
+            if client.world_position() == from {
+                return (stayed, 0);
+            }
+            // Where it led before any wrapping round the planet.
+            let to = step.from(from);
+            let conditions = world.conditions();
+            let ends = (
+                world.ground.elevation(from.0, from.1, conditions),
+                world.ground.elevation(to.0, to.1, conditions),
+            );
+            (stayed, world_step_cost(from, to, ends))
+        }
+    }
 }
 
 /// Puts anyone but client `i` (who did the forgetting, and has been dealt with)
@@ -454,14 +556,22 @@ pub(crate) fn answer(
         // Meant for a map the player has since left.
         ClientMessage::Step { map, .. } if map != client.map => true,
         ClientMessage::Step { number, step, .. } => {
-            client.last_step = Some(number);
-            match client.visit {
-                Some(_) => sites::stepped(client, step),
-                None => world_map::stepped(client, world, step),
+            if client.waiting.len() < MOST_WAITING {
+                client.waiting.push_back(Action::Step { number, step });
+            } else {
+                // Its `Position` puts the client right.
+                client.last_step = Some(number);
             }
+            true
         }
-        ClientMessage::EnterSite { chunk } => sites::enter_poi(client, world, chunk),
-        ClientMessage::UseExit => sites::use_exit(client, world),
+        ClientMessage::EnterSite { chunk } => {
+            client.waiting.push_back(Action::EnterSite { chunk });
+            true
+        }
+        ClientMessage::UseExit => {
+            client.waiting.push_back(Action::UseExit);
+            true
+        }
         ClientMessage::SetPaused(_) if !options.pausable => {
             warn!("A client asked to pause, which this server doesn't allow");
             true
@@ -484,19 +594,32 @@ pub(crate) fn answer(
             y,
             rotation,
         } => {
+            let was_worn = client.inventory.is_worn(item);
+            let tick = world.action_clock.ticks();
             match client.inventory.move_item(item, to, x, y, rotation) {
-                Ok(()) => client.unsaved = true,
+                Ok(()) => {
+                    client.unsaved = true;
+                    if was_worn {
+                        client.spend_dressing(item, tick);
+                    }
+                }
                 Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
             }
+            client.update_speed(world.action_clock.ticks());
             client
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
         }
         ClientMessage::WearItem { item } => {
+            let tick = world.action_clock.ticks();
             match client.inventory.wear(item) {
-                Ok(_) => client.unsaved = true,
+                Ok(_) => {
+                    client.unsaved = true;
+                    client.spend_dressing(item, tick);
+                }
                 Err(why) => warn!("Refused wearing {item:?}: {why:?}"),
             }
+            client.update_speed(world.action_clock.ticks());
             client
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
@@ -507,6 +630,7 @@ pub(crate) fn answer(
             } else {
                 warn!("Refused destroying {item:?}, which isn't carried");
             }
+            client.update_speed(world.action_clock.ticks());
             client
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
@@ -553,6 +677,7 @@ pub(crate) fn answer(
                 Ok(()) => client.unsaved = true,
                 Err(item) => info!("No room for a new {:?}", item.kind),
             }
+            client.update_speed(world.action_clock.ticks());
             client
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
@@ -566,9 +691,12 @@ pub(crate) fn answer(
             client
                 .link
                 .send(&ServerMessage::Sheet(client.sheet.clone()))
-                && client
-                    .link
-                    .send(&ServerMessage::Inventory(client.inventory.clone()))
+                && {
+                    client.update_speed(world.action_clock.ticks());
+                    client
+                        .link
+                        .send(&ServerMessage::Inventory(client.inventory.clone()))
+                }
         }
         ClientMessage::DevSnowLine(snow_line) => {
             world.snow_line = snow_line;
@@ -655,6 +783,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
             client.inventory = inventory;
             client.sheet = start_sheet(sheet, client.starting_as.take(), &mut client.inventory);
             give_first_clothes(&mut client.inventory);
+            client.speed = client.sheet.speed(&client.inventory);
             client.unsaved = true;
         }
         Err(error) => return client.refuse_for_saves(&error),
@@ -715,6 +844,8 @@ pub(crate) mod tests {
         pub dev_tools: bool,
         /// Whether the server pauses when asked (it doesn't, unless set).
         pub pausable: bool,
+        /// Whether as much time passes as what is asked takes (it does, unless set).
+        pub time_passes: bool,
         next_step: u32,
     }
 
@@ -735,6 +866,7 @@ pub(crate) mod tests {
                 welcome: Vec::new(),
                 dev_tools: true,
                 pausable: false,
+                time_passes: true,
                 next_step: 0,
             };
             test.welcome = test.send(&[HELLO]);
@@ -761,9 +893,21 @@ pub(crate) mod tests {
                 if self.client.phase == Phase::Joining {
                     welcome(&mut self.client, &mut self.world, &options);
                 }
+                // A long walk in one go shouldn't fill what can wait.
+                self.let_time_pass();
             }
+            self.let_time_pass();
             self.client.send_position();
             std::iter::from_fn(|| self.end.receive().unwrap()).collect()
+        }
+
+        /// As much time as what was asked takes, unless a test is watching time.
+        fn let_time_pass(&mut self) {
+            act(&mut self.client, &mut self.world);
+            while self.time_passes && !self.client.waiting.is_empty() {
+                self.world.action_clock.advance(1);
+                act(&mut self.client, &mut self.world);
+            }
         }
 
         /// Takes steps (`(dx, dy)`) on the current map, numbered on from
@@ -978,6 +1122,95 @@ pub(crate) mod tests {
         assert_eq!(sheet(&test.welcome), Some(Sheet::new(CreatureKind::Human)));
         let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
         assert_eq!(sheet(&answers), Some(Sheet::new(CreatureKind::Giant)));
+    }
+
+    #[test]
+    fn steps_wait_for_energy_in_order_and_time_brings_them() {
+        let mut test = TestClient::new();
+        enter_a_room(&mut test);
+        test.time_passes = false;
+        let before = test.client.visit.as_ref().unwrap().position();
+        // Three straight steps: the first at once, the others waiting.
+        let east = (1, 0);
+        test.steps(&[east, east, east]);
+        let after_first = (before.0 + 1, before.1);
+        assert_eq!(test.client.visit.as_ref().unwrap().position(), after_first);
+        assert_eq!(test.client.waiting.len(), 2);
+
+        // A step costs 1⅔ ticks: one more after 2 ticks, and the last after 2 more.
+        test.world.action_clock.advance(1);
+        test.send(&[]);
+        assert_eq!(test.client.waiting.len(), 2);
+        test.world.action_clock.advance(1);
+        test.send(&[]);
+        assert_eq!(test.client.waiting.len(), 1);
+        test.world.action_clock.advance(2);
+        let answers = test.send(&[]);
+        assert!(test.client.waiting.is_empty());
+        assert_eq!(
+            test.client.visit.as_ref().unwrap().position(),
+            (before.0 + 3, before.1)
+        );
+        assert!(
+            answers
+                .iter()
+                .any(|answer| matches!(answer, ServerMessage::Position { .. }))
+        );
+    }
+
+    /// Into a made-up site's wide room, away from walls.
+    fn enter_a_room(test: &mut TestClient) {
+        test.send(&[ClientMessage::DevEnterSite {
+            kind: shared::poi::PoiKind::Castle,
+            seed: 1,
+            level: 0,
+            ruin: 0,
+        }]);
+        // Somewhere with room for three steps east.
+        let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(3);
+        test.send(&[ClientMessage::DevTeleport { x, y }]);
+    }
+
+    #[test]
+    fn exits_wait_behind_the_steps_leading_to_them() {
+        let mut test = TestClient::new();
+        test.time_passes = false;
+        // On the world map, where a chunk with a poi is further than one step.
+        test.send(&[ClientMessage::DevTeleport { x: 0, y: 0 }]);
+        test.client.energy.spend(0, 210, 1000);
+        test.send(&[ClientMessage::UseExit]);
+        assert_eq!(test.client.waiting.len(), 1);
+        assert!(matches!(test.client.waiting[0], Action::UseExit));
+    }
+
+    #[test]
+    fn too_many_steps_are_dropped_and_the_client_put_right() {
+        let mut test = TestClient::new();
+        test.time_passes = false;
+        let steps = vec![(1, 0); MOST_WAITING + 10];
+        let answers = test.steps(&steps);
+        assert!(test.client.waiting.len() <= MOST_WAITING);
+        assert!(
+            answers
+                .iter()
+                .any(|answer| matches!(answer, ServerMessage::Position { .. }))
+        );
+    }
+
+    #[test]
+    fn heavy_loads_slow_a_character_and_dressing_takes_time() {
+        let mut test = TestClient::new();
+        let normal = test.client.speed;
+        let stones = vec![give(ItemKind::Stone); 5];
+        test.send(&stones);
+        assert!(test.client.speed < normal);
+
+        let mut test = TestClient::new();
+        test.time_passes = false;
+        let answers = test.send(&[give(ItemKind::Hat)]);
+        let hat = inventory(&answers).pockets[0].item.id;
+        test.send(&[ClientMessage::WearItem { item: hat }]);
+        assert!(!test.client.energy.ready(0, test.client.speed));
     }
 
     #[test]
@@ -1472,6 +1705,7 @@ pub(crate) mod tests {
             world_map_version: shared::world::WORLD_MAP_VERSION,
             hour: 0,
             clock: 2.5,
+            action_ticks: 0,
         });
         let world = ServerWorld::open(seed, storage).unwrap();
         assert!((150.0..160.0).contains(&world.clock.minutes()));

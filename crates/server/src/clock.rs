@@ -4,6 +4,7 @@
 //! and its own thread saves it. It can be stopped (`pause`), for single player:
 //! anything going by the world's time should go by this.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -63,6 +64,10 @@ impl WorldClock {
     /// Starts it again from where it stopped.
     pub fn resume(&self) {
         self.set_paused(false);
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.0.lock().expect("never poisoned").paused
     }
 
     fn set_paused(&self, paused: bool) {
@@ -159,5 +164,25 @@ mod tests {
         assert!(so_far >= 1);
         drop(repeating);
         assert!(count.load(Ordering::Relaxed) > so_far);
+    }
+}
+
+/// Ticks of action time since the world began: what creatures' energy goes by
+/// (`shared::energy`). Apart from `WorldClock` as it has to be a whole number and
+/// dev tools can't move it. It stops when that is paused, and when the server is off.
+#[derive(Clone, Default)]
+pub struct ActionClock(Arc<AtomicU64>);
+
+impl ActionClock {
+    pub fn new(ticks: u64) -> Self {
+        Self(Arc::new(AtomicU64::new(ticks)))
+    }
+
+    pub fn ticks(&self) -> u64 {
+        self.0.load(Ordering::Relaxed)
+    }
+
+    pub fn advance(&self, ticks: u64) {
+        self.0.fetch_add(ticks, Ordering::Relaxed);
     }
 }

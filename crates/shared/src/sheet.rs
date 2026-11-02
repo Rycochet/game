@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::creature::{CreatureKind, Size};
+use crate::energy::NORMAL_SPEED;
 use crate::item::Inventory;
 
 /// A creature's base stats.
@@ -147,6 +148,25 @@ impl Sheet {
     }
 }
 
+impl Load {
+    /// How much of its speed something keeps, as a percentage.
+    pub fn speed_percent(self) -> u32 {
+        match self {
+            Self::Light => 100,
+            Self::Burdened => 75,
+            Self::Overloaded => 40,
+        }
+    }
+}
+
+impl Sheet {
+    /// How much energy it gains per tick: its kind's speed, slowed by what it carries.
+    pub fn speed(&self, carrying: &Inventory) -> u32 {
+        let kind = carrying.creature.def().speed;
+        (NORMAL_SPEED * kind / 100 * self.load(carrying).speed_percent() / 100).max(1)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,6 +229,20 @@ mod tests {
         assert_eq!(sheet.load(&stones(4)), Load::Burdened);
         assert_eq!(sheet.load(&stones(6)), Load::Burdened);
         assert_eq!(sheet.load(&stones(7)), Load::Overloaded);
+    }
+
+    #[test]
+    fn weight_and_kind_decide_the_speed() {
+        let sheet = Sheet::new(CreatureKind::Human);
+        assert_eq!(sheet.speed(&stones(1)), NORMAL_SPEED);
+        assert_eq!(sheet.speed(&stones(5)), NORMAL_SPEED * 3 / 4);
+        assert_eq!(sheet.speed(&stones(7)), NORMAL_SPEED * 2 / 5);
+        let horse = Inventory {
+            creature: CreatureKind::Horse,
+            ..Inventory::default()
+        };
+        let sheet = Sheet::new(CreatureKind::Horse);
+        assert_eq!(sheet.speed(&horse), NORMAL_SPEED * 3 / 2);
     }
 
     #[test]

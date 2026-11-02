@@ -15,6 +15,8 @@ Everything can be done with a mouse or by touch, and on touch screens a tap is a
 | Travel somewhere | Click the place | Tap the place |
 | Enter a place, take stairs, leave a site | Click it, and walk there | Tap it |
 
+How fast you go depends on your kind of creature, what you carry, and the ground: the heavier the load, the slower everything is.
+
 ## Camera
 
 | Action | Keyboard and mouse | Touch |
