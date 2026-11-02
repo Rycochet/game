@@ -11,17 +11,17 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 - **Spacing:** gaps and padding are multiples of 4 px. Edges are exempt.
 - **Shape:** square corners for now.
 - **Raised things:** lit along the top and left, shaded along the bottom and right. Panels, tooltips and open lists also have one soft shadow.
-- **Feedback (PR 2):** every clickable thing has hovered and pressed looks, and a ripple from the point pressed. The hover look doubles as the focus look later.
+- **Feedback:** every clickable thing has hovered and pressed looks, and a ripple from the point pressed. The hover look doubles as the focus look later.
 - **Input:** whatever a mouse can do, a finger can do. Gamepad later. Tab focus and screen readers are not planned for now.
 
 ## Inputs
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Button | have; styles PR 2 | Normal, selected, active, disabled. PR 2 adds a main style (one per area) and a quiet one. No spinner. |
-| Icon button | have; PR 2 | Square, with padding and an optional tooltip naming it. |
-| Close button | have; PR 2 | A normal icon button. |
-| Checkbox | have; PR 2 | A whole clickable row with a drawn tick. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
+| Button | have | Normal, selected, active, disabled. A main style (one per area) and a quiet one with no box until hovered. No spinner. |
+| Icon button | have | Square, with padding and an optional tooltip naming it. |
+| Close button | have | A normal raised button, with a letter X. |
+| Checkbox | have | A whole clickable row with a drawn tick. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
 | Toggle row | PR 3 | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
 | Slider | have; PR 3 | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
 | Text box | have; PR 3 | Sunken, focus border, error state, optional label above. No floating label. |
@@ -34,7 +34,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Piece | Status | Here |
 | --- | --- | --- |
 | Text | have | `TextSize`. |
-| Tooltip | have | One dark look. A delay on buttons (with icon button tooltips, PR 2), none on items or what is under the pointer. Never the only way to learn something: fingers have no hover. |
+| Tooltip | have | One dark look. A delay on buttons, none on items or what is under the pointer. Never the only way to learn something: fingers have no hover. |
 | Icon | have | Pictures, or drawn in code. |
 | Scroll area | have | Wheel, finger or bar. |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
@@ -56,7 +56,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Panel | have | One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. |
+| Panel | have | One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. |
 | Full-screen layer | have | 90% of the window, 75% for one above it. |
 | Tabs | PR 3 | Folder-style, for switching between views of one thing (Settings). |
 | Menu | later | Right-click item menu: use, split, drop. |

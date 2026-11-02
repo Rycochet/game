@@ -13,8 +13,9 @@ use crate::connection::ToServer;
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::{
-    ButtonPressed, ButtonState, CLOSE_PIXELS, INK, Pressable, TextSize, WidgetSystems, panel_title,
-    spawn_button, spawn_close_button, spawn_icon_button, spawn_sized_layer, spawn_tabs,
+    ButtonPressed, ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, TextSize,
+    WidgetSystems, panel_title, spawn_button, spawn_close_button, spawn_icon_button,
+    spawn_sized_layer, spawn_tabs,
 };
 
 const GEAR_BUTTON: f32 = 34.0;
@@ -166,6 +167,7 @@ fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                 GearButton,
                 Action::Open,
                 Pressable,
+                ButtonTooltip("Menu".into()),
             ));
         });
     spawn_main_panel(&mut commands);
@@ -266,14 +268,17 @@ fn spawn_requester(commands: &mut Commands) {
                 ..default()
             })
             .with_children(|row| {
-                for (label, action) in [("Yes, quit", Action::ReallyQuit), ("No", Action::Back)] {
+                for (label, action, style) in [
+                    ("Yes, quit", Action::ReallyQuit, ButtonStyle::Main),
+                    ("No", Action::Back, ButtonStyle::Plain),
+                ] {
                     let node = Node {
                         width: px(MENU_WIDTH / 2.0 - GAP),
                         height: px(BUTTON_ROW),
                         ..default()
                     };
                     spawn_button(row, ButtonState::Normal, label, FONT, node)
-                        .insert((action, Pressable));
+                        .insert((action, style, Pressable));
                 }
             });
     });

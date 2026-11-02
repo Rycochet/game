@@ -15,10 +15,10 @@ use super::panels::GenerateKind;
 use crate::common::{GameView, TouchGesture};
 use crate::minimap::FullMap;
 use crate::widgets::{
-    ButtonPressed, ButtonState, HighlightStep, PANEL_EDGE, Pressable, SoftKey, SoftKeyPressed,
-    TextBox, TextEdited, TextFocus, TextSize, layer_share, matches_filter, next_highlight,
-    panel_title, spawn_button, spawn_check_button, spawn_close_button, spawn_fullscreen_layer,
-    spawn_icon_button, spawn_text_box,
+    ButtonPressed, ButtonState, ButtonTooltip, HighlightStep, PANEL_EDGE, Pressable, SoftKey,
+    SoftKeyPressed, TextBox, TextEdited, TextFocus, TextSize, layer_share, matches_filter,
+    next_highlight, panel_title, spawn_button, spawn_check_button, spawn_close_button,
+    spawn_fullscreen_layer, spawn_icon_button, spawn_text_box,
 };
 
 /// How long a toggled entry stays on show before the menu closes.
@@ -193,8 +193,11 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
                 height: px(WARNING_BUTTON),
                 ..default()
             };
-            spawn_icon_button(holder, ButtonState::Normal, icon, node)
-                .insert((WarningButton, Pressable));
+            spawn_icon_button(holder, ButtonState::Normal, icon, node).insert((
+                WarningButton,
+                Pressable,
+                ButtonTooltip("Debug Menu".into()),
+            ));
         });
     spawn_layer(&mut commands, ACTIONS, "Debug Menu");
     spawn_layer(&mut commands, SUBMENU, DebugAction::GeneratePoi.name());

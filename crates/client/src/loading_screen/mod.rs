@@ -235,7 +235,8 @@ fn fit_title(
     mut last: Local<Vec2>,
 ) {
     let size = window.size();
-    if size != *last {
+    // Minimised: nothing to fit, and no size of writing would.
+    if size != *last && size.min_element() >= 1.0 {
         *last = size;
         title.font_size = title_font_size(size).into();
     }

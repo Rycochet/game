@@ -4,6 +4,7 @@
 
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
+use bevy::window::PrimaryWindow;
 use shared::item::{Item, ItemKind, Quality, Rotation, Shape};
 
 use super::set_edge::{SetEdge, set_edge};
@@ -364,11 +365,12 @@ pub(super) fn name_item_at_pointer(
 /// Shows the name asked for this frame, on a dark box so every colour can be read.
 pub(super) fn show_item_tooltip(
     mut tooltip: ResMut<ItemTooltip>,
-    name_box: Single<(&mut Node, &mut Visibility), With<NameBox>>,
+    window: Single<&Window, With<PrimaryWindow>>,
+    name_box: Single<(&mut Node, &mut Visibility, &ComputedNode), With<NameBox>>,
     text: Single<(&mut Text, &mut TextColor), With<NameText>>,
     edge: Single<(&mut SetEdge, &mut Visibility), (With<NameEdge>, Without<NameBox>)>,
 ) {
-    let (mut node, mut visibility) = name_box.into_inner();
+    let (mut node, mut visibility, computed) = name_box.into_inner();
     let Some(tip) = tooltip.0.take() else {
         visibility.set_if_neq(Visibility::Hidden);
         return;
@@ -388,8 +390,11 @@ pub(super) fn show_item_tooltip(
     colour.set_if_neq(TextColor(
         tip.quality.map_or(NO_QUALITY_NAME, quality_colour),
     ));
-    node.left = px(tip.at.x);
-    node.top = px(tip.at.y);
+    // Kept on the screen, by the size it last had.
+    let size = computed.size() * computed.inverse_scale_factor;
+    let at = tip.at.min(window.size() - size).max(Vec2::ZERO);
+    node.left = px(at.x);
+    node.top = px(at.y);
 }
 
 #[cfg(test)]

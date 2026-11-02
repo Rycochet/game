@@ -3,6 +3,7 @@
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
 mod dropdown;
+mod feedback;
 mod filter_list;
 mod fullscreen;
 mod item;
@@ -22,6 +23,7 @@ use bevy::prelude::*;
 use crate::common::PointerSystems;
 
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
+pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
     darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer, spawn_sized_layer,
@@ -62,7 +64,12 @@ const CLOSE_FONT: TextSize = TextSize::Large;
 const TOOLTIP_EDGE: f32 = 1.0;
 const BUTTON_BORDER: f32 = 2.0;
 const CHECK_PIXELS: f32 = 18.0;
-const CHECK_MARK_PIXELS: f32 = 10.0;
+/// The two strokes of a tick: thick, then each one's length, where it goes and how
+/// it is turned.
+const TICK_THICKNESS: f32 = 2.0;
+const TICK_STROKES: [(f32, f32, f32, f32); 2] = [(6.0, 1.0, 7.0, 45.0), (10.0, 4.0, 6.0, -45.0)];
+/// Between the edge of a button and its picture.
+const ICON_PADDING: f32 = 4.0;
 const CHECK_GAP: f32 = 8.0;
 
 pub struct WidgetsPlugin;
@@ -102,10 +109,12 @@ impl Plugin for WidgetsPlugin {
                     .chain(),
             )
             .init_resource::<moveable::Dragging>()
+            .init_resource::<feedback::Pointed>()
             .init_resource::<slider::HeldSlider>()
             .add_systems(
                 PreUpdate,
                 (
+                    feedback::track_pointer,
                     text_box::note_press,
                     slider::drag_sliders,
                     scroll::scroll_areas,
@@ -121,9 +130,9 @@ impl Plugin for WidgetsPlugin {
             .add_systems(
                 Update,
                 (
-                    // First, to restyle them in the same frame.
-                    tabs::press_tabs.before(show_button_states),
-                    show_button_states,
+                    tabs::press_tabs,
+                    feedback::spread_ripples,
+                    feedback::show_button_tooltips,
                     moveable::place_panels,
                     scroll::show_scroll_bars,
                     slider::hold_sliders,
@@ -132,6 +141,11 @@ impl Plugin for WidgetsPlugin {
                     text_box::place_soft_keyboard,
                     dropdown::show_dropdowns,
                 ),
+            )
+            .add_systems(
+                PostUpdate,
+                (feedback::show_button_looks, feedback::show_hovered_edges)
+                    .before(bevy::ui::UiSystems::Layout),
             );
     }
 }
@@ -315,7 +329,8 @@ pub fn spawn_button<'a>(
     button
 }
 
-/// A button showing a picture rather than words, which fills it.
+/// A button showing a picture rather than words. Give it a `ButtonTooltip` to say
+/// what it is.
 pub fn spawn_icon_button<'a>(
     parent: &'a mut ChildSpawnerCommands,
     state: ButtonState,
@@ -327,6 +342,7 @@ pub fn spawn_icon_button<'a>(
         state,
         Node {
             border: UiRect::all(px(BUTTON_BORDER)),
+            padding: UiRect::all(px(ICON_PADDING)),
             ..node
         },
         BackgroundColor(background),
@@ -378,14 +394,22 @@ pub fn spawn_check_button<'a>(
         });
         slot.insert(BorderColor::from(INK));
         if checked == Some(true) {
-            slot.with_child((
-                Node {
-                    width: px(CHECK_MARK_PIXELS),
-                    height: px(CHECK_MARK_PIXELS),
-                    ..default()
-                },
-                BackgroundColor(INK),
-            ));
+            slot.with_children(|slot| {
+                for (length, left, top, degrees) in TICK_STROKES {
+                    slot.spawn((
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: px(left),
+                            top: px(top),
+                            width: px(length),
+                            height: px(TICK_THICKNESS),
+                            ..default()
+                        },
+                        UiTransform::from_rotation(Rot2::degrees(degrees)),
+                        BackgroundColor(INK),
+                    ));
+                }
+            });
         }
         inside.spawn((Text::new(label), size.font(), TextColor(text)));
     });
@@ -397,7 +421,9 @@ pub fn spawn_close_button<'a>(
     parent: &'a mut ChildSpawnerCommands,
     node: Node,
 ) -> EntityCommands<'a> {
+    let (background, border, _) = ButtonState::Normal.colours();
     let mut button = parent.spawn((
+        ButtonState::Normal,
         Node {
             width: px(CLOSE_PIXELS),
             height: px(CLOSE_PIXELS),
@@ -406,33 +432,9 @@ pub fn spawn_close_button<'a>(
             align_items: AlignItems::Center,
             ..node
         },
-        BorderColor::from(INK),
+        BackgroundColor(background),
+        border,
     ));
     button.with_child((Text::new("X"), CLOSE_FONT.font(), TextColor(INK)));
     button
-}
-
-/// Makes buttons look as their `ButtonState` says, when it changes.
-fn show_button_states(
-    mut buttons: Query<
-        (
-            &ButtonState,
-            &mut BackgroundColor,
-            &mut BorderColor,
-            &Children,
-        ),
-        Changed<ButtonState>,
-    >,
-    mut labels: Query<&mut TextColor>,
-) {
-    for (state, mut background, mut border, children) in &mut buttons {
-        let (new_background, new_border, new_text) = state.colours();
-        background.0 = new_background;
-        *border = new_border;
-        for &child in children {
-            if let Ok(mut text) = labels.get_mut(child) {
-                text.0 = new_text;
-            }
-        }
-    }
 }
