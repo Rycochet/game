@@ -64,6 +64,30 @@ impl Size {
         Self::Giant,
     ];
 
+    /// What it is called.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Tiny => "Tiny",
+            Self::Small => "Small",
+            Self::Medium => "Medium",
+            Self::Large => "Large",
+            Self::Huge => "Huge",
+            Self::Giant => "Giant",
+        }
+    }
+
+    /// How big it is beside `Medium`, in quarters, to keep to whole numbers.
+    pub fn quarters(self) -> u32 {
+        match self {
+            Self::Tiny => 2,
+            Self::Small => 3,
+            Self::Medium => 4,
+            Self::Large => 5,
+            Self::Huge => 6,
+            Self::Giant => 8,
+        }
+    }
+
     /// `by` sizes up or, negative, down, stopping at the ends.
     pub fn stepped(self, by: i8) -> Self {
         let last = Self::ALL.len() as i8 - 1;

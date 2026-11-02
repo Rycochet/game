@@ -12,7 +12,7 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 
 - `CreatureKind::{ALL, def()}`, `CreatureDef { name, weight (grams), size, pockets, body, speed, uses_stairs, playable, stats, skills, abilities, looks }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
 - `BodyPart { location, layers, places }`: which layers a location takes, and how many things taking one place fit there.
-- `Layer::{Skin, Middle, Outer}`, `Location`, `Size::{Tiny..Giant}` (`stepped`, `apart`).
+- `Layer::{Skin, Middle, Outer}`, `Location`, `Size::{Tiny..Giant}` (`name`, `quarters`, `stepped`, `apart`).
 
 ## Depends on
 

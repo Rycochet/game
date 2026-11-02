@@ -25,7 +25,7 @@ impl Held {
 
     /// The same for something held that isn't carried.
     pub fn turned_as(self, item: &Item) -> Self {
-        let shape = item.kind.def().shape.turned(self.rotation);
+        let shape = item.shape().turned(self.rotation);
         let quarter = Rotation::Quarter;
         Self {
             rotation: self.rotation.next(),

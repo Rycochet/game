@@ -521,3 +521,7 @@ Owner's design. Every shop has a keeper: a mob with an `Id` of its own, in the l
 ## 2026-11-02: God mode is one debug flag for everything it comes to do
 
 The owner asked for a God Mode toggle, with more to be added to it later. It is one dev tools flag (`DevGodMode`, `Client::god_mode`, `common::GodMode`), per connection and not saved, which new powers check rather than having messages or menu entries of their own. For now mobs take no notice of the player, and the player walks through them. Claude's choice: walking through swaps places, as with friendly mobs, so only one still stands on a cell.
+
+## 2026-11-02: An item's size sets how many cells it takes
+
+Owner's rule, the first step towards generated 3D items. Each side of an item's shape is multiplied by its size's value, rounding down when enlarging and up when reducing, so everything 1 × 1 stays so until Giant, which is 2 × 2. An item's picture and its place in a grid look the same at any size; only its name, and later the item popup, say so. Claude's choices: the values are the client's token sizes (0.5, 0.75, 1, 1.25, 1.5, 2), with shared `Giant` as the top one the owner called titan; sides stop at 8, as much as a `Shape` holds, so only a Giant sword is cut short (2 × 8); gaps scale in proportion. A bag's grid, its limits and all weights stay as they are for now, as scaling containers is to be decided, and bags aren't rolled at other sizes until it is. Saved items that now overlap are left as they are, being harmless, until an item wipe once the item plans are finalised.

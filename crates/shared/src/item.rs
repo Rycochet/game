@@ -94,6 +94,31 @@ impl Shape {
         }
     }
 
+    /// For something of this size rather than `Medium`: each side is multiplied,
+    /// rounding down when enlarging and up when reducing, to at most
+    /// `MAX_SHAPE_SIDE`. Gaps stay where they were, in proportion.
+    pub fn scaled(self, size: Size) -> Self {
+        let (width, height) = (
+            scaled_side(self.width, size),
+            scaled_side(self.height, size),
+        );
+        let mut cells = 0;
+        for y in 0..height {
+            for x in 0..width {
+                let from_x = x as u32 * self.width as u32 / width as u32;
+                let from_y = y as u32 * self.height as u32 / height as u32;
+                if self.has(from_x as u8, from_y as u8) {
+                    cells |= 1 << (y as u32 * 8 + x as u32);
+                }
+            }
+        }
+        Self {
+            width,
+            height,
+            cells,
+        }
+    }
+
     /// Whether something of this shape can go inside something whose outside is
     /// `outer`: it has fewer cells, and fits within its sides, turned or not.
     /// Fewer every time is what stops things nesting for ever.
@@ -625,9 +650,20 @@ impl Item {
         }
     }
 
-    /// What it is called: its own name, or its kind's.
-    pub fn name(&self) -> &str {
-        self.name.as_deref().unwrap_or(self.kind.def().name)
+    /// What it is called: its own name, or its kind's, saying its size unless
+    /// that is `Medium`.
+    pub fn name(&self) -> String {
+        let kind = self.kind.def().name;
+        match (&self.name, self.made.size) {
+            (Some(name), _) => name.clone(),
+            (None, Size::Medium) => kind.to_owned(),
+            (None, size) => format!("{} {kind}", size.name()),
+        }
+    }
+
+    /// The cells it takes up, by its kind and the size it was made.
+    pub fn shape(&self) -> Shape {
+        self.kind.def().shape.scaled(self.made.size)
     }
 
     /// What it weighs with everything in it, in grams.
@@ -659,6 +695,17 @@ fn weight_of(placed: &[Placed]) -> u32 {
     placed.iter().map(|placed| placed.item.total_weight()).sum()
 }
 
+/// One side of a shape at this size: see `Shape::scaled`.
+fn scaled_side(side: u8, size: Size) -> u8 {
+    let side = side as u32 * size.quarters();
+    let rounded = if size < Size::Medium {
+        side.div_ceil(4)
+    } else {
+        side / 4
+    };
+    rounded.min(MAX_SHAPE_SIDE as u32) as u8
+}
+
 /// An item in a grid: the cell its shape's top left is on, and how it is turned.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Placed {
@@ -671,7 +718,7 @@ pub struct Placed {
 impl Placed {
     /// Its shape as it lies.
     pub fn shape(&self) -> Shape {
-        self.item.kind.def().shape.turned(self.rotation)
+        self.item.shape().turned(self.rotation)
     }
 
     /// The grid cells it takes up.
@@ -874,11 +921,11 @@ impl Inventory {
         if item.holds_or_is(target) {
             return Err(MoveRefused::IntoItself);
         }
-        let target_def = self.find(target).ok_or(MoveRefused::NoSuchGrid)?.kind.def();
-        if target_def.container.is_none() {
+        let target_item = self.find(target).ok_or(MoveRefused::NoSuchGrid)?;
+        if target_item.kind.def().container.is_none() {
             return Err(MoveRefused::NoSuchGrid);
         }
-        if !item.kind.def().shape.smaller_than(target_def.shape) {
+        if !item.shape().smaller_than(target_item.shape()) {
             return Err(MoveRefused::TooBig);
         }
         let mut chain = self
@@ -930,7 +977,7 @@ impl Inventory {
             return Err(MoveRefused::Covered);
         }
         self.may_hold(holder, item)?;
-        let shape = item.kind.def().shape.turned(rotation);
+        let shape = item.shape().turned(rotation);
         if self.grid(holder).is_none() {
             return Err(MoveRefused::NoSuchGrid);
         }
@@ -954,7 +1001,7 @@ impl Inventory {
         if self.grid(holder).is_none() {
             return Err(MoveRefused::NoSuchGrid);
         }
-        let shape = item.kind.def().shape.turned(rotation);
+        let shape = item.shape().turned(rotation);
         if self.has_room(holder, shape, x, y, None) {
             Ok(())
         } else {
@@ -990,7 +1037,7 @@ impl Inventory {
         turned_from: Rotation,
     ) -> Option<(u8, u8, Rotation)> {
         self.may_hold(holder, item).ok()?;
-        self.first_room(holder, item.kind.def().shape, turned_from, None)
+        self.first_room(holder, item.shape(), turned_from, None)
     }
 
     /// Moves a carried item here, if it can go.
@@ -1117,13 +1164,13 @@ impl Inventory {
     ) -> Option<(u8, u8, Rotation)> {
         let item = self.find(id)?;
         self.may_hold(holder, item).ok()?;
-        self.first_room(holder, item.kind.def().shape, turned_from, Some(id))
+        self.first_room(holder, item.shape(), turned_from, Some(id))
     }
 
     /// Puts a new item in the first place it fits in the pockets. Gives it back
     /// if there is no room.
     pub fn give(&mut self, item: Item) -> Result<(), Item> {
-        let shape = item.kind.def().shape;
+        let shape = item.shape();
         match self.first_room(Holder::Pockets, shape, Rotation::None, None) {
             Some((x, y, rotation)) => {
                 self.pockets.push(Placed {
@@ -1295,6 +1342,123 @@ mod tests {
         let mut sorted = names.clone();
         sorted.sort();
         assert_eq!(names, sorted);
+    }
+
+    fn sized(n: u128, kind: ItemKind, size: Size) -> Item {
+        Item {
+            made: Made::for_body(kind, size, Some(10), false),
+            ..Item::new(id(n), kind)
+        }
+    }
+
+    fn sides(kind: ItemKind, size: Size) -> (u8, u8) {
+        let shape = sized(1, kind, size).shape();
+        (shape.width, shape.height)
+    }
+
+    #[test]
+    fn sizes_round_down_going_up_and_up_going_down() {
+        let ring = |size| sides(ItemKind::Ring, size);
+        for size in [
+            Size::Tiny,
+            Size::Small,
+            Size::Medium,
+            Size::Large,
+            Size::Huge,
+        ] {
+            assert_eq!(ring(size), (1, 1), "{size:?}");
+        }
+        assert_eq!(ring(Size::Giant), (2, 2));
+
+        let sword = |size| sides(ItemKind::Sword, size);
+        assert_eq!(sword(Size::Tiny), (1, 3));
+        assert_eq!(sword(Size::Small), (1, 4));
+        assert_eq!(sword(Size::Medium), (1, 5));
+        assert_eq!(sword(Size::Large), (1, 6));
+        assert_eq!(sword(Size::Huge), (1, 7));
+    }
+
+    #[test]
+    fn no_side_passes_the_most_a_shape_can_hold() {
+        assert_eq!(sides(ItemKind::Sword, Size::Giant), (2, MAX_SHAPE_SIDE));
+    }
+
+    #[test]
+    fn every_kind_keeps_its_cells_and_its_medium_shape_at_every_size() {
+        for kind in ItemKind::ALL {
+            assert_eq!(kind.def().shape.scaled(Size::Medium), kind.def().shape);
+            for size in Size::ALL {
+                let shape = kind.def().shape.scaled(size);
+                assert!(shape.size() > 0, "{kind:?} {size:?}");
+                assert!(shape.width <= MAX_SHAPE_SIDE && shape.height <= MAX_SHAPE_SIDE);
+            }
+        }
+    }
+
+    #[test]
+    fn a_gap_in_a_shape_grows_with_it() {
+        let shape = ItemKind::Boomerang.def().shape.scaled(Size::Giant);
+        assert_eq!((shape.width, shape.height), (4, 4));
+        assert_eq!(shape.size(), 12);
+        assert!(!shape.has(2, 0) && !shape.has(3, 1));
+        assert!(shape.has(0, 0) && shape.has(3, 3));
+    }
+
+    #[test]
+    fn a_name_says_the_size_unless_it_is_medium_or_its_own() {
+        assert_eq!(sized(1, ItemKind::Ring, Size::Medium).name(), "Ring");
+        assert_eq!(sized(1, ItemKind::Ring, Size::Giant).name(), "Giant Ring");
+        let named = Item {
+            name: Some("The Band".to_owned()),
+            ..sized(1, ItemKind::Ring, Size::Giant)
+        };
+        assert_eq!(named.name(), "The Band");
+    }
+
+    #[test]
+    fn the_rules_go_by_the_size_it_was_made() {
+        let mut inventory = carrying(&[ItemKind::Pouch]);
+        let giant = sized(2, ItemKind::Ring, Size::Giant);
+        // As big as the pouch's outside, so it can't go inside.
+        assert_eq!(
+            inventory.check_add(&giant, Holder::Inside(id(1)), 0, 0, NONE),
+            Err(MoveRefused::TooBig)
+        );
+        // Beside the pouch, in the pockets, its second row and column count.
+        assert_eq!(
+            inventory.check_add(&giant, Holder::Pockets, 5, 0, NONE),
+            Err(MoveRefused::NoRoom)
+        );
+        inventory.add(giant, Holder::Pockets, 2, 0, NONE).unwrap();
+        assert_eq!(
+            inventory.check_add(
+                &Item::new(id(3), ItemKind::Ring),
+                Holder::Pockets,
+                3,
+                1,
+                NONE
+            ),
+            Err(MoveRefused::NoRoom)
+        );
+    }
+
+    #[test]
+    fn things_saved_smaller_than_they_now_are_can_still_be_moved_apart() {
+        // Saved at one cell each before sizes changed shapes: now they overlap.
+        let mut inventory = Inventory::default();
+        for (n, x) in [(1, 0), (2, 1)] {
+            inventory.pockets.push(Placed {
+                item: sized(n, ItemKind::Ring, Size::Giant),
+                x,
+                y: 0,
+                rotation: NONE,
+            });
+        }
+        inventory
+            .move_item(id(2), Holder::Pockets, 3, 0, NONE)
+            .unwrap();
+        assert_eq!(inventory.pockets.len(), 2);
+        assert!(inventory.find(id(1)).is_some() && inventory.find(id(2)).is_some());
     }
 
     #[test]

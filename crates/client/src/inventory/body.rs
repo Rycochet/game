@@ -78,7 +78,7 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
     let covered = carried.covered_by(item.id).is_some();
     let tint = item_colour(item.kind).with_alpha(if covered { COVERED_ALPHA } else { 1.0 });
     // Held by a cell it has, and it is never turned while worn.
-    let grip = item.kind.def().shape.cells().next().unwrap_or((0, 0));
+    let grip = item.shape().cells().next().unwrap_or((0, 0));
     let cell = ItemCell {
         id: item.id,
         rotation: Rotation::None,

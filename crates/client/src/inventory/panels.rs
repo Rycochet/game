@@ -349,7 +349,7 @@ pub(super) fn show_bins(
         let cell = ItemCell {
             id: item.id,
             rotation: Rotation::None,
-            grip: item.kind.def().shape.cells().next().unwrap_or((0, 0)),
+            grip: item.shape().cells().next().unwrap_or((0, 0)),
         };
         let kind = item.kind;
         commands.entity(bin).with_children(|bin| {
@@ -531,7 +531,7 @@ pub(super) fn show_aim(
             y,
             allowed,
         } => {
-            let shape = item.kind.def().shape.turned(rotation);
+            let shape = item.shape().turned(rotation);
             let cells: Vec<_> = shape
                 .cells()
                 .map(|(cell_x, cell_y)| (x + cell_x as i32, y + cell_y as i32))
@@ -590,7 +590,7 @@ pub(super) fn show_held(
         *drawn = now;
         commands.entity(entity).despawn_related::<Children>();
         let look = ItemLook::of(item);
-        let shape = item.kind.def().shape.turned(held.rotation);
+        let shape = item.shape().turned(held.rotation);
         commands.entity(entity).with_children(|parent| {
             spawn_item_cells(parent, look, shape, (0.0, 0.0), false, |_, _| Floating);
         });
