@@ -36,4 +36,6 @@ Clearing a browser's data for a server's address, or losing `guest_tokens.ron`, 
 
 Copy the server's folder while the server is stopped. Saves are written often while it runs, every few seconds, and everything is saved when it stops. In Docker, back up the volume.
 
-If a site or character file can't be read, the server renames it to end in `.ron.broken` and starts that one again, so nothing is lost for good.
+If a site, character or account file makes no sense, the server renames it to end in `.ron.broken` and starts that one again, so nothing is lost for good.
+
+If a file can't be reached at all, because of its permissions or a failing disk, it is left alone, and the player is told to try again soon. If saves can't be written, the server keeps trying while it runs, and logs an error. Stopping waits up to 8 seconds for them.

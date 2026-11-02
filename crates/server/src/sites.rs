@@ -161,6 +161,9 @@ pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitS
         client.unsaved = true;
         return world_map::look_around(client, world);
     };
+    if let Err(error) = world.open_site(id, poi.kind) {
+        return client.refuse_for_saves(&error);
+    }
     // Their map is the version they knew (a save from before these were
     // recorded knew the one saved with the site).
     let saved_version = world.site(id, poi.kind).version;
@@ -243,6 +246,9 @@ fn enter_site(
     index: u32,
     arrival: Arrival,
 ) -> bool {
+    if let Err(error) = world.open_site(id, poi.kind) {
+        return client.refuse_for_saves(&error);
+    }
     let Some(site) = make_site(world, &poi, id) else {
         error!("{id:?} can't be made by this server");
         return true;
@@ -1430,7 +1436,7 @@ mod tests {
         // ...and the server's, on disk too.
         let answers = test.send(&[ClientMessage::DevForgetMapOnServer]);
         assert_eq!(answers[0], ServerMessage::ForgetWorldMap);
-        assert!(test.world.storage.load_site(id).is_none());
+        assert!(test.world.storage.load_site(id).unwrap().is_none());
         assert!(test.world.site(id, PoiKind::Castle).levels.is_empty());
     }
 

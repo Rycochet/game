@@ -55,6 +55,9 @@ impl Connections {
     }
 }
 
+/// What a client is told when saves can't be reached. Nothing has been lost.
+const SAVES_TROUBLE: &str = "the server can't reach its saves just now: try again soon";
+
 /// How far a client has got, from connecting to playing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Phase {
@@ -170,6 +173,15 @@ impl Client {
         self.unsaved = false;
     }
 
+    /// Saves can't be reached, so nothing about this client can be trusted to
+    /// load: logs why, tells it, and answers `false` so that it is disconnected.
+    pub(crate) fn refuse_for_saves(&self, error: &str) -> bool {
+        error!("Refusing a client: {error}");
+        self.link
+            .send(&ServerMessage::Refused(SAVES_TROUBLE.into()));
+        false
+    }
+
     /// Disconnects it: the player leaves their level, and the character is
     /// saved.
     fn disconnect(&mut self, world: &mut ServerWorld) {
@@ -266,8 +278,10 @@ fn join(
             other.disconnect(world);
         }
     }
-    if let (Some(account), Some(character)) = (&account, &character) {
-        accounts.played(account, character);
+    if let (Some(account), Some(character)) = (&account, &character)
+        && let Err(error) = accounts.played(account, character)
+    {
+        return clients[i].refuse_for_saves(&error);
     }
     welcome(&mut clients[i], world, options)
 }
@@ -303,21 +317,24 @@ pub(crate) fn tell_the_time(connections: Res<Connections>, mut world: ResMut<Ser
 /// A client has logged in: a guest goes straight to their one character, anyone
 /// else is told theirs to choose from.
 fn logged_in(client: &mut Client, key: &LoginKey, accounts: &mut Accounts) -> bool {
-    let id = accounts.log_in(key);
-    let account = accounts.account(&id);
-    let answered = if account.guest {
-        client.character_id = Some(accounts.guest_character(&id));
-        client.phase = Phase::Joining;
-        true
-    } else {
-        client.phase = Phase::Choosing;
-        client.link.send(&ServerMessage::Characters {
-            list: account.characters.clone(),
-            can_create: account.characters.len() < MAX_CHARACTERS,
-        })
-    };
-    client.account = Some(id);
-    answered
+    let answered = (|| {
+        let id = accounts.log_in(key)?;
+        let account = accounts.account(&id)?;
+        let answered = if account.guest {
+            client.character_id = Some(accounts.guest_character(&id)?);
+            client.phase = Phase::Joining;
+            true
+        } else {
+            client.phase = Phase::Choosing;
+            client.link.send(&ServerMessage::Characters {
+                list: account.characters.clone(),
+                can_create: account.characters.len() < MAX_CHARACTERS,
+            })
+        };
+        client.account = Some(id);
+        Ok::<bool, String>(answered)
+    })();
+    answered.unwrap_or_else(|error| client.refuse_for_saves(&error))
 }
 
 /// Answers one message; `false` if the client should be disconnected.
@@ -377,7 +394,10 @@ pub(crate) fn answer(
                 return refuse(client, "not the time to choose a character".into());
             };
             // A client can ask for anything: only its own will do.
-            let characters = &accounts.account(&account).characters;
+            let characters = match accounts.account(&account) {
+                Ok(account) => &account.characters,
+                Err(error) => return client.refuse_for_saves(&error),
+            };
             if !characters.iter().any(|character| character.id == id) {
                 return refuse(client, "that isn't one of this account's characters".into());
             }
@@ -514,13 +534,23 @@ pub(crate) fn answer(
 /// Loads the character (or starts a new one), and tells the client the
 /// world and where they are; back into the site level they were on, if any.
 fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions) -> bool {
-    client.phase = Phase::Playing;
     let id = client
         .character_id
         .as_ref()
         .expect("decided before joining");
-    (client.character, client.other_worlds) = world.storage.load_character(id, world.seed.id());
-    client.inventory = world.storage.load_inventory(id);
+    let loaded = world
+        .storage
+        .load_character(id, world.seed.id())
+        .and_then(|character| Ok((character, world.storage.load_inventory(id)?)));
+    // Not `Playing` yet, so nothing blank can be saved over the real character.
+    match loaded {
+        Ok((character, inventory)) => {
+            (client.character, client.other_worlds) = character;
+            client.inventory = inventory;
+        }
+        Err(error) => return client.refuse_for_saves(&error),
+    }
+    client.phase = Phase::Playing;
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
@@ -546,13 +576,20 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::Ordering;
+    use std::time::Duration;
+
     use shared::item::{Holder, ItemKind, Rotation};
     use shared::movement::{Step, steps_between};
+    use shared::poi::PoiKind;
     use shared::protocol::{ClientLink, Credentials, GuestToken, local_pair};
     use shared::world::WorldSeed;
 
     use super::*;
-    use crate::storage::{Storage, tests::TestFolder};
+    use crate::save_queue::{SaveQueue, tests::MemoryBackend};
+    use crate::saves::SaveKey;
+    use crate::storage::{SiteId, SiteSave, Storage, tests::TestFolder};
 
     /// A server world, a client connected to it, and the client's end.
     pub(crate) struct TestClient {
@@ -931,13 +968,115 @@ pub(crate) mod tests {
         assert!(connections.clients.is_empty());
     }
 
+    /// A world saved in a backend that can be told to fail, and its queue.
+    fn world_in_memory() -> (Arc<MemoryBackend>, SaveQueue, ServerWorld) {
+        let backend = Arc::new(MemoryBackend::default());
+        let queue = SaveQueue::new(backend.clone());
+        let seed = WorldSeed::new(1);
+        let storage = Storage::new(queue.clone(), seed.id());
+        let world = ServerWorld::open(seed, storage).unwrap();
+        (backend, queue, world)
+    }
+
+    fn refused(answers: &[ServerMessage]) -> bool {
+        answers
+            .iter()
+            .any(|answer| matches!(answer, ServerMessage::Refused(_)))
+    }
+
+    #[test]
+    fn a_character_that_cant_be_reached_is_refused_and_not_saved_over() {
+        let (backend, queue, world) = world_in_memory();
+        let mut test = TestClient::of(world);
+        test.send(&[ClientMessage::DevTeleport { x: 5, y: 6 }]);
+        let world = test.leave();
+        assert!(queue.flush(Duration::from_secs(5)));
+        let key = SaveKey::Character(CharacterId::new("tester").unwrap());
+        let before = backend.holds(&key);
+        assert!(before.is_some());
+
+        backend.cant_read.store(true, Ordering::Relaxed);
+        let test = TestClient::of(world);
+        assert!(refused(&test.welcome));
+        let world = test.leave();
+        assert!(queue.flush(Duration::from_secs(5)));
+        assert_eq!(backend.holds(&key), before);
+
+        // Back to normal: there they are.
+        backend.cant_read.store(false, Ordering::Relaxed);
+        let test = TestClient::of(world);
+        assert!(!refused(&test.welcome));
+        assert_eq!(test.client.world_position(), (5, 6));
+    }
+
+    #[test]
+    fn a_character_saved_while_writes_fail_is_written_later_and_read_back_meanwhile() {
+        let (backend, queue, world) = world_in_memory();
+        backend.cant_write.store(true, Ordering::Relaxed);
+        let mut test = TestClient::of(world);
+        test.send(&[ClientMessage::DevTeleport { x: 5, y: 6 }]);
+        let world = test.leave();
+        let key = SaveKey::Character(CharacterId::new("tester").unwrap());
+        assert_eq!(backend.holds(&key), None);
+
+        let test = TestClient::of(world);
+        assert_eq!(test.client.world_position(), (5, 6));
+
+        backend.cant_write.store(false, Ordering::Relaxed);
+        assert!(queue.flush(Duration::from_secs(5)));
+        assert!(backend.holds(&key).is_some());
+    }
+
+    #[test]
+    fn a_site_that_cant_be_reached_is_refused_and_not_saved_over() {
+        let (backend, queue, world) = world_in_memory();
+        let id = SiteId::Dev {
+            kind: PoiKind::Castle,
+            seed: 1,
+            ruin: 0,
+        };
+        let key = SaveKey::Site(world.seed.id(), id);
+        let saved = SiteSave {
+            version: 1,
+            ..SiteSave::default()
+        };
+        world.storage.save_site(id, &saved);
+        assert!(queue.flush(Duration::from_secs(5)));
+        let before = backend.holds(&key);
+
+        let mut test = TestClient::of(world);
+        backend.cant_read.store(true, Ordering::Relaxed);
+        let answers = test.send(&[ClientMessage::DevEnterSite {
+            kind: PoiKind::Castle,
+            seed: 1,
+            level: 0,
+            ruin: 0,
+        }]);
+        assert!(refused(&answers));
+
+        // Asked for anyway, somewhere that can't refuse: blank, and not saved.
+        test.world
+            .site_mut(id, PoiKind::Castle)
+            .levels
+            .entry(9)
+            .or_default();
+        test.world.save_sites();
+        assert!(queue.flush(Duration::from_secs(5)));
+        assert_eq!(backend.holds(&key), before);
+
+        // Back to normal: the real one again.
+        backend.cant_read.store(false, Ordering::Relaxed);
+        test.world.open_site(id, PoiKind::Castle).unwrap();
+        assert!(test.world.site(id, PoiKind::Castle).levels.is_empty());
+    }
+
     #[test]
     fn guests_come_back_by_their_token_and_the_newest_connection_wins() {
         let folder = crate::storage::tests::TestFolder::new();
         let seed = WorldSeed::new(1);
         let storage = crate::storage::Storage::in_folder(&folder.0, seed.id());
         let world = ServerWorld::open(seed, storage).unwrap();
-        let mut connections = Connections::new(Accounts::in_folder(&folder.0));
+        let mut connections = Connections::new(Accounts::new(SaveQueue::in_folder(&folder.0)));
         let (first, link) = local_pair();
         connections.add(link);
         first.send(&HELLO);

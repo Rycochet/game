@@ -17,6 +17,8 @@ mod ids;
 mod latency;
 mod lets_encrypt;
 mod network;
+mod save_queue;
+mod saves;
 mod sites;
 mod storage;
 mod tls;
@@ -48,6 +50,7 @@ pub use shared::protocol::CharacterId;
 pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
 pub use tls::{CertificateFacts, CertificateSource, Security, certificate_facts};
 
+use save_queue::SaveQueue;
 use storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved, WorldSave};
 
 /// Simulation ticks per second.
@@ -92,16 +95,18 @@ pub struct ServerOptions {
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
-        let storage = match &self.data {
-            Some(data) => Storage::in_folder(data, self.world_seed.id()),
+        // One save thread for the world and the accounts.
+        let queue = self.data.as_deref().map(SaveQueue::in_folder);
+        let storage = match &queue {
+            Some(queue) => Storage::new(queue.clone(), self.world_seed.id()),
             None => Storage::none(),
         };
         let world = ServerWorld::open(self.world_seed, storage)
             .unwrap_or_else(|error| panic!("The server can't open its world: {error}"));
         app.insert_resource(world)
             .insert_resource(self.options)
-            .insert_resource(Connections::new(match &self.data {
-                Some(data) => accounts::Accounts::in_folder(data),
+            .insert_resource(Connections::new(match queue {
+                Some(queue) => accounts::Accounts::new(queue),
                 None => accounts::Accounts::default(),
             }))
             .add_systems(Startup, announce)
@@ -175,6 +180,9 @@ pub struct ServerWorld {
     /// The sites entered so far (loaded when first needed).
     sites: BTreeMap<SiteId, SiteSave>,
     unsaved_sites: Unsaved<SiteId>,
+    /// Sites whose saves couldn't be reached, so what is in `sites` for them is
+    /// blank, and must not be saved over the real one.
+    unreachable_sites: BTreeSet<SiteId>,
     /// Sites forgotten since `connections::handle_messages` last looked, for
     /// putting out anyone else in them.
     forgotten: Forgotten,
@@ -258,6 +266,7 @@ impl ServerWorld {
             storage,
             sites: BTreeMap::new(),
             unsaved_sites: Unsaved::default(),
+            unreachable_sites: BTreeSet::new(),
             forgotten: Forgotten::default(),
         };
         save_world(&world.storage, seed, clock);
@@ -272,17 +281,38 @@ impl ServerWorld {
         }
     }
 
-    /// What is saved about a site (for a `kind` of poi): loaded, or new
-    /// (made with its generator's current version) if nobody has been in.
+    /// Loads what is saved about a site (for a `kind` of poi), or makes it new
+    /// (with its generator's current version) if nobody has been in. An error if
+    /// its save couldn't be reached. Done on going into a site, where someone can
+    /// be told, so that `site` doesn't need to fail.
+    pub(crate) fn open_site(&mut self, id: SiteId, kind: PoiKind) -> Result<(), String> {
+        if self.sites.contains_key(&id) && !self.unreachable_sites.contains(&id) {
+            return Ok(());
+        }
+        let save = self.storage.load_site(id)?.unwrap_or_else(|| {
+            self.unsaved_sites.mark(id);
+            SiteSave {
+                version: Generator::for_poi(kind).version(),
+                ..default()
+            }
+        });
+        self.unreachable_sites.remove(&id);
+        self.sites.insert(id, save);
+        Ok(())
+    }
+
+    /// What is saved about a site. Normally open already; if it isn't and its save
+    /// can't be reached, it is blank for now and not saved.
     pub(crate) fn site(&mut self, id: SiteId, kind: PoiKind) -> &mut SiteSave {
-        if !self.sites.contains_key(&id) {
-            let save = self.storage.load_site(id).unwrap_or_else(|| {
-                self.unsaved_sites.mark(id);
-                SiteSave {
-                    version: Generator::for_poi(kind).version(),
-                    ..default()
-                }
-            });
+        if !self.sites.contains_key(&id)
+            && let Err(error) = self.open_site(id, kind)
+        {
+            error!("Using a blank {id:?}, which won't be saved: {error}");
+            self.unreachable_sites.insert(id);
+            let save = SiteSave {
+                version: Generator::for_poi(kind).version(),
+                ..default()
+            };
             self.sites.insert(id, save);
         }
         self.sites.get_mut(&id).expect("just made sure")
@@ -297,7 +327,9 @@ impl ServerWorld {
     /// Saves the sites that have changed.
     pub(crate) fn save_sites(&mut self) {
         for id in self.unsaved_sites.take() {
-            if let Some(save) = self.sites.get(&id) {
+            if let Some(save) = self.sites.get(&id)
+                && !self.unreachable_sites.contains(&id)
+            {
                 self.storage.save_site(id, save);
             }
         }
@@ -307,6 +339,7 @@ impl ServerWorld {
     /// current version and no players' changes.
     pub(crate) fn forget_site(&mut self, id: SiteId) {
         self.sites.remove(&id);
+        self.unreachable_sites.remove(&id);
         self.unsaved_sites.unmark(&id);
         self.storage.remove_site(id);
         self.forgotten.sites.insert(id);
@@ -315,6 +348,7 @@ impl ServerWorld {
     /// Forgets every site, as `forget_site`.
     pub(crate) fn forget_sites(&mut self) {
         self.sites.clear();
+        self.unreachable_sites.clear();
         self.unsaved_sites.take();
         self.storage.remove_sites();
         self.forgotten.all = true;
