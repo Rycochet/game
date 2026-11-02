@@ -422,7 +422,8 @@ fn show_gift_aim(
         commands.entity(entity).with_children(|layer| {
             for (cell_x, cell_y) in shape.cells() {
                 let (cell_x, cell_y) = ((x + cell_x) as f32, (y + cell_y) as f32);
-                layer.spawn((at_cell(cell_x, cell_y), BackgroundColor(ALLOWED)));
+                // Floating: the grid under them is still what the pointer is on.
+                layer.spawn((at_cell(cell_x, cell_y), BackgroundColor(ALLOWED), Floating));
             }
         });
     }
