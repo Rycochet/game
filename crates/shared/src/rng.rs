@@ -82,6 +82,22 @@ impl Rng {
     }
 }
 
+impl Rng {
+    /// One of these, more often the greater its weight. A weight of 0 is never
+    /// picked, and at least one must be above 0.
+    pub fn pick_weighted<T: Copy>(&mut self, options: &[(T, u64)]) -> T {
+        let total: u64 = options.iter().map(|&(_, weight)| weight).sum();
+        let mut left = self.range_u64(0, total);
+        for &(option, weight) in options {
+            if left < weight {
+                return option;
+            }
+            left -= weight;
+        }
+        unreachable!("left is below the sum of the weights")
+    }
+}
+
 /// SplitMix64's finaliser: scrambles all 64 bits.
 fn mix(mut z: u64) -> u64 {
     z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);

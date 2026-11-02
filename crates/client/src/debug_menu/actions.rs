@@ -21,6 +21,7 @@ pub enum DebugAction {
     GiveItem,
     GodMode,
     HerbsState,
+    ItemPictures,
     ResetView,
     RevealMap,
     ShowDebugInfo,
@@ -56,7 +57,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 22] = [
+    pub(super) const ALL: [Self; 23] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -69,6 +70,7 @@ impl DebugAction {
         Self::GiveItem,
         Self::GodMode,
         Self::HerbsState,
+        Self::ItemPictures,
         Self::ResetView,
         Self::RevealMap,
         Self::ShowDebugInfo,
@@ -95,6 +97,7 @@ impl DebugAction {
             Self::GiveItem => "Give Item",
             Self::GodMode => "God Mode",
             Self::HerbsState => "Herbs State",
+            Self::ItemPictures => "Item Pictures",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
             Self::ShowDebugInfo => "Show Debug Info",

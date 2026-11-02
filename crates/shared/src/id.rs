@@ -10,12 +10,21 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::rng::Seed;
+
 /// Something's id for good. In a save it reads as the usual text form of a UUID;
 /// in a message it is 16 bytes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Id(pub Uuid);
 
 impl Id {
+    /// A seed only this thing has, for what is rolled when it is made. The two halves
+    /// are mixed as the low one alone hardly changes from one id to the next.
+    pub fn seed(self) -> Seed {
+        let bits = self.0.as_u128();
+        Seed::new((bits >> 64) as u64 ^ bits as u64)
+    }
+
     /// An id for a test in any crate, different for each `n`. The game's own come
     /// from `server::new_id`.
     pub fn for_test(n: u128) -> Self {

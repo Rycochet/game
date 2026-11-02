@@ -23,6 +23,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Give Item | Yes | Opens a panel with a button for each kind of item, and choices of the size it is made for, whether it is magical, whether it is part of a set and its quality. Each press puts a new one in your pockets, if there is room. |
 | God Mode | Yes | Toggles mobs taking no notice of you and letting you walk through them, so they don't block your way. A ghost shows at the top left while it is on. |
 | Herbs State | | Opens a panel stepping through how grown the herbs are, on a level with herbs. Changes only what is drawn. |
+| Item Pictures | | Opens a panel showing every kind of gem in every cut as it is drawn, at each quality. Pressing a picture shows it large. |
 | Reset View | | Puts the camera back to its starting view, as Home does. |
 | Reveal Map | Yes | Shows you the whole of this level. Not in towns. |
 | Show Debug Info | | Toggles the status text: position, hour, ping and view statistics. |

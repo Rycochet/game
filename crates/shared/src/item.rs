@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::creature::{CreatureKind, Layer, Location, Size};
 use crate::id::Id;
+use crate::item_form::ItemForm;
 use crate::rng::Rng;
 use crate::world::WorldId;
 
@@ -219,6 +220,7 @@ pub enum ItemKind {
     FingerlessGloves,
     FullArmour,
     Gauntlets,
+    Gem,
     Gloves,
     Hat,
     Lantern,
@@ -239,7 +241,7 @@ const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 24] = [
+    pub const ALL: [Self; 25] = [
         Self::Apple,
         Self::Backpack,
         Self::Barding,
@@ -251,6 +253,7 @@ impl ItemKind {
         Self::FingerlessGloves,
         Self::FullArmour,
         Self::Gauntlets,
+        Self::Gem,
         Self::Gloves,
         Self::Hat,
         Self::Lantern,
@@ -324,6 +327,7 @@ impl ItemKind {
                 (0, 0),
                 false,
             )),
+            Self::Gem => plain("Gem", 5, square),
             Self::Gloves => plain("Gloves", 100, Shape::rectangle(1, 2)).worn(wear(
                 Middle,
                 &[Hands, Fingers],
@@ -634,6 +638,10 @@ pub struct Item {
     /// Part of a set, of whatever quality it is.
     #[serde(default)]
     pub set: bool,
+    /// What it is physically like, for kinds rolled that way, and not for things
+    /// saved before this was kept.
+    #[serde(default)]
+    pub form: Option<ItemForm>,
 }
 
 impl Item {
@@ -647,17 +655,23 @@ impl Item {
             made_at: None,
             name: None,
             set: false,
+            form: None,
         }
     }
 
-    /// What it is called: its own name, or its kind's, saying its size unless
-    /// that is `Medium`.
+    /// What it is called: its own name, or by its form or kind, saying its size
+    /// unless that is `Medium`.
     pub fn name(&self) -> String {
-        let kind = self.kind.def().name;
-        match (&self.name, self.made.size) {
-            (Some(name), _) => name.clone(),
-            (None, Size::Medium) => kind.to_owned(),
-            (None, size) => format!("{} {kind}", size.name()),
+        if let Some(name) = &self.name {
+            return name.clone();
+        }
+        let plain = match &self.form {
+            Some(form) => form.name(),
+            None => self.kind.def().name.to_owned(),
+        };
+        match self.made.size {
+            Size::Medium => plain,
+            size => format!("{} {plain}", size.name()),
         }
     }
 

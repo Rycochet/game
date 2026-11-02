@@ -9,6 +9,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
 use shared::item::{ItemKind, Quality};
+use shared::item_form::{Cut, GemForm};
+use shared::material::Material;
 use shared::poi::PoiKind;
 use shared::rng::Seed;
 use shared::site::{Generator, MAX_RUIN, StairsStyle};
@@ -21,11 +23,12 @@ use super::bodies::BodiesToShow;
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
+use crate::item_art::{ItemPictures, Look};
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TabChosen,
     TextBox, raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown,
-    spawn_icon_button, spawn_moveable_panel, spawn_slider, spawn_tabs, spawn_text_box,
-    spawn_tooltip,
+    spawn_icon_button, spawn_moveable_panel, spawn_scroll_area, spawn_slider, spawn_tabs,
+    spawn_text_box, spawn_tooltip,
 };
 
 const FONT: f32 = 16.0;
@@ -92,6 +95,7 @@ impl OpenPanels {
                 DebugAction::SunsAndMoons => {}
                 DebugAction::GiveItem => spawn_give_buttons(content),
                 DebugAction::ChangeCreature => spawn_creature_buttons(content),
+                DebugAction::ItemPictures => spawn_item_pictures(content),
                 _ => spawn_step_buttons(content, action),
             });
         if action == DebugAction::SunsAndMoons {
@@ -178,6 +182,193 @@ fn spawn_creature_buttons(content: &mut ChildSpawnerCommands) {
         };
         spawn_button(content, ButtonState::Normal, kind.def().name, FONT, node)
             .insert((CreatureButton(kind), Pressable));
+    }
+}
+
+/// How big each picture in Item Pictures' grid is shown, and is drawn, for sharpness.
+const PICTURE: f32 = 50.0;
+const PICTURE_PIXELS: u32 = 100;
+const LARGE_PICTURE: f32 = 256.0;
+const LARGE_PICTURE_PIXELS: u32 = 512;
+const PICTURE_LABEL: f32 = 12.0;
+/// The most of the window's height the grid takes, before it scrolls.
+const PICTURES_HEIGHT: Val = Val::Vh(70.0);
+/// Room for the name of a gem beside its row.
+const PICTURE_ROW_LABEL: f32 = 84.0;
+
+/// What Item Pictures shows.
+#[derive(Resource)]
+pub(super) struct PicturesForm {
+    quality: Quality,
+    chosen: GemForm,
+}
+
+impl Default for PicturesForm {
+    fn default() -> Self {
+        Self {
+            quality: Quality::default(),
+            chosen: gem_to_show(Material::Ruby, Cut::Round),
+        }
+    }
+}
+
+/// One of each stone and cut. Each uncut stone has its own lumps.
+fn gem_to_show(material: Material, cut: Cut) -> GemForm {
+    let shape_seed = if cut == Cut::Uncut {
+        material as u16 + 1
+    } else {
+        0
+    };
+    GemForm {
+        material,
+        cut,
+        shape_seed,
+    }
+}
+
+/// A picture in Item Pictures' grid: pressing it shows it large.
+#[derive(Component, Clone, Copy)]
+pub(super) struct GemPicture(GemForm);
+
+#[derive(Component)]
+pub(super) struct LargePicture;
+
+#[derive(Component)]
+pub(super) struct PictureQualities;
+
+/// Every stone in every cut, and whichever was last pressed, large.
+fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
+    let qualities: Vec<String> = Quality::ALL.iter().map(|q| format!("{q:?}")).collect();
+    let qualities: Vec<&str> = qualities.iter().map(String::as_str).collect();
+    let common = Quality::ALL
+        .iter()
+        .position(|&quality| quality == Quality::default())
+        .unwrap_or(0);
+    let row = spawn_tabs(content, &qualities, common, FONT);
+    content.commands().entity(row).insert(PictureQualities);
+    content
+        .spawn(Node {
+            column_gap: px(8),
+            ..default()
+        })
+        .with_children(|sides| {
+            sides
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                })
+                .with_children(|column| {
+                    spawn_picture_heading(column);
+                    let area = spawn_scroll_area(column, PICTURES_HEIGHT);
+                    column.commands().entity(area).with_children(|grid| {
+                        for material in Material::GEMS {
+                            spawn_picture_row(grid, material);
+                        }
+                    });
+                });
+            sides.spawn((
+                LargePicture,
+                Node {
+                    width: px(LARGE_PICTURE),
+                    height: px(LARGE_PICTURE),
+                    flex_shrink: 0.0,
+                    ..default()
+                },
+                ImageNode::default(),
+            ));
+        });
+}
+
+fn picture_label(words: &str, width: f32) -> impl Bundle {
+    (
+        Text::new(words),
+        TextFont::from_font_size(PICTURE_LABEL),
+        TextColor(INK),
+        Node {
+            width: px(width),
+            ..default()
+        },
+    )
+}
+
+fn spawn_picture_heading(grid: &mut ChildSpawnerCommands) {
+    grid.spawn(Node::default()).with_children(|row| {
+        row.spawn(picture_label("", PICTURE_ROW_LABEL));
+        for cut in Cut::ALL {
+            row.spawn(picture_label(cut.name(), PICTURE));
+        }
+    });
+}
+
+fn spawn_picture_row(grid: &mut ChildSpawnerCommands, material: Material) {
+    grid.spawn(Node {
+        align_items: AlignItems::Center,
+        ..default()
+    })
+    .with_children(|row| {
+        row.spawn(picture_label(material.name(), PICTURE_ROW_LABEL));
+        for cut in Cut::ALL {
+            row.spawn((
+                GemPicture(gem_to_show(material, cut)),
+                Pressable,
+                Node {
+                    width: px(PICTURE),
+                    height: px(PICTURE),
+                    flex_shrink: 0.0,
+                    ..default()
+                },
+                ImageNode::default(),
+            ));
+        }
+    });
+}
+
+/// What Item Pictures' quality tabs and pictures do.
+pub(super) fn choose_pictures(
+    mut chosen: MessageReader<TabChosen>,
+    mut pressed: MessageReader<ButtonPressed>,
+    rows: Query<(), With<PictureQualities>>,
+    pictures: Query<&GemPicture>,
+    mut form: ResMut<PicturesForm>,
+) {
+    for &TabChosen(row, index) in chosen.read() {
+        if rows.contains(row) {
+            form.quality = Quality::ALL[index];
+        }
+    }
+    for press in pressed.read() {
+        if let Ok(&GemPicture(gem)) = pictures.get(press.0) {
+            form.chosen = gem;
+        }
+    }
+}
+
+/// Keeps Item Pictures' images to what is chosen.
+pub(super) fn show_pictures(
+    form: Res<PicturesForm>,
+    mut pictures: ResMut<ItemPictures>,
+    mut images: ResMut<Assets<Image>>,
+    mut grid: Query<(Ref<GemPicture>, &mut ImageNode), Without<LargePicture>>,
+    mut large: Query<(Ref<LargePicture>, &mut ImageNode), Without<GemPicture>>,
+) {
+    let quality = Some(form.quality);
+    for (picture, mut image) in &mut grid {
+        if form.is_changed() || picture.is_added() {
+            let look = Look::Gem {
+                gem: picture.0,
+                quality,
+            };
+            image.image = pictures.picture(look, PICTURE_PIXELS, &mut images);
+        }
+    }
+    for (picture, mut image) in &mut large {
+        if form.is_changed() || picture.is_added() {
+            let look = Look::Gem {
+                gem: form.chosen,
+                quality,
+            };
+            image.image = pictures.picture(look, LARGE_PICTURE_PIXELS, &mut images);
+        }
     }
 }
 

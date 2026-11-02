@@ -851,18 +851,19 @@ pub(crate) fn made_for(
     let body = inventory.creature.def();
     let id = crate::ids::new_id();
     let quality = kind.def().has_quality.then_some(quality);
-    let name = (quality == Some(Quality::Artifact)).then(|| {
-        // Only needs to differ from one to the next, so the id will do: its low
-        // half alone hardly changes.
-        let bits = id.0.as_u128();
-        let mut rng = shared::rng::Seed::new((bits >> 64) as u64 ^ bits as u64).rng();
-        shared::item::artifact_name(&mut rng, kind)
-    });
+    let name = (quality == Some(Quality::Artifact))
+        .then(|| shared::item::artifact_name(&mut id.seed().rng(), kind));
+    let rolled = shared::item_form::roll_form(kind, id.seed(), quality, size);
+    let size = match &rolled {
+        Some(rolled) => rolled.size,
+        None => size.unwrap_or(body.size),
+    };
     Item {
-        made: Made::for_body(kind, size.unwrap_or(body.size), body.fingers(), magical),
+        made: Made::for_body(kind, size, body.fingers(), magical),
         quality,
         made_at: Some(made_at),
         name,
+        form: rolled.map(|rolled| rolled.form),
         ..Item::new(id, kind)
     }
 }
