@@ -13,7 +13,8 @@ A server is set up entirely by environment variables, and none of them are requi
 | -------- | ------- | ------------ |
 | `HOW_ADDRESS` | `0.0.0.0:8080` | The plain port's address. It only answers that connections must be secure, unless `HOW_BEHIND_PROXY` is on. |
 | `HOW_TLS_ADDRESS` | `0.0.0.0:8081` | The secure port's address, for HTTPS and `wss://`. |
-| `HOW_BEHIND_PROXY` | `false` | `true` turns TLS off and serves everything on the plain port, for a server behind a reverse proxy that looks after TLS. Can't be used with a certificate of your own or Let's Encrypt. |
+| `HOW_BEHIND_PROXY` | `false` | `true` also serves everything on the plain port, for a reverse proxy to reach. The secure port stays open, so the proxy can use either. |
+| `HOW_DISABLE_SSL` | `false` | `true` doesn't open the secure port or set up a certificate. The server refuses to start unless `HOW_BEHIND_PROXY` is on too, and if a certificate of your own or Let's Encrypt is set. |
 | `HOW_WEB` | none (`/srv/web` in Docker) | The folder holding the web client. Without it, only the game itself is served. |
 
 ## Certificates

@@ -44,12 +44,15 @@ const RENEW_WITHIN: Duration = Duration::days(365);
 /// How the server secures its connections.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Security {
-    /// Plain HTTP and `ws://`: a reverse proxy in front takes care of TLS.
-    BehindProxy,
-    /// HTTPS and `wss://` on `address`; the plain port only answers with an error.
+    /// Plain HTTP and `ws://` only: TLS is turned off, and a reverse proxy in
+    /// front takes care of it.
+    PlainOnly,
+    /// HTTPS and `wss://` on `address`. The plain port serves the game as well if
+    /// `plain_too` (behind a reverse proxy), or else only answers with an error.
     Tls {
         address: SocketAddr,
         source: CertificateSource,
+        plain_too: bool,
     },
 }
 
@@ -74,6 +77,7 @@ pub enum CertificateSource {
 /// What the environment says, before it is checked.
 struct Settings {
     behind_proxy: bool,
+    disable_ssl: bool,
     address: Option<String>,
     certificate: Option<PathBuf>,
     key: Option<PathBuf>,
@@ -84,7 +88,7 @@ struct Settings {
 }
 
 impl Security {
-    /// Works it out from `HOW_BEHIND_PROXY`, `HOW_TLS_ADDRESS`,
+    /// Works it out from `HOW_BEHIND_PROXY`, `HOW_DISABLE_SSL`, `HOW_TLS_ADDRESS`,
     /// `HOW_TLS_CERTIFICATE`, `HOW_TLS_KEY`, `HOW_TLS_NAMES`,
     /// `HOW_LETS_ENCRYPT_DOMAIN`, `HOW_LETS_ENCRYPT_EMAIL` and
     /// `HOW_DEBUG_LETS_ENCRYPT_STAGING`.
@@ -92,6 +96,7 @@ impl Security {
         Self::from_settings(
             Settings {
                 behind_proxy: option_on("HOW_BEHIND_PROXY", false),
+                disable_ssl: option_on("HOW_DISABLE_SSL", false),
                 address: env::var("HOW_TLS_ADDRESS").ok(),
                 certificate: env::var_os("HOW_TLS_CERTIFICATE").map(Into::into),
                 key: env::var_os("HOW_TLS_KEY").map(Into::into),
@@ -105,15 +110,21 @@ impl Security {
     }
 
     fn from_settings(settings: Settings, data: &Path) -> Result<Self, String> {
-        if settings.behind_proxy {
-            if settings.certificate.is_some() || settings.key.is_some() || settings.domain.is_some()
-            {
+        if settings.disable_ssl {
+            if !settings.behind_proxy {
                 return Err(
-                    "HOW_BEHIND_PROXY=true uses no certificate, so it can't be set with HOW_TLS_CERTIFICATE, HOW_TLS_KEY or HOW_LETS_ENCRYPT_DOMAIN"
+                    "HOW_DISABLE_SSL=true would leave connections unprotected, so it also needs HOW_BEHIND_PROXY=true"
                         .into(),
                 );
             }
-            return Ok(Self::BehindProxy);
+            if settings.certificate.is_some() || settings.key.is_some() || settings.domain.is_some()
+            {
+                return Err(
+                    "HOW_DISABLE_SSL=true uses no certificate, so it can't be set with HOW_TLS_CERTIFICATE, HOW_TLS_KEY or HOW_LETS_ENCRYPT_DOMAIN"
+                        .into(),
+                );
+            }
+            return Ok(Self::PlainOnly);
         }
         if settings.domain.is_some() && (settings.certificate.is_some() || settings.key.is_some()) {
             return Err(
@@ -157,7 +168,11 @@ impl Security {
             (None, None, None) => CertificateSource::Generated { folder, names },
             _ => return Err("HOW_TLS_CERTIFICATE and HOW_TLS_KEY must be set together".into()),
         };
-        Ok(Self::Tls { address, source })
+        Ok(Self::Tls {
+            address,
+            source,
+            plain_too: settings.behind_proxy,
+        })
     }
 }
 
@@ -541,6 +556,7 @@ pub(crate) mod tests {
     fn settings() -> Settings {
         Settings {
             behind_proxy: false,
+            disable_ssl: false,
             address: None,
             certificate: None,
             key: None,
@@ -579,7 +595,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn tls_is_on_unless_behind_a_proxy() {
+    fn tls_stays_on_behind_a_proxy_which_only_opens_the_plain_port() {
         let data = Path::new("data");
         let secure = Security::from_settings(settings(), data).unwrap();
         assert_eq!(
@@ -590,6 +606,7 @@ pub(crate) mod tests {
                     folder: data.join("tls"),
                     names: Vec::new(),
                 },
+                plain_too: false,
             }
         );
         let proxied = Settings {
@@ -598,8 +615,85 @@ pub(crate) mod tests {
         };
         assert_eq!(
             Security::from_settings(proxied, data).unwrap(),
-            Security::BehindProxy
+            Security::Tls {
+                address: DEFAULT_TLS_ADDRESS.parse().unwrap(),
+                source: CertificateSource::Generated {
+                    folder: data.join("tls"),
+                    names: Vec::new(),
+                },
+                plain_too: true,
+            }
         );
+    }
+
+    #[test]
+    fn any_certificate_can_be_used_behind_a_proxy() {
+        let data = Path::new("data");
+        let with_files = Settings {
+            behind_proxy: true,
+            certificate: Some("c.pem".into()),
+            key: Some("k.pem".into()),
+            ..settings()
+        };
+        let Security::Tls {
+            source: CertificateSource::Files { .. },
+            plain_too: true,
+            ..
+        } = Security::from_settings(with_files, data).unwrap()
+        else {
+            panic!("own files, with the plain port open");
+        };
+        let with_a_domain = Settings {
+            behind_proxy: true,
+            ..lets_encrypt_settings()
+        };
+        let Security::Tls {
+            source: CertificateSource::LetsEncrypt { .. },
+            plain_too: true,
+            ..
+        } = Security::from_settings(with_a_domain, data).unwrap()
+        else {
+            panic!("Let's Encrypt, with the plain port open");
+        };
+    }
+
+    #[test]
+    fn ssl_can_only_be_disabled_behind_a_proxy() {
+        let data = Path::new("data");
+        let alone = Settings {
+            disable_ssl: true,
+            ..settings()
+        };
+        let refusal = Security::from_settings(alone, data).unwrap_err();
+        assert!(refusal.contains("HOW_BEHIND_PROXY"), "{refusal}");
+        let proxied = Settings {
+            disable_ssl: true,
+            behind_proxy: true,
+            ..settings()
+        };
+        assert_eq!(
+            Security::from_settings(proxied, data).unwrap(),
+            Security::PlainOnly
+        );
+    }
+
+    #[test]
+    fn disabling_ssl_refuses_certificates_it_would_ignore() {
+        let data = Path::new("data");
+        let with_files = Settings {
+            disable_ssl: true,
+            behind_proxy: true,
+            certificate: Some("c.pem".into()),
+            key: Some("k.pem".into()),
+            ..settings()
+        };
+        assert!(Security::from_settings(with_files, data).is_err());
+        let with_a_domain = Settings {
+            disable_ssl: true,
+            behind_proxy: true,
+            ..lets_encrypt_settings()
+        };
+        assert!(Security::from_settings(with_a_domain, data).is_err());
     }
 
     #[test]
@@ -615,13 +709,6 @@ pub(crate) mod tests {
             ..settings()
         };
         assert!(Security::from_settings(only_key, data).is_err());
-        let proxied_with_files = Settings {
-            behind_proxy: true,
-            certificate: Some("c.pem".into()),
-            key: Some("k.pem".into()),
-            ..settings()
-        };
-        assert!(Security::from_settings(proxied_with_files, data).is_err());
         let bad_address = Settings {
             address: Some("nowhere".into()),
             ..settings()
@@ -655,11 +742,6 @@ pub(crate) mod tests {
     #[test]
     fn lets_encrypt_settings_that_disagree_are_refused() {
         let data = Path::new("data");
-        let proxied = Settings {
-            behind_proxy: true,
-            ..lets_encrypt_settings()
-        };
-        assert!(Security::from_settings(proxied, data).is_err());
         let with_files = Settings {
             certificate: Some("c.pem".into()),
             key: Some("k.pem".into()),
