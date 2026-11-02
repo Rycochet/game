@@ -261,6 +261,14 @@ impl Forgotten {
 }
 
 impl ServerWorld {
+    /// When and where something made now is made.
+    pub(crate) fn made_now(&self) -> shared::item::MadeAt {
+        shared::item::MadeAt {
+            world: self.seed.id(),
+            minute: self.clock.minutes() as u64,
+        }
+    }
+
     /// A world that is never saved (tests).
     pub fn new(seed: WorldSeed) -> Self {
         Self::open(seed, Storage::none()).expect("nothing to read")

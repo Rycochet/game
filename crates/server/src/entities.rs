@@ -1303,6 +1303,7 @@ mod tests {
             kind: shared::item::ItemKind::Coin,
             size: None,
             magical: false,
+            quality: Default::default(),
         }]);
         let gift = answers.iter().rev().find_map(|answer| match answer {
             ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),
@@ -1351,6 +1352,7 @@ mod tests {
             kind: shared::item::ItemKind::Coin,
             size: None,
             magical: false,
+            quality: Default::default(),
         }]);
         let coin = answers.iter().rev().find_map(|answer| match answer {
             ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),

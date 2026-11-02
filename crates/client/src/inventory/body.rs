@@ -9,7 +9,9 @@ use shared::item::{Inventory, Item, Rotation};
 use shared::wear::Fit;
 
 use super::hold::Target;
-use super::panels::{CELL, GRID_COLOUR, GRID_LINE, ITEM_EDGE, ItemCell, colour, label};
+use super::panels::{
+    CELL, GRID_COLOUR, GRID_LINE, ITEM_EDGE, ItemCell, colour, edge, edge_width, label,
+};
 use super::{Carried, Holding};
 use crate::widgets::{INK, Pressable};
 
@@ -89,9 +91,12 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
     let mut slot = row.spawn((
         BodyNode,
         cell,
-        slot_node(),
+        Node {
+            border: UiRect::all(px(edge_width(item.quality))),
+            ..slot_node()
+        },
         BackgroundColor(tint),
-        BorderColor::from(ITEM_EDGE),
+        BorderColor::from(edge(item.quality)),
     ));
     // Something under another can't be picked up.
     if !covered {

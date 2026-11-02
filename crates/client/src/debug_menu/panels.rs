@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
-use shared::item::ItemKind;
+use shared::item::{ItemKind, Quality};
 use shared::poi::PoiKind;
 use shared::rng::Seed;
 use shared::site::{Generator, MAX_RUIN, StairsStyle};
@@ -147,6 +147,14 @@ fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
     content.commands().entity(row).insert(GiveSizes);
     let row = spawn_tabs(content, &["Plain", "Magical"], 0, FONT);
     content.commands().entity(row).insert(GiveMagic);
+    let qualities: Vec<String> = Quality::ALL.iter().map(|q| format!("{q:?}")).collect();
+    let qualities: Vec<&str> = qualities.iter().map(String::as_str).collect();
+    let common = Quality::ALL
+        .iter()
+        .position(|&quality| quality == Quality::default())
+        .unwrap_or(0);
+    let row = spawn_tabs(content, &qualities, common, FONT);
+    content.commands().entity(row).insert(GiveQualities);
     content.spawn(wrapped()).with_children(|buttons| {
         for kind in ItemKind::ALL {
             let node = Node {
@@ -187,12 +195,17 @@ pub(super) struct GiveSizes;
 #[derive(Component)]
 pub(super) struct GiveMagic;
 
+/// The tabs choosing how good new items are.
+#[derive(Component)]
+pub(super) struct GiveQualities;
+
 /// How Give Item makes things.
 #[derive(Resource, Default)]
 pub(super) struct GiveForm {
     /// `None` for the character's own.
     size: Option<Size>,
     magical: bool,
+    quality: Quality,
 }
 
 /// Follows Give Item's tabs.
@@ -200,6 +213,7 @@ pub(super) fn choose_give_options(
     mut chosen: MessageReader<TabChosen>,
     sizes: Query<(), With<GiveSizes>>,
     magic: Query<(), With<GiveMagic>>,
+    qualities: Query<(), With<GiveQualities>>,
     mut form: ResMut<GiveForm>,
 ) {
     for &TabChosen(row, index) in chosen.read() {
@@ -208,6 +222,9 @@ pub(super) fn choose_give_options(
         }
         if magic.contains(row) {
             form.magical = index == 1;
+        }
+        if qualities.contains(row) {
+            form.quality = Quality::ALL[index];
         }
     }
 }
@@ -225,6 +242,7 @@ pub(super) fn press_give_buttons(
                 kind,
                 size: form.size,
                 magical: form.magical,
+                quality: form.quality,
             }));
         }
     }
