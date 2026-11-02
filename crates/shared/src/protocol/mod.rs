@@ -31,7 +31,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 28;
+pub const PROTOCOL_VERSION: u32 = 29;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -393,7 +393,7 @@ mod tests {
             },
             ClientMessage::Login(Credentials::Guest(GuestToken([7; 32]))),
             ClientMessage::ChooseCharacter {
-                id: CharacterId::new("someone").unwrap(),
+                id: CharacterId(crate::id::Id::for_test(1)),
             },
             ClientMessage::CreateCharacter {
                 name: "Some One".into(),
@@ -460,7 +460,7 @@ mod tests {
             },
             ServerMessage::Characters {
                 list: vec![CharacterSummary {
-                    id: CharacterId::new("someone").unwrap(),
+                    id: CharacterId(crate::id::Id::for_test(1)),
                     name: "Some One".into(),
                     last_played: 99,
                 }],
@@ -468,7 +468,7 @@ mod tests {
             },
             ServerMessage::Welcome {
                 world: WorldInfo {
-                    id: WorldId(7),
+                    id: crate::world::WorldSeed::new(7).id(),
                     terrain_seed: Seed::new(8),
                     world_map_version: 1,
                 },

@@ -441,9 +441,7 @@ pub struct Item {
     pub id: Id,
     pub kind: ItemKind,
     /// What is in its grid, if it has one.
-    #[serde(default)]
     pub contents: Vec<Placed>,
-    #[serde(default)]
     pub made: Made,
 }
 
@@ -492,7 +490,6 @@ pub struct Placed {
     pub item: Item,
     pub x: u8,
     pub y: u8,
-    #[serde(default)]
     pub rotation: Rotation,
 }
 
@@ -541,22 +538,14 @@ pub enum MoveRefused {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Inventory {
     /// What kind of creature is carrying it all, which decides what they can wear.
-    #[serde(default)]
     pub creature: CreatureKind,
     /// They have had their first clothes.
-    #[serde(default)]
     pub outfitted: bool,
     pub pockets: Vec<Placed>,
     /// How big the pockets are, from their kind of creature.
-    #[serde(default = "default_pockets")]
     pub pockets_size: (u8, u8),
     /// What they have on: see `shared::wear`.
-    #[serde(default)]
     pub worn: Vec<Item>,
-}
-
-fn default_pockets() -> (u8, u8) {
-    POCKETS
 }
 
 impl Default for Inventory {

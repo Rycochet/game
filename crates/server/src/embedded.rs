@@ -6,11 +6,7 @@ use std::thread::{self, JoinHandle};
 use shared::protocol::{ClientLink, local_pair};
 use shared::world::WorldSeed;
 
-use crate::{CharacterId, Connections, ServerOptions, headless_app};
-
-/// The single player's character, who has no account (until there are
-/// characters to choose from here).
-const PLAYER: &str = "player";
+use crate::{Connections, ServerOptions, headless_app};
 
 /// A running embedded server. Dropping it waits for the server to finish:
 /// drop the client's link first, so it sees its client leave, saves and
@@ -48,10 +44,9 @@ pub fn start_embedded(
             // Made on the thread itself: a Bevy `App` can't move between
             // threads.
             let mut app = headless_app(world_seed, options, data);
-            let character = CharacterId::new(PLAYER).expect("a fine id");
             app.world_mut()
                 .resource_mut::<Connections>()
-                .add_playing(server, character);
+                .add_single_player(server);
             app.run();
         })
         .expect("the server thread can start");
@@ -100,8 +95,13 @@ mod tests {
         // Leaving: the server saves and stops, so dropping it returns.
         drop(client);
         drop(server);
-        let saved = folder.0.join("characters/player.ron");
-        let character = std::fs::read_to_string(saved).unwrap();
+        // The one character there is, whatever their id.
+        let saved = std::fs::read_dir(folder.0.join("characters"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap();
+        let character = std::fs::read_to_string(saved.path()).unwrap();
         assert!(character.contains("world_position: (5, 6)"), "{character}");
     }
 }

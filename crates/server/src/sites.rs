@@ -207,8 +207,8 @@ pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitS
     if let Err(error) = world.open_site(id, poi.kind) {
         return client.refuse_for_saves(&error);
     }
-    // Their map is the version they knew (a save from before these were
-    // recorded knew the one saved with the site).
+    // Their map is the version they knew (someone new to it knows the one saved
+    // with the site).
     let saved_version = world.site(id, poi.kind).version;
     let knew = client.character.site_versions.get(&id).copied();
     let knew = knew.unwrap_or(saved_version);
@@ -375,7 +375,7 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
             if let Some(there) = client.visit.as_ref().map(Visit::position) {
                 let site = visit_id;
                 let taken = crate::entities::StairsTaken {
-                    who: client.entity_id,
+                    who: client.entity_id(),
                     site,
                     from_level,
                     stairs: (x, y),

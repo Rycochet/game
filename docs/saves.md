@@ -24,6 +24,8 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 - `characters/`: what each character knows, and where they are.
 - `accounts/` and `logins/`: who owns which characters. No login secret is stored.
 - `tls/`: its certificates. **`tls/key.pem` is its private key**, so keep it to yourself.
+- `save_format.ron`: which format the saves here are in.
+- `old-saves-<date>/`: saves from an older version that can't be used any more. A new version that wipes saves moves `worlds/`, `characters/`, `accounts/` and `logins/` here when it starts, and leaves everything else, such as certificates, in place. This version can't read them, so delete the folder whenever you like.
 
 ### In the native client's folder
 

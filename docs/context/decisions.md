@@ -275,9 +275,9 @@ Claude's choices, easily changed: the full map keeps north at the top, the minim
 
 ## 2026-10-31: World map features are now called pois
 
-The owner's choice: "poi" (point of interest) replaces "feature" for things on the world map, in code and docs (`shared::poi`, `Poi`, `PoiKind`, `PoiMap`, ...). "Feature" still means a game feature (feature modules) and a Cargo feature. Three old names stay because changing them would damage existing worlds: the seed name `derive("features")` (it would move every poi), site files `sites/feature_<x>_<y>.ron`, and serde aliases `Feature` and `features` so saved characters still load (without them a character file is put aside as broken).
+The owner's choice: "poi" (point of interest) replaces "feature" for things on the world map, in code and docs (`shared::poi`, `Poi`, `PoiKind`, `PoiMap`, ...). "Feature" still means a game feature (feature modules) and a Cargo feature. (Done at the save wipe of 2026-11-02: nothing below remains in the code.) Three old names stayed because changing them would damage existing worlds: the seed name `derive("features")` (it would move every poi), site files `sites/feature_<x>_<y>.ron`, and serde aliases `Feature` and `features` so saved characters still load (without them a character file is put aside as broken).
 
-**To do at the next full wipe of saves (owner):** rename `derive("features")`, the site files and the character fields too, and drop the aliases.
+At the wipe, `derive("features")` became `derive("pois")`, the site files `poi_<x>_<y>.ron`, and the aliases went.
 
 ## 2026-10-31: Pois are hidden until known, and shown as 3D models
 
@@ -407,7 +407,7 @@ The owner's choice: game minutes since the world began (one a real second) rathe
 
 ## 2026-11-01: Environment variables start `HOW_`, and logging uses `LOG_LEVEL`
 
-The owner's convention: every variable starts `HOW_`, and those only for debugging and development start `HOW_DEBUG_`, replacing `HALL_OF_WORLDS_*`, `GAME_*` and `SITE_*`. There are no `HOW_CLIENT_` / `HOW_SERVER_` prefixes, as there are few settings and the native client embeds the server, so reads both sides' (`HOW_DATA`). Noisy logging goes at a lower level instead of behind a flag: `LOG_LEVEL`, with `debug` and `trace` kept to our crates so Bevy's lines don't bury them, and `RUST_LOG` overriding it. Both programs refuse to start if a `HALL_OF_WORLDS_*` variable is set, because ignoring the old data folder would quietly save somewhere else; that check goes at the next save wipe.
+The owner's convention: every variable starts `HOW_`, and those only for debugging and development start `HOW_DEBUG_`, replacing `HALL_OF_WORLDS_*`, `GAME_*` and `SITE_*`. There are no `HOW_CLIENT_` / `HOW_SERVER_` prefixes, as there are few settings and the native client embeds the server, so reads both sides' (`HOW_DATA`). Noisy logging goes at a lower level instead of behind a flag: `LOG_LEVEL`, with `debug` and `trace` kept to our crates so Bevy's lines don't bury them, and `RUST_LOG` overriding it. Both programs refused to start with a `HALL_OF_WORLDS_*` variable set until the save wipe of 2026-11-02, because ignoring the old data folder would have quietly saved somewhere else.
 
 ## 2026-11-01: One way to read boolean options
 
@@ -486,3 +486,11 @@ The owner's design: mobs can chase up and down stairs, and a floor runs until it
 ## 2026-11-02: Any mob can remember, so any can be an NPC
 
 The owner's design: every mob can be an NPC, learning things and remembering them, so a beggar given money feels differently from then on. Memories are facts about characters rather than words, so that the game can act on them, and each moves a scale of warmth from where its kind's feeling starts. They are kept against the mob's id, with what it was given, saved with the level it belongs on, so only mobs someone has dealt with cost anything. Claude's choices: 30 warmth for any gift, whatever it is; 32 facts kept per mob; a new Beggar kind, a few in each town, as the owner's example needed someone to give to; giving by dropping on a name in a Nearby panel, within 2 cells; a gift can't be taken back. Dialogue, trade and what mobs do with what they carry are for later.
+
+## 2026-11-02: UUIDs for ids that are made or worked out, and a save wipe
+
+The owner's request, waiting until mobs were in. Ids the server issues (items, mobs, characters, accounts, and the single player's character, made on first run through a `LoginKey::SinglePlayer` account rather than a new kind of file) are version 6 UUIDs. A `WorldId` is a version 5 UUID of the seed under a fixed namespace, the owner's idea: a hash, so the same seed is still the same world on any server; the seed stays in `world.ron` and never reaches a client. Other players are seen by their character's id, so `Client::entity_id` lasts between connections.
+
+Staying as they are, because a UUID wouldn't suit them: `RoomId` and building ids (small numbers both sides generate), `SiteId` (worked out from the place) and touch ids (the operating system's).
+
+The ids change every file name, so the owner chose a wipe over converting saves, and took the waiting jobs with it: the old "feature" names, `refuse_old_variables`, and code only for older saves (`hour`, `serde(default)` on what is saved, which the rule in `storage` brings back field by field as saves grow). This also moves every poi. Saves are moved to `old-saves-<date>/` rather than deleted, so a wrong `HOW_DATA` can't destroy anything, and certificates stay, so a wipe can't take a server's HTTPS down. `save_format.ron` says what a folder holds; `OLDEST_SAVE_FORMAT` is what a later wipe raises. The format file and moving are `FileBackend` matters, not part of `SaveBackend`.

@@ -2,7 +2,6 @@
 //! refusal to run on the old variable names, and yes-or-no options.
 
 use std::env;
-use std::process;
 
 use bevy::log::{DEFAULT_FILTER, Level, LogPlugin};
 
@@ -22,9 +21,6 @@ const OUR_CRATES: [&str; 4] = [
 /// every self-signed certificate, which is normal here; `connection::trust`
 /// says what matters.
 const SILENCED: &str = "rustls_platform_verifier=off";
-
-/// The start of the variable names used before `HOW_`.
-const OLD_PREFIX: &str = "HALL_OF_WORLDS_";
 
 /// The values that turn on an option that is off by default.
 const TRUE_VALUES: [&str; 4] = ["1", "on", "true", "yes"];
@@ -75,35 +71,6 @@ fn log_plugin_for(value: Option<&str>) -> LogPlugin {
             filter: format!("{DEFAULT_FILTER},{SILENCED}"),
             ..Default::default()
         }
-    }
-}
-
-/// Stop if an old variable name is set. Ignoring one could mean quietly saving
-/// somewhere else, which looks like lost characters or overwrites real ones.
-pub fn refuse_old_variables() {
-    let old: Vec<String> = env::vars_os()
-        .filter_map(|(name, _)| name.into_string().ok())
-        .filter(|name| name.starts_with(OLD_PREFIX))
-        .collect();
-    if old.is_empty() {
-        return;
-    }
-    for name in &old {
-        eprintln!("{name} is no longer read: use {}", replacement(name));
-    }
-    process::exit(1);
-}
-
-/// What replaced an old variable.
-fn replacement(old: &str) -> &'static str {
-    match old.strip_prefix(OLD_PREFIX) {
-        Some("ADDRESS") => "HOW_ADDRESS",
-        Some("WEB") => "HOW_WEB",
-        Some("SERVER_DATA") => "HOW_DATA",
-        Some("SERVER") => "HOW_SERVER",
-        Some("DEV_TOOLS") => "HOW_DEBUG_TOOLS",
-        Some("LOG_PINGS") => "LOG_LEVEL=debug",
-        _ => "the HOW_ names, or remove it",
     }
 }
 
@@ -191,11 +158,5 @@ mod tests {
                 "{name} is missing from docs/environment-variables.md"
             );
         }
-    }
-
-    #[test]
-    fn old_variables_name_their_replacements() {
-        assert_eq!(replacement("HALL_OF_WORLDS_SERVER_DATA"), "HOW_DATA");
-        assert_eq!(replacement("HALL_OF_WORLDS_LOG_PINGS"), "LOG_LEVEL=debug");
     }
 }

@@ -5,6 +5,8 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::id::Id;
+
 /// A way of logging in that a server offers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LoginMethod {
@@ -49,22 +51,11 @@ impl fmt::Debug for GuestToken {
     }
 }
 
-/// Which character. Made by the server, and also the name of their file, so
-/// only letters, digits, `-` and `_`. One arriving from a client is only used
-/// after it is found among the account's own.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct CharacterId(String);
-
-impl CharacterId {
-    pub fn new(id: &str) -> Option<Self> {
-        let fine = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_';
-        (!id.is_empty() && id.len() <= 32 && id.chars().all(fine)).then(|| Self(id.into()))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
+/// Which character. Made by the server, and also the name of their file, which
+/// being a UUID keeps safe. One arriving from a client is only used after it is
+/// found among the account's own.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct CharacterId(pub Id);
 
 /// A character in the list to choose from.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -87,13 +78,5 @@ mod tests {
         assert_eq!(GuestToken::from_hex(&"é".repeat(32)), None);
         let shown = format!("{:?}", Credentials::Guest(token));
         assert!(!shown.contains("ab"), "{shown}");
-    }
-
-    #[test]
-    fn character_ids_are_safe_file_names() {
-        assert!(CharacterId::new("player_1").is_some());
-        for bad in ["", "../x", "a b", "a/b", "C:"] {
-            assert!(CharacterId::new(bad).is_none(), "{bad}");
-        }
     }
 }
