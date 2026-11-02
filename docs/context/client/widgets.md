@@ -12,6 +12,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/filter_list.rs`: `matches_filter`, `next_highlight`, `HighlightStep`, shared by the debug menu and dropdowns with search. Unit tests.
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
 - `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `TabChosen`, `press_tabs`. Unit test.
+- `crates/client/src/widgets/item.rs`: how items look: `spawn_item_grid`, `spawn_item_cells`, `ItemTooltip`, colours and sizes. Unit tests.
 - `crates/client/src/widgets/moveable.rs`: `spawn_moveable_panel`, `place_panels` (keeps them on the screen), `take_presses` (`PreUpdate`, takes clicks and touches for widgets). Unit tests.
 
 ## Public API
@@ -27,6 +28,8 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `spawn_text_box(parent, TextBox { text, prefix, digits_only, takes_keys }, font_size, node)`: a click or tap gives it the keyboard. `takes_keys` keeps all keys from the game while it has them (Return, Esc or a click elsewhere gives them up); off for a box in something that reads keys itself, which sets `TextFocus` to its box and reads `TextEdited(entity)` and `SoftKeyPressed`.
 - `spawn_dropdown(parent, Dropdown { options, selected, searchable }, font_size, node)`: `DropdownChosen(entity, index)` says what the player chose. With `searchable`, the open list has a text box with the keyboard, narrowing it as letters are typed.
 - `spawn_tabs(parent, labels, selected, font_size)`: a row of buttons of which one is chosen, like radio buttons; returns the row. `TabChosen(row, index)` says the player chose another.
+- `spawn_item_grid(parent, width, height, extra, fill)`: an empty grid of `CELL`s, with `fill` adding what goes over them (`covering()` nodes, `at_cell(x, y)`). `spawn_item_cells(parent, kind, quality, shape, corner, pressable, on_each)`: an item's cells, with `on_each(x, y)` giving what goes on each and on its label. `item_colour`, `item_label`, `item_edge`, `item_edge_width`, `GRID_COLOUR`, `GRID_LINE`, `ITEM_EDGE`, `ALLOWED`, `REFUSED`, `ITEM_LABEL_FONT`, `HELD_ITEM_Z`.
+- `ItemTooltip(Option<ItemTip { words, quality, at }>)`: set it in `Update` to show a name beside the pointer this frame, on a dark box, in its quality's colour. `Floating`: on what follows the pointer, so it doesn't count as being under it.
 - `stops_presses(entity)`: put it on a node for presses on it to go no further.
 - `spawn_fullscreen_layer(commands, depth, content)`: a hidden, centred full-screen panel, 90% of the window for depth 0 and 75% for depth 1 (`layer_share`), darkening everything outside it. Returns the layer (show and hide it; a press outside the panel is its `ButtonPressed`, which should close only that layer) and the panel to fill. `LAYER_EDGE`.
 - `spawn_sized_layer(commands, depth, width, height, content)`: the same with a panel of this size rather than its depth's (`Val::Auto` fits its contents).

@@ -9,15 +9,15 @@ use shared::item::{Inventory, Item, Rotation};
 use shared::wear::Fit;
 
 use super::hold::Target;
-use super::panels::{
-    CELL, GRID_COLOUR, GRID_LINE, ITEM_EDGE, ItemCell, colour, edge, edge_width, label,
-};
+use super::panels::ItemCell;
 use super::{Carried, Holding};
-use crate::widgets::{INK, Pressable};
+use crate::widgets::{
+    ALLOWED, CELL, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, ITEM_LABEL_FONT, Pressable, REFUSED,
+    item_colour, item_edge, item_edge_width, item_label,
+};
 
 const NAME_WIDTH: f32 = 80.0;
 const FONT: f32 = 14.0;
-const LABEL_FONT: f32 = 13.0;
 const BORDER: f32 = 1.0;
 const COVERED_ALPHA: f32 = 0.45;
 
@@ -76,7 +76,7 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         return;
     };
     let covered = carried.covered_by(item.id).is_some();
-    let tint = colour(item.kind).with_alpha(if covered { COVERED_ALPHA } else { 1.0 });
+    let tint = item_colour(item.kind).with_alpha(if covered { COVERED_ALPHA } else { 1.0 });
     // Held by a cell it has, and it is never turned while worn.
     let grip = item.kind.def().shape.cells().next().unwrap_or((0, 0));
     let cell = ItemCell {
@@ -85,18 +85,18 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         grip,
     };
     let text = match here.len() {
-        1 => label(item.kind),
-        many => format!("{}{many}", label(item.kind)),
+        1 => item_label(item.kind),
+        many => format!("{}{many}", item_label(item.kind)),
     };
     let mut slot = row.spawn((
         BodyNode,
         cell,
         Node {
-            border: UiRect::all(px(edge_width(item.quality))),
+            border: UiRect::all(px(item_edge_width(item.quality))),
             ..slot_node()
         },
         BackgroundColor(tint),
-        BorderColor::from(edge(item.quality)),
+        BorderColor::from(item_edge(item.quality)),
     ));
     // Something under another can't be picked up.
     if !covered {
@@ -106,7 +106,7 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         BodyNode,
         cell,
         Text::new(text),
-        TextFont::from_font_size(LABEL_FONT),
+        TextFont::from_font_size(ITEM_LABEL_FONT),
         TextColor(ITEM_EDGE),
     ));
 }
@@ -186,8 +186,8 @@ pub(super) fn show_body_aim(
     mut rows: Query<&mut BackgroundColor, With<BodyRows>>,
 ) {
     let tint = match holding.aim {
-        Some(Target::Body { allowed: true }) => super::panels::ALLOWED,
-        Some(Target::Body { allowed: false }) => super::panels::REFUSED,
+        Some(Target::Body { allowed: true }) => ALLOWED,
+        Some(Target::Body { allowed: false }) => REFUSED,
         _ => Color::NONE,
     };
     for mut background in &mut rows {

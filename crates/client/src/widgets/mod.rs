@@ -5,6 +5,7 @@
 mod dropdown;
 mod filter_list;
 mod fullscreen;
+mod item;
 mod moveable;
 mod slider;
 mod soft_keyboard;
@@ -21,6 +22,11 @@ pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
     LAYER_EDGE, darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer,
     spawn_sized_layer,
+};
+pub use item::{
+    ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, HELD_ITEM_Z, ITEM_EDGE, ITEM_LABEL_FONT,
+    ItemTip, ItemTooltip, REFUSED, at_cell, covering, item_colour, item_edge, item_edge_width,
+    item_label, spawn_item_cells, spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use slider::{SliderMoved, spawn_slider};
@@ -70,6 +76,13 @@ impl Plugin for WidgetsPlugin {
             .add_message::<DropdownChosen>()
             .add_message::<TabChosen>()
             .init_resource::<TextFocus>()
+            .init_resource::<ItemTooltip>()
+            .add_systems(Startup, item::spawn_name_box)
+            // After `Update`, where it is asked for, and in time to be laid out.
+            .add_systems(
+                PostUpdate,
+                item::show_item_tooltip.before(bevy::ui::UiSystems::Layout),
+            )
             .init_resource::<text_box::PressedThisFrame>()
             .init_resource::<dropdown::OpenList>()
             .configure_sets(

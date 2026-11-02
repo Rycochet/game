@@ -8,10 +8,9 @@ use shared::sheet::Feeling;
 
 use super::Holding;
 use super::hold::Target;
-use super::panels::{ALLOWED, GRID_COLOUR};
 use crate::common::{MapPosition, Other};
 use crate::player::Player;
-use crate::widgets::{INK, RaisePanel, spawn_moveable_panel};
+use crate::widgets::{ALLOWED, GRID_COLOUR, INK, RaisePanel, spawn_moveable_panel};
 
 const AT: Vec2 = Vec2::new(900.0, 300.0);
 const FONT: f32 = 16.0;
