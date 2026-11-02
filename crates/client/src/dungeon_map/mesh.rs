@@ -232,7 +232,6 @@ pub fn build(
         level,
         views,
         sight,
-        remembered,
         light,
         camera,
         shape,
@@ -645,6 +644,60 @@ mod tests {
             shape,
         );
         assert!(north_side(&meshes));
+    }
+
+    /// Where remembered walls were drawn, for a viewer who was to the north
+    /// and has gone, with the camera to the south.
+    fn memory_seen_from_the_south(level: &Level) -> Vec<[f32; 3]> {
+        let views = views_from(level, &[(0, -3)]);
+        let remembered = &views[0].sight;
+        let meshes = build(
+            level,
+            &[],
+            &Sight::new(level),
+            remembered,
+            &LightGrid::new(level),
+            &[],
+            &[],
+            &BTreeSet::new(),
+            &[],
+            false,
+            Vec3::new(0.0, 600.0, 900.0),
+            Shape::Built,
+        );
+        meshes.memory[Surface::Wall as usize]
+            .attribute(Mesh::ATTRIBUTE_POSITION)
+            .and_then(|values| values.as_float3())
+            .unwrap()
+            .to_vec()
+    }
+
+    /// A wall seen only from the north still shows with the camera south of
+    /// it, where the side seen is turned away: not as a hole.
+    #[test]
+    fn a_wall_known_from_one_side_shows_from_the_other() {
+        let positions = memory_seen_from_the_south(&room_with_wall());
+        let south_side = CELL_SIZE * 0.05;
+        assert!(
+            positions
+                .iter()
+                .any(|p| (p[2] - south_side).abs() < 0.01 && p[1] < 0.01)
+        );
+    }
+
+    /// The same behind two rows of wall: nothing is open at their inner
+    /// corners, so what lies between them stays dark.
+    #[test]
+    fn a_thick_wall_stays_dark_inside() {
+        let mut level = room_with_wall();
+        for x in -2..=2 {
+            level.set(x, 1, Cell::Wall);
+        }
+        let positions = memory_seen_from_the_south(&level);
+        let middle = positions
+            .iter()
+            .filter(|p| p[0].abs() < CELL_SIZE && p[2] > 0.01);
+        assert_eq!(middle.count(), 0);
     }
 
     /// The floor of a wall's cell, seen from the south, stops at the wall's
