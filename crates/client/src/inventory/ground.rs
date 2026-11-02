@@ -12,14 +12,15 @@ use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPos
 use crate::connection::FromServer;
 use crate::player::Player;
 use crate::widgets::{
-    INK, StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim, spawn_scroll_area,
+    INK, StockAim, StockAimAt, StockGrid, StockGridNode, TextSize, draw_stock_aim,
+    spawn_scroll_area,
 };
 
 /// How many cells across it is: the longest thing there can be.
 const COLUMNS: u8 = 8;
 /// The most of the window's height it takes, before it scrolls.
 const MOST_HEIGHT: Val = Val::Vh(50.0);
-const FONT: f32 = 16.0;
+const FONT: TextSize = TextSize::Medium;
 
 /// What is on the ground where the server last said.
 #[derive(Resource)]
@@ -53,17 +54,13 @@ pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) -> Entity {
             GroundSection,
             Node {
                 flex_direction: FlexDirection::Column,
-                row_gap: px(FONT / 2.0),
+                row_gap: px(8),
                 display: Display::None,
                 ..default()
             },
         ))
         .with_children(|section| {
-            section.spawn((
-                Text::new("On the ground"),
-                TextFont::from_font_size(FONT),
-                TextColor(INK),
-            ));
+            section.spawn((Text::new("On the ground"), FONT.font(), TextColor(INK)));
             holder = spawn_scroll_area(section, MOST_HEIGHT);
         });
     holder

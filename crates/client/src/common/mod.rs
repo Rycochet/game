@@ -592,8 +592,6 @@ pub const NIGHT_LIGHT: f32 = 0.1;
 
 /// What an item's name is written in when it has no quality.
 pub const NO_QUALITY_NAME: Color = Color::srgb(0.9, 0.85, 0.75);
-/// Behind an item's name, dark so that every quality's colour can be read.
-pub const ITEM_NAME_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);
 
 /// How far the bands on set items' edges have slid, in pixels.
 #[derive(Resource, Default)]

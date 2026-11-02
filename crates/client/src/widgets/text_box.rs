@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
 use super::soft_keyboard;
-use super::{ButtonPressed, INK, Pressable};
+use super::{ButtonPressed, INK, Pressable, TextSize};
 
 const CARET: &str = "_";
 const SIDE_PADDING: f32 = 8.0;
@@ -54,7 +54,7 @@ pub(super) struct RaisesKeyboard;
 pub fn spawn_text_box<'a>(
     parent: &'a mut ChildSpawnerCommands,
     text_box: TextBox,
-    font_size: f32,
+    size: TextSize,
     node: Node,
 ) -> EntityCommands<'a> {
     let mut holder = parent.spawn((
@@ -73,7 +73,7 @@ pub fn spawn_text_box<'a>(
     holder.with_child((
         TextBoxLabel(entity),
         Text::new(""),
-        TextFont::from_font_size(font_size),
+        size.font(),
         TextColor(INK),
     ));
     holder

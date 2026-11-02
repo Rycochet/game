@@ -13,12 +13,12 @@ use crate::connection::ToServer;
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::{
-    ButtonPressed, ButtonState, CLOSE_PIXELS, INK, Pressable, WidgetSystems, panel_title,
+    ButtonPressed, ButtonState, CLOSE_PIXELS, INK, Pressable, TextSize, WidgetSystems, panel_title,
     spawn_button, spawn_close_button, spawn_icon_button, spawn_sized_layer, spawn_tabs,
 };
 
 const GEAR_BUTTON: f32 = 34.0;
-const CORNER_GAP: f32 = 10.0;
+const CORNER_GAP: f32 = 8.0;
 
 const MENU_WIDTH: f32 = 260.0;
 const MARGIN: f32 = 20.0;
@@ -26,8 +26,8 @@ const MARGIN: f32 = 20.0;
 /// moves when it does.
 const PAUSED_ROW: f32 = 48.0;
 const BUTTON_ROW: f32 = 38.0;
-const GAP: f32 = 6.0;
-const FONT: f32 = 18.0;
+const GAP: f32 = 8.0;
+const FONT: TextSize = TextSize::Large;
 const SETTINGS_TITLE_ROW: f32 = 36.0;
 /// Round the close button, still on it, for fingers.
 const CLOSE_MARGIN: f32 = 4.0;
@@ -259,11 +259,7 @@ fn spawn_requester(commands: &mut Commands) {
         },
     );
     commands.entity(panel).with_children(|panel| {
-        panel.spawn((
-            Text::new("Are you sure?"),
-            TextFont::from_font_size(FONT),
-            TextColor(INK),
-        ));
+        panel.spawn((Text::new("Are you sure?"), FONT.font(), TextColor(INK)));
         panel
             .spawn(Node {
                 column_gap: px(GAP),

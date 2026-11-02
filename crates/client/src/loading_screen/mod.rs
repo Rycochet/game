@@ -12,7 +12,7 @@ use bevy::winit::WinitSettings;
 use crate::common::{
     GameView, LoadingStep, PointerSystems, ServerStatus, TouchGesture, frame_settings,
 };
-use crate::widgets::WidgetSystems;
+use crate::widgets::{TextSize, WidgetSystems};
 
 /// Built into the program, rather than loaded, to be there on the first frame.
 const TITLE_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/CinzelDecorative-Bold.ttf");
@@ -35,7 +35,7 @@ const REFUSED: Color = Color::srgb(1.0, 0.35, 0.3);
 
 const BAR_HEIGHT: f32 = 32.0;
 const BAR_MARGIN: f32 = 32.0;
-const BAR_FONT: f32 = 18.0;
+const BAR_FONT: TextSize = TextSize::Large;
 
 /// Frames before the screen has certainly been drawn once, so "Starting..." is
 /// seen before the work starts.
@@ -173,12 +173,7 @@ fn spawn_screen(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                         },
                         BackgroundColor(GOLD.with_alpha(0.45)),
                     ));
-                    bar.spawn((
-                        BarText,
-                        Text::new(""),
-                        TextFont::from_font_size(BAR_FONT),
-                        TextColor(WRITING),
-                    ));
+                    bar.spawn((BarText, Text::new(""), BAR_FONT.font(), TextColor(WRITING)));
                 });
         });
 }

@@ -7,7 +7,7 @@ use bevy::window::PrimaryWindow;
 
 use super::item::shown_at;
 use super::{
-    ButtonPressed, ButtonState, INK, Pressable, RaisePanel, panel, panel_title, raised_border,
+    ButtonPressed, ButtonState, PANEL_EDGE, Pressable, RaisePanel, SHADED_EDGE, panel, panel_title,
     spawn_close_button,
 };
 use crate::common::{PointerPosition, TouchGesture};
@@ -16,15 +16,14 @@ use crate::common::{PointerPosition, TouchGesture};
 /// others.
 const FIRST_PANEL_Z: i32 = 30;
 
-const EDGE: f32 = 3.0;
-const PADDING: f32 = 6.0;
+const PADDING: f32 = 8.0;
 const CONTENT_GAP: f32 = 4.0;
 const TITLE_GAP: f32 = 8.0;
-/// The stripes either side of the title: how many, how thick, the gap between,
-/// and the least each side may shrink to.
+/// The stripes either side of the title, which only panels that can be moved have:
+/// how many, how thick, the gap between, and the least each side may shrink to.
 const STRIPES: usize = 3;
-const STRIPE_THICKNESS: f32 = 3.0;
-const STRIPE_GAP: f32 = 3.0;
+const STRIPE_THICKNESS: f32 = 2.0;
+const STRIPE_GAP: f32 = 4.0;
 const MIN_STRIPES_WIDTH: f32 = 16.0;
 /// Round the close button, still on it, for fingers.
 const CLOSE_MARGIN: f32 = 4.0;
@@ -60,7 +59,7 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
             panel(),
             MoveablePanel { at, window: None },
             GlobalZIndex(FIRST_PANEL_Z),
-            raised_border(),
+            Visibility::Hidden,
         ))
         .id();
     commands.entity(root).insert((
@@ -68,7 +67,7 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
         Node {
             position_type: PositionType::Absolute,
             flex_direction: FlexDirection::Column,
-            border: UiRect::all(px(EDGE)),
+            border: UiRect::all(px(PANEL_EDGE)),
             padding: UiRect::all(px(PADDING)),
             row_gap: px(CONTENT_GAP),
             ..default()
@@ -131,7 +130,7 @@ fn spawn_stripes(bar: &mut ChildSpawnerCommands) {
                     height: px(STRIPE_THICKNESS),
                     ..default()
                 },
-                BackgroundColor(INK),
+                BackgroundColor(SHADED_EDGE),
             ));
         }
     });
@@ -152,14 +151,24 @@ fn in_new_window(at: Vec2, old: Vec2, new: Vec2) -> Vec2 {
 /// Puts panels where they are wanted, as far as the window allows.
 pub(super) fn place_panels(
     window: Single<&Window, With<PrimaryWindow>>,
-    mut panels: Query<(&mut MoveablePanel, &ComputedNode, &mut Node)>,
+    mut panels: Query<(
+        &mut MoveablePanel,
+        &ComputedNode,
+        &mut Node,
+        &mut Visibility,
+    )>,
 ) {
     let window = Vec2::new(window.width(), window.height());
     // Minimised: nowhere to be, so everything stays as it is for coming back.
     if window.min_element() < 1.0 {
         return;
     }
-    for (mut moveable, computed, mut node) in &mut panels {
+    for (mut moveable, computed, mut node, mut visibility) in &mut panels {
+        // Not laid out yet, so it can't be placed: it stays hidden until it can.
+        if computed.size() == Vec2::ZERO {
+            continue;
+        }
+        visibility.set_if_neq(Visibility::Inherited);
         if let Some(old) = moveable.window.replace(window) {
             moveable.at = in_new_window(moveable.at, old, window);
         }

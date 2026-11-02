@@ -13,7 +13,8 @@ use super::filter_list::{HighlightStep, matches_filter, next_highlight};
 use super::fullscreen::layer_z;
 use super::text_box::{RaisesKeyboard, TextBox, TextEdited, TextFocus, spawn_text_box};
 use super::{
-    ButtonPressed, ButtonState, INK, Pressable, panel, raised_border, spawn_button, stops_presses,
+    ButtonPressed, ButtonState, INK, PANEL_EDGE, Pressable, TextSize, panel, spawn_button,
+    stops_presses,
 };
 use crate::common::TouchGesture;
 
@@ -21,13 +22,12 @@ use crate::common::TouchGesture;
 const LIST_LAYER: i32 = 4;
 /// How many options show at once.
 const ROWS: usize = 8;
-const ROW: f32 = 30.0;
-const GAP: f32 = 3.0;
-const EDGE: f32 = 3.0;
-const FONT: f32 = 16.0;
+const ROW: f32 = 32.0;
+const GAP: f32 = 4.0;
+const FONT: TextSize = TextSize::Medium;
 const SEARCH_HEIGHT: f32 = 32.0;
 /// How far a finger drags to move by a row.
-const DRAG_PER_ROW: f32 = 30.0;
+const DRAG_PER_ROW: f32 = 32.0;
 const LEAST_WIDTH: f32 = 160.0;
 
 /// A choice among `options`. Set `selected` to change it.
@@ -75,12 +75,12 @@ pub(super) struct List {
 pub fn spawn_dropdown<'a>(
     parent: &'a mut ChildSpawnerCommands,
     dropdown: Dropdown,
-    font_size: f32,
+    size: TextSize,
     node: Node,
 ) -> EntityCommands<'a> {
     let label = label_of(&dropdown);
     let searchable = dropdown.searchable;
-    let mut button = spawn_button(parent, ButtonState::Normal, label, font_size, node);
+    let mut button = spawn_button(parent, ButtonState::Normal, label, size, node);
     button.insert((dropdown, Pressable));
     if searchable {
         button.insert(RaisesKeyboard);
@@ -256,7 +256,7 @@ fn spawn_list(
         0.0
     };
     let rows = of.options.len().clamp(1, ROWS) as f32;
-    let height = search_room + rows * (ROW + GAP) + 2.0 * EDGE + GAP;
+    let height = search_room + rows * (ROW + GAP) + 2.0 * PANEL_EDGE + GAP;
     let corner = list_corner(place, height, width, window);
     let backing = commands
         .spawn((
@@ -271,7 +271,7 @@ fn spawn_list(
             GlobalZIndex(layer_z(LIST_LAYER)),
         ))
         .id();
-    let holder = commands.spawn((panel(), raised_border())).id();
+    let holder = commands.spawn(panel()).id();
     commands.entity(holder).insert((
         stops_presses(holder),
         Node {
@@ -279,7 +279,7 @@ fn spawn_list(
             left: px(corner.x),
             top: px(corner.y),
             width: px(width),
-            border: UiRect::all(px(EDGE)),
+            border: UiRect::all(px(PANEL_EDGE)),
             padding: UiRect::all(px(GAP)),
             row_gap: px(GAP),
             flex_direction: FlexDirection::Column,
@@ -352,11 +352,7 @@ pub(super) fn show_dropdowns(
     commands.entity(holder).despawn_children();
     commands.entity(holder).with_children(|holder| {
         if now.0.is_empty() {
-            holder.spawn((
-                Text::new("No matches"),
-                TextFont::from_font_size(FONT),
-                TextColor(INK),
-            ));
+            holder.spawn((Text::new("No matches"), FONT.font(), TextColor(INK)));
         }
         for (row, &at) in now.0.iter().enumerate().skip(now.1).take(ROWS) {
             let state = if now.2 == Some(row) {
@@ -375,7 +371,7 @@ pub(super) fn show_dropdowns(
             let last = (now.1 + ROWS).min(now.0.len());
             holder.spawn((
                 Text::new(format!("{} to {last} of {}", now.1 + 1, now.0.len())),
-                TextFont::from_font_size(FONT),
+                FONT.font(),
                 TextLayout::justify(Justify::Center),
                 TextColor(INK),
             ));

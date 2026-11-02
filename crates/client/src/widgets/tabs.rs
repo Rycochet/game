@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, spawn_button};
+use super::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, TextSize, spawn_button};
 
 const TAB_GAP: f32 = 4.0;
 
@@ -29,7 +29,7 @@ pub fn spawn_tabs(
     parent: &mut ChildSpawnerCommands,
     labels: &[&str],
     selected: usize,
-    font_size: f32,
+    size: TextSize,
 ) -> Entity {
     let mut row = parent.spawn((
         Tabs { selected },
@@ -45,7 +45,7 @@ pub fn spawn_tabs(
                 padding: BUTTON_PADDING,
                 ..default()
             };
-            spawn_button(row, state_of(index, selected), *label, font_size, node).insert((
+            spawn_button(row, state_of(index, selected), *label, size, node).insert((
                 Tab {
                     row: row_entity,
                     index,

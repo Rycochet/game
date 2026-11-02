@@ -14,6 +14,7 @@ mod soft_keyboard;
 mod stock;
 mod tabs;
 mod text_box;
+mod theme;
 
 use bevy::input::InputSystems;
 use bevy::prelude::*;
@@ -23,14 +24,12 @@ use crate::common::PointerSystems;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
-    LAYER_EDGE, darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer,
-    spawn_sized_layer,
+    darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer, spawn_sized_layer,
 };
 pub use item::{
-    ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, HELD_ITEM_Z, ITEM_EDGE, ITEM_LABEL_FONT,
-    ItemLook, ItemTip, ItemTooltip, PICTURE_PIXELS_PER_CELL, REFUSED, at_cell, covering,
-    item_colour, item_edge, item_edge_width, item_label, item_picture, logical_rect, shown_at,
-    spawn_item_cells, spawn_item_grid,
+    CELL, Floating, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip,
+    PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
+    item_label, item_picture, logical_rect, shown_at, spawn_item_cells, spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use scroll::spawn_scroll_area;
@@ -40,36 +39,31 @@ pub use soft_keyboard::Key as SoftKey;
 pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};
 pub use tabs::{TabChosen, spawn_tabs};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, spawn_text_box};
+pub use theme::{ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, TextSize};
+use theme::{
+    DISABLED_BACKGROUND, DISABLED_EDGE, DISABLED_TEXT, LIT_EDGE, RAISED_BACKGROUND, SELECTED_TEXT,
+    SHADED_EDGE, TOOLTIP_BACKGROUND, TOOLTIP_TEXT, soft_shadow,
+};
 
-/// The inside of panels, the colour of parchment.
-pub const PARCHMENT: [u8; 3] = [240, 225, 190];
-/// Writing and lines on parchment.
-pub const INK: Color = Color::srgb(0.25, 0.17, 0.1);
+/// The width of the edge of a panel.
+pub const PANEL_EDGE: f32 = 3.0;
 /// A close button, across.
 pub const CLOSE_PIXELS: f32 = 28.0;
 /// The padding of a button with no size of its own.
 pub const BUTTON_PADDING: UiRect = UiRect {
-    left: Val::Px(14.0),
-    right: Val::Px(14.0),
-    top: Val::Px(5.0),
-    bottom: Val::Px(5.0),
+    left: Val::Px(12.0),
+    right: Val::Px(12.0),
+    top: Val::Px(4.0),
+    bottom: Val::Px(4.0),
 };
 
-const TITLE_FONT: f32 = 24.0;
-const TOOLTIP_FONT: f32 = 18.0;
-const CLOSE_FONT: f32 = 18.0;
+const TOOLTIP_FONT: TextSize = TextSize::Medium;
+const CLOSE_FONT: TextSize = TextSize::Large;
+const TOOLTIP_EDGE: f32 = 1.0;
 const BUTTON_BORDER: f32 = 2.0;
 const CHECK_PIXELS: f32 = 18.0;
 const CHECK_MARK_PIXELS: f32 = 10.0;
 const CHECK_GAP: f32 = 8.0;
-
-const RAISED_BACKGROUND: Color = Color::srgb(0.75, 0.65, 0.48);
-const LIT_EDGE: Color = Color::srgb(0.95, 0.87, 0.7);
-const SHADED_EDGE: Color = Color::srgb(0.42, 0.32, 0.2);
-const SELECTED_TEXT: Color = LIT_EDGE;
-const DISABLED_BACKGROUND: Color = Color::srgb(0.62, 0.59, 0.53);
-const DISABLED_EDGE: Color = Color::srgb(0.5, 0.48, 0.44);
-const DISABLED_TEXT: Color = Color::srgb(0.42, 0.4, 0.37);
 
 pub struct WidgetsPlugin;
 
@@ -221,7 +215,7 @@ fn raised_border() -> BorderColor {
 pub fn raised_box() -> impl Bundle {
     (
         Node {
-            border: UiRect::all(px(3)),
+            border: UiRect::all(px(PANEL_EDGE)),
             padding: BUTTON_PADDING,
             ..default()
         },
@@ -230,7 +224,9 @@ pub fn raised_box() -> impl Bundle {
     )
 }
 
-/// A parchment panel, placed by absolute position. Its parts go in as children.
+/// A parchment panel, placed by absolute position, with a soft shadow. Its parts
+/// go in as children. Give its `Node` a border of `PANEL_EDGE`, or a `panel_frame`
+/// if its children are placed by numbers that shouldn't allow for one.
 pub fn panel() -> impl Bundle {
     let [red, green, blue] = PARCHMENT;
     (
@@ -239,31 +235,54 @@ pub fn panel() -> impl Bundle {
             ..default()
         },
         BackgroundColor(Color::srgb_u8(red, green, blue)),
+        raised_border(),
+        soft_shadow(),
+    )
+}
+
+/// A panel's edge, as a child covering it: spawn it first, to be behind the rest.
+pub fn panel_frame() -> impl Bundle {
+    (
+        Node {
+            position_type: PositionType::Absolute,
+            width: percent(100),
+            height: percent(100),
+            border: UiRect::all(px(PANEL_EDGE)),
+            ..default()
+        },
+        raised_border(),
     )
 }
 
 /// The writing for a panel's title. Add a `Node` to place it.
 pub fn panel_title(title: impl Into<String>) -> impl Bundle {
-    (
-        Text::new(title),
-        TextFont::from_font_size(TITLE_FONT),
-        TextColor(INK),
-    )
+    (Text::new(title), TextSize::Title.font(), TextColor(INK))
 }
 
-/// A named box, such as what is under the pointer; `marker` goes on its text,
+/// A dark box naming something, such as what is under the pointer; `marker` goes on its text,
 /// to find it and change what it says. Hide the holder to hide it.
 pub fn spawn_tooltip(
     holder: &mut ChildSpawnerCommands,
     marker: impl Bundle,
     text: impl Into<String>,
 ) {
-    holder.spawn(raised_box()).with_child((
-        marker,
-        Text::new(text),
-        TextFont::from_font_size(TOOLTIP_FONT),
-        TextColor(INK),
-    ));
+    holder
+        .spawn((
+            Node {
+                border: UiRect::all(px(TOOLTIP_EDGE)),
+                padding: BUTTON_PADDING,
+                ..default()
+            },
+            BackgroundColor(TOOLTIP_BACKGROUND),
+            BorderColor::from(SHADED_EDGE),
+            soft_shadow(),
+        ))
+        .with_child((
+            marker,
+            Text::new(text),
+            TOOLTIP_FONT.font(),
+            TextColor(TOOLTIP_TEXT),
+        ));
 }
 
 /// A button. `node` says its size or padding and where it goes; its border and
@@ -272,7 +291,7 @@ pub fn spawn_button<'a>(
     parent: &'a mut ChildSpawnerCommands,
     state: ButtonState,
     label: impl Into<String>,
-    font_size: f32,
+    size: TextSize,
     node: Node,
 ) -> EntityCommands<'a> {
     let (background, border, text) = state.colours();
@@ -289,7 +308,7 @@ pub fn spawn_button<'a>(
     ));
     button.with_child((
         Text::new(label),
-        TextFont::from_font_size(font_size),
+        size.font(),
         TextLayout::justify(Justify::Center),
         TextColor(text),
     ));
@@ -331,7 +350,7 @@ pub fn spawn_check_button<'a>(
     state: ButtonState,
     checked: Option<bool>,
     label: impl Into<String>,
-    font_size: f32,
+    size: TextSize,
     node: Node,
 ) -> EntityCommands<'a> {
     let (background, border, text) = state.colours();
@@ -368,11 +387,7 @@ pub fn spawn_check_button<'a>(
                 BackgroundColor(INK),
             ));
         }
-        inside.spawn((
-            Text::new(label),
-            TextFont::from_font_size(font_size),
-            TextColor(text),
-        ));
+        inside.spawn((Text::new(label), size.font(), TextColor(text)));
     });
     button
 }
@@ -393,11 +408,7 @@ pub fn spawn_close_button<'a>(
         },
         BorderColor::from(INK),
     ));
-    button.with_child((
-        Text::new("X"),
-        TextFont::from_font_size(CLOSE_FONT),
-        TextColor(INK),
-    ));
+    button.with_child((Text::new("X"), CLOSE_FONT.font(), TextColor(INK)));
     button
 }
 

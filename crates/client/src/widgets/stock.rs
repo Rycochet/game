@@ -7,8 +7,9 @@ use shared::creature::Size;
 use shared::id::Id;
 use shared::item::{Inventory, Item, ItemKind, Placed, Rotation, Shape};
 
+use super::ALLOWED;
 use super::item::{
-    ALLOWED, CELL, Floating, ItemLook, ItemName, at_cell, covering, logical_rect, spawn_item_cells,
+    CELL, Floating, ItemLook, ItemName, at_cell, covering, logical_rect, spawn_item_cells,
     spawn_item_grid,
 };
 use crate::common::{HeldGift, StockCell, TakesGifts};

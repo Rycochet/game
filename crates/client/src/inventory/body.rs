@@ -14,12 +14,12 @@ use super::{Carried, Holding};
 use crate::item_art::{ItemPicture, look_of};
 use crate::widgets::{
     ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, ITEM_LABEL_FONT,
-    PICTURE_PIXELS_PER_CELL, Pressable, REFUSED, item_colour, item_edge, item_edge_width,
+    PICTURE_PIXELS_PER_CELL, Pressable, REFUSED, TextSize, item_colour, item_edge, item_edge_width,
     item_label, set_edge,
 };
 
 const NAME_WIDTH: f32 = 80.0;
-const FONT: f32 = 14.0;
+const FONT: TextSize = TextSize::Small;
 const BORDER: f32 = 1.0;
 const COVERED_ALPHA: f32 = 0.45;
 
@@ -48,7 +48,7 @@ fn words(text: impl Into<String>, width: f32) -> impl Bundle {
     (
         BodyNode,
         Text::new(text),
-        TextFont::from_font_size(FONT),
+        FONT.font(),
         TextColor(INK),
         Node {
             width: px(width),
@@ -141,7 +141,7 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         BodyNode,
         cell,
         Text::new(text),
-        TextFont::from_font_size(ITEM_LABEL_FONT),
+        ITEM_LABEL_FONT.font(),
         TextColor(ITEM_EDGE),
     ));
 }
@@ -168,7 +168,7 @@ pub(super) fn show_clothes(
             rows.spawn((
                 BodyNode,
                 Text::new(format!("{}, {:?}", def.name, def.size)),
-                TextFont::from_font_size(FONT),
+                FONT.font(),
                 TextColor(INK),
             ));
             rows.spawn((BodyNode, Node::default()))

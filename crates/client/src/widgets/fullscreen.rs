@@ -5,7 +5,8 @@
 use bevy::prelude::*;
 
 use super::moveable::PanelPart;
-use super::{Pressable, panel, raised_border, stops_presses};
+use super::theme::DARKENING;
+use super::{PANEL_EDGE, Pressable, panel, stops_presses};
 
 /// Above every moveable panel, however many times they have been brought to the
 /// front. A layer's own parts may go a little above its number.
@@ -16,11 +17,6 @@ const Z_PER_LAYER: i32 = 10;
 /// above it.
 const FIRST_SHARE: f32 = 0.9;
 const SHARE_PER_LAYER: f32 = 0.15;
-
-/// The width of a layer's edge.
-pub const LAYER_EDGE: f32 = 3.0;
-
-const DARKENING: Color = Color::srgba(0.0, 0.0, 0.0, 0.5);
 
 /// A layer's darkening, which while it shows stops anything under it being used.
 #[derive(Component, Clone, Copy, Debug)]
@@ -92,14 +88,14 @@ pub fn spawn_sized_layer(
         align_items: AlignItems::Center,
         ..default()
     });
-    let panel_entity = commands.spawn((panel(), raised_border())).id();
+    let panel_entity = commands.spawn(panel()).id();
     commands.entity(panel_entity).insert((
         stops_presses(panel_entity),
         Node {
             position_type: PositionType::Relative,
             width,
             height,
-            border: UiRect::all(px(LAYER_EDGE)),
+            border: UiRect::all(px(PANEL_EDGE)),
             ..content
         },
     ));

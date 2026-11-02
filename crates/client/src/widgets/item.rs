@@ -7,8 +7,8 @@ use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use shared::item::{Item, ItemKind, Quality, Rotation, Shape};
 
 use super::set_edge::{SetEdge, set_edge};
-use super::{Pressable, spawn_tooltip};
-use crate::common::{ITEM_NAME_BACKGROUND, NO_QUALITY_NAME, PointerPosition, quality_colour};
+use super::{GRID_COLOUR, GRID_LINE, ITEM_EDGE, Pressable, TextSize, spawn_tooltip};
+use crate::common::{NO_QUALITY_NAME, PointerPosition, quality_colour};
 use crate::item_art::{ItemPicture, Look, look_of};
 
 /// A grid cell, across, in logical pixels.
@@ -17,17 +17,9 @@ pub const CELL: f32 = 32.0;
 /// for sharpness.
 pub const PICTURE_PIXELS_PER_CELL: u32 = 64;
 /// What is written on an item.
-pub const ITEM_LABEL_FONT: f32 = 13.0;
+pub const ITEM_LABEL_FONT: TextSize = TextSize::Small;
 /// Above moveable panels, below full-screen layers.
 pub const HELD_ITEM_Z: i32 = 900_000;
-
-pub const GRID_COLOUR: Color = Color::srgb(0.55, 0.46, 0.33);
-pub const GRID_LINE: Color = Color::srgb(0.42, 0.34, 0.24);
-pub const ITEM_EDGE: Color = Color::srgb(0.15, 0.1, 0.05);
-/// Cells a drop could take.
-pub const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
-/// Cells a drop couldn't take.
-pub const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
 
 const CELL_BORDER: f32 = 1.0;
 /// How thick the metal edge of a set item's name is.
@@ -272,7 +264,7 @@ pub fn spawn_item_cells<B: Bundle>(
         if first && !drawn {
             node.with_child((
                 Text::new(item_label(kind)),
-                TextFont::from_font_size(ITEM_LABEL_FONT),
+                ITEM_LABEL_FONT.font(),
                 TextColor(ITEM_EDGE),
                 on_each(x, y),
             ));
@@ -373,9 +365,8 @@ pub(super) fn name_item_at_pointer(
 pub(super) fn show_item_tooltip(
     mut tooltip: ResMut<ItemTooltip>,
     name_box: Single<(&mut Node, &mut Visibility), With<NameBox>>,
-    text: Single<(&mut Text, &mut TextColor, &ChildOf), With<NameText>>,
+    text: Single<(&mut Text, &mut TextColor), With<NameText>>,
     edge: Single<(&mut SetEdge, &mut Visibility), (With<NameEdge>, Without<NameBox>)>,
-    mut backgrounds: Query<&mut BackgroundColor>,
 ) {
     let (mut node, mut visibility) = name_box.into_inner();
     let Some(tip) = tooltip.0.take() else {
@@ -390,16 +381,13 @@ pub(super) fn show_item_tooltip(
     } else {
         Visibility::Hidden
     });
-    let (mut text, mut colour, parent) = text.into_inner();
+    let (mut text, mut colour) = text.into_inner();
     if text.0 != tip.words {
         text.0 = tip.words;
     }
     colour.set_if_neq(TextColor(
         tip.quality.map_or(NO_QUALITY_NAME, quality_colour),
     ));
-    if let Ok(mut background) = backgrounds.get_mut(parent.parent()) {
-        background.set_if_neq(BackgroundColor(ITEM_NAME_BACKGROUND));
-    }
     node.left = px(tip.at.x);
     node.top = px(tip.at.y);
 }
