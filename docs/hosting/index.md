@@ -46,7 +46,8 @@ Change the `environment` and `ports` of the example:
 | ----- | ----------- | ----- |
 | Let's Encrypt | `HOW_LETS_ENCRYPT_DOMAIN: game.example.com`, which accepts Let's Encrypt's terms | `"443:8081"` |
 | Your own certificate | `HOW_TLS_CERTIFICATE` and `HOW_TLS_KEY`, the paths of your PEM files as the container sees them, which must be readable by its `hall` user | `"8081:8081"` |
-| Behind a reverse proxy that looks after TLS | `HOW_BEHIND_PROXY: "true"` | `"8080:8080"` alone |
+| Behind a reverse proxy, unencrypted between it and this server | `HOW_BEHIND_PROXY: "true"` and `HOW_DISABLE_SSL: "true"` | `"8080:8080"` alone |
+| Behind a reverse proxy, encrypted between it and this server | Any certificate above or the self-signed one, with `HOW_BEHIND_PROXY: "true"` if it should be able to use port 8080 too | `"8081:8081"`, and `"8080:8080"` if used |
 
 - **Let's Encrypt:** the domain's public port 443 must reach this server, directly rather than through a proxy. The self-signed certificate is used until the new one arrives, with no restart needed.
 - **Your own certificate:** replaced files are picked up within an hour, with no restart needed.

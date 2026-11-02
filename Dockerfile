@@ -11,10 +11,11 @@
 # HOW_LETS_ENCRYPT_DOMAIN asks Let's Encrypt for one (publish it as -p 443:8081).
 # Port 8080 only answers that connections must be secure.
 #
-# Behind a reverse proxy that looks after TLS, set HOW_BEHIND_PROXY=true: port 8080
-# then serves everything, and 8081 isn't used:
+# Behind a reverse proxy, set HOW_BEHIND_PROXY=true: port 8080 then serves
+# everything too, and 8081 stays open in case the proxy prefers it. HOW_DISABLE_SSL=true
+# as well doesn't open 8081 or set up a certificate:
 #
-#   docker run -p 8080:8080 -e HOW_BEHIND_PROXY=true -v hall-of-worlds:/data hall-of-worlds
+#   docker run -p 8080:8080 -e HOW_BEHIND_PROXY=true -e HOW_DISABLE_SSL=true -v hall-of-worlds:/data hall-of-worlds
 #
 # Saves go in /data: mount a volume there to keep them.
 #

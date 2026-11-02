@@ -3,8 +3,8 @@
 //! proxy such as Cloudflare in front of it) is all a server needs.
 //!
 //! That port is the secure one (HTTPS and `wss://`), and the plain port only
-//! answers with an error saying so. Behind a proxy (`Security::BehindProxy`)
-//! the plain port serves everything and the proxy looks after TLS.
+//! answers with an error saying so. Behind a proxy, the plain port serves
+//! everything too, and with `Security::PlainOnly` it is the only port.
 //!
 //! The web server runs on its own thread (with a small `tokio` runtime, as
 //! the web libraries need). Each WebSocket becomes a `ServerLink` handed to
@@ -86,6 +86,8 @@ struct SecurePort {
     /// Whether to get certificates from Let's Encrypt, if they are from there
     /// (tests answer its checks without asking it for anything).
     ask_lets_encrypt: bool,
+    /// Whether the plain port serves the game as well.
+    plain_too: bool,
 }
 
 /// Connections the web server has accepted, waiting to join the game.
@@ -115,11 +117,21 @@ impl Plugin for NetworkPlugin {
         let listener = TcpListener::bind(self.address)
             .unwrap_or_else(|error| panic!("Can't listen on {}: {error}", self.address));
         let secure = match &self.security {
-            Security::BehindProxy => {
-                info!("Behind a proxy: connections here aren't secured");
+            Security::PlainOnly => {
+                info!("SSL is disabled: connections here aren't secured");
                 None
             }
-            Security::Tls { address, source } => {
+            Security::Tls {
+                address,
+                source,
+                plain_too,
+            } => {
+                if *plain_too {
+                    info!(
+                        "Behind a proxy: connections on {} aren't secured",
+                        self.address
+                    );
+                }
                 let certificates =
                     Certificates::load(source).unwrap_or_else(|error| panic!("{error}"));
                 let listener = TcpListener::bind(address)
@@ -132,6 +144,7 @@ impl Plugin for NetworkPlugin {
                     listener,
                     certificates: Arc::new(certificates),
                     ask_lets_encrypt: true,
+                    plain_too: *plain_too,
                 })
             }
         };
@@ -224,7 +237,6 @@ fn game_routes(
         );
     }
     if let Some(web) = web {
-        info!("Serving the web client from {}", web.display());
         router = router.fallback_service(ServeDir::new(web));
     }
     router
@@ -266,6 +278,9 @@ fn serve(
             stop_signal().await;
             stop_asked.store(true, Ordering::Relaxed);
         });
+        if let Some(web) = &web {
+            info!("Serving the web client from {}", web.display());
+        }
         let Some(secure) = secure else {
             if let Err(error) = axum::serve(listener, game_routes(web, sockets, None)).await {
                 error!("The web server stopped: {error}");
@@ -277,8 +292,12 @@ fn serve(
             .local_addr()
             .expect("a bound port has an address")
             .port();
-        let refusing = Router::new().fallback(move || use_the_secure_port(port));
-        let plain = axum::serve(listener, refusing);
+        let plain_routes = if secure.plain_too {
+            game_routes(web.clone(), sockets.clone(), None)
+        } else {
+            Router::new().fallback(move || use_the_secure_port(port))
+        };
+        let plain = axum::serve(listener, plain_routes);
         let routes = game_routes(web, sockets, Some(secure.certificates.clone()));
         let secured = axum::serve(TlsListener::start(secure), routes);
         let (plain, secured) = tokio::join!(plain.into_future(), secured.into_future());
@@ -303,6 +322,7 @@ impl TlsListener {
             listener,
             certificates,
             ask_lets_encrypt,
+            ..
         } = secure;
         listener.set_nonblocking(true).expect("can be non-blocking");
         let address = listener.local_addr().expect("a bound port has an address");
@@ -557,10 +577,19 @@ mod tests {
     fn serve_with(
         certificates: Arc<Certificates>,
     ) -> (SocketAddr, SocketAddr, Receiver<ServerLink>) {
+        serve_with_plain_too(certificates, false)
+    }
+
+    /// The same, saying whether the plain port serves the game as well.
+    fn serve_with_plain_too(
+        certificates: Arc<Certificates>,
+        plain_too: bool,
+    ) -> (SocketAddr, SocketAddr, Receiver<ServerLink>) {
         let secure = SecurePort {
             listener: TcpListener::bind("127.0.0.1:0").unwrap(),
             certificates,
             ask_lets_encrypt: false,
+            plain_too,
         };
         let secure_address = secure.listener.local_addr().unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -686,6 +715,38 @@ mod tests {
         // A peer closing without TLS's goodbye is fine here.
         let _ = stream.read_to_end(&mut answer);
         String::from_utf8_lossy(&answer).into_owned()
+    }
+
+    #[test]
+    fn behind_a_proxy_both_ports_serve_the_game() {
+        let folder = TestFolder::new();
+        let source = CertificateSource::Generated {
+            folder: folder.0.join("tls"),
+            names: Vec::new(),
+        };
+        let certificates = Arc::new(Certificates::load(&source).unwrap());
+        let (plain, secure, accepted) = serve_with_plain_too(certificates, true);
+
+        let (_plain_socket, _) =
+            tungstenite::connect(format!("ws://{plain}{SOCKET_PATH}")).unwrap();
+        assert!(accepted.recv_timeout(Duration::from_secs(5)).is_ok());
+
+        let url = format!("wss://localhost:{}{SOCKET_PATH}", secure.port());
+        let (_secure_socket, _) = tungstenite::client_tls_with_config(
+            url,
+            TcpStream::connect(secure).unwrap(),
+            None,
+            Some(tungstenite::Connector::Rustls(trusting_client())),
+        )
+        .unwrap();
+        assert!(accepted.recv_timeout(Duration::from_secs(5)).is_ok());
+
+        // The certificate is only asked for over a connection that uses it.
+        let answer = ask(TcpStream::connect(plain).unwrap(), CERTIFICATE_PATH);
+        assert!(answer.starts_with("HTTP/1.1 404"), "{answer}");
+        let mut player = connect_as(secure, "localhost", &[b"http/1.1"]);
+        let answer = ask(&mut player, CERTIFICATE_PATH);
+        assert!(answer.starts_with("HTTP/1.1 200"), "{answer}");
     }
 
     #[test]

@@ -5,11 +5,13 @@
 //! Set by environment variables:
 //!
 //! - `HOW_ADDRESS`: the plain port (default `0.0.0.0:8080`), which only answers
-//!   that connections must be secure, unless `HOW_BEHIND_PROXY` is set.
+//!   that connections must be secure, unless `HOW_BEHIND_PROXY` is on.
 //! - `HOW_TLS_ADDRESS`: the secure port for HTTPS and `wss://` (default
 //!   `0.0.0.0:8081`).
-//! - `HOW_BEHIND_PROXY`: `true` turns TLS off and serves everything on the plain
-//!   port, for a server behind a reverse proxy that looks after TLS.
+//! - `HOW_BEHIND_PROXY`: `true` also serves everything on the plain port, for a
+//!   reverse proxy to reach. The secure port stays open.
+//! - `HOW_DISABLE_SSL`: `true` doesn't open the secure port or set up a
+//!   certificate. It needs `HOW_BEHIND_PROXY`, or the server refuses to start.
 //! - `HOW_TLS_CERTIFICATE` and `HOW_TLS_KEY`: the paths of your own PEM
 //!   certificate and private key. Without them, a self-signed certificate is
 //!   made and kept in the data folder.
