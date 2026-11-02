@@ -7,6 +7,7 @@ use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use bevy::window::PrimaryWindow;
 use shared::item::{Item, ItemKind, Quality, Rotation, Shape};
 
+use super::aura::{Aura, AuraMask, aura_glow};
 use super::set_edge::{SetEdge, set_edge};
 use super::{GRID_COLOUR, GRID_LINE, ITEM_EDGE, Pressable, TextSize, spawn_tooltip};
 use crate::common::{NO_QUALITY_NAME, PointerPosition, quality_colour};
@@ -66,6 +67,8 @@ pub struct ItemLook {
     /// Its picture, if its kind has a model, and how it is turned.
     pub picture: Option<Look>,
     pub rotation: Rotation,
+    /// How it glows, if it does.
+    pub aura: Option<Aura>,
 }
 
 impl ItemLook {
@@ -76,6 +79,7 @@ impl ItemLook {
             set: item.set,
             picture: look_of(item),
             rotation: Rotation::None,
+            aura: Aura::of(item),
         }
     }
 
@@ -220,8 +224,22 @@ pub fn spawn_item_cells<B: Bundle>(
         set,
         picture,
         rotation,
+        aura,
     } = look;
     let drawn = picture.is_some();
+    let pixels = shape.width.max(shape.height) as u32 * PICTURE_PIXELS_PER_CELL;
+    // Behind a picture, with its frame drawn over it.
+    if let (Some(aura), Some(picture)) = (aura, &picture) {
+        let node = Node {
+            left: px(corner.0 * CELL),
+            top: px(corner.1 * CELL),
+            width: px(shape.width as f32 * CELL),
+            height: px(shape.height as f32 * CELL),
+            ..default()
+        };
+        let mask = AuraMask::Picture(picture.clone(), pixels);
+        parent.spawn((aura_glow(aura, mask, node), picture_turned(rotation)));
+    }
     // Before the cells, so that they are what the pointer finds.
     if let Some(picture) = picture {
         let (width, height) = (shape.width as f32, shape.height as f32);
@@ -233,7 +251,6 @@ pub fn spawn_item_cells<B: Bundle>(
             height: px(height * CELL),
             ..default()
         };
-        let pixels = shape.width.max(shape.height) as u32 * PICTURE_PIXELS_PER_CELL;
         parent.spawn(item_picture(picture, pixels, node, rotation));
     }
     let mut first = true;
@@ -276,23 +293,40 @@ pub fn spawn_item_cells<B: Bundle>(
             node.with_child(set_edge(quality, width, width));
         }
     }
+    // Over plain cells, inside their frame.
+    if let (Some(aura), false) = (aura, drawn) {
+        let edge = item_edge_width(quality);
+        let node = Node {
+            left: px(corner.0 * CELL + edge),
+            top: px(corner.1 * CELL + edge),
+            width: px(shape.width as f32 * CELL - edge * 2.0),
+            height: px(shape.height as f32 * CELL - edge * 2.0),
+            ..default()
+        };
+        parent.spawn(aura_glow(aura, AuraMask::Cells(shape), node));
+    }
 }
 
 /// An item's picture in this node, turned this way. It never takes the pointer.
 pub fn item_picture(look: Look, pixels: u32, node: Node, rotation: Rotation) -> impl Bundle {
+    (
+        Floating,
+        ItemPicture { look, pixels },
+        ImageNode::default(),
+        node,
+        picture_turned(rotation),
+    )
+}
+
+/// How something drawn from a picture is turned.
+fn picture_turned(rotation: Rotation) -> UiTransform {
     let degrees = match rotation {
         Rotation::None => 0.0,
         Rotation::Quarter => 90.0,
         Rotation::Half => 180.0,
         Rotation::ThreeQuarters => 270.0,
     };
-    (
-        Floating,
-        ItemPicture { look, pixels },
-        ImageNode::default(),
-        node,
-        UiTransform::from_rotation(Rot2::degrees(degrees)),
-    )
+    UiTransform::from_rotation(Rot2::degrees(degrees))
 }
 
 /// An edge of this width only on the sides with none of the shape beyond them.

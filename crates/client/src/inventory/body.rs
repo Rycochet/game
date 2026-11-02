@@ -5,17 +5,18 @@
 use bevy::prelude::*;
 use shared::creature::Layer;
 use shared::id::Id;
-use shared::item::{Inventory, Item, Rotation};
-use shared::wear::Fit;
+use shared::item::{Inventory, Item, Rotation, Shape};
+use shared::wear::{Fit, Remover};
 
 use super::hold::Target;
 use super::panels::ItemCell;
 use super::{Carried, Holding};
+use crate::common::GodMode;
 use crate::item_art::{ItemPicture, look_of};
 use crate::widgets::{
-    ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, ITEM_LABEL_FONT,
-    PICTURE_PIXELS_PER_CELL, Pressable, REFUSED, TextSize, item_colour, item_edge, item_edge_width,
-    item_label, set_edge,
+    ALLOWED, Aura, AuraMask, CELL, Floating, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE,
+    ITEM_LABEL_FONT, PICTURE_PIXELS_PER_CELL, Pressable, REFUSED, TextSize, aura_glow, item_colour,
+    item_edge, item_edge_width, item_label, set_edge,
 };
 
 const NAME_WIDTH: f32 = 80.0;
@@ -67,7 +68,7 @@ fn slot_node() -> Node {
 }
 
 /// How a slot is drawn: the worn things here, last on top.
-fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item]) {
+fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item], god: bool) {
     let Some(item) = here.last() else {
         row.spawn((
             BodyNode,
@@ -112,9 +113,22 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         BackgroundColor(tint),
         BorderColor::from(item_edge(item.quality)),
     ));
-    // Something under another can't be picked up.
-    if !covered {
+    // Something under another can't be picked up, nor a curse once it is known.
+    if !covered && (god || carried.may_remove(item.id, Remover::Wearer)) {
         slot.insert(Pressable);
+    }
+    if let Some(aura) = Aura::of(item) {
+        // One cell here, whatever it takes up in a grid.
+        let mask = match &picture {
+            Some(look) => AuraMask::Picture(look.clone(), PICTURE_PIXELS_PER_CELL),
+            None => AuraMask::Cells(Shape::rectangle(1, 1)),
+        };
+        let node = Node {
+            width: percent(100),
+            height: percent(100),
+            ..default()
+        };
+        slot.with_child(aura_glow(aura, mask, node));
     }
     if let Some(look) = picture {
         let node = Node {
@@ -150,13 +164,14 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
 pub(super) fn show_clothes(
     carried: Res<Carried>,
     holding: Res<Holding>,
+    god: Res<GodMode>,
     new_rows: Query<(), Added<BodyRows>>,
     rows: Query<Entity, With<BodyRows>>,
     mut commands: Commands,
     mut drawn_without: Local<Option<Id>>,
 ) {
     let held = holding.held.map(|held| held.item.id);
-    if !carried.is_changed() && new_rows.is_empty() && *drawn_without == held {
+    if !carried.is_changed() && !god.is_changed() && new_rows.is_empty() && *drawn_without == held {
         return;
     }
     *drawn_without = held;
@@ -198,7 +213,7 @@ pub(super) fn show_clothes(
                                     })
                                 })
                                 .collect();
-                            spawn_slot(row, inventory, &here);
+                            spawn_slot(row, inventory, &here, god.0);
                         }
                     });
             }

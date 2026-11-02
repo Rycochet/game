@@ -6,7 +6,7 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 
 - `crates/shared/src/creature.rs`: `Layer`, `Location`, `Size`, `BodyPart`, `CreatureDef`, `CreatureKind` (the table: `def()`).
 - `crates/shared/src/sheet.rs`: `Stats`, `Skill`, `Ability`, `Trait`, `Appearance` (`suits`, `says`), `Load`, `Sheet` (`new`, `capacity`, `load`). Tests.
-- `crates/shared/src/wear.rs`: `Fit`, `WearRefused`, and on `Inventory`: `is_worn`, `covered_by`, `check_wear`, `wear`, `worn_fit`, `change_body`; on `Made`: `fit`. Tests for every rule below.
+- `crates/shared/src/wear.rs`: `Fit`, `WearRefused` (`worth_trying`), `Remover`, and on `Inventory`: `is_worn`, `covered_by`, `check_wear`, `wear`, `worn_fit`, `change_body`, `may_remove`, `favour_found_out`, `magic_found_out`, `hide_secrets`; on `Made`: `fit`. Tests for every rule below.
 
 ## Public API
 
@@ -28,7 +28,9 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 - Going on and coming off: nothing on a higher layer may be at any of its locations (`covered_by`), and on going on, nothing on the same layer (`WearRefused::Clash`). Taking off is `Inventory::move_item`, which refuses `MoveRefused::Covered`; destroying is refused the same way.
 - `one_place` items (rings) take one of a location's places, and clash only once all are taken or something whole is on that layer.
 - Rings are Skin on `Fingers`. Gloves are Middle on `Hands` and `Fingers`, gauntlets Outer on both, so both lock rings underneath; fingerless gloves are on `Hands` only. Gloves being Middle differs from the owner's first example, so that rings can stay on under them.
-- Fit is on the item itself (`item::Made`): the size it fits, the smallest and largest that can wear it, and finger count. `Made::fit` answers `Exact`, `Loose(n)` or `None`; `WearDef::adjustable` things are exact anywhere in their range; magical things fit any size and fingers but not any body. Things covering whole fingers need exactly the body's count. Looseness has no penalty until stats have something to affect.
+- Fit is on the item itself (`item::Made`): the size it fits, the smallest and largest that can wear it, and finger count. `Made::fit` answers `Exact`, `Loose(n)` or `None`; `WearDef::adjustable` things are exact anywhere in their range; magical things are exact within `Quality::magic_reach` sizes of their own (uncommon 1 up to artifact 5), going by their usual range beyond that, whatever the fingers, but not on any body. Things covering whole fingers need exactly the body's count. Looseness has no penalty until stats have something to affect.
+- Taking off: `may_remove(id, Remover)` says who may, by what lies on it: blessed things only their wearer, cursed things nobody, and anything not worn anyone. It is for whoever acts to ask, not `move_item` or `hand_over`: a body falling or a future ability doesn't go by it. God mode skips it for the player's own attempts (`server`).
+- Magic gives itself away when it was needed to fit (`magic_found_out`, called only for players). A curse gives itself away when taking it off fails. Nothing reveals a blessing yet. A client doesn't know what is secret, so it lets a player try anything refused only for size or fingers (`worth_trying`), and the server decides.
 - A creature's size comes from its kind, apart from its appearance's height, which has no effect on rules.
 - The creature is kept on `Inventory` for now, as that is all that depends on it.
 - A `Sheet` is one creature's stats, skills and appearance, starting from its kind. Abilities come from the kind alone. Nothing uses stats or skills yet but carrying: capacity is strength × (size + 1) kg, burdened past half and overloaded past all of it, which cut speed (`Sheet::speed`) to 75% and 40%. Appearance never affects rules, and `suits` is how the server checks a choice.

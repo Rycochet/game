@@ -558,11 +558,13 @@ pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id)
             ..Item::new(new_id(), new.kind)
         };
         give_form(&mut item, None, &mut new_id);
+        item.roll_secrets();
         item
     }));
     keeping.carried.clone_from(&items);
     saved.last_made = restocked.last_made;
     saved.last_interaction = Some(now);
+    let items = client.as_seen(items);
     client.link.send(&ServerMessage::TradeStock { with, items })
 }
 
@@ -1194,6 +1196,7 @@ mod tests {
             magical: false,
             quality: Quality::Common,
             set: false,
+            favour: None,
         };
         test.send(&[coin]);
         let item = test.client.inventory.pockets.last().unwrap().item.id;

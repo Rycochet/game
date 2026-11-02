@@ -17,6 +17,7 @@ use shared::protocol::{
     CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerLink, ServerMessage,
 };
 use shared::sheet::{Appearance, Feeling, Sheet};
+use shared::wear::Remover;
 use shared::world::{MINUTES_PER_HOUR, WorldId};
 
 use crate::accounts::{AccountId, Accounts, LoginKey, MAX_CHARACTERS};
@@ -134,6 +135,8 @@ pub struct Client {
     pub(crate) detect_monsters: bool,
     /// Dev tools: mobs take no notice of it, and it can walk through them.
     pub(crate) god_mode: bool,
+    /// Dev tools: it is told items' secrets, without them being found out.
+    pub(crate) truesight: bool,
     /// Who the client has been told is in sight, and where.
     pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
     /// How the client has been told they feel.
@@ -178,6 +181,7 @@ impl Client {
             inventory: Inventory::default(),
             detect_monsters: false,
             god_mode: false,
+            truesight: false,
             seen_entities: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
             sheet: Sheet::default(),
@@ -221,6 +225,37 @@ impl Client {
     pub(crate) fn update_speed(&mut self, tick: u64) {
         self.energy.settle(tick, self.speed);
         self.speed = self.sheet.speed(&self.inventory);
+    }
+
+    /// Tells the client what it carries, as far as it knows.
+    pub(crate) fn send_inventory(&mut self) -> bool {
+        let mut seen = self.inventory.clone();
+        if !self.truesight {
+            seen.hide_secrets();
+        }
+        self.link.send(&ServerMessage::Inventory(seen))
+    }
+
+    /// These items, as far as the client knows.
+    pub(crate) fn as_seen(&self, mut items: Vec<Item>) -> Vec<Item> {
+        if !self.truesight {
+            items.iter_mut().for_each(Item::hide_secrets);
+        }
+        items
+    }
+
+    /// Whether the player's own attempt to take this off gets anywhere. A curse
+    /// holding it is found out by trying, unless something on top stopped the attempt.
+    pub(crate) fn may_take_off(&mut self, item: shared::id::Id) -> bool {
+        if self.god_mode
+            || self.inventory.covered_by(item).is_some()
+            || self.inventory.may_remove(item, Remover::Wearer)
+        {
+            return true;
+        }
+        self.inventory.favour_found_out(item);
+        self.unsaved = true;
+        false
     }
 
     /// It has put this on or taken it off, which takes longer the heavier it is.
@@ -700,22 +735,24 @@ pub(crate) fn answer(
         } => {
             let cost = client.inventory.move_cost(item, to);
             let tick = world.action_clock.ticks();
-            match client.inventory.move_item(item, to, x, y, rotation) {
-                Ok(()) => {
-                    client.unsaved = true;
-                    client.energy.spend(tick, client.speed, cost);
+            if client.may_take_off(item) {
+                match client.inventory.move_item(item, to, x, y, rotation) {
+                    Ok(()) => {
+                        client.unsaved = true;
+                        client.energy.spend(tick, client.speed, cost);
+                    }
+                    Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
                 }
-                Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
             }
             client.update_speed(world.action_clock.ticks());
-            client
-                .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()))
+            client.send_inventory()
         }
         ClientMessage::GiveItem { item, to } => {
             let mut stock = None;
             let cost = client.inventory.put_down_cost(item);
-            let given = if sites::keeper_building(client, world, to).is_some() {
+            let given = if !client.may_take_off(item) {
+                Err("it won't come off")
+            } else if sites::keeper_building(client, world, to).is_some() {
                 sites::give_to_keeper(client, world, item, to).map(|items| stock = Some(items))
             } else {
                 crate::entities::give(client, world, item, to)
@@ -729,11 +766,10 @@ pub(crate) fn answer(
                 Err(why) => warn!("Refused giving {item:?} to {to:?}: {why}"),
             }
             client.update_speed(world.action_clock.ticks());
-            let sent = client
-                .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()));
+            let sent = client.send_inventory();
             match stock {
                 Some(items) => {
+                    let items = client.as_seen(items);
                     sent && client
                         .link
                         .send(&ServerMessage::TradeStock { with: to, items })
@@ -762,11 +798,12 @@ pub(crate) fn answer(
             }
             client.update_speed(world.action_clock.ticks());
             let stock = sites::keeper_stock(client, world, with);
-            let sent = client
-                .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()));
+            let sent = client.send_inventory();
             match stock {
-                Some(items) => sent && client.link.send(&ServerMessage::TradeStock { with, items }),
+                Some(items) => {
+                    let items = client.as_seen(items);
+                    sent && client.link.send(&ServerMessage::TradeStock { with, items })
+                }
                 None => sent,
             }
         }
@@ -775,25 +812,24 @@ pub(crate) fn answer(
             match client.inventory.wear(item) {
                 Ok(_) => {
                     client.unsaved = true;
+                    client.inventory.magic_found_out(item);
                     client.spend_dressing(item, tick);
                 }
                 Err(why) => warn!("Refused wearing {item:?}: {why:?}"),
             }
             client.update_speed(world.action_clock.ticks());
-            client
-                .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()))
+            client.send_inventory()
         }
         ClientMessage::BinItem { item } => {
-            if client.inventory.to_bin(item) {
+            if !client.may_take_off(item) {
+                // Nothing more to say: it stays on.
+            } else if client.inventory.to_bin(item) {
                 client.unsaved = true;
             } else {
                 warn!("Refused throwing away {item:?}");
             }
             client.update_speed(world.action_clock.ticks());
-            client
-                .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()))
+            client.send_inventory()
         }
         // Dev tools are only for the embedded server; elsewhere a stray key
         // or click is ignored rather than ending the game.
@@ -840,7 +876,14 @@ pub(crate) fn answer(
             magical,
             quality,
             set,
+            favour,
         } => {
+            // Asking for magic on what is too plain for it would quietly give none.
+            let quality = if magical && kind.def().wear.is_some() {
+                quality.max(Quality::Uncommon)
+            } else {
+                quality
+            };
             let mut new = made_for(
                 &client.inventory,
                 kind,
@@ -850,18 +893,23 @@ pub(crate) fn answer(
                 world.made_now(),
             );
             new.set = set && new.quality.is_some();
+            new.made.magical = magical && new.can_be_magical();
+            new.favour = favour.filter(|_| kind.def().wear.is_some());
             match client.inventory.give(new) {
                 Ok(()) => client.unsaved = true,
                 Err(item) => info!("No room for a new {:?}", item.kind),
             }
             client.update_speed(world.action_clock.ticks());
-            client
-                .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()))
+            client.send_inventory()
         }
         ClientMessage::DevDetectMonsters(on) => {
             client.detect_monsters = on;
             true
+        }
+        ClientMessage::DevTruesight(on) => {
+            client.truesight = on;
+            client.ground_told.again = true;
+            client.send_inventory()
         }
         ClientMessage::DevGodMode(on) => {
             client.god_mode = on;
@@ -884,9 +932,7 @@ pub(crate) fn answer(
                 .send(&ServerMessage::Sheet(client.sheet.clone()))
                 && {
                     client.update_speed(world.action_clock.ticks());
-                    client
-                        .link
-                        .send(&ServerMessage::Inventory(client.inventory.clone()))
+                    client.send_inventory()
                 }
         }
         ClientMessage::DevSnowLine(snow_line) => {
@@ -1008,9 +1054,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
         || !client
             .link
             .send(&ServerMessage::Sheet(client.sheet.clone()))
-        || !client
-            .link
-            .send(&ServerMessage::Inventory(client.inventory.clone()))
+        || !client.send_inventory()
     {
         return false;
     }
@@ -1031,7 +1075,7 @@ pub(crate) mod tests {
     use std::sync::atomic::Ordering;
     use std::time::Duration;
 
-    use shared::item::{Holder, Rotation};
+    use shared::item::{Favour, Holder, Rotation};
     use shared::movement::{Step, steps_between};
     use shared::poi::PoiKind;
     use shared::protocol::{ClientLink, Credentials, GuestToken, local_pair};
@@ -1180,6 +1224,7 @@ pub(crate) mod tests {
             magical: false,
             quality: Quality::Rare,
             set: false,
+            favour: None,
         }
     }
 
@@ -1351,14 +1396,15 @@ pub(crate) mod tests {
             magical: false,
             quality: Quality::Poor,
             set: true,
+            favour: None,
         };
-        test.send(&[give(ItemKind::Sword), give(ItemKind::Apple)]);
+        test.send(&[give(ItemKind::Hat), give(ItemKind::Apple)]);
         let set_of = |kind| {
             let pockets = test.client.inventory.pockets.iter();
             let mut pockets = pockets.filter(|placed| placed.item.kind == kind);
             pockets.next_back().unwrap().item.set
         };
-        assert!(set_of(ItemKind::Sword));
+        assert!(set_of(ItemKind::Hat));
         assert!(!set_of(ItemKind::Apple));
     }
 
@@ -1371,6 +1417,7 @@ pub(crate) mod tests {
             magical: false,
             quality: Quality::Rare,
             set: false,
+            favour: None,
         };
         let carried = inventory(&test.send(&[give(ItemKind::Ring)]));
         let ring = &carried.pockets[0].item;
@@ -1394,6 +1441,7 @@ pub(crate) mod tests {
             magical: false,
             quality: Quality::Artifact,
             set: false,
+            favour: None,
         };
         let carried = inventory(&test.send(&[artifact]));
         let name = carried.pockets[0].item.name();
@@ -1414,6 +1462,7 @@ pub(crate) mod tests {
     fn items_are_made_for_the_wearer_or_the_size_asked_for() {
         let mut test = TestClient::new();
         test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
+        test.send(&[ClientMessage::DevTruesight(true)]);
         let answers = test.send(&[give(ItemKind::Gloves)]);
         let gloves = inventory(&answers).pockets.last().unwrap().item.made;
         assert_eq!(gloves.size, shared::creature::Size::Giant);
@@ -1424,6 +1473,7 @@ pub(crate) mod tests {
             magical: true,
             quality: Quality::Epic,
             set: false,
+            favour: None,
         };
         let mut made = |kind| {
             let answers = test.send(&[large(kind)]);
@@ -1435,6 +1485,145 @@ pub(crate) mod tests {
         // Not something that comes in sizes, whoever asks or carries it.
         let coin = made(ItemKind::Coin);
         assert_eq!(coin.size, shared::creature::Size::Medium);
+    }
+
+    /// Something new in the pockets, with these secrets, and its id.
+    fn given(
+        test: &mut TestClient,
+        kind: ItemKind,
+        size: Option<shared::creature::Size>,
+        magical: bool,
+        favour: Option<Favour>,
+    ) -> Id {
+        let answers = test.send(&[ClientMessage::DevGiveItem {
+            kind,
+            size,
+            magical,
+            quality: Quality::Rare,
+            set: false,
+            favour,
+        }]);
+        inventory(&answers).pockets.last().unwrap().item.id
+    }
+
+    fn secretly_cursed_hat() -> (TestClient, Id) {
+        let mut test = TestClient::new();
+        let hat = given(&mut test, ItemKind::Hat, None, true, Some(Favour::Cursed));
+        test.send(&[ClientMessage::WearItem { item: hat }]);
+        (test, hat)
+    }
+
+    #[test]
+    fn secrets_are_only_sent_to_truesight_or_once_found_out() {
+        let (mut test, hat) = secretly_cursed_hat();
+        assert!(test.client.inventory.find(hat).unwrap().is_magical());
+        let shoes = given(&mut test, ItemKind::Shoes, None, false, None);
+        let answers = test.send(&[ClientMessage::BinItem { item: shoes }]);
+        let seen = inventory(&answers);
+        let item = seen.find(hat).unwrap();
+        assert!(!item.made.magical);
+        assert_eq!(item.favour, None);
+
+        let seen = inventory(&test.send(&[ClientMessage::DevTruesight(true)]));
+        let item = seen.find(hat).unwrap();
+        assert!(item.made.magical);
+        assert_eq!(item.favour, Some(Favour::Cursed));
+        assert!(
+            !item.known.magic && !item.known.favour,
+            "seen, not found out"
+        );
+
+        let seen = inventory(&test.send(&[ClientMessage::DevTruesight(false)]));
+        assert_eq!(seen.find(hat).unwrap().favour, None);
+    }
+
+    #[test]
+    fn trying_to_take_off_a_curse_fails_and_gives_it_away() {
+        let attempts = |hat| {
+            [
+                ClientMessage::MoveItem {
+                    item: hat,
+                    to: Holder::Pockets,
+                    x: 0,
+                    y: 0,
+                    rotation: Rotation::None,
+                },
+                ClientMessage::BinItem { item: hat },
+                ClientMessage::GiveItem {
+                    item: hat,
+                    to: Id::for_test(9),
+                },
+            ]
+        };
+        for index in 0..3 {
+            let (mut test, hat) = secretly_cursed_hat();
+            let answers = test.send(&[attempts(hat)[index].clone()]);
+            let seen = inventory(&answers);
+            assert!(seen.is_worn(hat), "attempt {index}");
+            let item = seen.find(hat).unwrap();
+            assert_eq!(item.favour, Some(Favour::Cursed), "attempt {index}");
+            assert!(!item.made.magical, "only the curse is found out");
+        }
+    }
+
+    #[test]
+    fn in_god_mode_a_curse_comes_off_and_stays_secret() {
+        let (mut test, hat) = secretly_cursed_hat();
+        test.send(&[ClientMessage::DevGodMode(true)]);
+        let answers = test.send(&[ClientMessage::BinItem { item: hat }]);
+        let seen = inventory(&answers);
+        assert!(!seen.is_worn(hat));
+        assert_eq!(seen.bin.unwrap().favour, None);
+    }
+
+    #[test]
+    fn a_blessing_lets_its_wearer_take_it_off_and_stays_secret() {
+        let mut test = TestClient::new();
+        let hat = given(&mut test, ItemKind::Hat, None, false, Some(Favour::Blessed));
+        test.send(&[ClientMessage::WearItem { item: hat }]);
+        let seen = inventory(&test.send(&[ClientMessage::BinItem { item: hat }]));
+        assert!(seen.in_bin(hat));
+        assert_eq!(seen.bin.unwrap().favour, None);
+    }
+
+    #[test]
+    fn wrong_sized_magic_gives_itself_away_by_fitting() {
+        use shared::creature::Size;
+        let mut test = TestClient::new();
+        let own = given(&mut test, ItemKind::Hat, None, true, None);
+        let answers = test.send(&[ClientMessage::WearItem { item: own }]);
+        assert!(!inventory(&answers).find(own).unwrap().made.magical);
+
+        // Too small for a medium wearer, were it not magical. Rare reaches 2.
+        let mut test = TestClient::new();
+        let tiny = given(&mut test, ItemKind::Hat, Some(Size::Tiny), true, None);
+        let answers = test.send(&[ClientMessage::WearItem { item: tiny }]);
+        let seen = inventory(&answers);
+        assert!(seen.is_worn(tiny));
+        assert!(seen.find(tiny).unwrap().made.magical);
+
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
+        let far = given(&mut test, ItemKind::Hat, Some(Size::Tiny), true, None);
+        let answers = test.send(&[ClientMessage::WearItem { item: far }]);
+        assert!(!inventory(&answers).is_worn(far), "past its reach");
+    }
+
+    #[test]
+    fn asking_for_magic_on_something_plain_raises_its_quality() {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevTruesight(true)]);
+        let answers = test.send(&[ClientMessage::DevGiveItem {
+            kind: ItemKind::Hat,
+            size: None,
+            magical: true,
+            quality: Quality::Common,
+            set: false,
+            favour: None,
+        }]);
+        let hat = inventory(&answers).pockets.last().unwrap().item.clone();
+        assert!(hat.is_magical());
+        assert_eq!(hat.quality, Some(Quality::Uncommon));
     }
 
     #[test]

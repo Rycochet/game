@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::common::{
     ClickMode, DebugInfo, GameClock, GameView, GodMode, KillMob, MapPosition, ServerClock,
-    ViewStats, Weather,
+    Truesight, ViewStats, Weather,
 };
 use crate::debug_menu::TemperatureCycle;
 use crate::fonts;
@@ -40,6 +40,7 @@ const PING_ICON: char = '\u{1F4F6}';
 const SNOW_LINE_ICON: char = '\u{2744}';
 const GOD_MODE_ICON: &str = "\u{1F47B}";
 const KILL_MOB_ICON: &str = "\u{1F480}";
+const TRUESIGHT_ICON: &str = "\u{1F440}";
 
 const MODE_COLOUR: Color = Color::srgb(1.0, 0.2, 0.2);
 
@@ -86,6 +87,7 @@ fn update_status_text(
     mode: Res<ClickMode>,
     god: Res<GodMode>,
     kill: Res<KillMob>,
+    truesight: Res<Truesight>,
     mut text: Single<&mut Text, With<StatusText>>,
     mut mode_text: Single<&mut TextSpan, (With<ModeText>, Without<StatsText>)>,
     mut stats_text: Single<&mut TextSpan, (With<StatsText>, Without<ModeText>)>,
@@ -100,6 +102,7 @@ fn update_status_text(
     let says = [
         (god.0, GOD_MODE_ICON),
         (kill.0, KILL_MOB_ICON),
+        (truesight.0, TRUESIGHT_ICON),
         (!mode.is_empty(), mode),
     ];
     let says: Vec<&str> = says

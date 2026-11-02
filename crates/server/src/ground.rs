@@ -43,7 +43,7 @@ pub(crate) struct GroundTold {
     pile: Option<((i64, i64), Vec<Id>)>,
     /// It guessed at something the server has now answered: it needs telling again,
     /// even if nothing changed.
-    again: bool,
+    pub(crate) again: bool,
     /// It has been told the bags its character remembers on this map.
     bags_told: bool,
 }
@@ -85,6 +85,9 @@ fn put_down(client: &Client, world: &mut ServerWorld, item: Item) {
 /// Moves something carried to the ground under the player: what it cost.
 fn dropped(client: &mut Client, world: &mut ServerWorld, item: Id) -> Result<u32, &'static str> {
     standing_on(client).ok_or("not in a site")?;
+    if !client.may_take_off(item) {
+        return Err("it won't come off");
+    }
     let cost = client.inventory.put_down_cost(item);
     let item = client
         .inventory
@@ -133,6 +136,7 @@ pub(crate) fn act(
                 .inventory
                 .wear_new(found)
                 .map_err(|_| "it can't go on")?;
+            client.inventory.magic_found_out(item);
             take_up(client, world, item);
             Ok(dressing_cost(grams) + handling_cost(grams))
         }),
@@ -154,9 +158,7 @@ pub(crate) fn act(
     };
     client.update_speed(world.action_clock.ticks());
     client.ground_told.again = true;
-    let sent = client
-        .link
-        .send(&ServerMessage::Inventory(client.inventory.clone()));
+    let sent = client.send_inventory();
     (sent, cost)
 }
 
@@ -174,7 +176,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
         let items = level.and_then(|level| level.ground.get(&at));
         let pile = items.map(|items| (at, items.iter().map(|item| item.id).collect()));
         if pile != client.ground_told.pile || client.ground_told.again {
-            let items = items.cloned().unwrap_or_default();
+            let items = client.as_seen(items.cloned().unwrap_or_default());
             client.link.send(&ServerMessage::GroundItems {
                 x: at.0,
                 y: at.1,
@@ -244,7 +246,7 @@ fn tell_bags(client: &mut Client, world: &mut ServerWorld) {
 #[cfg(test)]
 mod tests {
     use shared::energy::site_step_cost;
-    use shared::item::{Inventory, ItemKind, Quality};
+    use shared::item::{Favour, Inventory, ItemKind, Quality};
     use shared::protocol::{ClientMessage, ServerMessage};
 
     use super::*;
@@ -268,6 +270,18 @@ mod tests {
             magical: false,
             quality: Quality::Rare,
             set: false,
+            favour: None,
+        }
+    }
+
+    fn give_cursed(kind: ItemKind) -> ClientMessage {
+        ClientMessage::DevGiveItem {
+            kind,
+            size: None,
+            magical: false,
+            quality: Quality::Rare,
+            set: false,
+            favour: Some(Favour::Cursed),
         }
     }
 
@@ -382,6 +396,29 @@ mod tests {
         let shoes = shoes.unwrap().id;
         let answers = test.send(&[ClientMessage::DropItem { item: shoes }]);
         assert!(carrying(&answers).is_worn(shoes));
+    }
+
+    #[test]
+    fn a_curse_doesnt_let_go_for_the_ground_either() {
+        let mut test = in_a_site();
+        let answers = test.send(&[give_cursed(ItemKind::Hat)]);
+        let hat = carrying(&answers).pockets.last().unwrap().item.id;
+        test.send(&[ClientMessage::WearItem { item: hat }]);
+        let answers = test.send(&[ClientMessage::DropItem { item: hat }]);
+        let seen = carrying(&answers);
+        assert!(seen.is_worn(hat));
+        assert_eq!(seen.find(hat).unwrap().favour, Some(Favour::Cursed));
+    }
+
+    #[test]
+    fn what_is_on_the_ground_keeps_its_secrets() {
+        let mut test = in_a_site();
+        let answers = test.send(&[give_cursed(ItemKind::Hat)]);
+        let hat = carrying(&answers).pockets.last().unwrap().item.id;
+        let answers = test.send(&[ClientMessage::DropItem { item: hat }]);
+        assert_eq!(ground(&answers)[0].favour, None);
+        let answers = test.send(&[ClientMessage::DevTruesight(true)]);
+        assert_eq!(ground(&answers)[0].favour, Some(Favour::Cursed));
     }
 
     #[test]

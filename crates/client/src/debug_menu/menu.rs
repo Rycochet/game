@@ -703,6 +703,7 @@ mod tests {
             cycling: false,
             detecting: false,
             god_mode: false,
+            truesight: false,
             killing: false,
             teleporting: false,
             changing_cells: false,

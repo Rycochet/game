@@ -53,7 +53,8 @@
 //!   show the pockets and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at
 //!   this index in the pockets, under the cursor (see `HOW_DEBUG_CURSOR`).
 //!   `HOW_DEBUG_DROP=true`: put all but the first of what is in the pockets on the
-//!   ground underfoot first (in a site).
+//!   ground underfoot first (in a site). `HOW_DEBUG_SECRETS=true`: truesight on, and
+//!   things that are magical, blessed and cursed, to look at how they glow.
 //! - `HOW_DEBUG_BAGS=true`: two seconds after starting, show a bag of every look in
 //!   a row east from the player, only to look at (in a site).
 //! - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look
@@ -69,7 +70,7 @@ use bevy::window::PrimaryWindow;
 
 use shared::creature::CreatureKind;
 use shared::dungeon::Cell;
-use shared::item::ItemKind;
+use shared::item::{Favour, ItemKind, Quality};
 use shared::movement::steps_between;
 use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
@@ -77,7 +78,7 @@ use shared::site::StairsStyle;
 
 use crate::common::{
     Attitude, CurrentDungeon, FirstFloor, GameView, MapPosition, OtherLevels, Token, TokenShape,
-    TokenSize,
+    TokenSize, Truesight,
 };
 use crate::connection::ToServer;
 use crate::debug_menu::{AutoWalk, DebugAction, DebugMenu};
@@ -253,6 +254,7 @@ impl Plugin for DevToolsPlugin {
         if server::option_on("HOW_DEBUG_INVENTORY", false) {
             let hold = env::var("HOW_DEBUG_HOLD").ok().and_then(|n| n.parse().ok());
             let drop_some = server::option_on("HOW_DEBUG_DROP", false);
+            let secrets = server::option_on("HOW_DEBUG_SECRETS", false);
             let creature = env::var("HOW_DEBUG_CREATURE")
                 .ok()
                 .and_then(|n| n.parse::<usize>().ok())
@@ -262,6 +264,7 @@ impl Plugin for DevToolsPlugin {
                 move |time: Res<Time<Real>>,
                       view: Res<State<GameView>>,
                       mut step: Local<u8>,
+                      mut truesight: ResMut<Truesight>,
                       mut to_server: MessageWriter<ToServer>,
                       mut debug: MessageWriter<InventoryDebug>| {
                     if *view.get() == GameView::Connecting {
@@ -269,6 +272,30 @@ impl Plugin for DevToolsPlugin {
                     }
                     if *step == 0 {
                         *step = 1;
+                        if secrets {
+                            truesight.0 = true;
+                            to_server.write(ToServer(ClientMessage::DevTruesight(true)));
+                            let curse = Some(Favour::Cursed);
+                            let bless = Some(Favour::Blessed);
+                            for (kind, magical, favour) in [
+                                (ItemKind::Ring, true, None),
+                                (ItemKind::Ring, false, bless),
+                                (ItemKind::Ring, false, curse),
+                                (ItemKind::Ring, true, curse),
+                                (ItemKind::Hat, true, None),
+                                (ItemKind::Hat, false, bless),
+                                (ItemKind::Socks, false, curse),
+                            ] {
+                                to_server.write(ToServer(ClientMessage::DevGiveItem {
+                                    kind,
+                                    size: None,
+                                    magical,
+                                    quality: Quality::Rare,
+                                    set: false,
+                                    favour,
+                                }));
+                            }
+                        }
                         if let Some(kind) = creature {
                             to_server.write(ToServer(ClientMessage::DevSetCreature(kind)));
                         }
@@ -279,6 +306,7 @@ impl Plugin for DevToolsPlugin {
                                 magical: false,
                                 quality: Default::default(),
                                 set: false,
+                                favour: None,
                             }));
                         }
                     } else if *step == 1 && time.elapsed_secs() > 2.0 {

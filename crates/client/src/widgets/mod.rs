@@ -2,6 +2,7 @@
 //! buttons, tooltips and panels that can be moved about. Use these rather than
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
+mod aura;
 mod dropdown;
 mod feedback;
 mod filter_list;
@@ -22,6 +23,7 @@ use bevy::prelude::*;
 
 use crate::common::PointerSystems;
 
+pub use aura::{Aura, AuraMask, aura_glow};
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
@@ -86,6 +88,9 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
             .init_resource::<crate::common::BandShift>()
+            .init_resource::<aura::Auras>()
+            .add_plugins(UiMaterialPlugin::<aura::AuraMaterial>::default())
+            .add_systems(Update, (aura::give_auras, aura::pulse_auras))
             .add_plugins(UiMaterialPlugin::<set_edge::SetEdgeMaterial>::default())
             .add_systems(Startup, set_edge::make_set_edges)
             .add_systems(Update, (set_edge::give_set_edges, set_edge::slide_bands))

@@ -53,6 +53,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<PlayerSpeed>()
             .init_resource::<DetectMonsters>()
             .init_resource::<GodMode>()
+            .init_resource::<Truesight>()
             .init_resource::<KillMob>()
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
@@ -135,6 +136,11 @@ pub struct DetectMonsters(pub bool);
 /// server is told; anything else god mode comes to do should go by this too.
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GodMode(pub bool);
+
+/// Debug: what is hidden is shown, such as what is secret about items. As the server
+/// is told, as it is what sends them; anything else hidden should go by this too.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Truesight(pub bool);
 
 /// Debug: clicking a mob kills it. Only this client knows it is on; the server checks
 /// each kill.
