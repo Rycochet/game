@@ -53,6 +53,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<PlayerSpeed>()
             .init_resource::<DetectMonsters>()
             .init_resource::<GodMode>()
+            .init_resource::<KillMob>()
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
@@ -134,6 +135,11 @@ pub struct DetectMonsters(pub bool);
 /// server is told; anything else god mode comes to do should go by this too.
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GodMode(pub bool);
+
+/// Debug: clicking a mob kills it. Only this client knows it is on; the server checks
+/// each kill.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KillMob(pub bool);
 
 /// The words on the Character panel saying what the character is like, which
 /// `character` fills in.

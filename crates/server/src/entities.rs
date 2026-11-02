@@ -191,10 +191,12 @@ impl ServerWorld {
         let saved = self.site_mut(id, poi.kind).levels.entry(index).or_default();
         let unsettled = std::mem::take(&mut saved.unsettled);
         let records = saved.records.clone();
+        let dead = saved.dead.clone();
         let mut due = BTreeSet::new();
         let tick = self_tick;
         let mobs = plan
             .into_iter()
+            .filter(|spawn| !dead.contains(&spawn.number))
             .map(|spawn| {
                 let carried_on = unsettled.get(&spawn.number);
                 let id = *saved.mobs.entry(spawn.number).or_insert_with(new_id);
@@ -397,6 +399,54 @@ pub(crate) fn give(
     let record = saved.records.entry(to).or_default();
     record.memory = memory;
     record.carried.push(item);
+    Ok(())
+}
+
+/// A mob in the player's sight dies (dev tools). All it had falls where it stood, and
+/// it is gone for good: nothing of it is kept but that its spawn is dead.
+pub(crate) fn kill(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    mob: Id,
+) -> Result<(), &'static str> {
+    let visit = client.visit.as_mut().ok_or("not in a site")?;
+    let place = (visit.id(), visit.index());
+    let population = world
+        .populations
+        .0
+        .get_mut(&place)
+        .ok_or("nobody on this level")?;
+    let index = population
+        .mobs
+        .iter()
+        .position(|one| one.id == mob)
+        .ok_or("no such mob here")?;
+    let at = population.mobs[index].position;
+    if !visit.can_see(at.0, at.1) {
+        return Err("out of sight");
+    }
+    let dead = population.mobs.remove(index);
+    population.due.retain(|&(_, id)| id != mob);
+    let kind = population.poi_kind;
+    // Its home level was waiting for it to come back.
+    if !dead.way_back.is_empty()
+        && let Some(home) = world.populations.0.get_mut(&(place.0, dead.home_level))
+    {
+        home.away = home.away.saturating_sub(1);
+    }
+    // What it had is saved with the level it belongs on, wherever it has got to.
+    let site = world.site_mut(place.0, kind);
+    let saved = site.levels.entry(dead.home_level).or_default();
+    saved.dead.insert(dead.number);
+    saved.mobs.remove(&dead.number);
+    saved.unsettled.remove(&dead.number);
+    let record = saved.records.remove(&mob).unwrap_or_default();
+    let mut left = record.gear.map_or_else(Vec::new, Inventory::spilled);
+    left.extend(record.carried);
+    if !left.is_empty() {
+        let here = site.levels.entry(place.1).or_default();
+        here.ground.entry(at).or_default().extend(left);
+    }
     Ok(())
 }
 
@@ -1448,6 +1498,118 @@ mod tests {
         };
         let record = &test.world.site(id, PoiKind::Castle).levels[&0].records[&mob];
         assert_eq!(record.carried.len(), 1);
+    }
+
+    fn dev_castle() -> SiteId {
+        SiteId::Dev {
+            kind: PoiKind::Castle,
+            seed: 7,
+            ruin: 0,
+        }
+    }
+
+    /// Stands the player in a room with the level's first mob beside them, carrying
+    /// something: the mob's id and where it is.
+    fn next_to_a_laden_mob(test: &mut TestClient) -> (Id, (i64, i64)) {
+        test.send(&[CASTLE]);
+        let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(3);
+        test.send(&[ClientMessage::DevTeleport { x, y }]);
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        population.mobs[0].position = (x + 1, y);
+        let mob = population.mobs[0].id;
+        let site = test.world.site_mut(dev_castle(), PoiKind::Castle);
+        let record = site.levels.get_mut(&0).unwrap().records.get_mut(&mob);
+        let record = record.unwrap();
+        let mut gear = Inventory::default();
+        gear.give(shared::item::Item::new(Id::for_test(50), ItemKind::Sword))
+            .unwrap();
+        record.gear = Some(gear);
+        let given = shared::item::Item::new(Id::for_test(51), ItemKind::Coin);
+        record.carried.push(given);
+        // So that the player has been told of it.
+        test.send(&[]);
+        (mob, (x + 1, y))
+    }
+
+    #[test]
+    fn a_killed_mob_leaves_all_it_had_and_goes_for_good() {
+        let mut test = TestClient::new();
+        let (mob, at) = next_to_a_laden_mob(&mut test);
+        let answers = test.send(&[ClientMessage::DevKillMob { mob }]);
+        assert!(
+            answers.contains(&ServerMessage::EntityGone { id: mob }),
+            "{answers:?}"
+        );
+        assert!(answers.iter().any(|answer| matches!(
+            answer,
+            ServerMessage::GroundSeen { x, y, .. } if (*x, *y) == at
+        )));
+
+        let level = &test.world.site(dev_castle(), PoiKind::Castle).levels[&0];
+        let left: Vec<Id> = level.ground[&at].iter().map(|item| item.id).collect();
+        assert_eq!(left, [Id::for_test(50), Id::for_test(51)]);
+        assert!(!level.records.contains_key(&mob));
+        assert!(!level.mobs.values().any(|id| *id == mob));
+
+        // Not when the level is made up again.
+        test.world.populations.forget_all();
+        test.send(&[CASTLE]);
+        let population = test.world.populations.0.values().next().unwrap();
+        assert!(!population.mobs.is_empty());
+        assert!(population.mobs.iter().all(|one| one.id != mob));
+        let level = &test.world.site(dev_castle(), PoiKind::Castle).levels[&0];
+        assert!(!level.mobs.values().any(|id| *id == mob));
+    }
+
+    #[test]
+    fn a_mob_stays_dead_after_a_restart() {
+        let folder = TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
+        let mut test = TestClient::of(open());
+        let (mob, at) = next_to_a_laden_mob(&mut test);
+        test.send(&[ClientMessage::DevKillMob { mob }]);
+        let world = test.leave();
+        world.storage.finish_writing();
+        drop(world);
+
+        let mut test = TestClient::of(open());
+        test.send(&[]);
+        let mobs = test.world.populations.0.values().next().unwrap();
+        assert!(mobs.mobs.iter().all(|one| one.id != mob));
+        let level = &test.world.site(dev_castle(), PoiKind::Castle).levels[&0];
+        assert_eq!(level.ground[&at].len(), 2);
+    }
+
+    #[test]
+    fn killing_needs_dev_tools_and_sight() {
+        let mut test = TestClient::new();
+        let (mob, _) = next_to_a_laden_mob(&mut test);
+        test.dev_tools = false;
+        test.send(&[ClientMessage::DevKillMob { mob }]);
+        assert_eq!(the_mob(&test).id, mob, "not allowed");
+        test.dev_tools = true;
+
+        let far = test.client.visit.as_mut().unwrap().walkable_out_of_sight();
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        population.mobs[0].position = far;
+        test.send(&[ClientMessage::DevKillMob { mob }]);
+        assert_eq!(the_mob(&test).id, mob, "out of sight");
+    }
+
+    #[test]
+    fn a_mob_killed_away_from_home_is_not_waited_for() {
+        let mut test = TestClient::new();
+        let (mob, at) = next_to_a_laden_mob(&mut test);
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        population.away = 1;
+        population.mobs[0].way_back.push(Hop {
+            stairs: at,
+            to_level: 0,
+            arrives: at,
+        });
+        test.send(&[ClientMessage::DevKillMob { mob }]);
+        assert_eq!(test.world.populations.0.values().next().unwrap().away, 0);
     }
 
     #[test]

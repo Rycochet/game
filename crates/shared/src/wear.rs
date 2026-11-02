@@ -204,6 +204,12 @@ impl Inventory {
         self.take(id)
     }
 
+    /// Everything carried and worn, each with all in it, as what is left of a body.
+    pub fn spilled(self) -> Vec<Item> {
+        let pockets = self.pockets.into_iter().map(|placed| placed.item);
+        pockets.chain(self.worn).collect()
+    }
+
     /// How a worn item fits its wearer.
     pub fn worn_fit(&self, id: Id) -> Option<Fit> {
         let item = self.worn.iter().find(|item| item.id == id)?;

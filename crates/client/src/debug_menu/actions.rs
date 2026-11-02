@@ -22,6 +22,7 @@ pub enum DebugAction {
     GodMode,
     HerbsState,
     ItemPictures,
+    KillMob,
     ResetView,
     RevealMap,
     ShowDebugInfo,
@@ -45,6 +46,7 @@ pub(super) struct Facts {
     pub cycling: bool,
     pub detecting: bool,
     pub god_mode: bool,
+    pub killing: bool,
     pub teleporting: bool,
     pub changing_cells: bool,
     pub showing_info: bool,
@@ -57,7 +59,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 23] = [
+    pub(super) const ALL: [Self; 24] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -71,6 +73,7 @@ impl DebugAction {
         Self::GodMode,
         Self::HerbsState,
         Self::ItemPictures,
+        Self::KillMob,
         Self::ResetView,
         Self::RevealMap,
         Self::ShowDebugInfo,
@@ -98,6 +101,7 @@ impl DebugAction {
             Self::GodMode => "God Mode",
             Self::HerbsState => "Herbs State",
             Self::ItemPictures => "Item Pictures",
+            Self::KillMob => "Kill Mob",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
             Self::ShowDebugInfo => "Show Debug Info",
@@ -159,6 +163,7 @@ impl DebugAction {
                 | Self::GeneratePoi
                 | Self::GiveItem
                 | Self::GodMode
+                | Self::KillMob
                 | Self::RevealMap
                 | Self::TeleportMode
                 | Self::TeleportToPoiShowcase
@@ -175,6 +180,7 @@ impl DebugAction {
             Self::CycleTemperature => Some(facts.cycling),
             Self::DetectMonsters => Some(facts.detecting),
             Self::GodMode => Some(facts.god_mode),
+            Self::KillMob => Some(facts.killing),
             Self::ShowDebugInfo => Some(facts.showing_info),
             Self::SunsAndMoons => Some(facts.suns_and_moons_open),
             Self::WorldTime => Some(facts.world_time_open),
@@ -228,6 +234,7 @@ mod tests {
             cycling: false,
             detecting: false,
             god_mode: false,
+            killing: false,
             teleporting: false,
             changing_cells: false,
             showing_info: true,

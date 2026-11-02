@@ -13,8 +13,8 @@ use shared::movement::Step;
 use shared::protocol::{ClientMessage, ServerMessage};
 
 use crate::common::{
-    ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, GameView, GodMode, NORMAL_SNOW_LINE,
-    ServerDevTools, Weather,
+    ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, GameView, GodMode, KillMob,
+    NORMAL_SNOW_LINE, ServerDevTools, Weather,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::player::{PlayerSystems, TakeStep};
@@ -104,6 +104,7 @@ struct FactSources<'w> {
     cycle: Res<'w, TemperatureCycle>,
     detect: Res<'w, DetectMonsters>,
     god: Res<'w, GodMode>,
+    kill: Res<'w, KillMob>,
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
     server_dev_tools: Res<'w, ServerDevTools>,
@@ -121,6 +122,7 @@ impl FactSources<'_> {
             cycling: *self.cycle != TemperatureCycle::Off,
             detecting: self.detect.0,
             god_mode: self.god.0,
+            killing: self.kill.0,
             teleporting: *self.mode == ClickMode::Teleport,
             changing_cells: *self.mode == ClickMode::ChangeCell,
             showing_info: self.info.0,
@@ -173,6 +175,7 @@ fn run_actions(
     mut cycle: ResMut<TemperatureCycle>,
     mut detect: ResMut<DetectMonsters>,
     mut god: ResMut<GodMode>,
+    mut kill: ResMut<KillMob>,
     mut mode: ResMut<ClickMode>,
     mut info: ResMut<DebugInfo>,
     mut open: ResMut<OpenPanels>,
@@ -206,6 +209,7 @@ fn run_actions(
                 god.0 = !god.0;
                 to_server.write(ToServer(ClientMessage::DevGodMode(god.0)));
             }
+            DebugAction::KillMob => kill.0 = !kill.0,
             DebugAction::ForgetMap => {
                 to_server.write(ToServer(ClientMessage::DevForgetMap));
             }

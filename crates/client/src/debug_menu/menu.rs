@@ -700,6 +700,7 @@ mod tests {
             cycling: false,
             detecting: false,
             god_mode: false,
+            killing: false,
             teleporting: false,
             changing_cells: false,
             showing_info: false,
