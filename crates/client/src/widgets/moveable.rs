@@ -106,6 +106,8 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
         })
         .id();
     commands.entity(root).add_children(&[bar, content]);
+    // In front of any panels already open.
+    commands.write_message(RaisePanel(root));
     (root, content)
 }
 

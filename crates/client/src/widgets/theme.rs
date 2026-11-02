@@ -22,6 +22,13 @@ pub(super) const DISABLED_TEXT: Color = Color::srgb(0.42, 0.4, 0.37);
 pub(super) const TOOLTIP_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);
 pub(super) const TOOLTIP_TEXT: Color = NO_QUALITY_NAME;
 
+/// A main button's background.
+pub(super) const MAIN_BACKGROUND: Color = Color::srgb(0.85, 0.62, 0.25);
+/// The edge of a text box or slider under the pointer.
+pub(super) const HOVER_EDGE: Color = Color::srgb(0.7, 0.4, 0.1);
+/// What spreads from a press, at its strongest.
+pub(super) const RIPPLE: Color = Color::srgba(1.0, 1.0, 1.0, 0.45);
+
 /// What is outside a full-screen layer.
 pub(super) const DARKENING: Color = Color::srgba(0.0, 0.0, 0.0, 0.5);
 const SHADOW: Color = Color::srgba(0.0, 0.0, 0.0, 0.45);

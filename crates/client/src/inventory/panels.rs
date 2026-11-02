@@ -17,10 +17,10 @@ use super::{Carried, Holding, OpenCharacter, item_cell_in_front};
 use crate::common::{GROUND, GameView, PointerPosition, SheetText};
 use crate::item_art::look_of;
 use crate::widgets::{
-    ALLOWED, ButtonPressed, ButtonState, CELL, Floating, GRID_LINE, HELD_ITEM_Z, INK, ITEM_EDGE,
-    ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, PICTURE_PIXELS_PER_CELL, Pressable, REFUSED,
-    RaisePanel, TextSize, at_cell, covering, item_colour, item_label, item_picture,
-    spawn_icon_button, spawn_item_cells, spawn_item_grid, spawn_moveable_panel,
+    ALLOWED, ButtonPressed, ButtonState, ButtonTooltip, CELL, Floating, GRID_LINE, HELD_ITEM_Z,
+    INK, ITEM_EDGE, ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, PICTURE_PIXELS_PER_CELL,
+    Pressable, REFUSED, RaisePanel, TextSize, at_cell, covering, item_colour, item_label,
+    item_picture, spawn_icon_button, spawn_item_cells, spawn_item_grid, spawn_moveable_panel,
 };
 
 const BUTTON: f32 = 34.0;
@@ -224,8 +224,11 @@ pub(super) fn spawn_fixed_parts(mut commands: Commands, mut images: ResMut<Asset
                 height: px(BUTTON),
                 ..default()
             };
-            spawn_icon_button(holder, ButtonState::Normal, icon, node)
-                .insert((PocketsButton, Pressable));
+            spawn_icon_button(holder, ButtonState::Normal, icon, node).insert((
+                PocketsButton,
+                Pressable,
+                ButtonTooltip("Character".into()),
+            ));
         });
     commands.spawn((
         HeldItem,

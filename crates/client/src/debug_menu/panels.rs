@@ -26,8 +26,8 @@ use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::item_art::{ItemPictures, Look, look_of};
 use crate::widgets::{
-    BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TabChosen,
-    TextBox, TextSize, raised_box, spawn_button, spawn_check_button, spawn_close_button,
+    BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, INK, Pressable, RaisePanel,
+    TabChosen, TextBox, TextSize, raised_box, spawn_button, spawn_check_button, spawn_close_button,
     spawn_dropdown, spawn_icon_button, spawn_moveable_panel, spawn_scroll_area, spawn_slider,
     spawn_tabs, spawn_text_box, spawn_tooltip,
 };
@@ -530,6 +530,13 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
         };
         spawn_button(content, state, label, FONT, node).insert(Pressable);
     }
+    for (style, label) in [(ButtonStyle::Main, "Main"), (ButtonStyle::Quiet, "Quiet")] {
+        let node = Node {
+            padding: BUTTON_PADDING,
+            ..default()
+        };
+        spawn_button(content, ButtonState::Normal, label, FONT, node).insert((style, Pressable));
+    }
     for (on, label) in [
         (Some(true), "Check on"),
         (Some(false), "Check off"),
@@ -731,6 +738,7 @@ pub(super) fn open_generate_panel(
             ..default()
         };
         spawn_button(content, ButtonState::Normal, "Generate", FONT, node)
+            .insert(ButtonStyle::Main)
             .insert((GenerateButton, Pressable));
     });
 }
