@@ -91,6 +91,7 @@ pub(crate) fn reveal_pois(client: &mut Client, world: &ServerWorld) -> bool {
 pub(crate) fn forget(client: &mut Client, world: &ServerWorld) -> bool {
     client.character.pois.clear();
     client.character.memory.clear();
+    client.character.bags.clear();
     client.character.site_versions.clear();
     client.world_chunks.clear();
     client.unsaved = true;

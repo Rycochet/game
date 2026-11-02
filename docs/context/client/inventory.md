@@ -14,6 +14,7 @@ The Character panel (what the character is like, what they wear and what they ca
 ## Public API
 
 - `InventoryPlugin`.
+- `OpenCharacter` (message): opens the Character panel, or brings it to the front (`ground`).
 - `Carried(Inventory)` (resource): what is carried, as the server last said plus any move since.
 - `InventoryDebug` (message, native): `OpenPockets`, `OpenBags`, `PickUp(index)`, `DropSome`. Used by `dev_tools`.
 

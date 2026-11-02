@@ -17,6 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::dungeon::Cell;
+use shared::ground::Load;
 use shared::id::Id;
 use shared::item::{Inventory, Item};
 use shared::mob::Memory;
@@ -383,10 +384,16 @@ pub struct CharacterWorldSave {
     pub pois: BTreeMap<ChunkPos, KnownPoi>,
     /// The cells they have seen of each site level.
     pub memory: BTreeMap<SiteId, BTreeMap<u32, CellMasks>>,
+    /// The bags they last saw on each site level, by cell, as they looked then.
+    #[serde(default)]
+    pub bags: BTreeMap<SiteId, BTreeMap<u32, RememberedBags>>,
     /// The generator version of each site as they last knew it: when a site's
     /// has changed, so has its map, and what they remember of it means nothing.
     pub site_versions: BTreeMap<SiteId, u32>,
 }
+
+/// The bags a character remembers on a level, by cell.
+pub type RememberedBags = BTreeMap<(i64, i64), Load>;
 
 /// Where in a site a character is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -576,6 +583,10 @@ pub(crate) mod tests {
         let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
         let character = CharacterWorldSave {
             forgotten_to: FORGET_BEFORE,
+            bags: BTreeMap::from([(
+                site,
+                BTreeMap::from([(1, BTreeMap::from([((2, 3), Load::Full)]))]),
+            )]),
             site_versions: BTreeMap::from([(site, 3)]),
             world_position: (-40, 7),
             visit: Some(VisitSave {

@@ -23,6 +23,7 @@ Shared building blocks for the client modules. Keep it small.
 - `ClickMode` (resource): `Normal`, `Teleport`, `ChangeCell`, what a click on the map does; set by `debug_menu`, read by `world_map`, `dungeon_map`, `minimap`, `ui`. `DebugInfo(bool)` (resource): whether `ui` shows its status text. `CurrentDungeon::level_has(cell)`.
 - `ServerDevTools(bool)` (resource): whether the server accepts dev tools messages; set by `connection` from `Welcome`, read by `debug_menu`. `KnownPois::forget_all`.
 - `StockCell`, `HeldStock`, `TookItem`: picking up what someone has to trade.
+- `HoveredBag` (resource): the cell of the bag on the ground the pointer is on; `ground` sets it, `dungeon_map` leaves such clicks alone.
 - `GROUND`: who `StockCell` and `TakesGifts` say for the ground under the player. `SpentEnergy` (message): the player did something that takes energy; read by `player`.
 - `TakesGifts`, `HeldOverGifts`, `HeldGift`, `GaveItem`: dropping a held item on something to give it to someone, between `inventory` and `trade`.
 - `BandShift`: how far the bands on set items' edges have slid, from `view3d` for `widgets`.

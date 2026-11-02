@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
+use crate::ground::Load;
 use crate::id::Id;
 use crate::item::{Holder, Inventory, Item, ItemKind, Quality, Rotation};
 use crate::mob::EntityLook;
@@ -31,7 +32,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 31;
+pub const PROTOCOL_VERSION: u32 = 32;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -288,6 +289,12 @@ pub enum ServerMessage {
     /// What is on the ground under the player, when they arrive on it or it changes,
     /// and only for someone standing there. Empty once there is nothing.
     GroundItems { x: i64, y: i64, items: Vec<Item> },
+    /// There is a bag on the ground here, looking this full: seen just now, or what is
+    /// remembered of it, after arriving on a level. Bags out of sight aren't kept up to
+    /// date, so they can be wrong until they are next seen.
+    GroundSeen { x: i64, y: i64, load: Load },
+    /// There is no bag here after all, as just seen.
+    GroundGone { x: i64, y: i64 },
     /// Who keeps each shop of a town (`Buildings` comes first), by `BuildingLook::id`.
     /// Never on the map: they stand behind the door.
     Keepers(Vec<(u16, Id)>),
@@ -581,6 +588,12 @@ mod tests {
                 y: -2,
                 items: Vec::new(),
             },
+            ServerMessage::GroundSeen {
+                x: 1,
+                y: -2,
+                load: Load::Half,
+            },
+            ServerMessage::GroundGone { x: 1, y: -2 },
             ServerMessage::Keepers(vec![(3, Id::for_test(4))]),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 1, y: -2 },

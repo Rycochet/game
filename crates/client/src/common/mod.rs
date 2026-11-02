@@ -597,6 +597,11 @@ pub struct BandShift(pub f32);
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TakesGifts(pub shared::id::Id);
 
+/// The cell of the bag on the ground the pointer is on, if any: a click there isn't
+/// on the map under it.
+#[derive(Resource, Default, Clone, Copy, PartialEq, Eq)]
+pub struct HoveredBag(pub Option<(i64, i64)>);
+
 /// Who `StockCell` and `TakesGifts` say for the ground under the player, which is
 /// nobody's.
 pub const GROUND: shared::id::Id = shared::id::Id::NOBODY;

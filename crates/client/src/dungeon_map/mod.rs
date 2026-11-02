@@ -43,8 +43,9 @@ use shared::protocol::ClientMessage;
 use shared::surface::SurfaceSample;
 
 use crate::common::{
-    ClickMode, CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, LightSource,
-    MapPosition, PointerPosition, SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
+    ClickMode, CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, HoveredBag,
+    LightSource, MapPosition, PointerPosition, SharesSight, SmoothPosition, ViewStats, Weather,
+    WorldReturn,
 };
 use crate::common::{DetectMonsters, Other};
 use crate::connection::ToServer;
@@ -144,8 +145,8 @@ struct DungeonScene;
 /// What was last drawn, for click picking: the combined sight and the solid
 /// wall sides.
 #[derive(Resource, Default)]
-struct Shown {
-    sight: Option<Sight>,
+pub struct Shown {
+    pub sight: Option<Sight>,
     solid_faces: Vec<WallFace>,
     /// Counts the times sight was worked out again, or the level changed.
     looks: u64,
@@ -936,11 +937,16 @@ fn pick_on_click(
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
+    bag: Res<HoveredBag>,
     mut travel: MessageWriter<TravelTo>,
     mut door_clicked: MessageWriter<DoorClicked>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
+        return;
+    }
+    // Left to `ground`.
+    if bag.0.is_some() && *mode == ClickMode::Normal {
         return;
     }
     let Some(cursor) = pointer.0 else {
