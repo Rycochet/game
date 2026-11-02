@@ -157,9 +157,9 @@ struct Shown {
 struct SurfaceMaterials {
     solid: Vec<Handle<SurfaceMaterial>>,
     memory: Vec<Handle<SurfaceMaterial>>,
-    see_through: Handle<StandardMaterial>,
+    see_through: Handle<SurfaceMaterial>,
     /// Of stairs in the way of a viewer, in `Surface::ALL` order.
-    stairs_through: Vec<Handle<StandardMaterial>>,
+    stairs_through: Vec<Handle<SurfaceMaterial>>,
     /// The outside ground's picture as drawn, for `colour_ground` to copy.
     ground_picture: Handle<Image>,
     /// Pictures waiting to load so a grey copy can be made for the
@@ -211,18 +211,11 @@ fn spawn_scene(
     mut rain_materials: ResMut<Assets<rain::RainMaterial>>,
 ) {
     let mask = sight_lines::spawn_mask(&mut commands, &mut images, &mut meshes, &mut materials);
-    // Floors and what lies on them are cut at the edge of sight, in both
-    // versions, the rest by the cell for now.
-    let masked = |base: StandardMaterial, surface: Surface, side: MaskSide| SurfaceMaterial {
+    // Everything is cut at the edge of sight: what is lit shows inside it, what
+    // is remembered outside.
+    let masked = |base: StandardMaterial, side: MaskSide| SurfaceMaterial {
         base,
-        extension: SightMask::new(
-            mask.clone(),
-            if surface.cut_at_sight() {
-                side
-            } else {
-                MaskSide::All
-            },
-        ),
+        extension: SightMask::new(mask.clone(), side),
     };
     let theme = Theme::of(None);
     let pictures: Vec<Handle<Image>> = Surface::ALL
@@ -259,7 +252,7 @@ fn spawn_scene(
             } else {
                 unlit(picture)
             };
-            surface_materials.add(masked(base, surface, MaskSide::InSight))
+            surface_materials.add(masked(base, MaskSide::InSight))
         })
         .collect();
     // Blended meshes don't sort against each other by themselves: floors are
@@ -285,27 +278,33 @@ fn spawn_scene(
                 },
                 ..unlit(picture)
             };
-            surface_materials.add(masked(base, surface, MaskSide::OutOfSight))
+            surface_materials.add(masked(base, MaskSide::OutOfSight))
         })
         .collect();
-    let see_through = materials.add(StandardMaterial {
-        base_color: Color::srgba(1.0, 1.0, 1.0, SEE_THROUGH_ALPHA),
-        base_color_texture: Some(load_tile(&asset_server, theme.wall)),
-        unlit: true,
-        alpha_mode: AlphaMode::Blend,
-        // These sides face away from the camera, so they are back faces.
-        cull_mode: None,
-        ..default()
-    });
+    let see_through = surface_materials.add(masked(
+        StandardMaterial {
+            base_color: Color::srgba(1.0, 1.0, 1.0, SEE_THROUGH_ALPHA),
+            base_color_texture: Some(load_tile(&asset_server, theme.wall)),
+            unlit: true,
+            alpha_mode: AlphaMode::Blend,
+            // These sides face away from the camera, so they are back faces.
+            cull_mode: None,
+            ..default()
+        },
+        MaskSide::InSight,
+    ));
     // Back faces stay culled, so a model doesn't show its far side as well.
     let stairs_through: Vec<_> = pictures
         .iter()
         .map(|picture| {
-            materials.add(StandardMaterial {
-                base_color: Color::srgba(1.0, 1.0, 1.0, SEE_THROUGH_ALPHA),
-                alpha_mode: AlphaMode::Blend,
-                ..unlit(picture)
-            })
+            surface_materials.add(masked(
+                StandardMaterial {
+                    base_color: Color::srgba(1.0, 1.0, 1.0, SEE_THROUGH_ALPHA),
+                    alpha_mode: AlphaMode::Blend,
+                    ..unlit(picture)
+                },
+                MaskSide::InSight,
+            ))
         })
         .collect();
     let visibility = if *view.get() == GameView::Dungeon {
@@ -355,28 +354,34 @@ fn spawn_scene(
     commands.entity(scene).with_child((
         CropPart,
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color_texture: Some(load_tile(&asset_server, field::CROPS_PICTURE)),
-            unlit: true,
-            alpha_mode: AlphaMode::Mask(0.5),
-            // Seen from both sides.
-            cull_mode: None,
-            ..default()
-        })),
+        MeshMaterial3d(surface_materials.add(masked(
+            StandardMaterial {
+                base_color_texture: Some(load_tile(&asset_server, field::CROPS_PICTURE)),
+                unlit: true,
+                alpha_mode: AlphaMode::Mask(0.5),
+                // Seen from both sides.
+                cull_mode: None,
+                ..default()
+            },
+            MaskSide::InSight,
+        ))),
         NoFrustumCulling,
         NotShadowCaster,
     ));
     commands.entity(scene).with_child((
         HerbPart,
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color_texture: Some(load_tile(&asset_server, herbs::HERBS_PICTURE)),
-            unlit: true,
-            alpha_mode: AlphaMode::Mask(0.5),
-            // Seen from both sides.
-            cull_mode: None,
-            ..default()
-        })),
+        MeshMaterial3d(surface_materials.add(masked(
+            StandardMaterial {
+                base_color_texture: Some(load_tile(&asset_server, herbs::HERBS_PICTURE)),
+                unlit: true,
+                alpha_mode: AlphaMode::Mask(0.5),
+                // Seen from both sides.
+                cull_mode: None,
+                ..default()
+            },
+            MaskSide::InSight,
+        ))),
         NoFrustumCulling,
         NotShadowCaster,
     ));
@@ -407,8 +412,7 @@ fn apply_theme(
     dungeon: Res<CurrentDungeon>,
     asset_server: Res<AssetServer>,
     mut surfaces: ResMut<SurfaceMaterials>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
+    mut materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
     if !dungeon.is_changed() {
         return;
@@ -416,16 +420,16 @@ fn apply_theme(
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
-        if let Some(mut material) = surface_materials.get_mut(&surfaces.solid[surface as usize]) {
+        if let Some(mut material) = materials.get_mut(&surfaces.solid[surface as usize]) {
             material.base.base_color_texture = Some(picture.clone());
         }
         if let Some(mut material) = materials.get_mut(&surfaces.stairs_through[surface as usize]) {
-            material.base_color_texture = Some(picture.clone());
+            material.base.base_color_texture = Some(picture.clone());
         }
         surfaces.to_grey.push((surface as usize, picture));
     }
     if let Some(mut material) = materials.get_mut(&surfaces.see_through) {
-        material.base_color_texture = Some(load_tile(&asset_server, theme.wall));
+        material.base.base_color_texture = Some(load_tile(&asset_server, theme.wall));
     }
 }
 
@@ -440,8 +444,7 @@ fn colour_ground(
     weather: Res<Weather>,
     surfaces: Res<SurfaceMaterials>,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
+    mut materials: ResMut<Assets<SurfaceMaterial>>,
     mut painted: Local<Option<[u8; 4]>>,
 ) {
     let Some(world) = world else {
@@ -467,11 +470,10 @@ fn colour_ground(
     let copy = recoloured(picture, colour);
     let copy = images.add(copy);
     let ground = Surface::Ground as usize;
-    if let Some(mut material) = surface_materials.get_mut(&surfaces.solid[ground]) {
-        material.base.base_color_texture = Some(copy.clone());
-    }
-    if let Some(mut material) = materials.get_mut(&surfaces.stairs_through[ground]) {
-        material.base_color_texture = Some(copy.clone());
+    for handle in [&surfaces.solid[ground], &surfaces.stairs_through[ground]] {
+        if let Some(mut material) = materials.get_mut(handle) {
+            material.base.base_color_texture = Some(copy.clone());
+        }
     }
     *painted = Some(colour);
 }
