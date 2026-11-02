@@ -87,7 +87,8 @@ pub struct DungeonMapPlugin;
 impl Plugin for DungeonMapPlugin {
     fn build(&self, app: &mut App) {
         let in_view = in_state(GameView::Dungeon);
-        app.init_resource::<Shown>()
+        app.add_message::<DoorClicked>()
+            .init_resource::<Shown>()
             .init_resource::<OutsideLight>()
             .init_resource::<TownLights>()
             .add_plugins(MaterialPlugin::<rain::RainMaterial>::default())
@@ -936,6 +937,7 @@ fn pick_on_click(
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
     mut travel: MessageWriter<TravelTo>,
+    mut door_clicked: MessageWriter<DoorClicked>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
@@ -960,8 +962,16 @@ fn pick_on_click(
         }
         return;
     }
-    let door = picking::door_front(ray, &dungeon.buildings, &shown.solid_faces);
-    let picked = door
+    let door = picking::door_clicked(ray, &dungeon.buildings, &shown.solid_faces);
+    if let Some(building) = door
+        && *mode != ClickMode::Teleport
+    {
+        door_clicked.write(DoorClicked { building });
+        return;
+    }
+    let front = door.and_then(|id| dungeon.buildings.iter().find(|b| b.id == id));
+    let front = front.map(|b| (b.door.0 + b.faces.0, b.door.1 + b.faces.1));
+    let picked = front
         .or_else(|| picking::pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces));
     if let Some((x, y)) = picked {
         // Dev tools: Teleport Mode jumps there instead (through walls), if the
@@ -972,6 +982,13 @@ fn pick_on_click(
             travel.write(TravelTo { x, y });
         }
     }
+}
+
+/// A town building's door was clicked: for `shop`, which decides what that means.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct DoorClicked {
+    /// Its `BuildingLook::id`.
+    pub building: u16,
 }
 
 /// Keeps a real point light over each `LightSource`, so tokens near it are

@@ -9,15 +9,14 @@ use shared::site::BuildingLook;
 use super::mesh::WallFace;
 use super::{CELL_SIZE, WALL_HEIGHT};
 
-/// The cell in front of a town's door, if the ray hits the door before any
-/// other solid wall piece.
-pub fn door_front(
+/// The building whose door the ray hits before any other solid wall piece.
+pub fn door_clicked(
     ray: Ray3d,
     buildings: &[BuildingLook],
     solid_faces: &[WallFace],
-) -> Option<(i64, i64)> {
+) -> Option<u16> {
     let direction = *ray.direction;
-    let mut nearest: Option<(f32, (i64, i64))> = None;
+    let mut nearest: Option<(f32, u16)> = None;
     for building in buildings {
         let (dx, dy) = building.faces;
         let normal = Vec3::new(dx as f32, 0.0, dy as f32);
@@ -35,15 +34,15 @@ pub fn door_front(
         if let Some(distance) = hits_face(ray.origin, direction, &face)
             && nearest.is_none_or(|(best, _)| distance < best)
         {
-            nearest = Some((distance, (building.door.0 + dx, building.door.1 + dy)));
+            nearest = Some((distance, building.id));
         }
     }
-    let (distance, front) = nearest?;
+    let (distance, building) = nearest?;
     // A door stands just in front of its own wall, so that doesn't count.
     let blocked = solid_faces
         .iter()
         .any(|face| hits_face(ray.origin, direction, face).is_some_and(|d| d < distance - 0.5));
-    (!blocked).then_some(front)
+    (!blocked).then_some(building)
 }
 
 /// The seen walkable cell the ray first lands on, if no solid wall side is hit
