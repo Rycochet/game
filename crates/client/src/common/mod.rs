@@ -589,6 +589,28 @@ pub const NO_QUALITY_NAME: Color = Color::srgb(0.9, 0.85, 0.75);
 /// Behind an item's name, dark so that every quality's colour can be read.
 pub const ITEM_NAME_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);
 
+/// On what an item can be dropped on to give it to someone, for all of it to count.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct TakesGifts(pub shared::id::Id);
+
+/// Something held over what `TakesGifts`.
+#[derive(Clone, Copy, Debug)]
+pub struct HeldGift {
+    pub to: shared::id::Id,
+    pub item: shared::id::Id,
+    pub rotation: shared::item::Rotation,
+    /// Where its shape's top left corner is, in logical pixels.
+    pub corner: Vec2,
+}
+
+/// What is held over what `TakesGifts` now.
+#[derive(Resource, Default)]
+pub struct HeldOverGifts(pub Option<HeldGift>);
+
+/// It was let go there, and is on its way to them.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct GaveItem(pub HeldGift);
+
 /// What each quality of item looks like: a name in it, an edge around it.
 pub fn quality_colour(quality: Quality) -> Color {
     match quality {

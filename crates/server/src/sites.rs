@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::id::Id;
 use shared::item::{Item, MadeAt, Quality};
+use shared::mob::Event;
 use shared::movement::{Step, step_on_level};
 use shared::poi::{ChunkPos, Poi, PoiKind};
 use shared::protocol::{
@@ -376,6 +377,48 @@ struct NewKeepers {
     shops: Vec<u16>,
 }
 
+/// Which building on the player's level this is the keeper of, if any.
+pub(crate) fn keeper_building(client: &Client, world: &mut ServerWorld, with: Id) -> Option<u16> {
+    let visit = client.visit.as_ref()?;
+    let level = world
+        .site(visit.id, visit.poi.kind)
+        .levels
+        .get(&visit.index)?;
+    let mut buildings = level.buildings.iter();
+    buildings
+        .find(|(_, save)| save.keeper == Some(with))
+        .map(|(&building, _)| building)
+}
+
+/// Gives a shop's keeper something, from beside its door: it joins what the shop has,
+/// which comes back, and the keeper remembers it. Selling, until there is payment.
+pub(crate) fn give_to_keeper(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    item: Id,
+    with: Id,
+) -> Result<Vec<Item>, &'static str> {
+    let character = client.character_id.ok_or("nobody to remember")?;
+    let building = keeper_building(client, world, with).ok_or("no such keeper here")?;
+    let visit = client.visit.as_ref().ok_or("not in a site")?;
+    let town = visit.level.buildings.iter().find(|b| b.look.id == building);
+    let door = town.ok_or("no such building here")?.look.door;
+    let (x, y) = visit.position;
+    if (x - door.0).abs().max((y - door.1).abs()) > DOOR_REACH {
+        return Err("too far away");
+    }
+    let (id, kind, index) = (visit.id, visit.poi.kind, visit.index);
+    let item = client
+        .inventory
+        .hand_over(item)
+        .ok_or("can't hand that over")?;
+    let level = world.site_mut(id, kind).levels.entry(index).or_default();
+    let record = level.records.entry(with).or_default();
+    record.memory.remember(character, Event::Gave(item.kind));
+    record.carried.push(item);
+    Ok(record.carried.clone())
+}
+
 /// Opens trading with a shop's keeper for a player beside its door: its stock is
 /// caught up and sent. Anything else is refused, with no answer. `false` if the
 /// client has gone.
@@ -384,17 +427,7 @@ pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id)
         warn!("Refused opening a trade from outside any site");
         return true;
     };
-    let level = world
-        .site(visit.id, visit.poi.kind)
-        .levels
-        .get(&visit.index);
-    let building = level.and_then(|level| {
-        let mut buildings = level.buildings.iter();
-        buildings
-            .find(|(_, save)| save.keeper == Some(with))
-            .map(|(&building, _)| building)
-    });
-    let Some(building) = building else {
+    let Some(building) = keeper_building(client, world, with) else {
         warn!("Refused opening a trade with someone who isn't here: {with:?}");
         return true;
     };
@@ -1080,6 +1113,36 @@ mod tests {
         let level = &test.world.site(id, kind).levels[&index];
         assert!(level.buildings[&building].stock.is_empty());
         assert!(level.records[&keeper].carried.contains(&old));
+    }
+
+    #[test]
+    fn what_is_given_to_a_keeper_joins_the_stock_from_beside_the_door_only() {
+        let (mut test, with, front) = in_a_village();
+        let coin = ClientMessage::DevGiveItem {
+            kind: shared::item::ItemKind::Coin,
+            size: None,
+            magical: false,
+            quality: Quality::Common,
+        };
+        test.send(&[coin]);
+        let item = test.client.inventory.pockets.last().unwrap().item.id;
+        let give = ClientMessage::GiveItem { item, to: with };
+        test.send(&[ClientMessage::DevTeleport {
+            x: front.0 + 40,
+            y: front.1,
+        }]);
+        assert_eq!(stock_in(&test.send(std::slice::from_ref(&give))), None);
+        assert!(test.client.inventory.find(item).is_some(), "still theirs");
+        test.send(&[ClientMessage::DevTeleport {
+            x: front.0,
+            y: front.1,
+        }]);
+        let stock = stock_in(&test.send(&[give])).expect("the stock comes back");
+        assert!(stock.iter().any(|one| one.id == item));
+        assert!(
+            test.client.inventory.find(item).is_none(),
+            "no longer theirs"
+        );
     }
 
     #[test]

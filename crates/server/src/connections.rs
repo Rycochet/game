@@ -669,14 +669,28 @@ pub(crate) fn answer(
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
         }
         ClientMessage::GiveItem { item, to } => {
-            match crate::entities::give(client, world, item, to) {
+            let mut stock = None;
+            let given = if sites::keeper_building(client, world, to).is_some() {
+                sites::give_to_keeper(client, world, item, to).map(|items| stock = Some(items))
+            } else {
+                crate::entities::give(client, world, item, to)
+            };
+            match given {
                 Ok(()) => client.unsaved = true,
                 Err(why) => warn!("Refused giving {item:?} to {to:?}: {why}"),
             }
             client.update_speed(world.action_clock.ticks());
-            client
+            let sent = client
                 .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()))
+                .send(&ServerMessage::Inventory(client.inventory.clone()));
+            match stock {
+                Some(items) => {
+                    sent && client
+                        .link
+                        .send(&ServerMessage::TradeStock { with: to, items })
+                }
+                None => sent,
+            }
         }
         ClientMessage::WearItem { item } => {
             let tick = world.action_clock.ticks();

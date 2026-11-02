@@ -7,6 +7,7 @@ mod filter_list;
 mod fullscreen;
 mod item;
 mod moveable;
+mod scroll;
 mod slider;
 mod soft_keyboard;
 mod tabs;
@@ -26,9 +27,10 @@ pub use fullscreen::{
 pub use item::{
     ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, HELD_ITEM_Z, ITEM_EDGE, ITEM_LABEL_FONT,
     ItemName, ItemTip, ItemTooltip, REFUSED, at_cell, covering, item_colour, item_edge,
-    item_edge_width, item_label, spawn_item_cells, spawn_item_grid,
+    item_edge_width, item_label, logical_rect, shown_at, spawn_item_cells, spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
+pub use scroll::spawn_scroll_area;
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
 pub use tabs::{TabChosen, spawn_tabs};
@@ -103,6 +105,7 @@ impl Plugin for WidgetsPlugin {
                 (
                     text_box::note_press,
                     slider::drag_sliders,
+                    scroll::scroll_areas,
                     moveable::take_presses,
                     text_box::take_text,
                     dropdown::run_dropdowns,
@@ -119,6 +122,7 @@ impl Plugin for WidgetsPlugin {
                     tabs::press_tabs.before(show_button_states),
                     show_button_states,
                     moveable::place_panels,
+                    scroll::show_scroll_bars,
                     slider::hold_sliders,
                     slider::place_marks,
                     text_box::show_text_boxes,
