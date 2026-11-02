@@ -383,6 +383,8 @@ struct Someone {
     /// The site level they are on, if any.
     level: Option<(SiteId, u32)>,
     position: (i64, i64),
+    /// Mobs take no notice of them.
+    god_mode: bool,
 }
 
 fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
@@ -400,6 +402,7 @@ fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
                 level,
                 position,
+                god_mode: client.god_mode,
             }
         })
         .collect()
@@ -728,9 +731,15 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
     let everyone = everyone_playing(clients);
     let mut crossings = Vec::new();
     for (&place, population) in &mut world.populations.0 {
-        let spots: Vec<Spot> = everyone
-            .iter()
-            .filter(|someone| someone.level == Some(place))
+        let here = || {
+            everyone
+                .iter()
+                .filter(|someone| someone.level == Some(place))
+        };
+        // Those in god mode still stand somewhere and can see, but aren't noticed.
+        let standing: Vec<(i64, i64)> = here().map(|someone| someone.position).collect();
+        let spots: Vec<Spot> = here()
+            .filter(|someone| !someone.god_mode)
             .map(|someone| Spot {
                 id: someone.id,
                 character: someone.character,
@@ -753,7 +762,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             }
         }
 
-        let mut taken: Taken = spots.iter().map(|spot| spot.position).collect();
+        let mut taken: Taken = standing.iter().copied().collect();
         taken.extend(mobs.iter().map(|mob| mob.position));
         let mut maps = Maps::default();
         while let Some(&(when, id)) = due.first() {
@@ -766,9 +775,9 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             };
             let mut crossing = None;
             let seen = |cell| {
-                spots
+                standing
                     .iter()
-                    .any(|spot| line_is_clear(level, spot.position, cell))
+                    .any(|&spot| line_is_clear(level, spot, cell))
             };
             let was_at = mob.position;
             let cost = act(
@@ -1462,6 +1471,58 @@ mod tests {
         }]);
         assert_eq!(player(&test), spot);
         assert_ne!(the_mob(&test).position, spot);
+    }
+
+    #[test]
+    fn in_god_mode_mobs_take_no_notice() {
+        for kind in [
+            CreatureKind::Kobold,
+            CreatureKind::Chicken,
+            CreatureKind::Beggar,
+        ] {
+            let mut test = beside_a_mob(kind, 3);
+            test.send(&[ClientMessage::DevGodMode(true)]);
+            let started = the_mob(&test).position;
+            run(&mut test, 40);
+            assert_eq!(the_mob(&test).doing, Doing::Idle);
+            assert_eq!(the_mob(&test).position, started);
+        }
+    }
+
+    #[test]
+    fn a_chase_ends_when_god_mode_is_turned_on() {
+        let mut test = beside_a_mob(CreatureKind::Kobold, 3);
+        run(&mut test, 40);
+        assert!(matches!(the_mob(&test).doing, Doing::Going { .. }));
+        test.send(&[ClientMessage::DevGodMode(true)]);
+        run(&mut test, 40);
+        assert!(!matches!(the_mob(&test).doing, Doing::Going { .. }));
+        assert_ne!(the_mob(&test).position, player(&test));
+    }
+
+    #[test]
+    fn in_god_mode_a_player_walks_through_an_enemy() {
+        let east = (1, 0);
+        let mut test = beside_a_mob(CreatureKind::Kobold, 1);
+        test.send(&[ClientMessage::DevGodMode(true)]);
+        let from = player(&test);
+        test.steps(&[east]);
+        assert_eq!(player(&test), (from.0 + 1, from.1));
+        assert_eq!(the_mob(&test).position, from);
+
+        // Turned off, it is in the way again.
+        test.send(&[ClientMessage::DevGodMode(false)]);
+        let from = player(&test);
+        test.steps(&[(-1, 0)]);
+        assert_eq!(player(&test), from);
+    }
+
+    #[test]
+    fn god_mode_needs_dev_tools() {
+        let mut test = TestClient::new();
+        test.dev_tools = false;
+        test.send(&[ClientMessage::DevGodMode(true)]);
+        assert!(!test.client.god_mode);
     }
 
     #[test]

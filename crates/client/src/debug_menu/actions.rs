@@ -19,6 +19,7 @@ pub enum DebugAction {
     ForgetMapOnServer,
     GeneratePoi,
     GiveItem,
+    GodMode,
     HerbsState,
     ResetView,
     RevealMap,
@@ -42,6 +43,7 @@ pub(super) struct Facts {
     pub walking: bool,
     pub cycling: bool,
     pub detecting: bool,
+    pub god_mode: bool,
     pub teleporting: bool,
     pub changing_cells: bool,
     pub showing_info: bool,
@@ -54,7 +56,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 21] = [
+    pub(super) const ALL: [Self; 22] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -65,6 +67,7 @@ impl DebugAction {
         Self::ForgetMapOnServer,
         Self::GeneratePoi,
         Self::GiveItem,
+        Self::GodMode,
         Self::HerbsState,
         Self::ResetView,
         Self::RevealMap,
@@ -90,6 +93,7 @@ impl DebugAction {
             Self::ForgetMapOnServer => "Forget Map (Server)",
             Self::GeneratePoi => "Generate POI",
             Self::GiveItem => "Give Item",
+            Self::GodMode => "God Mode",
             Self::HerbsState => "Herbs State",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
@@ -151,6 +155,7 @@ impl DebugAction {
                 | Self::ForgetMapOnServer
                 | Self::GeneratePoi
                 | Self::GiveItem
+                | Self::GodMode
                 | Self::RevealMap
                 | Self::TeleportMode
                 | Self::TeleportToPoiShowcase
@@ -166,6 +171,7 @@ impl DebugAction {
             Self::ChangeCellMode => Some(facts.changing_cells),
             Self::CycleTemperature => Some(facts.cycling),
             Self::DetectMonsters => Some(facts.detecting),
+            Self::GodMode => Some(facts.god_mode),
             Self::ShowDebugInfo => Some(facts.showing_info),
             Self::SunsAndMoons => Some(facts.suns_and_moons_open),
             Self::WorldTime => Some(facts.world_time_open),
@@ -218,6 +224,7 @@ mod tests {
             walking: false,
             cycling: false,
             detecting: false,
+            god_mode: false,
             teleporting: false,
             changing_cells: false,
             showing_info: true,
