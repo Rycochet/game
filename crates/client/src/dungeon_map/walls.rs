@@ -315,6 +315,21 @@ pub(super) fn flat_uv(east: f32, south: f32) -> [f32; 2] {
     ]
 }
 
+/// The floor a quarter of a wall, door or window takes from the cells round its
+/// corner. Liquid is drawn for itself, with this floor round it. Doors, windows
+/// and holes have no floor of their own to pass on (a door between wood and
+/// grass would give both sides wood), so the cells on the quarter's own side
+/// decide.
+fn floor_near(level: &Level, around: [(i64, i64); 3]) -> Surface {
+    around
+        .iter()
+        .map(|&(x, y)| level.cell(x, y))
+        .find(|&cell| {
+            cell.is_open() && !cell.is_liquid() && !cell.is_opening() && cell != Cell::Hole
+        })
+        .map_or(Surface::Floor, Surface::of_flat)
+}
+
 impl<'a> Tile<'a> {
     fn new(scene: &'a Scene<'a>, (x, y): (i64, i64), joins: [bool; 4]) -> Self {
         Self {
@@ -413,14 +428,7 @@ impl<'a> Tile<'a> {
         foot: &[Patch],
         fade_from: &[Patch],
     ) {
-        let level = self.scene.level;
-        // Liquid is drawn for itself, with this floor round it.
-        let surface = self
-            .around_corner((sx, sz))
-            .iter()
-            .map(|&(x, y)| level.cell(x, y))
-            .find(|cell| cell.is_open() && !cell.is_liquid())
-            .map_or(Surface::Floor, Surface::of_flat);
+        let surface = floor_near(self.scene.level, self.around_corner((sx, sz)));
         let point = |east: f32, south: f32| {
             let (e, s) = (sx * east, sz * south);
             (self.centre + Vec3::new(e, 0.0, s), flat_uv(e, s), 1.0)
@@ -1306,5 +1314,63 @@ impl Opening {
         }
         columns.push(HALF_CELL);
         columns
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Floor to the north, ground to the south, and a wall line between them
+    /// along `y` = 1 with `middle` at `x` = 1.
+    fn wall_line(middle: Cell) -> Level {
+        let mut level = Level::new(0, 0, 3, 3);
+        for x in 0..3 {
+            level.set(x, 0, Cell::Floor);
+            level.set(x, 1, Cell::Wall);
+            level.set(x, 2, Cell::Ground);
+        }
+        level.set(1, 1, middle);
+        level
+    }
+
+    /// The cells round the corner of a quarter of the cell at `(x, y)`.
+    fn around((x, y): (i64, i64), (dx, dy): (i64, i64)) -> [(i64, i64); 3] {
+        [(x + dx, y), (x, y + dy), (x + dx, y + dy)]
+    }
+
+    #[test]
+    fn a_wall_beside_an_opening_takes_the_floor_on_its_own_side() {
+        for middle in [Cell::Door, Cell::Window] {
+            let level = wall_line(middle);
+            let north = floor_near(&level, around((0, 1), (1, -1)));
+            let south = floor_near(&level, around((0, 1), (1, 1)));
+            assert_eq!(north, Surface::Floor, "{middle:?}");
+            assert_eq!(south, Surface::Ground, "{middle:?}");
+        }
+    }
+
+    #[test]
+    fn an_opening_beside_an_opening_takes_the_floor_on_its_own_side() {
+        let mut level = wall_line(Cell::Door);
+        level.set(0, 1, Cell::Window);
+        assert_eq!(floor_near(&level, around((0, 1), (1, 1))), Surface::Ground);
+        assert_eq!(floor_near(&level, around((1, 1), (-1, 1))), Surface::Ground);
+    }
+
+    #[test]
+    fn a_wall_beside_a_hole_takes_the_floor_on_its_own_side() {
+        let level = wall_line(Cell::Hole);
+        assert_eq!(floor_near(&level, around((0, 1), (1, 1))), Surface::Ground);
+    }
+
+    #[test]
+    fn only_openings_round_a_corner_give_floor() {
+        let mut level = Level::new(0, 0, 2, 2);
+        level.set(0, 0, Cell::Wall);
+        level.set(1, 0, Cell::Door);
+        level.set(0, 1, Cell::Wall);
+        level.set(1, 1, Cell::Wall);
+        assert_eq!(floor_near(&level, around((0, 0), (1, 1))), Surface::Floor);
     }
 }
