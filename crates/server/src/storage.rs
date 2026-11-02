@@ -336,6 +336,12 @@ pub struct BuildingSave {
     /// decide when its stock refreshes. The clock can be moved back (dev tools),
     /// so this can be in the future: count that as no time having passed.
     pub last_interaction: Option<f64>,
+    /// What it has for sale, if it has ever been opened.
+    #[serde(default)]
+    pub stock: Vec<Item>,
+    /// The game minute it last finished making something.
+    #[serde(default)]
+    pub last_made: Option<u64>,
 }
 
 /// Cells of a level by chunk: one bit per cell (see
@@ -607,6 +613,8 @@ pub(crate) mod tests {
                         BuildingSave {
                             trades: 2,
                             last_interaction: Some(12.5),
+                            stock: Vec::new(),
+                            last_made: Some(9),
                         },
                     )]),
                 },

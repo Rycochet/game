@@ -14,6 +14,7 @@ use bevy::winit::{UpdateMode, WinitSettings};
 use shared::celestial::{BodyNow, Celestial, flat_light};
 use shared::climate::Climate;
 use shared::dungeon::{Cell, Level, RoomId, Sight};
+use shared::item::Quality;
 use shared::movement::{WorldConditions, WorldGround};
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::protocol::{LevelChunk, LevelInfo, SeenPoi, SeenStairs, WorldInfo};
@@ -582,6 +583,24 @@ impl ServerClock {
 
 /// The dull light everywhere, however dark it gets, as a fraction of full light.
 pub const NIGHT_LIGHT: f32 = 0.1;
+
+/// What an item's name is written in when it has no quality.
+pub const NO_QUALITY_NAME: Color = Color::srgb(0.9, 0.85, 0.75);
+/// Behind an item's name, dark so that every quality's colour can be read.
+pub const ITEM_NAME_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);
+
+/// What each quality of item looks like: a name in it, an edge around it.
+pub fn quality_colour(quality: Quality) -> Color {
+    match quality {
+        Quality::Poor => Color::srgb(0.62, 0.62, 0.62),
+        Quality::Common => Color::srgb(1.0, 1.0, 1.0),
+        Quality::Uncommon => Color::srgb(0.12, 0.85, 0.2),
+        Quality::Rare => Color::srgb(0.2, 0.5, 1.0),
+        Quality::Epic => Color::srgb(0.7, 0.3, 0.95),
+        Quality::Legendary => Color::srgb(1.0, 0.55, 0.05),
+        Quality::Artifact => Color::srgb(1.0, 0.84, 0.25),
+    }
+}
 
 /// The suns and moons as they are this frame (`shared::celestial`).
 #[derive(Resource, Default)]

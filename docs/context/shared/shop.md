@@ -1,10 +1,10 @@
 # shared: shop
 
-What town shops have in stock, and working it out when one is opened. Only the server will call it, as the seed is secret. It makes no items, since ids are the server's: it says which old stock to keep and what to add. Not used in play yet: the server and a panel follow.
+What town shops have in stock, and working it out when one is opened. Only the server will call it, as the seed is secret. It makes no items, since ids are the server's: it says which old stock to keep and what to add. The server calls it when a shop is opened (`sites::open_shop`).
 
 ## Files
 
-- `crates/shared/src/shop.rs`: `Shop`, `sells`, `NewStock`, `Restocked`, `catch_up`, `REPLACED_AFTER`, `TOP_UP_AFTER`. Tests.
+- `crates/shared/src/shop.rs`: `Shop`, `sells`, `NewStock`, `Restocked`, `catch_up`, `REPLACED_AFTER`, `TOP_UP_AFTER`, `DOOR_REACH`. Tests.
 
 ## Public API
 
@@ -18,7 +18,7 @@ What town shops have in stock, and working it out when one is opened. Only the s
 
 ## Used by
 
-- Nothing yet.
+- `server` (`sites`), client `shop`.
 
 ## Notes
 

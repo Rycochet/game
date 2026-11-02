@@ -461,6 +461,7 @@ fn receive(
                 | ServerMessage::OnWorldMap { .. }
                 | ServerMessage::Teleported { .. }
                 | ServerMessage::Inventory(_)
+                | ServerMessage::ShopStock { .. }
                 | ServerMessage::Sheet(_)
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::EntityMoved { .. }

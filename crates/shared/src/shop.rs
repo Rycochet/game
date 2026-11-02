@@ -34,6 +34,9 @@ const MINIMUM_SHARE: u64 = 80;
 const SPEED_AT_WORST: u64 = 150;
 const SPEED_AT_BEST: u64 = 50;
 
+/// How near its door someone must be to deal with a shop, in cells.
+pub const DOOR_REACH: i64 = 1;
+
 /// What a shop has been told of itself and its town.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Shop {

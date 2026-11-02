@@ -13,7 +13,9 @@ use super::body::{spawn_rows, worn_notes};
 use super::give::NearbyPanel;
 use super::hold::Target;
 use super::{Carried, Holding, item_cell_in_front};
-use crate::common::{GameView, PointerPosition, SheetText};
+use crate::common::{
+    GameView, ITEM_NAME_BACKGROUND, NO_QUALITY_NAME, PointerPosition, SheetText, quality_colour,
+};
 use crate::widgets::{
     ButtonPressed, ButtonState, INK, Pressable, RaisePanel, spawn_icon_button,
     spawn_moveable_panel, spawn_tooltip,
@@ -41,10 +43,6 @@ const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
 pub(super) const GRID_COLOUR: Color = Color::srgb(0.55, 0.46, 0.33);
 pub(super) const GRID_LINE: Color = Color::srgb(0.42, 0.34, 0.24);
 pub(super) const ITEM_EDGE: Color = Color::srgb(0.15, 0.1, 0.05);
-/// What an item's name is written in when it has no quality.
-const NO_QUALITY_NAME: Color = Color::srgb(0.9, 0.85, 0.75);
-/// Behind an item's name, dark so that every quality's colour can be read.
-const NAME_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);
 /// How thick an edge showing quality is, to be seen beside the kind's colour.
 const QUALITY_BORDER: f32 = 2.0;
 pub(super) const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
@@ -121,18 +119,6 @@ pub(super) struct BinSlot;
 pub(super) struct BinIcon(Handle<Image>);
 
 /// What a kind of item looks like until it has a picture: its colour.
-pub(super) fn quality_colour(quality: Quality) -> Color {
-    match quality {
-        Quality::Poor => Color::srgb(0.62, 0.62, 0.62),
-        Quality::Common => Color::srgb(1.0, 1.0, 1.0),
-        Quality::Uncommon => Color::srgb(0.12, 0.85, 0.2),
-        Quality::Rare => Color::srgb(0.2, 0.5, 1.0),
-        Quality::Epic => Color::srgb(0.7, 0.3, 0.95),
-        Quality::Legendary => Color::srgb(1.0, 0.55, 0.05),
-        Quality::Artifact => Color::srgb(1.0, 0.84, 0.25),
-    }
-}
-
 /// The colour of the edge of an item of this quality.
 pub(super) fn edge(quality: Option<Quality>) -> Color {
     quality.map_or(ITEM_EDGE, quality_colour)
@@ -824,7 +810,7 @@ pub(super) fn show_tooltip(
     }
     text_colour.set_if_neq(TextColor(quality.map_or(NO_QUALITY_NAME, quality_colour)));
     if let Ok(mut background) = backgrounds.get_mut(parent.parent()) {
-        background.set_if_neq(BackgroundColor(NAME_BACKGROUND));
+        background.set_if_neq(BackgroundColor(ITEM_NAME_BACKGROUND));
     }
     node.left = px(at.x + TOOLTIP_OFFSET.x);
     node.top = match holding.held {

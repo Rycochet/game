@@ -8,15 +8,18 @@ use std::collections::VecDeque;
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
+use shared::item::{Item, MadeAt, Quality};
 use shared::movement::{Step, step_on_level};
 use shared::poi::{ChunkPos, Poi, PoiKind};
 use shared::protocol::{
     ENTER_REACH, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, ServerMessage, level_chunk,
 };
 use shared::rng::Seed;
+use shared::shop::{DOOR_REACH, Shop, catch_up, sells};
 use shared::site::{Exit, Generator, MAX_RUIN, Site, SiteLevel, StairsDirection, leads_out};
 
 use crate::connections::Client;
+use crate::ids::new_id;
 use crate::storage::{CellMasks, SiteId, VisitSave, now};
 use crate::world_map::{self, look_around};
 use crate::{LEVEL_PRELOAD_STEPS, ServerWorld};
@@ -343,6 +346,79 @@ pub(crate) fn teleport(client: &mut Client, x: i64, y: i64) -> bool {
     client.unsaved = true;
     client.changed_map();
     client.link.send(&ServerMessage::Teleported { x, y }) && update_sight(client)
+}
+
+/// Opens a town's shop for a player beside its door: its stock is caught up and
+/// sent. Anything else is refused, with no answer. `false` if the client has gone.
+pub(crate) fn open_shop(client: &mut Client, world: &mut ServerWorld, building: u16) -> bool {
+    let Some(visit) = &client.visit else {
+        warn!("Refused opening a shop from outside any site");
+        return true;
+    };
+    let Some(town) = visit.level.buildings.iter().find(|b| b.look.id == building) else {
+        warn!("Refused opening a building that isn't here: {building}");
+        return true;
+    };
+    let (x, y) = visit.position;
+    let door = town.look.door;
+    if sells(town.look.kind).is_empty() || (x - door.0).abs().max((y - door.1).abs()) > DOOR_REACH {
+        warn!("Refused opening {:?} from {x},{y}", town.look.kind);
+        return true;
+    }
+    let of_kind = visit.level.buildings.iter();
+    let of_kind = of_kind.filter(|b| b.look.kind == town.look.kind).count() as u32;
+    let (kind, quality, trades) = (town.look.kind, town.quality, town.trades);
+    let seed = visit.poi.seed.derive("shop");
+    let seed = Seed::new(seed.at(&[visit.index as i64, building as i64]));
+    let (id, poi_kind, index) = (visit.id, visit.poi.kind, visit.index);
+    let now = world.clock.minutes();
+    let made = world.made_now();
+    let level = world
+        .site_mut(id, poi_kind)
+        .levels
+        .entry(index)
+        .or_default();
+    let saved = level.buildings.entry(building).or_default();
+    let shop = Shop {
+        kind,
+        quality,
+        trades: trades + saved.trades,
+        of_kind,
+    };
+    let stock: Vec<Quality> = saved
+        .stock
+        .iter()
+        .map(|item| item.quality.unwrap_or_default())
+        .collect();
+    // The clock can be moved back (dev tools).
+    let last_visit = saved.last_interaction.map(|at| at.max(0.0) as u64);
+    let restocked = catch_up(
+        seed,
+        &shop,
+        &stock,
+        saved.last_made,
+        last_visit,
+        made.minute,
+    );
+    let mut items: Vec<Item> = restocked
+        .keep
+        .iter()
+        .map(|&index| saved.stock[index].clone())
+        .collect();
+    items.extend(restocked.new.iter().map(|new| Item {
+        quality: new.quality,
+        made_at: Some(MadeAt {
+            minute: new.minute,
+            ..made
+        }),
+        ..Item::new(new_id(), new.kind)
+    }));
+    saved.stock.clone_from(&items);
+    saved.last_made = restocked.last_made;
+    saved.last_interaction = Some(now);
+    client
+        .link
+        .send(&ServerMessage::ShopStock { building, items })
 }
 
 /// Uses what the player stands on: stairs to another level, or ground on
@@ -860,6 +936,96 @@ mod tests {
     use crate::connections::tests::TestClient;
     use crate::storage::Storage;
     use crate::storage::tests::TestFolder;
+
+    /// A village, and a shop in it with what is beside its door.
+    fn in_a_village() -> (TestClient, u16, (i64, i64)) {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevEnterSite {
+            kind: PoiKind::Village,
+            seed: 4,
+            level: 0,
+            ruin: 0,
+        }]);
+        let visit = test.client.visit.as_ref().unwrap();
+        let shop = visit
+            .level
+            .buildings
+            .iter()
+            .find(|b| !sells(b.look.kind).is_empty());
+        let look = &shop.expect("a village with a shop").look;
+        let front = (look.door.0 + look.faces.0, look.door.1 + look.faces.1);
+        let building = look.id;
+        (test, building, front)
+    }
+
+    fn stock_in(answers: &[ServerMessage]) -> Option<Vec<shared::item::Item>> {
+        answers.iter().find_map(|answer| match answer {
+            ServerMessage::ShopStock { items, .. } => Some(items.clone()),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn a_shop_only_opens_from_beside_its_door_and_keeps_its_stock() {
+        let (mut test, building, front) = in_a_village();
+        let open = ClientMessage::OpenShop { building };
+        let far = ClientMessage::DevTeleport {
+            x: front.0 + 40,
+            y: front.1,
+        };
+        test.send(&[far]);
+        assert_eq!(stock_in(&test.send(std::slice::from_ref(&open))), None);
+        let near = ClientMessage::DevTeleport {
+            x: front.0,
+            y: front.1,
+        };
+        test.send(&[near]);
+        let first = stock_in(&test.send(std::slice::from_ref(&open))).expect("it opens");
+        assert!(!first.is_empty());
+        assert!(first.iter().all(|item| item.made_at.is_some()));
+        let again = stock_in(&test.send(std::slice::from_ref(&open))).expect("it opens");
+        assert_eq!(again, first, "no time has passed");
+    }
+
+    #[test]
+    fn something_that_is_not_a_shop_stays_shut() {
+        let (mut test, _, front) = in_a_village();
+        let visit = test.client.visit.as_ref().unwrap();
+        let house = visit
+            .level
+            .buildings
+            .iter()
+            .find(|b| sells(b.look.kind).is_empty());
+        let look = house.expect("a village with a house").look.clone();
+        test.send(&[ClientMessage::DevTeleport {
+            x: look.door.0 + look.faces.0,
+            y: look.door.1 + look.faces.1,
+        }]);
+        let open = ClientMessage::OpenShop { building: look.id };
+        assert_eq!(stock_in(&test.send(&[open])), None);
+        assert_ne!(front, look.door);
+    }
+
+    #[test]
+    fn a_shops_stock_changes_as_time_passes() {
+        let (mut test, building, front) = in_a_village();
+        test.send(&[ClientMessage::DevTeleport {
+            x: front.0,
+            y: front.1,
+        }]);
+        let open = ClientMessage::OpenShop { building };
+        let first = stock_in(&test.send(std::slice::from_ref(&open))).unwrap();
+        let later = test.world.clock.minutes() + 200_000.0;
+        test.send(&[ClientMessage::DevSetTime { minutes: later }]);
+        let second = stock_in(&test.send(std::slice::from_ref(&open))).unwrap();
+        let ids = |items: &[shared::item::Item]| -> Vec<shared::id::Id> {
+            items.iter().map(|item| item.id).collect()
+        };
+        assert!(
+            ids(&second).iter().all(|id| !ids(&first).contains(id)),
+            "past the limit everything has been replaced"
+        );
+    }
 
     /// A town arrives whole and remembered, with its buildings, and nothing
     /// of it is kept in the character's memory.
