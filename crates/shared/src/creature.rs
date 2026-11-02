@@ -7,6 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::sheet::{Ability, Skill, Stats, Trait};
+
 /// Clothing layers, from the skin out. A layer covers those under it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Layer {
@@ -91,6 +93,15 @@ pub struct CreatureDef {
     /// Its base grid: what it can carry with no bag.
     pub pockets: (u8, u8),
     pub body: &'static [BodyPart],
+    /// Whether someone can choose to play one.
+    pub playable: bool,
+    pub stats: Stats,
+    /// Skills it starts with, and how good at them.
+    pub skills: &'static [(Skill, u8)],
+    /// What it can do because of what it is.
+    pub abilities: &'static [Ability],
+    /// What can differ between creatures of this kind, to look at.
+    pub looks: &'static [Trait],
 }
 
 impl CreatureDef {
@@ -200,26 +211,84 @@ impl CreatureKind {
     ];
 
     pub const fn def(self) -> CreatureDef {
-        const fn def(
-            name: &'static str,
-            size: Size,
-            pockets: (u8, u8),
-            body: &'static [BodyPart],
-        ) -> CreatureDef {
-            CreatureDef {
-                name,
-                size,
-                pockets,
-                body,
+        use Ability::{Flutter, Kick, NightVision, Trample};
+        use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
+        use Trait::{CoatColour, FeatherColour, HairColour, Height, SkinShade};
+        const fn stats(strength: u8, dexterity: u8, intelligence: u8, constitution: u8) -> Stats {
+            Stats {
+                strength,
+                dexterity,
+                intelligence,
+                constitution,
             }
         }
         match self {
-            Self::Centaur => def("Centaur", Size::Large, (6, 5), &CENTAUR),
-            Self::Chicken => def("Chicken", Size::Tiny, (2, 2), &CHICKEN),
-            Self::Giant => def("Giant", Size::Giant, (8, 6), &TEN_FINGERS),
-            Self::Horse => def("Horse", Size::Large, (4, 3), &HORSE),
-            Self::Human => def("Human", Size::Medium, (6, 4), &TEN_FINGERS),
-            Self::Kobold => def("Kobold", Size::Small, (4, 3), &EIGHT_FINGERS),
+            Self::Centaur => CreatureDef {
+                name: "Centaur",
+                size: Size::Large,
+                pockets: (6, 5),
+                body: &CENTAUR,
+                playable: true,
+                stats: stats(14, 10, 9, 13),
+                skills: &[(Running, 4), (Foraging, 1)],
+                abilities: &[Kick, Trample],
+                looks: &[HairColour, SkinShade, CoatColour, Height],
+            },
+            Self::Chicken => CreatureDef {
+                name: "Chicken",
+                size: Size::Tiny,
+                pockets: (2, 2),
+                body: &CHICKEN,
+                playable: false,
+                stats: stats(1, 8, 1, 2),
+                skills: &[(Foraging, 3)],
+                abilities: &[Flutter],
+                looks: &[FeatherColour],
+            },
+            Self::Giant => CreatureDef {
+                name: "Giant",
+                size: Size::Giant,
+                pockets: (8, 6),
+                body: &TEN_FINGERS,
+                playable: true,
+                stats: stats(20, 6, 7, 18),
+                skills: &[(Climbing, 1)],
+                abilities: &[Trample],
+                looks: &[HairColour, SkinShade, Height],
+            },
+            Self::Horse => CreatureDef {
+                name: "Horse",
+                size: Size::Large,
+                pockets: (4, 3),
+                body: &HORSE,
+                playable: false,
+                stats: stats(16, 10, 3, 14),
+                skills: &[(Running, 5), (Swimming, 1)],
+                abilities: &[Kick, Trample],
+                looks: &[CoatColour, Height],
+            },
+            Self::Human => CreatureDef {
+                name: "Human",
+                size: Size::Medium,
+                pockets: (6, 4),
+                body: &TEN_FINGERS,
+                playable: true,
+                stats: stats(10, 10, 10, 10),
+                skills: &[(Swimming, 1), (Climbing, 1)],
+                abilities: &[],
+                looks: &[HairColour, SkinShade, Height],
+            },
+            Self::Kobold => CreatureDef {
+                name: "Kobold",
+                size: Size::Small,
+                pockets: (4, 3),
+                body: &EIGHT_FINGERS,
+                playable: true,
+                stats: stats(7, 13, 9, 8),
+                skills: &[(Stealth, 3), (Climbing, 2)],
+                abilities: &[NightVision],
+                looks: &[SkinShade, Height],
+            },
         }
     }
 }

@@ -24,12 +24,13 @@ use crate::item::{Holder, Inventory, ItemKind, Rotation};
 use crate::movement::Step;
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
 use crate::rng::Seed;
+use crate::sheet::{Appearance, Sheet};
 use crate::site::PoiLook;
 use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 24;
+pub const PROTOCOL_VERSION: u32 = 25;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -57,7 +58,13 @@ pub enum ClientMessage {
     ChooseCharacter { id: CharacterId },
     /// Makes a new character and plays them, answered with `Welcome`. The
     /// server checks the name and how many the account has.
-    CreateCharacter { name: String },
+    CreateCharacter {
+        name: String,
+        /// What they are: refused unless it is `CreatureDef::playable`.
+        kind: CreatureKind,
+        /// How they look: refused unless it suits the kind.
+        appearance: Appearance,
+    },
     /// Asks the server's clock, now and then. `sent` is the client's own time,
     /// handed back in `Pong` so it can tell how long the round trip took.
     Ping { sent: f64 },
@@ -294,6 +301,9 @@ pub enum ServerMessage {
     /// Everything the character carries, as the server has it: after Welcome,
     /// and whenever it is asked to change, so a move it refused is put right.
     Inventory(Inventory),
+    /// What the character is like, for them to see: after `Welcome`, and when it
+    /// changes. Nobody else is told this.
+    Sheet(Sheet),
 }
 
 /// What a player knows of one world map chunk. The terrain itself isn't
@@ -376,6 +386,8 @@ mod tests {
             },
             ClientMessage::CreateCharacter {
                 name: "Some One".into(),
+                kind: CreatureKind::Kobold,
+                appearance: Appearance::default(),
             },
             ClientMessage::Step {
                 map: 2,
@@ -547,6 +559,7 @@ mod tests {
                 x: -2,
                 y: 5,
             },
+            ServerMessage::Sheet(Sheet::new(CreatureKind::Horse)),
             ServerMessage::Inventory({
                 let mut inventory = Inventory::default();
                 let pouch = crate::item::Item::new(Id(uuid::Uuid::from_u128(1)), ItemKind::Pouch);

@@ -5,11 +5,12 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 ## Files
 
 - `crates/shared/src/creature.rs`: `Layer`, `Location`, `Size`, `BodyPart`, `CreatureDef`, `CreatureKind` (the table: `def()`).
+- `crates/shared/src/sheet.rs`: `Stats`, `Skill`, `Ability`, `Trait`, `Appearance` (`suits`, `says`), `Load`, `Sheet` (`new`, `capacity`, `load`). Tests.
 - `crates/shared/src/wear.rs`: `Fit`, `WearRefused`, and on `Inventory`: `is_worn`, `covered_by`, `check_wear`, `wear`, `worn_fit`, `change_body`; on `Made`: `fit`. Tests for every rule below.
 
 ## Public API
 
-- `CreatureKind::{ALL, def()}`, `CreatureDef { name, size, pockets, body }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
+- `CreatureKind::{ALL, def()}`, `CreatureDef { name, size, pockets, body, playable, stats, skills, abilities, looks }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
 - `BodyPart { location, layers, places }`: which layers a location takes, and how many things taking one place fit there.
 - `Layer::{Skin, Middle, Outer}`, `Location`, `Size::{Tiny..Giant}` (`stepped`, `apart`).
 
@@ -30,4 +31,5 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 - Fit is on the item itself (`item::Made`): the size it fits, the smallest and largest that can wear it, and finger count. `Made::fit` answers `Exact`, `Loose(n)` or `None`; `WearDef::adjustable` things are exact anywhere in their range; magical things fit any size and fingers but not any body. Things covering whole fingers need exactly the body's count. Looseness has no penalty until stats have something to affect.
 - A creature's size comes from its kind, apart from its appearance's height, which has no effect on rules.
 - The creature is kept on `Inventory` for now, as that is all that depends on it.
-- Kinds, bodies and clothes are first guesses to try the rules out.
+- A `Sheet` is one creature's stats, skills and appearance, starting from its kind. Abilities come from the kind alone. Nothing uses stats or skills yet but carrying: capacity is strength × (size + 1) kg, burdened past half and overloaded past all of it, with no effect until energy exists. Appearance never affects rules, and `suits` is how the server checks a choice.
+- Kinds, bodies, stats and clothes are first guesses to try the rules out.

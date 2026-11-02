@@ -45,7 +45,8 @@ pub(super) const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
 /// The panels open, in the order they were opened.
 #[derive(Resource, Default)]
 pub(super) struct OpenGrids {
-    open: Vec<(Holder, Entity)>,
+    /// Each with the size its grid was drawn at.
+    open: Vec<(Holder, Entity, (u8, u8))>,
     opened: u32,
 }
 
@@ -246,7 +247,7 @@ impl OpenGrids {
         commands: &mut Commands,
         raise: &mut MessageWriter<RaisePanel>,
     ) {
-        if let Some(&(_, panel)) = self.open.iter().find(|(open, _)| *open == holder) {
+        if let Some(&(_, panel, _)) = self.open.iter().find(|(open, ..)| *open == holder) {
             raise.write(RaisePanel(panel));
             return;
         }
@@ -305,12 +306,12 @@ impl OpenGrids {
                     }
                 });
         });
-        self.open.push((holder, panel));
+        self.open.push((holder, panel, (width, height)));
     }
 
     /// Whether the pockets' panel is open.
     fn pockets_open(&self) -> bool {
-        self.open.iter().any(|(open, _)| *open == Holder::Pockets)
+        self.open.iter().any(|(open, ..)| *open == Holder::Pockets)
     }
 
     fn toggle_pockets(
@@ -322,10 +323,10 @@ impl OpenGrids {
         let open = self
             .open
             .iter()
-            .position(|(open, _)| *open == Holder::Pockets);
+            .position(|(open, ..)| *open == Holder::Pockets);
         match open {
             Some(index) => {
-                let (_, panel) = self.open.remove(index);
+                let (_, panel, _) = self.open.remove(index);
                 commands.entity(panel).despawn();
             }
             None => self.open(Holder::Pockets, carried, commands, raise),
@@ -408,24 +409,30 @@ pub(super) fn toggle_pockets(
     }
 }
 
-/// Forgets panels closed by their own close buttons, and closes those of bags no
-/// longer carried.
+/// Forgets panels closed by their own close buttons, closes those of bags no
+/// longer carried, and draws the pockets again if the body changed their size.
 pub(super) fn forget_closed(
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
+    mut raise: MessageWriter<RaisePanel>,
 ) {
-    open.open.retain(|&(holder, panel)| {
+    let mut redraw_pockets = false;
+    open.open.retain(|&(holder, panel, size)| {
         if !nodes.contains(panel) {
             return false;
         }
-        let there = carried.0.grid(holder).is_some();
-        if !there {
+        let keep = carried.0.grid_size(holder) == Some(size);
+        if !keep {
             commands.entity(panel).despawn();
+            redraw_pockets |= holder == Holder::Pockets;
         }
-        there
+        keep
     });
+    if redraw_pockets {
+        open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
+    }
 }
 
 /// One cell of an item, in a parent placing it: the parent's corner is the shape's.

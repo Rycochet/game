@@ -460,3 +460,7 @@ The owner's design. Players and mobs share kinds of creature, from a table, each
 Sizes are on the item, with a size it fits and a range it can be worn in (the owner's two values), loose outside its own size unless it adjusts; magical items fit any size and fingers but not any body. Loose has no penalty yet.
 
 Dragging on and off is the same holding as in the grids. Claude's choices: a panel of rows and layers, opening with the pockets, since there are no pictures of bodies; the creature kept on `Inventory` for now; existing characters get the starter clothes once; Change Creature loses what doesn't fit, being a debug tool. Pockets now come from the kind.
+
+## 2026-11-02: Stats, skills, abilities and looks start from the kind
+
+The owner's design: every creature kind has base stats, skills and abilities used by gameplay and mob generators, and appearance that only changes how it looks. Each character has a `Sheet` starting from their kind. Claude's choices: Strength, Dexterity, Intelligence and Constitution from `designs.txt`, agreed in planning; abilities only from the kind for now; which kinds are playable; all the numbers. What can be carried is strength × (size + 1) kg, burdened past half and overloaded past all of it, shown on a new character panel, and slows nothing until energy exists. `CreateCharacter` takes a kind and look, checked by the server, ready for a creation menu. Appearance only shows as words: tokens are fixed pictures, and how they vary is left for when entities have looks.

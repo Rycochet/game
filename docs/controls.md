@@ -31,6 +31,7 @@ Everything can be done with a mouse or by touch, and on touch screens a tap is a
 | Move and zoom the full map | Drag, mouse wheel | Drag, pinch |
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
 | Close what is on top | Esc, or click outside it | Tap outside it |
+| Open or close your character's details | C, or click the person at the bottom left | Tap the person |
 | Open or close your pockets and clothes | I, or click the bag at the bottom left | Tap the bag |
 | Pick up an item, and put it down | Press on it, drag, let go | Slide a finger from it, let go |
 | Turn an item you are holding | Right-click | Tap with a second finger |

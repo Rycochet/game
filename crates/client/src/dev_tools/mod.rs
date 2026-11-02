@@ -71,6 +71,7 @@ use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
 use shared::site::StairsStyle;
 
+use crate::character::OpenCharacterPanel;
 use crate::common::{
     Attitude, CurrentDungeon, FirstFloor, GameView, MapPosition, OtherLevels, Token, TokenShape,
     TokenSize,
@@ -240,7 +241,8 @@ impl Plugin for DevToolsPlugin {
                       view: Res<State<GameView>>,
                       mut step: Local<u8>,
                       mut to_server: MessageWriter<ToServer>,
-                      mut debug: MessageWriter<InventoryDebug>| {
+                      mut debug: MessageWriter<InventoryDebug>,
+                      mut character: MessageWriter<OpenCharacterPanel>| {
                     if *view.get() == GameView::Connecting {
                         return;
                     }
@@ -259,6 +261,7 @@ impl Plugin for DevToolsPlugin {
                     } else if *step == 1 && time.elapsed_secs() > 2.0 {
                         *step = 2;
                         debug.write(InventoryDebug::OpenPockets);
+                        character.write(OpenCharacterPanel);
                         match hold {
                             Some(index) => debug.write(InventoryDebug::PickUp(index)),
                             None => debug.write(InventoryDebug::OpenBags),

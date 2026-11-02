@@ -1,0 +1,220 @@
+//! What a creature is like: stats, skills, abilities and how it looks. See
+//! `docs/context/shared/creature.md`.
+//!
+//! Stats and skills are for gameplay that doesn't exist yet, apart from what
+//! strength says about carrying. Appearance never affects the rules.
+
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+
+use crate::creature::{CreatureKind, Size};
+use crate::item::Inventory;
+
+/// A creature's base stats.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Stats {
+    pub strength: u8,
+    pub dexterity: u8,
+    pub intelligence: u8,
+    pub constitution: u8,
+}
+
+/// Something that can be learned, and be better or worse at.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum Skill {
+    Climbing,
+    Foraging,
+    Running,
+    Stealth,
+    Swimming,
+}
+
+/// Something a creature can do because of what it is. No more than a name so far.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum Ability {
+    Flutter,
+    Kick,
+    NightVision,
+    Trample,
+}
+
+/// Something that differs between creatures of a kind, only to look at.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum Trait {
+    CoatColour,
+    FeatherColour,
+    HairColour,
+    Height,
+    SkinShade,
+}
+
+impl Trait {
+    /// The choices, in order.
+    pub const fn choices(self) -> &'static [&'static str] {
+        match self {
+            Self::CoatColour => &["Bay", "Black", "Chestnut", "Grey", "White"],
+            Self::FeatherColour => &["Brown", "Black", "Speckled", "White"],
+            Self::HairColour => &["Black", "Brown", "Blonde", "Red", "Grey", "White"],
+            Self::Height => &["Average", "Very short", "Short", "Tall", "Very tall"],
+            Self::SkinShade => &["Medium", "Pale", "Light", "Tan", "Brown", "Dark"],
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::CoatColour => "Coat",
+            Self::FeatherColour => "Feathers",
+            Self::HairColour => "Hair",
+            Self::Height => "Height",
+            Self::SkinShade => "Skin",
+        }
+    }
+}
+
+/// How one creature looks: a choice for each trait, the first if not given.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Appearance(pub BTreeMap<Trait, u8>);
+
+impl Appearance {
+    /// Whether every choice is for a trait this kind has, and is one of its choices.
+    pub fn suits(&self, kind: CreatureKind) -> bool {
+        self.0.iter().all(|(&which, &choice)| {
+            kind.def().looks.contains(&which) && (choice as usize) < which.choices().len()
+        })
+    }
+
+    /// What this trait is, in words.
+    pub fn says(&self, which: Trait) -> &'static str {
+        let choice = self.0.get(&which).copied().unwrap_or(0);
+        which.choices().get(choice as usize).copied().unwrap_or("")
+    }
+}
+
+/// How weighed down someone is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Load {
+    Light,
+    Burdened,
+    Overloaded,
+}
+
+/// What one creature is like: starts from its kind, and can grow from there.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Sheet {
+    pub stats: Stats,
+    #[serde(default)]
+    pub skills: BTreeMap<Skill, u8>,
+    #[serde(default)]
+    pub appearance: Appearance,
+}
+
+impl Default for Sheet {
+    fn default() -> Self {
+        Self::new(CreatureKind::default())
+    }
+}
+
+impl Sheet {
+    /// A plain one of this kind.
+    pub fn new(kind: CreatureKind) -> Self {
+        let def = kind.def();
+        Self {
+            stats: def.stats,
+            skills: def.skills.iter().copied().collect(),
+            appearance: Appearance::default(),
+        }
+    }
+
+    /// How much it can carry before it is overloaded, in grams: by strength, and
+    /// more the bigger it is.
+    pub fn capacity(&self, size: Size) -> u32 {
+        const GRAMS_PER_STRENGTH_AND_SIZE: u32 = 1000;
+        self.stats.strength as u32 * (size as u32 + 1) * GRAMS_PER_STRENGTH_AND_SIZE
+    }
+
+    /// How weighed down this makes it: burdened past half what it can carry.
+    pub fn load(&self, carrying: &Inventory) -> Load {
+        let capacity = self.capacity(carrying.creature.def().size);
+        let weight = carrying.total_weight();
+        if weight > capacity {
+            Load::Overloaded
+        } else if weight * 2 > capacity {
+            Load::Burdened
+        } else {
+            Load::Light
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::id::Id;
+    use crate::item::{Item, ItemKind};
+
+    #[test]
+    fn every_kind_has_stats_and_looks() {
+        for kind in CreatureKind::ALL {
+            let def = kind.def();
+            assert!(def.stats.strength > 0, "{}", def.name);
+            assert!(!def.looks.is_empty(), "{}", def.name);
+            let sheet = Sheet::new(kind);
+            assert_eq!(sheet.stats, def.stats);
+            assert_eq!(sheet.skills.len(), def.skills.len());
+            assert!(sheet.appearance.suits(kind));
+        }
+    }
+
+    #[test]
+    fn a_look_must_suit_the_kind_and_be_a_real_choice() {
+        let look = |which, choice| Appearance(BTreeMap::from([(which, choice)]));
+        assert!(look(Trait::HairColour, 3).suits(CreatureKind::Human));
+        assert_eq!(look(Trait::HairColour, 3).says(Trait::HairColour), "Red");
+        assert!(!look(Trait::HairColour, 99).suits(CreatureKind::Human));
+        // Chickens have no hair.
+        assert!(!look(Trait::HairColour, 0).suits(CreatureKind::Chicken));
+        assert!(look(Trait::FeatherColour, 1).suits(CreatureKind::Chicken));
+    }
+
+    #[test]
+    fn appearance_changes_nothing_that_matters() {
+        let plain = Sheet::new(CreatureKind::Human);
+        let tall = Sheet {
+            appearance: Appearance(BTreeMap::from([(Trait::Height, 4)])),
+            ..plain.clone()
+        };
+        assert_eq!(plain.capacity(Size::Medium), tall.capacity(Size::Medium));
+    }
+
+    /// An inventory with this many stones of 5 kg.
+    fn stones(count: u128) -> Inventory {
+        let mut inventory = Inventory {
+            pockets_size: (40, 40),
+            ..Inventory::default()
+        };
+        for n in 0..count {
+            let stone = Item::new(Id::for_test(n), ItemKind::Stone);
+            inventory.give(stone).unwrap();
+        }
+        inventory
+    }
+
+    #[test]
+    fn weight_moves_a_human_through_the_loads() {
+        // Strength 10 and size 3: 30 kg.
+        let sheet = Sheet::new(CreatureKind::Human);
+        assert_eq!(sheet.capacity(Size::Medium), 30_000);
+        assert_eq!(sheet.load(&stones(3)), Load::Light);
+        assert_eq!(sheet.load(&stones(4)), Load::Burdened);
+        assert_eq!(sheet.load(&stones(6)), Load::Burdened);
+        assert_eq!(sheet.load(&stones(7)), Load::Overloaded);
+    }
+
+    #[test]
+    fn a_sheet_reads_back_from_a_message() {
+        let sheet = Sheet::new(CreatureKind::Kobold);
+        let bytes = postcard::to_allocvec(&sheet).unwrap();
+        assert_eq!(postcard::from_bytes::<Sheet>(&bytes).unwrap(), sheet);
+    }
+}
