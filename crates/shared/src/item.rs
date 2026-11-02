@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::creature::{CreatureKind, Layer, Location, Size};
 use crate::id::Id;
 
 /// The widest and tallest a shape can be.
@@ -16,8 +17,8 @@ pub const MAX_SHAPE_SIDE: u8 = 8;
 /// How many grids deep things can go below the pockets: backpack, pouch, box.
 pub const MAX_DEPTH: u32 = 3;
 
-/// The size of a character's pockets. (Later it comes from their kind of
-/// creature.)
+/// The pockets of a character saved before creature kinds, and of a new
+/// `Inventory`. Otherwise they come from the kind of creature.
 pub const POCKETS: (u8, u8) = (6, 4);
 
 /// The cells something takes up, within its width and height: bit `y * 8 + x`
@@ -155,6 +156,22 @@ pub struct ItemDef {
     pub weight: u32,
     pub shape: Shape,
     pub container: Option<ContainerDef>,
+    pub wear: Option<WearDef>,
+}
+
+/// How something is worn.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WearDef {
+    pub layer: Layer,
+    pub locations: &'static [Location],
+    /// It takes only one place of its one location: a ring on a finger.
+    pub one_place: bool,
+    /// How many sizes smaller and larger than it was made for it can be worn.
+    pub down: u8,
+    pub up: u8,
+    /// It adjusts, so it fits properly anywhere in that range. Otherwise anything
+    /// but its own size is loose.
+    pub adjustable: bool,
 }
 
 /// A kind of item. Saved by name, so new ones can go anywhere in the list.
@@ -162,37 +179,71 @@ pub struct ItemDef {
 pub enum ItemKind {
     Apple,
     Backpack,
+    Barding,
+    Belt,
     Boomerang,
+    Boots,
+    Cloak,
     Coin,
+    FingerlessGloves,
+    FullArmour,
+    Gauntlets,
+    Gloves,
+    Hat,
     Lantern,
+    Necklace,
     Pouch,
     Ring,
+    Shoes,
     SmallBox,
+    Socks,
     Stone,
     Sword,
+    TShirt,
+    Trousers,
 }
 
 /// All but its top-right cell: an L.
 const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
 
 impl ItemKind {
-    /// Every kind, alphabetically.
-    pub const ALL: [Self; 10] = [
+    /// Every kind, alphabetically by name.
+    pub const ALL: [Self; 24] = [
         Self::Apple,
         Self::Backpack,
+        Self::Barding,
+        Self::Belt,
         Self::Boomerang,
+        Self::Boots,
+        Self::Cloak,
         Self::Coin,
+        Self::FingerlessGloves,
+        Self::FullArmour,
+        Self::Gauntlets,
+        Self::Gloves,
+        Self::Hat,
         Self::Lantern,
+        Self::Necklace,
         Self::Pouch,
         Self::Ring,
+        Self::Shoes,
         Self::SmallBox,
+        Self::Socks,
         Self::Stone,
         Self::Sword,
+        Self::TShirt,
+        Self::Trousers,
     ];
 
     pub const fn def(self) -> ItemDef {
+        use Layer::{Middle, Outer, Skin};
+        use Location::{
+            Arms, Feet, Fingers, Forelegs, Hands, Head, Hindlegs, Legs, Neck, Shoulders, Torso,
+            Waist,
+        };
+        let square = Shape::rectangle(1, 1);
         match self {
-            Self::Apple => plain("Apple", 150, Shape::rectangle(1, 1)),
+            Self::Apple => plain("Apple", 150, square),
             Self::Backpack => bag(
                 "Backpack",
                 1200,
@@ -200,10 +251,59 @@ impl ItemKind {
                 (10, 12),
                 Some(25_000),
                 None,
-            ),
+            )
+            .worn(wear(Outer, &[Shoulders], (1, 1), true)),
+            Self::Barding => plain("Barding", 15_000, Shape::rectangle(4, 4)).worn(wear(
+                Outer,
+                &[Neck, Torso, Forelegs, Hindlegs],
+                (0, 0),
+                false,
+            )),
+            Self::Belt => plain("Belt", 200, Shape::rectangle(1, 3)).worn(wear(
+                Middle,
+                &[Waist],
+                (2, 2),
+                true,
+            )),
             Self::Boomerang => plain("Boomerang", 400, BOOMERANG),
-            Self::Coin => plain("Coin", 10, Shape::rectangle(1, 1)),
+            Self::Boots => plain("Boots", 1100, Shape::rectangle(2, 2)).worn(wear(
+                Outer,
+                &[Feet],
+                (1, 0),
+                false,
+            )),
+            Self::Cloak => plain("Cloak", 900, Shape::rectangle(2, 3)).worn(wear(
+                Middle,
+                &[Shoulders],
+                (1, 1),
+                true,
+            )),
+            Self::Coin => plain("Coin", 10, square),
+            Self::FingerlessGloves => plain("Fingerless Gloves", 80, Shape::rectangle(1, 2))
+                .worn(wear(Middle, &[Hands], (1, 1), true)),
+            Self::FullArmour => plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(wear(
+                Outer,
+                &[Shoulders, Arms, Torso, Legs],
+                (0, 0),
+                false,
+            )),
+            Self::Gauntlets => plain("Gauntlets", 1200, Shape::rectangle(2, 1)).worn(wear(
+                Outer,
+                &[Hands, Fingers],
+                (0, 0),
+                false,
+            )),
+            Self::Gloves => plain("Gloves", 100, Shape::rectangle(1, 2)).worn(wear(
+                Middle,
+                &[Hands, Fingers],
+                (1, 0),
+                false,
+            )),
+            Self::Hat => {
+                plain("Hat", 150, Shape::rectangle(2, 1)).worn(wear(Outer, &[Head], (1, 0), false))
+            }
             Self::Lantern => plain("Lantern", 800, Shape::rectangle(1, 2)),
+            Self::Necklace => plain("Necklace", 40, square).worn(wear(Skin, &[Neck], (5, 5), true)),
             Self::Pouch => bag(
                 "Pouch",
                 80,
@@ -212,7 +312,16 @@ impl ItemKind {
                 Some(1500),
                 Some(500),
             ),
-            Self::Ring => plain("Ring", 10, Shape::rectangle(1, 1)),
+            Self::Ring => plain("Ring", 10, square).worn(WearDef {
+                one_place: true,
+                ..wear(Skin, &[Fingers], (1, 1), true)
+            }),
+            Self::Shoes => plain("Shoes", 500, Shape::rectangle(2, 1)).worn(wear(
+                Middle,
+                &[Feet],
+                (1, 0),
+                false,
+            )),
             Self::SmallBox => bag(
                 "Small Box",
                 100,
@@ -221,8 +330,21 @@ impl ItemKind {
                 Some(300),
                 None,
             ),
+            Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
             Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)),
             Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)),
+            Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
+                Skin,
+                &[Torso, Arms],
+                (1, 0),
+                false,
+            )),
+            Self::Trousers => plain("Trousers", 500, Shape::rectangle(2, 3)).worn(wear(
+                Middle,
+                &[Legs],
+                (1, 0),
+                false,
+            )),
         }
     }
 }
@@ -233,6 +355,7 @@ const fn plain(name: &'static str, weight: u32, shape: Shape) -> ItemDef {
         weight,
         shape,
         container: None,
+        wear: None,
     }
 }
 
@@ -245,15 +368,70 @@ const fn bag(
     max_each: Option<u32>,
 ) -> ItemDef {
     ItemDef {
-        name,
-        weight,
-        shape,
         container: Some(ContainerDef {
             width,
             height,
             max_total,
             max_each,
         }),
+        ..plain(name, weight, shape)
+    }
+}
+
+const fn wear(
+    layer: Layer,
+    locations: &'static [Location],
+    (down, up): (u8, u8),
+    adjustable: bool,
+) -> WearDef {
+    WearDef {
+        layer,
+        locations,
+        one_place: false,
+        down,
+        up,
+        adjustable,
+    }
+}
+
+impl ItemDef {
+    const fn worn(self, wear: WearDef) -> Self {
+        Self {
+            wear: Some(wear),
+            ..self
+        }
+    }
+}
+
+/// Who an item was made for. Part of the item itself: one kind of glove comes in
+/// any size and number of fingers.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Made {
+    /// The size it fits.
+    pub size: Size,
+    /// The smallest and largest it can be worn by at all.
+    pub smallest: Size,
+    pub largest: Size,
+    /// How many fingers it has, if it covers them.
+    pub fingers: Option<u8>,
+    /// It resizes itself to fit anyone, whatever their fingers, but not whatever
+    /// their shape.
+    pub magical: bool,
+}
+
+impl Made {
+    /// A thing of this kind made for a creature of this size and these fingers.
+    pub fn for_body(kind: ItemKind, size: Size, fingers: Option<u8>, magical: bool) -> Self {
+        let wear = kind.def().wear;
+        let covers_fingers =
+            wear.is_some_and(|wear| !wear.one_place && wear.locations.contains(&Location::Fingers));
+        Self {
+            size,
+            smallest: size.stepped(-(wear.map_or(0, |wear| wear.down) as i8)),
+            largest: size.stepped(wear.map_or(0, |wear| wear.up) as i8),
+            fingers: if covers_fingers { fingers } else { None },
+            magical,
+        }
     }
 }
 
@@ -265,6 +443,8 @@ pub struct Item {
     /// What is in its grid, if it has one.
     #[serde(default)]
     pub contents: Vec<Placed>,
+    #[serde(default)]
+    pub made: Made,
 }
 
 impl Item {
@@ -273,6 +453,7 @@ impl Item {
             id,
             kind,
             contents: Vec::new(),
+            made: Made::for_body(kind, Size::Medium, Some(10), false),
         }
     }
 
@@ -352,18 +533,48 @@ pub enum MoveRefused {
     NoRoom,
     /// It is too heavy for a container it would end up in.
     TooHeavy,
+    /// It is worn, under something on a higher layer.
+    Covered,
 }
 
-/// Everything a character carries.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// Everything a character carries: what is in their pockets and what they wear.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Inventory {
+    /// What kind of creature is carrying it all, which decides what they can wear.
+    #[serde(default)]
+    pub creature: CreatureKind,
+    /// They have had their first clothes.
+    #[serde(default)]
+    pub outfitted: bool,
     pub pockets: Vec<Placed>,
+    /// How big the pockets are, from their kind of creature.
+    #[serde(default = "default_pockets")]
+    pub pockets_size: (u8, u8),
+    /// What they have on: see `shared::wear`.
+    #[serde(default)]
+    pub worn: Vec<Item>,
+}
+
+fn default_pockets() -> (u8, u8) {
+    POCKETS
+}
+
+impl Default for Inventory {
+    fn default() -> Self {
+        Self {
+            creature: CreatureKind::default(),
+            outfitted: false,
+            pockets: Vec::new(),
+            pockets_size: POCKETS,
+            worn: Vec::new(),
+        }
+    }
 }
 
 impl Inventory {
     /// What it all weighs, in grams.
     pub fn total_weight(&self) -> u32 {
-        weight_of(&self.pockets)
+        weight_of(&self.pockets) + self.worn.iter().map(Item::total_weight).sum::<u32>()
     }
 
     /// The item with this id, wherever it is.
@@ -377,7 +588,15 @@ impl Inventory {
                 }
             })
         }
-        search(&self.pockets, id)
+        search(&self.pockets, id).or_else(|| {
+            self.worn.iter().find_map(|item| {
+                if item.id == id {
+                    Some(item)
+                } else {
+                    search(&item.contents, id)
+                }
+            })
+        })
     }
 
     /// What is in this grid: `None` if there is no such grid.
@@ -395,7 +614,7 @@ impl Inventory {
     /// How wide and tall this grid is.
     pub fn grid_size(&self, holder: Holder) -> Option<(u8, u8)> {
         match holder {
-            Holder::Pockets => Some(POCKETS),
+            Holder::Pockets => Some(self.pockets_size),
             Holder::Inside(id) => {
                 let container = self.find(id)?.kind.def().container?;
                 Some((container.width, container.height))
@@ -420,11 +639,27 @@ impl Inventory {
             })
         }
         let mut around = Vec::new();
-        search(&self.pockets, id, &mut around).then_some(around)
+        if search(&self.pockets, id, &mut around) {
+            return Some(around);
+        }
+        for item in &self.worn {
+            if item.id == id {
+                return Some(Vec::new());
+            }
+            let mut around = vec![item.id];
+            if search(&item.contents, id, &mut around) {
+                return Some(around);
+            }
+        }
+        None
     }
 
-    /// Which grid an item is in, and how it lies there.
+    /// Which grid an item is in, and how it lies there. None if it isn't in a
+    /// grid, as when it is worn.
     pub fn placed(&self, id: Id) -> Option<(Holder, &Placed)> {
+        if self.is_worn(id) {
+            return None;
+        }
         let holder = match self.containers_around(id)?.last() {
             Some(&container) => Holder::Inside(container),
             None => Holder::Pockets,
@@ -516,6 +751,9 @@ impl Inventory {
         rotation: Rotation,
     ) -> Result<(), MoveRefused> {
         let item = self.find(id).ok_or(MoveRefused::NoSuchItem)?;
+        if self.covered_by(id).is_some() {
+            return Err(MoveRefused::Covered);
+        }
         self.may_hold(holder, item)?;
         let shape = item.kind.def().shape.turned(rotation);
         if self.grid(holder).is_none() {
@@ -550,13 +788,14 @@ impl Inventory {
         Ok(())
     }
 
-    /// Destroys a carried item and everything in it. `false` if it isn't carried.
+    /// Destroys a carried item and everything in it. `false` if it isn't carried,
+    /// or is worn under something.
     pub fn destroy(&mut self, id: Id) -> bool {
-        self.take(id).is_some()
+        self.covered_by(id).is_none() && self.take(id).is_some()
     }
 
     /// Takes an item out, wherever it is.
-    fn take(&mut self, id: Id) -> Option<Item> {
+    pub(crate) fn take(&mut self, id: Id) -> Option<Item> {
         fn search(placed: &mut Vec<Placed>, id: Id) -> Option<Item> {
             if let Some(index) = placed.iter().position(|placed| placed.item.id == id) {
                 return Some(placed.remove(index).item);
@@ -565,7 +804,14 @@ impl Inventory {
                 .iter_mut()
                 .find_map(|placed| search(&mut placed.item.contents, id))
         }
-        search(&mut self.pockets, id)
+        if let Some(index) = self.worn.iter().position(|item| item.id == id) {
+            return Some(self.worn.remove(index));
+        }
+        search(&mut self.pockets, id).or_else(|| {
+            self.worn
+                .iter_mut()
+                .find_map(|item| search(&mut item.contents, id))
+        })
     }
 
     fn grid_mut(&mut self, holder: Holder) -> Option<&mut Vec<Placed>> {
@@ -580,7 +826,15 @@ impl Inventory {
         }
         match holder {
             Holder::Pockets => Some(&mut self.pockets),
-            Holder::Inside(id) => search(&mut self.pockets, id),
+            Holder::Inside(id) => search(&mut self.pockets, id).or_else(|| {
+                self.worn.iter_mut().find_map(|item| {
+                    if item.id == id {
+                        Some(&mut item.contents)
+                    } else {
+                        search(&mut item.contents, id)
+                    }
+                })
+            }),
         }
     }
 

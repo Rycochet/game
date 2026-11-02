@@ -1,0 +1,265 @@
+//! Kinds of creature: the same for players and, later, mobs. What each kind's
+//! body is like, and so what it can wear. See `docs/context/shared/creature.md`.
+//!
+//! A table here, as with kinds of item. Different bodies use different locations
+//! (`Forelegs` isn't `Legs`), so trousers don't fit a horse, and a centaur is a
+//! human top on those.
+
+use serde::{Deserialize, Serialize};
+
+/// Clothing layers, from the skin out. A layer covers those under it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum Layer {
+    Skin,
+    Middle,
+    Outer,
+}
+
+impl Layer {
+    pub const ALL: [Self; 3] = [Self::Skin, Self::Middle, Self::Outer];
+}
+
+/// Somewhere on a body that clothes can go.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum Location {
+    Head,
+    Neck,
+    Shoulders,
+    Arms,
+    Wings,
+    Torso,
+    Waist,
+    Hands,
+    Fingers,
+    Legs,
+    Feet,
+    Forelegs,
+    Hindlegs,
+    Tail,
+}
+
+/// How big a creature is, or the clothes made for one, smallest first.
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+pub enum Size {
+    Tiny,
+    Small,
+    #[default]
+    Medium,
+    Large,
+    Huge,
+    Giant,
+}
+
+impl Size {
+    pub const ALL: [Self; 6] = [
+        Self::Tiny,
+        Self::Small,
+        Self::Medium,
+        Self::Large,
+        Self::Huge,
+        Self::Giant,
+    ];
+
+    /// `by` sizes up or, negative, down, stopping at the ends.
+    pub fn stepped(self, by: i8) -> Self {
+        let last = Self::ALL.len() as i8 - 1;
+        Self::ALL[(self as i8 + by).clamp(0, last) as usize]
+    }
+
+    /// How many sizes apart.
+    pub fn apart(self, other: Self) -> u8 {
+        (self as i8 - other as i8).unsigned_abs()
+    }
+}
+
+/// One location on a body: which layers go there, and how many places it has for
+/// things that take only one (fingers for rings).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BodyPart {
+    pub location: Location,
+    pub layers: &'static [Layer],
+    pub places: u8,
+}
+
+/// What a kind of creature is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CreatureDef {
+    pub name: &'static str,
+    pub size: Size,
+    /// Its base grid: what it can carry with no bag.
+    pub pockets: (u8, u8),
+    pub body: &'static [BodyPart],
+}
+
+impl CreatureDef {
+    pub fn part(&self, location: Location) -> Option<&'static BodyPart> {
+        self.body.iter().find(|part| part.location == location)
+    }
+
+    /// How many fingers it has: none if it has no `Fingers`.
+    pub fn fingers(&self) -> Option<u8> {
+        self.part(Location::Fingers).map(|part| part.places)
+    }
+}
+
+/// A kind of creature. Saved by name, so new ones can go anywhere in the list.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CreatureKind {
+    Centaur,
+    Chicken,
+    Giant,
+    Horse,
+    #[default]
+    Human,
+    Kobold,
+}
+
+const SKIN: &[Layer] = &[Layer::Skin];
+const SKIN_OUTER: &[Layer] = &[Layer::Skin, Layer::Outer];
+const MIDDLE: &[Layer] = &[Layer::Middle];
+const MIDDLE_OUTER: &[Layer] = &[Layer::Middle, Layer::Outer];
+const SKIN_MIDDLE: &[Layer] = &[Layer::Skin, Layer::Middle];
+const ALL_LAYERS: &[Layer] = &Layer::ALL;
+
+const fn part(location: Location, layers: &'static [Layer]) -> BodyPart {
+    BodyPart {
+        location,
+        layers,
+        places: 1,
+    }
+}
+
+const fn fingers(places: u8) -> BodyPart {
+    BodyPart {
+        location: Location::Fingers,
+        layers: ALL_LAYERS,
+        places,
+    }
+}
+
+/// A two-legged body with hands of this many fingers in all.
+const fn biped(finger_count: u8) -> [BodyPart; 10] {
+    [
+        part(Location::Head, SKIN_OUTER),
+        part(Location::Neck, SKIN_OUTER),
+        part(Location::Shoulders, MIDDLE_OUTER),
+        part(Location::Arms, ALL_LAYERS),
+        part(Location::Torso, ALL_LAYERS),
+        part(Location::Waist, MIDDLE),
+        part(Location::Hands, MIDDLE_OUTER),
+        fingers(finger_count),
+        part(Location::Legs, ALL_LAYERS),
+        part(Location::Feet, ALL_LAYERS),
+    ]
+}
+
+const TEN_FINGERS: [BodyPart; 10] = biped(10);
+const EIGHT_FINGERS: [BodyPart; 10] = biped(8);
+
+const CHICKEN: [BodyPart; 6] = [
+    part(Location::Head, SKIN),
+    part(Location::Neck, SKIN),
+    part(Location::Wings, SKIN_OUTER),
+    part(Location::Torso, SKIN),
+    part(Location::Legs, SKIN_MIDDLE),
+    part(Location::Feet, SKIN),
+];
+
+const HORSE: [BodyPart; 6] = [
+    part(Location::Head, SKIN_OUTER),
+    part(Location::Neck, SKIN_OUTER),
+    part(Location::Torso, SKIN_OUTER),
+    part(Location::Forelegs, SKIN_OUTER),
+    part(Location::Hindlegs, SKIN_OUTER),
+    part(Location::Tail, SKIN),
+];
+
+const CENTAUR: [BodyPart; 9] = [
+    part(Location::Head, SKIN_OUTER),
+    part(Location::Neck, SKIN_OUTER),
+    part(Location::Shoulders, MIDDLE_OUTER),
+    part(Location::Arms, ALL_LAYERS),
+    part(Location::Torso, ALL_LAYERS),
+    part(Location::Hands, MIDDLE_OUTER),
+    fingers(10),
+    part(Location::Forelegs, SKIN_OUTER),
+    part(Location::Hindlegs, SKIN_OUTER),
+];
+
+impl CreatureKind {
+    /// Every kind, alphabetically.
+    pub const ALL: [Self; 6] = [
+        Self::Centaur,
+        Self::Chicken,
+        Self::Giant,
+        Self::Horse,
+        Self::Human,
+        Self::Kobold,
+    ];
+
+    pub const fn def(self) -> CreatureDef {
+        const fn def(
+            name: &'static str,
+            size: Size,
+            pockets: (u8, u8),
+            body: &'static [BodyPart],
+        ) -> CreatureDef {
+            CreatureDef {
+                name,
+                size,
+                pockets,
+                body,
+            }
+        }
+        match self {
+            Self::Centaur => def("Centaur", Size::Large, (6, 5), &CENTAUR),
+            Self::Chicken => def("Chicken", Size::Tiny, (2, 2), &CHICKEN),
+            Self::Giant => def("Giant", Size::Giant, (8, 6), &TEN_FINGERS),
+            Self::Horse => def("Horse", Size::Large, (4, 3), &HORSE),
+            Self::Human => def("Human", Size::Medium, (6, 4), &TEN_FINGERS),
+            Self::Kobold => def("Kobold", Size::Small, (4, 3), &EIGHT_FINGERS),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_kind_is_listed_alphabetically_and_no_location_twice() {
+        let names: Vec<_> = CreatureKind::ALL.iter().map(|k| k.def().name).collect();
+        let mut sorted = names.clone();
+        sorted.sort();
+        assert_eq!(names, sorted);
+        for kind in CreatureKind::ALL {
+            let body = kind.def().body;
+            for (index, part) in body.iter().enumerate() {
+                assert!(!part.layers.is_empty(), "{:?}", part.location);
+                assert!(part.places > 0);
+                assert!(
+                    body[index + 1..]
+                        .iter()
+                        .all(|o| o.location != part.location)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn sizes_step_and_stop_at_the_ends() {
+        assert_eq!(Size::Medium.stepped(-1), Size::Small);
+        assert_eq!(Size::Tiny.stepped(-3), Size::Tiny);
+        assert_eq!(Size::Huge.stepped(5), Size::Giant);
+        assert_eq!(Size::Tiny.apart(Size::Large), 3);
+    }
+
+    #[test]
+    fn finger_counts_differ_by_kind() {
+        assert_eq!(CreatureKind::Human.def().fingers(), Some(10));
+        assert_eq!(CreatureKind::Kobold.def().fingers(), Some(8));
+        assert_eq!(CreatureKind::Chicken.def().fingers(), None);
+    }
+}

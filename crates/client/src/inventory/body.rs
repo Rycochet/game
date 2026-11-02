@@ -1,0 +1,238 @@
+//! The clothes panel: a row for each place on the character's body and a column
+//! for each layer. Items are dragged on to wear them and off to take them off,
+//! with the same holding as everything else.
+
+use bevy::prelude::*;
+use shared::creature::Layer;
+use shared::id::Id;
+use shared::item::{Inventory, Item, Rotation};
+use shared::wear::Fit;
+
+use super::hold::Target;
+use super::panels::{CELL, GRID_COLOUR, GRID_LINE, ITEM_EDGE, ItemCell, colour, label};
+use super::{Carried, Holding};
+use crate::widgets::{INK, Pressable, RaisePanel, spawn_moveable_panel};
+
+const AT: Vec2 = Vec2::new(340.0, 140.0);
+const NAME_WIDTH: f32 = 80.0;
+const FONT: f32 = 14.0;
+const LABEL_FONT: f32 = 13.0;
+const BORDER: f32 = 1.0;
+const COVERED_ALPHA: f32 = 0.45;
+
+/// The panel, if open.
+#[derive(Resource, Default)]
+pub(super) struct ClothesPanel(Option<Entity>);
+
+/// On the panel's slots and everything in them: dropping here means wearing.
+#[derive(Component, Clone, Copy)]
+pub(super) struct BodyNode;
+
+/// What holds the rows, and shows whether a drop would work.
+#[derive(Component)]
+pub(super) struct BodyRows;
+
+impl ClothesPanel {
+    /// Opens it, or brings it to the front if it is open.
+    pub(super) fn open(
+        &mut self,
+        commands: &mut Commands,
+        raise: &mut MessageWriter<RaisePanel>,
+        nodes: &Query<(), With<Node>>,
+    ) {
+        if let Some(panel) = self.0.filter(|&panel| nodes.contains(panel)) {
+            raise.write(RaisePanel(panel));
+            return;
+        }
+        let (panel, content) = spawn_moveable_panel(commands, "Clothes", AT);
+        commands.entity(content).with_child((
+            BodyRows,
+            BodyNode,
+            Node {
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+            BackgroundColor(Color::NONE),
+        ));
+        self.0 = Some(panel);
+    }
+
+    pub(super) fn is_open(&self) -> bool {
+        self.0.is_some()
+    }
+
+    pub(super) fn close(&mut self, commands: &mut Commands, nodes: &Query<(), With<Node>>) {
+        if let Some(panel) = self.0.take().filter(|&panel| nodes.contains(panel)) {
+            commands.entity(panel).despawn();
+        }
+    }
+}
+
+fn words(text: impl Into<String>, width: f32) -> impl Bundle {
+    (
+        BodyNode,
+        Text::new(text),
+        TextFont::from_font_size(FONT),
+        TextColor(INK),
+        Node {
+            width: px(width),
+            ..default()
+        },
+    )
+}
+
+fn slot_node() -> Node {
+    Node {
+        width: px(CELL),
+        height: px(CELL),
+        border: UiRect::all(px(BORDER)),
+        ..default()
+    }
+}
+
+/// How a slot is drawn: the worn things here, last on top.
+fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item]) {
+    let Some(item) = here.last() else {
+        row.spawn((
+            BodyNode,
+            slot_node(),
+            BackgroundColor(GRID_COLOUR),
+            BorderColor::from(GRID_LINE),
+        ));
+        return;
+    };
+    let covered = carried.covered_by(item.id).is_some();
+    let tint = colour(item.kind).with_alpha(if covered { COVERED_ALPHA } else { 1.0 });
+    // Held by a cell it has, and it is never turned while worn.
+    let grip = item.kind.def().shape.cells().next().unwrap_or((0, 0));
+    let cell = ItemCell {
+        id: item.id,
+        rotation: Rotation::None,
+        grip,
+    };
+    let text = match here.len() {
+        1 => label(item.kind),
+        many => format!("{}{many}", label(item.kind)),
+    };
+    let mut slot = row.spawn((
+        BodyNode,
+        cell,
+        slot_node(),
+        BackgroundColor(tint),
+        BorderColor::from(ITEM_EDGE),
+    ));
+    // Something under another can't be picked up.
+    if !covered {
+        slot.insert(Pressable);
+    }
+    slot.with_child((
+        BodyNode,
+        cell,
+        Text::new(text),
+        TextFont::from_font_size(LABEL_FONT),
+        TextColor(ITEM_EDGE),
+    ));
+}
+
+/// Forgets the panel once its close button has closed it.
+pub(super) fn forget_closed(mut clothes: ResMut<ClothesPanel>, nodes: Query<(), With<Node>>) {
+    if clothes.0.is_some_and(|panel| !nodes.contains(panel)) {
+        clothes.0 = None;
+    }
+}
+
+/// Draws the rows again when what is worn, or the body, or what is held changes.
+pub(super) fn show_clothes(
+    carried: Res<Carried>,
+    holding: Res<Holding>,
+    new_rows: Query<(), Added<BodyRows>>,
+    rows: Query<Entity, With<BodyRows>>,
+    mut commands: Commands,
+    mut drawn_without: Local<Option<Id>>,
+) {
+    let held = holding.held.map(|held| held.item.id);
+    if !carried.is_changed() && new_rows.is_empty() && *drawn_without == held {
+        return;
+    }
+    *drawn_without = held;
+    for entity in &rows {
+        commands.entity(entity).despawn_related::<Children>();
+        let inventory = &carried.0;
+        let def = inventory.creature.def();
+        commands.entity(entity).with_children(|rows| {
+            rows.spawn((
+                BodyNode,
+                Text::new(format!("{}, {:?}", def.name, def.size)),
+                TextFont::from_font_size(FONT),
+                TextColor(INK),
+            ));
+            rows.spawn((BodyNode, Node::default()))
+                .with_children(|row| {
+                    row.spawn(words("", NAME_WIDTH));
+                    for layer in Layer::ALL {
+                        row.spawn(words(layer_letter(layer), CELL));
+                    }
+                });
+            for part in def.body {
+                rows.spawn((BodyNode, Node::default()))
+                    .with_children(|row| {
+                        row.spawn(words(format!("{:?}", part.location), NAME_WIDTH));
+                        for layer in Layer::ALL {
+                            if !part.layers.contains(&layer) {
+                                row.spawn((BodyNode, slot_node()));
+                                continue;
+                            }
+                            let here: Vec<&Item> = inventory
+                                .worn
+                                .iter()
+                                .filter(|item| Some(item.id) != held)
+                                .filter(|item| {
+                                    item.kind.def().wear.is_some_and(|wear| {
+                                        wear.layer == layer
+                                            && wear.locations.contains(&part.location)
+                                    })
+                                })
+                                .collect();
+                            spawn_slot(row, inventory, &here);
+                        }
+                    });
+            }
+        });
+    }
+}
+
+/// The heading of a layer's column.
+fn layer_letter(layer: Layer) -> &'static str {
+    match layer {
+        Layer::Skin => "In",
+        Layer::Middle => "Mid",
+        Layer::Outer => "Out",
+    }
+}
+
+/// Green or red behind the rows, while something held is over them.
+pub(super) fn show_body_aim(
+    holding: Res<Holding>,
+    mut rows: Query<&mut BackgroundColor, With<BodyRows>>,
+) {
+    let tint = match holding.aim {
+        Some(Target::Body { allowed: true }) => super::panels::ALLOWED,
+        Some(Target::Body { allowed: false }) => super::panels::REFUSED,
+        _ => Color::NONE,
+    };
+    for mut background in &mut rows {
+        background.set_if_neq(BackgroundColor(tint));
+    }
+}
+
+/// What a worn item's name adds: why it can't be moved, and how it fits.
+pub(super) fn worn_notes(carried: &Inventory, id: Id) -> String {
+    let mut notes = String::new();
+    if let Some(over) = carried.covered_by(id).and_then(|over| carried.find(over)) {
+        notes.push_str(&format!(" (under {})", over.kind.def().name));
+    }
+    if let Some(Fit::Loose(by)) = carried.worn_fit(id) {
+        notes.push_str(&format!(" (loose by {by})"));
+    }
+    notes
+}

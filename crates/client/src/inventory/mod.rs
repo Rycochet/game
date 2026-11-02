@@ -1,6 +1,7 @@
 //! What the character carries: grids in moveable panels, and picking things up,
 //! holding them and putting them down. See `docs/context/client/inventory.md`.
 
+mod body;
 mod hold;
 mod panels;
 
@@ -14,6 +15,7 @@ use crate::common::GameView;
 use crate::common::{PointerPosition, PointerSystems, TouchGesture};
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{ButtonPressed, RaisePanel, WidgetSystems};
+use body::{BodyNode, ClothesPanel};
 use hold::{Held, Target};
 use panels::{BinNode, Floating, ItemCell, OpenGrids};
 
@@ -27,6 +29,7 @@ impl Plugin for InventoryPlugin {
         app.init_resource::<Carried>()
             .init_resource::<Holding>()
             .init_resource::<OpenGrids>()
+            .init_resource::<ClothesPanel>()
             .add_systems(Startup, panels::spawn_fixed_parts)
             .add_systems(
                 PreUpdate,
@@ -44,8 +47,11 @@ impl Plugin for InventoryPlugin {
                     read_server,
                     panels::toggle_pockets,
                     panels::forget_closed,
+                    body::forget_closed,
                     panels::show_bins,
                     panels::show_grids,
+                    body::show_clothes,
+                    body::show_body_aim,
                     panels::show_aim,
                     panels::show_held,
                     panels::show_tooltip,
@@ -154,6 +160,7 @@ fn pick_up_by_finger(
         With<Node>,
     >,
     mut holding: ResMut<Holding>,
+    carried: Res<Carried>,
     mut decided: Local<Option<Vec2>>,
 ) {
     if gesture.first_finger.is_none() {
@@ -164,7 +171,9 @@ fn pick_up_by_finger(
         return;
     }
     *decided = Some(gesture.drag_start);
-    if let Some(cell) = item_cell_in_front(gesture.drag_start, nodes.iter()) {
+    if let Some(cell) = item_cell_in_front(gesture.drag_start, nodes.iter())
+        && carried.0.covered_by(cell.id).is_none()
+    {
         holding.held = Some(HeldBy {
             item: Held {
                 id: cell.id,
@@ -208,6 +217,7 @@ fn hold_items(
             &UiGlobalTransform,
             &InheritedVisibility,
             Has<BinNode>,
+            Has<BodyNode>,
         ),
         Without<Floating>,
     >,
@@ -285,18 +295,30 @@ fn hold_items(
                 (grid.holder, cell.x as i32, cell.y as i32)
             })
     });
-    // Only if nothing is in front of it: this destroys things.
-    let on_bin = at.is_some_and(|at| {
-        nodes
-            .iter()
-            .filter(|(_, node, transform, visible, _)| {
-                visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
-            })
-            .max_by_key(|(stack, ..)| stack.0)
-            .is_some_and(|(.., is_bin)| is_bin)
-    });
+    // Only what is in front counts: the bin destroys things.
+    let (on_bin, on_body) = at
+        .and_then(|at| {
+            nodes
+                .iter()
+                .filter(|(_, node, transform, visible, ..)| {
+                    visible.get()
+                        && node.contains_point(**transform, at / node.inverse_scale_factor)
+                })
+                .max_by_key(|(stack, ..)| stack.0)
+                .map(|(.., is_bin, is_body)| (is_bin, is_body))
+        })
+        .unwrap_or_default();
     let aim = if on_bin {
         Target::Bin
+    } else if on_body {
+        // On it already: nothing happens, whatever it is over.
+        if carried.0.is_worn(held.item.id) {
+            Target::Nowhere
+        } else {
+            Target::Body {
+                allowed: carried.0.check_wear(held.item.id).is_ok(),
+            }
+        }
     } else {
         hold::target(&carried.0, held.item, over)
     };
@@ -313,6 +335,13 @@ fn hold_items(
     }
     holding.held = None;
     holding.aim = None;
+    if aim == (Target::Body { allowed: true }) {
+        let item = held.item.id;
+        if carried.0.wear(item).is_ok() {
+            to_server.write(ToServer(ClientMessage::WearItem { item }));
+        }
+        return;
+    }
     if aim == Target::Bin {
         let item = held.item.id;
         carried.0.destroy(item);
@@ -335,11 +364,14 @@ fn hold_items(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_arguments)]
 fn run_debug(
     mut asked: MessageReader<InventoryDebug>,
     carried: Res<Carried>,
     mut holding: ResMut<Holding>,
     mut open: ResMut<OpenGrids>,
+    mut clothes: ResMut<ClothesPanel>,
+    nodes: Query<(), With<Node>>,
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     view: Res<State<GameView>>,
@@ -351,6 +383,7 @@ fn run_debug(
         match *asked {
             InventoryDebug::OpenPockets => {
                 open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
+                clothes.open(&mut commands, &mut raise, &nodes);
             }
             InventoryDebug::OpenBags => {
                 for placed in &carried.0.pockets {

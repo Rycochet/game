@@ -8,6 +8,7 @@ use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 use shared::id::Id;
 use shared::item::{Holder, Inventory, ItemKind, Placed, Rotation, Shape};
 
+use super::body::{ClothesPanel, worn_notes};
 use super::hold::Target;
 use super::{Carried, Holding, item_cell_in_front};
 use crate::common::{GameView, PointerPosition};
@@ -35,11 +36,11 @@ const HELD_NAME_ABOVE: f32 = 48.0;
 const FIRST_AT: Vec2 = Vec2::new(90.0, 140.0);
 const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
 
-const GRID_COLOUR: Color = Color::srgb(0.55, 0.46, 0.33);
-const GRID_LINE: Color = Color::srgb(0.42, 0.34, 0.24);
-const ITEM_EDGE: Color = Color::srgb(0.15, 0.1, 0.05);
-const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
-const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
+pub(super) const GRID_COLOUR: Color = Color::srgb(0.55, 0.46, 0.33);
+pub(super) const GRID_LINE: Color = Color::srgb(0.42, 0.34, 0.24);
+pub(super) const ITEM_EDGE: Color = Color::srgb(0.15, 0.1, 0.05);
+pub(super) const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
+pub(super) const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
 
 /// The panels open, in the order they were opened.
 #[derive(Resource, Default)]
@@ -107,7 +108,7 @@ pub(super) struct BinNode;
 pub(super) struct BinIcon(Handle<Image>);
 
 /// What a kind of item looks like until it has a picture: its colour.
-fn colour(kind: ItemKind) -> Color {
+pub(super) fn colour(kind: ItemKind) -> Color {
     let index = ItemKind::ALL
         .iter()
         .position(|&other| other == kind)
@@ -117,7 +118,7 @@ fn colour(kind: ItemKind) -> Color {
 }
 
 /// What it says on the first cell of an item.
-fn label(kind: ItemKind) -> String {
+pub(super) fn label(kind: ItemKind) -> String {
     kind.def().name.chars().take(2).collect()
 }
 
@@ -307,6 +308,11 @@ impl OpenGrids {
         self.open.push((holder, panel));
     }
 
+    /// Whether the pockets' panel is open.
+    fn pockets_open(&self) -> bool {
+        self.open.iter().any(|(open, _)| *open == Holder::Pockets)
+    }
+
     fn toggle_pockets(
         &mut self,
         carried: &Inventory,
@@ -384,12 +390,20 @@ pub(super) fn toggle_pockets(
     view: Res<State<GameView>>,
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
+    mut clothes: ResMut<ClothesPanel>,
+    nodes: Query<(), With<Node>>,
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
 ) {
     let by_button = pressed.read().any(|press| button.contains(press.0));
     let by_key = keys.just_pressed(KeyCode::KeyI);
     if (by_button || by_key) && *view.get() != GameView::Connecting {
+        // The clothes go with the pockets, as things are dragged between them.
+        if open.pockets_open() {
+            clothes.close(&mut commands, &nodes);
+        } else {
+            clothes.open(&mut commands, &mut raise, &nodes);
+        }
         open.toggle_pockets(&carried.0, &mut commands, &mut raise);
     }
 }
@@ -550,7 +564,7 @@ pub(super) fn show_aim(
         return;
     };
     let (holder, cells, allowed) = match aim {
-        Target::Nowhere | Target::Bin => return,
+        Target::Nowhere | Target::Bin | Target::Body { .. } => return,
         Target::Cells {
             holder,
             x,
@@ -629,12 +643,13 @@ pub(super) fn show_held(
 }
 
 /// The name of what is under the pointer, or of what is held.
-#[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn show_tooltip(
     carried: Res<Carried>,
     holding: Res<Holding>,
     pointer: Res<PointerPosition>,
     open: Res<OpenGrids>,
+    clothes: Res<ClothesPanel>,
     nodes: Query<
         (
             &ComputedStackIndex,
@@ -651,7 +666,7 @@ pub(super) fn show_tooltip(
     let (mut node, mut visibility) = name_box.into_inner();
     let shown = if let Some(held) = holding.held {
         Some(held.item.id)
-    } else if open.open.is_empty() {
+    } else if open.open.is_empty() && !clothes.is_open() {
         None
     } else {
         pointer
@@ -659,9 +674,14 @@ pub(super) fn show_tooltip(
             .and_then(|at| item_cell_in_front(at, nodes.iter()))
             .map(|cell| cell.id)
     };
-    let name = shown
-        .and_then(|id| carried.0.find(id))
-        .map(|item| item.kind.def().name);
+    let name = shown.and_then(|id| {
+        let item = carried.0.find(id)?;
+        Some(format!(
+            "{}{}",
+            item.kind.def().name,
+            worn_notes(&carried.0, id)
+        ))
+    });
     let (Some(name), Some(at)) = (name, pointer.0.or(holding.at)) else {
         visibility.set_if_neq(Visibility::Hidden);
         return;
@@ -670,7 +690,7 @@ pub(super) fn show_tooltip(
     let words = if holding.aim == Some(Target::Bin) {
         format!("Destroy {name}")
     } else {
-        name.to_owned()
+        name
     };
     if text.0 != words {
         text.0 = words;

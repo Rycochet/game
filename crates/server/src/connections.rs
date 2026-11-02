@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
-use shared::item::{Inventory, Item};
+use shared::item::{Inventory, Item, ItemKind, Made};
 use shared::poi::ChunkPos;
 use shared::protocol::{
     CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerLink, ServerMessage,
@@ -468,6 +468,15 @@ pub(crate) fn answer(
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
         }
+        ClientMessage::WearItem { item } => {
+            match client.inventory.wear(item) {
+                Ok(_) => client.unsaved = true,
+                Err(why) => warn!("Refused wearing {item:?}: {why:?}"),
+            }
+            client
+                .link
+                .send(&ServerMessage::Inventory(client.inventory.clone()))
+        }
         ClientMessage::DestroyItem { item } => {
             if client.inventory.destroy(item) {
                 client.unsaved = true;
@@ -510,11 +519,25 @@ pub(crate) fn answer(
             Some(_) => sites::forget_site(client, world),
             None => world_map::forget_on_server(client, world),
         },
-        ClientMessage::DevGiveItem(kind) => {
-            match client.inventory.give(Item::new(crate::ids::new_id(), kind)) {
+        ClientMessage::DevGiveItem {
+            kind,
+            size,
+            magical,
+        } => {
+            let new = made_for(&client.inventory, kind, size, magical);
+            match client.inventory.give(new) {
                 Ok(()) => client.unsaved = true,
                 Err(item) => info!("No room for a new {:?}", item.kind),
             }
+            client
+                .link
+                .send(&ServerMessage::Inventory(client.inventory.clone()))
+        }
+        ClientMessage::DevSetCreature(kind) => {
+            for item in client.inventory.change_body(kind) {
+                info!("No room for {:?} on becoming {kind:?}: lost", item.kind);
+            }
+            client.unsaved = true;
             client
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
@@ -527,6 +550,36 @@ pub(crate) fn answer(
             world.clock.set(minutes);
             world.clock_moved = true;
             true
+        }
+    }
+}
+
+/// A new item of this kind, made for this size or the wearer's, and their fingers.
+fn made_for(
+    inventory: &Inventory,
+    kind: ItemKind,
+    size: Option<shared::creature::Size>,
+    magical: bool,
+) -> Item {
+    let body = inventory.creature.def();
+    Item {
+        made: Made::for_body(kind, size.unwrap_or(body.size), body.fingers(), magical),
+        ..Item::new(crate::ids::new_id(), kind)
+    }
+}
+
+/// A new character's clothes. Characters from before clothes get them too, unless
+/// they are already wearing something.
+fn give_first_clothes(inventory: &mut Inventory) {
+    if std::mem::replace(&mut inventory.outfitted, true) || !inventory.worn.is_empty() {
+        return;
+    }
+    for kind in [ItemKind::TShirt, ItemKind::Trousers, ItemKind::Shoes] {
+        // Straight on, as the pockets may be full. Only for bodies they fit: other
+        // kinds of creature start with none.
+        if inventory.creature == shared::creature::CreatureKind::Human {
+            let item = made_for(inventory, kind, None, false);
+            inventory.worn.push(item);
         }
     }
 }
@@ -547,6 +600,8 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
         Ok((character, inventory)) => {
             (client.character, client.other_worlds) = character;
             client.inventory = inventory;
+            give_first_clothes(&mut client.inventory);
+            client.unsaved = true;
         }
         Err(error) => return client.refuse_for_saves(&error),
     }
@@ -580,7 +635,8 @@ pub(crate) mod tests {
     use std::sync::atomic::Ordering;
     use std::time::Duration;
 
-    use shared::item::{Holder, ItemKind, Rotation};
+    use shared::creature::CreatureKind;
+    use shared::item::{Holder, Rotation};
     use shared::movement::{Step, steps_between};
     use shared::poi::PoiKind;
     use shared::protocol::{ClientLink, Credentials, GuestToken, local_pair};
@@ -705,6 +761,14 @@ pub(crate) mod tests {
 
     const GUEST: ClientMessage = ClientMessage::Login(Credentials::Guest(GuestToken([1; 32])));
 
+    fn give(kind: ItemKind) -> ClientMessage {
+        ClientMessage::DevGiveItem {
+            kind,
+            size: None,
+            magical: false,
+        }
+    }
+
     /// What the last `Inventory` among these answers says.
     fn inventory(answers: &[ServerMessage]) -> Inventory {
         answers
@@ -719,15 +783,21 @@ pub(crate) mod tests {
 
     #[test]
     fn a_character_is_told_what_they_carry_on_joining() {
-        assert_eq!(inventory(&TestClient::new().welcome), Inventory::default());
+        let first = inventory(&TestClient::new().welcome);
+        assert!(first.pockets.is_empty());
+        let kinds: Vec<_> = first.worn.iter().map(|item| item.kind).collect();
+        assert_eq!(
+            kinds,
+            [ItemKind::TShirt, ItemKind::Trousers, ItemKind::Shoes]
+        );
     }
 
     #[test]
     fn items_move_by_the_rules_and_a_refused_move_is_put_right() {
         let mut test = TestClient::new();
-        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Pouch)]);
+        let answers = test.send(&[give(ItemKind::Pouch)]);
         let pouch = inventory(&answers).pockets[0].item.id;
-        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Stone)]);
+        let answers = test.send(&[give(ItemKind::Stone)]);
         let carried = inventory(&answers);
         let stone = carried.pockets[1].item.id;
 
@@ -757,7 +827,7 @@ pub(crate) mod tests {
     #[test]
     fn destroying_takes_what_is_carried_and_only_that() {
         let mut test = TestClient::new();
-        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Coin)]);
+        let answers = test.send(&[give(ItemKind::Coin)]);
         let coin = inventory(&answers).pockets[0].item.id;
         let destroy = ClientMessage::DestroyItem { item: coin };
         assert!(
@@ -773,10 +843,78 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
+        let mut test = TestClient::new();
+        let answers = test.send(&[give(ItemKind::Boots)]);
+        let boots = inventory(&answers).pockets[0].item.id;
+        let wear = ClientMessage::WearItem { item: boots };
+        let worn = inventory(&test.send(std::slice::from_ref(&wear)));
+        assert!(worn.is_worn(boots));
+        assert!(worn.pockets.is_empty());
+
+        // The shoes are under the boots, so a refused move is put right.
+        let shoes = worn
+            .worn
+            .iter()
+            .find(|item| item.kind == ItemKind::Shoes)
+            .unwrap()
+            .id;
+        let take_off = |item| ClientMessage::MoveItem {
+            item,
+            to: Holder::Pockets,
+            x: 0,
+            y: 0,
+            rotation: Rotation::None,
+        };
+        assert!(inventory(&test.send(&[take_off(shoes)])).is_worn(shoes));
+        let answers = test.send(&[take_off(boots)]);
+        assert!(!inventory(&answers).is_worn(boots));
+    }
+
+    #[test]
+    fn a_new_body_takes_everything_off_and_is_kept() {
+        let folder = TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
+        let mut test = TestClient::of(open());
+        let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
+        let changed = inventory(&answers);
+        assert_eq!(changed.creature, CreatureKind::Kobold);
+        assert!(changed.worn.is_empty());
+        assert_eq!(changed.pockets_size, (4, 3));
+        test.leave();
+        // They aren't dressed again on coming back.
+        assert_eq!(inventory(&TestClient::of(open()).welcome), changed);
+    }
+
+    #[test]
+    fn items_are_made_for_the_wearer_or_the_size_asked_for() {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
+        let answers = test.send(&[give(ItemKind::Gloves)]);
+        let gloves = inventory(&answers).pockets.last().unwrap().item.made;
+        assert_eq!(gloves.size, shared::creature::Size::Giant);
+        assert_eq!(gloves.fingers, Some(10));
+        let large = ClientMessage::DevGiveItem {
+            kind: ItemKind::Coin,
+            size: Some(shared::creature::Size::Large),
+            magical: true,
+        };
+        let made = inventory(&test.send(&[large]))
+            .pockets
+            .last()
+            .unwrap()
+            .item
+            .made;
+        assert_eq!(made.size, shared::creature::Size::Large);
+        assert!(made.magical);
+    }
+
+    #[test]
     fn giving_an_item_needs_dev_tools_and_room() {
         let mut test = TestClient::new();
         test.dev_tools = false;
-        let give = ClientMessage::DevGiveItem(ItemKind::Coin);
+        let give = give(ItemKind::Coin);
         assert!(test.send(std::slice::from_ref(&give)).is_empty());
 
         test.dev_tools = true;
@@ -791,7 +929,7 @@ pub(crate) mod tests {
         let seed = WorldSeed::new(1);
         let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
         let mut test = TestClient::of(open());
-        let answers = test.send(&[ClientMessage::DevGiveItem(ItemKind::Backpack)]);
+        let answers = test.send(&[give(ItemKind::Backpack)]);
         let carried = inventory(&answers);
         test.leave();
         assert_eq!(inventory(&TestClient::of(open()).welcome), carried);

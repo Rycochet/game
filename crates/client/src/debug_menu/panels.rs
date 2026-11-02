@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
 use shared::item::ItemKind;
 use shared::poi::PoiKind;
@@ -21,8 +22,8 @@ use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::widgets::{
-    BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TextBox,
-    raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown,
+    BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TabChosen,
+    TextBox, raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown,
     spawn_icon_button, spawn_moveable_panel, spawn_slider, spawn_tabs, spawn_text_box,
     spawn_tooltip,
 };
@@ -90,6 +91,7 @@ impl OpenPanels {
                 DebugAction::ShowWidgets => spawn_every_widget(content),
                 DebugAction::SunsAndMoons => {}
                 DebugAction::GiveItem => spawn_give_buttons(content),
+                DebugAction::ChangeCreature => spawn_creature_buttons(content),
                 _ => spawn_step_buttons(content, action),
             });
         if action == DebugAction::SunsAndMoons {
@@ -122,15 +124,50 @@ fn spawn_step_buttons(content: &mut ChildSpawnerCommands, action: DebugAction) {
         });
 }
 
-/// A button for each kind of item.
+/// How wide the rows of buttons wrap, so a long list stays on the screen.
+const WRAPPED_WIDTH: f32 = 520.0;
+
+fn wrapped() -> Node {
+    Node {
+        width: px(WRAPPED_WIDTH),
+        flex_wrap: FlexWrap::Wrap,
+        column_gap: px(4),
+        row_gap: px(4),
+        ..default()
+    }
+}
+
+/// How new items are made, and a button for each kind.
 fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
-    for kind in ItemKind::ALL {
+    let sizes: Vec<String> = std::iter::once("Mine".to_owned())
+        .chain(Size::ALL.iter().map(|size| format!("{size:?}")))
+        .collect();
+    let sizes: Vec<&str> = sizes.iter().map(String::as_str).collect();
+    let row = spawn_tabs(content, &sizes, 0, FONT);
+    content.commands().entity(row).insert(GiveSizes);
+    let row = spawn_tabs(content, &["Plain", "Magical"], 0, FONT);
+    content.commands().entity(row).insert(GiveMagic);
+    content.spawn(wrapped()).with_children(|buttons| {
+        for kind in ItemKind::ALL {
+            let node = Node {
+                padding: BUTTON_PADDING,
+                ..default()
+            };
+            spawn_button(buttons, ButtonState::Normal, kind.def().name, FONT, node)
+                .insert((GiveButton(kind), Pressable));
+        }
+    });
+}
+
+/// A button for each kind of creature.
+fn spawn_creature_buttons(content: &mut ChildSpawnerCommands) {
+    for kind in CreatureKind::ALL {
         let node = Node {
             padding: BUTTON_PADDING,
             ..default()
         };
         spawn_button(content, ButtonState::Normal, kind.def().name, FONT, node)
-            .insert((GiveButton(kind), Pressable));
+            .insert((CreatureButton(kind), Pressable));
     }
 }
 
@@ -138,15 +175,70 @@ fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
 #[derive(Component, Clone, Copy)]
 pub(super) struct GiveButton(ItemKind);
 
+/// Asks the server to make the character this kind of creature.
+#[derive(Component, Clone, Copy)]
+pub(super) struct CreatureButton(CreatureKind);
+
+/// The tabs choosing what size new items are made for.
+#[derive(Component)]
+pub(super) struct GiveSizes;
+
+/// The tabs choosing whether new items are magical.
+#[derive(Component)]
+pub(super) struct GiveMagic;
+
+/// How Give Item makes things.
+#[derive(Resource, Default)]
+pub(super) struct GiveForm {
+    /// `None` for the character's own.
+    size: Option<Size>,
+    magical: bool,
+}
+
+/// Follows Give Item's tabs.
+pub(super) fn choose_give_options(
+    mut chosen: MessageReader<TabChosen>,
+    sizes: Query<(), With<GiveSizes>>,
+    magic: Query<(), With<GiveMagic>>,
+    mut form: ResMut<GiveForm>,
+) {
+    for &TabChosen(row, index) in chosen.read() {
+        if sizes.contains(row) {
+            form.size = index.checked_sub(1).map(|index| Size::ALL[index]);
+        }
+        if magic.contains(row) {
+            form.magical = index == 1;
+        }
+    }
+}
+
 /// What Give Item's buttons do.
 pub(super) fn press_give_buttons(
     mut pressed: MessageReader<ButtonPressed>,
     buttons: Query<&GiveButton>,
+    form: Res<GiveForm>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     for press in pressed.read() {
         if let Ok(&GiveButton(kind)) = buttons.get(press.0) {
-            to_server.write(ToServer(ClientMessage::DevGiveItem(kind)));
+            to_server.write(ToServer(ClientMessage::DevGiveItem {
+                kind,
+                size: form.size,
+                magical: form.magical,
+            }));
+        }
+    }
+}
+
+/// What Change Creature's buttons do.
+pub(super) fn press_creature_buttons(
+    mut pressed: MessageReader<ButtonPressed>,
+    buttons: Query<&CreatureButton>,
+    mut to_server: MessageWriter<ToServer>,
+) {
+    for press in pressed.read() {
+        if let Ok(&CreatureButton(kind)) = buttons.get(press.0) {
+            to_server.write(ToServer(ClientMessage::DevSetCreature(kind)));
         }
     }
 }

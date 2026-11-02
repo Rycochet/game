@@ -37,6 +37,7 @@ impl Plugin for DebugMenuPlugin {
             .init_resource::<DebugMenu>()
             .init_resource::<OpenPanels>()
             .init_resource::<panels::GenerateForm>()
+            .init_resource::<panels::GiveForm>()
             .add_message::<DebugAction>()
             .add_message::<panels::GenerateKind>()
             .add_systems(Startup, menu::spawn_menu)
@@ -57,7 +58,9 @@ impl Plugin for DebugMenuPlugin {
                     panels::press_generate_buttons,
                     panels::update_generate_buttons,
                     panels::press_panel_buttons,
+                    panels::choose_give_options,
                     panels::press_give_buttons,
+                    panels::press_creature_buttons,
                     panels::update_panel_buttons,
                     temperature_cycle,
                     menu::show_menu,
@@ -197,7 +200,8 @@ fn run_actions(
             DebugAction::WorldTime | DebugAction::SunsAndMoons => {
                 open.toggle(action, &mut commands, &mut raise, &nodes);
             }
-            DebugAction::FieldsState
+            DebugAction::ChangeCreature
+            | DebugAction::FieldsState
             | DebugAction::GiveItem
             | DebugAction::HerbsState
             | DebugAction::ShowWidgets

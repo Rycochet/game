@@ -17,6 +17,7 @@ pub use login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMet
 
 use serde::{Deserialize, Serialize};
 
+use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::id::Id;
 use crate::item::{Holder, Inventory, ItemKind, Rotation};
@@ -28,7 +29,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 23;
+pub const PROTOCOL_VERSION: u32 = 24;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -77,7 +78,7 @@ pub enum ClientMessage {
     /// ignore it.
     SetPaused(bool),
     /// Moves something the character carries to this place in this grid, turned
-    /// this way, answered with Inventory, whether or not it could go.
+    /// this way, answered with `Inventory`, whether or not it could go.
     MoveItem {
         item: Id,
         to: Holder,
@@ -88,9 +89,21 @@ pub enum ClientMessage {
     /// Destroys something the character carries and all that is in it, for good,
     /// answered with `Inventory`.
     DestroyItem { item: Id },
+    /// Puts on something the character carries, answered with `Inventory`, whether
+    /// or not it could go on. Taking it off is `MoveItem`.
+    WearItem { item: Id },
     /// Developer tools: a new item of this kind in the character's pockets if
-    /// there is room, answered with Inventory.
-    DevGiveItem(ItemKind),
+    /// there is room, made for this size (or their own) and their fingers,
+    /// answered with `Inventory`.
+    DevGiveItem {
+        kind: ItemKind,
+        size: Option<Size>,
+        magical: bool,
+    },
+    /// Developer tools: the character becomes this kind of creature. Everything
+    /// comes off into the new pockets, and what doesn't fit is lost. Answered with
+    /// `Inventory`.
+    DevSetCreature(CreatureKind),
     /// Developer tools: jump to a point on the map the player is on (in a
     /// site, only onto a walkable cell), answered with `Teleported`. Only an
     /// embedded (single-player) server accepts it; others ignore it.
@@ -160,7 +173,8 @@ impl ClientMessage {
                 | Self::DevForgetMap
                 | Self::DevForgetMapOnServer
                 | Self::DevGenerateSite { .. }
-                | Self::DevGiveItem(_)
+                | Self::DevGiveItem { .. }
+                | Self::DevSetCreature(_)
         )
     }
 
@@ -383,7 +397,15 @@ mod tests {
             ClientMessage::DestroyItem {
                 item: Id(uuid::Uuid::from_u128(7)),
             },
-            ClientMessage::DevGiveItem(ItemKind::Pouch),
+            ClientMessage::WearItem {
+                item: Id(uuid::Uuid::from_u128(7)),
+            },
+            ClientMessage::DevGiveItem {
+                kind: ItemKind::Pouch,
+                size: Some(Size::Large),
+                magical: true,
+            },
+            ClientMessage::DevSetCreature(CreatureKind::Chicken),
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevSetTime { minutes: 90.5 },
