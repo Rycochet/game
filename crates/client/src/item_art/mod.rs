@@ -52,6 +52,8 @@ pub fn look_of(item: &Item) -> Option<Look> {
             gem: *gem,
             quality: item.quality,
         }),
+        // No model yet.
+        ItemForm::Ring(_) => None,
     }
 }
 

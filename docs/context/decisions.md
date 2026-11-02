@@ -537,3 +537,7 @@ Owner's design: each kind has one generic model drawn differently by values that
 - **Size stays out of pictures:** see the size entry above.
 
 Order: size rule (done), gems (done), ring values, ring model, pictures in grids, disk cache (dropped if measuring shows no gain).
+
+## 2026-11-02: Gems set in rings are whole items
+
+Owner's design: a ring's settings each hold a whole gem item with its own id, or nothing, and a setting stays when its gem goes, so gems can later be taken out, replaced or added, and settings added. A ring may have an empty setting when made, rarely, and several gems strongly favour the same stone. A setting takes a gem of its size, smaller, or one size up (owner: ugly, but a thing people do). Claude's choices: gems sit inside the ring's form rather than its `contents`, as those mean a grid to open; a gem matching the first copies its cut too; a ring's quality is how it was made and doesn't change with its gems, each of which has its own; a size given is used as it is (a wearer's or a mob's), and only shop stock rolls one; `Inventory::find` doesn't see set gems until something can move them.
