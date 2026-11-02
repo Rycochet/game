@@ -28,7 +28,7 @@ pub const POCKETS: (u8, u8) = (6, 4);
 
 /// The cells something takes up, within its width and height: bit `y * 8 + x`
 /// of `cells`, so 8 × 8 fits in one number.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Shape {
     pub width: u8,
     pub height: u8,
@@ -527,8 +527,8 @@ pub struct Made {
     pub largest: Size,
     /// How many fingers it has, if it covers them.
     pub fingers: Option<u8>,
-    /// It resizes itself to fit anyone, whatever their fingers, but not whatever
-    /// their shape.
+    /// It resizes itself to fit whatever their fingers, and sizes as far from its own
+    /// as its quality reaches (`Quality::magic_reach`), but not whatever their shape.
     pub magical: bool,
 }
 
@@ -584,6 +584,19 @@ impl Quality {
             Self::Rare => 600,
             Self::Epic => 150,
             Self::Legendary => 45,
+            Self::Artifact => 5,
+        }
+    }
+
+    /// How many sizes from its own something magical of this quality fits perfectly.
+    /// Nothing below uncommon can be magical.
+    pub const fn magic_reach(self) -> u8 {
+        match self {
+            Self::Poor | Self::Common => 0,
+            Self::Uncommon => 1,
+            Self::Rare => 2,
+            Self::Epic => 3,
+            Self::Legendary => 4,
             Self::Artifact => 5,
         }
     }
@@ -660,6 +673,30 @@ pub fn artifact_name(rng: &mut Rng, kind: ItemKind) -> String {
     format!("The {word} {}", kind.def().name)
 }
 
+/// How likely something that can be magical is to be, in percent. First guess.
+const MAGICAL_PERCENT: u64 = 5;
+/// How likely something wearable is to be blessed, and to be cursed, in percent.
+/// First guesses.
+const BLESSED_PERCENT: u64 = 5;
+const CURSED_PERCENT: u64 = 5;
+
+/// What can lie on an item besides magic: never both, so there is one field for it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Favour {
+    /// Only its wearer can take it off.
+    Blessed,
+    /// Nobody can take it off, once it is on.
+    Cursed,
+}
+
+/// What has been found out about an item, for everyone from then on. What hasn't
+/// isn't sent to clients: see `Item::hide_secrets`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Known {
+    pub magic: bool,
+    pub favour: bool,
+}
+
 /// When and where an item was made. Each world has its own clock, so a minute
 /// means nothing without its world.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -694,6 +731,12 @@ pub struct Item {
     /// saved before this was kept.
     #[serde(default)]
     pub form: Option<ItemForm>,
+    /// Blessed, cursed or neither.
+    #[serde(default)]
+    pub favour: Option<Favour>,
+    /// Which of its secrets have been found out.
+    #[serde(default)]
+    pub known: Known,
 }
 
 impl Item {
@@ -708,15 +751,79 @@ impl Item {
             name: None,
             set: false,
             form: None,
+            favour: None,
+            known: Known::default(),
+        }
+    }
+
+    /// Whether this could be magical: only what is worn, better than common.
+    pub fn can_be_magical(&self) -> bool {
+        self.kind.def().wear.is_some() && self.quality.is_some_and(|q| q.magic_reach() > 0)
+    }
+
+    /// Whether it is magical. What is flagged but can't be counts for nothing.
+    pub fn is_magical(&self) -> bool {
+        self.made.magical && self.can_be_magical()
+    }
+
+    /// Rolls whether a new thing to wear is magical, and blessed or cursed, going by
+    /// its id. Only for what is found: not for what is asked for by name.
+    pub fn roll_secrets(&mut self) {
+        if self.kind.def().wear.is_none() {
+            return;
+        }
+        let mut rng = self.id.seed().derive("item secrets").rng();
+        self.made.magical = rng.range_u64(0, 100) < MAGICAL_PERCENT && self.can_be_magical();
+        let favour = rng.range_u64(0, 100);
+        self.favour = if favour < BLESSED_PERCENT {
+            Some(Favour::Blessed)
+        } else if favour < BLESSED_PERCENT + CURSED_PERCENT {
+            Some(Favour::Cursed)
+        } else {
+            None
+        };
+    }
+
+    /// As a client may see it, and everything in it: what hasn't been found out
+    /// looks as if it wasn't there.
+    pub fn hide_secrets(&mut self) {
+        if !self.known.magic {
+            self.made.magical = false;
+        }
+        if !self.known.favour {
+            self.favour = None;
+        }
+        for placed in &mut self.contents {
+            placed.item.hide_secrets();
         }
     }
 
     /// What it is called: its own name, or by its form or kind, saying its size
-    /// unless that is `Medium`.
+    /// unless that is `Medium`, and whether it is blessed, cursed or magical. For a
+    /// client, whose copy says only what is known of those: not for the server to
+    /// send, as its own copy has them all.
     pub fn name(&self) -> String {
+        let favour = self.favour.map(|favour| match favour {
+            Favour::Blessed => "Blessed",
+            Favour::Cursed => "Cursed",
+        });
+        let magical = self.is_magical().then_some("Magical");
+        let states: Vec<&str> = favour.into_iter().chain(magical).collect();
         if let Some(name) = &self.name {
-            return name.clone();
+            return match states.is_empty() {
+                true => name.clone(),
+                false => format!("{name} ({})", states.join(", ")),
+            };
         }
+        let plain = self.plain_name();
+        match states.is_empty() {
+            true => plain,
+            false => format!("{} {plain}", states.join(" ")),
+        }
+    }
+
+    /// What it is called by its form or kind, with its size.
+    fn plain_name(&self) -> String {
         let plain = match &self.form {
             Some(form) => form.name(),
             None => self.kind.def().name.to_owned(),
@@ -1530,6 +1637,34 @@ mod tests {
             ..sized(1, ItemKind::Ring, Size::Giant)
         };
         assert_eq!(named.name(), "The Band");
+    }
+
+    #[test]
+    fn a_name_says_what_is_known_of_blessings_curses_and_magic() {
+        let ring = Item {
+            made: Made {
+                magical: true,
+                ..sized(1, ItemKind::Ring, Size::Giant).made
+            },
+            quality: Some(Quality::Rare),
+            favour: Some(Favour::Cursed),
+            ..sized(1, ItemKind::Ring, Size::Giant)
+        };
+        assert_eq!(ring.name(), "Cursed Magical Giant Ring");
+        let named = Item {
+            name: Some("The Band".to_owned()),
+            ..ring.clone()
+        };
+        assert_eq!(named.name(), "The Band (Cursed, Magical)");
+        let mut hidden = ring.clone();
+        hidden.known.favour = true;
+        hidden.hide_secrets();
+        assert_eq!(hidden.name(), "Cursed Giant Ring");
+        let blessed = Item {
+            favour: Some(Favour::Blessed),
+            ..sized(1, ItemKind::Ring, Size::Medium)
+        };
+        assert_eq!(blessed.name(), "Blessed Ring");
     }
 
     #[test]

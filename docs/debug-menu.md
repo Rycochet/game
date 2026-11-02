@@ -20,8 +20,8 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Forget Map | Yes | Forgets what your character knows of this level, or on the world map, of the world and every site. Not in towns. |
 | Forget Map (Server) | Yes | As Forget Map, and the server also forgets this site, or on the world map every site, so they are made again with the current generators. Works in towns. |
 | Generate POI | Yes | Lists every kind of place. Choosing one opens a panel to pick its ruin and seed, then Generate takes you into it. |
-| Give Item | Yes | Opens a panel with a button for each kind of item, and choices of the size it is made for (for what is worn, gems and blades; everything else is always medium), whether it is magical, whether it is part of a set and its quality. Each press puts a new one in your pockets, if there is room. |
-| God Mode | Yes | Toggles mobs taking no notice of you and letting you walk through them, so they don't block your way. A ghost shows at the top left while it is on. |
+| Give Item | Yes | Opens a panel with a button for each kind of item, and choices of the size it is made for (for what is worn, gems and blades; everything else is always medium), whether it is magical, whether it is blessed or cursed, whether it is part of a set and its quality. Only things worn can be any of the first three, and only better than common can be magical, so asking for magic on something worse makes it uncommon. All are as secret as on anything found: use Truesight to see them. Each press puts a new one in your pockets, if there is room. |
+| God Mode | Yes | Toggles mobs taking no notice of you and letting you walk through them, so they don't block your way, and lets you take off cursed things. A ghost shows at the top left while it is on. |
 | Herbs State | | Opens a panel stepping through how grown the herbs are, on a level with herbs. Changes only what is drawn. |
 | Item Pictures | | Opens a panel showing every kind of gem in every cut, and a sample of rings, as they are drawn, at each quality. Pressing a picture shows it large. |
 | Kill Mob | Yes | Toggles clicking or tapping a mob in sight killing it. What it had falls where it stood, and it doesn't come back. A skull shows at the top left while it is on. |
@@ -34,4 +34,5 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Teleport Mode | Yes | Toggles clicks on the map taking you there at once, through walls in a site. |
 | Teleport to POI Showcase | Yes | Takes you to a plain far south with every kind of place on it, in several seeds and levels of ruin. |
 | Teleport to Start | Yes | Takes you out of any site, to where new characters start on the world map. |
+| Truesight | Yes | Toggles seeing what is secret about items: the glow of what is magical, blessed or cursed. They don't count as found out, so turning it off hides them again. Eyes show at the top left while it is on. |
 | World Time | Yes | Toggles a panel moving the world's clock an hour either way, for everyone playing. It stops at the world's beginning. |

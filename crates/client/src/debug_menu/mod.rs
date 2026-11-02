@@ -14,7 +14,7 @@ use shared::protocol::{ClientMessage, ServerMessage};
 
 use crate::common::{
     ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, GameView, GodMode, KillMob,
-    NORMAL_SNOW_LINE, ServerDevTools, Weather,
+    NORMAL_SNOW_LINE, ServerDevTools, Truesight, Weather,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::player::{PlayerSystems, TakeStep};
@@ -104,6 +104,7 @@ struct FactSources<'w> {
     cycle: Res<'w, TemperatureCycle>,
     detect: Res<'w, DetectMonsters>,
     god: Res<'w, GodMode>,
+    truesight: Res<'w, Truesight>,
     kill: Res<'w, KillMob>,
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
@@ -122,6 +123,7 @@ impl FactSources<'_> {
             cycling: *self.cycle != TemperatureCycle::Off,
             detecting: self.detect.0,
             god_mode: self.god.0,
+            truesight: self.truesight.0,
             killing: self.kill.0,
             teleporting: *self.mode == ClickMode::Teleport,
             changing_cells: *self.mode == ClickMode::ChangeCell,
@@ -144,15 +146,22 @@ fn auto_walk(
     }
 }
 
-/// A new connection knows nothing of god mode.
+/// A new connection knows nothing of god mode or truesight.
 fn remind_of_god_mode(
     mut from_server: MessageReader<FromServer>,
     god: Res<GodMode>,
+    truesight: Res<Truesight>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     for FromServer(message) in from_server.read() {
-        if god.0 && matches!(message, ServerMessage::Welcome { .. }) {
+        if !matches!(message, ServerMessage::Welcome { .. }) {
+            continue;
+        }
+        if god.0 {
             to_server.write(ToServer(ClientMessage::DevGodMode(true)));
+        }
+        if truesight.0 {
+            to_server.write(ToServer(ClientMessage::DevTruesight(true)));
         }
     }
 }
@@ -175,6 +184,7 @@ fn run_actions(
     mut cycle: ResMut<TemperatureCycle>,
     mut detect: ResMut<DetectMonsters>,
     mut god: ResMut<GodMode>,
+    mut truesight: ResMut<Truesight>,
     mut kill: ResMut<KillMob>,
     mut mode: ResMut<ClickMode>,
     mut info: ResMut<DebugInfo>,
@@ -208,6 +218,10 @@ fn run_actions(
             DebugAction::GodMode => {
                 god.0 = !god.0;
                 to_server.write(ToServer(ClientMessage::DevGodMode(god.0)));
+            }
+            DebugAction::Truesight => {
+                truesight.0 = !truesight.0;
+                to_server.write(ToServer(ClientMessage::DevTruesight(truesight.0)));
             }
             DebugAction::KillMob => kill.0 = !kill.0,
             DebugAction::ForgetMap => {

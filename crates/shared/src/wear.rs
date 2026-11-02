@@ -7,7 +7,7 @@
 
 use crate::creature::{CreatureKind, Layer, Location, Size};
 use crate::id::Id;
-use crate::item::{Inventory, Item, ItemDef, Made};
+use crate::item::{Favour, Inventory, Item, ItemDef, Made, Quality};
 
 /// How an item fits its wearer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,16 +36,33 @@ pub enum WearRefused {
     Covered(Id),
 }
 
+impl WearRefused {
+    /// Whether this might only be how it looks from here: magic that hasn't been found
+    /// out would fit, so a client lets the server decide.
+    pub fn worth_trying(self) -> bool {
+        matches!(self, Self::WrongSize | Self::WrongFingers)
+    }
+}
+
+/// Who is trying to take something off.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Remover {
+    Wearer,
+    Other,
+}
+
 impl Made {
-    /// How this fits a creature of this size: `None` if it doesn't.
-    pub fn fit(&self, adjustable: bool, size: Size) -> Option<Fit> {
-        if self.magical {
+    /// How this fits a creature of this size, with its quality deciding how far any
+    /// magic reaches: `None` if it doesn't. Past that reach, it is as if it had none.
+    pub fn fit(&self, adjustable: bool, size: Size, quality: Option<Quality>) -> Option<Fit> {
+        let off = self.size.apart(size);
+        let reach = quality.map_or(0, Quality::magic_reach);
+        if self.magical && off <= reach && reach > 0 {
             return Some(Fit::Exact);
         }
         if size < self.smallest || size > self.largest {
             return None;
         }
-        let off = self.size.apart(size);
         Some(if adjustable || off == 0 {
             Fit::Exact
         } else {
@@ -115,10 +132,10 @@ impl Inventory {
         }
         let fit = item
             .made
-            .fit(wear.adjustable, body.size)
+            .fit(wear.adjustable, body.size, item.quality)
             .ok_or(WearRefused::WrongSize)?;
         let whole_fingers = !wear.one_place && wear.locations.contains(&Location::Fingers);
-        if whole_fingers && !item.made.magical && item.made.fingers != body.fingers() {
+        if whole_fingers && !item.is_magical() && item.made.fingers != body.fingers() {
             return Err(WearRefused::WrongFingers);
         }
         if let Some(other) = self.clash(item) {
@@ -195,6 +212,62 @@ impl Inventory {
         Ok(fit)
     }
 
+    /// Whether this person may take this off, by what lies on it: anything not worn
+    /// may go. What this says belongs to whoever is acting, and not to `move_item` or
+    /// `hand_over`: a body falling, or an ability, isn't someone trying.
+    pub fn may_remove(&self, id: Id, by: Remover) -> bool {
+        let Some(item) = self.worn.iter().find(|item| item.id == id) else {
+            return true;
+        };
+        match item.favour {
+            None => true,
+            Some(Favour::Blessed) => by == Remover::Wearer,
+            Some(Favour::Cursed) => false,
+        }
+    }
+
+    /// Finds out that this worn thing is cursed or blessed.
+    pub fn favour_found_out(&mut self, id: Id) {
+        if let Some(item) = self.worn.iter_mut().find(|item| item.id == id) {
+            item.known.favour = true;
+        }
+    }
+
+    /// Whether putting this on just now was only possible by its magic, which gives
+    /// it away. A thing that would fit anyway keeps its secret.
+    pub fn magic_found_out(&mut self, id: Id) -> bool {
+        let body = self.creature.def();
+        let Some(item) = self.worn.iter_mut().find(|item| item.id == id) else {
+            return false;
+        };
+        let Some(wear) = item.kind.def().wear else {
+            return false;
+        };
+        if !item.is_magical() {
+            return false;
+        }
+        let without = Made {
+            magical: false,
+            ..item.made
+        };
+        let plain = without.fit(wear.adjustable, body.size, item.quality);
+        let with = item.made.fit(wear.adjustable, body.size, item.quality);
+        let whole_fingers = !wear.one_place && wear.locations.contains(&Location::Fingers);
+        let needed = (plain != with) || (whole_fingers && item.made.fingers != body.fingers());
+        if needed {
+            item.known.magic = true;
+        }
+        needed
+    }
+
+    /// As a client may see it: see `Item::hide_secrets`.
+    pub fn hide_secrets(&mut self) {
+        let placed = self.pockets.iter_mut().map(|placed| &mut placed.item);
+        for item in placed.chain(&mut self.worn).chain(&mut self.bin) {
+            item.hide_secrets();
+        }
+    }
+
     /// Takes out something to hand over, with all in it, unless it isn't carried or
     /// is worn under something.
     pub fn hand_over(&mut self, id: Id) -> Option<Item> {
@@ -214,7 +287,8 @@ impl Inventory {
     pub fn worn_fit(&self, id: Id) -> Option<Fit> {
         let item = self.worn.iter().find(|item| item.id == id)?;
         let wear = item.kind.def().wear?;
-        item.made.fit(wear.adjustable, self.creature.def().size)
+        item.made
+            .fit(wear.adjustable, self.creature.def().size, item.quality)
     }
 
     /// For a character becoming another kind of creature (dev tools): everything
@@ -356,6 +430,7 @@ mod tests {
                 fingers: Some(10),
                 magical,
             },
+            quality: Some(Quality::Uncommon),
             ..Item::new(id(1), ItemKind::Gloves)
         };
         let mut inventory = Inventory {
@@ -420,26 +495,156 @@ mod tests {
     #[test]
     fn shoes_fit_one_size_smaller_loosely_and_never_larger() {
         let shoes = medium(ItemKind::Shoes);
-        assert_eq!(shoes.fit(false, Size::Medium), Some(Fit::Exact));
-        assert_eq!(shoes.fit(false, Size::Small), Some(Fit::Loose(1)));
-        assert_eq!(shoes.fit(false, Size::Tiny), None);
-        assert_eq!(shoes.fit(false, Size::Large), None);
+        assert_eq!(shoes.fit(false, Size::Medium, None), Some(Fit::Exact));
+        assert_eq!(shoes.fit(false, Size::Small, None), Some(Fit::Loose(1)));
+        assert_eq!(shoes.fit(false, Size::Tiny, None), None);
+        assert_eq!(shoes.fit(false, Size::Large, None), None);
     }
 
     #[test]
-    fn a_belt_adjusts_and_magic_fits_anyone() {
+    fn a_belt_adjusts() {
         let belt = medium(ItemKind::Belt);
         let adjustable = ItemKind::Belt.def().wear.unwrap().adjustable;
         assert!(adjustable);
-        assert_eq!(belt.fit(adjustable, Size::Small), Some(Fit::Exact));
-        assert_eq!(belt.fit(adjustable, Size::Huge), Some(Fit::Exact));
-        assert_eq!(belt.fit(adjustable, Size::Giant), None);
+        assert_eq!(belt.fit(adjustable, Size::Small, None), Some(Fit::Exact));
+        assert_eq!(belt.fit(adjustable, Size::Huge, None), Some(Fit::Exact));
+        assert_eq!(belt.fit(adjustable, Size::Giant, None), None);
+    }
 
+    #[test]
+    fn magic_reaches_further_the_better_it_is() {
         let magic = Made {
             magical: true,
             ..medium(ItemKind::Shoes)
         };
-        assert_eq!(magic.fit(false, Size::Giant), Some(Fit::Exact));
+        let fit = |size, quality| magic.fit(false, size, Some(quality));
+        // Its normal range is what is left past the reach.
+        assert_eq!(fit(Size::Large, Quality::Uncommon), Some(Fit::Exact));
+        assert_eq!(fit(Size::Huge, Quality::Uncommon), None);
+        assert_eq!(fit(Size::Small, Quality::Uncommon), Some(Fit::Exact));
+        assert_eq!(fit(Size::Huge, Quality::Rare), Some(Fit::Exact));
+        assert_eq!(fit(Size::Giant, Quality::Rare), None);
+        assert_eq!(fit(Size::Giant, Quality::Epic), Some(Fit::Exact));
+        assert_eq!(
+            Made {
+                size: Size::Tiny,
+                ..magic
+            }
+            .fit(false, Size::Giant, Some(Quality::Artifact)),
+            Some(Fit::Exact)
+        );
+        // Common is too plain for magic: shoes as usual.
+        assert_eq!(fit(Size::Small, Quality::Common), Some(Fit::Loose(1)));
+    }
+
+    /// Worn by a medium human.
+    fn wearing(item: Item) -> Inventory {
+        let mut inventory = Inventory::default();
+        inventory.worn.push(item);
+        inventory
+    }
+
+    fn with_favour(favour: Option<Favour>) -> Item {
+        Item {
+            favour,
+            ..Item::new(id(1), ItemKind::Hat)
+        }
+    }
+
+    #[test]
+    fn blessed_stops_others_and_cursed_stops_everyone() {
+        let may = |favour, by| wearing(with_favour(favour)).may_remove(id(1), by);
+        assert!(may(None, Remover::Wearer));
+        assert!(may(None, Remover::Other));
+        assert!(may(Some(Favour::Blessed), Remover::Wearer));
+        assert!(!may(Some(Favour::Blessed), Remover::Other));
+        assert!(!may(Some(Favour::Cursed), Remover::Wearer));
+        assert!(!may(Some(Favour::Cursed), Remover::Other));
+    }
+
+    #[test]
+    fn a_curse_only_holds_what_is_worn() {
+        let mut inventory = Inventory::default();
+        inventory.give(with_favour(Some(Favour::Cursed))).unwrap();
+        assert!(inventory.may_remove(id(1), Remover::Wearer));
+    }
+
+    #[test]
+    fn magic_is_found_out_only_when_it_was_needed() {
+        let body = Inventory::default().creature.def().size;
+        let shoes = |size: Size, quality| Item {
+            made: Made {
+                magical: true,
+                ..Made::for_body(ItemKind::Shoes, size, None, false)
+            },
+            quality: Some(quality),
+            ..Item::new(id(1), ItemKind::Shoes)
+        };
+        // Its own size: nothing to give it away.
+        let mut own = wearing(shoes(body, Quality::Rare));
+        assert!(!own.magic_found_out(id(1)));
+        assert!(!own.worn[0].known.magic);
+        // Too small for the wearer: only magic could do that.
+        let mut small = wearing(shoes(body.stepped(-1), Quality::Rare));
+        assert!(small.magic_found_out(id(1)));
+        assert!(small.worn[0].known.magic);
+        // Loose anyway, out of reach of poor magic: nothing changes.
+        let mut plain = wearing(shoes(body.stepped(1), Quality::Common));
+        assert!(!plain.magic_found_out(id(1)));
+    }
+
+    #[test]
+    fn hidden_secrets_arent_shown_until_found_out() {
+        let secret = Item {
+            made: Made {
+                magical: true,
+                ..Made::default()
+            },
+            favour: Some(Favour::Cursed),
+            ..Item::new(id(1), ItemKind::Hat)
+        };
+        let mut hidden = wearing(secret.clone());
+        hidden.hide_secrets();
+        assert!(!hidden.worn[0].made.magical);
+        assert_eq!(hidden.worn[0].favour, None);
+        // One found out says nothing of the other.
+        let mut known = wearing(secret);
+        known.favour_found_out(id(1));
+        known.hide_secrets();
+        assert!(!known.worn[0].made.magical);
+        assert_eq!(known.worn[0].favour, Some(Favour::Cursed));
+    }
+
+    #[test]
+    fn only_wearables_better_than_common_roll_magic() {
+        let rolled = |kind, quality| {
+            (0..2000).any(|n| {
+                let mut item = Item {
+                    quality,
+                    ..Item::new(id(n), kind)
+                };
+                item.roll_secrets();
+                item.made.magical
+            })
+        };
+        assert!(rolled(ItemKind::Hat, Some(Quality::Uncommon)));
+        assert!(!rolled(ItemKind::Hat, Some(Quality::Common)));
+        assert!(!rolled(ItemKind::Stone, Some(Quality::Rare)));
+    }
+
+    #[test]
+    fn most_things_are_neither_blessed_nor_cursed_and_none_both() {
+        let favours: Vec<_> = (0..2000)
+            .map(|n| {
+                let mut item = Item::new(id(n), ItemKind::Hat);
+                item.roll_secrets();
+                item.favour
+            })
+            .collect();
+        let count = |one| favours.iter().filter(|&&f| f == one).count();
+        assert!(count(None) > 1600);
+        assert!(count(Some(Favour::Blessed)) > 0);
+        assert!(count(Some(Favour::Cursed)) > 0);
     }
 
     #[test]

@@ -32,6 +32,7 @@ pub enum DebugAction {
     TeleportMode,
     TeleportToPoiShowcase,
     TeleportToStart,
+    Truesight,
     WorldTime,
 }
 
@@ -46,6 +47,7 @@ pub(super) struct Facts {
     pub cycling: bool,
     pub detecting: bool,
     pub god_mode: bool,
+    pub truesight: bool,
     pub killing: bool,
     pub teleporting: bool,
     pub changing_cells: bool,
@@ -59,7 +61,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 24] = [
+    pub(super) const ALL: [Self; 25] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -83,6 +85,7 @@ impl DebugAction {
         Self::TeleportMode,
         Self::TeleportToPoiShowcase,
         Self::TeleportToStart,
+        Self::Truesight,
         Self::WorldTime,
     ];
 
@@ -111,6 +114,7 @@ impl DebugAction {
             Self::TeleportMode => "Teleport Mode",
             Self::TeleportToPoiShowcase => "Teleport to POI Showcase",
             Self::TeleportToStart => "Teleport to Start",
+            Self::Truesight => "Truesight",
             Self::WorldTime => "World Time",
         }
     }
@@ -168,6 +172,7 @@ impl DebugAction {
                 | Self::TeleportMode
                 | Self::TeleportToPoiShowcase
                 | Self::TeleportToStart
+                | Self::Truesight
                 | Self::WorldTime
         )
     }
@@ -180,6 +185,7 @@ impl DebugAction {
             Self::CycleTemperature => Some(facts.cycling),
             Self::DetectMonsters => Some(facts.detecting),
             Self::GodMode => Some(facts.god_mode),
+            Self::Truesight => Some(facts.truesight),
             Self::KillMob => Some(facts.killing),
             Self::ShowDebugInfo => Some(facts.showing_info),
             Self::SunsAndMoons => Some(facts.suns_and_moons_open),
@@ -234,6 +240,7 @@ mod tests {
             cycling: false,
             detecting: false,
             god_mode: false,
+            truesight: false,
             killing: false,
             teleporting: false,
             changing_cells: false,

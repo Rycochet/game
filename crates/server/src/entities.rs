@@ -362,6 +362,7 @@ fn dressed(kind: CreatureKind, gear: &[(ItemKind, Option<Quality>)], made_at: Ma
                 continue;
             }
         }
+        new.roll_secrets();
         // Clothes go straight on, as they may be bigger than its pockets.
         if carrying.check_wear_new(&new).is_ok() {
             let _ = carrying.wear_new(new);
@@ -1443,6 +1444,7 @@ mod tests {
             magical: false,
             quality: Default::default(),
             set: false,
+            favour: None,
         }]);
         let gift = answers.iter().rev().find_map(|answer| match answer {
             ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),
@@ -1528,6 +1530,7 @@ mod tests {
             magical: false,
             quality: Default::default(),
             set: false,
+            favour: None,
         }]);
         let coin = answers.iter().rev().find_map(|answer| match answer {
             ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),

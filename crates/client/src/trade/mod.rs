@@ -13,7 +13,7 @@ use shared::site::BuildingLook;
 
 use crate::common::{
     CurrentDungeon, GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPosition,
-    PointerSystems, TookItem,
+    PointerSystems, TookItem, Truesight,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::dungeon_map::DoorClicked;
@@ -53,7 +53,14 @@ impl Plugin for TradePlugin {
                     (change_of_mind, follow_clicked_door)
                         .chain()
                         .in_set(PlayerSystems::Input),
-                    (note_gifts, read_server, draw_grids, show_gift_aim).chain(),
+                    (
+                        ask_again_with_truesight,
+                        note_gifts,
+                        read_server,
+                        draw_grids,
+                        show_gift_aim,
+                    )
+                        .chain(),
                     close_when_left.after(PlayerSystems::Travel),
                 ),
             );
@@ -157,6 +164,20 @@ fn follow_clicked_door(
                 x: front.0,
                 y: front.1,
             });
+        }
+    }
+}
+
+/// Truesight changes what the server tells of what is shown here.
+fn ask_again_with_truesight(
+    truesight: Res<Truesight>,
+    open: Res<OpenTrades>,
+    mut to_server: MessageWriter<ToServer>,
+) {
+    if truesight.is_changed() && !truesight.is_added() {
+        for trade in &open.0 {
+            let with = trade.grid.with;
+            to_server.write(ToServer(ClientMessage::OpenTrade { with }));
         }
     }
 }

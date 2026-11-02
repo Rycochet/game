@@ -21,7 +21,7 @@ use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::ground::Load;
 use crate::id::Id;
-use crate::item::{Holder, Inventory, Item, ItemKind, Quality, Rotation};
+use crate::item::{Favour, Holder, Inventory, Item, ItemKind, Quality, Rotation};
 use crate::mob::EntityLook;
 use crate::movement::Step;
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
@@ -145,9 +145,14 @@ pub enum ClientMessage {
         quality: Quality,
         /// Part of a set, if it has quality.
         set: bool,
+        /// Blessed or cursed. It and `magical` are as secret as on anything else.
+        favour: Option<Favour>,
     },
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),
+    /// Developer tools: truesight on or off. The client is told what is secret about
+    /// items, without it being found out. Answered with `Inventory`.
+    DevTruesight(bool),
     /// Developer tools: god mode on or off. Mobs take no notice of the character,
     /// and it can walk through them.
     DevGodMode(bool),
@@ -230,6 +235,7 @@ impl ClientMessage {
                 | Self::DevGiveItem { .. }
                 | Self::DevSetCreature(_)
                 | Self::DevDetectMonsters(_)
+                | Self::DevTruesight(_)
                 | Self::DevGodMode(_)
                 | Self::DevKillMob { .. }
         )
@@ -493,6 +499,7 @@ mod tests {
                 magical: true,
                 quality: Quality::Epic,
                 set: false,
+                favour: Some(Favour::Cursed),
             },
             ClientMessage::OpenTrade {
                 with: Id::for_test(3),
@@ -523,6 +530,7 @@ mod tests {
             },
             ClientMessage::DevSetCreature(CreatureKind::Chicken),
             ClientMessage::DevDetectMonsters(true),
+            ClientMessage::DevTruesight(true),
             ClientMessage::DevGodMode(true),
             ClientMessage::DevKillMob {
                 mob: Id::for_test(9),

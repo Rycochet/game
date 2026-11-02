@@ -12,9 +12,10 @@ use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use shared::energy::{dressing_cost, handling_cost};
 use shared::item::{Holder, Inventory, Item};
 use shared::protocol::{ClientMessage, ServerMessage};
+use shared::wear::{Fit, Remover, WearRefused};
 
 use crate::common::{
-    GROUND, GameView, GaveItem, HeldGift, HeldOverGifts, HeldStock, PointerPosition,
+    GROUND, GameView, GaveItem, GodMode, HeldGift, HeldOverGifts, HeldStock, PointerPosition,
     PointerSystems, SpentEnergy, StockCell, TakesGifts, TookItem, TouchGesture,
 };
 use crate::connection::{FromServer, ToServer};
@@ -153,6 +154,12 @@ fn read_server(mut from_server: MessageReader<FromServer>, mut carried: ResMut<C
     }
 }
 
+/// Whether it is worth asking to wear something: the server may know of magic this
+/// client doesn't, which would make it fit.
+fn worth_wearing(check: Result<Fit, WearRefused>) -> bool {
+    check.err().is_none_or(WearRefused::worth_trying)
+}
+
 /// The item cell in front of everything else at this point, if one is.
 fn item_cell_in_front<'a>(
     at: Vec2,
@@ -202,6 +209,7 @@ fn pick_up_by_finger(
     >,
     mut holding: ResMut<Holding>,
     carried: Res<Carried>,
+    god: Res<GodMode>,
     mut decided: Local<Option<Vec2>>,
 ) {
     if gesture.first_finger.is_none() {
@@ -214,6 +222,7 @@ fn pick_up_by_finger(
     *decided = Some(gesture.drag_start);
     if let Some(cell) = item_cell_in_front(gesture.drag_start, nodes.iter())
         && carried.0.covered_by(cell.id).is_none()
+        && (god.0 || carried.0.may_remove(cell.id, Remover::Wearer))
     {
         holding.held = Some(HeldBy {
             item: Held {
@@ -430,7 +439,7 @@ fn hold_items(
             Target::Bin
         } else if from_ground && on_body {
             Target::Body {
-                allowed: carried.0.check_wear_new(item).is_ok(),
+                allowed: worth_wearing(carried.0.check_wear_new(item)),
             }
         } else if on_bin || on_body || on_row.is_some() {
             Target::Nowhere
@@ -458,7 +467,7 @@ fn hold_items(
             Target::Nowhere
         } else {
             Target::Body {
-                allowed: carried.0.check_wear(held.item.id).is_ok(),
+                allowed: worth_wearing(carried.0.check_wear(held.item.id)),
             }
         }
     } else {
@@ -491,8 +500,9 @@ fn hold_items(
         } else if aim == (Target::Body { allowed: true }) {
             let id = held.item.id;
             let grams = item.total_weight();
+            to_server.write(ToServer(ClientMessage::WearFromGround { item: id }));
+            // Otherwise only the server can say.
             if carried.0.wear_new(item).is_ok() {
-                to_server.write(ToServer(ClientMessage::WearFromGround { item: id }));
                 took.write(TookItem { with, item: id });
                 spent.write(SpentEnergy(dressing_cost(grams) + handling_cost(grams)));
             }
@@ -527,8 +537,9 @@ fn hold_items(
     if aim == (Target::Body { allowed: true }) {
         let item = held.item.id;
         let grams = carried.0.find(item).map_or(0, Item::total_weight);
+        to_server.write(ToServer(ClientMessage::WearItem { item }));
+        // Otherwise only the server can say.
         if carried.0.wear(item).is_ok() {
-            to_server.write(ToServer(ClientMessage::WearItem { item }));
             spent.write(SpentEnergy(dressing_cost(grams)));
         }
         return;

@@ -257,10 +257,16 @@ fn oldest_first(items: &[Item]) -> Vec<&Item> {
 
 /// The grid after hearing what there is.
 fn restocked(columns: u8, old: &[Placed], items: &[Item], gifts: &[Gift]) -> Vec<Placed> {
+    // What was there stays where it was, as it is now: more may be known of it.
     let mut stock: Vec<Placed> = old
         .iter()
-        .filter(|placed| items.iter().any(|item| item.id == placed.item.id))
-        .cloned()
+        .filter_map(|placed| {
+            let item = items.iter().find(|item| item.id == placed.item.id)?;
+            Some(Placed {
+                item: item.clone(),
+                ..placed.clone()
+            })
+        })
         .collect();
     for item in oldest_first(items) {
         if stock.iter().any(|placed| placed.item.id == item.id) {

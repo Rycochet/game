@@ -9,7 +9,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
 use shared::id::Id;
-use shared::item::{Item, ItemKind, Quality};
+use shared::item::{Favour, Item, ItemKind, Quality};
 use shared::item_form::{Cut, GemForm, give_form};
 use shared::material::Material;
 use shared::poi::PoiKind;
@@ -152,6 +152,8 @@ fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
     content.commands().entity(row).insert(GiveSizes);
     let row = spawn_tabs(content, &["Plain", "Magical"], 0, FONT);
     content.commands().entity(row).insert(GiveMagic);
+    let row = spawn_tabs(content, &["Plain", "Blessed", "Cursed"], 0, FONT);
+    content.commands().entity(row).insert(GiveFavour);
     let row = spawn_tabs(content, &["Alone", "Set"], 0, FONT);
     content.commands().entity(row).insert(GiveSet);
     let qualities: Vec<String> = Quality::ALL.iter().map(|q| format!("{q:?}")).collect();
@@ -439,6 +441,10 @@ pub(super) struct GiveSizes;
 #[derive(Component)]
 pub(super) struct GiveMagic;
 
+/// The tabs choosing whether new items are blessed or cursed.
+#[derive(Component)]
+pub(super) struct GiveFavour;
+
 /// The tabs choosing whether new items are part of a set.
 #[derive(Component)]
 pub(super) struct GiveSet;
@@ -453,6 +459,7 @@ pub(super) struct GiveForm {
     /// `None` for the character's own.
     size: Option<Size>,
     magical: bool,
+    favour: Option<Favour>,
     quality: Quality,
     set: bool,
 }
@@ -462,6 +469,7 @@ pub(super) fn choose_give_options(
     mut chosen: MessageReader<TabChosen>,
     sizes: Query<(), With<GiveSizes>>,
     magic: Query<(), With<GiveMagic>>,
+    favour: Query<(), With<GiveFavour>>,
     set: Query<(), With<GiveSet>>,
     qualities: Query<(), With<GiveQualities>>,
     mut form: ResMut<GiveForm>,
@@ -472,6 +480,13 @@ pub(super) fn choose_give_options(
         }
         if magic.contains(row) {
             form.magical = index == 1;
+        }
+        if favour.contains(row) {
+            form.favour = match index {
+                1 => Some(Favour::Blessed),
+                2 => Some(Favour::Cursed),
+                _ => None,
+            };
         }
         if set.contains(row) {
             form.set = index == 1;
@@ -497,6 +512,7 @@ pub(super) fn press_give_buttons(
                 magical: form.magical,
                 quality: form.quality,
                 set: form.set,
+                favour: form.favour,
             }));
         }
     }
