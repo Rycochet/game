@@ -114,6 +114,15 @@ impl Default for DebugInfo {
     }
 }
 
+/// Another creature on the map: a mob or another player, as the server has told
+/// this player of it.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct Other {
+    pub id: shared::id::Id,
+    pub kind: shared::creature::CreatureKind,
+    pub feeling: shared::sheet::Feeling,
+}
+
 /// How much energy the player gains per tick (`shared::energy`), from what they are
 /// and what they carry. The server keeps its own.
 #[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]

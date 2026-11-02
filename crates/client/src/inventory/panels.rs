@@ -9,6 +9,7 @@ use shared::id::Id;
 use shared::item::{Holder, Inventory, ItemKind, Placed, Rotation, Shape};
 
 use super::body::{ClothesPanel, worn_notes};
+use super::give::NearbyPanel;
 use super::hold::Target;
 use super::{Carried, Holding, item_cell_in_front};
 use crate::common::{GameView, PointerPosition};
@@ -392,6 +393,7 @@ pub(super) fn toggle_pockets(
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
     mut clothes: ResMut<ClothesPanel>,
+    mut nearby: ResMut<NearbyPanel>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
@@ -402,8 +404,10 @@ pub(super) fn toggle_pockets(
         // The clothes go with the pockets, as things are dragged between them.
         if open.pockets_open() {
             clothes.close(&mut commands, &nodes);
+            nearby.close(&mut commands, &nodes);
         } else {
             clothes.open(&mut commands, &mut raise, &nodes);
+            nearby.open(&mut commands, &mut raise, &nodes);
         }
         open.toggle_pockets(&carried.0, &mut commands, &mut raise);
     }
@@ -571,7 +575,7 @@ pub(super) fn show_aim(
         return;
     };
     let (holder, cells, allowed) = match aim {
-        Target::Nowhere | Target::Bin | Target::Body { .. } => return,
+        Target::Nowhere | Target::Bin | Target::Body { .. } | Target::Someone(_) => return,
         Target::Cells {
             holder,
             x,
@@ -694,7 +698,9 @@ pub(super) fn show_tooltip(
         return;
     };
     visibility.set_if_neq(Visibility::Inherited);
-    let words = if holding.aim == Some(Target::Bin) {
+    let words = if let Some(Target::Someone(_)) = holding.aim {
+        format!("Give {name}")
+    } else if holding.aim == Some(Target::Bin) {
         format!("Destroy {name}")
     } else {
         name

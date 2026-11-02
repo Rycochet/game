@@ -37,6 +37,8 @@ pub(super) enum Target {
     Nowhere,
     /// On the bin: it and all in it would be destroyed.
     Bin,
+    /// On someone's row: it would be given to them.
+    Someone(Id),
     /// On the clothes panel: it would be put on, if it can be.
     Body { allowed: bool },
     /// In this grid with its top left cell here, which may be off the grid.
@@ -106,6 +108,7 @@ pub(super) fn drop_move(
         Target::Nowhere
         | Target::Bin
         | Target::Body { .. }
+        | Target::Someone(_)
         | Target::Cells { allowed: false, .. }
         | Target::Bag { place: None, .. } => {
             return None;

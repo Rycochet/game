@@ -122,6 +122,7 @@ impl CreatureDef {
 /// A kind of creature. Saved by name, so new ones can go anywhere in the list.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CreatureKind {
+    Beggar,
     Centaur,
     Chicken,
     Giant,
@@ -205,7 +206,8 @@ const CENTAUR: [BodyPart; 9] = [
 
 impl CreatureKind {
     /// Every kind, alphabetically.
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
+        Self::Beggar,
         Self::Centaur,
         Self::Chicken,
         Self::Giant,
@@ -216,8 +218,10 @@ impl CreatureKind {
 
     /// How this kind feels about another, to begin with. A kind likes its own.
     pub fn feeling_about(self, other: Self) -> Feeling {
-        use CreatureKind::{Giant, Kobold};
+        use CreatureKind::{Beggar, Giant, Kobold};
         match (self, other) {
+            // Has nothing against anyone, and hopes.
+            (Beggar, _) => Feeling::Neutral,
             (one, two) if one == two => Feeling::Friendly,
             (Giant, Kobold) | (Kobold, _) => Feeling::Unfriendly,
             _ => Feeling::Neutral,
@@ -251,6 +255,19 @@ impl CreatureKind {
             }
         }
         match self {
+            Self::Beggar => CreatureDef {
+                name: "Beggar",
+                size: Size::Medium,
+                pockets: (2, 2),
+                body: &TEN_FINGERS,
+                speed: 80,
+                uses_stairs: true,
+                playable: false,
+                stats: stats(6, 7, 9, 6),
+                skills: &[(Foraging, 1)],
+                abilities: &[],
+                looks: &[HairColour, SkinShade, Height],
+            },
             Self::Centaur => CreatureDef {
                 name: "Centaur",
                 size: Size::Large,

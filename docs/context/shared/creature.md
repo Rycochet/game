@@ -32,5 +32,5 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 - A creature's size comes from its kind, apart from its appearance's height, which has no effect on rules.
 - The creature is kept on `Inventory` for now, as that is all that depends on it.
 - A `Sheet` is one creature's stats, skills and appearance, starting from its kind. Abilities come from the kind alone. Nothing uses stats or skills yet but carrying: capacity is strength × (size + 1) kg, burdened past half and overloaded past all of it, which cut speed (`Sheet::speed`) to 75% and 40%. Appearance never affects rules, and `suits` is how the server checks a choice.
-- `feeling_about` (`sheet::Feeling`) and `reaction` (`sheet::Reaction`) say what a kind thinks of another and does about it: a kind likes its own, kobolds dislike nearly everyone, chickens run from anyone. Memories will shift feelings.
+- `feeling_about` (`sheet::Feeling`) and `reaction` (`sheet::Reaction`) say what a kind thinks of another and does about it: a kind likes its own, kobolds dislike nearly everyone, chickens run from anyone. Memories (`mob::Memory`) shift feelings along a scale (`Feeling::warmth`, `from_warmth`).
 - Kinds, bodies, stats and clothes are first guesses to try the rules out.

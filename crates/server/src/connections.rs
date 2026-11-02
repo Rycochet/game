@@ -13,7 +13,7 @@ use shared::poi::ChunkPos;
 use shared::protocol::{
     CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerLink, ServerMessage,
 };
-use shared::sheet::{Appearance, Sheet};
+use shared::sheet::{Appearance, Feeling, Sheet};
 use shared::world::{MINUTES_PER_HOUR, WorldId};
 
 use crate::accounts::{AccountId, Accounts, LoginKey, MAX_CHARACTERS};
@@ -100,7 +100,7 @@ pub struct Client {
     /// The account it logged in to (none on an embedded server).
     account: Option<AccountId>,
     /// Its character: given when it connected, or decided by logging in.
-    character_id: Option<CharacterId>,
+    pub(crate) character_id: Option<CharacterId>,
     /// Whether it is to be disconnected (and was saved).
     gone: bool,
     /// What the character knows of this world and where they are in it: the
@@ -114,6 +114,8 @@ pub struct Client {
     pub(crate) entity_id: Id,
     /// Who the client has been told is in sight, and where.
     pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
+    /// How the client has been told they feel.
+    pub(crate) seen_feelings: BTreeMap<Id, Feeling>,
     /// What the character is like.
     pub(crate) sheet: Sheet,
     /// How much it can do now, and how fast that comes back.
@@ -152,6 +154,7 @@ impl Client {
             inventory: Inventory::default(),
             entity_id: crate::ids::new_id(),
             seen_entities: BTreeMap::new(),
+            seen_feelings: BTreeMap::new(),
             sheet: Sheet::default(),
             energy: Energy::default(),
             speed: NORMAL_SPEED,
@@ -184,6 +187,7 @@ impl Client {
         self.waiting.clear();
         // The client forgets them too.
         self.seen_entities.clear();
+        self.seen_feelings.clear();
     }
 
     /// What it carries has changed, which can change how fast it goes.
@@ -630,6 +634,16 @@ pub(crate) fn answer(
                     }
                 }
                 Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
+            }
+            client.update_speed(world.action_clock.ticks());
+            client
+                .link
+                .send(&ServerMessage::Inventory(client.inventory.clone()))
+        }
+        ClientMessage::GiveItem { item, to } => {
+            match crate::entities::give(client, world, item, to) {
+                Ok(()) => client.unsaved = true,
+                Err(why) => warn!("Refused giving {item:?} to {to:?}: {why}"),
             }
             client.update_speed(world.action_clock.ticks());
             client

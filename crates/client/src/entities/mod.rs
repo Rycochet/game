@@ -9,7 +9,9 @@ use shared::id::Id;
 use shared::protocol::ServerMessage;
 use shared::sheet::Feeling;
 
-use crate::common::{Attitude, GameView, Icon, MapPosition, SmoothPosition, Token, TokenSize};
+use crate::common::{
+    Attitude, GameView, Icon, MapPosition, Other, SmoothPosition, Token, TokenSize,
+};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 use crate::player::{Player, PlayerSystems};
@@ -39,6 +41,7 @@ fn picture(kind: CreatureKind) -> &'static str {
     match kind {
         // (No centaur among the pictures yet.)
         CreatureKind::Centaur | CreatureKind::Human => "monsters/humanfighter.png",
+        CreatureKind::Beggar => "monsters/humandruid01.png",
         CreatureKind::Chicken => "monsters/chicken1.png",
         CreatureKind::Giant => "monsters/gianthill.png",
         CreatureKind::Horse => "monsters/horse01.png",
@@ -69,10 +72,6 @@ fn picture_size(kind: CreatureKind) -> TokenSize {
 #[derive(Resource, Default)]
 struct Others(HashMap<Id, Entity>);
 
-/// Marks another's token.
-#[derive(Component)]
-struct Other;
-
 fn read_server(
     mut from_server: MessageReader<FromServer>,
     mut others: ResMut<Others>,
@@ -88,7 +87,11 @@ fn read_server(
                 };
                 let spawned = commands
                     .spawn((
-                        Other,
+                        Other {
+                            id: look.id,
+                            kind: look.kind,
+                            feeling: look.feeling,
+                        },
                         at,
                         SmoothPosition::from(at),
                         Token {

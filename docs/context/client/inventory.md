@@ -7,6 +7,7 @@ What the character carries: a moveable panel for each open grid, and picking ite
 - `crates/client/src/inventory/mod.rs`: `InventoryPlugin`, `Carried`, `Holding`, `read_server`, `pick_up_by_finger` (`PreUpdate`, before widgets), `hold_items` (`PreUpdate`, after `WidgetSystems::Modal`: presses, turning, following and letting go), `InventoryDebug` (native).
 - `crates/client/src/inventory/hold.rs`: without Bevy: `Held`, `Target`, `target`, `drop_move`. Unit tests.
 - `crates/client/src/inventory/body.rs`: `ClothesPanel`, `BodyNode`, `show_clothes`, `show_body_aim`, `worn_notes`.
+- `crates/client/src/inventory/give.rs`: `NearbyPanel`, `GiveRow`, `show_nearby`, `show_give_aim`.
 - `crates/client/src/inventory/panels.rs`: `OpenGrids`, `CELL` (32 px), `spawn_fixed_parts`, `toggle_pockets`, `forget_closed`, `show_grids`, `show_aim`, `show_held`, `show_tooltip`, `show_button`, the bag icon (drawn in code).
 
 ## Public API
@@ -30,6 +31,7 @@ What the character carries: a moveable panel for each open grid, and picking ite
 - Right-click turns what is held; by touch, a tap with a second finger (owner agreed to try this, to adjust after testing). While a finger holds something, its two-finger gestures don't reach the camera, and the right button doesn't turn it.
 - The bin at the bottom right of the pockets' panel destroys what is dropped on it, from any grid, with all that is in it (owner's design), at once and for good: there is no requester, and items on the ground don't exist yet. It only counts if nothing is in front of it at the pointer; it shows red and the name reads "Destroy ..." first. Panels of bags destroyed close themselves.
 - Clothes (owner's design: dragged on and off): a panel opening and closing with the pockets, a row per place on the body and a column per layer (Claude's layout). Dropping anything on it wears it (`WearItem`), with the rows green or red first. Dragging off into a grid takes it off (`MoveItem`); dropped elsewhere, it snaps back. Something covered is paler and can't be picked up, and its name says what it is under, or that it is loose. Rings on several fingers share a slot, with a count. A worn bag opens with a double press as anywhere.
+- Giving: a Nearby panel opens with the pockets, listing who is within `mob::GIVE_REACH`, by `common::Other`. Dropping a held item on a row sends `GiveItem`; the server also checks they are in sight, and `Inventory` puts it right if not. Clicking people on the map to give is for later, as dropping on tokens needed more than this.
 - Double press on a bag opens it: a second press within `DOUBLE_PRESS_SECONDS`. A press on anything else always picks up.
 - By touch: a finger sliding away from an item picks it up (`TouchGesture::first_finger`, `other_finger_tapped`). A tap arrives as a click, so it picks up and drops at once, doing nothing, and two make a double press. Only what is in front at the point counts, the same as for presses.
 - Moves are shown at once and `Inventory` follows every one, so a refused move goes back. Client-only choices: a panel per grid, a bag's panel closing when it is no longer carried.

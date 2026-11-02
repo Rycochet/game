@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use crate::creature::CreatureKind;
 use crate::dungeon::{Cell, Level};
 use crate::id::Id;
+use crate::item::ItemKind;
 use crate::poi::PoiKind;
+use crate::protocol::CharacterId;
 use crate::rng::Seed;
 use crate::sheet::{Appearance, Feeling, Trait};
 
@@ -17,6 +19,7 @@ const PURPOSE: i64 = 0x006d_6f62;
 /// One walkable cell in this many has a mob.
 const CELLS_PER_MOB: usize = 60;
 const MOST_MOBS: usize = 12;
+const MOST_BEGGARS: usize = 3;
 /// How far from any stairs a mob starts, in cells: nobody arrives beside one.
 const FROM_STAIRS: i64 = 6;
 /// How many places are tried for each.
@@ -32,9 +35,51 @@ pub struct Spawn {
     pub appearance: Appearance,
 }
 
+/// How near someone must be to give something, in cells.
+pub const GIVE_REACH: i64 = 2;
+
+/// How many things a mob remembers: the oldest go first.
+const MOST_REMEMBERED: usize = 32;
+
+/// Something that happened, as a mob remembers it. Things, not words, so it can
+/// say what it means for how the mob feels.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Event {
+    Gave(ItemKind),
+}
+
+impl Event {
+    /// How much warmer it makes the mob feel about whoever did it.
+    fn warmth(self) -> i32 {
+        match self {
+            Self::Gave(_) => 30,
+        }
+    }
+}
+
+/// What a mob remembers, about which characters.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Memory(Vec<(CharacterId, Event)>);
+
+impl Memory {
+    pub fn remember(&mut self, about: CharacterId, event: Event) {
+        if self.0.len() >= MOST_REMEMBERED {
+            self.0.remove(0);
+        }
+        self.0.push((about, event));
+    }
+
+    /// How much warmer it feels about this character than it would have.
+    pub fn warmth_for(&self, about: &CharacterId) -> i32 {
+        let events = self.0.iter().filter(|(who, _)| who == about);
+        events.map(|(_, event)| event.warmth()).sum()
+    }
+}
+
 /// What can be found in a kind of place, with how many of each in 100.
 fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
     match site {
+        _ if site.is_town() => &[(CreatureKind::Beggar, 100)],
         PoiKind::Farm => &[(CreatureKind::Chicken, 80), (CreatureKind::Horse, 20)],
         _ => &[
             (CreatureKind::Kobold, 75),
@@ -45,7 +90,7 @@ fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
 }
 
 /// The mobs of level `index` of a site. The same every time for the same seed.
-/// None in towns, which will have people of their own.
+/// A town has a few beggars for now.
 pub fn spawns(
     seed: Seed,
     index: u32,
@@ -53,9 +98,6 @@ pub fn spawns(
     level: &Level,
     stairs: &[(i64, i64)],
 ) -> Vec<Spawn> {
-    if site.is_town() {
-        return Vec::new();
-    }
     let (min_x, min_y, width, height) = level.bounds();
     let is_home = |x: i64, y: i64| {
         let far_from_stairs = stairs
@@ -67,7 +109,13 @@ pub fn spawns(
         .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
         .filter(|&(x, y)| is_home(x, y))
         .count();
-    let wanted = (cells / CELLS_PER_MOB).min(MOST_MOBS);
+    // Towns are huge, and only have a few people in the street so far.
+    let most = if site.is_town() {
+        MOST_BEGGARS
+    } else {
+        MOST_MOBS
+    };
+    let wanted = (cells / CELLS_PER_MOB).min(most);
     let lives_here = who_lives_in(site);
     let mut mobs: Vec<Spawn> = Vec::new();
     for number in 0..wanted as u32 {
@@ -177,12 +225,39 @@ mod tests {
     }
 
     #[test]
-    fn towns_have_none_and_farms_have_animals() {
+    fn towns_have_beggars_and_farms_have_animals() {
         let level = room();
-        assert!(spawns(Seed::new(1), 0, PoiKind::Town, &level, &[]).is_empty());
+        let town = spawns(Seed::new(1), 0, PoiKind::Town, &level, &[]);
+        assert!(!town.is_empty() && town.len() <= MOST_BEGGARS);
+        assert!(town.iter().all(|mob| mob.kind == CreatureKind::Beggar));
         let farm = spawns(Seed::new(1), 0, PoiKind::Farm, &level, &[]);
         assert!(!farm.is_empty());
         assert!(farm.iter().all(|mob| !mob.kind.def().playable));
+    }
+
+    #[test]
+    fn memories_warm_a_mob_to_whoever_it_remembers() {
+        let (a, b) = (
+            CharacterId::new("a").unwrap(),
+            CharacterId::new("b").unwrap(),
+        );
+        let mut memory = Memory::default();
+        memory.remember(a.clone(), Event::Gave(ItemKind::Coin));
+        assert_eq!(memory.warmth_for(&a), 30);
+        assert_eq!(memory.warmth_for(&b), 0);
+        for _ in 0..MOST_REMEMBERED {
+            memory.remember(b.clone(), Event::Gave(ItemKind::Coin));
+        }
+        // Only so much is kept.
+        assert_eq!(memory.warmth_for(&a), 0);
+        assert_eq!(memory.warmth_for(&b), 30 * MOST_REMEMBERED as i32);
+        // A beggar given one thing goes from neutral to friendly.
+        let warmer = Feeling::Neutral.warmth() + 30;
+        assert_eq!(Feeling::from_warmth(warmer), Feeling::Friendly);
+        // A kobold stops being unfriendly after one, and takes three to be friendly.
+        assert_eq!(Feeling::from_warmth(-50 + 30), Feeling::Neutral);
+        assert_eq!(Feeling::from_warmth(-50 + 60), Feeling::Neutral);
+        assert_eq!(Feeling::from_warmth(-50 + 90), Feeling::Friendly);
     }
 
     #[test]
