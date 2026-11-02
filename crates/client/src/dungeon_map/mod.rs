@@ -20,6 +20,7 @@ mod liquid;
 mod mesh;
 mod picking;
 mod rain;
+mod sight_lines;
 mod stairs;
 mod theme;
 mod town;
@@ -53,6 +54,7 @@ use crate::view3d::{ClickedToken, TOKEN_DIAMETER, TokenView, View3dSystems, View
 use daylight::{OutsideLight, Spill, TownLights};
 use mesh::{Surface, View, WallFace};
 use shared::sheet::Feeling;
+use sight_lines::{MaskSide, SightLines, SightMask, SurfaceMaterial};
 use theme::Theme;
 
 /// Size of a cell in 3D units: about the size of a token's picture.
@@ -89,9 +91,16 @@ impl Plugin for DungeonMapPlugin {
             .init_resource::<OutsideLight>()
             .init_resource::<TownLights>()
             .add_plugins(MaterialPlugin::<rain::RainMaterial>::default())
+            .add_plugins(MaterialPlugin::<SurfaceMaterial>::default())
             .add_systems(Startup, spawn_scene)
-            .add_systems(OnEnter(GameView::Dungeon), show_scene)
-            .add_systems(OnExit(GameView::Dungeon), hide_scene)
+            .add_systems(
+                OnEnter(GameView::Dungeon),
+                (show_scene, sight_lines::set_mask_active::<true>),
+            )
+            .add_systems(
+                OnExit(GameView::Dungeon),
+                (hide_scene, sight_lines::set_mask_active::<false>),
+            )
             .add_systems(
                 Update,
                 pick_on_click
@@ -108,6 +117,8 @@ impl Plugin for DungeonMapPlugin {
                     daylight::update_town_lights,
                     daylight::tint_outside,
                     daylight::token_ambient,
+                    sight_lines::update_outlines,
+                    sight_lines::place_mask,
                     update_meshes,
                     update_crops,
                     update_herbs,
@@ -144,8 +155,8 @@ struct Shown {
 /// follow the theme.
 #[derive(Resource)]
 struct SurfaceMaterials {
-    solid: Vec<Handle<StandardMaterial>>,
-    memory: Vec<Handle<StandardMaterial>>,
+    solid: Vec<Handle<SurfaceMaterial>>,
+    memory: Vec<Handle<SurfaceMaterial>>,
     see_through: Handle<StandardMaterial>,
     /// Of stairs in the way of a viewer, in `Surface::ALL` order.
     stairs_through: Vec<Handle<StandardMaterial>>,
@@ -188,14 +199,31 @@ struct TokenLight {
     owner: Entity,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_scene(
     mut commands: Commands,
     view: Res<State<GameView>>,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
+    mut images: ResMut<Assets<Image>>,
     mut rain_materials: ResMut<Assets<rain::RainMaterial>>,
 ) {
+    let mask = sight_lines::spawn_mask(&mut commands, &mut images, &mut meshes, &mut materials);
+    // Floors and what lies on them are cut at the edge of sight, in both
+    // versions, the rest by the cell for now.
+    let masked = |base: StandardMaterial, surface: Surface, side: MaskSide| SurfaceMaterial {
+        base,
+        extension: SightMask::new(
+            mask.clone(),
+            if surface.cut_at_sight() {
+                side
+            } else {
+                MaskSide::All
+            },
+        ),
+    };
     let theme = Theme::of(None);
     let pictures: Vec<Handle<Image>> = Surface::ALL
         .iter()
@@ -213,7 +241,7 @@ fn spawn_scene(
         .zip(&pictures)
         .map(|(&surface, picture)| {
             let opacity = liquid::opacity(surface);
-            materials.add(if surface == Surface::WallBlend {
+            let base = if surface == Surface::WallBlend {
                 StandardMaterial {
                     alpha_mode: AlphaMode::Blend,
                     depth_bias: BLEND_DEPTH_BIAS,
@@ -230,7 +258,8 @@ fn spawn_scene(
                 }
             } else {
                 unlit(picture)
-            })
+            };
+            surface_materials.add(masked(base, surface, MaskSide::InSight))
         })
         .collect();
     // Blended meshes don't sort against each other by themselves: floors are
@@ -240,7 +269,7 @@ fn spawn_scene(
         .iter()
         .zip(&pictures)
         .map(|(&surface, picture)| {
-            materials.add(StandardMaterial {
+            let base = StandardMaterial {
                 base_color: Color::srgba(1.0, 1.0, 1.0, MEMORY_ALPHA),
                 // Solid even as memory: a whole town is remembered at once,
                 // and blended meshes wouldn't sort.
@@ -255,7 +284,8 @@ fn spawn_scene(
                     _ => -1.0,
                 },
                 ..unlit(picture)
-            })
+            };
+            surface_materials.add(masked(base, surface, MaskSide::OutOfSight))
         })
         .collect();
     let see_through = materials.add(StandardMaterial {
@@ -378,6 +408,7 @@ fn apply_theme(
     asset_server: Res<AssetServer>,
     mut surfaces: ResMut<SurfaceMaterials>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
     if !dungeon.is_changed() {
         return;
@@ -385,8 +416,8 @@ fn apply_theme(
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
-        if let Some(mut material) = materials.get_mut(&surfaces.solid[surface as usize]) {
-            material.base_color_texture = Some(picture.clone());
+        if let Some(mut material) = surface_materials.get_mut(&surfaces.solid[surface as usize]) {
+            material.base.base_color_texture = Some(picture.clone());
         }
         if let Some(mut material) = materials.get_mut(&surfaces.stairs_through[surface as usize]) {
             material.base_color_texture = Some(picture.clone());
@@ -410,6 +441,7 @@ fn colour_ground(
     surfaces: Res<SurfaceMaterials>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
     mut painted: Local<Option<[u8; 4]>>,
 ) {
     let Some(world) = world else {
@@ -435,10 +467,11 @@ fn colour_ground(
     let copy = recoloured(picture, colour);
     let copy = images.add(copy);
     let ground = Surface::Ground as usize;
-    for handle in [&surfaces.solid[ground], &surfaces.stairs_through[ground]] {
-        if let Some(mut material) = materials.get_mut(handle) {
-            material.base_color_texture = Some(copy.clone());
-        }
+    if let Some(mut material) = surface_materials.get_mut(&surfaces.solid[ground]) {
+        material.base.base_color_texture = Some(copy.clone());
+    }
+    if let Some(mut material) = materials.get_mut(&surfaces.stairs_through[ground]) {
+        material.base_color_texture = Some(copy.clone());
     }
     *painted = Some(colour);
 }
@@ -475,7 +508,7 @@ fn recoloured(image: &Image, colour: [u8; 4]) -> Image {
 fn grey_pictures(
     mut surfaces: ResMut<SurfaceMaterials>,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
     if surfaces.to_grey.is_empty() {
         return;
@@ -497,7 +530,7 @@ fn grey_pictures(
             }
         };
         if let Some(mut material) = materials.get_mut(&surfaces.memory[*index]) {
-            material.base_color_texture = Some(grey);
+            material.base.base_color_texture = Some(grey);
         }
         false
     });
@@ -616,7 +649,12 @@ fn update_meshes(
     mut seen: Local<Option<(Vec<View>, Sight)>>,
     // Together, as Bevy limits how many things a system can ask for.
     (outside, mut spill): (Res<OutsideLight>, Local<Spill>),
-    (town_lights, mut window_glow): (Res<TownLights>, Local<Spill>),
+    (town_lights, mut window_glow, lines, mut lines_seen): (
+        Res<TownLights>,
+        Local<Spill>,
+        Res<SightLines>,
+        Local<u64>,
+    ),
 ) {
     let camera = camera.translation;
     let looked_again = dungeon.is_changed()
@@ -626,6 +664,7 @@ fn update_meshes(
         || looked_again
         || outside.is_changed()
         || town_lights.is_changed()
+        || *lines_seen != lines.changes
         || lights
             .iter()
             .any(|(position, light)| position.is_changed() || light.is_changed());
@@ -633,6 +672,7 @@ fn update_meshes(
         return;
     }
     *built_for = Some(camera);
+    *lines_seen = lines.changes;
 
     let start = Instant::now();
     let level = &dungeon.level;
@@ -658,6 +698,12 @@ fn update_meshes(
     let Some((views, sight)) = &*seen else {
         return;
     };
+    // Drawn as in sight: what the game's sight says, and anything the real
+    // lines reach into, which can be a little more. The mask cuts them to shape.
+    let mut drawn = sight.clone();
+    // What needs a remembered copy for the mask to show: drawn as in sight, but
+    // not all of it is.
+    let mut cut = Sight::new(level);
     // What is in sight is remembered from now on (only cells the server has
     // sent: the rest are wall here until it does). Not a change that needs
     // anything redrawn, so it doesn't mark the level changed.
@@ -665,7 +711,16 @@ fn update_meshes(
     let (min_x, min_y, width, height) = level.bounds();
     for y in min_y..min_y + height {
         for x in min_x..min_x + width {
-            if sight.is_seen(x, y) && dungeon.known.is_seen(x, y) {
+            if lines.touched.as_ref().is_some_and(|t| t.is_seen(x, y)) {
+                drawn.insert(x, y);
+            }
+            if drawn.is_seen(x, y)
+                && (lines.crossed.as_ref().is_some_and(|c| c.is_seen(x, y))
+                    || lines.touched.as_ref().is_none_or(|t| !t.is_seen(x, y)))
+            {
+                cut.insert(x, y);
+            }
+            if drawn.is_seen(x, y) && dungeon.known.is_seen(x, y) {
                 remembered.insert(x, y);
             }
         }
@@ -703,7 +758,7 @@ fn update_meshes(
     let built = mesh::build(
         level,
         views,
-        sight,
+        &drawn,
         &remembered,
         &light,
         &dungeon.stairs,
@@ -713,6 +768,7 @@ fn update_meshes(
         ruined,
         camera,
         theme.shape,
+        &cut,
     );
     shown.sight = Some(sight.clone());
     dungeon.bypass_change_detection().remembered = remembered;
@@ -780,7 +836,9 @@ fn update_meshes(
         .map_or(String::new(), |b| {
             format!(", at the door of: {}", b.kind.name())
         });
-    stats.summary = format!("{place}{at_door}: sight, light and meshes {ms:.2} ms");
+    let outlines = lines.cost_ms;
+    stats.summary =
+        format!("{place}{at_door}: sight, light and meshes {ms:.2} ms, lines {outlines:.2} ms");
 }
 
 /// Builds the crops again when what is seen changes: never for the camera, as

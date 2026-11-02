@@ -963,6 +963,7 @@ mod tests {
             false,
             camera,
             Shape::Built,
+            &Sight::new(&level),
         );
         let mesh = &meshes.solid[Surface::Town as usize];
         let normals = mesh
