@@ -796,7 +796,7 @@ pub(crate) fn answer(
 }
 
 /// A new item of this kind, made for this size or the wearer's, and their fingers.
-fn made_for(
+pub(crate) fn made_for(
     inventory: &Inventory,
     kind: ItemKind,
     size: Option<shared::creature::Size>,
@@ -805,11 +805,21 @@ fn made_for(
     made_at: MadeAt,
 ) -> Item {
     let body = inventory.creature.def();
+    let id = crate::ids::new_id();
+    let quality = kind.def().has_quality.then_some(quality);
+    let name = (quality == Some(Quality::Artifact)).then(|| {
+        // Only needs to differ from one to the next, so the id will do: its low
+        // half alone hardly changes.
+        let bits = id.0.as_u128();
+        let mut rng = shared::rng::Seed::new((bits >> 64) as u64 ^ bits as u64).rng();
+        shared::item::artifact_name(&mut rng, kind)
+    });
     Item {
         made: Made::for_body(kind, size.unwrap_or(body.size), body.fingers(), magical),
-        quality: kind.def().has_quality.then_some(quality),
+        quality,
         made_at: Some(made_at),
-        ..Item::new(crate::ids::new_id(), kind)
+        name,
+        ..Item::new(id, kind)
     }
 }
 
@@ -1192,13 +1202,28 @@ pub(crate) mod tests {
         assert_eq!(coin.quality, None, "a coin has no quality");
         let made = sword.made_at.expect("new things know when they were made");
         assert_eq!(made.world, test.world.seed.id());
+        assert_eq!(sword.name, None);
+    }
+
+    #[test]
+    fn artifacts_are_always_named() {
+        let mut test = TestClient::new();
+        let artifact = ClientMessage::DevGiveItem {
+            kind: ItemKind::Sword,
+            size: None,
+            magical: false,
+            quality: Quality::Artifact,
+        };
+        let carried = inventory(&test.send(&[artifact]));
+        let name = carried.pockets[0].item.name();
+        assert!(name.ends_with(" Sword") && name != "Sword", "{name}");
     }
 
     #[test]
     fn items_saved_before_quality_still_load() {
         let saved =
             ron::to_string(&Item::new(shared::id::Id::for_test(1), ItemKind::Sword)).unwrap();
-        let old = saved.replace(",quality:None,made_at:None", "");
+        let old = saved.replace(",quality:None,made_at:None,name:None", "");
         assert_ne!(old, saved);
         let item: Item = ron::from_str(&old).unwrap();
         assert_eq!((item.quality, item.made_at), (None, None));

@@ -13,7 +13,7 @@ use shared::creature::CreatureKind;
 use shared::dungeon::{Level, line_is_clear};
 use shared::energy::{Energy, SITE_SCALE, site_step_cost};
 use shared::id::Id;
-use shared::item::Inventory;
+use shared::item::{Inventory, ItemKind, MadeAt, Quality};
 use shared::mob::{EntityLook, Event, GIVE_REACH, Memory, spawns};
 use shared::movement::{STRAIGHT_COST, Step, step_on_level};
 use shared::pathfinding::DistanceMap;
@@ -187,6 +187,7 @@ impl ServerWorld {
         let stairs: Vec<_> = level.stairs.iter().map(|s| (s.x, s.y)).collect();
         let plan = spawns(poi.seed, index, poi.kind, &level.level, &stairs);
         let self_tick = self.action_clock.ticks();
+        let made_at = self.made_now();
         let saved = self.site_mut(id, poi.kind).levels.entry(index).or_default();
         let unsettled = std::mem::take(&mut saved.unsettled);
         let records = saved.records.clone();
@@ -196,11 +197,14 @@ impl ServerWorld {
             .into_iter()
             .map(|spawn| {
                 let carried_on = unsettled.get(&spawn.number);
-                let carrying = Inventory {
-                    creature: spawn.kind,
-                    ..Inventory::default()
-                };
                 let id = *saved.mobs.entry(spawn.number).or_insert_with(new_id);
+                let carrying = saved
+                    .records
+                    .entry(id)
+                    .or_default()
+                    .gear
+                    .get_or_insert_with(|| dressed(spawn.kind, &spawn.gear, made_at))
+                    .clone();
                 if carried_on.is_some() {
                     due.insert((tick, id));
                 }
@@ -327,6 +331,27 @@ impl ServerWorld {
             }
         }
     }
+}
+
+/// A new mob's belongings: it wears what it can, and keeps the rest in its
+/// pockets while there is room.
+fn dressed(kind: CreatureKind, gear: &[(ItemKind, Option<Quality>)], made_at: MadeAt) -> Inventory {
+    let mut carrying = Inventory {
+        creature: kind,
+        outfitted: true,
+        pockets_size: kind.def().pockets,
+        ..Inventory::default()
+    };
+    for &(item, quality) in gear {
+        let quality = quality.unwrap_or_default();
+        let new = crate::connections::made_for(&carrying, item, None, false, quality, made_at);
+        let id = new.id;
+        if carrying.give(new).is_ok() {
+            // Anything that can't be worn stays in the pockets.
+            let _ = carrying.wear(id);
+        }
+    }
+    carrying
 }
 
 /// A player gives a carried item to a mob near enough and in sight. It remembers,
@@ -1343,6 +1368,41 @@ mod tests {
         // And it comes along.
         run(&mut test, 3);
         assert!(matches!(the_mob(&test).doing, Doing::Going { .. }));
+    }
+
+    #[test]
+    fn a_mob_is_dressed_once_and_keeps_its_things_after_a_restart() {
+        let folder = TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
+        let mut test = TestClient::of(open());
+        test.send(&[CASTLE]);
+        let belongings = |test: &mut TestClient| -> Vec<(Id, Inventory)> {
+            let (&(site, level), mobs) = test.world.populations.0.iter().next().unwrap();
+            let kind = mobs.poi_kind;
+            let ids: Vec<Id> = mobs.mobs.iter().map(|mob| mob.id).collect();
+            let saved = &test.world.site(site, kind).levels[&level];
+            let of = |id: Id| (id, saved.records[&id].gear.clone().unwrap());
+            ids.into_iter().map(of).collect()
+        };
+        let before = belongings(&mut test);
+        let wearers = before
+            .iter()
+            .filter(|(_, carrying)| !carrying.worn.is_empty());
+        assert!(wearers.count() > 0, "someone is dressed: {before:?}");
+        let armed = before.iter().any(|(_, carrying)| {
+            let carried = carrying.pockets.iter().map(|placed| &placed.item);
+            carried
+                .chain(&carrying.worn)
+                .any(|item| item.made_at.is_some())
+        });
+        assert!(armed);
+        let world = test.leave();
+        world.storage.finish_writing();
+        drop(world);
+
+        let mut test = TestClient::of(open());
+        assert_eq!(belongings(&mut test), before);
     }
 
     #[test]

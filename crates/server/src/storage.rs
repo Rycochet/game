@@ -304,8 +304,7 @@ pub struct LevelSave {
     /// The ids of the level's mobs, by which of its spawns they are. A mob keeps its
     /// id while it lives, so what it remembers stays with it.
     pub mobs: BTreeMap<u32, Id>,
-    /// What mobs that have had dealings with anyone remember and were given. They
-    /// keep it while they live.
+    /// What mobs have come to know and own, kept while they live.
     pub records: BTreeMap<Id, MobRecord>,
     /// Mobs that weren't at rest when last saved, by number, to carry on.
     pub unsettled: BTreeMap<u32, SavedMob>,
@@ -316,6 +315,9 @@ pub struct LevelSave {
 pub struct MobRecord {
     pub memory: Memory,
     pub carried: Vec<Item>,
+    /// What it wears and carries: rolled when it is first needed, then its own.
+    #[serde(default)]
+    pub gear: Option<Inventory>,
 }
 
 /// What a mob was doing, for carrying on after the server has been off.

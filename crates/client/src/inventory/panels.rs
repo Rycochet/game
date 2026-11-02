@@ -803,7 +803,7 @@ pub(super) fn show_tooltip(
     };
     let name = shown.and_then(|id| {
         let item = carried.0.find(id)?;
-        let words = format!("{}{}", item.kind.def().name, worn_notes(&carried.0, id));
+        let words = format!("{}{}", item.name(), worn_notes(&carried.0, id));
         Some((words, item.quality))
     });
     let (Some((name, quality)), Some(at)) = (name, pointer.0.or(holding.at)) else {
@@ -814,7 +814,7 @@ pub(super) fn show_tooltip(
     let words = match holding.aim {
         Some(Target::Someone(_)) => format!("Give {name}"),
         Some(Target::Bin) => match carried.0.bin.as_ref() {
-            Some(old) => format!("Throw away {name}, destroying {}", old.kind.def().name),
+            Some(old) => format!("Throw away {name}, destroying {}", old.name()),
             None => format!("Throw away {name}"),
         },
         _ => name,
