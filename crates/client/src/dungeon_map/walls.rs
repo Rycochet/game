@@ -3,11 +3,11 @@
 //!
 //! A wall cell is drawn in four quarters around its centre. Each quarter is
 //! part of the open space round a corner of the cell, and has its own piece of
-//! floor, up to two wall faces and a piece of the wall's top. A quarter is
-//! drawn only if an open cell sharing that corner is seen (or remembered), so
-//! the far side of a wall, and the insides of solid rock, stay dark. The floor
-//! stops at the wall's foot, and beside natural walls the wall's picture fades
-//! out across it.
+//! floor, up to two wall faces and a piece of the wall's top. A remembered
+//! wall draws a quarter if an open cell known to the client shares that corner,
+//! so a wall seen from one side doesn't vanish when the camera is behind it,
+//! and the insides of solid rock stay dark. The floor stops at the wall's foot,
+//! and beside natural walls the wall's picture fades out across it.
 
 use std::collections::BTreeSet;
 
@@ -120,7 +120,6 @@ pub struct Scene<'a> {
     pub level: &'a Level,
     pub views: &'a [View],
     pub sight: &'a Sight,
-    pub remembered: &'a Sight,
     pub light: &'a LightGrid,
     pub camera: Vec3,
     pub shape: Shape,
@@ -357,6 +356,15 @@ impl<'a> Tile<'a> {
         self.around_corner(quarter)
             .iter()
             .any(|&(x, y)| level.is_open(x, y) && sight.is_seen(x, y))
+    }
+
+    /// Whether an open cell the client knows of is around the corner in a
+    /// quarter, seen or not (cells it doesn't know of are wall here).
+    fn quarter_open(&self, quarter: (f32, f32)) -> bool {
+        let level = self.scene.level;
+        self.around_corner(quarter)
+            .iter()
+            .any(|&(x, y)| level.is_open(x, y))
     }
 
     /// The light at a point on this cell, blending between the cell's corners
@@ -609,7 +617,10 @@ impl<'a> Tile<'a> {
     ) {
         let scene = self.scene;
         let in_sight = self.quarter_in(scene.sight, quarter);
-        if !in_sight && !self.quarter_in(scene.remembered, quarter) {
+        // The wall is remembered, so a side not yet seen is drawn as memory
+        // too: otherwise it is a hole whenever the camera is behind the side
+        // that was seen. Quarters with nothing open round them are solid rock.
+        if !in_sight && !self.quarter_open(quarter) {
             return;
         }
         let (east_west, north_south) = Self::quarter_sides(quarter);
