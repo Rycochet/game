@@ -18,7 +18,8 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::dungeon::Cell;
 use shared::id::Id;
-use shared::item::Inventory;
+use shared::item::{Inventory, Item};
+use shared::mob::Memory;
 use shared::poi::{ChunkPos, PoiKind};
 use shared::protocol::CharacterId;
 use shared::sheet::Sheet;
@@ -317,9 +318,22 @@ pub struct LevelSave {
     /// id while it lives, so what it remembers stays with it.
     #[serde(default)]
     pub mobs: BTreeMap<u32, Id>,
+    /// What mobs that have had dealings with anyone remember and were given. They
+    /// keep it while they live.
+    #[serde(default)]
+    pub records: BTreeMap<Id, MobRecord>,
     /// Mobs that weren't at rest when last saved, by number, to carry on.
     #[serde(default)]
     pub unsettled: BTreeMap<u32, SavedMob>,
+}
+
+/// What a mob has come to know and own.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MobRecord {
+    #[serde(default)]
+    pub memory: Memory,
+    #[serde(default)]
+    pub carried: Vec<Item>,
 }
 
 /// What a mob was doing, for carrying on after the server has been off.
@@ -630,6 +644,7 @@ pub(crate) mod tests {
                     last_visit: 99,
                     mobs: BTreeMap::new(),
                     unsettled: BTreeMap::new(),
+                    records: BTreeMap::new(),
                     changes: BTreeMap::from([((1, 2), Cell::Floor)]),
                     buildings: BTreeMap::from([(
                         4,

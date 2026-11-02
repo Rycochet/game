@@ -31,7 +31,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 27;
+pub const PROTOCOL_VERSION: u32 = 28;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -97,6 +97,9 @@ pub enum ClientMessage {
     /// Destroys something the character carries and all that is in it, for good,
     /// answered with `Inventory`.
     DestroyItem { item: Id },
+    /// Gives something carried to a mob near enough and in sight, which remembers it,
+    /// answered with `Inventory`, whether or not it could be done.
+    GiveItem { item: Id, to: Id },
     /// Puts on something the character carries, answered with `Inventory`, whether
     /// or not it could go on. Taking it off is `MoveItem`.
     WearItem { item: Id },
@@ -416,6 +419,10 @@ mod tests {
             },
             ClientMessage::DestroyItem {
                 item: Id(uuid::Uuid::from_u128(7)),
+            },
+            ClientMessage::GiveItem {
+                item: Id(uuid::Uuid::from_u128(7)),
+                to: Id(uuid::Uuid::from_u128(8)),
             },
             ClientMessage::WearItem {
                 item: Id(uuid::Uuid::from_u128(7)),

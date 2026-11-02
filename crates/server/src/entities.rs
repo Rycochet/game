@@ -14,7 +14,7 @@ use shared::dungeon::{Level, line_is_clear};
 use shared::energy::{Energy, SITE_SCALE, site_step_cost};
 use shared::id::Id;
 use shared::item::Inventory;
-use shared::mob::{EntityLook, spawns};
+use shared::mob::{EntityLook, Event, GIVE_REACH, Memory, spawns};
 use shared::movement::{STRAIGHT_COST, Step, step_on_level};
 use shared::pathfinding::DistanceMap;
 use shared::poi::{Poi, PoiKind};
@@ -27,6 +27,7 @@ use crate::ServerWorld;
 use crate::connections::{Client, Phase};
 use crate::ids::new_id;
 use crate::storage::{SavedMob, SiteId};
+use shared::protocol::CharacterId;
 
 /// How long a level nobody is on stays in use.
 const KEPT_FOR: Duration = Duration::from_secs(60);
@@ -89,11 +90,23 @@ pub(crate) struct Mob {
     pub doing: Doing,
     /// Which of its level's mobs it is.
     number: u32,
+    /// What it remembers.
+    memory: Memory,
     /// The level it belongs on, and the stairs back there, last taken last.
     home_level: u32,
     way_back: Vec<Hop>,
     energy: Energy,
     speed: u32,
+}
+
+impl Mob {
+    /// How it feels about a creature of this kind, played by this character, with
+    /// what it remembers of them.
+    fn feeling(&self, kind: CreatureKind, character: Option<&CharacterId>) -> Feeling {
+        let start = self.kind.feeling_about(kind).warmth();
+        let warmed = character.map_or(0, |character| self.memory.warmth_for(character));
+        Feeling::from_warmth(start + warmed)
+    }
 }
 
 /// Stairs a mob has come by: where they are here, and where they lead back to.
@@ -176,6 +189,7 @@ impl ServerWorld {
         let self_tick = self.action_clock.ticks();
         let saved = self.site_mut(id, poi.kind).levels.entry(index).or_default();
         let unsettled = std::mem::take(&mut saved.unsettled);
+        let records = saved.records.clone();
         let mut due = BTreeSet::new();
         let tick = self_tick;
         let mobs = plan
@@ -198,6 +212,9 @@ impl ServerWorld {
                     home: spawn.position,
                     doing: carried_on.map_or(Doing::Idle, |saved| saved.doing),
                     number: spawn.number,
+                    memory: records
+                        .get(&id)
+                        .map_or_else(Memory::default, |r| r.memory.clone()),
                     home_level: index,
                     way_back: Vec::new(),
                     energy: Energy::default(),
@@ -271,9 +288,56 @@ impl ServerWorld {
     }
 }
 
+/// A player gives a carried item to a mob near enough and in sight. It remembers,
+/// and keeps the item.
+pub(crate) fn give(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    item: Id,
+    to: Id,
+) -> Result<(), &'static str> {
+    let character = client.character_id.clone().ok_or("nobody to remember")?;
+    let visit = client.visit.as_mut().ok_or("not in a site")?;
+    let (from, place) = (visit.position(), (visit.id(), visit.index()));
+    let population = world
+        .populations
+        .0
+        .get_mut(&place)
+        .ok_or("nobody on this level")?;
+    let mob = population
+        .mobs
+        .iter_mut()
+        .find(|mob| mob.id == to)
+        .ok_or("no such mob here")?;
+    if cells_apart(from, mob.position) > GIVE_REACH
+        || !line_is_clear(&population.level, from, mob.position)
+    {
+        return Err("too far away");
+    }
+    let item = client
+        .inventory
+        .hand_over(item)
+        .ok_or("can't hand that over")?;
+    let event = Event::Gave(item.kind);
+    mob.memory.remember(character, event);
+    // Saved with the level it belongs on, wherever it has got to.
+    let (kind, home_level) = (population.poi_kind, mob.home_level);
+    let memory = mob.memory.clone();
+    let saved = world
+        .site_mut(place.0, kind)
+        .levels
+        .entry(home_level)
+        .or_default();
+    let record = saved.records.entry(to).or_default();
+    record.memory = memory;
+    record.carried.push(item);
+    Ok(())
+}
+
 /// A player as others see them.
 struct Someone {
     id: Id,
+    character: Option<CharacterId>,
     look: (CreatureKind, Appearance),
     /// The site level they are on, if any.
     level: Option<(SiteId, u32)>,
@@ -291,6 +355,7 @@ fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
             };
             Someone {
                 id: client.entity_id,
+                character: client.character_id.clone(),
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
                 level,
                 position,
@@ -320,6 +385,7 @@ impl Maps {
 /// A player on a level, as far as its mobs go.
 struct Spot {
     id: Id,
+    character: Option<CharacterId>,
     kind: CreatureKind,
     position: (i64, i64),
 }
@@ -344,7 +410,10 @@ fn notice(mob: &Mob, level: &Level, spots: &[Spot]) -> Option<Doing> {
                 last_seen: spot.position,
                 gap,
             };
-            match mob.kind.reaction(mob.kind.feeling_about(spot.kind)) {
+            match mob
+                .kind
+                .reaction(mob.feeling(spot.kind, spot.character.as_ref()))
+            {
                 Reaction::Ignore => None,
                 Reaction::Flee => Some(Doing::Fleeing { from: spot.id }),
                 Reaction::Approach => Some(going(FRIENDLY_GAP)),
@@ -572,6 +641,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             .filter(|someone| someone.level == Some(place))
             .map(|someone| Spot {
                 id: someone.id,
+                character: someone.character.clone(),
                 kind: someone.look.0,
                 position: someone.position,
             })
@@ -691,7 +761,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
                         id: mob.id,
                         kind: mob.kind,
                         appearance: mob.appearance.clone(),
-                        feeling: mob.kind.feeling_about(my_kind),
+                        feeling: mob.feeling(my_kind, client.character_id.as_ref()),
                         x: mob.position.0,
                         y: mob.position.1,
                     });
@@ -706,6 +776,17 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
 /// has gone is noticed when its messages are next read.
 fn tell(client: &mut Client, seen: Vec<EntityLook>) {
     let now_seen: BTreeSet<Id> = seen.iter().map(|look| look.id).collect();
+    let feelings_changed: BTreeSet<Id> = seen
+        .iter()
+        .filter(|look| {
+            client
+                .seen_feelings
+                .get(&look.id)
+                .is_some_and(|known| *known != look.feeling)
+        })
+        .map(|look| look.id)
+        .collect();
+    client.seen_feelings = seen.iter().map(|look| (look.id, look.feeling)).collect();
     client.seen_entities.retain(|id, _| {
         let stays = now_seen.contains(id);
         if !stays {
@@ -715,7 +796,10 @@ fn tell(client: &mut Client, seen: Vec<EntityLook>) {
     });
     for look in seen {
         let at = (look.x, look.y);
-        match client.seen_entities.insert(look.id, at) {
+        let known = client.seen_entities.insert(look.id, at);
+        // Told afresh, the token takes the new colour.
+        let known = known.filter(|_| !feelings_changed.contains(&look.id));
+        match known {
             None => {
                 client.link.send(&ServerMessage::EntitySeen(look));
             }
@@ -1111,5 +1195,107 @@ mod tests {
         assert_eq!(carried_on.doing, settling);
         let population = test.world.populations.0.values().next().unwrap();
         assert!(!population.due.is_empty());
+    }
+
+    /// `beside_a_mob`, with something to give it.
+    fn with_a_gift(kind: CreatureKind) -> (TestClient, Id) {
+        let mut test = beside_a_mob(kind, 2);
+        let answers = test.send(&[ClientMessage::DevGiveItem {
+            kind: shared::item::ItemKind::Coin,
+            size: None,
+            magical: false,
+        }]);
+        let gift = answers.iter().rev().find_map(|answer| match answer {
+            ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),
+            _ => None,
+        });
+        (test, gift.expect("told of it"))
+    }
+
+    #[test]
+    fn a_beggar_given_something_remembers_and_warms_to_the_giver() {
+        let (mut test, coin) = with_a_gift(CreatureKind::Beggar);
+        let beggar = the_mob(&test).id;
+        run(&mut test, 3);
+        // Neutral, and nothing to do about it, to begin with.
+        assert_eq!(the_mob(&test).doing, Doing::Idle);
+
+        let answers = test.send(&[ClientMessage::GiveItem {
+            item: coin,
+            to: beggar,
+        }]);
+        assert!(test.client.inventory.find(coin).is_none());
+        // The token changes colour.
+        let told = answers.iter().find_map(|answer| match answer {
+            ServerMessage::EntitySeen(look) if look.id == beggar => Some(look.feeling),
+            _ => None,
+        });
+        assert_eq!(told, Some(Feeling::Friendly));
+        // And it comes along.
+        run(&mut test, 3);
+        assert!(matches!(the_mob(&test).doing, Doing::Going { .. }));
+    }
+
+    #[test]
+    fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
+        let folder = TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
+        let mut test = TestClient::of(open());
+        test.send(&[CASTLE]);
+        let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(3);
+        test.send(&[ClientMessage::DevTeleport { x, y }]);
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        population.mobs[0].position = (x + 1, y);
+        let mob = population.mobs[0].id;
+        let answers = test.send(&[ClientMessage::DevGiveItem {
+            kind: shared::item::ItemKind::Coin,
+            size: None,
+            magical: false,
+        }]);
+        let coin = answers.iter().rev().find_map(|answer| match answer {
+            ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),
+            _ => None,
+        });
+        test.send(&[ClientMessage::GiveItem {
+            item: coin.unwrap(),
+            to: mob,
+        }]);
+        let world = test.leave();
+        world.storage.finish_writing();
+        drop(world);
+
+        let mut test = TestClient::of(open());
+        let tester = test.client.character_id.clone().unwrap();
+        assert_eq!(the_mob(&test).id, mob);
+        assert_eq!(the_mob(&test).memory.warmth_for(&tester), 30);
+        let id = SiteId::Dev {
+            kind: PoiKind::Castle,
+            seed: 7,
+            ruin: 0,
+        };
+        let record = &test.world.site(id, PoiKind::Castle).levels[&0].records[&mob];
+        assert_eq!(record.carried.len(), 1);
+    }
+
+    #[test]
+    fn nothing_can_be_given_from_too_far_or_that_isnt_carried() {
+        let (mut test, coin) = with_a_gift(CreatureKind::Beggar);
+        let beggar = the_mob(&test).id;
+        // Not carried.
+        test.send(&[ClientMessage::GiveItem {
+            item: beggar,
+            to: beggar,
+        }]);
+        assert_eq!(the_mob(&test).memory, Memory::default());
+        // Too far.
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        population.mobs[0].position.0 += GIVE_REACH + 1;
+        test.send(&[ClientMessage::GiveItem {
+            item: coin,
+            to: beggar,
+        }]);
+        assert!(test.client.inventory.find(coin).is_some());
+        assert_eq!(the_mob(&test).memory, Memory::default());
     }
 }

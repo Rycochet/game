@@ -182,6 +182,15 @@ impl Inventory {
         Ok(fit)
     }
 
+    /// Takes out something to hand over, with all in it, unless it isn't carried or
+    /// is worn under something.
+    pub fn hand_over(&mut self, id: Id) -> Option<Item> {
+        if self.covered_by(id).is_some() {
+            return None;
+        }
+        self.take(id)
+    }
+
     /// How a worn item fits its wearer.
     pub fn worn_fit(&self, id: Id) -> Option<Fit> {
         let item = self.worn.iter().find(|item| item.id == id)?;

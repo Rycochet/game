@@ -39,6 +39,7 @@ How fast you go depends on your kind of creature, what you carry, and the ground
 | Turn an item you are holding | Right-click | Tap with a second finger |
 | Open a bag | Double-click it | Double-tap it |
 | Put on or take off clothes | Drag them onto the clothes panel, or off it into a grid | The same |
+| Give something to someone near | Drag it onto their name in the Nearby panel | The same |
 | Destroy an item, and all that is in it | Drop it on the bin in your pockets | The same |
 | Open the [debug menu](debug-menu) | Backtick (`` ` ``), or click the warning button at the top left | Tap the warning button |
 

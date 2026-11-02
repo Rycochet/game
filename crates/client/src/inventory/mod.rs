@@ -2,6 +2,7 @@
 //! holding them and putting them down. See `docs/context/client/inventory.md`.
 
 mod body;
+mod give;
 mod hold;
 mod panels;
 
@@ -16,6 +17,7 @@ use crate::common::{PointerPosition, PointerSystems, TouchGesture};
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{ButtonPressed, RaisePanel, WidgetSystems};
 use body::{BodyNode, ClothesPanel};
+use give::{GiveRow, NearbyPanel};
 use hold::{Held, Target};
 use panels::{BinNode, Floating, ItemCell, OpenGrids};
 
@@ -30,6 +32,7 @@ impl Plugin for InventoryPlugin {
             .init_resource::<Holding>()
             .init_resource::<OpenGrids>()
             .init_resource::<ClothesPanel>()
+            .init_resource::<NearbyPanel>()
             .add_systems(Startup, panels::spawn_fixed_parts)
             .add_systems(
                 PreUpdate,
@@ -48,10 +51,13 @@ impl Plugin for InventoryPlugin {
                     panels::toggle_pockets,
                     panels::forget_closed,
                     body::forget_closed,
+                    give::forget_closed,
                     panels::show_bins,
                     panels::show_grids,
                     body::show_clothes,
                     body::show_body_aim,
+                    give::show_nearby,
+                    give::show_give_aim,
                     panels::show_aim,
                     panels::show_held,
                     panels::show_tooltip,
@@ -218,6 +224,7 @@ fn hold_items(
             &InheritedVisibility,
             Has<BinNode>,
             Has<BodyNode>,
+            Option<&GiveRow>,
         ),
         Without<Floating>,
     >,
@@ -296,7 +303,7 @@ fn hold_items(
             })
     });
     // Only what is in front counts: the bin destroys things.
-    let (on_bin, on_body) = at
+    let (on_bin, on_body, on_row) = at
         .and_then(|at| {
             nodes
                 .iter()
@@ -305,11 +312,13 @@ fn hold_items(
                         && node.contains_point(**transform, at / node.inverse_scale_factor)
                 })
                 .max_by_key(|(stack, ..)| stack.0)
-                .map(|(.., is_bin, is_body)| (is_bin, is_body))
+                .map(|(.., is_bin, is_body, row)| (is_bin, is_body, row.map(|row| row.0)))
         })
         .unwrap_or_default();
     let aim = if on_bin {
         Target::Bin
+    } else if let Some(someone) = on_row {
+        Target::Someone(someone)
     } else if on_body {
         // On it already: nothing happens, whatever it is over.
         if carried.0.is_worn(held.item.id) {
@@ -342,6 +351,13 @@ fn hold_items(
         }
         return;
     }
+    if let Target::Someone(to) = aim {
+        let item = held.item.id;
+        if carried.0.hand_over(item).is_some() {
+            to_server.write(ToServer(ClientMessage::GiveItem { item, to }));
+        }
+        return;
+    }
     if aim == Target::Bin {
         let item = held.item.id;
         carried.0.destroy(item);
@@ -371,6 +387,7 @@ fn run_debug(
     mut holding: ResMut<Holding>,
     mut open: ResMut<OpenGrids>,
     mut clothes: ResMut<ClothesPanel>,
+    mut nearby: ResMut<NearbyPanel>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
@@ -384,6 +401,7 @@ fn run_debug(
             InventoryDebug::OpenPockets => {
                 open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
                 clothes.open(&mut commands, &mut raise, &nodes);
+                nearby.open(&mut commands, &mut raise, &nodes);
             }
             InventoryDebug::OpenBags => {
                 for placed in &carried.0.pockets {
