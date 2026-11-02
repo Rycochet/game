@@ -115,6 +115,9 @@ pub enum ClientMessage {
     },
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),
+    /// Developer tools: god mode on or off. Mobs take no notice of the character,
+    /// and it can walk through them.
+    DevGodMode(bool),
     /// Developer tools: the character becomes this kind of creature. Everything
     /// comes off into the new pockets, and what doesn't fit is lost. Answered with
     /// `Inventory`.
@@ -191,6 +194,7 @@ impl ClientMessage {
                 | Self::DevGiveItem { .. }
                 | Self::DevSetCreature(_)
                 | Self::DevDetectMonsters(_)
+                | Self::DevGodMode(_)
         )
     }
 
@@ -440,6 +444,7 @@ mod tests {
             },
             ClientMessage::DevSetCreature(CreatureKind::Chicken),
             ClientMessage::DevDetectMonsters(true),
+            ClientMessage::DevGodMode(true),
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevSetTime { minutes: 90.5 },

@@ -387,7 +387,9 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
                     to_level: index,
                     arrives: there,
                 };
-                world.saw_stairs_taken(taken);
+                if !client.god_mode {
+                    world.saw_stairs_taken(taken);
+                }
             }
             arrived
         }

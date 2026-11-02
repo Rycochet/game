@@ -10,13 +10,13 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::movement::Step;
-use shared::protocol::ClientMessage;
+use shared::protocol::{ClientMessage, ServerMessage};
 
 use crate::common::{
-    ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, GameView, NORMAL_SNOW_LINE,
+    ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, GameView, GodMode, NORMAL_SNOW_LINE,
     ServerDevTools, Weather,
 };
-use crate::connection::ToServer;
+use crate::connection::{FromServer, ToServer};
 use crate::player::{PlayerSystems, TakeStep};
 use crate::view3d::OrbitCamera;
 use crate::widgets::WidgetSystems;
@@ -52,6 +52,7 @@ impl Plugin for DebugMenuPlugin {
                 Update,
                 (
                     panels::forget_closed,
+                    remind_of_god_mode,
                     run_actions,
                     bodies::fill_panels,
                     bodies::apply_sliders,
@@ -99,6 +100,7 @@ struct FactSources<'w> {
     walk: Res<'w, AutoWalk>,
     cycle: Res<'w, TemperatureCycle>,
     detect: Res<'w, DetectMonsters>,
+    god: Res<'w, GodMode>,
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
     server_dev_tools: Res<'w, ServerDevTools>,
@@ -115,6 +117,7 @@ impl FactSources<'_> {
             walking: self.walk.0,
             cycling: *self.cycle != TemperatureCycle::Off,
             detecting: self.detect.0,
+            god_mode: self.god.0,
             teleporting: *self.mode == ClickMode::Teleport,
             changing_cells: *self.mode == ClickMode::ChangeCell,
             showing_info: self.info.0,
@@ -136,6 +139,19 @@ fn auto_walk(
     }
 }
 
+/// A new connection knows nothing of god mode.
+fn remind_of_god_mode(
+    mut from_server: MessageReader<FromServer>,
+    god: Res<GodMode>,
+    mut to_server: MessageWriter<ToServer>,
+) {
+    for FromServer(message) in from_server.read() {
+        if god.0 && matches!(message, ServerMessage::Welcome { .. }) {
+            to_server.write(ToServer(ClientMessage::DevGodMode(true)));
+        }
+    }
+}
+
 /// Turns one mode of clicking on or off; only one can be on.
 fn toggled(mode: ClickMode, this: ClickMode) -> ClickMode {
     if mode == this {
@@ -153,6 +169,7 @@ fn run_actions(
     mut walk: ResMut<AutoWalk>,
     mut cycle: ResMut<TemperatureCycle>,
     mut detect: ResMut<DetectMonsters>,
+    mut god: ResMut<GodMode>,
     mut mode: ResMut<ClickMode>,
     mut info: ResMut<DebugInfo>,
     mut open: ResMut<OpenPanels>,
@@ -181,6 +198,10 @@ fn run_actions(
             DebugAction::DetectMonsters => {
                 detect.0 = !detect.0;
                 to_server.write(ToServer(ClientMessage::DevDetectMonsters(detect.0)));
+            }
+            DebugAction::GodMode => {
+                god.0 = !god.0;
+                to_server.write(ToServer(ClientMessage::DevGodMode(god.0)));
             }
             DebugAction::ForgetMap => {
                 to_server.write(ToServer(ClientMessage::DevForgetMap));

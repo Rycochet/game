@@ -51,6 +51,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ClickMode>()
             .init_resource::<PlayerSpeed>()
             .init_resource::<DetectMonsters>()
+            .init_resource::<GodMode>()
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
@@ -127,6 +128,11 @@ pub struct Other {
 /// Debug: every mob on the level is shown, seen or not.
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DetectMonsters(pub bool);
+
+/// Debug: mobs take no notice of the player, who can walk through them. As the
+/// server is told; anything else god mode comes to do should go by this too.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GodMode(pub bool);
 
 /// The words on the Character panel saying what the character is like, which
 /// `character` fills in.

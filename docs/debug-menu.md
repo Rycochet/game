@@ -21,6 +21,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Forget Map (Server) | Yes | As Forget Map, and the server also forgets this site, or on the world map every site, so they are made again with the current generators. Works in towns. |
 | Generate POI | Yes | Lists every kind of place. Choosing one opens a panel to pick its ruin and seed, then Generate takes you into it. |
 | Give Item | Yes | Opens a panel with a button for each kind of item, and choices of the size it is made for, whether it is magical and its quality. Each press puts a new one in your pockets, if there is room. |
+| God Mode | Yes | Toggles mobs taking no notice of you and letting you walk through them, so they don't block your way. A ghost shows at the top left while it is on. |
 | Herbs State | | Opens a panel stepping through how grown the herbs are, on a level with herbs. Changes only what is drawn. |
 | Reset View | | Puts the camera back to its starting view, as Home does. |
 | Reveal Map | Yes | Shows you the whole of this level. Not in towns. |

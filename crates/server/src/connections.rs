@@ -126,6 +126,8 @@ pub struct Client {
     pub(crate) inventory: Inventory,
     /// Dev tools: it is told of every mob on its level, seen or not.
     pub(crate) detect_monsters: bool,
+    /// Dev tools: mobs take no notice of it, and it can walk through them.
+    pub(crate) god_mode: bool,
     /// Who the client has been told is in sight, and where.
     pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
     /// How the client has been told they feel.
@@ -167,6 +169,7 @@ impl Client {
             other_worlds: BTreeMap::new(),
             inventory: Inventory::default(),
             detect_monsters: false,
+            god_mode: false,
             seen_entities: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
             sheet: Sheet::default(),
@@ -360,7 +363,7 @@ fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Step) -> (bool
             if let Some(to) = visit.landing(step) {
                 let kind = client.inventory.creature;
                 let character = client.character_id.as_ref();
-                if world.enemy_at(place, to, kind, character) {
+                if !client.god_mode && world.enemy_at(place, to, kind, character) {
                     info!("Refused a step onto an enemy, at {to:?}");
                     return (true, 0);
                 }
@@ -758,6 +761,10 @@ pub(crate) fn answer(
         }
         ClientMessage::DevDetectMonsters(on) => {
             client.detect_monsters = on;
+            true
+        }
+        ClientMessage::DevGodMode(on) => {
+            client.god_mode = on;
             true
         }
         ClientMessage::DevSetCreature(kind) => {

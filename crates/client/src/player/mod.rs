@@ -15,8 +15,8 @@ use shared::pathfinding::{Path, find_path, find_world_path, straighten};
 use shared::sheet::Feeling;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, Icon, LightSource, MapPosition, Other,
-    PlayerSpeed, ServerStatus, SmoothPosition, Token, ViewFacing, Weather,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, Icon, LightSource, MapPosition,
+    Other, PlayerSpeed, ServerStatus, SmoothPosition, Token, ViewFacing, Weather,
 };
 
 /// How far the player's light reaches in dungeons, in cells.
@@ -217,6 +217,7 @@ fn take_steps(
     speed: Res<PlayerSpeed>,
     mut energy: ResMut<PlayerEnergy>,
     mut stepped: MessageWriter<Stepped>,
+    god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
     player: Single<(&mut MapPosition, &mut Travel), With<Player>>,
 ) {
@@ -256,7 +257,7 @@ fn take_steps(
             continue;
         };
         // An enemy won't move aside; anyone else swaps places, as the server says.
-        if enemy_cells(&others).contains(&(x, y)) {
+        if enemy_cells(&others, *god).contains(&(x, y)) {
             continue;
         }
         let cost = match view.get() {
@@ -303,11 +304,12 @@ fn travel(
     mut stepped: MessageWriter<Stepped>,
     speed_now: Res<PlayerSpeed>,
     mut energy: ResMut<PlayerEnergy>,
+    god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
-    let enemies = enemy_cells(&others);
+    let enemies = enemy_cells(&others, *god);
     // Only through cells the player has seen, so that a route gives nothing away
     // (and memory may be out of date: the server checks), and round enemies.
     let known = |x, y| dungeon.remembered.is_seen(x, y) && !enemies.contains(&(x, y));
@@ -477,11 +479,14 @@ fn towards(from: DVec2, to: DVec2, distance: f64) -> DVec2 {
     }
 }
 
-/// The cells of mobs that won't move aside for the player.
-fn enemy_cells(others: &Query<(&Other, &MapPosition), Without<Player>>) -> Vec<(i64, i64)> {
+/// The cells of mobs that won't move aside for the player: none in god mode.
+fn enemy_cells(
+    others: &Query<(&Other, &MapPosition), Without<Player>>,
+    god: GodMode,
+) -> Vec<(i64, i64)> {
     others
         .iter()
-        .filter(|(other, _)| other.feeling == Feeling::Unfriendly)
+        .filter(|(other, _)| !god.0 && other.feeling == Feeling::Unfriendly)
         .map(|(_, at)| (at.x, at.y))
         .collect()
 }
