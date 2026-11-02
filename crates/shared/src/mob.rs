@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::creature::CreatureKind;
 use crate::dungeon::{Cell, Level};
 use crate::id::Id;
-use crate::item::ItemKind;
+use crate::item::{Drop, ItemKind, Quality, roll_drop};
 use crate::poi::PoiKind;
 use crate::protocol::CharacterId;
 use crate::rng::Seed;
@@ -33,6 +33,8 @@ pub struct Spawn {
     pub kind: CreatureKind,
     pub position: (i64, i64),
     pub appearance: Appearance,
+    /// What it starts with, innermost clothes first: it wears what it can.
+    pub gear: Vec<(ItemKind, Option<Quality>)>,
 }
 
 /// How near someone must be to give something, in cells.
@@ -87,6 +89,64 @@ fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
             (CreatureKind::Giant, 10),
         ],
     }
+}
+
+/// Where the rolls for a mob's gear start, clear of those for its place and looks.
+const GEAR_ROLLS: i64 = 1000;
+
+/// What a kind of creature may start with: for each chance, in 100, of having
+/// something there, the kinds it could be and how much each weighs. First guesses.
+fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
+    use ItemKind::{
+        Apple, Belt, Boomerang, Boots, Cloak, Coin, FullArmour, Gloves, Hat, Pouch, Shoes, Socks,
+        Stone, Sword, TShirt, Trousers,
+    };
+    match kind {
+        CreatureKind::Beggar => &[
+            (100, &[(TShirt, 1)]),
+            (100, &[(Trousers, 1)]),
+            (50, &[(Shoes, 2), (Socks, 1), (Hat, 1)]),
+            (40, &[(Apple, 1), (Coin, 2), (Stone, 1)]),
+        ],
+        CreatureKind::Giant => &[
+            (100, &[(Trousers, 1)]),
+            (60, &[(Belt, 1), (Boots, 2), (Cloak, 1)]),
+            (20, &[(FullArmour, 1)]),
+            (40, &[(Sword, 1)]),
+            (30, &[(Coin, 2), (Stone, 2), (Pouch, 1)]),
+        ],
+        CreatureKind::Kobold => &[
+            (50, &[(TShirt, 1), (Trousers, 1)]),
+            (30, &[(Gloves, 1), (Boots, 1), (Hat, 1)]),
+            (70, &[(Sword, 1), (Boomerang, 2)]),
+            (30, &[(Coin, 2), (Stone, 2), (Apple, 1), (Pouch, 1)]),
+        ],
+        _ => &[],
+    }
+}
+
+/// Rolls a mob's gear, each place on its own so changing one moves no others.
+fn roll_gear(roll: &impl Fn(i64) -> u64, kind: CreatureKind) -> Vec<(ItemKind, Option<Quality>)> {
+    let places = gear_of(kind).iter().zip(GEAR_ROLLS..);
+    places
+        .filter_map(|(&(chance, kinds), place)| {
+            let mut rng = Seed::new(roll(place)).rng();
+            if rng.range_u64(0, 100) >= chance {
+                return None;
+            }
+            let table: Vec<Drop> = Quality::ALL
+                .iter()
+                .flat_map(|&quality| {
+                    kinds.iter().map(move |&(kind, weight)| Drop {
+                        quality,
+                        kind,
+                        weight,
+                    })
+                })
+                .collect();
+            roll_drop(&mut rng, &table)
+        })
+        .collect()
 }
 
 /// The mobs of level `index` of a site. The same every time for the same seed.
@@ -144,6 +204,7 @@ pub fn spawns(
             kind,
             position,
             appearance: looks(&roll, kind),
+            gear: roll_gear(&roll, kind),
         });
     }
     mobs
@@ -222,6 +283,29 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn mobs_start_with_what_their_kind_can_have_and_animals_with_nothing() {
+        let (mut kobolds_armed, mut qualities) = (0, std::collections::BTreeSet::new());
+        for seed in 0..300 {
+            let roll = |what: i64| Seed::new(seed).at(&[PURPOSE, what]);
+            let gear = roll_gear(&roll, CreatureKind::Kobold);
+            kobolds_armed += gear
+                .iter()
+                .any(|&(kind, _)| matches!(kind, ItemKind::Sword | ItemKind::Boomerang))
+                as u32;
+            for (kind, quality) in gear {
+                assert_eq!(quality.is_some(), kind.def().has_quality, "{kind:?}");
+                qualities.extend(quality);
+            }
+            assert!(roll_gear(&roll, CreatureKind::Chicken).is_empty());
+            assert!(roll_gear(&roll, CreatureKind::Horse).is_empty());
+            let beggar = roll_gear(&roll, CreatureKind::Beggar);
+            assert_eq!(beggar[0].0, ItemKind::TShirt);
+        }
+        assert!((150..270).contains(&kobolds_armed), "{kobolds_armed}");
+        assert!(qualities.contains(&Quality::Poor) && qualities.contains(&Quality::Rare));
     }
 
     #[test]

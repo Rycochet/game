@@ -34,7 +34,8 @@ pub(crate) enum SaveKey {
     Login(String),
 }
 
-/// A whole save.
+/// A whole save. Only passed along to be written, so its size doesn't matter.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Save {
     World(WorldSave),

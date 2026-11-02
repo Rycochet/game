@@ -5,7 +5,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 ## Files
 
 - `crates/shared/src/id.rs`: `Id`, a version 6 UUID (text in saves, 16 bytes in messages). Nothing here makes one: `server::ids::new_id` does.
-- `crates/shared/src/item.rs`: `Shape`, `Rotation`, `ItemKind` (the table: `def()`), `ItemDef`, `ContainerDef`, `Quality`, `Drop`, `roll_drop`, `MadeAt`, `Item`, `Placed`, `Holder`, `Inventory`, `MoveRefused`. Tests for every rule below.
+- `crates/shared/src/item.rs`: `Shape`, `Rotation`, `ItemKind` (the table: `def()`), `ItemDef`, `ContainerDef`, `Quality`, `Drop`, `roll_drop`, `artifact_name`, `MadeAt`, `Item`, `Placed`, `Holder`, `Inventory`, `MoveRefused`. Tests for every rule below.
 
 ## Public API
 
@@ -14,7 +14,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 - `Shape`: up to `MAX_SHAPE_SIDE` (8) a side, as bits of a `u64`, gaps allowed. `rectangle`, `has`, `cells`, `size`, `turned`, `smaller_than`.
 - `Rotation::{None, Quarter, Half, ThreeQuarters}`: clockwise; `next`, `turn_cell`.
 - `Quality::{ALL, odds, roll}` (Poor to Artifact, odds out of `ODDS_OUT_OF`), `Drop { quality, kind, weight }`, `roll_drop` (both rolls: quality, then the item at it; a table without that quality takes the nearest below, or else above).
-- `Item { id, kind, contents, made, quality, made_at }`, `MadeAt { world, minute }` (each world has its own clock), `Made` (who it was made for: `for_body`), `Placed { item, x, y, rotation }` (`shape`, `cells`), `Holder::{Pockets, Inside(id)}`.
+- `Item { id, kind, contents, made, quality, made_at, name }` (`name()` is its own name or its kind's; every artifact has one, from `artifact_name`, placeholders so far), `MadeAt { world, minute }` (each world has its own clock), `Made` (who it was made for: `for_body`), `Placed { item, x, y, rotation }` (`shape`, `cells`), `Holder::{Pockets, Inside(id)}`.
 - `Inventory { creature, outfitted, pockets, pockets_size, worn, bin }`: `find`, `placed`, `grid`, `grid_size`, `total_weight`, `weight_with_creature`, `check_move`, `move_item`, `first_place_for` (a closed bag: the first place, turning if it must), `give` (a new item, first place in the pockets), `to_bin`, `in_bin` (`bin` keeps what was last thrown away, and the next destroys it).
 - `POCKETS` (6 × 4, for saves from before creature kinds and new inventories), `MAX_DEPTH` (3).
 

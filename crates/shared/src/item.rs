@@ -539,6 +539,26 @@ pub fn roll_drop(rng: &mut Rng, table: &[Drop]) -> Option<(ItemKind, Option<Qual
     Some((kind, kind.def().has_quality.then_some(at)))
 }
 
+/// A placeholder name for an artifact of this kind: artifacts are always named.
+pub fn artifact_name(rng: &mut Rng, kind: ItemKind) -> String {
+    const WORDS: [&str; 12] = [
+        "Ashen",
+        "Dawning",
+        "Endless",
+        "Forgotten",
+        "Gilded",
+        "Hollow",
+        "Last",
+        "Quiet",
+        "Sunken",
+        "Thousandth",
+        "Wandering",
+        "Whispering",
+    ];
+    let word = WORDS[rng.range_u64(0, WORDS.len() as u64) as usize];
+    format!("The {word} {}", kind.def().name)
+}
+
 /// When and where an item was made. Each world has its own clock, so a minute
 /// means nothing without its world.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -563,6 +583,9 @@ pub struct Item {
     /// `None` for things saved before this was kept.
     #[serde(default)]
     pub made_at: Option<MadeAt>,
+    /// Its own name, if it has one: every artifact does.
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 impl Item {
@@ -574,7 +597,13 @@ impl Item {
             made: Made::for_body(kind, Size::Medium, Some(10), false),
             quality: None,
             made_at: None,
+            name: None,
         }
+    }
+
+    /// What it is called: its own name, or its kind's.
+    pub fn name(&self) -> &str {
+        self.name.as_deref().unwrap_or(self.kind.def().name)
     }
 
     /// What it weighs with everything in it, in grams.
@@ -1103,6 +1132,15 @@ mod tests {
             }
         }
         assert!((1..100).contains(&swords), "{swords}");
+    }
+
+    #[test]
+    fn an_item_goes_by_its_own_name_if_it_has_one() {
+        let mut sword = Item::new(id(1), ItemKind::Sword);
+        assert_eq!(sword.name(), "Sword");
+        sword.name = Some(artifact_name(&mut Seed::new(1).rng(), ItemKind::Sword));
+        assert!(sword.name().starts_with("The "), "{}", sword.name());
+        assert!(sword.name().ends_with(" Sword"), "{}", sword.name());
     }
 
     #[test]
