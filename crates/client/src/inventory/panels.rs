@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 use shared::id::Id;
-use shared::item::{Holder, Inventory, ItemKind, Placed, Rotation, Shape};
+use shared::item::{Holder, Inventory, ItemKind, Placed, Quality, Rotation, Shape};
 
 use super::body::{spawn_rows, worn_notes};
 use super::give::NearbyPanel;
@@ -41,6 +41,12 @@ const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
 pub(super) const GRID_COLOUR: Color = Color::srgb(0.55, 0.46, 0.33);
 pub(super) const GRID_LINE: Color = Color::srgb(0.42, 0.34, 0.24);
 pub(super) const ITEM_EDGE: Color = Color::srgb(0.15, 0.1, 0.05);
+/// What an item's name is written in when it has no quality.
+const NO_QUALITY_NAME: Color = Color::srgb(0.9, 0.85, 0.75);
+/// Behind an item's name, dark so that every quality's colour can be read.
+const NAME_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);
+/// How thick an edge showing quality is, to be seen beside the kind's colour.
+const QUALITY_BORDER: f32 = 2.0;
 pub(super) const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
 pub(super) const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
 
@@ -115,6 +121,32 @@ pub(super) struct BinSlot;
 pub(super) struct BinIcon(Handle<Image>);
 
 /// What a kind of item looks like until it has a picture: its colour.
+pub(super) fn quality_colour(quality: Quality) -> Color {
+    match quality {
+        Quality::Poor => Color::srgb(0.62, 0.62, 0.62),
+        Quality::Common => Color::srgb(1.0, 1.0, 1.0),
+        Quality::Uncommon => Color::srgb(0.12, 0.85, 0.2),
+        Quality::Rare => Color::srgb(0.2, 0.5, 1.0),
+        Quality::Epic => Color::srgb(0.7, 0.3, 0.95),
+        Quality::Legendary => Color::srgb(1.0, 0.55, 0.05),
+        Quality::Artifact => Color::srgb(1.0, 0.84, 0.25),
+    }
+}
+
+/// The colour of the edge of an item of this quality.
+pub(super) fn edge(quality: Option<Quality>) -> Color {
+    quality.map_or(ITEM_EDGE, quality_colour)
+}
+
+/// How thick the edge of an item of this quality is.
+pub(super) fn edge_width(quality: Option<Quality>) -> f32 {
+    if quality.is_some() {
+        QUALITY_BORDER
+    } else {
+        CELL_BORDER
+    }
+}
+
 pub(super) fn colour(kind: ItemKind) -> Color {
     let index = ItemKind::ALL
         .iter()
@@ -520,6 +552,7 @@ pub(super) fn forget_closed(
 fn spawn_cells(
     parent: &mut ChildSpawnerCommands,
     kind: ItemKind,
+    quality: Option<Quality>,
     shape: Shape,
     corner: (f32, f32),
     cell_extra: impl Fn(u8, u8) -> Option<ItemCell>,
@@ -527,9 +560,12 @@ fn spawn_cells(
     let mut first = true;
     for (x, y) in shape.cells() {
         let mut node = parent.spawn((
-            at_cell(corner.0 + x as f32, corner.1 + y as f32),
+            Node {
+                border: UiRect::all(px(edge_width(quality))),
+                ..at_cell(corner.0 + x as f32, corner.1 + y as f32)
+            },
             BackgroundColor(colour(kind)),
-            BorderColor::from(ITEM_EDGE),
+            BorderColor::from(edge(quality)),
         ));
         let cell = cell_extra(x, y);
         match cell {
@@ -593,6 +629,7 @@ fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed) {
     spawn_cells(
         layer,
         placed.item.kind,
+        placed.item.quality,
         placed.shape(),
         (placed.x as f32, placed.y as f32),
         |x, y| {
@@ -717,9 +754,10 @@ pub(super) fn show_held(
     if *drawn != now {
         *drawn = now;
         commands.entity(entity).despawn_related::<Children>();
-        let (kind, shape) = (item.kind, item.kind.def().shape.turned(held.rotation));
+        let (kind, quality) = (item.kind, item.quality);
+        let shape = item.kind.def().shape.turned(held.rotation);
         commands.entity(entity).with_children(|parent| {
-            spawn_cells(parent, kind, shape, (0.0, 0.0), |_, _| None);
+            spawn_cells(parent, kind, quality, shape, (0.0, 0.0), |_, _| None);
         });
     }
     let grip = Vec2::new(held.grip.0 as f32 + 0.5, held.grip.1 as f32 + 0.5) * CELL;
@@ -748,8 +786,10 @@ pub(super) fn show_tooltip(
         (With<Node>, Without<NameBox>),
     >,
     name_box: Single<(&mut Node, &mut Visibility), With<NameBox>>,
-    mut text: Single<&mut Text, With<NameText>>,
+    text: Single<(&mut Text, &mut TextColor, &ChildOf), With<NameText>>,
+    mut backgrounds: Query<&mut BackgroundColor>,
 ) {
+    let (mut text, mut text_colour, parent) = text.into_inner();
     let (mut node, mut visibility) = name_box.into_inner();
     let shown = if let Some(held) = holding.held {
         Some(held.item.id)
@@ -763,13 +803,10 @@ pub(super) fn show_tooltip(
     };
     let name = shown.and_then(|id| {
         let item = carried.0.find(id)?;
-        Some(format!(
-            "{}{}",
-            item.kind.def().name,
-            worn_notes(&carried.0, id)
-        ))
+        let words = format!("{}{}", item.kind.def().name, worn_notes(&carried.0, id));
+        Some((words, item.quality))
     });
-    let (Some(name), Some(at)) = (name, pointer.0.or(holding.at)) else {
+    let (Some((name, quality)), Some(at)) = (name, pointer.0.or(holding.at)) else {
         visibility.set_if_neq(Visibility::Hidden);
         return;
     };
@@ -784,6 +821,10 @@ pub(super) fn show_tooltip(
     };
     if text.0 != words {
         text.0 = words;
+    }
+    text_colour.set_if_neq(TextColor(quality.map_or(NO_QUALITY_NAME, quality_colour)));
+    if let Ok(mut background) = backgrounds.get_mut(parent.parent()) {
+        background.set_if_neq(BackgroundColor(NAME_BACKGROUND));
     }
     node.left = px(at.x + TOOLTIP_OFFSET.x);
     node.top = match holding.held {

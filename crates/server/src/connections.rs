@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::energy::{CHANGE_MAP_COST, Energy, NORMAL_SPEED, dressing_cost, site_step_cost};
 use shared::id::Id;
-use shared::item::{Inventory, Item, ItemKind, Made};
+use shared::item::{Inventory, Item, ItemKind, Made, MadeAt, Quality};
 use shared::movement::{Step, world_step_cost};
 use shared::poi::ChunkPos;
 use shared::protocol::{
@@ -737,8 +737,16 @@ pub(crate) fn answer(
             kind,
             size,
             magical,
+            quality,
         } => {
-            let new = made_for(&client.inventory, kind, size, magical);
+            let new = made_for(
+                &client.inventory,
+                kind,
+                size,
+                magical,
+                quality,
+                world.made_now(),
+            );
             match client.inventory.give(new) {
                 Ok(()) => client.unsaved = true,
                 Err(item) => info!("No room for a new {:?}", item.kind),
@@ -786,10 +794,14 @@ fn made_for(
     kind: ItemKind,
     size: Option<shared::creature::Size>,
     magical: bool,
+    quality: Quality,
+    made_at: MadeAt,
 ) -> Item {
     let body = inventory.creature.def();
     Item {
         made: Made::for_body(kind, size.unwrap_or(body.size), body.fingers(), magical),
+        quality: kind.def().has_quality.then_some(quality),
+        made_at: Some(made_at),
         ..Item::new(crate::ids::new_id(), kind)
     }
 }
@@ -817,7 +829,7 @@ fn start_sheet(
 }
 
 /// A new character's clothes.
-fn give_first_clothes(inventory: &mut Inventory) {
+fn give_first_clothes(inventory: &mut Inventory, made_at: MadeAt) {
     if std::mem::replace(&mut inventory.outfitted, true) {
         return;
     }
@@ -825,7 +837,7 @@ fn give_first_clothes(inventory: &mut Inventory) {
         // Straight on, as the pockets may be full. Only for bodies they fit: other
         // kinds of creature start with none.
         if inventory.creature == shared::creature::CreatureKind::Human {
-            let item = made_for(inventory, kind, None, false);
+            let item = made_for(inventory, kind, None, false, Quality::Common, made_at);
             inventory.worn.push(item);
         }
     }
@@ -851,7 +863,7 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
             (client.character, client.other_worlds) = character;
             client.inventory = inventory;
             client.sheet = start_sheet(sheet, client.starting_as.take(), &mut client.inventory);
-            give_first_clothes(&mut client.inventory);
+            give_first_clothes(&mut client.inventory, world.made_now());
             client.speed = client.sheet.speed(&client.inventory);
             client.unsaved = true;
         }
@@ -1041,6 +1053,7 @@ pub(crate) mod tests {
             kind,
             size: None,
             magical: false,
+            quality: Quality::Rare,
         }
     }
 
@@ -1163,6 +1176,28 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn new_items_have_the_quality_asked_for_and_the_time_they_were_made() {
+        let mut test = TestClient::new();
+        let answers = test.send(&[give(ItemKind::Sword), give(ItemKind::Coin)]);
+        let carried = inventory(&answers);
+        let (sword, coin) = (&carried.pockets[0].item, &carried.pockets[1].item);
+        assert_eq!(sword.quality, Some(Quality::Rare));
+        assert_eq!(coin.quality, None, "a coin has no quality");
+        let made = sword.made_at.expect("new things know when they were made");
+        assert_eq!(made.world, test.world.seed.id());
+    }
+
+    #[test]
+    fn items_saved_before_quality_still_load() {
+        let saved =
+            ron::to_string(&Item::new(shared::id::Id::for_test(1), ItemKind::Sword)).unwrap();
+        let old = saved.replace(",quality:None,made_at:None", "");
+        assert_ne!(old, saved);
+        let item: Item = ron::from_str(&old).unwrap();
+        assert_eq!((item.quality, item.made_at), (None, None));
+    }
+
+    #[test]
     fn items_are_made_for_the_wearer_or_the_size_asked_for() {
         let mut test = TestClient::new();
         test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
@@ -1174,6 +1209,7 @@ pub(crate) mod tests {
             kind: ItemKind::Coin,
             size: Some(shared::creature::Size::Large),
             magical: true,
+            quality: Quality::Epic,
         };
         let made = inventory(&test.send(&[large]))
             .pockets

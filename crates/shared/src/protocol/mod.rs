@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::id::Id;
-use crate::item::{Holder, Inventory, ItemKind, Rotation};
+use crate::item::{Holder, Inventory, ItemKind, Quality, Rotation};
 use crate::mob::EntityLook;
 use crate::movement::Step;
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
@@ -110,6 +110,8 @@ pub enum ClientMessage {
         kind: ItemKind,
         size: Option<Size>,
         magical: bool,
+        /// Ignored for kinds without quality.
+        quality: Quality,
     },
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),
@@ -434,6 +436,7 @@ mod tests {
                 kind: ItemKind::Pouch,
                 size: Some(Size::Large),
                 magical: true,
+                quality: Quality::Epic,
             },
             ClientMessage::DevSetCreature(CreatureKind::Chicken),
             ClientMessage::DevDetectMonsters(true),

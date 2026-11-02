@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::creature::{CreatureKind, Layer, Location, Size};
 use crate::id::Id;
+use crate::rng::Rng;
+use crate::world::WorldId;
 
 /// The widest and tallest a shape can be.
 pub const MAX_SHAPE_SIDE: u8 = 8;
@@ -157,6 +159,8 @@ pub struct ItemDef {
     pub shape: Shape,
     pub container: Option<ContainerDef>,
     pub wear: Option<WearDef>,
+    /// Whether how well it is made matters: not for a coin.
+    pub has_quality: bool,
 }
 
 /// How something is worn.
@@ -243,7 +247,7 @@ impl ItemKind {
         };
         let square = Shape::rectangle(1, 1);
         match self {
-            Self::Apple => plain("Apple", 150, square),
+            Self::Apple => plain("Apple", 150, square).without_quality(),
             Self::Backpack => bag(
                 "Backpack",
                 1200,
@@ -278,7 +282,7 @@ impl ItemKind {
                 (1, 1),
                 true,
             )),
-            Self::Coin => plain("Coin", 10, square),
+            Self::Coin => plain("Coin", 10, square).without_quality(),
             Self::FingerlessGloves => plain("Fingerless Gloves", 80, Shape::rectangle(1, 2))
                 .worn(wear(Middle, &[Hands], (1, 1), true)),
             Self::FullArmour => plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(wear(
@@ -331,7 +335,7 @@ impl ItemKind {
                 None,
             ),
             Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
-            Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)),
+            Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)).without_quality(),
             Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)),
             Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
                 Skin,
@@ -356,6 +360,7 @@ const fn plain(name: &'static str, weight: u32, shape: Shape) -> ItemDef {
         shape,
         container: None,
         wear: None,
+        has_quality: true,
     }
 }
 
@@ -395,6 +400,13 @@ const fn wear(
 }
 
 impl ItemDef {
+    const fn without_quality(self) -> Self {
+        Self {
+            has_quality: false,
+            ..self
+        }
+    }
+
     const fn worn(self, wear: WearDef) -> Self {
         Self {
             wear: Some(wear),
@@ -435,6 +447,107 @@ impl Made {
     }
 }
 
+/// How good an item is, worst first. The better, the rarer. Set items aren't
+/// here: they aren't rolled, and come from stories (see `decisions.md`).
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+pub enum Quality {
+    Poor,
+    #[default]
+    Common,
+    Uncommon,
+    Rare,
+    Epic,
+    Legendary,
+    Artifact,
+}
+
+impl Quality {
+    pub const ALL: [Quality; 7] = [
+        Self::Poor,
+        Self::Common,
+        Self::Uncommon,
+        Self::Rare,
+        Self::Epic,
+        Self::Legendary,
+        Self::Artifact,
+    ];
+
+    /// How likely a roll is to give it, out of `ODDS_OUT_OF`. First guesses.
+    pub const fn odds(self) -> u64 {
+        match self {
+            Self::Poor => 2500,
+            Self::Common => 5000,
+            Self::Uncommon => 1700,
+            Self::Rare => 600,
+            Self::Epic => 150,
+            Self::Legendary => 45,
+            Self::Artifact => 5,
+        }
+    }
+
+    /// The first of a drop's two rolls: how good it will be.
+    pub fn roll(rng: &mut Rng) -> Self {
+        let mut left = rng.range_u64(0, ODDS_OUT_OF);
+        for quality in Self::ALL {
+            if left < quality.odds() {
+                return quality;
+            }
+            left -= quality.odds();
+        }
+        Self::Common
+    }
+}
+
+/// What `Quality::odds` add up to.
+pub const ODDS_OUT_OF: u64 = 10_000;
+
+/// One line of a drop table: this kind can drop at this quality, more likely the
+/// more it weighs against the others at that quality.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Drop {
+    pub quality: Quality,
+    pub kind: ItemKind,
+    pub weight: u64,
+}
+
+/// Both rolls of a drop: first the quality, then the item from those at that
+/// quality. If the table has none so good, it takes the best it has below that,
+/// or failing that the worst above. `None` if the table is empty. A kind without
+/// quality comes back without one.
+pub fn roll_drop(rng: &mut Rng, table: &[Drop]) -> Option<(ItemKind, Option<Quality>)> {
+    let rolled = Quality::roll(rng);
+    let at = table
+        .iter()
+        .map(|drop| drop.quality)
+        .filter(|&quality| quality <= rolled)
+        .max()
+        .or_else(|| table.iter().map(|drop| drop.quality).min())?;
+    let lines = || table.iter().filter(|drop| drop.quality == at);
+    let total: u64 = lines().map(|drop| drop.weight).sum();
+    let mut left = rng.range_u64(0, total.max(1));
+    let mut chosen = None;
+    for drop in lines() {
+        chosen = Some(drop.kind);
+        if left < drop.weight {
+            break;
+        }
+        left -= drop.weight;
+    }
+    let kind = chosen?;
+    Some((kind, kind.def().has_quality.then_some(at)))
+}
+
+/// When and where an item was made. Each world has its own clock, so a minute
+/// means nothing without its world.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MadeAt {
+    pub world: WorldId,
+    /// Game minutes on that world's clock.
+    pub minute: u64,
+}
+
 /// One item: it keeps its id for good, wherever it goes.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Item {
@@ -443,6 +556,13 @@ pub struct Item {
     /// What is in its grid, if it has one.
     pub contents: Vec<Placed>,
     pub made: Made,
+    /// How good it is: it can change later, and it is still the same item. `None`
+    /// for kinds without quality, and things saved before quality.
+    #[serde(default)]
+    pub quality: Option<Quality>,
+    /// `None` for things saved before this was kept.
+    #[serde(default)]
+    pub made_at: Option<MadeAt>,
 }
 
 impl Item {
@@ -452,6 +572,8 @@ impl Item {
             kind,
             contents: Vec::new(),
             made: Made::for_body(kind, Size::Medium, Some(10), false),
+            quality: None,
+            made_at: None,
         }
     }
 
@@ -915,6 +1037,85 @@ impl Inventory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rng::Seed;
+
+    #[test]
+    fn the_odds_add_up_and_better_is_rarer_past_common() {
+        let total: u64 = Quality::ALL.iter().map(|quality| quality.odds()).sum();
+        assert_eq!(total, ODDS_OUT_OF);
+        for pair in Quality::ALL[1..].windows(2) {
+            assert!(pair[0].odds() > pair[1].odds(), "{pair:?}");
+        }
+    }
+
+    #[test]
+    fn rolls_of_quality_follow_the_odds() {
+        let mut rng = Seed::new(12).rng();
+        let mut counts = [0u64; 7];
+        for _ in 0..100_000 {
+            counts[Quality::roll(&mut rng) as usize] += 1;
+        }
+        for quality in Quality::ALL {
+            let expected = quality.odds() * 10;
+            let got = counts[quality as usize];
+            assert!(
+                got.abs_diff(expected) <= expected / 4 + 10,
+                "{quality:?}: {got}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_same_seed_rolls_the_same_quality() {
+        let rolls = |seed| {
+            let mut rng = Seed::new(seed).rng();
+            [(); 16].map(|_| Quality::roll(&mut rng))
+        };
+        assert_eq!(rolls(1), rolls(1));
+        assert_ne!(rolls(1), rolls(2));
+    }
+
+    #[test]
+    fn a_drop_takes_the_nearest_quality_the_table_has() {
+        let line = |quality, kind| Drop {
+            quality,
+            kind,
+            weight: 1,
+        };
+        assert_eq!(roll_drop(&mut Seed::new(1).rng(), &[]), None);
+        // Only Rare in the table, whatever is rolled.
+        let table = [line(Quality::Rare, ItemKind::Sword)];
+        for seed in 0..200 {
+            let dropped = roll_drop(&mut Seed::new(seed).rng(), &table);
+            assert_eq!(dropped, Some((ItemKind::Sword, Some(Quality::Rare))));
+        }
+        // Each roll stays within what is at or below it, once any is.
+        let table = [
+            line(Quality::Poor, ItemKind::Hat),
+            line(Quality::Epic, ItemKind::Sword),
+        ];
+        let mut swords = 0;
+        for seed in 0..2000 {
+            match roll_drop(&mut Seed::new(seed).rng(), &table) {
+                Some((ItemKind::Hat, Some(Quality::Poor))) => {}
+                Some((ItemKind::Sword, Some(Quality::Epic))) => swords += 1,
+                other => panic!("{other:?}"),
+            }
+        }
+        assert!((1..100).contains(&swords), "{swords}");
+    }
+
+    #[test]
+    fn a_kind_without_quality_drops_without_one() {
+        let table = [Drop {
+            quality: Quality::Common,
+            kind: ItemKind::Coin,
+            weight: 1,
+        }];
+        let dropped = roll_drop(&mut Seed::new(3).rng(), &table);
+        assert_eq!(dropped, Some((ItemKind::Coin, None)));
+        assert!(ItemKind::Sword.def().has_quality);
+    }
 
     /// Inventory with these kinds in the pockets, ids from 1, left to right.
     fn carrying(kinds: &[ItemKind]) -> Inventory {
