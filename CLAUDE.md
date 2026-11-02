@@ -41,6 +41,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: item_form   | `crates/shared/src/item_form.rs`, `material.rs` | `docs/context/shared/item.md` | What one item is physically like, rolled once and saved: forms, gem cuts, materials |
 | shared: creature    | `crates/shared/src/creature.rs`, `wear.rs`, `sheet.rs` | `docs/context/shared/creature.md` | Kinds of creature and their bodies, sizes, stats, skills, looks, what they can carry, layers of clothes and the rules for wearing them |
 | shared: energy      | `crates/shared/src/energy.rs` | `docs/context/shared/energy.md` | Time for actions: energy by speed and ticks, worked out by formula; action costs |
+| shared: ground      | `crates/shared/src/ground.rs`   | `docs/context/shared/ground.md`     | How full a bag on the ground looks, from its weight |
 | shared: shop        | `crates/shared/src/shop.rs`     | `docs/context/shared/shop.md`       | What town shops sell, make times, biased rolls, and catching stock up on opening |
 | shared: mob         | `crates/shared/src/mob.rs`    | `docs/context/shared/mob.md`        | Who is on a site level from its seed, and what a player learns of what is on the map |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
@@ -62,6 +63,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: inventory   | `crates/client/src/inventory/` | `docs/context/client/inventory.md`  | Grids of what is carried and the clothes panel, in moveable panels; picking items up, holding, turning and dropping or wearing them |
 | client: item_art    | `crates/client/src/item_art/`   | `docs/context/client/item_art.md`   | Pictures of items: drawn once in 3D off screen and kept as images; gem and ring models |
 | client: trade       | `crates/client/src/trade/`      | `docs/context/client/trade.md`      | Trading panels with someone's stock in a grid; for now a town shop's, opened by clicking its door, near or from afar |
+| client: ground      | `crates/client/src/ground/`     | `docs/context/client/ground.md`     | Bags on the ground: 3D models by how full, sparkle, black outlines, remembered in grey; clicking one walks there and opens the Character panel |
 | client: character   | `crates/client/src/character/` | `docs/context/client/character.md`  | Character panel: stats, skills, abilities, looks and how loaded |
 | client: entities    | `crates/client/src/entities/` | `docs/context/client/entities.md`   | Mobs and other players as tokens, as long as they can be seen |
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |

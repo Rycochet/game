@@ -4,6 +4,7 @@
 
 use bevy::prelude::*;
 use shared::energy::{dressing_cost, handling_cost};
+use shared::ground::Load;
 use shared::id::Id;
 use shared::item::{Holder, Item, Rotation};
 use shared::poi::PoiKind;
@@ -43,6 +44,8 @@ pub(crate) struct GroundTold {
     /// It guessed at something the server has now answered: it needs telling again,
     /// even if nothing changed.
     again: bool,
+    /// It has been told the bags its character remembers on this map.
+    bags_told: bool,
 }
 
 /// The cell the player stands on, and which level it is on.
@@ -177,8 +180,64 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
                 y: at.1,
                 items,
             });
-            client.ground_told = GroundTold { pile, again: false };
+            client.ground_told.pile = pile;
+            client.ground_told.again = false;
         }
+        tell_bags(client, world);
+    }
+}
+
+/// Tells a client about bags: on arriving, those its character remembers; after that
+/// only what has just been seen to differ, which is all its character remembers too.
+fn tell_bags(client: &mut Client, world: &mut ServerWorld) {
+    let Some((id, kind, index, _)) = standing_on(client) else {
+        return;
+    };
+    let level = world.site(id, kind).levels.get(&index);
+    let ground = level.map(|level| &level.ground);
+    let piles: Vec<((i64, i64), Load)> = ground
+        .into_iter()
+        .flatten()
+        .map(|(&cell, items)| (cell, Load::of(items)))
+        .collect();
+    let levels = client.character.bags.get(&id);
+    let mut known = levels
+        .and_then(|levels| levels.get(&index))
+        .cloned()
+        .unwrap_or_default();
+    if !client.ground_told.bags_told {
+        client.ground_told.bags_told = true;
+        for (&(x, y), &load) in &known {
+            client.link.send(&ServerMessage::GroundSeen { x, y, load });
+        }
+    }
+    let Some(visit) = client.visit.as_mut() else {
+        return;
+    };
+    let mut changed = false;
+    for &(cell, load) in &piles {
+        if known.get(&cell) != Some(&load) && visit.can_see(cell.0, cell.1) {
+            known.insert(cell, load);
+            changed = true;
+            let (x, y) = cell;
+            client.link.send(&ServerMessage::GroundSeen { x, y, load });
+        }
+    }
+    let gone: Vec<(i64, i64)> = known
+        .keys()
+        .filter(|cell| !piles.iter().any(|(pile, _)| pile == *cell))
+        .filter(|cell| visit.can_see(cell.0, cell.1))
+        .copied()
+        .collect();
+    for (x, y) in gone {
+        known.remove(&(x, y));
+        changed = true;
+        client.link.send(&ServerMessage::GroundGone { x, y });
+    }
+    if changed {
+        let levels = client.character.bags.entry(id).or_default();
+        levels.insert(index, known);
+        client.unsaved = true;
     }
 }
 
@@ -332,6 +391,75 @@ mod tests {
         let answers = test.send(&[ClientMessage::BinFromGround { item: coin }]);
         assert!(carrying(&answers).in_bin(coin));
         assert!(ground(&answers).is_empty());
+    }
+
+    /// What is said of bags among these answers.
+    fn bags_told(answers: &[ServerMessage]) -> Vec<&ServerMessage> {
+        let bags = answers.iter().filter(|answer| {
+            matches!(
+                answer,
+                ServerMessage::GroundSeen { .. } | ServerMessage::GroundGone { .. }
+            )
+        });
+        bags.collect()
+    }
+
+    /// Puts something on the ground here, as someone else would.
+    fn lay_down(test: &mut TestClient, at: (i64, i64), grams: ItemKind) {
+        let visit = test.client.visit.as_ref().unwrap();
+        let (id, kind, index) = (visit.id(), visit.kind(), visit.index());
+        let level = test.world.site_mut(id, kind).levels.entry(index);
+        let pile = level.or_default().ground.entry(at).or_default();
+        pile.push(Item::new(Id::for_test(pile.len() as u128 + 100), grams));
+    }
+
+    #[test]
+    fn bags_are_only_told_of_when_seen_and_remembered_until_seen_again() {
+        let mut test = in_a_site();
+        let far = test.client.visit.as_mut().unwrap().walkable_out_of_sight();
+        let here = test.client.visit.as_ref().unwrap().position();
+        lay_down(&mut test, far, ItemKind::Coin);
+        assert!(bags_told(&test.send(&[])).is_empty(), "out of sight");
+
+        let go_there = ClientMessage::DevTeleport { x: far.0, y: far.1 };
+        let answers = test.send(std::slice::from_ref(&go_there));
+        let seen = ServerMessage::GroundSeen {
+            x: far.0,
+            y: far.1,
+            load: Load::Flat,
+        };
+        assert_eq!(bags_told(&answers), [&seen]);
+
+        // Someone takes it while the player is away: they still remember it.
+        let answers = test.send(&[ClientMessage::DevTeleport {
+            x: here.0,
+            y: here.1,
+        }]);
+        assert_eq!(bags_told(&answers), [&seen], "remembered on arriving");
+        let visit = test.client.visit.as_ref().unwrap();
+        let (id, kind, index) = (visit.id(), visit.kind(), visit.index());
+        let level = test.world.site_mut(id, kind).levels.entry(index);
+        level.or_default().ground.remove(&far);
+        assert!(bags_told(&test.send(&[])).is_empty());
+
+        // And find out on seeing the place again.
+        let answers = test.send(&[go_there]);
+        let gone = ServerMessage::GroundGone { x: far.0, y: far.1 };
+        assert_eq!(bags_told(&answers), [&seen, &gone]);
+    }
+
+    #[test]
+    fn a_bag_seen_to_fill_up_looks_it() {
+        let mut test = in_a_site();
+        let here = test.client.visit.as_ref().unwrap().position();
+        lay_down(&mut test, here, ItemKind::Coin);
+        test.send(&[]);
+        lay_down(&mut test, here, ItemKind::Sword);
+        let answers = test.send(&[]);
+        let [ServerMessage::GroundSeen { load, .. }] = bags_told(&answers)[..] else {
+            panic!("told how it looks now");
+        };
+        assert!(*load > Load::Flat);
     }
 
     #[test]

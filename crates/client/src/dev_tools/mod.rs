@@ -54,6 +54,8 @@
 //!   this index in the pockets, under the cursor (see `HOW_DEBUG_CURSOR`).
 //!   `HOW_DEBUG_DROP=true`: put all but the first of what is in the pockets on the
 //!   ground underfoot first (in a site).
+//! - `HOW_DEBUG_BAGS=true`: two seconds after starting, show a bag of every look in
+//!   a row east from the player, only to look at (in a site).
 //! - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look
 //!   at what hovering shows.
 //! - `HOW_DEBUG_SCREENSHOT=path.png`: save a screenshot after `HOW_DEBUG_SCREENSHOT_DELAY`
@@ -79,6 +81,7 @@ use crate::common::{
 };
 use crate::connection::ToServer;
 use crate::debug_menu::{AutoWalk, DebugAction, DebugMenu};
+use crate::ground::GroundDebug;
 use crate::inventory::InventoryDebug;
 use crate::minimap::FullMap;
 use crate::player::{Player, PlayerSystems, TakeStep, TravelTo};
@@ -227,6 +230,21 @@ impl Plugin for DevToolsPlugin {
                     if !*sent {
                         *sent = true;
                         actions.write(action);
+                    }
+                },
+            );
+        }
+
+        if server::option_on("HOW_DEBUG_BAGS", false) {
+            app.add_systems(
+                Update,
+                |time: Res<Time<Real>>,
+                 view: Res<State<GameView>>,
+                 mut done: Local<bool>,
+                 mut debug: MessageWriter<GroundDebug>| {
+                    if !*done && *view.get() == GameView::Dungeon && time.elapsed_secs() > 2.0 {
+                        *done = true;
+                        debug.write(GroundDebug::ShowLooks);
                     }
                 },
             );

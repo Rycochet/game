@@ -41,6 +41,7 @@ impl Plugin for InventoryPlugin {
             .init_resource::<HeldOverGifts>()
             .init_resource::<HeldStock>()
             .add_message::<TookItem>()
+            .add_message::<OpenCharacter>()
             .add_message::<GaveItem>()
             .add_systems(Startup, panels::spawn_fixed_parts)
             .add_systems(
@@ -82,6 +83,10 @@ impl Plugin for InventoryPlugin {
             .add_systems(Update, run_debug.before(panels::forget_closed));
     }
 }
+
+/// Opens the Character panel, or brings it to the front.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct OpenCharacter;
 
 /// What the character carries, as last heard from the server plus any move
 /// since, which it answers.

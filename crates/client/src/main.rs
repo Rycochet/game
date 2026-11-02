@@ -12,6 +12,7 @@ mod dev_tools;
 mod dungeon_map;
 mod entities;
 mod fonts;
+mod ground;
 mod inventory;
 mod item_art;
 mod loading_screen;
@@ -82,6 +83,7 @@ fn main() {
         inventory::InventoryPlugin,
         character::CharacterPlugin,
         entities::EntitiesPlugin,
+        ground::GroundPlugin,
         trade::TradePlugin,
         item_art::ItemArtPlugin,
     ));

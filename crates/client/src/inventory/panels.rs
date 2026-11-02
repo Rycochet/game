@@ -13,7 +13,7 @@ use super::body::{spawn_rows, worn_notes};
 use super::give::NearbyPanel;
 use super::ground::{GroundHolder, spawn_section};
 use super::hold::Target;
-use super::{Carried, Holding, item_cell_in_front};
+use super::{Carried, Holding, OpenCharacter, item_cell_in_front};
 use crate::common::{GROUND, GameView, PointerPosition, SheetText};
 use crate::item_art::look_of;
 use crate::widgets::{
@@ -472,6 +472,7 @@ pub(super) fn show_drop(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn toggle_pockets(
     mut pressed: MessageReader<ButtonPressed>,
+    mut asked: MessageReader<OpenCharacter>,
     button: Query<(), With<PocketsButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     view: Res<State<GameView>>,
@@ -492,6 +493,11 @@ pub(super) fn toggle_pockets(
             nearby.open(&mut commands, &mut raise, &nodes);
         }
         open.toggle_pockets(&carried.0, &mut commands, &mut raise);
+    } else if asked.read().count() > 0 {
+        if !open.pockets_open() {
+            nearby.open(&mut commands, &mut raise, &nodes);
+        }
+        open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
     }
 }
 

@@ -67,6 +67,16 @@ impl Visit {
         (stairs.x, stairs.y)
     }
 
+    /// A walkable cell the player can't see, for tests.
+    #[cfg(test)]
+    pub(crate) fn walkable_out_of_sight(&mut self) -> (i64, i64) {
+        const SEARCH: i64 = 200;
+        (-SEARCH..SEARCH)
+            .flat_map(|y| (-SEARCH..SEARCH).map(move |x| (x, y)))
+            .find(|&(x, y)| self.level.level.is_walkable(x, y) && !self.can_see(x, y))
+            .expect("a site has more than one room")
+    }
+
     /// A cell with room for this many steps east of it, for tests.
     #[cfg(test)]
     pub(crate) fn room_to_walk_east(&self, steps: i64) -> (i64, i64) {
@@ -191,6 +201,7 @@ pub(crate) fn generate(
     let id = SiteId::Dev { kind, seed, ruin };
     world.forget_site(id);
     client.character.memory.remove(&id);
+    client.character.bags.remove(&id);
     client.character.site_versions.remove(&id);
     dev_enter(client, world, kind, seed, 0, ruin)
 }
@@ -252,6 +263,7 @@ pub(crate) fn forget_site(client: &mut Client, world: &mut ServerWorld) -> bool 
     } = visit;
     world.forget_site(id);
     client.character.memory.remove(&id);
+    client.character.bags.remove(&id);
     client.character.site_versions.remove(&id);
     enter_site(client, world, poi, id, index, Arrival::At(position))
 }
@@ -269,6 +281,7 @@ pub(crate) fn put_out(client: &mut Client, world: &mut ServerWorld) -> bool {
 /// its poi.
 fn leave_for_poi(client: &mut Client, world: &mut ServerWorld, poi: Poi, id: SiteId) -> bool {
     client.character.memory.remove(&id);
+    client.character.bags.remove(&id);
     client.character.site_versions.remove(&id);
     client.character.world_position = (poi.x, poi.y);
     client.unsaved = true;
@@ -316,6 +329,7 @@ fn enter_site(
     let known = client.character.site_versions.insert(id, version);
     if known.is_some_and(|known| known != version) {
         client.character.memory.remove(&id);
+        client.character.bags.remove(&id);
     }
     client.unsaved = true;
     let index = index.min(site.levels() - 1);

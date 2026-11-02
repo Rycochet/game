@@ -9,6 +9,7 @@ pub mod climate;
 pub mod creature;
 pub mod dungeon;
 pub mod energy;
+pub mod ground;
 pub mod id;
 pub mod item;
 pub mod item_form;

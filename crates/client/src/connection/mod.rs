@@ -463,6 +463,8 @@ fn receive(
                 | ServerMessage::Inventory(_)
                 | ServerMessage::TradeStock { .. }
                 | ServerMessage::GroundItems { .. }
+                | ServerMessage::GroundSeen { .. }
+                | ServerMessage::GroundGone { .. }
                 | ServerMessage::Keepers(_)
                 | ServerMessage::Sheet(_)
                 | ServerMessage::EntitySeen(_)
