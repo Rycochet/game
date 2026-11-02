@@ -13,7 +13,7 @@ use super::panels::ItemCell;
 use super::{Carried, Holding};
 use crate::widgets::{
     ALLOWED, CELL, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, ITEM_LABEL_FONT, Pressable, REFUSED,
-    item_colour, item_edge, item_edge_width, item_label,
+    item_colour, item_edge, item_edge_width, item_label, set_edge,
 };
 
 const NAME_WIDTH: f32 = 80.0;
@@ -101,6 +101,10 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
     // Something under another can't be picked up.
     if !covered {
         slot.insert(Pressable);
+    }
+    if item.set {
+        let width = item_edge_width(item.quality);
+        slot.with_child(set_edge(item.quality, width, width));
     }
     slot.with_child((
         BodyNode,

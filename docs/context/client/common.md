@@ -23,6 +23,7 @@ Shared building blocks for the client modules. Keep it small.
 - `ClickMode` (resource): `Normal`, `Teleport`, `ChangeCell`, what a click on the map does; set by `debug_menu`, read by `world_map`, `dungeon_map`, `minimap`, `ui`. `DebugInfo(bool)` (resource): whether `ui` shows its status text. `CurrentDungeon::level_has(cell)`.
 - `ServerDevTools(bool)` (resource): whether the server accepts dev tools messages; set by `connection` from `Welcome`, read by `debug_menu`. `KnownPois::forget_all`.
 - `TakesGifts`, `HeldOverGifts`, `HeldGift`, `GaveItem`: dropping a held item on something to give it to someone, between `inventory` and `trade`.
+- `BandShift`: how far the bands on set items' edges have slid, from `view3d` for `widgets`.
 - `quality_colour`, `NO_QUALITY_NAME`, `ITEM_NAME_BACKGROUND`: how an item's quality is shown, for `inventory` and `widgets`.
 - `Portal` (component): `Poi(SeenPoi)`: clicking it sends the player there and arriving enters its site (`site`). World map pois have one; stairs are cells of the level, not entities.
 - `Token::no_base`: draws no base, for a world map poi's model; still clickable.

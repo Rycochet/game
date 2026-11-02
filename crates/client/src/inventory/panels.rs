@@ -16,8 +16,8 @@ use super::{Carried, Holding, item_cell_in_front};
 use crate::common::{GameView, PointerPosition, SheetText};
 use crate::widgets::{
     ALLOWED, ButtonPressed, ButtonState, CELL, Floating, GRID_LINE, HELD_ITEM_Z, INK, ITEM_EDGE,
-    ITEM_LABEL_FONT, ItemTip, ItemTooltip, Pressable, REFUSED, RaisePanel, at_cell, covering,
-    item_colour, item_label, spawn_icon_button, spawn_item_cells, spawn_item_grid,
+    ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, Pressable, REFUSED, RaisePanel, at_cell,
+    covering, item_colour, item_label, spawn_icon_button, spawn_item_cells, spawn_item_grid,
     spawn_moveable_panel,
 };
 
@@ -465,8 +465,7 @@ fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed) {
     let (id, rotation) = (placed.item.id, placed.rotation);
     spawn_item_cells(
         layer,
-        placed.item.kind,
-        placed.item.quality,
+        ItemLook::of(&placed.item),
         placed.shape(),
         (placed.x as f32, placed.y as f32),
         true,
@@ -590,12 +589,10 @@ pub(super) fn show_held(
     if *drawn != now {
         *drawn = now;
         commands.entity(entity).despawn_related::<Children>();
-        let (kind, quality) = (item.kind, item.quality);
+        let look = ItemLook::of(item);
         let shape = item.kind.def().shape.turned(held.rotation);
         commands.entity(entity).with_children(|parent| {
-            spawn_item_cells(parent, kind, quality, shape, (0.0, 0.0), false, |_, _| {
-                Floating
-            });
+            spawn_item_cells(parent, look, shape, (0.0, 0.0), false, |_, _| Floating);
         });
     }
     let grip = Vec2::new(held.grip.0 as f32 + 0.5, held.grip.1 as f32 + 0.5) * CELL;
@@ -638,9 +635,9 @@ pub(super) fn show_tooltip(
     let name = shown.and_then(|id| {
         let item = carried.0.find(id)?;
         let words = format!("{}{}", item.name(), worn_notes(&carried.0, id));
-        Some((words, item.quality))
+        Some((words, item.quality, item.set))
     });
-    let (Some((name, quality)), Some(at)) = (name, pointer.0.or(holding.at)) else {
+    let (Some((name, quality, set)), Some(at)) = (name, pointer.0.or(holding.at)) else {
         return;
     };
     let words = match holding.aim {
@@ -659,6 +656,7 @@ pub(super) fn show_tooltip(
     tooltip.0 = Some(ItemTip {
         words,
         quality,
+        set,
         at: Vec2::new(at.x + TOOLTIP_OFFSET.x, top),
     });
 }

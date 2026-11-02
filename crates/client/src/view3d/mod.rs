@@ -5,6 +5,7 @@
 //! `ViewGrid`, which says how big a grid cell is and where the floor is; this
 //! module keeps the camera on the player and the tokens on their owners.
 
+mod bands;
 mod camera;
 mod token;
 
@@ -60,6 +61,7 @@ impl Plugin for View3dPlugin {
                     token::sync_tokens,
                     token::sync_icons,
                     place_camera_and_tokens,
+                    bands::drift_bands,
                 )
                     .chain()
                     .in_set(View3dSystems::Place)

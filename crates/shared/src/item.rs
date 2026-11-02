@@ -467,8 +467,8 @@ impl Made {
     }
 }
 
-/// How good an item is, worst first. The better, the rarer. Set items aren't
-/// here: they aren't rolled, and come from stories (see `decisions.md`).
+/// How good an item is, worst first. The better, the rarer. Being part of a set is
+/// apart from this: see `Item::set` and `decisions.md`.
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
 )]
@@ -606,6 +606,9 @@ pub struct Item {
     /// Its own name, if it has one: every artifact does.
     #[serde(default)]
     pub name: Option<String>,
+    /// Part of a set, of whatever quality it is.
+    #[serde(default)]
+    pub set: bool,
 }
 
 impl Item {
@@ -618,6 +621,7 @@ impl Item {
             quality: None,
             made_at: None,
             name: None,
+            set: false,
         }
     }
 

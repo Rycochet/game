@@ -1338,6 +1338,7 @@ mod tests {
             size: None,
             magical: false,
             quality: Default::default(),
+            set: false,
         }]);
         let gift = answers.iter().rev().find_map(|answer| match answer {
             ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),
@@ -1422,6 +1423,7 @@ mod tests {
             size: None,
             magical: false,
             quality: Default::default(),
+            set: false,
         }]);
         let coin = answers.iter().rev().find_map(|answer| match answer {
             ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),

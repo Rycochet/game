@@ -19,8 +19,8 @@ use crate::connection::{FromServer, ToServer};
 use crate::dungeon_map::DoorClicked;
 use crate::player::{Arrived, Player, PlayerSystems, TakeStep, TravelTo};
 use crate::widgets::{
-    ALLOWED, CELL, Floating, ItemName, RaisePanel, WidgetSystems, at_cell, covering, logical_rect,
-    spawn_item_cells, spawn_item_grid, spawn_moveable_panel, spawn_scroll_area,
+    ALLOWED, CELL, Floating, ItemLook, ItemName, RaisePanel, WidgetSystems, at_cell, covering,
+    logical_rect, spawn_item_cells, spawn_item_grid, spawn_moveable_panel, spawn_scroll_area,
 };
 
 /// To the left, leaving the player in view.
@@ -315,11 +315,11 @@ fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, gifts: Ta
     let name = ItemName {
         words: placed.item.name().to_owned(),
         quality: placed.item.quality,
+        set: placed.item.set,
     };
     spawn_item_cells(
         layer,
-        placed.item.kind,
-        placed.item.quality,
+        ItemLook::of(&placed.item),
         placed.shape(),
         (placed.x as f32, placed.y as f32),
         false,
