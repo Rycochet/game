@@ -308,6 +308,10 @@ pub struct LevelSave {
     pub records: BTreeMap<Id, MobRecord>,
     /// Mobs that weren't at rest when last saved, by number, to carry on.
     pub unsettled: BTreeMap<u32, SavedMob>,
+    /// What is lying on the ground, by cell, oldest first. Stays until taken: a
+    /// reset never touches it.
+    #[serde(default)]
+    pub ground: BTreeMap<(i64, i64), Vec<Item>>,
 }
 
 /// What a mob has come to know and own.
@@ -611,6 +615,10 @@ pub(crate) mod tests {
                     mobs: BTreeMap::new(),
                     unsettled: BTreeMap::new(),
                     records: BTreeMap::new(),
+                    ground: BTreeMap::from([(
+                        (3, 4),
+                        vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],
+                    )]),
                     changes: BTreeMap::from([((1, 2), Cell::Floor)]),
                     buildings: BTreeMap::from([(
                         4,

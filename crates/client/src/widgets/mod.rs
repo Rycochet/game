@@ -11,6 +11,7 @@ mod scroll;
 mod set_edge;
 mod slider;
 mod soft_keyboard;
+mod stock;
 mod tabs;
 mod text_box;
 
@@ -27,7 +28,7 @@ pub use fullscreen::{
 };
 pub use item::{
     ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, HELD_ITEM_Z, ITEM_EDGE, ITEM_LABEL_FONT,
-    ItemLook, ItemName, ItemTip, ItemTooltip, REFUSED, at_cell, covering, item_colour, item_edge,
+    ItemLook, ItemTip, ItemTooltip, REFUSED, at_cell, covering, item_colour, item_edge,
     item_edge_width, item_label, logical_rect, shown_at, spawn_item_cells, spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
@@ -35,6 +36,7 @@ pub use scroll::spawn_scroll_area;
 pub use set_edge::set_edge;
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
+pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};
 pub use tabs::{TabChosen, spawn_tabs};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, spawn_text_box};
 

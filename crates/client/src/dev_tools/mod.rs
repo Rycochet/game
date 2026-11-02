@@ -52,6 +52,8 @@
 //! - `HOW_DEBUG_INVENTORY=true`: two seconds after starting, have a few items and
 //!   show the pockets and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at
 //!   this index in the pockets, under the cursor (see `HOW_DEBUG_CURSOR`).
+//!   `HOW_DEBUG_DROP=true`: put all but the first of what is in the pockets on the
+//!   ground underfoot first (in a site).
 //! - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look
 //!   at what hovering shows.
 //! - `HOW_DEBUG_SCREENSHOT=path.png`: save a screenshot after `HOW_DEBUG_SCREENSHOT_DELAY`
@@ -232,6 +234,7 @@ impl Plugin for DevToolsPlugin {
 
         if server::option_on("HOW_DEBUG_INVENTORY", false) {
             let hold = env::var("HOW_DEBUG_HOLD").ok().and_then(|n| n.parse().ok());
+            let drop_some = server::option_on("HOW_DEBUG_DROP", false);
             let creature = env::var("HOW_DEBUG_CREATURE")
                 .ok()
                 .and_then(|n| n.parse::<usize>().ok())
@@ -262,6 +265,9 @@ impl Plugin for DevToolsPlugin {
                         }
                     } else if *step == 1 && time.elapsed_secs() > 2.0 {
                         *step = 2;
+                        if drop_some {
+                            debug.write(InventoryDebug::DropSome);
+                        }
                         debug.write(InventoryDebug::OpenPockets);
                         match hold {
                             Some(index) => debug.write(InventoryDebug::PickUp(index)),

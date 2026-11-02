@@ -14,6 +14,7 @@ mod connections;
 mod embedded;
 mod entities;
 mod environment;
+mod ground;
 mod ids;
 mod latency;
 mod lets_encrypt;
@@ -123,6 +124,7 @@ impl Plugin for ServerPlugin {
                     connections::handle_messages,
                     connections::run_mobs,
                     connections::sync_entities,
+                    connections::sync_ground,
                     connections::tell_the_time,
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),
                     exit_when_alone.run_if(|options: Res<ServerOptions>| options.exit_when_alone),

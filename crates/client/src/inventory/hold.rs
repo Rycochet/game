@@ -42,6 +42,8 @@ pub(super) enum Target {
     Nowhere,
     /// On the bin: it and all in it would be destroyed.
     Bin,
+    /// On the Drop icon: it would go on the ground under the player, if it can.
+    Drop { allowed: bool },
     /// On someone's row: it would be given to them.
     Someone(Id),
     /// On the clothes panel: it would be put on, if it can be.
@@ -148,6 +150,7 @@ pub(super) fn drop_move(
     let wanted = match target {
         Target::Nowhere
         | Target::Bin
+        | Target::Drop { .. }
         | Target::Body { .. }
         | Target::Someone(_)
         | Target::Cells { allowed: false, .. }

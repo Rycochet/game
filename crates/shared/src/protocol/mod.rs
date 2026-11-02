@@ -31,7 +31,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 30;
+pub const PROTOCOL_VERSION: u32 = 31;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -117,6 +117,22 @@ pub enum ClientMessage {
     /// Puts on something the character carries, answered with `Inventory`, whether
     /// or not it could go on. Taking it off is `MoveItem`.
     WearItem { item: Id },
+    /// Puts something carried or worn on the ground, on the cell the player is on, in
+    /// a site, after any steps to get there. Answered with `Inventory` and
+    /// `GroundItems`, whether or not it could be done, as are the three below.
+    DropItem { item: Id },
+    /// Takes something from the ground under the player, to this place.
+    TakeFromGround {
+        item: Id,
+        to: Holder,
+        x: u8,
+        y: u8,
+        rotation: Rotation,
+    },
+    /// Puts on something from the ground under the player.
+    WearFromGround { item: Id },
+    /// Throws away something from the ground under the player, as `BinItem`.
+    BinFromGround { item: Id },
     /// Developer tools: a new item of this kind in the character's pockets if
     /// there is room, made for this size (or their own) and their fingers,
     /// answered with `Inventory`.
@@ -269,6 +285,9 @@ pub enum ServerMessage {
     },
     /// What someone the player is trading with has to trade.
     TradeStock { with: Id, items: Vec<Item> },
+    /// What is on the ground under the player, when they arrive on it or it changes,
+    /// and only for someone standing there. Empty once there is nothing.
+    GroundItems { x: i64, y: i64, items: Vec<Item> },
     /// Who keeps each shop of a town (`Buildings` comes first), by `BuildingLook::id`.
     /// Never on the map: they stand behind the door.
     Keepers(Vec<(u16, Id)>),
@@ -475,6 +494,22 @@ mod tests {
                 y: 2,
                 rotation: Rotation::Quarter,
             },
+            ClientMessage::DropItem {
+                item: Id::for_test(5),
+            },
+            ClientMessage::TakeFromGround {
+                item: Id::for_test(6),
+                to: Holder::Pockets,
+                x: 1,
+                y: 2,
+                rotation: Rotation::Quarter,
+            },
+            ClientMessage::WearFromGround {
+                item: Id::for_test(7),
+            },
+            ClientMessage::BinFromGround {
+                item: Id::for_test(8),
+            },
             ClientMessage::DevSetCreature(CreatureKind::Chicken),
             ClientMessage::DevDetectMonsters(true),
             ClientMessage::DevGodMode(true),
@@ -539,6 +574,11 @@ mod tests {
             ServerMessage::Refused("no".into()),
             ServerMessage::TradeStock {
                 with: Id::for_test(3),
+                items: Vec::new(),
+            },
+            ServerMessage::GroundItems {
+                x: 1,
+                y: -2,
                 items: Vec::new(),
             },
             ServerMessage::Keepers(vec![(3, Id::for_test(4))]),

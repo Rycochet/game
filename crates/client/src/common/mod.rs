@@ -597,6 +597,15 @@ pub struct BandShift(pub f32);
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TakesGifts(pub shared::id::Id);
 
+/// Who `StockCell` and `TakesGifts` say for the ground under the player, which is
+/// nobody's.
+pub const GROUND: shared::id::Id = shared::id::Id::NOBODY;
+
+/// The player has done something that takes this much energy (`shared::energy`).
+/// The server works out the same, and keeps its own.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct SpentEnergy(pub u32);
+
 /// Something held over what `TakesGifts`.
 #[derive(Clone, Copy, Debug)]
 pub struct HeldGift {

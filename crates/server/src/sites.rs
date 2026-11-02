@@ -106,6 +106,11 @@ impl Visit {
         self.id
     }
 
+    /// What kind of poi it is behind.
+    pub(crate) fn kind(&self) -> PoiKind {
+        self.poi.kind
+    }
+
     /// Whether the site is a town, whose layout players always know.
     fn is_town(&self) -> bool {
         self.site.kind().is_town()

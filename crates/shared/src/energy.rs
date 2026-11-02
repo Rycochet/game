@@ -41,6 +41,15 @@ pub fn dressing_cost(grams: u32) -> u32 {
     AT_LEAST + grams / 10
 }
 
+/// How much moving something this heavy from one container to another costs: 10 kg
+/// takes as long as a straight step in a site. Nothing is quite free. To depend on
+/// stats, later.
+pub fn handling_cost(grams: u32) -> u32 {
+    const GRAMS_PER_STEP: u64 = 10_000;
+    let step = (70 * SITE_SCALE) as u64;
+    (grams as u64 * step).div_ceil(GRAMS_PER_STEP) as u32
+}
+
 /// How much energy something has, and the tick that was correct at.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Energy {

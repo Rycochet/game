@@ -57,3 +57,4 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
   then read the PNG. Keep screenshots under `target/` (git-ignored).
 - Python with Pillow is installed on the owner's machine for analysing screenshots (e.g. mean brightness, cropping the HUD).
 - To find which Bevy system is failing in a panic, build with `cargo build -p client --features bevy/debug --target-dir target/debug-names` (system names are hidden otherwise).
+- `HOW_DEBUG_DROP=true`, with `HOW_DEBUG_INVENTORY`: all but the first of what is in the pockets goes on the ground underfoot, to look at the ground section.

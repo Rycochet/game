@@ -9,7 +9,7 @@ Time for doing things: the same rule for players and, later, mobs, on both sides
 ## Public API
 
 - `Energy`: `at`, `ready`, `spend`, `settle` (before the speed changes), `ready_at`.
-- `ACTION_TICKS_PER_SECOND` (20), `NORMAL_SPEED` (210 per tick), `SITE_SCALE` (5), `CHANGE_MAP_COST`, `site_step_cost`, `dressing_cost`. World map steps cost `movement::world_step_cost`.
+- `ACTION_TICKS_PER_SECOND` (20), `NORMAL_SPEED` (210 per tick), `SITE_SCALE` (5), `CHANGE_MAP_COST`, `site_step_cost`, `dressing_cost`, `handling_cost` (moving between containers: 10 kg is one straight step, to depend on stats later). World map steps cost `movement::world_step_cost`.
 
 ## Depends on
 
@@ -25,4 +25,4 @@ Time for doing things: the same rule for players and, later, mobs, on both sides
 - The concept follows a roguelike scheduling article the owner chose, not its queue: this game has no turns to wait for, and the server's intents arrive whenever they do.
 - The server's clock is `server::clock::ActionClock`, whole ticks by real time, saved, stopped by pausing and never moved by dev tools. The client counts its own from `Time`, which stops with the game.
 - The numbers keep today's pace: 12 cells a second in a site, 60 points on the world map. Whether that is right is a separate question.
-- Client: keyboard steps wait for energy here, and travel is paced by distance, which comes to the same, so the server rarely has to wait. Putting clothes on costs energy on the server only, so a following step can wait there a little.
+- Client: keyboard steps wait for energy here, and travel is paced by distance, which comes to the same, so the server rarely has to wait. What is done with items costs the same on both sides: `common::SpentEnergy` spends it here and stops a journey for that long, as travel is paced by distance.

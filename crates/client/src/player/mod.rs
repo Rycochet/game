@@ -16,7 +16,7 @@ use shared::sheet::Feeling;
 
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, Icon, LightSource, MapPosition,
-    Other, PlayerSpeed, ServerStatus, SmoothPosition, Token, ViewFacing, Weather,
+    Other, PlayerSpeed, ServerStatus, SmoothPosition, SpentEnergy, Token, ViewFacing, Weather,
 };
 
 /// How far the player's light reaches in dungeons, in cells.
@@ -40,6 +40,7 @@ impl Plugin for PlayerPlugin {
             .add_message::<Arrived>()
             .add_message::<TakeStep>()
             .add_message::<Stepped>()
+            .add_message::<SpentEnergy>()
             .configure_sets(
                 Update,
                 (PlayerSystems::Input, PlayerSystems::Travel).chain(),
@@ -143,6 +144,9 @@ struct PlayerEnergy {
     speed: u32,
     /// Steps asked for and waiting for energy, in order.
     waiting: VecDeque<Step>,
+    /// How long a journey has to stop for, in seconds, for what was spent on other
+    /// things: it is paced by distance, not energy.
+    stopped_for: f64,
 }
 
 /// Which tick of action time it is here. Stops when the game does.
@@ -208,6 +212,7 @@ fn move_player(
 #[allow(clippy::too_many_arguments)]
 fn take_steps(
     mut requests: MessageReader<TakeStep>,
+    mut spent: MessageReader<SpentEnergy>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
     world: Option<Res<CurrentWorld>>,
@@ -228,6 +233,10 @@ fn take_steps(
     if old_speed != speed.0 {
         energy.energy.settle(tick, old_speed);
         energy.speed = speed.0;
+    }
+    for &SpentEnergy(cost) in spent.read() {
+        energy.energy.spend(tick, speed.0, cost);
+        energy.stopped_for += cost as f64 / (speed.0.max(1) as f64 * ACTION_TICKS_PER_SECOND);
     }
     for &TakeStep(step) in requests.read() {
         if energy.waiting.len() < MOST_STEPS_WAITING {
@@ -357,7 +366,10 @@ fn travel(
         GameView::Connecting => return,
     };
     let tick = action_tick(&time);
-    let distance = speed * time.delta_secs_f64() * speed_now.0 as f64 / NORMAL_SPEED as f64;
+    let stopped = energy.stopped_for.min(time.delta_secs_f64());
+    energy.stopped_for -= stopped;
+    let moving = time.delta_secs_f64() - stopped;
+    let distance = speed * moving * speed_now.0 as f64 / NORMAL_SPEED as f64;
 
     if let Some(landing) = travel.jump {
         let to = DVec2::new(landing.x as f64, landing.y as f64);
