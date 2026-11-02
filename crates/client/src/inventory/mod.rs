@@ -15,11 +15,11 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use crate::common::GameView;
 use crate::common::{PointerPosition, PointerSystems, TouchGesture};
 use crate::connection::{FromServer, ToServer};
-use crate::widgets::{ButtonPressed, RaisePanel, WidgetSystems};
+use crate::widgets::{ButtonPressed, CELL, Floating, RaisePanel, WidgetSystems};
 use body::BodyNode;
 use give::{GiveRow, NearbyPanel};
 use hold::{Held, Target};
-use panels::{BinNode, Floating, ItemCell, OpenGrids};
+use panels::{BinNode, ItemCell, OpenGrids};
 
 /// A press on an item this long after the last one on it opens it.
 const DOUBLE_PRESS_SECONDS: f64 = 0.35;
@@ -297,7 +297,7 @@ fn hold_items(
             .max_by_key(|(.., stack)| stack.0)
             .map(|(grid, node, transform, ..)| {
                 let (corner, _) = logical_rect(node, transform);
-                let cell = ((at - corner) / panels::CELL).floor();
+                let cell = ((at - corner) / CELL).floor();
                 (grid.holder, cell.x as i32, cell.y as i32)
             })
     });

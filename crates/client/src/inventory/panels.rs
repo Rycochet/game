@@ -7,31 +7,25 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 use shared::id::Id;
-use shared::item::{Holder, Inventory, ItemKind, Placed, Quality, Rotation, Shape};
+use shared::item::{Holder, Inventory, Placed, Rotation};
 
 use super::body::{spawn_rows, worn_notes};
 use super::give::NearbyPanel;
 use super::hold::Target;
 use super::{Carried, Holding, item_cell_in_front};
-use crate::common::{
-    GameView, ITEM_NAME_BACKGROUND, NO_QUALITY_NAME, PointerPosition, SheetText, quality_colour,
-};
+use crate::common::{GameView, PointerPosition, SheetText};
 use crate::widgets::{
-    ButtonPressed, ButtonState, INK, Pressable, RaisePanel, spawn_icon_button,
-    spawn_moveable_panel, spawn_tooltip,
+    ALLOWED, ButtonPressed, ButtonState, CELL, Floating, GRID_LINE, HELD_ITEM_Z, INK, ITEM_EDGE,
+    ITEM_LABEL_FONT, ItemTip, ItemTooltip, Pressable, REFUSED, RaisePanel, at_cell, covering,
+    item_colour, item_label, spawn_icon_button, spawn_item_cells, spawn_item_grid,
+    spawn_moveable_panel,
 };
-
-/// A grid cell, across, in logical pixels.
-pub(super) const CELL: f32 = 32.0;
 
 const BUTTON: f32 = 34.0;
 const COLUMN_GAP: f32 = 16.0;
 const CORNER_GAP: f32 = 10.0;
 const FONT: f32 = 16.0;
-const LABEL_FONT: f32 = 13.0;
 const CELL_BORDER: f32 = 1.0;
-/// Above moveable panels, below full-screen layers.
-const HELD_Z: i32 = 900_000;
 /// How far from the pointer an item's name goes.
 const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);
 /// How far above a held item its name goes, to its top.
@@ -39,14 +33,6 @@ const HELD_NAME_ABOVE: f32 = 48.0;
 /// Where the first panel goes, and how far along each one after it.
 const FIRST_AT: Vec2 = Vec2::new(90.0, 140.0);
 const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
-
-pub(super) const GRID_COLOUR: Color = Color::srgb(0.55, 0.46, 0.33);
-pub(super) const GRID_LINE: Color = Color::srgb(0.42, 0.34, 0.24);
-pub(super) const ITEM_EDGE: Color = Color::srgb(0.15, 0.1, 0.05);
-/// How thick an edge showing quality is, to be seen beside the kind's colour.
-const QUALITY_BORDER: f32 = 2.0;
-pub(super) const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
-pub(super) const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
 
 /// The panels open, in the order they were opened.
 #[derive(Resource, Default)]
@@ -96,16 +82,6 @@ pub(super) struct PocketsButton;
 #[derive(Component)]
 pub(super) struct HeldItem;
 
-#[derive(Component)]
-pub(super) struct NameBox;
-
-#[derive(Component)]
-pub(super) struct NameText;
-
-/// Follows the pointer above everything: not what the pointer is on.
-#[derive(Component)]
-pub(super) struct Floating;
-
 /// The bin and what is in it: what is dropped here is thrown away.
 #[derive(Component)]
 pub(super) struct BinNode;
@@ -117,35 +93,6 @@ pub(super) struct BinSlot;
 /// The bin's picture.
 #[derive(Resource)]
 pub(super) struct BinIcon(Handle<Image>);
-
-/// What a kind of item looks like until it has a picture: its colour.
-/// The colour of the edge of an item of this quality.
-pub(super) fn edge(quality: Option<Quality>) -> Color {
-    quality.map_or(ITEM_EDGE, quality_colour)
-}
-
-/// How thick the edge of an item of this quality is.
-pub(super) fn edge_width(quality: Option<Quality>) -> f32 {
-    if quality.is_some() {
-        QUALITY_BORDER
-    } else {
-        CELL_BORDER
-    }
-}
-
-pub(super) fn colour(kind: ItemKind) -> Color {
-    let index = ItemKind::ALL
-        .iter()
-        .position(|&other| other == kind)
-        .unwrap_or(0);
-    // Spread round the colour wheel by a step that doesn't repeat soon.
-    Color::hsl((index as f32 * 67.0) % 360.0, 0.45, 0.5)
-}
-
-/// What it says on the first cell of an item.
-pub(super) fn label(kind: ItemKind) -> String {
-    kind.def().name.chars().take(2).collect()
-}
 
 fn kilograms(grams: u32) -> String {
     format!("{:.2} kg", grams as f32 / 1000.0)
@@ -212,7 +159,7 @@ fn bin_icon() -> Image {
     )
 }
 
-/// The button, and what stands above panels: the held item and an item's name.
+/// The button, and the held item, which stands above panels.
 pub(super) fn spawn_fixed_parts(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let icon = images.add(person_icon());
     commands.insert_resource(BinIcon(images.add(bin_icon())));
@@ -243,21 +190,9 @@ pub(super) fn spawn_fixed_parts(mut commands: Commands, mut images: ResMut<Asset
             position_type: PositionType::Absolute,
             ..default()
         },
-        GlobalZIndex(HELD_Z),
+        GlobalZIndex(HELD_ITEM_Z),
         Visibility::Hidden,
     ));
-    commands
-        .spawn((
-            NameBox,
-            Floating,
-            Node {
-                position_type: PositionType::Absolute,
-                ..default()
-            },
-            GlobalZIndex(HELD_Z + 1),
-            Visibility::Hidden,
-        ))
-        .with_children(|holder| spawn_tooltip(holder, NameText, ""));
 }
 
 impl OpenGrids {
@@ -341,26 +276,10 @@ impl OpenGrids {
 
 /// A grid, and under it the words on its weight and, for the pockets, the bin.
 fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, height: u8) {
-    parent
-        .spawn((
-            GridNode { holder },
-            Node {
-                width: px(width as f32 * CELL),
-                height: px(height as f32 * CELL),
-                flex_shrink: 0.0,
-                ..default()
-            },
-            BackgroundColor(GRID_COLOUR),
-        ))
-        .with_children(|grid| {
-            for y in 0..height {
-                for x in 0..width {
-                    grid.spawn((at_cell(x as f32, y as f32), BorderColor::from(GRID_LINE)));
-                }
-            }
-            grid.spawn((ItemLayer { holder }, covering()));
-            grid.spawn((AimLayer { holder }, covering()));
-        });
+    spawn_item_grid(parent, width, height, GridNode { holder }, |grid| {
+        grid.spawn((ItemLayer { holder }, covering()));
+        grid.spawn((AimLayer { holder }, covering()));
+    });
     parent
         .spawn(Node {
             justify_content: JustifyContent::SpaceBetween,
@@ -388,31 +307,6 @@ fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, heig
                 ));
             }
         });
-}
-
-/// A node one cell across at this place in a grid.
-fn at_cell(x: f32, y: f32) -> Node {
-    Node {
-        position_type: PositionType::Absolute,
-        left: px(x * CELL),
-        top: px(y * CELL),
-        width: px(CELL),
-        height: px(CELL),
-        border: UiRect::all(px(CELL_BORDER)),
-        ..default()
-    }
-}
-
-/// A node filling a grid, for its children to be placed in.
-fn covering() -> Node {
-    Node {
-        position_type: PositionType::Absolute,
-        left: px(0),
-        top: px(0),
-        width: percent(100),
-        height: percent(100),
-        ..default()
-    }
 }
 
 /// Gives the bin its picture, shows what is in it, and whether dropping something
@@ -468,13 +362,13 @@ pub(super) fn show_bins(
                     height: percent(100),
                     ..default()
                 },
-                BackgroundColor(colour(kind)),
+                BackgroundColor(item_colour(kind)),
             ))
             .with_child((
                 BinNode,
                 cell,
-                Text::new(label(kind)),
-                TextFont::from_font_size(LABEL_FONT),
+                Text::new(item_label(kind)),
+                TextFont::from_font_size(ITEM_LABEL_FONT),
                 TextColor(ITEM_EDGE),
             ));
         });
@@ -534,49 +428,6 @@ pub(super) fn forget_closed(
     }
 }
 
-/// One cell of an item, in a parent placing it: the parent's corner is the shape's.
-fn spawn_cells(
-    parent: &mut ChildSpawnerCommands,
-    kind: ItemKind,
-    quality: Option<Quality>,
-    shape: Shape,
-    corner: (f32, f32),
-    cell_extra: impl Fn(u8, u8) -> Option<ItemCell>,
-) {
-    let mut first = true;
-    for (x, y) in shape.cells() {
-        let mut node = parent.spawn((
-            Node {
-                border: UiRect::all(px(edge_width(quality))),
-                ..at_cell(corner.0 + x as f32, corner.1 + y as f32)
-            },
-            BackgroundColor(colour(kind)),
-            BorderColor::from(edge(quality)),
-        ));
-        let cell = cell_extra(x, y);
-        match cell {
-            Some(cell) => node.insert((cell, Pressable)),
-            None => node.insert(Floating),
-        };
-        if first {
-            first = false;
-            let mut text = node.commands();
-            let id = text
-                .spawn((
-                    Text::new(label(kind)),
-                    TextFont::from_font_size(LABEL_FONT),
-                    TextColor(ITEM_EDGE),
-                ))
-                .id();
-            match cell {
-                Some(cell) => text.entity(id).insert(cell),
-                None => text.entity(id).insert(Floating),
-            };
-            node.add_child(id);
-        }
-    }
-}
-
 /// Draws what is in each open grid again when it changes. What is held isn't
 /// drawn where it was, though it is still there until dropped.
 #[allow(clippy::too_many_arguments)]
@@ -612,18 +463,17 @@ pub(super) fn show_grids(
 
 fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed) {
     let (id, rotation) = (placed.item.id, placed.rotation);
-    spawn_cells(
+    spawn_item_cells(
         layer,
         placed.item.kind,
         placed.item.quality,
         placed.shape(),
         (placed.x as f32, placed.y as f32),
-        |x, y| {
-            Some(ItemCell {
-                id,
-                rotation,
-                grip: (x, y),
-            })
+        true,
+        |x, y| ItemCell {
+            id,
+            rotation,
+            grip: (x, y),
         },
     );
 }
@@ -743,7 +593,9 @@ pub(super) fn show_held(
         let (kind, quality) = (item.kind, item.quality);
         let shape = item.kind.def().shape.turned(held.rotation);
         commands.entity(entity).with_children(|parent| {
-            spawn_cells(parent, kind, quality, shape, (0.0, 0.0), |_, _| None);
+            spawn_item_cells(parent, kind, quality, shape, (0.0, 0.0), false, |_, _| {
+                Floating
+            });
         });
     }
     let grip = Vec2::new(held.grip.0 as f32 + 0.5, held.grip.1 as f32 + 0.5) * CELL;
@@ -769,14 +621,10 @@ pub(super) fn show_tooltip(
             &InheritedVisibility,
             Option<&ItemCell>,
         ),
-        (With<Node>, Without<NameBox>),
+        (With<Node>, Without<Floating>),
     >,
-    name_box: Single<(&mut Node, &mut Visibility), With<NameBox>>,
-    text: Single<(&mut Text, &mut TextColor, &ChildOf), With<NameText>>,
-    mut backgrounds: Query<&mut BackgroundColor>,
+    mut tooltip: ResMut<ItemTooltip>,
 ) {
-    let (mut text, mut text_colour, parent) = text.into_inner();
-    let (mut node, mut visibility) = name_box.into_inner();
     let shown = if let Some(held) = holding.held {
         Some(held.item.id)
     } else if open.open.is_empty() {
@@ -793,10 +641,8 @@ pub(super) fn show_tooltip(
         Some((words, item.quality))
     });
     let (Some((name, quality)), Some(at)) = (name, pointer.0.or(holding.at)) else {
-        visibility.set_if_neq(Visibility::Hidden);
         return;
     };
-    visibility.set_if_neq(Visibility::Inherited);
     let words = match holding.aim {
         Some(Target::Someone(_)) => format!("Give {name}"),
         Some(Target::Bin) => match carried.0.bin.as_ref() {
@@ -805,19 +651,16 @@ pub(super) fn show_tooltip(
         },
         _ => name,
     };
-    if text.0 != words {
-        text.0 = words;
-    }
-    text_colour.set_if_neq(TextColor(quality.map_or(NO_QUALITY_NAME, quality_colour)));
-    if let Ok(mut background) = backgrounds.get_mut(parent.parent()) {
-        background.set_if_neq(BackgroundColor(ITEM_NAME_BACKGROUND));
-    }
-    node.left = px(at.x + TOOLTIP_OFFSET.x);
-    node.top = match holding.held {
+    let top = match holding.held {
         // Above what is held, so as not to hide any of it.
-        Some(held) => px(at.y - (held.item.grip.1 as f32 + 0.5) * CELL - HELD_NAME_ABOVE),
-        None => px(at.y + TOOLTIP_OFFSET.y),
+        Some(held) => at.y - (held.item.grip.1 as f32 + 0.5) * CELL - HELD_NAME_ABOVE,
+        None => at.y + TOOLTIP_OFFSET.y,
     };
+    tooltip.0 = Some(ItemTip {
+        words,
+        quality,
+        at: Vec2::new(at.x + TOOLTIP_OFFSET.x, top),
+    });
 }
 
 /// The button is hidden while connecting, as the warning button is.

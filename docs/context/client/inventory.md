@@ -8,7 +8,7 @@ The Character panel (what the character is like, what they wear and what they ca
 - `crates/client/src/inventory/hold.rs`: without Bevy: `Held`, `Target`, `target`, `drop_move`. Unit tests.
 - `crates/client/src/inventory/body.rs`: `spawn_rows`, `BodyNode`, `show_clothes`, `show_body_aim`, `worn_notes`.
 - `crates/client/src/inventory/give.rs`: `NearbyPanel`, `GiveRow`, `show_nearby`, `show_give_aim`.
-- `crates/client/src/inventory/panels.rs`: `OpenGrids`, `CELL` (32 px), `spawn_fixed_parts`, `toggle_pockets`, `forget_closed`, `show_grids`, `show_aim`, `show_held`, `show_tooltip`, `show_button`, the bag icon (drawn in code).
+- `crates/client/src/inventory/panels.rs`: `OpenGrids`, `spawn_fixed_parts`, `toggle_pockets`, `forget_closed`, `show_grids`, `show_aim`, `show_held`, `show_tooltip`, `show_button`, the bag icon (drawn in code).
 
 ## Public API
 
@@ -26,7 +26,7 @@ The Character panel (what the character is like, what they wear and what they ca
 
 ## Notes
 
-- An item's quality colours its edge (2 px, wider than a plain item's) in grids, worn and held, and its name, on a dark tooltip so every colour can be read (`common::quality_colour`, `edge`, `edge_width`).
+- An item's quality colours its edge (2 px, wider than a plain item's) in grids, worn and held, and its name, on a dark tooltip so every colour can be read (`widgets::spawn_item_cells`, `ItemTooltip`, which draw items anywhere).
 - Owner's design: press on an item to pick it up. It follows the pointer at its true size, held by the cell it was pressed on, and letting go drops it. Anywhere it can't go, it snaps back. A held item isn't drawn where it was but nothing has changed until the drop, which is one `MoveItem`, so a lost connection can't lose it.
 - The cells it would take show green, or red if refused. Dropped on a closed bag, the bag's own cells show this, and it goes in the first place it fits (`Inventory::first_place_for`), turning if it must.
 - Right-click turns what is held; by touch, a tap with a second finger (owner agreed to try this, to adjust after testing). While a finger holds something, its two-finger gestures don't reach the camera, and the right button doesn't turn it.
