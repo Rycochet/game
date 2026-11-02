@@ -5,7 +5,7 @@
 import bevy_pbr::render::{
     forward_io::{FragmentOutput, VertexOutput},
     pbr_fragment::pbr_input_from_standard_material,
-    pbr_functions::{alpha_discard, apply_pbr_lighting, main_pass_post_lighting_processing},
+    pbr_functions::{alpha_discard, main_pass_post_lighting_processing},
 };
 
 struct Mask {
@@ -47,7 +47,9 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
         pbr_input.material.base_color,
     );
     var out: FragmentOutput;
-    out.color = apply_pbr_lighting(pbr_input);
+    // Unlit: the light is baked into the vertex colours, so real lights would
+    // only add a shine.
+    out.color = pbr_input.material.base_color;
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
     return out;
 }
