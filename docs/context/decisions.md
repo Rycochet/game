@@ -557,3 +557,7 @@ Owner's design. Knives to polearms aren't a list of kinds: a weapon has a blade 
 ## 2026-11-02: UI design guide and shared widget rules
 
 `docs/context/ui-design.md` is the palette for planning screens, from the owner's guide based on Material UI, and is updated as needs change. The owner chose, piece by piece, what to take: the game keeps its parchment, raised edges, square corners and Lexend, with one look (no dark mode). Text comes in four named sizes rather than numbers, gaps are multiples of 4 px, and moveable panels are told from static ones by lighter stripes. Ripple, hover and pressed states are planned for all clickable widgets; stacks and gamepads are separate later tasks.
+
+## 2026-11-02: Scaling weapons, and requests with limits
+
+Owner's rules. Whoever asks for a weapon can give limits on its cells and weight, and the generator keeps to them without rolling again, or makes nothing. It first takes an ordinary-sized weapon that fits, so a tiny creature usually gets a dagger of some form. Otherwise, or now and then, it scales one, whose size and weight both change, and which keeps only its generic name ("Giant Sword"). A named weapon at another size ("Tiny Katana") only comes from asking for exactly that, as a shop commission or a player's ability might. Each family is its own `ItemKind`, so saved swords stay as they were and no wipe is needed.

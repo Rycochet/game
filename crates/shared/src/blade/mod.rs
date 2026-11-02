@@ -4,6 +4,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::creature::Size;
+use crate::item::{ItemKind, MAX_SHAPE_SIDE, Quality, Shape};
+use crate::item_form::Limits;
+use crate::material::Material;
 use crate::rng::Rng;
 
 mod table;
@@ -34,6 +38,37 @@ impl Family {
         Self::Spear,
         Self::Polearm,
     ];
+
+    /// The kind of item this family is made as.
+    pub const fn kind(self) -> ItemKind {
+        match self {
+            Self::Knife => ItemKind::Knife,
+            Self::Dagger => ItemKind::Dagger,
+            Self::ShortSword => ItemKind::ShortSword,
+            Self::Sword => ItemKind::Sword,
+            Self::LongSword => ItemKind::Longsword,
+            Self::Axe => ItemKind::Axe,
+            Self::Spear => ItemKind::Spear,
+            Self::Polearm => ItemKind::Polearm,
+        }
+    }
+
+    /// The other families to try if this one can't be made: first the smaller ones in
+    /// any order, as those are likely to fit, then the larger, nearest first.
+    fn others(self, rng: &mut Rng) -> Vec<Self> {
+        let mut smaller: Vec<(Self, u64)> = Self::ALL[..self as usize]
+            .iter()
+            .map(|&family| (family, 1))
+            .collect();
+        let mut others = Vec::new();
+        while !smaller.is_empty() {
+            let family = rng.pick_weighted(&smaller);
+            smaller.retain(|&(other, _)| other != family);
+            others.push(family);
+        }
+        others.extend_from_slice(&Self::ALL[self as usize + 1..]);
+        others
+    }
 }
 
 /// How the blade meets the handle, which decides how its length is measured and which
@@ -188,10 +223,20 @@ pub enum Tips {
     ThreeTines,
 }
 
+/// How much has been done to make it look good.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Decoration {
+    Plain,
+    Engraved,
+    Inlaid,
+    Tasselled,
+}
+
 /// What one weapon is like. Lengths are whole millimetres, at the size of an ordinary
 /// person's weapon: an item's own size goes on top of this.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BladeForm {
+    pub family: Family,
     pub build: Build,
     pub blade: u16,
     pub handle: u16,
@@ -213,6 +258,13 @@ pub struct BladeForm {
     pub top: Top,
     pub back: Back,
     pub tips: Tips,
+    pub blade_metal: Material,
+    pub handle_material: Material,
+    pub fittings: Material,
+    pub decoration: Decoration,
+    /// Scaled by a roll, so too unusual to count as any specific weapon: only its
+    /// generic name. A weapon made on request at another size keeps its name.
+    pub generic_only: bool,
 }
 
 impl BladeForm {
@@ -226,6 +278,9 @@ impl BladeForm {
 
     /// The most specific name that fits it, or else the generic name for its size.
     pub fn name(&self) -> &'static str {
+        if self.generic_only {
+            return self.generic_name();
+        }
         // Equally specific names go to the one earlier in the table, the better known.
         let fitting = ROWS
             .iter()
@@ -235,11 +290,90 @@ impl BladeForm {
         if let Some((_, row)) = fitting {
             return row.name;
         }
+        self.generic_name()
+    }
+
+    fn generic_name(&self) -> &'static str {
         match cell_of(self.build, self.blade, self.handle).and_then(|cell| cell.generic) {
             Some("Knife") if self.edges != Edges::Single => "Dagger",
             Some(generic) => generic,
             None => "Blade",
         }
+    }
+
+    /// The cells it takes at its ordinary size, an item's size going on top.
+    pub fn shape(&self) -> Shape {
+        let length = length_of(self.build, self.blade, self.handle) as u32;
+        let long = (length + CELL_LENGTH / 2) / CELL_LENGTH;
+        let long = long.clamp(1, MAX_SHAPE_SIDE as u32) as u8;
+        let wide = self.build == Build::Side && self.blade >= BROAD_EDGE.0;
+        Shape::rectangle(if wide { 2 } else { 1 }, long)
+    }
+
+    /// What it weighs at its ordinary size, in grams, from how much of what it is made.
+    pub fn grams(&self) -> u32 {
+        let head_mm3 = match self.build {
+            Build::Along => {
+                let width = match self.width {
+                    BladeWidth::Narrow => 25,
+                    BladeWidth::Normal => 45,
+                    BladeWidth::Broad => 65,
+                };
+                self.blade as u64 * width * 3
+            }
+            Build::Side => {
+                let blade = self.blade as u64;
+                let heads = 1 + (self.sides[1] == SidePart::AxeBlade) as u64;
+                heads * blade * (blade / 2).min(150) * 4
+            }
+        };
+        let handle_mm3 = self.handle as u64 * HANDLE_AREA_MM2;
+        let head = head_mm3 * self.blade_metal.density() as u64 / 10_000;
+        let handle = handle_mm3 * self.handle_material.density() as u64 / 10_000;
+        let guard = match self.guard {
+            Guard::None => 0,
+            Guard::Disc => 80,
+            Guard::Cross => 120,
+            Guard::KnuckleBow => 150,
+            Guard::Cup => 250,
+            Guard::Basket => 350,
+        };
+        let pommel = if self.pommel == Pommel::None { 0 } else { 100 };
+        let part = |there: bool| if there { 150 } else { 0 };
+        let extras = part(!matches!(
+            self.sides[0],
+            SidePart::None | SidePart::AxeBlade
+        )) + part(!matches!(
+            self.sides[1],
+            SidePart::None | SidePart::AxeBlade
+        )) + part(self.top == Top::Spike)
+            + part(self.back != Back::None);
+        (head + handle) as u32 + guard + pommel + extras
+    }
+
+    /// What it weighs at this size: size in each direction, so twice as big is eight
+    /// times as heavy.
+    pub fn grams_at(&self, size: Size) -> u32 {
+        let quarters = size.quarters() as u64;
+        (self.grams() as u64 * quarters * quarters * quarters / 64) as u32
+    }
+}
+
+/// How much of a weapon's length takes one more cell.
+const CELL_LENGTH: u32 = 200;
+/// A handle's section, a little over 3 cm across.
+const HANDLE_AREA_MM2: u64 = 700;
+/// The share out of 100 of weapons asked for by a creature smaller than ordinary that
+/// are scaled even though an ordinary one fits, and for one larger.
+const SCALED_PERCENT_SMALL: u64 = 10;
+const SCALED_PERCENT_LARGE: u64 = 40;
+
+/// How long it is from end to end, as far as carrying it goes: a head at the side adds
+/// nothing to that.
+fn length_of(build: Build, blade: u16, handle: u16) -> u16 {
+    match build {
+        Build::Along => blade + handle,
+        Build::Side => handle,
     }
 }
 
@@ -339,20 +473,278 @@ fn overlap(one: Span, other: Span) -> Option<Span> {
     (span.0 < span.1).then_some(span)
 }
 
-/// A new weapon of a family. Picks a row of the table, by how common it is, then a cell
-/// it may be in, then each property in turn, within what the row allows.
-pub fn roll_blade(rng: &mut Rng, family: Family) -> BladeForm {
-    let rows: Vec<(&Row, u64)> = ROWS
+/// A weapon rolled for a request, with the size it must be made.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Rolled {
+    pub form: BladeForm,
+    pub size: Size,
+}
+
+/// A new ordinary weapon of a family. Picks a row of the table, by how common it is, then
+/// a cell it may be in, then each property in turn, within what the row allows.
+pub fn roll_blade(rng: &mut Rng, family: Family, quality: Quality) -> BladeForm {
+    roll_ordinary(rng, family, quality, &Limits::NONE).expect("nothing limits it")
+}
+
+/// A weapon that must be this size: if it isn't the ordinary one, it is scaled, and so
+/// has only its generic name.
+pub fn roll_blade_at(rng: &mut Rng, family: Family, quality: Quality, size: Size) -> BladeForm {
+    if size == Size::Medium {
+        return roll_blade(rng, family, quality);
+    }
+    roll_scaled(rng, family, quality, &Limits::NONE, size).expect("nothing limits it")
+}
+
+/// A weapon within limits. An ordinary one if any will do, of this family or else the
+/// nearest that fits, so a tiny creature asking for a sword usually gets a dagger.
+/// Sometimes, or if nothing ordinary fits, one of this family scaled, nearest its
+/// wielder's size. `None` if nothing can be made.
+pub fn roll_blade_within(
+    rng: &mut Rng,
+    family: Family,
+    quality: Quality,
+    limits: &Limits,
+) -> Option<Rolled> {
+    let wielder = limits.wielder.unwrap_or(Size::Medium);
+    let percent = if wielder < Size::Medium {
+        SCALED_PERCENT_SMALL
+    } else {
+        SCALED_PERCENT_LARGE
+    };
+    let scale_first = wielder != Size::Medium && rng.range_u64(0, 100) < percent;
+    if scale_first {
+        let rolled = scaled_near(rng, family, quality, limits, wielder);
+        if rolled.is_some() {
+            return rolled;
+        }
+    }
+    let mut families = vec![family];
+    families.extend(family.others(rng));
+    for other in families {
+        if let Some(form) = roll_ordinary(rng, other, quality, limits) {
+            let size = Size::Medium;
+            return Some(Rolled { form, size });
+        }
+    }
+    scaled_near(rng, family, quality, limits, wielder)
+}
+
+/// A specific weapon at any size, keeping its name: only when asked for, such as a
+/// commission from a shop. `None` if there is no such name, or it can't keep to limits.
+pub fn commission_blade(
+    rng: &mut Rng,
+    name: &str,
+    quality: Quality,
+    size: Size,
+    limits: &Limits,
+) -> Option<Rolled> {
+    let row = ROWS.iter().find(|row| row.name == name)?;
+    let form = roll_row_within(rng, row, quality, limits, size)?;
+    Some(Rolled { form, size })
+}
+
+/// A wielder's limits: what it can lift without being burdened, and what suits its size.
+/// Those smaller than ordinary can't manage anything long, and the largest have no use
+/// for anything short.
+pub fn limits_for_wielder(size: Size, spare_grams: u32) -> Limits {
+    let (longest, shortest) = match size {
+        Size::Tiny => (Some(2), None),
+        Size::Small => (Some(4), None),
+        Size::Medium | Size::Large => (None, None),
+        Size::Huge => (None, Some(5)),
+        Size::Giant => (None, Some(6)),
+    };
+    Limits {
+        fits: longest.map(|longest| (2, longest)),
+        at_least_long: shortest,
+        most_grams: Some(spare_grams),
+        least_grams: None,
+        wielder: Some(size),
+    }
+}
+
+/// An ordinary weapon of one family: rows that can't fit are passed over.
+fn roll_ordinary(
+    rng: &mut Rng,
+    family: Family,
+    quality: Quality,
+    limits: &Limits,
+) -> Option<BladeForm> {
+    let mut rows: Vec<(&Row, u64)> = ROWS
         .iter()
         .filter(|row| row.family == family)
         .map(|row| (row, row.weight))
         .collect();
-    let row = rng.pick_weighted(&rows);
-    let places: Vec<((Span, Span), u64)> = row.places().map(|place| (place, 1)).collect();
+    while !rows.is_empty() {
+        let row = rng.pick_weighted(&rows);
+        let form = roll_row_within(rng, row, quality, limits, Size::Medium);
+        if form.is_some() {
+            return form;
+        }
+        rows.retain(|(other, _)| other.name != row.name);
+    }
+    None
+}
+
+/// A generic weapon of one family at another size.
+fn roll_scaled(
+    rng: &mut Rng,
+    family: Family,
+    quality: Quality,
+    limits: &Limits,
+    size: Size,
+) -> Option<BladeForm> {
+    let mut generic = ROWS
+        .iter()
+        .filter(|row| row.family == family && row.generic);
+    let mut form = generic.find_map(|row| roll_row_within(rng, row, quality, limits, size))?;
+    form.generic_only = true;
+    Some(form)
+}
+
+/// Scaled, trying the sizes in order from the wielder's own outwards.
+fn scaled_near(
+    rng: &mut Rng,
+    family: Family,
+    quality: Quality,
+    limits: &Limits,
+    wielder: Size,
+) -> Option<Rolled> {
+    let mut sizes: Vec<Size> = Size::ALL
+        .into_iter()
+        .filter(|&size| size != Size::Medium)
+        .collect();
+    sizes.sort_by_key(|&size| (size as i32 - wielder as i32).abs());
+    sizes.into_iter().find_map(|size| {
+        let form = roll_scaled(rng, family, quality, limits, size)?;
+        Some(Rolled { form, size })
+    })
+}
+
+/// The lengths at its ordinary size that keep a weapon scaled to `size` within limits.
+/// `None` if none do.
+fn lengths_within(limits: &Limits, size: Size) -> Option<Span> {
+    let long_at = |cells: u8| Shape::rectangle(1, cells).scaled(size).height;
+    let longest = match limits.fits {
+        Some((one, other)) => {
+            let room = one.max(other);
+            (1..=MAX_SHAPE_SIDE)
+                .rev()
+                .find(|&cells| long_at(cells) <= room)?
+        }
+        None => MAX_SHAPE_SIDE,
+    };
+    let shortest = match limits.at_least_long {
+        Some(least) => (1..=MAX_SHAPE_SIDE).find(|&cells| long_at(cells) >= least)?,
+        None => 1,
+    };
+    let cell = CELL_LENGTH as u16;
+    let from = match shortest {
+        1 => 0,
+        _ => shortest as u16 * cell - cell / 2,
+    };
+    let to = match longest {
+        MAX_SHAPE_SIDE => u16::MAX,
+        _ => longest as u16 * cell + cell / 2,
+    };
+    (from < to).then_some((from, to))
+}
+
+/// The handles from which some blade in `blade` gives a length within `lengths`.
+fn handles_within(build: Build, blade: Span, handle: Span, lengths: Span) -> Option<Span> {
+    match build {
+        Build::Side => overlap(handle, lengths),
+        Build::Along => {
+            let from = lengths.0.saturating_sub(blade.1 - 1);
+            let to = lengths.1.saturating_sub(blade.0);
+            overlap(handle, (from, to))
+        }
+    }
+}
+
+/// The blades that, with this handle, give a length within `lengths`.
+fn blades_within(build: Build, blade: Span, handle: u16, lengths: Span) -> Option<Span> {
+    match build {
+        Build::Side => Some(blade),
+        Build::Along => {
+            let from = lengths.0.saturating_sub(handle);
+            let to = lengths.1.saturating_sub(handle);
+            overlap(blade, (from, to))
+        }
+    }
+}
+
+/// The first number in a span that passes, given that all those after it pass too, or
+/// the span's end if none do.
+fn first_passing(span: Span, passes: impl Fn(u16) -> bool) -> u16 {
+    let (mut low, mut high) = span;
+    while low < high {
+        let middle = low + (high - low) / 2;
+        if passes(middle) {
+            high = middle;
+        } else {
+            low = middle + 1;
+        }
+    }
+    low
+}
+
+/// The blades in a span that keep this weapon's weight within limits: a longer one is
+/// never lighter.
+fn blades_by_weight(form: &BladeForm, blade: Span, size: Size, limits: &Limits) -> Option<Span> {
+    let grams = |length: u16| {
+        let longer = BladeForm {
+            blade: length,
+            ..*form
+        };
+        longer.grams_at(size)
+    };
+    let from = match limits.least_grams {
+        Some(least) => first_passing(blade, |length| grams(length) >= least),
+        None => blade.0,
+    };
+    let to = match limits.most_grams {
+        Some(most) => first_passing(blade, |length| grams(length) > most),
+        None => blade.1,
+    };
+    (from < to).then_some((from, to))
+}
+
+/// One row within limits, at a size. Lengths are cut down to what fits rather than
+/// rolled again. If its weight still can't fit, it tries the lightest it could be made
+/// of before giving up on this row.
+fn roll_row_within(
+    rng: &mut Rng,
+    row: &Row,
+    quality: Quality,
+    limits: &Limits,
+    size: Size,
+) -> Option<BladeForm> {
+    let lengths = lengths_within(limits, size)?;
+    let places: Vec<((Span, Span), u64)> = row
+        .places()
+        .filter_map(|(blade, handle)| {
+            let handle = handles_within(row.build, blade, handle, lengths)?;
+            Some(((blade, handle), 1))
+        })
+        .collect();
+    if places.is_empty() {
+        return None;
+    }
     let (blade, handle) = rng.pick_weighted(&places);
-    let blade = rng.range_u64(blade.0 as u64, blade.1 as u64) as u16;
     let handle = rng.range_u64(handle.0 as u64, handle.1 as u64) as u16;
-    roll_properties(rng, row, blade, handle)
+    let blade = blades_within(row.build, blade, handle, lengths)?;
+    let mut form = roll_properties(rng, row, quality, blade.0, handle);
+    let span = blades_by_weight(&form, blade, size, limits).or_else(|| {
+        form.width = row.width.first().copied().unwrap_or(BladeWidth::Narrow);
+        form.blade_metal = Material::Iron;
+        form.handle_material = Material::Wood;
+        blades_by_weight(&form, blade, size, limits)
+    })?;
+    form.blade = rng.range_u64(span.0 as u64, span.1 as u64) as u16;
+    limits
+        .allows(form.shape().scaled(size), form.grams_at(size))
+        .then_some(form)
 }
 
 /// Picks by the usual weights among what the row allows. A row may allow only things
@@ -373,7 +765,13 @@ fn pick<T: Copy + PartialEq>(rng: &mut Rng, allowed: &[T], usual: &[(T, u64)]) -
 }
 
 /// First guesses at how often each is seen. Properties are rolled in this order.
-fn roll_properties(rng: &mut Rng, row: &Row, blade: u16, handle: u16) -> BladeForm {
+fn roll_properties(
+    rng: &mut Rng,
+    row: &Row,
+    quality: Quality,
+    blade: u16,
+    handle: u16,
+) -> BladeForm {
     let build = row.build;
     let is_side = build == Build::Side;
     let held = !is_side && handle < SHAFT_FROM;
@@ -634,7 +1032,37 @@ fn roll_properties(rng: &mut Rng, row: &Row, blade: u16, handle: u16) -> BladeFo
         ],
     );
     let tips = pick(rng, row.tips, &[(Tips::Single, 1)]);
+    // Better work goes into finer things, more often.
+    let fine = quality as u64;
+    let blade_metal = rng.pick_weighted(&[
+        (Material::Iron, 80),
+        (Material::Copper, 10),
+        (Material::Silver, 2 + fine * 3),
+        (Material::Gold, fine),
+    ]);
+    let handle_material = if held {
+        rng.pick_weighted(&[
+            (Material::Wood, 60),
+            (Material::Bone, 25),
+            (Material::Iron, 15),
+        ])
+    } else {
+        Material::Wood
+    };
+    let fittings = rng.pick_weighted(&[
+        (Material::Iron, 60),
+        (Material::Copper, 25),
+        (Material::Silver, 5 + fine * 5),
+        (Material::Gold, 1 + fine * 3),
+    ]);
+    let decoration = rng.pick_weighted(&[
+        (Decoration::Plain, 70),
+        (Decoration::Engraved, 10 + fine * 8),
+        (Decoration::Inlaid, 2 + fine * 5),
+        (Decoration::Tasselled, 5),
+    ]);
     BladeForm {
+        family: row.family,
         build,
         blade,
         handle,
@@ -655,6 +1083,11 @@ fn roll_properties(rng: &mut Rng, row: &Row, blade: u16, handle: u16) -> BladeFo
         top,
         back,
         tips,
+        blade_metal,
+        handle_material,
+        fittings,
+        decoration,
+        generic_only: false,
     }
 }
 
@@ -665,7 +1098,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     fn rolled(family: Family) -> impl Iterator<Item = BladeForm> {
-        (0..6000).map(move |seed| roll_blade(&mut Seed::new(seed).rng(), family))
+        (0..6000).map(move |seed| roll_blade(&mut Seed::new(seed).rng(), family, Quality::Common))
     }
 
     fn all_names() -> BTreeSet<&'static str> {
@@ -680,6 +1113,7 @@ mod tests {
         roll_properties(
             &mut Seed::new(1).rng(),
             ROWS.iter().find(|row| row.name == "Sword").unwrap(),
+            Quality::Common,
             blade,
             handle,
         )
@@ -688,9 +1122,12 @@ mod tests {
     #[test]
     fn the_same_seed_rolls_the_same_weapon() {
         // Golden: changing the rolls is fine, but should be noticed.
-        let form = roll_blade(&mut Seed::new(1).rng(), Family::Sword);
-        assert_eq!(form, roll_blade(&mut Seed::new(1).rng(), Family::Sword));
-        assert_eq!((form.blade, form.handle, form.name()), (794, 272, "Katana"));
+        let form = roll_blade(&mut Seed::new(1).rng(), Family::Sword, Quality::Common);
+        assert_eq!(
+            form,
+            roll_blade(&mut Seed::new(1).rng(), Family::Sword, Quality::Common)
+        );
+        assert_eq!((form.blade, form.handle, form.name()), (609, 298, "Katana"));
     }
 
     #[test]
@@ -822,9 +1259,126 @@ mod tests {
         assert_eq!(spear.attachment(), Attachment::Socket);
     }
 
+    fn asked_for(seed: u64, family: Family, limits: &Limits) -> Option<Rolled> {
+        roll_blade_within(&mut Seed::new(seed).rng(), family, Quality::Common, limits)
+    }
+
+    #[test]
+    fn a_plain_sword_is_about_what_the_placeholder_was() {
+        let swords: Vec<_> = rolled(Family::Sword)
+            .filter(|form| form.name() == "Sword")
+            .collect();
+        let grams: u32 = swords.iter().map(|form| form.grams()).sum();
+        let average = grams / swords.len() as u32;
+        assert!((800..1800).contains(&average), "{average}");
+        assert!(swords.iter().all(|form| form.shape().height >= 4));
+    }
+
+    #[test]
+    fn longer_weighs_more_and_size_is_cubed() {
+        let mut form = sword(800, 150);
+        let light = form.grams();
+        form.blade = 900;
+        assert!(form.grams() > light);
+        assert_eq!(form.grams_at(Size::Giant), form.grams() * 8);
+        assert_eq!(form.grams_at(Size::Medium), form.grams());
+    }
+
+    #[test]
+    fn nothing_rolled_breaks_its_limits() {
+        for size in Size::ALL {
+            for spare in [300, 800, 2000, 10_000, 100_000] {
+                let limits = limits_for_wielder(size, spare);
+                for family in Family::ALL {
+                    for seed in 0..100 {
+                        if let Some(got) = asked_for(seed, family, &limits) {
+                            let shape = got.form.shape().scaled(got.size);
+                            let grams = got.form.grams_at(got.size);
+                            assert!(limits.allows(shape, grams), "{got:?} in {limits:?}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_tiny_creature_almost_always_gets_an_ordinary_small_weapon() {
+        let limits = limits_for_wielder(Size::Tiny, 5000);
+        let got: Vec<_> = (0..1000)
+            .filter_map(|seed| asked_for(seed, Family::Sword, &limits))
+            .collect();
+        assert_eq!(got.len(), 1000);
+        let ordinary: Vec<_> = got.iter().filter(|got| got.size == Size::Medium).collect();
+        assert!((850..950).contains(&ordinary.len()), "{}", ordinary.len());
+        for got in ordinary {
+            assert!(!got.form.generic_only);
+            assert!(matches!(
+                got.form.family,
+                Family::Knife | Family::Dagger | Family::ShortSword
+            ));
+        }
+    }
+
+    #[test]
+    fn a_giant_may_get_a_giant_sword_named_only_generically() {
+        let limits = limits_for_wielder(Size::Giant, 500_000);
+        let giants: Vec<_> = (0..500)
+            .filter_map(|seed| asked_for(seed, Family::Sword, &limits))
+            .filter(|got| got.size == Size::Giant)
+            .collect();
+        assert!(!giants.is_empty());
+        for got in giants {
+            assert!(got.form.generic_only);
+            assert_eq!(got.form.family, Family::Sword);
+            assert_eq!(got.form.name(), "Sword");
+        }
+    }
+
+    #[test]
+    fn nothing_comes_back_when_nothing_fits() {
+        let limits = Limits {
+            most_grams: Some(1),
+            ..Limits::NONE
+        };
+        assert_eq!(asked_for(1, Family::Sword, &limits), None);
+    }
+
+    #[test]
+    fn a_commission_keeps_its_name_at_any_size() {
+        let order = |name| {
+            let mut rng = Seed::new(1).rng();
+            commission_blade(&mut rng, name, Quality::Rare, Size::Tiny, &Limits::NONE)
+        };
+        let tiny = order("Katana").unwrap();
+        assert_eq!((tiny.size, tiny.form.name()), (Size::Tiny, "Katana"));
+        assert!(order("Lightsaber").is_none());
+    }
+
+    #[test]
+    fn a_weapon_made_at_another_size_has_only_its_generic_name() {
+        for seed in 0..200 {
+            let mut rng = Seed::new(seed).rng();
+            let form = roll_blade_at(&mut rng, Family::Sword, Quality::Common, Size::Giant);
+            assert_eq!(form.name(), "Sword");
+        }
+    }
+
+    #[test]
+    fn better_work_is_more_often_of_finer_metal() {
+        let gold = |quality| {
+            (0..4000)
+                .map(|seed| roll_blade(&mut Seed::new(seed).rng(), Family::Sword, quality))
+                .filter(|form| form.blade_metal == Material::Gold)
+                .count()
+        };
+        assert_eq!(gold(Quality::Poor), 0);
+        assert!(gold(Quality::Legendary) > 50);
+    }
+
     #[test]
     fn a_form_survives_being_saved() {
-        let form = roll_blade(&mut Seed::new(3).rng(), Family::Polearm);
+        let form = roll_blade(&mut Seed::new(3).rng(), Family::Polearm, Quality::Common);
         let bytes = postcard::to_allocvec(&form).unwrap();
         assert_eq!(postcard::from_bytes::<BladeForm>(&bytes).unwrap(), form);
     }

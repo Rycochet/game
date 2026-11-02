@@ -1329,7 +1329,8 @@ pub(crate) mod tests {
     #[test]
     fn new_items_have_the_quality_asked_for_and_the_time_they_were_made() {
         let mut test = TestClient::new();
-        let answers = test.send(&[give(ItemKind::Sword), give(ItemKind::Coin)]);
+        // A dagger, as a long enough sword wouldn't fit in the pockets.
+        let answers = test.send(&[give(ItemKind::Dagger), give(ItemKind::Coin)]);
         let carried = inventory(&answers);
         let (sword, coin) = (&carried.pockets[0].item, &carried.pockets[1].item);
         assert_eq!(sword.quality, Some(Quality::Rare));

@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::blade::Family;
 use crate::creature::{CreatureKind, Layer, Location, Size};
 use crate::energy::{dressing_cost, handling_cost};
 use crate::id::Id;
@@ -211,6 +212,7 @@ pub struct WearDef {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ItemKind {
     Apple,
+    Axe,
     Backpack,
     Barding,
     Belt,
@@ -218,19 +220,25 @@ pub enum ItemKind {
     Boots,
     Cloak,
     Coin,
+    Dagger,
     FingerlessGloves,
     FullArmour,
     Gauntlets,
     Gem,
     Gloves,
     Hat,
+    Knife,
     Lantern,
+    Longsword,
     Necklace,
+    Polearm,
     Pouch,
     Ring,
     Shoes,
+    ShortSword,
     SmallBox,
     Socks,
+    Spear,
     Stone,
     Sword,
     TShirt,
@@ -242,8 +250,9 @@ const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 25] = [
+    pub const ALL: [Self; 32] = [
         Self::Apple,
+        Self::Axe,
         Self::Backpack,
         Self::Barding,
         Self::Belt,
@@ -251,24 +260,45 @@ impl ItemKind {
         Self::Boots,
         Self::Cloak,
         Self::Coin,
+        Self::Dagger,
         Self::FingerlessGloves,
         Self::FullArmour,
         Self::Gauntlets,
         Self::Gem,
         Self::Gloves,
         Self::Hat,
+        Self::Knife,
         Self::Lantern,
+        Self::Longsword,
         Self::Necklace,
+        Self::Polearm,
         Self::Pouch,
         Self::Ring,
         Self::Shoes,
+        Self::ShortSword,
         Self::SmallBox,
         Self::Socks,
+        Self::Spear,
         Self::Stone,
         Self::Sword,
         Self::TShirt,
         Self::Trousers,
     ];
+
+    /// The family of weapon this makes, for those rolled as blades.
+    pub const fn blade_family(self) -> Option<Family> {
+        match self {
+            Self::Knife => Some(Family::Knife),
+            Self::Dagger => Some(Family::Dagger),
+            Self::ShortSword => Some(Family::ShortSword),
+            Self::Sword => Some(Family::Sword),
+            Self::Longsword => Some(Family::LongSword),
+            Self::Axe => Some(Family::Axe),
+            Self::Spear => Some(Family::Spear),
+            Self::Polearm => Some(Family::Polearm),
+            _ => None,
+        }
+    }
 
     pub const fn def(self) -> ItemDef {
         use Layer::{Middle, Outer, Skin};
@@ -279,6 +309,8 @@ impl ItemKind {
         let square = Shape::rectangle(1, 1);
         let def = match self {
             Self::Apple => plain("Apple", 150, square).without_quality(),
+            // A blade's weight and shape are its form's: these are only for one without.
+            Self::Axe => plain("Axe", 900, Shape::rectangle(1, 3)),
             Self::Backpack => bag(
                 "Backpack",
                 1200,
@@ -314,6 +346,7 @@ impl ItemKind {
                 true,
             )),
             Self::Coin => plain("Coin", 10, square).without_quality(),
+            Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)),
             Self::FingerlessGloves => plain("Fingerless Gloves", 80, Shape::rectangle(1, 2))
                 .worn(wear(Middle, &[Hands], (1, 1), true)),
             Self::FullArmour => plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(wear(
@@ -338,8 +371,11 @@ impl ItemKind {
             Self::Hat => {
                 plain("Hat", 150, Shape::rectangle(2, 1)).worn(wear(Outer, &[Head], (1, 0), false))
             }
+            Self::Knife => plain("Knife", 200, Shape::rectangle(1, 2)),
             Self::Lantern => plain("Lantern", 800, Shape::rectangle(1, 2)),
+            Self::Longsword => plain("Longsword", 2000, Shape::rectangle(1, 6)),
             Self::Necklace => plain("Necklace", 40, square).worn(wear(Skin, &[Neck], (5, 5), true)),
+            Self::Polearm => plain("Polearm", 3000, Shape::rectangle(1, 8)),
             Self::Pouch => bag(
                 "Pouch",
                 80,
@@ -358,6 +394,7 @@ impl ItemKind {
                 (1, 0),
                 false,
             )),
+            Self::ShortSword => plain("Short Sword", 900, Shape::rectangle(1, 4)),
             Self::SmallBox => bag(
                 "Small Box",
                 100,
@@ -367,6 +404,7 @@ impl ItemKind {
                 None,
             ),
             Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
+            Self::Spear => plain("Spear", 1500, Shape::rectangle(1, 8)),
             Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)).without_quality(),
             Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)),
             Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
@@ -388,7 +426,14 @@ impl ItemKind {
             Self::Socks | Self::TShirt | Self::Trousers | Self::Hat => 50,
             Self::Ring | Self::Pouch | Self::Belt | Self::Boomerang => 75,
             Self::Gauntlets | Self::Backpack | Self::Necklace => 150,
-            Self::Sword => 200,
+            Self::Sword
+            | Self::Axe
+            | Self::Dagger
+            | Self::Knife
+            | Self::Longsword
+            | Self::Polearm
+            | Self::ShortSword
+            | Self::Spear => 200,
             Self::FullArmour | Self::Barding => 400,
             _ => 100,
         })
@@ -678,13 +723,21 @@ impl Item {
 
     /// The cells it takes up, by its kind and the size it was made.
     pub fn shape(&self) -> Shape {
-        self.kind.def().shape.scaled(self.made.size)
+        let shape = match &self.form {
+            Some(ItemForm::Blade(blade)) => blade.shape(),
+            _ => self.kind.def().shape,
+        };
+        shape.scaled(self.made.size)
     }
 
     /// What it weighs with everything in it, in grams.
     pub fn total_weight(&self) -> u32 {
         let set: u32 = self.set_gems().map(Item::total_weight).sum();
-        self.kind.def().weight + weight_of(&self.contents) + set
+        let own = match &self.form {
+            Some(ItemForm::Blade(blade)) => blade.grams_at(self.made.size),
+            _ => self.kind.def().weight,
+        };
+        own + weight_of(&self.contents) + set
     }
 
     /// The gems set in it.

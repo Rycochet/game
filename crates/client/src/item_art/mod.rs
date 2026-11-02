@@ -88,6 +88,8 @@ fn sizes_above(size: Size, than: Size) -> i8 {
 pub fn look_of(item: &Item) -> Option<Look> {
     let quality = item.quality;
     match item.form.as_ref()? {
+        // Blades have no model yet, so they are drawn as anything else without one.
+        ItemForm::Blade(_) => None,
         ItemForm::Gem(gem) => Some(Look::Gem { gem: *gem, quality }),
         ItemForm::Ring(ring) => {
             let settings = ring.settings.iter().map(|setting| SettingLook {

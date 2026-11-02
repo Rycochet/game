@@ -9,11 +9,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
+use shared::blade::limits_for_wielder;
 use shared::creature::CreatureKind;
 use shared::dungeon::{Level, line_is_clear};
 use shared::energy::{Energy, SITE_SCALE, site_step_cost};
 use shared::id::Id;
 use shared::item::{Inventory, ItemKind, MadeAt, Quality};
+use shared::item_form::give_blade_within;
 use shared::mob::{EntityLook, Event, GIVE_REACH, Memory, spawns};
 use shared::movement::{STRAIGHT_COST, Step, step_on_level};
 use shared::pathfinding::DistanceMap;
@@ -344,9 +346,22 @@ fn dressed(kind: CreatureKind, gear: &[(ItemKind, Option<Quality>)], made_at: Ma
         pockets_size: kind.def().pockets,
         ..Inventory::default()
     };
+    // Past half of what it can carry it is burdened: see `Sheet::load`.
+    let lifting = Sheet::new(kind).capacity(kind.def().size) / 2;
     for &(item, quality) in gear {
         let quality = quality.unwrap_or_default();
-        let new = crate::connections::made_for(&carrying, item, None, false, quality, made_at);
+        let mut new = crate::connections::made_for(&carrying, item, None, false, quality, made_at);
+        if item.blade_family().is_some() {
+            // A blade it can lift and that suits its size, or none at all.
+            let spare = lifting.saturating_sub(carrying.total_weight());
+            let mut limits = limits_for_wielder(kind.def().size, spare);
+            let (width, height) = kind.def().pockets;
+            let longest = limits.fits.map_or(u8::MAX, |(_, longest)| longest);
+            limits.fits = Some((width.min(height), width.max(height).min(longest)));
+            if !give_blade_within(&mut new, &limits) {
+                continue;
+            }
+        }
         let id = new.id;
         if carrying.give(new).is_ok() {
             // Anything that can't be worn stays in the pockets.
@@ -1017,6 +1032,25 @@ mod tests {
         level: 0,
         ruin: 0,
     };
+
+    #[test]
+    fn mobs_only_get_blades_they_can_carry_and_lift() {
+        let made_at = MadeAt {
+            world: WorldSeed::new(1).id(),
+            minute: 0,
+        };
+        for kind in [CreatureKind::Kobold, CreatureKind::Giant] {
+            let lifting = Sheet::new(kind).capacity(kind.def().size) / 2;
+            let (mut armed, tries) = (0, 200);
+            for _ in 0..tries {
+                let gear = [(ItemKind::Sword, Some(Quality::Common))];
+                let carrying = dressed(kind, &gear, made_at);
+                assert!(carrying.total_weight() <= lifting);
+                armed += !carrying.pockets.is_empty() as u32;
+            }
+            assert_eq!(armed, tries, "{kind:?} should always find something");
+        }
+    }
 
     fn seen_ids(answers: &[ServerMessage]) -> BTreeSet<Id> {
         answers
