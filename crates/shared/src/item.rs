@@ -571,6 +571,11 @@ impl Inventory {
         weight_of(&self.pockets) + self.worn.iter().map(Item::total_weight).sum::<u32>()
     }
 
+    /// What the creature weighs with all it carries and wears, in grams.
+    pub fn weight_with_creature(&self) -> u32 {
+        self.creature.def().weight + self.total_weight()
+    }
+
     /// The item with this id, wherever it is.
     pub fn find(&self, id: Id) -> Option<&Item> {
         fn search(placed: &[Placed], id: Id) -> Option<&Item> {
@@ -1027,6 +1032,20 @@ mod tests {
         assert_eq!(inventory.find(id(1)).unwrap().contents.len(), 16);
         assert_eq!(inventory.pockets.len(), 1);
         assert_eq!(inventory.total_weight(), 80 + 16 * 10);
+    }
+
+    #[test]
+    fn the_creature_counts_with_what_it_carries_and_wears_but_not_the_bin() {
+        let mut inventory = carrying(&[ItemKind::Pouch, ItemKind::Ring, ItemKind::Ring]);
+        inventory.creature = CreatureKind::Horse;
+        assert_eq!(inventory.weight_with_creature(), 500_000 + 80 + 10 + 10);
+        inventory
+            .move_item(id(2), Holder::Inside(id(1)), 0, 0, NONE)
+            .unwrap();
+        assert!(inventory.to_bin(id(3)));
+        inventory.worn.push(Item::new(id(4), ItemKind::Stone));
+        let stone = ItemKind::Stone.def().weight;
+        assert_eq!(inventory.weight_with_creature(), 500_000 + 80 + 10 + stone);
     }
 
     #[test]
