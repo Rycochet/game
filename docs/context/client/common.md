@@ -27,7 +27,7 @@ Shared building blocks for the client modules. Keep it small.
 - `GROUND`: who `StockCell` and `TakesGifts` say for the ground under the player. `SpentEnergy` (message): the player did something that takes energy; read by `player`.
 - `TakesGifts`, `HeldOverGifts`, `HeldGift`, `GaveItem`: dropping a held item on something to give it to someone, between `inventory` and `trade`.
 - `BandShift`: how far the bands on set items' edges have slid, from `view3d` for `widgets`.
-- `quality_colour`, `NO_QUALITY_NAME`, `ITEM_NAME_BACKGROUND`: how an item's quality is shown, for `inventory` and `widgets`.
+- `quality_colour`, `NO_QUALITY_NAME`: how an item's quality is shown, for `inventory` and `widgets`.
 - `Portal` (component): `Poi(SeenPoi)`: clicking it sends the player there and arriving enters its site (`site`). World map pois have one; stairs are cells of the level, not entities.
 - `Token::no_base`: draws no base, for a world map poi's model; still clickable.
 - `Clickable` (component, marker): its token can be clicked (`view3d::ClickedToken`).

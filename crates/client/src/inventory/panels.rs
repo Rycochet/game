@@ -19,14 +19,14 @@ use crate::item_art::look_of;
 use crate::widgets::{
     ALLOWED, ButtonPressed, ButtonState, CELL, Floating, GRID_LINE, HELD_ITEM_Z, INK, ITEM_EDGE,
     ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, PICTURE_PIXELS_PER_CELL, Pressable, REFUSED,
-    RaisePanel, at_cell, covering, item_colour, item_label, item_picture, spawn_icon_button,
-    spawn_item_cells, spawn_item_grid, spawn_moveable_panel,
+    RaisePanel, TextSize, at_cell, covering, item_colour, item_label, item_picture,
+    spawn_icon_button, spawn_item_cells, spawn_item_grid, spawn_moveable_panel,
 };
 
 const BUTTON: f32 = 34.0;
 const COLUMN_GAP: f32 = 16.0;
-const CORNER_GAP: f32 = 10.0;
-const FONT: f32 = 16.0;
+const CORNER_GAP: f32 = 8.0;
+const FONT: TextSize = TextSize::Medium;
 const CELL_BORDER: f32 = 1.0;
 /// How far from the pointer an item's name goes.
 const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);
@@ -275,12 +275,7 @@ impl OpenGrids {
                     ..default()
                 })
                 .with_children(|columns| {
-                    columns.spawn((
-                        SheetText,
-                        Text::default(),
-                        TextFont::from_font_size(FONT),
-                        TextColor(INK),
-                    ));
+                    columns.spawn((SheetText, Text::default(), FONT.font(), TextColor(INK)));
                     spawn_rows(columns);
                     columns
                         .spawn(Node {
@@ -339,7 +334,7 @@ fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, heig
             row.spawn((
                 WeightText { holder },
                 Text::default(),
-                TextFont::from_font_size(FONT),
+                FONT.font(),
                 TextColor(INK),
             ));
             if holder == Holder::Pockets {
@@ -436,7 +431,7 @@ pub(super) fn show_bins(
                         BinNode,
                         cell,
                         Text::new(item_label(kind)),
-                        TextFont::from_font_size(ITEM_LABEL_FONT),
+                        ITEM_LABEL_FONT.font(),
                         TextColor(ITEM_EDGE),
                     ));
                 }

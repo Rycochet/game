@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
 use super::fullscreen::Darkening;
-use super::{ButtonPressed, INK, LIT_EDGE, Pressable};
+use super::{ButtonPressed, INK, LIT_EDGE, Pressable, RAISED_BACKGROUND};
 use crate::common::{PointerPosition, TouchGesture};
 
 const HEIGHT: f32 = 18.0;
@@ -13,7 +13,6 @@ const BORDER: f32 = 1.0;
 const MARK_WIDTH: f32 = 4.0;
 /// The mark's light edge, so it shows on a dark track as well as a light one.
 const MARK_EDGE: f32 = 1.0;
-const PLAIN_TRACK: Color = Color::srgb(0.75, 0.65, 0.48);
 
 /// Where a slider's mark is, `0..=1` along it. Set it to move the mark.
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
@@ -54,7 +53,7 @@ pub fn spawn_slider<'a>(
     ));
     match track {
         Some(track) => slider.insert(ImageNode::new(track).with_mode(NodeImageMode::Stretch)),
-        None => slider.insert(BackgroundColor(PLAIN_TRACK)),
+        None => slider.insert(BackgroundColor(RAISED_BACKGROUND)),
     };
     let id = slider.id();
     slider.with_child((

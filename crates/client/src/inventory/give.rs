@@ -10,13 +10,13 @@ use super::Holding;
 use super::hold::Target;
 use crate::common::{MapPosition, Other};
 use crate::player::Player;
-use crate::widgets::{ALLOWED, GRID_COLOUR, INK, RaisePanel, spawn_moveable_panel};
+use crate::widgets::{ALLOWED, GRID_COLOUR, INK, RaisePanel, TextSize, spawn_moveable_panel};
 
 const AT: Vec2 = Vec2::new(900.0, 300.0);
-const FONT: f32 = 16.0;
+const FONT: TextSize = TextSize::Medium;
 const ROW_WIDTH: f32 = 200.0;
 const ROW_HEIGHT: f32 = 28.0;
-const ROW_GAP: f32 = 2.0;
+const ROW_GAP: f32 = 4.0;
 
 /// The panel, if open.
 #[derive(Resource, Default)]
@@ -107,11 +107,7 @@ pub(super) fn show_nearby(
         commands.entity(entity).despawn_related::<Children>();
         commands.entity(entity).with_children(|rows| {
             if near.is_empty() {
-                rows.spawn((
-                    Text::new("Nobody near enough"),
-                    TextFont::from_font_size(FONT),
-                    TextColor(INK),
-                ));
+                rows.spawn((Text::new("Nobody near enough"), FONT.font(), TextColor(INK)));
             }
             for &(id, feeling, name) in &near {
                 rows.spawn((
@@ -127,7 +123,7 @@ pub(super) fn show_nearby(
                 .with_child((
                     GiveRow(id),
                     Text::new(format!("{name}{}", feeling_word(feeling))),
-                    TextFont::from_font_size(FONT),
+                    FONT.font(),
                     TextColor(INK),
                 ));
             }

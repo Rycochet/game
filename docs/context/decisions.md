@@ -553,3 +553,7 @@ Owner's design. Items can lie on any cell of a site's levels, never on the world
 ## 2026-11-02: Weapons from size grids and named rows
 
 Owner's design. Knives to polearms aren't a list of kinds: a weapon has a blade and handle length and a set of properties, the grids in `shared::blade` say which sizes may be made at all, and its name comes from what it is like: the most specific that fits, or else a generic name for its size. Names are limited to those people know, using the Google Books Ngram Viewer, about 5 to 10 a family. Scythes and sickles are left for tools later. Research: `research-bladed-weapons.md`.
+
+## 2026-11-02: UI design guide and shared widget rules
+
+`docs/context/ui-design.md` is the palette for planning screens, from the owner's guide based on Material UI, and is updated as needs change. The owner chose, piece by piece, what to take: the game keeps its parchment, raised edges, square corners and Lexend, with one look (no dark mode). Text comes in four named sizes rather than numbers, gaps are multiples of 4 px, and moveable panels are told from static ones by lighter stripes. Ripple, hover and pressed states are planned for all clickable widgets; stacks and gamepads are separate later tasks.

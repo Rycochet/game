@@ -7,15 +7,15 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::celestial::{Body, BodyKind, colour_along};
 
 use crate::common::CurrentWorld;
-use crate::widgets::{INK, SliderMoved, spawn_slider};
+use crate::widgets::{INK, SliderMoved, TextSize, spawn_slider};
 
-const FONT: f32 = 16.0;
+const FONT: TextSize = TextSize::Medium;
 const NAME_WIDTH: f32 = 60.0;
 const SWATCH: f32 = 18.0;
 const SLIDER_WIDTH: f32 = 180.0;
 const ROW_GAP: f32 = 8.0;
 /// Between the suns and the moons.
-const SECTION_GAP: f32 = 14.0;
+const SECTION_GAP: f32 = 16.0;
 /// How many colours a track shows, and how many are tried to place a mark.
 const STEPS: u32 = 128;
 /// What the end of the intensity slider means.
@@ -142,7 +142,7 @@ fn spawn_row(
         .with_children(|row| {
             row.spawn((
                 Text::new(name),
-                TextFont::from_font_size(FONT),
+                FONT.font(),
                 TextColor(INK),
                 Node {
                     width: px(NAME_WIDTH),

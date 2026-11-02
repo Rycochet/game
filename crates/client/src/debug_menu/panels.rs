@@ -27,12 +27,12 @@ use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::item_art::{ItemPictures, Look, look_of};
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TabChosen,
-    TextBox, raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown,
-    spawn_icon_button, spawn_moveable_panel, spawn_scroll_area, spawn_slider, spawn_tabs,
-    spawn_text_box, spawn_tooltip,
+    TextBox, TextSize, raised_box, spawn_button, spawn_check_button, spawn_close_button,
+    spawn_dropdown, spawn_icon_button, spawn_moveable_panel, spawn_scroll_area, spawn_slider,
+    spawn_tabs, spawn_text_box, spawn_tooltip,
 };
 
-const FONT: f32 = 16.0;
+const FONT: TextSize = TextSize::Medium;
 const CHECK_ROW: f32 = 34.0;
 /// Where the first panel goes, and how far along each one after it.
 const FIRST_AT: Vec2 = Vec2::new(60.0, 110.0);
@@ -191,7 +191,7 @@ const PICTURE: f32 = 50.0;
 const PICTURE_PIXELS: u32 = 100;
 const LARGE_PICTURE: f32 = 256.0;
 const LARGE_PICTURE_PIXELS: u32 = 512;
-const PICTURE_LABEL: f32 = 12.0;
+const PICTURE_LABEL: TextSize = TextSize::Small;
 /// How many rings Item Pictures shows: a sample of what the server would roll.
 const RING_ROWS: u128 = 8;
 const RING_COLUMNS: u128 = 8;
@@ -318,7 +318,7 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
 fn picture_label(words: &str, width: f32) -> impl Bundle {
     (
         Text::new(words),
-        TextFont::from_font_size(PICTURE_LABEL),
+        PICTURE_LABEL.font(),
         TextColor(INK),
         Node {
             width: px(width),
@@ -569,7 +569,7 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
     spawn_text_box(content, text_box, FONT, node);
     content.spawn(raised_box()).with_child((
         Text::new("Raised box"),
-        TextFont::from_font_size(FONT),
+        FONT.font(),
         TextColor(crate::widgets::INK),
     ));
     content
@@ -659,11 +659,7 @@ fn row() -> Node {
 }
 
 fn words(text: impl Into<String>) -> impl Bundle {
-    (
-        Text::new(text),
-        TextFont::from_font_size(FONT),
-        TextColor(INK),
-    )
+    (Text::new(text), FONT.font(), TextColor(INK))
 }
 
 /// Opens the Generate POI panel for the kind chosen, in place of any open.

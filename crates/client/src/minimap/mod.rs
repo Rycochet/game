@@ -34,8 +34,8 @@ use crate::player::{Player, PlayerSystems};
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{HoveredToken, OrbitCamera, View3dSystems};
 use crate::widgets::{
-    CLOSE_PIXELS, PARCHMENT, WidgetSystems, darkening, layer_z, leaves_presses, panel, panel_title,
-    spawn_close_button, spawn_tooltip,
+    CLOSE_PIXELS, PARCHMENT, WidgetSystems, darkening, layer_z, leaves_presses, panel, panel_frame,
+    panel_title, spawn_close_button, spawn_tooltip,
 };
 use crate::world_map::{self, poi_picture, poi_picture_name};
 use canvas::Canvas;
@@ -53,7 +53,7 @@ const NOTCH: f32 = 6.0;
 /// The window height at which the sizes round the minimap (`BORDER`, `NOTCH`,
 /// and the suns and moons) are as given: the height a window opens at.
 const MINIMAP_BASE_HEIGHT: f32 = 720.0;
-const CORNER_GAP: f32 = 10.0;
+const CORNER_GAP: f32 = 8.0;
 
 /// A grid square, plus the grid line shared with the next one.
 const CELL_PIXELS: f32 = 11.0;
@@ -272,6 +272,7 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
             Visibility::Hidden,
         ))
         .with_children(|panel| {
+            panel.spawn(panel_frame());
             panel.spawn((
                 FullMapTitle,
                 panel_title(""),

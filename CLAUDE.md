@@ -25,6 +25,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | (project)           | root files                      | `docs/context/project.md`             | Build, tooling, folder layout, CI                   |
 | (design)            | n/a                             | `docs/context/architecture.md`        | Client/server split, trust, determinism, map data flow |
 | (performance)       | n/a                             | `docs/context/optimisations.md`       | Measured optimisations tried but not adopted (memory) |
+| (ui design)         | n/a                             | `docs/context/ui-design.md`           | The palette of interface pieces: how each should look and behave here, and which we have |
 | (postgres plan)     | n/a                             | `docs/context/postgres-migration.md`  | Not built: optional relational Postgres saves and a two-way migration tool, for when the data schema has matured |
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |

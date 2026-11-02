@@ -6,7 +6,7 @@ use bevy::window::PrimaryWindow;
 
 use super::{CORNER_GAP, FullMap, full_map_area, full_map_picture_corner};
 use crate::common::{CurrentDungeon, FirstFloor, GameView, OtherLevels};
-use crate::widgets::{ButtonState, layer_z, spawn_button};
+use crate::widgets::{ButtonState, TextSize, layer_z, spawn_button};
 
 /// A button's height and width (all the same, with room for "-10"), and the
 /// gap between two.
@@ -16,7 +16,7 @@ pub(super) const BUTTON_GAP: f32 = 4.0;
 /// How far either side of a button still counts as on it.
 const SIDE_REACH: f32 = 10.0;
 
-const FONT: f32 = 16.0;
+const FONT: TextSize = TextSize::Medium;
 
 #[derive(Component)]
 pub(super) struct FloorColumn;

@@ -15,9 +15,9 @@ use super::panels::GenerateKind;
 use crate::common::{GameView, TouchGesture};
 use crate::minimap::FullMap;
 use crate::widgets::{
-    ButtonPressed, ButtonState, HighlightStep, LAYER_EDGE, Pressable, SoftKey, SoftKeyPressed,
-    TextBox, TextEdited, TextFocus, layer_share, matches_filter, next_highlight, panel_title,
-    spawn_button, spawn_check_button, spawn_close_button, spawn_fullscreen_layer,
+    ButtonPressed, ButtonState, HighlightStep, PANEL_EDGE, Pressable, SoftKey, SoftKeyPressed,
+    TextBox, TextEdited, TextFocus, TextSize, layer_share, matches_filter, next_highlight,
+    panel_title, spawn_button, spawn_check_button, spawn_close_button, spawn_fullscreen_layer,
     spawn_icon_button, spawn_text_box,
 };
 
@@ -29,7 +29,7 @@ const ACTIONS: usize = 0;
 const SUBMENU: usize = 1;
 
 const WARNING_BUTTON: f32 = 34.0;
-const CORNER_GAP: f32 = 10.0;
+const CORNER_GAP: f32 = 8.0;
 
 const MARGIN: f32 = 16.0;
 const TITLE_ROW: f32 = 36.0;
@@ -41,7 +41,7 @@ const GAP: f32 = 4.0;
 const COLUMN_GAP: f32 = GAP * 2.0;
 const COLUMN_WIDTH: f32 = 300.0;
 const PAGE_BUTTON: f32 = 34.0;
-const FONT: f32 = 18.0;
+const FONT: TextSize = TextSize::Large;
 
 /// What has been typed in one layer's list, which entry the arrow keys are on
 /// (counted among those on show), and the first column drawn.
@@ -280,7 +280,7 @@ fn spawn_layer(commands: &mut Commands, layer: usize, title: &str) {
 /// How many entries fit in a column of this layer, in a window this tall.
 fn rows_in(window_height: f32, layer: usize) -> usize {
     let share = layer_share(layer as i32);
-    let inside = window_height * share - 2.0 * (LAYER_EDGE + MARGIN);
+    let inside = window_height * share - 2.0 * (PANEL_EDGE + MARGIN);
     let room = inside - TITLE_ROW - FILTER_HEIGHT - 2.0 * GAP * 3.0;
     (((room + GAP) / (ROW + GAP)).floor() as usize).max(1)
 }
@@ -288,7 +288,7 @@ fn rows_in(window_height: f32, layer: usize) -> usize {
 /// How many columns of this layer fit, in a window this wide.
 fn columns_in(window_width: f32, layer: usize) -> usize {
     let share = layer_share(layer as i32);
-    let room = window_width * share - 2.0 * (LAYER_EDGE + MARGIN);
+    let room = window_width * share - 2.0 * (PANEL_EDGE + MARGIN);
     (((room + COLUMN_GAP) / (COLUMN_WIDTH + COLUMN_GAP)).floor() as usize).max(1)
 }
 
