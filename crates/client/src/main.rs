@@ -13,6 +13,7 @@ mod dungeon_map;
 mod entities;
 mod fonts;
 mod inventory;
+mod item_art;
 mod loading_screen;
 mod minimap;
 mod player;
@@ -82,6 +83,7 @@ fn main() {
         character::CharacterPlugin,
         entities::EntitiesPlugin,
         trade::TradePlugin,
+        item_art::ItemArtPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is

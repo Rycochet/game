@@ -41,7 +41,7 @@
 //!   this many grid points from the player (`0,0` to centre it on them).
 //! - `HOW_DEBUG_MAP_ZOOM=n`: the full map opened by `HOW_DEBUG_MAP` at this zoom.
 //! - `HOW_DEBUG_PANEL=1`: open the Show Widgets panel; `suns`: Suns and Moons;
-//!   `generate`: Generate POI's submenu.
+//!   `pictures`: Item Pictures; `generate`: Generate POI's submenu.
 //! - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
 //! - `HOW_DEBUG_SYSTEM_MENU=menu`: start with the system menu open; `quit`: at
 //!   its requester; `settings`: at its settings.
@@ -212,6 +212,8 @@ impl Plugin for DevToolsPlugin {
         if let Ok(panel) = env::var("HOW_DEBUG_PANEL") {
             let action = if panel == "suns" {
                 DebugAction::SunsAndMoons
+            } else if panel == "pictures" {
+                DebugAction::ItemPictures
             } else if panel == "generate" {
                 DebugAction::GeneratePoi
             } else {

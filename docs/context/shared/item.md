@@ -7,6 +7,9 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 - `crates/shared/src/id.rs`: `Id`, a version 6 UUID (text in saves, 16 bytes in messages). Nothing here makes one: `server::ids::new_id` does.
 - `crates/shared/src/item.rs`: `Shape`, `Rotation`, `ItemKind` (the table: `def()`), `ItemDef`, `ContainerDef`, `Quality`, `Drop`, `roll_drop`, `artifact_name`, `MadeAt`, `Item`, `Placed`, `Holder`, `Inventory`, `MoveRefused`. Tests for every rule below.
 
+- `crates/shared/src/item_form.rs`: `ItemForm`, `GemForm`, `Cut`, `Rolled`, `roll_form`. Tests.
+- `crates/shared/src/material.rs`: `Material`, `Category`. Placeholder table, first guesses at tiers. Tests.
+
 ## Public API
 
 - `Id(Uuid)`: something's id for good, for items, mobs, characters and accounts (the last two wrapped in `CharacterId` and `AccountId`). Prints as the usual UUID text, which also names files. `Id::for_test` is for tests in any crate.
@@ -16,6 +19,8 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 - `Quality::{ALL, odds, roll}` (Poor to Artifact, odds out of `ODDS_OUT_OF`), `Drop { quality, kind, weight }`, `roll_drop` (both rolls: quality, then the item at it; a table without that quality takes the nearest below, or else above).
 - `Item { id, kind, contents, made, quality, made_at, name, set }` (`name()` is its own name or its kind's with its size unless `Medium`; every artifact has its own, from `artifact_name`, placeholders so far; `shape()` is its kind's at the size it was made: use it, not `def().shape`), `MadeAt { world, minute }` (each world has its own clock), `Made` (who it was made for: `for_body`), `Placed { item, x, y, rotation }` (`shape`, `cells`), `Holder::{Pockets, Inside(id)}`.
 - `Inventory { creature, outfitted, pockets, pockets_size, worn, bin }`: `find`, `placed`, `grid`, `grid_size`, `total_weight`, `weight_with_creature`, `check_move`, `move_item`, `check_add`, `add`, `first_place_for_new` (the same for something not carried), `first_place_for` (a closed bag: the first place, turning if it must), `give` (a new item, first place in the pockets), `to_bin`, `in_bin` (`bin` keeps what was last thrown away, and the next destroys it).
+- `roll_form(kind, seed, quality, size)`: a new item's `Rolled { size, form }`, for kinds with a form (gems so far). `size` is what it must be, such as a mob's; without one it is rolled. The seed comes from `Id::seed`. `Item.form` holds the result, `None` for other kinds and old saves. `ItemForm::name`, `GemForm { material, cut, shape_seed }`, `Cut::{ALL, name}`.
+- `Material::{ALL, GEMS, name, category, tier}`, `Category::{Gem, Metal}`.
 - `POCKETS` (6 × 4, for saves from before creature kinds and new inventories), `MAX_DEPTH` (3).
 
 ## Depends on
@@ -34,4 +39,5 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 - Nothing in the table is small enough to go inside a `SmallBox` and have a grid, so `MAX_DEPTH` is only reached by bags made by hand in tests, for now.
 - Rolls are the server's: it is the only maker of items. A roll's odds and colours are first guesses; colours are the client's (`inventory`). Quality gives nothing yet. An item's quality may change, and its id doesn't. Design: `decisions.md`, 2026-11-02, item quality.
 - Size changes only the outside of an item: each side is multiplied by `Size::quarters` (0.5 to 2), rounding down when enlarging and up when reducing, to at most 8. A bag's grid, its limits and every weight stay as they are, so a Tiny pouch is 1 × 1 and can hold nothing, and bags aren't rolled at other sizes yet. Saved items may now overlap: harmless, as they can still be moved apart, until the item wipe.
+- A form is rolled once by the server and saved, never worked out again, as it will affect value: changing the rolls leaves existing items alone. The client only draws what it is sent. Each kind rolls its choices in order, each seeing those before: changing weights to lean on one (`Rng::pick_weighted`), or a weight of 0 to rule something out. Gems: quality, material, cut, size. The finest gems never come Giant, by whole-number division.
 - Kinds are placeholders for trying this out, and the weights are guesses.

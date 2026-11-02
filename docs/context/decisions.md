@@ -525,3 +525,15 @@ The owner asked for a God Mode toggle, with more to be added to it later. It is 
 ## 2026-11-02: An item's size sets how many cells it takes
 
 Owner's rule, the first step towards generated 3D items. Each side of an item's shape is multiplied by its size's value, rounding down when enlarging and up when reducing, so everything 1 × 1 stays so until Giant, which is 2 × 2. An item's picture and its place in a grid look the same at any size; only its name, and later the item popup, say so. Claude's choices: the values are the client's token sizes (0.5, 0.75, 1, 1.25, 1.5, 2), with shared `Giant` as the top one the owner called titan; sides stop at 8, as much as a `Shape` holds, so only a Giant sword is cut short (2 × 8); gaps scale in proportion. A bag's grid, its limits and all weights stay as they are for now, as scaling containers is to be decided, and bags aren't rolled at other sizes until it is. Saved items that now overlap are left as they are, being harmless, until an item wipe once the item plans are finalised.
+
+## 2026-11-02: Generated items: forms saved on the item, and 3D pictures
+
+Owner's design: each kind has one generic model drawn differently by values that come from the seed, drawn once to an image rather than in 3D each frame. Rings and gems only, until other kinds have been researched: the generic name isn't enough, as a sword's measurements decide whether it is a rapier or a katana, and so its name.
+
+- **Values are saved, not worked out again.** Material will affect value, so the server rolls an item's form once (seeded from its `Id`) and saves it (`Item.form`). Changing the rolls never changes items already made. Claude's choice, against working it out from the seed each time as first discussed.
+- **Rolls are ordered choices.** Each sees those before it, and can lean on one by weights or limit it with a weight of 0 (owner). Quality stays the first roll, as shops need that order, so better rolls lean towards finer materials (Claude's choice): a gold ring is still more often a good one, and making an item can roll the other way when that is built.
+- **Pictures are kept by what they show** (`item_art::Look`), not by seed or id, so a change to what can be seen makes a new picture and others keep theirs. On disk, planned, the name will hash that with a drawing version; file dates only say what to clear out, as they can't say a picture is stale (Claude's choice, against the owner's first idea).
+- **Gems are real items** set in rings' settings (planned), so they can be taken out, replaced or added to, and a setting can be empty (owner). Cuts are round, oval, emerald, cushion, princess, pear, trillion and uncut (owner); only clear stones for now, as opaque ones are usually cut as domes, which isn't one of these. Uncut gems won't go in settings (Claude's choice).
+- **Size stays out of pictures:** see the size entry above.
+
+Order: size rule (done), gems (done), ring values, ring model, pictures in grids, disk cache (dropped if measuring shows no gain).
