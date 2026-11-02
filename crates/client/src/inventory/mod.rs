@@ -16,7 +16,7 @@ use crate::common::GameView;
 use crate::common::{PointerPosition, PointerSystems, TouchGesture};
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{ButtonPressed, RaisePanel, WidgetSystems};
-use body::{BodyNode, ClothesPanel};
+use body::BodyNode;
 use give::{GiveRow, NearbyPanel};
 use hold::{Held, Target};
 use panels::{BinNode, Floating, ItemCell, OpenGrids};
@@ -31,7 +31,6 @@ impl Plugin for InventoryPlugin {
         app.init_resource::<Carried>()
             .init_resource::<Holding>()
             .init_resource::<OpenGrids>()
-            .init_resource::<ClothesPanel>()
             .init_resource::<NearbyPanel>()
             .add_systems(Startup, panels::spawn_fixed_parts)
             .add_systems(
@@ -50,7 +49,6 @@ impl Plugin for InventoryPlugin {
                     read_server,
                     panels::toggle_pockets,
                     panels::forget_closed,
-                    body::forget_closed,
                     give::forget_closed,
                     panels::show_bins,
                     panels::show_grids,
@@ -240,7 +238,8 @@ fn hold_items(
         let is_bag = carried
             .0
             .find(cell.id)
-            .is_some_and(|item| item.kind.def().container.is_some());
+            .is_some_and(|item| item.kind.def().container.is_some())
+            && !carried.0.in_bin(cell.id);
         if again && is_bag {
             open.open(
                 Holder::Inside(cell.id),
@@ -316,7 +315,12 @@ fn hold_items(
         })
         .unwrap_or_default();
     let aim = if on_bin {
-        Target::Bin
+        // In it already: nothing happens.
+        if carried.0.in_bin(held.item.id) {
+            Target::Nowhere
+        } else {
+            Target::Bin
+        }
     } else if let Some(someone) = on_row {
         Target::Someone(someone)
     } else if on_body {
@@ -360,8 +364,9 @@ fn hold_items(
     }
     if aim == Target::Bin {
         let item = held.item.id;
-        carried.0.destroy(item);
-        to_server.write(ToServer(ClientMessage::DestroyItem { item }));
+        if carried.0.to_bin(item) {
+            to_server.write(ToServer(ClientMessage::BinItem { item }));
+        }
         return;
     }
     if let Some((to, x, y, rotation)) = hold::drop_move(&carried.0, held.item, aim) {
@@ -386,7 +391,6 @@ fn run_debug(
     carried: Res<Carried>,
     mut holding: ResMut<Holding>,
     mut open: ResMut<OpenGrids>,
-    mut clothes: ResMut<ClothesPanel>,
     mut nearby: ResMut<NearbyPanel>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
@@ -400,7 +404,6 @@ fn run_debug(
         match *asked {
             InventoryDebug::OpenPockets => {
                 open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
-                clothes.open(&mut commands, &mut raise, &nodes);
                 nearby.open(&mut commands, &mut raise, &nodes);
             }
             InventoryDebug::OpenBags => {

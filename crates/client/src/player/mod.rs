@@ -11,11 +11,12 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use shared::energy::{ACTION_TICKS_PER_SECOND, Energy, NORMAL_SPEED, site_step_cost};
 use shared::movement::{Step, step_cost, step_on_level, step_on_world_map, world_step_cost};
-use shared::pathfinding::{find_path, find_world_path, straighten};
+use shared::pathfinding::{Path, find_path, find_world_path, straighten};
+use shared::sheet::Feeling;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, Icon, LightSource, MapPosition, PlayerSpeed,
-    ServerStatus, SmoothPosition, Token, ViewFacing, Weather,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, Icon, LightSource, MapPosition, Other,
+    PlayerSpeed, ServerStatus, SmoothPosition, Token, ViewFacing, Weather,
 };
 
 /// How far the player's light reaches in dungeons, in cells.
@@ -216,6 +217,7 @@ fn take_steps(
     speed: Res<PlayerSpeed>,
     mut energy: ResMut<PlayerEnergy>,
     mut stepped: MessageWriter<Stepped>,
+    others: Query<(&Other, &MapPosition), Without<Player>>,
     player: Single<(&mut MapPosition, &mut Travel), With<Player>>,
 ) {
     let (mut position, mut travel) = player.into_inner();
@@ -253,6 +255,10 @@ fn take_steps(
         let Some((x, y)) = to else {
             continue;
         };
+        // An enemy won't move aside; anyone else swaps places, as the server says.
+        if enemy_cells(&others).contains(&(x, y)) {
+            continue;
+        }
         let cost = match view.get() {
             GameView::Dungeon => site_step_cost(from, (x, y)),
             _ => world.as_ref().map_or(0, |world| {
@@ -297,9 +303,14 @@ fn travel(
     mut stepped: MessageWriter<Stepped>,
     speed_now: Res<PlayerSpeed>,
     mut energy: ResMut<PlayerEnergy>,
+    others: Query<(&Other, &MapPosition), Without<Player>>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
+    let enemies = enemy_cells(&others);
+    // Only through cells the player has seen, so that a route gives nothing away
+    // (and memory may be out of date: the server checks), and round enemies.
+    let known = |x, y| dungeon.remembered.is_seen(x, y) && !enemies.contains(&(x, y));
 
     // On the world map, the ground and the conditions now; in a dungeon, `None`.
     let ground = (*view.get() == GameView::WorldMap)
@@ -323,9 +334,6 @@ fn travel(
         let path = match ground {
             Some((ground, conditions)) => find_world_path(ground, conditions, from, to),
             None => {
-                // Only through cells the player has seen, so that a route gives
-                // nothing away (and memory may be out of date: the server checks).
-                let known = |x, y| dungeon.remembered.is_seen(x, y);
                 let path = find_path(&dungeon.level, from, to, None, known);
                 straighten(&dungeon.level, from, &path, known)
             }
@@ -393,6 +401,22 @@ fn travel(
                     Some((ground, conditions)) => step_on_world_map(ground, conditions, at, step),
                     None => step_on_level(&dungeon.level, at, step),
                 };
+                let in_the_way = enemies.contains(&next);
+                if in_the_way && ground.is_none() {
+                    // An enemy has come between: go round it, from here.
+                    let path = find_path(&dungeon.level, at, travel.goal, None, known);
+                    let path = Path {
+                        cells: straighten(&dungeon.level, at, &path, known).cells,
+                        ..path
+                    };
+                    travel.route_arrives = path.reached;
+                    travel.route = path.cells.into();
+                    now = DVec2::new(at.0 as f64, at.1 as f64);
+                    if travel.route.is_empty() {
+                        break;
+                    }
+                    continue;
+                }
                 if legal != Some(next) {
                     // The tide or a thaw has cut the way: find another from here.
                     if let Some((ground, conditions)) = ground {
@@ -451,6 +475,15 @@ fn towards(from: DVec2, to: DVec2, distance: f64) -> DVec2 {
     } else {
         from + (to - from).normalize() * distance
     }
+}
+
+/// The cells of mobs that won't move aside for the player.
+fn enemy_cells(others: &Query<(&Other, &MapPosition), Without<Player>>) -> Vec<(i64, i64)> {
+    others
+        .iter()
+        .filter(|(other, _)| other.feeling == Feeling::Unfriendly)
+        .map(|(_, at)| (at.x, at.y))
+        .collect()
 }
 
 /// The grid point a position is nearest: its cell, in a dungeon.

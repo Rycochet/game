@@ -698,6 +698,7 @@ mod tests {
             has_herbs: false,
             walking: false,
             cycling: false,
+            detecting: false,
             teleporting: false,
             changing_cells: false,
             showing_info: false,
@@ -716,7 +717,7 @@ mod tests {
         let shown = on_show("s");
         assert_eq!(
             return_chooses(&shown, None, &facts()),
-            Some(DebugAction::ForgetMapOnServer),
+            Some(DebugAction::DetectMonsters),
             "{shown:?}"
         );
     }
@@ -731,7 +732,7 @@ mod tests {
     fn return_on_a_highlighted_entry_chooses_it() {
         let shown = on_show("");
         assert_eq!(
-            return_chooses(&shown, Some(5), &facts()),
+            return_chooses(&shown, Some(6), &facts()),
             Some(DebugAction::ForgetMap)
         );
     }

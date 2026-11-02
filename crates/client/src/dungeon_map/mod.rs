@@ -45,12 +45,14 @@ use crate::common::{
     ClickMode, CurrentDungeon, CurrentWorld, GameClock, GameView, HerbGrowthShift, LightSource,
     MapPosition, PointerPosition, SharesSight, SmoothPosition, ViewStats, Weather, WorldReturn,
 };
+use crate::common::{DetectMonsters, Other};
 use crate::connection::ToServer;
 use crate::player::{Player, PlayerSystems, TravelTo};
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{ClickedToken, TOKEN_DIAMETER, TokenView, View3dSystems, ViewCamera, ViewGrid};
 use daylight::{OutsideLight, Spill, TownLights};
 use mesh::{Surface, View, WallFace};
+use shared::sheet::Feeling;
 use theme::Theme;
 
 /// Size of a cell in 3D units: about the size of a token's picture.
@@ -552,15 +554,22 @@ fn hide_scene(
 fn hide_unseen_tokens(
     shown: Res<Shown>,
     positions: Query<&MapPosition>,
+    others: Query<&Other>,
+    detect: Res<DetectMonsters>,
     mut tokens: Query<(&TokenView, &mut Visibility)>,
 ) {
     let Some(sight) = &shown.sight else {
         return;
     };
     for (view, mut visibility) in &mut tokens {
-        let seen = positions
-            .get(view.owner)
-            .is_ok_and(|position| sight.is_seen(position.x, position.y));
+        let detected = detect.0
+            && others
+                .get(view.owner)
+                .is_ok_and(|other| other.feeling != Feeling::None);
+        let seen = detected
+            || positions
+                .get(view.owner)
+                .is_ok_and(|position| sight.is_seen(position.x, position.y));
         visibility.set_if_neq(if seen {
             Visibility::Inherited
         } else {

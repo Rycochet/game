@@ -1,4 +1,4 @@
-//! The clothes panel: a row for each place on the character's body and a column
+//! The clothes on the Character panel: a row for each place on the character's body and a column
 //! for each layer. Items are dragged on to wear them and off to take them off,
 //! with the same holding as everything else.
 
@@ -11,18 +11,13 @@ use shared::wear::Fit;
 use super::hold::Target;
 use super::panels::{CELL, GRID_COLOUR, GRID_LINE, ITEM_EDGE, ItemCell, colour, label};
 use super::{Carried, Holding};
-use crate::widgets::{INK, Pressable, RaisePanel, spawn_moveable_panel};
+use crate::widgets::{INK, Pressable};
 
-const AT: Vec2 = Vec2::new(340.0, 140.0);
 const NAME_WIDTH: f32 = 80.0;
 const FONT: f32 = 14.0;
 const LABEL_FONT: f32 = 13.0;
 const BORDER: f32 = 1.0;
 const COVERED_ALPHA: f32 = 0.45;
-
-/// The panel, if open.
-#[derive(Resource, Default)]
-pub(super) struct ClothesPanel(Option<Entity>);
 
 /// On the panel's slots and everything in them: dropping here means wearing.
 #[derive(Component, Clone, Copy)]
@@ -32,40 +27,17 @@ pub(super) struct BodyNode;
 #[derive(Component)]
 pub(super) struct BodyRows;
 
-impl ClothesPanel {
-    /// Opens it, or brings it to the front if it is open.
-    pub(super) fn open(
-        &mut self,
-        commands: &mut Commands,
-        raise: &mut MessageWriter<RaisePanel>,
-        nodes: &Query<(), With<Node>>,
-    ) {
-        if let Some(panel) = self.0.filter(|&panel| nodes.contains(panel)) {
-            raise.write(RaisePanel(panel));
-            return;
-        }
-        let (panel, content) = spawn_moveable_panel(commands, "Clothes", AT);
-        commands.entity(content).with_child((
-            BodyRows,
-            BodyNode,
-            Node {
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-            BackgroundColor(Color::NONE),
-        ));
-        self.0 = Some(panel);
-    }
-
-    pub(super) fn is_open(&self) -> bool {
-        self.0.is_some()
-    }
-
-    pub(super) fn close(&mut self, commands: &mut Commands, nodes: &Query<(), With<Node>>) {
-        if let Some(panel) = self.0.take().filter(|&panel| nodes.contains(panel)) {
-            commands.entity(panel).despawn();
-        }
-    }
+/// The clothes' part of the Character panel.
+pub(super) fn spawn_rows(parent: &mut ChildSpawnerCommands) {
+    parent.spawn((
+        BodyRows,
+        BodyNode,
+        Node {
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        BackgroundColor(Color::NONE),
+    ));
 }
 
 fn words(text: impl Into<String>, width: f32) -> impl Bundle {
@@ -132,13 +104,6 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         TextFont::from_font_size(LABEL_FONT),
         TextColor(ITEM_EDGE),
     ));
-}
-
-/// Forgets the panel once its close button has closed it.
-pub(super) fn forget_closed(mut clothes: ResMut<ClothesPanel>, nodes: Query<(), With<Node>>) {
-    if clothes.0.is_some_and(|panel| !nodes.contains(panel)) {
-        clothes.0 = None;
-    }
 }
 
 /// Draws the rows again when what is worn, or the body, or what is held changes.

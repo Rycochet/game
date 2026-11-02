@@ -13,7 +13,7 @@ use crate::common::{MapPosition, Other};
 use crate::player::Player;
 use crate::widgets::{INK, RaisePanel, spawn_moveable_panel};
 
-const AT: Vec2 = Vec2::new(90.0, 420.0);
+const AT: Vec2 = Vec2::new(900.0, 300.0);
 const FONT: f32 = 16.0;
 const ROW_WIDTH: f32 = 200.0;
 const ROW_HEIGHT: f32 = 28.0;

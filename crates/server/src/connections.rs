@@ -124,6 +124,8 @@ pub struct Client {
     other_worlds: BTreeMap<WorldId, CharacterWorldSave>,
     /// What the character carries.
     pub(crate) inventory: Inventory,
+    /// Dev tools: it is told of every mob on its level, seen or not.
+    pub(crate) detect_monsters: bool,
     /// Who the client has been told is in sight, and where.
     pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
     /// How the client has been told they feel.
@@ -164,6 +166,7 @@ impl Client {
             character: CharacterWorldSave::default(),
             other_worlds: BTreeMap::new(),
             inventory: Inventory::default(),
+            detect_monsters: false,
             seen_entities: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
             sheet: Sheet::default(),
@@ -352,16 +355,23 @@ fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Step) -> (bool
     match &client.visit {
         Some(visit) => {
             let from = visit.position();
+            let place = (visit.id(), visit.index());
+            // Someone who won't move aside is in the way; anyone else swaps places.
+            if let Some(to) = visit.landing(step) {
+                let kind = client.inventory.creature;
+                let character = client.character_id.as_ref();
+                if world.enemy_at(place, to, kind, character) {
+                    info!("Refused a step onto an enemy, at {to:?}");
+                    return (true, 0);
+                }
+            }
             let stayed = sites::stepped(client, step);
             let to = client.visit.as_ref().map_or(from, Visit::position);
-            (
-                stayed,
-                if to == from {
-                    0
-                } else {
-                    site_step_cost(from, to)
-                },
-            )
+            if to == from {
+                return (stayed, 0);
+            }
+            world.swap_mob(place, to, from);
+            (stayed, site_step_cost(from, to))
         }
         None => {
             let from = client.world_position();
@@ -673,11 +683,11 @@ pub(crate) fn answer(
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
         }
-        ClientMessage::DestroyItem { item } => {
-            if client.inventory.destroy(item) {
+        ClientMessage::BinItem { item } => {
+            if client.inventory.to_bin(item) {
                 client.unsaved = true;
             } else {
-                warn!("Refused destroying {item:?}, which isn't carried");
+                warn!("Refused throwing away {item:?}");
             }
             client.update_speed(world.action_clock.ticks());
             client
@@ -690,8 +700,15 @@ pub(crate) fn answer(
             warn!("A client asked for dev tools ({message:?}), which this server doesn't allow");
             true
         }
-        ClientMessage::DevTeleport { x, y } => match client.visit {
-            Some(_) => sites::teleport(client, x, y),
+        ClientMessage::DevTeleport { x, y } => match &client.visit {
+            Some(visit) => {
+                let place = (visit.id(), visit.index());
+                let stayed = sites::teleport(client, x, y);
+                if let Some(visit) = &client.visit {
+                    world.move_mob_aside(place, visit.position());
+                }
+                stayed
+            }
             None => world_map::teleport(client, world, x, y),
         },
         ClientMessage::DevBackToStart => world_map::back_to_start(client, world),
@@ -730,6 +747,10 @@ pub(crate) fn answer(
             client
                 .link
                 .send(&ServerMessage::Inventory(client.inventory.clone()))
+        }
+        ClientMessage::DevDetectMonsters(on) => {
+            client.detect_monsters = on;
+            true
         }
         ClientMessage::DevSetCreature(kind) => {
             for item in client.inventory.change_body(kind) {
@@ -1083,7 +1104,7 @@ pub(crate) mod tests {
         let mut test = TestClient::new();
         let answers = test.send(&[give(ItemKind::Coin)]);
         let coin = inventory(&answers).pockets[0].item.id;
-        let destroy = ClientMessage::DestroyItem { item: coin };
+        let destroy = ClientMessage::BinItem { item: coin };
         assert!(
             inventory(&test.send(std::slice::from_ref(&destroy)))
                 .pockets

@@ -273,7 +273,7 @@ mod tests {
         // Nor come off under them.
         assert_eq!(inventory.covered_by(id(1)), Some(id(2)));
         assert_eq!(take_off(&mut inventory, 1), Err(MoveRefused::Covered));
-        assert!(!inventory.destroy(id(1)));
+        assert!(!inventory.to_bin(id(1)));
         take_off(&mut inventory, 2).unwrap();
         assert_eq!(take_off(&mut inventory, 1), Err(MoveRefused::NoRoom));
         assert_eq!(

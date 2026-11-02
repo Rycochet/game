@@ -61,3 +61,4 @@ The dungeon (and building) view: `shared::dungeon` cells drawn in 3D through `vi
 - Clicks: `TravelTo`; `player` finds the route (`shared::pathfinding`) and travels at 12 cells/s here.
 - Rebuilding everything (with sight) is about 1 ms for a 50 × 66 castle floor; it happens every frame while the camera moves (dragging, travelling). Bigger levels may need to rebuild only what changed.
 - In `common::ClickMode::Teleport`, a click on the map (not a token) sends `DevTeleport` instead of `TravelTo` (dev tools: only the embedded server allows it; through walls in a site, but onto a walkable cell). `ClickMode::ChangeCell` sends `DevSetCell` (floor → wall → door → window → floor), to try wall shapes. Uses `connection::ToServer`.
+- With `common::DetectMonsters` on, mobs' tokens show on cells nobody sees.

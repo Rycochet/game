@@ -31,7 +31,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 29;
+pub const PROTOCOL_VERSION: u32 = 30;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -94,9 +94,9 @@ pub enum ClientMessage {
         y: u8,
         rotation: Rotation,
     },
-    /// Destroys something the character carries and all that is in it, for good,
-    /// answered with `Inventory`.
-    DestroyItem { item: Id },
+    /// Throws something the character carries in their bin, with all in it,
+    /// destroying what was there, answered with `Inventory`.
+    BinItem { item: Id },
     /// Gives something carried to a mob near enough and in sight, which remembers it,
     /// answered with `Inventory`, whether or not it could be done.
     GiveItem { item: Id, to: Id },
@@ -111,6 +111,8 @@ pub enum ClientMessage {
         size: Option<Size>,
         magical: bool,
     },
+    /// Developer tools: be told of every mob on the level, seen or not, or not.
+    DevDetectMonsters(bool),
     /// Developer tools: the character becomes this kind of creature. Everything
     /// comes off into the new pockets, and what doesn't fit is lost. Answered with
     /// `Inventory`.
@@ -186,6 +188,7 @@ impl ClientMessage {
                 | Self::DevGenerateSite { .. }
                 | Self::DevGiveItem { .. }
                 | Self::DevSetCreature(_)
+                | Self::DevDetectMonsters(_)
         )
     }
 
@@ -417,7 +420,7 @@ mod tests {
                 y: 3,
                 rotation: Rotation::Quarter,
             },
-            ClientMessage::DestroyItem {
+            ClientMessage::BinItem {
                 item: Id(uuid::Uuid::from_u128(7)),
             },
             ClientMessage::GiveItem {
@@ -433,6 +436,7 @@ mod tests {
                 magical: true,
             },
             ClientMessage::DevSetCreature(CreatureKind::Chicken),
+            ClientMessage::DevDetectMonsters(true),
             ClientMessage::DevTeleport { x: -3, y: 4 },
             ClientMessage::DevSnowLine(40),
             ClientMessage::DevSetTime { minutes: 90.5 },

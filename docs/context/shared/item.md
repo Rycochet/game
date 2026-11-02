@@ -14,7 +14,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 - `Shape`: up to `MAX_SHAPE_SIDE` (8) a side, as bits of a `u64`, gaps allowed. `rectangle`, `has`, `cells`, `size`, `turned`, `smaller_than`.
 - `Rotation::{None, Quarter, Half, ThreeQuarters}`: clockwise; `next`, `turn_cell`.
 - `Item { id, kind, contents, made }`, `Made` (who it was made for: `for_body`), `Placed { item, x, y, rotation }` (`shape`, `cells`), `Holder::{Pockets, Inside(id)}`.
-- `Inventory { creature, outfitted, pockets, pockets_size, worn }`: `find`, `placed`, `grid`, `grid_size`, `total_weight`, `check_move`, `move_item`, `first_place_for` (a closed bag: the first place, turning if it must), `give` (a new item, first place in the pockets), `destroy` (with all in it).
+- `Inventory { creature, outfitted, pockets, pockets_size, worn, bin }`: `find`, `placed`, `grid`, `grid_size`, `total_weight`, `check_move`, `move_item`, `first_place_for` (a closed bag: the first place, turning if it must), `give` (a new item, first place in the pockets), `to_bin`, `in_bin` (`bin` keeps what was last thrown away, and the next destroys it).
 - `POCKETS` (6 × 4, for saves from before creature kinds and new inventories), `MAX_DEPTH` (3).
 
 ## Depends on

@@ -546,6 +546,10 @@ pub struct Inventory {
     pub pockets_size: (u8, u8),
     /// What they have on: see `shared::wear`.
     pub worn: Vec<Item>,
+    /// What they last threw away: it can be taken back until something else is
+    /// thrown away, which destroys it. It weighs nothing, being left behind.
+    #[serde(default)]
+    pub bin: Option<Item>,
 }
 
 impl Default for Inventory {
@@ -556,6 +560,7 @@ impl Default for Inventory {
             pockets: Vec::new(),
             pockets_size: POCKETS,
             worn: Vec::new(),
+            bin: None,
         }
     }
 }
@@ -577,7 +582,7 @@ impl Inventory {
                 }
             })
         }
-        search(&self.pockets, id).or_else(|| {
+        let carried = search(&self.pockets, id).or_else(|| {
             self.worn.iter().find_map(|item| {
                 if item.id == id {
                     Some(item)
@@ -585,7 +590,8 @@ impl Inventory {
                     search(&item.contents, id)
                 }
             })
-        })
+        });
+        carried.or_else(|| self.bin.as_ref().filter(|item| item.id == id))
     }
 
     /// What is in this grid: `None` if there is no such grid.
@@ -646,7 +652,7 @@ impl Inventory {
     /// Which grid an item is in, and how it lies there. None if it isn't in a
     /// grid, as when it is worn.
     pub fn placed(&self, id: Id) -> Option<(Holder, &Placed)> {
-        if self.is_worn(id) {
+        if self.is_worn(id) || self.in_bin(id) {
             return None;
         }
         let holder = match self.containers_around(id)?.last() {
@@ -777,10 +783,23 @@ impl Inventory {
         Ok(())
     }
 
-    /// Destroys a carried item and everything in it. `false` if it isn't carried,
-    /// or is worn under something.
-    pub fn destroy(&mut self, id: Id) -> bool {
-        self.covered_by(id).is_none() && self.take(id).is_some()
+    /// Throws a carried item away, with everything in it, destroying what was thrown
+    /// away before. `false` if it isn't carried, is worn under something, or is
+    /// there already.
+    pub fn to_bin(&mut self, id: Id) -> bool {
+        if self.in_bin(id) || self.covered_by(id).is_some() {
+            return false;
+        }
+        let Some(item) = self.take(id) else {
+            return false;
+        };
+        self.bin = Some(item);
+        true
+    }
+
+    /// Whether this is what was last thrown away.
+    pub fn in_bin(&self, id: Id) -> bool {
+        self.bin.as_ref().is_some_and(|item| item.id == id)
     }
 
     /// Takes an item out, wherever it is.
@@ -792,6 +811,9 @@ impl Inventory {
             placed
                 .iter_mut()
                 .find_map(|placed| search(&mut placed.item.contents, id))
+        }
+        if self.in_bin(id) {
+            return self.bin.take();
         }
         if let Some(index) = self.worn.iter().position(|item| item.id == id) {
             return Some(self.worn.remove(index));
@@ -1203,15 +1225,30 @@ mod tests {
     }
 
     #[test]
-    fn destroying_a_bag_takes_what_is_in_it_and_nothing_else() {
+    fn the_bin_keeps_the_last_thing_thrown_away_until_the_next() {
         let mut inventory = nested();
         inventory.give(Item::new(id(4), ItemKind::Coin)).unwrap();
-        assert!(inventory.destroy(id(2)));
+        assert!(inventory.to_bin(id(2)));
+        // Gone from the backpack, but it and what is in it can still be had.
+        assert!(inventory.find(id(1)).unwrap().contents.is_empty());
+        assert!(inventory.find(id(2)).is_some());
+        assert!(inventory.placed(id(2)).is_none());
+        // It weighs nothing there.
+        assert_eq!(inventory.total_weight(), 1200 + 10);
+        // Thrown away twice, nothing changes.
+        assert!(!inventory.to_bin(id(2)));
+        // Taken back, it goes in a grid again.
+        assert_eq!(
+            inventory.move_item(id(2), Holder::Pockets, 4, 0, NONE),
+            Ok(())
+        );
+        assert!(inventory.bin.is_none());
+        // Another thrown away destroys the first.
+        assert!(inventory.to_bin(id(2)));
+        assert!(inventory.to_bin(id(4)));
         assert!(inventory.find(id(2)).is_none());
         assert!(inventory.find(id(3)).is_none());
-        assert!(inventory.find(id(1)).is_some());
         assert!(inventory.find(id(4)).is_some());
-        assert!(!inventory.destroy(id(2)));
     }
 
     #[test]
