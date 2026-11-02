@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::id::Id;
 use shared::item::{Item, MadeAt, Quality};
+use shared::item_form::give_form;
 use shared::mob::Event;
 use shared::movement::{Step, step_on_level};
 use shared::poi::{ChunkPos, Poi, PoiKind};
@@ -528,13 +529,17 @@ pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id)
         .iter()
         .map(|&index| keeping.carried[index].clone())
         .collect();
-    items.extend(restocked.new.iter().map(|new| Item {
-        quality: new.quality,
-        made_at: Some(MadeAt {
-            minute: new.minute,
-            ..made
-        }),
-        ..Item::new(new_id(), new.kind)
+    items.extend(restocked.new.iter().map(|new| {
+        let mut item = Item {
+            quality: new.quality,
+            made_at: Some(MadeAt {
+                minute: new.minute,
+                ..made
+            }),
+            ..Item::new(new_id(), new.kind)
+        };
+        give_form(&mut item, None, &mut new_id);
+        item
     }));
     keeping.carried.clone_from(&items);
     saved.last_made = restocked.last_made;

@@ -682,7 +682,13 @@ impl Item {
 
     /// What it weighs with everything in it, in grams.
     pub fn total_weight(&self) -> u32 {
-        self.kind.def().weight + weight_of(&self.contents)
+        let set: u32 = self.set_gems().map(Item::total_weight).sum();
+        self.kind.def().weight + weight_of(&self.contents) + set
+    }
+
+    /// The gems set in it.
+    pub fn set_gems(&self) -> impl Iterator<Item = &Item> {
+        self.form.iter().flat_map(ItemForm::gems)
     }
 
     /// How many grids deep it is, itself and what could be in it now: 0 if it
@@ -702,6 +708,7 @@ impl Item {
                 .contents
                 .iter()
                 .any(|placed| placed.item.holds_or_is(id))
+            || self.set_gems().any(|gem| gem.holds_or_is(id))
     }
 }
 
@@ -1183,6 +1190,7 @@ impl Inventory {
 
     /// Puts a new item in the first place it fits in the pockets. Gives it back
     /// if there is no room.
+    #[allow(clippy::result_large_err)] // Handing it back whole is the point, and rare.
     pub fn give(&mut self, item: Item) -> Result<(), Item> {
         let shape = item.shape();
         match self.first_room(Holder::Pockets, shape, Rotation::None, None) {

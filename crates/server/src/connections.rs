@@ -8,6 +8,7 @@ use shared::creature::CreatureKind;
 use shared::energy::{CHANGE_MAP_COST, Energy, NORMAL_SPEED, dressing_cost, site_step_cost};
 use shared::id::Id;
 use shared::item::{Inventory, Item, ItemKind, Made, MadeAt, Quality};
+use shared::item_form::give_form;
 use shared::movement::{Step, world_step_cost};
 use shared::poi::ChunkPos;
 use shared::protocol::{
@@ -853,19 +854,17 @@ pub(crate) fn made_for(
     let quality = kind.def().has_quality.then_some(quality);
     let name = (quality == Some(Quality::Artifact))
         .then(|| shared::item::artifact_name(&mut id.seed().rng(), kind));
-    let rolled = shared::item_form::roll_form(kind, id.seed(), quality, size);
-    let size = match &rolled {
-        Some(rolled) => rolled.size,
-        None => size.unwrap_or(body.size),
-    };
-    Item {
-        made: Made::for_body(kind, size, body.fingers(), magical),
+    let mut item = Item {
+        made: Made::for_body(kind, size.unwrap_or(body.size), body.fingers(), magical),
         quality,
         made_at: Some(made_at),
         name,
-        form: rolled.map(|rolled| rolled.form),
         ..Item::new(id, kind)
-    }
+    };
+    // What is worn is made to fit the wearer unless told otherwise.
+    let size = size.or(kind.def().wear.map(|_| body.size));
+    give_form(&mut item, size, &mut crate::ids::new_id);
+    item
 }
 
 /// What a joining character is like: as saved; or as they asked when being made;
@@ -1269,6 +1268,29 @@ pub(crate) mod tests {
         };
         assert!(set_of(ItemKind::Sword));
         assert!(!set_of(ItemKind::Apple));
+    }
+
+    #[test]
+    fn a_new_ring_has_a_form_and_fits_its_wearer_and_a_new_gem_rolls_its_size() {
+        let mut test = TestClient::new();
+        let give = |kind| ClientMessage::DevGiveItem {
+            kind,
+            size: None,
+            magical: false,
+            quality: Quality::Rare,
+            set: false,
+        };
+        let carried = inventory(&test.send(&[give(ItemKind::Ring)]));
+        let ring = &carried.pockets[0].item;
+        assert!(ring.form.is_some());
+        assert_eq!(ring.made.size, carried.creature.def().size);
+        let carried = inventory(&test.send(&[give(ItemKind::Gem)]));
+        assert!(
+            carried
+                .pockets
+                .iter()
+                .any(|placed| { placed.item.kind == ItemKind::Gem && placed.item.form.is_some() })
+        );
     }
 
     #[test]
