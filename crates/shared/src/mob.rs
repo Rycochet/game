@@ -98,8 +98,8 @@ const GEAR_ROLLS: i64 = 1000;
 /// something there, the kinds it could be and how much each weighs. First guesses.
 fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
     use ItemKind::{
-        Apple, Belt, Boomerang, Boots, Cloak, Coin, FullArmour, Gloves, Hat, Pouch, Shoes, Socks,
-        Stone, Sword, TShirt, Trousers,
+        Apple, Axe, Belt, Boomerang, Boots, Cloak, Coin, Dagger, FullArmour, Gloves, Hat, Knife,
+        Longsword, Pouch, Shoes, ShortSword, Socks, Spear, Stone, Sword, TShirt, Trousers,
     };
     match kind {
         CreatureKind::Beggar => &[
@@ -112,13 +112,16 @@ fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
             (100, &[(Trousers, 1)]),
             (60, &[(Belt, 1), (Boots, 2), (Cloak, 1)]),
             (20, &[(FullArmour, 1)]),
-            (40, &[(Sword, 1)]),
+            (40, &[(Sword, 2), (Longsword, 1), (Axe, 2), (Spear, 1)]),
             (30, &[(Coin, 2), (Stone, 2), (Pouch, 1)]),
         ],
         CreatureKind::Kobold => &[
             (50, &[(TShirt, 1), (Trousers, 1)]),
             (30, &[(Gloves, 1), (Boots, 1), (Hat, 1)]),
-            (70, &[(Sword, 1), (Boomerang, 2)]),
+            (
+                70,
+                &[(Knife, 1), (Dagger, 2), (ShortSword, 1), (Boomerang, 2)],
+            ),
             (30, &[(Coin, 2), (Stone, 2), (Apple, 1), (Pouch, 1)]),
         ],
         _ => &[],
@@ -293,7 +296,7 @@ mod tests {
             let gear = roll_gear(&roll, CreatureKind::Kobold);
             kobolds_armed += gear
                 .iter()
-                .any(|&(kind, _)| matches!(kind, ItemKind::Sword | ItemKind::Boomerang))
+                .any(|&(kind, _)| kind == ItemKind::Boomerang || kind.blade_family().is_some())
                 as u32;
             for (kind, quality) in gear {
                 assert_eq!(quality.is_some(), kind.def().has_quality, "{kind:?}");

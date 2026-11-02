@@ -7,8 +7,10 @@ use serde::{Deserialize, Serialize};
 /// What sort of thing a material is, which decides what it can be used for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Category {
+    Bone,
     Gem,
     Metal,
+    Wood,
 }
 
 /// A material. Saved by name, so new ones can go anywhere in the list.
@@ -16,6 +18,7 @@ pub enum Category {
 pub enum Material {
     Amethyst,
     Aquamarine,
+    Bone,
     Citrine,
     Copper,
     Diamond,
@@ -28,13 +31,15 @@ pub enum Material {
     Sapphire,
     Silver,
     Topaz,
+    Wood,
 }
 
 impl Material {
     /// Every material, alphabetically by name.
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 16] = [
         Self::Amethyst,
         Self::Aquamarine,
+        Self::Bone,
         Self::Citrine,
         Self::Copper,
         Self::Diamond,
@@ -47,6 +52,7 @@ impl Material {
         Self::Sapphire,
         Self::Silver,
         Self::Topaz,
+        Self::Wood,
     ];
 
     /// Every gem, cheapest first and alphabetically within a tier.
@@ -67,6 +73,7 @@ impl Material {
         match self {
             Self::Amethyst => "Amethyst",
             Self::Aquamarine => "Aquamarine",
+            Self::Bone => "Bone",
             Self::Citrine => "Citrine",
             Self::Copper => "Copper",
             Self::Diamond => "Diamond",
@@ -79,12 +86,15 @@ impl Material {
             Self::Sapphire => "Sapphire",
             Self::Silver => "Silver",
             Self::Topaz => "Topaz",
+            Self::Wood => "Wood",
         }
     }
 
     pub fn category(self) -> Category {
         match self {
+            Self::Bone => Category::Bone,
             Self::Copper | Self::Gold | Self::Iron | Self::Silver => Category::Metal,
+            Self::Wood => Category::Wood,
             _ => Category::Gem,
         }
     }
@@ -92,10 +102,29 @@ impl Material {
     /// How fine it is within its category, from 1. A first guess that rolls lean on.
     pub fn tier(self) -> u64 {
         match self {
-            Self::Amethyst | Self::Citrine | Self::Copper | Self::Garnet | Self::Peridot => 1,
+            Self::Amethyst
+            | Self::Bone
+            | Self::Citrine
+            | Self::Copper
+            | Self::Garnet
+            | Self::Peridot
+            | Self::Wood => 1,
             Self::Aquamarine | Self::Iron | Self::Topaz => 2,
             Self::Emerald | Self::Ruby | Self::Sapphire | Self::Silver => 3,
             Self::Diamond | Self::Gold => 4,
+        }
+    }
+
+    /// How heavy it is, as tenths of a gram for each cubic centimetre. A first guess.
+    pub fn density(self) -> u32 {
+        match self {
+            Self::Wood => 7,
+            Self::Bone => 19,
+            Self::Iron => 79,
+            Self::Copper => 90,
+            Self::Silver => 105,
+            Self::Gold => 193,
+            _ => 35,
         }
     }
 }

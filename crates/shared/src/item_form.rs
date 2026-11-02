@@ -7,9 +7,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::blade::{self, BladeForm};
 use crate::creature::Size;
 use crate::id::Id;
-use crate::item::{Item, ItemKind, Made, Quality};
+use crate::item::{Item, ItemKind, Made, Quality, Shape};
 use crate::material::{Category, Material};
 use crate::rng::Rng;
 
@@ -18,6 +19,42 @@ use crate::rng::Rng;
 pub enum ItemForm {
     Gem(GemForm),
     Ring(Box<RingForm>),
+    Blade(Box<BladeForm>),
+}
+
+/// What whoever asks for an item needs of it. Anything left out doesn't matter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Limits {
+    /// A space it must fit in, turned either way.
+    pub fits: Option<(u8, u8)>,
+    /// How many cells its long side must at least be.
+    pub at_least_long: Option<u8>,
+    pub most_grams: Option<u32>,
+    pub least_grams: Option<u32>,
+    /// Whose size to make it nearest, if it has to be scaled.
+    pub wielder: Option<Size>,
+}
+
+impl Limits {
+    pub const NONE: Self = Self {
+        fits: None,
+        at_least_long: None,
+        most_grams: None,
+        least_grams: None,
+        wielder: None,
+    };
+
+    /// Whether something of this shape and weight will do.
+    pub fn allows(&self, shape: Shape, grams: u32) -> bool {
+        let long = shape.width.max(shape.height);
+        let short = shape.width.min(shape.height);
+        let fits = self
+            .fits
+            .is_none_or(|(one, other)| short <= one.min(other) && long <= one.max(other));
+        fits && self.at_least_long.is_none_or(|least| long >= least)
+            && self.most_grams.is_none_or(|most| grams <= most)
+            && self.least_grams.is_none_or(|least| grams >= least)
+    }
 }
 
 impl ItemForm {
@@ -26,6 +63,7 @@ impl ItemForm {
         match self {
             Self::Gem(gem) => format!("{} {}", gem.cut.name(), gem.material.name()),
             Self::Ring(ring) => ring.name(),
+            Self::Blade(blade) => blade.name().to_owned(),
         }
     }
 
@@ -33,7 +71,7 @@ impl ItemForm {
     pub fn gems(&self) -> impl Iterator<Item = &Item> {
         let settings = match self {
             Self::Ring(ring) => ring.settings.as_slice(),
-            Self::Gem(_) => &[],
+            Self::Gem(_) | Self::Blade(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }
@@ -238,11 +276,46 @@ pub fn give_form(item: &mut Item, size: Option<Size>, new_id: &mut impl FnMut() 
             });
             (ItemForm::Ring(Box::new(ring)), size)
         }
-        _ => return,
+        kind => {
+            let Some(family) = kind.blade_family() else {
+                return;
+            };
+            let size = size.unwrap_or(Size::Medium);
+            let blade = blade::roll_blade_at(&mut rng, family, quality, size);
+            (ItemForm::Blade(Box::new(blade)), size)
+        }
     };
     let size = size.unwrap_or(rolled_size);
     item.made = Made::for_body(item.kind, size, item.made.fingers, item.made.magical);
     item.form = Some(form);
+}
+
+/// Gives a new blade its form within limits, which may make it another family's kind.
+/// `false` if nothing can be made within them, so the item shouldn't exist.
+pub fn give_blade_within(item: &mut Item, limits: &Limits) -> bool {
+    let Some(family) = item.kind.blade_family() else {
+        return false;
+    };
+    let mut rng = item.id.seed().derive("item form").rng();
+    let quality = item.quality.unwrap_or_default();
+    let rolled = blade::roll_blade_within(&mut rng, family, quality, limits);
+    rolled.map(|rolled| set_blade(item, rolled)).is_some()
+}
+
+/// Makes a new item into a specific weapon at any size, keeping its name: only for when
+/// that is asked for, as a commission from a shop or an ability might. `false` if there
+/// is no such weapon, or it can't keep to the limits.
+pub fn give_commission(item: &mut Item, name: &str, size: Size, limits: &Limits) -> bool {
+    let mut rng = item.id.seed().derive("item form").rng();
+    let quality = item.quality.unwrap_or_default();
+    let rolled = blade::commission_blade(&mut rng, name, quality, size, limits);
+    rolled.map(|rolled| set_blade(item, rolled)).is_some()
+}
+
+fn set_blade(item: &mut Item, rolled: blade::Rolled) {
+    item.kind = rolled.form.family.kind();
+    item.made = Made::for_body(item.kind, rolled.size, item.made.fingers, item.made.magical);
+    item.form = Some(ItemForm::Blade(Box::new(rolled.form)));
 }
 
 /// Quality, then material (better favours finer), then cut (by material), then size
@@ -526,6 +599,49 @@ mod tests {
     fn the_same_seed_rolls_the_same_ring() {
         let one = made(ItemKind::Ring, 7, Quality::Rare, None);
         assert_eq!(one, made(ItemKind::Ring, 7, Quality::Rare, None));
+    }
+
+    #[test]
+    fn blades_take_their_weight_and_shape_from_their_form() {
+        let sword = made(ItemKind::Sword, 1, Quality::Common, None);
+        let Some(ItemForm::Blade(form)) = &sword.form else {
+            panic!("{sword:?}");
+        };
+        assert_eq!(sword.total_weight(), form.grams());
+        assert_eq!(sword.shape(), form.shape());
+        assert_eq!(sword.name(), form.name());
+        let giant = made(ItemKind::Sword, 1, Quality::Common, Some(Size::Giant));
+        assert_eq!(giant.name(), "Giant Sword");
+    }
+
+    #[test]
+    fn a_commission_is_named_with_its_size() {
+        let mut item = Item::new(Id::for_test(1), ItemKind::Coin);
+        assert!(give_commission(
+            &mut item,
+            "Katana",
+            Size::Tiny,
+            &Limits::NONE
+        ));
+        assert_eq!(item.kind, ItemKind::Sword);
+        assert_eq!(item.name(), "Tiny Katana");
+    }
+
+    #[test]
+    fn a_blade_within_limits_may_change_kind_or_not_be_made() {
+        let limits = blade::limits_for_wielder(Size::Tiny, 5000);
+        let got = (0..50).map(|seed| {
+            let mut item = Item::new(Id::for_test(seed), ItemKind::Sword);
+            assert!(give_blade_within(&mut item, &limits));
+            item.kind
+        });
+        assert!(got.into_iter().any(|kind| kind != ItemKind::Sword));
+        let mut item = Item::new(Id::for_test(1), ItemKind::Sword);
+        let none = Limits {
+            most_grams: Some(1),
+            ..Limits::NONE
+        };
+        assert!(!give_blade_within(&mut item, &none));
     }
 
     #[test]
