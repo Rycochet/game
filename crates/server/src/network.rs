@@ -196,6 +196,7 @@ fn stop_when_asked(
     if stop.0.load(Ordering::Relaxed) {
         info!("Stopping: saving everyone");
         connections.disconnect_all(&mut world);
+        world.storage.finish_writing();
         exit.write(AppExit::Success);
     }
 }

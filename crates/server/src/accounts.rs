@@ -1,22 +1,23 @@
 //! Accounts: who has logged in, and which characters they have. See "Accounts"
 //! in `docs/context/architecture.md`.
 //!
-//! Saved in the server's data folder:
+//! Saved through `saves` (see `FileBackend` for where):
 //!
-//! - `logins/<hash>.ron`: which account a way of logging in belongs to. The
-//!   hash is of the login's method and key, so no secret is kept, and more than
-//!   one way in can lead to the same account.
-//! - `accounts/<id>.ron`: an account and its characters (`AccountSave`).
+//! - logins (`LoginSave`): which account a way of logging in belongs to, by a
+//!   hash of the login's method and key, so no secret is kept, and more than one
+//!   way in can lead to the same account.
+//! - accounts (`AccountSave`): an account and its characters.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 
 use ring::digest::{SHA256, digest};
 use ring::rand::{SecureRandom, SystemRandom};
 use serde::{Deserialize, Serialize};
 use shared::protocol::{CharacterId, CharacterSummary, Credentials, GuestToken};
 
-use crate::storage::{now, read_or_put_aside, write};
+use crate::save_queue::SaveQueue;
+use crate::saves::{Save, SaveKey};
+use crate::storage::now;
 
 /// How many characters an account may have.
 pub(crate) const MAX_CHARACTERS: usize = 8;
@@ -31,7 +32,18 @@ const GUEST_NAME: &str = "Guest";
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) struct AccountId(String);
 
-/// `accounts/<id>.ron`.
+impl AccountId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    #[cfg(test)]
+    pub fn for_test(id: &str) -> Self {
+        Self(id.to_owned())
+    }
+}
+
+/// An account's save.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub(crate) struct AccountSave {
     /// A guest has one character, with nothing to choose.
@@ -44,9 +56,9 @@ pub(crate) struct AccountSave {
     pub characters: Vec<CharacterSummary>,
 }
 
-/// `logins/<hash>.ron`.
-#[derive(Serialize, Deserialize)]
-struct LoginSave {
+/// A login's save.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub(crate) struct LoginSave {
     account: AccountId,
 }
 
@@ -88,50 +100,44 @@ impl LoginKey {
     }
 }
 
-/// Every account seen so far, and where they are kept (with no folder, only
+/// Every account seen so far, and where they are kept (with no queue, only
 /// here: tests).
 #[derive(Default)]
 pub struct Accounts {
-    folder: Option<PathBuf>,
+    queue: Option<SaveQueue>,
     /// By login hash.
     logins: BTreeMap<String, AccountId>,
     loaded: BTreeMap<AccountId, AccountSave>,
 }
 
 impl Accounts {
-    /// The accounts in the data folder `data`.
-    pub(crate) fn in_folder(data: &Path) -> Self {
+    /// The accounts saved through `queue`.
+    pub(crate) fn new(queue: SaveQueue) -> Self {
         Self {
-            folder: Some(data.to_owned()),
+            queue: Some(queue),
             ..Self::default()
         }
     }
 
-    fn login_file(&self, hash: &str) -> Option<PathBuf> {
-        let file = self.folder.as_ref()?.join("logins");
-        Some(file.join(format!("{hash}.ron")))
-    }
-
-    fn account_file(&self, id: &AccountId) -> Option<PathBuf> {
-        let file = self.folder.as_ref()?.join("accounts");
-        Some(file.join(format!("{}.ron", id.0)))
-    }
-
-    /// The account this login belongs to: made now if it is the first time.
-    pub(crate) fn log_in(&mut self, key: &LoginKey) -> AccountId {
+    /// The account this login belongs to: made now if it is the first time. An
+    /// error if saves can't be reached: making another account would lose theirs.
+    pub(crate) fn log_in(&mut self, key: &LoginKey) -> Result<AccountId, String> {
         let hash = key.hash();
         if let Some(id) = self.logins.get(&hash) {
-            return id.clone();
+            return Ok(id.clone());
         }
-        let file = self.login_file(&hash);
-        let saved = file.as_deref().and_then(read_or_put_aside::<LoginSave>);
+        let login = SaveKey::Login(hash.clone());
+        let saved = match &self.queue {
+            Some(queue) => queue.load(&login)?,
+            None => None,
+        };
         let id = match saved {
-            Some(login) => login.account,
-            None => {
+            Some(Save::Login(login)) => login.account,
+            _ => {
                 let id = AccountId(random_id());
-                if let Some(file) = &file {
+                if let Some(queue) = &self.queue {
                     let account = id.clone();
-                    write(file, &LoginSave { account });
+                    queue.save(login, Save::Login(LoginSave { account }));
                 }
                 self.loaded.insert(
                     id.clone(),
@@ -146,35 +152,41 @@ impl Accounts {
             }
         };
         self.logins.insert(hash, id.clone());
-        id
+        Ok(id)
     }
 
-    /// An account. One whose file has gone (or is broken) starts again, as a
-    /// guest's so it can't be left with nothing to choose from.
-    pub(crate) fn account(&mut self, id: &AccountId) -> &AccountSave {
+    /// An account. One whose save has gone (or is broken) starts again, as a
+    /// guest's so it can't be left with nothing to choose from. An error if saves
+    /// can't be reached.
+    pub(crate) fn account(&mut self, id: &AccountId) -> Result<&AccountSave, String> {
         if !self.loaded.contains_key(id) {
-            let file = self.account_file(id);
-            let save = file.as_deref().and_then(read_or_put_aside);
-            let save = save.unwrap_or_else(|| AccountSave {
-                guest: true,
-                created: now(),
-                characters: Vec::new(),
-            });
+            let saved = match &self.queue {
+                Some(queue) => queue.load(&SaveKey::Account(id.clone()))?,
+                None => None,
+            };
+            let save = match saved {
+                Some(Save::Account(save)) => save,
+                _ => AccountSave {
+                    guest: true,
+                    created: now(),
+                    characters: Vec::new(),
+                },
+            };
             self.loaded.insert(id.clone(), save);
         }
-        &self.loaded[id]
+        Ok(&self.loaded[id])
     }
 
     fn save(&self, id: &AccountId) {
-        if let (Some(file), Some(save)) = (self.account_file(id), self.loaded.get(id)) {
-            write(&file, save);
+        if let (Some(queue), Some(save)) = (&self.queue, self.loaded.get(id)) {
+            queue.save(SaveKey::Account(id.clone()), Save::Account(save.clone()));
         }
     }
 
     /// The character of a guest's account: their one, made now if need be.
-    pub(crate) fn guest_character(&mut self, id: &AccountId) -> CharacterId {
-        if let Some(character) = self.account(id).characters.first() {
-            return character.id.clone();
+    pub(crate) fn guest_character(&mut self, id: &AccountId) -> Result<CharacterId, String> {
+        if let Some(character) = self.account(id)?.characters.first() {
+            return Ok(character.id.clone());
         }
         self.add_character(id, GUEST_NAME.into())
     }
@@ -187,15 +199,15 @@ impl Accounts {
         name: &str,
     ) -> Result<CharacterId, String> {
         let name = checked_name(name)?;
-        if self.account(id).characters.len() >= MAX_CHARACTERS {
+        if self.account(id)?.characters.len() >= MAX_CHARACTERS {
             return Err(format!("an account can have {MAX_CHARACTERS} characters"));
         }
-        Ok(self.add_character(id, name))
+        self.add_character(id, name)
     }
 
-    fn add_character(&mut self, id: &AccountId, name: String) -> CharacterId {
+    fn add_character(&mut self, id: &AccountId, name: String) -> Result<CharacterId, String> {
         let character = CharacterId::new(&random_id()).expect("hex digits are a fine id");
-        self.account(id);
+        self.account(id)?;
         let account = self.loaded.get_mut(id).expect("just loaded");
         account.characters.push(CharacterSummary {
             id: character.clone(),
@@ -203,17 +215,18 @@ impl Accounts {
             last_played: 0,
         });
         self.save(id);
-        character
+        Ok(character)
     }
 
     /// Notes that a character is being played now.
-    pub(crate) fn played(&mut self, id: &AccountId, character: &CharacterId) {
-        self.account(id);
+    pub(crate) fn played(&mut self, id: &AccountId, character: &CharacterId) -> Result<(), String> {
+        self.account(id)?;
         let account = self.loaded.get_mut(id).expect("just loaded");
         if let Some(found) = account.characters.iter_mut().find(|c| c.id == *character) {
             found.last_played = now();
             self.save(id);
         }
+        Ok(())
     }
 }
 
@@ -256,8 +269,13 @@ pub fn new_guest_token() -> Result<GuestToken, String> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::Path;
+    use std::sync::Arc;
+    use std::sync::atomic::Ordering;
+    use std::time::Duration;
 
     use super::*;
+    use crate::save_queue::tests::MemoryBackend;
     use crate::storage::tests::TestFolder;
 
     /// Every file under a folder, as text: its path and contents.
@@ -279,26 +297,30 @@ mod tests {
     fn a_login_finds_its_account_again_after_a_restart() {
         let folder = TestFolder::new();
         let token = LoginKey::Guest(GuestToken([3; 32]));
-        let mut accounts = Accounts::in_folder(&folder.0);
-        let id = accounts.log_in(&token);
-        let character = accounts.guest_character(&id);
-        assert!(accounts.account(&id).guest);
+        let mut accounts = Accounts::new(SaveQueue::in_folder(&folder.0));
+        let id = accounts.log_in(&token).unwrap();
+        let character = accounts.guest_character(&id).unwrap();
+        assert!(accounts.account(&id).unwrap().guest);
+        // Dropping it finishes writing, as stopping does.
+        drop(accounts);
 
-        let mut restarted = Accounts::in_folder(&folder.0);
-        assert_eq!(restarted.log_in(&token), id);
-        assert_eq!(restarted.guest_character(&id), character);
-        assert_eq!(restarted.account(&id).characters.len(), 1);
+        let mut restarted = Accounts::new(SaveQueue::in_folder(&folder.0));
+        assert_eq!(restarted.log_in(&token).unwrap(), id);
+        assert_eq!(restarted.guest_character(&id).unwrap(), character);
+        assert_eq!(restarted.account(&id).unwrap().characters.len(), 1);
         // Someone else is someone else.
-        assert_ne!(restarted.log_in(&LoginKey::Guest(GuestToken([4; 32]))), id);
+        let other = LoginKey::Guest(GuestToken([4; 32]));
+        assert_ne!(restarted.log_in(&other).unwrap(), id);
     }
 
     #[test]
     fn a_guest_token_is_never_saved() {
         let folder = TestFolder::new();
         let token = GuestToken([0xcd; 32]);
-        let mut accounts = Accounts::in_folder(&folder.0);
-        let id = accounts.log_in(&LoginKey::Guest(token));
-        accounts.guest_character(&id);
+        let mut accounts = Accounts::new(SaveQueue::in_folder(&folder.0));
+        let id = accounts.log_in(&LoginKey::Guest(token)).unwrap();
+        accounts.guest_character(&id).unwrap();
+        drop(accounts);
         assert!(!everything_in(&folder.0).contains(&token.to_hex()));
     }
 
@@ -312,8 +334,8 @@ mod tests {
     #[test]
     fn names_are_checked_and_characters_limited() {
         let mut accounts = Accounts::default();
-        let id = accounts.log_in(&LoginKey::Test("someone"));
-        assert!(!accounts.account(&id).guest);
+        let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
+        assert!(!accounts.account(&id).unwrap().guest);
         for bad in ["", "   ", "a\nb", &"x".repeat(MAX_NAME + 1)] {
             assert!(accounts.create_character(&id, bad).is_err(), "{bad}");
         }
@@ -323,9 +345,26 @@ mod tests {
                 .unwrap();
         }
         assert_eq!(
-            accounts.account(&id).characters[0].name,
+            accounts.account(&id).unwrap().characters[0].name,
             "Long Name Ünder 24"
         );
         assert!(accounts.create_character(&id, "One More").is_err());
+    }
+
+    #[test]
+    fn saves_that_cant_be_reached_dont_make_a_new_account() {
+        let backend = Arc::new(MemoryBackend::default());
+        let queue = SaveQueue::new(backend.clone());
+        let token = LoginKey::Guest(GuestToken([3; 32]));
+        let id = Accounts::new(queue.clone()).log_in(&token).unwrap();
+        assert!(queue.flush(Duration::from_secs(5)));
+
+        backend.cant_read.store(true, Ordering::Relaxed);
+        let mut restarted = Accounts::new(queue.clone());
+        assert!(restarted.log_in(&token).is_err());
+        assert!(restarted.account(&id).is_err());
+
+        backend.cant_read.store(false, Ordering::Relaxed);
+        assert_eq!(restarted.log_in(&token).unwrap(), id);
     }
 }
