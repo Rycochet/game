@@ -8,6 +8,8 @@ Finding a way across one level of a site or the world map: the quickest route of
 
 ## Public API
 
+- `DistanceMap::to(level, goal)`: how long it takes to reach a goal from everywhere, for mobs sharing the work; `cost`, `towards`, `away`.
+
 - `Path { steps, cells, cost, reached }`: the `Step`s to take, where each lands (not including the start), the time it takes in `movement::step_cost` units, and whether it ends on the goal.
 - `find_path(level, from, to, max_cost, allowed) -> Path`: the quickest route, landing only on cells `allowed` accepts. If the goal can't be reached (or is past `max_cost`), goes to the reachable cell nearest it in a straight line: check `reached`.
 - `straighten(level, from, &path, allowed) -> Path`: the same route, as quick and as legal, with its diagonals spread along each stretch instead of bunched. Separate because only looks care: skip it for anything that recalculates often.

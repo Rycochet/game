@@ -92,6 +92,28 @@ impl Appearance {
     }
 }
 
+/// How one creature feels about another: what its token's colour says to them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Feeling {
+    /// It doesn't feel anything: another player.
+    #[default]
+    None,
+    Friendly,
+    Neutral,
+    Unfriendly,
+}
+
+/// What a creature does on noticing another.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Reaction {
+    Ignore,
+    /// Goes up to it, and stays nearby.
+    Approach,
+    /// Runs at it. Nothing happens on arriving until there is combat.
+    Attack,
+    Flee,
+}
+
 /// How weighed down someone is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Load {

@@ -9,7 +9,7 @@ use crate::dungeon::{Cell, Level};
 use crate::id::Id;
 use crate::poi::PoiKind;
 use crate::rng::Seed;
-use crate::sheet::{Appearance, Trait};
+use crate::sheet::{Appearance, Feeling, Trait};
 
 /// Marks these hashes as being for mobs, apart from anything else from the seed.
 const PURPOSE: i64 = 0x006d_6f62;
@@ -17,6 +17,8 @@ const PURPOSE: i64 = 0x006d_6f62;
 /// One walkable cell in this many has a mob.
 const CELLS_PER_MOB: usize = 60;
 const MOST_MOBS: usize = 12;
+/// How far from any stairs a mob starts, in cells: nobody arrives beside one.
+const FROM_STAIRS: i64 = 6;
 /// How many places are tried for each.
 const TRIES: i64 = 16;
 
@@ -44,12 +46,23 @@ fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
 
 /// The mobs of level `index` of a site. The same every time for the same seed.
 /// None in towns, which will have people of their own.
-pub fn spawns(seed: Seed, index: u32, site: PoiKind, level: &Level) -> Vec<Spawn> {
+pub fn spawns(
+    seed: Seed,
+    index: u32,
+    site: PoiKind,
+    level: &Level,
+    stairs: &[(i64, i64)],
+) -> Vec<Spawn> {
     if site.is_town() {
         return Vec::new();
     }
     let (min_x, min_y, width, height) = level.bounds();
-    let is_home = |x: i64, y: i64| level.is_walkable(x, y) && level.cell(x, y) != Cell::Ground;
+    let is_home = |x: i64, y: i64| {
+        let far_from_stairs = stairs
+            .iter()
+            .all(|s| (s.0 - x).abs().max((s.1 - y).abs()) >= FROM_STAIRS);
+        level.is_walkable(x, y) && level.cell(x, y) != Cell::Ground && far_from_stairs
+    };
     let cells = (min_y..min_y + height)
         .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
         .filter(|&(x, y)| is_home(x, y))
@@ -103,6 +116,8 @@ pub struct EntityLook {
     pub id: Id,
     pub kind: CreatureKind,
     pub appearance: Appearance,
+    /// How it feels about the player being told.
+    pub feeling: Feeling,
     pub x: i64,
     pub y: i64,
 }
@@ -125,18 +140,18 @@ mod tests {
     #[test]
     fn the_same_seed_gives_the_same_mobs() {
         let level = room();
-        let first = spawns(Seed::new(5), 0, PoiKind::Castle, &level);
+        let first = spawns(Seed::new(5), 0, PoiKind::Castle, &level, &[]);
         assert!(!first.is_empty());
-        assert_eq!(first, spawns(Seed::new(5), 0, PoiKind::Castle, &level));
-        assert_ne!(first, spawns(Seed::new(6), 0, PoiKind::Castle, &level));
-        assert_ne!(first, spawns(Seed::new(5), 1, PoiKind::Castle, &level));
+        assert_eq!(first, spawns(Seed::new(5), 0, PoiKind::Castle, &level, &[]));
+        assert_ne!(first, spawns(Seed::new(6), 0, PoiKind::Castle, &level, &[]));
+        assert_ne!(first, spawns(Seed::new(5), 1, PoiKind::Castle, &level, &[]));
     }
 
     #[test]
     fn mobs_stand_apart_on_walkable_cells_with_looks_that_suit_them() {
         let level = room();
         for seed in 0..20 {
-            let mobs = spawns(Seed::new(seed), 0, PoiKind::Crypt, &level);
+            let mobs = spawns(Seed::new(seed), 0, PoiKind::Crypt, &level, &[]);
             for (index, mob) in mobs.iter().enumerate() {
                 assert!(level.is_walkable(mob.position.0, mob.position.1));
                 assert!(mob.appearance.suits(mob.kind));
@@ -146,10 +161,26 @@ mod tests {
     }
 
     #[test]
+    fn nobody_starts_beside_the_stairs() {
+        let level = room();
+        let stairs = [(10, 10), (30, 12)];
+        for seed in 0..20 {
+            for mob in spawns(Seed::new(seed), 0, PoiKind::Crypt, &level, &stairs) {
+                for s in stairs {
+                    let gap = (s.0 - mob.position.0)
+                        .abs()
+                        .max((s.1 - mob.position.1).abs());
+                    assert!(gap >= FROM_STAIRS);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn towns_have_none_and_farms_have_animals() {
         let level = room();
-        assert!(spawns(Seed::new(1), 0, PoiKind::Town, &level).is_empty());
-        let farm = spawns(Seed::new(1), 0, PoiKind::Farm, &level);
+        assert!(spawns(Seed::new(1), 0, PoiKind::Town, &level, &[]).is_empty());
+        let farm = spawns(Seed::new(1), 0, PoiKind::Farm, &level, &[]);
         assert!(!farm.is_empty());
         assert!(farm.iter().all(|mob| !mob.kind.def().playable));
     }
@@ -172,6 +203,7 @@ mod tests {
             id: Id::for_test(9),
             kind: CreatureKind::Kobold,
             appearance: Appearance::default(),
+            feeling: Feeling::Unfriendly,
             x: -2,
             y: 3,
         };

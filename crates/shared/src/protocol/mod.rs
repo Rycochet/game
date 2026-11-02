@@ -31,7 +31,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 26;
+pub const PROTOCOL_VERSION: u32 = 27;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -572,6 +572,7 @@ mod tests {
                 id: Id(uuid::Uuid::from_u128(4)),
                 kind: CreatureKind::Giant,
                 appearance: Appearance::default(),
+                feeling: crate::sheet::Feeling::Friendly,
                 x: 3,
                 y: -4,
             }),
