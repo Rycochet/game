@@ -15,7 +15,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 - `Rotation::{None, Quarter, Half, ThreeQuarters}`: clockwise; `next`, `turn_cell`.
 - `Quality::{ALL, odds, roll}` (Poor to Artifact, odds out of `ODDS_OUT_OF`), `Drop { quality, kind, weight }`, `roll_drop` (both rolls: quality, then the item at it; a table without that quality takes the nearest below, or else above).
 - `Item { id, kind, contents, made, quality, made_at, name, set }` (`name()` is its own name or its kind's; every artifact has one, from `artifact_name`, placeholders so far), `MadeAt { world, minute }` (each world has its own clock), `Made` (who it was made for: `for_body`), `Placed { item, x, y, rotation }` (`shape`, `cells`), `Holder::{Pockets, Inside(id)}`.
-- `Inventory { creature, outfitted, pockets, pockets_size, worn, bin }`: `find`, `placed`, `grid`, `grid_size`, `total_weight`, `weight_with_creature`, `check_move`, `move_item`, `first_place_for` (a closed bag: the first place, turning if it must), `give` (a new item, first place in the pockets), `to_bin`, `in_bin` (`bin` keeps what was last thrown away, and the next destroys it).
+- `Inventory { creature, outfitted, pockets, pockets_size, worn, bin }`: `find`, `placed`, `grid`, `grid_size`, `total_weight`, `weight_with_creature`, `check_move`, `move_item`, `check_add`, `add`, `first_place_for_new` (the same for something not carried), `first_place_for` (a closed bag: the first place, turning if it must), `give` (a new item, first place in the pockets), `to_bin`, `in_bin` (`bin` keeps what was last thrown away, and the next destroys it).
 - `POCKETS` (6 × 4, for saves from before creature kinds and new inventories), `MAX_DEPTH` (3).
 
 ## Depends on

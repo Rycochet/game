@@ -104,6 +104,16 @@ pub enum ClientMessage {
     /// its door, after any steps to get there. Answered with `TradeStock` if it can
     /// be.
     OpenTrade { with: Id },
+    /// Takes something from who they are trading with, to this place. Answered with
+    /// `Inventory` and `TradeStock`, whether or not it could be done.
+    TakeItem {
+        with: Id,
+        item: Id,
+        to: Holder,
+        x: u8,
+        y: u8,
+        rotation: Rotation,
+    },
     /// Puts on something the character carries, answered with `Inventory`, whether
     /// or not it could go on. Taking it off is `MoveItem`.
     WearItem { item: Id },
@@ -456,6 +466,14 @@ mod tests {
             },
             ClientMessage::OpenTrade {
                 with: Id::for_test(3),
+            },
+            ClientMessage::TakeItem {
+                with: Id::for_test(3),
+                item: Id::for_test(4),
+                to: Holder::Pockets,
+                x: 1,
+                y: 2,
+                rotation: Rotation::Quarter,
             },
             ClientMessage::DevSetCreature(CreatureKind::Chicken),
             ClientMessage::DevDetectMonsters(true),

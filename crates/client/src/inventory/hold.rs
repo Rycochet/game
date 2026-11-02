@@ -2,7 +2,7 @@
 //! be tested alone. The rules for whether it may are `shared::item`'s.
 
 use shared::id::Id;
-use shared::item::{Holder, Inventory, Placed, Rotation};
+use shared::item::{Holder, Inventory, Item, Placed, Rotation};
 
 /// An item picked up and following the pointer. Nothing has changed anywhere
 /// until it is dropped: it is still where it was, only not drawn there.
@@ -20,6 +20,11 @@ impl Held {
         let Some(item) = inventory.find(self.id) else {
             return self;
         };
+        self.turned_as(item)
+    }
+
+    /// The same for something held that isn't carried.
+    pub fn turned_as(self, item: &Item) -> Self {
         let shape = item.kind.def().shape.turned(self.rotation);
         let quarter = Rotation::Quarter;
         Self {
@@ -97,6 +102,42 @@ pub(super) fn target(
     }
 }
 
+/// The same for something that isn't carried yet.
+pub(super) fn target_for_new(
+    inventory: &Inventory,
+    item: &Item,
+    held: Held,
+    over: Option<(Holder, i32, i32)>,
+) -> Target {
+    let Some((holder, cell_x, cell_y)) = over else {
+        return Target::Nowhere;
+    };
+    let Some(grid) = inventory.grid(holder) else {
+        return Target::Nowhere;
+    };
+    if let Some(placed) = on_cell(grid, (cell_x, cell_y), held.id)
+        && placed.item.kind.def().container.is_some()
+    {
+        let bag = placed.item.id;
+        let place = inventory.first_place_for_new(item, Holder::Inside(bag), held.rotation);
+        return Target::Bag { bag, place };
+    }
+    let (x, y) = (cell_x - held.grip.0 as i32, cell_y - held.grip.1 as i32);
+    let allowed = u8::try_from(x).is_ok_and(|x| {
+        u8::try_from(y).is_ok_and(|y| {
+            inventory
+                .check_add(item, holder, x, y, held.rotation)
+                .is_ok()
+        })
+    });
+    Target::Cells {
+        holder,
+        x,
+        y,
+        allowed,
+    }
+}
+
 /// What to do to carry out a drop: the grid, place and turn to ask for. `None`
 /// snaps back: it can't go there, or that is where it already is.
 pub(super) fn drop_move(
@@ -128,7 +169,7 @@ pub(super) fn drop_move(
 
 #[cfg(test)]
 mod tests {
-    use shared::item::{Item, ItemKind};
+    use shared::item::ItemKind;
     use uuid::Uuid;
 
     use super::*;
@@ -153,6 +194,22 @@ mod tests {
             rotation: Rotation::None,
             grip: (0, 0),
         }
+    }
+
+    #[test]
+    fn something_new_goes_by_cell_or_into_a_bag() {
+        let inventory = carrying(&[ItemKind::Pouch]);
+        let ring = Item::new(id(9), ItemKind::Ring);
+        let aim = target_for_new(&inventory, &ring, held(9), Some((Holder::Pockets, 3, 2)));
+        assert_eq!(
+            drop_move(&inventory, held(9), aim),
+            Some((Holder::Pockets, 3, 2, Rotation::None))
+        );
+        let aim = target_for_new(&inventory, &ring, held(9), Some((Holder::Pockets, 1, 1)));
+        assert_eq!(
+            drop_move(&inventory, held(9), aim),
+            Some((Holder::Inside(id(1)), 0, 0, Rotation::None))
+        );
     }
 
     #[test]

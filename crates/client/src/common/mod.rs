@@ -615,6 +615,27 @@ pub struct HeldOverGifts(pub Option<HeldGift>);
 #[derive(Message, Clone, Copy, Debug)]
 pub struct GaveItem(pub HeldGift);
 
+/// On a cell of something someone has to trade, and its label: a press picks it up
+/// by this cell.
+#[derive(Component, Clone, Debug)]
+pub struct StockCell {
+    pub with: shared::id::Id,
+    pub item: shared::item::Item,
+    pub rotation: shared::item::Rotation,
+    pub grip: (u8, u8),
+}
+
+/// What is held that is still someone else's, if anything: not drawn where it was.
+#[derive(Resource, Default, PartialEq)]
+pub struct HeldStock(pub Option<shared::id::Id>);
+
+/// It was taken from who they are trading with, and is on its way to the pockets.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct TookItem {
+    pub with: shared::id::Id,
+    pub item: shared::id::Id,
+}
+
 /// What each quality of item looks like: a name in it, an edge around it.
 pub fn quality_colour(quality: Quality) -> Color {
     match quality {

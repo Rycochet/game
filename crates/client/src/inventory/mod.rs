@@ -8,13 +8,14 @@ mod panels;
 
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
-use shared::item::{Holder, Inventory};
+use shared::item::{Holder, Inventory, Item};
 use shared::protocol::{ClientMessage, ServerMessage};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::common::GameView;
 use crate::common::{
-    GaveItem, HeldGift, HeldOverGifts, PointerPosition, PointerSystems, TakesGifts, TouchGesture,
+    GaveItem, HeldGift, HeldOverGifts, HeldStock, PointerPosition, PointerSystems, StockCell,
+    TakesGifts, TookItem, TouchGesture,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{
@@ -37,6 +38,8 @@ impl Plugin for InventoryPlugin {
             .init_resource::<OpenGrids>()
             .init_resource::<NearbyPanel>()
             .init_resource::<HeldOverGifts>()
+            .init_resource::<HeldStock>()
+            .add_message::<TookItem>()
             .add_message::<GaveItem>()
             .add_systems(Startup, panels::spawn_fixed_parts)
             .add_systems(
@@ -88,6 +91,18 @@ struct Holding {
     aim: Option<Target>,
     /// Where the pointer last was, for one just lifted.
     at: Option<Vec2>,
+    /// If it is still someone else's: who, and the thing itself.
+    stock: Option<(shared::id::Id, Item)>,
+}
+
+impl Holding {
+    /// What is held.
+    fn item<'a>(&'a self, carried: &'a Inventory) -> Option<&'a Item> {
+        match &self.stock {
+            Some((_, item)) => Some(item),
+            None => carried.find(self.held?.item.id),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -162,6 +177,17 @@ fn pick_up_by_finger(
         ),
         (With<Node>, Without<Floating>),
     >,
+    stock: Query<
+        (
+            &ComputedStackIndex,
+            &ComputedNode,
+            &UiGlobalTransform,
+            &InheritedVisibility,
+            Option<&StockCell>,
+            Option<&CalculatedClip>,
+        ),
+        (With<Node>, Without<Floating>),
+    >,
     mut holding: ResMut<Holding>,
     carried: Res<Carried>,
     mut decided: Local<Option<Vec2>>,
@@ -186,6 +212,25 @@ fn pick_up_by_finger(
             by: Hand::Finger,
         });
         gesture.drag = Vec2::ZERO;
+        return;
+    }
+    let front = stock
+        .iter()
+        .filter(|(_, node, transform, visible, _, clip)| {
+            visible.get() && shown_at(gesture.drag_start, node, transform, *clip)
+        })
+        .max_by_key(|(stack, ..)| stack.0);
+    if let Some((.., Some(cell), _)) = front {
+        holding.held = Some(HeldBy {
+            item: Held {
+                id: cell.item.id,
+                rotation: cell.rotation,
+                grip: cell.grip,
+            },
+            by: Hand::Finger,
+        });
+        holding.stock = Some((cell.with, cell.item.clone()));
+        gesture.drag = Vec2::ZERO;
     }
 }
 
@@ -194,7 +239,7 @@ fn pick_up_by_finger(
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn hold_items(
     mut pressed: MessageReader<ButtonPressed>,
-    cells: Query<&ItemCell>,
+    (cells, stock_cells): (Query<&ItemCell>, Query<&StockCell>),
     grids: Query<(
         &panels::GridNode,
         &ComputedNode,
@@ -211,7 +256,12 @@ fn hold_items(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     mut to_server: MessageWriter<ToServer>,
-    (mut over_gifts, mut gave): (ResMut<HeldOverGifts>, MessageWriter<GaveItem>),
+    (mut over_gifts, mut gave, mut held_stock, mut took): (
+        ResMut<HeldOverGifts>,
+        MessageWriter<GaveItem>,
+        ResMut<HeldStock>,
+        MessageWriter<TookItem>,
+    ),
     time: Res<Time<Real>>,
     mut last_press: Local<Option<(shared::id::Id, f64)>>,
     nodes: Query<
@@ -230,6 +280,18 @@ fn hold_items(
     >,
 ) {
     for press in pressed.read() {
+        if let Ok(cell) = stock_cells.get(press.0) {
+            holding.held = Some(HeldBy {
+                item: Held {
+                    id: cell.item.id,
+                    rotation: cell.rotation,
+                    grip: cell.grip,
+                },
+                by: Hand::Mouse,
+            });
+            holding.stock = Some((cell.with, cell.item.clone()));
+            continue;
+        }
         let Ok(&cell) = cells.get(press.0) else {
             continue;
         };
@@ -262,12 +324,20 @@ fn hold_items(
     }
 
     over_gifts.0 = None;
+    let from_stock = holding.stock.as_ref().map(|(with, _)| *with);
+    held_stock.set_if_neq(HeldStock(
+        holding
+            .held
+            .filter(|_| from_stock.is_some())
+            .map(|held| held.item.id),
+    ));
     let Some(mut held) = holding.held else {
         holding.aim = None;
         holding.at = None;
+        holding.stock = None;
         return;
     };
-    if carried.0.find(held.item.id).is_none() {
+    if holding.stock.is_none() && carried.0.find(held.item.id).is_none() {
         // The server says it has gone.
         holding.held = None;
         holding.aim = None;
@@ -278,7 +348,10 @@ fn hold_items(
     // So the camera doesn't turn with the same press.
     mouse.reset(MouseButton::Right);
     if turn {
-        held.item = held.item.turned(&carried.0);
+        held.item = match &holding.stock {
+            Some((_, item)) => held.item.turned_as(item),
+            None => held.item.turned(&carried.0),
+        };
     }
     let finger = gesture.first_finger;
     if held.by == Hand::Finger {
@@ -324,13 +397,21 @@ fn hold_items(
         })
         .unwrap_or_default();
     let on_row = on_row.or(on_gifts);
+    // Something of theirs can only go back to them.
+    let on_gifts = on_gifts.filter(|&to| from_stock.is_none_or(|from| from == to));
     over_gifts.0 = on_gifts.zip(at).map(|(to, at)| HeldGift {
         to,
         item: held.item.id,
         rotation: held.item.rotation,
         corner: at - (Vec2::new(held.item.grip.0 as f32, held.item.grip.1 as f32) + 0.5) * CELL,
     });
-    let aim = if on_bin {
+    let aim = if let Some((_, item)) = &holding.stock {
+        if on_bin || on_body || on_row.is_some() {
+            Target::Nowhere
+        } else {
+            hold::target_for_new(&carried.0, item, held.item, over)
+        }
+    } else if on_bin {
         // In it already: nothing happens.
         if carried.0.in_bin(held.item.id) {
             Target::Nowhere
@@ -364,6 +445,27 @@ fn hold_items(
     }
     holding.held = None;
     holding.aim = None;
+    if let Some((with, item)) = holding.stock.take() {
+        held_stock.set_if_neq(HeldStock(None));
+        if let Some(gift) = over_gifts.0 {
+            // Moved about in their grid: nothing to ask anyone.
+            gave.write(GaveItem(gift));
+        } else if let Some((to, x, y, rotation)) = hold::drop_move(&carried.0, held.item, aim)
+            && carried.0.add(item, to, x, y, rotation).is_ok()
+        {
+            let item = held.item.id;
+            to_server.write(ToServer(ClientMessage::TakeItem {
+                with,
+                item,
+                to,
+                x,
+                y,
+                rotation,
+            }));
+            took.write(TookItem { with, item });
+        }
+        return;
+    }
     if aim == (Target::Body { allowed: true }) {
         let item = held.item.id;
         if carried.0.wear(item).is_ok() {

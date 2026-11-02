@@ -692,6 +692,28 @@ pub(crate) fn answer(
                 None => sent,
             }
         }
+        ClientMessage::TakeItem {
+            with,
+            item,
+            to,
+            x,
+            y,
+            rotation,
+        } => {
+            match sites::take_from_keeper(client, world, with, item, (to, x, y, rotation)) {
+                Ok(()) => client.unsaved = true,
+                Err(why) => warn!("Refused taking {item:?} from {with:?}: {why}"),
+            }
+            client.update_speed(world.action_clock.ticks());
+            let stock = sites::keeper_stock(client, world, with);
+            let sent = client
+                .link
+                .send(&ServerMessage::Inventory(client.inventory.clone()));
+            match stock {
+                Some(items) => sent && client.link.send(&ServerMessage::TradeStock { with, items }),
+                None => sent,
+            }
+        }
         ClientMessage::WearItem { item } => {
             let tick = world.action_clock.ticks();
             match client.inventory.wear(item) {
