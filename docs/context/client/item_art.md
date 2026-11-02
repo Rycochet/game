@@ -6,11 +6,12 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 
 - `crates/client/src/item_art/mod.rs`: `ItemArtPlugin`, `Look`, `look_of`, `ItemPictures`, the render queue, the lights and each picture's camera.
 - `crates/client/src/item_art/gem.rs`: `gem_parts`: colours, materials and meshes of gems (seven cuts from one builder, uncut as a lumpy sphere). Unit tests.
+- `crates/client/src/item_art/ring.rs`: `ring_parts`: a cross-section swept round a circle for the band, patterns, mounts, and gems placed in settings, all tipped back together. Unit tests.
 
 ## Public API
 
 - `ItemArtPlugin`.
-- `Look`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form.
+- `Look`, `RingLook`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form.
 - `ItemPictures` (resource): `picture(look, pixels, images)` gives the image straight away, empty until drawn, and the same one if asked again.
 
 ## Depends on
@@ -31,6 +32,7 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - Better quality means more contrast between faces and a sharper shine.
 - Every picture has a black edge (owner's request), 4 of its pixels, so 2 as shown: `OUTLINE_COPIES` black copies of each mesh, moved round and behind it. It goes by what the camera sees, so any model gets it with nothing of its own. A model must leave that much room inside `VIEW_WIDTH`.
 - Pictures are drawn at twice the size they are shown, which is what that thickness assumes.
-- Rings have forms but no model yet, so `look_of` gives `None`.
-- Size isn't in `Look`: a picture fills what the item takes up, at any size.
+
+- Size isn't in `Look`: a picture fills what the item takes up, at any size. Only sizes against each other show: a setting against its ring, a gem against its setting, which is how a gem too big looks it.
+- Metal is half metallic rather than fully: fully metal shows only what it reflects, and nothing is round it to reflect. Patterns are cheap: twisted turns the cross-section on its way round, hammered tilts each small face's normal, engraved darkens bands of faces.
 - Pictures are kept in memory for good, for now. Showing them in grids, and keeping them on disk, are planned (`decisions.md`, 2026-11-02, generated items).

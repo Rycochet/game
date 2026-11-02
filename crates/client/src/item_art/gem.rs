@@ -19,7 +19,7 @@ const TRILLION_POINTS: usize = 18;
 /// How wide the flat top is, against the outline.
 const TABLE: f32 = 0.55;
 const CROWN_HEIGHT: f32 = 0.3;
-const PAVILION_DEPTH: f32 = 0.7;
+pub(super) const PAVILION_DEPTH: f32 = 0.7;
 /// How much of the back shows through the front of a cut gem.
 const SEE_THROUGH: f32 = 0.4;
 /// How much darker the back is than the front.

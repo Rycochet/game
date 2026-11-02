@@ -2,6 +2,7 @@
 //! See `docs/context/client/item_art.md`.
 
 mod gem;
+mod ring;
 
 use std::collections::{HashMap, VecDeque};
 use std::f32::consts::TAU;
@@ -12,8 +13,10 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
+use shared::creature::Size;
 use shared::item::{Item, Quality};
-use shared::item_form::{GemForm, ItemForm};
+use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
+use shared::material::Material;
 
 /// Render layers kept for this, past any the views use, one per picture being drawn.
 const FIRST_LAYER: usize = 16;
@@ -36,24 +39,81 @@ const OUTLINE_BEHIND: f32 = 3.0;
 
 /// Everything a picture shows. Ids stay out of it, so things that look the same share
 /// one picture, and things that change their looks get a new one.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Look {
     Gem {
         gem: GemForm,
         quality: Option<Quality>,
     },
+    Ring {
+        ring: RingLook,
+        quality: Option<Quality>,
+    },
+}
+
+/// What can be seen of a ring. Sizes are against the ring's own, as how big it is
+/// doesn't show: only a gem too big for it does.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RingLook {
+    metal: Material,
+    profile: Profile,
+    width: BandWidth,
+    pattern: Pattern,
+    settings: Vec<SettingLook>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct SettingLook {
+    angle: u8,
+    mount: Mount,
+    /// Sizes bigger than the ring.
+    bigger: i8,
+    gem: Option<SetGemLook>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct SetGemLook {
+    gem: GemForm,
+    quality: Option<Quality>,
+    /// Sizes bigger than its setting.
+    bigger: i8,
+}
+
+/// How many sizes `size` is above `than`, or below if negative.
+fn sizes_above(size: Size, than: Size) -> i8 {
+    size as i8 - than as i8
 }
 
 /// How this item looks, if it has a form to go by.
-#[allow(dead_code)] // Until pictures are shown in the inventory.
 pub fn look_of(item: &Item) -> Option<Look> {
+    let quality = item.quality;
     match item.form.as_ref()? {
-        ItemForm::Gem(gem) => Some(Look::Gem {
-            gem: *gem,
-            quality: item.quality,
-        }),
-        // No model yet.
-        ItemForm::Ring(_) => None,
+        ItemForm::Gem(gem) => Some(Look::Gem { gem: *gem, quality }),
+        ItemForm::Ring(ring) => {
+            let settings = ring.settings.iter().map(|setting| SettingLook {
+                angle: setting.angle,
+                mount: setting.mount,
+                bigger: sizes_above(setting.size, item.made.size),
+                gem: setting.gem.as_ref().and_then(|gem| match &gem.form {
+                    Some(ItemForm::Gem(form)) => Some(SetGemLook {
+                        gem: *form,
+                        quality: gem.quality,
+                        bigger: sizes_above(gem.made.size, setting.size),
+                    }),
+                    _ => None,
+                }),
+            });
+            Some(Look::Ring {
+                ring: RingLook {
+                    metal: ring.metal,
+                    profile: ring.profile,
+                    width: ring.width,
+                    pattern: ring.pattern,
+                    settings: settings.collect(),
+                },
+                quality,
+            })
+        }
     }
 }
 
@@ -73,7 +133,7 @@ impl ItemPictures {
         pixels: u32,
         images: &mut Assets<Image>,
     ) -> Handle<Image> {
-        if let Some(picture) = self.made.get(&(look, pixels)) {
+        if let Some(picture) = self.made.get(&(look.clone(), pixels)) {
             return picture.clone();
         }
         let picture = images.add(Image::new_target_texture(
@@ -82,10 +142,17 @@ impl ItemPictures {
             TextureFormat::Rgba8UnormSrgb,
             None,
         ));
-        self.made.insert((look, pixels), picture.clone());
+        self.made.insert((look.clone(), pixels), picture.clone());
         self.waiting.push_back((look, pixels, picture.clone()));
         picture
     }
+}
+
+/// One piece of a model.
+struct Part {
+    mesh: Handle<Mesh>,
+    material: Handle<StandardMaterial>,
+    transform: Transform,
 }
 
 /// Everything for one picture while it is being drawn, under one entity.
@@ -160,6 +227,16 @@ fn draw_pictures(
         let parts = match look {
             Look::Gem { gem, quality } => {
                 gem::gem_parts(&gem, quality, &mut meshes, &mut materials)
+                    .into_iter()
+                    .map(|(mesh, material)| Part {
+                        mesh,
+                        material,
+                        transform: Transform::default(),
+                    })
+                    .collect()
+            }
+            Look::Ring { ring, quality } => {
+                ring::ring_parts(&ring, quality, &mut meshes, &mut materials)
             }
         };
         let black = materials.add(StandardMaterial {
@@ -198,24 +275,30 @@ fn spawn_lights(commands: &mut Commands) {
 /// A black edge of the same thickness whatever is drawn: each mesh again in black,
 /// moved a little each way across the picture, and back so that only what sticks out
 /// shows. Going by what the camera sees, it needs nothing of a model's shape.
-fn outline_copies(
-    parts: &[(Handle<Mesh>, Handle<StandardMaterial>)],
-    pixels: u32,
-    black: &Handle<StandardMaterial>,
-) -> Vec<(Handle<Mesh>, Handle<StandardMaterial>, Vec3)> {
+fn outline_copies(parts: &[Part], pixels: u32, black: &Handle<StandardMaterial>) -> Vec<Part> {
     let looking = -CAMERA_AT.normalize();
     let right = looking.cross(CAMERA_UP).normalize();
     let up = right.cross(looking);
     let reach = OUTLINE_PIXELS * VIEW_WIDTH / pixels as f32;
-    let mut meshes: Vec<&Handle<Mesh>> = parts.iter().map(|(mesh, _)| mesh).collect();
-    meshes.dedup();
     let mut copies = Vec::new();
-    for mesh in meshes {
+    let mut last = None;
+    for part in parts {
+        // A gem is one mesh drawn twice, which needs only one edge.
+        let this = (part.mesh.id(), part.transform);
+        if last == Some(this) {
+            continue;
+        }
+        last = Some(this);
         for copy in 0..OUTLINE_COPIES {
             let angle = copy as f32 / OUTLINE_COPIES as f32 * TAU;
             let across = (right * angle.cos() + up * angle.sin()) * reach;
-            let moved = across + looking * OUTLINE_BEHIND;
-            copies.push((mesh.clone(), black.clone(), moved));
+            let mut transform = part.transform;
+            transform.translation += across + looking * OUTLINE_BEHIND;
+            copies.push(Part {
+                mesh: part.mesh.clone(),
+                material: black.clone(),
+                transform,
+            });
         }
     }
     copies
@@ -225,8 +308,8 @@ fn spawn_drawing(
     commands: &mut Commands,
     slot: usize,
     picture: Handle<Image>,
-    parts: Vec<(Handle<Mesh>, Handle<StandardMaterial>)>,
-    outline: Vec<(Handle<Mesh>, Handle<StandardMaterial>, Vec3)>,
+    parts: Vec<Part>,
+    outline: Vec<Part>,
 ) {
     let layer = RenderLayers::layer(FIRST_LAYER + slot);
     commands
@@ -263,14 +346,11 @@ fn spawn_drawing(
                 Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP),
                 layer.clone(),
             ));
-            for (mesh, material) in parts {
-                drawing.spawn((Mesh3d(mesh), MeshMaterial3d(material), layer.clone()));
-            }
-            for (mesh, material, moved) in outline {
+            for part in parts.into_iter().chain(outline) {
                 drawing.spawn((
-                    Mesh3d(mesh),
-                    MeshMaterial3d(material),
-                    Transform::from_translation(moved),
+                    Mesh3d(part.mesh),
+                    MeshMaterial3d(part.material),
+                    part.transform,
                     layer.clone(),
                 ));
             }
