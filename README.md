@@ -102,6 +102,10 @@ Multiplayer roguelike with infinite world
 * Some changes are per-player (unique monster rewards / quests etc) and must be saved for the individual player.
 * Some changes are permanent (digging etc) and must be saved for everyone.
 
+## Credits
+
+Claude Code (Opus 5.5) for code and placeholder 3D images. This game would not have been possible without it.
+
 ## Licence
 
 Hall of Worlds is licensed under [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/) (CC BY-NC 4.0): you may share and adapt it with attribution, but not for commercial purposes. See [LICENSE](LICENSE). Third-party dependencies keep their own licences.

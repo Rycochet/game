@@ -1,6 +1,6 @@
 # Attribution
 
-Artwork in this folder made by other people, with the licence it is used under.
+Artwork in this folder made by other people, with the licence it is used under. Placeholder 3D images are by Claude Code (Opus 5.5).
 
 ## `fonts/CinzelDecorative-Bold.ttf`: Cinzel Decorative by Natanael Gama
 
