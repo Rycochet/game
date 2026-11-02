@@ -15,11 +15,12 @@ use super::ground::{GroundHolder, spawn_section};
 use super::hold::Target;
 use super::{Carried, Holding, item_cell_in_front};
 use crate::common::{GROUND, GameView, PointerPosition, SheetText};
+use crate::item_art::look_of;
 use crate::widgets::{
     ALLOWED, ButtonPressed, ButtonState, CELL, Floating, GRID_LINE, HELD_ITEM_Z, INK, ITEM_EDGE,
-    ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, Pressable, REFUSED, RaisePanel, at_cell,
-    covering, item_colour, item_label, spawn_icon_button, spawn_item_cells, spawn_item_grid,
-    spawn_moveable_panel,
+    ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, PICTURE_PIXELS_PER_CELL, Pressable, REFUSED,
+    RaisePanel, at_cell, covering, item_colour, item_label, item_picture, spawn_icon_button,
+    spawn_item_cells, spawn_item_grid, spawn_moveable_panel,
 };
 
 const BUTTON: f32 = 34.0;
@@ -403,8 +404,14 @@ pub(super) fn show_bins(
             grip: item.shape().cells().next().unwrap_or((0, 0)),
         };
         let kind = item.kind;
+        let picture = look_of(item);
         commands.entity(bin).with_children(|bin| {
-            bin.spawn((
+            let colour = if picture.is_some() {
+                Color::NONE
+            } else {
+                item_colour(kind)
+            };
+            let mut slot = bin.spawn((
                 BinNode,
                 cell,
                 Pressable,
@@ -413,15 +420,27 @@ pub(super) fn show_bins(
                     height: percent(100),
                     ..default()
                 },
-                BackgroundColor(item_colour(kind)),
-            ))
-            .with_child((
-                BinNode,
-                cell,
-                Text::new(item_label(kind)),
-                TextFont::from_font_size(ITEM_LABEL_FONT),
-                TextColor(ITEM_EDGE),
+                BackgroundColor(colour),
             ));
+            match picture {
+                Some(look) => {
+                    slot.with_child(item_picture(
+                        look,
+                        PICTURE_PIXELS_PER_CELL,
+                        covering(),
+                        Rotation::None,
+                    ));
+                }
+                None => {
+                    slot.with_child((
+                        BinNode,
+                        cell,
+                        Text::new(item_label(kind)),
+                        TextFont::from_font_size(ITEM_LABEL_FONT),
+                        TextColor(ITEM_EDGE),
+                    ));
+                }
+            }
         });
     }
 }
@@ -539,7 +558,7 @@ fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed) {
     let (id, rotation) = (placed.item.id, placed.rotation);
     spawn_item_cells(
         layer,
-        ItemLook::of(&placed.item),
+        ItemLook::of(&placed.item).turned(rotation),
         placed.shape(),
         (placed.x as f32, placed.y as f32),
         true,
@@ -667,7 +686,7 @@ pub(super) fn show_held(
     if *drawn != now {
         *drawn = now;
         commands.entity(entity).despawn_related::<Children>();
-        let look = ItemLook::of(item);
+        let look = ItemLook::of(item).turned(held.rotation);
         let shape = item.shape().turned(held.rotation);
         commands.entity(entity).with_children(|parent| {
             spawn_item_cells(parent, look, shape, (0.0, 0.0), false, |_, _| Floating);

@@ -148,6 +148,14 @@ impl ItemPictures {
     }
 }
 
+/// On an `ImageNode`: it shows this picture once there is one to show.
+#[derive(Component, Clone, Debug)]
+pub struct ItemPicture {
+    pub look: Look,
+    /// How many pixels across it is drawn.
+    pub pixels: u32,
+}
+
 /// One piece of a model.
 struct Part {
     mesh: Handle<Mesh>,
@@ -183,10 +191,20 @@ impl Plugin for ItemArtPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ItemPictures>()
             .init_resource::<StillCompiling>()
-            .add_systems(PostUpdate, draw_pictures);
+            .add_systems(PostUpdate, (fill_pictures, draw_pictures).chain());
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(ExtractSchedule, count_compiling);
         }
+    }
+}
+
+fn fill_pictures(
+    mut pictures: ResMut<ItemPictures>,
+    mut images: ResMut<Assets<Image>>,
+    mut new: Query<(&ItemPicture, &mut ImageNode), Added<ItemPicture>>,
+) {
+    for (picture, mut node) in &mut new {
+        node.image = pictures.picture(picture.look.clone(), picture.pixels, &mut images);
     }
 }
 
