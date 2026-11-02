@@ -561,3 +561,7 @@ Owner's design. Knives to polearms aren't a list of kinds: a weapon has a blade 
 ## 2026-11-02: Scaling weapons, and requests with limits
 
 Owner's rules. Whoever asks for a weapon can give limits on its cells and weight, and the generator keeps to them without rolling again, or makes nothing. It first takes an ordinary-sized weapon that fits, so a tiny creature usually gets a dagger of some form. Otherwise, or now and then, it scales one, whose size and weight both change, and which keeps only its generic name ("Giant Sword"). A named weapon at another size ("Tiny Katana") only comes from asking for exactly that, as a shop commission or a player's ability might. Each family is its own `ItemKind`, so saved swords stay as they were and no wipe is needed.
+
+## 2026-11-02: Most items come in one size
+
+Owner's rule: all wearables come in sizes, and everything else is `Medium` for now, whoever carries it, so a giant's coin is an ordinary coin. Claude's choice, agreed: gems keep their rolled sizes, as ring settings depend on them, and blades scale by the rules above. Items already saved keep their sizes until the item wipe.

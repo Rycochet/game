@@ -237,6 +237,7 @@ pub struct EntityLook {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::item::{Inventory, Item, Made};
 
     /// A room big enough for some mobs.
     fn room() -> Level {
@@ -309,6 +310,36 @@ mod tests {
         }
         assert!((150..270).contains(&kobolds_armed), "{kobolds_armed}");
         assert!(qualities.contains(&Quality::Poor) && qualities.contains(&Quality::Rare));
+    }
+
+    /// Blades are left out: they are rolled within what the mob can carry. Anything else
+    /// must go on it, made for it, or else in its pockets, at the size it is made.
+    #[test]
+    fn mobs_can_wear_or_carry_all_they_can_start_with() {
+        for creature in CreatureKind::ALL {
+            let body = creature.def();
+            let (width, height) = body.pockets;
+            let bare = Inventory {
+                creature,
+                ..Inventory::default()
+            };
+            let places = gear_of(creature).iter().flat_map(|(_, kinds)| kinds.iter());
+            for &(kind, _) in places.filter(|(kind, _)| kind.blade_family().is_none()) {
+                let item = Item {
+                    made: Made::for_body(kind, body.size, body.fingers(), false),
+                    ..Item::new(Id::for_test(1), kind)
+                };
+                let shape = kind.def().shape;
+                let (short, long) = (shape.width.min(shape.height), shape.width.max(shape.height));
+                assert!(
+                    bare.check_wear_new(&item).is_ok()
+                        || (!kind.comes_in_sizes()
+                            && short <= width.min(height)
+                            && long <= width.max(height)),
+                    "{creature:?} can't have {kind:?}"
+                );
+            }
+        }
     }
 
     #[test]
