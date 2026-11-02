@@ -40,6 +40,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: item        | `crates/shared/src/item.rs`, `id.rs` | `docs/context/shared/item.md`       | UUID v6 `Id`s, kinds of item, shapes and grid inventories with nested bags: the rules moves are checked by |
 | shared: creature    | `crates/shared/src/creature.rs`, `wear.rs`, `sheet.rs` | `docs/context/shared/creature.md` | Kinds of creature and their bodies, sizes, stats, skills, looks, what they can carry, layers of clothes and the rules for wearing them |
 | shared: energy      | `crates/shared/src/energy.rs` | `docs/context/shared/energy.md` | Time for actions: energy by speed and ticks, worked out by formula; action costs |
+| shared: mob         | `crates/shared/src/mob.rs`    | `docs/context/shared/mob.md`        | Who is on a site level from its seed, and what a player learns of what is on the map |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes) |
@@ -58,6 +59,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: system_menu | `crates/client/src/system_menu/` | `docs/context/client/system_menu.md` | Esc or gear button: small menu (Settings, Logout, Quit), quit requester and web ended page, Settings layer with tabs; asks a single-player server to pause while open |
 | client: inventory   | `crates/client/src/inventory/` | `docs/context/client/inventory.md`  | Grids of what is carried and the clothes panel, in moveable panels; picking items up, holding, turning and dropping or wearing them |
 | client: character   | `crates/client/src/character/` | `docs/context/client/character.md`  | Character panel: stats, skills, abilities, looks and how loaded |
+| client: entities    | `crates/client/src/entities/` | `docs/context/client/entities.md`   | Mobs and other players as tokens, as long as they can be seen |
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |
 | client: widgets     | `crates/client/src/widgets/`    | `docs/context/client/widgets.md`      | Interface pieces: panels with titles, buttons by state, tooltips, moveable panels; taking clicks on them |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, click mode text                    |

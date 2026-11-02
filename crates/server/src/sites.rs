@@ -21,6 +21,9 @@ use crate::storage::{CellMasks, SiteId, VisitSave, now};
 use crate::world_map::{self, look_around};
 use crate::{LEVEL_PRELOAD_STEPS, ServerWorld};
 
+/// How far in a town others can be made out, in cells.
+const TOWN_SIGHT: u32 = 40;
+
 /// A player's stay on a site level.
 pub(crate) struct Visit {
     /// The poi the site is behind.
@@ -39,6 +42,10 @@ pub(crate) struct Visit {
     /// from them, so each step only looks from the cells that are new.
     looked_from: Sight,
     loaded: Sight,
+    /// What can be seen now, by the game's rule: who else is in sight. Worked out
+    /// from `view_from`, and only again once the player has moved.
+    view: Sight,
+    view_from: Option<(i64, i64)>,
 }
 
 impl Visit {
@@ -55,6 +62,25 @@ impl Visit {
             .flat_map(|y| (-SEARCH..SEARCH).map(move |x| (x, y)))
             .find(|&(x, y)| (0..=steps).all(|dx| self.level.level.is_walkable(x + dx, y)))
             .expect("a site has a room")
+    }
+
+    /// Which level of the site it is.
+    pub(crate) fn index(&self) -> u32 {
+        self.index
+    }
+
+    /// Whether something at this cell can be seen from where the player is.
+    pub(crate) fn can_see(&mut self, x: i64, y: i64) -> bool {
+        if self.view_from != Some(self.position) {
+            let (from_x, from_y) = self.position;
+            let level = &self.level.level;
+            self.view = Sight::new(level);
+            // Towns are big, and work out no sight otherwise.
+            let reach = self.is_town().then_some(TOWN_SIGHT);
+            self.view.add_view(level, from_x, from_y, reach);
+            self.view_from = Some(self.position);
+        }
+        self.view.is_seen(x, y)
     }
 
     /// Which site it is.
@@ -377,6 +403,7 @@ pub(crate) fn set_cell(
     let saved = site.levels.entry(visit.index).or_default();
     saved.changes.insert((x, y), cell);
     // Everything may look different from everywhere now.
+    visit.view_from = None;
     visit.looked_from = Sight::new(&visit.level.level);
     visit.loaded = Sight::new(&visit.level.level);
     let (chunk, bit) = level_chunk(x, y);
@@ -497,6 +524,8 @@ fn enter_level(
         arrival: position,
         entering_site,
     };
+    let view = Sight::new(&level.level);
+    world.populate(new.id, new.poi, index, &level.level);
     let looked_from = Sight::new(&level.level);
     let loaded = Sight::new(&level.level);
     client.changed_map();
@@ -510,6 +539,8 @@ fn enter_level(
     let mut visit = Visit {
         looked_from,
         loaded,
+        view,
+        view_from: None,
         poi,
         id,
         site,

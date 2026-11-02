@@ -21,6 +21,7 @@ use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::id::Id;
 use crate::item::{Holder, Inventory, ItemKind, Rotation};
+use crate::mob::EntityLook;
 use crate::movement::Step;
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiKind};
 use crate::rng::Seed;
@@ -30,7 +31,7 @@ use crate::world::WorldId;
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 25;
+pub const PROTOCOL_VERSION: u32 = 26;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.
@@ -304,6 +305,13 @@ pub enum ServerMessage {
     /// What the character is like, for them to see: after `Welcome`, and when it
     /// changes. Nobody else is told this.
     Sheet(Sheet),
+    /// Something has come into sight: a mob or another player. The map changing
+    /// (`EnterLevel`, `OnWorldMap`, `Teleported`) forgets everything seen before.
+    EntitySeen(EntityLook),
+    /// Something in sight has moved.
+    EntityMoved { id: Id, x: i64, y: i64 },
+    /// Something has gone out of sight, or away.
+    EntityGone { id: Id },
 }
 
 /// What a player knows of one world map chunk. The terrain itself isn't
@@ -560,6 +568,21 @@ mod tests {
                 y: 5,
             },
             ServerMessage::Sheet(Sheet::new(CreatureKind::Horse)),
+            ServerMessage::EntitySeen(EntityLook {
+                id: Id(uuid::Uuid::from_u128(4)),
+                kind: CreatureKind::Giant,
+                appearance: Appearance::default(),
+                x: 3,
+                y: -4,
+            }),
+            ServerMessage::EntityMoved {
+                id: Id(uuid::Uuid::from_u128(4)),
+                x: 4,
+                y: -4,
+            },
+            ServerMessage::EntityGone {
+                id: Id(uuid::Uuid::from_u128(4)),
+            },
             ServerMessage::Inventory({
                 let mut inventory = Inventory::default();
                 let pouch = crate::item::Item::new(Id(uuid::Uuid::from_u128(1)), ItemKind::Pouch);

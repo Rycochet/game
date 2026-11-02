@@ -10,6 +10,7 @@ mod debug_menu;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
 mod dungeon_map;
+mod entities;
 mod fonts;
 mod inventory;
 mod loading_screen;
@@ -81,6 +82,7 @@ fn main() {
         system_menu::SystemMenuPlugin,
         inventory::InventoryPlugin,
         character::CharacterPlugin,
+        entities::EntitiesPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is

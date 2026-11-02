@@ -12,6 +12,7 @@ mod accounts;
 mod clock;
 mod connections;
 mod embedded;
+mod entities;
 mod environment;
 mod ids;
 mod latency;
@@ -25,6 +26,7 @@ mod tls;
 mod world_map;
 
 use clock::{ActionClock, Repeating, WorldClock};
+use entities::Populations;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -115,6 +117,7 @@ impl Plugin for ServerPlugin {
                 (
                     advance_action_clock,
                     connections::handle_messages,
+                    connections::sync_entities,
                     connections::tell_the_time,
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),
                     exit_when_alone.run_if(|options: Res<ServerOptions>| options.exit_when_alone),
@@ -229,6 +232,8 @@ pub struct ServerWorld {
     /// Sites whose saves couldn't be reached, so what is in `sites` for them is
     /// blank, and must not be saved over the real one.
     unreachable_sites: BTreeSet<SiteId>,
+    /// Who is on the site levels in use.
+    pub(crate) populations: Populations,
     /// Sites forgotten since `connections::handle_messages` last looked, for
     /// putting out anyone else in them.
     forgotten: Forgotten,
@@ -318,6 +323,7 @@ impl ServerWorld {
             sites: BTreeMap::new(),
             unsaved_sites: Unsaved::default(),
             unreachable_sites: BTreeSet::new(),
+            populations: Populations::default(),
             forgotten: Forgotten::default(),
         };
         save_world(&world.storage, seed, clock, saved_ticks);
@@ -393,6 +399,7 @@ impl ServerWorld {
         self.unreachable_sites.remove(&id);
         self.unsaved_sites.unmark(&id);
         self.storage.remove_site(id);
+        self.populations.forget_site(id);
         self.forgotten.sites.insert(id);
     }
 
@@ -402,6 +409,7 @@ impl ServerWorld {
         self.unreachable_sites.clear();
         self.unsaved_sites.take();
         self.storage.remove_sites();
+        self.populations.forget_all();
         self.forgotten.all = true;
     }
 

@@ -11,6 +11,7 @@ pub mod dungeon;
 pub mod energy;
 pub mod id;
 pub mod item;
+pub mod mob;
 pub mod movement;
 pub mod pathfinding;
 pub mod poi;
