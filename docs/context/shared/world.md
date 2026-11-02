@@ -9,7 +9,7 @@ A world's seeds and global settings. Each world has one secret seed (server only
 ## Public API
 
 - `WorldSeed::new(u64)` (secret: never send it to a client; serde, for the server's save): `.terrain()` (public terrain seed, for `WorldParams`), `.pois()` (secret, for `PoiMap`), `.id() -> WorldId`.
-- `WorldId(u64)` (serde): the world's public id; the same seed is the same world on any server.
+- `WorldId(Uuid)` (serde): the world's public id, a version 5 UUID of the seed's bytes under a fixed namespace (no clock or randomness); the same seed is the same world on any server. Its own type rather than an `Id`, which only the server makes.
 - `WORLD_MAP_VERSION` (1): the world map generator's version (see "Generator versions" in `architecture.md`); bump only for changes that matter.
 - `GAME_MINUTE_SECONDS` (1), `MINUTES_PER_HOUR` (60), `GAME_HOUR_SECONDS` (60): real time against the game's clock, which counts minutes.
 - `WorldParams::from_seed(Seed)` (given the terrain seed): fields `seed` (the terrain seed), `radius` (m), `circumference` (m), `year` (days), `density`, `tilt`, `sea_level` (surface height units, `20..60`), `climate`, `warmth` (`-0.1..0.1`: how warm the planet is on average, used by `shared::climate`).
@@ -17,7 +17,7 @@ A world's seeds and global settings. Each world has one secret seed (server only
 
 ## Depends on
 
-- `shared::rng`, `libm`, `serde`.
+- `shared::rng`, `libm`, `serde`, `uuid`.
 
 ## Used by
 

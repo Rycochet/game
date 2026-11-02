@@ -47,6 +47,20 @@ impl Connections {
         self.clients.push(Client::new(link, Some(character)));
     }
 
+    /// The embedded server's one player, with their character. Refused if saves
+    /// can't be reached, as anyone else would be.
+    pub fn add_single_player(&mut self, link: ServerLink) {
+        match self.accounts.single_player() {
+            Ok(character) => self.add_playing(link, character),
+            Err(error) => {
+                let mut client = Client::new(link, None);
+                client.refuse_for_saves(&error);
+                client.gone = true;
+                self.clients.push(client);
+            }
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.clients.is_empty()
     }
@@ -110,8 +124,6 @@ pub struct Client {
     other_worlds: BTreeMap<WorldId, CharacterWorldSave>,
     /// What the character carries.
     pub(crate) inventory: Inventory,
-    /// What others know this character by while they are playing.
-    pub(crate) entity_id: Id,
     /// Who the client has been told is in sight, and where.
     pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
     /// How the client has been told they feel.
@@ -152,7 +164,6 @@ impl Client {
             character: CharacterWorldSave::default(),
             other_worlds: BTreeMap::new(),
             inventory: Inventory::default(),
-            entity_id: crate::ids::new_id(),
             seen_entities: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
             sheet: Sheet::default(),
@@ -239,6 +250,12 @@ impl Client {
 
     /// Saves can't be reached, so nothing about this client can be trusted to
     /// load: logs why, tells it, and answers `false` so that it is disconnected.
+    /// What others know this character by: their character's id. Nil until there
+    /// is a character, when nobody can see them anyway.
+    pub(crate) fn entity_id(&self) -> Id {
+        self.character_id.map_or(Id(uuid::Uuid::nil()), |id| id.0)
+    }
+
     pub(crate) fn refuse_for_saves(&self, error: &str) -> bool {
         error!("Refusing a client: {error}");
         self.link
@@ -394,8 +411,8 @@ fn join(
     accounts: &mut Accounts,
     options: &ServerOptions,
 ) -> bool {
-    let account = clients[i].account.clone();
-    let character = clients[i].character_id.clone();
+    let account = clients[i].account;
+    let character = clients[i].character_id;
     for (j, other) in clients.iter_mut().enumerate() {
         let same_account = account.is_some() && other.account == account;
         let same = same_account || other.character_id == character;
@@ -527,11 +544,7 @@ pub(crate) fn answer(
             logged_in(client, &key, accounts)
         }
         ClientMessage::ChooseCharacter { id } => {
-            let Some(account) = client
-                .account
-                .clone()
-                .filter(|_| client.phase == Phase::Choosing)
-            else {
+            let Some(account) = client.account.filter(|_| client.phase == Phase::Choosing) else {
                 return refuse(client, "not the time to choose a character".into());
             };
             // A client can ask for anything: only its own will do.
@@ -551,11 +564,7 @@ pub(crate) fn answer(
             kind,
             appearance,
         } => {
-            let Some(account) = client
-                .account
-                .clone()
-                .filter(|_| client.phase == Phase::Choosing)
-            else {
+            let Some(account) = client.account.filter(|_| client.phase == Phase::Choosing) else {
                 return refuse(client, "not the time to make a character".into());
             };
             // A client can ask for anything: the server decides what may be played.
@@ -765,7 +774,7 @@ fn made_for(
 }
 
 /// What a joining character is like: as saved; or as they asked when being made;
-/// or for a character from before sheets, plain for their kind.
+/// or if they didn't ask, plain for their kind.
 fn start_sheet(
     saved: Option<Sheet>,
     asked: Option<(CreatureKind, Appearance)>,
@@ -786,10 +795,9 @@ fn start_sheet(
     }
 }
 
-/// A new character's clothes. Characters from before clothes get them too, unless
-/// they are already wearing something.
+/// A new character's clothes.
 fn give_first_clothes(inventory: &mut Inventory) {
-    if std::mem::replace(&mut inventory.outfitted, true) || !inventory.worn.is_empty() {
+    if std::mem::replace(&mut inventory.outfitted, true) {
         return;
     }
     for kind in [ItemKind::TShirt, ItemKind::Trousers, ItemKind::Shoes] {
@@ -857,6 +865,11 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
 
 #[cfg(test)]
 pub(crate) mod tests {
+    /// The character a `TestClient` plays.
+    fn tester() -> CharacterId {
+        CharacterId(Id::for_test(1000))
+    }
+
     use std::sync::Arc;
     use std::sync::atomic::Ordering;
     use std::time::Duration;
@@ -901,7 +914,7 @@ pub(crate) mod tests {
             let mut test = Self {
                 world,
                 accounts: Accounts::default(),
-                client: Client::new(server_link, CharacterId::new("tester")),
+                client: Client::new(server_link, Some(tester())),
                 end,
                 welcome: Vec::new(),
                 dev_tools: true,
@@ -1481,11 +1494,11 @@ pub(crate) mod tests {
         assert!(*can_create);
         assert_eq!(list[0].name, "Some One");
         assert!(list[0].last_played > 0);
-        let theirs = list[0].id.clone();
+        let theirs = list[0].id;
 
         // Someone else's can't be chosen.
         let (other, _) = logged_in_to_account(&mut connections, "someone else");
-        other.send(&ClientMessage::ChooseCharacter { id: theirs.clone() });
+        other.send(&ClientMessage::ChooseCharacter { id: theirs });
         // Their own can, and an account plays one at a time.
         second.send(&ClientMessage::ChooseCharacter { id: theirs });
         let (connections, _world) = tick(connections, world);
@@ -1538,7 +1551,7 @@ pub(crate) mod tests {
         test.send(&[ClientMessage::DevTeleport { x: 5, y: 6 }]);
         let world = test.leave();
         assert!(queue.flush(Duration::from_secs(5)));
-        let key = SaveKey::Character(CharacterId::new("tester").unwrap());
+        let key = SaveKey::Character(tester());
         let before = backend.holds(&key);
         assert!(before.is_some());
 
@@ -1563,7 +1576,7 @@ pub(crate) mod tests {
         let mut test = TestClient::of(world);
         test.send(&[ClientMessage::DevTeleport { x: 5, y: 6 }]);
         let world = test.leave();
-        let key = SaveKey::Character(CharacterId::new("tester").unwrap());
+        let key = SaveKey::Character(tester());
         assert_eq!(backend.holds(&key), None);
 
         let test = TestClient::of(world);
@@ -1661,9 +1674,9 @@ pub(crate) mod tests {
     fn forgetting_a_site_on_the_server_puts_only_others_out_at_the_poi() {
         let mut connections = Connections::default();
         let (first, link) = local_pair();
-        connections.add_playing(link, CharacterId::new("first").unwrap());
+        connections.add_playing(link, CharacterId(Id::for_test(1)));
         let (second, link) = local_pair();
-        connections.add_playing(link, CharacterId::new("second").unwrap());
+        connections.add_playing(link, CharacterId(Id::for_test(2)));
         first.send(&HELLO);
         second.send(&HELLO);
         let world = ServerWorld::new(WorldSeed::new(1));
@@ -1702,7 +1715,7 @@ pub(crate) mod tests {
         };
         let mut connections = Connections::default();
         let (end, link) = local_pair();
-        connections.add_playing(link, CharacterId::new("tester").unwrap());
+        connections.add_playing(link, tester());
         end.send(&HELLO);
         let (connections, mut world) = tick(connections, open());
         answers(&end);
@@ -1751,24 +1764,6 @@ pub(crate) mod tests {
         let restarted = open();
         assert_eq!(restarted.hour, 20);
         assert!((1200.0..1210.0).contains(&restarted.clock.minutes()));
-    }
-
-    #[test]
-    fn saves_before_format_2_counted_hours() {
-        let folder = crate::storage::tests::TestFolder::new();
-        let seed = WorldSeed::new(1);
-        let storage = crate::storage::Storage::in_folder(&folder.0, seed.id());
-        storage.save_world(&crate::storage::WorldSave {
-            format: 1,
-            seed,
-            world_map_version: shared::world::WORLD_MAP_VERSION,
-            hour: 0,
-            clock: 2.5,
-            action_ticks: 0,
-        });
-        let world = ServerWorld::open(seed, storage).unwrap();
-        assert!((150.0..160.0).contains(&world.clock.minutes()));
-        assert_eq!(world.hour, 2);
     }
 
     #[test]
@@ -1827,7 +1822,7 @@ pub(crate) mod tests {
     #[test]
     fn messages_before_hello_are_refused() {
         let (end, server_link) = local_pair();
-        let mut client = Client::new(server_link, CharacterId::new("x"));
+        let mut client = Client::new(server_link, Some(tester()));
         let mut world = ServerWorld::new(WorldSeed::new(1));
         let mut accounts = Accounts::default();
         let options = ServerOptions {

@@ -37,9 +37,6 @@ const ASSET_FOLDER: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");
 const ASSET_FOLDER: &str = "assets";
 
 fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    server::refuse_old_variables();
-
     let plugins = DefaultPlugins
         .set(WindowPlugin {
             primary_window: Some(Window {

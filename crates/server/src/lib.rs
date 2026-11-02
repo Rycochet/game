@@ -46,7 +46,7 @@ use shared::world::{
 pub use accounts::new_guest_token;
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
-pub use environment::{log_plugin, option_on, refuse_old_variables};
+pub use environment::{log_plugin, option_on};
 pub use network::NetworkPlugin;
 pub use shared::protocol::CharacterId;
 pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
@@ -97,6 +97,10 @@ pub struct ServerOptions {
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
+        if let Some(data) = &self.data {
+            saves::set_aside_old_saves(data)
+                .unwrap_or_else(|error| panic!("The server can't set aside old saves: {error}"));
+        }
         // One save thread for the world and the accounts.
         let queue = self.data.as_deref().map(SaveQueue::in_folder);
         let storage = match &queue {
@@ -194,7 +198,6 @@ fn save_world(storage: &Storage, seed: WorldSeed, clock: f64, action_ticks: u64)
         format: SAVE_FORMAT,
         seed,
         world_map_version: WORLD_MAP_VERSION,
-        hour: 0,
         clock,
         action_ticks,
     });
@@ -288,12 +291,7 @@ impl ServerWorld {
                         save.world_map_version
                     ));
                 }
-                // Saves before format 2 counted hours (the oldest only whole ones).
-                if save.format < 2 {
-                    save.clock.max(save.hour as f64) * MINUTES_PER_HOUR
-                } else {
-                    save.clock
-                }
+                save.clock
             }
             None => 0.0,
         };

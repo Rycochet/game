@@ -9,7 +9,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 
 ## Public API
 
-- `Id(Uuid)`: something's id for good, for items and later mobs and anything else needing one. Existing ids (`CharacterId`, `AccountId`) aren't converted yet.
+- `Id(Uuid)`: something's id for good, for items, mobs, characters and accounts (the last two wrapped in `CharacterId` and `AccountId`). Prints as the usual UUID text, which also names files. `Id::for_test` is for tests in any crate.
 - `ItemKind::{ALL, def()}`, `ItemDef { name, weight (grams), shape, container, wear }`, `WearDef` (see `creature.md`), `ContainerDef { width, height, max_total, max_each }`. To add a kind: add it to the enum, `ALL` (alphabetical by name) and `def`. Saved by name.
 - `Shape`: up to `MAX_SHAPE_SIDE` (8) a side, as bits of a `u64`, gaps allowed. `rectangle`, `has`, `cells`, `size`, `turned`, `smaller_than`.
 - `Rotation::{None, Quarter, Half, ThreeQuarters}`: clockwise; `next`, `turn_cell`.
@@ -19,7 +19,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 
 ## Depends on
 
-- `serde`, `uuid` (MIT/Apache-2.0, with only `serde` here; the server adds what makes new ids).
+- `serde`, `uuid` (MIT/Apache-2.0, with `serde` and `v5` here, for `WorldId`; the server adds what makes new ids).
 
 ## Used by
 

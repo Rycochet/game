@@ -35,7 +35,11 @@ pub const DATA_FOLDER_VARIABLE: &str = "HOW_DATA";
 /// Bump when a save changes in a way older servers can't read (adding a
 /// field with a default doesn't need it). A server refuses a world saved
 /// with a newer format than its own.
-pub const SAVE_FORMAT: u32 = 2;
+pub const SAVE_FORMAT: u32 = 3;
+
+/// Saves from before this format are moved out of the way on starting
+/// (`saves::set_aside_old_saves`): raising it wipes every server's saves.
+pub const OLDEST_SAVE_FORMAT: u32 = 3;
 
 /// The server's data folder: `HOW_DATA` if set, otherwise
 /// `Hall of Worlds/server` in the user's data folder (`%APPDATA%` on
@@ -71,7 +75,7 @@ impl Storage {
     pub fn none() -> Self {
         Self {
             queue: None,
-            world: WorldId(0),
+            world: WorldId(uuid::Uuid::nil()),
             forget_before: FORGET_BEFORE,
         }
     }
@@ -179,7 +183,7 @@ impl Storage {
         let Some(queue) = &self.queue else {
             return Ok(None);
         };
-        Ok(match queue.load(&SaveKey::Character(id.clone()))? {
+        Ok(match queue.load(&SaveKey::Character(*id))? {
             Some(Save::Character(save)) => Some(save),
             _ => None,
         })
@@ -199,7 +203,7 @@ impl Storage {
         let mut worlds = save.map_or_else(BTreeMap::new, |save| save.worlds);
         let here = worlds
             .remove(&world)
-            .filter(|here| self.not_forgotten(here.forgotten_to, id.as_str()))
+            .filter(|here| self.not_forgotten(here.forgotten_to, &id.0.to_string()))
             .unwrap_or_default();
         Ok((here, worlds))
     }
@@ -211,9 +215,9 @@ impl Storage {
         Ok(save.map_or_else(Inventory::default, |save| save.inventory))
     }
 
-    /// What a character is like: `None` if they are new, or from before sheets.
+    /// What a character is like: `None` if they are new.
     pub fn load_sheet(&self, id: &CharacterId) -> Result<Option<Sheet>, String> {
-        Ok(self.character(id)?.and_then(|save| save.sheet))
+        Ok(self.character(id)?.map(|save| save.sheet))
     }
 
     /// Saves a character who is in `world`, knowing `here` of it.
@@ -237,12 +241,12 @@ impl Storage {
                 },
             );
             queue.save(
-                SaveKey::Character(id.clone()),
+                SaveKey::Character(*id),
                 Save::Character(CharacterSave {
                     world,
                     worlds,
                     inventory: inventory.clone(),
-                    sheet: Some(sheet.clone()),
+                    sheet: sheet.clone(),
                 }),
             );
         }
@@ -252,18 +256,11 @@ impl Storage {
 /// Which site: a world map poi's, or a made-up one (dev tools).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SiteId {
-    /// The site of the poi in this world map chunk. (`alias`: its name in
-    /// files saved when pois were called features.)
-    #[serde(alias = "Feature")]
+    /// The site of the poi in this world map chunk.
     Poi(ChunkPos),
     /// Developer tools: a site of this kind and map seed, a building ruined
     /// this much.
-    Dev {
-        kind: PoiKind,
-        seed: u64,
-        #[serde(default)]
-        ruin: u8,
-    },
+    Dev { kind: PoiKind, seed: u64, ruin: u8 },
 }
 
 /// `world.ron`.
@@ -275,14 +272,9 @@ pub struct WorldSave {
     pub seed: WorldSeed,
     /// The world map generator it was made with (`WORLD_MAP_VERSION`).
     pub world_map_version: u32,
-    /// Only in saves before format 2: its clock's whole hours.
-    #[serde(default, skip_serializing)]
-    pub hour: u32,
-    /// Its clock: game minutes since it began (before format 2, hours).
-    #[serde(default)]
+    /// Its clock: game minutes since it began.
     pub clock: f64,
     /// Its action clock: ticks since it began (`clock::ActionClock`).
-    #[serde(default)]
     pub action_ticks: u64,
 }
 
@@ -290,13 +282,11 @@ pub struct WorldSave {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct SiteSave {
     /// The `FORGET_BEFORE` it was saved under.
-    #[serde(default)]
     pub forgotten_to: u32,
     /// The generator version it was first made with (`Generator::version`):
     /// it is always generated with this one.
     pub version: u32,
     /// Its levels that have been visited, by index.
-    #[serde(default)]
     pub levels: BTreeMap<u32, LevelSave>,
 }
 
@@ -305,34 +295,26 @@ pub struct SiteSave {
 pub struct LevelSave {
     /// When someone was last on it (seconds since 1970): it resets after
     /// nobody has been for a while, once there are spawns to bring back.
-    #[serde(default)]
     pub last_visit: u64,
     /// Cells changed by players (dug, broken), applied over the generated
     /// level every time; a reset never undoes them.
-    #[serde(default)]
     pub changes: BTreeMap<(i64, i64), Cell>,
     /// A town's buildings that players have dealt with, by `RoomId`.
-    #[serde(default)]
     pub buildings: BTreeMap<u16, BuildingSave>,
     /// The ids of the level's mobs, by which of its spawns they are. A mob keeps its
     /// id while it lives, so what it remembers stays with it.
-    #[serde(default)]
     pub mobs: BTreeMap<u32, Id>,
     /// What mobs that have had dealings with anyone remember and were given. They
     /// keep it while they live.
-    #[serde(default)]
     pub records: BTreeMap<Id, MobRecord>,
     /// Mobs that weren't at rest when last saved, by number, to carry on.
-    #[serde(default)]
     pub unsettled: BTreeMap<u32, SavedMob>,
 }
 
 /// What a mob has come to know and own.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MobRecord {
-    #[serde(default)]
     pub memory: Memory,
-    #[serde(default)]
     pub carried: Vec<Item>,
 }
 
@@ -347,12 +329,10 @@ pub struct SavedMob {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct BuildingSave {
     /// Trades made by players, on top of the number it was generated with.
-    #[serde(default)]
     pub trades: u32,
     /// The server's clock (game minutes) when last interacted with, which will
     /// decide when its stock refreshes. The clock can be moved back (dev tools),
     /// so this can be in the future: count that as no time having passed.
-    #[serde(default)]
     pub last_interaction: Option<f64>,
 }
 
@@ -366,39 +346,29 @@ pub struct CharacterSave {
     /// The world they are in.
     pub world: WorldId,
     /// What they know of each world they have been to, kept for going back.
-    #[serde(default)]
     pub worlds: BTreeMap<WorldId, CharacterWorldSave>,
     /// What they carry, wherever they go.
-    #[serde(default)]
     pub inventory: Inventory,
     /// What they are like, wherever they go.
-    #[serde(default)]
-    pub sheet: Option<Sheet>,
+    pub sheet: Sheet,
 }
 
 /// What a character knows of one world, and where they are in it.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct CharacterWorldSave {
     /// The `FORGET_BEFORE` it was saved under.
-    #[serde(default)]
     pub forgotten_to: u32,
     /// Where they are on the world map (at the poi, while in a site).
-    #[serde(default)]
     pub world_position: (i64, i64),
     /// The site level they are on, if any.
-    #[serde(default)]
     pub visit: Option<VisitSave>,
     /// The world map chunks whose poi they have seen, and what they
-    /// know of it. (`alias`: its name in files saved when pois were called
-    /// features.)
-    #[serde(default, alias = "features")]
+    /// know of it.
     pub pois: BTreeMap<ChunkPos, KnownPoi>,
     /// The cells they have seen of each site level.
-    #[serde(default)]
     pub memory: BTreeMap<SiteId, BTreeMap<u32, CellMasks>>,
     /// The generator version of each site as they last knew it: when a site's
     /// has changed, so has its map, and what they remember of it means nothing.
-    #[serde(default)]
     pub site_versions: BTreeMap<SiteId, u32>,
 }
 
@@ -415,10 +385,8 @@ pub struct VisitSave {
 pub struct KnownPoi {
     /// Whether they have learned where the chunk's poi is. Towns are always
     /// known, and nothing teaches a character the others yet.
-    #[serde(default)]
     pub known: bool,
     /// Whether they have been inside.
-    #[serde(default)]
     pub visited: bool,
 }
 
@@ -484,25 +452,11 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn characters_saved_when_pois_were_features_still_load() {
-        let text = "(
-            visit: Some((site: Feature((x: -2, y: 3)), level: 1, position: (3, -4))),
-            features: {(x: 1, y: 1): (visited: true)},
-            memory: {Feature((x: -2, y: 3)): {}},
-        )";
-        let site = SiteId::Poi(ChunkPos { x: -2, y: 3 });
-        let save: CharacterWorldSave = ron::from_str(text).unwrap();
-        assert_eq!(save.visit.unwrap().site, site);
-        assert!(save.pois[&ChunkPos { x: 1, y: 1 }].visited);
-        assert!(save.memory.contains_key(&site));
-    }
-
-    #[test]
     fn what_was_saved_before_forget_before_is_forgotten() {
         let folder = TestFolder::new();
-        let world = WorldId(5);
+        let world = WorldSeed::new(5).id();
         let mut storage = Storage::in_folder(&folder.0, world);
-        let id = CharacterId::new("someone").unwrap();
+        let id = CharacterId(Id::for_test(1));
         let site = SiteId::Poi(ChunkPos { x: 1, y: 2 });
         let character = CharacterWorldSave {
             world_position: (3, 4),
@@ -551,8 +505,8 @@ pub(crate) mod tests {
     #[test]
     fn a_character_keeps_what_they_know_of_other_worlds() {
         let folder = TestFolder::new();
-        let (first, second) = (WorldId(5), WorldId(6));
-        let id = CharacterId::new("someone").unwrap();
+        let (first, second) = (WorldSeed::new(5).id(), WorldSeed::new(6).id());
+        let id = CharacterId(Id::for_test(1));
         let at = |x| CharacterWorldSave {
             forgotten_to: FORGET_BEFORE,
             world_position: (x, 0),
@@ -568,7 +522,7 @@ pub(crate) mod tests {
             &Sheet::default(),
         );
         in_first.finish_writing();
-        assert!(folder.0.join("characters/someone.ron").exists());
+        assert!(folder.0.join(format!("characters/{}.ron", id.0)).exists());
 
         // Into another world: new to them, and the first is kept.
         let in_second = Storage::in_folder(&folder.0, second);
@@ -585,7 +539,7 @@ pub(crate) mod tests {
         );
         in_second.finish_writing();
 
-        let file = fs::read_to_string(folder.0.join("characters/someone.ron")).unwrap();
+        let file = fs::read_to_string(folder.0.join(format!("characters/{}.ron", id.0))).unwrap();
         let save: CharacterSave = ron::from_str(&file).unwrap();
         assert_eq!(save.world, second);
         // And back, where they were.
@@ -595,9 +549,9 @@ pub(crate) mod tests {
     #[test]
     fn saves_are_read_back() {
         let folder = TestFolder::new();
-        let world = WorldId(5);
+        let world = WorldSeed::new(5).id();
         let storage = Storage::in_folder(&folder.0, world);
-        let id = CharacterId::new("someone").unwrap();
+        let id = CharacterId(Id::for_test(1));
         assert_eq!(
             storage.load_character(&id, world).unwrap().0,
             CharacterWorldSave::default()
@@ -661,19 +615,12 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn missing_fields_take_their_defaults() {
-        let save: CharacterWorldSave = ron::from_str("(world_position: (1, 2))").unwrap();
-        assert_eq!(save.world_position, (1, 2));
-        assert!(save.visit.is_none() && save.memory.is_empty());
-    }
-
-    #[test]
     fn broken_files_are_put_aside() {
         let folder = TestFolder::new();
-        let world = WorldId(5);
+        let world = WorldSeed::new(5).id();
         let storage = Storage::in_folder(&folder.0, world);
-        let id = CharacterId::new("broken").unwrap();
-        let file = folder.0.join("characters/broken.ron");
+        let id = CharacterId(Id::for_test(1));
+        let file = folder.0.join(format!("characters/{}.ron", id.0));
         fs::create_dir_all(file.parent().unwrap()).unwrap();
         fs::write(&file, "not a save").unwrap();
         assert_eq!(
@@ -687,11 +634,11 @@ pub(crate) mod tests {
     #[test]
     fn a_file_that_cant_be_reached_stays_and_nothing_starts_again() {
         let folder = TestFolder::new();
-        let world = WorldId(5);
+        let world = WorldSeed::new(5).id();
         let storage = Storage::in_folder(&folder.0, world);
-        let id = CharacterId::new("locked").unwrap();
+        let id = CharacterId(Id::for_test(1));
         // A folder in its place can't be read as a file, whatever the system.
-        let file = folder.0.join("characters/locked.ron");
+        let file = folder.0.join(format!("characters/{}.ron", id.0));
         fs::create_dir_all(&file).unwrap();
         assert!(storage.load_character(&id, world).is_err());
         assert!(storage.load_inventory(&id).is_err());
@@ -702,10 +649,10 @@ pub(crate) mod tests {
     #[test]
     fn a_file_that_isnt_text_is_broken() {
         let folder = TestFolder::new();
-        let world = WorldId(5);
+        let world = WorldSeed::new(5).id();
         let storage = Storage::in_folder(&folder.0, world);
-        let id = CharacterId::new("binary").unwrap();
-        let file = folder.0.join("characters/binary.ron");
+        let id = CharacterId(Id::for_test(1));
+        let file = folder.0.join(format!("characters/{}.ron", id.0));
         fs::create_dir_all(file.parent().unwrap()).unwrap();
         fs::write(&file, [0xff, 0xfe, 0x00]).unwrap();
         assert!(storage.load_character(&id, world).is_ok());

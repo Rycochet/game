@@ -296,7 +296,7 @@ pub(crate) fn give(
     item: Id,
     to: Id,
 ) -> Result<(), &'static str> {
-    let character = client.character_id.clone().ok_or("nobody to remember")?;
+    let character = client.character_id.ok_or("nobody to remember")?;
     let visit = client.visit.as_mut().ok_or("not in a site")?;
     let (from, place) = (visit.position(), (visit.id(), visit.index()));
     let population = world
@@ -354,8 +354,8 @@ fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 None => (None, client.character.world_position),
             };
             Someone {
-                id: client.entity_id,
-                character: client.character_id.clone(),
+                id: client.entity_id(),
+                character: client.character_id,
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
                 level,
                 position,
@@ -641,7 +641,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             .filter(|someone| someone.level == Some(place))
             .map(|someone| Spot {
                 id: someone.id,
-                character: someone.character.clone(),
+                character: someone.character,
                 kind: someone.look.0,
                 position: someone.position,
             })
@@ -735,7 +735,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
         let my_kind = client.inventory.creature;
         let mut seen: Vec<EntityLook> = Vec::new();
         for someone in &everyone {
-            let in_sight = someone.id != client.entity_id
+            let in_sight = someone.id != client.entity_id()
                 && someone.level == here
                 && match &mut client.visit {
                     Some(visit) => visit.can_see(someone.position.0, someone.position.1),
@@ -921,9 +921,9 @@ mod tests {
     impl Two {
         fn new() -> Self {
             let mut connections = crate::Connections::default();
-            let ends = ["first", "second"].map(|name| {
+            let ends = [1, 2].map(|n| {
                 let (end, link) = local_pair();
-                connections.add_playing(link, crate::CharacterId::new(name).unwrap());
+                connections.add_playing(link, crate::CharacterId(Id::for_test(n)));
                 end.send(&HELLO);
                 end
             });
@@ -1156,7 +1156,7 @@ mod tests {
     fn a_kind_that_cant_use_stairs_stays_behind() {
         let mut test = being_chased_at_stairs(CreatureKind::Giant);
         // (A giant could, so this makes one that can't by its kind.)
-        let (after, last_seen) = (test.client.entity_id, player(&test));
+        let (after, last_seen) = (test.client.entity_id(), player(&test));
         let population = test.world.populations.0.values_mut().next().unwrap();
         population.mobs[0].kind = CreatureKind::Horse;
         let mob = population.mobs[0].id;
@@ -1266,7 +1266,7 @@ mod tests {
         drop(world);
 
         let mut test = TestClient::of(open());
-        let tester = test.client.character_id.clone().unwrap();
+        let tester = test.client.character_id.unwrap();
         assert_eq!(the_mob(&test).id, mob);
         assert_eq!(the_mob(&test).memory.warmth_for(&tester), 30);
         let id = SiteId::Dev {

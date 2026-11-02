@@ -13,8 +13,10 @@ use std::collections::BTreeMap;
 use ring::digest::{SHA256, digest};
 use ring::rand::{SecureRandom, SystemRandom};
 use serde::{Deserialize, Serialize};
+use shared::id::Id;
 use shared::protocol::{CharacterId, CharacterSummary, Credentials, GuestToken};
 
+use crate::ids::new_id;
 use crate::save_queue::SaveQueue;
 use crate::saves::{Save, SaveKey};
 use crate::storage::now;
@@ -29,30 +31,16 @@ const MAX_NAME: usize = 24;
 const GUEST_NAME: &str = "Guest";
 
 /// Which account: made by the server, and the name of its file.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub(crate) struct AccountId(String);
-
-impl AccountId {
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    #[cfg(test)]
-    pub fn for_test(id: &str) -> Self {
-        Self(id.to_owned())
-    }
-}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub(crate) struct AccountId(pub Id);
 
 /// An account's save.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub(crate) struct AccountSave {
     /// A guest has one character, with nothing to choose.
-    #[serde(default)]
     pub guest: bool,
     /// When it was made (seconds since 1970).
-    #[serde(default)]
     pub created: u64,
-    #[serde(default)]
     pub characters: Vec<CharacterSummary>,
 }
 
@@ -65,6 +53,8 @@ pub(crate) struct LoginSave {
 /// A way of logging in, proved by whoever makes one.
 pub(crate) enum LoginKey {
     Guest(GuestToken),
+    /// The embedded server's one player, who has nothing to log in with.
+    SinglePlayer,
     /// The only way to an account that isn't a guest's, until there are logins.
     #[cfg(test)]
     Test(&'static str),
@@ -80,7 +70,7 @@ impl From<&Credentials> for LoginKey {
 
 impl LoginKey {
     fn is_guest(&self) -> bool {
-        matches!(self, Self::Guest(_))
+        matches!(self, Self::Guest(_) | Self::SinglePlayer)
     }
 
     /// Its file name. A method's name comes first, so the same key from another
@@ -88,11 +78,13 @@ impl LoginKey {
     fn hash(&self) -> String {
         let mut text = match self {
             Self::Guest(_) => b"guest:".to_vec(),
+            Self::SinglePlayer => b"single player:".to_vec(),
             #[cfg(test)]
             Self::Test(_) => b"test:".to_vec(),
         };
         match self {
             Self::Guest(token) => text.extend(token.0),
+            Self::SinglePlayer => {}
             #[cfg(test)]
             Self::Test(key) => text.extend(key.as_bytes()),
         }
@@ -124,7 +116,7 @@ impl Accounts {
     pub(crate) fn log_in(&mut self, key: &LoginKey) -> Result<AccountId, String> {
         let hash = key.hash();
         if let Some(id) = self.logins.get(&hash) {
-            return Ok(id.clone());
+            return Ok(*id);
         }
         let login = SaveKey::Login(hash.clone());
         let saved = match &self.queue {
@@ -134,13 +126,12 @@ impl Accounts {
         let id = match saved {
             Some(Save::Login(login)) => login.account,
             _ => {
-                let id = AccountId(random_id());
+                let id = AccountId(new_id());
                 if let Some(queue) = &self.queue {
-                    let account = id.clone();
-                    queue.save(login, Save::Login(LoginSave { account }));
+                    queue.save(login, Save::Login(LoginSave { account: id }));
                 }
                 self.loaded.insert(
-                    id.clone(),
+                    id,
                     AccountSave {
                         guest: key.is_guest(),
                         created: now(),
@@ -151,7 +142,7 @@ impl Accounts {
                 id
             }
         };
-        self.logins.insert(hash, id.clone());
+        self.logins.insert(hash, id);
         Ok(id)
     }
 
@@ -161,7 +152,7 @@ impl Accounts {
     pub(crate) fn account(&mut self, id: &AccountId) -> Result<&AccountSave, String> {
         if !self.loaded.contains_key(id) {
             let saved = match &self.queue {
-                Some(queue) => queue.load(&SaveKey::Account(id.clone()))?,
+                Some(queue) => queue.load(&SaveKey::Account(*id))?,
                 None => None,
             };
             let save = match saved {
@@ -172,23 +163,30 @@ impl Accounts {
                     characters: Vec::new(),
                 },
             };
-            self.loaded.insert(id.clone(), save);
+            self.loaded.insert(*id, save);
         }
         Ok(&self.loaded[id])
     }
 
     fn save(&self, id: &AccountId) {
         if let (Some(queue), Some(save)) = (&self.queue, self.loaded.get(id)) {
-            queue.save(SaveKey::Account(id.clone()), Save::Account(save.clone()));
+            queue.save(SaveKey::Account(*id), Save::Account(save.clone()));
         }
     }
 
     /// The character of a guest's account: their one, made now if need be.
     pub(crate) fn guest_character(&mut self, id: &AccountId) -> Result<CharacterId, String> {
         if let Some(character) = self.account(id)?.characters.first() {
-            return Ok(character.id.clone());
+            return Ok(character.id);
         }
         self.add_character(id, GUEST_NAME.into())
+    }
+
+    /// The embedded server's one character, made the first time and saved like
+    /// anyone else's. An error if saves can't be reached.
+    pub(crate) fn single_player(&mut self) -> Result<CharacterId, String> {
+        let id = self.log_in(&LoginKey::SinglePlayer)?;
+        self.guest_character(&id)
     }
 
     /// Makes a character with the name the player chose. An error says what is
@@ -206,11 +204,11 @@ impl Accounts {
     }
 
     fn add_character(&mut self, id: &AccountId, name: String) -> Result<CharacterId, String> {
-        let character = CharacterId::new(&random_id()).expect("hex digits are a fine id");
+        let character = CharacterId(new_id());
         self.account(id)?;
         let account = self.loaded.get_mut(id).expect("just loaded");
         account.characters.push(CharacterSummary {
-            id: character.clone(),
+            id: character,
             name,
             last_played: 0,
         });
@@ -241,15 +239,6 @@ fn checked_name(name: &str) -> Result<String, String> {
         return Err("a name can't contain control characters".into());
     }
     Ok(name.to_owned())
-}
-
-/// 16 random hex digits, for the ids the server makes.
-fn random_id() -> String {
-    let mut bytes = [0; 8];
-    SystemRandom::new()
-        .fill(&mut bytes)
-        .expect("the system has randomness");
-    hex(&bytes)
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -322,6 +311,17 @@ mod tests {
         accounts.guest_character(&id).unwrap();
         drop(accounts);
         assert!(!everything_in(&folder.0).contains(&token.to_hex()));
+    }
+
+    #[test]
+    fn the_single_player_keeps_their_character_after_a_restart() {
+        let folder = TestFolder::new();
+        let mut accounts = Accounts::new(SaveQueue::in_folder(&folder.0));
+        let character = accounts.single_player().unwrap();
+        drop(accounts);
+        let mut restarted = Accounts::new(SaveQueue::in_folder(&folder.0));
+        assert_eq!(restarted.single_player().unwrap(), character);
+        assert_eq!(character.0.0.get_version_num(), 6);
     }
 
     #[test]

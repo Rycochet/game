@@ -39,14 +39,13 @@ use std::process;
 
 use server::{
     DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerOptions, default_data_folder, headless_app,
-    log_plugin, option_on, refuse_old_variables,
+    log_plugin, option_on,
 };
 use shared::world::WorldSeed;
 
 const DEFAULT_ADDRESS: &str = "0.0.0.0:8080";
 
 fn main() {
-    refuse_old_variables();
     let address: SocketAddr = env::var("HOW_ADDRESS")
         .unwrap_or_else(|_| DEFAULT_ADDRESS.into())
         .parse()

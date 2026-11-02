@@ -372,10 +372,8 @@ mod tests {
         WorldParams::from_seed(Seed::new(12345))
     }
 
-    // The seed the golden values were made with (from before the secret
-    // world seed existed), so they still hold.
     fn seed() -> Seed {
-        world().seed.derive("features")
+        world().seed.derive("pois")
     }
 
     fn map() -> PoiMap {
@@ -392,7 +390,7 @@ mod tests {
         assert_eq!(format!("{found:?}"), GOLDEN_POIS);
     }
 
-    const GOLDEN_POIS: &str = "[Some((GreenTent, 26575, -174, 2668159104225416170)), Some((ArcheryRange, 25, -143, 836672284536475144)), Some((City, 76, -161, 13866251810797213691)), Some((Crypt, 151, -138, 9653634252034210361))]";
+    const GOLDEN_POIS: &str = "[Some((Castle, 26616, -151, 1205419824134351811)), Some((BlueTent, 33, -145, 12428200609095318837)), Some((Castle, 73, -179, 8556449169803114599)), Some((ArcheryRange, 155, -139, 14946549129168680566))]";
 
     #[test]
     fn about_the_right_share_of_chunks_have_one() {

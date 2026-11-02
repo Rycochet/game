@@ -146,9 +146,7 @@ pub enum Load {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sheet {
     pub stats: Stats,
-    #[serde(default)]
     pub skills: BTreeMap<Skill, u8>,
-    #[serde(default)]
     pub appearance: Appearance,
 }
 

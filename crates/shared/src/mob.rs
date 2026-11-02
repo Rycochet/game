@@ -238,15 +238,15 @@ mod tests {
     #[test]
     fn memories_warm_a_mob_to_whoever_it_remembers() {
         let (a, b) = (
-            CharacterId::new("a").unwrap(),
-            CharacterId::new("b").unwrap(),
+            CharacterId(crate::id::Id::for_test(1)),
+            CharacterId(crate::id::Id::for_test(2)),
         );
         let mut memory = Memory::default();
-        memory.remember(a.clone(), Event::Gave(ItemKind::Coin));
+        memory.remember(a, Event::Gave(ItemKind::Coin));
         assert_eq!(memory.warmth_for(&a), 30);
         assert_eq!(memory.warmth_for(&b), 0);
         for _ in 0..MOST_REMEMBERED {
-            memory.remember(b.clone(), Event::Gave(ItemKind::Coin));
+            memory.remember(b, Event::Gave(ItemKind::Coin));
         }
         // Only so much is kept.
         assert_eq!(memory.warmth_for(&a), 0);

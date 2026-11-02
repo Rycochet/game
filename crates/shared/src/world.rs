@@ -8,11 +8,15 @@
 use crate::rng::Seed;
 use core::f64::consts::PI;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// The world map generator's version (`WorldParams`, `surface`). Bump it only
 /// when the generated terrain changes in a way that matters, not for
 /// cosmetic changes: existing worlds keep the version they were made with.
 pub const WORLD_MAP_VERSION: u32 = 3;
+
+/// What world ids are hashed under. Changing it gives every world a new id.
+const WORLD_ID_NAMESPACE: Uuid = Uuid::from_u128(0x6f1d_3a84_9c27_4e5b_b0d6_28e7_41ac_f953);
 
 /// A world's secret seed. Only the server has it (and saves it); never send
 /// it to a client.
@@ -29,23 +33,25 @@ impl WorldSeed {
         self.0.derive("terrain")
     }
 
-    /// The secret seed world map pois (and so their sites) come from. Its
-    /// name is from when pois were called features: changing it would move
-    /// every poi in every world.
+    /// The secret seed world map pois (and so their sites) come from.
     pub fn pois(self) -> Seed {
-        self.0.derive("features")
+        self.0.derive("pois")
     }
 
-    /// The world's public id: the same seed is the same world on any server.
+    /// The world's public id: the same seed is the same world on any server. A
+    /// version 5 UUID, a one-way hash of the seed, with no clock or randomness.
     pub fn id(self) -> WorldId {
-        WorldId(self.0.derive("id").value())
+        WorldId(Uuid::new_v5(
+            &WORLD_ID_NAMESPACE,
+            &self.0.value().to_le_bytes(),
+        ))
     }
 }
 
 /// Which world this is, safe to share: it identifies the world without
 /// revealing its seed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct WorldId(pub u64);
+pub struct WorldId(pub Uuid);
 
 /// Settings that shape a whole world. Ported from the TypeScript prototype's
 /// `IWorld`; the ranges are the same.
@@ -137,15 +143,22 @@ mod tests {
     fn golden_world_seed() {
         let seed = WorldSeed::new(12345);
         assert_eq!(seed.terrain().value(), GOLDEN_TERRAIN_SEED);
-        assert_eq!(seed.id(), WorldId(GOLDEN_WORLD_ID));
+        assert_eq!(seed.id().0.to_string(), GOLDEN_WORLD_ID);
         // Each purpose gets its own seed, none of them the secret one.
-        let derived = [seed.terrain(), seed.pois(), Seed::new(seed.id().0)];
-        assert!(derived.iter().all(|&d| d != seed.0));
-        assert!(derived[0] != derived[1] && derived[1] != derived[2]);
+        assert!(seed.terrain() != seed.0 && seed.pois() != seed.0);
+        assert!(seed.terrain() != seed.pois());
+    }
+
+    #[test]
+    fn a_world_id_is_version_5_and_depends_only_on_the_seed() {
+        let id = WorldSeed::new(12345).id();
+        assert_eq!(id.0.get_version_num(), 5);
+        assert_eq!(id, WorldSeed::new(12345).id());
+        assert_ne!(id, WorldSeed::new(12346).id());
     }
 
     const GOLDEN_TERRAIN_SEED: u64 = 15274154617967521790;
-    const GOLDEN_WORLD_ID: u64 = 13205059784687644427;
+    const GOLDEN_WORLD_ID: &str = "61384f54-ba35-5b56-83dc-127e0e995d12";
 
     const GOLDEN_WORLD: &str = "WorldParams { seed: Seed(12345), radius: 4239010, circumference: 26634485, year: 152, density: 1.2471431745178077, tilt: 0.38362863605768616, sea_level: 50.762015892761944, climate: 0.19909579997428872, warmth: -0.015898052726041195 }";
     const GOLDEN_WATER_AT_2: f64 = 51.52927316487732;

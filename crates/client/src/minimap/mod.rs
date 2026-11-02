@@ -1323,7 +1323,7 @@ mod tests {
         let mut app = app();
         let chunk = shared::poi::ChunkPos { x: 1, y: 1 };
         let mut world = CurrentWorld::new(&shared::protocol::WorldInfo {
-            id: shared::world::WorldId(1),
+            id: shared::world::WorldSeed::new(1).id(),
             terrain_seed: shared::rng::Seed::new(1),
             world_map_version: shared::world::WORLD_MAP_VERSION,
         });

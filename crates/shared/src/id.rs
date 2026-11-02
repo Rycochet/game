@@ -5,6 +5,8 @@
 //! the server makes them (`server::new_id`): clients are told them, so nothing
 //! here needs a clock or randomness, and it stays deterministic.
 
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -13,11 +15,18 @@ use uuid::Uuid;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Id(pub Uuid);
 
-#[cfg(test)]
 impl Id {
-    /// An id for a test, different for each `n`.
+    /// An id for a test in any crate, different for each `n`. The game's own come
+    /// from `server::new_id`.
     pub fn for_test(n: u128) -> Self {
         Self(Uuid::from_u128(n))
+    }
+}
+
+/// The usual text form of a UUID, also what files are named by.
+impl fmt::Display for Id {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 

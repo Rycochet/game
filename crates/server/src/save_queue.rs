@@ -292,8 +292,9 @@ fn write_everything(shared: &Shared, failing: &mut BTreeSet<SaveKey>) {
 pub(crate) mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
 
+    use shared::id::Id;
     use shared::protocol::CharacterId;
-    use shared::world::WorldId;
+    use shared::world::WorldSeed;
 
     use super::*;
     use crate::accounts::{AccountId, AccountSave};
@@ -363,7 +364,7 @@ pub(crate) mod tests {
     const SOON: Duration = Duration::from_secs(5);
 
     fn site_key(x: i64) -> SaveKey {
-        SaveKey::Site(WorldId(5), SiteId::Poi(ChunkPos { x, y: 0 }))
+        SaveKey::Site(WorldSeed::new(5).id(), SiteId::Poi(ChunkPos { x, y: 0 }))
     }
 
     fn site(version: u32) -> Save {
@@ -381,8 +382,8 @@ pub(crate) mod tests {
 
     /// What every backend must do, whichever it is.
     fn behaves_as_a_backend(queue: &SaveQueue) {
-        let character = SaveKey::Character(CharacterId::new("someone").unwrap());
-        let account = SaveKey::Account(AccountId::for_test("abc"));
+        let character = SaveKey::Character(CharacterId(Id::for_test(1)));
+        let account = SaveKey::Account(AccountId(Id::for_test(2)));
         let saves = [
             (site_key(1), site(1)),
             (site_key(2), site(2)),
@@ -404,7 +405,7 @@ pub(crate) mod tests {
         assert!(queue.read(&site_key(2)).unwrap().is_some());
 
         // A site saved after they all go stays.
-        queue.remove(SaveKey::Sites(WorldId(5)));
+        queue.remove(SaveKey::Sites(WorldSeed::new(5).id()));
         queue.save(site_key(3), site(3));
         assert_eq!(queue.read(&site_key(2)), Ok(None));
         assert!(queue.flush(SOON));
@@ -458,7 +459,7 @@ pub(crate) mod tests {
         queue.save(site_key(1), site(1));
         assert!(queue.flush(SOON));
         backend.cant_write.store(true, Ordering::Relaxed);
-        queue.remove(SaveKey::Sites(WorldId(5)));
+        queue.remove(SaveKey::Sites(WorldSeed::new(5).id()));
         queue.save(site_key(2), site(2));
         assert!(!queue.flush(Duration::from_millis(50)));
         backend.cant_write.store(false, Ordering::Relaxed);
