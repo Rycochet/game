@@ -4,14 +4,18 @@
 
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
-use shared::item::{Item, ItemKind, Quality, Shape};
+use shared::item::{Item, ItemKind, Quality, Rotation, Shape};
 
 use super::set_edge::{SetEdge, set_edge};
 use super::{Pressable, spawn_tooltip};
 use crate::common::{ITEM_NAME_BACKGROUND, NO_QUALITY_NAME, PointerPosition, quality_colour};
+use crate::item_art::{ItemPicture, Look, look_of};
 
 /// A grid cell, across, in logical pixels.
 pub const CELL: f32 = 32.0;
+/// How many pixels a picture has for each cell it covers: twice what it is shown at,
+/// for sharpness.
+pub const PICTURE_PIXELS_PER_CELL: u32 = 64;
 /// What is written on an item.
 pub const ITEM_LABEL_FONT: f32 = 13.0;
 /// Above moveable panels, below full-screen layers.
@@ -61,11 +65,14 @@ pub struct ItemName {
 }
 
 /// What an item looks like.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct ItemLook {
     pub kind: ItemKind,
     pub quality: Option<Quality>,
     pub set: bool,
+    /// Its picture, if its kind has a model, and how it is turned.
+    pub picture: Option<Look>,
+    pub rotation: Rotation,
 }
 
 impl ItemLook {
@@ -74,7 +81,14 @@ impl ItemLook {
             kind: item.kind,
             quality: item.quality,
             set: item.set,
+            picture: look_of(item),
+            rotation: Rotation::None,
         }
+    }
+
+    /// Turned this way.
+    pub fn turned(self, rotation: Rotation) -> Self {
+        Self { rotation, ..self }
     }
 }
 
@@ -207,23 +221,55 @@ pub fn spawn_item_cells<B: Bundle>(
     pressable: bool,
     on_each: impl Fn(u8, u8) -> B,
 ) {
-    let ItemLook { kind, quality, set } = look;
+    let ItemLook {
+        kind,
+        quality,
+        set,
+        picture,
+        rotation,
+    } = look;
+    let drawn = picture.is_some();
+    // Before the cells, so that they are what the pointer finds.
+    if let Some(picture) = picture {
+        let (width, height) = (shape.width as f32, shape.height as f32);
+        let node = Node {
+            position_type: PositionType::Absolute,
+            left: px(corner.0 * CELL),
+            top: px(corner.1 * CELL),
+            width: px(width * CELL),
+            height: px(height * CELL),
+            ..default()
+        };
+        let pixels = shape.width.max(shape.height) as u32 * PICTURE_PIXELS_PER_CELL;
+        parent.spawn(item_picture(picture, pixels, node, rotation));
+    }
     let mut first = true;
     for (x, y) in shape.cells() {
+        let edge = item_edge_width(quality);
+        // A picture goes across its cells, so only the outside of the shape has an edge.
+        let border = if drawn {
+            cell_edges(shape, x, y, edge)
+        } else {
+            UiRect::all(px(edge))
+        };
+        let colour = if drawn {
+            Color::NONE
+        } else {
+            item_colour(kind)
+        };
         let mut node = parent.spawn((
             Node {
-                border: UiRect::all(px(item_edge_width(quality))),
+                border,
                 ..at_cell(corner.0 + x as f32, corner.1 + y as f32)
             },
-            BackgroundColor(item_colour(kind)),
+            BackgroundColor(colour),
             BorderColor::from(item_edge(quality)),
             on_each(x, y),
         ));
         if pressable {
             node.insert(Pressable);
         }
-        if first {
-            first = false;
+        if first && !drawn {
             node.with_child((
                 Text::new(item_label(kind)),
                 TextFont::from_font_size(ITEM_LABEL_FONT),
@@ -231,10 +277,39 @@ pub fn spawn_item_cells<B: Bundle>(
                 on_each(x, y),
             ));
         }
+        first = false;
         if set {
             let width = item_edge_width(quality);
             node.with_child(set_edge(quality, width, width));
         }
+    }
+}
+
+/// An item's picture in this node, turned this way. It never takes the pointer.
+pub fn item_picture(look: Look, pixels: u32, node: Node, rotation: Rotation) -> impl Bundle {
+    let degrees = match rotation {
+        Rotation::None => 0.0,
+        Rotation::Quarter => 90.0,
+        Rotation::Half => 180.0,
+        Rotation::ThreeQuarters => 270.0,
+    };
+    (
+        Floating,
+        ItemPicture { look, pixels },
+        ImageNode::default(),
+        node,
+        UiTransform::from_rotation(Rot2::degrees(degrees)),
+    )
+}
+
+/// An edge of this width only on the sides with none of the shape beyond them.
+fn cell_edges(shape: Shape, x: u8, y: u8, edge: f32) -> UiRect {
+    let side = |beyond: bool| if beyond { px(0) } else { px(edge) };
+    UiRect {
+        left: side(x > 0 && shape.has(x - 1, y)),
+        right: side(shape.has(x + 1, y)),
+        top: side(y > 0 && shape.has(x, y - 1)),
+        bottom: side(shape.has(x, y + 1)),
     }
 }
 
@@ -332,6 +407,15 @@ pub(super) fn show_item_tooltip(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_picture_across_cells_has_an_edge_only_round_the_outside() {
+        let edges = cell_edges(Shape::rectangle(2, 2), 0, 0, 2.0);
+        assert_eq!((edges.left, edges.top), (px(2), px(2)));
+        assert_eq!((edges.right, edges.bottom), (px(0), px(0)));
+        let alone = cell_edges(Shape::rectangle(1, 1), 0, 0, 2.0);
+        assert_eq!(alone, UiRect::all(px(2)));
+    }
 
     #[test]
     fn quality_makes_an_edge_wider() {

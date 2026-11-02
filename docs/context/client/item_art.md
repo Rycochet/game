@@ -12,6 +12,7 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 
 - `ItemArtPlugin`.
 - `Look`, `RingLook`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form.
+- `ItemPicture { look, pixels }` (component): on an `ImageNode`, it shows that picture. `widgets::item_picture` is the usual way.
 - `ItemPictures` (resource): `picture(look, pixels, images)` gives the image straight away, empty until drawn, and the same one if asked again.
 
 ## Depends on
@@ -20,7 +21,7 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 
 ## Used by
 
-- `debug_menu` (Item Pictures).
+- `debug_menu` (Item Pictures), `widgets` and `inventory` (grids and the clothes panel).
 
 ## Notes
 
@@ -33,6 +34,7 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - Every picture has a black edge (owner's request), 4 of its pixels, so 2 as shown: `OUTLINE_COPIES` black copies of each mesh, moved round and behind it. It goes by what the camera sees, so any model gets it with nothing of its own. A model must leave that much room inside `VIEW_WIDTH`.
 - Pictures are drawn at twice the size they are shown, which is what that thickness assumes.
 
+- A picture is square, and is stretched to fit a shape that isn't: only square kinds have models so far.
 - Size isn't in `Look`: a picture fills what the item takes up, at any size. Only sizes against each other show: a setting against its ring, a gem against its setting, which is how a gem too big looks it.
 - Metal is half metallic rather than fully: fully metal shows only what it reflects, and nothing is round it to reflect. Patterns are cheap: twisted turns the cross-section on its way round, hammered tilts each small face's normal, engraved darkens bands of faces.
-- Pictures are kept in memory for good, for now. Showing them in grids, and keeping them on disk, are planned (`decisions.md`, 2026-11-02, generated items).
+- Pictures are kept in memory for good, for now. Keeping them on disk is planned (`decisions.md`, 2026-11-02, generated items).

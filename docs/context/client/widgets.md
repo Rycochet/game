@@ -32,7 +32,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `spawn_text_box(parent, TextBox { text, prefix, digits_only, takes_keys }, font_size, node)`: a click or tap gives it the keyboard. `takes_keys` keeps all keys from the game while it has them (Return, Esc or a click elsewhere gives them up); off for a box in something that reads keys itself, which sets `TextFocus` to its box and reads `TextEdited(entity)` and `SoftKeyPressed`.
 - `spawn_dropdown(parent, Dropdown { options, selected, searchable }, font_size, node)`: `DropdownChosen(entity, index)` says what the player chose. With `searchable`, the open list has a text box with the keyboard, narrowing it as letters are typed.
 - `spawn_tabs(parent, labels, selected, font_size)`: a row of buttons of which one is chosen, like radio buttons; returns the row. `TabChosen(row, index)` says the player chose another.
-- `spawn_item_grid(parent, width, height, extra, on_lines, fill)`: an empty grid of `CELL`s, with `on_lines` on each cell's lines and `fill` adding what goes over them (`covering()` nodes, `at_cell(x, y)`). `spawn_item_cells(parent, ItemLook, shape, corner, pressable, on_each)`: an item's cells, with `on_each(x, y)` giving what goes on each and on its label. `item_colour`, `item_label`, `item_edge`, `item_edge_width`, `GRID_COLOUR`, `GRID_LINE`, `ITEM_EDGE`, `ALLOWED`, `REFUSED`, `ITEM_LABEL_FONT`, `HELD_ITEM_Z`.
+- `spawn_item_grid(parent, width, height, extra, on_lines, fill)`: an empty grid of `CELL`s, with `on_lines` on each cell's lines and `fill` adding what goes over them (`covering()` nodes, `at_cell(x, y)`). `spawn_item_cells(parent, ItemLook, shape, corner, pressable, on_each)`: an item's cells, with `on_each(x, y)` giving what goes on each and on its label. `ItemLook` (with `turned`) carries the picture, if the kind has a model: it then goes behind transparent cells, with an edge only round the outside of the shape, and no colour or label. `item_picture(look, pixels, node, rotation)`, `PICTURE_PIXELS_PER_CELL`, `item_colour`, `item_label`, `item_edge`, `item_edge_width`, `GRID_COLOUR`, `GRID_LINE`, `ITEM_EDGE`, `ALLOWED`, `REFUSED`, `ITEM_LABEL_FONT`, `HELD_ITEM_Z`.
 - `ItemTooltip(Option<ItemTip { words, quality, at }>)`: set it in `Update` to show a name beside the pointer this frame, on a dark box, in its quality's colour. `ItemName { words, quality }`: on an item's cells and label, for its name to show on hovering, unless one has been asked for. `Floating`: on what follows the pointer, or lies over a grid's cells, so it doesn't count as being under it.
 - `spawn_scroll_area(parent, max_height)`: returns the entity to put contents in. As tall as they are up to `max_height`, then they scroll by the wheel (which then doesn't reach the camera), a finger, or the bar beside it. What is scrolled out of sight still counts as being there: looking for what is under the pointer in one, use `shown_at(at, node, transform, clip)`. `logical_rect(node, transform)`: where a node is on the screen.
 - `set_edge(quality, width, out)`: a node drawn as a metal edge, standing `out` beyond its parent's inside; `spawn_item_cells` and `ItemTip { set }` use it, so only something drawing an item its own way needs it.
@@ -43,7 +43,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Depends on
 
-- `common` (`PointerPosition`, `PointerSystems`, `TouchGesture`).
+- `common` (`PointerPosition`, `PointerSystems`, `TouchGesture`), `item_art`.
 
 ## Used by
 

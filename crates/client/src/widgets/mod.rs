@@ -28,8 +28,9 @@ pub use fullscreen::{
 };
 pub use item::{
     ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, HELD_ITEM_Z, ITEM_EDGE, ITEM_LABEL_FONT,
-    ItemLook, ItemTip, ItemTooltip, REFUSED, at_cell, covering, item_colour, item_edge,
-    item_edge_width, item_label, logical_rect, shown_at, spawn_item_cells, spawn_item_grid,
+    ItemLook, ItemTip, ItemTooltip, PICTURE_PIXELS_PER_CELL, REFUSED, at_cell, covering,
+    item_colour, item_edge, item_edge_width, item_label, item_picture, logical_rect, shown_at,
+    spawn_item_cells, spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use scroll::spawn_scroll_area;

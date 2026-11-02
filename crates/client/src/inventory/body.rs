@@ -11,9 +11,11 @@ use shared::wear::Fit;
 use super::hold::Target;
 use super::panels::ItemCell;
 use super::{Carried, Holding};
+use crate::item_art::{ItemPicture, look_of};
 use crate::widgets::{
-    ALLOWED, CELL, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, ITEM_LABEL_FONT, Pressable, REFUSED,
-    item_colour, item_edge, item_edge_width, item_label, set_edge,
+    ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, ITEM_LABEL_FONT,
+    PICTURE_PIXELS_PER_CELL, Pressable, REFUSED, item_colour, item_edge, item_edge_width,
+    item_label, set_edge,
 };
 
 const NAME_WIDTH: f32 = 80.0;
@@ -76,7 +78,13 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         return;
     };
     let covered = carried.covered_by(item.id).is_some();
-    let tint = item_colour(item.kind).with_alpha(if covered { COVERED_ALPHA } else { 1.0 });
+    let alpha = if covered { COVERED_ALPHA } else { 1.0 };
+    let picture = look_of(item);
+    let tint = if picture.is_some() {
+        Color::NONE
+    } else {
+        item_colour(item.kind).with_alpha(alpha)
+    };
     // Held by a cell it has, and it is never turned while worn.
     let grip = item.shape().cells().next().unwrap_or((0, 0));
     let cell = ItemCell {
@@ -84,9 +92,15 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
         rotation: Rotation::None,
         grip,
     };
+    // A picture says what it is, leaving only how many.
+    let label = if picture.is_some() {
+        String::new()
+    } else {
+        item_label(item.kind)
+    };
     let text = match here.len() {
-        1 => item_label(item.kind),
-        many => format!("{}{many}", item_label(item.kind)),
+        1 => label,
+        many => format!("{label}{many}"),
     };
     let mut slot = row.spawn((
         BodyNode,
@@ -101,6 +115,23 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
     // Something under another can't be picked up.
     if !covered {
         slot.insert(Pressable);
+    }
+    if let Some(look) = picture {
+        let node = Node {
+            position_type: PositionType::Absolute,
+            width: percent(100),
+            height: percent(100),
+            ..default()
+        };
+        slot.with_child((
+            Floating,
+            ItemPicture {
+                look,
+                pixels: PICTURE_PIXELS_PER_CELL,
+            },
+            ImageNode::default().with_color(Color::WHITE.with_alpha(alpha)),
+            node,
+        ));
     }
     if item.set {
         let width = item_edge_width(item.quality);

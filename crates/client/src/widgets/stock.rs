@@ -166,7 +166,7 @@ fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, with: Id)
     };
     spawn_item_cells(
         layer,
-        ItemLook::of(&placed.item),
+        ItemLook::of(&placed.item).turned(placed.rotation),
         placed.shape(),
         (placed.x as f32, placed.y as f32),
         true,
