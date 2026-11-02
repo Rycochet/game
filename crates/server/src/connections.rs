@@ -867,6 +867,12 @@ pub(crate) fn answer(
             client.god_mode = on;
             true
         }
+        ClientMessage::DevKillMob { mob } => {
+            if let Err(why) = crate::entities::kill(client, world, mob) {
+                warn!("Refused to kill {mob:?}: {why}");
+            }
+            true
+        }
         ClientMessage::DevSetCreature(kind) => {
             for item in client.inventory.change_body(kind) {
                 info!("No room for {:?} on becoming {kind:?}: lost", item.kind);

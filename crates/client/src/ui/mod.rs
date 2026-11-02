@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use crate::common::{
-    ClickMode, DebugInfo, GameClock, GameView, GodMode, MapPosition, ServerClock, ViewStats,
-    Weather,
+    ClickMode, DebugInfo, GameClock, GameView, GodMode, KillMob, MapPosition, ServerClock,
+    ViewStats, Weather,
 };
 use crate::debug_menu::TemperatureCycle;
 use crate::fonts;
@@ -38,7 +38,8 @@ const POSITION_ICON: char = '\u{1F4CD}';
 const HOUR_ICON: char = '\u{1F550}';
 const PING_ICON: char = '\u{1F4F6}';
 const SNOW_LINE_ICON: char = '\u{2744}';
-const GOD_MODE_ICON: char = '\u{1F47B}';
+const GOD_MODE_ICON: &str = "\u{1F47B}";
+const KILL_MOB_ICON: &str = "\u{1F480}";
 
 const MODE_COLOUR: Color = Color::srgb(1.0, 0.2, 0.2);
 
@@ -61,7 +62,7 @@ fn spawn_status_text(mut commands: Commands) {
                 ModeText,
                 TextSpan::default(),
                 TextColor(MODE_COLOUR),
-                // Each span has its own font, and this one shows the ghost.
+                // Each span has its own font, and this one shows the ghost and skull.
                 TextFont {
                     font: fonts::with_icons(),
                     ..default()
@@ -84,6 +85,7 @@ fn update_status_text(
     view: Res<State<GameView>>,
     mode: Res<ClickMode>,
     god: Res<GodMode>,
+    kill: Res<KillMob>,
     mut text: Single<&mut Text, With<StatusText>>,
     mut mode_text: Single<&mut TextSpan, (With<ModeText>, Without<StatsText>)>,
     mut stats_text: Single<&mut TextSpan, (With<StatsText>, Without<ModeText>)>,
@@ -95,11 +97,16 @@ fn update_status_text(
         ClickMode::Teleport => "Teleport Mode",
         ClickMode::ChangeCell => "Change Cell Mode",
     };
-    let mode = match (god.0, mode) {
-        (false, mode) => mode.to_string(),
-        (true, "") => GOD_MODE_ICON.to_string(),
-        (true, mode) => format!("{GOD_MODE_ICON} {mode}"),
-    };
+    let says = [
+        (god.0, GOD_MODE_ICON),
+        (kill.0, KILL_MOB_ICON),
+        (!mode.is_empty(), mode),
+    ];
+    let says: Vec<&str> = says
+        .into_iter()
+        .filter_map(|(on, words)| on.then_some(words))
+        .collect();
+    let mode = says.join(" ");
     // Nothing else to say before the first welcome.
     if !info.0 || *view.get() == GameView::Connecting {
         text.0 = String::new();

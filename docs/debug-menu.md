@@ -24,6 +24,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | God Mode | Yes | Toggles mobs taking no notice of you and letting you walk through them, so they don't block your way. A ghost shows at the top left while it is on. |
 | Herbs State | | Opens a panel stepping through how grown the herbs are, on a level with herbs. Changes only what is drawn. |
 | Item Pictures | | Opens a panel showing every kind of gem in every cut, and a sample of rings, as they are drawn, at each quality. Pressing a picture shows it large. |
+| Kill Mob | Yes | Toggles clicking or tapping a mob in sight killing it. What it had falls where it stood, and it doesn't come back. A skull shows at the top left while it is on. |
 | Reset View | | Puts the camera back to its starting view, as Home does. |
 | Reveal Map | Yes | Shows you the whole of this level. Not in towns. |
 | Show Debug Info | | Toggles the status text: position, hour, ping and view statistics. |

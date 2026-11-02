@@ -313,6 +313,9 @@ pub struct LevelSave {
     /// reset never touches it.
     #[serde(default)]
     pub ground: BTreeMap<(i64, i64), Vec<Item>>,
+    /// Which of its spawns have died, by number: they aren't made again.
+    #[serde(default)]
+    pub dead: BTreeSet<u32>,
 }
 
 /// What a mob has come to know and own.
@@ -626,6 +629,7 @@ pub(crate) mod tests {
                     mobs: BTreeMap::new(),
                     unsettled: BTreeMap::new(),
                     records: BTreeMap::new(),
+                    dead: BTreeSet::from([3]),
                     ground: BTreeMap::from([(
                         (3, 4),
                         vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],
