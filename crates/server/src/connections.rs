@@ -5,7 +5,9 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
-use shared::energy::{CHANGE_MAP_COST, Energy, NORMAL_SPEED, dressing_cost, site_step_cost};
+use shared::energy::{
+    CHANGE_MAP_COST, Energy, NORMAL_SPEED, dressing_cost, handling_cost, site_step_cost,
+};
 use shared::id::Id;
 use shared::item::{Inventory, Item, ItemKind, Made, MadeAt, Quality};
 use shared::item_form::give_form;
@@ -18,6 +20,7 @@ use shared::sheet::{Appearance, Feeling, Sheet};
 use shared::world::{MINUTES_PER_HOUR, WorldId};
 
 use crate::accounts::{AccountId, Accounts, LoginKey, MAX_CHARACTERS};
+use crate::ground::{self, GroundAction, GroundTold};
 use crate::sites::{self, Visit};
 use crate::storage::CharacterWorldSave;
 use crate::{ServerOptions, ServerWorld, world_map};
@@ -91,6 +94,7 @@ enum Action {
     EnterSite { chunk: ChunkPos },
     UseExit,
     OpenTrade { with: Id },
+    Ground(GroundAction),
 }
 
 /// How far a client has got, from connecting to playing.
@@ -136,6 +140,8 @@ pub struct Client {
     pub(crate) seen_feelings: BTreeMap<Id, Feeling>,
     /// What the character is like.
     pub(crate) sheet: Sheet,
+    /// What it was last told is on the ground under the player.
+    pub(crate) ground_told: GroundTold,
     /// How much it can do now, and how fast that comes back.
     energy: Energy,
     speed: u32,
@@ -175,6 +181,7 @@ impl Client {
             seen_entities: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
             sheet: Sheet::default(),
+            ground_told: GroundTold::default(),
             energy: Energy::default(),
             speed: NORMAL_SPEED,
             waiting: VecDeque::new(),
@@ -207,10 +214,11 @@ impl Client {
         // The client forgets them too.
         self.seen_entities.clear();
         self.seen_feelings.clear();
+        self.ground_told = GroundTold::default();
     }
 
     /// What it carries has changed, which can change how fast it goes.
-    fn update_speed(&mut self, tick: u64) {
+    pub(crate) fn update_speed(&mut self, tick: u64) {
         self.energy.settle(tick, self.speed);
         self.speed = self.sheet.speed(&self.inventory);
     }
@@ -341,6 +349,7 @@ fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
             Action::UseExit => (sites::use_exit(client, world), 0),
             Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
+            Action::Ground(action) => ground::act(client, world, action),
         };
         if !stayed {
             return false;
@@ -466,6 +475,11 @@ pub(crate) fn run_mobs(mut connections: ResMut<Connections>, mut world: ResMut<S
 /// moved. Who is on a level stays while it is in use.
 pub(crate) fn sync_entities(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
     crate::entities::sync(&mut connections.clients, &mut world);
+}
+
+/// Every tick: tells everyone what has come to be on the ground under them.
+pub(crate) fn sync_ground(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
+    ground::sync(&mut connections.clients, &mut world);
 }
 
 /// Every tick: tells everyone playing if the clock was moved, or has reached a
@@ -631,6 +645,37 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::OpenTrade { with });
             true
         }
+        ClientMessage::DropItem { item } => {
+            let action = Action::Ground(GroundAction::Drop { item });
+            client.waiting.push_back(action);
+            true
+        }
+        ClientMessage::TakeFromGround {
+            item,
+            to,
+            x,
+            y,
+            rotation,
+        } => {
+            client.waiting.push_back(Action::Ground(GroundAction::Take {
+                item,
+                to,
+                x,
+                y,
+                rotation,
+            }));
+            true
+        }
+        ClientMessage::WearFromGround { item } => {
+            let action = Action::Ground(GroundAction::Wear { item });
+            client.waiting.push_back(action);
+            true
+        }
+        ClientMessage::BinFromGround { item } => {
+            let action = Action::Ground(GroundAction::Bin { item });
+            client.waiting.push_back(action);
+            true
+        }
         ClientMessage::SetPaused(_) if !options.pausable => {
             warn!("A client asked to pause, which this server doesn't allow");
             true
@@ -653,14 +698,12 @@ pub(crate) fn answer(
             y,
             rotation,
         } => {
-            let was_worn = client.inventory.is_worn(item);
+            let cost = client.inventory.move_cost(item, to);
             let tick = world.action_clock.ticks();
             match client.inventory.move_item(item, to, x, y, rotation) {
                 Ok(()) => {
                     client.unsaved = true;
-                    if was_worn {
-                        client.spend_dressing(item, tick);
-                    }
+                    client.energy.spend(tick, client.speed, cost);
                 }
                 Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
             }
@@ -671,13 +714,18 @@ pub(crate) fn answer(
         }
         ClientMessage::GiveItem { item, to } => {
             let mut stock = None;
+            let cost = client.inventory.put_down_cost(item);
             let given = if sites::keeper_building(client, world, to).is_some() {
                 sites::give_to_keeper(client, world, item, to).map(|items| stock = Some(items))
             } else {
                 crate::entities::give(client, world, item, to)
             };
             match given {
-                Ok(()) => client.unsaved = true,
+                Ok(()) => {
+                    client.unsaved = true;
+                    let tick = world.action_clock.ticks();
+                    client.energy.spend(tick, client.speed, cost);
+                }
                 Err(why) => warn!("Refused giving {item:?} to {to:?}: {why}"),
             }
             client.update_speed(world.action_clock.ticks());
@@ -702,7 +750,14 @@ pub(crate) fn answer(
             rotation,
         } => {
             match sites::take_from_keeper(client, world, with, item, (to, x, y, rotation)) {
-                Ok(()) => client.unsaved = true,
+                Ok(()) => {
+                    client.unsaved = true;
+                    let grams = client.inventory.find(item).map_or(0, Item::total_weight);
+                    let tick = world.action_clock.ticks();
+                    client
+                        .energy
+                        .spend(tick, client.speed, handling_cost(grams));
+                }
                 Err(why) => warn!("Refused taking {item:?} from {with:?}: {why}"),
             }
             client.update_speed(world.action_clock.ticks());
@@ -1046,6 +1101,7 @@ pub(crate) mod tests {
             self.let_time_pass();
             self.client.send_position();
             crate::entities::sync(std::slice::from_mut(&mut self.client), &mut self.world);
+            ground::sync(std::slice::from_mut(&mut self.client), &mut self.world);
             std::iter::from_fn(|| self.end.receive().unwrap()).collect()
         }
 
@@ -1172,6 +1228,33 @@ pub(crate) mod tests {
         let (_, placed) = carried.placed(stone).expect("still carried");
         assert_eq!((placed.x, placed.y), (4, 2));
         assert!(test.client.unsaved);
+    }
+
+    #[test]
+    fn moves_between_containers_take_time_and_sorting_one_doesnt() {
+        let mut test = TestClient::new();
+        test.time_passes = false;
+        let answers = test.send(&[give(ItemKind::Pouch), give(ItemKind::Coin)]);
+        let carried = inventory(&answers);
+        let (pouch, coin) = (carried.pockets[0].item.id, carried.pockets[1].item.id);
+        let tick = test.world.action_clock.ticks();
+        let energy = test.client.energy.at(tick, test.client.speed);
+        test.send(&[ClientMessage::MoveItem {
+            item: coin,
+            to: Holder::Pockets,
+            x: 5,
+            y: 3,
+            rotation: Rotation::None,
+        }]);
+        assert_eq!(test.client.energy.at(tick, test.client.speed), energy);
+        test.send(&[ClientMessage::MoveItem {
+            item: coin,
+            to: Holder::Inside(pouch),
+            x: 0,
+            y: 0,
+            rotation: Rotation::None,
+        }]);
+        assert!(test.client.energy.at(tick, test.client.speed) < energy);
     }
 
     #[test]

@@ -8,17 +8,18 @@ The Character panel (what the character is like, what they wear and what they ca
 - `crates/client/src/inventory/hold.rs`: without Bevy: `Held`, `Target`, `target`, `drop_move`. Unit tests.
 - `crates/client/src/inventory/body.rs`: `spawn_rows`, `BodyNode`, `show_clothes`, `show_body_aim`, `worn_notes`.
 - `crates/client/src/inventory/give.rs`: `NearbyPanel`, `GiveRow`, `show_nearby`, `show_give_aim`.
+- `crates/client/src/inventory/ground.rs`: `Ground`, `spawn_section`, `read_server`, `show_section`, `show_aim`.
 - `crates/client/src/inventory/panels.rs`: `OpenGrids`, `spawn_fixed_parts`, `toggle_pockets`, `forget_closed`, `show_grids`, `show_aim`, `show_held`, `show_tooltip`, `show_button`, the bag icon (drawn in code).
 
 ## Public API
 
 - `InventoryPlugin`.
 - `Carried(Inventory)` (resource): what is carried, as the server last said plus any move since.
-- `InventoryDebug` (message, native): `OpenPockets`, `OpenBags`, `PickUp(index)`. Used by `dev_tools`.
+- `InventoryDebug` (message, native): `OpenPockets`, `OpenBags`, `PickUp(index)`, `DropSome`. Used by `dev_tools`.
 
 ## Depends on
 
-- `common` (`GameView`, `PointerPosition`, `PointerSystems`, `TouchGesture`), `connection` (`ToServer`, `FromServer`), `widgets`, `shared::item`, `shared::id`, `shared::protocol`.
+- `common` (`GameView`, `PointerPosition`, `PointerSystems`, `TouchGesture`, `GROUND`, `SpentEnergy`), `connection` (`ToServer`, `FromServer`), `player` (`Player`), `widgets`, `shared::item`, `shared::id`, `shared::protocol`.
 
 ## Used by
 
@@ -39,3 +40,5 @@ The Character panel (what the character is like, what they wear and what they ca
 - By touch: a finger sliding away from an item picks it up (`TouchGesture::first_finger`, `other_finger_tapped`). A tap arrives as a click, so it picks up and drops at once, doing nothing, and two make a double press. Only what is in front at the point counts, the same as for presses.
 - Moves are shown at once and `Inventory` follows every one, so a refused move goes back. Client-only choices: a panel per grid, a bag's panel closing when it is no longer carried.
 - Items are plain coloured cells with the first letters of their names, until there are pictures.
+- The ground (owner's design; sites only, never the world map): what is dropped on the Drop icon, left of the bin, goes on the cell under the player (`DropItem`), red on the world map, for what is covered and for anything held from the ground or a shop. While the player stands on something, a section to the right of the pockets shows it in a scrolling grid 8 wide (`widgets::StockGrid`, with `common::GROUND` standing for who it is with, so `hold_items` treats it as stock and gifts). What is dropped on the grid goes on the ground. From the ground, things can go to grids, the clothes (`WearFromGround`) or the bin (`BinFromGround`), but not the Drop icon, someone's row or a shop. Worn things can go straight to the ground if nothing covers them. A bag on the ground can't be opened until picked up.
+- Moving things between containers takes time, by weight (`Inventory::move_cost`, `put_down_cost`, `energy::handling_cost`); sorting one grid doesn't. `SpentEnergy` tells `player`, so it doesn't run ahead of the server.

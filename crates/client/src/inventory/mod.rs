@@ -3,19 +3,19 @@
 
 mod body;
 mod give;
+mod ground;
 mod hold;
 mod panels;
 
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
+use shared::energy::{dressing_cost, handling_cost};
 use shared::item::{Holder, Inventory, Item};
 use shared::protocol::{ClientMessage, ServerMessage};
 
-#[cfg(not(target_arch = "wasm32"))]
-use crate::common::GameView;
 use crate::common::{
-    GaveItem, HeldGift, HeldOverGifts, HeldStock, PointerPosition, PointerSystems, StockCell,
-    TakesGifts, TookItem, TouchGesture,
+    GROUND, GameView, GaveItem, HeldGift, HeldOverGifts, HeldStock, PointerPosition,
+    PointerSystems, SpentEnergy, StockCell, TakesGifts, TookItem, TouchGesture,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{
@@ -24,7 +24,7 @@ use crate::widgets::{
 use body::BodyNode;
 use give::{GiveRow, NearbyPanel};
 use hold::{Held, Target};
-use panels::{BinNode, ItemCell, OpenGrids};
+use panels::{BinNode, DropNode, ItemCell, OpenGrids};
 
 /// A press on an item this long after the last one on it opens it.
 const DOUBLE_PRESS_SECONDS: f64 = 0.35;
@@ -37,6 +37,7 @@ impl Plugin for InventoryPlugin {
             .init_resource::<Holding>()
             .init_resource::<OpenGrids>()
             .init_resource::<NearbyPanel>()
+            .init_resource::<ground::Ground>()
             .init_resource::<HeldOverGifts>()
             .init_resource::<HeldStock>()
             .add_message::<TookItem>()
@@ -60,6 +61,10 @@ impl Plugin for InventoryPlugin {
                     panels::forget_closed,
                     give::forget_closed,
                     panels::show_bins,
+                    panels::show_drop,
+                    ground::read_server,
+                    ground::show_section,
+                    ground::show_aim,
                     panels::show_grids,
                     body::show_clothes,
                     body::show_body_aim,
@@ -131,6 +136,8 @@ pub enum InventoryDebug {
     OpenBags,
     /// Picks up the item in the pockets at this index, until the program ends.
     PickUp(usize),
+    /// Puts all but the first of what is in the pockets on the ground.
+    DropSome,
 }
 
 fn read_server(mut from_server: MessageReader<FromServer>, mut carried: ResMut<Carried>) {
@@ -256,11 +263,13 @@ fn hold_items(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     mut to_server: MessageWriter<ToServer>,
-    (mut over_gifts, mut gave, mut held_stock, mut took): (
+    (mut over_gifts, mut gave, mut held_stock, mut took, mut spent, view): (
         ResMut<HeldOverGifts>,
         MessageWriter<GaveItem>,
         ResMut<HeldStock>,
         MessageWriter<TookItem>,
+        MessageWriter<SpentEnergy>,
+        Res<State<GameView>>,
     ),
     time: Res<Time<Real>>,
     mut last_press: Local<Option<(shared::id::Id, f64)>>,
@@ -271,6 +280,7 @@ fn hold_items(
             &UiGlobalTransform,
             &InheritedVisibility,
             Has<BinNode>,
+            Has<DropNode>,
             Has<BodyNode>,
             Option<&GiveRow>,
             Option<&TakesGifts>,
@@ -378,7 +388,7 @@ fn hold_items(
             })
     });
     // Only what is in front counts: the bin destroys things.
-    let (on_bin, on_body, on_row, on_gifts) = at
+    let (on_bin, on_drop, on_body, on_row, on_gifts) = at
         .and_then(|at| {
             nodes
                 .iter()
@@ -386,9 +396,10 @@ fn hold_items(
                     visible.get() && shown_at(at, node, transform, *clip)
                 })
                 .max_by_key(|(stack, ..)| stack.0)
-                .map(|(.., is_bin, is_body, row, gifts, _)| {
+                .map(|(.., is_bin, is_drop, is_body, row, gifts, _)| {
                     (
                         is_bin,
+                        is_drop,
                         is_body,
                         row.map(|row| row.0),
                         gifts.map(|gifts| gifts.0),
@@ -405,11 +416,27 @@ fn hold_items(
         rotation: held.item.rotation,
         corner: at - (Vec2::new(held.item.grip.0 as f32, held.item.grip.1 as f32) + 0.5) * CELL,
     });
-    let aim = if let Some((_, item)) = &holding.stock {
-        if on_bin || on_body || on_row.is_some() {
+    let aim = if let Some((with, item)) = &holding.stock {
+        let from_ground = *with == GROUND;
+        if on_drop {
+            // On the ground already, or someone else's.
+            Target::Drop { allowed: false }
+        } else if from_ground && on_bin {
+            Target::Bin
+        } else if from_ground && on_body {
+            Target::Body {
+                allowed: carried.0.check_wear_new(item).is_ok(),
+            }
+        } else if on_bin || on_body || on_row.is_some() {
             Target::Nowhere
         } else {
             hold::target_for_new(&carried.0, item, held.item, over)
+        }
+    } else if on_drop {
+        // Only sites have ground, and what is covered can't come off.
+        Target::Drop {
+            allowed: *view.get() == GameView::Dungeon
+                && carried.0.covered_by(held.item.id).is_none(),
         }
     } else if on_bin {
         // In it already: nothing happens.
@@ -450,33 +477,76 @@ fn hold_items(
         if let Some(gift) = over_gifts.0 {
             // Moved about in their grid: nothing to ask anyone.
             gave.write(GaveItem(gift));
-        } else if let Some((to, x, y, rotation)) = hold::drop_move(&carried.0, held.item, aim)
-            && carried.0.add(item, to, x, y, rotation).is_ok()
-        {
-            let item = held.item.id;
-            to_server.write(ToServer(ClientMessage::TakeItem {
-                with,
-                item,
-                to,
-                x,
-                y,
-                rotation,
-            }));
-            took.write(TookItem { with, item });
+        } else if aim == Target::Bin {
+            // Only from the ground: see `aim`.
+            let id = held.item.id;
+            carried.0.to_bin_new(item);
+            to_server.write(ToServer(ClientMessage::BinFromGround { item: id }));
+            took.write(TookItem { with, item: id });
+        } else if aim == (Target::Body { allowed: true }) {
+            let id = held.item.id;
+            let grams = item.total_weight();
+            if carried.0.wear_new(item).is_ok() {
+                to_server.write(ToServer(ClientMessage::WearFromGround { item: id }));
+                took.write(TookItem { with, item: id });
+                spent.write(SpentEnergy(dressing_cost(grams) + handling_cost(grams)));
+            }
+        } else if let Some((to, x, y, rotation)) = hold::drop_move(&carried.0, held.item, aim) {
+            let grams = item.total_weight();
+            if carried.0.add(item, to, x, y, rotation).is_ok() {
+                let item = held.item.id;
+                to_server.write(ToServer(if with == GROUND {
+                    ClientMessage::TakeFromGround {
+                        item,
+                        to,
+                        x,
+                        y,
+                        rotation,
+                    }
+                } else {
+                    ClientMessage::TakeItem {
+                        with,
+                        item,
+                        to,
+                        x,
+                        y,
+                        rotation,
+                    }
+                }));
+                took.write(TookItem { with, item });
+                spent.write(SpentEnergy(handling_cost(grams)));
+            }
         }
         return;
     }
     if aim == (Target::Body { allowed: true }) {
         let item = held.item.id;
+        let grams = carried.0.find(item).map_or(0, Item::total_weight);
         if carried.0.wear(item).is_ok() {
             to_server.write(ToServer(ClientMessage::WearItem { item }));
+            spent.write(SpentEnergy(dressing_cost(grams)));
+        }
+        return;
+    }
+    if aim == (Target::Drop { allowed: true }) {
+        let item = held.item.id;
+        let cost = carried.0.put_down_cost(item);
+        if carried.0.hand_over(item).is_some() {
+            to_server.write(ToServer(ClientMessage::DropItem { item }));
+            spent.write(SpentEnergy(cost));
         }
         return;
     }
     if let Target::Someone(to) = aim {
         let item = held.item.id;
+        let cost = carried.0.put_down_cost(item);
         if carried.0.hand_over(item).is_some() {
-            to_server.write(ToServer(ClientMessage::GiveItem { item, to }));
+            to_server.write(ToServer(if to == GROUND {
+                ClientMessage::DropItem { item }
+            } else {
+                ClientMessage::GiveItem { item, to }
+            }));
+            spent.write(SpentEnergy(cost));
             if let Some(gift) = over_gifts.0 {
                 gave.write(GaveItem(gift));
             }
@@ -493,7 +563,9 @@ fn hold_items(
     if let Some((to, x, y, rotation)) = hold::drop_move(&carried.0, held.item, aim) {
         // Shown at once; `Inventory` follows, putting it right if the server disagrees.
         let item = held.item.id;
+        let cost = carried.0.move_cost(item, to);
         if carried.0.move_item(item, to, x, y, rotation).is_ok() {
+            spent.write(SpentEnergy(cost));
             to_server.write(ToServer(ClientMessage::MoveItem {
                 item,
                 to,
@@ -517,6 +589,7 @@ fn run_debug(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     view: Res<State<GameView>>,
+    mut to_server: MessageWriter<ToServer>,
 ) {
     if *view.get() == GameView::Connecting {
         return;
@@ -533,6 +606,12 @@ fn run_debug(
                         let bag = Holder::Inside(placed.item.id);
                         open.open(bag, &carried.0, &mut commands, &mut raise);
                     }
+                }
+            }
+            InventoryDebug::DropSome => {
+                for placed in carried.0.pockets.iter().skip(1) {
+                    let item = placed.item.id;
+                    to_server.write(ToServer(ClientMessage::DropItem { item }));
                 }
             }
             InventoryDebug::PickUp(index) => {

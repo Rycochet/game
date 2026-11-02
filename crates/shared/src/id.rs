@@ -18,6 +18,9 @@ use crate::rng::Seed;
 pub struct Id(pub Uuid);
 
 impl Id {
+    /// Stands for no one: no real id is nil.
+    pub const NOBODY: Id = Id(Uuid::nil());
+
     /// A seed only this thing has, for what is rolled when it is made. The two halves
     /// are mixed as the low one alone hardly changes from one id to the next.
     pub fn seed(self) -> Seed {

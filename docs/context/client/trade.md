@@ -4,7 +4,7 @@ Trading panels. For now a town shop's: clicking its door opens it from beside th
 
 ## Files
 
-- `crates/client/src/trade/mod.rs`: `TradePlugin`; private `OpenTrades`, `Keepers`, `Heading`, `follow_clicked_door`, `open_on_arrival`, `note_gifts`, `read_server`, `draw_grids`, `show_gift_aim`, `arranged`, `restocked`, `close_on_escape`, `close_when_left`. Unit tests.
+- `crates/client/src/trade/mod.rs`: `TradePlugin`; private `OpenTrades`, `Keepers`, `Heading`, `follow_clicked_door`, `open_on_arrival`, `note_gifts`, `read_server`, `draw_grids`, `show_gift_aim`, `close_on_escape`, `close_when_left`. Unit tests. Grids are `widgets::StockGrid`.
 
 ## Public API
 

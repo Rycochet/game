@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::creature::{CreatureKind, Layer, Location, Size};
+use crate::energy::{dressing_cost, handling_cost};
 use crate::id::Id;
 use crate::item_form::ItemForm;
 use crate::rng::Rng;
@@ -1095,6 +1096,41 @@ impl Inventory {
         };
         self.bin = Some(item);
         true
+    }
+
+    /// Throws away something not carried, destroying what was thrown away before.
+    pub fn to_bin_new(&mut self, item: Item) {
+        self.bin = Some(item);
+    }
+
+    /// What moving this carried item to this grid costs: nothing within a grid.
+    pub fn move_cost(&self, id: Id, to: Holder) -> u32 {
+        let Some(item) = self.find(id) else {
+            return 0;
+        };
+        let grams = item.total_weight();
+        if self.is_worn(id) {
+            dressing_cost(grams)
+        } else if self.placed(id).is_some_and(|(from, _)| from == to) {
+            0
+        } else {
+            handling_cost(grams)
+        }
+    }
+
+    /// What putting this carried item down costs, or handing it over: taking it off
+    /// first, if it is worn.
+    pub fn put_down_cost(&self, id: Id) -> u32 {
+        let Some(item) = self.find(id) else {
+            return 0;
+        };
+        let grams = item.total_weight();
+        let taking_off = if self.is_worn(id) {
+            dressing_cost(grams)
+        } else {
+            0
+        };
+        taking_off + handling_cost(grams)
     }
 
     /// Whether this is what was last thrown away.

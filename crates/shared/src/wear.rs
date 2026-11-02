@@ -97,6 +97,12 @@ impl Inventory {
             return Err(WearRefused::AlreadyWorn);
         }
         let item = self.find(id).ok_or(WearRefused::NoSuchItem)?;
+        self.check_wear_new(item)
+    }
+
+    /// Whether this could be put on, carried or not, and how it would fit.
+    pub fn check_wear_new(&self, item: &Item) -> Result<Fit, WearRefused> {
+        let id = item.id;
         let wear = item.kind.def().wear.ok_or(WearRefused::NotClothing)?;
         let body = self.creature.def();
         for &location in wear.locations {
@@ -178,6 +184,13 @@ impl Inventory {
     pub fn wear(&mut self, id: Id) -> Result<Fit, WearRefused> {
         let fit = self.check_wear(id)?;
         let item = self.take(id).ok_or(WearRefused::NoSuchItem)?;
+        self.worn.push(item);
+        Ok(fit)
+    }
+
+    /// Puts on something not carried, if it can go on.
+    pub fn wear_new(&mut self, item: Item) -> Result<Fit, WearRefused> {
+        let fit = self.check_wear_new(&item)?;
         self.worn.push(item);
         Ok(fit)
     }

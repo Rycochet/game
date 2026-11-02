@@ -11,9 +11,10 @@ use shared::item::{Holder, Inventory, Placed, Rotation};
 
 use super::body::{spawn_rows, worn_notes};
 use super::give::NearbyPanel;
+use super::ground::{GroundHolder, spawn_section};
 use super::hold::Target;
 use super::{Carried, Holding, item_cell_in_front};
-use crate::common::{GameView, PointerPosition, SheetText};
+use crate::common::{GROUND, GameView, PointerPosition, SheetText};
 use crate::widgets::{
     ALLOWED, ButtonPressed, ButtonState, CELL, Floating, GRID_LINE, HELD_ITEM_Z, INK, ITEM_EDGE,
     ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, Pressable, REFUSED, RaisePanel, at_cell,
@@ -94,6 +95,14 @@ pub(super) struct BinSlot;
 #[derive(Resource)]
 pub(super) struct BinIcon(Handle<Image>);
 
+/// The Drop icon: what is dropped here goes on the ground under the player.
+#[derive(Component)]
+pub(super) struct DropNode;
+
+/// The Drop icon's picture.
+#[derive(Resource)]
+pub(super) struct DropIcon(Handle<Image>);
+
 fn kilograms(grams: u32) -> String {
     format!("{:.2} kg", grams as f32 / 1000.0)
 }
@@ -159,10 +168,44 @@ fn bin_icon() -> Image {
     )
 }
 
+/// A hand with an arrow down below it, drawn here so there is no file to ship for it.
+fn drop_icon() -> Image {
+    const SIZE: usize = 32;
+    const INK_BYTES: [u8; 4] = [60, 40, 20, 255];
+    let mut bytes = vec![0; SIZE * SIZE * 4];
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let (x, y) = (x as i32, y as i32);
+            // Four fingers pointing down from the palm, with gaps, and a thumb.
+            let palm = (9..23).contains(&x) && (2..10).contains(&y);
+            let finger = (9..23).contains(&x) && (10..17).contains(&y) && (x - 9) % 4 != 3;
+            let thumb = (5..9).contains(&x) && (5..11).contains(&y);
+            let shaft = (14..18).contains(&x) && (19..25).contains(&y);
+            let across = (x as f32 - 15.5).abs();
+            let head = (25..31).contains(&y) && across < (31 - y) as f32 + 0.5;
+            if palm || finger || thumb || shaft || head {
+                bytes[(y as usize * SIZE + x as usize) * 4..][..4].copy_from_slice(&INK_BYTES);
+            }
+        }
+    }
+    Image::new(
+        Extent3d {
+            width: SIZE as u32,
+            height: SIZE as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        bytes,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    )
+}
+
 /// The button, and the held item, which stands above panels.
 pub(super) fn spawn_fixed_parts(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let icon = images.add(person_icon());
     commands.insert_resource(BinIcon(images.add(bin_icon())));
+    commands.insert_resource(DropIcon(images.add(drop_icon())));
     commands
         .spawn((
             Node {
@@ -218,6 +261,7 @@ impl OpenGrids {
         let at = FIRST_AT + NEXT_AT * (self.opened % 8) as f32;
         self.opened += 1;
         let (panel, content) = spawn_moveable_panel(commands, title, at);
+        let mut ground_holder = None;
         commands.entity(content).with_children(|content| {
             if holder != Holder::Pockets {
                 spawn_grid(content, holder, width, height);
@@ -244,8 +288,12 @@ impl OpenGrids {
                             ..default()
                         })
                         .with_children(|column| spawn_grid(column, holder, width, height));
+                    ground_holder = Some(spawn_section(columns));
                 });
         });
+        if let Some(ground_holder) = ground_holder {
+            commands.entity(ground_holder).insert(GroundHolder);
+        }
         self.open.push((holder, panel, (width, height)));
     }
 
@@ -294,17 +342,20 @@ fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, heig
                 TextColor(INK),
             ));
             if holder == Holder::Pockets {
-                row.spawn((
-                    BinNode,
-                    BinSlot,
-                    Node {
+                row.spawn(Node {
+                    column_gap: px(CELL_BORDER * 4.0),
+                    ..default()
+                })
+                .with_children(|slots| {
+                    let slot = || Node {
                         width: px(CELL),
                         height: px(CELL),
                         border: UiRect::all(px(CELL_BORDER)),
                         ..default()
-                    },
-                    BorderColor::from(GRID_LINE),
-                ));
+                    };
+                    slots.spawn((DropNode, slot(), BorderColor::from(GRID_LINE)));
+                    slots.spawn((BinNode, BinSlot, slot(), BorderColor::from(GRID_LINE)));
+                });
             }
         });
 }
@@ -372,6 +423,29 @@ pub(super) fn show_bins(
                 TextColor(ITEM_EDGE),
             ));
         });
+    }
+}
+
+/// Gives the Drop icon its picture, and shows what dropping something on it would do.
+pub(super) fn show_drop(
+    icon: Res<DropIcon>,
+    holding: Res<Holding>,
+    new_icons: Query<Entity, Added<DropNode>>,
+    mut icons: Query<&mut BackgroundColor, With<DropNode>>,
+    mut commands: Commands,
+) {
+    for entity in &new_icons {
+        commands
+            .entity(entity)
+            .insert((ImageNode::new(icon.0.clone()), BackgroundColor(Color::NONE)));
+    }
+    let tint = match holding.aim {
+        Some(Target::Drop { allowed: true }) => ALLOWED,
+        Some(Target::Drop { allowed: false }) => REFUSED,
+        _ => Color::NONE,
+    };
+    for mut background in &mut icons {
+        background.set_if_neq(BackgroundColor(tint));
     }
 }
 
@@ -524,7 +598,11 @@ pub(super) fn show_aim(
         return;
     };
     let (holder, cells, allowed) = match aim {
-        Target::Nowhere | Target::Bin | Target::Body { .. } | Target::Someone(_) => return,
+        Target::Nowhere
+        | Target::Bin
+        | Target::Drop { .. }
+        | Target::Body { .. }
+        | Target::Someone(_) => return,
         Target::Cells {
             holder,
             x,
@@ -644,6 +722,10 @@ pub(super) fn show_tooltip(
         return;
     };
     let words = match holding.aim {
+        Some(Target::Someone(GROUND)) | Some(Target::Drop { allowed: true }) => {
+            format!("Drop {name}")
+        }
+        Some(Target::Drop { allowed: false }) => format!("Can't drop {name}"),
         Some(Target::Someone(_)) => format!("Give {name}"),
         Some(Target::Bin) => match carried.0.bin.as_ref() {
             Some(old) => format!("Throw away {name}, destroying {}", old.name()),

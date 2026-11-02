@@ -462,6 +462,7 @@ fn receive(
                 | ServerMessage::Teleported { .. }
                 | ServerMessage::Inventory(_)
                 | ServerMessage::TradeStock { .. }
+                | ServerMessage::GroundItems { .. }
                 | ServerMessage::Keepers(_)
                 | ServerMessage::Sheet(_)
                 | ServerMessage::EntitySeen(_)
