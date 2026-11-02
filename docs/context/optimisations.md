@@ -26,3 +26,9 @@ Findings worth revisiting later. Nothing here is in the code. Versions matter: r
 **Why not adopted:** the owner judged the saving not worth the extra upkeep (an explicit feature list has to be maintained as features are needed). Most remaining memory is the GPU driver and Bevy's render pipelines rather than game code.
 
 **Easy wins if memory matters later:** the thread count and single shadow cascade are a few lines each with no feature-list upkeep (together ~45 MB).
+
+## 2026-11-02: Keeping item pictures on disk
+
+Planned so that pictures need not be drawn again each time the game starts. Measured on the owner's laptop, in the native debug build, with Item Pictures asking for 147 pictures at once: 1.56 s until the graphics card's programs had compiled, then 131 pictures in 3.2 s, about 40 a second, with the slowest frame 37.5 ms and most about 35 ms. The frame time with nothing drawing wasn't measured.
+
+Not adopted. A full inventory is a few dozen pictures, so under a second once compiled, with each item's edge showing until then. The compile would mostly be saved only for the first look at an inventory, while a cache would need reading pictures back from the graphics card, a PNG library, file handling on another thread, clearing out old files and a version to raise when drawing changes, for native only. Worth another look if models get much more expensive, or if the wait on first opening an inventory is noticed.
