@@ -161,6 +161,8 @@ pub struct ItemDef {
     pub wear: Option<WearDef>,
     /// Whether how well it is made matters: not for a coin.
     pub has_quality: bool,
+    /// How long it takes to make beside other things, as a percentage.
+    pub make_percent: u64,
 }
 
 /// How something is worn.
@@ -246,7 +248,7 @@ impl ItemKind {
             Waist,
         };
         let square = Shape::rectangle(1, 1);
-        match self {
+        let def = match self {
             Self::Apple => plain("Apple", 150, square).without_quality(),
             Self::Backpack => bag(
                 "Backpack",
@@ -349,7 +351,17 @@ impl ItemKind {
                 (1, 0),
                 false,
             )),
-        }
+        };
+        // First guesses at how much work each is beside the usual.
+        def.taking(match self {
+            Self::Apple | Self::Coin | Self::Stone => 10,
+            Self::Socks | Self::TShirt | Self::Trousers | Self::Hat => 50,
+            Self::Ring | Self::Pouch | Self::Belt | Self::Boomerang => 75,
+            Self::Gauntlets | Self::Backpack | Self::Necklace => 150,
+            Self::Sword => 200,
+            Self::FullArmour | Self::Barding => 400,
+            _ => 100,
+        })
     }
 }
 
@@ -361,6 +373,7 @@ const fn plain(name: &'static str, weight: u32, shape: Shape) -> ItemDef {
         container: None,
         wear: None,
         has_quality: true,
+        make_percent: 100,
     }
 }
 
@@ -400,6 +413,13 @@ const fn wear(
 }
 
 impl ItemDef {
+    const fn taking(self, make_percent: u64) -> Self {
+        Self {
+            make_percent,
+            ..self
+        }
+    }
+
     const fn without_quality(self) -> Self {
         Self {
             has_quality: false,
