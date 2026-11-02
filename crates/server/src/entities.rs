@@ -8,6 +8,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant};
 
+use serde::{Deserialize, Serialize};
 use shared::creature::CreatureKind;
 use shared::dungeon::{Level, line_is_clear};
 use shared::energy::{Energy, SITE_SCALE, site_step_cost};
@@ -16,7 +17,7 @@ use shared::item::Inventory;
 use shared::mob::{EntityLook, spawns};
 use shared::movement::{STRAIGHT_COST, Step, step_on_level};
 use shared::pathfinding::DistanceMap;
-use shared::poi::Poi;
+use shared::poi::{Poi, PoiKind};
 use shared::protocol::{ServerMessage, WORLD_MAP_SIGHT};
 use shared::rng::Seed;
 use shared::sheet::{Appearance, Feeling, Reaction, Sheet};
@@ -25,7 +26,7 @@ use shared::site::SiteLevel;
 use crate::ServerWorld;
 use crate::connections::{Client, Phase};
 use crate::ids::new_id;
-use crate::storage::SiteId;
+use crate::storage::{SavedMob, SiteId};
 
 /// How long a level nobody is on stays in use.
 const KEPT_FOR: Duration = Duration::from_secs(60);
@@ -45,14 +46,22 @@ const HOME_WITHIN: u64 = 1200;
 const THINKING_COST: u32 = STRAIGHT_COST * SITE_SCALE;
 
 /// What a mob is doing. Anything but `Idle` keeps it, and its level, going.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Doing {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Doing {
     /// At rest, and needing no time until something wakes it.
     Idle,
     /// Going after someone, stopping this near.
     Going {
         after: Id,
         last_seen: (i64, i64),
+        gap: i64,
+    },
+    /// Going after someone it saw take these stairs.
+    Following {
+        after: Id,
+        stairs: (i64, i64),
+        to_level: u32,
+        arrives: (i64, i64),
         gap: i64,
     },
     /// Getting away from someone it can see.
@@ -78,8 +87,43 @@ pub(crate) struct Mob {
     /// Where it started, and goes back to.
     pub home: (i64, i64),
     pub doing: Doing,
+    /// Which of its level's mobs it is.
+    number: u32,
+    /// The level it belongs on, and the stairs back there, last taken last.
+    home_level: u32,
+    way_back: Vec<Hop>,
     energy: Energy,
     speed: u32,
+}
+
+/// Stairs a mob has come by: where they are here, and where they lead back to.
+#[derive(Clone, Copy, Debug)]
+struct Hop {
+    stairs: (i64, i64),
+    to_level: u32,
+    arrives: (i64, i64),
+}
+
+/// Someone has taken stairs: mobs after them that saw will follow.
+pub(crate) struct StairsTaken {
+    pub who: Id,
+    pub site: SiteId,
+    pub from_level: u32,
+    pub stairs: (i64, i64),
+    pub to_level: u32,
+    pub arrives: (i64, i64),
+}
+
+/// A mob going to another level.
+struct Crossing {
+    mob: Id,
+    site: SiteId,
+    from_level: u32,
+    to_level: u32,
+    from_stairs: (i64, i64),
+    arrives: (i64, i64),
+    /// It is on its way home, not after someone.
+    going_back: bool,
 }
 
 /// The mobs of one level, and how long nobody has been there.
@@ -90,14 +134,18 @@ pub(crate) struct Population {
     level: Level,
     /// Who is due to act: the tick, and which mob. A mob at rest isn't here, so
     /// costs nothing however long it rests.
-    due: BTreeSet<(u64, usize)>,
+    due: BTreeSet<(u64, Id)>,
+    /// How many of its mobs are on other levels, so it must stay for their return.
+    away: u32,
+    /// What kind of poi the site is behind, to reach its save.
+    poi_kind: PoiKind,
     empty_since: Option<Instant>,
 }
 
 impl Population {
     /// Whether every mob is at rest, so nothing is going on here.
     fn is_settled(&self) -> bool {
-        self.mobs.iter().all(|mob| mob.doing == Doing::Idle)
+        self.away == 0 && self.mobs.iter().all(|mob| mob.doing == Doing::Idle)
     }
 }
 
@@ -125,21 +173,33 @@ impl ServerWorld {
         }
         let stairs: Vec<_> = level.stairs.iter().map(|s| (s.x, s.y)).collect();
         let plan = spawns(poi.seed, index, poi.kind, &level.level, &stairs);
+        let self_tick = self.action_clock.ticks();
         let saved = self.site_mut(id, poi.kind).levels.entry(index).or_default();
+        let unsettled = std::mem::take(&mut saved.unsettled);
+        let mut due = BTreeSet::new();
+        let tick = self_tick;
         let mobs = plan
             .into_iter()
             .map(|spawn| {
+                let carried_on = unsettled.get(&spawn.number);
                 let carrying = Inventory {
                     creature: spawn.kind,
                     ..Inventory::default()
                 };
+                let id = *saved.mobs.entry(spawn.number).or_insert_with(new_id);
+                if carried_on.is_some() {
+                    due.insert((tick, id));
+                }
                 Mob {
-                    id: *saved.mobs.entry(spawn.number).or_insert_with(new_id),
+                    id,
                     kind: spawn.kind,
                     appearance: spawn.appearance,
-                    position: spawn.position,
+                    position: carried_on.map_or(spawn.position, |saved| saved.position),
                     home: spawn.position,
-                    doing: Doing::Idle,
+                    doing: carried_on.map_or(Doing::Idle, |saved| saved.doing),
+                    number: spawn.number,
+                    home_level: index,
+                    way_back: Vec::new(),
                     energy: Energy::default(),
                     speed: Sheet::new(spawn.kind).speed(&carrying),
                 }
@@ -148,10 +208,66 @@ impl ServerWorld {
         let population = Population {
             mobs,
             level: level.level.clone(),
-            due: BTreeSet::new(),
+            due,
+            away: 0,
+            poi_kind: poi.kind,
             empty_since: None,
         };
         self.populations.0.insert((id, index), population);
+    }
+
+    /// Mobs after someone who has just taken stairs, and saw, follow if they can.
+    pub(crate) fn saw_stairs_taken(&mut self, taken: StairsTaken) {
+        let place = (taken.site, taken.from_level);
+        let Some(population) = self.populations.0.get_mut(&place) else {
+            return;
+        };
+        for mob in &mut population.mobs {
+            if let Doing::Going { after, gap, .. } = mob.doing
+                && after == taken.who
+                && mob.kind.def().uses_stairs
+                && line_is_clear(&population.level, mob.position, taken.stairs)
+            {
+                mob.doing = Doing::Following {
+                    after,
+                    stairs: taken.stairs,
+                    to_level: taken.to_level,
+                    arrives: taken.arrives,
+                    gap,
+                };
+            }
+        }
+    }
+
+    /// Notes in the sites' saves which mobs aren't at rest, to carry on after a
+    /// restart. Those on other levels start again from home.
+    pub(crate) fn save_mobs(&mut self) {
+        let mut notes = Vec::new();
+        for (&(site, level), population) in &self.populations.0 {
+            let unsettled: BTreeMap<u32, SavedMob> = population
+                .mobs
+                .iter()
+                .filter(|mob| {
+                    mob.doing != Doing::Idle && mob.home_level == level && mob.way_back.is_empty()
+                })
+                .map(|mob| {
+                    let saved = SavedMob {
+                        position: mob.position,
+                        doing: mob.doing,
+                    };
+                    (mob.number, saved)
+                })
+                .collect();
+            notes.push((site, level, population.poi_kind, unsettled));
+        }
+        for (site, level, kind, unsettled) in notes {
+            let known = self.site(site, kind).levels.get(&level);
+            let same = known.is_none_or(|saved| saved.unsettled == unsettled);
+            if !same || (known.is_none() && !unsettled.is_empty()) {
+                let saved = self.site_mut(site, kind).levels.entry(level).or_default();
+                saved.unsettled = unsettled;
+            }
+        }
     }
 }
 
@@ -210,7 +326,10 @@ struct Spot {
 
 /// What a mob does about players now, if it should stop what it is doing.
 fn notice(mob: &Mob, level: &Level, spots: &[Spot]) -> Option<Doing> {
-    if matches!(mob.doing, Doing::Going { .. } | Doing::Fleeing { .. }) {
+    if matches!(
+        mob.doing,
+        Doing::Going { .. } | Doing::Following { .. } | Doing::Fleeing { .. }
+    ) {
         return None;
     }
     spots
@@ -250,7 +369,9 @@ fn wandering_step(mob: &Mob, tick: u64) -> Option<Step> {
 }
 
 /// One mob's turn: what it does and what it costs. Afterwards it may be at rest.
-/// `seen` says whether any player can see a cell.
+/// `seen` says whether any player can see a cell. `crossing` is filled in if it
+/// is going to another level.
+#[allow(clippy::too_many_arguments)]
 fn act(
     mob: &mut Mob,
     level: &Level,
@@ -258,6 +379,8 @@ fn act(
     maps: &mut Maps,
     tick: u64,
     seen: impl Fn((i64, i64)) -> bool,
+    crossing: &mut Option<Crossing>,
+    (site, level_index): (SiteId, u32),
 ) -> u32 {
     let settle = Doing::Settling {
         steps_left: SETTLING_STEPS,
@@ -293,6 +416,30 @@ fn act(
                 THINKING_COST
             })
         }
+        Doing::Following {
+            stairs,
+            to_level,
+            arrives,
+            ..
+        } => {
+            if mob.position == stairs {
+                *crossing = Some(Crossing {
+                    mob: mob.id,
+                    site,
+                    from_level: level_index,
+                    to_level,
+                    from_stairs: stairs,
+                    arrives,
+                    going_back: false,
+                });
+                return shared::energy::CHANGE_MAP_COST;
+            }
+            let step = maps.to(level, stairs).towards(level, mob.position);
+            take_step(mob, level, step).unwrap_or_else(|| {
+                mob.doing = settle;
+                THINKING_COST
+            })
+        }
         Doing::Fleeing { from } => {
             let threat = spots
                 .iter()
@@ -312,18 +459,105 @@ fn act(
             take_step(mob, level, wandering_step(mob, tick)).unwrap_or(THINKING_COST)
         }
         Doing::GoingHome { since } => {
+            // Home, or the stairs leading back towards it.
+            let hop = mob.way_back.last().copied();
+            let goal = hop.map_or(mob.home, |hop| hop.stairs);
             let late = tick.saturating_sub(since) > HOME_WITHIN;
-            let step = maps.to(level, mob.home).towards(level, mob.position);
+            let step = maps.to(level, goal).towards(level, mob.position);
             let walked = take_step(mob, level, step);
             // Stuck or lost, it gets there when nobody can see.
-            if (late || walked.is_none()) && !seen(mob.position) && !seen(mob.home) {
-                mob.position = mob.home;
+            if (late || walked.is_none()) && !seen(mob.position) && !seen(goal) {
+                mob.position = goal;
             }
-            if mob.position == mob.home {
-                mob.doing = Doing::Idle;
+            if mob.position == goal {
+                match hop {
+                    Some(hop) => {
+                        *crossing = Some(Crossing {
+                            mob: mob.id,
+                            site,
+                            from_level: level_index,
+                            to_level: hop.to_level,
+                            from_stairs: hop.stairs,
+                            arrives: hop.arrives,
+                            going_back: true,
+                        });
+                    }
+                    None => mob.doing = Doing::Idle,
+                }
             }
             walked.unwrap_or(THINKING_COST)
         }
+    }
+}
+
+/// Takes a mob from one level to another. It stays where it is if there is
+/// nowhere to go: it can only be somewhere nobody has been since, going forward,
+/// as a level with its mobs away is kept.
+fn cross(populations: &mut Populations, crossing: Crossing, tick: u64) {
+    let Crossing {
+        mob,
+        site,
+        from_level,
+        to_level,
+        from_stairs,
+        arrives,
+        going_back,
+    } = crossing;
+    let settle = Doing::Settling {
+        steps_left: SETTLING_STEPS,
+    };
+    let Some(from) = populations.0.get_mut(&(site, from_level)) else {
+        return;
+    };
+    let Some(index) = from.mobs.iter().position(|one| one.id == mob) else {
+        return;
+    };
+    if !populations.0.contains_key(&(site, to_level)) {
+        let from = populations
+            .0
+            .get_mut(&(site, from_level))
+            .expect("just used");
+        from.mobs[index].doing = settle;
+        return;
+    }
+    let from = populations
+        .0
+        .get_mut(&(site, from_level))
+        .expect("just used");
+    let mut moving = from.mobs.remove(index);
+    from.due.retain(|&(_, id)| id != mob);
+    let home = moving.home_level;
+    if going_back {
+        moving.way_back.pop();
+    } else {
+        moving.way_back.push(Hop {
+            stairs: arrives,
+            to_level: from_level,
+            arrives: from_stairs,
+        });
+        if let Doing::Following { after, gap, .. } = moving.doing {
+            moving.doing = Doing::Going {
+                after,
+                last_seen: arrives,
+                gap,
+            };
+        }
+    }
+    moving.position = arrives;
+    let back_home = to_level == home && moving.way_back.is_empty();
+    let left_home = from_level == home && !going_back && moving.way_back.len() == 1;
+    let ready = moving.energy.ready_at(tick + 1, moving.speed);
+    let there = populations
+        .0
+        .get_mut(&(site, to_level))
+        .expect("checked above");
+    there.due.insert((ready, moving.id));
+    there.mobs.push(moving);
+    if back_home {
+        there.away = there.away.saturating_sub(1);
+    }
+    if left_home && let Some(home_level) = populations.0.get_mut(&(site, home)) {
+        home_level.away += 1;
     }
 }
 
@@ -331,6 +565,7 @@ fn act(
 pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
     let tick = world.action_clock.ticks();
     let everyone = everyone_playing(clients);
+    let mut crossings = Vec::new();
     for (&place, population) in &mut world.populations.0 {
         let spots: Vec<Spot> = everyone
             .iter()
@@ -346,34 +581,52 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
         } = population;
 
         // Anyone at rest or settling may notice someone.
-        for (index, mob) in mobs.iter_mut().enumerate() {
+        for mob in mobs.iter_mut() {
             if let Some(doing) = notice(mob, level, &spots) {
                 let at_rest = mob.doing == Doing::Idle;
                 mob.doing = doing;
                 if at_rest {
-                    due.insert((mob.energy.ready_at(tick, mob.speed), index));
+                    due.insert((mob.energy.ready_at(tick, mob.speed), mob.id));
                 }
             }
         }
 
         let mut maps = Maps::default();
-        while let Some(&(when, index)) = due.first() {
+        while let Some(&(when, id)) = due.first() {
             if when > tick {
                 break;
             }
-            due.remove(&(when, index));
-            let mob = &mut mobs[index];
-            let cost = act(mob, level, &spots, &mut maps, tick, |cell| {
+            due.remove(&(when, id));
+            let Some(mob) = mobs.iter_mut().find(|mob| mob.id == id) else {
+                continue;
+            };
+            let mut crossing = None;
+            let seen = |cell| {
                 spots
                     .iter()
                     .any(|spot| line_is_clear(level, spot.position, cell))
-            });
+            };
+            let cost = act(
+                mob,
+                level,
+                &spots,
+                &mut maps,
+                tick,
+                seen,
+                &mut crossing,
+                place,
+            );
             mob.energy.spend(tick, mob.speed, cost);
-            if mob.doing != Doing::Idle {
+            if let Some(crossing) = crossing {
+                crossings.push(crossing);
+            } else if mob.doing != Doing::Idle {
                 // At least the next tick, so one turn can't run for ever here.
-                due.insert((mob.energy.ready_at(tick + 1, mob.speed), index));
+                due.insert((mob.energy.ready_at(tick + 1, mob.speed), id));
             }
         }
+    }
+    for crossing in crossings {
+        cross(&mut world.populations, crossing, tick);
     }
 }
 
@@ -761,5 +1014,102 @@ mod tests {
             _ => None,
         });
         assert_eq!(feeling, Some(Feeling::Unfriendly));
+    }
+
+    /// `beside_a_mob`, with the player on the level's first stairs and the mob after
+    /// them, having seen.
+    fn being_chased_at_stairs(kind: CreatureKind) -> TestClient {
+        let mut test = beside_a_mob(kind, 3);
+        let visit = test.client.visit.as_ref().unwrap();
+        let stairs = visit.first_stairs();
+        test.send(&[ClientMessage::DevTeleport {
+            x: stairs.0,
+            y: stairs.1,
+        }]);
+        // Beside the stairs, so it sees them taken.
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        let mob = &mut population.mobs[0];
+        mob.position = stairs;
+        mob.home = stairs;
+        run(&mut test, 2);
+        test
+    }
+
+    /// Which level each mob with this id is on.
+    fn levels_with(test: &TestClient, id: Id) -> Vec<u32> {
+        let levels = test.world.populations.0.iter();
+        levels
+            .filter(|(_, population)| population.mobs.iter().any(|mob| mob.id == id))
+            .map(|(&(_, level), _)| level)
+            .collect()
+    }
+
+    #[test]
+    fn a_mob_that_sees_stairs_taken_follows_and_later_goes_home() {
+        let mut test = being_chased_at_stairs(CreatureKind::Kobold);
+        let mob = the_mob(&test).id;
+        assert_eq!(levels_with(&test, mob), [0]);
+        test.send(&[ClientMessage::UseExit]);
+        let upstairs = test.client.visit.as_ref().unwrap().index();
+        run(&mut test, 60);
+        assert_eq!(levels_with(&test, mob), [upstairs]);
+
+        // The player leaves. It loses them, wanders, and takes the stairs home;
+        // its home level stays in use meanwhile.
+        test.send(&[ClientMessage::DevBackToStart]);
+        let home_level = test.world.populations.0.keys().find(|(_, l)| *l == 0);
+        assert!(home_level.is_some());
+        crate::entities::sync(std::slice::from_mut(&mut test.client), &mut test.world);
+        run(&mut test, HOME_WITHIN + 400);
+        assert_eq!(levels_with(&test, mob), [0]);
+        let home = test.world.populations.0.iter().find(|((_, l), _)| *l == 0);
+        let (_, home) = home.unwrap();
+        assert_eq!(home.away, 0);
+        assert!(home.is_settled());
+    }
+
+    #[test]
+    fn a_kind_that_cant_use_stairs_stays_behind() {
+        let mut test = being_chased_at_stairs(CreatureKind::Giant);
+        // (A giant could, so this makes one that can't by its kind.)
+        let (after, last_seen) = (test.client.entity_id, player(&test));
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        population.mobs[0].kind = CreatureKind::Horse;
+        let mob = population.mobs[0].id;
+        population.mobs[0].doing = Doing::Going {
+            after,
+            last_seen,
+            gap: ATTACK_GAP,
+        };
+        test.send(&[ClientMessage::UseExit]);
+        run(&mut test, 60);
+        assert_eq!(levels_with(&test, mob), [0]);
+    }
+
+    #[test]
+    fn a_mob_part_way_through_something_carries_on_after_a_restart() {
+        let folder = TestFolder::new();
+        let seed = WorldSeed::new(1);
+        let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
+        let mut test = TestClient::of(open());
+        test.send(&[CASTLE]);
+        let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(3);
+        test.send(&[ClientMessage::DevTeleport { x, y }]);
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        let spot = (x + 2, y);
+        let settling = Doing::Settling { steps_left: 4 };
+        population.mobs[0].position = spot;
+        population.mobs[0].doing = settling;
+        test.world.save_mobs();
+        let world = test.leave();
+        world.storage.finish_writing();
+        drop(world);
+
+        let test = TestClient::of(open());
+        let carried_on = the_mob(&test);
+        assert_eq!(carried_on.position, spot);
+        assert_eq!(carried_on.doing, settling);
+        let population = test.world.populations.0.values().next().unwrap();
+        assert!(!population.due.is_empty());
     }
 }

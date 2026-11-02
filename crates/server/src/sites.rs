@@ -54,6 +54,13 @@ impl Visit {
         self.position
     }
 
+    /// The level's first stairs, for tests.
+    #[cfg(test)]
+    pub(crate) fn first_stairs(&self) -> (i64, i64) {
+        let stairs = self.level.stairs[0];
+        (stairs.x, stairs.y)
+    }
+
     /// A cell with room for this many steps east of it, for tests.
     #[cfg(test)]
     pub(crate) fn room_to_walk_east(&self, steps: i64) -> (i64, i64) {
@@ -358,12 +365,26 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
             } else {
                 Arrival::From(Exit::Level(visit.index))
             };
+            let (visit_id, from_level) = (visit.id, visit.index);
             let new = NewVisit {
                 poi: visit.poi,
                 id: visit.id,
                 site: visit.site,
             };
-            enter_level(client, world, new, index, from, false)
+            let arrived = enter_level(client, world, new, index, from, false);
+            if let Some(there) = client.visit.as_ref().map(Visit::position) {
+                let site = visit_id;
+                let taken = crate::entities::StairsTaken {
+                    who: client.entity_id,
+                    site,
+                    from_level,
+                    stairs: (x, y),
+                    to_level: index,
+                    arrives: there,
+                };
+                world.saw_stairs_taken(taken);
+            }
+            arrived
         }
         Exit::WorldMap => {
             let (x, y) = (visit.poi.x, visit.poi.y);
