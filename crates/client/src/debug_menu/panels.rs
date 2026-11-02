@@ -8,8 +8,9 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
-use shared::item::{ItemKind, Quality};
-use shared::item_form::{Cut, GemForm};
+use shared::id::Id;
+use shared::item::{Item, ItemKind, Quality};
+use shared::item_form::{Cut, GemForm, give_form};
 use shared::material::Material;
 use shared::poi::PoiKind;
 use shared::rng::Seed;
@@ -23,7 +24,7 @@ use super::bodies::BodiesToShow;
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
-use crate::item_art::{ItemPictures, Look};
+use crate::item_art::{ItemPictures, Look, look_of};
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, Dropdown, INK, Pressable, RaisePanel, TabChosen,
     TextBox, raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown,
@@ -191,6 +192,9 @@ const PICTURE_PIXELS: u32 = 100;
 const LARGE_PICTURE: f32 = 256.0;
 const LARGE_PICTURE_PIXELS: u32 = 512;
 const PICTURE_LABEL: f32 = 12.0;
+/// How many rings Item Pictures shows: a sample of what the server would roll.
+const RING_ROWS: u128 = 8;
+const RING_COLUMNS: u128 = 8;
 /// The most of the window's height the grid takes, before it scrolls.
 const PICTURES_HEIGHT: Val = Val::Vh(70.0);
 /// Room for the name of a gem beside its row.
@@ -200,14 +204,14 @@ const PICTURE_ROW_LABEL: f32 = 84.0;
 #[derive(Resource)]
 pub(super) struct PicturesForm {
     quality: Quality,
-    chosen: GemForm,
+    chosen: Shown,
 }
 
 impl Default for PicturesForm {
     fn default() -> Self {
         Self {
             quality: Quality::default(),
-            chosen: gem_to_show(Material::Ruby, Cut::Round),
+            chosen: Shown::Gem(gem_to_show(Material::Ruby, Cut::Round)),
         }
     }
 }
@@ -226,9 +230,38 @@ fn gem_to_show(material: Material, cut: Cut) -> GemForm {
     }
 }
 
+/// What one picture in Item Pictures is of.
+#[derive(Clone, Copy)]
+enum Shown {
+    Gem(GemForm),
+    /// A ring as the server would roll it from this number, at the quality chosen.
+    Ring(u128),
+}
+
+impl Shown {
+    fn look(self, quality: Quality) -> Option<Look> {
+        match self {
+            Self::Gem(gem) => Some(Look::Gem {
+                gem,
+                quality: Some(quality),
+            }),
+            Self::Ring(seed) => {
+                let mut ring = Item::new(Id::for_test(seed), ItemKind::Ring);
+                ring.quality = Some(quality);
+                let mut gems = seed << 32;
+                give_form(&mut ring, Some(Size::Medium), &mut || {
+                    gems += 1;
+                    Id::for_test(gems)
+                });
+                look_of(&ring)
+            }
+        }
+    }
+}
+
 /// A picture in Item Pictures' grid: pressing it shows it large.
 #[derive(Component, Clone, Copy)]
-pub(super) struct GemPicture(GemForm);
+pub(super) struct GemPicture(Shown);
 
 #[derive(Component)]
 pub(super) struct LargePicture;
@@ -263,6 +296,9 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                     column.commands().entity(area).with_children(|grid| {
                         for material in Material::GEMS {
                             spawn_picture_row(grid, material);
+                        }
+                        for row in 0..RING_ROWS {
+                            spawn_ring_row(grid, row);
                         }
                     });
                 });
@@ -308,19 +344,39 @@ fn spawn_picture_row(grid: &mut ChildSpawnerCommands, material: Material) {
     .with_children(|row| {
         row.spawn(picture_label(material.name(), PICTURE_ROW_LABEL));
         for cut in Cut::ALL {
-            row.spawn((
-                GemPicture(gem_to_show(material, cut)),
-                Pressable,
-                Node {
-                    width: px(PICTURE),
-                    height: px(PICTURE),
-                    flex_shrink: 0.0,
-                    ..default()
-                },
-                ImageNode::default(),
-            ));
+            spawn_picture(row, Shown::Gem(gem_to_show(material, cut)));
         }
     });
+}
+
+fn spawn_ring_row(grid: &mut ChildSpawnerCommands, row: u128) {
+    grid.spawn(Node {
+        align_items: AlignItems::Center,
+        ..default()
+    })
+    .with_children(|cells| {
+        cells.spawn(picture_label(
+            if row == 0 { "Rings" } else { "" },
+            PICTURE_ROW_LABEL,
+        ));
+        for cell in 0..RING_COLUMNS {
+            spawn_picture(cells, Shown::Ring(row * RING_COLUMNS + cell + 1));
+        }
+    });
+}
+
+fn spawn_picture(row: &mut ChildSpawnerCommands, shown: Shown) {
+    row.spawn((
+        GemPicture(shown),
+        Pressable,
+        Node {
+            width: px(PICTURE),
+            height: px(PICTURE),
+            flex_shrink: 0.0,
+            ..default()
+        },
+        ImageNode::default(),
+    ));
 }
 
 /// What Item Pictures' quality tabs and pictures do.
@@ -337,8 +393,8 @@ pub(super) fn choose_pictures(
         }
     }
     for press in pressed.read() {
-        if let Ok(&GemPicture(gem)) = pictures.get(press.0) {
-            form.chosen = gem;
+        if let Ok(&GemPicture(shown)) = pictures.get(press.0) {
+            form.chosen = shown;
         }
     }
 }
@@ -351,22 +407,17 @@ pub(super) fn show_pictures(
     mut grid: Query<(Ref<GemPicture>, &mut ImageNode), Without<LargePicture>>,
     mut large: Query<(Ref<LargePicture>, &mut ImageNode), Without<GemPicture>>,
 ) {
-    let quality = Some(form.quality);
     for (picture, mut image) in &mut grid {
-        if form.is_changed() || picture.is_added() {
-            let look = Look::Gem {
-                gem: picture.0,
-                quality,
-            };
+        if (form.is_changed() || picture.is_added())
+            && let Some(look) = picture.0.look(form.quality)
+        {
             image.image = pictures.picture(look, PICTURE_PIXELS, &mut images);
         }
     }
     for (picture, mut image) in &mut large {
-        if form.is_changed() || picture.is_added() {
-            let look = Look::Gem {
-                gem: form.chosen,
-                quality,
-            };
+        if (form.is_changed() || picture.is_added())
+            && let Some(look) = form.chosen.look(form.quality)
+        {
             image.image = pictures.picture(look, LARGE_PICTURE_PIXELS, &mut images);
         }
     }
