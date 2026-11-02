@@ -715,6 +715,101 @@ mod tests {
         assert!(north_side(&meshes));
     }
 
+    /// A room with a door in its south wall at `(0, 1)`, floor beyond it, seen
+    /// from just north of the door with the camera to the south.
+    fn through_a_door(views: &[View], sight: &Sight, level: &Level) -> DungeonMeshes {
+        build(
+            level,
+            views,
+            sight,
+            sight,
+            &LightGrid::new(level),
+            &[],
+            &[],
+            &BTreeSet::new(),
+            &[],
+            false,
+            Vec3::new(0.0, 600.0, 900.0),
+            Shape::Built,
+            &Sight::new(level),
+        )
+    }
+
+    fn door_in_a_wall() -> Level {
+        let mut level = room_with_wall();
+        for x in -7..=7 {
+            level.set(x, 0, Cell::Floor);
+            level.set(x, 1, Cell::Wall);
+        }
+        level.set(0, 1, Cell::Door);
+        level
+    }
+
+    fn has_point(mesh: &Mesh, point: [f32; 3]) -> bool {
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            .and_then(|values| values.as_float3())
+            .is_some_and(|positions| {
+                positions
+                    .iter()
+                    .any(|p| (0..3).all(|i| (p[i] - point[i]).abs() < 0.01))
+            })
+    }
+
+    /// Past a door, the far side of the wall beside it is out of sight, but the
+    /// floor there can be in sight: as memory the mask would hide it, leaving
+    /// a black hole.
+    #[test]
+    fn floor_in_sight_beside_a_far_side_is_lit() {
+        let level = door_in_a_wall();
+        let views = views_from(&level, &[(0, 0)]);
+        let meshes = through_a_door(&views, &views[0].sight, &level);
+        // Where the south side of the wall just east of the door meets the
+        // door's cell.
+        let foot = [CELL_SIZE / 2.0, 0.0, CELL_SIZE * 1.05];
+        assert!(has_point(&meshes.solid[Surface::Floor as usize], foot));
+        assert!(!has_point(&meshes.memory[Surface::Floor as usize], foot));
+    }
+
+    /// A wall only the real lines of sight reach is in sight for that viewer:
+    /// as memory the mask would hide it, leaving it invisible.
+    #[test]
+    fn wall_a_viewer_reaches_is_solid() {
+        let level = room_with_wall();
+        let mut sight = Sight::new(&level);
+        // Lines reach the floor south of the wall's middle, and the wall.
+        sight.reveal(&level, 0, 1);
+        let views = [View {
+            cell: (0, 3),
+            sight: sight.clone(),
+        }];
+        let meshes = through_a_door(&views, &sight, &level);
+        assert!(
+            meshes
+                .solid_faces
+                .iter()
+                .any(|face| { face.normal == Vec3::Z && face.centre.x.abs() < CELL_SIZE / 2.0 })
+        );
+    }
+
+    /// The edge of sight can run along a wall's foot without reaching the open
+    /// cell beside it: that quarter of a wall in sight is still lit, to show
+    /// inside the edge.
+    #[test]
+    fn every_open_quarter_of_a_wall_in_sight_is_lit() {
+        let level = room_with_wall();
+        let mut sight = Sight::new(&level);
+        // Reaches the wall at (0, 0), but not the floor south of its west half.
+        sight.reveal(&level, 1, 1);
+        let views = [View {
+            cell: (1, 3),
+            sight: sight.clone(),
+        }];
+        let meshes = through_a_door(&views, &sight, &level);
+        assert!(meshes.solid_faces.iter().any(|face| {
+            face.normal == Vec3::Z && (-CELL_SIZE / 2.0..0.0).contains(&face.centre.x)
+        }));
+    }
+
     /// Where remembered walls were drawn, for a viewer who was to the north
     /// and has gone, with the camera to the south.
     fn memory_seen_from_the_south(level: &Level) -> Vec<[f32; 3]> {

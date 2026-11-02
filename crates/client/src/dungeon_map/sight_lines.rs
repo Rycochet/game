@@ -129,6 +129,8 @@ pub struct SightLines {
     from: Vec<Vec2d>,
     /// Open cells any outline reaches into, and the walls touching them.
     pub touched: Option<Sight>,
+    /// The same for each viewer: the player first, then those sharing sight.
+    pub touched_by: Vec<Sight>,
     /// Cells an outline's edge crosses, or close to it: only part of each is
     /// in sight.
     pub crossed: Option<Sight>,
@@ -201,6 +203,7 @@ pub fn spawn_mask(
         walls: WallMap::default(),
         from: Vec::new(),
         touched: None,
+        touched_by: Vec::new(),
         crossed: None,
         changes: 0,
         cost_ms: 0.0,
@@ -240,14 +243,20 @@ pub fn update_outlines(
     if dungeon.is_changed() {
         lines.walls = WallMap::of(level);
     }
-    let mut touched = Sight::new(level);
+    let mut touched_by = Vec::new();
     let mut crossed = Sight::new(level);
     let mut triangles = Vec::new();
     for &viewer in &from {
         let outline = lines.walls.outline(viewer);
+        let mut touched = Sight::new(level);
         touch_cells(level, viewer, &outline, &mut touched);
+        touched_by.push(touched);
         cross_cells(&outline, &mut crossed);
         add_fan(&mut triangles, viewer, &outline);
+    }
+    let mut touched = Sight::new(level);
+    for one in &touched_by {
+        add_cells(level, one, &mut touched);
     }
     let mut visibility = outline.into_inner();
     visibility.set_if_neq(if triangles.is_empty() {
@@ -263,8 +272,9 @@ pub fn update_outlines(
     lines.from = from;
     lines.crossed = Some(crossed);
     lines.cost_ms = start.elapsed().as_secs_f32() * 1000.0;
-    if lines.touched.as_ref() != Some(&touched) {
+    if lines.touched_by != touched_by {
         lines.touched = Some(touched);
+        lines.touched_by = touched_by;
         lines.changes += 1;
     }
 }
@@ -572,6 +582,18 @@ fn touch_cells(level: &Level, from: Vec2d, outline: &[Vec2d], touched: &mut Sigh
                 if level.is_open(x, row) && !touched.is_seen(x, row) {
                     touched.reveal(level, x, row);
                 }
+            }
+        }
+    }
+}
+
+/// Counts the cells in `from` as seen in `into` too.
+pub fn add_cells(level: &Level, from: &Sight, into: &mut Sight) {
+    let (min_x, min_y, width, height) = level.bounds();
+    for y in min_y..min_y + height {
+        for x in min_x..min_x + width {
+            if from.is_seen(x, y) {
+                into.insert(x, y);
             }
         }
     }

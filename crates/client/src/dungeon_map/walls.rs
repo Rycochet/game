@@ -193,7 +193,7 @@ pub fn build_wall(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)) {
     // wall stays dark.
     if !turned_away.contains(&true) {
         for quarter in QUARTERS {
-            if tile.quarter_in(scene.sight, quarter) {
+            if tile.quarter_shows(scene.sight, quarter) {
                 tile.fill_foot(layers, quarter, reach);
             }
         }
@@ -356,6 +356,15 @@ impl<'a> Tile<'a> {
         self.around_corner(quarter)
             .iter()
             .any(|&(x, y)| level.is_open(x, y) && sight.is_seen(x, y))
+    }
+
+    /// Whether a quarter counts as in `sight`: an open cell around its corner
+    /// is, or the wall is and such a cell is known. The edge of sight can run
+    /// along the floor of the wall's cell without reaching that open cell, and
+    /// the mask would hide memory there.
+    fn quarter_shows(&self, sight: &Sight, quarter: (f32, f32)) -> bool {
+        self.quarter_in(sight, quarter)
+            || (sight.is_seen(self.x, self.y) && self.quarter_open(quarter))
     }
 
     /// Whether an open cell the client knows of is around the corner in a
@@ -577,7 +586,7 @@ impl<'a> Tile<'a> {
         let (dx, dy) = [(0, -1), (1, 0), (0, 1), (-1, 0)][facing];
         self.scene.views.iter().any(|view| {
             let (vx, vy) = view.cell;
-            self.quarter_in(&view.sight, quarter) && (vx - self.x) * dx + (vy - self.y) * dy >= 0
+            self.quarter_shows(&view.sight, quarter) && (vx - self.x) * dx + (vy - self.y) * dy >= 0
         })
     }
 
@@ -616,7 +625,7 @@ impl<'a> Tile<'a> {
         turned_away: [bool; 2],
     ) {
         let scene = self.scene;
-        let in_sight = self.quarter_in(scene.sight, quarter);
+        let in_sight = self.quarter_shows(scene.sight, quarter);
         // The wall is remembered, so a side not yet seen is drawn as memory
         // too: otherwise it is a hole whenever the camera is behind the side
         // that was seen. Quarters with nothing open round them are solid rock.
@@ -647,15 +656,17 @@ impl<'a> Tile<'a> {
                 see_through(east_west),
             ),
         ];
-        // A quarter whose only faces are remembered is remembered as a whole,
-        // so its floor and top match them.
+        // The mask decides what shows of a floor in sight: lit inside its edge
+        // and grey outside (`copy_as_memory`). Memory alone would leave a hole
+        // inside the edge. A top isn't cut, so one whose only faces are
+        // remembered is remembered too, to match them.
         let live = faces.contains(&Some(Layer::Solid)) || faces.contains(&Some(Layer::SeeThrough));
         let remembered = !in_sight || (!live && faces.contains(&Some(Layer::Memory)));
         let foot = self.wall_foot((east_west, north_south), reach);
-        let floor_layer = if remembered {
-            Layer::Memory
-        } else {
+        let floor_layer = if in_sight {
             Layer::Solid
+        } else {
+            Layer::Memory
         };
         match outline_at(scene.level, (self.x, self.y), quarter) {
             Some(outline) => self.wet_quarter(layers, floor_layer, quarter, outline, &foot),

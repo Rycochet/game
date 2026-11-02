@@ -703,6 +703,22 @@ fn update_meshes(
     // Drawn as in sight: what the game's sight says, and anything the real
     // lines reach into, which can be a little more. The mask cuts them to shape.
     let mut drawn = sight.clone();
+    // Each viewer sees what its own lines reach too, or a wall they reach would
+    // be drawn as memory, which the mask hides inside its edge.
+    let views: Vec<View> = views
+        .iter()
+        .enumerate()
+        .map(|(i, view)| {
+            let mut sight = view.sight.clone();
+            if let Some(touched) = lines.touched_by.get(i) {
+                sight_lines::add_cells(level, touched, &mut sight);
+            }
+            View {
+                cell: view.cell,
+                sight,
+            }
+        })
+        .collect();
     // What needs a remembered copy for the mask to show: drawn as in sight, but
     // not all of it is.
     let mut cut = Sight::new(level);
@@ -759,7 +775,7 @@ fn update_meshes(
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     let built = mesh::build(
         level,
-        views,
+        &views,
         &drawn,
         &remembered,
         &light,
