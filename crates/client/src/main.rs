@@ -3,6 +3,7 @@
 //! This file only creates the window and registers each feature module's
 //! plugin. Game logic lives in the modules themselves.
 
+mod character;
 mod common;
 mod connection;
 mod debug_menu;
@@ -76,7 +77,11 @@ fn main() {
         loading_screen::LoadingScreenPlugin,
     ));
     // (Apart: a tuple of plugins can only be so long.)
-    app.add_plugins((system_menu::SystemMenuPlugin, inventory::InventoryPlugin));
+    app.add_plugins((
+        system_menu::SystemMenuPlugin,
+        inventory::InventoryPlugin,
+        character::CharacterPlugin,
+    ));
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

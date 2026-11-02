@@ -20,6 +20,7 @@ use shared::dungeon::Cell;
 use shared::item::Inventory;
 use shared::poi::{ChunkPos, PoiKind};
 use shared::protocol::CharacterId;
+use shared::sheet::Sheet;
 use shared::site::FORGET_BEFORE;
 use shared::world::{WorldId, WorldSeed};
 
@@ -208,6 +209,11 @@ impl Storage {
         Ok(save.map_or_else(Inventory::default, |save| save.inventory))
     }
 
+    /// What a character is like: `None` if they are new, or from before sheets.
+    pub fn load_sheet(&self, id: &CharacterId) -> Result<Option<Sheet>, String> {
+        Ok(self.character(id)?.and_then(|save| save.sheet))
+    }
+
     /// Saves a character who is in `world`, knowing `here` of it.
     pub fn save_character(
         &self,
@@ -216,6 +222,7 @@ impl Storage {
         here: &CharacterWorldSave,
         others: &BTreeMap<WorldId, CharacterWorldSave>,
         inventory: &Inventory,
+        sheet: &Sheet,
     ) {
         if let Some(queue) = &self.queue {
             let mut worlds = others.clone();
@@ -233,6 +240,7 @@ impl Storage {
                     world,
                     worlds,
                     inventory: inventory.clone(),
+                    sheet: Some(sheet.clone()),
                 }),
             );
         }
@@ -331,6 +339,9 @@ pub struct CharacterSave {
     /// What they carry, wherever they go.
     #[serde(default)]
     pub inventory: Inventory,
+    /// What they are like, wherever they go.
+    #[serde(default)]
+    pub sheet: Option<Sheet>,
 }
 
 /// What a character knows of one world, and where they are in it.
@@ -466,7 +477,14 @@ pub(crate) mod tests {
             ..default()
         };
         let none = BTreeMap::new();
-        storage.save_character(&id, world, &character, &none, &Inventory::default());
+        storage.save_character(
+            &id,
+            world,
+            &character,
+            &none,
+            &Inventory::default(),
+            &Sheet::default(),
+        );
         storage.save_site(site, &SiteSave::default());
         assert_eq!(
             storage.load_character(&id, world).unwrap().0.world_position,
@@ -482,7 +500,14 @@ pub(crate) mod tests {
         assert_eq!(storage.load_site(site).unwrap(), None);
 
         // Saved again, it is remembered from now on.
-        storage.save_character(&id, world, &character, &none, &Inventory::default());
+        storage.save_character(
+            &id,
+            world,
+            &character,
+            &none,
+            &Inventory::default(),
+            &Sheet::default(),
+        );
         storage.save_site(site, &SiteSave::default());
         assert_eq!(
             storage.load_character(&id, world).unwrap().0.world_position,
@@ -502,7 +527,14 @@ pub(crate) mod tests {
             ..default()
         };
         let in_first = Storage::in_folder(&folder.0, first);
-        in_first.save_character(&id, first, &at(1), &BTreeMap::new(), &Inventory::default());
+        in_first.save_character(
+            &id,
+            first,
+            &at(1),
+            &BTreeMap::new(),
+            &Inventory::default(),
+            &Sheet::default(),
+        );
         in_first.finish_writing();
         assert!(folder.0.join("characters/someone.ron").exists());
 
@@ -511,7 +543,14 @@ pub(crate) mod tests {
         let (here, others) = in_second.load_character(&id, second).unwrap();
         assert_eq!(here, CharacterWorldSave::default());
         assert_eq!(others, BTreeMap::from([(first, at(1))]));
-        in_second.save_character(&id, second, &at(2), &others, &Inventory::default());
+        in_second.save_character(
+            &id,
+            second,
+            &at(2),
+            &others,
+            &Inventory::default(),
+            &Sheet::default(),
+        );
         in_second.finish_writing();
 
         let file = fs::read_to_string(folder.0.join("characters/someone.ron")).unwrap();
@@ -560,6 +599,7 @@ pub(crate) mod tests {
             &character,
             &BTreeMap::new(),
             &Inventory::default(),
+            &Sheet::default(),
         );
         assert_eq!(storage.load_character(&id, world).unwrap().0, character);
 

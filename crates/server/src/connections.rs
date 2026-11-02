@@ -4,11 +4,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
+use shared::creature::CreatureKind;
 use shared::item::{Inventory, Item, ItemKind, Made};
 use shared::poi::ChunkPos;
 use shared::protocol::{
     CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerLink, ServerMessage,
 };
+use shared::sheet::{Appearance, Sheet};
 use shared::world::{MINUTES_PER_HOUR, WorldId};
 
 use crate::accounts::{AccountId, Accounts, LoginKey, MAX_CHARACTERS};
@@ -91,6 +93,10 @@ pub struct Client {
     other_worlds: BTreeMap<WorldId, CharacterWorldSave>,
     /// What the character carries.
     inventory: Inventory,
+    /// What the character is like.
+    sheet: Sheet,
+    /// What a character being made here asked to be, for when they first join.
+    starting_as: Option<(CreatureKind, Appearance)>,
     /// Whether `character` (or the visit) changed since it was saved.
     pub(crate) unsaved: bool,
     /// The site level the player is on, if any.
@@ -118,6 +124,8 @@ impl Client {
             character: CharacterWorldSave::default(),
             other_worlds: BTreeMap::new(),
             inventory: Inventory::default(),
+            sheet: Sheet::default(),
+            starting_as: None,
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),
@@ -169,6 +177,7 @@ impl Client {
             &self.character,
             &self.other_worlds,
             &self.inventory,
+            &self.sheet,
         );
         self.unsaved = false;
     }
@@ -405,7 +414,11 @@ pub(crate) fn answer(
             client.phase = Phase::Joining;
             true
         }
-        ClientMessage::CreateCharacter { name } => {
+        ClientMessage::CreateCharacter {
+            name,
+            kind,
+            appearance,
+        } => {
             let Some(account) = client
                 .account
                 .clone()
@@ -413,9 +426,20 @@ pub(crate) fn answer(
             else {
                 return refuse(client, "not the time to make a character".into());
             };
+            // A client can ask for anything: the server decides what may be played.
+            if !kind.def().playable {
+                return refuse(client, format!("{} can't be played", kind.def().name));
+            }
+            if !appearance.suits(kind) {
+                return refuse(
+                    client,
+                    "that look doesn't suit that kind of creature".into(),
+                );
+            }
             match accounts.create_character(&account, &name) {
                 Ok(id) => {
                     client.character_id = Some(id);
+                    client.starting_as = Some((kind, appearance));
                     client.phase = Phase::Joining;
                     true
                 }
@@ -537,10 +561,14 @@ pub(crate) fn answer(
             for item in client.inventory.change_body(kind) {
                 info!("No room for {:?} on becoming {kind:?}: lost", item.kind);
             }
+            client.sheet = Sheet::new(kind);
             client.unsaved = true;
             client
                 .link
-                .send(&ServerMessage::Inventory(client.inventory.clone()))
+                .send(&ServerMessage::Sheet(client.sheet.clone()))
+                && client
+                    .link
+                    .send(&ServerMessage::Inventory(client.inventory.clone()))
         }
         ClientMessage::DevSnowLine(snow_line) => {
             world.snow_line = snow_line;
@@ -565,6 +593,28 @@ fn made_for(
     Item {
         made: Made::for_body(kind, size.unwrap_or(body.size), body.fingers(), magical),
         ..Item::new(crate::ids::new_id(), kind)
+    }
+}
+
+/// What a joining character is like: as saved; or as they asked when being made;
+/// or for a character from before sheets, plain for their kind.
+fn start_sheet(
+    saved: Option<Sheet>,
+    asked: Option<(CreatureKind, Appearance)>,
+    inventory: &mut Inventory,
+) -> Sheet {
+    if let Some(sheet) = saved {
+        return sheet;
+    }
+    match asked {
+        Some((kind, appearance)) => {
+            inventory.change_body(kind);
+            Sheet {
+                appearance,
+                ..Sheet::new(kind)
+            }
+        }
+        None => Sheet::new(inventory.creature),
     }
 }
 
@@ -594,12 +644,16 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
     let loaded = world
         .storage
         .load_character(id, world.seed.id())
-        .and_then(|character| Ok((character, world.storage.load_inventory(id)?)));
+        .and_then(|character| {
+            let inventory = world.storage.load_inventory(id)?;
+            Ok((character, inventory, world.storage.load_sheet(id)?))
+        });
     // Not `Playing` yet, so nothing blank can be saved over the real character.
     match loaded {
-        Ok((character, inventory)) => {
+        Ok((character, inventory, sheet)) => {
             (client.character, client.other_worlds) = character;
             client.inventory = inventory;
+            client.sheet = start_sheet(sheet, client.starting_as.take(), &mut client.inventory);
             give_first_clothes(&mut client.inventory);
             client.unsaved = true;
         }
@@ -619,6 +673,9 @@ fn welcome(client: &mut Client, world: &mut ServerWorld, options: &ServerOptions
     if !client.link.send(&welcome)
         || !client
             .link
+            .send(&ServerMessage::Sheet(client.sheet.clone()))
+        || !client
+            .link
             .send(&ServerMessage::Inventory(client.inventory.clone()))
     {
         return false;
@@ -635,7 +692,6 @@ pub(crate) mod tests {
     use std::sync::atomic::Ordering;
     use std::time::Duration;
 
-    use shared::creature::CreatureKind;
     use shared::item::{Holder, Rotation};
     use shared::movement::{Step, steps_between};
     use shared::poi::PoiKind;
@@ -911,6 +967,20 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_character_is_told_their_sheet_and_a_new_body_gives_a_new_one() {
+        let sheet = |answers: &[ServerMessage]| {
+            answers.iter().rev().find_map(|answer| match answer {
+                ServerMessage::Sheet(sheet) => Some(sheet.clone()),
+                _ => None,
+            })
+        };
+        let mut test = TestClient::new();
+        assert_eq!(sheet(&test.welcome), Some(Sheet::new(CreatureKind::Human)));
+        let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
+        assert_eq!(sheet(&answers), Some(Sheet::new(CreatureKind::Giant)));
+    }
+
+    #[test]
     fn giving_an_item_needs_dev_tools_and_room() {
         let mut test = TestClient::new();
         test.dev_tools = false;
@@ -1045,6 +1115,49 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_new_character_is_what_they_asked_if_it_is_allowed() {
+        use std::collections::BTreeMap;
+
+        use shared::sheet::Trait;
+
+        let make = |key, kind, appearance| {
+            let world = ServerWorld::new(WorldSeed::new(1));
+            let mut connections = Connections::default();
+            let (end, _) = logged_in_to_account(&mut connections, key);
+            end.send(&ClientMessage::CreateCharacter {
+                name: "Some One".into(),
+                kind,
+                appearance,
+            });
+            let _ = tick(connections, world);
+            answers(&end)
+        };
+        let red = Appearance(BTreeMap::from([(Trait::HairColour, 3)]));
+
+        // Kinds nobody may play, and looks that don't suit them.
+        let told = make("a", CreatureKind::Horse, Appearance::default());
+        assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+        let told = make("b", CreatureKind::Kobold, red.clone());
+        assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+
+        let told = make("c", CreatureKind::Giant, red.clone());
+        let sheet = told.iter().find_map(|answer| match answer {
+            ServerMessage::Sheet(sheet) => Some(sheet.clone()),
+            _ => None,
+        });
+        assert_eq!(
+            sheet,
+            Some(Sheet {
+                appearance: red,
+                ..Sheet::new(CreatureKind::Giant)
+            })
+        );
+        let carried = inventory(&told);
+        assert_eq!(carried.creature, CreatureKind::Giant);
+        assert_eq!(carried.pockets_size, CreatureKind::Giant.def().pockets);
+    }
+
+    #[test]
     fn accounts_choose_or_make_a_character_and_only_their_own() {
         let world = ServerWorld::new(WorldSeed::new(1));
         let mut connections = Connections::default();
@@ -1059,6 +1172,8 @@ pub(crate) mod tests {
             }]
         );
         end.send(&ClientMessage::CreateCharacter {
+            kind: CreatureKind::Human,
+            appearance: Appearance::default(),
             name: "Some One".into(),
         });
         let (connections, world) = tick(connections, world);
@@ -1099,6 +1214,8 @@ pub(crate) mod tests {
         let (connections, world) = tick(connections, world);
         answers(&end);
         end.send(&ClientMessage::CreateCharacter {
+            kind: CreatureKind::Human,
+            appearance: Appearance::default(),
             name: "Another".into(),
         });
         let (connections, _world) = tick(connections, world);

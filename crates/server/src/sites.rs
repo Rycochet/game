@@ -1173,6 +1173,7 @@ mod tests {
             test.welcome[..],
             [
                 ServerMessage::Welcome { x: 70, y: -3, .. },
+                ServerMessage::Sheet(_),
                 ServerMessage::Inventory(_),
                 ServerMessage::EnterLevel(_),
                 ..
@@ -1311,7 +1312,7 @@ mod tests {
         assert!(test.client.visit.is_none());
         assert!(!test.client.character.memory.contains_key(&id));
         assert!(matches!(
-            test.welcome[2],
+            test.welcome[3],
             ServerMessage::OnWorldMap { x: 70, y: -3 }
         ));
         assert!(
@@ -1336,7 +1337,7 @@ mod tests {
 
         let test = TestClient::of(world);
         assert!(test.client.visit.is_none());
-        assert!(matches!(test.welcome[2], ServerMessage::OnWorldMap { .. }));
+        assert!(matches!(test.welcome[3], ServerMessage::OnWorldMap { .. }));
     }
 
     #[test]

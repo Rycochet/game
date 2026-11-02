@@ -460,7 +460,8 @@ fn receive(
                 | ServerMessage::RememberedLevel(_)
                 | ServerMessage::OnWorldMap { .. }
                 | ServerMessage::Teleported { .. }
-                | ServerMessage::Inventory(_)),
+                | ServerMessage::Inventory(_)
+                | ServerMessage::Sheet(_)),
             )) => {
                 from_server.write(FromServer(message));
             }
