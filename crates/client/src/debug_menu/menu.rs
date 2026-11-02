@@ -731,7 +731,7 @@ mod tests {
     fn return_on_a_highlighted_entry_chooses_it() {
         let shown = on_show("");
         assert_eq!(
-            return_chooses(&shown, Some(4), &facts()),
+            return_chooses(&shown, Some(5), &facts()),
             Some(DebugAction::ForgetMap)
         );
     }

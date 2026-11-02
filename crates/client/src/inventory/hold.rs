@@ -37,6 +37,8 @@ pub(super) enum Target {
     Nowhere,
     /// On the bin: it and all in it would be destroyed.
     Bin,
+    /// On the clothes panel: it would be put on, if it can be.
+    Body { allowed: bool },
     /// In this grid with its top left cell here, which may be off the grid.
     Cells {
         holder: Holder,
@@ -103,6 +105,7 @@ pub(super) fn drop_move(
     let wanted = match target {
         Target::Nowhere
         | Target::Bin
+        | Target::Body { .. }
         | Target::Cells { allowed: false, .. }
         | Target::Bag { place: None, .. } => {
             return None;
@@ -113,8 +116,10 @@ pub(super) fn drop_move(
             place: Some((x, y, rotation)),
         } => (Holder::Inside(bag), x, y, rotation),
     };
-    let (holder, placed) = inventory.placed(held.id)?;
-    let same = (holder, placed.x, placed.y, placed.rotation) == wanted;
+    // (Worn things aren't in a grid, so this is never where they already are.)
+    let same = inventory
+        .placed(held.id)
+        .is_some_and(|(holder, placed)| (holder, placed.x, placed.y, placed.rotation) == wanted);
     (!same).then_some(wanted)
 }
 

@@ -11,6 +11,7 @@ use crate::widgets::matches_filter;
 pub enum DebugAction {
     AutoWalk,
     ChangeCellMode,
+    ChangeCreature,
     CycleTemperature,
     FieldsState,
     ForgetMap,
@@ -51,9 +52,10 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 19] = [
+    pub(super) const ALL: [Self; 20] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
+        Self::ChangeCreature,
         Self::CycleTemperature,
         Self::FieldsState,
         Self::ForgetMap,
@@ -77,6 +79,7 @@ impl DebugAction {
         match self {
             Self::AutoWalk => "Auto Walk",
             Self::ChangeCellMode => "Change Cell Mode",
+            Self::ChangeCreature => "Change Creature",
             Self::CycleTemperature => "Cycle Temperature",
             Self::FieldsState => "Fields State",
             Self::ForgetMap => "Forget Map",
@@ -137,6 +140,7 @@ impl DebugAction {
         matches!(
             self,
             Self::ChangeCellMode
+                | Self::ChangeCreature
                 | Self::CycleTemperature
                 | Self::ForgetMap
                 | Self::ForgetMapOnServer

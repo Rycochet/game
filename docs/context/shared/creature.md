@@ -1,0 +1,33 @@
+# shared: creature
+
+Kinds of creature, the same for players and later mobs, and wearing things by the shape of the body.
+
+## Files
+
+- `crates/shared/src/creature.rs`: `Layer`, `Location`, `Size`, `BodyPart`, `CreatureDef`, `CreatureKind` (the table: `def()`).
+- `crates/shared/src/wear.rs`: `Fit`, `WearRefused`, and on `Inventory`: `is_worn`, `covered_by`, `check_wear`, `wear`, `worn_fit`, `change_body`; on `Made`: `fit`. Tests for every rule below.
+
+## Public API
+
+- `CreatureKind::{ALL, def()}`, `CreatureDef { name, size, pockets, body }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
+- `BodyPart { location, layers, places }`: which layers a location takes, and how many things taking one place fit there.
+- `Layer::{Skin, Middle, Outer}`, `Location`, `Size::{Tiny..Giant}` (`stepped`, `apart`).
+
+## Depends on
+
+- `serde`, `shared::item`, `shared::id`.
+
+## Used by
+
+- `shared::item`, `protocol`, `server` (`connections`), client `inventory`, `debug_menu`, `dev_tools`.
+
+## Notes
+
+- An item (`item::WearDef`) has one layer and a list of locations. It fits if every location is on the body and takes that layer, so a T-shirt needs arms, which a chicken hasn't; trousers need `Legs`, which a horse hasn't.
+- Going on and coming off: nothing on a higher layer may be at any of its locations (`covered_by`), and on going on, nothing on the same layer (`WearRefused::Clash`). Taking off is `Inventory::move_item`, which refuses `MoveRefused::Covered`; destroying is refused the same way.
+- `one_place` items (rings) take one of a location's places, and clash only once all are taken or something whole is on that layer.
+- Rings are Skin on `Fingers`. Gloves are Middle on `Hands` and `Fingers`, gauntlets Outer on both, so both lock rings underneath; fingerless gloves are on `Hands` only. Gloves being Middle differs from the owner's first example, so that rings can stay on under them.
+- Fit is on the item itself (`item::Made`): the size it fits, the smallest and largest that can wear it, and finger count. `Made::fit` answers `Exact`, `Loose(n)` or `None`; `WearDef::adjustable` things are exact anywhere in their range; magical things fit any size and fingers but not any body. Things covering whole fingers need exactly the body's count. Looseness has no penalty until stats have something to affect.
+- A creature's size comes from its kind, apart from its appearance's height, which has no effect on rules.
+- The creature is kept on `Inventory` for now, as that is all that depends on it.
+- Kinds, bodies and clothes are first guesses to try the rules out.

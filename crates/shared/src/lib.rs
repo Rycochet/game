@@ -6,6 +6,7 @@
 
 pub mod celestial;
 pub mod climate;
+pub mod creature;
 pub mod dungeon;
 pub mod id;
 pub mod item;
@@ -19,5 +20,6 @@ pub mod showcase;
 pub mod site;
 pub mod surface;
 pub mod vegetation;
+pub mod wear;
 pub mod weather;
 pub mod world;

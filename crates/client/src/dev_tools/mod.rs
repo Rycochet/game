@@ -63,6 +63,7 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy::window::PrimaryWindow;
 
+use shared::creature::CreatureKind;
 use shared::dungeon::Cell;
 use shared::item::ItemKind;
 use shared::movement::steps_between;
@@ -229,6 +230,10 @@ impl Plugin for DevToolsPlugin {
 
         if server::option_on("HOW_DEBUG_INVENTORY", false) {
             let hold = env::var("HOW_DEBUG_HOLD").ok().and_then(|n| n.parse().ok());
+            let creature = env::var("HOW_DEBUG_CREATURE")
+                .ok()
+                .and_then(|n| n.parse::<usize>().ok())
+                .and_then(|n| CreatureKind::ALL.get(n).copied());
             app.add_systems(
                 Update,
                 move |time: Res<Time<Real>>,
@@ -241,8 +246,15 @@ impl Plugin for DevToolsPlugin {
                     }
                     if *step == 0 {
                         *step = 1;
+                        if let Some(kind) = creature {
+                            to_server.write(ToServer(ClientMessage::DevSetCreature(kind)));
+                        }
                         for kind in [ItemKind::Backpack, ItemKind::Pouch, ItemKind::Boomerang] {
-                            to_server.write(ToServer(ClientMessage::DevGiveItem(kind)));
+                            to_server.write(ToServer(ClientMessage::DevGiveItem {
+                                kind,
+                                size: None,
+                                magical: false,
+                            }));
                         }
                     } else if *step == 1 && time.elapsed_secs() > 2.0 {
                         *step = 2;
