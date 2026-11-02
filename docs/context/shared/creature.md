@@ -10,7 +10,7 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 
 ## Public API
 
-- `CreatureKind::{ALL, def()}`, `CreatureDef { name, size, pockets, body, speed, uses_stairs, playable, stats, skills, abilities, looks }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
+- `CreatureKind::{ALL, def()}`, `CreatureDef { name, weight (grams), size, pockets, body, speed, uses_stairs, playable, stats, skills, abilities, looks }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
 - `BodyPart { location, layers, places }`: which layers a location takes, and how many things taking one place fit there.
 - `Layer::{Skin, Middle, Outer}`, `Location`, `Size::{Tiny..Giant}` (`stepped`, `apart`).
 
@@ -32,5 +32,6 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 - A creature's size comes from its kind, apart from its appearance's height, which has no effect on rules.
 - The creature is kept on `Inventory` for now, as that is all that depends on it.
 - A `Sheet` is one creature's stats, skills and appearance, starting from its kind. Abilities come from the kind alone. Nothing uses stats or skills yet but carrying: capacity is strength × (size + 1) kg, burdened past half and overloaded past all of it, which cut speed (`Sheet::speed`) to 75% and 40%. Appearance never affects rules, and `suits` is how the server checks a choice.
+- A creature's body weight comes from its kind, and `Inventory::weight_with_creature` adds what it carries and wears. Load only counts what is carried: a human's body alone is over twice what it can carry.
 - `feeling_about` (`sheet::Feeling`) and `reaction` (`sheet::Reaction`) say what a kind thinks of another and does about it: a kind likes its own, kobolds dislike nearly everyone, chickens run from anyone. Memories (`mob::Memory`) shift feelings along a scale (`Feeling::warmth`, `from_warmth`).
 - Kinds, bodies, stats and clothes are first guesses to try the rules out.

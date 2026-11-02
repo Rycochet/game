@@ -89,6 +89,8 @@ pub struct BodyPart {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CreatureDef {
     pub name: &'static str,
+    /// What its body weighs, in grams, with nothing on it.
+    pub weight: u32,
     pub size: Size,
     /// Its base grid: what it can carry with no bag.
     pub pockets: (u8, u8),
@@ -257,6 +259,7 @@ impl CreatureKind {
         match self {
             Self::Beggar => CreatureDef {
                 name: "Beggar",
+                weight: 55_000,
                 size: Size::Medium,
                 pockets: (2, 2),
                 body: &TEN_FINGERS,
@@ -270,6 +273,7 @@ impl CreatureKind {
             },
             Self::Centaur => CreatureDef {
                 name: "Centaur",
+                weight: 500_000,
                 size: Size::Large,
                 pockets: (6, 5),
                 body: &CENTAUR,
@@ -283,6 +287,7 @@ impl CreatureKind {
             },
             Self::Chicken => CreatureDef {
                 name: "Chicken",
+                weight: 2_500,
                 size: Size::Tiny,
                 pockets: (2, 2),
                 body: &CHICKEN,
@@ -296,6 +301,7 @@ impl CreatureKind {
             },
             Self::Giant => CreatureDef {
                 name: "Giant",
+                weight: 1_500_000,
                 speed: 90,
                 uses_stairs: true,
                 size: Size::Giant,
@@ -309,6 +315,7 @@ impl CreatureKind {
             },
             Self::Horse => CreatureDef {
                 name: "Horse",
+                weight: 500_000,
                 size: Size::Large,
                 pockets: (4, 3),
                 body: &HORSE,
@@ -322,6 +329,7 @@ impl CreatureKind {
             },
             Self::Human => CreatureDef {
                 name: "Human",
+                weight: 70_000,
                 speed: 100,
                 uses_stairs: true,
                 size: Size::Medium,
@@ -335,6 +343,7 @@ impl CreatureKind {
             },
             Self::Kobold => CreatureDef {
                 name: "Kobold",
+                weight: 25_000,
                 size: Size::Small,
                 pockets: (4, 3),
                 body: &EIGHT_FINGERS,
@@ -371,6 +380,13 @@ mod tests {
                         .all(|o| o.location != part.location)
                 );
             }
+        }
+    }
+
+    #[test]
+    fn every_kind_weighs_something() {
+        for kind in CreatureKind::ALL {
+            assert!(kind.def().weight > 0, "{:?}", kind);
         }
     }
 

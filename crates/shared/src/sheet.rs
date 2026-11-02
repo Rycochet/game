@@ -272,6 +272,14 @@ mod tests {
     }
 
     #[test]
+    fn its_own_body_doesnt_weigh_a_creature_down() {
+        let sheet = Sheet::new(CreatureKind::Human);
+        let carrying = stones(0);
+        assert!(carrying.weight_with_creature() > sheet.capacity(Size::Medium));
+        assert_eq!(sheet.load(&carrying), Load::Light);
+    }
+
+    #[test]
     fn weight_and_kind_decide_the_speed() {
         let sheet = Sheet::new(CreatureKind::Human);
         assert_eq!(sheet.speed(&stones(1)), NORMAL_SPEED);
