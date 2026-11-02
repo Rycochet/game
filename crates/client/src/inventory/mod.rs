@@ -7,15 +7,19 @@ mod hold;
 mod panels;
 
 use bevy::prelude::*;
-use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
+use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use shared::item::{Holder, Inventory};
 use shared::protocol::{ClientMessage, ServerMessage};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::common::GameView;
-use crate::common::{PointerPosition, PointerSystems, TouchGesture};
+use crate::common::{
+    GaveItem, HeldGift, HeldOverGifts, PointerPosition, PointerSystems, TakesGifts, TouchGesture,
+};
 use crate::connection::{FromServer, ToServer};
-use crate::widgets::{ButtonPressed, CELL, Floating, RaisePanel, WidgetSystems};
+use crate::widgets::{
+    ButtonPressed, CELL, Floating, RaisePanel, WidgetSystems, logical_rect, shown_at,
+};
 use body::BodyNode;
 use give::{GiveRow, NearbyPanel};
 use hold::{Held, Target};
@@ -32,6 +36,8 @@ impl Plugin for InventoryPlugin {
             .init_resource::<Holding>()
             .init_resource::<OpenGrids>()
             .init_resource::<NearbyPanel>()
+            .init_resource::<HeldOverGifts>()
+            .add_message::<GaveItem>()
             .add_systems(Startup, panels::spawn_fixed_parts)
             .add_systems(
                 PreUpdate,
@@ -120,13 +126,6 @@ fn read_server(mut from_server: MessageReader<FromServer>, mut carried: ResMut<C
     }
 }
 
-/// Where a node is on the screen, in logical pixels: its top left and size.
-fn logical_rect(node: &ComputedNode, transform: &UiGlobalTransform) -> (Vec2, Vec2) {
-    let size = node.size() * node.inverse_scale_factor;
-    let centre = transform.translation * node.inverse_scale_factor;
-    (centre - size / 2.0, size)
-}
-
 /// The item cell in front of everything else at this point, if one is.
 fn item_cell_in_front<'a>(
     at: Vec2,
@@ -212,6 +211,7 @@ fn hold_items(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     mut to_server: MessageWriter<ToServer>,
+    (mut over_gifts, mut gave): (ResMut<HeldOverGifts>, MessageWriter<GaveItem>),
     time: Res<Time<Real>>,
     mut last_press: Local<Option<(shared::id::Id, f64)>>,
     nodes: Query<
@@ -223,6 +223,8 @@ fn hold_items(
             Has<BinNode>,
             Has<BodyNode>,
             Option<&GiveRow>,
+            Option<&TakesGifts>,
+            Option<&CalculatedClip>,
         ),
         Without<Floating>,
     >,
@@ -259,6 +261,7 @@ fn hold_items(
         });
     }
 
+    over_gifts.0 = None;
     let Some(mut held) = holding.held else {
         holding.aim = None;
         holding.at = None;
@@ -302,18 +305,31 @@ fn hold_items(
             })
     });
     // Only what is in front counts: the bin destroys things.
-    let (on_bin, on_body, on_row) = at
+    let (on_bin, on_body, on_row, on_gifts) = at
         .and_then(|at| {
             nodes
                 .iter()
-                .filter(|(_, node, transform, visible, ..)| {
-                    visible.get()
-                        && node.contains_point(**transform, at / node.inverse_scale_factor)
+                .filter(|(_, node, transform, visible, .., clip)| {
+                    visible.get() && shown_at(at, node, transform, *clip)
                 })
                 .max_by_key(|(stack, ..)| stack.0)
-                .map(|(.., is_bin, is_body, row)| (is_bin, is_body, row.map(|row| row.0)))
+                .map(|(.., is_bin, is_body, row, gifts, _)| {
+                    (
+                        is_bin,
+                        is_body,
+                        row.map(|row| row.0),
+                        gifts.map(|gifts| gifts.0),
+                    )
+                })
         })
         .unwrap_or_default();
+    let on_row = on_row.or(on_gifts);
+    over_gifts.0 = on_gifts.zip(at).map(|(to, at)| HeldGift {
+        to,
+        item: held.item.id,
+        rotation: held.item.rotation,
+        corner: at - (Vec2::new(held.item.grip.0 as f32, held.item.grip.1 as f32) + 0.5) * CELL,
+    });
     let aim = if on_bin {
         // In it already: nothing happens.
         if carried.0.in_bin(held.item.id) {
@@ -359,6 +375,9 @@ fn hold_items(
         let item = held.item.id;
         if carried.0.hand_over(item).is_some() {
             to_server.write(ToServer(ClientMessage::GiveItem { item, to }));
+            if let Some(gift) = over_gifts.0 {
+                gave.write(GaveItem(gift));
+            }
         }
         return;
     }

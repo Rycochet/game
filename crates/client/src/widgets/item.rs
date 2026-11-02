@@ -3,7 +3,7 @@
 //! with the module showing them.
 
 use bevy::prelude::*;
-use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
+use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use shared::item::{ItemKind, Quality, Shape};
 
 use super::{Pressable, spawn_tooltip};
@@ -114,12 +114,33 @@ pub fn covering() -> Node {
     }
 }
 
-/// An empty grid with `extra` on it. `fill` adds what goes over its cells.
-pub fn spawn_item_grid(
+/// Where a node is on the screen, in logical pixels: its top left and size.
+pub fn logical_rect(node: &ComputedNode, transform: &UiGlobalTransform) -> (Vec2, Vec2) {
+    let size = node.size() * node.inverse_scale_factor;
+    let centre = transform.translation * node.inverse_scale_factor;
+    (centre - size / 2.0, size)
+}
+
+/// Whether a node is at this point, in logical pixels, and not scrolled out of sight.
+pub fn shown_at(
+    at: Vec2,
+    node: &ComputedNode,
+    transform: &UiGlobalTransform,
+    clip: Option<&CalculatedClip>,
+) -> bool {
+    let physical = at / node.inverse_scale_factor;
+    node.contains_point(*transform, physical)
+        && clip.is_none_or(|clip| clip.contains_point(physical))
+}
+
+/// An empty grid with `extra` on it, and `on_lines` on each cell's lines. `fill`
+/// adds what goes over its cells.
+pub fn spawn_item_grid<L: Bundle + Clone>(
     parent: &mut ChildSpawnerCommands,
     width: u8,
     height: u8,
     extra: impl Bundle,
+    on_lines: L,
     fill: impl FnOnce(&mut ChildSpawnerCommands),
 ) {
     parent
@@ -136,7 +157,11 @@ pub fn spawn_item_grid(
         .with_children(|grid| {
             for y in 0..height {
                 for x in 0..width {
-                    grid.spawn((at_cell(x as f32, y as f32), BorderColor::from(GRID_LINE)));
+                    grid.spawn((
+                        at_cell(x as f32, y as f32),
+                        BorderColor::from(GRID_LINE),
+                        on_lines.clone(),
+                    ));
                 }
             }
             fill(grid);
@@ -208,6 +233,7 @@ pub(super) fn name_item_at_pointer(
             &UiGlobalTransform,
             &InheritedVisibility,
             Option<&ItemName>,
+            Option<&CalculatedClip>,
         ),
         (With<Node>, Without<Floating>),
     >,
@@ -218,11 +244,11 @@ pub(super) fn name_item_at_pointer(
     };
     let front = nodes
         .iter()
-        .filter(|(_, node, transform, visible, _)| {
-            visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
+        .filter(|(_, node, transform, visible, _, clip)| {
+            visible.get() && shown_at(at, node, transform, *clip)
         })
         .max_by_key(|(stack, ..)| stack.0);
-    if let Some((.., Some(name))) = front {
+    if let Some((.., Some(name), _)) = front {
         tooltip.0 = Some(ItemTip {
             words: name.words.clone(),
             quality: name.quality,

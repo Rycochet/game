@@ -5,19 +5,22 @@
 use std::collections::BTreeMap;
 
 use bevy::prelude::*;
+use bevy::ui::UiGlobalTransform;
 use shared::id::Id;
-use shared::item::{Item, ItemKind};
+use shared::item::{Item, ItemKind, Placed, Rotation, Shape};
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::shop::DOOR_REACH;
 use shared::site::BuildingLook;
 
-use crate::common::{CurrentDungeon, GameView, MapPosition, PointerSystems};
+use crate::common::{
+    CurrentDungeon, GameView, GaveItem, HeldOverGifts, MapPosition, PointerSystems, TakesGifts,
+};
 use crate::connection::{FromServer, ToServer};
 use crate::dungeon_map::DoorClicked;
 use crate::player::{Arrived, Player, PlayerSystems, TakeStep, TravelTo};
 use crate::widgets::{
-    Floating, ItemName, RaisePanel, WidgetSystems, covering, spawn_item_cells, spawn_item_grid,
-    spawn_moveable_panel,
+    ALLOWED, CELL, Floating, ItemName, RaisePanel, WidgetSystems, at_cell, covering, logical_rect,
+    spawn_item_cells, spawn_item_grid, spawn_moveable_panel, spawn_scroll_area,
 };
 
 /// To the left, leaving the player in view.
@@ -26,6 +29,8 @@ const AT: Vec2 = Vec2::new(40.0, 120.0);
 const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
 /// How many cells across a panel's grid is.
 const COLUMNS: usize = 12;
+/// The most of the window's height a grid takes, before it scrolls.
+const MOST_HEIGHT: Val = Val::Vh(70.0);
 
 pub struct TradePlugin;
 
@@ -48,7 +53,7 @@ impl Plugin for TradePlugin {
                     (change_of_mind, follow_clicked_door)
                         .chain()
                         .in_set(PlayerSystems::Input),
-                    read_server,
+                    (note_gifts, read_server, show_gift_aim).chain(),
                     close_when_left.after(PlayerSystems::Travel),
                 ),
             );
@@ -61,7 +66,29 @@ struct OpenTrade {
     panel: Entity,
     /// What the player must stay near.
     place: (i64, i64),
+    /// What the grid goes in.
+    holder: Entity,
+    /// What is in the grid, and where.
+    stock: Vec<Placed>,
+    /// Gifts on their way, and where they were dropped.
+    gifts: Vec<Gift>,
 }
+
+/// Something given, and where in the grid it was let go.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Gift {
+    item: Id,
+    rotation: Rotation,
+    wanted: (i32, i32),
+}
+
+/// A panel's grid.
+#[derive(Component, Clone, Copy)]
+struct TradeGrid(Id);
+
+/// What shows in a grid where something held would go.
+#[derive(Component, Clone, Copy)]
+struct TradeAim(Id);
 
 /// The panels open, in the order they were opened.
 #[derive(Resource, Default)]
@@ -172,8 +199,34 @@ fn open_on_arrival(
     }
 }
 
-/// Who keeps what, and what the server says someone has: their panel, unless it
-/// is open already. A new level closes every panel.
+/// The cell of this grid an item's corner is nearest.
+fn cell_in_grid(corner: Vec2, node: &ComputedNode, transform: &UiGlobalTransform) -> (i32, i32) {
+    let (grid, _) = logical_rect(node, transform);
+    let cell = ((corner - grid) / CELL).round();
+    (cell.x as i32, cell.y as i32)
+}
+
+/// Notes where things given were let go, for when they come back as stock.
+fn note_gifts(
+    mut gave: MessageReader<GaveItem>,
+    grids: Query<(&TradeGrid, &ComputedNode, &UiGlobalTransform)>,
+    mut open: ResMut<OpenTrades>,
+) {
+    for GaveItem(gift) in gave.read() {
+        let grid = grids.iter().find(|(grid, ..)| grid.0 == gift.to);
+        let trade = open.0.iter_mut().find(|trade| trade.with == gift.to);
+        if let (Some((_, node, transform)), Some(trade)) = (grid, trade) {
+            trade.gifts.push(Gift {
+                item: gift.item,
+                rotation: gift.rotation,
+                wanted: cell_in_grid(gift.corner, node, transform),
+            });
+        }
+    }
+}
+
+/// Who keeps what, and what the server says someone has: their panel, drawn again
+/// if it is open, keeping things where they are. A new level closes every panel.
 #[allow(clippy::too_many_arguments)]
 fn read_server(
     mut from_server: MessageReader<FromServer>,
@@ -198,8 +251,12 @@ fn read_server(
             }
             ServerMessage::Keepers(list) => keepers.0 = list.iter().copied().collect(),
             ServerMessage::TradeStock { with, items } => {
-                if let Some(panel) = open.panel_with(*with) {
-                    raise.write(RaisePanel(panel));
+                if let Some(trade) = open.0.iter_mut().find(|trade| trade.with == *with) {
+                    trade.stock = restocked(&trade.stock, items, &trade.gifts);
+                    trade.gifts.clear();
+                    commands.entity(trade.holder).despawn_related::<Children>();
+                    draw_grid(&mut commands, trade.holder, *with, &trade.stock);
+                    raise.write(RaisePanel(trade.panel));
                     continue;
                 }
                 let building = keepers.0.iter().find(|(_, keeper)| *keeper == with);
@@ -210,12 +267,21 @@ fn read_server(
                     continue;
                 };
                 let at = AT + NEXT_AT * open.0.len() as f32;
-                let panel = spawn_panel(&mut commands, look.kind.name(), at, items);
+                let (panel, content) = spawn_moveable_panel(&mut commands, look.kind.name(), at);
+                let mut holder = Entity::PLACEHOLDER;
+                commands.entity(content).with_children(|content| {
+                    holder = spawn_scroll_area(content, MOST_HEIGHT);
+                });
+                let stock = arranged(items);
+                draw_grid(&mut commands, holder, *with, &stock);
                 raise.write(RaisePanel(panel));
                 open.0.push(OpenTrade {
                     with: *with,
                     panel,
                     place: look.door,
+                    holder,
+                    stock,
+                    gifts: Vec::new(),
                 });
             }
             _ => {}
@@ -223,41 +289,80 @@ fn read_server(
     }
 }
 
-fn spawn_panel(commands: &mut Commands, title: &str, at: Vec2, items: &[Item]) -> Entity {
-    let (panel, content) = spawn_moveable_panel(commands, title, at);
-    let arranged = arranged(items);
-    commands.entity(content).with_children(|content| {
-        spawn_item_grid(content, COLUMNS as u8, arranged.rows, (), |grid| {
-            grid.spawn((covering(), Floating)).with_children(|layer| {
-                for &(item, x, y) in &arranged.places {
-                    spawn_stock_item(layer, item, x, y);
-                }
-            });
-        });
+fn draw_grid(commands: &mut Commands, holder: Entity, with: Id, stock: &[Placed]) {
+    let gifts = TakesGifts(with);
+    commands.entity(holder).with_children(|holder| {
+        let grid = (TradeGrid(with), gifts);
+        spawn_item_grid(
+            holder,
+            COLUMNS as u8,
+            rows_for(stock),
+            grid,
+            gifts,
+            |grid| {
+                grid.spawn((covering(), Floating)).with_children(|layer| {
+                    for placed in stock {
+                        spawn_stock_item(layer, placed, gifts);
+                    }
+                });
+                grid.spawn((TradeAim(with), covering(), Floating));
+            },
+        );
     });
-    panel
 }
 
-fn spawn_stock_item(layer: &mut ChildSpawnerCommands, item: &Item, x: u8, y: u8) {
+fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, gifts: TakesGifts) {
     let name = ItemName {
-        words: item.name().to_owned(),
-        quality: item.quality,
+        words: placed.item.name().to_owned(),
+        quality: placed.item.quality,
     };
     spawn_item_cells(
         layer,
-        item.kind,
-        item.quality,
-        item.kind.def().shape,
-        (x as f32, y as f32),
+        placed.item.kind,
+        placed.item.quality,
+        placed.shape(),
+        (placed.x as f32, placed.y as f32),
         false,
-        |_, _| name.clone(),
+        |_, _| (name.clone(), gifts),
     );
 }
 
-/// Where things go in a panel's grid, and how many rows it has.
-struct Arranged<'a> {
-    places: Vec<(&'a Item, u8, u8)>,
-    rows: u8,
+/// Green where something held would go if let go now.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+fn show_gift_aim(
+    held: Res<HeldOverGifts>,
+    carried: Res<crate::inventory::Carried>,
+    open: Res<OpenTrades>,
+    grids: Query<(&TradeGrid, &ComputedNode, &UiGlobalTransform)>,
+    aims: Query<(Entity, &TradeAim)>,
+    new_aims: Query<(), Added<TradeAim>>,
+    mut commands: Commands,
+    mut drawn: Local<Option<(Id, (u8, u8), Shape)>>,
+) {
+    let aim = held.0.and_then(|gift| {
+        let trade = open.0.iter().find(|trade| trade.with == gift.to)?;
+        let (_, node, transform) = grids.iter().find(|(grid, ..)| grid.0 == gift.to)?;
+        let item = carried.0.find(gift.item)?;
+        let shape = item.kind.def().shape.turned(gift.rotation);
+        let wanted = cell_in_grid(gift.corner, node, transform);
+        Some((gift.to, landing(&trade.stock, shape, wanted), shape))
+    });
+    if *drawn == aim && new_aims.is_empty() {
+        return;
+    }
+    *drawn = aim;
+    for (entity, shown) in &aims {
+        commands.entity(entity).despawn_related::<Children>();
+        let Some((_, (x, y), shape)) = aim.filter(|aim| aim.0 == shown.0) else {
+            continue;
+        };
+        commands.entity(entity).with_children(|layer| {
+            for (cell_x, cell_y) in shape.cells() {
+                let (cell_x, cell_y) = ((x + cell_x) as f32, (y + cell_y) as f32);
+                layer.spawn((at_cell(cell_x, cell_y), BackgroundColor(ALLOWED)));
+            }
+        });
+    }
 }
 
 /// The longest side of any kind of item: what the empty rows must have room for,
@@ -269,43 +374,83 @@ fn longest_side() -> u8 {
     sides.max().unwrap_or(1)
 }
 
-/// Oldest first, each in the first place it fits, along each row from the left,
-/// with room for the largest thing below it all. Worked out at each opening: places
-/// aren't kept.
-fn arranged(items: &[Item]) -> Arranged<'_> {
+/// How many rows a grid has: all it holds, and room for the largest thing below.
+fn rows_for(stock: &[Placed]) -> u8 {
+    let cells = stock.iter().flat_map(|placed| placed.cells());
+    let lowest = cells.map(|(_, y)| y + 1).max().unwrap_or(0);
+    lowest + longest_side()
+}
+
+/// Whether a shape's cells are all free with its corner here.
+fn fits(stock: &[Placed], shape: Shape, x: i32, y: i32) -> bool {
+    let taken: Vec<(u8, u8)> = stock.iter().flat_map(|placed| placed.cells()).collect();
+    x >= 0
+        && y >= 0
+        && shape.cells().all(|(cell_x, cell_y)| {
+            let cell = (x + cell_x as i32, y + cell_y as i32);
+            cell.0 < COLUMNS as i32 && !taken.contains(&(cell.0 as u8, cell.1 as u8))
+        })
+}
+
+/// The first place a shape fits, along each row from the left. There is always one,
+/// at the latest below everything.
+fn first_place(stock: &[Placed], shape: Shape) -> (u8, u8) {
+    let rows = rows_for(stock) as i32;
+    (0..rows)
+        .flat_map(|y| (0..COLUMNS as i32).map(move |x| (x, y)))
+        .find(|&(x, y)| fits(stock, shape, x, y))
+        .map_or((0, rows as u8), |(x, y)| (x as u8, y as u8))
+}
+
+/// Where something let go here ends up: there if it fits, or else the first place.
+fn landing(stock: &[Placed], shape: Shape, wanted: (i32, i32)) -> (u8, u8) {
+    if fits(stock, shape, wanted.0, wanted.1) {
+        (wanted.0 as u8, wanted.1 as u8)
+    } else {
+        first_place(stock, shape)
+    }
+}
+
+/// Oldest first. Things without a time are older than time was kept.
+fn oldest_first(items: &[Item]) -> Vec<&Item> {
     let mut items: Vec<&Item> = items.iter().collect();
-    // Things without a time are older than time was kept.
     items.sort_by_key(|item| (item.made_at.map(|made| made.minute), item.id));
-    let mut taken: Vec<[bool; COLUMNS]> = Vec::new();
-    let mut places = Vec::new();
-    for item in items {
-        let cells: Vec<(u8, u8)> = item.kind.def().shape.cells().collect();
-        let fits = |x: usize, y: usize, taken: &[[bool; COLUMNS]]| {
-            cells.iter().all(|&(cell_x, cell_y)| {
-                let (cell_x, cell_y) = (x + cell_x as usize, y + cell_y as usize);
-                cell_x < COLUMNS && taken.get(cell_y).is_none_or(|row| !row[cell_x])
-            })
-        };
-        // There is always somewhere, at the latest below everything.
-        let place = (0..=taken.len())
-            .flat_map(|y| (0..COLUMNS).map(move |x| (x, y)))
-            .find(|&(x, y)| fits(x, y, &taken));
-        let Some((x, y)) = place else {
+    items
+}
+
+/// A grid drawn afresh, each thing in the first place it fits. Worked out at each
+/// opening: places aren't kept.
+fn arranged(items: &[Item]) -> Vec<Placed> {
+    restocked(&[], items, &[])
+}
+
+/// The grid after hearing what there is: what was there stays where it was, what
+/// was given goes where it was let go if it fits, and the rest in the first place.
+fn restocked(old: &[Placed], items: &[Item], gifts: &[Gift]) -> Vec<Placed> {
+    let mut stock: Vec<Placed> = old
+        .iter()
+        .filter(|placed| items.iter().any(|item| item.id == placed.item.id))
+        .cloned()
+        .collect();
+    for item in oldest_first(items) {
+        if stock.iter().any(|placed| placed.item.id == item.id) {
             continue;
-        };
-        for &(cell_x, cell_y) in &cells {
-            let row = y + cell_y as usize;
-            if taken.len() <= row {
-                taken.resize(row + 1, [false; COLUMNS]);
-            }
-            taken[row][x + cell_x as usize] = true;
         }
-        places.push((item, x as u8, y as u8));
+        let gift = gifts.iter().find(|gift| gift.item == item.id);
+        let rotation = gift.map_or(Rotation::None, |gift| gift.rotation);
+        let shape = item.kind.def().shape.turned(rotation);
+        let (x, y) = match gift {
+            Some(gift) => landing(&stock, shape, gift.wanted),
+            None => first_place(&stock, shape),
+        };
+        stock.push(Placed {
+            item: item.clone(),
+            x,
+            y,
+            rotation,
+        });
     }
-    Arranged {
-        places,
-        rows: taken.len() as u8 + longest_side(),
-    }
+    stock
 }
 
 /// Esc closes the panel opened last rather than opening the system menu.
@@ -369,7 +514,9 @@ mod tests {
         starts(change_of_mind);
         starts(follow_clicked_door);
         starts(open_on_arrival);
+        starts(note_gifts);
         starts(read_server);
+        starts(show_gift_aim);
         starts(close_on_escape);
         starts(close_when_left);
     }
@@ -384,9 +531,9 @@ mod tests {
         }
     }
 
-    fn place_of(arranged: &Arranged, n: u128) -> (u8, u8) {
-        let place = arranged.places.iter().find(|p| p.0.id == Id::for_test(n));
-        place.map(|&(_, x, y)| (x, y)).unwrap()
+    fn place_of(stock: &[Placed], n: u128) -> (u8, u8) {
+        let placed = stock.iter().find(|p| p.item.id == Id::for_test(n));
+        placed.map(|placed| (placed.x, placed.y)).unwrap()
     }
 
     #[test]
@@ -425,23 +572,57 @@ mod tests {
             .enumerate()
             .map(|(n, &kind)| made(n as u128, kind, n as u64))
             .collect();
-        let arranged = arranged(&items);
+        let stock = arranged(&items);
         let mut seen = std::collections::BTreeSet::new();
-        let mut lowest = 0;
-        for &(item, x, y) in &arranged.places {
-            for (cell_x, cell_y) in item.kind.def().shape.cells() {
-                assert!(seen.insert((x + cell_x, y + cell_y)), "overlap");
-                assert!(x + cell_x < COLUMNS as u8);
-                lowest = lowest.max(y + cell_y + 1);
+        for placed in &stock {
+            for cell in placed.cells() {
+                assert!(seen.insert(cell), "overlap");
+                assert!(cell.0 < COLUMNS as u8);
             }
         }
-        assert_eq!(arranged.places.len(), items.len());
-        assert_eq!(arranged.rows, lowest + longest_side());
+        assert_eq!(stock.len(), items.len());
+        let lowest = seen.iter().map(|cell| cell.1 + 1).max().unwrap();
+        assert_eq!(rows_for(&stock), lowest + longest_side());
     }
 
     #[test]
     fn an_empty_grid_has_room_for_the_longest_thing() {
-        assert_eq!(arranged(&[]).rows, longest_side());
+        assert_eq!(rows_for(&[]), longest_side());
         assert!(longest_side() >= 5, "a sword");
+    }
+
+    #[test]
+    fn a_gift_goes_where_it_was_let_go_and_the_grid_grows_to_keep_its_empty_rows() {
+        let old = arranged(&[made(1, ItemKind::Apple, 1)]);
+        let rows = rows_for(&old);
+        let items = [made(1, ItemKind::Apple, 1), made(2, ItemKind::Apple, 2)];
+        let gift = Gift {
+            item: Id::for_test(2),
+            rotation: Rotation::None,
+            wanted: (4, 5),
+        };
+        let stock = restocked(&old, &items, &[gift]);
+        assert_eq!(place_of(&stock, 1), (0, 0));
+        assert_eq!(place_of(&stock, 2), (4, 5));
+        assert!(rows_for(&stock) > rows);
+        assert_eq!(rows_for(&stock), 6 + longest_side());
+    }
+
+    #[test]
+    fn a_gift_let_go_on_something_goes_in_the_first_place_instead() {
+        let old = arranged(&[made(1, ItemKind::Apple, 1)]);
+        let items = [made(1, ItemKind::Apple, 1), made(2, ItemKind::Apple, 2)];
+        let gift = Gift {
+            item: Id::for_test(2),
+            rotation: Rotation::None,
+            wanted: (0, 0),
+        };
+        assert_eq!(place_of(&restocked(&old, &items, &[gift]), 2), (1, 0));
+    }
+
+    #[test]
+    fn opening_again_sorts_gifts_in_with_the_rest() {
+        let items = [made(2, ItemKind::Apple, 2), made(1, ItemKind::Apple, 1)];
+        assert_eq!(place_of(&arranged(&items), 1), (0, 0));
     }
 }
