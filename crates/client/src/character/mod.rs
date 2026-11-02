@@ -4,11 +4,12 @@
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use shared::energy::NORMAL_SPEED;
 use shared::item::Inventory;
 use shared::protocol::ServerMessage;
 use shared::sheet::Sheet;
 
-use crate::common::GameView;
+use crate::common::{GameView, PlayerSpeed};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 use crate::widgets::{
@@ -32,7 +33,14 @@ impl Plugin for CharacterPlugin {
             .add_systems(Startup, spawn_button)
             .add_systems(
                 Update,
-                (read_server, toggle_panel, show_words, show_button).chain(),
+                (
+                    read_server,
+                    publish_speed,
+                    toggle_panel,
+                    show_words,
+                    show_button,
+                )
+                    .chain(),
             );
     }
 }
@@ -62,6 +70,15 @@ fn read_server(mut from_server: MessageReader<FromServer>, mut sheet: ResMut<Cha
             sheet.0 = new.clone();
         }
     }
+}
+
+/// What the player's speed comes to, for moving them.
+fn publish_speed(
+    sheet: Res<CharacterSheet>,
+    carried: Res<Carried>,
+    mut speed: ResMut<PlayerSpeed>,
+) {
+    speed.set_if_neq(PlayerSpeed(sheet.0.speed(&carried.0)));
 }
 
 /// Someone's head and shoulders, drawn here so there is no file to ship for it.
@@ -168,6 +185,7 @@ fn describe(sheet: &Sheet, carried: &Inventory) -> String {
             sheet.capacity(def.size) as f32 / 1000.0,
             sheet.load(carried),
         ),
+        format!("Speed {}%", sheet.speed(carried) * 100 / NORMAL_SPEED),
     ];
     if !sheet.skills.is_empty() {
         lines.push(String::new());
@@ -231,6 +249,7 @@ mod tests {
         assert!(words.contains("Stealth 3"));
         assert!(words.contains("NightVision"));
         assert!(words.contains("Light"));
+        assert!(words.contains("Speed 100%"));
         assert!(words.contains("Height: Average"));
     }
 }

@@ -47,6 +47,16 @@ impl Visit {
         self.position
     }
 
+    /// A cell with room for this many steps east of it, for tests.
+    #[cfg(test)]
+    pub(crate) fn room_to_walk_east(&self, steps: i64) -> (i64, i64) {
+        const SEARCH: i64 = 200;
+        (-SEARCH..SEARCH)
+            .flat_map(|y| (-SEARCH..SEARCH).map(move |x| (x, y)))
+            .find(|&(x, y)| (0..=steps).all(|dx| self.level.level.is_walkable(x + dx, y)))
+            .expect("a site has a room")
+    }
+
     /// Which site it is.
     pub(crate) fn id(&self) -> SiteId {
         self.id

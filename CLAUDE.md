@@ -39,6 +39,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: dungeon     | `crates/shared/src/dungeon.rs`  | `docs/context/shared/dungeon.md`      | Cell grid (floor, wall, doors, windows, ground, covered ground, water, lava, roads, gardens, holes, fields, fences, herb beds), wall shapes, rooms, line of sight / light reach |
 | shared: item        | `crates/shared/src/item.rs`, `id.rs` | `docs/context/shared/item.md`       | UUID v6 `Id`s, kinds of item, shapes and grid inventories with nested bags: the rules moves are checked by |
 | shared: creature    | `crates/shared/src/creature.rs`, `wear.rs`, `sheet.rs` | `docs/context/shared/creature.md` | Kinds of creature and their bodies, sizes, stats, skills, looks, what they can carry, layers of clothes and the rules for wearing them |
+| shared: energy      | `crates/shared/src/energy.rs` | `docs/context/shared/energy.md` | Time for actions: energy by speed and ticks, worked out by formula; action costs |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes) |

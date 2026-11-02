@@ -9,54 +9,53 @@ use bevy::math::DVec2;
 use std::collections::VecDeque;
 
 use bevy::prelude::*;
+use shared::energy::{ACTION_TICKS_PER_SECOND, Energy, NORMAL_SPEED, site_step_cost};
 use shared::movement::{Step, step_cost, step_on_level, step_on_world_map, world_step_cost};
 use shared::pathfinding::{find_path, find_world_path, straighten};
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, Icon, LightSource, MapPosition,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, Icon, LightSource, MapPosition, PlayerSpeed,
     ServerStatus, SmoothPosition, Token, ViewFacing, Weather,
 };
-
-/// While a key is held, how often the player takes another step.
-const STEP_REPEAT_SECONDS: f32 = 0.05;
 
 /// How far the player's light reaches in dungeons, in cells.
 const LIGHT_RADIUS: u32 = 6;
 
-/// Travel speed towards a clicked point, in grid units per second: world map
-/// points, or dungeon cells (which are much bigger on screen).
+/// Travel speed towards a clicked point at `NORMAL_SPEED`, in grid units per
+/// second: world map points, or dungeon cells (which are much bigger on screen).
+/// What `shared::energy`'s costs come to, so the server has time for every step.
 const TRAVEL_SPEED: f64 = 60.0;
 const DUNGEON_TRAVEL_SPEED: f64 = 12.0;
+
+/// How many asked-for steps can wait for energy here.
+const MOST_STEPS_WAITING: usize = 8;
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(StepRepeat(Timer::from_seconds(
-            STEP_REPEAT_SECONDS,
-            TimerMode::Repeating,
-        )))
-        .add_message::<TravelTo>()
-        .add_message::<Arrived>()
-        .add_message::<TakeStep>()
-        .add_message::<Stepped>()
-        .configure_sets(
-            Update,
-            (PlayerSystems::Input, PlayerSystems::Travel).chain(),
-        )
-        .add_systems(Startup, spawn_player)
-        // Nowhere to move until the server has said which world this is.
-        .add_systems(
-            Update,
-            (
-                move_player.in_set(PlayerSystems::Input),
-                // After everything in `Input` asked for its steps.
-                (take_steps, travel).chain().in_set(PlayerSystems::Travel),
+        app.init_resource::<PlayerEnergy>()
+            .add_message::<TravelTo>()
+            .add_message::<Arrived>()
+            .add_message::<TakeStep>()
+            .add_message::<Stepped>()
+            .configure_sets(
+                Update,
+                (PlayerSystems::Input, PlayerSystems::Travel).chain(),
             )
-                .run_if(not(in_state(GameView::Connecting)))
-                // Nobody to tell while the connection is down.
-                .run_if(|status: Res<ServerStatus>| status.is_connected()),
-        );
+            .add_systems(Startup, spawn_player)
+            // Nowhere to move until the server has said which world this is.
+            .add_systems(
+                Update,
+                (
+                    move_player.in_set(PlayerSystems::Input),
+                    // After everything in `Input` asked for its steps.
+                    (take_steps, travel).chain().in_set(PlayerSystems::Travel),
+                )
+                    .run_if(not(in_state(GameView::Connecting)))
+                    // Nobody to tell while the connection is down.
+                    .run_if(|status: Res<ServerStatus>| status.is_connected()),
+            );
     }
 }
 
@@ -134,8 +133,21 @@ struct Travel {
     jump: Option<MapPosition>,
 }
 
-#[derive(Resource)]
-struct StepRepeat(Timer);
+/// The player's energy as far as the client can tell, the same way the server
+/// does, so steps aren't shown sooner than it will allow them.
+#[derive(Resource, Default)]
+struct PlayerEnergy {
+    energy: Energy,
+    /// The speed the energy has been going at.
+    speed: u32,
+    /// Steps asked for and waiting for energy, in order.
+    waiting: VecDeque<Step>,
+}
+
+/// Which tick of action time it is here. Stops when the game does.
+fn action_tick(time: &Time) -> u64 {
+    (time.elapsed_secs_f64() * ACTION_TICKS_PER_SECOND) as u64
+}
 
 fn spawn_player(mut commands: Commands) {
     commands.spawn((
@@ -153,12 +165,12 @@ fn spawn_player(mut commands: Commands) {
     ));
 }
 
-/// Steps one grid unit when a key is pressed, then repeats while it's held.
+/// Asks for a step while a key is held, as soon as the last one has gone: energy
+/// sets the pace.
 fn move_player(
     keys: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
     facing: Res<ViewFacing>,
-    mut repeat: ResMut<StepRepeat>,
+    energy: Res<PlayerEnergy>,
     mut steps: MessageWriter<TakeStep>,
 ) {
     // A key tapped and released within one frame is "just pressed" but no
@@ -179,13 +191,7 @@ fn move_player(
         dy += 1;
     }
 
-    let just_pressed = keys.any_just_pressed(MOVE_KEYS);
-    if just_pressed {
-        repeat.0.reset();
-    }
-    repeat.0.tick(time.delta());
-
-    if (dx != 0 || dy != 0) && (just_pressed || repeat.0.just_finished()) {
+    if (dx != 0 || dy != 0) && energy.waiting.is_empty() {
         // The keys mean screen directions, so follow the way the map is turned.
         let (dx, dy) = facing.screen_to_grid(dx, dy);
         if let Some(step) = Step::new(dx, dy) {
@@ -206,11 +212,29 @@ fn take_steps(
     world: Option<Res<CurrentWorld>>,
     clock: Res<GameClock>,
     weather: Res<Weather>,
+    time: Res<Time>,
+    speed: Res<PlayerSpeed>,
+    mut energy: ResMut<PlayerEnergy>,
     mut stepped: MessageWriter<Stepped>,
     player: Single<(&mut MapPosition, &mut Travel), With<Player>>,
 ) {
     let (mut position, mut travel) = player.into_inner();
+    let tick = action_tick(&time);
+    // The time up to now went at the old speed.
+    let old_speed = energy.speed.max(1);
+    if old_speed != speed.0 {
+        energy.energy.settle(tick, old_speed);
+        energy.speed = speed.0;
+    }
     for &TakeStep(step) in requests.read() {
+        if energy.waiting.len() < MOST_STEPS_WAITING {
+            energy.waiting.push_back(step);
+        }
+    }
+    while energy.energy.ready(tick, speed.0) {
+        let Some(step) = energy.waiting.pop_front() else {
+            break;
+        };
         if travel.jump.is_some() {
             continue;
         }
@@ -229,6 +253,18 @@ fn take_steps(
         let Some((x, y)) = to else {
             continue;
         };
+        let cost = match view.get() {
+            GameView::Dungeon => site_step_cost(from, (x, y)),
+            _ => world.as_ref().map_or(0, |world| {
+                let conditions = world.conditions(&clock, &weather);
+                let ends = (
+                    world.ground.elevation(from.0, from.1, conditions),
+                    world.ground.elevation(x, y, conditions),
+                );
+                world_step_cost(from, (x, y), ends)
+            }),
+        };
+        energy.energy.spend(tick, speed.0, cost);
         *position = MapPosition { x, y };
         stepped.write(Stepped::between(step, from, (x, y)));
         if (x, y) != step.from(from) {
@@ -240,17 +276,6 @@ fn take_steps(
         }
     }
 }
-
-const MOVE_KEYS: [KeyCode; 8] = [
-    KeyCode::ArrowLeft,
-    KeyCode::ArrowRight,
-    KeyCode::ArrowUp,
-    KeyCode::ArrowDown,
-    KeyCode::KeyA,
-    KeyCode::KeyD,
-    KeyCode::KeyW,
-    KeyCode::KeyS,
-];
 
 /// Moves along the route found when the journey was asked for, always ending
 /// exactly on its last point, announcing each step: at constant speed, except
@@ -270,6 +295,8 @@ fn travel(
     mut requests: MessageReader<TravelTo>,
     mut arrived: MessageWriter<Arrived>,
     mut stepped: MessageWriter<Stepped>,
+    speed_now: Res<PlayerSpeed>,
+    mut energy: ResMut<PlayerEnergy>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
@@ -319,7 +346,8 @@ fn travel(
         // Travel doesn't run while connecting.
         GameView::Connecting => return,
     };
-    let distance = speed * time.delta_secs_f64();
+    let tick = action_tick(&time);
+    let distance = speed * time.delta_secs_f64() * speed_now.0 as f64 / NORMAL_SPEED as f64;
 
     if let Some(landing) = travel.jump {
         let to = DVec2::new(landing.x as f64, landing.y as f64);
@@ -380,6 +408,18 @@ fn travel(
                     now = DVec2::new(at.0 as f64, at.1 as f64);
                     break;
                 }
+                // Paced by distance above, which comes to the same as this.
+                let cost = match ground {
+                    Some((ground, conditions)) => {
+                        let ends = (
+                            ground.elevation(at.0, at.1, conditions),
+                            ground.elevation(next.0, next.1, conditions),
+                        );
+                        world_step_cost(at, next, ends)
+                    }
+                    None => site_step_cost(at, next),
+                };
+                energy.energy.spend(tick, speed_now.0, cost);
                 stepped.write(Stepped::between(step, at, next));
                 let jumped = next != step.from(at);
                 at = next;

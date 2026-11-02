@@ -27,6 +27,6 @@ How characters move: one step at a time to one of the 8 neighbouring grid points
 
 ## Notes
 
-- No speed limit yet: the server takes as many steps as arrive. A limit comes with game time (turns or a step budget), in `step_cost` units. So slopes only steer routes and slow what the client shows of click travel; keyboard steps aren't slowed.
+- Time for steps is `shared::energy`, using the costs here. A limit comes with game time (turns or a step budget), in `step_cost` units. So slopes only steer routes and slow what the client shows of click travel; keyboard steps aren't slowed.
 - Walkable ground follows the tide, by whole game hours, matching what the client draws. If an `Hour` message crosses a step in flight, that step may be refused and put right.
 - Climbs count on broad height, not the full surface: tried on real mountains, a higher flat cost or one growing with steepness on the full surface barely changed routes, because small bumps cost the same on any route and drown out the mountain. Tune with `SLOPE_COST` (its comment records what was seen at each value).

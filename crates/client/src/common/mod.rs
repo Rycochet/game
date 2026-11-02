@@ -49,6 +49,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()
             .init_resource::<ClickMode>()
+            .init_resource::<PlayerSpeed>()
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
@@ -110,6 +111,17 @@ pub struct DebugInfo(pub bool);
 impl Default for DebugInfo {
     fn default() -> Self {
         Self(true)
+    }
+}
+
+/// How much energy the player gains per tick (`shared::energy`), from what they are
+/// and what they carry. The server keeps its own.
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PlayerSpeed(pub u32);
+
+impl Default for PlayerSpeed {
+    fn default() -> Self {
+        Self(shared::energy::NORMAL_SPEED)
     }
 }
 

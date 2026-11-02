@@ -8,6 +8,7 @@ pub mod celestial;
 pub mod climate;
 pub mod creature;
 pub mod dungeon;
+pub mod energy;
 pub mod id;
 pub mod item;
 pub mod movement;

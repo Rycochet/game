@@ -93,6 +93,8 @@ pub struct CreatureDef {
     /// Its base grid: what it can carry with no bag.
     pub pockets: (u8, u8),
     pub body: &'static [BodyPart],
+    /// How fast it goes for its kind, as a percentage of ordinary.
+    pub speed: u32,
     /// Whether someone can choose to play one.
     pub playable: bool,
     pub stats: Stats,
@@ -228,6 +230,7 @@ impl CreatureKind {
                 size: Size::Large,
                 pockets: (6, 5),
                 body: &CENTAUR,
+                speed: 140,
                 playable: true,
                 stats: stats(14, 10, 9, 13),
                 skills: &[(Running, 4), (Foraging, 1)],
@@ -239,6 +242,7 @@ impl CreatureKind {
                 size: Size::Tiny,
                 pockets: (2, 2),
                 body: &CHICKEN,
+                speed: 70,
                 playable: false,
                 stats: stats(1, 8, 1, 2),
                 skills: &[(Foraging, 3)],
@@ -247,6 +251,7 @@ impl CreatureKind {
             },
             Self::Giant => CreatureDef {
                 name: "Giant",
+                speed: 90,
                 size: Size::Giant,
                 pockets: (8, 6),
                 body: &TEN_FINGERS,
@@ -261,6 +266,7 @@ impl CreatureKind {
                 size: Size::Large,
                 pockets: (4, 3),
                 body: &HORSE,
+                speed: 150,
                 playable: false,
                 stats: stats(16, 10, 3, 14),
                 skills: &[(Running, 5), (Swimming, 1)],
@@ -269,6 +275,7 @@ impl CreatureKind {
             },
             Self::Human => CreatureDef {
                 name: "Human",
+                speed: 100,
                 size: Size::Medium,
                 pockets: (6, 4),
                 body: &TEN_FINGERS,
@@ -283,6 +290,7 @@ impl CreatureKind {
                 size: Size::Small,
                 pockets: (4, 3),
                 body: &EIGHT_FINGERS,
+                speed: 100,
                 playable: true,
                 stats: stats(7, 13, 9, 8),
                 skills: &[(Stealth, 3), (Climbing, 2)],
