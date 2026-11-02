@@ -549,3 +549,7 @@ Owner's rule: any 3D model gets a black outline unless told otherwise. Bags are 
 ## 2026-11-02: Items on the ground
 
 Owner's design. Items can lie on any cell of a site's levels, never on the world map, in one unlimited pile per cell saved with the level and shared by everyone on it. They stay until taken. Only someone standing on the cell is told what is in a pile; dropping on the Drop icon or the ground section, and taking to grids, clothes or the bin, are all checked by the server and wait behind the player's steps, as where they stand decides what they mean. Moving something to a different container takes time by weight (10 kg is one straight step, to depend on stats later); sorting within a grid and throwing away are free. What is on the ground shows from afar only as a bag, by how full it looks. Characters remember how bags looked when last seen, saved, and aren't told anything else until they see the place again, so a remembered bag may be gone. Mobs dropping their gear follows.
+
+## 2026-11-02: Weapons from size grids and named rows
+
+Owner's design. Knives to polearms aren't a list of kinds: a weapon has a blade and handle length and a set of properties, the grids in `shared::blade` say which sizes may be made at all, and its name comes from what it is like: the most specific that fits, or else a generic name for its size. Names are limited to those people know, using the Google Books Ngram Viewer, about 5 to 10 a family. Scythes and sickles are left for tools later. Research: `research-bladed-weapons.md`.
