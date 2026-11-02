@@ -1,5 +1,6 @@
-//! Drawing what is carried: a moveable panel per open grid, the button and key
-//! for the pockets, the item being held, and its name.
+//! Drawing what is carried: the Character panel, with the pockets' grid in it, a
+//! moveable panel per open bag, the button and keys, the item being held, and its
+//! name.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
@@ -8,11 +9,11 @@ use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 use shared::id::Id;
 use shared::item::{Holder, Inventory, ItemKind, Placed, Rotation, Shape};
 
-use super::body::{ClothesPanel, worn_notes};
+use super::body::{spawn_rows, worn_notes};
 use super::give::NearbyPanel;
 use super::hold::Target;
 use super::{Carried, Holding, item_cell_in_front};
-use crate::common::{GameView, PointerPosition};
+use crate::common::{GameView, PointerPosition, SheetText};
 use crate::widgets::{
     ButtonPressed, ButtonState, INK, Pressable, RaisePanel, spawn_icon_button,
     spawn_moveable_panel, spawn_tooltip,
@@ -22,7 +23,7 @@ use crate::widgets::{
 pub(super) const CELL: f32 = 32.0;
 
 const BUTTON: f32 = 34.0;
-const BIN: f32 = 36.0;
+const COLUMN_GAP: f32 = 16.0;
 const CORNER_GAP: f32 = 10.0;
 const FONT: f32 = 16.0;
 const LABEL_FONT: f32 = 13.0;
@@ -101,9 +102,13 @@ pub(super) struct NameText;
 #[derive(Component)]
 pub(super) struct Floating;
 
-/// The bin in the pockets' panel: what is dropped on it is destroyed.
+/// The bin and what is in it: what is dropped here is thrown away.
 #[derive(Component)]
 pub(super) struct BinNode;
+
+/// The bin itself, under what is in it.
+#[derive(Component)]
+pub(super) struct BinSlot;
 
 /// The bin's picture.
 #[derive(Resource)]
@@ -128,20 +133,18 @@ fn kilograms(grams: u32) -> String {
     format!("{:.2} kg", grams as f32 / 1000.0)
 }
 
-/// A bag, drawn here so there is no file to ship for it.
-fn bag_icon() -> Image {
+/// Someone's head and shoulders, drawn here so there is no file to ship for it.
+fn person_icon() -> Image {
     const SIZE: usize = 32;
     const INK_BYTES: [u8; 4] = [60, 40, 20, 255];
     let mut bytes = vec![0; SIZE * SIZE * 4];
     let middle = (SIZE as f32 - 1.0) / 2.0;
     for y in 0..SIZE {
         for x in 0..SIZE {
-            let (across, down) = (x as f32 - middle, y as f32 - middle);
-            // A round body, and a neck tied above it.
-            let body = across.hypot(down - 4.0) < 11.0;
-            let neck = across.abs() < 3.5 && (-13.0..-5.0).contains(&down);
-            let flare = across.abs() < 6.0 && (-14.0..-11.0).contains(&down);
-            if body || neck || flare {
+            let (across, down) = (x as f32 - middle, y as f32);
+            let head = across.hypot(down - 10.0) < 6.5;
+            let shoulders = across.hypot(down - 30.0) < 12.5 && down < 28.0;
+            if head || shoulders {
                 bytes[(y * SIZE + x) * 4..][..4].copy_from_slice(&INK_BYTES);
             }
         }
@@ -193,7 +196,7 @@ fn bin_icon() -> Image {
 
 /// The button, and what stands above panels: the held item and an item's name.
 pub(super) fn spawn_fixed_parts(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    let icon = images.add(bag_icon());
+    let icon = images.add(person_icon());
     commands.insert_resource(BinIcon(images.add(bin_icon())));
     commands
         .spawn((
@@ -256,55 +259,38 @@ impl OpenGrids {
             return;
         };
         let title = match holder {
-            Holder::Pockets => "Pockets",
+            Holder::Pockets => "Character",
             Holder::Inside(id) => carried.find(id).map_or("", |item| item.kind.def().name),
         };
         let at = FIRST_AT + NEXT_AT * (self.opened % 8) as f32;
         self.opened += 1;
         let (panel, content) = spawn_moveable_panel(commands, title, at);
         commands.entity(content).with_children(|content| {
-            content
-                .spawn((
-                    GridNode { holder },
-                    Node {
-                        width: px(width as f32 * CELL),
-                        height: px(height as f32 * CELL),
-                        ..default()
-                    },
-                    BackgroundColor(GRID_COLOUR),
-                ))
-                .with_children(|grid| {
-                    for y in 0..height {
-                        for x in 0..width {
-                            grid.spawn((at_cell(x as f32, y as f32), BorderColor::from(GRID_LINE)));
-                        }
-                    }
-                    grid.spawn((ItemLayer { holder }, covering()));
-                    grid.spawn((AimLayer { holder }, covering()));
-                });
+            if holder != Holder::Pockets {
+                spawn_grid(content, holder, width, height);
+                return;
+            }
+            // What they are like, what they wear and what they carry.
             content
                 .spawn(Node {
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
+                    column_gap: px(COLUMN_GAP),
                     ..default()
                 })
-                .with_children(|row| {
-                    row.spawn((
-                        WeightText { holder },
+                .with_children(|columns| {
+                    columns.spawn((
+                        SheetText,
                         Text::default(),
                         TextFont::from_font_size(FONT),
                         TextColor(INK),
                     ));
-                    if holder == Holder::Pockets {
-                        row.spawn((
-                            BinNode,
-                            Node {
-                                width: px(BIN),
-                                height: px(BIN),
-                                ..default()
-                            },
-                        ));
-                    }
+                    spawn_rows(columns);
+                    columns
+                        .spawn(Node {
+                            flex_direction: FlexDirection::Column,
+                            row_gap: px(COLUMN_GAP / 2.0),
+                            ..default()
+                        })
+                        .with_children(|column| spawn_grid(column, holder, width, height));
                 });
         });
         self.open.push((holder, panel, (width, height)));
@@ -335,6 +321,57 @@ impl OpenGrids {
     }
 }
 
+/// A grid, and under it the words on its weight and, for the pockets, the bin.
+fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, height: u8) {
+    parent
+        .spawn((
+            GridNode { holder },
+            Node {
+                width: px(width as f32 * CELL),
+                height: px(height as f32 * CELL),
+                flex_shrink: 0.0,
+                ..default()
+            },
+            BackgroundColor(GRID_COLOUR),
+        ))
+        .with_children(|grid| {
+            for y in 0..height {
+                for x in 0..width {
+                    grid.spawn((at_cell(x as f32, y as f32), BorderColor::from(GRID_LINE)));
+                }
+            }
+            grid.spawn((ItemLayer { holder }, covering()));
+            grid.spawn((AimLayer { holder }, covering()));
+        });
+    parent
+        .spawn(Node {
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            row.spawn((
+                WeightText { holder },
+                Text::default(),
+                TextFont::from_font_size(FONT),
+                TextColor(INK),
+            ));
+            if holder == Holder::Pockets {
+                row.spawn((
+                    BinNode,
+                    BinSlot,
+                    Node {
+                        width: px(CELL),
+                        height: px(CELL),
+                        border: UiRect::all(px(CELL_BORDER)),
+                        ..default()
+                    },
+                    BorderColor::from(GRID_LINE),
+                ));
+            }
+        });
+}
+
 /// A node one cell across at this place in a grid.
 fn at_cell(x: f32, y: f32) -> Node {
     Node {
@@ -360,30 +397,73 @@ fn covering() -> Node {
     }
 }
 
-/// Gives bins their picture, and shows whether dropping would destroy.
+/// Gives the bin its picture, shows what is in it, and whether dropping something
+/// on it would throw that away for good.
+#[allow(clippy::type_complexity)]
 pub(super) fn show_bins(
     icon: Res<BinIcon>,
+    carried: Res<Carried>,
     holding: Res<Holding>,
-    new_bins: Query<Entity, Added<BinNode>>,
-    mut bins: Query<&mut BackgroundColor, With<BinNode>>,
+    new_bins: Query<Entity, Added<BinSlot>>,
+    mut bins: Query<(Entity, &mut BackgroundColor), With<BinSlot>>,
     mut commands: Commands,
+    mut drawn: Local<Option<Id>>,
 ) {
     for bin in &new_bins {
         commands
             .entity(bin)
             .insert((ImageNode::new(icon.0.clone()), BackgroundColor(Color::NONE)));
     }
-    let tint = if holding.aim == Some(Target::Bin) {
-        REFUSED
-    } else {
-        Color::NONE
+    let held = holding.held.map(|held| held.item.id);
+    let inside = carried.0.bin.as_ref().filter(|item| Some(item.id) != held);
+    let now = inside.map(|item| item.id);
+    let redraw = *drawn != now || !new_bins.is_empty();
+    *drawn = now;
+    let tint = match (holding.aim, carried.0.bin.is_some()) {
+        (Some(Target::Bin), true) => REFUSED,
+        (Some(Target::Bin), false) => ALLOWED,
+        _ => Color::NONE,
     };
-    for mut background in &mut bins {
+    for (bin, mut background) in &mut bins {
         background.set_if_neq(BackgroundColor(tint));
+        if !redraw {
+            continue;
+        }
+        commands.entity(bin).despawn_related::<Children>();
+        let Some(item) = inside else {
+            continue;
+        };
+        // Any shape shows as one cell here.
+        let cell = ItemCell {
+            id: item.id,
+            rotation: Rotation::None,
+            grip: item.kind.def().shape.cells().next().unwrap_or((0, 0)),
+        };
+        let kind = item.kind;
+        commands.entity(bin).with_children(|bin| {
+            bin.spawn((
+                BinNode,
+                cell,
+                Pressable,
+                Node {
+                    width: percent(100),
+                    height: percent(100),
+                    ..default()
+                },
+                BackgroundColor(colour(kind)),
+            ))
+            .with_child((
+                BinNode,
+                cell,
+                Text::new(label(kind)),
+                TextFont::from_font_size(LABEL_FONT),
+                TextColor(ITEM_EDGE),
+            ));
+        });
     }
 }
 
-/// The button or `I` opens or closes the pockets.
+/// The button, `C` or `I` opens or closes the Character panel.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn toggle_pockets(
     mut pressed: MessageReader<ButtonPressed>,
@@ -392,21 +472,18 @@ pub(super) fn toggle_pockets(
     view: Res<State<GameView>>,
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
-    mut clothes: ResMut<ClothesPanel>,
     mut nearby: ResMut<NearbyPanel>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
 ) {
     let by_button = pressed.read().any(|press| button.contains(press.0));
-    let by_key = keys.just_pressed(KeyCode::KeyI);
+    let by_key = keys.any_just_pressed([KeyCode::KeyC, KeyCode::KeyI]);
     if (by_button || by_key) && *view.get() != GameView::Connecting {
-        // The clothes go with the pockets, as things are dragged between them.
+        // Things are given by dragging them from there.
         if open.pockets_open() {
-            clothes.close(&mut commands, &nodes);
             nearby.close(&mut commands, &nodes);
         } else {
-            clothes.open(&mut commands, &mut raise, &nodes);
             nearby.open(&mut commands, &mut raise, &nodes);
         }
         open.toggle_pockets(&carried.0, &mut commands, &mut raise);
@@ -660,7 +737,6 @@ pub(super) fn show_tooltip(
     holding: Res<Holding>,
     pointer: Res<PointerPosition>,
     open: Res<OpenGrids>,
-    clothes: Res<ClothesPanel>,
     nodes: Query<
         (
             &ComputedStackIndex,
@@ -677,7 +753,7 @@ pub(super) fn show_tooltip(
     let (mut node, mut visibility) = name_box.into_inner();
     let shown = if let Some(held) = holding.held {
         Some(held.item.id)
-    } else if open.open.is_empty() && !clothes.is_open() {
+    } else if open.open.is_empty() {
         None
     } else {
         pointer
@@ -698,12 +774,13 @@ pub(super) fn show_tooltip(
         return;
     };
     visibility.set_if_neq(Visibility::Inherited);
-    let words = if let Some(Target::Someone(_)) = holding.aim {
-        format!("Give {name}")
-    } else if holding.aim == Some(Target::Bin) {
-        format!("Destroy {name}")
-    } else {
-        name
+    let words = match holding.aim {
+        Some(Target::Someone(_)) => format!("Give {name}"),
+        Some(Target::Bin) => match carried.0.bin.as_ref() {
+            Some(old) => format!("Throw away {name}, destroying {}", old.kind.def().name),
+            None => format!("Throw away {name}"),
+        },
+        _ => name,
     };
     if text.0 != words {
         text.0 = words;

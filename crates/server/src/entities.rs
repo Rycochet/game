@@ -233,6 +233,47 @@ impl ServerWorld {
         self.populations.0.insert((id, index), population);
     }
 
+    /// Whether a mob on this cell won't let this player past.
+    pub(crate) fn enemy_at(
+        &self,
+        place: (SiteId, u32),
+        cell: (i64, i64),
+        kind: CreatureKind,
+        character: Option<&CharacterId>,
+    ) -> bool {
+        self.populations.0.get(&place).is_some_and(|population| {
+            population.mobs.iter().any(|mob| {
+                mob.position == cell && mob.feeling(kind, character) == Feeling::Unfriendly
+            })
+        })
+    }
+
+    /// A player has stepped from `from` to `to`: a mob there takes their place.
+    pub(crate) fn swap_mob(&mut self, place: (SiteId, u32), to: (i64, i64), from: (i64, i64)) {
+        if let Some(population) = self.populations.0.get_mut(&place) {
+            for mob in &mut population.mobs {
+                if mob.position == to {
+                    mob.position = from;
+                }
+            }
+        }
+    }
+
+    /// A player has arrived on this cell, not by a step: a mob there moves to the
+    /// nearest free cell it can stand on.
+    pub(crate) fn move_mob_aside(&mut self, place: (SiteId, u32), cell: (i64, i64)) {
+        let Some(population) = self.populations.0.get_mut(&place) else {
+            return;
+        };
+        let Some(index) = population.mobs.iter().position(|mob| mob.position == cell) else {
+            return;
+        };
+        let taken = |spot: (i64, i64)| population.mobs.iter().any(|mob| mob.position == spot);
+        if let Some(spot) = nearest_free(&population.level, cell, taken) {
+            population.mobs[index].position = spot;
+        }
+    }
+
     /// Mobs after someone who has just taken stairs, and saw, follow if they can.
     pub(crate) fn saw_stairs_taken(&mut self, taken: StairsTaken) {
         let place = (taken.site, taken.from_level);
@@ -422,9 +463,15 @@ fn notice(mob: &Mob, level: &Level, spots: &[Spot]) -> Option<Doing> {
         })
 }
 
+/// The cells someone is standing on: no mob can go on them.
+type Taken = BTreeSet<(i64, i64)>;
+
 /// Moves a mob by a step, if it can go. What it cost.
-fn take_step(mob: &mut Mob, level: &Level, step: Option<Step>) -> Option<u32> {
+fn take_step(mob: &mut Mob, level: &Level, step: Option<Step>, taken: &Taken) -> Option<u32> {
     let to = step_on_level(level, mob.position, step?)?;
+    if taken.contains(&to) {
+        return None;
+    }
     let cost = site_step_cost(mob.position, to);
     mob.position = to;
     Some(cost)
@@ -449,8 +496,10 @@ fn act(
     tick: u64,
     seen: impl Fn((i64, i64)) -> bool,
     crossing: &mut Option<Crossing>,
+    taken: &Taken,
     (site, level_index): (SiteId, u32),
 ) -> u32 {
+    let free = |cell: (i64, i64)| !taken.contains(&cell);
     let settle = Doing::Settling {
         steps_left: SETTLING_STEPS,
     };
@@ -478,8 +527,8 @@ fn act(
                 }
                 return THINKING_COST;
             }
-            let step = maps.to(level, goal).towards(level, mob.position);
-            take_step(mob, level, step).unwrap_or_else(|| {
+            let step = maps.to(level, goal).towards(level, mob.position, free);
+            take_step(mob, level, step, taken).unwrap_or_else(|| {
                 // No way there.
                 mob.doing = settle;
                 THINKING_COST
@@ -503,8 +552,8 @@ fn act(
                 });
                 return shared::energy::CHANGE_MAP_COST;
             }
-            let step = maps.to(level, stairs).towards(level, mob.position);
-            take_step(mob, level, step).unwrap_or_else(|| {
+            let step = maps.to(level, stairs).towards(level, mob.position, free);
+            take_step(mob, level, step, taken).unwrap_or_else(|| {
                 mob.doing = settle;
                 THINKING_COST
             })
@@ -517,25 +566,27 @@ fn act(
                 mob.doing = settle;
                 return THINKING_COST;
             };
-            let step = maps.to(level, threat.position).away(level, mob.position);
-            take_step(mob, level, step).unwrap_or(THINKING_COST)
+            let step = maps
+                .to(level, threat.position)
+                .away(level, mob.position, free);
+            take_step(mob, level, step, taken).unwrap_or(THINKING_COST)
         }
         Doing::Settling { steps_left } => {
             mob.doing = match steps_left.checked_sub(1) {
                 Some(steps_left) => Doing::Settling { steps_left },
                 None => Doing::GoingHome { since: tick },
             };
-            take_step(mob, level, wandering_step(mob, tick)).unwrap_or(THINKING_COST)
+            take_step(mob, level, wandering_step(mob, tick), taken).unwrap_or(THINKING_COST)
         }
         Doing::GoingHome { since } => {
             // Home, or the stairs leading back towards it.
             let hop = mob.way_back.last().copied();
             let goal = hop.map_or(mob.home, |hop| hop.stairs);
             let late = tick.saturating_sub(since) > HOME_WITHIN;
-            let step = maps.to(level, goal).towards(level, mob.position);
-            let walked = take_step(mob, level, step);
+            let step = maps.to(level, goal).towards(level, mob.position, free);
+            let walked = take_step(mob, level, step, taken);
             // Stuck or lost, it gets there when nobody can see.
-            if (late || walked.is_none()) && !seen(mob.position) && !seen(goal) {
+            if (late || walked.is_none()) && !seen(mob.position) && !seen(goal) && free(goal) {
                 mob.position = goal;
             }
             if mob.position == goal {
@@ -559,10 +610,28 @@ fn act(
     }
 }
 
+/// The nearest walkable cell to this one that isn't taken, not far off.
+fn nearest_free(
+    level: &Level,
+    cell: (i64, i64),
+    taken: impl Fn((i64, i64)) -> bool,
+) -> Option<(i64, i64)> {
+    const FURTHEST: i64 = 8;
+    (1..=FURTHEST).find_map(|reach| {
+        (-reach..=reach).find_map(|dy| {
+            (-reach..=reach).find_map(|dx| {
+                let spot = (cell.0 + dx, cell.1 + dy);
+                let on_edge = dx.abs().max(dy.abs()) == reach;
+                (on_edge && level.is_walkable(spot.0, spot.1) && !taken(spot)).then_some(spot)
+            })
+        })
+    })
+}
+
 /// Takes a mob from one level to another. It stays where it is if there is
 /// nowhere to go: it can only be somewhere nobody has been since, going forward,
 /// as a level with its mobs away is kept.
-fn cross(populations: &mut Populations, crossing: Crossing, tick: u64) {
+fn cross(populations: &mut Populations, crossing: Crossing, tick: u64, players: &[Someone]) {
     let Crossing {
         mob,
         site,
@@ -587,8 +656,31 @@ fn cross(populations: &mut Populations, crossing: Crossing, tick: u64) {
             .get_mut(&(site, from_level))
             .expect("just used");
         from.mobs[index].doing = settle;
+        from.due.insert((tick + 1, mob));
         return;
     }
+    // Someone may be standing there: it arrives beside them, or if it can't, waits
+    // at the stairs and tries again.
+    let there = populations.0.get(&(site, to_level)).expect("just checked");
+    let occupied = |spot: (i64, i64)| {
+        there.mobs.iter().any(|one| one.position == spot)
+            || players
+                .iter()
+                .any(|one| one.level == Some((site, to_level)) && one.position == spot)
+    };
+    let landing = if occupied(arrives) {
+        nearest_free(&there.level, arrives, occupied)
+    } else {
+        Some(arrives)
+    };
+    let Some(landing) = landing else {
+        let from = populations
+            .0
+            .get_mut(&(site, from_level))
+            .expect("just used");
+        from.due.insert((tick + 1, mob));
+        return;
+    };
     let from = populations
         .0
         .get_mut(&(site, from_level))
@@ -612,7 +704,7 @@ fn cross(populations: &mut Populations, crossing: Crossing, tick: u64) {
             };
         }
     }
-    moving.position = arrives;
+    moving.position = landing;
     let back_home = to_level == home && moving.way_back.is_empty();
     let left_home = from_level == home && !going_back && moving.way_back.len() == 1;
     let ready = moving.energy.ready_at(tick + 1, moving.speed);
@@ -661,6 +753,8 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             }
         }
 
+        let mut taken: Taken = spots.iter().map(|spot| spot.position).collect();
+        taken.extend(mobs.iter().map(|mob| mob.position));
         let mut maps = Maps::default();
         while let Some(&(when, id)) = due.first() {
             if when > tick {
@@ -676,6 +770,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                     .iter()
                     .any(|spot| line_is_clear(level, spot.position, cell))
             };
+            let was_at = mob.position;
             let cost = act(
                 mob,
                 level,
@@ -684,8 +779,11 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                 tick,
                 seen,
                 &mut crossing,
+                &taken,
                 place,
             );
+            taken.remove(&was_at);
+            taken.insert(mob.position);
             mob.energy.spend(tick, mob.speed, cost);
             if let Some(crossing) = crossing {
                 crossings.push(crossing);
@@ -696,7 +794,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
         }
     }
     for crossing in crossings {
-        cross(&mut world.populations, crossing, tick);
+        cross(&mut world.populations, crossing, tick, &everyone);
     }
 }
 
@@ -733,6 +831,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
             .map(|visit| (visit.id(), visit.index()));
         let me = client.character.world_position;
         let my_kind = client.inventory.creature;
+        let detect = client.detect_monsters;
         let mut seen: Vec<EntityLook> = Vec::new();
         for someone in &everyone {
             let in_sight = someone.id != client.entity_id()
@@ -756,7 +855,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
             && let Some(population) = world.populations.0.get(&level)
         {
             for mob in &population.mobs {
-                if visit.can_see(mob.position.0, mob.position.1) {
+                if detect || visit.can_see(mob.position.0, mob.position.1) {
                     seen.push(EntityLook {
                         id: mob.id,
                         kind: mob.kind,
@@ -1297,5 +1396,88 @@ mod tests {
         }]);
         assert!(test.client.inventory.find(coin).is_some());
         assert_eq!(the_mob(&test).memory, Memory::default());
+    }
+
+    #[test]
+    fn mobs_never_step_onto_each_other_or_a_player() {
+        let mut test = beside_a_mob(CreatureKind::Kobold, 3);
+        // Two more running at the player from the same place.
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        let spot = population.mobs[0].position;
+        for (index, mob) in population.mobs.iter_mut().enumerate().take(3).skip(1) {
+            mob.kind = CreatureKind::Kobold;
+            mob.position = (spot.0, spot.1 + index as i64 - 1);
+            mob.home = mob.position;
+        }
+        for _ in 0..40 {
+            run(&mut test, 1);
+            let population = test.world.populations.0.values().next().unwrap();
+            let mut places: Vec<_> = population.mobs.iter().map(|mob| mob.position).collect();
+            places.push(player(&test));
+            let all = places.len();
+            places.sort();
+            places.dedup();
+            assert_eq!(places.len(), all, "two on one cell");
+        }
+    }
+
+    #[test]
+    fn a_player_swaps_with_someone_friendly_but_not_with_an_enemy() {
+        let east = (1, 0);
+        let mut test = beside_a_mob(CreatureKind::Horse, 1);
+        let from = player(&test);
+        test.steps(&[east]);
+        assert_eq!(player(&test), (from.0 + 1, from.1));
+        assert_eq!(the_mob(&test).position, from);
+
+        let mut test = beside_a_mob(CreatureKind::Kobold, 1);
+        let from = player(&test);
+        let answers = test.steps(&[east]);
+        assert_eq!(player(&test), from);
+        assert!(
+            answers
+                .iter()
+                .any(|answer| matches!(answer, ServerMessage::Position { .. }))
+        );
+        // Given enough, it stops being an enemy and moves over.
+        let mob = the_mob(&test).id;
+        let tester = test.client.character_id.unwrap();
+        let population = test.world.populations.0.values_mut().next().unwrap();
+        let event = Event::Gave(shared::item::ItemKind::Coin);
+        population.mobs[0].memory.remember(tester, event);
+        assert_eq!(the_mob(&test).id, mob);
+        test.steps(&[east]);
+        assert_eq!(player(&test), (from.0 + 1, from.1));
+    }
+
+    #[test]
+    fn a_mob_on_the_cell_someone_arrives_on_moves_aside() {
+        let mut test = beside_a_mob(CreatureKind::Kobold, 3);
+        let spot = the_mob(&test).position;
+        test.send(&[ClientMessage::DevTeleport {
+            x: spot.0,
+            y: spot.1,
+        }]);
+        assert_eq!(player(&test), spot);
+        assert_ne!(the_mob(&test).position, spot);
+    }
+
+    #[test]
+    fn detecting_shows_mobs_out_of_sight() {
+        let mut test = TestClient::new();
+        let answers = test.send(&[CASTLE]);
+        let everyone = mob_ids(&mut test);
+        assert!(seen_ids(&answers).len() < everyone.len());
+        let answers = test.send(&[ClientMessage::DevDetectMonsters(true)]);
+        let found = seen_ids(&answers);
+        assert!(!found.is_empty());
+        assert_eq!(test.client.seen_entities.len(), everyone.len());
+        // Turned off, those out of sight go.
+        let answers = test.send(&[ClientMessage::DevDetectMonsters(false)]);
+        assert!(
+            answers
+                .iter()
+                .any(|answer| matches!(answer, ServerMessage::EntityGone { .. }))
+        );
     }
 }

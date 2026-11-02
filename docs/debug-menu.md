@@ -15,6 +15,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Change Cell Mode | Yes | Toggles clicks in a site changing the cell clicked, from floor to wall to door to window and back, to try wall shapes. |
 | Change Creature | Yes | Opens a panel with a button for each kind of creature. Choosing one makes your character that kind: everything comes off into the new pockets, and whatever doesn't fit is lost. |
 | Cycle Temperature | Yes | Lowers the snow line all the way and raises it again, then turns itself off. Turning it off early puts the snow line straight back. |
+| Detect Monsters | Yes | Toggles being shown every mob on the current level, whether you can see it or not. |
 | Fields State | | Opens a panel stepping through the stages of the crops in view, on a level with fields. Changes only what is drawn. |
 | Forget Map | Yes | Forgets what your character knows of this level, or on the world map, of the world and every site. Not in towns. |
 | Forget Map (Server) | Yes | As Forget Map, and the server also forgets this site, or on the world map every site, so they are made again with the current generators. Works in towns. |

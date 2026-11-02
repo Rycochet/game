@@ -32,3 +32,4 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 - Jumps over liquid: `MapPosition` goes straight to the cell landed on and `SmoothPosition` glides there at travel speed. Until the jump is over, steps are ignored and a new `TravelTo` waits. A journey jumps on leaving the cell before the liquid and carries on from the edge of the landing cell; a keyboard jump ends on the landing cell's centre.
 - Systems use `Single<..., With<Player>>`, assuming one player entity. Multiplayer will need local vs remote players.
 - A new native window takes keyboard focus, so typing elsewhere at that moment can move the player.
+- Enemies (`common::Other` that is `Unfriendly`) can't be stepped onto and routes go round them, finding a new way if one comes between. Anyone else swaps places, which the server tells of as their move.

@@ -71,6 +71,11 @@ impl Visit {
             .expect("a site has a room")
     }
 
+    /// Where a step from here lands, if it can be taken.
+    pub(crate) fn landing(&self, step: Step) -> Option<(i64, i64)> {
+        step_on_level(&self.level.level, self.position, step)
+    }
+
     /// Which level of the site it is.
     pub(crate) fn index(&self) -> u32 {
         self.index
@@ -534,6 +539,7 @@ fn enter_level(
         Arrival::At(_) => level.arrive(Exit::WorldMap),
         Arrival::From(from) => level.arrive(from),
     };
+    world.move_mob_aside((new.id, index), position);
     let info = LevelInfo {
         kind: site.kind(),
         ruined: site.is_ruined(),

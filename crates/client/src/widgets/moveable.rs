@@ -33,6 +33,9 @@ const CLOSE_MARGIN: f32 = 4.0;
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct MoveablePanel {
     at: Vec2,
+    /// The window's size when last placed, to keep it in the same part of the
+    /// window when that changes.
+    window: Option<Vec2>,
 }
 
 /// What a click on this node does.
@@ -54,7 +57,7 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
     let root = commands
         .spawn((
             panel(),
-            MoveablePanel { at },
+            MoveablePanel { at, window: None },
             GlobalZIndex(FIRST_PANEL_Z),
             raised_border(),
         ))
@@ -139,13 +142,26 @@ fn on_screen(at: Vec2, size: Vec2, window: Vec2) -> Vec2 {
     at.min(window - size).max(Vec2::ZERO)
 }
 
+/// Where something at `at` belongs once the window has changed size: the same
+/// share of the way across it.
+fn in_new_window(at: Vec2, old: Vec2, new: Vec2) -> Vec2 {
+    at / old * new
+}
+
 /// Puts panels where they are wanted, as far as the window allows.
 pub(super) fn place_panels(
     window: Single<&Window, With<PrimaryWindow>>,
     mut panels: Query<(&mut MoveablePanel, &ComputedNode, &mut Node)>,
 ) {
     let window = Vec2::new(window.width(), window.height());
+    // Minimised: nowhere to be, so everything stays as it is for coming back.
+    if window.min_element() < 1.0 {
+        return;
+    }
     for (mut moveable, computed, mut node) in &mut panels {
+        if let Some(old) = moveable.window.replace(window) {
+            moveable.at = in_new_window(moveable.at, old, window);
+        }
         let size = computed.size() * computed.inverse_scale_factor;
         let at = on_screen(moveable.at, size, window);
         if moveable.at != at {
@@ -315,6 +331,15 @@ mod tests {
         assert_eq!(on_screen(Vec2::new(50.0, 50.0), big, window), Vec2::ZERO);
     }
 
+    #[test]
+    fn panels_keep_their_share_of_a_changed_window() {
+        let old = Vec2::new(800.0, 600.0);
+        let at = Vec2::new(400.0, 150.0);
+        let bigger = Vec2::new(1600.0, 1200.0);
+        assert_eq!(in_new_window(at, old, bigger), Vec2::new(800.0, 300.0));
+        assert_eq!(in_new_window(at, old, old), at);
+    }
+
     /// A node on the screen, as the layout would leave it.
     fn laid_out(corner: Vec2, size: Vec2, stack: u32) -> impl Bundle {
         (
@@ -350,6 +375,7 @@ mod tests {
             .spawn((
                 MoveablePanel {
                     at: Vec2::new(100.0, 100.0),
+                    window: None,
                 },
                 GlobalZIndex(FIRST_PANEL_Z),
             ))

@@ -92,18 +92,30 @@ impl DistanceMap {
         (cost != u32::MAX).then_some(cost)
     }
 
-    /// The legal step from here that leads to where it costs the least, if any is
-    /// nearer than here.
-    pub fn towards(&self, level: &Level, from: (i64, i64)) -> Option<Step> {
+    /// The legal step onto a `free` cell that leads to where it costs the least, if
+    /// any is nearer than here.
+    pub fn towards(
+        &self,
+        level: &Level,
+        from: (i64, i64),
+        free: impl Fn((i64, i64)) -> bool,
+    ) -> Option<Step> {
         let here = self.cost(from).unwrap_or(u32::MAX);
-        self.best_step(level, from, |cost| (cost < here).then_some(cost))
+        self.best_step(level, from, free, |cost| (cost < here).then_some(cost))
     }
 
-    /// The legal step from here that leads furthest from the goal, if any is
-    /// further than here. Somewhere the goal can't be reached from is furthest.
-    pub fn away(&self, level: &Level, from: (i64, i64)) -> Option<Step> {
+    /// The legal step onto a `free` cell that leads furthest from the goal, if any
+    /// is further than here. Somewhere the goal can't be reached from is furthest.
+    pub fn away(
+        &self,
+        level: &Level,
+        from: (i64, i64),
+        free: impl Fn((i64, i64)) -> bool,
+    ) -> Option<Step> {
         let here = self.cost(from).unwrap_or(u32::MAX);
-        self.best_step(level, from, |cost| (cost > here).then_some(u32::MAX - cost))
+        self.best_step(level, from, free, |cost| {
+            (cost > here).then_some(u32::MAX - cost)
+        })
     }
 
     /// The step whose landing scores lowest. A step that scores `None` isn't taken.
@@ -111,6 +123,7 @@ impl DistanceMap {
         &self,
         level: &Level,
         from: (i64, i64),
+        free: impl Fn((i64, i64)) -> bool,
         score: impl Fn(u32) -> Option<u32>,
     ) -> Option<Step> {
         DIRECTIONS
@@ -118,6 +131,9 @@ impl DistanceMap {
             .filter_map(|&(dx, dy)| {
                 let step = Step::new(dx, dy)?;
                 let to = step_on_level(level, from, step)?;
+                if !free(to) {
+                    return None;
+                }
                 Some((score(self.cost(to).unwrap_or(u32::MAX))?, step))
             })
             .min_by_key(|&(score, _)| score)
@@ -801,15 +817,26 @@ mod tests {
             // Going by it reaches the goal.
             let mut at = from;
             while at != goal {
-                let step = map.towards(&level, at).expect("nearer");
+                let step = map.towards(&level, at, |_| true).expect("nearer");
                 at = step_on_level(&level, at, step).expect("legal");
             }
             // Going away gets further.
-            if let Some(step) = map.away(&level, from) {
+            if let Some(step) = map.away(&level, from, |_| true) {
                 let to = step_on_level(&level, from, step).unwrap();
                 assert!(map.cost(to) > map.cost(from));
             }
         }
+        // A step isn't offered onto a cell that isn't free.
+        let blocked = step_on_level(
+            &level,
+            (0, 3),
+            map.towards(&level, (0, 3), |_| true).unwrap(),
+        );
+        let other = map.towards(&level, (0, 3), |cell| Some(cell) != blocked);
+        assert_ne!(
+            other.and_then(|step| step_on_level(&level, (0, 3), step)),
+            blocked
+        );
         // Walls can't be reached.
         assert_eq!(map.cost((-2, 0)), None);
         assert_eq!(map.cost((100, 100)), None);

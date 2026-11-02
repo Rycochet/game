@@ -50,6 +50,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ViewFacing>()
             .init_resource::<ClickMode>()
             .init_resource::<PlayerSpeed>()
+            .init_resource::<DetectMonsters>()
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
@@ -122,6 +123,15 @@ pub struct Other {
     pub kind: shared::creature::CreatureKind,
     pub feeling: shared::sheet::Feeling,
 }
+
+/// Debug: every mob on the level is shown, seen or not.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DetectMonsters(pub bool);
+
+/// The words on the Character panel saying what the character is like, which
+/// `character` fills in.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct SheetText;
 
 /// How much energy the player gains per tick (`shared::energy`), from what they are
 /// and what they carry. The server keeps its own.

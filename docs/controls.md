@@ -17,6 +17,8 @@ Everything can be done with a mouse or by touch, and on touch screens a tap is a
 
 How fast you go depends on your kind of creature, what you carry, and the ground: the heavier the load, the slower everything is.
 
+You can't walk onto an enemy. Walking onto anyone else swaps places with them.
+
 ## Camera
 
 | Action | Keyboard and mouse | Touch |
@@ -33,14 +35,13 @@ How fast you go depends on your kind of creature, what you carry, and the ground
 | Move and zoom the full map | Drag, mouse wheel | Drag, pinch |
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
 | Close what is on top | Esc, or click outside it | Tap outside it |
-| Open or close your character's details | C, or click the person at the bottom left | Tap the person |
-| Open or close your pockets and clothes | I, or click the bag at the bottom left | Tap the bag |
+| Open or close your character, clothes and pockets | C or I, or click the person at the bottom left | Tap the person |
 | Pick up an item, and put it down | Press on it, drag, let go | Slide a finger from it, let go |
 | Turn an item you are holding | Right-click | Tap with a second finger |
 | Open a bag | Double-click it | Double-tap it |
 | Put on or take off clothes | Drag them onto the clothes panel, or off it into a grid | The same |
 | Give something to someone near | Drag it onto their name in the Nearby panel | The same |
-| Destroy an item, and all that is in it | Drop it on the bin in your pockets | The same |
+| Throw an item away, with all that is in it | Drop it on the bin in your pockets. Take it back until you throw away something else, which destroys it | The same |
 | Open the [debug menu](debug-menu) | Backtick (`` ` ``), or click the warning button at the top left | Tap the warning button |
 
 Esc goes to whatever is on top first: a text box, a dropdown, the debug menu or the full map, and only then the system menu.

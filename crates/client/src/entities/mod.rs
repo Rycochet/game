@@ -6,13 +6,13 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::id::Id;
-use shared::protocol::ServerMessage;
+use shared::protocol::{ClientMessage, ServerMessage};
 use shared::sheet::Feeling;
 
 use crate::common::{
-    Attitude, GameView, Icon, MapPosition, Other, SmoothPosition, Token, TokenSize,
+    Attitude, DetectMonsters, GameView, Icon, MapPosition, Other, SmoothPosition, Token, TokenSize,
 };
-use crate::connection::FromServer;
+use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
 use crate::player::{Player, PlayerSystems};
 
@@ -76,6 +76,8 @@ fn read_server(
     mut from_server: MessageReader<FromServer>,
     mut others: ResMut<Others>,
     mut positions: Query<&mut MapPosition, With<Other>>,
+    detect: Res<DetectMonsters>,
+    mut to_server: MessageWriter<ToServer>,
     mut commands: Commands,
 ) {
     for FromServer(message) in from_server.read() {
@@ -115,6 +117,13 @@ fn read_server(
             }
             ServerMessage::EntityGone { id } => {
                 if let Some(entity) = others.0.remove(id) {
+                    commands.entity(entity).despawn();
+                }
+            }
+            // A new connection knows nothing of this.
+            ServerMessage::Welcome { .. } if detect.0 => {
+                to_server.write(ToServer(ClientMessage::DevDetectMonsters(true)));
+                for (_, entity) in others.0.drain() {
                     commands.entity(entity).despawn();
                 }
             }

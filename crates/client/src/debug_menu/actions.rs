@@ -13,6 +13,7 @@ pub enum DebugAction {
     ChangeCellMode,
     ChangeCreature,
     CycleTemperature,
+    DetectMonsters,
     FieldsState,
     ForgetMap,
     ForgetMapOnServer,
@@ -40,6 +41,7 @@ pub(super) struct Facts {
     pub has_herbs: bool,
     pub walking: bool,
     pub cycling: bool,
+    pub detecting: bool,
     pub teleporting: bool,
     pub changing_cells: bool,
     pub showing_info: bool,
@@ -52,11 +54,12 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 20] = [
+    pub(super) const ALL: [Self; 21] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
         Self::CycleTemperature,
+        Self::DetectMonsters,
         Self::FieldsState,
         Self::ForgetMap,
         Self::ForgetMapOnServer,
@@ -81,6 +84,7 @@ impl DebugAction {
             Self::ChangeCellMode => "Change Cell Mode",
             Self::ChangeCreature => "Change Creature",
             Self::CycleTemperature => "Cycle Temperature",
+            Self::DetectMonsters => "Detect Monsters",
             Self::FieldsState => "Fields State",
             Self::ForgetMap => "Forget Map",
             Self::ForgetMapOnServer => "Forget Map (Server)",
@@ -142,6 +146,7 @@ impl DebugAction {
             Self::ChangeCellMode
                 | Self::ChangeCreature
                 | Self::CycleTemperature
+                | Self::DetectMonsters
                 | Self::ForgetMap
                 | Self::ForgetMapOnServer
                 | Self::GeneratePoi
@@ -160,6 +165,7 @@ impl DebugAction {
             Self::AutoWalk => Some(facts.walking),
             Self::ChangeCellMode => Some(facts.changing_cells),
             Self::CycleTemperature => Some(facts.cycling),
+            Self::DetectMonsters => Some(facts.detecting),
             Self::ShowDebugInfo => Some(facts.showing_info),
             Self::SunsAndMoons => Some(facts.suns_and_moons_open),
             Self::WorldTime => Some(facts.world_time_open),
@@ -211,6 +217,7 @@ mod tests {
             has_herbs: false,
             walking: false,
             cycling: false,
+            detecting: false,
             teleporting: false,
             changing_cells: false,
             showing_info: true,

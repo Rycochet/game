@@ -1,23 +1,23 @@
 # client: character
 
-The character panel: what the character is like, from `C` or the person button at the bottom left. Words only, for now. Native and web.
+What the character is like: the left of the Character panel, which `inventory` opens, in words for now. Native and web.
 
 ## Files
 
-- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested), the person icon (drawn in code).
+- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested).
 
 ## Public API
 
 - `CharacterPlugin`.
-- `CharacterSheet(Sheet)` (resource): what the server last said. `OpenCharacterPanel` (message): opens or closes it, as `C` does (`dev_tools`).
+- `CharacterSheet(Sheet)` (resource): what the server last said.
 
 ## Depends on
 
-- `common` (`GameView`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
+- `common` (`SheetText`, `PlayerSpeed`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
 
 ## Used by
 
-- `dev_tools`.
+- Nothing directly.
 
 ## Notes
 
