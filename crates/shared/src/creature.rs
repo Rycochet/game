@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::sheet::{Ability, Skill, Stats, Trait};
+use crate::sheet::{Ability, Feeling, Reaction, Skill, Stats, Trait};
 
 /// Clothing layers, from the skin out. A layer covers those under it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -212,6 +212,30 @@ impl CreatureKind {
         Self::Kobold,
     ];
 
+    /// How this kind feels about another, to begin with. A kind likes its own.
+    pub fn feeling_about(self, other: Self) -> Feeling {
+        use CreatureKind::{Giant, Kobold};
+        match (self, other) {
+            (one, two) if one == two => Feeling::Friendly,
+            (Giant, Kobold) | (Kobold, _) => Feeling::Unfriendly,
+            _ => Feeling::Neutral,
+        }
+    }
+
+    /// What this kind does about something it feels this way about.
+    pub fn reaction(self, feeling: Feeling) -> Reaction {
+        use CreatureKind::{Chicken, Horse};
+        match (self, feeling) {
+            (_, Feeling::None) => Reaction::Ignore,
+            (Chicken | Horse, Feeling::Friendly) => Reaction::Ignore,
+            (_, Feeling::Friendly) => Reaction::Approach,
+            (Chicken, _) => Reaction::Flee,
+            (Horse, Feeling::Unfriendly) => Reaction::Flee,
+            (_, Feeling::Unfriendly) => Reaction::Attack,
+            (_, Feeling::Neutral) => Reaction::Ignore,
+        }
+    }
+
     pub const fn def(self) -> CreatureDef {
         use Ability::{Flutter, Kick, NightVision, Trample};
         use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
@@ -331,6 +355,18 @@ mod tests {
         assert_eq!(Size::Tiny.stepped(-3), Size::Tiny);
         assert_eq!(Size::Huge.stepped(5), Size::Giant);
         assert_eq!(Size::Tiny.apart(Size::Large), 3);
+    }
+
+    #[test]
+    fn kinds_like_their_own_and_react_as_they_are() {
+        use CreatureKind::{Chicken, Human, Kobold};
+        assert_eq!(Kobold.feeling_about(Kobold), Feeling::Friendly);
+        assert_eq!(Kobold.feeling_about(Human), Feeling::Unfriendly);
+        assert_eq!(Chicken.feeling_about(Human), Feeling::Neutral);
+        assert_eq!(Kobold.reaction(Feeling::Unfriendly), Reaction::Attack);
+        assert_eq!(Kobold.reaction(Feeling::Friendly), Reaction::Approach);
+        assert_eq!(Chicken.reaction(Feeling::Neutral), Reaction::Flee);
+        assert_eq!(Human.reaction(Feeling::Neutral), Reaction::Ignore);
     }
 
     #[test]

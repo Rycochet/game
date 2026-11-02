@@ -525,7 +525,7 @@ fn enter_level(
         entering_site,
     };
     let view = Sight::new(&level.level);
-    world.populate(new.id, new.poi, index, &level.level);
+    world.populate(new.id, new.poi, index, &level);
     let looked_from = Sight::new(&level.level);
     let loaded = Sight::new(&level.level);
     client.changed_map();

@@ -117,6 +117,7 @@ impl Plugin for ServerPlugin {
                 (
                     advance_action_clock,
                     connections::handle_messages,
+                    connections::run_mobs,
                     connections::sync_entities,
                     connections::tell_the_time,
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),

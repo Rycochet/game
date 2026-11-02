@@ -7,8 +7,9 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::protocol::ServerMessage;
+use shared::sheet::Feeling;
 
-use crate::common::{GameView, Icon, MapPosition, SmoothPosition, Token, TokenSize};
+use crate::common::{Attitude, GameView, Icon, MapPosition, SmoothPosition, Token, TokenSize};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 use crate::player::{Player, PlayerSystems};
@@ -42,6 +43,16 @@ fn picture(kind: CreatureKind) -> &'static str {
         CreatureKind::Giant => "monsters/gianthill.png",
         CreatureKind::Horse => "monsters/horse01.png",
         CreatureKind::Kobold => "monsters/koboldfighter.png",
+    }
+}
+
+/// The colour of a token, from how what it stands for feels about the player.
+fn attitude(feeling: Feeling) -> Attitude {
+    match feeling {
+        Feeling::None => Attitude::None,
+        Feeling::Friendly => Attitude::Friendly,
+        Feeling::Neutral => Attitude::Neutral,
+        Feeling::Unfriendly => Attitude::Unfriendly,
     }
 }
 
@@ -82,6 +93,7 @@ fn read_server(
                         SmoothPosition::from(at),
                         Token {
                             size: picture_size(look.kind),
+                            attitude: attitude(look.feeling),
                             ..default()
                         },
                         Icon(picture(look.kind).into()),

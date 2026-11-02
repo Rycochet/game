@@ -166,6 +166,11 @@ impl Client {
         }
     }
 
+    /// Whether it is being disconnected.
+    pub(crate) fn is_gone(&self) -> bool {
+        self.gone
+    }
+
     /// Where the player is on the world map (at the poi, in a site).
     pub(crate) fn world_position(&self) -> (i64, i64) {
         self.character.world_position
@@ -412,6 +417,11 @@ pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResM
         client.save(&mut world);
     }
     world.save_sites();
+}
+
+/// Every tick: mobs do what they are doing.
+pub(crate) fn run_mobs(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
+    crate::entities::run_mobs(&mut connections.clients, &mut world);
 }
 
 /// Every tick: tells everyone who has come into or gone out of their sight, or
