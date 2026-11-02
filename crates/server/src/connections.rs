@@ -413,6 +413,7 @@ fn join(
 
 /// Saves every character and site that has changed.
 pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
+    world.save_mobs();
     for client in &mut connections.clients {
         client.save(&mut world);
     }

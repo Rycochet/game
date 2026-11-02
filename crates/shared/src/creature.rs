@@ -95,6 +95,8 @@ pub struct CreatureDef {
     pub body: &'static [BodyPart],
     /// How fast it goes for its kind, as a percentage of ordinary.
     pub speed: u32,
+    /// Whether it can go up and down stairs, so as to follow someone.
+    pub uses_stairs: bool,
     /// Whether someone can choose to play one.
     pub playable: bool,
     pub stats: Stats,
@@ -255,6 +257,7 @@ impl CreatureKind {
                 pockets: (6, 5),
                 body: &CENTAUR,
                 speed: 140,
+                uses_stairs: false,
                 playable: true,
                 stats: stats(14, 10, 9, 13),
                 skills: &[(Running, 4), (Foraging, 1)],
@@ -267,6 +270,7 @@ impl CreatureKind {
                 pockets: (2, 2),
                 body: &CHICKEN,
                 speed: 70,
+                uses_stairs: false,
                 playable: false,
                 stats: stats(1, 8, 1, 2),
                 skills: &[(Foraging, 3)],
@@ -276,6 +280,7 @@ impl CreatureKind {
             Self::Giant => CreatureDef {
                 name: "Giant",
                 speed: 90,
+                uses_stairs: true,
                 size: Size::Giant,
                 pockets: (8, 6),
                 body: &TEN_FINGERS,
@@ -291,6 +296,7 @@ impl CreatureKind {
                 pockets: (4, 3),
                 body: &HORSE,
                 speed: 150,
+                uses_stairs: false,
                 playable: false,
                 stats: stats(16, 10, 3, 14),
                 skills: &[(Running, 5), (Swimming, 1)],
@@ -300,6 +306,7 @@ impl CreatureKind {
             Self::Human => CreatureDef {
                 name: "Human",
                 speed: 100,
+                uses_stairs: true,
                 size: Size::Medium,
                 pockets: (6, 4),
                 body: &TEN_FINGERS,
@@ -315,6 +322,7 @@ impl CreatureKind {
                 pockets: (4, 3),
                 body: &EIGHT_FINGERS,
                 speed: 100,
+                uses_stairs: true,
                 playable: true,
                 stats: stats(7, 13, 9, 8),
                 skills: &[(Stealth, 3), (Climbing, 2)],

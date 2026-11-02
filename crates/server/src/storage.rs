@@ -317,6 +317,16 @@ pub struct LevelSave {
     /// id while it lives, so what it remembers stays with it.
     #[serde(default)]
     pub mobs: BTreeMap<u32, Id>,
+    /// Mobs that weren't at rest when last saved, by number, to carry on.
+    #[serde(default)]
+    pub unsettled: BTreeMap<u32, SavedMob>,
+}
+
+/// What a mob was doing, for carrying on after the server has been off.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SavedMob {
+    pub position: (i64, i64),
+    pub doing: crate::entities::Doing,
 }
 
 /// What players have done with a town's building.
@@ -619,6 +629,7 @@ pub(crate) mod tests {
                 LevelSave {
                     last_visit: 99,
                     mobs: BTreeMap::new(),
+                    unsettled: BTreeMap::new(),
                     changes: BTreeMap::from([((1, 2), Cell::Floor)]),
                     buildings: BTreeMap::from([(
                         4,
