@@ -255,6 +255,7 @@ impl Plugin for DevToolsPlugin {
                                 size: None,
                                 magical: false,
                                 quality: Default::default(),
+                                set: false,
                             }));
                         }
                     } else if *step == 1 && time.elapsed_secs() > 2.0 {

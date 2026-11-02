@@ -761,8 +761,9 @@ pub(crate) fn answer(
             size,
             magical,
             quality,
+            set,
         } => {
-            let new = made_for(
+            let mut new = made_for(
                 &client.inventory,
                 kind,
                 size,
@@ -770,6 +771,7 @@ pub(crate) fn answer(
                 quality,
                 world.made_now(),
             );
+            new.set = set && new.quality.is_some();
             match client.inventory.give(new) {
                 Ok(()) => client.unsaved = true,
                 Err(item) => info!("No room for a new {:?}", item.kind),
@@ -1091,6 +1093,7 @@ pub(crate) mod tests {
             size: None,
             magical: false,
             quality: Quality::Rare,
+            set: false,
         }
     }
 
@@ -1226,6 +1229,26 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn only_things_with_quality_can_be_part_of_a_set() {
+        let mut test = TestClient::new();
+        let give = |kind| ClientMessage::DevGiveItem {
+            kind,
+            size: None,
+            magical: false,
+            quality: Quality::Poor,
+            set: true,
+        };
+        test.send(&[give(ItemKind::Sword), give(ItemKind::Apple)]);
+        let set_of = |kind| {
+            let pockets = test.client.inventory.pockets.iter();
+            let mut pockets = pockets.filter(|placed| placed.item.kind == kind);
+            pockets.next_back().unwrap().item.set
+        };
+        assert!(set_of(ItemKind::Sword));
+        assert!(!set_of(ItemKind::Apple));
+    }
+
+    #[test]
     fn artifacts_are_always_named() {
         let mut test = TestClient::new();
         let artifact = ClientMessage::DevGiveItem {
@@ -1233,6 +1256,7 @@ pub(crate) mod tests {
             size: None,
             magical: false,
             quality: Quality::Artifact,
+            set: false,
         };
         let carried = inventory(&test.send(&[artifact]));
         let name = carried.pockets[0].item.name();
@@ -1262,6 +1286,7 @@ pub(crate) mod tests {
             size: Some(shared::creature::Size::Large),
             magical: true,
             quality: Quality::Epic,
+            set: false,
         };
         let made = inventory(&test.send(&[large]))
             .pockets

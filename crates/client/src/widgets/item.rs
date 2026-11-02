@@ -4,8 +4,9 @@
 
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
-use shared::item::{ItemKind, Quality, Shape};
+use shared::item::{Item, ItemKind, Quality, Shape};
 
+use super::set_edge::{SetEdge, set_edge};
 use super::{Pressable, spawn_tooltip};
 use crate::common::{ITEM_NAME_BACKGROUND, NO_QUALITY_NAME, PointerPosition, quality_colour};
 
@@ -25,6 +26,8 @@ pub const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
 pub const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
 
 const CELL_BORDER: f32 = 1.0;
+/// How thick the metal edge of a set item's name is.
+const NAME_EDGE: f32 = 3.0;
 /// How far from the pointer an item's name goes.
 const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);
 /// How thick an edge showing quality is, to be seen beside the kind's colour.
@@ -42,6 +45,8 @@ pub struct ItemTooltip(pub Option<ItemTip>);
 pub struct ItemTip {
     pub words: String,
     pub quality: Option<Quality>,
+    /// Gets a metal edge.
+    pub set: bool,
     /// Where its top left goes.
     pub at: Vec2,
 }
@@ -52,6 +57,25 @@ pub struct ItemTip {
 pub struct ItemName {
     pub words: String,
     pub quality: Option<Quality>,
+    pub set: bool,
+}
+
+/// What an item looks like.
+#[derive(Clone, Copy, Debug)]
+pub struct ItemLook {
+    pub kind: ItemKind,
+    pub quality: Option<Quality>,
+    pub set: bool,
+}
+
+impl ItemLook {
+    pub fn of(item: &Item) -> Self {
+        Self {
+            kind: item.kind,
+            quality: item.quality,
+            set: item.set,
+        }
+    }
 }
 
 #[derive(Component)]
@@ -59,6 +83,10 @@ pub(super) struct NameBox;
 
 #[derive(Component)]
 pub(super) struct NameText;
+
+/// The metal edge of the box, for a set item's name.
+#[derive(Component)]
+pub(super) struct NameEdge;
 
 /// What a kind of item looks like until it has a picture: its colour.
 pub fn item_colour(kind: ItemKind) -> Color {
@@ -173,13 +201,13 @@ pub fn spawn_item_grid<L: Bundle + Clone>(
 /// its place in the shape. `pressable` makes presses on the cells `ButtonPressed`.
 pub fn spawn_item_cells<B: Bundle>(
     parent: &mut ChildSpawnerCommands,
-    kind: ItemKind,
-    quality: Option<Quality>,
+    look: ItemLook,
     shape: Shape,
     corner: (f32, f32),
     pressable: bool,
     on_each: impl Fn(u8, u8) -> B,
 ) {
+    let ItemLook { kind, quality, set } = look;
     let mut first = true;
     for (x, y) in shape.cells() {
         let mut node = parent.spawn((
@@ -203,6 +231,10 @@ pub fn spawn_item_cells<B: Bundle>(
                 on_each(x, y),
             ));
         }
+        if set {
+            let width = item_edge_width(quality);
+            node.with_child(set_edge(quality, width, width));
+        }
     }
 }
 
@@ -218,7 +250,10 @@ pub(super) fn spawn_name_box(mut commands: Commands) {
             GlobalZIndex(HELD_ITEM_Z + 1),
             Visibility::Hidden,
         ))
-        .with_children(|holder| spawn_tooltip(holder, NameText, ""));
+        .with_children(|holder| {
+            spawn_tooltip(holder, NameText, "");
+            holder.spawn((NameEdge, set_edge(None, NAME_EDGE, 0.0), Visibility::Hidden));
+        });
 }
 
 /// Asks for the name of the `ItemName` in front at the pointer, unless a name has
@@ -252,16 +287,19 @@ pub(super) fn name_item_at_pointer(
         tooltip.0 = Some(ItemTip {
             words: name.words.clone(),
             quality: name.quality,
+            set: name.set,
             at: at + TOOLTIP_OFFSET,
         });
     }
 }
 
+#[allow(clippy::type_complexity)]
 /// Shows the name asked for this frame, on a dark box so every colour can be read.
 pub(super) fn show_item_tooltip(
     mut tooltip: ResMut<ItemTooltip>,
     name_box: Single<(&mut Node, &mut Visibility), With<NameBox>>,
     text: Single<(&mut Text, &mut TextColor, &ChildOf), With<NameText>>,
+    edge: Single<(&mut SetEdge, &mut Visibility), (With<NameEdge>, Without<NameBox>)>,
     mut backgrounds: Query<&mut BackgroundColor>,
 ) {
     let (mut node, mut visibility) = name_box.into_inner();
@@ -270,6 +308,13 @@ pub(super) fn show_item_tooltip(
         return;
     };
     visibility.set_if_neq(Visibility::Inherited);
+    let (mut edge, mut edge_visible) = edge.into_inner();
+    edge.set_if_neq(SetEdge(tip.quality));
+    edge_visible.set_if_neq(if tip.set {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    });
     let (mut text, mut colour, parent) = text.into_inner();
     if text.0 != tip.words {
         text.0 = tip.words;

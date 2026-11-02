@@ -147,6 +147,8 @@ fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
     content.commands().entity(row).insert(GiveSizes);
     let row = spawn_tabs(content, &["Plain", "Magical"], 0, FONT);
     content.commands().entity(row).insert(GiveMagic);
+    let row = spawn_tabs(content, &["Alone", "Set"], 0, FONT);
+    content.commands().entity(row).insert(GiveSet);
     let qualities: Vec<String> = Quality::ALL.iter().map(|q| format!("{q:?}")).collect();
     let qualities: Vec<&str> = qualities.iter().map(String::as_str).collect();
     let common = Quality::ALL
@@ -195,6 +197,10 @@ pub(super) struct GiveSizes;
 #[derive(Component)]
 pub(super) struct GiveMagic;
 
+/// The tabs choosing whether new items are part of a set.
+#[derive(Component)]
+pub(super) struct GiveSet;
+
 /// The tabs choosing how good new items are.
 #[derive(Component)]
 pub(super) struct GiveQualities;
@@ -206,6 +212,7 @@ pub(super) struct GiveForm {
     size: Option<Size>,
     magical: bool,
     quality: Quality,
+    set: bool,
 }
 
 /// Follows Give Item's tabs.
@@ -213,6 +220,7 @@ pub(super) fn choose_give_options(
     mut chosen: MessageReader<TabChosen>,
     sizes: Query<(), With<GiveSizes>>,
     magic: Query<(), With<GiveMagic>>,
+    set: Query<(), With<GiveSet>>,
     qualities: Query<(), With<GiveQualities>>,
     mut form: ResMut<GiveForm>,
 ) {
@@ -222,6 +230,9 @@ pub(super) fn choose_give_options(
         }
         if magic.contains(row) {
             form.magical = index == 1;
+        }
+        if set.contains(row) {
+            form.set = index == 1;
         }
         if qualities.contains(row) {
             form.quality = Quality::ALL[index];
@@ -243,6 +254,7 @@ pub(super) fn press_give_buttons(
                 size: form.size,
                 magical: form.magical,
                 quality: form.quality,
+                set: form.set,
             }));
         }
     }

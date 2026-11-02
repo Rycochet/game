@@ -116,6 +116,8 @@ pub enum ClientMessage {
         magical: bool,
         /// Ignored for kinds without quality.
         quality: Quality,
+        /// Part of a set, if it has quality.
+        set: bool,
     },
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),
@@ -450,6 +452,7 @@ mod tests {
                 size: Some(Size::Large),
                 magical: true,
                 quality: Quality::Epic,
+                set: false,
             },
             ClientMessage::OpenTrade {
                 with: Id::for_test(3),

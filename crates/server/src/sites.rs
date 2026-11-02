@@ -1123,6 +1123,7 @@ mod tests {
             size: None,
             magical: false,
             quality: Quality::Common,
+            set: false,
         };
         test.send(&[coin]);
         let item = test.client.inventory.pockets.last().unwrap().item.id;
