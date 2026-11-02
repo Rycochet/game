@@ -338,7 +338,7 @@ impl ServerWorld {
 }
 
 /// A new mob's belongings: it wears what it can, and keeps the rest in its
-/// pockets while there is room.
+/// pockets while there is room. Only what is worn or a blade is made to its size.
 fn dressed(kind: CreatureKind, gear: &[(ItemKind, Option<Quality>)], made_at: MadeAt) -> Inventory {
     let mut carrying = Inventory {
         creature: kind,
@@ -362,10 +362,11 @@ fn dressed(kind: CreatureKind, gear: &[(ItemKind, Option<Quality>)], made_at: Ma
                 continue;
             }
         }
-        let id = new.id;
-        if carrying.give(new).is_ok() {
-            // Anything that can't be worn stays in the pockets.
-            let _ = carrying.wear(id);
+        // Clothes go straight on, as they may be bigger than its pockets.
+        if carrying.check_wear_new(&new).is_ok() {
+            let _ = carrying.wear_new(new);
+        } else {
+            let _ = carrying.give(new);
         }
     }
     carrying
@@ -1050,6 +1051,25 @@ mod tests {
             }
             assert_eq!(armed, tries, "{kind:?} should always find something");
         }
+    }
+
+    #[test]
+    fn mobs_wear_clothes_made_for_them_and_carry_ordinary_things() {
+        use shared::creature::Size;
+        let made_at = MadeAt {
+            world: WorldSeed::new(1).id(),
+            minute: 0,
+        };
+        let gear = [
+            (ItemKind::Trousers, Some(Quality::Common)),
+            (ItemKind::Stone, None),
+        ];
+        // A beggar's trousers are bigger than its pockets.
+        let beggar = dressed(CreatureKind::Beggar, &gear, made_at);
+        assert_eq!(beggar.worn[0].kind, ItemKind::Trousers);
+        let giant = dressed(CreatureKind::Giant, &gear, made_at);
+        assert_eq!(giant.worn[0].made.size, Size::Giant);
+        assert_eq!(giant.pockets[0].item.made.size, Size::Medium);
     }
 
     fn seen_ids(answers: &[ServerMessage]) -> BTreeSet<Id> {

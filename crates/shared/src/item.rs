@@ -285,6 +285,12 @@ impl ItemKind {
         Self::Trousers,
     ];
 
+    /// Whether it can be made at other sizes: what is worn, gems and blades. Everything
+    /// else is always `Medium`, whoever carries it.
+    pub const fn comes_in_sizes(self) -> bool {
+        self.def().wear.is_some() || matches!(self, Self::Gem) || self.blade_family().is_some()
+    }
+
     /// The family of weapon this makes, for those rolled as blades.
     pub const fn blade_family(self) -> Option<Family> {
         match self {

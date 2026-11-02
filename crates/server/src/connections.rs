@@ -902,6 +902,7 @@ pub(crate) fn answer(
 }
 
 /// A new item of this kind, made for this size or the wearer's, and their fingers.
+/// Kinds that don't come in sizes are `Medium`, whatever is asked for.
 pub(crate) fn made_for(
     inventory: &Inventory,
     kind: ItemKind,
@@ -911,19 +912,20 @@ pub(crate) fn made_for(
     made_at: MadeAt,
 ) -> Item {
     let body = inventory.creature.def();
+    let size = size.filter(|_| kind.comes_in_sizes());
+    // What is worn is made to fit the wearer unless told otherwise.
+    let size = size.or(kind.def().wear.map(|_| body.size));
     let id = crate::ids::new_id();
     let quality = kind.def().has_quality.then_some(quality);
     let name = (quality == Some(Quality::Artifact))
         .then(|| shared::item::artifact_name(&mut id.seed().rng(), kind));
     let mut item = Item {
-        made: Made::for_body(kind, size.unwrap_or(body.size), body.fingers(), magical),
+        made: Made::for_body(kind, size.unwrap_or_default(), body.fingers(), magical),
         quality,
         made_at: Some(made_at),
         name,
         ..Item::new(id, kind)
     };
-    // What is worn is made to fit the wearer unless told otherwise.
-    let size = size.or(kind.def().wear.map(|_| body.size));
     give_form(&mut item, size, &mut crate::ids::new_id);
     item
 }
@@ -1416,21 +1418,23 @@ pub(crate) mod tests {
         let gloves = inventory(&answers).pockets.last().unwrap().item.made;
         assert_eq!(gloves.size, shared::creature::Size::Giant);
         assert_eq!(gloves.fingers, Some(10));
-        let large = ClientMessage::DevGiveItem {
-            kind: ItemKind::Coin,
+        let large = |kind| ClientMessage::DevGiveItem {
+            kind,
             size: Some(shared::creature::Size::Large),
             magical: true,
             quality: Quality::Epic,
             set: false,
         };
-        let made = inventory(&test.send(&[large]))
-            .pockets
-            .last()
-            .unwrap()
-            .item
-            .made;
-        assert_eq!(made.size, shared::creature::Size::Large);
-        assert!(made.magical);
+        let mut made = |kind| {
+            let answers = test.send(&[large(kind)]);
+            inventory(&answers).pockets.last().unwrap().item.made
+        };
+        let hat = made(ItemKind::Hat);
+        assert_eq!(hat.size, shared::creature::Size::Large);
+        assert!(hat.magical);
+        // Not something that comes in sizes, whoever asks or carries it.
+        let coin = made(ItemKind::Coin);
+        assert_eq!(coin.size, shared::creature::Size::Medium);
     }
 
     #[test]
