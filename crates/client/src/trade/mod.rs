@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
+use shared::creature::Size;
 use shared::id::Id;
 use shared::item::{Item, ItemKind, Placed, Rotation, Shape};
 use shared::protocol::{ClientMessage, ServerMessage};
@@ -236,7 +237,7 @@ fn note_gifts(
             .iter_mut()
             .find(|placed| placed.item.id == gift.item);
         if let Some(placed) = moved {
-            let shape = placed.item.kind.def().shape.turned(gift.rotation);
+            let shape = placed.item.shape().turned(gift.rotation);
             (placed.x, placed.y) = landing(&rest, shape, wanted);
             placed.rotation = gift.rotation;
             trade.changed = true;
@@ -357,7 +358,7 @@ fn draw_grid(commands: &mut Commands, trade: &OpenTrade, without: Option<Id>) {
 
 fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, with: Id) {
     let name = ItemName {
-        words: placed.item.name().to_owned(),
+        words: placed.item.name(),
         quality: placed.item.quality,
         set: placed.item.set,
     };
@@ -404,7 +405,7 @@ fn show_gift_aim(
         let item = theirs
             .map(|placed| &placed.item)
             .or(carried.0.find(gift.item))?;
-        let shape = item.kind.def().shape.turned(gift.rotation);
+        let shape = item.shape().turned(gift.rotation);
         let wanted = cell_in_grid(gift.corner, node, transform);
         let rest = others(&trade.stock, gift.item);
         Some((gift.to, landing(&rest, shape, wanted), shape))
@@ -427,13 +428,16 @@ fn show_gift_aim(
     }
 }
 
-/// The longest side of any kind of item: what the empty rows must have room for,
-/// however it is turned.
+/// The longest side of any kind of item at its largest: what the empty rows must
+/// have room for, however it is turned.
 fn longest_side() -> u8 {
-    let sides = ItemKind::ALL
+    let shapes = ItemKind::ALL
         .iter()
-        .flat_map(|kind| kind.def().shape.cells().flat_map(|(x, y)| [x + 1, y + 1]));
-    sides.max().unwrap_or(1)
+        .map(|kind| kind.def().shape.scaled(Size::Giant));
+    shapes
+        .flat_map(|shape| [shape.width, shape.height])
+        .max()
+        .unwrap_or(1)
 }
 
 /// How many rows a grid has: all it holds, and room for the largest thing below.
@@ -500,7 +504,7 @@ fn restocked(old: &[Placed], items: &[Item], gifts: &[Gift]) -> Vec<Placed> {
         }
         let gift = gifts.iter().find(|gift| gift.item == item.id);
         let rotation = gift.map_or(Rotation::None, |gift| gift.rotation);
-        let shape = item.kind.def().shape.turned(rotation);
+        let shape = item.shape().turned(rotation);
         let (x, y) = match gift {
             Some(gift) => landing(&stock, shape, gift.wanted),
             None => first_place(&stock, shape),
