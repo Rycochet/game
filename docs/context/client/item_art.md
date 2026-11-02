@@ -37,4 +37,4 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - A picture is square, and is stretched to fit a shape that isn't: only square kinds have models so far.
 - Size isn't in `Look`: a picture fills what the item takes up, at any size. Only sizes against each other show: a setting against its ring, a gem against its setting, which is how a gem too big looks it.
 - Metal is half metallic rather than fully: fully metal shows only what it reflects, and nothing is round it to reflect. Patterns are cheap: twisted turns the cross-section on its way round, hammered tilts each small face's normal, engraved darkens bands of faces.
-- Pictures are kept in memory for good, for now. Keeping them on disk is planned (`decisions.md`, 2026-11-02, generated items).
+- Pictures are kept in memory for good, about 16 KB each at one cell, and drawn again next time the game starts. Keeping them on disk was measured and not done: see `optimisations.md`.

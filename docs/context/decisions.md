@@ -532,11 +532,11 @@ Owner's design: each kind has one generic model drawn differently by values that
 
 - **Values are saved, not worked out again.** Material will affect value, so the server rolls an item's form once (seeded from its `Id`) and saves it (`Item.form`). Changing the rolls never changes items already made. Claude's choice, against working it out from the seed each time as first discussed.
 - **Rolls are ordered choices.** Each sees those before it, and can lean on one by weights or limit it with a weight of 0 (owner). Quality stays the first roll, as shops need that order, so better rolls lean towards finer materials (Claude's choice): a gold ring is still more often a good one, and making an item can roll the other way when that is built.
-- **Pictures are kept by what they show** (`item_art::Look`), not by seed or id, so a change to what can be seen makes a new picture and others keep theirs. On disk, planned, the name will hash that with a drawing version; file dates only say what to clear out, as they can't say a picture is stale (Claude's choice, against the owner's first idea).
+- **Pictures are kept by what they show** (`item_art::Look`), not by seed or id, so a change to what can be seen makes a new picture and others keep theirs. They are kept in memory only: a disk cache was planned, and dropped after measuring (`optimisations.md`), as drawing is quick enough.
 - **Gems are real items** set in rings' settings (planned), so they can be taken out, replaced or added to, and a setting can be empty (owner). Cuts are round, oval, emerald, cushion, princess, pear, trillion and uncut (owner); only clear stones for now, as opaque ones are usually cut as domes, which isn't one of these. Uncut gems won't go in settings (Claude's choice).
 - **Size stays out of pictures:** see the size entry above.
 
-Order: size rule (done), gems (done), ring values, ring model, pictures in grids, disk cache (dropped if measuring shows no gain).
+All built: size rule, gems, ring values, ring model, pictures in grids.
 
 ## 2026-11-02: Gems set in rings are whole items
 
