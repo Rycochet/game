@@ -277,8 +277,8 @@ impl OpenGrids {
 /// A grid, and under it the words on its weight and, for the pockets, the bin.
 fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, height: u8) {
     spawn_item_grid(parent, width, height, GridNode { holder }, |grid| {
-        grid.spawn((ItemLayer { holder }, covering()));
-        grid.spawn((AimLayer { holder }, covering()));
+        grid.spawn((ItemLayer { holder }, covering(), Floating));
+        grid.spawn((AimLayer { holder }, covering(), Floating));
     });
     parent
         .spawn(Node {

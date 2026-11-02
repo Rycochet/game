@@ -89,7 +89,7 @@ enum Action {
     Step { number: u32, step: Step },
     EnterSite { chunk: ChunkPos },
     UseExit,
-    OpenShop { building: u16 },
+    OpenTrade { with: Id },
 }
 
 /// How far a client has got, from connecting to playing.
@@ -339,7 +339,7 @@ fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             }
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
             Action::UseExit => (sites::use_exit(client, world), 0),
-            Action::OpenShop { building } => (sites::open_shop(client, world, building), 0),
+            Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
         };
         if !stayed {
             return false;
@@ -626,8 +626,8 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::UseExit);
             true
         }
-        ClientMessage::OpenShop { building } => {
-            client.waiting.push_back(Action::OpenShop { building });
+        ClientMessage::OpenTrade { with } => {
+            client.waiting.push_back(Action::OpenTrade { with });
             true
         }
         ClientMessage::SetPaused(_) if !options.pausable => {

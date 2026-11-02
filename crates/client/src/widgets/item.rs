@@ -3,10 +3,11 @@
 //! with the module showing them.
 
 use bevy::prelude::*;
+use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 use shared::item::{ItemKind, Quality, Shape};
 
 use super::{Pressable, spawn_tooltip};
-use crate::common::{ITEM_NAME_BACKGROUND, NO_QUALITY_NAME, quality_colour};
+use crate::common::{ITEM_NAME_BACKGROUND, NO_QUALITY_NAME, PointerPosition, quality_colour};
 
 /// A grid cell, across, in logical pixels.
 pub const CELL: f32 = 32.0;
@@ -24,6 +25,8 @@ pub const ALLOWED: Color = Color::srgba(0.2, 0.8, 0.25, 0.55);
 pub const REFUSED: Color = Color::srgba(0.85, 0.15, 0.15, 0.55);
 
 const CELL_BORDER: f32 = 1.0;
+/// How far from the pointer an item's name goes.
+const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);
 /// How thick an edge showing quality is, to be seen beside the kind's colour.
 const QUALITY_BORDER: f32 = 2.0;
 
@@ -41,6 +44,14 @@ pub struct ItemTip {
     pub quality: Option<Quality>,
     /// Where its top left goes.
     pub at: Vec2,
+}
+
+/// On an item's cells and label for its name to show when the pointer is on it,
+/// for items whose owner has nothing more to say about them.
+#[derive(Component, Clone)]
+pub struct ItemName {
+    pub words: String,
+    pub quality: Option<Quality>,
 }
 
 #[derive(Component)]
@@ -185,6 +196,41 @@ pub(super) fn spawn_name_box(mut commands: Commands) {
         .with_children(|holder| spawn_tooltip(holder, NameText, ""));
 }
 
+/// Asks for the name of the `ItemName` in front at the pointer, unless a name has
+/// been asked for already.
+#[allow(clippy::type_complexity)]
+pub(super) fn name_item_at_pointer(
+    pointer: Res<PointerPosition>,
+    nodes: Query<
+        (
+            &ComputedStackIndex,
+            &ComputedNode,
+            &UiGlobalTransform,
+            &InheritedVisibility,
+            Option<&ItemName>,
+        ),
+        (With<Node>, Without<Floating>),
+    >,
+    mut tooltip: ResMut<ItemTooltip>,
+) {
+    let Some(at) = pointer.0.filter(|_| tooltip.0.is_none()) else {
+        return;
+    };
+    let front = nodes
+        .iter()
+        .filter(|(_, node, transform, visible, _)| {
+            visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
+        })
+        .max_by_key(|(stack, ..)| stack.0);
+    if let Some((.., Some(name))) = front {
+        tooltip.0 = Some(ItemTip {
+            words: name.words.clone(),
+            quality: name.quality,
+            at: at + TOOLTIP_OFFSET,
+        });
+    }
+}
+
 /// Shows the name asked for this frame, on a dark box so every colour can be read.
 pub(super) fn show_item_tooltip(
     mut tooltip: ResMut<ItemTooltip>,
@@ -225,5 +271,6 @@ mod tests {
     #[test]
     fn showing_a_name_asks_for_nothing_twice() {
         IntoSystem::into_system(show_item_tooltip).initialize(&mut World::new());
+        IntoSystem::into_system(name_item_at_pointer).initialize(&mut World::new());
     }
 }

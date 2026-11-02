@@ -161,7 +161,7 @@ fn pick_up_by_finger(
             &InheritedVisibility,
             Option<&ItemCell>,
         ),
-        With<Node>,
+        (With<Node>, Without<Floating>),
     >,
     mut holding: ResMut<Holding>,
     carried: Res<Carried>,

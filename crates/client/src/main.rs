@@ -16,11 +16,11 @@ mod inventory;
 mod loading_screen;
 mod minimap;
 mod player;
-mod shop;
 mod site;
 mod surface_style;
 mod system_menu;
 mod touch;
+mod trade;
 mod ui;
 mod view3d;
 mod widgets;
@@ -81,7 +81,7 @@ fn main() {
         inventory::InventoryPlugin,
         character::CharacterPlugin,
         entities::EntitiesPlugin,
-        shop::ShopPlugin,
+        trade::TradePlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is

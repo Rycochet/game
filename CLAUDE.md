@@ -59,7 +59,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: debug_menu  | `crates/client/src/debug_menu/`  | `docs/context/client/debug_menu.md`   | Backtick or warning button: full-screen filtered list of debug actions (toggles, Teleport Mode, Cycle Temperature, World Time, Suns and Moons, Stairs/Fields/Herbs panels, Show Widgets) |
 | client: system_menu | `crates/client/src/system_menu/` | `docs/context/client/system_menu.md` | Esc or gear button: small menu (Settings, Logout, Quit), quit requester and web ended page, Settings layer with tabs; asks a single-player server to pause while open |
 | client: inventory   | `crates/client/src/inventory/` | `docs/context/client/inventory.md`  | Grids of what is carried and the clothes panel, in moveable panels; picking items up, holding, turning and dropping or wearing them |
-| client: shop        | `crates/client/src/shop/`       | `docs/context/client/shop.md`       | A town shop's panel, opened by clicking its door, near or from afar |
+| client: trade       | `crates/client/src/trade/`      | `docs/context/client/trade.md`      | Trading panels with someone's stock in a grid; for now a town shop's, opened by clicking its door, near or from afar |
 | client: character   | `crates/client/src/character/` | `docs/context/client/character.md`  | Character panel: stats, skills, abilities, looks and how loaded |
 | client: entities    | `crates/client/src/entities/` | `docs/context/client/entities.md`   | Mobs and other players as tokens, as long as they can be seen |
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |
