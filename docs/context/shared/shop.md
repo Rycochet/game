@@ -1,6 +1,6 @@
 # shared: shop
 
-What town shops have in stock, and working it out when one is opened. Only the server will call it, as the seed is secret. It makes no items, since ids are the server's: it says which old stock to keep and what to add. The server calls it when a shop is opened (`sites::open_shop`).
+What town shops have in stock, and working it out when one is opened. Only the server will call it, as the seed is secret. It makes no items, since ids are the server's: it says which old stock to keep and what to add. The server calls it when a shop is opened (`sites::open_trade`).
 
 ## Files
 
@@ -18,7 +18,7 @@ What town shops have in stock, and working it out when one is opened. Only the s
 
 ## Used by
 
-- `server` (`sites`), client `shop`.
+- `server` (`sites`), client `trade`.
 
 ## Notes
 

@@ -336,8 +336,12 @@ pub struct BuildingSave {
     /// decide when its stock refreshes. The clock can be moved back (dev tools),
     /// so this can be in the future: count that as no time having passed.
     pub last_interaction: Option<f64>,
-    /// What it has for sale, if it has ever been opened.
+    /// Who keeps it, if it is a shop: a mob never on the map, in the level's
+    /// `records`, whose `carried` is what the shop has.
     #[serde(default)]
+    pub keeper: Option<Id>,
+    /// What it had for sale before it had a keeper: moved to them when they come.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stock: Vec<Item>,
     /// The game minute it last finished making something.
     #[serde(default)]
@@ -611,6 +615,7 @@ pub(crate) mod tests {
                     buildings: BTreeMap::from([(
                         4,
                         BuildingSave {
+                            keeper: None,
                             trades: 2,
                             last_interaction: Some(12.5),
                             stock: Vec::new(),

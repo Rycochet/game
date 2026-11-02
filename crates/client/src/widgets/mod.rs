@@ -25,8 +25,8 @@ pub use fullscreen::{
 };
 pub use item::{
     ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, HELD_ITEM_Z, ITEM_EDGE, ITEM_LABEL_FONT,
-    ItemTip, ItemTooltip, REFUSED, at_cell, covering, item_colour, item_edge, item_edge_width,
-    item_label, spawn_item_cells, spawn_item_grid,
+    ItemName, ItemTip, ItemTooltip, REFUSED, at_cell, covering, item_colour, item_edge,
+    item_edge_width, item_label, spawn_item_cells, spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use slider::{SliderMoved, spawn_slider};
@@ -81,7 +81,9 @@ impl Plugin for WidgetsPlugin {
             // After `Update`, where it is asked for, and in time to be laid out.
             .add_systems(
                 PostUpdate,
-                item::show_item_tooltip.before(bevy::ui::UiSystems::Layout),
+                (item::name_item_at_pointer, item::show_item_tooltip)
+                    .chain()
+                    .before(bevy::ui::UiSystems::Layout),
             )
             .init_resource::<text_box::PressedThisFrame>()
             .init_resource::<dropdown::OpenList>()

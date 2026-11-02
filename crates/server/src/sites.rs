@@ -8,6 +8,7 @@ use std::collections::VecDeque;
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
+use shared::id::Id;
 use shared::item::{Item, MadeAt, Quality};
 use shared::movement::{Step, step_on_level};
 use shared::poi::{ChunkPos, Poi, PoiKind};
@@ -348,11 +349,53 @@ pub(crate) fn teleport(client: &mut Client, x: i64, y: i64) -> bool {
     client.link.send(&ServerMessage::Teleported { x, y }) && update_sight(client)
 }
 
-/// Opens a town's shop for a player beside its door: its stock is caught up and
-/// sent. Anything else is refused, with no answer. `false` if the client has gone.
-pub(crate) fn open_shop(client: &mut Client, world: &mut ServerWorld, building: u16) -> bool {
+/// Who keeps each of a town level's shops, by building. Each has one for good, made
+/// the first time it is needed.
+fn keepers_of(world: &mut ServerWorld, visit: &NewKeepers) -> Vec<(u16, Id)> {
+    let saved = world
+        .site_mut(visit.id, visit.kind)
+        .levels
+        .entry(visit.index);
+    let saved = saved.or_default();
+    let shops = visit.shops.iter().map(|&building| {
+        let save = saved.buildings.entry(building).or_default();
+        let keeper = *save.keeper.get_or_insert_with(new_id);
+        let old_stock = std::mem::take(&mut save.stock);
+        let record = saved.records.entry(keeper).or_default();
+        record.carried.extend(old_stock);
+        (building, keeper)
+    });
+    shops.collect()
+}
+
+/// A town level, for `keepers_of`.
+struct NewKeepers {
+    id: SiteId,
+    kind: PoiKind,
+    index: u32,
+    shops: Vec<u16>,
+}
+
+/// Opens trading with a shop's keeper for a player beside its door: its stock is
+/// caught up and sent. Anything else is refused, with no answer. `false` if the
+/// client has gone.
+pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id) -> bool {
     let Some(visit) = &client.visit else {
-        warn!("Refused opening a shop from outside any site");
+        warn!("Refused opening a trade from outside any site");
+        return true;
+    };
+    let level = world
+        .site(visit.id, visit.poi.kind)
+        .levels
+        .get(&visit.index);
+    let building = level.and_then(|level| {
+        let mut buildings = level.buildings.iter();
+        buildings
+            .find(|(_, save)| save.keeper == Some(with))
+            .map(|(&building, _)| building)
+    });
+    let Some(building) = building else {
+        warn!("Refused opening a trade with someone who isn't here: {with:?}");
         return true;
     };
     let Some(town) = visit.level.buildings.iter().find(|b| b.look.id == building) else {
@@ -378,6 +421,7 @@ pub(crate) fn open_shop(client: &mut Client, world: &mut ServerWorld, building: 
         .levels
         .entry(index)
         .or_default();
+    let keeping = level.records.entry(with).or_default();
     let saved = level.buildings.entry(building).or_default();
     let shop = Shop {
         kind,
@@ -385,8 +429,8 @@ pub(crate) fn open_shop(client: &mut Client, world: &mut ServerWorld, building: 
         trades: trades + saved.trades,
         of_kind,
     };
-    let stock: Vec<Quality> = saved
-        .stock
+    let stock: Vec<Quality> = keeping
+        .carried
         .iter()
         .map(|item| item.quality.unwrap_or_default())
         .collect();
@@ -403,7 +447,7 @@ pub(crate) fn open_shop(client: &mut Client, world: &mut ServerWorld, building: 
     let mut items: Vec<Item> = restocked
         .keep
         .iter()
-        .map(|&index| saved.stock[index].clone())
+        .map(|&index| keeping.carried[index].clone())
         .collect();
     items.extend(restocked.new.iter().map(|new| Item {
         quality: new.quality,
@@ -413,12 +457,10 @@ pub(crate) fn open_shop(client: &mut Client, world: &mut ServerWorld, building: 
         }),
         ..Item::new(new_id(), new.kind)
     }));
-    saved.stock.clone_from(&items);
+    keeping.carried.clone_from(&items);
     saved.last_made = restocked.last_made;
     saved.last_interaction = Some(now);
-    client
-        .link
-        .send(&ServerMessage::ShopStock { building, items })
+    client.link.send(&ServerMessage::TradeStock { with, items })
 }
 
 /// Uses what the player stands on: stairs to another level, or ground on
@@ -658,6 +700,18 @@ fn enter_level(
     if visit.is_town() {
         let looks = visit.level.buildings.iter().map(|b| b.look.clone());
         let message = ServerMessage::Buildings(looks.collect());
+        if !client.link.send(&message) {
+            return false;
+        }
+        let shops = visit.level.buildings.iter();
+        let shops = shops.filter(|b| !sells(b.look.kind).is_empty());
+        let keepers = NewKeepers {
+            id: visit.id,
+            kind: visit.poi.kind,
+            index,
+            shops: shops.map(|b| b.look.id).collect(),
+        };
+        let message = ServerMessage::Keepers(keepers_of(world, &keepers));
         if !client.link.send(&message) {
             return false;
         }
@@ -938,7 +992,7 @@ mod tests {
     use crate::storage::tests::TestFolder;
 
     /// A village, and a shop in it with what is beside its door.
-    fn in_a_village() -> (TestClient, u16, (i64, i64)) {
+    fn in_a_village() -> (TestClient, Id, (i64, i64)) {
         let mut test = TestClient::new();
         test.send(&[ClientMessage::DevEnterSite {
             kind: PoiKind::Village,
@@ -954,21 +1008,26 @@ mod tests {
             .find(|b| !sells(b.look.kind).is_empty());
         let look = &shop.expect("a village with a shop").look;
         let front = (look.door.0 + look.faces.0, look.door.1 + look.faces.1);
-        let building = look.id;
-        (test, building, front)
+        let saved = test
+            .world
+            .site(visit.id, visit.poi.kind)
+            .levels
+            .get(&visit.index);
+        let keeper = saved.unwrap().buildings[&look.id].keeper.expect("a keeper");
+        (test, keeper, front)
     }
 
     fn stock_in(answers: &[ServerMessage]) -> Option<Vec<shared::item::Item>> {
         answers.iter().find_map(|answer| match answer {
-            ServerMessage::ShopStock { items, .. } => Some(items.clone()),
+            ServerMessage::TradeStock { items, .. } => Some(items.clone()),
             _ => None,
         })
     }
 
     #[test]
     fn a_shop_only_opens_from_beside_its_door_and_keeps_its_stock() {
-        let (mut test, building, front) = in_a_village();
-        let open = ClientMessage::OpenShop { building };
+        let (mut test, with, front) = in_a_village();
+        let open = ClientMessage::OpenTrade { with };
         let far = ClientMessage::DevTeleport {
             x: front.0 + 40,
             y: front.1,
@@ -988,8 +1047,44 @@ mod tests {
     }
 
     #[test]
+    fn a_keeper_stays_and_takes_over_what_a_shop_had() {
+        let (mut test, keeper, _) = in_a_village();
+        let visit = test.client.visit.as_ref().unwrap();
+        let (id, kind, index) = (visit.id, visit.poi.kind, visit.index);
+        let building = {
+            let level = &test.world.site(id, kind).levels[&index];
+            let mut buildings = level.buildings.iter();
+            *buildings.find(|(_, b)| b.keeper == Some(keeper)).unwrap().0
+        };
+        let old = Item::new(Id::for_test(9), shared::item::ItemKind::Apple);
+        let level = test
+            .world
+            .site_mut(id, kind)
+            .levels
+            .entry(index)
+            .or_default();
+        level
+            .buildings
+            .get_mut(&building)
+            .unwrap()
+            .stock
+            .push(old.clone());
+        let shops = vec![building];
+        let new = NewKeepers {
+            id,
+            kind,
+            index,
+            shops,
+        };
+        assert_eq!(keepers_of(&mut test.world, &new), vec![(building, keeper)]);
+        let level = &test.world.site(id, kind).levels[&index];
+        assert!(level.buildings[&building].stock.is_empty());
+        assert!(level.records[&keeper].carried.contains(&old));
+    }
+
+    #[test]
     fn something_that_is_not_a_shop_stays_shut() {
-        let (mut test, _, front) = in_a_village();
+        let (mut test, keeper, front) = in_a_village();
         let visit = test.client.visit.as_ref().unwrap();
         let house = visit
             .level
@@ -1001,19 +1096,25 @@ mod tests {
             x: look.door.0 + look.faces.0,
             y: look.door.1 + look.faces.1,
         }]);
-        let open = ClientMessage::OpenShop { building: look.id };
+        // A keeper of somewhere else, too far from here.
+        let open = ClientMessage::OpenTrade { with: keeper };
+        assert_eq!(stock_in(&test.send(&[open])), None);
+        // Someone who keeps nothing.
+        let open = ClientMessage::OpenTrade {
+            with: Id::for_test(1),
+        };
         assert_eq!(stock_in(&test.send(&[open])), None);
         assert_ne!(front, look.door);
     }
 
     #[test]
     fn a_shops_stock_changes_as_time_passes() {
-        let (mut test, building, front) = in_a_village();
+        let (mut test, with, front) = in_a_village();
         test.send(&[ClientMessage::DevTeleport {
             x: front.0,
             y: front.1,
         }]);
-        let open = ClientMessage::OpenShop { building };
+        let open = ClientMessage::OpenTrade { with };
         let first = stock_in(&test.send(std::slice::from_ref(&open))).unwrap();
         let later = test.world.clock.minutes() + 200_000.0;
         test.send(&[ClientMessage::DevSetTime { minutes: later }]);

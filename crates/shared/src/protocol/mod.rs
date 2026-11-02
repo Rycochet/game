@@ -100,9 +100,10 @@ pub enum ClientMessage {
     /// Gives something carried to a mob near enough and in sight, which remembers it,
     /// answered with `Inventory`, whether or not it could be done.
     GiveItem { item: Id, to: Id },
-    /// Opens a town's shop, by its `BuildingLook::id`, from beside its door, after
-    /// any steps to get there. Answered with `ShopStock` if it can be.
-    OpenShop { building: u16 },
+    /// Asks to trade with someone: for now a shop's keeper (`Keepers`), from beside
+    /// its door, after any steps to get there. Answered with `TradeStock` if it can
+    /// be.
+    OpenTrade { with: Id },
     /// Puts on something the character carries, answered with `Inventory`, whether
     /// or not it could go on. Taking it off is `MoveItem`.
     WearItem { item: Id },
@@ -254,8 +255,11 @@ pub enum ServerMessage {
         list: Vec<CharacterSummary>,
         can_create: bool,
     },
-    /// What a shop the player has opened has for sale.
-    ShopStock { building: u16, items: Vec<Item> },
+    /// What someone the player is trading with has to trade.
+    TradeStock { with: Id, items: Vec<Item> },
+    /// Who keeps each shop of a town (`Buildings` comes first), by `BuildingLook::id`.
+    /// Never on the map: they stand behind the door.
+    Keepers(Vec<(u16, Id)>),
     /// The player is in the game: the world they are in, its clock (in game
     /// hours since it began) and snow line, and where they are on its world
     /// map (where they left off). If they were in a site, `EnterLevel` follows.
@@ -447,7 +451,9 @@ mod tests {
                 magical: true,
                 quality: Quality::Epic,
             },
-            ClientMessage::OpenShop { building: 3 },
+            ClientMessage::OpenTrade {
+                with: Id::for_test(3),
+            },
             ClientMessage::DevSetCreature(CreatureKind::Chicken),
             ClientMessage::DevDetectMonsters(true),
             ClientMessage::DevGodMode(true),
@@ -510,10 +516,11 @@ mod tests {
                 clock: 6.75,
             },
             ServerMessage::Refused("no".into()),
-            ServerMessage::ShopStock {
-                building: 3,
+            ServerMessage::TradeStock {
+                with: Id::for_test(3),
                 items: Vec::new(),
             },
+            ServerMessage::Keepers(vec![(3, Id::for_test(4))]),
             ServerMessage::WorldChunk(WorldChunk {
                 chunk: ChunkPos { x: 1, y: -2 },
                 poi: Some(SeenPoi {
