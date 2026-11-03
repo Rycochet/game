@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::armour::hands::{self, HandsForm, HandsPiece};
+use crate::armour::shoulders::{self, ShouldersForm};
 use crate::blade::{self, BladeForm};
 use crate::creature::Size;
 use crate::id::Id;
@@ -23,6 +24,8 @@ pub enum ItemForm {
     Blade(Box<BladeForm>),
     /// Gauntlets and other hand pieces.
     Hands(HandsForm),
+    /// A pair of pauldrons or other shoulder pieces.
+    Shoulders(ShouldersForm),
 }
 
 /// What whoever asks for an item needs of it. Anything left out doesn't matter.
@@ -68,6 +71,7 @@ impl ItemForm {
             Self::Ring(ring) => ring.name(),
             Self::Blade(blade) => blade.name().to_owned(),
             Self::Hands(hands) => hands.name().to_owned(),
+            Self::Shoulders(shoulders) => shoulders.name().to_owned(),
         }
     }
 
@@ -75,7 +79,7 @@ impl ItemForm {
     pub fn gems(&self) -> impl Iterator<Item = &Item> {
         let settings = match self {
             Self::Ring(ring) => ring.settings.as_slice(),
-            Self::Gem(_) | Self::Blade(_) | Self::Hands(_) => &[],
+            Self::Gem(_) | Self::Blade(_) | Self::Hands(_) | Self::Shoulders(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }
@@ -288,6 +292,10 @@ pub fn give_form(item: &mut Item, size: Option<Size>, new_id: &mut impl FnMut() 
             };
             let hands = hands::roll(&mut rng, piece, None);
             (ItemForm::Hands(hands), size.unwrap_or(Size::Medium))
+        }
+        ItemKind::ShoulderArmour => {
+            let shoulders = shoulders::roll(&mut rng, None, None);
+            (ItemForm::Shoulders(shoulders), size.unwrap_or(Size::Medium))
         }
         kind => {
             let Some(family) = kind.blade_family() else {

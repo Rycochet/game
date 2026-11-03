@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Construction, Style};
+use super::{Construction, Style, in_style};
 use crate::body::{Frame, Joint, Side};
 use crate::creature::Size;
 use crate::material::Material;
@@ -117,7 +117,7 @@ impl HandsForm {
     pub fn allowed(&self, piece: HandsPiece) -> bool {
         let in_list =
             |list: &[(Construction, u64)]| list.iter().any(|&(c, _)| c == self.construction);
-        in_list(constructions(piece))
+        in_list(&in_style(constructions(piece), self.style))
             && fingers_for(self.construction, piece, self.style)
                 .iter()
                 .any(|&(f, _)| f == self.fingers)
@@ -232,10 +232,11 @@ impl HandsForm {
         main * self.material.density() / reference + rest + extras
     }
 
-    /// What the pair weighs made at this size: a bigger hand in every direction.
+    /// What the pair weighs made at this size: bigger across, as thick (the owner's
+    /// decision), so by the square of its size.
     pub fn grams_at(&self, size: Size) -> u32 {
         let quarters = size.quarters() as u64;
-        (self.grams() as u64 * quarters * quarters * quarters / 64) as u32
+        (self.grams() as u64 * quarters * quarters / 16) as u32
     }
 }
 
@@ -388,7 +389,7 @@ fn may_have_trim(construction: Construction, material: Material) -> bool {
 /// Each choice comes from what the ones before allow, so nothing is thrown away.
 pub fn roll(rng: &mut Rng, piece: HandsPiece, style: Option<Style>) -> HandsForm {
     let style = style.unwrap_or_else(|| Style::roll(rng));
-    let construction = rng.pick_weighted(constructions(piece));
+    let construction = rng.pick_weighted(&in_style(constructions(piece), style));
     let fingers = rng.pick_weighted(fingers_for(construction, piece, style));
     let cuff = rng.pick_weighted(cuffs_for(construction, fingers, style));
     let knuckles = rng.pick_weighted(knuckles_for(construction));
