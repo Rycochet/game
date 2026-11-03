@@ -12,15 +12,6 @@ crates/client/src/debug_menu/panels.rs 1102
 crates/client/src/dev_tools/debug_api.rs 674
 crates/client/src/dev_tools/fake_input.rs 424
 crates/client/src/dev_tools/mod.rs 685
-crates/client/src/dungeon_map/daylight.rs 350
-crates/client/src/dungeon_map/field.rs 382
-crates/client/src/dungeon_map/liquid.rs 526
-crates/client/src/dungeon_map/mesh.rs 599
-crates/client/src/dungeon_map/mod.rs 1037
-crates/client/src/dungeon_map/sight_lines.rs 662
-crates/client/src/dungeon_map/stairs.rs 840
-crates/client/src/dungeon_map/town.rs 899
-crates/client/src/dungeon_map/walls.rs 1341
 crates/client/src/ground/bag.rs 343
 crates/client/src/ground/mod.rs 626
 crates/client/src/minimap/frame.rs 342

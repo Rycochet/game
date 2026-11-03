@@ -1,3 +1,6 @@
+use shared::dungeon::{Cell, Level};
+
+use super::outline::Outline;
 use super::*;
 
 /// How far from the middle of a cell the liquid reaches along the edge of a

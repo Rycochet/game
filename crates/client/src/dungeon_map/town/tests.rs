@@ -1,6 +1,11 @@
+use bevy::prelude::*;
+use shared::dungeon::{Cell, RoomId};
 use shared::dungeon::{Level, Sight};
 use shared::site::Rect as CellRect;
+use shared::site::{BuildingKind, BuildingLook, RoofKind, WallKind};
+use std::collections::BTreeSet;
 
+use super::super::mesh::Surface;
 use super::super::mesh::{LightGrid, View, build};
 use super::super::theme::Shape;
 use super::*;
