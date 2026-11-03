@@ -1,0 +1,158 @@
+//! Answering item moves: dropping, taking, wearing, giving, binning and moving things.
+
+use bevy::prelude::*;
+use shared::energy::handling_cost;
+use shared::item::Item;
+use shared::protocol::{ClientMessage, ServerMessage};
+
+use super::{Action, Client};
+use crate::ServerWorld;
+use crate::ground::GroundAction;
+use crate::sites::{self};
+
+/// Answers a message about items. Whether the client is still welcome.
+pub(super) fn answer_items(
+    client: &mut Client,
+    message: ClientMessage,
+    world: &mut ServerWorld,
+) -> bool {
+    match message {
+        ClientMessage::DropItem { item } => {
+            let action = Action::Ground(GroundAction::Drop { item });
+            client.waiting.push_back(action);
+            true
+        }
+        ClientMessage::TakeFromGround {
+            item,
+            to,
+            x,
+            y,
+            rotation,
+        } => {
+            client.waiting.push_back(Action::Ground(GroundAction::Take {
+                item,
+                to,
+                x,
+                y,
+                rotation,
+            }));
+            true
+        }
+        ClientMessage::WearFromGround { item } => {
+            let action = Action::Ground(GroundAction::Wear { item });
+            client.waiting.push_back(action);
+            true
+        }
+        ClientMessage::BinFromGround { item } => {
+            let action = Action::Ground(GroundAction::Bin { item });
+            client.waiting.push_back(action);
+            true
+        }
+        ClientMessage::MoveItem {
+            item,
+            to,
+            x,
+            y,
+            rotation,
+        } => {
+            let cost = client.inventory.move_cost(item, to);
+            let tick = world.action_clock.ticks();
+            if client.may_take_off(item) {
+                match client.inventory.move_item(item, to, x, y, rotation) {
+                    Ok(()) => {
+                        client.unsaved = true;
+                        client.energy.spend(tick, client.speed, cost);
+                    }
+                    Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
+                }
+            }
+            client.update_speed(world.action_clock.ticks());
+            client.send_inventory()
+        }
+        ClientMessage::GiveItem { item, to } => {
+            let mut stock = None;
+            let cost = client.inventory.put_down_cost(item);
+            let given = if !client.may_take_off(item) {
+                Err("it won't come off")
+            } else if sites::keeper_building(client, world, to).is_some() {
+                sites::give_to_keeper(client, world, item, to).map(|items| stock = Some(items))
+            } else {
+                crate::entities::give(client, world, item, to)
+            };
+            match given {
+                Ok(()) => {
+                    client.unsaved = true;
+                    let tick = world.action_clock.ticks();
+                    client.energy.spend(tick, client.speed, cost);
+                }
+                Err(why) => warn!("Refused giving {item:?} to {to:?}: {why}"),
+            }
+            client.update_speed(world.action_clock.ticks());
+            let sent = client.send_inventory();
+            match stock {
+                Some(items) => {
+                    let items = client.as_seen(items);
+                    sent && client
+                        .link
+                        .send(&ServerMessage::TradeStock { with: to, items })
+                }
+                None => sent,
+            }
+        }
+        ClientMessage::TakeItem {
+            with,
+            item,
+            to,
+            x,
+            y,
+            rotation,
+        } => {
+            match sites::take_from_keeper(client, world, with, item, (to, x, y, rotation)) {
+                Ok(()) => {
+                    client.unsaved = true;
+                    let grams = client.inventory.find(item).map_or(0, Item::total_weight);
+                    let tick = world.action_clock.ticks();
+                    client
+                        .energy
+                        .spend(tick, client.speed, handling_cost(grams));
+                }
+                Err(why) => warn!("Refused taking {item:?} from {with:?}: {why}"),
+            }
+            client.update_speed(world.action_clock.ticks());
+            let stock = sites::keeper_stock(client, world, with);
+            let sent = client.send_inventory();
+            match stock {
+                Some(items) => {
+                    let items = client.as_seen(items);
+                    sent && client.link.send(&ServerMessage::TradeStock { with, items })
+                }
+                None => sent,
+            }
+        }
+        ClientMessage::WearItem { item } => {
+            let tick = world.action_clock.ticks();
+            match client.inventory.wear(item) {
+                Ok(_) => {
+                    client.unsaved = true;
+                    client.inventory.magic_found_out(item);
+                    client.spend_dressing(item, tick);
+                }
+                Err(why) => warn!("Refused wearing {item:?}: {why:?}"),
+            }
+            client.update_speed(world.action_clock.ticks());
+            client.send_inventory()
+        }
+        ClientMessage::BinItem { item } => {
+            if !client.may_take_off(item) {
+                // Nothing more to say: it stays on.
+            } else if client.inventory.to_bin(item) {
+                client.unsaved = true;
+            } else {
+                warn!("Refused throwing away {item:?}");
+            }
+            client.update_speed(world.action_clock.ticks());
+            client.send_inventory()
+        }
+        _ => unreachable!("`answer` only passes item messages here"),
+    }
+}

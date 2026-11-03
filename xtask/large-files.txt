@@ -40,13 +40,6 @@ crates/client/src/world_map/mod.rs 542
 crates/client/src/world_map/poi_model.rs 712
 crates/client/src/world_map/sky.rs 501
 crates/client/src/world_map/terrain.rs 834
-crates/server/src/connections.rs 1077
-crates/server/src/entities.rs 1017
-crates/server/src/lib.rs 428
-crates/server/src/network.rs 520
-crates/server/src/sites.rs 1121
-crates/server/src/storage.rs 460
-crates/server/src/tls.rs 549
 crates/shared/src/celestial.rs 607
 crates/shared/src/creature.rs 403
 crates/shared/src/dungeon.rs 541
