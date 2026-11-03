@@ -234,3 +234,23 @@ fn looks_list_their_signs() {
     assert_eq!(signs, [((2, 2), BuildingKind::Inn)]);
     assert_eq!(looks.at(100, 100), CellLook::Empty);
 }
+
+#[test]
+fn a_secret_door_is_drawn_as_a_door_and_listed_for_its_s() {
+    let mut dungeon = dungeon();
+    dungeon.level.set(2, 2, Cell::SecretDoor);
+    dungeon.level.set(2, 1, Cell::Floor);
+    dungeon.level.set(2, 3, Cell::Floor);
+    let secret = CellLook::SecretDoor { east_west: true };
+    assert_eq!(look_of(&dungeon, 2, 2), secret);
+    let door = CellLook::Door { east_west: true };
+    for (u, v) in [(0.0, 0.0), (0.25, 0.1), (0.45, 0.0), (0.0, 0.4)] {
+        assert_eq!(colour_at(secret, u, v, 0.05), colour_at(door, u, v, 0.05));
+    }
+    let looks = Looks::of(&dungeon, (1, 1), (3, 3));
+    assert_eq!(looks.secret_doors().collect::<Vec<_>>(), [(2, 2)]);
+
+    dungeon.level.set(2, 2, Cell::Door);
+    let looks = Looks::of(&dungeon, (1, 1), (3, 3));
+    assert_eq!(looks.secret_doors().count(), 0);
+}

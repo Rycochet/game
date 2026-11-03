@@ -76,6 +76,10 @@ const SIGN_PIXELS: f32 = 10.0;
 /// How big stairs are drawn: a little smaller than the player's dot, for more
 /// of a gap round them in their square.
 const STAIRS_PIXELS: f32 = 8.0;
+/// How tall a secret door's "S" is drawn, and the edge round it in the
+/// parchment's colour.
+const SECRET_DOOR_PIXELS: f32 = 7.2;
+const SECRET_DOOR_EDGE: f32 = 1.0;
 /// How big a poi's picture is drawn.
 const ICON_PIXELS: f32 = 16.0;
 /// How solid a completed poi's picture is.

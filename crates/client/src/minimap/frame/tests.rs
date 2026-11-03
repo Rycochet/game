@@ -113,3 +113,32 @@ fn the_arrow_sits_on_the_edge_towards_the_player() {
     let (place, _) = arrow_place(size, (-150.0, -150.0), 10.0).unwrap();
     assert_eq!(place, (10.0, 10.0));
 }
+
+#[test]
+fn a_secret_doors_s_is_inked_on_its_curves_and_edged_in_the_background() {
+    const BACKGROUND: [u8; 3] = [200, 180, 150];
+    let mut pixels = vec![0; 4 * 40 * 40];
+    let mut canvas = Canvas {
+        pixels: &mut pixels,
+        width: 40,
+        height: 40,
+    };
+    // 20 px tall at (20, 20): curves of radius 4, a stroke 4 wide.
+    secret_door_icon(&mut canvas, (20.0, 20.0), 20.0, 2.0, BACKGROUND);
+    let at = |x: usize, y: usize| {
+        let i = (y * 40 + x) * 4;
+        [pixels[i], pixels[i + 1], pixels[i + 2]]
+    };
+    // The middle, the top, the bottom, the left of the top curve and the
+    // right of the bottom one are inked.
+    for (x, y) in [(20, 20), (20, 12), (20, 28), (16, 16), (24, 24)] {
+        assert_eq!(at(x, y), SECRET_DOOR_INK, "({x}, {y})");
+    }
+    // Inside each curve, and where the S is open (the top curve's lower
+    // right and the bottom one's upper left), there is no ink.
+    for (x, y) in [(20, 16), (20, 24), (24, 18), (16, 22)] {
+        assert_ne!(at(x, y), SECRET_DOOR_INK, "({x}, {y})");
+    }
+    // Just outside the stroke is the edge.
+    assert_eq!(at(20, 9), BACKGROUND);
+}
