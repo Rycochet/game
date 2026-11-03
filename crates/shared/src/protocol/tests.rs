@@ -72,6 +72,13 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             item: Id(uuid::Uuid::from_u128(7)),
             onto: Id(uuid::Uuid::from_u128(8)),
         },
+        ClientMessage::FromStack {
+            stack: Id(uuid::Uuid::from_u128(7)),
+            items: vec![Id(uuid::Uuid::from_u128(8))],
+            then: Box::new(ClientMessage::BinItem {
+                item: Id(uuid::Uuid::from_u128(8)),
+            }),
+        },
         ClientMessage::StackFromGround {
             item: Id(uuid::Uuid::from_u128(7)),
             onto: Id(uuid::Uuid::from_u128(8)),

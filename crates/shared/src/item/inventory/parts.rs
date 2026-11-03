@@ -36,8 +36,38 @@ impl Inventory {
         Some(stack)
     }
 
+    /// Lifts these items (some, not all) out of a stack in a grid as a stack of their
+    /// own, in the order they were in, lying where the stack does: a group from a
+    /// mixed stack. What is left keeps its order, and the id of its lowest. The
+    /// group's id, which is its lowest's.
+    pub fn lift_group(&mut self, stack: Id, items: &[Id]) -> Option<Id> {
+        let (holder, placed) = self.placed(stack)?;
+        let (x, y, rotation) = (placed.x, placed.y, placed.rotation);
+        let ids: Vec<Id> = placed.item.members().map(|one| one.id).collect();
+        let taking = ids.iter().filter(|id| items.contains(id)).count();
+        if taking == 0 || taking == ids.len() || taking != items.len() {
+            return None;
+        }
+        let mut whole = self.take(stack)?;
+        let mut all = std::mem::take(&mut whole.above);
+        all.insert(0, whole);
+        let (group, kept): (Vec<Item>, Vec<Item>) =
+            all.into_iter().partition(|one| items.contains(&one.id));
+        let group_id = group[0].id;
+        let grid = self.grid_mut(holder)?;
+        for part in [kept, group] {
+            grid.push(Placed {
+                item: restacked(part),
+                x,
+                y,
+                rotation,
+            });
+        }
+        Some(group_id)
+    }
+
     /// Puts back on its stack any part lifted out and not moved: lying just where an
-    /// item it looks like does. Whether anything went back.
+    /// item of its kind does. Whether anything went back.
     pub fn settle_parts(&mut self) -> bool {
         let mut settled = false;
         let mut holders = vec![Holder::Pockets];
@@ -71,7 +101,7 @@ impl Inventory {
         grid.iter().enumerate().find_map(|(index, part)| {
             grid[..index]
                 .iter()
-                .find(|stack| same_place(stack, part) && stack.item.looks_like(&part.item))
+                .find(|stack| same_place(stack, part) && stack.item.kind == part.item.kind)
                 .map(|stack| (part.item.id, stack.item.id))
         })
     }
@@ -96,6 +126,13 @@ impl Inventory {
         }
         found
     }
+}
+
+/// Items from the bottom up as one stack.
+fn restacked(mut items: Vec<Item>) -> Item {
+    let mut bottom = items.remove(0);
+    bottom.above = items;
+    bottom
 }
 
 fn same_place(a: &Placed, b: &Placed) -> bool {

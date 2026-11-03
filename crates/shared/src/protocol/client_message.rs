@@ -68,6 +68,15 @@ pub enum ClientMessage {
     /// the same, from its top, the rest staying where it was. Answered with
     /// `Inventory`, whether or not it could be done.
     StackItem { item: Id, onto: Id },
+    /// Some of the items of a carried stack (a mixed one), lifted out together, keeping
+    /// their order: `then` is what to do with them, by the id of the lowest. It is
+    /// one of `MoveItem`, `StackItem`, `GiveItem`, `WearItem`, `BinItem` or
+    /// `DropItem`, and answered as that is.
+    FromStack {
+        stack: Id,
+        items: Vec<Id>,
+        then: Box<ClientMessage>,
+    },
     /// Throws something the character carries in their bin, with all in it,
     /// destroying what was there, answered with `Inventory`.
     BinItem { item: Id },

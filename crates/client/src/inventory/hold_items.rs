@@ -16,7 +16,7 @@ use shared::wear::{Fit, WearRefused};
 use super::body::BodyNode;
 use super::give::GiveRow;
 use super::panels::{BinNode, DropNode, ItemCell, OpenGrids};
-use super::split::{Split, SplitCell};
+use super::split::{PickRow, Split, SplitCell};
 use super::{CLICK_PIXELS, CLICK_SECONDS, Carried, Hand, Holding};
 use crate::common::{
     GameView, GaveItem, HeldOverGifts, HeldStock, SpentEnergy, StockCell, TakesGifts, TookItem,
@@ -88,7 +88,12 @@ pub(super) struct Outbox<'w> {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn hold_items(
     mut pressed: MessageReader<ButtonPressed>,
-    cells: (Query<&ItemCell>, Query<&StockCell>, Query<&SplitCell>),
+    cells: (
+        Query<&ItemCell>,
+        Query<&StockCell>,
+        Query<&SplitCell>,
+        Query<&PickRow>,
+    ),
     under: Under,
     (pointer, ui_scale): (Res<UiPointer>, Res<UiScale>),
     mut mouse: ResMut<ButtonInput<MouseButton>>,
@@ -111,8 +116,11 @@ pub(super) fn hold_items(
 ) {
     let now = time.elapsed_secs_f64();
     // Part of a stack lifted out (see `split`) goes back once nothing holds it.
-    if holding.held.is_none() && carried.bypass_change_detection().0.settle_parts() {
-        carried.set_changed();
+    if holding.held.is_none() {
+        holding.group = None;
+        if carried.bypass_change_detection().0.settle_parts() {
+            carried.set_changed();
+        }
     }
     let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
     // Widgets may have taken `just_pressed`.
@@ -120,7 +128,7 @@ pub(super) fn hold_items(
     *was_down = mouse.pressed(MouseButton::Left);
     let done = take_presses(
         &mut pressed,
-        (&cells.0, &cells.1, &cells.2),
+        (&cells.0, &cells.1, &cells.2, &cells.3),
         &mut split,
         &mut mouse,
         &mut holding,
@@ -138,9 +146,22 @@ pub(super) fn hold_items(
     // has said what is carried again.
     if let Some(held) = holding.held
         && holding.stock.is_none()
-        && carried.0.find(held.item.id).is_none()
     {
-        carried.0.lift_part(held.item.id);
+        match &holding.group {
+            Some((stack, items)) => {
+                let lifted = carried.0.find(held.item.id).is_some_and(|item| {
+                    item.count() as usize == items.len()
+                        && item.members().all(|one| items.contains(&one.id))
+                });
+                if !lifted {
+                    carried.0.lift_group(*stack, items);
+                }
+            }
+            None if carried.0.find(held.item.id).is_none() => {
+                carried.0.lift_part(held.item.id);
+            }
+            None => {}
+        }
     }
     let Some((mut held, aim, at, finger)) = aim_held(
         &mut holding,

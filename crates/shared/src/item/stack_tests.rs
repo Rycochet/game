@@ -314,3 +314,49 @@ fn wearing_a_lifted_part_wears_its_top_and_the_rest_goes_back() {
     inventory.settle_parts();
     assert_eq!(ids(inventory.find(id(1)).unwrap()), [id(1), id(2), id(3)]);
 }
+
+/// Three hats, the middle one known to be cursed: a mixed stack.
+fn mixed_hats() -> Item {
+    let mut hats = stack(1, ItemKind::Hat, 3);
+    hats.above[0].favour = Some(Favour::Cursed);
+    hats.above[0].known.favour = true;
+    hats
+}
+
+#[test]
+fn a_mixed_stack_falls_into_groups_from_the_top() {
+    let hats = mixed_hats();
+    let groups: Vec<Vec<Id>> = hats
+        .groups()
+        .iter()
+        .map(|group| group.iter().map(|one| one.id).collect())
+        .collect();
+    assert_eq!(groups, [vec![id(3), id(1)], vec![id(2)]]);
+    assert_eq!(stack(5, ItemKind::Coin, 2).groups().len(), 1);
+}
+
+#[test]
+fn a_group_lifts_out_keeping_both_orders_and_goes_back_if_not_moved() {
+    let mut inventory = Inventory::default();
+    inventory
+        .add(mixed_hats(), Holder::Pockets, 0, 0, Rotation::None)
+        .unwrap();
+    // The plain ones, taking the bottom: what is left is known by its own lowest.
+    assert_eq!(inventory.lift_group(id(1), &[id(1), id(3)]), Some(id(1)));
+    assert_eq!(ids(inventory.find(id(1)).unwrap()), [id(1), id(3)]);
+    assert_eq!(ids(inventory.find(id(2)).unwrap()), [id(2)]);
+    assert!(inventory.settle_parts());
+    assert_eq!(inventory.pockets.len(), 1);
+    assert_eq!(inventory.find(id(2)).unwrap().count(), 3);
+    // All of it, none of it or something else isn't a group.
+    assert_eq!(inventory.lift_group(id(2), &[]), None);
+    assert_eq!(inventory.lift_group(id(2), &[id(1), id(2), id(3)]), None);
+    assert_eq!(inventory.lift_group(id(2), &[id(9)]), None);
+}
+
+#[test]
+fn knowing_there_is_no_curse_looks_like_not_knowing() {
+    let mut known = Item::new(id(1), ItemKind::Hat);
+    known.known.favour = true;
+    assert!(known.looks_like(&Item::new(id(2), ItemKind::Hat)));
+}

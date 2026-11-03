@@ -98,12 +98,24 @@ pub(super) fn let_go_of(
         }
         return;
     }
+    // Some of a mixed stack: whatever is asked is for those items together.
+    let group = holding.group.take();
+    let mut send = |ToServer(then): ToServer| {
+        to_server.write(ToServer(match &group {
+            Some((stack, items)) => ClientMessage::FromStack {
+                stack: *stack,
+                items: items.clone(),
+                then: Box::new(then),
+            },
+            None => then,
+        }));
+    };
     if aim == (Target::Body { allowed: true }) {
         let item = held.item.id;
         // Only the top of a stack goes on.
         let top = carried.0.find(item).map(Item::top);
         let grams = top.map_or(0, Item::total_weight);
-        to_server.write(ToServer(ClientMessage::WearItem { item }));
+        send(ToServer(ClientMessage::WearItem { item }));
         // Otherwise only the server can say.
         if carried.0.wear(item).is_ok() {
             spent.write(SpentEnergy(dressing_cost(grams)));
@@ -114,7 +126,7 @@ pub(super) fn let_go_of(
         let item = held.item.id;
         let cost = carried.0.put_down_cost(item);
         if carried.0.hand_over(item).is_some() {
-            to_server.write(ToServer(ClientMessage::DropItem { item }));
+            send(ToServer(ClientMessage::DropItem { item }));
             spent.write(SpentEnergy(cost));
         }
         return;
@@ -123,7 +135,7 @@ pub(super) fn let_go_of(
         let item = held.item.id;
         let cost = carried.0.put_down_cost(item);
         if carried.0.hand_over(item).is_some() {
-            to_server.write(ToServer(if to == GROUND {
+            send(ToServer(if to == GROUND {
                 ClientMessage::DropItem { item }
             } else {
                 ClientMessage::GiveItem { item, to }
@@ -138,7 +150,7 @@ pub(super) fn let_go_of(
     if aim == Target::Bin {
         let item = held.item.id;
         if carried.0.to_bin(item) {
-            to_server.write(ToServer(ClientMessage::BinItem { item }));
+            send(ToServer(ClientMessage::BinItem { item }));
         }
         return;
     }
@@ -148,7 +160,7 @@ pub(super) fn let_go_of(
         let cost = to.map_or(0, |to| carried.0.move_cost(item, to));
         if carried.0.stack_onto(item, onto, stacks.0).is_ok() {
             spent.write(SpentEnergy(cost));
-            to_server.write(ToServer(ClientMessage::StackItem { item, onto }));
+            send(ToServer(ClientMessage::StackItem { item, onto }));
         }
         return;
     }
@@ -158,7 +170,7 @@ pub(super) fn let_go_of(
         let cost = carried.0.move_cost(item, to);
         if carried.0.move_item(item, to, x, y, rotation).is_ok() {
             spent.write(SpentEnergy(cost));
-            to_server.write(ToServer(ClientMessage::MoveItem {
+            send(ToServer(ClientMessage::MoveItem {
                 item,
                 to,
                 x,

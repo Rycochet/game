@@ -16,6 +16,30 @@ pub(super) fn answer_items(
     message: ClientMessage,
     world: &mut ServerWorld,
 ) -> bool {
+    // Some of a mixed stack: lifted out together, then dealt with as anything is.
+    let message = match message {
+        ClientMessage::FromStack { stack, items, then } => match *then {
+            ClientMessage::DropItem { item } => {
+                let group = Some((stack, items));
+                let action = Action::Ground(GroundAction::Drop { item, group });
+                client.waiting.push_back(action);
+                return true;
+            }
+            then @ (ClientMessage::MoveItem { .. }
+            | ClientMessage::StackItem { .. }
+            | ClientMessage::GiveItem { .. }
+            | ClientMessage::WearItem { .. }
+            | ClientMessage::BinItem { .. }) => {
+                client.inventory.lift_group(stack, &items);
+                then
+            }
+            other => {
+                warn!("Refused {other:?} for part of a stack");
+                return client.send_inventory();
+            }
+        },
+        other => other,
+    };
     // An id from inside a stack stands for it and all above it: lifted out on its
     // own, it moves like anything else, and goes back if it isn't moved.
     if let ClientMessage::MoveItem { item, .. }
@@ -28,7 +52,7 @@ pub(super) fn answer_items(
     }
     match message {
         ClientMessage::DropItem { item } => {
-            let action = Action::Ground(GroundAction::Drop { item });
+            let action = Action::Ground(GroundAction::Drop { item, group: None });
             client.waiting.push_back(action);
             true
         }
