@@ -61,6 +61,9 @@
 //!   at what hovering shows.
 //! - `HOW_DEBUG_SCREENSHOT=path.png`: save a screenshot after `HOW_DEBUG_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
+//! - `HOW_DEBUG_KEEP_DRAWING=false`: with the debug API or a screenshot running,
+//!   frames keep their focused rate in the background (`common::KeepDrawing`);
+//!   this slows them to a second apart again, as players have it.
 
 #[cfg(feature = "debug-api")]
 mod debug_api;
@@ -74,6 +77,7 @@ use crate::common::GameView;
 // Split into files (`cargo xtask lint` keeps files small).
 mod forced;
 mod inventory;
+mod keep_drawing;
 mod menus;
 mod moving;
 mod parse;
@@ -126,5 +130,6 @@ impl Plugin for DevToolsPlugin {
         view::add(app);
         world::add(app);
         screenshot::add(app);
+        keep_drawing::add(app);
     }
 }

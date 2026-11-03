@@ -46,8 +46,8 @@ pub use states::{ClickMode, GameView, LoadingStep, ServerStatus};
 pub use token::{Attitude, Icon, Token, TokenShape, TokenSize};
 pub use view::{ViewFacing, ViewStats};
 pub use weather::{NORMAL_SNOW_LINE, Weather};
-pub use window::frame_settings;
 use window::open_maximised;
+pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois};
 
 /// Frame rate cap while the window has focus. Not a twitch game, so this saves
@@ -60,6 +60,7 @@ impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(frame_settings(true))
+            .init_resource::<KeepDrawing>()
             .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()
             .init_resource::<OtherLevels>()
