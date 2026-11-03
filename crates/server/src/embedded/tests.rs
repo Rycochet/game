@@ -47,3 +47,46 @@ fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
     let character = std::fs::read_to_string(saved.path()).unwrap();
     assert!(character.contains("world_position: (5, 6)"), "{character}");
 }
+
+#[test]
+fn its_player_can_open_it_to_others_and_close_it_again() {
+    use shared::protocol::{OnlineSettings, OnlineState};
+    use std::net::{TcpListener, TcpStream};
+
+    let folder = TestFolder::new();
+    let (client, server) = start_embedded(WorldSeed::new(99), Some(folder.0.clone()));
+    assert!(client.send(&ClientMessage::Hello {
+        protocol: PROTOCOL_VERSION,
+    }));
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let next_online = || loop {
+        if let Some(ServerMessage::Online(state)) = client.receive().expect("still connected") {
+            break state;
+        }
+        assert!(Instant::now() < deadline, "no answer from the server");
+        thread::sleep(Duration::from_millis(10));
+    };
+    // A port nothing is using.
+    let port = TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    let settings = OnlineSettings {
+        bind_address: "127.0.0.1".into(),
+        port,
+        ..Default::default()
+    };
+    assert!(client.send(&ClientMessage::SetOnline(Some(settings))));
+    let OnlineState::Online { fingerprint, .. } = next_online() else {
+        panic!("not online");
+    };
+    assert_eq!(fingerprint.len(), 64);
+    assert!(TcpStream::connect(("127.0.0.1", port)).is_ok());
+
+    assert!(client.send(&ClientMessage::SetOnline(None)));
+    assert_eq!(next_online(), OnlineState::Offline);
+    assert!(TcpStream::connect(("127.0.0.1", port)).is_err());
+    drop(client);
+    drop(server);
+}

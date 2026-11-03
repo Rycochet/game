@@ -2,7 +2,7 @@
 
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use shared::protocol::ServerMessage;
+use shared::protocol::{OnlineState, ServerMessage};
 use shared::world::MINUTES_PER_HOUR;
 use shared::world::WORLD_MAP_VERSION;
 
@@ -10,7 +10,7 @@ use super::ping::TimedPong;
 use super::prediction::{Prediction, correction};
 use super::{Connecting, FromServer, ServerConnection, give_up, hang_up, log_in};
 use crate::common::{
-    CurrentWorld, GameClock, GameView, MapPosition, ServerClock, ServerStatus, Weather,
+    CurrentWorld, GameClock, GameView, Hosting, MapPosition, ServerClock, ServerStatus, Weather,
 };
 use crate::player::Player;
 
@@ -31,6 +31,7 @@ pub(super) fn receive(
     mut server_clock: ResMut<ServerClock>,
     time: Res<Time<Real>>,
     mut weather: ResMut<Weather>,
+    mut hosting: ResMut<Hosting>,
     mut player: Query<&mut MapPosition, With<Player>>,
 ) {
     // A world joined now: its chunks follow straight away, before the
@@ -126,6 +127,18 @@ pub(super) fn receive(
                     dev_tools,
                     can_pause,
                 }));
+            }
+            Ok(Some(ServerMessage::Online(state))) => {
+                // Nobody pauses a world others are playing in.
+                server_clock.can_pause = !matches!(state, OnlineState::Online { .. });
+                hosting.0 = state;
+            }
+            // On purpose: not worth trying again.
+            Ok(Some(ServerMessage::GoingOffline(name))) => {
+                let reason =
+                    format!("{name} has gone offline: its host closed it to other players.");
+                give_up(&mut commands, &mut status, reason);
+                break;
             }
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");

@@ -9,6 +9,7 @@ mod address;
 mod level;
 mod link;
 mod login;
+mod online;
 
 pub use address::{DEFAULT_PORT, ServerAddress};
 pub use level::{
@@ -16,6 +17,7 @@ pub use level::{
 };
 pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
 pub use login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
+pub use online::{OnlineSettings, OnlineState};
 
 use crate::poi::CHUNK_SIZE;
 
@@ -31,7 +33,7 @@ pub use world_chunk::{SeenPoi, WorldChunk, WorldInfo};
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 33;
+pub const PROTOCOL_VERSION: u32 = 34;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.

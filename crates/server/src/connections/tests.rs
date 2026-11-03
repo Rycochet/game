@@ -79,6 +79,7 @@ impl TestClient {
             exit_when_alone: false,
             pausable: self.pausable,
             guests: true,
+            ..Default::default()
         };
         for message in messages {
             answer(
@@ -708,6 +709,7 @@ pub(crate) fn tick_both(connections: &mut Connections, world: &mut ServerWorld) 
         exit_when_alone: false,
         pausable: false,
         guests: true,
+        ..Default::default()
     });
     bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
     bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, sync_entities).unwrap();
@@ -734,6 +736,7 @@ fn tick_with(
         exit_when_alone: false,
         pausable: false,
         guests,
+        ..Default::default()
     });
     bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
     (
@@ -1150,6 +1153,7 @@ fn the_hour_and_moved_clocks_are_told_and_a_restart_carries_on() {
         exit_when_alone: false,
         pausable: false,
         guests: true,
+        ..Default::default()
     };
     assert!(answer(
         &mut connections.clients[0],
@@ -1235,6 +1239,7 @@ fn messages_before_hello_are_refused() {
         exit_when_alone: false,
         pausable: false,
         guests: true,
+        ..Default::default()
     };
     let message = ClientMessage::UseExit;
     assert!(!answer(

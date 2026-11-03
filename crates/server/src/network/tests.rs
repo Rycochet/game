@@ -43,7 +43,15 @@ fn serve_without_a_game(
         ping_every,
         silent_after,
     };
-    thread::spawn(move || serve(listener, None, None, sockets, Arc::default()));
+    thread::spawn(move || {
+        serve(
+            Some(listener),
+            None,
+            None,
+            sockets,
+            Stop::Signal(Arc::default()),
+        )
+    });
     (address, accepted)
 }
 
@@ -87,7 +95,15 @@ fn serve_with_plain_too(
         ping_every: PING_EVERY,
         silent_after: SILENT_AFTER,
     };
-    thread::spawn(move || serve(listener, Some(secure), None, sockets, Arc::default()));
+    thread::spawn(move || {
+        serve(
+            Some(listener),
+            Some(secure),
+            None,
+            sockets,
+            Stop::Signal(Arc::default()),
+        )
+    });
     (plain_address, secure_address, accepted)
 }
 

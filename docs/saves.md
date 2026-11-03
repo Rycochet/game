@@ -23,13 +23,13 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 - `worlds/`: each world, and the sites in it that have been entered.
 - `characters/`: what each character knows, and where they are.
 - `accounts/` and `logins/`: who owns which characters. No login secret is stored.
-- `tls/`: its certificates. **`tls/key.pem` is its private key**, so keep it to yourself.
+- `tls/`: its certificates (single player's too, once Online has been on). **`tls/key.pem` is its private key**, so keep it to yourself.
 - `save_format.ron`: which format the saves here are in.
 - `old-saves-<date>/`: saves from an older version that can't be used any more. A new version that wipes saves moves `worlds/`, `characters/`, `accounts/` and `logins/` here when it starts, and leaves everything else, such as certificates, in place. This version can't read them, so delete the folder whenever you like.
 
 ### In the native client's folder
 
-- `client.ron`: choices kept between runs, such as the interface size and "Enable touch" from Settings, the page Item Pictures last showed, and the servers joined with Connect (and any certificate pasted in for them). The path can be changed with `HOW_PREFERENCES`.
+- `client.ron`: choices kept between runs, such as the interface size and "Enable touch" from Settings, the page Item Pictures last showed, the servers joined with Connect (and any certificate pasted in for them), and Online with its Server Options. The path can be changed with `HOW_PREFERENCES`.
 - `guest_tokens.ron`: the secret that makes you the same guest on each server, beside `client.ron`. Anyone with it can play as you.
 
 Clearing a browser's data for a server's address, or losing `guest_tokens.ron`, loses that guest's character, as there's no other way to log in yet.

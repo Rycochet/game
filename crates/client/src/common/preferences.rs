@@ -10,6 +10,8 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use shared::protocol::OnlineSettings;
+
 use super::SavedServer;
 
 /// The player's choices, loaded at start and saved whenever they change.
@@ -28,6 +30,11 @@ pub struct Preferences {
     /// The address of the one Play connects to, if it isn't the usual one
     /// (single player, or in a browser the page's server).
     pub last_server: Option<String>,
+    /// "Online": the built-in server is opened to other players once playing on
+    /// it (native only).
+    pub online: bool,
+    /// How it is opened (Server Options).
+    pub online_settings: OnlineSettings,
 }
 
 /// How big the interface is drawn: its own size is 100%.

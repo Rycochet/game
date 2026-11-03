@@ -41,10 +41,13 @@ pub fn start_embedded(
                 exit_when_alone: true,
                 pausable: true,
                 guests: false,
+                ..Default::default()
             };
             // Made on the thread itself: a Bevy `App` can't move between
             // threads.
-            let mut app = headless_app(world_seed, options, data);
+            let mut app = headless_app(world_seed, options, data.clone());
+            // Its player may open it to others.
+            app.add_plugins(crate::OnlinePlugin { data });
             // The client's own debug API takes the usual port.
             app.add_plugins(DebugApiPlugin { port_offset: 1 });
             app.world_mut()

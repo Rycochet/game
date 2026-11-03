@@ -22,6 +22,14 @@ pub enum SystemMenu {
     Forgetting,
     /// The startup menu, and above it why the server can't be played on.
     Refused,
+    /// The menu, and above it Server Options (native only).
+    ServerOptions,
+    /// The menu, and above it the requester asking whether to let others join.
+    GoingOnline,
+    /// The menu, and above it the requester asking whether to send others away.
+    GoingOffline,
+    /// The menu, and above it why the server couldn't be opened to others.
+    OnlineFailed,
 }
 
 impl SystemMenu {
@@ -44,9 +52,18 @@ impl SystemMenu {
             (Self::Menu, Action::Quit) => Self::Confirming,
             // (Connect's own presses are `connect::use_connect`'s.)
             (Self::Menu, Action::Connect) => Self::Connect,
-            (Self::Confirming | Self::Settings | Self::Credits | Self::Connect, Action::Back) => {
-                Self::Menu
-            }
+            (Self::Menu, Action::ServerOptions) => Self::ServerOptions,
+            (
+                Self::Confirming
+                | Self::Settings
+                | Self::Credits
+                | Self::Connect
+                | Self::ServerOptions
+                | Self::GoingOnline
+                | Self::GoingOffline
+                | Self::OnlineFailed,
+                Action::Back,
+            ) => Self::Menu,
             (Self::Certificate | Self::Forgetting, Action::Back) => Self::Connect,
             (same, _) => same,
         }
@@ -81,6 +98,18 @@ pub(super) enum Action {
     KeepCertificate,
     /// Takes the certificate away from the server in Connect's box.
     ClearCertificate,
+    /// "Online": opens the built-in server to others, or closes it, asking
+    /// first while playing on it.
+    ToggleOnline,
+    /// The requester's yes, to letting others join or sending them away.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    ReallyToggleOnline,
+    /// The gear beside Online.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    ServerOptions,
+    /// Copies the server's certificate.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    CopyCertificate,
     Quit,
     ReallyQuit,
 }
@@ -96,6 +125,8 @@ pub(super) enum MenuButton {
     LogOut,
     /// Enabled only at the startup menu.
     Connect,
+    /// Native only: shows whether it is on.
+    Online,
 }
 
 /// The gear button.

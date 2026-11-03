@@ -164,6 +164,17 @@ pub(super) fn join(
 ) -> bool {
     let account = clients[i].account;
     let character = clients[i].character_id;
+    let playing = clients
+        .iter()
+        .filter(|other| !other.gone && other.phase == Phase::Playing)
+        .count();
+    if options.player_limit > 0 && !clients[i].host && playing >= options.player_limit.into() {
+        info!("A player was turned away: the server is full");
+        clients[i].link.send(&ServerMessage::Refused(
+            "this server is full: try again later".into(),
+        ));
+        return false;
+    }
     for (j, other) in clients.iter_mut().enumerate() {
         let same_account = account.is_some() && other.account == account;
         let same = same_account || other.character_id == character;

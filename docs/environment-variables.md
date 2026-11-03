@@ -35,6 +35,8 @@ Without any of these, the server makes a self-signed certificate and keeps it in
 | -------- | ------- | ------------ |
 | `HOW_DATA` | `Hall of Worlds/server` in the user's data folder (`/data` in Docker) | Where to save. See [Saves and data](saves). |
 | `HOW_GUESTS` | `true` | Whether people can play without an account. `false` stops the server from starting for now, as there is no other way to log in yet. |
+| `HOW_SERVER_NAME` | `Hall of Worlds` | What the server calls itself, for instance when telling players it is going offline. |
+| `HOW_PLAYER_LIMIT` | `0` | The most players at once; anyone more is told the server is full. `0` is no limit. |
 
 ## Logging
 

@@ -69,14 +69,14 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
                 height: px(GEAR_BUTTON),
                 ..default()
             };
-            spawn_icon_button(holder, ButtonState::Normal, icon, node).insert((
+            spawn_icon_button(holder, ButtonState::Normal, icon.clone(), node).insert((
                 GearButton,
                 Action::Open,
                 Pressable,
                 ButtonTooltip("Menu".into()),
             ));
         });
-    super::panel::spawn_main_panel(&mut commands);
+    super::panel::spawn_main_panel(&mut commands, icon.clone());
     spawn_requester(&mut commands);
     spawn_settings(&mut commands);
     super::credits::spawn_credits(&mut commands);
@@ -84,6 +84,11 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
     super::connect::spawn_connect(&mut commands, &icons);
     super::connect::spawn_popups(&mut commands);
     super::refusal::spawn_refusal(&mut commands);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        super::online::spawn_online_requesters(&mut commands);
+        super::server_options::spawn_server_options(&mut commands);
+    }
     commands.insert_resource(icons);
 }
 
