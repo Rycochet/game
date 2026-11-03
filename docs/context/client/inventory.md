@@ -10,7 +10,8 @@ The Character panel (what the character is like, what they wear and what they ca
 - `crates/client/src/inventory/body.rs`: `spawn_rows`, `BodyNode`, `show_clothes`, `show_body_aim`, `worn_notes`.
 - `crates/client/src/inventory/give.rs`: `NearbyPanel`, `GiveRow`, `show_nearby`, `show_give_aim`.
 - `crates/client/src/inventory/ground.rs`: `Ground`, `spawn_section`, `read_server`, `show_section`, `show_aim`.
-- `crates/client/src/inventory/panels.rs`: `OpenGrids` and the panels' components, the module list. In `panels/`: `fixed.rs` (`spawn_fixed_parts`), `icons.rs` (the person, bin and ground icons, drawn in code), `grids.rs` (`OpenGrids::open`), `pockets.rs` (`toggle_pockets`, `forget_closed`), `bins.rs` (`show_bins`, `show_drop`), `show.rs` (`show_grids`, weights), `aim.rs` (`show_aim`), `held.rs` (`show_held`, `show_tooltip`, `show_button`).
+- `crates/client/src/inventory/filter.rs`: `GridFilter`, `FilterIcons`, `make_icons` (`Startup`), `spawn_filter`, `chosen`, `dims`, `keep_filters` (icons on new filters, greying empty categories, the ground grid's filter). `filter/icons.rs`: the pictures for All and each category, drawn in code.
+- `crates/client/src/inventory/panels.rs`: `OpenGrids` and the panels' components, the module list. In `panels/`: `fixed.rs` (`spawn_fixed_parts`), `icons.rs` (the person, bin and ground icons, drawn in code), `grids.rs` (`OpenGrids::open`, each grid with its filter above it), `pockets.rs` (`toggle_pockets`, `forget_closed`), `bins.rs` (`show_bins`, `show_drop`), `show.rs` (`show_grids`, weights), `aim.rs` (`show_aim`), `held.rs` (`show_held`, `show_tooltip`, `show_button`).
 
 ## Public API
 
@@ -21,7 +22,7 @@ The Character panel (what the character is like, what they wear and what they ca
 
 ## Depends on
 
-- `common` (`GameView`, `PointerPosition`, `PointerSystems`, `TouchGesture`, `GROUND`, `SpentEnergy`), `connection` (`ToServer`, `FromServer`), `player` (`Player`), `widgets`, `shared::item`, `shared::id`, `shared::protocol`.
+- `shared::item::ItemCategory`, `common` (`GameView`, `PointerPosition`, `PointerSystems`, `TouchGesture`, `GROUND`, `SpentEnergy`), `connection` (`ToServer`, `FromServer`), `player` (`Player`), `widgets`, `shared::item`, `shared::id`, `shared::protocol`.
 
 ## Used by
 
@@ -49,3 +50,4 @@ The Character panel (what the character is like, what they wear and what they ca
 - Stacks (`shared::item`): shown by their top, with a count, and named by it. Held over something that looks the same, its cells show green if some can go on (`StackItem`, or `StackFromGround` from the ground; never from a shop), red if none can; dropped on a closed bag, a stack inside it that takes all of it comes before a free place. Only a stack's top is worn, from a grid or the ground, the rest staying where it was.
 - Splitting (owner's design): shift+click, or a tap, on a stack opens a dark box by it (`split`) with its name, a slider from one to all (opening at half) and the stack at that count. Pressing that stack picks up that many from its top (`Inventory::part_of`; the part is lifted out in `Carried` while held, again if the server's answer comes first) and closes the box; Esc, a press elsewhere or the stack going closes it. Letting go sends the usual message with the part's id. Once nothing is held, any part left lying on its stack goes back (`settle_parts`), so snapping back needs nothing more. The item's own name isn't shown while the box is.
 - Mixed stacks (owner's design): a stack with something known to differ has a red "!" in its top right corner (`widgets`). Any press on it, a tap or a finger held on it opens the split box with rows instead of a slider: All, then each kind in it, top's first, each with a small picture keeping its glow, its name and how many. Pressing a row holds those items (`Holding::group`, lifted out in `Carried` by `lift_group`), and every message letting go sends is wrapped in `FromStack`. Snapping back puts them on top of the stack; once nothing differs the mark goes. Mixed stacks on the ground or in a shop are picked up whole for now.
+- Filters (owner's design): a small button at the top right above each carried grid, and beside "On the ground", opens a list of All then each `ItemCategory`, with pictures; categories with nothing in that grid are greyed. The button shows the chosen one's picture. What isn't in it is faded (`ItemLook::dimmed`) but can still be picked up and named; a stack goes by its top. Each grid has its own, kept on its button, so closing a panel resets it to All. Sorting, the second button, comes next.

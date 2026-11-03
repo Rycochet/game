@@ -3,9 +3,8 @@
 
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
-use shared::creature::Size;
 use shared::id::Id;
-use shared::item::{Inventory, Item, ItemKind, Placed, Rotation, Shape};
+use shared::item::{Inventory, Item, ItemCategory, Placed, Rotation, Shape};
 
 use super::ALLOWED;
 use super::item::{
@@ -13,6 +12,13 @@ use super::item::{
     spawn_item_grid,
 };
 use crate::common::{HeldGift, StockCell, TakesGifts};
+
+// Split into files (`cargo xtask lint` keeps files small).
+mod place;
+
+#[cfg(test)]
+use place::longest_side;
+use place::{first_place, landing, rows_for};
 
 /// Where something held over a grid would land, with whose grid it is and its shape.
 pub type StockAimAt = (Id, (u8, u8), Shape);
@@ -27,6 +33,8 @@ pub struct StockGrid {
     gifts: Vec<Gift>,
     /// It needs drawing again.
     pub changed: bool,
+    /// Only this shows clearly: the rest is faded.
+    pub filter: Option<ItemCategory>,
 }
 
 /// Something given, and where in the grid it was let go.
@@ -54,11 +62,17 @@ impl StockGrid {
             stock: restocked(columns, &[], items, &[]),
             gifts: Vec::new(),
             changed: true,
+            filter: None,
         }
     }
 
     pub fn is_empty(&self) -> bool {
         self.stock.is_empty()
+    }
+
+    /// What is in it.
+    pub fn items(&self) -> impl Iterator<Item = &Item> {
+        self.stock.iter().map(|placed| &placed.item)
     }
 
     /// The server says what there is: what was there stays where it was, what was
@@ -110,7 +124,7 @@ impl StockGrid {
                 grid.spawn((covering(), Floating)).with_children(|layer| {
                     let shown = self.stock.iter();
                     for placed in shown.filter(|placed| Some(placed.item.id) != without) {
-                        spawn_stock_item(layer, placed, with);
+                        spawn_stock_item(layer, placed, with, self.filter);
                     }
                 });
                 grid.spawn((StockAim(with), covering(), Floating));
@@ -159,7 +173,12 @@ pub fn draw_stock_aim<'a>(
     }
 }
 
-fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, with: Id) {
+fn spawn_stock_item(
+    layer: &mut ChildSpawnerCommands,
+    placed: &Placed,
+    with: Id,
+    filter: Option<ItemCategory>,
+) {
     // A stack is named by its top, which is what shows.
     let top = placed.item.top();
     let name = ItemName {
@@ -167,9 +186,12 @@ fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, with: Id)
         quality: top.quality,
         set: top.set,
     };
+    let dimmed = filter.is_some_and(|only| top.kind.category() != only);
     spawn_item_cells(
         layer,
-        ItemLook::of(&placed.item).turned(placed.rotation),
+        ItemLook::of(&placed.item)
+            .turned(placed.rotation)
+            .dimmed(dimmed),
         placed.shape(),
         (placed.x as f32, placed.y as f32),
         true,
@@ -199,55 +221,6 @@ fn cell_in_grid(corner: Vec2, node: &ComputedNode, transform: &UiGlobalTransform
 fn others(stock: &[Placed], item: Id) -> Vec<Placed> {
     let others = stock.iter().filter(|placed| placed.item.id != item);
     others.cloned().collect()
-}
-
-/// The longest side of any kind of item at its largest: what the empty rows must
-/// have room for, however it is turned.
-fn longest_side() -> u8 {
-    let shapes = ItemKind::ALL
-        .iter()
-        .map(|kind| kind.def().shape.scaled(Size::Giant));
-    shapes
-        .flat_map(|shape| [shape.width, shape.height])
-        .max()
-        .unwrap_or(1)
-}
-
-/// How many rows a grid has: all it holds, and room for the largest thing below.
-fn rows_for(stock: &[Placed]) -> u8 {
-    let cells = stock.iter().flat_map(|placed| placed.cells());
-    let lowest = cells.map(|(_, y)| y + 1).max().unwrap_or(0);
-    lowest + longest_side()
-}
-
-/// Whether a shape's cells are all free with its corner here.
-fn fits(columns: u8, stock: &[Placed], shape: Shape, x: i32, y: i32) -> bool {
-    let taken: Vec<(u8, u8)> = stock.iter().flat_map(|placed| placed.cells()).collect();
-    x >= 0
-        && y >= 0
-        && shape.cells().all(|(cell_x, cell_y)| {
-            let cell = (x + cell_x as i32, y + cell_y as i32);
-            cell.0 < columns as i32 && !taken.contains(&(cell.0 as u8, cell.1 as u8))
-        })
-}
-
-/// The first place a shape fits, along each row from the left. There is always one,
-/// at the latest below everything.
-fn first_place(columns: u8, stock: &[Placed], shape: Shape) -> (u8, u8) {
-    let rows = rows_for(stock) as i32;
-    (0..rows)
-        .flat_map(|y| (0..columns as i32).map(move |x| (x, y)))
-        .find(|&(x, y)| fits(columns, stock, shape, x, y))
-        .map_or((0, rows as u8), |(x, y)| (x as u8, y as u8))
-}
-
-/// Where something let go here ends up: there if it fits, or else the first place.
-fn landing(columns: u8, stock: &[Placed], shape: Shape, wanted: (i32, i32)) -> (u8, u8) {
-    if fits(columns, stock, shape, wanted.0, wanted.1) {
-        (wanted.0 as u8, wanted.1 as u8)
-    } else {
-        first_place(columns, stock, shape)
-    }
 }
 
 /// Oldest first. Things without a time are older than time was kept.

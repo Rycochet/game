@@ -6,6 +6,7 @@
 //! tree starting from their pockets: a grid of placed items, some of which have
 //! grids of their own.
 
+mod category;
 mod def;
 mod drop;
 mod inventory;
@@ -22,6 +23,7 @@ mod secrets;
 mod shape;
 mod stack;
 
+pub use category::ItemCategory;
 pub use drop::{Drop, ODDS_OUT_OF, roll_drop};
 pub use inventory::Inventory;
 pub use item::{Item, MadeAt};

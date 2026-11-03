@@ -6,7 +6,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 
 - `crates/shared/src/id.rs`: `Id`, a version 6 UUID (text in saves, 16 bytes in messages). Nothing here makes one: `server::ids::new_id` does.
 - `crates/shared/src/item.rs`: the module list, the re-exports below (every type is used as `item::X`) and the constants `MAX_SHAPE_SIDE`, `MAX_DEPTH`, `POCKETS`. Tests for every rule below in `item/tests.rs`, `item/add_tests.rs` and `item/stack_tests.rs`. In `item/`:
-  - `kind.rs`: `ItemKind` (`ALL`, `blade_family`, `comes_in_sizes` and other questions about a kind). `def.rs`: `ItemKind::def`, the table of what each kind is. `item_def.rs`: `ItemDef`, `ContainerDef`, `WearDef`, and the helpers the table is written with (`plain`, `bag`, `wear`, `taking`, `worn`).
+  - `kind.rs`: `ItemKind` (`ALL`, `blade_family`, `comes_in_sizes` and other questions about a kind). `def.rs`: `ItemKind::def`, the table of what each kind is. `category.rs`: `ItemCategory`, `ItemKind::category`. `item_def.rs`: `ItemDef`, `ContainerDef`, `WearDef`, and the helpers the table is written with (`plain`, `bag`, `wear`, `taking`, `worn`).
   - `item.rs`: `Item` (`new`, `name`, `shape`, `total_weight`, `set_gems`), `MadeAt`. `made.rs`: `Made`. `quality.rs`: `Quality`, `artifact_name`. `secrets.rs`: `Favour`, `Known`, and `Item`'s magic and secrets (`can_be_magical`, `roll_secrets`, `hide_secrets`).
   - `stack.rs`: `StackLimits`, and `Item`'s stacks (`count`, `top`, `members`, `groups`, `looks_like`, `is_even`, `take_top`, `split_top`, `put_on`, `own_weight`).
   - `placed.rs`: `Placed`, `Holder`. `refused.rs`: `MoveRefused`. `shape.rs`: `Shape`, `Rotation`. `drop.rs`: `Drop`, `ODDS_OUT_OF`, `roll_drop`.
@@ -21,6 +21,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 
 - `Favour::{Blessed, Cursed}` (`Item.favour`, one or neither), `Known { magic, favour }` (`Item.known`, what has been found out). `Item::{can_be_magical, is_magical, roll_secrets, hide_secrets}`, `Inventory::hide_secrets`: see Notes. The rules for what they do are in `wear.rs` (`creature.md`).
 - `Id(Uuid)`: something's id for good, for items, mobs, characters and accounts (the last two wrapped in `CharacterId` and `AccountId`). Prints as the usual UUID text, which also names files. `Id::for_test` is for tests in any crate. `Id::NOBODY` is nil, no real id.
+- `ItemCategory::{ALL, name}` (Weapons, Armour, Clothing, Jewellery, Containers, Food, Valuables, Materials, Other: the owner's list), `ItemKind::category`: every kind in one, listed by hand with no catch-all, so a new kind needs one to build. For filtering grids, and sorting them next.
 - `ItemKind::{ALL, def()}`, `ItemDef { name, weight (grams), shape, container, wear, has_quality, make_percent }`, `WearDef` (see `creature.md`), `ContainerDef { width, height, max_total, max_each }`. To add a kind: add it to the enum, `ALL` (alphabetical by name) and `def`. Saved by name.
 - `Shape`: up to `MAX_SHAPE_SIDE` (8) a side, as bits of a `u64`, gaps allowed. `rectangle`, `has`, `cells`, `size`, `turned`, `scaled` (for a `Size`), `smaller_than`.
 - `Rotation::{None, Quarter, Half, ThreeQuarters}`: clockwise; `next`, `turn_cell`.

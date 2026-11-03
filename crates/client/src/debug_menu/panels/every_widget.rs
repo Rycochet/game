@@ -77,6 +77,7 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
             options: kinds(),
             selected: 0,
             searchable,
+            ..default()
         };
         let node = Node {
             padding: BUTTON_PADDING,

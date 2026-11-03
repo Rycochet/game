@@ -51,6 +51,8 @@ pub struct ItemLook {
     pub count: u32,
     /// A stack with something in it known to differ.
     pub mixed: bool,
+    /// Faded into what is behind it, as not what is being looked for.
+    pub dimmed: bool,
 }
 
 impl ItemLook {
@@ -67,7 +69,13 @@ impl ItemLook {
             aura: Aura::of(item),
             count,
             mixed,
+            dimmed: false,
         }
+    }
+
+    /// Faded or not, by a filter.
+    pub fn dimmed(self, dimmed: bool) -> Self {
+        Self { dimmed, ..self }
     }
 
     /// Turned this way.

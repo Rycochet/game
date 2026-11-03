@@ -4,28 +4,31 @@ use bevy::prelude::*;
 use shared::id::Id;
 use shared::item::{Holder, Inventory, Placed};
 
+use super::super::filter::{GridFilter, chosen, dims};
 use super::super::{Carried, Holding};
 use super::{ItemCell, ItemLayer, WeightText};
-use crate::widgets::{ItemLook, spawn_item_cells};
+use crate::widgets::{Dropdown, ItemLook, spawn_item_cells};
 
 pub(super) fn kilograms(grams: u32) -> String {
     format!("{:.2} kg", grams as f32 / 1000.0)
 }
 
-/// Draws what is in each open grid again when it changes. What is held isn't
-/// drawn where it was, though it is still there until dropped.
+/// Draws what is in each open grid again when it changes, or its filter does. What
+/// is held isn't drawn where it was, though it is still there until dropped.
 #[allow(clippy::too_many_arguments)]
 pub(in crate::inventory) fn show_grids(
     carried: Res<Carried>,
     holding: Res<Holding>,
     new_layers: Query<(), Added<ItemLayer>>,
     layers: Query<(Entity, &ItemLayer)>,
+    filters: Query<(&GridFilter, Ref<Dropdown>)>,
     mut weights: Query<(&WeightText, &mut Text)>,
     mut commands: Commands,
     mut drawn_without: Local<Option<Id>>,
 ) {
     let held = holding.held.map(|held| held.item.id);
-    if !carried.is_changed() && new_layers.is_empty() && *drawn_without == held {
+    let filtered = filters.iter().any(|(_, dropdown)| dropdown.is_changed());
+    if !carried.is_changed() && new_layers.is_empty() && *drawn_without == held && !filtered {
         return;
     }
     *drawn_without = held;
@@ -34,9 +37,13 @@ pub(in crate::inventory) fn show_grids(
         let Some(grid) = carried.0.grid(layer.holder) else {
             continue;
         };
+        let filter = filters
+            .iter()
+            .find(|(filter, _)| filter.0 == Some(layer.holder))
+            .and_then(|(_, dropdown)| chosen(&dropdown));
         commands.entity(entity).with_children(|layer| {
             for placed in grid.iter().filter(|placed| Some(placed.item.id) != held) {
-                spawn_placed(layer, placed);
+                spawn_placed(layer, placed, dims(filter, &placed.item));
             }
         });
     }
@@ -45,11 +52,11 @@ pub(in crate::inventory) fn show_grids(
     }
 }
 
-pub(super) fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed) {
+pub(super) fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed, dimmed: bool) {
     let (id, rotation) = (placed.item.id, placed.rotation);
     spawn_item_cells(
         layer,
-        ItemLook::of(&placed.item).turned(rotation),
+        ItemLook::of(&placed.item).turned(rotation).dimmed(dimmed),
         placed.shape(),
         (placed.x as f32, placed.y as f32),
         true,

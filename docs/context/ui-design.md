@@ -21,6 +21,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | --- | --- | --- |
 | Button | have | Normal, selected, active, disabled. A main style (one per area) and a quiet one with no box until hovered. No spinner. |
 | Icon button | have | Square, with padding and an optional tooltip naming it. |
+| Small icon button | have | 22 px, for controls on the edge of something, such as the filter above a grid. An icon dropdown is one, opening a list of options with their pictures, some greyed. |
 | Close button | have | A normal raised button, with a letter X. |
 | Checkbox | have | A whole clickable row with a drawn tick. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
 | Toggle row | have | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |

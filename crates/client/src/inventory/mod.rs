@@ -19,6 +19,7 @@ use crate::widgets::WidgetSystems;
 #[cfg(not(target_arch = "wasm32"))]
 mod debug;
 mod early_pictures;
+mod filter;
 mod finger;
 mod hold_items;
 mod holding;
@@ -56,7 +57,7 @@ impl Plugin for InventoryPlugin {
             .add_message::<TookItem>()
             .add_message::<OpenCharacter>()
             .add_message::<GaveItem>()
-            .add_systems(Startup, panels::spawn_fixed_parts)
+            .add_systems(Startup, (panels::spawn_fixed_parts, filter::make_icons))
             .add_systems(
                 PreUpdate,
                 (
@@ -77,7 +78,7 @@ impl Plugin for InventoryPlugin {
                     give::forget_closed,
                     panels::show_bins,
                     panels::show_drop,
-                    ground::read_server,
+                    (ground::read_server, filter::keep_filters).chain(),
                     ground::show_section,
                     ground::show_aim,
                     panels::show_grids,

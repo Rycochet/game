@@ -12,6 +12,10 @@ pub(super) const TICK_STROKES: [Stroke; 2] = [(6.0, 1.0, 7.0, 45.0), (10.0, 4.0,
 
 /// Between the edge of a button and its picture.
 pub(super) const ICON_PADDING: f32 = 4.0;
+/// A small icon button, across: for controls on the edge of something, such as a grid.
+const SMALL_ICON_BUTTON: f32 = 22.0;
+/// Between the edge of a small icon button and its picture.
+const SMALL_ICON_PADDING: f32 = 2.0;
 
 /// A button. `node` says its size or padding and where it goes; its border and
 /// the centring of its words are set here.
@@ -70,6 +74,23 @@ pub fn spawn_icon_button<'a>(
             ..default()
         },
     ));
+    button
+}
+
+/// An icon button `SMALL_ICON_BUTTON` across, with `node` for where it goes.
+pub fn spawn_small_icon_button<'a>(
+    parent: &'a mut ChildSpawnerCommands,
+    state: ButtonState,
+    icon: Handle<Image>,
+    node: Node,
+) -> EntityCommands<'a> {
+    let mut button = spawn_icon_button(parent, state, icon, node);
+    button.entry::<Node>().and_modify(|mut node| {
+        node.width = px(SMALL_ICON_BUTTON);
+        node.height = px(SMALL_ICON_BUTTON);
+        node.flex_shrink = 0.0;
+        node.padding = UiRect::all(px(SMALL_ICON_PADDING));
+    });
     button
 }
 

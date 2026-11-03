@@ -38,6 +38,7 @@ pub(super) fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                 options: PicturePage::ALL.map(|page| page.name().to_owned()).to_vec(),
                 selected: 0,
                 searchable: false,
+                ..default()
             };
             let node = Node {
                 padding: BUTTON_PADDING,

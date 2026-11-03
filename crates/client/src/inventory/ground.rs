@@ -8,6 +8,7 @@ use shared::id::Id;
 use shared::protocol::ServerMessage;
 
 use super::Carried;
+use super::filter::spawn_filter;
 use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPosition, TookItem};
 use crate::connection::FromServer;
 use crate::player::Player;
@@ -26,7 +27,7 @@ const FONT: TextSize = TextSize::Medium;
 #[derive(Resource)]
 pub(super) struct Ground {
     at: Option<(i64, i64)>,
-    grid: StockGrid,
+    pub(super) grid: StockGrid,
 }
 
 impl Default for Ground {
@@ -60,7 +61,16 @@ pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) -> Entity {
             },
         ))
         .with_children(|section| {
-            section.spawn((Text::new("On the ground"), FONT.font(), TextColor(INK)));
+            section
+                .spawn(Node {
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    ..default()
+                })
+                .with_children(|row| {
+                    row.spawn((Text::new("On the ground"), FONT.font(), TextColor(INK)));
+                    spawn_filter(row, None);
+                });
             holder = spawn_scroll_area(section, MOST_HEIGHT);
         });
     holder

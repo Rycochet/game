@@ -15,7 +15,7 @@ mod show;
 
 use list::spawn_list;
 use parts::label_of;
-pub use parts::{Dropdown, DropdownChosen, spawn_dropdown};
+pub use parts::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
 pub(super) use parts::{List, ListBacking, ListOption, ListRows, OpenList};
 use rows::{list_corner, on_show, window_start};
 pub(super) use run::run_dropdowns;
@@ -24,8 +24,10 @@ pub(super) use show::show_dropdowns;
 /// Above anything a dropdown can be on.
 const LIST_LAYER: i32 = 4;
 /// How many options show at once.
-const ROWS: usize = 8;
+const ROWS: usize = 10;
 const ROW: f32 = 32.0;
+/// A picture beside an option in the list, across.
+const ROW_ICON: f32 = 20.0;
 const GAP: f32 = 4.0;
 const FONT: TextSize = TextSize::Medium;
 const SEARCH_HEIGHT: f32 = 32.0;

@@ -6,12 +6,16 @@ use shared::item::Shape;
 use super::super::aura::{AuraMask, aura_glow};
 use super::super::set_edge::set_edge;
 use super::super::{GRID_COLOUR, GRID_LINE, ITEM_EDGE, Pressable};
+use super::Floating;
 use super::count::spawn_count;
 use super::mixed::spawn_mixed_mark;
 use super::{
     CELL, ITEM_LABEL_FONT, ItemLook, PICTURE_PIXELS_PER_CELL, at_cell, item_colour, item_edge,
     item_edge_width, item_label, item_picture, picture_node, picture_turned,
 };
+
+/// Over an item filtered out: `GRID_COLOUR`, letting a little of it through.
+const DIMMING: Color = Color::srgba(0.55, 0.46, 0.33, 0.65);
 
 /// An empty grid with `extra` on it, and `on_lines` on each cell's lines. `fill`
 /// adds what goes over its cells.
@@ -68,6 +72,7 @@ pub fn spawn_item_cells<B: Bundle>(
         aura,
         count,
         mixed,
+        dimmed,
     } = look;
     let drawn = picture.is_some();
     let pixels = shape.width.max(shape.height) as u32 * PICTURE_PIXELS_PER_CELL;
@@ -136,6 +141,13 @@ pub fn spawn_item_cells<B: Bundle>(
     }
     spawn_count(parent, count, shape, corner, item_edge_width(quality));
     spawn_mixed_mark(parent, mixed, shape, corner, item_edge_width(quality));
+    if dimmed {
+        // Last, so over all of it: the grid's colour, mostly hiding it.
+        for (x, y) in shape.cells() {
+            let cell = at_cell(corner.0 + x as f32, corner.1 + y as f32);
+            parent.spawn((cell, BackgroundColor(DIMMING), Floating));
+        }
+    }
 }
 
 /// An edge of this width only on the sides with none of the shape beyond them.

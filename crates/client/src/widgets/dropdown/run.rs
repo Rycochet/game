@@ -111,7 +111,7 @@ pub(in crate::widgets) fn run_dropdowns(
     }
     let mut closing =
         keys.just_pressed(KeyCode::Escape) || presses.iter().any(|&press| backing.contains(press));
-    if let Some(at) = choice {
+    if let Some(at) = choice.filter(|&at| !dropdown.is_greyed(at)) {
         dropdown.selected = at;
         chosen.write(DropdownChosen(list.dropdown, at));
         closing = true;
