@@ -16,7 +16,7 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 | A server's saves, and single player's | `Hall of Worlds/server` in the user's data folder, or wherever `HOW_DATA` says |
 | In Docker | `/data`, which should be a volume |
 | The native client's own files | `Hall of Worlds/client` in the user's data folder |
-| A browser's guest token | The browser's local storage for that server's address |
+| A browser's guest token and preferences | The browser's local storage for that server's address |
 
 ### In a server's folder
 
@@ -30,6 +30,7 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 ### In the native client's folder
 
 - `known_servers.ron`: the servers visited and how each is trusted. The path can be changed with `HOW_KNOWN_SERVERS`.
+- `client.ron`: choices kept between runs, such as the page Item Pictures last showed. The path can be changed with `HOW_PREFERENCES`.
 - `guest_tokens.ron`: the secret that makes you the same guest on each server. Anyone with it can play as you.
 
 Clearing a browser's data for a server's address, or losing `guest_tokens.ron`, loses that guest's character, as there's no other way to log in yet.
