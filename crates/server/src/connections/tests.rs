@@ -1,4 +1,16 @@
-/// The character a `TestClient` plays.
+use super::answer::logged_in;
+use super::messages::act;
+use crate::accounts::{Accounts, LoginKey};
+use crate::ground::{self};
+use crate::sites::{self};
+use crate::{ServerOptions, ServerWorld};
+use shared::creature::CreatureKind;
+use shared::id::Id;
+use shared::item::{Inventory, Item, ItemKind, Quality};
+use shared::movement::Step;
+use shared::protocol::{CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessage};
+use shared::sheet::{Appearance, Sheet};
+use shared::world::MINUTES_PER_HOUR;
 fn tester() -> CharacterId {
     CharacterId(Id::for_test(1000))
 }
@@ -8,7 +20,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use shared::item::{Favour, Holder, Rotation};
-use shared::movement::{Step, steps_between};
+use shared::movement::steps_between;
 use shared::poi::PoiKind;
 use shared::protocol::{ClientLink, Credentials, GuestToken, local_pair};
 use shared::world::WorldSeed;
