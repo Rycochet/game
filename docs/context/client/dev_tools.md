@@ -4,9 +4,9 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Files
 
-- `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`.
-- `crates/client/src/dev_tools/fake_input.rs`: only with the `debug-api` feature: fake mouse, touch, wheel, keys and typing for the debug API, queued and played a step a frame.
-- `crates/client/src/dev_tools/debug_api.rs`: only with the `debug-api` feature: the client's debug API methods (see `docs/context/debug-api.md`), one for most of these variables, going through the same code: `Forced` (stairs style, fields stage and cursor kept as set, applied every frame by `apply_forced`), `open_map`, `turn_camera`, `token_of`, `cell_kind`.
+- `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`. Each group of `HOW_DEBUG_` variables is read by an `add(app)` in its own file: `start.rs` (position, entering a site, cells), `forced.rs` (`Forced`: stairs, fields, cursor), `menus.rs` (panels, menus, the full map), `inventory.rs`, `moving.rs`, `world.rs` (time, suns and moons, snow), `view.rs` (herbs, window, token, camera), `screenshot.rs`; `parse.rs` reads their values.
+- `crates/client/src/dev_tools/fake_input.rs`: only with the `debug-api` feature: fake mouse, touch, wheel, keys and typing for the debug API, queued and played a step a frame. In `fake_input/`: `play.rs`, `mouse.rs`, `keys.rs`, `wait.rs`.
+- `crates/client/src/dev_tools/debug_api.rs`: only with the `debug-api` feature: the client's debug API methods (see `docs/context/debug-api.md`), one for most of these variables, going through the same code: `Forced` (stairs style, fields stage and cursor kept as set, applied every frame by `apply_forced`), `open_map`, `turn_camera`, `token_of`, `cell_kind`. In `debug_api/`, by what the methods do: `state.rs` (state, screenshot), `places.rs`, `world.rs`, `items.rs`, `moving.rs`, `view.rs`, `drawing.rs`, `panels.rs`.
 
 ## Public API
 

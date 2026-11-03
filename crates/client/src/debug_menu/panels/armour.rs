@@ -55,7 +55,7 @@ pub(super) fn first_plate<T>(
 }
 
 impl ArmourShown {
-    pub(super) fn look(self, quality: Quality) -> Option<Look> {
+    pub(in crate::debug_menu) fn look(self, quality: Quality) -> Option<Look> {
         let rolled = quality;
         let quality = Some(quality);
         Some(match self {

@@ -1,3 +1,11 @@
+use bevy::input::ButtonState;
+use bevy::input::keyboard::{Key, KeyboardInput, NativeKey, NativeKeyCode};
+use bevy::input::mouse::{MouseButtonInput, MouseWheel};
+use bevy::input::touch::{TouchInput, TouchPhase};
+use bevy::window::PrimaryWindow;
+
+use super::keys::{logical_key, typed_key};
+use super::mouse::drag_steps;
 use super::*;
 
 #[test]
