@@ -1,3 +1,4 @@
+use super::scale::detail_for;
 use super::*;
 
 #[test]

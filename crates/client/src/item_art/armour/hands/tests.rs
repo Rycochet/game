@@ -1,5 +1,9 @@
 use super::*;
+use crate::item_art::{HandsLook, OUTLINE_PIXELS, VIEW_WIDTH};
+use shared::armour::hands::Hand;
 use shared::armour::hands::{HandsPiece, roll};
+use shared::body::{Frame, Side};
+use shared::creature::CreatureKind;
 use shared::rng::Seed;
 
 fn looks() -> impl Iterator<Item = HandsLook> {

@@ -1,4 +1,6 @@
+use super::super::{BladeLook, OUTLINE_PIXELS, VIEW_WIDTH};
 use shared::blade::{Family, roll_blade};
+use shared::item::Quality;
 use shared::rng::Seed;
 
 use super::*;

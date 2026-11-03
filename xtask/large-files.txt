@@ -23,14 +23,6 @@ crates/client/src/dungeon_map/town.rs 899
 crates/client/src/dungeon_map/walls.rs 1341
 crates/client/src/ground/bag.rs 343
 crates/client/src/ground/mod.rs 626
-crates/client/src/inventory/mod.rs 728
-crates/client/src/inventory/panels.rs 780
-crates/client/src/item_art/armour/hands.rs 1007
-crates/client/src/item_art/armour/shoulders.rs 1367
-crates/client/src/item_art/blade.rs 884
-crates/client/src/item_art/gem.rs 323
-crates/client/src/item_art/mod.rs 504
-crates/client/src/item_art/ring.rs 309
 crates/client/src/minimap/frame.rs 342
 crates/client/src/minimap/grid.rs 337
 crates/client/src/minimap/mod.rs 1290

@@ -1,5 +1,9 @@
 use super::*;
+use crate::item_art::body::trunk_depth;
+use crate::item_art::{OUTLINE_PIXELS, ShouldersLook, VIEW_WIDTH};
 use shared::armour::shoulders::{ShouldersKind, roll};
+use shared::body::Frame;
+use shared::creature::CreatureKind;
 use shared::rng::Seed;
 
 fn looks() -> impl Iterator<Item = ShouldersLook> {
