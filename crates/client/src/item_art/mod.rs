@@ -1,6 +1,7 @@
 //! Pictures of items, drawn once in 3D by a camera of their own and kept as images.
 //! See `docs/context/client/item_art.md`.
 
+mod armour;
 mod blade;
 mod body;
 mod gem;
@@ -15,6 +16,7 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
+use shared::armour::hands::{Hand, HandsForm};
 use shared::blade::BladeForm;
 use shared::creature::{CreatureKind, Size};
 use shared::item::{Item, Quality};
@@ -56,6 +58,11 @@ pub enum Look {
         blade: BladeLook,
         quality: Option<Quality>,
     },
+    /// A pair of gauntlets or other hand pieces.
+    Hands {
+        hands: HandsLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -67,6 +74,7 @@ impl Look {
         match self {
             Self::Gem { .. } | Self::Ring { .. } => (1, 1),
             Self::Blade { blade, .. } => blade.cells,
+            Self::Hands { hands, .. } => hands.cells,
             Self::Body { .. } => body::CELLS,
         }
     }
@@ -92,6 +100,26 @@ pub struct BladeLook {
     form: BladeForm,
     /// What it takes up, wide and long, not turned.
     cells: (u8, u8),
+}
+
+/// What can be seen of a pair of hand pieces: how many digits each hand has shows.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct HandsLook {
+    form: HandsForm,
+    digits: u8,
+    /// What it takes up, wide and long, not turned.
+    cells: (u8, u8),
+}
+
+impl HandsLook {
+    /// Hand pieces with this many digits on each hand, taking up these cells.
+    pub fn new(form: HandsForm, digits: u8, cells: (u8, u8)) -> Self {
+        Self {
+            form,
+            digits,
+            cells,
+        }
+    }
 }
 
 /// A length to the nearest centimetre.
@@ -152,6 +180,17 @@ pub fn look_of(item: &Item) -> Option<Look> {
             })
         }
         ItemForm::Gem(gem) => Some(Look::Gem { gem: *gem, quality }),
+        ItemForm::Hands(form) => {
+            let shape = item.shape();
+            Some(Look::Hands {
+                hands: HandsLook {
+                    form: *form,
+                    digits: Hand::digits(item.made.fingers),
+                    cells: (shape.width, shape.height),
+                },
+                quality,
+            })
+        }
         ItemForm::Ring(ring) => {
             let settings = ring.settings.iter().map(|setting| SettingLook {
                 angle: setting.angle,
@@ -325,6 +364,9 @@ fn draw_pictures(
             }
             Look::Blade { blade, quality } => {
                 blade::blade_parts(&blade, quality, &mut meshes, &mut materials)
+            }
+            Look::Hands { hands, quality } => {
+                armour::hands::hands_parts(&hands, quality, &mut meshes, &mut materials)
             }
             Look::Body { kind } => body::body_parts(kind, &mut meshes, &mut materials),
         };

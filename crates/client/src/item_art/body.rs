@@ -26,14 +26,14 @@ const TILT: f32 = 0.25;
 const ROUND: usize = 12;
 const HEAD_RINGS: usize = 8;
 
-type Triangle = [Vec3; 3];
+pub(super) type Triangle = [Vec3; 3];
 
 fn point(mm: [i32; 3]) -> Vec3 {
     Vec3::new(mm[0] as f32, mm[1] as f32, mm[2] as f32)
 }
 
 /// Skin over rings of equally many points, with the ends closed.
-fn loft(triangles: &mut Vec<Triangle>, rings: &[Vec<Vec3>]) {
+pub(super) fn loft(triangles: &mut Vec<Triangle>, rings: &[Vec<Vec3>]) {
     let middle = |ring: &[Vec3]| ring.iter().copied().sum::<Vec3>() / ring.len() as f32;
     let mut face = |a: Vec3, b: Vec3, c: Vec3, out: Vec3| {
         let forward = (b - a).cross(c - a).dot(out) >= 0.0;
@@ -71,7 +71,7 @@ fn level(y: f32, (across, deep): (f32, f32), forward: f32) -> Vec<Vec3> {
 }
 
 /// A round limb from one point to another, its radius changing along it.
-fn limb(triangles: &mut Vec<Triangle>, path: &[(Vec3, f32)]) {
+pub(super) fn limb(triangles: &mut Vec<Triangle>, path: &[(Vec3, f32)]) {
     let rings: Vec<Vec<Vec3>> = (0..path.len())
         .map(|at| {
             let (place, radius) = path[at];
@@ -92,7 +92,7 @@ fn limb(triangles: &mut Vec<Triangle>, path: &[(Vec3, f32)]) {
 }
 
 /// A ball stretched to these half sizes.
-fn blob(triangles: &mut Vec<Triangle>, centre: Vec3, half: Vec3) {
+pub(super) fn blob(triangles: &mut Vec<Triangle>, centre: Vec3, half: Vec3) {
     let rings: Vec<Vec<Vec3>> = (0..=HEAD_RINGS)
         .map(|ring| {
             let down = ring as f32 / HEAD_RINGS as f32 * PI;
@@ -217,7 +217,7 @@ fn fitted(frame: &Frame) -> Vec<Triangle> {
 }
 
 /// A flat-faced mesh of these triangles, as weapons' are.
-fn mesh_of(triangles: &[Triangle]) -> Mesh {
+pub(super) fn mesh_of(triangles: &[Triangle]) -> Mesh {
     let mut positions = Vec::with_capacity(triangles.len() * 3);
     let mut normals = Vec::with_capacity(triangles.len() * 3);
     for [a, b, c] in triangles {

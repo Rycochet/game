@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use shared::armour::hands::{self, HandsPiece};
+use shared::armour::{Construction, Style};
 use shared::body::Frame;
 use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
@@ -25,7 +27,7 @@ use super::bodies::BodiesToShow;
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
-use crate::item_art::{ItemPictures, Look, look_of};
+use crate::item_art::{HandsLook, ItemPictures, Look, look_of};
 use crate::widgets::{
     ALLOWED, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, GRID_COLOUR, INK,
     Pressable, RaisePanel, TabChosen, TextBox, TextSize, field_label, raised_box, spawn_button,
@@ -198,6 +200,8 @@ const PICTURE: f32 = 50.0;
 const PICTURE_PIXELS: u32 = 100;
 /// How long a weapon is shown in Item Pictures' grid.
 const BLADE_PICTURE: f32 = 150.0;
+/// How wide a pair of gauntlets is shown in Item Pictures' grid.
+const HANDS_PICTURE: f32 = 100.0;
 const LARGE_PICTURE: f32 = 256.0;
 const LARGE_PICTURE_PIXELS: u32 = 512;
 const PICTURE_LABEL: TextSize = TextSize::Small;
@@ -249,6 +253,11 @@ enum Shown {
     Blade(Family, u128),
     /// A bare body to dress.
     Body(CreatureKind),
+    /// Hand pieces of this kind as the server would roll them from this number, with
+    /// this many digits on each hand.
+    Hands(HandsPiece, u64, u8),
+    /// The first plate gauntlets rolled in this style.
+    HandsStyle(Style),
 }
 
 impl Shown {
@@ -275,7 +284,32 @@ impl Shown {
                 look_of(&blade)
             }
             Self::Body(kind) => Frame::of(kind).map(|_| Look::Body { kind }),
+            Self::Hands(piece, seed, digits) => {
+                let form = hands::roll(&mut Seed::new(seed).rng(), piece, None);
+                Some(hands_look(form, digits, quality))
+            }
+            Self::HandsStyle(style) => {
+                let plate = (0..)
+                    .map(|seed| {
+                        hands::roll(
+                            &mut Seed::new(seed).rng(),
+                            HandsPiece::Gauntlets,
+                            Some(style),
+                        )
+                    })
+                    .find(|form| form.construction == Construction::Plate)?;
+                Some(hands_look(plate, 5, quality))
+            }
         }
+    }
+}
+
+/// Hand pieces as a pair of gauntlets takes them up.
+fn hands_look(form: hands::HandsForm, digits: u8, quality: Quality) -> Look {
+    let shape = ItemKind::Gauntlets.def().shape;
+    Look::Hands {
+        hands: HandsLook::new(form, digits, (shape.width, shape.height)),
+        quality: Some(quality),
     }
 }
 
@@ -315,6 +349,7 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                     let area = spawn_scroll_area(column, PICTURES_HEIGHT);
                     column.commands().entity(area).with_children(|grid| {
                         spawn_body_row(grid);
+                        spawn_hands_rows(grid);
                         for family in Family::ALL {
                             spawn_blade_row(grid, family);
                         }
@@ -406,6 +441,45 @@ fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
     });
 }
 
+/// Rolled gauntlets (the second row with a kobold's hands), demi-gauntlets and padded
+/// gloves, and plate gauntlets in each style.
+fn spawn_hands_rows(grid: &mut ChildSpawnerCommands) {
+    let rows = [
+        ("Gauntlets", HandsPiece::Gauntlets, 5),
+        ("", HandsPiece::Gauntlets, 4),
+        ("Demi, Padded", HandsPiece::Demi, 5),
+    ];
+    for (row, (label, piece, digits)) in rows.into_iter().enumerate() {
+        grid.spawn(Node {
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|cells| {
+            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
+            for cell in 0..RING_COLUMNS as u64 {
+                let seed = row as u64 * 100 + cell;
+                // Half the last row padded gloves.
+                let piece = if piece == HandsPiece::Demi && cell >= RING_COLUMNS as u64 / 2 {
+                    HandsPiece::Padded
+                } else {
+                    piece
+                };
+                spawn_picture(cells, Shown::Hands(piece, seed, digits));
+            }
+        });
+    }
+    grid.spawn(Node {
+        align_items: AlignItems::Center,
+        ..default()
+    })
+    .with_children(|cells| {
+        cells.spawn(picture_label("Styles", PICTURE_ROW_LABEL));
+        for style in Style::ALL {
+            spawn_picture(cells, Shown::HandsStyle(style));
+        }
+    });
+}
+
 fn spawn_blade_row(grid: &mut ChildSpawnerCommands, family: Family) {
     grid.spawn(Node {
         align_items: AlignItems::Center,
@@ -466,8 +540,13 @@ pub(super) fn show_pictures(
         if (form.is_changed() || picture.is_added())
             && let Some(look) = picture.0.look(form.quality)
         {
-            // A weapon needs its full size for its black edge to be right, and more room.
+            // A weapon or gauntlets need their full size for the black edge to be right, and
+            // more room.
             let (box_side, pixels) = match picture.0 {
+                Shown::Hands(..) | Shown::HandsStyle(_) => (
+                    HANDS_PICTURE,
+                    look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
+                ),
                 Shown::Blade(..) | Shown::Body(_) => (
                     BLADE_PICTURE,
                     look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
