@@ -58,5 +58,5 @@ Server (`server/src/debug_api/methods.rs`; `--server` for the embedded one):
 - `crates/server/src/debug_api/methods.rs`: the `server.` methods, added by `ServerPlugin`. Uses `connections::save_all` and feature-only accessors `Connections::clients`, `Visit::site_id`, `Visit::cells`, `Storage::flush`. Test of the cells picture.
 - `crates/client/src/dev_tools/fake_input.rs`: the fake input methods, `FakeInput` (the queue) and `play`. Tests (keys, drags, a step a frame).
 - `crates/client/src/dev_tools/debug_api.rs`: the other `client.` methods. Uses `dev_tools`' `Forced`, `open_map`, `turn_camera` and `token_of`, which the variables use too, and `DebugAction::named` / `names`.
-- `xtask/src/api.rs`: `cargo xtask api` (waiting for files and for input), and the `tmp.` check (`temporary_methods`). Tests.
+- `xtask/src/api.rs`: `cargo xtask api` (waiting for files and for input), and the `tmp.` check (`temporary_methods`). Tests. In `api/`: `request.rs`, `http.rs`, `json.rs`, `wait.rs`, `temporary.rs`.
 - Where it is added: `main.rs` of the client (port offset 0) and of the server (after the log plugin), `embedded.rs` (offset 1).

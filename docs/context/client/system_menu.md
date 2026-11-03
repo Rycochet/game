@@ -4,7 +4,7 @@ The system menu: Esc or the gear button top right (the way in on touch devices) 
 
 ## Files
 
-- `crates/client/src/system_menu/mod.rs`: `SystemMenuPlugin`, `SystemMenu`, the gear icon (drawn in code), the panels, `take_input` (`PreUpdate`, `WidgetSystems::Front`), `show_menu`, `ask_for_pause`, `show_ended_page`. Unit tests.
+- `crates/client/src/system_menu/mod.rs`: `SystemMenuPlugin`, `SystemMenu`, the gear icon (drawn in code), the panels, `take_input` (`PreUpdate`, `WidgetSystems::Front`), `show_menu`, `ask_for_pause`, `show_ended_page`. Unit tests. Beside it: `state.rs` (`SystemMenu`), `spawn.rs`, `input.rs`, `show.rs`.
 - `crates/client/src/system_menu/settings.rs`: Settings' tabs and pages (`spawn_pages`; hidden pages take no room): Gameplay (empty) and Interface, with the interface size dropdown (Auto, then `widgets::INTERFACE_PERCENTS`) and "Enable touch" (on and disabled on a touch-only device, `widgets::TouchOnly`). `fill_interface_page` rebuilds it when `Preferences` change; `use_pages` switches pages and writes the choices into `Preferences`. Unit tests.
 
 ## Public API

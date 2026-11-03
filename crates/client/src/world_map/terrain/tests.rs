@@ -1,3 +1,7 @@
+use bevy::prelude::*;
+
+use super::super::HALF_SIZE;
+use super::edges::crossings;
 use super::*;
 
 #[test]

@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::MapPosition;
 
 #[test]
 fn beside_a_door_includes_diagonals_and_nothing_further() {

@@ -1,4 +1,7 @@
 use super::super::RAISED_BACKGROUND;
+use super::super::theme::{ERROR_EDGE, HOVER_EDGE};
+use super::super::{ButtonState, INK};
+use super::show::text_box_edge;
 use super::*;
 
 #[test]

@@ -1,9 +1,12 @@
+use shared::dungeon::Cell;
 use shared::dungeon::{Level, RoomId};
 use shared::poi::PoiKind;
 use shared::protocol::LevelInfo;
+use shared::site::BuildingKind;
 use shared::site::{BuildingLook, Rect, RoofKind, WallKind};
 
 use super::*;
+use crate::common::CurrentDungeon;
 
 /// White between the lines; beyond them, what is known to be there.
 #[test]

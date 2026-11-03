@@ -1,4 +1,7 @@
+use bevy::prelude::*;
+use shared::poi::PoiKind;
 use shared::rng::Seed;
+use shared::site::{Outline, PoiLook};
 
 use super::*;
 

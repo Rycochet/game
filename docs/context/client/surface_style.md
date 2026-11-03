@@ -4,7 +4,7 @@ Colours and thresholds for drawing a planet's surface. Swap the resource for oth
 
 ## Files
 
-- `crates/client/src/surface_style/mod.rs`: `SurfaceStylePlugin`, `SurfaceStyle`, `SurfaceKind`, `Band`, `hsl_to_rgba`, test.
+- `crates/client/src/surface_style/mod.rs`: `SurfaceStylePlugin`, `SurfaceStyle`, `SurfaceKind`, `Band`, `hsl_to_rgba`, test. Beside it: `band.rs`, `style.rs`, `colour.rs`, `biome.rs`.
 
 ## Public API
 
