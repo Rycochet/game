@@ -81,7 +81,7 @@ pub struct LevelChunk {
     /// Which of its cells are included: bit `row × 8 + column`.
     pub mask: u64,
     /// Those cells, in bit order. What the player would see: a secret door
-    /// is a wall.
+    /// is a wall, unless they have truesight.
     pub cells: Vec<Cell>,
     /// Stairs on those cells.
     pub stairs: Vec<SeenStairs>,

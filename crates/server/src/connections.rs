@@ -909,7 +909,7 @@ pub(crate) fn answer(
         ClientMessage::DevTruesight(on) => {
             client.truesight = on;
             client.ground_told.again = true;
-            client.send_inventory()
+            client.send_inventory() && sites::truesight_changed(client, world)
         }
         ClientMessage::DevGodMode(on) => {
             client.god_mode = on;

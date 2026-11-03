@@ -292,6 +292,10 @@ pub fn build(
     }
 }
 
+/// What is hidden looks like: how much of each of red, green and blue is kept and
+/// added, with its opacity unchanged.
+const HIDDEN_TINT: [(f32, f32); 4] = [(0.5, 0.05), (0.8, 0.3), (0.9, 0.4), (1.0, 0.0)];
+
 /// How much each builder holds so far: its vertices and indices.
 fn sizes(builders: &[Builder]) -> Vec<(usize, usize)> {
     builders
@@ -310,6 +314,43 @@ fn copy_as_memory(layers: &mut Layers, before: &[(usize, usize)]) {
     }
 }
 
+/// How many vertices each mesh holds so far.
+fn layer_sizes(layers: &Layers) -> Vec<usize> {
+    all_builders(layers)
+        .map(|builder| builder.positions.len())
+        .collect()
+}
+
+fn all_builders(layers: &Layers) -> impl Iterator<Item = &Builder> {
+    layers
+        .solid
+        .iter()
+        .chain(&layers.memory)
+        .chain(std::iter::once(&layers.see_through))
+}
+
+/// Gives what was added since `before` the pale glow of something hidden, which
+/// shows even in the dark.
+fn tint_since(layers: &mut Layers, before: &[usize]) {
+    let Layers {
+        solid,
+        memory,
+        see_through,
+        ..
+    } = layers;
+    let builders = solid
+        .iter_mut()
+        .chain(memory.iter_mut())
+        .chain(std::iter::once(see_through));
+    for (builder, &from) in builders.zip(before) {
+        for colour in &mut builder.colours[from..] {
+            for (part, (keep, add)) in colour.iter_mut().zip(HIDDEN_TINT) {
+                *part = *part * keep + add;
+            }
+        }
+    }
+}
+
 /// Whatever stands at a remembered cell.
 fn build_cell_at(layers: &mut Layers, scene: &Scene, stairs: &[SeenStairs], (x, y): (i64, i64)) {
     let level = scene.level;
@@ -317,7 +358,12 @@ fn build_cell_at(layers: &mut Layers, scene: &Scene, stairs: &[SeenStairs], (x, 
     if cell.is_wall() {
         // A town's buildings are drawn whole, in `build`.
         if level.room(x, y).is_none() {
+            let before = layer_sizes(layers);
             build_wall(layers, scene, (x, y));
+            // Only sent to truesight: otherwise it arrives as a wall.
+            if cell == Cell::SecretDoor {
+                tint_since(layers, &before);
+            }
         }
     } else if cell.is_road() || cell == Cell::Garden {
         town::build_flat(layers, scene, (x, y));

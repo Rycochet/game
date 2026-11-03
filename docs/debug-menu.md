@@ -34,5 +34,5 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Teleport Mode | Yes | Toggles clicks on the map taking you there at once, through walls in a site. |
 | Teleport to POI Showcase | Yes | Takes you to a plain far south with every kind of place on it, in several seeds and levels of ruin. |
 | Teleport to Start | Yes | Takes you out of any site, to where new characters start on the world map. |
-| Truesight | Yes | Toggles seeing what is secret about items: the glow of what is magical, blessed or cursed. They don't count as found out, so turning it off hides them again. Eyes show at the top left while it is on. |
+| Truesight | Yes | Toggles seeing what is hidden: the glow and names of items that are magical, blessed or cursed, and secret doors, which show as pale walls and stay shut. None count as found out, so turning it off hides them again. Eyes show at the top left while it is on. |
 | World Time | Yes | Toggles a panel moving the world's clock an hour either way, for everyone playing. It stops at the world's beginning. |

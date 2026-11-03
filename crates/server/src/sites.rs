@@ -730,8 +730,9 @@ fn send_other_levels(client: &Client, world: &mut ServerWorld, new: &NewVisit, i
             remembered.get(&chunk).is_some_and(|m| m & (1 << bit) != 0)
         };
         let neighbours = beside(level, is_remembered, remembered);
-        let mut chunks = level_chunks(level, &stairs, remembered, true);
-        chunks.extend(level_chunks(level, &stairs, &neighbours, false));
+        let truesight = client.truesight;
+        let mut chunks = level_chunks(level, &stairs, remembered, true, truesight);
+        chunks.extend(level_chunks(level, &stairs, &neighbours, false, truesight));
         let message = ServerMessage::RememberedLevel(RememberedLevel {
             index: other,
             bounds: level.bounds(),
@@ -870,8 +871,21 @@ fn arrive_again(client: &mut Client, world: &mut ServerWorld) -> bool {
     enter_level(client, world, new, index, Arrival::At(position), false)
 }
 
+/// Developer tools: truesight has just changed. If it changes how this level looks,
+/// it is sent again. Only then, as that closes whatever is open on it.
+pub(crate) fn truesight_changed(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = &client.visit else {
+        return true;
+    };
+    let level = &visit.level.level;
+    let (min_x, min_y, width, height) = level.bounds();
+    let hides_something = (min_y..min_y + height)
+        .any(|y| (min_x..min_x + width).any(|x| level.cell(x, y) == Cell::SecretDoor));
+    !hides_something || arrive_again(client, world)
+}
+
 /// Developer tools: the character knows the whole of the level they are on. A
-/// secret door stays a wall, as it does when seen.
+/// secret door stays a wall, as it does when seen, unless they have truesight.
 pub(crate) fn reveal_level(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = client.visit.take() else {
         return true;
@@ -1039,9 +1053,16 @@ fn nearby_cells(level: &Level, from: (i64, i64), steps: i64) -> Vec<(i64, i64)> 
 /// Sends the cells in `masks` as the player would see them, a chunk at a
 /// time, with any stairs on them.
 fn send_cells(client: &Client, visit: &Visit, masks: &CellMasks, remembered: bool) -> bool {
-    level_chunks(&visit.level.level, &visit.stairs, masks, remembered)
-        .into_iter()
-        .all(|chunk| client.link.send(&ServerMessage::LevelCells(chunk)))
+    let truesight = client.truesight;
+    level_chunks(
+        &visit.level.level,
+        &visit.stairs,
+        masks,
+        remembered,
+        truesight,
+    )
+    .into_iter()
+    .all(|chunk| client.link.send(&ServerMessage::LevelCells(chunk)))
 }
 
 /// The cells in `masks` as the player would see them, a chunk at a time, with
@@ -1051,6 +1072,7 @@ fn level_chunks(
     stairs: &[SeenStairs],
     masks: &CellMasks,
     remembered: bool,
+    truesight: bool,
 ) -> Vec<LevelChunk> {
     let mut chunks = Vec::with_capacity(masks.len());
     for (&chunk, &mask) in masks {
@@ -1066,8 +1088,8 @@ fn level_chunks(
         let cells = positions
             .iter()
             .map(|&(x, y)| match level.cell(x, y) {
-                // Hidden until found.
-                Cell::SecretDoor => Cell::Wall,
+                // Hidden until found, but not from truesight.
+                Cell::SecretDoor if !truesight => Cell::Wall,
                 cell => cell,
             })
             .collect();
@@ -1450,6 +1472,36 @@ mod tests {
         let (_, _, width, height) = info.bounds;
         assert!(sent.len() < (width * height) as usize);
         assert!(sent.iter().all(|&(_, _, cell, _)| cell != Cell::SecretDoor));
+    }
+
+    #[test]
+    fn truesight_shows_secret_doors_and_only_while_it_is_on() {
+        let has_door = |answers: &[ServerMessage]| {
+            cells(answers)
+                .iter()
+                .any(|&(_, _, cell, _)| cell == Cell::SecretDoor)
+        };
+        let found = (0..100).any(|seed| {
+            let mut test = TestClient::new();
+            test.send(&[
+                ClientMessage::DevEnterSite {
+                    kind: PoiKind::Castle,
+                    seed,
+                    level: 0,
+                    ruin: 0,
+                },
+                ClientMessage::DevRevealMap,
+            ]);
+            let answers = test.send(&[ClientMessage::DevTruesight(true)]);
+            if !has_door(&answers) {
+                return false;
+            }
+            let answers = test.send(&[ClientMessage::DevTruesight(false)]);
+            assert!(!cells(&answers).is_empty(), "sent again");
+            assert!(!has_door(&answers));
+            true
+        });
+        assert!(found, "no level with a secret door to try this on");
     }
 
     #[test]
