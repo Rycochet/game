@@ -1,6 +1,7 @@
 //! What can be seen of armour pieces: what their pictures are kept by.
 
 use shared::armour::hands::{Hand, HandsForm};
+use shared::armour::head::HeadForm;
 use shared::armour::shoulders::ShouldersForm;
 use shared::armour::torso::TorsoForm;
 use shared::item::Item;
@@ -58,6 +59,21 @@ impl TorsoLook {
     }
 }
 
+/// What can be seen of a head piece.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct HeadLook {
+    pub(in crate::item_art) form: HeadForm,
+    /// What it takes up, wide and long, not turned.
+    pub(in crate::item_art) cells: (u8, u8),
+}
+
+impl HeadLook {
+    /// A head piece taking up these cells.
+    pub fn new(form: HeadForm, cells: (u8, u8)) -> Self {
+        Self { form, cells }
+    }
+}
+
 /// How an armour item looks, from its form and the cells it takes up.
 pub(super) fn armour_look(item: &Item) -> Option<Look> {
     let quality = item.quality;
@@ -74,6 +90,10 @@ pub(super) fn armour_look(item: &Item) -> Option<Look> {
         },
         ItemForm::Torso(form) => Look::Torso {
             torso: TorsoLook::new(*form, cells),
+            quality,
+        },
+        ItemForm::Head(form) => Look::Head {
+            head: HeadLook::new(*form, cells),
             quality,
         },
         _ => return None,

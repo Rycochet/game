@@ -3,6 +3,7 @@
 
 mod finish;
 pub mod hands;
+pub mod head;
 pub mod shoulders;
 pub mod torso;
 
@@ -41,10 +42,12 @@ pub enum Construction {
     /// Rings sewn flat on leather (the owner kept it, though doubted historically).
     /// Saved by name, so it goes at the end.
     RingMail,
+    /// Rattan woven over a frame: Chinese rattan helmets (the owner's decision).
+    Woven,
 }
 
 impl Construction {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 13] = [
         Self::Padded,
         Self::Leather,
         Self::Mail,
@@ -57,6 +60,7 @@ impl Construction {
         Self::Plate,
         Self::Mirror,
         Self::RingMail,
+        Self::Woven,
     ];
 
     /// Whether it bends with the body rather than holding its shape.
@@ -178,7 +182,13 @@ impl Style {
                 Self::Japanese => !matches!(construction, C::Scale | C::Mirror),
                 Self::Chinese => matches!(
                     construction,
-                    C::Leather | C::Mail | C::Scale | C::Lamellar | C::PlatesInCloth | C::Mirror
+                    C::Leather
+                        | C::Mail
+                        | C::Scale
+                        | C::Lamellar
+                        | C::PlatesInCloth
+                        | C::Mirror
+                        | C::Woven
                 ),
                 Self::Steppe => matches!(
                     construction,

@@ -3,6 +3,7 @@
 //! all use the same parts. What every location's models share is here.
 
 pub(super) mod hands;
+pub(super) mod head;
 pub(super) mod shoulders;
 mod surface;
 pub(super) mod torso;
@@ -11,6 +12,24 @@ use bevy::prelude::*;
 use shared::material::Material;
 
 use crate::item_art::body::Triangle;
+use crate::item_art::{Look, Part};
+
+/// An armour piece's parts, for the looks that are armour; none for others.
+pub(in crate::item_art) fn armour_parts(
+    look: Look,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) -> Vec<Part> {
+    match look {
+        Look::Hands { hands, quality } => hands::hands_parts(&hands, quality, meshes, materials),
+        Look::Shoulders { shoulders, quality } => {
+            shoulders::shoulders_parts(&shoulders, quality, meshes, materials)
+        }
+        Look::Torso { torso, quality } => torso::torso_parts(&torso, quality, meshes, materials),
+        Look::Head { head, quality } => head::head_parts(&head, quality, meshes, materials),
+        _ => Vec::new(),
+    }
+}
 
 /// What each part is made of, drawn with its own material.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -151,6 +170,7 @@ pub(in crate::item_art) fn colour_of(material: Material) -> Color {
         Material::Cotton => Color::srgb(0.93, 0.92, 0.88),
         Material::Silk => Color::srgb(0.6, 0.1, 0.15),
         Material::Wood => Color::srgb(0.5, 0.36, 0.22),
+        Material::Rattan => Color::srgb(0.74, 0.6, 0.34),
         _ => Color::srgb(0.5, 0.5, 0.5),
     }
 }

@@ -24,7 +24,7 @@ use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
 
-pub use looks::{HandsLook, ShouldersLook, TorsoLook};
+pub use looks::{HandsLook, HeadLook, ShouldersLook, TorsoLook};
 
 /// Render layers kept for this, past any the views use, one per picture being drawn.
 const FIRST_LAYER: usize = 16;
@@ -82,6 +82,11 @@ pub enum Look {
         torso: TorsoLook,
         quality: Option<Quality>,
     },
+    /// A helmet, coif or arming cap, as worn.
+    Head {
+        head: HeadLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -96,6 +101,7 @@ impl Look {
             Self::Hands { hands, .. } => hands.cells,
             Self::Shoulders { shoulders, .. } => shoulders.cells,
             Self::Torso { torso, .. } => torso.cells,
+            Self::Head { head, .. } => head.cells,
             Self::Body { .. } => body::CELLS,
         }
     }
@@ -181,7 +187,7 @@ pub fn look_of(item: &Item) -> Option<Look> {
             })
         }
         ItemForm::Gem(gem) => Some(Look::Gem { gem: *gem, quality }),
-        ItemForm::Hands(_) | ItemForm::Shoulders(_) | ItemForm::Torso(_) => {
+        ItemForm::Hands(_) | ItemForm::Shoulders(_) | ItemForm::Torso(_) | ItemForm::Head(_) => {
             looks::armour_look(item)
         }
         ItemForm::Ring(ring) => {
@@ -398,16 +404,8 @@ fn draw_pictures(
             Look::Blade { blade, quality } => {
                 blade::blade_parts(&blade, quality, &mut meshes, &mut materials)
             }
-            Look::Hands { hands, quality } => {
-                armour::hands::hands_parts(&hands, quality, &mut meshes, &mut materials)
-            }
-            Look::Shoulders { shoulders, quality } => {
-                armour::shoulders::shoulders_parts(&shoulders, quality, &mut meshes, &mut materials)
-            }
-            Look::Torso { torso, quality } => {
-                armour::torso::torso_parts(&torso, quality, &mut meshes, &mut materials)
-            }
             Look::Body { kind } => body::body_parts(kind, &mut meshes, &mut materials),
+            look => armour::armour_parts(look, &mut meshes, &mut materials),
         };
         let black = materials.add(StandardMaterial {
             base_color: Color::BLACK,
