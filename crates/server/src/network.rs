@@ -22,9 +22,8 @@ use shared::protocol::ServerLink;
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64};
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Duration;
 
 use crate::ServerWorld;
@@ -33,12 +32,18 @@ use crate::connections::{self};
 use crate::tls::{Certificates, Security};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod online;
+mod ports;
 mod routes;
 mod socket;
 mod stop;
 mod tls_listener;
 
-use routes::{accept_connections, serve};
+pub use online::OnlinePlugin;
+use ports::open_ports;
+#[cfg(test)]
+use routes::serve;
+use routes::{Stop, accept_connections};
 use socket::upgrade;
 use stop::{stop_signal, stop_when_asked};
 use tls_listener::TlsListener;
@@ -110,64 +115,25 @@ struct Sockets {
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
-        // Bound here, so a port in use stops the server straight away.
-        let listener = TcpListener::bind(self.address)
-            .unwrap_or_else(|error| panic!("Can't listen on {}: {error}", self.address));
-        let secure = match &self.security {
-            Security::PlainOnly => {
-                info!("SSL is disabled: connections here aren't secured");
-                None
-            }
-            Security::Tls {
-                address,
-                source,
-                plain_too,
-            } => {
-                if *plain_too {
-                    info!(
-                        "Behind a proxy: connections on {} aren't secured",
-                        self.address
-                    );
-                }
-                let certificates =
-                    Certificates::load(source).unwrap_or_else(|error| panic!("{error}"));
-                let listener = TcpListener::bind(address)
-                    .unwrap_or_else(|error| panic!("Can't listen on {address}: {error}"));
-                info!(
-                    "Listening securely on {address}: key fingerprint {}",
-                    certificates.fingerprint()
-                );
-                Some(SecurePort {
-                    listener,
-                    certificates: Arc::new(certificates),
-                    ask_lets_encrypt: true,
-                    plain_too: *plain_too,
-                })
-            }
-        };
-        let (new_connections, accepted) = mpsc::channel();
-        let web = self.web.clone();
         let stop = StopAsked::default();
-        let stop_asked = stop.0.clone();
         let clock = app.world().resource::<ServerWorld>().clock.clone();
-        let sockets = Sockets {
-            new_connections,
+        // Bound here, so a port in use stops the server straight away.
+        let ports = open_ports(
             clock,
-            connections: Arc::default(),
-            ping_every: PING_EVERY,
-            silent_after: SILENT_AFTER,
-        };
-        thread::Builder::new()
-            .name("network".into())
-            .spawn(move || serve(listener, secure, web, sockets, stop_asked))
-            .expect("the network thread can start");
-        info!("Listening on {}", self.address);
-        app.insert_resource(NewConnections(Mutex::new(accepted)))
+            Some(self.address),
+            &self.security,
+            self.web.clone(),
+            Stop::Signal(stop.0.clone()),
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        app.insert_resource(NewConnections(Mutex::new(ports.accepted)))
             .insert_resource(stop)
             .add_systems(
                 Update,
                 (
-                    accept_connections.before(connections::handle_messages),
+                    accept_connections
+                        .run_if(resource_exists::<NewConnections>)
+                        .before(connections::handle_messages),
                     stop_when_asked.after(connections::handle_messages),
                 ),
             );

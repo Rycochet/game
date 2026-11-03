@@ -76,7 +76,8 @@ HOW_SERVER=wss://game.example.com:8081/ws hall-of-worlds
 ## Things to know
 
 - **Players are guests for now.** There are no logins yet, and anyone who can reach the server can play. A guest gets their own character, tied to that browser or native client.
-- **A networked server never pauses.** The system menu doesn't stop the world for anyone, whatever the settings: see [Pausing](../client#pausing).
+- **A networked server never pauses.** The system menu doesn't stop the world for anyone, whatever the settings, and nor does a native client's own server while Online is on: see [Pausing](../client#pausing).
+- **Hosting from the game itself:** a native client can open its own world to others with Online in the system menu, on one secure port (8081 unless Server Options says otherwise), with a certificate it makes. Players on the internet need that port forwarded to the computer. A standalone server is better for a world that is always there.
 - **Time stops only when the server does.** The world's clock is saved, and carries on from there next time.
 - **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the server's side of the [debug menu](../debug-menu).
 - **Stopping:** the server saves everyone when asked to stop (`docker compose down`, Ctrl+C or SIGTERM).

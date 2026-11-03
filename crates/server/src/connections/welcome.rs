@@ -114,8 +114,8 @@ pub(super) fn welcome(
         snow_line: world.snow_line,
         x,
         y,
-        dev_tools: options.dev_tools,
-        can_pause: options.pausable,
+        dev_tools: options.dev_tools_for(client.host),
+        can_pause: options.pausable && client.host,
     };
     if !client.link.send(&welcome)
         || !client

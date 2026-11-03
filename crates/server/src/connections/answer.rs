@@ -152,6 +152,15 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::OpenTrade { with });
             true
         }
+        ClientMessage::SetOnline(_) if !client.host => {
+            warn!("A client asked to open the server to others, which only its host may");
+            true
+        }
+        ClientMessage::SetOnline(settings) => {
+            // For `network::online`, which can reach the ports.
+            client.asked_online = Some(settings);
+            true
+        }
         ClientMessage::SetPaused(_) if !options.pausable => {
             warn!("A client asked to pause, which this server doesn't allow");
             true
@@ -178,7 +187,7 @@ pub(crate) fn answer(
         | ClientMessage::BinItem { .. } => answer_items(client, message, world),
         // Dev tools are only for the embedded server; elsewhere a stray key
         // or click is ignored rather than ending the game.
-        _ if message.is_dev_tool() && !options.dev_tools => {
+        _ if message.is_dev_tool() && !options.dev_tools_for(client.host) => {
             warn!("A client asked for dev tools ({message:?}), which this server doesn't allow");
             true
         }

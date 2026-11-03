@@ -50,4 +50,4 @@ Esc goes to whatever is on top first: a text box, a dropdown, the debug menu or 
 
 ## While the system menu is open
 
-The menu takes all the keys, the wheel and the gestures, so nothing behind it reacts. In single player the game is paused too. On a networked server it isn't, and a journey you clicked on carries on: see [Pausing](client#pausing).
+The menu takes all the keys, the wheel and the gestures, so nothing behind it reacts. In single player the game is paused too, unless Online is on. On a networked server it isn't, and a journey you clicked on carries on: see [Pausing](client#pausing).

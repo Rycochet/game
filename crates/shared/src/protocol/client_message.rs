@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::OnlineSettings;
 use super::login::{CharacterId, Credentials};
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
@@ -50,6 +51,10 @@ pub enum ClientMessage {
     /// with just this player on it pauses (`Welcome`'s `can_pause`); others
     /// ignore it.
     SetPaused(bool),
+    /// Opens the server to other players with these settings (or closes it, with
+    /// `None`), answered with `Online`. Only the embedded server's own player
+    /// may; others are ignored.
+    SetOnline(Option<OnlineSettings>),
     /// Moves something the character carries to this place in this grid, turned
     /// this way, answered with `Inventory`, whether or not it could go.
     MoveItem {

@@ -4,9 +4,11 @@
 //! feature modules belong here. See `docs/context/client/common.md`.
 
 mod floors;
+mod hosting;
 mod preferences;
 mod servers;
 pub use floors::{FirstFloor, OtherLevels};
+pub use hosting::Hosting;
 #[cfg(not(target_arch = "wasm32"))]
 pub use preferences::client_file;
 pub use preferences::{InterfaceSize, Preferences};
@@ -75,6 +77,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<WorldReturn>()
             .init_resource::<ServerStatus>()
             .init_resource::<Session>()
+            .init_resource::<Hosting>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
             .init_resource::<HerbGrowthShift>()

@@ -8,7 +8,7 @@ use shared::id::Id;
 use shared::item::Inventory;
 use shared::movement::Step;
 use shared::poi::ChunkPos;
-use shared::protocol::{CharacterId, ServerLink};
+use shared::protocol::{CharacterId, ServerLink, ServerMessage};
 use shared::sheet::{Appearance, Feeling, Sheet};
 use shared::world::WorldId;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -87,6 +87,35 @@ impl Connections {
         &self.clients
     }
 
+    /// What the host has asked of opening the server to others, if anything.
+    pub(crate) fn take_online_request(
+        &mut self,
+    ) -> Option<Option<shared::protocol::OnlineSettings>> {
+        let host = self.clients.iter_mut().find(|client| client.host)?;
+        host.asked_online.take()
+    }
+
+    /// Tells the host (the embedded server's own player), if connected.
+    pub(crate) fn tell_host(&self, message: &ServerMessage) {
+        for client in self
+            .clients
+            .iter()
+            .filter(|client| client.host && !client.gone)
+        {
+            client.link.send(message);
+        }
+    }
+
+    /// Tells everyone but the host this, and disconnects them, saving them
+    /// (the server is closing to others).
+    pub(crate) fn send_others_away(&mut self, world: &mut ServerWorld, message: &ServerMessage) {
+        for client in self.clients.iter_mut().filter(|client| !client.host) {
+            client.link.send(message);
+            client.disconnect(world);
+        }
+        self.clients.retain(|client| !client.gone);
+    }
+
     /// Disconnects everyone, saving them (the server is stopping).
     pub(crate) fn disconnect_all(&mut self, world: &mut ServerWorld) {
         for client in &mut self.clients {
@@ -134,6 +163,11 @@ pub(crate) enum Phase {
 /// sent.
 pub struct Client {
     pub(crate) link: ServerLink,
+    /// The embedded server's own player (connected without logging in), who
+    /// keeps dev tools and pausing when others join, and may open it to them.
+    pub(crate) host: bool,
+    /// What the host last asked of opening the server to others, not yet done.
+    pub(crate) asked_online: Option<Option<shared::protocol::OnlineSettings>>,
     pub(crate) phase: Phase,
     /// The account it logged in to (none on an embedded server).
     account: Option<AccountId>,

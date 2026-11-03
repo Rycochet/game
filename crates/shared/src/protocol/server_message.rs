@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::OnlineState;
 use super::level::{LevelChunk, LevelInfo, RememberedLevel};
 use super::login::{CharacterSummary, LoginMethod};
 use super::{WorldChunk, WorldInfo};
@@ -68,6 +69,12 @@ pub enum ServerMessage {
     Pong { sent: f64, clock: f64 },
     /// The server won't talk to this client, and why.
     Refused(String),
+    /// Whether the server is open to other players, the answer to `SetOnline`.
+    Online(OnlineState),
+    /// The server is closing to other players on purpose (its host turned Online
+    /// off), so this connection is ending and isn't worth trying again: the
+    /// server's name.
+    GoingOffline(String),
     /// A world map chunk, as this player knows it.
     WorldChunk(WorldChunk),
     /// The player is now on this site level; its cells follow.

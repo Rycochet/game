@@ -59,6 +59,8 @@ pub(super) fn show_buttons(
             MenuButton::Play => !session.is_playing(),
             MenuButton::Continue => session.is_playing(),
             MenuButton::LogOut => session.is_playing() && !clock.local_server,
+            // Its looks are `online::show_online`'s.
+            MenuButton::Online => true,
             MenuButton::Connect => {
                 // Log out first to go to another server.
                 state.set_if_neq(if session.is_playing() {

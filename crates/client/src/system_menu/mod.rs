@@ -14,8 +14,12 @@ mod connect;
 mod credits;
 mod icons;
 mod input;
+#[cfg(not(target_arch = "wasm32"))]
+mod online;
 mod panel;
 mod refusal;
+#[cfg(not(target_arch = "wasm32"))]
+mod server_options;
 mod show;
 mod spawn;
 mod state;
@@ -76,6 +80,18 @@ impl Plugin for SystemMenuPlugin {
                     settings::use_pages,
                 ),
             );
+        // This game's own server, opened to others: native only.
+        #[cfg(not(target_arch = "wasm32"))]
+        app.add_systems(
+            Update,
+            (
+                online::use_online,
+                online::show_online,
+                online::show_online_failure,
+                server_options::run_server_options,
+                server_options::give_copy_its_font,
+            ),
+        );
     }
 }
 

@@ -18,3 +18,15 @@ pub(super) fn paste() -> Option<String> {
 pub(super) fn paste() -> Option<String> {
     None
 }
+
+/// Puts this text on the clipboard; `false` if it couldn't.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn copy_to_clipboard(text: &str) -> bool {
+    match arboard::Clipboard::new().and_then(|mut clipboard| clipboard.set_text(text)) {
+        Ok(()) => true,
+        Err(error) => {
+            bevy::log::warn!("Can't copy to the clipboard: {error}");
+            false
+        }
+    }
+}

@@ -11,6 +11,12 @@ fn preferences_read_back_as_saved() {
             key: Some("ab12".into()),
         }],
         last_server: Some("play.example.com:9000".into()),
+        online: true,
+        online_settings: shared::protocol::OnlineSettings {
+            name: "Ryc's world".into(),
+            player_limit: 4,
+            ..Default::default()
+        },
     };
     assert_eq!(Preferences::from_text(&preferences.to_text()), preferences);
 }

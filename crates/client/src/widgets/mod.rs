@@ -29,6 +29,8 @@ use crate::common::PointerSystems;
 
 pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;
+#[cfg(not(target_arch = "wasm32"))]
+pub use clipboard::copy_to_clipboard;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};

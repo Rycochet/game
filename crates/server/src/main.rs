@@ -30,6 +30,8 @@
 //! - `HOW_GUESTS`: `true` (the default) lets clients play without an account.
 //!   `false` stops the server from starting, until there is another way in.
 //! - `HOW_DEBUG_TOOLS`: `true` accepts dev tools messages from anyone connected.
+//! - `HOW_SERVER_NAME`: what the server calls itself (default `Hall of Worlds`).
+//! - `HOW_PLAYER_LIMIT`: the most players at once (default 0, no limit).
 //! - `LOG_LEVEL`: how much to log (see `environment`); `debug` adds every
 //!   connection's every round trip, for looking into network trouble.
 
@@ -38,8 +40,8 @@ use std::net::SocketAddr;
 use std::process;
 
 use server::{
-    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerOptions, debug_api::DebugApiPlugin,
-    default_data_folder, headless_app, log_plugin, option_on,
+    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerName, ServerOptions,
+    debug_api::DebugApiPlugin, default_data_folder, headless_app, log_plugin, option_on,
 };
 use shared::world::WorldSeed;
 
@@ -63,6 +65,13 @@ fn main() {
         process::exit(1);
     }
     let dev_tools = option_on("HOW_DEBUG_TOOLS", false);
+    let player_limit = match env::var("HOW_PLAYER_LIMIT") {
+        Ok(limit) => limit.trim().parse().unwrap_or_else(|_| {
+            eprintln!("HOW_PLAYER_LIMIT is a number of players, 0 for no limit, not {limit:?}");
+            process::exit(1);
+        }),
+        Err(_) => 0,
+    };
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {
@@ -70,9 +79,14 @@ fn main() {
             exit_when_alone: false,
             pausable: false,
             guests,
+            player_limit,
+            ..Default::default()
         },
         Some(data.clone()),
     );
+    if let Ok(name) = env::var("HOW_SERVER_NAME") {
+        app.insert_resource(ServerName(name));
+    }
     app.add_plugins((
         log_plugin(),
         NetworkPlugin {

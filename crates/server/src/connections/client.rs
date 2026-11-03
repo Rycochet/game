@@ -19,6 +19,9 @@ impl Client {
     pub(crate) fn new(link: ServerLink, character_id: Option<CharacterId>) -> Self {
         Self {
             link,
+            // Playing a character without logging in: the embedded server's own.
+            host: character_id.is_some(),
+            asked_online: None,
             phase: Phase::Greeting,
             account: None,
             character_id,

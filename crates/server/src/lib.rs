@@ -38,7 +38,7 @@ pub use accounts::new_guest_token;
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
 pub use environment::{log_plugin, option_on};
-pub use network::NetworkPlugin;
+pub use network::{NetworkPlugin, OnlinePlugin};
 pub use shared::protocol::CharacterId;
 pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
 pub use tls::{CertificateFacts, CertificateSource, Security, certificate_facts};
@@ -75,7 +75,7 @@ pub struct ServerPlugin {
 }
 
 /// How a server is run.
-#[derive(Resource, Clone, Copy, Debug)]
+#[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct ServerOptions {
     /// Whether clients may use developer tools (`DevEnterSite`): only for
     /// the embedded single-player server.
@@ -89,6 +89,30 @@ pub struct ServerOptions {
     /// whose one client is the only one playing. Separate from `dev_tools`, so
     /// a test server with those on can't be stopped by anyone connected.
     pub pausable: bool,
+    /// Whether an embedded server is open to other players: then its dev
+    /// tools are its own player's alone.
+    pub online: bool,
+    /// The most players at once, 0 for no limit (`HOW_PLAYER_LIMIT`).
+    pub player_limit: u16,
+}
+
+impl ServerOptions {
+    /// Whether this client may use dev tools: on a server that allows them, its
+    /// host (the embedded server's own player) always, others unless it is an
+    /// embedded server open to other players.
+    pub(crate) fn dev_tools_for(&self, host: bool) -> bool {
+        self.dev_tools && (host || !self.online)
+    }
+}
+
+/// What the server calls itself (`HOW_SERVER_NAME`, or Server Options).
+#[derive(Resource, Clone, Debug, PartialEq, Eq)]
+pub struct ServerName(pub String);
+
+impl Default for ServerName {
+    fn default() -> Self {
+        Self("Hall of Worlds".into())
+    }
 }
 
 impl Plugin for ServerPlugin {
@@ -107,6 +131,7 @@ impl Plugin for ServerPlugin {
             .unwrap_or_else(|error| panic!("The server can't open its world: {error}"));
         app.insert_resource(world)
             .insert_resource(self.options)
+            .init_resource::<ServerName>()
             .insert_resource(Connections::new(match queue {
                 Some(queue) => accounts::Accounts::new(queue),
                 None => accounts::Accounts::default(),
