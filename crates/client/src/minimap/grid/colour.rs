@@ -77,7 +77,7 @@ pub fn colour_at(look: CellLook, u: f64, v: f64, line: f64) -> Option<[u8; 3]> {
                 floor(sides[usize::from(signed > 0.0)])
             })
         }
-        CellLook::Door { east_west } => {
+        CellLook::Door { east_west } | CellLook::SecretDoor { east_west } => {
             let (along, across) = along_across(east_west);
             let in_rectangle = along <= DOOR_HALF_LENGTH && across <= DOOR_HALF_WIDTH;
             Some(if in_rectangle {

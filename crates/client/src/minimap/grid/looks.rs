@@ -31,6 +31,9 @@ pub enum CellLook {
     Wall(Sides),
     /// A dungeon's door in a wall running east-west, or north-south.
     Door { east_west: bool },
+    /// A secret door, found or seen by truesight: drawn as a door, with an "S"
+    /// stamped over it.
+    SecretDoor { east_west: bool },
     /// A window in a wall running east-west, or north-south, with the colours
     /// of what it is known to look onto, to the north or west and the south or
     /// east.
@@ -73,19 +76,30 @@ impl Looks {
         }
     }
 
-    /// The shop signs in the box: where, and whose.
-    pub fn signs(&self) -> impl Iterator<Item = ((i64, i64), BuildingKind)> + '_ {
-        self.looks.iter().enumerate().filter_map(|(index, look)| {
-            let CellLook::Sign(kind) = look else {
-                return None;
-            };
+    /// Every cell in the box: where, and how it looks.
+    fn cells(&self) -> impl Iterator<Item = ((i64, i64), CellLook)> + '_ {
+        self.looks.iter().enumerate().map(|(index, look)| {
             let index = index as i64;
             let at = (
                 self.min.0 + index % self.size.0,
                 self.min.1 + index / self.size.0,
             );
-            Some((at, *kind))
+            (at, *look)
         })
+    }
+
+    /// The shop signs in the box: where, and whose.
+    pub fn signs(&self) -> impl Iterator<Item = ((i64, i64), BuildingKind)> + '_ {
+        self.cells().filter_map(|(at, look)| match look {
+            CellLook::Sign(kind) => Some((at, kind)),
+            _ => None,
+        })
+    }
+
+    /// Where the secret doors in the box are.
+    pub fn secret_doors(&self) -> impl Iterator<Item = (i64, i64)> + '_ {
+        self.cells()
+            .filter_map(|(at, look)| matches!(look, CellLook::SecretDoor { .. }).then_some(at))
     }
 }
 
@@ -108,8 +122,11 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             && (cell.is_walkable() || cell.is_jumpable() || cell == Cell::Window || other_building)
     };
     match level.cell(x, y) {
+        Cell::Door => CellLook::Door {
+            east_west: level.opening_runs_east_west(x, y),
+        },
         // Only sent to truesight: otherwise it arrives as a wall.
-        Cell::Door | Cell::SecretDoor => CellLook::Door {
+        Cell::SecretDoor => CellLook::SecretDoor {
             east_west: level.opening_runs_east_west(x, y),
         },
         Cell::Window => {

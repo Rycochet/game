@@ -11,9 +11,9 @@ use super::sprites::Sprites;
 use super::world::WorldTiles;
 use super::{
     DrawnFrom, FULL_MAP_BUDGET_MS, ICON_PIXELS, MINIMAP_BUDGET_MS, MapPictures, REDRAW_SECONDS,
-    Room, STAIRS_PIXELS, Screen, Sources, full_map_area, full_map_marks, full_map_side,
-    location_title, minimap_across, minimap_marks, minimap_picture_size, prepare_stamps,
-    under_the_sky, units_per_pixel,
+    Room, SECRET_DOOR_EDGE, SECRET_DOOR_PIXELS, STAIRS_PIXELS, Screen, Sources, full_map_area,
+    full_map_marks, full_map_side, location_title, minimap_across, minimap_marks,
+    minimap_picture_size, prepare_stamps, under_the_sky, units_per_pixel,
 };
 use crate::common::GameView;
 use crate::widgets::PARCHMENT;
@@ -233,7 +233,16 @@ pub(super) fn draw_maps(
         }
     }
 
-    if looks.is_some() {
+    if let Some(looks) = &looks {
+        for (x, y) in looks.secret_doors() {
+            super::frame::secret_door_icon(
+                &mut canvas,
+                projection.to_picture(x as f64, y as f64),
+                SECRET_DOOR_PIXELS * zoom * dots,
+                SECRET_DOOR_EDGE * dots,
+                PARCHMENT,
+            );
+        }
         for stairs in &dungeon.stairs {
             if dungeon.remembered.is_seen(stairs.x, stairs.y) {
                 super::frame::stairs_icon(
