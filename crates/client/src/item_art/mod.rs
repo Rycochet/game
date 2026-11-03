@@ -18,13 +18,12 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
 use bevy::window::PrimaryWindow;
-use shared::blade::BladeForm;
 use shared::creature::{CreatureKind, Size};
 use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
 
-pub use looks::{HandsLook, HeadLook, ShouldersLook, TorsoLook};
+pub use looks::{ArmsLook, BladeLook, HandsLook, HeadLook, ShouldersLook, TorsoLook};
 
 /// Render layers kept for this, past any the views use, one per picture being drawn.
 const FIRST_LAYER: usize = 16;
@@ -87,6 +86,11 @@ pub enum Look {
         head: HeadLook,
         quality: Option<Quality>,
     },
+    /// Vambraces, sleeves or other arm pieces, as worn.
+    Arms {
+        arms: ArmsLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -102,6 +106,7 @@ impl Look {
             Self::Shoulders { shoulders, .. } => shoulders.cells,
             Self::Torso { torso, .. } => torso.cells,
             Self::Head { head, .. } => head.cells,
+            Self::Arms { arms, .. } => arms.cells,
             Self::Body { .. } => body::CELLS,
         }
     }
@@ -118,20 +123,6 @@ impl Look {
         let longest = self.longest() as u32;
         UVec2::new(wide as u32, long as u32) * pixels / longest
     }
-}
-
-/// What can be seen of a weapon: lengths to the nearest centimetre, so that nearly the
-/// same weapons share a picture, and without what doesn't show.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct BladeLook {
-    form: BladeForm,
-    /// What it takes up, wide and long, not turned.
-    cells: (u8, u8),
-}
-
-/// A length to the nearest centimetre.
-fn to_centimetre(millimetres: u16) -> u16 {
-    (millimetres + 5) / 10 * 10
 }
 
 /// What can be seen of a ring. Sizes are against the ring's own, as how big it is
@@ -171,25 +162,8 @@ fn sizes_above(size: Size, than: Size) -> i8 {
 pub fn look_of(item: &Item) -> Option<Look> {
     let quality = item.quality;
     match item.form.as_ref()? {
-        ItemForm::Blade(form) => {
-            let shape = item.shape();
-            Some(Look::Blade {
-                blade: BladeLook {
-                    form: BladeForm {
-                        blade: to_centimetre(form.blade),
-                        handle: to_centimetre(form.handle),
-                        generic_only: false,
-                        ..**form
-                    },
-                    cells: (shape.width, shape.height),
-                },
-                quality,
-            })
-        }
+        ItemForm::Blade(form) => Some(looks::blade_look(item, form)),
         ItemForm::Gem(gem) => Some(Look::Gem { gem: *gem, quality }),
-        ItemForm::Hands(_) | ItemForm::Shoulders(_) | ItemForm::Torso(_) | ItemForm::Head(_) => {
-            looks::armour_look(item)
-        }
         ItemForm::Ring(ring) => {
             let settings = ring.settings.iter().map(|setting| SettingLook {
                 angle: setting.angle,
@@ -215,6 +189,7 @@ pub fn look_of(item: &Item) -> Option<Look> {
                 quality,
             })
         }
+        _ => looks::armour_look(item),
     }
 }
 

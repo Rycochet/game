@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::armour::arms::ArmsForm;
 use crate::armour::hands::HandsForm;
 use crate::armour::head::HeadForm;
 use crate::armour::shoulders::ShouldersForm;
@@ -21,8 +22,10 @@ use crate::rng::Rng;
 mod armour;
 mod limits;
 mod measure;
+mod words;
 
 pub use limits::Limits;
+use words::{counted, gem_material, plural};
 
 /// What an item is like, for kinds that have this.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,6 +41,8 @@ pub enum ItemForm {
     Torso(TorsoForm),
     /// A helmet, coif or arming cap.
     Head(HeadForm),
+    /// Vambraces, sleeves or other arm pieces, for one arm or both.
+    Arms(ArmsForm),
 }
 
 impl ItemForm {
@@ -51,6 +56,7 @@ impl ItemForm {
             Self::Shoulders(shoulders) => shoulders.name().to_owned(),
             Self::Torso(torso) => torso.name().to_owned(),
             Self::Head(head) => head.name(),
+            Self::Arms(arms) => arms.name(),
         }
     }
 
@@ -63,7 +69,8 @@ impl ItemForm {
             | Self::Hands(_)
             | Self::Shoulders(_)
             | Self::Torso(_)
-            | Self::Head(_) => &[],
+            | Self::Head(_)
+            | Self::Arms(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }
@@ -210,37 +217,6 @@ impl RingForm {
             Some((only, [])) => format!("{ring} with {only}"),
             Some((last, others)) => format!("{ring} with {} and {last}", others.join(", ")),
         }
-    }
-}
-
-fn gem_material(item: &Item) -> Option<Material> {
-    match &item.form {
-        Some(ItemForm::Gem(gem)) => Some(gem.material),
-        _ => None,
-    }
-}
-
-fn counted(count: usize, one: &str, many: String) -> String {
-    let a = if one.starts_with(['A', 'E']) {
-        "an"
-    } else {
-        "a"
-    };
-    match count {
-        1 => format!("{a} {one}"),
-        2 => format!("Two {many}"),
-        3 => format!("Three {many}"),
-        4 => format!("Four {many}"),
-        5 => format!("Five {many}"),
-        _ => format!("{count} {many}"),
-    }
-}
-
-fn plural(stone: Material) -> String {
-    match stone {
-        Material::Ruby => "Rubies".to_owned(),
-        Material::Topaz => "Topazes".to_owned(),
-        _ => format!("{}s", stone.name()),
     }
 }
 

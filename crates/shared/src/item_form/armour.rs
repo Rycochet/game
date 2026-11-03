@@ -1,6 +1,7 @@
 //! Rolling the forms of armour, by item kind.
 
 use super::ItemForm;
+use crate::armour::arms;
 use crate::armour::hands::{self, HandsPiece};
 use crate::armour::head::{self, HeadKind};
 use crate::armour::shoulders;
@@ -14,6 +15,7 @@ pub(super) fn armour_form(kind: ItemKind, rng: &mut Rng, quality: Quality) -> Op
     let torso = |rng: &mut Rng, kind| ItemForm::Torso(torso::roll(rng, kind, None, quality));
     let head = |rng: &mut Rng, kind| ItemForm::Head(head::roll(rng, kind, None, quality));
     Some(match kind {
+        ItemKind::ArmArmour => ItemForm::Arms(arms::roll(rng, None, quality)),
         ItemKind::Gauntlets => hands(rng, HandsPiece::Gauntlets),
         ItemKind::DemiGauntlets => hands(rng, HandsPiece::Demi),
         ItemKind::PaddedGloves => hands(rng, HandsPiece::Padded),

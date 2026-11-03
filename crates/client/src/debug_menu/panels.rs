@@ -36,6 +36,10 @@ use crate::widgets::{
 use shared::blade::Family;
 
 mod armour;
+mod arms;
+mod page;
+
+use page::PicturePage;
 
 const FONT: TextSize = TextSize::Medium;
 /// How much of the window's height Show Widgets may take before it scrolls.
@@ -242,77 +246,6 @@ fn gem_to_show(material: Material, cut: Cut) -> GemForm {
         material,
         cut,
         shape_seed,
-    }
-}
-
-/// What Item Pictures' grid shows: one kind of item at a time, chosen from a dropdown
-/// and kept in `Preferences` by name.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub(super) enum PicturePage {
-    Bodies,
-    Hands,
-    Shoulders,
-    Torso,
-    Head,
-    Weapons,
-    #[default]
-    Gems,
-    Rings,
-}
-
-impl PicturePage {
-    const ALL: [Self; 8] = [
-        Self::Bodies,
-        Self::Hands,
-        Self::Shoulders,
-        Self::Torso,
-        Self::Head,
-        Self::Weapons,
-        Self::Gems,
-        Self::Rings,
-    ];
-
-    fn name(self) -> &'static str {
-        match self {
-            Self::Bodies => "Bodies",
-            Self::Hands => "Hands",
-            Self::Shoulders => "Shoulders",
-            Self::Torso => "Torso",
-            Self::Head => "Head",
-            Self::Weapons => "Weapons",
-            Self::Gems => "Gems",
-            Self::Rings => "Rings",
-        }
-    }
-
-    /// The page last chosen, or Gems if none was, or it isn't one any more.
-    fn chosen(preferences: &Preferences) -> Self {
-        let name = preferences.item_pictures.as_deref();
-        Self::ALL
-            .into_iter()
-            .find(|page| Some(page.name()) == name)
-            .unwrap_or_default()
-    }
-
-    /// This page's rows.
-    fn spawn(self, grid: &mut ChildSpawnerCommands) {
-        match self {
-            Self::Bodies => spawn_body_row(grid),
-            Self::Hands => armour::spawn_hands_rows(grid),
-            Self::Shoulders => armour::spawn_shoulders_rows(grid),
-            Self::Torso => armour::spawn_torso_rows(grid),
-            Self::Head => armour::spawn_head_rows(grid),
-            Self::Weapons => Family::ALL
-                .into_iter()
-                .for_each(|f| spawn_blade_row(grid, f)),
-            Self::Gems => {
-                spawn_picture_heading(grid);
-                for material in Material::GEMS {
-                    spawn_picture_row(grid, material);
-                }
-            }
-            Self::Rings => (0..RING_ROWS).for_each(|row| spawn_ring_row(grid, row)),
-        }
     }
 }
 

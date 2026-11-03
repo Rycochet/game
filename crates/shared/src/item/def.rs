@@ -17,6 +17,14 @@ impl ItemKind {
         let def =
             match self {
                 Self::Apple => plain("Apple", 150, square).without_quality(),
+                // Both arms, or one; its form says its name, cells and weight, and whether
+                // it is padded (kote).
+                Self::ArmArmour => plain("Arm Armour", 2000, Shape::rectangle(2, 3)).worn(wear(
+                    Outer,
+                    &[Arms],
+                    (0, 0),
+                    false,
+                )),
                 // The rest of the head pieces' looks, cells and weights are their forms'.
                 Self::ArmingCap => plain("Arming Cap", 250, Shape::rectangle(2, 1)).worn(wear(
                     Skin,
@@ -216,6 +224,7 @@ impl ItemKind {
             | Self::DemiGauntlets
             | Self::ShoulderArmour
             | Self::TorsoArmour
+            | Self::ArmArmour
             | Self::Backpack
             | Self::Necklace => 150,
             Self::Sword
