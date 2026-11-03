@@ -1,0 +1,167 @@
+use super::*;
+use crate::item::{Inventory, Item, Made};
+
+/// A room big enough for some mobs.
+fn room() -> Level {
+    let mut level = Level::new(0, 0, 42, 22);
+    for y in 1..21 {
+        for x in 1..41 {
+            level.set(x, y, Cell::Floor);
+        }
+    }
+    level
+}
+
+#[test]
+fn the_same_seed_gives_the_same_mobs() {
+    let level = room();
+    let first = spawns(Seed::new(5), 0, PoiKind::Castle, &level, &[]);
+    assert!(!first.is_empty());
+    assert_eq!(first, spawns(Seed::new(5), 0, PoiKind::Castle, &level, &[]));
+    assert_ne!(first, spawns(Seed::new(6), 0, PoiKind::Castle, &level, &[]));
+    assert_ne!(first, spawns(Seed::new(5), 1, PoiKind::Castle, &level, &[]));
+}
+
+#[test]
+fn mobs_stand_apart_on_walkable_cells_with_looks_that_suit_them() {
+    let level = room();
+    for seed in 0..20 {
+        let mobs = spawns(Seed::new(seed), 0, PoiKind::Crypt, &level, &[]);
+        for (index, mob) in mobs.iter().enumerate() {
+            assert!(level.is_walkable(mob.position.0, mob.position.1));
+            assert!(mob.appearance.suits(mob.kind));
+            assert!(mobs[index + 1..].iter().all(|o| o.position != mob.position));
+        }
+    }
+}
+
+#[test]
+fn nobody_starts_beside_the_stairs() {
+    let level = room();
+    let stairs = [(10, 10), (30, 12)];
+    for seed in 0..20 {
+        for mob in spawns(Seed::new(seed), 0, PoiKind::Crypt, &level, &stairs) {
+            for s in stairs {
+                let gap = (s.0 - mob.position.0)
+                    .abs()
+                    .max((s.1 - mob.position.1).abs());
+                assert!(gap >= FROM_STAIRS);
+            }
+        }
+    }
+}
+
+#[test]
+fn mobs_start_with_what_their_kind_can_have_and_animals_with_nothing() {
+    let (mut kobolds_armed, mut qualities) = (0, std::collections::BTreeSet::new());
+    for seed in 0..300 {
+        let roll = |what: i64| Seed::new(seed).at(&[PURPOSE, what]);
+        let gear = roll_gear(&roll, CreatureKind::Kobold);
+        kobolds_armed += gear
+            .iter()
+            .any(|&(kind, _)| kind == ItemKind::Boomerang || kind.blade_family().is_some())
+            as u32;
+        for (kind, quality) in gear {
+            assert_eq!(quality.is_some(), kind.def().has_quality, "{kind:?}");
+            qualities.extend(quality);
+        }
+        assert!(roll_gear(&roll, CreatureKind::Chicken).is_empty());
+        assert!(roll_gear(&roll, CreatureKind::Horse).is_empty());
+        let beggar = roll_gear(&roll, CreatureKind::Beggar);
+        assert_eq!(beggar[0].0, ItemKind::TShirt);
+    }
+    assert!((150..270).contains(&kobolds_armed), "{kobolds_armed}");
+    assert!(qualities.contains(&Quality::Poor) && qualities.contains(&Quality::Rare));
+}
+
+/// Blades are left out: they are rolled within what the mob can carry. Anything else
+/// must go on it, made for it, or else in its pockets, at the size it is made.
+#[test]
+fn mobs_can_wear_or_carry_all_they_can_start_with() {
+    for creature in CreatureKind::ALL {
+        let body = creature.def();
+        let (width, height) = body.pockets;
+        let bare = Inventory {
+            creature,
+            ..Inventory::default()
+        };
+        let places = gear_of(creature).iter().flat_map(|(_, kinds)| kinds.iter());
+        for &(kind, _) in places.filter(|(kind, _)| kind.blade_family().is_none()) {
+            let item = Item {
+                made: Made::for_body(kind, body.size, body.fingers(), false),
+                ..Item::new(Id::for_test(1), kind)
+            };
+            let shape = kind.def().shape;
+            let (short, long) = (shape.width.min(shape.height), shape.width.max(shape.height));
+            assert!(
+                bare.check_wear_new(&item).is_ok()
+                    || (!kind.comes_in_sizes()
+                        && short <= width.min(height)
+                        && long <= width.max(height)),
+                "{creature:?} can't have {kind:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn towns_have_beggars_and_farms_have_animals() {
+    let level = room();
+    let town = spawns(Seed::new(1), 0, PoiKind::Town, &level, &[]);
+    assert!(!town.is_empty() && town.len() <= MOST_BEGGARS);
+    assert!(town.iter().all(|mob| mob.kind == CreatureKind::Beggar));
+    let farm = spawns(Seed::new(1), 0, PoiKind::Farm, &level, &[]);
+    assert!(!farm.is_empty());
+    assert!(farm.iter().all(|mob| !mob.kind.def().playable));
+}
+
+#[test]
+fn memories_warm_a_mob_to_whoever_it_remembers() {
+    let (a, b) = (
+        CharacterId(crate::id::Id::for_test(1)),
+        CharacterId(crate::id::Id::for_test(2)),
+    );
+    let mut memory = Memory::default();
+    memory.remember(a, Event::Gave(ItemKind::Coin));
+    assert_eq!(memory.warmth_for(&a), 30);
+    assert_eq!(memory.warmth_for(&b), 0);
+    for _ in 0..MOST_REMEMBERED {
+        memory.remember(b, Event::Gave(ItemKind::Coin));
+    }
+    // Only so much is kept.
+    assert_eq!(memory.warmth_for(&a), 0);
+    assert_eq!(memory.warmth_for(&b), 30 * MOST_REMEMBERED as i32);
+    // A beggar given one thing goes from neutral to friendly.
+    let warmer = Feeling::Neutral.warmth() + 30;
+    assert_eq!(Feeling::from_warmth(warmer), Feeling::Friendly);
+    // A kobold stops being unfriendly after one, and takes three to be friendly.
+    assert_eq!(Feeling::from_warmth(-50 + 30), Feeling::Neutral);
+    assert_eq!(Feeling::from_warmth(-50 + 60), Feeling::Neutral);
+    assert_eq!(Feeling::from_warmth(-50 + 90), Feeling::Friendly);
+}
+
+#[test]
+fn a_move_is_small_enough_to_send_often() {
+    let moved = crate::protocol::ServerMessage::EntityMoved {
+        id: Id::for_test(u128::MAX),
+        x: 100,
+        y: -100,
+    };
+    // Its kind, 17 for the id, and two short numbers.
+    let bytes = postcard::to_allocvec(&moved).unwrap();
+    assert!(bytes.len() <= 24, "{}", bytes.len());
+}
+
+#[test]
+fn a_look_reads_back_from_a_message() {
+    let look = EntityLook {
+        id: Id::for_test(9),
+        kind: CreatureKind::Kobold,
+        appearance: Appearance::default(),
+        feeling: Feeling::Unfriendly,
+        x: -2,
+        y: 3,
+    };
+    let bytes = postcard::to_allocvec(&look).unwrap();
+    assert_eq!(postcard::from_bytes::<EntityLook>(&bytes).unwrap(), look);
+}

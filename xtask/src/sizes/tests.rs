@@ -14,9 +14,15 @@ fn code_after_a_test_module_is_counted() {
 }
 
 #[test]
+fn test_modules_in_their_own_files_are_not_counted() {
+    let text = "fn a() {}\n#[cfg(test)]\nmod tests;\n";
+    assert_eq!(code_lines(text), 1);
+}
+
+#[test]
 fn other_test_only_lines_are_counted() {
-    let text = "#[cfg(test)]\nmod tests;\n#[cfg(test)]\nfn helper() {}\n";
-    assert_eq!(code_lines(text), 4);
+    let text = "#[cfg(test)]\nfn helper() {}\n";
+    assert_eq!(code_lines(text), 2);
 }
 
 #[test]

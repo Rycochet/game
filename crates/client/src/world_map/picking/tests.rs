@@ -1,0 +1,191 @@
+use super::super::HALF_SIZE;
+use super::*;
+use shared::rng::Seed;
+use shared::world::WorldParams;
+
+fn setup() -> (Surface, SurfaceStyle, HeightCache, f64) {
+    let world = WorldParams::from_seed(Seed::new(12345));
+    let water = world.sea_level;
+    (
+        Surface::new(&world),
+        SurfaceStyle::default(),
+        HeightCache::default(),
+        water,
+    )
+}
+
+fn no_lift(_: &mut HeightCache, _: i64, _: i64) -> f32 {
+    0.0
+}
+
+/// The window in the starting view, looking north.
+const NORTH_VIEW: ViewSquare = ViewSquare {
+    right: Vec2::X,
+    towards: Vec2::Y,
+    half: HALF_SIZE as f32,
+};
+
+fn ray(origin: Vec3, towards: Vec3) -> Ray3d {
+    Ray3d::new(origin, Dir3::new(towards - origin).unwrap())
+}
+
+#[test]
+fn straight_down_hits_the_point_below() {
+    let (surface, style, mut cache, water) = setup();
+    let hit = pick(
+        ray(Vec3::new(10.0, 500.0, -20.0), Vec3::new(10.0, 0.0, -20.0)),
+        (0, 0),
+        NORTH_VIEW,
+        &mut cache,
+        &surface,
+        &style,
+        water,
+        no_lift,
+    );
+    assert_eq!(hit, Some((10, -20)));
+}
+
+#[test]
+fn through_an_edge_face_misses() {
+    let (surface, style, mut cache, water) = setup();
+    // Low and level from the south: enters the window below the surface.
+    let hit = pick(
+        ray(Vec3::new(0.0, 5.0, 600.0), Vec3::new(0.0, 4.0, 0.0)),
+        (0, 0),
+        NORTH_VIEW,
+        &mut cache,
+        &surface,
+        &style,
+        water,
+        no_lift,
+    );
+    assert_eq!(hit, None);
+}
+
+#[test]
+fn through_the_north_face_misses() {
+    let (surface, style, mut cache, water) = setup();
+    // As above, from the north (the view turned round).
+    let hit = pick(
+        ray(Vec3::new(0.0, 5.0, -600.0), Vec3::new(0.0, 4.0, 0.0)),
+        (0, 0),
+        NORTH_VIEW,
+        &mut cache,
+        &surface,
+        &style,
+        water,
+        no_lift,
+    );
+    assert_eq!(hit, None);
+}
+
+#[test]
+fn from_the_east_hits_the_top() {
+    let (surface, style, mut cache, water) = setup();
+    // Looking west from high up: lands somewhere on the window.
+    let hit = pick(
+        ray(Vec3::new(900.0, 600.0, 0.0), Vec3::new(0.0, 0.0, 0.0)),
+        (0, 0),
+        NORTH_VIEW,
+        &mut cache,
+        &surface,
+        &style,
+        water,
+        no_lift,
+    );
+    let (x, y) = hit.expect("should hit the terrain");
+    assert!(x.abs() <= HALF_SIZE && y.abs() <= 1);
+}
+
+#[test]
+fn turned_window_has_turned_edges() {
+    let (surface, style, mut cache, water) = setup();
+    // Straight down at (190, 190): inside the square window looking
+    // north, but outside it turned 45° (the corner direction is ~269
+    // from the centre, while the turned window reaches only 200).
+    let down = ray(Vec3::new(190.0, 500.0, 190.0), Vec3::new(190.0, 0.0, 190.0));
+    let diagonal = std::f32::consts::FRAC_1_SQRT_2;
+    let turned = ViewSquare {
+        right: Vec2::new(diagonal, -diagonal),
+        towards: Vec2::new(diagonal, diagonal),
+        ..NORTH_VIEW
+    };
+    let mut hit = |square| {
+        pick(
+            down,
+            (0, 0),
+            square,
+            &mut cache,
+            &surface,
+            &style,
+            water,
+            no_lift,
+        )
+    };
+    assert_eq!(hit(NORTH_VIEW), Some((190, 190)));
+    assert_eq!(hit(turned), None);
+}
+
+#[test]
+fn zoomed_window_is_smaller() {
+    let (surface, style, mut cache, water) = setup();
+    // Straight down at (150, 0): inside the starting view's window, but
+    // outside it zoomed in to 0.6 (reaching 120).
+    let down = ray(Vec3::new(150.0, 500.0, 0.0), Vec3::new(150.0, 0.0, 0.0));
+    let zoomed = ViewSquare {
+        half: 120.0,
+        ..NORTH_VIEW
+    };
+    let mut hit = |square| {
+        pick(
+            down,
+            (0, 0),
+            square,
+            &mut cache,
+            &surface,
+            &style,
+            water,
+            no_lift,
+        )
+    };
+    assert_eq!(hit(NORTH_VIEW), Some((150, 0)));
+    assert_eq!(hit(zoomed), None);
+}
+
+/// A slanting ray coming from the east meets raised woods further east
+/// than it meets the ground.
+#[test]
+fn raised_woods_are_hit_first() {
+    let (surface, style, mut cache, water) = setup();
+    let from_east = ray(Vec3::new(900.0, 600.0, 0.0), Vec3::new(0.0, 0.0, 0.0));
+    let mut hit = |lift: f32| {
+        pick(
+            from_east,
+            (0, 0),
+            NORTH_VIEW,
+            &mut cache,
+            &surface,
+            &style,
+            water,
+            |_: &mut HeightCache, _: i64, _: i64| lift,
+        )
+        .expect("should hit the terrain")
+    };
+    assert!(hit(10.0).0 > hit(0.0).0);
+}
+
+#[test]
+fn over_the_map_misses() {
+    let (surface, style, mut cache, water) = setup();
+    let hit = pick(
+        ray(Vec3::new(0.0, 500.0, 600.0), Vec3::new(0.0, 300.0, -600.0)),
+        (0, 0),
+        NORTH_VIEW,
+        &mut cache,
+        &surface,
+        &style,
+        water,
+        no_lift,
+    );
+    assert_eq!(hit, None);
+}

@@ -9,7 +9,8 @@ const FOLDERS: &[&str] = &["crates", "xtask"];
 
 /// Every Rust file that counts, by its path from the workspace with `/`
 /// between folders (the same on every OS), with its lines. Test files
-/// (`tests.rs`, or anything in a `tests` folder) don't count.
+/// (named `tests.rs` or ending in `_tests.rs`, or anything in a `tests`
+/// folder) don't count.
 pub fn rust_files(root: &Path) -> BTreeMap<String, usize> {
     let mut files = BTreeMap::new();
     for folder in FOLDERS {
@@ -29,7 +30,9 @@ fn visit(root: &Path, folder: &Path, files: &mut BTreeMap<String, usize>) {
             if name != "target" && name != "tests" {
                 visit(root, &path, files);
             }
-        } else if path.extension().is_some_and(|ext| ext == "rs") && name != "tests.rs" {
+        } else if path.extension().is_some_and(|ext| ext == "rs")
+            && !name.to_string_lossy().ends_with("tests.rs")
+        {
             let Ok(text) = fs::read_to_string(&path) else {
                 continue;
             };
@@ -44,17 +47,18 @@ fn visit(root: &Path, folder: &Path, files: &mut BTreeMap<String, usize>) {
     }
 }
 
-/// Lines in a file, leaving out any test module written inside it: a
-/// `#[cfg(test)]` line, then `mod name {`, up to the `}` that rustfmt puts
-/// alone at the start of a line to close it.
+/// Lines in a file, leaving out its test modules: a `#[cfg(test)]` line,
+/// then `mod name;` (the tests are in their own file), or `mod name {` up to
+/// the `}` that rustfmt puts alone at the start of a line to close it.
 pub fn code_lines(text: &str) -> usize {
     let mut count = 0;
     let mut lines = text.lines().peekable();
     while let Some(line) = lines.next() {
-        let opens_module = lines
-            .peek()
-            .is_some_and(|next| next.contains("mod ") && next.ends_with('{'));
-        if line == "#[cfg(test)]" && opens_module {
+        let next = lines.peek().copied().unwrap_or_default();
+        let module = line == "#[cfg(test)]" && next.contains("mod ");
+        if module && next.ends_with(';') {
+            lines.next();
+        } else if module && next.ends_with('{') {
             lines.by_ref().find(|line| *line == "}");
         } else {
             count += 1;
