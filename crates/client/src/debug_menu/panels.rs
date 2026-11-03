@@ -253,6 +253,7 @@ pub(super) enum PicturePage {
     Hands,
     Shoulders,
     Torso,
+    Head,
     Weapons,
     #[default]
     Gems,
@@ -260,11 +261,12 @@ pub(super) enum PicturePage {
 }
 
 impl PicturePage {
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 8] = [
         Self::Bodies,
         Self::Hands,
         Self::Shoulders,
         Self::Torso,
+        Self::Head,
         Self::Weapons,
         Self::Gems,
         Self::Rings,
@@ -276,6 +278,7 @@ impl PicturePage {
             Self::Hands => "Hands",
             Self::Shoulders => "Shoulders",
             Self::Torso => "Torso",
+            Self::Head => "Head",
             Self::Weapons => "Weapons",
             Self::Gems => "Gems",
             Self::Rings => "Rings",
@@ -298,22 +301,17 @@ impl PicturePage {
             Self::Hands => armour::spawn_hands_rows(grid),
             Self::Shoulders => armour::spawn_shoulders_rows(grid),
             Self::Torso => armour::spawn_torso_rows(grid),
-            Self::Weapons => {
-                for family in Family::ALL {
-                    spawn_blade_row(grid, family);
-                }
-            }
+            Self::Head => armour::spawn_head_rows(grid),
+            Self::Weapons => Family::ALL
+                .into_iter()
+                .for_each(|f| spawn_blade_row(grid, f)),
             Self::Gems => {
                 spawn_picture_heading(grid);
                 for material in Material::GEMS {
                     spawn_picture_row(grid, material);
                 }
             }
-            Self::Rings => {
-                for row in 0..RING_ROWS {
-                    spawn_ring_row(grid, row);
-                }
-            }
+            Self::Rings => (0..RING_ROWS).for_each(|row| spawn_ring_row(grid, row)),
         }
     }
 }

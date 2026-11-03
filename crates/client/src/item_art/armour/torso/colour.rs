@@ -10,7 +10,7 @@ use crate::item_art::armour::{Stuff, colour_of, darker, matte};
 use crate::item_art::ring::metal_material;
 
 /// What a dye looks like; undyed is the cloth's own colour.
-pub(super) fn dye_colour(dye: Dye, cloth: Material) -> Color {
+pub(in crate::item_art) fn dye_colour(dye: Dye, cloth: Material) -> Color {
     match dye {
         Dye::Natural => colour_of(cloth),
         Dye::Red => Color::srgb(0.62, 0.1, 0.1),
@@ -25,7 +25,11 @@ pub(super) fn dye_colour(dye: Dye, cloth: Material) -> Color {
 }
 
 /// Metal as it is finished.
-fn finished(metal: Material, finish: Finish, quality: Option<Quality>) -> StandardMaterial {
+pub(in crate::item_art) fn finished(
+    metal: Material,
+    finish: Finish,
+    quality: Option<Quality>,
+) -> StandardMaterial {
     let tinted = |r, g, b, rough| StandardMaterial {
         base_color: Color::srgb(r, g, b),
         metallic: 0.4,

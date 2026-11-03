@@ -7,9 +7,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::armour::hands::{self, HandsForm, HandsPiece};
-use crate::armour::shoulders::{self, ShouldersForm};
-use crate::armour::torso::{self, TorsoForm, TorsoKind};
+use crate::armour::hands::HandsForm;
+use crate::armour::head::HeadForm;
+use crate::armour::shoulders::ShouldersForm;
+use crate::armour::torso::TorsoForm;
 use crate::blade::{self, BladeForm};
 use crate::creature::Size;
 use crate::id::Id;
@@ -17,7 +18,9 @@ use crate::item::{Item, ItemKind, Made, Quality};
 use crate::material::Material;
 use crate::rng::Rng;
 
+mod armour;
 mod limits;
+mod measure;
 
 pub use limits::Limits;
 
@@ -33,6 +36,8 @@ pub enum ItemForm {
     Shoulders(ShouldersForm),
     /// A cuirass or other torso armour, or an arming vest.
     Torso(TorsoForm),
+    /// A helmet, coif or arming cap.
+    Head(HeadForm),
 }
 
 impl ItemForm {
@@ -45,6 +50,7 @@ impl ItemForm {
             Self::Hands(hands) => hands.name().to_owned(),
             Self::Shoulders(shoulders) => shoulders.name().to_owned(),
             Self::Torso(torso) => torso.name().to_owned(),
+            Self::Head(head) => head.name(),
         }
     }
 
@@ -56,7 +62,8 @@ impl ItemForm {
             | Self::Blade(_)
             | Self::Hands(_)
             | Self::Shoulders(_)
-            | Self::Torso(_) => &[],
+            | Self::Torso(_)
+            | Self::Head(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }
@@ -243,7 +250,9 @@ fn plural(stone: Material) -> String {
 pub fn give_form(item: &mut Item, size: Option<Size>, new_id: &mut impl FnMut() -> Id) {
     let mut rng = item.id.seed().derive("item form").rng();
     let quality = item.quality.unwrap_or_default();
+    let armour = armour::armour_form(item.kind, &mut rng, quality);
     let (form, rolled_size) = match item.kind {
+        _ if let Some(form) = armour => (form, size.unwrap_or(Size::Medium)),
         ItemKind::Gem => {
             let (gem, size) = roll_gem(&mut rng, quality, true);
             (ItemForm::Gem(gem), size)
@@ -260,27 +269,6 @@ pub fn give_form(item: &mut Item, size: Option<Size>, new_id: &mut impl FnMut() 
                 stone
             });
             (ItemForm::Ring(Box::new(ring)), size)
-        }
-        ItemKind::Gauntlets | ItemKind::DemiGauntlets | ItemKind::PaddedGloves => {
-            let piece = match item.kind {
-                ItemKind::DemiGauntlets => HandsPiece::Demi,
-                ItemKind::PaddedGloves => HandsPiece::Padded,
-                _ => HandsPiece::Gauntlets,
-            };
-            let hands = hands::roll(&mut rng, piece, None);
-            (ItemForm::Hands(hands), size.unwrap_or(Size::Medium))
-        }
-        ItemKind::ShoulderArmour => {
-            let shoulders = shoulders::roll(&mut rng, None, None);
-            (ItemForm::Shoulders(shoulders), size.unwrap_or(Size::Medium))
-        }
-        ItemKind::TorsoArmour | ItemKind::ArmingVest => {
-            let kind = match item.kind {
-                ItemKind::ArmingVest => TorsoKind::ArmingVest,
-                _ => TorsoKind::Armour,
-            };
-            let torso = torso::roll(&mut rng, kind, None, quality);
-            (ItemForm::Torso(torso), size.unwrap_or(Size::Medium))
         }
         kind => {
             let Some(family) = kind.blade_family() else {

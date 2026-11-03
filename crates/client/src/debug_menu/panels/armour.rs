@@ -1,8 +1,9 @@
-//! Item Pictures' armour pages: rolled hand, shoulder and torso pieces, and a picture of
-//! each in every style.
+//! Item Pictures' armour pages: rolled hand, shoulder, torso and head pieces, and a
+//! picture of each in every style.
 
 use bevy::prelude::*;
 use shared::armour::hands::{self, HandsPiece};
+use shared::armour::head::{self, HeadKind};
 use shared::armour::shoulders::{self, ShouldersKind};
 use shared::armour::torso::{self, TorsoKind};
 use shared::armour::{Construction, Style};
@@ -10,7 +11,7 @@ use shared::item::{ItemKind, Quality};
 use shared::rng::{Rng, Seed};
 
 use super::{PICTURE_ROW_LABEL, RING_COLUMNS, Shown, picture_label, spawn_picture};
-use crate::item_art::{HandsLook, Look, ShouldersLook, TorsoLook};
+use crate::item_art::{HandsLook, HeadLook, Look, ShouldersLook, TorsoLook};
 
 /// One armour picture.
 #[derive(Clone, Copy)]
@@ -28,6 +29,10 @@ pub(super) enum ArmourShown {
     Torso(Option<Construction>, u64),
     /// The first plate torso piece rolled in this style.
     TorsoStyle(Style),
+    /// A head piece of this kind as the server would roll it from this number.
+    Head(HeadKind, u64),
+    /// The first helmet rolled in this style.
+    HeadStyle(Style),
 }
 
 /// The first of fifty rolls in plate, or the first at all where the style has none.
@@ -85,6 +90,17 @@ impl ArmourShown {
                 let roll = |rng: &mut Rng| torso::roll(rng, TorsoKind::Armour, Some(style), rolled);
                 torso_look(first_plate(roll, |form| form.construction)?, quality)
             }
+            Self::Head(kind, seed) => head_look(
+                head::roll(&mut Seed::new(seed).rng(), kind, None, rolled),
+                quality,
+            ),
+            Self::HeadStyle(style) => {
+                let mut rng = Seed::new(style as u64).rng();
+                head_look(
+                    head::roll(&mut rng, HeadKind::Helmet, Some(style), rolled),
+                    quality,
+                )
+            }
         })
     }
 }
@@ -112,6 +128,15 @@ fn torso_look(form: torso::TorsoForm, quality: Option<Quality>) -> Look {
     let shape = form.shape();
     Look::Torso {
         torso: TorsoLook::new(form, (shape.width, shape.height)),
+        quality,
+    }
+}
+
+/// A head piece in the cells its form takes up.
+fn head_look(form: head::HeadForm, quality: Option<Quality>) -> Look {
+    let shape = form.shape();
+    Look::Head {
+        head: HeadLook::new(form, (shape.width, shape.height)),
         quality,
     }
 }
@@ -206,6 +231,28 @@ pub(super) fn spawn_torso_rows(grid: &mut ChildSpawnerCommands) {
         spawn_row(grid, label, pictures);
     }
     spawn_style_rows(grid, ArmourShown::TorsoStyle);
+}
+
+/// Rolled helmets over three rows, then bevored helms, coifs and caps, and a helmet in
+/// each style.
+pub(super) fn spawn_head_rows(grid: &mut ChildSpawnerCommands) {
+    use HeadKind::{BevoredHelm, Cap, Coif, Helmet};
+    let rows: [(&str, &[HeadKind]); 5] = [
+        ("Helmets", &[Helmet]),
+        ("", &[Helmet]),
+        ("", &[Helmet]),
+        ("Bevored, Coif", &[BevoredHelm, Coif]),
+        ("Coif, Cap", &[Coif, Cap]),
+    ];
+    for (row, (label, kinds)) in rows.into_iter().enumerate() {
+        let pictures = (0..RING_COLUMNS as u64).map(move |cell| {
+            // A shared row's second half is its second kind.
+            let half = (cell * kinds.len() as u64 / RING_COLUMNS as u64) as usize;
+            Shown::Armour(ArmourShown::Head(kinds[half], row as u64 * 100 + cell))
+        });
+        spawn_row(grid, label, pictures);
+    }
+    spawn_style_rows(grid, ArmourShown::HeadStyle);
 }
 
 /// A picture in each style, as many to a row as rings have.
