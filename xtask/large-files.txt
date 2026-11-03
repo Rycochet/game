@@ -1,0 +1,77 @@
+# Rust files allowed over the file size limit (see "File size" in CLAUDE.md).
+# Each line: path, the most lines it may have (tests not counted), and an
+# optional `# reason` for keeping it large (such as a long data table).
+# Files without a reason are waiting to be split. A listed file may only
+# shrink: `cargo xtask sizes` lowers the numbers and removes files back under
+# the limit. Only add a file with the owner's agreement.
+crates/client/src/common/mod.rs 894
+crates/client/src/connection/mod.rs 542
+crates/client/src/connection/socket.rs 304
+crates/client/src/debug_menu/menu.rs 692
+crates/client/src/debug_menu/panels.rs 1323
+crates/client/src/dev_tools/debug_api.rs 674
+crates/client/src/dev_tools/fake_input.rs 424
+crates/client/src/dev_tools/mod.rs 685
+crates/client/src/dungeon_map/daylight.rs 350
+crates/client/src/dungeon_map/field.rs 382
+crates/client/src/dungeon_map/liquid.rs 526
+crates/client/src/dungeon_map/mesh.rs 599
+crates/client/src/dungeon_map/mod.rs 1037
+crates/client/src/dungeon_map/sight_lines.rs 662
+crates/client/src/dungeon_map/stairs.rs 840
+crates/client/src/dungeon_map/town.rs 899
+crates/client/src/dungeon_map/walls.rs 1341
+crates/client/src/ground/bag.rs 343
+crates/client/src/ground/mod.rs 626
+crates/client/src/inventory/mod.rs 728
+crates/client/src/inventory/panels.rs 780
+crates/client/src/item_art/armour/hands.rs 1007
+crates/client/src/item_art/armour/shoulders.rs 1482
+crates/client/src/item_art/blade.rs 884
+crates/client/src/item_art/gem.rs 323
+crates/client/src/item_art/mod.rs 574
+crates/client/src/item_art/ring.rs 309
+crates/client/src/minimap/frame.rs 342
+crates/client/src/minimap/grid.rs 337
+crates/client/src/minimap/mod.rs 1290
+crates/client/src/player/mod.rs 512
+crates/client/src/surface_style/mod.rs 320
+crates/client/src/system_menu/mod.rs 427
+crates/client/src/trade/mod.rs 365
+crates/client/src/view3d/token.rs 529
+crates/client/src/widgets/dropdown.rs 398
+crates/client/src/widgets/feedback.rs 315
+crates/client/src/widgets/item.rs 459
+crates/client/src/widgets/mod.rs 472
+crates/client/src/widgets/moveable.rs 327
+crates/client/src/world_map/mod.rs 542
+crates/client/src/world_map/poi_model.rs 712
+crates/client/src/world_map/sky.rs 501
+crates/client/src/world_map/terrain.rs 834
+crates/server/src/connections.rs 1077
+crates/server/src/entities.rs 1017
+crates/server/src/lib.rs 428
+crates/server/src/network.rs 520
+crates/server/src/sites.rs 1121
+crates/server/src/storage.rs 460
+crates/server/src/tls.rs 549
+crates/shared/src/armour/hands.rs 472
+crates/shared/src/armour/shoulders.rs 1087
+crates/shared/src/blade/mod.rs 1093
+crates/shared/src/blade/table.rs 1144
+crates/shared/src/celestial.rs 607
+crates/shared/src/creature.rs 403
+crates/shared/src/dungeon.rs 541
+crates/shared/src/item.rs 1483
+crates/shared/src/item_form.rs 546
+crates/shared/src/pathfinding.rs 457
+crates/shared/src/poi.rs 364
+crates/shared/src/protocol/mod.rs 429
+crates/shared/src/shop.rs 359
+crates/shared/src/site/building.rs 1127
+crates/shared/src/site/cave.rs 746
+crates/shared/src/site/farm.rs 430
+crates/shared/src/site/mod.rs 753
+crates/shared/src/site/town.rs 1476
+crates/shared/src/wear.rs 319
+xtask/src/api.rs 363

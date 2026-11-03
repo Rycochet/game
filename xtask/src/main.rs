@@ -4,6 +4,7 @@
 //! macOS, Linux and in CI without installing anything extra.
 
 mod api;
+mod sizes;
 
 use std::env;
 use std::fs;
@@ -18,7 +19,10 @@ Tasks:
   test    Check formatting, type-check and lint (warnings are errors) for
           both native and the browser (wasm), then run the tests. Run this
           before merging.
-  lint    The same checks without the tests. The pre-commit hook runs this.
+  lint    The same checks without the tests, and the file size check. The
+          pre-commit hook runs this.
+  sizes   Lower the entries in xtask/large-files.txt to the files' sizes
+          now, removing files back under the limit.
   hooks   Turn on the pre-commit hook for this checkout (once per clone).
   package Release build of the native client and server, put together
           with the game assets in target/package/ (what the Build
@@ -79,16 +83,13 @@ const TESTS: Check = ("Tests", &["test", "--workspace", "--features", DEBUG_API]
 
 fn main() -> ExitCode {
     match env::args().nth(1).as_deref() {
-        Some("test") => {
-            let checked = run_checks(LINTS.iter().chain([&TESTS]));
-            let temporary = no_temporary_methods();
-            if checked == ExitCode::SUCCESS {
-                temporary
-            } else {
-                checked
-            }
-        }
-        Some("lint") => run_checks(LINTS),
+        Some("test") => all_passed([
+            run_checks(LINTS.iter().chain([&TESTS])),
+            sizes::check(&workspace_root()),
+            no_temporary_methods(),
+        ]),
+        Some("lint") => all_passed([run_checks(LINTS), sizes::check(&workspace_root())]),
+        Some("sizes") => sizes::update(&workspace_root()),
         Some("hooks") => hooks(),
         Some("package") => package(),
         Some("api") => api::run(&env::args().skip(2).collect::<Vec<_>>()),
@@ -100,6 +101,16 @@ fn main() -> ExitCode {
             );
             ExitCode::FAILURE
         }
+    }
+}
+
+/// Success only if every one succeeded.
+fn all_passed(results: impl IntoIterator<Item = ExitCode>) -> ExitCode {
+    let results: Vec<_> = results.into_iter().collect();
+    if results.iter().all(|result| *result == ExitCode::SUCCESS) {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
     }
 }
 
