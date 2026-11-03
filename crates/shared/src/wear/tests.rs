@@ -1,6 +1,10 @@
 use super::*;
-use crate::creature::Size;
+use crate::armour::hands::Fingers;
+use crate::creature::{CreatureKind, Location, Size};
+use crate::id::Id;
+use crate::item::{Favour, Inventory, Item, Made, Quality};
 use crate::item::{Holder, ItemKind, MoveRefused, Rotation};
+use crate::item_form::ItemForm;
 
 const HUMAN: CreatureKind = CreatureKind::Human;
 

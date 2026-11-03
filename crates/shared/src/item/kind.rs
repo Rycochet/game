@@ -1,0 +1,129 @@
+//! `ItemKind`: every kind of item. What each is, is the table in `def.rs`.
+
+use serde::{Deserialize, Serialize};
+
+use crate::blade::Family;
+
+/// A kind of item. Saved by name, so new ones can go anywhere in the list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ItemKind {
+    Apple,
+    ArmArmour,
+    ArmingCap,
+    ArmingVest,
+    Axe,
+    Backpack,
+    Barding,
+    Belt,
+    BevoredHelm,
+    Boomerang,
+    Boots,
+    Caparison,
+    Cloak,
+    Coif,
+    Coin,
+    Dagger,
+    DemiGauntlets,
+    FingerlessGloves,
+    FullArmour,
+    Gambeson,
+    Gauntlets,
+    Gem,
+    Gloves,
+    Hat,
+    Helmet,
+    Knife,
+    Lantern,
+    Longsword,
+    Necklace,
+    PaddedGloves,
+    Polearm,
+    Pouch,
+    Ring,
+    Shoes,
+    ShortSword,
+    ShoulderArmour,
+    SmallBox,
+    Socks,
+    Spear,
+    Stone,
+    Surcoat,
+    Sword,
+    TShirt,
+    Tabard,
+    TorsoArmour,
+    Trousers,
+}
+
+impl ItemKind {
+    /// Every kind, alphabetically by name.
+    pub const ALL: [Self; 46] = [
+        Self::Apple,
+        Self::ArmArmour,
+        Self::ArmingCap,
+        Self::ArmingVest,
+        Self::Axe,
+        Self::Backpack,
+        Self::Barding,
+        Self::Belt,
+        Self::BevoredHelm,
+        Self::Boomerang,
+        Self::Boots,
+        Self::Caparison,
+        Self::Cloak,
+        Self::Coif,
+        Self::Coin,
+        Self::Dagger,
+        Self::DemiGauntlets,
+        Self::FingerlessGloves,
+        Self::FullArmour,
+        Self::Gambeson,
+        Self::Gauntlets,
+        Self::Gem,
+        Self::Gloves,
+        Self::Hat,
+        Self::Helmet,
+        Self::Knife,
+        Self::Lantern,
+        Self::Longsword,
+        Self::Necklace,
+        Self::PaddedGloves,
+        Self::Polearm,
+        Self::Pouch,
+        Self::Ring,
+        Self::Shoes,
+        Self::ShortSword,
+        Self::ShoulderArmour,
+        Self::SmallBox,
+        Self::Socks,
+        Self::Spear,
+        Self::Stone,
+        Self::Surcoat,
+        Self::Sword,
+        Self::TShirt,
+        Self::Tabard,
+        Self::TorsoArmour,
+        Self::Trousers,
+    ];
+
+    /// Whether it can be made at other sizes: what is worn, gems and blades. Everything
+    /// else is always `Medium`, whoever carries it.
+    pub const fn comes_in_sizes(self) -> bool {
+        self.def().wear.is_some() || matches!(self, Self::Gem) || self.blade_family().is_some()
+    }
+
+    /// The family of weapon this makes, for those rolled as blades.
+    pub const fn blade_family(self) -> Option<Family> {
+        match self {
+            Self::Knife => Some(Family::Knife),
+            Self::Dagger => Some(Family::Dagger),
+            Self::ShortSword => Some(Family::ShortSword),
+            Self::Sword => Some(Family::Sword),
+            Self::Longsword => Some(Family::LongSword),
+            Self::Axe => Some(Family::Axe),
+            Self::Spear => Some(Family::Spear),
+            Self::Polearm => Some(Family::Polearm),
+            _ => None,
+        }
+    }
+}

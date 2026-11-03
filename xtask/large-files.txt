@@ -62,8 +62,6 @@ crates/shared/src/blade/table.rs 1144
 crates/shared/src/celestial.rs 607
 crates/shared/src/creature.rs 403
 crates/shared/src/dungeon.rs 541
-crates/shared/src/item.rs 1129
-crates/shared/src/item_form.rs 495
 crates/shared/src/pathfinding.rs 457
 crates/shared/src/poi.rs 364
 crates/shared/src/protocol/mod.rs 429
@@ -73,5 +71,4 @@ crates/shared/src/site/cave.rs 746
 crates/shared/src/site/farm.rs 430
 crates/shared/src/site/mod.rs 753
 crates/shared/src/site/town.rs 1476
-crates/shared/src/wear.rs 317
 xtask/src/api.rs 363

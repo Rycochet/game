@@ -6,7 +6,7 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 
 - `crates/shared/src/creature.rs`: `Layer`, `Location`, `Size`, `BodyPart`, `CreatureDef`, `CreatureKind` (the table: `def()`).
 - `crates/shared/src/sheet.rs`: `Stats`, `Skill`, `Ability`, `Trait`, `Appearance` (`suits`, `says`), `Load`, `Sheet` (`new`, `capacity`, `load`). Tests.
-- `crates/shared/src/wear.rs`: `Fit`, `WearRefused` (`worth_trying`), `Remover`, and on `Inventory`: `is_worn`, `covered_by`, `check_wear`, `wear`, `worn_fit`, `change_body`, `may_remove`, `favour_found_out`, `magic_found_out`, `hide_secrets`; on `Made`: `fit`. Tests for every rule below.
+- `crates/shared/src/wear.rs`: `Fit`, `WearRefused` (`worth_trying`), `Remover`, what an item covers; on `Made`: `fit`. On `Inventory`, in `wear/`: `check.rs` (`is_worn`, `covered_by`, `check_wear`, what clashes), `changes.rs` (`wear`, `worn_fit`, `change_body`, `may_remove`, `hand_over`), `secrets.rs` (`favour_found_out`, `magic_found_out`, `hide_secrets`). Tests for every rule below.
 
 ## Public API
 
