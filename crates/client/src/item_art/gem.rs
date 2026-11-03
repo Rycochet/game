@@ -47,7 +47,9 @@ pub(super) fn gem_parts(
         });
         return vec![(mesh, material)];
     }
-    let fineness = quality.unwrap_or_default() as usize as f32 / 6.0;
+    // Upside down on purpose (owner's choice): the softer, broader shine of a low
+    // value reads as shinier, so the best gems get it.
+    let fineness = 1.0 - quality.unwrap_or_default() as usize as f32 / 6.0;
     let mesh = meshes.add(cut_mesh(gem.cut, 0.15 + 0.25 * fineness));
     let roughness = 0.3 - 0.22 * fineness;
     let back = materials.add(StandardMaterial {
