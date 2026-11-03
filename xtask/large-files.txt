@@ -7,16 +7,10 @@
 crates/client/src/common/mod.rs 894
 crates/client/src/connection/mod.rs 542
 crates/client/src/connection/socket.rs 304
-crates/client/src/debug_menu/menu.rs 692
-crates/client/src/debug_menu/panels.rs 1102
-crates/client/src/dev_tools/debug_api.rs 674
-crates/client/src/dev_tools/fake_input.rs 424
-crates/client/src/dev_tools/mod.rs 685
 crates/client/src/ground/bag.rs 343
 crates/client/src/ground/mod.rs 626
 crates/client/src/minimap/frame.rs 342
 crates/client/src/minimap/grid.rs 337
-crates/client/src/minimap/mod.rs 1290
 crates/client/src/player/mod.rs 512
 crates/client/src/surface_style/mod.rs 320
 crates/client/src/system_menu/mod.rs 427

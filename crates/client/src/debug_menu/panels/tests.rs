@@ -1,4 +1,10 @@
+use shared::site::StairsStyle;
+
+use super::super::actions::DebugAction;
+use super::generate_form::NEW_SEEDS;
+use super::steps::{can_step, previous_style};
 use super::*;
+use crate::common::{CurrentDungeon, GameView};
 
 #[test]
 fn new_seeds_are_short_and_differ() {

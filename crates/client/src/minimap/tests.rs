@@ -1,7 +1,19 @@
 use bevy::ecs::system::RunSystemOnce;
+use bevy::input::mouse::AccumulatedMouseScroll;
+use bevy::window::PrimaryWindow;
 use shared::dungeon::Level;
+use shared::protocol::{ClientMessage, SeenPoi};
 
+use super::names::words;
 use super::*;
+use crate::common::{
+    ClickMode, CurrentDungeon, CurrentWorld, FirstFloor, GameView, OtherLevels, SmoothPosition,
+    TouchGesture, UiPointer,
+};
+use crate::connection::ToServer;
+use crate::player::Player;
+use crate::view3d::OrbitCamera;
+use crate::widgets::CLOSE_PIXELS;
 
 #[test]
 fn ruined_places_are_named_as_ruins() {

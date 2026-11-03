@@ -1,4 +1,9 @@
+use shared::poi::PoiKind;
+
+use super::super::actions::{DebugAction, Facts};
+use super::on_show::kinds_on_show;
 use super::*;
+use crate::common::GameView;
 
 fn facts() -> Facts {
     Facts {
