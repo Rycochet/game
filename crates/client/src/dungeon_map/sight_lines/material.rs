@@ -25,7 +25,9 @@ impl MaskSide {
     }
 }
 
-/// Order matches `struct Mask` in the shader.
+/// Order matches `struct Mask` in the shader. WebGL 2 refuses a uniform that
+/// isn't a multiple of 16 bytes (the game quits on entering a site), so three
+/// unused `f32`s pad the 20 bytes out to 32.
 #[derive(ShaderType, Reflect, Clone, Copy, Debug, Default)]
 pub struct MaskParams {
     /// The corner of the mask with the smallest world `x` and `z`.
@@ -33,6 +35,9 @@ pub struct MaskParams {
     /// One over the world size it covers.
     pub(super) per_unit: Vec2,
     side: f32,
+    _pad_a: f32,
+    _pad_b: f32,
+    _pad_c: f32,
 }
 
 /// Adds the mask to a surface's standard material.

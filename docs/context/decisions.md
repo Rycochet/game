@@ -656,7 +656,7 @@ Owner's design: "Online" in the system menu (native only, remembered between run
 
 ## 2026-11-03: No asset `.meta` files; uniforms padded to 16 bytes
 
-The client sets `AssetMetaCheck::Never`: we keep no `.meta` files beside assets, and on the web every lookup was a failed request (a 404 in the console per asset), which buried real errors. Change it back if `.meta` files are ever added. Every shader uniform struct is a multiple of 16 bytes, padded with unused `f32`s on both sides, because WebGL 2 refuses anything else and the web build quit on its first frame (`picture_edge.wesl`, found on the test server).
+The client sets `AssetMetaCheck::Never`: we keep no `.meta` files beside assets, and on the web every lookup was a failed request (a 404 in the console per asset), which buried real errors. Change it back if `.meta` files are ever added. Every shader uniform struct is a multiple of 16 bytes, padded with unused `f32`s on both sides, because WebGL 2 refuses anything else and the web build quit on its first frame (`picture_edge.wesl`, found on the test server). Render targets use `Srgb` formats for the same reason (the sight mask's `Rgba8Unorm` quit the web build on entering a site). Since both slipped past native testing, `cargo xtask lint` checks them, with storage buffers and compute in shaders, by reading the source (`xtask/src/webgl/`), like the file size check.
 
 ## 2026-11-03: Item stacks
 

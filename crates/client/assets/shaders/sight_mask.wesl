@@ -13,6 +13,10 @@ struct Mask {
     per_unit: vec2<f32>,
     // 1 only in sight, -1 only out of sight.
     side: f32,
+    // Pads the uniform to 32 bytes: WebGL 2 needs a multiple of 16.
+    _pad_a: f32,
+    _pad_b: f32,
+    _pad_c: f32,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> mask: Mask;

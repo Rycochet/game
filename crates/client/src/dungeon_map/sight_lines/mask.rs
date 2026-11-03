@@ -41,10 +41,13 @@ pub fn spawn_mask(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Handle<Image> {
+    // sRGB: for a plain `Rgba8Unorm` target Bevy gives the camera's own
+    // textures a second view format, which WebGL 2 can't do. The mask is only
+    // black and white, which sRGB keeps as they are.
     let mask = images.add(Image::new_target_texture(
         MASK_PIXELS,
         MASK_PIXELS,
-        TextureFormat::Rgba8Unorm,
+        TextureFormat::Rgba8UnormSrgb,
         None,
     ));
     let outline_mesh = meshes.add(Mesh::from(Cuboid::from_length(0.0)));
