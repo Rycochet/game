@@ -3,6 +3,7 @@
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
 mod aura;
+mod auto_scroll;
 mod dropdown;
 mod feedback;
 mod filter_list;
@@ -26,6 +27,7 @@ use bevy::prelude::*;
 use crate::common::PointerSystems;
 
 pub use aura::{Aura, AuraMask, aura_glow};
+pub use auto_scroll::AutoScroll;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
@@ -155,6 +157,7 @@ impl Plugin for WidgetsPlugin {
                     progress::show_progress,
                     moveable::place_panels,
                     scroll::show_scroll_bars,
+                    auto_scroll::auto_scroll,
                     slider::hold_sliders,
                     slider::place_marks,
                     text_box::show_text_boxes,

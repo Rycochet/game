@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 
-use super::{GearButton, Layer, PausedText, SystemMenu};
-use crate::common::{GameView, ServerClock};
+use super::{GearButton, Layer, MenuButton, PausedText, SystemMenu};
+use crate::common::{GameView, ServerClock, Session};
 use crate::connection::ToServer;
 
 /// Native: nothing, the window just goes. In a browser the page stays, so it
@@ -44,6 +44,26 @@ pub(super) fn show_menu(
     gear.set_if_neq(shown_if(*view.get() != GameView::Connecting));
     // Only hidden, so its room stays and nothing moves.
     paused.set_if_neq(shown_if(clock.paused));
+}
+
+/// Play at the startup menu, Continue while playing, and Logout only while
+/// playing on another computer's server.
+pub(super) fn show_buttons(
+    session: Res<Session>,
+    clock: Res<ServerClock>,
+    mut buttons: Query<(&MenuButton, &mut Node)>,
+) {
+    for (button, mut node) in &mut buttons {
+        let shown = match button {
+            MenuButton::Play => !session.is_playing(),
+            MenuButton::Continue => session.is_playing(),
+            MenuButton::LogOut => session.is_playing() && !clock.local_server,
+        };
+        let display = if shown { Display::Flex } else { Display::None };
+        if node.display != display {
+            node.display = display;
+        }
+    }
 }
 
 /// While the menu is open, asks a server that can pause to do so, and to carry on

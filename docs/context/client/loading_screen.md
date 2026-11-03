@@ -1,10 +1,10 @@
 # client: loading_screen
 
-The screen covering everything from the first frame until the game can take input: "Hall of Worlds" and, at the bottom, a bar saying what is happening. It comes back while the connection is lost, and shows why if the server refuses or the client won't trust it.
+The screen covering everything from the first frame until the game can take input: "Hall of Worlds" and, at the bottom, a bar saying what is happening. It comes back while the connection is lost, and shows why if the server refuses or the client won't trust it. At the startup menu (`common::Session::AtStart`) it is only the title, smaller and at the top, with the system menu over it.
 
 ## Files
 
-- `crates/client/src/loading_screen/mod.rs`: `LoadingScreenPlugin`; `next_step` (from frames run and frames since the welcome), `title_font_size`, `bar_shows`, `take_all_input` (`PreUpdate`, before the widgets: clears keys, mouse, wheel and fingers while up), `keep_frame_rate`, `remove_page_screen` (web only). Unit tests.
+- `crates/client/src/loading_screen/mod.rs`: `LoadingScreenPlugin`; `next_step` (from frames run and frames since the welcome), `title_font_size`, `bar_shows`, `take_all_input` (`PreUpdate`, before the widgets: clears keys, mouse, wheel and fingers while up, but not at the startup menu, which takes them), `fit_title` (size and place by window and `Session`), `keep_frame_rate`, `remove_page_screen` (web only). Unit tests.
 
 ## Public API
 
@@ -14,7 +14,7 @@ The screen covering everything from the first frame until the game can take inpu
 
 ## Depends on
 
-- `common` (`LoadingStep`, `ServerStatus`, `GameView`, `TouchGesture`, `PointerSystems`, `frame_settings`, `KeepDrawing`), `widgets` (`WidgetSystems`, for ordering).
+- `common` (`LoadingStep`, `ServerStatus`, `GameView`, `TouchGesture`, `PointerSystems`, `frame_settings`, `KeepDrawing`, `Session`), `widgets` (`WidgetSystems`, for ordering; `layer_z`).
 
 ## Used by
 
@@ -22,6 +22,7 @@ The screen covering everything from the first frame until the game can take inpu
 
 ## Notes
 
+- Its `GlobalZIndex` is just under the first full-screen layer (`widgets::layer_z(0) - 1`), above everything else, so the system menu's layers can be the startup menu over it.
 - To add a step for startup work: add it to `LoadingStep`, then give it a place in `next_step` and words and a fill in `bar_shows`. The bar's positions are fixed for now, not timed.
 - `connection` waits out `Starting`, or the word would never be seen: it would connect before the first frame is drawn.
 - The title's font is built in with `include_bytes!` to be there on the first frame. `TITLE_EMS_WIDE` is measured from the font: change it with the font or the words.

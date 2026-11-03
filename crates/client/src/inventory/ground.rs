@@ -95,7 +95,8 @@ pub(super) fn read_server(
                     ground.grid = StockGrid::new(GROUND, COLUMNS, items);
                 }
             }
-            ServerMessage::EnterLevel(_)
+            ServerMessage::Welcome { .. }
+            | ServerMessage::EnterLevel(_)
             | ServerMessage::OnWorldMap { .. }
             | ServerMessage::Teleported { .. } => *ground = Ground::default(),
             _ => {}

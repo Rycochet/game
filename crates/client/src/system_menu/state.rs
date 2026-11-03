@@ -12,6 +12,8 @@ pub enum SystemMenu {
     Confirming,
     /// The menu, and above it the settings.
     Settings,
+    /// The menu, and above it the credits.
+    Credits,
 }
 
 impl SystemMenu {
@@ -25,8 +27,9 @@ impl SystemMenu {
             (Self::Closed, Action::Open) => Self::Menu,
             (Self::Menu, Action::Back) => Self::Closed,
             (Self::Menu, Action::Settings) => Self::Settings,
+            (Self::Menu, Action::Credits) => Self::Credits,
             (Self::Menu, Action::Quit) => Self::Confirming,
-            (Self::Confirming | Self::Settings, Action::Back) => Self::Menu,
+            (Self::Confirming | Self::Settings | Self::Credits, Action::Back) => Self::Menu,
             (same, _) => same,
         }
     }
@@ -37,10 +40,27 @@ impl SystemMenu {
 pub(super) enum Action {
     Open,
     /// Closes what is on top: its "No" or close button, or outside its panel.
+    /// Continue, on the menu.
     Back,
+    /// From the startup menu: connects, and closes the menu.
+    Play,
     Settings,
+    Credits,
+    /// Leaves the server for the startup menu.
+    LogOut,
     Quit,
     ReallyQuit,
+}
+
+/// A menu button shown only some of the time (`show_buttons`).
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum MenuButton {
+    /// At the startup menu.
+    Play,
+    /// While playing.
+    Continue,
+    /// While playing on another computer's server (not the one built in).
+    LogOut,
 }
 
 /// The gear button.

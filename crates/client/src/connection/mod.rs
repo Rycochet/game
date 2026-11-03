@@ -25,13 +25,14 @@ use bevy::prelude::*;
 use prediction::Prediction;
 use socket::Target;
 
-use crate::common::CurrentWorld;
+use crate::common::{CurrentWorld, Session};
 use crate::player::PlayerSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod clock;
 mod connect;
 mod log_in;
+mod log_out;
 mod messages;
 mod receive;
 mod send;
@@ -41,6 +42,7 @@ use clock::{apply_pong, run_clock, send_local_pings, stop_game_time};
 use connect::pump_socket;
 use connect::{Connecting, connect, give_up, hang_up};
 use log_in::log_in;
+use log_out::{log_out, logged_out};
 pub use messages::{FromServer, ServerConnection, ToServer};
 use receive::receive;
 use send::{count_map_changes, hang_up_on_exit, send, send_steps};
@@ -60,7 +62,12 @@ impl Plugin for ConnectionPlugin {
             .add_systems(
                 PreUpdate,
                 (
-                    connect.run_if(not(resource_exists::<ServerConnection>)),
+                    log_out
+                        .run_if(resource_exists::<ServerConnection>)
+                        .run_if(logged_out),
+                    connect
+                        .run_if(not(resource_exists::<ServerConnection>))
+                        .run_if(|session: Res<Session>| session.is_playing()),
                     receive.run_if(resource_exists::<ServerConnection>),
                     stop_game_time,
                 )

@@ -10,10 +10,10 @@ use bevy::window::PrimaryWindow;
 use bevy::winit::WinitSettings;
 
 use crate::common::{
-    GameView, KeepDrawing, LoadingStep, PointerSystems, ServerStatus, TouchGesture, frame_settings,
-    interface_area,
+    GameView, KeepDrawing, LoadingStep, PointerSystems, ServerStatus, Session, TouchGesture,
+    frame_settings, interface_area,
 };
-use crate::widgets::{Progress, TextSize, WidgetSystems, spawn_progress_bar};
+use crate::widgets::{Progress, TextSize, WidgetSystems, layer_z, spawn_progress_bar};
 
 /// Built into the program, rather than loaded, to be there on the first frame.
 const TITLE_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/CinzelDecorative-Bold.ttf");
@@ -21,6 +21,9 @@ const TITLE_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/CinzelDecorat
 const TITLE: &str = "Hall of\nWorlds";
 /// The share of the window the title may fill.
 const TITLE_HEIGHT_SHARE: f32 = 0.5;
+/// At the startup menu, the title keeps to the top of the window, above the menu.
+const START_TITLE_HEIGHT_SHARE: f32 = 0.28;
+const START_TITLE_TOP: f32 = 6.0;
 const TITLE_WIDTH_SHARE: f32 = 0.8;
 /// How wide the title's longest line is ("Worlds" in this font), and how tall
 /// its two lines are, in font sizes.
@@ -53,8 +56,11 @@ impl Plugin for LoadingScreenPlugin {
             .add_systems(Startup, spawn_screen)
             .add_systems(
                 PreUpdate,
+                // At the startup menu, the menu over the screen takes what it wants.
                 take_all_input
-                    .run_if(|step: Res<LoadingStep>| *step != LoadingStep::Ready)
+                    .run_if(|step: Res<LoadingStep>, session: Res<Session>| {
+                        *step != LoadingStep::Ready && session.is_playing()
+                    })
                     .after(InputSystems)
                     .after(PointerSystems)
                     .before(WidgetSystems::Presses),
@@ -97,10 +103,15 @@ fn next_step(step: LoadingStep, frames: u32, settled: u32) -> LoadingStep {
     }
 }
 
-/// The biggest font size that keeps the title in its share of the window.
-fn title_font_size(window: Vec2) -> f32 {
-    (window.x * TITLE_WIDTH_SHARE / TITLE_EMS_WIDE)
-        .min(window.y * TITLE_HEIGHT_SHARE / TITLE_EMS_HIGH)
+/// The biggest font size that keeps the title in its share of the window, which
+/// is less at the startup menu.
+fn title_font_size(window: Vec2, at_start: bool) -> f32 {
+    let height_share = if at_start {
+        START_TITLE_HEIGHT_SHARE
+    } else {
+        TITLE_HEIGHT_SHARE
+    };
+    (window.x * TITLE_WIDTH_SHARE / TITLE_EMS_WIDE).min(window.y * height_share / TITLE_EMS_HIGH)
 }
 
 /// What the bar says, and how full it is.
@@ -129,8 +140,9 @@ fn spawn_screen(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                 ..default()
             },
             BackgroundColor(BACKGROUND),
-            // Above everything, the debug menu too.
-            GlobalZIndex(i32::MAX),
+            // Above everything but the full-screen layers, so the system menu
+            // can be the startup menu over it.
+            GlobalZIndex(layer_z(0) - 1),
         ))
         .with_children(|screen| {
             screen.spawn((
@@ -191,21 +203,29 @@ fn update_step(
     step.set_if_neq(next_step(*step, frames.0, *settled));
 }
 
+#[allow(clippy::type_complexity)]
 fn show_screen(
     step: Res<LoadingStep>,
     status: Res<ServerStatus>,
-    mut screen: Single<&mut Visibility, With<LoadingScreen>>,
+    session: Res<Session>,
+    mut screen: Single<&mut Visibility, (With<LoadingScreen>, Without<Bar>)>,
+    mut bar: Single<&mut Visibility, (With<Bar>, Without<LoadingScreen>)>,
     mut progress: Single<&mut Progress, With<Bar>>,
     mut text: Single<(&mut Text, &mut TextColor), With<BarText>>,
 ) {
-    if !step.is_changed() && !status.is_changed() {
+    if !step.is_changed() && !status.is_changed() && !session.is_changed() {
         return;
     }
-    screen.set_if_neq(if *step == LoadingStep::Ready {
-        Visibility::Hidden
-    } else {
-        Visibility::Inherited
-    });
+    let shown_if = |shown: bool| {
+        if shown {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        }
+    };
+    screen.set_if_neq(shown_if(*step != LoadingStep::Ready));
+    // Only the title behind the startup menu.
+    bar.set_if_neq(shown_if(session.is_playing()));
     let (words, full) = bar_shows(*step, &status);
     progress.0 = full;
     text.0.0 = words;
@@ -219,15 +239,26 @@ fn show_screen(
 fn fit_title(
     window: Single<&Window, With<PrimaryWindow>>,
     ui_scale: Res<UiScale>,
+    session: Res<Session>,
     mut title: Single<&mut TextFont, With<Title>>,
-    mut last: Local<Vec2>,
+    mut screen: Single<&mut Node, With<LoadingScreen>>,
+    mut last: Local<Option<(Vec2, bool)>>,
 ) {
     // The title keeps its share of the window, whatever size the interface is.
     let size = interface_area(&window, &ui_scale);
+    let at_start = !session.is_playing();
     // Minimised: nothing to fit, and no size of writing would.
-    if size != *last && size.min_element() >= 1.0 {
-        *last = size;
-        title.font_size = title_font_size(size).into();
+    if *last != Some((size, at_start)) && size.min_element() >= 1.0 {
+        *last = Some((size, at_start));
+        title.font_size = title_font_size(size, at_start).into();
+        (screen.justify_content, screen.padding) = if at_start {
+            (
+                JustifyContent::FlexStart,
+                UiRect::top(Val::Vh(START_TITLE_TOP)),
+            )
+        } else {
+            (JustifyContent::Center, UiRect::ZERO)
+        };
     }
 }
 
@@ -251,11 +282,14 @@ fn remove_page_screen(step: Res<LoadingStep>, mut removed: Local<bool>) {
 /// otherwise a second apart (as they are after it, unless `KeepDrawing`).
 fn keep_frame_rate(
     step: Res<LoadingStep>,
+    session: Res<Session>,
     keep: Res<KeepDrawing>,
     mut settings: ResMut<WinitSettings>,
 ) {
-    if step.is_changed() || keep.is_changed() {
-        *settings = frame_settings(*step != LoadingStep::Ready || keep.0);
+    if step.is_changed() || session.is_changed() || keep.is_changed() {
+        // Not at the startup menu, which only waits for the player.
+        let loading = *step != LoadingStep::Ready && session.is_playing();
+        *settings = frame_settings(loading || keep.0);
     }
 }
 

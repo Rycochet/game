@@ -61,6 +61,9 @@
 //!   at what hovering shows.
 //! - `HOW_DEBUG_SCREENSHOT=path.png`: save a screenshot after `HOW_DEBUG_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
+//! - `HOW_DEBUG_SKIP_MENU=true`: straight past the startup menu into the game, as
+//!   if Play was pressed. On by default when any other variable here (but the
+//!   debug API's and `HOW_DEBUG_KEEP_DRAWING`) is set; `false` keeps the menu.
 //! - `HOW_DEBUG_KEEP_DRAWING=false`: with the debug API or a screenshot running,
 //!   frames keep their focused rate in the background (`common::KeepDrawing`);
 //!   this slows them to a second apart again, as players have it.
@@ -82,6 +85,7 @@ mod menus;
 mod moving;
 mod parse;
 mod screenshot;
+mod skip_menu;
 mod start;
 mod view;
 mod world;
@@ -130,6 +134,7 @@ impl Plugin for DevToolsPlugin {
         view::add(app);
         world::add(app);
         screenshot::add(app);
+        skip_menu::add(app);
         keep_drawing::add(app);
     }
 }
