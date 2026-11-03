@@ -1,0 +1,100 @@
+//! Taking this frame's presses on items: a double click on a bag opens it, and
+//! a press on anything else picks it up.
+
+use bevy::prelude::*;
+use shared::item::Holder;
+
+use super::super::hold::Held;
+use super::super::panels::{ItemCell, OpenGrids};
+use super::super::{Carried, DOUBLE_PRESS_SECONDS, Hand, HeldBy, Holding};
+use crate::common::StockCell;
+use crate::widgets::{ButtonPressed, RaisePanel};
+
+/// Takes the presses. Whether that was all there is to do this frame.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub(super) fn take_presses(
+    pressed: &mut MessageReader<ButtonPressed>,
+    (cells, stock_cells): (&Query<&ItemCell>, &Query<&StockCell>),
+    mouse: &mut ResMut<ButtonInput<MouseButton>>,
+    holding: &mut ResMut<Holding>,
+    carried: &Carried,
+    open: &mut ResMut<OpenGrids>,
+    commands: &mut Commands,
+    raise: &mut MessageWriter<RaisePanel>,
+    last_press: &mut Option<(shared::id::Id, f64)>,
+    (now, new_press, tapped, at_press): (f64, bool, bool, Option<Vec2>),
+) -> bool {
+    let clicked_held = holding
+        .held
+        .filter(|held| held.by == Hand::Clicked)
+        .map(|held| held.item.id);
+    if clicked_held.is_some() && new_press {
+        // For putting it down, not for what is under it.
+        mouse.clear_just_pressed(MouseButton::Left);
+    }
+    if let Some(id) = clicked_held.filter(|_| new_press)
+        && last_press
+            .is_some_and(|(pressed, when)| pressed == id && now - when < DOUBLE_PRESS_SECONDS)
+        && carried
+            .0
+            .find(id)
+            .is_some_and(|item| item.kind.def().container.is_some())
+        && !carried.0.in_bin(id)
+    {
+        // A double click on a bag: the first lifted it, and it goes back.
+        holding.held = None;
+        holding.aim = None;
+        open.open(Holder::Inside(id), &carried.0, commands, raise);
+        pressed.clear();
+        return true;
+    }
+    for press in pressed.read() {
+        if clicked_held.is_some() {
+            continue;
+        }
+        if let Ok(cell) = stock_cells.get(press.0) {
+            if tapped {
+                continue;
+            }
+            holding.picked = at_press.map(|at| (at, now));
+            holding.held = Some(HeldBy {
+                item: Held {
+                    id: cell.item.id,
+                    rotation: cell.rotation,
+                    grip: cell.grip,
+                },
+                by: Hand::Mouse,
+            });
+            holding.stock = Some((cell.with, cell.item.clone()));
+            continue;
+        }
+        let Ok(&cell) = cells.get(press.0) else {
+            continue;
+        };
+        let again =
+            last_press.is_some_and(|(id, when)| id == cell.id && now - when < DOUBLE_PRESS_SECONDS);
+        *last_press = Some((cell.id, now));
+        let is_bag = carried
+            .0
+            .find(cell.id)
+            .is_some_and(|item| item.kind.def().container.is_some())
+            && !carried.0.in_bin(cell.id);
+        if again && is_bag {
+            open.open(Holder::Inside(cell.id), &carried.0, commands, raise);
+            continue;
+        }
+        if tapped {
+            continue;
+        }
+        holding.picked = at_press.map(|at| (at, now));
+        holding.held = Some(HeldBy {
+            item: Held {
+                id: cell.id,
+                rotation: cell.rotation,
+                grip: cell.grip,
+            },
+            by: Hand::Mouse,
+        });
+    }
+    false
+}

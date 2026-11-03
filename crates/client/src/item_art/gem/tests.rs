@@ -1,4 +1,5 @@
 use super::*;
+use shared::item_form::Cut;
 
 const CUTS: [Cut; 7] = [
     Cut::Cushion,

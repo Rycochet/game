@@ -1,0 +1,112 @@
+//! Picking things up with a finger: a press held on an item.
+
+use bevy::prelude::*;
+use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
+use shared::wear::Remover;
+
+use super::hold::Held;
+use super::panels::ItemCell;
+use super::{Carried, Hand, HeldBy, Holding};
+use crate::common::{GodMode, StockCell, TouchGesture, in_interface};
+use crate::widgets::{Floating, shown_at};
+
+/// The item cell in front of everything else at this point, if one is.
+pub(super) fn item_cell_in_front<'a>(
+    at: Vec2,
+    nodes: impl Iterator<
+        Item = (
+            &'a ComputedStackIndex,
+            &'a ComputedNode,
+            &'a UiGlobalTransform,
+            &'a InheritedVisibility,
+            Option<&'a ItemCell>,
+        ),
+    >,
+) -> Option<ItemCell> {
+    nodes
+        .filter(|(_, node, transform, visible, _)| {
+            visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
+        })
+        .max_by_key(|(stack, ..)| stack.0)
+        .and_then(|(.., cell)| cell.copied())
+}
+
+/// A finger staying still on an item picks it up, once for each contact: a tap shows
+/// its name, or opens it, and a finger sliding straight away is scrolling.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub(super) fn pick_up_by_finger(
+    mut gesture: ResMut<TouchGesture>,
+    nodes: Query<
+        (
+            &ComputedStackIndex,
+            &ComputedNode,
+            &UiGlobalTransform,
+            &InheritedVisibility,
+            Option<&ItemCell>,
+        ),
+        (With<Node>, Without<Floating>),
+    >,
+    stock: Query<
+        (
+            &ComputedStackIndex,
+            &ComputedNode,
+            &UiGlobalTransform,
+            &InheritedVisibility,
+            Option<&StockCell>,
+            Option<&CalculatedClip>,
+        ),
+        (With<Node>, Without<Floating>),
+    >,
+    mut holding: ResMut<Holding>,
+    carried: Res<Carried>,
+    god: Res<GodMode>,
+    ui_scale: Res<UiScale>,
+    mut decided: Local<Option<Vec2>>,
+) {
+    if gesture.first_finger.is_none() {
+        *decided = None;
+    }
+    if holding.held.is_some_and(|held| held.by == Hand::Finger) {
+        // Moving what it holds, not scrolling what is under it.
+        gesture.drag = Vec2::ZERO;
+    }
+    let Some(start) = gesture
+        .still_at
+        .map(|start| in_interface(start, &ui_scale))
+        .filter(|&start| holding.held.is_none() && *decided != Some(start))
+    else {
+        return;
+    };
+    *decided = Some(start);
+    if let Some(cell) = item_cell_in_front(start, nodes.iter())
+        && carried.0.covered_by(cell.id).is_none()
+        && (god.0 || carried.0.may_remove(cell.id, Remover::Wearer))
+    {
+        holding.held = Some(HeldBy {
+            item: Held {
+                id: cell.id,
+                rotation: cell.rotation,
+                grip: cell.grip,
+            },
+            by: Hand::Finger,
+        });
+        return;
+    }
+    let front = stock
+        .iter()
+        .filter(|(_, node, transform, visible, _, clip)| {
+            visible.get() && shown_at(start, node, transform, *clip)
+        })
+        .max_by_key(|(stack, ..)| stack.0);
+    if let Some((.., Some(cell), _)) = front {
+        holding.held = Some(HeldBy {
+            item: Held {
+                id: cell.item.id,
+                rotation: cell.rotation,
+                grip: cell.grip,
+            },
+            by: Hand::Finger,
+        });
+        holding.stock = Some((cell.with, cell.item.clone()));
+    }
+}

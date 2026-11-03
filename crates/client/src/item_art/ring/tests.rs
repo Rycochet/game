@@ -1,5 +1,8 @@
+use super::super::RingLook;
 use super::*;
 use crate::item_art::VIEW_WIDTH;
+use shared::item_form::{BandWidth, Pattern, Profile};
+use shared::material::Material;
 
 fn ring(profile: Profile, width: BandWidth, pattern: Pattern) -> RingLook {
     RingLook {

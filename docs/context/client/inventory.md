@@ -4,12 +4,13 @@ The Character panel (what the character is like, what they wear and what they ca
 
 ## Files
 
-- `crates/client/src/inventory/mod.rs`: `InventoryPlugin`, `Carried`, `Holding`, `read_server`, `pick_up_by_finger` (`PreUpdate`, before widgets), `hold_items` (`PreUpdate`, after `WidgetSystems::Modal`: presses, turning, following and letting go), `InventoryDebug` (native).
+- `crates/client/src/inventory/mod.rs`: `InventoryPlugin`, `Carried`, `InventoryDebug` (native), the module list. Beside it: `holding.rs` (`Holding`, `HeldBy`, `Hand`, `cancel_held`), `server.rs` (`read_server`), `finger.rs` (`pick_up_by_finger`, `PreUpdate`, before widgets), `debug.rs` (`run_debug`, native).
+- `crates/client/src/inventory/hold_items.rs`: `hold_items` (`PreUpdate`, after `WidgetSystems::Modal`), `is_click`, `worth_wearing`, and its `SystemParam`s `Under` (what the pointer may be over) and `Outbox` (what letting go writes). It runs three steps in `hold_items/`, in order: `press.rs` (presses: a double click opens a bag, a press picks up), `aim.rs` (turning, following the pointer or finger, and the `Target`), `let_go.rs` (taking, wearing, dropping, giving, binning or moving).
 - `crates/client/src/inventory/hold.rs`: without Bevy: `Held`, `Target`, `target`, `drop_move`. Unit tests.
 - `crates/client/src/inventory/body.rs`: `spawn_rows`, `BodyNode`, `show_clothes`, `show_body_aim`, `worn_notes`.
 - `crates/client/src/inventory/give.rs`: `NearbyPanel`, `GiveRow`, `show_nearby`, `show_give_aim`.
 - `crates/client/src/inventory/ground.rs`: `Ground`, `spawn_section`, `read_server`, `show_section`, `show_aim`.
-- `crates/client/src/inventory/panels.rs`: `OpenGrids`, `spawn_fixed_parts`, `toggle_pockets`, `forget_closed`, `show_grids`, `show_aim`, `show_held`, `show_tooltip`, `show_button`, the bag icon (drawn in code).
+- `crates/client/src/inventory/panels.rs`: `OpenGrids` and the panels' components, the module list. In `panels/`: `fixed.rs` (`spawn_fixed_parts`), `icons.rs` (the person, bin and ground icons, drawn in code), `grids.rs` (`OpenGrids::open`), `pockets.rs` (`toggle_pockets`, `forget_closed`), `bins.rs` (`show_bins`, `show_drop`), `show.rs` (`show_grids`, weights), `aim.rs` (`show_aim`), `held.rs` (`show_held`, `show_tooltip`, `show_button`).
 
 ## Public API
 
