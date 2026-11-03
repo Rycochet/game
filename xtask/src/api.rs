@@ -17,6 +17,10 @@ const CLIENT_PORT: u16 = 15702;
 /// How long to wait for a file a method says is coming (a screenshot).
 const FILE_WAIT: Duration = Duration::from_secs(15);
 
+/// How long to wait for queued fake input to be played (`client.wait` can
+/// ask for many frames).
+const INPUT_WAIT: Duration = Duration::from_secs(120);
+
 pub const USAGE: &str = "\
   api     Call a running game's debug API and print the answer:
             cargo xtask api [--server | --port N] <method> [params]
@@ -53,6 +57,13 @@ pub fn run(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
         println!("==> Saved {}", file.display());
+    }
+    if body.contains("\"wait_for_input\":true") {
+        if !wait_for_input(request.port) {
+            eprintln!("==> The input queued wasn't all played");
+            return ExitCode::FAILURE;
+        }
+        println!("==> Played");
     }
     if body.contains("\"error\":") {
         ExitCode::FAILURE
@@ -215,6 +226,36 @@ fn string_field(json: &str, name: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// A whole-number field anywhere in `json`, by name.
+fn number_field(json: &str, name: &str) -> Option<u64> {
+    let start = json.find(&format!("\"{name}\":"))? + name.len() + 3;
+    let digits: String = json[start..]
+        .chars()
+        .skip_while(|c| c.is_whitespace())
+        .take_while(char::is_ascii_digit)
+        .collect();
+    digits.parse().ok()
+}
+
+/// Asks `client.input` until nothing queued is left to play.
+fn wait_for_input(port: u16) -> bool {
+    let ask = Request {
+        port,
+        method: "client.input".into(),
+        params: None,
+    }
+    .body();
+    let deadline = Instant::now() + INPUT_WAIT;
+    while Instant::now() < deadline {
+        match call(port, &ask).map(|body| number_field(&body, "pending")) {
+            Ok(Some(0)) => return true,
+            Ok(Some(_)) => thread::sleep(Duration::from_millis(50)),
+            _ => return false,
+        }
+    }
+    false
 }
 
 /// Waits until `file` exists and has stopped growing.
@@ -395,6 +436,14 @@ mod tests {
         fs::remove_dir_all(&root).unwrap();
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("try.rs:1"), "{found:?}");
+    }
+
+    #[test]
+    fn numbers_are_read_back() {
+        let answer = r#"{"result":{"frame":120,"pending": 3}}"#;
+        assert_eq!(number_field(answer, "pending"), Some(3));
+        assert_eq!(number_field(answer, "frame"), Some(120));
+        assert_eq!(number_field(answer, "missing"), None);
     }
 
     #[test]

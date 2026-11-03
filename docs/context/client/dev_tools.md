@@ -5,6 +5,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 ## Files
 
 - `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`.
+- `crates/client/src/dev_tools/fake_input.rs`: only with the `debug-api` feature: fake mouse, touch, wheel, keys and typing for the debug API, queued and played a step a frame.
 - `crates/client/src/dev_tools/debug_api.rs`: only with the `debug-api` feature: the client's debug API methods (see `docs/context/debug-api.md`), one for most of these variables, going through the same code: `Forced` (stairs style, fields stage and cursor kept as set, applied every frame by `apply_forced`), `open_map`, `turn_camera`, `token_of`, `cell_kind`.
 
 ## Public API

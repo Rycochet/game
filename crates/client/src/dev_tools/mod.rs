@@ -64,6 +64,8 @@
 
 #[cfg(feature = "debug-api")]
 mod debug_api;
+#[cfg(feature = "debug-api")]
+mod fake_input;
 
 use std::env;
 
@@ -107,7 +109,10 @@ enum Start {
 impl Plugin for DevToolsPlugin {
     fn build(&self, app: &mut App) {
         #[cfg(feature = "debug-api")]
-        debug_api::add(app);
+        {
+            debug_api::add(app);
+            fake_input::add(app);
+        }
 
         app.configure_sets(
             OnExit(GameView::Connecting),
