@@ -36,8 +36,10 @@ You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
 | Close what is on top | Esc, or click outside it | Tap outside it |
 | Open or close your character, clothes and pockets | C or I, or click the person at the bottom left | Tap the person |
-| Pick up an item, and put it down | Press on it, drag, let go | Slide a finger from it, let go |
-| Turn an item you are holding | Right-click | Tap with a second finger |
+| Pick up an item, and put it down | Press on it, drag, let go; or click it, then click where it goes | Hold a finger on it, drag, let go |
+| Turn an item you are holding | Right-click or R | Tap with a second finger |
+| Put back an item you are holding | Esc, or drop it where it can't go | Drop it where it can't go |
+| See an item's name | Point at it | Tap it |
 | Open a bag | Double-click it | Double-tap it |
 | Put on or take off clothes | Drag them onto the clothes panel, or off it into a grid | The same |
 | Give something to someone near | Drag it onto their name in the Nearby panel | The same |

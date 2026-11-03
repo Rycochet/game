@@ -14,6 +14,12 @@ use crate::common::{PointerPosition, PointerSystems, TouchGesture};
 /// dragging, so lifting it is no longer a tap.
 const TAP_SLOP: f32 = 10.0;
 
+/// How long a finger stays still to be holding something, in seconds.
+const HOLD_SECONDS: f32 = 0.3;
+/// How long what was tapped still counts as under the pointer, for its name to show,
+/// in seconds.
+const TAP_SHOWS_SECONDS: f32 = 3.0;
+
 /// Two fingers closer than this (logical pixels) give no reliable pinch or
 /// twist.
 const MIN_FINGER_GAP: f32 = 1.0;
@@ -60,6 +66,12 @@ struct Tracker {
     canceled: bool,
     /// The finger that landed first in this contact.
     first: Option<u64>,
+    /// When this contact began.
+    landed: Option<f32>,
+    /// Where the last tap was, and when.
+    last_tap: Option<(Vec2, f32)>,
+    /// A tap's click is being held down, until the next frame.
+    clicking: bool,
 }
 
 impl Tracker {
@@ -112,6 +124,37 @@ impl Tracker {
             tap: tap.is_some(),
             gesture,
         }
+    }
+
+    /// Where the one finger down landed, if it has stayed there since `HOLD_SECONDS`
+    /// ago. Call it after `read`.
+    fn still_at(&mut self, down: &[Finger], now: f32) -> Option<Vec2> {
+        if down.is_empty() {
+            self.landed = None;
+            return None;
+        }
+        let landed = *self.landed.get_or_insert(now);
+        match down {
+            [finger] if !self.several && !self.moved && now - landed >= HOLD_SECONDS => {
+                Some(finger.start)
+            }
+            _ => None,
+        }
+    }
+
+    /// What was just tapped, for a while, unless a finger is down again.
+    fn tapped_point(&mut self, tap: Option<Vec2>, any_down: bool, now: f32) -> Option<Vec2> {
+        if let Some(at) = tap {
+            self.last_tap = Some((at, now));
+        }
+        if any_down
+            || self
+                .last_tap
+                .is_some_and(|(_, when)| now - when >= TAP_SHOWS_SECONDS)
+        {
+            self.last_tap = None;
+        }
+        self.last_tap.map(|(at, _)| at)
     }
 
     fn gesture(&self, down: &[Finger]) -> TouchGesture {
@@ -179,27 +222,43 @@ fn read_touches(
     mut pointer: ResMut<PointerPosition>,
     mut gesture: ResMut<TouchGesture>,
     mut tracker: Local<Tracker>,
-    mut clicking: Local<bool>,
+    time: Res<Time<Real>>,
 ) {
-    if *clicking {
+    if tracker.clicking {
         mouse.release(MouseButton::Left);
-        *clicking = false;
+        tracker.clicking = false;
     }
+    let now = time.elapsed_secs();
+    let down = fingers(touches.iter());
     let reading = tracker.read(
-        &fingers(touches.iter()),
+        &down,
         &fingers(touches.iter_just_released()),
         touches.any_just_canceled(),
     );
     if reading.tap {
         mouse.press(MouseButton::Left);
-        *clicking = true;
+        tracker.clicking = true;
     }
-    pointer.0 = reading.position.or_else(|| window.cursor_position());
-    *gesture = reading.gesture;
+    let tapped = tracker.tapped_point(
+        reading.position.filter(|_| reading.tap),
+        !down.is_empty(),
+        now,
+    );
+    pointer.0 = reading
+        .position
+        .or(tapped)
+        .or_else(|| window.cursor_position());
+    *gesture = TouchGesture {
+        tap: reading.tap,
+        still_at: tracker.still_at(&down, now),
+        ..reading.gesture
+    };
 }
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use bevy::input::touch::{TouchInput, TouchPhase, touch_screen_input_system};
 
     use super::*;
@@ -357,6 +416,7 @@ mod tests {
             .init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<PointerPosition>()
             .init_resource::<TouchGesture>()
+            .init_resource::<Time<Real>>()
             .add_systems(Update, (touch_screen_input_system, read_touches).chain());
         app.world_mut().spawn((Window::default(), PrimaryWindow));
         app
@@ -378,7 +438,7 @@ mod tests {
     }
 
     #[test]
-    fn a_tap_clicks_for_one_frame_and_leaves_no_pointer() {
+    fn a_tap_clicks_for_one_frame_and_its_pointer_stays_a_while() {
         let mut app = app();
         let spot = Vec2::new(40.0, 30.0);
         send(&mut app, TouchPhase::Started, 1, spot);
@@ -399,6 +459,37 @@ mod tests {
         app.update();
         let mouse = app.world().resource::<ButtonInput<MouseButton>>();
         assert!(!mouse.pressed(MouseButton::Left));
+        assert_eq!(app.world().resource::<PointerPosition>().0, Some(spot));
+
+        let later = Duration::from_secs_f32(TAP_SHOWS_SECONDS + 1.0);
+        let mut time = app.world_mut().resource_mut::<Time<Real>>();
+        time.update();
+        time.update_with_duration(later);
+        app.update();
         assert_eq!(app.world().resource::<PointerPosition>().0, None);
+    }
+
+    #[test]
+    fn only_a_finger_staying_still_is_holding() {
+        let finger = |at: (f32, f32)| Finger {
+            id: 1,
+            at: at.into(),
+            start: (10.0, 10.0).into(),
+        };
+        let mut tracker = Tracker::default();
+        let down = [finger((10.0, 10.0))];
+        tracker.read(&down, &[], false);
+        assert_eq!(tracker.still_at(&down, 1.0), None);
+        assert_eq!(
+            tracker.still_at(&down, 2.0 + HOLD_SECONDS),
+            Some((10.0, 10.0).into())
+        );
+
+        let mut tracker = Tracker::default();
+        tracker.read(&down, &[], false);
+        tracker.still_at(&down, 1.0);
+        let slid = [finger((40.0, 10.0))];
+        tracker.read(&slid, &[], false);
+        assert_eq!(tracker.still_at(&slid, 2.0), None);
     }
 }

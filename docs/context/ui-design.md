@@ -79,11 +79,11 @@ Rules:
 
 | Action | Mouse | Touch | Gamepad (later) |
 | --- | --- | --- | --- |
-| Pick up | Press and drag; click (PR 4) | Press and hold, then drag (PR 4) | A / Cross |
-| Place | Release; click (PR 4) | Lift finger | A / Cross |
-| Turn held item | Right-click; R (PR 4) | Tap with a second finger | Shoulder button |
-| Cancel | Esc (PR 4); drop somewhere invalid | Drop somewhere invalid | B / Circle |
-| Details | Hover | Tap (PR 4) | Y / Triangle |
+| Pick up | Press and drag; click | Press and hold, then drag | A / Cross |
+| Place | Release; click | Lift finger | A / Cross |
+| Turn held item | Right-click; R | Tap with a second finger | Shoulder button |
+| Cancel | Esc; drop somewhere invalid | Drop somewhere invalid | B / Circle |
+| Details | Hover | Tap | Y / Triangle |
 | Open a bag | Double press | Double tap | |
 
 A simple tap shows an item's name, and later the item info boxes that will replace it. A quick slide stays free for scrolling.

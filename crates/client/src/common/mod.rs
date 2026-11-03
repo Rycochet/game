@@ -195,6 +195,10 @@ pub struct TouchGesture {
     pub first_finger: Option<Vec2>,
     /// Another finger touched and lifted, while the first stayed down.
     pub other_finger_tapped: bool,
+    /// This frame's left press is a tap, not the mouse.
+    pub tap: bool,
+    /// Where the one finger down landed, once it has stayed there a moment.
+    pub still_at: Option<Vec2>,
 }
 
 impl Default for TouchGesture {
@@ -208,6 +212,8 @@ impl Default for TouchGesture {
             centre: Vec2::ZERO,
             first_finger: None,
             other_finger_tapped: false,
+            tap: false,
+            still_at: None,
         }
     }
 }
