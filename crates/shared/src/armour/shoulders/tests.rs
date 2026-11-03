@@ -1,4 +1,7 @@
 use super::*;
+use crate::armour::{Construction, Style};
+use crate::creature::Size;
+use crate::material::Material;
 
 fn rolled(kind: Option<ShouldersKind>) -> impl Iterator<Item = ShouldersForm> {
     (0..3000u64).map(move |seed| {

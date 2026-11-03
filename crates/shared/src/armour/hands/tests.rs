@@ -1,5 +1,9 @@
 use super::*;
+use crate::armour::{Construction, Style};
+use crate::body::{Frame, Side};
 use crate::creature::CreatureKind;
+use crate::creature::Size;
+use crate::material::Material;
 
 const PIECES: [HandsPiece; 3] = [HandsPiece::Gauntlets, HandsPiece::Demi, HandsPiece::Padded];
 

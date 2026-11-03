@@ -4,8 +4,11 @@ Weapons made of a handle with a blade or head on it, from knives to polearms: wh
 
 ## Files
 
-- `crates/shared/src/blade/mod.rs`: `BladeForm` and its properties, the size grids (`CELLS`), `roll_blade`, `name`. Tests.
-- `crates/shared/src/blade/table.rs`: `ROWS`, the named weapons and what each asks for.
+- `crates/shared/src/blade/mod.rs`: the module list and re-exports, and the helpers the files share. Tests in `tests.rs`. In `blade/`:
+  - `family.rs`: `Family`. `parts.rs`: the property enums. `form.rs`: `BladeForm`, its `name`, cells and weight.
+  - `cells.rs`: the size grids (`CELLS`), the length spans and which cell a blade falls in.
+  - `roll.rs`: `roll_blade`, `roll_blade_at`, `roll_blade_within`, `commission_blade`, `limits_for_wielder`, `Rolled`. `within.rs`: finding lengths and rows within a request's limits. `properties.rs`: `roll_properties`, everything rolled from a row, in three steps in `properties/` (`blade.rs`, `hilt.rs`, `materials.rs`), always in that order: they take rolls in turn from one generator, so reordering them changes every blade.
+  - `table.rs`: `Row` (what a name asks for), its shared defaults, and `rows()`, every row in the order they are rolled from. The rows themselves are in `table/`, one file per family (`knives.rs` … `polearms.rs`), in that order: changing the order changes rolls and which of two equal names wins.
 
 ## Public API
 
