@@ -5,6 +5,7 @@ use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
 use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 
+use super::AutoScroll;
 use super::moveable::PanelPart;
 use super::{GRID_LINE, INK};
 use crate::common::{TouchGesture, UiPointer, in_interface};
@@ -73,7 +74,7 @@ pub fn spawn_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> 
 }
 
 /// How far an area's contents can go: their height beyond its own.
-fn furthest(node: &ComputedNode) -> f32 {
+pub(super) fn furthest(node: &ComputedNode) -> f32 {
     (node.content_size.y - node.size.y).max(0.0) * node.inverse_scale_factor
 }
 
@@ -83,9 +84,10 @@ fn at_share(share: f32, furthest: f32) -> f32 {
 }
 
 /// The wheel and fingers over an area, and the mouse on its bar. Takes them, so
-/// the camera doesn't move with them.
+/// the camera doesn't move with them. Scrolling by hand stops an `AutoScroll`.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn scroll_areas(
+    mut commands: Commands,
     pointer: Res<UiPointer>,
     ui_scale: Res<UiScale>,
     mouse: Res<ButtonInput<MouseButton>>,
@@ -169,6 +171,7 @@ pub(super) fn scroll_areas(
         && let Ok((.., node, _, _, mut position)) = areas.get_mut(area)
     {
         position.y = (position.y + by).clamp(0.0, furthest(node));
+        commands.entity(area).remove::<AutoScroll>();
     }
 
     if !mouse.pressed(MouseButton::Left) {
@@ -198,6 +201,7 @@ pub(super) fn scroll_areas(
         let height = node.size.y * node.inverse_scale_factor;
         let top = transform.translation.y * node.inverse_scale_factor - height / 2.0;
         position.y = at_share((at.y - top) / height.max(1.0), furthest(area_node));
+        commands.entity(area).remove::<AutoScroll>();
     }
 }
 

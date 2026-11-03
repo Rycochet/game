@@ -6,8 +6,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use super::{
     ABOVE_MENU_LAYER, Action, BUTTON_ROW, CLOSE_MARGIN, CORNER_GAP, FONT, GAP, GEAR_BUTTON,
-    GearButton, Layer, MARGIN, MENU_LAYER, MENU_WIDTH, PAUSED_ROW, PausedText, SETTINGS_SHARE,
-    SETTINGS_TITLE_ROW, SystemMenu,
+    GearButton, Layer, MARGIN, MENU_WIDTH, SETTINGS_SHARE, SETTINGS_TITLE_ROW, SystemMenu,
 };
 use crate::widgets::{
     ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, panel_title,
@@ -77,9 +76,10 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
                 ButtonTooltip("Menu".into()),
             ));
         });
-    spawn_main_panel(&mut commands);
+    super::panel::spawn_main_panel(&mut commands);
     spawn_requester(&mut commands);
     spawn_settings(&mut commands);
+    super::credits::spawn_credits(&mut commands);
 }
 
 pub(super) fn wide_button() -> Node {
@@ -102,54 +102,6 @@ pub(super) fn spawn_layer(
     let (layer, panel) = spawn_sized_layer(commands, depth, width, height, content);
     commands.entity(layer).insert((Layer(shown), Action::Back));
     panel
-}
-
-pub(super) fn spawn_main_panel(commands: &mut Commands) {
-    let panel = spawn_layer(
-        commands,
-        MENU_LAYER,
-        &[
-            SystemMenu::Menu,
-            SystemMenu::Confirming,
-            SystemMenu::Settings,
-        ],
-        px(MENU_WIDTH),
-        Val::Auto,
-        Node {
-            padding: UiRect {
-                left: px(MARGIN),
-                right: px(MARGIN),
-                top: px(0),
-                bottom: px(MARGIN),
-            },
-            flex_direction: FlexDirection::Column,
-            row_gap: px(GAP),
-            ..default()
-        },
-    );
-    commands.entity(panel).with_children(|panel| {
-        panel
-            .spawn(Node {
-                height: px(PAUSED_ROW),
-                flex_shrink: 0.0,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..default()
-            })
-            .with_child((PausedText, panel_title("Paused"), Visibility::Hidden));
-        for (state, label, action) in [
-            (ButtonState::Normal, "Settings", Some(Action::Settings)),
-            // Back to choosing a character, once there is that to go back to.
-            (ButtonState::Disabled, "Logout", None),
-            (ButtonState::Normal, "Quit", Some(Action::Quit)),
-        ] {
-            let mut button = spawn_button(panel, state, label, FONT, wide_button());
-            button.insert(Pressable);
-            if let Some(action) = action {
-                button.insert(action);
-            }
-        }
-    });
 }
 
 pub(super) fn spawn_requester(commands: &mut Commands) {
@@ -178,6 +130,35 @@ pub(super) fn spawn_requester(commands: &mut Commands) {
     });
 }
 
+/// A big layer's title, with a close button on the right.
+pub(super) fn spawn_title_row(panel: &mut ChildSpawnerCommands, title: &str) {
+    panel
+        .spawn(Node {
+            height: px(SETTINGS_TITLE_ROW),
+            flex_shrink: 0.0,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            row.spawn(panel_title(title));
+            row.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    right: px(-CLOSE_MARGIN),
+                    top: px((SETTINGS_TITLE_ROW - CLOSE_PIXELS) / 2.0 - CLOSE_MARGIN),
+                    padding: UiRect::all(px(CLOSE_MARGIN)),
+                    ..default()
+                },
+                Action::Back,
+                Pressable,
+            ))
+            .with_children(|holder| {
+                spawn_close_button(holder, default());
+            });
+        });
+}
+
 pub(super) fn spawn_settings(commands: &mut Commands) {
     let panel = spawn_layer(
         commands,
@@ -193,32 +174,7 @@ pub(super) fn spawn_settings(commands: &mut Commands) {
         },
     );
     commands.entity(panel).with_children(|panel| {
-        panel
-            .spawn(Node {
-                height: px(SETTINGS_TITLE_ROW),
-                flex_shrink: 0.0,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..default()
-            })
-            .with_children(|title| {
-                title.spawn(panel_title("Settings"));
-                title
-                    .spawn((
-                        Node {
-                            position_type: PositionType::Absolute,
-                            right: px(-CLOSE_MARGIN),
-                            top: px((SETTINGS_TITLE_ROW - CLOSE_PIXELS) / 2.0 - CLOSE_MARGIN),
-                            padding: UiRect::all(px(CLOSE_MARGIN)),
-                            ..default()
-                        },
-                        Action::Back,
-                        Pressable,
-                    ))
-                    .with_children(|holder| {
-                        spawn_close_button(holder, default());
-                    });
-            });
+        spawn_title_row(panel, "Settings");
         super::settings::spawn_pages(panel);
     });
 }

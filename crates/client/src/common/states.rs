@@ -1,4 +1,5 @@
-//! What is on screen: the view, the loading step, the click mode, the server's status.
+//! What is on screen: the view, the loading step, the click mode, the server's
+//! status, and whether the player has chosen to play.
 
 use bevy::prelude::*;
 
@@ -52,11 +53,28 @@ impl ServerStatus {
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameView {
     /// Waiting for the server to say which world this is: nothing to show
-    /// yet, and no `CurrentWorld`. Only until the first `Welcome`: losing the
-    /// connection later keeps the view (`ServerStatus` says).
+    /// yet, and no `CurrentWorld`. Until the first `Welcome`, and again after
+    /// logging out: losing the connection keeps the view (`ServerStatus` says).
     #[default]
     Connecting,
     WorldMap,
     /// Inside a site (a building or cave): `CurrentDungeon`.
     Dungeon,
+}
+
+/// Whether the player has chosen to play. Until then, and again after logging
+/// out, the system menu is the startup menu and nothing connects.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Session {
+    /// The startup menu, over the title.
+    #[default]
+    AtStart,
+    /// Play was pressed: connecting, or connected.
+    Playing,
+}
+
+impl Session {
+    pub fn is_playing(self) -> bool {
+        self == Self::Playing
+    }
 }

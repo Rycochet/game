@@ -32,9 +32,14 @@ fn ready_only_once_settled_and_gone_when_the_connection_is() {
 #[test]
 fn title_stays_in_its_share_of_any_window() {
     for window in [Vec2::new(1280.0, 720.0), Vec2::new(375.0, 812.0)] {
-        let size = title_font_size(window);
-        assert!(size * TITLE_EMS_WIDE <= window.x * TITLE_WIDTH_SHARE + 0.01);
-        assert!(size * TITLE_EMS_HIGH <= window.y * TITLE_HEIGHT_SHARE + 0.01);
+        for (at_start, share) in [
+            (false, TITLE_HEIGHT_SHARE),
+            (true, START_TITLE_HEIGHT_SHARE),
+        ] {
+            let size = title_font_size(window, at_start);
+            assert!(size * TITLE_EMS_WIDE <= window.x * TITLE_WIDTH_SHARE + 0.01);
+            assert!(size * TITLE_EMS_HIGH <= window.y * share + 0.01);
+        }
     }
 }
 

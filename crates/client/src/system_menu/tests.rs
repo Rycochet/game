@@ -2,7 +2,7 @@ use bevy::ecs::system::RunSystemOnce;
 use bevy::input::mouse::AccumulatedMouseScroll;
 
 use super::*;
-use crate::common::TouchGesture;
+use crate::common::{Session, TouchGesture};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::ButtonPressed;
@@ -17,8 +17,19 @@ fn test_app(menu: SystemMenu) -> App {
         .init_resource::<TouchGesture>()
         .init_resource::<DebugMenu>()
         .init_resource::<FullMap>()
+        .insert_resource(Session::Playing)
         .insert_resource(menu);
     app
+}
+
+fn at_start() -> App {
+    let mut app = test_app(SystemMenu::Closed);
+    app.insert_resource(Session::AtStart);
+    app
+}
+
+fn session(app: &App) -> Session {
+    *app.world().resource::<Session>()
 }
 
 fn press_escape(app: &mut App) -> SystemMenu {
@@ -97,6 +108,8 @@ fn the_buttons_go_where_they_say() {
     assert_eq!(press(&mut app, Action::Open), SystemMenu::Menu);
     assert_eq!(press(&mut app, Action::Settings), SystemMenu::Settings);
     assert_eq!(press(&mut app, Action::Back), SystemMenu::Menu);
+    assert_eq!(press(&mut app, Action::Credits), SystemMenu::Credits);
+    assert_eq!(press(&mut app, Action::Back), SystemMenu::Menu);
     assert_eq!(press(&mut app, Action::Quit), SystemMenu::Confirming);
     assert_eq!(press(&mut app, Action::Back), SystemMenu::Menu);
     assert_eq!(press(&mut app, Action::Back), SystemMenu::Closed);
@@ -112,4 +125,28 @@ fn only_yes_quits() {
     press(&mut app, Action::Quit);
     press(&mut app, Action::ReallyQuit);
     assert_eq!(exits(&app), 1);
+}
+
+#[test]
+fn the_startup_menu_stays_until_play() {
+    let mut app = at_start();
+    assert_eq!(press_escape(&mut app), SystemMenu::Menu);
+    assert_eq!(press(&mut app, Action::Back), SystemMenu::Menu);
+    assert_eq!(press(&mut app, Action::Settings), SystemMenu::Settings);
+    assert_eq!(press_escape(&mut app), SystemMenu::Menu);
+    assert_eq!(press_escape(&mut app), SystemMenu::Menu);
+    assert_eq!(session(&app), Session::AtStart);
+    assert_eq!(press(&mut app, Action::Play), SystemMenu::Closed);
+    assert_eq!(session(&app), Session::Playing);
+}
+
+#[test]
+fn logging_out_goes_back_to_the_startup_menu() {
+    let mut app = test_app(SystemMenu::Menu);
+    // Play does nothing while playing.
+    assert_eq!(press(&mut app, Action::Play), SystemMenu::Menu);
+    assert_eq!(session(&app), Session::Playing);
+    assert_eq!(press(&mut app, Action::LogOut), SystemMenu::Menu);
+    assert_eq!(session(&app), Session::AtStart);
+    assert_eq!(press_escape(&mut app), SystemMenu::Menu);
 }

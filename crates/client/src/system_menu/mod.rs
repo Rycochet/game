@@ -1,25 +1,27 @@
 //! The system menu: Esc or the gear button top right opens a small panel with
-//! Settings, Logout and Quit, and while it is open single player is paused. See
+//! Continue, Settings, Credits, Logout and Quit, and while it is open single
+//! player is paused. The same menu, with Play, is the startup menu. See
 //! `docs/context/client/system_menu.md`.
 
 mod settings;
 
 use bevy::prelude::*;
 
-use crate::common::GameView;
 use crate::widgets::{TextSize, WidgetSystems};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod credits;
 mod input;
+mod panel;
 mod show;
 mod spawn;
 mod state;
 
-use input::take_input;
-use show::{ask_for_pause, show_ended_page, show_menu};
+use input::{take_input, takes_input};
+use show::{ask_for_pause, show_buttons, show_ended_page, show_menu};
 use spawn::spawn_menu;
 pub use state::SystemMenu;
-use state::{Action, GearButton, Layer, PausedText};
+use state::{Action, GearButton, Layer, MenuButton, PausedText};
 
 const GEAR_BUTTON: f32 = 34.0;
 const CORNER_GAP: f32 = 8.0;
@@ -31,6 +33,8 @@ const MARGIN: f32 = 20.0;
 const PAUSED_ROW: f32 = 48.0;
 const BUTTON_ROW: f32 = 38.0;
 const GAP: f32 = 8.0;
+/// Between the menu's sections.
+const SECTION_GAP: f32 = 24.0;
 const FONT: TextSize = TextSize::Large;
 const SETTINGS_TITLE_ROW: f32 = 36.0;
 /// Round the close button, still on it, for fingers.
@@ -50,14 +54,14 @@ impl Plugin for SystemMenuPlugin {
             .add_systems(Startup, spawn_menu)
             .add_systems(
                 PreUpdate,
-                take_input
-                    .in_set(WidgetSystems::Front)
-                    .run_if(not(in_state(GameView::Connecting))),
+                take_input.in_set(WidgetSystems::Front).run_if(takes_input),
             )
             .add_systems(
                 Update,
                 (
                     show_menu,
+                    show_buttons,
+                    credits::start_credits,
                     ask_for_pause,
                     settings::fill_interface_page,
                     settings::use_pages,

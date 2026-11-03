@@ -1,0 +1,92 @@
+//! The menu's own panel: "Paused" above three sections of buttons, with a gap
+//! between them.
+
+use bevy::prelude::*;
+
+use super::spawn::{spawn_layer, wide_button};
+use super::{
+    Action, FONT, GAP, MARGIN, MENU_LAYER, MENU_WIDTH, MenuButton, PAUSED_ROW, PausedText,
+    SECTION_GAP, SystemMenu,
+};
+use crate::widgets::{ButtonState, Pressable, panel_title, spawn_button};
+
+/// One button: what it says, what it does, and when it shows if not always.
+type Entry = (&'static str, Action, Option<MenuButton>);
+
+/// The sections, top to bottom.
+const SECTIONS: &[&[Entry]] = &[
+    &[
+        ("Play", Action::Play, Some(MenuButton::Play)),
+        ("Continue", Action::Back, Some(MenuButton::Continue)),
+    ],
+    &[
+        ("Settings", Action::Settings, None),
+        ("Credits", Action::Credits, None),
+    ],
+    &[
+        ("Logout", Action::LogOut, Some(MenuButton::LogOut)),
+        ("Quit", Action::Quit, None),
+    ],
+];
+
+pub(super) fn spawn_main_panel(commands: &mut Commands) {
+    let panel = spawn_layer(
+        commands,
+        MENU_LAYER,
+        &[
+            SystemMenu::Menu,
+            SystemMenu::Confirming,
+            SystemMenu::Settings,
+            SystemMenu::Credits,
+        ],
+        px(MENU_WIDTH),
+        Val::Auto,
+        Node {
+            padding: UiRect {
+                left: px(MARGIN),
+                right: px(MARGIN),
+                top: px(0),
+                bottom: px(MARGIN),
+            },
+            flex_direction: FlexDirection::Column,
+            row_gap: px(SECTION_GAP),
+            ..default()
+        },
+    );
+    commands.entity(panel).with_children(|panel| {
+        panel
+            .spawn(Node {
+                height: px(PAUSED_ROW),
+                flex_shrink: 0.0,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                // Its own room above the first section, without the gap.
+                margin: UiRect::bottom(px(GAP - SECTION_GAP)),
+                ..default()
+            })
+            .with_child((PausedText, panel_title("Paused"), Visibility::Hidden));
+        for section in SECTIONS {
+            panel
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    row_gap: px(GAP),
+                    ..default()
+                })
+                .with_children(|section_node| {
+                    for &(label, action, shown) in *section {
+                        let mut button = spawn_button(
+                            section_node,
+                            ButtonState::Normal,
+                            label,
+                            FONT,
+                            wide_button(),
+                        );
+                        button.insert((action, Pressable));
+                        if let Some(shown) = shown {
+                            button.insert(shown);
+                        }
+                    }
+                });
+        }
+    });
+}

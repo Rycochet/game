@@ -42,7 +42,7 @@ pub use pointer::{
 };
 pub use sky::SkyNow;
 use sky::update_sky;
-pub use states::{ClickMode, GameView, LoadingStep, ServerStatus};
+pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use token::{Attitude, Icon, Token, TokenShape, TokenSize};
 pub use view::{ViewFacing, ViewStats};
 pub use weather::{NORMAL_SNOW_LINE, Weather};
@@ -67,6 +67,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<FirstFloor>()
             .init_resource::<WorldReturn>()
             .init_resource::<ServerStatus>()
+            .init_resource::<Session>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
             .init_resource::<HerbGrowthShift>()
