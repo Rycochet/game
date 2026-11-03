@@ -8,11 +8,13 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - `crates/client/src/item_art/gem.rs`: `gem_parts`: colours, materials and meshes of gems (seven cuts from one builder, uncut as a lumpy sphere). Unit tests.
 - `crates/client/src/item_art/ring.rs`: `ring_parts`: a cross-section swept round a circle for the band, patterns, mounts, and gems placed in settings, all tipped back together. Unit tests.
 - `crates/client/src/item_art/body.rs`: `body_parts`: a plain standing body from `shared::body::Frame`, slightly turned and seen a little from above, filling a 1 × 2 picture. Unit test.
+- `crates/client/src/item_art/armour/mod.rs`, `armour/hands.rs`: armour models by location. Hands: `build_hand` / `build_pair` (both hands in place on a `Frame`, for sets and the character picture), `material_of`, `Stuff`, `Model`; `hands_parts` lays a pair down for its picture. Unit tests.
 - `crates/client/src/item_art/blade.rs`: `blade_parts`: weapons from their rolled form, built in millimetres from lofted sections and tubes, then fitted to their cells. Unit tests.
 
 ## Public API
 
 - `ItemArtPlugin`.
+- `Look::Hands { hands: HandsLook, quality }`, `HandsLook::new(form, digits, cells)`: a pair of hand pieces; how many digits each hand has shows.
 - `Look::Body { kind }`: a bare body, for kinds with a frame; worn things will be added to it for a character's picture.
 - `Look`, `RingLook`, `BladeLook`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form. `Look::cells`, `longest`, `picture_size(pixels)`: its proportions.
 - `ItemPicture { look, pixels }` (component, `pixels` along the longest side): on an `ImageNode`, it shows that picture. `widgets::item_picture` is the usual way.
@@ -20,7 +22,7 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 
 ## Depends on
 
-- `shared::item`, `shared::item_form`, `shared::blade`, `shared::body`, `shared::creature`, `shared::material`, `shared::rng`. No other module.
+- `shared::item`, `shared::item_form`, `shared::blade`, `shared::armour`, `shared::body`, `shared::creature`, `shared::material`, `shared::rng`. No other module.
 
 ## Used by
 
@@ -42,3 +44,5 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - Size isn't in `Look`: a picture fills what the item takes up, at any size. Only sizes against each other show: a setting against its ring, a gem against its setting, which is how a gem too big looks it.
 - Metal is half metallic rather than fully: fully metal shows only what it reflects, and nothing is round it to reflect. Patterns are cheap: twisted turns the cross-section on its way round, hammered tilts each small face's normal, engraved darkens bands of faces.
 - Pictures are kept in memory for good, about 16 KB each at one cell, and drawn again next time the game starts. Keeping them on disk was measured and not done: see `optimisations.md`.
+- Armour is built in millimetres in place on `shared::body::Frame`, with parts by what they are made of (`armour::hands::Stuff`), so sets and the character picture can reuse the same builders. `body.rs`'s `loft`, `limb`, `blob` and `mesh_of` are shared within `item_art` for this.
+- Hands: each hand hangs from the wrist, palm to the thigh, thumb forwards. Plates are thin shells (`plate`) from rows of points with their normals; lames step out 1.4 mm over the next so their edges show; mail and quilting are shaded in alternate strips. A cuff is 28 mm out from the forearm, over a vambrace. Styles change plate shapes: flutes (Gothic, Maximilian), points and cusps (Gothic, Elven), square cuffs (Kastenbrust), thick plates and a heavy knuckle bar (Dwarven), etched bands (Greenwich). The picture lays both down, fingers to the right, the right hand above with its thumb up, tipped back a little, and fits them by their bounds, as a test checks.

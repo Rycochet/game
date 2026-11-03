@@ -7,11 +7,12 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::armour::hands::{self, HandsForm, HandsPiece};
 use crate::blade::{self, BladeForm};
 use crate::creature::Size;
 use crate::id::Id;
 use crate::item::{Item, ItemKind, Made, Quality, Shape};
-use crate::material::{Category, Material};
+use crate::material::Material;
 use crate::rng::Rng;
 
 /// What an item is like, for kinds that have this.
@@ -20,6 +21,8 @@ pub enum ItemForm {
     Gem(GemForm),
     Ring(Box<RingForm>),
     Blade(Box<BladeForm>),
+    /// Gauntlets and other hand pieces.
+    Hands(HandsForm),
 }
 
 /// What whoever asks for an item needs of it. Anything left out doesn't matter.
@@ -64,6 +67,7 @@ impl ItemForm {
             Self::Gem(gem) => format!("{} {}", gem.cut.name(), gem.material.name()),
             Self::Ring(ring) => ring.name(),
             Self::Blade(blade) => blade.name().to_owned(),
+            Self::Hands(hands) => hands.name().to_owned(),
         }
     }
 
@@ -71,7 +75,7 @@ impl ItemForm {
     pub fn gems(&self) -> impl Iterator<Item = &Item> {
         let settings = match self {
             Self::Ring(ring) => ring.settings.as_slice(),
-            Self::Gem(_) | Self::Blade(_) => &[],
+            Self::Gem(_) | Self::Blade(_) | Self::Hands(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }
@@ -276,6 +280,15 @@ pub fn give_form(item: &mut Item, size: Option<Size>, new_id: &mut impl FnMut() 
             });
             (ItemForm::Ring(Box::new(ring)), size)
         }
+        ItemKind::Gauntlets | ItemKind::DemiGauntlets | ItemKind::PaddedGloves => {
+            let piece = match item.kind {
+                ItemKind::DemiGauntlets => HandsPiece::Demi,
+                ItemKind::PaddedGloves => HandsPiece::Padded,
+                _ => HandsPiece::Gauntlets,
+            };
+            let hands = hands::roll(&mut rng, piece, None);
+            (ItemForm::Hands(hands), size.unwrap_or(Size::Medium))
+        }
         kind => {
             let Some(family) = kind.blade_family() else {
                 return;
@@ -410,6 +423,15 @@ fn roll_ring_size(rng: &mut Rng) -> Size {
     ])
 }
 
+/// The metals rings are made of, in the order they were first rolled from, so rolls
+/// stay as they were when more metals came for armour.
+const RING_METALS: [Material; 4] = [
+    Material::Copper,
+    Material::Gold,
+    Material::Iron,
+    Material::Silver,
+];
+
 /// Quality, then metal (better favours finer), then its band, then how many settings
 /// (finer and better have more), then the gems. `new_gem` makes each gem an item.
 fn roll_ring(
@@ -418,10 +440,8 @@ fn roll_ring(
     size: Size,
     new_gem: &mut impl FnMut(GemForm, Size, Quality) -> Item,
 ) -> RingForm {
-    let metals = Material::ALL
+    let metals: Vec<_> = RING_METALS
         .into_iter()
-        .filter(|metal| metal.category() == Category::Metal);
-    let metals: Vec<_> = metals
         .map(|metal| (metal, fine_weight(metal, quality)))
         .collect();
     let metal = rng.pick_weighted(&metals);
@@ -519,6 +539,7 @@ fn roll_gem_quality(rng: &mut Rng, ring: Quality) -> Quality {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::material::Category;
 
     fn made(kind: ItemKind, seed: u128, quality: Quality, size: Option<Size>) -> Item {
         let mut item = Item::new(Id::for_test(seed), kind);

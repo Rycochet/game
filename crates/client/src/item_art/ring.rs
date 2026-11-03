@@ -155,9 +155,14 @@ pub(super) fn metal_material(metal: Material, quality: Option<Quality>) -> Stand
     let fineness = quality.unwrap_or_default() as usize as f32 / 6.0;
     StandardMaterial {
         base_color: match metal {
+            Material::Adamantine => Color::srgb(0.34, 0.31, 0.42),
+            Material::Brass => Color::srgb(0.86, 0.7, 0.36),
+            Material::Bronze => Color::srgb(0.72, 0.5, 0.26),
             Material::Copper => Color::srgb(0.85, 0.5, 0.3),
             Material::Iron => Color::srgb(0.48, 0.49, 0.52),
+            Material::Mithril => Color::srgb(0.82, 0.88, 0.96),
             Material::Silver => Color::srgb(0.88, 0.89, 0.92),
+            Material::Steel => Color::srgb(0.64, 0.66, 0.7),
             _ => Color::srgb(1.0, 0.76, 0.3),
         },
         // Fully metal shows only what it reflects, and there is nothing round it.

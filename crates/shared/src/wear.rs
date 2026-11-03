@@ -5,9 +5,20 @@
 //! of them exists there and takes that layer. It can only go on or come off if
 //! nothing on a higher layer is at any of its locations.
 
+use crate::armour::hands::Fingers;
 use crate::creature::{CreatureKind, Layer, Location, Size};
 use crate::id::Id;
-use crate::item::{Favour, Inventory, Item, ItemDef, Made, Quality};
+use crate::item::{Favour, Inventory, Item, ItemDef, Made, Quality, WearDef};
+use crate::item_form::ItemForm;
+
+/// Whether something is made for a number of fingers, so only fits hands with that
+/// many unless magical: anything over each finger, but not mittens, which take any
+/// (the owner's decision), nor rings, which take one.
+fn made_for_fingers(item: &Item, wear: &WearDef) -> bool {
+    let mitten =
+        matches!(&item.form, Some(ItemForm::Hands(hands)) if hands.fingers == Fingers::Mitten);
+    !wear.one_place && wear.locations.contains(&Location::Fingers) && !mitten
+}
 
 /// How an item fits its wearer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -143,7 +154,7 @@ impl Inventory {
             .made
             .fit(wear.adjustable, body.size, item.quality)
             .ok_or(WearRefused::WrongSize)?;
-        let whole_fingers = !wear.one_place && wear.locations.contains(&Location::Fingers);
+        let whole_fingers = made_for_fingers(item, &wear);
         if whole_fingers && !item.is_magical() && item.made.fingers != body.fingers() {
             return Err(WearRefused::WrongFingers);
         }
@@ -248,7 +259,7 @@ impl Inventory {
         };
         let plain = without.fit(wear.adjustable, body.size, item.quality);
         let with = item.made.fit(wear.adjustable, body.size, item.quality);
-        let whole_fingers = !wear.one_place && wear.locations.contains(&Location::Fingers);
+        let whole_fingers = made_for_fingers(item, &wear);
         let needed = (plain != with) || (whole_fingers && item.made.fingers != body.fingers());
         if needed {
             item.known.magic = true;
@@ -486,6 +497,51 @@ mod tests {
         // Fingerless ones don't care.
         let mut fingerless = carrying_for(kobold, &[ItemKind::FingerlessGloves]);
         assert_eq!(fingerless.wear(id(1)), Ok(Fit::Exact));
+    }
+
+    #[test]
+    fn mitten_gauntlets_fit_any_fingers_and_demi_gauntlets_leave_rings_free() {
+        use crate::armour::hands::{self, HandsPiece};
+        let kobold = CreatureKind::Kobold;
+        // Gauntlets made for ten fingers, as rolled, with mittens or fingers.
+        let gauntlets = |fingers| {
+            let form = (0..)
+                .map(|seed| {
+                    hands::roll(
+                        &mut crate::rng::Seed::new(seed).rng(),
+                        HandsPiece::Gauntlets,
+                        None,
+                    )
+                })
+                .find(|form| form.fingers == fingers)
+                .unwrap();
+            Item {
+                made: Made {
+                    fingers: Some(10),
+                    ..Made::for_body(ItemKind::Gauntlets, Size::Small, Some(10), false)
+                },
+                form: Some(ItemForm::Hands(form)),
+                ..Item::new(id(1), ItemKind::Gauntlets)
+            }
+        };
+        let wearing = |item| {
+            let mut inventory = Inventory {
+                creature: kobold,
+                ..Inventory::default()
+            };
+            inventory.give(item).unwrap();
+            inventory.check_wear(id(1))
+        };
+        assert_eq!(
+            wearing(gauntlets(Fingers::Fingered)),
+            Err(WearRefused::WrongFingers)
+        );
+        assert!(wearing(gauntlets(Fingers::Mitten)).is_ok());
+        // A ring goes on and off under demi-gauntlets.
+        let mut inventory = carrying(&[ItemKind::DemiGauntlets, ItemKind::Ring]);
+        inventory.wear(id(1)).unwrap();
+        inventory.wear(id(2)).unwrap();
+        assert_eq!(inventory.covered_by(id(2)), None);
     }
 
     #[test]

@@ -225,6 +225,7 @@ pub enum ItemKind {
     Cloak,
     Coin,
     Dagger,
+    DemiGauntlets,
     FingerlessGloves,
     FullArmour,
     Gambeson,
@@ -236,6 +237,7 @@ pub enum ItemKind {
     Lantern,
     Longsword,
     Necklace,
+    PaddedGloves,
     Polearm,
     Pouch,
     Ring,
@@ -257,7 +259,7 @@ const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 36] = [
+    pub const ALL: [Self; 38] = [
         Self::Apple,
         Self::Axe,
         Self::Backpack,
@@ -269,6 +271,7 @@ impl ItemKind {
         Self::Cloak,
         Self::Coin,
         Self::Dagger,
+        Self::DemiGauntlets,
         Self::FingerlessGloves,
         Self::FullArmour,
         Self::Gambeson,
@@ -280,6 +283,7 @@ impl ItemKind {
         Self::Lantern,
         Self::Longsword,
         Self::Necklace,
+        Self::PaddedGloves,
         Self::Polearm,
         Self::Pouch,
         Self::Ring,
@@ -324,154 +328,166 @@ impl ItemKind {
             Torso, Waist,
         };
         let square = Shape::rectangle(1, 1);
-        let def = match self {
-            Self::Apple => plain("Apple", 150, square).without_quality(),
-            // A blade's weight and shape are its form's: these are only for one without.
-            Self::Axe => plain("Axe", 900, Shape::rectangle(1, 3)),
-            Self::Backpack => bag(
-                "Backpack",
-                1200,
-                Shape::rectangle(3, 4),
-                (10, 12),
-                Some(25_000),
-                None,
-            )
-            .worn(WearDef {
-                one_place: true,
-                ..wear(Outer, &[Back], (1, 1), true)
-            }),
-            Self::Barding => plain("Barding", 15_000, Shape::rectangle(4, 4)).worn(wear(
-                Outer,
-                &[Neck, Torso, Forelegs, Hindlegs],
-                (0, 0),
-                false,
-            )),
-            Self::Belt => plain("Belt", 200, Shape::rectangle(1, 3)).worn(wear(
-                Middle,
-                &[Waist],
-                (2, 2),
-                true,
-            )),
-            Self::Boomerang => plain("Boomerang", 400, BOOMERANG),
-            Self::Boots => plain("Boots", 1100, Shape::rectangle(2, 2)).worn(wear(
-                Outer,
-                &[Feet],
-                (1, 0),
-                false,
-            )),
-            // Cloth over barding, to below the knees, which doesn't count as the legs.
-            Self::Caparison => plain("Caparison", 4000, Shape::rectangle(3, 3)).worn(wear(
-                Over,
-                &[Head, Neck, Torso],
-                (0, 1),
-                false,
-            )),
-            Self::Cloak => plain("Cloak", 900, Shape::rectangle(2, 3)).worn(WearDef {
-                one_place: true,
-                ..wear(Outer, &[Back], (1, 1), true)
-            }),
-            Self::Coin => plain("Coin", 10, square).without_quality(),
-            Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)),
-            Self::FingerlessGloves => plain("Fingerless Gloves", 80, Shape::rectangle(1, 2))
-                .worn(wear(Middle, &[Hands], (1, 1), true)),
-            // With its own padding, so no gambeson under it.
-            Self::FullArmour => {
-                plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(WearDef {
-                    padded: &[Shoulders, Arms, Torso],
-                    ..wear(Outer, &[Shoulders, Arms, Torso, Legs], (0, 0), false)
-                })
-            }
-            Self::Gambeson => plain("Gambeson", 2500, Shape::rectangle(2, 3)).worn(wear(
-                Middle,
-                &[Torso, Arms],
-                (1, 0),
-                false,
-            )),
-            Self::Gauntlets => plain("Gauntlets", 1200, Shape::rectangle(2, 1)).worn(wear(
-                Outer,
-                &[Hands, Fingers],
-                (0, 0),
-                false,
-            )),
-            Self::Gem => plain("Gem", 5, square),
-            Self::Gloves => plain("Gloves", 100, Shape::rectangle(1, 2)).worn(wear(
-                Middle,
-                &[Hands, Fingers],
-                (1, 0),
-                false,
-            )),
-            Self::Hat => {
-                plain("Hat", 150, Shape::rectangle(2, 1)).worn(wear(Outer, &[Head], (1, 0), false))
-            }
-            Self::Knife => plain("Knife", 200, Shape::rectangle(1, 2)),
-            Self::Lantern => plain("Lantern", 800, Shape::rectangle(1, 2)),
-            Self::Longsword => plain("Longsword", 2000, Shape::rectangle(1, 6)),
-            Self::Necklace => plain("Necklace", 40, square).worn(wear(Skin, &[Neck], (5, 5), true)),
-            Self::Polearm => plain("Polearm", 3000, Shape::rectangle(1, 8)),
-            Self::Pouch => bag(
-                "Pouch",
-                80,
-                Shape::rectangle(2, 2),
-                (4, 4),
-                Some(1500),
-                Some(500),
-            ),
-            Self::Ring => plain("Ring", 10, square).worn(WearDef {
-                one_place: true,
-                ..wear(Skin, &[Fingers], (1, 1), true)
-            }),
-            Self::Shoes => plain("Shoes", 500, Shape::rectangle(2, 1)).worn(wear(
-                Middle,
-                &[Feet],
-                (1, 0),
-                false,
-            )),
-            Self::ShortSword => plain("Short Sword", 900, Shape::rectangle(1, 4)),
-            Self::SmallBox => bag(
-                "Small Box",
-                100,
-                Shape::rectangle(2, 1),
-                (3, 2),
-                Some(300),
-                None,
-            ),
-            Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
-            Self::Spear => plain("Spear", 1500, Shape::rectangle(1, 8)),
-            Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)).without_quality(),
-            // Belted over armour, to the knee, which doesn't count as the legs.
-            Self::Surcoat => plain("Surcoat", 800, Shape::rectangle(2, 3)).worn(wear(
-                Over,
-                &[Torso, Waist],
-                (1, 1),
-                true,
-            )),
-            Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)),
-            Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
-                Skin,
-                &[Torso, Arms],
-                (1, 0),
-                false,
-            )),
-            // Open at the sides, so it fits more than one size.
-            Self::Tabard => plain("Tabard", 500, Shape::rectangle(2, 3)).worn(wear(
-                Over,
-                &[Shoulders, Torso],
-                (1, 1),
-                true,
-            )),
-            Self::Trousers => plain("Trousers", 500, Shape::rectangle(2, 3)).worn(wear(
-                Middle,
-                &[Legs],
-                (1, 0),
-                false,
-            )),
-        };
+        let def =
+            match self {
+                Self::Apple => plain("Apple", 150, square).without_quality(),
+                // A blade's weight and shape are its form's: these are only for one without.
+                Self::Axe => plain("Axe", 900, Shape::rectangle(1, 3)),
+                Self::Backpack => bag(
+                    "Backpack",
+                    1200,
+                    Shape::rectangle(3, 4),
+                    (10, 12),
+                    Some(25_000),
+                    None,
+                )
+                .worn(WearDef {
+                    one_place: true,
+                    ..wear(Outer, &[Back], (1, 1), true)
+                }),
+                Self::Barding => plain("Barding", 15_000, Shape::rectangle(4, 4)).worn(wear(
+                    Outer,
+                    &[Neck, Torso, Forelegs, Hindlegs],
+                    (0, 0),
+                    false,
+                )),
+                Self::Belt => plain("Belt", 200, Shape::rectangle(1, 3)).worn(wear(
+                    Middle,
+                    &[Waist],
+                    (2, 2),
+                    true,
+                )),
+                Self::Boomerang => plain("Boomerang", 400, BOOMERANG),
+                Self::Boots => plain("Boots", 1100, Shape::rectangle(2, 2)).worn(wear(
+                    Outer,
+                    &[Feet],
+                    (1, 0),
+                    false,
+                )),
+                // Cloth over barding, to below the knees, which doesn't count as the legs.
+                Self::Caparison => plain("Caparison", 4000, Shape::rectangle(3, 3)).worn(wear(
+                    Over,
+                    &[Head, Neck, Torso],
+                    (0, 1),
+                    false,
+                )),
+                Self::Cloak => plain("Cloak", 900, Shape::rectangle(2, 3)).worn(WearDef {
+                    one_place: true,
+                    ..wear(Outer, &[Back], (1, 1), true)
+                }),
+                Self::Coin => plain("Coin", 10, square).without_quality(),
+                Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)),
+                // Over the back of the hand and the wrist only, so rings stay free.
+                Self::DemiGauntlets => plain("Demi-gauntlets", 450, Shape::rectangle(2, 1))
+                    .worn(wear(Outer, &[Hands], (0, 0), false)),
+                Self::FingerlessGloves => plain("Fingerless Gloves", 80, Shape::rectangle(1, 2))
+                    .worn(wear(Middle, &[Hands], (1, 1), true)),
+                // With its own padding, so no gambeson under it.
+                Self::FullArmour => {
+                    plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(WearDef {
+                        padded: &[Shoulders, Arms, Torso],
+                        ..wear(Outer, &[Shoulders, Arms, Torso, Legs], (0, 0), false)
+                    })
+                }
+                Self::Gambeson => plain("Gambeson", 2500, Shape::rectangle(2, 3)).worn(wear(
+                    Middle,
+                    &[Torso, Arms],
+                    (1, 0),
+                    false,
+                )),
+                Self::Gauntlets => plain("Gauntlets", 1200, Shape::rectangle(2, 1)).worn(wear(
+                    Outer,
+                    &[Hands, Fingers],
+                    (0, 0),
+                    false,
+                )),
+                Self::Gem => plain("Gem", 5, square),
+                Self::Gloves => plain("Gloves", 100, Shape::rectangle(1, 2)).worn(wear(
+                    Middle,
+                    &[Hands, Fingers],
+                    (1, 0),
+                    false,
+                )),
+                Self::Hat => plain("Hat", 150, Shape::rectangle(2, 1)).worn(wear(
+                    Outer,
+                    &[Head],
+                    (1, 0),
+                    false,
+                )),
+                Self::Knife => plain("Knife", 200, Shape::rectangle(1, 2)),
+                Self::Lantern => plain("Lantern", 800, Shape::rectangle(1, 2)),
+                Self::Longsword => plain("Longsword", 2000, Shape::rectangle(1, 6)),
+                Self::Necklace => {
+                    plain("Necklace", 40, square).worn(wear(Skin, &[Neck], (5, 5), true))
+                }
+                // Under gauntlets.
+                Self::PaddedGloves => plain("Padded Gloves", 150, Shape::rectangle(2, 1))
+                    .worn(wear(Middle, &[Hands, Fingers], (1, 0), false)),
+                Self::Polearm => plain("Polearm", 3000, Shape::rectangle(1, 8)),
+                Self::Pouch => bag(
+                    "Pouch",
+                    80,
+                    Shape::rectangle(2, 2),
+                    (4, 4),
+                    Some(1500),
+                    Some(500),
+                ),
+                Self::Ring => plain("Ring", 10, square).worn(WearDef {
+                    one_place: true,
+                    ..wear(Skin, &[Fingers], (1, 1), true)
+                }),
+                Self::Shoes => plain("Shoes", 500, Shape::rectangle(2, 1)).worn(wear(
+                    Middle,
+                    &[Feet],
+                    (1, 0),
+                    false,
+                )),
+                Self::ShortSword => plain("Short Sword", 900, Shape::rectangle(1, 4)),
+                Self::SmallBox => bag(
+                    "Small Box",
+                    100,
+                    Shape::rectangle(2, 1),
+                    (3, 2),
+                    Some(300),
+                    None,
+                ),
+                Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
+                Self::Spear => plain("Spear", 1500, Shape::rectangle(1, 8)),
+                Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)).without_quality(),
+                // Belted over armour, to the knee, which doesn't count as the legs.
+                Self::Surcoat => plain("Surcoat", 800, Shape::rectangle(2, 3)).worn(wear(
+                    Over,
+                    &[Torso, Waist],
+                    (1, 1),
+                    true,
+                )),
+                Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)),
+                Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
+                    Skin,
+                    &[Torso, Arms],
+                    (1, 0),
+                    false,
+                )),
+                // Open at the sides, so it fits more than one size.
+                Self::Tabard => plain("Tabard", 500, Shape::rectangle(2, 3)).worn(wear(
+                    Over,
+                    &[Shoulders, Torso],
+                    (1, 1),
+                    true,
+                )),
+                Self::Trousers => plain("Trousers", 500, Shape::rectangle(2, 3)).worn(wear(
+                    Middle,
+                    &[Legs],
+                    (1, 0),
+                    false,
+                )),
+            };
         // First guesses at how much work each is beside the usual.
         def.taking(match self {
             Self::Apple | Self::Coin | Self::Stone => 10,
             Self::Socks | Self::TShirt | Self::Trousers | Self::Hat | Self::Tabard => 50,
             Self::Ring | Self::Pouch | Self::Belt | Self::Boomerang => 75,
-            Self::Gauntlets | Self::Backpack | Self::Necklace => 150,
+            Self::Gauntlets | Self::DemiGauntlets | Self::Backpack | Self::Necklace => 150,
             Self::Sword
             | Self::Axe
             | Self::Dagger
@@ -889,6 +905,7 @@ impl Item {
         let set: u32 = self.set_gems().map(Item::total_weight).sum();
         let own = match &self.form {
             Some(ItemForm::Blade(blade)) => blade.grams_at(self.made.size),
+            Some(ItemForm::Hands(hands)) => hands.grams_at(self.made.size),
             _ => self.kind.def().weight,
         };
         own + weight_of(&self.contents) + set
