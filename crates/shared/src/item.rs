@@ -243,6 +243,7 @@ pub enum ItemKind {
     Ring,
     Shoes,
     ShortSword,
+    ShoulderArmour,
     SmallBox,
     Socks,
     Spear,
@@ -259,7 +260,7 @@ const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 38] = [
+    pub const ALL: [Self; 39] = [
         Self::Apple,
         Self::Axe,
         Self::Backpack,
@@ -289,6 +290,7 @@ impl ItemKind {
         Self::Ring,
         Self::Shoes,
         Self::ShortSword,
+        Self::ShoulderArmour,
         Self::SmallBox,
         Self::Socks,
         Self::Spear,
@@ -389,9 +391,10 @@ impl ItemKind {
                         ..wear(Outer, &[Shoulders, Arms, Torso, Legs], (0, 0), false)
                     })
                 }
+                // Over the shoulders too (the owner's decision), under pauldrons.
                 Self::Gambeson => plain("Gambeson", 2500, Shape::rectangle(2, 3)).worn(wear(
                     Middle,
-                    &[Torso, Arms],
+                    &[Shoulders, Torso, Arms],
                     (1, 0),
                     false,
                 )),
@@ -443,6 +446,9 @@ impl ItemKind {
                     false,
                 )),
                 Self::ShortSword => plain("Short Sword", 900, Shape::rectangle(1, 4)),
+                // A pair: its form says its kind, name, cells and weight.
+                Self::ShoulderArmour => plain("Shoulder Armour", 2600, Shape::rectangle(3, 2))
+                    .worn(wear(Outer, &[Shoulders], (0, 0), false)),
                 Self::SmallBox => bag(
                     "Small Box",
                     100,
@@ -487,7 +493,11 @@ impl ItemKind {
             Self::Apple | Self::Coin | Self::Stone => 10,
             Self::Socks | Self::TShirt | Self::Trousers | Self::Hat | Self::Tabard => 50,
             Self::Ring | Self::Pouch | Self::Belt | Self::Boomerang => 75,
-            Self::Gauntlets | Self::DemiGauntlets | Self::Backpack | Self::Necklace => 150,
+            Self::Gauntlets
+            | Self::DemiGauntlets
+            | Self::ShoulderArmour
+            | Self::Backpack
+            | Self::Necklace => 150,
             Self::Sword
             | Self::Axe
             | Self::Dagger
@@ -895,6 +905,7 @@ impl Item {
     pub fn shape(&self) -> Shape {
         let shape = match &self.form {
             Some(ItemForm::Blade(blade)) => blade.shape(),
+            Some(ItemForm::Shoulders(shoulders)) => shoulders.shape(),
             _ => self.kind.def().shape,
         };
         shape.scaled(self.made.size)
@@ -906,6 +917,7 @@ impl Item {
         let own = match &self.form {
             Some(ItemForm::Blade(blade)) => blade.grams_at(self.made.size),
             Some(ItemForm::Hands(hands)) => hands.grams_at(self.made.size),
+            Some(ItemForm::Shoulders(shoulders)) => shoulders.grams_at(self.made.size),
             _ => self.kind.def().weight,
         };
         own + weight_of(&self.contents) + set

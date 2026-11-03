@@ -17,6 +17,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
 use shared::armour::hands::{Hand, HandsForm};
+use shared::armour::shoulders::ShouldersForm;
 use shared::blade::BladeForm;
 use shared::creature::{CreatureKind, Size};
 use shared::item::{Item, Quality};
@@ -63,6 +64,11 @@ pub enum Look {
         hands: HandsLook,
         quality: Option<Quality>,
     },
+    /// A pair of pauldrons or other shoulder pieces, as worn.
+    Shoulders {
+        shoulders: ShouldersLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -75,6 +81,7 @@ impl Look {
             Self::Gem { .. } | Self::Ring { .. } => (1, 1),
             Self::Blade { blade, .. } => blade.cells,
             Self::Hands { hands, .. } => hands.cells,
+            Self::Shoulders { shoulders, .. } => shoulders.cells,
             Self::Body { .. } => body::CELLS,
         }
     }
@@ -119,6 +126,21 @@ impl HandsLook {
             digits,
             cells,
         }
+    }
+}
+
+/// What can be seen of a pair of shoulder pieces.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ShouldersLook {
+    form: ShouldersForm,
+    /// What it takes up, wide and long, not turned.
+    cells: (u8, u8),
+}
+
+impl ShouldersLook {
+    /// Shoulder pieces taking up these cells.
+    pub fn new(form: ShouldersForm, cells: (u8, u8)) -> Self {
+        Self { form, cells }
     }
 }
 
@@ -186,6 +208,16 @@ pub fn look_of(item: &Item) -> Option<Look> {
                 hands: HandsLook {
                     form: *form,
                     digits: Hand::digits(item.made.fingers),
+                    cells: (shape.width, shape.height),
+                },
+                quality,
+            })
+        }
+        ItemForm::Shoulders(form) => {
+            let shape = item.shape();
+            Some(Look::Shoulders {
+                shoulders: ShouldersLook {
+                    form: *form,
                     cells: (shape.width, shape.height),
                 },
                 quality,
@@ -367,6 +399,9 @@ fn draw_pictures(
             }
             Look::Hands { hands, quality } => {
                 armour::hands::hands_parts(&hands, quality, &mut meshes, &mut materials)
+            }
+            Look::Shoulders { shoulders, quality } => {
+                armour::shoulders::shoulders_parts(&shoulders, quality, &mut meshes, &mut materials)
             }
             Look::Body { kind } => body::body_parts(kind, &mut meshes, &mut materials),
         };

@@ -107,28 +107,65 @@ pub(super) fn blob(triangles: &mut Vec<Triangle>, centre: Vec3, half: Vec3) {
     loft(triangles, &rings);
 }
 
+/// The trunk's levels from the crotch up to the neck: each height, with its half widths
+/// across and front to back.
+fn trunk_levels(frame: &Frame) -> [(f32, (f32, f32)); 6] {
+    let f = |value: i32| value as f32;
+    let half = |(across, deep): (i32, i32)| (f(across), f(deep));
+    [
+        (f(frame.hip) - f(frame.thigh), half(frame.hips_half)),
+        (f(frame.hip), half(frame.hips_half)),
+        (f(frame.waist), half(frame.waist_half)),
+        (f(frame.chest), half(frame.chest_half)),
+        (
+            f(frame.shoulder),
+            (f(frame.shoulder_half), f(frame.chest_half.1) * 0.7),
+        ),
+        (
+            f(frame.neck_base),
+            (f(frame.neck) * 1.6, f(frame.neck) * 1.2),
+        ),
+    ]
+}
+
+/// The trunk's half widths across and front to back at a height, as it is drawn: what
+/// armour on it is offset from.
+pub(super) fn trunk_half(frame: &Frame, y: f32) -> (f32, f32) {
+    let levels = trunk_levels(frame);
+    let (first, last) = (levels[0], levels[levels.len() - 1]);
+    if y <= first.0 {
+        return first.1;
+    }
+    if y >= last.0 {
+        return last.1;
+    }
+    let at = levels
+        .windows(2)
+        .find(|pair| y <= pair[1].0)
+        .expect("between the ends");
+    let t = (y - at[0].0) / (at[1].0 - at[0].0);
+    (
+        at[0].1.0 + (at[1].1.0 - at[0].1.0) * t,
+        at[0].1.1 + (at[1].1.1 - at[0].1.1) * t,
+    )
+}
+
+/// How far in front of the middle (or behind it) the trunk's skin is at this height and
+/// this far across: 0 past its side.
+pub(super) fn trunk_depth(frame: &Frame, x: f32, y: f32) -> f32 {
+    let (across, deep) = trunk_half(frame, y);
+    deep * (1.0 - (x / across).powi(2)).max(0.0).sqrt()
+}
+
 /// The body, in millimetres, standing as its frame says.
 fn build(frame: &Frame) -> Vec<Triangle> {
     let f = |value: i32| value as f32;
-    let half = |(across, deep): (i32, i32)| (f(across), f(deep));
     let mut triangles = Vec::new();
     // The trunk, from the crotch up to where the arms join.
-    let trunk = [
-        level(f(frame.hip) - f(frame.thigh), half(frame.hips_half), 0.0),
-        level(f(frame.hip), half(frame.hips_half), 0.0),
-        level(f(frame.waist), half(frame.waist_half), 0.0),
-        level(f(frame.chest), half(frame.chest_half), 0.0),
-        level(
-            f(frame.shoulder),
-            (f(frame.shoulder_half), f(frame.chest_half.1) * 0.7),
-            0.0,
-        ),
-        level(
-            f(frame.neck_base),
-            (f(frame.neck) * 1.6, f(frame.neck) * 1.2),
-            0.0,
-        ),
-    ];
+    let trunk: Vec<_> = trunk_levels(frame)
+        .into_iter()
+        .map(|(y, halves)| level(y, halves, 0.0))
+        .collect();
     loft(&mut triangles, &trunk);
     let neck = f(frame.neck);
     limb(

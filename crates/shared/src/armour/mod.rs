@@ -2,6 +2,7 @@
 //! their own work, built on `body::Frame`. See `docs/context/shared/armour.md`.
 
 pub mod hands;
+pub mod shoulders;
 
 use serde::{Deserialize, Serialize};
 
@@ -60,8 +61,10 @@ impl Construction {
 }
 
 /// How a piece looks, shared by every piece of a set so they match: the owner's list of
-/// harness styles, historical and fantasy. Mostly for plate; on other constructions it
-/// changes only trim and edges.
+/// harness styles, historical and fantasy, and regional looks. Each construction is made
+/// only in some styles (`allows`). European styles mostly shape plate; on other
+/// constructions they change only trim and edges. Saved by name, so new ones go at the
+/// end.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Style {
     /// Plain polished plates, rolled edges.
@@ -81,10 +84,22 @@ pub enum Style {
     Elven,
     /// Thick and square, stepped edges, heavy bars.
     Dwarven,
+    /// Lacquered lamellae and lames laced in silk: sode, dō, kote.
+    Japanese,
+    /// Lamellae and scales, beast heads on the shoulders, mirrors on the breast.
+    Chinese,
+    /// Mongol and Turkic: lamellar and laminar of iron and rawhide.
+    Steppe,
+    /// Greek and Roman: bronze, linen, segmented lames, mail doublings.
+    Classical,
+    /// Lamellar and splinted, over mail.
+    Byzantine,
+    /// Mail and plate, and mirrors.
+    IndoPersian,
 }
 
 impl Style {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 14] = [
         Self::White,
         Self::Gothic,
         Self::Milanese,
@@ -93,6 +108,12 @@ impl Style {
         Self::Kastenbrust,
         Self::Elven,
         Self::Dwarven,
+        Self::Japanese,
+        Self::Chinese,
+        Self::Steppe,
+        Self::Classical,
+        Self::Byzantine,
+        Self::IndoPersian,
     ];
 
     pub fn name(self) -> &'static str {
@@ -105,6 +126,69 @@ impl Style {
             Self::Kastenbrust => "Kastenbrust",
             Self::Elven => "Elven",
             Self::Dwarven => "Dwarven",
+            Self::Japanese => "Japanese",
+            Self::Chinese => "Chinese",
+            Self::Steppe => "Steppe",
+            Self::Classical => "Classical",
+            Self::Byzantine => "Byzantine",
+            Self::IndoPersian => "Indo-Persian",
+        }
+    }
+
+    /// One of the European harnesses, which mostly shape plate.
+    pub fn european(self) -> bool {
+        matches!(
+            self,
+            Self::White
+                | Self::Gothic
+                | Self::Milanese
+                | Self::Maximilian
+                | Self::Greenwich
+                | Self::Kastenbrust
+        )
+    }
+
+    /// Whether this construction is made in this style (the owner's decision: each
+    /// construction allows only some styles). Padding goes with anything; the fantasy
+    /// styles with all but mirrors.
+    pub fn allows(self, construction: Construction) -> bool {
+        use Construction as C;
+        match construction {
+            C::Padded => true,
+            _ if self.european() => matches!(
+                construction,
+                C::Leather | C::Mail | C::Scale | C::PlatesInCloth | C::Splint | C::Plate
+            ),
+            _ => match self {
+                Self::Elven | Self::Dwarven => construction != C::Mirror,
+                Self::Japanese => !matches!(construction, C::Scale | C::Mirror),
+                Self::Chinese => matches!(
+                    construction,
+                    C::Leather | C::Mail | C::Scale | C::Lamellar | C::PlatesInCloth | C::Mirror
+                ),
+                Self::Steppe => matches!(
+                    construction,
+                    C::Leather
+                        | C::Mail
+                        | C::Scale
+                        | C::Lamellar
+                        | C::Laminar
+                        | C::MailAndPlate
+                        | C::Mirror
+                ),
+                Self::Classical => matches!(
+                    construction,
+                    C::Leather | C::Mail | C::Scale | C::Laminar | C::Plate
+                ),
+                Self::Byzantine => matches!(
+                    construction,
+                    C::Leather | C::Mail | C::Scale | C::Lamellar | C::Laminar | C::Splint
+                ),
+                _ => matches!(
+                    construction,
+                    C::Mail | C::Scale | C::Lamellar | C::MailAndPlate | C::Mirror | C::Plate
+                ),
+            },
         }
     }
 
@@ -119,6 +203,27 @@ impl Style {
             (Self::Kastenbrust, 5),
             (Self::Elven, 8),
             (Self::Dwarven, 8),
+            (Self::Japanese, 8),
+            (Self::Chinese, 6),
+            (Self::Steppe, 6),
+            (Self::Classical, 6),
+            (Self::Byzantine, 4),
+            (Self::IndoPersian, 4),
         ])
+    }
+}
+
+/// The constructions in a list that a style allows, with their weights; the whole list
+/// if it allows none, so every kind of piece can be made in every style.
+pub fn in_style(list: &[(Construction, u64)], style: Style) -> Vec<(Construction, u64)> {
+    let allowed: Vec<_> = list
+        .iter()
+        .copied()
+        .filter(|&(construction, _)| style.allows(construction))
+        .collect();
+    if allowed.is_empty() {
+        list.to_vec()
+    } else {
+        allowed
     }
 }

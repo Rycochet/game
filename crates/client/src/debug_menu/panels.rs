@@ -7,6 +7,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use shared::armour::hands::{self, HandsPiece};
+use shared::armour::shoulders::{self, ShouldersKind};
 use shared::armour::{Construction, Style};
 use shared::body::Frame;
 use shared::creature::{CreatureKind, Size};
@@ -27,7 +28,7 @@ use super::bodies::BodiesToShow;
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
-use crate::item_art::{HandsLook, ItemPictures, Look, look_of};
+use crate::item_art::{HandsLook, ItemPictures, Look, ShouldersLook, look_of};
 use crate::widgets::{
     ALLOWED, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, GRID_COLOUR, INK,
     Pressable, RaisePanel, TabChosen, TextBox, TextSize, field_label, raised_box, spawn_button,
@@ -258,6 +259,10 @@ enum Shown {
     Hands(HandsPiece, u64, u8),
     /// The first plate gauntlets rolled in this style.
     HandsStyle(Style),
+    /// Shoulder pieces of this kind as the server would roll them from this number.
+    Shoulders(ShouldersKind, u64),
+    /// The first plate pauldrons rolled in this style.
+    ShouldersStyle(Style),
 }
 
 impl Shown {
@@ -289,7 +294,7 @@ impl Shown {
                 Some(hands_look(form, digits, quality))
             }
             Self::HandsStyle(style) => {
-                let plate = (0..)
+                let plate = (0..50)
                     .map(|seed| {
                         hands::roll(
                             &mut Seed::new(seed).rng(),
@@ -297,10 +302,51 @@ impl Shown {
                             Some(style),
                         )
                     })
-                    .find(|form| form.construction == Construction::Plate)?;
+                    // The first in plate, or the first at all where the style has none.
+                    .reduce(|first, form| {
+                        let plate = Construction::Plate;
+                        if first.construction != plate && form.construction == plate {
+                            form
+                        } else {
+                            first
+                        }
+                    })?;
                 Some(hands_look(plate, 5, quality))
             }
+            Self::Shoulders(kind, seed) => {
+                let form = shoulders::roll(&mut Seed::new(seed).rng(), Some(kind), None);
+                Some(shoulders_look(form, quality))
+            }
+            Self::ShouldersStyle(style) => {
+                let plate = (0..50)
+                    .map(|seed| {
+                        shoulders::roll(
+                            &mut Seed::new(seed).rng(),
+                            Some(ShouldersKind::Pauldrons),
+                            Some(style),
+                        )
+                    })
+                    // The first in plate, or the first at all where the style has none.
+                    .reduce(|first, form| {
+                        let plate = Construction::Plate;
+                        if first.construction != plate && form.construction == plate {
+                            form
+                        } else {
+                            first
+                        }
+                    })?;
+                Some(shoulders_look(plate, quality))
+            }
         }
+    }
+}
+
+/// Shoulder pieces in the cells their form takes up.
+fn shoulders_look(form: shoulders::ShouldersForm, quality: Quality) -> Look {
+    let shape = form.shape();
+    Look::Shoulders {
+        shoulders: ShouldersLook::new(form, (shape.width, shape.height)),
+        quality: Some(quality),
     }
 }
 
@@ -350,6 +396,7 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                     column.commands().entity(area).with_children(|grid| {
                         spawn_body_row(grid);
                         spawn_hands_rows(grid);
+                        spawn_shoulders_rows(grid);
                         for family in Family::ALL {
                             spawn_blade_row(grid, family);
                         }
@@ -468,16 +515,57 @@ fn spawn_hands_rows(grid: &mut ChildSpawnerCommands) {
             }
         });
     }
-    grid.spawn(Node {
-        align_items: AlignItems::Center,
-        ..default()
-    })
-    .with_children(|cells| {
-        cells.spawn(picture_label("Styles", PICTURE_ROW_LABEL));
-        for style in Style::ALL {
-            spawn_picture(cells, Shown::HandsStyle(style));
-        }
-    });
+    spawn_style_rows(grid, Shown::HandsStyle);
+}
+
+/// Rolled shoulder pieces, a row for the commonest kinds and shared rows for the rest,
+/// and plate pauldrons in each style.
+fn spawn_shoulders_rows(grid: &mut ChildSpawnerCommands) {
+    use ShouldersKind::{Ailettes, Cape, Discs, Guards, Pauldrons, Spaulders, Wing};
+    let rows: [(&str, &[ShouldersKind]); 5] = [
+        ("Pauldrons", &[Pauldrons]),
+        ("Spaulders", &[Spaulders]),
+        ("Guards", &[Guards]),
+        ("Cape, Discs", &[Cape, Discs]),
+        ("Ailettes, Wing", &[Ailettes, Wing]),
+    ];
+    for (row, (label, kinds)) in rows.into_iter().enumerate() {
+        grid.spawn(Node {
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|cells| {
+            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
+            for cell in 0..RING_COLUMNS {
+                // A shared row's last kind gets only its last picture.
+                let kind = if cell + 1 == RING_COLUMNS {
+                    kinds[kinds.len() - 1]
+                } else {
+                    kinds[0]
+                };
+                let seed = row as u64 * 100 + cell as u64;
+                spawn_picture(cells, Shown::Shoulders(kind, seed));
+            }
+        });
+    }
+    spawn_style_rows(grid, Shown::ShouldersStyle);
+}
+
+/// A picture in each style, as many to a row as rings have.
+fn spawn_style_rows(grid: &mut ChildSpawnerCommands, shown: fn(Style) -> Shown) {
+    for (row, styles) in Style::ALL.chunks(RING_COLUMNS as usize).enumerate() {
+        grid.spawn(Node {
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|cells| {
+            let label = if row == 0 { "Styles" } else { "" };
+            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
+            for &style in styles {
+                spawn_picture(cells, shown(style));
+            }
+        });
+    }
 }
 
 fn spawn_blade_row(grid: &mut ChildSpawnerCommands, family: Family) {
@@ -543,7 +631,10 @@ pub(super) fn show_pictures(
             // A weapon or gauntlets need their full size for the black edge to be right, and
             // more room.
             let (box_side, pixels) = match picture.0 {
-                Shown::Hands(..) | Shown::HandsStyle(_) => (
+                Shown::Hands(..)
+                | Shown::HandsStyle(_)
+                | Shown::Shoulders(..)
+                | Shown::ShouldersStyle(_) => (
                     HANDS_PICTURE,
                     look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
                 ),
