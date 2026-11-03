@@ -2,6 +2,7 @@
 //! place on `shared::body::Frame`, so its own picture, a set and a dressed character
 //! all use the same parts. What every location's models share is here.
 
+pub(super) mod arms;
 pub(super) mod hands;
 pub(super) mod head;
 pub(super) mod shoulders;
@@ -27,6 +28,7 @@ pub(in crate::item_art) fn armour_parts(
         }
         Look::Torso { torso, quality } => torso::torso_parts(&torso, quality, meshes, materials),
         Look::Head { head, quality } => head::head_parts(&head, quality, meshes, materials),
+        Look::Arms { arms, quality } => arms::arms_parts(&arms, quality, meshes, materials),
         _ => Vec::new(),
     }
 }

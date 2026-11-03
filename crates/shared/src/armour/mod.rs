@@ -1,6 +1,7 @@
 //! Armour: what every piece and set shares. Pieces for each body location are added by
 //! their own work, built on `body::Frame`. See `docs/context/shared/armour.md`.
 
+pub mod arms;
 mod finish;
 pub mod hands;
 pub mod head;

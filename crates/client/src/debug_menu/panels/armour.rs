@@ -1,5 +1,5 @@
 //! Item Pictures' armour pages: rolled hand, shoulder, torso and head pieces, and a
-//! picture of each in every style.
+//! picture of each in every style. Arm pieces are in `arms.rs`.
 
 use bevy::prelude::*;
 use shared::armour::hands::{self, HandsPiece};
@@ -33,10 +33,12 @@ pub(super) enum ArmourShown {
     Head(HeadKind, u64),
     /// The first helmet rolled in this style.
     HeadStyle(Style),
+    /// An arm piece (see `arms.rs`).
+    Arms(super::arms::ArmsShown),
 }
 
 /// The first of fifty rolls in plate, or the first at all where the style has none.
-fn first_plate<T>(
+pub(super) fn first_plate<T>(
     roll: impl Fn(&mut Rng) -> T,
     construction: impl Fn(&T) -> Construction,
 ) -> Option<T> {
@@ -57,6 +59,7 @@ impl ArmourShown {
         let rolled = quality;
         let quality = Some(quality);
         Some(match self {
+            Self::Arms(arms) => arms.look(rolled)?,
             Self::Hands(piece, seed, digits) => hands_look(
                 hands::roll(&mut Seed::new(seed).rng(), piece, None),
                 digits,
@@ -142,7 +145,11 @@ fn head_look(form: head::HeadForm, quality: Option<Quality>) -> Look {
 }
 
 /// A labelled row of pictures.
-fn spawn_row(grid: &mut ChildSpawnerCommands, label: &str, pictures: impl Iterator<Item = Shown>) {
+pub(super) fn spawn_row(
+    grid: &mut ChildSpawnerCommands,
+    label: &str,
+    pictures: impl Iterator<Item = Shown>,
+) {
     grid.spawn(Node {
         align_items: AlignItems::Center,
         ..default()
@@ -256,7 +263,7 @@ pub(super) fn spawn_head_rows(grid: &mut ChildSpawnerCommands) {
 }
 
 /// A picture in each style, as many to a row as rings have.
-fn spawn_style_rows(grid: &mut ChildSpawnerCommands, shown: fn(Style) -> ArmourShown) {
+pub(super) fn spawn_style_rows(grid: &mut ChildSpawnerCommands, shown: fn(Style) -> ArmourShown) {
     for (row, styles) in Style::ALL.chunks(RING_COLUMNS as usize).enumerate() {
         let label = if row == 0 { "Styles" } else { "" };
         let pictures = styles.iter().map(|&style| Shown::Armour(shown(style)));
