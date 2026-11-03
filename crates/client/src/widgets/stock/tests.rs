@@ -1,5 +1,5 @@
 use super::*;
-use shared::item::MadeAt;
+use shared::item::{ItemKind, MadeAt};
 use shared::world::WorldId;
 
 const COLUMNS: u8 = 12;

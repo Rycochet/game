@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 
 use super::super::text_box::RaisesKeyboard;
-use super::super::{ButtonState, Pressable, TextSize, spawn_button, spawn_strokes};
+use super::super::{
+    ButtonState, Pressable, TextSize, spawn_button, spawn_small_icon_button, spawn_strokes,
+};
 use super::{ARROW_RIGHT, ARROW_STROKES, ARROW_WIDE};
 
 /// A choice among `options`. Set `selected` to change it.
@@ -12,6 +14,17 @@ pub struct Dropdown {
     pub options: Vec<String>,
     pub selected: usize,
     pub searchable: bool,
+    /// A picture for each option, shown beside it in the list, or none.
+    pub icons: Vec<Handle<Image>>,
+    /// Options shown but not to be chosen, by index; missing ones are not greyed.
+    pub greyed: Vec<bool>,
+}
+
+impl Dropdown {
+    /// Whether this option is shown greyed, and can't be chosen.
+    pub(in crate::widgets) fn is_greyed(&self, at: usize) -> bool {
+        self.greyed.get(at).copied().unwrap_or(false)
+    }
 }
 
 /// The player chose an option of this dropdown.
@@ -72,6 +85,20 @@ pub fn spawn_dropdown<'a>(
     if searchable {
         button.insert(RaisesKeyboard);
     }
+    button
+}
+
+/// A small icon button showing the chosen option's picture, which opens the list.
+/// Give it a `ButtonTooltip` to say what it chooses.
+pub fn spawn_icon_dropdown<'a>(
+    parent: &'a mut ChildSpawnerCommands,
+    dropdown: Dropdown,
+    node: Node,
+) -> EntityCommands<'a> {
+    let icon = dropdown.icons.get(dropdown.selected).cloned();
+    let mut button =
+        spawn_small_icon_button(parent, ButtonState::Normal, icon.unwrap_or_default(), node);
+    button.insert((dropdown, Pressable));
     button
 }
 

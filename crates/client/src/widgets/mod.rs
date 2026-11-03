@@ -31,7 +31,7 @@ pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]
 pub use clipboard::copy_to_clipboard;
-pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
+pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
@@ -66,7 +66,10 @@ pub use boxes::{panel, panel_frame, panel_title, raised_box, spawn_tooltip, tool
 use boxes::{raised_border, sunken_border};
 pub use button_state::{ButtonPressed, ButtonState, Pressable, RaisePanel, WidgetSystems};
 use buttons::{Stroke, spawn_strokes};
-pub use buttons::{spawn_button, spawn_check_button, spawn_close_button, spawn_icon_button};
+pub use buttons::{
+    spawn_button, spawn_check_button, spawn_close_button, spawn_icon_button,
+    spawn_small_icon_button,
+};
 
 /// The width of the edge of a panel.
 pub const PANEL_EDGE: f32 = 3.0;

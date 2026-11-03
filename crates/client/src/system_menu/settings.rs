@@ -119,6 +119,7 @@ pub(super) fn fill_interface_page(
                 options: size_options(),
                 selected: size_index(preferences.interface_size),
                 searchable: false,
+                ..default()
             };
             let node = Node {
                 width: px(DROPDOWN_WIDTH),
