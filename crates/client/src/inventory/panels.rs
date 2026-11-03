@@ -14,7 +14,7 @@ use super::give::NearbyPanel;
 use super::ground::{GroundHolder, spawn_section};
 use super::hold::Target;
 use super::{Carried, Holding, OpenCharacter, item_cell_in_front};
-use crate::common::{GROUND, GameView, PointerPosition, SheetText};
+use crate::common::{GROUND, GameView, SheetText, UiPointer};
 use crate::item_art::look_of;
 use crate::widgets::{
     ALLOWED, ButtonPressed, ButtonState, ButtonTooltip, CELL, Floating, GRID_LINE, HELD_ITEM_Z,
@@ -707,7 +707,7 @@ pub(super) fn show_held(
 pub(super) fn show_tooltip(
     carried: Res<Carried>,
     holding: Res<Holding>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     open: Res<OpenGrids>,
     nodes: Query<
         (

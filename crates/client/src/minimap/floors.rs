@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use super::{CORNER_GAP, FullMap, full_map_area, full_map_picture_corner};
+use super::{CORNER_GAP, FullMap, Room, full_map_area, full_map_picture_corner};
 use crate::common::{CurrentDungeon, FirstFloor, GameView, OtherLevels};
 use crate::widgets::{ButtonState, TextSize, layer_z, spawn_button};
 
@@ -61,7 +61,7 @@ pub(super) fn buttons(
 
 /// The column's top-left corner and its size, in logical pixels, centred down
 /// the side of the full map.
-pub(super) fn column(window: &Window, count: usize) -> (Vec2, Vec2) {
+pub(super) fn column(window: &Room, count: usize) -> (Vec2, Vec2) {
     let count = count as f32;
     let size = Vec2::new(
         BUTTON_WIDTH,
@@ -77,7 +77,7 @@ pub(super) fn column(window: &Window, count: usize) -> (Vec2, Vec2) {
 }
 
 /// Which button, counted from the top, is at a point on the window.
-pub(super) fn under(window: &Window, at: Vec2, count: usize) -> Option<usize> {
+pub(super) fn under(window: &Room, at: Vec2, count: usize) -> Option<usize> {
     let (corner, size) = column(window, count);
     // Half the gap each way belongs to the nearest button, and a little to the
     // sides, for fingers.
@@ -107,6 +107,7 @@ type ButtonsDrawn = (Vec<u32>, Option<u32>, Option<u32>, u32);
 pub(super) fn show_buttons(
     mut commands: Commands,
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
     levels: Res<OtherLevels>,
@@ -115,6 +116,7 @@ pub(super) fn show_buttons(
     column_node: Single<(Entity, &mut Node), With<FloorColumn>>,
     mut drawn: Local<ButtonsDrawn>,
 ) {
+    let window = Room::of(&window, &ui_scale);
     let floors = buttons(*view.get(), full.open, &dungeon, &levels);
     let (entity, mut node) = column_node.into_inner();
     let (corner, _) = column(&window, floors.len());

@@ -5,6 +5,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 ## Files
 
 - `crates/client/src/widgets/feedback.rs`: `ButtonStyle`, `ButtonTooltip`; `track_pointer` (first in `Presses`), `show_button_looks`, `show_edges`, `spread_ripples`, button names after a wait. Unit tests.
+- `crates/client/src/widgets/scale.rs`: how big the interface is drawn: `apply_interface_scale` (`PreUpdate`, before `PointerSystems`) sets Bevy's `UiScale` from `Preferences` and the window, `interface_scale`, `TouchOnly`, `INTERFACE_PERCENTS`. Unit tests.
 - `crates/client/src/widgets/theme.rs`: the colours, `TextSize` and the soft shadow. Unit test.
 - `crates/client/src/widgets/mod.rs`: `WidgetsPlugin`, sizes, `ButtonState`, `raised_box`, `panel`, `panel_frame`, `panel_title`, `spawn_tooltip`, `spawn_button`, `spawn_icon_button`, `spawn_check_button`, `spawn_close_button`.
 - `crates/client/src/widgets/fullscreen.rs`: `spawn_fullscreen_layer`, `darkening`, `leaves_presses`, `layer_z`, `layer_share`. Unit tests.
@@ -26,6 +27,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 ## Public API
 
 - `WidgetsPlugin`; `WidgetSystems` (system sets, `Presses`, `Front`, then `Modal`): anything covering the screen reads presses in `Modal`, or `Front` to be ahead of those (the system menu); anything else taking clicks in `PreUpdate` runs after both.
+- `INTERFACE_PERCENTS`: the sizes Settings offers after Auto. `TouchOnly(bool)` (resource): the device has only a touch screen (browsers say, with `any-pointer: fine`; natively never), so touch is on whatever the setting.
 - `INK`, `PARCHMENT`, `CLOSE_PIXELS`, `BUTTON_PADDING`, `PANEL_EDGE`.
 - `TextSize` (`Small`, `Medium`, `Large`, `Title`), with `.font()`: all writing is one of these.
 - `panel()`, `panel_title(text)`: a parchment panel with a raised edge (give its `Node` a border of `PANEL_EDGE`) and a soft shadow, placed by absolute position, and the writing for its title. `panel_frame()`: the edge as a child, for a panel whose children are placed by numbers.
@@ -51,7 +53,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Depends on
 
-- `common` (`PointerPosition`, `PointerSystems`, `TouchGesture`), `item_art`.
+- `common` (`UiPointer`, `PointerSystems`, `TouchGesture`, `in_interface`, `interface_area`, `Preferences`), `item_art`.
 
 ## Used by
 
@@ -59,6 +61,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Notes
 
+- Interface size: Auto is the smaller of width ÷ 1920 and height ÷ 1080 of the window's logical pixels (owner's choice, so a maximised 1080p screen is today's size); a percentage otherwise; always 50% to 300%, and at least 100% with touch on. Everything built from `Node`s grows with it except the minimap and full map (see there). Hit tests, panel places and anything at the pointer are in interface pixels (`UiPointer`, `logical_rect`, `shown_at`); window sizes and `TouchGesture`'s positions and drags are converted with `in_interface` / `interface_area`. The soft keyboard's places go back to window pixels for the browser.
 - Sliders by touch: a tap moves the mark there, and a drag starting on one moves it (`drag_sliders`, before `take_presses`, which would otherwise take a drag on a panel).
 - Dropdowns: an open list takes all input, in `Presses` so nothing else sees it. Up and Down move the highlight, Return chooses it (or the first), Esc or a click outside closes it, and the wheel or a finger scrolls. Only a window of `ROWS` rows is drawn rather than clipping more, as a clipped node still takes presses here. Nothing in the game uses them yet: see Show Widgets (owner kept them when Generate POI became a submenu).
 - On-screen keyboard: browsers only allow focusing an input during the tap, so a `pointerup` listener on the canvas focuses the hidden input if the tap is on a box, or a dropdown with search, whose places are sent each frame. Untested on a real iPad.

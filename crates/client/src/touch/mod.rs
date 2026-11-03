@@ -8,7 +8,7 @@ use bevy::input::touch::Touches;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::common::{PointerPosition, PointerSystems, TouchGesture};
+use crate::common::{PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface};
 
 /// A finger moving further than this (logical pixels) from where it landed is
 /// dragging, so lifting it is no longer a tap.
@@ -215,11 +215,14 @@ fn fingers<'a>(touches: impl Iterator<Item = &'a bevy::input::touch::Touch>) -> 
 
 /// Runs in `PreUpdate`, so the maps and the game see a tap as a click made
 /// with the mouse. The click lasts one frame.
+#[allow(clippy::too_many_arguments)]
 fn read_touches(
     touches: Res<Touches>,
     window: Single<&Window, With<PrimaryWindow>>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     mut pointer: ResMut<PointerPosition>,
+    mut ui_pointer: ResMut<UiPointer>,
+    ui_scale: Res<UiScale>,
     mut gesture: ResMut<TouchGesture>,
     mut tracker: Local<Tracker>,
     time: Res<Time<Real>>,
@@ -248,6 +251,7 @@ fn read_touches(
         .position
         .or(tapped)
         .or_else(|| window.cursor_position());
+    ui_pointer.0 = pointer.0.map(|at| in_interface(at, &ui_scale));
     *gesture = TouchGesture {
         tap: reading.tap,
         still_at: tracker.still_at(&down, now),
@@ -415,6 +419,8 @@ mod tests {
             .init_resource::<Touches>()
             .init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<PointerPosition>()
+            .init_resource::<UiPointer>()
+            .insert_resource(UiScale(2.0))
             .init_resource::<TouchGesture>()
             .init_resource::<Time<Real>>()
             .add_systems(Update, (touch_screen_input_system, read_touches).chain());
@@ -449,6 +455,8 @@ mod tests {
                 .pressed(MouseButton::Left)
         );
         assert_eq!(app.world().resource::<PointerPosition>().0, Some(spot));
+        // In the interface's pixels, drawn twice its size here.
+        assert_eq!(app.world().resource::<UiPointer>().0, Some(spot / 2.0));
 
         send(&mut app, TouchPhase::Ended, 1, spot);
         app.update();

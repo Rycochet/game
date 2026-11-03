@@ -10,7 +10,7 @@ use shared::item::{Item, ItemKind, Quality, Rotation, Shape};
 use super::aura::{Aura, AuraMask, aura_glow};
 use super::set_edge::{SetEdge, set_edge};
 use super::{GRID_COLOUR, GRID_LINE, ITEM_EDGE, Pressable, TextSize, spawn_tooltip};
-use crate::common::{NO_QUALITY_NAME, PointerPosition, quality_colour};
+use crate::common::{NO_QUALITY_NAME, UiPointer, interface_area, quality_colour};
 use crate::item_art::{ItemPicture, Look, look_of};
 
 /// A grid cell, across, in logical pixels.
@@ -45,7 +45,7 @@ pub struct ItemTip {
     pub quality: Option<Quality>,
     /// Gets a metal edge.
     pub set: bool,
-    /// Where its top left goes.
+    /// Where its top left goes, in the interface's pixels (`UiPointer`'s).
     pub at: Vec2,
 }
 
@@ -153,14 +153,16 @@ pub fn covering() -> Node {
     }
 }
 
-/// Where a node is on the screen, in logical pixels: its top left and size.
+/// Where a node is on the screen, in the interface's pixels (`UiPointer`'s, as
+/// `Node`s are sized in): its top left and size.
 pub fn logical_rect(node: &ComputedNode, transform: &UiGlobalTransform) -> (Vec2, Vec2) {
     let size = node.size() * node.inverse_scale_factor;
     let centre = transform.translation * node.inverse_scale_factor;
     (centre - size / 2.0, size)
 }
 
-/// Whether a node is at this point, in logical pixels, and not scrolled out of sight.
+/// Whether a node is at this point, in the interface's pixels (`UiPointer`'s), and
+/// not scrolled out of sight.
 pub fn shown_at(
     at: Vec2,
     node: &ComputedNode,
@@ -382,7 +384,7 @@ pub(super) fn spawn_name_box(mut commands: Commands) {
 /// been asked for already.
 #[allow(clippy::type_complexity)]
 pub(super) fn name_item_at_pointer(
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     nodes: Query<
         (
             &ComputedStackIndex,
@@ -420,6 +422,7 @@ pub(super) fn name_item_at_pointer(
 pub(super) fn show_item_tooltip(
     mut tooltip: ResMut<ItemTooltip>,
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     name_box: Single<(&mut Node, &mut Visibility, &ComputedNode), With<NameBox>>,
     text: Single<(&mut Text, &mut TextColor), With<NameText>>,
     edge: Single<(&mut SetEdge, &mut Visibility), (With<NameEdge>, Without<NameBox>)>,
@@ -446,7 +449,10 @@ pub(super) fn show_item_tooltip(
     ));
     // Kept on the screen, by the size it last had.
     let size = computed.size() * computed.inverse_scale_factor;
-    let at = tip.at.min(window.size() - size).max(Vec2::ZERO);
+    let at = tip
+        .at
+        .min(interface_area(&window, &ui_scale) - size)
+        .max(Vec2::ZERO);
     node.left = px(at.x);
     node.top = px(at.y);
 }

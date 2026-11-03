@@ -16,7 +16,7 @@ use super::{
     ButtonPressed, ButtonState, INK, PANEL_EDGE, Pressable, Stroke, TextSize, panel, spawn_button,
     spawn_strokes, stops_presses,
 };
-use crate::common::TouchGesture;
+use crate::common::{TouchGesture, in_interface, interface_area};
 
 /// Above anything a dropdown can be on.
 const LIST_LAYER: i32 = 4;
@@ -152,6 +152,7 @@ pub(super) fn run_dropdowns(
     mut scroll: ResMut<AccumulatedMouseScroll>,
     mut gesture: ResMut<TouchGesture>,
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     mut dropdowns: Query<(&mut Dropdown, &ComputedNode, &UiGlobalTransform)>,
     options: Query<&ListOption>,
     boxes: Query<&TextBox>,
@@ -170,7 +171,7 @@ pub(super) fn run_dropdowns(
         if let Some((entity, dropdown, node, transform)) = opening {
             let scale = node.inverse_scale_factor;
             let place = Rect::from_center_size(transform.translation * scale, node.size() * scale);
-            let area = Vec2::new(window.width(), window.height());
+            let area = interface_area(&window, &ui_scale);
             let new = spawn_list(&mut commands, entity, dropdown, place, area);
             focus.0 = new.search;
             open.0 = Some(new);
@@ -210,7 +211,7 @@ pub(super) fn run_dropdowns(
             list.first + 1
         };
     }
-    list.dragged += gesture.drag.y;
+    list.dragged += in_interface(gesture.drag, &ui_scale).y;
     while list.dragged.abs() >= DRAG_PER_ROW {
         list.highlight = None;
         if list.dragged > 0.0 {

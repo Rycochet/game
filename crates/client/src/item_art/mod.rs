@@ -16,6 +16,7 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
+use bevy::window::PrimaryWindow;
 use shared::armour::hands::{Hand, HandsForm};
 use shared::armour::shoulders::ShouldersForm;
 use shared::blade::BladeForm;
@@ -38,6 +39,12 @@ const CAMERA_UP: Vec3 = Vec3::NEG_Z;
 /// How thick the black edge round every picture is, in its own pixels: pictures are
 /// drawn at twice the size they are shown.
 const OUTLINE_PIXELS: f32 = 4.0;
+/// The most times over the pixels asked for a picture is drawn with, for a large
+/// interface (see `ItemPictures::detail`).
+const MOST_DETAIL: u32 = 2;
+/// The screen's pixels to an interface pixel that pictures as asked for are sharp up
+/// to: they are asked for at twice the size they are shown.
+const SHARP_UP_TO: f32 = 2.0;
 /// How many black copies make the edge: enough that it looks round.
 const OUTLINE_COPIES: usize = 16;
 /// How far behind a model its black copies go, to be behind every part of it.
@@ -253,20 +260,32 @@ pub fn look_of(item: &Item) -> Option<Look> {
 
 /// The pictures made or being made. Ask for one with `picture`: it is empty for the
 /// frames until it has been drawn.
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct ItemPictures {
+    /// By the pixels they were drawn with.
     made: HashMap<(Look, u32), Handle<Image>>,
+    /// With the pixels asked for, for the black edge.
     waiting: VecDeque<(Look, u32, Handle<Image>)>,
+    /// How many times over the pixels asked for they are drawn with, so they stay
+    /// sharp on a large interface.
+    detail: u32,
+}
+
+impl Default for ItemPictures {
+    fn default() -> Self {
+        Self {
+            made: HashMap::default(),
+            waiting: VecDeque::default(),
+            detail: 1,
+        }
+    }
 }
 
 impl ItemPictures {
-    /// The picture of this, this many pixels along its longest side.
-    pub fn picture(
-        &mut self,
-        look: Look,
-        pixels: u32,
-        images: &mut Assets<Image>,
-    ) -> Handle<Image> {
+    /// The picture of this, this many pixels along its longest side (more, on a
+    /// large interface).
+    pub fn picture(&mut self, look: Look, asked: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        let pixels = asked * self.detail;
         if let Some(picture) = self.made.get(&(look.clone(), pixels)) {
             return picture.clone();
         }
@@ -278,7 +297,7 @@ impl ItemPictures {
             None,
         ));
         self.made.insert((look.clone(), pixels), picture.clone());
-        self.waiting.push_back((look, pixels, picture.clone()));
+        self.waiting.push_back((look, asked, picture.clone()));
         picture
     }
 }
@@ -287,7 +306,7 @@ impl ItemPictures {
 #[derive(Component, Clone, Debug)]
 pub struct ItemPicture {
     pub look: Look,
-    /// How many pixels along its longest side it is drawn.
+    /// How many pixels along its longest side it is asked for (`ItemPictures::picture`).
     pub pixels: u32,
 }
 
@@ -326,10 +345,38 @@ impl Plugin for ItemArtPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ItemPictures>()
             .init_resource::<StillCompiling>()
-            .add_systems(PostUpdate, (fill_pictures, draw_pictures).chain());
+            .add_systems(
+                PostUpdate,
+                (follow_interface_scale, fill_pictures, draw_pictures).chain(),
+            );
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(ExtractSchedule, count_compiling);
         }
+    }
+}
+
+/// How many times over the pixels asked for pictures are drawn with, for this many of
+/// the screen's pixels to an interface pixel.
+fn detail_for(screen_per_interface: f32) -> u32 {
+    ((screen_per_interface / SHARP_UP_TO).ceil() as u32).clamp(1, MOST_DETAIL)
+}
+
+/// Draws pictures with more pixels when the interface is drawn larger, and
+/// gives those on show the new ones.
+fn follow_interface_scale(
+    window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
+    mut pictures: ResMut<ItemPictures>,
+    mut images: ResMut<Assets<Image>>,
+    mut shown: Query<(&ItemPicture, &mut ImageNode)>,
+) {
+    let detail = detail_for(window.scale_factor() * ui_scale.0);
+    if pictures.detail == detail {
+        return;
+    }
+    pictures.detail = detail;
+    for (picture, mut node) in &mut shown {
+        node.image = pictures.picture(picture.look.clone(), picture.pixels, &mut images);
     }
 }
 
@@ -374,7 +421,7 @@ fn draw_pictures(
         spawn_lights(&mut commands);
     }
     for slot in (0..SLOTS).filter(|&slot| free[slot]) {
-        let Some((look, pixels, picture)) = pictures.waiting.pop_front() else {
+        let Some((look, asked, picture)) = pictures.waiting.pop_front() else {
             break;
         };
         let (wide, long) = look.cells();
@@ -411,7 +458,8 @@ fn draw_pictures(
             cull_mode: None,
             ..default()
         });
-        let outline = outline_copies(&parts, pixels, &black);
+        // As thick on the screen whatever the detail.
+        let outline = outline_copies(&parts, asked, &black);
         spawn_drawing(&mut commands, slot, picture, view, parts, outline);
     }
 }
@@ -522,4 +570,17 @@ fn spawn_drawing(
                 ));
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pictures_get_more_detail_on_a_large_interface() {
+        assert_eq!(detail_for(1.0), 1);
+        assert_eq!(detail_for(SHARP_UP_TO), 1);
+        assert_eq!(detail_for(2.4), 2);
+        assert_eq!(detail_for(9.0), MOST_DETAIL);
+    }
 }

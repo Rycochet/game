@@ -7,7 +7,7 @@ use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 
 use super::moveable::PanelPart;
 use super::{GRID_LINE, INK};
-use crate::common::{PointerPosition, TouchGesture};
+use crate::common::{TouchGesture, UiPointer, in_interface};
 
 const BAR_WIDTH: f32 = 10.0;
 const BAR_GAP: f32 = 4.0;
@@ -86,7 +86,8 @@ fn at_share(share: f32, furthest: f32) -> f32 {
 /// the camera doesn't move with them.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn scroll_areas(
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
+    ui_scale: Res<UiScale>,
     mouse: Res<ButtonInput<MouseButton>>,
     mut wheel: ResMut<AccumulatedMouseScroll>,
     mut gesture: ResMut<TouchGesture>,
@@ -159,9 +160,9 @@ pub(super) fn scroll_areas(
         moved = Some((area, -pixels));
         wheel.delta = Vec2::ZERO;
     } else if gesture.drag != Vec2::ZERO
-        && let Some(area) = over(gesture.drag_start, &areas)
+        && let Some(area) = over(in_interface(gesture.drag_start, &ui_scale), &areas)
     {
-        moved = Some((area, -gesture.drag.y));
+        moved = Some((area, -in_interface(gesture.drag, &ui_scale).y));
         gesture.drag = Vec2::ZERO;
     }
     if let Some((area, by)) = moved

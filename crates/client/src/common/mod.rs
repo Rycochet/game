@@ -6,7 +6,7 @@
 mod floors;
 mod preferences;
 pub use floors::{FirstFloor, OtherLevels};
-pub use preferences::Preferences;
+pub use preferences::{InterfaceSize, Preferences};
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -60,13 +60,25 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
+            .init_resource::<UiPointer>()
             .init_resource::<TouchGesture>()
             .insert_resource(preferences::load_preferences())
             .add_systems(Last, preferences::save_preferences)
+            .add_systems(Startup, open_maximised)
             .add_systems(
                 PreUpdate,
                 update_sky.run_if(resource_exists::<CurrentWorld>),
             );
+    }
+}
+
+/// Natively the window opens filling the screen, which Auto sizes the interface by.
+/// (A browser's canvas fills the page anyway.)
+fn open_maximised(mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>) {
+    if cfg!(not(target_arch = "wasm32")) {
+        for mut window in &mut windows {
+            window.set_maximized(true);
+        }
     }
 }
 
@@ -177,6 +189,23 @@ pub struct PointerSystems;
 /// `Window::cursor_position`, which knows nothing of fingers.
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq)]
 pub struct PointerPosition(pub Option<Vec2>);
+
+/// `PointerPosition` in the interface's own pixels, which `UiScale` makes bigger
+/// or smaller than the window's: what interface pieces (`Node`s) are placed and
+/// sized in. Hit tests and anything placed at the pointer use this.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq)]
+pub struct UiPointer(pub Option<Vec2>);
+
+/// A point or distance in logical window pixels, in the interface's own pixels.
+pub fn in_interface(at: Vec2, scale: &UiScale) -> Vec2 {
+    at / scale.0
+}
+
+/// The window's size in the interface's own pixels: how much room interface
+/// pieces have.
+pub fn interface_area(window: &Window, scale: &UiScale) -> Vec2 {
+    in_interface(window.size(), scale)
+}
 
 /// What fingers did this frame, other than tap. A system using it may set it
 /// back to the default so that later ones don't use it as well.

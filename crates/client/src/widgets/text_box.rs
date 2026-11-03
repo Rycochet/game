@@ -206,6 +206,7 @@ pub(super) fn show_text_boxes(
 /// Tells the browser where a tap should raise the on-screen keyboard.
 #[allow(clippy::type_complexity)]
 pub(super) fn place_soft_keyboard(
+    ui_scale: Res<UiScale>,
     places: Query<
         (&ComputedNode, &UiGlobalTransform, &InheritedVisibility),
         Or<(With<TextBox>, With<RaisesKeyboard>)>,
@@ -215,7 +216,8 @@ pub(super) fn place_soft_keyboard(
         .iter()
         .filter(|(.., visible)| visible.get())
         .map(|(node, transform, _)| {
-            let scale = node.inverse_scale_factor;
+            // In the browser's pixels, the window's logical ones.
+            let scale = node.inverse_scale_factor * ui_scale.0;
             Rect::from_center_size(transform.translation * scale, node.size() * scale)
         })
         .collect();

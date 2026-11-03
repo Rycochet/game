@@ -10,7 +10,7 @@ use super::slider::Slider;
 use super::text_box::{TextBox, TextFocus};
 use super::theme::{ERROR_EDGE, HOVER_EDGE, MAIN_BACKGROUND, PARCHMENT, RIPPLE};
 use super::{BUTTON_BORDER, ButtonState, INK, Pressable, raised_border, sunken_border};
-use crate::common::PointerPosition;
+use crate::common::UiPointer;
 
 const LIGHTER_WHEN_HOVERED: f32 = 0.06;
 const DARKER_WHEN_PRESSED: f32 = 0.08;
@@ -118,7 +118,7 @@ pub(super) fn track_pointer(
     mut commands: Commands,
     time: Res<Time>,
     mouse: Res<ButtonInput<MouseButton>>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     widgets: Query<
         (
             Entity,
@@ -292,7 +292,7 @@ pub(super) fn show_edges(
 /// Asks for the name of the button the pointer has stayed on, if it has one.
 pub(super) fn show_button_tooltips(
     time: Res<Time>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     pointed: Res<Pointed>,
     names: Query<&ButtonTooltip>,
     mut tooltip: ResMut<ItemTooltip>,

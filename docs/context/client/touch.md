@@ -8,7 +8,7 @@ Turns fingers into what the rest of the game reads, so no other module needs to 
 
 ## Public API
 
-- `TouchPlugin`. What it writes is in `common`: `PointerPosition`, `TouchGesture`, `PointerSystems`.
+- `TouchPlugin`. What it writes is in `common`: `PointerPosition`, `UiPointer` (the same in interface pixels, by `UiScale`), `TouchGesture` (window pixels), `PointerSystems`.
 
 ## Depends on
 
