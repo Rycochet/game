@@ -1,5 +1,7 @@
-use super::*;
 use shared::dungeon::Cell;
+use shared::dungeon::{Level, Sight};
+
+use super::*;
 
 fn point(x: i64, y: i64) -> Vec2d {
     Vec2d {

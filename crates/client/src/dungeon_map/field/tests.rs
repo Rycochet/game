@@ -1,5 +1,8 @@
-use super::*;
+use shared::site::FieldLook;
 use shared::site::Rect;
+
+use super::super::town::PLOUGHED_TILE;
+use super::*;
 
 fn field(livestock: bool, variety: u32) -> FieldLook {
     FieldLook {

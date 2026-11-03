@@ -1,3 +1,6 @@
+use shared::dungeon::{Cell, Level};
+
+use super::super::mesh::Surface;
 use super::*;
 
 /// Floor to the north, ground to the south, and a wall line between them

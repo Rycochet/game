@@ -1,5 +1,11 @@
-use super::*;
+use shared::dungeon::{Cell, Level};
+use shared::protocol::SeenStairs;
+use shared::rng::Seed;
+use shared::site::BuildingLook;
 use shared::site::{StairsDirection, StairsStyle};
+use std::collections::BTreeSet;
+
+use super::*;
 
 /// `#` wall, `.` floor, `,` ground, `W` window, `+` door.
 fn level(rows: &[&str]) -> Level {

@@ -1,3 +1,9 @@
+use bevy::prelude::*;
+use shared::dungeon::{Cell, Level, Sight};
+use std::collections::BTreeSet;
+
+use super::super::CELL_SIZE;
+use super::super::theme::Shape;
 use super::*;
 use crate::dungeon_map::WALL_HEIGHT;
 

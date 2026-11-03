@@ -1,3 +1,8 @@
+use shared::protocol::SeenStairs;
+use shared::site::{StairsDirection, StairsStyle};
+
+use super::super::CELL_SIZE;
+use super::super::mesh::{Builder, Surface, View};
 use super::*;
 
 fn build(direction: StairsDirection, style: StairsStyle) -> Vec<Builder> {
