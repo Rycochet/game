@@ -227,6 +227,7 @@ fn layer_letter(layer: Layer) -> &'static str {
         Layer::Skin => "In",
         Layer::Middle => "Mid",
         Layer::Outer => "Out",
+        Layer::Over => "Over",
     }
 }
 

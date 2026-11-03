@@ -406,6 +406,22 @@ mod tests {
     }
 
     #[test]
+    fn surcoats_and_caparisons_go_over_armour() {
+        use ItemKind::{Barding, Caparison, FullArmour, Surcoat, Tabard};
+        let mut inventory = carrying(&[FullArmour, Surcoat, Tabard]);
+        inventory.wear(id(1)).unwrap();
+        assert_eq!(inventory.wear(id(2)), Ok(Fit::Exact));
+        assert_eq!(inventory.covered_by(id(1)), Some(id(2)));
+        // Both are on the torso.
+        assert_eq!(inventory.check_wear(id(3)), Err(WearRefused::Clash(id(2))));
+
+        let mut horse = carrying_for(CreatureKind::Horse, &[Barding, Caparison]);
+        horse.wear(id(1)).unwrap();
+        assert_eq!(horse.wear(id(2)), Ok(Fit::Exact));
+        assert_eq!(horse.covered_by(id(1)), Some(id(2)));
+    }
+
+    #[test]
     fn gloves_lock_rings_and_fingerless_ones_dont() {
         use ItemKind::{FingerlessGloves, Gauntlets, Gloves, Ring};
         let mut inventory = carrying(&[Ring, Gloves, Ring, Gauntlets, FingerlessGloves]);

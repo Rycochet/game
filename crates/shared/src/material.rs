@@ -10,6 +10,8 @@ pub enum Category {
     Bone,
     Gem,
     Metal,
+    /// Plant stuff other than timber: rattan, cork.
+    Plant,
     Wood,
 }
 
@@ -21,12 +23,14 @@ pub enum Material {
     Bone,
     Citrine,
     Copper,
+    Cork,
     Diamond,
     Emerald,
     Garnet,
     Gold,
     Iron,
     Peridot,
+    Rattan,
     Ruby,
     Sapphire,
     Silver,
@@ -36,18 +40,20 @@ pub enum Material {
 
 impl Material {
     /// Every material, alphabetically by name.
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 18] = [
         Self::Amethyst,
         Self::Aquamarine,
         Self::Bone,
         Self::Citrine,
         Self::Copper,
+        Self::Cork,
         Self::Diamond,
         Self::Emerald,
         Self::Garnet,
         Self::Gold,
         Self::Iron,
         Self::Peridot,
+        Self::Rattan,
         Self::Ruby,
         Self::Sapphire,
         Self::Silver,
@@ -76,12 +82,14 @@ impl Material {
             Self::Bone => "Bone",
             Self::Citrine => "Citrine",
             Self::Copper => "Copper",
+            Self::Cork => "Cork",
             Self::Diamond => "Diamond",
             Self::Emerald => "Emerald",
             Self::Garnet => "Garnet",
             Self::Gold => "Gold",
             Self::Iron => "Iron",
             Self::Peridot => "Peridot",
+            Self::Rattan => "Rattan",
             Self::Ruby => "Ruby",
             Self::Sapphire => "Sapphire",
             Self::Silver => "Silver",
@@ -94,6 +102,7 @@ impl Material {
         match self {
             Self::Bone => Category::Bone,
             Self::Copper | Self::Gold | Self::Iron | Self::Silver => Category::Metal,
+            Self::Cork | Self::Rattan => Category::Plant,
             Self::Wood => Category::Wood,
             _ => Category::Gem,
         }
@@ -106,8 +115,10 @@ impl Material {
             | Self::Bone
             | Self::Citrine
             | Self::Copper
+            | Self::Cork
             | Self::Garnet
             | Self::Peridot
+            | Self::Rattan
             | Self::Wood => 1,
             Self::Aquamarine | Self::Iron | Self::Topaz => 2,
             Self::Emerald | Self::Ruby | Self::Sapphire | Self::Silver => 3,
@@ -118,6 +129,8 @@ impl Material {
     /// How heavy it is, as tenths of a gram for each cubic centimetre. A first guess.
     pub fn density(self) -> u32 {
         match self {
+            Self::Cork => 2,
+            Self::Rattan => 5,
             Self::Wood => 7,
             Self::Bone => 19,
             Self::Iron => 79,
