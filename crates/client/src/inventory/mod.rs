@@ -29,6 +29,10 @@ use panels::{BinNode, DropNode, ItemCell, OpenGrids};
 
 /// A press on an item this long after the last one on it opens it.
 const DOUBLE_PRESS_SECONDS: f64 = 0.35;
+/// A press and release this quick, this close together, is a click: what it picked up
+/// stays held until the next.
+const CLICK_SECONDS: f64 = 0.3;
+const CLICK_PIXELS: f32 = 8.0;
 
 pub struct InventoryPlugin;
 
@@ -48,8 +52,9 @@ impl Plugin for InventoryPlugin {
             .add_systems(
                 PreUpdate,
                 (
-                    // Before widgets stop a finger's drag on a panel.
-                    pick_up_by_finger
+                    // Before widgets stop a finger's drag on a panel, and before the
+                    // menus see Esc.
+                    (pick_up_by_finger, cancel_held)
                         .before(WidgetSystems::Presses)
                         .after(PointerSystems),
                     hold_items.after(WidgetSystems::Modal),
@@ -104,6 +109,8 @@ struct Holding {
     at: Option<Vec2>,
     /// If it is still someone else's: who, and the thing itself.
     stock: Option<(shared::id::Id, Item)>,
+    /// Where and when the mouse picked it up.
+    picked: Option<(Vec2, f64)>,
 }
 
 impl Holding {
@@ -125,8 +132,10 @@ struct HeldBy {
 /// What let go of it drops it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Hand {
-    /// The left button, or a tap, which arrives as a click.
+    /// The left button, until it is let go.
     Mouse,
+    /// A click, until the next.
+    Clicked,
     Finger,
     /// Nothing does (`InventoryDebug::PickUp`).
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
@@ -144,6 +153,11 @@ pub enum InventoryDebug {
     PickUp(usize),
     /// Puts all but the first of what is in the pockets on the ground.
     DropSome,
+}
+
+/// Whether a press and release were a click rather than a drag.
+fn is_click(from: Vec2, to: Vec2, seconds: f64) -> bool {
+    seconds < CLICK_SECONDS && from.distance(to) < CLICK_PIXELS
 }
 
 fn read_server(mut from_server: MessageReader<FromServer>, mut carried: ResMut<Carried>) {
@@ -181,8 +195,17 @@ fn item_cell_in_front<'a>(
         .and_then(|(.., cell)| cell.copied())
 }
 
-/// A finger sliding away from an item picks it up, once for each contact: a tap
-/// is a click instead, for opening things.
+/// Esc puts back what is held, and goes no further.
+fn cancel_held(mut keys: ResMut<ButtonInput<KeyCode>>, mut holding: ResMut<Holding>) {
+    if holding.held.is_some() && keys.clear_just_pressed(KeyCode::Escape) {
+        holding.held = None;
+        holding.aim = None;
+        holding.stock = None;
+    }
+}
+
+/// A finger staying still on an item picks it up, once for each contact: a tap shows
+/// its name, or opens it, and a finger sliding straight away is scrolling.
 #[allow(clippy::type_complexity)]
 fn pick_up_by_finger(
     mut gesture: ResMut<TouchGesture>,
@@ -215,12 +238,18 @@ fn pick_up_by_finger(
     if gesture.first_finger.is_none() {
         *decided = None;
     }
-    if gesture.drag == Vec2::ZERO || holding.held.is_some() || *decided == Some(gesture.drag_start)
-    {
-        return;
+    if holding.held.is_some_and(|held| held.by == Hand::Finger) {
+        // Moving what it holds, not scrolling what is under it.
+        gesture.drag = Vec2::ZERO;
     }
-    *decided = Some(gesture.drag_start);
-    if let Some(cell) = item_cell_in_front(gesture.drag_start, nodes.iter())
+    let Some(start) = gesture
+        .still_at
+        .filter(|&start| holding.held.is_none() && *decided != Some(start))
+    else {
+        return;
+    };
+    *decided = Some(start);
+    if let Some(cell) = item_cell_in_front(start, nodes.iter())
         && carried.0.covered_by(cell.id).is_none()
         && (god.0 || carried.0.may_remove(cell.id, Remover::Wearer))
     {
@@ -232,13 +261,12 @@ fn pick_up_by_finger(
             },
             by: Hand::Finger,
         });
-        gesture.drag = Vec2::ZERO;
         return;
     }
     let front = stock
         .iter()
         .filter(|(_, node, transform, visible, _, clip)| {
-            visible.get() && shown_at(gesture.drag_start, node, transform, *clip)
+            visible.get() && shown_at(start, node, transform, *clip)
         })
         .max_by_key(|(stack, ..)| stack.0);
     if let Some((.., Some(cell), _)) = front {
@@ -251,7 +279,6 @@ fn pick_up_by_finger(
             by: Hand::Finger,
         });
         holding.stock = Some((cell.with, cell.item.clone()));
-        gesture.drag = Vec2::ZERO;
     }
 }
 
@@ -277,16 +304,17 @@ fn hold_items(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     mut to_server: MessageWriter<ToServer>,
-    (mut over_gifts, mut gave, mut held_stock, mut took, mut spent, view): (
+    (mut over_gifts, mut gave, mut held_stock, mut took, mut spent, view, mut keys): (
         ResMut<HeldOverGifts>,
         MessageWriter<GaveItem>,
         ResMut<HeldStock>,
         MessageWriter<TookItem>,
         MessageWriter<SpentEnergy>,
         Res<State<GameView>>,
+        ResMut<ButtonInput<KeyCode>>,
     ),
     time: Res<Time<Real>>,
-    mut last_press: Local<Option<(shared::id::Id, f64)>>,
+    (mut last_press, mut was_down): (Local<Option<(shared::id::Id, f64)>>, Local<bool>),
     nodes: Query<
         (
             &ComputedStackIndex,
@@ -303,8 +331,45 @@ fn hold_items(
         Without<Floating>,
     >,
 ) {
+    let now = time.elapsed_secs_f64();
+    // Widgets may have taken `just_pressed`.
+    let new_press = mouse.pressed(MouseButton::Left) && !*was_down;
+    *was_down = mouse.pressed(MouseButton::Left);
+    let clicked_held = holding
+        .held
+        .filter(|held| held.by == Hand::Clicked)
+        .map(|held| held.item.id);
+    if clicked_held.is_some() && new_press {
+        // For putting it down, not for what is under it.
+        mouse.clear_just_pressed(MouseButton::Left);
+    }
+    if let Some(id) = clicked_held.filter(|_| new_press)
+        && last_press
+            .is_some_and(|(pressed, when)| pressed == id && now - when < DOUBLE_PRESS_SECONDS)
+        && carried
+            .0
+            .find(id)
+            .is_some_and(|item| item.kind.def().container.is_some())
+        && !carried.0.in_bin(id)
+    {
+        // A double click on a bag: the first lifted it, and it goes back.
+        holding.held = None;
+        holding.aim = None;
+        open.open(Holder::Inside(id), &carried.0, &mut commands, &mut raise);
+        pressed.clear();
+        return;
+    }
+    let tapped = gesture.tap;
+    let at_press = pointer.0;
     for press in pressed.read() {
+        if clicked_held.is_some() {
+            continue;
+        }
         if let Ok(cell) = stock_cells.get(press.0) {
+            if tapped {
+                continue;
+            }
+            holding.picked = at_press.map(|at| (at, now));
             holding.held = Some(HeldBy {
                 item: Held {
                     id: cell.item.id,
@@ -319,7 +384,6 @@ fn hold_items(
         let Ok(&cell) = cells.get(press.0) else {
             continue;
         };
-        let now = time.elapsed_secs_f64();
         let again =
             last_press.is_some_and(|(id, when)| id == cell.id && now - when < DOUBLE_PRESS_SECONDS);
         *last_press = Some((cell.id, now));
@@ -337,6 +401,10 @@ fn hold_items(
             );
             continue;
         }
+        if tapped {
+            continue;
+        }
+        holding.picked = at_press.map(|at| (at, now));
         holding.held = Some(HeldBy {
             item: Held {
                 id: cell.id,
@@ -371,7 +439,7 @@ fn hold_items(
     let turn = mouse.just_pressed(MouseButton::Right) || gesture.other_finger_tapped;
     // So the camera doesn't turn with the same press.
     mouse.reset(MouseButton::Right);
-    if turn {
+    if turn || keys.clear_just_pressed(KeyCode::KeyR) {
         held.item = match &holding.stock {
             Some((_, item)) => held.item.turned_as(item),
             None => held.item.turned(&carried.0),
@@ -385,7 +453,7 @@ fn hold_items(
     }
     let at = match held.by {
         Hand::Finger => finger.or(holding.at),
-        Hand::Mouse | Hand::Debug => pointer.0.or(holding.at),
+        Hand::Mouse | Hand::Clicked | Hand::Debug => pointer.0.or(holding.at),
     };
     holding.at = at;
     let over = at.and_then(|at| {
@@ -474,8 +542,17 @@ fn hold_items(
         hold::target(&carried.0, held.item, over)
     };
 
+    let released = !mouse.pressed(MouseButton::Left);
+    if held.by == Hand::Mouse
+        && released
+        && let (Some((from, when)), Some(at)) = (holding.picked, at)
+        && is_click(from, at, now - when)
+    {
+        held.by = Hand::Clicked;
+    }
     let let_go = match held.by {
-        Hand::Mouse => !mouse.pressed(MouseButton::Left),
+        Hand::Mouse => released,
+        Hand::Clicked => new_press,
         Hand::Finger => finger.is_none(),
         Hand::Debug => false,
     };
@@ -643,5 +720,18 @@ fn run_debug(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_quick_press_in_one_place_is_a_click() {
+        let from = Vec2::new(100.0, 100.0);
+        assert!(is_click(from, from + Vec2::X, 0.1));
+        assert!(!is_click(from, from + Vec2::X, CLICK_SECONDS));
+        assert!(!is_click(from, from + Vec2::X * CLICK_PIXELS, 0.1));
     }
 }
