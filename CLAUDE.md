@@ -90,6 +90,17 @@ If a task touches a module not listed here, it doesn't exist yet: create it (see
 - If two modules need the same type, move it to `common` rather than having them depend on each other.
 - Keep modules small enough that their context file stays short. Split a module (e.g. `world/terrain`, `world/render`) when it grows past what one context file can summarise.
 
+## File size (owner's rule)
+
+Small files, each about one thing, are easier to understand and to find things in, for the owner and for Claude alike.
+
+- **One idea per file:** a type and its `impl`, one Bevy system with its small helpers, one generator step, one message handler. Name the file after it.
+- **Aim for under about 100 lines; 300 is the limit**, not counting tests. `cargo xtask lint` (and so the pre-commit hook) enforces the limit.
+- **Tests go in their own file:** `#[cfg(test)] mod tests;` in `foo.rs` (or `foo/mod.rs`) is read from `foo/tests.rs`.
+- **`mod.rs` holds** the `mod` lines, the plugin and `pub use` re-exports, so other modules' paths don't change when a module is split into files.
+- **Widen privacy only as far as a split needs** (`pub(super)`, `pub(crate)`), never to `pub` for convenience: the module's public API stays what its context file lists.
+- **Files over the limit** are listed in `xtask/large-files.txt` and may only shrink. One with a `# reason` (such as a long data table) is large on purpose; one without is waiting to be split. After a change shrinks listed files, run `cargo xtask sizes` to lower or remove their entries. Never add an entry, or a reason, without the owner's agreement: split the file instead.
+
 ## Keeping context files up to date (required)
 
 Whenever a change affects a module, update its `docs/context/<crate>/<module>.md` **in the same commit / branch / PR** as the code. Update it when you change:
@@ -137,8 +148,8 @@ When the owner says a branch is ready to merge (or asks for a PR):
 - Native: `cargo run` · Server: `cargo run -p server` (with `HOW_WEB=dist` after `trunk build`, it serves the web client too, on https://localhost:8081 with a self-signed certificate, and also on http://localhost:8080 with `HOW_BEHIND_PROXY=true`) · Web: `trunk serve` (http://localhost:3000; it has no game server: use the server's port to play) · Format: `cargo fmt`
 - Debug API: build with `--features debug-api` (debug builds only; releases refuse it) and start with `HOW_DEBUG_API=true`, then `cargo xtask api <method> [key=value ...]` (`--server` for the embedded server); `rpc.discover` lists the methods. It can also click, drag, tap, scroll, press keys and type (`client.click`, `client.key`, ...), for testing the interface. See `docs/context/debug-api.md`.
 - Release package: `cargo xtask package` (native client + server + `assets/` in `target/package/`; native releases must always include the assets).
-- **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native (with and without the debug API) and for wasm (type-check only), then `cargo test --workspace` with the debug API, then a check that no `tmp.` debug API methods are left. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
-- **Lint: `cargo xtask lint`**: the same without the tests. The pre-commit hook in `.githooks/` runs it (turn on once per clone with `cargo xtask hooks`). It checks the files on disk, not only what's staged. Fix what it reports rather than skipping it with `--no-verify`.
+- **Test: `cargo xtask test`**: formatting check, clippy with warnings as errors for native (with and without the debug API) and for wasm (type-check only), then `cargo test --workspace` with the debug API, then the file size check (see "File size"), then a check that no `tmp.` debug API methods are left. Run it before finishing any change. CI no longer runs it (too much work per PR): CI runs only `cargo check --release` on Linux for ready-for-review PRs and `master`, so it must pass locally before merging.
+- **Lint: `cargo xtask lint`**: the same without the tests and the `tmp.` check. `cargo xtask sizes` lowers the entries in `xtask/large-files.txt` after files shrink. The pre-commit hook in `.githooks/` runs it (turn on once per clone with `cargo xtask hooks`). It checks the files on disk, not only what's staged. Fix what it reports rather than skipping it with `--no-verify`.
 
 ## Development workflow
 
