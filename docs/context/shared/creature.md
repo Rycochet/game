@@ -12,7 +12,7 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 
 - `CreatureKind::{ALL, def()}`, `CreatureDef { name, weight (grams), size, pockets, body, speed, uses_stairs, playable, stats, skills, abilities, looks }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
 - `BodyPart { location, layers, places }`: which layers a location takes, and how many things taking one place fit there.
-- `Layer::{Skin, Middle, Outer}`, `Location`, `Size::{Tiny..Giant}` (`name`, `quarters`, `stepped`, `apart`).
+- `Layer::{Skin, Middle, Outer, Over}`, `Location`, `Size::{Tiny..Giant}` (`name`, `quarters`, `stepped`, `apart`).
 
 ## Depends on
 
@@ -28,7 +28,8 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 - Going on and coming off: nothing on a higher layer may be at any of its locations (`covered_by`), and on going on, nothing on the same layer (`WearRefused::Clash`). Taking off is `Inventory::move_item`, which refuses `MoveRefused::Covered`; destroying is refused the same way.
 - `one_place` items (rings) take one of a location's places, and clash only once all are taken or something whole is on that layer.
 - Padding (`WearDef::padded`): armour with its own padding also takes the Middle layer at those of its locations, for clashing and covering, so Full Armour won't go over a gambeson but goes over trousers. A body must take Middle there.
-- `Back` has two places, Outer only, for a backpack and a cloak (both `one_place`). Armour for the back is on `Torso`, so it never stops a pack. Bipeds' `Head` and `Neck` take all three layers (arming caps, coifs) and `Waist` takes Outer (faulds, tassets) as well as Middle (belts).
+- `Back` has two places, Outer only, for a backpack and a cloak (both `one_place`). Armour for the back is on `Torso`, so it never stops a pack. Bipeds' `Head` and `Neck` take Skin to Outer (arming caps, coifs) and `Waist` takes Outer (faulds, tassets) as well as Middle (belts).
+- `Over` is cloth over armour: a biped's Shoulders, Arms, Torso, Waist and Legs (surcoat, tabard), and a horse's Head, Neck and Torso (caparison over barding). Nowhere else takes it. A piece that only half covers a location doesn't list it (a knee-length surcoat isn't on the legs).
 - Rings are Skin on `Fingers`. Gloves are Middle on `Hands` and `Fingers`, gauntlets Outer on both, so both lock rings underneath; fingerless gloves are on `Hands` only. Gloves being Middle differs from the owner's first example, so that rings can stay on under them.
 - Fit is on the item itself (`item::Made`): the size it fits, the smallest and largest that can wear it, and finger count. `Made::fit` answers `Exact`, `Loose(n)` or `None`; `WearDef::adjustable` things are exact anywhere in their range; magical things are exact within `Quality::magic_reach` sizes of their own (uncommon 1 up to artifact 5), going by their usual range beyond that, whatever the fingers, but not on any body. Things covering whole fingers need exactly the body's count. Looseness has no penalty until stats have something to affect.
 - Taking off: `may_remove(id, Remover)` says who may, by what lies on it: blessed things only their wearer, cursed things nobody, and anything not worn anyone. It is for whoever acts to ask, not `move_item` or `hand_over`: a body falling or a future ability doesn't go by it. God mode skips it for the player's own attempts (`server`).

@@ -15,10 +15,12 @@ pub enum Layer {
     Skin,
     Middle,
     Outer,
+    /// Cloth over armour: surcoats, tabards, a horse's caparison.
+    Over,
 }
 
 impl Layer {
-    pub const ALL: [Self; 3] = [Self::Skin, Self::Middle, Self::Outer];
+    pub const ALL: [Self; 4] = [Self::Skin, Self::Middle, Self::Outer, Self::Over];
 }
 
 /// Somewhere on a body that clothes can go.
@@ -163,8 +165,11 @@ pub enum CreatureKind {
 
 const SKIN: &[Layer] = &[Layer::Skin];
 const SKIN_OUTER: &[Layer] = &[Layer::Skin, Layer::Outer];
+const SKIN_OUTER_OVER: &[Layer] = &[Layer::Skin, Layer::Outer, Layer::Over];
 const MIDDLE_OUTER: &[Layer] = &[Layer::Middle, Layer::Outer];
+const MIDDLE_OUTER_OVER: &[Layer] = &[Layer::Middle, Layer::Outer, Layer::Over];
 const SKIN_MIDDLE: &[Layer] = &[Layer::Skin, Layer::Middle];
+const SKIN_TO_OUTER: &[Layer] = &[Layer::Skin, Layer::Middle, Layer::Outer];
 const ALL_LAYERS: &[Layer] = &Layer::ALL;
 
 const fn part(location: Location, layers: &'static [Layer]) -> BodyPart {
@@ -185,25 +190,26 @@ const BACK: BodyPart = BodyPart {
 const fn fingers(places: u8) -> BodyPart {
     BodyPart {
         location: Location::Fingers,
-        layers: ALL_LAYERS,
+        layers: SKIN_TO_OUTER,
         places,
     }
 }
 
-/// A two-legged body with hands of this many fingers in all.
+/// A two-legged body with hands of this many fingers in all. Surcoats and
+/// tabards go Over from the shoulders to the legs.
 const fn biped(finger_count: u8) -> [BodyPart; 11] {
     [
-        part(Location::Head, ALL_LAYERS),
-        part(Location::Neck, ALL_LAYERS),
-        part(Location::Shoulders, MIDDLE_OUTER),
+        part(Location::Head, SKIN_TO_OUTER),
+        part(Location::Neck, SKIN_TO_OUTER),
+        part(Location::Shoulders, MIDDLE_OUTER_OVER),
         BACK,
         part(Location::Arms, ALL_LAYERS),
         part(Location::Torso, ALL_LAYERS),
-        part(Location::Waist, MIDDLE_OUTER),
+        part(Location::Waist, MIDDLE_OUTER_OVER),
         part(Location::Hands, MIDDLE_OUTER),
         fingers(finger_count),
         part(Location::Legs, ALL_LAYERS),
-        part(Location::Feet, ALL_LAYERS),
+        part(Location::Feet, SKIN_TO_OUTER),
     ]
 }
 
@@ -219,19 +225,20 @@ const CHICKEN: [BodyPart; 6] = [
     part(Location::Feet, SKIN),
 ];
 
+/// A caparison goes Over barding.
 const HORSE: [BodyPart; 6] = [
-    part(Location::Head, SKIN_OUTER),
-    part(Location::Neck, SKIN_OUTER),
-    part(Location::Torso, SKIN_OUTER),
+    part(Location::Head, SKIN_OUTER_OVER),
+    part(Location::Neck, SKIN_OUTER_OVER),
+    part(Location::Torso, SKIN_OUTER_OVER),
     part(Location::Forelegs, SKIN_OUTER),
     part(Location::Hindlegs, SKIN_OUTER),
     part(Location::Tail, SKIN),
 ];
 
 const CENTAUR: [BodyPart; 10] = [
-    part(Location::Head, ALL_LAYERS),
-    part(Location::Neck, ALL_LAYERS),
-    part(Location::Shoulders, MIDDLE_OUTER),
+    part(Location::Head, SKIN_TO_OUTER),
+    part(Location::Neck, SKIN_TO_OUTER),
+    part(Location::Shoulders, MIDDLE_OUTER_OVER),
     BACK,
     part(Location::Arms, ALL_LAYERS),
     part(Location::Torso, ALL_LAYERS),

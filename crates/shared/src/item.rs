@@ -221,6 +221,7 @@ pub enum ItemKind {
     Belt,
     Boomerang,
     Boots,
+    Caparison,
     Cloak,
     Coin,
     Dagger,
@@ -244,8 +245,10 @@ pub enum ItemKind {
     Socks,
     Spear,
     Stone,
+    Surcoat,
     Sword,
     TShirt,
+    Tabard,
     Trousers,
 }
 
@@ -254,7 +257,7 @@ const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 33] = [
+    pub const ALL: [Self; 36] = [
         Self::Apple,
         Self::Axe,
         Self::Backpack,
@@ -262,6 +265,7 @@ impl ItemKind {
         Self::Belt,
         Self::Boomerang,
         Self::Boots,
+        Self::Caparison,
         Self::Cloak,
         Self::Coin,
         Self::Dagger,
@@ -285,8 +289,10 @@ impl ItemKind {
         Self::Socks,
         Self::Spear,
         Self::Stone,
+        Self::Surcoat,
         Self::Sword,
         Self::TShirt,
+        Self::Tabard,
         Self::Trousers,
     ];
 
@@ -312,7 +318,7 @@ impl ItemKind {
     }
 
     pub const fn def(self) -> ItemDef {
-        use Layer::{Middle, Outer, Skin};
+        use Layer::{Middle, Outer, Over, Skin};
         use Location::{
             Arms, Back, Feet, Fingers, Forelegs, Hands, Head, Hindlegs, Legs, Neck, Shoulders,
             Torso, Waist,
@@ -351,6 +357,13 @@ impl ItemKind {
                 Outer,
                 &[Feet],
                 (1, 0),
+                false,
+            )),
+            // Cloth over barding, to below the knees, which doesn't count as the legs.
+            Self::Caparison => plain("Caparison", 4000, Shape::rectangle(3, 3)).worn(wear(
+                Over,
+                &[Head, Neck, Torso],
+                (0, 1),
                 false,
             )),
             Self::Cloak => plain("Cloak", 900, Shape::rectangle(2, 3)).worn(WearDef {
@@ -425,12 +438,26 @@ impl ItemKind {
             Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
             Self::Spear => plain("Spear", 1500, Shape::rectangle(1, 8)),
             Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)).without_quality(),
+            // Belted over armour, to the knee, which doesn't count as the legs.
+            Self::Surcoat => plain("Surcoat", 800, Shape::rectangle(2, 3)).worn(wear(
+                Over,
+                &[Torso, Waist],
+                (1, 1),
+                true,
+            )),
             Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)),
             Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
                 Skin,
                 &[Torso, Arms],
                 (1, 0),
                 false,
+            )),
+            // Open at the sides, so it fits more than one size.
+            Self::Tabard => plain("Tabard", 500, Shape::rectangle(2, 3)).worn(wear(
+                Over,
+                &[Shoulders, Torso],
+                (1, 1),
+                true,
             )),
             Self::Trousers => plain("Trousers", 500, Shape::rectangle(2, 3)).worn(wear(
                 Middle,
@@ -442,7 +469,7 @@ impl ItemKind {
         // First guesses at how much work each is beside the usual.
         def.taking(match self {
             Self::Apple | Self::Coin | Self::Stone => 10,
-            Self::Socks | Self::TShirt | Self::Trousers | Self::Hat => 50,
+            Self::Socks | Self::TShirt | Self::Trousers | Self::Hat | Self::Tabard => 50,
             Self::Ring | Self::Pouch | Self::Belt | Self::Boomerang => 75,
             Self::Gauntlets | Self::Backpack | Self::Necklace => 150,
             Self::Sword

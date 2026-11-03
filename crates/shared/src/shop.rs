@@ -53,9 +53,9 @@ pub struct Shop {
 /// a shop. Only placeholders exist to sell for now.
 pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
     use ItemKind::{
-        Apple, Backpack, Barding, Belt, Boomerang, Boots, Cloak, FingerlessGloves, FullArmour,
-        Gambeson, Gauntlets, Gloves, Hat, Lantern, Necklace, Pouch, Ring, Shoes, SmallBox, Socks,
-        Sword, TShirt, Trousers,
+        Apple, Backpack, Barding, Belt, Boomerang, Boots, Caparison, Cloak, FingerlessGloves,
+        FullArmour, Gambeson, Gauntlets, Gloves, Hat, Lantern, Necklace, Pouch, Ring, Shoes,
+        SmallBox, Socks, Surcoat, Sword, TShirt, Tabard, Trousers,
     };
     match kind {
         BuildingKind::Blacksmith => &[(Sword, 2), (Gauntlets, 2), (Lantern, 1)],
@@ -69,6 +69,8 @@ pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
             (Cloak, 1),
             (Gloves, 1),
             (FingerlessGloves, 1),
+            (Surcoat, 1),
+            (Tabard, 1),
         ],
         BuildingKind::Leatherworker => &[
             (Belt, 2),
@@ -86,6 +88,7 @@ pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
             (Gauntlets, 2),
             (Boots, 2),
             (Barding, 1),
+            (Caparison, 1),
         ],
         BuildingKind::PotionShop => &[(Apple, 1), (SmallBox, 1)],
         BuildingKind::ScrollShop => &[(Lantern, 1), (SmallBox, 1)],
