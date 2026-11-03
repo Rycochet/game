@@ -29,7 +29,7 @@ use debug::run_debug;
 use finger::{item_cell_in_front, pick_up_by_finger};
 use hold_items::hold_items;
 use holding::{Hand, HeldBy, Holding, cancel_held};
-use server::read_server;
+use server::{Stacks, read_server};
 
 /// A press on an item this long after the last one on it opens it.
 const DOUBLE_PRESS_SECONDS: f64 = 0.35;
@@ -43,6 +43,7 @@ pub struct InventoryPlugin;
 impl Plugin for InventoryPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Carried>()
+            .init_resource::<Stacks>()
             .init_resource::<Holding>()
             .init_resource::<OpenGrids>()
             .init_resource::<NearbyPanel>()

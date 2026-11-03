@@ -8,6 +8,7 @@ use super::TextSize;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod cells;
+mod count;
 mod look;
 mod name;
 mod nodes;

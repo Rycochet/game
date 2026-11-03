@@ -47,10 +47,15 @@ pub struct ItemLook {
     pub rotation: Rotation,
     /// How it glows, if it does.
     pub aura: Option<Aura>,
+    /// How many there are of it: more than one for a stack.
+    pub count: u32,
 }
 
 impl ItemLook {
+    /// How it looks, by the top of a stack, with how many there are.
     pub fn of(item: &Item) -> Self {
+        let count = item.count();
+        let item = item.top();
         Self {
             kind: item.kind,
             quality: item.quality,
@@ -58,6 +63,7 @@ impl ItemLook {
             picture: look_of(item),
             rotation: Rotation::None,
             aura: Aura::of(item),
+            count,
         }
     }
 

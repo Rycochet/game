@@ -6,6 +6,7 @@ use shared::item::Shape;
 use super::super::aura::{AuraMask, aura_glow};
 use super::super::set_edge::set_edge;
 use super::super::{GRID_COLOUR, GRID_LINE, ITEM_EDGE, Pressable};
+use super::count::spawn_count;
 use super::{
     CELL, ITEM_LABEL_FONT, ItemLook, PICTURE_PIXELS_PER_CELL, at_cell, item_colour, item_edge,
     item_edge_width, item_label, item_picture, picture_node, picture_turned,
@@ -64,6 +65,7 @@ pub fn spawn_item_cells<B: Bundle>(
         picture,
         rotation,
         aura,
+        count,
     } = look;
     let drawn = picture.is_some();
     let pixels = shape.width.max(shape.height) as u32 * PICTURE_PIXELS_PER_CELL;
@@ -130,6 +132,7 @@ pub fn spawn_item_cells<B: Bundle>(
         };
         parent.spawn(aura_glow(aura, AuraMask::Cells(shape), node));
     }
+    spawn_count(parent, count, shape, corner, item_edge_width(quality));
 }
 
 /// An edge of this width only on the sides with none of the shape beyond them.

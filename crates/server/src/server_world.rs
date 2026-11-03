@@ -1,6 +1,7 @@
 //! `ServerWorld`: the world as the server holds it, its clock, sites and what has been forgotten.
 
 use bevy::prelude::*;
+use shared::item::StackLimits;
 use shared::movement::{WorldConditions, WorldGround};
 use shared::poi::{PoiKind, PoiMap};
 use shared::protocol::WorldInfo;
@@ -52,6 +53,8 @@ pub struct ServerWorld {
     unreachable_sites: BTreeSet<SiteId>,
     /// Who is on the site levels in use.
     pub(crate) populations: Populations,
+    /// How big stacks of items may get here.
+    pub(crate) stacks: StackLimits,
     /// Sites forgotten since `super::connections::handle_messages` last looked, for
     /// putting out anyone else in them.
     forgotten: Forgotten,
@@ -145,6 +148,7 @@ impl ServerWorld {
             unsaved_sites: Unsaved::default(),
             unreachable_sites: BTreeSet::new(),
             populations: Populations::default(),
+            stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),
         };
         save_world(&world.storage, seed, clock, saved_ticks);

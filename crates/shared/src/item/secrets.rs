@@ -70,5 +70,8 @@ impl Item {
         for placed in &mut self.contents {
             placed.item.hide_secrets();
         }
+        for stacked in &mut self.above {
+            stacked.hide_secrets();
+        }
     }
 }

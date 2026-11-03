@@ -2,6 +2,7 @@
 //! what letting go there would do.
 
 use bevy::prelude::*;
+use shared::item::StackLimits;
 
 use super::super::hold::Target;
 use super::super::{Carried, Hand, HeldBy, Holding};
@@ -24,7 +25,11 @@ pub(super) fn aim_held(
     keys: &mut ResMut<ButtonInput<KeyCode>>,
     (over_gifts, held_stock): (&mut ResMut<HeldOverGifts>, &mut ResMut<HeldStock>),
 ) -> Option<(HeldBy, Target, Option<Vec2>, Option<Vec2>)> {
-    let Under { grids, nodes } = under;
+    let Under {
+        grids,
+        nodes,
+        stacks,
+    } = under;
     over_gifts.0 = None;
     let from_stock = holding.stock.as_ref().map(|(with, _)| *with);
     held_stock.set_if_neq(HeldStock(
@@ -116,13 +121,20 @@ pub(super) fn aim_held(
         } else if from_ground && on_bin {
             Target::Bin
         } else if from_ground && on_body {
+            // Only the top of a stack goes on.
             Target::Body {
-                allowed: worth_wearing(carried.0.check_wear_new(item)),
+                allowed: worth_wearing(carried.0.check_wear_new(item.top())),
             }
         } else if on_bin || on_body || on_row.is_some() {
             Target::Nowhere
         } else {
-            super::super::hold::target_for_new(&carried.0, item, held.item, over)
+            // Only what is on the ground can go on a stack, not someone's stock.
+            let limits = if from_ground {
+                stacks.0
+            } else {
+                StackLimits::NONE
+            };
+            super::super::hold::target_for_new(&carried.0, item, held.item, over, limits)
         }
     } else if on_drop {
         // Only sites have ground, and what is covered can't come off.
@@ -149,7 +161,7 @@ pub(super) fn aim_held(
             }
         }
     } else {
-        super::super::hold::target(&carried.0, held.item, over)
+        super::super::hold::target(&carried.0, held.item, over, stacks.0)
     };
     Some((held, aim, at, finger))
 }

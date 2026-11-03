@@ -7,7 +7,7 @@ use shared::energy::{dressing_cost, handling_cost};
 use shared::item::Item;
 use shared::protocol::ClientMessage;
 
-use super::super::hold::Target;
+use super::super::hold::{Target, stack_onto};
 use super::super::{Carried, HeldBy, Holding};
 use super::Outbox;
 use crate::common::{GROUND, GaveItem, HeldOverGifts, HeldStock, SpentEnergy, TookItem};
@@ -27,6 +27,7 @@ pub(super) fn let_go_of(
         gave,
         took,
         spent,
+        stacks,
     } = out;
     if let Some((with, item)) = holding.stock.take() {
         held_stock.set_if_neq(HeldStock(None));
@@ -41,12 +42,31 @@ pub(super) fn let_go_of(
             took.write(TookItem { with, item: id });
         } else if aim == (Target::Body { allowed: true }) {
             let id = held.item.id;
-            let grams = item.total_weight();
             to_server.write(ToServer(ClientMessage::WearFromGround { item: id }));
+            // Only the top of a stack goes on, and the rest stays on the ground.
+            let mut item = item;
+            let top = item.take_top();
+            let all_of_it = top.is_none();
+            let wearing = top.unwrap_or(item);
+            let grams = wearing.total_weight();
             // Otherwise only the server can say.
-            if carried.0.wear_new(item).is_ok() {
-                took.write(TookItem { with, item: id });
+            if carried.0.wear_new(wearing).is_ok() {
+                if all_of_it {
+                    took.write(TookItem { with, item: id });
+                }
                 spent.write(SpentEnergy(dressing_cost(grams) + handling_cost(grams)));
+            }
+        } else if let Some(onto) = stack_onto(aim).filter(|_| with == GROUND) {
+            let id = held.item.id;
+            let grams = item.total_weight();
+            to_server.write(ToServer(ClientMessage::StackFromGround { item: id, onto }));
+            // What is left stays on the ground, as the server will say.
+            if let Ok(rest) = carried.0.add_to_stack(item, onto, stacks.0) {
+                let left = rest.as_ref().map_or(0, Item::total_weight);
+                if rest.is_none() {
+                    took.write(TookItem { with, item: id });
+                }
+                spent.write(SpentEnergy(handling_cost(grams - left)));
             }
         } else if let Some((to, x, y, rotation)) =
             super::super::hold::drop_move(&carried.0, held.item, aim)
@@ -80,7 +100,9 @@ pub(super) fn let_go_of(
     }
     if aim == (Target::Body { allowed: true }) {
         let item = held.item.id;
-        let grams = carried.0.find(item).map_or(0, Item::total_weight);
+        // Only the top of a stack goes on.
+        let top = carried.0.find(item).map(Item::top);
+        let grams = top.map_or(0, Item::total_weight);
         to_server.write(ToServer(ClientMessage::WearItem { item }));
         // Otherwise only the server can say.
         if carried.0.wear(item).is_ok() {
@@ -117,6 +139,16 @@ pub(super) fn let_go_of(
         let item = held.item.id;
         if carried.0.to_bin(item) {
             to_server.write(ToServer(ClientMessage::BinItem { item }));
+        }
+        return;
+    }
+    if let Some(onto) = stack_onto(aim) {
+        let item = held.item.id;
+        let to = carried.0.placed(onto).map(|(holder, _)| holder);
+        let cost = to.map_or(0, |to| carried.0.move_cost(item, to));
+        if carried.0.stack_onto(item, onto, stacks.0).is_ok() {
+            spent.write(SpentEnergy(cost));
+            to_server.write(ToServer(ClientMessage::StackItem { item, onto }));
         }
         return;
     }

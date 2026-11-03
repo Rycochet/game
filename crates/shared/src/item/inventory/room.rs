@@ -1,7 +1,7 @@
 //! Finding room for something in an `Inventory`, and giving new items.
 
 use crate::id::Id;
-use crate::item::{Holder, Inventory, Item, Placed, Rotation, Shape};
+use crate::item::{Holder, Inventory, Item, Placed, Rotation, Shape, StackLimits};
 
 impl Inventory {
     /// The first place in this grid where an item of this shape has room,
@@ -43,10 +43,15 @@ impl Inventory {
         self.first_room(holder, item.shape(), turned_from, Some(id))
     }
 
-    /// Puts a new item in the first place it fits in the pockets. Gives it back
-    /// if there is no room.
+    /// Puts a new item in the pockets: on the first stack it can all go on, or else
+    /// in the first place it fits. Gives it back if there is no room.
     #[allow(clippy::result_large_err)] // Handing it back whole is the point, and rare.
-    pub fn give(&mut self, item: Item) -> Result<(), Item> {
+    pub fn give(&mut self, item: Item, limits: StackLimits) -> Result<(), Item> {
+        if let Some(onto) = self.first_stack_for(&item, Holder::Pockets, limits) {
+            self.add_to_stack(item, onto, limits)
+                .expect("first_stack_for found room for all of it");
+            return Ok(());
+        }
         let shape = item.shape();
         match self.first_room(Holder::Pockets, shape, Rotation::None, None) {
             Some((x, y, rotation)) => {

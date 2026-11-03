@@ -258,3 +258,42 @@ fn ten_kilos_takes_about_a_step_to_pick_up() {
     assert_eq!(handling_cost(1), 1, "nothing is free");
     assert_eq!(handling_cost(0), 0);
 }
+
+#[test]
+fn a_stack_on_the_ground_joins_a_carried_one_as_far_as_it_fits() {
+    let mut test = in_a_site();
+    let three = [
+        give(ItemKind::Coin),
+        give(ItemKind::Coin),
+        give(ItemKind::Coin),
+    ];
+    let dropped = carrying(&test.send(&three)).pockets[0].item.id;
+    test.send(&[ClientMessage::DropItem { item: dropped }]);
+    let kept = carrying(&test.send(&[give(ItemKind::Coin)])).pockets[0]
+        .item
+        .id;
+    test.world.stacks = shared::item::StackLimits {
+        grams_per_cell: 2000,
+        most: 3,
+    };
+    let answers = test.send(&[ClientMessage::StackFromGround {
+        item: dropped,
+        onto: kept,
+    }]);
+    assert_eq!(carrying(&answers).find(kept).map(Item::count), Some(3));
+    let left = ground(&answers);
+    assert_eq!((left[0].id, left[0].count()), (dropped, 1));
+}
+
+#[test]
+fn wearing_a_stack_from_the_ground_leaves_the_rest_there() {
+    let mut test = in_a_site();
+    let hats = carrying(&test.send(&[give(ItemKind::Hat), give(ItemKind::Hat)]));
+    let hats = &hats.pockets[0].item;
+    let (bottom, top) = (hats.id, hats.top().id);
+    test.send(&[ClientMessage::DropItem { item: bottom }]);
+    let answers = test.send(&[ClientMessage::WearFromGround { item: bottom }]);
+    assert!(carrying(&answers).is_worn(top));
+    let left = ground(&answers);
+    assert_eq!((left[0].id, left[0].count()), (bottom, 1));
+}

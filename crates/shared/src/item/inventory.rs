@@ -5,6 +5,7 @@ mod cost;
 mod lookup;
 mod room;
 mod rules;
+mod stacking;
 
 use serde::{Deserialize, Serialize};
 

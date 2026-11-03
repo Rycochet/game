@@ -32,6 +32,9 @@
 //! - `HOW_DEBUG_TOOLS`: `true` accepts dev tools messages from anyone connected.
 //! - `HOW_SERVER_NAME`: what the server calls itself (default `Hall of Worlds`).
 //! - `HOW_PLAYER_LIMIT`: the most players at once (default 0, no limit).
+//! - `HOW_STACK_GRAMS_PER_CELL`: the most a stack of items may weigh for each cell
+//!   it takes up, in grams (default 2000).
+//! - `HOW_STACK_MAX`: the most items in one stack (default 99).
 //! - `LOG_LEVEL`: how much to log (see `environment`); `debug` adds every
 //!   connection's every round trip, for looking into network trouble.
 

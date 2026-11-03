@@ -8,7 +8,7 @@ use super::login::{CharacterSummary, LoginMethod};
 use super::{WorldChunk, WorldInfo};
 use crate::ground::Load;
 use crate::id::Id;
-use crate::item::{Inventory, Item};
+use crate::item::{Inventory, Item, StackLimits};
 use crate::mob::EntityLook;
 use crate::sheet::Sheet;
 
@@ -49,6 +49,8 @@ pub enum ServerMessage {
         dev_tools: bool,
         /// Whether this server pauses when asked: only single player's.
         can_pause: bool,
+        /// How big stacks of items may get here.
+        stacks: StackLimits,
     },
     /// Everything the client knows of the world map is forgotten; the chunks
     /// it may know again follow (`DevForgetMap`).

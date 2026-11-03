@@ -6,6 +6,7 @@ use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::ground::Load;
 use crate::id::Id;
+use crate::item::StackLimits;
 use crate::item::{Favour, Holder, Inventory, ItemKind, Quality, Rotation};
 use crate::mob::EntityLook;
 use crate::movement::Step;
@@ -66,6 +67,14 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             x: 2,
             y: 3,
             rotation: Rotation::Quarter,
+        },
+        ClientMessage::StackItem {
+            item: Id(uuid::Uuid::from_u128(7)),
+            onto: Id(uuid::Uuid::from_u128(8)),
+        },
+        ClientMessage::StackFromGround {
+            item: Id(uuid::Uuid::from_u128(7)),
+            onto: Id(uuid::Uuid::from_u128(8)),
         },
         ClientMessage::BinItem {
             item: Id(uuid::Uuid::from_u128(7)),
@@ -164,6 +173,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             y: 9,
             dev_tools: true,
             can_pause: true,
+            stacks: StackLimits::default(),
         },
         ServerMessage::ForgetWorldMap,
         ServerMessage::SnowLine(40),
@@ -296,7 +306,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ServerMessage::Inventory({
             let mut inventory = Inventory::default();
             let pouch = crate::item::Item::new(Id(uuid::Uuid::from_u128(1)), ItemKind::Pouch);
-            inventory.give(pouch).unwrap();
+            inventory.give(pouch, StackLimits::NONE).unwrap();
             inventory
         }),
     ];

@@ -1,7 +1,7 @@
 //! A new character's first sheet and clothes, and welcoming a character into the world.
 
 use shared::creature::CreatureKind;
-use shared::item::{Inventory, Item, ItemKind, Made, MadeAt, Quality};
+use shared::item::{Inventory, Item, ItemKind, Made, MadeAt, Quality, StackLimits};
 use shared::item_form::give_form;
 use shared::protocol::ServerMessage;
 use shared::sheet::{Appearance, Sheet};
@@ -51,7 +51,7 @@ pub(super) fn start_sheet(
     }
     match asked {
         Some((kind, appearance)) => {
-            inventory.change_body(kind);
+            inventory.change_body(kind, StackLimits::NONE);
             Sheet {
                 appearance,
                 ..Sheet::new(kind)
@@ -116,6 +116,7 @@ pub(super) fn welcome(
         y,
         dev_tools: options.dev_tools_for(client.host),
         can_pause: options.pausable && client.host,
+        stacks: world.stacks,
     };
     if !client.link.send(&welcome)
         || !client

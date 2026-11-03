@@ -2,6 +2,7 @@ use super::*;
 use crate::armour::hands::Fingers;
 use crate::creature::{CreatureKind, Location, Size};
 use crate::id::Id;
+use crate::item::StackLimits;
 use crate::item::{Favour, Inventory, Item, Made, Quality};
 use crate::item::{Holder, ItemKind, MoveRefused, Rotation};
 use crate::item_form::ItemForm;
@@ -26,7 +27,7 @@ fn carrying_for(kind: CreatureKind, kinds: &[ItemKind]) -> Inventory {
             made,
             ..Item::new(id(index as u128 + 1), item)
         };
-        inventory.give(new).expect("room");
+        inventory.give(new, StackLimits::NONE).expect("room");
     }
     inventory
 }
@@ -190,13 +191,13 @@ fn gloves_need_the_right_number_of_fingers_unless_magical() {
         creature: kobold,
         ..Inventory::default()
     };
-    inventory.give(gloves(false)).unwrap();
+    inventory.give(gloves(false), StackLimits::NONE).unwrap();
     assert_eq!(inventory.check_wear(id(1)), Err(WearRefused::WrongFingers));
     let mut magic = Inventory {
         creature: kobold,
         ..Inventory::default()
     };
-    magic.give(gloves(true)).unwrap();
+    magic.give(gloves(true), StackLimits::NONE).unwrap();
     assert_eq!(magic.check_wear(id(1)), Ok(Fit::Exact));
     // Fingerless ones don't care.
     let mut fingerless = carrying_for(kobold, &[ItemKind::FingerlessGloves]);
@@ -233,7 +234,7 @@ fn mitten_gauntlets_fit_any_fingers_and_demi_gauntlets_leave_rings_free() {
             creature: kobold,
             ..Inventory::default()
         };
-        inventory.give(item).unwrap();
+        inventory.give(item, StackLimits::NONE).unwrap();
         inventory.check_wear(id(1))
     };
     assert_eq!(
@@ -363,7 +364,9 @@ fn blessed_stops_others_and_cursed_stops_everyone() {
 #[test]
 fn a_curse_only_holds_what_is_worn() {
     let mut inventory = Inventory::default();
-    inventory.give(with_favour(Some(Favour::Cursed))).unwrap();
+    inventory
+        .give(with_favour(Some(Favour::Cursed)), StackLimits::NONE)
+        .unwrap();
     assert!(inventory.may_remove(id(1), Remover::Wearer));
 }
 
@@ -459,7 +462,7 @@ fn magic_doesnt_change_the_body() {
         },
         ..Item::new(id(1), ItemKind::TShirt)
     };
-    inventory.give(shirt).unwrap();
+    inventory.give(shirt, StackLimits::NONE).unwrap();
     assert_eq!(
         inventory.check_wear(id(1)),
         Err(WearRefused::WrongBody(Location::Arms))
@@ -509,7 +512,7 @@ fn changing_body_takes_everything_off_and_gives_back_what_doesnt_fit() {
     let mut inventory = carrying(&[FullArmour, Ring, Stone]);
     inventory.wear(id(1)).unwrap();
     // A chicken's 2 × 2 pockets: the armour is too big and the ring goes first.
-    let lost = inventory.change_body(CreatureKind::Chicken);
+    let lost = inventory.change_body(CreatureKind::Chicken, StackLimits::NONE);
     assert!(inventory.worn.is_empty());
     assert_eq!(inventory.pockets_size, (2, 2));
     assert_eq!(lost.len() + inventory.pockets.len(), 3);

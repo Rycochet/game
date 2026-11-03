@@ -1,5 +1,6 @@
 use super::*;
 use crate::id::Id;
+use crate::item::StackLimits;
 use crate::item::{Item, ItemKind};
 
 #[test]
@@ -44,7 +45,7 @@ fn stones(count: u128) -> Inventory {
     };
     for n in 0..count {
         let stone = Item::new(Id::for_test(n), ItemKind::Stone);
-        inventory.give(stone).unwrap();
+        inventory.give(stone, StackLimits::NONE).unwrap();
     }
     inventory
 }

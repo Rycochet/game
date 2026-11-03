@@ -160,10 +160,12 @@ pub fn draw_stock_aim<'a>(
 }
 
 fn spawn_stock_item(layer: &mut ChildSpawnerCommands, placed: &Placed, with: Id) {
+    // A stack is named by its top, which is what shows.
+    let top = placed.item.top();
     let name = ItemName {
-        words: placed.item.name(),
-        quality: placed.item.quality,
-        set: placed.item.set,
+        words: top.name(),
+        quality: top.quality,
+        set: top.set,
     };
     spawn_item_cells(
         layer,

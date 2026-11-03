@@ -64,6 +64,10 @@ pub enum ClientMessage {
         y: u8,
         rotation: Rotation,
     },
+    /// Puts as much of a carried stack as fits on another carried stack that looks
+    /// the same, from its top, the rest staying where it was. Answered with
+    /// `Inventory`, whether or not it could be done.
+    StackItem { item: Id, onto: Id },
     /// Throws something the character carries in their bin, with all in it,
     /// destroying what was there, answered with `Inventory`.
     BinItem { item: Id },
@@ -91,6 +95,9 @@ pub enum ClientMessage {
     /// a site, after any steps to get there. Answered with `Inventory` and
     /// `GroundItems`, whether or not it could be done, as are the three below.
     DropItem { item: Id },
+    /// Puts as much of something on the ground under the player as fits on a
+    /// carried stack that looks the same, the rest staying on the ground.
+    StackFromGround { item: Id, onto: Id },
     /// Takes something from the ground under the player, to this place.
     TakeFromGround {
         item: Id,
