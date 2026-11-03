@@ -125,6 +125,15 @@ impl Storage {
         }
     }
 
+    /// Waits for everything saved so far to be written, within
+    /// `FINISH_WITHIN`, for the debug API: `false` if some wasn't.
+    #[cfg(feature = "debug-api")]
+    pub(crate) fn flush(&self) -> bool {
+        self.queue
+            .as_ref()
+            .is_none_or(|queue| queue.flush(FINISH_WITHIN))
+    }
+
     /// Whether a save made under `forgotten_to` still counts.
     fn not_forgotten(&self, forgotten_to: u32, what: &str) -> bool {
         let kept = forgotten_to >= self.forget_before;

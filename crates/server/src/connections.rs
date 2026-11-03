@@ -500,9 +500,14 @@ fn join(
 
 /// Saves every character and site that has changed.
 pub(crate) fn save_changes(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
+    save_all(&mut connections, &mut world);
+}
+
+/// Queues everything changed to be saved: mobs, characters and sites.
+pub(crate) fn save_all(connections: &mut Connections, world: &mut ServerWorld) {
     world.save_mobs();
     for client in &mut connections.clients {
-        client.save(&mut world);
+        client.save(world);
     }
     world.save_sites();
 }

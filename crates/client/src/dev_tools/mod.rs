@@ -112,7 +112,9 @@ impl Plugin for DevToolsPlugin {
         app.configure_sets(
             OnExit(GameView::Connecting),
             (Start::Place, Start::Enter).chain(),
-        );
+        )
+        .init_resource::<Forced>()
+        .add_systems(Update, apply_forced);
 
         if let Some((x, y)) = env::var("HOW_DEBUG_POS")
             .ok()
@@ -187,32 +189,18 @@ impl Plugin for DevToolsPlugin {
             );
         }
 
-        if let Some(style) = env::var("HOW_DEBUG_STAIRS")
+        let mut forced = app.world_mut().resource_mut::<Forced>();
+        forced.stairs = env::var("HOW_DEBUG_STAIRS")
             .ok()
             .and_then(|n| n.trim().parse::<usize>().ok())
-            .and_then(|n| StairsStyle::ALL.get(n).copied())
-        {
-            app.add_systems(Update, move |mut dungeon: ResMut<CurrentDungeon>| {
-                if dungeon.stairs.iter().any(|stairs| stairs.style != style) {
-                    for stairs in &mut dungeon.stairs {
-                        stairs.style = style;
-                    }
-                }
-            });
-        }
-
-        if let Some(variety) = env::var("HOW_DEBUG_FIELDS")
+            .and_then(|n| StairsStyle::ALL.get(n).copied());
+        forced.fields = env::var("HOW_DEBUG_FIELDS")
             .ok()
-            .and_then(|n| n.trim().parse::<u32>().ok())
-        {
-            app.add_systems(Update, move |mut dungeon: ResMut<CurrentDungeon>| {
-                if dungeon.fields.iter().any(|f| f.variety != variety) {
-                    for field in &mut dungeon.fields {
-                        field.variety = variety;
-                    }
-                }
-            });
-        }
+            .and_then(|n| n.trim().parse::<u32>().ok());
+        forced.cursor = env::var("HOW_DEBUG_CURSOR")
+            .ok()
+            .and_then(|pos| parse_pos(&pos))
+            .map(|(x, y)| Vec2::new(x as f32, y as f32));
 
         if let Some(stages) = env::var("HOW_DEBUG_HERBS")
             .ok()
@@ -341,21 +329,6 @@ impl Plugin for DevToolsPlugin {
             _ => app,
         };
 
-        if let Some((x, y)) = env::var("HOW_DEBUG_CURSOR")
-            .ok()
-            .and_then(|pos| parse_pos(&pos))
-        {
-            app.add_systems(
-                Update,
-                move |mut window: Single<&mut Window, With<PrimaryWindow>>| {
-                    let at = Vec2::new(x as f32, y as f32);
-                    if window.cursor_position() != Some(at) {
-                        window.set_cursor_position(Some(at));
-                    }
-                },
-            );
-        }
-
         if let Some(first) = env::var("HOW_DEBUG_FIRST_FLOOR")
             .ok()
             .and_then(|n| n.parse().ok())
@@ -393,11 +366,7 @@ impl Plugin for DevToolsPlugin {
                       mut map: ResMut<FullMap>| {
                     if !*done && time.elapsed_secs() > 2.0 {
                         *done = true;
-                        map.open = true;
-                        map.centre = Some(((player.x + dx) as f64, (player.y + dy) as f64));
-                        if let Some(zoom) = zoom {
-                            map.zoom = zoom;
-                        }
+                        open_map(&mut map, &player, (dx, dy), zoom);
                     }
                 },
             );
@@ -543,15 +512,12 @@ impl Plugin for DevToolsPlugin {
                 OnExit(GameView::Connecting),
                 move |mut cameras: Query<&mut OrbitCamera>| {
                     for mut camera in &mut cameras {
-                        if let Some(yaw) = numbers.first() {
-                            camera.yaw = yaw.to_radians();
-                        }
-                        if let Some(pitch) = numbers.get(1) {
-                            camera.pitch = pitch.to_radians();
-                        }
-                        if let Some(zoom) = numbers.get(2) {
-                            camera.distance /= zoom;
-                        }
+                        turn_camera(
+                            &mut camera,
+                            numbers.first().copied(),
+                            numbers.get(1).copied(),
+                            numbers.get(2).copied(),
+                        );
                     }
                 },
             );
@@ -569,6 +535,69 @@ impl Plugin for DevToolsPlugin {
             })
             .add_systems(Update, screenshot_then_quit);
         }
+    }
+}
+
+/// What dev tools keep as they are while set, however the game changes them:
+/// every stairs' style, every field's stage (`HOW_DEBUG_STAIRS`,
+/// `HOW_DEBUG_FIELDS`), and where the mouse cursor is (`HOW_DEBUG_CURSOR`).
+/// The debug API sets them too.
+#[derive(Resource, Default)]
+struct Forced {
+    stairs: Option<StairsStyle>,
+    fields: Option<u32>,
+    /// In logical pixels.
+    cursor: Option<Vec2>,
+}
+
+fn apply_forced(
+    forced: Res<Forced>,
+    mut dungeon: ResMut<CurrentDungeon>,
+    mut window: Single<&mut Window, With<PrimaryWindow>>,
+) {
+    if let Some(style) = forced.stairs
+        && dungeon.stairs.iter().any(|stairs| stairs.style != style)
+    {
+        for stairs in &mut dungeon.stairs {
+            stairs.style = style;
+        }
+    }
+    if let Some(variety) = forced.fields
+        && dungeon.fields.iter().any(|field| field.variety != variety)
+    {
+        for field in &mut dungeon.fields {
+            field.variety = variety;
+        }
+    }
+    if let Some(at) = forced.cursor
+        && window.cursor_position() != Some(at)
+    {
+        window.set_cursor_position(Some(at));
+    }
+}
+
+/// Opens the full map, centred `offset` grid points from the player, at
+/// `zoom` if given.
+fn open_map(map: &mut FullMap, player: &MapPosition, offset: (i64, i64), zoom: Option<f32>) {
+    map.open = true;
+    map.centre = Some(((player.x + offset.0) as f64, (player.y + offset.1) as f64));
+    if let Some(zoom) = zoom {
+        map.zoom = zoom;
+    }
+}
+
+/// Turns the camera to `yaw` and `pitch` (degrees) and divides its distance
+/// by `zoom`, each if given. Sets the fields directly, so the limits on
+/// turning and zooming don't apply.
+fn turn_camera(camera: &mut OrbitCamera, yaw: Option<f32>, pitch: Option<f32>, zoom: Option<f32>) {
+    if let Some(yaw) = yaw {
+        camera.yaw = yaw.to_radians();
+    }
+    if let Some(pitch) = pitch {
+        camera.pitch = pitch.to_radians();
+    }
+    if let Some(zoom) = zoom {
+        camera.distance /= zoom;
     }
 }
 
@@ -600,19 +629,22 @@ fn screenshot_then_quit(
 /// `shape,attitude` or `shape,attitude,completed`, all numbers.
 fn parse_token(text: &str) -> Option<Token> {
     let mut numbers = text.split(',').map(|n| n.trim().parse::<usize>().ok());
-    let shape = *TokenShape::ALL.get(numbers.next()??)?;
-    let attitude = *Attitude::ALL.get(numbers.next()??)?;
+    let shape = numbers.next()??;
+    let attitude = numbers.next()??;
     let completed = numbers.next().flatten() == Some(1);
-    let size = numbers
-        .next()
-        .flatten()
-        .and_then(|n| TokenSize::ALL.get(n).copied())
-        .unwrap_or_default();
+    token_of(shape, attitude, completed, numbers.next().flatten())
+}
+
+/// A token from indexes into `TokenShape::ALL`, `Attitude::ALL` and
+/// `TokenSize::ALL` (`Default` if none).
+fn token_of(shape: usize, attitude: usize, completed: bool, size: Option<usize>) -> Option<Token> {
     Some(Token {
-        shape,
-        attitude,
+        shape: *TokenShape::ALL.get(shape)?,
+        attitude: *Attitude::ALL.get(attitude)?,
         completed,
-        size,
+        size: size
+            .and_then(|n| TokenSize::ALL.get(n).copied())
+            .unwrap_or_default(),
         ..default()
     })
 }
@@ -621,7 +653,12 @@ fn parse_token(text: &str) -> Option<Token> {
 fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
     let (position, kind) = text.rsplit_once(',')?;
     let (dx, dy) = parse_pos(position)?;
-    let cell = match kind.trim() {
+    Some((dx, dy, cell_kind(kind)?))
+}
+
+/// A kind of cell by the name `HOW_DEBUG_CELLS` uses.
+fn cell_kind(name: &str) -> Option<Cell> {
+    Some(match name.trim() {
         "floor" => Cell::Floor,
         "wall" => Cell::Wall,
         "door" => Cell::Door,
@@ -633,8 +670,7 @@ fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
         "ground" => Cell::Ground,
         "covered" => Cell::CoveredGround,
         _ => return None,
-    };
-    Some((dx, dy, cell))
+    })
 }
 
 fn parse_pos(text: &str) -> Option<(i64, i64)> {

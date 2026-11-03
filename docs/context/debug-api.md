@@ -17,9 +17,24 @@ Bevy's remote protocol (`bevy_remote`: JSON-RPC over HTTP, localhost only) in th
 
 ## Methods
 
-- `client.state` (`client/src/dev_tools/debug_api.rs`): program, pid, data folder, `view` (`GameView`), player `position`, `level` (the `LevelInfo` in a site), clock minutes and paused, window size.
-- `client.screenshot {path}` (same file): saves the window at the end of the frame to `path` (absolute or relative to the game's folder; folders made, an old file removed first); answers with the full path and `wait_for_file`. The game keeps running.
-- `server.state` (`server/src/debug_api/state.rs`): program (`server` or `embedded server`), pid, data folder, dev tools on, clock minutes and paused, `players` (character id, phase, world position, `visit`: site id, level, position).
+Kinds of things (`PoiKind`, `ItemKind`, `Quality`, `Favour`, `CreatureKind`, `Cell`) are given by the names they are saved by (`"Castle"`, `"Ring"`, `"Rare"`, `"SecretDoor"`); a wrong one is answered with the list of right ones. Methods that only do something answer `"ok"`; what they ask of the server arrives a tick or so later, so check with a state method.
+
+Client (`client/src/dev_tools/debug_api.rs`; each says which `HOW_DEBUG_` variable it matches, and shares its code):
+
+- `client.state`: program, pid, data folder, `view` (`GameView`), player `position`, `level` (the `LevelInfo` in a site), `showing_floor`, clock minutes and paused, window size, `full_map`, `debug_menu`, `system_menu`.
+- `client.screenshot {path}`: saves the window at the end of the frame to `path` (absolute or relative to the game's folder; folders made, an old file removed first); answers with the full path and `wait_for_file`. The game keeps running.
+- Asking the server: `client.teleport {x, y}`, `client.enter_site {kind, seed?, level?, ruin?}`, `client.set_cells {cells: [{dx, dy, cell}]}` (from the player, in a site), `client.set_time {hours | minutes}`, `client.snow_line {line}`, `client.reveal_pois`, `client.give_item {kind, quality?, magical?, set?, favour?}`, `client.set_creature {kind}`.
+- Moving: `client.step {dx, dy}` (keyboard steps), `client.travel {x, y}` (as a click), `client.walk {on}` (Auto Walk).
+- Looks: `client.view {yaw?, pitch?, zoom?}` (degrees; zoom divides the present distance), `client.window_size {width, height}`, `client.cursor {x, y}` (held until `{}`), `client.stairs_style {style}` / `client.fields_stage {stage}` (kept until `null`), `client.herbs_shift {stages}`, `client.celestial {seed}`, `client.token {shape, attitude, completed?, size?}` (indexes).
+- What is open: `client.map {open?, dx?, dy?, zoom?}`, `client.show_floor {floor}` (`null` for the player's own), `client.debug_action {name}` (any debug menu entry, by its name in any case; not checked for being available), `client.debug_menu {open?, filter?}`, `client.system_menu {show: closed | menu | quit | settings}`, `client.inventory {show: pockets | bags | hold | drop_some, index?}`.
+
+Server (`server/src/debug_api/methods.rs`; `--server` for the embedded one):
+
+- `server.state`: program (`server` or `embedded server`), pid, data folder, dev tools on, clock minutes and paused, action ticks, `players` (character id, phase, world position, `visit`: site id, level, position).
+- `server.mobs`: every level in use (site, level) and its mobs: id, kind, position, home, `doing`.
+- `server.cells {player?, radius?}`: a player's level around them as the server has it (secret doors included), rows from the north, `@` the player, blank outside the level, with a `legend` of the letters used, and `from` (the top-left cell).
+- `server.sites`: sites loaded, their generator version and the levels with saves.
+- `server.save`: saves everything changed and answers once it is written (`written`: whether all of it was, within 8 s).
 
 ## Adding a method
 
@@ -31,14 +46,13 @@ Bevy's remote protocol (`bevy_remote`: JSON-RPC over HTTP, localhost only) in th
 
 ## Files
 
-- `crates/server/src/debug_api/mod.rs`: always built: `DebugApiPlugin { port_offset }` (with the feature it starts the API; without it, warns if `HOW_DEBUG_API` is set), `VARIABLE`, `DEFAULT_PORT`, `port_from`, the release guard. Re-exports for method files: `AddDebugMethod`, `BrpError`, `BrpResult`, `Value`, `json`, `params`.
-- `crates/server/src/debug_api/remote.rs`: feature only: `start` (tries the port, then `RemotePlugin` + `RemoteHttpPlugin` on 127.0.0.1), `PendingMethods`, `register_methods`, `AddDebugMethod`, `params`. Tests.
-- `crates/server/src/debug_api/state.rs`: `server.state`, added by `ServerPlugin`.
-- `crates/client/src/dev_tools/debug_api.rs`: `client.state`, `client.screenshot`.
+- `crates/server/src/debug_api/mod.rs`: always built: `DebugApiPlugin { port_offset }` (with the feature it starts the API; without it, warns if `HOW_DEBUG_API` is set), `VARIABLE`, `DEFAULT_PORT`, `port_from`, the release guard. Re-exports for method files: `AddDebugMethod`, `BrpError`, `BrpResult`, `Value`, `json`, `params`, `refused` (an answer saying what was wrong).
+- `crates/server/src/debug_api/remote.rs`: feature only: `start` (tries the port, then `RemotePlugin` + `RemoteHttpPlugin` on 127.0.0.1), `PendingMethods`, `register_methods`, `AddDebugMethod`, `params`, `refused`. Tests.
+- `crates/server/src/debug_api/methods.rs`: the `server.` methods, added by `ServerPlugin`. Uses `connections::save_all` and feature-only accessors `Connections::clients`, `Visit::site_id`, `Visit::cells`, `Storage::flush`. Test of the cells picture.
+- `crates/client/src/dev_tools/debug_api.rs`: the `client.` methods. Uses `dev_tools`' `Forced`, `open_map`, `turn_camera` and `token_of`, which the variables use too, and `DebugAction::named` / `names`.
 - `xtask/src/api.rs`: `cargo xtask api`, and the `tmp.` check (`temporary_methods`). Tests.
 - Where it is added: `main.rs` of the client (port offset 0) and of the server (after the log plugin), `embedded.rs` (offset 1).
 
 ## Planned
 
-- PR 2: server methods (mobs on a level, cells, clocks, loaded sites, save and wait), client methods for every `dev_tools` variable (sharing their code, the variables kept) and running debug menu entries by name.
 - PR 3: fake input (click, drag, key, type) and waiting for frames or until idle.

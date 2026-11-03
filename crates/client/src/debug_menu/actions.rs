@@ -119,6 +119,21 @@ impl DebugAction {
         }
     }
 
+    /// The action with this name, as the menu shows it, in any case (dev
+    /// tools: the debug API runs entries by name).
+    #[cfg(any(test, all(feature = "debug-api", not(target_arch = "wasm32"))))]
+    pub fn named(name: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|action| action.name().eq_ignore_ascii_case(name.trim()))
+    }
+
+    /// Every action's name, in the menu's order.
+    #[cfg(any(test, all(feature = "debug-api", not(target_arch = "wasm32"))))]
+    pub fn names() -> impl Iterator<Item = &'static str> {
+        Self::ALL.into_iter().map(Self::name)
+    }
+
     /// Whether choosing it opens a submenu, rather than doing something.
     pub(super) fn has_submenu(self) -> bool {
         self == Self::GeneratePoi
@@ -217,6 +232,17 @@ pub(super) fn kind_name(kind: PoiKind) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn entries_are_found_by_name_in_any_case() {
+        assert_eq!(DebugAction::named("God Mode"), Some(DebugAction::GodMode));
+        assert_eq!(
+            DebugAction::named(" teleport to start "),
+            Some(DebugAction::TeleportToStart)
+        );
+        assert_eq!(DebugAction::named("Godmode"), None);
+        assert_eq!(DebugAction::names().count(), DebugAction::ALL.len());
+    }
 
     #[test]
     fn the_user_documentation_lists_every_entry() {
