@@ -1,11 +1,19 @@
-//! Drawing the pictures asked for, a few at a time.
+//! Drawing the pictures asked for, a page at a time.
 
+use bevy::platform::time::Instant;
 use bevy::prelude::*;
+use std::time::Duration;
 
+use super::copy::PageCopies;
+use super::parts::parts_of;
 use super::{
-    Drawing, ItemPicture, ItemPictures, Look, Part, PictureLight, SLOTS, StillCompiling,
-    VIEW_WIDTH, outline_copies, spawn_drawing, spawn_lights,
+    Batch, EdgeMaterial, ItemPicture, ItemPictures, OUTLINE_PIXELS, PAGES, PictureLight,
+    StillCompiling, spawn_batch, spawn_cell, spawn_lights,
 };
+
+/// How long building models may take in a frame, so a panel full of new things
+/// doesn't stall one. What is built in a frame is drawn as one page.
+const BUILD_TIME: Duration = Duration::from_millis(10);
 
 pub(super) fn fill_pictures(
     mut pictures: ResMut<ItemPictures>,
@@ -17,71 +25,100 @@ pub(super) fn fill_pictures(
     }
 }
 
+type Stores<'w> = (
+    ResMut<'w, Assets<Mesh>>,
+    ResMut<'w, Assets<StandardMaterial>>,
+    ResMut<'w, Assets<EdgeMaterial>>,
+    ResMut<'w, Assets<Image>>,
+);
+
+/// Finishes pages once drawn and copied, and starts one with as many waiting
+/// pictures as can be built this frame, while there is a page free.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn draw_pictures(
     mut commands: Commands,
     mut pictures: ResMut<ItemPictures>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut drawing: Query<(Entity, &mut Drawing)>,
+    mut stores: Stores,
+    mut batches: Query<(Entity, &mut Batch)>,
     lights: Query<Entity, With<PictureLight>>,
     compiling: Res<StillCompiling>,
+    mut copies: ResMut<PageCopies>,
 ) {
-    let mut free = [true; SLOTS];
-    for (entity, mut one) in &mut drawing {
-        if one.frames_left == 0 {
-            commands.entity(entity).despawn();
-        } else {
-            if compiling.0 == 0 {
-                one.frames_left -= 1;
-            }
-            free[one.slot] = false;
+    let started = Instant::now();
+    copies.0.clear();
+    let mut busy = [false; PAGES];
+    for (entity, mut batch) in &mut batches {
+        busy[batch.slot] = true;
+        if compiling.0 > 0 {
+            continue;
         }
+        batch.frames_left -= 1;
+        if batch.frames_left == 0 {
+            // Copied in the frames before.
+            pictures.drawn += batch.cells.len() as u64;
+            commands.entity(entity).despawn();
+            continue;
+        }
+        let page = batch.page.id();
+        copies.0.extend(
+            batch
+                .cells
+                .iter()
+                .map(|(rect, picture)| (page, *rect, picture.id())),
+        );
     }
-    let any_left = free.iter().any(|&slot| !slot);
-    if !any_left && pictures.waiting.is_empty() {
-        for light in &lights {
-            commands.entity(light).despawn();
+    let Some(first) = pictures.waiting.front() else {
+        if batches.is_empty() {
+            for light in &lights {
+                commands.entity(light).despawn();
+            }
         }
         return;
-    }
+    };
+    let Some(slot) = (0..PAGES).find(|&slot| !busy[slot]) else {
+        return;
+    };
     if lights.is_empty() {
         spawn_lights(&mut commands);
     }
-    for slot in (0..SLOTS).filter(|&slot| free[slot]) {
-        let Some((look, asked, picture)) = pictures.waiting.pop_front() else {
-            break;
+    let size = first.look.picture_size(first.pixels);
+    let mut batch = Batch::new(slot, size, &mut stores.3, &mut stores.0);
+    let entity = commands.spawn_empty().id();
+    fill(
+        &mut commands,
+        (entity, &mut batch),
+        &mut pictures,
+        &mut stores,
+        started,
+    );
+    spawn_batch(&mut commands, entity, batch);
+}
+
+/// Takes waiting pictures onto the page while there is room and time this frame.
+fn fill(
+    commands: &mut Commands,
+    (entity, batch): (Entity, &mut Batch),
+    pictures: &mut ItemPictures,
+    (meshes, materials, edges, _): &mut Stores,
+    started: Instant,
+) {
+    while let Some(next) = pictures.waiting.front() {
+        if started.elapsed() > BUILD_TIME && !batch.cells.is_empty() {
+            return;
+        }
+        let Some(rect) = batch.shelves.place(next.look.picture_size(next.pixels)) else {
+            return;
         };
-        let (wide, long) = look.cells();
-        let longest = look.longest() as f32;
-        let view = Vec2::new(wide as f32, long as f32) / longest * VIEW_WIDTH;
-        let parts = match look {
-            Look::Gem { gem, quality } => {
-                super::gem::gem_parts(&gem, quality, &mut meshes, &mut materials)
-                    .into_iter()
-                    .map(|(mesh, material)| Part {
-                        mesh,
-                        material,
-                        transform: Transform::default(),
-                    })
-                    .collect()
-            }
-            Look::Ring { ring, quality } => {
-                super::ring::ring_parts(&ring, quality, &mut meshes, &mut materials)
-            }
-            Look::Blade { blade, quality } => {
-                super::blade::blade_parts(&blade, quality, &mut meshes, &mut materials)
-            }
-            Look::Body { kind } => super::body::body_parts(kind, &mut meshes, &mut materials),
-            look => super::armour::armour_parts(look, &mut meshes, &mut materials),
+        let Some(next) = pictures.waiting.pop_front() else {
+            return;
         };
-        let black = materials.add(StandardMaterial {
-            base_color: Color::BLACK,
-            unlit: true,
-            cull_mode: None,
-            ..default()
-        });
+        let building = Instant::now();
+        let parts = parts_of(next.look, meshes, materials);
+        pictures.building += building.elapsed();
         // As thick on the screen whatever the detail.
-        let outline = outline_copies(&parts, asked, &black);
-        spawn_drawing(&mut commands, slot, picture, view, parts, outline);
+        let reach = (OUTLINE_PIXELS * next.pixels as f32 / next.asked as f32).round() as u32;
+        let edge = MeshMaterial3d(batch.edge(reach, edges));
+        spawn_cell(commands, (entity, batch), rect, parts, edge);
+        batch.cells.push((rect, next.picture));
     }
 }
