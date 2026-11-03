@@ -33,7 +33,7 @@ Client (`client/src/dev_tools/debug_api.rs`; each says which `HOW_DEBUG_` variab
 Fake input (`client/src/dev_tools/fake_input.rs`): Bevy's own input messages (`MouseButtonInput`, `MouseWheel`, `TouchInput`, `KeyboardInput`) and the window's cursor, so the game takes them as a person's. Each request is queued and played one step a frame, before Bevy reads input (`PreUpdate`, before `InputSystems`), so a press and its release land on separate frames. Positions are logical pixels (`client.state`'s window size; screenshots are physical, so divide by the scale). They answer `wait_for_input`, and `cargo xtask api` waits (asking `client.input`) until all is played.
 
 - `client.move {x, y}`, `client.click {x, y, button?, hold_frames?, touch?}` (`touch: true` taps with a finger instead), `client.drag {from: [x, y], to: [x, y], steps?, button?, touch?}`, `client.scroll {lines, x?, y?}` (positive scrolls up, zooming in).
-- `client.key {key, hold_frames?}` (Bevy's `KeyCode` names: `Escape`, `Backquote`, `KeyM`, `Enter`, `ArrowUp`, ...), `client.type {text}` (a key a frame, as `Key::Character`, into whatever has the keyboard).
+- `client.key {key, hold_frames?, with?}` (Bevy's `KeyCode` names: `Escape`, `Backquote`, `KeyM`, `Enter`, `ArrowUp`, ...; `with` holds others round it, as `["ControlLeft"]` for Ctrl+V), `client.type {text}` (a key a frame, as `Key::Character`, into whatever has the keyboard).
 - `client.wait {frames}`: answers once that many frames have passed after everything queued. `client.input`: `pending` steps and the `frame` count.
 - A real mouse moved over the window at the same time fights the fake cursor.
 

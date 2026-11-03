@@ -15,28 +15,36 @@ pub(super) struct KeyParams {
     key: KeyCode,
     #[serde(default = "one")]
     hold_frames: u32,
+    /// Keys held down round it, such as `["ControlLeft"]` for Ctrl+V.
+    #[serde(default)]
+    with: Vec<KeyCode>,
 }
 
 /// `client.key { "key": "Escape" }`: presses and lets go of a key (holding it
-/// `hold_frames`).
+/// `hold_frames`), with any keys in `with` held down from a frame before.
 pub(super) fn key(In(request): In<Option<Value>>, mut fake: ResMut<FakeInput>) -> BrpResult {
-    let KeyParams { key, hold_frames } = params(request)?;
-    let logical = logical_key(key);
-    let steps = [Step::Key {
-        code: key,
-        logical: logical.clone(),
-        state: ButtonState::Pressed,
-    }]
-    .into_iter()
-    .chain((1..hold_frames).map(|_| Step::Wait))
-    .chain([
-        Step::Key {
-            code: key,
-            logical,
-            state: ButtonState::Released,
-        },
-        Step::Wait,
-    ]);
+    let KeyParams {
+        key,
+        hold_frames,
+        with,
+    } = params(request)?;
+    let held = |code: KeyCode, state| Step::Key {
+        code,
+        logical: logical_key(code),
+        state,
+    };
+    let mut steps: Vec<Step> = with
+        .iter()
+        .map(|&code| held(code, ButtonState::Pressed))
+        .collect();
+    if !with.is_empty() {
+        steps.push(Step::Wait);
+    }
+    steps.push(held(key, ButtonState::Pressed));
+    steps.extend((1..hold_frames).map(|_| Step::Wait));
+    steps.push(held(key, ButtonState::Released));
+    steps.extend(with.iter().map(|&code| held(code, ButtonState::Released)));
+    steps.push(Step::Wait);
     queued(&mut fake, steps)
 }
 

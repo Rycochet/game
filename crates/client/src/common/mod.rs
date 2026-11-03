@@ -5,8 +5,12 @@
 
 mod floors;
 mod preferences;
+mod servers;
 pub use floors::{FirstFloor, OtherLevels};
+#[cfg(not(target_arch = "wasm32"))]
+pub use preferences::client_file;
 pub use preferences::{InterfaceSize, Preferences};
+pub use servers::{ChosenServer, SavedServer};
 
 use bevy::prelude::*;
 
@@ -58,6 +62,9 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
+        let preferences = preferences::load_preferences();
+        app.insert_resource(ChosenServer::from_saved(&preferences))
+            .insert_resource(preferences);
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(frame_settings(true))
             .init_resource::<KeepDrawing>()
@@ -87,7 +94,6 @@ impl Plugin for CommonPlugin {
             .init_resource::<PointerPosition>()
             .init_resource::<UiPointer>()
             .init_resource::<TouchGesture>()
-            .insert_resource(preferences::load_preferences())
             .add_systems(Last, preferences::save_preferences)
             .add_systems(Startup, open_maximised)
             .add_systems(

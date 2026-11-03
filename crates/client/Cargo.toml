@@ -27,9 +27,11 @@ ron.workspace = true
 server.workspace = true
 tungstenite.workspace = true
 rustls.workspace = true
-rustls-platform-verifier.workspace = true
 # Where the client keeps its files.
 dirs.workspace = true
+# Pasting into text boxes and copying (MIT/Apache-2.0). In a browser, the
+# browser pastes into the page's hidden input.
+arboard = { version = "3", default-features = false }
 
 # The browser's WebSocket, location and storage.
 [target.'cfg(target_arch = "wasm32")'.dependencies]

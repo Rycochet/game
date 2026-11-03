@@ -59,7 +59,6 @@ The native client reads `HOW_DATA` too, for its single-player saves, as well as 
 
 | Variable | Default | What it does |
 | -------- | ------- | ------------ |
-| `HOW_SERVER` | none | The server to join, such as `wss://game.example.com:8081/ws`. Without it, the client plays single player. |
-| `HOW_SERVER_KEY` | none | The key fingerprint the server must have, from its log. See [Connecting a native client](hosting/#connecting-a-native-client). |
-| `HOW_KNOWN_SERVERS` | `Hall of Worlds/client/known_servers.ron` in the user's data folder | The file remembering the servers this client has visited. |
+| `HOW_SERVER` | none | A server for Play to join, such as `wss://game.example.com:8081/ws`, until logging out; a server chosen in Connect comes first. Without either, Play is single player. |
+| `HOW_SERVER_KEY` | none | The key fingerprint `HOW_SERVER` must have, from its log. Without it, any certificate is accepted. See [Connecting a native client](hosting/#connecting-a-native-client). |
 | `HOW_PREFERENCES` | `Hall of Worlds/client/client.ron` in the user's data folder | The file keeping the player's choices between runs. |

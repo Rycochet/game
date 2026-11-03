@@ -6,6 +6,7 @@ The messages between clients and the server, and the `Link` that carries them. C
 
 - `crates/shared/src/protocol/mod.rs`: `PROTOCOL_VERSION`, world map range constants, `ClientMessage`, `ServerMessage`, `WorldInfo`, `WorldChunk`. Tests: every message survives the link; closed links; report distance below the preload. Beside it: `client_message.rs`, `server_message.rs`, `ping.rs` (pings and pongs as bytes), `world_chunk.rs` (`WorldChunk`, `SeenPoi`, `WorldInfo`).
 - `crates/shared/src/protocol/level.rs`: site levels as sent: `LEVEL_CHUNK_SIZE` (8), `ENTER_REACH` (2), `level_chunk(x, y) -> (chunk, bit)`, `LevelInfo`, `LevelChunk` (`positions()`, `cells()`), `RememberedLevel`, `SeenStairs`. Test: cells come back where they were.
+- `crates/shared/src/protocol/address.rs`: `ServerAddress` (`parse` what players type: host name, IPv4 or `[IPv6]`, optional port, no scheme or path; shown as typed, the port only when not `DEFAULT_PORT`; `url()` its `wss://host:port/ws`), `DEFAULT_PORT` (8081, the secure port). Tests.
 - `crates/shared/src/protocol/link.rs`: `Link`, `ClientLink`, `ServerLink`, `LinkError`, `local_pair`, `Wire`, `wired`. Tests (in `mod.rs`): every message survives the link and a wire, garbled bytes and closed ends noticed.
 - `crates/shared/src/protocol/login.rs`: between `Hello` and `Welcome`: `LoginMethod`, `Credentials`, `GuestToken` (32 bytes; `to_hex`, `from_hex`; its `Debug` hides it), `CharacterId(Id)` (a UUID, so always a safe file name), `CharacterSummary { id, name, last_played }`. Tests: tokens read back and stay out of logs, safe ids.
 

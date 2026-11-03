@@ -1,85 +1,15 @@
 use super::*;
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 const ADDRESS: &str = "game.example:8081";
 
-/// A certificate authority that does or doesn't vouch for everything.
-#[derive(Debug)]
-struct Authority(bool);
-
-impl ServerCertVerifier for Authority {
-    fn verify_server_cert(
-        &self,
-        _: &CertificateDer<'_>,
-        _: &[CertificateDer<'_>],
-        _: &ServerName<'_>,
-        _: &[u8],
-        _: UnixTime,
-    ) -> Result<ServerCertVerified, rustls::Error> {
-        if self.0 {
-            Ok(ServerCertVerified::assertion())
-        } else {
-            Err(rustls::Error::General("unknown issuer".into()))
-        }
-    }
-
-    fn verify_tls12_signature(
-        &self,
-        _: &[u8],
-        _: &CertificateDer<'_>,
-        _: &DigitallySignedStruct,
-    ) -> Result<HandshakeSignatureValid, rustls::Error> {
-        unreachable!()
-    }
-
-    fn verify_tls13_signature(
-        &self,
-        _: &[u8],
-        _: &CertificateDer<'_>,
-        _: &DigitallySignedStruct,
-    ) -> Result<HandshakeSignatureValid, rustls::Error> {
-        unreachable!()
-    }
-
-    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        Vec::new()
-    }
-}
-
-/// A known servers file of its own, removed at the end.
-struct Folder(PathBuf);
-
-impl Folder {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let number = NEXT.fetch_add(1, Ordering::Relaxed);
-        let name = format!("how-trust-{}-{number}", std::process::id());
-        let folder = env::temp_dir().join(name);
-        fs::create_dir_all(&folder).unwrap();
-        Self(folder)
-    }
-
-    fn file(&self) -> PathBuf {
-        self.0.join("known_servers.ron")
-    }
-
-    fn trust(&self, authority: bool, pinned: Option<String>) -> ServerTrust {
-        ServerTrust {
-            address: ADDRESS.into(),
-            pinned,
-            authority: Arc::new(Authority(authority)),
-            known: KnownServers(Some(self.file())),
-            refusal: Refusal::default(),
-            provider: Arc::new(default_provider()),
-        }
-    }
-}
-
-impl Drop for Folder {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
+fn trust(key: Option<(String, KeyFrom)>) -> ServerTrust {
+    ServerTrust {
+        address: ADDRESS.into(),
+        key,
+        refusal: Refusal::default(),
+        provider: Arc::new(default_provider()),
     }
 }
 
@@ -114,88 +44,36 @@ fn fingerprint(certificate: &CertificateDer<'_>) -> String {
 }
 
 #[test]
-fn a_new_key_is_remembered_and_accepted_again() {
-    let folder = Folder::new();
-    let certificate = certificate(30);
-    assert!(check(&folder.trust(false, None), &certificate));
-    let trust = folder.trust(false, None);
-    assert!(check(&trust, &certificate));
+fn with_no_key_any_certificate_will_do() {
+    let trust = trust(None);
+    assert!(check(&trust, &certificate(30)));
+    assert!(check(&trust, &certificate(30)));
+    assert!(check(&trust, &certificate(-1)));
     assert_eq!(trust.refusal.take(), None);
 }
 
 #[test]
-fn a_changed_key_is_refused_for_good() {
-    let folder = Folder::new();
-    assert!(check(&folder.trust(false, None), &certificate(30)));
-    let trust = folder.trust(false, None);
-    assert!(!check(&trust, &certificate(30)));
-    assert!(trust.refusal.take().unwrap().contains("key has changed"));
-}
-
-#[test]
-fn keys_are_remembered_per_server() {
-    let folder = Folder::new();
-    assert!(check(&folder.trust(false, None), &certificate(30)));
-    let mut other = folder.trust(false, None);
-    other.address = "game.example:9000".into();
-    assert!(check(&other, &certificate(30)));
-}
-
-#[test]
-fn an_authority_is_enough_and_is_then_required() {
-    let folder = Folder::new();
-    assert!(check(&folder.trust(true, None), &certificate(30)));
-    // A renewed certificate, with a new key: still vouched for.
-    assert!(check(&folder.trust(true, None), &certificate(30)));
-    let trust = folder.trust(false, None);
-    assert!(!check(&trust, &certificate(30)));
-    assert!(trust.refusal.take().unwrap().contains("no longer backed"));
-}
-
-#[test]
-fn an_authority_overrides_a_remembered_key() {
-    let folder = Folder::new();
-    assert!(check(&folder.trust(false, None), &certificate(30)));
-    assert!(check(&folder.trust(true, None), &certificate(30)));
-}
-
-#[test]
-fn an_expired_certificate_is_refused_and_not_remembered() {
-    let folder = Folder::new();
-    let trust = folder.trust(false, None);
-    assert!(!check(&trust, &certificate(-1)));
-    assert!(trust.refusal.take().unwrap().contains("expired"));
-    assert!(!folder.file().exists());
-}
-
-#[test]
-fn a_named_key_is_all_that_is_accepted() {
-    let folder = Folder::new();
+fn a_pasted_key_is_all_that_is_accepted() {
     let certificate = certificate(30);
-    let named = fingerprint(&certificate);
-    assert!(check(
-        &folder.trust(false, Some(named.clone())),
-        &certificate
-    ));
-    // Even if an authority vouches for another one.
-    let other = self::certificate(30);
-    let trust = folder.trust(true, Some(named.clone()));
-    assert!(!check(&trust, &other));
-    assert!(trust.refusal.take().unwrap().contains("HOW_SERVER_KEY"));
-    let expired = self::certificate(-1);
-    let trust = folder.trust(false, Some(fingerprint(&expired)));
-    assert!(!check(&trust, &expired));
+    let key = Some((fingerprint(&certificate), KeyFrom::Pasted));
+    assert!(check(&trust(key.clone()), &certificate));
+    let trust = trust(key);
+    assert!(!check(&trust, &self::certificate(30)));
+    let reason = trust.refusal.take().unwrap();
+    assert!(reason.contains("doesn't match the one saved"));
 }
 
 #[test]
-fn an_unreadable_file_refuses_rather_than_forgets() {
-    let folder = Folder::new();
-    fs::write(folder.file(), "not what it should be").unwrap();
-    let trust = folder.trust(false, None);
+fn a_named_key_says_where_it_came_from() {
+    let trust = trust(Some(("0".repeat(64), KeyFrom::Environment)));
     assert!(!check(&trust, &certificate(30)));
-    assert!(trust.refusal.take().is_some());
-    assert_eq!(
-        fs::read_to_string(folder.file()).unwrap(),
-        "not what it should be"
-    );
+    assert!(trust.refusal.take().unwrap().contains("HOW_SERVER_KEY"));
+}
+
+#[test]
+fn a_keys_certificate_must_be_in_date() {
+    let expired = certificate(-1);
+    let trust = trust(Some((fingerprint(&expired), KeyFrom::Pasted)));
+    assert!(!check(&trust, &expired));
+    assert!(trust.refusal.take().unwrap().contains("expired"));
 }

@@ -2,7 +2,7 @@
 //! so it gets the same character back. There is one per server, so a server
 //! can't use it on another.
 //!
-//! - Native: in `guest_tokens.ron` beside the known servers, by `host:port`.
+//! - Native: in `guest_tokens.ron` beside the preferences, by `host:port`.
 //!   `HOW_DEBUG_GUEST` names a slot, so that clients on one computer can be
 //!   different guests.
 //! - Web: in the browser's local storage, which is already per server.
@@ -41,7 +41,7 @@ pub(super) fn token(_target: &Target) -> Result<GuestToken, String> {
 /// safe one can't be made.
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) fn token(target: &Target) -> Result<GuestToken, String> {
-    let Target::Url(url) = target else {
+    let Target::Url { url, .. } = target else {
         // An embedded server has no logins, so this doesn't get used.
         return server::new_guest_token();
     };
@@ -61,12 +61,20 @@ mod native {
     use bevy::log::warn;
     use shared::protocol::GuestToken;
 
-    use crate::connection::trust::{KnownServers, write_through_new};
-
-    /// Where the tokens are kept: secrets, so not in the known servers' file,
-    /// which people are told to edit.
+    /// Where the tokens are kept: secrets, so not in the preferences, which
+    /// people may share or edit.
     pub fn file() -> Option<PathBuf> {
-        Some(KnownServers::path()?.with_file_name("guest_tokens.ron"))
+        crate::common::client_file("guest_tokens.ron")
+    }
+
+    /// Writes all of a file or none of it.
+    fn write_through_new(path: &Path, text: &str) -> io::Result<()> {
+        if let Some(folder) = path.parent() {
+            fs::create_dir_all(folder)?;
+        }
+        let new = path.with_extension("ron.new");
+        fs::write(&new, text)?;
+        fs::rename(new, path)
     }
 
     /// What a server's token is kept under.

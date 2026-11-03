@@ -10,7 +10,10 @@ use super::super::ping::Pinger;
 /// when either side goes. It doesn't depend on the game's frames, so the
 /// connection and its timing carry on while the window is frozen.
 #[cfg(not(target_arch = "wasm32"))]
-pub(in crate::connection) fn open(url: &str) -> (ClientLink, LatestPong, Refusal) {
+pub(in crate::connection) fn open(
+    url: &str,
+    key: Option<(String, super::super::trust::KeyFrom)>,
+) -> (ClientLink, LatestPong, Refusal) {
     use std::net::TcpStream;
     use std::thread;
     use std::time::{Duration, Instant};
@@ -51,7 +54,7 @@ pub(in crate::connection) fn open(url: &str) -> (ClientLink, LatestPong, Refusal
                 .port_u16()
                 .unwrap_or(if secure { 443 } else { 80 });
             let connector = if secure {
-                match super::super::trust::connector(&host, port, refused.clone()) {
+                match super::super::trust::connector(&host, port, key, refused.clone()) {
                     Ok(connector) => Some(connector),
                     Err(error) => {
                         refused.set(error);

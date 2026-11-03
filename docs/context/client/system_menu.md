@@ -1,21 +1,23 @@
 # client: system_menu
 
-The system menu: Esc or the gear button top right (the way in on touch devices) opens a small panel in three sections: Continue; Settings and Credits; Logout and Quit. While it is open, single player is paused. The same menu, with Play for Continue, is the startup menu over the title, until Play is pressed (`common::Session`). Native and web.
+The system menu: Esc or the gear button top right (the way in on touch devices) opens a small panel in three sections: Continue and Connect...; Settings and Credits; Logout and Quit. While it is open, single player is paused. The same menu, with Play for Continue, is the startup menu over the title, until Play is pressed (`common::Session`). Native and web.
 
 ## Files
 
 - `crates/client/src/system_menu/mod.rs`: `SystemMenuPlugin`, `SystemMenu`, the gear icon (drawn in code), the panels, `take_input` (`PreUpdate`, `WidgetSystems::Front`, while `takes_input`: at the startup menu or once there is a world), `show_menu`, `show_buttons` (Play, Continue and Logout by `Session` and `ServerClock::local_server`), `ask_for_pause`, `show_ended_page`. Unit tests. Beside it: `state.rs` (`SystemMenu`, `Action`, `MenuButton`), `spawn.rs` (gear, layers, requester, Settings, `spawn_title_row`), `panel.rs` (the menu's sections, `SECTIONS`), `input.rs`, `show.rs`.
+- `crates/client/src/system_menu/connect.rs`: Connect (startup menu only): example, address box (`AddressBox`), padlock (`PadlockButton`, native only), the remembered servers (`ServerList`, rows by `spawn_server_row` with a bin), Connect and Cancel. In `connect/`: `form.rs` (`ConnectForm`: a key pasted or cleared and the address it is for, the server being forgotten; `open_connect` fills the box with `ChosenServer` or the latest server, and after a refusal keeps the key tried; `fill_server_list`; `use_connect`, Connect's presses, which `SystemMenu::after` leaves to it), `show.rs` (`show_connect`: Connect and the padlock only for an address, the padlock shut while a key is kept, Keep only for a certificate), `popups.rs` (the certificate box and the forget requester). `icons.rs`: padlock shut and open, bin.
+- `crates/client/src/system_menu/refusal.rs`: `show_refusal`: a refusal while playing goes to `Session::AtStart` and the "Can't connect" requester with the reason in red; its OK goes to Connect if a server was chosen there, else the menu.
 - `crates/client/src/system_menu/credits.rs`: the Credits layer (`CREDITS`: what was done and by whom), a scroll area that `start_credits` restarts from the top with `widgets::AutoScroll` each time it opens. Test: every bold label on `docs/credits.md` is in it.
 - `crates/client/src/system_menu/settings.rs`: Settings' tabs and pages (`spawn_pages`; hidden pages take no room): Gameplay (empty) and Interface, with the interface size dropdown (Auto, then `widgets::INTERFACE_PERCENTS`) and "Enable touch" (on and disabled on a touch-only device, `widgets::TouchOnly`). `fill_interface_page` rebuilds it when `Preferences` change; `use_pages` switches pages and writes the choices into `Preferences`. Unit tests.
 
 ## Public API
 
 - `SystemMenuPlugin`.
-- `SystemMenu` (resource): `Closed`, `Menu`, `Confirming` (the requester above the menu), `Settings`, `Credits` (above the menu); `is_open()`. Set by `dev_tools` (`HOW_DEBUG_SYSTEM_MENU`).
+- `SystemMenu` (resource): `Closed`, `Menu`, `Confirming` (the requester above the menu), `Settings`, `Credits`, `Connect`, `Refused` (above the menu), `Certificate`, `Forgetting` (above Connect); `is_open()`. Set by `dev_tools` (`HOW_DEBUG_SYSTEM_MENU`).
 
 ## Depends on
 
-- `common` (`GameView`, `ServerClock`, `Session`, `TouchGesture`, `Preferences`, `InterfaceSize`), `connection` (`ToServer`), `debug_menu` (`DebugMenu::open`), `minimap` (`FullMap::open`), `widgets`, `shared::protocol`.
+- `common` (`GameView`, `ServerClock`, `Session`, `ChosenServer`, `SavedServer`, `TouchGesture`, `Preferences`, `InterfaceSize`), `connection` (`ToServer`, `server_key`), `debug_menu` (`DebugMenu::open`), `minimap` (`FullMap::open`), `widgets`, `shared::protocol`.
 
 ## Used by
 

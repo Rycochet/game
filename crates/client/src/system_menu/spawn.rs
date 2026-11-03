@@ -80,6 +80,11 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
     spawn_requester(&mut commands);
     spawn_settings(&mut commands);
     super::credits::spawn_credits(&mut commands);
+    let icons = super::icons::ConnectIcons::new(&mut images);
+    super::connect::spawn_connect(&mut commands, &icons);
+    super::connect::spawn_popups(&mut commands);
+    super::refusal::spawn_refusal(&mut commands);
+    commands.insert_resource(icons);
 }
 
 pub(super) fn wide_button() -> Node {
