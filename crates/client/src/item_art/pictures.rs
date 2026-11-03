@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use std::collections::{HashMap, VecDeque};
+use std::time::Duration;
 
 use super::Look;
 
@@ -12,11 +13,14 @@ use super::Look;
 pub struct ItemPictures {
     /// By the pixels they were drawn with.
     made: HashMap<(Look, u32), Handle<Image>>,
-    /// With the pixels asked for, for the black edge.
-    pub(super) waiting: VecDeque<(Look, u32, Handle<Image>)>,
+    pub(super) waiting: VecDeque<Waiting>,
     /// How many times over the pixels asked for they are drawn with, so they stay
     /// sharp on a large interface.
     pub(super) detail: u32,
+    /// How many pictures have been drawn so far, and the time spent building their
+    /// models.
+    pub(super) drawn: u64,
+    pub(super) building: Duration,
 }
 
 impl Default for ItemPictures {
@@ -25,6 +29,8 @@ impl Default for ItemPictures {
             made: HashMap::default(),
             waiting: VecDeque::default(),
             detail: 1,
+            drawn: 0,
+            building: Duration::ZERO,
         }
     }
 }
@@ -45,9 +51,23 @@ impl ItemPictures {
             None,
         ));
         self.made.insert((look.clone(), pixels), picture.clone());
-        self.waiting.push_back((look, asked, picture.clone()));
+        self.waiting.push_back(Waiting {
+            look,
+            asked,
+            pixels,
+            picture: picture.clone(),
+        });
         picture
     }
+}
+
+/// A picture still to be drawn.
+pub(super) struct Waiting {
+    pub(super) look: Look,
+    /// The pixels asked for, which the black edge goes by, and those it is drawn with.
+    pub(super) asked: u32,
+    pub(super) pixels: u32,
+    pub(super) picture: Handle<Image>,
 }
 
 /// On an `ImageNode`: it shows this picture once there is one to show.

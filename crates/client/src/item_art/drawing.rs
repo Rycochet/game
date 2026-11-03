@@ -1,4 +1,4 @@
-//! A drawing being made: its parts, the light, and waiting for shaders.
+//! What drawing is made of: models' parts, the lights, and waiting for shaders.
 
 use bevy::prelude::*;
 use bevy::render::MainWorld;
@@ -9,13 +9,6 @@ pub(super) struct Part {
     pub(super) mesh: Handle<Mesh>,
     pub(super) material: Handle<StandardMaterial>,
     pub(super) transform: Transform,
-}
-
-/// Everything for one picture while it is being drawn, under one entity.
-#[derive(Component)]
-pub(super) struct Drawing {
-    pub(super) slot: usize,
-    pub(super) frames_left: u8,
 }
 
 /// The lights all pictures share, there only while any are being drawn so as not to

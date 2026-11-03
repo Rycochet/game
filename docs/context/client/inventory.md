@@ -4,7 +4,7 @@ The Character panel (what the character is like, what they wear and what they ca
 
 ## Files
 
-- `crates/client/src/inventory/mod.rs`: `InventoryPlugin`, `Carried`, `InventoryDebug` (native), the module list. Beside it: `holding.rs` (`Holding`, `HeldBy`, `Hand`, `cancel_held`), `server.rs` (`read_server`), `finger.rs` (`pick_up_by_finger`, `PreUpdate`, before widgets), `debug.rs` (`run_debug`, native).
+- `crates/client/src/inventory/mod.rs`: `InventoryPlugin`, `Carried`, `InventoryDebug` (native), the module list. Beside it: `holding.rs` (`Holding`, `HeldBy`, `Hand`, `cancel_held`), `server.rs` (`read_server`), `finger.rs` (`pick_up_by_finger`, `PreUpdate`, before widgets), `early_pictures.rs` (`ask_early`: pictures of everything carried and worn asked for as soon as `Carried` changes, so they are drawn before a panel shows them), `debug.rs` (`run_debug`, native).
 - `crates/client/src/inventory/hold_items.rs`: `hold_items` (`PreUpdate`, after `WidgetSystems::Modal`), `is_click`, `worth_wearing`, and its `SystemParam`s `Under` (what the pointer may be over) and `Outbox` (what letting go writes). It runs three steps in `hold_items/`, in order: `press.rs` (presses: a double click opens a bag, a press picks up), `aim.rs` (turning, following the pointer or finger, and the `Target`), `let_go.rs` (taking, wearing, dropping, giving, binning or moving).
 - `crates/client/src/inventory/hold.rs`: without Bevy: `Held`, `Target`, `target`, `drop_move`. Unit tests.
 - `crates/client/src/inventory/body.rs`: `spawn_rows`, `BodyNode`, `show_clothes`, `show_body_aim`, `worn_notes`.

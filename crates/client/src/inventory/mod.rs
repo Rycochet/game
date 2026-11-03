@@ -18,6 +18,7 @@ use crate::widgets::WidgetSystems;
 // Split into files (`cargo xtask lint` keeps files small).
 #[cfg(not(target_arch = "wasm32"))]
 mod debug;
+mod early_pictures;
 mod finger;
 mod hold_items;
 mod holding;
@@ -87,6 +88,7 @@ impl Plugin for InventoryPlugin {
                 )
                     .chain(),
             );
+        app.add_systems(Update, early_pictures::ask_early);
         #[cfg(not(target_arch = "wasm32"))]
         app.add_message::<InventoryDebug>()
             .add_systems(Update, run_debug.before(panels::forget_closed));

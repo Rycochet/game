@@ -1,20 +1,22 @@
-//! Setting up a drawing off screen: lights, the parts and their black outlines.
+//! Setting up a page off screen: lights, its two cameras, and each picture's model
+//! and the square its edge is drawn on.
 
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::{RenderTarget, ScalingMode};
-use bevy::core_pipeline::tonemapping::Tonemapping;
+use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
 use bevy::prelude::*;
-use std::f32::consts::TAU;
 
-use super::{
-    CAMERA_AT, CAMERA_UP, Drawing, FIRST_LAYER, FRAMES_ALIVE, OUTLINE_BEHIND, OUTLINE_COPIES,
-    OUTLINE_PIXELS, Part, PictureLight, SLOTS, VIEW_WIDTH,
-};
+use super::{Batch, CAMERA_AT, CAMERA_UP, PAGES, Part, PictureLight, VIEW_WIDTH, layers};
+
+/// World units to a pixel of the page. Models are scaled down to this, so that a
+/// whole page of them stays well in front of its camera.
+const PAGE_UNIT: f32 = 1.0 / 1024.0;
+/// How far back from the page the models' camera is.
+const CAMERA_BACK: f32 = 10.0;
 
 /// Strongest from the top right, as things are lit in the interface, with enough from
 /// elsewhere that no face goes black, and shiny things have something to catch.
 pub(super) fn spawn_lights(commands: &mut Commands) {
-    let layers = RenderLayers::from_layers(&(FIRST_LAYER..FIRST_LAYER + SLOTS).collect::<Vec<_>>());
     let lights = [
         (Vec3::new(2.0, 3.0, 1.0), 4000.0),
         (Vec3::new(-3.0, 1.5, 1.5), 1500.0),
@@ -28,97 +30,124 @@ pub(super) fn spawn_lights(commands: &mut Commands) {
                 ..default()
             },
             Transform::from_translation(from).looking_at(Vec3::ZERO, Vec3::Y),
-            layers.clone(),
+            RenderLayers::from_layers(&(0..PAGES).map(|slot| layers(slot).0).collect::<Vec<_>>()),
         ));
     }
 }
 
-/// A black edge of the same thickness whatever is drawn: each mesh again in black,
-/// moved a little each way across the picture, and back so that only what sticks out
-/// shows. Going by what the camera sees, it needs nothing of a model's shape.
-pub(super) fn outline_copies(
-    parts: &[Part],
-    pixels: u32,
-    black: &Handle<StandardMaterial>,
-) -> Vec<Part> {
-    let looking = -CAMERA_AT.normalize();
-    let right = looking.cross(CAMERA_UP).normalize();
-    let up = right.cross(looking);
-    let reach = OUTLINE_PIXELS * VIEW_WIDTH / pixels as f32;
-    let mut copies = Vec::new();
-    let mut last = None;
-    for part in parts {
-        // A gem is one mesh drawn twice, which needs only one edge.
-        let this = (part.mesh.id(), part.transform);
-        if last == Some(this) {
-            continue;
-        }
-        last = Some(this);
-        for copy in 0..OUTLINE_COPIES {
-            let angle = copy as f32 / OUTLINE_COPIES as f32 * TAU;
-            let across = (right * angle.cos() + up * angle.sin()) * reach;
-            let mut transform = part.transform;
-            transform.translation += across + looking * OUTLINE_BEHIND;
-            copies.push(Part {
-                mesh: part.mesh.clone(),
-                material: black.clone(),
-                transform,
-            });
-        }
-    }
-    copies
+/// Where the models' camera is, which every model is seen from as a picture of its
+/// own would be.
+fn models_view() -> Transform {
+    Transform::from_translation(CAMERA_AT.normalize() * CAMERA_BACK)
+        .looking_at(Vec3::ZERO, CAMERA_UP)
 }
 
-pub(super) fn spawn_drawing(
+/// The batch on its entity, with its cameras.
+pub(super) fn spawn_batch(commands: &mut Commands, entity: Entity, batch: Batch) {
+    let size = batch.size.as_vec2();
+    let (models_layer, edge_layer) = layers(batch.slot);
+    // Before anything that might show them, the models before their edges.
+    let order = -40 + 2 * batch.slot as isize;
+    let camera = |order| Camera {
+        order,
+        clear_color: Color::NONE.into(),
+        ..default()
+    };
+    let models = commands
+        .spawn((
+            Camera3d::default(),
+            camera(order),
+            AmbientLight {
+                brightness: 150.0,
+                ..default()
+            },
+            RenderTarget::Image(batch.models.clone().into()),
+            Projection::Orthographic(OrthographicProjection {
+                near: 0.0,
+                far: CAMERA_BACK * 2.0,
+                scaling_mode: ScalingMode::Fixed {
+                    width: size.x * PAGE_UNIT,
+                    height: size.y * PAGE_UNIT,
+                },
+                ..OrthographicProjection::default_3d()
+            }),
+            Tonemapping::None,
+            DebandDither::Disabled,
+            models_view(),
+            RenderLayers::layer(models_layer),
+        ))
+        .id();
+    // In the page's pixels, looking at its middle.
+    let edges = commands
+        .spawn((
+            Camera3d::default(),
+            camera(order + 1),
+            RenderTarget::Image(batch.page.clone().into()),
+            Projection::Orthographic(OrthographicProjection {
+                near: 0.0,
+                far: 2.0,
+                scaling_mode: ScalingMode::Fixed {
+                    width: size.x,
+                    height: size.y,
+                },
+                ..OrthographicProjection::default_3d()
+            }),
+            Tonemapping::None,
+            DebandDither::Disabled,
+            // Whole pixels: an edge is there or not.
+            Msaa::Off,
+            Transform::from_xyz(0.0, 0.0, 1.0).looking_to(Vec3::NEG_Z, Vec3::Y),
+            RenderLayers::layer(edge_layer),
+        ))
+        .id();
+    commands
+        .entity(entity)
+        .insert((batch, Transform::default(), Visibility::default()))
+        .add_children(&[models, edges]);
+}
+
+/// A picture's model, fitted to its place on the page, and the square its edge is
+/// drawn on. A model fills `VIEW_WIDTH` along its longest side, as a picture of its
+/// own would.
+pub(super) fn spawn_cell(
     commands: &mut Commands,
-    slot: usize,
-    picture: Handle<Image>,
-    view: Vec2,
+    batch: (Entity, &Batch),
+    rect: URect,
     parts: Vec<Part>,
-    outline: Vec<Part>,
+    edge: MeshMaterial3d<super::EdgeMaterial>,
 ) {
-    let layer = RenderLayers::layer(FIRST_LAYER + slot);
+    let (entity, batch) = batch;
+    let (models_layer, edge_layer) = layers(batch.slot);
+    let half = batch.size.as_vec2() / 2.0;
+    let middle = rect.as_rect().center();
+    // From the page's middle, with y up.
+    let across = Vec2::new(middle.x - half.x, half.y - middle.y);
+    let view = models_view();
+    let at = (view.right() * across.x + view.up() * across.y) * PAGE_UNIT;
+    let longest = rect.width().max(rect.height()) as f32;
+    let scale = longest * PAGE_UNIT / VIEW_WIDTH;
     commands
         .spawn((
-            Drawing {
-                slot,
-                frames_left: FRAMES_ALIVE,
-            },
-            Transform::default(),
+            Transform::from_translation(at).with_scale(Vec3::splat(scale)),
             Visibility::default(),
+            ChildOf(entity),
         ))
-        .with_children(|drawing| {
-            drawing.spawn((
-                Camera3d::default(),
-                Camera {
-                    // Before anything that might show it.
-                    order: -10 - slot as isize,
-                    clear_color: Color::NONE.into(),
-                    ..default()
-                },
-                AmbientLight {
-                    brightness: 150.0,
-                    ..default()
-                },
-                RenderTarget::Image(picture.into()),
-                Projection::Orthographic(OrthographicProjection {
-                    scaling_mode: ScalingMode::Fixed {
-                        width: view.x,
-                        height: view.y,
-                    },
-                    ..OrthographicProjection::default_3d()
-                }),
-                Tonemapping::None,
-                Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP),
-                layer.clone(),
-            ));
-            for part in parts.into_iter().chain(outline) {
-                drawing.spawn((
+        .with_children(|cell| {
+            for part in parts {
+                cell.spawn((
                     Mesh3d(part.mesh),
                     MeshMaterial3d(part.material),
                     part.transform,
-                    layer.clone(),
+                    RenderLayers::layer(models_layer),
                 ));
             }
         });
+    let size = rect.size().as_vec2();
+    commands.spawn((
+        Mesh3d(batch.quad.clone()),
+        edge,
+        Transform::from_translation(across.extend(0.0)).with_scale(size.extend(1.0)),
+        RenderLayers::layer(edge_layer),
+        ChildOf(entity),
+    ));
 }
