@@ -1,6 +1,7 @@
 //! Pictures of items, drawn once in 3D by a camera of their own and kept as images.
 //! See `docs/context/client/item_art.md`.
 
+mod blade;
 mod gem;
 mod ring;
 
@@ -13,6 +14,7 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
+use shared::blade::BladeForm;
 use shared::creature::Size;
 use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
@@ -49,6 +51,47 @@ pub enum Look {
         ring: RingLook,
         quality: Option<Quality>,
     },
+    Blade {
+        blade: BladeLook,
+        quality: Option<Quality>,
+    },
+}
+
+impl Look {
+    /// The cells it is drawn to fill, wide and long: only the proportions matter.
+    pub fn cells(&self) -> (u8, u8) {
+        match self {
+            Self::Gem { .. } | Self::Ring { .. } => (1, 1),
+            Self::Blade { blade, .. } => blade.cells,
+        }
+    }
+
+    /// The most cells it reaches along either side.
+    pub fn longest(&self) -> u8 {
+        let (wide, long) = self.cells();
+        wide.max(long)
+    }
+
+    /// How big its picture is, given how many pixels its longest side has.
+    pub fn picture_size(&self, pixels: u32) -> UVec2 {
+        let (wide, long) = self.cells();
+        let longest = self.longest() as u32;
+        UVec2::new(wide as u32, long as u32) * pixels / longest
+    }
+}
+
+/// What can be seen of a weapon: lengths to the nearest centimetre, so that nearly the
+/// same weapons share a picture, and without what doesn't show.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct BladeLook {
+    form: BladeForm,
+    /// What it takes up, wide and long, not turned.
+    cells: (u8, u8),
+}
+
+/// A length to the nearest centimetre.
+fn to_centimetre(millimetres: u16) -> u16 {
+    (millimetres + 5) / 10 * 10
 }
 
 /// What can be seen of a ring. Sizes are against the ring's own, as how big it is
@@ -88,8 +131,21 @@ fn sizes_above(size: Size, than: Size) -> i8 {
 pub fn look_of(item: &Item) -> Option<Look> {
     let quality = item.quality;
     match item.form.as_ref()? {
-        // Blades have no model yet, so they are drawn as anything else without one.
-        ItemForm::Blade(_) => None,
+        ItemForm::Blade(form) => {
+            let shape = item.shape();
+            Some(Look::Blade {
+                blade: BladeLook {
+                    form: BladeForm {
+                        blade: to_centimetre(form.blade),
+                        handle: to_centimetre(form.handle),
+                        generic_only: false,
+                        ..**form
+                    },
+                    cells: (shape.width, shape.height),
+                },
+                quality,
+            })
+        }
         ItemForm::Gem(gem) => Some(Look::Gem { gem: *gem, quality }),
         ItemForm::Ring(ring) => {
             let settings = ring.settings.iter().map(|setting| SettingLook {
@@ -128,7 +184,7 @@ pub struct ItemPictures {
 }
 
 impl ItemPictures {
-    /// The picture of this, square, this many pixels across.
+    /// The picture of this, this many pixels along its longest side.
     pub fn picture(
         &mut self,
         look: Look,
@@ -138,9 +194,10 @@ impl ItemPictures {
         if let Some(picture) = self.made.get(&(look.clone(), pixels)) {
             return picture.clone();
         }
+        let size = look.picture_size(pixels);
         let picture = images.add(Image::new_target_texture(
-            pixels,
-            pixels,
+            size.x,
+            size.y,
             TextureFormat::Rgba8UnormSrgb,
             None,
         ));
@@ -154,7 +211,7 @@ impl ItemPictures {
 #[derive(Component, Clone, Debug)]
 pub struct ItemPicture {
     pub look: Look,
-    /// How many pixels across it is drawn.
+    /// How many pixels along its longest side it is drawn.
     pub pixels: u32,
 }
 
@@ -244,6 +301,9 @@ fn draw_pictures(
         let Some((look, pixels, picture)) = pictures.waiting.pop_front() else {
             break;
         };
+        let (wide, long) = look.cells();
+        let longest = look.longest() as f32;
+        let view = Vec2::new(wide as f32, long as f32) / longest * VIEW_WIDTH;
         let parts = match look {
             Look::Gem { gem, quality } => {
                 gem::gem_parts(&gem, quality, &mut meshes, &mut materials)
@@ -258,6 +318,9 @@ fn draw_pictures(
             Look::Ring { ring, quality } => {
                 ring::ring_parts(&ring, quality, &mut meshes, &mut materials)
             }
+            Look::Blade { blade, quality } => {
+                blade::blade_parts(&blade, quality, &mut meshes, &mut materials)
+            }
         };
         let black = materials.add(StandardMaterial {
             base_color: Color::BLACK,
@@ -266,7 +329,7 @@ fn draw_pictures(
             ..default()
         });
         let outline = outline_copies(&parts, pixels, &black);
-        spawn_drawing(&mut commands, slot, picture, parts, outline);
+        spawn_drawing(&mut commands, slot, picture, view, parts, outline);
     }
 }
 
@@ -328,6 +391,7 @@ fn spawn_drawing(
     commands: &mut Commands,
     slot: usize,
     picture: Handle<Image>,
+    view: Vec2,
     parts: Vec<Part>,
     outline: Vec<Part>,
 ) {
@@ -357,8 +421,8 @@ fn spawn_drawing(
                 RenderTarget::Image(picture.into()),
                 Projection::Orthographic(OrthographicProjection {
                     scaling_mode: ScalingMode::Fixed {
-                        width: VIEW_WIDTH,
-                        height: VIEW_WIDTH,
+                        width: view.x,
+                        height: view.y,
                     },
                     ..OrthographicProjection::default_3d()
                 }),

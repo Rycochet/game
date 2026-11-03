@@ -31,6 +31,7 @@ use crate::widgets::{
     spawn_dropdown, spawn_icon_button, spawn_moveable_panel, spawn_scroll_area, spawn_slider,
     spawn_tabs, spawn_text_box, spawn_tooltip,
 };
+use shared::blade::Family;
 
 const FONT: TextSize = TextSize::Medium;
 const CHECK_ROW: f32 = 34.0;
@@ -191,6 +192,8 @@ fn spawn_creature_buttons(content: &mut ChildSpawnerCommands) {
 /// How big each picture in Item Pictures' grid is shown, and is drawn, for sharpness.
 const PICTURE: f32 = 50.0;
 const PICTURE_PIXELS: u32 = 100;
+/// How long a weapon is shown in Item Pictures' grid.
+const BLADE_PICTURE: f32 = 150.0;
 const LARGE_PICTURE: f32 = 256.0;
 const LARGE_PICTURE_PIXELS: u32 = 512;
 const PICTURE_LABEL: TextSize = TextSize::Small;
@@ -238,6 +241,8 @@ enum Shown {
     Gem(GemForm),
     /// A ring as the server would roll it from this number, at the quality chosen.
     Ring(u128),
+    /// A weapon of this family, likewise.
+    Blade(Family, u128),
 }
 
 impl Shown {
@@ -256,6 +261,12 @@ impl Shown {
                     Id::for_test(gems)
                 });
                 look_of(&ring)
+            }
+            Self::Blade(family, seed) => {
+                let mut blade = Item::new(Id::for_test(seed), family.kind());
+                blade.quality = Some(quality);
+                give_form(&mut blade, Some(Size::Medium), &mut || Id::for_test(0));
+                look_of(&blade)
             }
         }
     }
@@ -296,6 +307,9 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                     spawn_picture_heading(column);
                     let area = spawn_scroll_area(column, PICTURES_HEIGHT);
                     column.commands().entity(area).with_children(|grid| {
+                        for family in Family::ALL {
+                            spawn_blade_row(grid, family);
+                        }
                         for material in Material::GEMS {
                             spawn_picture_row(grid, material);
                         }
@@ -367,6 +381,20 @@ fn spawn_ring_row(grid: &mut ChildSpawnerCommands, row: u128) {
     });
 }
 
+fn spawn_blade_row(grid: &mut ChildSpawnerCommands, family: Family) {
+    grid.spawn(Node {
+        align_items: AlignItems::Center,
+        ..default()
+    })
+    .with_children(|cells| {
+        cells.spawn(picture_label(&format!("{family:?}"), PICTURE_ROW_LABEL));
+        for cell in 0..RING_COLUMNS {
+            let seed = (family as u128 + 1) * 1000 + cell;
+            spawn_picture(cells, Shown::Blade(family, seed));
+        }
+    });
+}
+
 fn spawn_picture(row: &mut ChildSpawnerCommands, shown: Shown) {
     row.spawn((
         GemPicture(shown),
@@ -406,20 +434,36 @@ pub(super) fn show_pictures(
     form: Res<PicturesForm>,
     mut pictures: ResMut<ItemPictures>,
     mut images: ResMut<Assets<Image>>,
-    mut grid: Query<(Ref<GemPicture>, &mut ImageNode), Without<LargePicture>>,
-    mut large: Query<(Ref<LargePicture>, &mut ImageNode), Without<GemPicture>>,
+    mut grid: Query<(Ref<GemPicture>, &mut ImageNode, &mut Node), Without<LargePicture>>,
+    mut large: Query<(Ref<LargePicture>, &mut ImageNode, &mut Node), Without<GemPicture>>,
 ) {
-    for (picture, mut image) in &mut grid {
+    for (picture, mut image, mut node) in &mut grid {
         if (form.is_changed() || picture.is_added())
             && let Some(look) = picture.0.look(form.quality)
         {
-            image.image = pictures.picture(look, PICTURE_PIXELS, &mut images);
+            // A weapon needs its full size for its black edge to be right, and more room.
+            let (box_side, pixels) = match picture.0 {
+                Shown::Blade(..) => (
+                    BLADE_PICTURE,
+                    look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
+                ),
+                _ => (PICTURE, PICTURE_PIXELS),
+            };
+            let size = look.picture_size(1000).as_vec2() / 1000.0 * box_side;
+            node.width = px(size.x);
+            node.height = px(size.y);
+            node.margin = UiRect::horizontal(px((PICTURE - size.x).max(0.0) / 2.0));
+            image.image = pictures.picture(look, pixels, &mut images);
         }
     }
-    for (picture, mut image) in &mut large {
+    for (picture, mut image, mut node) in &mut large {
         if (form.is_changed() || picture.is_added())
             && let Some(look) = form.chosen.look(form.quality)
         {
+            let size = look.picture_size(1000).as_vec2() / 1000.0 * LARGE_PICTURE;
+            node.width = px(size.x);
+            node.height = px(size.y);
+            node.margin = UiRect::horizontal(px((LARGE_PICTURE - size.x) / 2.0));
             image.image = pictures.picture(look, LARGE_PICTURE_PIXELS, &mut images);
         }
     }

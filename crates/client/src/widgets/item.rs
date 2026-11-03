@@ -230,27 +230,13 @@ pub fn spawn_item_cells<B: Bundle>(
     let pixels = shape.width.max(shape.height) as u32 * PICTURE_PIXELS_PER_CELL;
     // Behind a picture, with its frame drawn over it.
     if let (Some(aura), Some(picture)) = (aura, &picture) {
-        let node = Node {
-            left: px(corner.0 * CELL),
-            top: px(corner.1 * CELL),
-            width: px(shape.width as f32 * CELL),
-            height: px(shape.height as f32 * CELL),
-            ..default()
-        };
+        let node = picture_node(shape, rotation, corner);
         let mask = AuraMask::Picture(picture.clone(), pixels);
         parent.spawn((aura_glow(aura, mask, node), picture_turned(rotation)));
     }
     // Before the cells, so that they are what the pointer finds.
     if let Some(picture) = picture {
-        let (width, height) = (shape.width as f32, shape.height as f32);
-        let node = Node {
-            position_type: PositionType::Absolute,
-            left: px(corner.0 * CELL),
-            top: px(corner.1 * CELL),
-            width: px(width * CELL),
-            height: px(height * CELL),
-            ..default()
-        };
+        let node = picture_node(shape, rotation, corner);
         parent.spawn(item_picture(picture, pixels, node, rotation));
     }
     let mut first = true;
@@ -304,6 +290,40 @@ pub fn spawn_item_cells<B: Bundle>(
             ..default()
         };
         parent.spawn(aura_glow(aura, AuraMask::Cells(shape), node));
+    }
+}
+
+/// Where a picture goes over a shape as it lies, with the shape's corner at `corner`. A
+/// node turns about its middle and keeps its own layout, so one turned a quarter is laid
+/// out the other way round, with the same middle.
+fn picture_node(shape: Shape, rotation: Rotation, corner: (f32, f32)) -> Node {
+    let (lying_wide, lying_long) = (shape.width as f32, shape.height as f32);
+    let (wide, long) = match rotation {
+        Rotation::None | Rotation::Half => (lying_wide, lying_long),
+        Rotation::Quarter | Rotation::ThreeQuarters => (lying_long, lying_wide),
+    };
+    Node {
+        position_type: PositionType::Absolute,
+        left: px((corner.0 + (lying_wide - wide) / 2.0) * CELL),
+        top: px((corner.1 + (lying_long - long) / 2.0) * CELL),
+        width: px(wide * CELL),
+        height: px(long * CELL),
+        ..default()
+    }
+}
+
+/// A picture of this look kept to its proportions, in the middle of a square parent.
+pub fn picture_in_square(look: &Look) -> Node {
+    let (wide, long) = look.cells();
+    let longest = look.longest() as f32;
+    let (wide, long) = (wide as f32 / longest * 100.0, long as f32 / longest * 100.0);
+    Node {
+        position_type: PositionType::Absolute,
+        left: percent((100.0 - wide) / 2.0),
+        top: percent((100.0 - long) / 2.0),
+        width: percent(wide),
+        height: percent(long),
+        ..default()
     }
 }
 

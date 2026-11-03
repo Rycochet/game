@@ -7,17 +7,18 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - `crates/client/src/item_art/mod.rs`: `ItemArtPlugin`, `Look`, `look_of`, `ItemPictures`, the render queue, the lights and each picture's camera.
 - `crates/client/src/item_art/gem.rs`: `gem_parts`: colours, materials and meshes of gems (seven cuts from one builder, uncut as a lumpy sphere). Unit tests.
 - `crates/client/src/item_art/ring.rs`: `ring_parts`: a cross-section swept round a circle for the band, patterns, mounts, and gems placed in settings, all tipped back together. Unit tests.
+- `crates/client/src/item_art/blade.rs`: `blade_parts`: weapons from their rolled form, built in millimetres from lofted sections and tubes, then fitted to their cells. Unit tests.
 
 ## Public API
 
 - `ItemArtPlugin`.
-- `Look`, `RingLook`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form.
-- `ItemPicture { look, pixels }` (component): on an `ImageNode`, it shows that picture. `widgets::item_picture` is the usual way.
+- `Look`, `RingLook`, `BladeLook`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form. `Look::cells`, `longest`, `picture_size(pixels)`: its proportions.
+- `ItemPicture { look, pixels }` (component, `pixels` along the longest side): on an `ImageNode`, it shows that picture. `widgets::item_picture` is the usual way.
 - `ItemPictures` (resource): `picture(look, pixels, images)` gives the image straight away, empty until drawn, and the same one if asked again.
 
 ## Depends on
 
-- `shared::item`, `shared::item_form`, `shared::material`, `shared::rng`. No other module.
+- `shared::item`, `shared::item_form`, `shared::blade`, `shared::material`, `shared::rng`. No other module.
 
 ## Used by
 
@@ -34,7 +35,8 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - Every picture has a black edge (owner's request), 4 of its pixels, so 2 as shown: `OUTLINE_COPIES` black copies of each mesh, moved round and behind it. It goes by what the camera sees, so any model gets it with nothing of its own. A model must leave that much room inside `VIEW_WIDTH`.
 - Pictures are drawn at twice the size they are shown, which is what that thickness assumes.
 
-- A picture is square, and is stretched to fit a shape that isn't: only square kinds have models so far.
+- A picture has the proportions of what its item takes up, not turned: square for gems and rings, long for weapons. It must be asked for at 64 pixels per cell of its longest side for its black edge and margin to be right. A picture turned a quarter is laid out the other way round about the same middle (`widgets::picture_node`). Where one cell shows it, `widgets::picture_in_square` keeps its proportions.
+- A weapon points up with its edge to the right, and its length is squeezed to fit but its width much less (one cell shows at most 15 cm across), or a pike would be a black line. It is placed by its bounds, so anything rolled fits, which a test checks. Lengths in `BladeLook` are to the nearest centimetre, so that nearly the same weapons share a picture. No fine curves on heads: at this size their outlines are what show.
 - Size isn't in `Look`: a picture fills what the item takes up, at any size. Only sizes against each other show: a setting against its ring, a gem against its setting, which is how a gem too big looks it.
 - Metal is half metallic rather than fully: fully metal shows only what it reflects, and nothing is round it to reflect. Patterns are cheap: twisted turns the cross-section on its way round, hammered tilts each small face's normal, engraved darkens bands of faces.
 - Pictures are kept in memory for good, about 16 KB each at one cell, and drawn again next time the game starts. Keeping them on disk was measured and not done: see `optimisations.md`.

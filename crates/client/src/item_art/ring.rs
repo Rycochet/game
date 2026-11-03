@@ -151,7 +151,7 @@ fn rod(from: Vec3, to: Vec3, radius: f32) -> Transform {
         .with_scale(Vec3::new(radius, along.length(), radius))
 }
 
-fn metal_material(metal: Material, quality: Option<Quality>) -> StandardMaterial {
+pub(super) fn metal_material(metal: Material, quality: Option<Quality>) -> StandardMaterial {
     let fineness = quality.unwrap_or_default() as usize as f32 / 6.0;
     StandardMaterial {
         base_color: match metal {
