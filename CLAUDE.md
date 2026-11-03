@@ -96,7 +96,7 @@ Small files, each about one thing, are easier to understand and to find things i
 
 - **One idea per file:** a type and its `impl`, one Bevy system with its small helpers, one generator step, one message handler. Name the file after it.
 - **Aim for under about 100 lines; 300 is the limit**, not counting tests. `cargo xtask lint` (and so the pre-commit hook) enforces the limit.
-- **Tests go in their own file:** `#[cfg(test)] mod tests;` in `foo.rs` (or `foo/mod.rs`) is read from `foo/tests.rs`.
+- **Tests go in their own file:** `#[cfg(test)] mod tests;` in `foo.rs` (or `foo/mod.rs`) is read from `foo/tests.rs`. Every module's tests are kept this way, so context files don't list them. A second test module in the same place is named `<what>_tests.rs`, which the size check also leaves out.
 - **`mod.rs` holds** the `mod` lines, the plugin and `pub use` re-exports, so other modules' paths don't change when a module is split into files.
 - **Widen privacy only as far as a split needs** (`pub(super)`, `pub(crate)`), never to `pub` for convenience: the module's public API stays what its context file lists.
 - **Files over the limit** are listed in `xtask/large-files.txt` and may only shrink. One with a `# reason` (such as a long data table) is large on purpose; one without is waiting to be split. After a change shrinks listed files, run `cargo xtask sizes` to lower or remove their entries. Never add an entry, or a reason, without the owner's agreement: split the file instead.
