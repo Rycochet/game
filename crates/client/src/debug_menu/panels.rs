@@ -26,14 +26,17 @@ use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::item_art::{ItemPictures, Look, look_of};
 use crate::widgets::{
-    BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, INK, Pressable, RaisePanel,
-    TabChosen, TextBox, TextSize, raised_box, spawn_button, spawn_check_button, spawn_close_button,
-    spawn_dropdown, spawn_icon_button, spawn_moveable_panel, spawn_scroll_area, spawn_slider,
-    spawn_tabs, spawn_text_box, spawn_tooltip,
+    ALLOWED, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, GRID_COLOUR, INK,
+    Pressable, RaisePanel, TabChosen, TextBox, TextSize, field_label, raised_box, spawn_button,
+    spawn_check_button, spawn_close_button, spawn_dropdown, spawn_icon_button,
+    spawn_moveable_panel, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_tabs,
+    spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
 use shared::blade::Family;
 
 const FONT: TextSize = TextSize::Medium;
+/// How much of the window's height Show Widgets may take before it scrolls.
+const EVERY_WIDGET_HEIGHT: f32 = 80.0;
 const CHECK_ROW: f32 = 34.0;
 /// Where the first panel goes, and how far along each one after it.
 const FIRST_AT: Vec2 = Vec2::new(60.0, 110.0);
@@ -149,13 +152,13 @@ fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
         .chain(Size::ALL.iter().map(|size| format!("{size:?}")))
         .collect();
     let sizes: Vec<&str> = sizes.iter().map(String::as_str).collect();
-    let row = spawn_tabs(content, &sizes, 0, FONT);
+    let row = spawn_toggle_row(content, &sizes, 0, FONT);
     content.commands().entity(row).insert(GiveSizes);
-    let row = spawn_tabs(content, &["Plain", "Magical"], 0, FONT);
+    let row = spawn_toggle_row(content, &["Plain", "Magical"], 0, FONT);
     content.commands().entity(row).insert(GiveMagic);
-    let row = spawn_tabs(content, &["Plain", "Blessed", "Cursed"], 0, FONT);
+    let row = spawn_toggle_row(content, &["Plain", "Blessed", "Cursed"], 0, FONT);
     content.commands().entity(row).insert(GiveFavour);
-    let row = spawn_tabs(content, &["Alone", "Set"], 0, FONT);
+    let row = spawn_toggle_row(content, &["Alone", "Set"], 0, FONT);
     content.commands().entity(row).insert(GiveSet);
     let qualities: Vec<String> = Quality::ALL.iter().map(|q| format!("{q:?}")).collect();
     let qualities: Vec<&str> = qualities.iter().map(String::as_str).collect();
@@ -163,7 +166,7 @@ fn spawn_give_buttons(content: &mut ChildSpawnerCommands) {
         .iter()
         .position(|&quality| quality == Quality::default())
         .unwrap_or(0);
-    let row = spawn_tabs(content, &qualities, common, FONT);
+    let row = spawn_toggle_row(content, &qualities, common, FONT);
     content.commands().entity(row).insert(GiveQualities);
     content.spawn(wrapped()).with_children(|buttons| {
         for kind in ItemKind::ALL {
@@ -290,7 +293,7 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
         .iter()
         .position(|&quality| quality == Quality::default())
         .unwrap_or(0);
-    let row = spawn_tabs(content, &qualities, common, FONT);
+    let row = spawn_toggle_row(content, &qualities, common, FONT);
     content.commands().entity(row).insert(PictureQualities);
     content
         .spawn(Node {
@@ -577,6 +580,18 @@ pub(super) fn press_creature_buttons(
 
 /// One of each thing `widgets` makes, to see how they look together.
 fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
+    let area = spawn_scroll_area(content, Val::Vh(EVERY_WIDGET_HEIGHT));
+    content.commands().entity(area).with_children(|area| {
+        area.spawn(Node {
+            flex_direction: FlexDirection::Column,
+            row_gap: px(4),
+            ..default()
+        })
+        .with_children(spawn_widgets);
+    });
+}
+
+fn spawn_widgets(content: &mut ChildSpawnerCommands) {
     for (state, label) in [
         (ButtonState::Normal, "Normal"),
         (ButtonState::Selected, "Selected"),
@@ -609,6 +624,17 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
         spawn_check_button(content, ButtonState::Normal, on, label, FONT, node).insert(Pressable);
     }
     spawn_tabs(content, &["Tab", "Other tab", "Third tab"], 0, FONT);
+    spawn_toggle_row(content, &["Toggle", "Other", "Third"], 0, FONT);
+    spawn_progress_bar(
+        content,
+        0.6,
+        (GRID_COLOUR, ALLOWED),
+        Node {
+            height: px(CHECK_ROW),
+            ..default()
+        },
+        (Text::new("Progress"), FONT.font(), TextColor(INK)),
+    );
     spawn_close_button(content, default());
     spawn_slider(content, 0.5, None, 160.0);
     let kinds = || PoiKind::ALL.map(kind_name).to_vec();
@@ -633,7 +659,15 @@ fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
         height: px(CHECK_ROW),
         ..default()
     };
-    spawn_text_box(content, text_box, FONT, node);
+    content.spawn(field_label("Label"));
+    spawn_text_box(content, text_box, FONT, node.clone());
+    let wrong = TextBox {
+        text: "Something wrong".into(),
+        takes_keys: true,
+        error: true,
+        ..default()
+    };
+    spawn_text_box(content, wrong, FONT, node);
     content.spawn(raised_box()).with_child((
         Text::new("Raised box"),
         FONT.font(),

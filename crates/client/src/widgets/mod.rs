@@ -9,6 +9,7 @@ mod filter_list;
 mod fullscreen;
 mod item;
 mod moveable;
+mod progress;
 mod scroll;
 mod set_edge;
 mod slider;
@@ -28,7 +29,8 @@ pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
-    darkening, layer_share, layer_z, leaves_presses, spawn_fullscreen_layer, spawn_sized_layer,
+    darkening, layer_share, layer_z, leaves_presses, spawn_dialog, spawn_fullscreen_layer,
+    spawn_sized_layer,
 };
 pub use item::{
     CELL, Floating, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip,
@@ -37,13 +39,14 @@ pub use item::{
     spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
+pub use progress::{Progress, spawn_progress_bar};
 pub use scroll::spawn_scroll_area;
 pub use set_edge::set_edge;
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
 pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};
-pub use tabs::{TabChosen, spawn_tabs};
-pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, spawn_text_box};
+pub use tabs::{TabChosen, spawn_tabs, spawn_toggle_row};
+pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
 pub use theme::{ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, TextSize};
 use theme::{
     DISABLED_BACKGROUND, DISABLED_EDGE, DISABLED_TEXT, LIT_EDGE, RAISED_BACKGROUND, SELECTED_TEXT,
@@ -67,10 +70,9 @@ const CLOSE_FONT: TextSize = TextSize::Large;
 const TOOLTIP_EDGE: f32 = 1.0;
 const BUTTON_BORDER: f32 = 2.0;
 const CHECK_PIXELS: f32 = 18.0;
-/// The two strokes of a tick: thick, then each one's length, where it goes and how
-/// it is turned.
-const TICK_THICKNESS: f32 = 2.0;
-const TICK_STROKES: [(f32, f32, f32, f32); 2] = [(6.0, 1.0, 7.0, 45.0), (10.0, 4.0, 6.0, -45.0)];
+/// The two strokes of a tick: each one's length, where it goes and how it is turned.
+const TICK_STROKES: [Stroke; 2] = [(6.0, 1.0, 7.0, 45.0), (10.0, 4.0, 6.0, -45.0)];
+const STROKE_THICKNESS: f32 = 2.0;
 /// Between the edge of a button and its picture.
 const ICON_PADDING: f32 = 4.0;
 const CHECK_GAP: f32 = 8.0;
@@ -139,6 +141,7 @@ impl Plugin for WidgetsPlugin {
                     tabs::press_tabs,
                     feedback::spread_ripples,
                     feedback::show_button_tooltips,
+                    progress::show_progress,
                     moveable::place_panels,
                     scroll::show_scroll_bars,
                     slider::hold_sliders,
@@ -150,7 +153,7 @@ impl Plugin for WidgetsPlugin {
             )
             .add_systems(
                 PostUpdate,
-                (feedback::show_button_looks, feedback::show_hovered_edges)
+                (feedback::show_button_looks, feedback::show_edges)
                     .before(bevy::ui::UiSystems::Layout),
             );
     }
@@ -228,6 +231,16 @@ fn raised_border() -> BorderColor {
         left: LIT_EDGE,
         right: SHADED_EDGE,
         bottom: SHADED_EDGE,
+    }
+}
+
+/// Shaded along its top and left, lit along its bottom and right.
+fn sunken_border() -> BorderColor {
+    BorderColor {
+        top: SHADED_EDGE,
+        left: SHADED_EDGE,
+        right: LIT_EDGE,
+        bottom: LIT_EDGE,
     }
 }
 
@@ -400,26 +413,32 @@ pub fn spawn_check_button<'a>(
         });
         slot.insert(BorderColor::from(INK));
         if checked == Some(true) {
-            slot.with_children(|slot| {
-                for (length, left, top, degrees) in TICK_STROKES {
-                    slot.spawn((
-                        Node {
-                            position_type: PositionType::Absolute,
-                            left: px(left),
-                            top: px(top),
-                            width: px(length),
-                            height: px(TICK_THICKNESS),
-                            ..default()
-                        },
-                        UiTransform::from_rotation(Rot2::degrees(degrees)),
-                        BackgroundColor(INK),
-                    ));
-                }
-            });
+            slot.with_children(|slot| spawn_strokes(slot, &TICK_STROKES));
         }
         inside.spawn((Text::new(label), size.font(), TextColor(text)));
     });
     button
+}
+
+/// A straight line drawn on something: its length, where it goes and how it is turned.
+type Stroke = (f32, f32, f32, f32);
+
+/// Lines making up a small mark, such as a tick.
+fn spawn_strokes(parent: &mut ChildSpawnerCommands, strokes: &[Stroke]) {
+    for &(length, left, top, degrees) in strokes {
+        parent.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: px(left),
+                top: px(top),
+                width: px(length),
+                height: px(STROKE_THICKNESS),
+                ..default()
+            },
+            UiTransform::from_rotation(Rot2::degrees(degrees)),
+            BackgroundColor(INK),
+        ));
+    }
 }
 
 /// A close button, with `node` for where it goes.

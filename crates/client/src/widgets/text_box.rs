@@ -8,7 +8,8 @@ use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
 use super::soft_keyboard;
-use super::{ButtonPressed, INK, Pressable, TextSize};
+use super::theme::SUNKEN_BACKGROUND;
+use super::{ButtonPressed, INK, Pressable, TextSize, sunken_border};
 
 const CARET: &str = "_";
 const SIDE_PADDING: f32 = 8.0;
@@ -24,6 +25,8 @@ pub struct TextBox {
     /// the keyboard up). Off for a box in something that reads the keys it wants
     /// and takes the rest itself.
     pub takes_keys: bool,
+    /// What it says is wrong: its edge shows it, whoever has the keyboard.
+    pub error: bool,
 }
 
 /// The writing of a `TextBox`, whose entity it holds.
@@ -67,7 +70,8 @@ pub fn spawn_text_box<'a>(
             overflow: Overflow::clip(),
             ..node
         },
-        BorderColor::from(INK),
+        BackgroundColor(SUNKEN_BACKGROUND),
+        sunken_border(),
     ));
     let entity = holder.id();
     holder.with_child((
@@ -77,6 +81,11 @@ pub fn spawn_text_box<'a>(
         TextColor(INK),
     ));
     holder
+}
+
+/// The words naming a box, to go above it.
+pub fn field_label(words: impl Into<String>) -> impl Bundle {
+    (Text::new(words), TextSize::Small.font(), TextColor(INK))
 }
 
 /// What of `typed` a box keeps.

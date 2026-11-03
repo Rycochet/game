@@ -12,7 +12,7 @@ use bevy::winit::WinitSettings;
 use crate::common::{
     GameView, LoadingStep, PointerSystems, ServerStatus, TouchGesture, frame_settings,
 };
-use crate::widgets::{TextSize, WidgetSystems};
+use crate::widgets::{Progress, TextSize, WidgetSystems, spawn_progress_bar};
 
 /// Built into the program, rather than loaded, to be there on the first frame.
 const TITLE_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/CinzelDecorative-Bold.ttf");
@@ -79,7 +79,7 @@ struct LoadingScreen;
 struct Title;
 
 #[derive(Component)]
-struct BarFill;
+struct Bar;
 
 #[derive(Component)]
 struct BarText;
@@ -146,35 +146,21 @@ fn spawn_screen(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                     color: TITLE_SHADOW,
                 },
             ));
-            screen
-                .spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: px(BAR_MARGIN),
-                        right: px(BAR_MARGIN),
-                        bottom: px(BAR_MARGIN),
-                        height: px(BAR_HEIGHT),
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-                        ..default()
-                    },
-                    BackgroundColor(BAR_BACKGROUND),
-                ))
-                .with_children(|bar| {
-                    bar.spawn((
-                        BarFill,
-                        Node {
-                            position_type: PositionType::Absolute,
-                            left: px(0),
-                            top: px(0),
-                            bottom: px(0),
-                            width: percent(0),
-                            ..default()
-                        },
-                        BackgroundColor(GOLD.with_alpha(0.45)),
-                    ));
-                    bar.spawn((BarText, Text::new(""), BAR_FONT.font(), TextColor(WRITING)));
-                });
+            spawn_progress_bar(
+                screen,
+                0.0,
+                (BAR_BACKGROUND, GOLD.with_alpha(0.45)),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: px(BAR_MARGIN),
+                    right: px(BAR_MARGIN),
+                    bottom: px(BAR_MARGIN),
+                    height: px(BAR_HEIGHT),
+                    ..default()
+                },
+                (BarText, Text::new(""), BAR_FONT.font(), TextColor(WRITING)),
+            )
+            .insert(Bar);
         });
 }
 
@@ -208,7 +194,7 @@ fn show_screen(
     step: Res<LoadingStep>,
     status: Res<ServerStatus>,
     mut screen: Single<&mut Visibility, With<LoadingScreen>>,
-    mut fill: Single<&mut Node, With<BarFill>>,
+    mut progress: Single<&mut Progress, With<Bar>>,
     mut text: Single<(&mut Text, &mut TextColor), With<BarText>>,
 ) {
     if !step.is_changed() && !status.is_changed() {
@@ -220,7 +206,7 @@ fn show_screen(
         Visibility::Inherited
     });
     let (words, full) = bar_shows(*step, &status);
-    fill.width = percent(full * 100.0);
+    progress.0 = full;
     text.0.0 = words;
     text.1.0 = if matches!(*status, ServerStatus::Refused(_)) {
         REFUSED
