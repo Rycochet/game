@@ -5,16 +5,15 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 ## Files
 
 - `crates/shared/src/id.rs`: `Id`, a version 6 UUID (text in saves, 16 bytes in messages). Nothing here makes one: `server::ids::new_id` does.
-- `crates/shared/src/item.rs`: `ItemKind`, `ItemDef`, `ContainerDef`, `Quality`, `artifact_name`, `MadeAt`, `Item`, `Placed`, `Holder`, `Inventory`, `MoveRefused`. Tests for every rule below.
-
-- `crates/shared/src/item/def.rs`: `ItemKind::def`, the table of what each kind is.
-- `crates/shared/src/item/drop.rs`: `Drop`, `ODDS_OUT_OF`, `roll_drop` (re-exported from `item`).
-- `crates/shared/src/item/shape.rs`: `Shape`, `Rotation` (re-exported from `item`).
-- `crates/shared/src/item_form.rs`: `ItemForm`, `GemForm`, `Cut`, `give_form`, `give_blade_within`, `give_commission`. Tests.
-- `crates/shared/src/item_form/limits.rs`: `Limits` (re-exported from `item_form`).
-- `crates/shared/src/item_form/armour.rs`: rolling a new armour item's form by its kind.
-- `crates/shared/src/item_form/measure.rs`: `ItemForm::shape` and `grams_at`, for forms that decide their item's cells and weight.
-- `crates/shared/src/item_form/words.rs`: words for a ring's name (its gems counted, plurals).
+- `crates/shared/src/item.rs`: the module list, the re-exports below (every type is used as `item::X`) and the constants `MAX_SHAPE_SIDE`, `MAX_DEPTH`, `POCKETS`. Tests for every rule below in `item/tests.rs` and `item/add_tests.rs`. In `item/`:
+  - `kind.rs`: `ItemKind` (`ALL`, `blade_family`, `comes_in_sizes` and other questions about a kind). `def.rs`: `ItemKind::def`, the table of what each kind is. `item_def.rs`: `ItemDef`, `ContainerDef`, `WearDef`, and the helpers the table is written with (`plain`, `bag`, `wear`, `taking`, `worn`).
+  - `item.rs`: `Item` (`new`, `name`, `shape`, `total_weight`, `set_gems`), `MadeAt`. `made.rs`: `Made`. `quality.rs`: `Quality`, `artifact_name`. `secrets.rs`: `Favour`, `Known`, and `Item`'s magic and secrets (`can_be_magical`, `roll_secrets`, `hide_secrets`).
+  - `placed.rs`: `Placed`, `Holder`. `refused.rs`: `MoveRefused`. `shape.rs`: `Shape`, `Rotation`. `drop.rs`: `Drop`, `ODDS_OUT_OF`, `roll_drop`.
+  - `inventory.rs`: `Inventory`, its weights. `inventory/`: `lookup.rs` (`find`, `grid`, `placed`, what holds what), `rules.rs` (`check_move`, `check_add`, the rules below), `changes.rs` (`add`, `move_item`, the bin), `room.rs` (`first_place_for`, `give`), `cost.rs` (`move_cost`, `put_down_cost`).
+- `crates/shared/src/item_form.rs`: `ItemForm` and the module list, re-exporting the types below. Tests. In `item_form/`:
+  - `give.rs`: `give_form`, `give_blade_within`, `give_commission`. `armour.rs`: rolling a new armour item's form by its kind. `limits.rs`: `Limits`.
+  - `gem.rs`: `GemForm`, `Cut`, rolling a gem. `ring.rs`: `RingForm`, `Setting` and the band's parts. `ring_roll.rs`: rolling a ring and its gems. `words.rs`: words for a ring's name (its gems counted, plurals).
+  - `measure.rs`: `ItemForm::shape` and `grams_at`, for forms that decide their item's cells and weight.
 - `crates/shared/src/material.rs`: `Material`, `Category`. Placeholder table, first guesses at tiers. Tests.
 
 ## Public API

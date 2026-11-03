@@ -1,5 +1,12 @@
+use super::ring_roll::{SETTING_SPACING, setting_angle};
+use super::words::gem_material;
 use super::*;
+use crate::blade::{self};
+use crate::creature::Size;
+use crate::id::Id;
+use crate::item::{Item, ItemKind, Made, Quality};
 use crate::material::Category;
+use crate::material::Material;
 
 fn made(kind: ItemKind, seed: u128, quality: Quality, size: Option<Size>) -> Item {
     let mut item = Item::new(Id::for_test(seed), kind);

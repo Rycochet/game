@@ -1,6 +1,7 @@
 //! What each kind of item is: its name, weight, cells, and how it is carried or worn.
 
-use super::{ItemDef, ItemKind, Shape, WearDef, bag, plain, wear};
+use super::item_def::{bag, plain, wear};
+use super::{ItemDef, ItemKind, Shape, WearDef};
 use crate::creature::{Layer, Location};
 
 /// All but its top-right cell: an L.

@@ -1,4 +1,6 @@
 use super::*;
+use crate::creature::{CreatureKind, Size};
+use crate::id::Id;
 use crate::rng::Seed;
 
 #[test]

@@ -1,4 +1,5 @@
 use super::*;
+use crate::id::Id;
 
 #[test]
 fn something_new_goes_by_the_same_rules_as_a_move() {
