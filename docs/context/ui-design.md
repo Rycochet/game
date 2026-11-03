@@ -22,10 +22,10 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Icon button | have | Square, with padding and an optional tooltip naming it. |
 | Close button | have | A normal raised button, with a letter X. |
 | Checkbox | have | A whole clickable row with a drawn tick. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
-| Toggle row | PR 3 | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
-| Slider | have; PR 3 | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
-| Text box | have; PR 3 | Sunken, focus border, error state, optional label above. No floating label. |
-| Dropdown | have; PR 3 | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
+| Toggle row | have | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
+| Slider | have | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
+| Text box | have | Sunken, focus border, error state, optional label above. No floating label. |
+| Dropdown | have | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
 | Switch | later | For settings that apply at once, once Settings has real options. Until then checkboxes do it. |
 | Fab, ButtonGroup, Rating, SpeedDial | no | |
 
@@ -46,9 +46,9 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Dialog | PR 3 | `spawn_dialog` over full-screen layers: title, content, buttons. The quit question uses it. |
+| Dialog | have | `spawn_dialog` over full-screen layers: title, content, buttons. The quit question uses it. |
 | Darkening | have | What is outside a layer; each layer's adds up. |
-| Progress bar | PR 3 | From the loading screen. |
+| Progress bar | have | From the loading screen. |
 | Snackbar, Alert | later | Likely soon: "Saved", "Connection lost". |
 | Spinner, Skeleton | no | |
 
@@ -58,7 +58,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | --- | --- | --- |
 | Panel | have | One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. |
 | Full-screen layer | have | 90% of the window, 75% for one above it. |
-| Tabs | PR 3 | Folder-style, for switching between views of one thing (Settings). |
+| Tabs | have | Folder-style, for switching between views of one thing (Settings). |
 | Menu | later | Right-click item menu: use, split, drop. |
 | Card, Accordion, AppBar, Drawer, Breadcrumbs, Pagination, Stepper, BottomNavigation, Link, ImageList | no | |
 

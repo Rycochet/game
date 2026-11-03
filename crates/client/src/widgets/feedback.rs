@@ -7,9 +7,9 @@ use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use super::item::{Floating, ItemTip, ItemTooltip, logical_rect, shown_at};
 use super::moveable::PanelPart;
 use super::slider::Slider;
-use super::text_box::TextBox;
-use super::theme::{HOVER_EDGE, MAIN_BACKGROUND, RIPPLE};
-use super::{BUTTON_BORDER, ButtonState, INK, Pressable, raised_border};
+use super::text_box::{TextBox, TextFocus};
+use super::theme::{ERROR_EDGE, HOVER_EDGE, MAIN_BACKGROUND, PARCHMENT, RIPPLE};
+use super::{BUTTON_BORDER, ButtonState, INK, Pressable, raised_border, sunken_border};
 use crate::common::PointerPosition;
 
 const LIGHTER_WHEN_HOVERED: f32 = 0.06;
@@ -29,6 +29,8 @@ pub enum ButtonStyle {
     Main,
     /// Something less often wanted: no box until the pointer is on it.
     Quiet,
+    /// A tab: when chosen, of a piece with the panel below it.
+    Folder,
 }
 
 /// The name of a button that only shows a picture, for hovering over it.
@@ -64,10 +66,19 @@ pub(super) struct Ripple {
 
 /// A button's background, border and text colours.
 fn look(state: ButtonState, style: ButtonStyle, touch: Touch) -> (Color, BorderColor, Color) {
-    let (mut background, mut border, text) = state.colours();
+    let (mut background, mut border, mut text) = state.colours();
+    if state == ButtonState::Selected && style == ButtonStyle::Folder {
+        let [red, green, blue] = PARCHMENT;
+        background = Color::srgb_u8(red, green, blue);
+        border = BorderColor {
+            bottom: background,
+            ..raised_border()
+        };
+        text = INK;
+    }
     if state == ButtonState::Normal {
         match style {
-            ButtonStyle::Plain => {}
+            ButtonStyle::Plain | ButtonStyle::Folder => {}
             ButtonStyle::Main => background = MAIN_BACKGROUND,
             ButtonStyle::Quiet if touch == Touch::Away => {
                 background = Color::NONE;
@@ -86,13 +97,7 @@ fn look(state: ButtonState, style: ButtonStyle, touch: Touch) -> (Color, BorderC
             background = background.darker(DARKER_WHEN_PRESSED);
             // Pushed in: the light now falls on its other edges.
             if state == ButtonState::Normal {
-                let raised = raised_border();
-                border = BorderColor {
-                    top: raised.bottom,
-                    left: raised.right,
-                    right: raised.left,
-                    bottom: raised.top,
-                };
+                border = sunken_border();
             }
         }
     }
@@ -246,13 +251,35 @@ pub(super) fn show_button_looks(
     }
 }
 
+/// The edge of a text box: what is wrong, then who has it, then the pointer.
+fn text_box_edge(error: bool, focused: bool, hovered: bool) -> BorderColor {
+    if error {
+        BorderColor::from(ERROR_EDGE)
+    } else if focused {
+        BorderColor::from(INK)
+    } else if hovered {
+        BorderColor::from(HOVER_EDGE)
+    } else {
+        sunken_border()
+    }
+}
+
 /// Text boxes and sliders have no state of their own to show: their edges change.
 #[allow(clippy::type_complexity)]
-pub(super) fn show_hovered_edges(
+pub(super) fn show_edges(
     pointed: Res<Pointed>,
-    mut edges: Query<(Entity, &mut BorderColor), Or<(With<TextBox>, With<Slider>)>>,
+    focus: Res<TextFocus>,
+    mut boxes: Query<(Entity, &TextBox, &mut BorderColor)>,
+    mut sliders: Query<(Entity, &mut BorderColor), (With<Slider>, Without<TextBox>)>,
 ) {
-    for (entity, mut border) in &mut edges {
+    for (entity, text_box, mut border) in &mut boxes {
+        border.set_if_neq(text_box_edge(
+            text_box.error,
+            focus.0 == Some(entity),
+            pointed.hovered == Some(entity),
+        ));
+    }
+    for (entity, mut border) in &mut sliders {
         let colour = if pointed.hovered == Some(entity) {
             HOVER_EDGE
         } else {
@@ -315,6 +342,26 @@ mod tests {
         assert_eq!(
             look(ButtonState::Normal, ButtonStyle::Plain, Touch::Away).0,
             RAISED_BACKGROUND
+        );
+    }
+
+    #[test]
+    fn a_chosen_folder_tab_runs_into_the_panel() {
+        let chosen = look(ButtonState::Selected, ButtonStyle::Folder, Touch::Away);
+        assert_eq!(chosen.1.bottom, chosen.0);
+        assert_eq!(chosen.2, INK);
+    }
+
+    #[test]
+    fn an_error_shows_whoever_has_the_box() {
+        assert_eq!(
+            text_box_edge(true, true, true),
+            BorderColor::from(ERROR_EDGE)
+        );
+        assert_eq!(text_box_edge(false, true, true), BorderColor::from(INK));
+        assert_eq!(
+            text_box_edge(false, false, true),
+            BorderColor::from(HOVER_EDGE)
         );
     }
 

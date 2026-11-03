@@ -13,8 +13,8 @@ use super::filter_list::{HighlightStep, matches_filter, next_highlight};
 use super::fullscreen::layer_z;
 use super::text_box::{RaisesKeyboard, TextBox, TextEdited, TextFocus, spawn_text_box};
 use super::{
-    ButtonPressed, ButtonState, INK, PANEL_EDGE, Pressable, TextSize, panel, spawn_button,
-    stops_presses,
+    ButtonPressed, ButtonState, INK, PANEL_EDGE, Pressable, Stroke, TextSize, panel, spawn_button,
+    spawn_strokes, stops_presses,
 };
 use crate::common::TouchGesture;
 
@@ -29,6 +29,10 @@ const SEARCH_HEIGHT: f32 = 32.0;
 /// How far a finger drags to move by a row.
 const DRAG_PER_ROW: f32 = 32.0;
 const LEAST_WIDTH: f32 = 160.0;
+/// The arrow on the button: how far across, from the button's right, and its strokes.
+const ARROW_WIDE: f32 = 12.0;
+const ARROW_RIGHT: f32 = 4.0;
+const ARROW_STROKES: [Stroke; 2] = [(8.0, -1.0, 4.0, 45.0), (8.0, 4.0, 4.0, -45.0)];
 
 /// A choice among `options`. Set `selected` to change it.
 #[derive(Component, Clone, Debug, Default)]
@@ -82,6 +86,17 @@ pub fn spawn_dropdown<'a>(
     let searchable = dropdown.searchable;
     let mut button = spawn_button(parent, ButtonState::Normal, label, size, node);
     button.insert((dropdown, Pressable));
+    button.with_children(|inside| {
+        inside
+            .spawn(Node {
+                position_type: PositionType::Absolute,
+                right: px(ARROW_RIGHT + ARROW_WIDE),
+                top: percent(50),
+                margin: UiRect::top(px(-ARROW_WIDE / 2.0)),
+                ..default()
+            })
+            .with_children(|arrow| spawn_strokes(arrow, &ARROW_STROKES));
+    });
     if searchable {
         button.insert(RaisesKeyboard);
     }
@@ -90,7 +105,7 @@ pub fn spawn_dropdown<'a>(
 
 fn label_of(dropdown: &Dropdown) -> String {
     let chosen = dropdown.options.get(dropdown.selected);
-    format!("{} v", chosen.map_or("", String::as_str))
+    chosen.cloned().unwrap_or_default()
 }
 
 /// The options matching what has been typed, by index.

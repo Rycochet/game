@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::moveable::PanelPart;
 use super::theme::DARKENING;
-use super::{PANEL_EDGE, Pressable, panel, stops_presses};
+use super::{PANEL_EDGE, Pressable, panel, panel_title, stops_presses};
 
 /// Above every moveable panel, however many times they have been brought to the
 /// front. A layer's own parts may go a little above its number.
@@ -15,6 +15,8 @@ const Z_PER_LAYER: i32 = 10;
 
 /// How much of the window the first layer takes, and how much less each one
 /// above it.
+const DIALOG_MARGIN: f32 = 16.0;
+const DIALOG_BUTTON_GAP: f32 = 8.0;
 const FIRST_SHARE: f32 = 0.9;
 const SHARE_PER_LAYER: f32 = 0.15;
 
@@ -101,6 +103,54 @@ pub fn spawn_sized_layer(
     ));
     commands.entity(layer).add_child(panel_entity);
     (layer, panel_entity)
+}
+
+/// The parts of a dialog.
+pub struct Dialog {
+    /// To show and hide; a press outside the panel is a `ButtonPressed` for it.
+    pub layer: Entity,
+    /// To put what it says in.
+    pub content: Entity,
+    /// To put its buttons in, along the bottom on the right.
+    pub buttons: Entity,
+}
+
+/// A hidden panel asking something that needs an answer now, as layer `depth`.
+pub fn spawn_dialog(commands: &mut Commands, depth: i32, title: &str) -> Dialog {
+    let (layer, panel) = spawn_sized_layer(
+        commands,
+        depth,
+        Val::Auto,
+        Val::Auto,
+        Node {
+            padding: UiRect::all(px(DIALOG_MARGIN)),
+            flex_direction: FlexDirection::Column,
+            row_gap: px(DIALOG_MARGIN),
+            ..default()
+        },
+    );
+    let title = commands.spawn(panel_title(title)).id();
+    let content = commands
+        .spawn(Node {
+            flex_direction: FlexDirection::Column,
+            ..default()
+        })
+        .id();
+    let buttons = commands
+        .spawn(Node {
+            justify_content: JustifyContent::End,
+            column_gap: px(DIALOG_BUTTON_GAP),
+            ..default()
+        })
+        .id();
+    commands
+        .entity(panel)
+        .add_children(&[title, content, buttons]);
+    Dialog {
+        layer,
+        content,
+        buttons,
+    }
 }
 
 #[cfg(test)]

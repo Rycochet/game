@@ -14,7 +14,7 @@ use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::{
     ButtonPressed, ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, TextSize,
-    WidgetSystems, panel_title, spawn_button, spawn_close_button, spawn_icon_button,
+    WidgetSystems, panel_title, spawn_button, spawn_close_button, spawn_dialog, spawn_icon_button,
     spawn_sized_layer, spawn_tabs,
 };
 
@@ -246,41 +246,28 @@ fn spawn_main_panel(commands: &mut Commands) {
 }
 
 fn spawn_requester(commands: &mut Commands) {
-    let panel = spawn_layer(
-        commands,
-        ABOVE_MENU_LAYER,
-        &[SystemMenu::Confirming],
-        Val::Auto,
-        Val::Auto,
-        Node {
-            padding: UiRect::all(px(MARGIN)),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            row_gap: px(MARGIN),
-            ..default()
-        },
-    );
-    commands.entity(panel).with_children(|panel| {
-        panel.spawn((Text::new("Are you sure?"), FONT.font(), TextColor(INK)));
-        panel
-            .spawn(Node {
-                column_gap: px(GAP),
+    let dialog = spawn_dialog(commands, ABOVE_MENU_LAYER, "Quit");
+    commands
+        .entity(dialog.layer)
+        .insert((Layer(&[SystemMenu::Confirming]), Action::Back));
+    commands.entity(dialog.content).with_child((
+        Text::new("Are you sure?"),
+        FONT.font(),
+        TextColor(INK),
+    ));
+    commands.entity(dialog.buttons).with_children(|row| {
+        for (label, action, style) in [
+            ("Yes, quit", Action::ReallyQuit, ButtonStyle::Main),
+            ("No", Action::Back, ButtonStyle::Plain),
+        ] {
+            let node = Node {
+                width: px(MENU_WIDTH / 2.0 - GAP),
+                height: px(BUTTON_ROW),
                 ..default()
-            })
-            .with_children(|row| {
-                for (label, action, style) in [
-                    ("Yes, quit", Action::ReallyQuit, ButtonStyle::Main),
-                    ("No", Action::Back, ButtonStyle::Plain),
-                ] {
-                    let node = Node {
-                        width: px(MENU_WIDTH / 2.0 - GAP),
-                        height: px(BUTTON_ROW),
-                        ..default()
-                    };
-                    spawn_button(row, ButtonState::Normal, label, FONT, node)
-                        .insert((action, style, Pressable));
-                }
-            });
+            };
+            spawn_button(row, ButtonState::Normal, label, FONT, node)
+                .insert((action, style, Pressable));
+        }
     });
 }
 

@@ -1,60 +1,118 @@
-//! A row of tabs: buttons of which exactly one is chosen, as radio buttons are.
+//! Rows of buttons of which exactly one is chosen, as radio buttons are: joined
+//! toggles to pick an option, and folder tabs to switch what is shown below them.
 
 use bevy::prelude::*;
 
-use super::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, TextSize, spawn_button};
+use super::{
+    BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, SHADED_EDGE, TextSize,
+    spawn_button,
+};
 
+/// Between folder tabs.
 const TAB_GAP: f32 = 4.0;
+/// The line under folder tabs, which the chosen one covers.
+const TAB_LINE: f32 = 2.0;
 
-/// A row of tabs, and which is chosen.
+/// A row, and which is chosen.
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct Tabs {
     selected: usize,
 }
 
-/// One tab: its row, and where in it.
+/// One of a row: its row, and where in it.
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct Tab {
     row: Entity,
     index: usize,
 }
 
-/// The player chose another tab of this row: its entity, and which.
+/// The player chose another of this row: its entity, and which.
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TabChosen(pub Entity, pub usize);
 
-/// A row of tabs with these words, with `selected` chosen. Returns the row, for
-/// telling which `TabChosen` is about.
+/// Joined buttons with these words, to pick one option, all on show, with `selected`
+/// chosen. Returns the row, for telling which `TabChosen` is about.
+pub fn spawn_toggle_row(
+    parent: &mut ChildSpawnerCommands,
+    labels: &[&str],
+    selected: usize,
+    size: TextSize,
+) -> Entity {
+    let node = Node {
+        padding: BUTTON_PADDING,
+        ..default()
+    };
+    let row = parent.spawn((Tabs { selected }, Node::default())).id();
+    spawn_row(
+        parent,
+        row,
+        labels,
+        selected,
+        size,
+        node,
+        ButtonStyle::Plain,
+    );
+    row
+}
+
+/// Folder tabs with these words, to switch between views of one thing, with
+/// `selected` chosen. Returns the row, for telling which `TabChosen` is about.
 pub fn spawn_tabs(
     parent: &mut ChildSpawnerCommands,
     labels: &[&str],
     selected: usize,
     size: TextSize,
 ) -> Entity {
-    let mut row = parent.spawn((
-        Tabs { selected },
-        Node {
-            column_gap: px(TAB_GAP),
-            ..default()
-        },
-    ));
-    let row_entity = row.id();
-    row.with_children(|row| {
-        for (index, label) in labels.iter().enumerate() {
-            let node = Node {
-                padding: BUTTON_PADDING,
+    let node = Node {
+        padding: BUTTON_PADDING,
+        margin: UiRect::bottom(px(-TAB_LINE)),
+        ..default()
+    };
+    let row = parent
+        .spawn((
+            Tabs { selected },
+            Node {
+                column_gap: px(TAB_GAP),
+                border: UiRect::bottom(px(TAB_LINE)),
                 ..default()
-            };
-            spawn_button(row, state_of(index, selected), *label, size, node).insert((
-                Tab {
-                    row: row_entity,
-                    index,
-                },
-                Pressable,
-            ));
+            },
+            BorderColor::from(SHADED_EDGE),
+        ))
+        .id();
+    spawn_row(
+        parent,
+        row,
+        labels,
+        selected,
+        size,
+        node,
+        ButtonStyle::Folder,
+    );
+    row
+}
+
+/// Puts the buttons in a row.
+fn spawn_row(
+    parent: &mut ChildSpawnerCommands,
+    row: Entity,
+    labels: &[&str],
+    selected: usize,
+    size: TextSize,
+    node: Node,
+    style: ButtonStyle,
+) {
+    parent.commands().entity(row).with_children(|row_inside| {
+        for (index, label) in labels.iter().enumerate() {
+            spawn_button(
+                row_inside,
+                state_of(index, selected),
+                *label,
+                size,
+                node.clone(),
+            )
+            .insert((Tab { row, index }, style, Pressable));
         }
     });
-    row_entity
 }
 
 fn state_of(index: usize, selected: usize) -> ButtonState {

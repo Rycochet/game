@@ -5,14 +5,14 @@ use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
 use super::fullscreen::Darkening;
-use super::{ButtonPressed, INK, LIT_EDGE, Pressable, RAISED_BACKGROUND};
+use super::theme::SUNKEN_BACKGROUND;
+use super::{ButtonPressed, INK, Pressable, RAISED_BACKGROUND, raised_border};
 use crate::common::{PointerPosition, TouchGesture};
 
 const HEIGHT: f32 = 18.0;
 const BORDER: f32 = 1.0;
-const MARK_WIDTH: f32 = 4.0;
-/// The mark's light edge, so it shows on a dark track as well as a light one.
-const MARK_EDGE: f32 = 1.0;
+const MARK_WIDTH: f32 = 12.0;
+const MARK_EDGE: f32 = 2.0;
 
 /// Where a slider's mark is, `0..=1` along it. Set it to move the mark.
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
@@ -53,7 +53,7 @@ pub fn spawn_slider<'a>(
     ));
     match track {
         Some(track) => slider.insert(ImageNode::new(track).with_mode(NodeImageMode::Stretch)),
-        None => slider.insert(BackgroundColor(RAISED_BACKGROUND)),
+        None => slider.insert(BackgroundColor(SUNKEN_BACKGROUND)),
     };
     let id = slider.id();
     slider.with_child((
@@ -64,11 +64,11 @@ pub fn spawn_slider<'a>(
             width: px(MARK_WIDTH),
             height: percent(100),
             margin: UiRect::left(px(-MARK_WIDTH / 2.0)),
-            border: UiRect::horizontal(px(MARK_EDGE)),
+            border: UiRect::all(px(MARK_EDGE)),
             ..default()
         },
-        BackgroundColor(INK),
-        BorderColor::from(LIT_EDGE),
+        BackgroundColor(RAISED_BACKGROUND),
+        raised_border(),
     ));
     slider
 }
