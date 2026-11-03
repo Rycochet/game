@@ -5,6 +5,7 @@
 
 mod api;
 mod sizes;
+mod webgl;
 
 use std::env;
 use std::fs;
@@ -19,8 +20,8 @@ Tasks:
   test    Check formatting, type-check and lint (warnings are errors) for
           both native and the browser (wasm), then run the tests. Run this
           before merging.
-  lint    The same checks without the tests, and the file size check. The
-          pre-commit hook runs this.
+  lint    The same checks without the tests, and the file size and WebGL 2
+          checks. The pre-commit hook runs this.
   sizes   Lower the entries in xtask/large-files.txt to the files' sizes
           now, removing files back under the limit.
   hooks   Turn on the pre-commit hook for this checkout (once per clone).
@@ -86,9 +87,14 @@ fn main() -> ExitCode {
         Some("test") => all_passed([
             run_checks(LINTS.iter().chain([&TESTS])),
             sizes::check(&workspace_root()),
+            webgl::check(&workspace_root()),
             no_temporary_methods(),
         ]),
-        Some("lint") => all_passed([run_checks(LINTS), sizes::check(&workspace_root())]),
+        Some("lint") => all_passed([
+            run_checks(LINTS),
+            sizes::check(&workspace_root()),
+            webgl::check(&workspace_root()),
+        ]),
         Some("sizes") => sizes::update(&workspace_root()),
         Some("hooks") => hooks(),
         Some("package") => package(),
