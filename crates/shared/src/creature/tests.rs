@@ -1,4 +1,5 @@
 use super::*;
+use crate::sheet::{Feeling, Reaction};
 
 #[test]
 fn every_kind_is_listed_alphabetically_and_no_location_twice() {

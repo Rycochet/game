@@ -1,5 +1,8 @@
+use super::site::Plan;
 use super::*;
 use crate::dungeon::Cell;
+use crate::poi::PoiKind;
+use crate::rng::Seed;
 
 /// Prints levels as text: `cargo test -p shared print_sites -- --ignored --nocapture`
 /// (`HOW_DEBUG_SITE_KINDS`, `HOW_DEBUG_SITE_SEED`, `HOW_DEBUG_SITE_RUIN` choose what).

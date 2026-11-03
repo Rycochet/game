@@ -4,7 +4,7 @@ Dungeons and buildings as rules: a grid of cells (floor, wall, doors, windows, o
 
 ## Files
 
-- `crates/shared/src/dungeon.rs`: `Cell`, `WallShape`, `RoomId`, `Level`, `Sight` and the private line checks (`clear_line`). Golden tests (test room layout, sight from its centre), wall shapes, sight past columns and through openings, mutual sight.
+- `crates/shared/src/dungeon.rs`: `Cell`, `WallShape`, `RoomId`, `Level`, `Sight` and the private line checks (`clear_line`). Golden tests (test room layout, sight from its centre), wall shapes, sight past columns and through openings, mutual sight. In `dungeon/`: `cell.rs`, `wall_shape.rs`, `level.rs` (`RoomId`, `Level`), `sight.rs`, `line.rs` (`line_is_clear`), `bars.rs` (`WallBar`).
 
 ## Public API
 

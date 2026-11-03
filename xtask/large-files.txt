@@ -40,16 +40,4 @@ crates/client/src/world_map/mod.rs 542
 crates/client/src/world_map/poi_model.rs 712
 crates/client/src/world_map/sky.rs 501
 crates/client/src/world_map/terrain.rs 834
-crates/shared/src/celestial.rs 607
-crates/shared/src/creature.rs 403
-crates/shared/src/dungeon.rs 541
-crates/shared/src/pathfinding.rs 457
-crates/shared/src/poi.rs 364
-crates/shared/src/protocol/mod.rs 429
-crates/shared/src/shop.rs 359
-crates/shared/src/site/building.rs 1127
-crates/shared/src/site/cave.rs 746
-crates/shared/src/site/farm.rs 430
-crates/shared/src/site/mod.rs 753
-crates/shared/src/site/town.rs 1476
 xtask/src/api.rs 363

@@ -1,6 +1,11 @@
+use grid::Reach;
+
+use super::descent::descent_way;
 use super::*;
 use crate::dungeon::Cell;
-use grid::Reach;
+use crate::dungeon::Level;
+use crate::poi::PoiKind;
+use crate::rng::Seed;
 
 #[test]
 fn only_sturdy_buildings_can_be_ruined() {

@@ -1,4 +1,7 @@
 use super::*;
+use crate::item::Quality;
+use crate::rng::Seed;
+use crate::site::BuildingKind;
 
 const fn smith(quality: u16, of_kind: u32) -> Shop {
     Shop {

@@ -1,4 +1,7 @@
 use super::*;
+use crate::rng::Seed;
+use crate::surface::Surface;
+use crate::world::WorldParams;
 
 // The client's fixed world: 26634 points wide, so 416 columns, the last
 // 74 points wide.

@@ -1,6 +1,11 @@
 use super::*;
 use crate::dungeon::Cell;
+use crate::dungeon::Level;
 use crate::movement::step_on_world_map;
+use crate::movement::{
+    DIAGONAL_COST, STRAIGHT_COST, Step, WorldConditions, WorldGround, step_cost, step_on_level,
+    world_step_cost,
+};
 use crate::rng::Seed;
 use crate::world::WorldParams;
 
