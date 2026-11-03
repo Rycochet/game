@@ -7,7 +7,7 @@ use bevy::ui::UiGlobalTransform;
 use super::fullscreen::Darkening;
 use super::theme::SUNKEN_BACKGROUND;
 use super::{ButtonPressed, INK, Pressable, RAISED_BACKGROUND, raised_border};
-use crate::common::{PointerPosition, TouchGesture};
+use crate::common::{TouchGesture, UiPointer, in_interface};
 
 const HEIGHT: f32 = 18.0;
 const BORDER: f32 = 1.0;
@@ -78,7 +78,7 @@ fn value_at(x: f32, left: f32, width: f32) -> f32 {
     ((x - left) / width.max(1.0)).clamp(0.0, 1.0)
 }
 
-/// How far along a slider's node a point in logical pixels is.
+/// How far along a slider's node a point in the interface's pixels is.
 fn along(node: &ComputedNode, transform: &UiGlobalTransform, at: Vec2) -> f32 {
     let scale = node.inverse_scale_factor;
     let size = node.size() * scale;
@@ -110,7 +110,7 @@ fn move_slider(
 /// A press on a slider takes it (and moves the mark there), until let go.
 pub(super) fn hold_sliders(
     mouse: Res<ButtonInput<MouseButton>>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     mut pressed: MessageReader<ButtonPressed>,
     mut held: ResMut<HeldSlider>,
     mut sliders: Query<(
@@ -141,8 +141,9 @@ pub(super) fn hold_sliders(
 /// A finger dragging from a slider moves it. Before `take_presses`, which takes
 /// drags starting on panels.
 pub(super) fn drag_sliders(
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     gesture: Res<TouchGesture>,
+    ui_scale: Res<UiScale>,
     mut sliders: Query<(
         &mut Slider,
         &ComputedNode,
@@ -164,7 +165,7 @@ pub(super) fn drag_sliders(
         let Ok((_, node, transform, visible)) = sliders.get(entity) else {
             continue;
         };
-        let start = gesture.drag_start / node.inverse_scale_factor;
+        let start = in_interface(gesture.drag_start, &ui_scale) / node.inverse_scale_factor;
         if visible.get() && node.contains_point(*transform, start) {
             move_slider(entity, at, &mut sliders, &mut moved);
             return;
@@ -193,9 +194,16 @@ mod tests {
 
     /// A slider from (100, 50), 200 across; and the app it is in.
     fn test() -> (App, Entity) {
+        test_at(1.0)
+    }
+
+    /// The same, in the interface's pixels, with the interface drawn `scale` times
+    /// its size (in a window with no scaling of its own).
+    fn test_at(scale: f32) -> (App, Entity) {
         let mut app = App::new();
         app.init_resource::<ButtonInput<MouseButton>>()
-            .init_resource::<PointerPosition>()
+            .init_resource::<UiPointer>()
+            .insert_resource(UiScale(scale))
             .init_resource::<TouchGesture>()
             .init_resource::<HeldSlider>()
             .add_message::<ButtonPressed>()
@@ -206,12 +214,12 @@ mod tests {
             .spawn((
                 Slider(0.5),
                 ComputedNode {
-                    size,
-                    inverse_scale_factor: 1.0,
+                    size: size * scale,
+                    inverse_scale_factor: 1.0 / scale,
                     ..default()
                 },
                 UiGlobalTransform::from(Affine2::from_translation(
-                    Vec2::new(100.0, 50.0) + size / 2.0,
+                    (Vec2::new(100.0, 50.0) + size / 2.0) * scale,
                 )),
                 InheritedVisibility::VISIBLE,
             ))
@@ -227,7 +235,7 @@ mod tests {
     fn the_mouse_holds_a_slider_until_let_go() {
         let (mut app, slider) = test();
         let world = app.world_mut();
-        world.resource_mut::<PointerPosition>().0 = Some(Vec2::new(150.0, 55.0));
+        world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 55.0));
         world
             .resource_mut::<ButtonInput<MouseButton>>()
             .press(MouseButton::Left);
@@ -240,7 +248,7 @@ mod tests {
 
         // Off the slider, it still follows, as far as its end.
         let world = app.world_mut();
-        world.resource_mut::<PointerPosition>().0 = Some(Vec2::new(900.0, 400.0));
+        world.resource_mut::<UiPointer>().0 = Some(Vec2::new(900.0, 400.0));
         world.run_system_once(hold_sliders).unwrap();
         assert_eq!(value(&app, slider), 1.0);
 
@@ -248,7 +256,7 @@ mod tests {
         world
             .resource_mut::<ButtonInput<MouseButton>>()
             .release(MouseButton::Left);
-        world.resource_mut::<PointerPosition>().0 = Some(Vec2::new(150.0, 55.0));
+        world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 55.0));
         world.run_system_once(hold_sliders).unwrap();
         assert_eq!(value(&app, slider), 1.0);
     }
@@ -257,7 +265,7 @@ mod tests {
     fn a_finger_drags_a_slider_it_landed_on() {
         let (mut app, slider) = test();
         let world = app.world_mut();
-        world.resource_mut::<PointerPosition>().0 = Some(Vec2::new(150.0, 300.0));
+        world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 300.0));
         *world.resource_mut::<TouchGesture>() = TouchGesture {
             drag: Vec2::new(1.0, 0.0),
             drag_start: Vec2::new(200.0, 55.0),
@@ -269,9 +277,26 @@ mod tests {
         // Landing elsewhere moves nothing.
         let world = app.world_mut();
         world.resource_mut::<TouchGesture>().drag_start = Vec2::new(200.0, 300.0);
-        world.resource_mut::<PointerPosition>().0 = Some(Vec2::new(250.0, 55.0));
+        world.resource_mut::<UiPointer>().0 = Some(Vec2::new(250.0, 55.0));
         world.run_system_once(drag_sliders).unwrap();
         assert_eq!(value(&app, slider), 0.25);
+    }
+
+    #[test]
+    fn a_finger_finds_its_slider_at_any_size() {
+        for scale in [0.5, 2.0] {
+            let (mut app, slider) = test_at(scale);
+            let world = app.world_mut();
+            world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 300.0));
+            // Where it landed is in window pixels.
+            *world.resource_mut::<TouchGesture>() = TouchGesture {
+                drag: Vec2::new(1.0, 0.0),
+                drag_start: Vec2::new(200.0, 55.0) * scale,
+                ..default()
+            };
+            world.run_system_once(drag_sliders).unwrap();
+            assert_eq!(value(&app, slider), 0.25, "at {scale}");
+        }
     }
 
     #[test]

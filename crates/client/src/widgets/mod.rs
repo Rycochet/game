@@ -10,6 +10,7 @@ mod fullscreen;
 mod item;
 mod moveable;
 mod progress;
+mod scale;
 mod scroll;
 mod set_edge;
 mod slider;
@@ -40,6 +41,7 @@ pub use item::{
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use progress::{Progress, spawn_progress_bar};
+pub use scale::{INTERFACE_PERCENTS, TouchOnly};
 pub use scroll::spawn_scroll_area;
 pub use set_edge::set_edge;
 pub use slider::{SliderMoved, spawn_slider};
@@ -115,6 +117,11 @@ impl Plugin for WidgetsPlugin {
                     WidgetSystems::Modal,
                 )
                     .chain(),
+            )
+            .insert_resource(scale::TouchOnly::detect())
+            .add_systems(
+                PreUpdate,
+                scale::apply_interface_scale.before(PointerSystems),
             )
             .init_resource::<moveable::Dragging>()
             .init_resource::<feedback::Pointed>()

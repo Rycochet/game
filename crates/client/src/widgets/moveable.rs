@@ -10,7 +10,7 @@ use super::{
     ButtonPressed, ButtonState, PANEL_EDGE, Pressable, RaisePanel, SHADED_EDGE, panel, panel_title,
     spawn_close_button,
 };
-use crate::common::{PointerPosition, TouchGesture};
+use crate::common::{TouchGesture, UiPointer, in_interface, interface_area};
 
 /// Above the maps, below full-screen layers; a panel clicked on goes above the
 /// others.
@@ -153,6 +153,7 @@ fn in_new_window(at: Vec2, old: Vec2, new: Vec2) -> Vec2 {
 /// Puts panels where they are wanted, as far as the window allows.
 pub(super) fn place_panels(
     window: Single<&Window, With<PrimaryWindow>>,
+    scale: Res<UiScale>,
     mut panels: Query<(
         &mut MoveablePanel,
         &ComputedNode,
@@ -160,7 +161,7 @@ pub(super) fn place_panels(
         &mut Visibility,
     )>,
 ) {
-    let window = Vec2::new(window.width(), window.height());
+    let window = interface_area(&window, &scale);
     // Minimised: nowhere to be, so everything stays as it is for coming back.
     if window.min_element() < 1.0 {
         return;
@@ -208,8 +209,9 @@ pub(super) struct Dragging {
 pub(super) fn take_presses(
     mut commands: Commands,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     mut gesture: ResMut<TouchGesture>,
+    scale: Res<UiScale>,
     parts: Query<(
         &ComputedStackIndex,
         &ComputedNode,
@@ -303,7 +305,7 @@ pub(super) fn take_presses(
     }
 
     if gesture.drag != Vec2::ZERO {
-        let start = gesture.drag_start;
+        let start = in_interface(gesture.drag_start, &scale);
         if dragging.touch.is_none_or(|(known, _)| known != start) {
             dragging.touch = Some((
                 start,
@@ -316,7 +318,7 @@ pub(super) fn take_presses(
         }
         if let Some((_, Some(panel))) = dragging.touch {
             if let Ok((mut moveable, _)) = panels.get_mut(panel) {
-                moveable.at += gesture.drag;
+                moveable.at += in_interface(gesture.drag, &scale);
             }
             gesture.drag = Vec2::ZERO;
         }
@@ -352,15 +354,17 @@ mod tests {
         assert_eq!(in_new_window(at, old, old), at);
     }
 
-    /// A node on the screen, as the layout would leave it.
-    fn laid_out(corner: Vec2, size: Vec2, stack: u32) -> impl Bundle {
+    /// A node on the screen, as the layout would leave it with the interface drawn
+    /// `scale` times its size (`UiScale`, in a window with no scaling of its own):
+    /// `corner` and `size` in the interface's pixels.
+    fn laid_out(corner: Vec2, size: Vec2, stack: u32, scale: f32) -> impl Bundle {
         (
             ComputedNode {
-                size,
-                inverse_scale_factor: 1.0,
+                size: size * scale,
+                inverse_scale_factor: 1.0 / scale,
                 ..default()
             },
-            UiGlobalTransform::from(Affine2::from_translation(corner + size / 2.0)),
+            UiGlobalTransform::from(Affine2::from_translation((corner + size / 2.0) * scale)),
             InheritedVisibility::VISIBLE,
             ComputedStackIndex(stack),
         )
@@ -375,9 +379,15 @@ mod tests {
     /// A panel at (100, 100) with a title bar along its top, a close button
     /// at the bar's right and a button below.
     fn test() -> Test {
+        test_at(1.0)
+    }
+
+    /// The same, with the interface drawn `scale` times its size.
+    fn test_at(scale: f32) -> Test {
         let mut app = App::new();
         app.init_resource::<ButtonInput<MouseButton>>()
-            .init_resource::<PointerPosition>()
+            .init_resource::<UiPointer>()
+            .insert_resource(UiScale(scale))
             .init_resource::<TouchGesture>()
             .init_resource::<Dragging>()
             .add_message::<ButtonPressed>()
@@ -394,21 +404,21 @@ mod tests {
             .id();
         world.entity_mut(root).insert((
             PanelPart::Body(root),
-            laid_out(Vec2::new(100.0, 100.0), Vec2::new(200.0, 100.0), 0),
+            laid_out(Vec2::new(100.0, 100.0), Vec2::new(200.0, 100.0), 0, scale),
         ));
         world.spawn((
             PanelPart::TitleBar(root),
-            laid_out(Vec2::new(100.0, 100.0), Vec2::new(160.0, 30.0), 1),
+            laid_out(Vec2::new(100.0, 100.0), Vec2::new(160.0, 30.0), 1, scale),
         ));
         world.spawn((
             PanelPart::Close(root),
-            laid_out(Vec2::new(260.0, 100.0), Vec2::new(40.0, 30.0), 1),
+            laid_out(Vec2::new(260.0, 100.0), Vec2::new(40.0, 30.0), 1, scale),
         ));
         let button = world
             .spawn((
                 Pressable,
                 ButtonState::Normal,
-                laid_out(Vec2::new(110.0, 150.0), Vec2::new(80.0, 30.0), 1),
+                laid_out(Vec2::new(110.0, 150.0), Vec2::new(80.0, 30.0), 1, scale),
             ))
             .id();
         Test { app, root, button }
@@ -423,7 +433,7 @@ mod tests {
         }
 
         fn click(&mut self, x: f32, y: f32) {
-            self.app.world_mut().resource_mut::<PointerPosition>().0 = Some(Vec2::new(x, y));
+            self.app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::new(x, y));
             let mut mouse = self
                 .app
                 .world_mut()
@@ -484,7 +494,7 @@ mod tests {
         // Another panel's body, in front of the button.
         test.app.world_mut().spawn((
             PanelPart::Body(root),
-            laid_out(Vec2::new(110.0, 150.0), Vec2::new(80.0, 30.0), 5),
+            laid_out(Vec2::new(110.0, 150.0), Vec2::new(80.0, 30.0), 5, 1.0),
         ));
         test.click(120.0, 160.0);
         assert!(!test.still_pressed());
@@ -497,7 +507,7 @@ mod tests {
         let root = test.root;
         test.app.world_mut().spawn((
             PanelPart::LeftForOwner(root),
-            laid_out(Vec2::ZERO, Vec2::new(800.0, 600.0), 5),
+            laid_out(Vec2::ZERO, Vec2::new(800.0, 600.0), 5, 1.0),
         ));
         // On the button, and on the title bar, which would have started a drag.
         test.click(120.0, 160.0);
@@ -539,7 +549,7 @@ mod tests {
     fn the_mouse_drags_by_the_title_bar_until_let_go() {
         let mut test = test();
         test.click(120.0, 110.0);
-        test.app.world_mut().resource_mut::<PointerPosition>().0 = Some(Vec2::new(150.0, 130.0));
+        test.app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 130.0));
         test.step();
         assert_eq!(test.panel_at(), Vec2::new(130.0, 120.0));
 
@@ -547,9 +557,41 @@ mod tests {
             .world_mut()
             .resource_mut::<ButtonInput<MouseButton>>()
             .release(MouseButton::Left);
-        test.app.world_mut().resource_mut::<PointerPosition>().0 = Some(Vec2::new(300.0, 300.0));
+        test.app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::new(300.0, 300.0));
         test.step();
         assert_eq!(test.panel_at(), Vec2::new(130.0, 120.0));
+    }
+
+    #[test]
+    fn presses_land_where_the_interface_is_drawn_at_any_size() {
+        for scale in [0.5, 2.0] {
+            let mut test = test_at(scale);
+            // In the interface's pixels, as `UiPointer` gives them.
+            test.click(120.0, 160.0);
+            assert_eq!(test.presses(), vec![test.button], "at {scale}");
+            test.click(120.0, 110.0);
+            test.app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 130.0));
+            test.step();
+            assert_eq!(test.panel_at(), Vec2::new(130.0, 120.0), "at {scale}");
+        }
+    }
+
+    #[test]
+    fn a_finger_drags_a_panel_as_far_as_it_went_on_the_screen() {
+        for scale in [0.5, 2.0] {
+            let mut test = test_at(scale);
+            // In window pixels, as `TouchGesture` gives them: on the title bar.
+            touch_drag(
+                &mut test,
+                Vec2::new(120.0, 110.0) * scale,
+                Vec2::new(40.0, 20.0),
+            );
+            assert_eq!(
+                test.panel_at(),
+                Vec2::new(100.0, 100.0) + Vec2::new(40.0, 20.0) / scale,
+                "at {scale}"
+            );
+        }
     }
 
     fn touch_drag(test: &mut Test, start: Vec2, drag: Vec2) {

@@ -442,6 +442,7 @@ impl Plugin for DevToolsPlugin {
                       mut window: Single<&mut Window, With<PrimaryWindow>>| {
                     if !*done && time.elapsed_secs() > 1.0 {
                         *done = true;
+                        window.set_maximized(false);
                         window.resolution.set(width, height);
                     }
                 },

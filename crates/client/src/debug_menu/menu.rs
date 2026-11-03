@@ -12,7 +12,7 @@ use shared::poi::PoiKind;
 use super::FactSources;
 use super::actions::{DebugAction, Facts, kind_name};
 use super::panels::GenerateKind;
-use crate::common::{GameView, TouchGesture};
+use crate::common::{GameView, TouchGesture, interface_area};
 use crate::minimap::FullMap;
 use crate::widgets::{
     ButtonPressed, ButtonState, ButtonTooltip, HighlightStep, PANEL_EDGE, Pressable, SoftKey,
@@ -280,7 +280,8 @@ fn spawn_layer(commands: &mut Commands, layer: usize, title: &str) {
     });
 }
 
-/// How many entries fit in a column of this layer, in a window this tall.
+/// How many entries fit in a column of this layer, in a window this tall (in the
+/// interface's pixels).
 fn rows_in(window_height: f32, layer: usize) -> usize {
     let share = layer_share(layer as i32);
     let inside = window_height * share - 2.0 * (PANEL_EDGE + MARGIN);
@@ -288,7 +289,8 @@ fn rows_in(window_height: f32, layer: usize) -> usize {
     (((room + GAP) / (ROW + GAP)).floor() as usize).max(1)
 }
 
-/// How many columns of this layer fit, in a window this wide.
+/// How many columns of this layer fit, in a window this wide (in the interface's
+/// pixels).
 fn columns_in(window_width: f32, layer: usize) -> usize {
     let share = layer_share(layer as i32);
     let room = window_width * share - 2.0 * (PANEL_EDGE + MARGIN);
@@ -391,7 +393,7 @@ pub(super) fn take_input(
     nodes: MenuNodes,
     mut focus: ResMut<TextFocus>,
     full_map: Res<FullMap>,
-    window: Single<&Window, With<PrimaryWindow>>,
+    (window, ui_scale): (Single<&Window, With<PrimaryWindow>>, Res<UiScale>),
     sources: FactSources,
     // Real time: game time is capped per frame, so it runs slow when unfocused.
     time: Res<Time<Real>>,
@@ -444,10 +446,8 @@ pub(super) fn take_input(
         closing |= timer.tick(time.delta()).is_finished();
     } else if !toggled {
         let facts = sources.facts();
-        let (rows, fit) = (
-            rows_in(window.height(), layer),
-            columns_in(window.width(), layer),
-        );
+        let room = interface_area(&window, &ui_scale);
+        let (rows, fit) = (rows_in(room.y, layer), columns_in(room.x, layer));
         let wheel = scroll.delta.y;
         let edited_text = filter_boxes
             .iter()
@@ -563,7 +563,7 @@ pub(super) struct GridDrawn {
 pub(super) fn show_menu(
     mut commands: Commands,
     menu: Res<DebugMenu>,
-    window: Single<&Window, With<PrimaryWindow>>,
+    (window, ui_scale): (Single<&Window, With<PrimaryWindow>>, Res<UiScale>),
     sources: FactSources,
     mut roots: Query<(&MenuRoot, &mut Visibility)>,
     mut warning: Single<
@@ -605,8 +605,9 @@ pub(super) fn show_menu(
         let Some(level) = menu.level(layer) else {
             continue;
         };
-        let rows = rows_in(window.height(), layer);
-        let fit = columns_in(window.width(), layer);
+        let room = interface_area(&window, &ui_scale);
+        let rows = rows_in(room.y, layer);
+        let fit = columns_in(room.x, layer);
         let entries: Vec<_> = entries_on_show(layer, &level.filter)
             .into_iter()
             .enumerate()

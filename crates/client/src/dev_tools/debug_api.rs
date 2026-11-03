@@ -22,8 +22,8 @@ use shared::site::StairsStyle;
 
 use super::{Forced, open_map, token_of, turn_camera};
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameView, HerbGrowthShift, MapPosition, OtherLevels, ServerClock,
-    Token,
+    CurrentDungeon, CurrentWorld, GameView, HerbGrowthShift, InterfaceSize, MapPosition,
+    OtherLevels, Preferences, ServerClock, Token,
 };
 use crate::connection::ToServer;
 use crate::debug_menu::{AutoWalk, DebugAction, DebugMenu};
@@ -52,6 +52,7 @@ pub(super) fn add(app: &mut App) {
         // How things look.
         .add_debug_method("client.view", view)
         .add_debug_method("client.window_size", window_size)
+        .add_debug_method("client.interface", interface)
         .add_debug_method("client.cursor", cursor)
         .add_debug_method("client.stairs_style", stairs_style)
         .add_debug_method("client.fields_stage", fields_stage)
@@ -84,7 +85,7 @@ fn state(
     dungeon: Res<CurrentDungeon>,
     levels: Res<OtherLevels>,
     clock: Res<ServerClock>,
-    window: Query<&Window, With<PrimaryWindow>>,
+    (window, ui_scale): (Query<&Window, With<PrimaryWindow>>, Res<UiScale>),
     open: (Res<FullMap>, Res<DebugMenu>, Res<SystemMenu>),
 ) -> BrpResult {
     let view = *view.get();
@@ -102,7 +103,9 @@ fn state(
         "window": window.single().ok().map(|window| json!({
             "width": window.width(),
             "height": window.height(),
+            "scale_factor": window.scale_factor(),
         })),
+        "ui_scale": ui_scale.0,
         "full_map": map.open,
         "debug_menu": debug_menu.open,
         "system_menu": format!("{:?}", *system_menu),
@@ -382,7 +385,42 @@ fn window_size(
     mut window: Single<&mut Window, With<PrimaryWindow>>,
 ) -> BrpResult {
     let SizeParams { width, height } = params(request)?;
+    window.set_maximized(false);
     window.resolution.set(width, height);
+    done()
+}
+
+#[derive(Deserialize)]
+struct InterfaceParams {
+    /// `"auto"`, or a percentage.
+    size: Option<Value>,
+    /// "Enable touch".
+    touch: Option<bool>,
+}
+
+/// `client.interface { "size": 200, "touch": false }`: the interface size and
+/// "Enable touch", as Settings sets them (and saves them: run with
+/// `HOW_PREFERENCES` elsewhere to keep the player's own). `"size": "auto"` for Auto.
+fn interface(In(request): In<Option<Value>>, mut preferences: ResMut<Preferences>) -> BrpResult {
+    let InterfaceParams { size, touch } = params(request)?;
+    if let Some(size) = size {
+        preferences.interface_size = match &size {
+            Value::String(auto) if auto.eq_ignore_ascii_case("auto") => InterfaceSize::Auto,
+            Value::Number(percent) => percent
+                .as_u64()
+                .and_then(|percent| u16::try_from(percent).ok())
+                .map(InterfaceSize::Percent)
+                .ok_or_else(|| refused(format!("not a percentage: {percent}")))?,
+            other => {
+                return Err(refused(format!(
+                    "size is \"auto\" or a percentage, not {other}"
+                )));
+            }
+        };
+    }
+    if let Some(touch) = touch {
+        preferences.touch = touch;
+    }
     done()
 }
 

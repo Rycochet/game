@@ -16,6 +16,22 @@ use serde::{Deserialize, Serialize};
 pub struct Preferences {
     /// The page Item Pictures in the debug menu last showed, by its name.
     pub item_pictures: Option<String>,
+    /// How big the interface is drawn.
+    pub interface_size: InterfaceSize,
+    /// "Enable touch": the interface is never drawn smaller than its own size,
+    /// for fingers. A device with only a touch screen behaves as if this is on.
+    pub touch: bool,
+}
+
+/// How big the interface is drawn: its own size is 100%.
+#[derive(Serialize, Deserialize, Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum InterfaceSize {
+    /// Keeps its share of the window: 100% in a window 1920 × 1080 (logical
+    /// pixels), more in a larger one.
+    #[default]
+    Auto,
+    /// Always this percentage.
+    Percent(u16),
 }
 
 impl Preferences {
@@ -117,6 +133,8 @@ mod tests {
     fn preferences_read_back_as_saved() {
         let preferences = Preferences {
             item_pictures: Some("Rings".into()),
+            interface_size: InterfaceSize::Percent(150),
+            touch: true,
         };
         assert_eq!(Preferences::from_text(&preferences.to_text()), preferences);
     }

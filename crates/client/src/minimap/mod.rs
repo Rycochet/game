@@ -26,7 +26,8 @@ use shared::site::StairsDirection;
 
 use crate::common::{
     ClickMode, CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels,
-    PointerPosition, PointerSystems, Portal, SkyNow, SmoothPosition, Token, TouchGesture, Weather,
+    PointerSystems, Portal, SkyNow, SmoothPosition, Token, TouchGesture, UiPointer, Weather,
+    in_interface, interface_area,
 };
 use crate::connection::ToServer;
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
@@ -337,21 +338,62 @@ fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.insert_resource(MapPictures { minimap, full });
 }
 
-/// The minimap's round part across, in logical pixels.
-fn minimap_across(window: &Window) -> f32 {
+/// The window as the maps' nodes see it: its size in the interface's pixels,
+/// which `UiScale` makes bigger or smaller, so the maps keep their share of the
+/// window whatever size the interface is drawn.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Room {
+    size: Vec2,
+    /// The screen's pixels to an interface pixel.
+    scale: f32,
+    /// The screen's pixels to a logical window pixel.
+    screen: f32,
+}
+
+impl Room {
+    pub(super) fn of(window: &Window, ui_scale: &UiScale) -> Self {
+        Self {
+            size: interface_area(window, ui_scale),
+            scale: window.scale_factor() * ui_scale.0,
+            screen: window.scale_factor(),
+        }
+    }
+
+    pub(super) fn width(&self) -> f32 {
+        self.size.x
+    }
+
+    pub(super) fn height(&self) -> f32 {
+        self.size.y
+    }
+
+    /// The screen's pixels to an interface pixel.
+    pub(super) fn scale_factor(&self) -> f32 {
+        self.scale
+    }
+
+    /// The screen's pixels to a logical window pixel: for what is drawn in the
+    /// maps' pictures, which follows the screen as the maps do.
+    pub(super) fn screen_factor(&self) -> f32 {
+        self.screen
+    }
+}
+
+/// The minimap's round part across, in the interface's pixels.
+fn minimap_across(window: &Room) -> f32 {
     // Never nothing: a minimised window has no height, and the scale of the
     // maps is worked out from this.
     (window.height() * MINIMAP_OF_HEIGHT).round().max(1.0)
 }
 
 /// How much bigger than given the sizes round the minimap are in this window.
-fn minimap_trim(window: &Window) -> f32 {
+fn minimap_trim(window: &Room) -> f32 {
     minimap_across(window) / (MINIMAP_BASE_HEIGHT * MINIMAP_OF_HEIGHT)
 }
 
 /// The picture holding it, with the suns and moons round it (more than the
 /// notch needs).
-fn minimap_picture_size(window: &Window) -> f32 {
+fn minimap_picture_size(window: &Room) -> f32 {
     minimap_across(window) + 2.0 * (sky::BAND.max(NOTCH) * minimap_trim(window) + 1.0)
 }
 
@@ -361,12 +403,12 @@ fn under_the_sky(view: GameView, dungeon: &CurrentDungeon) -> bool {
 }
 
 /// The full map's parchment, across, in logical pixels.
-fn full_map_side(window: &Window) -> f32 {
+fn full_map_side(window: &Room) -> f32 {
     (window.width().min(window.height()) * FULL_MAP_OF_WINDOW).round()
 }
 
 /// The part of it the map is drawn on, in logical pixels.
-fn full_map_area(window: &Window) -> Vec2 {
+fn full_map_area(window: &Room) -> Vec2 {
     let side = full_map_side(window);
     Vec2::new(
         side - 2.0 * FULL_MAP_MARGIN,
@@ -376,13 +418,13 @@ fn full_map_area(window: &Window) -> Vec2 {
 }
 
 /// The top-left corner of the full map's parchment, in logical pixels.
-fn full_map_corner(window: &Window) -> Vec2 {
+fn full_map_corner(window: &Room) -> Vec2 {
     let side = full_map_side(window);
     Vec2::new(window.width() - side, window.height() - side) / 2.0
 }
 
 /// The top-left corner of the full map's picture, in logical pixels.
-fn full_map_picture_corner(window: &Window) -> Vec2 {
+fn full_map_picture_corner(window: &Room) -> Vec2 {
     full_map_corner(window) + Vec2::new(FULL_MAP_MARGIN, FULL_MAP_MARGIN + TITLE_HEIGHT)
 }
 
@@ -394,7 +436,7 @@ enum OverFullMap {
     Parchment,
 }
 
-fn over_full_map(window: &Window, at: Vec2) -> OverFullMap {
+fn over_full_map(window: &Room, at: Vec2) -> OverFullMap {
     let side = full_map_side(window);
     let at = at - full_map_corner(window);
     let inside = |from: f32, to: f32, at: f32| (from..to).contains(&at);
@@ -414,7 +456,7 @@ fn over_full_map(window: &Window, at: Vec2) -> OverFullMap {
 
 /// Grid units per logical pixel at the minimap's scale. On the world map the minimap shows as much as
 /// the window on screen does across, which zooming changes.
-fn units_per_pixel(view: GameView, window: &Window, camera: &OrbitCamera) -> f64 {
+fn units_per_pixel(view: GameView, window: &Room, camera: &OrbitCamera) -> f64 {
     match view {
         GameView::WorldMap => {
             let shown = 2.0 * (world_map::HALF_SIZE as f64) * f64::from(camera.zoom());
@@ -452,14 +494,16 @@ fn go_into_clicked_poi(
     mode: Res<ClickMode>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     view: Res<State<GameView>>,
     camera: Single<&OrbitCamera>,
     player: Single<&SmoothPosition, With<Player>>,
     world: Option<Res<CurrentWorld>>,
     mut full: ResMut<FullMap>,
     mut to_server: MessageWriter<ToServer>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
 ) {
+    let window = Room::of(&window, &ui_scale);
     let view = *view.get();
     let teleporting = *mode == ClickMode::Teleport;
     if !full.open
@@ -507,6 +551,7 @@ fn take_input(
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     mut scroll: ResMut<AccumulatedMouseScroll>,
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     view: Res<State<GameView>>,
     camera: Single<&OrbitCamera>,
     world: Option<Res<CurrentWorld>>,
@@ -514,9 +559,10 @@ fn take_input(
     mut levels: ResMut<OtherLevels>,
     player: Single<&SmoothPosition, With<Player>>,
     mut full: ResMut<FullMap>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
     mut gesture: ResMut<TouchGesture>,
 ) {
+    let window = Room::of(&window, &ui_scale);
     let view = *view.get();
     if view == GameView::Connecting {
         return;
@@ -596,7 +642,7 @@ fn take_input(
         let area = full_map_area(&window);
         let middle = full_map_picture_corner(&window) + area / 2.0;
         let towards = if touch.pinch != 1.0 {
-            Some(touch.centre)
+            Some(in_interface(touch.centre, &ui_scale))
         } else {
             cursor
         };
@@ -637,7 +683,7 @@ fn take_input(
             full.drag_from = cursor;
             Some(to - from)
         }
-        _ => (touch.drag != Vec2::ZERO).then_some(touch.drag),
+        _ => (touch.drag != Vec2::ZERO).then_some(in_interface(touch.drag, &ui_scale)),
     };
     if let Some(moved) = moved {
         let centre = full.centre.unwrap_or(spot);
@@ -673,6 +719,7 @@ struct DrawnFrom {
 struct Sources<'w, 's> {
     view: Res<'w, State<GameView>>,
     window: Single<'w, 's, &'static Window, With<PrimaryWindow>>,
+    ui_scale: Res<'w, UiScale>,
     player: Single<'w, 's, &'static SmoothPosition, With<Player>>,
     camera: Single<'w, 's, &'static OrbitCamera>,
     world: Option<Res<'w, CurrentWorld>>,
@@ -723,6 +770,7 @@ fn draw_maps(
     let Sources {
         view,
         window,
+        ui_scale,
         player,
         camera,
         world,
@@ -744,7 +792,11 @@ fn draw_maps(
         title,
     } = &mut screen;
     let view = *view.get();
+    let window = Room::of(&window, &ui_scale);
+    // The pictures' pixels to an interface pixel, for their sizes; what is drawn in
+    // them follows the screen (`dots`), as the maps do, not the interface.
     let scale = window.scale_factor();
+    let dots = window.screen_factor();
     let on_other_floor = levels.showing().is_some();
     let spot = levels.spot(&dungeon, (player.x, player.y));
     // Which way the player's floor is from the one shown.
@@ -847,7 +899,7 @@ fn draw_maps(
         (size.0 as f32).hypot(size.1 as f32) / 2.0
     } else {
         clip
-    } + ICON_PIXELS * zoom * scale;
+    } + ICON_PIXELS * zoom * dots;
     let grid_box = projection.grid_box(reach);
 
     // What can be got ready before the picture is taken out of the assets.
@@ -862,7 +914,7 @@ fn draw_maps(
         )
     });
     let mut prepare = |path: String, part, pixels: f32, at, opacity| {
-        let pixels = (pixels * scale).round().max(1.0) as u32;
+        let pixels = (pixels * dots).round().max(1.0) as u32;
         if sprites.prepare(&asset_server, &images, &path, part, pixels) {
             stamps.push((path, part, pixels, at, opacity));
             false
@@ -897,7 +949,7 @@ fn draw_maps(
                 } else {
                     1.0
                 };
-                let pixels = ((ICON_PIXELS * zoom) * scale).round().max(1.0) as u32;
+                let pixels = ((ICON_PIXELS * zoom) * dots).round().max(1.0) as u32;
                 let name = poi_picture_name(poi.kind, poi.look);
                 sprites.make(&name, pixels, |size| poi_picture(poi.kind, poi.look, size));
                 stamps.push((name, None, pixels, at, opacity));
@@ -960,7 +1012,7 @@ fn draw_maps(
                 frame::stairs_icon(
                     &mut canvas,
                     projection.to_picture(stairs.x as f64, stairs.y as f64),
-                    STAIRS_PIXELS * zoom * scale,
+                    STAIRS_PIXELS * zoom * dots,
                     stairs.direction == StairsDirection::Down,
                 );
             }
@@ -969,7 +1021,7 @@ fn draw_maps(
 
     let player_at = projection.to_picture(spot.0, spot.1);
     // The dot grows with the map.
-    let (dot, outline) = (DOT_PIXELS * zoom * scale, DOT_OUTLINE * zoom * scale);
+    let (dot, outline) = (DOT_PIXELS * zoom * dots, DOT_OUTLINE * zoom * dots);
     if full.open {
         let picture_size = (size.0 as f32, size.1 as f32);
         // On another floor they are smaller, with what says which way beside
@@ -978,12 +1030,12 @@ fn draw_maps(
         let (dot, hint) = if on_other_floor {
             (
                 dot * OTHER_FLOOR_SIZE,
-                Some(FLOOR_HINT_PIXELS * zoom * scale),
+                Some(FLOOR_HINT_PIXELS * zoom * dots),
             )
         } else {
             (dot, None)
         };
-        let arrow_place = frame::arrow_place(picture_size, player_at, ARROW_INSET * zoom * scale);
+        let arrow_place = frame::arrow_place(picture_size, player_at, ARROW_INSET * zoom * dots);
         let mark = arrow_place.map_or(player_at, |(place, _)| place);
         match arrow_place {
             Some((place, direction)) => {
@@ -997,10 +1049,10 @@ fn draw_maps(
         }
         let length = (window.height() * COMPASS_OF_HEIGHT).max(COMPASS_MIN_LENGTH);
         let foot = (
-            size.0 as f32 - COMPASS_INSET * scale,
+            size.0 as f32 - COMPASS_INSET * dots,
             size.1 as f32 - HOVER_LIFT * scale,
         );
-        frame::compass(&mut canvas, foot, length * scale, COMPASS_LINE * scale);
+        frame::compass(&mut canvas, foot, length * scale, COMPASS_LINE * dots);
     } else {
         frame::player_dot(&mut canvas, player_at, dot, outline);
         let trim = scale * minimap_trim(&window);
@@ -1027,6 +1079,7 @@ fn draw_maps(
 #[allow(clippy::too_many_arguments)]
 fn name_what_is_hovered(
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     view: Res<State<GameView>>,
     camera: Single<&OrbitCamera>,
     player: Single<&SmoothPosition, With<Player>>,
@@ -1036,8 +1089,9 @@ fn name_what_is_hovered(
     full: Res<FullMap>,
     mut holder: Single<&mut Visibility, With<HoverBox>>,
     mut text: Single<&mut Text, With<HoverText>>,
-    pointer: Res<PointerPosition>,
+    pointer: Res<UiPointer>,
 ) {
+    let window = Room::of(&window, &ui_scale);
     let view = *view.get();
     let name = pointer.0.filter(|_| full.open).and_then(|cursor| {
         let centre = levels.spot(&dungeon, (player.x, player.y));
@@ -1069,7 +1123,7 @@ fn name_what_is_hovered(
 /// picture, and the grid units per pixel there. `player_spot` is the map's middle
 /// unless it has been dragged.
 fn spot_on_full_map(
-    window: &Window,
+    window: &Room,
     cursor: Vec2,
     view: GameView,
     camera: &OrbitCamera,
@@ -1099,7 +1153,7 @@ fn hovered_body(
     view: GameView,
     dungeon: &CurrentDungeon,
     sky_now: &SkyNow,
-    window: &Window,
+    window: &Room,
     at: Vec2,
 ) -> Option<String> {
     if !under_the_sky(view, dungeon) {
@@ -1124,11 +1178,13 @@ fn name_hovered_token(
     full: Res<FullMap>,
     hovered: Res<HoveredToken>,
     portals: Query<&Portal>,
-    (sky_now, dungeon, pointer): (Res<SkyNow>, Res<CurrentDungeon>, Res<PointerPosition>),
+    (sky_now, dungeon, pointer): (Res<SkyNow>, Res<CurrentDungeon>, Res<UiPointer>),
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     mut holder: Single<&mut Visibility, With<WorldHoverBox>>,
     mut text: Single<&mut Text, With<WorldHoverText>>,
 ) {
+    let window = Room::of(&window, &ui_scale);
     let body = pointer
         .0
         .filter(|_| !full.open)
@@ -1280,7 +1336,8 @@ mod tests {
             .init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<AccumulatedMouseScroll>()
             .init_resource::<ClickMode>()
-            .init_resource::<PointerPosition>()
+            .init_resource::<UiPointer>()
+            .init_resource::<UiScale>()
             .init_resource::<TouchGesture>()
             .init_resource::<OtherLevels>()
             .init_resource::<FullMap>();
@@ -1298,7 +1355,7 @@ mod tests {
     }
 
     fn set_cursor(app: &mut App, at: Vec2) {
-        app.world_mut().resource_mut::<PointerPosition>().0 = Some(at);
+        app.world_mut().resource_mut::<UiPointer>().0 = Some(at);
     }
 
     fn press_key(app: &mut App, key: KeyCode) {
@@ -1343,7 +1400,11 @@ mod tests {
             .add_message::<ToServer>();
         app.world_mut().resource_mut::<FullMap>().set_open(true);
         let mut windows = app.world_mut().query::<&Window>();
-        let window = windows.single(app.world()).expect("a window");
+        let window = Room::of(
+            windows.single(app.world()).expect("a window"),
+            &UiScale::default(),
+        );
+        let window = &window;
         let corner =
             full_map_corner(window) + Vec2::new(FULL_MAP_MARGIN, FULL_MAP_MARGIN + TITLE_HEIGHT);
         let middle = corner + full_map_area(window) / 2.0;
@@ -1488,7 +1549,7 @@ mod tests {
         let mouse = app.world().resource::<ButtonInput<MouseButton>>();
         assert!(mouse.just_pressed(MouseButton::Left));
 
-        let size = minimap_picture_size(&Window::default());
+        let size = minimap_picture_size(&Room::of(&Window::default(), &UiScale::default()));
         let on = Vec2::new(1280.0 - CORNER_GAP - size / 2.0, CORNER_GAP + size / 2.0);
         click(&mut app, on);
         assert!(app.world().resource::<FullMap>().open);
@@ -1631,7 +1692,7 @@ mod tests {
         assert!(floors::buttons(GameView::WorldMap, true, dungeon, levels).is_empty());
         let window = Window::default();
         let on_button = |row: usize| {
-            let (corner, _) = floors::column(&window, 2);
+            let (corner, _) = floors::column(&Room::of(&window, &UiScale::default()), 2);
             let down = row as f32 * (floors::BUTTON + floors::BUTTON_GAP);
             corner + Vec2::new(5.0, 5.0 + down)
         };
@@ -1690,6 +1751,22 @@ mod tests {
     fn a_minimised_window_still_gives_the_maps_a_scale() {
         let mut window = Window::default();
         window.resolution.set(800.0, 0.0);
-        assert_eq!(minimap_across(&window), 1.0);
+        assert_eq!(minimap_across(&Room::of(&window, &UiScale::default())), 1.0);
+    }
+
+    #[test]
+    fn the_maps_keep_their_share_of_the_window_at_any_interface_size() {
+        let mut window = Window::default();
+        window.resolution.set(1280.0, 720.0);
+        let on_screen = |scale: f32| {
+            let room = Room::of(&window, &UiScale(scale));
+            (
+                minimap_across(&room) * room.scale_factor(),
+                full_map_side(&room) * room.scale_factor(),
+            )
+        };
+        assert_eq!(on_screen(1.0), (144.0, 648.0));
+        assert_eq!(on_screen(0.5), on_screen(1.0));
+        assert_eq!(on_screen(2.0), on_screen(1.0));
     }
 }

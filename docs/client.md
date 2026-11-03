@@ -18,6 +18,7 @@ In every case the server decides what happens, and the client shows it.
 - **Sites:** go into a place on the map and the view changes to its levels, seen cell by cell. You only see what your character can see, and what you have seen before stays on the map in grey.
 - **The minimap:** the round map in the top-right corner. Click it for the full map, which shows what you know of the world or of the site you're in.
 - **The system menu:** Settings, Logout (not available yet) and Quit. See below.
+- **Interface size:** in Settings, under Interface. Auto (the first choice) keeps panels and writing the same share of the window however big it is; or choose from 50% to 300%. "Enable touch" keeps it at 100% or more, for fingers, and is always on for a device with only a touch screen. The minimap always keeps its share of the window.
 
 ## Pausing
 

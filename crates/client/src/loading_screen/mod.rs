@@ -11,6 +11,7 @@ use bevy::winit::WinitSettings;
 
 use crate::common::{
     GameView, LoadingStep, PointerSystems, ServerStatus, TouchGesture, frame_settings,
+    interface_area,
 };
 use crate::widgets::{Progress, TextSize, WidgetSystems, spawn_progress_bar};
 
@@ -217,10 +218,12 @@ fn show_screen(
 
 fn fit_title(
     window: Single<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     mut title: Single<&mut TextFont, With<Title>>,
     mut last: Local<Vec2>,
 ) {
-    let size = window.size();
+    // The title keeps its share of the window, whatever size the interface is.
+    let size = interface_area(&window, &ui_scale);
     // Minimised: nothing to fit, and no size of writing would.
     if size != *last && size.min_element() >= 1.0 {
         *last = size;

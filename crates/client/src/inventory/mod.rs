@@ -15,8 +15,8 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use shared::wear::{Fit, Remover, WearRefused};
 
 use crate::common::{
-    GROUND, GameView, GaveItem, GodMode, HeldGift, HeldOverGifts, HeldStock, PointerPosition,
-    PointerSystems, SpentEnergy, StockCell, TakesGifts, TookItem, TouchGesture,
+    GROUND, GameView, GaveItem, GodMode, HeldGift, HeldOverGifts, HeldStock, PointerSystems,
+    SpentEnergy, StockCell, TakesGifts, TookItem, TouchGesture, UiPointer, in_interface,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{
@@ -105,11 +105,11 @@ struct Holding {
     held: Option<HeldBy>,
     /// What dropping it now would do.
     aim: Option<Target>,
-    /// Where the pointer last was, for one just lifted.
+    /// Where the pointer last was, for one just lifted, in the interface's pixels.
     at: Option<Vec2>,
     /// If it is still someone else's: who, and the thing itself.
     stock: Option<(shared::id::Id, Item)>,
-    /// Where and when the mouse picked it up.
+    /// Where (in the interface's pixels) and when the mouse picked it up.
     picked: Option<(Vec2, f64)>,
 }
 
@@ -206,7 +206,7 @@ fn cancel_held(mut keys: ResMut<ButtonInput<KeyCode>>, mut holding: ResMut<Holdi
 
 /// A finger staying still on an item picks it up, once for each contact: a tap shows
 /// its name, or opens it, and a finger sliding straight away is scrolling.
-#[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn pick_up_by_finger(
     mut gesture: ResMut<TouchGesture>,
     nodes: Query<
@@ -233,6 +233,7 @@ fn pick_up_by_finger(
     mut holding: ResMut<Holding>,
     carried: Res<Carried>,
     god: Res<GodMode>,
+    ui_scale: Res<UiScale>,
     mut decided: Local<Option<Vec2>>,
 ) {
     if gesture.first_finger.is_none() {
@@ -244,6 +245,7 @@ fn pick_up_by_finger(
     }
     let Some(start) = gesture
         .still_at
+        .map(|start| in_interface(start, &ui_scale))
         .filter(|&start| holding.held.is_none() && *decided != Some(start))
     else {
         return;
@@ -295,7 +297,7 @@ fn hold_items(
         &InheritedVisibility,
         &ComputedStackIndex,
     )>,
-    pointer: Res<PointerPosition>,
+    (pointer, ui_scale): (Res<UiPointer>, Res<UiScale>),
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     mut gesture: ResMut<TouchGesture>,
     mut holding: ResMut<Holding>,
@@ -445,7 +447,7 @@ fn hold_items(
             None => held.item.turned(&carried.0),
         };
     }
-    let finger = gesture.first_finger;
+    let finger = gesture.first_finger.map(|at| in_interface(at, &ui_scale));
     if held.by == Hand::Finger {
         // Two fingers on the screen here are holding and turning, not moving the
         // camera.
@@ -546,7 +548,8 @@ fn hold_items(
     if held.by == Hand::Mouse
         && released
         && let (Some((from, when)), Some(at)) = (holding.picked, at)
-        && is_click(from, at, now - when)
+        // In the window's pixels, so a click is the same whatever the size.
+        && is_click(from * ui_scale.0, at * ui_scale.0, now - when)
     {
         held.by = Hand::Clicked;
     }

@@ -2,6 +2,8 @@
 //! Settings, Logout and Quit, and while it is open single player is paused. See
 //! `docs/context/client/system_menu.md`.
 
+mod settings;
+
 use bevy::asset::RenderAssetUsages;
 use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
@@ -15,7 +17,7 @@ use crate::minimap::FullMap;
 use crate::widgets::{
     ButtonPressed, ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, TextSize,
     WidgetSystems, panel_title, spawn_button, spawn_close_button, spawn_dialog, spawn_icon_button,
-    spawn_sized_layer, spawn_tabs,
+    spawn_sized_layer,
 };
 
 const GEAR_BUTTON: f32 = 34.0;
@@ -51,7 +53,15 @@ impl Plugin for SystemMenuPlugin {
                     .in_set(WidgetSystems::Front)
                     .run_if(not(in_state(GameView::Connecting))),
             )
-            .add_systems(Update, (show_menu, ask_for_pause));
+            .add_systems(
+                Update,
+                (
+                    show_menu,
+                    ask_for_pause,
+                    settings::fill_interface_page,
+                    settings::use_pages,
+                ),
+            );
     }
 }
 
@@ -312,8 +322,7 @@ fn spawn_settings(commands: &mut Commands) {
                         spawn_close_button(holder, default());
                     });
             });
-        // Nothing on its one page yet, so nothing listens for `TabChosen`.
-        spawn_tabs(panel, &["Gameplay"], 0, FONT);
+        settings::spawn_pages(panel);
     });
 }
 

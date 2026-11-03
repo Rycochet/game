@@ -33,6 +33,7 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 
 ## Notes
 
+- Detail: pictures are asked for at twice the pixels they are shown with, sharp up to two screen pixels per interface pixel. Beyond that (a large `UiScale` on a scaled screen) `ItemPictures` draws them with `detail` times the pixels asked for (at most `MOST_DETAIL`), and `follow_interface_scale` gives those on show the new ones. The black edge goes by the pixels asked for, so it stays as thick on the screen. Debug Item Pictures' own requests only pick it up when they next change.
 - Colours and finishes are the client's, and meshes aren't rolled: everything to do with what a thing is comes from its saved form, so the same item looks the same anywhere, though pixels may differ between graphics cards.
 - Up to `SLOTS` pictures draw at once, each camera on a render layer of its own (16 up), so a panel full of new things doesn't stall a frame. The rest wait their turn.
 - Something new to draw isn't drawn until the graphics card's program for it has compiled, so cameras stay until `StillCompiling` is 0 and then a few frames more. Without that the first pictures after starting come out empty. Same idea as Bevy's loading screen example.

@@ -8,6 +8,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 
 - **Colours:** named, in `widgets/theme.rs`. Parchment and ink, with raised, selected and disabled colours, green for allowed and red for refused. One look: no light and dark modes.
 - **Text:** Lexend, in four named sizes (`TextSize`): small 13, medium 16, large 18, title 24. Words as written, not uppercase.
+- **Size:** everything is drawn at the player's interface size (Settings, Interface): Auto keeps its share of the window, with 100% in a 1920 × 1080 window; or 50% to 300%. "Enable touch" keeps it at least 100%. The minimap and full map keep their share of the window instead. Design at 100%; check 50% and 200%.
 - **Spacing:** gaps and padding are multiples of 4 px. Edges are exempt.
 - **Shape:** square corners for now.
 - **Raised things:** lit along the top and left, shaded along the bottom and right. Panels, tooltips and open lists also have one soft shadow.
