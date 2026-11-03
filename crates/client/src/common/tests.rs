@@ -57,3 +57,11 @@ fn screen_up_follows_the_view() {
     // Right on screen when east is at the top: south.
     assert_eq!(ViewFacing(1).screen_to_grid(1, 0), (0, 1));
 }
+
+#[test]
+fn keep_drawing_keeps_the_focused_rate_unfocused() {
+    let kept = frame_settings(true);
+    assert_eq!(kept.unfocused_mode, kept.focused_mode);
+    let slowed = frame_settings(false);
+    assert_ne!(slowed.unfocused_mode, slowed.focused_mode);
+}

@@ -10,7 +10,7 @@ use bevy::window::PrimaryWindow;
 use bevy::winit::WinitSettings;
 
 use crate::common::{
-    GameView, LoadingStep, PointerSystems, ServerStatus, TouchGesture, frame_settings,
+    GameView, KeepDrawing, LoadingStep, PointerSystems, ServerStatus, TouchGesture, frame_settings,
     interface_area,
 };
 use crate::widgets::{Progress, TextSize, WidgetSystems, spawn_progress_bar};
@@ -248,10 +248,14 @@ fn remove_page_screen(step: Res<LoadingStep>, mut removed: Local<bool>) {
 }
 
 /// Keeps loading quick even with the window in the background, where frames are
-/// otherwise a second apart.
-fn keep_frame_rate(step: Res<LoadingStep>, mut settings: ResMut<WinitSettings>) {
-    if step.is_changed() {
-        *settings = frame_settings(*step != LoadingStep::Ready);
+/// otherwise a second apart (as they are after it, unless `KeepDrawing`).
+fn keep_frame_rate(
+    step: Res<LoadingStep>,
+    keep: Res<KeepDrawing>,
+    mut settings: ResMut<WinitSettings>,
+) {
+    if step.is_changed() || keep.is_changed() {
+        *settings = frame_settings(*step != LoadingStep::Ready || keep.0);
     }
 }
 

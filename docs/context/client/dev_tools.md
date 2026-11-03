@@ -4,7 +4,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Files
 
-- `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`. Each group of `HOW_DEBUG_` variables is read by an `add(app)` in its own file: `start.rs` (position, entering a site, cells), `forced.rs` (`Forced`: stairs, fields, cursor), `menus.rs` (panels, menus, the full map), `inventory.rs`, `moving.rs`, `world.rs` (time, suns and moons, snow), `view.rs` (herbs, window, token, camera), `screenshot.rs`; `parse.rs` reads their values.
+- `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`. Each group of `HOW_DEBUG_` variables is read by an `add(app)` in its own file: `start.rs` (position, entering a site, cells), `forced.rs` (`Forced`: stairs, fields, cursor), `menus.rs` (panels, menus, the full map), `inventory.rs`, `moving.rs`, `world.rs` (time, suns and moons, snow), `view.rs` (herbs, window, token, camera), `screenshot.rs`, `keep_drawing.rs`; `parse.rs` reads their values.
 - `crates/client/src/dev_tools/fake_input.rs`: only with the `debug-api` feature: fake mouse, touch, wheel, keys and typing for the debug API, queued and played a step a frame. In `fake_input/`: `play.rs`, `mouse.rs`, `keys.rs`, `wait.rs`.
 - `crates/client/src/dev_tools/debug_api.rs`: only with the `debug-api` feature: the client's debug API methods (see `docs/context/debug-api.md`), one for most of these variables, going through the same code: `Forced` (stairs style, fields stage and cursor kept as set, applied every frame by `apply_forced`), `open_map`, `turn_camera`, `token_of`, `cell_kind`. In `debug_api/`, by what the methods do: `state.rs` (state, screenshot), `places.rs`, `world.rs`, `items.rs`, `moving.rs`, `view.rs`, `drawing.rs`, `panels.rs`.
 
@@ -37,6 +37,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
 - `HOW_DEBUG_SYSTEM_MENU=menu`: start with the system menu open; `quit`: at its requester; `settings`: at its settings.
 - `HOW_DEBUG_LOADING_HOLD=true`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
+- `HOW_DEBUG_KEEP_DRAWING=false`: while the debug API (`HOW_DEBUG_API`) or `HOW_DEBUG_SCREENSHOT` is running, frames keep their focused rate (about 30 fps) in the background (`common::KeepDrawing`), so tools driving a window behind others aren't held to one a second; `false` gives the players' rate back.
 - `HOW_DEBUG_REVEAL_POIS=true`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `HOW_DEBUG_SCREENSHOT=path.png` (+ optional `HOW_DEBUG_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
 - Not here, but also dev tools the embedded server allows: the debug menu's Teleport Mode (`world_map`, `dungeon_map`; on a poi on the full map it goes into it, `minimap`), Change Cell Mode (`dungeon_map`) and Teleport to Start (`debug_menu`).

@@ -70,7 +70,7 @@ The world map is inspired by Legend (1992): a square slab of terrain seen from t
 
 ## 2026-10-27: Frame rate capped at ~30 fps
 
-Not a twitch game: the client updates about 30 times a second while focused (input still wakes it immediately) and once a second unfocused, to save GPU and power.
+Not a twitch game: the client updates about 30 times a second while focused (input still wakes it immediately) and once a second unfocused, to save GPU and power. Native builds running the debug API or a screenshot keep the focused rate in the background (2026-11-03, `HOW_DEBUG_KEEP_DRAWING=false` to see players' rate), as tools drive the game from behind other windows and were held to a frame a second.
 
 ## 2026-10-27: Native dev tools for visual checks
 
