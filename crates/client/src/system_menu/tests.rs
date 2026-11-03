@@ -1,6 +1,11 @@
 use bevy::ecs::system::RunSystemOnce;
+use bevy::input::mouse::AccumulatedMouseScroll;
 
 use super::*;
+use crate::common::TouchGesture;
+use crate::debug_menu::DebugMenu;
+use crate::minimap::FullMap;
+use crate::widgets::ButtonPressed;
 
 fn test_app(menu: SystemMenu) -> App {
     let mut app = App::new();

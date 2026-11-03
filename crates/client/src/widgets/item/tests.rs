@@ -1,3 +1,6 @@
+use shared::item::{Quality, Shape};
+
+use super::cells::cell_edges;
 use super::*;
 
 #[test]

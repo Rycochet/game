@@ -1,3 +1,6 @@
+use shared::climate::ClimateSample;
+use shared::surface::SurfaceSample;
+
 use super::*;
 
 #[test]

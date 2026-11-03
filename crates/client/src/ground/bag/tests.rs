@@ -1,3 +1,5 @@
+use shared::ground::Load;
+
 use super::*;
 
 #[test]

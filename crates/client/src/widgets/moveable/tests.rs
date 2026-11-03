@@ -1,7 +1,12 @@
 use bevy::ecs::system::RunSystemOnce;
 use bevy::math::Affine2;
+use bevy::prelude::*;
+use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 
+use super::super::{ButtonPressed, ButtonState, Pressable, RaisePanel};
+use super::place::{in_new_window, on_screen};
 use super::*;
+use crate::common::{TouchGesture, UiPointer};
 
 #[test]
 fn panels_stay_on_the_screen() {

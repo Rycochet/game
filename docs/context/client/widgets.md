@@ -4,23 +4,23 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Files
 
-- `crates/client/src/widgets/feedback.rs`: `ButtonStyle`, `ButtonTooltip`; `track_pointer` (first in `Presses`), `show_button_looks`, `show_edges`, `spread_ripples`, button names after a wait. Unit tests.
+- `crates/client/src/widgets/feedback.rs`: `ButtonStyle`, `ButtonTooltip`; `track_pointer` (first in `Presses`), `show_button_looks`, `show_edges`, `spread_ripples`, button names after a wait. Unit tests. In `feedback/`: `looks.rs`, `pointer.rs`, `show.rs`.
 - `crates/client/src/widgets/scale.rs`: how big the interface is drawn: `apply_interface_scale` (`PreUpdate`, before `PointerSystems`) sets Bevy's `UiScale` from `Preferences` and the window, `interface_scale`, `TouchOnly`, `INTERFACE_PERCENTS`. Unit tests.
 - `crates/client/src/widgets/theme.rs`: the colours, `TextSize` and the soft shadow. Unit test.
-- `crates/client/src/widgets/mod.rs`: `WidgetsPlugin`, sizes, `ButtonState`, `raised_box`, `panel`, `panel_frame`, `panel_title`, `spawn_tooltip`, `spawn_button`, `spawn_icon_button`, `spawn_check_button`, `spawn_close_button`.
+- `crates/client/src/widgets/mod.rs`: `WidgetsPlugin`, sizes, `ButtonState`, `raised_box`, `panel`, `panel_frame`, `panel_title`, `spawn_tooltip`, `spawn_button`, `spawn_icon_button`, `spawn_check_button`, `spawn_close_button`. Beside it: `button_state.rs` (`ButtonState`, `WidgetSystems`, presses), `boxes.rs` (panels, tooltips), `buttons.rs`.
 - `crates/client/src/widgets/fullscreen.rs`: `spawn_fullscreen_layer`, `darkening`, `leaves_presses`, `layer_z`, `layer_share`. Unit tests.
 - `crates/client/src/widgets/text_box.rs`: `TextBox`, `TextFocus`, `TextEdited`, `SoftKeyPressed`, `spawn_text_box`, and the systems giving boxes the keyboard. Unit tests.
 - `crates/client/src/widgets/soft_keyboard.rs`: in browsers, a hidden HTML input for the on-screen keyboard. Does nothing natively.
-- `crates/client/src/widgets/dropdown.rs`: `Dropdown`, `DropdownChosen`, `spawn_dropdown`, and the open list. Unit tests.
+- `crates/client/src/widgets/dropdown.rs`: `Dropdown`, `DropdownChosen`, `spawn_dropdown`, and the open list. Unit tests. In `dropdown/`: `parts.rs`, `rows.rs`, `run.rs`, `list.rs`, `show.rs`.
 - `crates/client/src/widgets/filter_list.rs`: `matches_filter`, `next_highlight`, `HighlightStep`, shared by the debug menu and dropdowns with search. Unit tests.
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
 - `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `spawn_toggle_row`, `TabChosen`, `press_tabs`. Unit test.
 - `crates/client/src/widgets/progress.rs`: `Progress`, `spawn_progress_bar`, `show_progress`. Unit test.
-- `crates/client/src/widgets/item.rs`: how items look: `spawn_item_grid`, `spawn_item_cells`, `ItemTooltip`, colours and sizes. Unit tests.
+- `crates/client/src/widgets/item.rs`: how items look: `spawn_item_grid`, `spawn_item_cells`, `ItemTooltip`, colours and sizes. Unit tests. In `item/`: `look.rs`, `nodes.rs`, `cells.rs`, `picture.rs`, `name.rs`.
 - `crates/client/src/widgets/scroll.rs`: `spawn_scroll_area`, `scroll_areas` (before `take_presses`), `show_scroll_bars`. Unit tests.
 - `crates/client/src/widgets/aura.rs`: the glow of what is magical, blessed or cursed (`assets/shaders/item_aura.wesl`): `Aura`, `AuraMask`, `aura_glow`, materials made as needed. Unit tests.
 - `crates/client/src/widgets/set_edge.rs`: the metal edge of set items (`assets/shaders/set_edge.wesl`): `SetEdge`, `set_edge`, a material per quality, sliding with `common::BandShift`. Unit test.
-- `crates/client/src/widgets/moveable.rs`: `spawn_moveable_panel`, `place_panels` (keeps them on the screen), `take_presses` (`PreUpdate`, takes clicks and touches for widgets). Unit tests.
+- `crates/client/src/widgets/moveable.rs`: `spawn_moveable_panel`, `place_panels` (keeps them on the screen), `take_presses` (`PreUpdate`, takes clicks and touches for widgets). Unit tests. In `moveable/`: `spawn.rs`, `place.rs`, `drag.rs`.
 
 `crates/client/src/widgets/stock.rs`: `StockGrid` (a grid of what isn't carried: a shop's, the ground; places kept here only), `StockGridNode`, `StockAim`, `StockAimAt`, `draw_stock_aim`. Unit tests.
 

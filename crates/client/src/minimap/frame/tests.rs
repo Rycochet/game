@@ -1,3 +1,5 @@
+use super::super::canvas::{Canvas, polygon_distance};
+use super::stairs_icon::stairs_corners;
 use super::*;
 
 #[test]

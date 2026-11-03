@@ -4,7 +4,7 @@ Shared building blocks for the client modules. Keep it small.
 
 ## Files
 
-- `crates/client/src/common/mod.rs`: `CommonPlugin`; black `ClearColor`, frame-rate cap (`WinitSettings`), world and dungeon resources, `GameView` state, clock, weather, view stats, tokens, lights.
+- `crates/client/src/common/mod.rs`: `CommonPlugin`; black `ClearColor`, frame-rate cap (`WinitSettings`), world and dungeon resources, `GameView` state, clock, weather, view stats, tokens, lights. Beside it, by what they are for: `states.rs` (`GameView`, `LoadingStep`, `ClickMode`, `ServerStatus`), `world.rs` (`CurrentWorld`, `KnownPois`), `dungeon.rs` (`CurrentDungeon`), `map.rs` (positions, `Portal`, `Clickable`, `LightSource`, `SharesSight`), `token.rs`, `pointer.rs`, `clock.rs`, `sky.rs`, `weather.rs`, `view.rs`, `items.rs`, `creatures.rs`, `debug.rs`, `window.rs` (`frame_settings`).
 
 - `crates/client/src/common/preferences.rs`: `Preferences`, the player's choices kept between runs (native `client.ron` beside the known servers or `HOW_PREFERENCES`; web local storage). Unit tests.
 

@@ -1,4 +1,6 @@
+use shared::poi::ChunkPos;
 use shared::poi::PoiKind;
+use shared::protocol::SeenPoi;
 
 use super::*;
 

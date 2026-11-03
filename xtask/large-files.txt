@@ -4,25 +4,3 @@
 # Files without a reason are waiting to be split. A listed file may only
 # shrink: `cargo xtask sizes` lowers the numbers and removes files back under
 # the limit. Only add a file with the owner's agreement.
-crates/client/src/common/mod.rs 894
-crates/client/src/connection/mod.rs 542
-crates/client/src/connection/socket.rs 304
-crates/client/src/ground/bag.rs 343
-crates/client/src/ground/mod.rs 626
-crates/client/src/minimap/frame.rs 342
-crates/client/src/minimap/grid.rs 337
-crates/client/src/player/mod.rs 512
-crates/client/src/surface_style/mod.rs 320
-crates/client/src/system_menu/mod.rs 427
-crates/client/src/trade/mod.rs 365
-crates/client/src/view3d/token.rs 529
-crates/client/src/widgets/dropdown.rs 398
-crates/client/src/widgets/feedback.rs 315
-crates/client/src/widgets/item.rs 459
-crates/client/src/widgets/mod.rs 472
-crates/client/src/widgets/moveable.rs 327
-crates/client/src/world_map/mod.rs 542
-crates/client/src/world_map/poi_model.rs 712
-crates/client/src/world_map/sky.rs 501
-crates/client/src/world_map/terrain.rs 834
-xtask/src/api.rs 363

@@ -1,0 +1,139 @@
+//! What the server says of keepers and stock, the grids, and gifts let go on them.
+
+use bevy::prelude::*;
+use bevy::ui::UiGlobalTransform;
+use shared::id::Id;
+use shared::protocol::ServerMessage;
+
+use super::{AT, COLUMNS, Heading, Keepers, MOST_HEIGHT, NEXT_AT, OpenTrade, OpenTrades};
+use crate::common::{CurrentDungeon, GROUND, GaveItem, HeldOverGifts, HeldStock, TookItem};
+use crate::connection::FromServer;
+use crate::widgets::{
+    RaisePanel, StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim,
+    spawn_moveable_panel, spawn_scroll_area,
+};
+
+/// Notes where things given were let go, for when they come back as stock, moves
+/// what is theirs already, and takes away what was taken.
+pub(super) fn note_gifts(
+    mut gave: MessageReader<GaveItem>,
+    mut took: MessageReader<TookItem>,
+    grids: Query<(&StockGridNode, &ComputedNode, &UiGlobalTransform)>,
+    mut open: ResMut<OpenTrades>,
+) {
+    for GaveItem(gift) in gave.read() {
+        let grid = grids.iter().find(|(grid, ..)| grid.0 == gift.to);
+        let trade = open.0.iter_mut().find(|trade| trade.grid.with == gift.to);
+        if let (Some((_, node, transform)), Some(trade)) = (grid, trade) {
+            trade.grid.gave(gift, node, transform);
+        }
+    }
+    for took in took.read() {
+        let trade = open.0.iter_mut().find(|trade| trade.grid.with == took.with);
+        if let Some(trade) = trade {
+            trade.grid.took(took.item);
+        }
+    }
+}
+
+/// Draws grids again when what is in them changes, or something is picked up from
+/// them or put back. What is held isn't drawn where it was.
+pub(super) fn draw_grids(
+    held: Res<HeldStock>,
+    mut open: ResMut<OpenTrades>,
+    mut commands: Commands,
+    mut drawn_without: Local<Option<Id>>,
+) {
+    let picked_up = *drawn_without != held.0;
+    *drawn_without = held.0;
+    for trade in &mut open.0 {
+        if trade.grid.changed || picked_up {
+            trade.grid.changed = false;
+            commands.entity(trade.holder).despawn_related::<Children>();
+            trade.grid.draw(&mut commands, trade.holder, held.0);
+        }
+    }
+}
+
+/// Who keeps what, and what the server says someone has: their panel, drawn again
+/// if it is open, keeping things where they are. A new level closes every panel.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn read_server(
+    mut from_server: MessageReader<FromServer>,
+    dungeon: Res<CurrentDungeon>,
+    nodes: Query<(), With<Node>>,
+    mut keepers: ResMut<Keepers>,
+    mut open: ResMut<OpenTrades>,
+    mut heading: ResMut<Heading>,
+    mut raise: MessageWriter<RaisePanel>,
+    mut commands: Commands,
+) {
+    for FromServer(message) in from_server.read() {
+        match message {
+            ServerMessage::EnterLevel(_) => {
+                heading.0 = None;
+                keepers.0.clear();
+                for trade in open.0.drain(..) {
+                    if nodes.contains(trade.panel) {
+                        commands.entity(trade.panel).despawn();
+                    }
+                }
+            }
+            ServerMessage::Keepers(list) => keepers.0 = list.iter().copied().collect(),
+            ServerMessage::TradeStock { with, items } => {
+                let trade = open.0.iter_mut().find(|trade| trade.grid.with == *with);
+                if let Some(trade) = trade {
+                    trade.grid.heard(items);
+                    continue;
+                }
+                let building = keepers.0.iter().find(|(_, keeper)| *keeper == with);
+                let look = building.and_then(|(&id, _)| {
+                    dungeon.buildings.iter().find(|building| building.id == id)
+                });
+                let Some(look) = look else {
+                    continue;
+                };
+                let at = AT + NEXT_AT * open.0.len() as f32;
+                let (panel, content) = spawn_moveable_panel(&mut commands, look.kind.name(), at);
+                let mut holder = Entity::PLACEHOLDER;
+                commands.entity(content).with_children(|content| {
+                    holder = spawn_scroll_area(content, MOST_HEIGHT);
+                });
+                raise.write(RaisePanel(panel));
+                open.0.push(OpenTrade {
+                    panel,
+                    place: look.door,
+                    holder,
+                    grid: StockGrid::new(*with, COLUMNS, items),
+                });
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Green where something held would go if let go now.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub(super) fn show_gift_aim(
+    held: Res<HeldOverGifts>,
+    carried: Res<crate::inventory::Carried>,
+    open: Res<OpenTrades>,
+    grids: Query<(&StockGridNode, &ComputedNode, &UiGlobalTransform)>,
+    aims: Query<(Entity, &StockAim)>,
+    new_aims: Query<(), Added<StockAim>>,
+    mut commands: Commands,
+    mut drawn: Local<Option<StockAimAt>>,
+) {
+    let aim = held.0.and_then(|gift| {
+        let trade = open.0.iter().find(|trade| trade.grid.with == gift.to)?;
+        let (_, node, transform) = grids.iter().find(|(grid, ..)| grid.0 == gift.to)?;
+        trade.grid.aim(&gift, &carried.0, node, transform)
+    });
+    if *drawn == aim && new_aims.is_empty() {
+        return;
+    }
+    *drawn = aim;
+    // The ground's are `inventory`'s.
+    let ours = aims.iter().filter(|(_, aim)| aim.0 != GROUND);
+    draw_stock_aim(&mut commands, ours, aim);
+}
