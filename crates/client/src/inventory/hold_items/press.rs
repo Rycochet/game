@@ -6,6 +6,7 @@ use shared::item::Holder;
 
 use super::super::hold::Held;
 use super::super::panels::{ItemCell, OpenGrids};
+use super::super::split::{Split, SplitCell, Splitting};
 use super::super::{Carried, DOUBLE_PRESS_SECONDS, Hand, HeldBy, Holding};
 use crate::common::StockCell;
 use crate::widgets::{ButtonPressed, RaisePanel};
@@ -14,7 +15,8 @@ use crate::widgets::{ButtonPressed, RaisePanel};
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn take_presses(
     pressed: &mut MessageReader<ButtonPressed>,
-    (cells, stock_cells): (&Query<&ItemCell>, &Query<&StockCell>),
+    (cells, stock_cells, split_cells): (&Query<&ItemCell>, &Query<&StockCell>, &Query<&SplitCell>),
+    split: &mut ResMut<Split>,
     mouse: &mut ResMut<ButtonInput<MouseButton>>,
     holding: &mut ResMut<Holding>,
     carried: &Carried,
@@ -22,7 +24,7 @@ pub(super) fn take_presses(
     commands: &mut Commands,
     raise: &mut MessageWriter<RaisePanel>,
     last_press: &mut Option<(shared::id::Id, f64)>,
-    (now, new_press, tapped, at_press): (f64, bool, bool, Option<Vec2>),
+    (now, new_press, tapped, at_press, shift): (f64, bool, bool, Option<Vec2>, bool),
 ) -> bool {
     let clicked_held = holding
         .held
@@ -50,6 +52,25 @@ pub(super) fn take_presses(
     }
     for press in pressed.read() {
         if clicked_held.is_some() {
+            continue;
+        }
+        if let Ok(cell) = split_cells.get(press.0) {
+            // The stack in the split box: that many from its top, picked up as anything
+            // is, a tap or quick click holding it until the next.
+            if let Some(splitting) = split.0.take()
+                && let Some(part) = carried.0.part_of(splitting.stack, splitting.count)
+                && let Some((_, placed)) = carried.0.placed(splitting.stack)
+            {
+                holding.picked = at_press.map(|at| (at, now));
+                holding.held = Some(HeldBy {
+                    item: Held {
+                        id: part,
+                        rotation: placed.rotation,
+                        grip: cell.grip,
+                    },
+                    by: Hand::Mouse,
+                });
+            }
             continue;
         }
         if let Ok(cell) = stock_cells.get(press.0) {
@@ -81,6 +102,14 @@ pub(super) fn take_presses(
             && !carried.0.in_bin(cell.id);
         if again && is_bag {
             open.open(Holder::Inside(cell.id), &carried.0, commands, raise);
+            continue;
+        }
+        let all = carried.0.find(cell.id).map_or(1, |item| item.count());
+        if (shift || tapped) && all > 1 && !carried.0.in_bin(cell.id) {
+            // A stack to split: see `split`.
+            if let Some(at) = at_press {
+                split.0 = Some(Splitting::open(cell.id, all, at));
+            }
             continue;
         }
         if tapped {

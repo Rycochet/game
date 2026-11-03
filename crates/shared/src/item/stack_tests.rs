@@ -239,3 +239,78 @@ fn a_stack_with_something_known_to_differ_takes_no_more() {
         0
     );
 }
+
+#[test]
+fn a_part_is_named_by_its_lowest_item_and_lifted_out_where_the_stack_lies() {
+    let mut inventory = Inventory::default();
+    inventory
+        .add(
+            stack(1, ItemKind::Coin, 5),
+            Holder::Pockets,
+            2,
+            1,
+            Rotation::None,
+        )
+        .unwrap();
+    assert_eq!(inventory.part_of(id(1), 2), Some(id(4)));
+    assert_eq!(inventory.part_of(id(1), 5), Some(id(1)));
+    assert_eq!(inventory.part_of(id(1), 6), None);
+    assert_eq!(inventory.lift_part(id(4)), Some(id(1)));
+    let (_, part) = inventory.placed(id(4)).unwrap();
+    assert_eq!((part.x, part.y, part.item.count()), (2, 1, 2));
+    assert_eq!(inventory.find(id(1)).unwrap().count(), 3);
+    // Nothing to lift for a whole stack or something alone.
+    assert_eq!(inventory.lift_part(id(1)), None);
+}
+
+#[test]
+fn a_lifted_part_moves_like_anything_else_or_goes_back() {
+    let mut inventory = Inventory::default();
+    inventory
+        .add(
+            stack(1, ItemKind::Coin, 5),
+            Holder::Pockets,
+            0,
+            0,
+            Rotation::None,
+        )
+        .unwrap();
+    inventory.lift_part(id(4));
+    // Where its stack is there is no room for it, so it can't stay.
+    assert_eq!(
+        inventory.move_item(id(4), Holder::Pockets, 0, 0, Rotation::None),
+        Err(MoveRefused::NoRoom)
+    );
+    assert!(inventory.settle_parts());
+    assert_eq!(
+        ids(inventory.find(id(1)).unwrap()),
+        (1..=5).map(id).collect::<Vec<_>>()
+    );
+    // Moved elsewhere, it stays a stack of its own.
+    inventory.lift_part(id(4));
+    inventory
+        .move_item(id(4), Holder::Pockets, 3, 0, Rotation::None)
+        .unwrap();
+    assert!(!inventory.settle_parts());
+    assert_eq!(ids(inventory.find(id(4)).unwrap()), [id(4), id(5)]);
+    assert_eq!(inventory.find(id(1)).unwrap().count(), 3);
+}
+
+#[test]
+fn wearing_a_lifted_part_wears_its_top_and_the_rest_goes_back() {
+    let mut inventory = Inventory::default();
+    inventory
+        .add(
+            stack(1, ItemKind::Hat, 4),
+            Holder::Pockets,
+            0,
+            0,
+            Rotation::None,
+        )
+        .unwrap();
+    inventory.lift_part(id(3));
+    inventory.wear(id(3)).unwrap();
+    assert!(inventory.is_worn(id(4)));
+    inventory.settle_parts();
+    assert_eq!(ids(inventory.find(id(1)).unwrap()), [id(1), id(2), id(3)]);
+}

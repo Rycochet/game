@@ -107,6 +107,8 @@ fn put_down(client: &Client, world: &mut ServerWorld, item: Item) {
 /// Moves something carried to the ground under the player: what it cost.
 fn dropped(client: &mut Client, world: &mut ServerWorld, item: Id) -> Result<u32, &'static str> {
     standing_on(client).ok_or("not in a site")?;
+    // Part of a stack: see `answer_items`.
+    client.inventory.lift_part(item);
     if !client.may_take_off(item) {
         return Err("it won't come off");
     }

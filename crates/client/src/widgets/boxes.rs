@@ -76,6 +76,20 @@ pub fn panel_title(title: impl Into<String>) -> impl Bundle {
     (Text::new(title), TextSize::Title.font(), TextColor(INK))
 }
 
+/// The dark box of a tooltip, with `node`'s layout, for more than a name in it.
+pub fn tooltip_box(node: Node) -> impl Bundle {
+    (
+        Node {
+            border: UiRect::all(px(TOOLTIP_EDGE)),
+            padding: BUTTON_PADDING,
+            ..node
+        },
+        BackgroundColor(TOOLTIP_BACKGROUND),
+        BorderColor::from(SHADED_EDGE),
+        soft_shadow(),
+    )
+}
+
 /// A dark box naming something, such as what is under the pointer; `marker` goes on its text,
 /// to find it and change what it says. Hide the holder to hide it.
 pub fn spawn_tooltip(
@@ -83,21 +97,10 @@ pub fn spawn_tooltip(
     marker: impl Bundle,
     text: impl Into<String>,
 ) {
-    holder
-        .spawn((
-            Node {
-                border: UiRect::all(px(TOOLTIP_EDGE)),
-                padding: BUTTON_PADDING,
-                ..default()
-            },
-            BackgroundColor(TOOLTIP_BACKGROUND),
-            BorderColor::from(SHADED_EDGE),
-            soft_shadow(),
-        ))
-        .with_child((
-            marker,
-            Text::new(text),
-            TOOLTIP_FONT.font(),
-            TextColor(TOOLTIP_TEXT),
-        ));
+    holder.spawn(tooltip_box(Node::default())).with_child((
+        marker,
+        Text::new(text),
+        TOOLTIP_FONT.font(),
+        TextColor(TOOLTIP_TEXT),
+    ));
 }

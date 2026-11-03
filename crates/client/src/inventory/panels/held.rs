@@ -69,10 +69,12 @@ pub(in crate::inventory) fn show_tooltip(
         (With<Node>, Without<Floating>),
     >,
     mut tooltip: ResMut<ItemTooltip>,
+    split: Res<super::super::split::Split>,
 ) {
     let shown = if let Some(held) = holding.held {
         Some(held.item.id)
-    } else if open.open.is_empty() {
+    } else if open.open.is_empty() || split.0.is_some() {
+        // The split box names the stack itself.
         None
     } else {
         pointer

@@ -16,6 +16,7 @@ use shared::wear::{Fit, WearRefused};
 use super::body::BodyNode;
 use super::give::GiveRow;
 use super::panels::{BinNode, DropNode, ItemCell, OpenGrids};
+use super::split::{Split, SplitCell};
 use super::{CLICK_PIXELS, CLICK_SECONDS, Carried, Hand, Holding};
 use crate::common::{
     GameView, GaveItem, HeldOverGifts, HeldStock, SpentEnergy, StockCell, TakesGifts, TookItem,
@@ -87,7 +88,7 @@ pub(super) struct Outbox<'w> {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn hold_items(
     mut pressed: MessageReader<ButtonPressed>,
-    cells: (Query<&ItemCell>, Query<&StockCell>),
+    cells: (Query<&ItemCell>, Query<&StockCell>, Query<&SplitCell>),
     under: Under,
     (pointer, ui_scale): (Res<UiPointer>, Res<UiScale>),
     mut mouse: ResMut<ButtonInput<MouseButton>>,
@@ -98,22 +99,29 @@ pub(super) fn hold_items(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     mut out: Outbox,
-    (mut over_gifts, mut held_stock, view, mut keys): (
+    (mut over_gifts, mut held_stock, view, mut keys, mut split): (
         ResMut<HeldOverGifts>,
         ResMut<HeldStock>,
         Res<State<GameView>>,
         ResMut<ButtonInput<KeyCode>>,
+        ResMut<Split>,
     ),
     time: Res<Time<Real>>,
     (mut last_press, mut was_down): (Local<Option<(shared::id::Id, f64)>>, Local<bool>),
 ) {
     let now = time.elapsed_secs_f64();
+    // Part of a stack lifted out (see `split`) goes back once nothing holds it.
+    if holding.held.is_none() && carried.bypass_change_detection().0.settle_parts() {
+        carried.set_changed();
+    }
+    let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
     // Widgets may have taken `just_pressed`.
     let new_press = mouse.pressed(MouseButton::Left) && !*was_down;
     *was_down = mouse.pressed(MouseButton::Left);
     let done = take_presses(
         &mut pressed,
-        (&cells.0, &cells.1),
+        (&cells.0, &cells.1, &cells.2),
+        &mut split,
         &mut mouse,
         &mut holding,
         &carried,
@@ -121,10 +129,18 @@ pub(super) fn hold_items(
         &mut commands,
         &mut raise,
         &mut last_press,
-        (now, new_press, gesture.tap, pointer.0),
+        (now, new_press, gesture.tap, pointer.0, shift),
     );
     if done {
         return;
+    }
+    // Holding part of a stack: it lies on its own while held, even after the server
+    // has said what is carried again.
+    if let Some(held) = holding.held
+        && holding.stock.is_none()
+        && carried.0.find(held.item.id).is_none()
+    {
+        carried.0.lift_part(held.item.id);
     }
     let Some((mut held, aim, at, finger)) = aim_held(
         &mut holding,

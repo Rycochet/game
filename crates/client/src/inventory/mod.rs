@@ -23,6 +23,7 @@ mod finger;
 mod hold_items;
 mod holding;
 mod server;
+mod split;
 
 #[cfg(not(target_arch = "wasm32"))]
 use debug::run_debug;
@@ -30,6 +31,7 @@ use finger::{item_cell_in_front, pick_up_by_finger};
 use hold_items::hold_items;
 use holding::{Hand, HeldBy, Holding, cancel_held};
 use server::{Stacks, read_server};
+use split::Split;
 
 /// A press on an item this long after the last one on it opens it.
 const DOUBLE_PRESS_SECONDS: f64 = 0.35;
@@ -45,6 +47,7 @@ impl Plugin for InventoryPlugin {
         app.init_resource::<Carried>()
             .init_resource::<Stacks>()
             .init_resource::<Holding>()
+            .init_resource::<Split>()
             .init_resource::<OpenGrids>()
             .init_resource::<NearbyPanel>()
             .init_resource::<ground::Ground>()
@@ -59,7 +62,7 @@ impl Plugin for InventoryPlugin {
                 (
                     // Before widgets stop a finger's drag on a panel, and before the
                     // menus see Esc.
-                    (pick_up_by_finger, cancel_held)
+                    (pick_up_by_finger, cancel_held, split::close_split)
                         .before(WidgetSystems::Presses)
                         .after(PointerSystems),
                     hold_items.after(WidgetSystems::Modal),
@@ -86,6 +89,8 @@ impl Plugin for InventoryPlugin {
                     panels::show_held,
                     panels::show_tooltip,
                     panels::show_button,
+                    split::move_split,
+                    split::show_split,
                 )
                     .chain(),
             );

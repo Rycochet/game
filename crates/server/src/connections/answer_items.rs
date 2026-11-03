@@ -16,6 +16,16 @@ pub(super) fn answer_items(
     message: ClientMessage,
     world: &mut ServerWorld,
 ) -> bool {
+    // An id from inside a stack stands for it and all above it: lifted out on its
+    // own, it moves like anything else, and goes back if it isn't moved.
+    if let ClientMessage::MoveItem { item, .. }
+    | ClientMessage::StackItem { item, .. }
+    | ClientMessage::GiveItem { item, .. }
+    | ClientMessage::WearItem { item }
+    | ClientMessage::BinItem { item } = message
+    {
+        client.inventory.lift_part(item);
+    }
     match message {
         ClientMessage::DropItem { item } => {
             let action = Action::Ground(GroundAction::Drop { item });
