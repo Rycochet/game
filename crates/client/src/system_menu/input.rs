@@ -4,7 +4,7 @@ use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
 
 use super::{Action, SystemMenu, show_ended_page};
-use crate::common::{GameView, Session, TouchGesture};
+use crate::common::{ChosenServer, GameView, Session, TouchGesture};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::ButtonPressed;
@@ -24,6 +24,7 @@ pub(super) fn take_input(
     full_map: Res<FullMap>,
     mut menu: ResMut<SystemMenu>,
     mut session: ResMut<Session>,
+    mut chosen: ResMut<ChosenServer>,
     mut exit: MessageWriter<AppExit>,
 ) {
     let at_start = !session.is_playing();
@@ -62,8 +63,19 @@ pub(super) fn take_input(
             *menu = SystemMenu::Closed;
         }
         (Action::LogOut, SystemMenu::Menu) if !at_start => {
-            // The menu stays, as the startup menu.
+            // The menu stays, as the startup menu, and Play is the usual
+            // server's again.
             *session = Session::AtStart;
+            chosen.0 = None;
+        }
+        (Action::Connect, SystemMenu::Menu) if !at_start => {}
+        // On to Connect, to try another way, if it was Connect's server.
+        (Action::Back, SystemMenu::Refused) => {
+            *menu = if chosen.0.is_some() {
+                SystemMenu::Connect
+            } else {
+                SystemMenu::Menu
+            };
         }
         // Nothing to go back to from the startup menu.
         (Action::Back, SystemMenu::Menu) if at_start => {}

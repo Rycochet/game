@@ -6,6 +6,7 @@ use shared::protocol::ClientMessage;
 use super::{GearButton, Layer, MenuButton, PausedText, SystemMenu};
 use crate::common::{GameView, ServerClock, Session};
 use crate::connection::ToServer;
+use crate::widgets::ButtonState;
 
 /// Native: nothing, the window just goes. In a browser the page stays, so it
 /// shows its own screen in `index.html`, with a button to load the game again.
@@ -46,18 +47,27 @@ pub(super) fn show_menu(
     paused.set_if_neq(shown_if(clock.paused));
 }
 
-/// Play at the startup menu, Continue while playing, and Logout only while
-/// playing on another computer's server.
+/// Play at the startup menu, Continue while playing, Logout only while playing
+/// on another computer's server, and Connect... only usable at the startup menu.
 pub(super) fn show_buttons(
     session: Res<Session>,
     clock: Res<ServerClock>,
-    mut buttons: Query<(&MenuButton, &mut Node)>,
+    mut buttons: Query<(&MenuButton, &mut Node, &mut ButtonState)>,
 ) {
-    for (button, mut node) in &mut buttons {
+    for (button, mut node, mut state) in &mut buttons {
         let shown = match button {
             MenuButton::Play => !session.is_playing(),
             MenuButton::Continue => session.is_playing(),
             MenuButton::LogOut => session.is_playing() && !clock.local_server,
+            MenuButton::Connect => {
+                // Log out first to go to another server.
+                state.set_if_neq(if session.is_playing() {
+                    ButtonState::Disabled
+                } else {
+                    ButtonState::Normal
+                });
+                true
+            }
         };
         let display = if shown { Display::Flex } else { Display::None };
         if node.display != display {

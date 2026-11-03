@@ -57,19 +57,21 @@ These can't be mixed: settings that disagree stop the server from starting, and 
 
 ## Connecting a native client
 
-Set `HOW_SERVER` when starting the client, using `wss://` and the path `/ws`:
+Players choose **Connect...** on the startup menu and type the server's address, such as `game.example.com` or `game.example.com:9000`. Without a port, it is 8081. The client remembers the servers it has joined, and Play goes back to the last one.
 
-```bash
-HOW_SERVER=wss://game.example.com:8081/ws hall-of-worlds
-```
-
-There is no server list in the game yet. A certificate from a recognised authority is simply checked. With a self-signed one, the client remembers the server's key on its first visit and refuses if it ever changes. That first visit can't tell the server from an impostor, so to be sure, set `HOW_SERVER_KEY` to the key fingerprint, which is in the server's log when it starts:
+The client accepts any certificate the server has, so you can change yours whenever you like. A player who wants to be sure they've reached your server, and not an impostor, can paste its certificate (from `https://<your server>:8081/certificate`) or its key's fingerprint into the padlock beside the address. From then on, only a server with that key is accepted, and the client says plainly why if it isn't. The fingerprint is in the server's log when it starts:
 
 ```text
 Listening securely on 0.0.0.0:8081: key fingerprint ...
 ```
 
-If a server's key changed for a good reason, remove its line from `known_servers.ron` (see [Saves and data](../saves)).
+If you change your key, tell players who pasted the old one, so they can paste the new one.
+
+For testing, `HOW_SERVER` starts the client on a server straight away, using `wss://` and the path `/ws`, and `HOW_SERVER_KEY` gives the key it must have:
+
+```bash
+HOW_SERVER=wss://game.example.com:8081/ws hall-of-worlds
+```
 
 ## Things to know
 

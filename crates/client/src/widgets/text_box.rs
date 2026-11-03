@@ -12,6 +12,13 @@ use super::theme::SUNKEN_BACKGROUND;
 use super::{ButtonPressed, INK, Pressable, TextSize, sunken_border};
 
 const CARET: &str = "_";
+/// Held with V, they paste (Ctrl, or Cmd on a Mac).
+const COMMAND_KEYS: [KeyCode; 4] = [
+    KeyCode::ControlLeft,
+    KeyCode::ControlRight,
+    KeyCode::SuperLeft,
+    KeyCode::SuperRight,
+];
 const SIDE_PADDING: f32 = 8.0;
 
 /// A box to type into. Change `text` to change what it says.
@@ -115,6 +122,7 @@ pub(super) fn take_text(
     mut edited: MessageWriter<TextEdited>,
     mut soft_keys: MessageWriter<SoftKeyPressed>,
     mut told_soft_keyboard: Local<(Option<Entity>, String)>,
+    mut commands_held: Local<Vec<KeyCode>>,
 ) {
     let on_box = pressed
         .read()
@@ -133,6 +141,16 @@ pub(super) fn take_text(
         focus.0 = None;
     }
     let typed: Vec<KeyboardInput> = typed.read().cloned().collect();
+    // Followed from the keys themselves, as a box with the keyboard clears the
+    // pressed keys every frame.
+    for key in &typed {
+        if COMMAND_KEYS.contains(&key.key_code) {
+            commands_held.retain(|held| *held != key.key_code);
+            if key.state == KeyState::Pressed {
+                commands_held.push(key.key_code);
+            }
+        }
+    }
     let soft: Vec<_> = soft_keyboard::take_keys();
     let gave_up = !soft.is_empty();
     for key in soft {
@@ -148,10 +166,18 @@ pub(super) fn take_text(
 
     let digits_only = text_box.digits_only;
     let mut text = text_box.text.clone();
+    let command = !commands_held.is_empty();
     for key in typed.iter().filter(|key| key.state == KeyState::Pressed) {
         match &key.logical_key {
             // Opens and closes the debug menu.
             _ if key.key_code == KeyCode::Backquote => {}
+            _ if command && key.key_code == KeyCode::KeyV => {
+                if let Some(pasted) = super::clipboard::paste() {
+                    text.push_str(&allowed(&pasted, digits_only));
+                }
+            }
+            // Other shortcuts type nothing.
+            Key::Character(_) if command => {}
             Key::Backspace => {
                 text.pop();
             }

@@ -10,9 +10,12 @@ use bevy::prelude::*;
 use crate::widgets::{TextSize, WidgetSystems};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod connect;
 mod credits;
+mod icons;
 mod input;
 mod panel;
+mod refusal;
 mod show;
 mod spawn;
 mod state;
@@ -51,6 +54,7 @@ pub struct SystemMenuPlugin;
 impl Plugin for SystemMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SystemMenu>()
+            .init_resource::<connect::ConnectForm>()
             .add_systems(Startup, spawn_menu)
             .add_systems(
                 PreUpdate,
@@ -62,6 +66,11 @@ impl Plugin for SystemMenuPlugin {
                     show_menu,
                     show_buttons,
                     credits::start_credits,
+                    refusal::show_refusal,
+                    connect::open_connect,
+                    connect::fill_server_list,
+                    connect::use_connect,
+                    connect::show_connect,
                     ask_for_pause,
                     settings::fill_interface_page,
                     settings::use_pages,

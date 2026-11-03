@@ -1,7 +1,7 @@
 //! What the player chose last time, kept between runs.
 //!
-//! - Native: in `client.ron` beside the known servers, or where `HOW_PREFERENCES`
-//!   says.
+//! - Native: in `client.ron` in the user's data folder, or where
+//!   `HOW_PREFERENCES` says.
 //! - Web: in the browser's local storage.
 //!
 //! Anything missing or unreadable is the default, so a new field or an old file
@@ -9,6 +9,8 @@
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+
+use super::SavedServer;
 
 /// The player's choices, loaded at start and saved whenever they change.
 #[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
@@ -21,6 +23,11 @@ pub struct Preferences {
     /// "Enable touch": the interface is never drawn smaller than its own size,
     /// for fingers. A device with only a touch screen behaves as if this is on.
     pub touch: bool,
+    /// The servers on other computers connected to, the latest first.
+    pub servers: Vec<SavedServer>,
+    /// The address of the one Play connects to, if it isn't the usual one
+    /// (single player, or in a browser the page's server).
+    pub last_server: Option<String>,
 }
 
 /// How big the interface is drawn: its own size is 100%.
@@ -87,8 +94,8 @@ mod store {
     use bevy::prelude::*;
 
     /// `HOW_PREFERENCES`, or `Hall of Worlds/client/client.ron` in the user's data
-    /// folder, beside the known servers.
-    fn path() -> Option<PathBuf> {
+    /// folder.
+    pub(in crate::common) fn path() -> Option<PathBuf> {
         env::var_os("HOW_PREFERENCES").map(Into::into).or_else(|| {
             dirs::data_dir().map(|folder| {
                 folder
@@ -123,6 +130,13 @@ mod store {
             warn!("Can't save preferences in {}: {error}", path.display());
         }
     }
+}
+
+/// Native: where the client keeps a file of its own, such as guest tokens:
+/// beside the preferences.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn client_file(name: &str) -> Option<std::path::PathBuf> {
+    Some(store::path()?.with_file_name(name))
 }
 
 #[cfg(test)]

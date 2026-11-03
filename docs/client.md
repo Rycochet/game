@@ -7,8 +7,8 @@ nav_order: 3
 
 The client is the game itself. It looks much the same as a native program and in a browser, but the two differ in what they connect to:
 
-- **Native** programs play single player on a server built into them, or join a networked server if told to.
-- **Browsers** always play on the server the page came from.
+- **Native** programs play single player on a server built into them, or join a networked server chosen with Connect... on the startup menu.
+- **Browsers** play on the server the page came from, or another chosen with Connect... (one whose certificate is from a certificate authority, as browsers check that themselves).
 
 In every case the server decides what happens, and the client shows it.
 
@@ -17,8 +17,9 @@ In every case the server decides what happens, and the client shows it.
 - **The world map:** the land in 3D, with its rivers, weather, and suns and moons moving across the sky. Time passes for everyone on a server, and the places you can visit stand on the map.
 - **Sites:** go into a place on the map and the view changes to its levels, seen cell by cell. You only see what your character can see, and what you have seen before stays on the map in grey.
 - **The minimap:** the round map in the top-right corner. Click it for the full map, which shows what you know of the world or of the site you're in.
-- **The startup menu:** the game starts on its title with the system menu over it. Play joins the game: single player for a native program (or the networked server it was told to join), the page's server in a browser.
-- **The system menu:** Continue, then Settings and Credits, then Logout and Quit. Logout is only there when playing on a networked server, and goes back to the startup menu; a native program's next Play is single player again. See below.
+- **The startup menu:** the game starts on its title with the system menu over it. Play joins the game: the last server joined with Connect..., or else single player for a native program and the page's server in a browser. If a server can't be played on, the game comes back here and says why.
+- **Connect...:** only on the startup menu. Type a server's address (`host`, or `host:port`), or pick one joined before; the bin beside one forgets it. On a native program, the padlock takes the server's certificate or key fingerprint, pasted with Ctrl+V, and from then on only a server with that key is accepted.
+- **The system menu:** Continue and Connect... (greyed out while playing), then Settings and Credits, then Logout and Quit. Logout is only there when playing on a networked server, and goes back to the startup menu; the next Play is single player again, or the page's server in a browser. See below.
 - **Interface size:** in Settings, under Interface. Auto (the first choice) keeps panels and writing the same share of the window however big it is; or choose from 50% to 300%. "Enable touch" keeps it at 100% or more, for fingers, and is always on for a device with only a touch screen. The minimap always keeps its share of the window.
 
 ## Pausing

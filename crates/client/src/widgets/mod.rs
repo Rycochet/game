@@ -4,6 +4,7 @@
 
 mod aura;
 mod auto_scroll;
+mod clipboard;
 mod dropdown;
 mod feedback;
 mod filter_list;

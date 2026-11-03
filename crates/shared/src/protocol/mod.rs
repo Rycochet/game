@@ -5,10 +5,12 @@
 //! player may know (`ServerMessage`). Every message is encoded with postcard,
 //! also in single player, where the link is an in-process channel.
 
+mod address;
 mod level;
 mod link;
 mod login;
 
+pub use address::{DEFAULT_PORT, ServerAddress};
 pub use level::{
     ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, level_chunk,
 };

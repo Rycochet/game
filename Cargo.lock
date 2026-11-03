@@ -2359,13 +2359,13 @@ dependencies = [
 name = "client"
 version = "0.1.0"
 dependencies = [
+ "arboard",
  "bevy",
  "dirs",
  "js-sys",
  "rcgen",
  "ron",
  "rustls",
- "rustls-platform-verifier",
  "serde",
  "server",
  "shared",

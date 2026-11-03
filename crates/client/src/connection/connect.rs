@@ -5,7 +5,7 @@ use super::ServerConnection;
 use super::ping::LatestPong;
 use super::prediction::Prediction;
 use super::socket::Target;
-use crate::common::{LoadingStep, ServerClock, ServerStatus};
+use crate::common::{ChosenServer, LoadingStep, ServerClock, ServerStatus};
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, GuestToken, PROTOCOL_VERSION};
 use std::time::Duration;
@@ -16,7 +16,10 @@ pub(super) const RETRY_EVERY: Duration = Duration::from_secs(2);
 /// How to connect, and when to try again.
 #[derive(Resource)]
 pub(super) struct Connecting {
+    /// Where it last connected, or tried to.
     pub(super) target: Target,
+    /// Whether `HOW_SERVER` still counts: until logging out.
+    pub(super) environment: bool,
     /// The token to log in as a guest with, once one is needed.
     pub(super) guest: Option<GuestToken>,
     /// Counting down to the next try; `None` to try now.
@@ -39,7 +42,15 @@ pub(super) fn connect(world: &mut World) {
         return;
     }
     connecting.retry = Some(Timer::new(RETRY_EVERY, TimerMode::Once));
-    let connection = match &connecting.target {
+    let environment = connecting.environment;
+    let target = Target::choose(world.resource::<ChosenServer>(), environment);
+    let mut connecting = world.resource_mut::<Connecting>();
+    if target != connecting.target {
+        // Guest tokens are per server.
+        connecting.guest = None;
+        connecting.target = target.clone();
+    }
+    let connection = match &target {
         #[cfg(not(target_arch = "wasm32"))]
         Target::Embedded => {
             let (link, embedded) = server::start_embedded(
@@ -55,9 +66,9 @@ pub(super) fn connect(world: &mut World) {
             }
         }
         #[cfg(not(target_arch = "wasm32"))]
-        Target::Url(url) => {
+        Target::Url { url, key } => {
             info!("Connecting to {url}");
-            let (link, pongs, refusal) = super::socket::open(url);
+            let (link, pongs, refusal) = super::socket::open(url, key.clone());
             ServerConnection {
                 link,
                 pongs,
@@ -67,7 +78,7 @@ pub(super) fn connect(world: &mut World) {
             }
         }
         #[cfg(target_arch = "wasm32")]
-        Target::Url(url) => {
+        Target::Url { url } => {
             info!("Connecting to {url}");
             let Some((link, pongs, socket)) = super::socket::BrowserSocket::open(url) else {
                 warn!("Can't open a WebSocket to {url}");

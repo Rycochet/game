@@ -6,6 +6,11 @@ fn preferences_read_back_as_saved() {
         item_pictures: Some("Rings".into()),
         interface_size: InterfaceSize::Percent(150),
         touch: true,
+        servers: vec![SavedServer {
+            address: "play.example.com:9000".into(),
+            key: Some("ab12".into()),
+        }],
+        last_server: Some("play.example.com:9000".into()),
     };
     assert_eq!(Preferences::from_text(&preferences.to_text()), preferences);
 }

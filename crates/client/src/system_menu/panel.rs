@@ -18,6 +18,7 @@ const SECTIONS: &[&[Entry]] = &[
     &[
         ("Play", Action::Play, Some(MenuButton::Play)),
         ("Continue", Action::Back, Some(MenuButton::Continue)),
+        ("Connect...", Action::Connect, Some(MenuButton::Connect)),
     ],
     &[
         ("Settings", Action::Settings, None),
@@ -38,6 +39,10 @@ pub(super) fn spawn_main_panel(commands: &mut Commands) {
             SystemMenu::Confirming,
             SystemMenu::Settings,
             SystemMenu::Credits,
+            SystemMenu::Connect,
+            SystemMenu::Certificate,
+            SystemMenu::Forgetting,
+            SystemMenu::Refused,
         ],
         px(MENU_WIDTH),
         Val::Auto,

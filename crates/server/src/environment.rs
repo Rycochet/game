@@ -17,9 +17,9 @@ const OUR_CRATES: [&str; 4] = [
     "shared",
 ];
 
-/// Logs turned off. The operating system's certificate check logs an error for
-/// every self-signed certificate, which is normal here; `connection::trust`
-/// says what matters.
+/// Logs turned off. The operating system's certificate check (used in reaching
+/// Let's Encrypt) logs an error for every certificate it can't vouch for, which
+/// says nothing useful here.
 const SILENCED: &str = "rustls_platform_verifier=off";
 
 /// The values that turn on an option that is off by default.

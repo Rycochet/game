@@ -2,7 +2,7 @@ use bevy::ecs::system::RunSystemOnce;
 use bevy::input::mouse::AccumulatedMouseScroll;
 
 use super::*;
-use crate::common::{Session, TouchGesture};
+use crate::common::{ChosenServer, Session, TouchGesture};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::ButtonPressed;
@@ -18,6 +18,7 @@ fn test_app(menu: SystemMenu) -> App {
         .init_resource::<DebugMenu>()
         .init_resource::<FullMap>()
         .insert_resource(Session::Playing)
+        .init_resource::<ChosenServer>()
         .insert_resource(menu);
     app
 }

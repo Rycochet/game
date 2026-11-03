@@ -25,7 +25,7 @@ use bevy::prelude::*;
 use prediction::Prediction;
 use socket::Target;
 
-use crate::common::{CurrentWorld, Session};
+use crate::common::{ChosenServer, CurrentWorld, Session};
 use crate::player::PlayerSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
@@ -35,6 +35,7 @@ mod log_in;
 mod log_out;
 mod messages;
 mod receive;
+mod remember;
 mod send;
 
 use clock::{apply_pong, run_clock, send_local_pings, stop_game_time};
@@ -42,10 +43,13 @@ use clock::{apply_pong, run_clock, send_local_pings, stop_game_time};
 use connect::pump_socket;
 use connect::{Connecting, connect, give_up, hang_up};
 use log_in::log_in;
-use log_out::{log_out, logged_out};
+use log_out::{back_at_start, log_out, now_playing, start_playing};
 pub use messages::{FromServer, ServerConnection, ToServer};
 use receive::receive;
+use remember::remember_server;
 use send::{count_map_changes, hang_up_on_exit, send, send_steps};
+#[cfg(not(target_arch = "wasm32"))]
+pub use trust::server_key;
 
 pub struct ConnectionPlugin;
 
@@ -55,16 +59,16 @@ impl Plugin for ConnectionPlugin {
             .add_message::<FromServer>()
             .init_resource::<Prediction>()
             .insert_resource(Connecting {
-                target: Target::choose(),
+                target: Target::choose(&ChosenServer::default(), true),
+                environment: true,
                 guest: None,
                 retry: None,
             })
             .add_systems(
                 PreUpdate,
                 (
-                    log_out
-                        .run_if(resource_exists::<ServerConnection>)
-                        .run_if(logged_out),
+                    log_out.run_if(back_at_start),
+                    start_playing.run_if(now_playing),
                     connect
                         .run_if(not(resource_exists::<ServerConnection>))
                         .run_if(|session: Res<Session>| session.is_playing()),
@@ -74,6 +78,7 @@ impl Plugin for ConnectionPlugin {
                     .chain(),
             )
             .add_systems(Update, send_steps.after(PlayerSystems::Travel))
+            .add_systems(Update, remember_server)
             .add_systems(
                 Update,
                 (
