@@ -72,6 +72,9 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             item: Id(uuid::Uuid::from_u128(7)),
             onto: Id(uuid::Uuid::from_u128(8)),
         },
+        ClientMessage::SortGrid {
+            holder: Holder::Inside(Id(uuid::Uuid::from_u128(8))),
+        },
         ClientMessage::FromStack {
             stack: Id(uuid::Uuid::from_u128(7)),
             items: vec![Id(uuid::Uuid::from_u128(8))],

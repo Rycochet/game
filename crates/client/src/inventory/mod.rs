@@ -24,6 +24,7 @@ mod finger;
 mod hold_items;
 mod holding;
 mod server;
+mod sort;
 mod split;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -57,7 +58,14 @@ impl Plugin for InventoryPlugin {
             .add_message::<TookItem>()
             .add_message::<OpenCharacter>()
             .add_message::<GaveItem>()
-            .add_systems(Startup, (panels::spawn_fixed_parts, filter::make_icons))
+            .add_systems(
+                Startup,
+                (
+                    panels::spawn_fixed_parts,
+                    filter::make_icons,
+                    sort::make_icon,
+                ),
+            )
             .add_systems(
                 PreUpdate,
                 (
@@ -96,6 +104,11 @@ impl Plugin for InventoryPlugin {
                     .chain(),
             );
         app.add_systems(Update, early_pictures::ask_early);
+        // Before the grids are drawn, so a sort shows at once.
+        app.add_systems(
+            Update,
+            (sort::press_sort, sort::show_icons).before(panels::show_grids),
+        );
         #[cfg(not(target_arch = "wasm32"))]
         app.add_message::<InventoryDebug>()
             .add_systems(Update, run_debug.before(panels::forget_closed));

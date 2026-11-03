@@ -6,6 +6,7 @@ use shared::item::{Holder, Inventory};
 use super::super::body::spawn_rows;
 use super::super::filter::spawn_filter;
 use super::super::ground::{GroundHolder, spawn_section};
+use super::super::sort::spawn_sort;
 use super::{
     AimLayer, BinNode, BinSlot, CELL_BORDER, COLUMN_GAP, DropNode, FIRST_AT, FONT, GridNode,
     ItemLayer, NEXT_AT, OpenGrids, WeightText,
@@ -100,9 +101,13 @@ pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, widt
     parent
         .spawn(Node {
             justify_content: JustifyContent::FlexEnd,
+            column_gap: px(CELL_BORDER * 4.0),
             ..default()
         })
-        .with_children(|row| spawn_filter(row, Some(holder)));
+        .with_children(|row| {
+            spawn_sort(row, holder);
+            spawn_filter(row, Some(holder));
+        });
     spawn_item_grid(parent, width, height, GridNode { holder }, (), |grid| {
         grid.spawn((ItemLayer { holder }, covering(), Floating));
         grid.spawn((AimLayer { holder }, covering(), Floating));

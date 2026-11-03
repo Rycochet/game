@@ -182,6 +182,7 @@ pub(crate) fn answer(
         | ClientMessage::BinFromGround { .. }
         | ClientMessage::MoveItem { .. }
         | ClientMessage::StackItem { .. }
+        | ClientMessage::SortGrid { .. }
         | ClientMessage::FromStack { .. }
         | ClientMessage::StackFromGround { .. }
         | ClientMessage::GiveItem { .. }

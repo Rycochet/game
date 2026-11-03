@@ -664,4 +664,8 @@ Owner's design. Items that look the same as far as the player knows (secrets hid
 
 ## 2026-11-03: Item categories and grid filters
 
-Every kind of item is in one `ItemCategory` (shared, listed by hand with no catch-all): Weapons, Armour, Clothing, Jewellery, Containers, Food, Valuables, Materials, Other (owner's list). Each carried grid, and the ground, has a small filter button above it opening a list with pictures rather than cycling (owner's choice), with empty categories greyed; what isn't in the chosen one is faded, not hidden, and the filter resets to All when its panel closes. Bags fade by their own category, not by what they hold (owner: keep it simple). Client only. Sorting, by the same categories, follows in its own PR.
+Every kind of item is in one `ItemCategory` (shared, listed by hand with no catch-all): Weapons, Armour, Clothing, Jewellery, Containers, Food, Valuables, Materials, Other (owner's list). Each carried grid, and the ground, has a small filter button above it opening a list with pictures rather than cycling (owner's choice), with empty categories greyed; what isn't in the chosen one is faded, not hidden, and the filter resets to All when its panel closes. Bags fade by their own category, not by what they hold (owner: keep it simple). Client only.
+
+## 2026-11-03: Sorting a grid
+
+A Sort button above each carried grid lays it out again in one go (owner's design), by shared `Inventory::sort_grid`: identical items stacked within the stack limits, then largest first (cells, then box, then category, kind name and id) placed by the same first-fit search as everything else, from the top left, row by row, turning only if it must. The client sends only the intent (`SortGrid { holder }`) and predicts by running the same code; if anything wouldn't fit, nothing changes and no message is sent (owner). The order never uses an item's own name, which can carry secrets on the server. No energy cost, as rearranging one grid is free.

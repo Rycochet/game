@@ -6,6 +6,7 @@ mod lookup;
 mod parts;
 mod room;
 mod rules;
+mod sort;
 mod stacking;
 
 use serde::{Deserialize, Serialize};

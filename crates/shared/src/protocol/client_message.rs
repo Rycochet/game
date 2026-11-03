@@ -68,6 +68,10 @@ pub enum ClientMessage {
     /// the same, from its top, the rest staying where it was. Answered with
     /// `Inventory`, whether or not it could be done.
     StackItem { item: Id, onto: Id },
+    /// Lays out a carried grid again, in one go (`Inventory::sort_grid`): what looks
+    /// the same stacked, then largest first from the top left. Answered with
+    /// `Inventory`; nothing changes if something wouldn't fit.
+    SortGrid { holder: Holder },
     /// Some of the items of a carried stack (a mixed one), lifted out together, keeping
     /// their order: `then` is what to do with them, by the id of the lowest. It is
     /// one of `MoveItem`, `StackItem`, `GiveItem`, `WearItem`, `BinItem` or
