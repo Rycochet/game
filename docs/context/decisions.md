@@ -653,3 +653,7 @@ Servers are typed as `host[:port]` (`shared::protocol::ServerAddress`, `DEFAULT_
 ## 2026-11-03: Online: a native client opens its own server to others
 
 Owner's design: "Online" in the system menu (native only, remembered between runs) opens the embedded server's secure port once Play has connected to it in-process, never before. Turning it either way while playing there asks first, and players sent away are told it went offline on purpose (`GoingOffline`), so they don't retry. Server Options sets the name, the public address (kept for a future announce server, and put in the certificate), the listen address and port, and a player limit, and shows the certificate with a copy button. The ports open and close at runtime (`network::open_ports`, `OnlinePlugin`), the secure port only. While online nobody pauses, guests may log in, and dev tools stay with the host (`Client::host`). The standalone server gets `HOW_SERVER_NAME` and `HOW_PLAYER_LIMIT`; a `HOW_PUBLIC_ADDRESS` waits for the announce server, as nothing would use it yet.
+
+## 2026-11-03: No asset `.meta` files; uniforms padded to 16 bytes
+
+The client sets `AssetMetaCheck::Never`: we keep no `.meta` files beside assets, and on the web every lookup was a failed request (a 404 in the console per asset), which buried real errors. Change it back if `.meta` files are ever added. Every shader uniform struct is a multiple of 16 bytes, padded with unused `f32`s on both sides, because WebGL 2 refuses anything else and the web build quit on its first frame (`picture_edge.wesl`, found on the test server).

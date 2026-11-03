@@ -53,6 +53,9 @@ fn main() {
         })
         .set(AssetPlugin {
             file_path: ASSET_FOLDER.into(),
+            // There are no `.meta` files, so don't look for one beside every asset
+            // (on the web, each look is a request that fails with a 404).
+            meta_check: bevy::asset::AssetMetaCheck::Never,
             ..default()
         });
     // The web has no environment to read `LOG_LEVEL` from.

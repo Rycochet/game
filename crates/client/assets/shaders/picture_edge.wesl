@@ -5,8 +5,13 @@
 
 import bevy_pbr::render::forward_io::VertexOutput;
 
+// WebGL 2 needs uniforms to be a multiple of 16 bytes, so the radius is padded
+// out with three unused floats (as `EdgeParams` in item_art/edge.rs).
 struct Edge {
     radius: f32,
+    _pad_a: f32,
+    _pad_b: f32,
+    _pad_c: f32,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> edge: Edge;

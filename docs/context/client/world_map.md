@@ -51,3 +51,4 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with th
 - Vegetation added about 0.4 ms to the cut while walking (13.4 to 13.8 ms, single readings); its cost on the GPU has not been measured.
 - Terrain and edge faces use `NoFrustumCulling` because their meshes are replaced after the bounds are computed. `HeightCache` is inserted by commands at startup, so systems take it as `Option` for the first frame.
 - In `common::ClickMode::Teleport`, a click on the map (not a token) sends `DevTeleport` instead of `TravelTo` (dev tools: only the embedded server allows it; through walls in a site, but onto a walkable cell). Uses `connection::ToServer`.
+- Shader uniforms must be a multiple of 16 bytes, or WebGL 2 (the web build) refuses the pipeline and the game quits on its first frame; native is fine either way, so nothing else catches it. Pad a short struct with unused `f32`s, the same in the Rust struct and the shader (see `project.md`).

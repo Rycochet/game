@@ -74,3 +74,4 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - The minimap's close and floor buttons look like widgets but keep their own hit tests from its layout constants (and the tests built on them), so they aren't `Pressable`.
 - Layers: maps 10, warning button 15, moveable panels from 30 up, full-screen layers from 1,000,000 (debug menu, full map), loading screen above all. Outside a layer's panel, each layer's darkening adds up (owner's design), so nothing under one can be used, whatever is behind it.
 - Only the front-most thing under the pointer gets a press: a button under another panel gets nothing.
+- Shader uniforms must be a multiple of 16 bytes, or WebGL 2 (the web build) refuses the pipeline and the game quits on its first frame; native is fine either way, so nothing else catches it. Pad a short struct with unused `f32`s, the same in the Rust struct and the shader (see `project.md`).

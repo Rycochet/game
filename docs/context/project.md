@@ -23,6 +23,7 @@
 - Rust stable, pinned via `rust-toolchain.toml` (also installs the `wasm32-unknown-unknown` target, clippy, rustfmt).
 - `Cargo.toml`: dev profile builds our code at opt-level 1 and dependencies at 3 (Bevy is unusably slow unoptimised). Release uses thin LTO.
 - Web: Trunk (`cargo install --locked trunk`). `index.html` asks Trunk to run `wasm-opt -Os` in release builds.
+- Shaders (`crates/client/assets/shaders/`): every uniform struct must be a multiple of 16 bytes, padded with unused `f32`s in both the shader and its Rust `ShaderType`. WebGL 2 has no `BUFFER_BINDINGS_NOT_16_BYTE_ALIGNED`, so the web build refuses a short one and Bevy quits on the first frame, while native works; `picture_edge.wesl` (#130) broke the web build this way.
 - Windows needs the MSVC C++ build tools (installed: VS 2019 Build Tools). Linux needs alsa/udev/wayland/xkbcommon dev packages (see CI).
 
 ## VSCode
