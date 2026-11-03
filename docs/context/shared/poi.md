@@ -4,7 +4,7 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 
 ## Files
 
-- `crates/shared/src/poi.rs`: `PoiMap`, `Poi`, `PoiKind`, `ChunkPos`, constants. Golden and invariant tests.
+- `crates/shared/src/poi.rs`: `PoiMap`, `Poi`, `PoiKind`, `ChunkPos`, constants. Golden and invariant tests. In `poi/`: `kind.rs`, `chunk.rs` (`ChunkPos`, `Poi`), `poi_map.rs`, `in_chunk.rs` (a chunk's poi, towns), `area.rs`.
 
 ## Public API
 

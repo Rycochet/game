@@ -1,6 +1,10 @@
 use std::collections::BTreeMap;
 
+use super::super::SiteLevel;
+use super::super::grid::Reach;
 use super::*;
+use crate::dungeon::{Cell, Level, RoomId};
+use crate::rng::Seed;
 
 fn town(target: i64, seed: u64) -> SiteLevel {
     Town::new(Seed::new(seed), target).generate()

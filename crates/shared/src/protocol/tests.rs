@@ -1,4 +1,18 @@
+use super::level::{LevelChunk, LevelInfo, RememberedLevel, SeenStairs};
+use super::link::{LinkError, local_pair, wired};
+use super::login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
 use super::*;
+use crate::creature::{CreatureKind, Size};
+use crate::dungeon::Cell;
+use crate::ground::Load;
+use crate::id::Id;
+use crate::item::{Favour, Holder, Inventory, ItemKind, Quality, Rotation};
+use crate::mob::EntityLook;
+use crate::movement::Step;
+use crate::poi::{ChunkPos, PoiKind};
+use crate::rng::Seed;
+use crate::sheet::{Appearance, Sheet};
+use crate::site::PoiLook;
 use crate::site::{StairsDirection, StairsStyle};
 
 #[test]

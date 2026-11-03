@@ -1,0 +1,80 @@
+//! The quickest route across one level (A*).
+
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+
+use super::{DIRECTIONS, Path, distance_squared, estimate};
+use crate::dungeon::Level;
+use crate::movement::{Step, step_cost, step_on_level};
+
+/// The quickest route from `from` to `to`, using only legal steps that land on
+/// cells `allowed` accepts (the client: cells the player knows; a monster: all
+/// of them). `max_cost` stops a search going further than that, which also
+/// keeps it cheap. If the goal can't be reached, the route goes to the nearest
+/// cell that can, straight-line, so check `reached`.
+///
+/// Among equally quick routes the diagonals fall anywhere: see `straighten`.
+pub fn find_path(
+    level: &Level,
+    from: (i64, i64),
+    to: (i64, i64),
+    max_cost: Option<u32>,
+    allowed: impl Fn(i64, i64) -> bool,
+) -> Path {
+    let (min_x, min_y, width, height) = level.bounds();
+    let index = |(x, y): (i64, i64)| ((y - min_y) * width + (x - min_x)) as usize;
+    if !level.contains(from.0, from.1) {
+        return Path::default();
+    }
+
+    // For each cell: the cheapest way found to it, and the cell it came from.
+    let mut best = vec![u32::MAX; (width * height) as usize];
+    let mut came_from = vec![from; best.len()];
+    best[index(from)] = 0;
+
+    // Cells to look at, cheapest total first. (`BinaryHeap` gives the largest
+    // first, and `Reverse` turns that round.) The rest of the tuple settles
+    // ties: closest to the goal, then by position.
+    let mut open = BinaryHeap::new();
+    open.push(Reverse((estimate(from, to), estimate(from, to), from)));
+    let mut nearest = (distance_squared(from, to), from);
+
+    while let Some(Reverse((total, left, at))) = open.pop() {
+        let cost = total - left;
+        // Reached again more cheaply since this was added.
+        if cost > best[index(at)] {
+            continue;
+        }
+        nearest = nearest.min((distance_squared(at, to), at));
+        if at == to {
+            break;
+        }
+        for (dx, dy) in DIRECTIONS {
+            let step = Step::new(dx, dy).expect("directions are steps");
+            let Some(next) = step_on_level(level, at, step) else {
+                continue;
+            };
+            let next_cost = cost + step_cost(at, next);
+            if next_cost >= best[index(next)]
+                || max_cost.is_some_and(|max| next_cost > max)
+                || !allowed(next.0, next.1)
+            {
+                continue;
+            }
+            best[index(next)] = next_cost;
+            came_from[index(next)] = at;
+            let left = estimate(next, to);
+            open.push(Reverse((next_cost + left, left, next)));
+        }
+    }
+
+    let end = nearest.1;
+    let mut cells = Vec::new();
+    let mut at = end;
+    while at != from {
+        cells.push(at);
+        at = came_from[index(at)];
+    }
+    cells.reverse();
+    Path::through(from, cells, end == to)
+}

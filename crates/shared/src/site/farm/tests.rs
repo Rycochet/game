@@ -1,7 +1,10 @@
 use super::super::grid::Reach;
+use super::super::town::Rect;
 use super::super::{Generator, Site, StairsDirection, leads_out};
 use super::*;
+use crate::dungeon::{Cell, Level};
 use crate::poi::PoiKind;
+use crate::rng::Seed;
 
 fn farms(ruin: u8) -> impl Iterator<Item = Site> {
     (0..150).map(move |n| {

@@ -1,4 +1,6 @@
+use super::sun::colour_distance;
 use super::*;
+use crate::rng::Seed;
 
 fn world(seed: u64) -> Celestial {
     Celestial::from_seed(Seed::new(seed))

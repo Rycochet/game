@@ -4,7 +4,7 @@ A world's suns and moons, and where they are at any time, from the public terrai
 
 ## Files
 
-- `crates/shared/src/celestial.rs`: `Celestial`, `Body`, `BodyNow`, `BodyKind`, `ColourName`, `flat_light`, `brightest`, `MOST_BODIES`. Golden and chance tests.
+- `crates/shared/src/celestial.rs`: `Celestial`, `Body`, `BodyNow`, `BodyKind`, `ColourName`, `flat_light`, `brightest`, `MOST_BODIES`. Golden and chance tests. In `celestial/`: `celestial.rs` (`from_seed`), `body.rs`, `colour_name.rs`, `now.rs` (`at`), `light.rs`, `sun.rs`, `moon.rs`, `moon_path.rs`, `vector.rs`, `dev_tools.rs`.
 
 ## Public API
 
