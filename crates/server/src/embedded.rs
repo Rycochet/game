@@ -6,6 +6,7 @@ use std::thread::{self, JoinHandle};
 use shared::protocol::{ClientLink, local_pair};
 use shared::world::WorldSeed;
 
+use crate::debug_api::DebugApiPlugin;
 use crate::{Connections, ServerOptions, headless_app};
 
 /// A running embedded server. Dropping it waits for the server to finish:
@@ -44,6 +45,8 @@ pub fn start_embedded(
             // Made on the thread itself: a Bevy `App` can't move between
             // threads.
             let mut app = headless_app(world_seed, options, data);
+            // The client's own debug API takes the usual port.
+            app.add_plugins(DebugApiPlugin { port_offset: 1 });
             app.world_mut()
                 .resource_mut::<Connections>()
                 .add_single_player(server);

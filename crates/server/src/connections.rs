@@ -70,6 +70,12 @@ impl Connections {
         self.clients.is_empty()
     }
 
+    /// Everyone connected, for the debug API.
+    #[cfg(feature = "debug-api")]
+    pub(crate) fn clients(&self) -> &[Client] {
+        &self.clients
+    }
+
     /// Disconnects everyone, saving them (the server is stopping).
     pub(crate) fn disconnect_all(&mut self, world: &mut ServerWorld) {
         for client in &mut self.clients {

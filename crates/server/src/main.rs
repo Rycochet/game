@@ -38,8 +38,8 @@ use std::net::SocketAddr;
 use std::process;
 
 use server::{
-    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerOptions, default_data_folder, headless_app,
-    log_plugin, option_on,
+    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerOptions, debug_api::DebugApiPlugin,
+    default_data_folder, headless_app, log_plugin, option_on,
 };
 use shared::world::WorldSeed;
 
@@ -80,6 +80,8 @@ fn main() {
             web,
             security,
         },
+        // After the log plugin, so what it says is logged.
+        DebugApiPlugin { port_offset: 0 },
     ));
     bevy::log::info!("Saving in {}", data.display());
     if dev_tools {

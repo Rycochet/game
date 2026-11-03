@@ -5,6 +5,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 ## Files
 
 - `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`.
+- `crates/client/src/dev_tools/debug_api.rs`: only with the `debug-api` feature: the client's debug API methods, `client.state` and `client.screenshot` (see `docs/context/debug-api.md`). More of these variables will become methods.
 
 ## Public API
 
@@ -44,7 +45,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 
 ## Depends on
 
-- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `inventory` (`InventoryDebug`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `loading_screen` (`HoldLoadingScreen`), `system_menu` (`SystemMenu`).
+- `common` (`FirstFloor`, `OtherLevels`, `GameView`, `Token`, `TokenShape`, `Attitude`, `MapPosition`), `connection` (`ToServer`), `shared` (`poi::PoiKind`, `protocol::ClientMessage`), `debug_menu` (`AutoWalk`, `DebugAction`, `DebugMenu`), `inventory` (`InventoryDebug`), `player` (`Player`, `TravelTo`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `loading_screen` (`HoldLoadingScreen`), `system_menu` (`SystemMenu`), `server::debug_api` (`AddDebugMethod`, with the feature).
 
 ## Used by
 
