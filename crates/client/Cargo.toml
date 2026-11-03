@@ -17,6 +17,9 @@ shared.workspace = true
 bevy = { workspace = true, features = ["default"] }
 # The player's locale, for how floors are numbered, on native and in browsers.
 sys-locale = { version = "0.3", features = ["js"] }
+# The player's preferences, and on native the servers this client has met.
+serde.workspace = true
+ron.workspace = true
 
 # Native clients embed the server for single player (or connect to one over
 # a WebSocket); the web client only ever connects to a server.
@@ -25,9 +28,7 @@ server.workspace = true
 tungstenite.workspace = true
 rustls.workspace = true
 rustls-platform-verifier.workspace = true
-# The servers this client has met.
-serde.workspace = true
-ron.workspace = true
+# Where the client keeps its files.
 dirs.workspace = true
 
 # The browser's WebSocket, location and storage.

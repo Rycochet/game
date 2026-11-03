@@ -25,14 +25,14 @@ use shared::world::MINUTES_PER_HOUR;
 
 use super::actions::{DebugAction, kind_name};
 use super::bodies::BodiesToShow;
-use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
+use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, Preferences, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::item_art::{HandsLook, ItemPictures, Look, ShouldersLook, look_of};
 use crate::widgets::{
-    ALLOWED, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, GRID_COLOUR, INK,
-    Pressable, RaisePanel, TabChosen, TextBox, TextSize, field_label, raised_box, spawn_button,
-    spawn_check_button, spawn_close_button, spawn_dropdown, spawn_icon_button,
+    ALLOWED, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, DropdownChosen,
+    GRID_COLOUR, INK, Pressable, RaisePanel, TabChosen, TextBox, TextSize, field_label, raised_box,
+    spawn_button, spawn_check_button, spawn_close_button, spawn_dropdown, spawn_icon_button,
     spawn_moveable_panel, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_tabs,
     spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
@@ -211,6 +211,8 @@ const RING_ROWS: u128 = 8;
 const RING_COLUMNS: u128 = 8;
 /// The most of the window's height the grid takes, before it scrolls.
 const PICTURES_HEIGHT: Val = Val::Vh(70.0);
+/// Room for the longest page's name in the dropdown, beside its arrow.
+const PAGES_WIDTH: f32 = 160.0;
 /// Room for the name of a gem beside its row.
 const PICTURE_ROW_LABEL: f32 = 84.0;
 
@@ -241,6 +243,75 @@ fn gem_to_show(material: Material, cut: Cut) -> GemForm {
         material,
         cut,
         shape_seed,
+    }
+}
+
+/// What Item Pictures' grid shows: one kind of item at a time, chosen from a dropdown
+/// and kept in `Preferences` by name.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub(super) enum PicturePage {
+    Bodies,
+    Hands,
+    Shoulders,
+    Weapons,
+    #[default]
+    Gems,
+    Rings,
+}
+
+impl PicturePage {
+    const ALL: [Self; 6] = [
+        Self::Bodies,
+        Self::Hands,
+        Self::Shoulders,
+        Self::Weapons,
+        Self::Gems,
+        Self::Rings,
+    ];
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Bodies => "Bodies",
+            Self::Hands => "Hands",
+            Self::Shoulders => "Shoulders",
+            Self::Weapons => "Weapons",
+            Self::Gems => "Gems",
+            Self::Rings => "Rings",
+        }
+    }
+
+    /// The page last chosen, or Gems if none was, or it isn't one any more.
+    fn chosen(preferences: &Preferences) -> Self {
+        let name = preferences.item_pictures.as_deref();
+        Self::ALL
+            .into_iter()
+            .find(|page| Some(page.name()) == name)
+            .unwrap_or_default()
+    }
+
+    /// This page's rows.
+    fn spawn(self, grid: &mut ChildSpawnerCommands) {
+        match self {
+            Self::Bodies => spawn_body_row(grid),
+            Self::Hands => spawn_hands_rows(grid),
+            Self::Shoulders => spawn_shoulders_rows(grid),
+            Self::Weapons => {
+                for family in Family::ALL {
+                    spawn_blade_row(grid, family);
+                }
+            }
+            Self::Gems => {
+                spawn_picture_heading(grid);
+                for material in Material::GEMS {
+                    spawn_picture_row(grid, material);
+                }
+            }
+            Self::Rings => {
+                for row in 0..RING_ROWS {
+                    spawn_ring_row(grid, row);
+                }
+            }
+        }
     }
 }
 
@@ -369,7 +440,16 @@ pub(super) struct LargePicture;
 #[derive(Component)]
 pub(super) struct PictureQualities;
 
-/// Every stone in every cut, and whichever was last pressed, large.
+/// The dropdown choosing Item Pictures' page.
+#[derive(Component)]
+pub(super) struct PicturePages;
+
+/// Holds the rows of Item Pictures' page, and says which page they are, once filled.
+#[derive(Component, Default)]
+pub(super) struct PicturesGrid(Option<PicturePage>);
+
+/// The page of pictures last chosen, filled in by `fill_pictures`, and whichever
+/// picture was last pressed, large.
 fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
     let qualities: Vec<String> = Quality::ALL.iter().map(|q| format!("{q:?}")).collect();
     let qualities: Vec<&str> = qualities.iter().map(String::as_str).collect();
@@ -377,8 +457,27 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
         .iter()
         .position(|&quality| quality == Quality::default())
         .unwrap_or(0);
-    let row = spawn_toggle_row(content, &qualities, common, FONT);
-    content.commands().entity(row).insert(PictureQualities);
+    content
+        .spawn(Node {
+            column_gap: px(8),
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|choices| {
+            let pages = Dropdown {
+                options: PicturePage::ALL.map(|page| page.name().to_owned()).to_vec(),
+                selected: 0,
+                searchable: false,
+            };
+            let node = Node {
+                padding: BUTTON_PADDING,
+                min_width: px(PAGES_WIDTH),
+                ..default()
+            };
+            spawn_dropdown(choices, pages, FONT, node).insert(PicturePages);
+            let row = spawn_toggle_row(choices, &qualities, common, FONT);
+            choices.commands().entity(row).insert(PictureQualities);
+        });
     content
         .spawn(Node {
             column_gap: px(8),
@@ -391,21 +490,15 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                     ..default()
                 })
                 .with_children(|column| {
-                    spawn_picture_heading(column);
                     let area = spawn_scroll_area(column, PICTURES_HEIGHT);
-                    column.commands().entity(area).with_children(|grid| {
-                        spawn_body_row(grid);
-                        spawn_hands_rows(grid);
-                        spawn_shoulders_rows(grid);
-                        for family in Family::ALL {
-                            spawn_blade_row(grid, family);
-                        }
-                        for material in Material::GEMS {
-                            spawn_picture_row(grid, material);
-                        }
-                        for row in 0..RING_ROWS {
-                            spawn_ring_row(grid, row);
-                        }
+                    column.commands().entity(area).with_children(|area| {
+                        area.spawn((
+                            PicturesGrid::default(),
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                ..default()
+                            },
+                        ));
                     });
                 });
             sides.spawn((
@@ -596,22 +689,61 @@ fn spawn_picture(row: &mut ChildSpawnerCommands, shown: Shown) {
     ));
 }
 
-/// What Item Pictures' quality tabs and pictures do.
+/// What Item Pictures' page dropdown, quality tabs and pictures do.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn choose_pictures(
     mut chosen: MessageReader<TabChosen>,
+    mut pages: MessageReader<DropdownChosen>,
     mut pressed: MessageReader<ButtonPressed>,
     rows: Query<(), With<PictureQualities>>,
+    dropdowns: Query<(), With<PicturePages>>,
     pictures: Query<&GemPicture>,
     mut form: ResMut<PicturesForm>,
+    mut preferences: ResMut<Preferences>,
 ) {
     for &TabChosen(row, index) in chosen.read() {
         if rows.contains(row) {
             form.quality = Quality::ALL[index];
         }
     }
+    for &DropdownChosen(dropdown, index) in pages.read() {
+        let name = PicturePage::ALL[index].name();
+        if dropdowns.contains(dropdown) && preferences.item_pictures.as_deref() != Some(name) {
+            preferences.item_pictures = Some(name.to_owned());
+        }
+    }
     for press in pressed.read() {
         if let Ok(&GemPicture(shown)) = pictures.get(press.0) {
             form.chosen = shown;
+        }
+    }
+}
+
+/// Fills Item Pictures' grid with the page chosen, and shows its name in the dropdown.
+/// Only that page's pictures are drawn.
+pub(super) fn fill_pictures(
+    mut commands: Commands,
+    preferences: Res<Preferences>,
+    mut grids: Query<(Entity, &mut PicturesGrid)>,
+    mut dropdowns: Query<&mut Dropdown, With<PicturePages>>,
+) {
+    let page = PicturePage::chosen(&preferences);
+    for (entity, mut grid) in &mut grids {
+        if grid.0 != Some(page) {
+            grid.0 = Some(page);
+            commands
+                .entity(entity)
+                .despawn_children()
+                .with_children(|grid| page.spawn(grid));
+        }
+    }
+    let index = PicturePage::ALL
+        .iter()
+        .position(|&p| p == page)
+        .unwrap_or(0);
+    for mut dropdown in &mut dropdowns {
+        if dropdown.selected != index {
+            dropdown.selected = index;
         }
     }
 }

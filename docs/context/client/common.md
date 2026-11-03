@@ -6,7 +6,11 @@ Shared building blocks for the client modules. Keep it small.
 
 - `crates/client/src/common/mod.rs`: `CommonPlugin`; black `ClearColor`, frame-rate cap (`WinitSettings`), world and dungeon resources, `GameView` state, clock, weather, view stats, tokens, lights.
 
+- `crates/client/src/common/preferences.rs`: `Preferences`, the player's choices kept between runs (native `client.ron` beside the known servers or `HOW_PREFERENCES`; web local storage). Unit tests.
+
 ## Public API
+
+- `Preferences` (resource): loaded at start, saved in `Last` whenever changed; a missing, old or unreadable file gives the defaults (`#[serde(default)]`), so add fields freely. `item_pictures`: Item Pictures' page name (`debug_menu`).
 
 - `floors.rs`: `OtherLevels` (the site's other known levels, each a `CurrentDungeon`, for the maps: `entering`, `add`, `show`, `show_own`, `showing`, `shown`, `floors`, `spot`), `CurrentDungeon::floor_name` (for the full map's title; `describe` adds "of Y" for the HUD), `FirstFloor` (the first floor's number, 0 or 1, from the locale by `sys-locale`: the EU, UK and Latin America count from 0).
 - `CurrentWorld` (resource): `params: WorldParams`, `surface: Surface`, `vegetation: Vegetation`, `celestial: Celestial`, `ground: WorldGround` (walking rules), `pois: KnownPois`; `CurrentWorld::new(&WorldInfo)`. Only exists once the server has welcomed the client (inserted by `connection`, which also adds the chunks the server sends, marking it changed).

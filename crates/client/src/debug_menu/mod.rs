@@ -65,6 +65,7 @@ impl Plugin for DebugMenuPlugin {
                     panels::press_give_buttons,
                     panels::press_creature_buttons,
                     panels::choose_pictures,
+                    panels::fill_pictures,
                     panels::show_pictures,
                     panels::update_panel_buttons,
                     temperature_cycle,

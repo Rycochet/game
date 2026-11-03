@@ -1,0 +1,133 @@
+//! What the player chose last time, kept between runs.
+//!
+//! - Native: in `client.ron` beside the known servers, or where `HOW_PREFERENCES`
+//!   says.
+//! - Web: in the browser's local storage.
+//!
+//! Anything missing or unreadable is the default, so a new field or an old file
+//! is never an error.
+
+use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
+
+/// The player's choices, loaded at start and saved whenever they change.
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[serde(default)]
+pub struct Preferences {
+    /// The page Item Pictures in the debug menu last showed, by its name.
+    pub item_pictures: Option<String>,
+}
+
+impl Preferences {
+    /// As saved, or the default.
+    fn from_text(text: &str) -> Self {
+        ron::from_str(text).unwrap_or_else(|error| {
+            warn!("Can't read the saved preferences, so using the defaults: {error}");
+            Self::default()
+        })
+    }
+
+    fn to_text(&self) -> String {
+        ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()).unwrap_or_default()
+    }
+}
+
+/// Keeps `Preferences` saved.
+pub(super) fn save_preferences(preferences: Res<Preferences>) {
+    if preferences.is_changed() && !preferences.is_added() {
+        store::save(&preferences.to_text());
+    }
+}
+
+/// Loads `Preferences` at start.
+pub(super) fn load_preferences() -> Preferences {
+    store::load().map_or_else(Preferences::default, |text| Preferences::from_text(&text))
+}
+
+#[cfg(target_arch = "wasm32")]
+mod store {
+    const KEY: &str = "hall-of-worlds-preferences";
+
+    fn storage() -> Option<web_sys::Storage> {
+        web_sys::window()?.local_storage().ok().flatten()
+    }
+
+    pub(super) fn load() -> Option<String> {
+        storage()?.get_item(KEY).ok().flatten()
+    }
+
+    pub(super) fn save(text: &str) {
+        if let Some(storage) = storage() {
+            let _ = storage.set_item(KEY, text);
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+mod store {
+    use std::path::PathBuf;
+    use std::{env, fs, io};
+
+    use bevy::prelude::*;
+
+    /// `HOW_PREFERENCES`, or `Hall of Worlds/client/client.ron` in the user's data
+    /// folder, beside the known servers.
+    fn path() -> Option<PathBuf> {
+        env::var_os("HOW_PREFERENCES").map(Into::into).or_else(|| {
+            dirs::data_dir().map(|folder| {
+                folder
+                    .join("Hall of Worlds")
+                    .join("client")
+                    .join("client.ron")
+            })
+        })
+    }
+
+    pub(super) fn load() -> Option<String> {
+        let path = path()?;
+        match fs::read_to_string(&path) {
+            Ok(text) => Some(text),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+            Err(error) => {
+                warn!("Can't read {}: {error}", path.display());
+                None
+            }
+        }
+    }
+
+    pub(super) fn save(text: &str) {
+        let Some(path) = path() else {
+            return;
+        };
+        let written = path
+            .parent()
+            .map_or(Ok(()), fs::create_dir_all)
+            .and_then(|()| fs::write(&path, text));
+        if let Err(error) = written {
+            warn!("Can't save preferences in {}: {error}", path.display());
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preferences_read_back_as_saved() {
+        let preferences = Preferences {
+            item_pictures: Some("Rings".into()),
+        };
+        assert_eq!(Preferences::from_text(&preferences.to_text()), preferences);
+    }
+
+    #[test]
+    fn unreadable_or_unknown_preferences_are_the_defaults() {
+        assert_eq!(Preferences::from_text("not ron"), Preferences::default());
+        let later = "(item_pictures: Some(\"Gems\"), something_new: 3)";
+        assert_eq!(
+            Preferences::from_text(later).item_pictures.as_deref(),
+            Some("Gems")
+        );
+    }
+}

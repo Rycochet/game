@@ -4,7 +4,9 @@
 //! feature modules belong here. See `docs/context/client/common.md`.
 
 mod floors;
+mod preferences;
 pub use floors::{FirstFloor, OtherLevels};
+pub use preferences::Preferences;
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -59,6 +61,8 @@ impl Plugin for CommonPlugin {
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()
             .init_resource::<TouchGesture>()
+            .insert_resource(preferences::load_preferences())
+            .add_systems(Last, preferences::save_preferences)
             .add_systems(
                 PreUpdate,
                 update_sky.run_if(resource_exists::<CurrentWorld>),
