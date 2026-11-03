@@ -619,6 +619,7 @@ fn parse_cell(text: &str) -> Option<(i64, i64, Cell)> {
         "floor" => Cell::Floor,
         "wall" => Cell::Wall,
         "door" => Cell::Door,
+        "secret" => Cell::SecretDoor,
         "window" => Cell::Window,
         "water" => Cell::Water,
         "lava" => Cell::Lava,

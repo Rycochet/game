@@ -151,7 +151,8 @@ pub enum ClientMessage {
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),
     /// Developer tools: truesight on or off. The client is told what is secret about
-    /// items, without it being found out. Answered with `Inventory`.
+    /// items and sees secret doors, without any being found out. Answered with
+    /// `Inventory`, and the level again if it has secret doors.
     DevTruesight(bool),
     /// Developer tools: god mode on or off. Mobs take no notice of the character,
     /// and it can walk through them.

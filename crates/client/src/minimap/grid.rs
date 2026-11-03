@@ -161,7 +161,8 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
             && (cell.is_walkable() || cell.is_jumpable() || cell == Cell::Window || other_building)
     };
     match level.cell(x, y) {
-        Cell::Door => CellLook::Door {
+        // Only sent to truesight: otherwise it arrives as a wall.
+        Cell::Door | Cell::SecretDoor => CellLook::Door {
             east_west: level.opening_runs_east_west(x, y),
         },
         Cell::Window => {
