@@ -34,7 +34,7 @@ pub fn option_on(variable: &str, default: bool) -> bool {
     option_value(env::var(variable).ok().as_deref(), default)
 }
 
-fn option_value(value: Option<&str>, default: bool) -> bool {
+pub(crate) fn option_value(value: Option<&str>, default: bool) -> bool {
     let Some(value) = value else {
         return default;
     };
@@ -129,12 +129,26 @@ mod tests {
         assert!(plugin.filter.contains("server=DEBUG"));
     }
 
+    /// Every source file in `folder` and the folders inside it.
+    fn source_files(folder: &std::path::Path) -> Vec<std::path::PathBuf> {
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(folder).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                files.extend(source_files(&path));
+            } else {
+                files.push(path);
+            }
+        }
+        files
+    }
+
     /// Every `HOW_` name in this crate's source files.
     fn variables_in_the_source() -> std::collections::BTreeSet<String> {
         let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut names = std::collections::BTreeSet::new();
-        for file in std::fs::read_dir(folder).unwrap() {
-            let source = std::fs::read_to_string(file.unwrap().path()).unwrap();
+        for file in source_files(&folder) {
+            let source = std::fs::read_to_string(file).unwrap();
             let is_part = |c: char| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_';
             for (start, _) in source.match_indices("HOW_") {
                 let rest = &source[start..];

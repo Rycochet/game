@@ -11,6 +11,7 @@
 mod accounts;
 mod clock;
 mod connections;
+pub mod debug_api;
 mod embedded;
 mod entities;
 mod environment;
@@ -131,6 +132,8 @@ impl Plugin for ServerPlugin {
                 )
                     .chain(),
             );
+        #[cfg(feature = "debug-api")]
+        debug_api::add_server_methods(app, self.data.clone());
     }
 }
 

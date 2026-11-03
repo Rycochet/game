@@ -3,6 +3,8 @@
 //! Plain Rust instead of shell scripts so the same commands work on Windows,
 //! macOS, Linux and in CI without installing anything extra.
 
+mod api;
+
 use std::env;
 use std::fs;
 use std::io;
@@ -20,7 +22,8 @@ Tasks:
   hooks   Turn on the pre-commit hook for this checkout (once per clone).
   package Release build of the native client and server, put together
           with the game assets in target/package/ (what the Build
-          workflow uploads).";
+          workflow uploads).
+";
 
 /// A named cargo command: what `lint` and `test` are made of.
 type Check = (&'static str, &'static [&'static str]);
@@ -33,6 +36,20 @@ const LINTS: &[Check] = &[
             "clippy",
             "--workspace",
             "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ],
+    ),
+    // The debug API is only in builds that ask for it, so lint those too.
+    (
+        "Lint (native, debug API)",
+        &[
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--features",
+            DEBUG_API,
             "--",
             "-D",
             "warnings",
@@ -54,19 +71,52 @@ const LINTS: &[Check] = &[
     ),
 ];
 
-const TESTS: Check = ("Tests", &["test", "--workspace"]);
+/// The features that build the debug API in, for every crate that has it.
+const DEBUG_API: &str = "client/debug-api,server/debug-api";
+
+/// With the debug API, so its tests run too.
+const TESTS: Check = ("Tests", &["test", "--workspace", "--features", DEBUG_API]);
 
 fn main() -> ExitCode {
     match env::args().nth(1).as_deref() {
-        Some("test") => run_checks(LINTS.iter().chain([&TESTS])),
+        Some("test") => {
+            let checked = run_checks(LINTS.iter().chain([&TESTS]));
+            let temporary = no_temporary_methods();
+            if checked == ExitCode::SUCCESS {
+                temporary
+            } else {
+                checked
+            }
+        }
         Some("lint") => run_checks(LINTS),
         Some("hooks") => hooks(),
         Some("package") => package(),
+        Some("api") => api::run(&env::args().skip(2).collect::<Vec<_>>()),
         _ => {
-            eprintln!("{USAGE}");
+            eprintln!(
+                "{USAGE}
+{}",
+                api::USAGE
+            );
             ExitCode::FAILURE
         }
     }
+}
+
+/// Fails if any debug API method is still named `tmp.`: those are for trying
+/// things out on a branch, and are removed or renamed before merging.
+fn no_temporary_methods() -> ExitCode {
+    println!("==> Temporary debug API methods");
+    let found = api::temporary_methods(&workspace_root());
+    if found.is_empty() {
+        println!("==> None");
+        return ExitCode::SUCCESS;
+    }
+    for place in &found {
+        eprintln!("{place}");
+    }
+    eprintln!("==> FAILED: remove these `tmp.` methods, or rename them to keep them");
+    ExitCode::FAILURE
 }
 
 /// Points git at the hooks kept in the repository (`.githooks/`). Git doesn't

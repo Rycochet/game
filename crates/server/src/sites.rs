@@ -97,6 +97,12 @@ impl Visit {
         self.index
     }
 
+    /// Which site it is, for the debug API.
+    #[cfg(feature = "debug-api")]
+    pub(crate) fn site_id(&self) -> SiteId {
+        self.id
+    }
+
     /// Whether something at this cell can be seen from where the player is.
     pub(crate) fn can_see(&mut self, x: i64, y: i64) -> bool {
         if self.view_from != Some(self.position) {

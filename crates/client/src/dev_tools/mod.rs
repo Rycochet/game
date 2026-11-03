@@ -62,6 +62,9 @@
 //! - `HOW_DEBUG_SCREENSHOT=path.png`: save a screenshot after `HOW_DEBUG_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 
+#[cfg(feature = "debug-api")]
+mod debug_api;
+
 use std::env;
 
 use bevy::prelude::*;
@@ -103,6 +106,9 @@ enum Start {
 
 impl Plugin for DevToolsPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(feature = "debug-api")]
+        debug_api::add(app);
+
         app.configure_sets(
             OnExit(GameView::Connecting),
             (Start::Place, Start::Enter).chain(),

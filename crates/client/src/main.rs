@@ -91,7 +91,11 @@ fn main() {
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)
     #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugins(dev_tools::DevToolsPlugin);
+    app.add_plugins((
+        dev_tools::DevToolsPlugin,
+        // Started by `HOW_DEBUG_API`, if this build has it.
+        server::debug_api::DebugApiPlugin { port_offset: 0 },
+    ));
 
     app.run();
 }
