@@ -58,7 +58,8 @@ web-sys = { version = "0.3", features = [
 [features]
 # The debug API (native only): see docs/context/debug-api.md. Debug builds
 # only: a release build with it refuses to compile.
-debug-api = ["server/debug-api"]
+# `bevy/serialize` lets the API name keys and buttons as Bevy does.
+debug-api = ["server/debug-api", "bevy/serialize"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 uuid.workspace = true
