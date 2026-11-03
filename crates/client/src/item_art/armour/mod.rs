@@ -4,6 +4,8 @@
 
 pub(super) mod hands;
 pub(super) mod shoulders;
+mod surface;
+pub(super) mod torso;
 
 use bevy::prelude::*;
 use shared::material::Material;

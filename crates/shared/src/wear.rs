@@ -8,7 +8,7 @@
 use crate::armour::hands::Fingers;
 use crate::creature::{CreatureKind, Layer, Location, Size};
 use crate::id::Id;
-use crate::item::{Favour, Inventory, Item, ItemDef, Made, Quality, WearDef};
+use crate::item::{Favour, Inventory, Item, Made, Quality, WearDef};
 use crate::item_form::ItemForm;
 
 /// Whether something is made for a number of fingers, so only fits hands with that
@@ -84,16 +84,16 @@ impl Made {
 
 /// Each location a worn item takes, with the layer it takes there: its own layer
 /// everywhere, and Middle too where it is padded.
-fn coverage(def: &ItemDef) -> Vec<(Location, Layer)> {
-    let Some(wear) = def.wear else {
+fn coverage(item: &Item) -> Vec<(Location, Layer)> {
+    let Some(wear) = item.kind.def().wear else {
         return Vec::new();
     };
     let own = wear
         .locations
         .iter()
         .map(|&location| (location, wear.layer));
-    let padding = wear
-        .padded
+    let padding = item
+        .padded()
         .iter()
         .map(|&location| (location, Layer::Middle));
     own.chain(padding).collect()
@@ -110,13 +110,11 @@ impl Inventory {
             .iter()
             .filter(|other| other.id != not)
             .find(|other| {
-                coverage(&other.kind.def())
-                    .iter()
-                    .any(|&(theirs, their_layer)| {
-                        places
-                            .iter()
-                            .any(|&(location, layer)| theirs == location && their_layer > layer)
-                    })
+                coverage(other).iter().any(|&(theirs, their_layer)| {
+                    places
+                        .iter()
+                        .any(|&(location, layer)| theirs == location && their_layer > layer)
+                })
             })
             .map(|other| other.id)
     }
@@ -124,7 +122,7 @@ impl Inventory {
     /// What is on top of this worn item, stopping it coming off.
     pub fn covered_by(&self, id: Id) -> Option<Id> {
         let item = self.worn.iter().find(|item| item.id == id)?;
-        self.covering(&coverage(&item.kind.def()), id)
+        self.covering(&coverage(item), id)
     }
 
     /// Whether this carried item can be put on, and how it would fit.
@@ -141,7 +139,7 @@ impl Inventory {
         let id = item.id;
         let wear = item.kind.def().wear.ok_or(WearRefused::NotClothing)?;
         let body = self.creature.def();
-        let places = coverage(&item.kind.def());
+        let places = coverage(item);
         for &(location, layer) in &places {
             let part = body
                 .part(location)
@@ -171,11 +169,11 @@ impl Inventory {
     /// each other's way once every place is taken.
     fn clash(&self, item: &Item) -> Option<Id> {
         let wear = item.kind.def().wear?;
-        for (location, layer) in coverage(&item.kind.def()) {
+        for (location, layer) in coverage(item) {
             let here = || {
                 self.worn
                     .iter()
-                    .filter(move |other| coverage(&other.kind.def()).contains(&(location, layer)))
+                    .filter(move |other| coverage(other).contains(&(location, layer)))
             };
             let whole = |other: &&Item| {
                 other
@@ -414,6 +412,27 @@ mod tests {
         );
         // And nothing Middle goes on under it.
         assert_eq!(inventory.check_wear(id(1)), Err(WearRefused::Clash(id(2))));
+    }
+
+    #[test]
+    fn lined_torso_armour_takes_the_middle_layer_but_unlined_goes_over_a_vest() {
+        use crate::armour::torso::{self, TorsoKind};
+        use ItemKind::{ArmingVest, Gambeson, TorsoArmour};
+        let mut inventory = carrying(&[ArmingVest, TorsoArmour, Gambeson]);
+        inventory.wear(id(1)).unwrap();
+        // Without a form it is unlined, so it goes over the vest.
+        assert_eq!(inventory.wear(id(2)), Ok(Fit::Exact));
+        // A vest and a gambeson clash on the torso.
+        take_off(&mut inventory, 2).unwrap();
+        assert_eq!(inventory.check_wear(id(3)), Err(WearRefused::Clash(id(1))));
+        let mut rng = crate::rng::Seed::new(1).rng();
+        let lined = (0..)
+            .map(|_| torso::roll(&mut rng, TorsoKind::Armour, None, Quality::Common))
+            .find(|form| form.lined)
+            .unwrap();
+        let mut armour = Item::new(id(9), TorsoArmour);
+        armour.form = Some(ItemForm::Torso(lined));
+        assert_eq!(armour.padded(), &[Location::Torso]);
     }
 
     #[test]

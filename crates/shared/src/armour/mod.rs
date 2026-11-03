@@ -1,12 +1,16 @@
 //! Armour: what every piece and set shares. Pieces for each body location are added by
 //! their own work, built on `body::Frame`. See `docs/context/shared/armour.md`.
 
+mod finish;
 pub mod hands;
 pub mod shoulders;
+pub mod torso;
 
 use serde::{Deserialize, Serialize};
 
 use crate::rng::Rng;
+
+pub use finish::{Dye, Finish};
 
 /// How a piece of armour is made, decided first: it says what it looks like and what
 /// it can be made of. A set has one for all its pieces.
@@ -34,10 +38,13 @@ pub enum Construction {
     Plate,
     /// Large polished plates over mail.
     Mirror,
+    /// Rings sewn flat on leather (the owner kept it, though doubted historically).
+    /// Saved by name, so it goes at the end.
+    RingMail,
 }
 
 impl Construction {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::Padded,
         Self::Leather,
         Self::Mail,
@@ -49,13 +56,14 @@ impl Construction {
         Self::Splint,
         Self::Plate,
         Self::Mirror,
+        Self::RingMail,
     ];
 
     /// Whether it bends with the body rather than holding its shape.
     pub fn flexible(self) -> bool {
         matches!(
             self,
-            Self::Padded | Self::Mail | Self::Scale | Self::Lamellar
+            Self::Padded | Self::Mail | Self::Scale | Self::Lamellar | Self::RingMail
         )
     }
 }
@@ -157,7 +165,13 @@ impl Style {
             C::Padded => true,
             _ if self.european() => matches!(
                 construction,
-                C::Leather | C::Mail | C::Scale | C::PlatesInCloth | C::Splint | C::Plate
+                C::Leather
+                    | C::Mail
+                    | C::RingMail
+                    | C::Scale
+                    | C::PlatesInCloth
+                    | C::Splint
+                    | C::Plate
             ),
             _ => match self {
                 Self::Elven | Self::Dwarven => construction != C::Mirror,
