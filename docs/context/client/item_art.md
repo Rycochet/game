@@ -7,18 +7,20 @@ Pictures of items: each look is drawn once in 3D by a camera of its own, off scr
 - `crates/client/src/item_art/mod.rs`: `ItemArtPlugin`, `Look`, `look_of`, `ItemPictures`, the render queue, the lights and each picture's camera.
 - `crates/client/src/item_art/gem.rs`: `gem_parts`: colours, materials and meshes of gems (seven cuts from one builder, uncut as a lumpy sphere). Unit tests.
 - `crates/client/src/item_art/ring.rs`: `ring_parts`: a cross-section swept round a circle for the band, patterns, mounts, and gems placed in settings, all tipped back together. Unit tests.
+- `crates/client/src/item_art/body.rs`: `body_parts`: a plain standing body from `shared::body::Frame`, slightly turned and seen a little from above, filling a 1 × 2 picture. Unit test.
 - `crates/client/src/item_art/blade.rs`: `blade_parts`: weapons from their rolled form, built in millimetres from lofted sections and tubes, then fitted to their cells. Unit tests.
 
 ## Public API
 
 - `ItemArtPlugin`.
+- `Look::Body { kind }`: a bare body, for kinds with a frame; worn things will be added to it for a character's picture.
 - `Look`, `RingLook`, `BladeLook`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form. `Look::cells`, `longest`, `picture_size(pixels)`: its proportions.
 - `ItemPicture { look, pixels }` (component, `pixels` along the longest side): on an `ImageNode`, it shows that picture. `widgets::item_picture` is the usual way.
 - `ItemPictures` (resource): `picture(look, pixels, images)` gives the image straight away, empty until drawn, and the same one if asked again.
 
 ## Depends on
 
-- `shared::item`, `shared::item_form`, `shared::blade`, `shared::material`, `shared::rng`. No other module.
+- `shared::item`, `shared::item_form`, `shared::blade`, `shared::body`, `shared::creature`, `shared::material`, `shared::rng`. No other module.
 
 ## Used by
 

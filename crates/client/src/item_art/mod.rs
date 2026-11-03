@@ -2,6 +2,7 @@
 //! See `docs/context/client/item_art.md`.
 
 mod blade;
+mod body;
 mod gem;
 mod ring;
 
@@ -15,7 +16,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
 use shared::blade::BladeForm;
-use shared::creature::Size;
+use shared::creature::{CreatureKind, Size};
 use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
@@ -55,6 +56,9 @@ pub enum Look {
         blade: BladeLook,
         quality: Option<Quality>,
     },
+    /// A bare body of a kind that stands on two legs, standing: what worn things are
+    /// built on, and later a character with what it wears.
+    Body { kind: CreatureKind },
 }
 
 impl Look {
@@ -63,6 +67,7 @@ impl Look {
         match self {
             Self::Gem { .. } | Self::Ring { .. } => (1, 1),
             Self::Blade { blade, .. } => blade.cells,
+            Self::Body { .. } => body::CELLS,
         }
     }
 
@@ -321,6 +326,7 @@ fn draw_pictures(
             Look::Blade { blade, quality } => {
                 blade::blade_parts(&blade, quality, &mut meshes, &mut materials)
             }
+            Look::Body { kind } => body::body_parts(kind, &mut meshes, &mut materials),
         };
         let black = materials.add(StandardMaterial {
             base_color: Color::BLACK,
