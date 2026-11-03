@@ -681,6 +681,8 @@ fn giving_an_item_needs_dev_tools_and_room() {
     assert!(test.send(std::slice::from_ref(&give)).is_empty());
 
     test.dev_tools = true;
+    // Coins given apart, so they fill the pockets.
+    test.world.stacks = shared::item::StackLimits::NONE;
     let answers = test.send(&vec![give; 30]);
     // Six by four pockets, and no more.
     assert_eq!(inventory(&answers).pockets.len(), 24);
@@ -1283,4 +1285,48 @@ fn steps_meant_for_another_map_are_ignored() {
     };
     assert!(test.send(&[stale]).is_empty());
     assert_eq!(test.client.world_position(), (0, 0));
+}
+
+#[test]
+fn things_given_stack_and_wearing_a_stack_puts_on_only_its_top() {
+    let mut test = TestClient::new();
+    let answers = test.send(&[give(ItemKind::Hat), give(ItemKind::Hat)]);
+    let carried = inventory(&answers);
+    assert_eq!(carried.pockets.len(), 1);
+    let hats = &carried.pockets[0].item;
+    assert_eq!(hats.count(), 2);
+    let (bottom, top) = (hats.id, hats.top().id);
+    let worn = inventory(&test.send(&[ClientMessage::WearItem { item: bottom }]));
+    assert!(worn.is_worn(top));
+    assert_eq!(worn.find(bottom).map(Item::count), Some(1));
+}
+
+#[test]
+fn a_stack_goes_on_another_as_far_as_the_server_allows() {
+    let mut test = TestClient::new();
+    // Given apart, then allowed three to a stack.
+    test.world.stacks = shared::item::StackLimits::NONE;
+    let answers = test.send(&[
+        give(ItemKind::Coin),
+        give(ItemKind::Coin),
+        give(ItemKind::Coin),
+    ]);
+    let carried = inventory(&answers);
+    let coins: Vec<_> = carried
+        .pockets
+        .iter()
+        .map(|placed| placed.item.id)
+        .collect();
+    test.world.stacks = shared::item::StackLimits {
+        grams_per_cell: 2000,
+        most: 2,
+    };
+    let stack = |item, onto| ClientMessage::StackItem { item, onto };
+    let carried = inventory(&test.send(&[stack(coins[1], coins[0])]));
+    assert_eq!(carried.pockets.len(), 2);
+    assert_eq!(carried.find(coins[0]).map(Item::count), Some(2));
+    // Full: refused, and the client is put right.
+    let carried = inventory(&test.send(&[stack(coins[2], coins[0])]));
+    assert_eq!(carried.find(coins[2]).map(Item::count), Some(1));
+    assert_eq!(carried.find(coins[0]).map(Item::count), Some(2));
 }

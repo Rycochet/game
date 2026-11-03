@@ -20,6 +20,7 @@ mod quality;
 mod refused;
 mod secrets;
 mod shape;
+mod stack;
 
 pub use drop::{Drop, ODDS_OUT_OF, roll_drop};
 pub use inventory::Inventory;
@@ -32,6 +33,7 @@ pub use quality::{Quality, artifact_name};
 pub use refused::MoveRefused;
 pub use secrets::{Favour, Known};
 pub use shape::{Rotation, Shape};
+pub use stack::StackLimits;
 
 /// The widest and tallest a shape can be.
 pub const MAX_SHAPE_SIDE: u8 = 8;
@@ -45,6 +47,9 @@ pub const POCKETS: (u8, u8) = (6, 4);
 
 #[cfg(test)]
 mod add_tests;
+
+#[cfg(test)]
+mod stack_tests;
 
 #[cfg(test)]
 mod tests;

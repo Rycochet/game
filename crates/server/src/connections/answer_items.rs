@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::energy::handling_cost;
-use shared::item::Item;
+use shared::item::{Holder, Item};
 use shared::protocol::{ClientMessage, ServerMessage};
 
 use super::{Action, Client};
@@ -38,6 +38,11 @@ pub(super) fn answer_items(
             }));
             true
         }
+        ClientMessage::StackFromGround { item, onto } => {
+            let action = Action::Ground(GroundAction::Stack { item, onto });
+            client.waiting.push_back(action);
+            true
+        }
         ClientMessage::WearFromGround { item } => {
             let action = Action::Ground(GroundAction::Wear { item });
             client.waiting.push_back(action);
@@ -64,6 +69,23 @@ pub(super) fn answer_items(
                         client.energy.spend(tick, client.speed, cost);
                     }
                     Err(why) => warn!("Refused moving item {item:?} to {to:?}: {why:?}"),
+                }
+            }
+            client.update_speed(world.action_clock.ticks());
+            client.send_inventory()
+        }
+        ClientMessage::StackItem { item, onto } => {
+            let to = client.inventory.placed(onto);
+            let to = to.map_or(Holder::Pockets, |(holder, _)| holder);
+            let cost = client.inventory.move_cost(item, to);
+            let tick = world.action_clock.ticks();
+            if client.may_take_off(item) {
+                match client.inventory.stack_onto(item, onto, world.stacks) {
+                    Ok(_) => {
+                        client.unsaved = true;
+                        client.energy.spend(tick, client.speed, cost);
+                    }
+                    Err(why) => warn!("Refused stacking {item:?} on {onto:?}: {why:?}"),
                 }
             }
             client.update_speed(world.action_clock.ticks());
@@ -131,11 +153,16 @@ pub(super) fn answer_items(
         }
         ClientMessage::WearItem { item } => {
             let tick = world.action_clock.ticks();
+            // Only the top of a stack goes on.
+            let top = client
+                .inventory
+                .find(item)
+                .map_or(item, |found| found.top().id);
             match client.inventory.wear(item) {
                 Ok(_) => {
                     client.unsaved = true;
-                    client.inventory.magic_found_out(item);
-                    client.spend_dressing(item, tick);
+                    client.inventory.magic_found_out(top);
+                    client.spend_dressing(top, tick);
                 }
                 Err(why) => warn!("Refused wearing {item:?}: {why:?}"),
             }

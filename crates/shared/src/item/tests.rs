@@ -95,7 +95,9 @@ fn carrying(kinds: &[ItemKind]) -> Inventory {
     let mut inventory = Inventory::default();
     for (index, &kind) in kinds.iter().enumerate() {
         let item = Item::new(id(index as u128 + 1), kind);
-        inventory.give(item).expect("room in the pockets");
+        inventory
+            .give(item, StackLimits::NONE)
+            .expect("room in the pockets");
     }
     inventory
 }
@@ -329,7 +331,7 @@ fn only_a_smaller_shape_goes_in() {
     // The outer shape matters, not the bigger grid inside.
     let sword = Item::new(id(9), ItemKind::Sword);
     let mut with_sword = carrying(&[ItemKind::Pouch]);
-    with_sword.give(sword).unwrap();
+    with_sword.give(sword, StackLimits::NONE).unwrap();
     assert_eq!(
         with_sword.check_move(id(9), Holder::Inside(id(1)), 0, 0, NONE),
         Err(MoveRefused::TooBig)
@@ -342,7 +344,7 @@ fn a_pouch_holds_more_than_its_outside() {
     for ring in 0..16u8 {
         let ring_id = id(100 + ring as u128);
         inventory
-            .give(Item::new(ring_id, ItemKind::Ring))
+            .give(Item::new(ring_id, ItemKind::Ring), StackLimits::NONE)
             .unwrap_or_else(|_| panic!("the pockets are full"));
         inventory
             .move_item(ring_id, Holder::Inside(id(1)), ring % 4, ring / 4, NONE)
@@ -399,7 +401,9 @@ fn nested() -> Inventory {
 fn three_grids_deep_is_the_limit() {
     // The backpack, pouch and box are three grids, and a ring may go in the last.
     let mut inventory = nested();
-    inventory.give(Item::new(id(4), ItemKind::Ring)).unwrap();
+    inventory
+        .give(Item::new(id(4), ItemKind::Ring), StackLimits::NONE)
+        .unwrap();
     assert_eq!(
         inventory.check_move(id(4), Holder::Inside(id(3)), 0, 0, NONE),
         Ok(())
@@ -408,7 +412,7 @@ fn three_grids_deep_is_the_limit() {
     // Nothing small enough has a grid today, so a box holding a pouch is made
     // by hand: going into the pouch, its grids would be third and fourth.
     inventory
-        .give(Item::new(id(5), ItemKind::SmallBox))
+        .give(Item::new(id(5), ItemKind::SmallBox), StackLimits::NONE)
         .unwrap();
     let (_, placed) = inventory.placed(id(5)).unwrap();
     let (x, y) = (placed.x, placed.y);
@@ -449,7 +453,7 @@ fn a_container_limits_the_weight_of_each_thing_and_of_all() {
     for apple in 0..11u8 {
         let apple_id = id(50 + apple as u128);
         inventory
-            .give(Item::new(apple_id, ItemKind::Apple))
+            .give(Item::new(apple_id, ItemKind::Apple), StackLimits::NONE)
             .unwrap();
         let result =
             inventory.move_item(apple_id, Holder::Inside(id(1)), apple % 4, apple / 4, NONE);
@@ -473,7 +477,7 @@ fn weight_limits_look_at_the_containers_further_out() {
     for apple in 0..9u8 {
         let apple_id = id(50 + apple as u128);
         inventory
-            .give(Item::new(apple_id, ItemKind::Apple))
+            .give(Item::new(apple_id, ItemKind::Apple), StackLimits::NONE)
             .unwrap();
         inventory
             .move_item(
@@ -486,7 +490,9 @@ fn weight_limits_look_at_the_containers_further_out() {
             .unwrap();
     }
     let last = id(70);
-    inventory.give(Item::new(last, ItemKind::Apple)).unwrap();
+    inventory
+        .give(Item::new(last, ItemKind::Apple), StackLimits::NONE)
+        .unwrap();
     assert_eq!(
         inventory.check_move(last, Holder::Inside(id(2)), 0, 0, NONE),
         Err(MoveRefused::TooHeavy)
@@ -521,7 +527,7 @@ fn moving_about_inside_a_bag_doesnt_count_its_weight_twice() {
     for apple in 0..10u8 {
         let apple_id = id(50 + apple as u128);
         inventory
-            .give(Item::new(apple_id, ItemKind::Apple))
+            .give(Item::new(apple_id, ItemKind::Apple), StackLimits::NONE)
             .unwrap();
         inventory
             .move_item(apple_id, Holder::Inside(id(1)), apple % 4, apple / 4, NONE)
@@ -545,13 +551,17 @@ fn dropped_on_a_closed_bag_it_takes_the_first_place_turning_if_it_must() {
     for y in 0..4u8 {
         for x in 0..3u8 {
             let coin = id(100 + (y as u128) * 10 + x as u128);
-            pouch.give(Item::new(coin, ItemKind::Coin)).unwrap();
+            pouch
+                .give(Item::new(coin, ItemKind::Coin), StackLimits::NONE)
+                .unwrap();
             pouch
                 .move_item(coin, Holder::Inside(id(1)), x, y, NONE)
                 .unwrap();
         }
     }
-    pouch.give(Item::new(id(2), ItemKind::SmallBox)).unwrap();
+    pouch
+        .give(Item::new(id(2), ItemKind::SmallBox), StackLimits::NONE)
+        .unwrap();
     let place = pouch.first_place_for(id(2), Holder::Inside(id(1)), NONE);
     assert_eq!(place, Some((3, 0, Rotation::Quarter)));
 
@@ -565,7 +575,9 @@ fn dropped_on_a_closed_bag_it_takes_the_first_place_turning_if_it_must() {
 #[test]
 fn the_bin_keeps_the_last_thing_thrown_away_until_the_next() {
     let mut inventory = nested();
-    inventory.give(Item::new(id(4), ItemKind::Coin)).unwrap();
+    inventory
+        .give(Item::new(id(4), ItemKind::Coin), StackLimits::NONE)
+        .unwrap();
     assert!(inventory.to_bin(id(2)));
     // Gone from the backpack, but it and what is in it can still be had.
     assert!(inventory.find(id(1)).unwrap().contents.is_empty());
@@ -593,9 +605,11 @@ fn the_bin_keeps_the_last_thing_thrown_away_until_the_next() {
 fn a_new_item_goes_in_the_first_place_or_comes_back() {
     let mut inventory = Inventory::default();
     for n in 0..24 {
-        inventory.give(Item::new(id(n), ItemKind::Coin)).unwrap();
+        inventory
+            .give(Item::new(id(n), ItemKind::Coin), StackLimits::NONE)
+            .unwrap();
     }
-    let refused = inventory.give(Item::new(id(99), ItemKind::Coin));
+    let refused = inventory.give(Item::new(id(99), ItemKind::Coin), StackLimits::NONE);
     assert_eq!(refused.unwrap_err().id, id(99));
 }
 

@@ -2,14 +2,15 @@
 
 use crate::creature::CreatureKind;
 use crate::id::Id;
-use crate::item::{Favour, Inventory, Item};
+use crate::item::{Favour, Inventory, Item, StackLimits};
 use crate::wear::{Fit, Remover, WearRefused};
 
 impl Inventory {
     /// Puts this carried item on, if it can go.
     pub fn wear(&mut self, id: Id) -> Result<Fit, WearRefused> {
         let fit = self.check_wear(id)?;
-        let item = self.take(id).ok_or(WearRefused::NoSuchItem)?;
+        // Only the top of a stack: the rest stays where it was.
+        let item = self.take_top(id).ok_or(WearRefused::NoSuchItem)?;
         self.worn.push(item);
         Ok(fit)
     }
@@ -59,9 +60,9 @@ impl Inventory {
     }
 
     /// For a character becoming another kind of creature (dev tools): everything
-    /// comes off and goes in the new pockets, as far as it fits. Gives back what
+    /// comes off and goes in the new pockets, stacking, as far as it fits. Gives back what
     /// didn't.
-    pub fn change_body(&mut self, kind: CreatureKind) -> Vec<Item> {
+    pub fn change_body(&mut self, kind: CreatureKind, limits: StackLimits) -> Vec<Item> {
         let old = std::mem::take(self);
         self.creature = kind;
         self.outfitted = old.outfitted;
@@ -72,7 +73,7 @@ impl Inventory {
             .map(|placed| placed.item)
             .chain(old.worn);
         everything
-            .filter_map(|item| self.give(item).err())
+            .filter_map(|item| self.give(item, limits).err())
             .collect()
     }
 }

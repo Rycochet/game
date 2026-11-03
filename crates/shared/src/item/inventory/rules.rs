@@ -57,8 +57,9 @@ impl Inventory {
         // From the inside out: each container it would end up in, with what
         // would lie directly in that one on the way to the item. A container it
         // is in already gains nothing.
+        // A container's most for each item counts one item of a stack.
         let weight = item.total_weight();
-        let mut lying_in_it = weight;
+        let mut lying_in_it = item.members().map(Item::own_weight).max().unwrap_or(0);
         for &container in chain.iter().rev() {
             let holding = self.find(container).ok_or(MoveRefused::NoSuchGrid)?;
             let def = holding

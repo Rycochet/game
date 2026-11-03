@@ -48,6 +48,10 @@ pub struct Item {
     /// Which of its secrets have been found out.
     #[serde(default)]
     pub known: Known,
+    /// The items stacked on this one, the top last: see `stack`. Each of them has
+    /// nothing above it.
+    #[serde(default)]
+    pub above: Vec<Item>,
 }
 
 impl Item {
@@ -64,6 +68,7 @@ impl Item {
             form: None,
             favour: None,
             known: Known::default(),
+            above: Vec::new(),
         }
     }
 
@@ -110,15 +115,16 @@ impl Item {
         shape.scaled(self.made.size)
     }
 
-    /// What it weighs with everything in it, in grams.
+    /// What it weighs with everything in it and stacked on it, in grams.
     pub fn total_weight(&self) -> u32 {
+        let stacked: u32 = self.above.iter().map(Item::total_weight).sum();
         let set: u32 = self.set_gems().map(Item::total_weight).sum();
         let own = self
             .form
             .as_ref()
             .and_then(|form| form.grams_at(self.made.size));
         let own = own.unwrap_or(self.kind.def().weight);
-        own + weight_of(&self.contents) + set
+        own + weight_of(&self.contents) + set + stacked
     }
 
     /// Where it also takes the Middle layer: its kind's padding, or torso armour that
@@ -146,9 +152,10 @@ impl Item {
         1 + inside.max().unwrap_or(0)
     }
 
-    /// Whether `id` is this item or somewhere inside it.
+    /// Whether `id` is this item, somewhere inside it or stacked on it.
     pub(super) fn holds_or_is(&self, id: Id) -> bool {
         self.id == id
+            || self.has_above(id)
             || self
                 .contents
                 .iter()

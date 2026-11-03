@@ -181,6 +181,8 @@ pub(crate) fn answer(
         | ClientMessage::WearFromGround { .. }
         | ClientMessage::BinFromGround { .. }
         | ClientMessage::MoveItem { .. }
+        | ClientMessage::StackItem { .. }
+        | ClientMessage::StackFromGround { .. }
         | ClientMessage::GiveItem { .. }
         | ClientMessage::TakeItem { .. }
         | ClientMessage::WearItem { .. }

@@ -53,12 +53,19 @@ pub(in crate::inventory) fn show_aim(
                 .collect();
             (holder, cells, allowed)
         }
-        Target::Bag { bag, place } => {
+        Target::Bag { bag, place, onto } => {
             let Some((holder, placed)) = carried.0.placed(bag) else {
                 return;
             };
             let cells = placed.cells().map(|(x, y)| (x as i32, y as i32)).collect();
-            (holder, cells, place.is_some())
+            (holder, cells, place.is_some() || onto.is_some())
+        }
+        Target::Stack { onto, allowed } => {
+            let Some((holder, placed)) = carried.0.placed(onto) else {
+                return;
+            };
+            let cells = placed.cells().map(|(x, y)| (x as i32, y as i32)).collect();
+            (holder, cells, allowed)
         }
     };
     let Some((width, height)) = carried.0.grid_size(holder) else {

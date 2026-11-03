@@ -74,7 +74,7 @@ pub(super) fn answer_dev(
             new.set = set && new.quality.is_some();
             new.made.magical = magical && new.can_be_magical();
             new.favour = favour.filter(|_| kind.def().wear.is_some());
-            match client.inventory.give(new) {
+            match client.inventory.give(new, world.stacks) {
                 Ok(()) => client.unsaved = true,
                 Err(item) => info!("No room for a new {:?}", item.kind),
             }
@@ -101,7 +101,7 @@ pub(super) fn answer_dev(
             true
         }
         ClientMessage::DevSetCreature(kind) => {
-            for item in client.inventory.change_body(kind) {
+            for item in client.inventory.change_body(kind, world.stacks) {
                 info!("No room for {:?} on becoming {kind:?}: lost", item.kind);
             }
             client.sheet = Sheet::new(kind);

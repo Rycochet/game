@@ -39,7 +39,8 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Icon | have | Pictures, or drawn in code. |
 | Scroll area | have | Wheel, finger or bar. |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
-| Table, Chip, Avatar, Badge, Divider | later | A badge comes with item stacks. |
+| Badge | have | A stack's count: white with a black outline, bottom centre inside the item's frame. |
+| Table, Chip, Avatar, Divider | later | |
 
 ## Feedback
 
@@ -70,7 +71,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | Item | have | Any contiguous shape of cells, shown with a picture or colour, with an edge showing quality. Held at true size and solid, for now: the green and red cells already show where it goes. |
 | Item slot | have | Any size of item shrunk to fit. Hint icons come with type limits: leave room for them. |
 | Container | have | A grid in a panel. Fixed width; fixed height, or growing and scrolling for what has no limit, such as a shop or the ground. |
-| Stack | later | Count badge and maximum stack size, then splitting. Needs server rules first. |
+| Stack | have | Items that look the same in one place, with a count; dropping on one joins it. Limits are the server's. Splitting and mixed stacks to come. |
 
 Rules:
 

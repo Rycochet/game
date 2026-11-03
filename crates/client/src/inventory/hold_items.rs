@@ -68,6 +68,8 @@ pub(super) struct Under<'w, 's> {
         ),
         Without<Floating>,
     >,
+    /// How big stacks may get.
+    stacks: Res<'w, super::Stacks>,
 }
 
 /// What letting go of something tells the server and the rest of the client.
@@ -77,6 +79,7 @@ pub(super) struct Outbox<'w> {
     gave: MessageWriter<'w, GaveItem>,
     took: MessageWriter<'w, TookItem>,
     spent: MessageWriter<'w, SpentEnergy>,
+    stacks: Res<'w, super::Stacks>,
 }
 
 /// Everything about holding: picking up with the mouse, turning, following the

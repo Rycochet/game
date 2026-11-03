@@ -565,8 +565,11 @@ fn next_to_a_laden_mob(test: &mut TestClient) -> (Id, (i64, i64)) {
     let record = site.levels.get_mut(&0).unwrap().records.get_mut(&mob);
     let record = record.unwrap();
     let mut gear = Inventory::default();
-    gear.give(shared::item::Item::new(Id::for_test(50), ItemKind::Sword))
-        .unwrap();
+    gear.give(
+        shared::item::Item::new(Id::for_test(50), ItemKind::Sword),
+        shared::item::StackLimits::NONE,
+    )
+    .unwrap();
     record.gear = Some(gear);
     let given = shared::item::Item::new(Id::for_test(51), ItemKind::Coin);
     record.carried.push(given);

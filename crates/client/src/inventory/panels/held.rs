@@ -85,6 +85,8 @@ pub(in crate::inventory) fn show_tooltip(
             Some(_) => holding.item(&carried.0)?,
             None => carried.0.find(id)?,
         };
+        // A stack is named by its top, which is what shows.
+        let item = item.top();
         let words = format!("{}{}", item.name(), worn_notes(&carried.0, id));
         Some((words, item.quality, item.set))
     });

@@ -37,7 +37,7 @@ impl Inventory {
             return Err(WearRefused::AlreadyWorn);
         }
         let item = self.find(id).ok_or(WearRefused::NoSuchItem)?;
-        self.check_wear_new(item)
+        self.check_wear_new(item.top())
     }
 
     /// Whether this could be put on, carried or not, and how it would fit.

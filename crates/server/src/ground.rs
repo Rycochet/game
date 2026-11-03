@@ -28,6 +28,10 @@ pub(crate) enum GroundAction {
         y: u8,
         rotation: Rotation,
     },
+    Stack {
+        item: Id,
+        onto: Id,
+    },
     Wear {
         item: Id,
     },
@@ -36,11 +40,14 @@ pub(crate) enum GroundAction {
     },
 }
 
+/// What lay on a cell: each thing's id, with how many there were of it.
+type Pile = Vec<(Id, u32)>;
+
 /// What a client was last told about the ground under it.
 #[derive(Default)]
 pub(crate) struct GroundTold {
-    /// The cell, and what lay there. `None` if nothing did.
-    pile: Option<((i64, i64), Vec<Id>)>,
+    /// The cell, and what lay there, with how many of each. `None` if nothing did.
+    pile: Option<((i64, i64), Pile)>,
     /// It guessed at something the server has now answered: it needs telling again,
     /// even if nothing changed.
     pub(crate) again: bool,
@@ -71,6 +78,21 @@ fn take_up(client: &Client, world: &mut ServerWorld, item: Id) -> Option<Item> {
         level.ground.remove(&at);
     }
     Some(taken)
+}
+
+/// What is left on the ground of something partly taken up: `None` if all of it was.
+fn leave_on_ground(client: &Client, world: &mut ServerWorld, item: Id, rest: Option<Item>) {
+    let Some(rest) = rest else {
+        take_up(client, world, item);
+        return;
+    };
+    let Some((.., at)) = standing_on(client) else {
+        return;
+    };
+    let lying = level_mut(world, client).and_then(|level| level.ground.get_mut(&at));
+    if let Some(one) = lying.and_then(|pile| pile.iter_mut().find(|one| one.id == item)) {
+        *one = rest;
+    }
 }
 
 /// Puts this on the ground under the player, as the newest there.
@@ -130,14 +152,28 @@ pub(crate) fn act(
             take_up(client, world, item);
             Ok(handling_cost(grams))
         }),
-        GroundAction::Wear { item } => lying(client, world, item).and_then(|found| {
-            let grams = found.total_weight();
+        GroundAction::Stack { item, onto } => lying(client, world, item).and_then(|found| {
+            let stacks = world.stacks;
+            let rest = client
+                .inventory
+                .add_to_stack(found.clone(), onto, stacks)
+                .map_err(|_| "it can't go on that")?;
+            let left = rest.as_ref().map_or(0, Item::total_weight);
+            leave_on_ground(client, world, item, rest);
+            Ok(handling_cost(found.total_weight() - left))
+        }),
+        GroundAction::Wear { item } => lying(client, world, item).and_then(|mut found| {
+            // Only the top of a stack goes on: the rest stays on the ground.
+            let top = found.take_top();
+            let rest = top.is_some().then(|| found.clone());
+            let wearing = top.unwrap_or(found);
+            let (worn, grams) = (wearing.id, wearing.total_weight());
             client
                 .inventory
-                .wear_new(found)
+                .wear_new(wearing)
                 .map_err(|_| "it can't go on")?;
-            client.inventory.magic_found_out(item);
-            take_up(client, world, item);
+            client.inventory.magic_found_out(worn);
+            leave_on_ground(client, world, item, rest);
             Ok(dressing_cost(grams) + handling_cost(grams))
         }),
         GroundAction::Bin { item } => lying(client, world, item).map(|found| {
@@ -174,7 +210,10 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
         };
         let level = world.site(id, kind).levels.get(&index);
         let items = level.and_then(|level| level.ground.get(&at));
-        let pile = items.map(|items| (at, items.iter().map(|item| item.id).collect()));
+        let pile = items.map(|items| {
+            let counted = items.iter().map(|item| (item.id, item.count()));
+            (at, counted.collect())
+        });
         if pile != client.ground_told.pile || client.ground_told.again {
             let items = client.as_seen(items.cloned().unwrap_or_default());
             client.link.send(&ServerMessage::GroundItems {

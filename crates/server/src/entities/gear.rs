@@ -4,7 +4,7 @@ use shared::blade::limits_for_wielder;
 use shared::creature::CreatureKind;
 use shared::dungeon::line_is_clear;
 use shared::id::Id;
-use shared::item::{Inventory, ItemKind, MadeAt, Quality};
+use shared::item::{Inventory, ItemKind, MadeAt, Quality, StackLimits};
 use shared::item_form::give_blade_within;
 use shared::mob::{Event, GIVE_REACH};
 use shared::sheet::Sheet;
@@ -47,7 +47,8 @@ pub(super) fn dressed(
         if carrying.check_wear_new(&new).is_ok() {
             let _ = carrying.wear_new(new);
         } else {
-            let _ = carrying.give(new);
+            // Their own things don't stack.
+            let _ = carrying.give(new, StackLimits::NONE);
         }
     }
     carrying

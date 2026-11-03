@@ -88,6 +88,7 @@ pub(super) fn receive(
                 y,
                 dev_tools,
                 can_pause,
+                stacks,
             })) => {
                 server_dev_tools.0 = dev_tools;
                 server_clock.can_pause = can_pause;
@@ -126,6 +127,7 @@ pub(super) fn receive(
                     y,
                     dev_tools,
                     can_pause,
+                    stacks,
                 }));
             }
             Ok(Some(ServerMessage::Online(state))) => {
