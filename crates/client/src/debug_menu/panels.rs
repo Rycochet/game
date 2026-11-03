@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use shared::body::Frame;
 use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
 use shared::id::Id;
@@ -246,6 +247,8 @@ enum Shown {
     Ring(u128),
     /// A weapon of this family, likewise.
     Blade(Family, u128),
+    /// A bare body to dress.
+    Body(CreatureKind),
 }
 
 impl Shown {
@@ -271,6 +274,7 @@ impl Shown {
                 give_form(&mut blade, Some(Size::Medium), &mut || Id::for_test(0));
                 look_of(&blade)
             }
+            Self::Body(kind) => Frame::of(kind).map(|_| Look::Body { kind }),
         }
     }
 }
@@ -310,6 +314,7 @@ fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                     spawn_picture_heading(column);
                     let area = spawn_scroll_area(column, PICTURES_HEIGHT);
                     column.commands().entity(area).with_children(|grid| {
+                        spawn_body_row(grid);
                         for family in Family::ALL {
                             spawn_blade_row(grid, family);
                         }
@@ -384,6 +389,23 @@ fn spawn_ring_row(grid: &mut ChildSpawnerCommands, row: u128) {
     });
 }
 
+/// Every kind that stands on two legs, bare.
+fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
+    grid.spawn(Node {
+        align_items: AlignItems::Center,
+        ..default()
+    })
+    .with_children(|cells| {
+        cells.spawn(picture_label("Bodies", PICTURE_ROW_LABEL));
+        let bipeds = CreatureKind::ALL
+            .into_iter()
+            .filter(|&kind| Frame::of(kind).is_some());
+        for kind in bipeds {
+            spawn_picture(cells, Shown::Body(kind));
+        }
+    });
+}
+
 fn spawn_blade_row(grid: &mut ChildSpawnerCommands, family: Family) {
     grid.spawn(Node {
         align_items: AlignItems::Center,
@@ -446,7 +468,7 @@ pub(super) fn show_pictures(
         {
             // A weapon needs its full size for its black edge to be right, and more room.
             let (box_side, pixels) = match picture.0 {
-                Shown::Blade(..) => (
+                Shown::Blade(..) | Shown::Body(_) => (
                     BLADE_PICTURE,
                     look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
                 ),
