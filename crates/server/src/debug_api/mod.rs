@@ -10,14 +10,14 @@
 use bevy::prelude::*;
 
 #[cfg(feature = "debug-api")]
-mod remote;
+mod methods;
 #[cfg(feature = "debug-api")]
-mod state;
+mod remote;
 
 #[cfg(feature = "debug-api")]
-pub use remote::{AddDebugMethod, BrpError, BrpResult, Value, json, params};
+pub(crate) use methods::add_server_methods;
 #[cfg(feature = "debug-api")]
-pub(crate) use state::add_server_methods;
+pub use remote::{AddDebugMethod, BrpError, BrpResult, Value, json, params, refused};
 
 // The debug API is for development only: no release may ever have it.
 #[cfg(all(feature = "debug-api", not(debug_assertions)))]

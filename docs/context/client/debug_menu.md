@@ -5,14 +5,14 @@ The debug menu: backtick or the warning button top left opens a full-screen laye
 ## Files
 
 - `crates/client/src/debug_menu/mod.rs`: `DebugMenuPlugin`, `AutoWalk`, `TemperatureCycle`, `run_actions` (does what `DebugAction` says), `auto_walk`, `temperature_cycle`, `FactSources`.
-- `crates/client/src/debug_menu/actions.rs`: `DebugAction` (every entry, alphabetical), its name, `is_available`, `is_on`, `matches`, `next_highlight`. Pure, unit tested. To add an entry: add it here (`ALL` and the matches), to `run_actions` and to `docs/debug-menu.md` (a test checks).
+- `crates/client/src/debug_menu/actions.rs`: `DebugAction` (every entry, alphabetical), its name, `named` and `names` (finding one by name, for the debug API's `client.debug_action`), `is_available`, `is_on`, `matches`, `next_highlight`. Pure, unit tested. To add an entry: add it here (`ALL` and the matches), to `run_actions` and to `docs/debug-menu.md` (a test checks).
 - `crates/client/src/debug_menu/menu.rs`: `DebugMenu`, `spawn_menu`, the warning icon (drawn in code), `take_input` (`PreUpdate`, `WidgetSystems::Modal`), `show_menu` (rebuilds the grid when what it says changes).
 - `crates/client/src/debug_menu/panels.rs`: moveable panels the menu opens: Previous and Next for stairs, fields and herbs (`StepButton`), and Show Widgets (one of every widget). `OpenPanels`.
 
 ## Public API
 
 - `DebugMenuPlugin`.
-- `DebugAction` (message): do this, as if chosen. Used by `dev_tools` (`HOW_DEBUG_PANEL`).
+- `DebugAction` (message): do this, as if chosen. Used by `dev_tools` (`HOW_DEBUG_PANEL`, and the debug API's `client.debug_action`, which finds it with `DebugAction::named`; `DebugAction::names` lists them).
 - `DebugMenu` (resource): `open`, `filter`; `open_with` (native, for `HOW_DEBUG_MENU`).
 - `AutoWalk(bool)` (resource): the player walks east one step per frame on the world map. `TemperatureCycle` (resource): `Off`, `Cooling`, `Warming`; the snow line falls to 0 and back through the server (`DevSnowLine`), and it turns itself off at the end.
 

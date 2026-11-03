@@ -103,6 +103,12 @@ impl Visit {
         self.id
     }
 
+    /// The level's cells as the server has them, for the debug API.
+    #[cfg(feature = "debug-api")]
+    pub(crate) fn cells(&self) -> &shared::dungeon::Level {
+        &self.level.level
+    }
+
     /// Whether something at this cell can be seen from where the player is.
     pub(crate) fn can_see(&mut self, x: i64, y: i64) -> bool {
         if self.view_from != Some(self.position) {

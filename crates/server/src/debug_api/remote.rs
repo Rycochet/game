@@ -52,11 +52,17 @@ impl AddDebugMethod for App {
 /// Reads a method's params as `T`. Missing params read as `{}`, so a type
 /// whose fields are all optional (or `serde(default)`) needs none.
 pub fn params<T: DeserializeOwned>(params: Option<Value>) -> BrpResult<T> {
-    serde_json::from_value(params.unwrap_or_else(|| json!({}))).map_err(|error| BrpError {
+    serde_json::from_value(params.unwrap_or_else(|| json!({})))
+        .map_err(|error| refused(error.to_string()))
+}
+
+/// The answer to a request that can't be done as asked, saying why.
+pub fn refused(message: impl Into<String>) -> BrpError {
+    BrpError {
         code: error_codes::INVALID_PARAMS,
-        message: error.to_string(),
+        message: message.into(),
         data: None,
-    })
+    }
 }
 
 /// Starts the remote protocol on `port`, on localhost only, unless that port
