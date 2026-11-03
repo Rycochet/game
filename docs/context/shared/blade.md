@@ -19,7 +19,7 @@ Weapons made of a handle with a blade or head on it, from knives to polearms: wh
 
 ## Used by
 
-- `item`, `item_form`; `server` (`entities`, for mobs' gear).
+- `item`, `item_form`; `server` (`entities`, for mobs' gear); client `item_art` (models) and `debug_menu` (Item Pictures).
 
 ## Notes
 

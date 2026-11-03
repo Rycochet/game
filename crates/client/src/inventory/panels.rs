@@ -20,7 +20,8 @@ use crate::widgets::{
     ALLOWED, ButtonPressed, ButtonState, ButtonTooltip, CELL, Floating, GRID_LINE, HELD_ITEM_Z,
     INK, ITEM_EDGE, ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip, PICTURE_PIXELS_PER_CELL,
     Pressable, REFUSED, RaisePanel, TextSize, at_cell, covering, item_colour, item_label,
-    item_picture, spawn_icon_button, spawn_item_cells, spawn_item_grid, spawn_moveable_panel,
+    item_picture, picture_in_square, spawn_icon_button, spawn_item_cells, spawn_item_grid,
+    spawn_moveable_panel,
 };
 
 const BUTTON: f32 = 34.0;
@@ -422,12 +423,9 @@ pub(super) fn show_bins(
             ));
             match picture {
                 Some(look) => {
-                    slot.with_child(item_picture(
-                        look,
-                        PICTURE_PIXELS_PER_CELL,
-                        covering(),
-                        Rotation::None,
-                    ));
+                    let node = picture_in_square(&look);
+                    let pixels = look.longest() as u32 * PICTURE_PIXELS_PER_CELL;
+                    slot.with_child(item_picture(look, pixels, node, Rotation::None));
                 }
                 None => {
                     slot.with_child((

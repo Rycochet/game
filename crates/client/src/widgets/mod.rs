@@ -33,7 +33,8 @@ pub use fullscreen::{
 pub use item::{
     CELL, Floating, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip,
     PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
-    item_label, item_picture, logical_rect, shown_at, spawn_item_cells, spawn_item_grid,
+    item_label, item_picture, logical_rect, picture_in_square, shown_at, spawn_item_cells,
+    spawn_item_grid,
 };
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use scroll::spawn_scroll_area;

@@ -161,8 +161,8 @@ pub(super) fn give_auras(
         let (mask, reach, inward) = match &glow.mask {
             AuraMask::Picture(look, pixels) => {
                 let picture = pictures.picture(look.clone(), *pixels, &mut images);
-                let cells = *pixels as f32 / PICTURE_PIXELS_PER_CELL as f32;
-                (picture, reach_of(Vec2::splat(cells)), 0.0)
+                let cells = look.picture_size(*pixels).as_vec2() / PICTURE_PIXELS_PER_CELL as f32;
+                (picture, reach_of(cells), 0.0)
             }
             AuraMask::Cells(shape) => {
                 let mask = auras
