@@ -125,6 +125,15 @@ pub(super) fn answer_items(
             client.update_speed(world.action_clock.ticks());
             client.send_inventory()
         }
+        ClientMessage::SortGrid { holder } => {
+            // Rearranging one grid takes no time.
+            if client.inventory.sort_grid(holder, world.stacks) {
+                client.unsaved = true;
+            } else {
+                debug!("Nothing sorted in {holder:?}");
+            }
+            client.send_inventory()
+        }
         ClientMessage::GiveItem { item, to } => {
             let mut stock = None;
             let cost = client.inventory.put_down_cost(item);

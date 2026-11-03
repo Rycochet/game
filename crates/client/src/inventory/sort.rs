@@ -1,0 +1,98 @@
+//! Sorting: a small button above each carried grid lays it out again in one go
+//! (`Inventory::sort_grid`). The client tries first, and asks the server only if
+//! that worked and changed something, so a sort that can't be done does nothing.
+
+use bevy::asset::RenderAssetUsages;
+use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use shared::item::Holder;
+use shared::protocol::ClientMessage;
+
+use super::server::Stacks;
+use super::{Carried, Holding};
+use crate::connection::ToServer;
+use crate::widgets::{
+    ButtonPressed, ButtonState, ButtonTooltip, Pressable, spawn_small_icon_button,
+};
+
+/// A sort button, and the grid it sorts.
+#[derive(Component, Clone, Copy)]
+pub(super) struct SortButton(pub Holder);
+
+/// The sort button's picture.
+#[derive(Resource)]
+pub(super) struct SortIcon(Handle<Image>);
+
+pub(super) fn make_icon(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
+    commands.insert_resource(SortIcon(images.add(sort_icon())));
+}
+
+/// A sort button. Its picture comes from `show_icons`.
+pub(super) fn spawn_sort(parent: &mut ChildSpawnerCommands, holder: Holder) {
+    spawn_small_icon_button(parent, ButtonState::Normal, default(), Node::default()).insert((
+        SortButton(holder),
+        Pressable,
+        ButtonTooltip("Sort".into()),
+    ));
+}
+
+/// Gives new sort buttons their picture.
+pub(super) fn show_icons(
+    icon: Res<SortIcon>,
+    buttons: Query<&Children, Added<SortButton>>,
+    mut pictures: Query<&mut ImageNode>,
+) {
+    for children in &buttons {
+        for &child in children {
+            if let Ok(mut picture) = pictures.get_mut(child) {
+                picture.image = icon.0.clone();
+            }
+        }
+    }
+}
+
+/// Sorts a grid when its button is pressed, unless something is held.
+pub(super) fn press_sort(
+    mut pressed: MessageReader<ButtonPressed>,
+    buttons: Query<&SortButton>,
+    holding: Res<Holding>,
+    stacks: Res<Stacks>,
+    mut carried: ResMut<Carried>,
+    mut to_server: MessageWriter<ToServer>,
+) {
+    for press in pressed.read() {
+        let Ok(&SortButton(holder)) = buttons.get(press.0) else {
+            continue;
+        };
+        if holding.held.is_none() && carried.0.sort_grid(holder, stacks.0) {
+            to_server.write(ToServer(ClientMessage::SortGrid { holder }));
+        }
+    }
+}
+
+/// Three bars, longest at the top, drawn here so there is no file to ship for it.
+fn sort_icon() -> Image {
+    const SIZE: usize = 32;
+    const INK_BYTES: [u8; 4] = [60, 40, 20, 255];
+    let mut bytes = vec![0; SIZE * SIZE * 4];
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let (x, y) = (x as i32, y as i32);
+            let bar = |top: i32, right: i32| (top..top + 5).contains(&y) && (4..right).contains(&x);
+            if bar(5, 28) || bar(14, 21) || bar(23, 14) {
+                bytes[(y as usize * SIZE + x as usize) * 4..][..4].copy_from_slice(&INK_BYTES);
+            }
+        }
+    }
+    Image::new(
+        Extent3d {
+            width: SIZE as u32,
+            height: SIZE as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        bytes,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    )
+}

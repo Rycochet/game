@@ -1406,3 +1406,35 @@ fn a_group_from_a_mixed_stack_moves_together() {
     assert_eq!(carried.find(hats.id).map(Item::count), Some(2));
     assert_eq!(carried.find(cursed).map(Item::count), Some(1));
 }
+
+#[test]
+fn a_grid_is_sorted_as_the_client_would_sort_it() {
+    let mut test = TestClient::new();
+    let answers = test.send(&[give(ItemKind::Coin), give(ItemKind::Stone)]);
+    let carried = inventory(&answers);
+    let stone = carried
+        .pockets
+        .iter()
+        .find(|placed| placed.item.kind == ItemKind::Stone)
+        .map(|placed| placed.item.id)
+        .unwrap();
+    // Into the far corner, so that sorting moves it.
+    let (width, height) = carried.pockets_size;
+    let to_corner = ClientMessage::MoveItem {
+        item: stone,
+        to: Holder::Pockets,
+        x: width - 2,
+        y: height - 2,
+        rotation: Rotation::None,
+    };
+    let before = inventory(&test.send(&[to_corner]));
+    let expected = before
+        .sorted_grid(Holder::Pockets, test.world.stacks)
+        .unwrap();
+    assert_ne!(before.pockets, expected);
+    let sort = ClientMessage::SortGrid {
+        holder: Holder::Pockets,
+    };
+    let after = inventory(&test.send(&[sort]));
+    assert_eq!(after.pockets, expected);
+}
