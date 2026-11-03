@@ -200,6 +200,9 @@ pub struct WearDef {
     pub locations: &'static [Location],
     /// It takes only one place of its one location: a ring on a finger.
     pub one_place: bool,
+    /// Of its locations, where it also takes the Middle layer: armour with its own
+    /// padding, worn all as one.
+    pub padded: &'static [Location],
     /// How many sizes smaller and larger than it was made for it can be worn.
     pub down: u8,
     pub up: u8,
@@ -223,6 +226,7 @@ pub enum ItemKind {
     Dagger,
     FingerlessGloves,
     FullArmour,
+    Gambeson,
     Gauntlets,
     Gem,
     Gloves,
@@ -250,7 +254,7 @@ const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 32] = [
+    pub const ALL: [Self; 33] = [
         Self::Apple,
         Self::Axe,
         Self::Backpack,
@@ -263,6 +267,7 @@ impl ItemKind {
         Self::Dagger,
         Self::FingerlessGloves,
         Self::FullArmour,
+        Self::Gambeson,
         Self::Gauntlets,
         Self::Gem,
         Self::Gloves,
@@ -309,8 +314,8 @@ impl ItemKind {
     pub const fn def(self) -> ItemDef {
         use Layer::{Middle, Outer, Skin};
         use Location::{
-            Arms, Feet, Fingers, Forelegs, Hands, Head, Hindlegs, Legs, Neck, Shoulders, Torso,
-            Waist,
+            Arms, Back, Feet, Fingers, Forelegs, Hands, Head, Hindlegs, Legs, Neck, Shoulders,
+            Torso, Waist,
         };
         let square = Shape::rectangle(1, 1);
         let def = match self {
@@ -325,7 +330,10 @@ impl ItemKind {
                 Some(25_000),
                 None,
             )
-            .worn(wear(Outer, &[Shoulders], (1, 1), true)),
+            .worn(WearDef {
+                one_place: true,
+                ..wear(Outer, &[Back], (1, 1), true)
+            }),
             Self::Barding => plain("Barding", 15_000, Shape::rectangle(4, 4)).worn(wear(
                 Outer,
                 &[Neck, Torso, Forelegs, Hindlegs],
@@ -345,20 +353,25 @@ impl ItemKind {
                 (1, 0),
                 false,
             )),
-            Self::Cloak => plain("Cloak", 900, Shape::rectangle(2, 3)).worn(wear(
-                Middle,
-                &[Shoulders],
-                (1, 1),
-                true,
-            )),
+            Self::Cloak => plain("Cloak", 900, Shape::rectangle(2, 3)).worn(WearDef {
+                one_place: true,
+                ..wear(Outer, &[Back], (1, 1), true)
+            }),
             Self::Coin => plain("Coin", 10, square).without_quality(),
             Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)),
             Self::FingerlessGloves => plain("Fingerless Gloves", 80, Shape::rectangle(1, 2))
                 .worn(wear(Middle, &[Hands], (1, 1), true)),
-            Self::FullArmour => plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(wear(
-                Outer,
-                &[Shoulders, Arms, Torso, Legs],
-                (0, 0),
+            // With its own padding, so no gambeson under it.
+            Self::FullArmour => {
+                plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(WearDef {
+                    padded: &[Shoulders, Arms, Torso],
+                    ..wear(Outer, &[Shoulders, Arms, Torso, Legs], (0, 0), false)
+                })
+            }
+            Self::Gambeson => plain("Gambeson", 2500, Shape::rectangle(2, 3)).worn(wear(
+                Middle,
+                &[Torso, Arms],
+                (1, 0),
                 false,
             )),
             Self::Gauntlets => plain("Gauntlets", 1200, Shape::rectangle(2, 1)).worn(wear(
@@ -487,6 +500,7 @@ const fn wear(
         layer,
         locations,
         one_place: false,
+        padded: &[],
         down,
         up,
         adjustable,

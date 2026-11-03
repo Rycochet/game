@@ -71,17 +71,21 @@ impl Made {
     }
 }
 
-/// The locations of a worn item, and its layer.
-fn coverage(def: &ItemDef) -> (&'static [Location], Option<Layer>) {
-    match def.wear {
-        Some(wear) => (wear.locations, Some(wear.layer)),
-        None => (&[], None),
-    }
-}
-
-/// Whether two things cover a location in common.
-fn share(a: &[Location], b: &[Location]) -> bool {
-    a.iter().any(|location| b.contains(location))
+/// Each location a worn item takes, with the layer it takes there: its own layer
+/// everywhere, and Middle too where it is padded.
+fn coverage(def: &ItemDef) -> Vec<(Location, Layer)> {
+    let Some(wear) = def.wear else {
+        return Vec::new();
+    };
+    let own = wear
+        .locations
+        .iter()
+        .map(|&location| (location, wear.layer));
+    let padding = wear
+        .padded
+        .iter()
+        .map(|&location| (location, Layer::Middle));
+    own.chain(padding).collect()
 }
 
 impl Inventory {
@@ -89,14 +93,19 @@ impl Inventory {
         self.worn.iter().any(|item| item.id == id)
     }
 
-    /// What, on a higher layer than `layer`, is at any of these locations.
-    fn covering(&self, layer: Layer, locations: &[Location], not: Id) -> Option<Id> {
+    /// What is on a higher layer than any of these, at the same location.
+    fn covering(&self, places: &[(Location, Layer)], not: Id) -> Option<Id> {
         self.worn
             .iter()
             .filter(|other| other.id != not)
             .find(|other| {
-                let (theirs, their_layer) = coverage(&other.kind.def());
-                their_layer > Some(layer) && share(theirs, locations)
+                coverage(&other.kind.def())
+                    .iter()
+                    .any(|&(theirs, their_layer)| {
+                        places
+                            .iter()
+                            .any(|&(location, layer)| theirs == location && their_layer > layer)
+                    })
             })
             .map(|other| other.id)
     }
@@ -104,8 +113,7 @@ impl Inventory {
     /// What is on top of this worn item, stopping it coming off.
     pub fn covered_by(&self, id: Id) -> Option<Id> {
         let item = self.worn.iter().find(|item| item.id == id)?;
-        let (locations, layer) = coverage(&item.kind.def());
-        self.covering(layer?, locations, id)
+        self.covering(&coverage(&item.kind.def()), id)
     }
 
     /// Whether this carried item can be put on, and how it would fit.
@@ -122,11 +130,12 @@ impl Inventory {
         let id = item.id;
         let wear = item.kind.def().wear.ok_or(WearRefused::NotClothing)?;
         let body = self.creature.def();
-        for &location in wear.locations {
+        let places = coverage(&item.kind.def());
+        for &(location, layer) in &places {
             let part = body
                 .part(location)
                 .ok_or(WearRefused::WrongBody(location))?;
-            if !part.layers.contains(&wear.layer) {
+            if !part.layers.contains(&layer) {
                 return Err(WearRefused::WrongBody(location));
             }
         }
@@ -141,7 +150,7 @@ impl Inventory {
         if let Some(other) = self.clash(item) {
             return Err(WearRefused::Clash(other));
         }
-        if let Some(other) = self.covering(wear.layer, wear.locations, id) {
+        if let Some(other) = self.covering(&places, id) {
             return Err(WearRefused::Covered(other));
         }
         Ok(fit)
@@ -151,24 +160,11 @@ impl Inventory {
     /// each other's way once every place is taken.
     fn clash(&self, item: &Item) -> Option<Id> {
         let wear = item.kind.def().wear?;
-        let same_layer = || {
-            self.worn.iter().filter(move |other| {
-                other
-                    .kind
-                    .def()
-                    .wear
-                    .is_some_and(|theirs| theirs.layer == wear.layer)
-            })
-        };
-        for &location in wear.locations {
+        for (location, layer) in coverage(&item.kind.def()) {
             let here = || {
-                same_layer().filter(move |other| {
-                    other
-                        .kind
-                        .def()
-                        .wear
-                        .is_some_and(|theirs| theirs.locations.contains(&location))
-                })
+                self.worn
+                    .iter()
+                    .filter(move |other| coverage(&other.kind.def()).contains(&(location, layer)))
             };
             let whole = |other: &&Item| {
                 other
@@ -376,11 +372,37 @@ mod tests {
     }
 
     #[test]
-    fn a_backpack_and_a_full_suit_cant_be_worn_together() {
-        use ItemKind::{Backpack, FullArmour};
-        let mut inventory = carrying(&[Backpack, FullArmour]);
+    fn a_backpack_and_a_cloak_share_the_back_over_armour() {
+        use ItemKind::{Backpack, Cloak, FullArmour};
+        let mut inventory = carrying(&[Backpack, FullArmour, Cloak, Backpack]);
         inventory.wear(id(1)).unwrap();
+        assert_eq!(inventory.wear(id(2)), Ok(Fit::Exact));
+        assert_eq!(inventory.wear(id(3)), Ok(Fit::Exact));
+        // The back has room for two.
+        assert!(matches!(
+            inventory.check_wear(id(4)),
+            Err(WearRefused::Clash(_))
+        ));
+    }
+
+    #[test]
+    fn padded_armour_takes_the_middle_layer_too() {
+        use ItemKind::{FullArmour, Gambeson, TShirt, Trousers};
+        let mut inventory = carrying(&[Gambeson, FullArmour, TShirt, Trousers]);
+        inventory.wear(id(1)).unwrap();
+        // A full suit has its own padding, so a gambeson is in its way...
         assert_eq!(inventory.check_wear(id(2)), Err(WearRefused::Clash(id(1))));
+        take_off(&mut inventory, 1).unwrap();
+        // ...but not trousers, where it has none.
+        inventory.wear(id(4)).unwrap();
+        inventory.wear(id(2)).unwrap();
+        // Its padding covers what is under it as well.
+        assert_eq!(
+            inventory.check_wear(id(3)),
+            Err(WearRefused::Covered(id(2)))
+        );
+        // And nothing Middle goes on under it.
+        assert_eq!(inventory.check_wear(id(1)), Err(WearRefused::Clash(id(2))));
     }
 
     #[test]
