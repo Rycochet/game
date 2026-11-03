@@ -79,6 +79,10 @@ impl Client {
 
     /// Tells the client what it carries, as far as it knows.
     pub(crate) fn send_inventory(&mut self) -> bool {
+        // Part of a stack lifted out for a move that didn't take it goes back.
+        if self.inventory.settle_parts() {
+            self.unsaved = true;
+        }
         let mut seen = self.inventory.clone();
         if !self.truesight {
             seen.hide_secrets();

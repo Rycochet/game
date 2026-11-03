@@ -3,6 +3,7 @@
 mod changes;
 mod cost;
 mod lookup;
+mod parts;
 mod room;
 mod rules;
 mod stacking;

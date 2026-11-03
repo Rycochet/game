@@ -1330,3 +1330,30 @@ fn a_stack_goes_on_another_as_far_as_the_server_allows() {
     assert_eq!(carried.find(coins[2]).map(Item::count), Some(1));
     assert_eq!(carried.find(coins[0]).map(Item::count), Some(2));
 }
+
+#[test]
+fn part_of_a_stack_moves_on_its_own_and_goes_back_if_refused() {
+    let mut test = TestClient::new();
+    let answers = test.send(&[
+        give(ItemKind::Coin),
+        give(ItemKind::Coin),
+        give(ItemKind::Coin),
+    ]);
+    let coins = inventory(&answers).pockets[0].item.clone();
+    let part = coins.above[0].id;
+    let move_to = |x| ClientMessage::MoveItem {
+        item: part,
+        to: Holder::Pockets,
+        x,
+        y: 0,
+        rotation: Rotation::None,
+    };
+    // Onto its own stack's place: refused, and nothing changes.
+    let carried = inventory(&test.send(&[move_to(0)]));
+    assert_eq!(carried.pockets.len(), 1);
+    assert_eq!(carried.find(coins.id).map(Item::count), Some(3));
+    // Elsewhere: the top two go.
+    let carried = inventory(&test.send(&[move_to(4)]));
+    assert_eq!(carried.find(coins.id).map(Item::count), Some(1));
+    assert_eq!(carried.find(part).map(Item::count), Some(2));
+}
