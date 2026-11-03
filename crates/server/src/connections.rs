@@ -135,7 +135,7 @@ const MOST_WAITING: usize = 64;
 
 /// Something that takes time, waiting its turn. Things that depend on where the
 /// player is have to wait behind the steps that lead there.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 enum Action {
     Step { number: u32, step: Step },
     EnterSite { chunk: ChunkPos },

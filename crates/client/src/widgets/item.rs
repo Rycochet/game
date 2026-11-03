@@ -10,6 +10,7 @@ use super::TextSize;
 mod cells;
 mod count;
 mod look;
+mod mixed;
 mod name;
 mod nodes;
 mod picture;

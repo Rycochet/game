@@ -49,12 +49,14 @@ pub struct ItemLook {
     pub aura: Option<Aura>,
     /// How many there are of it: more than one for a stack.
     pub count: u32,
+    /// A stack with something in it known to differ.
+    pub mixed: bool,
 }
 
 impl ItemLook {
     /// How it looks, by the top of a stack, with how many there are.
     pub fn of(item: &Item) -> Self {
-        let count = item.count();
+        let (count, mixed) = (item.count(), !item.is_even());
         let item = item.top();
         Self {
             kind: item.kind,
@@ -64,6 +66,7 @@ impl ItemLook {
             rotation: Rotation::None,
             aura: Aura::of(item),
             count,
+            mixed,
         }
     }
 

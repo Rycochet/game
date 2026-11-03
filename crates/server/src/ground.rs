@@ -16,10 +16,12 @@ use crate::storage::{LevelSave, SiteId};
 
 /// Something a client asked to do with the ground, in turn with its steps: where the
 /// player is decides what it means.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum GroundAction {
     Drop {
         item: Id,
+        /// The stack and items, for a group from a mixed one (`FromStack`).
+        group: Option<(Id, Vec<Id>)>,
     },
     Take {
         item: Id,
@@ -105,10 +107,18 @@ fn put_down(client: &Client, world: &mut ServerWorld, item: Item) {
 }
 
 /// Moves something carried to the ground under the player: what it cost.
-fn dropped(client: &mut Client, world: &mut ServerWorld, item: Id) -> Result<u32, &'static str> {
+fn dropped(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    item: Id,
+    group: Option<(Id, Vec<Id>)>,
+) -> Result<u32, &'static str> {
     standing_on(client).ok_or("not in a site")?;
     // Part of a stack: see `answer_items`.
-    client.inventory.lift_part(item);
+    match group {
+        Some((stack, items)) => client.inventory.lift_group(stack, &items),
+        None => client.inventory.lift_part(item),
+    };
     if !client.may_take_off(item) {
         return Err("it won't come off");
     }
@@ -138,7 +148,7 @@ pub(crate) fn act(
     action: GroundAction,
 ) -> (bool, u32) {
     let done = match action {
-        GroundAction::Drop { item } => dropped(client, world, item),
+        GroundAction::Drop { item, ref group } => dropped(client, world, item, group.clone()),
         GroundAction::Take {
             item,
             to,

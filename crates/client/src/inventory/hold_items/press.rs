@@ -6,7 +6,7 @@ use shared::item::Holder;
 
 use super::super::hold::Held;
 use super::super::panels::{ItemCell, OpenGrids};
-use super::super::split::{Split, SplitCell, Splitting};
+use super::super::split::{PickRow, Split, SplitCell, Splitting};
 use super::super::{Carried, DOUBLE_PRESS_SECONDS, Hand, HeldBy, Holding};
 use crate::common::StockCell;
 use crate::widgets::{ButtonPressed, RaisePanel};
@@ -15,7 +15,12 @@ use crate::widgets::{ButtonPressed, RaisePanel};
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn take_presses(
     pressed: &mut MessageReader<ButtonPressed>,
-    (cells, stock_cells, split_cells): (&Query<&ItemCell>, &Query<&StockCell>, &Query<&SplitCell>),
+    (cells, stock_cells, split_cells, pick_rows): (
+        &Query<&ItemCell>,
+        &Query<&StockCell>,
+        &Query<&SplitCell>,
+        &Query<&PickRow>,
+    ),
     split: &mut ResMut<Split>,
     mouse: &mut ResMut<ButtonInput<MouseButton>>,
     holding: &mut ResMut<Holding>,
@@ -52,6 +57,25 @@ pub(super) fn take_presses(
     }
     for press in pressed.read() {
         if clicked_held.is_some() {
+            continue;
+        }
+        if let Ok(PickRow(items)) = pick_rows.get(press.0) {
+            // A row of a mixed stack's box: those items together, or all of it.
+            if let Some(splitting) = split.0.take()
+                && let Some((_, placed)) = carried.0.placed(splitting.stack)
+            {
+                let id = items.as_ref().map_or(splitting.stack, |items| items[0]);
+                holding.group = items.clone().map(|items| (splitting.stack, items));
+                holding.picked = at_press.map(|at| (at, now));
+                holding.held = Some(HeldBy {
+                    item: Held {
+                        id,
+                        rotation: placed.rotation,
+                        grip: placed.shape().cells().next().unwrap_or((0, 0)),
+                    },
+                    by: Hand::Mouse,
+                });
+            }
             continue;
         }
         if let Ok(cell) = split_cells.get(press.0) {
@@ -105,7 +129,8 @@ pub(super) fn take_presses(
             continue;
         }
         let all = carried.0.find(cell.id).map_or(1, |item| item.count());
-        if (shift || tapped) && all > 1 && !carried.0.in_bin(cell.id) {
+        let mixed = carried.0.find(cell.id).is_some_and(|item| !item.is_even());
+        if (shift || tapped || mixed) && all > 1 && !carried.0.in_bin(cell.id) {
             // A stack to split: see `split`.
             if let Some(at) = at_press {
                 split.0 = Some(Splitting::open(cell.id, all, at));

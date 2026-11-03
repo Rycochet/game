@@ -1,7 +1,8 @@
 //! Splitting a stack (owner's design): shift+click, or a tap, on a stack opens a box
 //! with its name, a slider from one to all of it, and the stack at that many below.
 //! Pressing that picks up that many from its top, closing the box; letting go goes
-//! by the usual rules, and only what was taken moves.
+//! by the usual rules, and only what was taken moves. A mixed stack opens it on any
+//! press, with a row for each kind in it instead (`picker`).
 
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
@@ -129,6 +130,11 @@ pub(super) fn show_split(
             TextSize::Medium.font(),
             TextColor(colour),
         ));
+        if !placed.item.is_even() {
+            // Mixed: a row for each kind in it, rather than a count.
+            picker::spawn_rows(inside, &placed);
+            return;
+        }
         spawn_slider(inside, value_of(splitting.count, all), None, SLIDER_WIDTH)
             .insert(SplitSlider);
         let shape = placed.shape();
@@ -207,6 +213,10 @@ pub(super) fn close_split(
         split.0 = None;
     }
 }
+
+mod picker;
+
+pub(super) use picker::PickRow;
 
 #[cfg(test)]
 mod tests;

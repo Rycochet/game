@@ -71,7 +71,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | Item | have | Any contiguous shape of cells, shown with a picture or colour, with an edge showing quality. Held at true size and solid, for now: the green and red cells already show where it goes. |
 | Item slot | have | Any size of item shrunk to fit. Hint icons come with type limits: leave room for them. |
 | Container | have | A grid in a panel. Fixed width; fixed height, or growing and scrolling for what has no limit, such as a shop or the ground. |
-| Stack | have | Items that look the same in one place, with a count; dropping on one joins it. Limits are the server's. Split by shift+click or a tap: a dark box with the name, a slider and the stack to pick up. Mixed stacks to come. |
+| Stack | have | Items that look the same in one place, with a count; dropping on one joins it. Limits are the server's. Split by shift+click or a tap: a dark box with the name, a slider and the stack to pick up. A mixed stack has a red "!" in its corner, and any press opens the box with a row for each kind and one for all. |
 
 Rules:
 

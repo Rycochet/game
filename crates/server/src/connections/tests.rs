@@ -1357,3 +1357,52 @@ fn part_of_a_stack_moves_on_its_own_and_goes_back_if_refused() {
     assert_eq!(carried.find(coins.id).map(Item::count), Some(1));
     assert_eq!(carried.find(part).map(Item::count), Some(2));
 }
+
+#[test]
+fn a_group_from_a_mixed_stack_moves_together() {
+    let mut test = TestClient::new();
+    let answers = test.send(&[
+        give(ItemKind::Hat),
+        give(ItemKind::Hat),
+        give(ItemKind::Hat),
+    ]);
+    let hats = inventory(&answers).pockets[0].item.clone();
+    let cursed = hats.above[0].id;
+    {
+        let stack = &mut test.client.inventory.pockets[0].item;
+        stack.above[0].favour = Some(Favour::Cursed);
+        stack.above[0].known.favour = true;
+    }
+    let plain = vec![hats.id, hats.above[1].id];
+    let from_stack = |x| ClientMessage::FromStack {
+        stack: hats.id,
+        items: plain.clone(),
+        then: Box::new(ClientMessage::MoveItem {
+            item: hats.id,
+            to: Holder::Pockets,
+            x,
+            y: 0,
+            rotation: Rotation::None,
+        }),
+    };
+    // Back where it was: refused, and it goes back on the stack.
+    let carried = inventory(&test.send(&[from_stack(0)]));
+    assert_eq!(carried.pockets.len(), 1);
+    assert_eq!(carried.pockets[0].item.count(), 3);
+    // Elsewhere: the plain two go, and the cursed one is left alone.
+    let bottom = carried.pockets[0].item.id;
+    let from_stack = ClientMessage::FromStack {
+        stack: bottom,
+        items: plain.clone(),
+        then: Box::new(ClientMessage::MoveItem {
+            item: hats.id,
+            to: Holder::Pockets,
+            x: 3,
+            y: 0,
+            rotation: Rotation::None,
+        }),
+    };
+    let carried = inventory(&test.send(&[from_stack]));
+    assert_eq!(carried.find(hats.id).map(Item::count), Some(2));
+    assert_eq!(carried.find(cursed).map(Item::count), Some(1));
+}

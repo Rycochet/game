@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
-use crate::item::Item;
+use crate::item::{Item, Known};
 use crate::item_form::ItemForm;
 
 /// How big a stack may get. The server's to set (`HOW_STACK_GRAMS_PER_CELL`,
@@ -76,6 +76,19 @@ impl Item {
         std::iter::once(self).chain(&self.above)
     }
 
+    /// Its items in groups that look the same, each from the top down, the group of
+    /// its top first: one group unless it is mixed.
+    pub fn groups(&self) -> Vec<Vec<&Item>> {
+        let mut groups: Vec<Vec<&Item>> = Vec::new();
+        for one in self.members().rev() {
+            match groups.iter_mut().find(|group| group[0].looks_like(one)) {
+                Some(group) => group.push(one),
+                None => groups.push(vec![one]),
+            }
+        }
+        groups
+    }
+
     /// Whether every item in it looks the same as the others.
     pub fn is_even(&self) -> bool {
         self.above.iter().all(|one| one.looks_like(self))
@@ -129,6 +142,8 @@ impl Item {
     fn as_compared(&self) -> Item {
         let mut copy = self.clone();
         copy.hide_secrets();
+        // What is known shows already, and knowing there is nothing shows nothing.
+        copy.known = Known::default();
         copy.id = Id::NOBODY;
         copy.made_at = None;
         copy.above.clear();

@@ -62,6 +62,7 @@ pub(super) fn pick_up_by_finger(
     god: Res<GodMode>,
     ui_scale: Res<UiScale>,
     mut decided: Local<Option<Vec2>>,
+    mut split: ResMut<super::split::Split>,
 ) {
     if gesture.first_finger.is_none() {
         *decided = None;
@@ -82,6 +83,13 @@ pub(super) fn pick_up_by_finger(
         && carried.0.covered_by(cell.id).is_none()
         && (god.0 || carried.0.may_remove(cell.id, Remover::Wearer))
     {
+        // A mixed stack is chosen from first: see `split`.
+        if let Some(stack) = carried.0.find(cell.id).filter(|item| !item.is_even())
+            && !carried.0.in_bin(cell.id)
+        {
+            split.0 = Some(super::split::Splitting::open(cell.id, stack.count(), start));
+            return;
+        }
         holding.held = Some(HeldBy {
             item: Held {
                 id: cell.id,

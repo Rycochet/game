@@ -17,6 +17,8 @@ pub(super) struct Holding {
     pub(super) stock: Option<(shared::id::Id, Item)>,
     /// Where (in the interface's pixels) and when the mouse picked it up.
     pub(super) picked: Option<(Vec2, f64)>,
+    /// Some of a mixed stack: the stack, and the items held, from the bottom up.
+    pub(super) group: Option<(shared::id::Id, Vec<shared::id::Id>)>,
 }
 
 impl Holding {
@@ -54,5 +56,6 @@ pub(super) fn cancel_held(mut keys: ResMut<ButtonInput<KeyCode>>, mut holding: R
         holding.held = None;
         holding.aim = None;
         holding.stock = None;
+        holding.group = None;
     }
 }
