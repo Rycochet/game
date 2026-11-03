@@ -38,6 +38,9 @@ pub enum Location {
     Forelegs,
     Hindlegs,
     Tail,
+    /// For packs and cloaks: armour for the back is on `Torso`, so it never stops a
+    /// pack going on.
+    Back,
 }
 
 /// How big a creature is, or the clothes made for one, smallest first.
@@ -160,7 +163,6 @@ pub enum CreatureKind {
 
 const SKIN: &[Layer] = &[Layer::Skin];
 const SKIN_OUTER: &[Layer] = &[Layer::Skin, Layer::Outer];
-const MIDDLE: &[Layer] = &[Layer::Middle];
 const MIDDLE_OUTER: &[Layer] = &[Layer::Middle, Layer::Outer];
 const SKIN_MIDDLE: &[Layer] = &[Layer::Skin, Layer::Middle];
 const ALL_LAYERS: &[Layer] = &Layer::ALL;
@@ -173,6 +175,13 @@ const fn part(location: Location, layers: &'static [Layer]) -> BodyPart {
     }
 }
 
+/// Room for a pack and a cloak.
+const BACK: BodyPart = BodyPart {
+    location: Location::Back,
+    layers: &[Layer::Outer],
+    places: 2,
+};
+
 const fn fingers(places: u8) -> BodyPart {
     BodyPart {
         location: Location::Fingers,
@@ -182,14 +191,15 @@ const fn fingers(places: u8) -> BodyPart {
 }
 
 /// A two-legged body with hands of this many fingers in all.
-const fn biped(finger_count: u8) -> [BodyPart; 10] {
+const fn biped(finger_count: u8) -> [BodyPart; 11] {
     [
-        part(Location::Head, SKIN_OUTER),
-        part(Location::Neck, SKIN_OUTER),
+        part(Location::Head, ALL_LAYERS),
+        part(Location::Neck, ALL_LAYERS),
         part(Location::Shoulders, MIDDLE_OUTER),
+        BACK,
         part(Location::Arms, ALL_LAYERS),
         part(Location::Torso, ALL_LAYERS),
-        part(Location::Waist, MIDDLE),
+        part(Location::Waist, MIDDLE_OUTER),
         part(Location::Hands, MIDDLE_OUTER),
         fingers(finger_count),
         part(Location::Legs, ALL_LAYERS),
@@ -197,8 +207,8 @@ const fn biped(finger_count: u8) -> [BodyPart; 10] {
     ]
 }
 
-const TEN_FINGERS: [BodyPart; 10] = biped(10);
-const EIGHT_FINGERS: [BodyPart; 10] = biped(8);
+const TEN_FINGERS: [BodyPart; 11] = biped(10);
+const EIGHT_FINGERS: [BodyPart; 11] = biped(8);
 
 const CHICKEN: [BodyPart; 6] = [
     part(Location::Head, SKIN),
@@ -218,10 +228,11 @@ const HORSE: [BodyPart; 6] = [
     part(Location::Tail, SKIN),
 ];
 
-const CENTAUR: [BodyPart; 9] = [
-    part(Location::Head, SKIN_OUTER),
-    part(Location::Neck, SKIN_OUTER),
+const CENTAUR: [BodyPart; 10] = [
+    part(Location::Head, ALL_LAYERS),
+    part(Location::Neck, ALL_LAYERS),
     part(Location::Shoulders, MIDDLE_OUTER),
+    BACK,
     part(Location::Arms, ALL_LAYERS),
     part(Location::Torso, ALL_LAYERS),
     part(Location::Hands, MIDDLE_OUTER),
