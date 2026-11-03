@@ -1,4 +1,9 @@
+use super::table::rows;
 use super::*;
+use crate::creature::Size;
+use crate::item::Quality;
+use crate::item_form::Limits;
+use crate::material::Material;
 use crate::rng::Seed;
 use std::collections::BTreeSet;
 
@@ -17,7 +22,7 @@ fn all_names() -> BTreeSet<&'static str> {
 fn sword(blade: u16, handle: u16) -> BladeForm {
     roll_properties(
         &mut Seed::new(1).rng(),
-        ROWS.iter().find(|row| row.name == "Sword").unwrap(),
+        rows().find(|row| row.name == "Sword").unwrap(),
         Quality::Common,
         blade,
         handle,
@@ -37,7 +42,7 @@ fn the_same_seed_rolls_the_same_weapon() {
 
 #[test]
 fn every_row_can_be_made_somewhere() {
-    for row in &ROWS {
+    for row in rows() {
         assert!(row.places().next().is_some(), "{} has no cell", row.name);
     }
 }
@@ -45,7 +50,7 @@ fn every_row_can_be_made_somewhere() {
 #[test]
 fn every_specific_name_turns_up() {
     let names = all_names();
-    for row in ROWS.iter().filter(|row| !row.generic) {
+    for row in rows().filter(|row| !row.generic) {
         assert!(names.contains(row.name), "{} never turns up", row.name);
     }
 }
@@ -100,7 +105,7 @@ fn a_knife_with_two_edges_is_a_dagger() {
 #[test]
 fn a_katana_and_a_bastard_sword_share_a_cell_but_not_a_name() {
     let cell = |name: &str| {
-        let family = ROWS.iter().find(|row| row.name == name).unwrap().family;
+        let family = rows().find(|row| row.name == name).unwrap().family;
         rolled(family)
             .find(|form| form.name() == name && form.blade < 800)
             .map(|form| cell_of(form.build, form.blade, form.handle).unwrap().blade)

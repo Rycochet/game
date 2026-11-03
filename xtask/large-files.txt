@@ -55,10 +55,6 @@ crates/server/src/network.rs 520
 crates/server/src/sites.rs 1121
 crates/server/src/storage.rs 460
 crates/server/src/tls.rs 549
-crates/shared/src/armour/hands.rs 472
-crates/shared/src/armour/shoulders.rs 1087
-crates/shared/src/blade/mod.rs 1093
-crates/shared/src/blade/table.rs 1144
 crates/shared/src/celestial.rs 607
 crates/shared/src/creature.rs 403
 crates/shared/src/dungeon.rs 541
