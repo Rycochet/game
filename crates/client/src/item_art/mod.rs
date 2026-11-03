@@ -5,6 +5,7 @@ mod armour;
 mod blade;
 mod body;
 mod gem;
+mod looks;
 mod ring;
 
 use std::collections::{HashMap, VecDeque};
@@ -17,13 +18,13 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{PipelineCache, TextureFormat};
 use bevy::render::{ExtractSchedule, MainWorld, RenderApp};
 use bevy::window::PrimaryWindow;
-use shared::armour::hands::{Hand, HandsForm};
-use shared::armour::shoulders::ShouldersForm;
 use shared::blade::BladeForm;
 use shared::creature::{CreatureKind, Size};
 use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
+
+pub use looks::{HandsLook, ShouldersLook, TorsoLook};
 
 /// Render layers kept for this, past any the views use, one per picture being drawn.
 const FIRST_LAYER: usize = 16;
@@ -76,6 +77,11 @@ pub enum Look {
         shoulders: ShouldersLook,
         quality: Option<Quality>,
     },
+    /// A cuirass or other torso piece, as worn.
+    Torso {
+        torso: TorsoLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -89,6 +95,7 @@ impl Look {
             Self::Blade { blade, .. } => blade.cells,
             Self::Hands { hands, .. } => hands.cells,
             Self::Shoulders { shoulders, .. } => shoulders.cells,
+            Self::Torso { torso, .. } => torso.cells,
             Self::Body { .. } => body::CELLS,
         }
     }
@@ -114,41 +121,6 @@ pub struct BladeLook {
     form: BladeForm,
     /// What it takes up, wide and long, not turned.
     cells: (u8, u8),
-}
-
-/// What can be seen of a pair of hand pieces: how many digits each hand has shows.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct HandsLook {
-    form: HandsForm,
-    digits: u8,
-    /// What it takes up, wide and long, not turned.
-    cells: (u8, u8),
-}
-
-impl HandsLook {
-    /// Hand pieces with this many digits on each hand, taking up these cells.
-    pub fn new(form: HandsForm, digits: u8, cells: (u8, u8)) -> Self {
-        Self {
-            form,
-            digits,
-            cells,
-        }
-    }
-}
-
-/// What can be seen of a pair of shoulder pieces.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ShouldersLook {
-    form: ShouldersForm,
-    /// What it takes up, wide and long, not turned.
-    cells: (u8, u8),
-}
-
-impl ShouldersLook {
-    /// Shoulder pieces taking up these cells.
-    pub fn new(form: ShouldersForm, cells: (u8, u8)) -> Self {
-        Self { form, cells }
-    }
 }
 
 /// A length to the nearest centimetre.
@@ -209,26 +181,8 @@ pub fn look_of(item: &Item) -> Option<Look> {
             })
         }
         ItemForm::Gem(gem) => Some(Look::Gem { gem: *gem, quality }),
-        ItemForm::Hands(form) => {
-            let shape = item.shape();
-            Some(Look::Hands {
-                hands: HandsLook {
-                    form: *form,
-                    digits: Hand::digits(item.made.fingers),
-                    cells: (shape.width, shape.height),
-                },
-                quality,
-            })
-        }
-        ItemForm::Shoulders(form) => {
-            let shape = item.shape();
-            Some(Look::Shoulders {
-                shoulders: ShouldersLook {
-                    form: *form,
-                    cells: (shape.width, shape.height),
-                },
-                quality,
-            })
+        ItemForm::Hands(_) | ItemForm::Shoulders(_) | ItemForm::Torso(_) => {
+            looks::armour_look(item)
         }
         ItemForm::Ring(ring) => {
             let settings = ring.settings.iter().map(|setting| SettingLook {
@@ -449,6 +403,9 @@ fn draw_pictures(
             }
             Look::Shoulders { shoulders, quality } => {
                 armour::shoulders::shoulders_parts(&shoulders, quality, &mut meshes, &mut materials)
+            }
+            Look::Torso { torso, quality } => {
+                armour::torso::torso_parts(&torso, quality, &mut meshes, &mut materials)
             }
             Look::Body { kind } => body::body_parts(kind, &mut meshes, &mut materials),
         };

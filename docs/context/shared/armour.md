@@ -4,18 +4,23 @@ What all armour shares, and the pieces for each body location. Multi-location se
 
 ## Files
 
-- `crates/shared/src/armour/mod.rs`: `Construction`, `Style`.
+- `crates/shared/src/armour/mod.rs`: `Construction`, `Style`, `in_style`.
+- `crates/shared/src/armour/finish.rs`: `Dye` and `Finish`, the one colour-and-finish type every location shares (agreed between the location chats).
 - `crates/shared/src/armour/hands.rs`: hand pieces: `HandsPiece`, `HandsForm` and what it rolls (`Fingers`, `Cuff`, `Knuckles`), the allowed-combination grid, `roll`, names and weights; `Hand`, a hand's sizes worked out from the body frame. Tests.
+- `crates/shared/src/armour/torso/`: torso pieces. `mod.rs` (`TorsoForm`, `TorsoKind`, small queries), `parts.rs` (what each construction rolls: `TorsoBody`, `Breast`, `Plackart`, `Fluting`, `Links`, `Weave`, `Rings`, `Quilting`), `tables.rs` (weighted lists by style and construction), `roll.rs`, `grid.rs` (`allowed`), `names.rs`, `weight.rs` (cells and grams). Tests in `tests.rs`.
 - `crates/shared/src/armour/shoulders.rs`: shoulder pieces, as pairs: `ShouldersKind`, `ShouldersPiece` (what each kind rolls), `ShouldersForm`, `Heraldry`, the grid, `roll`, names, cells and weights. Tests.
 
 ## Public API
 
-- `Construction::{Padded, Leather, Mail, Scale, Lamellar, Laminar, PlatesInCloth, MailAndPlate, Splint, Plate, Mirror}` (`ALL`, `flexible`).
+- `Construction::{Padded, Leather, Mail, Scale, Lamellar, Laminar, PlatesInCloth, MailAndPlate, Splint, Plate, Mirror, RingMail}` (`ALL`, `flexible`). Ring mail (rings sewn on leather) is made only in European and fantasy styles.
+- `Dye::{Natural, Red, Blue, Green, Black, Brown, White, Yellow, Purple}` (`ALL`, `name`, `roll`, `roll_paint`): cloth and lacing. `Finish::{Bright, Blackened, Russet, Blued, Tinned, Painted(Dye), Lacquered(Dye), Gilt, Etched}` (`rare_only`, `allowed(quality)`, `roll(rng, style, quality)`): metal, and lacquer on leather. Gilt and Etched only at Rare and better. A set passes both to its pieces. (Shoulders' own `shoulders::Finish` is leather's plain, tooled or studded, older than these.)
 - `Style::{White, Gothic, Milanese, Maximilian, Greenwich, Kastenbrust, Elven, Dwarven, Japanese, Chinese, Steppe, Classical, Byzantine, IndoPersian}` (`ALL`, `name`, `roll`, `european`, `allows(construction)`): one list for every location, shared by a set's pieces; saved by name, new ones at the end. `in_style(list, style)`: the constructions in a list a style allows (the whole list if none).
 - `hands::roll(rng, piece, style)`: a `HandsForm` for a `HandsPiece::{Gauntlets, Demi, Padded}` (the item kinds `Gauntlets`, `DemiGauntlets`, `PaddedGloves`); a set passes its style, a piece alone rolls one.
 - `HandsForm { construction, fingers, cuff, knuckles, claws, locking, material, cloth, trim, style }`: `allowed(piece)`, `name`, `generic_name`, `specific_name`, `grams`, `grams_at(size)`. `Fingers::{Fingered, Mitten, Open}`, `Cuff::{Wrist, Hourglass, Bell, Pointed, Long}` (`reach(frame)`, `flare`), `Knuckles::{Plain, Ridged, Spiked, Rondel}`.
 - `shoulders::roll(rng, kind, style)`: a `ShouldersForm` of a `ShouldersKind::{Pauldrons, Spaulders, Guards, Cape, Discs, Ailettes, Wing}`, or any kind (item kind `ShoulderArmour`).
 - `ShouldersForm { piece, construction, adornment, finish, material, cloth, trim, style }`: `kind`, `allowed`, `name`, `generic_name`, `specific_name`, `shape` (cells), `grams`, `grams_at(size)`, `roman`, `dendra`, `japanese`. `ShouldersPiece::{Pauldrons { cut, wings, lames, upper_lames, haute_piece, gardbrace, besagews }, Spaulders { lames, besagews, pteruges }, Guards { size, shape, rows, lacing }, Cape { cut, length }, Discs { diameter, boss }, Ailettes { shape, size, heraldry }, Wing}`. `Cut`, `Wings`, `HautePiece` (`height`), `Span` (`guard`, `ailette`), `GuardShape`, `Lacing`, `CapeCut`, `Length`, `AiletteShape`, `Adornment::{None, Spikes(n), Horns, BeastHead, Skull}`, `Finish::{Plain, Tooled, Studded, RingMail}`.
+- `torso::roll(rng, kind, style, quality)`: a `TorsoForm` for a `TorsoKind::{Armour, ArmingVest}` (item kinds `TorsoArmour`, `ArmingVest`).
+- `TorsoForm { body, construction, style, material, back, over_mail, lined, vest, finish, cover, lacing, trim }`: `kind`, `allowed`, `padded` (takes Middle too: lined, or padding itself), `breast`, `sleeves`, `rigid`, `name`, `generic_name`, `specific_name`, `shape` (cells), `grams`, `grams_at(size)`. `TorsoBody::{Plate { breast, plackart, ridge, fluting, lance_rest }, Leather { breast, studded }, Mail { links, weave, rings, sleeves }, RingMail { sleeves }, Padded { quilting, sleeves }}`. `Rings::outside` (mm).
 - `Heraldry { field, charge, colour }` (`allowed`, `roll`), `Tincture` (`metal`), `Charge`: a simple coat of arms, for ailettes now and shields and surcoats later.
 - `hands::Hand::of(frame, side, digits)`: wrist, tip, length, palm, breadth, thickness, thumb, number of fingers, wrist radius, in millimetres. `Hand::digits(fingers)`: digits per hand from a body's finger count.
 
@@ -25,7 +30,7 @@ What all armour shares, and the pieces for each body location. Multi-location se
 
 ## Used by
 
-- `shared::item_form` (`ItemForm::Hands`, `ItemForm::Shoulders`, `give_form`), `shared::item` (a shoulder form's cells and weight), `shared::wear` (mittens fit any fingers), client `item_art` (gauntlet and shoulder models) and `debug_menu` (Item Pictures).
+- `shared::item_form` (`ItemForm::Hands`, `ItemForm::Shoulders`, `ItemForm::Torso`, `give_form`), `shared::item` (a shoulder or torso form's cells and weight, a torso form's padding: `Item::padded`), `shared::wear` (mittens fit any fingers), client `item_art` (gauntlet and shoulder models) and `debug_menu` (Item Pictures).
 
 ## Notes
 
@@ -36,4 +41,5 @@ What all armour shares, and the pieces for each body location. Multi-location se
 - Cuffs reach up the forearm over the arms' vambraces, 28 mm out from the skin, up to 200 mm from the wrist (agreed with the Arms work, whose pieces stay within 20 mm and end at the wrist).
 - Claws and knuckle spikes will give unarmed damage bonuses once combat has them (owner's decision).
 - Shoulders: one item is a pair, and a pair may be uneven (Milanese great left, lance cut on the right). Wings and sode reach over chest, back and upper arm but count only as Shoulders. Besagews and gardbraces are parts, not items. Classical plate spaulders are bronze and Mycenaean (Dendra), Classical laminar ones Roman; Japanese guards are sode, named by size; yokes and doublings are Classical. A style leans the kind: ailettes only European or fantasy, the wing only Steppe, guards more in regional styles. Adornments sit on top of any style. Edges agreed with Torso, Arms and Neck: rigid pieces lie outside the breastplate and gorget, lames end about 130 mm down the arm over the rerebrace.
-- Research: `docs/context/research-armour-hands.md`, `docs/context/research-armour-shoulders.md`.
+- Torso: one item per piece, Outer on Torso; the backplate is part of it (`back`), so Back stays free for packs. Lined pieces and padded jacks also take Middle, through `Item::padded` (form, not kind); the Arming Vest is Middle itself. A rigid piece may be `over_mail`: its own mail shirt under it, one item (owner's decision, no fourth layer). Plate's breast comes from the style (Milanese globose, Gothic waisted with a pointed plackart, Kastenbrust boxed, Greenwich peascod, Maximilian fluted, Classical muscle, bell or discs, Japanese tankō, Elven leaf, Dwarven panels); names follow the breast and back (Cuirass or Breastplate, Kardiophylax a disc without a back). Lamellar, scale, laminar, plates in cloth, plated mail, mirror, slat and rattan pieces come in a second PR. Weights from area × thickness × density, calibrated to a steel cuirass of about 5.3 kg. Edges agreed with Shoulders, Waist and Neck: rigid shells 25 mm off the skin, the hem at the waist with a flange 20 mm below, shoulder straps under pauldrons.
+- Research: `docs/context/research-armour-hands.md`, `docs/context/research-armour-shoulders.md`, `docs/context/research-armour-torso.md`.

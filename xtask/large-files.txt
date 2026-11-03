@@ -8,7 +8,7 @@ crates/client/src/common/mod.rs 894
 crates/client/src/connection/mod.rs 542
 crates/client/src/connection/socket.rs 304
 crates/client/src/debug_menu/menu.rs 692
-crates/client/src/debug_menu/panels.rs 1323
+crates/client/src/debug_menu/panels.rs 1171
 crates/client/src/dev_tools/debug_api.rs 674
 crates/client/src/dev_tools/fake_input.rs 424
 crates/client/src/dev_tools/mod.rs 685
@@ -26,10 +26,10 @@ crates/client/src/ground/mod.rs 626
 crates/client/src/inventory/mod.rs 728
 crates/client/src/inventory/panels.rs 780
 crates/client/src/item_art/armour/hands.rs 1007
-crates/client/src/item_art/armour/shoulders.rs 1482
+crates/client/src/item_art/armour/shoulders.rs 1367
 crates/client/src/item_art/blade.rs 884
 crates/client/src/item_art/gem.rs 323
-crates/client/src/item_art/mod.rs 574
+crates/client/src/item_art/mod.rs 531
 crates/client/src/item_art/ring.rs 309
 crates/client/src/minimap/frame.rs 342
 crates/client/src/minimap/grid.rs 337
@@ -62,8 +62,8 @@ crates/shared/src/blade/table.rs 1144
 crates/shared/src/celestial.rs 607
 crates/shared/src/creature.rs 403
 crates/shared/src/dungeon.rs 541
-crates/shared/src/item.rs 1483
-crates/shared/src/item_form.rs 546
+crates/shared/src/item.rs 1362
+crates/shared/src/item_form.rs 531
 crates/shared/src/pathfinding.rs 457
 crates/shared/src/poi.rs 364
 crates/shared/src/protocol/mod.rs 429
@@ -73,5 +73,5 @@ crates/shared/src/site/cave.rs 746
 crates/shared/src/site/farm.rs 430
 crates/shared/src/site/mod.rs 753
 crates/shared/src/site/town.rs 1476
-crates/shared/src/wear.rs 319
+crates/shared/src/wear.rs 317
 xtask/src/api.rs 363

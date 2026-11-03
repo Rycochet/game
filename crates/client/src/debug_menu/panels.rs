@@ -6,9 +6,6 @@ use std::collections::HashMap;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use shared::armour::hands::{self, HandsPiece};
-use shared::armour::shoulders::{self, ShouldersKind};
-use shared::armour::{Construction, Style};
 use shared::body::Frame;
 use shared::creature::{CreatureKind, Size};
 use shared::dungeon::Cell;
@@ -28,7 +25,7 @@ use super::bodies::BodiesToShow;
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, Preferences, ServerClock};
 use crate::connection::ToServer;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
-use crate::item_art::{HandsLook, ItemPictures, Look, ShouldersLook, look_of};
+use crate::item_art::{ItemPictures, Look, look_of};
 use crate::widgets::{
     ALLOWED, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Dropdown, DropdownChosen,
     GRID_COLOUR, INK, Pressable, RaisePanel, TabChosen, TextBox, TextSize, field_label, raised_box,
@@ -37,6 +34,8 @@ use crate::widgets::{
     spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
 use shared::blade::Family;
+
+mod armour;
 
 const FONT: TextSize = TextSize::Medium;
 /// How much of the window's height Show Widgets may take before it scrolls.
@@ -253,6 +252,7 @@ pub(super) enum PicturePage {
     Bodies,
     Hands,
     Shoulders,
+    Torso,
     Weapons,
     #[default]
     Gems,
@@ -260,10 +260,11 @@ pub(super) enum PicturePage {
 }
 
 impl PicturePage {
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 7] = [
         Self::Bodies,
         Self::Hands,
         Self::Shoulders,
+        Self::Torso,
         Self::Weapons,
         Self::Gems,
         Self::Rings,
@@ -274,6 +275,7 @@ impl PicturePage {
             Self::Bodies => "Bodies",
             Self::Hands => "Hands",
             Self::Shoulders => "Shoulders",
+            Self::Torso => "Torso",
             Self::Weapons => "Weapons",
             Self::Gems => "Gems",
             Self::Rings => "Rings",
@@ -293,8 +295,9 @@ impl PicturePage {
     fn spawn(self, grid: &mut ChildSpawnerCommands) {
         match self {
             Self::Bodies => spawn_body_row(grid),
-            Self::Hands => spawn_hands_rows(grid),
-            Self::Shoulders => spawn_shoulders_rows(grid),
+            Self::Hands => armour::spawn_hands_rows(grid),
+            Self::Shoulders => armour::spawn_shoulders_rows(grid),
+            Self::Torso => armour::spawn_torso_rows(grid),
             Self::Weapons => {
                 for family in Family::ALL {
                     spawn_blade_row(grid, family);
@@ -325,15 +328,8 @@ enum Shown {
     Blade(Family, u128),
     /// A bare body to dress.
     Body(CreatureKind),
-    /// Hand pieces of this kind as the server would roll them from this number, with
-    /// this many digits on each hand.
-    Hands(HandsPiece, u64, u8),
-    /// The first plate gauntlets rolled in this style.
-    HandsStyle(Style),
-    /// Shoulder pieces of this kind as the server would roll them from this number.
-    Shoulders(ShouldersKind, u64),
-    /// The first plate pauldrons rolled in this style.
-    ShouldersStyle(Style),
+    /// A piece of armour.
+    Armour(armour::ArmourShown),
 }
 
 impl Shown {
@@ -360,73 +356,8 @@ impl Shown {
                 look_of(&blade)
             }
             Self::Body(kind) => Frame::of(kind).map(|_| Look::Body { kind }),
-            Self::Hands(piece, seed, digits) => {
-                let form = hands::roll(&mut Seed::new(seed).rng(), piece, None);
-                Some(hands_look(form, digits, quality))
-            }
-            Self::HandsStyle(style) => {
-                let plate = (0..50)
-                    .map(|seed| {
-                        hands::roll(
-                            &mut Seed::new(seed).rng(),
-                            HandsPiece::Gauntlets,
-                            Some(style),
-                        )
-                    })
-                    // The first in plate, or the first at all where the style has none.
-                    .reduce(|first, form| {
-                        let plate = Construction::Plate;
-                        if first.construction != plate && form.construction == plate {
-                            form
-                        } else {
-                            first
-                        }
-                    })?;
-                Some(hands_look(plate, 5, quality))
-            }
-            Self::Shoulders(kind, seed) => {
-                let form = shoulders::roll(&mut Seed::new(seed).rng(), Some(kind), None);
-                Some(shoulders_look(form, quality))
-            }
-            Self::ShouldersStyle(style) => {
-                let plate = (0..50)
-                    .map(|seed| {
-                        shoulders::roll(
-                            &mut Seed::new(seed).rng(),
-                            Some(ShouldersKind::Pauldrons),
-                            Some(style),
-                        )
-                    })
-                    // The first in plate, or the first at all where the style has none.
-                    .reduce(|first, form| {
-                        let plate = Construction::Plate;
-                        if first.construction != plate && form.construction == plate {
-                            form
-                        } else {
-                            first
-                        }
-                    })?;
-                Some(shoulders_look(plate, quality))
-            }
+            Self::Armour(shown) => shown.look(quality),
         }
-    }
-}
-
-/// Shoulder pieces in the cells their form takes up.
-fn shoulders_look(form: shoulders::ShouldersForm, quality: Quality) -> Look {
-    let shape = form.shape();
-    Look::Shoulders {
-        shoulders: ShouldersLook::new(form, (shape.width, shape.height)),
-        quality: Some(quality),
-    }
-}
-
-/// Hand pieces as a pair of gauntlets takes them up.
-fn hands_look(form: hands::HandsForm, digits: u8, quality: Quality) -> Look {
-    let shape = ItemKind::Gauntlets.def().shape;
-    Look::Hands {
-        hands: HandsLook::new(form, digits, (shape.width, shape.height)),
-        quality: Some(quality),
     }
 }
 
@@ -581,86 +512,6 @@ fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
     });
 }
 
-/// Rolled gauntlets (the second row with a kobold's hands), demi-gauntlets and padded
-/// gloves, and plate gauntlets in each style.
-fn spawn_hands_rows(grid: &mut ChildSpawnerCommands) {
-    let rows = [
-        ("Gauntlets", HandsPiece::Gauntlets, 5),
-        ("", HandsPiece::Gauntlets, 4),
-        ("Demi, Padded", HandsPiece::Demi, 5),
-    ];
-    for (row, (label, piece, digits)) in rows.into_iter().enumerate() {
-        grid.spawn(Node {
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|cells| {
-            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
-            for cell in 0..RING_COLUMNS as u64 {
-                let seed = row as u64 * 100 + cell;
-                // Half the last row padded gloves.
-                let piece = if piece == HandsPiece::Demi && cell >= RING_COLUMNS as u64 / 2 {
-                    HandsPiece::Padded
-                } else {
-                    piece
-                };
-                spawn_picture(cells, Shown::Hands(piece, seed, digits));
-            }
-        });
-    }
-    spawn_style_rows(grid, Shown::HandsStyle);
-}
-
-/// Rolled shoulder pieces, a row for the commonest kinds and shared rows for the rest,
-/// and plate pauldrons in each style.
-fn spawn_shoulders_rows(grid: &mut ChildSpawnerCommands) {
-    use ShouldersKind::{Ailettes, Cape, Discs, Guards, Pauldrons, Spaulders, Wing};
-    let rows: [(&str, &[ShouldersKind]); 5] = [
-        ("Pauldrons", &[Pauldrons]),
-        ("Spaulders", &[Spaulders]),
-        ("Guards", &[Guards]),
-        ("Cape, Discs", &[Cape, Discs]),
-        ("Ailettes, Wing", &[Ailettes, Wing]),
-    ];
-    for (row, (label, kinds)) in rows.into_iter().enumerate() {
-        grid.spawn(Node {
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|cells| {
-            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
-            for cell in 0..RING_COLUMNS {
-                // A shared row's last kind gets only its last picture.
-                let kind = if cell + 1 == RING_COLUMNS {
-                    kinds[kinds.len() - 1]
-                } else {
-                    kinds[0]
-                };
-                let seed = row as u64 * 100 + cell as u64;
-                spawn_picture(cells, Shown::Shoulders(kind, seed));
-            }
-        });
-    }
-    spawn_style_rows(grid, Shown::ShouldersStyle);
-}
-
-/// A picture in each style, as many to a row as rings have.
-fn spawn_style_rows(grid: &mut ChildSpawnerCommands, shown: fn(Style) -> Shown) {
-    for (row, styles) in Style::ALL.chunks(RING_COLUMNS as usize).enumerate() {
-        grid.spawn(Node {
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|cells| {
-            let label = if row == 0 { "Styles" } else { "" };
-            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
-            for &style in styles {
-                spawn_picture(cells, shown(style));
-            }
-        });
-    }
-}
-
 fn spawn_blade_row(grid: &mut ChildSpawnerCommands, family: Family) {
     grid.spawn(Node {
         align_items: AlignItems::Center,
@@ -763,10 +614,7 @@ pub(super) fn show_pictures(
             // A weapon or gauntlets need their full size for the black edge to be right, and
             // more room.
             let (box_side, pixels) = match picture.0 {
-                Shown::Hands(..)
-                | Shown::HandsStyle(_)
-                | Shown::Shoulders(..)
-                | Shown::ShouldersStyle(_) => (
+                Shown::Armour(_) => (
                     HANDS_PICTURE,
                     look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
                 ),

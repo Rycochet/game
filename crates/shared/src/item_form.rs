@@ -9,12 +9,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::armour::hands::{self, HandsForm, HandsPiece};
 use crate::armour::shoulders::{self, ShouldersForm};
+use crate::armour::torso::{self, TorsoForm, TorsoKind};
 use crate::blade::{self, BladeForm};
 use crate::creature::Size;
 use crate::id::Id;
-use crate::item::{Item, ItemKind, Made, Quality, Shape};
+use crate::item::{Item, ItemKind, Made, Quality};
 use crate::material::Material;
 use crate::rng::Rng;
+
+mod limits;
+
+pub use limits::Limits;
 
 /// What an item is like, for kinds that have this.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,41 +31,8 @@ pub enum ItemForm {
     Hands(HandsForm),
     /// A pair of pauldrons or other shoulder pieces.
     Shoulders(ShouldersForm),
-}
-
-/// What whoever asks for an item needs of it. Anything left out doesn't matter.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Limits {
-    /// A space it must fit in, turned either way.
-    pub fits: Option<(u8, u8)>,
-    /// How many cells its long side must at least be.
-    pub at_least_long: Option<u8>,
-    pub most_grams: Option<u32>,
-    pub least_grams: Option<u32>,
-    /// Whose size to make it nearest, if it has to be scaled.
-    pub wielder: Option<Size>,
-}
-
-impl Limits {
-    pub const NONE: Self = Self {
-        fits: None,
-        at_least_long: None,
-        most_grams: None,
-        least_grams: None,
-        wielder: None,
-    };
-
-    /// Whether something of this shape and weight will do.
-    pub fn allows(&self, shape: Shape, grams: u32) -> bool {
-        let long = shape.width.max(shape.height);
-        let short = shape.width.min(shape.height);
-        let fits = self
-            .fits
-            .is_none_or(|(one, other)| short <= one.min(other) && long <= one.max(other));
-        fits && self.at_least_long.is_none_or(|least| long >= least)
-            && self.most_grams.is_none_or(|most| grams <= most)
-            && self.least_grams.is_none_or(|least| grams >= least)
-    }
+    /// A cuirass or other torso armour, or an arming vest.
+    Torso(TorsoForm),
 }
 
 impl ItemForm {
@@ -72,6 +44,7 @@ impl ItemForm {
             Self::Blade(blade) => blade.name().to_owned(),
             Self::Hands(hands) => hands.name().to_owned(),
             Self::Shoulders(shoulders) => shoulders.name().to_owned(),
+            Self::Torso(torso) => torso.name().to_owned(),
         }
     }
 
@@ -79,7 +52,11 @@ impl ItemForm {
     pub fn gems(&self) -> impl Iterator<Item = &Item> {
         let settings = match self {
             Self::Ring(ring) => ring.settings.as_slice(),
-            Self::Gem(_) | Self::Blade(_) | Self::Hands(_) | Self::Shoulders(_) => &[],
+            Self::Gem(_)
+            | Self::Blade(_)
+            | Self::Hands(_)
+            | Self::Shoulders(_)
+            | Self::Torso(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }
@@ -296,6 +273,14 @@ pub fn give_form(item: &mut Item, size: Option<Size>, new_id: &mut impl FnMut() 
         ItemKind::ShoulderArmour => {
             let shoulders = shoulders::roll(&mut rng, None, None);
             (ItemForm::Shoulders(shoulders), size.unwrap_or(Size::Medium))
+        }
+        ItemKind::TorsoArmour | ItemKind::ArmingVest => {
+            let kind = match item.kind {
+                ItemKind::ArmingVest => TorsoKind::ArmingVest,
+                _ => TorsoKind::Armour,
+            };
+            let torso = torso::roll(&mut rng, kind, None, quality);
+            (ItemForm::Torso(torso), size.unwrap_or(Size::Medium))
         }
         kind => {
             let Some(family) = kind.blade_family() else {
