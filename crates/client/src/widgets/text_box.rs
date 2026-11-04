@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
 use super::soft_keyboard;
-use super::theme::SUNKEN_BACKGROUND;
+use super::theme::{HINT_TEXT, SUNKEN_BACKGROUND};
 use super::{ButtonPressed, INK, Pressable, TextSize, sunken_border};
 
 const CARET: &str = "_";
@@ -34,11 +34,17 @@ pub struct TextBox {
     pub takes_keys: bool,
     /// What it says is wrong: its edge shows it, whoever has the keyboard.
     pub error: bool,
+    /// Written after the text (and the caret) in grey, and not part of it.
+    pub suffix: String,
 }
 
 /// The writing of a `TextBox`, whose entity it holds.
 #[derive(Component)]
 pub(super) struct TextBoxLabel(Entity);
+
+/// The grey writing after it (`TextBox::suffix`), part of the label's text.
+#[derive(Component)]
+pub(super) struct TextBoxSuffix(Entity);
 
 /// Which box has the keyboard. Something that owns a box can set it.
 #[derive(Resource, Default)]
@@ -81,12 +87,21 @@ pub fn spawn_text_box<'a>(
         sunken_border(),
     ));
     let entity = holder.id();
-    holder.with_child((
-        TextBoxLabel(entity),
-        Text::new(""),
-        size.font(),
-        TextColor(INK),
-    ));
+    holder.with_children(|holder| {
+        holder
+            .spawn((
+                TextBoxLabel(entity),
+                Text::new(""),
+                size.font(),
+                TextColor(INK),
+            ))
+            .with_child((
+                TextBoxSuffix(entity),
+                TextSpan::default(),
+                size.font(),
+                TextColor(HINT_TEXT),
+            ));
+    });
     holder
 }
 
@@ -216,7 +231,15 @@ pub(super) fn show_text_boxes(
     focus: Res<TextFocus>,
     boxes: Query<&TextBox>,
     mut labels: Query<(&TextBoxLabel, &mut Text)>,
+    mut suffixes: Query<(&TextBoxSuffix, &mut TextSpan)>,
 ) {
+    for (suffix, mut span) in &mut suffixes {
+        if let Ok(text_box) = boxes.get(suffix.0)
+            && span.0 != text_box.suffix
+        {
+            span.0.clone_from(&text_box.suffix);
+        }
+    }
     for (label, mut text) in &mut labels {
         let Ok(text_box) = boxes.get(label.0) else {
             continue;

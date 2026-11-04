@@ -1,8 +1,8 @@
 //! Connect, from the startup menu: a box for a server's address, the servers
 //! connected to before (click one to put it in the box, or bin it), and, on
 //! native, a padlock to paste in the server's certificate so that only it is
-//! accepted. Connect's own Connect plays there. See `form.rs` for what the
-//! presses do.
+//! accepted. Connect's own Connect plays there, once `check.rs` has found a
+//! server at the address. See `form.rs` for what the presses do.
 
 use bevy::prelude::*;
 
@@ -15,11 +15,15 @@ use crate::widgets::{
 };
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod check;
 mod form;
+mod mark;
 mod popups;
 mod show;
 
+pub(super) use check::{AddressCheck, check_address};
 pub(super) use form::{ConnectForm, fill_server_list, open_connect, use_connect};
+pub(super) use mark::show_mark;
 pub(super) use popups::spawn_popups;
 pub(super) use show::show_connect;
 
@@ -90,7 +94,11 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
                     takes_keys: true,
                     ..default()
                 };
-                spawn_text_box(row, text_box, FONT, node).insert(AddressBox);
+                spawn_text_box(row, text_box, FONT, node)
+                    .insert(AddressBox)
+                    .with_children(|address_box| mark::spawn_mark(address_box, BUTTON_ROW))
+                    .entry::<Node>()
+                    .and_modify(|mut node| node.padding.right = px(mark::MARK_ROOM));
                 let node = Node {
                     width: px(BUTTON_ROW),
                     height: px(BUTTON_ROW),

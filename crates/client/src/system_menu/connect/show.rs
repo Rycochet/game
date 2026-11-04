@@ -1,11 +1,13 @@
-//! Keeping Connect up to date as things are typed: Connect and the padlock only
-//! work for an address, the padlock is shut while a certificate is kept for it,
+//! Keeping Connect up to date as things are typed: Connect only works once a
+//! server has been found at the address (`check.rs`), the padlock only for an
+//! address, the padlock is shut while a certificate is kept for it,
 //! and the certificate popup's Keep only works for a certificate.
 
 use bevy::prelude::*;
 
 use super::super::SystemMenu;
 use super::super::icons::ConnectIcons;
+use super::check::AddressCheck;
 use super::form::{ConnectForm, address_in, pasted_key};
 use super::popups::{CertificateBox, CertificateStatus, KeepButton};
 use super::{AddressBox, ConnectNowButton, PadlockButton};
@@ -24,6 +26,7 @@ fn enabled_if(usable: bool) -> ButtonState {
 pub(in crate::system_menu) fn show_connect(
     menu: Res<SystemMenu>,
     form: Res<ConnectForm>,
+    check: Res<AddressCheck>,
     preferences: Res<Preferences>,
     icons: Res<ConnectIcons>,
     address: Single<&TextBox, (With<AddressBox>, Without<CertificateBox>)>,
@@ -52,8 +55,9 @@ pub(in crate::system_menu) fn show_connect(
         return;
     }
     let in_box = address_in(&address.text);
+    let found = check.ready_for(&address.text).is_some();
     for mut state in &mut connect {
-        state.set_if_neq(enabled_if(in_box.is_some()));
+        state.set_if_neq(enabled_if(found));
     }
     let key = in_box
         .as_ref()

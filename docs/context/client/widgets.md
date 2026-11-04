@@ -12,7 +12,8 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/text_box.rs`: `TextBox`, `TextFocus`, `TextEdited`, `SoftKeyPressed`, `spawn_text_box`, and the systems giving boxes the keyboard. Unit tests.
 - `crates/client/src/widgets/soft_keyboard.rs`: in browsers, a hidden HTML input for the on-screen keyboard. Does nothing natively.
 - `crates/client/src/widgets/dropdown.rs`: `Dropdown`, `DropdownChosen`, `spawn_dropdown`, `spawn_icon_dropdown`, and the open list. Unit tests. In `dropdown/`: `parts.rs`, `rows.rs`, `run.rs`, `list.rs`, `show.rs`.
-- `crates/client/src/widgets/hover_tip.rs`: `HoverTip`, `show_hover_tips` (`PostUpdate`, after items' names, before the tooltip is shown).
+- `crates/client/src/widgets/spinner.rs`: `Spinner` (pub: a node turning on the real clock while on show), its picture drawn at start (`make_spinner_picture`), `picture_spinners`, `turn_spinners`. Unit test.
+- `crates/client/src/widgets/hover_tip.rs`: `HoverTip` (an empty one shows nothing), `show_hover_tips` (`PostUpdate`, after items' names, before the tooltip is shown).
 - `crates/client/src/widgets/filter_list.rs`: `matches_filter`, `next_highlight`, `HighlightStep`, shared by the debug menu and dropdowns with search. Unit tests.
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
 - `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `spawn_toggle_row`, `TabChosen`, `press_tabs`. Unit test.
@@ -29,6 +30,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Public API
 
+- `Spinner`: give a sized node it to show a turning spinner while it is on show.
 - `WidgetsPlugin`; `WidgetSystems` (system sets, `Presses`, `Front`, then `Modal`): anything covering the screen reads presses in `Modal`, or `Front` to be ahead of those (the system menu); anything else taking clicks in `PreUpdate` runs after both.
 - `INTERFACE_PERCENTS`: the sizes Settings offers after Auto. `TouchOnly(bool)` (resource): the device has only a touch screen (browsers say, with `any-pointer: fine`; natively never), so touch is on whatever the setting.
 - `INK`, `PARCHMENT`, `CLOSE_PIXELS`, `BUTTON_PADDING`, `PANEL_EDGE`.
@@ -40,7 +42,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `Pressable` (put it on a button): clicks on it become `ButtonPressed(entity)`, unless disabled, and go no further.
 - `spawn_moveable_panel(commands, title, at)`: returns the panel and the entity to put its contents in. It fits its contents, has lighter stripes either side of its title to tell it from a static panel, is moved by its title bar and despawned by its close button; it opens in front of other panels; a press on it brings it to the front, as does `RaisePanel(entity)`.
 - `spawn_slider(parent, value, track, width)`: a track (a picture, or plain) with a mark along it. Values are `0..=1`. `SliderMoved(entity, value)` says the player moved it; add a marker to tell which.
-- `field_label(words)`: small words to go above a box. `spawn_text_box(parent, TextBox { text, prefix, digits_only, takes_keys, error }, size, node)`: sunken, its edge showing `error`, then the keyboard, then the pointer; a click or tap gives it the keyboard. `takes_keys` keeps all keys from the game while it has them (Return, Esc or a click elsewhere gives them up); off for a box in something that reads keys itself, which sets `TextFocus` to its box and reads `TextEdited(entity)` and `SoftKeyPressed`.
+- `field_label(words)`: small words to go above a box. `spawn_text_box(parent, TextBox { text, prefix, digits_only, takes_keys, error, suffix }, size, node)` (`suffix`: grey words after the text and caret, a `TextSpan` of the label): sunken, its edge showing `error`, then the keyboard, then the pointer; a click or tap gives it the keyboard. `takes_keys` keeps all keys from the game while it has them (Return, Esc or a click elsewhere gives them up); off for a box in something that reads keys itself, which sets `TextFocus` to its box and reads `TextEdited(entity)` and `SoftKeyPressed`.
 - `spawn_dropdown(parent, Dropdown { options, selected, searchable, icons, greyed }, size, node)`: `DropdownChosen(entity, index)` says what the player chose. With `searchable`, the open list has a text box with the keyboard, narrowing it as letters are typed. `icons` (one per option, or none) go beside each option in the list; options marked in `greyed` show disabled and can't be chosen. `spawn_icon_dropdown(parent, dropdown, node)`: the same as a small icon button showing the chosen option's icon (the inventory's filters); `icons` may be filled in after spawning.
 - `spawn_toggle_row(parent, labels, selected, size)`: joined buttons of which one is chosen, to pick an option. `spawn_tabs(parent, labels, selected, size)`: the same as folder tabs, to switch views. Both return the row; `TabChosen(row, index)` says the player chose another.
 - `spawn_progress_bar(parent, full, (track, fill), node, words)`, `Progress(full)`: a bar with writing over it, in whatever colours suit where it is.

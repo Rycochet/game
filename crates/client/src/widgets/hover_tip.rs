@@ -12,7 +12,8 @@ use crate::common::UiPointer;
 const DELAY: f32 = 0.5;
 const OFFSET: Vec2 = Vec2::new(16.0, 16.0);
 
-/// What this node and everything in it is, shown on hovering.
+/// What this node and everything in it is, shown on hovering (nothing while
+/// it is empty).
 #[derive(Component, Clone, Debug)]
 pub struct HoverTip(pub String);
 
@@ -69,7 +70,10 @@ pub(in crate::widgets) fn show_hover_tips(
     if now - start < DELAY || tooltip.0.is_some() {
         return;
     }
-    if let Ok(tip) = tips.get(holder) {
+    // An empty one has nothing to say for now.
+    if let Ok(tip) = tips.get(holder)
+        && !tip.0.is_empty()
+    {
         tooltip.0 = Some(ItemTip {
             words: tip.0.clone(),
             quality: None,

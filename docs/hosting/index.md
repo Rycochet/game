@@ -57,7 +57,7 @@ These can't be mixed: settings that disagree stop the server from starting, and 
 
 ## Connecting a native client
 
-Players choose **Connect...** on the startup menu and type the server's address, such as `game.example.com` or `game.example.com:9000`. Without a port, it is 8081. The client remembers the servers it has joined, and Play goes back to the last one.
+Players choose **Connect...** on the startup menu and type the server's address, such as `game.example.com` or `game.example.com:9000`. Without a port, the client tries 8081 and then 443, so a server on either needs no port typed; it asks `/_version` to tell a Hall of Worlds server from any other web server. The client remembers the servers it has joined, and Play goes back to the last one.
 
 The client accepts any certificate the server has, so you can change yours whenever you like. A player who wants to be sure they've reached your server, and not an impostor, can paste its certificate (from `https://<your server>:8081/certificate`) or its key's fingerprint into the padlock beside the address. From then on, only a server with that key is accepted, and the client says plainly why if it isn't. The fingerprint is in the server's log when it starts:
 
