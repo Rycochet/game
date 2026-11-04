@@ -7,8 +7,8 @@ use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
 
 use super::looks::{
-    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, ShouldersLook, TorsoLook,
-    WaistLook,
+    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, ShouldersLook,
+    TorsoLook, WaistLook,
 };
 
 /// Everything a picture shows. Ids stay out of it, so things that look the same share
@@ -67,6 +67,11 @@ pub enum Look {
         feet: FeetLook,
         quality: Option<Quality>,
     },
+    /// A collar, gorget, bevor, aventail or mantle, as worn.
+    Neck {
+        neck: NeckLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -86,6 +91,7 @@ impl Look {
             Self::Legs { legs, .. } => legs.cells,
             Self::Waist { waist, .. } => waist.cells,
             Self::Feet { feet, .. } => feet.cells,
+            Self::Neck { neck, .. } => neck.cells,
             Self::Body { .. } => super::body::CELLS,
         }
     }

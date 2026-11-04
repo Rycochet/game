@@ -70,6 +70,11 @@ impl ItemKind {
             | Self::Chausses
             | Self::FootArmour
             | Self::Coif
+            | Self::Collar
+            | Self::Gorget
+            | Self::Bevor
+            | Self::Aventail
+            | Self::Mantle
             | Self::DemiGauntlets
             | Self::FullArmour
             | Self::Gambeson
