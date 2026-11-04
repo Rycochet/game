@@ -43,6 +43,7 @@ impl Client {
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),
+            sent_roads: BTreeSet::new(),
             reveal_pois: world_map::ALL_POIS_KNOWN,
             map: 0,
             last_step: None,

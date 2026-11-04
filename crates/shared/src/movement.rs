@@ -129,7 +129,7 @@ const ELEVATIONS_PER_HEIGHT: f64 = 4.0;
 /// drawing routes over real mountains: at 9 they go straight over summits, at
 /// 20 they only shave them, at 45 they go round a mountain about 4 chunks across
 /// (a bigger one's detour costs more than its climb), and at 90 detours get wide.
-const SLOPE_COST: u32 = 45;
+pub(crate) const SLOPE_COST: u32 = 45;
 
 /// Where `step` from `(x, y)` leads on the world map, if it can be taken: onto
 /// dry ground or ice. Anyone standing in open water may step anywhere, so that

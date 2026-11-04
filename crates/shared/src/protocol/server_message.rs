@@ -10,6 +10,7 @@ use crate::ground::Load;
 use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
 use crate::mob::EntityLook;
+use crate::road::Road;
 use crate::sheet::Sheet;
 
 /// From the server to a client.
@@ -79,6 +80,10 @@ pub enum ServerMessage {
     GoingOffline(String),
     /// A world map chunk, as this player knows it.
     WorldChunk(WorldChunk),
+    /// A road between two towns, sent once it is worked out to anyone near
+    /// enough to see any of it (towns are seen by all, so it gives nothing
+    /// away). Sent once per connection; the client keeps it.
+    Road(Road),
     /// The player is now on this site level; its cells follow.
     EnterLevel(LevelInfo),
     /// Cells of the current level.

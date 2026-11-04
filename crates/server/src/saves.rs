@@ -8,11 +8,14 @@ use std::{fs, io};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use shared::protocol::CharacterId;
+use shared::road::RoadLink;
 use shared::world::WorldId;
 use time::OffsetDateTime;
 
 use crate::accounts::{AccountId, AccountSave, LoginSave};
-use crate::storage::{CharacterSave, OLDEST_SAVE_FORMAT, SAVE_FORMAT, SiteId, SiteSave, WorldSave};
+use crate::storage::{
+    CharacterSave, OLDEST_SAVE_FORMAT, RoadSave, SAVE_FORMAT, SiteId, SiteSave, WorldSave,
+};
 
 /// Says which format a data folder's saves are in.
 const FORMAT_FILE: &str = "save_format.ron";
@@ -28,6 +31,8 @@ pub(crate) enum SaveKey {
     /// All of a world's sites at once: only ever removed.
     Sites(WorldId),
     Site(WorldId, SiteId),
+    /// A road worked out once, kept so it needn't be again.
+    Road(WorldId, RoadLink),
     Character(CharacterId),
     Account(AccountId),
     /// By the hash of the login.
@@ -40,6 +45,7 @@ pub(crate) enum SaveKey {
 pub(crate) enum Save {
     World(WorldSave),
     Site(SiteSave),
+    Road(RoadSave),
     Character(CharacterSave),
     Account(AccountSave),
     Login(LoginSave),
@@ -76,6 +82,7 @@ pub(crate) trait SaveBackend: Send + Sync {
 ///
 /// - `worlds/<world id>/world.ron`: the world.
 /// - `worlds/<world id>/sites/<site>.ron`: a site that has been entered.
+/// - `worlds/<world id>/roads/<a>_<b>.ron`: a road between the towns in chunks `a` and `b`.
 /// - `characters/<id>.ron`: a character, who can move between worlds.
 /// - `accounts/<id>.ron`: an account and its characters.
 /// - `logins/<hash>.ron`: which account a way of logging in belongs to.
@@ -103,6 +110,10 @@ impl FileBackend {
                 .world_folder(*id)
                 .join("sites")
                 .join(site_file_name(*site)),
+            SaveKey::Road(id, link) => self.world_folder(*id).join("roads").join(format!(
+                "{}_{}_{}_{}.ron",
+                link.a.x, link.a.y, link.b.x, link.b.y
+            )),
             SaveKey::Character(id) => self.data.join("characters").join(format!("{}.ron", id.0)),
             SaveKey::Account(id) => self.data.join("accounts").join(format!("{}.ron", id.0)),
             SaveKey::Login(hash) => self.data.join("logins").join(format!("{hash}.ron")),
@@ -131,6 +142,7 @@ impl SaveBackend for FileBackend {
             SaveKey::World(_) => read(&file)?.map(Save::World),
             SaveKey::Sites(_) => None,
             SaveKey::Site(..) => read(&file)?.map(Save::Site),
+            SaveKey::Road(..) => read(&file)?.map(Save::Road),
             SaveKey::Character(_) => read(&file)?.map(Save::Character),
             SaveKey::Account(_) => read(&file)?.map(Save::Account),
             SaveKey::Login(_) => read(&file)?.map(Save::Login),
@@ -142,6 +154,7 @@ impl SaveBackend for FileBackend {
         match save {
             Save::World(save) => write(&file, save),
             Save::Site(save) => write(&file, save),
+            Save::Road(save) => write(&file, save),
             Save::Character(save) => write(&file, save),
             Save::Account(save) => write(&file, save),
             Save::Login(save) => write(&file, save),

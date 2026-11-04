@@ -25,6 +25,7 @@ pub mod poi;
 pub mod protocol;
 pub mod river;
 pub mod rng;
+pub mod road;
 pub mod sheet;
 pub mod shop;
 pub mod showcase;

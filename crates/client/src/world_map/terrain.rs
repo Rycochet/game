@@ -15,6 +15,7 @@ mod edges;
 mod grid;
 mod height_cache;
 mod rivers;
+mod roads;
 mod square;
 mod window;
 
@@ -25,6 +26,7 @@ pub use grid::TerrainGrid;
 pub use height_cache::HeightCache;
 pub use rivers::build_rivers;
 use rivers::clip;
+pub use roads::build_roads;
 use square::Corner;
 pub use square::ViewSquare;
 pub use window::build_window;

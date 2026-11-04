@@ -1,4 +1,5 @@
-//! The scene's parts: its root, what follows the player, terrain, edges and rivers.
+//! The scene's parts: its root, what follows the player, terrain, edges, rivers
+//! and roads.
 
 use bevy::prelude::*;
 
@@ -23,8 +24,12 @@ pub(super) struct RiverStrips;
 #[derive(Component)]
 pub(super) struct RiverBanks;
 
-/// The meshes of the rivers' strips and banks.
-pub(super) type RiverMeshes<'w, 's> = (
+#[derive(Component)]
+pub(super) struct RoadStrips;
+
+/// The meshes of the rivers' strips and banks, and the roads.
+pub(super) type StripMeshes<'w, 's> = (
     Single<'w, 's, &'static Mesh3d, With<RiverStrips>>,
     Single<'w, 's, &'static Mesh3d, With<RiverBanks>>,
+    Single<'w, 's, &'static Mesh3d, With<RoadStrips>>,
 );

@@ -20,6 +20,7 @@ mod ids;
 mod latency;
 mod lets_encrypt;
 mod network;
+mod roads;
 mod save_queue;
 mod saves;
 mod sites;
@@ -143,6 +144,7 @@ impl Plugin for ServerPlugin {
                 (
                     advance_action_clock,
                     connections::handle_messages,
+                    connections::send_roads,
                     connections::run_mobs,
                     connections::sync_entities,
                     connections::sync_ground,

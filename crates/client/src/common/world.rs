@@ -13,7 +13,7 @@ use shared::weather::WeatherField;
 use shared::world::WorldParams;
 use std::collections::BTreeMap;
 
-use super::{GameClock, MOST_PLANETS_IN_AN_AREA, Weather};
+use super::{GameClock, KnownRoads, MOST_PLANETS_IN_AN_AREA, Weather};
 
 /// The world the player is in, its surface generator and the pois the
 /// server has told the client about. Only exists once the server has said
@@ -30,6 +30,8 @@ pub struct CurrentWorld {
     /// The ground as far as walking goes (the server's rules).
     pub ground: WorldGround,
     pub pois: KnownPois,
+    /// The roads the server has told of.
+    pub roads: KnownRoads,
 }
 
 impl CurrentWorld {
@@ -44,6 +46,7 @@ impl CurrentWorld {
             weather: WeatherField::new(&params),
             celestial: Celestial::from_seed(params.seed),
             pois: KnownPois::new(surface.width()),
+            roads: KnownRoads::default(),
             ground: WorldGround::new(&params),
             surface,
             params,

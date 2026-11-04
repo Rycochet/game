@@ -28,6 +28,8 @@ pub struct TerrainGrid {
     /// What the shader grows here: trees, low growth, how narrow the trees
     /// are and how lush. No trees or growth except on open land.
     pub(super) covers: Vec<Vec4>,
+    /// Whether it shows snow, which covers small roads.
+    pub(super) snowy: Vec<bool>,
     /// The grid point the window is centred on (the player's).
     pub(super) centre: (i64, i64),
 }
@@ -42,6 +44,7 @@ impl Default for TerrainGrid {
             normals: vec![[0.0, 1.0, 0.0]; len],
             colours: vec![[0.0; 4]; len],
             covers: vec![Vec4::ZERO; len],
+            snowy: vec![false; len],
             centre: (0, 0),
         }
     }
@@ -152,8 +155,9 @@ impl TerrainGrid {
                 // Snow, shore and water change with the weather and tide, so
                 // what shows is decided here rather than in `shared`.
                 let cover = cache.cover(vegetation, climate, surface, x, z);
-                let open_land =
-                    style.kind(sample, place, water_level, snow_line) == SurfaceKind::Land;
+                let kind = style.kind(sample, place, water_level, snow_line);
+                let open_land = kind == SurfaceKind::Land;
+                self.snowy[i] = kind == SurfaceKind::Snow;
                 self.covers[i] = Vec4::new(
                     if open_land {
                         cover.trees * rivers.open_at(x, z)
