@@ -4,7 +4,7 @@ Developer helpers driven by environment variables. Compiled for native only (`#[
 
 ## Files
 
-- `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`. Each group of `HOW_DEBUG_` variables is read by an `add(app)` in its own file: `start.rs` (position, entering a site, cells), `forced.rs` (`Forced`: stairs, fields, cursor), `menus.rs` (panels, menus, the full map), `inventory.rs`, `moving.rs`, `world.rs` (time, suns and moons, snow), `view.rs` (herbs, token, camera), `window.rs` (`HOW_DEBUG_WINDOW`, with `parse_window`), `screenshot.rs`, `keep_drawing.rs`, `skip_menu.rs`; `parse.rs` reads their values.
+- `crates/client/src/dev_tools/mod.rs`: `DevToolsPlugin`. Each group of `HOW_DEBUG_` variables is read by an `add(app)` in its own file: `start.rs` (position, entering a site, cells), `forced.rs` (`Forced`: stairs, fields, cursor), `menus.rs` (panels, menus, the full map), `inventory.rs`, `moving.rs`, `world.rs` (time, suns and moons, snow), `view.rs` (herbs, token, camera), `window.rs` (`HOW_DEBUG_WINDOW`, with `parse_window`), `title.rs` (`HOW_DEBUG_TITLE`), `screenshot.rs`, `keep_drawing.rs`, `skip_menu.rs`; `parse.rs` reads their values.
 - `crates/client/src/dev_tools/fake_input.rs`: only with the `debug-api` feature: fake mouse, touch, wheel, keys and typing for the debug API, queued and played a step a frame. In `fake_input/`: `play.rs`, `mouse.rs`, `keys.rs`, `wait.rs`.
 - `crates/client/src/dev_tools/debug_api.rs`: only with the `debug-api` feature: the client's debug API methods (see `docs/context/debug-api.md`), one for most of these variables, going through the same code: `Forced` (stairs style, fields stage and cursor kept as set, applied every frame by `apply_forced`), `open_map`, `turn_camera`, `token_of`, `cell_kind`. In `debug_api/`, by what the methods do: `state.rs` (state, screenshot), `places.rs`, `world.rs`, `items.rs`, `moving.rs`, `view.rs`, `drawing.rs`, `panels.rs`.
 
@@ -26,6 +26,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - `HOW_DEBUG_CELESTIAL=n`: the suns and moons of terrain seed `n`, not this world's, for their light only (the tide stays this world's, as the server has it). 272 has two suns and two moons, 142 two suns and five moons, 144 one blue sun and no moons.
 - `HOW_DEBUG_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as indexes into `TokenShape::ALL` / `Attitude::ALL` (e.g. `3,3` red hexagon, `4,0` white octagon); a third value `1` makes it completed; a fourth is an index into `TokenSize::ALL` (default 2, `Default`).
 - `HOW_DEBUG_WINDOW`: how the window opens, the same every run: `full-screen,WxH` (exclusive full screen at that resolution, physical pixels, or the nearest the screen has, with a warning), `full-screen` (borderless), `maximised`, or `WxH` (windowed, logical pixels, centred on the main monitor). Full screen opens on the main monitor. Sets `common::DisplayInUse` and turns `RememberWindow` off, so nothing about the window is saved over the player's own. It doesn't skip the startup menu. To check that views follow a resize while running, use the debug API's `client.window_size`, which also stops the window being saved.
+- `HOW_DEBUG_TITLE=text`: `text` and a space before the window's title (blank: unchanged), so the copies Claude starts read "Dev: Hall of Worlds" (`HOW_DEBUG_TITLE=Dev:`) beside the owner's. It doesn't skip the startup menu.
 - `HOW_DEBUG_VIEW=yaw[,pitch[,zoom]]`: start with the camera turned by `yaw` degrees (90 puts the camera in the east looking west, 180 looks south), tilted to `pitch` degrees above the horizon and zoomed in (the distance is divided by `zoom`: 1.6667 is the closest the wheel allows). Sets `OrbitCamera` fields directly, so the limits don't apply; below 1 the map's window stops growing at `world_map::MAX_HALF` and so gets smaller on screen.
 - `HOW_DEBUG_MAP=dx,dy`: two seconds after starting, open the full map, moved this many grid points from the player, without the limits on dragging (`0,0` centres it on them; far enough off shows the arrow).
 - `HOW_DEBUG_MAP_ZOOM=n`: the map `HOW_DEBUG_MAP` opens at this zoom.
@@ -37,7 +38,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
 - `HOW_DEBUG_SYSTEM_MENU=menu`: start with the system menu open; `quit`: at its requester; `settings`: at its settings.
 - `HOW_DEBUG_LOADING_HOLD=true`: keep the loading screen up (`loading_screen::HoldLoadingScreen`), to look at it.
-- `HOW_DEBUG_SKIP_MENU=true`: start past the startup menu, as if Play was pressed (`common::Session::Playing`). On by default when any other `HOW_DEBUG_` variable is set, but for the debug API's, `HOW_DEBUG_GUEST`, `HOW_DEBUG_KEEP_DRAWING` and the server's; `false` keeps the menu (to look at it with a screenshot).
+- `HOW_DEBUG_SKIP_MENU=true`: start past the startup menu, as if Play was pressed (`common::Session::Playing`). On by default when any other `HOW_DEBUG_` variable is set, but for the debug API's, `HOW_DEBUG_GUEST`, `HOW_DEBUG_KEEP_DRAWING`, `HOW_DEBUG_TITLE`, `HOW_DEBUG_WINDOW` and the server's; `false` keeps the menu (to look at it with a screenshot).
 - `HOW_DEBUG_KEEP_DRAWING=false`: while the debug API (`HOW_DEBUG_API`) or `HOW_DEBUG_SCREENSHOT` is running, frames keep their focused rate (about 30 fps) in the background (`common::KeepDrawing`), so tools driving a window behind others aren't held to one a second; `false` gives the players' rate back.
 - `HOW_DEBUG_REVEAL_POIS=true`: show every poi on this connection (sends `DevRevealPois`), not just towns and known ones. Not saved. Changes nothing while the server's `ALL_POIS_KNOWN` is on.
 - `HOW_DEBUG_SCREENSHOT=path.png` (+ optional `HOW_DEBUG_SCREENSHOT_DELAY` seconds, default 5): save a screenshot, then quit 2 s later.
@@ -57,7 +58,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 ## Notes
 
 - How Claude checks visual changes natively, e.g. from Git Bash:
-  `HOW_DEBUG_SCREENSHOT=C:/Projects/game/target/shots/map.png <target>/debug/hall-of-worlds.exe`, where `<target>` is cargo's target folder (`target/` unless moved)
+  `HOW_DEBUG_TITLE=Dev: HOW_DEBUG_SCREENSHOT=C:/Projects/game/target/shots/map.png <target>/debug/hall-of-worlds.exe`, where `<target>` is cargo's target folder (`target/` unless moved)
   then read the PNG. Keep screenshots under `target/` (git-ignored).
 - Python with Pillow is installed on the owner's machine for analysing screenshots (e.g. mean brightness, cropping the HUD).
 - To find which Bevy system is failing in a panic, build with `cargo build -p client --features bevy/debug --target-dir <target>/debug-names` (inside cargo's target folder, wherever that is) (system names are hidden otherwise).

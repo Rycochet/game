@@ -31,14 +31,28 @@ mod world_map;
 
 use bevy::prelude::*;
 
-/// Where Bevy loads assets from. Native debug builds use the source folder
-/// (an absolute path fixed at compile time), so the debug executable finds
-/// them however and wherever it is started. Otherwise `assets` is next to the
-/// executable (native) or the page (web, copied there by Trunk).
+/// Where Bevy loads assets from. Native debug builds use an `assets` folder
+/// beside the executable if there is one (a copy made by `cargo xtask latest`),
+/// and otherwise the source folder (an absolute path fixed at compile time), so
+/// the debug executable finds them however and wherever it is started.
 #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
-const ASSET_FOLDER: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");
+fn asset_folder() -> String {
+    let beside = std::env::current_exe()
+        .ok()
+        .and_then(|exe| Some(exe.parent()?.join("assets")))
+        .filter(|folder| folder.is_dir());
+    match beside {
+        Some(folder) => folder.to_string_lossy().into_owned(),
+        None => concat!(env!("CARGO_MANIFEST_DIR"), "/assets").to_string(),
+    }
+}
+
+/// Where Bevy loads assets from: `assets` next to the executable (native) or
+/// the page (web, copied there by Trunk).
 #[cfg(not(all(debug_assertions, not(target_arch = "wasm32"))))]
-const ASSET_FOLDER: &str = "assets";
+fn asset_folder() -> String {
+    "assets".to_string()
+}
 
 fn main() {
     let plugins = DefaultPlugins
@@ -53,7 +67,7 @@ fn main() {
             ..default()
         })
         .set(AssetPlugin {
-            file_path: ASSET_FOLDER.into(),
+            file_path: asset_folder(),
             // There are no `.meta` files, so don't look for one beside every asset
             // (on the web, each look is a request that fails with a 404).
             meta_check: bevy::asset::AssetMetaCheck::Never,

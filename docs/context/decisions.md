@@ -772,3 +772,7 @@ New generators work in metres (sea level 0, Earth-like: most land low, peaks to 
 ## 2026-11-04: The Windows exe carries its name
 
 The taskbar showed the exe's file name, `hall-of-worlds`, as it had no version information. The client's `build.rs` builds one in with `winresource` (MIT), only when building for Windows on Windows: FileDescription and ProductName "Hall of Worlds", the version from Cargo. No icon yet; one would go in the same way.
+
+## 2026-11-04: A latest build to play, instead of starting the game
+
+Owner's decision: chats no longer leave the game running after a change, which got in the way (a running exe blocks every build, and starting it interrupted the owner). `cargo xtask latest` copies the debug build (with the debug API) as `hall-of-worlds-latest` into `latest/` in cargo's target folder, not `dist/` (Trunk empties that), with the assets and `play.cmd`, for the owner to start when they choose. Its own name keeps `taskkill //IM hall-of-worlds.exe` off it, and its debug API port (15712) keeps development copies and `cargo xtask api` from reaching it. Debug builds use an `assets` folder beside the exe when there is one, as the source folder may change with branches or, for a worktree, be gone. `HOW_DEBUG_TITLE` (owner's request) puts text before the window title; the copies Claude starts use `Dev:`. A Claude Code mod outside the repo (`/play`, and a button above the prompt) starts `play.cmd`.

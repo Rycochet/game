@@ -19,7 +19,8 @@ fn others_leave_it() {
     assert!(!sets_up_start(names(&[
         "HOW_DATA",
         "HOW_SERVER",
-        "HOW_DEBUG_API"
+        "HOW_DEBUG_API",
+        "HOW_DEBUG_TITLE"
     ])));
     assert!(!sets_up_start(names(&["HOW_DEBUG_SKIP_MENU"])));
 }

@@ -6,7 +6,7 @@ Bevy's remote protocol (`bevy_remote`: JSON-RPC over HTTP, localhost only) in th
 
 - Build with `--features debug-api` (`cargo build -p client --features debug-api`; the client's feature turns on the server's). Off by default. `compile_error!` in `server::debug_api` refuses the feature in any release build, so nothing that ships (`cargo xtask package`, the Docker image, CI's `cargo check --release`) can have it. The handlers live in files compiled only with the feature, so their code never reaches other builds.
 - Start with `HOW_DEBUG_API=true` (port 15702) or `HOW_DEBUG_API=<port>`. The client and a standalone server take that port; the client's embedded server the next (15703). Without the feature, setting it only logs a warning.
-- A port already in use (another copy running) is logged as a warning and the program starts without the API: only callers are stuck. `client.state` / `server.state` give the process id and data folder, so a caller can tell whose game answered.
+- A port already in use (another copy running) is logged as a warning and the program starts without the API: only callers are stuck. `client.state` / `server.state` give the process id and data folder, so a caller can tell whose game answered. The owner's copy from `cargo xtask latest` (`play.cmd`) uses port 15712 (`--port 15712`), so development copies on the default port never reach it.
 - Switching the feature on or off recompiles part of Bevy the first time (bevy_remote turns on some Bevy features, and the client's feature turns on `bevy/serialize` for key and button names); cargo then keeps both builds.
 
 ## Calling it
