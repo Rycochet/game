@@ -10,8 +10,6 @@ use bevy::prelude::*;
 use shared::movement::WorldConditions;
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 
-use super::canvas::Canvas;
-use super::projection::Projection;
 use crate::common::{CurrentWorld, NORMAL_SNOW_LINE};
 use crate::surface_style::SurfaceStyle;
 
@@ -147,58 +145,6 @@ impl WorldTiles {
         }
         false
     }
-
-    /// Paints the chunks it has, unknown ones staying `parchment`. Pixels
-    /// further than `clip` from the middle of the picture are left alone.
-    pub fn draw(
-        &self,
-        canvas: &mut Canvas,
-        view: &Projection,
-        width: i64,
-        clip: f32,
-        parchment: [u8; 3],
-    ) {
-        let samples: &[(f32, f32)] = if view.units_per_pixel > 1.0 {
-            &[(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)]
-        } else {
-            &[(0.5, 0.5)]
-        };
-        // Neighbouring pixels are mostly in the same chunk.
-        let mut last: Option<((i64, i64), Option<&Tile>)> = None;
-        for y in 0..canvas.height {
-            for x in 0..canvas.width {
-                let (px, py) = (x as f32 + 0.5, y as f32 + 0.5);
-                if (px - view.middle.0).hypot(py - view.middle.1) > clip {
-                    continue;
-                }
-                let mut sum = [0u32; 3];
-                for (offset_x, offset_y) in samples {
-                    let (grid_x, grid_y) = view.to_grid(x as f32 + offset_x, y as f32 + offset_y);
-                    // Wrapped first: chunks line up from the seam at `x` = 0.
-                    let grid_x = (grid_x.floor() as i64).rem_euclid(width);
-                    let grid_y = grid_y.floor() as i64;
-                    let key = chunk_of(grid_x, grid_y, width);
-                    let tile = match last {
-                        Some((last_key, tile)) if last_key == key => tile,
-                        _ => {
-                            let tile = self.tiles.get(&key);
-                            last = Some((key, tile));
-                            tile
-                        }
-                    };
-                    let colour = tile.map_or(parchment, |tile| {
-                        let column = (grid_x - key.0 * CHUNK_SIZE) / tile.step;
-                        let row = grid_y.rem_euclid(CHUNK_SIZE) / tile.step;
-                        tile.colours[row as usize * tile.across + column as usize]
-                    });
-                    for (total, channel) in sum.iter_mut().zip(colour) {
-                        *total += u32::from(channel);
-                    }
-                }
-                canvas.set(x, y, sum.map(|total| (total / samples.len() as u32) as u8));
-            }
-        }
-    }
 }
 
 /// A chunk's colours, one for every `step` points each way, from the middle
@@ -251,6 +197,8 @@ pub fn shows_known(world: &CurrentWorld, (min, max): ((f64, f64), (f64, f64))) -
             .any(|&x| world.pois.is_known(ChunkPos { x, y }))
     })
 }
+
+mod paint;
 
 #[cfg(test)]
 mod tests;

@@ -135,7 +135,13 @@ pub(super) fn draw_maps(
         size,
     };
     *since += time.delta_secs();
-    if last.as_ref() == Some(&now) && !*pending && *since < REDRAW_SECONDS {
+    // Only what is remembered in sites and the minimap's sky change without
+    // telling: the full map of the world map changes only with the world
+    // (chunks and roads arriving), so it isn't redrawn on the clock.
+    let on_the_clock = view != GameView::WorldMap || !full.open;
+    let world_changed = world.as_ref().is_some_and(|world| world.is_changed());
+    let due = on_the_clock && *since >= REDRAW_SECONDS;
+    if last.as_ref() == Some(&now) && !*pending && !world_changed && !due {
         return;
     }
     *since = 0.0;
