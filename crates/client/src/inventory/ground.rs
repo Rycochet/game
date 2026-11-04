@@ -13,15 +13,14 @@ use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPos
 use crate::connection::FromServer;
 use crate::player::Player;
 use crate::widgets::{
-    INK, StockAim, StockAimAt, StockGrid, StockGridNode, TextSize, draw_stock_aim,
-    spawn_scroll_area,
+    ContainerLook, ContainerSize, StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim,
+    spawn_container,
 };
 
 /// How many cells across it is: the longest thing there can be.
 const COLUMNS: u8 = 8;
 /// The most of the window's height it takes, before it scrolls.
 const MOST_HEIGHT: Val = Val::Vh(50.0);
-const FONT: TextSize = TextSize::Medium;
 
 /// What is on the ground where the server last said.
 #[derive(Resource)]
@@ -54,24 +53,26 @@ pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) -> Entity {
         .spawn((
             GroundSection,
             Node {
-                flex_direction: FlexDirection::Column,
-                row_gap: px(8),
                 display: Display::None,
                 ..default()
             },
         ))
         .with_children(|section| {
-            section
-                .spawn(Node {
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    ..default()
-                })
-                .with_children(|row| {
-                    row.spawn((Text::new("On the ground"), FONT.font(), TextColor(INK)));
-                    spawn_filter(row, None);
-                });
-            holder = spawn_scroll_area(section, MOST_HEIGHT);
+            let look = ContainerLook {
+                title: Some("On the ground"),
+                controls: true,
+                size: ContainerSize::Grows(MOST_HEIGHT),
+                weight: false,
+                slots: false,
+            };
+            let parts = spawn_container(section, look);
+            if let Some(controls) = parts.controls {
+                let mut commands = section.commands();
+                commands
+                    .entity(controls)
+                    .with_children(|row| spawn_filter(row, None));
+            }
+            holder = parts.grid;
         });
     holder
 }

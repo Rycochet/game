@@ -9,8 +9,8 @@ use super::{AT, COLUMNS, Heading, Keepers, MOST_HEIGHT, NEXT_AT, OpenTrade, Open
 use crate::common::{CurrentDungeon, GROUND, GaveItem, HeldOverGifts, HeldStock, TookItem};
 use crate::connection::FromServer;
 use crate::widgets::{
-    RaisePanel, StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim,
-    spawn_moveable_panel, spawn_scroll_area,
+    ContainerLook, ContainerSize, RaisePanel, StockAim, StockAimAt, StockGrid, StockGridNode,
+    draw_stock_aim, spawn_container, spawn_moveable_panel,
 };
 
 /// Notes where things given were let go, for when they come back as stock, moves
@@ -98,7 +98,15 @@ pub(super) fn read_server(
                 let (panel, content) = spawn_moveable_panel(&mut commands, look.kind.name(), at);
                 let mut holder = Entity::PLACEHOLDER;
                 commands.entity(content).with_children(|content| {
-                    holder = spawn_scroll_area(content, MOST_HEIGHT);
+                    // The panel's title says whose it is, and stock weighs nothing to anyone.
+                    let look = ContainerLook {
+                        title: None,
+                        controls: false,
+                        size: ContainerSize::Grows(MOST_HEIGHT),
+                        weight: false,
+                        slots: false,
+                    };
+                    holder = spawn_container(content, look).grid;
                 });
                 raise.write(RaisePanel(panel));
                 open.0.push(OpenTrade {
