@@ -2,14 +2,11 @@
 
 use bevy::prelude::*;
 use shared::dungeon::Cell;
-use shared::protocol::ClientMessage;
 use shared::site::StairsStyle;
-use shared::world::MINUTES_PER_HOUR;
 
 use super::super::actions::DebugAction;
 use super::FONT;
-use crate::common::{CurrentDungeon, GameView, HerbGrowthShift, ServerClock};
-use crate::connection::ToServer;
+use crate::common::{CurrentDungeon, GameView, HerbGrowthShift};
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::widgets::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, spawn_button};
 
@@ -27,12 +24,7 @@ pub(super) fn spawn_step_buttons(content: &mut ChildSpawnerCommands, action: Deb
             ..default()
         })
         .with_children(|row| {
-            let [back, on] = if action == DebugAction::WorldTime {
-                ["-1 hour", "+1 hour"]
-            } else {
-                ["Previous", "Next"]
-            };
-            for (label, forward) in [(back, false), (on, true)] {
+            for (label, forward) in [("Previous", false), ("Next", true)] {
                 let node = Node {
                     padding: BUTTON_PADDING,
                     ..default()
@@ -45,14 +37,13 @@ pub(super) fn spawn_step_buttons(content: &mut ChildSpawnerCommands, action: Deb
 
 /// Whether a panel's buttons can do anything here.
 pub(super) fn can_step(action: DebugAction, view: GameView, dungeon: &CurrentDungeon) -> bool {
-    action == DebugAction::WorldTime
-        || view == GameView::Dungeon
-            && match action {
-                DebugAction::StairsStyle => !dungeon.stairs.is_empty(),
-                DebugAction::FieldsState => !dungeon.fields.is_empty(),
-                DebugAction::HerbsState => dungeon.level_has(Cell::HerbBed),
-                _ => true,
-            }
+    view == GameView::Dungeon
+        && match action {
+            DebugAction::StairsStyle => !dungeon.stairs.is_empty(),
+            DebugAction::FieldsState => !dungeon.fields.is_empty(),
+            DebugAction::HerbsState => dungeon.level_has(Cell::HerbBed),
+            _ => true,
+        }
 }
 
 /// The style before this one, going round.
@@ -69,8 +60,6 @@ pub(in crate::debug_menu) fn press_panel_buttons(
     buttons: Query<&StepButton>,
     mut dungeon: ResMut<CurrentDungeon>,
     mut shift: ResMut<HerbGrowthShift>,
-    clock: Res<ServerClock>,
-    mut to_server: MessageWriter<ToServer>,
 ) {
     for press in pressed.read() {
         let Ok(&StepButton { action, forward }) = buttons.get(press.0) else {
@@ -98,16 +87,6 @@ pub(in crate::debug_menu) fn press_panel_buttons(
                 // Back is nearly all the way round, as the shift can't go below 0.
                 let by = if forward { 1 } else { HERB_STAGES - 1 };
                 shift.0 = (shift.0 + by) % HERB_STAGES;
-            }
-            DebugAction::WorldTime => {
-                let by = if forward {
-                    MINUTES_PER_HOUR
-                } else {
-                    -MINUTES_PER_HOUR
-                };
-                to_server.write(ToServer(ClientMessage::DevSetTime {
-                    minutes: clock.minutes + by,
-                }));
             }
             _ => {}
         }

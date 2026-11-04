@@ -1,5 +1,5 @@
 //! The moveable panels the menu opens: Previous and Next for what a place draws,
-//! and one showing every widget.
+//! the world's time, and one showing every widget.
 
 use bevy::prelude::*;
 
@@ -27,6 +27,8 @@ mod pictures_form;
 mod pictures_spawn;
 mod pictures_systems;
 mod steps;
+mod time_text;
+mod world_time;
 
 use every_widget::spawn_every_widget;
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
@@ -56,6 +58,8 @@ use pictures_spawn::{
 pub(super) use pictures_systems::{choose_pictures, fill_pictures, show_pictures};
 use steps::spawn_step_buttons;
 pub(super) use steps::{press_panel_buttons, update_panel_buttons};
+use world_time::spawn_world_time;
+pub(super) use world_time::{edit_time_box, press_time_steps};
 
 const FONT: TextSize = TextSize::Medium;
 /// How much of the window's height Show Widgets may take before it scrolls.
