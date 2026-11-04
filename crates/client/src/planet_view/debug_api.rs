@@ -69,5 +69,17 @@ fn planet(
             .save(&path)
             .map_err(|error| refused(format!("can't save {path}: {error}")))?;
     }
-    Ok(json!({ "filled": filled, "seed": showing.choice.seed.value() }))
+    let gates: Vec<_> = globe
+        .planet
+        .gates
+        .gates
+        .iter()
+        .map(|gate| json!({ "x": gate.x, "y": gate.y, "round": gate.round }))
+        .collect();
+    Ok(json!({
+        "filled": filled,
+        "seed": showing.choice.seed.value(),
+        "world_gates": gates,
+        "gate_tries": globe.planet.gates.tries,
+    }))
 }

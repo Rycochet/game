@@ -9,6 +9,7 @@ mod clouds;
 mod colour;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
 mod debug_api;
+mod gates;
 mod globe;
 mod input;
 mod layer;
@@ -55,6 +56,7 @@ impl Plugin for PlanetViewPlugin {
                 (
                     open::open,
                     read_bar::read_bar,
+                    gates::show_gate_words,
                     texture::fill_texture,
                     spin::spin,
                     clouds::move_clouds,
