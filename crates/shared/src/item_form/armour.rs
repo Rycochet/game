@@ -10,11 +10,16 @@ use crate::armour::neck::{self, NeckKind};
 use crate::armour::shoulders;
 use crate::armour::torso::{self, TorsoKind};
 use crate::armour::waist::{self, WaistKind};
+use crate::footwear::{self, FootwearPiece};
 use crate::item::{ItemKind, Quality};
 use crate::rng::Rng;
 
-/// The form of a new piece of armour of this kind, or `None` for other kinds.
+/// The form of a new piece of armour or footwear of this kind, or `None` for other
+/// kinds.
 pub(super) fn armour_form(kind: ItemKind, rng: &mut Rng, quality: Quality) -> Option<ItemForm> {
+    if let Some(piece) = FootwearPiece::of(kind) {
+        return Some(ItemForm::Footwear(footwear::roll(rng, piece, quality)));
+    }
     let hands = |rng: &mut Rng, piece| ItemForm::Hands(hands::roll(rng, piece, None));
     let torso = |rng: &mut Rng, kind| ItemForm::Torso(torso::roll(rng, kind, None, quality));
     let head = |rng: &mut Rng, kind| ItemForm::Head(head::roll(rng, kind, None, quality));

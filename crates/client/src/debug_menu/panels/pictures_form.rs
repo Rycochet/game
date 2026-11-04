@@ -75,6 +75,8 @@ pub(super) enum Shown {
     Body(CreatureKind),
     /// A piece of armour.
     Armour(super::armour::ArmourShown),
+    /// A pair of footwear.
+    Footwear(super::footwear::FootwearShown),
 }
 
 impl Shown {
@@ -102,6 +104,7 @@ impl Shown {
             }
             Self::Body(kind) => Frame::of(kind).map(|_| Look::Body { kind }),
             Self::Armour(shown) => shown.look(quality),
+            Self::Footwear(shown) => shown.look(quality),
         }
     }
 }

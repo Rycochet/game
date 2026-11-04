@@ -23,6 +23,7 @@ pub enum ItemKind {
     Caparison,
     Chausses,
     Cloak,
+    Clogs,
     Coif,
     Coin,
     Collar,
@@ -50,9 +51,11 @@ pub enum ItemKind {
     Polearm,
     Pouch,
     Ring,
+    Sandals,
     Shoes,
     ShortSword,
     ShoulderArmour,
+    Slippers,
     SmallBox,
     Socks,
     Spear,
@@ -68,7 +71,7 @@ pub enum ItemKind {
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 57] = [
+    pub const ALL: [Self; 60] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -85,6 +88,7 @@ impl ItemKind {
         Self::Caparison,
         Self::Chausses,
         Self::Cloak,
+        Self::Clogs,
         Self::Coif,
         Self::Coin,
         Self::Collar,
@@ -112,9 +116,11 @@ impl ItemKind {
         Self::Polearm,
         Self::Pouch,
         Self::Ring,
+        Self::Sandals,
         Self::Shoes,
         Self::ShortSword,
         Self::ShoulderArmour,
+        Self::Slippers,
         Self::SmallBox,
         Self::Socks,
         Self::Spear,

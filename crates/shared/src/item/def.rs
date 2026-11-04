@@ -21,6 +21,10 @@ impl ItemKind {
                 Self::Aventail | Self::Bevor | Self::Collar | Self::Gorget | Self::Mantle => {
                     self.neck_def()
                 }
+                // Shoes, boots, sandals, clogs and slippers: in `feet_def.rs`.
+                Self::Boots | Self::Clogs | Self::Sandals | Self::Shoes | Self::Slippers => {
+                    self.feet_def()
+                }
                 Self::Apple => plain("Apple", 150, square).without_quality(),
                 // Both arms, or one; its form says its name, cells and weight, and whether
                 // it is padded (kote).
@@ -74,13 +78,6 @@ impl ItemKind {
                 Self::BevoredHelm => plain("Bevored Helm", 4000, Shape::rectangle(2, 3))
                     .worn(wear(Outer, &[Head, Neck], (0, 0), false)),
                 Self::Boomerang => plain("Boomerang", 400, BOOMERANG),
-                // Middle, as shoes are, so foot armour goes over them.
-                Self::Boots => plain("Boots", 1100, Shape::rectangle(2, 2)).worn(wear(
-                    Middle,
-                    &[Feet],
-                    (1, 0),
-                    false,
-                )),
                 // Cloth over barding, to below the knees, which doesn't count as the legs.
                 Self::Caparison => plain("Caparison", 4000, Shape::rectangle(3, 3)).worn(wear(
                     Over,
@@ -200,12 +197,6 @@ impl ItemKind {
                     one_place: true,
                     ..wear(Skin, &[Fingers], (1, 1), true)
                 }),
-                Self::Shoes => plain("Shoes", 500, Shape::rectangle(2, 1)).worn(wear(
-                    Middle,
-                    &[Feet],
-                    (1, 0),
-                    false,
-                )),
                 Self::ShortSword => plain("Short Sword", 900, Shape::rectangle(1, 4)),
                 // A pair: its form says its kind, name, cells and weight.
                 Self::ShoulderArmour => plain("Shoulder Armour", 2600, Shape::rectangle(3, 2))

@@ -6,6 +6,7 @@ mod blade;
 mod body;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
 mod debug_api;
+mod footwear;
 mod gem;
 mod looks;
 mod ring;
@@ -13,6 +14,7 @@ mod ring;
 use bevy::prelude::*;
 use bevy::render::{ExtractSchedule, Render, RenderApp, RenderSystems};
 
+pub use footwear::FootwearLook;
 pub use looks::{
     ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, ShouldersLook,
     TorsoLook, WaistLook,

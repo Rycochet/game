@@ -8,15 +8,15 @@ use crate::site::BuildingKind;
 /// a shop. Only placeholders exist to sell for now.
 pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
     use ItemKind::{
-        Apple, Backpack, Barding, Belt, Boomerang, Boots, Caparison, Cloak, DemiGauntlets,
+        Apple, Backpack, Barding, Belt, Boomerang, Boots, Caparison, Cloak, Clogs, DemiGauntlets,
         FingerlessGloves, FullArmour, Gambeson, Gauntlets, Gloves, Hat, Lantern, Necklace,
-        PaddedGloves, Pouch, Ring, Shoes, ShoulderArmour, SmallBox, Socks, Surcoat, Sword, TShirt,
-        Tabard, Trousers,
+        PaddedGloves, Pouch, Ring, Sandals, Shoes, ShoulderArmour, Slippers, SmallBox, Socks,
+        Surcoat, Sword, TShirt, Tabard, Trousers,
     };
     match kind {
         BuildingKind::Blacksmith => &[(Sword, 2), (Gauntlets, 2), (Lantern, 1)],
         BuildingKind::Herbalist => &[(Apple, 3), (Pouch, 1)],
-        BuildingKind::Carpenter => &[(SmallBox, 2), (Boomerang, 1)],
+        BuildingKind::Carpenter => &[(SmallBox, 2), (Boomerang, 1), (Clogs, 1)],
         BuildingKind::Tailor => &[
             (TShirt, 3),
             (Trousers, 3),
@@ -28,11 +28,13 @@ pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
             (PaddedGloves, 1),
             (Surcoat, 1),
             (Tabard, 1),
+            (Slippers, 1),
         ],
         BuildingKind::Leatherworker => &[
             (Belt, 2),
             (Boots, 2),
             (Shoes, 2),
+            (Sandals, 1),
             (Pouch, 2),
             (Backpack, 1),
             (Gloves, 1),

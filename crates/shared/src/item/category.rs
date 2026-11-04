@@ -95,6 +95,9 @@ impl ItemKind {
             | Self::Gloves
             | Self::Hat
             | Self::Shoes
+            | Self::Sandals
+            | Self::Clogs
+            | Self::Slippers
             | Self::Socks
             | Self::Surcoat
             | Self::TShirt

@@ -99,13 +99,13 @@ const GEAR_ROLLS: i64 = 1000;
 fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
     use ItemKind::{
         Apple, Axe, Belt, Boomerang, Boots, Cloak, Coin, Dagger, FullArmour, Gloves, Hat, Knife,
-        Longsword, Pouch, Shoes, ShortSword, Socks, Spear, Stone, Sword, TShirt, Trousers,
+        Longsword, Pouch, Sandals, Shoes, ShortSword, Socks, Spear, Stone, Sword, TShirt, Trousers,
     };
     match kind {
         CreatureKind::Beggar => &[
             (100, &[(TShirt, 1)]),
             (100, &[(Trousers, 1)]),
-            (50, &[(Shoes, 2), (Socks, 1), (Hat, 1)]),
+            (50, &[(Shoes, 2), (Sandals, 1), (Socks, 1), (Hat, 1)]),
             (40, &[(Apple, 1), (Coin, 2), (Stone, 1)]),
         ],
         CreatureKind::Giant => &[

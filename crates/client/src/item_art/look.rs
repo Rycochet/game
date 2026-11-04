@@ -72,6 +72,11 @@ pub enum Look {
         neck: NeckLook,
         quality: Option<Quality>,
     },
+    /// Shoes, boots, sandals, clogs or slippers, a pair.
+    Footwear {
+        footwear: super::FootwearLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -92,6 +97,7 @@ impl Look {
             Self::Waist { waist, .. } => waist.cells,
             Self::Feet { feet, .. } => feet.cells,
             Self::Neck { neck, .. } => neck.cells,
+            Self::Footwear { footwear, .. } => footwear.cells,
             Self::Body { .. } => super::body::CELLS,
         }
     }
@@ -171,6 +177,13 @@ pub fn look_of(item: &Item) -> Option<Look> {
                     pattern: ring.pattern,
                     settings: settings.collect(),
                 },
+                quality,
+            })
+        }
+        ItemForm::Footwear(form) => {
+            let shape = item.shape();
+            Some(Look::Footwear {
+                footwear: super::FootwearLook::new(*form, (shape.width, shape.height)),
                 quality,
             })
         }

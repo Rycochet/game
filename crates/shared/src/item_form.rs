@@ -17,6 +17,7 @@ use crate::armour::shoulders::ShouldersForm;
 use crate::armour::torso::TorsoForm;
 use crate::armour::waist::WaistForm;
 use crate::blade::BladeForm;
+use crate::footwear::FootwearForm;
 use crate::item::Item;
 
 mod armour;
@@ -57,6 +58,8 @@ pub enum ItemForm {
     Feet(FeetForm),
     /// A collar, gorget, bevor, aventail or mantle.
     Neck(NeckForm),
+    /// A pair of shoes, boots, sandals, clogs or slippers.
+    Footwear(FootwearForm),
 }
 
 impl ItemForm {
@@ -75,6 +78,7 @@ impl ItemForm {
             Self::Waist(waist) => waist.name(),
             Self::Feet(feet) => feet.name(),
             Self::Neck(neck) => neck.name(),
+            Self::Footwear(footwear) => footwear.name(),
         }
     }
 
@@ -92,7 +96,8 @@ impl ItemForm {
             | Self::Legs(_)
             | Self::Waist(_)
             | Self::Feet(_)
-            | Self::Neck(_) => &[],
+            | Self::Neck(_)
+            | Self::Footwear(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }

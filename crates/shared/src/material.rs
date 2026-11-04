@@ -38,6 +38,8 @@ pub enum Material {
     Diamond,
     DragonScale,
     Emerald,
+    Felt,
+    Fur,
     Garnet,
     Gold,
     HardenedLeather,
@@ -48,11 +50,14 @@ pub enum Material {
     Mithril,
     Peridot,
     Rattan,
+    Rawhide,
     Ruby,
     Sapphire,
     Silk,
     Silver,
     Steel,
+    Straw,
+    Suede,
     Topaz,
     Wood,
     Wool,
@@ -60,7 +65,7 @@ pub enum Material {
 
 impl Material {
     /// Every material, alphabetically by name.
-    pub const ALL: [Self; 34] = [
+    pub const ALL: [Self; 39] = [
         Self::Adamantine,
         Self::Amethyst,
         Self::Aquamarine,
@@ -77,6 +82,8 @@ impl Material {
         Self::Diamond,
         Self::DragonScale,
         Self::Emerald,
+        Self::Felt,
+        Self::Fur,
         Self::Garnet,
         Self::Gold,
         Self::HardenedLeather,
@@ -87,11 +94,14 @@ impl Material {
         Self::Mithril,
         Self::Peridot,
         Self::Rattan,
+        Self::Rawhide,
         Self::Ruby,
         Self::Sapphire,
         Self::Silk,
         Self::Silver,
         Self::Steel,
+        Self::Straw,
+        Self::Suede,
         Self::Topaz,
         Self::Wood,
         Self::Wool,
@@ -129,6 +139,8 @@ impl Material {
             Self::Diamond => "Diamond",
             Self::DragonScale => "Dragon Scale",
             Self::Emerald => "Emerald",
+            Self::Felt => "Felt",
+            Self::Fur => "Fur",
             Self::Garnet => "Garnet",
             Self::Gold => "Gold",
             Self::HardenedLeather => "Hardened Leather",
@@ -139,11 +151,14 @@ impl Material {
             Self::Mithril => "Mithril",
             Self::Peridot => "Peridot",
             Self::Rattan => "Rattan",
+            Self::Rawhide => "Rawhide",
             Self::Ruby => "Ruby",
             Self::Sapphire => "Sapphire",
             Self::Silk => "Silk",
             Self::Silver => "Silver",
             Self::Steel => "Steel",
+            Self::Straw => "Straw",
+            Self::Suede => "Suede",
             Self::Topaz => "Topaz",
             Self::Wood => "Wood",
             Self::Wool => "Wool",
@@ -153,7 +168,12 @@ impl Material {
     pub fn category(self) -> Category {
         match self {
             Self::Bone | Self::Chitin | Self::DragonScale | Self::Horn => Category::Bone,
-            Self::BuffLeather | Self::HardenedLeather | Self::Leather => Category::Leather,
+            Self::BuffLeather
+            | Self::Fur
+            | Self::HardenedLeather
+            | Self::Leather
+            | Self::Rawhide
+            | Self::Suede => Category::Leather,
             Self::Adamantine
             | Self::Brass
             | Self::Bronze
@@ -163,8 +183,8 @@ impl Material {
             | Self::Mithril
             | Self::Silver
             | Self::Steel => Category::Metal,
-            Self::Coir | Self::Cork | Self::Rattan => Category::Plant,
-            Self::Cotton | Self::Linen | Self::Silk | Self::Wool => Category::Textile,
+            Self::Coir | Self::Cork | Self::Rattan | Self::Straw => Category::Plant,
+            Self::Cotton | Self::Felt | Self::Linen | Self::Silk | Self::Wool => Category::Textile,
             Self::Wood => Category::Wood,
             _ => Category::Gem,
         }
@@ -181,20 +201,25 @@ impl Material {
             | Self::Copper
             | Self::Cork
             | Self::Cotton
+            | Self::Felt
             | Self::Garnet
             | Self::Horn
             | Self::Leather
             | Self::Linen
             | Self::Peridot
             | Self::Rattan
+            | Self::Rawhide
+            | Self::Straw
             | Self::Wood
             | Self::Wool => 1,
             Self::Aquamarine
             | Self::Bronze
             | Self::BuffLeather
             | Self::Chitin
+            | Self::Fur
             | Self::HardenedLeather
             | Self::Iron
+            | Self::Suede
             | Self::Topaz => 2,
             Self::Emerald
             | Self::Ruby
@@ -209,11 +234,14 @@ impl Material {
     /// How heavy it is, as tenths of a gram for each cubic centimetre. A first guess.
     pub fn density(self) -> u32 {
         match self {
-            Self::Cork => 2,
+            Self::Cork | Self::Straw => 2,
+            Self::Felt => 3,
             Self::Rattan => 5,
             Self::Wood => 7,
             Self::Coir => 12,
-            Self::BuffLeather | Self::Leather => 9,
+            Self::Suede => 8,
+            Self::BuffLeather | Self::Fur | Self::Leather => 9,
+            Self::Rawhide => 12,
             Self::HardenedLeather => 11,
             Self::Chitin | Self::Horn | Self::Silk | Self::Wool => 13,
             Self::Cotton | Self::Linen => 15,
