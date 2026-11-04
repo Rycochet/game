@@ -6,6 +6,8 @@ mod aura;
 mod auto_scroll;
 mod clipboard;
 mod container;
+#[cfg(not(target_arch = "wasm32"))]
+mod copy_button;
 mod dropdown;
 mod feedback;
 mod filter_list;
@@ -37,6 +39,8 @@ pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]
 pub use clipboard::copy_to_clipboard;
 pub use container::{ContainerLook, ContainerSize, spawn_container};
+#[cfg(not(target_arch = "wasm32"))]
+pub use copy_button::spawn_copy_button;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};

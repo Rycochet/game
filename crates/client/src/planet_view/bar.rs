@@ -1,6 +1,6 @@
-//! The bar across the top: which generator, which seed (or a random one),
-//! Reset (back to the current world as it is) and which layer the picture
-//! shows.
+//! The bar across the top: which generator, which seed (typed, random or
+//! copied), Reset (back to the current world as it is) and which layer the
+//! picture shows.
 
 use bevy::prelude::*;
 use shared::surface::SurfaceGenerator;
@@ -26,6 +26,9 @@ pub(super) struct Bar {
     pub(super) generator: Entity,
     pub(super) seed: Entity,
     pub(super) random: Entity,
+    /// Natively only: browsers have no clipboard for the game yet.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) copy: Entity,
     pub(super) reset: Entity,
     pub(super) layer: Entity,
 }
@@ -81,8 +84,12 @@ pub(super) fn spawn_bar(
             height: px(ROW_HEIGHT),
             ..default()
         };
-        let random = spawn_icon_button(row, ButtonState::Normal, random_icon, node)
+        let random = spawn_icon_button(row, ButtonState::Normal, random_icon, node.clone())
             .insert((Pressable, ButtonTooltip("Random seed".into())))
+            .id();
+        #[cfg(not(target_arch = "wasm32"))]
+        let copy = crate::widgets::spawn_copy_button(row, "Copy the seed", FONT, node)
+            .insert(Pressable)
             .id();
         let reset = spawn_button(row, ButtonState::Normal, "Reset", FONT, control(None))
             .insert(Pressable)
@@ -94,6 +101,8 @@ pub(super) fn spawn_bar(
             generator,
             seed,
             random,
+            #[cfg(not(target_arch = "wasm32"))]
+            copy,
             reset,
             layer,
         });

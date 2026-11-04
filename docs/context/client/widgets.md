@@ -15,6 +15,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/spinner.rs`: `Spinner` (pub: a node turning on the real clock while on show), its picture drawn at start (`make_spinner_picture`), `picture_spinners`, `turn_spinners`. Unit test.
 - `crates/client/src/widgets/hover_tip.rs`: `HoverTip` (an empty one shows nothing), `show_hover_tips` (`PostUpdate`, after items' names, before the tooltip is shown).
 - `crates/client/src/widgets/filter_list.rs`: `matches_filter`, `next_highlight`, `HighlightStep`, shared by the debug menu and dropdowns with search. Unit tests.
+- `crates/client/src/widgets/copy_button.rs`: `spawn_copy_button(parent, what, size, node)` (pub, native only like `copy_to_clipboard`: a button showing a clipboard from the icon font, named `what`; Server Options' certificate and View Planet's seed).
 - `crates/client/src/widgets/new_seed_icon.rs`: `new_seed_icon` (pub: a round arrow, for a button making a new random seed; the Generate POI panel and View Planet).
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
 - `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `spawn_toggle_row`, `TabChosen`, `press_tabs`. Unit test.

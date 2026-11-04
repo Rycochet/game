@@ -58,6 +58,10 @@ pub(super) fn read_bar(
             seed_box.error = false;
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    if presses.contains(&bar.copy) {
+        crate::widgets::copy_to_clipboard(&choice.seed.value().to_string());
+    }
     if presses.contains(&bar.reset) {
         choice = Choice {
             layer: choice.layer,
