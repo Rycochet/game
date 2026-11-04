@@ -4,7 +4,7 @@ The debug menu: backtick or the warning button top left opens a full-screen laye
 
 ## Files
 
-- `crates/client/src/debug_menu/mod.rs`: `DebugMenuPlugin`, `AutoWalk`, `TemperatureCycle`, `run_actions` (does what `DebugAction` says), `auto_walk`, `temperature_cycle`, `FactSources`.
+- `crates/client/src/debug_menu/mod.rs`: `DebugMenuPlugin`, `AutoWalk`, `TemperatureCycle`, `run_actions` (does what `DebugAction` says), `auto_walk`, `FactSources`. `temperature.rs`: `temperature_cycle` (Cycle Temperature).
 - `crates/client/src/debug_menu/actions.rs`: `DebugAction` (every entry, alphabetical), its name, `named` and `names` (finding one by name, for the debug API's `client.debug_action`), `is_available`, `is_on`, `matches`, `next_highlight`. Pure, unit tested. To add an entry: add it here (`ALL` and the matches), to `run_actions` and to `docs/debug-menu.md` (a test checks).
 - `crates/client/src/debug_menu/menu.rs`: `DebugMenu`, `spawn_menu`, the warning icon (drawn in code), `take_input` (`PreUpdate`, `WidgetSystems::Modal`), `show_menu` (rebuilds the grid when what it says changes). In `menu/`: `state.rs` (`DebugMenu`), `parts.rs`, `spawn.rs` (layers, warning icon), `columns.rs`, `on_show.rs`, `input.rs` (`take_input`), `show.rs` (`show_menu`).
 - `crates/client/src/debug_menu/panels.rs`: moveable panels the menu opens: Previous and Next for stairs, fields and herbs (`StepButton`), and Show Widgets (one of every widget). `OpenPanels`. In `panels/`, beside the pages: `open.rs` (`OpenPanels`), `steps.rs` (Previous and Next), `world_time.rs` (World Time) and `time_text.rs` (its time as words and back), `layout.rs`, `give.rs` and `give_systems.rs` (Give Item, Change Creature), `pictures_form.rs`, `pictures_spawn.rs` and `pictures_systems.rs` (Item Pictures), `every_widget.rs` (Show Widgets), `generate_form.rs` and `generate.rs` (Generate POI).
@@ -27,7 +27,7 @@ The debug menu: backtick or the warning button top left opens a full-screen laye
 
 ## Depends on
 
-- `common` (`ClickMode`, `DebugInfo`, `CurrentDungeon`, `GameView`, `GodMode`, `Truesight`, `KillMob`, `HerbGrowthShift`, `TouchGesture`, `Weather`), `connection` (`ToServer`, `FromServer`), `player` (`TakeStep`, `PlayerSystems`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `widgets`, `item_art`, `dungeon_map` (`CROP_STAGES`, `HERB_STAGES`), `shared::movement`, `shared::showcase`, `shared::site`.
+- `common` (`ClickMode`, `DebugInfo`, `CurrentDungeon`, `GameView`, `GodMode`, `Truesight`, `KillMob`, `HerbGrowthShift`, `TouchGesture`, `Weather`), `connection` (`ToServer`, `FromServer`), `player` (`TakeStep`, `PlayerSystems`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `planet_view` (`ViewPlanet`: View Planet), `widgets`, `item_art`, `dungeon_map` (`CROP_STAGES`, `HERB_STAGES`), `shared::movement`, `shared::showcase`, `shared::site`.
 
 ## Used by
 

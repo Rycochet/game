@@ -4,13 +4,14 @@ A world's suns and moons, and where they are at any time, from the public terrai
 
 ## Files
 
-- `crates/shared/src/celestial.rs`: `Celestial`, `Body`, `BodyNow`, `BodyKind`, `ColourName`, `flat_light`, `brightest`, `MOST_BODIES`. Golden and chance tests. In `celestial/`: `celestial.rs` (`from_seed`), `body.rs`, `colour_name.rs`, `now.rs` (`at`), `light.rs`, `sun.rs`, `moon.rs`, `moon_path.rs`, `vector.rs`, `dev_tools.rs`, `tide.rs` (`tide_pull`).
+- `crates/shared/src/celestial.rs`: `Celestial`, `Body`, `BodyNow`, `BodyKind`, `ColourName`, `flat_light`, `brightest`, `MOST_BODIES`. Golden and chance tests. In `celestial/`: `celestial.rs` (`from_seed`), `body.rs`, `colour_name.rs`, `now.rs` (`at`), `period.rs`, `light.rs`, `sun.rs`, `moon.rs`, `moon_path.rs`, `vector.rs`, `dev_tools.rs`, `tide.rs` (`tide_pull`).
 
 ## Public API
 
 - `Celestial::from_seed(terrain seed)`.
 - `bodies() -> Vec<Body>`: every sun, then every moon, whatever the time: `kind`, `colour` (linear RGB), `colour_name` (`Option<ColourName>`: `None` when too near white to have a name), `size`. Use this to ask what a world has.
 - `at(hours) -> Vec<BodyNow>`: the same order, at a time: `body`, `direction` (unit, `[east, up, south]`), `lit` (how much of a moon's face we see is lit), `waxing`, `along` (how far along its way across the sky: negative before its top, positive after, always rising, whichever way that goes on the world), `phase()` (`MoonPhase`: for later, as nothing else reads the name yet), `light` (linear RGB, faded near the horizon, zero below it), `is_up()`, `flat_light()`. Everything goes through this, so what is said matches what is seen.
+- `period(number) -> Option<f64>`: hours one of `bodies` takes to go round (a sun's day, a moon's orbit); `client::planet_view` places moons by it.
 - `set_colour(number, colour)`, `sun_strength(number)`, `set_sun_strength(number, strength)`, `colour_along(kind, 0..=1)`: for the debug menu's panel.
 - `tide_pull(hours) -> f64`: how far the moons pull the sea, `-1..=1` (0 with no moons), for `WorldParams::tide`.
 - `flat_light(&bodies)`: their light together on flat ground. `brightest(&bodies)`: the index of the one lighting flat ground most.
@@ -21,7 +22,7 @@ A world's suns and moons, and where they are at any time, from the public terrai
 
 ## Used by
 
-- `shared::world` (the tide); `server` (`ServerWorld`, for the water level); client `common` (`CurrentWorld::celestial`, `SkyNow`), `world_map` (`lights`, baked slope shading, water level).
+- `shared::world` (the tide); `server` (`ServerWorld`, for the water level); client `common` (`CurrentWorld::celestial`, `SkyNow`), `world_map` (`lights`, baked slope shading, water level), `planet_view` (the globe's sky).
 
 ## Notes
 

@@ -17,6 +17,7 @@ mod inventory;
 mod item_art;
 mod loading_screen;
 mod minimap;
+mod planet_view;
 mod player;
 mod site;
 mod surface_style;
@@ -89,6 +90,7 @@ fn main() {
         ground::GroundPlugin,
         trade::TradePlugin,
         item_art::ItemArtPlugin,
+        planet_view::PlanetViewPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is
