@@ -41,7 +41,7 @@ pub(super) struct Scene {
 pub(super) fn spawn_scene(
     commands: &mut Commands,
     (seed, celestial): (Seed, &Celestial),
-    texture: Handle<Image>,
+    (texture, relief): (Handle<Image>, Handle<Image>),
     picture: Handle<Image>,
     assets: (
         &mut Assets<Mesh>,
@@ -55,11 +55,19 @@ pub(super) fn spawn_scene(
         .spawn((Transform::default(), Visibility::default()))
         .id();
     let sphere = meshes.add(Sphere::new(1.0).mesh().uv(96, 48));
+    // The globe's own, with tangents for its relief: finer, so the shading
+    // follows the picture smoothly.
+    let ground = Sphere::new(1.0)
+        .mesh()
+        .uv(192, 96)
+        .with_generated_tangents()
+        .expect("a sphere has positions, normals and picture coordinates");
 
     // Bevy's sphere has its poles on Z, with its picture's top at +Z: tip it
     // so north is up.
     let surface = materials.add(StandardMaterial {
         base_color_texture: Some(texture),
+        normal_map_texture: Some(relief),
         perceptual_roughness: 0.9,
         reflectance: 0.2,
         ..default()
@@ -67,7 +75,7 @@ pub(super) fn spawn_scene(
     let globe = commands
         .spawn((Transform::default(), Visibility::default(), ChildOf(root)))
         .with_child((
-            Mesh3d(sphere.clone()),
+            Mesh3d(meshes.add(ground)),
             MeshMaterial3d(surface),
             Transform::from_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
             layer.clone(),

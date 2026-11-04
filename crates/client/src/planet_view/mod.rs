@@ -16,6 +16,7 @@ mod moon_look;
 mod open;
 mod planet;
 mod read_bar;
+mod relief;
 mod showing;
 mod sky;
 mod spin;

@@ -21,12 +21,14 @@ pub(super) struct Colouring {
     pub(super) broad: bool,
 }
 
+/// A grid point's colour, and its height in metres from the sea (the sea
+/// itself flat), for the relief.
 pub(super) fn colour_at(
     planet: &Planet,
     style: &SurfaceStyle,
     colouring: Colouring,
     (x, y): (i64, i64),
-) -> [u8; 4] {
+) -> ([u8; 4], f32) {
     let sample = if colouring.broad {
         SurfaceSample {
             height: planet.surface.broad_height(x, y),
@@ -35,10 +37,12 @@ pub(super) fn colour_at(
     } else {
         planet.surface.sample(x, y)
     };
-    match colouring.layer {
+    let metres = planet.surface.metres(sample.height);
+    let colour = match colouring.layer {
         Layer::Surface => surface_colour(planet, style, colouring, (x, y), sample),
-        Layer::Elevation => elevation_tint(planet.surface.metres(sample.height)),
-    }
+        Layer::Elevation => elevation_tint(metres),
+    };
+    (colour, metres.max(0) as f32)
 }
 
 /// Its colour on level ground, as the world map has it, darker under trees.

@@ -5,7 +5,8 @@
 // easterlies), shearing the blobs into streaks. The drift would shear them
 // more and more round the globe, so it runs in cycles: two copies, each
 // drifting for one cycle and then starting again from fresh noise, fade into
-// each other so neither start shows, and the twist never builds up.
+// each other so neither start shows, and the twist never builds up. High
+// ground gathers cloud, and the land downwind of it is clearer.
 
 import bevy_pbr::render::forward_io::VertexOutput;
 
@@ -17,6 +18,9 @@ struct Clouds {
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> clouds: Clouds;
+// The globe's relief: its alpha is the ground's height, 1 at 9 km.
+@group(constants::MATERIAL_BIND_GROUP) @binding(1) var relief: texture_2d<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(2) var relief_sampler: sampler;
 
 const TAU: f32 = 6.2831853;
 const PI: f32 = 3.1415927;
@@ -33,6 +37,15 @@ const CYCLE_HOURS: f32 = 24.0;
 // The thickest cloud, and the dull light on the night side.
 const MOST_OPAQUE: f32 = 0.85;
 const NIGHT: f32 = 0.06;
+// High ground lifts the air, so more cloud forms over it; downwind of it the
+// air has rained out, so less: how much each, and how far upwind to look (in
+// the picture's width, about 5 degrees of longitude). Only highlands count,
+// from `HIGHLANDS` of 9 km, fully by `HIGHEST`.
+const HIGH_GROUND: f32 = 0.35;
+const HIGHLANDS: f32 = 0.22;
+const HIGHEST: f32 = 0.65;
+const RAIN_SHADOW: f32 = 0.8;
+const UPWIND: f32 = 0.015;
 
 // A random value 0..1 for a whole-numbered corner. Integer maths, so a corner
 // gets exactly the same value in every pixel: a `sin` hash isn't exact on
@@ -110,7 +123,15 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     // More cloud at the equator and the middle latitudes, less in the dry
     // belts about 30 degrees out and at the poles.
     let wet = cos(6.0 * latitude);
-    let threshold = 0.55 - 0.08 * wet;
+    // The wind blows west where this is positive (as the bands drift), so
+    // upwind is east, further along the picture.
+    let wind = cos(4.0 * latitude);
+    let ground = textureSample(relief, relief_sampler, in.uv).a;
+    let upwind_ground =
+        textureSample(relief, relief_sampler, in.uv + vec2<f32>(UPWIND * wind, 0.0)).a;
+    let here = smoothstep(HIGHLANDS, HIGHEST, ground);
+    let upwind = smoothstep(HIGHLANDS, HIGHEST, upwind_ground);
+    let threshold = 0.55 - 0.08 * wet - HIGH_GROUND * here + RAIN_SHADOW * max(upwind - here, 0.0);
     let thickness = smoothstep(threshold, threshold + 0.15, shape);
 
     let lit = max(dot(normalize(in.world_normal), normalize(clouds.sun.xyz)), 0.0);
