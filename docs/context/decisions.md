@@ -762,3 +762,9 @@ Owner's decision: on the owner's machine, cargo builds into `D:\.cargo-target` (
 ## 2026-11-04: Maps show mid-tide water and the normal snow line
 
 The minimap and full map colour the world map with the water at `sea_level` (mid-tide) and snow at `NORMAL_SNOW_LINE`, never following the tide or the weather; the 3D view still does. Owner: a map should stay consistent. It also means a chunk's colours are worked out once and kept (until `SurfaceStyle` changes), where before every tide change threw them all away.
+
+## 2026-11-04: Several surface generators, chosen deliberately
+
+`shared::surface` can make the land more than one way (`SurfaceGenerator`): `Classic` (the original layered noise) and `Continents` (planet-sized land and oceans in whole metres from the sea, with shelves, plateaus and rare long mountain ranges; Plates to follow). Owner: the old noise is good for randomness but doesn't look like a real planet, and may still suit some worlds (a dry one). Every world keeps `Classic` until a generator is chosen per world on purpose, which will be its own change (saved in `WorldParams`, a `WORLD_MAP_VERSION` bump, the world map drawn relative to the local height, walking, tides, rivers and pois retuned in metres). Until then the others are seen only in View Planet, whose bar picks the generator, seed and layer.
+
+New generators work in metres (sea level 0, Earth-like: most land low, peaks to about 9 km, ocean floors about 4 km down), turned into the old height scale at 100 m a unit for everything else; their climate cools at Earth's 6.5 °C a km. The old 0-127 scale (once kept small for the browser) no longer limits heights.

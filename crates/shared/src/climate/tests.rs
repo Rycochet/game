@@ -91,3 +91,16 @@ fn real_terrain_has_variety() {
     }
     assert!(found.len() >= 7, "only {found:?}");
 }
+
+#[test]
+fn air_cools_at_earths_rate_above_the_sea() {
+    let climate = Climate::new(&WorldParams::from_seed(Seed::new(5)));
+    let low = climate.sample_metres(100, 50, 0);
+    let high = climate.sample_metres(100, 50, 1000);
+    let cooled = low.celsius() - high.celsius();
+    if low.temperature < 1.0 && high.temperature > 0.0 {
+        assert!((cooled - 6.5).abs() < 1e-9, "{cooled}");
+    }
+    // Under the sea counts as at it.
+    assert_eq!(climate.sample_metres(100, 50, -3000), low);
+}

@@ -41,6 +41,14 @@ const MOISTURE_NOISE: f64 = 0.55;
 /// How far the world's `climate` moves the moisture each way.
 const WORLD_MOISTURE: f64 = 0.25;
 
+/// The temperature scale in degrees Celsius: 0 is this cold, and each whole
+/// unit this many degrees warmer, so `SNOW_TEMPERATURE` is about -8 °C and the
+/// equator's sea level about 27 °C.
+pub const CELSIUS_AT_ZERO: f64 = -10.5;
+pub const CELSIUS_PER_UNIT: f64 = 50.0;
+/// How much colder the air gets climbing a kilometre: Earth's average.
+const LAPSE_RATE: f64 = 6.5;
+
 /// Below this temperature, land is covered in snow. With the numbers above,
 /// on an average world and at an average place that is around height 90.
 pub const SNOW_TEMPERATURE: f64 = 0.05;
@@ -55,6 +63,11 @@ pub struct ClimateSample {
 impl ClimateSample {
     pub fn biome(self) -> Biome {
         Biome::of(self.temperature, self.moisture)
+    }
+
+    /// The temperature in degrees Celsius.
+    pub fn celsius(self) -> f64 {
+        CELSIUS_AT_ZERO + self.temperature * CELSIUS_PER_UNIT
     }
 }
 
@@ -147,15 +160,28 @@ impl Climate {
 
     /// The climate at a position whose ground is at `height`.
     pub fn sample(&self, x: i64, y: i64, height: f64) -> ClimateSample {
+        let climb = (height - COOLING_FROM).max(0.0) / COOLING_HEIGHT;
+        self.cooled_by(x, y, HEIGHT_COOLING * climb)
+    }
+
+    /// The climate at a position whose ground is `metres` above the sea, for
+    /// surfaces worked out in metres: the air cools at Earth's rate as it
+    /// climbs, from the sea rather than from a fixed height.
+    pub fn sample_metres(&self, x: i64, y: i64, metres: i32) -> ClimateSample {
+        let kilometres = metres.max(0) as f64 / 1000.0;
+        self.cooled_by(x, y, LAPSE_RATE * kilometres / CELSIUS_PER_UNIT)
+    }
+
+    /// The climate at a position, `cooling` colder for its height.
+    fn cooled_by(&self, x: i64, y: i64, cooling: f64) -> ClimateSample {
         if showcase::in_plain(y) {
             return showcase::CLIMATE;
         }
         // Poles are a quarter of the way round from the equator.
         let latitude = (y.abs() as f64 / (self.width as f64 / 4.0)).min(1.0);
-        let climb = (height - COOLING_FROM).max(0.0) / COOLING_HEIGHT;
         let temperature = EQUATOR_TEMPERATURE + self.warmth - POLE_COOLING * latitude
             + TEMPERATURE_NOISE * self.layered(&self.temperature, x, y)
-            - HEIGHT_COOLING * climb;
+            - cooling;
         let moisture = 0.5 + self.wetness + MOISTURE_NOISE * self.layered(&self.moisture, x, y);
         ClimateSample {
             temperature: temperature.clamp(0.0, 1.0),

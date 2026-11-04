@@ -7,9 +7,10 @@ use shared::site::{Generator, MAX_RUIN};
 use super::super::actions::{DebugAction, kind_name};
 use super::{
     CHECK_ROW, FIRST_AT, FONT, GenerateButton, GenerateForm, GenerateKind, NEXT_AT, NewSeedButton,
-    OpenPanels, RuinButton, SEED_WIDTH, SeedBox, new_seed, new_seed_icon, row, words,
+    OpenPanels, RuinButton, SEED_WIDTH, SeedBox, new_seed, row, words,
 };
 use crate::connection::ToServer;
+use crate::widgets::new_seed_icon;
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, TextBox, spawn_button,
     spawn_icon_button, spawn_moveable_panel, spawn_text_box,

@@ -3,19 +3,26 @@
 //! loading screen for travelling between planets later. See
 //! `docs/context/client/planet_view.md`.
 
+mod bar;
 mod close;
 mod clouds;
+mod colour;
+#[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
+mod debug_api;
 mod globe;
 mod input;
+mod layer;
 mod moon_look;
 mod open;
+mod planet;
+mod read_bar;
+mod showing;
 mod sky;
 mod spin;
 mod texture;
 
 use bevy::prelude::*;
 
-use crate::common::PointerSystems;
 use crate::widgets::WidgetSystems;
 
 /// Render layer of the globe, its moons, lights and camera: drawn only into
@@ -33,19 +40,20 @@ pub struct PlanetViewPlugin;
 
 impl Plugin for PlanetViewPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<open::PlanetView>()
+        app.init_resource::<showing::PlanetView>()
             .add_plugins(MaterialPlugin::<clouds::PlanetCloudMaterial>::default())
             .add_message::<ViewPlanet>()
             .add_systems(
                 PreUpdate,
                 input::take_input
-                    .after(PointerSystems)
-                    .before(WidgetSystems::Presses),
+                    .after(WidgetSystems::Presses)
+                    .before(WidgetSystems::Front),
             )
             .add_systems(
                 Update,
                 (
                     open::open,
+                    read_bar::read_bar,
                     texture::fill_texture,
                     spin::spin,
                     clouds::move_clouds,
@@ -53,6 +61,8 @@ impl Plugin for PlanetViewPlugin {
                 )
                     .chain(),
             );
+        #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
+        debug_api::add(app);
     }
 }
 

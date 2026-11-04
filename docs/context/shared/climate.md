@@ -9,7 +9,8 @@ Temperature, moisture and the biome they make, at any world map position, follow
 ## Public API
 
 - `SNOW_TEMPERATURE`: land colder than this is snow, around height 90 on average.
-- `Climate::new(&WorldParams)`, `.sample(x, y, height) -> ClimateSample`.
+- `Climate::new(&WorldParams)`, `.sample(x, y, height) -> ClimateSample`, `.sample_metres(x, y, metres)` (for surfaces worked out in metres: cools at Earth's 6.5 °C a km from the sea instead of `HEIGHT_COOLING`).
+- `CELSIUS_AT_ZERO` (-10.5), `CELSIUS_PER_UNIT` (50): the scale in °C, so snow is about -8 °C and the equator's sea about 27 °C; `ClimateSample::celsius()`.
 - `ClimateSample { temperature, moisture }` (both `0..=1`), `.biome()`.
 - `Biome`: `Tundra`, `BorealForest`, `Grassland`, `Woodland`, `SeasonalForest`, `TemperateRainforest`, `Desert`, `Savanna`, `TropicalRainforest`; `ALL`; `Biome::of(temperature, moisture)`.
 

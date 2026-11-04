@@ -11,7 +11,7 @@ use bevy::shader::ShaderRef;
 use shared::rng::Seed;
 use std::f32::consts::FRAC_PI_2;
 
-use super::open::PlanetView;
+use super::showing::PlanetView;
 use super::{HOURS_PER_SECOND, PLANET_LAYER};
 
 /// How far above the ground the clouds are, in the globe's radii: at this
@@ -92,7 +92,7 @@ pub(super) fn move_clouds(
     let Some(showing) = view.showing.as_ref() else {
         return;
     };
-    let Some(mut material) = materials.get_mut(&showing.clouds) else {
+    let Some(mut material) = materials.get_mut(&showing.globe.clouds) else {
         return;
     };
     let hours = (time.elapsed_secs_f64() - showing.opened) * HOURS_PER_SECOND;
@@ -100,6 +100,7 @@ pub(super) fn move_clouds(
     // The lights sit unturned at the scene's root, so this is in the world's
     // frame, as the shader's normals are.
     if let Some(light) = showing
+        .globe
         .scene
         .suns
         .first()
