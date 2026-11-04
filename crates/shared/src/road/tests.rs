@@ -115,3 +115,34 @@ fn golden_roads() {
 }
 
 const GOLDEN_ROADS: &str = "[(1, -4, 1, -2, Path, Some((165, (88, -165)))), (1, -4, 2, -4, Path, Some((96, (121, -250)))), (1, -2, 414, 0, Track, Some((217, (15, -22))))]";
+
+#[test]
+fn a_step_counts_along_a_road_either_way_and_round_the_planet_but_not_across_it() {
+    let link = RoadLink::new(ChunkPos { x: 0, y: 0 }, ChunkPos { x: 1, y: 0 });
+    let road = |kind, points: Vec<(i64, i64)>| Road { link, kind, points };
+    let mut steps = RoadSteps::new(100);
+    steps.add(&road(
+        RoadKind::Path,
+        vec![(98, 5), (99, 5), (100, 5), (101, 6)],
+    ));
+    assert_eq!(steps.kind_of((98, 5), (99, 5)), Some(RoadKind::Path));
+    assert_eq!(steps.kind_of((99, 5), (98, 5)), Some(RoadKind::Path));
+    // Past the planet's edge, on any copy of it.
+    assert_eq!(steps.kind_of((99, 5), (0, 5)), Some(RoadKind::Path));
+    assert_eq!(steps.kind_of((-1, 5), (0, 5)), Some(RoadKind::Path));
+    // Two of its points that aren't one after the other: crossing, not along.
+    assert_eq!(steps.kind_of((99, 5), (1, 6)), None);
+    assert_eq!(steps.kind_of((98, 5), (98, 6)), None);
+    // Where a larger road shares a step, it counts.
+    steps.add(&road(RoadKind::Highway, vec![(99, 5), (100, 5)]));
+    assert_eq!(steps.kind_of((99, 5), (0, 5)), Some(RoadKind::Highway));
+    steps.add(&road(RoadKind::Track, vec![(99, 5), (100, 5)]));
+    assert_eq!(steps.kind_of((99, 5), (0, 5)), Some(RoadKind::Highway));
+}
+
+#[test]
+fn larger_roads_are_faster_up_to_twice_open_land() {
+    let speeds = RoadKind::ALL.map(RoadKind::speed_percent);
+    assert_eq!(speeds, [125, 150, 175, FASTEST_PERCENT]);
+    assert_eq!(FASTEST_PERCENT, 200);
+}

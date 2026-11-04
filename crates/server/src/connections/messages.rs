@@ -123,7 +123,8 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
                 world.ground.elevation(from.0, from.1, conditions),
                 world.ground.elevation(to.0, to.1, conditions),
             );
-            (stayed, world_step_cost(from, to, ends))
+            let road = world.road_steps.kind_of(from, to);
+            (stayed, world_step_cost(from, to, ends, road))
         }
     }
 }

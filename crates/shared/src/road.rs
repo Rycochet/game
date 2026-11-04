@@ -19,8 +19,10 @@ use crate::world::WorldParams;
 mod kind;
 mod network;
 mod route;
+mod steps;
 
-pub use kind::RoadKind;
+pub use kind::{FASTEST_PERCENT, RoadKind};
+pub use steps::RoadSteps;
 
 /// The furthest apart two towns may be and still be joined, in grid points:
 /// 6 chunks (owner's choice).

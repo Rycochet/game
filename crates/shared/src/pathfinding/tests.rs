@@ -7,6 +7,7 @@ use crate::movement::{
     world_step_cost,
 };
 use crate::rng::Seed;
+use crate::road::RoadSteps;
 use crate::world::WorldParams;
 
 fn anywhere(_: i64, _: i64) -> bool {
@@ -241,7 +242,7 @@ fn assert_walkable_on_world_map(ground: &WorldGround, from: (i64, i64), path: &P
             ground.elevation(at.0, at.1, water()),
             ground.elevation(cell.0, cell.1, water()),
         );
-        cost += world_step_cost(at, cell, ends);
+        cost += world_step_cost(at, cell, ends, None);
         at = cell;
     }
     assert_eq!(cost, path.cost);
@@ -282,6 +283,7 @@ fn world_routes_go_round_a_summit() {
     let path = find_world_path(
         &ground,
         conditions,
+        &RoadSteps::default(),
         (peak.0 - 150, peak.1),
         (peak.0 + 150, peak.1),
     );
@@ -294,7 +296,7 @@ fn world_routes_go_round_a_summit() {
 fn world_routes_go_round_water() {
     let ground = ground();
     let (from, to) = across_water(&ground);
-    let path = find_world_path(&ground, water(), from, to);
+    let path = find_world_path(&ground, water(), &RoadSteps::default(), from, to);
     assert_walkable_on_world_map(&ground, from, &path);
     assert!(
         path.cells
@@ -312,7 +314,7 @@ fn world_routes_stop_at_the_nearest_shore_for_a_click_on_water() {
     let ground = ground();
     let (from, to) = across_water(&ground);
     let wet = (to.0 - 40, to.1);
-    let path = find_world_path(&ground, water(), from, wet);
+    let path = find_world_path(&ground, water(), &RoadSteps::default(), from, wet);
     assert!(!path.reached);
     assert_walkable_on_world_map(&ground, from, &path);
     let end = path.cells.last().copied().unwrap_or(from);
@@ -324,14 +326,17 @@ fn world_routes_stay_within_reach_and_repeat_exactly() {
     let ground = ground();
     let (from, _) = across_water(&ground);
     let far = (from.0 + 10 * WORLD_ROUTE_REACH, from.1);
-    let path = find_world_path(&ground, water(), from, far);
+    let path = find_world_path(&ground, water(), &RoadSteps::default(), from, far);
     assert!(!path.reached);
     assert!(
         path.cells
             .iter()
             .all(|c| (c.0 - from.0).abs() <= WORLD_ROUTE_REACH)
     );
-    assert_eq!(path, find_world_path(&ground, water(), from, far));
+    assert_eq!(
+        path,
+        find_world_path(&ground, water(), &RoadSteps::default(), from, far)
+    );
 }
 
 #[test]
@@ -339,7 +344,7 @@ fn world_routes_start_from_water_too() {
     let ground = ground();
     let (from, to) = across_water(&ground);
     let wet = (from.0 + 20, from.1);
-    let path = find_world_path(&ground, water(), wet, to);
+    let path = find_world_path(&ground, water(), &RoadSteps::default(), wet, to);
     assert_walkable_on_world_map(&ground, wet, &path);
     assert!(!path.cells.is_empty());
 }

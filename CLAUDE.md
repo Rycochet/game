@@ -35,7 +35,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
 | shared: climate     | `crates/shared/src/climate.rs`  | `docs/context/shared/climate.md`      | Temperature, moisture and Whittaker biomes at any world map position |
 | shared: river       | `crates/shared/src/river.rs`    | `docs/context/shared/river.md`        | Rivers running downhill from a chunk's source, more where wet (visual only for now) |
-| shared: road        | `crates/shared/src/road.rs`     | `docs/context/shared/road.md`         | Roads between towns within range (paths, tracks, stone roads, highways by the smaller town), routed by the walking rules; worked out by the server (visual only for now) |
+| shared: road        | `crates/shared/src/road.rs`     | `docs/context/shared/road.md`         | Roads between towns within range (paths, tracks, stone roads, highways by the smaller town), routed by the walking rules; worked out by the server; steps along them are faster |
 | shared: vegetation  | `crates/shared/src/vegetation.rs` | `docs/context/shared/vegetation.md` | Tree cover and low growth at any world map position, from climate and patch noise (visual only for now) |
 | shared: weather     | `crates/shared/src/weather.rs`  | `docs/context/shared/weather.md`      | Cloud cover and rain at any place and time (4D simplex noise) |
 | shared: poi     | `crates/shared/src/poi.rs`  | `docs/context/shared/poi.md`      | World map chunks and their pois (kind, position, map seed) |

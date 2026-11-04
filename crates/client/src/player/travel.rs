@@ -50,7 +50,10 @@ pub(super) fn travel(
     let ground = (*view.get() == GameView::WorldMap)
         .then_some(world.as_ref())
         .flatten()
-        .map(|world| (&world.ground, world.conditions(&clock, &weather)));
+        .map(|world| {
+            let conditions = world.conditions(&clock, &weather);
+            (&world.ground, conditions, world.roads.steps())
+        });
 
     if *tile != travel.last {
         travel.route.clear();
@@ -66,7 +69,9 @@ pub(super) fn travel(
         let from = (tile.x, tile.y);
         let to = (request.x, request.y);
         let path = match ground {
-            Some((ground, conditions)) => find_world_path(ground, conditions, from, to),
+            Some((ground, conditions, roads)) => {
+                find_world_path(ground, conditions, roads, from, to)
+            }
             None => {
                 let path = find_path(&dungeon.level, from, to, None, known);
                 straighten(&dungeon.level, from, &path, known)
@@ -114,12 +119,13 @@ pub(super) fn travel(
             let to = DVec2::new(next.0 as f64, next.1 as f64);
             // How much longer this step takes than on flat ground.
             let slowness = match ground {
-                Some((ground, conditions)) if next != at => {
+                Some((ground, conditions, roads)) if next != at => {
                     let ends = (
                         ground.elevation(at.0, at.1, conditions),
                         ground.elevation(next.0, next.1, conditions),
                     );
-                    world_step_cost(at, next, ends) as f64 / step_cost(at, next) as f64
+                    let road = roads.kind_of(at, next);
+                    world_step_cost(at, next, ends, road) as f64 / step_cost(at, next) as f64
                 }
                 _ => 1.0,
             };
@@ -135,7 +141,9 @@ pub(super) fn travel(
                     .expect("the next cell isn't this one");
                 // The route was legal when it was found, but cells can change.
                 let legal = match ground {
-                    Some((ground, conditions)) => step_on_world_map(ground, conditions, at, step),
+                    Some((ground, conditions, _)) => {
+                        step_on_world_map(ground, conditions, at, step)
+                    }
                     None => step_on_level(&dungeon.level, at, step),
                 };
                 let in_the_way = enemies.contains(&next);
@@ -156,8 +164,8 @@ pub(super) fn travel(
                 }
                 if legal != Some(next) {
                     // The tide or a thaw has cut the way: find another from here.
-                    if let Some((ground, conditions)) = ground {
-                        let path = find_world_path(ground, conditions, at, travel.goal);
+                    if let Some((ground, conditions, roads)) = ground {
+                        let path = find_world_path(ground, conditions, roads, at, travel.goal);
                         travel.route_arrives = path.reached;
                         travel.route = path.cells.into();
                         if travel.route.is_empty() {
@@ -171,12 +179,12 @@ pub(super) fn travel(
                 }
                 // Paced by distance above, which comes to the same as this.
                 let cost = match ground {
-                    Some((ground, conditions)) => {
+                    Some((ground, conditions, roads)) => {
                         let ends = (
                             ground.elevation(at.0, at.1, conditions),
                             ground.elevation(next.0, next.1, conditions),
                         );
-                        world_step_cost(at, next, ends)
+                        world_step_cost(at, next, ends, roads.kind_of(at, next))
                     }
                     None => site_step_cost(at, next),
                 };

@@ -14,12 +14,12 @@ How characters move: one step at a time to one of the 8 neighbouring grid points
 - `WorldConditions { water, snow_line }`: what decides where can be walked now, as the server says (the hour's `WorldParams::water_level`, the weather).
 - `WorldGround::new(&WorldParams)`, `.elevation(x, y, conditions) -> Option<i32>`: in whole quarters of `Surface::broad_height`, `None` for open water (ice counts as ground).
 - `step_on_world_map(ground, conditions, from, step) -> Option<(x, y)>`: onto dry ground or ice; anyone standing in open water may step anywhere, so nobody caught by the tide, a thaw or put there is stuck.
-- `world_step_cost(from, to, elevations) -> u32`: `step_cost` plus `SLOPE_COST` (45) per elevation climbed or descended; water counts as flat.
+- `world_step_cost(from, to, elevations, road) -> u32`: `step_cost` plus `SLOPE_COST` (45) per elevation climbed or descended, water counting as flat, all divided by the road's speed when the step runs along one (`road::RoadSteps::kind_of`; `None` off roads).
 - `steps_between(from, to) -> Vec<Step>`: diagonal first, then straight (dev tools, tests).
 
 ## Depends on
 
-- `shared::dungeon` (`Level`), `shared::surface`, `shared::world`, `serde`.
+- `shared::dungeon` (`Level`), `shared::road` (`RoadKind`), `shared::surface`, `shared::world`, `serde`.
 
 ## Used by
 

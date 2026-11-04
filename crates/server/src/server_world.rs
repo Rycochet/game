@@ -34,6 +34,8 @@ pub struct ServerWorld {
     pub(crate) ground: WorldGround,
     /// Works out the roads between towns.
     pub(crate) roads: RoadWorker,
+    /// The steps along every road found so far, which cost less.
+    pub(crate) road_steps: shared::road::RoadSteps,
     params: WorldParams,
     /// The suns and moons: the tide follows the moons.
     celestial: Celestial,
@@ -142,6 +144,7 @@ impl ServerWorld {
             width: Surface::new(&params).width(),
             ground: WorldGround::new(&params),
             roads: RoadWorker::start(seed, storage.clone()),
+            road_steps: shared::road::RoadSteps::new(Surface::new(&params).width()),
             celestial: Celestial::from_seed(params.seed),
             params,
             clock: world_clock,
