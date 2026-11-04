@@ -9,6 +9,7 @@
 //! while `GameView::WorldMap` is current.
 
 mod lights;
+pub(crate) mod map_sky;
 mod picking;
 mod poi_model;
 mod pois;
@@ -74,6 +75,7 @@ impl Plugin for WorldMapPlugin {
             .init_resource::<SpawnedPois>()
             .init_resource::<PoiMeshes>()
             .init_resource::<KnownRivers>()
+            .init_resource::<map_sky::MapSky>()
             .add_plugins((
                 MaterialPlugin::<sky::TerrainMaterial>::default(),
                 MaterialPlugin::<sky::CloudMaterial>::default(),
@@ -92,6 +94,7 @@ impl Plugin for WorldMapPlugin {
             .add_systems(
                 Update,
                 (
+                    map_sky::update.before(sky::update).before(lights::update),
                     update_terrain,
                     sky::update,
                     lights::update,

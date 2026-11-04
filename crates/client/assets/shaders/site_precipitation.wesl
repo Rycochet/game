@@ -47,6 +47,10 @@ fn vertex(in: Vertex) -> Output {
     if weather.rain * 1.05 < fract(random * 57.3) + 0.03 {
         return out;
     }
+    // The share the Weather setting draws.
+    if fract(random * 91.7) >= weather.light.a {
+        return out;
+    }
 
     var speed = 70.0;
     var size = vec2<f32>(0.3, 5.0);

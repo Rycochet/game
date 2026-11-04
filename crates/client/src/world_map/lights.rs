@@ -1,13 +1,15 @@
 //! The world map's lights: one `DirectionalLight` per sun and moon (only the
-//! brightest casting shadows), the ambient fill, and the parts of the scene that
-//! aren't lit by them following along.
+//! brightest casting shadows, as the Shadows setting allows), the ambient fill
+//! (raised by Brightness), and the parts of the scene that aren't lit by them
+//! following along.
 
-use bevy::light::light_consts;
+use bevy::light::{DirectionalLightShadowMap, light_consts};
 use bevy::prelude::*;
 use shared::celestial::{BodyKind, BodyNow, MOST_BODIES, brightest};
 
+use super::map_sky::MapSky;
 use super::{EdgeFaces, WorldMapScene};
-use crate::common::SkyNow;
+use crate::common::{NIGHT_LIGHT, Preferences, Shadows};
 
 /// A strong light with little ambient fill, so slopes facing away go properly
 /// dark. This is what a sun gives flat ground at noon, tuned so overall
@@ -49,9 +51,16 @@ pub(super) fn spawn(commands: &mut Commands) {
     }
 }
 
+/// Shadow map sizes for the Shadows setting's Low and High.
+const SHADOW_MAP_LOW: usize = 1024;
+const SHADOW_MAP_HIGH: usize = 2048;
+
 /// Every frame in this view: puts the lights where the suns and moons are.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn update(
-    sky: Res<SkyNow>,
+    sky: Res<MapSky>,
+    preferences: Res<Preferences>,
+    shadow_map: Option<ResMut<DirectionalLightShadowMap>>,
     ambient: Option<ResMut<GlobalAmbientLight>>,
     faces: Single<&MeshMaterial3d<StandardMaterial>, With<EdgeFaces>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -62,6 +71,17 @@ pub(super) fn update(
         &mut Visibility,
     )>,
 ) {
+    let sky = &sky.0;
+    let video = &preferences.video;
+    if let Some(mut map) = shadow_map {
+        let size = match video.shadows {
+            Shadows::Low => SHADOW_MAP_LOW,
+            Shadows::Off | Shadows::High => SHADOW_MAP_HIGH,
+        };
+        if map.size != size {
+            map.size = size;
+        }
+    }
     let strongest_channel = sky.flat.max_element();
     let shadows = brightest(&sky.bodies);
     let shown = |number: usize| !ONE_LIGHT || number == shadows;
@@ -87,7 +107,7 @@ pub(super) fn update(
         let strongest = red.max(green).max(blue);
         light.color = Color::linear_rgb(red / strongest, green / strongest, blue / strongest);
         light.illuminance = FLAT_LUX * strongest * boost(now) * exposure;
-        let casts = number == shadows;
+        let casts = number == shadows && video.shadows != Shadows::Off;
         if light.shadow_maps_enabled != casts {
             light.shadow_maps_enabled = casts;
         }
@@ -102,13 +122,15 @@ pub(super) fn update(
             Vec3::ONE
         };
         ambient.color = Color::linear_rgb(tint.x, tint.y, tint.z);
-        ambient.brightness = AMBIENT_BRIGHTNESS;
+        // Brightness: at least that share of what a noon sun gives.
+        let least = AMBIENT_BRIGHTNESS * video.least_light() / NIGHT_LIGHT;
+        ambient.brightness = AMBIENT_BRIGHTNESS.max(least);
     }
 
     // The edge faces are unlit, so their colours match the prototype's: they
     // only need dimming, or they would glow at night.
     if let Some(mut material) = materials.get_mut(&faces.0) {
-        let lit = sky.lit();
+        let lit = sky.lit().max(Vec3::splat(video.least_light()));
         material.base_color = Color::linear_rgb(lit.x, lit.y, lit.z);
     }
 }

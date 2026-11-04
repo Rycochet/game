@@ -6,7 +6,7 @@ use shared::celestial::{BodyNow, flat_light};
 use super::{CurrentWorld, NIGHT_LIGHT, ServerClock};
 
 /// The suns and moons as they are this frame (`shared::celestial`).
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone)]
 pub struct SkyNow {
     /// In the order of `Celestial::bodies`.
     pub bodies: Vec<BodyNow>,

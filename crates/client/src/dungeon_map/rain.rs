@@ -17,7 +17,7 @@ use shared::rng::Seed;
 
 use super::daylight::OutsideLight;
 use super::{CELL_SIZE, Shown};
-use crate::common::{CurrentDungeon, CurrentWorld, ServerClock, WorldReturn};
+use crate::common::{CurrentDungeon, CurrentWorld, Preferences, ServerClock, WorldReturn};
 
 /// Quads of precipitation per cell, shown in proportion to how hard it is
 /// falling: the same density as on the world map.
@@ -34,7 +34,8 @@ struct RainParams {
     /// Seconds, for things moving.
     time: f32,
     fall_height: f32,
-    /// What to multiply colours by to look lit (`OutsideLight::lit`).
+    /// `rgb`: what to multiply colours by to look lit (`OutsideLight::lit`);
+    /// `a`: the share of drops the Weather setting draws.
     light: Vec4,
 }
 
@@ -151,6 +152,7 @@ pub fn update(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<RainMaterial>>,
     mut outside: Local<Vec<(i64, i64)>>,
+    preferences: Res<Preferences>,
 ) {
     let Some(world) = world else {
         return;
@@ -198,7 +200,10 @@ pub fn update(
             temperature: temperature.temperature as f32,
             time: time.elapsed_secs(),
             fall_height: FALL_HEIGHT,
-            light: outside_light.lit().extend(1.0),
+            // Alpha: the share the Weather setting draws.
+            light: outside_light
+                .lit()
+                .extend(preferences.video.precipitation.share()),
         };
     }
 }

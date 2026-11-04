@@ -7,7 +7,12 @@ use super::super::mesh::with_ambient;
 use super::super::sight_lines::SurfaceMaterial;
 use super::super::{CropPart, HerbPart, Surface, SurfaceMaterials, TOKEN_AMBIENT_BRIGHTNESS};
 use super::{CLOUD_SHADOW, OPEN_AMBIENT_BRIGHTNESS};
-use crate::common::{CurrentDungeon, CurrentWorld, GameClock, MapPosition, WorldReturn};
+
+/// How much darker remembered places are with Remembered Places set to Dim.
+const MEMORY_DIM: f32 = 0.5;
+use crate::common::{
+    CurrentDungeon, CurrentWorld, GameClock, MapPosition, Preferences, Remembered, WorldReturn,
+};
 use crate::player::Player;
 
 /// The light outside at the site's place.
@@ -54,25 +59,35 @@ pub(in crate::dungeon_map) fn update_outside(
 
 /// What isn't baked into meshes' colours follows the light: remembered open
 /// ground, which would otherwise be brighter than what is in sight at night, and
-/// crops and plants.
+/// crops and plants. Remembered places are darker still with Remembered
+/// Places set to Dim.
 #[allow(clippy::type_complexity)]
 pub(in crate::dungeon_map) fn tint_outside(
+    preferences: Res<Preferences>,
     outside: Res<OutsideLight>,
     surfaces: Res<SurfaceMaterials>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
     plants: Query<&MeshMaterial3d<SurfaceMaterial>, Or<(With<CropPart>, With<HerbPart>)>>,
+    mut dimmed: Local<f32>,
 ) {
-    if !outside.is_changed() {
+    let dim = match preferences.video.remembered {
+        Remembered::Dim => MEMORY_DIM,
+        Remembered::Show | Remembered::Hide => 1.0,
+    };
+    if !outside.is_changed() && !(preferences.is_changed() && *dimmed != dim) {
         return;
     }
+    *dimmed = dim;
     let lit = outside.lit();
     let tint = |material: &mut StandardMaterial, by: Vec3| {
         let alpha = material.base_color.alpha();
         material.base_color = Color::linear_rgba(by.x, by.y, by.z, alpha);
     };
-    for surface in [Surface::Ground, Surface::Town] {
+    for surface in Surface::ALL {
+        let outside = matches!(surface, Surface::Ground | Surface::Town);
+        let by = if outside { lit.max_element() } else { 1.0 };
         if let Some(mut material) = materials.get_mut(&surfaces.memory[surface as usize]) {
-            tint(&mut material.base, Vec3::splat(lit.max_element()));
+            tint(&mut material.base, Vec3::splat(by * dim));
         }
     }
     for plant in &plants {
@@ -83,8 +98,10 @@ pub(in crate::dungeon_map) fn tint_outside(
 }
 
 /// Tokens have more ambient light with the player out in the open or in a town,
-/// following the light there, and the usual dim fill otherwise.
+/// following the light there, and the usual dim fill otherwise; with Brightness,
+/// at least that share of what full daylight gives.
 pub(in crate::dungeon_map) fn token_ambient(
+    preferences: Res<Preferences>,
     outside: Res<OutsideLight>,
     dungeon: Res<CurrentDungeon>,
     player: Single<&MapPosition, With<Player>>,
@@ -101,6 +118,7 @@ pub(in crate::dungeon_map) fn token_ambient(
     } else {
         (TOKEN_AMBIENT_BRIGHTNESS, Vec3::ONE)
     };
+    let brightness = brightness.max(OPEN_AMBIENT_BRIGHTNESS * preferences.video.least_light());
     let color = Color::linear_rgb(tint.x, tint.y, tint.z);
     if ambient.brightness != brightness || ambient.color != color {
         ambient.brightness = brightness;

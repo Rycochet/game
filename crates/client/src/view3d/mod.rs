@@ -15,7 +15,7 @@ use bevy::prelude::*;
 use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{SmoothPosition, ViewFacing};
+use crate::common::{MapPosition, Preferences, SmoothPosition, ViewFacing};
 use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{
@@ -152,10 +152,11 @@ fn spawn_camera(
 /// view is turned (`ViewFacing`).
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn place_camera_and_tokens(
-    player: Single<&SmoothPosition, With<Player>>,
+    player: Single<(Option<&MapPosition>, &SmoothPosition), With<Player>>,
+    preferences: Res<Preferences>,
     grid: Res<ViewGrid>,
     assets: Res<TokenAssets>,
-    positions: Query<&SmoothPosition>,
+    positions: Query<(Option<&MapPosition>, &SmoothPosition)>,
     mut facing: ResMut<ViewFacing>,
     camera: Single<
         (&OrbitCamera, &mut Transform),
@@ -166,8 +167,15 @@ fn place_camera_and_tokens(
 ) {
     let (orbit, mut camera) = camera.into_inner();
     let size = grid.cell_size;
+    // Reduce Motion: on the cell, without gliding between.
+    let snap = preferences.video.reduce_motion;
+    let shown_at = |(cell, smooth): (Option<&MapPosition>, &SmoothPosition)| match cell {
+        Some(cell) if snap => (cell.x as f32, cell.y as f32),
+        _ => (smooth.x as f32, smooth.y as f32),
+    };
 
-    let target = Vec3::new(player.x as f32 * size, grid.floor, player.y as f32 * size);
+    let (x, y) = shown_at(*player);
+    let target = Vec3::new(x * size, grid.floor, y * size);
     *camera = orbit.transform(target);
     // Only write when it changes, so change detection stays meaningful.
     facing.set_if_neq(ViewFacing(orbit.quarter_turns()));
@@ -176,11 +184,8 @@ fn place_camera_and_tokens(
         let Ok(position) = positions.get(view.owner) else {
             continue;
         };
-        transform.translation = Vec3::new(
-            position.x as f32 * size,
-            grid.floor + token::HALF_THICKNESS,
-            position.y as f32 * size,
-        );
+        let (x, y) = shown_at(position);
+        transform.translation = Vec3::new(x * size, grid.floor + token::HALF_THICKNESS, y * size);
     }
 
     // Token views never rotate, so turning each anchor to the camera's

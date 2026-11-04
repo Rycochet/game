@@ -44,6 +44,7 @@ mod growth;
 mod lights;
 mod parts;
 mod pictures;
+mod plain_pictures;
 mod showing;
 mod spawn_scene;
 mod update_meshes;
@@ -137,6 +138,9 @@ impl Plugin for DungeonMapPlugin {
                     .after(View3dSystems::Place)
                     .run_if(in_view),
             )
-            .add_systems(Update, grey_pictures);
+            .add_systems(
+                Update,
+                (grey_pictures, plain_pictures::plain_pictures).chain(),
+            );
     }
 }

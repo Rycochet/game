@@ -7,10 +7,15 @@ use shared::celestial::brightest;
 use super::rivers::KnownRivers;
 use super::terrain::{HeightCache, TerrainGrid, ViewSquare};
 use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, MAX_HALF, StripMeshes, Terrain};
-use crate::common::{CurrentWorld, GameClock, MapPosition, ViewStats, Weather};
+use crate::common::{
+    CurrentWorld, GameClock, MapPosition, Preferences, ViewDistance, ViewStats, Weather,
+};
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{OrbitCamera, ViewCamera};
+
+/// The window last cut: its turn and size, and whether lit at noon.
+type LastCut = (f32, f32, bool);
 
 /// When the player reaches a new grid point, the hour, weather or style change,
 /// or the view turns: moves the terrain to the player, works out any grid
@@ -34,30 +39,38 @@ pub(super) fn update_terrain(
     faces: Single<&Mesh3d, With<EdgeFaces>>,
     // Together, as Bevy limits how many things a system can ask for.
     (river_strips, river_banks, road_strips): StripMeshes,
-    // `Local` keeps a value between runs of this system: the square last cut.
-    mut cut: Local<Option<(f32, f32)>>,
+    // `Local` keeps a value between runs of this system: the square last cut
+    // (its turn and size), and whether lit at noon (Midday Sun).
+    (preferences, mut cut): (Res<Preferences>, Local<Option<LastCut>>),
 ) {
     // The cache is inserted by `spawn_view`'s commands, so it can be missing
     // on the very first frame.
     let Some(mut cache) = cache else {
         return;
     };
-    // A new hour, weather or style changes how every point is drawn.
-    let redraw_all =
-        clock.is_changed() || weather.is_changed() || style.is_changed() || cache.is_added();
+    let video = &preferences.video;
+    let square = view_square(&orbit, video.view_distance);
     // Turning or zooming changes the square.
-    let reframed = *cut != Some((orbit.yaw, orbit.distance));
+    let reframed = cut.is_none_or(|(yaw, half, _)| (yaw, half) != (orbit.yaw, square.half));
+    let relit = cut.is_some_and(|(.., noon)| noon != video.midday_sun);
+    // A new hour (for the tide), weather, style or light changes how every
+    // point is drawn.
+    let redraw_all = clock.is_changed()
+        || weather.is_changed()
+        || style.is_changed()
+        || cache.is_added()
+        || relit;
     // More of the world, which may have pois the woods make way for.
     if !(player.is_changed() || redraw_all || reframed || world.is_changed()) {
         return;
     }
-    *cut = Some((orbit.yaw, orbit.distance));
+    *cut = Some((orbit.yaw, square.half, video.midday_sun));
 
     let start = Instant::now();
     let centre = (player.x, player.y);
     let water_level = world.water_level(&clock);
-    let square = view_square(&orbit);
-    let light_from = light_from(&world, clock.hour as f64);
+    let hour = super::map_sky::shading_hour(video.midday_sun, clock.hour as f64);
+    let light_from = light_from(&world, hour);
     for mut transform in &mut followers {
         transform.translation = Vec3::new(player.x as f32, 0.0, player.y as f32);
     }
@@ -150,14 +163,28 @@ pub(super) fn light_from(world: &CurrentWorld, hours: f64) -> (f64, f64) {
 /// The window of terrain on show: lined up with the camera, and smaller when
 /// zoomed in, by as much as the camera moved in, so it keeps its size on
 /// screen and zooming shows less of the world rather than a bigger map.
-pub(super) fn view_square(orbit: &OrbitCamera) -> ViewSquare {
+pub(super) fn view_square(orbit: &OrbitCamera, distance: ViewDistance) -> ViewSquare {
     let (right, towards) = orbit.ground_axes();
     ViewSquare {
         right,
         towards,
-        half: window_half(orbit.zoom()),
+        half: drawn_half(orbit.zoom(), distance),
     }
 }
+
+/// How far the window's sides are from the player with the View Distance
+/// setting: Normal as `window_half`, Near three quarters of that, Far all the
+/// window there can be, even zoomed in.
+pub(super) fn drawn_half(zoom: f32, distance: ViewDistance) -> f32 {
+    match distance {
+        ViewDistance::Near => window_half(zoom) * NEAR_SHARE,
+        ViewDistance::Normal => window_half(zoom),
+        ViewDistance::Far => MAX_HALF,
+    }
+}
+
+/// How much of the usual window Near draws.
+const NEAR_SHARE: f32 = 0.75;
 
 /// Grid units from the player to each side of the window at a camera zoom
 /// (`OrbitCamera::zoom`): `HALF_SIZE` in the starting view, never more than

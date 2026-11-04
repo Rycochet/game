@@ -19,6 +19,8 @@ struct Sky {
     towards: vec2<f32>,
     centre: vec2<f32>,
     light: vec4<f32>,
+    shown: vec4<f32>,
+    still: vec4<f32>,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> sky: Sky;
@@ -144,9 +146,10 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
         // Two layers of slow ripples, rougher and greyer under a storm.
         let rough = above.g;
         let speed = 0.25 + 0.75 * above.r + rough;
+        let time = sky.still.y;
         let wrapped = place.xz % 4096.0;
-        let small = smooth_noise(TURN * wrapped / 6.0 + vec2<f32>(sky.time * 0.11, sky.time * 0.07) * speed);
-        let large = smooth_noise(TURN * TURN * wrapped / 19.0 - vec2<f32>(sky.time * 0.05, sky.time * -0.03) * speed);
+        let small = smooth_noise(TURN * wrapped / 6.0 + vec2<f32>(time * 0.11, time * 0.07) * speed);
+        let large = smooth_noise(TURN * TURN * wrapped / 19.0 - vec2<f32>(time * 0.05, time * -0.03) * speed);
         let ripple = small * 0.55 + large * 0.45;
         let strength = 0.16 + 0.4 * rough;
         var moving = colour * (1.0 + (ripple - 0.5) * 2.0 * strength);
@@ -161,7 +164,8 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
     @if(VERTEX_UVS_A && VERTEX_UVS_B) {
         cover = vec4<f32>(in.uv, in.uv_b);
     }
-    if water <= 0.001 && cover.x + cover.y > 0.001 {
+    // Foliage off leaves the ground's own colour.
+    if water <= 0.001 && cover.x + cover.y > 0.001 && sky.shown.w > 0.5 {
         let wrapped = place.xz % 4096.0;
         var bump = vec2<f32>(0.0);
 
@@ -196,13 +200,15 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
         pbr_input.N = normalize(pbr_input.N - vec3<f32>(bump.x, 0.0, bump.y));
     }
 
-    colour *= 1.0 - SHADOW * above.r;
+    colour *= 1.0 - SHADOW * above.r * sky.shown.y;
     pbr_input.material.base_color = vec4<f32>(colour, pbr_input.material.base_color.a);
 
     var out: FragmentOutput;
     out.color = apply_pbr_lighting(pbr_input);
     let glow = sky.light.a * (1.0 - smoothstep(GLOW_FULL, GLOW_END, distance(in.world_position.xz, sky.centre)));
     out.color = vec4<f32>(out.color.rgb + colour * glow, out.color.a);
+    // Brightness: never darker than this share of the colour in full light.
+    out.color = vec4<f32>(max(out.color.rgb, colour * sky.still.x), out.color.a);
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
     return out;
 }
