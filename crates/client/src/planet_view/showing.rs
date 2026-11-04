@@ -11,6 +11,7 @@ use super::clouds::{PlanetCloudMaterial, spawn_clouds};
 use super::globe::{Scene, spawn_scene};
 use super::layer::Layer;
 use super::planet::Planet;
+use super::relief::new_relief_texture;
 use super::sky::Sky;
 use super::texture::{Fill, new_texture, texture_size};
 use crate::common::CurrentWorld;
@@ -71,6 +72,10 @@ pub(super) struct Globe {
     pub(super) sky: Sky,
     /// The surface's picture, its size and how far it is filled.
     pub(super) texture: Handle<Image>,
+    /// The relief, and each pixel's height in metres (the sea flat) it is
+    /// worked out from, kept as the picture fills.
+    pub(super) relief: Handle<Image>,
+    pub(super) heights: Vec<f32>,
     pub(super) size: UVec2,
     pub(super) fill: Fill,
 }
@@ -95,11 +100,12 @@ pub(super) fn build_globe(
     let planet = Planet::new(world, choice.seed, choice.generator);
     let size = texture_size(planet.surface.width());
     let texture = assets.images.add(new_texture(size));
+    let relief = assets.images.add(new_relief_texture(size));
     let celestial = planet.celestial(world);
     let scene = spawn_scene(
         commands,
         (choice.seed, celestial),
-        texture.clone(),
+        (texture.clone(), relief.clone()),
         picture,
         (
             &mut assets.meshes,
@@ -110,7 +116,7 @@ pub(super) fn build_globe(
     let clouds = spawn_clouds(
         commands,
         scene.globe,
-        choice.seed,
+        (choice.seed, relief.clone()),
         (&mut assets.meshes, &mut assets.clouds),
     );
     Globe {
@@ -121,6 +127,8 @@ pub(super) fn build_globe(
         scene,
         clouds,
         texture,
+        heights: vec![0.0; (size.x * size.y) as usize],
+        relief,
         size,
         fill: Fill::default(),
     }

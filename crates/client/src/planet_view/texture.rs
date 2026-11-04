@@ -2,6 +2,7 @@
 //! down. Filled coarsely first, in blocks, then finer and finer, all within a
 //! few milliseconds a frame: the whole globe shows at once and sharpens as it
 //! turns, rather than the game stopping or the picture filling row by row.
+//! Then the relief is worked out from the heights found, the same way.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
@@ -11,7 +12,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use std::time::Duration;
 
 use super::colour::{Colouring, colour_at};
-use super::showing::PlanetView;
+use super::relief::relief_row;
+use super::showing::{Globe, PlanetView};
 use crate::surface_style::SurfaceStyle;
 
 /// The widest the picture gets; smaller worlds get a pixel a grid point.
@@ -34,9 +36,12 @@ pub(super) struct Fill {
     row: u32,
 }
 
+/// The pass after the colours': the relief, a row at a time.
+const RELIEF_PASS: usize = PASSES.len();
+
 impl Fill {
     pub(super) fn done(self) -> bool {
-        self.pass >= PASSES.len()
+        self.pass > RELIEF_PASS
     }
 }
 
@@ -100,6 +105,10 @@ pub(super) fn fill_texture(
     if globe.fill.done() {
         return;
     }
+    if globe.fill.pass == RELIEF_PASS {
+        fill_relief(globe, &mut images);
+        return;
+    }
     let Some(mut image) = images.get_mut(&globe.texture) else {
         return;
     };
@@ -115,16 +124,17 @@ pub(super) fn fill_texture(
         broad: width >= size.x as i64 * BROAD_FROM,
     };
     let started = Instant::now();
-    while !globe.fill.done() && started.elapsed() < FRAME_BUDGET {
+    while globe.fill.pass < RELIEF_PASS && started.elapsed() < FRAME_BUDGET {
         let Fill { pass, row } = globe.fill;
         let block = PASSES[pass];
         for column in pass_columns(pass, row, size.x) {
             let at = ground_at(column, row, size, width);
-            let colour = colour_at(&globe.planet, &style, colouring, at);
+            let (colour, metres) = colour_at(&globe.planet, &style, colouring, at);
             for down in row..(row + block).min(size.y) {
                 for across in column..(column + block).min(size.x) {
-                    let start = ((down * size.x + across) * 4) as usize;
-                    data[start..start + 4].copy_from_slice(&colour);
+                    let pixel = (down * size.x + across) as usize;
+                    data[pixel * 4..pixel * 4 + 4].copy_from_slice(&colour);
+                    globe.heights[pixel] = metres;
                 }
             }
         }
@@ -135,5 +145,34 @@ pub(super) fn fill_texture(
                 row: 0,
             };
         }
+    }
+}
+
+/// The relief's next rows, as many as fit in the frame's budget, once the
+/// heights are all known.
+fn fill_relief(globe: &mut Globe, images: &mut Assets<Image>) {
+    let Some(mut image) = images.get_mut(&globe.relief) else {
+        return;
+    };
+    let Some(data) = image.data.as_mut() else {
+        return;
+    };
+    let circumference = globe.planet.surface.width() as f32 * 1000.0;
+    let started = Instant::now();
+    while globe.fill.row < globe.size.y && started.elapsed() < FRAME_BUDGET {
+        relief_row(
+            &globe.heights,
+            globe.size,
+            globe.fill.row,
+            circumference,
+            data,
+        );
+        globe.fill.row += 1;
+    }
+    if globe.fill.row >= globe.size.y {
+        globe.fill = Fill {
+            pass: RELIEF_PASS + 1,
+            row: 0,
+        };
     }
 }

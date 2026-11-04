@@ -33,6 +33,11 @@ pub(super) struct CloudParams {
 pub(super) struct PlanetCloudMaterial {
     #[uniform(0)]
     pub(super) params: CloudParams,
+    /// The globe's relief, whose alpha is the ground's height: more cloud
+    /// over high ground, less downwind of it.
+    #[texture(1)]
+    #[sampler(2)]
+    relief: Handle<Image>,
 }
 
 impl Material for PlanetCloudMaterial {
@@ -59,7 +64,7 @@ impl Material for PlanetCloudMaterial {
 pub(super) fn spawn_clouds(
     commands: &mut Commands,
     globe: Entity,
-    terrain: Seed,
+    (terrain, relief): (Seed, Handle<Image>),
     assets: (&mut Assets<Mesh>, &mut Assets<PlanetCloudMaterial>),
 ) -> Handle<PlanetCloudMaterial> {
     let (meshes, materials) = assets;
@@ -70,6 +75,7 @@ pub(super) fn spawn_clouds(
             start_hours: Vec4::new(start(), start(), start(), 0.0),
             sun: Vec4::Y,
         },
+        relief,
     });
     commands.spawn((
         Mesh3d(meshes.add(Sphere::new(CLOUD_HEIGHT).mesh().uv(96, 48))),
