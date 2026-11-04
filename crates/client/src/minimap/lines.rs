@@ -105,6 +105,7 @@ impl MapRivers {
             let (column, row) = chunk_of(x, y, width);
             world.pois.is_known(ChunkPos { x: column, y: row })
         };
+        // One layer for every kind, as each is painted it is cleared again.
         let mut layer = Layer::new(canvas.width, canvas.height);
         for river in self.rivers.values().flatten() {
             let thickness = |i: usize| {
@@ -121,7 +122,6 @@ impl MapRivers {
                 continue;
             }
             let pixels = road_pixels(kind) * widen;
-            let mut layer = Layer::new(canvas.width, canvas.height);
             for road in &roads {
                 layer.stroke(view, &road.points, width, &known, |_| pixels);
             }
@@ -131,12 +131,11 @@ impl MapRivers {
                 RoadKind::Road => layer.paint(canvas, clip, STONE, 1.0),
                 RoadKind::Highway => {
                     layer.paint(canvas, clip, HIGHWAY_EDGE, 1.0);
-                    let mut middle = Layer::new(canvas.width, canvas.height);
                     let narrow = pixels * HIGHWAY_MIDDLE;
                     for road in &roads {
-                        middle.stroke(view, &road.points, width, &known, |_| narrow);
+                        layer.stroke(view, &road.points, width, &known, |_| narrow);
                     }
-                    middle.paint(canvas, clip, HIGHWAY, 1.0);
+                    layer.paint(canvas, clip, HIGHWAY, 1.0);
                 }
             }
         }
@@ -149,6 +148,9 @@ struct Layer {
     width: u32,
     height: u32,
     cover: Vec<f32>,
+    /// The box lines have covered since it was last painted (left, top, right
+    /// and bottom, the last two just past it), so only that is gone over.
+    touched: Option<(u32, u32, u32, u32)>,
 }
 
 impl Layer {
@@ -157,6 +159,7 @@ impl Layer {
             width,
             height,
             cover: vec![0.0; (width * height) as usize],
+            touched: None,
         }
     }
 
@@ -204,11 +207,23 @@ impl Layer {
         let high = |a: f32, b: f32, end: u32| ((a.max(b) + reach).ceil().max(0.0) as u32).min(end);
         let (along_x, along_y) = (b.0 - a.0, b.1 - a.1);
         let length = (along_x * along_x + along_y * along_y).max(1e-6);
-        for y in low(a.1, b.1)..high(a.1, b.1, self.height) {
-            for x in low(a.0, b.0)..high(a.0, b.0, self.width) {
+        let (left, right) = (low(a.0, b.0), high(a.0, b.0, self.width));
+        let (top, bottom) = (low(a.1, b.1), high(a.1, b.1, self.height));
+        if left >= right || top >= bottom {
+            return;
+        }
+        self.touched = Some(
+            self.touched
+                .map_or((left, top, right, bottom), |(l, t, r, b)| {
+                    (l.min(left), t.min(top), r.max(right), b.max(bottom))
+                }),
+        );
+        for y in top..bottom {
+            for x in left..right {
                 let (px, py) = (x as f32 + 0.5 - a.0, y as f32 + 0.5 - a.1);
                 let t = ((px * along_x + py * along_y) / length).clamp(0.0, 1.0);
-                let distance = (px - along_x * t).hypot(py - along_y * t) - half;
+                let (off_x, off_y) = (px - along_x * t, py - along_y * t);
+                let distance = (off_x * off_x + off_y * off_y).sqrt() - half;
                 let covered = (0.5 - distance).clamp(0.0, 1.0);
                 let slot = &mut self.cover[(y * self.width + x) as usize];
                 *slot = slot.max(covered);
@@ -216,17 +231,25 @@ impl Layer {
         }
     }
 
-    /// Mixes `colour` over the canvas where covered, by `strength` at most.
-    fn paint(&self, canvas: &mut Canvas, clip: f32, colour: [u8; 3], strength: f32) {
+    /// Mixes `colour` over the canvas where covered, by `strength` at most,
+    /// then clears what it painted, ready for the next kind of line.
+    fn paint(&mut self, canvas: &mut Canvas, clip: f32, colour: [u8; 3], strength: f32) {
+        let Some((left, top, right, bottom)) = self.touched.take() else {
+            return;
+        };
         let middle = (self.width as f32 / 2.0, self.height as f32 / 2.0);
-        for (index, &covered) in self.cover.iter().enumerate() {
-            if covered <= 0.0 {
-                continue;
-            }
-            let (x, y) = (index as u32 % self.width, index as u32 / self.width);
-            let (dx, dy) = (x as f32 + 0.5 - middle.0, y as f32 + 0.5 - middle.1);
-            if dx.hypot(dy) <= clip {
-                canvas.blend(x, y, colour, covered * strength);
+        let clip_squared = clip * clip;
+        for y in top..bottom {
+            let row = (y * self.width) as usize;
+            for x in left..right {
+                let covered = std::mem::take(&mut self.cover[row + x as usize]);
+                if covered <= 0.0 {
+                    continue;
+                }
+                let (dx, dy) = (x as f32 + 0.5 - middle.0, y as f32 + 0.5 - middle.1);
+                if dx * dx + dy * dy <= clip_squared {
+                    canvas.blend(x, y, colour, covered * strength);
+                }
             }
         }
     }
