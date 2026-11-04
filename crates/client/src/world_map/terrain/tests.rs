@@ -1,14 +1,33 @@
 use bevy::prelude::*;
 
-use super::super::HALF_SIZE;
+use super::super::{HALF_SIZE, MAX_HALF, window_half};
 use super::edges::crossings;
 use super::*;
 
 #[test]
 fn grid_reaches_the_window_corners() {
-    let corner = HALF_SIZE as f32 * std::f32::consts::SQRT_2;
+    let corner = MAX_HALF * std::f32::consts::SQRT_2;
     // The corner plus one square for the triangles around it.
     assert!(REACH as f32 >= corner + 1.0);
+}
+
+#[test]
+fn window_never_outgrows_the_stores() {
+    // Zoomed in, the window shrinks; zoomed out past `MAX_HALF` (debug
+    // tools only) it stays that size.
+    assert_eq!(window_half(1.0), HALF_SIZE as f32);
+    assert_eq!(window_half(0.6), HALF_SIZE as f32 * 0.6);
+    assert_eq!(window_half(1.0 / 0.1), MAX_HALF);
+    // The largest window turned 45°, where its bounding box is widest, is
+    // still within what `TerrainGrid` keeps (`reach` asserts it).
+    let diagonal = Vec2::new(1.0, 1.0).normalize();
+    let square = ViewSquare {
+        right: diagonal,
+        towards: Vec2::new(-diagonal.y, diagonal.x),
+        half: window_half(10.0),
+    };
+    let (x, z) = square.reach();
+    assert!(x <= REACH && z <= REACH);
 }
 
 #[test]

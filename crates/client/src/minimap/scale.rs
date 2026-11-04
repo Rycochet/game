@@ -15,7 +15,7 @@ pub(super) fn under_the_sky(view: GameView, dungeon: &CurrentDungeon) -> bool {
 pub(super) fn units_per_pixel(view: GameView, window: &Room, camera: &OrbitCamera) -> f64 {
     match view {
         GameView::WorldMap => {
-            let shown = 2.0 * (world_map::HALF_SIZE as f64) * f64::from(camera.zoom());
+            let shown = 2.0 * f64::from(world_map::window_half(camera.zoom()));
             shown / f64::from(minimap_across(window))
         }
         _ => 1.0 / f64::from(CELL_PIXELS),

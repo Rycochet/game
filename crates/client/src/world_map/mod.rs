@@ -42,6 +42,7 @@ use parts::{
 use showing::{hide_scene, show_scene};
 use spawn::spawn_view;
 use tokens::{hide_tokens_outside_window, rest_tokens_on_terrain};
+pub use update_terrain::window_half;
 use update_terrain::{update_terrain, view_square};
 
 /// World height units per 3D unit of height. 1.0 keeps the prototype's
@@ -51,6 +52,12 @@ pub const HEIGHT_SCALE: f32 = 1.0;
 /// Grid units from the player to each edge of the window (400×400, as the
 /// prototype).
 pub const HALF_SIZE: i64 = 200;
+
+/// The furthest the window's sides may be from the player, which the terrain
+/// and sky stores are sized for (checked when compiling). Zoomed out further
+/// than this (only debug tools can), the window keeps this size and so gets
+/// smaller on screen, rather than outgrowing what is worked out.
+pub const MAX_HALF: f32 = HALF_SIZE as f32;
 
 /// How much of the prototype's slope shading is baked into the terrain
 /// colours (1.0 = the same as the prototype).

@@ -29,10 +29,12 @@ use square::Corner;
 pub use square::ViewSquare;
 pub use window::build_window;
 
+use super::MAX_HALF;
+
 /// The furthest grid units from the player `TerrainGrid` may need. The
-/// window's corners are `HALF_SIZE × √2` (about 283) away, so this covers it
-/// at any angle, with a little to spare.
-pub const REACH: i64 = 287;
+/// window's corners are at most `MAX_HALF × √2` (about 283) away, so this
+/// covers it at any angle, with a little to spare for `ViewSquare::reach`.
+pub const REACH: i64 = (MAX_HALF * std::f32::consts::SQRT_2) as i64 + 5;
 
 /// Side length of `TerrainGrid`'s wrapping store: more than the `2 × REACH`
 /// it must hold, so moving never evicts points still in view.
