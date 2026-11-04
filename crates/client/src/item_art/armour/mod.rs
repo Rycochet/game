@@ -8,6 +8,7 @@ pub(super) mod hands;
 pub(super) mod head;
 pub(super) mod legs;
 pub(super) mod neck;
+pub(super) mod set;
 pub(super) mod shoulders;
 pub(super) mod surface;
 pub(super) mod torso;
@@ -37,6 +38,7 @@ pub(in crate::item_art) fn armour_parts(
         Look::Waist { waist, quality } => waist::waist_parts(&waist, quality, meshes, materials),
         Look::Feet { feet, quality } => feet::feet_parts(&feet, quality, meshes, materials),
         Look::Neck { neck, quality } => neck::neck_parts(&neck, quality, meshes, materials),
+        Look::Set { set, quality } => set::set_parts(&set, quality, meshes, materials),
         _ => Vec::new(),
     }
 }

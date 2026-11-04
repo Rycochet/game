@@ -14,6 +14,7 @@ mod hanging;
 #[cfg(test)]
 mod tests;
 
+pub(in crate::item_art) use self::colour::material_of;
 use std::f32::consts::TAU;
 
 use bevy::prelude::*;

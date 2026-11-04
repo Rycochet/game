@@ -48,7 +48,7 @@ pub(in crate::item_art) fn finished(
     }
 }
 
-pub(super) fn material_of(
+pub(in crate::item_art) fn material_of(
     stuff: Stuff,
     form: &TorsoForm,
     quality: Option<Quality>,

@@ -23,7 +23,7 @@ pub(super) fn tincture(tincture: Tincture, quality: Option<Quality>) -> Standard
 }
 
 /// How each part looks, by what it is made of.
-pub(super) fn material_of(
+pub(in crate::item_art) fn material_of(
     stuff: Stuff,
     form: &ShouldersForm,
     quality: Option<Quality>,

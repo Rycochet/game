@@ -11,6 +11,7 @@ pub enum ItemKind {
     ArmArmour,
     ArmingCap,
     ArmingVest,
+    ArmourCoat,
     Aventail,
     Axe,
     Backpack,
@@ -27,6 +28,7 @@ pub enum ItemKind {
     Coif,
     Coin,
     Collar,
+    Corslet,
     CuirassierTassets,
     Dagger,
     DemiGauntlets,
@@ -38,6 +40,7 @@ pub enum ItemKind {
     Gem,
     Gloves,
     Gorget,
+    HalfArmour,
     Hat,
     Helmet,
     Knife,
@@ -71,11 +74,12 @@ pub enum ItemKind {
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 60] = [
+    pub const ALL: [Self; 63] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
         Self::ArmingVest,
+        Self::ArmourCoat,
         Self::Aventail,
         Self::Axe,
         Self::Backpack,
@@ -92,6 +96,7 @@ impl ItemKind {
         Self::Coif,
         Self::Coin,
         Self::Collar,
+        Self::Corslet,
         Self::CuirassierTassets,
         Self::Dagger,
         Self::DemiGauntlets,
@@ -103,6 +108,7 @@ impl ItemKind {
         Self::Gem,
         Self::Gloves,
         Self::Gorget,
+        Self::HalfArmour,
         Self::Hat,
         Self::Helmet,
         Self::Knife,

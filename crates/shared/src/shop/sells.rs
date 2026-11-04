@@ -8,10 +8,10 @@ use crate::site::BuildingKind;
 /// a shop. Only placeholders exist to sell for now.
 pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
     use ItemKind::{
-        Apple, Backpack, Barding, Belt, Boomerang, Boots, Caparison, Cloak, Clogs, DemiGauntlets,
-        FingerlessGloves, FullArmour, Gambeson, Gauntlets, Gloves, Hat, Lantern, Necklace,
-        PaddedGloves, Pouch, Ring, Sandals, Shoes, ShoulderArmour, Slippers, SmallBox, Socks,
-        Surcoat, Sword, TShirt, Tabard, Trousers,
+        Apple, ArmingCap, ArmingVest, Backpack, Belt, Boomerang, Boots, Cloak, Clogs,
+        FingerlessGloves, Gauntlets, Gloves, Hat, Lantern, Necklace, PaddedChausses, PaddedGloves,
+        Pouch, Ring, Sandals, Shoes, Slippers, SmallBox, Socks, Surcoat, Sword, TShirt, Tabard,
+        Trousers,
     };
     match kind {
         BuildingKind::Blacksmith => &[(Sword, 2), (Gauntlets, 2), (Lantern, 1)],
@@ -26,6 +26,9 @@ pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
             (Gloves, 1),
             (FingerlessGloves, 1),
             (PaddedGloves, 1),
+            (ArmingCap, 1),
+            (ArmingVest, 1),
+            (PaddedChausses, 1),
             (Surcoat, 1),
             (Tabard, 1),
             (Slippers, 1),
@@ -41,17 +44,7 @@ pub fn sells(kind: BuildingKind) -> &'static [(ItemKind, u64)] {
         ],
         BuildingKind::Fletcher => &[(Boomerang, 1)],
         BuildingKind::Weaponsmith => &[(Sword, 2), (Boomerang, 1)],
-        BuildingKind::Armoursmith => &[
-            (FullArmour, 1),
-            (Gambeson, 1),
-            (ShoulderArmour, 2),
-            (Gauntlets, 2),
-            (DemiGauntlets, 1),
-            (PaddedGloves, 1),
-            (Boots, 2),
-            (Barding, 1),
-            (Caparison, 1),
-        ],
+        BuildingKind::Armoursmith => super::armoursmith::ARMOURSMITH,
         BuildingKind::PotionShop => &[(Apple, 1), (SmallBox, 1)],
         BuildingKind::ScrollShop => &[(Lantern, 1), (SmallBox, 1)],
         BuildingKind::Jeweller => &[(Ring, 2), (Necklace, 1)],

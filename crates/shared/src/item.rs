@@ -22,6 +22,7 @@ mod placed;
 mod quality;
 mod refused;
 mod secrets;
+mod set_def;
 mod shape;
 mod stack;
 

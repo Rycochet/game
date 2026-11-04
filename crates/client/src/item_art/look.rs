@@ -7,7 +7,7 @@ use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
 
 use super::looks::{
-    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, ShouldersLook,
+    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, SetLook, ShouldersLook,
     TorsoLook, WaistLook,
 };
 
@@ -77,6 +77,11 @@ pub enum Look {
         footwear: super::FootwearLook,
         quality: Option<Quality>,
     },
+    /// An armour set: its pieces as worn together.
+    Set {
+        set: SetLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -98,6 +103,7 @@ impl Look {
             Self::Feet { feet, .. } => feet.cells,
             Self::Neck { neck, .. } => neck.cells,
             Self::Footwear { footwear, .. } => footwear.cells,
+            Self::Set { set, .. } => set.cells,
             Self::Body { .. } => super::body::CELLS,
         }
     }

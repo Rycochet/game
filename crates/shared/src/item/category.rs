@@ -77,6 +77,9 @@ impl ItemKind {
             | Self::Mantle
             | Self::DemiGauntlets
             | Self::FullArmour
+            | Self::HalfArmour
+            | Self::ArmourCoat
+            | Self::Corslet
             | Self::Gambeson
             | Self::Gauntlets
             | Self::Helmet

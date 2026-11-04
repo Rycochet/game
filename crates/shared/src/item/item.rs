@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::armour::set::SetKind;
 use crate::creature::{Location, Size};
 use crate::id::Id;
 use crate::item::{Favour, ItemKind, Known, Made, Placed, Quality, Shape};
@@ -133,6 +134,10 @@ impl Item {
         match &self.form {
             Some(ItemForm::Torso(torso)) if torso.padded() => &[Location::Torso],
             Some(ItemForm::Arms(arms)) if arms.padded() => &[Location::Arms],
+            // Other sets come with their padding anyway.
+            Some(ItemForm::Set(set)) if set.kind == SetKind::Coat && set.padded() => {
+                &[Location::Torso]
+            }
             _ => self.kind.def().wear.map_or(&[], |wear| wear.padded),
         }
     }

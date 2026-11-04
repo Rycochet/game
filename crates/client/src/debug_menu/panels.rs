@@ -12,6 +12,7 @@ mod footwear;
 mod legs;
 mod neck;
 mod page;
+mod sets;
 mod waist;
 
 // Split into files (`cargo xtask lint` keeps files small).

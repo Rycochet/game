@@ -10,7 +10,7 @@ use crate::item_art::armour::torso::{dye_colour, finished};
 use crate::item_art::armour::{Stuff, colour_of, darker, matte};
 use crate::item_art::ring::metal_material;
 
-pub(super) fn material_of(
+pub(in crate::item_art) fn material_of(
     stuff: Stuff,
     form: &LegsForm,
     quality: Option<Quality>,

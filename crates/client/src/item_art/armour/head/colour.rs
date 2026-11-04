@@ -14,7 +14,7 @@ use crate::item_art::ring::metal_material;
 /// Bone and horn.
 const BONE: Color = Color::srgb(0.86, 0.8, 0.66);
 
-pub(super) fn material_of(
+pub(in crate::item_art) fn material_of(
     stuff: Stuff,
     form: &HeadForm,
     quality: Option<Quality>,
