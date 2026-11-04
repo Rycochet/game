@@ -17,6 +17,10 @@ impl ItemKind {
         let square = Shape::rectangle(1, 1);
         let def =
             match self {
+                // Collars, gorgets, bevors, aventails and mantles: in `neck_def.rs`.
+                Self::Aventail | Self::Bevor | Self::Collar | Self::Gorget | Self::Mantle => {
+                    self.neck_def()
+                }
                 Self::Apple => plain("Apple", 150, square).without_quality(),
                 // Both arms, or one; its form says its name, cells and weight, and whether
                 // it is padded (kote).
@@ -268,6 +272,11 @@ impl ItemKind {
             | Self::LegArmour
             | Self::Chausses
             | Self::FootArmour
+            | Self::Collar
+            | Self::Gorget
+            | Self::Bevor
+            | Self::Aventail
+            | Self::Mantle
             | Self::WaistArmour
             | Self::CuirassierTassets
             | Self::Backpack

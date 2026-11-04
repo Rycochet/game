@@ -7,6 +7,7 @@ mod finish;
 pub mod hands;
 pub mod head;
 pub mod legs;
+pub mod neck;
 pub mod shoulders;
 pub mod torso;
 pub mod waist;

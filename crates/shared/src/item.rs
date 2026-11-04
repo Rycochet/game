@@ -16,6 +16,7 @@ mod item;
 mod item_def;
 mod kind;
 mod made;
+mod neck_def;
 mod placed;
 mod quality;
 mod refused;

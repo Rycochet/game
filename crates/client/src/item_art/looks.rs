@@ -5,6 +5,7 @@ use shared::armour::feet::FeetForm;
 use shared::armour::hands::{Hand, HandsForm};
 use shared::armour::head::HeadForm;
 use shared::armour::legs::LegsForm;
+use shared::armour::neck::NeckForm;
 use shared::armour::shoulders::ShouldersForm;
 use shared::armour::torso::TorsoForm;
 use shared::armour::waist::WaistForm;
@@ -170,6 +171,21 @@ impl FeetLook {
     }
 }
 
+/// What can be seen of a neck piece.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct NeckLook {
+    pub(in crate::item_art) form: NeckForm,
+    /// What it takes up, wide and long, not turned.
+    pub(in crate::item_art) cells: (u8, u8),
+}
+
+impl NeckLook {
+    /// A neck piece taking up these cells.
+    pub fn new(form: NeckForm, cells: (u8, u8)) -> Self {
+        Self { form, cells }
+    }
+}
+
 /// How an armour item looks, from its form and the cells it takes up.
 pub(super) fn armour_look(item: &Item) -> Option<Look> {
     let quality = item.quality;
@@ -206,6 +222,10 @@ pub(super) fn armour_look(item: &Item) -> Option<Look> {
         },
         ItemForm::Feet(form) => Look::Feet {
             feet: FeetLook::new(*form, cells),
+            quality,
+        },
+        ItemForm::Neck(form) => Look::Neck {
+            neck: NeckLook::new(*form, cells),
             quality,
         },
         _ => return None,
