@@ -1,5 +1,5 @@
 //! What is on the ground under the player: a section of the Character panel, to the
-//! right of the pockets, only while there is something there. The Drop icon is in
+//! right of the inventory, only while there is something there. The Drop icon is in
 //! `panels`.
 
 use bevy::prelude::*;

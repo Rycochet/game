@@ -7,7 +7,7 @@ use shared::item::Inventory;
 use shared::protocol::ServerMessage;
 use shared::sheet::Sheet;
 
-use crate::common::{PlayerSpeed, SheetText};
+use crate::common::{CarryLimit, PlayerSpeed, SheetText};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 
@@ -15,8 +15,10 @@ pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<CharacterSheet>()
-            .add_systems(Update, (read_server, publish_speed, show_words).chain());
+        app.init_resource::<CharacterSheet>().add_systems(
+            Update,
+            (read_server, publish_speed, publish_limit, show_words).chain(),
+        );
     }
 }
 
@@ -39,6 +41,12 @@ fn publish_speed(
     mut speed: ResMut<PlayerSpeed>,
 ) {
     speed.set_if_neq(PlayerSpeed(sheet.0.speed(&carried.0)));
+}
+
+/// The most the player can carry, for the weight under the inventory.
+fn publish_limit(sheet: Res<CharacterSheet>, carried: Res<Carried>, mut limit: ResMut<CarryLimit>) {
+    let size = carried.0.creature.def().size;
+    limit.set_if_neq(CarryLimit(sheet.0.capacity(size)));
 }
 
 /// What the panel says.

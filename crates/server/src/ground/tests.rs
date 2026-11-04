@@ -54,10 +54,10 @@ fn ground(answers: &[ServerMessage]) -> Vec<Item> {
     found.expect("what is on the ground among the answers")
 }
 
-/// A character holding one of these in the pockets, and its id.
+/// A character holding one of these in the inventory, and its id.
 fn holding(kind: ItemKind) -> (TestClient, Id) {
     let mut test = in_a_site();
-    let id = carrying(&test.send(&[give(kind)])).pockets[0].item.id;
+    let id = carrying(&test.send(&[give(kind)])).items[0].item.id;
     (test, id)
 }
 
@@ -71,7 +71,7 @@ fn dropped_things_lie_under_the_player_and_come_back() {
 
     let answers = test.send(&[ClientMessage::TakeFromGround {
         item: coin,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x: 2,
         y: 1,
         rotation: Rotation::None,
@@ -107,7 +107,7 @@ fn stepping_off_it_stops_it_being_reachable() {
 fn the_world_map_has_no_ground() {
     let mut test = TestClient::new();
     let answers = test.send(&[give(ItemKind::Coin)]);
-    let coin = carrying(&answers).pockets[0].item.id;
+    let coin = carrying(&answers).items[0].item.id;
     let answers = test.send(&[ClientMessage::DropItem { item: coin }]);
     assert!(carrying(&answers).find(coin).is_some());
 }
@@ -116,10 +116,10 @@ fn the_world_map_has_no_ground() {
 fn what_cant_go_where_it_was_asked_stays_on_the_ground() {
     let (mut test, stone) = holding(ItemKind::Stone);
     test.send(&[ClientMessage::DropItem { item: stone }]);
-    // Off the edge of the pockets.
+    // Off the edge of the inventory.
     let answers = test.send(&[ClientMessage::TakeFromGround {
         item: stone,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x: 200,
         y: 0,
         rotation: Rotation::None,
@@ -155,7 +155,7 @@ fn what_is_under_something_stays_on() {
 fn a_curse_doesnt_let_go_for_the_ground_either() {
     let mut test = in_a_site();
     let answers = test.send(&[give_cursed(ItemKind::Hat)]);
-    let hat = carrying(&answers).pockets.last().unwrap().item.id;
+    let hat = carrying(&answers).items.last().unwrap().item.id;
     test.send(&[ClientMessage::WearItem { item: hat }]);
     let answers = test.send(&[ClientMessage::DropItem { item: hat }]);
     let seen = carrying(&answers);
@@ -167,7 +167,7 @@ fn a_curse_doesnt_let_go_for_the_ground_either() {
 fn what_is_on_the_ground_keeps_its_secrets() {
     let mut test = in_a_site();
     let answers = test.send(&[give_cursed(ItemKind::Hat)]);
-    let hat = carrying(&answers).pockets.last().unwrap().item.id;
+    let hat = carrying(&answers).items.last().unwrap().item.id;
     let answers = test.send(&[ClientMessage::DropItem { item: hat }]);
     assert_eq!(ground(&answers)[0].favour, None);
     let answers = test.send(&[ClientMessage::DevTruesight(true)]);
@@ -267,9 +267,9 @@ fn a_stack_on_the_ground_joins_a_carried_one_as_far_as_it_fits() {
         give(ItemKind::Coin),
         give(ItemKind::Coin),
     ];
-    let dropped = carrying(&test.send(&three)).pockets[0].item.id;
+    let dropped = carrying(&test.send(&three)).items[0].item.id;
     test.send(&[ClientMessage::DropItem { item: dropped }]);
-    let kept = carrying(&test.send(&[give(ItemKind::Coin)])).pockets[0]
+    let kept = carrying(&test.send(&[give(ItemKind::Coin)])).items[0]
         .item
         .id;
     test.world.stacks = shared::item::StackLimits {
@@ -289,7 +289,7 @@ fn a_stack_on_the_ground_joins_a_carried_one_as_far_as_it_fits() {
 fn wearing_a_stack_from_the_ground_leaves_the_rest_there() {
     let mut test = in_a_site();
     let hats = carrying(&test.send(&[give(ItemKind::Hat), give(ItemKind::Hat)]));
-    let hats = &hats.pockets[0].item;
+    let hats = &hats.items[0].item;
     let (bottom, top) = (hats.id, hats.top().id);
     test.send(&[ClientMessage::DropItem { item: bottom }]);
     let answers = test.send(&[ClientMessage::WearFromGround { item: bottom }]);

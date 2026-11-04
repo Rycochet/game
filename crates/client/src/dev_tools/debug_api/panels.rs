@@ -137,12 +137,12 @@ pub(super) fn system_menu(
 #[serde(rename_all = "snake_case")]
 pub(super) enum InventoryShown {
     /// The Character panel.
-    Pockets,
-    /// Every bag in the pockets.
+    Inventory,
+    /// Every bag in the inventory.
     Bags,
-    /// Holds the item at `index` in the pockets.
+    /// Holds the item at `index` in the inventory.
     Hold,
-    /// All but the first of the pockets onto the ground.
+    /// All but the first of the inventory onto the ground.
     DropSome,
 }
 
@@ -153,7 +153,7 @@ pub(super) struct InventoryParams {
     index: usize,
 }
 
-/// `client.inventory { "show": "pockets" }`: `pockets`, `bags`, `hold` (with
+/// `client.inventory { "show": "inventory" }`: `inventory`, `bags`, `hold` (with
 /// `index`) or `drop_some`, as `HOW_DEBUG_INVENTORY` does.
 pub(super) fn inventory(
     In(request): In<Option<Value>>,
@@ -161,7 +161,7 @@ pub(super) fn inventory(
 ) -> BrpResult {
     let InventoryParams { show, index } = params(request)?;
     debug.write(match show {
-        InventoryShown::Pockets => InventoryDebug::OpenPockets,
+        InventoryShown::Inventory => InventoryDebug::OpenInventory,
         InventoryShown::Bags => InventoryDebug::OpenBags,
         InventoryShown::Hold => InventoryDebug::PickUp(index),
         InventoryShown::DropSome => InventoryDebug::DropSome,

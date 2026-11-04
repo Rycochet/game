@@ -14,7 +14,7 @@ use crate::ServerWorld;
 use crate::connections::Client;
 
 /// A new mob's belongings: it wears what it can, and keeps the rest in its
-/// pockets while there is room. Only what is worn or a blade is made to its size.
+/// inventory while there is room. Only what is worn or a blade is made to its size.
 pub(super) fn dressed(
     kind: CreatureKind,
     gear: &[(ItemKind, Option<Quality>)],
@@ -23,7 +23,7 @@ pub(super) fn dressed(
     let mut carrying = Inventory {
         creature: kind,
         outfitted: true,
-        pockets_size: kind.def().pockets,
+        size: kind.def().inventory,
         ..Inventory::default()
     };
     // Past half of what it can carry it is burdened: see `Sheet::load`.
@@ -35,7 +35,7 @@ pub(super) fn dressed(
             // A blade it can lift and that suits its size, or none at all.
             let spare = lifting.saturating_sub(carrying.total_weight());
             let mut limits = limits_for_wielder(kind.def().size, spare);
-            let (width, height) = kind.def().pockets;
+            let (width, height) = kind.def().inventory;
             let longest = limits.fits.map_or(u8::MAX, |(_, longest)| longest);
             limits.fits = Some((width.min(height), width.max(height).min(longest)));
             if !give_blade_within(&mut new, &limits) {
@@ -43,7 +43,7 @@ pub(super) fn dressed(
             }
         }
         new.roll_secrets();
-        // Clothes go straight on, as they may be bigger than its pockets.
+        // Clothes go straight on, as they may be bigger than its inventory.
         if carrying.check_wear_new(&new).is_ok() {
             let _ = carrying.wear_new(new);
         } else {

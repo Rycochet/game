@@ -1,4 +1,4 @@
-//! Bags of every look, and a few items in the pockets, on starting.
+//! Bags of every look, and a few items in the inventory, on starting.
 
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
@@ -91,7 +91,7 @@ pub(super) fn add(app: &mut App) {
                     if drop_some {
                         debug.write(InventoryDebug::DropSome);
                     }
-                    debug.write(InventoryDebug::OpenPockets);
+                    debug.write(InventoryDebug::OpenInventory);
                     match hold {
                         Some(index) => debug.write(InventoryDebug::PickUp(index)),
                         None => debug.write(InventoryDebug::OpenBags),

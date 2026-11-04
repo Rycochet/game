@@ -70,7 +70,7 @@ impl Inventory {
     /// item of its kind does. Whether anything went back.
     pub fn settle_parts(&mut self) -> bool {
         let mut settled = false;
-        let mut holders = vec![Holder::Pockets];
+        let mut holders = vec![Holder::Inventory];
         holders.extend(self.containers().into_iter().map(Holder::Inside));
         for holder in holders {
             while let Some((part, stack)) = self.lying_on(holder) {
@@ -86,7 +86,7 @@ impl Inventory {
 
     /// The stack in a grid that `id` is inside (not its bottom), and where it lies.
     fn stack_holding(&self, id: Id) -> Option<(Holder, Id, u8, u8, crate::item::Rotation)> {
-        let mut holders = vec![Holder::Pockets];
+        let mut holders = vec![Holder::Inventory];
         holders.extend(self.containers().into_iter().map(Holder::Inside));
         holders.into_iter().find_map(|holder| {
             let placed = self.grid(holder)?.iter().find(|p| p.item.has_above(id))?;
@@ -120,7 +120,7 @@ impl Inventory {
             }
         }
         let mut found = Vec::new();
-        search(&self.pockets, &mut found);
+        search(&self.items, &mut found);
         for item in &self.worn {
             collect(item, &mut found);
         }

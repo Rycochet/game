@@ -1,4 +1,4 @@
-//! Showing what is in each open grid, and how much it weighs.
+//! Showing what is in each open grid, and how much it weighs (`widgets::weight_words`).
 
 use bevy::prelude::*;
 use shared::id::Id;
@@ -7,11 +7,8 @@ use shared::item::{Holder, Inventory, Placed};
 use super::super::filter::{GridFilter, chosen, dims};
 use super::super::{Carried, Holding};
 use super::{ItemCell, ItemLayer, WeightText};
-use crate::widgets::{Dropdown, ItemLook, spawn_item_cells};
-
-pub(super) fn kilograms(grams: u32) -> String {
-    format!("{:.2} kg", grams as f32 / 1000.0)
-}
+use crate::common::CarryLimit;
+use crate::widgets::{Dropdown, ItemLook, spawn_item_cells, weight_words};
 
 /// Draws what is in each open grid again when it changes, or its filter does. What
 /// is held isn't drawn where it was, though it is still there until dropped.
@@ -22,7 +19,6 @@ pub(in crate::inventory) fn show_grids(
     new_layers: Query<(), Added<ItemLayer>>,
     layers: Query<(Entity, &ItemLayer)>,
     filters: Query<(&GridFilter, Ref<Dropdown>)>,
-    mut weights: Query<(&WeightText, &mut Text)>,
     mut commands: Commands,
     mut drawn_without: Local<Option<Id>>,
 ) {
@@ -47,8 +43,21 @@ pub(in crate::inventory) fn show_grids(
             }
         });
     }
+}
+
+/// Writes each open grid's weight under it again when what is carried, or the most
+/// that can be, changes.
+pub(in crate::inventory) fn show_weights(
+    carried: Res<Carried>,
+    limit: Res<CarryLimit>,
+    new_weights: Query<(), Added<WeightText>>,
+    mut weights: Query<(&WeightText, &mut Text)>,
+) {
+    if !carried.is_changed() && !limit.is_changed() && new_weights.is_empty() {
+        return;
+    }
     for (weight, mut text) in &mut weights {
-        **text = weight_words(&carried.0, weight.holder);
+        **text = grid_weight(&carried.0, weight.holder, limit.0);
     }
 }
 
@@ -68,9 +77,9 @@ pub(super) fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed, di
     );
 }
 
-pub(super) fn weight_words(carried: &Inventory, holder: Holder) -> String {
+pub(super) fn grid_weight(carried: &Inventory, holder: Holder, limit: u32) -> String {
     match holder {
-        Holder::Pockets => format!("Carrying {}", kilograms(carried.total_weight())),
+        Holder::Inventory => weight_words(carried.total_weight(), Some(limit)),
         Holder::Inside(id) => {
             let Some(item) = carried.find(id) else {
                 return String::new();
@@ -80,10 +89,10 @@ pub(super) fn weight_words(carried: &Inventory, holder: Holder) -> String {
                 .iter()
                 .map(|placed| placed.item.total_weight())
                 .sum();
-            match item.kind.def().container.and_then(|bag| bag.max_total) {
-                Some(most) => format!("Holding {} of {}", kilograms(held), kilograms(most)),
-                None => format!("Holding {}", kilograms(held)),
-            }
+            weight_words(
+                held,
+                item.kind.def().container.and_then(|bag| bag.max_total),
+            )
         }
     }
 }

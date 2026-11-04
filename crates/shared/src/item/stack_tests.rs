@@ -28,12 +28,12 @@ fn given_apples_stack_until_the_weight_limit() {
             .unwrap();
     }
     // 13 apples of 150 g make 1950 g, under 2000 g for their one cell.
-    assert_eq!(inventory.pockets.len(), 2);
-    let first = &inventory.pockets[0].item;
+    assert_eq!(inventory.items.len(), 2);
+    let first = &inventory.items[0].item;
     assert_eq!((first.id, first.count()), (id(1), 13));
     assert_eq!(first.top().id, id(13));
     assert_eq!(first.total_weight(), 13 * 150);
-    assert_eq!(inventory.pockets[1].item.count(), 1);
+    assert_eq!(inventory.items[1].item.count(), 1);
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn light_things_stack_until_the_count_limit() {
             .give(Item::new(id(n), ItemKind::Coin), limits)
             .unwrap();
     }
-    let counts: Vec<u32> = inventory.pockets.iter().map(|p| p.item.count()).collect();
+    let counts: Vec<u32> = inventory.items.iter().map(|p| p.item.count()).collect();
     assert_eq!(counts, [99, 1]);
 }
 
@@ -83,10 +83,10 @@ fn a_stack_goes_on_another_as_far_as_it_fits() {
     let mut inventory = Inventory::default();
     let (big, small) = (stack(1, ItemKind::Apple, 12), stack(20, ItemKind::Apple, 3));
     inventory
-        .add(big, Holder::Pockets, 0, 0, Rotation::None)
+        .add(big, Holder::Inventory, 0, 0, Rotation::None)
         .unwrap();
     inventory
-        .add(small, Holder::Pockets, 1, 0, Rotation::None)
+        .add(small, Holder::Inventory, 1, 0, Rotation::None)
         .unwrap();
     assert_eq!(inventory.stack_onto(id(20), id(1), limits), Ok(1));
     // The top went first; what is left keeps its bottom, and so its id.
@@ -108,14 +108,14 @@ fn a_whole_stack_joins_another_and_goes() {
     inventory
         .add(
             stack(1, ItemKind::Coin, 2),
-            Holder::Pockets,
+            Holder::Inventory,
             0,
             0,
             Rotation::None,
         )
         .unwrap();
     inventory
-        .add(coins, Holder::Pockets, 2, 0, Rotation::None)
+        .add(coins, Holder::Inventory, 2, 0, Rotation::None)
         .unwrap();
     assert_eq!(inventory.stack_onto(id(1), id(3), limits), Ok(2));
     assert!(inventory.find(id(1)).is_none());
@@ -132,7 +132,7 @@ fn something_not_carried_joins_a_stack_and_the_rest_is_given_back() {
     inventory
         .add(
             stack(1, ItemKind::Coin, 2),
-            Holder::Pockets,
+            Holder::Inventory,
             0,
             0,
             Rotation::None,
@@ -161,7 +161,7 @@ fn a_bag_counts_one_item_of_a_stack_against_its_most_for_each() {
     inventory
         .add(
             stack(10, ItemKind::Apple, 4),
-            Holder::Pockets,
+            Holder::Inventory,
             4,
             0,
             Rotation::None,
@@ -175,7 +175,7 @@ fn a_bag_counts_one_item_of_a_stack_against_its_most_for_each() {
     inventory
         .add(
             stack(20, ItemKind::Apple, 11),
-            Holder::Pockets,
+            Holder::Inventory,
             5,
             0,
             Rotation::None,
@@ -193,7 +193,7 @@ fn wearing_a_stack_wears_only_its_top() {
     inventory
         .add(
             stack(1, ItemKind::Hat, 3),
-            Holder::Pockets,
+            Holder::Inventory,
             0,
             0,
             Rotation::None,
@@ -246,7 +246,7 @@ fn a_part_is_named_by_its_lowest_item_and_lifted_out_where_the_stack_lies() {
     inventory
         .add(
             stack(1, ItemKind::Coin, 5),
-            Holder::Pockets,
+            Holder::Inventory,
             2,
             1,
             Rotation::None,
@@ -269,7 +269,7 @@ fn a_lifted_part_moves_like_anything_else_or_goes_back() {
     inventory
         .add(
             stack(1, ItemKind::Coin, 5),
-            Holder::Pockets,
+            Holder::Inventory,
             0,
             0,
             Rotation::None,
@@ -278,7 +278,7 @@ fn a_lifted_part_moves_like_anything_else_or_goes_back() {
     inventory.lift_part(id(4));
     // Where its stack is there is no room for it, so it can't stay.
     assert_eq!(
-        inventory.move_item(id(4), Holder::Pockets, 0, 0, Rotation::None),
+        inventory.move_item(id(4), Holder::Inventory, 0, 0, Rotation::None),
         Err(MoveRefused::NoRoom)
     );
     assert!(inventory.settle_parts());
@@ -289,7 +289,7 @@ fn a_lifted_part_moves_like_anything_else_or_goes_back() {
     // Moved elsewhere, it stays a stack of its own.
     inventory.lift_part(id(4));
     inventory
-        .move_item(id(4), Holder::Pockets, 3, 0, Rotation::None)
+        .move_item(id(4), Holder::Inventory, 3, 0, Rotation::None)
         .unwrap();
     assert!(!inventory.settle_parts());
     assert_eq!(ids(inventory.find(id(4)).unwrap()), [id(4), id(5)]);
@@ -302,7 +302,7 @@ fn wearing_a_lifted_part_wears_its_top_and_the_rest_goes_back() {
     inventory
         .add(
             stack(1, ItemKind::Hat, 4),
-            Holder::Pockets,
+            Holder::Inventory,
             0,
             0,
             Rotation::None,
@@ -339,14 +339,14 @@ fn a_mixed_stack_falls_into_groups_from_the_top() {
 fn a_group_lifts_out_keeping_both_orders_and_goes_back_if_not_moved() {
     let mut inventory = Inventory::default();
     inventory
-        .add(mixed_hats(), Holder::Pockets, 0, 0, Rotation::None)
+        .add(mixed_hats(), Holder::Inventory, 0, 0, Rotation::None)
         .unwrap();
     // The plain ones, taking the bottom: what is left is known by its own lowest.
     assert_eq!(inventory.lift_group(id(1), &[id(1), id(3)]), Some(id(1)));
     assert_eq!(ids(inventory.find(id(1)).unwrap()), [id(1), id(3)]);
     assert_eq!(ids(inventory.find(id(2)).unwrap()), [id(2)]);
     assert!(inventory.settle_parts());
-    assert_eq!(inventory.pockets.len(), 1);
+    assert_eq!(inventory.items.len(), 1);
     assert_eq!(inventory.find(id(2)).unwrap().count(), 3);
     // All of it, none of it or something else isn't a group.
     assert_eq!(inventory.lift_group(id(2), &[]), None);

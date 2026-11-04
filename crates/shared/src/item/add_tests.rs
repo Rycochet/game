@@ -8,11 +8,11 @@ fn something_new_goes_by_the_same_rules_as_a_move() {
     let coin = Item::new(Id::for_test(2), ItemKind::Coin);
     assert!(
         inventory
-            .add(stone.clone(), Holder::Pockets, 0, 0, Rotation::None)
+            .add(stone.clone(), Holder::Inventory, 0, 0, Rotation::None)
             .is_ok()
     );
     assert_eq!(
-        inventory.check_add(&coin, Holder::Pockets, 1, 1, Rotation::None),
+        inventory.check_add(&coin, Holder::Inventory, 1, 1, Rotation::None),
         Err(MoveRefused::NoRoom)
     );
     assert_eq!(
@@ -27,7 +27,7 @@ fn something_new_goes_by_the_same_rules_as_a_move() {
     );
     assert!(
         inventory
-            .add(coin, Holder::Pockets, 2, 0, Rotation::None)
+            .add(coin, Holder::Inventory, 2, 0, Rotation::None)
             .is_ok()
     );
 }

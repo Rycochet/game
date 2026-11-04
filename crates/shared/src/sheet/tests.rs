@@ -40,7 +40,7 @@ fn appearance_changes_nothing_that_matters() {
 /// An inventory with this many stones of 5 kg.
 fn stones(count: u128) -> Inventory {
     let mut inventory = Inventory {
-        pockets_size: (40, 40),
+        size: (40, 40),
         ..Inventory::default()
     };
     for n in 0..count {

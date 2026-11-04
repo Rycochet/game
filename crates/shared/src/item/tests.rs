@@ -90,14 +90,14 @@ fn a_kind_without_quality_drops_without_one() {
     assert!(ItemKind::Sword.def().has_quality);
 }
 
-/// Inventory with these kinds in the pockets, ids from 1, left to right.
+/// An inventory with these kinds in it, ids from 1, left to right.
 fn carrying(kinds: &[ItemKind]) -> Inventory {
     let mut inventory = Inventory::default();
     for (index, &kind) in kinds.iter().enumerate() {
         let item = Item::new(id(index as u128 + 1), kind);
         inventory
             .give(item, StackLimits::NONE)
-            .expect("room in the pockets");
+            .expect("room in the inventory");
     }
     inventory
 }
@@ -230,16 +230,16 @@ fn the_rules_go_by_the_size_it_was_made() {
         inventory.check_add(&giant, Holder::Inside(id(1)), 0, 0, NONE),
         Err(MoveRefused::TooBig)
     );
-    // Beside the pouch, in the pockets, its second row and column count.
+    // Beside the pouch, in the inventory, its second row and column count.
     assert_eq!(
-        inventory.check_add(&giant, Holder::Pockets, 5, 0, NONE),
+        inventory.check_add(&giant, Holder::Inventory, 5, 0, NONE),
         Err(MoveRefused::NoRoom)
     );
-    inventory.add(giant, Holder::Pockets, 2, 0, NONE).unwrap();
+    inventory.add(giant, Holder::Inventory, 2, 0, NONE).unwrap();
     assert_eq!(
         inventory.check_add(
             &Item::new(id(3), ItemKind::Ring),
-            Holder::Pockets,
+            Holder::Inventory,
             3,
             1,
             NONE
@@ -253,7 +253,7 @@ fn things_saved_smaller_than_they_now_are_can_still_be_moved_apart() {
     // Saved at one cell each before sizes changed shapes: now they overlap.
     let mut inventory = Inventory::default();
     for (n, x) in [(1, 0), (2, 1)] {
-        inventory.pockets.push(Placed {
+        inventory.items.push(Placed {
             item: sized(n, ItemKind::Ring, Size::Giant),
             x,
             y: 0,
@@ -261,9 +261,9 @@ fn things_saved_smaller_than_they_now_are_can_still_be_moved_apart() {
         });
     }
     inventory
-        .move_item(id(2), Holder::Pockets, 3, 0, NONE)
+        .move_item(id(2), Holder::Inventory, 3, 0, NONE)
         .unwrap();
-    assert_eq!(inventory.pockets.len(), 2);
+    assert_eq!(inventory.items.len(), 2);
     assert!(inventory.find(id(1)).is_some() && inventory.find(id(2)).is_some());
 }
 
@@ -289,25 +289,25 @@ fn a_quarter_turn_swaps_the_sides_and_four_come_back() {
 fn things_cant_lie_on_each_other_or_stick_out() {
     let mut inventory = carrying(&[ItemKind::Stone, ItemKind::Apple]);
     assert_eq!(
-        inventory.check_move(id(2), Holder::Pockets, 1, 1, NONE),
+        inventory.check_move(id(2), Holder::Inventory, 1, 1, NONE),
         Err(MoveRefused::NoRoom)
     );
     assert_eq!(
-        inventory.check_move(id(1), Holder::Pockets, 5, 0, NONE),
+        inventory.check_move(id(1), Holder::Inventory, 5, 0, NONE),
         Err(MoveRefused::NoRoom)
     );
     // An item isn't in its own way.
     assert_eq!(
-        inventory.check_move(id(1), Holder::Pockets, 1, 0, NONE),
+        inventory.check_move(id(1), Holder::Inventory, 1, 0, NONE),
         Err(MoveRefused::NoRoom),
         "the apple is at (2, 0)"
     );
     assert_eq!(
-        inventory.move_item(id(2), Holder::Pockets, 5, 3, NONE),
+        inventory.move_item(id(2), Holder::Inventory, 5, 3, NONE),
         Ok(())
     );
     assert_eq!(
-        inventory.move_item(id(1), Holder::Pockets, 1, 0, NONE),
+        inventory.move_item(id(1), Holder::Inventory, 1, 0, NONE),
         Ok(())
     );
     assert_eq!(inventory.placed(id(1)).unwrap().1.x, 1);
@@ -345,13 +345,13 @@ fn a_pouch_holds_more_than_its_outside() {
         let ring_id = id(100 + ring as u128);
         inventory
             .give(Item::new(ring_id, ItemKind::Ring), StackLimits::NONE)
-            .unwrap_or_else(|_| panic!("the pockets are full"));
+            .unwrap_or_else(|_| panic!("the inventory is full"));
         inventory
             .move_item(ring_id, Holder::Inside(id(1)), ring % 4, ring / 4, NONE)
             .unwrap();
     }
     assert_eq!(inventory.find(id(1)).unwrap().contents.len(), 16);
-    assert_eq!(inventory.pockets.len(), 1);
+    assert_eq!(inventory.items.len(), 1);
     assert_eq!(inventory.total_weight(), 80 + 16 * 10);
 }
 
@@ -385,7 +385,7 @@ fn nothing_goes_inside_itself() {
     );
 }
 
-/// A backpack holding a pouch holding a box, in the pockets, ids 1 to 3.
+/// A backpack holding a pouch holding a box, in the inventory, ids 1 to 3.
 fn nested() -> Inventory {
     let mut inventory = carrying(&[ItemKind::Backpack, ItemKind::Pouch, ItemKind::SmallBox]);
     inventory
@@ -417,18 +417,15 @@ fn three_grids_deep_is_the_limit() {
     let (_, placed) = inventory.placed(id(5)).unwrap();
     let (x, y) = (placed.x, placed.y);
     let index = inventory
-        .pockets
+        .items
         .iter()
         .position(|placed| placed.x == x && placed.y == y);
-    inventory.pockets[index.unwrap()]
-        .item
-        .contents
-        .push(Placed {
-            item: Item::new(id(6), ItemKind::Pouch),
-            x: 0,
-            y: 0,
-            rotation: NONE,
-        });
+    inventory.items[index.unwrap()].item.contents.push(Placed {
+        item: Item::new(id(6), ItemKind::Pouch),
+        x: 0,
+        y: 0,
+        rotation: NONE,
+    });
     assert_eq!(
         inventory.check_move(id(5), Holder::Inside(id(2)), 0, 1, NONE),
         Err(MoveRefused::TooDeep)
@@ -509,7 +506,7 @@ fn weight_limits_look_at_the_containers_further_out() {
             rotation: NONE,
         });
     }
-    inventory.pockets[0].item.contents.push(Placed {
+    inventory.items[0].item.contents.push(Placed {
         item: inner,
         x: 0,
         y: 0,
@@ -589,7 +586,7 @@ fn the_bin_keeps_the_last_thing_thrown_away_until_the_next() {
     assert!(!inventory.to_bin(id(2)));
     // Taken back, it goes in a grid again.
     assert_eq!(
-        inventory.move_item(id(2), Holder::Pockets, 4, 0, NONE),
+        inventory.move_item(id(2), Holder::Inventory, 4, 0, NONE),
         Ok(())
     );
     assert!(inventory.bin.is_none());
@@ -621,4 +618,19 @@ fn an_inventory_reads_back_from_a_message() {
         postcard::from_bytes::<Inventory>(&bytes).unwrap(),
         inventory
     );
+}
+
+#[test]
+fn an_inventory_saved_as_pockets_still_loads() {
+    let mut inventory = carrying(&[ItemKind::Coin]);
+    inventory.size = (5, 3);
+    let mut saved = serde_json::to_value(&inventory).unwrap();
+    let fields = saved.as_object_mut().unwrap();
+    let items = fields.remove("items").unwrap();
+    let size = fields.remove("size").unwrap();
+    fields.insert("pockets".into(), items);
+    fields.insert("pockets_size".into(), size);
+    let old = saved.to_string();
+    let loaded: Inventory = serde_json::from_str(&old).unwrap();
+    assert_eq!(loaded, inventory);
 }

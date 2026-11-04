@@ -55,7 +55,7 @@ pub struct StockCell {
 #[derive(Resource, Default, PartialEq)]
 pub struct HeldStock(pub Option<shared::id::Id>);
 
-/// It was taken from who they are trading with, and is on its way to the pockets.
+/// It was taken from who they are trading with, and is on its way to the inventory.
 #[derive(Message, Clone, Copy, Debug)]
 pub struct TookItem {
     pub with: shared::id::Id,

@@ -121,7 +121,7 @@ fn what_is_given_to_a_keeper_joins_the_stock_from_beside_the_door_only() {
         favour: None,
     };
     test.send(&[coin]);
-    let item = test.client.inventory.pockets.last().unwrap().item.id;
+    let item = test.client.inventory.items.last().unwrap().item.id;
     let give = ClientMessage::GiveItem { item, to: with };
     test.send(&[ClientMessage::DevTeleport {
         x: front.0 + 40,
@@ -156,19 +156,19 @@ fn taking_from_a_keeper_needs_reach_room_and_it_still_being_there() {
     let take = |x: u8| ClientMessage::TakeItem {
         with,
         item,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x,
         y: 0,
         rotation: Rotation::None,
     };
-    // Clear the pockets, for room.
-    test.client.inventory.pockets.clear();
+    // Clear the inventory, for room.
+    test.client.inventory.items.clear();
     // Set directly, as a teleport only goes somewhere walkable.
     test.client.visit.as_mut().unwrap().position = (front.0 + 40, front.1);
     test.send(&[take(0)]);
     assert!(test.client.inventory.find(item).is_none(), "out of reach");
     test.client.visit.as_mut().unwrap().position = front;
-    // Off the end of the pockets.
+    // Off the end of the inventory.
     test.send(&[take(200)]);
     assert!(test.client.inventory.find(item).is_none(), "no room there");
     let answers = test.send(&[take(0)]);
@@ -177,7 +177,7 @@ fn taking_from_a_keeper_needs_reach_room_and_it_still_being_there() {
     assert!(left.iter().all(|one| one.id != item));
     assert_eq!(left.len(), stock.len() - 1);
     // Taken twice, it isn't copied.
-    test.client.inventory.pockets.clear();
+    test.client.inventory.items.clear();
     test.send(&[take(0)]);
     assert!(test.client.inventory.find(item).is_none(), "already gone");
 }

@@ -51,9 +51,9 @@
 //! - `HOW_DEBUG_SHOW_FLOOR=n`: three seconds after starting, look at this known
 //!   floor (an index, from 0) on the maps.
 //! - `HOW_DEBUG_INVENTORY=true`: two seconds after starting, have a few items and
-//!   show the pockets and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at
-//!   this index in the pockets, under the cursor (see `HOW_DEBUG_CURSOR`).
-//!   `HOW_DEBUG_DROP=true`: put all but the first of what is in the pockets on the
+//!   show the inventory and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at
+//!   this index in the inventory, under the cursor (see `HOW_DEBUG_CURSOR`).
+//!   `HOW_DEBUG_DROP=true`: put all but the first of what is in the inventory on the
 //!   ground underfoot first (in a site). `HOW_DEBUG_SECRETS=true`: truesight on, and
 //!   things that are magical, blessed and cursed, to look at how they glow.
 //! - `HOW_DEBUG_BAGS=true`: two seconds after starting, show a bag of every look in

@@ -20,7 +20,7 @@ pub struct CreatureDef {
     pub weight: u32,
     pub size: Size,
     /// Its base grid: what it can carry with no bag.
-    pub pockets: (u8, u8),
+    pub inventory: (u8, u8),
     pub body: &'static [BodyPart],
     /// How fast it goes for its kind, as a percentage of ordinary.
     pub speed: u32,

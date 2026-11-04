@@ -97,7 +97,7 @@ impl Inventory {
         if let Some(index) = self.worn.iter().position(|item| item.id == id) {
             return Some(self.worn.remove(index));
         }
-        search(&mut self.pockets, id).or_else(|| {
+        search(&mut self.items, id).or_else(|| {
             self.worn
                 .iter_mut()
                 .find_map(|item| search(&mut item.contents, id))
@@ -115,8 +115,8 @@ impl Inventory {
             })
         }
         match holder {
-            Holder::Pockets => Some(&mut self.pockets),
-            Holder::Inside(id) => search(&mut self.pockets, id).or_else(|| {
+            Holder::Inventory => Some(&mut self.items),
+            Holder::Inside(id) => search(&mut self.items, id).or_else(|| {
                 self.worn.iter_mut().find_map(|item| {
                     if item.id == id {
                         Some(&mut item.contents)

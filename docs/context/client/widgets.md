@@ -26,6 +26,8 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/set_edge.rs`: the metal edge of set items (`assets/shaders/set_edge.wesl`): `SetEdge`, `set_edge`, a material per quality, sliding with `common::BandShift`. Unit test.
 - `crates/client/src/widgets/moveable.rs`: `spawn_moveable_panel`, `place_panels` (keeps them on the screen), `take_presses` (`PreUpdate`, takes clicks and touches for widgets). Unit tests. In `moveable/`: `spawn.rs`, `place.rs`, `drag.rs`.
 
+`crates/client/src/widgets/weight.rs`: `weight_words` (a container's weight under its grid: `12.34kg / 45.00kg`, or `3.20kg` with no limit). Unit tests.
+
 `crates/client/src/widgets/stock.rs`: `StockGrid` (a grid of what isn't carried: a shop's, the ground; places kept here only; `items`, and `filter` to fade what isn't in a category), `StockGridNode`, `StockAim`, `StockAimAt`, `draw_stock_aim`. Unit tests. `stock/place.rs`: where things go in it (`first_place`, `landing`, `rows_for`).
 
 ## Public API

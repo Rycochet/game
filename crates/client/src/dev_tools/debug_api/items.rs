@@ -26,7 +26,7 @@ pub(super) struct GiveItemParams {
 }
 
 /// `client.give_item { "kind": "Ring", "quality": "Rare", "magical": true }`:
-/// into the pockets, as Give Item does. Saved.
+/// into the inventory, as Give Item does. Saved.
 pub(super) fn give_item(
     In(request): In<Option<Value>>,
     mut to_server: MessageWriter<ToServer>,
@@ -73,7 +73,7 @@ pub(super) struct WearItemParams {
 }
 
 /// `client.wear_item { "kind": "FullArmour" }`: puts on the first thing of this kind
-/// in the pockets, as dragging it onto the clothes panel does.
+/// in the inventory, as dragging it onto the clothes panel does.
 pub(super) fn wear_item(
     In(request): In<Option<Value>>,
     carried: Res<Carried>,
@@ -82,11 +82,11 @@ pub(super) fn wear_item(
     let WearItemParams { kind } = params(request)?;
     let Some(placed) = carried
         .0
-        .pockets
+        .items
         .iter()
         .find(|placed| placed.item.kind == kind)
     else {
-        return Err(refused(format!("no {kind:?} in the pockets")));
+        return Err(refused(format!("no {kind:?} in the inventory")));
     };
     let item = placed.item.id;
     to_server.write(ToServer(ClientMessage::WearItem { item }));

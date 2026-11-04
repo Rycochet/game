@@ -75,12 +75,12 @@ fn mobs_start_with_what_their_kind_can_have_and_animals_with_nothing() {
 }
 
 /// Blades are left out: they are rolled within what the mob can carry. Anything else
-/// must go on it, made for it, or else in its pockets, at the size it is made.
+/// must go on it, made for it, or else in its inventory, at the size it is made.
 #[test]
 fn mobs_can_wear_or_carry_all_they_can_start_with() {
     for creature in CreatureKind::ALL {
         let body = creature.def();
-        let (width, height) = body.pockets;
+        let (width, height) = body.inventory;
         let bare = Inventory {
             creature,
             ..Inventory::default()

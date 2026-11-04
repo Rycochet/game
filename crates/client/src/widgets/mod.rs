@@ -23,6 +23,7 @@ mod stock;
 mod tabs;
 mod text_box;
 mod theme;
+mod weight;
 
 use bevy::input::InputSystems;
 use bevy::prelude::*;
@@ -60,6 +61,7 @@ pub use tabs::{TabChosen, spawn_tabs, spawn_toggle_row};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
 pub use theme::{ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, TextSize};
 use theme::{RAISED_BACKGROUND, SHADED_EDGE};
+pub use weight::weight_words;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod boxes;

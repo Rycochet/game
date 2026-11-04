@@ -1,4 +1,4 @@
-//! Drawing what is carried: the Character panel, with the pockets' grid in it, a
+//! Drawing what is carried: the Character panel, with the inventory's grid in it, a
 //! moveable panel per open bag, the button and keys, the item being held, and its
 //! name.
 
@@ -15,7 +15,7 @@ mod fixed;
 mod grids;
 mod held;
 mod icons;
-mod pockets;
+mod own;
 mod show;
 
 pub(super) use aim::show_aim;
@@ -23,8 +23,8 @@ pub(super) use bins::{show_bins, show_drop};
 pub(super) use fixed::spawn_fixed_parts;
 pub(super) use held::{show_button, show_held, show_tooltip};
 use icons::{bin_icon, drop_icon, person_icon};
-pub(super) use pockets::{forget_closed, toggle_pockets};
-pub(super) use show::show_grids;
+pub(super) use own::{forget_closed, toggle_inventory};
+pub(super) use show::{show_grids, show_weights};
 
 const BUTTON: f32 = 34.0;
 const COLUMN_GAP: f32 = 16.0;
@@ -82,7 +82,7 @@ pub(super) struct ItemCell {
 }
 
 #[derive(Component)]
-pub(super) struct PocketsButton;
+pub(super) struct InventoryButton;
 
 #[derive(Component)]
 pub(super) struct HeldItem;

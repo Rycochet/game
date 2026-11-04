@@ -14,10 +14,10 @@ fn at(n: u128, kind: ItemKind, x: u8, y: u8, rotation: Rotation) -> Placed {
     }
 }
 
-/// Six by four pockets, with a sword along the top.
+/// A six by four inventory, with a sword along the top.
 fn messy() -> Inventory {
     Inventory {
-        pockets: vec![
+        items: vec![
             at(1, ItemKind::Apple, 0, 3, Rotation::None),
             at(2, ItemKind::Coin, 5, 0, Rotation::None),
             at(3, ItemKind::Sword, 0, 0, Rotation::Quarter),
@@ -40,7 +40,7 @@ fn layout(grid: &[Placed]) -> Vec<(Id, u8, u8, Rotation, u32)> {
 #[test]
 fn largest_go_first_from_the_top_left_with_like_stacked() {
     let sorted = messy()
-        .sorted_grid(Holder::Pockets, StackLimits::default())
+        .sorted_grid(Holder::Inventory, StackLimits::default())
         .unwrap();
     assert_eq!(
         layout(&sorted),
@@ -60,11 +60,11 @@ fn largest_go_first_from_the_top_left_with_like_stacked() {
 #[test]
 fn something_turns_only_if_it_must() {
     let mut inventory = messy();
-    // Upright, it is too tall for the pockets.
-    inventory.pockets[2].rotation = Rotation::None;
-    inventory.pockets[2].y = 1;
+    // Upright, it is too tall for the inventory.
+    inventory.items[2].rotation = Rotation::None;
+    inventory.items[2].y = 1;
     let sorted = inventory
-        .sorted_grid(Holder::Pockets, StackLimits::default())
+        .sorted_grid(Holder::Inventory, StackLimits::default())
         .unwrap();
     assert_eq!((sorted[0].item.id, sorted[0].x, sorted[0].y), (id(3), 0, 0));
     assert_eq!(sorted[0].rotation, Rotation::Quarter);
@@ -77,11 +77,11 @@ fn stacks_keep_to_their_limits() {
         most: 1,
         ..StackLimits::default()
     };
-    assert!(inventory.sort_grid(Holder::Pockets, limits));
-    assert_eq!(inventory.pockets.len(), 5);
+    assert!(inventory.sort_grid(Holder::Inventory, limits));
+    assert_eq!(inventory.items.len(), 5);
     assert!(
         inventory
-            .pockets
+            .items
             .iter()
             .all(|placed| placed.item.count() == 1)
     );
@@ -91,29 +91,29 @@ fn stacks_keep_to_their_limits() {
 fn sorting_again_changes_nothing() {
     let mut inventory = messy();
     let limits = StackLimits::default();
-    assert!(inventory.sort_grid(Holder::Pockets, limits));
+    assert!(inventory.sort_grid(Holder::Inventory, limits));
     let once = inventory.clone();
-    assert!(!inventory.sort_grid(Holder::Pockets, limits));
+    assert!(!inventory.sort_grid(Holder::Inventory, limits));
     assert_eq!(inventory, once);
 }
 
 #[test]
 fn nothing_changes_if_something_would_not_fit() {
-    // Two things that can't stack, in pockets of one cell.
+    // Two things that can't stack, in an inventory of one cell.
     let mut inventory = Inventory {
-        pockets: vec![
+        items: vec![
             at(1, ItemKind::Apple, 0, 0, Rotation::None),
             at(2, ItemKind::Coin, 0, 0, Rotation::None),
         ],
-        pockets_size: (1, 1),
+        size: (1, 1),
         ..Inventory::default()
     };
     let before = inventory.clone();
     assert_eq!(
-        inventory.sorted_grid(Holder::Pockets, StackLimits::default()),
+        inventory.sorted_grid(Holder::Inventory, StackLimits::default()),
         None
     );
-    assert!(!inventory.sort_grid(Holder::Pockets, StackLimits::default()));
+    assert!(!inventory.sort_grid(Holder::Inventory, StackLimits::default()));
     assert_eq!(inventory, before);
 }
 
@@ -125,7 +125,7 @@ fn a_bag_inside_is_sorted_on_its_own() {
         at(12, ItemKind::Coin, 1, 2, Rotation::None),
     ];
     let mut inventory = Inventory {
-        pockets: vec![Placed {
+        items: vec![Placed {
             item: backpack,
             x: 0,
             y: 0,
@@ -133,9 +133,9 @@ fn a_bag_inside_is_sorted_on_its_own() {
         }],
         ..Inventory::default()
     };
-    let pockets = inventory.pockets.clone();
+    let carried = inventory.items.clone();
     assert!(inventory.sort_grid(Holder::Inside(id(10)), StackLimits::default()));
     let inside = inventory.grid(Holder::Inside(id(10))).unwrap();
     assert_eq!(layout(inside), [(id(11), 0, 0, Rotation::None, 2)]);
-    assert_eq!(inventory.pockets[0].x, pockets[0].x);
+    assert_eq!(inventory.items[0].x, carried[0].x);
 }

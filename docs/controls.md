@@ -36,7 +36,7 @@ You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
 | Windowed or full screen (native only) | Alt+Enter, or Settings, Video | Settings, Video |
 | Close what is on top | Esc, or click outside it (not the startup menu: press Play) | Tap outside it |
-| Open or close your character, clothes and pockets | C or I, or click the person at the bottom left | Tap the person |
+| Open or close your character, clothes and inventory | C or I, or click the person at the bottom left | Tap the person |
 | Pick up an item, and put it down | Press on it, drag, let go; or click it, then click where it goes | Hold a finger on it, drag, let go |
 | Turn an item you are holding | Right-click or R | Tap with a second finger |
 | Put back an item you are holding | Esc, or drop it where it can't go | Drop it where it can't go |
@@ -44,7 +44,7 @@ You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 | Open a bag | Double-click it | Double-tap it |
 | Put on or take off clothes | Drag them onto the clothes panel, or off it into a grid | The same |
 | Give something to someone near | Drag it onto their name in the Nearby panel | The same |
-| Throw an item away, with all that is in it | Drop it on the bin in your pockets. Take it back until you throw away something else, which destroys it | The same |
+| Throw an item away, with all that is in it | Drop it on the bin under your inventory. Take it back until you throw away something else, which destroys it | The same |
 | Open the [debug menu](debug-menu) | Backtick (`` ` ``), or click the warning button at the top left | Tap the warning button |
 
 Esc goes to whatever is on top first: a text box, a dropdown, the debug menu or the full map, and only then the system menu.

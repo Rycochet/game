@@ -13,12 +13,12 @@ fn id(n: u128) -> Id {
     Id::for_test(n)
 }
 
-/// These kinds, made for this creature, ids from 1, in big pockets.
+/// These kinds, made for this creature, ids from 1, in a big inventory.
 fn carrying_for(kind: CreatureKind, kinds: &[ItemKind]) -> Inventory {
     let def = kind.def();
     let mut inventory = Inventory {
         creature: kind,
-        pockets_size: (40, 40),
+        size: (40, 40),
         ..Inventory::default()
     };
     for (index, &item) in kinds.iter().enumerate() {
@@ -36,9 +36,9 @@ fn carrying(kinds: &[ItemKind]) -> Inventory {
     carrying_for(HUMAN, kinds)
 }
 
-/// Takes it off into a far corner of the pockets.
+/// Takes it off into a far corner of the inventory.
 fn take_off(inventory: &mut Inventory, n: u128) -> Result<(), MoveRefused> {
-    inventory.move_item(id(n), Holder::Pockets, 30, 30, Rotation::None)
+    inventory.move_item(id(n), Holder::Inventory, 30, 30, Rotation::None)
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn a_higher_layer_stops_what_is_under_it_going_on_or_coming_off() {
     take_off(&mut inventory, 2).unwrap();
     assert_eq!(take_off(&mut inventory, 1), Err(MoveRefused::NoRoom));
     assert_eq!(
-        inventory.move_item(id(1), Holder::Pockets, 32, 30, Rotation::None),
+        inventory.move_item(id(1), Holder::Inventory, 32, 30, Rotation::None),
         Ok(())
     );
 }
@@ -482,7 +482,7 @@ fn a_worn_bag_keeps_its_grid_and_its_contents() {
     assert_eq!(inventory.grid_size(Holder::Inside(id(1))), Some((10, 12)));
     // Things go in and out of it while it is worn.
     assert_eq!(
-        inventory.move_item(id(2), Holder::Pockets, 0, 0, Rotation::None),
+        inventory.move_item(id(2), Holder::Inventory, 0, 0, Rotation::None),
         Ok(())
     );
     assert_eq!(
@@ -511,11 +511,11 @@ fn changing_body_takes_everything_off_and_gives_back_what_doesnt_fit() {
     use ItemKind::{FullArmour, Ring, Stone};
     let mut inventory = carrying(&[FullArmour, Ring, Stone]);
     inventory.wear(id(1)).unwrap();
-    // A chicken's 2 × 2 pockets: the armour is too big and the ring goes first.
+    // A chicken's 2 × 2 inventory: the armour is too big and the ring goes first.
     let lost = inventory.change_body(CreatureKind::Chicken, StackLimits::NONE);
     assert!(inventory.worn.is_empty());
-    assert_eq!(inventory.pockets_size, (2, 2));
-    assert_eq!(lost.len() + inventory.pockets.len(), 3);
+    assert_eq!(inventory.size, (2, 2));
+    assert_eq!(lost.len() + inventory.items.len(), 3);
     assert!(lost.iter().any(|item| item.kind == FullArmour));
 }
 
@@ -524,7 +524,7 @@ fn a_picture_shows_what_is_drawn_and_not_what_drawn_things_cover() {
     use crate::item_form::give_form;
     use ItemKind::{FullArmour, Gambeson, Surcoat};
     let mut inventory = carrying(&[Gambeson, FullArmour, Surcoat]);
-    for placed in inventory.pockets.iter_mut() {
+    for placed in inventory.items.iter_mut() {
         give_form(&mut placed.item, None, &mut || id(99));
     }
     // Nothing drawn is worn yet.

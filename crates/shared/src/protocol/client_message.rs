@@ -123,7 +123,7 @@ pub enum ClientMessage {
     WearFromGround { item: Id },
     /// Throws away something from the ground under the player, as `BinItem`.
     BinFromGround { item: Id },
-    /// Developer tools: a new item of this kind in the character's pockets if
+    /// Developer tools: a new item of this kind in the character's inventory if
     /// there is room, made for this size (or their own) and their fingers,
     /// answered with `Inventory`.
     DevGiveItem {
@@ -150,7 +150,7 @@ pub enum ClientMessage {
     /// stood, and it doesn't come back.
     DevKillMob { mob: Id },
     /// Developer tools: the character becomes this kind of creature. Everything
-    /// comes off into the new pockets, and what doesn't fit is lost. Answered with
+    /// comes off into the new inventory, and what doesn't fit is lost. Answered with
     /// `Inventory`.
     DevSetCreature(CreatureKind),
     /// Developer tools: jump to a point on the map the player is on (in a

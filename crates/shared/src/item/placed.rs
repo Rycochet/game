@@ -27,9 +27,9 @@ impl Placed {
     }
 }
 
-/// A grid things can be in: a character's pockets or a container's.
+/// A grid things can be in: a character's inventory or a container's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Holder {
-    Pockets,
+    Inventory,
     Inside(Id),
 }

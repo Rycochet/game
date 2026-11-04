@@ -1,20 +1,20 @@
-//! Opening the pockets, and forgetting grids whose panels closed.
+//! Opening the inventory, and forgetting grids whose panels closed.
 
 use bevy::prelude::*;
 use shared::item::Holder;
 
 use super::super::give::NearbyPanel;
 use super::super::{Carried, OpenCharacter};
-use super::{OpenGrids, PocketsButton};
+use super::{InventoryButton, OpenGrids};
 use crate::common::GameView;
 use crate::widgets::{ButtonPressed, RaisePanel};
 
 /// The button, `C` or `I` opens or closes the Character panel.
 #[allow(clippy::too_many_arguments)]
-pub(in crate::inventory) fn toggle_pockets(
+pub(in crate::inventory) fn toggle_inventory(
     mut pressed: MessageReader<ButtonPressed>,
     mut asked: MessageReader<OpenCharacter>,
-    button: Query<(), With<PocketsButton>>,
+    button: Query<(), With<InventoryButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     view: Res<State<GameView>>,
     carried: Res<Carried>,
@@ -28,22 +28,22 @@ pub(in crate::inventory) fn toggle_pockets(
     let by_key = keys.any_just_pressed([KeyCode::KeyC, KeyCode::KeyI]);
     if (by_button || by_key) && *view.get() != GameView::Connecting {
         // Things are given by dragging them from there.
-        if open.pockets_open() {
+        if open.inventory_open() {
             nearby.close(&mut commands, &nodes);
         } else {
             nearby.open(&mut commands, &mut raise, &nodes);
         }
-        open.toggle_pockets(&carried.0, &mut commands, &mut raise);
+        open.toggle_inventory(&carried.0, &mut commands, &mut raise);
     } else if asked.read().count() > 0 {
-        if !open.pockets_open() {
+        if !open.inventory_open() {
             nearby.open(&mut commands, &mut raise, &nodes);
         }
-        open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
+        open.open(Holder::Inventory, &carried.0, &mut commands, &mut raise);
     }
 }
 
 /// Forgets panels closed by their own close buttons, closes those of bags no
-/// longer carried, and draws the pockets again if the body changed their size.
+/// longer carried, and draws the inventory again if the body changed its size.
 pub(in crate::inventory) fn forget_closed(
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
@@ -51,7 +51,7 @@ pub(in crate::inventory) fn forget_closed(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
 ) {
-    let mut redraw_pockets = false;
+    let mut redraw_inventory = false;
     open.open.retain(|&(holder, panel, size)| {
         if !nodes.contains(panel) {
             return false;
@@ -59,11 +59,11 @@ pub(in crate::inventory) fn forget_closed(
         let keep = carried.0.grid_size(holder) == Some(size);
         if !keep {
             commands.entity(panel).despawn();
-            redraw_pockets |= holder == Holder::Pockets;
+            redraw_inventory |= holder == Holder::Inventory;
         }
         keep
     });
-    if redraw_pockets {
-        open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
+    if redraw_inventory {
+        open.open(Holder::Inventory, &carried.0, &mut commands, &mut raise);
     }
 }

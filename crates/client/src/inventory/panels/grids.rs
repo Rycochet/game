@@ -33,7 +33,7 @@ impl OpenGrids {
             return;
         };
         let title = match holder {
-            Holder::Pockets => "Character",
+            Holder::Inventory => "Character",
             Holder::Inside(id) => carried.find(id).map_or("", |item| item.kind.def().name),
         };
         let at = FIRST_AT + NEXT_AT * (self.opened % 8) as f32;
@@ -41,7 +41,7 @@ impl OpenGrids {
         let (panel, content) = spawn_moveable_panel(commands, title, at);
         let mut ground_holder = None;
         commands.entity(content).with_children(|content| {
-            if holder != Holder::Pockets {
+            if holder != Holder::Inventory {
                 spawn_grid(content, holder, width, height);
                 return;
             }
@@ -70,12 +70,14 @@ impl OpenGrids {
         self.open.push((holder, panel, (width, height)));
     }
 
-    /// Whether the pockets' panel is open.
-    pub(super) fn pockets_open(&self) -> bool {
-        self.open.iter().any(|(open, ..)| *open == Holder::Pockets)
+    /// Whether the inventory's panel is open.
+    pub(super) fn inventory_open(&self) -> bool {
+        self.open
+            .iter()
+            .any(|(open, ..)| *open == Holder::Inventory)
     }
 
-    pub(super) fn toggle_pockets(
+    pub(super) fn toggle_inventory(
         &mut self,
         carried: &Inventory,
         commands: &mut Commands,
@@ -84,18 +86,18 @@ impl OpenGrids {
         let open = self
             .open
             .iter()
-            .position(|(open, ..)| *open == Holder::Pockets);
+            .position(|(open, ..)| *open == Holder::Inventory);
         match open {
             Some(index) => {
                 let (_, panel, _) = self.open.remove(index);
                 commands.entity(panel).despawn();
             }
-            None => self.open(Holder::Pockets, carried, commands, raise),
+            None => self.open(Holder::Inventory, carried, commands, raise),
         }
     }
 }
 
-/// A grid, its controls above it, and under it the words on its weight and, for the pockets, the bin.
+/// A grid, its controls above it, and under it the words on its weight and, for the inventory, the bin.
 pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, height: u8) {
     // Its controls, along its top at the right.
     parent
@@ -125,7 +127,7 @@ pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, widt
                 FONT.font(),
                 TextColor(INK),
             ));
-            if holder == Holder::Pockets {
+            if holder == Holder::Inventory {
                 row.spawn(Node {
                     column_gap: px(CELL_BORDER * 4.0),
                     ..default()

@@ -37,7 +37,7 @@ fn mobs_only_get_blades_they_can_carry_and_lift() {
             let gear = [(ItemKind::Sword, Some(Quality::Common))];
             let carrying = dressed(kind, &gear, made_at);
             assert!(carrying.total_weight() <= lifting);
-            armed += !carrying.pockets.is_empty() as u32;
+            armed += !carrying.items.is_empty() as u32;
         }
         assert_eq!(armed, tries, "{kind:?} should always find something");
     }
@@ -54,12 +54,12 @@ fn mobs_wear_clothes_made_for_them_and_carry_ordinary_things() {
         (ItemKind::Trousers, Some(Quality::Common)),
         (ItemKind::Stone, None),
     ];
-    // A beggar's trousers are bigger than its pockets.
+    // A beggar's trousers are bigger than its inventory.
     let beggar = dressed(CreatureKind::Beggar, &gear, made_at);
     assert_eq!(beggar.worn[0].kind, ItemKind::Trousers);
     let giant = dressed(CreatureKind::Giant, &gear, made_at);
     assert_eq!(giant.worn[0].made.size, Size::Giant);
-    assert_eq!(giant.pockets[0].item.made.size, Size::Medium);
+    assert_eq!(giant.items[0].item.made.size, Size::Medium);
 }
 
 fn seen_ids(answers: &[ServerMessage]) -> BTreeSet<Id> {
@@ -434,7 +434,7 @@ fn with_a_gift(kind: CreatureKind) -> (TestClient, Id) {
         favour: None,
     }]);
     let gift = answers.iter().rev().find_map(|answer| match answer {
-        ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),
+        ServerMessage::Inventory(carried) => Some(carried.items[0].item.id),
         _ => None,
     });
     (test, gift.expect("told of it"))
@@ -485,7 +485,7 @@ fn a_mob_is_dressed_once_and_keeps_its_things_after_a_restart() {
         .filter(|(_, carrying)| !carrying.worn.is_empty());
     assert!(wearers.count() > 0, "someone is dressed: {before:?}");
     let armed = before.iter().any(|(_, carrying)| {
-        let carried = carrying.pockets.iter().map(|placed| &placed.item);
+        let carried = carrying.items.iter().map(|placed| &placed.item);
         carried
             .chain(&carrying.worn)
             .any(|item| item.made_at.is_some())
@@ -520,7 +520,7 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
         favour: None,
     }]);
     let coin = answers.iter().rev().find_map(|answer| match answer {
-        ServerMessage::Inventory(carried) => Some(carried.pockets[0].item.id),
+        ServerMessage::Inventory(carried) => Some(carried.items[0].item.id),
         _ => None,
     });
     test.send(&[ClientMessage::GiveItem {
