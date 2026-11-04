@@ -40,7 +40,7 @@ fn planet(
         showing.choice.generator = SurfaceGenerator::ALL
             .into_iter()
             .find(|kind| kind.name().eq_ignore_ascii_case(&name))
-            .ok_or_else(|| refused("generator is Classic or Continents"))?;
+            .ok_or_else(|| refused("generator is Classic, Continents or Plates"))?;
     }
     if let Some(seed) = asked.seed {
         showing.choice.seed = Seed::new(seed);
@@ -49,7 +49,7 @@ fn planet(
         showing.choice.layer = Layer::ALL
             .into_iter()
             .find(|layer| layer.name().eq_ignore_ascii_case(&name))
-            .ok_or_else(|| refused("layer is Surface or Elevation"))?;
+            .ok_or_else(|| refused("layer is Surface, Elevation or Plates"))?;
     }
     let globe = &showing.globe;
     let up_to_date = globe.built == (showing.choice.seed, showing.choice.generator)
