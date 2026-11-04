@@ -42,7 +42,7 @@ pub(super) fn pick_on_click(
     let Ok(ray) = camera.viewport_to_world(camera_transform, cursor) else {
         return;
     };
-    let water_level = world.params.water_level(clock.hour as f64);
+    let water_level = world.water_level(&clock);
     if let Some((x, y)) = super::picking::pick(
         ray,
         (player.x, player.y),

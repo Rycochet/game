@@ -15,6 +15,7 @@ mod moon;
 mod moon_path;
 mod now;
 mod sun;
+mod tide;
 mod vector;
 
 pub use body::{Body, BodyKind, BodyNow, MoonPhase};
@@ -22,7 +23,7 @@ pub use celestial::Celestial;
 pub use colour_name::ColourName;
 pub use light::{brightest, colour_along, flat_light};
 use moon::{Moon, from_hue, moon_count, new_moon};
-use moon_path::moon_at;
+use moon_path::{moon_at, moon_direction};
 use now::{fade, rise_of};
 use sun::{Sun, new_sun, sun_colour};
 use vector::{cross, dot, scaled, unit};
@@ -112,3 +113,5 @@ const SUN_COLOURS: [(f64, [f64; 3]); 4] = [
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tide_tests;

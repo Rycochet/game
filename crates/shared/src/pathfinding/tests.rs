@@ -222,7 +222,7 @@ fn ground() -> WorldGround {
 /// How high the water is in these tests.
 fn water() -> WorldConditions {
     WorldConditions {
-        water: WorldParams::from_seed(Seed::new(12345)).water_level(0.0),
+        water: WorldParams::from_seed(Seed::new(12345)).high_water(),
         snow_line: 128.0,
     }
 }
@@ -266,7 +266,7 @@ fn world_routes_go_round_a_summit() {
     let surface = crate::surface::Surface::new(&world);
     let ground = WorldGround::new(&world);
     let conditions = WorldConditions {
-        water: world.water_level(0.0),
+        water: world.high_water(),
         snow_line: 128.0,
     };
     // The highest of the broad land round the start.

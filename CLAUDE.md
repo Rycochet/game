@@ -30,7 +30,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | (postgres plan)     | n/a                             | `docs/context/postgres-migration.md`  | Not built: optional relational Postgres saves and a two-way migration tool, for when the data schema has matured |
 | shared: rng         | `crates/shared/src/rng.rs`      | `docs/context/shared/rng.md`          | Seeds, position hashing, random sequences           |
 | shared: world       | `crates/shared/src/world.rs`    | `docs/context/shared/world.md`        | World settings from seed, tides                     |
-| shared: celestial   | `crates/shared/src/celestial.rs` | `docs/context/shared/celestial.md`   | Suns and moons from the seed: colours and names, where they are and the light they give at any time |
+| shared: celestial   | `crates/shared/src/celestial.rs` | `docs/context/shared/celestial.md`   | Suns and moons from the seed: colours and names, where they are, the light they give and the moons' pull on the tide at any time |
 | shared: surface     | `crates/shared/src/surface.rs`  | `docs/context/shared/surface.md`      | Terrain height/jitter at any grid position (noise)  |
 | shared: climate     | `crates/shared/src/climate.rs`  | `docs/context/shared/climate.md`      | Temperature, moisture and Whittaker biomes at any world map position |
 | shared: river       | `crates/shared/src/river.rs`    | `docs/context/shared/river.md`        | Rivers running downhill from a chunk's source, more where wet (visual only for now) |

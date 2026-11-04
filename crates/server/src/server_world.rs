@@ -1,6 +1,7 @@
 //! `ServerWorld`: the world as the server holds it, its clock, sites and what has been forgotten.
 
 use bevy::prelude::*;
+use shared::celestial::Celestial;
 use shared::item::StackLimits;
 use shared::movement::{WorldConditions, WorldGround};
 use shared::poi::{PoiKind, PoiMap};
@@ -34,6 +35,8 @@ pub struct ServerWorld {
     /// Works out the roads between towns.
     pub(crate) roads: RoadWorker,
     params: WorldParams,
+    /// The suns and moons: the tide follows the moons.
+    celestial: Celestial,
     /// Game minutes since the world began, always running.
     pub(crate) clock: WorldClock,
     /// What creatures' energy goes by.
@@ -139,6 +142,7 @@ impl ServerWorld {
             width: Surface::new(&params).width(),
             ground: WorldGround::new(&params),
             roads: RoadWorker::start(seed, storage.clone()),
+            celestial: Celestial::from_seed(params.seed),
             params,
             clock: world_clock,
             action_clock,
@@ -162,7 +166,7 @@ impl ServerWorld {
     /// What decides where can be walked now.
     pub(crate) fn conditions(&self) -> WorldConditions {
         WorldConditions {
-            water: self.params.water_level(self.hour as f64),
+            water: self.params.water_level(&self.celestial, self.hour as f64),
             snow_line: self.snow_line as f64,
         }
     }
