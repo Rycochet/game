@@ -55,6 +55,14 @@ impl Planet {
         }
     }
 
+    /// Whether this is sea frozen over, for surfaces in metres: `Classic`
+    /// freezes by the snow line instead.
+    pub(super) fn has_sea_ice(&self, sample: SurfaceSample, climate: ClimateSample) -> bool {
+        self.surface.generator() != SurfaceGenerator::Classic
+            && sample.height < self.params.sea_level
+            && climate.celsius() < shared::climate::SEA_ICE
+    }
+
     /// The climate over ground of this sample: cooling with height as the
     /// world's own does for `Classic`, at Earth's rate from the sea for a
     /// surface worked out in metres.

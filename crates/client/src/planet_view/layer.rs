@@ -16,16 +16,28 @@ pub(super) enum Layer {
     /// carrying continents, with their edges red where they push together and
     /// blue where they part.
     Plates,
+    /// The yearly average temperature, blue cold to red hot.
+    Temperature,
+    /// How wet, brown dry to blue wet.
+    Moisture,
 }
 
 impl Layer {
-    pub(super) const ALL: [Layer; 3] = [Layer::Surface, Layer::Elevation, Layer::Plates];
+    pub(super) const ALL: [Layer; 5] = [
+        Layer::Surface,
+        Layer::Elevation,
+        Layer::Plates,
+        Layer::Temperature,
+        Layer::Moisture,
+    ];
 
     pub(super) fn name(self) -> &'static str {
         match self {
             Layer::Surface => "Surface",
             Layer::Elevation => "Elevation",
             Layer::Plates => "Plates",
+            Layer::Temperature => "Temperature",
+            Layer::Moisture => "Moisture",
         }
     }
 }
@@ -94,4 +106,20 @@ pub(super) fn plate_tint(sample: Option<PlateSample>) -> [u8; 4] {
     let hue = ((column * 5 + row * 3).rem_euclid(12) * 30) as f64;
     let lightness = if sample.continental { 0.62 } else { 0.32 };
     hsl_to_rgba(hue, 0.45, lightness)
+}
+
+/// A temperature in °C as a colour: deep blue at -30 or below, white at
+/// freezing, through yellow to deep red at 35 or above.
+pub(super) fn temperature_tint(celsius: f64) -> [u8; 4] {
+    let t = ((celsius + 30.0) / 65.0).clamp(0.0, 1.0);
+    // Hue from 240 (blue) to 0 (red); pale near freezing.
+    let freezing = 30.0 / 65.0;
+    let lightness = 0.85 - 0.4 * ((t - freezing).abs() / (1.0 - freezing)).min(1.0);
+    hsl_to_rgba(240.0 * (1.0 - t), 0.75, lightness)
+}
+
+/// Moisture (`0..=1`) as a colour: brown dry, green, blue wet.
+pub(super) fn moisture_tint(moisture: f64) -> [u8; 4] {
+    let m = moisture.clamp(0.0, 1.0);
+    hsl_to_rgba(30.0 + 180.0 * m, 0.55, 0.45)
 }
