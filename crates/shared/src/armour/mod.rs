@@ -8,12 +8,17 @@ pub mod head;
 pub mod legs;
 pub mod shoulders;
 pub mod torso;
+pub mod waist;
 
 use serde::{Deserialize, Serialize};
 
 use crate::rng::Rng;
 
 pub use finish::{Dye, Finish};
+
+/// Millimetres from the skin to the inside of any Outer armour: the clothes and padding
+/// under it (agreed by the location chats; each location's own figures build on it).
+pub const STANDOFF_MM: i32 = 15;
 
 /// How a piece of armour is made, decided first: it says what it looks like and what
 /// it can be made of. A set has one for all its pieces.

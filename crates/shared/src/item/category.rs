@@ -78,7 +78,9 @@ impl ItemKind {
             | Self::PaddedChausses
             | Self::PaddedGloves
             | Self::ShoulderArmour
-            | Self::TorsoArmour => Armour,
+            | Self::TorsoArmour
+            | Self::CuirassierTassets
+            | Self::WaistArmour => Armour,
             Self::Belt
             | Self::Boots
             | Self::Caparison

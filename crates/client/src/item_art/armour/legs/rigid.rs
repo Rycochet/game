@@ -150,7 +150,13 @@ fn add_greave(model: &mut Model, form: &LegsForm, leg: &Leg, top: f32, thick: f3
 
 /// The knee's cop, a lame above and below, a fan when winged, a spike when spiked, of
 /// `stuff`: the piece's own, or iron over padding.
-pub(super) fn add_knee(model: &mut Model, form: &LegsForm, leg: &Leg, lift: f32, stuff: Stuff) {
+pub(in crate::item_art) fn add_knee(
+    model: &mut Model,
+    form: &LegsForm,
+    leg: &Leg,
+    lift: f32,
+    stuff: Stuff,
+) {
     let knee = leg.knee();
     let size = if form.style == Style::IndoPersian {
         0.95

@@ -6,6 +6,7 @@ use shared::armour::head::HeadForm;
 use shared::armour::legs::LegsForm;
 use shared::armour::shoulders::ShouldersForm;
 use shared::armour::torso::TorsoForm;
+use shared::armour::waist::WaistForm;
 use shared::blade::BladeForm;
 use shared::item::Item;
 use shared::item_form::ItemForm;
@@ -138,6 +139,21 @@ impl LegsLook {
     }
 }
 
+/// What can be seen of a waist piece.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct WaistLook {
+    pub(in crate::item_art) form: WaistForm,
+    /// What it takes up, wide and long, not turned.
+    pub(in crate::item_art) cells: (u8, u8),
+}
+
+impl WaistLook {
+    /// A waist piece taking up these cells.
+    pub fn new(form: WaistForm, cells: (u8, u8)) -> Self {
+        Self { form, cells }
+    }
+}
+
 /// How an armour item looks, from its form and the cells it takes up.
 pub(super) fn armour_look(item: &Item) -> Option<Look> {
     let quality = item.quality;
@@ -166,6 +182,10 @@ pub(super) fn armour_look(item: &Item) -> Option<Look> {
         },
         ItemForm::Legs(form) => Look::Legs {
             legs: LegsLook::new(*form, cells),
+            quality,
+        },
+        ItemForm::Waist(form) => Look::Waist {
+            waist: WaistLook::new(*form, cells),
             quality,
         },
         _ => return None,
