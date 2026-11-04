@@ -35,7 +35,7 @@ pub(super) use generate::{open_generate_panel, press_generate_buttons, update_ge
 pub(super) use generate_form::{
     GenerateButton, GenerateForm, GenerateKind, NewSeedButton, RuinButton, SeedBox,
 };
-use generate_form::{SEED_WIDTH, new_seed, new_seed_icon};
+use generate_form::{SEED_WIDTH, new_seed};
 pub(super) use give::{
     CreatureButton, GiveButton, GiveFavour, GiveForm, GiveMagic, GiveQualities, GiveSet, GiveSizes,
 };

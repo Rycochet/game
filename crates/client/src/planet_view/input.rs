@@ -1,26 +1,26 @@
-//! While open, the view has all input: any click, tap or Esc closes it, and
-//! nothing behind it sees any of it.
+//! While open, the view has all input. The bar's controls get theirs first, as
+//! widgets do; any other click or tap, or Esc, closes it; and nothing behind it
+//! sees any of it.
 
 use bevy::input::mouse::AccumulatedMouseScroll;
-use bevy::input::touch::Touches;
 use bevy::prelude::*;
 
 use super::close::close;
-use super::open::PlanetView;
+use super::showing::PlanetView;
 use crate::common::TouchGesture;
 
 /// Presses this soon after opening are left alone: the press that chose View
 /// Planet in the debug menu mustn't close it again.
 const SETTLING_SECONDS: f64 = 0.25;
 
-/// After the pointer has been read (taps are turned into clicks then), before
-/// the widgets, menus and maps look at anything.
+/// After the widgets have taken presses on the bar (and an open dropdown or the
+/// seed box its keys), before the system menu or anything behind looks at what
+/// is left.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn take_input(
     mut view: ResMut<PlanetView>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
-    touches: Res<Touches>,
     mut scroll: ResMut<AccumulatedMouseScroll>,
     mut gesture: ResMut<TouchGesture>,
     time: Res<Time<Real>>,
@@ -30,9 +30,11 @@ pub(super) fn take_input(
         return;
     };
     let settled = time.elapsed_secs_f64() - showing.opened > SETTLING_SECONDS;
-    let pressed = keys.just_pressed(KeyCode::Escape)
-        || mouse.get_just_pressed().next().is_some()
-        || touches.any_just_pressed();
+    // A tap arrives as a click, which the bar's widgets have taken if it was
+    // theirs; one elsewhere still shows here.
+    let clicked = mouse.get_just_pressed().next().is_some();
+    // The click that takes the keyboard from the seed box only does that.
+    let pressed = keys.just_pressed(KeyCode::Escape) || (clicked && !showing.typing);
     if settled && pressed {
         close(&mut view, &mut commands);
     }

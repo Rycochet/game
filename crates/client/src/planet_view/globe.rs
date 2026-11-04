@@ -5,13 +5,13 @@ use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
 use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
 use bevy::prelude::*;
-use shared::celestial::BodyKind;
+use shared::celestial::{BodyKind, Celestial};
+use shared::rng::Seed;
 use std::f32::consts::FRAC_PI_2;
 
 use super::PLANET_LAYER;
 use super::moon_look::MoonLook;
 use super::sky::moon_distance;
-use crate::common::CurrentWorld;
 
 /// The camera's field of view, and how far above the equator it looks from,
 /// so the north pole shows.
@@ -40,7 +40,7 @@ pub(super) struct Scene {
 
 pub(super) fn spawn_scene(
     commands: &mut Commands,
-    world: &CurrentWorld,
+    (seed, celestial): (Seed, &Celestial),
     texture: Handle<Image>,
     picture: Handle<Image>,
     assets: (
@@ -78,11 +78,11 @@ pub(super) fn spawn_scene(
     let mut moons = Vec::new();
     let mut furthest: f32 = 1.0;
     let mut moon_number = 0;
-    for (number, body) in world.celestial.bodies().iter().enumerate() {
+    for (number, body) in celestial.bodies().iter().enumerate() {
         let [red, green, blue] = body.colour.map(|part| part as f32);
         let colour = Color::linear_rgb(red, green, blue);
         if body.kind == BodyKind::Sun {
-            let strength = world.celestial.sun_strength(number) as f32;
+            let strength = celestial.sun_strength(number) as f32;
             suns.push(
                 commands
                     .spawn((
@@ -99,10 +99,10 @@ pub(super) fn spawn_scene(
             );
             continue;
         }
-        let look = MoonLook::of(world.params.seed, moon_number);
+        let look = MoonLook::of(seed, moon_number);
         moon_number += 1;
         let radius = MOON_RADIUS * body.size as f32;
-        let period = world.celestial.period(number).unwrap_or(24.0);
+        let period = celestial.period(number).unwrap_or(24.0);
         furthest = furthest.max(moon_distance(period) + radius);
         let material = materials.add(StandardMaterial {
             base_color: colour,

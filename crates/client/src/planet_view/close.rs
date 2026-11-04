@@ -2,14 +2,14 @@
 
 use bevy::prelude::*;
 
-use super::open::PlanetView;
+use super::showing::PlanetView;
 use crate::common::CurrentWorld;
 
 /// Closes the view, if open.
 pub(super) fn close(view: &mut PlanetView, commands: &mut Commands) {
     if let Some(showing) = view.showing.take() {
         commands.entity(showing.layer).despawn();
-        commands.entity(showing.scene.root).despawn();
+        commands.entity(showing.globe.scene.root).despawn();
     }
 }
 

@@ -2,7 +2,10 @@
 // only. Soft blobs from noise on the sphere, which change over time two ways:
 // the noise is slowly moved through with the hours, and bands of latitude
 // drift east or west at their own speeds (trade winds, westerlies, polar
-// easterlies), shearing the blobs into streaks.
+// easterlies), shearing the blobs into streaks. The drift would shear them
+// more and more round the globe, so it runs in cycles: two copies, each
+// drifting for one cycle and then starting again from fresh noise, fade into
+// each other so neither start shows, and the twist never builds up.
 
 import bevy_pbr::render::forward_io::VertexOutput;
 
@@ -24,6 +27,9 @@ const SCALE: f32 = 3.5;
 const CHANGE: f32 = 0.025;
 // How fast the bands drift, in radians of longitude a game hour.
 const DRIFT: f32 = 0.03;
+// Game hours a copy drifts before starting again: the most the bands get
+// twisted is `DRIFT` times this.
+const CYCLE_HOURS: f32 = 24.0;
 // The thickest cloud, and the dull light on the night side.
 const MOST_OPAQUE: f32 = 0.85;
 const NIGHT: f32 = 0.06;
@@ -68,19 +74,38 @@ fn layered(p: vec3<f32>) -> f32 {
     return total / 0.9375;
 }
 
-@fragment
-fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    let hours = clouds.start_hours.w;
-    let latitude = PI * (0.5 - in.uv.y);
+// The clouds of one copy, which has drifted for `drifted` hours since it
+// started again for the `cycle`th time.
+fn copy_shape(uv: vec2<f32>, hours: f32, drifted: f32, cycle: f32) -> f32 {
+    let latitude = PI * (0.5 - uv.y);
     // West in the tropics and near the poles, east between: -cos(4 × latitude).
-    let longitude = in.uv.x * TAU - cos(4.0 * latitude) * DRIFT * hours;
+    let longitude = uv.x * TAU - cos(4.0 * latitude) * DRIFT * drifted;
     let point = vec3<f32>(
         cos(latitude) * cos(longitude),
         sin(latitude),
         -cos(latitude) * sin(longitude),
     );
+    // Each start is somewhere new in the noise, so cycles don't repeat.
+    let fresh = vec3<f32>(5.3, 1.9, 3.7) * cycle;
     let drifting = clouds.start_hours.xyz + vec3<f32>(0.3, 0.7, 1.0) * CHANGE * hours;
-    let shape = layered(point * SCALE + drifting);
+    return layered(point * SCALE + drifting + fresh);
+}
+
+@fragment
+fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
+    let hours = clouds.start_hours.w;
+    let latitude = PI * (0.5 - in.uv.y);
+    // Two copies half a cycle apart, each unseen as it starts again.
+    let first = hours / CYCLE_HOURS;
+    let second = first + 0.5;
+    let first_shape = copy_shape(in.uv, hours, fract(first) * CYCLE_HOURS, floor(first));
+    let second_shape =
+        copy_shape(in.uv, hours, fract(second) * CYCLE_HOURS, floor(second) + 100.0);
+    let weight = 1.0 - abs(2.0 * fract(first) - 1.0);
+    // Blending two noises flattens them towards the middle; spread the result
+    // out again so the clouds stay as thick halfway through.
+    let spread = inverseSqrt(weight * weight + (1.0 - weight) * (1.0 - weight));
+    let shape = 0.5 + (mix(second_shape, first_shape, weight) - 0.5) * spread;
 
     // More cloud at the equator and the middle latitudes, less in the dry
     // belts about 30 degrees out and at the poles.

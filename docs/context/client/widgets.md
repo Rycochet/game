@@ -15,6 +15,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/spinner.rs`: `Spinner` (pub: a node turning on the real clock while on show), its picture drawn at start (`make_spinner_picture`), `picture_spinners`, `turn_spinners`. Unit test.
 - `crates/client/src/widgets/hover_tip.rs`: `HoverTip` (an empty one shows nothing), `show_hover_tips` (`PostUpdate`, after items' names, before the tooltip is shown).
 - `crates/client/src/widgets/filter_list.rs`: `matches_filter`, `next_highlight`, `HighlightStep`, shared by the debug menu and dropdowns with search. Unit tests.
+- `crates/client/src/widgets/new_seed_icon.rs`: `new_seed_icon` (pub: a round arrow, for a button making a new random seed; the Generate POI panel and View Planet).
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
 - `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `spawn_toggle_row`, `TabChosen`, `press_tabs`. Unit test.
 - `crates/client/src/widgets/progress.rs`: `Progress`, `spawn_progress_bar`, `show_progress`. Unit test.
@@ -81,6 +82,6 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - Moveable panels stay hidden until first laid out and placed, so they never flash at the top left. They keep their share of the window as it changes size (`in_new_window`), and don't move at all while it is minimised.
 - Close buttons on moveable panels have a margin that also counts as on them, for fingers.
 - The minimap's close and floor buttons look like widgets but keep their own hit tests from its layout constants (and the tests built on them), so they aren't `Pressable`.
-- Layers: maps 10, warning button 15, moveable panels from 30 up, full-screen layers from 1,000,000 (debug menu, full map), loading screen above all. Outside a layer's panel, each layer's darkening adds up (owner's design), so nothing under one can be used, whatever is behind it.
+- Layers: maps 10, warning button 15, moveable panels from 30 up, full-screen layers from 1,000,000 (debug menu, full map, View Planet at depth 50), open dropdown lists at depth 100 (above all of them), loading screen above all. Outside a layer's panel, each layer's darkening adds up (owner's design), so nothing under one can be used, whatever is behind it.
 - Only the front-most thing under the pointer gets a press: a button under another panel gets nothing.
 - Shader uniforms must be a multiple of 16 bytes, or WebGL 2 (the web build) refuses the pipeline and the game quits on its first frame; native is fine either way, so nothing else catches it. Pad a short struct with unused `f32`s, the same in the Rust struct and the shader (see `project.md`).
