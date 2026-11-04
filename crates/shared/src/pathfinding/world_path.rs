@@ -5,6 +5,7 @@ use std::collections::BinaryHeap;
 
 use super::{DIRECTIONS, Path, distance_squared, estimate};
 use crate::movement::{Step, WorldConditions, WorldGround, world_step_cost};
+use crate::road::{FASTEST_PERCENT, RoadSteps};
 
 /// How far a route on the world map may go from where it starts, each way, in
 /// points. More than the view shows, and the ground is infinite, so this is what
@@ -12,12 +13,13 @@ use crate::movement::{Step, WorldConditions, WorldGround, world_step_cost};
 pub const WORLD_ROUTE_REACH: i64 = 320;
 
 /// The quickest route across the world map in these `conditions`: legal
-/// steps, slopes costing extra. If the goal can't be reached within
+/// steps, slopes costing extra, steps along `roads` less. If the goal can't be reached within
 /// `WORLD_ROUTE_REACH`, the route goes to the nearest point that can,
 /// straight-line, so check `reached`.
 pub fn find_world_path(
     ground: &WorldGround,
     conditions: WorldConditions,
+    roads: &RoadSteps,
     from: (i64, i64),
     to: (i64, i64),
 ) -> Path {
@@ -45,8 +47,17 @@ pub fn find_world_path(
     let mut best = vec![u32::MAX; (side * side) as usize];
     let mut came_from = vec![from; best.len()];
     best[index(from)] = 0;
+    // With roads about, the least a route can cost is at the fastest road's
+    // speed, or the route found may not be the quickest.
+    let least = |at: (i64, i64)| {
+        if roads.is_empty() {
+            estimate(at, to)
+        } else {
+            estimate(at, to) * 100 / FASTEST_PERCENT
+        }
+    };
     let mut open = BinaryHeap::new();
-    open.push(Reverse((estimate(from, to), estimate(from, to), from)));
+    open.push(Reverse((least(from), least(from), from)));
     let mut nearest = (distance_squared(from, to), from);
 
     while let Some(Reverse((total, left, at))) = open.pop() {
@@ -69,13 +80,14 @@ pub fn find_world_path(
             if here.is_some() && there.is_none() {
                 continue;
             }
-            let next_cost = cost + world_step_cost(at, next, (here, there));
+            let road = roads.kind_of(at, next);
+            let next_cost = cost + world_step_cost(at, next, (here, there), road);
             if next_cost >= best[index(next)] {
                 continue;
             }
             best[index(next)] = next_cost;
             came_from[index(next)] = at;
-            let left = estimate(next, to);
+            let left = least(next);
             open.push(Reverse((next_cost + left, left, next)));
         }
     }

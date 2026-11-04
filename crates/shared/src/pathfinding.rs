@@ -35,4 +35,6 @@ const DIRECTIONS: [(i64, i64); 8] = [
 ];
 
 #[cfg(test)]
+mod road_tests;
+#[cfg(test)]
 mod tests;

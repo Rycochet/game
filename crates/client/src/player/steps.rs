@@ -84,7 +84,12 @@ pub(super) fn take_steps(
                     world.ground.elevation(from.0, from.1, conditions),
                     world.ground.elevation(x, y, conditions),
                 );
-                world_step_cost(from, (x, y), ends)
+                world_step_cost(
+                    from,
+                    (x, y),
+                    ends,
+                    world.roads.steps().kind_of(from, (x, y)),
+                )
             }),
         };
         energy.energy.spend(tick, speed.0, cost);

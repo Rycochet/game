@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::dungeon::Level;
+use crate::road::RoadKind;
 use crate::surface::Surface;
 use crate::world::WorldParams;
 
@@ -147,18 +148,24 @@ pub fn step_on_world_map(
     allowed.then_some((x, y))
 }
 
-/// What a step on the world map costs, given the elevation at each end: its
-/// distance, plus the slope. Water counts as flat.
+/// What a step on the world map costs, given the elevation at each end and the
+/// road it runs along, if any (`RoadSteps::kind_of`): its distance, plus the
+/// slope, divided by the road's speed. Water counts as flat.
 pub fn world_step_cost(
     from: (i64, i64),
     to: (i64, i64),
     elevations: (Option<i32>, Option<i32>),
+    road: Option<RoadKind>,
 ) -> u32 {
     let slope = match elevations {
         (Some(a), Some(b)) => a.abs_diff(b),
         _ => 0,
     };
-    step_cost(from, to) + slope * SLOPE_COST
+    let cost = step_cost(from, to) + slope * SLOPE_COST;
+    match road {
+        Some(kind) => cost * 100 / kind.speed_percent(),
+        None => cost,
+    }
 }
 
 /// The steps from one point to another: diagonally first, then straight.

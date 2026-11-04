@@ -9,11 +9,14 @@ use crate::ServerWorld;
 
 /// Sends each road the road thread has found to every player near enough to
 /// be sent any of it (as far as world map chunks are sent), once per
-/// connection.
-pub(crate) fn send_roads(mut connections: ResMut<Connections>, world: Res<ServerWorld>) {
+/// connection, and from now on steps along it cost less.
+pub(crate) fn send_roads(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
     let found = world.roads.found();
     if found.is_empty() {
         return;
+    }
+    for road in &found {
+        world.road_steps.add(road);
     }
     let playing = |client: &&mut super::Client| !client.gone && client.phase == Phase::Playing;
     for client in connections.clients.iter_mut().filter(playing) {

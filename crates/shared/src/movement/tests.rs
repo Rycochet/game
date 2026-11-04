@@ -133,13 +133,16 @@ fn water_stops_steps_on_the_world_map_but_not_out_of_it() {
 
 #[test]
 fn slopes_cost_extra_either_way() {
-    let flat = world_step_cost((0, 0), (1, 0), (Some(8), Some(8)));
+    let flat = world_step_cost((0, 0), (1, 0), (Some(8), Some(8)), None);
     assert_eq!(flat, STRAIGHT_COST);
-    let up = world_step_cost((0, 0), (1, 0), (Some(8), Some(10)));
+    let up = world_step_cost((0, 0), (1, 0), (Some(8), Some(10)), None);
     assert_eq!(up, STRAIGHT_COST + 2 * SLOPE_COST);
-    assert_eq!(up, world_step_cost((1, 0), (0, 0), (Some(10), Some(8))));
     assert_eq!(
-        world_step_cost((0, 0), (1, 1), (None, Some(50))),
+        up,
+        world_step_cost((1, 0), (0, 0), (Some(10), Some(8)), None)
+    );
+    assert_eq!(
+        world_step_cost((0, 0), (1, 1), (None, Some(50)), None),
         DIAGONAL_COST
     );
 }
@@ -151,4 +154,14 @@ fn steps_between_points_add_up() {
     let end = steps.iter().fold((0, 0), |at, step| step.from(at));
     assert_eq!(end, (3, -1));
     assert!(steps_between((4, 4), (4, 4)).is_empty());
+}
+
+#[test]
+fn steps_along_roads_cost_less_by_their_speed() {
+    use crate::road::RoadKind;
+    let up = |road| world_step_cost((0, 0), (1, 0), (Some(8), Some(10)), road);
+    let open = up(None);
+    assert_eq!(up(Some(RoadKind::Path)), open * 100 / 125);
+    assert_eq!(up(Some(RoadKind::Highway)), open / 2);
+    assert!(up(Some(RoadKind::Track)) > up(Some(RoadKind::Road)));
 }

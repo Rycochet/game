@@ -4,6 +4,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::poi::PoiKind;
 
+/// The fastest any road is, in percent of open land (`speed_percent`), which
+/// route searches must allow for.
+pub const FASTEST_PERCENT: u32 = 200;
+
 /// What a road is like. Ordered smallest first, so the larger of two is `max`:
 /// where roads overlap, the larger is drawn on top (owner's rule).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -37,6 +41,18 @@ impl RoadKind {
     /// choice), so a highway only joins two cities.
     pub fn between(a: PoiKind, b: PoiKind) -> Option<Self> {
         Some(Self::of_town(a)?.min(Self::of_town(b)?))
+    }
+
+    /// How fast walking along a road of this kind is, in percent of walking
+    /// over open land: 1.25 times for a path up to twice for a highway
+    /// (owner's figures).
+    pub fn speed_percent(self) -> u32 {
+        match self {
+            Self::Path => 125,
+            Self::Track => 150,
+            Self::Road => 175,
+            Self::Highway => FASTEST_PERCENT,
+        }
     }
 
     /// How much climbing counts when a road of this kind is laid, in percent of

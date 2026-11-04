@@ -9,7 +9,7 @@ Time for doing things: the same rule for players and, later, mobs, on both sides
 ## Public API
 
 - `Energy`: `at`, `ready`, `spend`, `settle` (before the speed changes), `ready_at`.
-- `ACTION_TICKS_PER_SECOND` (20), `NORMAL_SPEED` (210 per tick), `SITE_SCALE` (5), `CHANGE_MAP_COST`, `site_step_cost`, `dressing_cost`, `handling_cost` (moving between containers: 10 kg is one straight step, to depend on stats later). World map steps cost `movement::world_step_cost`.
+- `ACTION_TICKS_PER_SECOND` (20), `NORMAL_SPEED` (210 per tick), `SITE_SCALE` (5), `CHANGE_MAP_COST`, `site_step_cost`, `dressing_cost`, `handling_cost` (moving between containers: 10 kg is one straight step, to depend on stats later). World map steps cost `movement::world_step_cost`, less along roads.
 
 ## Depends on
 

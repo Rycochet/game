@@ -50,7 +50,7 @@ impl CurrentWorld {
             celestial: Celestial::from_seed(params.seed),
             tides: Celestial::from_seed(params.seed),
             pois: KnownPois::new(surface.width()),
-            roads: KnownRoads::default(),
+            roads: KnownRoads::new(surface.width()),
             ground: WorldGround::new(&params),
             surface,
             params,
