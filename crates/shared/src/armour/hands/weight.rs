@@ -45,6 +45,8 @@ impl HandsForm {
             }
             C::PlatesInCloth => ((hand + cuff) * 9 / 10, STEEL_DENSITY, 260),
             C::Mail => (hand * 2 + cuff - 80, STEEL_DENSITY, 60),
+            // Flat rings over the back and fingers only, sewn on a leather glove.
+            C::RingMail => ((hand + cuff) * 3 / 4, STEEL_DENSITY, 120),
             C::Scale => ((hand + cuff) * 9 / 10, STEEL_DENSITY, 200),
             C::MailAndPlate if self.fingers == Fingers::Open => (150, STEEL_DENSITY, 40),
             C::MailAndPlate => (hand * 3 / 5 + 400 + cuff, STEEL_DENSITY, 60),

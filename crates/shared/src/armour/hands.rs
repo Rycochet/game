@@ -1,5 +1,5 @@
-//! Armour for the hands, fingers included: gauntlets of plate, mail, scale, leather and
-//! plates in cloth, demi-gauntlets and tekkō on the back of the hand only, and padded
+//! Armour for the hands, fingers included: gauntlets of plate, mail, ring mail, scale,
+//! leather and plates in cloth, demi-gauntlets and tekkō on the back of the hand only, and padded
 //! gloves worn under them. What a piece is like is rolled once and saved; how big a
 //! hand is comes from the body frame, so the same piece is drawn alone and worn. See
 //! `docs/context/shared/armour.md`.

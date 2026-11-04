@@ -62,6 +62,8 @@ fn every_option_turns_up() {
     for name in [
         "Hourglass Gauntlets",
         "Tekkō",
+        "Ring Mail Gloves",
+        "Ring Mail Mittens",
         "Mail Mittens",
         "Padded Gloves",
     ] {

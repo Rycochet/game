@@ -24,6 +24,7 @@ mod cuff;
 mod extras;
 mod glove;
 mod look;
+mod rings;
 mod shape;
 
 use arc::{Arc, add_arc, add_arc_bumped, ellipse};
@@ -32,6 +33,7 @@ use cuff::add_cuff;
 use extras::{add_extras, add_scales, add_tekko};
 use glove::{add_glove, add_rivets};
 use look::{flute, look_of, styled};
+use rings::add_rings;
 use shape::{Axes, Shape, across};
 
 /// How many of a picture's pixels are one cell, for the margin's sake.
@@ -86,6 +88,11 @@ pub(in crate::item_art) fn build_hand(
                 Some(6.0),
             );
             add_cuff(&mut model, form, &hand, frame, &axes, Stuff::Main);
+        }
+        Construction::RingMail => {
+            add_glove(&mut model, &shape, &axes, mitten, 2.0, Stuff::Backing, None);
+            add_cuff(&mut model, form, &hand, frame, &axes, Stuff::Backing);
+            add_rings(&mut model, &shape, &axes, mitten, 2.0);
         }
         Construction::Leather => {
             add_glove(&mut model, &shape, &axes, mitten, 2.0, Stuff::Main, None);
