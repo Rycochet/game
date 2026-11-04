@@ -8,6 +8,10 @@
 
 use crate::creature::CreatureKind;
 
+mod proportions;
+
+pub use proportions::{PERSON, Proportions};
+
 /// Which side of the body, as its owner sees it: left is towards the picture's right.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Side {
@@ -93,7 +97,8 @@ pub struct Frame {
     pub arm_spread: i32,
 }
 
-/// An ordinary person: about eight heads tall, as artists draw them.
+/// An ordinary person: about eight heads tall, as artists draw them. Every other frame
+/// worked out from `Proportions` is measured against this one.
 const HUMAN: Frame = Frame {
     height: 1750,
     chin: 1530,
@@ -178,7 +183,7 @@ impl Frame {
     /// The shape of a kind that stands on two legs.
     pub fn of(kind: CreatureKind) -> Option<Frame> {
         match kind {
-            CreatureKind::Human | CreatureKind::Beggar => Some(HUMAN),
+            CreatureKind::Human | CreatureKind::Beggar => Some(PERSON.frame()),
             CreatureKind::Giant => Some(GIANT),
             CreatureKind::Kobold => Some(KOBOLD),
             CreatureKind::Centaur | CreatureKind::Chicken | CreatureKind::Horse => None,
