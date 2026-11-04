@@ -70,6 +70,12 @@ pub struct Storage {
 }
 
 impl Storage {
+    /// How many handles there are on its save queue (tests).
+    #[cfg(test)]
+    pub(crate) fn queue_handles(&self) -> usize {
+        self.queue.as_ref().map_or(0, SaveQueue::handles)
+    }
+
     /// Whether anything is saved at all.
     pub fn saves(&self) -> bool {
         self.queue.is_some()

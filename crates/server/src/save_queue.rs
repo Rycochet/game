@@ -75,6 +75,13 @@ struct Worker {
 pub(crate) struct SaveQueue(Arc<Worker>);
 
 impl SaveQueue {
+    /// How many handles there are on this queue (tests: it finishes writing
+    /// when the last goes).
+    #[cfg(test)]
+    pub(crate) fn handles(&self) -> usize {
+        Arc::strong_count(&self.0)
+    }
+
     /// Saving in files in the data folder `data`.
     pub fn in_folder(data: &Path) -> Self {
         Self::new(Arc::new(FileBackend::new(data)))
