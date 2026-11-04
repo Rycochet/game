@@ -12,6 +12,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use std::time::Duration;
 
 use super::colour::{Colouring, colour_at};
+use super::gates::stamp_gates;
 use super::relief::relief_row;
 use super::showing::{Globe, PlanetView};
 use crate::surface_style::SurfaceStyle;
@@ -144,6 +145,9 @@ pub(super) fn fill_texture(
                 pass: pass + 1,
                 row: 0,
             };
+            if globe.fill.pass == RELIEF_PASS {
+                stamp_gates(&globe.planet.gates, size, width, data);
+            }
         }
     }
 }

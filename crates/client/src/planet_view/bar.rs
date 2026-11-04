@@ -8,8 +8,8 @@ use shared::surface::SurfaceGenerator;
 use super::layer::Layer;
 use super::showing::Choice;
 use crate::widgets::{
-    BUTTON_PADDING, ButtonState, ButtonTooltip, Dropdown, PANEL_EDGE, Pressable, TextBox, TextSize,
-    field_label, panel, spawn_button, spawn_dropdown, spawn_icon_button, spawn_text_box,
+    BUTTON_PADDING, ButtonState, ButtonTooltip, Dropdown, INK, PANEL_EDGE, Pressable, TextBox,
+    TextSize, field_label, panel, spawn_button, spawn_dropdown, spawn_icon_button, spawn_text_box,
     stops_presses,
 };
 
@@ -31,6 +31,8 @@ pub(super) struct Bar {
     pub(super) copy: Entity,
     pub(super) reset: Entity,
     pub(super) layer: Entity,
+    /// How the World Gates were found.
+    pub(super) gate_words: Entity,
 }
 
 /// `random_icon`: the new seed button's picture.
@@ -97,6 +99,9 @@ pub(super) fn spawn_bar(
         row.spawn(field_label("Layer"));
         let names = Layer::ALL.map(|layer| layer.name().to_string());
         let layer = dropdown(row, names.to_vec(), choice.layer, &Layer::ALL);
+        let gate_words = row
+            .spawn((Text::new(""), TextSize::Small.font(), TextColor(INK)))
+            .id();
         parts = Some(Bar {
             generator,
             seed,
@@ -105,6 +110,7 @@ pub(super) fn spawn_bar(
             copy,
             reset,
             layer,
+            gate_words,
         });
     });
     parts.expect("the bar's children are spawned straight away")

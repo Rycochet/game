@@ -35,3 +35,4 @@ pub mod vegetation;
 pub mod wear;
 pub mod weather;
 pub mod world;
+pub mod world_gate;
