@@ -19,8 +19,8 @@ const MARGIN_PIXELS: f32 = OUTLINE_PIXELS + 2.0;
 const TURN: f32 = 0.35;
 const TILT: f32 = 0.25;
 
-/// One piece's triangles with what they are made of.
-type Coloured = Vec<(Vec<Triangle>, StandardMaterial)>;
+/// Triangles with what they are made of.
+pub(in crate::item_art) type Coloured = Vec<(Vec<Triangle>, StandardMaterial)>;
 
 /// Every piece of a set built on this frame, as worn, each part with its material.
 /// `digits` is how many digits each hand has, for its gauntlets.
@@ -93,7 +93,17 @@ pub(in crate::item_art) fn set_parts(
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
     let frame = Frame::of(CreatureKind::Human).expect("people have a frame");
-    let mut pieces = build(&look.form, &frame, look.digits, quality);
+    let pieces = build(&look.form, &frame, look.digits, quality);
+    fit(pieces, look.cells, meshes, materials)
+}
+
+/// Parts built on a frame, turned as a body is seen and fitted to these cells.
+pub(in crate::item_art) fn fit(
+    mut pieces: Coloured,
+    cells: (u8, u8),
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) -> Vec<Part> {
     let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(TURN);
     let turn = |triangles: &mut Vec<Triangle>, change: &dyn Fn(Vec3) -> Vec3| {
         for triangle in triangles.iter_mut() {
@@ -108,7 +118,7 @@ pub(in crate::item_art) fn set_parts(
         (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN)),
         |(low, high), &corner| (low.min(corner), high.max(corner)),
     );
-    let (wide, long) = (look.cells.0 as f32, look.cells.1 as f32);
+    let (wide, long) = (cells.0 as f32, cells.1 as f32);
     let world_per_pixel = VIEW_WIDTH / (wide.max(long) * PIXELS_PER_CELL);
     let room = |cells: f32| (cells * PIXELS_PER_CELL - 2.0 * MARGIN_PIXELS) * world_per_pixel;
     let size = high - low;

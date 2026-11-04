@@ -13,6 +13,7 @@ pub(super) mod shoulders;
 pub(super) mod surface;
 pub(super) mod torso;
 pub(super) mod waist;
+pub(super) mod worn;
 
 use bevy::prelude::*;
 use shared::material::Material;

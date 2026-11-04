@@ -158,7 +158,7 @@ pub(super) fn trunk_depth(frame: &Frame, x: f32, y: f32) -> f32 {
 }
 
 /// The body, in millimetres, standing as its frame says.
-fn build(frame: &Frame) -> Vec<Triangle> {
+pub(super) fn build(frame: &Frame) -> Vec<Triangle> {
     let f = |value: i32| value as f32;
     let mut triangles = Vec::new();
     // The trunk, from the crotch up to where the arms join.

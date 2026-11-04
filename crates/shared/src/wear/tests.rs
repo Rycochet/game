@@ -518,3 +518,23 @@ fn changing_body_takes_everything_off_and_gives_back_what_doesnt_fit() {
     assert_eq!(lost.len() + inventory.pockets.len(), 3);
     assert!(lost.iter().any(|item| item.kind == FullArmour));
 }
+
+#[test]
+fn a_picture_shows_what_is_drawn_and_not_what_drawn_things_cover() {
+    use crate::item_form::give_form;
+    use ItemKind::{FullArmour, Gambeson, Surcoat};
+    let mut inventory = carrying(&[Gambeson, FullArmour, Surcoat]);
+    for placed in inventory.pockets.iter_mut() {
+        give_form(&mut placed.item, None, &mut || id(99));
+    }
+    // Nothing drawn is worn yet.
+    inventory.wear(id(1)).unwrap();
+    assert!(inventory.shown().is_empty());
+    take_off(&mut inventory, 1).unwrap();
+    inventory.wear(id(2)).unwrap();
+    inventory.wear(id(3)).unwrap();
+    // The harness shows, under a surcoat that isn't drawn yet.
+    let shown = inventory.shown();
+    assert_eq!(shown.len(), 1);
+    assert!(matches!(shown[0].form, ItemForm::Set(_)));
+}

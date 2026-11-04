@@ -10,7 +10,7 @@ Who is on a site level to begin with, from the site's secret seed, and what a pl
 
 - `spawns(seed, index, site_kind, level, stairs) -> Vec<Spawn>`: the level's mobs, each with its `number`, kind, position, appearance and `gear` (kinds and qualities, rolled by `item::roll_drop`).
 - `Memory` (`remember`, `warmth_for`), `Event`, `GIVE_REACH`: what a mob remembers, as facts about characters, each warming or cooling how it feels about them.
-- `EntityLook { id, kind, appearance, feeling, x, y }`: all a player learns of a mob or another player. Never stats.
+- `EntityLook { id, kind, appearance, feeling, x, y, worn }`: all a player learns of a mob or another player. Never stats. `worn` is what can be seen of what it wears (`Inventory::shown`), for its picture.
 
 ## Depends on
 

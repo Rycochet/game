@@ -12,6 +12,7 @@ use crate::poi::PoiKind;
 use crate::protocol::CharacterId;
 use crate::rng::Seed;
 use crate::sheet::{Appearance, Feeling, Trait};
+use crate::wear::WornLook;
 
 /// Marks these hashes as being for mobs, apart from anything else from the seed.
 const PURPOSE: i64 = 0x006d_6f62;
@@ -232,6 +233,8 @@ pub struct EntityLook {
     pub feeling: Feeling,
     pub x: i64,
     pub y: i64,
+    /// What can be seen of what it wears, innermost first, for its picture.
+    pub worn: Vec<WornLook>,
 }
 
 #[cfg(test)]

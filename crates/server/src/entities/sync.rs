@@ -55,6 +55,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
                     feeling: Feeling::None,
                     x: someone.position.0,
                     y: someone.position.1,
+                    worn: someone.worn.clone(),
                 });
             }
         }
@@ -70,6 +71,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
                         feeling: mob.feeling(my_kind, client.character_id.as_ref()),
                         x: mob.position.0,
                         y: mob.position.1,
+                        worn: mob.shown.clone(),
                     });
                 }
             }
@@ -85,14 +87,18 @@ pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>) {
     let feelings_changed: BTreeSet<Id> = seen
         .iter()
         .filter(|look| {
-            client
-                .seen_feelings
-                .get(&look.id)
-                .is_some_and(|known| *known != look.feeling)
+            let feeling = client.seen_feelings.get(&look.id);
+            let worn = client.seen_worn.get(&look.id);
+            feeling.is_some_and(|known| *known != look.feeling)
+                || worn.is_some_and(|known| *known != look.worn)
         })
         .map(|look| look.id)
         .collect();
     client.seen_feelings = seen.iter().map(|look| (look.id, look.feeling)).collect();
+    client.seen_worn = seen
+        .iter()
+        .map(|look| (look.id, look.worn.clone()))
+        .collect();
     client.seen_entities.retain(|id, _| {
         let stays = now_seen.contains(id);
         if !stays {
@@ -103,7 +109,7 @@ pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>) {
     for look in seen {
         let at = (look.x, look.y);
         let known = client.seen_entities.insert(look.id, at);
-        // Told afresh, the token takes the new colour.
+        // Told afresh, the token takes the new colour and the new picture.
         let known = known.filter(|_| !feelings_changed.contains(&look.id));
         match known {
             None => {

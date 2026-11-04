@@ -14,6 +14,9 @@ use crate::item_form::ItemForm;
 mod changes;
 mod check;
 mod secrets;
+mod shown;
+
+pub use shown::WornLook;
 
 /// Whether something is made for a number of fingers, so only fits hands with that
 /// many unless magical: anything over each finger, but not mittens, which take any

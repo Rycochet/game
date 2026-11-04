@@ -1,6 +1,8 @@
 //! Others on the map: mobs and other players, as tokens, for as long as the server
 //! says they can be seen. See `docs/context/client/entities.md`.
 
+mod dressed;
+
 use std::collections::HashMap;
 
 use bevy::prelude::*;
@@ -32,7 +34,12 @@ impl Plugin for EntitiesPlugin {
         app.init_resource::<Others>().add_systems(
             Update,
             (
-                (read_server, show_moving, show_own_kind)
+                (
+                    read_server,
+                    show_moving,
+                    show_own_kind,
+                    dressed::show_own_dress,
+                )
                     .chain()
                     .after(PlayerSystems::Travel),
                 kill_clicked.after(View3dSystems::Click),
@@ -84,6 +91,7 @@ fn read_server(
     mut positions: Query<&mut MapPosition, With<Other>>,
     detect: Res<DetectMonsters>,
     mut to_server: MessageWriter<ToServer>,
+    mut drawing: dressed::Drawing,
     mut commands: Commands,
 ) {
     for FromServer(message) in from_server.read() {
@@ -110,6 +118,9 @@ fn read_server(
                         Icon(picture(look.kind).into()),
                     ))
                     .id();
+                if let Some(picture) = drawing.dressed(look.kind, &look.worn) {
+                    commands.entity(spawned).insert(picture);
+                }
                 if let Some(old) = others.0.insert(look.id, spawned) {
                     commands.entity(old).despawn();
                 }

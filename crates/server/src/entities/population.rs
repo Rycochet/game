@@ -63,6 +63,7 @@ impl ServerWorld {
                     way_back: Vec::new(),
                     energy: Energy::default(),
                     speed: Sheet::new(spawn.kind).speed(&carrying),
+                    shown: carrying.shown(),
                 }
             })
             .collect();
