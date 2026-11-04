@@ -12,6 +12,7 @@ pub mod climate;
 pub mod creature;
 pub mod dungeon;
 pub mod energy;
+pub mod footwear;
 pub mod ground;
 pub mod id;
 pub mod item;

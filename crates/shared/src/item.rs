@@ -11,6 +11,7 @@ mod def;
 mod drop;
 mod inventory;
 // Named after the type it holds, as every file here is.
+mod feet_def;
 #[allow(clippy::module_inception)]
 mod item;
 mod item_def;

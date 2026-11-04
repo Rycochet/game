@@ -9,7 +9,7 @@ pub(super) mod head;
 pub(super) mod legs;
 pub(super) mod neck;
 pub(super) mod shoulders;
-mod surface;
+pub(super) mod surface;
 pub(super) mod torso;
 pub(super) mod waist;
 
@@ -181,6 +181,12 @@ pub(in crate::item_art) fn colour_of(material: Material) -> Color {
         Material::Silk => Color::srgb(0.6, 0.1, 0.15),
         Material::Wood => Color::srgb(0.5, 0.36, 0.22),
         Material::Rattan => Color::srgb(0.74, 0.6, 0.34),
+        Material::Suede => Color::srgb(0.6, 0.45, 0.3),
+        Material::Rawhide => Color::srgb(0.72, 0.6, 0.42),
+        Material::Fur => Color::srgb(0.62, 0.55, 0.46),
+        Material::Felt => Color::srgb(0.55, 0.52, 0.48),
+        Material::Straw => Color::srgb(0.82, 0.72, 0.45),
+        Material::Coir => Color::srgb(0.55, 0.4, 0.24),
         _ => Color::srgb(0.5, 0.5, 0.5),
     }
 }
