@@ -104,3 +104,38 @@ fn air_cools_at_earths_rate_above_the_sea() {
     // Under the sea counts as at it.
     assert_eq!(climate.sample_metres(100, 50, -3000), low);
 }
+
+/// The yearly average at sea level, in °C, at a latitude in degrees, on a
+/// world `width` round.
+fn sea_celsius(climate: &Climate, width: i64, degrees: f64) -> f64 {
+    let y = (degrees / 90.0 * width as f64 / 4.0).round() as i64;
+    climate.sample_metres(0, y, 0).celsius()
+}
+
+#[test]
+fn planets_are_warm_at_the_equator_and_frozen_at_the_poles() {
+    for seed in [1, 2, 3, 4, 5] {
+        let world = WorldParams::from_seed(Seed::new(seed));
+        let climate = Climate::new(&world);
+        let width = (world.circumference / 1000).max(1) as i64;
+        let equator = sea_celsius(&climate, width, 0.0);
+        let mid = sea_celsius(&climate, width, 45.0);
+        assert!(
+            equator > mid,
+            "seed {seed}: {equator} at the equator, {mid} at 45"
+        );
+        // Past the ice edge however far it wanders.
+        for degrees in [ICE_LATITUDE + 4.0, 90.0, -ICE_LATITUDE - 4.0, -90.0] {
+            let ice = sea_celsius(&climate, width, degrees);
+            assert!(ice < SEA_ICE, "seed {seed}: {ice} at {degrees}");
+        }
+    }
+}
+
+#[test]
+fn rain_falls_in_belts() {
+    assert!(moisture_belt(0.0) > 0.9, "the equator is wet");
+    assert!(moisture_belt(30.0 / 90.0) < -0.9, "30 degrees out is dry");
+    assert!(moisture_belt(60.0 / 90.0) > 0.9, "60 degrees out is wet");
+    assert!(moisture_belt(1.0) < -0.9, "the poles are dry");
+}

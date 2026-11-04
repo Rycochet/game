@@ -49,7 +49,9 @@ fn planet(
         showing.choice.layer = Layer::ALL
             .into_iter()
             .find(|layer| layer.name().eq_ignore_ascii_case(&name))
-            .ok_or_else(|| refused("layer is Surface, Elevation or Plates"))?;
+            .ok_or_else(|| {
+                refused("layer is Surface, Elevation, Plates, Temperature or Moisture")
+            })?;
     }
     let globe = &showing.globe;
     let up_to_date = globe.built == (showing.choice.seed, showing.choice.generator)

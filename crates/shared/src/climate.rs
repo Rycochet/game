@@ -6,10 +6,14 @@
 //! cools the air, so climbing a hill moves through colder biomes by itself.
 //! See `docs/context/shared/climate.md`.
 
+mod planet;
+
 use crate::showcase;
 use crate::world::WorldParams;
 use core::f64::consts::TAU;
 use fastnoise_lite::{FastNoiseLite, NoiseType};
+pub use planet::{ICE_LATITUDE, SEA_ICE, moisture_belt};
+use planet::{Sunlit, polar_limit};
 
 /// Grid units per unit of noise space: climate regions are a few 400-point
 /// windows across.
@@ -48,6 +52,12 @@ pub const CELSIUS_AT_ZERO: f64 = -10.5;
 pub const CELSIUS_PER_UNIT: f64 = 50.0;
 /// How much colder the air gets climbing a kilometre: Earth's average.
 const LAPSE_RATE: f64 = 6.5;
+/// For surfaces in metres, whose climate comes from the planet (see
+/// `planet`): how far noise moves the temperature each way, in °C, and how
+/// much the belts of rain and the noise move the moisture.
+const METRES_TEMPERATURE_NOISE: f64 = 6.0;
+const BELT_MOISTURE: f64 = 0.3;
+const METRES_MOISTURE_NOISE: f64 = 0.22;
 
 /// Below this temperature, land is covered in snow. With the numbers above,
 /// on an average world and at an average place that is around height 90.
@@ -138,6 +148,8 @@ pub struct Climate {
     warmth: f64,
     /// Moisture added everywhere, from the world's `climate`.
     wetness: f64,
+    /// The planet's sunlight, for surfaces in metres.
+    sunlit: Sunlit,
 }
 
 impl Climate {
@@ -155,6 +167,7 @@ impl Climate {
             width: (world.circumference / 1000).max(1) as i64,
             warmth: world.warmth,
             wetness: (world.climate - 0.5) * 2.0 * WORLD_MOISTURE,
+            sunlit: Sunlit::new(world),
         }
     }
 
@@ -164,12 +177,32 @@ impl Climate {
         self.cooled_by(x, y, HEIGHT_COOLING * climb)
     }
 
-    /// The climate at a position whose ground is `metres` above the sea, for
-    /// surfaces worked out in metres: the air cools at Earth's rate as it
-    /// climbs, from the sea rather than from a fixed height.
+    /// The climate at a position whose ground is `metres` above the sea (the
+    /// sea's surface for anything below it), for surfaces worked out in
+    /// metres. It comes from the planet: sunlight by latitude for its tilt,
+    /// its suns' heat, ice past `ICE_LATITUDE`, belts of rain; then the air
+    /// cools at Earth's rate as it climbs from the sea.
     pub fn sample_metres(&self, x: i64, y: i64, metres: i32) -> ClimateSample {
+        if showcase::in_plain(y) {
+            return showcase::CLIMATE;
+        }
+        // The poles are a quarter of the way round from the equator.
+        let latitude = (y as f64 / (self.width as f64 / 4.0)).clamp(-1.0, 1.0);
         let kilometres = metres.max(0) as f64 / 1000.0;
-        self.cooled_by(x, y, LAPSE_RATE * kilometres / CELSIUS_PER_UNIT)
+        let local = self.layered(&self.temperature, x, y);
+        let celsius = self.sunlit.sea_level(latitude)
+            + self.warmth * CELSIUS_PER_UNIT
+            + METRES_TEMPERATURE_NOISE * local
+            - LAPSE_RATE * kilometres;
+        let celsius = celsius.min(polar_limit(latitude, local));
+        let moisture = 0.5
+            + self.wetness
+            + BELT_MOISTURE * moisture_belt(latitude)
+            + METRES_MOISTURE_NOISE * self.layered(&self.moisture, x, y);
+        ClimateSample {
+            temperature: ((celsius - CELSIUS_AT_ZERO) / CELSIUS_PER_UNIT).clamp(0.0, 1.0),
+            moisture: moisture.clamp(0.0, 1.0),
+        }
     }
 
     /// The climate at a position, `cooling` colder for its height.
