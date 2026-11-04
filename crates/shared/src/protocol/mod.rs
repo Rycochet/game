@@ -10,6 +10,7 @@ mod level;
 mod link;
 mod login;
 mod online;
+mod version;
 
 pub use address::{DEFAULT_PORT, ServerAddress};
 pub use level::{
@@ -18,6 +19,7 @@ pub use level::{
 pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
 pub use login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
 pub use online::{OnlineSettings, OnlineState};
+pub use version::{GAME_NAME, ServerVersion, VERSION_PATH};
 
 use crate::poi::CHUNK_SIZE;
 

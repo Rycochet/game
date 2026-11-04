@@ -31,7 +31,7 @@ On Linux you also need some system libraries, see <https://bevy.org/learn/quick-
 | ------------------------- | ----------------------- | ------------------------------------------ |
 | Run natively              | `cargo run`             | Task "Run (native)", or F5 to debug        |
 | Run the standalone server | `cargo run -p server`   |                                            |
-| Run in a browser          | `trunk serve`           | Task "Serve (web)", then <http://localhost:3000/> |
+| Run in a browser          | `trunk serve`           | Task "Serve (web)", then <http://localhost:3000/web/> |
 | Release build (native)    | `cargo build --release` | Task "Release build (native)"             |
 | Release build (web)       | `trunk build --release` | Task "Release build (web)", output in `dist/` |
 | Test (before merging)     | `cargo xtask test`      | Task "Test"                               |

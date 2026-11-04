@@ -24,7 +24,7 @@ Then start it:
 docker compose up -d
 ```
 
-Open `https://<your server>:8081` to play. The server makes its own certificate on first starting, and keeps it in the volume with the saves. No browser trusts a certificate like that, so each player has to accept a warning once.
+Open `https://<your server>:8081` to play: it goes to the web client, at `/web/`. The server makes its own certificate on first starting, and keeps it in the volume with the saves. No browser trusts a certificate like that, so each player has to accept a warning once.
 
 For a certificate that browsers trust without a warning, see the other options below.
 
@@ -81,3 +81,4 @@ HOW_SERVER=wss://game.example.com:8081/ws hall-of-worlds
 - **Time stops only when the server does.** The world's clock is saved, and carries on from there next time.
 - **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the server's side of the [debug menu](../debug-menu).
 - **Stopping:** the server saves everyone when asked to stop (`docker compose down`, Ctrl+C or SIGTERM).
+- **Health checks:** every port answers `/_healthz` with `200 ok` while the game is running, and `503` if it has stopped, even the plain port that otherwise only says to use the secure one. The Docker image checks it by itself (`docker ps` shows `healthy`), asking with the server's own `hall-of-worlds-server --health`, which needs no curl or wget. `/_version` says what the server is, as JSON, such as `{"game":"Hall of Worlds","version":"0.1.0","protocol":37}`.

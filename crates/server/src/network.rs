@@ -1,5 +1,5 @@
 //! Clients over the network: one port serving both the web client's files
-//! and the game itself as WebSockets on `/ws`, so a single HTTPS port (or a
+//! (under `/web/`) and the game itself as WebSockets on `/ws`, so a single HTTPS port (or a
 //! proxy such as Cloudflare in front of it) is all a server needs.
 //!
 //! That port is the secure one (HTTPS and `wss://`), and the plain port only
@@ -16,6 +16,9 @@
 //! game's next tick, so a round trip measures the network and not the tick.
 //! The server also times its own WebSocket pings (`latency`), to log connections
 //! having trouble and to drop those that have gone silent.
+//!
+//! Every port also answers `/_healthz` and `/_version` (`health`), and the
+//! server's binary can ask the first itself (`--health`), for Docker.
 
 use bevy::prelude::*;
 use shared::protocol::ServerLink;
@@ -32,6 +35,8 @@ use crate::connections::{self};
 use crate::tls::{Certificates, Security};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod health;
+mod health_check;
 mod online;
 mod ports;
 mod routes;
@@ -39,6 +44,9 @@ mod socket;
 mod stop;
 mod tls_listener;
 
+pub use health::HEALTH_PATH;
+use health::{Heartbeat, track_heartbeat};
+pub use health_check::check_health;
 pub use online::OnlinePlugin;
 use ports::open_ports;
 #[cfg(test)]
@@ -65,6 +73,9 @@ const SILENT_AFTER: Duration = Duration::from_secs(30);
 
 /// Where a certificate can be asked for (only on the secure port).
 const CERTIFICATE_PATH: &str = "/certificate";
+
+/// Where the web client's files are served (`public_url` in `Trunk.toml`).
+const WEB_PATH: &str = "/web/";
 
 /// How often the admin's certificate files are checked for a replacement.
 const CHECK_FILES_EVERY: Duration = Duration::from_secs(60 * 60);
@@ -109,6 +120,8 @@ struct Sockets {
     new_connections: Sender<ServerLink>,
     clock: WorldClock,
     connections: Arc<AtomicU64>,
+    /// When the game last ticked, for health checks.
+    heartbeat: Heartbeat,
     ping_every: Duration,
     silent_after: Duration,
 }
@@ -117,9 +130,11 @@ impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         let stop = StopAsked::default();
         let clock = app.world().resource::<ServerWorld>().clock.clone();
+        let heartbeat = track_heartbeat(app);
         // Bound here, so a port in use stops the server straight away.
         let ports = open_ports(
             clock,
+            heartbeat,
             Some(self.address),
             &self.security,
             self.web.clone(),
@@ -140,5 +155,7 @@ impl Plugin for NetworkPlugin {
     }
 }
 
+#[cfg(test)]
+mod health_tests;
 #[cfg(test)]
 mod tests;

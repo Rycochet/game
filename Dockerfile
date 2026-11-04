@@ -19,6 +19,11 @@
 #
 # Saves go in /data: mount a volume there to keep them.
 #
+# The web client is at /web/ (where / sends browsers). Every port also answers
+# /_healthz (200 while the game runs) and /_version (what the server is, as
+# JSON). Docker's health check asks the server's own binary, which needs no
+# curl or wget in the image.
+#
 # x86-64 only for now; ARM can be added later as another platform under the
 # same tag.
 
@@ -55,4 +60,7 @@ ENV HOW_ADDRESS=0.0.0.0:8080 \
     HOW_DATA=/data
 VOLUME /data
 EXPOSE 8080 8081
+# Asks /_healthz on the plain port (HOW_ADDRESS), which answers even while
+# only the secure port serves the game. Making a new world takes a while.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3     CMD ["/usr/local/bin/hall-of-worlds-server", "--health"]
 ENTRYPOINT ["/usr/local/bin/hall-of-worlds-server"]

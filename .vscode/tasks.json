@@ -21,7 +21,7 @@
         },
         {
             "label": "Serve (web)",
-            "detail": "Builds to WebAssembly and serves on http://localhost:3000, rebuilding on change",
+            "detail": "Builds to WebAssembly and serves on http://localhost:3000/web/, rebuilding on change",
             "type": "shell",
             "command": "trunk serve",
             "isBackground": true,

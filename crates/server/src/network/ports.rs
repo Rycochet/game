@@ -10,7 +10,7 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread::{self, JoinHandle};
 
 use super::routes::{Stop, serve};
-use super::{PING_EVERY, SILENT_AFTER, SecurePort, Sockets};
+use super::{Heartbeat, PING_EVERY, SILENT_AFTER, SecurePort, Sockets};
 use crate::clock::WorldClock;
 use crate::tls::{Certificates, Security};
 
@@ -28,6 +28,7 @@ pub(crate) struct OpenPorts {
 /// An `Err` says why it can't, before anything is served.
 pub(crate) fn open_ports(
     clock: WorldClock,
+    heartbeat: Heartbeat,
     plain: Option<SocketAddr>,
     security: &Security,
     web: Option<PathBuf>,
@@ -81,6 +82,7 @@ pub(crate) fn open_ports(
         new_connections,
         clock,
         connections: Arc::default(),
+        heartbeat,
         ping_every: PING_EVERY,
         silent_after: SILENT_AFTER,
     };

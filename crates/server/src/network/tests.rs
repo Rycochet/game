@@ -40,6 +40,7 @@ fn serve_without_a_game(
         new_connections,
         clock,
         connections: Arc::default(),
+        heartbeat: Heartbeat::default(),
         ping_every,
         silent_after,
     };
@@ -57,7 +58,7 @@ fn serve_without_a_game(
 
 /// A server with TLS on and no game running: its plain and secure
 /// addresses, its links, and the folder keeping its certificate.
-fn serve_securely() -> (SocketAddr, SocketAddr, Receiver<ServerLink>, TestFolder) {
+pub(super) fn serve_securely() -> (SocketAddr, SocketAddr, Receiver<ServerLink>, TestFolder) {
     let folder = TestFolder::new();
     let source = CertificateSource::Generated {
         folder: folder.0.join("tls"),
@@ -92,6 +93,7 @@ fn serve_with_plain_too(
         new_connections,
         clock: WorldClock::new(405.0),
         connections: Arc::default(),
+        heartbeat: Heartbeat::default(),
         ping_every: PING_EVERY,
         silent_after: SILENT_AFTER,
     };
@@ -206,7 +208,7 @@ fn trusting_client() -> Arc<rustls::ClientConfig> {
 }
 
 /// Asks for a path over HTTP on any stream; the whole answer.
-fn ask(mut stream: impl Read + Write, path: &str) -> String {
+pub(super) fn ask(mut stream: impl Read + Write, path: &str) -> String {
     write!(
         stream,
         "GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"

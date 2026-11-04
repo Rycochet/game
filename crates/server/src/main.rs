@@ -2,6 +2,10 @@
 //! running `ServerPlugin` at a fixed tick rate, with clients connecting over
 //! WebSockets (`NetworkPlugin`), which also serves the web client.
 //!
+//! `hall-of-worlds-server --health` asks a server already running here (on
+//! `HOW_ADDRESS`) whether it is well, and exits with 0 if it is: Docker's
+//! HEALTHCHECK.
+//!
 //! Set by environment variables:
 //!
 //! - `HOW_ADDRESS`: the plain port (default `0.0.0.0:8080`), which only answers
@@ -43,7 +47,7 @@ use std::net::SocketAddr;
 use std::process;
 
 use server::{
-    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerName, ServerOptions,
+    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerName, ServerOptions, check_health,
     debug_api::DebugApiPlugin, default_data_folder, headless_app, log_plugin, option_on,
 };
 use shared::world::WorldSeed;
@@ -55,6 +59,15 @@ fn main() {
         .unwrap_or_else(|_| DEFAULT_ADDRESS.into())
         .parse()
         .expect("HOW_ADDRESS is an address and port, such as 0.0.0.0:8080");
+    if env::args().nth(1).as_deref() == Some("--health") {
+        match check_health(address) {
+            Ok(()) => process::exit(0),
+            Err(error) => {
+                eprintln!("{error}");
+                process::exit(1);
+            }
+        }
+    }
     let web = env::var_os("HOW_WEB").map(Into::into);
     let data = default_data_folder();
     let security = Security::from_environment(&data).unwrap_or_else(|error| {

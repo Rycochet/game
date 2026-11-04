@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use super::NewConnections;
+use super::health::{Heartbeat, track_heartbeat};
 use super::ports::{OpenPorts, open_ports};
 use super::routes::{Stop, accept_connections};
 use crate::connections::{self, Connections};
@@ -52,6 +53,7 @@ impl Drop for Online {
 
 impl Plugin for OnlinePlugin {
     fn build(&self, app: &mut App) {
+        track_heartbeat(app);
         app.insert_resource(CertificateFolder(
             self.data.as_ref().map(|data| data.join("tls")),
         ))
@@ -79,6 +81,7 @@ fn go_online(
     mut name: ResMut<ServerName>,
     folder: Res<CertificateFolder>,
     mut slot: ResMut<OnlineSlot>,
+    heartbeat: Res<Heartbeat>,
 ) {
     let Some(asked) = connections.take_online_request() else {
         return;
@@ -98,7 +101,7 @@ fn go_online(
         connections.tell_host(&ServerMessage::Online(OnlineState::Offline));
         return;
     };
-    let opened = open(&settings, &folder, &world);
+    let opened = open(&settings, &folder, &world, &heartbeat);
     let (ports, closing) = match opened {
         Ok(opened) => opened,
         Err(reason) => {
@@ -137,6 +140,7 @@ fn open(
     settings: &OnlineSettings,
     folder: &CertificateFolder,
     world: &ServerWorld,
+    heartbeat: &Heartbeat,
 ) -> Result<(OpenPorts, tokio::sync::watch::Sender<()>), String> {
     let ip: IpAddr = settings.bind_address.trim().parse().map_err(|_| {
         format!(
@@ -159,6 +163,7 @@ fn open(
     let (closing, closed) = tokio::sync::watch::channel(());
     let ports = open_ports(
         world.clock.clone(),
+        heartbeat.clone(),
         None,
         &security,
         None,
