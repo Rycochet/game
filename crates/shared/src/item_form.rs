@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::armour::arms::ArmsForm;
 use crate::armour::hands::HandsForm;
 use crate::armour::head::HeadForm;
+use crate::armour::legs::LegsForm;
 use crate::armour::shoulders::ShouldersForm;
 use crate::armour::torso::TorsoForm;
 use crate::blade::BladeForm;
@@ -45,6 +46,8 @@ pub enum ItemForm {
     Head(HeadForm),
     /// Vambraces, sleeves or other arm pieces, for one arm or both.
     Arms(ArmsForm),
+    /// Greaves, chausses or other leg pieces, for both legs or one.
+    Legs(LegsForm),
 }
 
 impl ItemForm {
@@ -59,6 +62,7 @@ impl ItemForm {
             Self::Torso(torso) => torso.name().to_owned(),
             Self::Head(head) => head.name(),
             Self::Arms(arms) => arms.name(),
+            Self::Legs(legs) => legs.name(),
         }
     }
 
@@ -72,7 +76,8 @@ impl ItemForm {
             | Self::Shoulders(_)
             | Self::Torso(_)
             | Self::Head(_)
-            | Self::Arms(_) => &[],
+            | Self::Arms(_)
+            | Self::Legs(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }

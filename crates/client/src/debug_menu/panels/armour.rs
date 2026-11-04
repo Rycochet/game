@@ -1,5 +1,5 @@
 //! Item Pictures' armour pages: rolled hand, shoulder, torso and head pieces, and a
-//! picture of each in every style. Arm pieces are in `arms.rs`.
+//! picture of each in every style. Arm pieces are in `arms.rs`, leg pieces in `legs.rs`.
 
 use bevy::prelude::*;
 use shared::armour::hands::{self, HandsPiece};
@@ -35,6 +35,8 @@ pub(super) enum ArmourShown {
     HeadStyle(Style),
     /// An arm piece (see `arms.rs`).
     Arms(super::arms::ArmsShown),
+    /// A leg piece (see `legs.rs`).
+    Legs(super::legs::LegsShown),
 }
 
 /// The first of fifty rolls in plate, or the first at all where the style has none.
@@ -60,6 +62,7 @@ impl ArmourShown {
         let quality = Some(quality);
         Some(match self {
             Self::Arms(arms) => arms.look(rolled)?,
+            Self::Legs(legs) => legs.look(rolled)?,
             Self::Hands(piece, seed, digits) => hands_look(
                 hands::roll(&mut Seed::new(seed).rng(), piece, None),
                 digits,

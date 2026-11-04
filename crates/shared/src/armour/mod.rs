@@ -5,6 +5,7 @@ pub mod arms;
 mod finish;
 pub mod hands;
 pub mod head;
+pub mod legs;
 pub mod shoulders;
 pub mod torso;
 
