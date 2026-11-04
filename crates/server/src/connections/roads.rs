@@ -5,32 +5,32 @@ use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
 use shared::road::Road;
 
 use super::{Connections, Phase};
-use crate::ServerWorld;
+use crate::ServerWorlds;
 
-/// Sends each road the road thread has found to every player near enough to
-/// be sent any of it (as far as world map chunks are sent), once per
-/// connection, and from now on steps along it cost less.
-pub(crate) fn send_roads(mut connections: ResMut<Connections>, mut world: ResMut<ServerWorld>) {
-    let found = world.roads.found();
-    if found.is_empty() {
-        return;
-    }
-    for road in &found {
+/// Sends each road the road thread has found to every player in its world near
+/// enough to be sent any of it (as far as world map chunks are sent), once per
+/// connection, and from now on steps along it cost less. Roads of a world that
+/// has closed meanwhile are dropped: it asks again on opening.
+pub(crate) fn send_roads(mut connections: ResMut<Connections>, mut worlds: ResMut<ServerWorlds>) {
+    let found = worlds.home().roads_found();
+    for (id, road) in &found {
+        let Some(world) = worlds.get_mut(*id) else {
+            continue;
+        };
         world.road_steps.add(road);
-    }
-    let playing = |client: &&mut super::Client| !client.gone && client.phase == Phase::Playing;
-    for client in connections.clients.iter_mut().filter(playing) {
-        for road in &found {
+        let playing = |client: &&mut super::Client| {
+            !client.gone && client.phase == Phase::Playing && client.world == Some(*id)
+        };
+        for client in connections.clients.iter_mut().filter(playing) {
             if client.sent_roads.contains(&road.link)
                 || !near(road, client.world_position(), world.width)
             {
                 continue;
             }
             // A client that has gone is dealt with when its messages are read.
-            if !client.link.send(&ServerMessage::Road(Road::clone(road))) {
-                break;
+            if client.link.send(&ServerMessage::Road(Road::clone(road))) {
+                client.sent_roads.insert(road.link);
             }
-            client.sent_roads.insert(road.link);
         }
     }
 }

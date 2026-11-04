@@ -6,7 +6,7 @@ permalink: /hosting/
 
 # Hosting a server
 
-A server runs one world and serves both the game and the web client, so one port is all it needs. The published Docker image is the simplest way to run one. It is x86-64 only for now.
+A server runs every world its players are in, and serves both the game and the web client, so one port is all it needs. The published Docker image is the simplest way to run one. It is x86-64 only for now.
 
 Every setting is listed under [Server environment variables](../environment-variables).
 
@@ -78,7 +78,7 @@ HOW_SERVER=wss://game.example.com:8081/ws hall-of-worlds
 - **Players are guests for now.** There are no logins yet, and anyone who can reach the server can play. A guest gets their own character, tied to that browser or native client.
 - **A networked server never pauses.** The system menu (or a player's window going into the background) doesn't stop the world for anyone, whatever the settings, and nor does a native client's own server while Online is on: see [Pausing](../client#pausing).
 - **Hosting from the game itself:** a native client can open its own world to others with Online in the system menu, on one secure port (8081 unless Server Options says otherwise), with a certificate it makes. Players on the internet need that port forwarded to the computer. A standalone server is better for a world that is always there.
-- **Time stops only when the server does.** The world's clock is saved, and carries on from there next time.
+- **Time stops only when the server does.** The server's clock is saved, and carries on from there next time. Every world's time goes by it, so a world nobody is in keeps its time going too.
 - **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the server's side of the [debug menu](../debug-menu).
 - **Stopping:** the server saves everyone when asked to stop (`docker compose down`, Ctrl+C or SIGTERM).
 - **Health checks:** every port answers `/_healthz` with `200 ok` while the game is running, and `503` if it has stopped, even the plain port that otherwise only says to use the secure one. The Docker image checks it by itself (`docker ps` shows `healthy`), asking with the server's own `hall-of-worlds-server --health`, which needs no curl or wget. `/_version` says what the server is, as JSON, such as `{"game":"Hall of Worlds","version":"0.1.0","protocol":37}`.

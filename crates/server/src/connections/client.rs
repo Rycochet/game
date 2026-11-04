@@ -23,6 +23,7 @@ impl Client {
             host: character_id.is_some(),
             asked_online: None,
             phase: Phase::Greeting,
+            world: None,
             account: None,
             character_id,
             gone: false,

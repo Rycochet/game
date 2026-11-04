@@ -155,7 +155,7 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
     }
     // The roads through them, sent by `connections::send_roads` once found.
     if new {
-        world.roads.ask(min, max);
+        world.ask_roads(min, max);
     }
     true
 }

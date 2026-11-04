@@ -21,8 +21,9 @@ pub(super) fn add(app: &mut App) {
                   mut to_server: MessageWriter<ToServer>| {
                 if !*done && *view.get() != GameView::Connecting {
                     *done = true;
-                    to_server.write(ToServer(ClientMessage::DevSetTime {
-                        minutes: hours * shared::world::MINUTES_PER_HOUR,
+                    to_server.write(ToServer(ClientMessage::DevSetWorldClock {
+                        minutes: Some(hours * shared::world::MINUTES_PER_HOUR),
+                        rate: None,
                     }));
                 }
             },

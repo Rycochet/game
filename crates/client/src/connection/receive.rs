@@ -42,15 +42,17 @@ pub(super) fn receive(
             Ok(Some(ServerMessage::Hour(hour))) => {
                 clock.set_if_neq(GameClock { hour });
             }
-            Ok(Some(ServerMessage::Clock(minutes))) => {
-                server_clock.minutes = minutes;
+            Ok(Some(ServerMessage::WorldClock(world_time))) => {
+                let seconds = server_clock.seconds;
+                server_clock.set(seconds, world_time);
             }
             Ok(Some(ServerMessage::Paused {
                 paused,
-                clock: minutes,
+                clock: seconds,
             })) => {
                 server_clock.paused = paused;
-                server_clock.minutes = minutes;
+                let world_time = server_clock.time;
+                server_clock.set(seconds, world_time);
                 // An answer from before this could wrongly count the pause as
                 // time passed.
                 connection.pongs.take();
@@ -82,7 +84,8 @@ pub(super) fn receive(
             }
             Ok(Some(ServerMessage::Welcome {
                 world: info,
-                clock: minutes,
+                time: world_time,
+                server_clock: seconds,
                 snow_line,
                 x,
                 y,
@@ -90,13 +93,14 @@ pub(super) fn receive(
                 can_pause,
                 stacks,
             })) => {
+                let minutes = world_time.minutes(seconds);
                 server_dev_tools.0 = dev_tools;
                 server_clock.can_pause = can_pause;
                 server_clock.paused = false;
                 clock.set_if_neq(GameClock {
                     hour: (minutes / MINUTES_PER_HOUR) as u32,
                 });
-                server_clock.minutes = minutes;
+                server_clock.set(seconds, world_time);
                 weather.set_if_neq(Weather {
                     snow_line: snow_line as f64,
                 });
@@ -121,7 +125,8 @@ pub(super) fn receive(
                 }
                 from_server.write(FromServer(ServerMessage::Welcome {
                     world: info,
-                    clock: minutes,
+                    time: world_time,
+                    server_clock: seconds,
                     snow_line,
                     x,
                     y,

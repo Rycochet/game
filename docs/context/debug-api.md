@@ -40,10 +40,11 @@ Fake input (`client/src/dev_tools/fake_input.rs`): Bevy's own input messages (`M
 
 Server (`server/src/debug_api/methods.rs`; `--server` for the embedded one):
 
-- `server.state`: program (`server` or `embedded server`), pid, data folder, dev tools on, clock minutes and paused, action ticks, `players` (character id, phase, world position, `visit`: site id, level, position).
-- `server.mobs`: every level in use (site, level) and its mobs: id, kind, position, home, `doing`.
+- `server.state`: program (`server` or `embedded server`), pid, data folder, dev tools on, `home_world`, `server_clock` (seconds), `clock_minutes` (the home world's time), paused, action ticks, `players` (character id, phase, `world`, world position, `visit`: site id, level, position).
+- `server.worlds`: every open world: id, whether it is the home, its time in minutes, `rate` (`[game, real]`), players in it, sites loaded and levels in use.
+- `server.mobs {world?}`: every level in use (site, level) of a world (the home unless given its id) and its mobs: id, kind, position, home, `doing`.
 - `server.cells {player?, radius?}`: a player's level around them as the server has it (secret doors included), rows from the north, `@` the player, blank outside the level, with a `legend` of the letters used, and `from` (the top-left cell).
-- `server.sites`: sites loaded, their generator version and the levels with saves.
+- `server.sites {world?}`: a world's sites loaded (the home unless given its id), their generator version and the levels with saves.
 - `server.save`: saves everything changed and answers once it is written (`written`: whether all of it was, within 8 s).
 
 ## Adding a method

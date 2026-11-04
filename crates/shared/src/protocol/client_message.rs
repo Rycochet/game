@@ -11,6 +11,7 @@ use crate::item::{Favour, Holder, ItemKind, Quality, Rotation};
 use crate::movement::Step;
 use crate::poi::{ChunkPos, PoiKind};
 use crate::sheet::Appearance;
+use crate::world::ClockRate;
 
 /// From a client to the server.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -185,9 +186,13 @@ pub enum ClientMessage {
     /// Developer tools: set the snow line (which freezes water), answered
     /// with `SnowLine`. Only an embedded server accepts it.
     DevSnowLine(u32),
-    /// Developer tools: move the world's clock to this many game minutes since
-    /// the world began, answered with `Clock` to everyone playing.
-    DevSetTime { minutes: f64 },
+    /// Developer tools: move the world's time to this many game minutes since
+    /// the world began, and/or have it run at another rate from now on, answered
+    /// with `WorldClock` to everyone in that world.
+    DevSetWorldClock {
+        minutes: Option<f64>,
+        rate: Option<ClockRate>,
+    },
     /// Developer tools: show every poi, known or not, for this connection.
     /// Only an embedded server accepts it.
     DevRevealPois,
@@ -222,7 +227,7 @@ impl ClientMessage {
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
                 | Self::DevSnowLine(_)
-                | Self::DevSetTime { .. }
+                | Self::DevSetWorldClock { .. }
                 | Self::DevRevealPois
                 | Self::DevRevealMap
                 | Self::DevForgetMap

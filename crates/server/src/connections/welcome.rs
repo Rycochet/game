@@ -115,7 +115,8 @@ pub(super) fn welcome(
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
-        clock: world.clock.minutes(),
+        time: world.time(),
+        server_clock: world.server_clock.seconds(),
         snow_line: world.snow_line,
         x,
         y,

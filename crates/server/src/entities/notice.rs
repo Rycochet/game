@@ -14,7 +14,7 @@ use crate::connections::{Client, Phase};
 use crate::storage::SiteId;
 
 /// A player as others see them.
-pub(super) struct Someone {
+pub(crate) struct Someone {
     pub(super) id: Id,
     pub(super) character: Option<CharacterId>,
     pub(super) look: (CreatureKind, Appearance),

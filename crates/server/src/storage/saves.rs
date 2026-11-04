@@ -9,7 +9,7 @@ use shared::item::{Inventory, Item};
 use shared::mob::Memory;
 use shared::poi::{ChunkPos, PoiKind};
 use shared::sheet::Sheet;
-use shared::world::{WorldId, WorldSeed};
+use shared::world::{ClockRate, WorldId, WorldSeed};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Which site: a world map poi's, or a made-up one (dev tools).
@@ -31,9 +31,30 @@ pub struct WorldSave {
     pub seed: WorldSeed,
     /// The world map generator it was made with (`WORLD_MAP_VERSION`).
     pub world_map_version: u32,
-    /// Its clock: game minutes since it began.
+    /// Its time when saved: game minutes since it began.
     pub clock: f64,
-    /// Its action clock: ticks since it began (`clock::ActionClock`).
+    /// The server's clock (`ServerSave::clock`) when `clock` was saved: the
+    /// world's time has run on since, at `rate`. `None` from before worlds went
+    /// by the server's clock, when it stopped while the server was off.
+    #[serde(default)]
+    pub server_clock: Option<f64>,
+    /// How fast its time runs against the server's clock.
+    #[serde(default)]
+    pub rate: ClockRate,
+    /// The action clock when saved, from before the server had one of its own
+    /// (`ServerSave::action_ticks`): only read if that isn't saved yet.
+    #[serde(default)]
+    pub action_ticks: u64,
+}
+
+/// `server.ron`: the server's own clocks, which every world goes by.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct ServerSave {
+    /// The `SAVE_FORMAT` it was written with.
+    pub format: u32,
+    /// Real seconds the server has run, not counting pauses (`clock::ServerClock`).
+    pub clock: f64,
+    /// Ticks of action time (`clock::ActionClock`).
     pub action_ticks: u64,
 }
 

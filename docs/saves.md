@@ -20,7 +20,8 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 
 ### In a server's folder
 
-- `worlds/`: each world, the sites in it that have been entered, and its roads (`roads/`, each worked out once and kept; safe to delete, as they are worked out again).
+- `server.ron`: the server's own clock, which every world's time goes by.
+- `worlds/`: each world, its time, the sites in it that have been entered, and its roads (`roads/`, each worked out once and kept; safe to delete, as they are worked out again).
 - `characters/`: what each character knows, and where they are.
 - `accounts/` and `logins/`: who owns which characters. No login secret is stored.
 - `tls/`: its certificates (single player's too, once Online has been on). **`tls/key.pem` is its private key**, so keep it to yourself.

@@ -127,7 +127,7 @@ pub(crate) fn answer(
         _ if client.phase != Phase::Playing => refuse(client, "say hello first".into()),
         ClientMessage::Ping { sent } => client.link.send(&ServerMessage::Pong {
             sent,
-            clock: world.clock.minutes(),
+            clock: world.server_clock.seconds(),
         }),
         // Meant for a map the player has since left.
         ClientMessage::Step { map, .. } if map != client.map => true,
@@ -166,14 +166,15 @@ pub(crate) fn answer(
             true
         }
         ClientMessage::SetPaused(paused) => {
+            // The server's clock, so every world stops.
             if paused {
-                world.clock.pause();
+                world.server_clock.pause();
             } else {
-                world.clock.resume();
+                world.server_clock.resume();
             }
             client.link.send(&ServerMessage::Paused {
                 paused,
-                clock: world.clock.minutes(),
+                clock: world.server_clock.seconds(),
             })
         }
         ClientMessage::DropItem { .. }
@@ -213,6 +214,6 @@ pub(crate) fn answer(
         | ClientMessage::DevKillMob { .. }
         | ClientMessage::DevSetCreature(..)
         | ClientMessage::DevSnowLine(..)
-        | ClientMessage::DevSetTime { .. } => answer_dev(client, message, world),
+        | ClientMessage::DevSetWorldClock { .. } => answer_dev(client, message, world),
     }
 }

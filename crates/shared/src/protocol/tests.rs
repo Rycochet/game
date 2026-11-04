@@ -15,6 +15,7 @@ use crate::rng::Seed;
 use crate::sheet::{Appearance, Sheet};
 use crate::site::PoiLook;
 use crate::site::{StairsDirection, StairsStyle};
+use crate::world::{ClockRate, WorldTime};
 
 #[test]
 fn pings_and_pongs_are_recognised_from_their_bytes() {
@@ -140,7 +141,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ClientMessage::DevTeleport { x: -3, y: 4 },
         ClientMessage::DevSnowLine(40),
-        ClientMessage::DevSetTime { minutes: 90.5 },
+        ClientMessage::DevSetWorldClock {
+            minutes: Some(90.5),
+            rate: ClockRate::new(3, 2),
+        },
         ClientMessage::DevBackToStart,
         ClientMessage::DevToShowcase,
         ClientMessage::DevToHall,
@@ -178,7 +182,8 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 terrain_seed: Seed::new(8),
                 world_map_version: 1,
             },
-            clock: 5.25,
+            time: WorldTime::at(5.25, 2.0, ClockRate::NORMAL),
+            server_clock: 2.0,
             snow_line: 128,
             x: -4,
             y: 9,
@@ -189,7 +194,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ServerMessage::ForgetWorldMap,
         ServerMessage::SnowLine(40),
         ServerMessage::Hour(6),
-        ServerMessage::Clock(405.0),
+        ServerMessage::WorldClock(WorldTime::at(405.0, 10.0, ClockRate::NORMAL)),
         ServerMessage::Paused {
             paused: true,
             clock: 405.0,

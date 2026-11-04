@@ -16,7 +16,7 @@ fn serve_plain(heartbeat: Heartbeat, web: Option<PathBuf>) -> SocketAddr {
     let (new_connections, _accepted) = mpsc::channel();
     let sockets = Sockets {
         new_connections,
-        clock: WorldClock::new(405.0),
+        clock: ServerClock::new(405.0),
         connections: Arc::default(),
         heartbeat,
         ping_every: PING_EVERY,

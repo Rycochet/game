@@ -1,5 +1,5 @@
 use super::*;
-use crate::clock::WorldClock;
+use crate::clock::ServerClock;
 use crate::tls::Certificates;
 use shared::protocol::{ClientMessage, SOCKET_PATH, ServerLink, ServerMessage, wired};
 use std::net::{SocketAddr, TcpListener};
@@ -35,7 +35,7 @@ fn serve_without_a_game(
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();
     let (new_connections, accepted) = mpsc::channel();
-    let clock = WorldClock::new(405.0);
+    let clock = ServerClock::new(405.0);
     let sockets = Sockets {
         new_connections,
         clock,
@@ -91,7 +91,7 @@ fn serve_with_plain_too(
     let (new_connections, accepted) = mpsc::channel();
     let sockets = Sockets {
         new_connections,
-        clock: WorldClock::new(405.0),
+        clock: ServerClock::new(405.0),
         connections: Arc::default(),
         heartbeat: Heartbeat::default(),
         ping_every: PING_EVERY,

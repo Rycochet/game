@@ -373,7 +373,7 @@ fn a_mob_that_sees_stairs_taken_follows_and_later_goes_home() {
     test.send(&[ClientMessage::DevBackToStart]);
     let home_level = test.world.populations.0.keys().find(|(_, l)| *l == 0);
     assert!(home_level.is_some());
-    crate::entities::sync(std::slice::from_mut(&mut test.client), &mut test.world);
+    crate::entities::sync(std::slice::from_mut(&mut test.client), &mut test.world, &[]);
     run(&mut test, HOME_WITHIN + 400);
     assert_eq!(levels_with(&test, mob), [0]);
     let home = test.world.populations.0.iter().find(|((_, l), _)| *l == 0);

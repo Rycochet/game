@@ -28,6 +28,7 @@ mod pictures_spawn;
 mod pictures_systems;
 mod steps;
 mod time_text;
+mod world_rate;
 mod world_time;
 
 use every_widget::spawn_every_widget;
@@ -58,6 +59,7 @@ use pictures_spawn::{
 pub(super) use pictures_systems::{choose_pictures, fill_pictures, show_pictures};
 use steps::spawn_step_buttons;
 pub(super) use steps::{press_panel_buttons, update_panel_buttons};
+pub(super) use world_rate::{press_rate_buttons, update_rate_buttons};
 use world_time::spawn_world_time;
 pub(super) use world_time::{edit_time_box, press_time_steps};
 

@@ -216,8 +216,11 @@ fn a_shops_stock_changes_as_time_passes() {
     }]);
     let open = ClientMessage::OpenTrade { with };
     let first = stock_in(&test.send(std::slice::from_ref(&open))).unwrap();
-    let later = test.world.clock.minutes() + 200_000.0;
-    test.send(&[ClientMessage::DevSetTime { minutes: later }]);
+    let later = test.world.minutes() + 200_000.0;
+    test.send(&[ClientMessage::DevSetWorldClock {
+        minutes: Some(later),
+        rate: None,
+    }]);
     let second = stock_in(&test.send(std::slice::from_ref(&open))).unwrap();
     let ids = |items: &[shared::item::Item]| -> Vec<shared::id::Id> {
         items.iter().map(|item| item.id).collect()

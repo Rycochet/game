@@ -1,5 +1,6 @@
-//! The World Time panel: buttons moving the world's clock by steps either way,
-//! and a box with the time in it that moves the clock to exactly what is typed.
+//! The World Time panel: buttons moving the world's time by steps either way,
+//! and a box with the time in it that moves it to exactly what is typed; below
+//! them, how fast it runs (`world_rate`).
 
 use bevy::input::ButtonState as KeyState;
 use bevy::input::keyboard::KeyboardInput;
@@ -7,6 +8,7 @@ use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 
 use super::time_text::{read_time, time_text};
+use super::world_rate::spawn_world_rate;
 use super::{CHECK_ROW, FONT};
 use crate::common::ServerClock;
 use crate::connection::ToServer;
@@ -85,6 +87,7 @@ pub(super) fn spawn_world_time(content: &mut ChildSpawnerCommands) {
                 step(row, on);
             }
         });
+    spawn_world_rate(content);
 }
 
 /// Asks the server to move the clock by the pressed button's step. It stops at
@@ -100,8 +103,9 @@ pub(in crate::debug_menu) fn press_time_steps(
         let Ok(step) = steps.get(press.0) else {
             continue;
         };
-        to_server.write(ToServer(ClientMessage::DevSetTime {
-            minutes: clock.minutes + step.0,
+        to_server.write(ToServer(ClientMessage::DevSetWorldClock {
+            minutes: Some(clock.minutes + step.0),
+            rate: None,
         }));
         // Back to following the clock, if it was showing something unreadable.
         for mut text_box in &mut boxes {
@@ -138,7 +142,10 @@ pub(in crate::debug_menu) fn edit_time_box(
             if escaped {
                 text_box.error = false;
             } else if let Some(minutes) = read_time(&text_box.text, clock.minutes) {
-                to_server.write(ToServer(ClientMessage::DevSetTime { minutes }));
+                to_server.write(ToServer(ClientMessage::DevSetWorldClock {
+                    minutes: Some(minutes),
+                    rate: None,
+                }));
             } else {
                 text_box.error = true;
             }

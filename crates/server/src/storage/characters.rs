@@ -24,11 +24,15 @@ impl Storage {
         })
     }
 
+    /// The world a character is in, by their save: `None` if they are new.
+    pub fn character_world(&self, id: &CharacterId) -> Result<Option<WorldId>, String> {
+        Ok(self.character(id)?.map(|save| save.world))
+    }
+
     /// What a character knows of `world` (nothing if they haven't been there),
-    /// and of the other worlds they have been to. Being given `world` is how
-    /// they come to be in it, wherever their save says they were: a server only
-    /// runs one world so far. Knowledge from before `forget_before` is ignored,
-    /// and saved over.
+    /// and of the other worlds they have been to: the world they are in is
+    /// `character_world`, or for someone new, wherever the server puts them.
+    /// Knowledge from before `forget_before` is ignored, and saved over.
     pub fn load_character(
         &self,
         id: &CharacterId,

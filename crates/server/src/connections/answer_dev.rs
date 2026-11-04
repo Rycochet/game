@@ -124,9 +124,14 @@ pub(super) fn answer_dev(
             world.snow_line = snow_line;
             client.link.send(&ServerMessage::SnowLine(snow_line))
         }
-        ClientMessage::DevSetTime { minutes } => {
-            world.clock.set(minutes);
-            world.clock_moved = true;
+        ClientMessage::DevSetWorldClock { minutes, rate } => {
+            // Not trusted to be one: a rate that stops time is refused.
+            let rate = rate.map(|rate| shared::world::ClockRate::new(rate.game, rate.real));
+            if rate.is_some_and(|rate| rate.is_none()) {
+                warn!("A client asked for a clock rate that stops time");
+                return true;
+            }
+            world.set_time(minutes, rate.flatten());
             true
         }
         _ => unreachable!("`answer` only passes dev tools here"),

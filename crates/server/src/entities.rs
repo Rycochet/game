@@ -37,7 +37,7 @@ use moves::{Taken, act, nearest_free};
 use notice::{Maps, Someone, Spot, cells_apart, everyone_playing, notice};
 pub(super) use run::run_mobs;
 use run::world_gap;
-pub(super) use sync::sync;
+pub(super) use sync::{in_hall, sync};
 
 /// How long a level nobody is on stays in use.
 const KEPT_FOR: Duration = Duration::from_secs(60);

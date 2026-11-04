@@ -14,7 +14,8 @@ use time::OffsetDateTime;
 
 use crate::accounts::{AccountId, AccountSave, LoginSave};
 use crate::storage::{
-    CharacterSave, OLDEST_SAVE_FORMAT, RoadSave, SAVE_FORMAT, SiteId, SiteSave, WorldSave,
+    CharacterSave, OLDEST_SAVE_FORMAT, RoadSave, SAVE_FORMAT, ServerSave, SiteId, SiteSave,
+    WorldSave,
 };
 
 /// Says which format a data folder's saves are in.
@@ -27,6 +28,8 @@ const SAVE_FOLDERS: [&str; 4] = ["accounts", "characters", "logins", "worlds"];
 /// Which save.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum SaveKey {
+    /// The server's own clocks.
+    Server,
     World(WorldId),
     /// All of a world's sites at once: only ever removed.
     Sites(WorldId),
@@ -43,6 +46,7 @@ pub(crate) enum SaveKey {
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Save {
+    Server(ServerSave),
     World(WorldSave),
     Site(SiteSave),
     Road(RoadSave),
@@ -104,6 +108,7 @@ impl FileBackend {
     /// The file a save is in (for `Sites`, their folder).
     fn path(&self, key: &SaveKey) -> PathBuf {
         match key {
+            SaveKey::Server => self.data.join("server.ron"),
             SaveKey::World(id) => self.world_folder(*id).join("world.ron"),
             SaveKey::Sites(id) => self.world_folder(*id).join("sites"),
             SaveKey::Site(id, site) => self
@@ -139,6 +144,7 @@ impl SaveBackend for FileBackend {
     fn load(&self, key: &SaveKey) -> Result<Option<Save>, LoadError> {
         let file = self.path(key);
         Ok(match key {
+            SaveKey::Server => read(&file)?.map(Save::Server),
             SaveKey::World(_) => read(&file)?.map(Save::World),
             SaveKey::Sites(_) => None,
             SaveKey::Site(..) => read(&file)?.map(Save::Site),
@@ -152,6 +158,7 @@ impl SaveBackend for FileBackend {
     fn save(&self, key: &SaveKey, save: &Save) -> Result<(), String> {
         let file = self.path(key);
         match save {
+            Save::Server(save) => write(&file, save),
             Save::World(save) => write(&file, save),
             Save::Site(save) => write(&file, save),
             Save::Road(save) => write(&file, save),

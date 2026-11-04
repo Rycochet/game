@@ -12,6 +12,7 @@ use crate::item::{Inventory, Item, StackLimits};
 use crate::mob::EntityLook;
 use crate::road::Road;
 use crate::sheet::Sheet;
+use crate::world::WorldTime;
 
 /// From the server to a client.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -37,12 +38,14 @@ pub enum ServerMessage {
     /// Who keeps each shop of a town (`Buildings` comes first), by `BuildingLook::id`.
     /// Never on the map: they stand behind the door.
     Keepers(Vec<(u16, Id)>),
-    /// The player is in the game: the world they are in, its clock (in game
-    /// hours since it began) and snow line, and where they are on its world
-    /// map (where they left off). If they were in a site, `EnterLevel` follows.
+    /// The player is in the game: the world they are in, its time (worked out
+    /// from the server's clock, which reads `server_clock` seconds now) and snow
+    /// line, and where they are on its world map (where they left off). If they
+    /// were in a site, `EnterLevel` follows.
     Welcome {
         world: WorldInfo,
-        clock: f64,
+        time: WorldTime,
+        server_clock: f64,
         snow_line: u32,
         x: i64,
         y: i64,
@@ -62,13 +65,14 @@ pub enum ServerMessage {
     /// A new whole hour has begun on the clock (`% 24` is the time of day).
     /// The tide, and so where can be walked on the world map, follows it.
     Hour(u32),
-    /// The world's clock has been moved: game minutes since the world began.
-    Clock(f64),
-    /// The world's clock has stopped or started again, at this many game
-    /// minutes. While stopped, the clock in `Pong` says nothing new.
+    /// The world's time has been moved, or now runs at another rate.
+    WorldClock(WorldTime),
+    /// The server's clock has stopped or started again, at this many seconds,
+    /// and every world's time with it. While stopped, the clock in `Pong` says
+    /// nothing new.
     Paused { paused: bool, clock: f64 },
-    /// The answer to `Ping`: its `sent`, and the world's clock (game minutes)
-    /// when answering.
+    /// The answer to `Ping`: its `sent`, and the server's clock (seconds) when
+    /// answering, which every world's time is worked out from.
     Pong { sent: f64, clock: f64 },
     /// The server won't talk to this client, and why.
     Refused(String),

@@ -1,7 +1,7 @@
 //! The game's and the server's clocks, the night light, and herbs' growth shift.
 
 use bevy::prelude::*;
-use shared::world::MINUTES_PER_HOUR;
+use shared::world::{MINUTES_PER_HOUR, WorldTime};
 
 /// In-game time of day, in whole hours (`0..24`), as the server says
 /// (`connection`). Only changes once per hour, so systems can redraw on
@@ -16,11 +16,17 @@ pub struct GameClock {
 #[derive(Resource, Default)]
 pub struct HerbGrowthShift(pub u32);
 
-/// The server's clock as well as the client can tell: game minutes since the
-/// world began. Unlike `GameClock` it changes every frame, unless paused.
+/// The server's clock as well as the client can tell, and the world's time
+/// worked out from it: game minutes since the world began. Unlike `GameClock`
+/// it changes every frame, unless paused.
 #[derive(Resource, Default)]
 pub struct ServerClock {
+    /// The world's time, from `seconds` and `time` (`ServerClock::set`).
     pub minutes: f64,
+    /// The server's clock: real seconds it has run, kept in step by pings.
+    pub seconds: f64,
+    /// How the world's time goes by the server's clock.
+    pub time: WorldTime,
     /// The server says the clock has stopped. Game time (`Time`) stops with it.
     pub paused: bool,
     /// The server would stop it if asked (`ClientMessage::SetPaused`).
@@ -33,6 +39,14 @@ pub struct ServerClock {
 }
 
 impl ServerClock {
+    /// The server's clock reads `seconds`, and the world's time goes by it as
+    /// `time` says.
+    pub fn set(&mut self, seconds: f64, time: WorldTime) {
+        self.seconds = seconds;
+        self.time = time;
+        self.minutes = time.minutes(seconds);
+    }
+
     /// The same in game hours, which the tide, weather and sky go by.
     pub fn hours(&self) -> f64 {
         self.minutes / MINUTES_PER_HOUR

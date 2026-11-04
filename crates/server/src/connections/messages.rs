@@ -4,18 +4,19 @@ use bevy::prelude::*;
 use shared::energy::{CHANGE_MAP_COST, site_step_cost};
 use shared::movement::{Step, world_step_cost};
 use shared::protocol::ServerMessage;
+use shared::world::WorldId;
 
 use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
 use crate::ground::{self};
 use crate::sites::{self, Visit};
-use crate::{ServerOptions, ServerWorld, hall, world_map};
+use crate::{ServerOptions, ServerWorld, ServerWorlds, hall, world_map};
 
 /// Answers every message that has arrived, and forgets clients that have
 /// gone (or were refused), saving them first.
 pub(crate) fn handle_messages(
     mut connections: ResMut<Connections>,
-    mut world: ResMut<ServerWorld>,
+    mut worlds: ResMut<ServerWorlds>,
     options: Res<ServerOptions>,
 ) {
     let Connections { clients, accounts } = &mut *connections;
@@ -24,10 +25,11 @@ pub(crate) fn handle_messages(
         if client.gone {
             continue;
         }
+        let world = worlds.of(client.world);
         let stay = loop {
             match client.link.receive() {
                 Ok(Some(message)) => {
-                    if !answer(client, message, &mut world, accounts, &options) {
+                    if !answer(client, message, world, accounts, &options) {
                         break false;
                     }
                     // The rest once it has been welcomed (below).
@@ -35,7 +37,7 @@ pub(crate) fn handle_messages(
                         break true;
                     }
                 }
-                Ok(None) => break act(client, &mut world) && client.send_position(),
+                Ok(None) => break act(client, world) && client.send_position(),
                 Err(error) => {
                     info!("A client left ({error:?})");
                     break false;
@@ -43,13 +45,15 @@ pub(crate) fn handle_messages(
             }
         };
         if !stay {
-            client.disconnect(&mut world);
+            client.disconnect(worlds.of(client.world));
         } else if client.phase == Phase::Joining
-            && !join(clients, i, &mut world, accounts, &options)
+            && !join(clients, i, &mut worlds, accounts, &options)
         {
-            clients[i].disconnect(&mut world);
+            let world = clients[i].world;
+            clients[i].disconnect(worlds.of(world));
         }
-        put_out_of_forgotten_sites(clients, i, &mut world);
+        let world = clients[i].world;
+        put_out_of_forgotten_sites(clients, i, worlds.of(world));
     }
     clients.retain(|client| !client.gone);
 }
@@ -142,7 +146,8 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
 }
 
 /// Puts anyone but client `i` (who did the forgetting, and has been dealt with)
-/// out of any site just forgotten: what they are on is no longer that site.
+/// out of any site of its world just forgotten: what they are on is no longer
+/// that site.
 pub(super) fn put_out_of_forgotten_sites(
     clients: &mut [Client],
     i: usize,
@@ -152,11 +157,13 @@ pub(super) fn put_out_of_forgotten_sites(
     if forgotten.is_empty() {
         return;
     }
+    let clients_world = clients[i].world;
     for (j, other) in clients.iter_mut().enumerate() {
-        let inside = other
-            .visit
-            .as_ref()
-            .is_some_and(|visit| forgotten.includes(visit.id()));
+        let inside = other.world == clients_world
+            && other
+                .visit
+                .as_ref()
+                .is_some_and(|visit| forgotten.includes(visit.id()));
         if j != i && !other.gone && inside && !sites::put_out(other, world) {
             other.disconnect(world);
         }
@@ -171,7 +178,7 @@ pub(super) fn put_out_of_forgotten_sites(
 pub(super) fn join(
     clients: &mut [Client],
     i: usize,
-    world: &mut ServerWorld,
+    worlds: &mut ServerWorlds,
     accounts: &mut Accounts,
     options: &ServerOptions,
 ) -> bool {
@@ -196,7 +203,7 @@ pub(super) fn join(
             other.link.send(&ServerMessage::Refused(
                 "this account is playing somewhere else now".into(),
             ));
-            other.disconnect(world);
+            other.disconnect(worlds.of(other.world));
         }
     }
     if let (Some(account), Some(character)) = (&account, &character)
@@ -204,5 +211,28 @@ pub(super) fn join(
     {
         return clients[i].refuse_for_saves(&error);
     }
-    welcome(&mut clients[i], world, options)
+    let Some(world) = world_for(&mut clients[i], worlds) else {
+        return false;
+    };
+    clients[i].world = Some(world);
+    welcome(&mut clients[i], worlds.of(Some(world)), options)
+}
+
+/// The world a joining character is in: the one their save says, opened if
+/// need be, or the home for someone new or whose world can't be run (which is
+/// logged). `None` if saves can't be reached, when the client is refused.
+fn world_for(client: &mut Client, worlds: &mut ServerWorlds) -> Option<WorldId> {
+    let id = client.character_id.expect("decided before joining");
+    let saved = worlds.home().storage.character_world(&id);
+    let found = saved.and_then(|world| match world {
+        Some(world) => worlds.open_saved(world),
+        None => Ok(None),
+    });
+    match found {
+        Ok(found) => Some(found.unwrap_or(worlds.home_id())),
+        Err(error) => {
+            client.refuse_for_saves(&error);
+            None
+        }
+    }
 }

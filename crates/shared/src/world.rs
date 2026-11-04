@@ -11,6 +11,9 @@ use core::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+mod time;
+pub use time::{ClockRate, WorldTime};
+
 /// The world map generator's version (`WorldParams`, `surface`). Bump it only
 /// when the generated terrain changes in a way that matters, not for
 /// cosmetic changes: existing worlds keep the version they were made with.
