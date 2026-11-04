@@ -131,6 +131,7 @@ Update these **in the same PR** as the change:
 | Where saves or other files are kept | `docs/saves.md` |
 | Third-party art or fonts | `docs/credits.md` |
 | Kinds of armour, their names, styles, materials or rough weights | `docs/armour/` |
+| Kinds of footwear, their names, shapes, materials or rough weights | `docs/footwear.md` |
 
 Every page keeps to the checklist in `docs/context/wiki-style.md`.
 

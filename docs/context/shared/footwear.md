@@ -37,4 +37,4 @@ Shoes, boots, sandals, clogs and slippers, all worn in the Middle layer on the f
 - A style's name comes from its signature (closed laces on a sewn low shoe are Oxfords); anything that fits none takes the plain name for its kind, build and height, with an unusual upper first ("Silk Slippers").
 - Lengths are in hundredths of the foot's length, so they scale with the frame. Weights are the research's per-pair estimates, changed by the upper and what is added, and by the square of the size, as foot armour's.
 - Jewels come only at Rare and better, as gilt finishes do: the grid allows them at any quality.
-- Research: `docs/context/research-footwear.md`.
+- Research: `docs/context/research-footwear.md`. Players' page: `docs/footwear.md`, kept in step with this module.
