@@ -20,15 +20,23 @@ About 200 armour articles fetched by the parent chat, plus 22 more for the torso
 
 Every piece is Outer on Torso (item kind `TorsoArmour`), stopping at the waist; longer coats are sets with a Waist piece. The Arming Vest is Middle (`ArmingVest`).
 
-| Construction | Generic | Specific (in this PR) | Cells |
+| Construction | Generic | Specific | Cells |
 | --- | --- | --- | --- |
 | Plate | Cuirass; Breastplate (no back) | Milanese, Gothic, Maximilian, Peascod, Munition, Muscle, Bell, Triple-disc, Elven, Dwarven Cuirass; Kastenbrust; Tankō; Kardiophylax (disc, no back) | 3 × 3, breastplate 2 × 2 |
-| Leather | Leather Cuirass | Studded Leather, Buff Jerkin, Leather Muscle Cuirass | 3 × 3, buff 2 × 3 |
+| Leather | Leather Cuirass | Studded Leather, Buff Jerkin, Hide Armour (rawhide), Leather Muscle Cuirass | 3 × 3, soft 2 × 3 |
 | Mail | Mail Shirt | Byrnie, Lorica Hamata, Kusari Katabira, Mithril Shirt | 2 × 2 |
 | Ring mail | Ring Mail | | 2 × 3 |
 | Padded | Padded Jack; Arming Vest | Linothorax, Myeonje Baegap, Ichcahuipilli, Coir Armour | 2 × 3, vest 2 × 2 |
+| Scale | Scale Shirt | Lorica Squamata, Lorica Plumata (on mail), Horn Scale Shirt, Dragonscale Shirt, Coin Armour (brass) | 2 × 3 |
+| Lamellar | Lamellar Cuirass | Dō-maru, Haramaki, Ō-yoroi Dō, Mountain Pattern Cuirass, Klivanion, Bone Lamellar | 2 × 3, boxed 3 × 3 |
+| Laminar | Laminar Cuirass | Lorica Segmentata, Okegawa-dō, Banded Mail (over mail) | 3 × 3 |
+| Plates in cloth | Brigandine | Coat of Plates, Jack of Plate, Leather Brigandine, Dingjia, Tatami Dō | 2 × 3 |
+| Mail and plate | Plated Mail | Yushman, Bakhterets, Zirah Bagtar | 2 × 3 |
+| Mirror | Mirror Armour | Char-aina | 2 × 3 |
+| Splint | Splint Cuirass | Slat Armour (wood or bone) | 2 × 3 |
+| Woven | Rattan Cuirass | | 3 × 3 |
 
-Planned for the second PR: Lamellar Cuirass (Klivanion, Dō-maru, Haramaki, Ō-yoroi Dō, Mountain Pattern Cuirass, Bone Lamellar), Scale Shirt (Lorica Squamata, Lorica Plumata, Horn, Dragonscale, Coin Armour), Laminar Cuirass (Lorica Segmentata, Okegawa-dō, Banded Mail), Brigandine (Coat of Plates, Jack of Plate, Dingjia, Kuyak, Leather Brigandine), Plated Mail (Yushman, Bakhterets, Zirah Bagtar, Baju Rantai), Mirror Armour (Char-aina), Splint (Slat Armour, Rattan Cuirass), and Hide Armour (proposed from the pictures).
+Dropped while coding: Kuyak (the Steppe style makes no plates in cloth) and Baju Rantai (no Malay style).
 
 ## What is rolled
 
@@ -36,7 +44,7 @@ Style first (or a set's), then a construction it allows, material, the construct
 
 ## Weights (W)
 
-A human torso shell from waist to shoulders is about 0.31 m² (breast 0.17, back 0.14). Weight = area × thickness × density, by the material's density against the reference, plus fittings; by size squared for other sizes. Steel cuirass about 5.3 kg (breast 2.5 mm, back 1.5 mm), breastplate 3.6, munition 7, bronze muscle 4.4, hardened leather 1.9, buff jerkin 1.3, mail shirt with short sleeves 3.1 to 3.4 (about 8.5 kg/m², from the lorica hamata), padded jack 2.5 to 3, arming vest 1.2. A mail shirt under a rigid piece adds 3.1, a lining 0.9.
+A human torso shell from waist to shoulders is about 0.31 m² (breast 0.17, back 0.14). Weight = area × thickness × density, by the material's density against the reference, plus fittings; by size squared for other sizes. Steel cuirass about 5.3 kg (breast 2.5 mm, back 1.5 mm), breastplate 3.6, munition 7, bronze muscle 4.4, hardened leather 1.9, buff jerkin 1.3, mail shirt with short sleeves 3.1 to 3.4 (about 8.5 kg/m², from the lorica hamata), padded jack 2.5 to 3, arming vest 1.2. A mail shirt under a rigid piece adds 3.1, a lining 0.9. Small plates overlap more: iron scale 3.5 to 4.2 (about 1.4 times mail per m²), lamellar 3.9 to 4.6 (13 kg/m², from a Ming set of about 20 kg), laminar 0.6 a lame, brigandine plates 3.5 to 3.8 plus 0.5 cover, plated mail 5.1 to 5.9, mirror armour 4 to 4.5 with its mail, wooden slats 1.1, rattan 1.5.
 
 ## Owner's answers
 

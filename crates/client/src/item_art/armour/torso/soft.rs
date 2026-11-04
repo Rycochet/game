@@ -21,7 +21,7 @@ pub(super) const MAIL_OUT: f32 = 12.0;
 const PADDED_OUT: f32 = 15.0;
 const VEST_OUT: f32 = 6.0;
 
-fn round_shell(frame: &Frame, out: f32, hem: f32) -> Shell<'_> {
+pub(super) fn round_shell(frame: &Frame, out: f32, hem: f32) -> Shell<'_> {
     Shell {
         frame,
         span: Span::Round,
@@ -33,7 +33,7 @@ fn round_shell(frame: &Frame, out: f32, hem: f32) -> Shell<'_> {
 }
 
 /// A shell right round, raised in places by `puff`, `thick` millimetres.
-fn wrap(
+pub(super) fn wrap(
     model: &mut Model,
     stuff: Stuff,
     shell: &Shell,
@@ -53,7 +53,7 @@ fn wrap(
 }
 
 /// A short sleeve round the top of each arm, as far as the middle of the upper arm.
-fn sleeves(model: &mut Model, stuff: Stuff, frame: &Frame, out: f32) {
+pub(super) fn sleeves(model: &mut Model, stuff: Stuff, frame: &Frame, out: f32) {
     for side in Side::BOTH {
         let shoulder = frame.joint(Joint::Shoulder(side));
         let elbow = frame.joint(Joint::Elbow(side));

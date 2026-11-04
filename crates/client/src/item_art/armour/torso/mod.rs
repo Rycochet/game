@@ -1,11 +1,17 @@
-//! Torso armour: cuirasses and breastplates, leather, mail, ring mail, padding and the
-//! arming vest. Each is built in millimetres in place on a body frame (`build`), so a
+//! Torso armour: cuirasses and breastplates, leather, mail, ring mail, scale, lamellar,
+//! laminar, brigandines, plated mail, mirrors, slats, rattan, padding and the arming
+//! vest. Each is built in millimetres in place on a body frame (`build`), so a
 //! set and a dressed character use the same parts; the picture shows it alone, as worn,
 //! seen as a character is.
 
+mod cloth;
 mod colour;
+mod mirror;
 mod plate;
+mod plates;
+mod rows;
 mod shell;
+mod slats;
 mod soft;
 
 #[cfg(test)]
@@ -55,6 +61,7 @@ pub(in crate::item_art) fn build(form: &TorsoForm, frame: &Frame) -> Model {
         TorsoBody::Mail { .. } => soft::add_mail(&mut model, form, frame, soft::MAIL_OUT),
         TorsoBody::RingMail { .. } => soft::add_ring_mail(&mut model, form, frame),
         TorsoBody::Padded { .. } => soft::add_padded(&mut model, form, frame),
+        _ => plates::add_plates(&mut model, form, frame),
     }
     if form.lined {
         // The lining shows below the hem.

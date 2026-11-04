@@ -2,16 +2,16 @@
 //! human torso shell from waist to shoulders is about 0.31 m² (breast 0.17, back 0.14),
 //! times thickness and density (see the research).
 
-use super::{Breast, Plackart, Quilting, Rings, TorsoBody, TorsoForm, Weave};
+use super::{Breast, LamellarCut, Plackart, Quilting, Rings, TorsoBody, TorsoForm, Weave};
 use crate::creature::Size;
 use crate::item::Shape;
 
 /// What a main weight is worked out against, in tenths of a gram per cm³.
-const STEEL_DENSITY: u32 = 78;
+pub(super) const STEEL_DENSITY: u32 = 78;
 const HARD_LEATHER_DENSITY: u32 = 11;
 const LINEN_DENSITY: u32 = 15;
 /// A mail shirt with short sleeves, 0.36 m² at 8.5 kg/m², worn under a rigid piece.
-const MAIL_UNDER: u32 = 3100;
+pub(super) const MAIL_UNDER: u32 = 3100;
 
 impl TorsoForm {
     /// The cells it takes up at an ordinary size, wide and long.
@@ -27,6 +27,11 @@ impl TorsoForm {
                     if self.back { (3, 3) } else { (2, 2) }
                 }
                 TorsoBody::Mail { .. } => (2, 2),
+                TorsoBody::Laminar { .. } | TorsoBody::Woven => (3, 3),
+                TorsoBody::Lamellar {
+                    cut: LamellarCut::Boxed,
+                    ..
+                } => (3, 3),
                 _ => (2, 3),
             };
         Shape::rectangle(wide, long)
@@ -95,6 +100,7 @@ impl TorsoForm {
                 let sleeves = if sleeves { 400 } else { 0 };
                 (base + sleeves, LINEN_DENSITY, 0)
             }
+            _ => self.plates_grams(),
         };
         let studded = matches!(self.body, TorsoBody::Leather { studded: true, .. });
         let extras = if self.over_mail { MAIL_UNDER } else { 0 }

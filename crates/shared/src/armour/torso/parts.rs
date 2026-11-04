@@ -101,38 +101,3 @@ pub enum Quilting {
     /// Layers glued together, not stitched: linothorax.
     Laminated,
 }
-
-/// Everything a construction rolls of its own.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum TorsoBody {
-    /// Shaped solid plates.
-    Plate {
-        breast: Breast,
-        plackart: Plackart,
-        /// A ridge down the middle.
-        ridge: bool,
-        fluting: Fluting,
-        /// A hook on the right breast for a couched lance.
-        lance_rest: bool,
-    },
-    /// Hardened or buff leather; studded has rows of rivet heads.
-    Leather {
-        breast: Breast,
-        studded: bool,
-    },
-    Mail {
-        links: Links,
-        weave: Weave,
-        rings: Rings,
-        /// Short sleeves, to the middle of the upper arm: still not Arms.
-        sleeves: bool,
-    },
-    /// Rings sewn flat on leather.
-    RingMail {
-        sleeves: bool,
-    },
-    Padded {
-        quilting: Quilting,
-        sleeves: bool,
-    },
-}

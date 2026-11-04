@@ -1,20 +1,17 @@
 //! Rolling a piece of torso armour, each choice from what the ones before allow, so
 //! nothing is thrown away.
 
-use super::tables::{
-    VEST_MATERIALS, constructions, leather_breasts, materials, may_be_over_mail, may_lack_back,
-    plate_breasts,
-};
-use super::{
-    Breast, Fluting, Links, Plackart, Quilting, Rings, TorsoBody, TorsoForm, TorsoKind, Weave,
-};
-use crate::armour::{Construction, Dye, Finish, Style};
+use super::materials::materials;
+use super::roll_body::roll_body;
+use super::tables::{VEST_MATERIALS, constructions, may_lack_back};
+use super::{Construction, Dye, Finish, Quilting, TorsoBody, TorsoForm, TorsoKind};
+use crate::armour::Style;
 use crate::item::Quality;
 use crate::material::Material;
 use crate::rng::Rng;
 
 /// One in so many.
-fn one_in(rng: &mut Rng, chance: u64) -> bool {
+pub(super) fn one_in(rng: &mut Rng, chance: u64) -> bool {
     rng.range_u64(0, chance) == 0
 }
 
@@ -26,155 +23,59 @@ pub fn roll(rng: &mut Rng, kind: TorsoKind, style: Option<Style>, quality: Quali
     }
     let construction = rng.pick_weighted(&constructions(style));
     let material = rng.pick_weighted(materials(construction, style));
-    let body = roll_body(rng, construction, style, material);
-    let breast = match body {
-        TorsoBody::Plate { breast, .. } | TorsoBody::Leather { breast, .. } => Some(breast),
-        _ => None,
-    };
-    let rigid = matches!(body, TorsoBody::Plate { .. })
-        || (construction == Construction::Leather && material != Material::BuffLeather);
-    let back = !breast.is_some_and(may_lack_back) || !one_in(rng, 4);
-    let over_mail = rigid && may_be_over_mail(style) && one_in(rng, 4);
-    let lined = rigid && one_in(rng, 3);
-    let finish = match construction {
-        Construction::Plate => Finish::roll(rng, style, quality),
-        Construction::Mail if material != Material::Bronze => mail_finish(rng, quality),
-        Construction::Leather if rigid && one_in(rng, 4) => Finish::Lacquered(Dye::roll_paint(rng)),
-        _ => Finish::Bright,
-    };
-    let japanese_mail = matches!(
-        body,
-        TorsoBody::Mail {
-            weave: Weave::Japanese,
-            ..
-        }
-    );
-    let cover = (construction == Construction::Padded && material != Material::Coir
-        || japanese_mail)
-        .then(|| Dye::roll(rng));
-    let trim = (matches!(construction, Construction::Plate | Construction::Mail)
-        && material != Material::Bronze
-        && one_in(rng, 5))
-    .then_some(Material::Brass);
-    TorsoForm {
-        body,
+    let mut form = TorsoForm {
+        body: roll_body(rng, construction, style, material),
         construction,
         style,
         material,
-        back,
-        over_mail,
-        lined,
+        back: true,
+        over_mail: false,
+        lined: false,
         vest: false,
-        finish,
-        cover,
+        finish: Finish::Bright,
+        cover: None,
         lacing: None,
-        trim,
+        trim: None,
+    };
+    form.back = !form.breast().is_some_and(may_lack_back) || !one_in(rng, 4);
+    form.over_mail = form.may_have_mail() && one_in(rng, 4);
+    form.lined = form.always_lined() || (form.may_be_lined() && one_in(rng, 3));
+    form.finish = roll_finish(rng, &form, quality);
+    form.cover = form.has_cover().then(|| Dye::roll(rng));
+    form.lacing = form.has_lacing().then(|| lacing(rng, style));
+    form.trim = (form.may_have_trim() && one_in(rng, 5)).then_some(Material::Brass);
+    form
+}
+
+/// Metal finished as its style has it, mail more plainly, small plates of leather or
+/// horn and hard leather sometimes lacquered (mostly in the east).
+fn roll_finish(rng: &mut Rng, form: &TorsoForm, quality: Quality) -> Finish {
+    let eastern = matches!(form.style, Style::Japanese | Style::Chinese);
+    if form.any_finish() {
+        Finish::roll(rng, form.style, quality)
+    } else if form.mail_finish() {
+        let gilt = if quality >= Quality::Rare { 4 } else { 0 };
+        rng.pick_weighted(&[
+            (Finish::Bright, 70),
+            (Finish::Blackened, 18),
+            (Finish::Tinned, 8),
+            (Finish::Gilt, gilt),
+        ])
+    } else if form.may_be_lacquered() && one_in(rng, if eastern { 2 } else { 4 }) {
+        Finish::Lacquered(Dye::roll_paint(rng))
+    } else {
+        Finish::Bright
     }
 }
 
-/// Mail is left bright, blackened, tinned, or gilt when fine.
-fn mail_finish(rng: &mut Rng, quality: Quality) -> Finish {
-    let gilt = if quality >= Quality::Rare { 4 } else { 0 };
-    rng.pick_weighted(&[
-        (Finish::Bright, 70),
-        (Finish::Blackened, 18),
-        (Finish::Tinned, 8),
-        (Finish::Gilt, gilt),
-    ])
-}
-
-fn roll_body(
-    rng: &mut Rng,
-    construction: Construction,
-    style: Style,
-    material: Material,
-) -> TorsoBody {
-    match construction {
-        Construction::Plate => {
-            let breast = rng.pick_weighted(plate_breasts(style));
-            plate(rng, breast, style)
-        }
-        Construction::Leather => {
-            let breast = if material == Material::BuffLeather {
-                Breast::Round
-            } else {
-                rng.pick_weighted(leather_breasts(style))
-            };
-            let studded = material != Material::BuffLeather && one_in(rng, 3);
-            TorsoBody::Leather { breast, studded }
-        }
-        Construction::Mail => TorsoBody::Mail {
-            links: rng.pick_weighted(&[
-                (Links::Riveted, 50),
-                (Links::RivetedSolid, 25),
-                (Links::Butted, 15),
-                (Links::Welded, 10),
-            ]),
-            weave: if style == Style::Japanese {
-                Weave::Japanese
-            } else {
-                rng.pick_weighted(&[(Weave::FourInOne, 85), (Weave::SixInOne, 15)])
-            },
-            rings: rng.pick_weighted(&[
-                (Rings::Fine, 25),
-                (Rings::Medium, 50),
-                (Rings::Coarse, 25),
-            ]),
-            sleeves: !one_in(rng, 3),
-        },
-        Construction::RingMail => TorsoBody::RingMail {
-            sleeves: one_in(rng, 2),
-        },
-        _ => TorsoBody::Padded {
-            quilting: padded_quilting(rng, style, material),
-            sleeves: one_in(rng, 3),
-        },
-    }
-}
-
-/// Plate's parts, from the breast's shape and the style.
-fn plate(rng: &mut Rng, breast: Breast, style: Style) -> TorsoBody {
-    let plackart = match breast {
-        Breast::Gothic => Plackart::Pointed,
-        Breast::Globose => rng.pick_weighted(&[(Plackart::Half, 70), (Plackart::None, 30)]),
-        Breast::Round if style.european() => {
-            rng.pick_weighted(&[(Plackart::None, 75), (Plackart::Half, 25)])
-        }
-        _ => Plackart::None,
-    };
-    let ridge = match breast {
-        Breast::Gothic | Breast::Peascod | Breast::Munition => true,
-        Breast::Round | Breast::Box => one_in(rng, 2),
-        _ => false,
-    };
-    let fluting = match (breast, style) {
-        (Breast::Gothic, _) => Fluting::Ridges,
-        (_, Style::Maximilian) => Fluting::All,
-        _ => Fluting::None,
-    };
-    let lance_rest = style.european() && breast != Breast::Discs && one_in(rng, 3);
-    TorsoBody::Plate {
-        breast,
-        plackart,
-        ridge,
-        fluting,
-        lance_rest,
-    }
-}
-
-/// Laminated linen is Greek and layered cotton Korean-like (Chinese style); coir is
-/// knotted in squares.
-fn padded_quilting(rng: &mut Rng, style: Style, material: Material) -> Quilting {
-    match (material, style) {
-        (Material::Coir, _) => Quilting::Squares,
-        (Material::Linen, Style::Classical) | (Material::Cotton, Style::Chinese) => {
-            rng.pick_weighted(&[(Quilting::Laminated, 70), (Quilting::Channels, 30)])
-        }
-        _ => rng.pick_weighted(&[
-            (Quilting::Channels, 45),
-            (Quilting::Diamonds, 30),
-            (Quilting::Squares, 25),
-        ]),
+/// Japanese lacing is coloured silk; elsewhere it is mostly plain leather or cord.
+fn lacing(rng: &mut Rng, style: Style) -> Dye {
+    if style == Style::Japanese {
+        Dye::roll_paint(rng)
+    } else if one_in(rng, 3) {
+        Dye::roll(rng)
+    } else {
+        Dye::Natural
     }
 }
 

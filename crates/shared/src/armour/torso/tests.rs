@@ -31,12 +31,7 @@ fn every_roll_keeps_to_its_grid() {
 fn every_name_turns_up() {
     let all: Vec<_> = rolled(TorsoKind::Armour, None).collect();
     let mut names: Vec<_> = all.iter().map(|form| form.name()).collect();
-    for style in [
-        Style::Classical,
-        Style::Chinese,
-        Style::Japanese,
-        Style::Elven,
-    ] {
+    for style in Style::ALL {
         names.extend(rolled(TorsoKind::Armour, Some(style)).map(|form| form.name()));
     }
     for name in [
@@ -70,6 +65,39 @@ fn every_name_turns_up() {
         "Linothorax",
         "Myeonje Baegap",
         "Ichcahuipilli",
+        "Hide Armour",
+        "Scale Shirt",
+        "Lorica Squamata",
+        "Lorica Plumata",
+        "Horn Scale Shirt",
+        "Dragonscale Shirt",
+        "Coin Armour",
+        "Lamellar Cuirass",
+        "Dō-maru",
+        "Haramaki",
+        "Ō-yoroi Dō",
+        "Mountain Pattern Cuirass",
+        "Klivanion",
+        "Bone Lamellar",
+        "Laminar Cuirass",
+        "Lorica Segmentata",
+        "Okegawa-dō",
+        "Banded Mail",
+        "Brigandine",
+        "Coat of Plates",
+        "Jack of Plate",
+        "Leather Brigandine",
+        "Dingjia",
+        "Tatami Dō",
+        "Plated Mail",
+        "Yushman",
+        "Bakhterets",
+        "Zirah Bagtar",
+        "Mirror Armour",
+        "Char-aina",
+        "Splint Cuirass",
+        "Slat Armour",
+        "Rattan Cuirass",
     ] {
         assert!(names.contains(&name), "{name}");
     }

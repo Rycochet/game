@@ -16,6 +16,14 @@ impl TorsoForm {
             TorsoBody::RingMail { .. } => "Ring Mail",
             TorsoBody::Padded { .. } if self.vest => "Arming Vest",
             TorsoBody::Padded { .. } => "Padded Jack",
+            TorsoBody::Scale { .. } => "Scale Shirt",
+            TorsoBody::Lamellar { .. } => "Lamellar Cuirass",
+            TorsoBody::Laminar { .. } => "Laminar Cuirass",
+            TorsoBody::PlatesInCloth { .. } => "Brigandine",
+            TorsoBody::MailAndPlate { .. } => "Plated Mail",
+            TorsoBody::Mirror { .. } => "Mirror Armour",
+            TorsoBody::Splint { .. } => "Splint Cuirass",
+            TorsoBody::Woven => "Rattan Cuirass",
         }
     }
 
@@ -46,6 +54,8 @@ impl TorsoForm {
                     Some("Studded Leather")
                 } else if self.material == Material::BuffLeather {
                     Some("Buff Jerkin")
+                } else if self.material == Material::Rawhide {
+                    Some("Hide Armour")
                 } else if breast == Breast::Muscle {
                     Some("Leather Muscle Cuirass")
                 } else {
@@ -79,6 +89,7 @@ impl TorsoForm {
                 (Material::Cotton, Quilting::Squares) if !sleeves => Some("Ichcahuipilli"),
                 _ => None,
             },
+            _ => self.plates_name(),
         }
     }
 

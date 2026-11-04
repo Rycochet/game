@@ -1,7 +1,7 @@
 //! How each part of a torso piece looks: finishes on metal, dyes on cloth.
 
 use bevy::prelude::*;
-use shared::armour::torso::TorsoForm;
+use shared::armour::torso::{Rivets, TorsoBody, TorsoForm};
 use shared::armour::{Construction, Dye, Finish};
 use shared::item::Quality;
 use shared::material::{Category, Material};
@@ -48,9 +48,6 @@ pub(in crate::item_art) fn finished(
     }
 }
 
-/// Coconut fibre, which the shared colours don't have.
-const COIR: Color = Color::srgb(0.55, 0.38, 0.2);
-
 pub(super) fn material_of(
     stuff: Stuff,
     form: &TorsoForm,
@@ -64,21 +61,23 @@ pub(super) fn material_of(
         };
         matte(dye_colour(form.cover.unwrap_or_default(), base), 0.9)
     };
-    let main = || match form.material.category() {
-        Category::Metal => finished(form.material, form.finish, quality),
-        Category::Leather => match form.finish {
-            Finish::Lacquered(dye) => matte(dye_colour(dye, form.material), 0.25),
-            _ => matte(colour_of(form.material), 0.75),
-        },
-        Category::Plant => matte(COIR, 0.95),
-        Category::Textile => cloth(),
+    let main = || match (form.finish, form.material.category()) {
+        (_, Category::Metal) => finished(form.material, form.finish, quality),
+        (Finish::Lacquered(dye), _) => matte(dye_colour(dye, form.material), 0.25),
+        (_, Category::Leather) => matte(colour_of(form.material), 0.75),
+        (_, Category::Textile) => cloth(),
+        (_, Category::Plant | Category::Wood) => matte(colour_of(form.material), 0.85),
         _ => matte(colour_of(form.material), 0.4),
     };
     match stuff {
         Stuff::Main => main(),
         Stuff::Shade => darker(main()),
         Stuff::Backing => matte(colour_of(Material::Leather), 0.8),
-        Stuff::Cloth => cloth(),
+        // Lacing on lamellae, lames and slats; cloth elsewhere.
+        Stuff::Cloth => match form.lacing {
+            Some(dye) => matte(dye_colour(dye, Material::Leather), 0.7),
+            None => cloth(),
+        },
         // Laminated linen's painted borders take the dye; metal edges are brass.
         Stuff::Trim if form.construction == Construction::Padded => {
             let dye = match form.cover {
@@ -89,8 +88,16 @@ pub(super) fn material_of(
         }
         Stuff::Trim => metal_material(form.trim.unwrap_or(Material::Brass), quality),
         Stuff::Rivet => metal_material(
-            match form.construction {
-                Construction::Leather => Material::Brass,
+            match form.body {
+                TorsoBody::Leather { .. } => Material::Brass,
+                TorsoBody::PlatesInCloth {
+                    rivets: Rivets::Tinned,
+                    ..
+                } => Material::Silver,
+                TorsoBody::PlatesInCloth {
+                    rivets: Rivets::Gilt,
+                    ..
+                } => Material::Gold,
                 _ => Material::Iron,
             },
             quality,
