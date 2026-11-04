@@ -1,7 +1,8 @@
 //! Arm armour: bracers, vambraces, couters, rerebraces, arm harness, manicae, kote,
 //! bazubands and sleeves of every construction. Each arm is built in millimetres in
 //! place on a body frame (`build_arm`), so a set and a dressed character use the same
-//! parts; the picture shows the piece alone, its two arms drawn closer together.
+//! parts; the picture shows the piece alone, seen from the front with the elbows out
+//! and the forearms turned in towards each other.
 
 mod colour;
 mod path;
@@ -13,10 +14,12 @@ mod soft;
 mod tests;
 
 pub(in crate::item_art) use self::colour::material_of;
+use std::f32::consts::FRAC_PI_2;
+
 use bevy::prelude::*;
 use shared::armour::Construction;
 use shared::armour::arms::ArmsForm;
-use shared::body::{Frame, Side};
+use shared::body::{Frame, Joint, Side};
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 
@@ -34,12 +37,10 @@ const SOFT_LIFT: f32 = 7.0;
 const PIXELS_PER_CELL: f32 = 64.0;
 /// Pixels kept clear round it, for its black edge.
 const MARGIN_PIXELS: f32 = OUTLINE_PIXELS + 2.0;
-/// Turned further to its right than the bare body is, so the bent elbows show from
-/// the side, and seen from a little above.
-const TURN: f32 = 0.75;
+/// Seen from a little above.
 const TILT: f32 = 0.25;
-/// How far apart the two arms' tops are in a picture, in millimetres.
-const PICTURE_GAP: f32 = 150.0;
+/// How far apart the two forearms' inner ends are in a picture, in millimetres.
+const PICTURE_GAP: f32 = 60.0;
 /// How far a picture bends the arms forwards at the elbow, so they look like arms
 /// (the owner's request): about 45 degrees.
 const PICTURE_BEND: f32 = 0.8;
@@ -74,19 +75,27 @@ pub(in crate::item_art) fn build(form: &ArmsForm, frame: &Frame) -> Model {
     model
 }
 
-/// The piece built on an ordinary body for its picture, the arms bent at the elbow and
-/// moved in towards each other, turned a little and tipped back, then fitted to its
-/// cells.
+/// The piece built on an ordinary body for its picture, the arms bent at the elbow,
+/// each turned a quarter about its shoulder so the elbows point out and the forearms
+/// in, their outsides to the front (owner's choice), moved in towards each other and
+/// tipped back, then fitted to its cells.
 fn fitted(look: &ArmsLook) -> Model {
     let frame = Frame::of(CreatureKind::Human).expect("people have a frame");
     let mut picture = Model::default();
     for &side in look.form.sides.sides() {
         let mut arm = bent_arm(&look.form, &frame, side, PICTURE_BEND);
-        let inwards = side.sign() as f32 * (frame.shoulder_half as f32 - PICTURE_GAP / 2.0);
-        arm.map(|point| point - Vec3::X * inwards);
+        let [x, y, z] = frame.joint(Joint::Shoulder(side));
+        let shoulder = Vec3::new(x as f32, y as f32, z as f32);
+        // Forwards becomes inwards: the outside of each arm is +X times its sign.
+        let sign = side.sign() as f32;
+        let turn = Quat::from_rotation_y(-sign * FRAC_PI_2);
+        arm.map(|point| shoulder + turn * (point - shoulder));
+        let (low, high) = arm.bounds();
+        let inner = if sign > 0.0 { low.x } else { high.x };
+        arm.map(|point| point + Vec3::X * (sign * PICTURE_GAP / 2.0 - inner));
         picture.join(arm);
     }
-    let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(TURN);
+    let view = Quat::from_rotation_x(TILT);
     picture.map(|point| view * point);
     let (low, high) = picture.bounds();
     let (wide, long) = (look.cells.0 as f32, look.cells.1 as f32);

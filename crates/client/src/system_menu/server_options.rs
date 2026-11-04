@@ -43,7 +43,11 @@ const BOXES: [(OptionBox, &str, bool); 5] = [
         false,
     ),
     (OptionBox::Port, "Port", true),
-    (OptionBox::PlayerLimit, "Player limit (0 for none)", true),
+    (
+        OptionBox::PlayerLimit,
+        "Player limit (0 for no limit)",
+        true,
+    ),
 ];
 
 /// A clipboard (U+1F4CB, in the icon font).

@@ -55,6 +55,9 @@ pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
             Node {
                 flex_direction: FlexDirection::Column,
                 row_gap: px(ROW_GAP),
+                // The rest of the panel, so a page can scroll within it.
+                flex_grow: 1.0,
+                min_height: px(0),
                 display: if index == 0 {
                     Display::Flex
                 } else {

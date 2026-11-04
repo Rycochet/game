@@ -48,6 +48,7 @@ pub enum Material {
     Leather,
     Linen,
     Mithril,
+    Onyx,
     Peridot,
     Rattan,
     Rawhide,
@@ -65,7 +66,7 @@ pub enum Material {
 
 impl Material {
     /// Every material, alphabetically by name.
-    pub const ALL: [Self; 39] = [
+    pub const ALL: [Self; 40] = [
         Self::Adamantine,
         Self::Amethyst,
         Self::Aquamarine,
@@ -92,6 +93,7 @@ impl Material {
         Self::Leather,
         Self::Linen,
         Self::Mithril,
+        Self::Onyx,
         Self::Peridot,
         Self::Rattan,
         Self::Rawhide,
@@ -108,10 +110,11 @@ impl Material {
     ];
 
     /// Every gem, cheapest first and alphabetically within a tier.
-    pub const GEMS: [Self; 10] = [
+    pub const GEMS: [Self; 11] = [
         Self::Amethyst,
         Self::Citrine,
         Self::Garnet,
+        Self::Onyx,
         Self::Peridot,
         Self::Aquamarine,
         Self::Topaz,
@@ -149,6 +152,7 @@ impl Material {
             Self::Leather => "Leather",
             Self::Linen => "Linen",
             Self::Mithril => "Mithril",
+            Self::Onyx => "Onyx",
             Self::Peridot => "Peridot",
             Self::Rattan => "Rattan",
             Self::Rawhide => "Rawhide",
@@ -206,6 +210,7 @@ impl Material {
             | Self::Horn
             | Self::Leather
             | Self::Linen
+            | Self::Onyx
             | Self::Peridot
             | Self::Rattan
             | Self::Rawhide

@@ -6,7 +6,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use super::{
     ABOVE_MENU_LAYER, Action, BUTTON_ROW, CLOSE_MARGIN, CORNER_GAP, FONT, GAP, GEAR_BUTTON,
-    GearButton, Layer, MARGIN, MENU_WIDTH, SETTINGS_SHARE, SETTINGS_TITLE_ROW, SystemMenu,
+    GearButton, Layer, MARGIN, MENU_WIDTH, SETTINGS_HEIGHT, SETTINGS_TITLE_ROW, SETTINGS_WIDTH,
+    SystemMenu,
 };
 use crate::widgets::{
     ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, panel_title,
@@ -175,8 +176,8 @@ pub(super) fn spawn_settings(commands: &mut Commands) {
         commands,
         ABOVE_MENU_LAYER,
         &[SystemMenu::Settings, SystemMenu::KeepVideo],
-        percent(SETTINGS_SHARE),
-        percent(SETTINGS_SHARE),
+        percent(SETTINGS_WIDTH),
+        percent(SETTINGS_HEIGHT),
         Node {
             padding: UiRect::all(px(MARGIN)),
             flex_direction: FlexDirection::Column,

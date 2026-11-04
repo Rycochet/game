@@ -50,7 +50,7 @@ pub use item::{
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use progress::{Progress, spawn_progress_bar};
 pub use scale::{INTERFACE_PERCENTS, TouchOnly};
-pub use scroll::spawn_scroll_area;
+pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area};
 pub use set_edge::set_edge;
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;

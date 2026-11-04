@@ -5,25 +5,28 @@
 use bevy::prelude::*;
 
 use super::{FONT, LABEL_GAP, ROW_GAP, ROW_HEIGHT};
-use crate::widgets::{Dropdown, HoverTip, INK, spawn_dropdown};
+use crate::widgets::{Dropdown, HoverTip, INK, spawn_dropdown, spawn_filling_scroll_area};
 
 const LABEL_WIDTH: f32 = 180.0;
 const SECTION_GAP: f32 = 40.0;
 const HEADING_LINE: f32 = 2.0;
 
-/// Sections side by side, going onto more lines when the page is narrow.
+/// Sections one under another, each the page's whole width (owner's choice),
+/// scrolling in what is left of the page when they don't all fit.
 pub(super) fn spawn_sections(
     page: &mut ChildSpawnerCommands,
     fill: impl FnOnce(&mut ChildSpawnerCommands),
 ) {
-    page.spawn(Node {
-        flex_wrap: FlexWrap::Wrap,
-        column_gap: px(SECTION_GAP),
-        row_gap: px(SECTION_GAP),
-        align_items: AlignItems::FlexStart,
-        ..default()
-    })
-    .with_children(fill);
+    let area = spawn_filling_scroll_area(page);
+    page.commands().entity(area).with_children(|area| {
+        area.spawn(Node {
+            flex_direction: FlexDirection::Column,
+            flex_shrink: 0.0,
+            row_gap: px(SECTION_GAP),
+            ..default()
+        })
+        .with_children(fill);
+    });
 }
 
 /// A column of rows under a heading.

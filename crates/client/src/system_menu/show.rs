@@ -30,8 +30,8 @@ pub(super) fn show_menu(
     view: Res<State<GameView>>,
     clock: Res<ServerClock>,
     mut layers: Query<(&Layer, &mut Visibility)>,
-    mut gear: Single<&mut Visibility, (With<GearButton>, Without<Layer>, Without<PausedText>)>,
-    mut paused: Single<&mut Visibility, (With<PausedText>, Without<Layer>)>,
+    mut gear: Single<&mut Visibility, (With<GearButton>, Without<Layer>)>,
+    mut paused: Single<&mut Node, With<PausedText>>,
 ) {
     let shown_if = |shown: bool| {
         if shown {
@@ -44,8 +44,14 @@ pub(super) fn show_menu(
         visibility.set_if_neq(shown_if(layer.0.contains(&menu)));
     }
     gear.set_if_neq(shown_if(*view.get() != GameView::Connecting));
-    // Only hidden, so its room stays and nothing moves.
-    paused.set_if_neq(shown_if(clock.paused));
+    let display = if clock.paused {
+        Display::Flex
+    } else {
+        Display::None
+    };
+    if paused.display != display {
+        paused.display = display;
+    }
 }
 
 /// Play at the startup menu, Continue while playing, Logout only while playing

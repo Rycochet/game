@@ -155,24 +155,26 @@ pub(in crate::item_art) fn build_pair(form: &HandsForm, frame: &Frame, digits: u
     model
 }
 
-/// Both hands built on an ordinary body, laid down for their picture: fingers to the
-/// right, backs up, the right hand above the left, then fitted to the cells.
+/// Both hands built on an ordinary body, laid down for their picture: fingers down,
+/// backs to the front where most decoration is, thumbs towards each other (owner's
+/// choice), then fitted to the cells.
 fn fitted(look: &HandsLook) -> Model {
     let frame = Frame::of(CreatureKind::Human).expect("people have a frame");
     let mut picture = Model::default();
     for side in Side::BOTH {
         let mut hand = build_hand(&look.form, &frame, side, look.digits);
         let axes = Axes::of(&Hand::of(&frame, side, look.digits));
-        // Down goes right, out comes towards the camera.
-        let turn = Mat3::from_cols(axes.down, axes.out.cross(axes.down), axes.out).transpose();
+        // Down stays down, out comes towards the camera, and the thumb's way goes
+        // across: right for the right hand, left for the left.
+        let turn = Mat3::from_cols(axes.out.cross(axes.down), -axes.down, axes.out).transpose();
         hand.map(|point| turn * (point - axes.wrist));
         let (low, high) = hand.bounds();
-        // Thumbs point away from each other: the left one turns down.
+        // Thumbs towards each other: the right hand on the left.
         let shift = match side {
-            Side::Right => PICTURE_GAP / 2.0 - low.y,
-            Side::Left => -PICTURE_GAP / 2.0 - high.y,
+            Side::Right => -PICTURE_GAP / 2.0 - high.x,
+            Side::Left => PICTURE_GAP / 2.0 - low.x,
         };
-        hand.map(|point| point + Vec3::Y * shift);
+        hand.map(|point| point + Vec3::X * shift);
         picture.join(hand);
     }
     let tilt = Quat::from_rotation_x(-TILT);
