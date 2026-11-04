@@ -6,8 +6,8 @@ use bevy::window::PrimaryWindow;
 
 use super::{FullMap, FullMapPanel, FullMapPicture, FullMapTitle, Minimap};
 use crate::common::{
-    CurrentDungeon, CurrentWorld, FirstFloor, GameClock, GameView, OtherLevels, Portal, SkyNow,
-    SmoothPosition, Token, Weather,
+    CurrentDungeon, CurrentWorld, FirstFloor, GameView, OtherLevels, Portal, SkyNow,
+    SmoothPosition, Token,
 };
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
@@ -24,7 +24,6 @@ pub(super) struct DrawnFrom {
     pub(super) turn: (f32, f32),
     pub(super) scale: f64,
     pub(super) size: (u32, u32),
-    pub(super) water_and_snow: (u64, u64),
 }
 
 /// What maps are drawn from.
@@ -40,8 +39,6 @@ pub(super) struct Sources<'w, 's> {
     pub(super) levels: Res<'w, OtherLevels>,
     pub(super) first_floor: Res<'w, FirstFloor>,
     pub(super) style: Res<'w, SurfaceStyle>,
-    pub(super) clock: Res<'w, GameClock>,
-    pub(super) weather: Res<'w, Weather>,
     pub(super) sky: Res<'w, SkyNow>,
     pub(super) pois: Query<'w, 's, (&'static Portal, &'static Token)>,
     pub(super) asset_server: Res<'w, AssetServer>,

@@ -16,3 +16,23 @@ fn chunks_wrap_round_the_planet_only_east_west() {
     assert_eq!(chunk_of(-1, -1, 640), (9, -1));
     assert_eq!(chunk_of(640, 64, 640), (0, 1));
 }
+
+#[test]
+fn a_chunk_is_coarse_first_and_detailed_only_where_the_zoom_shows_it() {
+    let coarse = Tile {
+        step: COARSE_STEP,
+        across: 16,
+        colours: Vec::new(),
+    };
+    let detailed = Tile {
+        step: 1,
+        across: 64,
+        colours: Vec::new(),
+    };
+    // Nothing yet: the quick version, however close the zoom.
+    assert_eq!(next_step(None, 0.5), Some(COARSE_STEP));
+    // A pixel covering fewer points than the coarse step shows the difference.
+    assert_eq!(next_step(Some(&coarse), 0.5), Some(1));
+    assert_eq!(next_step(Some(&coarse), COARSE_STEP as f64), None);
+    assert_eq!(next_step(Some(&detailed), 0.5), None);
+}

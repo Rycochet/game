@@ -44,8 +44,6 @@ pub(super) fn draw_maps(
         levels,
         first_floor,
         style,
-        clock,
-        weather,
         sky: sky_now,
         pois,
         asset_server,
@@ -126,10 +124,6 @@ pub(super) fn draw_maps(
     let centre = full.centre.filter(|_| full.open).unwrap_or(spot);
     let zoom = if full.open { full.zoom } else { 1.0 };
     let units = units_per_pixel(view, &window, &camera) / f64::from(scale * zoom);
-    let water_and_snow = world.as_deref().map_or((0, 0), |world| {
-        let conditions = world.conditions(&clock, &weather);
-        (conditions.water.to_bits(), conditions.snow_line.to_bits())
-    });
     let now = DrawnFrom {
         view,
         floor: levels.showing(),
@@ -139,7 +133,6 @@ pub(super) fn draw_maps(
         turn: (grid_right.0 as f32, grid_right.1 as f32),
         scale: units,
         size,
-        water_and_snow,
     };
     *since += time.delta_secs();
     if last.as_ref() == Some(&now) && !*pending && *since < REDRAW_SECONDS {
@@ -192,8 +185,12 @@ pub(super) fn draw_maps(
         } else {
             MINIMAP_BUDGET_MS
         };
-        let conditions = world.conditions(&clock, &weather);
-        busy |= tiles.fill(world, &style, conditions, grid_box, budget);
+        // The tide and weather don't change the maps; only the colours they're
+        // drawn in do.
+        if style.is_changed() {
+            tiles.clear();
+        }
+        busy |= tiles.fill(world, &style, grid_box, units, budget);
         busy |= rivers.fill(world, grid_box, budget);
     }
     *pending = busy;
