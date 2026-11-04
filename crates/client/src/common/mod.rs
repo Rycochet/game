@@ -20,6 +20,7 @@ use bevy::prelude::*;
 mod clock;
 mod creatures;
 mod debug;
+mod display;
 mod dungeon;
 mod items;
 mod map;
@@ -30,11 +31,19 @@ mod token;
 mod view;
 mod weather;
 mod window;
+#[cfg(not(target_arch = "wasm32"))]
+mod window_follow;
+mod window_open;
+#[cfg(not(target_arch = "wasm32"))]
+mod window_save;
 mod world;
 
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{Other, PlayerSpeed, SheetText, SpentEnergy};
 pub use debug::{DebugInfo, DetectMonsters, GodMode, KillMob, ServerDevTools, Truesight};
+pub use display::{
+    DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
+};
 pub use dungeon::CurrentDungeon;
 pub use items::{
     BandShift, GROUND, GaveItem, HeldGift, HeldOverGifts, HeldStock, HoveredBag, NO_QUALITY_NAME,
@@ -52,7 +61,6 @@ pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use token::{Attitude, Icon, Token, TokenShape, TokenSize};
 pub use view::{ViewFacing, ViewStats};
 pub use weather::{NORMAL_SNOW_LINE, Weather};
-use window::open_maximised;
 pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois};
 
@@ -65,7 +73,10 @@ pub struct CommonPlugin;
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
         let preferences = preferences::load_preferences();
+        window_open::open_as_saved(app, &preferences.window);
         app.insert_resource(ChosenServer::from_saved(&preferences))
+            .insert_resource(DisplayInUse(preferences.window.display))
+            .init_resource::<RememberWindow>()
             .insert_resource(preferences);
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(frame_settings(true))
@@ -98,11 +109,20 @@ impl Plugin for CommonPlugin {
             .init_resource::<UiPointer>()
             .init_resource::<TouchGesture>()
             .add_systems(Last, preferences::save_preferences)
-            .add_systems(Startup, open_maximised)
+            .add_systems(Startup, window_open::maximise_as_saved)
             .add_systems(
                 PreUpdate,
                 update_sky.run_if(resource_exists::<CurrentWorld>),
             );
+        #[cfg(not(target_arch = "wasm32"))]
+        app.add_systems(
+            Update,
+            (
+                window_open::place_on_monitor,
+                window_follow::follow_display,
+                window_save::remember_window,
+            ),
+        );
     }
 }
 

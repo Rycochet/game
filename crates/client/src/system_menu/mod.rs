@@ -12,6 +12,8 @@ use crate::widgets::{TextSize, WidgetSystems};
 // Split into files (`cargo xtask lint` keeps files small).
 mod connect;
 mod credits;
+#[cfg(not(target_arch = "wasm32"))]
+mod full_screen_key;
 mod icons;
 mod input;
 #[cfg(not(target_arch = "wasm32"))]
@@ -59,6 +61,8 @@ impl Plugin for SystemMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SystemMenu>()
             .init_resource::<connect::ConnectForm>()
+            .init_resource::<settings::VideoForm>()
+            .init_resource::<settings::VideoTrial>()
             .add_systems(Startup, spawn_menu)
             .add_systems(
                 PreUpdate,
@@ -78,11 +82,19 @@ impl Plugin for SystemMenuPlugin {
                     ask_for_pause,
                     settings::fill_interface_page,
                     settings::use_pages,
+                    settings::fill_video_page,
+                    (settings::use_video_page, settings::run_trial).chain(),
                 ),
             );
-        // This game's own server, opened to others: native only.
+        // Alt+Enter, and this game's own server opened to others: native only.
         #[cfg(not(target_arch = "wasm32"))]
         app.add_systems(
+            PreUpdate,
+            full_screen_key::toggle_full_screen
+                .after(bevy::input::InputSystems)
+                .before(WidgetSystems::Presses),
+        )
+        .add_systems(
             Update,
             (
                 online::use_online,

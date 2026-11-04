@@ -34,6 +34,7 @@ You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 | Open or close the full map | M, or click the minimap | Tap the minimap |
 | Move and zoom the full map | Drag, mouse wheel | Drag, pinch |
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
+| Windowed or full screen (native only) | Alt+Enter, or Settings, Video | Settings, Video |
 | Close what is on top | Esc, or click outside it (not the startup menu: press Play) | Tap outside it |
 | Open or close your character, clothes and pockets | C or I, or click the person at the bottom left | Tap the person |
 | Pick up an item, and put it down | Press on it, drag, let go; or click it, then click where it goes | Hold a finger on it, drag, let go |

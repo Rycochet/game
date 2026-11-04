@@ -1,20 +1,10 @@
-//! Opening the window maximised, and how often frames run.
+//! How often frames run.
 
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use std::time::Duration;
 
 use super::FOCUSED_FPS;
-
-/// Natively the window opens filling the screen, which Auto sizes the interface by.
-/// (A browser's canvas fills the page anyway.)
-pub(super) fn open_maximised(mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>) {
-    if cfg!(not(target_arch = "wasm32")) {
-        for mut window in &mut windows {
-            window.set_maximized(true);
-        }
-    }
-}
 
 /// Whether frames keep their focused rate with the window in the background.
 /// Off for players; `dev_tools` turns it on while the debug API or a

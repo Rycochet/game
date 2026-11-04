@@ -17,6 +17,7 @@ const NOT_STARTING: &[&str] = &[
     "HOW_DEBUG_KEEP_DRAWING",
     "HOW_DEBUG_LETS_ENCRYPT_STAGING",
     "HOW_DEBUG_TOOLS",
+    "HOW_DEBUG_WINDOW",
 ];
 
 pub(super) fn add(app: &mut App) {

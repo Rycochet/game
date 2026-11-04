@@ -17,6 +17,17 @@ fn preferences_read_back_as_saved() {
             player_limit: 4,
             ..Default::default()
         },
+        window: WindowPrefs {
+            place: Some(crate::common::display::WindowPlace {
+                x: -1200,
+                y: 40,
+                width: 1280.0,
+                height: 720.0,
+            }),
+            maximised: false,
+            monitor: Some(r"\\.\DISPLAY2".into()),
+            ..Default::default()
+        },
     };
     assert_eq!(Preferences::from_text(&preferences.to_text()), preferences);
 }

@@ -1,5 +1,12 @@
-//! The pages of Settings, under its tabs: Gameplay (nothing yet) and Interface
-//! (its size, and "Enable touch"). Choices go straight into `Preferences`.
+//! The pages of Settings, under its tabs: Gameplay (nothing yet), Interface
+//! (its size, and "Enable touch") and Video (`video`). Interface choices go
+//! straight into `Preferences`.
+
+mod keep;
+mod video;
+
+pub(super) use keep::{VideoTrial, run_trial, spawn_keep_requester};
+pub(super) use video::{VideoForm, fill_video_page, use_video_page};
 
 use bevy::prelude::*;
 
@@ -9,7 +16,7 @@ use crate::widgets::{
     TabChosen, TextSize, TouchOnly, spawn_check_button, spawn_dropdown, spawn_tabs,
 };
 
-const PAGES: [&str; 2] = ["Gameplay", "Interface"];
+const PAGES: [&str; 3] = ["Gameplay", "Interface", "Video"];
 const FONT: TextSize = TextSize::Large;
 const ROW_GAP: f32 = 12.0;
 const LABEL_GAP: f32 = 16.0;
@@ -53,8 +60,14 @@ pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
                 ..default()
             },
         ));
-        if PAGES[index] == "Interface" {
-            page.insert(InterfacePage);
+        match PAGES[index] {
+            "Interface" => {
+                page.insert(InterfacePage);
+            }
+            "Video" => {
+                page.insert(video::VideoPage);
+            }
+            _ => {}
         }
     }
 }
