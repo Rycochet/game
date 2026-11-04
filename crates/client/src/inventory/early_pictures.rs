@@ -23,7 +23,7 @@ pub(super) fn ask_early(
     };
     let inventory = &carried.0;
     // Worn things show in a cell of the clothes panel; in a grid they take their shape.
-    let mut grids: Vec<&[Placed]> = vec![&inventory.pockets];
+    let mut grids: Vec<&[Placed]> = vec![&inventory.items];
     for item in &inventory.worn {
         ask(item, PICTURE_PIXELS_PER_CELL);
         ask(item, longest(item) * PICTURE_PIXELS_PER_CELL);

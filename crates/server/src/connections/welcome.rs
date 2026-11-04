@@ -67,7 +67,7 @@ pub(super) fn give_first_clothes(inventory: &mut Inventory, made_at: MadeAt) {
         return;
     }
     for kind in [ItemKind::TShirt, ItemKind::Trousers, ItemKind::Shoes] {
-        // Straight on, as the pockets may be full. Only for bodies they fit: other
+        // Straight on, as the inventory may be full. Only for bodies they fit: other
         // kinds of creature start with none.
         if inventory.creature == shared::creature::CreatureKind::Human {
             let item = made_for(inventory, kind, None, false, Quality::Common, made_at);

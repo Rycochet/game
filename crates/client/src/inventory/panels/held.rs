@@ -1,4 +1,4 @@
-//! Showing what is held, tooltips over items, and the pockets button.
+//! Showing what is held, tooltips over items, and the inventory button.
 
 use bevy::prelude::*;
 use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
@@ -8,7 +8,7 @@ use shared::item::Rotation;
 use super::super::body::worn_notes;
 use super::super::hold::Target;
 use super::super::{Carried, Holding, item_cell_in_front};
-use super::{HELD_NAME_ABOVE, HeldItem, ItemCell, OpenGrids, PocketsButton, TOOLTIP_OFFSET};
+use super::{HELD_NAME_ABOVE, HeldItem, InventoryButton, ItemCell, OpenGrids, TOOLTIP_OFFSET};
 use crate::common::{GROUND, GameView, UiPointer};
 use crate::widgets::{CELL, Floating, ItemLook, ItemTip, ItemTooltip, spawn_item_cells};
 
@@ -123,7 +123,7 @@ pub(in crate::inventory) fn show_tooltip(
 /// The button is hidden while connecting, as the warning button is.
 pub(in crate::inventory) fn show_button(
     view: Res<State<GameView>>,
-    mut button: Single<&mut Visibility, With<PocketsButton>>,
+    mut button: Single<&mut Visibility, With<InventoryButton>>,
 ) {
     button.set_if_neq(if *view.get() == GameView::Connecting {
         Visibility::Hidden

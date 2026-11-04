@@ -81,7 +81,7 @@ impl Plugin for InventoryPlugin {
                 Update,
                 (
                     read_server,
-                    panels::toggle_pockets,
+                    panels::toggle_inventory,
                     panels::forget_closed,
                     give::forget_closed,
                     panels::show_bins,
@@ -89,7 +89,7 @@ impl Plugin for InventoryPlugin {
                     (ground::read_server, filter::keep_filters).chain(),
                     ground::show_section,
                     ground::show_aim,
-                    panels::show_grids,
+                    (panels::show_grids, panels::show_weights),
                     body::show_clothes,
                     body::show_body_aim,
                     give::show_nearby,
@@ -128,12 +128,12 @@ pub struct Carried(pub Inventory);
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Message, Clone, Copy, Debug)]
 pub enum InventoryDebug {
-    OpenPockets,
-    /// Opens every bag in the pockets.
+    OpenInventory,
+    /// Opens every bag in the inventory.
     OpenBags,
-    /// Picks up the item in the pockets at this index, until the program ends.
+    /// Picks up the item in the inventory at this index, until the program ends.
     PickUp(usize),
-    /// Puts all but the first of what is in the pockets on the ground.
+    /// Puts all but the first of what is in the inventory on the ground.
     DropSome,
 }
 

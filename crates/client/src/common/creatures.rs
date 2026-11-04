@@ -1,4 +1,5 @@
-//! Other creatures on the map, the Character panel's words, the player's speed and spent energy.
+//! Other creatures on the map, the Character panel's words, the player's speed, the
+//! most they can carry and spent energy.
 
 use bevy::prelude::*;
 
@@ -26,6 +27,11 @@ impl Default for PlayerSpeed {
         Self(shared::energy::NORMAL_SPEED)
     }
 }
+
+/// The most the player can carry, in grams, from what they are (`Sheet::capacity`),
+/// which `character` keeps up to date.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CarryLimit(pub u32);
 
 /// The player has done something that takes this much energy (`shared::energy`).
 /// The server works out the same, and keeps its own.

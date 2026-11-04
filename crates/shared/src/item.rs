@@ -3,7 +3,7 @@
 //!
 //! What a kind of item is (`ItemKind::def`) is a table here. An item itself is
 //! its id and kind, and what is inside it. Everything a character carries is a
-//! tree starting from their pockets: a grid of placed items, some of which have
+//! tree starting from their inventory: a grid of placed items, some of which have
 //! grids of their own.
 
 mod category;
@@ -43,12 +43,12 @@ pub use stack::StackLimits;
 /// The widest and tallest a shape can be.
 pub const MAX_SHAPE_SIDE: u8 = 8;
 
-/// How many grids deep things can go below the pockets: backpack, pouch, box.
+/// How many grids deep things can go below the inventory: backpack, pouch, box.
 pub const MAX_DEPTH: u32 = 3;
 
-/// The pockets of a character saved before creature kinds, and of a new
+/// The inventory of a character saved before creature kinds, and of a new
 /// `Inventory`. Otherwise they come from the kind of creature.
-pub const POCKETS: (u8, u8) = (6, 4);
+pub const INVENTORY_SIZE: (u8, u8) = (6, 4);
 
 #[cfg(test)]
 mod add_tests;

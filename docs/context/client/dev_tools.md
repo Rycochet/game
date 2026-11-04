@@ -31,7 +31,7 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - `HOW_DEBUG_MAP_ZOOM=n`: the map `HOW_DEBUG_MAP` opens at this zoom.
 - `HOW_DEBUG_FIRST_FLOOR=n`: number floors from this (0 or 1), whatever the locale says.
 - `HOW_DEBUG_SHOW_FLOOR=n`: three seconds after starting, look at this known floor (an index, from 0); needs the full map open (`HOW_DEBUG_MAP`), as closed it goes straight back.
-- `HOW_DEBUG_INVENTORY=true`: have a few items and, two seconds after starting, show the pockets, clothes, character panel and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at this index in the pockets; with `HOW_DEBUG_CURSOR` to place it. `HOW_DEBUG_CREATURE=n`: first become this index in `CreatureKind::ALL`. Items are saved, so keep to a scratch data folder.
+- `HOW_DEBUG_INVENTORY=true`: have a few items and, two seconds after starting, show the inventory, clothes, character panel and any bags. `HOW_DEBUG_HOLD=n`: no bags, but hold the item at this index in the inventory; with `HOW_DEBUG_CURSOR` to place it. `HOW_DEBUG_CREATURE=n`: first become this index in `CreatureKind::ALL`. Items are saved, so keep to a scratch data folder.
 - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look at what hovering shows.
 - `HOW_DEBUG_PANEL=1`: open the debug menu's Show Widgets panel; `HOW_DEBUG_PANEL=suns`: its Suns and Moons panel; `HOW_DEBUG_PANEL=generate`: Generate POI's submenu.
 - `HOW_DEBUG_MENU=text`: start with the debug menu open, filtered by `text`.
@@ -63,4 +63,4 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 - To find which Bevy system is failing in a panic, build with `cargo build -p client --features bevy/debug --target-dir target/debug-names` (system names are hidden otherwise).
 - `HOW_DEBUG_BAGS=true`: a row of every look of bag east of the player, only drawn, to look at.
 - `HOW_DEBUG_SECRETS=true`, with `HOW_DEBUG_INVENTORY`: truesight on, and rings, hats and socks that are magical, blessed and cursed, to look at how they glow.
-- `HOW_DEBUG_DROP=true`, with `HOW_DEBUG_INVENTORY`: all but the first of what is in the pockets goes on the ground underfoot, to look at the ground section.
+- `HOW_DEBUG_DROP=true`, with `HOW_DEBUG_INVENTORY`: all but the first of what is in the inventory goes on the ground underfoot, to look at the ground section.

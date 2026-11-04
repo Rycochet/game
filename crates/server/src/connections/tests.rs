@@ -188,7 +188,7 @@ fn inventory(answers: &[ServerMessage]) -> Inventory {
 #[test]
 fn a_character_is_told_what_they_carry_on_joining() {
     let first = inventory(&TestClient::new().welcome);
-    assert!(first.pockets.is_empty());
+    assert!(first.items.is_empty());
     let kinds: Vec<_> = first.worn.iter().map(|item| item.kind).collect();
     assert_eq!(
         kinds,
@@ -200,10 +200,10 @@ fn a_character_is_told_what_they_carry_on_joining() {
 fn items_move_by_the_rules_and_a_refused_move_is_put_right() {
     let mut test = TestClient::new();
     let answers = test.send(&[give(ItemKind::Pouch)]);
-    let pouch = inventory(&answers).pockets[0].item.id;
+    let pouch = inventory(&answers).items[0].item.id;
     let answers = test.send(&[give(ItemKind::Stone)]);
     let carried = inventory(&answers);
-    let stone = carried.pockets[1].item.id;
+    let stone = carried.items[1].item.id;
 
     // Too big for the pouch: the answer still says where it really is.
     let refused = ClientMessage::MoveItem {
@@ -217,7 +217,7 @@ fn items_move_by_the_rules_and_a_refused_move_is_put_right() {
 
     let answers = test.send(&[ClientMessage::MoveItem {
         item: stone,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x: 4,
         y: 2,
         rotation: Rotation::None,
@@ -234,12 +234,12 @@ fn moves_between_containers_take_time_and_sorting_one_doesnt() {
     test.time_passes = false;
     let answers = test.send(&[give(ItemKind::Pouch), give(ItemKind::Coin)]);
     let carried = inventory(&answers);
-    let (pouch, coin) = (carried.pockets[0].item.id, carried.pockets[1].item.id);
+    let (pouch, coin) = (carried.items[0].item.id, carried.items[1].item.id);
     let tick = test.world.action_clock.ticks();
     let energy = test.client.energy.at(tick, test.client.speed);
     test.send(&[ClientMessage::MoveItem {
         item: coin,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x: 5,
         y: 3,
         rotation: Rotation::None,
@@ -259,17 +259,17 @@ fn moves_between_containers_take_time_and_sorting_one_doesnt() {
 fn destroying_takes_what_is_carried_and_only_that() {
     let mut test = TestClient::new();
     let answers = test.send(&[give(ItemKind::Coin)]);
-    let coin = inventory(&answers).pockets[0].item.id;
+    let coin = inventory(&answers).items[0].item.id;
     let destroy = ClientMessage::BinItem { item: coin };
     assert!(
         inventory(&test.send(std::slice::from_ref(&destroy)))
-            .pockets
+            .items
             .is_empty()
     );
     assert!(test.client.unsaved);
     // Gone already, so nothing changes, and the client is still told.
     test.client.unsaved = false;
-    assert!(inventory(&test.send(&[destroy])).pockets.is_empty());
+    assert!(inventory(&test.send(&[destroy])).items.is_empty());
     assert!(!test.client.unsaved);
 }
 
@@ -277,11 +277,11 @@ fn destroying_takes_what_is_carried_and_only_that() {
 fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
     let mut test = TestClient::new();
     let answers = test.send(&[give(ItemKind::FootArmour)]);
-    let sabatons = inventory(&answers).pockets[0].item.id;
+    let sabatons = inventory(&answers).items[0].item.id;
     let wear = ClientMessage::WearItem { item: sabatons };
     let worn = inventory(&test.send(std::slice::from_ref(&wear)));
     assert!(worn.is_worn(sabatons));
-    assert!(worn.pockets.is_empty());
+    assert!(worn.items.is_empty());
 
     // The shoes are under the sabatons, so a refused move is put right.
     let shoes = worn
@@ -292,7 +292,7 @@ fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
         .id;
     let take_off = |item| ClientMessage::MoveItem {
         item,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x: 0,
         y: 0,
         rotation: Rotation::None,
@@ -312,7 +312,7 @@ fn a_new_body_takes_everything_off_and_is_kept() {
     let changed = inventory(&answers);
     assert_eq!(changed.creature, CreatureKind::Kobold);
     assert!(changed.worn.is_empty());
-    assert_eq!(changed.pockets_size, (4, 3));
+    assert_eq!(changed.size, (4, 3));
     test.leave();
     // They aren't dressed again on coming back.
     assert_eq!(inventory(&TestClient::of(open()).welcome), changed);
@@ -321,10 +321,10 @@ fn a_new_body_takes_everything_off_and_is_kept() {
 #[test]
 fn new_items_have_the_quality_asked_for_and_the_time_they_were_made() {
     let mut test = TestClient::new();
-    // A dagger, as a long enough sword wouldn't fit in the pockets.
+    // A dagger, as a long enough sword wouldn't fit in the inventory.
     let answers = test.send(&[give(ItemKind::Dagger), give(ItemKind::Coin)]);
     let carried = inventory(&answers);
-    let (sword, coin) = (&carried.pockets[0].item, &carried.pockets[1].item);
+    let (sword, coin) = (&carried.items[0].item, &carried.items[1].item);
     assert_eq!(sword.quality, Some(Quality::Rare));
     assert_eq!(coin.quality, None, "a coin has no quality");
     let made = sword.made_at.expect("new things know when they were made");
@@ -345,9 +345,9 @@ fn only_things_with_quality_can_be_part_of_a_set() {
     };
     test.send(&[give(ItemKind::Hat), give(ItemKind::Apple)]);
     let set_of = |kind| {
-        let pockets = test.client.inventory.pockets.iter();
-        let mut pockets = pockets.filter(|placed| placed.item.kind == kind);
-        pockets.next_back().unwrap().item.set
+        let carried = test.client.inventory.items.iter();
+        let mut carried = carried.filter(|placed| placed.item.kind == kind);
+        carried.next_back().unwrap().item.set
     };
     assert!(set_of(ItemKind::Hat));
     assert!(!set_of(ItemKind::Apple));
@@ -365,13 +365,13 @@ fn a_new_ring_has_a_form_and_fits_its_wearer_and_a_new_gem_rolls_its_size() {
         favour: None,
     };
     let carried = inventory(&test.send(&[give(ItemKind::Ring)]));
-    let ring = &carried.pockets[0].item;
+    let ring = &carried.items[0].item;
     assert!(ring.form.is_some());
     assert_eq!(ring.made.size, carried.creature.def().size);
     let carried = inventory(&test.send(&[give(ItemKind::Gem)]));
     assert!(
         carried
-            .pockets
+            .items
             .iter()
             .any(|placed| { placed.item.kind == ItemKind::Gem && placed.item.form.is_some() })
     );
@@ -389,7 +389,7 @@ fn artifacts_are_always_named() {
         favour: None,
     };
     let carried = inventory(&test.send(&[artifact]));
-    let name = carried.pockets[0].item.name();
+    let name = carried.items[0].item.name();
     assert!(name.ends_with(" Sword") && name != "Sword", "{name}");
 }
 
@@ -408,7 +408,7 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
     test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
     test.send(&[ClientMessage::DevTruesight(true)]);
     let answers = test.send(&[give(ItemKind::Gloves)]);
-    let gloves = inventory(&answers).pockets.last().unwrap().item.made;
+    let gloves = inventory(&answers).items.last().unwrap().item.made;
     assert_eq!(gloves.size, shared::creature::Size::Giant);
     assert_eq!(gloves.fingers, Some(10));
     let large = |kind| ClientMessage::DevGiveItem {
@@ -421,7 +421,7 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
     };
     let mut made = |kind| {
         let answers = test.send(&[large(kind)]);
-        inventory(&answers).pockets.last().unwrap().item.made
+        inventory(&answers).items.last().unwrap().item.made
     };
     let hat = made(ItemKind::Hat);
     assert_eq!(hat.size, shared::creature::Size::Large);
@@ -431,7 +431,7 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
     assert_eq!(coin.size, shared::creature::Size::Medium);
 }
 
-/// Something new in the pockets, with these secrets, and its id.
+/// Something new in the inventory, with these secrets, and its id.
 fn given(
     test: &mut TestClient,
     kind: ItemKind,
@@ -447,7 +447,7 @@ fn given(
         set: false,
         favour,
     }]);
-    inventory(&answers).pockets.last().unwrap().item.id
+    inventory(&answers).items.last().unwrap().item.id
 }
 
 fn secretly_cursed_hat() -> (TestClient, Id) {
@@ -487,7 +487,7 @@ fn trying_to_take_off_a_curse_fails_and_gives_it_away() {
         [
             ClientMessage::MoveItem {
                 item: hat,
-                to: Holder::Pockets,
+                to: Holder::Inventory,
                 x: 0,
                 y: 0,
                 rotation: Rotation::None,
@@ -565,7 +565,7 @@ fn asking_for_magic_on_something_plain_raises_its_quality() {
         set: false,
         favour: None,
     }]);
-    let hat = inventory(&answers).pockets.last().unwrap().item.clone();
+    let hat = inventory(&answers).items.last().unwrap().item.clone();
     assert!(hat.is_magical());
     assert_eq!(hat.quality, Some(Quality::Uncommon));
 }
@@ -668,7 +668,7 @@ fn heavy_loads_slow_a_character_and_dressing_takes_time() {
     let mut test = TestClient::new();
     test.time_passes = false;
     let answers = test.send(&[give(ItemKind::Hat)]);
-    let hat = inventory(&answers).pockets[0].item.id;
+    let hat = inventory(&answers).items[0].item.id;
     test.send(&[ClientMessage::WearItem { item: hat }]);
     assert!(!test.client.energy.ready(0, test.client.speed));
 }
@@ -681,11 +681,11 @@ fn giving_an_item_needs_dev_tools_and_room() {
     assert!(test.send(std::slice::from_ref(&give)).is_empty());
 
     test.dev_tools = true;
-    // Coins given apart, so they fill the pockets.
+    // Coins given apart, so they fill the inventory.
     test.world.stacks = shared::item::StackLimits::NONE;
     let answers = test.send(&vec![give; 30]);
-    // Six by four pockets, and no more.
-    assert_eq!(inventory(&answers).pockets.len(), 24);
+    // A six by four inventory, and no more.
+    assert_eq!(inventory(&answers).items.len(), 24);
 }
 
 #[test]
@@ -869,7 +869,7 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
     );
     let carried = inventory(&told);
     assert_eq!(carried.creature, CreatureKind::Giant);
-    assert_eq!(carried.pockets_size, CreatureKind::Giant.def().pockets);
+    assert_eq!(carried.size, CreatureKind::Giant.def().inventory);
 }
 
 #[test]
@@ -1292,8 +1292,8 @@ fn things_given_stack_and_wearing_a_stack_puts_on_only_its_top() {
     let mut test = TestClient::new();
     let answers = test.send(&[give(ItemKind::Hat), give(ItemKind::Hat)]);
     let carried = inventory(&answers);
-    assert_eq!(carried.pockets.len(), 1);
-    let hats = &carried.pockets[0].item;
+    assert_eq!(carried.items.len(), 1);
+    let hats = &carried.items[0].item;
     assert_eq!(hats.count(), 2);
     let (bottom, top) = (hats.id, hats.top().id);
     let worn = inventory(&test.send(&[ClientMessage::WearItem { item: bottom }]));
@@ -1312,18 +1312,14 @@ fn a_stack_goes_on_another_as_far_as_the_server_allows() {
         give(ItemKind::Coin),
     ]);
     let carried = inventory(&answers);
-    let coins: Vec<_> = carried
-        .pockets
-        .iter()
-        .map(|placed| placed.item.id)
-        .collect();
+    let coins: Vec<_> = carried.items.iter().map(|placed| placed.item.id).collect();
     test.world.stacks = shared::item::StackLimits {
         grams_per_cell: 2000,
         most: 2,
     };
     let stack = |item, onto| ClientMessage::StackItem { item, onto };
     let carried = inventory(&test.send(&[stack(coins[1], coins[0])]));
-    assert_eq!(carried.pockets.len(), 2);
+    assert_eq!(carried.items.len(), 2);
     assert_eq!(carried.find(coins[0]).map(Item::count), Some(2));
     // Full: refused, and the client is put right.
     let carried = inventory(&test.send(&[stack(coins[2], coins[0])]));
@@ -1339,18 +1335,18 @@ fn part_of_a_stack_moves_on_its_own_and_goes_back_if_refused() {
         give(ItemKind::Coin),
         give(ItemKind::Coin),
     ]);
-    let coins = inventory(&answers).pockets[0].item.clone();
+    let coins = inventory(&answers).items[0].item.clone();
     let part = coins.above[0].id;
     let move_to = |x| ClientMessage::MoveItem {
         item: part,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x,
         y: 0,
         rotation: Rotation::None,
     };
     // Onto its own stack's place: refused, and nothing changes.
     let carried = inventory(&test.send(&[move_to(0)]));
-    assert_eq!(carried.pockets.len(), 1);
+    assert_eq!(carried.items.len(), 1);
     assert_eq!(carried.find(coins.id).map(Item::count), Some(3));
     // Elsewhere: the top two go.
     let carried = inventory(&test.send(&[move_to(4)]));
@@ -1366,10 +1362,10 @@ fn a_group_from_a_mixed_stack_moves_together() {
         give(ItemKind::Hat),
         give(ItemKind::Hat),
     ]);
-    let hats = inventory(&answers).pockets[0].item.clone();
+    let hats = inventory(&answers).items[0].item.clone();
     let cursed = hats.above[0].id;
     {
-        let stack = &mut test.client.inventory.pockets[0].item;
+        let stack = &mut test.client.inventory.items[0].item;
         stack.above[0].favour = Some(Favour::Cursed);
         stack.above[0].known.favour = true;
     }
@@ -1379,7 +1375,7 @@ fn a_group_from_a_mixed_stack_moves_together() {
         items: plain.clone(),
         then: Box::new(ClientMessage::MoveItem {
             item: hats.id,
-            to: Holder::Pockets,
+            to: Holder::Inventory,
             x,
             y: 0,
             rotation: Rotation::None,
@@ -1387,16 +1383,16 @@ fn a_group_from_a_mixed_stack_moves_together() {
     };
     // Back where it was: refused, and it goes back on the stack.
     let carried = inventory(&test.send(&[from_stack(0)]));
-    assert_eq!(carried.pockets.len(), 1);
-    assert_eq!(carried.pockets[0].item.count(), 3);
+    assert_eq!(carried.items.len(), 1);
+    assert_eq!(carried.items[0].item.count(), 3);
     // Elsewhere: the plain two go, and the cursed one is left alone.
-    let bottom = carried.pockets[0].item.id;
+    let bottom = carried.items[0].item.id;
     let from_stack = ClientMessage::FromStack {
         stack: bottom,
         items: plain.clone(),
         then: Box::new(ClientMessage::MoveItem {
             item: hats.id,
-            to: Holder::Pockets,
+            to: Holder::Inventory,
             x: 3,
             y: 0,
             rotation: Rotation::None,
@@ -1413,28 +1409,28 @@ fn a_grid_is_sorted_as_the_client_would_sort_it() {
     let answers = test.send(&[give(ItemKind::Coin), give(ItemKind::Stone)]);
     let carried = inventory(&answers);
     let stone = carried
-        .pockets
+        .items
         .iter()
         .find(|placed| placed.item.kind == ItemKind::Stone)
         .map(|placed| placed.item.id)
         .unwrap();
     // Into the far corner, so that sorting moves it.
-    let (width, height) = carried.pockets_size;
+    let (width, height) = carried.size;
     let to_corner = ClientMessage::MoveItem {
         item: stone,
-        to: Holder::Pockets,
+        to: Holder::Inventory,
         x: width - 2,
         y: height - 2,
         rotation: Rotation::None,
     };
     let before = inventory(&test.send(&[to_corner]));
     let expected = before
-        .sorted_grid(Holder::Pockets, test.world.stacks)
+        .sorted_grid(Holder::Inventory, test.world.stacks)
         .unwrap();
-    assert_ne!(before.pockets, expected);
+    assert_ne!(before.items, expected);
     let sort = ClientMessage::SortGrid {
-        holder: Holder::Pockets,
+        holder: Holder::Inventory,
     };
     let after = inventory(&test.send(&[sort]));
-    assert_eq!(after.pockets, expected);
+    assert_eq!(after.items, expected);
 }

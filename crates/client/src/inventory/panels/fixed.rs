@@ -1,9 +1,9 @@
-//! The parts that are always there: the pockets button, the held item, the bin and the ground.
+//! The parts that are always there: the inventory button, the held item, the bin and the ground.
 
 use bevy::prelude::*;
 
 use super::{
-    BUTTON, BinIcon, CORNER_GAP, DropIcon, HeldItem, PocketsButton, bin_icon, drop_icon,
+    BUTTON, BinIcon, CORNER_GAP, DropIcon, HeldItem, InventoryButton, bin_icon, drop_icon,
     person_icon,
 };
 use crate::widgets::{
@@ -36,7 +36,7 @@ pub(in crate::inventory) fn spawn_fixed_parts(
                 ..default()
             };
             spawn_icon_button(holder, ButtonState::Normal, icon, node).insert((
-                PocketsButton,
+                InventoryButton,
                 Pressable,
                 ButtonTooltip("Character".into()),
             ));

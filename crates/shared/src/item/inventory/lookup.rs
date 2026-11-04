@@ -15,7 +15,7 @@ impl Inventory {
                 }
             })
         }
-        let carried = search(&self.pockets, id).or_else(|| {
+        let carried = search(&self.items, id).or_else(|| {
             self.worn.iter().find_map(|item| {
                 if item.id == id {
                     Some(item)
@@ -30,7 +30,7 @@ impl Inventory {
     /// What is in this grid: `None` if there is no such grid.
     pub fn grid(&self, holder: Holder) -> Option<&[Placed]> {
         match holder {
-            Holder::Pockets => Some(&self.pockets),
+            Holder::Inventory => Some(&self.items),
             Holder::Inside(id) => {
                 let item = self.find(id)?;
                 item.kind.def().container?;
@@ -42,7 +42,7 @@ impl Inventory {
     /// How wide and tall this grid is.
     pub fn grid_size(&self, holder: Holder) -> Option<(u8, u8)> {
         match holder {
-            Holder::Pockets => Some(self.pockets_size),
+            Holder::Inventory => Some(self.size),
             Holder::Inside(id) => {
                 let container = self.find(id)?.kind.def().container?;
                 Some((container.width, container.height))
@@ -50,7 +50,7 @@ impl Inventory {
         }
     }
 
-    /// The containers leading to `id` from the pockets, outermost first (not
+    /// The containers leading to `id` from the inventory, outermost first (not
     /// `id` itself): `None` if it isn't here.
     pub(super) fn containers_around(&self, id: Id) -> Option<Vec<Id>> {
         fn search(placed: &[Placed], id: Id, around: &mut Vec<Id>) -> bool {
@@ -67,7 +67,7 @@ impl Inventory {
             })
         }
         let mut around = Vec::new();
-        if search(&self.pockets, id, &mut around) {
+        if search(&self.items, id, &mut around) {
             return Some(around);
         }
         for item in &self.worn {
@@ -90,7 +90,7 @@ impl Inventory {
         }
         let holder = match self.containers_around(id)?.last() {
             Some(&container) => Holder::Inside(container),
-            None => Holder::Pockets,
+            None => Holder::Inventory,
         };
         let placed = self
             .grid(holder)?

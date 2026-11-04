@@ -47,8 +47,8 @@ impl Inventory {
 
     /// Everything carried and worn, each with all in it, as what is left of a body.
     pub fn spilled(self) -> Vec<Item> {
-        let pockets = self.pockets.into_iter().map(|placed| placed.item);
-        pockets.chain(self.worn).collect()
+        let carried = self.items.into_iter().map(|placed| placed.item);
+        carried.chain(self.worn).collect()
     }
 
     /// How a worn item fits its wearer.
@@ -60,15 +60,15 @@ impl Inventory {
     }
 
     /// For a character becoming another kind of creature (dev tools): everything
-    /// comes off and goes in the new pockets, stacking, as far as it fits. Gives back what
+    /// comes off and goes in the new inventory, stacking, as far as it fits. Gives back what
     /// didn't.
     pub fn change_body(&mut self, kind: CreatureKind, limits: StackLimits) -> Vec<Item> {
         let old = std::mem::take(self);
         self.creature = kind;
         self.outfitted = old.outfitted;
-        self.pockets_size = kind.def().pockets;
+        self.size = kind.def().inventory;
         let everything = old
-            .pockets
+            .items
             .into_iter()
             .map(|placed| placed.item)
             .chain(old.worn);

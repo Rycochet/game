@@ -110,7 +110,7 @@ pub(super) fn answer_items(
         }
         ClientMessage::StackItem { item, onto } => {
             let to = client.inventory.placed(onto);
-            let to = to.map_or(Holder::Pockets, |(holder, _)| holder);
+            let to = to.map_or(Holder::Inventory, |(holder, _)| holder);
             let cost = client.inventory.move_cost(item, to);
             let tick = world.action_clock.ticks();
             if client.may_take_off(item) {

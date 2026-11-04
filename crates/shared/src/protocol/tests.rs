@@ -110,7 +110,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::TakeItem {
             with: Id::for_test(3),
             item: Id::for_test(4),
-            to: Holder::Pockets,
+            to: Holder::Inventory,
             x: 1,
             y: 2,
             rotation: Rotation::Quarter,
@@ -120,7 +120,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ClientMessage::TakeFromGround {
             item: Id::for_test(6),
-            to: Holder::Pockets,
+            to: Holder::Inventory,
             x: 1,
             y: 2,
             rotation: Rotation::Quarter,

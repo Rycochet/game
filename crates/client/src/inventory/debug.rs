@@ -31,12 +31,12 @@ pub(super) fn run_debug(
     }
     for asked in asked.read() {
         match *asked {
-            InventoryDebug::OpenPockets => {
-                open.open(Holder::Pockets, &carried.0, &mut commands, &mut raise);
+            InventoryDebug::OpenInventory => {
+                open.open(Holder::Inventory, &carried.0, &mut commands, &mut raise);
                 nearby.open(&mut commands, &mut raise, &nodes);
             }
             InventoryDebug::OpenBags => {
-                for placed in &carried.0.pockets {
+                for placed in &carried.0.items {
                     if placed.item.kind.def().container.is_some() {
                         let bag = Holder::Inside(placed.item.id);
                         open.open(bag, &carried.0, &mut commands, &mut raise);
@@ -44,13 +44,13 @@ pub(super) fn run_debug(
                 }
             }
             InventoryDebug::DropSome => {
-                for placed in carried.0.pockets.iter().skip(1) {
+                for placed in carried.0.items.iter().skip(1) {
                     let item = placed.item.id;
                     to_server.write(ToServer(ClientMessage::DropItem { item }));
                 }
             }
             InventoryDebug::PickUp(index) => {
-                if let Some(placed) = carried.0.pockets.get(index) {
+                if let Some(placed) = carried.0.items.get(index) {
                     holding.held = Some(HeldBy {
                         item: Held {
                             id: placed.item.id,
