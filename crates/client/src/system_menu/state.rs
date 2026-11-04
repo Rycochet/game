@@ -12,6 +12,9 @@ pub enum SystemMenu {
     Confirming,
     /// The menu, and above it the settings.
     Settings,
+    /// Settings, and above it the requester asking whether to keep the video
+    /// settings just applied.
+    KeepVideo,
     /// The menu, and above it the credits.
     Credits,
     /// The menu, and above it Connect (at the startup menu only).
@@ -53,6 +56,8 @@ impl SystemMenu {
             // (Connect's own presses are `connect::use_connect`'s.)
             (Self::Menu, Action::Connect) => Self::Connect,
             (Self::Menu, Action::ServerOptions) => Self::ServerOptions,
+            (Self::Settings, Action::ApplyVideo) => Self::KeepVideo,
+            (Self::KeepVideo, Action::KeepVideo | Action::Back) => Self::Settings,
             (
                 Self::Confirming
                 | Self::Settings
@@ -80,6 +85,10 @@ pub(super) enum Action {
     /// From the startup menu: connects, and closes the menu.
     Play,
     Settings,
+    /// The Video page's Apply.
+    ApplyVideo,
+    /// Keeps the video settings just applied (going back is `Back`).
+    KeepVideo,
     Credits,
     /// Leaves the server for the startup menu.
     LogOut,

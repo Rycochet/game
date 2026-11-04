@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use shared::protocol::OnlineSettings;
 
-use super::SavedServer;
+use super::{SavedServer, WindowPrefs};
 
 /// The player's choices, loaded at start and saved whenever they change.
 #[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
@@ -35,6 +35,8 @@ pub struct Preferences {
     pub online: bool,
     /// How it is opened (Server Options).
     pub online_settings: OnlineSettings,
+    /// The window as last left (native): where, how big, and how shown.
+    pub window: WindowPrefs,
 }
 
 /// How big the interface is drawn: its own size is 100%.

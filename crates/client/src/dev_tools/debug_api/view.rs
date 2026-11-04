@@ -7,7 +7,7 @@ use server::debug_api::{BrpResult, Value, params, refused};
 
 use super::super::{Forced, turn_camera};
 use super::done;
-use crate::common::{InterfaceSize, Preferences};
+use crate::common::{DisplayInUse, DisplayMode, InterfaceSize, Preferences, RememberWindow};
 use crate::view3d::OrbitCamera;
 
 #[derive(Deserialize)]
@@ -40,13 +40,17 @@ pub(super) struct SizeParams {
     height: f32,
 }
 
-/// `client.window_size { "width": 1280, "height": 720 }`, in logical pixels
-/// (`HOW_DEBUG_WINDOW_SIZE`).
+/// `client.window_size { "width": 1280, "height": 720 }`, in logical pixels,
+/// windowed. The window's place and size are then no longer saved.
 pub(super) fn window_size(
     In(request): In<Option<Value>>,
     mut window: Single<&mut Window, With<PrimaryWindow>>,
+    mut in_use: ResMut<DisplayInUse>,
+    mut remember: ResMut<RememberWindow>,
 ) -> BrpResult {
     let SizeParams { width, height } = params(request)?;
+    remember.0 = false;
+    in_use.0.mode = DisplayMode::Windowed;
     window.set_maximized(false);
     window.resolution.set(width, height);
     done()

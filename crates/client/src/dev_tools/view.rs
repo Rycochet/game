@@ -1,40 +1,20 @@
-//! How things look on starting: herbs, the window, the player's token and the camera.
+//! How things look on starting: herbs, the player's token and the camera.
 
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use std::env;
 
-use super::{parse_pos, parse_token};
+use super::parse_token;
 use crate::common::{GameView, Token};
 use crate::player::Player;
 use crate::view3d::OrbitCamera;
 
-/// `HOW_DEBUG_HERBS`, `HOW_DEBUG_WINDOW_SIZE`, `HOW_DEBUG_TOKEN` and `HOW_DEBUG_VIEW`.
+/// `HOW_DEBUG_HERBS`, `HOW_DEBUG_TOKEN` and `HOW_DEBUG_VIEW`.
 pub(super) fn add(app: &mut App) {
     if let Some(stages) = env::var("HOW_DEBUG_HERBS")
         .ok()
         .and_then(|n| n.trim().parse::<u32>().ok())
     {
         app.insert_resource(crate::common::HerbGrowthShift(stages));
-    }
-
-    if let Some((width, height)) = env::var("HOW_DEBUG_WINDOW_SIZE")
-        .ok()
-        .and_then(|size| parse_pos(&size))
-    {
-        let (width, height) = (width as f32, height as f32);
-        app.add_systems(
-            Update,
-            move |time: Res<Time>,
-                  mut done: Local<bool>,
-                  mut window: Single<&mut Window, With<PrimaryWindow>>| {
-                if !*done && time.elapsed_secs() > 1.0 {
-                    *done = true;
-                    window.set_maximized(false);
-                    window.resolution.set(width, height);
-                }
-            },
-        );
     }
 
     if let Some(new_token) = env::var("HOW_DEBUG_TOKEN")
