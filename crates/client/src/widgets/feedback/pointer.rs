@@ -15,7 +15,7 @@ use crate::common::UiPointer;
 #[allow(clippy::type_complexity)]
 pub(in crate::widgets) fn track_pointer(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     mouse: Res<ButtonInput<MouseButton>>,
     pointer: Res<UiPointer>,
     widgets: Query<
@@ -97,7 +97,7 @@ pub(in crate::widgets) fn track_pointer(
 /// Spreads ripples, and removes them when they have faded.
 pub(in crate::widgets) fn spread_ripples(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     mut ripples: Query<(&mut Ripple, &mut Node, &mut BackgroundColor, &ChildOf)>,
 ) {
     for (mut ripple, mut node, mut colour, holder) in &mut ripples {

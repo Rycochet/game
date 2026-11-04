@@ -28,6 +28,7 @@ mod pointer;
 mod sky;
 mod states;
 mod token;
+mod video;
 mod view;
 mod weather;
 mod window;
@@ -59,14 +60,13 @@ pub use sky::SkyNow;
 use sky::update_sky;
 pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use token::{Attitude, Icon, Token, TokenShape, TokenSize};
+pub use video::{
+    AntiAliasing, Background, FrameRate, IN_BROWSER, Preset, RENDER_SCALES, VideoPrefs,
+};
 pub use view::{ViewFacing, ViewStats};
 pub use weather::{NORMAL_SNOW_LINE, Weather};
 pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois};
-
-/// Frame rate cap while the window has focus. Not a twitch game, so this saves
-/// GPU and battery; input still wakes the app immediately.
-const FOCUSED_FPS: f64 = 30.0;
 
 pub struct CommonPlugin;
 
@@ -76,10 +76,10 @@ impl Plugin for CommonPlugin {
         window_open::open_as_saved(app, &preferences.window);
         app.insert_resource(ChosenServer::from_saved(&preferences))
             .insert_resource(DisplayInUse(preferences.window.display))
+            .insert_resource(frame_settings(true, &preferences.video))
             .init_resource::<RememberWindow>()
             .insert_resource(preferences);
         app.insert_resource(ClearColor(Color::BLACK))
-            .insert_resource(frame_settings(true))
             .init_resource::<KeepDrawing>()
             .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()
@@ -121,6 +121,7 @@ impl Plugin for CommonPlugin {
                 window_open::place_on_monitor,
                 window_follow::follow_display,
                 window_save::remember_window,
+                window::apply_vsync,
             ),
         );
     }

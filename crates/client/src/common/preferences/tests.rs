@@ -28,6 +28,12 @@ fn preferences_read_back_as_saved() {
             monitor: Some(r"\\.\DISPLAY2".into()),
             ..Default::default()
         },
+        video: crate::common::VideoPrefs {
+            render_scale: 80,
+            frame_rate: crate::common::FrameRate::Unlimited,
+            ..Default::default()
+        },
+        pause_unfocused: true,
     };
     assert_eq!(Preferences::from_text(&preferences.to_text()), preferences);
 }

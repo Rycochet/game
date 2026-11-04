@@ -1,12 +1,15 @@
-//! The pages of Settings, under its tabs: Gameplay (nothing yet), Interface
+//! The pages of Settings, under its tabs: Gameplay (`gameplay`), Interface
 //! (its size, and "Enable touch") and Video (`video`). Interface choices go
 //! straight into `Preferences`.
 
+mod gameplay;
 mod keep;
+mod rows;
 mod video;
 
+pub(super) use gameplay::{fill_gameplay_page, use_gameplay_page};
 pub(super) use keep::{VideoTrial, run_trial, spawn_keep_requester};
-pub(super) use video::{VideoForm, fill_video_page, use_video_page};
+pub(super) use video::{VideoForm, VideoShown, fill_video_page, use_video_options, use_video_page};
 
 use bevy::prelude::*;
 
@@ -61,6 +64,9 @@ pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
             },
         ));
         match PAGES[index] {
+            "Gameplay" => {
+                page.insert(gameplay::GameplayPage);
+            }
             "Interface" => {
                 page.insert(InterfacePage);
             }

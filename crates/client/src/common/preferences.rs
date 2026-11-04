@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use shared::protocol::OnlineSettings;
 
-use super::{SavedServer, WindowPrefs};
+use super::{SavedServer, VideoPrefs, WindowPrefs};
 
 /// The player's choices, loaded at start and saved whenever they change.
 #[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
@@ -37,6 +37,11 @@ pub struct Preferences {
     pub online_settings: OnlineSettings,
     /// The window as last left (native): where, how big, and how shown.
     pub window: WindowPrefs,
+    /// Video settings for speed and clutter.
+    pub video: VideoPrefs,
+    /// "Pause When Not in Focus": single player pauses while another window is
+    /// in front.
+    pub pause_unfocused: bool,
 }
 
 /// How big the interface is drawn: its own size is 100%.

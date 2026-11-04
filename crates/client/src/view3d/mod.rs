@@ -5,8 +5,10 @@
 //! `ViewGrid`, which says how big a grid cell is and where the floor is; this
 //! module keeps the camera on the player and the tokens on their owners.
 
+mod anti_aliasing;
 mod bands;
 mod camera;
+mod render_scale;
 mod token;
 
 use bevy::prelude::*;
@@ -52,6 +54,8 @@ impl Plugin for View3dPlugin {
                     (camera::control_with_mouse, camera::control_with_touch)
                         .in_set(PlayerSystems::Input),
                     token::find_token_under_cursor.in_set(View3dSystems::Click),
+                    anti_aliasing::apply_anti_aliasing,
+                    render_scale::apply_render_scale,
                 ),
             )
             .add_systems(
