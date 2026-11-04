@@ -23,7 +23,7 @@ use shared::body::Frame;
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 
-pub(in crate::item_art) use self::colour::{dye_colour, finished};
+pub(in crate::item_art) use self::colour::{dye_colour, finished, material_of};
 use self::shell::{Shell, Span};
 use super::surface::studs;
 use super::{Model, Stuff};

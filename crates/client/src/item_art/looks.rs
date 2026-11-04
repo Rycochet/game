@@ -6,6 +6,7 @@ use shared::armour::hands::{Hand, HandsForm};
 use shared::armour::head::HeadForm;
 use shared::armour::legs::LegsForm;
 use shared::armour::neck::NeckForm;
+use shared::armour::set::SetForm;
 use shared::armour::shoulders::ShouldersForm;
 use shared::armour::torso::TorsoForm;
 use shared::armour::waist::WaistForm;
@@ -186,6 +187,27 @@ impl NeckLook {
     }
 }
 
+/// What can be seen of an armour set: its pieces, and how many digits each hand has
+/// for its gauntlets.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct SetLook {
+    pub(in crate::item_art) form: SetForm,
+    pub(in crate::item_art) digits: u8,
+    /// What it takes up, wide and long, not turned.
+    pub(in crate::item_art) cells: (u8, u8),
+}
+
+impl SetLook {
+    /// A set with this many digits on each hand, taking up these cells.
+    pub fn new(form: SetForm, digits: u8, cells: (u8, u8)) -> Self {
+        Self {
+            form,
+            digits,
+            cells,
+        }
+    }
+}
+
 /// How an armour item looks, from its form and the cells it takes up.
 pub(super) fn armour_look(item: &Item) -> Option<Look> {
     let quality = item.quality;
@@ -222,6 +244,14 @@ pub(super) fn armour_look(item: &Item) -> Option<Look> {
         },
         ItemForm::Feet(form) => Look::Feet {
             feet: FeetLook::new(*form, cells),
+            quality,
+        },
+        ItemForm::Set(form) => Look::Set {
+            set: SetLook {
+                form: **form,
+                digits: Hand::digits(item.made.fingers),
+                cells,
+            },
             quality,
         },
         ItemForm::Neck(form) => Look::Neck {

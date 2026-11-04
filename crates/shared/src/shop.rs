@@ -7,6 +7,7 @@
 //! and what to add.
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod armoursmith;
 mod catch_up;
 mod sells;
 #[allow(clippy::module_inception)]

@@ -13,6 +13,7 @@ use crate::armour::hands::HandsForm;
 use crate::armour::head::HeadForm;
 use crate::armour::legs::LegsForm;
 use crate::armour::neck::NeckForm;
+use crate::armour::set::SetForm;
 use crate::armour::shoulders::ShouldersForm;
 use crate::armour::torso::TorsoForm;
 use crate::armour::waist::WaistForm;
@@ -60,6 +61,8 @@ pub enum ItemForm {
     Neck(NeckForm),
     /// A pair of shoes, boots, sandals, clogs or slippers.
     Footwear(FootwearForm),
+    /// An armour set: several locations' pieces as one item.
+    Set(Box<SetForm>),
 }
 
 impl ItemForm {
@@ -79,6 +82,7 @@ impl ItemForm {
             Self::Feet(feet) => feet.name(),
             Self::Neck(neck) => neck.name(),
             Self::Footwear(footwear) => footwear.name(),
+            Self::Set(set) => set.name(),
         }
     }
 
@@ -97,7 +101,8 @@ impl ItemForm {
             | Self::Waist(_)
             | Self::Feet(_)
             | Self::Neck(_)
-            | Self::Footwear(_) => &[],
+            | Self::Footwear(_)
+            | Self::Set(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }

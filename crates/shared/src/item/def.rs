@@ -21,6 +21,10 @@ impl ItemKind {
                 Self::Aventail | Self::Bevor | Self::Collar | Self::Gorget | Self::Mantle => {
                     self.neck_def()
                 }
+                // Armour sets: in `set_def.rs`.
+                Self::ArmourCoat | Self::Corslet | Self::FullArmour | Self::HalfArmour => {
+                    self.set_def()
+                }
                 // Shoes, boots, sandals, clogs and slippers: in `feet_def.rs`.
                 Self::Boots | Self::Clogs | Self::Sandals | Self::Shoes | Self::Slippers => {
                     self.feet_def()
@@ -125,13 +129,6 @@ impl ItemKind {
                     .worn(wear(Outer, &[Hands], (0, 0), false)),
                 Self::FingerlessGloves => plain("Fingerless Gloves", 80, Shape::rectangle(1, 2))
                     .worn(wear(Middle, &[Hands], (1, 1), true)),
-                // With its own padding, so no gambeson under it.
-                Self::FullArmour => {
-                    plain("Full Armour", 20_000, Shape::rectangle(3, 4)).worn(WearDef {
-                        padded: &[Shoulders, Arms, Torso],
-                        ..wear(Outer, &[Shoulders, Arms, Torso, Legs], (0, 0), false)
-                    })
-                }
                 // Over the shoulders too (the owner's decision), under pauldrons.
                 Self::Gambeson => plain("Gambeson", 2500, Shape::rectangle(2, 3)).worn(wear(
                     Middle,
@@ -280,7 +277,8 @@ impl ItemKind {
             | Self::Polearm
             | Self::ShortSword
             | Self::Spear => 200,
-            Self::FullArmour | Self::Barding => 400,
+            Self::FullArmour | Self::HalfArmour | Self::Barding => 400,
+            Self::ArmourCoat | Self::Corslet => 300,
             _ => 100,
         })
     }

@@ -7,6 +7,7 @@ use crate::armour::hands::{self, HandsPiece};
 use crate::armour::head::{self, HeadKind};
 use crate::armour::legs::{self, LegsKind};
 use crate::armour::neck::{self, NeckKind};
+use crate::armour::set::{self, SetKind};
 use crate::armour::shoulders;
 use crate::armour::torso::{self, TorsoKind};
 use crate::armour::waist::{self, WaistKind};
@@ -26,6 +27,7 @@ pub(super) fn armour_form(kind: ItemKind, rng: &mut Rng, quality: Quality) -> Op
     let legs = |rng: &mut Rng, kind| ItemForm::Legs(legs::roll(rng, kind, None, quality));
     let waist = |rng: &mut Rng, kind| ItemForm::Waist(waist::roll(rng, kind, None, quality));
     let neck = |rng: &mut Rng, kind| ItemForm::Neck(neck::roll(rng, kind, None, quality));
+    let set = |rng: &mut Rng, kind| ItemForm::Set(Box::new(set::roll(rng, kind, None, quality)));
     Some(match kind {
         ItemKind::ArmArmour => ItemForm::Arms(arms::roll(rng, None, quality)),
         ItemKind::Gauntlets => hands(rng, HandsPiece::Gauntlets),
@@ -49,6 +51,10 @@ pub(super) fn armour_form(kind: ItemKind, rng: &mut Rng, quality: Quality) -> Op
         ItemKind::Bevor => neck(rng, NeckKind::Bevor),
         ItemKind::Aventail => neck(rng, NeckKind::Aventail),
         ItemKind::Mantle => neck(rng, NeckKind::Mantle),
+        ItemKind::ArmourCoat => set(rng, SetKind::Coat),
+        ItemKind::Corslet => set(rng, SetKind::Corslet),
+        ItemKind::HalfArmour => set(rng, SetKind::Half),
+        ItemKind::FullArmour => set(rng, SetKind::Full),
         _ => return None,
     })
 }

@@ -34,7 +34,7 @@ mod surfaces;
 use adornment::add_adornment;
 use arm::Arm;
 use cape::{add_cape, add_yoke};
-use colour::material_of;
+pub(in crate::item_art) use colour::material_of;
 use disc::{add_ailette, add_shoulder_disc, add_wing, disc_place};
 use guards::add_guards;
 use look::{Look, edge_drop, flute, look_of, shaped};

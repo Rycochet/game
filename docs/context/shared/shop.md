@@ -4,7 +4,7 @@ What town shops have in stock, and working it out when one is opened. Only the s
 
 ## Files
 
-- `crates/shared/src/shop.rs`: `Shop`, `sells`, `NewStock`, `Restocked`, `catch_up`, `REPLACED_AFTER`, `TOP_UP_AFTER`, `DOOR_REACH`. Tests. In `shop/`: `shop.rs` (`Shop`), `sells.rs`, `catch_up.rs`.
+- `crates/shared/src/shop.rs`: `Shop`, `sells`, `NewStock`, `Restocked`, `catch_up`, `REPLACED_AFTER`, `TOP_UP_AFTER`, `DOOR_REACH`. Tests. In `shop/`: `shop.rs` (`Shop`), `sells.rs`, `armoursmith.rs` (the armoursmith's long list: every armour piece and set), `catch_up.rs`.
 
 ## Public API
 

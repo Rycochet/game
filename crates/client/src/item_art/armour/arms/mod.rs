@@ -12,6 +12,7 @@ mod soft;
 #[cfg(test)]
 mod tests;
 
+pub(in crate::item_art) use self::colour::material_of;
 use bevy::prelude::*;
 use shared::armour::Construction;
 use shared::armour::arms::ArmsForm;

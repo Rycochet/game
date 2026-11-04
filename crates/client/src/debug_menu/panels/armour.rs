@@ -44,6 +44,8 @@ pub(super) enum ArmourShown {
     Feet(super::feet::FeetShown),
     /// A neck piece (see `neck.rs`).
     Neck(super::neck::NeckShown),
+    /// An armour set (see `sets.rs`).
+    Set(super::sets::SetShown),
 }
 
 /// The first of fifty rolls in plate, or the first at all where the style has none.
@@ -73,6 +75,7 @@ impl ArmourShown {
             Self::Waist(waist) => waist.look(rolled)?,
             Self::Feet(feet) => feet.look(rolled)?,
             Self::Neck(neck) => neck.look(rolled)?,
+            Self::Set(set) => set.look(rolled)?,
             Self::Hands(piece, seed, digits) => hands_look(
                 hands::roll(&mut Seed::new(seed).rng(), piece, None),
                 digits,

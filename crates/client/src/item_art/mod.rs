@@ -16,7 +16,7 @@ use bevy::render::{ExtractSchedule, Render, RenderApp, RenderSystems};
 
 pub use footwear::FootwearLook;
 pub use looks::{
-    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, ShouldersLook,
+    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, SetLook, ShouldersLook,
     TorsoLook, WaistLook,
 };
 

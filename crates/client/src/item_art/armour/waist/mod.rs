@@ -16,6 +16,7 @@ mod tassets;
 #[cfg(test)]
 mod tests;
 
+pub(in crate::item_art) use self::colour::material_of;
 use bevy::prelude::*;
 use shared::armour::STANDOFF_MM;
 use shared::armour::waist::{WaistForm, WaistPiece};
