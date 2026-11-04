@@ -10,8 +10,8 @@ use bevy::window::PrimaryWindow;
 use bevy::winit::WinitSettings;
 
 use crate::common::{
-    GameView, KeepDrawing, LoadingStep, PointerSystems, ServerStatus, Session, TouchGesture,
-    frame_settings, interface_area,
+    GameView, KeepDrawing, LoadingStep, PointerSystems, Preferences, ServerStatus, Session,
+    TouchGesture, frame_settings, interface_area,
 };
 use crate::widgets::{Progress, TextSize, WidgetSystems, layer_z, spawn_progress_bar};
 
@@ -284,12 +284,14 @@ fn keep_frame_rate(
     step: Res<LoadingStep>,
     session: Res<Session>,
     keep: Res<KeepDrawing>,
+    preferences: Res<Preferences>,
     mut settings: ResMut<WinitSettings>,
 ) {
-    if step.is_changed() || session.is_changed() || keep.is_changed() {
+    let changed = step.is_changed() || session.is_changed() || keep.is_changed();
+    if changed || preferences.is_changed() {
         // Not at the startup menu, which only waits for the player.
         let loading = *step != LoadingStep::Ready && session.is_playing();
-        *settings = frame_settings(loading || keep.0);
+        *settings = frame_settings(loading || keep.0, &preferences.video);
     }
 }
 

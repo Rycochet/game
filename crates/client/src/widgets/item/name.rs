@@ -7,10 +7,13 @@ use bevy::window::PrimaryWindow;
 use super::super::set_edge::{SetEdge, set_edge};
 use super::super::spawn_tooltip;
 use super::{
-    Floating, HELD_ITEM_Z, ItemName, ItemTip, ItemTooltip, NAME_EDGE, NameBox, NameEdge, NameText,
+    Floating, ItemName, ItemTip, ItemTooltip, NAME_EDGE, NameBox, NameEdge, NameText,
     TOOLTIP_OFFSET, shown_at,
 };
 use crate::common::{NO_QUALITY_NAME, UiPointer, interface_area, quality_colour};
+
+/// The widest a tooltip grows before its words wrap, in the interface's pixels.
+const TIP_WIDTH: f32 = 420.0;
 
 pub(in crate::widgets) fn spawn_name_box(mut commands: Commands) {
     commands
@@ -19,9 +22,12 @@ pub(in crate::widgets) fn spawn_name_box(mut commands: Commands) {
             Floating,
             Node {
                 position_type: PositionType::Absolute,
+                // Long words (a setting's) wrap; names fit.
+                max_width: px(TIP_WIDTH),
                 ..default()
             },
-            GlobalZIndex(HELD_ITEM_Z + 1),
+            // In front of everything, full-screen layers included (Settings).
+            GlobalZIndex(i32::MAX),
             Visibility::Hidden,
         ))
         .with_children(|holder| {

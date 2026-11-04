@@ -62,6 +62,7 @@ impl Plugin for SystemMenuPlugin {
         app.init_resource::<SystemMenu>()
             .init_resource::<connect::ConnectForm>()
             .init_resource::<settings::VideoForm>()
+            .init_resource::<settings::VideoShown>()
             .init_resource::<settings::VideoTrial>()
             .add_systems(Startup, spawn_menu)
             .add_systems(
@@ -84,6 +85,9 @@ impl Plugin for SystemMenuPlugin {
                     settings::use_pages,
                     settings::fill_video_page,
                     (settings::use_video_page, settings::run_trial).chain(),
+                    settings::use_video_options,
+                    settings::fill_gameplay_page,
+                    settings::use_gameplay_page,
                 ),
             );
         // Alt+Enter, and this game's own server opened to others: native only.

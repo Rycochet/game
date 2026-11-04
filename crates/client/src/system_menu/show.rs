@@ -1,10 +1,11 @@
 //! Showing what is open, the web's ended page, and asking for a pause.
 
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use shared::protocol::ClientMessage;
 
 use super::{GearButton, Layer, MenuButton, PausedText, SystemMenu};
-use crate::common::{GameView, ServerClock, Session};
+use crate::common::{GameView, Preferences, ServerClock, Session};
 use crate::connection::ToServer;
 use crate::widgets::ButtonState;
 
@@ -78,15 +79,20 @@ pub(super) fn show_buttons(
     }
 }
 
-/// While the menu is open, asks a server that can pause to do so, and to carry on
-/// once it has closed. The server's answer is what stops the client (`connection`).
+/// While the menu is open, or the window is in the background with "Pause When
+/// Not in Focus" on, asks a server that can pause to do so, and to carry on
+/// once neither is so. The server's answer is what stops the client
+/// (`connection`).
 pub(super) fn ask_for_pause(
     menu: Res<SystemMenu>,
     clock: Res<ServerClock>,
+    preferences: Res<Preferences>,
+    window: Single<&Window, With<PrimaryWindow>>,
     mut asked: Local<bool>,
     mut to_server: MessageWriter<ToServer>,
 ) {
-    let wanted = menu.is_open() && clock.can_pause;
+    let away = preferences.pause_unfocused && !window.focused;
+    let wanted = (menu.is_open() || away) && clock.can_pause;
     if wanted != *asked {
         *asked = wanted;
         to_server.write(ToServer(ClientMessage::SetPaused(wanted)));

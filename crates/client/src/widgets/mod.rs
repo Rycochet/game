@@ -9,6 +9,7 @@ mod dropdown;
 mod feedback;
 mod filter_list;
 mod fullscreen;
+mod hover_tip;
 mod item;
 mod moveable;
 mod progress;
@@ -38,6 +39,7 @@ pub use fullscreen::{
     darkening, layer_share, layer_z, leaves_presses, spawn_dialog, spawn_fullscreen_layer,
     spawn_sized_layer,
 };
+pub use hover_tip::HoverTip;
 pub use item::{
     CELL, Floating, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemTip, ItemTooltip,
     PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
@@ -115,7 +117,11 @@ impl Plugin for WidgetsPlugin {
             // After `Update`, where it is asked for, and in time to be laid out.
             .add_systems(
                 PostUpdate,
-                (item::name_item_at_pointer, item::show_item_tooltip)
+                (
+                    item::name_item_at_pointer,
+                    hover_tip::show_hover_tips,
+                    item::show_item_tooltip,
+                )
                     .chain()
                     .before(bevy::ui::UiSystems::Layout),
             )

@@ -85,7 +85,7 @@ pub(in crate::widgets) fn show_edges(
 
 /// Asks for the name of the button the pointer has stayed on, if it has one.
 pub(in crate::widgets) fn show_button_tooltips(
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     pointer: Res<UiPointer>,
     pointed: Res<Pointed>,
     names: Query<&ButtonTooltip>,

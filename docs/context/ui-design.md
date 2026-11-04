@@ -36,7 +36,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Piece | Status | Here |
 | --- | --- | --- |
 | Text | have | `TextSize`. |
-| Tooltip | have | One dark look. A delay on buttons, none on items or what is under the pointer. Never the only way to learn something: fingers have no hover. |
+| Tooltip | have | One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on items or what is under the pointer. A finger held down shows a row's. Never the only way to learn something: fingers have no hover. |
 | Icon | have | Pictures, or drawn in code. |
 | Scroll area | have | Wheel, finger or bar. |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
