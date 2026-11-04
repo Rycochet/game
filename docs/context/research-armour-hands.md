@@ -26,9 +26,9 @@ Wikipedia has one short article on gauntlets, so shapes and weights rest mostly 
 
 ## Names
 
-Generic: Gauntlets, Mitten Gauntlets, Demi-gauntlets, Padded Gloves. Specific, when a roll fits, in this order: Clawed Gauntlets; Studded Leather Gauntlets; Spiked Gauntlets (metal); Locking Gauntlets; Kastenbrust Gauntlets; Gothic Gauntlets; Hourglass Gauntlets; Brigandine Gauntlets (plates in cloth); Mail Mittens / Mail Gloves; Scale Mittens / Scale Gloves; Tekkō (mail and plate, open); Mail-and-plate Gauntlets; Leather Gauntlets.
+Generic: Gauntlets, Mitten Gauntlets, Demi-gauntlets, Padded Gloves. Specific, when a roll fits, in this order: Clawed Gauntlets; Studded Leather Gauntlets; Spiked Gauntlets (metal); Locking Gauntlets; Kastenbrust Gauntlets; Gothic Gauntlets; Hourglass Gauntlets; Brigandine Gauntlets (plates in cloth); Mail Mittens / Mail Gloves; Ring Mail Mittens / Ring Mail Gloves; Scale Mittens / Scale Gloves; Tekkō (mail and plate, open); Mail-and-plate Gauntlets; Leather Gauntlets.
 
-Left out: cestus, knuckledusters, bagh nakh, the tekkō as a weapon and the pata (weapons); the yugake (an archer's glove); single gauntlets such as the manifer and the bridle-hand gauntlet, as items are pairs (owner). Ring mail gloves wait for a ring-mail construction.
+Left out: cestus, knuckledusters, bagh nakh, the tekkō as a weapon and the pata (weapons); the yugake (an archer's glove); single gauntlets such as the manifer and the bridle-hand gauntlet, as items are pairs (owner). Ring mail gloves came once `Construction::RingMail` existed (2026-11-04): fingered or mitten, a wrist cuff, flat rings sewn over the back and fingers of a leather glove; iron, steel or brass; (hand + cuff) × 3/4 at steel plus a 120 g glove, about 450 g a pair.
 
 ## Rolls and grid
 
@@ -39,6 +39,7 @@ Order: style, construction, fingers, cuff, knuckles, claws (fingered metal, 1 in
 | Padded | Padded Gloves (Middle) | fingered | wrist | plain | no |
 | Leather | Gauntlets | fingered, mitten | wrist, bell, long | plain, studs | no |
 | Mail | Gauntlets | fingered, mitten | wrist | plain | no |
+| Ring mail | Gauntlets | fingered, mitten | wrist | plain | no |
 | Scale | Gauntlets | fingered, mitten | wrist, bell | plain, spikes | fingered |
 | Plates in cloth | Gauntlets | fingered, mitten | wrist, hourglass | plain, spikes | no |
 | Mail and plate | Gauntlets, Demi-gauntlets | fingered, open | wrist, bell (open: wrist) | plain, ridged | fingered |

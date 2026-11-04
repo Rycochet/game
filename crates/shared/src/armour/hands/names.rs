@@ -36,6 +36,8 @@ impl HandsForm {
             (C::PlatesInCloth, _) => "Brigandine Gauntlets",
             (C::Mail, Fingers::Mitten) => "Mail Mittens",
             (C::Mail, _) => "Mail Gloves",
+            (C::RingMail, Fingers::Mitten) => "Ring Mail Mittens",
+            (C::RingMail, _) => "Ring Mail Gloves",
             (C::Scale, Fingers::Mitten) => "Scale Mittens",
             (C::Scale, _) => "Scale Gloves",
             (C::MailAndPlate, Fingers::Open) => "Tekkō",
