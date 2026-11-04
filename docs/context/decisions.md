@@ -758,3 +758,7 @@ Claude's choices: old saves are read through `serde` aliases for the old field n
 ## 2026-11-04: Build output may live outside the checkout
 
 Owner's decision: on the owner's machine, cargo builds into `D:\.cargo-target` (set in `C:\Projects\.cargo\config.toml`, outside the repository), as the system drive was full and every worktree kept its own many-GB `target/`. One folder is shared by every checkout and worktree, so dependencies are built once; builds in different checkouts wait for each other, and a running game blocks all of them. Nothing in the repository may assume `target/` is in the workspace: `cargo xtask package` asks `cargo metadata` for the target folder. CI, Docker and other clones set nothing and still use `target/`.
+
+## 2026-11-04: Maps show mid-tide water and the normal snow line
+
+The minimap and full map colour the world map with the water at `sea_level` (mid-tide) and snow at `NORMAL_SNOW_LINE`, never following the tide or the weather; the 3D view still does. Owner: a map should stay consistent. It also means a chunk's colours are worked out once and kept (until `SurfaceStyle` changes), where before every tide change threw them all away.
