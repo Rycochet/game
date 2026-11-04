@@ -634,3 +634,27 @@ fn an_inventory_saved_as_pockets_still_loads() {
     let loaded: Inventory = serde_json::from_str(&old).unwrap();
     assert_eq!(loaded, inventory);
 }
+
+#[test]
+fn a_bag_of_holding_takes_things_down_to_its_most_rows() {
+    let container = ItemKind::BagOfHolding.def().container.unwrap();
+    assert!(container.grows && !ItemKind::Backpack.def().container.unwrap().grows);
+    let mut inventory = carrying(&[ItemKind::BagOfHolding]);
+    let bag = Holder::Inside(id(1));
+    let last_row = container.height - 1;
+    let apple = Item::new(id(2), ItemKind::Apple);
+    inventory.check_add(&apple, bag, 0, last_row, NONE).unwrap();
+    assert!(
+        inventory
+            .check_add(&apple, bag, 0, container.height, NONE)
+            .is_err()
+    );
+    // Its rules are those of a grid as big as it can grow.
+    inventory
+        .add(apple, bag, container.width - 1, 50, NONE)
+        .unwrap();
+    assert_eq!(
+        inventory.grid_size(bag),
+        Some((container.width, container.height))
+    );
+}

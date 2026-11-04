@@ -15,6 +15,7 @@ pub enum ItemKind {
     Aventail,
     Axe,
     Backpack,
+    BagOfHolding,
     Barding,
     Belt,
     BevoredHelm,
@@ -74,7 +75,7 @@ pub enum ItemKind {
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 63] = [
+    pub const ALL: [Self; 64] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -83,6 +84,7 @@ impl ItemKind {
         Self::Aventail,
         Self::Axe,
         Self::Backpack,
+        Self::BagOfHolding,
         Self::Barding,
         Self::Belt,
         Self::Bevor,
