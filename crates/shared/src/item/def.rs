@@ -6,6 +6,9 @@ use crate::creature::{Layer, Location};
 
 /// All but its top-right cell: an L.
 const BOOMERANG: Shape = Shape::rectangle(2, 2).without(1 << 1);
+/// A bag of holding's grid: as wide as the ground's, and up to this many rows.
+const BAG_OF_HOLDING_WIDTH: u8 = 8;
+const BAG_OF_HOLDING_ROWS: u8 = 60;
 
 impl ItemKind {
     pub const fn def(self) -> ItemDef {
@@ -66,6 +69,16 @@ impl ItemKind {
                     one_place: true,
                     ..wear(Outer, &[Back], (1, 1), true)
                 }),
+                // A placeholder for trying out bags that grow: far more inside than out.
+                Self::BagOfHolding => bag(
+                    "Bag of Holding",
+                    500,
+                    Shape::rectangle(3, 3),
+                    (BAG_OF_HOLDING_WIDTH, BAG_OF_HOLDING_ROWS),
+                    Some(100_000),
+                    None,
+                )
+                .growing(),
                 Self::Barding => plain("Barding", 15_000, Shape::rectangle(4, 4)).worn(wear(
                     Outer,
                     &[Neck, Torso, Forelegs, Hindlegs],

@@ -17,6 +17,7 @@ mod held;
 mod icons;
 mod own;
 mod show;
+mod shown;
 
 pub(super) use aim::show_aim;
 pub(super) use bins::{show_bins, show_drop};
@@ -38,6 +39,8 @@ const HELD_NAME_ABOVE: f32 = 48.0;
 /// Where the first panel goes, and how far along each one after it.
 const FIRST_AT: Vec2 = Vec2::new(90.0, 140.0);
 const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
+/// The most of the window's height a growing bag's grid takes, before it scrolls.
+const MOST_HEIGHT: Val = Val::Vh(60.0);
 
 /// The panels open, in the order they were opened.
 #[derive(Resource, Default)]

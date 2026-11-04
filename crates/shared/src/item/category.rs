@@ -107,7 +107,7 @@ impl ItemKind {
             | Self::Tabard
             | Self::Trousers => Clothing,
             Self::Necklace | Self::Ring => Jewellery,
-            Self::Backpack | Self::Pouch | Self::SmallBox => Containers,
+            Self::Backpack | Self::BagOfHolding | Self::Pouch | Self::SmallBox => Containers,
             Self::Apple => Food,
             Self::Coin | Self::Gem => Valuables,
             Self::Stone => Materials,

@@ -7,9 +7,10 @@ use super::super::body::spawn_rows;
 use super::super::filter::spawn_filter;
 use super::super::ground::{GroundHolder, spawn_section};
 use super::super::sort::spawn_sort;
+use super::shown::{grows, shown_size};
 use super::{
     AimLayer, BinNode, BinSlot, CELL_BORDER, COLUMN_GAP, DropNode, FIRST_AT, FONT, GridNode,
-    ItemLayer, NEXT_AT, OpenGrids, WeightText,
+    ItemLayer, MOST_HEIGHT, NEXT_AT, OpenGrids, WeightText,
 };
 use crate::common::SheetText;
 use crate::widgets::{
@@ -30,9 +31,10 @@ impl OpenGrids {
             raise.write(RaisePanel(panel));
             return;
         }
-        let Some((width, height)) = carried.grid_size(holder) else {
+        let Some((width, height)) = shown_size(carried, holder) else {
             return;
         };
+        let grows = grows(carried, holder);
         let title = match holder {
             Holder::Inventory => "Character",
             Holder::Inside(id) => carried.find(id).map_or("", |item| item.kind.def().name),
@@ -43,7 +45,7 @@ impl OpenGrids {
         let mut ground_holder = None;
         commands.entity(content).with_children(|content| {
             if holder != Holder::Inventory {
-                spawn_grid(content, holder, width, height);
+                spawn_grid(content, holder, (width, height), grows);
                 return;
             }
             // What they are like, what they wear and what they carry.
@@ -55,7 +57,7 @@ impl OpenGrids {
                 .with_children(|columns| {
                     columns.spawn((SheetText, Text::default(), FONT.font(), TextColor(INK)));
                     spawn_rows(columns);
-                    spawn_grid(columns, holder, width, height);
+                    spawn_grid(columns, holder, (width, height), false);
                     ground_holder = Some(spawn_section(columns));
                 });
         });
@@ -93,12 +95,16 @@ impl OpenGrids {
 }
 
 /// A grid in its container: sort and filter above it, and under it the words on its
-/// weight and, for the inventory, the Drop and bin slots.
-pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, height: u8) {
+/// weight and, for the inventory, the Drop and bin slots. One that `grows` scrolls.
+fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, size: (u8, u8), grows: bool) {
     let look = ContainerLook {
         title: None,
         controls: true,
-        size: ContainerSize::Fixed,
+        size: if grows {
+            ContainerSize::Grows(MOST_HEIGHT)
+        } else {
+            ContainerSize::Fixed
+        },
         weight: true,
         slots: holder == Holder::Inventory,
     };
@@ -110,12 +116,9 @@ pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, widt
             spawn_filter(row, Some(holder));
         });
     }
-    commands.entity(parts.grid).with_children(|parent| {
-        spawn_item_grid(parent, width, height, GridNode { holder }, (), |grid| {
-            grid.spawn((ItemLayer { holder }, covering(), Floating));
-            grid.spawn((AimLayer { holder }, covering(), Floating));
-        });
-    });
+    commands
+        .entity(parts.grid)
+        .with_children(|parent| spawn_cells(parent, holder, size));
     if let Some(weight) = parts.weight {
         commands.entity(weight).insert(WeightText { holder });
     }
@@ -131,4 +134,17 @@ pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, widt
             slots.spawn((BinNode, BinSlot, slot(), BorderColor::from(GRID_LINE)));
         });
     }
+}
+
+/// A grid's cells, with the layers its items and aim are drawn in, which `show_grids`
+/// and `show_aim` fill.
+pub(super) fn spawn_cells(
+    parent: &mut ChildSpawnerCommands,
+    holder: Holder,
+    (width, height): (u8, u8),
+) {
+    spawn_item_grid(parent, width, height, GridNode { holder }, (), |grid| {
+        grid.spawn((ItemLayer { holder }, covering(), Floating));
+        grid.spawn((AimLayer { holder }, covering(), Floating));
+    });
 }

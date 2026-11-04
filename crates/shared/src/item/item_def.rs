@@ -8,7 +8,12 @@ use crate::item::Shape;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ContainerDef {
     pub width: u8,
+    /// Its rows; for one that grows, the most it can ever have.
     pub height: u8,
+    /// So big inside that only the rows in use are shown, with room below, growing
+    /// as it fills (a bag of holding): its weight is what really limits it. The
+    /// rules are the same as for any grid of `width` by `height`.
+    pub grows: bool,
     /// The most all its contents may weigh, in grams.
     pub max_total: Option<u32>,
     /// The most any one thing in it may weigh, in grams, with its contents.
@@ -72,6 +77,7 @@ pub(super) const fn bag(
         container: Some(ContainerDef {
             width,
             height,
+            grows: false,
             max_total,
             max_each,
         }),
@@ -100,6 +106,20 @@ impl ItemDef {
     pub(super) const fn taking(self, make_percent: u64) -> Self {
         Self {
             make_percent,
+            ..self
+        }
+    }
+
+    /// A bag whose grid grows as it fills: see `ContainerDef::grows`.
+    pub(super) const fn growing(self) -> Self {
+        let Some(container) = self.container else {
+            panic!("only a bag can grow");
+        };
+        Self {
+            container: Some(ContainerDef {
+                grows: true,
+                ..container
+            }),
             ..self
         }
     }
