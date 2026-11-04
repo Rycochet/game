@@ -17,6 +17,7 @@ You can play alone on your own computer, or join a server with other people.
 - [Installation](installation): getting the game or a server running.
 - [The client](client): what the game is made of, and how pausing works.
 - [Controls](controls): keyboard, mouse and touch.
+- [Armour](armour/): what can be worn where, how it is made, and sets.
 - [Hosting a server](hosting/): running your own, with an example Docker Compose file.
 - [Server environment variables](environment-variables): every setting a server has.
 - [Debug menu](debug-menu): the tools built in for trying things out.
