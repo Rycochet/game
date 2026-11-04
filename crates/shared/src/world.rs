@@ -14,7 +14,10 @@ use uuid::Uuid;
 /// The world map generator's version (`WorldParams`, `surface`). Bump it only
 /// when the generated terrain changes in a way that matters, not for
 /// cosmetic changes: existing worlds keep the version they were made with.
-pub const WORLD_MAP_VERSION: u32 = 3;
+pub const WORLD_MAP_VERSION: u32 = 4;
+
+/// The smallest planet's radius in metres (version 4: was 500).
+pub const SMALLEST_RADIUS: u64 = 1_500_000;
 
 /// What world ids are hashed under. Changing it gives every world a new id.
 const WORLD_ID_NAMESPACE: Uuid = Uuid::from_u128(0x6f1d_3a84_9c27_4e5b_b0d6_28e7_41ac_f953);
@@ -60,7 +63,9 @@ pub struct WorldId(pub Uuid);
 pub struct WorldParams {
     /// The public terrain seed (`WorldSeed::terrain`) these came from.
     pub seed: Seed,
-    /// Planet radius in metres, `500..6_500_000` (Earth is about 6_378_000).
+    /// Planet radius in metres, `1_500_000..6_500_000` (Earth is about
+    /// 6_378_000): no smaller, so every planet has room for all its World
+    /// Gates (`shared::world_gate`).
     pub radius: u64,
     /// Distance around the equator in metres.
     pub circumference: u64,
@@ -96,7 +101,10 @@ pub const GAME_HOUR_SECONDS: u64 = 60 * GAME_MINUTE_SECONDS;
 
 impl WorldParams {
     pub fn from_seed(seed: Seed) -> Self {
-        let radius = seed.derive("radius").rng().range_u64(500, 6_500_000);
+        let radius = seed
+            .derive("radius")
+            .rng()
+            .range_u64(SMALLEST_RADIUS, 6_500_000);
         Self {
             seed,
             radius,

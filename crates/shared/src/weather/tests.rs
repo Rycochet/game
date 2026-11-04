@@ -15,7 +15,7 @@ fn golden_samples() {
     assert_eq!(format!("{samples:?}"), GOLDEN_SAMPLES);
 }
 
-const GOLDEN_SAMPLES: &str = "[WeatherSample { cover: 0.6655160302734207, rain: 0.0 }, WeatherSample { cover: 0.0, rain: 0.0 }, WeatherSample { cover: 0.1131246678801845, rain: 0.0 }]";
+const GOLDEN_SAMPLES: &str = "[WeatherSample { cover: 0.5651992800642847, rain: 0.0 }, WeatherSample { cover: 0.0, rain: 0.0 }, WeatherSample { cover: 0.67635443029745, rain: 0.0 }]";
 
 #[test]
 fn noise_stays_in_range_and_varies() {

@@ -38,7 +38,7 @@ fn golden_samples() {
     assert_eq!(format!("{samples:?}"), GOLDEN_SAMPLES);
 }
 
-const GOLDEN_SAMPLES: &str = "[0.3625948317348957, 0.9510458312928677, 0.36863902360200884]";
+const GOLDEN_SAMPLES: &str = "[0.9960789998993278, 0.1914533587172627, 0.6100821044296026]";
 
 #[test]
 fn wraps_east_west() {

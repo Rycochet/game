@@ -34,6 +34,9 @@ impl PoiMap {
         if showcase::chunk_in_plain(chunk) {
             return showcase::poi_at(chunk);
         }
+        if self.has_gate(chunk) {
+            return None;
+        }
         let mut rng = Seed::new(self.seed.at(&[chunk.x, chunk.y])).rng();
         if rng.range_u64(0, 100) >= POI_CHANCE_PERCENT {
             return None;

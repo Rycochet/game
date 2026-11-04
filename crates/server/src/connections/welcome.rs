@@ -98,6 +98,11 @@ pub(super) fn welcome(
     match loaded {
         Ok((character, inventory, sheet)) => {
             (client.character, client.other_worlds) = character;
+            // Never saved in this world (or forgotten): new here, so they
+            // arrive through one of its World Gates.
+            if client.character.forgotten_to == 0 {
+                client.character.world_position = crate::world_map::arrival(world, id);
+            }
             client.inventory = inventory;
             client.sheet = start_sheet(sheet, client.starting_as.take(), &mut client.inventory);
             give_first_clothes(&mut client.inventory, world.made_now());

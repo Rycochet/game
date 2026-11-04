@@ -34,7 +34,7 @@ pub const MARGIN: i64 = CHUNK_SIZE;
 
 /// Bump whenever the roads made from a world change, so saved roads from
 /// before are worked out again.
-pub const ROAD_VERSION: u32 = 2;
+pub const ROAD_VERSION: u32 = 3;
 
 /// Which two towns a road joins, by their chunks, the smaller first, so each
 /// pair has one name however it was found.

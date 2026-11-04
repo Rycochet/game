@@ -19,14 +19,16 @@ fn chunks(answers: &[ServerMessage]) -> Vec<ChunkPos> {
 #[test]
 fn chunks_in_sight_are_sent_on_joining_and_once() {
     let mut test = TestClient::new();
+    let arrived = test.client.world_position();
     let first = chunks(&test.welcome);
     // Sight plus preload either way, 64 points per chunk: 11-12 chunks.
-    let side = first.iter().filter(|c| c.y == 0).count();
+    let row = arrived.1.div_euclid(64);
+    let side = first.iter().filter(|c| c.y == row).count();
     assert!((11..=13).contains(&side), "{side}");
     assert_eq!(first.len(), side * side);
     // Stepping there and back sends nothing new.
     assert!(chunks(&test.steps(&[(1, 0), (-1, 0)])).is_empty());
-    assert_eq!(test.client.world_position(), (0, 0));
+    assert_eq!(test.client.world_position(), arrived);
 }
 
 #[test]
@@ -83,30 +85,41 @@ fn dev_teleports_say_where_and_send_what_is_there() {
     let answers = test.send(&[ClientMessage::DevTeleport { x: 5000, y: 20 }]);
     assert_eq!(answers[0], ServerMessage::Teleported { x: 5000, y: 20 });
     assert!(!chunks(&answers).is_empty());
-    // And back to the start.
+    // And back to the start: the World Gate nearest.
+    let gate = nearest_gate(&test.world, (5000, 20));
     let answers = test.send(&[ClientMessage::DevBackToStart]);
-    let (x, y) = START;
+    let (x, y) = gate;
     assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
-    assert_eq!(test.client.world_position(), START);
+    assert_eq!(test.client.world_position(), gate);
+}
+
+#[test]
+fn new_characters_arrive_through_a_world_gate() {
+    let test = TestClient::new();
+    let at = test.client.world_position();
+    let gates = &test.world.pois.world_gates().gates;
+    assert!(gates.iter().any(|gate| (gate.x, gate.y) == at), "{at:?}");
 }
 
 #[test]
 fn dev_tools_are_ignored_where_not_allowed() {
     let mut test = TestClient::new();
     test.dev_tools = false;
+    let arrived = test.client.world_position();
     assert!(
         test.send(&[ClientMessage::DevTeleport { x: 50, y: 0 }])
             .is_empty()
     );
-    assert_eq!(test.client.world_position(), START);
+    assert_eq!(test.client.world_position(), arrived);
 }
 
 #[test]
 fn a_new_connection_is_sent_all_the_character_knows() {
     let mut test = TestClient::new();
+    let at_arrival: BTreeSet<_> = test.client.character.pois.keys().copied().collect();
     test.send(&[ClientMessage::DevTeleport { x: 5000, y: 20 }]);
     let known: BTreeSet<_> = test.client.character.pois.keys().copied().collect();
-    assert!(known.contains(&ChunkPos { x: 0, y: 0 }));
+    assert!(!at_arrival.is_empty() && at_arrival.is_subset(&known));
     // As it is when a character joins again.
     test.client.world_chunks.clear();
     let TestClient { client, world, .. } = &mut test;
@@ -166,7 +179,7 @@ fn the_key_goes_to_the_showcase_and_esc_comes_back() {
             .any(|poi| poi.kind == shared::poi::PoiKind::ALL[0])
     );
     let answers = test.send(&[ClientMessage::DevBackToStart]);
-    let (x, y) = START;
+    let (x, y) = nearest_gate(&test.world, showcase::ARRIVAL);
     assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
 }
 
@@ -206,12 +219,13 @@ fn a_poi_not_known_of_cannot_be_entered() {
 #[test]
 fn pois_in_sight_are_known() {
     let test = TestClient::new();
+    let (_, arrived_y) = test.client.world_position();
     let known = &test.client.character.pois;
     assert!(!known.is_empty());
     // Only those in sight, not the preload margin beyond it.
     for chunk in known.keys() {
         // (East-west, chunk numbers wrap round the planet.)
-        assert!(chunk.y.abs() * 64 <= WORLD_MAP_SIGHT + 64);
+        assert!((chunk.y * 64 - arrived_y).abs() <= WORLD_MAP_SIGHT + 64);
     }
     assert!(known.len() < test.client.world_chunks.len());
 }

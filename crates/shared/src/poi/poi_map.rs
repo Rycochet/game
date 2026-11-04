@@ -5,6 +5,7 @@ use crate::climate::Climate;
 use crate::rng::Seed;
 use crate::surface::Surface;
 use crate::world::WorldParams;
+use crate::world_gate::WorldGates;
 
 /// Finds the pois of one world.
 pub struct PoiMap {
@@ -17,6 +18,8 @@ pub struct PoiMap {
     pub(super) climate: Climate,
     /// Pois stand only where the ground is above this: high tide.
     pub(super) land_above: f64,
+    /// The world's World Gates: their chunks have no other poi.
+    gates: WorldGates,
 }
 
 impl PoiMap {
@@ -31,12 +34,23 @@ impl PoiMap {
     pub(super) fn with_water(world: &WorldParams, seed: Seed, land_above: f64) -> Self {
         let surface = Surface::new(world);
         Self {
+            gates: WorldGates::find(world, &surface),
             seed,
             width: surface.width(),
             surface,
             climate: Climate::new(world),
             land_above,
         }
+    }
+
+    /// The world's World Gates.
+    pub fn world_gates(&self) -> &WorldGates {
+        &self.gates
+    }
+
+    /// Whether a chunk (`x` wrapped) has a World Gate, and so no other poi.
+    pub(super) fn has_gate(&self, chunk: ChunkPos) -> bool {
+        self.gates.gates.iter().any(|gate| gate.chunk == chunk)
     }
 
     /// The world's width in grid points: `x` wraps at this.
