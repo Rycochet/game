@@ -79,6 +79,8 @@ fn gem_colour(gem: Material) -> Color {
         Material::Diamond => Color::srgb(0.93, 0.96, 1.0),
         Material::Emerald => Color::srgb(0.05, 0.7, 0.3),
         Material::Garnet => Color::srgb(0.5, 0.05, 0.12),
+        // Black, with a little blue in its shine.
+        Material::Onyx => Color::srgb(0.04, 0.04, 0.05),
         Material::Peridot => Color::srgb(0.6, 0.8, 0.15),
         Material::Ruby => Color::srgb(0.85, 0.05, 0.18),
         Material::Sapphire => Color::srgb(0.08, 0.2, 0.8),

@@ -69,16 +69,21 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
     );
     commands.entity(panel).with_children(|panel| {
         panel
-            .spawn(Node {
-                height: px(PAUSED_ROW),
-                flex_shrink: 0.0,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                // Its own room above the first section, without the gap.
-                margin: UiRect::bottom(px(GAP - SECTION_GAP)),
-                ..default()
-            })
-            .with_child((PausedText, panel_title("Paused"), Visibility::Hidden));
+            .spawn((
+                PausedText,
+                Node {
+                    // Taking no room until the game is paused (owner's choice).
+                    display: Display::None,
+                    height: px(PAUSED_ROW),
+                    flex_shrink: 0.0,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    // Its own room above the first section, without the gap.
+                    margin: UiRect::bottom(px(GAP - SECTION_GAP)),
+                    ..default()
+                },
+            ))
+            .with_child(panel_title("Paused"));
         for section in SECTIONS {
             panel
                 .spawn(Node {

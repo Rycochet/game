@@ -37,8 +37,8 @@ const CORNER_GAP: f32 = 8.0;
 
 const MENU_WIDTH: f32 = 260.0;
 const MARGIN: f32 = 20.0;
-/// Always there above the first button, for "Paused" to appear in, so nothing
-/// moves when it does.
+/// Above the first button while the game is paused; no room is kept for it
+/// otherwise.
 const PAUSED_ROW: f32 = 48.0;
 const BUTTON_ROW: f32 = 38.0;
 const GAP: f32 = 8.0;
@@ -48,9 +48,9 @@ const FONT: TextSize = TextSize::Large;
 const SETTINGS_TITLE_ROW: f32 = 36.0;
 /// Round the close button, still on it, for fingers.
 const CLOSE_MARGIN: f32 = 4.0;
-/// Settings takes as much of the window as the first layer does, though it is
-/// above the menu (owner's choice: it needs the room).
-const SETTINGS_SHARE: f32 = 90.0;
+/// How much of the window's width and height Settings takes (owner's choice).
+const SETTINGS_WIDTH: f32 = 50.0;
+const SETTINGS_HEIGHT: f32 = 75.0;
 
 const MENU_LAYER: i32 = 0;
 const ABOVE_MENU_LAYER: i32 = 1;

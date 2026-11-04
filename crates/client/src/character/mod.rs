@@ -53,11 +53,10 @@ fn describe(sheet: &Sheet, carried: &Inventory) -> String {
         format!("Intelligence {}", stats.intelligence),
         format!("Constitution {}", stats.constitution),
         String::new(),
+        // How much is carried now is shown under the inventory instead.
         format!(
-            "Carrying {:.2} of {:.2} kg: {:?}",
-            carried.total_weight() as f32 / 1000.0,
-            sheet.capacity(def.size) as f32 / 1000.0,
-            sheet.load(carried),
+            "Can carry {:.2} kg",
+            sheet.capacity(def.size) as f32 / 1000.0
         ),
         format!("Speed {}%", sheet.speed(carried) * 100 / NORMAL_SPEED),
     ];

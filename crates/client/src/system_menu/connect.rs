@@ -30,7 +30,7 @@ pub(super) use show::show_connect;
 const CONNECT_WIDTH: f32 = 520.0;
 /// The most of the window's height the list takes before it scrolls.
 const LIST_SHARE: f32 = 40.0;
-const EXAMPLE: &str = "For example: play.example.com, or play.example.com:9000";
+const EXAMPLE: &str = "For example: play.example.com, or play.example.com:8081";
 #[cfg(target_arch = "wasm32")]
 const BROWSER_NOTE: &str =
     "A browser only connects to servers whose certificate is from a certificate authority.";

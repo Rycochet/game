@@ -41,14 +41,14 @@ impl RoadKind {
 
     /// How much climbing counts when a road of this kind is laid, in percent of
     /// what it costs walkers. Paths follow exactly the walkers' rules; larger
-    /// roads mind slopes less, so they run straighter (owner: highways are 20%
-    /// more likely to change elevation).
+    /// roads mind slopes less, so they run straighter (owner: highways are 15%
+    /// more likely to change elevation; 20% made them too straight).
     pub fn slope_percent(self) -> u32 {
         match self {
             Self::Path => 100,
             Self::Track => 93,
             Self::Road => 87,
-            Self::Highway => 80,
+            Self::Highway => 85,
         }
     }
 }

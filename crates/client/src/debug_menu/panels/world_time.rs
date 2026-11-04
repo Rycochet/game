@@ -54,13 +54,14 @@ pub(in crate::debug_menu) struct TimeBox;
 pub(super) fn spawn_world_time(content: &mut ChildSpawnerCommands) {
     content
         .spawn(Node {
-            column_gap: px(2),
+            // Buttons and box touching, all one height (owner's choice).
             align_items: AlignItems::Center,
             ..default()
         })
         .with_children(|row| {
             let step = |row: &mut ChildSpawnerCommands, (label, minutes): (&str, f64)| {
                 let node = Node {
+                    height: px(CHECK_ROW),
                     padding: STEP_PADDING,
                     ..default()
                 };
@@ -77,7 +78,6 @@ pub(super) fn spawn_world_time(content: &mut ChildSpawnerCommands) {
             let node = Node {
                 width: px(BOX_WIDTH),
                 height: px(CHECK_ROW),
-                margin: UiRect::horizontal(px(4)),
                 ..default()
             };
             spawn_text_box(row, text_box, FONT, node).insert(TimeBox);

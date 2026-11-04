@@ -31,12 +31,32 @@ pub(super) struct ScrollThumb(Entity);
 /// the entity to put its contents in. They scroll, and don't take presses where they
 /// are out of sight: check `shown_at` when looking for what is under the pointer.
 pub fn spawn_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> Entity {
+    let row = Node {
+        flex_shrink: 0.0,
+        ..default()
+    };
+    spawn_area(parent, row, max_height, false)
+}
+
+/// The same, taking whatever room is left in a column whose own height is set, such
+/// as a panel's, rather than a height given, and its whole width.
+pub fn spawn_filling_scroll_area(parent: &mut ChildSpawnerCommands) -> Entity {
+    let row = Node {
+        flex_grow: 1.0,
+        flex_basis: px(0),
+        min_height: px(0),
+        ..default()
+    };
+    spawn_area(parent, row, percent(100), true)
+}
+
+/// An area in a row of `row`, beside its bar; `fill` widens it to the row's width.
+fn spawn_area(parent: &mut ChildSpawnerCommands, row: Node, max_height: Val, fill: bool) -> Entity {
     let mut area = Entity::PLACEHOLDER;
     parent
         .spawn(Node {
             column_gap: px(BAR_GAP),
-            flex_shrink: 0.0,
-            ..default()
+            ..row
         })
         .with_children(|row| {
             area = row
@@ -45,6 +65,7 @@ pub fn spawn_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> 
                     ScrollPosition::default(),
                     Node {
                         flex_direction: FlexDirection::Column,
+                        flex_grow: if fill { 1.0 } else { 0.0 },
                         max_height,
                         overflow: Overflow::scroll_y(),
                         ..default()
