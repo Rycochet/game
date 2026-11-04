@@ -32,6 +32,12 @@ impl WorldSeed {
         Self(Seed::new(value))
     }
 
+    /// The seed itself: for the server, and for the Hall's gates, whose
+    /// planets' seeds are their addresses.
+    pub const fn value(self) -> u64 {
+        self.0.value()
+    }
+
     /// The public seed the world map terrain comes from (`WorldParams`).
     pub fn terrain(self) -> Seed {
         self.0.derive("terrain")

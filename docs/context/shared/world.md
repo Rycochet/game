@@ -8,7 +8,7 @@ A world's seeds and global settings. Each world has one secret seed (server only
 
 ## Public API
 
-- `WorldSeed::new(u64)` (secret: never send it to a client; serde, for the server's save): `.terrain()` (public terrain seed, for `WorldParams`), `.pois()` (secret, for `PoiMap`), `.id() -> WorldId`.
+- `WorldSeed::new(u64)` (secret: never send it to a client; serde, for the server's save): `.terrain()` (public terrain seed, for `WorldParams`), `.pois()` (secret, for `PoiMap`), `.id() -> WorldId`, `.value()` (the seed itself, for the server and `shared::hall`).
 - `WorldId(Uuid)` (serde): the world's public id, a version 5 UUID of the seed's bytes under a fixed namespace (no clock or randomness); the same seed is the same world on any server. Its own type rather than an `Id`, which only the server makes.
 - `WORLD_MAP_VERSION` (1): the world map generator's version (see "Generator versions" in `architecture.md`); bump only for changes that matter.
 - `GAME_MINUTE_SECONDS` (1), `MINUTES_PER_HOUR` (60), `GAME_HOUR_SECONDS` (60): real time against the game's clock, which counts minutes.
@@ -21,7 +21,7 @@ A world's seeds and global settings. Each world has one secret seed (server only
 
 ## Used by
 
-- `shared::surface` (circumference), `shared::poi` (`high_water`), `shared::protocol` (`WorldId`); `server` (`WorldSeed`, water level); client `common` (`CurrentWorld`), `world_map` (water level), `connection` (`WORLD_MAP_VERSION`).
+- `shared::hall` (`WorldSeed`), `shared::surface` (circumference), `shared::poi` (`high_water`), `shared::protocol` (`WorldId`); `server` (`WorldSeed`, water level); client `common` (`CurrentWorld`), `world_map` (water level), `connection` (`WORLD_MAP_VERSION`).
 
 ## Notes
 

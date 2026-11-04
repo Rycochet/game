@@ -14,6 +14,7 @@ pub mod dungeon;
 pub mod energy;
 pub mod footwear;
 pub mod ground;
+pub mod hall;
 pub mod id;
 pub mod item;
 pub mod item_form;
