@@ -29,6 +29,8 @@
 //! - `HOW_DEBUG_WINDOW=full-screen,WxH|full-screen|maximised|WxH`: how the window
 //!   opens (`window`), saving nothing about it. The debug API's
 //!   `client.window_size` resizes it while running.
+//! - `HOW_DEBUG_TITLE=text`: put `text` and a space before the window's title
+//!   (`Dev:` gives `Dev: Hall of Worlds`), to tell development copies apart.
 //! - `HOW_DEBUG_TOKEN=shape,attitude[,completed[,size]]`: the player's token, as
 //!   numbers (indexes into `TokenShape::ALL` and `Attitude::ALL`), e.g. `3,2`
 //!   is a blue hexagon; a third value of `1` makes it completed, a fourth is
@@ -88,6 +90,7 @@ mod parse;
 mod screenshot;
 mod skip_menu;
 mod start;
+mod title;
 mod view;
 mod window;
 mod world;
@@ -135,6 +138,7 @@ impl Plugin for DevToolsPlugin {
         moving::add(app);
         view::add(app);
         window::add(app);
+        title::add(app);
         world::add(app);
         screenshot::add(app);
         skip_menu::add(app);

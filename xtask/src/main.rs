@@ -4,6 +4,7 @@
 //! macOS, Linux and in CI without installing anything extra.
 
 mod api;
+mod latest;
 mod sizes;
 mod target_dir;
 mod webgl;
@@ -30,6 +31,10 @@ Tasks:
           with the game assets in package/ in cargo's target folder
           (target/package/ unless cargo is set to build elsewhere: what
           the Build workflow uploads).
+  latest  Debug build with the debug API, copied with the assets into
+          latest/ in cargo's target folder as hall-of-worlds-latest, with
+          play.cmd to start it (debug API on port 15712): a copy to play
+          that never blocks a build.
 ";
 
 /// A named cargo command: what `lint` and `test` are made of.
@@ -100,6 +105,7 @@ fn main() -> ExitCode {
         Some("sizes") => sizes::update(&workspace_root()),
         Some("hooks") => hooks(),
         Some("package") => package(),
+        Some("latest") => latest::run(),
         Some("api") => api::run(&env::args().skip(2).collect::<Vec<_>>()),
         _ => {
             eprintln!(
