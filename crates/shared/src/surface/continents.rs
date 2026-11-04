@@ -1,8 +1,11 @@
 //! Continents: land and sea from noise on the scale of the whole planet,
 //! worked out in whole metres from the sea. Each world has its own share of
-//! land, met exactly by choosing where the coast falls.
+//! land, met exactly by choosing where the coast falls. With plates (the
+//! `Plates` generator), they decide where land is and where ranges rise, and
+//! the noise adds the detail.
 
 mod layers;
+mod plates;
 mod shape;
 
 use fastnoise_lite::FastNoiseLite;
@@ -10,6 +13,7 @@ use fastnoise_lite::FastNoiseLite;
 use super::{cylinder, new_noise};
 use crate::world::WorldParams;
 use layers::{Point, layered, ridged, scaled, warped};
+use plates::{Plates, Tectonics};
 use shape::smoothstep;
 
 /// The largest features: about this many across the planet's width.
@@ -45,6 +49,10 @@ const UPLIFT_SCALE: f64 = 3.0;
 const LOWEST_UPLIFT: f64 = 0.15;
 /// The ridges of ranges, this many times finer than the continents.
 const RIDGES_SCALE: f64 = 8.0;
+/// With plates: how much a plate's kind (`-1..1`) moves the land noise, and
+/// a range raises it, so ranges and island arcs stand out of the sea.
+const PLATE_LAND: f64 = 0.45;
+const RANGE_LAND: f64 = 0.15;
 
 pub(super) struct Continents {
     land: FastNoiseLite,
@@ -52,6 +60,8 @@ pub(super) struct Continents {
     ranges: FastNoiseLite,
     ridges: FastNoiseLite,
     uplift: FastNoiseLite,
+    /// For the `Plates` generator.
+    plates: Option<Plates>,
     width: i64,
     /// Grid units to a unit of noise space.
     zoom: f64,
@@ -60,13 +70,15 @@ pub(super) struct Continents {
 }
 
 impl Continents {
-    pub(super) fn new(world: &WorldParams, width: i64) -> Self {
+    /// `with_plates`: the `Plates` generator rather than `Continents`.
+    pub(super) fn new(world: &WorldParams, width: i64, with_plates: bool) -> Self {
         let mut continents = Self {
             land: new_noise(world, "continents"),
             warp: new_noise(world, "continents warp"),
             ranges: new_noise(world, "continents ranges"),
             ridges: new_noise(world, "continents ridges"),
             uplift: new_noise(world, "continents uplift"),
+            plates: with_plates.then(|| Plates::new(world, width)),
             width,
             zoom: (width as f64 / FEATURES_AROUND).max(1.0),
             coast: 0.0,
@@ -82,16 +94,28 @@ impl Continents {
     pub(super) fn metres(&self, x: i64, y: i64, broad: bool) -> (i32, f64) {
         let smallest = if broad { BROAD_SMALLEST } else { SMALLEST };
         let point = warped(&self.warp, cylinder(x, y, self.width, self.zoom), WARP);
-        let (land, jitter) = self.land_at(point, smallest);
+        let tectonics = self.plates.as_ref().map(|plates| plates.at((x, y), point));
+        let (land, jitter) = self.land_at(point, smallest, tectonics);
         let land = land - self.coast;
         let (ridge, uplift) = if land > 0.0 {
-            (self.ridge_at(point, smallest), self.uplift_at(point))
+            (
+                self.ridge_at(point, smallest, tectonics),
+                self.uplift_at(point),
+            )
         } else {
             (0.0, 0.0)
         };
-        let metres = shape::metres(land, ridge, uplift).round() as i32;
+        let moved = tectonics.map_or(0.0, |found| found.boundary.metres);
+        let metres = (shape::metres(land, ridge, uplift) + moved).round() as i32;
         let jitter = if broad { 0.0 } else { jitter * 8.0 };
         (metres, jitter)
+    }
+
+    /// Which plate a point is on, if this has plates.
+    pub(super) fn plate_at(&self, x: i64, y: i64) -> Option<crate::surface::PlateSample> {
+        let plates = self.plates.as_ref()?;
+        let point = warped(&self.warp, cylinder(x, y, self.width, self.zoom), WARP);
+        Some(plates.sample((x, y), point))
     }
 
     /// How many layers until features are `smallest` grid units, starting
@@ -104,15 +128,30 @@ impl Continents {
         layers
     }
 
-    /// The land noise at a warped point, before the coast is taken off, and
-    /// the jitter layer.
-    fn land_at(&self, point: Point, smallest: f64) -> (f64, f64) {
+    /// The land at a warped point, before the coast is taken off (the noise,
+    /// moved by the plates if there are any), and the jitter layer.
+    fn land_at(&self, point: Point, smallest: f64, tectonics: Option<Tectonics>) -> (f64, f64) {
         let jitter_layer = libm::round(libm::log2(self.zoom / JITTER_SIZE)).max(0.0) as u32;
-        layered(&self.land, point, self.layers(1.0, smallest), jitter_layer)
+        let (noise, jitter) = layered(&self.land, point, self.layers(1.0, smallest), jitter_layer);
+        let moved = tectonics.map_or(0.0, |found| {
+            PLATE_LAND * found.base + RANGE_LAND * found.boundary.range
+        });
+        (noise + moved, jitter)
     }
 
-    /// How strong a mountain range is here, `0..=1`: long winding belts.
-    fn ridge_at(&self, point: Point, smallest: f64) -> f64 {
+    /// How strong a mountain range is here, `0..=1`: where plates meet if
+    /// there are any, otherwise long winding belts.
+    fn ridge_at(&self, point: Point, smallest: f64, tectonics: Option<Tectonics>) -> f64 {
+        let layers = self.layers(RIDGES_SCALE, smallest).min(8);
+        if let Some(found) = tectonics {
+            let range = found.boundary.range;
+            if range <= 0.0 {
+                return 0.0;
+            }
+            // A solid range with ridges along it, rather than ridges alone.
+            let ridges = ridged(&self.ridges, scaled(point, RIDGES_SCALE), layers);
+            return range * (0.5 + 0.5 * ridges);
+        }
         let line = 1.0
             - layered(&self.ranges, scaled(point, BELTS_SCALE), 2, u32::MAX)
                 .0
@@ -135,7 +174,6 @@ impl Continents {
         if range <= 0.0 {
             return 0.0;
         }
-        let layers = self.layers(RIDGES_SCALE, smallest).min(8);
         range * ridged(&self.ridges, scaled(point, RIDGES_SCALE), layers)
     }
 
@@ -158,7 +196,8 @@ impl Continents {
             for column in 0..across {
                 let x = self.width * column as i64 / across as i64;
                 let point = warped(&self.warp, cylinder(x, y, self.width, self.zoom), WARP);
-                values.push(self.land_at(point, BROAD_SMALLEST).0);
+                let tectonics = self.plates.as_ref().map(|plates| plates.at((x, y), point));
+                values.push(self.land_at(point, BROAD_SMALLEST, tectonics).0);
             }
         }
         values.sort_by(f64::total_cmp);

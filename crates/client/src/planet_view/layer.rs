@@ -1,5 +1,9 @@
 //! What the globe's picture shows, as the bar's Layer dropdown chooses.
 
+use shared::surface::PlateSample;
+
+use crate::surface_style::hsl_to_rgba;
+
 /// What the picture shows.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) enum Layer {
@@ -8,15 +12,20 @@ pub(super) enum Layer {
     Surface,
     /// Height in metres from the sea, in a map's tints.
     Elevation,
+    /// The plates, for generators that have them: a colour each, brighter
+    /// carrying continents, with their edges red where they push together and
+    /// blue where they part.
+    Plates,
 }
 
 impl Layer {
-    pub(super) const ALL: [Layer; 2] = [Layer::Surface, Layer::Elevation];
+    pub(super) const ALL: [Layer; 3] = [Layer::Surface, Layer::Elevation, Layer::Plates];
 
     pub(super) fn name(self) -> &'static str {
         match self {
             Layer::Surface => "Surface",
             Layer::Elevation => "Elevation",
+            Layer::Plates => "Plates",
         }
     }
 }
@@ -57,4 +66,32 @@ pub(super) fn elevation_tint(metres: i32) -> [u8; 4] {
         }
     };
     [rgb[0], rgb[1], rgb[2], 255]
+}
+
+/// How near its edge a plate's edge colour shows, in plate cells, and how
+/// fast plates must close or part for it to.
+const EDGE: f64 = 0.015;
+const MOVING: f64 = 0.2;
+/// A planet without plates.
+const NO_PLATES: [u8; 4] = [60, 60, 66, 255];
+
+/// A plate's colour, from which plate it is; or its edge's.
+pub(super) fn plate_tint(sample: Option<PlateSample>) -> [u8; 4] {
+    let Some(sample) = sample else {
+        return NO_PLATES;
+    };
+    if sample.edge < EDGE {
+        if sample.closing > MOVING {
+            return [220, 40, 30, 255];
+        }
+        if sample.closing < -MOVING {
+            return [40, 120, 230, 255];
+        }
+        return [230, 230, 230, 255];
+    }
+    let (column, row) = sample.plate;
+    // Neighbours a few hues apart, so they're told apart.
+    let hue = ((column * 5 + row * 3).rem_euclid(12) * 30) as f64;
+    let lightness = if sample.continental { 0.62 } else { 0.32 };
+    hsl_to_rgba(hue, 0.45, lightness)
 }

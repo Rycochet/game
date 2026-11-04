@@ -2,7 +2,7 @@
 
 use shared::surface::SurfaceSample;
 
-use super::layer::{Layer, elevation_tint};
+use super::layer::{Layer, elevation_tint, plate_tint};
 use super::planet::Planet;
 use crate::surface_style::{SurfaceKind, SurfaceStyle};
 
@@ -41,6 +41,7 @@ pub(super) fn colour_at(
     let colour = match colouring.layer {
         Layer::Surface => surface_colour(planet, style, colouring, (x, y), sample),
         Layer::Elevation => elevation_tint(metres),
+        Layer::Plates => plate_tint(planet.surface.plate_at(x, y)),
     };
     (colour, metres.max(0) as f32)
 }

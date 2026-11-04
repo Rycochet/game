@@ -61,7 +61,7 @@ impl Planet {
     pub(super) fn climate_at(&self, x: i64, y: i64, sample: SurfaceSample) -> ClimateSample {
         match self.surface.generator() {
             SurfaceGenerator::Classic => self.climate.sample(x, y, sample.height),
-            SurfaceGenerator::Continents => {
+            SurfaceGenerator::Continents | SurfaceGenerator::Plates => {
                 self.climate
                     .sample_metres(x, y, self.surface.metres(sample.height))
             }

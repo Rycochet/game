@@ -37,6 +37,20 @@ impl SurfaceSample {
     }
 }
 
+/// Which plate a point is on, for showing them (`Plates` only).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PlateSample {
+    /// Which plate: its cell on the plates' coarse grid.
+    pub plate: (i64, i64),
+    /// Whether it carries a continent.
+    pub continental: bool,
+    /// How far from its edge with the next plate, in plate cells (one is
+    /// about a tenth of the planet's width).
+    pub edge: f64,
+    /// How fast it and that plate close, `-2..2`: below 0 they part.
+    pub closing: f64,
+}
+
 /// The ways of making a surface.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum SurfaceGenerator {
@@ -46,28 +60,37 @@ pub enum SurfaceGenerator {
     /// Continents and oceans with shelves, worked out in metres, with rare
     /// mountain ranges inland.
     Continents,
+    /// As `Continents`, but where land is and where ranges rise come from
+    /// drifting plates: ranges where they meet, island arcs, trenches, ocean
+    /// ridges and rifts.
+    Plates,
 }
 
 impl SurfaceGenerator {
-    pub const ALL: [SurfaceGenerator; 2] =
-        [SurfaceGenerator::Classic, SurfaceGenerator::Continents];
+    pub const ALL: [SurfaceGenerator; 3] = [
+        SurfaceGenerator::Classic,
+        SurfaceGenerator::Continents,
+        SurfaceGenerator::Plates,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
             SurfaceGenerator::Classic => "Classic",
             SurfaceGenerator::Continents => "Continents",
+            SurfaceGenerator::Plates => "Plates",
         }
     }
 }
 
 enum Generator {
     Classic(Classic),
-    // Boxed: it is much larger than `Classic`.
+    // Boxed: it is much larger than `Classic`. With plates for `Plates`.
     Continents(Box<Continents>),
 }
 
 /// Generates surface samples for one world.
 pub struct Surface {
+    kind: SurfaceGenerator,
     generator: Generator,
     /// Grid units around the equator.
     width: i64,
@@ -86,11 +109,13 @@ impl Surface {
         let width = (world.circumference / 1000).max(1) as i64;
         let generator = match kind {
             SurfaceGenerator::Classic => Generator::Classic(Classic::new(world)),
-            SurfaceGenerator::Continents => {
-                Generator::Continents(Box::new(Continents::new(world, width)))
+            SurfaceGenerator::Continents | SurfaceGenerator::Plates => {
+                let with_plates = kind == SurfaceGenerator::Plates;
+                Generator::Continents(Box::new(Continents::new(world, width, with_plates)))
             }
         };
         Self {
+            kind,
             generator,
             width,
             sea_level: world.sea_level,
@@ -98,10 +123,7 @@ impl Surface {
     }
 
     pub fn generator(&self) -> SurfaceGenerator {
-        match self.generator {
-            Generator::Classic(_) => SurfaceGenerator::Classic,
-            Generator::Continents(_) => SurfaceGenerator::Continents,
-        }
+        self.kind
     }
 
     /// Grid units around the equator; `x` wraps at this value.
@@ -138,6 +160,14 @@ impl Surface {
                     jitter,
                 }
             }
+        }
+    }
+
+    /// Which plate a point is on, for generators with plates.
+    pub fn plate_at(&self, x: i64, y: i64) -> Option<PlateSample> {
+        match &self.generator {
+            Generator::Continents(continents) => continents.plate_at(x, y),
+            Generator::Classic(_) => None,
         }
     }
 
@@ -181,3 +211,6 @@ mod tests;
 
 #[cfg(test)]
 mod continents_tests;
+
+#[cfg(test)]
+mod plates_tests;
