@@ -25,6 +25,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | (project)           | root files                      | `docs/context/project.md`             | Build, tooling, folder layout, CI                   |
 | (design)            | n/a                             | `docs/context/architecture.md`        | Client/server split, trust, determinism, map data flow |
 | (performance)       | n/a                             | `docs/context/optimisations.md`       | Measured optimisations tried but not adopted (memory) |
+| (wiki style)        | n/a                             | `docs/context/wiki-style.md`          | How the players' wiki pages are laid out and written, as a checklist the owner signs off; read before writing any page in `docs/` |
 | (ui design)         | n/a                             | `docs/context/ui-design.md`           | The palette of interface pieces: how each should look and behave here, and which we have |
 | (debug api)         | `crates/server/src/debug_api/`, each module's `debug_api.rs` | `docs/context/debug-api.md` | Localhost JSON-RPC into a running client or server (`--features debug-api`, `HOW_DEBUG_API=true`, `cargo xtask api`): its methods and how to add one, temporary or for good |
 | (postgres plan)     | n/a                             | `docs/context/postgres-migration.md`  | Not built: optional relational Postgres saves and a two-way migration tool, for when the data schema has matured |
@@ -129,6 +130,9 @@ Update these **in the same PR** as the change:
 | When the game pauses, or who may pause it | `docs/client.md`, `docs/controls.md`, `docs/hosting/index.md` |
 | Where saves or other files are kept | `docs/saves.md` |
 | Third-party art or fonts | `docs/credits.md` |
+| Kinds of armour, their names, styles, materials or rough weights | `docs/armour/` |
+
+Every page keeps to the checklist in `docs/context/wiki-style.md`.
 
 Everything else (the introduction, installation, the client's description, controls) is updated by hand when the owner asks, or when a change would make a page plainly wrong. Never put the owner's own server addresses in these pages.
 
