@@ -27,7 +27,7 @@ pub(super) fn rest_tokens_on_terrain(
     let Some(mut cache) = cache else {
         return;
     };
-    let water_level = world.params.water_level(clock.hour as f64);
+    let water_level = world.water_level(&clock);
     for (view, mut transform) in &mut views {
         let Ok(position) = owners.get(view.owner) else {
             continue;

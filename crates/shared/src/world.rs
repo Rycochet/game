@@ -5,6 +5,7 @@
 //! seed the client generates the world map from, the secret seeds for
 //! pois and sites, and the world's public id.
 
+use crate::celestial::Celestial;
 use crate::rng::Seed;
 use core::f64::consts::PI;
 use serde::{Deserialize, Serialize};
@@ -109,10 +110,11 @@ impl WorldParams {
         }
     }
 
-    /// How far the sea is above `sea_level` at a time of day (in hours).
-    /// Two tides a day; a tilt of 0.25 gives 1 unit.
-    pub fn tide(&self, hour: f64) -> f64 {
-        libm::cos(hour * PI / 6.0) * 4.0 * self.tilt
+    /// How far the sea is above `sea_level` at a time (in hours): the moons'
+    /// pull (`Celestial::tide_pull`) times the tides' reach, `4 × tilt` (a tilt
+    /// of 0.25 gives 1 unit). With no moons it stays at `sea_level`.
+    pub fn tide(&self, celestial: &Celestial, hour: f64) -> f64 {
+        celestial.tide_pull(hour) * 4.0 * self.tilt
     }
 
     /// The highest the water gets (high tide): ground above this is always
@@ -121,9 +123,9 @@ impl WorldParams {
         self.sea_level + 4.0 * self.tilt
     }
 
-    /// The water height at a time of day.
-    pub fn water_level(&self, hour: f64) -> f64 {
-        self.sea_level + self.tide(hour)
+    /// The water height at a time (in hours), with the moons' tide.
+    pub fn water_level(&self, celestial: &Celestial, hour: f64) -> f64 {
+        self.sea_level + self.tide(celestial, hour)
     }
 }
 

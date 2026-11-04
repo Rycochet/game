@@ -62,7 +62,7 @@ fn steps_cost_the_distance_they_cover() {
 /// How high the water is in these tests.
 fn water() -> WorldConditions {
     WorldConditions {
-        water: WorldParams::from_seed(crate::rng::Seed::new(12345)).water_level(0.0),
+        water: WorldParams::from_seed(crate::rng::Seed::new(12345)).high_water(),
         snow_line: 128.0,
     }
 }

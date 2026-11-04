@@ -399,7 +399,7 @@ The owner's design: `Cell::CoveredGround` looks like the land's own ground but g
 
 ## 2026-11-01: Suns and moons from the terrain seed
 
-The owner's design: a world has 1 to 3 suns and 0 to 5 moons (`shared::celestial`), which only make light. They come from the public seed, so clients work them out themselves and the server can too, later for quests (`bodies()`, `at(hours)`, with colour names), with no messages. Moon light uses real phases rather than "the brightest sun not up", since it costs one dot product. No time zones: one time of day for the whole planet, like tides. Baked things follow the light once a game hour, which the owner is happy with. Outside light in sites comes from the same source (a second PR).
+The owner's design: a world has 1 to 3 suns and 0 to 5 moons (`shared::celestial`), which make light (and, since 2026-11-04, the moons pull the tides). They come from the public seed, so clients work them out themselves and the server can too, later for quests (`bodies()`, `at(hours)`, with colour names), with no messages. Moon light uses real phases rather than "the brightest sun not up", since it costs one dot product. No time zones: one time of day for the whole planet, like tides. Baked things follow the light once a game hour, which the owner is happy with. Outside light in sites comes from the same source (a second PR).
 
 ## 2026-11-01: The world's clock counts minutes, on its own thread
 
@@ -730,3 +730,7 @@ Towns come from the secret pois seed, so the client can't work roads out: the se
 
 Planned next (same chat): rivers and roads on the minimap; then roads speeding up travel, 1.25× for paths to 2× for highways, only along consecutive road points, checked by the server step by step (the client sends steps, never costs). Owner's idea for later: only the largest hidden pois leave faint clues on the world map, found by a search action.
 
+
+## 2026-11-04: Tides follow the moons
+
+The owner's design, replacing two tides a day by the clock. The tide is the moons' heights in the sky (from the nadir, -1, to the zenith, 1) averaged by mass (`size³`), counting moons below the horizon, times `4 × tilt`; with no moons the sea stays at mid-tide. Heights are the true ones rather than scaled to each moon's highest point, so moons on low orbits make gentle tides: the owner's choice, for respecting orbits and more variety between worlds, with orbit speeds setting how often tides come. Moons are averaged rather than the highest taken (or their pulls multiplied, which would shrink tides and make two low moons a high one), so moons together make extra high and low tides and opposed ones cancel, while the range stays `±4 × tilt`: high water, pois, rivers and roads are unchanged, so no `WORLD_MAP_VERSION` bump. The water still moves once a game hour. The server keeps its own `Celestial` for it, as both sides must agree on walkable ground.

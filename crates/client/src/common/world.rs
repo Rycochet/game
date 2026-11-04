@@ -27,6 +27,9 @@ pub struct CurrentWorld {
     pub vegetation: Vegetation,
     pub weather: WeatherField,
     pub celestial: Celestial,
+    /// The world's own suns and moons, for the tide: the debug tools may swap
+    /// `celestial`'s for another world's, but the water must stay the server's.
+    tides: Celestial,
     /// The ground as far as walking goes (the server's rules).
     pub ground: WorldGround,
     pub pois: KnownPois,
@@ -45,6 +48,7 @@ impl CurrentWorld {
             vegetation: Vegetation::new(&params),
             weather: WeatherField::new(&params),
             celestial: Celestial::from_seed(params.seed),
+            tides: Celestial::from_seed(params.seed),
             pois: KnownPois::new(surface.width()),
             roads: KnownRoads::default(),
             ground: WorldGround::new(&params),
@@ -53,10 +57,16 @@ impl CurrentWorld {
         }
     }
 
+    /// How high the water is now: the moons' tide, by the hour as the
+    /// server has it.
+    pub fn water_level(&self, clock: &GameClock) -> f64 {
+        self.params.water_level(&self.tides, clock.hour as f64)
+    }
+
     /// What decides where can be walked now.
     pub fn conditions(&self, clock: &GameClock, weather: &Weather) -> WorldConditions {
         WorldConditions {
-            water: self.params.water_level(clock.hour as f64),
+            water: self.water_level(clock),
             snow_line: weather.snow_line,
         }
     }

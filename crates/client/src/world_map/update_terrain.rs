@@ -55,7 +55,7 @@ pub(super) fn update_terrain(
 
     let start = Instant::now();
     let centre = (player.x, player.y);
-    let water_level = world.params.water_level(clock.hour as f64);
+    let water_level = world.water_level(&clock);
     let square = view_square(&orbit);
     let light_from = light_from(&world, clock.hour as f64);
     for mut transform in &mut followers {
