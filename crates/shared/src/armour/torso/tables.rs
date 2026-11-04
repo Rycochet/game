@@ -6,12 +6,20 @@ use crate::armour::{Construction, Style, in_style};
 use crate::material::Material;
 
 /// Constructions torso armour is made in, before the style narrows them.
-const CONSTRUCTIONS: [(Construction, u64); 5] = [
-    (Construction::Plate, 40),
-    (Construction::Mail, 25),
-    (Construction::Leather, 15),
-    (Construction::Padded, 12),
-    (Construction::RingMail, 8),
+const CONSTRUCTIONS: [(Construction, u64); 13] = [
+    (Construction::Plate, 30),
+    (Construction::Mail, 18),
+    (Construction::Leather, 12),
+    (Construction::Padded, 9),
+    (Construction::RingMail, 5),
+    (Construction::Scale, 10),
+    (Construction::Lamellar, 10),
+    (Construction::Laminar, 6),
+    (Construction::PlatesInCloth, 10),
+    (Construction::MailAndPlate, 5),
+    (Construction::Mirror, 3),
+    (Construction::Splint, 3),
+    (Construction::Woven, 2),
 ];
 
 pub(super) fn constructions(style: Style) -> Vec<(Construction, u64)> {
@@ -45,48 +53,6 @@ pub(super) fn leather_breasts(style: Style) -> &'static [(Breast, u64)] {
     }
 }
 
-/// What the main part may be made of.
-pub(super) fn materials(construction: Construction, style: Style) -> &'static [(Material, u64)] {
-    use Construction as C;
-    use Material as M;
-    match (construction, style) {
-        (C::Plate, Style::Classical) => &[(M::Bronze, 80), (M::Iron, 20)],
-        (C::Plate, Style::Japanese) => &[(M::Iron, 1)],
-        (C::Plate, Style::Elven) => &[(M::Steel, 50), (M::Mithril, 35), (M::Bronze, 15)],
-        (C::Plate, Style::Dwarven) => &[(M::Steel, 50), (M::Iron, 25), (M::Adamantine, 25)],
-        (C::Plate, _) => &[
-            (M::Steel, 55),
-            (M::Iron, 35),
-            (M::Mithril, 4),
-            (M::Adamantine, 3),
-            (M::Chitin, 3),
-        ],
-        (C::Leather, Style::Classical) => &[(M::HardenedLeather, 1)],
-        (C::Leather, _) => &[
-            (M::HardenedLeather, 55),
-            (M::BuffLeather, 25),
-            (M::Leather, 20),
-        ],
-        (C::Mail, Style::Elven) => &[(M::Mithril, 50), (M::Steel, 50)],
-        (C::Mail, Style::Classical) => &[(M::Iron, 70), (M::Bronze, 30)],
-        (C::Mail, _) => &[
-            (M::Iron, 50),
-            (M::Steel, 40),
-            (M::Bronze, 5),
-            (M::Mithril, 4),
-            (M::Adamantine, 1),
-        ],
-        (C::RingMail, _) => &[(M::Iron, 50), (M::Steel, 30), (M::Brass, 20)],
-        _ => &[
-            (M::Linen, 55),
-            (M::Cotton, 25),
-            (M::Wool, 15),
-            (M::Silk, 3),
-            (M::Coir, 2),
-        ],
-    }
-}
-
 /// What an arming vest is made of.
 pub(super) const VEST_MATERIALS: [(Material, u64); 3] = [
     (Material::Linen, 70),
@@ -107,6 +73,11 @@ pub(super) fn may_lack_back(breast: Breast) -> bool {
         breast,
         Breast::Round | Breast::Munition | Breast::Globose | Breast::Peascod | Breast::Discs
     )
+}
+
+/// Leather that hangs rather than holding a shape: buff and raw hide.
+pub(super) fn soft_leather(material: Material) -> bool {
+    matches!(material, Material::BuffLeather | Material::Rawhide)
 }
 
 /// Styles a rigid piece may be worn over its own mail in: European, the fantasy

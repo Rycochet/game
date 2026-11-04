@@ -96,7 +96,8 @@ impl ArmourShown {
                     Some(_) => TorsoKind::Armour,
                     None => TorsoKind::ArmingVest,
                 };
-                let form = (0..2000)
+                // Enough rolls for the rarest construction (rattan) to turn up.
+                let form = (0..40_000)
                     .map(|seed| torso::roll(&mut Seed::new(seed).rng(), kind, None, rolled))
                     .filter(|form| construction.is_none_or(|c| form.construction == c))
                     .nth(nth as usize)?;
@@ -226,27 +227,30 @@ pub(super) fn spawn_shoulders_rows(grid: &mut ChildSpawnerCommands) {
     spawn_style_rows(grid, ArmourShown::ShouldersStyle);
 }
 
-/// Rolled torso pieces by construction, arming vests, and plate in each style.
+/// Rolled torso pieces by construction, two or three to a row, arming vests, and plate
+/// in each style.
 pub(super) fn spawn_torso_rows(grid: &mut ChildSpawnerCommands) {
-    use Construction::{Leather, Mail, Padded, Plate, RingMail};
-    let rows: [(&str, &[Option<Construction>]); 5] = [
-        ("Plate", &[Some(Plate)]),
-        ("", &[Some(Plate)]),
-        ("Leather", &[Some(Leather)]),
-        ("Mail, Ring", &[Some(Mail), Some(RingMail)]),
-        ("Padded, Vest", &[Some(Padded), None]),
+    use Construction as C;
+    let rows: [(&str, &[Option<Construction>]); 7] = [
+        ("Plate", &[Some(C::Plate)]),
+        ("Leather, Mail", &[Some(C::Leather), Some(C::Mail)]),
+        ("Ring, Scale", &[Some(C::RingMail), Some(C::Scale)]),
+        ("Lamellar, Laminar", &[Some(C::Lamellar), Some(C::Laminar)]),
+        (
+            "Cloth, Plated",
+            &[Some(C::PlatesInCloth), Some(C::MailAndPlate)],
+        ),
+        ("Mirror, Slats", &[Some(C::Mirror), Some(C::Splint)]),
+        (
+            "Rattan, Padded, Vest",
+            &[Some(C::Woven), Some(C::Padded), None],
+        ),
     ];
-    for (row, (label, constructions)) in rows.into_iter().enumerate() {
+    for (label, constructions) in rows {
         let pictures = (0..RING_COLUMNS as u64).map(move |cell| {
-            // A shared row's second half is its second kind.
-            let half = (cell * constructions.len() as u64 / RING_COLUMNS as u64) as usize;
-            // The second plate row carries on from the first.
-            let nth = if row == 1 {
-                cell + RING_COLUMNS as u64
-            } else {
-                cell
-            };
-            Shown::Armour(ArmourShown::Torso(constructions[half], nth))
+            // The row is shared out evenly between its kinds.
+            let kind = (cell * constructions.len() as u64 / RING_COLUMNS as u64) as usize;
+            Shown::Armour(ArmourShown::Torso(constructions[kind], cell))
         });
         spawn_row(grid, label, pictures);
     }

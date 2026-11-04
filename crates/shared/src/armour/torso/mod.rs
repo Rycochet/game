@@ -1,20 +1,32 @@
-//! Armour for the torso: breastplates and cuirasses, leather, mail, ring mail and
-//! padding, and the arming vest worn under them. Backplates are part of it, so armour
+//! Armour for the torso: breastplates and cuirasses, leather, mail and ring mail,
+//! scale, lamellar and laminar, plates in cloth, plated mail and mirrors, slats, rattan
+//! and padding, and the arming vest worn under them. Backplates are part of it, so armour
 //! never stops a pack on the back. See `docs/context/shared/armour.md`.
 
+mod body;
 mod grid;
+mod grid_body;
+mod materials;
 mod names;
+mod names_plates;
 mod parts;
+mod plates;
 mod roll;
+mod roll_body;
+mod roll_plates;
+mod rules;
 mod tables;
 mod weight;
+mod weight_plates;
 
 #[cfg(test)]
 mod tests;
 
 use serde::{Deserialize, Serialize};
 
-pub use parts::{Breast, Fluting, Links, Plackart, Quilting, Rings, TorsoBody, Weave};
+pub use body::TorsoBody;
+pub use parts::{Breast, Fluting, Links, Plackart, Quilting, Rings, Weave};
+pub use plates::{Backing, Lacing, LamellarCut, Mirrors, PlateRows, PlateSize, Rivets, ScaleShape};
 pub use roll::roll;
 
 use super::{Construction, Dye, Finish, Style};
@@ -76,21 +88,23 @@ impl TorsoForm {
         }
     }
 
-    /// Short sleeves, on mail, ring mail and padding.
+    /// Short sleeves, on mail, ring mail, scale, plated mail and padding.
     pub fn sleeves(&self) -> bool {
         match self.body {
             TorsoBody::Mail { sleeves, .. }
             | TorsoBody::RingMail { sleeves }
-            | TorsoBody::Padded { sleeves, .. } => sleeves,
+            | TorsoBody::Padded { sleeves, .. }
+            | TorsoBody::Scale { sleeves, .. }
+            | TorsoBody::MailAndPlate { sleeves, .. } => sleeves,
             _ => false,
         }
     }
 
-    /// Holds its own shape rather than hanging: plate and hardened leather.
+    /// Holds its own shape rather than hanging: plate, lames and hardened leather.
     pub fn rigid(&self) -> bool {
         match self.body {
-            TorsoBody::Plate { .. } => true,
-            TorsoBody::Leather { .. } => self.material != Material::BuffLeather,
+            TorsoBody::Plate { .. } | TorsoBody::Laminar { .. } => true,
+            TorsoBody::Leather { .. } => !tables::soft_leather(self.material),
             _ => false,
         }
     }

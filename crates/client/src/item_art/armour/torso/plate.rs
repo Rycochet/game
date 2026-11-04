@@ -199,7 +199,7 @@ fn add_discs(model: &mut Model, front: &Shell, back: bool) {
     }
 }
 
-fn add_disc(model: &mut Model, centre: Vec3, out: Vec3, radius: f32) {
+pub(super) fn add_disc(model: &mut Model, centre: Vec3, out: Vec3, radius: f32) {
     let across = out.cross(Vec3::Y).normalize_or(Vec3::X);
     let up = across.cross(out);
     let surface = |u: f32, v: f32| {
@@ -214,7 +214,7 @@ fn add_disc(model: &mut Model, centre: Vec3, out: Vec3, radius: f32) {
 
 /// Leather straps over each shoulder, from the breast's top to the back's, or crossing
 /// behind when there is no back.
-fn add_straps(model: &mut Model, front: &Shell, back: bool) {
+pub(super) fn add_straps(model: &mut Model, front: &Shell, back: bool) {
     let behind = Shell {
         span: Span::Back,
         ..*front
