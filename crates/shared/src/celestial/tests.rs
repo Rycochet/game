@@ -286,3 +286,14 @@ fn golden_sky() {
 }
 
 const GOLDEN_SKY: &str = "[BodyNow { body: Body { kind: Sun, colour: [0.7919773309346745, 0.8613182206231162, 1.0], colour_name: Some(Blue), size: 0.8387194116696959 }, direction: [-0.4142466559940582, 0.7847245973775617, 0.46109328152594464], lit: 1.0, waxing: false, along: -0.5057405771498451, light: [0.8848544385542069, 0.9623271030074982, 1.1172724319140812] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.6229742931451838, 0.9630333796082404], colour_name: Some(Violet), size: 0.38467303853895163 }, direction: [-0.5682175123423905, 0.7765099767964616, 0.27232538369198017], lit: 0.014851955962146002, waxing: false, along: -0.4487949123033693, light: [0.00034810470657831426, 0.00023584729793441146, 0.0004232904641828701] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.7892538947659659, 0.6835815888213319], colour_name: Some(Orange), size: 0.975111596324884 }, direction: [0.3830264755924152, 0.863143928178815, 0.32904905142439983], lit: 0.16480742912403212, waxing: false, along: 0.5016809540028195, light: [0.024821508610915713, 0.02130569919414452, 0.021424257526623178] }, BodyNow { body: Body { kind: Moon, colour: [1.0, 0.9869641784394392, 0.9994370279804488], colour_name: None, size: 0.981384194948326 }, direction: [-0.20199164293217609, 0.4677803293887748, -0.8604539148742888], lit: 0.47299821297354117, waxing: true, along: 0.8323854186958036, light: [0.07215731511971289, 0.07745200046741861, 0.09105903635547749] }]";
+
+#[test]
+fn periods_follow_the_bodies() {
+    let world = world(12345);
+    assert_eq!(world.period(0), Some(DAY_HOURS));
+    for number in 0..world.moons.len() {
+        let period = world.period(world.suns.len() + number).unwrap();
+        assert!((MOON_FASTEST..MOON_SLOWEST).contains(&period));
+    }
+    assert_eq!(world.period(world.bodies().len()), None);
+}

@@ -14,6 +14,7 @@ mod light;
 mod moon;
 mod moon_path;
 mod now;
+mod period;
 mod sun;
 mod tide;
 mod vector;
