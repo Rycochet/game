@@ -83,6 +83,13 @@ impl ItemKind {
                     (0, 1),
                     false,
                 )),
+                // Mail chausses with feet, over the shoes; its form says the rest.
+                Self::Chausses => plain("Chausses", 3800, Shape::rectangle(2, 3)).worn(wear(
+                    Outer,
+                    &[Legs, Feet],
+                    (1, 0),
+                    false,
+                )),
                 Self::Cloak => plain("Cloak", 900, Shape::rectangle(2, 3)).worn(WearDef {
                     one_place: true,
                     ..wear(Outer, &[Back], (1, 1), true)
@@ -141,10 +148,21 @@ impl ItemKind {
                 )),
                 Self::Knife => plain("Knife", 200, Shape::rectangle(1, 2)),
                 Self::Lantern => plain("Lantern", 800, Shape::rectangle(1, 2)),
+                // Both legs, or a single Classical greave; its form says its name, cells
+                // and weight.
+                Self::LegArmour => plain("Leg Armour", 3000, Shape::rectangle(2, 3)).worn(wear(
+                    Outer,
+                    &[Legs],
+                    (0, 0),
+                    false,
+                )),
                 Self::Longsword => plain("Longsword", 2000, Shape::rectangle(1, 6)),
                 Self::Necklace => {
                     plain("Necklace", 40, square).worn(wear(Skin, &[Neck], (5, 5), true))
                 }
+                // Quilted leggings under mail and plate, in place of trousers.
+                Self::PaddedChausses => plain("Padded Chausses", 1200, Shape::rectangle(2, 3))
+                    .worn(wear(Middle, &[Legs], (1, 0), false)),
                 // Under gauntlets.
                 Self::PaddedGloves => plain("Padded Gloves", 150, Shape::rectangle(2, 1))
                     .worn(wear(Middle, &[Hands, Fingers], (1, 0), false)),
@@ -226,6 +244,8 @@ impl ItemKind {
             | Self::ShoulderArmour
             | Self::TorsoArmour
             | Self::ArmArmour
+            | Self::LegArmour
+            | Self::Chausses
             | Self::Backpack
             | Self::Necklace => 150,
             Self::Sword

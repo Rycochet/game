@@ -5,6 +5,7 @@
 pub(super) mod arms;
 pub(super) mod hands;
 pub(super) mod head;
+pub(super) mod legs;
 pub(super) mod shoulders;
 mod surface;
 pub(super) mod torso;
@@ -29,6 +30,7 @@ pub(in crate::item_art) fn armour_parts(
         Look::Torso { torso, quality } => torso::torso_parts(&torso, quality, meshes, materials),
         Look::Head { head, quality } => head::head_parts(&head, quality, meshes, materials),
         Look::Arms { arms, quality } => arms::arms_parts(&arms, quality, meshes, materials),
+        Look::Legs { legs, quality } => legs::legs_parts(&legs, quality, meshes, materials),
         _ => Vec::new(),
     }
 }

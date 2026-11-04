@@ -13,6 +13,7 @@ impl ItemForm {
             Self::Torso(torso) => Some(torso.shape()),
             Self::Head(head) => Some(head.shape()),
             Self::Arms(arms) => Some(arms.shape()),
+            Self::Legs(legs) => Some(legs.shape()),
             Self::Gem(_) | Self::Ring(_) | Self::Hands(_) => None,
         }
     }
@@ -27,6 +28,7 @@ impl ItemForm {
             Self::Torso(torso) => Some(torso.grams_at(size)),
             Self::Head(head) => Some(head.grams_at(size)),
             Self::Arms(arms) => Some(arms.grams_at(size)),
+            Self::Legs(legs) => Some(legs.grams_at(size)),
             Self::Gem(_) | Self::Ring(_) => None,
         }
     }

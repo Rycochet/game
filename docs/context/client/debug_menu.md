@@ -11,6 +11,7 @@ The debug menu: backtick or the warning button top left opens a full-screen laye
 - `crates/client/src/debug_menu/panels/page.rs`: `PicturePage`, Item Pictures' pages and what each spawns.
 - `crates/client/src/debug_menu/panels/armour.rs`: Item Pictures' armour pages (Hands, Shoulders, Torso, Head): rolled pieces in rows by kind or construction, then one in each style.
 - `crates/client/src/debug_menu/panels/arms.rs`: the Arms page: rolled arm pieces by construction, then a whole plate arm in each style.
+- `crates/client/src/debug_menu/panels/legs.rs`: the Legs page: rolled leg pieces by construction, footed chausses and padded chausses, then a whole plate leg in each style.
 
 ## Public API
 

@@ -6,7 +6,7 @@ use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
 
-use super::looks::{ArmsLook, BladeLook, HandsLook, HeadLook, ShouldersLook, TorsoLook};
+use super::looks::{ArmsLook, BladeLook, HandsLook, HeadLook, LegsLook, ShouldersLook, TorsoLook};
 
 /// Everything a picture shows. Ids stay out of it, so things that look the same share
 /// one picture, and things that change their looks get a new one.
@@ -49,6 +49,11 @@ pub enum Look {
         arms: ArmsLook,
         quality: Option<Quality>,
     },
+    /// Greaves, chausses or other leg pieces, as worn.
+    Legs {
+        legs: LegsLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -65,6 +70,7 @@ impl Look {
             Self::Torso { torso, .. } => torso.cells,
             Self::Head { head, .. } => head.cells,
             Self::Arms { arms, .. } => arms.cells,
+            Self::Legs { legs, .. } => legs.cells,
             Self::Body { .. } => super::body::CELLS,
         }
     }

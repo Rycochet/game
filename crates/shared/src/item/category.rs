@@ -67,12 +67,15 @@ impl ItemKind {
             | Self::ArmingVest
             | Self::Barding
             | Self::BevoredHelm
+            | Self::Chausses
             | Self::Coif
             | Self::DemiGauntlets
             | Self::FullArmour
             | Self::Gambeson
             | Self::Gauntlets
             | Self::Helmet
+            | Self::LegArmour
+            | Self::PaddedChausses
             | Self::PaddedGloves
             | Self::ShoulderArmour
             | Self::TorsoArmour => Armour,

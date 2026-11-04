@@ -7,6 +7,7 @@ use crate::widgets::TextSize;
 
 mod armour;
 mod arms;
+mod legs;
 mod page;
 
 // Split into files (`cargo xtask lint` keeps files small).
