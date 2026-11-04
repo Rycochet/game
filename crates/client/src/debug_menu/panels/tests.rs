@@ -3,6 +3,7 @@ use shared::site::StairsStyle;
 use super::super::actions::DebugAction;
 use super::generate_form::NEW_SEEDS;
 use super::steps::{can_step, previous_style};
+use super::time_text::{read_time, time_text};
 use super::*;
 use crate::common::{CurrentDungeon, GameView};
 
@@ -32,4 +33,42 @@ fn panels_need_a_site_with_what_they_change() {
         GameView::WorldMap,
         &dungeon
     ));
+}
+
+#[test]
+fn world_time_reads_back_what_it_writes() {
+    for minutes in [0.0, 59.0, 60.0, 1439.0, 1440.0, 100_000.0] {
+        assert_eq!(read_time(&time_text(minutes), 0.0), Some(minutes));
+    }
+    assert_eq!(time_text(0.0), "Day 1 00:00");
+    assert_eq!(time_text(1440.0 + 6.0 * 60.0 + 30.5), "Day 2 06:30");
+}
+
+#[test]
+fn world_time_alone_is_on_the_day_shown() {
+    let day_three = 2.0 * 1440.0 + 500.0;
+    assert_eq!(read_time("06:30", day_three), Some(2.0 * 1440.0 + 390.0));
+    assert_eq!(
+        read_time("  day 3   06:30 ", 0.0),
+        Some(2.0 * 1440.0 + 390.0)
+    );
+}
+
+#[test]
+fn world_time_refuses_what_it_cant_read() {
+    for text in [
+        "",
+        "Day",
+        "Day 0 00:00",
+        "Day -1 00:00",
+        "Day 1 24:00",
+        "Day 1 10:60",
+        "Day 1 10:5",
+        "Day 1 1030",
+        "Night 1 10:30",
+        "Day x 10:30",
+        "Day 99999999999 10:30",
+    ] {
+        assert_eq!(read_time(text, 0.0), None, "{text:?}");
+    }
 }

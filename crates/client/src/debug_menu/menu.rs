@@ -23,8 +23,9 @@ pub(super) use show::show_menu;
 pub(super) use spawn::spawn_menu;
 pub use state::DebugMenu;
 
-/// How long a toggled entry stays on show before the menu closes.
-const TOGGLE_SECONDS: f32 = 1.0;
+/// How long a toggled entry stays on show before the menu closes: just past the
+/// press's ripple (`widgets`, 0.35 s).
+const TOGGLE_SECONDS: f32 = 0.4;
 
 /// The layer of the actions, and of a submenu above them.
 const ACTIONS: usize = 0;
