@@ -2,6 +2,9 @@
 [build]
 target = "index.html"
 dist = "dist"
+# The game server serves the web client under /web/ (`WEB_PATH` in its
+# `network` module), beside /ws and its other paths.
+public_url = "/web/"
 
 [serve]
 addresses = ["127.0.0.1"]

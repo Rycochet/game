@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     ports:
       - "8081:8081" # The game and the web client, over HTTPS.
-      - "8080:8080" # Only answers that connections must be secure.
+      - "8080:8080" # Only answers health checks, and that connections must be secure.
     environment:
       # Other names or addresses this server is reached by, so the certificate
       # covers them. Change this, or remove it if you only use localhost.

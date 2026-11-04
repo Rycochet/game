@@ -5794,6 +5794,7 @@ dependencies = [
  "libm",
  "postcard",
  "serde",
+ "serde_json",
  "uuid",
 ]
 

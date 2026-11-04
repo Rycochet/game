@@ -2,7 +2,7 @@
 
 use axum::Router;
 use axum::http::{StatusCode, header};
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::serve::ListenerExt;
 use bevy::prelude::*;
@@ -13,7 +13,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tower_http::services::ServeDir;
 
-use super::{CERTIFICATE_PATH, NewConnections, SecurePort, Sockets, TlsListener};
+use super::health::health_routes;
+use super::{CERTIFICATE_PATH, NewConnections, SecurePort, Sockets, TlsListener, WEB_PATH};
 use super::{stop_signal, upgrade};
 use crate::connections::Connections;
 use crate::tls::Certificates;
@@ -27,16 +28,19 @@ pub(super) fn accept_connections(new: Res<NewConnections>, mut connections: ResM
     }
 }
 
-/// The routes that serve the game: its WebSockets, the certificate if there
-/// is one, and the web client's files.
+/// The routes that serve the game: its WebSockets, health and version, the
+/// certificate if there is one, and the web client's files under `WEB_PATH`
+/// (where `/` sends browsers).
 pub(super) fn game_routes(
     web: Option<PathBuf>,
     sockets: Sockets,
     certificates: Option<Arc<Certificates>>,
 ) -> Router {
+    let health = health_routes(sockets.heartbeat.clone());
     let mut router = Router::new()
         .route(SOCKET_PATH, get(upgrade))
-        .with_state(sockets);
+        .with_state(sockets)
+        .merge(health);
     if let Some(certificates) = certificates {
         router = router.route(
             CERTIFICATE_PATH,
@@ -49,7 +53,13 @@ pub(super) fn game_routes(
         );
     }
     if let Some(web) = web {
-        router = router.fallback_service(ServeDir::new(web));
+        // Temporary, so the address can change again without browsers
+        // remembering this one.
+        let to_web = || async { Redirect::temporary(WEB_PATH) };
+        router = router
+            .nest_service(WEB_PATH, ServeDir::new(web))
+            .route("/", get(to_web))
+            .route(WEB_PATH.trim_end_matches('/'), get(to_web));
     }
     router
 }
@@ -143,7 +153,7 @@ async fn run(
             let plain_routes = if secure.plain_too {
                 game_routes(web.clone(), sockets.clone(), None)
             } else {
-                Router::new().fallback(move || use_the_secure_port(port))
+                health_routes(sockets.heartbeat.clone()).fallback(move || use_the_secure_port(port))
             };
             let routes = game_routes(web, sockets, Some(secure.certificates.clone()));
             let secured = axum::serve(TlsListener::start(secure), routes).into_future();
