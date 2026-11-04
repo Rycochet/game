@@ -23,6 +23,7 @@ pub enum ItemKind {
     Cloak,
     Coif,
     Coin,
+    CuirassierTassets,
     Dagger,
     DemiGauntlets,
     FingerlessGloves,
@@ -56,11 +57,12 @@ pub enum ItemKind {
     Tabard,
     TorsoArmour,
     Trousers,
+    WaistArmour,
 }
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 49] = [
+    pub const ALL: [Self; 51] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -77,6 +79,7 @@ impl ItemKind {
         Self::Cloak,
         Self::Coif,
         Self::Coin,
+        Self::CuirassierTassets,
         Self::Dagger,
         Self::DemiGauntlets,
         Self::FingerlessGloves,
@@ -110,6 +113,7 @@ impl ItemKind {
         Self::Tabard,
         Self::TorsoArmour,
         Self::Trousers,
+        Self::WaistArmour,
     ];
 
     /// Whether it can be made at other sizes: what is worn, gems and blades. Everything

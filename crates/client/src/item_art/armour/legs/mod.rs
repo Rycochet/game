@@ -22,7 +22,8 @@ use shared::body::{Frame, Side};
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 
-use self::path::Leg;
+pub(in crate::item_art) use self::path::Leg;
+pub(in crate::item_art) use self::rigid::add_knee;
 use super::Model;
 use crate::item_art::body::mesh_of;
 use crate::item_art::{CAMERA_AT, CAMERA_UP, LegsLook, OUTLINE_PIXELS, Part, VIEW_WIDTH};

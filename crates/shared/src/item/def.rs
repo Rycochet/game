@@ -101,6 +101,14 @@ impl ItemKind {
                     false,
                 )),
                 Self::Coin => plain("Coin", 10, square).without_quality(),
+                // Laminated to the knee, wrapping the thighs: Waist and Legs (the owner's
+                // decision). Its form says its cells and weight.
+                Self::CuirassierTassets => plain(
+                    "Cuirassier Tassets",
+                    4000,
+                    Shape::rectangle(2, 4),
+                )
+                .worn(wear(Outer, &[Waist, Legs], (0, 0), false)),
                 Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)),
                 // Over the back of the hand and the wrist only, so rings stay free.
                 Self::DemiGauntlets => plain("Demi-gauntlets", 450, Shape::rectangle(2, 1))
@@ -224,6 +232,10 @@ impl ItemKind {
                 // Its form says its name, cells and weight, and whether it is lined.
                 Self::TorsoArmour => plain("Torso Armour", 5000, Shape::rectangle(3, 3))
                     .worn(wear(Outer, &[Torso], (0, 0), false)),
+                // Faulds, tassets, skirts and the rest; its form says its name, cells and
+                // weight. Never padded: Waist's Middle is the belt's.
+                Self::WaistArmour => plain("Waist Armour", 2500, Shape::rectangle(2, 2))
+                    .worn(wear(Outer, &[Waist], (0, 0), false)),
                 Self::Trousers => plain("Trousers", 500, Shape::rectangle(2, 3)).worn(wear(
                     Middle,
                     &[Legs],
@@ -246,6 +258,8 @@ impl ItemKind {
             | Self::ArmArmour
             | Self::LegArmour
             | Self::Chausses
+            | Self::WaistArmour
+            | Self::CuirassierTassets
             | Self::Backpack
             | Self::Necklace => 150,
             Self::Sword

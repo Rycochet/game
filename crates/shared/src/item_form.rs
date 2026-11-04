@@ -13,6 +13,7 @@ use crate::armour::head::HeadForm;
 use crate::armour::legs::LegsForm;
 use crate::armour::shoulders::ShouldersForm;
 use crate::armour::torso::TorsoForm;
+use crate::armour::waist::WaistForm;
 use crate::blade::BladeForm;
 use crate::item::Item;
 
@@ -48,6 +49,8 @@ pub enum ItemForm {
     Arms(ArmsForm),
     /// Greaves, chausses or other leg pieces, for both legs or one.
     Legs(LegsForm),
+    /// A fauld, tassets, a skirt or another waist piece.
+    Waist(WaistForm),
 }
 
 impl ItemForm {
@@ -63,6 +66,7 @@ impl ItemForm {
             Self::Head(head) => head.name(),
             Self::Arms(arms) => arms.name(),
             Self::Legs(legs) => legs.name(),
+            Self::Waist(waist) => waist.name(),
         }
     }
 
@@ -77,7 +81,8 @@ impl ItemForm {
             | Self::Torso(_)
             | Self::Head(_)
             | Self::Arms(_)
-            | Self::Legs(_) => &[],
+            | Self::Legs(_)
+            | Self::Waist(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }

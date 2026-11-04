@@ -16,7 +16,7 @@ pub(super) const OUTSIDE: f32 = FRAC_PI_2;
 pub(super) const WING: f32 = 0.35 * PI;
 
 /// One leg of a frame, straight down from its hip.
-pub(super) struct Leg<'a> {
+pub(in crate::item_art) struct Leg<'a> {
     pub frame: &'a Frame,
     pub side: Side,
 }

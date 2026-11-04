@@ -9,6 +9,7 @@ pub(super) mod legs;
 pub(super) mod shoulders;
 mod surface;
 pub(super) mod torso;
+pub(super) mod waist;
 
 use bevy::prelude::*;
 use shared::material::Material;
@@ -31,6 +32,7 @@ pub(in crate::item_art) fn armour_parts(
         Look::Head { head, quality } => head::head_parts(&head, quality, meshes, materials),
         Look::Arms { arms, quality } => arms::arms_parts(&arms, quality, meshes, materials),
         Look::Legs { legs, quality } => legs::legs_parts(&legs, quality, meshes, materials),
+        Look::Waist { waist, quality } => waist::waist_parts(&waist, quality, meshes, materials),
         _ => Vec::new(),
     }
 }

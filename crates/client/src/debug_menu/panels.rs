@@ -9,6 +9,7 @@ mod armour;
 mod arms;
 mod legs;
 mod page;
+mod waist;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod every_widget;
