@@ -82,6 +82,9 @@ pub enum Look {
         set: SetLook,
         quality: Option<Quality>,
     },
+    /// A character of a kind that stands on two legs, wearing these (their own
+    /// looks), innermost first: what its token shows.
+    Character { kind: CreatureKind, worn: Vec<Look> },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -105,6 +108,7 @@ impl Look {
             Self::Footwear { footwear, .. } => footwear.cells,
             Self::Set { set, .. } => set.cells,
             Self::Body { .. } => super::body::CELLS,
+            Self::Character { .. } => super::character::CELLS,
         }
     }
 

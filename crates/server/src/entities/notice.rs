@@ -6,6 +6,7 @@ use shared::id::Id;
 use shared::pathfinding::DistanceMap;
 use shared::protocol::CharacterId;
 use shared::sheet::{Appearance, Reaction};
+use shared::wear::WornLook;
 use std::collections::BTreeMap;
 
 use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob, NOTICES_WITHIN};
@@ -17,6 +18,8 @@ pub(super) struct Someone {
     pub(super) id: Id,
     pub(super) character: Option<CharacterId>,
     pub(super) look: (CreatureKind, Appearance),
+    /// What can be seen of what they wear.
+    pub(super) worn: Vec<WornLook>,
     /// The site level they are on, if any.
     pub(super) level: Option<(SiteId, u32)>,
     pub(super) position: (i64, i64),
@@ -37,6 +40,7 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 id: client.entity_id(),
                 character: client.character_id,
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
+                worn: client.inventory.shown(),
                 level,
                 position,
                 god_mode: client.god_mode,

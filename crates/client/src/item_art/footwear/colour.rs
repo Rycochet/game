@@ -21,7 +21,7 @@ fn roughness(material: Material) -> f32 {
     }
 }
 
-pub(super) fn material_of(
+pub(in crate::item_art) fn material_of(
     stuff: Stuff,
     form: &FootwearForm,
     quality: Option<Quality>,

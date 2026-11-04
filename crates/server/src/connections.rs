@@ -10,6 +10,7 @@ use shared::movement::Step;
 use shared::poi::ChunkPos;
 use shared::protocol::{CharacterId, ServerLink, ServerMessage};
 use shared::sheet::{Appearance, Feeling, Sheet};
+use shared::wear::WornLook;
 use shared::world::WorldId;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -194,6 +195,8 @@ pub struct Client {
     pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
     /// How the client has been told they feel.
     pub(crate) seen_feelings: BTreeMap<Id, Feeling>,
+    /// What each could be seen wearing when last told, to tell again on a change.
+    pub(crate) seen_worn: BTreeMap<Id, Vec<WornLook>>,
     /// What the character is like.
     pub(crate) sheet: Sheet,
     /// What it was last told is on the ground under the player.

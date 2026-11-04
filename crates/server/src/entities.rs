@@ -15,6 +15,7 @@ use shared::movement::STRAIGHT_COST;
 use shared::poi::PoiKind;
 use shared::protocol::CharacterId;
 use shared::sheet::{Appearance, Feeling};
+use shared::wear::WornLook;
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant};
 
@@ -106,6 +107,9 @@ pub(crate) struct Mob {
     way_back: Vec<Hop>,
     energy: Energy,
     speed: u32,
+    /// What can be seen of what it wears, from when it was made: mobs don't change
+    /// clothes.
+    shown: Vec<WornLook>,
 }
 
 impl Mob {

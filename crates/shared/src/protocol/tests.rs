@@ -309,6 +309,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             feeling: crate::sheet::Feeling::Friendly,
             x: 3,
             y: -4,
+            worn: Vec::new(),
         }),
         ServerMessage::EntityMoved {
             id: Id(uuid::Uuid::from_u128(4)),

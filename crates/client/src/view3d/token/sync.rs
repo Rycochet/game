@@ -6,8 +6,10 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use super::super::camera::OrbitCamera;
-use super::{IconAnchor, TokenAssets, TokenView, outline_width, prism};
-use crate::common::{Icon, Token, TokenShape};
+use super::{
+    ICON_ART_PIXELS, ICON_FILE_PIXELS, IconAnchor, TokenAssets, TokenView, outline_width, prism,
+};
+use crate::common::{Icon, IconPicture, Token, TokenShape};
 
 /// Creates, restyles and removes token views to match the entities that have
 /// a `Token`.
@@ -104,14 +106,14 @@ pub(super) fn spawn_view(
         .add_children(&[body, outline, anchor]);
 }
 
-/// Shows each token owner's `Icon` on its anchor, replacing or removing the
-/// picture when the icon changes.
+/// Shows each token owner's `Icon` on its anchor, or its `IconPicture` in its place,
+/// replacing or removing the picture when either changes.
 pub fn sync_icons(
     mut commands: Commands,
     mut assets: ResMut<TokenAssets>,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    icons: Query<&Icon>,
+    icons: Query<(Option<&Icon>, Option<&IconPicture>)>,
     views: Query<&TokenView>,
     mut anchors: Query<(Entity, &mut IconAnchor, &ChildOf)>,
 ) {
@@ -119,26 +121,35 @@ pub fn sync_icons(
         let Ok(view) = views.get(child_of.parent()) else {
             continue;
         };
-        let wanted = icons.get(view.owner).ok().map(|icon| &icon.0);
-        if shown.shown.as_ref() == wanted {
+        let (icon, picture) = icons.get(view.owner).unwrap_or_default();
+        // Pictures are kept by a key of their own, beside icon files' paths.
+        let wanted = match (picture, icon) {
+            (Some(picture), _) => Some(format!("#picture {:?}", picture.0.id())),
+            (None, Some(icon)) => Some(icon.0.clone()),
+            (None, None) => None,
+        };
+        if shown.shown == wanted {
             continue;
         }
         commands.entity(anchor).despawn_children();
-        shown.shown = wanted.cloned();
-        let Some(path) = wanted else {
+        shown.shown = wanted.clone();
+        let Some(key) = wanted else {
             continue;
         };
         let material = assets
             .icon_materials
-            .entry(path.clone())
-            .or_insert_with(|| {
-                // Nearest-pixel sampling keeps the pixel art crisp.
-                let image = asset_server
-                    .load_builder()
-                    .with_settings(|settings: &mut ImageLoaderSettings| {
-                        settings.sampler = ImageSampler::nearest();
-                    })
-                    .load(path.clone());
+            .entry(key)
+            .or_insert_with_key(|key| {
+                let image = match picture {
+                    Some(picture) => picture.0.clone(),
+                    // Nearest-pixel sampling keeps the pixel art crisp.
+                    None => asset_server
+                        .load_builder()
+                        .with_settings(|settings: &mut ImageLoaderSettings| {
+                            settings.sampler = ImageSampler::nearest();
+                        })
+                        .load(key.clone()),
+                };
                 materials.add(StandardMaterial {
                     base_color_texture: Some(image),
                     // Unlit: the picture looks as drawn whatever the sun does.
@@ -150,10 +161,16 @@ pub fn sync_icons(
             })
             .clone();
         let quad = assets.icon_quad.clone();
+        // A picture fills itself, where icon art fills only the middle of its file.
+        let scale = match picture {
+            Some(_) => ICON_ART_PIXELS / ICON_FILE_PIXELS,
+            None => 1.0,
+        };
         commands.entity(anchor).with_child((
             Mesh3d(quad),
             MeshMaterial3d(material),
             NotShadowCaster,
+            Transform::from_scale(Vec3::splat(scale)),
         ));
     }
 }

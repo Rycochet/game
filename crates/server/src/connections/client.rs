@@ -34,6 +34,7 @@ impl Client {
             truesight: false,
             seen_entities: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
+            seen_worn: BTreeMap::new(),
             sheet: Sheet::default(),
             ground_told: GroundTold::default(),
             energy: Energy::default(),
@@ -69,6 +70,7 @@ impl Client {
         // The client forgets them too.
         self.seen_entities.clear();
         self.seen_feelings.clear();
+        self.seen_worn.clear();
         self.ground_told = GroundTold::default();
     }
 

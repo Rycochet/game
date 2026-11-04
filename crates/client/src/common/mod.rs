@@ -61,7 +61,7 @@ pub use roads::KnownRoads;
 pub use sky::SkyNow;
 use sky::update_sky;
 pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
-pub use token::{Attitude, Icon, Token, TokenShape, TokenSize};
+pub use token::{Attitude, Icon, IconPicture, Token, TokenShape, TokenSize};
 pub use video::{
     AntiAliasing, Background, FrameRate, IN_BROWSER, Preset, RENDER_SCALES, VideoPrefs,
 };

@@ -18,7 +18,7 @@ mod view;
 mod world;
 
 use drawing::{fields_stage, herbs_shift, stairs_style, token};
-use items::{give_item, set_creature};
+use items::{give_item, set_creature, wear_item};
 use moving::{step, travel, walk, yes};
 use panels::{debug_action, debug_menu, inventory, map, show_floor, system_menu};
 use places::{Place, enter_site, set_cells, teleport};
@@ -37,6 +37,7 @@ pub(super) fn add(app: &mut App) {
         .add_debug_method("client.snow_line", snow_line)
         .add_debug_method("client.reveal_pois", reveal_pois)
         .add_debug_method("client.give_item", give_item)
+        .add_debug_method("client.wear_item", wear_item)
         .add_debug_method("client.set_creature", set_creature)
         // Moving.
         .add_debug_method("client.step", step)
