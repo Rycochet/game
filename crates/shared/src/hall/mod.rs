@@ -13,6 +13,7 @@
 mod address;
 mod code;
 mod design;
+mod level;
 mod place;
 mod shuffle;
 mod tile;
@@ -20,6 +21,7 @@ mod tile;
 pub use address::GateAddress;
 pub use code::{CODE_LENGTH, GateCode, RUNES, SEPARATOR};
 pub use design::GateDesign;
+pub use level::{LEVEL_ROWS, LEVEL_TOP, cell, level};
 pub use place::{GatePlace, Side};
 pub use tile::{Tile, hue, tile, wrap_x};
 

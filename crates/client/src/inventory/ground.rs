@@ -108,6 +108,7 @@ pub(super) fn read_server(
             }
             ServerMessage::Welcome { .. }
             | ServerMessage::EnterLevel(_)
+            | ServerMessage::EnterHall { .. }
             | ServerMessage::OnWorldMap { .. }
             | ServerMessage::Teleported { .. } => *ground = Ground::default(),
             _ => {}

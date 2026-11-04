@@ -238,6 +238,9 @@ fn run_actions(
             DebugAction::RevealMap => {
                 to_server.write(ToServer(ClientMessage::DevRevealMap));
             }
+            DebugAction::TeleportToHall => {
+                to_server.write(ToServer(ClientMessage::DevToHall));
+            }
             DebugAction::TeleportToPoiShowcase => {
                 to_server.write(ToServer(ClientMessage::DevToShowcase));
             }

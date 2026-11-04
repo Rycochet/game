@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn a_basement_is_below_the_ground_whatever_its_index() {
     let info = |basement| LevelInfo {
-        kind: PoiKind::Farm,
+        kind: super::LevelKind::Poi(PoiKind::Farm),
         ruined: false,
         building: true,
         index: 0,

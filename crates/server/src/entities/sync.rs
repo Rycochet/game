@@ -1,5 +1,6 @@
 //! Telling each client what it can see of mobs and other players.
 
+use shared::hall;
 use shared::id::Id;
 use shared::mob::EntityLook;
 use shared::protocol::{ServerMessage, WORLD_MAP_SIGHT};
@@ -10,6 +11,7 @@ use std::time::Instant;
 use super::{KEPT_FOR, everyone_playing, world_gap};
 use crate::ServerWorld;
 use crate::connections::{Client, Phase};
+use crate::hall::HALL_SIGHT;
 
 /// Tells everyone playing who has come into sight, moved or gone, and lets go of
 /// levels nobody has been on for a while, once they have settled.
@@ -37,15 +39,18 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
             .as_ref()
             .map(|visit| (visit.id(), visit.index()));
         let me = client.character.world_position;
+        let my_hall = client.character.hall.filter(|_| client.visit.is_none());
         let my_kind = client.inventory.creature;
         let detect = client.detect_monsters;
         let mut seen: Vec<EntityLook> = Vec::new();
         for someone in &everyone {
             let in_sight = someone.id != client.entity_id()
                 && someone.level == here
-                && match &mut client.visit {
-                    Some(visit) => visit.can_see(someone.position.0, someone.position.1),
-                    None => world_gap(me, someone.position, width) <= WORLD_MAP_SIGHT,
+                && someone.in_hall == my_hall.is_some()
+                && match (&mut client.visit, my_hall) {
+                    (Some(visit), _) => visit.can_see(someone.position.0, someone.position.1),
+                    (None, Some(at)) => hall_gap(at, someone.position) <= HALL_SIGHT,
+                    (None, None) => world_gap(me, someone.position, width) <= WORLD_MAP_SIGHT,
                 };
             if in_sight {
                 seen.push(EntityLook {
@@ -53,7 +58,12 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
                     kind: someone.look.0,
                     appearance: someone.look.1.clone(),
                     feeling: Feeling::None,
-                    x: someone.position.0,
+                    x: match my_hall {
+                        // Counted from where this client's `x` starts, the near
+                        // way round.
+                        Some(at) => at.0 - client.hall_origin + toward(at.0, someone.position.0),
+                        None => someone.position.0,
+                    },
                     y: someone.position.1,
                     worn: someone.worn.clone(),
                 });
@@ -78,6 +88,25 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
         }
         tell(client, seen);
     }
+}
+
+/// How far east `to` is from `from` in the Hall, the near way round (west is
+/// negative).
+fn toward(from: i64, to: i64) -> i64 {
+    let across = hall::wrap_x(to - from);
+    if across > hall::HALL_LENGTH / 2 {
+        across - hall::HALL_LENGTH
+    } else {
+        across
+    }
+}
+
+/// How far apart two places in the Hall are, the near way round.
+fn hall_gap(a: (i64, i64), b: (i64, i64)) -> i64 {
+    let across = hall::wrap_x(a.0 - b.0);
+    across
+        .min(hall::HALL_LENGTH - across)
+        .max((a.1 - b.1).abs())
 }
 
 /// Tells a client how what it can see differs from what it knew. A client that

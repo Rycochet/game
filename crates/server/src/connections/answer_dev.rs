@@ -7,7 +7,7 @@ use shared::sheet::Sheet;
 
 use super::{Client, made_for};
 use crate::sites::{self};
-use crate::{ServerWorld, world_map};
+use crate::{ServerWorld, hall, world_map};
 
 /// Answers a dev tool. Whether the client is still welcome.
 pub(super) fn answer_dev(
@@ -16,6 +16,11 @@ pub(super) fn answer_dev(
     world: &mut ServerWorld,
 ) -> bool {
     match message {
+        ClientMessage::DevTeleport { x, y }
+            if client.visit.is_none() && client.character.hall.is_some() =>
+        {
+            hall::teleport(client, x, y)
+        }
         ClientMessage::DevTeleport { x, y } => match &client.visit {
             Some(visit) => {
                 let place = (visit.id(), visit.index());
@@ -29,6 +34,7 @@ pub(super) fn answer_dev(
         },
         ClientMessage::DevBackToStart => world_map::back_to_start(client, world),
         ClientMessage::DevToShowcase => world_map::to_showcase(client, world),
+        ClientMessage::DevToHall => hall::to_hall(client, world),
         ClientMessage::DevEnterSite {
             kind,
             seed,

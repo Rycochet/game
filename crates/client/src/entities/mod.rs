@@ -147,6 +147,7 @@ fn read_server(
             // Another map, or a new connection: the server says who is there.
             ServerMessage::Welcome { .. }
             | ServerMessage::EnterLevel(_)
+            | ServerMessage::EnterHall { .. }
             | ServerMessage::OnWorldMap { .. }
             | ServerMessage::Teleported { .. } => {
                 for (_, entity) in others.0.drain() {

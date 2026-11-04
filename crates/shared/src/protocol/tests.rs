@@ -143,6 +143,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::DevSetTime { minutes: 90.5 },
         ClientMessage::DevBackToStart,
         ClientMessage::DevToShowcase,
+        ClientMessage::DevToHall,
         ClientMessage::DevRevealPois,
         ClientMessage::DevRevealMap,
         ClientMessage::DevForgetMap,
@@ -234,7 +235,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             points: vec![(70, -10), (71, -9), (-3, 4)],
         }),
         ServerMessage::EnterLevel(LevelInfo {
-            kind: PoiKind::RockCave,
+            kind: LevelKind::Poi(PoiKind::RockCave),
             ruined: true,
             building: false,
             index: 1,
@@ -294,6 +295,11 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             remembered: true,
         }),
         ServerMessage::OnWorldMap { x: 100, y: -4 },
+        ServerMessage::EnterHall {
+            x: 8,
+            y: 0,
+            origin: 1 << 32,
+        },
         ServerMessage::Teleported { x: 6, y: -7 },
         ServerMessage::Position {
             map: 1,

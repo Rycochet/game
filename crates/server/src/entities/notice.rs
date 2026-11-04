@@ -22,6 +22,8 @@ pub(super) struct Someone {
     pub(super) worn: Vec<WornLook>,
     /// The site level they are on, if any.
     pub(super) level: Option<(SiteId, u32)>,
+    /// They are in the Hall of Worlds (and `level` is `None`).
+    pub(super) in_hall: bool,
     pub(super) position: (i64, i64),
     /// Mobs take no notice of them.
     pub(super) god_mode: bool,
@@ -32,9 +34,10 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
         .iter_mut()
         .filter(|client| client.phase == Phase::Playing && !client.is_gone())
         .map(|client| {
-            let (level, position) = match &client.visit {
-                Some(visit) => (Some((visit.id(), visit.index())), visit.position()),
-                None => (None, client.character.world_position),
+            let (level, position) = match (&client.visit, client.character.hall) {
+                (Some(visit), _) => (Some((visit.id(), visit.index())), visit.position()),
+                (None, Some(at)) => (None, at),
+                (None, None) => (None, client.character.world_position),
             };
             Someone {
                 id: client.entity_id(),
@@ -42,6 +45,7 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
                 worn: client.inventory.shown(),
                 level,
+                in_hall: client.visit.is_none() && client.character.hall.is_some(),
                 position,
                 god_mode: client.god_mode,
             }

@@ -212,6 +212,9 @@ pub struct Client {
     pub(crate) unsaved: bool,
     /// The site level the player is on, if any.
     pub(crate) visit: Option<Visit>,
+    /// In the Hall of Worlds, where the client's `x` counts from
+    /// (`ServerMessage::EnterHall`).
+    pub(crate) hall_origin: i64,
     /// The world map chunks it has been sent on this connection.
     pub(crate) world_chunks: BTreeSet<ChunkPos>,
     /// The roads it has been sent on this connection.

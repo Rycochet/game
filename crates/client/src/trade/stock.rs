@@ -71,7 +71,9 @@ pub(super) fn read_server(
     for FromServer(message) in from_server.read() {
         match message {
             // (A welcome may be from another server, after logging out.)
-            ServerMessage::Welcome { .. } | ServerMessage::EnterLevel(_) => {
+            ServerMessage::Welcome { .. }
+            | ServerMessage::EnterLevel(_)
+            | ServerMessage::EnterHall { .. } => {
                 heading.0 = None;
                 keepers.0.clear();
                 for trade in open.0.drain(..) {

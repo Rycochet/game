@@ -19,7 +19,7 @@ use crate::widgets::CLOSE_PIXELS;
 fn ruined_places_are_named_as_ruins() {
     let mut dungeon = CurrentDungeon::default();
     dungeon.enter(shared::protocol::LevelInfo {
-        kind: shared::poi::PoiKind::StoneTower,
+        kind: shared::protocol::LevelKind::Poi(shared::poi::PoiKind::StoneTower),
         ruined: true,
         building: true,
         index: 1,
@@ -377,7 +377,7 @@ fn the_wheel_zooms_towards_the_mouse() {
 /// A second floor beside the app's, known round the player's place.
 fn add_floor(app: &mut App) {
     let info = shared::protocol::LevelInfo {
-        kind: shared::poi::PoiKind::StoneTower,
+        kind: shared::protocol::LevelKind::Poi(shared::poi::PoiKind::StoneTower),
         ruined: false,
         building: true,
         index: 0,

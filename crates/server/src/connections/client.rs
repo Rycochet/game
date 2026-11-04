@@ -47,6 +47,7 @@ impl Client {
             sent_roads: BTreeSet::new(),
             reveal_pois: world_map::ALL_POIS_KNOWN,
             map: 0,
+            hall_origin: 0,
             last_step: None,
         }
     }
@@ -127,9 +128,10 @@ impl Client {
         let Some(step) = self.last_step.take() else {
             return true;
         };
-        let (x, y) = match &self.visit {
-            Some(visit) => visit.position(),
-            None => self.world_position(),
+        let (x, y) = match (&self.visit, self.character.hall) {
+            (Some(visit), _) => visit.position(),
+            (None, Some((x, y))) => (x - self.hall_origin, y),
+            (None, None) => self.world_position(),
         };
         let map = self.map;
         self.link.send(&ServerMessage::Position { map, step, x, y })

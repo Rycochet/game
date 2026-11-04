@@ -14,7 +14,8 @@ mod version;
 
 pub use address::{DEFAULT_PORT, FALLBACK_PORT, ServerAddress};
 pub use level::{
-    ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, level_chunk,
+    ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, LevelKind, RememberedLevel, SeenStairs,
+    level_chunk,
 };
 pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
 pub use login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
@@ -35,7 +36,7 @@ pub use world_chunk::{SeenPoi, WorldChunk, WorldInfo};
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 39;
+pub const PROTOCOL_VERSION: u32 = 40;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.

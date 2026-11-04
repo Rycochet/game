@@ -27,6 +27,7 @@ pub(super) fn read_server(
             // (A welcome may be from another server, after logging out.)
             ServerMessage::Welcome { .. }
             | ServerMessage::EnterLevel(_)
+            | ServerMessage::EnterHall { .. }
             | ServerMessage::OnWorldMap { .. }
             | ServerMessage::Teleported { .. } => {
                 for (_, old) in std::mem::take(&mut bags.0) {

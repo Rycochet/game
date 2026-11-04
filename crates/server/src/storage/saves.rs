@@ -140,6 +140,10 @@ pub struct CharacterWorldSave {
     pub world_position: (i64, i64),
     /// The site level they are on, if any.
     pub visit: Option<VisitSave>,
+    /// Where they are in the Hall of Worlds, if they are there, having come
+    /// from this world.
+    #[serde(default)]
+    pub hall: Option<(i64, i64)>,
     /// The world map chunks whose poi they have seen, and what they
     /// know of it.
     pub pois: BTreeMap<ChunkPos, KnownPoi>,

@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 use shared::dungeon::Sight;
 use shared::poi::Poi;
-use shared::protocol::{LevelInfo, RememberedLevel, SeenStairs, ServerMessage, level_chunk};
+use shared::protocol::{
+    LevelInfo, LevelKind, RememberedLevel, SeenStairs, ServerMessage, level_chunk,
+};
 use shared::shop::sells;
 use shared::site::{Exit, Site, SiteLevel, StairsDirection};
 
@@ -127,7 +129,7 @@ pub(super) fn enter_level(
     };
     world.move_mob_aside((new.id, index), position);
     let info = LevelInfo {
-        kind: site.kind(),
+        kind: LevelKind::Poi(site.kind()),
         ruined: site.is_ruined(),
         building: site.is_building(),
         index,
@@ -210,6 +212,7 @@ pub(super) fn enter_level(
     visit.sent = remembered;
     add_masks(&mut visit.sent, neighbours);
     client.visit = Some(visit);
+    client.character.hall = None;
     client.unsaved = true;
     update_sight(client)
 }

@@ -37,7 +37,7 @@ fn dungeon() -> CurrentDungeon {
         ..Default::default()
     };
     dungeon.enter(LevelInfo {
-        kind: PoiKind::Crypt,
+        kind: shared::protocol::LevelKind::Poi(PoiKind::Crypt),
         ruined: false,
         building: false,
         index: 0,

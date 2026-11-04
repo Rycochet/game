@@ -32,6 +32,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Stairs Style | | Opens a panel stepping through the styles of stairs, on a level with stairs. Changes only what is drawn. |
 | Suns and Moons | | Toggles a panel changing the colours of the suns and moons, and how bright the suns are. Only on your screen, until you next join the world. |
 | Teleport Mode | Yes | Toggles clicks on the map taking you there at once, through walls in a site. |
+| Teleport to Hall of Worlds | Yes | Takes you to the Hall of Worlds, a walkway hovering in the void, in front of the gate that leads to the World Gate nearest you. Teleport to Start brings you back. |
 | Teleport to POI Showcase | Yes | Takes you to a plain far south with every kind of place on it, in several seeds and levels of ruin. |
 | Teleport to Start | Yes | Takes you out of any site, to the nearest World Gate on the world map, where characters arrive. |
 | Truesight | Yes | Toggles seeing what is hidden: the glow and names of items that are magical, blessed or cursed, and secret doors, which show as pale walls and stay shut. None count as found out, so turning it off hides them again. Eyes show at the top left while it is on. |

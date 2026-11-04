@@ -9,6 +9,8 @@
 //! sight, or with where they are back on the world map; `dungeon_map` draws
 //! the level.
 
+mod hall;
+
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::site::leads_out;
@@ -33,7 +35,10 @@ impl Plugin for SitePlugin {
             )
             // After everything else this frame, so the view being left
             // never sees the new position (the view changes next frame).
-            .add_systems(PostUpdate, (change_map, use_on_arrival).chain());
+            .add_systems(
+                PostUpdate,
+                (change_map, hall::follow_player, use_on_arrival).chain(),
+            );
     }
 }
 
@@ -93,7 +98,7 @@ fn use_on_arrival(
 }
 
 /// What the server says about maps: the player is on a new level (and its
-/// cells), or on the world map (out of a site, or moved by dev tools).
+/// cells), in the Hall of Worlds, or on the world map (out of a site, or moved by dev tools).
 #[allow(clippy::too_many_arguments)]
 fn change_map(
     mut from_server: MessageReader<FromServer>,
@@ -118,6 +123,17 @@ fn change_map(
                 **player = MapPosition { x, y };
                 others.entering(&mut dungeon, info);
                 dungeon.enter(info.clone());
+                next.set(GameView::Dungeon);
+            }
+            // Counted from `origin`, a multiple of the gates' spacing, so the
+            // cells are the same.
+            &ServerMessage::EnterHall { x, y, .. } => {
+                if *view.get() == GameView::WorldMap {
+                    world_return.0 = **player;
+                }
+                **player = MapPosition { x, y };
+                *others = OtherLevels::default();
+                hall::show_around(&mut dungeon, (x, y));
                 next.set(GameView::Dungeon);
             }
             ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),

@@ -22,7 +22,7 @@ pub(crate) fn enter_poi(client: &mut Client, world: &mut ServerWorld, chunk: Chu
     // East-west, the nearer way round the planet.
     let dx = (poi.x - x).rem_euclid(world.width);
     let near = dx.min(world.width - dx) <= ENTER_REACH && (poi.y - y).abs() <= ENTER_REACH;
-    if client.visit.is_some() || !near {
+    if client.visit.is_some() || client.character.hall.is_some() || !near {
         warn!("A client tried to enter {chunk:?} from elsewhere");
         return true;
     }

@@ -30,6 +30,7 @@ pub enum DebugAction {
     StairsStyle,
     SunsAndMoons,
     TeleportMode,
+    TeleportToHall,
     TeleportToPoiShowcase,
     TeleportToStart,
     Truesight,
@@ -62,7 +63,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 26] = [
+    pub(super) const ALL: [Self; 27] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -84,6 +85,7 @@ impl DebugAction {
         Self::StairsStyle,
         Self::SunsAndMoons,
         Self::TeleportMode,
+        Self::TeleportToHall,
         Self::TeleportToPoiShowcase,
         Self::TeleportToStart,
         Self::Truesight,
@@ -114,6 +116,7 @@ impl DebugAction {
             Self::StairsStyle => "Stairs Style",
             Self::SunsAndMoons => "Suns and Moons",
             Self::TeleportMode => "Teleport Mode",
+            Self::TeleportToHall => "Teleport to Hall of Worlds",
             Self::TeleportToPoiShowcase => "Teleport to POI Showcase",
             Self::TeleportToStart => "Teleport to Start",
             Self::Truesight => "Truesight",
@@ -188,6 +191,7 @@ impl DebugAction {
                 | Self::KillMob
                 | Self::RevealMap
                 | Self::TeleportMode
+                | Self::TeleportToHall
                 | Self::TeleportToPoiShowcase
                 | Self::TeleportToStart
                 | Self::Truesight

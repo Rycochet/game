@@ -165,6 +165,11 @@ pub enum ClientMessage {
     /// from anywhere, answered with `OnWorldMap`. Only an embedded server accepts
     /// it, and only while the showcase is on.
     DevToShowcase,
+    /// Developer tools: to the Hall of Worlds, in front of the gate that leads
+    /// to the World Gate nearest the player (or the Hall's first gate, on a
+    /// planet that has none there), answered with `EnterHall`. Only an embedded
+    /// server accepts it.
+    DevToHall,
     /// Developer tools: go straight into a site of any kind and seed, at
     /// any level, a building ruined this much (0 to 5). Only an embedded
     /// (single-player) server accepts it.
@@ -213,6 +218,7 @@ impl ClientMessage {
             Self::DevTeleport { .. }
                 | Self::DevBackToStart
                 | Self::DevToShowcase
+                | Self::DevToHall
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
                 | Self::DevSnowLine(_)

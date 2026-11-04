@@ -152,6 +152,7 @@ fn saves_are_read_back() {
         )]),
         site_versions: BTreeMap::from([(site, 3)]),
         world_position: (-40, 7),
+        hall: Some((12, 3)),
         visit: Some(VisitSave {
             site,
             level: 1,

@@ -162,8 +162,10 @@ pub(super) fn update_meshes(
     // All in the open apart from their buildings, so their water is too.
     let open_air = dungeon.info.as_ref().is_some_and(|i| {
         matches!(
-            i.kind,
-            PoiKind::Farm | PoiKind::HerbalistHut | PoiKind::StiltHut | PoiKind::GreenStiltHut
+            i.kind.poi(),
+            Some(
+                PoiKind::Farm | PoiKind::HerbalistHut | PoiKind::StiltHut | PoiKind::GreenStiltHut
+            )
         )
     });
     if !is_town && (dungeon.is_changed() || outside.is_changed()) {
@@ -188,7 +190,7 @@ pub(super) fn update_meshes(
     }
     light.raise_to(video.least_light());
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
-    let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
+    let theme = Theme::of(dungeon.info.as_ref().and_then(|info| info.kind.poi()));
     let built = super::mesh::build(
         level,
         &views,

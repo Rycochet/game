@@ -21,7 +21,7 @@ pub(super) fn apply_theme(
     if !dungeon.is_changed() {
         return;
     }
-    let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
+    let theme = Theme::of(dungeon.info.as_ref().and_then(|info| info.kind.poi()));
     for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
         if let Some(mut material) = materials.get_mut(&surfaces.solid[surface as usize]) {

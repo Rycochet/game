@@ -131,8 +131,9 @@ pub(super) fn welcome(
     {
         return false;
     }
-    match client.character.visit.take() {
-        Some(visit) => sites::resume(client, world, visit),
-        None => world_map::look_around(client, world),
+    match (client.character.visit.take(), client.character.hall) {
+        (Some(visit), _) => sites::resume(client, world, visit),
+        (None, Some(at)) => crate::hall::enter(client, world, at),
+        (None, None) => world_map::look_around(client, world),
     }
 }

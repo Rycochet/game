@@ -198,6 +198,7 @@ pub(crate) fn answer(
         ClientMessage::DevTeleport { .. }
         | ClientMessage::DevBackToStart
         | ClientMessage::DevToShowcase
+        | ClientMessage::DevToHall
         | ClientMessage::DevEnterSite { .. }
         | ClientMessage::DevGenerateSite { .. }
         | ClientMessage::DevSetCell { .. }
