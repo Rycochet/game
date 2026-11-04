@@ -4,7 +4,7 @@
 
 use bevy::light::light_consts;
 use bevy::prelude::*;
-use shared::celestial::{MOST_BODIES, brightest};
+use shared::celestial::{BodyKind, BodyNow, MOST_BODIES, brightest};
 
 use super::{EdgeFaces, WorldMapScene};
 use crate::common::SkyNow;
@@ -22,6 +22,15 @@ const AMBIENT_BRIGHTNESS: f32 = 60.0;
 /// The most light flat ground takes, however many suns are up: above about this,
 /// sunlit faces clip towards lime.
 const MOST_FLAT_LIGHT: f32 = 1.15;
+
+/// Suns are drawn this much brighter than `shared::celestial` says (owner's
+/// choice), on screen only; moons as they are. `MOST_FLAT_LIGHT` still holds,
+/// so a lone noon sun gains a little less.
+const SUN_BOOST: f32 = 1.2;
+
+/// WebGL 2 takes only one directional light, and Bevy keeps the ones casting no
+/// shadows first, so it would drop the brightest: there, only that one is shown.
+const ONE_LIGHT: bool = cfg!(target_arch = "wasm32");
 
 /// A light for the `.0`th of `Celestial::at`'s bodies.
 #[derive(Component)]
@@ -54,10 +63,18 @@ pub(super) fn update(
     )>,
 ) {
     let strongest_channel = sky.flat.max_element();
-    let exposure = (MOST_FLAT_LIGHT / strongest_channel.max(MOST_FLAT_LIGHT)).min(1.0);
     let shadows = brightest(&sky.bodies);
+    let shown = |number: usize| !ONE_LIGHT || number == shadows;
+    let mut drawn_flat = Vec3::ZERO;
+    for (_, now) in sky.bodies.iter().enumerate().filter(|(n, _)| shown(*n)) {
+        let height = now.direction[1].max(0.0) as f32;
+        drawn_flat += Vec3::from(now.light.map(|v| v as f32)) * height * boost(now);
+    }
+    let drawn_strongest = drawn_flat.max_element();
+    let exposure = (MOST_FLAT_LIGHT / drawn_strongest.max(MOST_FLAT_LIGHT)).min(1.0);
     for (&BodyLight(number), mut light, mut transform, mut visibility) in &mut lights {
         let now = sky.bodies.get(number).filter(|now| now.flat_light() > 0.0);
+        let now = now.filter(|_| shown(number));
         let Some(now) = now else {
             visibility.set_if_neq(Visibility::Hidden);
             continue;
@@ -69,7 +86,7 @@ pub(super) fn update(
         let [red, green, blue] = now.light.map(|v| v as f32);
         let strongest = red.max(green).max(blue);
         light.color = Color::linear_rgb(red / strongest, green / strongest, blue / strongest);
-        light.illuminance = FLAT_LUX * strongest * exposure;
+        light.illuminance = FLAT_LUX * strongest * boost(now) * exposure;
         let casts = number == shadows;
         if light.shadow_maps_enabled != casts {
             light.shadow_maps_enabled = casts;
@@ -93,5 +110,13 @@ pub(super) fn update(
     if let Some(mut material) = materials.get_mut(&faces.0) {
         let lit = sky.lit();
         material.base_color = Color::linear_rgb(lit.x, lit.y, lit.z);
+    }
+}
+
+/// How much brighter this body is drawn than its light: `SUN_BOOST` for suns.
+fn boost(now: &BodyNow) -> f32 {
+    match now.body.kind {
+        BodyKind::Sun => SUN_BOOST,
+        BodyKind::Moon => 1.0,
     }
 }
