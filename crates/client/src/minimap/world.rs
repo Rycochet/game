@@ -41,7 +41,7 @@ fn columns(width: i64) -> i64 {
 }
 
 /// Which chunk a world position is in, wrapping round the planet.
-fn chunk_of(x: i64, y: i64, width: i64) -> (i64, i64) {
+pub(super) fn chunk_of(x: i64, y: i64, width: i64) -> (i64, i64) {
     (
         (x.rem_euclid(width) / CHUNK_SIZE).min(columns(width) - 1),
         y.div_euclid(CHUNK_SIZE),

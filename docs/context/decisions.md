@@ -728,7 +728,7 @@ Asked for by the owner, who chose the details. Two towns within 6 chunks are joi
 
 Towns come from the secret pois seed, so the client can't work roads out: the server does, on a thread of its own as a long one takes a while, and sends each as `ServerMessage::Road` to anyone near enough, once per connection. Towns are seen by all, so this gives nothing away (the reason `decisions.md` had for roads coming from the server). Each road is worked out once per world and saved in `worlds/<id>/roads/`, keyed by its two towns' chunks rather than stored with either town, as a road belongs to both and town saves only exist once entered; a saved road from another `ROAD_VERSION` is worked out again, so the files are only a shortcut. No `WORLD_MAP_VERSION` bump: nothing already generated changes.
 
-Planned next (same chat): rivers and roads on the minimap; then roads speeding up travel, 1.25× for paths to 2× for highways, only along consecutive road points, checked by the server step by step (the client sends steps, never costs). Owner's idea for later: only the largest hidden pois leave faint clues on the world map, found by a search action.
+Rivers and roads are also on the minimap and full map (PR 2), the larger road on top there too. Planned next (same chat): roads speeding up travel, 1.25× for paths to 2× for highways, only along consecutive road points, checked by the server step by step (the client sends steps, never costs). Owner's idea for later: only the largest hidden pois leave faint clues on the world map, found by a search action.
 
 
 ## 2026-11-04: Tides follow the moons
