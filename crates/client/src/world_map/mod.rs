@@ -13,6 +13,7 @@ mod picking;
 mod poi_model;
 mod pois;
 mod rivers;
+mod roads;
 pub mod sky;
 mod terrain;
 
@@ -37,7 +38,8 @@ mod update_terrain;
 
 use click::pick_on_click;
 use parts::{
-    EdgeFaces, FollowsPlayer, RiverBanks, RiverMeshes, RiverStrips, Terrain, WorldMapScene,
+    EdgeFaces, FollowsPlayer, RiverBanks, RiverStrips, RoadStrips, StripMeshes, Terrain,
+    WorldMapScene,
 };
 use showing::{hide_scene, show_scene};
 use spawn::spawn_view;

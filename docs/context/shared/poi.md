@@ -12,7 +12,7 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 - `PoiKind`: 40 kinds: 34 (`Boulders` … `Mausoleum`) named after the tiles `l2_terrain066`–`099` and in their order, all equally likely, then the towns (`Hamlet`, `Village`, `Town`, `City`; `is_town()`) and `Farm` and `HerbalistHut`, with their own odds; `ALL`.
 - `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded. `PoiKind`, `ChunkPos` and `Poi` are serde-serialisable (sent in `protocol::WorldChunk`).
 - `Poi { kind, chunk, x, y, seed }`: `x, y` its exact world grid position; `seed` is what its map is generated from.
-- `PoiMap::new(&WorldParams, pois_seed)` (the secret `WorldSeed::pois`; keeps its own `Surface`), `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Poi>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Poi>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
+- `PoiMap::new(&WorldParams, pois_seed)` (the secret `WorldSeed::pois`; keeps its own `Surface`), `.width()`, `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Poi>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Poi>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
 
 ## Depends on
 
@@ -20,7 +20,7 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 
 ## Used by
 
-- `shared::site` (`PoiKind` picks the generator), `shared::protocol` (`WorldChunk`), `server` (`ServerWorld::pois`: what it sends); client `common` (`KnownPois`, `Portal`), `world_map` (poi tokens), `site` (entering).
+- `shared::road` (towns), `shared::site` (`PoiKind` picks the generator), `shared::protocol` (`WorldChunk`), `server` (`ServerWorld::pois`: what it sends); client `common` (`KnownPois`, `Portal`), `world_map` (poi tokens), `site` (entering).
 
 ## Notes
 

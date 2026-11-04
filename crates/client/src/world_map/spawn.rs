@@ -5,7 +5,9 @@ use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
 use super::terrain::HeightCache;
-use super::{EdgeFaces, FollowsPlayer, RiverBanks, RiverStrips, Terrain, WorldMapScene};
+use super::{
+    EdgeFaces, FollowsPlayer, RiverBanks, RiverStrips, RoadStrips, Terrain, WorldMapScene,
+};
 use crate::common::GameView;
 
 /// Spawns the scene, hidden unless this is the current view.
@@ -82,6 +84,17 @@ pub(super) fn spawn_view(
 
     commands.spawn((
         WorldMapScene,
+        RoadStrips,
+        FollowsPlayer,
+        // Placeholder until the first update builds the real strips.
+        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
+        NoFrustumCulling,
+        Transform::default(),
+        visibility,
+    ));
+
+    commands.spawn((
+        WorldMapScene,
         EdgeFaces,
         FollowsPlayer,
         // Placeholder until the first update builds the real faces.
@@ -101,7 +114,7 @@ pub(super) fn spawn_view(
     commands.queue(attach_terrain_materials);
 }
 
-/// Terrain and rivers are drawn with the sky's materials, made in `super::sky::spawn`.
+/// Terrain, rivers and roads are drawn with the sky's materials, made in `super::sky::spawn`.
 /// (`Commands` run in order, so its resource exists by now.)
 pub(super) fn attach_terrain_materials(world: &mut World) {
     let assets = world.resource::<super::sky::SkyAssets>();
@@ -112,7 +125,7 @@ pub(super) fn attach_terrain_materials(world: &mut World) {
             .entity_mut(entity)
             .insert(MeshMaterial3d(terrain.clone()));
     }
-    let mut query = world.query_filtered::<Entity, With<RiverStrips>>();
+    let mut query = world.query_filtered::<Entity, Or<(With<RiverStrips>, With<RoadStrips>)>>();
     for entity in query.iter(world).collect::<Vec<_>>() {
         world
             .entity_mut(entity)

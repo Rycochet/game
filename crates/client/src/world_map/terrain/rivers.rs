@@ -25,7 +25,7 @@ pub(super) struct ClippedMesh {
 }
 
 impl ClippedMesh {
-    fn add(&mut self, triangle: [Corner; 3]) {
+    pub(super) fn add(&mut self, triangle: [Corner; 3]) {
         let clipped = clip(&triangle);
         let first = self.positions.len() as u32;
         for c in &clipped {
@@ -38,7 +38,7 @@ impl ClippedMesh {
         }
     }
 
-    fn into_mesh(self) -> Mesh {
+    pub(super) fn into_mesh(self) -> Mesh {
         let normals = vec![[0.0, 1.0, 0.0]; self.positions.len()];
         Mesh::new(
             PrimitiveTopology::TriangleList,

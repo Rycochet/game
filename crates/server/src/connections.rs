@@ -26,11 +26,13 @@ mod answer_items;
 mod answer;
 mod client;
 mod messages;
+mod roads;
 mod systems;
 mod welcome;
 
 pub(super) use answer::answer;
 pub(super) use messages::handle_messages;
+pub(super) use roads::send_roads;
 #[cfg(feature = "debug-api")]
 pub(super) use systems::save_all;
 pub(super) use systems::{run_mobs, save_changes, sync_entities, sync_ground, tell_the_time};
@@ -209,6 +211,8 @@ pub struct Client {
     pub(crate) visit: Option<Visit>,
     /// The world map chunks it has been sent on this connection.
     pub(crate) world_chunks: BTreeSet<ChunkPos>,
+    /// The roads it has been sent on this connection.
+    pub(crate) sent_roads: BTreeSet<shared::road::RoadLink>,
     /// Every poi is shown, whether known or not: from the start while
     /// `ALL_POIS_KNOWN`, otherwise by developer tools.
     pub(crate) reveal_pois: bool,

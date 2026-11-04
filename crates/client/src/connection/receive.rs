@@ -157,6 +157,10 @@ pub(super) fn receive(
                     None => warn!("A world map chunk arrived before the world"),
                 }
             }
+            Ok(Some(ServerMessage::Road(road))) => match joined.as_mut().or(world.as_deref_mut()) {
+                Some(world) => world.roads.insert(road),
+                None => warn!("A road arrived before the world"),
+            },
             Ok(Some(ServerMessage::Position { map, step, x, y })) => {
                 let Some(predicted) = prediction.confirmed(map, step, (x, y)) else {
                     continue;

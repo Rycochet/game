@@ -21,10 +21,12 @@ use crate::saves::{LoadError, Save, SaveKey};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod characters;
+mod roads;
 mod saves;
 mod sites;
 mod unsaved;
 
+pub use roads::RoadSave;
 pub use saves::{
     CellMasks, CharacterSave, CharacterWorldSave, KnownPoi, LevelSave, SavedMob, SiteId, SiteSave,
     VisitSave, WorldSave,

@@ -137,11 +137,11 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
         }
     }
     let reach = WORLD_MAP_SIGHT + WORLD_MAP_PRELOAD;
-    let chunks = world
-        .pois
-        .chunks_in_area((x - reach, y - reach), (x + reach, y + reach));
-    for chunk in chunks {
+    let (min, max) = ((x - reach, y - reach), (x + reach, y + reach));
+    let mut new = false;
+    for chunk in world.pois.chunks_in_area(min, max) {
         if client.world_chunks.insert(chunk) {
+            new = true;
             let poi = known_poi(client, world, chunk).map(Into::into);
             if !client
                 .link
@@ -150,6 +150,10 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
                 return false;
             }
         }
+    }
+    // The roads through them, sent by `connections::send_roads` once found.
+    if new {
+        world.roads.ask(min, max);
     }
     true
 }

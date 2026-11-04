@@ -6,7 +6,7 @@ use shared::celestial::brightest;
 
 use super::rivers::KnownRivers;
 use super::terrain::{HeightCache, TerrainGrid, ViewSquare};
-use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, MAX_HALF, RiverMeshes, Terrain};
+use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, MAX_HALF, StripMeshes, Terrain};
 use crate::common::{CurrentWorld, GameClock, MapPosition, ViewStats, Weather};
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
@@ -33,7 +33,7 @@ pub(super) fn update_terrain(
     terrain: Single<&Mesh3d, With<Terrain>>,
     faces: Single<&Mesh3d, With<EdgeFaces>>,
     // Together, as Bevy limits how many things a system can ask for.
-    (river_strips, river_banks): RiverMeshes,
+    (river_strips, river_banks, road_strips): StripMeshes,
     // `Local` keeps a value between runs of this system: the square last cut.
     mut cut: Local<Option<(f32, f32)>>,
 ) {
@@ -67,6 +67,7 @@ pub(super) fn update_terrain(
         &world.climate,
         &world.surface,
         &world.pois,
+        &world.roads,
         centre,
     );
     grid.fill(
@@ -116,6 +117,16 @@ pub(super) fn update_terrain(
     }
     if let Some(mut mesh) = meshes.get_mut(&river_banks.0) {
         *mesh = bank_mesh;
+    }
+    let road_mesh = super::terrain::build_roads(
+        &grid,
+        &world.roads,
+        &known_rivers,
+        world.surface.width(),
+        square,
+    );
+    if let Some(mut mesh) = meshes.get_mut(&road_strips.0) {
+        *mesh = road_mesh;
     }
     let cut_ms = start.elapsed().as_secs_f32() * 1000.0;
     stats.summary = format!("World map: fill {fill_ms:.1} ms, cut window {cut_ms:.1} ms");

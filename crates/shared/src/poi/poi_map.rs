@@ -39,6 +39,11 @@ impl PoiMap {
         }
     }
 
+    /// The world's width in grid points: `x` wraps at this.
+    pub fn width(&self) -> i64 {
+        self.width
+    }
+
     /// Chunk columns round the planet. The width is rarely a whole number of
     /// chunks, so the last column is wider, taking up the remainder.
     pub fn columns(&self) -> i64 {

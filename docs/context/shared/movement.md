@@ -23,7 +23,7 @@ How characters move: one step at a time to one of the 8 neighbouring grid points
 
 ## Used by
 
-- `server` (`world_map`, `sites`), `shared::pathfinding`, `shared::protocol` (`ClientMessage::Step`), client `common` (`CurrentWorld::ground`), `player` (keyboard and travel steps), `connection` (`prediction`), `debug_menu`, `dev_tools`.
+- `server` (`world_map`, `sites`), `shared::pathfinding`, `shared::road` (its costs, `SLOPE_COST` crate-wide), `shared::protocol` (`ClientMessage::Step`), client `common` (`CurrentWorld::ground`), `player` (keyboard and travel steps), `connection` (`prediction`), `debug_menu`, `dev_tools`.
 
 ## Notes
 

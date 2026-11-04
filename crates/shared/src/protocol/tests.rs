@@ -228,6 +228,11 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             chunk: ChunkPos { x: 0, y: 0 },
             poi: None,
         }),
+        ServerMessage::Road(crate::road::Road {
+            link: crate::road::RoadLink::new(ChunkPos { x: 2, y: 0 }, ChunkPos { x: 1, y: -1 }),
+            kind: crate::road::RoadKind::Track,
+            points: vec![(70, -10), (71, -9), (-3, 4)],
+        }),
         ServerMessage::EnterLevel(LevelInfo {
             kind: PoiKind::RockCave,
             ruined: true,

@@ -25,6 +25,7 @@ mod dungeon;
 mod items;
 mod map;
 mod pointer;
+mod roads;
 mod sky;
 mod states;
 mod token;
@@ -56,6 +57,7 @@ pub use map::{
 pub use pointer::{
     PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface, interface_area,
 };
+pub use roads::KnownRoads;
 pub use sky::SkyNow;
 use sky::update_sky;
 pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};

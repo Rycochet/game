@@ -11,11 +11,13 @@ use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::river::{MAX_LENGTH, River, Rivers};
 use shared::surface::Surface;
 
-use crate::common::KnownPois;
+use crate::common::{KnownPois, KnownRoads};
+
+mod clearing;
 
 /// World map grid units per screen pixel in the starting view (a 400-point
 /// window is about 1250 pixels wide), so widths can be given in pixels.
-const UNITS_PER_PIXEL: f32 = 0.32;
+pub(super) const UNITS_PER_PIXEL: f32 = 0.32;
 
 /// Width at the source and the widest a river gets, in pixels at the starting
 /// zoom (the owner's figures). Width comes only from how far it has run.
@@ -31,18 +33,6 @@ const SMOOTHING: usize = 4;
 
 /// Chunks each way from the player a source can be and still reach the window.
 const CHUNK_REACH: i64 = (MAX_LENGTH as i64 + super::terrain::REACH) / CHUNK_SIZE + 1;
-
-/// Woods are cut back round rivers, so they run on the ground: nothing grows
-/// within `CLEARED` grid units of the middle of one, and woods are back to full
-/// by `CLEARED_TO`. Wider than the river, as grid points are a unit apart.
-const CLEARED: f32 = 1.2;
-const CLEARED_TO: f32 = 4.0;
-
-/// The same round a poi: nothing grows under its model. Only pois the server
-/// has told this character of clear anything, so the woods give nothing away;
-/// a character learning of one, or another character playing, changes them.
-const POI_CLEARED: f32 = 8.0;
-const POI_CLEARED_TO: f32 = 13.0;
 
 /// Side of the wrapping store of clearings. It is rebuilt each time the player
 /// enters a chunk, so it must hold what the window can need from anywhere in
@@ -114,6 +104,8 @@ pub struct KnownRivers {
     open: Vec<f32>,
     /// The pois `open` is cleared round, sorted.
     cleared_pois: Vec<(i64, i64)>,
+    /// `KnownRoads::changes` when `open` was cleared round the roads.
+    cleared_roads: u32,
 }
 
 impl KnownRivers {
@@ -126,6 +118,7 @@ impl KnownRivers {
         climate: &Climate,
         surface: &Surface,
         pois: &KnownPois,
+        roads: &KnownRoads,
         (x, y): (i64, i64),
     ) -> bool {
         let columns = rivers.columns();
@@ -139,7 +132,7 @@ impl KnownRivers {
             .iter()
             .map(|poi| (poi.x, poi.y))
             .collect();
-        let window = super::terrain::REACH + CHUNK_SIZE + POI_CLEARED_TO as i64;
+        let window = super::terrain::REACH + CHUNK_SIZE + clearing::POI_CLEARED_TO as i64;
         let in_window =
             |&(px, py): &(i64, i64)| (px - x).abs() <= window && (py - y).abs() <= window;
         let outdated = near_pois
@@ -150,13 +143,14 @@ impl KnownRivers {
                 .cleared_pois
                 .iter()
                 .filter(|poi| in_window(poi))
-                .any(|poi| !near_pois.contains(poi));
+                .any(|poi| !near_pois.contains(poi))
+            || self.cleared_roads != roads.changes();
         if self.around == Some(here) && !outdated {
             return false;
         }
         self.cleared_pois = near_pois;
         if self.around == Some(here) {
-            self.clear_woods((x, y), rivers.width());
+            self.clear_woods((x, y), rivers.width(), roads);
             return true;
         }
         self.around = Some(here);
@@ -179,57 +173,8 @@ impl KnownRivers {
             let east = (chunk.x - here.x).rem_euclid(columns);
             east.min(columns - east) <= keep && (chunk.y - here.y).abs() <= keep
         });
-        self.clear_woods((x, y), rivers.width());
+        self.clear_woods((x, y), rivers.width(), roads);
         outdated
-    }
-
-    /// Works out `open` for the points around `centre`.
-    fn clear_woods(&mut self, centre: (i64, i64), world_width: i64) {
-        let mut open = std::mem::take(&mut self.open);
-        open.clear();
-        open.resize((CLEARING_SIDE * CLEARING_SIDE) as usize, 1.0);
-        let limit = CLEARING_SIDE / 2 - 1;
-        let reach = CLEARED_TO.ceil() as i64;
-        for river in self.rivers() {
-            // The way round the planet that is nearest the player.
-            let mut east = (river.source.0 - centre.0).rem_euclid(world_width);
-            if east > world_width / 2 {
-                east -= world_width;
-            }
-            let (x0, y0) = (east as f32, (river.source.1 - centre.1) as f32);
-            for point in &river.points {
-                let (px, py) = (point.x + x0, point.y + y0);
-                let (nx, ny) = (px.round() as i64, py.round() as i64);
-                for dy in ny - reach..=ny + reach {
-                    for dx in nx - reach..=nx + reach {
-                        if dx.abs() > limit || dy.abs() > limit {
-                            continue;
-                        }
-                        let distance = (dx as f32 - px).hypot(dy as f32 - py);
-                        let t = ((distance - CLEARED) / (CLEARED_TO - CLEARED)).clamp(0.0, 1.0);
-                        let slot = clearing_slot(centre.0 + dx, centre.1 + dy);
-                        open[slot] = open[slot].min(t * t * (3.0 - 2.0 * t));
-                    }
-                }
-            }
-        }
-        let reach = POI_CLEARED_TO.ceil() as i64;
-        for &(x, y) in &self.cleared_pois {
-            let (nx, ny) = (x - centre.0, y - centre.1);
-            for dy in ny - reach..=ny + reach {
-                for dx in nx - reach..=nx + reach {
-                    if dx.abs() > limit || dy.abs() > limit {
-                        continue;
-                    }
-                    let distance = ((dx - nx) as f32).hypot((dy - ny) as f32);
-                    let t =
-                        ((distance - POI_CLEARED) / (POI_CLEARED_TO - POI_CLEARED)).clamp(0.0, 1.0);
-                    let slot = clearing_slot(centre.0 + dx, centre.1 + dy);
-                    open[slot] = open[slot].min(t * t * (3.0 - 2.0 * t));
-                }
-            }
-        }
-        self.open = open;
     }
 
     /// How much of the woods grow at a point near the player: 0 beside a river,

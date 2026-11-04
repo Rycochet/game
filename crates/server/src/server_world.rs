@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use super::clock::{ActionClock, Repeating, WorldClock};
 use super::entities::Populations;
+use super::roads::RoadWorker;
 use super::save_world;
 use super::storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved};
 
@@ -30,6 +31,8 @@ pub struct ServerWorld {
     pub width: i64,
     /// The ground as far as walking goes.
     pub(crate) ground: WorldGround,
+    /// Works out the roads between towns.
+    pub(crate) roads: RoadWorker,
     params: WorldParams,
     /// Game minutes since the world began, always running.
     pub(crate) clock: WorldClock,
@@ -135,6 +138,7 @@ impl ServerWorld {
             pois: PoiMap::new(&params, seed.pois()),
             width: Surface::new(&params).width(),
             ground: WorldGround::new(&params),
+            roads: RoadWorker::start(seed, storage.clone()),
             params,
             clock: world_clock,
             action_clock,
