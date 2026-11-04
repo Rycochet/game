@@ -6,6 +6,7 @@ use shared::site::StairsDirection;
 
 use super::canvas::Canvas;
 use super::grid::Looks;
+use super::lines::MapRivers;
 use super::projection::Projection;
 use super::sprites::Sprites;
 use super::world::WorldTiles;
@@ -26,6 +27,7 @@ pub(super) fn draw_maps(
     time: Res<Time>,
     mut images: ResMut<Assets<Image>>,
     mut tiles: ResMut<WorldTiles>,
+    mut rivers: ResMut<MapRivers>,
     mut sprites: ResMut<Sprites>,
     mut last: Local<Option<DrawnFrom>>,
     mut pending: Local<bool>,
@@ -192,6 +194,7 @@ pub(super) fn draw_maps(
         };
         let conditions = world.conditions(&clock, &weather);
         busy |= tiles.fill(world, &style, conditions, grid_box, budget);
+        busy |= rivers.fill(world, grid_box, budget);
     }
     *pending = busy;
 
@@ -224,6 +227,8 @@ pub(super) fn draw_maps(
         (None, Some(world)) => {
             let width = world.surface.width();
             tiles.draw(&mut canvas, &projection, width, clip, PARCHMENT);
+            // Thicker when zoomed in, but less than the zoom.
+            rivers.draw(&mut canvas, &projection, world, zoom.sqrt() * dots, clip);
         }
         (None, None) => {}
     }

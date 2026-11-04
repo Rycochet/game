@@ -18,7 +18,7 @@ Rivers on the world map, from their chunk's position alone. Only something to lo
 
 ## Used by
 
-- Client `common` (`CurrentWorld::rivers`), `world_map` (`KnownRivers`).
+- Client `common` (`CurrentWorld::rivers`), `world_map` (`KnownRivers`), `minimap` (`MapRivers`, traced again for the maps).
 
 ## Notes
 

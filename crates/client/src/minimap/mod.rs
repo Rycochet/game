@@ -6,6 +6,7 @@ mod canvas;
 mod floors;
 mod frame;
 mod grid;
+mod lines;
 mod projection;
 mod sky;
 mod sprites;
@@ -13,6 +14,7 @@ mod world;
 
 use bevy::input::InputSystems;
 use bevy::prelude::*;
+use lines::MapRivers;
 use sprites::Sprites;
 use world::WorldTiles;
 
@@ -139,6 +141,7 @@ impl Plugin for MinimapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FullMap>()
             .init_resource::<WorldTiles>()
+            .init_resource::<MapRivers>()
             .init_resource::<Sprites>()
             .add_systems(Startup, (spawn_maps, floors::spawn_column))
             .add_systems(

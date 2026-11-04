@@ -19,7 +19,7 @@ Roads on the world map between towns, from the world alone, so the order anythin
 
 ## Used by
 
-- `server` (`roads`: the road thread, saves, `connections::send_roads`), `shared::protocol` (`ServerMessage::Road`), client `common` (`KnownRoads`), `world_map` (drawing, clearing woods).
+- `server` (`roads`: the road thread, saves, `connections::send_roads`), `shared::protocol` (`ServerMessage::Road`), client `common` (`KnownRoads`), `world_map` (drawing, clearing woods), `minimap` (lines on the maps).
 
 ## Notes
 
