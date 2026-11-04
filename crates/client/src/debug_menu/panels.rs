@@ -7,6 +7,7 @@ use crate::widgets::TextSize;
 
 mod armour;
 mod arms;
+mod feet;
 mod legs;
 mod page;
 mod waist;

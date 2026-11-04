@@ -276,14 +276,14 @@ fn destroying_takes_what_is_carried_and_only_that() {
 #[test]
 fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
     let mut test = TestClient::new();
-    let answers = test.send(&[give(ItemKind::Boots)]);
-    let boots = inventory(&answers).pockets[0].item.id;
-    let wear = ClientMessage::WearItem { item: boots };
+    let answers = test.send(&[give(ItemKind::FootArmour)]);
+    let sabatons = inventory(&answers).pockets[0].item.id;
+    let wear = ClientMessage::WearItem { item: sabatons };
     let worn = inventory(&test.send(std::slice::from_ref(&wear)));
-    assert!(worn.is_worn(boots));
+    assert!(worn.is_worn(sabatons));
     assert!(worn.pockets.is_empty());
 
-    // The shoes are under the boots, so a refused move is put right.
+    // The shoes are under the sabatons, so a refused move is put right.
     let shoes = worn
         .worn
         .iter()
@@ -298,8 +298,8 @@ fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
         rotation: Rotation::None,
     };
     assert!(inventory(&test.send(&[take_off(shoes)])).is_worn(shoes));
-    let answers = test.send(&[take_off(boots)]);
-    assert!(!inventory(&answers).is_worn(boots));
+    let answers = test.send(&[take_off(sabatons)]);
+    assert!(!inventory(&answers).is_worn(sabatons));
 }
 
 #[test]

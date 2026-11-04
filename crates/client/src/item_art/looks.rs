@@ -1,6 +1,7 @@
 //! What can be seen of weapons and armour pieces: what their pictures are kept by.
 
 use shared::armour::arms::ArmsForm;
+use shared::armour::feet::FeetForm;
 use shared::armour::hands::{Hand, HandsForm};
 use shared::armour::head::HeadForm;
 use shared::armour::legs::LegsForm;
@@ -154,6 +155,21 @@ impl WaistLook {
     }
 }
 
+/// What can be seen of a pair of foot pieces.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FeetLook {
+    pub(in crate::item_art) form: FeetForm,
+    /// What it takes up, wide and long, not turned.
+    pub(in crate::item_art) cells: (u8, u8),
+}
+
+impl FeetLook {
+    /// A pair of foot pieces taking up these cells.
+    pub fn new(form: FeetForm, cells: (u8, u8)) -> Self {
+        Self { form, cells }
+    }
+}
+
 /// How an armour item looks, from its form and the cells it takes up.
 pub(super) fn armour_look(item: &Item) -> Option<Look> {
     let quality = item.quality;
@@ -186,6 +202,10 @@ pub(super) fn armour_look(item: &Item) -> Option<Look> {
         },
         ItemForm::Waist(form) => Look::Waist {
             waist: WaistLook::new(*form, cells),
+            quality,
+        },
+        ItemForm::Feet(form) => Look::Feet {
+            feet: FeetLook::new(*form, cells),
             quality,
         },
         _ => return None,

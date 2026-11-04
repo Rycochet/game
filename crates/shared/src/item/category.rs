@@ -68,6 +68,7 @@ impl ItemKind {
             | Self::Barding
             | Self::BevoredHelm
             | Self::Chausses
+            | Self::FootArmour
             | Self::Coif
             | Self::DemiGauntlets
             | Self::FullArmour
