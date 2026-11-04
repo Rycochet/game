@@ -16,6 +16,9 @@ pub use spawn::{spawn_moveable_panel, stops_presses};
 const FIRST_PANEL_Z: i32 = 30;
 
 const PADDING: f32 = 8.0;
+/// Above the title bar: less than at the sides, as the bar is taller than the
+/// stripes in it, so the room above them matches the room beside them.
+const TOP_PADDING: f32 = 4.0;
 const CONTENT_GAP: f32 = 4.0;
 const TITLE_GAP: f32 = 8.0;
 /// The stripes either side of the title, which only panels that can be moved have:

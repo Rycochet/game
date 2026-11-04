@@ -93,6 +93,8 @@ pub const BUTTON_PADDING: UiRect = UiRect {
     bottom: Val::Px(4.0),
 };
 
+/// How far a panel's title is drawn above its place.
+const TITLE_LIFT: f32 = 2.0;
 const TOOLTIP_FONT: TextSize = TextSize::Medium;
 const CLOSE_FONT: TextSize = TextSize::Large;
 const TOOLTIP_EDGE: f32 = 1.0;
