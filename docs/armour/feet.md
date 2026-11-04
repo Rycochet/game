@@ -6,7 +6,7 @@ nav_order: 9
 
 # Foot armour
 
-Foot armour is one item for both feet, worn over shoes or boots. It reaches up to the ankle, under the edge of the leg armour. See [Armour](index) for layers, styles and materials.
+Foot armour is one item for both feet, worn over [shoes or boots](../footwear). It reaches up to the ankle, under the edge of the leg armour. See [Armour](index) for layers, styles and materials.
 
 ## Kinds
 
