@@ -17,6 +17,8 @@ pub(super) const SELECTED_TEXT: Color = LIT_EDGE;
 pub(super) const DISABLED_BACKGROUND: Color = Color::srgb(0.62, 0.59, 0.53);
 pub(super) const DISABLED_EDGE: Color = Color::srgb(0.5, 0.48, 0.44);
 pub(super) const DISABLED_TEXT: Color = Color::srgb(0.42, 0.4, 0.37);
+/// Words in a box that aren't part of what was typed.
+pub(super) const HINT_TEXT: Color = Color::srgb(0.55, 0.5, 0.42);
 
 /// Dark, so that every quality's colour can be read on it.
 pub(super) const TOOLTIP_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);

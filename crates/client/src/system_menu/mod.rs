@@ -61,6 +61,7 @@ impl Plugin for SystemMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SystemMenu>()
             .init_resource::<connect::ConnectForm>()
+            .init_resource::<connect::AddressCheck>()
             .init_resource::<settings::VideoForm>()
             .init_resource::<settings::VideoShown>()
             .init_resource::<settings::VideoTrial>()
@@ -76,10 +77,15 @@ impl Plugin for SystemMenuPlugin {
                     show_buttons,
                     credits::start_credits,
                     refusal::show_refusal,
-                    connect::open_connect,
+                    (
+                        connect::open_connect,
+                        connect::check_address,
+                        connect::use_connect,
+                        connect::show_connect,
+                        connect::show_mark,
+                    )
+                        .chain(),
                     connect::fill_server_list,
-                    connect::use_connect,
-                    connect::show_connect,
                     ask_for_pause,
                     settings::fill_interface_page,
                     settings::use_pages,

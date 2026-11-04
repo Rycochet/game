@@ -26,7 +26,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Checkbox | have | A whole clickable row with a drawn tick. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
 | Toggle row | have | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
 | Slider | have | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
-| Text box | have | Sunken, focus border, error state, optional label above. No floating label. |
+| Text box | have | Sunken, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. |
 | Dropdown | have | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
 | Switch | later | For settings that apply at once, once Settings has real options. Until then checkboxes do it. |
 | Fab, ButtonGroup, Rating, SpeedDial | no | |
@@ -53,7 +53,8 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | Darkening | have | What is outside a layer; each layer's adds up. |
 | Progress bar | have | From the loading screen. |
 | Snackbar, Alert | later | Likely soon: "Saved", "Connection lost". |
-| Spinner, Skeleton | no | |
+| Spinner | have | A ring with a gap, turning on the real clock, for something under way that can't say how far it has got (Connect checking an address). Small, beside or in what it is about. |
+| Skeleton | no | |
 
 ## Surfaces and moving about
 

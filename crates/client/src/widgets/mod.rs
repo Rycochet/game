@@ -18,6 +18,7 @@ mod scroll;
 mod set_edge;
 mod slider;
 mod soft_keyboard;
+mod spinner;
 mod stock;
 mod tabs;
 mod text_box;
@@ -53,6 +54,7 @@ pub use scroll::spawn_scroll_area;
 pub use set_edge::set_edge;
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
+pub use spinner::Spinner;
 pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};
 pub use tabs::{TabChosen, spawn_tabs, spawn_toggle_row};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
@@ -113,7 +115,14 @@ impl Plugin for WidgetsPlugin {
             .add_plugins(UiMaterialPlugin::<set_edge::SetEdgeMaterial>::default())
             .add_systems(Startup, set_edge::make_set_edges)
             .add_systems(Update, (set_edge::give_set_edges, set_edge::slide_bands))
-            .add_systems(Startup, item::spawn_name_box)
+            .add_systems(
+                Startup,
+                (item::spawn_name_box, spinner::make_spinner_picture),
+            )
+            .add_systems(
+                Update,
+                (spinner::picture_spinners, spinner::turn_spinners).chain(),
+            )
             // After `Update`, where it is asked for, and in time to be laid out.
             .add_systems(
                 PostUpdate,

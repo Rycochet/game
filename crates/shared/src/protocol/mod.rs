@@ -12,7 +12,7 @@ mod login;
 mod online;
 mod version;
 
-pub use address::{DEFAULT_PORT, ServerAddress};
+pub use address::{DEFAULT_PORT, FALLBACK_PORT, ServerAddress};
 pub use level::{
     ENTER_REACH, LEVEL_CHUNK_SIZE, LevelChunk, LevelInfo, RememberedLevel, SeenStairs, level_chunk,
 };

@@ -5,6 +5,7 @@ use shared::protocol::ServerAddress;
 
 use super::super::icons::ConnectIcons;
 use super::super::{Action, SystemMenu};
+use super::check::AddressCheck;
 use super::popups::{CertificateBox, ForgetWords};
 use super::{AddressBox, ServerList, spawn_server_row};
 use crate::common::{ChosenServer, Preferences, SavedServer, Session};
@@ -109,6 +110,7 @@ pub(in crate::system_menu) fn use_connect(
     mut chosen: ResMut<ChosenServer>,
     mut preferences: ResMut<Preferences>,
     mut form: ResMut<ConnectForm>,
+    check: Res<AddressCheck>,
     mut address: Single<&mut TextBox, (With<AddressBox>, Without<CertificateBox>)>,
     certificate: Single<&TextBox, (With<CertificateBox>, Without<AddressBox>)>,
     mut forget_words: Single<&mut Text, With<ForgetWords>>,
@@ -160,9 +162,17 @@ pub(in crate::system_menu) fn use_connect(
             *menu = SystemMenu::Connect;
         }
         (Action::ConnectNow, SystemMenu::Connect) => {
-            if let Some(address) = in_box {
-                let key = form.key_for(&address, &preferences.servers);
-                chosen.0 = Some(SavedServer { address, key });
+            // The port that answered is always kept with the server (owner).
+            let found = check
+                .ready_for(&address.text)
+                .map(|found| found.with_port());
+            if let (Some(typed), Some(found)) = (in_box, found) {
+                let key = form.key_for(&typed, &preferences.servers);
+                address.text.clone_from(&found);
+                chosen.0 = Some(SavedServer {
+                    address: found,
+                    key,
+                });
                 *session = Session::Playing;
                 *menu = SystemMenu::Closed;
             }
