@@ -6,7 +6,7 @@ use shared::celestial::brightest;
 
 use super::rivers::KnownRivers;
 use super::terrain::{HeightCache, TerrainGrid, ViewSquare};
-use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, RiverMeshes, Terrain};
+use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, MAX_HALF, RiverMeshes, Terrain};
 use crate::common::{CurrentWorld, GameClock, MapPosition, ViewStats, Weather};
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
@@ -144,6 +144,13 @@ pub(super) fn view_square(orbit: &OrbitCamera) -> ViewSquare {
     ViewSquare {
         right,
         towards,
-        half: HALF_SIZE as f32 * orbit.zoom(),
+        half: window_half(orbit.zoom()),
     }
+}
+
+/// Grid units from the player to each side of the window at a camera zoom
+/// (`OrbitCamera::zoom`): `HALF_SIZE` in the starting view, never more than
+/// `MAX_HALF`.
+pub fn window_half(zoom: f32) -> f32 {
+    (HALF_SIZE as f32 * zoom).min(MAX_HALF)
 }

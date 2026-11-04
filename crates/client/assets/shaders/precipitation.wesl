@@ -49,7 +49,8 @@ const SNOW_BELOW: f32 = 0.2;
 const SLEET_BELOW: f32 = 0.3;
 // How hard it must be raining for hail.
 const HAIL_ABOVE: f32 = 0.8;
-// Grid units the drops' pattern repeats over: more than the window's diagonal.
+// Grid units the drops' pattern repeats over: more than the window's diagonal
+// (`DROP_TILE` in `sky.rs` is a copy, checked against the largest window).
 const DROP_TILE: f32 = 600.0;
 // The lowest anything falls: below every shore.
 const LOWEST: f32 = 15.0;

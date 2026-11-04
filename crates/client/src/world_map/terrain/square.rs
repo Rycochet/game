@@ -39,7 +39,7 @@ pub struct ViewSquare {
     pub right: Vec2,
     pub towards: Vec2,
     /// From the centre to each side: `HALF_SIZE` in the starting view, less
-    /// when zoomed in.
+    /// when zoomed in, never more than `MAX_HALF` (see `window_half`).
     pub half: f32,
 }
 
@@ -65,12 +65,15 @@ impl ViewSquare {
     /// box), plus a little for the grid squares around its edge and rivers
     /// crossing it. Only grid points within this are drawn.
     pub(super) fn reach(&self) -> (i64, i64) {
-        let reach =
-            |a: f32, b: f32| ((self.half * (a.abs() + b.abs())).ceil() as i64 + 3).min(REACH);
-        (
+        let reach = |a: f32, b: f32| (self.half * (a.abs() + b.abs())).ceil() as i64 + 3;
+        let (x, z) = (
             reach(self.right.x, self.towards.x),
             reach(self.right.y, self.towards.y),
-        )
+        );
+        // `window_half` keeps the window within `MAX_HALF`, so this holds;
+        // cutting the reach short instead would cut the surface off unseen.
+        debug_assert!(x <= REACH && z <= REACH, "window wider than the stores");
+        (x, z)
     }
 
     /// How much of the starting view's width is on show (1 = all of it).

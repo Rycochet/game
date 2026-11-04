@@ -21,7 +21,7 @@ The maps: the round minimap always in the window's top-right corner, and the ful
 
 ## Depends on
 
-- `common` (`OtherLevels`, `FirstFloor`, `CurrentWorld`, `KnownPois::is_known`, `CurrentDungeon`, `GameClock`, `GameView`, `SkyNow`, `Portal`, `SmoothPosition`, `Token`, `Weather`), `surface_style` (`SurfaceStyle`), `view3d` (`OrbitCamera`, `View3dSystems`), `player` (`Player`, `PlayerSystems`), `world_map` (`HALF_SIZE`, `poi_icon`), `dungeon_map` (`TOWN_ATLAS`, `door_picture`), `widgets`, `shared::dungeon`, `shared::poi`, `shared::site` (`BuildingKind`).
+- `common` (`OtherLevels`, `FirstFloor`, `CurrentWorld`, `KnownPois::is_known`, `CurrentDungeon`, `GameClock`, `GameView`, `SkyNow`, `Portal`, `SmoothPosition`, `Token`, `Weather`), `surface_style` (`SurfaceStyle`), `view3d` (`OrbitCamera`, `View3dSystems`), `player` (`Player`, `PlayerSystems`), `world_map` (`window_half`, `poi_icon`), `dungeon_map` (`TOWN_ATLAS`, `door_picture`), `widgets`, `shared::dungeon`, `shared::poi`, `shared::site` (`BuildingKind`).
 
 ## Used by
 
