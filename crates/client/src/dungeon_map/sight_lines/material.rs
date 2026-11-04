@@ -57,6 +57,16 @@ impl MaterialExtension for SightMask {
 }
 
 impl SightMask {
+    /// Shows the whole surface (`None`, for the Hall of Worlds, where nothing
+    /// blocks sight and the mask would cut off the far end), or only one side
+    /// of the mask's edge again.
+    pub fn set_side(&mut self, side: Option<MaskSide>) {
+        let value = side.map_or(0.0, MaskSide::value);
+        if self.params.side != value {
+            self.params.side = value;
+        }
+    }
+
     pub fn new(mask: Handle<Image>, side: MaskSide) -> Self {
         Self {
             params: MaskParams {

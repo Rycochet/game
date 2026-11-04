@@ -146,7 +146,7 @@ impl CurrentDungeon {
         };
         let kind = match info.kind {
             LevelKind::Poi(kind) => kind,
-            LevelKind::Hall => return "Hall of Worlds".into(),
+            LevelKind::Hall { .. } => return "Hall of Worlds".into(),
         };
         if kind.is_town() {
             return format!("{kind:?}");

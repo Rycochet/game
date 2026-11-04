@@ -127,13 +127,13 @@ fn change_map(
             }
             // Counted from `origin`, a multiple of the gates' spacing, so the
             // cells are the same.
-            &ServerMessage::EnterHall { x, y, .. } => {
+            &ServerMessage::EnterHall { x, y, origin } => {
                 if *view.get() == GameView::WorldMap {
                     world_return.0 = **player;
                 }
                 **player = MapPosition { x, y };
                 *others = OtherLevels::default();
-                hall::show_around(&mut dungeon, (x, y));
+                hall::show_around(&mut dungeon, (x, y), origin);
                 next.set(GameView::Dungeon);
             }
             ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),

@@ -46,6 +46,12 @@ pub struct OrbitCamera {
     look_ahead: f32,
     /// The starting view, which `reset` returns to: (yaw, pitch, distance).
     home: (f32, f32, f32),
+    /// How far out it may go, as a multiple of the starting distance: 1, or
+    /// more where a view wants to show further (`set_reach`).
+    reach: f32,
+    /// The lowest it may tilt, in radians: `MIN_PITCH_DEGREES`, or more where
+    /// a view wants it (`set_lowest_pitch`).
+    lowest: f32,
 }
 
 impl OrbitCamera {
@@ -59,12 +65,35 @@ impl OrbitCamera {
             distance,
             look_ahead: look_ahead / (distance * pitch.cos()),
             home: (0.0, pitch, distance),
+            reach: 1.0,
+            lowest: MIN_PITCH_DEGREES.to_radians(),
         }
     }
 
-    /// Back to the starting view.
+    /// Back to the starting view, as far out as it may go.
     pub fn reset(&mut self) {
         (self.yaw, self.pitch, self.distance) = self.home;
+        self.distance *= self.reach;
+    }
+
+    /// Lets it go `reach` times as far out as the starting view, and goes as
+    /// far out as that (the Hall of Worlds shows further); 1 is usual.
+    pub fn set_reach(&mut self, reach: f32) {
+        self.reach = reach;
+        self.distance = self.home.2 * reach;
+    }
+
+    /// How far out it may go, as a multiple of the starting distance.
+    pub fn reach(&self) -> f32 {
+        self.reach
+    }
+
+    /// Lets it tilt no lower than `degrees` above the horizon (`None`: the
+    /// usual lowest), raising it if it is lower now. The Hall of Worlds keeps
+    /// the floor running off the top of the screen this way.
+    pub fn set_lowest_pitch(&mut self, degrees: Option<f32>) {
+        self.lowest = degrees.unwrap_or(MIN_PITCH_DEGREES).to_radians();
+        self.pitch = self.pitch.max(self.lowest);
     }
 
     /// The camera's transform for looking at `target`.
@@ -95,21 +124,20 @@ impl OrbitCamera {
         // grabbing the map, so the camera moves the other way. Dragging down
         // pulls the near side down, so the camera looks down more steeply.
         self.yaw = (self.yaw - pixels.x * RADIANS_PER_PIXEL).rem_euclid(TAU);
-        self.pitch = (self.pitch + pixels.y * RADIANS_PER_PIXEL).clamp(
-            MIN_PITCH_DEGREES.to_radians(),
-            MAX_PITCH_DEGREES.to_radians(),
-        );
+        self.pitch = (self.pitch + pixels.y * RADIANS_PER_PIXEL)
+            .clamp(self.lowest, MAX_PITCH_DEGREES.to_radians());
     }
 
     fn zoom_by(&mut self, notches: f32) {
         let home = self.home.2;
-        self.distance = (self.distance * ZOOM_PER_NOTCH.powf(notches)).clamp(home * MIN_ZOOM, home);
+        self.distance = (self.distance * ZOOM_PER_NOTCH.powf(notches))
+            .clamp(home * MIN_ZOOM, home * self.reach);
     }
 
     /// Moves in by a pinch: fingers twice as far apart halve the distance.
     fn zoom_by_pinch(&mut self, pinch: f32) {
         let home = self.home.2;
-        self.distance = (self.distance / pinch).clamp(home * MIN_ZOOM, home);
+        self.distance = (self.distance / pinch).clamp(home * MIN_ZOOM, home * self.reach);
     }
 
     /// Turns by an angle in radians, clockwise on the screen: the map follows

@@ -46,6 +46,13 @@ pub(crate) fn enter(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, 
     sites::leave(client, world);
     client.visit = None;
     let x = hall::wrap_x(x);
+    // A place that can't be walked on (the Hall was once wider): onto the
+    // walkway beside it.
+    let y = if hall::cell(x, y).is_walkable() {
+        y
+    } else {
+        y.clamp(0, hall::WALKWAY_ROWS - 1)
+    };
     client.character.hall = Some((x, y));
     client.hall_origin = x - x.rem_euclid(hall::GATE_SPACING);
     client.unsaved = true;

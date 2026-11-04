@@ -76,6 +76,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: ground      | `crates/client/src/ground/`     | `docs/context/client/ground.md`     | Bags on the ground: 3D models by how full, sparkle, black outlines, remembered in grey; clicking one walks there and opens the Character panel |
 | client: character   | `crates/client/src/character/` | `docs/context/client/character.md`  | Character panel: stats, skills, abilities, looks and the most that can be carried |
 | client: entities    | `crates/client/src/entities/` | `docs/context/client/entities.md`   | Mobs and other players as tokens, as long as they can be seen |
+| client: hall_view   | `crates/client/src/hall_view/`  | `docs/context/client/hall_view.md`    | The Hall of Worlds' gates: models by design with their rune codes (shown when zoomed in; also for world map gate pois), placed along the stretch, faded when in the player's way |
 | client: touch       | `crates/client/src/touch/`      | `docs/context/client/touch.md`        | Fingers: tap as a left click, `PointerPosition`, `TouchGesture` (drag, pinch, twist, tilt) |
 | client: widgets     | `crates/client/src/widgets/`    | `docs/context/client/widgets.md`      | Interface pieces: panels with titles, buttons by state, tooltips, moveable panels; taking clicks on them; interface size (`UiScale`) |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, click mode text                    |

@@ -264,6 +264,11 @@ pub(super) fn draw_maps(
     }
 
     let player_at = projection.to_picture(spot.0, spot.1);
+    // The Hall of Worlds has no north to show (owner).
+    let in_hall = players_level
+        .info
+        .as_ref()
+        .is_some_and(|info| matches!(info.kind, shared::protocol::LevelKind::Hall { .. }));
     if full.open {
         let floor = on_other_floor.then_some(player_is_up);
         full_map_marks(
@@ -273,6 +278,7 @@ pub(super) fn draw_maps(
             player_at,
             (zoom, dots, scale),
             floor,
+            !in_hall,
         );
     } else {
         let sky = under_the_sky(view, players_level).then_some(&*sky_now);
@@ -286,6 +292,7 @@ pub(super) fn draw_maps(
             (zoom, dots, scale),
             turn,
             sky,
+            !in_hall,
         );
     }
 }

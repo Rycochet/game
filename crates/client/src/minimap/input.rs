@@ -3,6 +3,7 @@
 use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use shared::protocol::LevelKind;
 
 use super::{
     CORNER_GAP, FullMap, KEEP_KNOWN_INSIDE, MAX_ZOOM, MIN_ZOOM, OverFullMap, PIXELS_PER_NOTCH,
@@ -142,7 +143,19 @@ pub(super) fn take_input(
         (area.x / 2.0 - KEEP_KNOWN_INSIDE).max(1.0) * scale,
         (area.y / 2.0 - KEEP_KNOWN_INSIDE).max(1.0) * scale,
     );
-    let known = |at| shows_known(view, world.as_deref(), shown, at, half);
+    // In the Hall of Worlds the map goes on for ever, so it is the player's
+    // dot that is kept inside, not what is known (owner).
+    let in_hall = shown
+        .info
+        .as_ref()
+        .is_some_and(|info| matches!(info.kind, LevelKind::Hall { .. }));
+    let known = |at: (f64, f64)| {
+        if in_hall {
+            (at.0 - spot.0).abs() <= half.0 && (at.1 - spot.1).abs() <= half.1
+        } else {
+            shows_known(view, world.as_deref(), shown, at, half)
+        }
+    };
     // Zoomed in, or somewhere else now (down the stairs, say): back towards
     // the player until something known shows. Another floor may show nothing
     // round the player's place: then the map is free until it finds something.

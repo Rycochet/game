@@ -31,7 +31,8 @@ pub enum LevelKind {
     /// A site behind a world map poi of this kind.
     Poi(PoiKind),
     /// The Hall of Worlds (`shared::hall`): never sent, the client makes it.
-    Hall,
+    /// Its `x` count from `origin` (`ServerMessage::EnterHall`).
+    Hall { origin: i64 },
 }
 
 impl LevelKind {
@@ -39,7 +40,7 @@ impl LevelKind {
     pub fn poi(self) -> Option<PoiKind> {
         match self {
             Self::Poi(kind) => Some(kind),
-            Self::Hall => None,
+            Self::Hall { .. } => None,
         }
     }
 

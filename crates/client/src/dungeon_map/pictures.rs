@@ -2,12 +2,14 @@
 
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
+use shared::hall;
+use shared::protocol::LevelKind;
 use shared::surface::SurfaceSample;
 
 use super::mesh::Surface;
-use super::sight_lines::SurfaceMaterial;
+use super::sight_lines::{MaskSide, SurfaceMaterial};
 use super::theme::Theme;
-use super::{SurfaceMaterials, load_tile};
+use super::{MEMORY_ALPHA, SurfaceMaterials, load_tile};
 use crate::common::{CurrentDungeon, CurrentWorld, GameClock, MapPosition, Weather, WorldReturn};
 use crate::surface_style::SurfaceStyle;
 
@@ -21,19 +23,62 @@ pub(super) fn apply_theme(
     if !dungeon.is_changed() {
         return;
     }
-    let theme = Theme::of(dungeon.info.as_ref().and_then(|info| info.kind.poi()));
+    let kind = dungeon.info.as_ref().map(|info| info.kind);
+    let theme = Theme::of_level(kind);
     for surface in [Surface::Floor, Surface::Wall, Surface::WallBlend] {
         let picture = load_tile(&asset_server, theme.picture(surface));
         if let Some(mut material) = materials.get_mut(&surfaces.solid[surface as usize]) {
             material.base.base_color_texture = Some(picture.clone());
+            if surface == Surface::Floor {
+                material.base.base_color = floor_tint(kind);
+            }
         }
         if let Some(mut material) = materials.get_mut(&surfaces.stairs_through[surface as usize]) {
             material.base.base_color_texture = Some(picture.clone());
         }
         surfaces.to_grey.push((surface as usize, picture));
     }
+    // Nothing in the Hall of Worlds is drawn see-through (owner): memory there
+    // is solid, like a town's.
+    let in_hall = matches!(kind, Some(LevelKind::Hall { .. }));
+    for (surface, handle) in Surface::ALL.iter().zip(&surfaces.memory) {
+        if let Some(mut material) = materials.get_mut(handle) {
+            let (alpha, mode) = if in_hall || *surface == Surface::Town {
+                (1.0, AlphaMode::Opaque)
+            } else {
+                (MEMORY_ALPHA, AlphaMode::Blend)
+            };
+            if material.base.alpha_mode != mode || material.base.base_color.alpha() != alpha {
+                material.base.alpha_mode = mode;
+                material.base.base_color.set_alpha(alpha);
+            }
+        }
+    }
+    // Nothing blocks sight in the Hall, so the mask, which only reaches the
+    // floor the camera shows, isn't used there: it would cut off the far end.
+    let sides = [
+        (&surfaces.solid, MaskSide::InSight),
+        (&surfaces.stairs_through, MaskSide::InSight),
+        (&surfaces.memory, MaskSide::OutOfSight),
+    ];
+    for (handles, side) in sides {
+        for handle in handles {
+            if let Some(mut material) = materials.get_mut(handle) {
+                material.extension.set_side((!in_hall).then_some(side));
+            }
+        }
+    }
     if let Some(mut material) = materials.get_mut(&surfaces.see_through) {
         material.base.base_color_texture = Some(load_tile(&asset_server, theme.wall));
+    }
+}
+
+/// The Hall of Worlds' marble takes a little of the Hall's hue where the player
+/// is (`shared::hall::hue`); any other floor is as drawn.
+fn floor_tint(kind: Option<LevelKind>) -> Color {
+    match kind {
+        Some(LevelKind::Hall { origin }) => Color::hsl(hall::hue(origin) as f32, 0.3, 0.95),
+        _ => Color::WHITE,
     }
 }
 

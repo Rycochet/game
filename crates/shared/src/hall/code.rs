@@ -1,15 +1,15 @@
-//! Gate codes: a gate's place as players see it, in runes rather than
-//! letters.
+//! Gate codes: a gate as players see it, in runes rather than letters.
 //!
 //! A code is `CODE_LENGTH` runes of the 32 in `RUNES`, 5 bits each, most
-//! significant first: the gate's number (32 bits) with its design (3 bits)
-//! above it. The design is worked out from the number, so it also checks the
+//! significant first: the gate's address (32 bits: where it leads, so
+//! neighbouring gates' codes are unalike) with its design (3 bits) above it.
+//! The design is worked out from the gate's place, so it also checks the
 //! code: changing any rune gives a code whose design doesn't match 7 times in
 //! 8.
 
 use core::fmt;
 
-use super::GatePlace;
+use super::{GateAddress, GatePlace};
 
 /// The runes codes are written in: the Anglo-Saxon futhorc in its usual
 /// order, without æsc (ᚫ), the easiest to mistake for ac (ᚪ).
@@ -63,7 +63,7 @@ pub struct GateCode(pub [u8; CODE_LENGTH]);
 
 impl GateCode {
     pub fn of(place: GatePlace) -> Self {
-        let value = (u64::from(place.design().index()) << 32) | u64::from(place.number());
+        let value = (u64::from(place.design().index()) << 32) | u64::from(place.address().bits());
         let mut runes = [0; CODE_LENGTH];
         for (i, rune) in runes.iter_mut().enumerate() {
             let shift = BITS_PER_RUNE * (CODE_LENGTH - 1 - i) as u32;
@@ -78,7 +78,7 @@ impl GateCode {
         let value = self.0.iter().fold(0u64, |value, &rune| {
             (value << BITS_PER_RUNE) | u64::from(rune & 31)
         });
-        let place = GatePlace::from_number(value as u32);
+        let place = GateAddress::from_bits(value as u32).place();
         (u64::from(place.design().index()) == value >> 32).then_some(place)
     }
 
