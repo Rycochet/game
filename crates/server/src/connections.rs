@@ -14,7 +14,7 @@ use shared::wear::WornLook;
 use shared::world::WorldId;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use crate::ServerWorld;
+use crate::ServerWorlds;
 use crate::accounts::{AccountId, Accounts};
 use crate::ground::{GroundAction, GroundTold};
 use crate::sites::Visit;
@@ -111,18 +111,18 @@ impl Connections {
 
     /// Tells everyone but the host this, and disconnects them, saving them
     /// (the server is closing to others).
-    pub(crate) fn send_others_away(&mut self, world: &mut ServerWorld, message: &ServerMessage) {
+    pub(crate) fn send_others_away(&mut self, worlds: &mut ServerWorlds, message: &ServerMessage) {
         for client in self.clients.iter_mut().filter(|client| !client.host) {
             client.link.send(message);
-            client.disconnect(world);
+            client.disconnect(worlds.of(client.world));
         }
         self.clients.retain(|client| !client.gone);
     }
 
     /// Disconnects everyone, saving them (the server is stopping).
-    pub(crate) fn disconnect_all(&mut self, world: &mut ServerWorld) {
+    pub(crate) fn disconnect_all(&mut self, worlds: &mut ServerWorlds) {
         for client in &mut self.clients {
-            client.disconnect(world);
+            client.disconnect(worlds.of(client.world));
         }
         self.clients.clear();
     }
@@ -178,6 +178,9 @@ pub struct Client {
     pub(crate) character_id: Option<CharacterId>,
     /// Whether it is to be disconnected (and was saved).
     gone: bool,
+    /// The world its character is in, once joining has decided it. In the
+    /// Hall, the world they came from.
+    pub(crate) world: Option<WorldId>,
     /// What the character knows of this world and where they are in it: the
     /// pois and cells they know (`visit` is filled in on saving).
     pub(crate) character: CharacterWorldSave,
@@ -231,3 +234,5 @@ pub struct Client {
 
 #[cfg(test)]
 pub(crate) mod tests;
+#[cfg(test)]
+mod worlds_tests;

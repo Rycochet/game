@@ -59,8 +59,13 @@ impl Plugin for DebugMenuPlugin {
                     panels::press_generate_buttons,
                     panels::update_generate_buttons,
                     panels::press_panel_buttons,
-                    panels::press_time_steps,
-                    panels::edit_time_box,
+                    (
+                        panels::press_time_steps,
+                        panels::edit_time_box,
+                        panels::press_rate_buttons,
+                        panels::update_rate_buttons,
+                    )
+                        .chain(),
                     panels::choose_give_options,
                     panels::press_give_buttons,
                     panels::press_creature_buttons,

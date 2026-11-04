@@ -1,4 +1,4 @@
-//! `ServerWorld`: the world as the server holds it, its clock, sites and what has been forgotten.
+//! `ServerWorld`: one world as the server holds it, its time, sites and what has been forgotten.
 
 use bevy::prelude::*;
 use shared::celestial::Celestial;
@@ -9,22 +9,22 @@ use shared::protocol::WorldInfo;
 use shared::site::Generator;
 use shared::surface::Surface;
 use shared::world::{
-    MINUTES_PER_HOUR, NORMAL_SNOW_LINE, WORLD_MAP_VERSION, WorldParams, WorldSeed,
+    MINUTES_PER_HOUR, NORMAL_SNOW_LINE, WORLD_MAP_VERSION, WorldParams, WorldSeed, WorldTime,
 };
 use std::collections::{BTreeMap, BTreeSet};
-use std::time::Duration;
+use std::sync::Arc;
 
-use super::clock::{ActionClock, Repeating, WorldClock};
+use super::clock::{ActionClock, ServerClock};
 use super::entities::Populations;
 use super::roads::RoadWorker;
-use super::save_world;
 use super::storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved};
 
-/// How often the clock is saved, in real time. A crash loses this much of it.
-const CLOCK_SAVE_EVERY: Duration = Duration::from_secs(10);
+mod sharing;
+mod time;
 
-/// The world this server runs.
-#[derive(Resource)]
+pub(crate) use sharing::Shared;
+
+/// One world the server runs (`ServerWorlds` holds them all).
 pub struct ServerWorld {
     pub seed: WorldSeed,
     pub pois: PoiMap,
@@ -32,24 +32,24 @@ pub struct ServerWorld {
     pub width: i64,
     /// The ground as far as walking goes.
     pub(crate) ground: WorldGround,
-    /// Works out the roads between towns.
-    pub(crate) roads: RoadWorker,
+    /// Works out the roads between towns (shared by every world).
+    roads: Arc<RoadWorker>,
     /// The steps along every road found so far, which cost less.
     pub(crate) road_steps: shared::road::RoadSteps,
     params: WorldParams,
     /// The suns and moons: the tide follows the moons.
     celestial: Celestial,
-    /// Game minutes since the world began, always running.
-    pub(crate) clock: WorldClock,
-    /// What creatures' energy goes by.
+    /// The server's clock, which the world's time is worked out from (`time`).
+    pub(crate) server_clock: ServerClock,
+    /// The world's time: game minutes since it began, by the server's clock.
+    time: WorldTime,
+    /// What creatures' energy goes by (the server's).
     pub(crate) action_clock: ActionClock,
-    /// The clock's whole hours. The tide follows this, so it moves once an
+    /// The time's whole hours. The tide follows this, so it moves once an
     /// hour rather than all the time.
     pub(crate) hour: u32,
-    /// `clock` has been moved, which everyone playing needs telling.
+    /// `time` has been moved or sped up, which everyone in the world needs telling.
     pub(crate) clock_moved: bool,
-    /// Saves the clock (`None`: nowhere to save it).
-    _clock_saver: Option<Repeating>,
     /// Above it everything is frozen (not saved: normal weather on starting).
     pub(crate) snow_line: u32,
     pub(crate) storage: Storage,
@@ -90,21 +90,32 @@ impl ServerWorld {
     pub(crate) fn made_now(&self) -> shared::item::MadeAt {
         shared::item::MadeAt {
             world: self.seed.id(),
-            minute: self.clock.minutes() as u64,
+            minute: self.minutes() as u64,
         }
     }
 
-    /// A world that is never saved (tests).
+    /// A world that is never saved, with clocks of its own (tests).
     pub fn new(seed: WorldSeed) -> Self {
         Self::open(seed, Storage::none()).expect("nothing to read")
     }
 
-    /// The world saved in `storage`, or a new one (saved straight away). An
-    /// error if the save can't be read or was made by a newer server.
+    /// `open_in`, with clocks and a road thread of its own (tests).
     pub(super) fn open(seed: WorldSeed, storage: Storage) -> Result<Self, String> {
+        Self::open_in(seed, storage, &Shared::new(0.0, 0))
+    }
+
+    /// The world saved in `storage`, or a new one (saved straight away), going
+    /// by `shared`'s clocks. An error if the save can't be read or was made by
+    /// a newer server.
+    pub(crate) fn open_in(
+        seed: WorldSeed,
+        storage: Storage,
+        shared: &Shared,
+    ) -> Result<Self, String> {
         let saved = storage.load_world()?;
-        let saved_ticks = saved.as_ref().map_or(0, |save| save.action_ticks);
-        let clock = match saved {
+        let now = shared.clock.seconds();
+        let mut changed = saved.is_none();
+        let time = match saved {
             Some(save) => {
                 if save.format > SAVE_FORMAT {
                     return Err(format!(
@@ -124,34 +135,30 @@ impl ServerWorld {
                         save.world_map_version
                     ));
                 }
-                save.clock
+                // Its time has run on from when it was saved, as the server's clock
+                // has; from now if saved before that clock was (or on another
+                // server, whose clock may be ahead).
+                changed = save.server_clock.is_none();
+                let then = save.server_clock.unwrap_or(now).min(now);
+                WorldTime::at(save.clock, then, save.rate)
             }
-            None => 0.0,
+            None => WorldTime::at(0.0, now, Default::default()),
         };
         let params = WorldParams::from_seed(seed.terrain());
-        let world_clock = WorldClock::new(clock);
-        let save_clock = world_clock.clone();
-        let save_to = storage.clone();
-        let action_clock = ActionClock::new(saved_ticks);
-        let save_ticks = action_clock.clone();
-        let clock_saver = storage.saves().then(|| {
-            Repeating::start(CLOCK_SAVE_EVERY, move || {
-                save_world(&save_to, seed, save_clock.minutes(), save_ticks.ticks());
-            })
-        });
+        let minutes = time.minutes(now);
         let world = Self {
             pois: PoiMap::new(&params, seed.pois()),
             width: Surface::new(&params).width(),
             ground: WorldGround::new(&params),
-            roads: RoadWorker::start(seed, storage.clone()),
+            roads: shared.roads.clone(),
             road_steps: shared::road::RoadSteps::new(Surface::new(&params).width()),
             celestial: Celestial::from_seed(params.seed),
             params,
-            clock: world_clock,
-            action_clock,
-            hour: (clock / MINUTES_PER_HOUR) as u32,
+            server_clock: shared.clock.clone(),
+            time,
+            action_clock: shared.action_clock.clone(),
+            hour: (minutes / MINUTES_PER_HOUR) as u32,
             clock_moved: false,
-            _clock_saver: clock_saver,
             snow_line: NORMAL_SNOW_LINE,
             seed,
             storage,
@@ -162,7 +169,11 @@ impl ServerWorld {
             stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),
         };
-        save_world(&world.storage, seed, clock, saved_ticks);
+        // Only new worlds, and those saved before going by the server's clock:
+        // otherwise `world.ron` only changes when its time is moved.
+        if changed {
+            world.save_world();
+        }
         Ok(world)
     }
 

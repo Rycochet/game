@@ -69,7 +69,7 @@ Generators are needed again after the first time, so every version still in use 
 
 **Persistence comes first.** The world is big, with no starting area to farm, so it is persistent rather than reset for loot. Changes that aren't the generator's (a player mining through a wall, breaking a door to get somewhere) are stored as an overlay on the generated base, applied whenever the map is generated, and a reset never undoes them; only the generator's spawns come back.
 
-There are several worlds and players move between them, so every map is addressed with its world: the world map, or a site level (world id, poi chunk, level).
+There are several worlds, a server runs all those its players are in at once (`ServerWorlds`), and players move between them, so every map is addressed with its world: the world map, or a site level (world id, poi chunk, level).
 
 **The server pushes; the client never asks.** The client sends intents (step, travel, take stairs); the server validates each step and sends whatever that makes visible, plus a margin. It already knows where everyone is, so a client's "I already have…" list isn't needed (later, perhaps on reconnect with a cache).
 

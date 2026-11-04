@@ -41,7 +41,7 @@ pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id)
     let seed = visit.poi.seed.derive("shop");
     let seed = Seed::new(seed.at(&[visit.index as i64, building as i64]));
     let (id, poi_kind, index) = (visit.id, visit.poi.kind, visit.index);
-    let now = world.clock.minutes();
+    let now = world.minutes();
     let made = world.made_now();
     let level = world
         .site_mut(id, poi_kind)

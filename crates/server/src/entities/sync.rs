@@ -8,16 +8,25 @@ use shared::sheet::Feeling;
 use std::collections::BTreeSet;
 use std::time::Instant;
 
-use super::{KEPT_FOR, everyone_playing, world_gap};
+use super::{KEPT_FOR, Someone, everyone_playing, world_gap};
 use crate::ServerWorld;
 use crate::connections::{Client, Phase};
 use crate::hall::HALL_SIGHT;
 
-/// Tells everyone playing who has come into sight, moved or gone, and lets go of
-/// levels nobody has been on for a while, once they have settled.
-pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
+/// Everyone playing who is in the Hall of Worlds, which all worlds share.
+pub(crate) fn in_hall(clients: &mut [Client]) -> Vec<Someone> {
+    let mut everyone = everyone_playing(clients);
+    everyone.retain(|someone| someone.in_hall);
+    everyone
+}
+
+/// Tells everyone playing in a world (`clients`) who has come into sight, moved
+/// or gone, and lets go of levels nobody has been on for a while, once they have
+/// settled. Those in the Hall see everyone there (`in_hall`), from any world.
+pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[Someone]) {
     let playing = |client: &&mut Client| client.phase == Phase::Playing;
-    let everyone = everyone_playing(clients);
+    let mut everyone = everyone_playing(clients);
+    everyone.retain(|someone| !someone.in_hall);
 
     let now = Instant::now();
     let in_use: BTreeSet<_> = everyone
@@ -43,7 +52,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
         let my_kind = client.inventory.creature;
         let detect = client.detect_monsters;
         let mut seen: Vec<EntityLook> = Vec::new();
-        for someone in &everyone {
+        for someone in everyone.iter().chain(in_hall) {
             let in_sight = someone.id != client.entity_id()
                 && someone.level == here
                 && someone.in_hall == my_hall.is_some()

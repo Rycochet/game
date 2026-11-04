@@ -5,7 +5,7 @@
 //! binary (dedicated / Docker) or embedded in a native client for single
 //! player, on its own thread with its own Bevy world. The web client never
 //! includes it. Clients talk to it only through messages
-//! (`shared::protocol`), even when embedded. It saves its world, sites,
+//! (`shared::protocol`), even when embedded. It saves its worlds, sites,
 //! characters (`storage`) and accounts (`accounts`) in its own data folder.
 
 mod accounts;
@@ -33,7 +33,7 @@ mod world_map;
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
-use shared::world::{WORLD_MAP_VERSION, WorldSeed};
+use shared::world::WorldSeed;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -47,17 +47,20 @@ pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
 pub use tls::{CertificateFacts, CertificateSource, Security, certificate_facts};
 
 use save_queue::SaveQueue;
-use storage::{SAVE_FORMAT, Storage, WorldSave};
+use storage::Storage;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod server_world;
+mod server_worlds;
 
 pub use server_world::ServerWorld;
+pub use server_worlds::ServerWorlds;
 
 /// Simulation ticks per second.
 pub const TICKS_PER_SECOND: f64 = shared::energy::ACTION_TICKS_PER_SECOND;
 
-/// The world every server runs until worlds can be created and chosen.
+/// The home world every server runs, where new characters arrive, until a
+/// place of its own takes over.
 pub const DEFAULT_WORLD_SEED: u64 = 12345;
 
 /// How often what has changed is saved (it is also saved when a client
@@ -124,15 +127,15 @@ impl Plugin for ServerPlugin {
             saves::set_aside_old_saves(data)
                 .unwrap_or_else(|error| panic!("The server can't set aside old saves: {error}"));
         }
-        // One save thread for the world and the accounts.
+        // One save thread for the worlds and the accounts.
         let queue = self.data.as_deref().map(SaveQueue::in_folder);
         let storage = match &queue {
             Some(queue) => Storage::new(queue.clone(), self.world_seed.id()),
             None => Storage::none(),
         };
-        let world = ServerWorld::open(self.world_seed, storage)
-            .unwrap_or_else(|error| panic!("The server can't open its world: {error}"));
-        app.insert_resource(world)
+        let worlds = ServerWorlds::start(self.world_seed, storage)
+            .unwrap_or_else(|error| panic!("The server can't open its home world: {error}"));
+        app.insert_resource(worlds)
             .insert_resource(self.options)
             .init_resource::<ServerName>()
             .insert_resource(Connections::new(match queue {
@@ -161,15 +164,15 @@ impl Plugin for ServerPlugin {
 }
 
 /// Moves the action clock on by real time, so that a slow frame doesn't slow
-/// everyone down, unless the world's clock is paused.
-fn advance_action_clock(time: Res<Time>, world: Res<ServerWorld>, mut owed: Local<f64>) {
-    if world.clock.is_paused() {
+/// everyone down, unless the server's clock is paused.
+fn advance_action_clock(time: Res<Time>, worlds: Res<ServerWorlds>, mut owed: Local<f64>) {
+    if worlds.clock().is_paused() {
         return;
     }
     *owed += time.delta_secs_f64() * shared::energy::ACTION_TICKS_PER_SECOND;
     let whole = owed.floor();
     *owed -= whole;
-    world.action_clock.advance(whole as u64);
+    worlds.action_clock().advance(whole as u64);
 }
 
 #[cfg(test)]
@@ -193,17 +196,6 @@ pub fn headless_app(world_seed: WorldSeed, options: ServerOptions, data: Option<
     app
 }
 
-/// Saves `world.ron`.
-fn save_world(storage: &Storage, seed: WorldSeed, clock: f64, action_ticks: u64) {
-    storage.save_world(&WorldSave {
-        format: SAVE_FORMAT,
-        seed,
-        world_map_version: WORLD_MAP_VERSION,
-        clock,
-        action_ticks,
-    });
-}
-
 /// Stops the server once nobody is connected (each client was saved as it
 /// left).
 fn exit_when_alone(connections: Res<Connections>, mut exit: MessageWriter<AppExit>) {
@@ -212,10 +204,10 @@ fn exit_when_alone(connections: Res<Connections>, mut exit: MessageWriter<AppExi
     }
 }
 
-fn announce(world: Res<ServerWorld>) {
+fn announce(worlds: Res<ServerWorlds>) {
     info!(
-        "Hall of Worlds server {} started, world {:?}",
+        "Hall of Worlds server {} started, home world {:?}",
         env!("CARGO_PKG_VERSION"),
-        world.seed.id()
+        worlds.home_id().0
     );
 }

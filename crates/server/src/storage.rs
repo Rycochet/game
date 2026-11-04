@@ -28,8 +28,8 @@ mod unsaved;
 
 pub use roads::RoadSave;
 pub use saves::{
-    CellMasks, CharacterSave, CharacterWorldSave, KnownPoi, LevelSave, SavedMob, SiteId, SiteSave,
-    VisitSave, WorldSave,
+    CellMasks, CharacterSave, CharacterWorldSave, KnownPoi, LevelSave, SavedMob, ServerSave,
+    SiteId, SiteSave, VisitSave, WorldSave,
 };
 pub use unsaved::{Unsaved, now};
 
@@ -105,6 +105,32 @@ impl Storage {
         Self::new(SaveQueue::in_folder(data), id)
     }
 
+    /// The same saves, for world `id` (the characters' are the same for all).
+    pub(crate) fn for_world(&self, id: WorldId) -> Self {
+        Self {
+            world: id,
+            ..self.clone()
+        }
+    }
+
+    /// The server's own clocks, if saved. An error if they can't be read.
+    pub fn load_server(&self) -> Result<Option<ServerSave>, String> {
+        let Some(queue) = &self.queue else {
+            return Ok(None);
+        };
+        match queue.read(&SaveKey::Server) {
+            Ok(Some(Save::Server(save))) => Ok(Some(save)),
+            Ok(_) => Ok(None),
+            Err(LoadError::CantReach(error) | LoadError::Broken(error)) => Err(error),
+        }
+    }
+
+    pub fn save_server(&self, save: &ServerSave) {
+        if let Some(queue) = &self.queue {
+            queue.save(SaveKey::Server, Save::Server(save.clone()));
+        }
+    }
+
     /// The saved world, if there is one. Anything wrong with it is an error, as
     /// it can't be started again: nothing is put aside.
     pub fn load_world(&self) -> Result<Option<WorldSave>, String> {
@@ -115,6 +141,19 @@ impl Storage {
             Ok(Some(Save::World(save))) => Ok(Some(save)),
             Ok(_) => Ok(None),
             Err(LoadError::CantReach(error) | LoadError::Broken(error)) => Err(error),
+        }
+    }
+
+    /// The seed of the world saved here: `None` if there is none, or it makes
+    /// no sense. An error only if it couldn't be reached, as it may be fine.
+    pub(crate) fn saved_world_seed(&self) -> Result<Option<shared::world::WorldSeed>, String> {
+        let Some(queue) = &self.queue else {
+            return Ok(None);
+        };
+        match queue.read(&SaveKey::World(self.world)) {
+            Ok(Some(Save::World(save))) => Ok(Some(save.seed)),
+            Ok(_) | Err(LoadError::Broken(_)) => Ok(None),
+            Err(LoadError::CantReach(error)) => Err(error),
         }
     }
 

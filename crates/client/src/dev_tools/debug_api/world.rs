@@ -27,7 +27,10 @@ pub(super) fn set_time(
         (Some(hours), None) => hours * shared::world::MINUTES_PER_HOUR,
         (None, None) => return Err(refused("give hours or minutes")),
     };
-    to_server.write(ToServer(ClientMessage::DevSetTime { minutes }));
+    to_server.write(ToServer(ClientMessage::DevSetWorldClock {
+        minutes: Some(minutes),
+        rate: None,
+    }));
     done()
 }
 

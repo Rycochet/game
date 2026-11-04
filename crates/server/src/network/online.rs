@@ -18,7 +18,7 @@ use super::ports::{OpenPorts, open_ports};
 use super::routes::{Stop, accept_connections};
 use crate::connections::{self, Connections};
 use crate::tls::{CertificateSource, Security};
-use crate::{ServerName, ServerOptions, ServerWorld};
+use crate::{ServerName, ServerOptions, ServerWorlds};
 
 /// Lets an embedded server's host open it to other players. `data` is its data
 /// folder, where the certificate is kept (`tls/`).
@@ -76,7 +76,7 @@ impl Plugin for OnlinePlugin {
 fn go_online(
     mut commands: Commands,
     mut connections: ResMut<Connections>,
-    mut world: ResMut<ServerWorld>,
+    mut worlds: ResMut<ServerWorlds>,
     mut options: ResMut<ServerOptions>,
     mut name: ResMut<ServerName>,
     folder: Res<CertificateFolder>,
@@ -88,7 +88,7 @@ fn go_online(
     };
     if slot.0.is_some() {
         let going = ServerMessage::GoingOffline(name.0.clone());
-        connections.send_others_away(&mut world, &going);
+        connections.send_others_away(&mut worlds, &going);
         // Closed now, so the port is free to open again below.
         slot.0 = None;
         commands.remove_resource::<NewConnections>();
@@ -101,7 +101,7 @@ fn go_online(
         connections.tell_host(&ServerMessage::Online(OnlineState::Offline));
         return;
     };
-    let opened = open(&settings, &folder, &world, &heartbeat);
+    let opened = open(&settings, &folder, &worlds, &heartbeat);
     let (ports, closing) = match opened {
         Ok(opened) => opened,
         Err(reason) => {
@@ -115,11 +115,11 @@ fn go_online(
     options.guests = true;
     options.pausable = false;
     options.player_limit = settings.player_limit;
-    if world.clock.is_paused() {
-        world.clock.resume();
+    if worlds.clock().is_paused() {
+        worlds.clock().resume();
         connections.tell_host(&ServerMessage::Paused {
             paused: false,
-            clock: world.clock.minutes(),
+            clock: worlds.clock().seconds(),
         });
     }
     let (certificate, fingerprint) = ports.certificate.unwrap_or_default();
@@ -139,7 +139,7 @@ fn go_online(
 fn open(
     settings: &OnlineSettings,
     folder: &CertificateFolder,
-    world: &ServerWorld,
+    worlds: &ServerWorlds,
     heartbeat: &Heartbeat,
 ) -> Result<(OpenPorts, tokio::sync::watch::Sender<()>), String> {
     let ip: IpAddr = settings.bind_address.trim().parse().map_err(|_| {
@@ -162,7 +162,7 @@ fn open(
     };
     let (closing, closed) = tokio::sync::watch::channel(());
     let ports = open_ports(
-        world.clock.clone(),
+        worlds.clock().clone(),
         heartbeat.clone(),
         None,
         &security,

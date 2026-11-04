@@ -7,16 +7,16 @@ use super::*;
 
 fn after_a_second(paused: bool) -> u64 {
     let mut app = World::new();
-    let world = ServerWorld::new(WorldSeed::new(1));
+    let worlds = ServerWorlds::with_home(ServerWorld::new(WorldSeed::new(1)));
     if paused {
-        world.clock.pause();
+        worlds.clock().pause();
     }
-    app.insert_resource(world);
+    app.insert_resource(worlds);
     let mut time = Time::<()>::default();
     time.advance_by(Duration::from_secs(1));
     app.insert_resource(time);
     app.run_system_once(advance_action_clock).unwrap();
-    app.resource::<ServerWorld>().action_clock.ticks()
+    app.resource::<ServerWorlds>().action_clock().ticks()
 }
 
 #[test]

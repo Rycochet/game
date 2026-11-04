@@ -12,8 +12,8 @@ fn seed() -> WorldSeed {
 
 /// Everything `worker` finds of an area 12 chunks across, waiting until it
 /// has been quiet for a while.
-fn found_by(worker: &RoadWorker) -> Vec<Arc<Road>> {
-    worker.ask((0, -400), (800, 400));
+fn found_by(worker: &RoadWorker, storage: &Storage) -> Vec<Arc<Road>> {
+    worker.ask(seed(), storage, (0, -400), (800, 400));
     let start = Instant::now();
     let mut found = Vec::new();
     let mut quiet_since = Instant::now();
@@ -26,7 +26,10 @@ fn found_by(worker: &RoadWorker) -> Vec<Arc<Road>> {
         } else {
             quiet_since = Instant::now();
         }
-        found.extend(new);
+        found.extend(new.into_iter().map(|(world, road)| {
+            assert_eq!(world, seed().id());
+            road
+        }));
         thread::sleep(Duration::from_millis(20));
     }
     found
@@ -36,13 +39,13 @@ fn found_by(worker: &RoadWorker) -> Vec<Arc<Road>> {
 fn the_thread_finds_the_roads_of_an_area_and_saves_them() {
     let folder = TestFolder::new();
     let storage = Storage::in_folder(&folder.0, seed().id());
-    let found = found_by(&RoadWorker::start(seed(), storage.clone()));
+    let found = found_by(&RoadWorker::start(), &storage);
     assert!(!found.is_empty());
     storage.finish_writing();
     let road = &found[0];
     assert_eq!(storage.load_road(road.link), Some(Some(Road::clone(road))));
     // A second server reads them back rather than working them out.
-    let again = found_by(&RoadWorker::start(seed(), storage));
+    let again = found_by(&RoadWorker::start(), &storage);
     assert_eq!(again, found);
 }
 
@@ -68,11 +71,25 @@ fn roads_from_another_version_are_worked_out_again() {
 fn dropping_the_worker_lets_go_of_the_saves_at_once() {
     let folder = TestFolder::new();
     let storage = Storage::in_folder(&folder.0, seed().id());
-    let worker = RoadWorker::start(seed(), storage.clone());
-    assert_eq!(storage.queue_handles(), 2);
-    // Busy working out roads when it is dropped.
-    worker.ask((0, -2000), (4000, 2000));
+    let worker = RoadWorker::start();
+    // Busy working out roads when it is dropped, holding the saves.
+    worker.ask(seed(), &storage, (0, -2000), (4000, 2000));
     drop(worker);
     // Only this one is left, so dropping it would finish writing straight away.
+    assert_eq!(storage.queue_handles(), 1);
+}
+
+#[test]
+fn a_forgotten_world_lets_go_of_its_saves() {
+    let folder = TestFolder::new();
+    let storage = Storage::in_folder(&folder.0, seed().id());
+    let worker = RoadWorker::start();
+    assert!(!found_by(&worker, &storage).is_empty());
+    assert_eq!(storage.queue_handles(), 2);
+    worker.forget(seed().id());
+    let start = Instant::now();
+    while storage.queue_handles() > 1 && start.elapsed() < Duration::from_secs(10) {
+        thread::sleep(Duration::from_millis(10));
+    }
     assert_eq!(storage.queue_handles(), 1);
 }

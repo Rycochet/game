@@ -1,8 +1,9 @@
-//! The world's clock: game minutes since the world began, running in real time
-//! whatever the server is doing, as it is worked out from when it was last set
-//! rather than added to each tick. The network thread answers pings from it,
-//! and its own thread saves it. It can be stopped (`pause`), for single player:
-//! anything going by the world's time should go by this.
+//! The server's clock: real seconds the server has run, worked out from when it
+//! was last set rather than added to each tick, so it runs whatever the server
+//! is doing. Every world's time is worked out from it (`shared::world::WorldTime`),
+//! the network thread answers pings from it, and its own thread saves it. It
+//! can be stopped (`pause`), for single player: anything going by the server's
+//! or a world's time should go by this.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
@@ -10,50 +11,40 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use shared::world::GAME_MINUTE_SECONDS;
-
 /// A clock any thread can read. Cloning it gives another handle on the same
 /// clock (`Arc` shares one value between threads, `Mutex` lets them change it).
 #[derive(Clone)]
-pub(crate) struct WorldClock(Arc<Mutex<Set>>);
+pub(crate) struct ServerClock(Arc<Mutex<Set>>);
 
-/// The time it was last set to, when, and whether it has stopped there.
+/// The reading it was last set to, when, and whether it has stopped there.
 #[derive(Clone, Copy)]
 struct Set {
-    minutes: f64,
+    seconds: f64,
     at: Instant,
     paused: bool,
 }
 
 impl Set {
-    fn minutes(&self) -> f64 {
+    fn seconds(&self) -> f64 {
         if self.paused {
-            self.minutes
+            self.seconds
         } else {
-            self.minutes + self.at.elapsed().as_secs_f64() / GAME_MINUTE_SECONDS as f64
+            self.seconds + self.at.elapsed().as_secs_f64()
         }
     }
 }
 
-impl WorldClock {
-    pub fn new(minutes: f64) -> Self {
+impl ServerClock {
+    pub fn new(seconds: f64) -> Self {
         Self(Arc::new(Mutex::new(Set {
-            minutes,
+            seconds,
             at: Instant::now(),
             paused: false,
         })))
     }
 
-    pub fn minutes(&self) -> f64 {
-        self.0.lock().expect("never poisoned").minutes()
-    }
-
-    /// Moves it to another time, which can be earlier. Not before the world began.
-    /// If it has stopped, it stays stopped there.
-    pub fn set(&self, minutes: f64) {
-        let mut set = self.0.lock().expect("never poisoned");
-        set.minutes = minutes.max(0.0);
-        set.at = Instant::now();
+    pub fn seconds(&self) -> f64 {
+        self.0.lock().expect("never poisoned").seconds()
     }
 
     /// Stops it where it is, until `resume`.
@@ -73,7 +64,7 @@ impl WorldClock {
     fn set_paused(&self, paused: bool) {
         let mut set = self.0.lock().expect("never poisoned");
         *set = Set {
-            minutes: set.minutes(),
+            seconds: set.seconds(),
             at: Instant::now(),
             paused,
         };
@@ -119,9 +110,9 @@ impl Drop for Repeating {
 #[cfg(test)]
 mod tests;
 
-/// Ticks of action time since the world began: what creatures' energy goes by
-/// (`shared::energy`). Apart from `WorldClock` as it has to be a whole number and
-/// dev tools can't move it. It stops when that is paused, and when the server is off.
+/// Ticks of action time: what creatures' energy goes by (`shared::energy`), one
+/// for the whole server. Apart from `ServerClock` as it has to be a whole number.
+/// It stops when that is paused, and when the server is off.
 #[derive(Clone, Default)]
 pub struct ActionClock(Arc<AtomicU64>);
 

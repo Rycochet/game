@@ -4,20 +4,21 @@ use bevy::prelude::*;
 use std::sync::atomic::Ordering;
 
 use super::StopAsked;
-use crate::ServerWorld;
+use crate::ServerWorlds;
 use crate::connections::Connections;
 
 /// Asked to stop: everyone is saved and disconnected, then the server stops.
 pub(super) fn stop_when_asked(
     stop: Res<StopAsked>,
     mut connections: ResMut<Connections>,
-    mut world: ResMut<ServerWorld>,
+    mut worlds: ResMut<ServerWorlds>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if stop.0.load(Ordering::Relaxed) {
         info!("Stopping: saving everyone");
-        connections.disconnect_all(&mut world);
-        world.storage.finish_writing();
+        connections.disconnect_all(&mut worlds);
+        worlds.save_worlds();
+        worlds.home().storage.finish_writing();
         exit.write(AppExit::Success);
     }
 }

@@ -76,7 +76,7 @@ async fn carry(mut socket: WebSocket, sockets: Sockets) {
                 match incoming {
                     Some(Ok(Message::Binary(bytes))) => {
                         if let Some(sent) = ClientMessage::read_ping(&bytes) {
-                            let pong = ServerMessage::pong_bytes(sent, sockets.clock.minutes());
+                            let pong = ServerMessage::pong_bytes(sent, sockets.clock.seconds());
                             if !send(&mut socket, Message::Binary(pong.into()), limit).await {
                                 break;
                             }

@@ -97,7 +97,7 @@ impl TestClient {
         }
         self.let_time_pass();
         self.client.send_position();
-        crate::entities::sync(std::slice::from_mut(&mut self.client), &mut self.world);
+        crate::entities::sync(std::slice::from_mut(&mut self.client), &mut self.world, &[]);
         ground::sync(std::slice::from_mut(&mut self.client), &mut self.world);
         std::iter::from_fn(|| self.end.receive().unwrap()).collect()
     }
@@ -705,7 +705,8 @@ pub(crate) fn tick_both(connections: &mut Connections, world: &mut ServerWorld) 
     let mut app = World::new();
     app.insert_resource(std::mem::take(connections));
     let seed = world.seed;
-    app.insert_resource(std::mem::replace(world, ServerWorld::new(seed)));
+    let world_now = std::mem::replace(world, ServerWorld::new(seed));
+    app.insert_resource(ServerWorlds::with_home(world_now));
     app.insert_resource(ServerOptions {
         dev_tools: true,
         exit_when_alone: false,
@@ -716,7 +717,7 @@ pub(crate) fn tick_both(connections: &mut Connections, world: &mut ServerWorld) 
     bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
     bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, sync_entities).unwrap();
     *connections = app.remove_resource::<Connections>().unwrap();
-    *world = app.remove_resource::<ServerWorld>().unwrap();
+    *world = app.remove_resource::<ServerWorlds>().unwrap().into_home();
 }
 
 /// Runs `handle_messages` once over these connections.
@@ -732,7 +733,7 @@ fn tick_with(
 ) -> (Connections, ServerWorld) {
     let mut app = World::new();
     app.insert_resource(connections);
-    app.insert_resource(world);
+    app.insert_resource(ServerWorlds::with_home(world));
     app.insert_resource(ServerOptions {
         dev_tools: true,
         exit_when_alone: false,
@@ -743,7 +744,7 @@ fn tick_with(
     bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, handle_messages).unwrap();
     (
         app.remove_resource::<Connections>().unwrap(),
-        app.remove_resource::<ServerWorld>().unwrap(),
+        app.remove_resource::<ServerWorlds>().unwrap().into_home(),
     )
 }
 
@@ -1132,19 +1133,21 @@ fn the_hour_and_moved_clocks_are_told_and_a_restart_carries_on() {
     let tell = |connections: Connections, world: ServerWorld| {
         let mut app = World::new();
         app.insert_resource(connections);
-        app.insert_resource(world);
+        app.insert_resource(ServerWorlds::with_home(world));
         bevy::ecs::system::RunSystemOnce::run_system_once(&mut app, tell_the_time).unwrap();
         (
             app.remove_resource::<Connections>().unwrap(),
-            app.remove_resource::<ServerWorld>().unwrap(),
+            app.remove_resource::<ServerWorlds>().unwrap().into_home(),
         )
     };
     // Within an hour says nothing; the next whole hour is told.
     world.hour = 40;
-    world.clock.set(40.25 * MINUTES_PER_HOUR);
-    let (connections, world) = tell(connections, world);
+    world.set_time(Some(40.25 * MINUTES_PER_HOUR), None);
+    world.clock_moved = false;
+    let (connections, mut world) = tell(connections, world);
     assert_eq!(answers(&end), []);
-    world.clock.set(41.0 * MINUTES_PER_HOUR);
+    world.set_time(Some(41.0 * MINUTES_PER_HOUR), None);
+    world.clock_moved = false;
     let (connections, mut world) = tell(connections, world);
     assert_eq!(answers(&end), [ServerMessage::Hour(41)]);
     // Moved by a dev tool, back as well: told the new time and hour.
@@ -1158,7 +1161,10 @@ fn the_hour_and_moved_clocks_are_told_and_a_restart_carries_on() {
     };
     assert!(answer(
         &mut connections.clients[0],
-        ClientMessage::DevSetTime { minutes: 1200.0 },
+        ClientMessage::DevSetWorldClock {
+            minutes: Some(1200.0),
+            rate: None,
+        },
         &mut world,
         &mut connections.accounts,
         &options
@@ -1166,14 +1172,14 @@ fn the_hour_and_moved_clocks_are_told_and_a_restart_carries_on() {
     let (_connections, world) = tell(connections, world);
     let told = answers(&end);
     assert!(
-        matches!(told[0], ServerMessage::Clock(minutes) if (1200.0..1210.0).contains(&minutes))
+        matches!(told[0], ServerMessage::WorldClock(time) if (1200.0..1210.0).contains(&time.minutes(world.server_clock.seconds())))
     );
     assert_eq!(told[1], ServerMessage::Hour(20));
     // Saved on stopping, and a restart carries on from there.
     drop(world);
     let restarted = open();
     assert_eq!(restarted.hour, 20);
-    assert!((1200.0..1210.0).contains(&restarted.clock.minutes()));
+    assert!((1200.0..1210.0).contains(&restarted.minutes()));
 }
 
 #[test]
@@ -1181,7 +1187,7 @@ fn a_pausable_server_stops_its_clock_when_asked() {
     let mut test = TestClient::new();
     test.pausable = true;
     let answers = test.send(&[ClientMessage::SetPaused(true)]);
-    let stopped = test.world.clock.minutes();
+    let stopped = test.world.server_clock.seconds();
     assert_eq!(
         answers,
         vec![ServerMessage::Paused {
@@ -1190,7 +1196,7 @@ fn a_pausable_server_stops_its_clock_when_asked() {
         }]
     );
     std::thread::sleep(std::time::Duration::from_millis(5));
-    assert_eq!(test.world.clock.minutes(), stopped);
+    assert_eq!(test.world.server_clock.seconds(), stopped);
 
     // Pings are still answered, with the clock where it stopped.
     let answers = test.send(&[ClientMessage::Ping { sent: 1.5 }]);
@@ -1208,7 +1214,7 @@ fn a_pausable_server_stops_its_clock_when_asked() {
         [ServerMessage::Paused { paused: false, .. }]
     ));
     std::thread::sleep(std::time::Duration::from_millis(5));
-    assert!(test.world.clock.minutes() > stopped);
+    assert!(test.world.server_clock.seconds() > stopped);
 }
 
 #[test]
@@ -1217,9 +1223,9 @@ fn other_servers_never_pause() {
     let mut test = TestClient::new();
     let answers = test.send(&[ClientMessage::SetPaused(true)]);
     assert!(answers.is_empty());
-    let before = test.world.clock.minutes();
+    let before = test.world.minutes();
     std::thread::sleep(std::time::Duration::from_millis(5));
-    assert!(test.world.clock.minutes() > before);
+    assert!(test.world.minutes() > before);
     assert!(matches!(
         test.welcome[0],
         ServerMessage::Welcome {

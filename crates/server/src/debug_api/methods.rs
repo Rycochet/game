@@ -9,30 +9,35 @@ use shared::dungeon::{Cell, Level};
 
 use super::{AddDebugMethod, BrpResult, Value, json, params, refused};
 use crate::connections::{Client, save_all};
-use crate::{Connections, ServerOptions, ServerWorld};
+use crate::{Connections, ServerOptions, ServerWorlds};
+
+mod worlds;
+
+use worlds::{WorldParams, chosen};
 
 /// Adds the server's methods. `data` is its data folder (none: saves nothing).
 pub(crate) fn add_server_methods(app: &mut App, data: Option<PathBuf>) {
     app.add_debug_method(
         "server.state",
         move |_: In<Option<Value>>,
-              world: Res<ServerWorld>,
+              worlds: Res<ServerWorlds>,
               connections: Res<Connections>,
               options: Res<ServerOptions>|
-              -> BrpResult { Ok(state(&data, &world, &connections, &options)) },
+              -> BrpResult { Ok(state(&data, &worlds, &connections, &options)) },
     )
     .add_debug_method("server.mobs", mobs)
     .add_debug_method("server.cells", cells)
     .add_debug_method("server.sites", sites)
+    .add_debug_method("server.worlds", worlds::worlds)
     .add_debug_method("server.save", save);
 }
 
 /// `server.state`: which server answered (process and data folder, so a
 /// caller can tell it is talking to its own game), its clocks and who is
-/// connected, with where they are.
+/// connected, with which world they are in and where.
 fn state(
     data: &Option<PathBuf>,
-    world: &ServerWorld,
+    worlds: &ServerWorlds,
     connections: &Connections,
     options: &ServerOptions,
 ) -> Value {
@@ -43,6 +48,7 @@ fn state(
             json!({
                 "character": client.character_id,
                 "phase": format!("{:?}", client.phase),
+                "world": client.world.map(|id| id.0),
                 "world_position": client.character.world_position,
                 "visit": client.visit.as_ref().map(|visit| json!({
                     "site": visit.site_id(),
@@ -57,16 +63,20 @@ fn state(
         "pid": process::id(),
         "data": data,
         "dev_tools": options.dev_tools,
-        "clock_minutes": world.clock.minutes(),
-        "paused": world.clock.is_paused(),
-        "action_ticks": world.action_clock.ticks(),
+        "home_world": worlds.home_id().0,
+        "server_clock": worlds.clock().seconds(),
+        "clock_minutes": worlds.home().minutes(),
+        "paused": worlds.clock().is_paused(),
+        "action_ticks": worlds.action_clock().ticks(),
         "players": players,
     })
 }
 
-/// `server.mobs`: every mob on the levels in use, by site and level: who it
-/// is, where, where its home is and what it is doing.
-fn mobs(_: In<Option<Value>>, world: Res<ServerWorld>) -> BrpResult {
+/// `server.mobs { "world": id }`: every mob on the levels in use of a world
+/// (the home unless asked), by site and level: who it is, where, where its
+/// home is and what it is doing.
+fn mobs(In(request): In<Option<Value>>, worlds: Res<ServerWorlds>) -> BrpResult {
+    let world = chosen(&worlds, params::<WorldParams>(request)?)?;
     let levels: Vec<Value> = world
         .populations
         .0
@@ -186,9 +196,11 @@ fn mark(cell: Cell) -> char {
     }
 }
 
-/// `server.sites`: the sites loaded so far, with their generator version
-/// and the levels that have saves.
-fn sites(_: In<Option<Value>>, world: Res<ServerWorld>) -> BrpResult {
+/// `server.sites { "world": id }`: the sites of a world (the home unless
+/// asked) loaded so far, with their generator version and the levels that
+/// have saves.
+fn sites(In(request): In<Option<Value>>, worlds: Res<ServerWorlds>) -> BrpResult {
+    let world = chosen(&worlds, params::<WorldParams>(request)?)?;
     let sites: Vec<Value> = world
         .sites
         .iter()
@@ -208,10 +220,10 @@ fn sites(_: In<Option<Value>>, world: Res<ServerWorld>) -> BrpResult {
 fn save(
     _: In<Option<Value>>,
     mut connections: ResMut<Connections>,
-    mut world: ResMut<ServerWorld>,
+    mut worlds: ResMut<ServerWorlds>,
 ) -> BrpResult {
-    save_all(&mut connections, &mut world);
-    Ok(json!({ "written": world.storage.flush() }))
+    save_all(&mut connections, &mut worlds);
+    Ok(json!({ "written": worlds.home().storage.flush() }))
 }
 
 #[cfg(test)]

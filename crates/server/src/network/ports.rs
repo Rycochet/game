@@ -11,7 +11,7 @@ use std::thread::{self, JoinHandle};
 
 use super::routes::{Stop, serve};
 use super::{Heartbeat, PING_EVERY, SILENT_AFTER, SecurePort, Sockets};
-use crate::clock::WorldClock;
+use crate::clock::ServerClock;
 use crate::tls::{Certificates, Security};
 
 /// Ports being served.
@@ -27,7 +27,7 @@ pub(crate) struct OpenPorts {
 /// plain one (`plain`, if any) and, with TLS, the secure one in `security`.
 /// An `Err` says why it can't, before anything is served.
 pub(crate) fn open_ports(
-    clock: WorldClock,
+    clock: ServerClock,
     heartbeat: Heartbeat,
     plain: Option<SocketAddr>,
     security: &Security,

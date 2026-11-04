@@ -25,9 +25,13 @@ fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
     };
     let world = ServerWorld::new(seed).info();
     // The clock has been running since the server started.
-    let ServerMessage::Welcome { clock, .. } = next_answer() else {
+    let ServerMessage::Welcome {
+        time, server_clock, ..
+    } = next_answer()
+    else {
         panic!("no welcome");
     };
+    let clock = time.minutes(server_clock);
     assert!((0.0..30.0).contains(&clock), "{clock}");
     let _ = world;
     // Not leaving before the teleport is dealt with: a server still

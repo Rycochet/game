@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use shared::protocol::ClientMessage;
-use shared::world::GAME_MINUTE_SECONDS;
 
 use super::ping::PING_EVERY;
 use super::{ServerConnection, ToServer};
@@ -11,13 +10,15 @@ use crate::common::ServerClock;
 /// How much of what the clock is out by is put right at each answer.
 pub(super) const CLOCK_EASING: f64 = 0.1;
 
-/// Game minutes the clock can be out by before it jumps (5 real seconds).
-pub(super) const CLOCK_JUMP_MINUTES: f64 = 5.0 / GAME_MINUTE_SECONDS as f64;
+/// Seconds the server's clock can be out by before it jumps.
+pub(super) const CLOCK_JUMP_SECONDS: f64 = 5.0;
 
-/// The clock keeps running between the server's answers.
+/// The clock keeps running between the server's answers, and the world's
+/// time with it.
 pub(super) fn run_clock(time: Res<Time<Real>>, mut clock: ResMut<ServerClock>) {
     if !clock.paused {
-        clock.minutes += time.delta_secs_f64() / GAME_MINUTE_SECONDS as f64;
+        let (seconds, world) = (clock.seconds + time.delta_secs_f64(), clock.time);
+        clock.set(seconds, world);
     }
 }
 
@@ -50,13 +51,16 @@ pub(super) fn apply_pong(
     // The server read its clock about half the round trip before the answer
     // arrived, and the answer may have been waiting for this frame since.
     let ago = pong.round_trip / 2.0 + pong.received.elapsed().as_secs_f64();
-    let behind = pong.clock + ago / GAME_MINUTE_SECONDS as f64 - clock.minutes;
+    let behind = pong.clock + ago - clock.seconds;
     // Far out: jump. Otherwise ease, so clouds never visibly jerk.
-    clock.minutes += if behind.abs() > CLOCK_JUMP_MINUTES {
-        behind
-    } else {
-        behind * CLOCK_EASING
-    };
+    let seconds = clock.seconds
+        + if behind.abs() > CLOCK_JUMP_SECONDS {
+            behind
+        } else {
+            behind * CLOCK_EASING
+        };
+    let world = clock.time;
+    clock.set(seconds, world);
 }
 
 /// Single player only, once in a world: asks the embedded server's clock now

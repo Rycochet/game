@@ -29,8 +29,8 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::ServerWorld;
-use crate::clock::WorldClock;
+use crate::ServerWorlds;
+use crate::clock::ServerClock;
 use crate::connections::{self};
 use crate::tls::{Certificates, Security};
 
@@ -118,7 +118,7 @@ struct StopAsked(Arc<AtomicBool>);
 #[derive(Clone)]
 struct Sockets {
     new_connections: Sender<ServerLink>,
-    clock: WorldClock,
+    clock: ServerClock,
     connections: Arc<AtomicU64>,
     /// When the game last ticked, for health checks.
     heartbeat: Heartbeat,
@@ -129,7 +129,7 @@ struct Sockets {
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         let stop = StopAsked::default();
-        let clock = app.world().resource::<ServerWorld>().clock.clone();
+        let clock = app.world().resource::<ServerWorlds>().clock().clone();
         let heartbeat = track_heartbeat(app);
         // Bound here, so a port in use stops the server straight away.
         let ports = open_ports(
