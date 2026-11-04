@@ -11,8 +11,8 @@ use super::spawn::{spawn_layer, spawn_title_row};
 use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
 use crate::common::{Hosting, Preferences};
 use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonTooltip, INK, Pressable, TextBox, TextSize,
-    copy_to_clipboard, field_label, spawn_button, spawn_scroll_area, spawn_text_box,
+    ButtonPressed, INK, Pressable, TextBox, TextSize, copy_to_clipboard, field_label,
+    spawn_copy_button, spawn_scroll_area, spawn_text_box,
 };
 
 const OPTIONS_WIDTH: f32 = 560.0;
@@ -49,13 +49,6 @@ const BOXES: [(OptionBox, &str, bool); 5] = [
         true,
     ),
 ];
-
-/// A clipboard (U+1F4CB, in the icon font).
-const COPY_ICON: &str = "\u{1F4CB}";
-
-/// The button copying the certificate.
-#[derive(Component)]
-pub(super) struct CopyButton;
 
 /// Where the certificate is shown.
 #[derive(Component)]
@@ -108,12 +101,8 @@ pub(super) fn spawn_server_options(commands: &mut Commands) {
                     flex_shrink: 0.0,
                     ..default()
                 };
-                spawn_button(row, ButtonState::Normal, COPY_ICON, FONT, node).insert((
-                    CopyButton,
-                    Action::CopyCertificate,
-                    Pressable,
-                    ButtonTooltip("Copy the certificate".into()),
-                ));
+                spawn_copy_button(row, "Copy the certificate", FONT, node)
+                    .insert((Action::CopyCertificate, Pressable));
             });
         let area = spawn_scroll_area(panel, Val::Vh(CERTIFICATE_SHARE));
         panel.commands().entity(area).with_child((
@@ -130,20 +119,6 @@ pub(super) fn spawn_server_options(commands: &mut Commands) {
             },
         ));
     });
-}
-
-/// The copy button's emoji is in the icon font.
-pub(super) fn give_copy_its_font(
-    buttons: Query<&Children, Added<CopyButton>>,
-    mut fonts: Query<&mut TextFont>,
-) {
-    for children in &buttons {
-        for &child in children {
-            if let Ok(mut font) = fonts.get_mut(child) {
-                font.font = crate::fonts::with_icons();
-            }
-        }
-    }
 }
 
 /// What a box holds for these settings.

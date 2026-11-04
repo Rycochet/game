@@ -111,7 +111,6 @@ impl Plugin for SystemMenuPlugin {
                 online::show_online,
                 online::show_online_failure,
                 server_options::run_server_options,
-                server_options::give_copy_its_font,
             ),
         );
     }
