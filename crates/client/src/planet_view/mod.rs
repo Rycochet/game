@@ -4,6 +4,7 @@
 //! `docs/context/client/planet_view.md`.
 
 mod close;
+mod clouds;
 mod globe;
 mod input;
 mod moon_look;
@@ -33,6 +34,7 @@ pub struct PlanetViewPlugin;
 impl Plugin for PlanetViewPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<open::PlanetView>()
+            .add_plugins(MaterialPlugin::<clouds::PlanetCloudMaterial>::default())
             .add_message::<ViewPlanet>()
             .add_systems(
                 PreUpdate,
@@ -46,6 +48,7 @@ impl Plugin for PlanetViewPlugin {
                     open::open,
                     texture::fill_texture,
                     spin::spin,
+                    clouds::move_clouds,
                     close::close_without_world,
                 )
                     .chain(),

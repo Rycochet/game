@@ -78,7 +78,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | client: widgets     | `crates/client/src/widgets/`    | `docs/context/client/widgets.md`      | Interface pieces: panels with titles, buttons by state, tooltips, moveable panels; taking clicks on them; interface size (`UiScale`) |
 | client: ui          | `crates/client/src/ui/`         | `docs/context/client/ui.md`           | HUD status text, click mode text                    |
 | client: fonts       | `crates/client/src/fonts/`      | `docs/context/client/fonts.md`        | The default font for all text: Lexend, built into the program |
-| client: planet_view | `crates/client/src/planet_view/` | `docs/context/client/planet_view.md` | View Planet: the whole world as a turning globe from the surface generator, a day a minute, with textured, spinning moons orbiting it; any click, tap or Esc closes |
+| client: planet_view | `crates/client/src/planet_view/` | `docs/context/client/planet_view.md` | View Planet: the whole world as a turning globe from the surface generator, a day a minute, with drifting clouds (shader) and textured, spinning moons orbiting it; any click, tap or Esc closes |
 | client: loading_screen | `crates/client/src/loading_screen/` | `docs/context/client/loading_screen.md` | Full-screen title and step bar until the game takes input, and while the connection is lost; server refusals; only the title behind the startup menu |
 | client: dev_tools   | `crates/client/src/dev_tools/`  | `docs/context/client/dev_tools.md`    | Env-var helpers: start position or site, stairs style, travel, walk, snow, camera view, screenshots |
 

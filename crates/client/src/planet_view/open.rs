@@ -1,10 +1,12 @@
 //! Opening the view: a black layer over everything with the globe's picture
 //! in the middle, and the scene that picture is drawn from.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use super::ViewPlanet;
+use super::clouds::{PlanetCloudMaterial, spawn_clouds};
 use super::globe::{Scene, spawn_scene};
 use super::sky::Sky;
 use super::texture::{new_texture, texture_size};
@@ -30,6 +32,8 @@ pub(super) struct Showing {
     /// The black layer and everything on it.
     pub(super) layer: Entity,
     pub(super) scene: Scene,
+    /// The clouds' material, which `clouds::move_clouds` keeps up to date.
+    pub(super) clouds: Handle<PlanetCloudMaterial>,
     pub(super) sky: Sky,
     /// The surface's picture, its size and how many rows are filled.
     pub(super) texture: Handle<Image>,
@@ -44,6 +48,15 @@ pub(super) struct Showing {
     pub(super) opened: f64,
 }
 
+/// The stores the scene's meshes, materials and pictures go in.
+#[derive(SystemParam)]
+pub(super) struct SceneAssets<'w> {
+    meshes: ResMut<'w, Assets<Mesh>>,
+    materials: ResMut<'w, Assets<StandardMaterial>>,
+    clouds: ResMut<'w, Assets<PlanetCloudMaterial>>,
+    images: ResMut<'w, Assets<Image>>,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn open(
     mut asked: MessageReader<ViewPlanet>,
@@ -53,9 +66,8 @@ pub(super) fn open(
     weather: Res<Weather>,
     window: Single<&Window, With<PrimaryWindow>>,
     time: Res<Time<Real>>,
-    mut images: ResMut<Assets<Image>>,
     mut commands: Commands,
-    mut assets: (ResMut<Assets<Mesh>>, ResMut<Assets<StandardMaterial>>),
+    mut assets: SceneAssets,
 ) {
     if asked.read().count() == 0 || view.showing.is_some() {
         return;
@@ -64,10 +76,10 @@ pub(super) fn open(
         return;
     };
     let size = texture_size(world.surface.width());
-    let texture = images.add(new_texture(size));
+    let texture = assets.images.add(new_texture(size));
     let shortest = window.physical_width().min(window.physical_height());
     let pixels = shortest.clamp(SMALLEST_PICTURE, LARGEST_PICTURE);
-    let picture = images.add(Image::new_target_texture(
+    let picture = assets.images.add(Image::new_target_texture(
         pixels,
         pixels,
         bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
@@ -78,11 +90,22 @@ pub(super) fn open(
         &world,
         texture.clone(),
         picture.clone(),
-        (&mut assets.0, &mut assets.1, &mut images),
+        (
+            &mut assets.meshes,
+            &mut assets.materials,
+            &mut assets.images,
+        ),
+    );
+    let clouds = spawn_clouds(
+        &mut commands,
+        scene.globe,
+        world.params.seed,
+        (&mut assets.meshes, &mut assets.clouds),
     );
     view.showing = Some(Showing {
         layer: spawn_layer(&mut commands, picture),
         scene,
+        clouds,
         sky: Sky::new(&world.celestial),
         texture,
         size,
