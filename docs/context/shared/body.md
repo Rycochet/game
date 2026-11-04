@@ -4,11 +4,13 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 
 ## Files
 
-- `crates/shared/src/body.rs`: `Frame` (the figures for each body shape: `HUMAN`, `GIANT`, `KOBOLD`), `Frame::of`, `Frame::joint`, `Joint`, `Side`. Tests.
+- `crates/shared/src/body.rs`: `Frame` (the figures for each body shape: `HUMAN`, the person every frame is measured against, then `GIANT`, `KOBOLD`), `Frame::of`, `Frame::joint`, `Joint`, `Side`. Tests.
+- `crates/shared/src/body/proportions.rs`: `Proportions` (heads tall, breadth, limbs, arms, legs, beside a person's) and `PERSON`; `Proportions::frame` works a whole frame out from them. Research: `docs/context/research-creatures.md`.
 
 ## Public API
 
-- `Frame::of(kind) -> Option<Frame>`: kinds with arms and legs (human, beggar, giant, kobold); none for centaurs and animals yet.
+- `Frame::of(kind) -> Option<Frame>`: kinds with arms and legs (human, beggar, giant, kobold); none for centaurs and animals yet. The human's (and beggar's) is `PERSON.frame()`.
+- `Proportions { heads, breadth, limbs, arms, legs }`, `PERSON`, `Proportions::frame()`: `heads` in tenths (a person is 80), the rest in thousandths of a person's.
 - `Frame` fields: heights of the main levels from the ground, half widths and depths, limb radii, limb lengths, `arm_spread`.
 - `Frame::joint(Joint) -> [i32; 3]`: x towards the body's left, y up, z forwards, origin on the ground between the feet.
 - `Joint::{Crown, Skull, Chin, NeckBase, Shoulder, Elbow, Wrist, Fingertips, Chest, Waist, Hip, Knee, Ankle, Toes, Heel}`, `Side::{Left, Right}` (`BOTH`, `sign`).
@@ -26,3 +28,5 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 - Every frame is at an ordinary person's scale (1750 mm tall), as blade lengths are: an item's size goes on top. So a kobold's frame is its proportions, not its height.
 - Arms hang a little out from the sides (`arm_spread` per metre down), so sleeves and gauntlets show in a picture.
 - Whole millimetres, so weights worked out from it agree on both sides. Figures are first guesses from artists' proportions.
+- Frames from `Proportions`: the head's height follows `heads`, the hips (and knees, ankles, feet) `legs`, and the shoulder, chest and waist levels spread over what lies between the neck and the hips, so every level stays in order. A person's proportions give `HUMAN` exactly (tested). Giant and kobold keep their own figures until their kinds move to proportions with the next bipeds.
+- Coming (owner, 2026-11-04): a general body layout (a spine that can tilt, limb slots with roles, head, tail, wings, parts as numbers) that `Frame` becomes the biped view of, so other body plans and shapeshifting can be built on it. See the research file.
