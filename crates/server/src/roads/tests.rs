@@ -63,3 +63,16 @@ fn roads_from_another_version_are_worked_out_again() {
     std::fs::write(&file, older).expect("written");
     assert_eq!(storage.load_road(link), None);
 }
+
+#[test]
+fn dropping_the_worker_lets_go_of_the_saves_at_once() {
+    let folder = TestFolder::new();
+    let storage = Storage::in_folder(&folder.0, seed().id());
+    let worker = RoadWorker::start(seed(), storage.clone());
+    assert_eq!(storage.queue_handles(), 2);
+    // Busy working out roads when it is dropped.
+    worker.ask((0, -2000), (4000, 2000));
+    drop(worker);
+    // Only this one is left, so dropping it would finish writing straight away.
+    assert_eq!(storage.queue_handles(), 1);
+}
