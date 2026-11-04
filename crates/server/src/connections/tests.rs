@@ -1057,10 +1057,10 @@ fn guests_come_back_by_their_token_and_the_newest_connection_wins() {
         step: Step::new(1, 0).unwrap(),
     };
     let (connections, world) = tick(connections, world);
-    assert!(matches!(
-        answers(&first)[1],
-        ServerMessage::Welcome { x: 0, .. }
-    ));
+    // They arrive through a World Gate.
+    let ServerMessage::Welcome { x: arrived, .. } = answers(&first)[1] else {
+        panic!("not welcomed");
+    };
     first.send(&step(1));
     let (mut connections, world) = tick(connections, world);
     answers(&first);
@@ -1075,7 +1075,7 @@ fn guests_come_back_by_their_token_and_the_newest_connection_wins() {
     assert!(matches!(answers(&first)[..], [ServerMessage::Refused(_)]));
     assert!(matches!(
         answers(&second)[1],
-        ServerMessage::Welcome { x: 1, .. }
+        ServerMessage::Welcome { x, .. } if x == arrived + 1
     ));
     assert_eq!(connections.clients.len(), 1);
 }
@@ -1109,10 +1109,9 @@ fn forgetting_a_site_on_the_server_puts_only_others_out_at_the_poi() {
     assert!(connections.clients[0].visit.is_some());
     assert!(matches!(answers(&first)[0], ServerMessage::EnterLevel(_)));
     assert!(connections.clients[1].visit.is_none());
-    assert!(matches!(
-        answers(&second)[0],
-        ServerMessage::OnWorldMap { x: 0, y: 0 }
-    ));
+    // Out where they went in: where they arrived.
+    let (x, y) = connections.clients[1].world_position();
+    assert_eq!(answers(&second)[0], ServerMessage::OnWorldMap { x, y });
 }
 
 #[test]
@@ -1257,6 +1256,7 @@ fn messages_before_hello_are_refused() {
 #[test]
 fn steps_are_answered_with_the_position_once_a_tick() {
     let mut test = TestClient::new();
+    let (x, y) = test.client.world_position();
     let answers = test.steps(&[(1, 0), (1, 1), (0, 1)]);
     let positions: Vec<_> = answers
         .iter()
@@ -1267,8 +1267,8 @@ fn steps_are_answered_with_the_position_once_a_tick() {
         [&ServerMessage::Position {
             map: 0,
             step: 3,
-            x: 2,
-            y: 2
+            x: x + 2,
+            y: y + 2
         }]
     );
     // Nothing moved, nothing to say.
@@ -1278,13 +1278,14 @@ fn steps_are_answered_with_the_position_once_a_tick() {
 #[test]
 fn steps_meant_for_another_map_are_ignored() {
     let mut test = TestClient::new();
+    let arrived = test.client.world_position();
     let stale = ClientMessage::Step {
         map: 7,
         number: 1,
         step: Step::new(1, 0).unwrap(),
     };
     assert!(test.send(&[stale]).is_empty());
-    assert_eq!(test.client.world_position(), (0, 0));
+    assert_eq!(test.client.world_position(), arrived);
 }
 
 #[test]

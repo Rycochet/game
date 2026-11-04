@@ -13,7 +13,7 @@ World Gates: the ways onto a planet, `WORLD_GATES` (16) on every one, each on la
 
 - `WORLD_GATES` (16, owner).
 - `WorldGates::find(&WorldParams, &Surface)`: `gates` (in the order found) and `tries`; `.complete()`: all 16 placed.
-- `WorldGate { x, y, chunk, round }`: on dry land above high tide, `x` in `0..width`; `chunk` as `PoiMap::chunk_at` has it (no other poi will stand there, PR 2); `round` from 0.
+- `WorldGate { x, y, chunk, round }`: on dry land above high tide, `x` in `0..width`; `chunk` as `PoiMap::chunk_at` has it (no other poi stands there); `round` from 0.
 
 ## Depends on
 
@@ -21,11 +21,11 @@ World Gates: the ways onto a planet, `WORLD_GATES` (16) on every one, each on la
 
 ## Used by
 
-- Client `planet_view` (rings on the globe, the bar's line, `client.planet`).
+- `shared::poi` (`PoiMap` finds the world's gates with its surface and keeps their chunks free of other pois; `world_gates()`), server (`world_map::arrival`: new characters arrive at one; `back_to_start` to the nearest), client `planet_view` (rings on the globe, the bar's line, `client.planet`).
 
 ## Notes
 
 - Every seed is a planet (owner: seeds are simple maths, not chosen), so nearly every planet must find all 16. Candidates are spots spread evenly over the area within 60° of the equator, from `seed.derive("world gates")`, 512 new ones a round. Each needs land joined to it (the fill may reach 70°) and spacing from the gates already found. Only gates still missing are looked for in the next round, which asks for less: 2, 1.5, 1, then 0.25 screens of land (a screen is about 400 × 400 grid points), and spacing 1, 0.7, 0.4, then 0.15 of the planet's, which is the smaller of 1,000 points or a twelfth of its width (owner: size-based). A planet of water tries every round and gives up (2,048 tries).
-- Measured on 1,000 seeds in a row each, planets no smaller than 1,500 km radius (PR 2's smallest): all 3,000 found all 16. Classic 998 in round 1; Continents 662, 166, 139, 33 by round; Plates 690, 209, 92, 9. Planets smaller than that (today's, until PR 2) use the last round more.
+- Measured on 1,000 seeds in a row each (planets are at least `world::SMALLEST_RADIUS`, 1,500 km, raised for this): all 3,000 found all 16. Classic 998 in round 1; Continents 662, 166, 139, 33 by round; Plates 690, 209, 92, 9.
 - Land is judged as the walking rules and pois do: above `high_water`, broad height for the coarse cells, the full surface for the spot.
 - No floats beyond the surface's own; candidates and fills go in a fixed order (the fill's queue), so the result is the same everywhere.

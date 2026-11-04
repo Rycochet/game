@@ -1,6 +1,8 @@
 //! Sending each player the world map chunks coming into their sight, and
 //! remembering the pois they have seen.
 
+mod arrival;
+
 use std::collections::btree_map::Entry;
 
 use bevy::prelude::*;
@@ -12,6 +14,7 @@ use shared::showcase;
 use crate::connections::Client;
 use crate::storage::KnownPoi;
 use crate::{ServerWorld, sites};
+pub(crate) use arrival::{arrival, nearest_gate};
 
 /// The player takes a step on the world map, unless it leads into water (a
 /// refused step is left for `Position` to put right). `false` if the client
@@ -31,9 +34,6 @@ pub(crate) fn stepped(client: &mut Client, world: &ServerWorld, step: Step) -> b
     look_around(client, world)
 }
 
-/// Where new characters start on the world map (`CharacterWorldSave`'s default).
-pub(crate) const START: (i64, i64) = (0, 0);
-
 /// Developer tools: puts the player at `(x, y)` on the world map.
 pub(crate) fn teleport(client: &mut Client, world: &ServerWorld, x: i64, y: i64) -> bool {
     client.character.world_position = (x, y);
@@ -42,10 +42,11 @@ pub(crate) fn teleport(client: &mut Client, world: &ServerWorld, x: i64, y: i64)
     client.link.send(&ServerMessage::Teleported { x, y }) && look_around(client, world)
 }
 
-/// Developer tools: puts the player back where new characters start, out of
-/// any site.
+/// Developer tools: puts the player at the World Gate nearest them, where
+/// characters arrive, out of any site.
 pub(crate) fn back_to_start(client: &mut Client, world: &mut ServerWorld) -> bool {
-    go_to(client, world, START)
+    let gate = nearest_gate(world, client.world_position());
+    go_to(client, world, gate)
 }
 
 /// Developer tools: puts the player on the plain with every kind of poi, out of

@@ -114,7 +114,7 @@ fn golden_roads() {
     assert_eq!(format!("{found:?}"), GOLDEN_ROADS);
 }
 
-const GOLDEN_ROADS: &str = "[(1, -4, 1, -2, Path, Some((165, (88, -165)))), (1, -4, 2, -4, Path, Some((96, (121, -250)))), (1, -2, 414, 0, Track, Some((217, (15, -22))))]";
+const GOLDEN_ROADS: &str = "[(1, -4, 2, -4, Path, Some((38, (133, -222)))), (1, -4, 464, -4, Path, Some((290, (-31, -226)))), (1, -2, 2, -4, Path, Some((220, (54, -159))))]";
 
 #[test]
 fn a_step_counts_along_a_road_either_way_and_round_the_planet_but_not_across_it() {

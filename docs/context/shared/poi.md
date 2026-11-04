@@ -12,11 +12,11 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 - `PoiKind`: 40 kinds: 34 (`Boulders` … `Mausoleum`) named after the tiles `l2_terrain066`–`099` and in their order, all equally likely, then the towns (`Hamlet`, `Village`, `Town`, `City`; `is_town()`) and `Farm` and `HerbalistHut`, with their own odds; `ALL`.
 - `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded. `PoiKind`, `ChunkPos` and `Poi` are serde-serialisable (sent in `protocol::WorldChunk`).
 - `Poi { kind, chunk, x, y, seed }`: `x, y` its exact world grid position; `seed` is what its map is generated from.
-- `PoiMap::new(&WorldParams, pois_seed)` (the secret `WorldSeed::pois`; keeps its own `Surface`), `.width()`, `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Poi>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Poi>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
+- `PoiMap::new(&WorldParams, pois_seed)` (the secret `WorldSeed::pois`; keeps its own `Surface`, and finds the world's World Gates with it), `.world_gates()` (their chunks have no other poi), `.width()`, `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Poi>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Poi>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
 
 ## Depends on
 
-- `shared::showcase` (a chunk on its plain has that poi instead), `shared::rng`, `shared::climate` (where farms and huts stand), `shared::surface` (ground height), `shared::world` (`high_water`).
+- `shared::showcase` (a chunk on its plain has that poi instead), `shared::world_gate`, `shared::rng`, `shared::climate` (where farms and huts stand), `shared::surface` (ground height), `shared::world` (`high_water`).
 
 ## Used by
 

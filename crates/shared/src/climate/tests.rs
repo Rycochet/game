@@ -17,7 +17,7 @@ fn golden_samples() {
     assert_eq!(format!("{samples:?}"), GOLDEN_SAMPLES);
 }
 
-const GOLDEN_SAMPLES: &str = "[ClimateSample { temperature: 0.7207018950599211, moisture: 0.05794992866699206 }, ClimateSample { temperature: 0.08091579423648787, moisture: 0.5796224217932354 }, ClimateSample { temperature: 0.13252501553257556, moisture: 0.6713264243747723 }]";
+const GOLDEN_SAMPLES: &str = "[ClimateSample { temperature: 0.7043175649105904, moisture: 0.40719585531164515 }, ClimateSample { temperature: 0.5568165204644837, moisture: 0.684561532044379 }, ClimateSample { temperature: 0.26386628147396207, moisture: 0.7074358110386562 }]";
 
 /// Snow is about as common as when it was a fixed height of 90.
 #[test]

@@ -160,6 +160,11 @@ impl Two {
             ends,
         };
         two.tick();
+        // Each arrives through their own World Gate: bring them together.
+        for end in &two.ends {
+            end.send(&ClientMessage::DevTeleport { x: 0, y: 0 });
+        }
+        two.tick();
         two
     }
 

@@ -2,17 +2,9 @@ use super::*;
 use crate::rng::Seed;
 use crate::surface::SurfaceGenerator;
 
-/// The smallest planet radius to come (PR 2 raises it to this), in metres.
-const SMALLEST_RADIUS: u64 = 1_500_000;
-
-/// A world from a seed, no smaller than planets will be.
+/// A world from a seed.
 fn world(seed: u64) -> WorldParams {
-    let mut world = WorldParams::from_seed(Seed::new(seed));
-    if world.radius < SMALLEST_RADIUS {
-        world.radius = SMALLEST_RADIUS;
-        world.circumference = (2.0 * core::f64::consts::PI * SMALLEST_RADIUS as f64) as u64;
-    }
-    world
+    WorldParams::from_seed(Seed::new(seed))
 }
 
 fn gates(seed: u64, generator: SurfaceGenerator) -> (WorldParams, Surface, WorldGates) {

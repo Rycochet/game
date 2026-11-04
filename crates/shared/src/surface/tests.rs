@@ -16,7 +16,7 @@ fn golden_samples() {
     assert_eq!(format!("{samples:?}"), GOLDEN_SAMPLES);
 }
 
-const GOLDEN_SAMPLES: &str = "[SurfaceSample { height: 66.09790093125775, jitter: -6.349335193634033 }, SurfaceSample { height: 66.56663356721401, jitter: -5.502878665924072 }, SurfaceSample { height: 69.92800272256136, jitter: -0.8336078524589539 }, SurfaceSample { height: 47.342495096847415, jitter: -0.28205934166908264 }, SurfaceSample { height: 46.198867592960596, jitter: -7.5050225257873535 }]";
+const GOLDEN_SAMPLES: &str = "[SurfaceSample { height: 51.50281874090433, jitter: -7.710816383361816 }, SurfaceSample { height: 51.91214060783386, jitter: -7.027172088623047 }, SurfaceSample { height: 55.553331926465034, jitter: -3.9334805011749268 }, SurfaceSample { height: 89.50275233387947, jitter: -2.190032720565796 }, SurfaceSample { height: 54.027571484446526, jitter: 1.7110778093338013 }]";
 
 #[test]
 fn wraps_east_west() {
