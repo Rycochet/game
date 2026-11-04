@@ -130,21 +130,21 @@ fn what_cant_go_where_it_was_asked_stays_on_the_ground() {
 
 #[test]
 fn clothes_go_straight_on_and_off() {
-    let (mut test, boots) = holding(ItemKind::Boots);
-    test.send(&[ClientMessage::DropItem { item: boots }]);
-    let answers = test.send(&[ClientMessage::WearFromGround { item: boots }]);
-    assert!(carrying(&answers).is_worn(boots));
+    let (mut test, sabatons) = holding(ItemKind::FootArmour);
+    test.send(&[ClientMessage::DropItem { item: sabatons }]);
+    let answers = test.send(&[ClientMessage::WearFromGround { item: sabatons }]);
+    assert!(carrying(&answers).is_worn(sabatons));
     assert!(ground(&answers).is_empty());
 
-    let answers = test.send(&[ClientMessage::DropItem { item: boots }]);
-    assert!(!carrying(&answers).is_worn(boots));
-    assert_eq!(ground(&answers)[0].id, boots);
+    let answers = test.send(&[ClientMessage::DropItem { item: sabatons }]);
+    assert!(!carrying(&answers).is_worn(sabatons));
+    assert_eq!(ground(&answers)[0].id, sabatons);
 }
 
 #[test]
 fn what_is_under_something_stays_on() {
-    let (mut test, boots) = holding(ItemKind::Boots);
-    let worn = carrying(&test.send(&[ClientMessage::WearItem { item: boots }]));
+    let (mut test, sabatons) = holding(ItemKind::FootArmour);
+    let worn = carrying(&test.send(&[ClientMessage::WearItem { item: sabatons }]));
     let shoes = worn.worn.iter().find(|item| item.kind == ItemKind::Shoes);
     let shoes = shoes.unwrap().id;
     let answers = test.send(&[ClientMessage::DropItem { item: shoes }]);

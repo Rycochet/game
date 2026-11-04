@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::armour::arms::ArmsForm;
+use crate::armour::feet::FeetForm;
 use crate::armour::hands::HandsForm;
 use crate::armour::head::HeadForm;
 use crate::armour::legs::LegsForm;
@@ -51,6 +52,8 @@ pub enum ItemForm {
     Legs(LegsForm),
     /// A fauld, tassets, a skirt or another waist piece.
     Waist(WaistForm),
+    /// Sabatons, mail shoes or foot guards, a pair.
+    Feet(FeetForm),
 }
 
 impl ItemForm {
@@ -67,6 +70,7 @@ impl ItemForm {
             Self::Arms(arms) => arms.name(),
             Self::Legs(legs) => legs.name(),
             Self::Waist(waist) => waist.name(),
+            Self::Feet(feet) => feet.name(),
         }
     }
 
@@ -82,7 +86,8 @@ impl ItemForm {
             | Self::Head(_)
             | Self::Arms(_)
             | Self::Legs(_)
-            | Self::Waist(_) => &[],
+            | Self::Waist(_)
+            | Self::Feet(_) => &[],
         };
         settings.iter().filter_map(|setting| setting.gem.as_ref())
     }

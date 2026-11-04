@@ -2,6 +2,7 @@
 //! their own work, built on `body::Frame`. See `docs/context/shared/armour.md`.
 
 pub mod arms;
+pub mod feet;
 mod finish;
 pub mod hands;
 pub mod head;

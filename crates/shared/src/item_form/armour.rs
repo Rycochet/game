@@ -2,6 +2,7 @@
 
 use super::ItemForm;
 use crate::armour::arms;
+use crate::armour::feet;
 use crate::armour::hands::{self, HandsPiece};
 use crate::armour::head::{self, HeadKind};
 use crate::armour::legs::{self, LegsKind};
@@ -35,6 +36,7 @@ pub(super) fn armour_form(kind: ItemKind, rng: &mut Rng, quality: Quality) -> Op
         ItemKind::PaddedChausses => legs(rng, LegsKind::Padded),
         ItemKind::WaistArmour => waist(rng, WaistKind::Armour),
         ItemKind::CuirassierTassets => waist(rng, WaistKind::Cuirassier),
+        ItemKind::FootArmour => ItemForm::Feet(feet::roll(rng, None, quality)),
         _ => return None,
     })
 }

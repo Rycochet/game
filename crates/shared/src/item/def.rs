@@ -70,8 +70,9 @@ impl ItemKind {
                 Self::BevoredHelm => plain("Bevored Helm", 4000, Shape::rectangle(2, 3))
                     .worn(wear(Outer, &[Head, Neck], (0, 0), false)),
                 Self::Boomerang => plain("Boomerang", 400, BOOMERANG),
+                // Middle, as shoes are, so foot armour goes over them.
                 Self::Boots => plain("Boots", 1100, Shape::rectangle(2, 2)).worn(wear(
-                    Outer,
+                    Middle,
                     &[Feet],
                     (1, 0),
                     false,
@@ -110,6 +111,14 @@ impl ItemKind {
                 )
                 .worn(wear(Outer, &[Waist, Legs], (0, 0), false)),
                 Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)),
+                // Sabatons, mail shoes and foot guards, over shoes or boots; its form says
+                // its name, cells and weight.
+                Self::FootArmour => plain("Foot Armour", 800, Shape::rectangle(2, 2)).worn(wear(
+                    Outer,
+                    &[Feet],
+                    (0, 0),
+                    false,
+                )),
                 // Over the back of the hand and the wrist only, so rings stay free.
                 Self::DemiGauntlets => plain("Demi-gauntlets", 450, Shape::rectangle(2, 1))
                     .worn(wear(Outer, &[Hands], (0, 0), false)),
@@ -258,6 +267,7 @@ impl ItemKind {
             | Self::ArmArmour
             | Self::LegArmour
             | Self::Chausses
+            | Self::FootArmour
             | Self::WaistArmour
             | Self::CuirassierTassets
             | Self::Backpack

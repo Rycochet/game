@@ -14,7 +14,8 @@ use bevy::prelude::*;
 use bevy::render::{ExtractSchedule, Render, RenderApp, RenderSystems};
 
 pub use looks::{
-    ArmsLook, BladeLook, HandsLook, HeadLook, LegsLook, ShouldersLook, TorsoLook, WaistLook,
+    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, ShouldersLook, TorsoLook,
+    WaistLook,
 };
 
 // Split into files (`cargo xtask lint` keeps files small).

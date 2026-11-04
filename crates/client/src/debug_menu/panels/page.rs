@@ -5,7 +5,7 @@ use shared::blade::Family;
 use shared::material::Material;
 
 use super::{
-    RING_ROWS, armour, arms, legs, spawn_blade_row, spawn_body_row, spawn_picture_heading,
+    RING_ROWS, armour, arms, feet, legs, spawn_blade_row, spawn_body_row, spawn_picture_heading,
     spawn_picture_row, spawn_ring_row, waist,
 };
 use crate::common::Preferences;
@@ -21,6 +21,7 @@ pub(in crate::debug_menu) enum PicturePage {
     Torso,
     Waist,
     Legs,
+    Feet,
     Head,
     Weapons,
     #[default]
@@ -29,7 +30,7 @@ pub(in crate::debug_menu) enum PicturePage {
 }
 
 impl PicturePage {
-    pub(super) const ALL: [Self; 11] = [
+    pub(super) const ALL: [Self; 12] = [
         Self::Bodies,
         Self::Hands,
         Self::Shoulders,
@@ -37,6 +38,7 @@ impl PicturePage {
         Self::Torso,
         Self::Waist,
         Self::Legs,
+        Self::Feet,
         Self::Head,
         Self::Weapons,
         Self::Gems,
@@ -50,6 +52,7 @@ impl PicturePage {
             Self::Shoulders => "Shoulders",
             Self::Arms => "Arms",
             Self::Legs => "Legs",
+            Self::Feet => "Feet",
             Self::Waist => "Waist",
             Self::Torso => "Torso",
             Self::Head => "Head",
@@ -76,6 +79,7 @@ impl PicturePage {
             Self::Shoulders => armour::spawn_shoulders_rows(grid),
             Self::Arms => arms::spawn_arms_rows(grid),
             Self::Legs => legs::spawn_legs_rows(grid),
+            Self::Feet => feet::spawn_feet_rows(grid),
             Self::Waist => waist::spawn_waist_rows(grid),
             Self::Torso => armour::spawn_torso_rows(grid),
             Self::Head => armour::spawn_head_rows(grid),

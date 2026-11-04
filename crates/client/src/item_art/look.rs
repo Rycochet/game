@@ -7,7 +7,8 @@ use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
 use shared::material::Material;
 
 use super::looks::{
-    ArmsLook, BladeLook, HandsLook, HeadLook, LegsLook, ShouldersLook, TorsoLook, WaistLook,
+    ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, ShouldersLook, TorsoLook,
+    WaistLook,
 };
 
 /// Everything a picture shows. Ids stay out of it, so things that look the same share
@@ -61,6 +62,11 @@ pub enum Look {
         waist: WaistLook,
         quality: Option<Quality>,
     },
+    /// Sabatons, mail shoes or foot guards, as worn.
+    Feet {
+        feet: FeetLook,
+        quality: Option<Quality>,
+    },
     /// A bare body of a kind that stands on two legs, standing: what worn things are
     /// built on, and later a character with what it wears.
     Body { kind: CreatureKind },
@@ -79,6 +85,7 @@ impl Look {
             Self::Arms { arms, .. } => arms.cells,
             Self::Legs { legs, .. } => legs.cells,
             Self::Waist { waist, .. } => waist.cells,
+            Self::Feet { feet, .. } => feet.cells,
             Self::Body { .. } => super::body::CELLS,
         }
     }
