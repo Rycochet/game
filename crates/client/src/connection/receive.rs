@@ -180,6 +180,7 @@ pub(super) fn receive(
             }
             Ok(Some(
                 message @ (ServerMessage::EnterLevel(_)
+                | ServerMessage::EnterHall { .. }
                 | ServerMessage::Buildings(_)
                 | ServerMessage::Fields(_)
                 | ServerMessage::LevelCells(_)

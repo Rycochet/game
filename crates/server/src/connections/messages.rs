@@ -9,7 +9,7 @@ use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
 use crate::ground::{self};
 use crate::sites::{self, Visit};
-use crate::{ServerOptions, ServerWorld, world_map};
+use crate::{ServerOptions, ServerWorld, hall, world_map};
 
 /// Answers every message that has arrived, and forgets clients that have
 /// gone (or were refused), saving them first.
@@ -89,6 +89,18 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
 /// Takes a step, if it is allowed: whether the client is still there, and what it
 /// cost, which is nothing if it was refused.
 pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Step) -> (bool, u32) {
+    if let Some(from) = client.character.hall {
+        let stayed = hall::stepped(client, step);
+        let to = client.character.hall.unwrap_or(from);
+        return (
+            stayed,
+            if to == from {
+                0
+            } else {
+                site_step_cost(from, to)
+            },
+        );
+    }
     match &client.visit {
         Some(visit) => {
             let from = visit.position();

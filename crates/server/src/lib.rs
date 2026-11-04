@@ -16,6 +16,7 @@ mod embedded;
 mod entities;
 mod environment;
 mod ground;
+mod hall;
 mod ids;
 mod latency;
 mod lets_encrypt;

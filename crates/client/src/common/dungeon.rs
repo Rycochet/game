@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, RoomId, Sight};
-use shared::protocol::{LevelChunk, LevelInfo, SeenStairs};
+use shared::protocol::{LevelChunk, LevelInfo, LevelKind, SeenStairs};
 use shared::site::{BuildingLook, FieldLook};
 
 use super::floors::FirstFloor;
@@ -128,7 +128,10 @@ impl CurrentDungeon {
     pub fn describe(&self) -> String {
         let name = self.floor_name(FirstFloor(1));
         match &self.info {
-            Some(info) if !info.kind.is_town() && info.storey(info.index) >= 0 => {
+            Some(info)
+                if info.kind.poi().is_some_and(|kind| !kind.is_town())
+                    && info.storey(info.index) >= 0 =>
+            {
                 format!("{name} of {}", info.levels)
             }
             _ => name,
@@ -141,14 +144,18 @@ impl CurrentDungeon {
         let Some(info) = &self.info else {
             return "Nowhere".into();
         };
-        if info.kind.is_town() {
-            return format!("{:?}", info.kind);
+        let kind = match info.kind {
+            LevelKind::Poi(kind) => kind,
+            LevelKind::Hall => return "Hall of Worlds".into(),
+        };
+        if kind.is_town() {
+            return format!("{kind:?}");
         }
         let what = if info.building { "floor" } else { "level" };
         let ruined = if info.ruined { "Ruined" } else { "" };
         if info.storey(info.index) < 0 {
-            return format!("{ruined}{:?}, basement", info.kind);
+            return format!("{ruined}{kind:?}, basement");
         }
-        format!("{ruined}{:?}, {what} {}", info.kind, info.index + first.0)
+        format!("{ruined}{kind:?}, {what} {}", info.index + first.0)
     }
 }

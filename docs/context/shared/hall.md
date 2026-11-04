@@ -1,14 +1,15 @@
 # shared: hall
 
-The Hall of Worlds: a special place with fixed rules, made by no generator. A marble walkway hovering in a void, `HALL_LENGTH` (2^33) tiles east to west and coming round again, with a World Gate every 4 tiles on both sides leading to one of the 16 World Gates of one planet. What each tile is, where each gate leads (both ways), what it is built like and its code of runes. Not yet a place players can be in (PR 2) or drawn (PR 3).
+The Hall of Worlds: a special place with fixed rules, made by no generator. A marble walkway hovering in a void, `HALL_LENGTH` (2^33) tiles east to west and coming round again, with a World Gate every 4 tiles on both sides leading to one of the 16 World Gates of one planet. What each tile is, where each gate leads (both ways), what it is built like and its code of runes. Players can be in it (dev tools take them there); it is drawn as a plain site level for now (marble and gate models: PR 3).
 
 ## Files
 
-- `crates/shared/src/hall/mod.rs`: the constants (`HALL_LENGTH`, `WALKWAY_ROWS` 4, `GATE_SPACING` 4, `PLANET_BITS` 28, `PLANETS`), `pub use`s. In `hall/`: `tile.rs` (`Tile`, `tile`, `wrap_x`, `hue`), `place.rs` (`GatePlace`, `Side`), `address.rs` (`GateAddress`), `shuffle.rs` (the per-sixteenth multipliers, steps and offsets), `design.rs` (`GateDesign`), `code.rs` (`GateCode`, `RUNES`).
+- `crates/shared/src/hall/mod.rs`: the constants (`HALL_LENGTH`, `WALKWAY_ROWS` 4, `GATE_SPACING` 4, `PLANET_BITS` 28, `PLANETS`), `pub use`s. In `hall/`: `tile.rs` (`Tile`, `tile`, `wrap_x`, `hue`), `place.rs` (`GatePlace`, `Side`), `address.rs` (`GateAddress`), `shuffle.rs` (the per-sixteenth multipliers, steps and offsets), `design.rs` (`GateDesign`), `code.rs` (`GateCode`, `RUNES`), `level.rs` (`cell`, `level`, `LEVEL_TOP`, `LEVEL_ROWS`).
 
 ## Public API
 
 - `tile(x, y) -> Tile::{Walkway, Gate(Side), Void}`: rows `0..4` walkway; rows -1 (north) and 4 (south) a gate's floor every 4th column, void between; void beyond. `wrap_x` brings any `x` into `0..HALL_LENGTH`. `hue(x)`: degrees, once round over the whole Hall (looks only).
+- `level(min_x, width)`: a stretch of the Hall as a `dungeon::Level`, rows `LEVEL_TOP` (-2) to 5 (`LEVEL_ROWS` 8: a row of void beyond each gate's), `x` unwrapped; `cell(x, y)`: walkway `Floor`, a gate's floor `Door` (for now), void `Hole`. Steps are checked on it by both sides (`movement::step_on_level`).
 - `GatePlace { column, side }`: `from_number(u32)` / `number()` (`2 × column + side`, north first: every `u32` is one gate), `at(x, y)`, `x()`, `y()`, `front()` (the walkway tile in front), `address()`, `design()`, `code()`.
 - `GateAddress`: `new(seed, entrance)` (`None` past `PLANETS` or 16), `for_world(WorldSeed, entrance)`, `from_bits` / `bits()` (`entrance << 28 | seed`), `seed()`, `entrance()` (the order `WorldGates::find` gives), `world()`, `place()`.
 - `GateDesign` (`RoundArch`, `SquareLintel`, `PointedArch`, `HorseshoeArch`, `Ogee`, `Trefoil`, `SteppedCorbel`, `Keyhole`; `ALL`, `of(place)`, `index()`): from a hash of the place.
@@ -16,11 +17,11 @@ The Hall of Worlds: a special place with fixed rules, made by no generator. A ma
 
 ## Depends on
 
-- `shared::world` (`WorldSeed`), `shared::world_gate` (`WORLD_GATES`), `shared::rng`.
+- `shared::world` (`WorldSeed`), `shared::world_gate` (`WORLD_GATES`), `shared::rng`, `shared::dungeon` (`Level`, `Cell`).
 
 ## Used by
 
-- Nothing yet.
+- `server` (`hall`: steps, arriving, dev tools), client `site` (`hall`: the stretch round the player).
 
 ## Notes
 

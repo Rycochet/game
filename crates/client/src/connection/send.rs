@@ -29,6 +29,7 @@ pub(super) fn count_map_changes(
         if matches!(
             message,
             ServerMessage::EnterLevel(_)
+                | ServerMessage::EnterHall { .. }
                 | ServerMessage::OnWorldMap { .. }
                 | ServerMessage::Teleported { .. }
         ) {

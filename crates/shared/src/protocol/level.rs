@@ -25,12 +25,35 @@ pub fn level_chunk(x: i64, y: i64) -> ((i64, i64), u32) {
     (chunk, bit as u32)
 }
 
+/// What kind of place a level is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LevelKind {
+    /// A site behind a world map poi of this kind.
+    Poi(PoiKind),
+    /// The Hall of Worlds (`shared::hall`): never sent, the client makes it.
+    Hall,
+}
+
+impl LevelKind {
+    /// The poi it is behind, if any.
+    pub fn poi(self) -> Option<PoiKind> {
+        match self {
+            Self::Poi(kind) => Some(kind),
+            Self::Hall => None,
+        }
+    }
+
+    pub fn is_town(self) -> bool {
+        self.poi().is_some_and(PoiKind::is_town)
+    }
+}
+
 /// What a player is told on arriving on a site level: everything except its
 /// cells, which follow as `LevelChunk`s.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LevelInfo {
     /// The kind of place (for its look and name).
-    pub kind: PoiKind,
+    pub kind: LevelKind,
     /// Whether it is a ruined building (for its name).
     pub ruined: bool,
     /// Whether its levels are a building's floors (going up) rather than a

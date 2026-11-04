@@ -97,6 +97,13 @@ pub enum ServerMessage {
     /// A farm's fields, sent after `EnterLevel` on its ground floor: what is
     /// needed to choose what grows in them.
     Fields(Vec<crate::site::FieldLook>),
+    /// The player is now in the Hall of Worlds (`shared::hall`), here. The
+    /// client works out its cells itself. Positions in the Hall (this, and
+    /// `Position`, `Teleported`, entities, `DevTeleport`) are counted from
+    /// `origin`, where the Hall's `x` is billions, more than drawing can
+    /// place: the Hall's own `x` is `x + origin`. `origin` is a multiple of
+    /// `GATE_SPACING`, so the cells are the same either way.
+    EnterHall { x: i64, y: i64, origin: i64 },
     /// The player is on the world map, here: back out of a site, or sent
     /// back to the start by dev tools.
     OnWorldMap { x: i64, y: i64 },
@@ -116,7 +123,7 @@ pub enum ServerMessage {
     /// changes. Nobody else is told this.
     Sheet(Sheet),
     /// Something has come into sight: a mob or another player. The map changing
-    /// (`EnterLevel`, `OnWorldMap`, `Teleported`) forgets everything seen before.
+    /// (`EnterLevel`, `EnterHall`, `OnWorldMap`, `Teleported`) forgets everything seen before.
     EntitySeen(EntityLook),
     /// Something in sight has moved.
     EntityMoved { id: Id, x: i64, y: i64 },

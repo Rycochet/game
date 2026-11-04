@@ -59,6 +59,7 @@ pub(crate) fn to_showcase(client: &mut Client, world: &mut ServerWorld) -> bool 
 fn go_to(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)) -> bool {
     sites::leave(client, world);
     client.visit = None;
+    client.character.hall = None;
     client.character.world_position = (x, y);
     client.unsaved = true;
     client.changed_map();
