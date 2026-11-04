@@ -2,10 +2,12 @@
 //! shown (Display mode) and full screen's resolution, which change nothing
 //! until Apply, which asks whether to keep them (`keep`); in a browser they are
 //! shown, disabled, as the browser looks after the window. Then the settings
-//! trading looks for speed (`options`), which apply at once (`choose`).
+//! trading looks for speed (`options`) or showing what is drawn (`sections`),
+//! which apply at once (`choose`).
 
 mod choose;
 mod options;
+mod sections;
 
 pub(in crate::system_menu) use choose::{VideoShown, use_video_options};
 
@@ -123,6 +125,10 @@ pub(in crate::system_menu) fn fill_video_page(
                 spawn_window_rows(section, in_use.0, entries, labels);
             });
             options::spawn_display_section(sections, &video);
+            sections::spawn_lighting_section(sections, &video);
+            sections::spawn_world_map_section(sections, &video);
+            sections::spawn_sites_section(sections, &video);
+            sections::spawn_motion_section(sections, &video);
             options::spawn_background_section(sections, &video);
         });
     });

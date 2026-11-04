@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::rivers::KnownRivers;
 use super::terrain::{HeightCache, ViewSquare};
 use super::view_square;
-use crate::common::{CurrentWorld, GameClock, MapPosition, SmoothPosition, Weather};
+use crate::common::{CurrentWorld, GameClock, MapPosition, Preferences, SmoothPosition, Weather};
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, ViewCamera};
@@ -21,17 +21,15 @@ pub(super) fn rest_tokens_on_terrain(
     style: Res<SurfaceStyle>,
     known_rivers: Res<KnownRivers>,
     cache: Option<ResMut<HeightCache>>,
-    owners: Query<&SmoothPosition>,
-    mut views: Query<(&TokenView, &mut Transform)>,
+    mut views: Query<&mut Transform, With<TokenView>>,
 ) {
     let Some(mut cache) = cache else {
         return;
     };
     let water_level = world.water_level(&clock);
-    for (view, mut transform) in &mut views {
-        let Ok(position) = owners.get(view.owner) else {
-            continue;
-        };
+    for mut transform in &mut views {
+        // Where `view3d` put it (one unit a grid point here), gliding or not.
+        let (x, z) = (transform.translation.x, transform.translation.z);
         let radius = TOKEN_DIAMETER / 2.0;
         let ground = super::terrain::highest_shown_height(
             &mut cache,
@@ -42,7 +40,7 @@ pub(super) fn rest_tokens_on_terrain(
             &style,
             water_level,
             weather.snow_line,
-            (position.x, position.y),
+            (f64::from(x), f64::from(z)),
             radius as f64,
         );
         transform.translation.y = ground + TOKEN_HALF_THICKNESS;
@@ -56,8 +54,9 @@ pub(super) fn hide_tokens_outside_window(
     orbit: Single<&OrbitCamera, With<ViewCamera>>,
     positions: Query<&SmoothPosition>,
     mut views: Query<(&TokenView, &mut Visibility)>,
+    preferences: Res<Preferences>,
 ) {
-    let square = view_square(&orbit);
+    let square = view_square(&orbit, preferences.video.view_distance);
     let inner = ViewSquare {
         half: square.half - TOKEN_DIAMETER / 2.0,
         ..square

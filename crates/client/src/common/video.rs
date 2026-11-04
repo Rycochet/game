@@ -1,7 +1,13 @@
-//! The Video settings that trade looks for speed, kept in `Preferences`, and
-//! the presets that set them together. Each is used by the module that draws
-//! what it changes; the window's own (display mode, resolution) are in
-//! `display`.
+//! The Video settings that trade looks for speed or clutter, kept in
+//! `Preferences`, and the presets that set them together. Each is used by the
+//! module that draws what it changes; the window's own (display mode,
+//! resolution) are in `display`. What each can be is in `choices`.
+
+mod choices;
+
+pub use choices::{
+    AntiAliasing, Background, FrameRate, Precipitation, Remembered, Shadows, ViewDistance,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -22,6 +28,30 @@ pub struct VideoPrefs {
     pub anti_aliasing: AntiAliasing,
     /// What happens to the drawing while another window is in front.
     pub background: Background,
+    /// The least light on what can be seen, in percent of full daylight
+    /// (`BRIGHTNESS_MOST` at most, so the dark still counts). The player's
+    /// own: presets leave it alone.
+    pub brightness: u8,
+    /// The world map's shadows (the brightest sun or moon's).
+    pub shadows: Shadows,
+    /// The world map lit as at noon by the main sun alone, whatever the time.
+    pub midday_sun: bool,
+    /// How much of the world map's land is drawn round the player.
+    pub view_distance: ViewDistance,
+    /// The world map's cloud sheet. Clouds shade the ground only with this and
+    /// shadows both on.
+    pub clouds: bool,
+    /// Rain, snow and hail falling, on the world map and in sites open to the sky.
+    pub precipitation: Precipitation,
+    /// Trees and low growth painted on the world map.
+    pub foliage: bool,
+    /// Sites' floors and walls drawn with their pictures, or in plain colours.
+    pub floor_textures: bool,
+    /// How places seen before, but not now, are drawn in sites.
+    pub remembered: Remembered,
+    /// Still water, and tokens and the camera jumping to their places rather
+    /// than gliding. The player's own: presets leave it alone.
+    pub reduce_motion: bool,
 }
 
 impl Default for VideoPrefs {
@@ -35,103 +65,29 @@ impl VideoPrefs {
     pub fn preset(&self) -> Option<Preset> {
         Preset::ALL
             .into_iter()
-            .find(|preset| preset.prefs() == *self)
+            .find(|preset| preset.over(*self) == *self)
     }
 
     /// The render scale as a share of the window, `0.5..=1`.
     pub fn render_share(&self) -> f32 {
         f32::from(self.render_scale.clamp(RENDER_SCALES.0, RENDER_SCALES.1)) / 100.0
     }
+
+    /// Brightness as a share of full daylight, `0..=0.49`.
+    pub fn least_light(&self) -> f32 {
+        f32::from(self.brightness.min(BRIGHTNESS_MOST)) / 100.0
+    }
 }
 
 /// The render scales offered, in percent: least and most.
 pub const RENDER_SCALES: (u8, u8) = (50, 100);
 
-/// The most frames drawn each second.
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum FrameRate {
-    Fps30,
-    Fps60,
-    Fps120,
-    Unlimited,
-}
-
-impl FrameRate {
-    pub const ALL: [Self; 4] = [Self::Fps30, Self::Fps60, Self::Fps120, Self::Unlimited];
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Fps30 => "30",
-            Self::Fps60 => "60",
-            Self::Fps120 => "120",
-            Self::Unlimited => "Unlimited",
-        }
-    }
-
-    /// Frames a second, or `None` for as many as can be drawn.
-    pub fn per_second(self) -> Option<f64> {
-        match self {
-            Self::Fps30 => Some(30.0),
-            Self::Fps60 => Some(60.0),
-            Self::Fps120 => Some(120.0),
-            Self::Unlimited => None,
-        }
-    }
-}
-
-/// Smoothing of jagged edges (MSAA).
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum AntiAliasing {
-    Off,
-    /// Not in a browser, whose graphics offer only 4× or none.
-    Times2,
-    Times4,
-}
-
-impl AntiAliasing {
-    pub const ALL: [Self; 3] = [Self::Off, Self::Times2, Self::Times4];
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Off => "Off",
-            Self::Times2 => "2×",
-            Self::Times4 => "4×",
-        }
-    }
-
-    /// Whether this build can use it.
-    pub fn usable(self) -> bool {
-        !(IN_BROWSER && self == Self::Times2)
-    }
-
-    /// What is used: in a browser 2× becomes 4×.
-    pub fn in_use(self) -> Self {
-        if self.usable() { self } else { Self::Times4 }
-    }
-}
-
-/// What happens to the drawing while another window is in front.
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Background {
-    /// A frame a second, to save power.
-    SlowDown,
-    /// As when in front: for streaming, or watching on another screen.
-    KeepDrawing,
-}
-
-impl Background {
-    pub const ALL: [Self; 2] = [Self::SlowDown, Self::KeepDrawing];
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::SlowDown => "Slow down",
-            Self::KeepDrawing => "Keep drawing",
-        }
-    }
-}
+/// The most Brightness can be, in percent: below half of daylight, so it helps
+/// eyes without lighting up the night (owner).
+pub const BRIGHTNESS_MOST: u8 = 49;
 
 /// Sets of Video settings, from fastest to best looking. Brightness and
-/// Reduce Motion (to come) are the player's own, and never set by these.
+/// Reduce Motion are the player's own, and never set by these.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Preset {
     Low,
@@ -150,20 +106,48 @@ impl Preset {
         }
     }
 
+    /// `prefs` with everything this preset sets set, keeping the player's own.
+    pub fn over(self, prefs: VideoPrefs) -> VideoPrefs {
+        VideoPrefs {
+            brightness: prefs.brightness,
+            reduce_motion: prefs.reduce_motion,
+            ..self.prefs()
+        }
+    }
+
     /// The settings it chooses. Medium is the default, as the game was before
     /// there was a choice.
     pub fn prefs(self) -> VideoPrefs {
-        let (frame_rate, render_scale, anti_aliasing) = match self {
-            Self::Low => (FrameRate::Fps30, 75, AntiAliasing::Off),
-            Self::Medium => (FrameRate::Fps30, 100, AntiAliasing::Times4),
-            Self::High => (FrameRate::Fps60, 100, AntiAliasing::Times4),
+        let low = self == Self::Low;
+        let (frame_rate, view_distance) = match self {
+            Self::Low => (FrameRate::Fps30, ViewDistance::Near),
+            Self::Medium => (FrameRate::Fps30, ViewDistance::Normal),
+            Self::High => (FrameRate::Fps60, ViewDistance::Far),
         };
         VideoPrefs {
             frame_rate,
             vsync: true,
-            render_scale,
-            anti_aliasing,
+            render_scale: if low { 75 } else { 100 },
+            anti_aliasing: if low {
+                AntiAliasing::Off
+            } else {
+                AntiAliasing::Times4
+            },
             background: Background::SlowDown,
+            brightness: 0,
+            shadows: if low { Shadows::Off } else { Shadows::High },
+            midday_sun: low,
+            view_distance,
+            clouds: !low,
+            precipitation: if low {
+                Precipitation::Light
+            } else {
+                Precipitation::Full
+            },
+            foliage: !low,
+            floor_textures: true,
+            remembered: Remembered::Show,
+            reduce_motion: false,
         }
     }
 }

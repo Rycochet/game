@@ -6,7 +6,9 @@ use shared::protocol::ClientMessage;
 use super::rivers::KnownRivers;
 use super::terrain::HeightCache;
 use super::view_square;
-use crate::common::{ClickMode, CurrentWorld, GameClock, MapPosition, PointerPosition, Weather};
+use crate::common::{
+    ClickMode, CurrentWorld, GameClock, MapPosition, PointerPosition, Preferences, Weather,
+};
 use crate::connection::ToServer;
 use crate::player::{Player, TravelTo};
 use crate::surface_style::SurfaceStyle;
@@ -31,6 +33,7 @@ pub(super) fn pick_on_click(
     cache: Option<ResMut<HeightCache>>,
     mut travel: MessageWriter<TravelTo>,
     mut to_server: MessageWriter<ToServer>,
+    preferences: Res<Preferences>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() {
         return;
@@ -46,7 +49,7 @@ pub(super) fn pick_on_click(
     if let Some((x, y)) = super::picking::pick(
         ray,
         (player.x, player.y),
-        view_square(orbit),
+        view_square(orbit, preferences.video.view_distance),
         &mut cache,
         &world.surface,
         &style,

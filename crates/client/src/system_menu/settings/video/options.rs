@@ -1,5 +1,6 @@
 //! The Video settings that trade looks for speed, on Settings' Video page: the
-//! preset, then Display and Background. They apply as soon as they are chosen
+//! preset, then Display and Background (and, in `sections`, the rest), with
+//! the pieces their rows are made of. They apply as soon as they are chosen
 //! (`choose`); the modules drawing what they change follow `Preferences`.
 
 use bevy::prelude::*;
@@ -11,9 +12,7 @@ use crate::common::{
 use crate::widgets::{ButtonState, Dropdown, INK, spawn_slider};
 
 const WIDTH: f32 = 200.0;
-const SCALE_TEXT_WIDTH: f32 = 60.0;
-/// Render Scale moves in steps of this many percent.
-pub(super) const SCALE_STEP: u8 = 5;
+const PERCENT_WIDTH: f32 = 60.0;
 
 /// Which setting a control is.
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
@@ -24,14 +23,25 @@ pub(in crate::system_menu) enum VideoControl {
     RenderScale,
     AntiAliasing,
     Background,
+    Brightness,
+    Shadows,
+    MiddaySun,
+    ViewDistance,
+    Clouds,
+    Precipitation,
+    Foliage,
+    FloorTextures,
+    Remembered,
+    ReduceMotion,
 }
 
-/// The percentage beside Render Scale's slider.
+/// The percentage beside a slider, by the slider's setting.
 #[derive(Component)]
-pub(in crate::system_menu) struct ScaleText;
+pub(in crate::system_menu) struct PercentText(pub(super) VideoControl);
 
 const PRESET: &str = "Sets the Video settings together, from fastest to best looking. \
-    Changing one of them makes this Custom.";
+    Brightness and Reduce Motion are yours, and stay as they are. Changing any other \
+    makes this Custom.";
 const FRAME_RATE: &str = "The most frames the game draws each second. Lower limits use \
     less power and run cooler, which helps laptops on battery. A big difference.";
 const VSYNC: &str = "Waits for the screen before showing each frame, so the picture \
@@ -45,18 +55,30 @@ const BACKGROUND: &str = "What the game does while another window is in front. S
     watching it on another screen. A big difference while in the background.";
 const BROWSER_DECIDES: &str = "Not in the browser, which decides this itself.";
 
-/// A dropdown for a setting: its choices, the one chosen, and those that can't be.
-fn dropdown(names: Vec<String>, chosen: usize, greyed: Vec<bool>) -> Dropdown {
+/// A dropdown for a setting: its choices' names, the one chosen, and those that
+/// can't be (none if empty).
+pub(super) fn dropdown<T: PartialEq + Copy>(
+    all: &[T],
+    name: impl Fn(T) -> &'static str,
+    chosen: T,
+    greyed: Vec<bool>,
+) -> Dropdown {
     Dropdown {
-        options: names,
-        selected: chosen,
+        options: all.iter().map(|&it| name(it).into()).collect(),
+        selected: all.iter().position(|&it| it == chosen).unwrap_or(0),
         greyed,
         ..default()
     }
 }
 
+/// A dropdown of On and Off.
+pub(super) fn on_off(on: bool) -> Dropdown {
+    let name = |on: bool| if on { "On" } else { "Off" };
+    dropdown(&[true, false], name, on, Vec::new())
+}
+
 /// Spawns a setting's dropdown row, marked, and disabled if `why_not`.
-fn setting_row(
+pub(super) fn setting_row(
     parent: &mut ChildSpawnerCommands,
     control: VideoControl,
     label: &str,
@@ -71,6 +93,30 @@ fn setting_row(
     }
 }
 
+/// Spawns a setting's slider row, from `least` to `most` percent, at `percent`.
+pub(super) fn slider_row(
+    parent: &mut ChildSpawnerCommands,
+    control: VideoControl,
+    label: &str,
+    what: &str,
+    (least, most, percent): (u8, u8, u8),
+) {
+    spawn_labelled(parent, label, tip(what, None), |row| {
+        let value = f32::from(percent.clamp(least, most) - least) / f32::from(most - least);
+        spawn_slider(row, value, None, WIDTH).insert(control);
+        row.spawn((
+            PercentText(control),
+            Text::new(format!("{percent}%")),
+            super::super::FONT.font(),
+            TextColor(INK),
+            Node {
+                width: px(PERCENT_WIDTH),
+                ..default()
+            },
+        ));
+    });
+}
+
 /// Preset, at the top of the page: Custom while the settings are no preset.
 pub(super) fn spawn_preset_row(page: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
     let mut names: Vec<String> = Preset::ALL.iter().map(|it| it.name().into()).collect();
@@ -82,74 +128,66 @@ pub(super) fn spawn_preset_row(page: &mut ChildSpawnerCommands, prefs: &VideoPre
     // Custom is only shown, not chosen.
     let mut greyed = vec![false; Preset::ALL.len()];
     greyed.push(true);
-    let list = dropdown(names, chosen, greyed);
+    let list = Dropdown {
+        options: names,
+        selected: chosen,
+        greyed,
+        ..default()
+    };
     setting_row(page, VideoControl::Preset, "Preset", (PRESET, None), list);
 }
 
 pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
     spawn_section(sections, "Display", |section| {
-        let names = FrameRate::ALL.iter().map(|it| it.name().into()).collect();
-        let chosen = FrameRate::ALL.iter().position(|&it| it == prefs.frame_rate);
-        let list = dropdown(names, chosen.unwrap_or(0), Vec::new());
+        let list = dropdown(
+            &FrameRate::ALL,
+            FrameRate::name,
+            prefs.frame_rate,
+            Vec::new(),
+        );
+        let row = (FRAME_RATE, None);
         setting_row(
             section,
             VideoControl::FrameRate,
             "Frame Rate Limit",
-            (FRAME_RATE, None),
+            row,
             list,
         );
 
-        let list = dropdown(
-            vec!["On".into(), "Off".into()],
-            usize::from(!prefs.vsync),
-            Vec::new(),
-        );
         let why_not = IN_BROWSER.then_some(BROWSER_DECIDES);
+        let row = (VSYNC, why_not);
         setting_row(
             section,
             VideoControl::VSync,
             "VSync",
-            (VSYNC, why_not),
-            list,
+            row,
+            on_off(prefs.vsync),
         );
 
-        spawn_labelled(section, "Render Scale", tip(RENDER_SCALE, None), |row| {
-            let (least, most) = RENDER_SCALES;
-            let value =
-                f32::from(prefs.render_scale.clamp(least, most) - least) / f32::from(most - least);
-            spawn_slider(row, value, None, WIDTH).insert(VideoControl::RenderScale);
-            row.spawn((
-                ScaleText,
-                Text::new(format!("{}%", prefs.render_scale)),
-                super::super::FONT.font(),
-                TextColor(INK),
-                Node {
-                    width: px(SCALE_TEXT_WIDTH),
-                    ..default()
-                },
-            ));
-        });
+        let (least, most) = RENDER_SCALES;
+        let at = (least, most, prefs.render_scale);
+        slider_row(
+            section,
+            VideoControl::RenderScale,
+            "Render Scale",
+            RENDER_SCALE,
+            at,
+        );
 
-        let names = AntiAliasing::ALL
-            .iter()
-            .map(|it| it.name().into())
-            .collect();
-        let chosen = AntiAliasing::ALL
-            .iter()
-            .position(|&it| it == prefs.anti_aliasing.in_use());
         let greyed = AntiAliasing::ALL.iter().map(|it| !it.usable()).collect();
-        let list = dropdown(names, chosen.unwrap_or(0), greyed);
-        let why_not = IN_BROWSER.then_some("2× isn't in the browser.");
-        let words = match why_not {
-            // Still usable: only one choice is missing.
-            Some(why) => format!("{ANTI_ALIASING}\n\n{why}"),
-            None => ANTI_ALIASING.into(),
+        let chosen = prefs.anti_aliasing.in_use();
+        let list = dropdown(&AntiAliasing::ALL, AntiAliasing::name, chosen, greyed);
+        // Still usable in a browser: only one choice is missing.
+        let words = match IN_BROWSER {
+            true => format!("{ANTI_ALIASING}\n\n2× isn't in the browser."),
+            false => ANTI_ALIASING.into(),
         };
+        let row = (words.as_str(), None);
         setting_row(
             section,
             VideoControl::AntiAliasing,
             "Anti-aliasing",
-            (&words, None),
+            row,
             list,
         );
     });
@@ -157,11 +195,12 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
 
 pub(super) fn spawn_background_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
     spawn_section(sections, "Background", |section| {
-        let names = Background::ALL.iter().map(|it| it.name().into()).collect();
-        let chosen = Background::ALL
-            .iter()
-            .position(|&it| it == prefs.background);
-        let list = dropdown(names, chosen.unwrap_or(0), Vec::new());
+        let list = dropdown(
+            &Background::ALL,
+            Background::name,
+            prefs.background,
+            Vec::new(),
+        );
         let why_not = IN_BROWSER.then_some("Not in the browser, which slows hidden tabs itself.");
         let row = (BACKGROUND, why_not);
         setting_row(

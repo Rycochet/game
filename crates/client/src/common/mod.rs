@@ -63,7 +63,8 @@ use sky::update_sky;
 pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use token::{Attitude, Icon, IconPicture, Token, TokenShape, TokenSize};
 pub use video::{
-    AntiAliasing, Background, FrameRate, IN_BROWSER, Preset, RENDER_SCALES, VideoPrefs,
+    AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, IN_BROWSER, Precipitation, Preset,
+    RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
 };
 pub use view::{ViewFacing, ViewStats};
 pub use weather::{NORMAL_SNOW_LINE, Weather};

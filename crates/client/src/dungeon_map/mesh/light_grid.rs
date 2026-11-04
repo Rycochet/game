@@ -54,6 +54,14 @@ impl LightGrid {
         }
     }
 
+    /// Raises every cell to at least `least` of full light (Brightness). Only
+    /// what is in sight is drawn lit, so nothing unseen shows.
+    pub fn raise_to(&mut self, least: f32) {
+        for light in &mut self.light {
+            *light = light.max(Vec3::splat(least));
+        }
+    }
+
     /// The light at a cell (none outside the level).
     pub fn at(&self, x: i64, y: i64) -> Vec3 {
         self.index(x, y).map_or(Vec3::ZERO, |i| self.light[i])

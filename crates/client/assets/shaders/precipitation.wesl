@@ -16,6 +16,8 @@ struct Sky {
     towards: vec2<f32>,
     centre: vec2<f32>,
     light: vec4<f32>,
+    shown: vec4<f32>,
+    still: vec4<f32>,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> sky: Sky;
@@ -80,6 +82,10 @@ fn vertex(in: Vertex) -> Output {
 
     // Harder rain lights up more of the quads.
     if rain * 1.05 < fract(in.seed.y * 57.3) + 0.03 {
+        return out;
+    }
+    // The share the Weather setting draws.
+    if fract(in.seed.x * 91.7) >= sky.shown.z {
         return out;
     }
 

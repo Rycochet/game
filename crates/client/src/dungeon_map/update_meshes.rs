@@ -10,7 +10,9 @@ use super::mesh::View;
 use super::sight_lines::SightLines;
 use super::theme::Theme;
 use super::{MemoryPart, SeeThroughPart, Shown, SolidPart, StairsThroughPart};
-use crate::common::{CurrentDungeon, LightSource, MapPosition, SharesSight, ViewStats};
+use crate::common::{
+    CurrentDungeon, LightSource, MapPosition, Preferences, Remembered, SharesSight, ViewStats,
+};
 use crate::player::Player;
 use crate::view3d::ViewCamera;
 
@@ -51,7 +53,14 @@ pub(super) fn update_meshes(
     // moves.
     mut seen: Local<Option<(Vec<View>, Sight)>>,
     // Together, as Bevy limits how many things a system can ask for.
-    (outside, mut spill): (Res<OutsideLight>, Local<Spill>),
+    // With the settings: Brightness and whether remembered places show, as
+    // last built.
+    (outside, mut spill, preferences, mut settings_seen): (
+        Res<OutsideLight>,
+        Local<Spill>,
+        Res<Preferences>,
+        Local<Option<(u8, bool)>>,
+    ),
     (town_lights, mut window_glow, lines, mut lines_seen): (
         Res<TownLights>,
         Local<Spill>,
@@ -60,6 +69,8 @@ pub(super) fn update_meshes(
     ),
 ) {
     let camera = camera.translation;
+    let video = &preferences.video;
+    let settings = (video.brightness, video.remembered != Remembered::Hide);
     let looked_again = dungeon.is_changed()
         || player.is_changed()
         || sharers.iter().any(|position| position.is_changed());
@@ -68,6 +79,7 @@ pub(super) fn update_meshes(
         || outside.is_changed()
         || town_lights.is_changed()
         || *lines_seen != lines.changes
+        || *settings_seen != Some(settings)
         || lights
             .iter()
             .any(|(position, light)| position.is_changed() || light.is_changed());
@@ -76,6 +88,7 @@ pub(super) fn update_meshes(
     }
     *built_for = Some(camera);
     *lines_seen = lines.changes;
+    *settings_seen = Some(settings);
 
     let start = Instant::now();
     let level = &dungeon.level;
@@ -173,6 +186,7 @@ pub(super) fn update_meshes(
             Vec3::new(colour.red, colour.green, colour.blue),
         );
     }
+    light.raise_to(video.least_light());
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
     let theme = Theme::of(dungeon.info.as_ref().map(|info| info.kind));
     let built = super::mesh::build(
@@ -219,7 +233,7 @@ pub(super) fn update_meshes(
     let mut memory_meshes: Vec<Option<Mesh>> = built.memory.into_iter().map(Some).collect();
     for (part, handle, mut visibility) in &mut memory {
         let i = part.0 as usize;
-        visibility.set_if_neq(shown_if(built.has_memory[i]));
+        visibility.set_if_neq(shown_if(built.has_memory[i] && settings.1));
         if !built.has_memory[i] {
             continue;
         }

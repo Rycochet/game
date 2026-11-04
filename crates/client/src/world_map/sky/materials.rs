@@ -30,6 +30,12 @@ pub struct SkyParams {
     /// `rgb`: what to multiply colours by to look lit by the sky (`SkyNow::lit`).
     /// `a`: how strong the glow round the player is.
     pub(super) light: Vec4,
+    /// The Video settings, each 0 (off) to 1: clouds shown, clouds shading the
+    /// ground (needs shadows too), the share of rain drawn, foliage painted.
+    pub(super) shown: Vec4,
+    /// `x`: the least light on the land (Brightness); `y`: seconds for moving
+    /// water, which Reduce Motion holds still.
+    pub(super) still: Vec4,
 }
 
 /// Adds the sky to the terrain's standard material.

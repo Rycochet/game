@@ -18,6 +18,28 @@ fn changed_settings_are_no_preset() {
 }
 
 #[test]
+fn presets_leave_the_players_own_settings_alone() {
+    let mine = VideoPrefs {
+        brightness: 30,
+        reduce_motion: true,
+        ..Preset::Low.prefs()
+    };
+    assert_eq!(mine.preset(), Some(Preset::Low));
+    let high = Preset::High.over(mine);
+    assert_eq!((high.brightness, high.reduce_motion), (30, true));
+    assert_eq!(high.preset(), Some(Preset::High));
+}
+
+#[test]
+fn brightness_stays_below_half() {
+    let prefs = VideoPrefs {
+        brightness: 90,
+        ..VideoPrefs::default()
+    };
+    assert_eq!(prefs.least_light(), 0.49);
+}
+
+#[test]
 fn render_share_stays_in_range() {
     let share = |render_scale| {
         VideoPrefs {

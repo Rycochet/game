@@ -5,14 +5,26 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::world::GAME_HOUR_SECONDS;
 
+use super::super::map_sky::MapSky;
 use super::super::view_square;
 use super::{
     CLOUD_HEIGHT, CloudMaterial, PLAYER_GLOW, PrecipitationMaterial, SKY_INTERVAL, SKY_REACH,
     SKY_SIDE, SKY_SPACING, SkyAssets, SkyParams, TerrainMaterial,
 };
-use crate::common::{CurrentWorld, MapPosition, ServerClock, SkyNow};
+use crate::common::{CurrentWorld, MapPosition, Preferences, ServerClock, Shadows, VideoPrefs};
 use crate::player::Player;
 use crate::view3d::{OrbitCamera, ViewCamera};
+
+/// What the Video settings show, for the shaders (`SkyParams::shown`).
+fn shown(video: &VideoPrefs) -> Vec4 {
+    let on = |yes: bool| if yes { 1.0 } else { 0.0 };
+    Vec4::new(
+        on(video.clouds),
+        on(video.clouds && video.shadows != Shadows::Off),
+        video.precipitation.share(),
+        on(video.foliage),
+    )
+}
 
 /// One moment of the sky, written into a texture.
 pub(super) fn work_out_moment(
@@ -78,6 +90,7 @@ pub struct SkyState {
     /// The clock's time at the newer moment.
     newer_hours: f64,
     temperatures: Temperatures,
+    /// The window the cloud sheet was cut to: its turn and size.
     square: Option<(f32, f32)>,
 }
 
@@ -88,7 +101,8 @@ pub fn update(
     time: Res<Time>,
     world: Res<CurrentWorld>,
     clock: Res<ServerClock>,
-    sky_now: Res<SkyNow>,
+    sky_now: Res<MapSky>,
+    preferences: Res<Preferences>,
     assets: Option<ResMut<SkyAssets>>,
     player: Single<&MapPosition, With<Player>>,
     orbit: Single<&OrbitCamera, With<ViewCamera>>,
@@ -159,7 +173,9 @@ pub fn update(
         // Texel centres are half a spacing in from the texture's corner.
         Vec2::new(x as f32, y as f32) - Vec2::splat(SKY_SPACING as f32 / 2.0)
     };
-    let square = view_square(&orbit);
+    let video = &preferences.video;
+    let square = view_square(&orbit, video.view_distance);
+    let sky_now = &sky_now.0;
     let params = SkyParams {
         origin_a: corner(state.origins[0]),
         origin_b: corner(state.origins[1]),
@@ -174,6 +190,17 @@ pub fn update(
         light: sky_now
             .lit()
             .extend(PLAYER_GLOW * (1.0 - sky_now.flat.max_element().min(1.0))),
+        shown: shown(video),
+        still: Vec4::new(
+            video.least_light(),
+            if video.reduce_motion {
+                0.0
+            } else {
+                time.elapsed_secs()
+            },
+            0.0,
+            0.0,
+        ),
     };
     let [older, newer] = &assets.moments;
     // Writing to these also tells Bevy to pick up changed textures.
@@ -196,10 +223,10 @@ pub fn update(
     }
 
     // The cloud sheet: the window's square, straight above it.
-    if state.square != Some((orbit.yaw, orbit.distance))
+    if state.square != Some((orbit.yaw, square.half))
         && let Some(mut mesh) = meshes.get_mut(&assets.cloud_sheet)
     {
-        state.square = Some((orbit.yaw, orbit.distance));
+        state.square = Some((orbit.yaw, square.half));
         let corners = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
             .map(|(u, v)| (square.right * u + square.towards * v) * square.half);
         let positions: Vec<[f32; 3]> = corners.iter().map(|c| [c.x, CLOUD_HEIGHT, c.y]).collect();
