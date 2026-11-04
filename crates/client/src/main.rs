@@ -32,8 +32,8 @@ mod world_map;
 use bevy::prelude::*;
 
 /// Where Bevy loads assets from. Native debug builds use the source folder
-/// (an absolute path fixed at compile time), so `target/debug/hall-of-worlds.exe`
-/// finds them however it is started. Otherwise `assets` is next to the
+/// (an absolute path fixed at compile time), so the debug executable finds
+/// them however and wherever it is started. Otherwise `assets` is next to the
 /// executable (native) or the page (web, copied there by Trunk).
 #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
 const ASSET_FOLDER: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");

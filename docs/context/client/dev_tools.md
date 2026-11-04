@@ -57,10 +57,10 @@ Boolean variables are read with `server::option_on`, so `1`, `on` and `yes` work
 ## Notes
 
 - How Claude checks visual changes natively, e.g. from Git Bash:
-  `HOW_DEBUG_SCREENSHOT=C:/Projects/game/target/shots/map.png ./target/debug/hall-of-worlds.exe`
+  `HOW_DEBUG_SCREENSHOT=C:/Projects/game/target/shots/map.png <target>/debug/hall-of-worlds.exe`, where `<target>` is cargo's target folder (`target/` unless moved)
   then read the PNG. Keep screenshots under `target/` (git-ignored).
 - Python with Pillow is installed on the owner's machine for analysing screenshots (e.g. mean brightness, cropping the HUD).
-- To find which Bevy system is failing in a panic, build with `cargo build -p client --features bevy/debug --target-dir target/debug-names` (system names are hidden otherwise).
+- To find which Bevy system is failing in a panic, build with `cargo build -p client --features bevy/debug --target-dir <target>/debug-names` (inside cargo's target folder, wherever that is) (system names are hidden otherwise).
 - `HOW_DEBUG_BAGS=true`: a row of every look of bag east of the player, only drawn, to look at.
 - `HOW_DEBUG_SECRETS=true`, with `HOW_DEBUG_INVENTORY`: truesight on, and rings, hats and socks that are magical, blessed and cursed, to look at how they glow.
 - `HOW_DEBUG_DROP=true`, with `HOW_DEBUG_INVENTORY`: all but the first of what is in the inventory goes on the ground underfoot, to look at the ground section.

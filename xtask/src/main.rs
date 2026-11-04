@@ -5,6 +5,7 @@
 
 mod api;
 mod sizes;
+mod target_dir;
 mod webgl;
 
 use std::env;
@@ -26,8 +27,9 @@ Tasks:
           now, removing files back under the limit.
   hooks   Turn on the pre-commit hook for this checkout (once per clone).
   package Release build of the native client and server, put together
-          with the game assets in target/package/ (what the Build
-          workflow uploads).
+          with the game assets in package/ in cargo's target folder
+          (target/package/ unless cargo is set to build elsewhere: what
+          the Build workflow uploads).
 ";
 
 /// A named cargo command: what `lint` and `test` are made of.
@@ -173,8 +175,9 @@ fn run_checks<'a>(checks: impl IntoIterator<Item = &'a Check>) -> ExitCode {
 }
 
 /// Builds the release executables and copies them, with the client's
-/// `assets` folder, into `target/package/`: the layout players get, since
-/// release builds load assets from next to the executable.
+/// `assets` folder, into `package/` in cargo's target folder (usually
+/// `target/package/`): the layout players get, since release builds load
+/// assets from next to the executable.
 fn package() -> ExitCode {
     let build = [
         "build",
@@ -192,9 +195,10 @@ fn package() -> ExitCode {
     }
 
     let root = workspace_root();
-    let package = root.join("target/package");
+    let target = target_dir::target_dir(&root);
+    let package = target.join("package");
     println!("==> Package: {}", package.display());
-    match assemble(&root, &package) {
+    match assemble(&root, &target.join("release"), &package) {
         Ok(()) => {
             println!("==> Packaged");
             ExitCode::SUCCESS
@@ -206,15 +210,16 @@ fn package() -> ExitCode {
     }
 }
 
-/// Empties `package`, then copies in the executables and the assets.
-fn assemble(root: &Path, package: &Path) -> io::Result<()> {
+/// Empties `package`, then copies in the executables from `release` and the
+/// assets.
+fn assemble(root: &Path, release: &Path, package: &Path) -> io::Result<()> {
     if package.exists() {
         fs::remove_dir_all(package)?;
     }
     fs::create_dir_all(package)?;
     for name in ["hall-of-worlds", "hall-of-worlds-server"] {
         let file = format!("{name}{}", env::consts::EXE_SUFFIX);
-        fs::copy(root.join("target/release").join(&file), package.join(&file))?;
+        fs::copy(release.join(&file), package.join(&file))?;
     }
     copy_dir(&root.join("crates/client/assets"), &package.join("assets"))
 }
