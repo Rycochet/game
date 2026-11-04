@@ -5,6 +5,7 @@
 mod aura;
 mod auto_scroll;
 mod clipboard;
+mod container;
 mod dropdown;
 mod feedback;
 mod filter_list;
@@ -34,6 +35,7 @@ pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]
 pub use clipboard::copy_to_clipboard;
+pub use container::{ContainerLook, ContainerSize, spawn_container};
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};

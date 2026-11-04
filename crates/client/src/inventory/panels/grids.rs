@@ -13,7 +13,8 @@ use super::{
 };
 use crate::common::SheetText;
 use crate::widgets::{
-    CELL, Floating, GRID_LINE, INK, RaisePanel, covering, spawn_item_grid, spawn_moveable_panel,
+    CELL, ContainerLook, ContainerSize, Floating, GRID_LINE, INK, RaisePanel, covering,
+    spawn_container, spawn_item_grid, spawn_moveable_panel,
 };
 
 impl OpenGrids {
@@ -54,13 +55,7 @@ impl OpenGrids {
                 .with_children(|columns| {
                     columns.spawn((SheetText, Text::default(), FONT.font(), TextColor(INK)));
                     spawn_rows(columns);
-                    columns
-                        .spawn(Node {
-                            flex_direction: FlexDirection::Column,
-                            row_gap: px(COLUMN_GAP / 2.0),
-                            ..default()
-                        })
-                        .with_children(|column| spawn_grid(column, holder, width, height));
+                    spawn_grid(columns, holder, width, height);
                     ground_holder = Some(spawn_section(columns));
                 });
         });
@@ -97,51 +92,43 @@ impl OpenGrids {
     }
 }
 
-/// A grid, its controls above it, and under it the words on its weight and, for the inventory, the bin.
+/// A grid in its container: sort and filter above it, and under it the words on its
+/// weight and, for the inventory, the Drop and bin slots.
 pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, width: u8, height: u8) {
-    // Its controls, along its top at the right.
-    parent
-        .spawn(Node {
-            justify_content: JustifyContent::FlexEnd,
-            column_gap: px(CELL_BORDER * 4.0),
-            ..default()
-        })
-        .with_children(|row| {
+    let look = ContainerLook {
+        title: None,
+        controls: true,
+        size: ContainerSize::Fixed,
+        weight: true,
+        slots: holder == Holder::Inventory,
+    };
+    let parts = spawn_container(parent, look);
+    let mut commands = parent.commands();
+    if let Some(controls) = parts.controls {
+        commands.entity(controls).with_children(|row| {
             spawn_sort(row, holder);
             spawn_filter(row, Some(holder));
         });
-    spawn_item_grid(parent, width, height, GridNode { holder }, (), |grid| {
-        grid.spawn((ItemLayer { holder }, covering(), Floating));
-        grid.spawn((AimLayer { holder }, covering(), Floating));
-    });
-    parent
-        .spawn(Node {
-            justify_content: JustifyContent::SpaceBetween,
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|row| {
-            row.spawn((
-                WeightText { holder },
-                Text::default(),
-                FONT.font(),
-                TextColor(INK),
-            ));
-            if holder == Holder::Inventory {
-                row.spawn(Node {
-                    column_gap: px(CELL_BORDER * 4.0),
-                    ..default()
-                })
-                .with_children(|slots| {
-                    let slot = || Node {
-                        width: px(CELL),
-                        height: px(CELL),
-                        border: UiRect::all(px(CELL_BORDER)),
-                        ..default()
-                    };
-                    slots.spawn((DropNode, slot(), BorderColor::from(GRID_LINE)));
-                    slots.spawn((BinNode, BinSlot, slot(), BorderColor::from(GRID_LINE)));
-                });
-            }
+    }
+    commands.entity(parts.grid).with_children(|parent| {
+        spawn_item_grid(parent, width, height, GridNode { holder }, (), |grid| {
+            grid.spawn((ItemLayer { holder }, covering(), Floating));
+            grid.spawn((AimLayer { holder }, covering(), Floating));
         });
+    });
+    if let Some(weight) = parts.weight {
+        commands.entity(weight).insert(WeightText { holder });
+    }
+    if let Some(slots) = parts.slots {
+        commands.entity(slots).with_children(|slots| {
+            let slot = || Node {
+                width: px(CELL),
+                height: px(CELL),
+                border: UiRect::all(px(CELL_BORDER)),
+                ..default()
+            };
+            slots.spawn((DropNode, slot(), BorderColor::from(GRID_LINE)));
+            slots.spawn((BinNode, BinSlot, slot(), BorderColor::from(GRID_LINE)));
+        });
+    }
 }
