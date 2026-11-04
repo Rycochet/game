@@ -60,6 +60,11 @@ web-sys = { version = "0.3", features = [
     "XmlHttpRequest",
 ] }
 
+# The Windows program's name and version, for the taskbar and its Details
+# (MIT), built in by `build.rs`. Only on Windows hosts, where it can.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
 [features]
 # The debug API (native only): see docs/context/debug-api.md. Debug builds
 # only: a release build with it refuses to compile.

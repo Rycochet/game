@@ -39,7 +39,7 @@ const MENU_WIDTH: f32 = 260.0;
 const MARGIN: f32 = 20.0;
 /// Above the first button while the game is paused; no room is kept for it
 /// otherwise.
-const PAUSED_ROW: f32 = 48.0;
+const PAUSED_ROW: f32 = 30.0;
 const BUTTON_ROW: f32 = 38.0;
 const GAP: f32 = 8.0;
 /// Between the menu's sections.

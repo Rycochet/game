@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::super::{PANEL_EDGE, RaisePanel, SHADED_EDGE, panel, panel_title, spawn_close_button};
 use super::{
     CLOSE_MARGIN, CONTENT_GAP, FIRST_PANEL_Z, MIN_STRIPES_WIDTH, PADDING, STRIPE_GAP,
-    STRIPE_THICKNESS, STRIPES, TITLE_GAP,
+    STRIPE_THICKNESS, STRIPES, TITLE_GAP, TOP_PADDING,
 };
 
 /// A panel that can be moved. `at` is where its top-left corner is wanted, in
@@ -48,7 +48,10 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
             position_type: PositionType::Absolute,
             flex_direction: FlexDirection::Column,
             border: UiRect::all(px(PANEL_EDGE)),
-            padding: UiRect::all(px(PADDING)),
+            padding: UiRect {
+                top: px(TOP_PADDING),
+                ..UiRect::all(px(PADDING))
+            },
             row_gap: px(CONTENT_GAP),
             ..default()
         },
@@ -77,6 +80,8 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
                 PanelPart::Close(root),
                 Node {
                     padding: UiRect::all(px(CLOSE_MARGIN)),
+                    // Still on it for fingers, but not making the bar taller.
+                    margin: UiRect::vertical(px(-CLOSE_MARGIN)),
                     ..default()
                 },
             ))

@@ -768,3 +768,7 @@ The minimap and full map colour the world map with the water at `sea_level` (mid
 `shared::surface` can make the land more than one way (`SurfaceGenerator`): `Classic` (the original layered noise) and `Continents` (planet-sized land and oceans in whole metres from the sea, with shelves, plateaus and rare long mountain ranges; Plates to follow). Owner: the old noise is good for randomness but doesn't look like a real planet, and may still suit some worlds (a dry one). Every world keeps `Classic` until a generator is chosen per world on purpose, which will be its own change (saved in `WorldParams`, a `WORLD_MAP_VERSION` bump, the world map drawn relative to the local height, walking, tides, rivers and pois retuned in metres). Until then the others are seen only in View Planet, whose bar picks the generator, seed and layer.
 
 New generators work in metres (sea level 0, Earth-like: most land low, peaks to about 9 km, ocean floors about 4 km down), turned into the old height scale at 100 m a unit for everything else; their climate cools at Earth's 6.5 °C a km. The old 0-127 scale (once kept small for the browser) no longer limits heights.
+
+## 2026-11-04: The Windows exe carries its name
+
+The taskbar showed the exe's file name, `hall-of-worlds`, as it had no version information. The client's `build.rs` builds one in with `winresource` (MIT), only when building for Windows on Windows: FileDescription and ProductName "Hall of Worlds", the version from Cargo. No icon yet; one would go in the same way.

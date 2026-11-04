@@ -6,7 +6,7 @@ use super::theme::{INK, PARCHMENT, TextSize};
 use super::theme::{
     LIT_EDGE, RAISED_BACKGROUND, SHADED_EDGE, TOOLTIP_BACKGROUND, TOOLTIP_TEXT, soft_shadow,
 };
-use super::{BUTTON_PADDING, PANEL_EDGE, TOOLTIP_EDGE, TOOLTIP_FONT};
+use super::{BUTTON_PADDING, PANEL_EDGE, TITLE_LIFT, TOOLTIP_EDGE, TOOLTIP_FONT};
 
 /// Lit along its top and left, in shade along its bottom and right.
 pub(super) fn raised_border() -> BorderColor {
@@ -71,9 +71,16 @@ pub fn panel_frame() -> impl Bundle {
     )
 }
 
-/// The writing for a panel's title. Add a `Node` to place it.
+/// The writing for a panel's title. Add a `Node` to place it. Drawn a little
+/// higher than its place, as Lexend leaves more room above capitals than below,
+/// so a centred title looks low.
 pub fn panel_title(title: impl Into<String>) -> impl Bundle {
-    (Text::new(title), TextSize::Title.font(), TextColor(INK))
+    (
+        Text::new(title),
+        TextSize::Title.font(),
+        TextColor(INK),
+        UiTransform::from_translation(Val2::px(0.0, -TITLE_LIFT)),
+    )
 }
 
 /// The dark box of a tooltip, with `node`'s layout, for more than a name in it.

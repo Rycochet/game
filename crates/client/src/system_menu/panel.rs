@@ -56,12 +56,7 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
         px(MENU_WIDTH),
         Val::Auto,
         Node {
-            padding: UiRect {
-                left: px(MARGIN),
-                right: px(MARGIN),
-                top: px(0),
-                bottom: px(MARGIN),
-            },
+            padding: UiRect::all(px(MARGIN)),
             flex_direction: FlexDirection::Column,
             row_gap: px(SECTION_GAP),
             ..default()
@@ -78,8 +73,6 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
                     flex_shrink: 0.0,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
-                    // Its own room above the first section, without the gap.
-                    margin: UiRect::bottom(px(GAP - SECTION_GAP)),
                     ..default()
                 },
             ))
