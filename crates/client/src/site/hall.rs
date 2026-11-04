@@ -11,15 +11,16 @@ use crate::common::{CurrentDungeon, MapPosition};
 use crate::player::Player;
 
 /// How much of the Hall is held at once, in tiles east to west.
-const STRETCH: i64 = 160;
+const STRETCH: i64 = 300;
 /// How near its end the player may come before it is moved along.
-const MARGIN: i64 = 40;
+const MARGIN: i64 = 75;
 
-/// Makes the current level the stretch of the Hall round `x`, all known.
-pub(super) fn show_around(dungeon: &mut CurrentDungeon, (x, y): (i64, i64)) {
+/// Makes the current level the stretch of the Hall round `x`, all known; `x`
+/// counts from `origin`, as the server sends it.
+pub(super) fn show_around(dungeon: &mut CurrentDungeon, (x, y): (i64, i64), origin: i64) {
     let min_x = x - STRETCH / 2;
     dungeon.enter(LevelInfo {
-        kind: LevelKind::Hall,
+        kind: LevelKind::Hall { origin },
         ruined: false,
         building: false,
         index: 0,
@@ -47,9 +48,11 @@ pub(super) fn follow_player(
     let Some(info) = &dungeon.info else {
         return;
     };
+    let LevelKind::Hall { origin } = info.kind else {
+        return;
+    };
     let (min_x, _, width, _) = info.bounds;
-    let far_enough = min_x + MARGIN..min_x + width - MARGIN;
-    if info.kind == LevelKind::Hall && !far_enough.contains(&player.x) {
-        show_around(&mut dungeon, (player.x, player.y));
+    if !(min_x + MARGIN..min_x + width - MARGIN).contains(&player.x) {
+        show_around(&mut dungeon, (player.x, player.y), origin);
     }
 }

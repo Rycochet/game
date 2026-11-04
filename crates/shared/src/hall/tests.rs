@@ -218,7 +218,29 @@ fn golden() {
     let place = GateAddress::new(12345, 0).unwrap().place();
     assert_eq!(place.number(), 175_562_835);
     assert_eq!(place.design(), GateDesign::PointedArch);
-    assert_eq!(place.code().to_string(), "ᚻᚳᚹ᛫ᛈᚪᚦᛗ");
+    assert_eq!(place.code().to_string(), "ᚻᚠᚠ᛫ᚠᛇᚢᚣ");
     let address = GatePlace::from_number(1_000_000).address();
     assert_eq!((address.seed(), address.entrance()), (123_989_860, 0));
+}
+
+#[test]
+fn rune_glyphs_fit_and_differ() {
+    let mut shapes: Vec<Vec<Stroke>> = Vec::new();
+    for strokes in RUNE_STROKES {
+        assert!(!strokes.is_empty());
+        for &[x0, y0, x1, y1] in strokes {
+            assert!(x0.max(x1) <= GLYPH_WIDTH && y0.max(y1) <= GLYPH_HEIGHT);
+        }
+        // The same strokes in any order or direction would look the same.
+        let mut shape: Vec<Stroke> = strokes
+            .iter()
+            .map(|&[x0, y0, x1, y1]| {
+                let (a, b) = ((x0, y0).min((x1, y1)), (x0, y0).max((x1, y1)));
+                [a.0, a.1, b.0, b.1]
+            })
+            .collect();
+        shape.sort();
+        assert!(!shapes.contains(&shape), "two runes look the same");
+        shapes.push(shape);
+    }
 }

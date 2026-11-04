@@ -67,6 +67,14 @@ pub(super) fn location_title(
             let biome = world.climate.sample(x, y, height).biome();
             format!("World map: {}", words(&format!("{biome:?}")))
         }
+        // A proper name already: not one written in code style.
+        _ if dungeon
+            .info
+            .as_ref()
+            .is_some_and(|info| info.kind.poi().is_none()) =>
+        {
+            dungeon.floor_name(first_floor)
+        }
         _ => words(&dungeon.floor_name(first_floor)),
     }
 }

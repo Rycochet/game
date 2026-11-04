@@ -5,14 +5,15 @@ use bevy::image::ImageSampler;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
+use super::gate_runes::{self, RUNES_HEIGHT};
 use super::{
     CORNER_GAP, FULL_MAP_LAYER, FULL_MAP_MARGIN, FullMapDarkening, FullMapPanel, FullMapPicture,
-    FullMapTitle, HOVER_LIFT, HoverBox, HoverText, MapPictures, Minimap, TITLE_HEIGHT,
-    WorldHoverBox, WorldHoverText,
+    FullMapTitle, HOVER_LIFT, HoverBox, HoverRunes, HoverRunesPicture, HoverText, MapPictures,
+    Minimap, TITLE_HEIGHT, WorldHoverBox, WorldHoverText,
 };
 use crate::widgets::{
     darkening, layer_z, leaves_presses, panel, panel_frame, panel_title, spawn_close_button,
-    spawn_tooltip,
+    spawn_tooltip, tooltip_box,
 };
 
 pub(super) fn new_picture() -> Image {
@@ -102,12 +103,27 @@ pub(super) fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image
                         bottom: px(FULL_MAP_MARGIN + HOVER_LIFT),
                         left: px(0),
                         right: px(0),
-                        justify_content: JustifyContent::Center,
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
                     Visibility::Hidden,
                 ))
-                .with_children(|holder| spawn_tooltip(holder, HoverText, ""));
+                .with_children(|holder| {
+                    spawn_tooltip(holder, HoverText, "");
+                    let (height, width) = (RUNES_HEIGHT, RUNES_HEIGHT * gate_runes::aspect());
+                    holder
+                        .spawn((HoverRunes, tooltip_box(Node::default()), Visibility::Hidden))
+                        .with_child((
+                            HoverRunesPicture,
+                            ImageNode::default(),
+                            Node {
+                                width: px(width),
+                                height: px(height),
+                                ..default()
+                            },
+                        ));
+                });
         });
     commands
         .spawn((

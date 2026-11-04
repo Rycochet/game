@@ -4,9 +4,10 @@ use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use shared::dungeon::Sight;
 use shared::poi::PoiKind;
+use shared::protocol::LevelKind;
 
 use super::daylight::{OutsideLight, Spill, TownLights};
-use super::mesh::View;
+use super::mesh::{LightGrid, View};
 use super::sight_lines::SightLines;
 use super::theme::Theme;
 use super::{MemoryPart, SeeThroughPart, Shown, SolidPart, StairsThroughPart};
@@ -16,6 +17,8 @@ use crate::common::{
 use crate::player::Player;
 use crate::view3d::ViewCamera;
 
+/// The Hall of Worlds' own light, everywhere in it.
+const HALL_LIGHT: f32 = 0.85;
 /// When anyone who sees or gives light moves, the level or the light outside
 /// changes, or the camera moves (turning, zooming or following the player): works out what
 /// is seen (and so remembered from now on) and how it is lit, and rebuilds
@@ -171,8 +174,16 @@ pub(super) fn update_meshes(
     if !is_town && (dungeon.is_changed() || outside.is_changed()) {
         *spill = Spill::work_out(level, &dungeon.stairs, outside.travel, open_air);
     }
-    let mut light =
-        super::daylight::light_from_outside(level, &spill, outside.light, is_town, open_air);
+    // The Hall of Worlds has no sky, and gives its own even light.
+    let in_hall = dungeon
+        .info
+        .as_ref()
+        .is_some_and(|i| matches!(i.kind, LevelKind::Hall { .. }));
+    let mut light = if in_hall {
+        LightGrid::filled(level, Vec3::splat(HALL_LIGHT))
+    } else {
+        super::daylight::light_from_outside(level, &spill, outside.light, is_town, open_air)
+    };
     if is_town {
         if dungeon.is_changed() || town_lights.is_changed() {
             *window_glow = Spill::from_windows(level, &dungeon.buildings, &town_lights.0);
@@ -190,7 +201,7 @@ pub(super) fn update_meshes(
     }
     light.raise_to(video.least_light());
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
-    let theme = Theme::of(dungeon.info.as_ref().and_then(|info| info.kind.poi()));
+    let theme = Theme::of_level(dungeon.info.as_ref().map(|info| info.kind));
     let built = super::mesh::build(
         level,
         &views,
@@ -235,7 +246,7 @@ pub(super) fn update_meshes(
     let mut memory_meshes: Vec<Option<Mesh>> = built.memory.into_iter().map(Some).collect();
     for (part, handle, mut visibility) in &mut memory {
         let i = part.0 as usize;
-        visibility.set_if_neq(shown_if(built.has_memory[i] && settings.1));
+        visibility.set_if_neq(shown_if(built.has_memory[i] && settings.1 && !in_hall));
         if !built.has_memory[i] {
             continue;
         }

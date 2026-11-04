@@ -46,6 +46,10 @@ impl RoundFrame {
     /// smoothly into each other, so the notch grows out of the border.
     pub fn distance(&self, x: f32, y: f32) -> f32 {
         let circle = (x - self.centre.0).hypot(y - self.centre.1) - self.radius;
+        // No notch: a plain ring (the Hall of Worlds has no north).
+        if self.notch <= 0.0 {
+            return circle;
+        }
         let notch = polygon_distance(&self.notch_corners(), x, y);
         let spread = (self.border + self.notch).max(0.01) * NOTCH_SPREAD;
         let near = (spread - (circle - notch).abs()).max(0.0) / spread;

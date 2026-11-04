@@ -13,6 +13,7 @@
 mod address;
 mod code;
 mod design;
+mod glyph;
 mod level;
 mod place;
 mod shuffle;
@@ -21,6 +22,7 @@ mod tile;
 pub use address::GateAddress;
 pub use code::{CODE_LENGTH, GateCode, RUNES, SEPARATOR};
 pub use design::GateDesign;
+pub use glyph::{GLYPH_HEIGHT, GLYPH_WIDTH, RUNE_STROKES, SEPARATOR_STROKES, Stroke};
 pub use level::{LEVEL_ROWS, LEVEL_TOP, cell, level};
 pub use place::{GatePlace, Side};
 pub use tile::{Tile, hue, tile, wrap_x};
@@ -29,7 +31,7 @@ pub use tile::{Tile, hue, tile, wrap_x};
 /// first again.
 pub const HALL_LENGTH: i64 = 1 << 33;
 /// How wide the walkway is, north to south: rows `0..WALKWAY_ROWS`.
-pub const WALKWAY_ROWS: i64 = 4;
+pub const WALKWAY_ROWS: i64 = 3;
 /// Tiles from one gate to the next along each side.
 pub const GATE_SPACING: i64 = 4;
 /// Bits of a planet's seed in an address: every seed below `1 << PLANET_BITS`

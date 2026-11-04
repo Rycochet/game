@@ -59,6 +59,9 @@ pub enum Cell {
     /// Walkable ground like `Ground`, but with something built over it: the
     /// weather and the light of outside don't reach it. Under a stilt hut, say.
     CoveredGround,
+    /// The floor a World Gate stands on, in the Hall of Worlds
+    /// (`shared::hall`): walkable floor, with the gate's own model on it.
+    WorldGate,
 }
 
 impl Cell {
@@ -74,6 +77,7 @@ impl Cell {
                 | Self::FieldGate
                 | Self::HerbBed
                 | Self::CoveredGround
+                | Self::WorldGate
         ) || self.is_road()
     }
 

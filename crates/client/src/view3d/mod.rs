@@ -126,8 +126,9 @@ fn spawn_camera(
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
             fov: CAMERA_FOV_DEGREES.to_radians(),
-            // The camera is far away, so draw well beyond the default range.
-            far: CAMERA_DISTANCE * 2.0,
+            // The camera is far away, so draw well beyond the default range:
+            // in the Hall of Worlds it looks 70 tiles along, further out.
+            far: CAMERA_DISTANCE * 3.0,
             ..default()
         }),
         orbit.transform(Vec3::ZERO),

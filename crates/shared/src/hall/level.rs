@@ -12,12 +12,12 @@ pub const LEVEL_TOP: i64 = -2;
 /// each.
 pub const LEVEL_ROWS: i64 = WALKWAY_ROWS + 4;
 
-/// The cell for a tile: walkway is floor, a gate's floor a door for now, the
+/// The cell for a tile: walkway is floor, a gate's floor `WorldGate`, the
 /// void a hole.
 pub fn cell(x: i64, y: i64) -> Cell {
     match tile(x, y) {
         Tile::Walkway => Cell::Floor,
-        Tile::Gate(_) => Cell::Door,
+        Tile::Gate(_) => Cell::WorldGate,
         Tile::Void => Cell::Hole,
     }
 }

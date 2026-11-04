@@ -14,7 +14,9 @@ use crate::common::SkyNow;
 
 /// The player on the full map: a dot, or an arrow at the edge pointing to
 /// them, smaller with a hint which way their floor is (`Some(player_is_up)`)
-/// when another floor is shown; and the compass.
+/// when another floor is shown; and the compass, if `north` (not in the
+/// Hall of Worlds, which has none: owner).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn full_map_marks(
     canvas: &mut Canvas,
     window: &Room,
@@ -22,6 +24,7 @@ pub(super) fn full_map_marks(
     player_at: (f32, f32),
     (zoom, dots, scale): (f32, f32, f32),
     other_floor: Option<bool>,
+    north: bool,
 ) {
     let (on_other_floor, player_is_up) = (other_floor.is_some(), other_floor == Some(true));
     // The dot grows with the map.
@@ -50,6 +53,9 @@ pub(super) fn full_map_marks(
     if let Some(hint) = hint {
         super::frame::floor_hint(canvas, mark, dot / 2.0, hint, player_is_up);
     }
+    if !north {
+        return;
+    }
     let length = (window.height() * COMPASS_OF_HEIGHT).max(COMPASS_MIN_LENGTH);
     let foot = (
         size.0 as f32 - COMPASS_INSET * dots,
@@ -58,8 +64,8 @@ pub(super) fn full_map_marks(
     super::frame::compass(canvas, foot, length * scale, COMPASS_LINE * dots);
 }
 
-/// The player's dot on the minimap, its round frame, and the suns and moons
-/// round it when `sky` is given.
+/// The player's dot on the minimap, its round frame (with its north notch if
+/// `north`), and the suns and moons round it when `sky` is given.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn minimap_marks(
     canvas: &mut Canvas,
@@ -70,6 +76,7 @@ pub(super) fn minimap_marks(
     (zoom, dots, scale): (f32, f32, f32),
     (grid_right, grid_down): ((f64, f64), (f64, f64)),
     sky: Option<&SkyNow>,
+    north: bool,
 ) {
     let (dot, outline) = (DOT_PIXELS * zoom * dots, DOT_OUTLINE * zoom * dots);
     super::frame::player_dot(canvas, player_at, dot, outline);
@@ -79,7 +86,7 @@ pub(super) fn minimap_marks(
         centre: projection.middle,
         radius: clip,
         border: BORDER * trim,
-        notch: NOTCH * trim,
+        notch: if north { NOTCH * trim } else { 0.0 },
         north: (-grid_right.1 as f32, -grid_down.1 as f32),
     };
     round.draw(canvas);

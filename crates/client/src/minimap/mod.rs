@@ -26,6 +26,7 @@ use crate::widgets::WidgetSystems;
 // Split into files (`cargo xtask lint` keeps files small).
 mod draw;
 mod full_map;
+mod gate_runes;
 mod hover;
 mod input;
 mod layout;
@@ -51,8 +52,8 @@ use layout::{
 use marks::{full_map_marks, minimap_marks};
 use names::{hovered_name, hovered_poi, location_title, poi_name};
 use parts::{
-    FullMapDarkening, FullMapPanel, FullMapPicture, FullMapTitle, HoverBox, HoverText, MapPictures,
-    Minimap, WorldHoverBox, WorldHoverText,
+    FullMapDarkening, FullMapPanel, FullMapPicture, FullMapTitle, HoverBox, HoverRunes,
+    HoverRunesPicture, HoverText, MapPictures, Minimap, WorldHoverBox, WorldHoverText,
 };
 pub(super) use room::Room;
 use scale::{shows_known, under_the_sky, units_per_pixel};

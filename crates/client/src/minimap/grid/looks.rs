@@ -1,6 +1,8 @@
 //! What each cell in a box looks like on the map, and the shop signs.
 
 use shared::dungeon::Cell;
+use shared::hall;
+use shared::protocol::LevelKind;
 use shared::site::BuildingKind;
 
 use super::{WHITE, ground_colour};
@@ -104,6 +106,19 @@ impl Looks {
 }
 
 pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
+    // The Hall of Worlds goes on beyond the stretch the client holds, and the
+    // void all round it shows as holes (owner): its cells are fixed rules.
+    // Its stretch counts `x` from a whole number of gates, so they are the same.
+    let in_hall = dungeon
+        .info
+        .as_ref()
+        .is_some_and(|info| matches!(info.kind, LevelKind::Hall { .. }));
+    if in_hall && !dungeon.level.contains(x, y) {
+        return match hall::cell(x, y) {
+            Cell::WorldGate => CellLook::Door { east_west: true },
+            cell => CellLook::Floor(ground_colour(cell)),
+        };
+    }
     if !dungeon.remembered.is_seen(x, y) {
         return CellLook::Empty;
     }
@@ -125,6 +140,8 @@ pub fn look_of(dungeon: &CurrentDungeon, x: i64, y: i64) -> CellLook {
         Cell::Door => CellLook::Door {
             east_west: level.opening_runs_east_west(x, y),
         },
+        // A World Gate's frame runs along the Hall.
+        Cell::WorldGate => CellLook::Door { east_west: true },
         // Only sent to truesight: otherwise it arrives as a wall.
         Cell::SecretDoor => CellLook::SecretDoor {
             east_west: level.opening_runs_east_west(x, y),

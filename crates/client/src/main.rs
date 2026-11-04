@@ -13,6 +13,7 @@ mod dungeon_map;
 mod entities;
 mod fonts;
 mod ground;
+mod hall_view;
 mod inventory;
 mod item_art;
 mod loading_screen;
@@ -105,6 +106,7 @@ fn main() {
         trade::TradePlugin,
         item_art::ItemArtPlugin,
         planet_view::PlanetViewPlugin,
+        hall_view::HallViewPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is

@@ -3,6 +3,7 @@
 //! same everywhere. All from the AngbandTk tiles (`assets/angbandtk/`).
 
 use shared::poi::PoiKind;
+use shared::protocol::LevelKind;
 
 use super::mesh::Surface;
 
@@ -58,7 +59,24 @@ const ICE: Theme = Theme {
     shape: Shape::Natural,
 };
 
+/// The Hall of Worlds: polished marble (`tools/make_marble.py`), tinted by
+/// the Hall's hue, a building's floor at its edges.
+const HALL: Theme = Theme {
+    wall: STONE.wall,
+    floor: "hall/marble.png",
+    shape: Shape::Built,
+};
+
 impl Theme {
+    /// The theme for a level: its poi's, or the Hall's.
+    pub fn of_level(kind: Option<LevelKind>) -> Self {
+        match kind {
+            Some(LevelKind::Hall { .. }) => HALL,
+            Some(LevelKind::Poi(kind)) => Self::of(Some(kind)),
+            None => Self::of(None),
+        }
+    }
+
     /// The theme for a kind of place (stone when there is none: the test
     /// room).
     pub fn of(kind: Option<PoiKind>) -> Self {

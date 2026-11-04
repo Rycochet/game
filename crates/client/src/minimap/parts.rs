@@ -26,6 +26,14 @@ pub(super) struct HoverBox;
 #[derive(Component)]
 pub(super) struct HoverText;
 
+/// Under the full map's hover box's name, a World Gate's code in runes
+/// (`gate_runes`), and its picture.
+#[derive(Component)]
+pub(super) struct HoverRunes;
+
+#[derive(Component)]
+pub(super) struct HoverRunesPicture;
+
 /// The box naming the poi the mouse is over on the world map itself.
 #[derive(Component)]
 pub(super) struct WorldHoverBox;
