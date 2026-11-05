@@ -5,7 +5,8 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 ## Files
 
 - `crates/shared/src/body.rs`: `Frame` (the figures for each body shape: `HUMAN`, the person every frame is measured against, then `GIANT`, `KOBOLD`), `Frame::of`, `Frame::joint`, `Joint`, `Side`. Tests.
-- `crates/shared/src/body/bipeds.rs`: `Biped` (a name and its proportions) and `FIRST_BIPEDS`, the first set from the research, drawn on Item Pictures' Bodies page but not kinds yet.
+- `crates/shared/src/body/parts.rs`: `Parts` (what a body has beyond a person's: `Snout`, ears, `Horns`, tusks, tail, `Feet`, `Wings`; shapes as kinds, sizes as millimetres) and `NONE`.
+- `crates/shared/src/body/bipeds.rs`: `Biped` (a name, usual height, proportions and parts) and `FIRST_BIPEDS`, the first set from the research, drawn on Item Pictures' Bodies page but not kinds yet.
 - `crates/shared/src/body/proportions.rs`: `Proportions` (heads tall, breadth, limbs, arms, legs, beside a person's) and `PERSON`; `Proportions::frame` works a whole frame out from them. Research: `docs/context/research-creatures.md`.
 
 ## Public API
@@ -13,7 +14,9 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 - `Frame::of(kind) -> Option<Frame>`: kinds with arms and legs (human, beggar, giant, kobold); none for centaurs and animals yet. The human's (and beggar's) is `PERSON.frame()`.
 - `Proportions { heads, breadth, limbs, arms, legs }`, `PERSON`, `Proportions::frame()`: `heads` in tenths (a person is 80), the rest in thousandths of a person's.
 - `Frame` fields: heights of the main levels from the ground, half widths and depths, limb radii, limb lengths, `arm_spread`.
-- `Biped { name, proportions }`, `FIRST_BIPEDS`: halfling, dwarf, elf, orc, goblin, kobold, lizardfolk, minotaur and birdfolk.
+- `Frame::usual_height(kind)`: how tall a kind on two legs usually stands, in millimetres (its frame is always a person's height).
+- `Parts { snout, snout_length, ears, horns, horn_length, tusks, tail, feet, wings }`, `NONE`, `Snout::{Flat, Muzzle, Long, Beak}`, `Horns::{None, Back, Bull}`, `Feet::{Plantigrade, Digitigrade, Hooves, Talons}`, `Wings::{None, Arms}`.
+- `Biped { name, height, proportions, parts }`, `FIRST_BIPEDS`: halfling, dwarf, elf, orc, goblin, kobold, lizardfolk, minotaur and birdfolk.
 - `Frame::joint(Joint) -> [i32; 3]`: x towards the body's left, y up, z forwards, origin on the ground between the feet.
 - `Joint::{Crown, Skull, Chin, NeckBase, Shoulder, Elbow, Wrist, Fingertips, Chest, Waist, Hip, Knee, Ankle, Toes, Heel}`, `Side::{Left, Right}` (`BOTH`, `sign`).
 

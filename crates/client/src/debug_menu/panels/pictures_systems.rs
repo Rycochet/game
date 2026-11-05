@@ -90,7 +90,7 @@ pub(in crate::debug_menu) fn show_pictures(
                     HANDS_PICTURE,
                     look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
                 ),
-                Shown::Blade(..) | Shown::Body(_) => (
+                Shown::Blade(..) | Shown::Body(..) => (
                     BLADE_PICTURE,
                     look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
                 ),
