@@ -29,6 +29,7 @@ mod notice;
 mod population;
 mod run;
 mod sync;
+mod territory;
 
 use crossing::cross;
 use gear::dressed;
@@ -83,6 +84,11 @@ pub enum Doing {
     },
     GoingHome {
         since: u64,
+    },
+    /// Standing between someone and its home, at its territory's edge.
+    Guarding {
+        against: Id,
+        last_seen: (i64, i64),
     },
 }
 

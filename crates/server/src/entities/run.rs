@@ -2,6 +2,7 @@
 
 use shared::dungeon::line_is_clear;
 
+use super::territory::mind_territory;
 use super::{Doing, Maps, Population, Spot, Taken, act, cross, everyone_playing, notice};
 use crate::ServerWorld;
 use crate::connections::Client;
@@ -32,8 +33,9 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             mobs, level, due, ..
         } = population;
 
-        // Anyone at rest or settling may notice someone.
+        // Anyone at rest, settling or guarding may notice someone.
         for mob in mobs.iter_mut() {
+            mind_territory(mob, level, &spots, tick);
             if let Some(doing) = notice(mob, level, &spots) {
                 let at_rest = mob.doing == Doing::Idle;
                 mob.doing = doing;

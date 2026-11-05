@@ -868,3 +868,7 @@ Owner's request. Each character remembers, per site, the level and cell they las
 ## 2026-11-05: Switches for every on/off setting
 
 Owner's request: a switch widget (`widgets::spawn_switch`), the size of a phone's, with a tick and a cross in its track as MUI's Android 12 example has, its thumb sliding across; every on/off setting in Settings uses one, in place of On/Off dropdowns (Video) and checkboxes (Pause When Not in Focus, Enable Touch, owner's choice). Claude's choices: the switch flips itself and sends `SwitchFlipped`, and slides are kept by `UiId` by the real clock, so a page built again as the setting changes (as Settings' pages are) carries on sliding; no ripple; Reduce Motion makes the thumb jump. Checkboxes stay for ticking things in lists (the debug menu).
+
+## 2026-11-05: Territorial mobs guard, and anger fades
+
+Owner: a territorial mob gets between the nearest stranger and the ground it guards and stands there, still neutral. Coming into its territory makes it unfriendly (red) and it attacks, but it gives up chasing when you get far enough away and goes back to guarding. The anger fades, after 3 minutes for now; being hurt, once there is combat, is never forgotten. Claude's choices: territory 6 cells round its home, and the leash measured from its home (8 cells) rather than from the mob, since someone no faster than it could never get further from it. Lizardfolk, the only territorial kind so far, now turn up in non-town sites so the behaviour can be met.

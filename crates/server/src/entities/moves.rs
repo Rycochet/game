@@ -6,6 +6,7 @@ use shared::movement::{Step, step_on_level};
 use shared::rng::Seed;
 use std::collections::BTreeSet;
 
+use super::territory::{LEASH, guard_spot, is_territorial};
 use super::{
     Crossing, Doing, HOME_WITHIN, Maps, Mob, SETTLING_STEPS, Spot, THINKING_COST, cells_apart,
 };
@@ -72,6 +73,17 @@ pub(super) fn act(
                 last_seen: goal,
                 gap,
             };
+            if is_territorial(mob) && cells_apart(mob.home, goal) > LEASH {
+                // Too far to bother chasing: back to keeping them out.
+                mob.doing = match target {
+                    Some(_) => Doing::Guarding {
+                        against: after,
+                        last_seen: goal,
+                    },
+                    None => settle,
+                };
+                return THINKING_COST;
+            }
             let near = if target.is_some() { gap } else { 0 };
             if cells_apart(mob.position, goal) <= near {
                 // Lost them, here where they were last seen.
@@ -122,6 +134,32 @@ pub(super) fn act(
             let step = maps
                 .to(level, threat.position)
                 .away(level, mob.position, free);
+            take_step(mob, level, step, taken).unwrap_or(THINKING_COST)
+        }
+        Doing::Guarding { against, .. } => {
+            let sees_within = mob.kind.senses().sight_range();
+            let target = spots.iter().find(|spot| {
+                spot.id == against
+                    && cells_apart(mob.position, spot.position) <= sees_within
+                    && line_is_clear(level, mob.position, spot.position)
+            });
+            let Some(target) = target else {
+                mob.doing = settle;
+                return THINKING_COST;
+            };
+            mob.doing = Doing::Guarding {
+                against,
+                last_seen: target.position,
+            };
+            let mut spot = guard_spot(mob.home, target.position);
+            if !level.is_walkable(spot.0, spot.1) {
+                spot = nearest_free(level, spot, |cell| !free(cell)).unwrap_or(mob.home);
+            }
+            if mob.position == spot {
+                // Standing its ground.
+                return THINKING_COST;
+            }
+            let step = maps.to(level, spot).towards(level, mob.position, free);
             take_step(mob, level, step, taken).unwrap_or(THINKING_COST)
         }
         Doing::Settling { steps_left } => {
