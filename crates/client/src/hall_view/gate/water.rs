@@ -18,6 +18,9 @@ const HEIGHT: u32 = 64;
 /// The water's blue, its streaks' paler blue, and how see-through each is.
 const BLUE: [u8; 3] = [42, 112, 204];
 const STREAK: [u8; 3] = [178, 220, 255];
+/// Instead, for a gate the player has gone through: orange, paler streaks.
+const ORANGE: [u8; 3] = [214, 112, 32];
+const ORANGE_STREAK: [u8; 3] = [255, 206, 140];
 const BLUE_ALPHA: f32 = 0.45;
 const STREAK_ALPHA: f32 = 0.8;
 
@@ -57,9 +60,15 @@ pub(super) fn mesh(design: GateDesign, scale: f32) -> Mesh {
     .with_inserted_indices(Indices::U32(indices))
 }
 
-/// Blue with paler streaks running down it, broken at different lengths per
-/// column; it repeats both ways, so it can scroll for ever.
-pub(super) fn picture() -> Image {
+/// Blue (orange once `visited`) with paler streaks running down it, broken at
+/// different lengths per column; it repeats both ways, so it can scroll for
+/// ever.
+pub(super) fn picture(visited: bool) -> Image {
+    let (body, streaks) = if visited {
+        (ORANGE, ORANGE_STREAK)
+    } else {
+        (BLUE, STREAK)
+    };
     let mut pixels = Vec::with_capacity((WIDTH * HEIGHT * 4) as usize);
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
@@ -77,9 +86,9 @@ pub(super) fn picture() -> Image {
             let mix = |a: u8, b: u8| (f32::from(a) + (f32::from(b) - f32::from(a)) * streak) as u8;
             let alpha = BLUE_ALPHA + (STREAK_ALPHA - BLUE_ALPHA) * streak;
             pixels.extend([
-                mix(BLUE[0], STREAK[0]),
-                mix(BLUE[1], STREAK[1]),
-                mix(BLUE[2], STREAK[2]),
+                mix(body[0], streaks[0]),
+                mix(body[1], streaks[1]),
+                mix(body[2], streaks[2]),
                 (alpha * 255.0) as u8,
             ]);
         }

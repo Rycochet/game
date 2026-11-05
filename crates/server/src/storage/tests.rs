@@ -49,14 +49,7 @@ fn what_was_saved_before_forget_before_is_forgotten() {
         ..default()
     };
     let none = BTreeMap::new();
-    storage.save_character(
-        &id,
-        world,
-        &character,
-        &none,
-        &Inventory::default(),
-        &Sheet::default(),
-    );
+    storage.save_character(&id, world, &character, &none, Everywhere::default());
     storage.save_site(site, &SiteSave::default());
     assert_eq!(
         storage.load_character(&id, world).unwrap().0.world_position,
@@ -72,14 +65,7 @@ fn what_was_saved_before_forget_before_is_forgotten() {
     assert_eq!(storage.load_site(site).unwrap(), None);
 
     // Saved again, it is remembered from now on.
-    storage.save_character(
-        &id,
-        world,
-        &character,
-        &none,
-        &Inventory::default(),
-        &Sheet::default(),
-    );
+    storage.save_character(&id, world, &character, &none, Everywhere::default());
     storage.save_site(site, &SiteSave::default());
     assert_eq!(
         storage.load_character(&id, world).unwrap().0.world_position,
@@ -99,14 +85,7 @@ fn a_character_keeps_what_they_know_of_other_worlds() {
         ..default()
     };
     let in_first = Storage::in_folder(&folder.0, first);
-    in_first.save_character(
-        &id,
-        first,
-        &at(1),
-        &BTreeMap::new(),
-        &Inventory::default(),
-        &Sheet::default(),
-    );
+    in_first.save_character(&id, first, &at(1), &BTreeMap::new(), Everywhere::default());
     in_first.finish_writing();
     assert!(folder.0.join(format!("characters/{}.ron", id.0)).exists());
 
@@ -115,14 +94,7 @@ fn a_character_keeps_what_they_know_of_other_worlds() {
     let (here, others) = in_second.load_character(&id, second).unwrap();
     assert_eq!(here, CharacterWorldSave::default());
     assert_eq!(others, BTreeMap::from([(first, at(1))]));
-    in_second.save_character(
-        &id,
-        second,
-        &at(2),
-        &others,
-        &Inventory::default(),
-        &Sheet::default(),
-    );
+    in_second.save_character(&id, second, &at(2), &others, Everywhere::default());
     in_second.finish_writing();
 
     let file = fs::read_to_string(folder.0.join(format!("characters/{}.ron", id.0))).unwrap();
@@ -172,8 +144,7 @@ fn saves_are_read_back() {
         world,
         &character,
         &BTreeMap::new(),
-        &Inventory::default(),
-        &Sheet::default(),
+        Everywhere::default(),
     );
     assert_eq!(storage.load_character(&id, world).unwrap().0, character);
 
@@ -253,4 +224,41 @@ fn a_file_that_isnt_text_is_broken() {
     fs::write(&file, [0xff, 0xfe, 0x00]).unwrap();
     assert!(storage.load_character(&id, world).is_ok());
     assert!(file.with_extension("ron.broken").exists());
+}
+
+#[test]
+fn a_character_keeps_the_gates_they_have_gone_through() {
+    let folder = TestFolder::new();
+    let world = WorldSeed::new(5).id();
+    let storage = Storage::in_folder(&folder.0, world);
+    let id = CharacterId(Id::for_test(1));
+    assert_eq!(storage.load_gates(&id).unwrap(), BTreeSet::new());
+
+    let gates = BTreeSet::from([3, 175_562_835]);
+    storage.save_character(
+        &id,
+        world,
+        &CharacterWorldSave::default(),
+        &BTreeMap::new(),
+        Everywhere {
+            gates: gates.clone(),
+            ..Everywhere::default()
+        },
+    );
+    assert_eq!(storage.load_gates(&id).unwrap(), gates);
+}
+
+#[test]
+fn a_save_from_before_gates_were_kept_still_loads() {
+    let save = CharacterSave {
+        world: WorldSeed::new(5).id(),
+        worlds: BTreeMap::new(),
+        inventory: Inventory::default(),
+        sheet: Sheet::default(),
+        gates: BTreeSet::new(),
+    };
+    let text = ron::to_string(&save).unwrap();
+    let old = text.replace(",gates:[]", "");
+    assert_ne!(old, text);
+    assert_eq!(ron::from_str::<CharacterSave>(&old).unwrap(), save);
 }

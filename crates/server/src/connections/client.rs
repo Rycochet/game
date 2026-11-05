@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use super::{Client, Phase, SAVES_TROUBLE};
 use crate::ground::GroundTold;
 use crate::sites::{self, Visit};
-use crate::storage::CharacterWorldSave;
+use crate::storage::{CharacterWorldSave, Everywhere};
 use crate::{ServerWorld, world_map};
 
 impl Client {
@@ -38,6 +38,7 @@ impl Client {
             seen_feelings: BTreeMap::new(),
             seen_worn: BTreeMap::new(),
             sheet: Sheet::default(),
+            gates: BTreeSet::new(),
             ground_told: GroundTold::default(),
             energy: Energy::default(),
             speed: NORMAL_SPEED,
@@ -154,8 +155,11 @@ impl Client {
             world.seed.id(),
             &self.character,
             &self.other_worlds,
-            &self.inventory,
-            &self.sheet,
+            Everywhere {
+                inventory: self.inventory.clone(),
+                sheet: self.sheet.clone(),
+                gates: self.gates.clone(),
+            },
         );
         self.unsaved = false;
     }

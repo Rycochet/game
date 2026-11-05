@@ -3,16 +3,15 @@
 use bevy::ecs::system::RunSystemOnce;
 use shared::creature::CreatureKind;
 use shared::id::Id;
-use shared::item::Inventory;
 use shared::protocol::{CharacterId, ClientLink, ClientMessage, ServerMessage, local_pair};
 use shared::sheet::Sheet;
 use shared::world::{WorldId, WorldSeed};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::tests::HELLO;
 use super::*;
-use crate::storage::Storage;
 use crate::storage::tests::TestFolder;
+use crate::storage::{Everywhere, Storage};
 use crate::{ServerOptions, ServerWorlds};
 
 const HOME: WorldSeed = WorldSeed::new(1);
@@ -35,8 +34,10 @@ fn server(folder: &TestFolder, saved_in: &[(CharacterId, WorldSeed)]) -> bevy::p
                 world,
                 &CharacterWorldSave::default(),
                 &BTreeMap::new(),
-                &Inventory::default(),
-                &Sheet::new(CreatureKind::Human),
+                Everywhere {
+                    sheet: Sheet::new(CreatureKind::Human),
+                    ..Everywhere::default()
+                },
             );
         }
         worlds.save_worlds();
@@ -240,11 +241,14 @@ fn a_world_gate_leads_into_the_hall_before_its_gate() {
         .place();
     let client = &app.resource::<Connections>().clients[0];
     assert_eq!(client.character.hall, Some(place.front()));
+    // Gone through, so remembered and drawn so.
+    assert_eq!(client.gates, BTreeSet::from([place.number()]));
+    let told = answers(&end);
     assert!(
-        answers(&end)
-            .iter()
+        told.iter()
             .any(|message| matches!(message, ServerMessage::EnterHall { .. }))
     );
+    assert!(told.contains(&ServerMessage::VisitedGates(vec![place.number()])));
 }
 
 #[test]
@@ -255,10 +259,9 @@ fn a_world_gate_out_of_reach_does_nothing() {
     // Standing at another gate, far away.
     end.send(&ClientMessage::EnterGate { entrance: 4 });
     app.run_system_once(handle_messages).unwrap();
-    assert_eq!(
-        app.resource::<Connections>().clients[0].character.hall,
-        None
-    );
+    let client = &app.resource::<Connections>().clients[0];
+    assert_eq!(client.character.hall, None);
+    assert!(client.gates.is_empty());
 }
 
 #[test]
@@ -291,10 +294,14 @@ fn a_hall_gate_leads_onto_its_planet_at_its_world_gate() {
         .gate_position(5)
         .unwrap();
     assert_eq!(client.world_position(), gate);
-    assert!(answers(&end).contains(&ServerMessage::OnWorldMap {
+    assert_eq!(client.gates, BTreeSet::from([place.number()]));
+    let told = answers(&end);
+    assert!(told.contains(&ServerMessage::OnWorldMap {
         x: gate.0,
         y: gate.1,
     }));
+    // Told again with the new world's welcome.
+    assert!(told.contains(&ServerMessage::VisitedGates(vec![place.number()])));
 }
 
 #[test]

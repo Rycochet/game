@@ -126,6 +126,10 @@ pub enum ServerMessage {
     /// What the character is like, for them to see: after `Welcome`, and when it
     /// changes. Nobody else is told this.
     Sheet(Sheet),
+    /// The World Gates the character has gone through, either way, as the Hall
+    /// gates the pairs are (`hall::GatePlace::number`): after `Welcome`, and
+    /// whenever another is added. Their water is drawn orange.
+    VisitedGates(Vec<u32>),
     /// Something has come into sight: a mob or another player. The map changing
     /// (`EnterLevel`, `EnterHall`, `OnWorldMap`, `Teleported`) forgets everything seen before.
     EntitySeen(EntityLook),

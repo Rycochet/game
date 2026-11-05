@@ -15,7 +15,7 @@ use shared::world::WorldId;
 use super::poi_model::PoiModel;
 use super::pois::{MODEL_LIFT, PoiMeshes};
 use crate::common::{Clickable, CurrentWorld, MapPosition, Portal, SmoothPosition, Token};
-use crate::hall_view::GateModel;
+use crate::hall_view::{GateModel, GateWater};
 use crate::view3d::{TOKEN_HALF_THICKNESS, TokenView};
 
 /// How tall a gate stands on the world map, in grid points: a five-floor
@@ -118,24 +118,20 @@ pub(super) fn despawn_gates(mut commands: Commands, mut spawned: ResMut<SpawnedG
 /// A gate's model, outline and water.
 type GateMeshSet = (Handle<Mesh>, Handle<Mesh>, Handle<Mesh>);
 
-/// The gates' meshes (model, outline, water), each made once, and the water's
-/// material.
+/// The gates' meshes (model, outline, water), each made once.
 #[derive(Default)]
 pub(super) struct GateMeshes {
     models: HashMap<u32, GateMeshSet>,
-    water: Option<Handle<StandardMaterial>>,
 }
 
 /// Gives each new gate token's view its model on an octagonal base, as pois
 /// have theirs, and the water in its opening.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn add_gate_models(
     mut commands: Commands,
     mut store: ResMut<PoiMeshes>,
     mut made: Local<GateMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
     views: Query<(Entity, &TokenView), Added<TokenView>>,
     shapes: Query<&GateShape>,
 ) {
@@ -156,19 +152,6 @@ pub(super) fn add_gate_models(
                 )
             })
             .clone();
-        let water_material = made
-            .water
-            .get_or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color_texture: Some(images.add(GateModel::water_picture())),
-                    unlit: true,
-                    alpha_mode: AlphaMode::Blend,
-                    cull_mode: None,
-                    double_sided: true,
-                    ..default()
-                })
-            })
-            .clone();
         let pair = (&mut *meshes, &mut *materials);
         store.attach(
             &mut commands,
@@ -181,7 +164,8 @@ pub(super) fn add_gate_models(
         let sheet = commands
             .spawn((
                 Mesh3d(water),
-                MeshMaterial3d(water_material),
+                // Blue, or orange once gone through (`hall_view`).
+                GateWater(place.number()),
                 Transform::from_xyz(0.0, MODEL_LIFT - TOKEN_HALF_THICKNESS, 0.0),
             ))
             .id();
