@@ -192,3 +192,23 @@ fn every_place_shares_out_exactly_100() {
         assert_eq!(total, 100, "{site:?}");
     }
 }
+
+#[test]
+fn keener_noses_and_stronger_trails_last_longer() {
+    use crate::creature::Acuity;
+    // A poor nose: 30 seconds on the weakest trail, a minute on the strongest.
+    assert!(can_smell(Acuity::Poor, BASE_SCENT, 0, 30 * 20 - 1));
+    assert!(!can_smell(Acuity::Poor, BASE_SCENT, 0, 30 * 20));
+    assert!(can_smell(Acuity::Poor, MOST_SCENT, 0, 60 * 20 - 1));
+    // A keen nose follows what a poor one has lost; none smells nothing.
+    assert!(can_smell(Acuity::Keen, BASE_SCENT, 0, 60 * 20));
+    assert!(!can_smell(Acuity::None, MOST_SCENT, 0, 0));
+    // Nothing is kept past what the keenest nose could smell on the strongest.
+    assert_eq!(SCENT_KEPT_FOR, smells_for(Acuity::Keen) * 2);
+}
+
+#[test]
+fn carrying_nothing_leaves_the_weakest_trail() {
+    let nothing = Inventory::default();
+    assert_eq!(scent_strength(&nothing), BASE_SCENT);
+}

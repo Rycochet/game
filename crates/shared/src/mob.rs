@@ -14,6 +14,9 @@ use crate::rng::Seed;
 use crate::sheet::{Appearance, Feeling, Trait};
 use crate::wear::WornLook;
 
+mod scent;
+pub use scent::{BASE_SCENT, MOST_SCENT, SCENT_KEPT_FOR, can_smell, scent_strength, smells_for};
+
 /// Marks these hashes as being for mobs, apart from anything else from the seed.
 const PURPOSE: i64 = 0x006d_6f62;
 

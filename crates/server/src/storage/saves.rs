@@ -95,6 +95,9 @@ pub struct LevelSave {
     /// Which of its spawns have died, by number: they aren't made again.
     #[serde(default)]
     pub dead: BTreeSet<u32>,
+    /// Everyone's scent marks, while any nose could still smell them.
+    #[serde(default)]
+    pub scents: crate::entities::Scents,
 }
 
 /// What a mob has come to know and own.

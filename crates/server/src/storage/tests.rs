@@ -160,6 +160,7 @@ fn saves_are_read_back() {
                 unsettled: BTreeMap::new(),
                 records: BTreeMap::new(),
                 dead: BTreeSet::from([3]),
+                scents: Default::default(),
                 ground: BTreeMap::from([(
                     (3, 4),
                     vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],

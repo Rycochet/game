@@ -3,9 +3,13 @@
 use shared::dungeon::line_is_clear;
 
 use super::territory::mind_territory;
+use super::tracking::track;
 use super::{Doing, Maps, Population, Spot, Taken, act, cross, everyone_playing, notice};
 use crate::ServerWorld;
 use crate::connections::Client;
+
+/// How often old scent marks are thrown away, in ticks: every 10 seconds.
+const SWEEP_EVERY: u64 = 200;
 
 /// Lets each level's mobs do what they are doing, as far as they have the energy.
 pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
@@ -27,11 +31,28 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                 character: someone.character,
                 kind: someone.look.0,
                 position: someone.position,
+                scent: someone.scent,
             })
             .collect();
         let Population {
-            mobs, level, due, ..
+            mobs,
+            level,
+            due,
+            scents,
+            last_at,
+            ..
         } = population;
+
+        // Players leave scent on the cells they step off.
+        for spot in &spots {
+            if let Some((was_at, _)) = last_at.insert(spot.id, (spot.position, spot.scent)) {
+                scents.walked(spot.id, was_at, spot.position, spot.scent, tick);
+            }
+        }
+        last_at.retain(|id, _| spots.iter().any(|spot| spot.id == *id));
+        if tick.is_multiple_of(SWEEP_EVERY) {
+            scents.sweep(tick);
+        }
 
         // Anyone at rest, settling or guarding may notice someone.
         for mob in mobs.iter_mut() {
@@ -63,17 +84,23 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                     .any(|&spot| line_is_clear(level, spot, cell))
             };
             let was_at = mob.position;
-            let cost = act(
-                mob,
-                level,
-                &spots,
-                &mut maps,
-                tick,
-                seen,
-                &mut crossing,
-                &taken,
-                place,
-            );
+            let cost = if matches!(mob.doing, Doing::Tracking { .. }) {
+                track(mob, level, &spots, scents, &taken, tick)
+            } else {
+                act(
+                    mob,
+                    level,
+                    &spots,
+                    &mut maps,
+                    tick,
+                    seen,
+                    &mut crossing,
+                    &taken,
+                    place,
+                )
+            };
+            // Mobs leave scent too.
+            scents.walked(mob.id, was_at, mob.position, mob.scent, tick);
             taken.remove(&was_at);
             taken.insert(mob.position);
             mob.energy.spend(tick, mob.speed, cost);

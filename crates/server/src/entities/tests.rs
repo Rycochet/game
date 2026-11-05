@@ -321,6 +321,7 @@ fn an_angry_territorial_mob_only_chases_near_its_home() {
         character: None,
         kind: CreatureKind::Human,
         position: (mob.home.0 - x, mob.home.1),
+        scent: 100,
     };
     let near = territorial_doing(&mob, &spot(LEASH), Feeling::Unfriendly);
     assert!(matches!(near, Some(Doing::Going { .. })));
@@ -899,4 +900,153 @@ fn detecting_shows_mobs_out_of_sight() {
             .iter()
             .any(|answer| matches!(answer, ServerMessage::EntityGone { .. }))
     );
+}
+
+/// A kobold `apart` cells east of the player, tracking someone else whose trail
+/// runs west from it to the player's cell, laid at ticks 10 onwards.
+fn on_a_trail(apart: i64) -> (TestClient, Id, super::Scents) {
+    use super::scent::Went;
+    let test = beside_a_mob(CreatureKind::Kobold, apart);
+    let start = the_mob(&test).position;
+    let who = Id::for_test(77);
+    let mut scents = super::Scents::default();
+    for step in 0..apart {
+        let cell = (start.0 - step, start.1);
+        scents.lay(who, cell, Went::Towards(-1, 0), 100, 10 + step as u64);
+    }
+    (test, who, scents)
+}
+
+fn tracking_after(who: Id) -> Doing {
+    Doing::Tracking {
+        after: who,
+        gap: ATTACK_GAP,
+        since: 0,
+    }
+}
+
+#[test]
+fn a_nose_follows_a_trail_out_of_sight() {
+    use super::tracking::track;
+    let (test, who, scents) = on_a_trail(6);
+    let mut mob = the_mob(&test);
+    mob.doing = tracking_after(who);
+    let level = &test.world.populations.0.values().next().unwrap().level;
+    let taken = Taken::new();
+    for _ in 0..6 {
+        track(&mut mob, level, &[], &scents, &taken, 100);
+    }
+    assert_eq!(mob.position, player(&test));
+    // At the end of the trail it gives up.
+    track(&mut mob, level, &[], &scents, &taken, 100);
+    assert!(
+        matches!(mob.doing, Doing::Settling { .. }),
+        "{:?}",
+        mob.doing
+    );
+}
+
+#[test]
+fn a_trail_too_old_for_the_nose_is_lost() {
+    use super::tracking::track;
+    use shared::mob::smells_for;
+    let (test, who, scents) = on_a_trail(4);
+    let mut mob = the_mob(&test);
+    mob.doing = tracking_after(who);
+    let start = mob.position;
+    let level = &test.world.populations.0.values().next().unwrap().level;
+    let keen = smells_for(CreatureKind::Kobold.senses().smell);
+    // Every mark is older than the nose can smell.
+    track(&mut mob, level, &[], &scents, &Taken::new(), 20 + keen);
+    assert_eq!(mob.position, start);
+    assert!(matches!(mob.doing, Doing::Settling { .. }));
+}
+
+#[test]
+fn a_trail_up_the_stairs_is_followed_by_those_that_take_stairs() {
+    use super::scent::Went;
+    use super::tracking::track;
+    let test = beside_a_mob(CreatureKind::Kobold, 2);
+    let mut mob = the_mob(&test);
+    let who = Id::for_test(77);
+    let mut scents = super::Scents::default();
+    let went = Went::Stairs {
+        to_level: 1,
+        arrives: (3, 3),
+    };
+    scents.lay(who, mob.position, went, 100, 5);
+    mob.doing = tracking_after(who);
+    let level = &test.world.populations.0.values().next().unwrap().level;
+    track(&mut mob, level, &[], &scents, &Taken::new(), 10);
+    assert!(
+        matches!(mob.doing, Doing::Following { to_level: 1, .. }),
+        "{:?}",
+        mob.doing
+    );
+}
+
+#[test]
+fn seeing_them_again_ends_the_tracking() {
+    use super::tracking::track;
+    let (test, who, scents) = on_a_trail(3);
+    let mut mob = the_mob(&test);
+    mob.doing = tracking_after(who);
+    let spot = Spot {
+        id: who,
+        character: None,
+        kind: CreatureKind::Human,
+        position: player(&test),
+        scent: 100,
+    };
+    let level = &test.world.populations.0.values().next().unwrap().level;
+    track(&mut mob, level, &[spot], &scents, &Taken::new(), 20);
+    assert!(matches!(mob.doing, Doing::Going { .. }));
+}
+
+#[test]
+fn players_and_mobs_leave_scent_where_they_step_from() {
+    let mut test = beside_a_mob(CreatureKind::Kobold, 6);
+    let from = player(&test);
+    run(&mut test, 1);
+    test.send(&[ClientMessage::DevTeleport {
+        x: from.0 + 1,
+        y: from.1,
+    }]);
+    run(&mut test, 1);
+    let population = test.world.populations.0.values().next().unwrap();
+    let me = test.client.entity_id();
+    let mark = population
+        .scents
+        .smelt(from, me, shared::creature::Acuity::Keen, 2);
+    assert!(mark.is_some());
+    // The kobold runs at the player, leaving its own.
+    run(&mut test, 20);
+    let population = test.world.populations.0.values().next().unwrap();
+    let kobold = the_mob(&test);
+    assert!(!population.scents.is_empty());
+    assert_ne!(kobold.position, kobold.home);
+    let left = population
+        .scents
+        .smelt(kobold.home, kobold.id, shared::creature::Acuity::Keen, 30);
+    assert!(left.is_some());
+}
+
+#[test]
+fn old_marks_are_swept_away() {
+    use super::scent::Went;
+    use shared::mob::SCENT_KEPT_FOR;
+    let mut scents = super::Scents::default();
+    scents.lay(Id::for_test(1), (0, 0), Went::Towards(1, 0), 200, 0);
+    scents.sweep(SCENT_KEPT_FOR - 1);
+    assert!(!scents.is_empty());
+    scents.sweep(SCENT_KEPT_FOR);
+    assert!(scents.is_empty());
+}
+
+#[test]
+fn something_with_a_nose_tracks_someone_it_loses() {
+    use super::tracking::start_tracking;
+    let test = beside_a_mob(CreatureKind::Kobold, 2);
+    let doing = start_tracking(&the_mob(&test), Id::for_test(1), ATTACK_GAP);
+    assert!(matches!(doing, Some(Doing::Tracking { since: 0, .. })));
 }

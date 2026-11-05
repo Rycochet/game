@@ -3,13 +3,14 @@
 use shared::creature::CreatureKind;
 use shared::dungeon::line_is_clear;
 use shared::energy::Energy;
-use shared::mob::{Memory, spawns};
+use shared::mob::{Memory, scent_strength, spawns};
 use shared::poi::Poi;
 use shared::protocol::CharacterId;
 use shared::sheet::{Feeling, Sheet};
 use shared::site::SiteLevel;
 use std::collections::{BTreeMap, BTreeSet};
 
+use super::scent::Went;
 use super::{Doing, Mob, Population, StairsTaken, dressed, nearest_free};
 use crate::ServerWorld;
 use crate::ids::new_id;
@@ -28,6 +29,8 @@ impl ServerWorld {
         let made_at = self.made_now();
         let saved = self.site_mut(id, poi.kind).levels.entry(index).or_default();
         let unsettled = std::mem::take(&mut saved.unsettled);
+        let mut scents = std::mem::take(&mut saved.scents);
+        scents.sweep(self_tick);
         let records = saved.records.clone();
         let dead = saved.dead.clone();
         let mut due = BTreeSet::new();
@@ -64,6 +67,7 @@ impl ServerWorld {
                     energy: Energy::default(),
                     speed: Sheet::new(spawn.kind).speed(&carrying),
                     shown: carrying.shown(),
+                    scent: scent_strength(&carrying),
                 }
             })
             .collect();
@@ -74,6 +78,8 @@ impl ServerWorld {
             away: 0,
             poi_kind: poi.kind,
             empty_since: None,
+            scents,
+            last_at: BTreeMap::new(),
         };
         self.populations.0.insert((id, index), population);
     }
@@ -122,9 +128,20 @@ impl ServerWorld {
     /// Mobs after someone who has just taken stairs, and saw, follow if they can.
     pub(crate) fn saw_stairs_taken(&mut self, taken: StairsTaken) {
         let place = (taken.site, taken.from_level);
+        let now = self.action_clock.ticks();
         let Some(population) = self.populations.0.get_mut(&place) else {
             return;
         };
+        // Their trail leads up or down here (nobody in god mode is in `last_at`).
+        if let Some((_, strength)) = population.last_at.remove(&taken.who) {
+            let went = Went::Stairs {
+                to_level: taken.to_level,
+                arrives: taken.arrives,
+            };
+            population
+                .scents
+                .lay(taken.who, taken.stairs, went, strength, now);
+        }
         for mob in &mut population.mobs {
             if let Doing::Going { after, gap, .. } = mob.doing
                 && after == taken.who
@@ -161,14 +178,18 @@ impl ServerWorld {
                     (mob.number, saved)
                 })
                 .collect();
-            notes.push((site, level, population.poi_kind, unsettled));
+            let scents = population.scents.clone();
+            notes.push((site, level, population.poi_kind, unsettled, scents));
         }
-        for (site, level, kind, unsettled) in notes {
+        for (site, level, kind, unsettled, scents) in notes {
             let known = self.site(site, kind).levels.get(&level);
-            let same = known.is_none_or(|saved| saved.unsettled == unsettled);
-            if !same || (known.is_none() && !unsettled.is_empty()) {
+            let same =
+                known.is_none_or(|saved| saved.unsettled == unsettled && saved.scents == scents);
+            let nothing = unsettled.is_empty() && scents.is_empty();
+            if !same || (known.is_none() && !nothing) {
                 let saved = self.site_mut(site, kind).levels.entry(level).or_default();
                 saved.unsettled = unsettled;
+                saved.scents = scents;
             }
         }
     }
