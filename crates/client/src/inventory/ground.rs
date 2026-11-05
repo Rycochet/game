@@ -13,8 +13,8 @@ use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPos
 use crate::connection::FromServer;
 use crate::player::Player;
 use crate::widgets::{
-    ContainerLook, ContainerSize, StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim,
-    spawn_container,
+    ContainerLook, ContainerSize, ScrollKey, StockAim, StockAimAt, StockGrid, StockGridNode,
+    draw_stock_aim, spawn_container,
 };
 
 /// How many cells across it is: the longest thing there can be.
@@ -66,6 +66,8 @@ pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) -> Entity {
                 slots: false,
             };
             let parts = spawn_container(section, look);
+            let key = ScrollKey::new("inventory.ground");
+            section.commands().entity(parts.grid).insert(key);
             if let Some(controls) = parts.controls {
                 let mut commands = section.commands();
                 commands

@@ -59,7 +59,7 @@ pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use progress::{Progress, spawn_progress_bar};
 pub use scale::{INTERFACE_PERCENTS, TouchOnly};
-pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area};
+pub use scroll::{ScrollKey, spawn_filling_scroll_area, spawn_scroll_area};
 pub use set_edge::set_edge;
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
@@ -201,10 +201,19 @@ impl Plugin for WidgetsPlugin {
                     dropdown::show_dropdowns,
                 ),
             )
+            .init_resource::<scroll::ScrollMemory>()
             .add_systems(
                 PostUpdate,
-                (feedback::show_button_looks, feedback::show_edges)
+                (
+                    feedback::show_button_looks,
+                    feedback::show_edges,
+                    scroll::bring_back_places,
+                )
                     .before(bevy::ui::UiSystems::Layout),
+            )
+            .add_systems(
+                PostUpdate,
+                scroll::keep_places.after(bevy::ui::UiSystems::Layout),
             );
     }
 }

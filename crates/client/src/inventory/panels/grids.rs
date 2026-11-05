@@ -14,7 +14,7 @@ use super::{
 };
 use crate::common::SheetText;
 use crate::widgets::{
-    CELL, ContainerLook, ContainerSize, Floating, GRID_LINE, INK, RaisePanel, covering,
+    CELL, ContainerLook, ContainerSize, Floating, GRID_LINE, INK, RaisePanel, ScrollKey, covering,
     spawn_container, spawn_item_grid, spawn_moveable_panel,
 };
 
@@ -110,6 +110,11 @@ fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, size: (u8, u8),
     };
     let parts = spawn_container(parent, look);
     let mut commands = parent.commands();
+    if grows && let Holder::Inside(bag) = holder {
+        commands
+            .entity(parts.grid)
+            .insert(ScrollKey::of("inventory.bag", bag));
+    }
     if let Some(controls) = parts.controls {
         commands.entity(controls).with_children(|row| {
             spawn_sort(row, holder);
