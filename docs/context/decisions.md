@@ -94,7 +94,7 @@ Domains (not live yet): `hallofworlds.com` landing page / adverts / email, `hall
 
 ## 2026-10-28: Docker image published to GHCR on every merge
 
-A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 8080 (now by the game server itself, below; at first by static-web-server alongside it). The Docker workflow builds and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master` (no PR builds). The Build workflow, run manually, keeps native (client + server, three OSes) and web release builds as artifacts.
+A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 8080 (now by the game server itself, below; at first by static-web-server alongside it). The Docker workflow builds and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master` (no PR builds), from `Dockerfile.github` since 2026-11-05 (below). The Build workflow, run manually, keeps native (client + server, three OSes) and web release builds as artifacts.
 
 ## 2026-10-28: Licence: CC BY-NC 4.0
 
@@ -848,3 +848,7 @@ Owner: a World Gate the character has gone through is drawn with orange water in
 ## 2026-11-05: Slower steps inside sites
 
 Owner: at 12 cells a second a mob coming round a corner, noticing from 12 cells, was beside you within a second. Normal speed is now 4 cells a second in a site (`energy::SITE_STEP_SCALE`, a constant to tweak), the world map unchanged. Only steps were slowed: stairs, dressing and moving things between containers keep their old cost (`SITE_SCALE`), as there was no reason to make them slower too. The client paces click travel and others' tokens by the same constant (`SITE_CELLS_PER_SECOND`).
+
+## 2026-11-05: GitHub builds the Docker image from what it compiled outside Docker
+
+The Docker workflow took about 35 minutes and most runs never finished: each merge cancelled the build still running, cancelled runs saved no cache, and the `--mount=type=cache` lines in `Dockerfile` don't survive between GitHub runs anyway, so every run compiled Trunk (7 min), the server and the fat-LTO web client from nothing. Owner's call: keep `Dockerfile` as it is, for building the image yourself, and add `Dockerfile.github`, which only copies in the server binary and web client that the workflow compiles on the runner with `Swatinem/rust-cache` (MIT/Apache-2.0) and `jetli/trunk-action` (MIT). A change to either Dockerfile checks whether the other needs it: the runtime part after their `Same in` marker line must be identical (`cargo xtask lint` checks it), and build steps are kept the same by hand in `Dockerfile`, `docker.yml` and `build.yml`. Claude's choices: a merge now waits for the running build (`cancel-in-progress: false`) instead of cancelling it; the runner is pinned to `ubuntu-24.04` so its glibc (2.39) is never newer than the image's trixie (2.41); the Docker layer cache is dropped, leaving GitHub's cache space to rust-cache. Fat LTO still runs in full on every web build, so that remains the bulk of the time; thin LTO for the `web` profile is the next lever if it is too slow, at some cost in download size.

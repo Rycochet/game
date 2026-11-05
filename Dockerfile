@@ -26,6 +26,13 @@
 #
 # x86-64 only for now; ARM can be added later as another platform under the
 # same tag.
+#
+# This file builds everything inside Docker, for building the image yourself.
+# GitHub's Docker workflow uses Dockerfile.github instead, which only copies in
+# what the workflow compiled outside Docker (where its cache works). Both must
+# make the same image: the part after the "Same in" line below is the same in
+# both (`cargo xtask lint` checks it), and a change to the build steps here
+# needs the same change in .github/workflows/docker.yml.
 
 # --- Tools: built once and cached as their own layer -----------------------
 FROM rust:1.99-trixie AS tools
@@ -50,6 +57,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:trixie-slim
 COPY --from=build /usr/local/bin/hall-of-worlds-server /usr/local/bin/
 COPY --from=build /srv/web /srv/web
+# --- Same in Dockerfile and Dockerfile.github from here to the end ------------
 # Certificate authorities: the server checks Let's Encrypt's website with them.
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends ca-certificates \

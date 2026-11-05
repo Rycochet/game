@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1
+# Hall of Worlds server image, as GitHub's Docker workflow builds it
+# (.github/workflows/docker.yml). Ports, settings and saves: see the top of
+# Dockerfile.
+#
+# The workflow compiles the server and the web client on the runner, where
+# rust-cache keeps compiled dependencies between runs (cache mounts inside a
+# Docker build don't survive on GitHub), then builds this from a folder holding
+# only what it made:
+#
+#   hall-of-worlds-server   the server (cargo build --release)
+#   web/                    the web client (trunk build --cargo-profile web,
+#                           then cargo xtask compress-web)
+#
+# To build the image yourself, use Dockerfile, which compiles everything inside
+# Docker. Both must make the same image: the part after the "Same in" line is
+# the same in both (`cargo xtask lint` checks it), and a change to Dockerfile's
+# build steps needs the same change in the workflow.
+#
+# The runner builds the server against its own glibc, so the runner (pinned in
+# the workflow) must never have a newer glibc than the Debian below.
+
+FROM debian:trixie-slim
+COPY hall-of-worlds-server /usr/local/bin/
+COPY web /srv/web
+# --- Same in Dockerfile and Dockerfile.github from here to the end ------------
+# Certificate authorities: the server checks Let's Encrypt's website with them.
+RUN apt-get update \
+ && apt-get install --yes --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+RUN useradd --system --no-create-home hall \
+ && mkdir /data \
+ && chown hall /data
+USER hall
+ENV HOW_ADDRESS=0.0.0.0:8080 \
+    HOW_WEB=/srv/web \
+    HOW_DATA=/data
+VOLUME /data
+EXPOSE 8080 8081
+# Asks /_healthz on the plain port (HOW_ADDRESS), which answers even while
+# only the secure port serves the game. Making a new world takes a while.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3     CMD ["/usr/local/bin/hall-of-worlds-server", "--health"]
+ENTRYPOINT ["/usr/local/bin/hall-of-worlds-server"]
