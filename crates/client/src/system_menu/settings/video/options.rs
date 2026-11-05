@@ -5,7 +5,9 @@
 
 use bevy::prelude::*;
 
-use super::super::rows::{spawn_dropdown_row, spawn_labelled, spawn_section, tip};
+use super::super::rows::{
+    spawn_dropdown_row, spawn_labelled, spawn_section, spawn_switch_row, tip,
+};
 use crate::common::{
     AntiAliasing, Background, FrameRate, IN_BROWSER, Preset, RENDER_SCALES, VideoPrefs,
 };
@@ -94,12 +96,6 @@ pub(super) fn dropdown<T: PartialEq + Copy>(
     }
 }
 
-/// A dropdown of On and Off.
-pub(super) fn on_off(on: bool) -> Dropdown {
-    let name = |on: bool| if on { "On" } else { "Off" };
-    dropdown(&[true, false], name, on, Vec::new())
-}
-
 /// Spawns a setting's dropdown row, marked, and disabled if `why_not`.
 pub(super) fn setting_row(
     parent: &mut ChildSpawnerCommands,
@@ -116,6 +112,26 @@ pub(super) fn setting_row(
     if why_not.is_some() {
         commands.entity(made).insert(ButtonState::Disabled);
     }
+}
+
+/// Spawns a setting's switch row, `on` or off, marked, and disabled if `why_not`.
+pub(super) fn switch_row(
+    parent: &mut ChildSpawnerCommands,
+    control: VideoControl,
+    label: &str,
+    (what, why_not): (&str, Option<&str>),
+    on: bool,
+) {
+    let state = match (why_not.is_some(), on) {
+        (false, _) => ButtonState::Normal,
+        (true, false) => ButtonState::Disabled,
+        (true, true) => ButtonState::DisabledSelected,
+    };
+    let made = spawn_switch_row(parent, label, tip(what, why_not), state, on);
+    parent
+        .commands()
+        .entity(made)
+        .insert((control, UiId::new("settings.video", control.ui_name())));
 }
 
 /// Spawns a setting's slider row, from `least` to `most` percent, at `percent`.
@@ -182,13 +198,7 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
 
         let why_not = IN_BROWSER.then_some(BROWSER_DECIDES);
         let row = (VSYNC, why_not);
-        setting_row(
-            section,
-            VideoControl::VSync,
-            "VSync",
-            row,
-            on_off(prefs.vsync),
-        );
+        switch_row(section, VideoControl::VSync, "VSync", row, prefs.vsync);
 
         let (least, most) = RENDER_SCALES;
         let at = (least, most, prefs.render_scale);

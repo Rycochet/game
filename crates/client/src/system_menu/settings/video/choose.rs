@@ -8,7 +8,7 @@ use crate::common::{
     AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, Precipitation, Preferences, Preset,
     RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
 };
-use crate::widgets::{DropdownChosen, SliderMoved};
+use crate::widgets::{DropdownChosen, SliderMoved, SwitchFlipped};
 
 /// Render Scale moves in steps of this many percent.
 const SCALE_STEP: u8 = 5;
@@ -45,9 +45,8 @@ fn pick<T: Copy>(all: &[T], index: usize, to: &mut T) {
     }
 }
 
-/// What a dropdown's choice does to the settings. On-off dropdowns list On first.
+/// What a dropdown's choice does to the settings.
 fn choose(prefs: &mut VideoPrefs, control: VideoControl, index: usize) {
-    let on = index == 0;
     match control {
         VideoControl::Preset => {
             if let Some(&preset) = Preset::ALL.get(index) {
@@ -55,19 +54,26 @@ fn choose(prefs: &mut VideoPrefs, control: VideoControl, index: usize) {
             }
         }
         VideoControl::FrameRate => pick(&FrameRate::ALL, index, &mut prefs.frame_rate),
-        VideoControl::VSync => prefs.vsync = on,
         VideoControl::AntiAliasing => pick(&AntiAliasing::ALL, index, &mut prefs.anti_aliasing),
         VideoControl::Background => pick(&Background::ALL, index, &mut prefs.background),
         VideoControl::Shadows => pick(&Shadows::ALL, index, &mut prefs.shadows),
-        VideoControl::MiddaySun => prefs.midday_sun = on,
         VideoControl::ViewDistance => pick(&ViewDistance::ALL, index, &mut prefs.view_distance),
-        VideoControl::Clouds => prefs.clouds = on,
         VideoControl::Precipitation => pick(&Precipitation::ALL, index, &mut prefs.precipitation),
-        VideoControl::Foliage => prefs.foliage = on,
-        VideoControl::FloorTextures => prefs.floor_textures = on,
         VideoControl::Remembered => pick(&Remembered::ALL, index, &mut prefs.remembered),
-        VideoControl::ReduceMotion => prefs.reduce_motion = on,
-        VideoControl::RenderScale | VideoControl::Brightness => {}
+        _ => {}
+    }
+}
+
+/// The setting a switch is, if it is one.
+fn switched(prefs: &mut VideoPrefs, control: VideoControl) -> Option<&mut bool> {
+    match control {
+        VideoControl::VSync => Some(&mut prefs.vsync),
+        VideoControl::MiddaySun => Some(&mut prefs.midday_sun),
+        VideoControl::Clouds => Some(&mut prefs.clouds),
+        VideoControl::Foliage => Some(&mut prefs.foliage),
+        VideoControl::FloorTextures => Some(&mut prefs.floor_textures),
+        VideoControl::ReduceMotion => Some(&mut prefs.reduce_motion),
+        _ => None,
     }
 }
 
@@ -89,6 +95,7 @@ fn slide(prefs: &mut VideoPrefs, control: VideoControl, value: f32) -> Option<u8
 pub(in crate::system_menu) fn use_video_options(
     mut chosen: MessageReader<DropdownChosen>,
     mut moved: MessageReader<SliderMoved>,
+    mut flipped: MessageReader<SwitchFlipped>,
     controls: Query<&VideoControl>,
     mut preferences: ResMut<Preferences>,
     mut shown: ResMut<VideoShown>,
@@ -100,6 +107,16 @@ pub(in crate::system_menu) fn use_video_options(
             choose(&mut prefs, control, index);
             // (Built again by the change, to show the preset.)
             preferences.video = prefs;
+        }
+    }
+    for &SwitchFlipped(switch, on) in flipped.read() {
+        if let Ok(&control) = controls.get(switch) {
+            let mut prefs = preferences.video;
+            if let Some(setting) = switched(&mut prefs, control) {
+                *setting = on;
+                // (Built again by the change, its thumb still sliding.)
+                preferences.video = prefs;
+            }
         }
     }
     for &SliderMoved(slider, value) in moved.read() {

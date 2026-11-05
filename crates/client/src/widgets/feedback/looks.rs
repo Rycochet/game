@@ -35,11 +35,11 @@ pub(super) enum Touch {
 #[derive(Resource, Default)]
 pub(in crate::widgets) struct Pointed {
     /// The front-most widget under it, unless disabled.
-    pub(super) hovered: Option<Entity>,
+    pub(in crate::widgets) hovered: Option<Entity>,
     /// When `hovered` last changed, in seconds.
     pub(super) since: f32,
     /// The widget the button being held went down on.
-    pub(super) pressed: Option<Entity>,
+    pub(in crate::widgets) pressed: Option<Entity>,
 }
 
 /// A spreading circle in a button, in a holder that cuts it to the button.

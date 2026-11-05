@@ -22,7 +22,7 @@ pub struct Preferences {
     pub item_pictures: Option<String>,
     /// How big the interface is drawn.
     pub interface_size: InterfaceSize,
-    /// "Enable touch": the interface is never drawn smaller than its own size,
+    /// "Enable Touch": the interface is never drawn smaller than its own size,
     /// for fingers. A device with only a touch screen behaves as if this is on.
     pub touch: bool,
     /// The servers on other computers connected to, the latest first.

@@ -864,3 +864,7 @@ Owner: mobs should notice and react by what they are, not one range and a hard-c
 ## 2026-11-05: Going back into a site arrives where the player walked out
 
 Owner's request. Each character remembers, per site, the level and cell they last walked out of it from (`CharacterWorldSave::left_at`, saved with the character, so each player has their own), and going in again puts them back there rather than at the entrance. Only walking out records it; it is forgotten with the rest of what they know of the site (a changed map, forgetting it, forgetting the world map), and a cell no longer walkable falls back to the entrance. Dev tools' Enter Site still goes to the level asked for.
+
+## 2026-11-05: Switches for every on/off setting
+
+Owner's request: a switch widget (`widgets::spawn_switch`), the size of a phone's, with a tick and a cross in its track as MUI's Android 12 example has, its thumb sliding across; every on/off setting in Settings uses one, in place of On/Off dropdowns (Video) and checkboxes (Pause When Not in Focus, Enable Touch, owner's choice). Claude's choices: the switch flips itself and sends `SwitchFlipped`, and slides are kept by `UiId` by the real clock, so a page built again as the setting changes (as Settings' pages are) carries on sliding; no ripple; Reduce Motion makes the thumb jump. Checkboxes stay for ticking things in lists (the debug menu).

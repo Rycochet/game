@@ -1,5 +1,5 @@
 //! The pages of Settings, under its tabs: Gameplay (`gameplay`), Interface
-//! (its size, and "Enable touch") and Video (`video`). Interface choices go
+//! (its size, and "Enable Touch") and Video (`video`). Interface choices go
 //! straight into `Preferences`.
 
 mod gameplay;
@@ -15,8 +15,8 @@ use bevy::prelude::*;
 
 use crate::common::{InterfaceSize, Preferences};
 use crate::widgets::{
-    ButtonPressed, ButtonState, Dropdown, DropdownChosen, INK, INTERFACE_PERCENTS, Pressable,
-    TabChosen, TextSize, TouchOnly, UiId, spawn_check_button, spawn_dropdown, spawn_tabs,
+    ButtonState, Dropdown, DropdownChosen, INTERFACE_PERCENTS, SwitchFlipped, TabChosen, TextSize,
+    TouchOnly, UiId, spawn_tabs,
 };
 
 const PAGES: [&str; 3] = ["Gameplay", "Interface", "Video"];
@@ -25,6 +25,10 @@ const ROW_GAP: f32 = 12.0;
 const LABEL_GAP: f32 = 16.0;
 const ROW_HEIGHT: f32 = 36.0;
 const DROPDOWN_WIDTH: f32 = 160.0;
+
+const SIZE: &str = "How big the interface is drawn. Auto follows the size of the window.";
+const TOUCH: &str = "Keeps the interface at least its own size, for fingers.";
+const TOUCH_ONLY: &str = "Always on, as this device only has a touch screen.";
 
 /// The tabs' row.
 #[derive(Component)]
@@ -42,7 +46,7 @@ pub(super) struct InterfacePage;
 pub(super) struct SizeDropdown;
 
 #[derive(Component)]
-pub(super) struct TouchButton;
+pub(super) struct TouchSwitch;
 
 /// The tabs and their pages, in Settings' panel.
 pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
@@ -133,48 +137,29 @@ pub(super) fn fill_interface_page(
     let page = *page;
     commands.entity(page).despawn_related::<Children>();
     commands.entity(page).with_children(|page| {
-        page.spawn(Node {
-            column_gap: px(LABEL_GAP),
-            align_items: AlignItems::Center,
+        let dropdown = Dropdown {
+            options: size_options(),
+            selected: size_index(preferences.interface_size),
+            searchable: false,
             ..default()
-        })
-        .with_children(|row| {
-            row.spawn((Text::new("Interface size"), FONT.font(), TextColor(INK)));
-            let dropdown = Dropdown {
-                options: size_options(),
-                selected: size_index(preferences.interface_size),
-                searchable: false,
-                ..default()
-            };
-            let node = Node {
-                width: px(DROPDOWN_WIDTH),
-                height: px(ROW_HEIGHT),
-                ..default()
-            };
-            spawn_dropdown(row, dropdown, FONT, node)
-                .insert((SizeDropdown, UiId::new("settings.interface", "size")));
-        });
+        };
+        let label = "Interface Size";
+        let size =
+            rows::spawn_dropdown_row(page, label, rows::tip(SIZE, None), dropdown, DROPDOWN_WIDTH);
+        page.commands()
+            .entity(size)
+            .insert((SizeDropdown, UiId::new("settings.interface", "size")));
         // A device with only a touch screen has it on, and can't turn it off.
-        let (state, checked) = if touch_only.0 {
-            (ButtonState::DisabledSelected, true)
+        let (state, on, why_not) = if touch_only.0 {
+            (ButtonState::DisabledSelected, true, Some(TOUCH_ONLY))
         } else {
-            (ButtonState::Normal, preferences.touch)
+            (ButtonState::Normal, preferences.touch, None)
         };
-        let node = Node {
-            height: px(ROW_HEIGHT),
-            align_self: AlignSelf::FlexStart,
-            ..default()
-        };
-        spawn_check_button(page, state, Some(checked), "Enable touch", FONT, node).insert((
-            TouchButton,
-            Pressable,
-            UiId::new("settings.interface", "touch"),
-        ));
-        page.spawn((
-            Text::new("Keeps the interface at least its own size, for fingers."),
-            TextSize::Small.font(),
-            TextColor(INK),
-        ));
+        let tip = rows::tip(TOUCH, why_not);
+        let touch = rows::spawn_switch_row(page, "Enable Touch", tip, state, on);
+        page.commands()
+            .entity(touch)
+            .insert((TouchSwitch, UiId::new("settings.interface", "touch")));
     });
 }
 
@@ -183,11 +168,11 @@ pub(super) fn fill_interface_page(
 pub(super) fn use_pages(
     mut tabs: MessageReader<TabChosen>,
     mut chosen: MessageReader<DropdownChosen>,
-    mut pressed: MessageReader<ButtonPressed>,
+    mut flipped: MessageReader<SwitchFlipped>,
     page_tabs: Query<(), With<PageTabs>>,
     mut pages: Query<(&Page, &mut Node)>,
     size_dropdowns: Query<(), With<SizeDropdown>>,
-    touch_buttons: Query<(), With<TouchButton>>,
+    touch_switches: Query<(), With<TouchSwitch>>,
     mut preferences: ResMut<Preferences>,
 ) {
     for &TabChosen(row, index) in tabs.read() {
@@ -212,9 +197,9 @@ pub(super) fn use_pages(
             }
         }
     }
-    for press in pressed.read() {
-        if touch_buttons.contains(press.0) {
-            preferences.touch = !preferences.touch;
+    for &SwitchFlipped(switch, on) in flipped.read() {
+        if touch_switches.contains(switch) {
+            preferences.touch = on;
         }
     }
 }

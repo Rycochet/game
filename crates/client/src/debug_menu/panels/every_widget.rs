@@ -8,7 +8,7 @@ use super::{CHECK_ROW, EVERY_WIDGET_HEIGHT, FONT};
 use crate::widgets::{
     ALLOWED, BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, GRID_COLOUR, INK, Pressable,
     TextBox, UiId, field_label, raised_box, spawn_button, spawn_check_button, spawn_close_button,
-    spawn_dropdown, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_tabs,
+    spawn_dropdown, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs,
     spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
 
@@ -69,6 +69,21 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
         spawn_check_button(content, ButtonState::Normal, on, label, FONT, node)
             .insert((Pressable, id(label)));
     }
+    content
+        .spawn(Node {
+            column_gap: px(8),
+            ..default()
+        })
+        .with_children(|row| {
+            for (state, on, label) in [
+                (ButtonState::Normal, true, "Switch on"),
+                (ButtonState::Normal, false, "Switch off"),
+                (ButtonState::Disabled, false, "Switch disabled"),
+                (ButtonState::DisabledSelected, true, "Switch disabled on"),
+            ] {
+                spawn_switch(row, state, on, default()).insert(id(label));
+            }
+        });
     let tabs = spawn_tabs(content, &["Tab", "Other tab", "Third tab"], 0, FONT);
     content.commands().entity(tabs).insert(id("Tabs"));
     let toggles = spawn_toggle_row(content, &["Toggle", "Other", "Third"], 0, FONT);

@@ -29,7 +29,7 @@ enum Change {
 
 /// `client.ui.set {id, value}`: a text box's words, a dropdown's or tab row's
 /// option (its index or words), a slider's place (0 to 1), whether a check
-/// button is ticked, or how far a scroll area is scrolled (interface pixels).
+/// button is ticked or a switch on, or how far a scroll area is scrolled (interface pixels).
 #[allow(clippy::type_complexity)]
 pub(super) fn set(
     In(request): In<Option<Value>>,
@@ -123,6 +123,17 @@ fn change_of(widgets: &Widgets, entity: Entity, asked: &SetAsked) -> BrpResult<C
                 .ok_or_else(|| refused("a check takes true or false"))?;
             let was = widgets.checked.get(entity).is_ok_and(|checked| checked.0);
             Ok(if was == ticked {
+                Change::Nothing
+            } else {
+                Change::Press(entity)
+            })
+        }
+        Kind::Switch => {
+            let on = value
+                .as_bool()
+                .ok_or_else(|| refused("a switch takes true or false"))?;
+            let was = widgets.switches.get(entity).is_ok_and(|switch| switch.0);
+            Ok(if was == on {
                 Change::Nothing
             } else {
                 Change::Press(entity)

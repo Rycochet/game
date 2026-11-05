@@ -60,12 +60,12 @@ pub(super) fn window_size(
 pub(super) struct InterfaceParams {
     /// `"auto"`, or a percentage.
     size: Option<Value>,
-    /// "Enable touch".
+    /// "Enable Touch".
     touch: Option<bool>,
 }
 
 /// `client.interface { "size": 200, "touch": false }`: the interface size and
-/// "Enable touch", as Settings sets them (and saves them: run with
+/// "Enable Touch", as Settings sets them (and saves them: run with
 /// `HOW_PREFERENCES` elsewhere to keep the player's own). `"size": "auto"` for Auto.
 pub(super) fn interface(
     In(request): In<Option<Value>>,

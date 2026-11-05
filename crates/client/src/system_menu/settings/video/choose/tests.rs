@@ -31,7 +31,7 @@ fn a_preset_sets_everything_but_the_players_own() {
     choose(&mut prefs, VideoControl::Preset, 2);
     assert_eq!(prefs.preset(), Some(Preset::High));
     assert_eq!((prefs.brightness, prefs.reduce_motion), (20, true));
-    choose(&mut prefs, VideoControl::VSync, 1);
+    *switched(&mut prefs, VideoControl::VSync).unwrap() = false;
     assert!(!prefs.vsync);
     assert_eq!(prefs.preset(), None);
     // "Custom", after the presets, changes nothing.
@@ -40,12 +40,16 @@ fn a_preset_sets_everything_but_the_players_own() {
 }
 
 #[test]
-fn on_off_lists_on_first() {
+fn switches_set_their_own_setting() {
     let mut prefs = VideoPrefs::default();
-    choose(&mut prefs, VideoControl::Clouds, 1);
+    *switched(&mut prefs, VideoControl::Clouds).unwrap() = false;
     assert!(!prefs.clouds);
+    *switched(&mut prefs, VideoControl::ReduceMotion).unwrap() = true;
+    assert!(prefs.reduce_motion);
+    assert!(switched(&mut prefs, VideoControl::Shadows).is_none());
+    // Switches aren't dropdowns: a choice changes nothing.
     choose(&mut prefs, VideoControl::Clouds, 0);
-    assert!(prefs.clouds);
+    assert!(!prefs.clouds);
     choose(&mut prefs, VideoControl::Remembered, 2);
     assert_eq!(prefs.remembered, Remembered::Hide);
 }

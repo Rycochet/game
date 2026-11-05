@@ -1,5 +1,5 @@
 //! How big the interface is drawn: Bevy's `UiScale`, from the player's
-//! `InterfaceSize` and "Enable touch". The minimap undoes it for itself.
+//! `InterfaceSize` and "Enable Touch". The minimap undoes it for itself.
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
