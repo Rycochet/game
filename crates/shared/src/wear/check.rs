@@ -1,8 +1,10 @@
 //! Whether something can be worn, and what covers what.
 
+use crate::body::{Horns, Parts, Snout};
 use crate::creature::{Layer, Location};
 use crate::id::Id;
 use crate::item::{Inventory, Item};
+use crate::item_form::ItemForm;
 use crate::wear::{Fit, WearRefused, coverage, made_for_fingers};
 
 impl Inventory {
@@ -53,6 +55,9 @@ impl Inventory {
             if !part.layers.contains(&layer) {
                 return Err(WearRefused::WrongBody(location));
             }
+        }
+        if covers_face(item) && !takes_closed_helmets(&Parts::of(self.creature)) {
+            return Err(WearRefused::WrongBody(Location::Head));
         }
         let fit = item
             .made
@@ -107,4 +112,20 @@ impl Inventory {
         }
         None
     }
+}
+
+/// Whether this covers the face, as a closed helmet does, on its own or in a set.
+fn covers_face(item: &Item) -> bool {
+    let head = match &item.form {
+        Some(ItemForm::Head(head)) => Some(*head),
+        Some(ItemForm::Set(set)) => set.head,
+        _ => None,
+    };
+    head.is_some_and(|head| head.face.closed())
+}
+
+/// Whether a closed helmet goes over this head: not over a snout, a beak or horns
+/// (owner, 2026-11-04).
+fn takes_closed_helmets(parts: &Parts) -> bool {
+    parts.snout == Snout::Flat && parts.horns == Horns::None
 }

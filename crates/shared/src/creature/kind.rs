@@ -28,12 +28,12 @@ pub enum CreatureKind {
 impl CreatureKind {
     /// How this kind feels about another, to begin with. A kind likes its own.
     pub fn feeling_about(self, other: Self) -> Feeling {
-        use CreatureKind::{Beggar, Giant, Goblin, Kobold};
+        use CreatureKind::{Beggar, Giant, Goblin, Kobold, Orc};
         match (self, other) {
             // Has nothing against anyone, and hopes.
             (Beggar, _) => Feeling::Neutral,
             (one, two) if one == two => Feeling::Friendly,
-            (Giant, Kobold) | (Kobold | Goblin, _) => Feeling::Unfriendly,
+            (Giant, Kobold) | (Kobold | Goblin | Orc, _) => Feeling::Unfriendly,
             _ => Feeling::Neutral,
         }
     }

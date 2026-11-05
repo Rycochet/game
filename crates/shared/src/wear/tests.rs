@@ -538,3 +538,43 @@ fn a_picture_shows_what_is_drawn_and_not_what_drawn_things_cover() {
     assert_eq!(shown.len(), 1);
     assert!(matches!(shown[0].form, ItemForm::Set(_)));
 }
+
+/// A helmet for a creature of this kind, its face closed or open.
+fn helmet_for(kind: CreatureKind, closed: bool) -> Inventory {
+    use crate::armour::head::{self, HeadKind};
+    let form = (0..)
+        .map(|seed| {
+            let mut rng = crate::rng::Seed::new(seed).rng();
+            head::roll(&mut rng, HeadKind::Helmet, None, Quality::Common)
+        })
+        .find(|form| form.face.closed() == closed)
+        .expect("both kinds of face are rolled");
+    let mut inventory = carrying_for(kind, &[]);
+    let def = kind.def();
+    let helmet = Item {
+        made: Made::for_body(ItemKind::Helmet, def.size, def.fingers(), false),
+        form: Some(ItemForm::Head(form)),
+        ..Item::new(id(1), ItemKind::Helmet)
+    };
+    inventory.give(helmet, StackLimits::NONE).expect("room");
+    inventory
+}
+
+#[test]
+fn closed_helmets_dont_go_over_snouts_or_horns() {
+    let wears = |kind, closed| helmet_for(kind, closed).check_wear(id(1));
+    assert!(wears(HUMAN, true).is_ok());
+    assert!(wears(CreatureKind::Kobold, false).is_ok());
+    for kind in [
+        CreatureKind::Kobold,
+        CreatureKind::Lizardfolk,
+        CreatureKind::Minotaur,
+        CreatureKind::Birdfolk,
+    ] {
+        assert_eq!(
+            wears(kind, true),
+            Err(WearRefused::WrongBody(Location::Head)),
+            "{kind:?}"
+        );
+    }
+}

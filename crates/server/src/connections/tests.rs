@@ -878,13 +878,16 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
     };
     let red = Appearance(BTreeMap::from([(Trait::HairColour, 3)]));
 
-    // Kinds nobody may play, and looks that don't suit them.
+    // Kinds nobody may play (too big for one cell, as a giant), and looks that don't
+    // suit them.
     let told = make("a", CreatureKind::Horse, Appearance::default());
+    assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+    let told = make("d", CreatureKind::Giant, Appearance::default());
     assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
     let told = make("b", CreatureKind::Kobold, red.clone());
     assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
 
-    let told = make("c", CreatureKind::Giant, red.clone());
+    let told = make("c", CreatureKind::Dwarf, red.clone());
     let sheet = told.iter().find_map(|answer| match answer {
         ServerMessage::Sheet(sheet) => Some(sheet.clone()),
         _ => None,
@@ -893,12 +896,12 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
         sheet,
         Some(Sheet {
             appearance: red,
-            ..Sheet::new(CreatureKind::Giant)
+            ..Sheet::new(CreatureKind::Dwarf)
         })
     );
     let carried = inventory(&told);
-    assert_eq!(carried.creature, CreatureKind::Giant);
-    assert_eq!(carried.size, CreatureKind::Giant.def().inventory);
+    assert_eq!(carried.creature, CreatureKind::Dwarf);
+    assert_eq!(carried.size, CreatureKind::Dwarf.def().inventory);
 }
 
 #[test]

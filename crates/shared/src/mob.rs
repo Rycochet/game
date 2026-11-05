@@ -85,9 +85,11 @@ fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
         _ if site.is_town() => &[(CreatureKind::Beggar, 100)],
         PoiKind::Farm => &[(CreatureKind::Chicken, 80), (CreatureKind::Horse, 20)],
         _ => &[
-            (CreatureKind::Kobold, 75),
-            (CreatureKind::Chicken, 15),
-            (CreatureKind::Giant, 10),
+            (CreatureKind::Kobold, 50),
+            (CreatureKind::Goblin, 20),
+            (CreatureKind::Orc, 10),
+            (CreatureKind::Chicken, 12),
+            (CreatureKind::Giant, 8),
         ],
     }
 }
@@ -125,6 +127,18 @@ fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
                 &[(Knife, 1), (Dagger, 2), (ShortSword, 1), (Boomerang, 2)],
             ),
             (30, &[(Coin, 2), (Stone, 2), (Apple, 1), (Pouch, 1)]),
+        ],
+        CreatureKind::Goblin => &[
+            (50, &[(TShirt, 1), (Trousers, 1)]),
+            (30, &[(Gloves, 1), (Boots, 1), (Hat, 1)]),
+            (70, &[(Knife, 2), (Dagger, 2), (ShortSword, 1)]),
+            (30, &[(Coin, 1), (Stone, 2), (Apple, 1), (Pouch, 1)]),
+        ],
+        CreatureKind::Orc => &[
+            (100, &[(Trousers, 1)]),
+            (60, &[(Belt, 1), (Boots, 2), (Cloak, 1)]),
+            (70, &[(Axe, 2), (Sword, 2), (Spear, 1)]),
+            (30, &[(Coin, 2), (Stone, 1), (Pouch, 1)]),
         ],
         _ => &[],
     }
