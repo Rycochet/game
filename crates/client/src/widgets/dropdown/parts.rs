@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::super::text_box::RaisesKeyboard;
 use super::super::{
-    ButtonState, Pressable, TextSize, spawn_button, spawn_small_icon_button, spawn_strokes,
+    ButtonState, INK, Pressable, TextSize, spawn_button, spawn_small_icon_button, spawn_strokes,
 };
 use super::{ARROW_RIGHT, ARROW_STROKES, ARROW_WIDE};
 
@@ -80,7 +80,7 @@ pub fn spawn_dropdown<'a>(
                 margin: UiRect::top(px(-ARROW_WIDE / 2.0)),
                 ..default()
             })
-            .with_children(|arrow| spawn_strokes(arrow, &ARROW_STROKES));
+            .with_children(|arrow| spawn_strokes(arrow, &ARROW_STROKES, INK));
     });
     if searchable {
         button.insert(RaisesKeyboard);

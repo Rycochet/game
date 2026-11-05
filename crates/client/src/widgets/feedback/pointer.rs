@@ -6,7 +6,7 @@ use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use super::super::item::{Floating, logical_rect, shown_at};
 use super::super::moveable::PanelPart;
 use super::super::theme::RIPPLE;
-use super::super::{BUTTON_BORDER, ButtonState, Pressable};
+use super::super::{BUTTON_BORDER, ButtonState, Pressable, Switch};
 use super::{Pointed, RIPPLE_SECONDS, Ripple, ripple_shape};
 use crate::common::UiPointer;
 
@@ -27,6 +27,7 @@ pub(in crate::widgets) fn track_pointer(
             &InheritedVisibility,
             Option<&CalculatedClip>,
             Option<&ButtonState>,
+            Has<Switch>,
         ),
         Or<(With<Pressable>, With<PanelPart>, With<ButtonState>)>,
     >,
@@ -35,12 +36,12 @@ pub(in crate::widgets) fn track_pointer(
     let front = pointer.0.and_then(|at| {
         widgets
             .iter()
-            .filter(|(_, _, node, transform, visible, clip, _)| {
+            .filter(|(_, _, node, transform, visible, clip, ..)| {
                 visible.get() && shown_at(at, node, transform, *clip)
             })
             .max_by_key(|(_, stack, ..)| stack.0)
     });
-    let usable = front.filter(|(.., state)| !state.is_some_and(|state| state.is_disabled()));
+    let usable = front.filter(|(.., state, _)| !state.is_some_and(|state| state.is_disabled()));
     let under = usable.map(|(entity, ..)| entity);
     let pressing = mouse.just_pressed(MouseButton::Left);
     if pressing {
@@ -58,7 +59,9 @@ pub(in crate::widgets) fn track_pointer(
     if !pressing {
         return;
     }
-    let (Some(at), Some((button, _, node, transform, _, _, Some(_)))) = (pointer.0, usable) else {
+    // A switch's thumb slides instead.
+    let (Some(at), Some((button, _, node, transform, _, _, Some(_), false))) = (pointer.0, usable)
+    else {
         return;
     };
     let (corner, size) = logical_rect(node, transform);

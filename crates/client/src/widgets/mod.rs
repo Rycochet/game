@@ -26,6 +26,7 @@ mod slider;
 mod soft_keyboard;
 mod spinner;
 mod stock;
+mod switch;
 mod tabs;
 mod text_box;
 mod theme;
@@ -68,6 +69,7 @@ pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
 pub use spinner::Spinner;
 pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};
+pub use switch::{Switch, SwitchFlipped, spawn_switch};
 pub use tabs::{TabChosen, spawn_tabs, spawn_toggle_row};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
 pub use theme::{
@@ -126,6 +128,8 @@ impl Plugin for WidgetsPlugin {
             .add_message::<SoftKeyPressed>()
             .add_message::<DropdownChosen>()
             .add_message::<TabChosen>()
+            .add_message::<SwitchFlipped>()
+            .init_resource::<switch::Slides>()
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
             .init_resource::<crate::common::BandShift>()
@@ -205,6 +209,7 @@ impl Plugin for WidgetsPlugin {
                     text_box::show_text_boxes,
                     text_box::place_soft_keyboard,
                     dropdown::show_dropdowns,
+                    (switch::flip_switches, switch::show_switches).chain(),
                 ),
             )
             .init_resource::<scroll::ScrollMemory>()

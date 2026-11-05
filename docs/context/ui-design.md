@@ -8,7 +8,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 
 - **Colours:** named, in `widgets/theme.rs`. Parchment and ink, with raised, selected and disabled colours, green for allowed and red for refused. One look: no light and dark modes.
 - **Text:** Lexend, in four named sizes (`TextSize`): small 13, medium 16, large 18, title 24. Words as written, not uppercase.
-- **Size:** everything is drawn at the player's interface size (Settings, Interface): Auto keeps its share of the window, with 100% in a 1920 × 1080 window; or 50% to 300%. "Enable touch" keeps it at least 100%. The minimap and full map keep their share of the window instead. Design at 100%; check 50% and 200%.
+- **Size:** everything is drawn at the player's interface size (Settings, Interface): Auto keeps its share of the window, with 100% in a 1920 × 1080 window; or 50% to 300%. "Enable Touch" keeps it at least 100%. The minimap and full map keep their share of the window instead. Design at 100%; check 50% and 200%.
 - **Spacing:** gaps and padding are multiples of 4 px. Edges are exempt.
 - **Shape:** square corners for now.
 - **Raised things:** lit along the top and left, shaded along the bottom and right. Panels, tooltips and open lists also have one soft shadow.
@@ -24,12 +24,12 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Icon button | have | Square, with padding and an optional tooltip naming it. |
 | Small icon button | have | 22 px, for controls on the edge of something, such as the sort and filter buttons above a grid. An icon dropdown is one, opening a list of options with their pictures, some greyed. |
 | Close button | have | A normal raised button, with a letter X. |
-| Checkbox | have | A whole clickable row with a drawn tick. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
+| Checkbox | have | A whole clickable row with a drawn tick, for picking things out of a list (the debug menu's toggles); settings use switches. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
 | Toggle row | have | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
 | Slider | have | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
 | Text box | have | Sunken, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. |
 | Dropdown | have | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
-| Switch | later | For settings that apply at once, once Settings has real options. Until then checkboxes do it. |
+| Switch | have | A pill about a phone's size (52 × 32), with a tick in the left half of its track and a cross in the right; the round thumb covers one, so off shows the cross. Green track when on, grey when off. A press anywhere flips it and the thumb slides across (jumps with Reduce Motion). For settings that apply at once: every on/off setting in Settings. |
 | Fab, ButtonGroup, Rating, SpeedDial | no | |
 
 ## Showing things
@@ -101,7 +101,8 @@ A simple tap shows an item's name, and later the item info boxes that will repla
 | Pick one of 2 to 5 options, all visible | Toggle row | Dropdown (hides choices) |
 | Pick one of 5 to 15 options | Dropdown | Toggle row (too wide) |
 | Pick from a long list | Dropdown with search | Dropdown without |
-| Turn something on or off | Checkbox (Switch later) | |
+| Turn a setting on or off | Switch | Dropdown of On and Off |
+| Tick things in a list | Checkbox | |
 | Choose a rough number | Slider | Text box |
 | Force a decision before going on | Dialog | |
 | Switch between views of one thing | Tabs | Toggle row |

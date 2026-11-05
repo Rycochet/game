@@ -31,7 +31,7 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 
 ### In the native client's folder
 
-- `client.ron`: choices kept between runs, such as the interface size and "Enable touch" from Settings, the page Item Pictures last showed, the servers joined with Connect (and any certificate pasted in for them), Online with its Server Options, and the window: where it was, its size, and how it was shown (Settings, Video). The path can be changed with `HOW_PREFERENCES`.
+- `client.ron`: choices kept between runs, such as the interface size and "Enable Touch" from Settings, the page Item Pictures last showed, the servers joined with Connect (and any certificate pasted in for them), Online with its Server Options, and the window: where it was, its size, and how it was shown (Settings, Video). The path can be changed with `HOW_PREFERENCES`.
 - `guest_tokens.ron`: the secret that makes you the same guest on each server, beside `client.ron`. Anyone with it can play as you.
 
 Clearing a browser's data for a server's address, or losing `guest_tokens.ron`, loses that guest's character, as there's no other way to log in yet.

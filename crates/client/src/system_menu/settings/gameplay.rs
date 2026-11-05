@@ -3,16 +3,15 @@
 
 use bevy::prelude::*;
 
-use super::rows::tip;
-use super::{FONT, ROW_HEIGHT};
+use super::rows::{spawn_switch_row, tip};
 use crate::common::{IN_BROWSER, Preferences, ServerClock, Session};
-use crate::widgets::{ButtonPressed, ButtonState, Pressable, UiId, spawn_check_button};
+use crate::widgets::{ButtonState, SwitchFlipped, UiId};
 
 #[derive(Component)]
 pub(in crate::system_menu) struct GameplayPage;
 
 #[derive(Component)]
-pub(in crate::system_menu) struct PauseButton;
+pub(in crate::system_menu) struct PauseSwitch;
 
 const PAUSE: &str = "Pauses the game while another window is in front. Single player only.";
 
@@ -52,28 +51,23 @@ pub(in crate::system_menu) fn fill_gameplay_page(
     let page = *page;
     commands.entity(page).despawn_related::<Children>();
     commands.entity(page).with_children(|page| {
-        let node = Node {
-            height: px(ROW_HEIGHT),
-            align_self: AlignSelf::FlexStart,
-            ..default()
-        };
-        spawn_check_button(page, state, Some(on), "Pause When Not in Focus", FONT, node).insert((
-            PauseButton,
-            Pressable,
+        let label = "Pause When Not in Focus";
+        let made = spawn_switch_row(page, label, tip(PAUSE, why_not), state, on);
+        page.commands().entity(made).insert((
+            PauseSwitch,
             UiId::new("settings.gameplay", "pause_unfocused"),
-            tip(PAUSE, why_not),
         ));
     });
 }
 
 pub(in crate::system_menu) fn use_gameplay_page(
-    mut pressed: MessageReader<ButtonPressed>,
-    buttons: Query<(), With<PauseButton>>,
+    mut flipped: MessageReader<SwitchFlipped>,
+    switches: Query<(), With<PauseSwitch>>,
     mut preferences: ResMut<Preferences>,
 ) {
-    for press in pressed.read() {
-        if buttons.contains(press.0) {
-            preferences.pause_unfocused = !preferences.pause_unfocused;
+    for &SwitchFlipped(switch, on) in flipped.read() {
+        if switches.contains(switch) {
+            preferences.pause_unfocused = on;
         }
     }
 }

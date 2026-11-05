@@ -132,7 +132,7 @@ pub fn spawn_check_button<'a>(
         });
         slot.insert(BorderColor::from(INK));
         if checked == Some(true) {
-            slot.with_children(|slot| spawn_strokes(slot, &TICK_STROKES));
+            slot.with_children(|slot| spawn_strokes(slot, &TICK_STROKES, INK));
         }
         inside.spawn((Text::new(label), size.font(), TextColor(text)));
     });
@@ -142,8 +142,8 @@ pub fn spawn_check_button<'a>(
 /// A straight line drawn on something: its length, where it goes and how it is turned.
 pub(super) type Stroke = (f32, f32, f32, f32);
 
-/// Lines making up a small mark, such as a tick.
-pub(super) fn spawn_strokes(parent: &mut ChildSpawnerCommands, strokes: &[Stroke]) {
+/// Lines making up a small mark, such as a tick, in `colour`.
+pub(super) fn spawn_strokes(parent: &mut ChildSpawnerCommands, strokes: &[Stroke], colour: Color) {
     for &(length, left, top, degrees) in strokes {
         parent.spawn((
             Node {
@@ -155,7 +155,7 @@ pub(super) fn spawn_strokes(parent: &mut ChildSpawnerCommands, strokes: &[Stroke
                 ..default()
             },
             UiTransform::from_rotation(Rot2::degrees(degrees)),
-            BackgroundColor(INK),
+            BackgroundColor(colour),
         ));
     }
 }
