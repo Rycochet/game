@@ -214,6 +214,7 @@ pub(crate) fn answer(
         | ClientMessage::DevKillMob { .. }
         | ClientMessage::DevSetCreature(..)
         | ClientMessage::DevSnowLine(..)
-        | ClientMessage::DevSetWorldClock { .. } => answer_dev(client, message, world),
+        | ClientMessage::DevSetWorldClock { .. }
+        | ClientMessage::DevGoToWorld { .. } => answer_dev(client, message, world),
     }
 }

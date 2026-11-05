@@ -112,6 +112,23 @@ pub(super) fn welcome(
         Err(error) => return client.refuse_for_saves(&error),
     }
     client.phase = Phase::Playing;
+    if !send_welcome(client, world, options) {
+        return false;
+    }
+    match (client.character.visit.take(), client.character.hall) {
+        (Some(visit), _) => sites::resume(client, world, visit),
+        (None, Some(at)) => crate::hall::enter(client, world, at),
+        (None, None) => world_map::look_around(client, world),
+    }
+}
+
+/// Tells the client the world they are in and where on its world map, then
+/// what they are like and carry. `false` if the client has gone.
+pub(super) fn send_welcome(
+    client: &mut Client,
+    world: &ServerWorld,
+    options: &ServerOptions,
+) -> bool {
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
         world: world.info(),
@@ -124,17 +141,9 @@ pub(super) fn welcome(
         can_pause: options.pausable && client.host,
         stacks: world.stacks,
     };
-    if !client.link.send(&welcome)
-        || !client
+    client.link.send(&welcome)
+        && client
             .link
             .send(&ServerMessage::Sheet(client.sheet.clone()))
-        || !client.send_inventory()
-    {
-        return false;
-    }
-    match (client.character.visit.take(), client.character.hall) {
-        (Some(visit), _) => sites::resume(client, world, visit),
-        (None, Some(at)) => crate::hall::enter(client, world, at),
-        (None, None) => world_map::look_around(client, world),
-    }
+        && client.send_inventory()
 }

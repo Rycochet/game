@@ -34,6 +34,7 @@ pub(super) fn add(app: &mut App) {
         .add_debug_method("client.enter_site", enter_site)
         .add_debug_method("client.set_cells", set_cells)
         .add_debug_method("client.set_time", set_time)
+        .add_debug_method("client.go_to_world", world::go_to_world)
         .add_debug_method("client.snow_line", snow_line)
         .add_debug_method("client.reveal_pois", reveal_pois)
         .add_debug_method("client.give_item", give_item)

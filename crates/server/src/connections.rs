@@ -27,6 +27,7 @@ mod answer_items;
 mod answer;
 mod client;
 mod messages;
+mod moving;
 mod roads;
 mod systems;
 mod welcome;
@@ -181,6 +182,9 @@ pub struct Client {
     /// The world its character is in, once joining has decided it. In the
     /// Hall, the world they came from.
     pub(crate) world: Option<WorldId>,
+    /// The world it has asked to go to (dev tools), moved to once its
+    /// messages this tick have been read.
+    going_to: Option<shared::world::WorldSeed>,
     /// What the character knows of this world and where they are in it: the
     /// pois and cells they know (`visit` is filled in on saving).
     pub(crate) character: CharacterWorldSave,

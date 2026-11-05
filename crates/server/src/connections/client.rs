@@ -24,6 +24,7 @@ impl Client {
             asked_online: None,
             phase: Phase::Greeting,
             world: None,
+            going_to: None,
             account: None,
             character_id,
             gone: false,

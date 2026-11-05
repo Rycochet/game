@@ -10,16 +10,24 @@ use shared::river::Rivers;
 use shared::surface::Surface;
 use shared::vegetation::Vegetation;
 use shared::weather::WeatherField;
-use shared::world::WorldParams;
+use shared::world::{WorldId, WorldParams};
 use std::collections::BTreeMap;
 
 use super::{GameClock, KnownRoads, MOST_PLANETS_IN_AN_AREA, Weather};
+
+/// The player has been moved to another world while playing (a `Welcome` for
+/// a world other than `CurrentWorld`'s): whatever was kept of the last one,
+/// such as the maps' caches, is to be forgotten.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct WorldChanged;
 
 /// The world the player is in, its surface generator and the pois the
 /// server has told the client about. Only exists once the server has said
 /// which world it is (`connection`).
 #[derive(Resource)]
 pub struct CurrentWorld {
+    /// Which world it is.
+    pub id: WorldId,
     pub params: WorldParams,
     pub surface: Surface,
     pub climate: Climate,
@@ -43,6 +51,7 @@ impl CurrentWorld {
         let params = WorldParams::from_seed(info.terrain_seed);
         let surface = Surface::new(&params);
         Self {
+            id: info.id,
             climate: Climate::new(&params),
             rivers: Rivers::new(&params),
             vegetation: Vegetation::new(&params),

@@ -141,6 +141,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ClientMessage::DevTeleport { x: -3, y: 4 },
         ClientMessage::DevSnowLine(40),
+        ClientMessage::DevGoToWorld { seed: 77 },
         ClientMessage::DevSetWorldClock {
             minutes: Some(90.5),
             rate: ClockRate::new(3, 2),

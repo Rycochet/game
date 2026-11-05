@@ -69,7 +69,7 @@ pub use video::{
 pub use view::{ViewFacing, ViewStats};
 pub use weather::{NORMAL_SNOW_LINE, Weather};
 pub use window::{KeepDrawing, frame_settings};
-pub use world::{CurrentWorld, KnownPois};
+pub use world::{CurrentWorld, KnownPois, WorldChanged};
 
 pub struct CommonPlugin;
 
@@ -96,6 +96,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<GameClock>()
             .init_resource::<HerbGrowthShift>()
             .init_resource::<ServerClock>()
+            .add_message::<WorldChanged>()
             .init_resource::<SkyNow>()
             .init_resource::<Weather>()
             .init_resource::<ViewStats>()

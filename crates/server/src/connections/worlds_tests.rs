@@ -4,7 +4,7 @@ use bevy::ecs::system::RunSystemOnce;
 use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::item::Inventory;
-use shared::protocol::{CharacterId, ClientLink, ServerMessage, local_pair};
+use shared::protocol::{CharacterId, ClientLink, ClientMessage, ServerMessage, local_pair};
 use shared::sheet::Sheet;
 use shared::world::{WorldId, WorldSeed};
 use std::collections::BTreeMap;
@@ -145,4 +145,69 @@ fn moving_one_worlds_time_tells_only_those_in_it() {
     };
     assert!(told(&other));
     assert!(!told(&home));
+}
+
+/// Everything waiting at a client's end.
+fn answers(end: &ClientLink) -> Vec<ServerMessage> {
+    std::iter::from_fn(|| end.receive().ok().flatten()).collect()
+}
+
+#[test]
+fn dev_tools_move_a_player_to_another_world_and_back() {
+    let folder = TestFolder::new();
+    let id = character(1);
+    let mut app = server(&folder, &[]);
+    let (end, home) = join(&mut app, id);
+    assert_eq!(home, HOME.id());
+    let start = app.resource::<Connections>().clients[0].world_position();
+    answers(&end);
+
+    end.send(&ClientMessage::DevGoToWorld {
+        seed: OTHER.value(),
+    });
+    app.run_system_once(handle_messages).unwrap();
+    let told = answers(&end);
+    let welcomed = told.iter().find_map(|message| match message {
+        ServerMessage::Welcome { world, x, y, .. } => Some((world.id, (*x, *y))),
+        _ => None,
+    });
+    let (world, arrived) = welcomed.expect("welcomed into the other world");
+    assert_eq!(world, OTHER.id());
+    assert!(told.contains(&ServerMessage::OnWorldMap {
+        x: arrived.0,
+        y: arrived.1,
+    }));
+    let client = &app.resource::<Connections>().clients[0];
+    assert_eq!(client.world, Some(OTHER.id()));
+    // Its own World Gates: another planet.
+    let other = app.resource::<ServerWorlds>().get(OTHER.id()).unwrap();
+    let gates = &other.pois.world_gates().gates;
+    assert!(gates.iter().any(|gate| (gate.x, gate.y) == arrived));
+    // Saved as there.
+    let storage = app.resource::<ServerWorlds>().home().storage.clone();
+    assert_eq!(storage.character_world(&id), Ok(Some(OTHER.id())));
+
+    // Back where they were.
+    end.send(&ClientMessage::DevGoToWorld { seed: HOME.value() });
+    app.run_system_once(handle_messages).unwrap();
+    let told = answers(&end);
+    assert!(told.contains(&ServerMessage::OnWorldMap {
+        x: start.0,
+        y: start.1,
+    }));
+    assert_eq!(
+        app.resource::<Connections>().clients[0].world,
+        Some(HOME.id())
+    );
+}
+
+#[test]
+fn going_to_the_world_they_are_in_changes_nothing() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let (end, _) = join(&mut app, character(1));
+    answers(&end);
+    end.send(&ClientMessage::DevGoToWorld { seed: HOME.value() });
+    app.run_system_once(handle_messages).unwrap();
+    assert_eq!(answers(&end), []);
 }

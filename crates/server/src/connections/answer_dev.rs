@@ -124,6 +124,12 @@ pub(super) fn answer_dev(
             world.snow_line = snow_line;
             client.link.send(&ServerMessage::SnowLine(snow_line))
         }
+        ClientMessage::DevGoToWorld { seed } => {
+            // Once its messages this tick have been read (`handle_messages`), as
+            // it needs every world.
+            client.going_to = Some(shared::world::WorldSeed::new(seed));
+            true
+        }
         ClientMessage::DevSetWorldClock { minutes, rate } => {
             // Not trusted to be one: a rate that stops time is refused.
             let rate = rate.map(|rate| shared::world::ClockRate::new(rate.game, rate.real));
