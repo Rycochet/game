@@ -4,8 +4,10 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
+use shared::sheet::Appearance;
 use shared::wear::WornLook;
 
+use crate::character::CharacterSheet;
 use crate::common::IconPicture;
 use crate::inventory::Carried;
 use crate::item_art::{ItemPictures, character_look};
@@ -22,9 +24,15 @@ pub(super) struct Drawing<'w> {
 }
 
 impl Drawing<'_> {
-    /// The picture of a creature of this kind wearing these, if any is drawn.
-    pub(super) fn dressed(&mut self, kind: CreatureKind, worn: &[WornLook]) -> Option<IconPicture> {
-        let look = character_look(kind, worn)?;
+    /// The picture of a creature of this kind, looking like this, wearing these, if any
+    /// is drawn.
+    pub(super) fn dressed(
+        &mut self,
+        kind: CreatureKind,
+        appearance: &Appearance,
+        worn: &[WornLook],
+    ) -> Option<IconPicture> {
+        let look = character_look(kind, appearance, worn)?;
         Some(IconPicture(self.pictures.picture(
             look,
             PIXELS,
@@ -36,22 +44,25 @@ impl Drawing<'_> {
 /// The player's own token shows them as they are dressed, whenever that changes.
 pub(super) fn show_own_dress(
     carried: Res<Carried>,
+    sheet: Res<CharacterSheet>,
     mut drawing: Drawing,
-    mut drawn: Local<Option<(CreatureKind, Vec<WornLook>)>>,
+    mut drawn: Local<Option<(CreatureKind, Appearance, Vec<WornLook>)>>,
     player: Single<Entity, With<Player>>,
     mut commands: Commands,
 ) {
-    if !carried.is_changed() && drawn.is_some() {
+    if !carried.is_changed() && !sheet.is_changed() && drawn.is_some() {
         return;
     }
     let kind = carried.0.creature;
+    let appearance = sheet.0.appearance.clone();
     let worn = carried.0.shown();
-    if drawn.as_ref() == Some(&(kind, worn.clone())) {
+    let now = (kind, appearance, worn);
+    if drawn.as_ref() == Some(&now) {
         return;
     }
-    match drawing.dressed(kind, &worn) {
+    match drawing.dressed(now.0, &now.1, &now.2) {
         Some(picture) => commands.entity(*player).insert(picture),
         None => commands.entity(*player).remove::<IconPicture>(),
     };
-    *drawn = Some((kind, worn));
+    *drawn = Some(now);
 }

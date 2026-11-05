@@ -10,7 +10,7 @@ use shared::item_form::{Cut, GemForm, give_form};
 use shared::material::Material;
 
 use super::page::PicturePage;
-use crate::item_art::{Look, look_of};
+use crate::item_art::{Colours, Look, look_of};
 use crate::widgets::TextSize;
 
 /// How big each picture in Item Pictures' grid is shown, and is drawn, for sharpness.
@@ -73,7 +73,7 @@ pub(super) enum Shown {
     Blade(Family, u128),
     /// A bare body to dress.
     /// A body on a frame, with its parts and usual height in millimetres.
-    Body(Frame, Parts, i32),
+    Body(Frame, Parts, i32, Colours),
     /// A piece of armour.
     Armour(super::armour::ArmourShown),
     /// A pair of footwear.
@@ -103,10 +103,11 @@ impl Shown {
                 give_form(&mut blade, Some(Size::Medium), &mut || Id::for_test(0));
                 look_of(&blade)
             }
-            Self::Body(frame, parts, height) => Some(Look::Body {
+            Self::Body(frame, parts, height, colours) => Some(Look::Body {
                 frame,
                 parts,
                 height,
+                colours,
             }),
             Self::Armour(shown) => shown.look(quality),
             Self::Footwear(shown) => shown.look(quality),

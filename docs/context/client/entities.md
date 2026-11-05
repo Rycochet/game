@@ -5,7 +5,7 @@ Others on the map: mobs and other players, as tokens, for as long as the server 
 ## Files
 
 - `crates/client/src/entities/mod.rs`: `EntitiesPlugin`, `Others` (id to token), `read_server`, `show_moving`, `show_own_kind`, `offer_to_kill`, `kill_clicked`, `picture`, `picture_size`. Unit tests.
-- `crates/client/src/entities/dressed.rs`: `dressed` (an `IconPicture` of a kind wearing these, from `item_art::character_look`), `show_own_dress` (the player's own token, from `inventory::Carried`, whenever what is worn changes).
+- `crates/client/src/entities/dressed.rs`: `dressed` (an `IconPicture` of a kind wearing these in its own colours, from `item_art::character_look`), `show_own_dress` (the player's own token, from `inventory::Carried` and `character::CharacterSheet`, whenever what is worn or how they look changes).
 
 ## Public API
 
@@ -13,7 +13,7 @@ Others on the map: mobs and other players, as tokens, for as long as the server 
 
 ## Depends on
 
-- `common` (`Clickable`, `GameView`, `Icon`, `KillMob`, `MapPosition`, `SmoothPosition`, `Token`, `TokenSize`), `connection` (`FromServer`), `inventory` (`Carried`), `player` (`Player`, `PlayerSystems`), `view3d` (`ClickedToken`, `View3dSystems`), `item_art` (`ItemPictures`, `character_look`), `shared::creature`, `shared::id`, `shared::protocol`.
+- `common` (`Clickable`, `GameView`, `Icon`, `KillMob`, `MapPosition`, `SmoothPosition`, `Token`, `TokenSize`), `connection` (`FromServer`), `inventory` (`Carried`), `character` (`CharacterSheet`), `player` (`Player`, `PlayerSystems`), `view3d` (`ClickedToken`, `View3dSystems`), `item_art` (`ItemPictures`, `character_look`), `shared::creature`, `shared::id`, `shared::protocol`.
 
 ## Used by
 

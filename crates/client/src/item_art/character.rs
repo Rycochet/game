@@ -6,9 +6,11 @@ use shared::armour::hands::Hand;
 use shared::body::Frame;
 use shared::creature::CreatureKind;
 use shared::item_form::ItemForm;
+use shared::sheet::Appearance;
 use shared::wear::WornLook;
 
 use super::armour::{set, worn};
+use super::colours::{Colours, material};
 use super::{
     ArmsLook, FeetLook, FootwearLook, HandsLook, HeadLook, LegsLook, Look, NeckLook, Part, SetLook,
     ShouldersLook, TorsoLook, WaistLook, body,
@@ -21,11 +23,20 @@ pub(super) const CELLS: (u8, u8) = (2, 2);
 const ANY: (u8, u8) = (1, 1);
 
 /// How a creature of this kind looks wearing these, if it stands on two legs and
-/// anything it wears is drawn: what its token shows in place of its icon.
-pub fn character_look(kind: CreatureKind, worn: &[WornLook]) -> Option<Look> {
+/// anything it wears is drawn: what its token shows in place of its icon, its body in
+/// its own colours.
+pub fn character_look(
+    kind: CreatureKind,
+    appearance: &Appearance,
+    worn: &[WornLook],
+) -> Option<Look> {
     Frame::of(kind)?;
     let worn: Vec<Look> = worn.iter().filter_map(piece_look).collect();
-    (!worn.is_empty()).then_some(Look::Character { kind, worn })
+    (!worn.is_empty()).then_some(Look::Character {
+        kind,
+        worn,
+        colours: Colours::of(kind, appearance),
+    })
 }
 
 /// How one worn thing looks, for its form.
@@ -80,30 +91,21 @@ fn piece_look(worn: &WornLook) -> Option<Look> {
     })
 }
 
-/// A body of this kind wearing these, filling its picture.
+/// A body of this kind wearing these, filling its picture, in its own colours.
 pub(super) fn character_parts(
     kind: CreatureKind,
     worn: &[Look],
+    colours: Colours,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
     let Some(frame) = Frame::of(kind) else {
         return Vec::new();
     };
-    // Plain, as the bare body is drawn: skin comes with looks.
-    let skin = StandardMaterial {
-        base_color: Color::srgb(0.78, 0.72, 0.64),
-        perceptual_roughness: 0.8,
-        ..default()
-    };
     let parts = shared::body::Parts::of(kind);
-    let feathers = StandardMaterial {
-        base_color: Color::srgb(0.95, 0.95, 0.93),
-        ..skin.clone()
-    };
     let mut pieces: set::Coloured = vec![
-        (body::build(&frame, &parts), skin),
-        (body::wings(&frame, &parts), feathers),
+        (body::build(&frame, &parts), material(colours.skin)),
+        (body::wings(&frame, &parts), material(colours.feathers)),
     ];
     // An aventail hangs from the helmet worn with it.
     let rim = worn.iter().find_map(|look| match look {

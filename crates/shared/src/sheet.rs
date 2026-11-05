@@ -12,6 +12,10 @@ use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
 use crate::item::Inventory;
 
+mod looks;
+
+pub use looks::Choice;
+
 /// A creature's base stats.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Stats {
@@ -51,17 +55,6 @@ pub enum Trait {
 }
 
 impl Trait {
-    /// The choices, in order.
-    pub const fn choices(self) -> &'static [&'static str] {
-        match self {
-            Self::CoatColour => &["Bay", "Black", "Chestnut", "Grey", "White"],
-            Self::FeatherColour => &["Brown", "Black", "Speckled", "White"],
-            Self::HairColour => &["Black", "Brown", "Blonde", "Red", "Grey", "White"],
-            Self::Height => &["Average", "Very short", "Short", "Tall", "Very tall"],
-            Self::SkinShade => &["Medium", "Pale", "Light", "Tan", "Brown", "Dark"],
-        }
-    }
-
     pub const fn name(self) -> &'static str {
         match self {
             Self::CoatColour => "Coat",
@@ -81,14 +74,34 @@ impl Appearance {
     /// Whether every choice is for a trait this kind has, and is one of its choices.
     pub fn suits(&self, kind: CreatureKind) -> bool {
         self.0.iter().all(|(&which, &choice)| {
-            kind.def().looks.contains(&which) && (choice as usize) < which.choices().len()
+            kind.def().looks.contains(&which) && (choice as usize) < which.choices_for(kind).len()
         })
     }
 
+    /// What is chosen for this trait, if this kind has it: the first if not given.
+    pub fn choice(&self, kind: CreatureKind, which: Trait) -> Option<Choice> {
+        if !kind.def().looks.contains(&which) {
+            return None;
+        }
+        let chosen = self.0.get(&which).copied().unwrap_or(0);
+        which.choices_for(kind).get(chosen as usize).copied()
+    }
+
     /// What this trait is, in words.
-    pub fn says(&self, which: Trait) -> &'static str {
-        let choice = self.0.get(&which).copied().unwrap_or(0);
-        which.choices().get(choice as usize).copied().unwrap_or("")
+    pub fn says(&self, kind: CreatureKind, which: Trait) -> &'static str {
+        self.choice(kind, which).map_or("", |choice| choice.name)
+    }
+
+    /// The colour its body is drawn in: its skin, or its coat for one with fur.
+    pub fn skin(&self, kind: CreatureKind) -> Option<[u8; 3]> {
+        [Trait::SkinShade, Trait::CoatColour]
+            .into_iter()
+            .find_map(|which| self.choice(kind, which)?.colour)
+    }
+
+    /// The colour of its feathers, if it has any.
+    pub fn feathers(&self, kind: CreatureKind) -> Option<[u8; 3]> {
+        self.choice(kind, Trait::FeatherColour)?.colour
     }
 }
 

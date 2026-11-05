@@ -26,10 +26,13 @@ pub(super) fn parts_of(
             frame,
             parts,
             height,
-        } => super::body::body_parts(&frame, &parts, height, meshes, materials),
-        Look::Character { kind, worn } => {
-            super::character::character_parts(kind, &worn, meshes, materials)
-        }
+            colours,
+        } => super::body::body_parts(&frame, &parts, height, colours, meshes, materials),
+        Look::Character {
+            kind,
+            worn,
+            colours,
+        } => super::character::character_parts(kind, &worn, colours, meshes, materials),
         Look::Footwear { footwear, quality } => {
             super::footwear::footwear_parts(&footwear, quality, meshes, materials)
         }

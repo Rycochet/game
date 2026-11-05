@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 use shared::body::{Frame, Parts};
+
+use super::Colours;
 use shared::creature::{CreatureKind, Size};
 use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
@@ -85,7 +87,11 @@ pub enum Look {
     },
     /// A character of a kind that stands on two legs, wearing these (their own
     /// looks), innermost first: what its token shows.
-    Character { kind: CreatureKind, worn: Vec<Look> },
+    Character {
+        kind: CreatureKind,
+        worn: Vec<Look>,
+        colours: Colours,
+    },
     /// A bare body standing as its frame says, with its parts, drawn as tall as
     /// `height` millimetres beside a person (up to a person's height): what worn things
     /// are built on, and later a character with what it wears.
@@ -93,6 +99,7 @@ pub enum Look {
         frame: Frame,
         parts: Parts,
         height: i32,
+        colours: Colours,
     },
 }
 
