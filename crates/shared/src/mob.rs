@@ -219,7 +219,7 @@ pub fn spawns(
 fn looks(roll: &impl Fn(i64) -> u64, kind: CreatureKind) -> Appearance {
     let chosen = |(place, &which): (usize, &Trait)| {
         let rolled = roll(TRIES * 2 + 1 + place as i64);
-        (which, (rolled % which.choices().len() as u64) as u8)
+        (which, (rolled % which.choices_for(kind).len() as u64) as u8)
     };
     Appearance(kind.def().looks.iter().enumerate().map(chosen).collect())
 }

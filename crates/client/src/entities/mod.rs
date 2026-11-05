@@ -128,7 +128,7 @@ fn read_server(
                         Icon(picture(look.kind).into()),
                     ))
                     .id();
-                if let Some(picture) = drawing.dressed(look.kind, &look.worn) {
+                if let Some(picture) = drawing.dressed(look.kind, &look.appearance, &look.worn) {
                     commands.entity(spawned).insert(picture);
                 }
                 if let Some(old) = others.0.insert(look.id, spawned) {

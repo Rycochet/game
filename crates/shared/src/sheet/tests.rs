@@ -20,7 +20,10 @@ fn every_kind_has_stats_and_looks() {
 fn a_look_must_suit_the_kind_and_be_a_real_choice() {
     let look = |which, choice| Appearance(BTreeMap::from([(which, choice)]));
     assert!(look(Trait::HairColour, 3).suits(CreatureKind::Human));
-    assert_eq!(look(Trait::HairColour, 3).says(Trait::HairColour), "Red");
+    assert_eq!(
+        look(Trait::HairColour, 3).says(CreatureKind::Human, Trait::HairColour),
+        "Red"
+    );
     assert!(!look(Trait::HairColour, 99).suits(CreatureKind::Human));
     // Chickens have no hair.
     assert!(!look(Trait::HairColour, 0).suits(CreatureKind::Chicken));
@@ -88,4 +91,25 @@ fn a_sheet_reads_back_from_a_message() {
     let sheet = Sheet::new(CreatureKind::Kobold);
     let bytes = postcard::to_allocvec(&sheet).unwrap();
     assert_eq!(postcard::from_bytes::<Sheet>(&bytes).unwrap(), sheet);
+}
+
+#[test]
+fn each_kind_draws_in_its_own_colours() {
+    let plain = Appearance::default();
+    // The first skin is the plain shade bare bodies were always drawn in.
+    assert_eq!(plain.skin(CreatureKind::Human), Some([199, 184, 163]));
+    assert_eq!(plain.skin(CreatureKind::Goblin), Some([112, 150, 72]));
+    // A minotaur's body is its coat; a birdfolk has no skin choice, but feathers.
+    assert_eq!(plain.skin(CreatureKind::Minotaur), Some([104, 70, 46]));
+    assert_eq!(plain.skin(CreatureKind::Birdfolk), None);
+    assert_eq!(
+        plain.feathers(CreatureKind::Birdfolk),
+        Some([242, 242, 238])
+    );
+    // Every colour trait's choices have colours, but for a hen's speckles.
+    for kind in CreatureKind::ALL {
+        for &which in kind.def().looks {
+            assert!(!which.choices_for(kind).is_empty(), "{kind:?} {which:?}");
+        }
+    }
 }

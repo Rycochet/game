@@ -5,6 +5,7 @@ mod armour;
 mod blade;
 mod body;
 mod character;
+mod colours;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
 mod debug_api;
 mod footwear;
@@ -16,6 +17,7 @@ use bevy::prelude::*;
 use bevy::render::{ExtractSchedule, Render, RenderApp, RenderSystems};
 
 pub use character::character_look;
+pub use colours::Colours;
 pub use footwear::FootwearLook;
 pub use looks::{
     ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, SetLook, ShouldersLook,

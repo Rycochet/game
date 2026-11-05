@@ -9,6 +9,7 @@ use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 use shared::body::{Frame, Joint, Parts, Side};
 
+use super::colours::{Colours, material};
 use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
 
 mod features;
@@ -236,35 +237,27 @@ pub(super) fn mesh_of(triangles: &[Triangle]) -> Mesh {
 }
 
 /// A bare body standing on this frame, with these parts, as tall as `height` beside a
-/// person.
+/// person, in these colours.
 pub(super) fn body_parts(
     frame: &Frame,
     parts: &Parts,
     height: i32,
+    colours: Colours,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
     let (skin, feathers) = fitted(frame, parts, height);
-    // Plain, as a tailor's dummy: skin comes with looks. Feathers white, so wings show
-    // apart from the arms.
-    [
-        (skin, Color::srgb(0.78, 0.72, 0.64)),
-        (feathers, Color::srgb(0.95, 0.95, 0.93)),
-    ]
-    .into_iter()
-    .filter(|(triangles, _)| !triangles.is_empty())
-    .map(|(triangles, colour)| Part {
-        mesh: meshes.add(mesh_of(&triangles)),
-        material: materials.add(StandardMaterial {
-            base_color: colour,
-            perceptual_roughness: 0.8,
-            ..default()
-        }),
-        transform: Transform::from_rotation(camera.rotation),
-    })
-    .collect()
+    [(skin, colours.skin), (feathers, colours.feathers)]
+        .into_iter()
+        .filter(|(triangles, _)| !triangles.is_empty())
+        .map(|(triangles, colour)| Part {
+            mesh: meshes.add(mesh_of(&triangles)),
+            material: materials.add(material(colour)),
+            transform: Transform::from_rotation(camera.rotation),
+        })
+        .collect()
 }
 
 #[cfg(test)]

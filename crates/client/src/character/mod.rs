@@ -84,7 +84,7 @@ fn describe(sheet: &Sheet, carried: &Inventory) -> String {
         lines.push(format!(
             "{}: {}",
             which.name(),
-            sheet.appearance.says(which)
+            sheet.appearance.says(carried.creature, which)
         ));
     }
     lines.join("\n")
