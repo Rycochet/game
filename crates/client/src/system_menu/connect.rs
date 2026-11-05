@@ -10,8 +10,8 @@ use super::icons::ConnectIcons;
 use super::spawn::{spawn_layer, spawn_title_row};
 use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
 use crate::widgets::{
-    ButtonState, ButtonStyle, ButtonTooltip, INK, Pressable, ScrollKey, TextBox, TextSize,
-    spawn_button, spawn_icon_button, spawn_scroll_area, spawn_text_box,
+    ButtonState, ButtonStyle, ButtonTooltip, INK, Pressable, TextBox, TextSize, UiId, spawn_button,
+    spawn_icon_button, spawn_scroll_area, spawn_text_box,
 };
 
 // Split into files (`cargo xtask lint` keeps files small).
@@ -71,7 +71,7 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
     );
     let icons = icons.clone();
     commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Connect");
+        spawn_title_row(panel, "Connect", "connect");
         panel.spawn((Text::new(EXAMPLE), TextSize::Medium.font(), TextColor(INK)));
         #[cfg(target_arch = "wasm32")]
         panel.spawn((
@@ -95,7 +95,7 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
                     ..default()
                 };
                 spawn_text_box(row, text_box, FONT, node)
-                    .insert(AddressBox)
+                    .insert((AddressBox, UiId::new("connect", "address")))
                     .with_children(|address_box| mark::spawn_mark(address_box, BUTTON_ROW))
                     .entry::<Node>()
                     .and_modify(|mut node| node.padding.right = px(mark::MARK_ROOM));
@@ -114,12 +114,13 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
                 spawn_icon_button(row, ButtonState::Normal, icons.open.clone(), node).insert((
                     PadlockButton,
                     Action::Certificate,
+                    Action::Certificate.ui_id("connect"),
                     Pressable,
                     ButtonTooltip("Certificate".into()),
                 ));
             });
         let list = spawn_scroll_area(panel, Val::Vh(LIST_SHARE));
-        let key = ScrollKey::new("connect.servers");
+        let key = UiId::new("connect", "servers");
         panel.commands().entity(list).insert((ServerList, key));
         panel
             .spawn(Node {
@@ -138,7 +139,7 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
                         ..default()
                     };
                     let mut button = spawn_button(row, ButtonState::Normal, label, FONT, node);
-                    button.insert((action, style, Pressable));
+                    button.insert((action, style, Pressable, action.ui_id("connect")));
                     if action == Action::ConnectNow {
                         button.insert(ConnectNowButton);
                     }
@@ -168,8 +169,11 @@ pub(super) fn spawn_server_row(
             height: px(BUTTON_ROW),
             ..default()
         };
-        spawn_button(row, ButtonState::Normal, address, FONT, node)
-            .insert((Action::PickServer(index), Pressable));
+        spawn_button(row, ButtonState::Normal, address, FONT, node).insert((
+            Action::PickServer(index),
+            Action::PickServer(index).ui_id("connect"),
+            Pressable,
+        ));
         let node = Node {
             width: px(BUTTON_ROW),
             height: px(BUTTON_ROW),
@@ -178,6 +182,7 @@ pub(super) fn spawn_server_row(
         };
         spawn_icon_button(row, ButtonState::Normal, bin, node).insert((
             Action::ForgetServer(index),
+            Action::ForgetServer(index).ui_id("connect"),
             Pressable,
             ButtonTooltip("Forget this server".into()),
         ));

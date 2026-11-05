@@ -13,6 +13,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 - **Shape:** square corners for now.
 - **Raised things:** lit along the top and left, shaded along the bottom and right. Panels, tooltips and open lists also have one soft shadow.
 - **Feedback:** every clickable thing has hovered and pressed looks, and a ripple from the point pressed. The hover look doubles as the focus look later.
+- **Ids:** every input widget has a `UiId` (`form/name`), unique among those on show, so the debug API can find it; give new ones their ids as they are made.
 - **Input:** whatever a mouse can do, a finger can do. Gamepad later. Tab focus and screen readers are not planned for now.
 
 ## Inputs

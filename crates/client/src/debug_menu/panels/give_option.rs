@@ -37,6 +37,21 @@ pub(in crate::debug_menu) enum OptionValue {
 }
 
 /// What the dropdown says when nothing is asked for.
+/// A field's dropdown's name in Give Item's form.
+pub(super) fn ui_name(field: Field) -> &'static str {
+    match field {
+        Field::Style => "style",
+        Field::Construction => "construction",
+        Field::Material => "material",
+        Field::Finish => "finish",
+        Field::Dye => "dye",
+        Field::Settings => "settings",
+        Field::GemMaterial => "gem_material",
+        Field::GemCut => "gem_cut",
+        Field::Limits => "limits",
+    }
+}
+
 pub(super) fn any(field: Field) -> &'static str {
     match field {
         Field::Style => "Any style",

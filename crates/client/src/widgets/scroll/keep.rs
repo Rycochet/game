@@ -1,37 +1,18 @@
 //! Keeping a scroll area's place. Every area keeps it as a share of how far it
 //! can go (`ScrollShare`), so it stays at much the same place in its contents
 //! when the window, the interface size or its contents change size. One with a
-//! `ScrollKey` is also remembered for the rest of the session, so an area built
+//! `UiId` is also remembered for the rest of the session, so an area built
 //! again (a page rebuilt after a change, a panel opened again) comes back there.
 
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use shared::id::Id;
 
 use super::{ScrollArea, furthest};
+use crate::widgets::UiId;
 
 /// Closer than this, in interface pixels, counts as the same place.
 const SAME_PLACE: f32 = 0.5;
-
-/// Which scroll area this is, for it to come back to its place when built again:
-/// a name, and which one of those it is when there can be several (a bag's id).
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct ScrollKey {
-    name: &'static str,
-    id: Option<Id>,
-}
-
-impl ScrollKey {
-    pub const fn new(name: &'static str) -> Self {
-        Self { name, id: None }
-    }
-
-    /// One of several of this name.
-    pub const fn of(name: &'static str, id: Id) -> Self {
-        Self { name, id: Some(id) }
-    }
-}
 
 /// Where an area is: `share` from 0 at the top to 1 at the bottom, and how far
 /// it could go when that was last seen (`None` until it has been laid out).
@@ -43,7 +24,7 @@ pub(in crate::widgets) struct ScrollShare {
 
 /// The places of areas with keys, for the session.
 #[derive(Resource, Default)]
-pub(in crate::widgets) struct ScrollMemory(HashMap<ScrollKey, ScrollShare>);
+pub(in crate::widgets) struct ScrollMemory(HashMap<UiId, ScrollShare>);
 
 /// Where a share is, in an area that can go this far.
 pub(super) fn place_of(share: f32, furthest: f32) -> f32 {
@@ -61,9 +42,13 @@ pub(super) fn share_of(place: f32, furthest: f32, had: f32) -> f32 {
 
 /// Before layout: a new area with a key starts where it was last, in pixels as
 /// far as was known then, so it doesn't show its top for a frame.
+#[allow(clippy::type_complexity)]
 pub(in crate::widgets) fn bring_back_places(
     memory: Res<ScrollMemory>,
-    mut areas: Query<(&ScrollKey, &mut ScrollShare, &mut ScrollPosition), Added<ScrollKey>>,
+    mut areas: Query<
+        (&UiId, &mut ScrollShare, &mut ScrollPosition),
+        (Added<UiId>, With<ScrollArea>),
+    >,
 ) {
     for (key, mut share, mut position) in &mut areas {
         let Some(kept) = memory.0.get(key) else {
@@ -86,7 +71,7 @@ pub(in crate::widgets) fn keep_places(
             &ComputedNode,
             &mut ScrollShare,
             &mut ScrollPosition,
-            Option<&ScrollKey>,
+            Option<&UiId>,
         ),
         With<ScrollArea>,
     >,

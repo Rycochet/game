@@ -7,7 +7,6 @@ use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 
 mod keep;
 
-pub use keep::ScrollKey;
 pub(super) use keep::{ScrollMemory, bring_back_places, keep_places};
 
 use keep::ScrollShare;

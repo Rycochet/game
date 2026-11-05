@@ -9,8 +9,8 @@ use super::{AT, COLUMNS, Heading, Keepers, MOST_HEIGHT, NEXT_AT, OpenTrade, Open
 use crate::common::{CurrentDungeon, GROUND, GaveItem, HeldOverGifts, HeldStock, TookItem};
 use crate::connection::FromServer;
 use crate::widgets::{
-    ContainerLook, ContainerSize, RaisePanel, ScrollKey, StockAim, StockAimAt, StockGrid,
-    StockGridNode, draw_stock_aim, spawn_container, spawn_moveable_panel,
+    ContainerLook, ContainerSize, RaisePanel, StockAim, StockAimAt, StockGrid, StockGridNode, UiId,
+    draw_stock_aim, spawn_container, spawn_moveable_panel,
 };
 
 /// Notes where things given were let go, for when they come back as stock, moves
@@ -109,7 +109,7 @@ pub(super) fn read_server(
                         slots: false,
                     };
                     holder = spawn_container(content, look).grid;
-                    let key = ScrollKey::of("trade.stock", *with);
+                    let key = UiId::of("trade", *with, "stock");
                     content.commands().entity(holder).insert(key);
                 });
                 raise.write(RaisePanel(panel));

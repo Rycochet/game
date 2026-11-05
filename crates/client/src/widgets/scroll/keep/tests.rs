@@ -78,7 +78,7 @@ fn a_hidden_area_keeps_its_share() {
 #[test]
 fn an_area_built_again_comes_back_to_its_place() {
     let mut world = world();
-    let key = ScrollKey::new("test");
+    let key = UiId::new("test", "scroll");
     let first = world
         .spawn((
             ScrollArea,
@@ -113,7 +113,7 @@ fn an_area_built_again_comes_back_to_its_place() {
 fn an_area_never_seen_starts_at_the_top() {
     let mut world = world();
     world.resource_mut::<ScrollMemory>().0.insert(
-        ScrollKey::new("other"),
+        UiId::new("other", "scroll"),
         ScrollShare {
             share: 1.0,
             furthest: Some(400.0),
@@ -122,7 +122,7 @@ fn an_area_never_seen_starts_at_the_top() {
     let area = world
         .spawn((
             ScrollArea,
-            ScrollKey::new("new"),
+            UiId::new("new", "scroll"),
             laid_out(100.0, 500.0),
             ScrollPosition::default(),
         ))

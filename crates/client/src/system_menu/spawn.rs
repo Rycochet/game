@@ -10,7 +10,7 @@ use super::{
     SystemMenu,
 };
 use crate::widgets::{
-    ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, panel_title,
+    ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, UiId, panel_title,
     spawn_button, spawn_close_button, spawn_dialog, spawn_icon_button, spawn_sized_layer,
 };
 
@@ -73,6 +73,7 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
             spawn_icon_button(holder, ButtonState::Normal, icon.clone(), node).insert((
                 GearButton,
                 Action::Open,
+                Action::Open.ui_id("hud"),
                 Pressable,
                 ButtonTooltip("Menu".into()),
             ));
@@ -136,14 +137,19 @@ pub(super) fn spawn_requester(commands: &mut Commands) {
                 height: px(BUTTON_ROW),
                 ..default()
             };
-            spawn_button(row, ButtonState::Normal, label, FONT, node)
-                .insert((action, style, Pressable));
+            spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
+                action,
+                style,
+                Pressable,
+                action.ui_id("quit"),
+            ));
         }
     });
 }
 
 /// A big layer's title, with a close button on the right.
-pub(super) fn spawn_title_row(panel: &mut ChildSpawnerCommands, title: &str) {
+/// Its close button is `close` in `form`.
+pub(super) fn spawn_title_row(panel: &mut ChildSpawnerCommands, title: &str, form: &'static str) {
     panel
         .spawn(Node {
             height: px(SETTINGS_TITLE_ROW),
@@ -164,6 +170,7 @@ pub(super) fn spawn_title_row(panel: &mut ChildSpawnerCommands, title: &str) {
                 },
                 Action::Back,
                 Pressable,
+                UiId::new(form, "close"),
             ))
             .with_children(|holder| {
                 spawn_close_button(holder, default());
@@ -186,7 +193,7 @@ pub(super) fn spawn_settings(commands: &mut Commands) {
         },
     );
     commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Settings");
+        spawn_title_row(panel, "Settings", "settings");
         super::settings::spawn_pages(panel);
     });
 }

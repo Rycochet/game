@@ -9,7 +9,7 @@ use super::{
     FIRST_AT, NEXT_AT, spawn_creature_buttons, spawn_every_widget, spawn_give_panel,
     spawn_go_to_world, spawn_item_pictures, spawn_step_buttons, spawn_world_time,
 };
-use crate::widgets::{RaisePanel, spawn_moveable_panel};
+use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
 
 /// The panels open, by what opened them.
 #[derive(Resource, Default)]
@@ -67,10 +67,28 @@ impl OpenPanels {
                 DebugAction::GoToWorld => spawn_go_to_world(content),
                 _ => spawn_step_buttons(content, action),
             });
+        commands
+            .entity(panel)
+            .insert(UiId::new(form_of(action), "panel"));
         if action == DebugAction::SunsAndMoons {
             commands.entity(content).insert(BodiesToShow);
         }
         self.panels.insert(action, panel);
+    }
+}
+
+/// The form a panel's widgets are in, for the debug API. Stairs, Fields and
+/// Herbs share one for now.
+pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
+    match action {
+        DebugAction::ShowWidgets => "debug.every_widget",
+        DebugAction::SunsAndMoons => "debug.suns_and_moons",
+        DebugAction::GiveItem => "debug.give_item",
+        DebugAction::ChangeCreature => "debug.change_creature",
+        DebugAction::ItemPictures => "debug.item_pictures",
+        DebugAction::WorldTime => "debug.world_time",
+        DebugAction::GoToWorld => "debug.go_to_world",
+        _ => "debug.steps",
     }
 }
 

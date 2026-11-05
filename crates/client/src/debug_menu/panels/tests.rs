@@ -72,3 +72,20 @@ fn world_time_refuses_what_it_cant_read() {
         assert_eq!(read_time(text, 0.0), None, "{text:?}");
     }
 }
+
+#[test]
+fn give_items_widgets_each_have_their_own_id() {
+    let mut world = World::new();
+    world
+        .commands()
+        .spawn(Node::default())
+        .with_children(spawn_give_panel);
+    world.flush();
+    let ids: Vec<crate::widgets::UiId> = world
+        .query::<&crate::widgets::UiId>()
+        .iter(&world)
+        .copied()
+        .collect();
+    assert!(ids.len() > 10);
+    assert!(crate::widgets::duplicate_ids(&ids).is_empty());
+}

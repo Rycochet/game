@@ -8,6 +8,8 @@ mod clipboard;
 mod container;
 #[cfg(not(target_arch = "wasm32"))]
 mod copy_button;
+#[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
+mod debug_api;
 mod dropdown;
 mod feedback;
 mod filter_list;
@@ -27,6 +29,7 @@ mod stock;
 mod tabs;
 mod text_box;
 mod theme;
+mod ui_id;
 mod weight;
 
 use bevy::input::InputSystems;
@@ -59,7 +62,7 @@ pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use progress::{Progress, spawn_progress_bar};
 pub use scale::{INTERFACE_PERCENTS, TouchOnly};
-pub use scroll::{ScrollKey, spawn_filling_scroll_area, spawn_scroll_area};
+pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area};
 pub use set_edge::set_edge;
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
@@ -71,6 +74,9 @@ pub use theme::{
     ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, TextSize, WARNING_TEXT,
 };
 use theme::{RAISED_BACKGROUND, SHADED_EDGE};
+#[cfg(any(test, feature = "debug-api"))]
+pub use ui_id::duplicate_ids;
+pub use ui_id::{Checked, UiId};
 pub use weight::weight_words;
 
 // Split into files (`cargo xtask lint` keeps files small).
@@ -214,6 +220,9 @@ impl Plugin for WidgetsPlugin {
             .add_systems(
                 PostUpdate,
                 scroll::keep_places.after(bevy::ui::UiSystems::Layout),
-            );
+            )
+            .add_systems(Last, ui_id::warn_of_duplicates);
+        #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
+        debug_api::add(app);
     }
 }

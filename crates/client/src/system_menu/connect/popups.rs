@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use super::super::{Action, BUTTON_ROW, FONT, Layer, SystemMenu};
 use crate::widgets::{
-    ButtonState, ButtonStyle, INK, Pressable, TextBox, TextSize, spawn_button, spawn_dialog,
+    ButtonState, ButtonStyle, INK, Pressable, TextBox, TextSize, UiId, spawn_button, spawn_dialog,
     spawn_text_box,
 };
 
@@ -75,7 +75,10 @@ fn spawn_certificate(commands: &mut Commands) {
                 takes_keys: true,
                 ..default()
             };
-            spawn_text_box(content, text_box, FONT, node).insert(CertificateBox);
+            spawn_text_box(content, text_box, FONT, node).insert((
+                CertificateBox,
+                UiId::new("connect.certificate", "certificate"),
+            ));
             content.spawn((
                 CertificateStatus,
                 Text::new(""),
@@ -90,7 +93,12 @@ fn spawn_certificate(commands: &mut Commands) {
             ("Cancel", Action::Back, ButtonStyle::Plain),
         ] {
             let mut button = spawn_button(row, ButtonState::Normal, label, FONT, button_node());
-            button.insert((action, style, Pressable));
+            button.insert((
+                action,
+                style,
+                Pressable,
+                action.ui_id("connect.certificate"),
+            ));
             if action == Action::KeepCertificate {
                 button.insert(KeepButton);
             }
@@ -118,8 +126,12 @@ fn spawn_forget(commands: &mut Commands) {
                 width: px(BUTTON_WIDTH + 30.0),
                 ..button_node()
             };
-            spawn_button(row, ButtonState::Normal, label, FONT, node)
-                .insert((action, style, Pressable));
+            spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
+                action,
+                style,
+                Pressable,
+                action.ui_id("connect.forget"),
+            ));
         }
     });
 }

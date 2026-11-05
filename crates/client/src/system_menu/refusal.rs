@@ -38,6 +38,7 @@ pub(super) fn spawn_refusal(commands: &mut Commands) {
         };
         spawn_button(row, ButtonState::Normal, "OK", FONT, node).insert((
             Action::Back,
+            Action::Back.ui_id("refused"),
             ButtonStyle::Main,
             Pressable,
         ));
