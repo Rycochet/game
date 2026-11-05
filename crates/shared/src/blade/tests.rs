@@ -191,7 +191,7 @@ fn longer_weighs_more_and_size_is_cubed() {
     let light = form.grams();
     form.blade = 900;
     assert!(form.grams() > light);
-    assert_eq!(form.grams_at(Size::Giant), form.grams() * 8);
+    assert_eq!(form.grams_at(Size::Giant), form.grams() * 27);
     assert_eq!(form.grams_at(Size::Medium), form.grams());
 }
 

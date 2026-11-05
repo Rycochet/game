@@ -12,7 +12,7 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 
 - `CreatureKind::{ALL, def()}`, `CreatureDef { name, weight (grams), size, inventory, body, speed, uses_stairs, playable, stats, skills, abilities, looks }` (`part`, `fingers`). To add a kind: the enum, `ALL` (alphabetical), `def`.
 - `BodyPart { location, layers, places }`: which layers a location takes, and how many things taking one place fit there.
-- `Layer::{Skin, Middle, Outer, Over}`, `Location`, `Size::{Tiny..Giant}` (`name`, `quarters`, `stepped`, `apart`).
+- `Layer::{Skin, Middle, Outer, Over}`, `Location`, `Size::{Tiny..Giant}` (`name`, `quarters`, `stepped`, `apart`). Quarters are each band's middle beside a person (owner, 2026-11-04): Tiny 1 (under 0.75 m), Small 3 (to 1.5 m), Medium 4 (to 2.1 m), Large 6 (to 3.2 m), Huge 9 (to 4.5 m), Giant 12 (to 7 m); items' sides scale by them and worn things' and blades' weights by their cube.
 
 ## Depends on
 
