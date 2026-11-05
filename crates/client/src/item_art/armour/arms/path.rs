@@ -21,9 +21,10 @@ pub(super) const WING: f32 = 0.3 * PI;
 /// a sleeve curves round it rather than folding.
 const BEND_SPREAD: f32 = 45.0;
 
-/// One arm of a frame. The arm hangs straight from the shoulder, a little out, as the
-/// frame has it; `bend` swings the forearm forwards by that many radians at the elbow,
-/// for pictures of a piece alone.
+/// One arm of a frame. The upper arm hangs a little out from the shoulder and the
+/// forearm, from the slightly bent elbow, nearer straight down, as the frame has them;
+/// `bend` swings the forearm further forwards by that many radians at the elbow, for
+/// pictures of a piece alone.
 pub(super) struct Arm<'a> {
     pub frame: &'a Frame,
     pub side: Side,
@@ -36,7 +37,7 @@ impl Arm<'_> {
         Vec3::new(x as f32, y as f32, z as f32)
     }
 
-    /// Down the straight arm, and millimetres along it for each millimetre down.
+    /// Down the upper arm, and millimetres along it for each millimetre down.
     fn straight(&self) -> (Vec3, f32) {
         let shoulder = self.joint(Joint::Shoulder(self.side));
         let elbow = self.joint(Joint::Elbow(self.side));
@@ -44,48 +45,69 @@ impl Arm<'_> {
         (per_down.normalize(), per_down.length())
     }
 
-    /// How far the arm has turned forwards at `down`: none above the elbow, all of the
-    /// bend below it, turning evenly in between.
-    fn turned(&self, down: f32) -> f32 {
-        let from = self.elbow() - BEND_SPREAD;
-        self.bend * ((down - from) / (2.0 * BEND_SPREAD)).clamp(0.0, 1.0)
+    /// Down the forearm: the frame's, swung forwards by `bend`.
+    fn forearm(&self) -> Vec3 {
+        let elbow = self.joint(Joint::Elbow(self.side));
+        let fore = (self.joint(Joint::Wrist(self.side)) - elbow).normalize();
+        let forwards = (Vec3::Z - fore * fore.z).normalize();
+        fore * self.bend.cos() + forwards * self.bend.sin()
     }
 
-    /// The arm's middle at `down` millimetres below the shoulder joint: how far it has
-    /// gone down the straight arm and forwards, added up over the bend.
-    fn centre(&self, down: f32) -> Vec3 {
-        let shoulder = self.joint(Joint::Shoulder(self.side));
-        let (along, per_down) = self.straight();
+    /// The angle between the upper arm and the forearm.
+    fn angle(&self) -> f32 {
+        self.straight().0.angle_between(self.forearm())
+    }
+
+    /// How far through the bend the arm is at `down`: 0 above it, 1 below it, evenly in
+    /// between.
+    fn through(&self, down: f32) -> f32 {
         let from = self.elbow() - BEND_SPREAD;
-        let (onward, forward) = if self.bend.abs() < 1e-4 || down <= from {
-            (down, 0.0)
+        ((down - from) / (2.0 * BEND_SPREAD)).clamp(0.0, 1.0)
+    }
+
+    /// The arm's middle at `down` millimetres below the shoulder joint: down the upper
+    /// arm, round the bend turning evenly, then down the forearm.
+    pub fn centre(&self, down: f32) -> Vec3 {
+        let shoulder = self.joint(Joint::Shoulder(self.side));
+        let (upper, per_down) = self.straight();
+        let from = self.elbow() - BEND_SPREAD;
+        let angle = self.angle();
+        let offset = if angle < 1e-4 || down <= from {
+            upper * down
         } else {
-            // Turning evenly over the spread, then straight on.
-            let rate = self.bend / (2.0 * BEND_SPREAD);
-            let turned = self.turned(down);
-            let past = (down - from - 2.0 * BEND_SPREAD).max(0.0);
-            (
-                from + turned.sin() / rate + past * self.bend.cos(),
-                (1.0 - turned.cos()) / rate + past * self.bend.sin(),
-            )
+            // The way turns evenly from the upper arm's to the forearm's: added up over
+            // the bend, that comes to these amounts of each.
+            let t = self.through(down);
+            let spread = 2.0 * BEND_SPREAD;
+            let scale = spread / (angle * angle.sin());
+            let of_upper = ((1.0 - t) * angle).cos() - angle.cos();
+            let of_fore = 1.0 - (t * angle).cos();
+            let past = (down - from - spread).max(0.0);
+            upper * from
+                + (upper * of_upper + self.forearm() * of_fore) * scale
+                + self.forearm() * past
         };
-        shoulder + (along * onward + Vec3::Z * forward) * per_down
+        shoulder + offset * per_down
     }
 
     /// The way down the arm at `down`.
     pub fn down(&self, down: f32) -> Vec3 {
-        let (along, _) = self.straight();
-        let turned = self.turned(down);
-        along * turned.cos() + Vec3::Z * turned.sin()
+        let (upper, fore) = (self.straight().0, self.forearm());
+        let angle = self.angle();
+        if angle < 1e-4 {
+            return upper;
+        }
+        let t = self.through(down);
+        (upper * ((1.0 - t) * angle).sin() + fore * (t * angle).sin()) / angle.sin()
     }
 
-    /// The way out from the arm at this turn, at `down`: round from its outside, which
-    /// stays the same however it bends, to its front.
+    /// The way out from the arm at this turn, at `down`: round from its outside, away
+    /// from the body, to its front.
     pub fn out(&self, down: f32, angle: f32) -> Vec3 {
-        let (along, _) = self.straight();
-        let outside = Vec3::Z.cross(along) * self.side.sign() as f32;
-        let turned = self.turned(down);
-        let front = Vec3::Z * turned.cos() - along * turned.sin();
+        let along = self.down(down);
+        let sign = self.side.sign() as f32;
+        let outside = Vec3::Z.cross(along).normalize() * sign;
+        let front = along.cross(outside) * sign;
         outside * angle.cos() + front * angle.sin()
     }
 

@@ -8,7 +8,6 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 use shared::body::{Frame, Joint, Side};
-use shared::creature::CreatureKind;
 
 use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
 
@@ -272,19 +271,16 @@ pub(super) fn mesh_of(triangles: &[Triangle]) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
 }
 
-/// A bare body of this kind, if it stands on two legs.
+/// A bare body standing on this frame.
 pub(super) fn body_parts(
-    kind: CreatureKind,
+    frame: &Frame,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
-    let Some(frame) = Frame::of(kind) else {
-        return Vec::new();
-    };
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
     vec![Part {
-        mesh: meshes.add(mesh_of(&fitted(&frame))),
+        mesh: meshes.add(mesh_of(&fitted(frame))),
         // Plain, as a tailor's dummy: skin comes with looks.
         material: materials.add(StandardMaterial {
             base_color: Color::srgb(0.78, 0.72, 0.64),

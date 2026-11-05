@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::blade::Family;
-use shared::body::Frame;
+use shared::body::{FIRST_BIPEDS, Frame};
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 use shared::item_form::Cut;
@@ -135,21 +135,25 @@ pub(super) fn spawn_ring_row(grid: &mut ChildSpawnerCommands, row: u128) {
     });
 }
 
-/// Every kind that stands on two legs, bare.
+/// Every kind that stands on two legs, bare, then the first set of bipeds to come.
 pub(super) fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
-    grid.spawn(Node {
-        align_items: AlignItems::Center,
-        ..default()
-    })
-    .with_children(|cells| {
-        cells.spawn(picture_label("Bodies", PICTURE_ROW_LABEL));
-        let bipeds = CreatureKind::ALL
-            .into_iter()
-            .filter(|&kind| Frame::of(kind).is_some());
-        for kind in bipeds {
-            spawn_picture(cells, Shown::Body(kind));
-        }
-    });
+    let kinds: Vec<Frame> = CreatureKind::ALL
+        .into_iter()
+        .filter_map(Frame::of)
+        .collect();
+    let coming = FIRST_BIPEDS.map(|biped| biped.proportions.frame());
+    for (label, frames) in [("Bodies", &kinds[..]), ("To come", &coming[..])] {
+        grid.spawn(Node {
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|cells| {
+            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
+            for &frame in frames {
+                spawn_picture(cells, Shown::Body(frame));
+            }
+        });
+    }
 }
 
 pub(super) fn spawn_blade_row(grid: &mut ChildSpawnerCommands, family: Family) {

@@ -76,6 +76,8 @@ impl Proportions {
             ankle_radius: thick(h.ankle_radius),
             foot_length: scaled(h.foot_length, self.legs),
             arm_spread: wide(h.arm_spread),
+            forearm_spread: h.forearm_spread,
+            forearm_forward: h.forearm_forward,
         }
     }
 }
