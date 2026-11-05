@@ -226,24 +226,36 @@ impl Style {
         }
     }
 
+    /// How often each style is made, for a piece made on its own.
+    const WEIGHTS: [(Self, u64); 14] = [
+        (Self::White, 30),
+        (Self::Gothic, 15),
+        (Self::Milanese, 15),
+        (Self::Maximilian, 10),
+        (Self::Greenwich, 8),
+        (Self::Kastenbrust, 5),
+        (Self::Elven, 8),
+        (Self::Dwarven, 8),
+        (Self::Japanese, 8),
+        (Self::Chinese, 6),
+        (Self::Steppe, 6),
+        (Self::Classical, 6),
+        (Self::Byzantine, 4),
+        (Self::IndoPersian, 4),
+    ];
+
     /// A style for a piece made on its own, plain the most often.
     pub fn roll(rng: &mut Rng) -> Self {
-        rng.pick_weighted(&[
-            (Self::White, 30),
-            (Self::Gothic, 15),
-            (Self::Milanese, 15),
-            (Self::Maximilian, 10),
-            (Self::Greenwich, 8),
-            (Self::Kastenbrust, 5),
-            (Self::Elven, 8),
-            (Self::Dwarven, 8),
-            (Self::Japanese, 8),
-            (Self::Chinese, 6),
-            (Self::Steppe, 6),
-            (Self::Classical, 6),
-            (Self::Byzantine, 4),
-            (Self::IndoPersian, 4),
-        ])
+        rng.pick_weighted(&Self::WEIGHTS)
+    }
+
+    /// A style, as `roll`, among those that make this construction.
+    pub fn roll_allowing(rng: &mut Rng, construction: Construction) -> Self {
+        let weights = Self::WEIGHTS.map(|(style, weight)| match style.allows(construction) {
+            true => (style, weight),
+            false => (style, 0),
+        });
+        rng.pick_weighted(&weights)
     }
 }
 

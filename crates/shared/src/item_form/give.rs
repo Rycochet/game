@@ -3,10 +3,8 @@
 use crate::blade::{self};
 use crate::creature::Size;
 use crate::id::Id;
-use crate::item::{Item, ItemKind, Made};
-use crate::item_form::gem::roll_gem;
-use crate::item_form::ring_roll::{roll_ring, roll_ring_size};
-use crate::item_form::{ItemForm, Limits};
+use crate::item::{Item, Made};
+use crate::item_form::{ItemForm, Limits, RollRequest, give_form_to};
 use crate::rng::Seed;
 
 /// Gives a new item its form, for kinds that have one, going by its quality. `size`
@@ -24,40 +22,8 @@ pub fn give_form_from(
     seed: Seed,
     new_id: &mut impl FnMut() -> Id,
 ) {
-    let mut rng = seed.derive("item form").rng();
-    let quality = item.quality.unwrap_or_default();
-    let armour = super::armour::armour_form(item.kind, &mut rng, quality);
-    let (form, rolled_size) = match item.kind {
-        _ if let Some(form) = armour => (form, size.unwrap_or(Size::Medium)),
-        ItemKind::Gem => {
-            let (gem, size) = roll_gem(&mut rng, quality, true);
-            (ItemForm::Gem(gem), size)
-        }
-        ItemKind::Ring => {
-            let size = size.unwrap_or_else(|| roll_ring_size(&mut rng));
-            let made_at = item.made_at;
-            let ring = roll_ring(&mut rng, quality, size, &mut |gem, gem_size, quality| {
-                let mut stone = Item::new(new_id(), ItemKind::Gem);
-                stone.made = Made::for_body(ItemKind::Gem, gem_size, None, false);
-                stone.quality = Some(quality);
-                stone.made_at = made_at;
-                stone.form = Some(ItemForm::Gem(gem));
-                stone
-            });
-            (ItemForm::Ring(Box::new(ring)), size)
-        }
-        kind => {
-            let Some(family) = kind.blade_family() else {
-                return;
-            };
-            let size = size.unwrap_or(Size::Medium);
-            let blade = blade::roll_blade_at(&mut rng, family, quality, size);
-            (ItemForm::Blade(Box::new(blade)), size)
-        }
-    };
-    let size = size.unwrap_or(rolled_size);
-    item.made = Made::for_body(item.kind, size, item.made.fingers, item.made.magical);
-    item.form = Some(form);
+    give_form_to(item, size, seed, &RollRequest::NONE, new_id)
+        .expect("asking for nothing is never refused");
 }
 
 /// Gives a new blade its form within limits, which may make it another family's kind.

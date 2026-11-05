@@ -6,9 +6,12 @@ mod blade;
 mod hilt;
 mod materials;
 
+pub(crate) use materials::blade_metals;
+
 use super::table::Row;
 use super::{BladeForm, Build, GRIP, SHAFT_FROM, within};
 use crate::item::Quality;
+use crate::material::Material;
 use crate::rng::Rng;
 use blade::roll_blade_itself;
 use hilt::roll_hilt;
@@ -32,6 +35,7 @@ pub(super) fn roll_properties(
     quality: Quality,
     blade: u16,
     handle: u16,
+    metal: Option<Material>,
 ) -> BladeForm {
     let build = row.build;
     let is_side = build == Build::Side;
@@ -45,7 +49,7 @@ pub(super) fn roll_properties(
 
     let parts = roll_blade_itself(rng, row, holding, blade);
     let hilt = roll_hilt(rng, row, holding, handle);
-    let made = roll_materials(rng, quality, holding);
+    let made = roll_materials(rng, quality, holding, metal);
     BladeForm {
         family: row.family,
         build,

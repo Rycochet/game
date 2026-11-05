@@ -22,19 +22,30 @@ use crate::footwear::FootwearForm;
 use crate::item::Item;
 
 mod armour;
+mod armour_ask;
+mod armour_choices;
+mod armour_parts;
+mod choices;
 mod gem;
 mod give;
+mod give_to;
 mod limits;
 mod make;
 mod measure;
+mod request;
 mod ring;
+mod ring_ask;
 mod ring_roll;
 mod words;
 
+pub use choices::{Choices, choices};
 pub use gem::{Cut, GemForm};
 pub use give::{give_blade_within, give_commission, give_form, give_form_from};
+pub use give_to::give_form_to;
 pub use limits::Limits;
-pub use make::{ItemOrder, batch_seed, make_item};
+pub use make::{ItemOrder, batch_seed, make_item, try_make_item};
+pub(crate) use request::keep_only;
+pub use request::{Field, Refused, RollRequest, fields};
 pub use ring::{BandWidth, Mount, Pattern, Profile, RingForm, Setting};
 
 /// What an item is like, for kinds that have this.
@@ -112,5 +123,7 @@ impl ItemForm {
 
 #[cfg(test)]
 mod make_tests;
+#[cfg(test)]
+mod request_tests;
 #[cfg(test)]
 mod tests;

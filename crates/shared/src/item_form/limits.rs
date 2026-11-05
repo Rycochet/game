@@ -1,10 +1,13 @@
 //! What whoever asks for an item needs of it, for rolling within.
 
+use serde::{Deserialize, Serialize};
+
 use crate::creature::Size;
 use crate::item::Shape;
+use crate::material::Material;
 
 /// What whoever asks for an item needs of it. Anything left out doesn't matter.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Limits {
     /// A space it must fit in, turned either way.
     pub fits: Option<(u8, u8)>,
@@ -14,6 +17,8 @@ pub struct Limits {
     pub least_grams: Option<u32>,
     /// Whose size to make it nearest, if it has to be scaled.
     pub wielder: Option<Size>,
+    /// What a blade's blade must be made of.
+    pub metal: Option<Material>,
 }
 
 impl Limits {
@@ -23,6 +28,7 @@ impl Limits {
         most_grams: None,
         least_grams: None,
         wielder: None,
+        metal: None,
     };
 
     /// Whether something of this shape and weight will do.

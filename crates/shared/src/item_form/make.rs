@@ -5,7 +5,7 @@
 use crate::creature::{CreatureKind, Size};
 use crate::id::Id;
 use crate::item::{Favour, Item, ItemKind, Made, MadeAt, Quality, artifact_name};
-use crate::item_form::give_form_from;
+use crate::item_form::{Refused, RollRequest, give_form_to};
 use crate::rng::Seed;
 
 /// What is asked for.
@@ -22,6 +22,8 @@ pub struct ItemOrder {
     pub set: bool,
     /// Blessed or cursed, only for what is worn.
     pub favour: Option<Favour>,
+    /// What its form must be like; `RollRequest::NONE` rolls it as usual.
+    pub request: RollRequest,
 }
 
 impl ItemOrder {
@@ -34,6 +36,7 @@ impl ItemOrder {
             quality,
             set: false,
             favour: None,
+            request: RollRequest::NONE,
         }
     }
 }
@@ -45,7 +48,8 @@ pub fn batch_seed(seed: u64, n: u32) -> Seed {
 }
 
 /// A new item as ordered, made for `wearer`, with everything about it rolled from
-/// `seed`. Anything inside it, such as a ring's gem, gets its id from `new_id`.
+/// `seed`. Anything inside it, such as a ring's gem, gets its id from `new_id`. If its
+/// request can't be met, it is rolled as usual instead: `try_make_item` says so.
 pub fn make_item(
     order: &ItemOrder,
     wearer: CreatureKind,
@@ -54,6 +58,25 @@ pub fn make_item(
     made_at: Option<MadeAt>,
     new_id: &mut impl FnMut() -> Id,
 ) -> Item {
+    try_make_item(order, wearer, id, seed, made_at, new_id).unwrap_or_else(|_| {
+        let plain = ItemOrder {
+            request: RollRequest::NONE,
+            ..*order
+        };
+        try_make_item(&plain, wearer, id, seed, made_at, new_id)
+            .expect("asking for nothing is never refused")
+    })
+}
+
+/// `make_item`, refused if its request can't be met, which uses no ids.
+pub fn try_make_item(
+    order: &ItemOrder,
+    wearer: CreatureKind,
+    id: Id,
+    seed: Seed,
+    made_at: Option<MadeAt>,
+    new_id: &mut impl FnMut() -> Id,
+) -> Result<Item, Refused> {
     let kind = order.kind;
     let worn = kind.def().wear.is_some();
     // Asking for magic on what is too plain for it would quietly give none.
@@ -80,9 +103,9 @@ pub fn make_item(
         name,
         ..Item::new(id, kind)
     };
-    give_form_from(&mut item, size, seed, new_id);
+    give_form_to(&mut item, size, seed, &order.request, new_id)?;
     item.set = order.set && item.quality.is_some();
     item.made.magical = order.magical && item.can_be_magical();
     item.favour = order.favour.filter(|_| worn);
-    item
+    Ok(item)
 }

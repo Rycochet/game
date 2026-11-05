@@ -24,6 +24,8 @@ pub use details::{Decoration, Fastening, Top, Under};
 pub use parts::{BROAD, Build, FootwearPiece, Heel, Height, LONG_POINT, Toe};
 pub use roll::roll;
 
+pub(crate) use materials::sole_of;
+
 use crate::armour::Dye;
 use crate::material::Material;
 

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::creature::Size;
 use shared::item::{Favour, ItemKind, Quality};
-use shared::item_form::ItemOrder;
+use shared::item_form::{ItemOrder, RollRequest};
 
 /// Whether new items are part of a set. Set and Unique do the same for now.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -71,6 +71,7 @@ impl GiveForm {
             quality: self.quality,
             set: self.set != SetChoice::None,
             favour: self.favour,
+            request: RollRequest::NONE,
         }
     }
 }

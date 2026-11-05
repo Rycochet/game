@@ -23,10 +23,22 @@ pub fn roll_blade(rng: &mut Rng, family: Family, quality: Quality) -> BladeForm 
 /// A weapon that must be this size: if it isn't the ordinary one, it is scaled, and so
 /// has only its generic name.
 pub fn roll_blade_at(rng: &mut Rng, family: Family, quality: Quality, size: Size) -> BladeForm {
+    roll_blade_at_within(rng, family, quality, size, &Limits::NONE).expect("nothing limits it")
+}
+
+/// `roll_blade_at`, keeping to limits without changing its family or size. `None` if
+/// nothing can be made within them.
+pub fn roll_blade_at_within(
+    rng: &mut Rng,
+    family: Family,
+    quality: Quality,
+    size: Size,
+    limits: &Limits,
+) -> Option<BladeForm> {
     if size == Size::Medium {
-        return roll_blade(rng, family, quality);
+        return roll_ordinary(rng, family, quality, limits);
     }
-    roll_scaled(rng, family, quality, &Limits::NONE, size).expect("nothing limits it")
+    roll_scaled(rng, family, quality, limits, size)
 }
 
 /// A weapon within limits. An ordinary one if any will do, of this family or else the
@@ -94,6 +106,7 @@ pub fn limits_for_wielder(size: Size, spare_grams: u32) -> Limits {
         most_grams: Some(spare_grams),
         least_grams: None,
         wielder: Some(size),
+        metal: None,
     }
 }
 

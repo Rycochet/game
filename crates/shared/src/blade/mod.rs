@@ -18,7 +18,8 @@ pub use parts::{
     Hands, Point, Pommel, Ricasso, Section, SidePart, Tips, Top,
 };
 pub use roll::{
-    Rolled, commission_blade, limits_for_wielder, roll_blade, roll_blade_at, roll_blade_within,
+    Rolled, commission_blade, limits_for_wielder, roll_blade, roll_blade_at, roll_blade_at_within,
+    roll_blade_within,
 };
 
 // What the files here share, as `super::...`.
@@ -27,6 +28,7 @@ use cells::{
     SCALED_PERCENT_LARGE, SCALED_PERCENT_SMALL, SHAFT_FROM, Span, cell_of, length_of, overlap,
     within,
 };
+pub(crate) use properties::blade_metals;
 use properties::roll_properties;
 use within::{pick, roll_row_within};
 
