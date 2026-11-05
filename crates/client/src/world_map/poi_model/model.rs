@@ -13,6 +13,13 @@ pub struct PoiModel {
 }
 
 impl PoiModel {
+    /// A model of these triangles, each with its corners in the order they
+    /// face outwards (as `hall_view::GateModel::triangles` gives them).
+    pub fn from_triangles(triangles: impl IntoIterator<Item = ([Vec3; 3], Rgb)>) -> Self {
+        let (corners, colours) = triangles.into_iter().unzip();
+        Self { corners, colours }
+    }
+
     /// A triangle facing away from `inside`.
     fn triangle(&mut self, a: Vec3, b: Vec3, c: Vec3, inside: Vec3, colour: Rgb) {
         let normal = (b - a).cross(c - a);

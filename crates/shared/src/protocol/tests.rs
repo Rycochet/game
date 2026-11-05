@@ -188,7 +188,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                     entrance: 3,
                     x: 40,
                     y: -12,
-                    place: Some(1_234_567),
+                    place: 1_234_567,
                 }],
             },
             time: WorldTime::at(5.25, 2.0, ClockRate::NORMAL),

@@ -1,21 +1,26 @@
 //! A planet's World Gates on the world map, as the server tells them
-//! (`CurrentWorld::gates`): tokens with the Hall's gate models (`hall_view`),
-//! with the runes of the Hall gate each leads to. Clicking one travels there and
-//! goes through it (`site`).
+//! (`CurrentWorld::gates`): tokens with the Hall's gate models (`hall_view`):
+//! the frame, the runes of the Hall gate each leads to and the water in its
+//! opening, just as that Hall gate looks, on a town's octagonal base, standing
+//! about as tall as a tall tower. Clicking one travels there and goes through
+//! it (`site`).
+
+use std::collections::HashMap;
 
 use bevy::prelude::*;
-use shared::hall::{GateDesign, GatePlace};
+use shared::hall::GatePlace;
 use shared::protocol::GateInfo;
 use shared::world::WorldId;
 
-use super::pois::MODEL_LIFT;
+use super::poi_model::PoiModel;
+use super::pois::{MODEL_LIFT, PoiMeshes};
 use crate::common::{Clickable, CurrentWorld, MapPosition, Portal, SmoothPosition, Token};
 use crate::hall_view::GateModel;
 use crate::view3d::{TOKEN_HALF_THICKNESS, TokenView};
 
-/// How big a gate stands on the world map: grid points to one of the Hall's
-/// cells, so it is about as big as a poi's model.
-const GATE_SCALE: f32 = 9.0;
+/// How tall a gate stands on the world map, in grid points: a five-floor
+/// tower's height, so it stands out as a tall tower does.
+const GATE_HEIGHT: f32 = 11.0;
 
 /// The gate tokens there are, and the world they are of (`None`: none yet).
 #[derive(Resource, Default)]
@@ -24,9 +29,44 @@ pub(super) struct SpawnedGates {
     world: Option<WorldId>,
 }
 
-/// What a gate looks like: its Hall gate's design and code, if it leads to one.
+/// The Hall gate a token's gate leads to, which it looks just like.
 #[derive(Component, Clone, Copy)]
-pub(super) struct GateShape(Option<GatePlace>);
+pub(super) struct GateShape(GatePlace);
+
+/// How much bigger than the Hall's (in cells) a gate is drawn on the maps.
+fn scale_of(place: GatePlace) -> f32 {
+    GATE_HEIGHT / GateModel::size(place.design()).1
+}
+
+/// A gate as a poi's model: the Hall gate `place`'s frame and runes, in grid
+/// points.
+fn gate_model(place: GatePlace) -> PoiModel {
+    let (design, scale) = (place.design(), scale_of(place));
+    let parts = [
+        GateModel::frame(design),
+        GateModel::runes(design, place.code()),
+    ];
+    let triangles: Vec<_> = parts
+        .iter()
+        .flat_map(|part| {
+            part.triangles()
+                .map(|(corners, colour)| (corners.map(|corner| corner * scale), colour))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    PoiModel::from_triangles(triangles)
+}
+
+/// The name of the picture on the maps of a gate leading to Hall gate
+/// `place` (a `GatePlace::number`), for `minimap`'s store of them.
+pub fn gate_picture_name(place: u32) -> String {
+    format!("gate:{place}")
+}
+
+/// That gate's picture on the maps: its model drawn as pois' are.
+pub fn gate_picture(place: u32, size: u32) -> Vec<u8> {
+    gate_model(GatePlace::from_number(place)).picture(size)
+}
 
 /// Spawns every World Gate of the world (there are only a few, far apart: the
 /// world map hides those outside its window), once the view is current.
@@ -62,7 +102,7 @@ fn spawn_gate(commands: &mut Commands, gate: GateInfo) -> Entity {
                 no_base: true,
                 ..default()
             },
-            GateShape(gate.place.map(GatePlace::from_number)),
+            GateShape(GatePlace::from_number(gate.place)),
         ))
         .id()
 }
@@ -75,44 +115,76 @@ pub(super) fn despawn_gates(mut commands: Commands, mut spawned: ResMut<SpawnedG
     }
 }
 
-/// Gives each new gate token's view its model: the frame, and the runes of
-/// the Hall gate it leads to.
+/// A gate's model, outline and water.
+type GateMeshSet = (Handle<Mesh>, Handle<Mesh>, Handle<Mesh>);
+
+/// The gates' meshes (model, outline, water), each made once, and the water's
+/// material.
+#[derive(Default)]
+pub(super) struct GateMeshes {
+    models: HashMap<u32, GateMeshSet>,
+    water: Option<Handle<StandardMaterial>>,
+}
+
+/// Gives each new gate token's view its model on an octagonal base, as pois
+/// have theirs, and the water in its opening.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn add_gate_models(
     mut commands: Commands,
+    mut store: ResMut<PoiMeshes>,
+    mut made: Local<GateMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut stone: Local<Option<Handle<StandardMaterial>>>,
+    mut images: ResMut<Assets<Image>>,
     views: Query<(Entity, &TokenView), Added<TokenView>>,
     shapes: Query<&GateShape>,
 ) {
     for (view, token_view) in &views {
-        let Ok(GateShape(place)) = shapes.get(token_view.owner) else {
+        let Ok(&GateShape(place)) = shapes.get(token_view.owner) else {
             continue;
         };
-        // Its light is in its colours.
-        let stone = stone
+        let (mesh, outline, water) = made
+            .models
+            .entry(place.number())
+            .or_insert_with(|| {
+                let model = gate_model(place);
+                let water = GateModel::water(place.design(), scale_of(place));
+                (
+                    meshes.add(model.mesh()),
+                    meshes.add(model.outline_mesh()),
+                    meshes.add(water),
+                )
+            })
+            .clone();
+        let water_material = made
+            .water
             .get_or_insert_with(|| {
                 materials.add(StandardMaterial {
+                    base_color_texture: Some(images.add(GateModel::water_picture())),
                     unlit: true,
+                    alpha_mode: AlphaMode::Blend,
+                    cull_mode: None,
+                    double_sided: true,
                     ..default()
                 })
             })
             .clone();
-        let design = place.map_or(GateDesign::RoundArch, GatePlace::design);
-        let mut parts = vec![GateModel::frame(design)];
-        if let Some(place) = place {
-            parts.push(GateModel::runes(design, place.code()));
-        }
-        let lift = Transform::from_xyz(0.0, MODEL_LIFT - TOKEN_HALF_THICKNESS, 0.0);
-        for part in parts {
-            let mesh = commands
-                .spawn((
-                    Mesh3d(meshes.add(part.mesh(GATE_SCALE))),
-                    MeshMaterial3d(stone.clone()),
-                    lift,
-                ))
-                .id();
-            commands.entity(view).add_child(mesh);
-        }
+        let pair = (&mut *meshes, &mut *materials);
+        store.attach(
+            &mut commands,
+            pair,
+            view,
+            token_view.owner,
+            (mesh, outline),
+            true,
+        );
+        let sheet = commands
+            .spawn((
+                Mesh3d(water),
+                MeshMaterial3d(water_material),
+                Transform::from_xyz(0.0, MODEL_LIFT - TOKEN_HALF_THICKNESS, 0.0),
+            ))
+            .id();
+        commands.entity(view).add_child(sheet);
     }
 }

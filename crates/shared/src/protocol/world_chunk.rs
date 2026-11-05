@@ -49,7 +49,8 @@ pub struct WorldInfo {
     /// Which world map generator the world was made with (`WORLD_MAP_VERSION`).
     pub world_map_version: u32,
     /// Its World Gates, in the order `WorldGates::find` gives (public: they
-    /// come from the terrain, and lead to the Hall).
+    /// come from the terrain, and lead to the Hall). Only the Hall's planets
+    /// have any: other worlds are reached by other means.
     pub gates: Vec<GateInfo>,
 }
 
@@ -60,7 +61,7 @@ pub struct GateInfo {
     pub entrance: u8,
     pub x: i64,
     pub y: i64,
-    /// The Hall gate it leads to (`hall::GatePlace::number`), if this world is
-    /// one of the Hall's planets; otherwise it leads nowhere.
-    pub place: Option<u32>,
+    /// The Hall gate it leads to (`hall::GatePlace::number`), which looks
+    /// just the same: its design and runes.
+    pub place: u32,
 }

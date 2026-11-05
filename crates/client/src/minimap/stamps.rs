@@ -1,4 +1,4 @@
-//! Pictures stamped on a map: shop signs and pois.
+//! Pictures stamped on a map: shop signs, pois and World Gates.
 
 use bevy::prelude::*;
 use std::collections::BTreeSet;
@@ -10,14 +10,14 @@ use super::sprites::Sprites;
 use super::{COMPLETED_OPACITY, ICON_PIXELS, SIGN_PIXELS};
 use crate::common::{CurrentWorld, Portal, Token};
 use crate::dungeon_map::{TOWN_ATLAS, door_picture};
-use crate::world_map::{poi_picture, poi_picture_name};
+use crate::world_map::{gate_picture, gate_picture_name, poi_picture, poi_picture_name};
 
 /// A picture to stamp on a map: its path, the part of it, its size in pixels,
 /// where it goes and how opaque it is.
 pub(super) type Stamp = (String, Part, u32, (f32, f32), f32);
 
-/// Gets ready what is stamped on a map: shop signs in a site, pois on the
-/// world map. Also says whether any picture is still loading.
+/// Gets ready what is stamped on a map: shop signs in a site, pois and World
+/// Gates on the world map. Also says whether any picture is still loading.
 pub(super) fn prepare_stamps(
     looks: Option<&Looks>,
     world: Option<&CurrentWorld>,
@@ -70,6 +70,26 @@ pub(super) fn prepare_stamps(
                 let name = poi_picture_name(poi.kind, poi.look);
                 sprites.make(&name, pixels, |size| poi_picture(poi.kind, poi.look, size));
                 stamps.push((name, None, pixels, at, opacity));
+            }
+            // The same size as pois': each picture is to the same scale, so a
+            // gate shows as big as a tall tower.
+            for gate in &world.gates {
+                // The near way round the planet.
+                let Some(x) = [-width, 0, width]
+                    .map(|shift| gate.x + shift)
+                    .into_iter()
+                    .find(|x| (area.0.0..=area.1.0).contains(x))
+                else {
+                    continue;
+                };
+                if !(area.0.1..=area.1.1).contains(&gate.y) {
+                    continue;
+                }
+                let at = projection.to_picture(x as f64, gate.y as f64);
+                let pixels = ((ICON_PIXELS * zoom) * dots).round().max(1.0) as u32;
+                let name = gate_picture_name(gate.place);
+                sprites.make(&name, pixels, |size| gate_picture(gate.place, size));
+                stamps.push((name, None, pixels, at, 1.0));
             }
         }
         (None, None) => {}

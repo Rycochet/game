@@ -326,3 +326,13 @@ fn a_hall_gate_to_the_world_they_came_from_leads_onto_its_map() {
     assert_eq!(client.character.hall, None);
     assert_eq!(client.world_position(), gate);
 }
+
+#[test]
+fn only_the_halls_planets_have_gates() {
+    let hall_planet = crate::ServerWorld::new(OTHER);
+    assert_eq!(hall_planet.gates().len(), shared::world_gate::WORLD_GATES);
+    // Past the Hall's highest planet: reached by other means.
+    let beyond = crate::ServerWorld::new(WorldSeed::new(1 << 40));
+    assert!(beyond.gates().is_empty());
+    assert!(beyond.info().gates.is_empty());
+}
