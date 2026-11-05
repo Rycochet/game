@@ -77,8 +77,7 @@ impl OpenPanels {
     }
 }
 
-/// The form a panel's widgets are in, for the debug API. Stairs, Fields and
-/// Herbs share one for now.
+/// The form a panel's widgets are in, for the debug API.
 pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
     match action {
         DebugAction::ShowWidgets => "debug.every_widget",
@@ -88,6 +87,9 @@ pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
         DebugAction::ItemPictures => "debug.item_pictures",
         DebugAction::WorldTime => "debug.world_time",
         DebugAction::GoToWorld => "debug.go_to_world",
+        DebugAction::StairsStyle => "debug.stairs",
+        DebugAction::FieldsState => "debug.fields",
+        DebugAction::HerbsState => "debug.herbs",
         _ => "debug.steps",
     }
 }

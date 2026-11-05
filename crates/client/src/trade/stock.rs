@@ -98,6 +98,9 @@ pub(super) fn read_server(
                 };
                 let at = AT + NEXT_AT * open.0.len() as f32;
                 let (panel, content) = spawn_moveable_panel(&mut commands, look.kind.name(), at);
+                commands
+                    .entity(panel)
+                    .insert(UiId::of("trade", *with, "panel"));
                 let mut holder = Entity::PLACEHOLDER;
                 commands.entity(content).with_children(|content| {
                     // The panel's title says whose it is, and stock weighs nothing to anyone.

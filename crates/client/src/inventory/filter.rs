@@ -35,8 +35,11 @@ pub(super) fn spawn_filter(parent: &mut ChildSpawnerCommands, of: Option<Holder>
         options: std::iter::once("All".to_owned()).chain(names).collect(),
         ..default()
     };
-    spawn_icon_dropdown(parent, dropdown, Node::default())
-        .insert((GridFilter(of), ButtonTooltip("Filter".into())));
+    spawn_icon_dropdown(parent, dropdown, Node::default()).insert((
+        GridFilter(of),
+        ButtonTooltip("Filter".into()),
+        super::ui_ids::grid_id(of, "filter"),
+    ));
 }
 
 /// The category a filter shows clearly, or `None` for all of them.

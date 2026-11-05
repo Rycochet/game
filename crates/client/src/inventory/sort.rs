@@ -32,6 +32,7 @@ pub(super) fn spawn_sort(parent: &mut ChildSpawnerCommands, holder: Holder) {
     spawn_small_icon_button(parent, ButtonState::Normal, default(), Node::default()).insert((
         SortButton(holder),
         Pressable,
+        super::ui_ids::grid_id(Some(holder), "sort"),
         ButtonTooltip("Sort".into()),
     ));
 }

@@ -48,9 +48,13 @@ pub(super) fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                 min_width: px(PAGES_WIDTH),
                 ..default()
             };
-            spawn_dropdown(choices, pages, FONT, node).insert(PicturePages);
+            spawn_dropdown(choices, pages, FONT, node)
+                .insert((PicturePages, UiId::new("debug.item_pictures", "page")));
             let row = spawn_toggle_row(choices, &qualities, common, FONT);
-            choices.commands().entity(row).insert(PictureQualities);
+            choices.commands().entity(row).insert((
+                PictureQualities,
+                UiId::new("debug.item_pictures", "quality"),
+            ));
         });
     content
         .spawn(Node {

@@ -7,6 +7,7 @@ use shared::surface::SurfaceGenerator;
 
 use super::layer::Layer;
 use super::showing::Choice;
+use crate::widgets::UiId;
 use crate::widgets::{
     BUTTON_PADDING, ButtonState, Dropdown, INK, PANEL_EDGE, Pressable, TextBox, TextSize,
     field_label, panel, spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
@@ -59,6 +60,7 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
         row.spawn(field_label("Generator"));
         let names = SurfaceGenerator::ALL.map(|kind| kind.name().to_string());
         let generator = dropdown(
+            UiId::new("planet", "generator"),
             row,
             names.to_vec(),
             choice.generator,
@@ -75,8 +77,12 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
             padding: UiRect::ZERO,
             ..control(Some(SEED_WIDTH))
         };
-        let seed = spawn_text_box(row, seed_box, FONT, node).id();
-        let random = spawn_new_seed_button(row, ROW_HEIGHT).id();
+        let seed = spawn_text_box(row, seed_box, FONT, node)
+            .insert(UiId::new("planet", "seed"))
+            .id();
+        let random = spawn_new_seed_button(row, ROW_HEIGHT)
+            .insert(UiId::new("planet", "new_seed"))
+            .id();
         #[cfg(not(target_arch = "wasm32"))]
         let copy = {
             let node = Node {
@@ -85,15 +91,16 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
                 ..default()
             };
             crate::widgets::spawn_copy_button(row, "Copy the seed", FONT, node)
-                .insert(Pressable)
+                .insert((Pressable, UiId::new("planet", "copy")))
                 .id()
         };
         let reset = spawn_button(row, ButtonState::Normal, "Reset", FONT, control(None))
-            .insert(Pressable)
+            .insert((Pressable, UiId::new("planet", "reset")))
             .id();
         row.spawn(field_label("Layer"));
         let names = Layer::ALL.map(|layer| layer.name().to_string());
-        let layer = dropdown(row, names.to_vec(), choice.layer, &Layer::ALL);
+        let id = UiId::new("planet", "layer");
+        let layer = dropdown(id, row, names.to_vec(), choice.layer, &Layer::ALL);
         let gate_words = row
             .spawn((Text::new(""), TextSize::Small.font(), TextColor(INK)))
             .id();
@@ -112,6 +119,7 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
 }
 
 fn dropdown<T: PartialEq>(
+    id: UiId,
     row: &mut ChildSpawnerCommands,
     options: Vec<String>,
     chosen: T,
@@ -127,5 +135,5 @@ fn dropdown<T: PartialEq>(
         padding: BUTTON_PADDING,
         ..default()
     };
-    spawn_dropdown(row, dropdown, FONT, node).id()
+    spawn_dropdown(row, dropdown, FONT, node).insert(id).id()
 }

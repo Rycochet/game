@@ -26,6 +26,7 @@ mod holding;
 mod server;
 mod sort;
 mod split;
+mod ui_ids;
 
 #[cfg(not(target_arch = "wasm32"))]
 use debug::run_debug;

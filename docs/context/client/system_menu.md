@@ -29,7 +29,7 @@ The system menu: Esc or the gear button top right (the way in on touch devices) 
 
 ## Notes
 
-- Ids (`widgets::UiId`): buttons by their `Action` (`Action::ui_id(form)` in `state.rs`: `menu/settings`, `quit/quit`, `connect/server.2`), big layers' close buttons `<form>/close` (`spawn_title_row`), Settings' tabs `settings/page`, Video's rows by `VideoControl` (`settings.video/frame_rate`), Server Options' boxes by `OptionBox`.
+- Ids (`widgets::UiId`): buttons by their `Action` (`Action::ui_id(form)` in `state.rs`: `menu/settings`, `quit/quit`, `connect/server.2`), big layers' close buttons `<form>/close` (`spawn_title_row`), Settings' tabs `settings/page`, Video's rows by `VideoControl` (`settings.video/frame_rate`), Server Options' boxes by `OptionBox`. The two Online requesters are `going_online` and `going_offline`.
 
 - Startup menu: while `Session::AtStart` the menu is always open, and Esc, outside presses and Continue do nothing; Play sets `Playing` and closes it. Logout (shown only while playing on a server that isn't built in: always on the web) sets `AtStart` and keeps the menu open, and `connection` hangs up. Credits are kept by hand beside `docs/credits.md` (the owner's name is only in the game's).
 - Owner's design: no close button or title on the menu; "Paused" above the first button, taking no room while not paused (`Display::None`), so the menu is shorter in multiplayer. Quit asks "Are you sure?" in a small requester, whose "No" closes only that. Settings is a layer 50% of the window wide and 75% high, with tabs (owner's choice).

@@ -1,6 +1,7 @@
 //! The Go to World panel: a seed (typed, or a random one) and a button that
 //! asks the server to move the player to that seed's world.
 
+use crate::widgets::UiId;
 use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 
@@ -36,8 +37,12 @@ pub(super) fn spawn_go_to_world(content: &mut ChildSpawnerCommands) {
             height: px(CHECK_ROW),
             ..default()
         };
-        spawn_text_box(row, text_box, FONT, node).insert(WorldSeedBox);
-        spawn_new_seed_button(row, CHECK_ROW).insert(RandomWorldButton);
+        spawn_text_box(row, text_box, FONT, node)
+            .insert((WorldSeedBox, UiId::new("debug.go_to_world", "seed")));
+        spawn_new_seed_button(row, CHECK_ROW).insert((
+            RandomWorldButton,
+            UiId::new("debug.go_to_world", "new_seed"),
+        ));
     });
     let node = Node {
         padding: BUTTON_PADDING,
@@ -45,7 +50,11 @@ pub(super) fn spawn_go_to_world(content: &mut ChildSpawnerCommands) {
     };
     spawn_button(content, ButtonState::Normal, "Go", FONT, node)
         .insert(ButtonStyle::Main)
-        .insert((GoToWorldButton, Pressable));
+        .insert((
+            GoToWorldButton,
+            Pressable,
+            UiId::new("debug.go_to_world", "go"),
+        ));
 }
 
 /// What the Go to World panel's buttons do.

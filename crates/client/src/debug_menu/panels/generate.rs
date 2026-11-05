@@ -1,5 +1,6 @@
 //! Opening the Generate POI panel, and what its buttons do.
 
+use crate::widgets::UiId;
 use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 use shared::site::{Generator, MAX_RUIN};
@@ -38,6 +39,9 @@ pub(in crate::debug_menu) fn open_generate_panel(
     let at = FIRST_AT + NEXT_AT * (open.opened % 8) as f32;
     open.opened += 1;
     let (panel, content) = spawn_moveable_panel(&mut commands, action.name(), at);
+    commands
+        .entity(panel)
+        .insert(UiId::new("debug.generate_poi", "panel"));
     open.panels.insert(action, panel);
     form.kind = Some(kind);
     form.ruin = 0;
@@ -52,8 +56,11 @@ pub(in crate::debug_menu) fn open_generate_panel(
                     padding: BUTTON_PADDING,
                     ..default()
                 };
-                spawn_button(row, ButtonState::Normal, ruin.to_string(), FONT, node)
-                    .insert((RuinButton(ruin), Pressable));
+                spawn_button(row, ButtonState::Normal, ruin.to_string(), FONT, node).insert((
+                    RuinButton(ruin),
+                    Pressable,
+                    UiId::new("debug.generate_poi", "ruin").at(usize::from(ruin)),
+                ));
             }
         });
         content.spawn(row()).with_children(|row| {
@@ -69,8 +76,10 @@ pub(in crate::debug_menu) fn open_generate_panel(
                 height: px(CHECK_ROW),
                 ..default()
             };
-            spawn_text_box(row, text_box, FONT, node).insert(SeedBox);
-            spawn_new_seed_button(row, CHECK_ROW).insert(NewSeedButton);
+            spawn_text_box(row, text_box, FONT, node)
+                .insert((SeedBox, UiId::new("debug.generate_poi", "seed")));
+            spawn_new_seed_button(row, CHECK_ROW)
+                .insert((NewSeedButton, UiId::new("debug.generate_poi", "new_seed")));
         });
         let node = Node {
             padding: BUTTON_PADDING,
@@ -78,7 +87,11 @@ pub(in crate::debug_menu) fn open_generate_panel(
         };
         spawn_button(content, ButtonState::Normal, "Generate", FONT, node)
             .insert(ButtonStyle::Main)
-            .insert((GenerateButton, Pressable));
+            .insert((
+                GenerateButton,
+                Pressable,
+                UiId::new("debug.generate_poi", "generate"),
+            ));
     });
 }
 

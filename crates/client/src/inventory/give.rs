@@ -42,6 +42,9 @@ impl NearbyPanel {
             return;
         }
         let (panel, content) = spawn_moveable_panel(commands, "Nearby", AT);
+        commands
+            .entity(panel)
+            .insert(crate::widgets::UiId::new("nearby", "panel"));
         commands.entity(content).with_child((
             NearbyRows,
             Node {
