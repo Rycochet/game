@@ -9,7 +9,7 @@ use shared::sheet::{Appearance, Reaction};
 use shared::wear::WornLook;
 use std::collections::BTreeMap;
 
-use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob, NOTICES_WITHIN};
+use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob};
 use crate::connections::{Client, Phase};
 use crate::storage::SiteId;
 
@@ -87,10 +87,11 @@ pub(super) fn notice(mob: &Mob, level: &Level, spots: &[Spot]) -> Option<Doing> 
     ) {
         return None;
     }
+    let sees_within = mob.kind.senses().sight_range();
     spots
         .iter()
         .filter(|spot| {
-            cells_apart(spot.position, mob.position) <= NOTICES_WITHIN
+            cells_apart(spot.position, mob.position) <= sees_within
                 && line_is_clear(level, mob.position, spot.position)
         })
         .find_map(|spot| {
