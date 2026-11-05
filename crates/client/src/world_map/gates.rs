@@ -2,8 +2,8 @@
 //! (`CurrentWorld::gates`): tokens with the Hall's gate models (`hall_view`):
 //! the frame, the runes of the Hall gate each leads to and the water in its
 //! opening, just as that Hall gate looks, on a town's octagonal base, standing
-//! about as tall as a tall tower. Clicking one travels there and goes through
-//! it (`site`).
+//! well above a tall tower, facing the camera and lit at its apex
+//! (`gate_view`). Clicking one travels there and goes through it (`site`).
 
 use std::collections::HashMap;
 
@@ -12,15 +12,19 @@ use shared::hall::GatePlace;
 use shared::protocol::GateInfo;
 use shared::world::WorldId;
 
+use super::gate_view::spawn_turn;
 use super::poi_model::PoiModel;
 use super::pois::{MODEL_LIFT, PoiMeshes};
 use crate::common::{Clickable, CurrentWorld, MapPosition, Portal, SmoothPosition, Token};
 use crate::hall_view::{GateModel, GateWater};
 use crate::view3d::{TOKEN_HALF_THICKNESS, TokenView};
 
-/// How tall a gate stands on the world map, in grid points: a five-floor
-/// tower's height, so it stands out as a tall tower does.
-const GATE_HEIGHT: f32 = 11.0;
+/// How tall a gate stands on the world map, in grid points: well above a
+/// five-floor tower (11), so it stands out from afar (owner).
+const GATE_HEIGHT: f32 = 18.0;
+
+#[cfg(test)]
+mod tests;
 
 /// The gate tokens there are, and the world they are of (`None`: none yet).
 #[derive(Resource, Default)]
@@ -125,7 +129,8 @@ pub(super) struct GateMeshes {
 }
 
 /// Gives each new gate token's view its model on an octagonal base, as pois
-/// have theirs, and the water in its opening.
+/// have theirs, the water in its opening and its light, all turning to face
+/// the camera (`gate_view`).
 pub(super) fn add_gate_models(
     mut commands: Commands,
     mut store: ResMut<PoiMeshes>,
@@ -152,11 +157,14 @@ pub(super) fn add_gate_models(
                 )
             })
             .clone();
+        // Everything turns to face the camera, the light at the top too.
+        let apex = MODEL_LIFT - TOKEN_HALF_THICKNESS + GATE_HEIGHT;
+        let turn = spawn_turn(&mut commands, view, apex);
         let pair = (&mut *meshes, &mut *materials);
         store.attach(
             &mut commands,
             pair,
-            view,
+            turn,
             token_view.owner,
             (mesh, outline),
             true,
@@ -169,6 +177,6 @@ pub(super) fn add_gate_models(
                 Transform::from_xyz(0.0, MODEL_LIFT - TOKEN_HALF_THICKNESS, 0.0),
             ))
             .id();
-        commands.entity(view).add_child(sheet);
+        commands.entity(turn).add_child(sheet);
     }
 }
