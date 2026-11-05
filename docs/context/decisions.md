@@ -813,6 +813,8 @@ Stance (owner, 2026-11-05): elbows slightly bent so the forearms hang nearer str
 
 Bodies have parts beyond a person's (`shared::body::Parts`: snout, ears, horns, tusks, tail, feet, wings), shapes as kinds and sizes as numbers, so a later morph can change the numbers. In pictures (owner, 2026-11-05) a body is drawn at its usual height beside a person for anything up to a person's height, a person of the usual height filling the picture as before. Claude's choice: the spine that tilts and limb slots wait for the first body that isn't upright on two legs.
 
+The first peoples are kinds (2026-11-05): halfling, dwarf, elf, orc, goblin, lizardfolk, minotaur and birdfolk join the kobold, all playable (each stands in one cell). Armour fits by body: feet on toes, hooves or talons take only Skin, so no boots or sabatons, and wing-arms take only Skin; kobolds no longer start with boots. Their stats are first guesses. Still to come: closed helmets against snouts and horns, skin colours from the research, the `Size` bands, and centaur and giant not playable.
+
 ## 2026-11-05: Give Item rolls from a seed the client chooses
 
 Owner: the Give Item panel reads like the item it makes, with a seed box, a picture of what will be given, a count with Different/Identical, and a Give button; in a site what doesn't fit goes on the ground, on the world map nothing is given unless all of it fits ("No space").

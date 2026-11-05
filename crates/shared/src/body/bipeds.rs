@@ -1,9 +1,10 @@
-//! The first set of two-legged bodies from the creature research
-//! (`docs/context/research-creatures.md`), as proportions beside a person's. They aren't
-//! kinds of creature yet: for now they are only drawn, for the owner to look over.
+//! The first peoples from the creature research (`docs/context/research-creatures.md`):
+//! each kind's body as proportions beside a person's, what it has beyond a person's,
+//! and how tall it usually stands.
 
 use super::Proportions;
 use super::parts::{Feet, Horns, NONE, Parts, Snout, Wings};
+use crate::creature::CreatureKind;
 
 /// A body that stands on two legs, by name.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -127,3 +128,19 @@ pub const FIRST_BIPEDS: [Biped; 9] = [
         },
     ),
 ];
+
+impl Biped {
+    /// The body of one of these kinds, by its name.
+    pub fn of(kind: CreatureKind) -> Option<Biped> {
+        FIRST_BIPEDS
+            .into_iter()
+            .find(|biped| biped.name == kind.def().name)
+    }
+}
+
+impl Parts {
+    /// What a kind's body has beyond a person's: nothing for a kind without a biped.
+    pub fn of(kind: CreatureKind) -> Parts {
+        Biped::of(kind).map_or(NONE, |biped| biped.parts)
+    }
+}

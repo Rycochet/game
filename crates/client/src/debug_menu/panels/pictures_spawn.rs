@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::blade::Family;
-use shared::body::{FIRST_BIPEDS, Frame, NONE, Parts};
+use shared::body::{Frame, Parts};
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 use shared::item_form::Cut;
@@ -135,25 +135,21 @@ pub(super) fn spawn_ring_row(grid: &mut ChildSpawnerCommands, row: u128) {
     });
 }
 
-/// Every kind that stands on two legs, bare, then the first set of bipeds to come.
+/// Every kind that stands on two legs, bare, at its usual height beside a person.
 pub(super) fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
-    let kinds: Vec<(Frame, Parts, i32)> = CreatureKind::ALL
-        .into_iter()
-        .filter_map(|kind| Some((Frame::of(kind)?, NONE, Frame::usual_height(kind))))
-        .collect();
-    let coming = FIRST_BIPEDS.map(|biped| (biped.proportions.frame(), biped.parts, biped.height));
-    for (label, bodies) in [("Bodies", &kinds[..]), ("To come", &coming[..])] {
-        grid.spawn(Node {
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|cells| {
-            cells.spawn(picture_label(label, PICTURE_ROW_LABEL));
-            for &(frame, parts, height) in bodies {
-                spawn_picture(cells, Shown::Body(frame, parts, height));
+    grid.spawn(Node {
+        align_items: AlignItems::Center,
+        ..default()
+    })
+    .with_children(|cells| {
+        cells.spawn(picture_label("Bodies", PICTURE_ROW_LABEL));
+        for kind in CreatureKind::ALL {
+            if let Some(frame) = Frame::of(kind) {
+                let height = Frame::usual_height(kind);
+                spawn_picture(cells, Shown::Body(frame, Parts::of(kind), height));
             }
-        });
-    }
+        }
+    });
 }
 
 pub(super) fn spawn_blade_row(grid: &mut ChildSpawnerCommands, family: Family) {

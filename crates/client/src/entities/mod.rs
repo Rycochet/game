@@ -52,13 +52,23 @@ impl Plugin for EntitiesPlugin {
 /// The picture for a kind of creature.
 fn picture(kind: CreatureKind) -> &'static str {
     match kind {
-        // (No centaur among the pictures yet.)
-        CreatureKind::Centaur | CreatureKind::Human => "monsters/humanfighter.png",
+        // (No centaur, dwarf, light elf, goblin, minotaur or birdfolk among the pictures
+        // yet.)
+        CreatureKind::Centaur
+        | CreatureKind::Human
+        | CreatureKind::Dwarf
+        | CreatureKind::Elf
+        | CreatureKind::Goblin
+        | CreatureKind::Minotaur
+        | CreatureKind::Birdfolk => "monsters/humanfighter.png",
         CreatureKind::Beggar => "monsters/humandruid01.png",
         CreatureKind::Chicken => "monsters/chicken1.png",
         CreatureKind::Giant => "monsters/gianthill.png",
         CreatureKind::Horse => "monsters/horse01.png",
         CreatureKind::Kobold => "monsters/koboldfighter.png",
+        CreatureKind::Halfling => "monsters/halflingfighter.png",
+        CreatureKind::Lizardfolk => "monsters/lizardgreen.png",
+        CreatureKind::Orc => "monsters/orcfighter.png",
     }
 }
 
@@ -76,7 +86,7 @@ fn attitude(feeling: Feeling) -> Attitude {
 fn picture_size(kind: CreatureKind) -> TokenSize {
     match kind {
         CreatureKind::Chicken => TokenSize::Small,
-        CreatureKind::Giant => TokenSize::Large,
+        CreatureKind::Giant | CreatureKind::Minotaur => TokenSize::Large,
         _ => TokenSize::Default,
     }
 }

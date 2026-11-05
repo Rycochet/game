@@ -40,6 +40,7 @@ Pictures of items: each look is drawn once in 3D, off screen, a page of them at 
 - `Look::Neck { neck: NeckLook, quality }`, `NeckLook::new(form, cells)`: a neck piece, as worn.
 - `Look::Set { set: SetLook, quality }`, `SetLook::new(form, digits, cells)`: an armour set, its pieces as worn together on one body, turned as a body is, fitted to its cells.
 - `Look::Head { head: HeadLook, quality }`, `HeadLook::new(form, cells)`: a head piece, as worn.
+- `Look::Character` draws the kind's body with its `Parts` (and white feathers for wing-arms) under what it wears.
 - `Look::Body { frame, parts, height }`: a bare body on a frame (a kind's, or one worked out from proportions) with its parts. A person of the usual height (1750 mm) fills the picture as before; anything shorter is drawn that much smaller on the same ground (owner, 2026-11-05); taller is drawn at a person's size, and anything still too wide or tall for the picture is fitted to it.
 - `Look::Character { kind, worn }`: a body wearing these (pieces' own looks, innermost first), square, for tokens. `character_look(kind, worn: &[WornLook])`: it, if the kind has a frame and anything worn is drawn.
 - `Look`, `RingLook`, `BladeLook`: everything a picture shows, and so what pictures are kept by. Ids stay out of it, so things that look the same share a picture. `look_of(item)`: an item's, if it has a form. `Look::cells`, `longest`, `picture_size(pixels)`: its proportions.

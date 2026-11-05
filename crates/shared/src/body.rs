@@ -161,42 +161,14 @@ const GIANT: Frame = Frame {
     ..HUMAN
 };
 
-/// A big head on short legs, leaning slightly forwards in life but not here.
-const KOBOLD: Frame = Frame {
-    chin: 1420,
-    neck_base: 1340,
-    shoulder: 1295,
-    chest: 1170,
-    waist: 1010,
-    hip: 860,
-    knee: 470,
-    head: (110, 150),
-    neck: 50,
-    shoulder_half: 170,
-    chest_half: (140, 100),
-    waist_half: (120, 90),
-    hips_half: (145, 100),
-    hip_apart: 80,
-    upper_arm: 40,
-    elbow_length: 270,
-    forearm: 34,
-    wrist_length: 230,
-    hand_length: 170,
-    thigh: 68,
-    knee_radius: 48,
-    calf: 46,
-    foot_length: 290,
-    ..HUMAN
-};
-
 impl Frame {
-    /// The shape of a kind that stands on two legs.
+    /// The shape of a kind that stands on two legs: the first peoples' from their
+    /// proportions.
     pub fn of(kind: CreatureKind) -> Option<Frame> {
         match kind {
             CreatureKind::Human | CreatureKind::Beggar => Some(PERSON.frame()),
             CreatureKind::Giant => Some(GIANT),
-            CreatureKind::Kobold => Some(KOBOLD),
-            CreatureKind::Centaur | CreatureKind::Chicken | CreatureKind::Horse => None,
+            _ => Biped::of(kind).map(|biped| biped.proportions.frame()),
         }
     }
 
@@ -204,9 +176,8 @@ impl Frame {
     /// person's height, so this is only for showing how big it is.
     pub fn usual_height(kind: CreatureKind) -> i32 {
         match kind {
-            CreatureKind::Kobold => 950,
             CreatureKind::Giant => 5000,
-            _ => HUMAN.height,
+            _ => Biped::of(kind).map_or(HUMAN.height, |biped| biped.height),
         }
     }
 

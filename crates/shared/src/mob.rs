@@ -118,7 +118,8 @@ fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
         ],
         CreatureKind::Kobold => &[
             (50, &[(TShirt, 1), (Trousers, 1)]),
-            (30, &[(Gloves, 1), (Boots, 1), (Hat, 1)]),
+            // On their toes, so no boots.
+            (30, &[(Gloves, 1), (Hat, 1)]),
             (
                 70,
                 &[(Knife, 1), (Dagger, 2), (ShortSword, 1), (Boomerang, 2)],

@@ -96,7 +96,15 @@ pub(super) fn character_parts(
         perceptual_roughness: 0.8,
         ..default()
     };
-    let mut pieces: set::Coloured = vec![(body::build(&frame, &shared::body::NONE), skin)];
+    let parts = shared::body::Parts::of(kind);
+    let feathers = StandardMaterial {
+        base_color: Color::srgb(0.95, 0.95, 0.93),
+        ..skin.clone()
+    };
+    let mut pieces: set::Coloured = vec![
+        (body::build(&frame, &parts), skin),
+        (body::wings(&frame, &parts), feathers),
+    ];
     // An aventail hangs from the helmet worn with it.
     let rim = worn.iter().find_map(|look| match look {
         Look::Head { head, .. } => Some(head.form.rim(&frame)),

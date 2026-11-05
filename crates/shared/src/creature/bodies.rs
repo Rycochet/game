@@ -1,5 +1,6 @@
 //! The body parts of each kind of creature.
 
+use super::peoples::{BIRDFOLK, DWARF, ELF, GOBLIN, HALFLING, LIZARDFOLK, MINOTAUR, ON_TOES, ORC};
 use super::{BodyPart, CreatureDef, CreatureKind, Layer, Location, Size};
 use crate::sheet::{Ability, Skill, Stats, Trait};
 
@@ -54,7 +55,6 @@ pub(super) const fn biped(finger_count: u8) -> [BodyPart; 11] {
 }
 
 pub(super) const TEN_FINGERS: [BodyPart; 11] = biped(10);
-pub(super) const EIGHT_FINGERS: [BodyPart; 11] = biped(8);
 
 pub(super) const CHICKEN: [BodyPart; 6] = [
     part(Location::Head, SKIN),
@@ -102,6 +102,14 @@ impl CreatureKind {
             }
         }
         match self {
+            Self::Birdfolk => BIRDFOLK,
+            Self::Dwarf => DWARF,
+            Self::Elf => ELF,
+            Self::Goblin => GOBLIN,
+            Self::Halfling => HALFLING,
+            Self::Lizardfolk => LIZARDFOLK,
+            Self::Minotaur => MINOTAUR,
+            Self::Orc => ORC,
             Self::Beggar => CreatureDef {
                 name: "Beggar",
                 weight: 55_000,
@@ -191,7 +199,7 @@ impl CreatureKind {
                 weight: 25_000,
                 size: Size::Small,
                 inventory: (4, 3),
-                body: &EIGHT_FINGERS,
+                body: &ON_TOES,
                 speed: 100,
                 uses_stairs: true,
                 playable: true,
