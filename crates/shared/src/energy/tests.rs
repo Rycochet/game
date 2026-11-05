@@ -74,9 +74,10 @@ fn dearer_actions_wait_longer_and_faster_creatures_act_more_often() {
 }
 
 #[test]
-fn fractions_of_a_tick_carry_over_so_walking_keeps_its_pace() {
-    // Costing 1⅔ ticks each, 12 steps take a second's 20 ticks.
-    let cost = site_step_cost((0, 0), (1, 0));
+fn fractions_of_a_tick_carry_over_so_actions_keep_their_pace() {
+    // Costing 1⅔ ticks each (a straight step's distance at `SITE_SCALE`), 12 take
+    // a second's 20 ticks.
+    let cost = crate::movement::STRAIGHT_COST * SITE_SCALE;
     let mut energy = Energy::default();
     let mut tick = 0;
     for _ in 0..12 {
@@ -87,10 +88,11 @@ fn fractions_of_a_tick_carry_over_so_walking_keeps_its_pace() {
 }
 
 #[test]
-fn plain_walking_matches_the_old_speeds() {
+fn plain_walking_keeps_its_pace() {
     let per_second = NORMAL_SPEED as f64 * ACTION_TICKS_PER_SECOND;
     let site = per_second / site_step_cost((0, 0), (1, 0)) as f64;
-    assert_eq!(site, 12.0);
+    assert_eq!(site, 4.0);
+    assert_eq!(site, SITE_CELLS_PER_SECOND);
     assert_eq!(per_second / step_cost((0, 0), (1, 0)) as f64, 60.0);
 }
 

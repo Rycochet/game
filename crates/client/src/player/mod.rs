@@ -29,7 +29,7 @@ const LIGHT_RADIUS: u32 = 6;
 /// second: world map points, or dungeon cells (which are much bigger on screen).
 /// What `shared::energy`'s costs come to, so the server has time for every step.
 const TRAVEL_SPEED: f64 = 60.0;
-const DUNGEON_TRAVEL_SPEED: f64 = 12.0;
+const DUNGEON_TRAVEL_SPEED: f64 = shared::energy::SITE_CELLS_PER_SECOND;
 
 /// How many asked-for steps can wait for energy here.
 const MOST_STEPS_WAITING: usize = 8;

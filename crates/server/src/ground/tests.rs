@@ -1,4 +1,4 @@
-use shared::energy::site_step_cost;
+use shared::energy::{ACTION_TICKS_PER_SECOND, NORMAL_SPEED};
 use shared::item::{Favour, Inventory, ItemKind, Quality};
 use shared::protocol::{ClientMessage, ServerMessage};
 
@@ -261,8 +261,10 @@ fn a_bag_seen_to_fill_up_looks_it() {
 }
 
 #[test]
-fn ten_kilos_takes_about_a_step_to_pick_up() {
-    assert_eq!(handling_cost(10_000), site_step_cost((0, 0), (1, 0)));
+fn ten_kilos_takes_a_twelfth_of_a_second_to_pick_up() {
+    // A twelfth of a second's energy at the usual speed.
+    let per_second = NORMAL_SPEED * ACTION_TICKS_PER_SECOND as u32;
+    assert_eq!(handling_cost(10_000), per_second / 12);
     assert_eq!(handling_cost(1), 1, "nothing is free");
     assert_eq!(handling_cost(0), 0);
 }

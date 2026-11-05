@@ -23,7 +23,7 @@ use crate::view3d::{ClickedToken, View3dSystems};
 /// How fast others are shown moving, in grid units a second: the same as an
 /// ordinary player, so they keep up with what the server says.
 const WORLD_MAP_SPEED: f64 = 60.0;
-const SITE_SPEED: f64 = 12.0;
+const SITE_SPEED: f64 = shared::energy::SITE_CELLS_PER_SECOND;
 /// Further behind than this, in grid units, they go straight there.
 const TOO_FAR_BEHIND: f64 = 8.0;
 
