@@ -15,7 +15,8 @@ use super::{
     Shown, gem_to_show,
 };
 use crate::widgets::{
-    BUTTON_PADDING, Dropdown, INK, Pressable, spawn_dropdown, spawn_scroll_area, spawn_toggle_row,
+    BUTTON_PADDING, Dropdown, INK, Pressable, ScrollKey, spawn_dropdown, spawn_scroll_area,
+    spawn_toggle_row,
 };
 
 /// The page of pictures last chosen, filled in by `fill_pictures`, and whichever
@@ -62,6 +63,8 @@ pub(super) fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                 })
                 .with_children(|column| {
                     let area = spawn_scroll_area(column, PICTURES_HEIGHT);
+                    let key = ScrollKey::new("debug.item_pictures");
+                    column.commands().entity(area).insert(key);
                     column.commands().entity(area).with_children(|area| {
                         area.spawn((
                             PicturesGrid::default(),

@@ -22,8 +22,8 @@ use crate::common::{
     DisplayChoice, DisplayInUse, DisplayMode, Preferences, Resolution, resolutions,
 };
 use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonStyle, Dropdown, DropdownChosen, INK, Pressable, TextSize,
-    spawn_button,
+    ButtonPressed, ButtonState, ButtonStyle, Dropdown, DropdownChosen, INK, Pressable, ScrollKey,
+    TextSize, spawn_button,
 };
 
 const DROPDOWN_WIDTH: f32 = 300.0;
@@ -120,7 +120,7 @@ pub(in crate::system_menu) fn fill_video_page(
     let video = preferences.video;
     commands.entity(page).with_children(|page| {
         options::spawn_preset_row(page, &video);
-        spawn_sections(page, |sections| {
+        spawn_sections(page, ScrollKey::new("settings.video"), |sections| {
             spawn_section(sections, "Window", |section| {
                 spawn_window_rows(section, in_use.0, entries, labels);
             });

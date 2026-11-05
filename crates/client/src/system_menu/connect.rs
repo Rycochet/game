@@ -10,8 +10,8 @@ use super::icons::ConnectIcons;
 use super::spawn::{spawn_layer, spawn_title_row};
 use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
 use crate::widgets::{
-    ButtonState, ButtonStyle, ButtonTooltip, INK, Pressable, TextBox, TextSize, spawn_button,
-    spawn_icon_button, spawn_scroll_area, spawn_text_box,
+    ButtonState, ButtonStyle, ButtonTooltip, INK, Pressable, ScrollKey, TextBox, TextSize,
+    spawn_button, spawn_icon_button, spawn_scroll_area, spawn_text_box,
 };
 
 // Split into files (`cargo xtask lint` keeps files small).
@@ -119,7 +119,8 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
                 ));
             });
         let list = spawn_scroll_area(panel, Val::Vh(LIST_SHARE));
-        panel.commands().entity(list).insert(ServerList);
+        let key = ScrollKey::new("connect.servers");
+        panel.commands().entity(list).insert((ServerList, key));
         panel
             .spawn(Node {
                 justify_content: JustifyContent::End,

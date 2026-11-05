@@ -5,28 +5,35 @@
 use bevy::prelude::*;
 
 use super::{FONT, LABEL_GAP, ROW_GAP, ROW_HEIGHT};
-use crate::widgets::{Dropdown, HoverTip, INK, spawn_dropdown, spawn_filling_scroll_area};
+use crate::widgets::{
+    Dropdown, HoverTip, INK, ScrollKey, spawn_dropdown, spawn_filling_scroll_area,
+};
 
 const LABEL_WIDTH: f32 = 180.0;
 const SECTION_GAP: f32 = 40.0;
 const HEADING_LINE: f32 = 2.0;
 
 /// Sections one under another, each the page's whole width (owner's choice),
-/// scrolling in what is left of the page when they don't all fit.
+/// scrolling in what is left of the page when they don't all fit, and keeping
+/// their place (`key`) when the page is built again.
 pub(super) fn spawn_sections(
     page: &mut ChildSpawnerCommands,
+    key: ScrollKey,
     fill: impl FnOnce(&mut ChildSpawnerCommands),
 ) {
     let area = spawn_filling_scroll_area(page);
-    page.commands().entity(area).with_children(|area| {
-        area.spawn(Node {
-            flex_direction: FlexDirection::Column,
-            flex_shrink: 0.0,
-            row_gap: px(SECTION_GAP),
-            ..default()
-        })
-        .with_children(fill);
-    });
+    page.commands()
+        .entity(area)
+        .insert(key)
+        .with_children(|area| {
+            area.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                flex_shrink: 0.0,
+                row_gap: px(SECTION_GAP),
+                ..default()
+            })
+            .with_children(fill);
+        });
 }
 
 /// A column of rows under a heading.

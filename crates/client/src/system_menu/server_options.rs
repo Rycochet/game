@@ -11,7 +11,7 @@ use super::spawn::{spawn_layer, spawn_title_row};
 use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
 use crate::common::{Hosting, Preferences};
 use crate::widgets::{
-    ButtonPressed, INK, Pressable, TextBox, TextSize, copy_to_clipboard, field_label,
+    ButtonPressed, INK, Pressable, ScrollKey, TextBox, TextSize, copy_to_clipboard, field_label,
     spawn_copy_button, spawn_scroll_area, spawn_text_box,
 };
 
@@ -105,6 +105,8 @@ pub(super) fn spawn_server_options(commands: &mut Commands) {
                     .insert((Action::CopyCertificate, Pressable));
             });
         let area = spawn_scroll_area(panel, Val::Vh(CERTIFICATE_SHARE));
+        let key = ScrollKey::new("server_options.certificate");
+        panel.commands().entity(area).insert(key);
         panel.commands().entity(area).with_child((
             CertificateText,
             Text::new(NO_CERTIFICATE),

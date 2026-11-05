@@ -5,6 +5,13 @@ use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
 use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 
+mod keep;
+
+pub use keep::ScrollKey;
+pub(super) use keep::{ScrollMemory, bring_back_places, keep_places};
+
+use keep::ScrollShare;
+
 use super::AutoScroll;
 use super::moveable::PanelPart;
 use super::{GRID_LINE, INK};
@@ -15,8 +22,10 @@ const BAR_GAP: f32 = 4.0;
 /// How far one notch of the wheel goes.
 const PIXELS_PER_NOTCH: f32 = 48.0;
 
-/// What scrolls: its contents go in this.
+/// What scrolls: its contents go in this. It keeps its place as a share of how far
+/// it can go (`keep`).
 #[derive(Component)]
+#[require(ScrollShare)]
 pub(super) struct ScrollArea;
 
 /// The bar beside an area.
@@ -226,11 +235,11 @@ pub(super) fn scroll_areas(
     }
 }
 
-/// Bars only show when there is something to scroll, and an area with less in it
-/// than before comes back.
+/// Bars only show when there is something to scroll. (An area with less in it than
+/// before comes back in `keep_places`.)
 #[allow(clippy::type_complexity)]
 pub(super) fn show_scroll_bars(
-    mut areas: Query<(&ComputedNode, &mut ScrollPosition), With<ScrollArea>>,
+    areas: Query<(&ComputedNode, &ScrollPosition), With<ScrollArea>>,
     mut bars: Query<(&ScrollBar, &mut Node), Without<ScrollThumb>>,
     mut thumbs: Query<(&ScrollThumb, &mut Node), Without<ScrollBar>>,
 ) {
@@ -248,16 +257,13 @@ pub(super) fn show_scroll_bars(
         }
     }
     for (thumb, mut node) in &mut thumbs {
-        let Ok((area, mut position)) = areas.get_mut(thumb.0) else {
+        let Ok((area, position)) = areas.get(thumb.0) else {
             continue;
         };
-        let most = furthest(area);
-        if position.y > most {
-            position.y = most;
-        }
+        let at = position.y.min(furthest(area));
         let whole = area.content_size.y.max(1.0);
         let (top, height) = (
-            percent(position.y / area.inverse_scale_factor / whole * 100.0),
+            percent(at / area.inverse_scale_factor / whole * 100.0),
             percent(area.size.y / whole * 100.0),
         );
         if node.top != top || node.height != height {
