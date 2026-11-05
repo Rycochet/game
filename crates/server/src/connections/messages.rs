@@ -11,7 +11,7 @@ use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
 use crate::ground::{self};
 use crate::sites::{self, Visit};
-use crate::{ServerOptions, ServerWorld, ServerWorlds, hall, world_map};
+use crate::{ServerOptions, ServerWorld, ServerWorlds, gates, hall, world_map};
 
 /// Answers every message that has arrived, and forgets clients that have
 /// gone (or were refused), saving them first.
@@ -47,7 +47,7 @@ pub(crate) fn handle_messages(
         };
         let stay = stay
             && match client.going_to.take() {
-                Some(seed) => change_world(client, &mut worlds, seed, &options),
+                Some(going) => change_world(client, &mut worlds, going, &options),
                 None => true,
             };
         if !stay {
@@ -79,6 +79,7 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
                 step_taken(client, world, step)
             }
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
+            Action::EnterGate { entrance } => (gates::enter_gate(client, world, entrance), 0),
             Action::UseExit => (sites::use_exit(client, world), 0),
             Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
             Action::Ground(action) => ground::act(client, world, action),

@@ -42,7 +42,7 @@ pub(super) struct PoiShape {
 /// show through it, and how far its model stands, so the base doesn't show
 /// through what lies flat in the model (a farm's fields).
 const BASE_LIFT: f32 = 0.2;
-const MODEL_LIFT: f32 = BASE_LIFT * 2.0;
+pub(super) const MODEL_LIFT: f32 = BASE_LIFT * 2.0;
 
 /// A model and its outline.
 type ModelMeshes = (Handle<Mesh>, Handle<Mesh>);

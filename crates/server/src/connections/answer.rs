@@ -144,6 +144,10 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::EnterSite { chunk });
             true
         }
+        ClientMessage::EnterGate { entrance } => {
+            client.waiting.push_back(Action::EnterGate { entrance });
+            true
+        }
         ClientMessage::UseExit => {
             client.waiting.push_back(Action::UseExit);
             true

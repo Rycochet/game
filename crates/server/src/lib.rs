@@ -15,6 +15,7 @@ pub mod debug_api;
 mod embedded;
 mod entities;
 mod environment;
+mod gates;
 mod ground;
 mod hall;
 mod ids;

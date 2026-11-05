@@ -48,4 +48,19 @@ pub struct WorldInfo {
     pub terrain_seed: Seed,
     /// Which world map generator the world was made with (`WORLD_MAP_VERSION`).
     pub world_map_version: u32,
+    /// Its World Gates, in the order `WorldGates::find` gives (public: they
+    /// come from the terrain, and lead to the Hall).
+    pub gates: Vec<GateInfo>,
+}
+
+/// One of a world's World Gates, on its world map.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GateInfo {
+    /// Which of the world's gates (`hall::GateAddress::entrance`).
+    pub entrance: u8,
+    pub x: i64,
+    pub y: i64,
+    /// The Hall gate it leads to (`hall::GatePlace::number`), if this world is
+    /// one of the Hall's planets; otherwise it leads nowhere.
+    pub place: Option<u32>,
 }

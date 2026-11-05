@@ -1,6 +1,7 @@
 use super::level::{LevelChunk, LevelInfo, RememberedLevel, SeenStairs};
 use super::link::{LinkError, local_pair, wired};
 use super::login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
+use super::world_chunk::GateInfo;
 use super::*;
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
@@ -142,6 +143,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::DevTeleport { x: -3, y: 4 },
         ClientMessage::DevSnowLine(40),
         ClientMessage::DevGoToWorld { seed: 77 },
+        ClientMessage::EnterGate { entrance: 5 },
         ClientMessage::DevSetWorldClock {
             minutes: Some(90.5),
             rate: ClockRate::new(3, 2),
@@ -182,6 +184,12 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 id: crate::world::WorldSeed::new(7).id(),
                 terrain_seed: Seed::new(8),
                 world_map_version: 1,
+                gates: vec![GateInfo {
+                    entrance: 3,
+                    x: 40,
+                    y: -12,
+                    place: Some(1_234_567),
+                }],
             },
             time: WorldTime::at(5.25, 2.0, ClockRate::NORMAL),
             server_clock: 2.0,

@@ -55,8 +55,8 @@ pub(crate) fn to_showcase(client: &mut Client, world: &mut ServerWorld) -> bool 
     !showcase::ENABLED || go_to(client, world, showcase::ARRIVAL)
 }
 
-/// Puts the player somewhere on the world map, out of any site.
-fn go_to(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)) -> bool {
+/// Puts the player somewhere on the world map, out of any site or the Hall.
+pub(crate) fn go_to(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)) -> bool {
     sites::leave(client, world);
     client.visit = None;
     client.character.hall = None;

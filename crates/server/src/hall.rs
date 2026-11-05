@@ -34,6 +34,10 @@ pub(crate) fn stepped(client: &mut Client, step: Step) -> bool {
         Some(to) => {
             client.character.hall = Some(to);
             client.unsaved = true;
+            // Onto a gate's floor: through it, to its planet.
+            if let Some((seed, entrance)) = crate::gates::hall_gate_leads(to) {
+                client.go_to_world(seed, crate::connections::Arrival::Gate(entrance));
+            }
         }
         None => info!("Refused a step in the Hall from {from:?}"),
     }

@@ -5,7 +5,7 @@ use shared::celestial::Celestial;
 use shared::climate::Climate;
 use shared::movement::{WorldConditions, WorldGround};
 use shared::poi::{CHUNK_SIZE, ChunkPos};
-use shared::protocol::{SeenPoi, WorldInfo};
+use shared::protocol::{GateInfo, SeenPoi, WorldInfo};
 use shared::river::Rivers;
 use shared::surface::Surface;
 use shared::vegetation::Vegetation;
@@ -28,6 +28,8 @@ pub struct WorldChanged;
 pub struct CurrentWorld {
     /// Which world it is.
     pub id: WorldId,
+    /// Its World Gates, as the server told them.
+    pub gates: Vec<GateInfo>,
     pub params: WorldParams,
     pub surface: Surface,
     pub climate: Climate,
@@ -52,6 +54,7 @@ impl CurrentWorld {
         let surface = Surface::new(&params);
         Self {
             id: info.id,
+            gates: info.gates.clone(),
             climate: Climate::new(&params),
             rivers: Rivers::new(&params),
             vegetation: Vegetation::new(&params),

@@ -193,6 +193,10 @@ pub enum ClientMessage {
         minutes: Option<f64>,
         rate: Option<ClockRate>,
     },
+    /// Go through the World Gate `entrance` of this world (the player must be
+    /// within `ENTER_REACH` of it, on the world map): into the Hall of Worlds,
+    /// before the gate it leads to (`EnterHall`). Waits behind the steps there.
+    EnterGate { entrance: u8 },
     /// Developer tools: to the world of this seed (any number is a planet),
     /// where the player was on its world map, or at one of its World Gates if
     /// new there; answered with a fresh `Welcome` and `OnWorldMap`.

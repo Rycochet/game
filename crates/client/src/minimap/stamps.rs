@@ -51,7 +51,8 @@ pub(super) fn prepare_stamps(
             let completed: BTreeSet<_> = pois
                 .iter()
                 .filter(|(_, token)| token.completed)
-                .map(|(Portal::Poi(poi), _)| (poi.x.rem_euclid(width), poi.y))
+                .filter_map(|(portal, _)| portal.poi())
+                .map(|poi| (poi.x.rem_euclid(width), poi.y))
                 .collect();
             let ((min_x, min_y), (max_x, max_y)) = grid_box;
             let area = (
