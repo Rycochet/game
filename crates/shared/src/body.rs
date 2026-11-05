@@ -9,9 +9,11 @@
 use crate::creature::CreatureKind;
 
 mod bipeds;
+mod parts;
 mod proportions;
 
 pub use bipeds::{Biped, FIRST_BIPEDS};
+pub use parts::{Feet, Horns, NONE, Parts, Snout, Wings};
 pub use proportions::{PERSON, Proportions};
 
 /// Which side of the body, as its owner sees it: left is towards the picture's right.
@@ -195,6 +197,16 @@ impl Frame {
             CreatureKind::Giant => Some(GIANT),
             CreatureKind::Kobold => Some(KOBOLD),
             CreatureKind::Centaur | CreatureKind::Chicken | CreatureKind::Horse => None,
+        }
+    }
+
+    /// How tall a kind on two legs usually stands, in millimetres. Its frame is always a
+    /// person's height, so this is only for showing how big it is.
+    pub fn usual_height(kind: CreatureKind) -> i32 {
+        match kind {
+            CreatureKind::Kobold => 950,
+            CreatureKind::Giant => 5000,
+            _ => HUMAN.height,
         }
     }
 

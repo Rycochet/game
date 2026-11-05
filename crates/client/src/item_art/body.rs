@@ -7,9 +7,15 @@ use std::f32::consts::{PI, TAU};
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
-use shared::body::{Frame, Joint, Side};
+use shared::body::{Frame, Joint, Parts, Side};
 
 use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
+
+mod features;
+mod fit;
+mod legs;
+
+use fit::fitted;
 
 /// What a body's picture takes up, wide and long: only the proportions matter.
 pub(super) const CELLS: (u8, u8) = (1, 2);
@@ -156,8 +162,9 @@ pub(super) fn trunk_depth(frame: &Frame, x: f32, y: f32) -> f32 {
     deep * (1.0 - (x / across).powi(2)).max(0.0).sqrt()
 }
 
-/// The body, in millimetres, standing as its frame says.
-pub(super) fn build(frame: &Frame) -> Vec<Triangle> {
+/// The body, in millimetres, standing as its frame says, with whatever it has beyond a
+/// person's.
+pub(super) fn build(frame: &Frame, parts: &Parts) -> Vec<Triangle> {
     let f = |value: i32| value as f32;
     let mut triangles = Vec::new();
     // The trunk, from the crotch up to where the arms join.
@@ -202,54 +209,10 @@ pub(super) fn build(frame: &Frame) -> Vec<Triangle> {
             joint(Joint::Shoulder(side)),
             Vec3::splat(upper * 1.15),
         );
-        limb(
-            &mut triangles,
-            &[
-                (joint(Joint::Hip(side)), f(frame.thigh)),
-                (joint(Joint::Knee(side)), f(frame.knee_radius)),
-                (
-                    joint(Joint::Knee(side)).lerp(joint(Joint::Ankle(side)), 0.3),
-                    f(frame.calf),
-                ),
-                (joint(Joint::Ankle(side)), f(frame.ankle_radius)),
-            ],
-        );
-        let (toes, heel) = (joint(Joint::Toes(side)), joint(Joint::Heel(side)));
-        let ankle = f(frame.ankle);
-        blob(
-            &mut triangles,
-            Vec3::new(toes.x, ankle / 2.0, (toes.z + heel.z) / 2.0),
-            Vec3::new(
-                f(frame.ankle_radius) * 1.3,
-                ankle / 2.0,
-                (toes.z - heel.z) / 2.0,
-            ),
-        );
+        legs::build(&mut triangles, frame, parts.feet, side);
     }
+    features::build(&mut triangles, frame, parts);
     triangles
-}
-
-/// The body turned and tipped as it is seen, then placed to fill its picture with room
-/// for its black edge.
-fn fitted(frame: &Frame) -> Vec<Triangle> {
-    let triangles = build(frame);
-    let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(TURN);
-    let (mut low, mut high) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-    for corner in triangles.iter().flatten() {
-        let corner = view * *corner;
-        low = low.min(corner);
-        high = high.max(corner);
-    }
-    let (wide, long) = (CELLS.0 as f32, CELLS.1 as f32);
-    let world_per_pixel = VIEW_WIDTH / (wide.max(long) * PIXELS_PER_CELL);
-    let room = |cells: f32| (cells * PIXELS_PER_CELL - 2.0 * MARGIN_PIXELS) * world_per_pixel;
-    let size = high - low;
-    let scale = (room(long) / size.y).min(room(wide) / size.x);
-    let middle = (low + high) / 2.0;
-    triangles
-        .into_iter()
-        .map(|triangle| triangle.map(|corner| (view * corner - middle) * scale))
-        .collect()
 }
 
 /// A flat-faced mesh of these triangles, as weapons' are.
@@ -271,24 +234,36 @@ pub(super) fn mesh_of(triangles: &[Triangle]) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
 }
 
-/// A bare body standing on this frame.
+/// A bare body standing on this frame, with these parts, as tall as `height` beside a
+/// person.
 pub(super) fn body_parts(
     frame: &Frame,
+    parts: &Parts,
+    height: i32,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
-    vec![Part {
-        mesh: meshes.add(mesh_of(&fitted(frame))),
-        // Plain, as a tailor's dummy: skin comes with looks.
+    let (skin, feathers) = fitted(frame, parts, height);
+    // Plain, as a tailor's dummy: skin comes with looks. Feathers white, so wings show
+    // apart from the arms.
+    [
+        (skin, Color::srgb(0.78, 0.72, 0.64)),
+        (feathers, Color::srgb(0.95, 0.95, 0.93)),
+    ]
+    .into_iter()
+    .filter(|(triangles, _)| !triangles.is_empty())
+    .map(|(triangles, colour)| Part {
+        mesh: meshes.add(mesh_of(&triangles)),
         material: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.78, 0.72, 0.64),
+            base_color: colour,
             perceptual_roughness: 0.8,
             ..default()
         }),
         transform: Transform::from_rotation(camera.rotation),
-    }]
+    })
+    .collect()
 }
 
 #[cfg(test)]

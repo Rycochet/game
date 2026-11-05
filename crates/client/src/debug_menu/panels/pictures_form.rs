@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::blade::Family;
-use shared::body::Frame;
+use shared::body::{Frame, Parts};
 use shared::creature::Size;
 use shared::id::Id;
 use shared::item::{Item, ItemKind, Quality};
@@ -72,7 +72,8 @@ pub(super) enum Shown {
     /// A weapon of this family, likewise.
     Blade(Family, u128),
     /// A bare body to dress.
-    Body(Frame),
+    /// A body on a frame, with its parts and usual height in millimetres.
+    Body(Frame, Parts, i32),
     /// A piece of armour.
     Armour(super::armour::ArmourShown),
     /// A pair of footwear.
@@ -102,7 +103,11 @@ impl Shown {
                 give_form(&mut blade, Some(Size::Medium), &mut || Id::for_test(0));
                 look_of(&blade)
             }
-            Self::Body(frame) => Some(Look::Body { frame }),
+            Self::Body(frame, parts, height) => Some(Look::Body {
+                frame,
+                parts,
+                height,
+            }),
             Self::Armour(shown) => shown.look(quality),
             Self::Footwear(shown) => shown.look(quality),
         }
