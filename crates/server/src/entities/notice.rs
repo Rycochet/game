@@ -3,6 +3,7 @@
 use shared::creature::CreatureKind;
 use shared::dungeon::{Level, line_is_clear};
 use shared::id::Id;
+use shared::mob::scent_strength;
 use shared::pathfinding::DistanceMap;
 use shared::protocol::CharacterId;
 use shared::sheet::{Appearance, Feeling, Reaction};
@@ -28,6 +29,8 @@ pub(crate) struct Someone {
     pub(super) position: (i64, i64),
     /// Mobs take no notice of them.
     pub(super) god_mode: bool,
+    /// How strong a trail they leave, as a percentage.
+    pub(super) scent: u32,
 }
 
 pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
@@ -49,6 +52,7 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 in_hall: client.visit.is_none() && client.character.hall.is_some(),
                 position,
                 god_mode: client.god_mode,
+                scent: scent_strength(&client.inventory),
             }
         })
         .collect()
@@ -78,6 +82,8 @@ pub(super) struct Spot {
     pub(super) character: Option<CharacterId>,
     pub(super) kind: CreatureKind,
     pub(super) position: (i64, i64),
+    /// How strong a trail they leave, as a percentage.
+    pub(super) scent: u32,
 }
 
 /// What a mob does about players now, if it should stop what it is doing.

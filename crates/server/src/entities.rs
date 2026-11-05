@@ -28,16 +28,19 @@ mod moves;
 mod notice;
 mod population;
 mod run;
+mod scent;
 mod sync;
 mod territory;
+mod tracking;
 
 use crossing::cross;
 use gear::dressed;
 pub(super) use gear::{give, kill};
-use moves::{Taken, act, nearest_free};
+use moves::{Taken, act, nearest_free, take_step};
 use notice::{Maps, Someone, Spot, cells_apart, everyone_playing, notice};
 pub(super) use run::run_mobs;
 use run::world_gap;
+pub(crate) use scent::Scents;
 pub(super) use sync::{in_hall, sync};
 
 /// How long a level nobody is on stays in use.
@@ -90,6 +93,13 @@ pub enum Doing {
         against: Id,
         last_seen: (i64, i64),
     },
+    /// Following someone's scent, stopping this near once it sees them, by marks
+    /// left at or after `since`.
+    Tracking {
+        after: Id,
+        gap: i64,
+        since: u64,
+    },
 }
 
 /// Something on a level that isn't a player.
@@ -114,6 +124,8 @@ pub(crate) struct Mob {
     /// What can be seen of what it wears, from when it was made: mobs don't change
     /// clothes.
     shown: Vec<WornLook>,
+    /// How strong a trail it leaves, as a percentage.
+    scent: u32,
 }
 
 impl Mob {
@@ -170,6 +182,11 @@ pub(crate) struct Population {
     /// What kind of poi the site is behind, to reach its save.
     poi_kind: PoiKind,
     empty_since: Option<Instant>,
+    /// Everyone's scent marks on it.
+    scents: Scents,
+    /// Where each player on it was last tick, and how strongly they smell, to
+    /// mark the cells they leave.
+    last_at: BTreeMap<Id, ((i64, i64), u32)>,
 }
 
 impl Population {

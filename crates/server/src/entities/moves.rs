@@ -7,6 +7,7 @@ use shared::rng::Seed;
 use std::collections::BTreeSet;
 
 use super::territory::{LEASH, guard_spot, is_territorial};
+use super::tracking::start_tracking;
 use super::{
     Crossing, Doing, HOME_WITHIN, Maps, Mob, SETTLING_STEPS, Spot, THINKING_COST, cells_apart,
 };
@@ -59,6 +60,8 @@ pub(super) fn act(
     };
     match mob.doing {
         Doing::Idle => 0,
+        // `run_mobs` sends these to `tracking::track`, which knows the scents.
+        Doing::Tracking { .. } => THINKING_COST,
         Doing::Going {
             after,
             last_seen,
@@ -86,9 +89,10 @@ pub(super) fn act(
             }
             let near = if target.is_some() { gap } else { 0 };
             if cells_apart(mob.position, goal) <= near {
-                // Lost them, here where they were last seen.
+                // Lost them, here where they were last seen: after their scent,
+                // if it has a nose.
                 if target.is_none() {
-                    mob.doing = settle;
+                    mob.doing = start_tracking(mob, after, gap).unwrap_or(settle);
                 }
                 return THINKING_COST;
             }
