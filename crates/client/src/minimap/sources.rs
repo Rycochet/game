@@ -20,7 +20,6 @@ pub(super) struct DrawnFrom {
     pub(super) floor: Option<u32>,
     pub(super) open: bool,
     pub(super) centre: (f64, f64),
-    pub(super) player: (f64, f64),
     pub(super) turn: (f32, f32),
     pub(super) scale: f64,
     pub(super) size: (u32, u32),

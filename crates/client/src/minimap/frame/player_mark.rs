@@ -5,8 +5,28 @@ use super::{BLACK, HINT_EDGE, HINT_GAP, HINT_HEAD_HEIGHT, HINT_HEAD_WIDTH, HINT_
 
 /// The player: a white circle with a thin black outline, `size` across in all.
 pub fn player_dot(canvas: &mut Canvas, centre: (f32, f32), size: f32, outline: f32) {
-    canvas.disc(centre, size / 2.0, BLACK);
-    canvas.disc(centre, size / 2.0 - outline, WHITE);
+    dot(canvas, centre, (size, outline), WHITE, None);
+}
+
+/// A circle of `fill` with a thin black outline, `size` across in all, like the
+/// player's; cut off outside the circle `inside` (centre, radius) if given.
+pub fn dot(
+    canvas: &mut Canvas,
+    centre: (f32, f32),
+    (size, outline): (f32, f32),
+    fill: [u8; 3],
+    inside: Option<((f32, f32), f32)>,
+) {
+    let cut = |x: f32, y: f32| {
+        inside.map_or(f32::MIN, |(middle, radius)| {
+            (x - middle.0).hypot(y - middle.1) - radius
+        })
+    };
+    for (radius, colour) in [(size / 2.0, BLACK), (size / 2.0 - outline, fill)] {
+        canvas.shape(centre, radius, colour, |x, y| {
+            ((x - centre.0).hypot(y - centre.1) - radius).max(cut(x, y))
+        });
+    }
 }
 
 /// A little arrow, head and shaft, `size` tall beside a mark `reach` across

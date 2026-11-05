@@ -65,13 +65,6 @@ impl Canvas<'_> {
         }
     }
 
-    /// Fills a circle.
-    pub fn disc(&mut self, centre: (f32, f32), radius: f32, colour: [u8; 3]) {
-        self.shape(centre, radius, colour, |x, y| {
-            (x - centre.0).hypot(y - centre.1) - radius
-        });
-    }
-
     /// Stamps a sprite centred on a point, at `opacity` from 0 to 1.
     pub fn sprite(&mut self, sprite: &Sprite, centre: (f32, f32), opacity: f32) {
         let left = (centre.0 - sprite.size as f32 / 2.0).round() as i64;

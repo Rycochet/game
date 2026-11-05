@@ -33,6 +33,8 @@ mod input;
 mod layout;
 mod marks;
 mod names;
+mod others;
+mod overlay;
 mod parts;
 mod room;
 mod scale;
@@ -50,7 +52,7 @@ use layout::{
     OverFullMap, full_map_area, full_map_corner, full_map_picture_corner, full_map_side,
     minimap_across, minimap_picture_size, minimap_trim, over_full_map,
 };
-use marks::{full_map_marks, minimap_marks};
+use marks::{full_map_compass, minimap_border, minimap_marks};
 use names::{hovered_name, hovered_poi, location_title, poi_name};
 use parts::{
     FullMapDarkening, FullMapPanel, FullMapPicture, FullMapTitle, HoverBox, HoverRunes,
@@ -145,6 +147,7 @@ impl Plugin for MinimapPlugin {
             .init_resource::<WorldTiles>()
             .init_resource::<MapRivers>()
             .init_resource::<Sprites>()
+            .init_resource::<overlay::MarksLayer>()
             .add_systems(Startup, (spawn_maps, floors::spawn_column))
             .add_systems(
                 Update,
@@ -162,7 +165,8 @@ impl Plugin for MinimapPlugin {
             )
             .add_systems(
                 Update,
-                draw_maps
+                (draw_maps, overlay::draw_marks)
+                    .chain()
                     .after(PlayerSystems::Travel)
                     .after(View3dSystems::Place)
                     .run_if(not(in_state(GameView::Connecting))),
