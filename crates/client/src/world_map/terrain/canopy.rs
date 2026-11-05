@@ -1,4 +1,4 @@
-//! How far woods raise the drawn surface, the highest shown height, and linear colours.
+//! How far woods raise the drawn surface, the drawn height at a point, and linear colours.
 
 use bevy::prelude::*;
 use shared::climate::Climate;
@@ -53,10 +53,13 @@ pub(super) const CANOPY_HEIGHT: f32 = 2.5;
 /// height.
 pub(super) const CANOPY_FROM: f32 = 0.2;
 
-/// The highest drawn surface within `radius` of a fractional position, so
-/// something that wide can rest on top without sinking into a slope.
+/// The height of the drawn surface at a fractional position: the grid
+/// points' drawn heights (woods included) interpolated across the triangle
+/// the point is in, split north-east to south-west as `build_window` draws
+/// them. Tokens rest with their centre here, so a poi's base meets the ground
+/// at the poi itself (owner).
 #[allow(clippy::too_many_arguments)]
-pub fn highest_shown_height(
+pub fn shown_height_at(
     cache: &mut HeightCache,
     surface: &Surface,
     climate: &Climate,
@@ -66,31 +69,34 @@ pub fn highest_shown_height(
     water_level: f64,
     snow_line: f64,
     (x, y): (f64, f64),
-    radius: f64,
 ) -> f32 {
-    let mut highest = f64::MIN;
-    let reach = radius.ceil() as i64;
-    for dy in -reach..=reach {
-        for dx in -reach..=reach {
-            let (px, py) = (x.round() as i64 + dx, y.round() as i64 + dy);
-            if (px as f64 - x).hypot(py as f64 - y) <= radius {
-                let sample = cache.get(surface, px, py);
-                let lift = canopy_lift(
-                    cache,
-                    surface,
-                    climate,
-                    vegetation,
-                    rivers,
-                    style,
-                    water_level,
-                    snow_line,
-                    (px, py),
-                );
-                highest = highest.max(style.shown_height(sample, water_level) + lift as f64);
-            }
-        }
+    let mut at = |px: i64, py: i64| {
+        let sample = cache.get(surface, px, py);
+        let lift = canopy_lift(
+            cache,
+            surface,
+            climate,
+            vegetation,
+            rivers,
+            style,
+            water_level,
+            snow_line,
+            (px, py),
+        );
+        style.shown_height(sample, water_level) as f32 * HEIGHT_SCALE + lift
+    };
+    let (gx, gy) = (x.floor(), y.floor());
+    let (fx, fy) = ((x - gx) as f32, (y - gy) as f32);
+    let (gx, gy) = (gx as i64, gy as i64);
+    let north_west = at(gx, gy);
+    let north_east = at(gx + 1, gy);
+    let south_west = at(gx, gy + 1);
+    if fx + fy <= 1.0 {
+        north_west + fx * (north_east - north_west) + fy * (south_west - north_west)
+    } else {
+        let south_east = at(gx + 1, gy + 1);
+        south_east + (1.0 - fx) * (south_west - south_east) + (1.0 - fy) * (north_east - south_east)
     }
-    highest as f32 * HEIGHT_SCALE
 }
 
 /// sRGB bytes to the linear floats meshes use.
