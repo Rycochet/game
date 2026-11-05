@@ -1,14 +1,15 @@
 //! Give Item's picture of what it will give, rolled here from the same seed as the
-//! server will roll it; how many it may give; and whether there is room for them.
+//! server will roll it; how many it may give; and whether it can all be given: made
+//! as asked, and with room for it.
 
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::item::{Inventory, Item, StackLimits};
-use shared::item_form::{ItemOrder, batch_seed, make_item};
+use shared::item_form::{ItemOrder, Refused, RollRequest, batch_seed, try_make_item};
 use shared::protocol::LevelKind;
 
-use super::{GiveButton, GiveChoice, GiveCount, GiveForm, GiveNoSpace, GivePreview};
+use super::{GiveButton, GiveChoice, GiveCount, GiveForm, GiveNoSpace, GivePreview, any};
 use crate::common::{CurrentDungeon, GameView};
 use crate::inventory::{Carried, Stacks};
 use crate::widgets::{ButtonState, CELL, ItemLook, ItemName, TextBox, spawn_item_cells};
@@ -25,7 +26,7 @@ pub(in crate::debug_menu) fn show_give_preview(
     dungeon: Res<CurrentDungeon>,
     mut previews: Query<(Entity, &mut GivePreview, &mut Node)>,
     mut counts: Query<&mut TextBox, With<GiveCount>>,
-    mut no_space: Query<&mut Visibility, With<GiveNoSpace>>,
+    mut warnings: Query<(&mut Text, &mut Visibility), With<GiveNoSpace>>,
     mut buttons: Query<
         (&mut ButtonState, Option<&GiveChoice>),
         Or<(With<GiveButton>, With<GiveChoice>)>,
@@ -41,7 +42,12 @@ pub(in crate::debug_menu) fn show_give_preview(
     }
     let (order, seed) = (form.order(), form.seed.unwrap_or_default());
     let wearer = carried.0.creature;
-    let item = one_of(&order, wearer, seed, 0, form.identical);
+    let first = one_of(&order, wearer, seed, 0, form.identical);
+    // What a refused request would have been: drawn, but not to be given.
+    let item = first.clone().unwrap_or_else(|_| {
+        let plain = order_as_usual(&order);
+        one_of(&plain, wearer, seed, 0, true).expect("asking nothing is never refused")
+    });
     let most = match form.identical {
         true => stacks.0.most_of(&item),
         false => stacks.0.most,
@@ -58,27 +64,32 @@ pub(in crate::debug_menu) fn show_give_preview(
     }
     let has_ground = *view.get() == GameView::Dungeon
         && (dungeon.info.as_ref()).is_some_and(|info| !matches!(info.kind, LevelKind::Hall { .. }));
-    let room = has_ground
-        || all_fit(
-            &carried.0,
-            stacks.0,
-            &order,
-            seed,
-            form.count,
-            form.identical,
-        );
-    for mut shown in &mut no_space {
-        shown.set_if_neq(if room {
-            Visibility::Hidden
-        } else {
-            Visibility::Inherited
+    let batch = Batch {
+        order,
+        wearer,
+        seed,
+        count: form.count,
+        identical: form.identical,
+    };
+    let problem = match first {
+        Err(Refused(field)) => Some(format!("No such {}", &any(field)[4..])),
+        Ok(_) => batch.problem(&carried.0, stacks.0, has_ground),
+    };
+    for (mut text, mut shown) in &mut warnings {
+        let words = problem.clone().unwrap_or_default();
+        if text.0 != words {
+            text.0 = words;
+        }
+        shown.set_if_neq(match problem {
+            Some(_) => Visibility::Inherited,
+            None => Visibility::Hidden,
         });
     }
     for (mut state, choice) in &mut buttons {
         let usable = match choice {
             Some(GiveChoice::Identical) => form.count > 1,
             Some(_) => continue,
-            None => room && form.seed.is_some(),
+            None => problem.is_none() && form.seed.is_some(),
         };
         state.set_if_neq(if usable {
             ButtonState::Normal
@@ -88,8 +99,22 @@ pub(in crate::debug_menu) fn show_give_preview(
     }
 }
 
+/// The same order, with its form rolled as usual.
+fn order_as_usual(order: &ItemOrder) -> ItemOrder {
+    ItemOrder {
+        request: RollRequest::NONE,
+        ..*order
+    }
+}
+
 /// The `n`th of a batch, as the server will make it; its ids only stand in.
-fn one_of(order: &ItemOrder, wearer: CreatureKind, seed: u64, n: u32, identical: bool) -> Item {
+fn one_of(
+    order: &ItemOrder,
+    wearer: CreatureKind,
+    seed: u64,
+    n: u32,
+    identical: bool,
+) -> Result<Item, Refused> {
     let mut next = (n as u128 + 1) << 32;
     let mut new_id = || {
         next += 1;
@@ -97,23 +122,41 @@ fn one_of(order: &ItemOrder, wearer: CreatureKind, seed: u64, n: u32, identical:
     };
     let id = new_id();
     let seed = batch_seed(seed, if identical { 0 } else { n });
-    make_item(order, wearer, id, seed, None, &mut new_id)
+    try_make_item(order, wearer, id, seed, None, &mut new_id)
 }
 
-/// Whether all of them would fit in what is carried, as the server will try it.
-fn all_fit(
-    carried: &Inventory,
-    limits: StackLimits,
-    order: &ItemOrder,
+/// What Give would ask for.
+struct Batch {
+    order: ItemOrder,
+    wearer: CreatureKind,
     seed: u64,
     count: u32,
     identical: bool,
-) -> bool {
-    let mut inventory = carried.clone();
-    (0..count).all(|n| {
-        let item = one_of(order, carried.creature, seed, n, identical);
-        inventory.give(item, limits).is_ok()
-    })
+}
+
+impl Batch {
+    /// Why the server would give none of it, as the panel says it: one of a batch of
+    /// different ones can't be made as asked, or with no ground, not all of it fits.
+    fn problem(
+        &self,
+        carried: &Inventory,
+        limits: StackLimits,
+        has_ground: bool,
+    ) -> Option<String> {
+        let mut inventory = carried.clone();
+        let mut fits = true;
+        for n in 0..self.count {
+            if has_ground && (self.identical || n == 0) {
+                continue;
+            }
+            let item = match one_of(&self.order, self.wearer, self.seed, n, self.identical) {
+                Ok(item) => item,
+                Err(Refused(field)) => return Some(format!("No such {}", &any(field)[4..])),
+            };
+            fits = fits && (has_ground || inventory.give(item, limits).is_ok());
+        }
+        (!fits).then(|| "No space".to_owned())
+    }
 }
 
 fn draw(commands: &mut Commands, entity: Entity, node: &mut Node, item: &Item) {

@@ -1,9 +1,10 @@
 //! Give Item (dev tools): new items as ordered, into the inventory, and in a site
-//! what doesn't fit onto the ground; on the world map, all of it or nothing.
+//! what doesn't fit onto the ground; on the world map, all of it or nothing. Nothing
+//! at all if any can't be made as asked.
 
 use bevy::prelude::*;
 use shared::item::Item;
-use shared::item_form::{ItemOrder, batch_seed, make_item};
+use shared::item_form::{ItemOrder, Refused, batch_seed, try_make_item};
 
 use super::Client;
 use crate::ServerWorld;
@@ -18,7 +19,10 @@ pub(super) fn give_items(
     count: u32,
     identical: bool,
 ) -> bool {
-    let items = made(client, world, order, seed, count, identical);
+    let Ok(items) = made(client, world, order, seed, count, identical) else {
+        info!("Can't make {:?} as asked: {:?}", order.kind, order.request);
+        return client.send_inventory();
+    };
     let mut inventory = client.inventory.clone();
     let mut left = Vec::new();
     for item in items {
@@ -42,7 +46,7 @@ pub(super) fn give_items(
 }
 
 /// The items, as many as the server allows: up to a full stack of one alike, or up
-/// to the most in any stack of different ones.
+/// to the most in any stack of different ones. Refused if any can't be made as asked.
 fn made(
     client: &Client,
     world: &ServerWorld,
@@ -50,21 +54,22 @@ fn made(
     seed: Option<u64>,
     count: u32,
     identical: bool,
-) -> Vec<Item> {
+) -> Result<Vec<Item>, Refused> {
     let seed = seed.unwrap_or_else(|| new_id().seed().value());
     let made_at = Some(world.made_now());
     let wearer = client.inventory.creature;
     let one = |n: u32| {
         let seed = batch_seed(seed, if identical { 0 } else { n });
-        make_item(order, wearer, new_id(), seed, made_at, &mut new_id)
+        try_make_item(order, wearer, new_id(), seed, made_at, &mut new_id)
     };
-    let first = one(0);
+    let first = one(0)?;
     let most = match identical {
         true => world.stacks.most_of(&first),
         false => world.stacks.most,
     };
     let count = count.clamp(1, most.max(1));
-    std::iter::once(first).chain((1..count).map(one)).collect()
+    let rest: Result<Vec<Item>, Refused> = (1..count).map(one).collect();
+    Ok(std::iter::once(first).chain(rest?).collect())
 }
 
 /// What is left over, as it goes on the ground: items alike as one stack.

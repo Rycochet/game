@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 use shared::creature::Size;
 use shared::item::{Favour, ItemKind, Quality};
-use shared::item_form::{ItemOrder, RollRequest};
+use shared::item_form::{Field, ItemOrder, RollRequest};
+
+use super::OptionValue;
 
 /// Whether new items are part of a set. Set and Unique do the same for now.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -39,6 +41,8 @@ pub(in crate::debug_menu) struct GiveForm {
     pub(super) favour: Option<Favour>,
     pub(super) magical: bool,
     pub(super) kind: ItemKind,
+    /// What its form must be like: only options its kind takes.
+    pub(super) request: RollRequest,
     /// `None` while the seed box says nothing that can be read.
     pub(super) seed: Option<u64>,
     /// How many seeds the Random button has made, to keep them apart.
@@ -56,6 +60,7 @@ impl Default for GiveForm {
             favour: None,
             magical: false,
             kind: give_kinds()[0],
+            request: RollRequest::NONE,
             seed: None,
             seeds_made: 0,
         }
@@ -71,7 +76,7 @@ impl GiveForm {
             quality: self.quality,
             set: self.set != SetChoice::None,
             favour: self.favour,
-            request: RollRequest::NONE,
+            request: self.request,
         }
     }
 }
@@ -113,7 +118,18 @@ pub(in crate::debug_menu) struct GivePreview {
     pub(super) drawn: Option<(ItemOrder, u64)>,
 }
 
-/// "No space", shown when it can't all be given.
+/// The line of options for its form, shown for kinds that take any.
+#[derive(Component)]
+pub(in crate::debug_menu) struct GiveOptionsLine;
+
+/// A dropdown for one option of its form: "Any ..." then `values`.
+#[derive(Component)]
+pub(in crate::debug_menu) struct GiveOption {
+    pub(super) field: Field,
+    pub(super) values: Vec<OptionValue>,
+}
+
+/// Why it can't all be given ("No space", or what can't be made), when it can't.
 #[derive(Component)]
 pub(in crate::debug_menu) struct GiveNoSpace;
 

@@ -125,6 +125,7 @@ pub(in crate::debug_menu) fn press_give_button(
             seed: Some(seed),
             count: form.count,
             identical: form.identical || form.count == 1,
+            request: order.request,
         }));
     }
 }

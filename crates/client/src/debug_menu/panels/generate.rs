@@ -10,10 +10,10 @@ use super::{
     OpenPanels, RuinButton, SEED_WIDTH, SeedBox, new_seed, row, words,
 };
 use crate::connection::ToServer;
-use crate::widgets::new_seed_icon;
+use crate::widgets::spawn_new_seed_button;
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, TextBox, spawn_button,
-    spawn_icon_button, spawn_moveable_panel, spawn_text_box,
+    spawn_moveable_panel, spawn_text_box,
 };
 
 /// Opens the Generate POI panel for the kind chosen, in place of any open.
@@ -23,7 +23,6 @@ pub(in crate::debug_menu) fn open_generate_panel(
     mut commands: Commands,
     mut open: ResMut<OpenPanels>,
     mut form: ResMut<GenerateForm>,
-    mut images: ResMut<Assets<Image>>,
     nodes: Query<(), With<Node>>,
     time: Res<Time<Real>>,
 ) {
@@ -44,7 +43,6 @@ pub(in crate::debug_menu) fn open_generate_panel(
     form.ruin = 0;
     form.seeds_made += 1;
     let seed = new_seed(time.elapsed().as_nanos() as u64, form.seeds_made);
-    let icon = images.add(new_seed_icon());
     commands.entity(content).with_children(|content| {
         content.spawn(words(kind_name(kind)));
         content.spawn(row()).with_children(|row| {
@@ -72,13 +70,7 @@ pub(in crate::debug_menu) fn open_generate_panel(
                 ..default()
             };
             spawn_text_box(row, text_box, FONT, node).insert(SeedBox);
-            let node = Node {
-                width: px(CHECK_ROW),
-                height: px(CHECK_ROW),
-                ..default()
-            };
-            spawn_icon_button(row, ButtonState::Normal, icon, node)
-                .insert((NewSeedButton, Pressable));
+            spawn_new_seed_button(row, CHECK_ROW).insert(NewSeedButton);
         });
         let node = Node {
             padding: BUTTON_PADDING,

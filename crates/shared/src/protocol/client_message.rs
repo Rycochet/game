@@ -8,6 +8,7 @@ use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::id::Id;
 use crate::item::{Favour, Holder, ItemKind, Quality, Rotation};
+use crate::item_form::RollRequest;
 use crate::movement::Step;
 use crate::poi::{ChunkPos, PoiKind};
 use crate::sheet::Appearance;
@@ -146,6 +147,9 @@ pub enum ClientMessage {
         /// (`item_form::batch_seed`). What doesn't fit goes on the ground in a site,
         /// and on the world map nothing is given unless all of it fits.
         identical: bool,
+        /// What their form must be like (`item_form::RollRequest`); refused, giving
+        /// nothing, if any of them can't keep to it (`try_make_item`).
+        request: RollRequest,
     },
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),

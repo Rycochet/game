@@ -27,6 +27,7 @@ fn give(kind: ItemKind) -> ClientMessage {
         seed: None,
         count: 1,
         identical: true,
+        request: shared::item_form::RollRequest::NONE,
     }
 }
 
@@ -41,6 +42,7 @@ fn give_cursed(kind: ItemKind) -> ClientMessage {
         seed: None,
         count: 1,
         identical: true,
+        request: shared::item_form::RollRequest::NONE,
     }
 }
 

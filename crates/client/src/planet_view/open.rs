@@ -9,7 +9,7 @@ use super::ViewPlanet;
 use super::bar::{Bar, spawn_bar};
 use super::showing::{Choice, PlanetView, SceneAssets, Showing, build_globe};
 use crate::common::{CurrentWorld, ServerClock, Weather};
-use crate::widgets::{layer_z, leaves_presses, new_seed_icon};
+use crate::widgets::{layer_z, leaves_presses};
 
 /// Above the menus and their layers.
 const VIEW_LAYER: i32 = 50;
@@ -48,8 +48,7 @@ pub(super) fn open(
     ));
     let choice = Choice::of(&world);
     let globe = build_globe(&mut commands, &mut assets, &world, choice, picture.clone());
-    let random_icon = assets.images.add(new_seed_icon());
-    let (layer, bar) = spawn_layer(&mut commands, (picture.clone(), random_icon), choice);
+    let (layer, bar) = spawn_layer(&mut commands, picture.clone(), choice);
     view.showing = Some(Showing {
         layer,
         picture,
@@ -66,11 +65,7 @@ pub(super) fn open(
 /// The black layer, with the picture in the middle as large as fits, the bar
 /// at the top and a note at the bottom. Presses on it are left for the view
 /// (to close it), and go no further.
-fn spawn_layer(
-    commands: &mut Commands,
-    (picture, random_icon): (Handle<Image>, Handle<Image>),
-    choice: Choice,
-) -> (Entity, Bar) {
+fn spawn_layer(commands: &mut Commands, picture: Handle<Image>, choice: Choice) -> (Entity, Bar) {
     let mut layer = commands.spawn((
         Node {
             position_type: PositionType::Absolute,
@@ -95,7 +90,7 @@ fn spawn_layer(
                 ..default()
             },
         ));
-        bar = Some(spawn_bar(layer, choice, random_icon));
+        bar = Some(spawn_bar(layer, choice));
         layer.spawn((
             Text::new(NOTE),
             TextColor(NOTE_COLOUR),

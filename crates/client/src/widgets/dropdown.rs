@@ -14,9 +14,9 @@ mod run;
 mod show;
 
 use list::spawn_list;
-use parts::label_of;
 pub use parts::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
 pub(super) use parts::{List, ListBacking, ListOption, ListRows, OpenList};
+use parts::{drawn_words, label_of};
 use rows::{list_corner, on_show, window_start};
 pub(super) use run::run_dropdowns;
 pub(super) use show::show_dropdowns;

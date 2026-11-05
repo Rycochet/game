@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use super::super::{BUTTON_BORDER, ButtonState, INK, Pressable, spawn_button};
 use super::{
-    Dropdown, FONT, GAP, ListOption, ListRows, OpenList, ROW, ROW_ICON, ROWS, label_of, on_show,
+    Dropdown, FONT, GAP, ListOption, ListRows, OpenList, ROW, ROW_ICON, ROWS, drawn_words,
+    label_of, on_show,
 };
 
 /// Keeps a dropdown's words or picture and an open list's rows up to date.
@@ -58,7 +59,13 @@ pub(in crate::widgets) fn show_dropdowns(
                 height: px(ROW),
                 ..default()
             };
-            let mut button = spawn_button(holder, state, dropdown.options[at].clone(), FONT, node);
+            let mut button = spawn_button(
+                holder,
+                state,
+                drawn_words(&dropdown.options[at]),
+                FONT,
+                node,
+            );
             button.insert((ListOption(at), Pressable));
             if let Some(icon) = dropdown.icons.get(at) {
                 with_icon(&mut button, icon.clone());
