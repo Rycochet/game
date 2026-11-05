@@ -31,6 +31,18 @@ struct Wanted {
 pub fn roll(rng: &mut Rng, kind: SetKind, style: Option<Style>, quality: Quality) -> SetForm {
     let style = style.unwrap_or_else(|| Style::roll(rng));
     let torso = roll_torso(rng, kind, style, quality);
+    roll_around(rng, kind, quality, torso)
+}
+
+/// A set of this kind around its torso piece, which gives every other piece its
+/// style, and its material and finish where they can take them.
+pub(crate) fn roll_around(
+    rng: &mut Rng,
+    kind: SetKind,
+    quality: Quality,
+    torso: TorsoForm,
+) -> SetForm {
+    let style = torso.style;
     let wanted = Wanted {
         construction: torso.construction,
         material: torso.material,
@@ -164,20 +176,31 @@ pub fn roll(rng: &mut Rng, kind: SetKind, style: Option<Style>, quality: Quality
 /// rigid for a corslet, never rigid for a coat, where the style makes one.
 fn roll_torso(rng: &mut Rng, kind: SetKind, style: Style, quality: Quality) -> TorsoForm {
     let roll = |rng: &mut Rng| torso::roll(rng, TorsoKind::Armour, Some(style), quality);
-    let mut torso = best(rng, roll, |form| {
-        let shaped = match kind {
-            SetKind::Coat => !form.rigid(),
-            SetKind::Corslet => form.rigid(),
-            SetKind::Half | SetKind::Full => true,
-        };
-        2 * u8::from(form.construction != Construction::Padded) + u8::from(shaped)
+    let torso = best(rng, roll, |form| {
+        2 * u8::from(form.construction != Construction::Padded) + u8::from(shaped(kind, form))
     });
+    with_back(torso)
+}
+
+/// Whether a torso piece will do for a set of this kind: not padding alone, and rigid
+/// or not as the kind is.
+pub(crate) fn torso_fits(kind: SetKind, torso: &TorsoForm) -> bool {
+    torso.construction != Construction::Padded && shaped(kind, torso)
+}
+
+fn shaped(kind: SetKind, torso: &TorsoForm) -> bool {
+    match kind {
+        SetKind::Coat => !torso.rigid(),
+        SetKind::Corslet => torso.rigid(),
+        SetKind::Half | SetKind::Full => true,
+    }
+}
+
+/// With a back, wherever it can have one.
+pub(crate) fn with_back(torso: TorsoForm) -> TorsoForm {
     let mut backed = torso;
     backed.back = true;
-    if backed.allowed() {
-        torso = backed;
-    }
-    torso
+    if backed.allowed() { backed } else { torso }
 }
 
 /// The best scored of up to `TRIES` rolls, or the first to score the most possible.

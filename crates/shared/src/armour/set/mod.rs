@@ -26,6 +26,8 @@ use crate::material::Material;
 
 pub use roll::roll;
 
+pub(crate) use roll::{roll_around, torso_fits, with_back};
+
 /// Which locations a set covers (item kinds `ArmourCoat`, `Corslet`, `HalfArmour`,
 /// `FullArmour`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

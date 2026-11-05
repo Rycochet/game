@@ -26,6 +26,7 @@ fn sword(blade: u16, handle: u16) -> BladeForm {
         Quality::Common,
         blade,
         handle,
+        None,
     )
 }
 

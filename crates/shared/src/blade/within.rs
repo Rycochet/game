@@ -131,10 +131,10 @@ pub(super) fn roll_row_within(
     let (blade, handle) = rng.pick_weighted(&places);
     let handle = rng.range_u64(handle.0 as u64, handle.1 as u64) as u16;
     let blade = blades_within(row.build, blade, handle, lengths)?;
-    let mut form = roll_properties(rng, row, quality, blade.0, handle);
+    let mut form = roll_properties(rng, row, quality, blade.0, handle, limits.metal);
     let span = blades_by_weight(&form, blade, size, limits).or_else(|| {
         form.width = row.width.first().copied().unwrap_or(BladeWidth::Narrow);
-        form.blade_metal = Material::Iron;
+        form.blade_metal = limits.metal.unwrap_or(Material::Iron);
         form.handle_material = Material::Wood;
         blades_by_weight(&form, blade, size, limits)
     })?;

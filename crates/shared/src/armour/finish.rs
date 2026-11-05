@@ -100,6 +100,22 @@ pub enum Finish {
 }
 
 impl Finish {
+    /// Every finish, in order, painted and lacquered in every colour but undyed.
+    pub fn all() -> Vec<Self> {
+        let colours = || Dye::ALL.into_iter().filter(|&dye| dye != Dye::Natural);
+        let mut all = vec![
+            Self::Bright,
+            Self::Blackened,
+            Self::Russet,
+            Self::Blued,
+            Self::Tinned,
+        ];
+        all.extend(colours().map(Self::Painted));
+        all.extend(colours().map(Self::Lacquered));
+        all.extend([Self::Gilt, Self::Etched]);
+        all
+    }
+
     /// Only made on things of Rare quality and better (the owner's decision).
     pub fn rare_only(self) -> bool {
         matches!(self, Self::Gilt | Self::Etched)

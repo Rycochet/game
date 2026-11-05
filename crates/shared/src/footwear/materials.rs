@@ -61,7 +61,7 @@ pub(super) fn uppers(
 
 /// What the sole is made of: leather under sewn and strapped footwear, the upper's own
 /// under soft and woven, rope under espadrilles, wood under clogs.
-pub(super) fn sole_of(build: Build, upper: Material) -> Material {
+pub(crate) fn sole_of(build: Build, upper: Material) -> Material {
     match build {
         Build::Sewn | Build::Strapped => Material::Leather,
         Build::Soft => match upper {

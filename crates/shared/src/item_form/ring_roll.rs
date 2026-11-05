@@ -2,7 +2,8 @@
 
 use crate::creature::Size;
 use crate::item::{Item, Quality};
-use crate::item_form::gem::{fine_weight, roll_gem};
+use crate::item_form::gem::roll_gem;
+use crate::item_form::ring_ask::RingAsk;
 use crate::item_form::{BandWidth, GemForm, Mount, Pattern, Profile, RingForm, Setting};
 use crate::material::Material;
 use crate::rng::Rng;
@@ -32,7 +33,7 @@ pub(super) fn roll_ring_size(rng: &mut Rng) -> Size {
 
 /// The metals rings are made of, in the order they were first rolled from, so rolls
 /// stay as they were when more metals came for armour.
-const RING_METALS: [Material; 4] = [
+pub(super) const RING_METALS: [Material; 4] = [
     Material::Copper,
     Material::Gold,
     Material::Iron,
@@ -41,17 +42,15 @@ const RING_METALS: [Material; 4] = [
 
 /// Quality, then metal (better favours finer), then its band, then how many settings
 /// (finer and better have more), then the gems. `new_gem` makes each gem an item.
+/// What is asked for is kept to, if `ask.check` passed.
 pub(super) fn roll_ring(
     rng: &mut Rng,
     quality: Quality,
     size: Size,
+    ask: RingAsk,
     new_gem: &mut impl FnMut(GemForm, Size, Quality) -> Item,
 ) -> RingForm {
-    let metals: Vec<_> = RING_METALS
-        .into_iter()
-        .map(|metal| (metal, fine_weight(metal, quality)))
-        .collect();
-    let metal = rng.pick_weighted(&metals);
+    let metal = rng.pick_weighted(&ask.metals(quality));
     let profile = rng.pick_weighted(&[
         (Profile::Domed, 30),
         (Profile::Flat, 30),
@@ -70,7 +69,7 @@ pub(super) fn roll_ring(
         (Pattern::Engraved, 15),
         (Pattern::Twisted, 10),
     ]);
-    let count = roll_setting_count(rng, metal, quality);
+    let count = rng.pick_weighted(&ask.counts(metal, quality));
     let smaller: i8 = rng.pick_weighted(&[(0, 50), (1, 35), (2, 15)]);
     let setting_size = size.stepped(-smaller);
     let mount = rng.pick_weighted(&[(Mount::Claws, 60), (Mount::Bezel, 40)]);
@@ -81,7 +80,7 @@ pub(super) fn roll_ring(
         if rng.range_u64(0, 100) >= EMPTY_PERCENT {
             let form = match first {
                 Some(same) if rng.range_u64(0, 100) < SAME_GEM_PERCENT => same,
-                _ => roll_gem(rng, quality, false).0,
+                _ => roll_gem(rng, quality, false, ask.gem).0,
             };
             first.get_or_insert(form);
             let gem_size = roll_gem_size(rng, setting_size);
@@ -103,17 +102,18 @@ pub(super) fn roll_ring(
     }
 }
 
-/// Most rings of poor metal have none. A finer metal and a better make have more.
-pub(super) fn roll_setting_count(rng: &mut Rng, metal: Material, quality: Quality) -> u8 {
+/// How many settings, by how often. Most rings of poor metal have none; a finer metal
+/// and a better make have more.
+pub(super) fn setting_counts(metal: Material, quality: Quality) -> [(u8, u64); 5] {
     let fine = metal.tier() + quality as u64;
-    rng.pick_weighted(&[
+    [
         (0, 60),
         (1, fine * 8),
         (2, fine * 3),
         (3, fine),
         // Only the very finest. Whole-number division leaves the rest without.
         (5, fine * fine / 16),
-    ])
+    ]
 }
 
 /// In a row across the top of the band, evenly either side of it.
