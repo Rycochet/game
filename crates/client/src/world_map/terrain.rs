@@ -20,7 +20,7 @@ mod square;
 mod window;
 
 use canopy::{CANOPY_SHADING, linear};
-pub use canopy::{canopy_lift, highest_shown_height};
+pub use canopy::{canopy_lift, shown_height_at};
 pub use edges::build_edges;
 pub use grid::TerrainGrid;
 pub use height_cache::HeightCache;

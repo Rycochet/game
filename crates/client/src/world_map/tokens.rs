@@ -10,9 +10,9 @@ use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, ViewCamera};
 
-/// Every frame, after `view3d` has placed the tokens: lifts each one onto the
-/// highest ground under it, so it never sinks into a slope. A poi's flat base
-/// is the same size, so it rests the same way.
+/// Every frame, after `view3d` has placed the tokens: rests each one with its
+/// centre on the drawn ground at its own point (owner), so a poi's flat base
+/// meets the ground at the poi. On a slope the uphill edge dips into it.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn rest_tokens_on_terrain(
     world: Res<CurrentWorld>,
@@ -30,8 +30,7 @@ pub(super) fn rest_tokens_on_terrain(
     for mut transform in &mut views {
         // Where `view3d` put it (one unit a grid point here), gliding or not.
         let (x, z) = (transform.translation.x, transform.translation.z);
-        let radius = TOKEN_DIAMETER / 2.0;
-        let ground = super::terrain::highest_shown_height(
+        let ground = super::terrain::shown_height_at(
             &mut cache,
             &world.surface,
             &world.climate,
@@ -41,7 +40,6 @@ pub(super) fn rest_tokens_on_terrain(
             water_level,
             weather.snow_line,
             (f64::from(x), f64::from(z)),
-            radius as f64,
         );
         transform.translation.y = ground + TOKEN_HALF_THICKNESS;
     }

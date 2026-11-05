@@ -62,3 +62,67 @@ fn clipping_keeps_the_inside_part() {
     assert!(clipped.len() >= 3);
     assert!(clipped.iter().all(|c| c.position.x <= half + 1e-4));
 }
+
+#[test]
+fn tokens_rest_on_the_drawn_triangles() {
+    use super::super::rivers::KnownRivers;
+    use crate::surface_style::SurfaceStyle;
+    use shared::climate::Climate;
+    use shared::rng::Seed;
+    use shared::surface::Surface;
+    use shared::vegetation::Vegetation;
+    use shared::world::WorldParams;
+
+    let params = WorldParams::from_seed(Seed::new(12345));
+    let (surface, climate, vegetation) = (
+        Surface::new(&params),
+        Climate::new(&params),
+        Vegetation::new(&params),
+    );
+    let (rivers, style) = (KnownRivers::default(), SurfaceStyle::default());
+    let (water, snow_line) = (params.sea_level, 1.0);
+    let mut cache = HeightCache::default();
+    let mut grid = TerrainGrid::default();
+    let square = ViewSquare {
+        right: Vec2::X,
+        towards: Vec2::Y,
+        half: 8.0,
+    };
+    let centre = (40, -25);
+    grid.fill(
+        &mut cache,
+        &surface,
+        &climate,
+        &vegetation,
+        &rivers,
+        &style,
+        water,
+        snow_line,
+        (1.0, 0.0),
+        centre,
+        square,
+        false,
+    );
+    // Both halves of a grid square, and a grid point itself.
+    for (dx, dz) in [(0.25, 0.25), (0.8, 0.7), (-2.5, 3.1), (1.0, -1.0)] {
+        let expected = grid.height_at(&grid.shown, Vec2::new(dx, dz));
+        let at = shown_height_at(
+            &mut cache,
+            &surface,
+            &climate,
+            &vegetation,
+            &rivers,
+            &style,
+            water,
+            snow_line,
+            (
+                centre.0 as f64 + f64::from(dx),
+                centre.1 as f64 + f64::from(dz),
+            ),
+        );
+        assert!(
+            (at - expected).abs() < 1e-3,
+            "{at} vs {expected} at {dx},{dz}"
+        );
+    }
+}
