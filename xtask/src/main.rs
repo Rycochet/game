@@ -4,6 +4,7 @@
 //! macOS, Linux and in CI without installing anything extra.
 
 mod api;
+mod compress_web;
 mod latest;
 mod sizes;
 mod target_dir;
@@ -35,6 +36,10 @@ Tasks:
           latest/ in cargo's target folder as hall-of-worlds-latest, with
           play.cmd to start it (debug API on port 15712): a copy to play
           that never blocks a build.
+  compress-web <dir>
+          Write a brotli copy (<file>.br) beside each file of a web build
+          (`trunk build`'s dist folder) that compresses well, for the
+          server to send browsers instead.
 ";
 
 /// A named cargo command: what `lint` and `test` are made of.
@@ -106,6 +111,7 @@ fn main() -> ExitCode {
         Some("hooks") => hooks(),
         Some("package") => package(),
         Some("latest") => latest::run(),
+        Some("compress-web") => compress_web::run(&env::args().skip(2).collect::<Vec<_>>()),
         Some("api") => api::run(&env::args().skip(2).collect::<Vec<_>>()),
         _ => {
             eprintln!(
