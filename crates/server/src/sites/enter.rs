@@ -29,7 +29,12 @@ pub(crate) fn enter_poi(client: &mut Client, world: &mut ServerWorld, chunk: Chu
     client.character.pois.entry(chunk).or_default().visited = true;
     client.unsaved = true;
     let id = SiteId::Poi(chunk);
-    enter_site(client, world, poi, id, 0, Arrival::From(Exit::WorldMap))
+    // Back where they last walked out, if they have been in before.
+    let (index, arrival) = match client.character.left_at.get(&id) {
+        Some(&(index, cell)) => (index, Arrival::LeftAt(cell)),
+        None => (0, Arrival::From(Exit::WorldMap)),
+    };
+    enter_site(client, world, poi, id, index, arrival)
 }
 
 /// Developer tools: enters a made-up site at any level, where the player
@@ -68,9 +73,7 @@ pub(crate) fn generate(
     client.visit = None;
     let id = SiteId::Dev { kind, seed, ruin };
     world.forget_site(id);
-    client.character.memory.remove(&id);
-    client.character.bags.remove(&id);
-    client.character.site_versions.remove(&id);
+    client.character.forget_site(&id);
     dev_enter(client, world, kind, seed, 0, ruin)
 }
 
@@ -141,8 +144,8 @@ pub(super) fn enter_site(
     world: &mut ServerWorld,
     poi: Poi,
     id: SiteId,
-    index: u32,
-    arrival: Arrival,
+    mut index: u32,
+    mut arrival: Arrival,
 ) -> bool {
     if let Err(error) = world.open_site(id, poi.kind) {
         return client.refuse_for_saves(&error);
@@ -156,6 +159,11 @@ pub(super) fn enter_site(
     if known.is_some_and(|known| known != version) {
         client.character.memory.remove(&id);
         client.character.bags.remove(&id);
+        client.character.left_at.remove(&id);
+        // Where they walked out was on another map.
+        if let Arrival::LeftAt(_) = arrival {
+            (index, arrival) = (0, Arrival::From(Exit::WorldMap));
+        }
     }
     client.unsaved = true;
     let index = index.min(site.levels() - 1);

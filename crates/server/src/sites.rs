@@ -163,7 +163,13 @@ enum Arrival {
     From(Exit),
     /// Back where they were (a saved visit), if it is still walkable.
     At((i64, i64)),
+    /// Where they last walked out of the site, if it is still walkable and
+    /// their map of the site is still the one they had: otherwise at its
+    /// entrance, on its first level.
+    LeftAt((i64, i64)),
 }
 
+#[cfg(test)]
+mod left_at_tests;
 #[cfg(test)]
 mod tests;
