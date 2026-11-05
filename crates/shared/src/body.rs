@@ -8,8 +8,10 @@
 
 use crate::creature::CreatureKind;
 
+mod bipeds;
 mod proportions;
 
+pub use bipeds::{Biped, FIRST_BIPEDS};
 pub use proportions::{PERSON, Proportions};
 
 /// Which side of the body, as its owner sees it: left is towards the picture's right.
@@ -95,6 +97,10 @@ pub struct Frame {
     pub foot_length: i32,
     /// How far out the arms hang, as so many millimetres out per metre down.
     pub arm_spread: i32,
+    /// How the forearms hang from the slightly bent elbows: so many millimetres out, and
+    /// forwards, per metre down, so they fall nearer straight down than the upper arms.
+    pub forearm_spread: i32,
+    pub forearm_forward: i32,
 }
 
 /// An ordinary person: about eight heads tall, as artists draw them. Every other frame
@@ -103,7 +109,7 @@ const HUMAN: Frame = Frame {
     height: 1750,
     chin: 1530,
     neck_base: 1450,
-    shoulder: 1420,
+    shoulder: 1405,
     chest: 1260,
     waist: 1080,
     hip: 900,
@@ -127,13 +133,15 @@ const HUMAN: Frame = Frame {
     ankle_radius: 35,
     foot_length: 260,
     arm_spread: 180,
+    forearm_spread: 30,
+    forearm_forward: 150,
 };
 
 /// Heavier built, with a smaller head for its height.
 const GIANT: Frame = Frame {
     chin: 1560,
     neck_base: 1480,
-    shoulder: 1440,
+    shoulder: 1425,
     head: (70, 90),
     neck: 75,
     shoulder_half: 230,
@@ -155,7 +163,7 @@ const GIANT: Frame = Frame {
 const KOBOLD: Frame = Frame {
     chin: 1420,
     neck_base: 1340,
-    shoulder: 1310,
+    shoulder: 1295,
     chest: 1170,
     waist: 1010,
     hip: 860,
@@ -193,12 +201,22 @@ impl Frame {
     /// Where a joint is: x towards the body's left, y up, z forwards.
     pub fn joint(&self, joint: Joint) -> [i32; 3] {
         let out = |side: Side, x: i32| side.sign() * x;
-        // An arm hangs out from its shoulder by its spread.
-        let arm = |side: Side, down: i32, y: i32| {
+        // An upper arm hangs out from its shoulder by its spread; the forearm, from the
+        // slightly bent elbow, nearer straight down and a little forwards.
+        let elbow = |side: Side| {
+            let down = self.elbow_length;
             [
                 out(side, self.shoulder_half + down * self.arm_spread / 1000),
-                y,
+                self.shoulder - down,
                 0,
+            ]
+        };
+        let below_elbow = |side: Side, down: i32| {
+            let [x, y, _] = elbow(side);
+            [
+                x + out(side, down * self.forearm_spread / 1000),
+                y - down,
+                down * self.forearm_forward / 1000,
             ]
         };
         match joint {
@@ -207,15 +225,9 @@ impl Frame {
             Joint::Chin => [0, self.chin, self.head.1 / 2],
             Joint::NeckBase => [0, self.neck_base, 0],
             Joint::Shoulder(side) => [out(side, self.shoulder_half), self.shoulder, 0],
-            Joint::Elbow(side) => arm(side, self.elbow_length, self.shoulder - self.elbow_length),
-            Joint::Wrist(side) => {
-                let down = self.elbow_length + self.wrist_length;
-                arm(side, down, self.shoulder - down)
-            }
-            Joint::Fingertips(side) => {
-                let down = self.elbow_length + self.wrist_length + self.hand_length;
-                arm(side, down, self.shoulder - down)
-            }
+            Joint::Elbow(side) => elbow(side),
+            Joint::Wrist(side) => below_elbow(side, self.wrist_length),
+            Joint::Fingertips(side) => below_elbow(side, self.wrist_length + self.hand_length),
             Joint::Chest => [0, self.chest, self.chest_half.1],
             Joint::Waist => [0, self.waist, self.waist_half.1],
             Joint::Hip(side) => [out(side, self.hip_apart), self.hip, 0],

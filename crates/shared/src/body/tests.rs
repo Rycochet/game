@@ -53,32 +53,8 @@ fn a_person_from_proportions_is_the_person_drawn_before() {
 }
 
 #[test]
-fn other_proportions_keep_the_levels_in_order() {
-    // Rough dwarf, elf and goblin rows from the creature research.
-    let samples = [
-        Proportions {
-            heads: 53,
-            breadth: 1250,
-            limbs: 1300,
-            arms: 950,
-            legs: 863,
-        },
-        Proportions {
-            heads: 85,
-            breadth: 900,
-            limbs: 800,
-            arms: 1030,
-            legs: 1059,
-        },
-        Proportions {
-            heads: 53,
-            breadth: 850,
-            limbs: 800,
-            arms: 1100,
-            legs: 902,
-        },
-    ];
-    for frame in samples.map(|p| p.frame()) {
+fn the_first_bipeds_keep_their_levels_in_order() {
+    for frame in FIRST_BIPEDS.map(|biped| biped.proportions.frame()) {
         let levels = [
             frame.height,
             frame.chin,

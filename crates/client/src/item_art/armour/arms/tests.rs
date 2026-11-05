@@ -1,7 +1,6 @@
 use super::*;
 use shared::armour::Style;
 use shared::armour::arms::roll;
-use shared::body::Joint;
 use shared::rng::Seed;
 
 fn looks() -> impl Iterator<Item = ArmsLook> {
@@ -40,10 +39,6 @@ fn every_piece_stays_inside_its_picture_with_room_for_its_edge() {
 #[test]
 fn worn_pieces_are_on_the_arm_off_its_skin_and_above_the_wrist() {
     let frame = Frame::of(CreatureKind::Human).unwrap();
-    let point = |joint| {
-        let [x, y, z] = frame.joint(joint);
-        Vec3::new(x as f32, y as f32, z as f32)
-    };
     for look in looks() {
         for &side in look.form.sides.sides() {
             let arm = Arm {
@@ -51,16 +46,14 @@ fn worn_pieces_are_on_the_arm_off_its_skin_and_above_the_wrist() {
                 side,
                 bend: 0.0,
             };
-            let shoulder = point(Joint::Shoulder(side));
-            let wrist = point(Joint::Wrist(side));
-            // Down the arm, as `Arm` measures it: by height.
-            let along = (wrist - shoulder).normalize();
-            let per_down = (point(Joint::Elbow(side)) - shoulder).length() / arm.elbow();
             let model = build_arm(&look.form, &frame, side);
             for corner in model.parts.iter().flat_map(|(_, t)| t.iter().flatten()) {
-                let from = *corner - shoulder;
-                let down = from.dot(along) / per_down;
-                let away = (from - along * from.dot(along)).length();
+                // Down the arm, as `Arm` measures it, to the nearest point of its middle.
+                let (down, away) = (0..=200)
+                    .map(|step| step as f32 * 5.0)
+                    .map(|down| (down, (*corner - arm.centre(down)).length()))
+                    .min_by(|a, b| a.1.total_cmp(&b.1))
+                    .unwrap();
                 assert!(down > 0.0 && down < arm.elbow() + 255.0, "{look:?} {down}");
                 assert!(away > arm.skin(down) + 1.0, "{look:?} {down} {away}");
             }

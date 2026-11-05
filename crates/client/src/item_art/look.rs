@@ -1,6 +1,7 @@
 //! `Look`: what can be seen of an item, which its picture is kept by, and `look_of`.
 
 use bevy::prelude::*;
+use shared::body::Frame;
 use shared::creature::{CreatureKind, Size};
 use shared::item::{Item, Quality};
 use shared::item_form::{BandWidth, GemForm, ItemForm, Mount, Pattern, Profile};
@@ -85,9 +86,9 @@ pub enum Look {
     /// A character of a kind that stands on two legs, wearing these (their own
     /// looks), innermost first: what its token shows.
     Character { kind: CreatureKind, worn: Vec<Look> },
-    /// A bare body of a kind that stands on two legs, standing: what worn things are
-    /// built on, and later a character with what it wears.
-    Body { kind: CreatureKind },
+    /// A bare body standing as its frame says: what worn things are built on, and later
+    /// a character with what it wears.
+    Body { frame: Frame },
 }
 
 impl Look {

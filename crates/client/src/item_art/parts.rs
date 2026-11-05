@@ -22,7 +22,7 @@ pub(super) fn parts_of(
         Look::Blade { blade, quality } => {
             super::blade::blade_parts(&blade, quality, meshes, materials)
         }
-        Look::Body { kind } => super::body::body_parts(kind, meshes, materials),
+        Look::Body { frame } => super::body::body_parts(&frame, meshes, materials),
         Look::Character { kind, worn } => {
             super::character::character_parts(kind, &worn, meshes, materials)
         }
