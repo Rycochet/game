@@ -137,28 +137,23 @@ fn sides(kind: ItemKind, size: Size) -> (u8, u8) {
 #[test]
 fn sizes_round_down_going_up_and_up_going_down() {
     let ring = |size| sides(ItemKind::Ring, size);
-    for size in [
-        Size::Tiny,
-        Size::Small,
-        Size::Medium,
-        Size::Large,
-        Size::Huge,
-    ] {
+    for size in [Size::Tiny, Size::Small, Size::Medium, Size::Large] {
         assert_eq!(ring(size), (1, 1), "{size:?}");
     }
-    assert_eq!(ring(Size::Giant), (2, 2));
+    assert_eq!(ring(Size::Huge), (2, 2));
+    assert_eq!(ring(Size::Giant), (3, 3));
 
     let sword = |size| sides(ItemKind::Sword, size);
-    assert_eq!(sword(Size::Tiny), (1, 3));
+    assert_eq!(sword(Size::Tiny), (1, 2));
     assert_eq!(sword(Size::Small), (1, 4));
     assert_eq!(sword(Size::Medium), (1, 5));
-    assert_eq!(sword(Size::Large), (1, 6));
-    assert_eq!(sword(Size::Huge), (1, 7));
+    assert_eq!(sword(Size::Large), (1, 7));
 }
 
 #[test]
 fn no_side_passes_the_most_a_shape_can_hold() {
-    assert_eq!(sides(ItemKind::Sword, Size::Giant), (2, MAX_SHAPE_SIDE));
+    assert_eq!(sides(ItemKind::Sword, Size::Huge), (2, MAX_SHAPE_SIDE));
+    assert_eq!(sides(ItemKind::Sword, Size::Giant), (3, MAX_SHAPE_SIDE));
 }
 
 #[test]
@@ -175,7 +170,7 @@ fn every_kind_keeps_its_cells_and_its_medium_shape_at_every_size() {
 
 #[test]
 fn a_gap_in_a_shape_grows_with_it() {
-    let shape = ItemKind::Boomerang.def().shape.scaled(Size::Giant);
+    let shape = ItemKind::Boomerang.def().shape.scaled(Size::Huge);
     assert_eq!((shape.width, shape.height), (4, 4));
     assert_eq!(shape.size(), 12);
     assert!(!shape.has(2, 0) && !shape.has(3, 1));

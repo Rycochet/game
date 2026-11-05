@@ -38,15 +38,18 @@ impl Size {
         }
     }
 
-    /// How big it is beside `Medium`, in quarters, to keep to whole numbers.
+    /// How big it is beside `Medium`, in quarters, to keep to whole numbers: the middle
+    /// of its band of heights (or lengths) over a person's 1.75 m, from the creature
+    /// research. Tiny is under 0.75 m, Small to 1.5 m, Medium to 2.1 m, Large to 3.2 m,
+    /// Huge to 4.5 m and Giant to 7 m (owner, 2026-11-04).
     pub fn quarters(self) -> u32 {
         match self {
-            Self::Tiny => 2,
+            Self::Tiny => 1,
             Self::Small => 3,
             Self::Medium => 4,
-            Self::Large => 5,
-            Self::Huge => 6,
-            Self::Giant => 8,
+            Self::Large => 6,
+            Self::Huge => 9,
+            Self::Giant => 12,
         }
     }
 

@@ -164,5 +164,5 @@ fn weights_match_the_worked_out_figures() {
             form.grams()
         );
     }
-    assert_eq!(plain.grams_at(Size::Large), plain.grams() * 25 / 16);
+    assert_eq!(plain.grams_at(Size::Large), plain.grams() * 36 / 16);
 }

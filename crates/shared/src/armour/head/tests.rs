@@ -115,7 +115,7 @@ fn weights_match_the_worked_out_figures() {
         }
     }
     let helm = find("Great Helm");
-    assert_eq!(helm.grams_at(Size::Large), helm.grams() * 25 / 16);
+    assert_eq!(helm.grams_at(Size::Large), helm.grams() * 36 / 16);
 }
 
 #[test]
