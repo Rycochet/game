@@ -45,6 +45,9 @@ pub(super) fn give_item(
         quality,
         set,
         favour,
+        seed: None,
+        count: 1,
+        identical: true,
     }));
     done()
 }

@@ -170,6 +170,9 @@ fn give(kind: ItemKind) -> ClientMessage {
         quality: Quality::Rare,
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     }
 }
 
@@ -342,6 +345,9 @@ fn only_things_with_quality_can_be_part_of_a_set() {
         quality: Quality::Poor,
         set: true,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     };
     test.send(&[give(ItemKind::Hat), give(ItemKind::Apple)]);
     let set_of = |kind| {
@@ -363,6 +369,9 @@ fn a_new_ring_has_a_form_and_fits_its_wearer_and_a_new_gem_rolls_its_size() {
         quality: Quality::Rare,
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     };
     let carried = inventory(&test.send(&[give(ItemKind::Ring)]));
     let ring = &carried.items[0].item;
@@ -387,6 +396,9 @@ fn artifacts_are_always_named() {
         quality: Quality::Artifact,
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     };
     let carried = inventory(&test.send(&[artifact]));
     let name = carried.items[0].item.name();
@@ -418,6 +430,9 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
         quality: Quality::Epic,
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     };
     let mut made = |kind| {
         let answers = test.send(&[large(kind)]);
@@ -446,6 +461,9 @@ fn given(
         quality: Quality::Rare,
         set: false,
         favour,
+        seed: None,
+        count: 1,
+        identical: true,
     }]);
     inventory(&answers).items.last().unwrap().item.id
 }
@@ -564,6 +582,9 @@ fn asking_for_magic_on_something_plain_raises_its_quality() {
         quality: Quality::Common,
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     }]);
     let hat = inventory(&answers).items.last().unwrap().item.clone();
     assert!(hat.is_magical());

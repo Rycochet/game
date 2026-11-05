@@ -28,6 +28,8 @@ pub(super) const TOOLTIP_TEXT: Color = NO_QUALITY_NAME;
 pub(super) const SUNKEN_BACKGROUND: Color = Color::srgb(0.87, 0.8, 0.65);
 /// The edge of a text box saying something is wrong.
 pub(super) const ERROR_EDGE: Color = Color::srgb(0.75, 0.12, 0.12);
+/// Words warning that something can't be done, on parchment.
+pub const WARNING_TEXT: Color = ERROR_EDGE;
 
 /// A main button's background.
 pub(super) const MAIN_BACKGROUND: Color = Color::srgb(0.85, 0.62, 0.25);

@@ -34,6 +34,17 @@ impl StackLimits {
         most: 1,
     };
 
+    /// The most of this item one stack could hold: 1 for what can't stack.
+    pub fn most_of(&self, item: &Item) -> u32 {
+        if item.kind.def().container.is_some() {
+            return 1;
+        }
+        let cells = item.shape().cells().count() as u32;
+        let most_grams = self.grams_per_cell.saturating_mul(cells);
+        let one = item.own_weight().max(1);
+        (most_grams / one).clamp(1, self.most.max(1))
+    }
+
     /// How many of `adding`'s items, taken from its top, could go on `stack`: 0 if
     /// they don't all look the same as it, or it is full.
     pub fn room(&self, stack: &Item, adding: &Item) -> u32 {

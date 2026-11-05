@@ -24,6 +24,9 @@ fn give(kind: ItemKind) -> ClientMessage {
         quality: Quality::Rare,
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     }
 }
 
@@ -35,6 +38,9 @@ fn give_cursed(kind: ItemKind) -> ClientMessage {
         quality: Quality::Rare,
         set: false,
         favour: Some(Favour::Cursed),
+        seed: None,
+        count: 1,
+        identical: true,
     }
 }
 

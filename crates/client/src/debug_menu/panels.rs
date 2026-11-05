@@ -20,6 +20,8 @@ mod every_widget;
 mod generate;
 mod generate_form;
 mod give;
+mod give_form;
+mod give_preview;
 mod give_systems;
 mod go_to_world;
 mod layout;
@@ -38,14 +40,21 @@ pub(super) use generate_form::{
     GenerateButton, GenerateForm, GenerateKind, NewSeedButton, RuinButton, SeedBox,
 };
 use generate_form::{SEED_WIDTH, new_seed};
-pub(super) use give::{
-    CreatureButton, GiveButton, GiveFavour, GiveForm, GiveMagic, GiveQualities, GiveSet, GiveSizes,
+pub(super) use give::CreatureButton;
+use give::{spawn_creature_buttons, spawn_give_panel};
+use give_form::give_kinds;
+pub(super) use give_form::{
+    GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveForm, GiveNoSpace, GivePreview,
+    GiveRandomSeed, GiveSeed, SetChoice,
 };
-use give::{spawn_creature_buttons, spawn_give_buttons};
-pub(super) use give_systems::{choose_give_options, press_creature_buttons, press_give_buttons};
+pub(super) use give_preview::show_give_preview;
+pub(super) use give_systems::{
+    choose_give_options, edit_give_boxes, press_creature_buttons, press_give_button,
+    start_give_panel,
+};
 use go_to_world::spawn_go_to_world;
 pub(super) use go_to_world::{press_go_to_world_buttons, update_go_to_world_button};
-use layout::{row, words, wrapped};
+use layout::{row, words};
 pub(super) use open::{OpenPanels, forget_closed};
 use pictures_form::{
     BLADE_PICTURE, HANDS_PICTURE, LARGE_PICTURE, LARGE_PICTURE_PIXELS, PAGES_WIDTH, PICTURE,

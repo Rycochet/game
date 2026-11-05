@@ -25,14 +25,16 @@ mod armour;
 mod gem;
 mod give;
 mod limits;
+mod make;
 mod measure;
 mod ring;
 mod ring_roll;
 mod words;
 
 pub use gem::{Cut, GemForm};
-pub use give::{give_blade_within, give_commission, give_form};
+pub use give::{give_blade_within, give_commission, give_form, give_form_from};
 pub use limits::Limits;
+pub use make::{ItemOrder, batch_seed, make_item};
 pub use ring::{BandWidth, Mount, Pattern, Profile, RingForm, Setting};
 
 /// What an item is like, for kinds that have this.
@@ -108,5 +110,7 @@ impl ItemForm {
     }
 }
 
+#[cfg(test)]
+mod make_tests;
 #[cfg(test)]
 mod tests;

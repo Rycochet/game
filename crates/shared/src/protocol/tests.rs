@@ -105,6 +105,9 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             quality: Quality::Epic,
             set: false,
             favour: Some(Favour::Cursed),
+            seed: None,
+            count: 1,
+            identical: true,
         },
         ClientMessage::OpenTrade {
             with: Id::for_test(3),
