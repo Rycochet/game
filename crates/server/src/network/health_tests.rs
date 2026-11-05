@@ -3,14 +3,24 @@ use super::*;
 use shared::protocol::{ServerVersion, VERSION_PATH};
 use std::fs;
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::thread;
 
 use crate::storage::tests::TestFolder;
 
 /// A plain web server with no game running, beating `heartbeat` only when a
-/// test does, and serving `web` if given.
+/// test does, and serving the web client in `web` if given (with no history).
 fn serve_plain(heartbeat: Heartbeat, web: Option<PathBuf>) -> SocketAddr {
+    let web = web.map(|files| WebClient {
+        files,
+        history: None,
+    });
+    serve_web(heartbeat, web)
+}
+
+/// `serve_plain` for any web client.
+pub(super) fn serve_web(heartbeat: Heartbeat, web: Option<WebClient>) -> SocketAddr {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();
     let (new_connections, _accepted) = mpsc::channel();

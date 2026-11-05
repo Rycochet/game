@@ -23,7 +23,6 @@
 use bevy::prelude::*;
 use shared::protocol::ServerLink;
 use std::net::{SocketAddr, TcpListener};
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -56,6 +55,7 @@ use routes::{Stop, accept_connections};
 use socket::upgrade;
 use stop::{stop_signal, stop_when_asked};
 use tls_listener::TlsListener;
+pub use web_files::WebClient;
 
 /// The largest message a client may send (they are all tiny).
 const MAX_MESSAGE: usize = 64 * 1024;
@@ -89,7 +89,7 @@ const HANDSHAKE_LIMIT: Duration = Duration::from_secs(10);
 /// with `address` only answering that it isn't secure.
 pub struct NetworkPlugin {
     pub address: SocketAddr,
-    pub web: Option<PathBuf>,
+    pub web: Option<WebClient>,
     pub security: Security,
 }
 
@@ -160,3 +160,5 @@ impl Plugin for NetworkPlugin {
 mod health_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod web_delta_tests;

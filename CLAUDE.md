@@ -14,7 +14,7 @@ The project owner is new to Rust: explain Rust concepts briefly when they come u
 
 Rust stable (pinned in `rust-toolchain.toml`), Bevy 0.20, Trunk for the web build, WebSockets between client and server, postcard for messages. Details: `docs/context/project.md`.
 
-Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`: the networked server, also serving the web client), `xtask` (helper commands).
+Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/client` (Bevy app, binary `hall-of-worlds`; native builds embed the server for single player), `crates/server` (native only, binary `hall-of-worlds-server`: the networked server, also serving the web client), `crates/web_delta` (native only: delta downloads of the web client, for the server and xtask), `xtask` (helper commands).
 
 ## How to load context (read this first)
 
@@ -58,6 +58,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes), server addresses as typed |
 | shared: site        | `crates/shared/src/site/`       | `docs/context/shared/site.md`         | Sites behind pois: building (BSP) with ruin and basements, cave (with skylights), town, farm and herbalist's hut generators, levels, stairs |
+| web_delta           | `crates/web_delta/`             | `docs/context/web_delta/web_delta.md` | Delta downloads of the web client (`dcz`): a new wasm compressed against an old build a browser has; hashes and file names the server and xtask share |
 | server              | `crates/server/`                | `docs/context/server/server.md`       | Authoritative server in its own Bevy world: WebSocket networking (and the web client's files) on one port, connections, world map chunks, site visits and level cells, accounts and logging in, saves (world, sites, characters), embedded single player (which its player can open to others), standalone binary |
 | client: connection  | `crates/client/src/connection/` | `docs/context/client/connection.md`   | Connecting to the server (embedded on native, WebSocket on the web), reconnecting, sending steps and putting refused ones right, `ToServer` / `FromServer` |
 | client: common      | `crates/client/src/common/`     | `docs/context/client/common.md`       | Current world (and its pois) and dungeon, the site's other known floors and their numbering, `MapPosition` / `SmoothPosition`, `GameView` state (incl. `Connecting`), the window as left (place, size, maximised, monitor, full screen) and `DisplayInUse`, `ServerStatus`, `Portal` / `Clickable`, clock, weather, view stats, view facing, frame cap, `Token`, `LightSource`, `SharesSight` |

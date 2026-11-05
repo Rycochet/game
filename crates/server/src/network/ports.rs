@@ -4,12 +4,12 @@
 use bevy::prelude::*;
 use shared::protocol::ServerLink;
 use std::net::{SocketAddr, TcpListener};
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
 use std::thread::{self, JoinHandle};
 
 use super::routes::{Stop, serve};
+use super::web_files::WebClient;
 use super::{Heartbeat, PING_EVERY, SILENT_AFTER, SecurePort, Sockets};
 use crate::clock::ServerClock;
 use crate::tls::{Certificates, Security};
@@ -31,7 +31,7 @@ pub(crate) fn open_ports(
     heartbeat: Heartbeat,
     plain: Option<SocketAddr>,
     security: &Security,
-    web: Option<PathBuf>,
+    web: Option<WebClient>,
     stop: Stop,
 ) -> Result<OpenPorts, String> {
     let bind = |address: SocketAddr| {

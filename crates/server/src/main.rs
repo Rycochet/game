@@ -28,7 +28,8 @@
 //! - `HOW_TLS_NAMES`: names and addresses a made certificate covers as well as
 //!   this machine, separated by commas.
 //! - `HOW_WEB`: the web client's folder (`trunk build`'s `dist`) to
-//!   serve; without it, only the game's WebSockets are served.
+//!   serve; without it, only the game's WebSockets are served. The last few
+//!   builds served are kept in the data folder's `web-history`, for deltas.
 //! - `HOW_DATA`: where to save (default: the user's data
 //!   folder).
 //! - `HOW_GUESTS`: `true` (the default) lets clients play without an account.
@@ -47,8 +48,9 @@ use std::net::SocketAddr;
 use std::process;
 
 use server::{
-    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerName, ServerOptions, check_health,
-    debug_api::DebugApiPlugin, default_data_folder, headless_app, log_plugin, option_on,
+    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerName, ServerOptions, WebClient,
+    check_health, debug_api::DebugApiPlugin, default_data_folder, headless_app, log_plugin,
+    option_on,
 };
 use shared::world::WorldSeed;
 
@@ -68,8 +70,13 @@ fn main() {
             }
         }
     }
-    let web = env::var_os("HOW_WEB").map(Into::into);
     let data = default_data_folder();
+    // Past builds of the web client are kept beside the saves, to send
+    // browsers that have one only what changed.
+    let web = env::var_os("HOW_WEB").map(|files| WebClient {
+        files: files.into(),
+        history: Some(data.join("web-history")),
+    });
     let security = Security::from_environment(&data).unwrap_or_else(|error| {
         // Logging hasn't started yet.
         eprintln!("{error}");

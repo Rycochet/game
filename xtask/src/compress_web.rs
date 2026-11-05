@@ -13,7 +13,8 @@ const SMALLEST: usize = 1024;
 
 /// Kinds of file that are compressed already, so brotli gains nothing.
 const ALREADY_COMPRESSED: &[&str] = &[
-    "br", "gz", "zst", "png", "jpg", "jpeg", "webp", "avif", "ktx2", "basis", "ogg", "mp3", "woff2",
+    "br", "gz", "zst", "dcz", "png", "jpg", "jpeg", "webp", "avif", "ktx2", "basis", "ogg", "mp3",
+    "woff2",
 ];
 
 pub fn run(args: &[String]) -> ExitCode {

@@ -8,6 +8,7 @@ mod compress_web;
 mod latest;
 mod sizes;
 mod target_dir;
+mod web_deltas;
 mod webgl;
 
 use std::env;
@@ -40,6 +41,10 @@ Tasks:
           Write a brotli copy (<file>.br) beside each file of a web build
           (`trunk build`'s dist folder) that compresses well, for the
           server to send browsers instead.
+  web-deltas <dir> <old wasm>...
+          Write a delta (deltas/<hash>.dcz) into a web build for each old
+          build's wasm given, for the server to send browsers that have
+          that old build. Give the wasm as published, never rebuilt.
 ";
 
 /// A named cargo command: what `lint` and `test` are made of.
@@ -112,6 +117,7 @@ fn main() -> ExitCode {
         Some("package") => package(),
         Some("latest") => latest::run(),
         Some("compress-web") => compress_web::run(&env::args().skip(2).collect::<Vec<_>>()),
+        Some("web-deltas") => web_deltas::run(&env::args().skip(2).collect::<Vec<_>>()),
         Some("api") => api::run(&env::args().skip(2).collect::<Vec<_>>()),
         _ => {
             eprintln!(

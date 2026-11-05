@@ -32,6 +32,10 @@ rcgen.workspace = true
 x509-parser.workspace = true
 time.workspace = true
 instant-acme.workspace = true
+# Deltas of the web client from builds browsers already have.
+web_delta.workspace = true
+# Reading the hash a browser names its build by (MIT/Apache-2.0).
+base64 = "0.22"
 uuid = { workspace = true, features = ["std", "rng", "v6"] }
 # Headless: no rendering, windowing, audio or input.
 bevy = { workspace = true, features = ["std", "bevy_log", "multi_threaded"] }

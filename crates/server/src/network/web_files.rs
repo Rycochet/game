@@ -1,6 +1,11 @@
 //! The web client's files: the brotli copy where there is one (made by
-//! `cargo xtask compress-web`) for browsers that take it, and how long
+//! `cargo xtask compress-web`) for browsers that take it, a delta for
+//! browsers that have an older build of the wasm (`deltas`), and how long
 //! browsers may keep each file.
+
+mod deltas;
+mod dictionary;
+mod history;
 
 use axum::Router;
 use axum::extract::Request;
@@ -8,6 +13,7 @@ use axum::http::{HeaderValue, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::Response;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tower_http::services::ServeDir;
 
 /// Files whose names carry a hash of what is in them never change, so
@@ -17,10 +23,24 @@ const KEEP: &str = "public, max-age=31536000, immutable";
 /// new version is seen at once; the check is small when nothing changed.
 const CHECK: &str = "no-cache";
 
-/// Serves the files in `dir`.
-pub(super) fn web_files(dir: PathBuf) -> Router {
+pub(super) use deltas::WebFiles;
+
+/// The web client a server serves: its files (`trunk build`'s `dist`), and
+/// where to keep the builds it served before, to make deltas from.
+#[derive(Clone, Debug)]
+pub struct WebClient {
+    pub files: PathBuf,
+    pub history: Option<PathBuf>,
+}
+
+/// Serves the web client's files, with deltas from older builds.
+pub(super) fn web_files(web: Arc<WebFiles>) -> Router {
     Router::new()
-        .fallback_service(ServeDir::new(dir).precompressed_br())
+        .fallback_service(ServeDir::new(&web.files).precompressed_br())
+        .layer(middleware::from_fn_with_state(
+            web,
+            dictionary::dictionaries,
+        ))
         .layer(middleware::from_fn(cache_control))
 }
 
