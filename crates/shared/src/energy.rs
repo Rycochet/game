@@ -17,20 +17,30 @@ use crate::movement::step_cost;
 /// the client counts for itself.
 pub const ACTION_TICKS_PER_SECOND: f64 = 20.0;
 
-/// What an ordinary creature gains per tick. With these costs, it walks about 12
-/// cells a second in a site and 60 points a second on the world map.
+/// What an ordinary creature gains per tick. With these costs, it walks 4 cells a
+/// second in a site and 60 points a second on the world map.
 pub const NORMAL_SPEED: u32 = 210;
 
-/// A cell of a site takes this many times the energy of a point of the world map,
-/// the scales being so different.
+/// Other actions in a site (stairs, dressing, moving things between containers) cost
+/// this many times a world map point's energy, the scales being so different.
 pub const SITE_SCALE: u32 = 5;
+
+/// A step in a site costs this many times a world map step: 4 cells a second at
+/// `NORMAL_SPEED`, slow enough that something coming round a corner can be seen
+/// before it is beside you. Tweak to change the pace inside sites.
+pub const SITE_STEP_SCALE: u32 = 15;
+
+/// Cells a second walked in a site at `NORMAL_SPEED` (what the client paces click
+/// travel by).
+pub const SITE_CELLS_PER_SECOND: f64 = NORMAL_SPEED as f64 * ACTION_TICKS_PER_SECOND
+    / (crate::movement::STRAIGHT_COST * SITE_STEP_SCALE) as f64;
 
 /// Taking stairs or going into or out of a site: two straight steps' worth.
 pub const CHANGE_MAP_COST: u32 = 2 * 70 * SITE_SCALE;
 
 /// How much a step in a site costs: its distance.
 pub fn site_step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
-    step_cost(from, to) * SITE_SCALE
+    step_cost(from, to) * SITE_STEP_SCALE
 }
 
 /// How much putting on or taking off something this heavy costs: plate takes
@@ -42,8 +52,8 @@ pub fn dressing_cost(grams: u32) -> u32 {
 }
 
 /// How much moving something this heavy from one container to another costs: 10 kg
-/// takes as long as a straight step in a site. Nothing is quite free. To depend on
-/// stats, later.
+/// takes a twelfth of a second at `NORMAL_SPEED`. Nothing is quite free. To depend
+/// on stats, later.
 pub fn handling_cost(grams: u32) -> u32 {
     const GRAMS_PER_STEP: u64 = 10_000;
     let step = (70 * SITE_SCALE) as u64;

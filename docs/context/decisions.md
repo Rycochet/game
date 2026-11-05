@@ -844,3 +844,7 @@ Owner: so the debug API can read and change the interface without taking the mou
 ## 2026-11-05: Visited World Gates are kept for the whole character, by gate pair
 
 Owner: a World Gate the character has gone through is drawn with orange water instead of blue. Each Hall gate and the planet World Gate it leads to are one pair, so they are kept by the Hall gate's `GatePlace::number` and going through either side marks both. Gates join worlds, so the set is in `CharacterSave::gates` beside the inventory and sheet, not in any one world's knowledge, and isn't forgotten by `FORGET_BEFORE`. Only going through counts (dev tools' moves don't). The server sends the whole set (`VisitedGates`) with every `Welcome` and when it grows; `hall_view` owns it client-side and colours every gate's water, in the Hall and on the world map, through one `GateWater` component.
+
+## 2026-11-05: Slower steps inside sites
+
+Owner: at 12 cells a second a mob coming round a corner, noticing from 12 cells, was beside you within a second. Normal speed is now 4 cells a second in a site (`energy::SITE_STEP_SCALE`, a constant to tweak), the world map unchanged. Only steps were slowed: stairs, dressing and moving things between containers keep their old cost (`SITE_SCALE`), as there was no reason to make them slower too. The client paces click travel and others' tokens by the same constant (`SITE_CELLS_PER_SECOND`).

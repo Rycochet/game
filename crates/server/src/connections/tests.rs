@@ -625,14 +625,14 @@ fn steps_wait_for_energy_in_order_and_time_brings_them() {
     assert_eq!(test.client.visit.as_ref().unwrap().position(), after_first);
     assert_eq!(test.client.waiting.len(), 2);
 
-    // A step costs 1⅔ ticks: one more after 2 ticks, and the last after 2 more.
-    test.world.action_clock.advance(1);
+    // A step costs 5 ticks: one more after 5 ticks, and the last after 5 more.
+    test.world.action_clock.advance(4);
     test.send(&[]);
     assert_eq!(test.client.waiting.len(), 2);
     test.world.action_clock.advance(1);
     test.send(&[]);
     assert_eq!(test.client.waiting.len(), 1);
-    test.world.action_clock.advance(2);
+    test.world.action_clock.advance(5);
     let answers = test.send(&[]);
     assert!(test.client.waiting.is_empty());
     assert_eq!(
