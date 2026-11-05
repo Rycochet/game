@@ -9,7 +9,7 @@ use super::super::rows::{spawn_dropdown_row, spawn_labelled, spawn_section, tip}
 use crate::common::{
     AntiAliasing, Background, FrameRate, IN_BROWSER, Preset, RENDER_SCALES, VideoPrefs,
 };
-use crate::widgets::{ButtonState, Dropdown, INK, spawn_slider};
+use crate::widgets::{ButtonState, Dropdown, INK, UiId, spawn_slider};
 
 const WIDTH: f32 = 200.0;
 const PERCENT_WIDTH: f32 = 60.0;
@@ -33,6 +33,29 @@ pub(in crate::system_menu) enum VideoControl {
     FloorTextures,
     Remembered,
     ReduceMotion,
+}
+
+impl VideoControl {
+    fn ui_name(self) -> &'static str {
+        match self {
+            Self::Preset => "preset",
+            Self::FrameRate => "frame_rate",
+            Self::VSync => "vsync",
+            Self::RenderScale => "render_scale",
+            Self::AntiAliasing => "anti_aliasing",
+            Self::Background => "background",
+            Self::Brightness => "brightness",
+            Self::Shadows => "shadows",
+            Self::MiddaySun => "midday_sun",
+            Self::ViewDistance => "view_distance",
+            Self::Clouds => "clouds",
+            Self::Precipitation => "precipitation",
+            Self::Foliage => "foliage",
+            Self::FloorTextures => "floor_textures",
+            Self::Remembered => "remembered",
+            Self::ReduceMotion => "reduce_motion",
+        }
+    }
 }
 
 /// The percentage beside a slider, by the slider's setting.
@@ -87,7 +110,9 @@ pub(super) fn setting_row(
 ) {
     let made = spawn_dropdown_row(parent, label, tip(what, why_not), dropdown, WIDTH);
     let mut commands = parent.commands();
-    commands.entity(made).insert(control);
+    commands
+        .entity(made)
+        .insert((control, UiId::new("settings.video", control.ui_name())));
     if why_not.is_some() {
         commands.entity(made).insert(ButtonState::Disabled);
     }
@@ -103,7 +128,8 @@ pub(super) fn slider_row(
 ) {
     spawn_labelled(parent, label, tip(what, None), |row| {
         let value = f32::from(percent.clamp(least, most) - least) / f32::from(most - least);
-        spawn_slider(row, value, None, WIDTH).insert(control);
+        spawn_slider(row, value, None, WIDTH)
+            .insert((control, UiId::new("settings.video", control.ui_name())));
         row.spawn((
             PercentText(control),
             Text::new(format!("{percent}%")),

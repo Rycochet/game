@@ -117,6 +117,9 @@ pub fn spawn_check_button<'a>(
         BackgroundColor(background),
         border,
     ));
+    if let Some(checked) = checked {
+        button.insert(super::Checked(checked));
+    }
     button.with_children(|inside| {
         let mut slot = inside.spawn(Node {
             width: px(CHECK_PIXELS),

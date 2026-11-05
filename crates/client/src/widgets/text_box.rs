@@ -111,7 +111,7 @@ pub fn field_label(words: impl Into<String>) -> impl Bundle {
 }
 
 /// What of `typed` a box keeps.
-fn allowed(typed: &str, digits_only: bool) -> String {
+pub(super) fn allowed(typed: &str, digits_only: bool) -> String {
     typed
         .chars()
         .filter(|c| !c.is_control() && (!digits_only || c.is_ascii_digit()))

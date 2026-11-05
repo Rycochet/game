@@ -16,7 +16,7 @@ use bevy::prelude::*;
 use crate::common::{InterfaceSize, Preferences};
 use crate::widgets::{
     ButtonPressed, ButtonState, Dropdown, DropdownChosen, INK, INTERFACE_PERCENTS, Pressable,
-    TabChosen, TextSize, TouchOnly, spawn_check_button, spawn_dropdown, spawn_tabs,
+    TabChosen, TextSize, TouchOnly, UiId, spawn_check_button, spawn_dropdown, spawn_tabs,
 };
 
 const PAGES: [&str; 3] = ["Gameplay", "Interface", "Video"];
@@ -47,7 +47,10 @@ pub(super) struct TouchButton;
 /// The tabs and their pages, in Settings' panel.
 pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
     let tabs = spawn_tabs(panel, &PAGES, 0, FONT);
-    panel.commands().entity(tabs).insert(PageTabs);
+    panel
+        .commands()
+        .entity(tabs)
+        .insert((PageTabs, UiId::new("settings", "page")));
     for (index, _) in PAGES.iter().enumerate() {
         // Pages not chosen take no room, so the chosen one is always at the top.
         let mut page = panel.spawn((
@@ -148,7 +151,8 @@ pub(super) fn fill_interface_page(
                 height: px(ROW_HEIGHT),
                 ..default()
             };
-            spawn_dropdown(row, dropdown, FONT, node).insert(SizeDropdown);
+            spawn_dropdown(row, dropdown, FONT, node)
+                .insert((SizeDropdown, UiId::new("settings.interface", "size")));
         });
         // A device with only a touch screen has it on, and can't turn it off.
         let (state, checked) = if touch_only.0 {
@@ -161,8 +165,11 @@ pub(super) fn fill_interface_page(
             align_self: AlignSelf::FlexStart,
             ..default()
         };
-        spawn_check_button(page, state, Some(checked), "Enable touch", FONT, node)
-            .insert((TouchButton, Pressable));
+        spawn_check_button(page, state, Some(checked), "Enable touch", FONT, node).insert((
+            TouchButton,
+            Pressable,
+            UiId::new("settings.interface", "touch"),
+        ));
         page.spawn((
             Text::new("Keeps the interface at least its own size, for fingers."),
             TextSize::Small.font(),

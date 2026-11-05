@@ -13,7 +13,7 @@ use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPos
 use crate::connection::FromServer;
 use crate::player::Player;
 use crate::widgets::{
-    ContainerLook, ContainerSize, ScrollKey, StockAim, StockAimAt, StockGrid, StockGridNode,
+    ContainerLook, ContainerSize, StockAim, StockAimAt, StockGrid, StockGridNode, UiId,
     draw_stock_aim, spawn_container,
 };
 
@@ -66,7 +66,7 @@ pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) -> Entity {
                 slots: false,
             };
             let parts = spawn_container(section, look);
-            let key = ScrollKey::new("inventory.ground");
+            let key = UiId::new("ground", "scroll");
             section.commands().entity(parts.grid).insert(key);
             if let Some(controls) = parts.controls {
                 let mut commands = section.commands();

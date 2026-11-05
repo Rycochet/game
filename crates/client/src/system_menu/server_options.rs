@@ -11,7 +11,7 @@ use super::spawn::{spawn_layer, spawn_title_row};
 use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
 use crate::common::{Hosting, Preferences};
 use crate::widgets::{
-    ButtonPressed, INK, Pressable, ScrollKey, TextBox, TextSize, copy_to_clipboard, field_label,
+    ButtonPressed, INK, Pressable, TextBox, TextSize, UiId, copy_to_clipboard, field_label,
     spawn_copy_button, spawn_scroll_area, spawn_text_box,
 };
 
@@ -28,6 +28,18 @@ pub(super) enum OptionBox {
     BindAddress,
     Port,
     PlayerLimit,
+}
+
+impl OptionBox {
+    fn ui_name(self) -> &'static str {
+        match self {
+            Self::Name => "name",
+            Self::PublicAddress => "public_address",
+            Self::BindAddress => "bind_address",
+            Self::Port => "port",
+            Self::PlayerLimit => "player_limit",
+        }
+    }
 }
 
 const BOXES: [(OptionBox, &str, bool); 5] = [
@@ -69,7 +81,7 @@ pub(super) fn spawn_server_options(commands: &mut Commands) {
         },
     );
     commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Server Options");
+        spawn_title_row(panel, "Server Options", "server_options");
         for (which, label, digits_only) in BOXES {
             panel.spawn(field_label(label));
             let text_box = TextBox {
@@ -82,7 +94,8 @@ pub(super) fn spawn_server_options(commands: &mut Commands) {
                 height: px(BUTTON_ROW),
                 ..default()
             };
-            spawn_text_box(panel, text_box, FONT, node).insert(which);
+            spawn_text_box(panel, text_box, FONT, node)
+                .insert((which, UiId::new("server_options", which.ui_name())));
         }
         // Its words, and the button copying it beside them.
         panel
@@ -101,11 +114,14 @@ pub(super) fn spawn_server_options(commands: &mut Commands) {
                     flex_shrink: 0.0,
                     ..default()
                 };
-                spawn_copy_button(row, "Copy the certificate", FONT, node)
-                    .insert((Action::CopyCertificate, Pressable));
+                spawn_copy_button(row, "Copy the certificate", FONT, node).insert((
+                    Action::CopyCertificate,
+                    Action::CopyCertificate.ui_id("server_options"),
+                    Pressable,
+                ));
             });
         let area = spawn_scroll_area(panel, Val::Vh(CERTIFICATE_SHARE));
-        let key = ScrollKey::new("server_options.certificate");
+        let key = UiId::new("server_options", "certificate");
         panel.commands().entity(area).insert(key);
         panel.commands().entity(area).with_child((
             CertificateText,

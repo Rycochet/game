@@ -99,7 +99,7 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
                             FONT,
                             wide_button(),
                         );
-                        button.insert((action, Pressable));
+                        button.insert((action, Pressable, action.ui_id("menu")));
                         if let Some(shown) = shown {
                             button.insert(shown);
                         }

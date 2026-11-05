@@ -16,14 +16,14 @@ const TAB_LINE: f32 = 2.0;
 /// A row, and which is chosen.
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct Tabs {
-    selected: usize,
+    pub(super) selected: usize,
 }
 
 /// One of a row: its row, and where in it.
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct Tab {
-    row: Entity,
-    index: usize,
+    pub(super) row: Entity,
+    pub(super) index: usize,
 }
 
 /// The player chose another of this row: its entity, and which.

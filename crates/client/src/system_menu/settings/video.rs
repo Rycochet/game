@@ -22,8 +22,8 @@ use crate::common::{
     DisplayChoice, DisplayInUse, DisplayMode, Preferences, Resolution, resolutions,
 };
 use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonStyle, Dropdown, DropdownChosen, INK, Pressable, ScrollKey,
-    TextSize, spawn_button,
+    ButtonPressed, ButtonState, ButtonStyle, Dropdown, DropdownChosen, INK, Pressable, TextSize,
+    UiId, spawn_button,
 };
 
 const DROPDOWN_WIDTH: f32 = 300.0;
@@ -120,7 +120,7 @@ pub(in crate::system_menu) fn fill_video_page(
     let video = preferences.video;
     commands.entity(page).with_children(|page| {
         options::spawn_preset_row(page, &video);
-        spawn_sections(page, ScrollKey::new("settings.video"), |sections| {
+        spawn_sections(page, UiId::new("settings.video", "scroll"), |sections| {
             spawn_section(sections, "Window", |section| {
                 spawn_window_rows(section, in_use.0, entries, labels);
             });
@@ -159,7 +159,7 @@ fn spawn_window_rows(
     section
         .commands()
         .entity(mode_dropdown)
-        .insert(ModeDropdown);
+        .insert((ModeDropdown, UiId::new("settings.video", "display_mode")));
     let sizes = Dropdown {
         options: labels,
         selected: resolution_index(&entries, in_use.resolution),
@@ -167,10 +167,10 @@ fn spawn_window_rows(
     };
     let size_tip = tip(RESOLUTION, Some(why_not.unwrap_or("Only for Full screen.")));
     let size_dropdown = spawn_dropdown_row(section, "Resolution", size_tip, sizes, DROPDOWN_WIDTH);
-    section
-        .commands()
-        .entity(size_dropdown)
-        .insert(ResolutionDropdown(entries));
+    section.commands().entity(size_dropdown).insert((
+        ResolutionDropdown(entries),
+        UiId::new("settings.video", "resolution"),
+    ));
     if let Some(why) = why_not {
         section.spawn((Text::new(why), TextSize::Small.font(), TextColor(INK)));
     }
@@ -188,6 +188,7 @@ fn spawn_window_rows(
             spawn_button(row, ButtonState::Disabled, "Apply", FONT, node).insert((
                 ApplyButton,
                 Action::ApplyVideo,
+                Action::ApplyVideo.ui_id("settings.video"),
                 ButtonStyle::Main,
                 Pressable,
             ));

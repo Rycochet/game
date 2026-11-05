@@ -62,7 +62,7 @@ pub(super) fn spawn_credits(commands: &mut Commands) {
         },
     );
     commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Credits");
+        spawn_title_row(panel, "Credits", "credits");
         let list = spawn_scroll_area(panel, Val::Vh(LIST_SHARE));
         panel.commands().entity(list).insert(CreditsList);
         panel.commands().entity(list).with_children(|list| {

@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 
+use crate::widgets::UiId;
+
 /// What is open.
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SystemMenu {
@@ -121,6 +123,37 @@ pub(super) enum Action {
     CopyCertificate,
     Quit,
     ReallyQuit,
+}
+
+impl Action {
+    /// Its button's id in `form`, for the debug API.
+    pub(super) fn ui_id(self, form: &'static str) -> UiId {
+        let name = match self {
+            Self::Open => "menu",
+            Self::Back => "back",
+            Self::Play => "play",
+            Self::Settings => "settings",
+            Self::ApplyVideo => "apply",
+            Self::KeepVideo | Self::KeepCertificate => "keep",
+            Self::Credits => "credits",
+            Self::LogOut => "log_out",
+            Self::Connect | Self::ConnectNow => "connect",
+            Self::PickServer(_) => "server",
+            Self::ForgetServer(_) | Self::ReallyForget => "forget",
+            Self::Certificate => "certificate",
+            Self::ClearCertificate => "clear",
+            Self::ToggleOnline => "online",
+            Self::ReallyToggleOnline => "yes",
+            Self::ServerOptions => "server_options",
+            Self::CopyCertificate => "copy",
+            Self::Quit | Self::ReallyQuit => "quit",
+        };
+        let id = UiId::new(form, name);
+        match self {
+            Self::PickServer(at) | Self::ForgetServer(at) => id.at(at),
+            _ => id,
+        }
+    }
 }
 
 /// A menu button shown only some of the time (`show_buttons`).

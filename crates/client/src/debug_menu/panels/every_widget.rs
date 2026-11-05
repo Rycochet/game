@@ -7,15 +7,15 @@ use super::super::actions::kind_name;
 use super::{CHECK_ROW, EVERY_WIDGET_HEIGHT, FONT};
 use crate::widgets::{
     ALLOWED, BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, GRID_COLOUR, INK, Pressable,
-    ScrollKey, TextBox, field_label, raised_box, spawn_button, spawn_check_button,
-    spawn_close_button, spawn_dropdown, spawn_progress_bar, spawn_scroll_area, spawn_slider,
-    spawn_tabs, spawn_text_box, spawn_toggle_row, spawn_tooltip,
+    TextBox, UiId, field_label, raised_box, spawn_button, spawn_check_button, spawn_close_button,
+    spawn_dropdown, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_tabs,
+    spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
 
 /// One of each thing `widgets` makes, to see how they look together.
 pub(super) fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
     let area = spawn_scroll_area(content, Val::Vh(EVERY_WIDGET_HEIGHT));
-    let key = ScrollKey::new("debug.every_widget");
+    let key = UiId::new("debug.every_widget", "scroll");
     content.commands().entity(area).insert(key);
     content.commands().entity(area).with_children(|area| {
         area.spawn(Node {

@@ -17,7 +17,7 @@ use super::{
 };
 use crate::item_art::Colours;
 use crate::widgets::{
-    BUTTON_PADDING, Dropdown, INK, Pressable, ScrollKey, spawn_dropdown, spawn_scroll_area,
+    BUTTON_PADDING, Dropdown, INK, Pressable, UiId, spawn_dropdown, spawn_scroll_area,
     spawn_toggle_row,
 };
 
@@ -65,7 +65,7 @@ pub(super) fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
                 })
                 .with_children(|column| {
                     let area = spawn_scroll_area(column, PICTURES_HEIGHT);
-                    let key = ScrollKey::new("debug.item_pictures");
+                    let key = UiId::new("debug.item_pictures", "scroll");
                     column.commands().entity(area).insert(key);
                     column.commands().entity(area).with_children(|area| {
                         area.spawn((

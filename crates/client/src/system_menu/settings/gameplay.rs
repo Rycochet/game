@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use super::rows::tip;
 use super::{FONT, ROW_HEIGHT};
 use crate::common::{IN_BROWSER, Preferences, ServerClock, Session};
-use crate::widgets::{ButtonPressed, ButtonState, Pressable, spawn_check_button};
+use crate::widgets::{ButtonPressed, ButtonState, Pressable, UiId, spawn_check_button};
 
 #[derive(Component)]
 pub(in crate::system_menu) struct GameplayPage;
@@ -60,6 +60,7 @@ pub(in crate::system_menu) fn fill_gameplay_page(
         spawn_check_button(page, state, Some(on), "Pause When Not in Focus", FONT, node).insert((
             PauseButton,
             Pressable,
+            UiId::new("settings.gameplay", "pause_unfocused"),
             tip(PAUSE, why_not),
         ));
     });

@@ -63,11 +63,13 @@ pub(in crate::system_menu) fn spawn_keep_requester(commands: &mut Commands) {
         spawn_button(row, ButtonState::Normal, "Keep", FONT, node.clone()).insert((
             KeepButton,
             Action::KeepVideo,
+            Action::KeepVideo.ui_id("settings.keep_video"),
             ButtonStyle::Main,
             Pressable,
         ));
         spawn_button(row, ButtonState::Normal, "Go back", FONT, node).insert((
             Action::Back,
+            Action::Back.ui_id("settings.keep_video"),
             ButtonStyle::Plain,
             Pressable,
         ));

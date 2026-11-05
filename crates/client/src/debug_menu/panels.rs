@@ -50,7 +50,7 @@ pub(super) use give_form::{
     GiveOptionsLine, GivePreview, GiveRandomSeed, GiveSeed, SetChoice,
 };
 pub(super) use give_option::OptionValue;
-use give_option::{FIELDS, any};
+use give_option::{FIELDS, any, ui_name};
 pub(super) use give_options::{choose_give_option, fill_give_options};
 pub(super) use give_preview::show_give_preview;
 pub(super) use give_systems::{

@@ -5,9 +5,7 @@
 use bevy::prelude::*;
 
 use super::{FONT, LABEL_GAP, ROW_GAP, ROW_HEIGHT};
-use crate::widgets::{
-    Dropdown, HoverTip, INK, ScrollKey, spawn_dropdown, spawn_filling_scroll_area,
-};
+use crate::widgets::{Dropdown, HoverTip, INK, UiId, spawn_dropdown, spawn_filling_scroll_area};
 
 const LABEL_WIDTH: f32 = 180.0;
 const SECTION_GAP: f32 = 40.0;
@@ -18,7 +16,7 @@ const HEADING_LINE: f32 = 2.0;
 /// their place (`key`) when the page is built again.
 pub(super) fn spawn_sections(
     page: &mut ChildSpawnerCommands,
-    key: ScrollKey,
+    key: UiId,
     fill: impl FnOnce(&mut ChildSpawnerCommands),
 ) {
     let area = spawn_filling_scroll_area(page);

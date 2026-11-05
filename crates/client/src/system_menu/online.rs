@@ -43,6 +43,7 @@ pub(super) fn spawn_online_row(section: &mut ChildSpawnerCommands, gear: Handle<
                 OnlineToggle,
                 MenuButton::Online,
                 Action::ToggleOnline,
+                Action::ToggleOnline.ui_id("menu"),
                 Pressable,
                 ButtonTooltip("Let other players join this game".into()),
             ));
@@ -54,6 +55,7 @@ pub(super) fn spawn_online_row(section: &mut ChildSpawnerCommands, gear: Handle<
             };
             spawn_icon_button(row, ButtonState::Normal, gear, node).insert((
                 Action::ServerOptions,
+                Action::ServerOptions.ui_id("menu"),
                 Pressable,
                 ButtonTooltip("Server Options".into()),
             ));
@@ -98,8 +100,12 @@ pub(super) fn spawn_online_requesters(commands: &mut Commands) {
                     height: px(BUTTON_ROW),
                     ..default()
                 };
-                spawn_button(row, ButtonState::Normal, label, FONT, node)
-                    .insert((action, style, Pressable));
+                spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
+                    action,
+                    style,
+                    Pressable,
+                    action.ui_id("online"),
+                ));
             }
         });
     }
@@ -125,6 +131,7 @@ pub(super) fn spawn_online_requesters(commands: &mut Commands) {
         };
         spawn_button(row, ButtonState::Normal, "OK", FONT, node).insert((
             Action::Back,
+            Action::Back.ui_id("online_failed"),
             ButtonStyle::Main,
             Pressable,
         ));
