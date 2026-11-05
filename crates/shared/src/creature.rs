@@ -11,11 +11,13 @@ mod def;
 mod kind;
 mod layer;
 mod peoples;
+mod senses;
 mod size;
 
 pub use def::{BodyPart, CreatureDef};
 pub use kind::CreatureKind;
 pub use layer::{Layer, Location};
+pub use senses::{Acuity, DarkSight, Senses, Temper};
 pub use size::Size;
 
 impl CreatureKind {

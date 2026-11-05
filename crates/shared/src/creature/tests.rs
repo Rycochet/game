@@ -54,3 +54,40 @@ fn finger_counts_differ_by_kind() {
     assert_eq!(CreatureKind::Kobold.def().fingers(), Some(8));
     assert_eq!(CreatureKind::Chicken.def().fingers(), None);
 }
+
+#[test]
+fn temper_decides_what_a_kind_does_about_strangers() {
+    use CreatureKind::{Chicken, Halfling, Horse, Human, Minotaur, Orc};
+    // Hostile kinds dislike everyone but their own.
+    assert_eq!(Minotaur.temper(), Temper::Hostile);
+    assert_eq!(Minotaur.feeling_about(Human), Feeling::Unfriendly);
+    assert_eq!(Orc.feeling_about(Orc), Feeling::Friendly);
+    // Timid ones keep away from all but friends, and leave friends be.
+    for timid in [Chicken, Horse] {
+        assert_eq!(timid.reaction(Feeling::Neutral), Reaction::Flee);
+        assert_eq!(timid.reaction(Feeling::Unfriendly), Reaction::Flee);
+        assert_eq!(timid.reaction(Feeling::Friendly), Reaction::Ignore);
+    }
+    // Friendly ones come over to strangers too.
+    assert_eq!(Halfling.reaction(Feeling::Neutral), Reaction::Approach);
+    assert_eq!(Human.reaction(Feeling::Unfriendly), Reaction::Attack);
+    // Players feel nothing, whatever the temper.
+    assert_eq!(Halfling.reaction(Feeling::None), Reaction::Ignore);
+}
+
+#[test]
+fn keener_eyes_see_further() {
+    use CreatureKind::{Elf, Human};
+    assert_eq!(Human.senses().sight_range(), 12);
+    assert_eq!(Elf.senses().sight_range(), 20);
+    let blind = Senses {
+        sight: Acuity::None,
+        ..Human.senses()
+    };
+    assert_eq!(blind.sight_range(), 1);
+    let poor = Senses {
+        sight: Acuity::Poor,
+        ..Human.senses()
+    };
+    assert_eq!(poor.sight_range(), 6);
+}

@@ -42,8 +42,6 @@ pub(super) use sync::{in_hall, sync};
 /// How long a level nobody is on stays in use.
 const KEPT_FOR: Duration = Duration::from_secs(60);
 
-/// How far a mob notices someone it can see, in cells.
-const NOTICES_WITHIN: i64 = 12;
 /// How near a mob going up to someone friendly stops.
 const FRIENDLY_GAP: i64 = 2;
 /// How near one running at someone stops, until there is combat.

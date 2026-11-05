@@ -250,7 +250,7 @@ fn mobs_at_rest_need_no_time_until_they_notice_someone() {
     // Kinds that ignore the player, wherever they are.
     let population = test.world.populations.0.values_mut().next().unwrap();
     for mob in &mut population.mobs {
-        mob.kind = CreatureKind::Horse;
+        mob.kind = CreatureKind::Dwarf;
     }
     run(&mut test, 20);
     let population = test.world.populations.0.values().next().unwrap();
@@ -263,6 +263,17 @@ fn something_unfriendly_runs_at_a_player_and_stops_beside_them() {
     let mut test = beside_a_mob(CreatureKind::Kobold, 3);
     run(&mut test, 40);
     assert!(cells_apart(the_mob(&test).position, player(&test)) <= ATTACK_GAP);
+    assert!(matches!(the_mob(&test).doing, Doing::Going { .. }));
+}
+
+#[test]
+fn mobs_notice_only_as_far_as_their_kind_sees() {
+    let sees = CreatureKind::Kobold.senses().sight_range();
+    let mut test = beside_a_mob(CreatureKind::Kobold, sees + 1);
+    run(&mut test, 5);
+    assert!(matches!(the_mob(&test).doing, Doing::Idle));
+    let mut test = beside_a_mob(CreatureKind::Kobold, sees);
+    run(&mut test, 5);
     assert!(matches!(the_mob(&test).doing, Doing::Going { .. }));
 }
 
