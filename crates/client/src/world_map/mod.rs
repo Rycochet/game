@@ -33,6 +33,7 @@ use crate::view3d::View3dSystems;
 // Split into files (`cargo xtask lint` keeps files small).
 mod click;
 mod forget;
+mod gate_view;
 mod gates;
 mod parts;
 mod showing;
@@ -128,6 +129,7 @@ impl Plugin for WorldMapPlugin {
                 (
                     pois::add_models,
                     gates::add_gate_models,
+                    gate_view::face_camera,
                     pois::outline_hovered,
                     rest_tokens_on_terrain,
                     hide_tokens_outside_window,
