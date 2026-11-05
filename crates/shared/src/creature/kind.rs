@@ -8,24 +8,32 @@ use crate::sheet::{Feeling, Reaction};
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CreatureKind {
     Beggar,
+    Birdfolk,
     Centaur,
     Chicken,
+    Dwarf,
+    Elf,
     Giant,
+    Goblin,
+    Halfling,
     Horse,
     #[default]
     Human,
     Kobold,
+    Lizardfolk,
+    Minotaur,
+    Orc,
 }
 
 impl CreatureKind {
     /// How this kind feels about another, to begin with. A kind likes its own.
     pub fn feeling_about(self, other: Self) -> Feeling {
-        use CreatureKind::{Beggar, Giant, Kobold};
+        use CreatureKind::{Beggar, Giant, Goblin, Kobold};
         match (self, other) {
             // Has nothing against anyone, and hopes.
             (Beggar, _) => Feeling::Neutral,
             (one, two) if one == two => Feeling::Friendly,
-            (Giant, Kobold) | (Kobold, _) => Feeling::Unfriendly,
+            (Giant, Kobold) | (Kobold | Goblin, _) => Feeling::Unfriendly,
             _ => Feeling::Neutral,
         }
     }

@@ -15,7 +15,7 @@ pub(super) fn build(triangles: &mut Vec<Triangle>, frame: &Frame, parts: &Parts)
 }
 
 /// The feathers of wings, if it has any: drawn apart from the skin, in their own colour.
-pub(super) fn wings(frame: &Frame, parts: &Parts) -> Vec<Triangle> {
+pub(in crate::item_art) fn wings(frame: &Frame, parts: &Parts) -> Vec<Triangle> {
     let mut triangles = Vec::new();
     if parts.wings == Wings::Arms {
         for side in Side::BOTH {

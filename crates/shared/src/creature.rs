@@ -10,6 +10,7 @@ mod bodies;
 mod def;
 mod kind;
 mod layer;
+mod peoples;
 mod size;
 
 pub use def::{BodyPart, CreatureDef};
@@ -19,14 +20,22 @@ pub use size::Size;
 
 impl CreatureKind {
     /// Every kind, alphabetically.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 15] = [
         Self::Beggar,
+        Self::Birdfolk,
         Self::Centaur,
         Self::Chicken,
+        Self::Dwarf,
+        Self::Elf,
         Self::Giant,
+        Self::Goblin,
+        Self::Halfling,
         Self::Horse,
         Self::Human,
         Self::Kobold,
+        Self::Lizardfolk,
+        Self::Minotaur,
+        Self::Orc,
     ];
 }
 

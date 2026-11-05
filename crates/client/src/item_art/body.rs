@@ -15,6 +15,7 @@ mod features;
 mod fit;
 mod legs;
 
+pub(super) use features::wings;
 use fit::fitted;
 
 /// What a body's picture takes up, wide and long: only the proportions matter.
