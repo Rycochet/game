@@ -123,6 +123,7 @@ fn saves_are_read_back() {
             BTreeMap::from([(1, BTreeMap::from([((2, 3), Load::Full)]))]),
         )]),
         site_versions: BTreeMap::from([(site, 3)]),
+        left_at: BTreeMap::from([(site, (1, (5, -6)))]),
         world_position: (-40, 7),
         hall: Some((12, 3)),
         visit: Some(VisitSave {

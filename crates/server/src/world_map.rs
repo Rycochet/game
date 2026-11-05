@@ -92,9 +92,7 @@ pub(crate) fn reveal_pois(client: &mut Client, world: &ServerWorld) -> bool {
 /// on it, and is told again what is in sight.
 pub(crate) fn forget(client: &mut Client, world: &ServerWorld) -> bool {
     client.character.pois.clear();
-    client.character.memory.clear();
-    client.character.bags.clear();
-    client.character.site_versions.clear();
+    client.character.forget_sites();
     client.world_chunks.clear();
     client.unsaved = true;
     client.link.send(&ServerMessage::ForgetWorldMap) && look_around(client, world)

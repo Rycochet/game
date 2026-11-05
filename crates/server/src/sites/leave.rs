@@ -24,9 +24,7 @@ pub(crate) fn forget_site(client: &mut Client, world: &mut ServerWorld) -> bool 
         ..
     } = visit;
     world.forget_site(id);
-    client.character.memory.remove(&id);
-    client.character.bags.remove(&id);
-    client.character.site_versions.remove(&id);
+    client.character.forget_site(&id);
     enter_site(client, world, poi, id, index, Arrival::At(position))
 }
 
@@ -47,9 +45,7 @@ pub(super) fn leave_for_poi(
     poi: Poi,
     id: SiteId,
 ) -> bool {
-    client.character.memory.remove(&id);
-    client.character.bags.remove(&id);
-    client.character.site_versions.remove(&id);
+    client.character.forget_site(&id);
     client.character.world_position = (poi.x, poi.y);
     client.unsaved = true;
     client.changed_map();
@@ -106,6 +102,9 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
             arrived
         }
         Exit::WorldMap => {
+            // Coming back in, they arrive where they walked out.
+            let left_at = (visit.index, (x, y));
+            client.character.left_at.insert(visit.id, left_at);
             let (x, y) = (visit.poi.x, visit.poi.y);
             client.character.world_position = (x, y);
             client.changed_map();

@@ -287,7 +287,7 @@ fn enter(test: &mut TestClient, level: u32) -> Vec<ServerMessage> {
 }
 
 /// The steps of a shortest walk from `from` to `to` on `level`.
-fn path(level: &Level, from: (i64, i64), to: (i64, i64)) -> Vec<(i64, i64)> {
+pub(super) fn path(level: &Level, from: (i64, i64), to: (i64, i64)) -> Vec<(i64, i64)> {
     let mut came_from = std::collections::BTreeMap::from([(from, from)]);
     let mut queue = VecDeque::from([from]);
     while let Some(at) = queue.pop_front() {
@@ -320,7 +320,7 @@ fn path(level: &Level, from: (i64, i64), to: (i64, i64)) -> Vec<(i64, i64)> {
 }
 
 /// Walks the player to `to` on their level.
-fn walk(test: &mut TestClient, to: (i64, i64)) -> Vec<ServerMessage> {
+pub(super) fn walk(test: &mut TestClient, to: (i64, i64)) -> Vec<ServerMessage> {
     let visit = test.client.visit.as_ref().unwrap();
     let steps = path(&visit.level.level, visit.position, to);
     test.steps(&steps)

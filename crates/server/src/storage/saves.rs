@@ -181,6 +181,29 @@ pub struct CharacterWorldSave {
     /// The generator version of each site as they last knew it: when a site's
     /// has changed, so has its map, and what they remember of it means nothing.
     pub site_versions: BTreeMap<SiteId, u32>,
+    /// The level and cell they last walked out of each site from: going in
+    /// again puts them back there.
+    #[serde(default)]
+    pub left_at: BTreeMap<SiteId, (u32, (i64, i64))>,
+}
+
+impl CharacterWorldSave {
+    /// Forgets everything they knew of a site: what they saw, the bags there,
+    /// its version and where they walked out.
+    pub fn forget_site(&mut self, id: &SiteId) {
+        self.memory.remove(id);
+        self.bags.remove(id);
+        self.site_versions.remove(id);
+        self.left_at.remove(id);
+    }
+
+    /// Forgets every site, as `forget_site` does.
+    pub fn forget_sites(&mut self) {
+        self.memory.clear();
+        self.bags.clear();
+        self.site_versions.clear();
+        self.left_at.clear();
+    }
 }
 
 /// The bags a character remembers on a level, by cell.
