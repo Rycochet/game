@@ -132,7 +132,8 @@ impl CreatureKind {
                 body: &CENTAUR,
                 speed: 140,
                 uses_stairs: false,
-                playable: true,
+                // Too big to stand in one cell, so not for players (owner, 2026-11-04).
+                playable: false,
                 stats: stats(14, 10, 9, 13),
                 skills: &[(Running, 4), (Foraging, 1)],
                 abilities: &[Kick, Trample],
@@ -160,7 +161,8 @@ impl CreatureKind {
                 size: Size::Giant,
                 inventory: (8, 6),
                 body: &TEN_FINGERS,
-                playable: true,
+                // Too big to stand in one cell, so not for players (owner, 2026-11-04).
+                playable: false,
                 stats: stats(20, 6, 7, 18),
                 skills: &[(Climbing, 1)],
                 abilities: &[Trample],
