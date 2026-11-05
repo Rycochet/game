@@ -7,7 +7,7 @@ use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
     FIRST_AT, NEXT_AT, spawn_creature_buttons, spawn_every_widget, spawn_give_buttons,
-    spawn_item_pictures, spawn_step_buttons, spawn_world_time,
+    spawn_go_to_world, spawn_item_pictures, spawn_step_buttons, spawn_world_time,
 };
 use crate::widgets::{RaisePanel, spawn_moveable_panel};
 
@@ -64,6 +64,7 @@ impl OpenPanels {
                 DebugAction::ChangeCreature => spawn_creature_buttons(content),
                 DebugAction::ItemPictures => spawn_item_pictures(content),
                 DebugAction::WorldTime => spawn_world_time(content),
+                DebugAction::GoToWorld => spawn_go_to_world(content),
                 _ => spawn_step_buttons(content, action),
             });
         if action == DebugAction::SunsAndMoons {

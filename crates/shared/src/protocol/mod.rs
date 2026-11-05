@@ -36,7 +36,7 @@ pub use world_chunk::{SeenPoi, WorldChunk, WorldInfo};
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 41;
+pub const PROTOCOL_VERSION: u32 = 42;
 
 /// Where a server's WebSocket is, beside the web client's files: what
 /// network clients connect to.

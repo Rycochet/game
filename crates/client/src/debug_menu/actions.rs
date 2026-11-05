@@ -19,6 +19,7 @@ pub enum DebugAction {
     ForgetMapOnServer,
     GeneratePoi,
     GiveItem,
+    GoToWorld,
     GodMode,
     HerbsState,
     ItemPictures,
@@ -63,7 +64,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 27] = [
+    pub(super) const ALL: [Self; 28] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -74,6 +75,7 @@ impl DebugAction {
         Self::ForgetMapOnServer,
         Self::GeneratePoi,
         Self::GiveItem,
+        Self::GoToWorld,
         Self::GodMode,
         Self::HerbsState,
         Self::ItemPictures,
@@ -106,6 +108,7 @@ impl DebugAction {
             Self::GeneratePoi => "Generate POI",
             Self::GiveItem => "Give Item",
             Self::GodMode => "God Mode",
+            Self::GoToWorld => "Go to World",
             Self::HerbsState => "Herbs State",
             Self::ItemPictures => "Item Pictures",
             Self::KillMob => "Kill Mob",
@@ -188,6 +191,7 @@ impl DebugAction {
                 | Self::GeneratePoi
                 | Self::GiveItem
                 | Self::GodMode
+                | Self::GoToWorld
                 | Self::KillMob
                 | Self::RevealMap
                 | Self::TeleportMode

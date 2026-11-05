@@ -193,6 +193,10 @@ pub enum ClientMessage {
         minutes: Option<f64>,
         rate: Option<ClockRate>,
     },
+    /// Developer tools: to the world of this seed (any number is a planet),
+    /// where the player was on its world map, or at one of its World Gates if
+    /// new there; answered with a fresh `Welcome` and `OnWorldMap`.
+    DevGoToWorld { seed: u64 },
     /// Developer tools: show every poi, known or not, for this connection.
     /// Only an embedded server accepts it.
     DevRevealPois,
@@ -228,6 +232,7 @@ impl ClientMessage {
                 | Self::DevSetCell { .. }
                 | Self::DevSnowLine(_)
                 | Self::DevSetWorldClock { .. }
+                | Self::DevGoToWorld { .. }
                 | Self::DevRevealPois
                 | Self::DevRevealMap
                 | Self::DevForgetMap

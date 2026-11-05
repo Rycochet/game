@@ -31,6 +31,7 @@ use crate::view3d::View3dSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod click;
+mod forget;
 mod parts;
 mod showing;
 mod spawn;
@@ -82,6 +83,13 @@ impl Plugin for WorldMapPlugin {
                 MaterialPlugin::<sky::PrecipitationMaterial>::default(),
             ))
             .add_systems(Startup, spawn_view)
+            // Before anything draws the new world with the last one's caches.
+            .add_systems(
+                Update,
+                (pois::despawn_all, forget::forget_world)
+                    .before(update_terrain)
+                    .run_if(on_message::<crate::common::WorldChanged>),
+            )
             .add_systems(OnEnter(GameView::WorldMap), show_scene)
             .add_systems(OnExit(GameView::WorldMap), (hide_scene, pois::despawn_all))
             .add_systems(

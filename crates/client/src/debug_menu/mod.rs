@@ -64,6 +64,8 @@ impl Plugin for DebugMenuPlugin {
                         panels::edit_time_box,
                         panels::press_rate_buttons,
                         panels::update_rate_buttons,
+                        panels::press_go_to_world_buttons,
+                        panels::update_go_to_world_button,
                     )
                         .chain(),
                     panels::choose_give_options,
@@ -265,6 +267,7 @@ fn run_actions(
             DebugAction::ChangeCreature
             | DebugAction::FieldsState
             | DebugAction::GiveItem
+            | DebugAction::GoToWorld
             | DebugAction::HerbsState
             | DebugAction::ItemPictures
             | DebugAction::ShowWidgets

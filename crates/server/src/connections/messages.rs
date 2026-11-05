@@ -6,6 +6,7 @@ use shared::movement::{Step, world_step_cost};
 use shared::protocol::ServerMessage;
 use shared::world::WorldId;
 
+use super::moving::change_world;
 use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
 use crate::ground::{self};
@@ -44,6 +45,11 @@ pub(crate) fn handle_messages(
                 }
             }
         };
+        let stay = stay
+            && match client.going_to.take() {
+                Some(seed) => change_world(client, &mut worlds, seed, &options),
+                None => true,
+            };
         if !stay {
             client.disconnect(worlds.of(client.world));
         } else if client.phase == Phase::Joining

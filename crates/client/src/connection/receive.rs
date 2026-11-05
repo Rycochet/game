@@ -11,6 +11,7 @@ use super::prediction::{Prediction, correction};
 use super::{Connecting, FromServer, ServerConnection, give_up, hang_up, log_in};
 use crate::common::{
     CurrentWorld, GameClock, GameView, Hosting, MapPosition, ServerClock, ServerStatus, Weather,
+    WorldChanged,
 };
 use crate::player::Player;
 
@@ -24,7 +25,8 @@ pub(super) fn receive(
     mut world: Option<ResMut<CurrentWorld>>,
     view: Res<State<GameView>>,
     mut next_view: ResMut<NextState<GameView>>,
-    mut from_server: MessageWriter<FromServer>,
+    // Together, as Bevy limits how many things a system can ask for.
+    (mut from_server, mut world_changed): (MessageWriter<FromServer>, MessageWriter<WorldChanged>),
     mut prediction: ResMut<Prediction>,
     mut clock: ResMut<GameClock>,
     mut server_dev_tools: ResMut<crate::common::ServerDevTools>,
@@ -112,6 +114,10 @@ pub(super) fn receive(
                     continue;
                 }
                 info!("Joined world {:?}", info.id);
+                // Moved to another while playing: the maps forget the last one.
+                if world.as_ref().is_some_and(|world| world.id != info.id) {
+                    world_changed.write(WorldChanged);
+                }
                 *status = ServerStatus::Connected;
                 joined = Some(CurrentWorld::new(&info));
                 // Where the player left off (`EnterLevel` follows if they

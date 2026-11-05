@@ -25,6 +25,7 @@ use crate::widgets::WidgetSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod draw;
+mod forget;
 mod full_map;
 mod gate_runes;
 mod hover;
@@ -145,6 +146,12 @@ impl Plugin for MinimapPlugin {
             .init_resource::<MapRivers>()
             .init_resource::<Sprites>()
             .add_systems(Startup, (spawn_maps, floors::spawn_column))
+            .add_systems(
+                Update,
+                forget::forget_world
+                    .before(draw_maps)
+                    .run_if(on_message::<crate::common::WorldChanged>),
+            )
             .add_systems(
                 PreUpdate,
                 (go_into_clicked_poi, take_input, floors::back_to_own_floor)
