@@ -51,7 +51,7 @@ Change the `environment` and `ports` of the example:
 
 - **Let's Encrypt:** the domain's public port 443 must reach this server, directly rather than through a proxy. The self-signed certificate is used until the new one arrives, with no restart needed.
 - **Your own certificate:** replaced files are picked up within an hour, with no restart needed.
-- **A reverse proxy:** it must pass WebSockets. Cloudflare's does. The web client's files come already compressed, and say how long they may be kept, so a proxy that caches needs no rules of its own for them.
+- **A reverse proxy:** it must pass WebSockets. Cloudflare's does. The web client's files come already compressed, and say how long they may be kept, so a proxy that caches needs no rules of its own for them. After an update, browsers that have an earlier build download only what changed, if the proxy passes compression dictionaries through (Cloudflare can).
 
 These can't be mixed: settings that disagree stop the server from starting, and it says why.
 

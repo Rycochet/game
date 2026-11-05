@@ -1,7 +1,7 @@
 # Workspace: shared game rules, the client app, and helper commands.
 # See docs/context/architecture.md for what goes where.
 [workspace]
-members = ["crates/client", "crates/server", "crates/shared", "xtask"]
+members = ["crates/client", "crates/server", "crates/shared", "crates/web_delta", "xtask"]
 resolver = "3"
 
 [workspace.package]
@@ -16,6 +16,7 @@ publish = false
 [workspace.dependencies]
 shared = { path = "crates/shared" }
 server = { path = "crates/server" }
+web_delta = { path = "crates/web_delta" }
 # Default features off here so the headless server can stay lean; the client
 # turns them back on.
 bevy = { version = "0.20", default-features = false }

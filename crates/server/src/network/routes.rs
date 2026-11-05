@@ -8,12 +8,11 @@ use axum::serve::ListenerExt;
 use bevy::prelude::*;
 use shared::protocol::SOCKET_PATH;
 use std::net::TcpListener;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::health::health_routes;
-use super::web_files::web_files;
+use super::web_files::{WebClient, WebFiles, web_files};
 use super::{CERTIFICATE_PATH, NewConnections, SecurePort, Sockets, TlsListener, WEB_PATH};
 use super::{stop_signal, upgrade};
 use crate::connections::Connections;
@@ -32,7 +31,7 @@ pub(super) fn accept_connections(new: Res<NewConnections>, mut connections: ResM
 /// certificate if there is one, and the web client's files under `WEB_PATH`
 /// (where `/` sends browsers).
 pub(super) fn game_routes(
-    web: Option<PathBuf>,
+    web: Option<Arc<WebFiles>>,
     sockets: Sockets,
     certificates: Option<Arc<Certificates>>,
 ) -> Router {
@@ -107,7 +106,7 @@ impl Stop {
 pub(super) fn serve(
     plain: Option<TcpListener>,
     secure: Option<SecurePort>,
-    web: Option<PathBuf>,
+    web: Option<WebClient>,
     sockets: Sockets,
     stop: Stop,
 ) {
@@ -117,8 +116,9 @@ pub(super) fn serve(
         .expect("a tokio runtime");
     runtime.block_on(async move {
         if let Some(web) = &web {
-            info!("Serving the web client from {}", web.display());
+            info!("Serving the web client from {}", web.files.display());
         }
+        let web = web.map(WebFiles::start);
         tokio::select! {
             () = run(plain, secure, web, sockets) => {}
             () = stop.wait() => {}
@@ -130,7 +130,7 @@ pub(super) fn serve(
 async fn run(
     plain: Option<TcpListener>,
     secure: Option<SecurePort>,
-    web: Option<PathBuf>,
+    web: Option<Arc<WebFiles>>,
     sockets: Sockets,
 ) {
     let plain = plain.map(|listener| {

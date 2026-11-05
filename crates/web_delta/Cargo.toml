@@ -1,0 +1,17 @@
+[package]
+name = "web_delta"
+description = "Delta downloads of the web client: a new build compressed against an old one (dcz)"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Native only: used by the server and xtask, never by the client.
+[dependencies]
+# zstd with an old build as its dictionary (zstd-safe: MIT/Apache-2.0; the
+# zstd library it builds: BSD).
+zstd-safe = { version = "8", default-features = false, features = ["std"] }
+# The dictionary's hash, which is how browsers name it (MIT/Apache-2.0).
+sha2 = "0.11"

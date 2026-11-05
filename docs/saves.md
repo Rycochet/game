@@ -26,6 +26,7 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 - `accounts/` and `logins/`: who owns which characters. No login secret is stored.
 - `tls/`: its certificates (single player's too, once Online has been on). **`tls/key.pem` is its private key**, so keep it to yourself.
 - `save_format.ron`: which format the saves here are in.
+- `web-history/`: the last few builds of the web client this server served, and what changed between them and the current one, so a browser that has an older build downloads only that. Only on a server serving the web client; safe to delete, at the cost of whole downloads after the next update.
 - `old-saves-<date>/`: saves from an older version that can't be used any more. A new version that wipes saves moves `worlds/`, `characters/`, `accounts/` and `logins/` here when it starts, and leaves everything else, such as certificates, in place. This version can't read them, so delete the folder whenever you like.
 
 ### In the native client's folder

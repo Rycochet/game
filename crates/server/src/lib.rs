@@ -42,7 +42,7 @@ pub use accounts::new_guest_token;
 pub use connections::Connections;
 pub use embedded::{EmbeddedServer, start_embedded};
 pub use environment::{log_plugin, option_on};
-pub use network::{NetworkPlugin, OnlinePlugin, check_health};
+pub use network::{NetworkPlugin, OnlinePlugin, WebClient, check_health};
 pub use shared::protocol::CharacterId;
 pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
 pub use tls::{CertificateFacts, CertificateSource, Security, certificate_facts};
