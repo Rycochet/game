@@ -4,7 +4,7 @@ The Character panel (what the character is like, what they wear and what they ca
 
 ## Files
 
-- `crates/client/src/inventory/mod.rs`: `InventoryPlugin`, `Carried`, `InventoryDebug` (native), the module list. Beside it: `holding.rs` (`Holding`, `HeldBy`, `Hand`, `cancel_held`), `server.rs` (`read_server`, `Stacks`: the server's `StackLimits` from `Welcome`), `finger.rs` (`pick_up_by_finger`, `PreUpdate`, before widgets), `early_pictures.rs` (`ask_early`: pictures of everything carried and worn asked for as soon as `Carried` changes, so they are drawn before a panel shows them), `debug.rs` (`run_debug`, native), `sort.rs` (`SortButton`, `spawn_sort`, `press_sort`, the sort icon drawn in code), `split.rs` (`Split`, the split box: `show_split`, `move_split`, `close_split`; `split/picker.rs`: `PickRow`, a mixed stack's rows).
+- `crates/client/src/inventory/mod.rs`: `InventoryPlugin`, `Carried`, `InventoryDebug` (native), the module list. Beside it: `holding.rs` (`Holding`, `HeldBy`, `Hand`, `cancel_held`), `server.rs` (`read_server`, `Stacks`: the server's `StackLimits` from `Welcome`), `finger.rs` (`pick_up_by_finger`, `PreUpdate`, before widgets), `early_pictures.rs` (`ask_early`: pictures of everything carried and worn asked for as soon as `Carried` changes, so they are drawn before a panel shows them), `debug.rs` (`run_debug`, native), `sort.rs` (`SortButton`, `spawn_sort`, `press_sort`, the sort icon drawn in code), `ui_ids.rs` (`grid_id`), `split.rs` (`Split`, the split box: `show_split`, `move_split`, `close_split`; `split/picker.rs`: `PickRow`, a mixed stack's rows).
 - `crates/client/src/inventory/hold_items.rs`: `hold_items` (`PreUpdate`, after `WidgetSystems::Modal`), `is_click`, `worth_wearing`, and its `SystemParam`s `Under` (what the pointer may be over) and `Outbox` (what letting go writes). It runs three steps in `hold_items/`, in order: `press.rs` (presses: a double click opens a bag, a press picks up), `aim.rs` (turning, following the pointer or finger, and the `Target`), `let_go.rs` (taking, wearing, dropping, giving, binning or moving).
 - `crates/client/src/inventory/hold.rs`: without Bevy: `Held`, `Target` (with `Stack` and a bag's stack), `target`, `drop_move`, `stack_onto`. Unit tests.
 - `crates/client/src/inventory/body.rs`: `spawn_rows`, `BodyNode`, `show_clothes`, `show_body_aim`, `worn_notes`.
@@ -30,6 +30,8 @@ The Character panel (what the character is like, what they wear and what they ca
 - `dev_tools`, `debug_menu` (`Carried`, `Stacks`).
 
 ## Notes
+
+- Ids (`widgets::UiId`, from `ui_ids::grid_id`): a grid's panel, `sort` and `filter` are in `inventory`, `bag#<id>` or `ground`; the corner button is `hud/character`, the split box's slider `split/count`, the Nearby panel `nearby/panel`.
 
 - Kinds with models show their pictures (`item_art`) in grids, in the hand, on the clothes panel and in the bin, with the same edges. Other kinds keep their colour and label.
 - An item's quality colours its edge (2 px, wider than a plain item's) in grids, worn and held, and its name, on a dark tooltip so every colour can be read (`widgets::spawn_item_cells`, `ItemTooltip`, which draw items anywhere).

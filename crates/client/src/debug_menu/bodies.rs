@@ -1,6 +1,7 @@
 //! The Suns and Moons panel: changes the colours of this world's suns and moons,
 //! and how strong the suns are. Only what this client draws.
 
+use crate::widgets::UiId;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -161,10 +162,15 @@ fn spawn_row(
                 BorderColor::from(INK),
             ));
             let value = nearest_along(body.kind, body.colour);
-            spawn_slider(row, value, Some(track), SLIDER_WIDTH).insert(BodySlider::Colour(number));
+            spawn_slider(row, value, Some(track), SLIDER_WIDTH).insert((
+                BodySlider::Colour(number),
+                UiId::new("debug.suns_and_moons", "colour").at(number),
+            ));
             if let Some((value, track)) = intensity {
-                spawn_slider(row, value, Some(track), SLIDER_WIDTH)
-                    .insert(BodySlider::Intensity(number));
+                spawn_slider(row, value, Some(track), SLIDER_WIDTH).insert((
+                    BodySlider::Intensity(number),
+                    UiId::new("debug.suns_and_moons", "intensity").at(number),
+                ));
             }
         });
 }

@@ -66,17 +66,19 @@ pub(super) fn spawn_online_requesters(commands: &mut Commands) {
     let asks = [
         (
             SystemMenu::GoingOnline,
+            "going_online",
             "Go online",
             "This will let other players connect to this game. Are you sure?",
         ),
         (
             SystemMenu::GoingOffline,
+            "going_offline",
             "Go offline",
             "Anyone else playing will be told the server is going offline, and disconnected. \
              Are you sure?",
         ),
     ];
-    for (state, title, words) in asks {
+    for (state, form, title, words) in asks {
         let dialog = spawn_dialog(commands, ABOVE_MENU_LAYER, title);
         commands
             .entity(dialog.layer)
@@ -104,7 +106,7 @@ pub(super) fn spawn_online_requesters(commands: &mut Commands) {
                     action,
                     style,
                     Pressable,
-                    action.ui_id("online"),
+                    action.ui_id(form),
                 ));
             }
         });

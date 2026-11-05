@@ -1,6 +1,7 @@
 //! The World Time panel's second row: buttons for how fast the world's time
 //! runs against the server's clock, the one it runs at chosen.
 
+use crate::widgets::UiId;
 use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 use shared::world::ClockRate;
@@ -39,15 +40,18 @@ pub(super) fn spawn_world_rate(content: &mut ChildSpawnerCommands) {
             ..default()
         })
         .with_children(|row| {
-            for (label, game, real) in RATES {
+            for (at, (label, game, real)) in RATES.into_iter().enumerate() {
                 let rate = ClockRate::new(game, real).expect("none of them stop time");
                 let node = Node {
                     height: px(CHECK_ROW),
                     padding: RATE_PADDING,
                     ..default()
                 };
-                spawn_button(row, ButtonState::Normal, label, TextSize::Small, node)
-                    .insert((RateButton(rate), Pressable));
+                spawn_button(row, ButtonState::Normal, label, TextSize::Small, node).insert((
+                    RateButton(rate),
+                    Pressable,
+                    UiId::new("debug.world_time", "rate").at(at),
+                ));
             }
         });
 }

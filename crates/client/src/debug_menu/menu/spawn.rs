@@ -1,5 +1,6 @@
 //! Making the menu's layers, and the warning icon.
 
+use crate::widgets::UiId;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -72,6 +73,7 @@ pub(in crate::debug_menu) fn spawn_menu(mut commands: Commands, mut images: ResM
             spawn_icon_button(holder, ButtonState::Normal, icon, node).insert((
                 WarningButton,
                 Pressable,
+                UiId::new("hud", "debug_menu"),
                 ButtonTooltip("Debug Menu".into()),
             ));
         });
@@ -117,6 +119,8 @@ pub(super) fn spawn_layer(commands: &mut Commands, layer: usize, title: &str) {
                     spawn_button(pages, ButtonState::Normal, label, FONT, node).insert((
                         PageButton { layer, forward },
                         Pressable,
+                        UiId::new("debug.menu", if forward { "next" } else { "previous" })
+                            .at(layer),
                         Visibility::Hidden,
                     ));
                 }
@@ -125,6 +129,7 @@ pub(super) fn spawn_layer(commands: &mut Commands, layer: usize, title: &str) {
             bar.spawn((
                 MenuClose,
                 Pressable,
+                UiId::new("debug.menu", "close").at(layer),
                 Node {
                     position_type: PositionType::Absolute,
                     right: px(0),
@@ -145,7 +150,10 @@ pub(super) fn spawn_layer(commands: &mut Commands, layer: usize, title: &str) {
             min_height: px(FILTER_HEIGHT),
             ..default()
         };
-        spawn_text_box(root, text_box, FONT, node).insert(FilterBox(layer));
+        spawn_text_box(root, text_box, FONT, node).insert((
+            FilterBox(layer),
+            UiId::new("debug.menu", "filter").at(layer),
+        ));
         root.spawn((
             MenuGrid(layer),
             Node {

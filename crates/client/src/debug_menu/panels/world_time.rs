@@ -2,6 +2,7 @@
 //! and a box with the time in it that moves it to exactly what is typed; below
 //! them, how fast it runs (`world_rate`).
 
+use crate::widgets::UiId;
 use bevy::input::ButtonState as KeyState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
@@ -61,17 +62,20 @@ pub(super) fn spawn_world_time(content: &mut ChildSpawnerCommands) {
             ..default()
         })
         .with_children(|row| {
-            let step = |row: &mut ChildSpawnerCommands, (label, minutes): (&str, f64)| {
+            let step = |row: &mut ChildSpawnerCommands, (label, minutes): (&str, f64), id: UiId| {
                 let node = Node {
                     height: px(CHECK_ROW),
                     padding: STEP_PADDING,
                     ..default()
                 };
-                spawn_button(row, ButtonState::Normal, label, STEP_FONT, node)
-                    .insert((TimeStep(minutes), Pressable));
+                spawn_button(row, ButtonState::Normal, label, STEP_FONT, node).insert((
+                    TimeStep(minutes),
+                    Pressable,
+                    id,
+                ));
             };
-            for back in BACK {
-                step(row, back);
+            for (at, back) in BACK.into_iter().enumerate() {
+                step(row, back, UiId::new("debug.world_time", "back").at(at));
             }
             let text_box = TextBox {
                 takes_keys: true,
@@ -82,9 +86,10 @@ pub(super) fn spawn_world_time(content: &mut ChildSpawnerCommands) {
                 height: px(CHECK_ROW),
                 ..default()
             };
-            spawn_text_box(row, text_box, FONT, node).insert(TimeBox);
-            for on in ON {
-                step(row, on);
+            spawn_text_box(row, text_box, FONT, node)
+                .insert((TimeBox, UiId::new("debug.world_time", "time")));
+            for (at, on) in ON.into_iter().enumerate() {
+                step(row, on, UiId::new("debug.world_time", "on").at(at));
             }
         });
     spawn_world_rate(content);

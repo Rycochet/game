@@ -73,6 +73,37 @@ fn world_time_refuses_what_it_cant_read() {
     }
 }
 
+/// What fills a panel.
+type SpawnPanel = fn(&mut ChildSpawnerCommands);
+
+/// The ids of what `spawn` puts in a panel.
+fn ids_in(spawn: impl FnOnce(&mut ChildSpawnerCommands)) -> Vec<crate::widgets::UiId> {
+    let mut world = World::new();
+    world.commands().spawn(Node::default()).with_children(spawn);
+    world.flush();
+    world
+        .query::<&crate::widgets::UiId>()
+        .iter(&world)
+        .copied()
+        .collect()
+}
+
+#[test]
+fn every_panels_widgets_each_have_their_own_id() {
+    let panels: [(&str, SpawnPanel); 5] = [
+        ("Show Widgets", spawn_every_widget),
+        ("Item Pictures", spawn_item_pictures),
+        ("World Time", spawn_world_time),
+        ("Go to World", spawn_go_to_world),
+        ("Change Creature", spawn_creature_buttons),
+    ];
+    for (name, spawn) in panels {
+        let ids = ids_in(spawn);
+        let twice = crate::widgets::duplicate_ids(&ids);
+        assert!(twice.is_empty(), "{name}: {twice:?}");
+    }
+}
+
 #[test]
 fn give_items_widgets_each_have_their_own_id() {
     let mut world = World::new();

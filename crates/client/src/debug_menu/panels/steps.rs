@@ -1,11 +1,13 @@
 //! Step buttons moving what a panel is for on or back, and greying them where they can't.
 
+use crate::widgets::UiId;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::site::StairsStyle;
 
 use super::super::actions::DebugAction;
 use super::FONT;
+use super::open::form_of;
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift};
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::widgets::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, spawn_button};
@@ -29,8 +31,11 @@ pub(super) fn spawn_step_buttons(content: &mut ChildSpawnerCommands, action: Deb
                     padding: BUTTON_PADDING,
                     ..default()
                 };
-                spawn_button(row, ButtonState::Normal, label, FONT, node)
-                    .insert((StepButton { action, forward }, Pressable));
+                spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
+                    StepButton { action, forward },
+                    Pressable,
+                    UiId::new(form_of(action), if forward { "next" } else { "previous" }),
+                ));
             }
         });
 }

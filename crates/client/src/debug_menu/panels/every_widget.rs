@@ -27,6 +27,11 @@ pub(super) fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
     });
 }
 
+/// A sample's id: its own words, as there is one of each.
+fn id(name: &'static str) -> UiId {
+    UiId::new("debug.every_widget", name)
+}
+
 pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
     for (state, label) in [
         (ButtonState::Normal, "Normal"),
@@ -39,14 +44,18 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
             padding: BUTTON_PADDING,
             ..default()
         };
-        spawn_button(content, state, label, FONT, node).insert(Pressable);
+        spawn_button(content, state, label, FONT, node).insert((Pressable, id(label)));
     }
     for (style, label) in [(ButtonStyle::Main, "Main"), (ButtonStyle::Quiet, "Quiet")] {
         let node = Node {
             padding: BUTTON_PADDING,
             ..default()
         };
-        spawn_button(content, ButtonState::Normal, label, FONT, node).insert((style, Pressable));
+        spawn_button(content, ButtonState::Normal, label, FONT, node).insert((
+            style,
+            Pressable,
+            id(label),
+        ));
     }
     for (on, label) in [
         (Some(true), "Check on"),
@@ -57,10 +66,13 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
             height: px(CHECK_ROW),
             ..default()
         };
-        spawn_check_button(content, ButtonState::Normal, on, label, FONT, node).insert(Pressable);
+        spawn_check_button(content, ButtonState::Normal, on, label, FONT, node)
+            .insert((Pressable, id(label)));
     }
-    spawn_tabs(content, &["Tab", "Other tab", "Third tab"], 0, FONT);
-    spawn_toggle_row(content, &["Toggle", "Other", "Third"], 0, FONT);
+    let tabs = spawn_tabs(content, &["Tab", "Other tab", "Third tab"], 0, FONT);
+    content.commands().entity(tabs).insert(id("Tabs"));
+    let toggles = spawn_toggle_row(content, &["Toggle", "Other", "Third"], 0, FONT);
+    content.commands().entity(toggles).insert(id("Toggles"));
     spawn_progress_bar(
         content,
         0.6,
@@ -71,8 +83,8 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
         },
         (Text::new("Progress"), FONT.font(), TextColor(INK)),
     );
-    spawn_close_button(content, default());
-    spawn_slider(content, 0.5, None, 160.0);
+    spawn_close_button(content, default()).insert(id("Close"));
+    spawn_slider(content, 0.5, None, 160.0).insert(id("Slider"));
     let kinds = || PoiKind::ALL.map(kind_name).to_vec();
     for searchable in [false, true] {
         let dropdown = Dropdown {
@@ -85,7 +97,8 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
             padding: BUTTON_PADDING,
             ..default()
         };
-        spawn_dropdown(content, dropdown, FONT, node);
+        let name = if searchable { "Search" } else { "Dropdown" };
+        spawn_dropdown(content, dropdown, FONT, node).insert(id(name));
     }
     let text_box = TextBox {
         text: "Text box".into(),
@@ -97,14 +110,14 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
         ..default()
     };
     content.spawn(field_label("Label"));
-    spawn_text_box(content, text_box, FONT, node.clone());
+    spawn_text_box(content, text_box, FONT, node.clone()).insert(id("Text box"));
     let wrong = TextBox {
         text: "Something wrong".into(),
         takes_keys: true,
         error: true,
         ..default()
     };
-    spawn_text_box(content, wrong, FONT, node);
+    spawn_text_box(content, wrong, FONT, node).insert(id("Wrong"));
     content.spawn(raised_box()).with_child((
         Text::new("Raised box"),
         FONT.font(),

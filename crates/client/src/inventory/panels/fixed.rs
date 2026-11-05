@@ -38,6 +38,7 @@ pub(in crate::inventory) fn spawn_fixed_parts(
             spawn_icon_button(holder, ButtonState::Normal, icon, node).insert((
                 InventoryButton,
                 Pressable,
+                crate::widgets::UiId::new("hud", "character"),
                 ButtonTooltip("Character".into()),
             ));
         });

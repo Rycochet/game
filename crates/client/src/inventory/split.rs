@@ -136,7 +136,7 @@ pub(super) fn show_split(
             return;
         }
         spawn_slider(inside, value_of(splitting.count, all), None, SLIDER_WIDTH)
-            .insert(SplitSlider);
+            .insert((SplitSlider, crate::widgets::UiId::new("split", "count")));
         let shape = placed.shape();
         let size = Node {
             width: px(shape.width as f32 * CELL),

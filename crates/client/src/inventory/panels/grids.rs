@@ -42,6 +42,8 @@ impl OpenGrids {
         let at = FIRST_AT + NEXT_AT * (self.opened % 8) as f32;
         self.opened += 1;
         let (panel, content) = spawn_moveable_panel(commands, title, at);
+        let id = super::super::ui_ids::grid_id(Some(holder), "panel");
+        commands.entity(panel).insert(id);
         let mut ground_holder = None;
         commands.entity(content).with_children(|content| {
             if holder != Holder::Inventory {
