@@ -18,6 +18,7 @@ mod roads;
 pub mod sky;
 mod terrain;
 
+pub use gates::{gate_picture, gate_picture_name};
 pub use pois::{picture as poi_picture, picture_name as poi_picture_name};
 
 use bevy::prelude::*;

@@ -45,7 +45,7 @@ const BASE_LIFT: f32 = 0.2;
 pub(super) const MODEL_LIFT: f32 = BASE_LIFT * 2.0;
 
 /// A model and its outline.
-type ModelMeshes = (Handle<Mesh>, Handle<Mesh>);
+pub(super) type ModelMeshes = (Handle<Mesh>, Handle<Mesh>);
 
 /// The models' meshes, each made once, the two flat bases (`false`: round;
 /// `true`: octagonal, for towns), and their one material.
@@ -146,8 +146,7 @@ pub(super) fn add_models(
         let Ok(shape) = shapes.get(token_view.owner) else {
             continue;
         };
-        let store = &mut *store;
-        let (mesh, outline_mesh) = store
+        let model = store
             .meshes
             .entry((shape.kind, shape.look, shape.variety))
             .or_insert_with(|| {
@@ -155,8 +154,32 @@ pub(super) fn add_models(
                 (meshes.add(model.mesh()), meshes.add(model.outline_mesh()))
             })
             .clone();
+        let town = shape.kind.is_town();
+        store.attach(
+            &mut commands,
+            (&mut meshes, &mut materials),
+            view,
+            token_view.owner,
+            model,
+            town,
+        );
+    }
+}
+
+impl PoiMeshes {
+    /// Puts a model (and its outline, shown while the mouse is over it) on a
+    /// token's view, on a flat base: octagonal for `town`, else round.
+    pub(super) fn attach(
+        &mut self,
+        commands: &mut Commands,
+        (meshes, materials): (&mut Assets<Mesh>, &mut Assets<StandardMaterial>),
+        view: Entity,
+        owner: Entity,
+        (mesh, outline_mesh): ModelMeshes,
+        town: bool,
+    ) {
         // White, so what shows is the mesh's own colours.
-        let material = store
+        let material = self
             .material
             .get_or_insert_with(|| {
                 materials.add(StandardMaterial {
@@ -165,8 +188,7 @@ pub(super) fn add_models(
                 })
             })
             .clone();
-        let town = shape.kind.is_town();
-        let base_mesh = store
+        let base_mesh = self
             .bases
             .entry(town)
             .or_insert_with(|| meshes.add(poi_model::base_mesh(town)))
@@ -188,7 +210,7 @@ pub(super) fn add_models(
             ))
             .id();
         // Drawn from inside, so only what stands out past the model shows.
-        let outline_material = store
+        let outline_material = self
             .outline_material
             .get_or_insert_with(|| {
                 materials.add(StandardMaterial {
@@ -201,9 +223,7 @@ pub(super) fn add_models(
             .clone();
         let outline = commands
             .spawn((
-                PoiOutline {
-                    owner: token_view.owner,
-                },
+                PoiOutline { owner },
                 Mesh3d(outline_mesh),
                 MeshMaterial3d(outline_material),
                 NotShadowCaster,
