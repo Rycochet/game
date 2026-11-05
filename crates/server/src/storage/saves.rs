@@ -150,6 +150,11 @@ pub struct CharacterSave {
     pub inventory: Inventory,
     /// What they are like, wherever they go.
     pub sheet: Sheet,
+    /// The World Gates they have gone through, either way, by the Hall gate
+    /// each pair is (`hall::GatePlace::number`): gates join worlds, so this is
+    /// kept for them all.
+    #[serde(default)]
+    pub gates: BTreeSet<u32>,
 }
 
 /// What a character knows of one world, and where they are in it.

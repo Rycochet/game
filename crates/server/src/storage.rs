@@ -26,6 +26,7 @@ mod saves;
 mod sites;
 mod unsaved;
 
+pub use characters::Everywhere;
 pub use roads::RoadSave;
 pub use saves::{
     CellMasks, CharacterSave, CharacterWorldSave, KnownPoi, LevelSave, SavedMob, ServerSave,

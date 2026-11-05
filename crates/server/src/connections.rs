@@ -31,6 +31,7 @@ mod messages;
 mod moving;
 mod roads;
 mod systems;
+mod visited_gates;
 mod welcome;
 
 pub(super) use answer::answer;
@@ -209,6 +210,8 @@ pub struct Client {
     pub(crate) seen_worn: BTreeMap<Id, Vec<WornLook>>,
     /// What the character is like.
     pub(crate) sheet: Sheet,
+    /// The World Gates it has gone through (`CharacterSave::gates`).
+    gates: BTreeSet<u32>,
     /// What it was last told is on the ground under the player.
     pub(crate) ground_told: GroundTold,
     /// How much it can do now, and how fast that comes back.

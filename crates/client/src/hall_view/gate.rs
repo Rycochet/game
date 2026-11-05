@@ -64,9 +64,10 @@ impl GateModel {
         water::mesh(design, scale)
     }
 
-    /// Blue with paler streaks, repeating, to slide downwards over `water`.
-    pub fn water_picture() -> Image {
-        water::picture()
+    /// Blue with paler streaks (orange for a gate the player has gone
+    /// through), repeating, to slide downwards over `water`.
+    pub(super) fn water_picture(visited: bool) -> Image {
+        water::picture(visited)
     }
 
     /// How far it reaches across from its middle, and how high.

@@ -5,10 +5,20 @@ use shared::item::Inventory;
 use shared::protocol::CharacterId;
 use shared::sheet::Sheet;
 use shared::world::WorldId;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::{CharacterSave, CharacterWorldSave, Storage};
 use crate::saves::{Save, SaveKey};
+
+/// What goes with a character from world to world, saved with what they know
+/// of each.
+#[derive(Clone, Debug, Default)]
+pub struct Everywhere {
+    pub inventory: Inventory,
+    pub sheet: Sheet,
+    /// `CharacterSave::gates`.
+    pub gates: BTreeSet<u32>,
+}
 
 impl Storage {
     /// A character's whole save, if they have one. A broken one is put aside (and
@@ -59,6 +69,13 @@ impl Storage {
         Ok(self.character(id)?.map(|save| save.sheet))
     }
 
+    /// The World Gates a character has gone through (`CharacterSave::gates`).
+    pub fn load_gates(&self, id: &CharacterId) -> Result<BTreeSet<u32>, String> {
+        Ok(self
+            .character(id)?
+            .map_or_else(BTreeSet::new, |save| save.gates))
+    }
+
     /// Saves a character who is in `world`, knowing `here` of it.
     pub fn save_character(
         &self,
@@ -66,8 +83,7 @@ impl Storage {
         world: WorldId,
         here: &CharacterWorldSave,
         others: &BTreeMap<WorldId, CharacterWorldSave>,
-        inventory: &Inventory,
-        sheet: &Sheet,
+        everywhere: Everywhere,
     ) {
         if let Some(queue) = &self.queue {
             let mut worlds = others.clone();
@@ -84,8 +100,9 @@ impl Storage {
                 Save::Character(CharacterSave {
                     world,
                     worlds,
-                    inventory: inventory.clone(),
-                    sheet: sheet.clone(),
+                    inventory: everywhere.inventory,
+                    sheet: everywhere.sheet,
+                    gates: everywhere.gates,
                 }),
             );
         }

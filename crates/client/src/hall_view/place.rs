@@ -1,5 +1,5 @@
 //! Standing the gates of the stretch of the Hall the player has round them,
-//! with water running down in their openings.
+//! with water running down in their openings (coloured by `visited`).
 
 use bevy::prelude::*;
 use shared::hall::{GatePlace, LEVEL_ROWS, LEVEL_TOP};
@@ -7,6 +7,7 @@ use shared::protocol::LevelKind;
 use std::collections::BTreeMap;
 
 use super::GateModel;
+use super::visited::{GateWater, WaterMaterials};
 use crate::common::CurrentDungeon;
 use crate::dungeon_map::CELL_SIZE;
 
@@ -14,12 +15,11 @@ use crate::dungeon_map::CELL_SIZE;
 const FLOW: f32 = 0.6;
 
 /// The gates standing (each frame, with its runes and water as children), by
-/// their cell as the client counts it, and the materials they share.
+/// their cell as the client counts it, and the stone they share.
 #[derive(Resource, Default)]
 pub(super) struct Gates {
     standing: BTreeMap<(i64, i64), Entity>,
     stone: Option<Handle<StandardMaterial>>,
-    water: Option<Handle<StandardMaterial>>,
 }
 
 /// When the stretch of the Hall changes, stands the gates on it and takes
@@ -29,7 +29,6 @@ pub(super) fn place_gates(
     mut gates: ResMut<Gates>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
     mut commands: Commands,
 ) {
     if !dungeon.is_changed() {
@@ -63,19 +62,6 @@ pub(super) fn place_gates(
             })
         })
         .clone();
-    let water = gates
-        .water
-        .get_or_insert_with(|| {
-            materials.add(StandardMaterial {
-                base_color_texture: Some(images.add(GateModel::water_picture())),
-                unlit: true,
-                alpha_mode: AlphaMode::Blend,
-                cull_mode: None,
-                double_sided: true,
-                ..default()
-            })
-        })
-        .clone();
     for (cell, gate) in wanted {
         if gates.standing.contains_key(&cell) {
             continue;
@@ -90,7 +76,7 @@ pub(super) fn place_gates(
         let sheet = commands
             .spawn((
                 Mesh3d(meshes.add(GateModel::water(design, CELL_SIZE))),
-                MeshMaterial3d(water.clone()),
+                GateWater(gate.number()),
             ))
             .id();
         let at = Vec3::new(cell.0 as f32 * CELL_SIZE, 0.0, cell.1 as f32 * CELL_SIZE);
@@ -107,18 +93,21 @@ pub(super) fn place_gates(
     }
 }
 
-/// Runs the water down every gate's opening, by sliding its picture.
+/// Runs the water down every gate's opening, by sliding its pictures.
 pub(super) fn run_water(
     gates: Res<Gates>,
+    waters: Res<WaterMaterials>,
     time: Res<Time>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if gates.standing.is_empty() {
         return;
     }
-    if let Some(mut water) = gates.water.as_ref().and_then(|w| materials.get_mut(w)) {
-        let down = (time.elapsed_secs() * FLOW).fract();
-        water.uv_transform = bevy::math::Affine2::from_translation(Vec2::new(0.0, -down));
+    let down = (time.elapsed_secs() * FLOW).fract();
+    for handle in [&waters.blue, &waters.orange] {
+        if let Some(mut water) = materials.get_mut(handle) {
+            water.uv_transform = bevy::math::Affine2::from_translation(Vec2::new(0.0, -down));
+        }
     }
 }
 

@@ -326,6 +326,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             y: 5,
         },
         ServerMessage::Sheet(Sheet::new(CreatureKind::Horse)),
+        ServerMessage::VisitedGates(vec![3, 175_562_835]),
         ServerMessage::EntitySeen(EntityLook {
             id: Id(uuid::Uuid::from_u128(4)),
             kind: CreatureKind::Giant,

@@ -90,12 +90,14 @@ pub(super) fn welcome(
         .load_character(id, world.seed.id())
         .and_then(|character| {
             let inventory = world.storage.load_inventory(id)?;
-            Ok((character, inventory, world.storage.load_sheet(id)?))
+            let gates = world.storage.load_gates(id)?;
+            Ok((character, inventory, world.storage.load_sheet(id)?, gates))
         });
     // Not `Playing` yet, so nothing blank can be saved over the real character.
     match loaded {
-        Ok((character, inventory, sheet)) => {
+        Ok((character, inventory, sheet, gates)) => {
             (client.character, client.other_worlds) = character;
+            client.gates = gates;
             // Never saved in this world (or forgotten): new here, so they
             // arrive through one of its World Gates.
             if client.character.forgotten_to == 0 {
@@ -121,7 +123,8 @@ pub(super) fn welcome(
 }
 
 /// Tells the client the world they are in and where on its world map, then
-/// what they are like and carry. `false` if the client has gone.
+/// what they are like, the gates they have gone through and what they carry.
+/// `false` if the client has gone.
 pub(super) fn send_welcome(
     client: &mut Client,
     world: &ServerWorld,
@@ -143,5 +146,6 @@ pub(super) fn send_welcome(
         && client
             .link
             .send(&ServerMessage::Sheet(client.sheet.clone()))
+        && client.send_visited_gates()
         && client.send_inventory()
 }

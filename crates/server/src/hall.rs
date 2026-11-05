@@ -36,6 +36,9 @@ pub(crate) fn stepped(client: &mut Client, step: Step) -> bool {
             client.unsaved = true;
             // Onto a gate's floor: through it, to its planet.
             if let Some((seed, entrance)) = crate::gates::hall_gate_leads(to) {
+                if let Some(place) = GatePlace::at(to.0, to.1) {
+                    client.went_through(place.number());
+                }
                 client.go_to_world(seed, crate::connections::Arrival::Gate(entrance));
             }
         }
