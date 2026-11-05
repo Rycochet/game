@@ -41,9 +41,12 @@ pub(super) struct WorldHoverBox;
 #[derive(Component)]
 pub(super) struct WorldHoverText;
 
-/// The pictures the maps are drawn in.
+/// The pictures the maps are drawn in, and the see-through marks layers over
+/// them (`overlay`).
 #[derive(Resource)]
 pub(super) struct MapPictures {
     pub(super) minimap: Handle<Image>,
     pub(super) full: Handle<Image>,
+    pub(super) minimap_marks: Handle<Image>,
+    pub(super) full_marks: Handle<Image>,
 }

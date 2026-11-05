@@ -32,21 +32,40 @@ pub(super) fn new_picture() -> Image {
     image
 }
 
+/// A see-through picture over the whole of the map it is put in.
+fn marks_layer(picture: &Handle<Image>) -> impl Bundle {
+    (
+        ImageNode::new(picture.clone()),
+        Node {
+            position_type: PositionType::Absolute,
+            top: px(0),
+            left: px(0),
+            width: percent(100),
+            height: percent(100),
+            ..default()
+        },
+    )
+}
+
 pub(super) fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let minimap = images.add(new_picture());
     let full = images.add(new_picture());
-    commands.spawn((
-        Minimap,
-        ImageNode::new(minimap.clone()),
-        Node {
-            position_type: PositionType::Absolute,
-            top: px(CORNER_GAP),
-            right: px(CORNER_GAP),
-            ..default()
-        },
-        GlobalZIndex(10),
-        Visibility::Hidden,
-    ));
+    let minimap_marks = images.add(new_picture());
+    let full_marks = images.add(new_picture());
+    commands
+        .spawn((
+            Minimap,
+            ImageNode::new(minimap.clone()),
+            Node {
+                position_type: PositionType::Absolute,
+                top: px(CORNER_GAP),
+                right: px(CORNER_GAP),
+                ..default()
+            },
+            GlobalZIndex(10),
+            Visibility::Hidden,
+        ))
+        .with_child(marks_layer(&minimap_marks));
     let behind = commands
         .spawn((
             darkening(FULL_MAP_LAYER),
@@ -76,16 +95,18 @@ pub(super) fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image
                     ..default()
                 },
             ));
-            panel.spawn((
-                FullMapPicture,
-                ImageNode::new(full.clone()),
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: px(FULL_MAP_MARGIN + TITLE_HEIGHT),
-                    left: px(FULL_MAP_MARGIN),
-                    ..default()
-                },
-            ));
+            panel
+                .spawn((
+                    FullMapPicture,
+                    ImageNode::new(full.clone()),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: px(FULL_MAP_MARGIN + TITLE_HEIGHT),
+                        left: px(FULL_MAP_MARGIN),
+                        ..default()
+                    },
+                ))
+                .with_child(marks_layer(&full_marks));
             spawn_close_button(
                 panel,
                 Node {
@@ -140,5 +161,10 @@ pub(super) fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image
             Visibility::Hidden,
         ))
         .with_children(|holder| spawn_tooltip(holder, WorldHoverText, ""));
-    commands.insert_resource(MapPictures { minimap, full });
+    commands.insert_resource(MapPictures {
+        minimap,
+        full,
+        minimap_marks,
+        full_marks,
+    });
 }

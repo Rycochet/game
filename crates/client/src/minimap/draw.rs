@@ -7,13 +7,14 @@ use shared::site::StairsDirection;
 use super::canvas::Canvas;
 use super::grid::Looks;
 use super::lines::MapRivers;
+use super::overlay::{MarksLayer, Under};
 use super::projection::Projection;
 use super::sprites::Sprites;
 use super::world::WorldTiles;
 use super::{
     DrawnFrom, FULL_MAP_BUDGET_MS, ICON_PIXELS, MINIMAP_BUDGET_MS, MapPictures, REDRAW_SECONDS,
     Room, SECRET_DOOR_EDGE, SECRET_DOOR_PIXELS, STAIRS_PIXELS, Screen, Sources, full_map_area,
-    full_map_marks, full_map_side, location_title, minimap_across, minimap_marks,
+    full_map_compass, full_map_side, location_title, minimap_across, minimap_border, minimap_marks,
     minimap_picture_size, prepare_stamps, under_the_sky, units_per_pixel,
 };
 use crate::common::GameView;
@@ -29,6 +30,7 @@ pub(super) fn draw_maps(
     mut tiles: ResMut<WorldTiles>,
     mut rivers: ResMut<MapRivers>,
     mut sprites: ResMut<Sprites>,
+    mut layer: ResMut<MarksLayer>,
     mut last: Local<Option<DrawnFrom>>,
     mut pending: Local<bool>,
     mut since: Local<f32>,
@@ -129,7 +131,6 @@ pub(super) fn draw_maps(
         floor: levels.showing(),
         open: full.open,
         centre,
-        player: (player.x, player.y),
         turn: (grid_right.0 as f32, grid_right.1 as f32),
         scale: units,
         size,
@@ -263,36 +264,27 @@ pub(super) fn draw_maps(
         }
     }
 
-    let player_at = projection.to_picture(spot.0, spot.1);
     // The Hall of Worlds has no north to show (owner).
     let in_hall = players_level
         .info
         .as_ref()
         .is_some_and(|info| matches!(info.kind, shared::protocol::LevelKind::Hall { .. }));
-    if full.open {
-        let floor = on_other_floor.then_some(player_is_up);
-        full_map_marks(
-            &mut canvas,
-            &window,
-            size,
-            player_at,
-            (zoom, dots, scale),
-            floor,
-            !in_hall,
-        );
-    } else {
+    if full.open && !in_hall {
+        full_map_compass(&mut canvas, &window, size, (dots, scale));
+    } else if !full.open {
         let sky = under_the_sky(view, players_level).then_some(&*sky_now);
         let turn = (grid_right, grid_down);
-        minimap_marks(
-            &mut canvas,
-            &window,
-            &projection,
-            player_at,
-            clip,
-            (zoom, dots, scale),
-            turn,
-            sky,
-            !in_hall,
-        );
+        minimap_marks(&mut canvas, &window, &projection, clip, turn, sky, !in_hall);
     }
+    layer.0 = Some(Under {
+        projection,
+        size,
+        full_map: full.open,
+        inside: (!full.open).then(|| (projection.middle, clip - minimap_border(&window))),
+        mark: zoom * dots,
+        other_floor: on_other_floor.then_some(player_is_up),
+        wrap: (view == GameView::WorldMap)
+            .then(|| world.as_deref().map(|world| world.surface.width()))
+            .flatten(),
+    });
 }

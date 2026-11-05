@@ -12,37 +12,32 @@ use super::{
 };
 use crate::common::SkyNow;
 
-/// The player on the full map: a dot, or an arrow at the edge pointing to
-/// them, smaller with a hint which way their floor is (`Some(player_is_up)`)
-/// when another floor is shown; and the compass, if `north` (not in the
-/// Hall of Worlds, which has none: owner).
-#[allow(clippy::too_many_arguments)]
-pub(super) fn full_map_marks(
+/// The player on a map's marks layer: a dot, or on the full map an arrow at
+/// the edge pointing to them, smaller with a hint which way their floor is
+/// (`Some(player_is_up)`) when another floor is shown. `mark` is the dot's
+/// size against `DOT_PIXELS`: the map's zoom times the screen's pixels.
+pub(super) fn player_mark(
     canvas: &mut Canvas,
-    window: &Room,
-    size: (u32, u32),
     player_at: (f32, f32),
-    (zoom, dots, scale): (f32, f32, f32),
+    mark: f32,
+    full_map: bool,
     other_floor: Option<bool>,
-    north: bool,
 ) {
-    let (on_other_floor, player_is_up) = (other_floor.is_some(), other_floor == Some(true));
-    // The dot grows with the map.
-    let (dot, outline) = (DOT_PIXELS * zoom * dots, DOT_OUTLINE * zoom * dots);
-    let picture_size = (size.0 as f32, size.1 as f32);
+    let (dot, outline) = (DOT_PIXELS * mark, DOT_OUTLINE * mark);
+    if !full_map {
+        super::frame::player_dot(canvas, player_at, dot, outline);
+        return;
+    }
+    let picture_size = (canvas.width as f32, canvas.height as f32);
     // On another floor they are smaller, with what says which way beside
     // them. The arrow is as wide as the dot, outline included, so what is
     // beside it stays put as it moves round the edge.
-    let (dot, hint) = if on_other_floor {
-        (
-            dot * OTHER_FLOOR_SIZE,
-            Some(FLOOR_HINT_PIXELS * zoom * dots),
-        )
-    } else {
-        (dot, None)
+    let dot = match other_floor {
+        Some(_) => dot * OTHER_FLOOR_SIZE,
+        None => dot,
     };
-    let arrow_place = super::frame::arrow_place(picture_size, player_at, ARROW_INSET * zoom * dots);
-    let mark = arrow_place.map_or(player_at, |(place, _)| place);
+    let arrow_place = super::frame::arrow_place(picture_size, player_at, ARROW_INSET * mark);
+    let at = arrow_place.map_or(player_at, |(place, _)| place);
     match arrow_place {
         Some((place, direction)) => {
             let arrow = dot - 2.0 * outline;
@@ -50,12 +45,19 @@ pub(super) fn full_map_marks(
         }
         None => super::frame::player_dot(canvas, player_at, dot, outline),
     }
-    if let Some(hint) = hint {
-        super::frame::floor_hint(canvas, mark, dot / 2.0, hint, player_is_up);
+    if let Some(player_is_up) = other_floor {
+        let hint = FLOOR_HINT_PIXELS * mark;
+        super::frame::floor_hint(canvas, at, dot / 2.0, hint, player_is_up);
     }
-    if !north {
-        return;
-    }
+}
+
+/// The full map's compass (not in the Hall of Worlds, which has none: owner).
+pub(super) fn full_map_compass(
+    canvas: &mut Canvas,
+    window: &Room,
+    size: (u32, u32),
+    (dots, scale): (f32, f32),
+) {
     let length = (window.height() * COMPASS_OF_HEIGHT).max(COMPASS_MIN_LENGTH);
     let foot = (
         size.0 as f32 - COMPASS_INSET * dots,
@@ -64,28 +66,28 @@ pub(super) fn full_map_marks(
     super::frame::compass(canvas, foot, length * scale, COMPASS_LINE * dots);
 }
 
-/// The player's dot on the minimap, its round frame (with its north notch if
-/// `north`), and the suns and moons round it when `sky` is given.
-#[allow(clippy::too_many_arguments)]
+/// How thick the minimap's border is drawn, in the picture's pixels.
+pub(super) fn minimap_border(window: &Room) -> f32 {
+    BORDER * window.scale_factor() * minimap_trim(window)
+}
+
+/// The minimap's round frame (with its north notch if `north`), and the suns
+/// and moons round it when `sky` is given.
 pub(super) fn minimap_marks(
     canvas: &mut Canvas,
     window: &Room,
     projection: &Projection,
-    player_at: (f32, f32),
     clip: f32,
-    (zoom, dots, scale): (f32, f32, f32),
     (grid_right, grid_down): ((f64, f64), (f64, f64)),
     sky: Option<&SkyNow>,
     north: bool,
 ) {
-    let (dot, outline) = (DOT_PIXELS * zoom * dots, DOT_OUTLINE * zoom * dots);
-    super::frame::player_dot(canvas, player_at, dot, outline);
-    let trim = scale * minimap_trim(window);
+    let trim = window.scale_factor() * minimap_trim(window);
     // North on the picture: the grid's north is `-y`.
     let round = RoundFrame {
         centre: projection.middle,
         radius: clip,
-        border: BORDER * trim,
+        border: minimap_border(window),
         notch: if north { NOTCH * trim } else { 0.0 },
         north: (-grid_right.1 as f32, -grid_down.1 as f32),
     };
