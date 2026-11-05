@@ -5,10 +5,11 @@ use shared::dungeon::{Level, line_is_clear};
 use shared::id::Id;
 use shared::pathfinding::DistanceMap;
 use shared::protocol::CharacterId;
-use shared::sheet::{Appearance, Reaction};
+use shared::sheet::{Appearance, Feeling, Reaction};
 use shared::wear::WornLook;
 use std::collections::BTreeMap;
 
+use super::territory::{is_territorial, territorial_doing};
 use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob};
 use crate::connections::{Client, Phase};
 use crate::storage::SiteId;
@@ -100,10 +101,11 @@ pub(super) fn notice(mob: &Mob, level: &Level, spots: &[Spot]) -> Option<Doing> 
                 last_seen: spot.position,
                 gap,
             };
-            match mob
-                .kind
-                .reaction(mob.feeling(spot.kind, spot.character.as_ref()))
-            {
+            let feeling = mob.feeling(spot.kind, spot.character.as_ref());
+            if is_territorial(mob) && feeling != Feeling::Friendly {
+                return territorial_doing(mob, spot, feeling);
+            }
+            match mob.kind.reaction(feeling) {
                 Reaction::Ignore => None,
                 Reaction::Flee => Some(Doing::Fleeing { from: spot.id }),
                 Reaction::Approach => Some(going(FRIENDLY_GAP)),

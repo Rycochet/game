@@ -278,6 +278,68 @@ fn mobs_notice_only_as_far_as_their_kind_sees() {
 }
 
 #[test]
+fn a_territorial_mob_stands_between_a_stranger_and_its_home() {
+    use super::territory::TERRITORY;
+    let mut test = beside_a_mob(CreatureKind::Lizardfolk, TERRITORY + 4);
+    let home = the_mob(&test).home;
+    run(&mut test, 60);
+    let mob = the_mob(&test);
+    assert!(
+        matches!(mob.doing, Doing::Guarding { .. }),
+        "{:?}",
+        mob.doing
+    );
+    // At the edge of its territory, towards the player, and neutral still.
+    assert_eq!(mob.position, (home.0 - TERRITORY, home.1));
+    let kind = test.client.inventory.creature;
+    assert_eq!(
+        mob.feeling(kind, test.client.character_id.as_ref()),
+        Feeling::Neutral
+    );
+}
+
+#[test]
+fn coming_into_its_territory_angers_it_and_it_attacks() {
+    let mut test = beside_a_mob(CreatureKind::Lizardfolk, 4);
+    run(&mut test, 40);
+    let mob = the_mob(&test);
+    let kind = test.client.inventory.creature;
+    assert_eq!(
+        mob.feeling(kind, test.client.character_id.as_ref()),
+        Feeling::Unfriendly
+    );
+    assert!(cells_apart(mob.position, player(&test)) <= ATTACK_GAP);
+}
+
+#[test]
+fn an_angry_territorial_mob_only_chases_near_its_home() {
+    use super::territory::{LEASH, territorial_doing};
+    let test = beside_a_mob(CreatureKind::Lizardfolk, 4);
+    let mob = the_mob(&test);
+    let spot = |x| Spot {
+        id: Id::for_test(9),
+        character: None,
+        kind: CreatureKind::Human,
+        position: (mob.home.0 - x, mob.home.1),
+    };
+    let near = territorial_doing(&mob, &spot(LEASH), Feeling::Unfriendly);
+    assert!(matches!(near, Some(Doing::Going { .. })));
+    let far = territorial_doing(&mob, &spot(LEASH + 1), Feeling::Unfriendly);
+    assert!(matches!(far, Some(Doing::Guarding { .. })));
+    // Friends are left to its kind's usual welcome.
+    assert_eq!(territorial_doing(&mob, &spot(1), Feeling::Friendly), None);
+}
+
+#[test]
+fn guards_stand_at_the_edge_or_nearer_home() {
+    use super::territory::{TERRITORY, guard_spot};
+    assert_eq!(guard_spot((0, 0), (20, 0)), (TERRITORY, 0));
+    assert_eq!(guard_spot((0, 0), (20, 20)), (TERRITORY, TERRITORY));
+    assert_eq!(guard_spot((0, 0), (3, 0)), (2, 0));
+    assert_eq!(guard_spot((5, 5), (5, 5)), (5, 5));
+}
+
+#[test]
 fn something_timid_runs_away() {
     let mut test = beside_a_mob(CreatureKind::Chicken, 2);
     let started = the_mob(&test).position;

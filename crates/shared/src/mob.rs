@@ -44,11 +44,18 @@ pub const GIVE_REACH: i64 = 2;
 /// How many things a mob remembers: the oldest go first.
 const MOST_REMEMBERED: usize = 32;
 
+/// How long, in action ticks, a mob stays angry at someone who came into its
+/// territory: 3 minutes. Being hurt, once there is combat, is never forgotten
+/// (owner, 2026-11-05).
+pub const TRESPASS_FORGOTTEN_AFTER: u64 = 3 * 60 * 20;
+
 /// Something that happened, as a mob remembers it. Things, not words, so it can
 /// say what it means for how the mob feels.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Event {
     Gave(ItemKind),
+    /// Came into its territory, at this action tick.
+    Trespassed(u64),
 }
 
 impl Event {
@@ -56,6 +63,8 @@ impl Event {
     fn warmth(self) -> i32 {
         match self {
             Self::Gave(_) => 30,
+            // Enough to turn neutral into unfriendly while it lasts.
+            Self::Trespassed(_) => -50,
         }
     }
 }
@@ -66,10 +75,23 @@ pub struct Memory(Vec<(CharacterId, Event)>);
 
 impl Memory {
     pub fn remember(&mut self, about: CharacterId, event: Event) {
+        // Only the latest trespass counts, so staying put doesn't fill its memory.
+        if matches!(event, Event::Trespassed(_)) {
+            self.0
+                .retain(|(who, old)| !(*who == about && matches!(old, Event::Trespassed(_))));
+        }
         if self.0.len() >= MOST_REMEMBERED {
             self.0.remove(0);
         }
         self.0.push((about, event));
+    }
+
+    /// Lets go of trespasses older than `TRESPASS_FORGOTTEN_AFTER` at this tick.
+    pub fn forget_old(&mut self, now: u64) {
+        self.0.retain(|(_, event)| match event {
+            Event::Trespassed(at) => now.saturating_sub(*at) < TRESPASS_FORGOTTEN_AFTER,
+            Event::Gave(_) => true,
+        });
     }
 
     /// How much warmer it feels about this character than it would have.
@@ -85,11 +107,12 @@ fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
         _ if site.is_town() => &[(CreatureKind::Beggar, 100)],
         PoiKind::Farm => &[(CreatureKind::Chicken, 80), (CreatureKind::Horse, 20)],
         _ => &[
-            (CreatureKind::Kobold, 50),
+            (CreatureKind::Kobold, 44),
             (CreatureKind::Goblin, 20),
             (CreatureKind::Orc, 10),
             (CreatureKind::Chicken, 12),
             (CreatureKind::Giant, 8),
+            (CreatureKind::Lizardfolk, 6),
         ],
     }
 }

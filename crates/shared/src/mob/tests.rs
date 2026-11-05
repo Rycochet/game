@@ -166,3 +166,29 @@ fn a_look_reads_back_from_a_message() {
     let bytes = postcard::to_allocvec(&look).unwrap();
     assert_eq!(postcard::from_bytes::<EntityLook>(&bytes).unwrap(), look);
 }
+
+#[test]
+fn a_trespass_angers_once_and_is_forgotten() {
+    let who = CharacterId(crate::id::Id::for_test(1));
+    let mut memory = Memory::default();
+    memory.remember(who, Event::Gave(ItemKind::Coin));
+    // Staying in its territory only keeps the latest trespass.
+    for tick in 0..10 {
+        memory.remember(who, Event::Trespassed(tick));
+    }
+    assert_eq!(memory.warmth_for(&who), 30 - 50);
+    assert_eq!(Feeling::from_warmth(-50), Feeling::Unfriendly);
+    memory.forget_old(9 + TRESPASS_FORGOTTEN_AFTER - 1);
+    assert_eq!(memory.warmth_for(&who), 30 - 50);
+    // Gifts are kept; the trespass goes.
+    memory.forget_old(9 + TRESPASS_FORGOTTEN_AFTER);
+    assert_eq!(memory.warmth_for(&who), 30);
+}
+
+#[test]
+fn every_place_shares_out_exactly_100() {
+    for site in PoiKind::ALL {
+        let total: u64 = who_lives_in(site).iter().map(|&(_, share)| share).sum();
+        assert_eq!(total, 100, "{site:?}");
+    }
+}
