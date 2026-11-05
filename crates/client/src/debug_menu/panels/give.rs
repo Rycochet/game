@@ -7,12 +7,13 @@ use shared::creature::{CreatureKind, Size};
 use shared::item::Quality;
 
 use super::{
-    CHECK_ROW, FONT, GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveNoSpace, GivePreview,
-    GiveRandomSeed, GiveSeed, SEED_WIDTH, SetChoice, give_kinds, row, words,
+    CHECK_ROW, FIELDS, FONT, GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveNoSpace,
+    GiveOption, GiveOptionsLine, GivePreview, GiveRandomSeed, GiveSeed, SEED_WIDTH, SetChoice, any,
+    give_kinds, row, words,
 };
 use crate::widgets::{
     BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, Pressable, TextBox, WARNING_TEXT,
-    spawn_button, spawn_dropdown, spawn_text_box,
+    spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
 };
 
 const COUNT_WIDTH: f32 = 64.0;
@@ -60,6 +61,23 @@ pub(super) fn spawn_give_panel(content: &mut ChildSpawnerCommands) {
         let kinds = give_kinds().into_iter().map(|kind| kind.def().name);
         dropdown(line, GiveChoice::Kind, kinds, 0, true);
     });
+    // Shown by `fill_give_options` for kinds whose form can be asked for.
+    let hidden = Node {
+        display: Display::None,
+        ..row()
+    };
+    content
+        .spawn((hidden, GiveOptionsLine))
+        .with_children(|line| {
+            line.spawn(words("Form"));
+            for field in FIELDS {
+                let option = GiveOption {
+                    field,
+                    values: Vec::new(),
+                };
+                dropdown(line, option, [any(field)], 0, false);
+            }
+        });
     content.spawn(row()).with_children(|line| {
         line.spawn(words("Seed"));
         let node = Node {
@@ -68,7 +86,7 @@ pub(super) fn spawn_give_panel(content: &mut ChildSpawnerCommands) {
             ..default()
         };
         spawn_text_box(line, digits(), FONT, node).insert(GiveSeed);
-        button(line, "Random").insert(GiveRandomSeed);
+        spawn_new_seed_button(line, CHECK_ROW).insert(GiveRandomSeed);
     });
     content.spawn((
         GivePreview::default(),
@@ -124,7 +142,7 @@ fn button<'a>(line: &'a mut ChildSpawnerCommands, label: &str) -> EntityCommands
 
 fn dropdown<'a, S: Into<String>>(
     line: &'a mut ChildSpawnerCommands,
-    choice: GiveChoice,
+    choice: impl Component,
     options: impl IntoIterator<Item = S>,
     selected: usize,
     searchable: bool,

@@ -73,6 +73,7 @@ pub(super) fn add(app: &mut App) {
                                 seed: None,
                                 count: 1,
                                 identical: true,
+                                request: shared::item_form::RollRequest::NONE,
                             }));
                         }
                     }
@@ -90,6 +91,7 @@ pub(super) fn add(app: &mut App) {
                             seed: None,
                             count: 1,
                             identical: true,
+                            request: shared::item_form::RollRequest::NONE,
                         }));
                     }
                 } else if *step == 1 && time.elapsed_secs() > 2.0 {

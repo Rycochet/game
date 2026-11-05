@@ -1,7 +1,7 @@
 //! Answering dev tools: teleports, sites made to order, items given, the clock and the like. `answer` only passes them on where dev tools are allowed.
 
 use bevy::prelude::*;
-use shared::item_form::{ItemOrder, RollRequest};
+use shared::item_form::ItemOrder;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::sheet::Sheet;
 
@@ -66,6 +66,7 @@ pub(super) fn answer_dev(
             seed,
             count,
             identical,
+            request,
         } => {
             let order = ItemOrder {
                 kind,
@@ -74,7 +75,7 @@ pub(super) fn answer_dev(
                 quality,
                 set,
                 favour,
-                request: RollRequest::NONE,
+                request,
             };
             give_items(client, world, &order, seed, count, identical)
         }

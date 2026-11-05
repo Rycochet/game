@@ -8,8 +8,8 @@ use shared::surface::SurfaceGenerator;
 use super::layer::Layer;
 use super::showing::Choice;
 use crate::widgets::{
-    BUTTON_PADDING, ButtonState, ButtonTooltip, Dropdown, INK, PANEL_EDGE, Pressable, TextBox,
-    TextSize, field_label, panel, spawn_button, spawn_dropdown, spawn_icon_button, spawn_text_box,
+    BUTTON_PADDING, ButtonState, Dropdown, INK, PANEL_EDGE, Pressable, TextBox, TextSize,
+    field_label, panel, spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
     stops_presses,
 };
 
@@ -35,12 +35,7 @@ pub(super) struct Bar {
     pub(super) gate_words: Entity,
 }
 
-/// `random_icon`: the new seed button's picture.
-pub(super) fn spawn_bar(
-    layer: &mut ChildSpawnerCommands,
-    choice: Choice,
-    random_icon: Handle<Image>,
-) -> Bar {
+pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar {
     let mut bar = layer.spawn(panel());
     bar.insert(Node {
         position_type: PositionType::Absolute,
@@ -81,18 +76,18 @@ pub(super) fn spawn_bar(
             ..control(Some(SEED_WIDTH))
         };
         let seed = spawn_text_box(row, seed_box, FONT, node).id();
-        let node = Node {
-            width: px(ROW_HEIGHT),
-            height: px(ROW_HEIGHT),
-            ..default()
-        };
-        let random = spawn_icon_button(row, ButtonState::Normal, random_icon, node.clone())
-            .insert((Pressable, ButtonTooltip("Random seed".into())))
-            .id();
+        let random = spawn_new_seed_button(row, ROW_HEIGHT).id();
         #[cfg(not(target_arch = "wasm32"))]
-        let copy = crate::widgets::spawn_copy_button(row, "Copy the seed", FONT, node)
-            .insert(Pressable)
-            .id();
+        let copy = {
+            let node = Node {
+                width: px(ROW_HEIGHT),
+                height: px(ROW_HEIGHT),
+                ..default()
+            };
+            crate::widgets::spawn_copy_button(row, "Copy the seed", FONT, node)
+                .insert(Pressable)
+                .id()
+        };
         let reset = spawn_button(row, ButtonState::Normal, "Reset", FONT, control(None))
             .insert(Pressable)
             .id();

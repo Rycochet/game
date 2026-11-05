@@ -108,6 +108,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             seed: None,
             count: 1,
             identical: true,
+            request: crate::item_form::RollRequest::NONE,
         },
         ClientMessage::OpenTrade {
             with: Id::for_test(3),

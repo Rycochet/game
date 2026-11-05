@@ -21,6 +21,8 @@ mod generate;
 mod generate_form;
 mod give;
 mod give_form;
+mod give_option;
+mod give_options;
 mod give_preview;
 mod give_systems;
 mod go_to_world;
@@ -44,9 +46,12 @@ pub(super) use give::CreatureButton;
 use give::{spawn_creature_buttons, spawn_give_panel};
 use give_form::give_kinds;
 pub(super) use give_form::{
-    GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveForm, GiveNoSpace, GivePreview,
-    GiveRandomSeed, GiveSeed, SetChoice,
+    GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveForm, GiveNoSpace, GiveOption,
+    GiveOptionsLine, GivePreview, GiveRandomSeed, GiveSeed, SetChoice,
 };
+pub(super) use give_option::OptionValue;
+use give_option::{FIELDS, any};
+pub(super) use give_options::{choose_give_option, fill_give_options};
 pub(super) use give_preview::show_give_preview;
 pub(super) use give_systems::{
     choose_give_options, edit_give_boxes, press_creature_buttons, press_give_button,

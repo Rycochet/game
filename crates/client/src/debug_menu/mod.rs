@@ -72,6 +72,8 @@ impl Plugin for DebugMenuPlugin {
                         panels::start_give_panel,
                         panels::choose_give_options,
                         panels::edit_give_boxes,
+                        panels::choose_give_option,
+                        panels::fill_give_options,
                         panels::show_give_preview,
                         panels::press_give_button,
                     )

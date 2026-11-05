@@ -104,5 +104,13 @@ pub fn spawn_icon_dropdown<'a>(
 
 pub(super) fn label_of(dropdown: &Dropdown) -> String {
     let chosen = dropdown.options.get(dropdown.selected);
-    chosen.cloned().unwrap_or_default()
+    drawn_words(chosen.map_or("", String::as_str))
+}
+
+/// An option's words as drawn: a blank one as a space, so it is a line high.
+pub(super) fn drawn_words(words: &str) -> String {
+    match words.is_empty() {
+        true => " ".to_owned(),
+        false => words.to_owned(),
+    }
 }

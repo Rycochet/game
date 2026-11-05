@@ -8,7 +8,7 @@ use super::{CHECK_ROW, FONT, GenerateForm, SEED_WIDTH, new_seed, row, words};
 use crate::connection::ToServer;
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, TextBox, spawn_button,
-    spawn_text_box,
+    spawn_new_seed_button, spawn_text_box,
 };
 
 /// The box with the seed of the world to go to.
@@ -37,12 +37,7 @@ pub(super) fn spawn_go_to_world(content: &mut ChildSpawnerCommands) {
             ..default()
         };
         spawn_text_box(row, text_box, FONT, node).insert(WorldSeedBox);
-        let node = Node {
-            padding: BUTTON_PADDING,
-            ..default()
-        };
-        spawn_button(row, ButtonState::Normal, "Random", FONT, node)
-            .insert((RandomWorldButton, Pressable));
+        spawn_new_seed_button(row, CHECK_ROW).insert(RandomWorldButton);
     });
     let node = Node {
         padding: BUTTON_PADDING,

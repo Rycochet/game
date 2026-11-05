@@ -1,11 +1,38 @@
-//! The icon for a button that makes a new random seed.
+//! The button that makes a new random seed, and its icon.
 
-use bevy::asset::RenderAssetUsages;
+use bevy::asset::{RenderAssetUsages, uuid_handle};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
+use super::{ButtonState, ButtonTooltip, Pressable, spawn_icon_button};
+
+/// The icon, made once at start (`make_new_seed_icon`), so buttons can show it
+/// without reaching for the images themselves.
+const NEW_SEED_ICON: Handle<Image> = uuid_handle!("8d3c2f61-7a4e-4b19-a0c5-2e9f6b1d4a73");
+
+/// A square button showing a round arrow, named "Random seed", `side` across. It is
+/// `Pressable`: put a marker on it to tell its presses apart.
+pub fn spawn_new_seed_button<'a>(
+    parent: &'a mut ChildSpawnerCommands,
+    side: f32,
+) -> EntityCommands<'a> {
+    let node = Node {
+        width: px(side),
+        height: px(side),
+        flex_shrink: 0.0,
+        ..default()
+    };
+    let mut button = spawn_icon_button(parent, ButtonState::Normal, NEW_SEED_ICON, node);
+    button.insert((Pressable, ButtonTooltip("Random seed".into())));
+    button
+}
+
+pub(super) fn make_new_seed_icon(mut images: ResMut<Assets<Image>>) {
+    let _ = images.insert(&NEW_SEED_ICON, new_seed_icon());
+}
+
 /// A round arrow, drawn here as there is no such letter in the font.
-pub fn new_seed_icon() -> Image {
+fn new_seed_icon() -> Image {
     const SIZE: usize = 32;
     const INK_BYTES: [u8; 4] = [64, 43, 26, 255];
     let mut bytes = vec![0; SIZE * SIZE * 4];

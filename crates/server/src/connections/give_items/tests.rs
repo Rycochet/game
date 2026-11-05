@@ -1,4 +1,6 @@
+use shared::armour::Style;
 use shared::item::{Inventory, Item, ItemKind, Quality};
+use shared::item_form::{ItemForm, RollRequest, choices};
 use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
 
@@ -15,6 +17,7 @@ fn give(kind: ItemKind, seed: u64, count: u32, identical: bool) -> ClientMessage
         seed: Some(seed),
         count,
         identical,
+        request: shared::item_form::RollRequest::NONE,
     }
 }
 
@@ -93,4 +96,57 @@ fn in_a_site_what_does_not_fit_goes_on_the_ground() {
     let ground = on_the_ground(&mut test);
     assert!(carried < 99 && !ground.is_empty());
     assert_eq!(carried + ground.len(), 99);
+}
+
+fn give_asking(kind: ItemKind, request: RollRequest) -> ClientMessage {
+    match give(kind, 3, 1, true) {
+        ClientMessage::DevGiveItem {
+            kind,
+            size,
+            magical,
+            quality,
+            set,
+            favour,
+            seed,
+            count,
+            identical,
+            ..
+        } => ClientMessage::DevGiveItem {
+            kind,
+            size,
+            magical,
+            quality,
+            set,
+            favour,
+            seed,
+            count,
+            identical,
+            request,
+        },
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn what_is_asked_of_its_form_is_kept_or_nothing_is_given() {
+    let mut test = TestClient::new();
+    let metal = choices(ItemKind::Ring, Quality::Rare, &RollRequest::NONE).materials[0];
+    let request = RollRequest {
+        material: Some(metal),
+        ..RollRequest::NONE
+    };
+    test.send(&[give_asking(ItemKind::Ring, request)]);
+    let rings = of_kind(&test.client.inventory, ItemKind::Ring);
+    let Some(ItemForm::Ring(ring)) = &rings[0].form else {
+        panic!("a ring has a ring's form");
+    };
+    assert_eq!(ring.metal, metal);
+    // A sword has no style, so asking for one gives nothing.
+    let before = test.client.inventory.items.len();
+    let request = RollRequest {
+        style: Some(Style::Gothic),
+        ..RollRequest::NONE
+    };
+    test.send(&[give_asking(ItemKind::Sword, request)]);
+    assert_eq!(test.client.inventory.items.len(), before);
 }
