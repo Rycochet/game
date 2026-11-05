@@ -32,7 +32,8 @@ use debug::run_debug;
 use finger::{item_cell_in_front, pick_up_by_finger};
 use hold_items::hold_items;
 use holding::{Hand, HeldBy, Holding, cancel_held};
-use server::{Stacks, read_server};
+pub use server::Stacks;
+use server::read_server;
 use split::Split;
 
 /// A press on an item this long after the last one on it opens it.

@@ -98,7 +98,7 @@ fn leave_on_ground(client: &Client, world: &mut ServerWorld, item: Id, rest: Opt
 }
 
 /// Puts this on the ground under the player, as the newest there.
-fn put_down(client: &Client, world: &mut ServerWorld, item: Item) {
+pub(crate) fn put_down(client: &Client, world: &mut ServerWorld, item: Item) {
     if let Some((.., at)) = standing_on(client)
         && let Some(level) = level_mut(world, client)
     {

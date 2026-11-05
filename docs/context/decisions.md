@@ -812,3 +812,9 @@ Bodies (owner): every body is worked out from a few proportions beside a person'
 Stance (owner, 2026-11-05): elbows slightly bent so the forearms hang nearer straight down, and shoulders a little lower; armour on the arms follows the frame's forearm. The first set of bipeds is drawn from proportions before becoming kinds, so the owner can look them over.
 
 Bodies have parts beyond a person's (`shared::body::Parts`: snout, ears, horns, tusks, tail, feet, wings), shapes as kinds and sizes as numbers, so a later morph can change the numbers. In pictures (owner, 2026-11-05) a body is drawn at its usual height beside a person for anything up to a person's height, a person of the usual height filling the picture as before. Claude's choice: the spine that tilts and limb slots wait for the first body that isn't upright on two legs.
+
+## 2026-11-05: Give Item rolls from a seed the client chooses
+
+Owner: the Give Item panel reads like the item it makes, with a seed box, a picture of what will be given, a count with Different/Identical, and a Give button; in a site what doesn't fit goes on the ground, on the world map nothing is given unless all of it fits ("No space").
+
+Making an item to order is shared (`shared::item_form::make_item`, from an `ItemOrder`), rolling its artifact name and form from a seed it is given rather than from its id. The server's `made_for` passes the new id's own seed, so nothing else changes; Give Item sends its seed in `DevGiveItem`, so the client's preview is exactly what the server makes. It is still the server that makes the items and decides how many (`StackLimits::most_of` / `most`) and where they go: the seed is an intent, only for dev tools. A batch of different ones takes `seed + n` (`batch_seed`).

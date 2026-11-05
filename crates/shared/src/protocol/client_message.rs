@@ -124,9 +124,9 @@ pub enum ClientMessage {
     WearFromGround { item: Id },
     /// Throws away something from the ground under the player, as `BinItem`.
     BinFromGround { item: Id },
-    /// Developer tools: a new item of this kind in the character's inventory if
-    /// there is room, made for this size (or their own) and their fingers,
-    /// answered with `Inventory`.
+    /// Developer tools: new items of this kind in the character's inventory,
+    /// made for this size (or their own) and their fingers, answered with
+    /// `Inventory`.
     DevGiveItem {
         kind: ItemKind,
         size: Option<Size>,
@@ -137,6 +137,15 @@ pub enum ClientMessage {
         set: bool,
         /// Blessed or cursed. It and `magical` are as secret as on anything else.
         favour: Option<Favour>,
+        /// What it is rolled from (`item_form::make_item`), so it is what Give Item
+        /// showed; `None` for a random one.
+        seed: Option<u64>,
+        /// How many: kept to what the server allows (`StackLimits`).
+        count: u32,
+        /// All alike, in one stack; otherwise each rolled from its own seed
+        /// (`item_form::batch_seed`). What doesn't fit goes on the ground in a site,
+        /// and on the world map nothing is given unless all of it fits.
+        identical: bool,
     },
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),

@@ -68,8 +68,14 @@ impl Plugin for DebugMenuPlugin {
                         panels::update_go_to_world_button,
                     )
                         .chain(),
-                    panels::choose_give_options,
-                    panels::press_give_buttons,
+                    (
+                        panels::start_give_panel,
+                        panels::choose_give_options,
+                        panels::edit_give_boxes,
+                        panels::show_give_preview,
+                        panels::press_give_button,
+                    )
+                        .chain(),
                     panels::press_creature_buttons,
                     panels::choose_pictures,
                     panels::fill_pictures,

@@ -18,6 +18,7 @@ The Character panel (what the character is like, what they wear and what they ca
 - `InventoryPlugin`.
 - `OpenCharacter` (message): opens the Character panel, or brings it to the front (`ground`).
 - `Carried(Inventory)` (resource): what is carried, as the server last said plus any move since.
+- `Stacks(StackLimits)` (resource): how big the server lets stacks get, from `Welcome` (`debug_menu`'s Give Item).
 - `InventoryDebug` (message, native): `OpenInventory`, `OpenBags`, `PickUp(index)`, `DropSome`. Used by `dev_tools`.
 
 ## Depends on
@@ -26,7 +27,7 @@ The Character panel (what the character is like, what they wear and what they ca
 
 ## Used by
 
-- `dev_tools`.
+- `dev_tools`, `debug_menu` (`Carried`, `Stacks`).
 
 ## Notes
 

@@ -1,11 +1,12 @@
 //! Answering dev tools: teleports, sites made to order, items given, the clock and the like. `answer` only passes them on where dev tools are allowed.
 
 use bevy::prelude::*;
-use shared::item::Quality;
+use shared::item_form::ItemOrder;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::sheet::Sheet;
 
-use super::{Client, made_for};
+use super::Client;
+use super::give_items::give_items;
 use crate::sites::{self};
 use crate::{ServerWorld, hall, world_map};
 
@@ -62,30 +63,19 @@ pub(super) fn answer_dev(
             quality,
             set,
             favour,
+            seed,
+            count,
+            identical,
         } => {
-            // Asking for magic on what is too plain for it would quietly give none.
-            let quality = if magical && kind.def().wear.is_some() {
-                quality.max(Quality::Uncommon)
-            } else {
-                quality
-            };
-            let mut new = made_for(
-                &client.inventory,
+            let order = ItemOrder {
                 kind,
                 size,
                 magical,
                 quality,
-                world.made_now(),
-            );
-            new.set = set && new.quality.is_some();
-            new.made.magical = magical && new.can_be_magical();
-            new.favour = favour.filter(|_| kind.def().wear.is_some());
-            match client.inventory.give(new, world.stacks) {
-                Ok(()) => client.unsaved = true,
-                Err(item) => info!("No room for a new {:?}", item.kind),
-            }
-            client.update_speed(world.action_clock.ticks());
-            client.send_inventory()
+                set,
+                favour,
+            };
+            give_items(client, world, &order, seed, count, identical)
         }
         ClientMessage::DevDetectMonsters(on) => {
             client.detect_monsters = on;

@@ -1,8 +1,8 @@
 //! A new character's first sheet and clothes, and welcoming a character into the world.
 
 use shared::creature::CreatureKind;
-use shared::item::{Inventory, Item, ItemKind, Made, MadeAt, Quality, StackLimits};
-use shared::item_form::give_form;
+use shared::item::{Inventory, Item, ItemKind, MadeAt, Quality, StackLimits};
+use shared::item_form::{ItemOrder, make_item};
 use shared::protocol::ServerMessage;
 use shared::sheet::{Appearance, Sheet};
 
@@ -20,23 +20,21 @@ pub(crate) fn made_for(
     quality: Quality,
     made_at: MadeAt,
 ) -> Item {
-    let body = inventory.creature.def();
-    let size = size.filter(|_| kind.comes_in_sizes());
-    // What is worn is made to fit the wearer unless told otherwise.
-    let size = size.or(kind.def().wear.map(|_| body.size));
-    let id = crate::ids::new_id();
-    let quality = kind.def().has_quality.then_some(quality);
-    let name = (quality == Some(Quality::Artifact))
-        .then(|| shared::item::artifact_name(&mut id.seed().rng(), kind));
-    let mut item = Item {
-        made: Made::for_body(kind, size.unwrap_or_default(), body.fingers(), magical),
-        quality,
-        made_at: Some(made_at),
-        name,
-        ..Item::new(id, kind)
+    let order = ItemOrder {
+        size,
+        magical,
+        ..ItemOrder::plain(kind, quality)
     };
-    give_form(&mut item, size, &mut crate::ids::new_id);
-    item
+    let id = crate::ids::new_id();
+    let made_at = Some(made_at);
+    make_item(
+        &order,
+        inventory.creature,
+        id,
+        id.seed(),
+        made_at,
+        &mut crate::ids::new_id,
+    )
 }
 
 /// What a joining character is like: as saved; or as they asked when being made;

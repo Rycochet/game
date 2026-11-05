@@ -30,8 +30,11 @@ pub(in crate::debug_menu) fn choose_pictures(
         }
     }
     for &DropdownChosen(dropdown, index) in pages.read() {
+        if !dropdowns.contains(dropdown) {
+            continue;
+        }
         let name = PicturePage::ALL[index].name();
-        if dropdowns.contains(dropdown) && preferences.item_pictures.as_deref() != Some(name) {
+        if preferences.item_pictures.as_deref() != Some(name) {
             preferences.item_pictures = Some(name.to_owned());
         }
     }

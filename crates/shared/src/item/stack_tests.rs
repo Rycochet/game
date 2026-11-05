@@ -360,3 +360,23 @@ fn knowing_there_is_no_curse_looks_like_not_knowing() {
     known.known.favour = true;
     assert!(known.looks_like(&Item::new(id(2), ItemKind::Hat)));
 }
+
+#[test]
+fn the_most_in_a_stack_goes_by_weight_and_count_and_bags_never_stack() {
+    let limits = StackLimits::default();
+    let coin = Item::new(id(1), ItemKind::Coin);
+    assert_eq!(limits.most_of(&coin), limits.most);
+    let apple = Item::new(id(2), ItemKind::Apple);
+    let room = limits.room(
+        &stack(10, ItemKind::Apple, 1),
+        &stack(20, ItemKind::Apple, 98),
+    );
+    assert_eq!(
+        limits.most_of(&apple),
+        room + 1,
+        "as many as given ones stack to"
+    );
+    let bag = Item::new(id(3), ItemKind::Backpack);
+    assert_eq!(limits.most_of(&bag), 1);
+    assert_eq!(StackLimits::NONE.most_of(&coin), 1);
+}

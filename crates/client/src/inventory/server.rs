@@ -9,7 +9,7 @@ use crate::connection::FromServer;
 
 /// How big the server lets stacks get, from `Welcome`.
 #[derive(Resource, Default)]
-pub(super) struct Stacks(pub StackLimits);
+pub struct Stacks(pub StackLimits);
 
 pub(super) fn read_server(
     mut from_server: MessageReader<FromServer>,

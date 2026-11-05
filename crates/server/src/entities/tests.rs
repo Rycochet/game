@@ -437,6 +437,9 @@ fn with_a_gift(kind: CreatureKind) -> (TestClient, Id) {
         quality: Default::default(),
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     }]);
     let gift = answers.iter().rev().find_map(|answer| match answer {
         ServerMessage::Inventory(carried) => Some(carried.items[0].item.id),
@@ -523,6 +526,9 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
         quality: Default::default(),
         set: false,
         favour: None,
+        seed: None,
+        count: 1,
+        identical: true,
     }]);
     let coin = answers.iter().rev().find_map(|answer| match answer {
         ServerMessage::Inventory(carried) => Some(carried.items[0].item.id),

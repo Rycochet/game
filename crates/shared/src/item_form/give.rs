@@ -7,12 +7,24 @@ use crate::item::{Item, ItemKind, Made};
 use crate::item_form::gem::roll_gem;
 use crate::item_form::ring_roll::{roll_ring, roll_ring_size};
 use crate::item_form::{ItemForm, Limits};
+use crate::rng::Seed;
 
 /// Gives a new item its form, for kinds that have one, going by its quality. `size`
 /// is what it must be, such as a mob's own; without one, it is rolled. Only the server
 /// makes items, so anything else it needs, such as gems, gets its id from `new_id`.
 pub fn give_form(item: &mut Item, size: Option<Size>, new_id: &mut impl FnMut() -> Id) {
-    let mut rng = item.id.seed().derive("item form").rng();
+    give_form_from(item, size, item.id.seed(), new_id);
+}
+
+/// `give_form`, rolled from `seed` rather than the item's id, so the same seed makes
+/// the same form whatever the id: Give Item's preview and what the server makes.
+pub fn give_form_from(
+    item: &mut Item,
+    size: Option<Size>,
+    seed: Seed,
+    new_id: &mut impl FnMut() -> Id,
+) {
+    let mut rng = seed.derive("item form").rng();
     let quality = item.quality.unwrap_or_default();
     let armour = super::armour::armour_form(item.kind, &mut rng, quality);
     let (form, rolled_size) = match item.kind {

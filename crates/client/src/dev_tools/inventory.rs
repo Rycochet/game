@@ -70,6 +70,9 @@ pub(super) fn add(app: &mut App) {
                                 quality: Quality::Rare,
                                 set: false,
                                 favour,
+                                seed: None,
+                                count: 1,
+                                identical: true,
                             }));
                         }
                     }
@@ -84,6 +87,9 @@ pub(super) fn add(app: &mut App) {
                             quality: Default::default(),
                             set: false,
                             favour: None,
+                            seed: None,
+                            count: 1,
+                            identical: true,
                         }));
                     }
                 } else if *step == 1 && time.elapsed_secs() > 2.0 {
