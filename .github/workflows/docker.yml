@@ -1,6 +1,12 @@
 # Builds the server image (game server + web client on port 8080).
 # master (after every merge): build and publish to the GitHub Container
 # Registry as ghcr.io/rycochet/hall-of-worlds:latest (plus a commit tag).
+# Run by hand on another branch, it publishes only the commit tag.
+#
+# The server and the web client are compiled here on the runner, where
+# rust-cache keeps the compiled dependencies between runs, then copied into the
+# image by Dockerfile.github. Its build steps must match Dockerfile's (the one
+# for building the image yourself): change both together.
 name: Docker
 
 on:
@@ -10,23 +16,48 @@ on:
       - "docs/**"
   workflow_dispatch:
 
+# A merge during a build waits for it rather than cancelling it (a cancelled
+# build saves no cache, and builds take longer than the gap between merges).
+# GitHub keeps only the newest waiting run, so merges in between are skipped.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
+  CARGO_TERM_COLOR: always
   # Registry image names must be lowercase.
   IMAGE: ghcr.io/rycochet/hall-of-worlds
 
 jobs:
   docker:
     name: Docker image
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: the server is built against this runner's
+    # glibc (2.39), which must not be newer than the image's Debian trixie
+    # (2.41).
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+      # rust-toolchain.toml installs the pinned toolchain and the wasm target.
+      - uses: Swatinem/rust-cache@v2
+      - uses: jetli/trunk-action@v0.5.0
+        with:
+          version: v0.22.1
+      - name: Build the server
+        run: cargo build --release --locked --package server --bin hall-of-worlds-server
+      # The web client's own, smaller profile (`web` in Cargo.toml), then
+      # brotli copies of its files for browsers that take them.
+      - name: Build the web client
+        run: |
+          trunk build --release --cargo-profile web
+          cargo xtask compress-web dist
+      - name: Gather what the image takes
+        run: |
+          mkdir image
+          cp target/release/hall-of-worlds-server image/
+          cp -r dist image/web
       - uses: docker/setup-buildx-action@v3
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -43,11 +74,13 @@ jobs:
             type=sha
       - uses: docker/build-push-action@v6
         with:
-          context: .
-          # x86-64 only for now; add linux/arm64 here later (same tags).
+          # Only what was gathered above (the repository's .dockerignore,
+          # which leaves out target and dist, isn't used here).
+          context: image
+          file: Dockerfile.github
+          # x86-64 only for now; add linux/arm64 here later (same tags), with
+          # the server built for it too.
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
