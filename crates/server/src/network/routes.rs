@@ -11,9 +11,9 @@ use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use tower_http::services::ServeDir;
 
 use super::health::health_routes;
+use super::web_files::web_files;
 use super::{CERTIFICATE_PATH, NewConnections, SecurePort, Sockets, TlsListener, WEB_PATH};
 use super::{stop_signal, upgrade};
 use crate::connections::Connections;
@@ -57,7 +57,7 @@ pub(super) fn game_routes(
         // remembering this one.
         let to_web = || async { Redirect::temporary(WEB_PATH) };
         router = router
-            .nest_service(WEB_PATH, ServeDir::new(web))
+            .nest_service(WEB_PATH, web_files(web))
             .route("/", get(to_web))
             .route(WEB_PATH.trim_end_matches('/'), get(to_web));
     }

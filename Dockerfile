@@ -37,11 +37,14 @@ COPY --from=tools /usr/local/cargo/bin/trunk /usr/local/cargo/bin/trunk
 WORKDIR /src
 COPY . .
 # rust-toolchain.toml installs the pinned toolchain and the wasm target.
+# The web client is built with its own, smaller profile (`web` in Cargo.toml),
+# then given brotli copies of its files for browsers that take them.
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
     cargo build --release --locked --package server --bin hall-of-worlds-server \
  && cp target/release/hall-of-worlds-server /usr/local/bin/ \
- && trunk build --release --dist /srv/web
+ && trunk build --release --cargo-profile web --dist /srv/web \
+ && cargo xtask compress-web /srv/web
 
 # --- Runtime -----------------------------------------------------------------
 FROM debian:trixie-slim

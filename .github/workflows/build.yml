@@ -43,7 +43,8 @@ jobs:
       - uses: jetli/trunk-action@v0.5.0
         with:
           version: v0.22.1
-      - run: trunk build --release
+      - run: trunk build --release --cargo-profile web
+      - run: cargo xtask compress-web dist
       - uses: actions/upload-artifact@v4
         with:
           name: hall-of-worlds-web

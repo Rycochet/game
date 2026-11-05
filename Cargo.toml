@@ -70,3 +70,14 @@ opt-level = 3
 [profile.release]
 codegen-units = 1
 lto = "thin"
+
+# The browser build (Docker's and the Build workflow's `trunk build --release
+# --cargo-profile web`): smaller than a native release, since every player
+# downloads it. Native releases and development builds don't use it.
+[profile.web]
+inherits = "release"
+lto = "fat"
+debug = false
+# Not `true`: that also strips the section naming the wasm features used,
+# which wasm-opt reads, and it then refuses the build.
+strip = "debuginfo"

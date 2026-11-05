@@ -43,6 +43,7 @@ mod routes;
 mod socket;
 mod stop;
 mod tls_listener;
+mod web_files;
 
 pub use health::HEALTH_PATH;
 use health::{Heartbeat, track_heartbeat};
