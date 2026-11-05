@@ -85,6 +85,11 @@ fn use_on_arrival(
             // After the steps there, so the server has the player at it.
             to_server.write(ToServer(ClientMessage::EnterSite { chunk: poi.chunk }));
         }
+        Some((position, Portal::Gate(gate))) if (position.x, position.y) == (x, y) => {
+            to_server.write(ToServer(ClientMessage::EnterGate {
+                entrance: gate.entrance,
+            }));
+        }
         _ => {
             if *view.get() != GameView::Dungeon {
                 return;

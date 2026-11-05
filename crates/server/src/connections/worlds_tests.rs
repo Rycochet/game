@@ -211,3 +211,118 @@ fn going_to_the_world_they_are_in_changes_nothing() {
     app.run_system_once(handle_messages).unwrap();
     assert_eq!(answers(&end), []);
 }
+
+/// Joins a character in the home world and stands them at its World Gate
+/// `entrance`, answering with their end.
+fn at_home_gate(app: &mut bevy::prelude::World, entrance: u8) -> ClientLink {
+    let (end, _) = join(app, character(1));
+    let gate = app
+        .resource::<ServerWorlds>()
+        .home()
+        .gate_position(entrance)
+        .expect("the home world has its gates");
+    app.resource_mut::<Connections>().clients[0]
+        .character
+        .world_position = gate;
+    answers(&end);
+    end
+}
+
+#[test]
+fn a_world_gate_leads_into_the_hall_before_its_gate() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let end = at_home_gate(&mut app, 3);
+    end.send(&ClientMessage::EnterGate { entrance: 3 });
+    app.run_system_once(handle_messages).unwrap();
+    let place = shared::hall::GateAddress::for_world(HOME, 3)
+        .unwrap()
+        .place();
+    let client = &app.resource::<Connections>().clients[0];
+    assert_eq!(client.character.hall, Some(place.front()));
+    assert!(
+        answers(&end)
+            .iter()
+            .any(|message| matches!(message, ServerMessage::EnterHall { .. }))
+    );
+}
+
+#[test]
+fn a_world_gate_out_of_reach_does_nothing() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let end = at_home_gate(&mut app, 3);
+    // Standing at another gate, far away.
+    end.send(&ClientMessage::EnterGate { entrance: 4 });
+    app.run_system_once(handle_messages).unwrap();
+    assert_eq!(
+        app.resource::<Connections>().clients[0].character.hall,
+        None
+    );
+}
+
+#[test]
+fn a_hall_gate_leads_onto_its_planet_at_its_world_gate() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let end = at_home_gate(&mut app, 0);
+    // In the Hall before the gate leading to the other planet's World Gate 5.
+    let place = shared::hall::GateAddress::for_world(OTHER, 5)
+        .unwrap()
+        .place();
+    let (x, y) = place.front();
+    let client = &mut app.resource_mut::<Connections>().clients[0];
+    client.character.hall = Some((x, y));
+    let map = client.map;
+    let step = shared::movement::Step::new(0, place.y() - y).unwrap();
+    end.send(&ClientMessage::Step {
+        map,
+        number: 1,
+        step,
+    });
+    app.run_system_once(handle_messages).unwrap();
+    let client = &app.resource::<Connections>().clients[0];
+    assert_eq!(client.world, Some(OTHER.id()));
+    assert_eq!(client.character.hall, None);
+    let gate = app
+        .resource::<ServerWorlds>()
+        .get(OTHER.id())
+        .unwrap()
+        .gate_position(5)
+        .unwrap();
+    assert_eq!(client.world_position(), gate);
+    assert!(answers(&end).contains(&ServerMessage::OnWorldMap {
+        x: gate.0,
+        y: gate.1,
+    }));
+}
+
+#[test]
+fn a_hall_gate_to_the_world_they_came_from_leads_onto_its_map() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let end = at_home_gate(&mut app, 0);
+    let place = shared::hall::GateAddress::for_world(HOME, 7)
+        .unwrap()
+        .place();
+    let (x, y) = place.front();
+    let client = &mut app.resource_mut::<Connections>().clients[0];
+    client.character.hall = Some((x, y));
+    let map = client.map;
+    let step = shared::movement::Step::new(0, place.y() - y).unwrap();
+    end.send(&ClientMessage::Step {
+        map,
+        number: 1,
+        step,
+    });
+    app.run_system_once(handle_messages).unwrap();
+    let client = &app.resource::<Connections>().clients[0];
+    let gate = app
+        .resource::<ServerWorlds>()
+        .home()
+        .gate_position(7)
+        .unwrap();
+    assert_eq!(client.world, Some(HOME.id()));
+    assert_eq!(client.character.hall, None);
+    assert_eq!(client.world_position(), gate);
+}

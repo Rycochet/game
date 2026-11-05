@@ -1,14 +1,26 @@
 //! Positions on the map, portals, clickable tokens, lights and shared sight.
 
 use bevy::prelude::*;
-use shared::protocol::SeenPoi;
+use shared::protocol::{GateInfo, SeenPoi};
 
 /// Clicking this entity's token sends the player to it; arriving uses it:
-/// entering a world map poi's site. Needs `Clickable`. (Stairs are cells
-/// of the level, not entities: see `site`.)
+/// entering a world map poi's site, or going through a World Gate into the
+/// Hall. Needs `Clickable`. (Stairs and the Hall's gates are cells of the
+/// level, not entities: see `site`.)
 #[derive(Component, Clone, Copy, Debug)]
 pub enum Portal {
     Poi(SeenPoi),
+    Gate(GateInfo),
+}
+
+impl Portal {
+    /// The poi it is, if it is one.
+    pub fn poi(&self) -> Option<&SeenPoi> {
+        match self {
+            Self::Poi(poi) => Some(poi),
+            Self::Gate(_) => None,
+        }
+    }
 }
 
 /// Its token can be clicked (`view3d::ClickedToken`).

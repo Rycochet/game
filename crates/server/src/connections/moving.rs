@@ -1,4 +1,5 @@
-//! Moving a player from the world they are in to another, while playing.
+//! Moving a player from the world they are in to another, while playing: by
+//! dev tools, or through a Hall gate onto its planet.
 
 use bevy::prelude::*;
 use shared::protocol::ServerMessage;
@@ -8,16 +9,34 @@ use super::Client;
 use super::welcome::send_welcome;
 use crate::{ServerOptions, ServerWorlds, sites, world_map};
 
+/// Where on a world's map someone moved to it arrives.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Arrival {
+    /// Where they were, or at one of its World Gates if they are new there
+    /// (dev tools).
+    AsBefore,
+    /// At this World Gate of it (through a Hall gate).
+    Gate(u8),
+}
+
+impl Client {
+    /// Has the player moved to the world of `seed` once its messages this tick
+    /// have been read (`handle_messages`), as that needs every world.
+    pub(crate) fn go_to_world(&mut self, seed: WorldSeed, arrival: Arrival) {
+        self.going_to = Some((seed, arrival));
+    }
+}
+
 /// Moves a client to the world of `seed`, opening it if need be: out of any
 /// site or the Hall of the world they leave (saved, with what they know of it
-/// kept for coming back), onto the new one's world map where they were, or at
-/// one of its World Gates if they are new there. Told by a fresh `Welcome`,
-/// then `OnWorldMap`. A world that can't be opened leaves them where they are.
-/// `false` if the client has gone.
+/// kept for coming back), onto the new one's world map as `arrival` says. Told
+/// by a fresh `Welcome`, then `OnWorldMap`. To the world they are in, only a
+/// gate moves them (out of the Hall, onto its map). A world that can't be
+/// opened leaves them where they are. `false` if the client has gone.
 pub(super) fn change_world(
     client: &mut Client,
     worlds: &mut ServerWorlds,
-    seed: WorldSeed,
+    (seed, arrival): (WorldSeed, Arrival),
     options: &ServerOptions,
 ) -> bool {
     let id = client.character_id.expect("only players move");
@@ -30,7 +49,10 @@ pub(super) fn change_world(
     };
     let world = worlds.of(client.world);
     if world.seed.id() == to {
-        return true;
+        return match arrival.gate_in(world) {
+            Some(gate) => world_map::go_to(client, world, gate),
+            None => true,
+        };
     }
     sites::leave(client, world);
     client.visit = None;
@@ -49,7 +71,9 @@ pub(super) fn change_world(
     client.world = Some(to);
     client.character.visit = None;
     client.character.hall = None;
-    if client.character.forgotten_to == 0 {
+    if let Some(gate) = arrival.gate_in(world) {
+        client.character.world_position = gate;
+    } else if client.character.forgotten_to == 0 {
         client.character.world_position = world_map::arrival(world, &id);
     }
     client.world_chunks.clear();
@@ -62,4 +86,14 @@ pub(super) fn change_world(
     send_welcome(client, world, options)
         && client.link.send(&ServerMessage::OnWorldMap { x, y })
         && world_map::look_around(client, world)
+}
+
+impl Arrival {
+    /// The World Gate of `world` it arrives at, if it is one it has.
+    fn gate_in(self, world: &crate::ServerWorld) -> Option<(i64, i64)> {
+        match self {
+            Self::AsBefore => None,
+            Self::Gate(entrance) => world.gate_position(entrance),
+        }
+    }
 }

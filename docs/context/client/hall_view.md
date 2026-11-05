@@ -20,7 +20,7 @@ The Hall of Worlds' own looks on top of what `dungeon_map` draws (its marble flo
 
 ## Used by
 
-- Nothing else yet.
+- `world_map` (`GateModel`, for World Gate tokens).
 
 ## Notes
 

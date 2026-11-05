@@ -127,7 +127,8 @@ pub(super) fn answer_dev(
         ClientMessage::DevGoToWorld { seed } => {
             // Once its messages this tick have been read (`handle_messages`), as
             // it needs every world.
-            client.going_to = Some(shared::world::WorldSeed::new(seed));
+            let seed = shared::world::WorldSeed::new(seed);
+            client.go_to_world(seed, super::Arrival::AsBefore);
             true
         }
         ClientMessage::DevSetWorldClock { minutes, rate } => {

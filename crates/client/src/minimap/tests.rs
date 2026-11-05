@@ -104,6 +104,7 @@ fn poi_under_the_mouse(teleporting: bool) -> App {
         id: shared::world::WorldSeed::new(1).id(),
         terrain_seed: shared::rng::Seed::new(1),
         world_map_version: shared::world::WORLD_MAP_VERSION,
+        gates: Vec::new(),
     });
     let poi = SeenPoi {
         kind: shared::poi::PoiKind::Crypt,

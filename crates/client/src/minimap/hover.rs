@@ -191,7 +191,10 @@ pub(super) fn name_hovered_token(
             .0
             .filter(|_| !full.open && *view.get() == GameView::WorldMap)
             .and_then(|token| portals.get(token).ok())
-            .map(|Portal::Poi(poi)| poi_name(poi))
+            .map(|portal| match portal {
+                Portal::Poi(poi) => poi_name(poi),
+                Portal::Gate(_) => "World Gate".to_owned(),
+            })
     });
     let shown = if name.is_some() {
         Visibility::Inherited

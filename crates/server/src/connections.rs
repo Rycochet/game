@@ -34,6 +34,7 @@ mod welcome;
 
 pub(super) use answer::answer;
 pub(super) use messages::handle_messages;
+pub(crate) use moving::Arrival;
 pub(super) use roads::send_roads;
 #[cfg(feature = "debug-api")]
 pub(super) use systems::save_all;
@@ -143,6 +144,7 @@ const MOST_WAITING: usize = 64;
 enum Action {
     Step { number: u32, step: Step },
     EnterSite { chunk: ChunkPos },
+    EnterGate { entrance: u8 },
     UseExit,
     OpenTrade { with: Id },
     Ground(GroundAction),
@@ -184,7 +186,7 @@ pub struct Client {
     pub(crate) world: Option<WorldId>,
     /// The world it has asked to go to (dev tools), moved to once its
     /// messages this tick have been read.
-    going_to: Option<shared::world::WorldSeed>,
+    going_to: Option<(shared::world::WorldSeed, moving::Arrival)>,
     /// What the character knows of this world and where they are in it: the
     /// pois and cells they know (`visit` is filled in on saving).
     pub(crate) character: CharacterWorldSave,

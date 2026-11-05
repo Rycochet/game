@@ -271,6 +271,7 @@ impl ServerWorld {
             id: self.seed.id(),
             terrain_seed: self.seed.terrain(),
             world_map_version: WORLD_MAP_VERSION,
+            gates: self.gates(),
         }
     }
 }

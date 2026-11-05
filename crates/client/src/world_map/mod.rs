@@ -32,6 +32,7 @@ use crate::view3d::View3dSystems;
 // Split into files (`cargo xtask lint` keeps files small).
 mod click;
 mod forget;
+mod gates;
 mod parts;
 mod showing;
 mod spawn;
@@ -74,6 +75,7 @@ impl Plugin for WorldMapPlugin {
         let in_view = in_state(GameView::WorldMap);
         app.init_resource::<TerrainGrid>()
             .init_resource::<SpawnedPois>()
+            .init_resource::<gates::SpawnedGates>()
             .init_resource::<PoiMeshes>()
             .init_resource::<KnownRivers>()
             .init_resource::<map_sky::MapSky>()
@@ -86,12 +88,19 @@ impl Plugin for WorldMapPlugin {
             // Before anything draws the new world with the last one's caches.
             .add_systems(
                 Update,
-                (pois::despawn_all, forget::forget_world)
+                (
+                    pois::despawn_all,
+                    gates::despawn_gates,
+                    forget::forget_world,
+                )
                     .before(update_terrain)
                     .run_if(on_message::<crate::common::WorldChanged>),
             )
             .add_systems(OnEnter(GameView::WorldMap), show_scene)
-            .add_systems(OnExit(GameView::WorldMap), (hide_scene, pois::despawn_all))
+            .add_systems(
+                OnExit(GameView::WorldMap),
+                (hide_scene, pois::despawn_all, gates::despawn_gates),
+            )
             .add_systems(
                 Update,
                 pick_on_click
@@ -107,6 +116,7 @@ impl Plugin for WorldMapPlugin {
                     sky::update,
                     lights::update,
                     pois::spawn_nearby,
+                    gates::spawn_gates,
                 )
                     .after(PlayerSystems::Travel)
                     .before(View3dSystems::Place)
@@ -116,6 +126,7 @@ impl Plugin for WorldMapPlugin {
                 Update,
                 (
                     pois::add_models,
+                    gates::add_gate_models,
                     pois::outline_hovered,
                     rest_tokens_on_terrain,
                     hide_tokens_outside_window,
