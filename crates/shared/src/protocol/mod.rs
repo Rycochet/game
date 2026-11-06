@@ -26,17 +26,19 @@ use crate::poi::CHUNK_SIZE;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod client_message;
+mod dev_vitals;
 mod ping;
 mod server_message;
 mod world_chunk;
 
 pub use client_message::ClientMessage;
+pub use dev_vitals::{DEV_BONUS, DEV_BONUS_TICKS, DevVitals};
 pub use server_message::ServerMessage;
 pub use world_chunk::{GateInfo, SeenPoi, WorldChunk, WorldInfo};
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 50;
+pub const PROTOCOL_VERSION: u32 = 51;
 
 /// The most items one `ClientMessage::LookUpItems` is answered for.
 pub const MOST_LOOKED_UP: usize = 64;

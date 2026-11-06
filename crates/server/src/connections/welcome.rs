@@ -155,6 +155,7 @@ pub(super) fn send_welcome(
         && client
             .link
             .send(&ServerMessage::Sheet(client.sheet.clone()))
+        && client.send_vitals(world.action_clock.ticks())
         && client.send_visited_gates()
         && client.send_inventory()
 }

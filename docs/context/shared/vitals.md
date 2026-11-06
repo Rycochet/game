@@ -1,0 +1,29 @@
+# shared: vitals
+
+Health and Mana: how much harm a creature can take and how much magic it has left, with how much there can be and refilling out of combat. The same rules for players and, later, mobs. Nothing harms or casts yet but dev tools; what happens at 0 Health comes with combat.
+
+## Files
+
+- `crates/shared/src/vitals.rs`: `Vital::{Health, Mana}` (`ALL`, `name`, `attribute`: Toughness, Will), `Change { vital, amount, until }` (`lasts`), `Vitals` (on `Sheet`: `health`, `mana`, `changes`; `at`, `told`, `settle`, `fill`, `hurt`, `spend_mana`, `in_combat`, `add_change`, `forget_ended`, `most`, `limits`), the numbers below. In `vitals/`: `track.rs` (`Track`: one of them, `refilled`, `VitalNow { value, most, refills_in }` with `after`), `limits.rs` (`Limits { health, mana }`, `MostParts { attribute, playtime, practice, changes }` with `total`).
+
+## Public API
+
+- Everything above. Numbers (first guesses; owner, 2026-11-06: balance by playing): `ATTRIBUTE_PER_POINT` 5 (a median 100 gives 20), `REFILL_TICKS` (5 minutes, empty to full), `CALM_AFTER` (10 s), `PLAYTIME_PER_POINT` (24 h of active playtime adds 1 to both), `PRACTICE_STEP` 25 (practice turns into points by a square root in steps of it: 25 is 1, 100 is 2), `PRACTICE_PER_HOUR` 20.
+
+## Depends on
+
+- `sheet` (`Attributes`), `energy` (`ACTION_TICKS_PER_SECOND`), `serde`.
+
+## Used by
+
+- `sheet` (`Sheet::vitals`), `protocol` (`ServerMessage::Vitals`, `ClientMessage::DevVitals`), `server` (`connections/vitals.rs`).
+
+## Notes
+
+- Stored like `energy`: a value and the action tick it refills from (`since`), so any later tick is a formula. Refilling is a straight line at most ÷ `REFILL_TICKS` a tick, so it uses the same attribute as the most, and "other factors" can scale it later. Integers only.
+- Being hurt or spending mana is combat (`in_combat`): neither refills until `CALM_AFTER` after it. Later, dealing harm should call it too.
+- The most = attribute ÷ 5 + playtime ÷ a day + √(practice ÷ 25) + changes, never below 1. Practice is what was taken or spent, at most `PRACTICE_PER_HOUR` a playtime hour each (counted by the hour playtime is in, so a clock as the rust plan has).
+- Full is kept as full (`u32::MAX` in a `Track`), so a new or old save starts full and full stays full when the most rises; below full stays the same number. Anything that changes the most (a change laid on or ended) settles first, at the old limits.
+- Changes end at an action tick, not playtime, so a potion wears off in real time, offline too. `forget_ended` settles at the limits with them before dropping them.
+- Refilling goes by the server's `ActionClock`, which runs while a player is offline on a networked server: logging out refills them (owner: fine, as the monsters around them refill too). Pausing stops it.
+- A client is told `VitalNow` (value, most, ticks until refilling starts) and refills it itself with `after`, which matches `at` (tested).

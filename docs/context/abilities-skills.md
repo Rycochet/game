@@ -71,7 +71,7 @@ Worked example, 1,000 uses each, square roots:
 
 - **Power** = attribute factor × skill value: doubling either doubles power, so twice as experienced is about as good as twice as able.
 - **Ratio contest:** success when a roll from 0 to a + b − 1 is under a, so the chance is a ÷ (a + b). Integer and deterministic. It is never impossible: ten times weaker still gives about 9%, so there are lucky shots and no places a character can't risk going.
-- Health and damage should grow modestly over a career, so a lucky hit still matters.
+- Health and damage should grow modestly over a career, so a lucky hit still matters. Health and Mana are built (`shared/vitals.md`): from Toughness and Will, a point a day of playtime and practice from harm taken and mana spent; their practice may move into the tree when it exists.
 - An untrained node counts from its parents and never below a small floor.
 
 ## Abilities

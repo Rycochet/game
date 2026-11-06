@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
 use crate::item::Inventory;
+use crate::vitals::Vitals;
 
 mod attributes;
 mod build;
@@ -177,6 +178,9 @@ pub struct Sheet {
     pub build: Build,
     pub skills: BTreeMap<Skill, u8>,
     pub appearance: Appearance,
+    /// Health and Mana: full in a save from before them.
+    #[serde(default)]
+    pub vitals: Vitals,
 }
 
 impl Default for Sheet {
@@ -199,6 +203,7 @@ impl Sheet {
             build,
             skills: kind.def().skills.iter().copied().collect(),
             appearance: Appearance::default(),
+            vitals: Vitals::default(),
         }
     }
 

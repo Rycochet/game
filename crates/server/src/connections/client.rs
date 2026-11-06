@@ -42,6 +42,7 @@ impl Client {
             gates: BTreeSet::new(),
             ground_told: GroundTold::default(),
             activity: super::playtime::Activity::default(),
+            vitals_told: None,
             energy: Energy::default(),
             speed: NORMAL_SPEED,
             waiting: VecDeque::new(),

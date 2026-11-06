@@ -12,6 +12,7 @@ use crate::item::{Inventory, Item, StackLimits};
 use crate::mob::EntityLook;
 use crate::road::Road;
 use crate::sheet::Sheet;
+use crate::vitals::VitalNow;
 use crate::world::WorldTime;
 
 /// From the server to a client.
@@ -130,6 +131,15 @@ pub enum ServerMessage {
     /// What the character is like, for them to see: after `Welcome`, and when it
     /// changes. Nobody else is told this.
     Sheet(Sheet),
+    /// Someone's Health and Mana as they are now: `who` is `None` for the
+    /// player's own (after `Sheet`, and whenever they change other than by
+    /// refilling), and later a party member's id. The client refills them
+    /// itself (`VitalNow::after`).
+    Vitals {
+        who: Option<Id>,
+        health: VitalNow,
+        mana: VitalNow,
+    },
     /// The World Gates the character has gone through, either way, as the Hall
     /// gates the pairs are (`hall::GatePlace::number`): after `Welcome`, and
     /// whenever another is added. Their water is drawn orange.

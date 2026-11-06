@@ -46,8 +46,10 @@ pub(crate) fn handle_messages(
                 Ok(None) => {
                     break act(client, world)
                         && client.send_position()
-                        && (client.phase != Phase::Playing
-                            || client.keep_time(world.action_clock.ticks(), options.idle_minutes));
+                        && (client.phase != Phase::Playing || {
+                            let now = world.action_clock.ticks();
+                            client.keep_time(now, options.idle_minutes) && client.keep_vitals(now)
+                        });
                 }
                 Err(error) => {
                     info!("A client left ({error:?})");
