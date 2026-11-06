@@ -984,3 +984,7 @@ Owner's decisions (Health and Mana, PR 2 of 3; numbers are first guesses for pla
 ## 2026-11-06: The Health and Mana circle
 
 Owner's design (Health and Mana, PR 3 of 3). A circle at the bottom middle of the window, half the minimap across: Health on the left in red, Mana on the right in blue, each half filling from the bottom over black, with a border round each half, bevelled lit from the top left like the buttons. It is painted on the CPU into a picture, as the minimap is, and repainted only when a level moves. The client refills what the server told it by the same formula, so the server sends nothing while they refill. It takes no clicks; its numbers are in a hover tip. Hover boxes near the bottom stand above it (`common::BottomHud`), and the planned action bar goes either side of it.
+
+## 2026-11-06: Spare assets, and icons from game-icons.net
+
+Owner: abilities show icons from game-icons.net (CC BY 3.0), all of which are kept in the repository, with art we have but don't use, in `spare_assets/`, which is never shipped, so releases and the web build carry only what the game uses. The icons are kept as the project's own SVGs from its GitHub repository (game-icons.net's own download had an expired certificate, and the SVGs are what its PNGs are drawn from); `cargo xtask icons` draws those listed in `xtask/icons.txt` as 128 × 128 PNGs, white on transparent, so they can be tinted, and `lint` checks the list and the PNGs agree.

@@ -6,6 +6,7 @@
 mod api;
 mod compress_web;
 mod dockerfiles;
+mod icons;
 mod latest;
 mod sizes;
 mod target_dir;
@@ -25,10 +26,12 @@ Tasks:
   test    Check formatting, type-check and lint (warnings are errors) for
           both native and the browser (wasm), then run the tests. Run this
           before merging.
-  lint    The same checks without the tests, and the file size, WebGL 2
-          and Dockerfile checks. The pre-commit hook runs this.
+  lint    The same checks without the tests, and the file size, WebGL 2,
+          Dockerfile and icon checks. The pre-commit hook runs this.
   sizes   Lower the entries in xtask/large-files.txt to the files' sizes
           now, removing files back under the limit.
+  icons   Draw the game-icons.net icons listed in xtask/icons.txt into
+          the client's assets as PNGs, removing those no longer listed.
   hooks   Turn on the pre-commit hook for this checkout (once per clone).
   package Release build of the native client and server, put together
           with the game assets in package/ in cargo's target folder
@@ -107,6 +110,7 @@ fn main() -> ExitCode {
             sizes::check(&workspace_root()),
             webgl::check(&workspace_root()),
             dockerfiles::check(&workspace_root()),
+            icons::check(&workspace_root()),
             no_temporary_methods(),
         ]),
         Some("lint") => all_passed([
@@ -114,8 +118,10 @@ fn main() -> ExitCode {
             sizes::check(&workspace_root()),
             webgl::check(&workspace_root()),
             dockerfiles::check(&workspace_root()),
+            icons::check(&workspace_root()),
         ]),
         Some("sizes") => sizes::update(&workspace_root()),
+        Some("icons") => icons::make(&workspace_root()),
         Some("hooks") => hooks(),
         Some("package") => package(),
         Some("latest") => latest::run(),
