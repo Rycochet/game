@@ -23,6 +23,13 @@ Artwork in this folder made by other people, with the licence it is used under. 
 - Licence: [SIL Open Font License 1.1](https://openfontlicense.org), in `fonts/NotoEmoji-OFL.txt`
 - Changes: none, but the file renamed from `NotoEmoji-Regular.ttf`.
 
+## `icons/`: game-icons.net icons by their contributors
+
+- Artists: the contributors to game-icons.net, each in their own folder: **Lorc**, **Delapouite**, **John Colburn**, **Felbrigg**, **John Redman**, **Carl Olsen**, **Sbed**, **PriorBlue**, **Willdabeast**, **Viscious Speed** (CC0), **Lord Berandas**, **Irongamer**, **HeavenlyDog**, **Lucas**, **Faithtoken**, **Skoll**, **Andy Meneely**, **Cathelineau**, **Kier Heyl**, **Aussiesim**, **Sparker**, **Zeromancer** (CC0), **Rihlsul**, **Quoting**, **Guard13007**, **DarkZaitzev**, **SpencerDub**, **GeneralAce135**, **Zajkonur**, **Catsu**, **Starseeker**, **Pepijn Poolman**, **Pierre Leducq**, **Caro Asercion**, **SeregaCthtuf**. Icons made by them, from <https://game-icons.net>.
+- Source: the SVGs in <https://github.com/game-icons/icons>, kept unchanged with their `license.txt` in `spare_assets/game-icons/` (never shipped).
+- Licence: [Creative Commons Attribution 3.0](http://creativecommons.org/licenses/by/3.0/) (CC BY 3.0), or CC0 where marked.
+- Changes: `cargo xtask icons` draws the ones listed in `xtask/icons.txt` as 128 × 128 PNGs, white on a transparent background (the black square behind each left out), at `icons/<author>/<name>.png`.
+
 ## `monsters/`: Dungeon Odyssey monster tiles by David E. Gervais
 
 - Artist: **David E. Gervais**

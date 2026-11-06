@@ -2,6 +2,7 @@
 .git
 .claude
 target
+spare_assets
 dist
 node_modules
 .vscode

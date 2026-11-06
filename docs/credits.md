@@ -16,6 +16,7 @@ Hall of Worlds is licensed under [Creative Commons Attribution-NonCommercial 4.0
 These keep their own licences. The [attribution file](https://github.com/Rycochet/game/blob/master/crates/client/assets/ATTRIBUTION.md) has the sources and any changes made.
 
 - **Monster and terrain tiles, and the AngbandTk tiles:** David E. Gervais, from the [D. Gervais tiles library](http://pousse.rapiere.free.fr/tome/) (CC BY 3.0).
+- **Icons:** Lorc, Delapouite and the other contributors to [game-icons.net](https://game-icons.net) (CC BY 3.0); the attribution file names them all.
 - **Cinzel Decorative:** Natanael Gama (SIL Open Font License 1.1).
 - **Lexend:** Bonnie Shaver-Troup, Thomas Jockin, Santiago Orozco, Héctor Gómez and Superunion (SIL Open Font License 1.1).
 - **Noto Emoji:** Google (SIL Open Font License 1.1).

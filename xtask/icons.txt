@@ -1,0 +1,3 @@
+# The game-icons.net icons the game uses, as <author>/<name> from
+# spare_assets/game-icons/. After changing this, run `cargo xtask icons`.
+lorc/pointy-sword

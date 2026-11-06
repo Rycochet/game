@@ -25,6 +25,10 @@ pub(super) const CREDITS: &[(&str, &str)] = &[
         "Monster and terrain tiles, and the AngbandTk tiles",
         "David E. Gervais",
     ),
+    (
+        "Icons, from game-icons.net",
+        "Lorc, Delapouite and the site's other contributors",
+    ),
     ("Title font: Cinzel Decorative", "Natanael Gama"),
     (
         "Writing font: Lexend",

@@ -11,3 +11,6 @@ publish.workspace = true
 brotli = "8"
 # Deltas for browsers that have an older build (`web-deltas`).
 web_delta.workspace = true
+# Draws the game-icons.net SVGs as PNGs (`icons`), in pure Rust (Apache-2.0 OR
+# MIT); without fonts or images, as the icons are plain shapes.
+resvg = { version = "0.49", default-features = false }
