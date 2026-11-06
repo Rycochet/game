@@ -178,8 +178,10 @@ fn dropdown<'a, S: Into<String>>(
     spawned
 }
 
-/// A button for each kind of creature.
+/// A button for each kind of creature, only working where there is ground to drop
+/// what the new body can't wear on (`update_creature_buttons`).
 pub(super) fn spawn_creature_buttons(content: &mut ChildSpawnerCommands) {
+    content.spawn(words("Not on the world map or in the Hall"));
     for kind in CreatureKind::ALL {
         let node = Node {
             padding: BUTTON_PADDING,

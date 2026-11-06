@@ -2,8 +2,7 @@
 
 use bevy::prelude::*;
 use shared::item_form::ItemOrder;
-use shared::protocol::{ClientMessage, ServerMessage};
-use shared::sheet::Sheet;
+use shared::protocol::ClientMessage;
 
 use super::Client;
 use super::give_items::give_items;
@@ -98,20 +97,7 @@ pub(super) fn answer_dev(
             }
             true
         }
-        ClientMessage::DevSetCreature(kind) => {
-            for item in client.inventory.change_body(kind, world.stacks) {
-                info!("No room for {:?} on becoming {kind:?}: lost", item.kind);
-            }
-            client.sheet = Sheet::new(kind);
-            client.unsaved = true;
-            client
-                .link
-                .send(&ServerMessage::Sheet(client.sheet.clone()))
-                && {
-                    client.update_speed(world.action_clock.ticks());
-                    client.send_inventory()
-                }
-        }
+        ClientMessage::DevSetCreature(kind) => super::change_kind::change_kind(client, world, kind),
         ClientMessage::DevGoToWorld { seed } => {
             // Once its messages this tick have been read (`handle_messages`), as
             // it needs every world.

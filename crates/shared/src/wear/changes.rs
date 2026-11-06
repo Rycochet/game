@@ -59,21 +59,27 @@ impl Inventory {
             .fit(wear.adjustable, self.creature.def().size, item.quality)
     }
 
-    /// For a character becoming another kind of creature (dev tools): everything
-    /// comes off and goes in the new inventory, stacking, as far as it fits. Gives back what
-    /// didn't.
+    /// For a creature becoming another kind: what the new body still takes stays
+    /// on, checked in the order it was put on so what is under goes back first.
+    /// What it can't wear drops, cursed or not (owner, 2026-11-04), and what was
+    /// carried goes in the new inventory, stacking, as far as it fits. Gives back
+    /// what drops: what can't be worn and what there was no room for.
     pub fn change_body(&mut self, kind: CreatureKind, limits: StackLimits) -> Vec<Item> {
         let old = std::mem::take(self);
         self.creature = kind;
         self.outfitted = old.outfitted;
         self.size = kind.def().inventory;
-        let everything = old
-            .items
-            .into_iter()
-            .map(|placed| placed.item)
-            .chain(old.worn);
-        everything
-            .filter_map(|item| self.give(item, limits).err())
-            .collect()
+        self.bin = old.bin;
+        let mut dropped = Vec::new();
+        for item in old.worn {
+            if self.check_wear_new(&item).is_ok() {
+                self.worn.push(item);
+            } else {
+                dropped.push(item);
+            }
+        }
+        let carried = old.items.into_iter().map(|placed| placed.item);
+        dropped.extend(carried.filter_map(|item| self.give(item, limits).err()));
+        dropped
     }
 }

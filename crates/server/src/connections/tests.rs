@@ -103,6 +103,16 @@ impl TestClient {
     }
 
     /// As much time as what was asked takes, unless a test is watching time.
+    /// Goes into a castle's ground floor, where there is ground to drop things on.
+    pub fn enter_a_castle(&mut self) {
+        self.send(&[ClientMessage::DevEnterSite {
+            kind: shared::poi::PoiKind::Castle,
+            seed: 1,
+            level: 0,
+            ruin: 0,
+        }]);
+    }
+
     fn let_time_pass(&mut self) {
         act(&mut self.client, &mut self.world);
         while self.time_passes && !self.client.waiting.is_empty() {
@@ -312,19 +322,68 @@ fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
 }
 
 #[test]
-fn a_new_body_takes_everything_off_and_is_kept() {
+fn a_new_body_drops_what_it_cant_wear_and_is_kept() {
     let folder = TestFolder::new();
     let seed = WorldSeed::new(1);
     let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
     let mut test = TestClient::of(open());
+    test.enter_a_castle();
     let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
     let changed = inventory(&answers);
     assert_eq!(changed.creature, CreatureKind::Kobold);
-    assert!(changed.worn.is_empty());
+    // Human shoes are too big for it: they drop, and what fits loosely stays on.
+    assert!(changed.worn.iter().all(|item| item.kind != ItemKind::Shoes));
+    assert!(!changed.worn.is_empty());
     assert_eq!(changed.size, (4, 3));
     test.leave();
     // They aren't dressed again on coming back.
     assert_eq!(inventory(&TestClient::of(open()).welcome), changed);
+}
+
+#[test]
+fn what_a_new_body_cant_wear_drops_under_it_and_they_are_told() {
+    let mut test = TestClient::new();
+    test.enter_a_castle();
+    let worn: Vec<Id> = test
+        .client
+        .inventory
+        .worn
+        .iter()
+        .map(|item| item.id)
+        .collect();
+    assert!(!worn.is_empty(), "a new character starts dressed");
+    let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
+    // A human's shoes are too big for a kobold: they lie at its feet, and the
+    // rest still fits, loosely.
+    let at = test.client.visit.as_ref().unwrap().position();
+    let site = test.client.visit.as_ref().unwrap().id();
+    let index = test.client.visit.as_ref().unwrap().index();
+    let ground = &test.world.site(site).levels[&index].ground[&at];
+    let lying: Vec<Id> = ground.iter().map(|item| item.id).collect();
+    let kept = test.client.inventory.worn.iter().map(|item| item.id);
+    let shoes = worn
+        .iter()
+        .copied()
+        .filter(|id| !kept.clone().any(|kept| kept == *id));
+    assert_eq!(lying, shoes.collect::<Vec<_>>());
+    assert_eq!(ground[0].kind, ItemKind::Shoes);
+    let told = answers.iter().rev().find_map(|answer| match answer {
+        ServerMessage::GroundItems { x, y, items } => Some(((*x, *y), items.len())),
+        _ => None,
+    });
+    assert_eq!(told, Some((at, 1)));
+}
+
+#[test]
+fn no_body_changes_on_the_world_map() {
+    let mut test = TestClient::new();
+    assert!(test.client.visit.is_none());
+    let before = test.client.inventory.clone();
+    let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
+    assert_eq!(test.client.inventory, before);
+    assert_eq!(test.client.sheet, Sheet::new(CreatureKind::Human));
+    // Told again what they are, to put right any guess.
+    assert_eq!(inventory(&answers).creature, CreatureKind::Human);
 }
 
 #[test]
@@ -427,6 +486,7 @@ fn items_saved_before_quality_still_load() {
 #[test]
 fn items_are_made_for_the_wearer_or_the_size_asked_for() {
     let mut test = TestClient::new();
+    test.enter_a_castle();
     test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
     test.send(&[ClientMessage::DevTruesight(true)]);
     let answers = test.send(&[give(ItemKind::Gloves)]);
@@ -577,6 +637,7 @@ fn wrong_sized_magic_gives_itself_away_by_fitting() {
     assert!(seen.find(tiny).unwrap().made.magical);
 
     let mut test = TestClient::new();
+    test.enter_a_castle();
     test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
     let far = given(&mut test, ItemKind::Hat, Some(Size::Tiny), true, None);
     let answers = test.send(&[ClientMessage::WearItem { item: far }]);
@@ -614,6 +675,7 @@ fn a_character_is_told_their_sheet_and_a_new_body_gives_a_new_one() {
     };
     let mut test = TestClient::new();
     assert_eq!(sheet(&test.welcome), Some(Sheet::new(CreatureKind::Human)));
+    test.enter_a_castle();
     let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
     assert_eq!(sheet(&answers), Some(Sheet::new(CreatureKind::Giant)));
 }

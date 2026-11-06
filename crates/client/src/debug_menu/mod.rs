@@ -81,7 +81,11 @@ impl Plugin for DebugMenuPlugin {
                         panels::press_give_button,
                     )
                         .chain(),
-                    panels::press_creature_buttons,
+                    (
+                        panels::update_creature_buttons,
+                        panels::press_creature_buttons,
+                    )
+                        .chain(),
                     panels::choose_pictures,
                     panels::fill_pictures,
                     panels::show_pictures,

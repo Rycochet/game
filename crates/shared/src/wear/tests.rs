@@ -507,16 +507,67 @@ fn a_bag_comes_off_with_what_is_in_it() {
 }
 
 #[test]
-fn changing_body_takes_everything_off_and_gives_back_what_doesnt_fit() {
+fn changing_body_drops_what_cant_be_worn_and_what_has_no_room() {
     use ItemKind::{FullArmour, Ring, Stone};
     let mut inventory = carrying(&[FullArmour, Ring, Stone]);
     inventory.wear(id(1)).unwrap();
-    // A chicken's 2 × 2 inventory: the armour is too big and the ring goes first.
-    let lost = inventory.change_body(CreatureKind::Chicken, StackLimits::NONE);
+    // A chicken's 2 × 2 inventory: the armour can't go on it, and drops rather
+    // than being carried; the ring and stone go in the grid as far as they fit.
+    let dropped = inventory.change_body(CreatureKind::Chicken, StackLimits::NONE);
     assert!(inventory.worn.is_empty());
     assert_eq!(inventory.size, (2, 2));
-    assert_eq!(lost.len() + inventory.items.len(), 3);
-    assert!(lost.iter().any(|item| item.kind == FullArmour));
+    assert_eq!(dropped.len() + inventory.items.len(), 3);
+    assert!(dropped.iter().any(|item| item.kind == FullArmour));
+    assert!(inventory.find(id(1)).is_none());
+}
+
+#[test]
+fn changing_to_a_body_that_takes_the_same_keeps_everything_on() {
+    use ItemKind::{Boots, Ring, Socks, TShirt};
+    let mut inventory = carrying(&[Socks, Boots, Ring, TShirt]);
+    for n in 1..=4 {
+        inventory.wear(id(n)).unwrap();
+    }
+    let dropped = inventory.change_body(CreatureKind::Elf, StackLimits::NONE);
+    assert!(dropped.is_empty());
+    let worn: Vec<Id> = inventory.worn.iter().map(|item| item.id).collect();
+    assert_eq!(worn, [id(1), id(2), id(3), id(4)], "in the order put on");
+    assert_eq!(inventory.covered_by(id(1)), Some(id(2)));
+}
+
+#[test]
+fn changing_body_drops_cursed_things_it_cant_wear() {
+    use ItemKind::{Boots, Ring};
+    let mut inventory = carrying(&[Boots, Ring]);
+    for placed in inventory.items.iter_mut() {
+        placed.item.favour = Some(Favour::Cursed);
+    }
+    inventory.wear(id(1)).unwrap();
+    inventory.wear(id(2)).unwrap();
+    let dropped = inventory.change_body(CreatureKind::Horse, StackLimits::NONE);
+    assert!(inventory.worn.is_empty());
+    let ids: Vec<Id> = dropped.iter().map(|item| item.id).collect();
+    assert_eq!(ids, [id(1), id(2)]);
+}
+
+#[test]
+fn changing_body_keeps_on_what_still_fits_over_what_dropped() {
+    use ItemKind::{Boots, Ring};
+    let mut inventory = carrying(&[Ring, Boots]);
+    inventory.wear(id(1)).unwrap();
+    inventory.wear(id(2)).unwrap();
+    // Whatever the new kind, nothing is lost, and what stays on could have been
+    // put on as it is.
+    for kind in CreatureKind::ALL {
+        let mut changed = inventory.clone();
+        let dropped = changed.change_body(kind, StackLimits::NONE);
+        assert_eq!(changed.worn.len() + dropped.len(), 2, "{kind:?}");
+        for item in changed.worn.clone() {
+            let mut without = changed.clone();
+            without.worn.retain(|other| other.id != item.id);
+            assert!(without.check_wear_new(&item).is_ok(), "{kind:?}");
+        }
+    }
 }
 
 #[test]

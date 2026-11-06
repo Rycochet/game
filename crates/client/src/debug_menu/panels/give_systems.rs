@@ -3,12 +3,13 @@
 use bevy::prelude::*;
 use shared::creature::Size;
 use shared::item::{Favour, Quality};
-use shared::protocol::ClientMessage;
+use shared::protocol::{ClientMessage, LevelKind};
 
 use super::{
     CreatureButton, GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveForm, GiveRandomSeed,
     GiveSeed, SetChoice, give_kinds, new_seed,
 };
+use crate::common::{CurrentDungeon, GameView};
 use crate::connection::ToServer;
 use crate::widgets::{ButtonPressed, ButtonState, DropdownChosen, TextBox, TextEdited};
 
@@ -133,12 +134,34 @@ pub(in crate::debug_menu) fn press_give_button(
 /// What Change Creature's buttons do.
 pub(in crate::debug_menu) fn press_creature_buttons(
     mut pressed: MessageReader<ButtonPressed>,
-    buttons: Query<&CreatureButton>,
+    buttons: Query<(&CreatureButton, &ButtonState)>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     for press in pressed.read() {
-        if let Ok(&CreatureButton(kind)) = buttons.get(press.0) {
+        if let Ok((&CreatureButton(kind), ButtonState::Normal)) = buttons.get(press.0) {
             to_server.write(ToServer(ClientMessage::DevSetCreature(kind)));
         }
+    }
+}
+
+/// Change Creature works only where there is ground for what the new body can't
+/// wear: in a site or the wilderness, not on the world map or in the Hall, as the
+/// server refuses it there.
+pub(in crate::debug_menu) fn update_creature_buttons(
+    view: Res<State<GameView>>,
+    dungeon: Res<CurrentDungeon>,
+    mut buttons: Query<&mut ButtonState, With<CreatureButton>>,
+) {
+    let in_hall = dungeon
+        .info
+        .as_ref()
+        .is_some_and(|info| matches!(info.kind, LevelKind::Hall { .. }));
+    let has_ground = *view.get() == GameView::Dungeon && !in_hall;
+    for mut state in &mut buttons {
+        state.set_if_neq(if has_ground {
+            ButtonState::Normal
+        } else {
+            ButtonState::Disabled
+        });
     }
 }
