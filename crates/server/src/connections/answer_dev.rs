@@ -35,6 +35,7 @@ pub(super) fn answer_dev(
         ClientMessage::DevBackToStart => world_map::back_to_start(client, world),
         ClientMessage::DevToShowcase => world_map::to_showcase(client, world),
         ClientMessage::DevToHall => hall::to_hall(client, world),
+        ClientMessage::DevVitals(what) => client.dev_vitals(what, world.action_clock.ticks()),
         ClientMessage::DevEnterSite {
             kind,
             seed,

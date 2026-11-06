@@ -203,6 +203,7 @@ pub(super) fn receive(
                 | ServerMessage::GroundGone { .. }
                 | ServerMessage::Keepers(_)
                 | ServerMessage::Sheet(_)
+                | ServerMessage::Vitals { .. }
                 | ServerMessage::VisitedGates(_)
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::EntityMoved { .. }

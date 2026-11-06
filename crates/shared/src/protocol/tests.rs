@@ -142,6 +142,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             item: Id::for_test(8),
         },
         ClientMessage::DevSetCreature(CreatureKind::Chicken),
+        ClientMessage::DevVitals(super::DevVitals::Hurt(4)),
         ClientMessage::DevDetectMonsters(true),
         ClientMessage::DevTruesight(true),
         ClientMessage::DevGodMode(true),
@@ -331,6 +332,15 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             y: 5,
         },
         ServerMessage::Sheet(Sheet::new(CreatureKind::Horse)),
+        ServerMessage::Vitals {
+            who: None,
+            health: crate::vitals::VitalNow {
+                value: 3,
+                most: 20,
+                refills_in: 150,
+            },
+            mana: crate::vitals::VitalNow::default(),
+        },
         ServerMessage::VisitedGates(vec![3, 175_562_835]),
         ServerMessage::EntitySeen(EntityLook {
             id: Id(uuid::Uuid::from_u128(4)),

@@ -30,7 +30,11 @@ pub(super) fn change_kind(
         crate::ground::put_down(client, world, item);
     }
     client.ground_told.again = true;
+    // Health and Mana stay as they were; how much there can be follows the
+    // new attributes (`keep_vitals` tells the client).
+    let vitals = std::mem::take(&mut client.sheet.vitals);
     client.sheet = Sheet::new(kind);
+    client.sheet.vitals = vitals;
     client.unsaved = true;
     client
         .link

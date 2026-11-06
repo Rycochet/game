@@ -233,7 +233,8 @@ pub(crate) fn answer(
         | ClientMessage::DevKillMob { .. }
         | ClientMessage::DevSetCreature(..)
         | ClientMessage::DevSetWorldClock { .. }
-        | ClientMessage::DevGoToWorld { .. } => answer_dev(client, message, world),
+        | ClientMessage::DevGoToWorld { .. }
+        | ClientMessage::DevVitals(_) => answer_dev(client, message, world),
         ClientMessage::DevDeleteCharacter => delete_character(client, world, accounts),
     }
 }

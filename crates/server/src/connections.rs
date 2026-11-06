@@ -37,6 +37,7 @@ mod playtime;
 mod roads;
 mod systems;
 mod visited_gates;
+mod vitals;
 mod welcome;
 
 pub(super) use answer::answer;
@@ -226,6 +227,8 @@ pub struct Client {
     pub(crate) ground_told: GroundTold,
     /// Its character's playtime, and when its player last did anything.
     pub(crate) activity: playtime::Activity,
+    /// How much Health and Mana there can be, as the client was last told.
+    vitals_told: Option<shared::vitals::Limits>,
     /// How much it can do now, and how fast that comes back.
     energy: Energy,
     speed: u32,
@@ -265,5 +268,7 @@ mod look_up_tests;
 mod new_character_tests;
 #[cfg(test)]
 pub(crate) mod tests;
+#[cfg(test)]
+mod vitals_tests;
 #[cfg(test)]
 mod worlds_tests;

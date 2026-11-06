@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::OnlineSettings;
+use super::dev_vitals::DevVitals;
 use super::login::{CharacterId, Credentials};
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
@@ -256,6 +257,9 @@ pub enum ClientMessage {
     /// new, and go straight into it, where the player stands on the world map.
     /// It is not added to the world map.
     DevGenerateSite { kind: PoiKind, seed: u64, ruin: u8 },
+    /// Developer tools: harm, spend, fill or raise the character's Health and
+    /// Mana (`DevVitals`), answered with `Vitals`.
+    DevVitals(DevVitals),
 }
 
 impl ClientMessage {
@@ -284,6 +288,7 @@ impl ClientMessage {
                 | Self::DevTruesight(_)
                 | Self::DevGodMode(_)
                 | Self::DevKillMob { .. }
+                | Self::DevVitals(_)
         )
     }
 }

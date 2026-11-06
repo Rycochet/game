@@ -21,13 +21,16 @@ pub enum DebugAction {
     GiveItem,
     GoToWorld,
     GodMode,
+    HealFully,
     HerbsState,
+    Hurt,
     ItemPictures,
     KillMob,
     ResetView,
     RevealMap,
     ShowDebugInfo,
     ShowWidgets,
+    SpendMana,
     StairsStyle,
     SunsAndMoons,
     TeleportMode,
@@ -36,6 +39,7 @@ pub enum DebugAction {
     TeleportToStart,
     Truesight,
     ViewPlanet,
+    VitalsBonus,
     WorldTime,
 }
 
@@ -63,7 +67,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 28] = [
+    pub(super) const ALL: [Self; 32] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -76,13 +80,16 @@ impl DebugAction {
         Self::GiveItem,
         Self::GoToWorld,
         Self::GodMode,
+        Self::HealFully,
         Self::HerbsState,
+        Self::Hurt,
         Self::ItemPictures,
         Self::KillMob,
         Self::ResetView,
         Self::RevealMap,
         Self::ShowDebugInfo,
         Self::ShowWidgets,
+        Self::SpendMana,
         Self::StairsStyle,
         Self::SunsAndMoons,
         Self::TeleportMode,
@@ -91,6 +98,7 @@ impl DebugAction {
         Self::TeleportToStart,
         Self::Truesight,
         Self::ViewPlanet,
+        Self::VitalsBonus,
         Self::WorldTime,
     ];
 
@@ -108,13 +116,16 @@ impl DebugAction {
             Self::GiveItem => "Give Item",
             Self::GodMode => "God Mode",
             Self::GoToWorld => "Go to World",
+            Self::HealFully => "Heal Fully",
             Self::HerbsState => "Herbs State",
+            Self::Hurt => "Hurt",
             Self::ItemPictures => "Item Pictures",
             Self::KillMob => "Kill Mob",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
             Self::ShowDebugInfo => "Show Debug Info",
             Self::ShowWidgets => "Show Widgets",
+            Self::SpendMana => "Spend Mana",
             Self::StairsStyle => "Stairs Style",
             Self::SunsAndMoons => "Suns and Moons",
             Self::TeleportMode => "Teleport Mode",
@@ -123,6 +134,7 @@ impl DebugAction {
             Self::TeleportToStart => "Teleport to Start",
             Self::Truesight => "Truesight",
             Self::ViewPlanet => "View Planet",
+            Self::VitalsBonus => "Vitals Bonus",
             Self::WorldTime => "World Time",
         }
     }
@@ -191,13 +203,17 @@ impl DebugAction {
                 | Self::GiveItem
                 | Self::GodMode
                 | Self::GoToWorld
+                | Self::HealFully
+                | Self::Hurt
                 | Self::KillMob
                 | Self::RevealMap
+                | Self::SpendMana
                 | Self::TeleportMode
                 | Self::TeleportToHall
                 | Self::TeleportToPoiShowcase
                 | Self::TeleportToStart
                 | Self::Truesight
+                | Self::VitalsBonus
                 | Self::WorldTime
         )
     }

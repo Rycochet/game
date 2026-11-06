@@ -34,6 +34,7 @@ pub mod showcase;
 pub mod site;
 pub mod surface;
 pub mod vegetation;
+pub mod vitals;
 pub mod wear;
 pub mod weather;
 pub mod wilderness;
