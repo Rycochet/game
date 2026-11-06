@@ -6,6 +6,7 @@
 pub mod controls;
 mod floors;
 mod hosting;
+mod hover;
 pub use controls::{Action, Binding, Controls, Group, Mods};
 mod preferences;
 mod servers;
@@ -52,6 +53,7 @@ pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
 };
 pub use dungeon::CurrentDungeon;
+pub use hover::{HoverName, HoveredInSky, HoveredOnMap, poi_name, words};
 pub use item_text::{DroppedOnText, HeldOverText, KnownItem, KnownItems, TakesItemText};
 pub use items::{
     BandShift, GROUND, GaveItem, HeldGift, HeldOverGifts, HeldStock, HoveredBag, NO_QUALITY_NAME,
@@ -92,6 +94,8 @@ impl Plugin for CommonPlugin {
             .init_resource::<KeepDrawing>()
             .init_resource::<OwnVitals>()
             .init_resource::<BottomHud>()
+            .init_resource::<HoveredOnMap>()
+            .init_resource::<HoveredInSky>()
             .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()
             .init_resource::<OtherLevels>()

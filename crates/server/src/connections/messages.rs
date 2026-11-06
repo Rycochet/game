@@ -233,6 +233,9 @@ pub(super) fn join(
     {
         return clients[i].refuse_for_saves(&error);
     }
+    if let Some(character) = &character {
+        clients[i].name = accounts.character_name(character).unwrap_or_default();
+    }
     let Some(world) = world_for(&mut clients[i], worlds) else {
         return false;
     };

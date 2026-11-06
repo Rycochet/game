@@ -349,6 +349,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ServerMessage::EntitySeen(EntityLook {
             id: Id(uuid::Uuid::from_u128(4)),
             kind: CreatureKind::Giant,
+            name: Some("Brin".into()),
             appearance: Appearance::default(),
             feeling: crate::sheet::Feeling::Friendly,
             x: 3,

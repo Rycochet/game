@@ -93,6 +93,16 @@ fn names_are_checked_and_characters_limited() {
 }
 
 #[test]
+fn a_character_is_found_by_name_for_others_to_see() {
+    let mut accounts = Accounts::default();
+    let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
+    let character = accounts.create_character(&id, "Brin").unwrap();
+    assert_eq!(accounts.character_name(&character).as_deref(), Some("Brin"));
+    accounts.rename_character(&character, "Bo").unwrap();
+    assert_eq!(accounts.character_name(&character).as_deref(), Some("Bo"));
+}
+
+#[test]
 fn saves_that_cant_be_reached_dont_make_a_new_account() {
     let backend = Arc::new(MemoryBackend::default());
     let queue = SaveQueue::new(backend.clone());

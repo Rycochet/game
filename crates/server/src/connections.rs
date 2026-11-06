@@ -193,6 +193,8 @@ pub struct Client {
     account: Option<AccountId>,
     /// Its character: given when it connected, or decided by logging in.
     pub(crate) character_id: Option<CharacterId>,
+    /// Its character's name, as others see it: set on joining.
+    pub(crate) name: String,
     /// Whether it is to be disconnected (and was saved).
     gone: bool,
     /// The world its character is in, once joining has decided it. In the

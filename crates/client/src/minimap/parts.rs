@@ -34,13 +34,6 @@ pub(super) struct HoverRunes;
 #[derive(Component)]
 pub(super) struct HoverRunesPicture;
 
-/// The box naming the poi the mouse is over on the world map itself.
-#[derive(Component)]
-pub(super) struct WorldHoverBox;
-
-#[derive(Component)]
-pub(super) struct WorldHoverText;
-
 /// The pictures the maps are drawn in, and the see-through marks layers over
 /// them (`overlay`).
 #[derive(Resource)]

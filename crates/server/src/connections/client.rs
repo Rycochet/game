@@ -28,6 +28,7 @@ impl Client {
             going_to: None,
             account: None,
             character_id,
+            name: String::new(),
             gone: false,
             character: CharacterWorldSave::default(),
             other_worlds: BTreeMap::new(),

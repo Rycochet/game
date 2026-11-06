@@ -157,6 +157,7 @@ fn a_look_reads_back_from_a_message() {
     let look = EntityLook {
         id: Id::for_test(9),
         kind: CreatureKind::Kobold,
+        name: None,
         appearance: Appearance::default(),
         feeling: Feeling::Unfriendly,
         x: -2,

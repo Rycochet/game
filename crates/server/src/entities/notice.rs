@@ -19,6 +19,8 @@ use crate::storage::SiteId;
 pub(crate) struct Someone {
     pub(super) id: Id,
     pub(super) character: Option<CharacterId>,
+    /// Their character's name.
+    pub(super) name: String,
     pub(super) look: (CreatureKind, Appearance),
     /// What can be seen of what they wear.
     pub(super) worn: Vec<WornLook>,
@@ -46,6 +48,7 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
             Someone {
                 id: client.entity_id(),
                 character: client.character_id,
+                name: client.name.clone(),
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
                 worn: client.inventory.shown(),
                 level,

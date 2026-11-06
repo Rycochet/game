@@ -46,17 +46,17 @@ mod teleport;
 use draw::draw_maps;
 pub use full_map::FullMap;
 use full_map::show_darkening;
-use hover::{name_hovered_token, name_what_is_hovered, spot_on_full_map};
+use hover::{find_hovered_body, name_what_is_hovered, spot_on_full_map};
 use input::take_input;
 use layout::{
     OverFullMap, full_map_area, full_map_corner, full_map_picture_corner, full_map_side,
     minimap_across, minimap_picture_size, minimap_trim, over_full_map,
 };
 use marks::{full_map_compass, minimap_border, minimap_marks};
-use names::{hovered_name, hovered_poi, location_title, poi_name};
+use names::{hovered_name, hovered_poi, location_title};
 use parts::{
     FullMapDarkening, FullMapPanel, FullMapPicture, FullMapTitle, HoverBox, HoverRunes,
-    HoverRunesPicture, HoverText, MapPictures, Minimap, WorldHoverBox, WorldHoverText,
+    HoverRunesPicture, HoverText, MapPictures, Minimap,
 };
 pub(super) use room::Room;
 use scale::{shows_known, under_the_sky, units_per_pixel};
@@ -175,7 +175,7 @@ impl Plugin for MinimapPlugin {
                 Update,
                 (
                     name_what_is_hovered,
-                    name_hovered_token,
+                    find_hovered_body,
                     floors::show_buttons,
                     show_darkening,
                 )

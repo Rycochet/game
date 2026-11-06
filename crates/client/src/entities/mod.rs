@@ -2,6 +2,7 @@
 //! says they can be seen. See `docs/context/client/entities.md`.
 
 mod dressed;
+mod hover_name;
 mod morph;
 
 use std::collections::HashMap;
@@ -136,6 +137,7 @@ fn read_server(
                         },
                         Icon(picture(look.kind).into()),
                         morph::SeenLooks(look.appearance.clone()),
+                        hover_name::hover_name(look),
                     ))
                     .id();
                 let picture = drawing.dressed(look.kind, &look.appearance, &look.worn);

@@ -9,7 +9,7 @@ use super::gate_runes::{self, RUNES_HEIGHT};
 use super::{
     CORNER_GAP, FULL_MAP_LAYER, FULL_MAP_MARGIN, FullMapDarkening, FullMapPanel, FullMapPicture,
     FullMapTitle, HOVER_LIFT, HoverBox, HoverRunes, HoverRunesPicture, HoverText, MapPictures,
-    Minimap, TITLE_HEIGHT, WorldHoverBox, WorldHoverText,
+    Minimap, TITLE_HEIGHT,
 };
 use crate::widgets::{
     darkening, layer_z, leaves_presses, panel, panel_frame, panel_title, spawn_close_button,
@@ -146,21 +146,6 @@ pub(super) fn spawn_maps(mut commands: Commands, mut images: ResMut<Assets<Image
                         ));
                 });
         });
-    commands
-        .spawn((
-            WorldHoverBox,
-            Node {
-                position_type: PositionType::Absolute,
-                bottom: px(FULL_MAP_MARGIN + HOVER_LIFT),
-                left: px(0),
-                right: px(0),
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            GlobalZIndex(10),
-            Visibility::Hidden,
-        ))
-        .with_children(|holder| spawn_tooltip(holder, WorldHoverText, ""));
     commands.insert_resource(MapPictures {
         minimap,
         full,
