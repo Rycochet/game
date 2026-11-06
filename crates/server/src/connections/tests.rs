@@ -164,6 +164,9 @@ pub(crate) const HELLO: ClientMessage = ClientMessage::Hello {
 pub(super) const GUEST: ClientMessage =
     ClientMessage::Login(Credentials::Guest(GuestToken([1; 32])));
 
+/// Gives one of `kind`. Tests always give a seed: without one the server rolls from a
+/// new id, so each run gets a different item, and some (about 1 sword in 30) don't fit
+/// what a new character carries, so on the world map nothing is given.
 fn give(kind: ItemKind) -> ClientMessage {
     ClientMessage::DevGiveItem {
         kind,
@@ -172,7 +175,7 @@ fn give(kind: ItemKind) -> ClientMessage {
         quality: Quality::Rare,
         set: false,
         favour: None,
-        seed: None,
+        seed: Some(1),
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
@@ -348,7 +351,7 @@ fn only_things_with_quality_can_be_part_of_a_set() {
         quality: Quality::Poor,
         set: true,
         favour: None,
-        seed: None,
+        seed: Some(1),
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
@@ -373,7 +376,7 @@ fn a_new_ring_has_a_form_and_fits_its_wearer_and_a_new_gem_rolls_its_size() {
         quality: Quality::Rare,
         set: false,
         favour: None,
-        seed: None,
+        seed: Some(1),
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
@@ -401,12 +404,13 @@ fn artifacts_are_always_named() {
         quality: Quality::Artifact,
         set: false,
         favour: None,
-        seed: None,
+        seed: Some(1),
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
     };
     let carried = inventory(&test.send(&[artifact]));
+    assert_eq!(carried.items.len(), 1, "the sword fits, with this seed");
     let name = carried.items[0].item.name();
     assert!(name.ends_with(" Sword") && name != "Sword", "{name}");
 }
@@ -436,7 +440,7 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
         quality: Quality::Epic,
         set: false,
         favour: None,
-        seed: None,
+        seed: Some(1),
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
@@ -468,7 +472,7 @@ fn given(
         quality: Quality::Rare,
         set: false,
         favour,
-        seed: None,
+        seed: Some(1),
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
@@ -590,7 +594,7 @@ fn asking_for_magic_on_something_plain_raises_its_quality() {
         quality: Quality::Common,
         set: false,
         favour: None,
-        seed: None,
+        seed: Some(1),
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
