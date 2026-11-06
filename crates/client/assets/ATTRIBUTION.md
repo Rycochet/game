@@ -2,12 +2,12 @@
 
 Artwork in this folder made by other people, with the licence it is used under. Placeholder 3D images are by Claude Code (Opus 5.5).
 
-## `fonts/CinzelDecorative-Bold.ttf`: Cinzel Decorative by Natanael Gama
+## `fonts/HallOfWorldsTitle.ttf`: Cinzel Decorative Bold by Natanael Gama, cut down
 
 - Designer: **Natanael Gama**
 - Source: Google Fonts, <https://github.com/google/fonts/tree/main/ofl/cinzeldecorative>
-- Licence: [SIL Open Font License 1.1](https://openfontlicense.org), in `fonts/CinzelDecorative-OFL.txt`
-- Changes: none.
+- Licence: [SIL Open Font License 1.1](https://openfontlicense.org), in `fonts/HallOfWorldsTitle-OFL.txt`
+- Changes: cut down to the letters of the game's title, as it is only used for that, and renamed "Hall of Worlds Title" (the licence reserves the name "Cinzel" for unchanged copies). Made from `CinzelDecorative-Bold.ttf` with fontTools: `pyftsubset CinzelDecorative-Bold.ttf --text="Hall of Worlds" --no-hinting --name-IDs='*' --drop-tables+=DSIG,FFTM`, then name IDs 1, 3, 4 and 6 changed to the new name and a note added to 5. Any other letter in the title needs it made again.
 
 ## `fonts/Lexend-Variable.ttf`: Lexend by The Lexend Project Authors
 

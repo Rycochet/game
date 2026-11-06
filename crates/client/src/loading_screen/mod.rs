@@ -18,7 +18,8 @@ use crate::widgets::{Progress, TextSize, WidgetSystems, layer_z, spawn_progress_
 use frames::keep_frame_rate;
 
 /// Built into the program, rather than loaded, to be there on the first frame.
-const TITLE_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/CinzelDecorative-Bold.ttf");
+/// Cinzel Decorative Bold cut down to the letters of [`TITLE`] (see `ATTRIBUTION.md`).
+const TITLE_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/HallOfWorldsTitle.ttf");
 
 const TITLE: &str = "Hall of\nWorlds";
 /// The share of the window the title may fill.
