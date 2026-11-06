@@ -213,3 +213,49 @@ fn exploring_from_water_or_a_site_is_refused() {
     assert!(test.client.visit.is_none());
     assert_eq!(SCALE, 16);
 }
+
+#[test]
+fn a_town_set_into_the_wilderness_has_its_buildings_sent() {
+    let mut test = TestClient::new();
+    let plan = chunk_near_start(&test, |c| c.poi().kind.is_town());
+    let cutout = plan.cutout().unwrap();
+    test.client.character.world_position = (cutout.poi().x, cutout.poi().y);
+    let answers = test.send(&[ClientMessage::Explore]);
+    let buildings = answers.iter().find_map(|answer| match answer {
+        ServerMessage::Buildings(buildings) => Some(buildings),
+        _ => None,
+    });
+    let buildings = buildings.expect("the town's buildings");
+    assert!(!buildings.is_empty());
+    // Where the town is in the wilderness.
+    let width = test.world.wilderness.wild.width();
+    for building in buildings {
+        let rect = building.rects[0];
+        assert!(
+            cutout.contains(rect.x.rem_euclid(width), rect.y),
+            "{rect:?}"
+        );
+    }
+}
+
+#[test]
+fn a_road_found_runs_through_the_wilderness() {
+    let mut test = TestClient::new();
+    let (px, py) = test.client.world_position();
+    let link = shared::road::RoadLink::new(ChunkPos { x: 0, y: 0 }, ChunkPos { x: 1, y: 0 });
+    let road = shared::road::Road {
+        link,
+        kind: shared::road::RoadKind::Track,
+        points: (px - 8..=px + 8).map(|x| (x, py)).collect(),
+    };
+    test.world.wilderness.add_road(std::sync::Arc::new(road));
+    test.send(&[ClientMessage::Explore]);
+    let visit = test.client.visit.as_ref().unwrap();
+    let level = &visit.level.level;
+    let (min_x, min_y, width, height) = level.bounds();
+    let surfaced = (min_y..min_y + height)
+        .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
+        .filter(|&(x, y)| matches!(level.cell(x, y), Cell::GravelTrack | Cell::Bridge))
+        .count();
+    assert!(surfaced > 100, "{surfaced}");
+}

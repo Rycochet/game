@@ -6,12 +6,15 @@
 //! only changes need keeping.
 
 mod block;
+mod course;
 mod cutout;
 mod plan;
 mod samples;
 mod scale;
 mod water;
 
+#[cfg(test)]
+mod course_tests;
 #[cfg(test)]
 mod tests;
 
@@ -20,6 +23,7 @@ pub use plan::ChunkPlan;
 pub use scale::{BLOCK_SIZE, BlockPos, SCALE};
 
 use crate::climate::Climate;
+use crate::river::Rivers;
 use crate::rng::Seed;
 use crate::surface::Surface;
 use crate::vegetation::Vegetation;
@@ -45,6 +49,15 @@ pub const CLEARED: i64 = 8;
 /// thinning in between (owner): a clearing no bigger than woods' own gaps.
 pub const CLEARED_TO: i64 = 24;
 
+/// No tree grows within this many cells of a river's edge, and trees are
+/// back to the land's own this far from it.
+pub const RIVER_CLEARED: f64 = 1.0;
+pub const RIVER_CLEARED_TO: f64 = 4.0;
+
+/// The same for roads.
+pub const ROAD_CLEARED: f64 = 1.0;
+pub const ROAD_CLEARED_TO: f64 = 6.0;
+
 /// How far round a way down into a site (a cave entered by a hole) the ground
 /// is clear, in cells.
 pub const ENTRANCE_CLEARING: i64 = 2;
@@ -54,6 +67,7 @@ pub struct Wilderness {
     surface: Surface,
     climate: Climate,
     vegetation: Vegetation,
+    rivers: Rivers,
     seed: Seed,
     /// The lowest the tide goes: below it is sea in the wilderness, for now.
     low_water: f64,
@@ -69,6 +83,7 @@ impl Wilderness {
             surface,
             climate: Climate::new(world),
             vegetation: Vegetation::new(world),
+            rivers: Rivers::new(world),
             seed: world.seed.derive("wilderness"),
             low_water: world.sea_level - world.tide_reach(),
         }

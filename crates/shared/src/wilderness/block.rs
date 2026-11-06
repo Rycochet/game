@@ -1,13 +1,16 @@
 //! Making a block of the wilderness, cell by cell.
 
+use super::course::Segment;
 use super::samples::Samples;
 use super::water::Water;
 use super::{
-    BlockPos, CLEARED, CLEARED_TO, ChunkPlan, MOST_TREES_PERCENT, SHALLOWS_REACH, Wilderness,
+    BlockPos, CLEARED, CLEARED_TO, ChunkPlan, MOST_TREES_PERCENT, RIVER_CLEARED, RIVER_CLEARED_TO,
+    ROAD_CLEARED, ROAD_CLEARED_TO, SHALLOWS_REACH, Wilderness,
 };
 use crate::dungeon::{Cell, Level};
 use crate::movement::past_the_ice;
 use crate::rng::Seed;
+use crate::road::RoadKind;
 
 /// Rolls are out of this many.
 const ROLL_OUT_OF: u64 = 1_000_000;
@@ -30,7 +33,22 @@ impl Wilderness {
             height + 2 * SHALLOWS_REACH,
         );
         let samples = Samples::new(self, around);
-        let water = Water::new(&samples, self.low_water, bounds);
+        let margin = (SHALLOWS_REACH as f64)
+            .max(ROAD_CLEARED_TO)
+            .max(RIVER_CLEARED_TO);
+        let rivers: Vec<Segment> = plan
+            .rivers
+            .iter()
+            .filter(|river| river.near(bounds, margin))
+            .copied()
+            .collect();
+        let roads: Vec<(Segment, RoadKind)> = plan
+            .roads
+            .iter()
+            .filter(|(road, _)| road.near(bounds, margin))
+            .copied()
+            .collect();
+        let water = Water::new(&samples, self.low_water, &rivers, bounds);
         let rolls = Rolls {
             trees: self.seed.derive("trees"),
             growth: self.seed.derive("growth"),
@@ -43,8 +61,19 @@ impl Wilderness {
                     level.set_room(x, y, cutout.level().room(x, y));
                     continue;
                 }
+                let road = roads
+                    .iter()
+                    .filter(|(road, _)| road.outside(x, y) <= 0.0)
+                    .map(|&(_, kind)| kind)
+                    .max();
                 let cell = if past_the_ice(self.points, y.div_euclid(super::SCALE)) {
                     Cell::Wall
+                } else if let Some(kind) = road {
+                    if water.is_wet(x, y) {
+                        Cell::Bridge
+                    } else {
+                        road_surface(kind)
+                    }
                 } else if water.is_wet(x, y) {
                     if water.is_shallow(x, y) {
                         Cell::Shallows
@@ -53,7 +82,16 @@ impl Wilderness {
                     }
                 } else {
                     let (trees, growth) = samples.cover(x, y);
-                    let trees = trees * clearing(plan, x, y) * MOST_TREES_PERCENT as f64 / 100.0;
+                    let open = clearing(plan, x, y)
+                        * courses_clear(&rivers, x, y, RIVER_CLEARED, RIVER_CLEARED_TO)
+                        * courses_clear(
+                            roads.iter().map(|(road, _)| road),
+                            x,
+                            y,
+                            ROAD_CLEARED,
+                            ROAD_CLEARED_TO,
+                        );
+                    let trees = trees * open * MOST_TREES_PERCENT as f64 / 100.0;
                     rolls.ground(self.wrap(x), y, trees, growth)
                 };
                 level.set(x, y, cell);
@@ -76,6 +114,32 @@ fn clearing(plan: &ChunkPlan, x: i64, y: i64) -> f64 {
         1.0
     } else {
         ((squared as f64).sqrt() - CLEARED as f64) / (CLEARED_TO - CLEARED) as f64
+    }
+}
+
+/// How much of the land's own tree cover a cell keeps near rivers or roads:
+/// none within `cleared` of an edge, all from `cleared_to`, evenly between.
+fn courses_clear<'a>(
+    courses: impl IntoIterator<Item = &'a Segment>,
+    x: i64,
+    y: i64,
+    cleared: f64,
+    cleared_to: f64,
+) -> f64 {
+    let nearest = courses
+        .into_iter()
+        .map(|course| course.outside(x, y))
+        .fold(f64::INFINITY, f64::min);
+    ((nearest - cleared) / (cleared_to - cleared)).clamp(0.0, 1.0)
+}
+
+/// What a road is surfaced with in the wilderness, by its kind.
+fn road_surface(kind: RoadKind) -> Cell {
+    match kind {
+        RoadKind::Path => Cell::DirtTrack,
+        RoadKind::Track => Cell::GravelTrack,
+        RoadKind::Road => Cell::Cobblestone,
+        RoadKind::Highway => Cell::Flagstones,
     }
 }
 

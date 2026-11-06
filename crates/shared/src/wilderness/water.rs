@@ -1,9 +1,10 @@
 //! Open water in the wilderness, and which of it is shallow enough to wade.
 
 use super::SHALLOWS_REACH;
+use super::course::Segment;
 use super::samples::Samples;
 
-/// Which cells round a rectangle are open water (unfrozen sea for now).
+/// Which cells round a rectangle are open water: unfrozen sea, and rivers.
 pub(super) struct Water {
     min_x: i64,
     min_y: i64,
@@ -17,6 +18,7 @@ impl Water {
     pub fn new(
         samples: &Samples,
         low_water: f64,
+        rivers: &[Segment],
         (min_x, min_y, width, height): (i64, i64, i64, i64),
     ) -> Self {
         let (min_x, min_y) = (min_x - SHALLOWS_REACH, min_y - SHALLOWS_REACH);
@@ -24,7 +26,8 @@ impl Water {
         let mut wet = Vec::with_capacity((width * height) as usize);
         for y in min_y..min_y + height {
             for x in min_x..min_x + width {
-                wet.push(samples.height(x, y) < low_water && !samples.frozen(x, y));
+                let sea = samples.height(x, y) < low_water && !samples.frozen(x, y);
+                wet.push(sea || rivers.iter().any(|river| river.outside(x, y) <= 0.0));
             }
         }
         Self {
