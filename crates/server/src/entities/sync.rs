@@ -98,8 +98,10 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                 }
             }
         }
-        tell(client, seen);
+        tell(client, seen, &world.died);
     }
+    // Everyone who saw them die has been told.
+    world.died.clear();
 }
 
 /// How far east `to` is from `from` in the Hall, the near way round (west is
@@ -123,7 +125,7 @@ fn hall_gap(a: (i64, i64), b: (i64, i64)) -> i64 {
 
 /// Tells a client how what it can see differs from what it knew. A client that
 /// has gone is noticed when its messages are next read.
-pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>) {
+pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>, died: &BTreeSet<Id>) {
     let now_seen: BTreeSet<Id> = seen.iter().map(|look| look.id).collect();
     let feelings_changed: BTreeSet<Id> = seen
         .iter()
@@ -143,7 +145,10 @@ pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>) {
     client.seen_entities.retain(|id, _| {
         let stays = now_seen.contains(id);
         if !stays {
-            client.link.send(&ServerMessage::EntityGone { id: *id });
+            let died = died.contains(id);
+            client
+                .link
+                .send(&ServerMessage::EntityGone { id: *id, died });
         }
         stays
     });

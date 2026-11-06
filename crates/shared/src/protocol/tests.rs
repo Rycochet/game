@@ -363,6 +363,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ServerMessage::EntityGone {
             id: Id(uuid::Uuid::from_u128(4)),
+            died: true,
         },
         ServerMessage::ItemsLookedUp {
             found: vec![crate::item::Item::new(Id::for_test(10), ItemKind::Ring)],

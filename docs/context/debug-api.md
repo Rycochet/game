@@ -21,7 +21,7 @@ Kinds of things (`PoiKind`, `ItemKind`, `Quality`, `Favour`, `CreatureKind`, `Ce
 
 Client (`client/src/dev_tools/debug_api.rs`; each says which `HOW_DEBUG_` variable it matches, and shares its code):
 
-- `client.state`: program, pid, data folder, `view` (`GameView`), player `position`, `level` (the `LevelInfo` in a site), `showing_floor`, clock minutes and paused, window size and scale factor, `ui_scale` (the interface's size, 1 for 100%), `full_map`, `debug_menu`, `system_menu`.
+- `client.state`: program, pid, data folder, `view` (`GameView`), player `position`, `target` (`common::Target`), `level` (the `LevelInfo` in a site), `showing_floor`, clock minutes and paused, window size and scale factor, `ui_scale` (the interface's size, 1 for 100%), `full_map`, `debug_menu`, `system_menu`.
 - `client.screenshot {path}`: saves the window at the end of the frame to `path` (absolute or relative to the game's folder; folders made, an old file removed first); answers with the full path and `wait_for_file`. The game keeps running.
 - Asking the server: `client.teleport {x, y}`, `client.enter_site {kind, seed?, level?, ruin?}`, `client.set_cells {cells: [{dx, dy, cell}]}` (from the player, in a site), `client.set_time {hours | minutes}`, `client.go_to_world {seed}`, `client.reveal_pois`, `client.give_item {kind, quality?, magical?, set?, favour?}`, `client.wear_item {kind}` (puts on the first of that kind in the inventory), `client.set_creature {kind, how?}` (`how`: `Permanent`, the default, or `Temporary`).
 - Moving: `client.step {dx, dy}` (keyboard steps), `client.travel {x, y}` (as a click), `client.walk {on}` (Auto Walk).
@@ -50,7 +50,7 @@ Server (`server/src/debug_api/methods.rs`; `--server` for the embedded one):
 
 - `server.state`: program (`server` or `embedded server`), pid, data folder, dev tools on, `home_world`, `server_clock` (seconds), `clock_minutes` (the home world's time), paused, action ticks, `players` (character id, phase, `world`, world position, `visit`: site id, level, position).
 - `server.worlds`: every open world: id, whether it is the home, its time in minutes, `rate` (`[game, real]`), players in it, sites loaded and levels in use.
-- `server.mobs {world?}`: every level in use (site, level) of a world (the home unless given its id) and its mobs: id, kind, position, home, `doing`.
+- `server.mobs {world?}`: every level in use (site, level) of a world (the home unless given its id) and its mobs: id, kind, position, home, `doing`, `target` (who it has in its sights as an enemy, if anyone).
 - `server.cells {player?, radius?}`: a player's level around them as the server has it (secret doors included), rows from the north, `@` the player, blank outside the level, with a `legend` of the letters used, and `from` (the top-left cell).
 - `server.sites {world?}`: a world's sites loaded (the home unless given its id), their generator version and the levels with saves.
 - `server.save`: saves everything changed and answers once it is written (`written`: whether all of it was, within 8 s).

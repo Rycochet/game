@@ -92,6 +92,7 @@ fn mobs(In(request): In<Option<Value>>, worlds: Res<ServerWorlds>) -> BrpResult 
                         "position": mob.position,
                         "home": mob.home,
                         "doing": mob.doing,
+                        "target": mob.target,
                     })
                 })
                 .collect();

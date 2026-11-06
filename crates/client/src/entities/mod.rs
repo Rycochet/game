@@ -168,7 +168,7 @@ fn read_server(
                     *position = MapPosition { x: *x, y: *y };
                 }
             }
-            ServerMessage::EntityGone { id } => {
+            ServerMessage::EntityGone { id, .. } => {
                 if let Some(entity) = others.0.remove(id) {
                     commands.entity(entity).despawn();
                 }

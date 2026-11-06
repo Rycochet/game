@@ -58,6 +58,9 @@ pub struct ServerWorld {
     unreachable_sites: BTreeSet<SiteId>,
     /// Who is on the site levels in use.
     pub(crate) populations: Populations,
+    /// Mobs that died since players were last told who they see, so those who
+    /// saw them go are told they died (`entities::sync`).
+    pub(crate) died: BTreeSet<shared::id::Id>,
     /// How big stacks of items may get here.
     pub(crate) stacks: StackLimits,
     /// Sites forgotten since `super::connections::handle_messages` last looked, for
@@ -164,6 +167,7 @@ impl ServerWorld {
             unsaved_sites: Unsaved::default(),
             unreachable_sites: BTreeSet::new(),
             populations: Populations::default(),
+            died: BTreeSet::new(),
             stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),
             wilderness: crate::wilderness::WildernessMaps::new(&params),

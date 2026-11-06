@@ -16,6 +16,10 @@ pub enum Action {
     /// Out of the wilderness to the world map.
     LeaveWilderness,
     ResetView,
+    /// The next creature out from the player, or the nearest without a target.
+    NextTarget,
+    /// The next creature in towards the player.
+    PreviousTarget,
     Character,
     FullMap,
     TurnItem,
@@ -29,23 +33,30 @@ pub enum Action {
 pub enum Group {
     Movement,
     Camera,
+    Targeting,
     Interface,
 }
 
 impl Group {
-    pub const ALL: [Self; 3] = [Self::Movement, Self::Camera, Self::Interface];
+    pub const ALL: [Self; 4] = [
+        Self::Movement,
+        Self::Camera,
+        Self::Targeting,
+        Self::Interface,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
             Self::Movement => "Movement",
             Self::Camera => "Camera",
+            Self::Targeting => "Targeting",
             Self::Interface => "Interface",
         }
     }
 }
 
 impl Action {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 14] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
@@ -53,6 +64,8 @@ impl Action {
         Self::Explore,
         Self::LeaveWilderness,
         Self::ResetView,
+        Self::NextTarget,
+        Self::PreviousTarget,
         Self::Character,
         Self::FullMap,
         Self::TurnItem,
@@ -70,6 +83,8 @@ impl Action {
             Self::Explore => "Explore Wilderness",
             Self::LeaveWilderness => "Leave Wilderness",
             Self::ResetView => "Reset View",
+            Self::NextTarget => "Next Target",
+            Self::PreviousTarget => "Previous Target",
             Self::Character => "Character and Inventory",
             Self::FullMap => "Full Map",
             Self::TurnItem => "Turn Held Item",
@@ -88,6 +103,8 @@ impl Action {
             Self::Explore => "explore",
             Self::LeaveWilderness => "leave_wilderness",
             Self::ResetView => "reset_view",
+            Self::NextTarget => "next_target",
+            Self::PreviousTarget => "previous_target",
             Self::Character => "character",
             Self::FullMap => "full_map",
             Self::TurnItem => "turn_item",
@@ -105,6 +122,7 @@ impl Action {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
             Self::Explore | Self::LeaveWilderness => Group::Movement,
             Self::ResetView => Group::Camera,
+            Self::NextTarget | Self::PreviousTarget => Group::Targeting,
             Self::Character | Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
             Self::FullScreen => Group::Interface,
         }
@@ -124,6 +142,8 @@ impl Action {
             Self::Explore => [shift(KeyCode::Period), None],
             Self::LeaveWilderness => [shift(KeyCode::Comma), None],
             Self::ResetView => [key(KeyCode::Home), None],
+            Self::NextTarget => [key(KeyCode::Tab), None],
+            Self::PreviousTarget => [shift(KeyCode::Tab), None],
             Self::Character => [key(KeyCode::KeyC), key(KeyCode::KeyI)],
             Self::FullMap => [key(KeyCode::KeyM), None],
             Self::TurnItem => [key(KeyCode::KeyR), None],

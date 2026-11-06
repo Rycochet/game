@@ -177,6 +177,7 @@ fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64))
                 position,
                 home: position,
                 doing: Doing::Idle,
+                target: None,
                 number: spawn.number,
                 memory: record.map_or_else(Memory::default, |r| r.memory.clone()),
                 home_level: 0,

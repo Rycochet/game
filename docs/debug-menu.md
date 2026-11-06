@@ -28,7 +28,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Herbs State | | Opens a panel stepping through how grown the herbs are, on a level with herbs. Changes only what is drawn. |
 | Hurt | Yes | Takes 5 Health, as a blow would: refilling waits 10 seconds, and it counts towards raising your most Health. |
 | Item Pictures | | Opens a panel showing one kind of item at a time, chosen from a list: a bare body of each kind on two legs and of each animal drawn, a sample of gauntlets, shoulder armour, arm armour, torso armour, helmets, waist armour, leg armour, foot armour or neck armour (in each style), armour sets of each kind (a full set in each style), footwear, weapons of each family, every kind of gem in every cut, or a sample of rings, as they are drawn, at each quality. It remembers the kind last chosen. Pressing a picture shows it large. |
-| Kill Mob | Yes | Toggles clicking or tapping a mob in sight killing it. What it had falls where it stood, and it doesn't come back. A skull shows at the top left while it is on. |
+| Kill Mob | Yes | Toggles clicking or tapping a mob in sight killing it. What it had falls where it stood, and it doesn't come back. A skull shows at the top left while it is on. It counts as a death, so if it was your target, the nearest enemy you can see becomes your target. |
 | Learn Some Skills | Yes | Practises six skills at the ends of branches, picked at random, by random amounts, and so the skills above them. |
 | Reset View | | Puts the camera back to its starting view, as Home does. |
 | Reveal Map | Yes | Shows you the whole of this level. Not in towns. |

@@ -26,6 +26,7 @@ mod player;
 mod site;
 mod surface_style;
 mod system_menu;
+mod target;
 mod touch;
 mod trade;
 mod ui;
@@ -115,6 +116,7 @@ fn main() {
         item_text::ItemTextPlugin,
         vitals::VitalsPlugin,
         hover::HoverPlugin,
+        target::TargetPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is

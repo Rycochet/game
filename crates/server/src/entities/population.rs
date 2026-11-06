@@ -58,6 +58,7 @@ impl ServerWorld {
                     position: carried_on.map_or(spawn.position, |saved| saved.position),
                     home: spawn.position,
                     doing: carried_on.map_or(Doing::Idle, |saved| saved.doing),
+                    target: None,
                     number: spawn.number,
                     memory: records
                         .get(&id)
