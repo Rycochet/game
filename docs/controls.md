@@ -25,6 +25,16 @@ How fast you go depends on your kind of creature, what you carry, and the ground
 
 You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 
+## Targeting
+
+| Action | Keyboard and mouse | Touch |
+| ------ | ------------------ | ----- |
+| Target a creature | Right-click it | Hold a finger on it |
+| Target the next enemy further out, or the nearest | Tab | |
+| Target the next enemy further in | Shift + Tab | |
+
+A red ring turns under your target. Tab and Shift + Tab go through enemies from nearest to furthest, or through everyone in sight if no enemies are. Your target stays your target when it goes out of sight. If you have no target in sight, the first enemy to come up to you becomes it, and when your target dies the nearest enemy you can see takes its place.
+
 ## Camera
 
 | Action | Keyboard and mouse | Touch |

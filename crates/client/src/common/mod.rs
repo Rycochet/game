@@ -32,6 +32,7 @@ mod pointer;
 mod roads;
 mod sky;
 mod states;
+mod target;
 mod token;
 mod video;
 mod view;
@@ -69,6 +70,7 @@ pub use roads::KnownRoads;
 pub use sky::SkyNow;
 use sky::update_sky;
 pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
+pub use target::Target;
 pub use token::{Attitude, Icon, IconPicture, Token, TokenShape, TokenSize};
 pub use video::{
     AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, IN_BROWSER, Precipitation, Preset,
@@ -96,6 +98,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<BottomHud>()
             .init_resource::<HoveredOnMap>()
             .init_resource::<HoveredInSky>()
+            .init_resource::<Target>()
             .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()
             .init_resource::<OtherLevels>()

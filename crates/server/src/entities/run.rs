@@ -60,6 +60,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             if let Some(doing) = notice(mob, level, &spots) {
                 let at_rest = mob.doing == Doing::Idle;
                 mob.doing = doing;
+                mob.target = doing.target();
                 if at_rest {
                     due.insert((mob.energy.ready_at(tick, mob.speed), mob.id));
                 }
@@ -104,6 +105,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             taken.remove(&was_at);
             taken.insert(mob.position);
             mob.energy.spend(tick, mob.speed, cost);
+            mob.target = mob.doing.target();
             if let Some(crossing) = crossing {
                 crossings.push(crossing);
             } else if mob.doing != Doing::Idle {

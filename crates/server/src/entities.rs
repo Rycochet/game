@@ -29,6 +29,7 @@ mod population;
 mod run;
 mod scent;
 mod sync;
+mod target;
 mod territory;
 mod tracking;
 mod wild;
@@ -113,6 +114,9 @@ pub(crate) struct Mob {
     /// Where it started, and goes back to.
     pub home: (i64, i64),
     pub doing: Doing,
+    /// Who it has in its sights: a player or another creature it means to get
+    /// close to as an enemy (`Doing::target`). Never told to players.
+    pub target: Option<Id>,
     /// Which of its level's mobs it is.
     number: u32,
     /// What it remembers.

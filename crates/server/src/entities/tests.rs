@@ -673,7 +673,10 @@ fn a_killed_mob_leaves_all_it_had_and_goes_for_good() {
     let (mob, at) = next_to_a_laden_mob(&mut test);
     let answers = test.send(&[ClientMessage::DevKillMob { mob }]);
     assert!(
-        answers.contains(&ServerMessage::EntityGone { id: mob }),
+        answers.contains(&ServerMessage::EntityGone {
+            id: mob,
+            died: true
+        }),
         "{answers:?}"
     );
     assert!(answers.iter().any(|answer| matches!(

@@ -8,7 +8,7 @@ use server::debug_api::{BrpError, BrpResult, Value, json, params};
 use std::path::PathBuf;
 use std::{fs, path, process};
 
-use crate::common::{CurrentDungeon, GameView, MapPosition, OtherLevels, ServerClock};
+use crate::common::{CurrentDungeon, GameView, MapPosition, OtherLevels, ServerClock, Target};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::player::Player;
@@ -21,8 +21,8 @@ pub(super) fn done() -> BrpResult {
 
 /// `client.state`: which client answered (process and the data folder its
 /// embedded server saves in, so a caller can tell it is talking to its own
-/// game), what it shows, where the player is, the clock, the window and
-/// what is open.
+/// game), what it shows, where the player is and whom they target, the clock,
+/// the window and what is open.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn state(
     _: In<Option<Value>>,
@@ -33,6 +33,7 @@ pub(super) fn state(
     clock: Res<ServerClock>,
     (window, ui_scale): (Query<&Window, With<PrimaryWindow>>, Res<UiScale>),
     open: (Res<FullMap>, Res<DebugMenu>, Res<SystemMenu>),
+    target: Res<Target>,
 ) -> BrpResult {
     let view = *view.get();
     let (map, debug_menu, system_menu) = open;
@@ -44,6 +45,7 @@ pub(super) fn state(
         "position": player.single().ok().map(|at| json!({ "x": at.x, "y": at.y })),
         "level": if view == GameView::Dungeon { dungeon.info.as_ref() } else { None },
         "showing_floor": levels.showing(),
+        "target": target.0,
         "clock_minutes": clock.minutes,
         "paused": clock.paused,
         "window": window.single().ok().map(|window| json!({

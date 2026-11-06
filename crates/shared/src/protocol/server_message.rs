@@ -154,6 +154,7 @@ pub enum ServerMessage {
     EntitySeen(EntityLook),
     /// Something in sight has moved.
     EntityMoved { id: Id, x: i64, y: i64 },
-    /// Something has gone out of sight, or away.
-    EntityGone { id: Id },
+    /// Something has gone out of sight, or away; `died` if it died, which only
+    /// those who could see it are told.
+    EntityGone { id: Id, died: bool },
 }

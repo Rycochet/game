@@ -132,6 +132,7 @@ pub(crate) fn kill(
         return Err("out of sight");
     }
     let dead = population.mobs.remove(index);
+    world.died.insert(mob);
     population.due.retain(|&(_, id)| id != mob);
     // Its home level was waiting for it to come back.
     if !dead.way_back.is_empty()
