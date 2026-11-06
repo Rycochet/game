@@ -3,7 +3,7 @@
 use shared::dungeon::{Cell, Sight};
 use shared::protocol::level_chunk;
 
-use super::{Visit, add_masks, all_cells, arrive_again, beside, nearby_cells, send_cells};
+use super::{Place, Visit, add_masks, all_cells, arrive_again, beside, nearby_cells, send_cells};
 use crate::connections::Client;
 use crate::storage::CellMasks;
 use crate::{LEVEL_PRELOAD_STEPS, ServerWorld};
@@ -79,30 +79,36 @@ pub(super) fn update_sight(client: &mut Client) -> bool {
         add_masks(&mut visit.sent, new);
         return sent;
     }
+    let reach = visit.reach();
     let (looked_from, loaded) = (&mut visit.looked_from, &mut visit.loaded);
     let level = &visit.level.level;
     let (x, y) = visit.position;
     // What the client draws: glimpses, the more generous sight.
     let mut seen = Sight::new(level);
-    seen.add_glimpses(level, x, y, None);
+    seen.add_glimpses(level, x, y, reach);
     for (nx, ny) in nearby_cells(level, (x, y), LEVEL_PRELOAD_STEPS) {
         if !looked_from.is_seen(nx, ny) {
             looked_from.insert(nx, ny);
-            loaded.add_glimpses(level, nx, ny, None);
+            loaded.add_glimpses(level, nx, ny, reach);
         }
     }
 
     let memory = memory(client, &visit);
     let mut learnt = false;
     let mut new = CellMasks::new();
+    let mut shared_cells = Vec::new();
     let (min_x, min_y, width, height) = level.bounds();
     for cy in min_y..min_y + height {
         for cx in min_x..min_x + width {
             let (chunk, bit) = level_chunk(cx, cy);
             if seen.is_seen(cx, cy) {
-                let mask = memory.entry(chunk).or_default();
+                let (kept, _) = level_chunk(visit.kept_at(cx), cy);
+                let mask = memory.entry(kept).or_default();
                 learnt |= *mask & (1 << bit) == 0;
                 *mask |= 1 << bit;
+                if visit.shares(cx, cy) {
+                    shared_cells.push((cx, cy));
+                }
             }
             let sent = visit.sent.get(&chunk).copied().unwrap_or(0);
             if visit.loaded.is_seen(cx, cy) && sent & (1 << bit) == 0 {
@@ -111,6 +117,7 @@ pub(super) fn update_sight(client: &mut Client) -> bool {
         }
     }
     client.unsaved |= learnt;
+    learnt_elsewhere(client, &visit, &shared_cells);
     // Their neighbours too: a wall's shape depends on what is beside it.
     let extra = beside(level, |cx, cy| visit.loaded.is_seen(cx, cy), &visit.sent);
     add_masks(&mut new, extra);
@@ -118,4 +125,31 @@ pub(super) fn update_sight(client: &mut Client) -> bool {
     let visit = client.visit.insert(visit);
     add_masks(&mut visit.sent, new);
     sent
+}
+
+/// Cells just seen that are another map's too, or a poi's cutout in the
+/// wilderness: they are remembered there as well, and the poi is known.
+fn learnt_elsewhere(client: &mut Client, visit: &Visit, cells: &[(i64, i64)]) {
+    for mirror in &visit.mirrors {
+        let memory = client.character.memory.entry(mirror.id).or_default();
+        let memory = memory.entry(mirror.index).or_default();
+        for &(x, y) in cells {
+            if let Some((x, y)) = mirror.of(x, y) {
+                let (chunk, bit) = level_chunk(x, y);
+                *memory.entry(chunk).or_default() |= 1 << bit;
+            }
+        }
+    }
+    if let Place::Wilderness { cutouts, .. } = &visit.place {
+        for &(chunk, (min_x, min_y, width, height)) in cutouts {
+            let inside = |&(x, y): &(i64, i64)| {
+                (min_x..min_x + width).contains(&x) && (min_y..min_y + height).contains(&y)
+            };
+            let poi = client.character.pois.entry(chunk).or_default();
+            if !poi.known && cells.iter().any(inside) {
+                poi.known = true;
+                client.unsaved = true;
+            }
+        }
+    }
 }

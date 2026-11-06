@@ -1,5 +1,6 @@
 use shared::energy::{ACTION_TICKS_PER_SECOND, NORMAL_SPEED};
 use shared::item::{Favour, Inventory, ItemKind, Quality};
+use shared::poi::PoiKind;
 use shared::protocol::{ClientMessage, ServerMessage};
 
 use super::*;
@@ -87,8 +88,8 @@ fn dropped_things_lie_under_the_player_and_come_back() {
     assert!(carrying(&answers).find(coin).is_some());
     assert!(ground(&answers).is_empty());
     let visit = test.client.visit.as_ref().unwrap();
-    let (id, kind, index) = (visit.id(), visit.kind(), visit.index());
-    let level = &test.world.site(id, kind).levels[&index];
+    let (id, index) = (visit.id(), visit.index());
+    let level = &test.world.site(id).levels[&index];
     assert!(level.ground.is_empty(), "nothing is left to save");
 }
 
@@ -205,8 +206,8 @@ fn bags_told(answers: &[ServerMessage]) -> Vec<&ServerMessage> {
 /// Puts something on the ground here, as someone else would.
 fn lay_down(test: &mut TestClient, at: (i64, i64), grams: ItemKind) {
     let visit = test.client.visit.as_ref().unwrap();
-    let (id, kind, index) = (visit.id(), visit.kind(), visit.index());
-    let level = test.world.site_mut(id, kind).levels.entry(index);
+    let (id, index) = (visit.id(), visit.index());
+    let level = test.world.site_mut(id).levels.entry(index);
     let pile = level.or_default().ground.entry(at).or_default();
     pile.push(Item::new(Id::for_test(pile.len() as u128 + 100), grams));
 }
@@ -235,8 +236,8 @@ fn bags_are_only_told_of_when_seen_and_remembered_until_seen_again() {
     }]);
     assert_eq!(bags_told(&answers), [&seen], "remembered on arriving");
     let visit = test.client.visit.as_ref().unwrap();
-    let (id, kind, index) = (visit.id(), visit.kind(), visit.index());
-    let level = test.world.site_mut(id, kind).levels.entry(index);
+    let (id, index) = (visit.id(), visit.index());
+    let level = test.world.site_mut(id).levels.entry(index);
     level.or_default().ground.remove(&far);
     assert!(bags_told(&test.send(&[])).is_empty());
 

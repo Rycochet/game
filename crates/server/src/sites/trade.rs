@@ -38,16 +38,15 @@ pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id)
     let of_kind = visit.level.buildings.iter();
     let of_kind = of_kind.filter(|b| b.look.kind == town.look.kind).count() as u32;
     let (kind, quality, trades) = (town.look.kind, town.quality, town.trades);
-    let seed = visit.poi.seed.derive("shop");
+    let Some(poi) = visit.poi() else {
+        return true;
+    };
+    let seed = poi.seed.derive("shop");
     let seed = Seed::new(seed.at(&[visit.index as i64, building as i64]));
-    let (id, poi_kind, index) = (visit.id, visit.poi.kind, visit.index);
+    let (id, index) = (visit.id, visit.index);
     let now = world.minutes();
     let made = world.made_now();
-    let level = world
-        .site_mut(id, poi_kind)
-        .levels
-        .entry(index)
-        .or_default();
+    let level = world.site_mut(id).levels.entry(index).or_default();
     let keeping = level.records.entry(with).or_default();
     let saved = level.buildings.entry(building).or_default();
     let shop = Shop {

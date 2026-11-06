@@ -33,6 +33,10 @@ pub enum LevelKind {
     /// The Hall of Worlds (`shared::hall`): never sent, the client makes it.
     /// Its `x` count from `origin` (`ServerMessage::EnterHall`).
     Hall { origin: i64 },
+    /// The wilderness (`shared::wilderness`): its level a window round the
+    /// player (`ServerMessage::WildernessWindow`), in its own cells, `x`
+    /// wrapping at its width.
+    Wilderness,
 }
 
 impl LevelKind {
@@ -40,7 +44,7 @@ impl LevelKind {
     pub fn poi(self) -> Option<PoiKind> {
         match self {
             Self::Poi(kind) => Some(kind),
-            Self::Hall { .. } => None,
+            Self::Hall { .. } | Self::Wilderness => None,
         }
     }
 

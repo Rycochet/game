@@ -40,8 +40,8 @@ fn in_a_site() -> TestClient {
 /// Everything on the ground under the player.
 fn on_the_ground(test: &mut TestClient) -> Vec<Item> {
     let visit = test.client.visit.as_ref().expect("in a site");
-    let (id, kind, level, at) = (visit.id(), visit.kind(), visit.index(), visit.position());
-    let site = test.world.site(id, kind);
+    let (id, level, at) = (visit.id(), visit.index(), visit.position());
+    let site = test.world.site(id);
     let level = site.levels.get(&level);
     level
         .and_then(|level| level.ground.get(&at))

@@ -4,7 +4,8 @@ use shared::poi::Poi;
 use shared::protocol::ServerMessage;
 use shared::site::{Exit, leads_out};
 
-use super::{Arrival, NewVisit, Visit, enter_level, enter_site};
+use super::wild::{back_to_wilderness, enter_wilderness, into_site};
+use super::{Arrival, NewVisit, Place, Visit, enter_level, enter_site};
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::storage::{SiteId, now};
@@ -16,8 +17,9 @@ pub(crate) fn forget_site(client: &mut Client, world: &mut ServerWorld) -> bool 
     let Some(visit) = client.visit.take() else {
         return true;
     };
+    let from_wilderness = visit.came_from_wilderness();
     let Visit {
-        poi,
+        place,
         id,
         index,
         position,
@@ -25,7 +27,11 @@ pub(crate) fn forget_site(client: &mut Client, world: &mut ServerWorld) -> bool 
     } = visit;
     world.forget_site(id);
     client.character.forget_site(&id);
-    enter_site(client, world, poi, id, index, Arrival::At(position))
+    let Place::Site { poi, .. } = place else {
+        return enter_wilderness(client, world, position);
+    };
+    let at = Arrival::At(position);
+    enter_site(client, world, poi, id, index, at, from_wilderness)
 }
 
 /// Puts the player out of the site they are on, which is no longer what they
@@ -34,7 +40,15 @@ pub(crate) fn put_out(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = client.visit.take() else {
         return true;
     };
-    leave_for_poi(client, world, visit.poi, visit.id)
+    match visit.poi() {
+        Some(&poi) => leave_for_poi(client, world, poi, visit.id),
+        None => {
+            // The wilderness: onto the world map where they are.
+            let (x, y) = client.world_position();
+            client.changed_map();
+            client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
+        }
+    }
 }
 
 /// The character forgets a site that has changed, and is on the world map at
@@ -61,28 +75,46 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
     };
     let (x, y) = visit.position;
     let stairs = visit.level.stairs.iter().find(|s| (s.x, s.y) == (x, y));
+    if visit.is_wilderness() {
+        return match stairs {
+            Some(stairs) => into_site(client, world, (x, y), stairs.to),
+            None => true,
+        };
+    }
     let exit = match stairs {
         Some(stairs) => stairs.to,
         None if leads_out(&visit.level.level, x, y) => Exit::WorldMap,
         None => return true,
     };
+    if visit.came_from_wilderness()
+        && let Some(at) = back_to_wilderness(world, visit, exit, (x, y))
+    {
+        leave(client, world);
+        client.visit = None;
+        return enter_wilderness(client, world, at);
+    }
     leave(client, world);
     let visit = client.visit.take().expect("checked above");
     client.unsaved = true;
+    let from_wilderness = visit.came_from_wilderness();
+    let (visit_id, from_level) = (visit.id, visit.index);
+    let Place::Site { poi, site, .. } = visit.place else {
+        return true;
+    };
     match exit {
         Exit::Level(index) => {
             // A building's stairs are on the same cell of both floors, and it
             // may have several: arrive at the ones taken.
-            let from = if visit.site.is_building() {
+            let from = if site.is_building() {
                 Arrival::At((x, y))
             } else {
-                Arrival::From(Exit::Level(visit.index))
+                Arrival::From(Exit::Level(from_level))
             };
-            let (visit_id, from_level) = (visit.id, visit.index);
             let new = NewVisit {
-                poi: visit.poi,
-                id: visit.id,
-                site: visit.site,
+                poi,
+                id: visit_id,
+                site: *site,
+                from_wilderness,
             };
             let arrived = enter_level(client, world, new, index, from, false);
             if let Some(there) = client.visit.as_ref().map(Visit::position) {
@@ -103,9 +135,9 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
         }
         Exit::WorldMap => {
             // Coming back in, they arrive where they walked out.
-            let left_at = (visit.index, (x, y));
-            client.character.left_at.insert(visit.id, left_at);
-            let (x, y) = (visit.poi.x, visit.poi.y);
+            let left_at = (from_level, (x, y));
+            client.character.left_at.insert(visit_id, left_at);
+            let (x, y) = (poi.x, poi.y);
             client.character.world_position = (x, y);
             client.changed_map();
             client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
@@ -117,7 +149,7 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
 /// now. The visit itself is left alone (saved with the character).
 pub(crate) fn leave(client: &Client, world: &mut ServerWorld) {
     if let Some(visit) = &client.visit {
-        let site = world.site_mut(visit.id, visit.poi.kind);
+        let site = world.site_mut(visit.id);
         site.levels.entry(visit.index).or_default().last_visit = now();
     }
 }

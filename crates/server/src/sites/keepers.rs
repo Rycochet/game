@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use shared::id::Id;
 use shared::item::Item;
 use shared::mob::Event;
-use shared::poi::PoiKind;
 use shared::shop::DOOR_REACH;
 
 use crate::ServerWorld;
@@ -15,10 +14,7 @@ use crate::storage::SiteId;
 /// Who keeps each of a town level's shops, by building. Each has one for good, made
 /// the first time it is needed.
 pub(super) fn keepers_of(world: &mut ServerWorld, visit: &NewKeepers) -> Vec<(u16, Id)> {
-    let saved = world
-        .site_mut(visit.id, visit.kind)
-        .levels
-        .entry(visit.index);
+    let saved = world.site_mut(visit.id).levels.entry(visit.index);
     let saved = saved.or_default();
     let shops = visit.shops.iter().map(|&building| {
         let save = saved.buildings.entry(building).or_default();
@@ -34,7 +30,6 @@ pub(super) fn keepers_of(world: &mut ServerWorld, visit: &NewKeepers) -> Vec<(u1
 /// A town level, for `keepers_of`.
 pub(super) struct NewKeepers {
     pub(super) id: SiteId,
-    pub(super) kind: PoiKind,
     pub(super) index: u32,
     pub(super) shops: Vec<u16>,
 }
@@ -42,10 +37,7 @@ pub(super) struct NewKeepers {
 /// Which building on the player's level this is the keeper of, if any.
 pub(crate) fn keeper_building(client: &Client, world: &mut ServerWorld, with: Id) -> Option<u16> {
     let visit = client.visit.as_ref()?;
-    let level = world
-        .site(visit.id, visit.poi.kind)
-        .levels
-        .get(&visit.index)?;
+    let level = world.site(visit.id).levels.get(&visit.index)?;
     let mut buildings = level.buildings.iter();
     buildings
         .find(|(_, save)| save.keeper == Some(with))
@@ -69,12 +61,12 @@ pub(crate) fn give_to_keeper(
     if (x - door.0).abs().max((y - door.1).abs()) > DOOR_REACH {
         return Err("too far away");
     }
-    let (id, kind, index) = (visit.id, visit.poi.kind, visit.index);
+    let (id, index) = (visit.id, visit.index);
     let item = client
         .inventory
         .hand_over(item)
         .ok_or("can't hand that over")?;
-    let level = world.site_mut(id, kind).levels.entry(index).or_default();
+    let level = world.site_mut(id).levels.entry(index).or_default();
     let record = level.records.entry(with).or_default();
     record.memory.remember(character, Event::Gave(item.kind));
     record.carried.push(item);
@@ -89,10 +81,7 @@ pub(crate) fn keeper_stock(
 ) -> Option<Vec<Item>> {
     keeper_building(client, world, with)?;
     let visit = client.visit.as_ref()?;
-    let level = world
-        .site(visit.id, visit.poi.kind)
-        .levels
-        .get(&visit.index)?;
+    let level = world.site(visit.id).levels.get(&visit.index)?;
     Some(level.records.get(&with)?.carried.clone())
 }
 
@@ -113,8 +102,8 @@ pub(crate) fn take_from_keeper(
     if (at_x - door.0).abs().max((at_y - door.1).abs()) > DOOR_REACH {
         return Err("too far away");
     }
-    let (id, kind, index) = (visit.id, visit.poi.kind, visit.index);
-    let level = world.site_mut(id, kind).levels.entry(index).or_default();
+    let (id, index) = (visit.id, visit.index);
+    let level = world.site_mut(id).levels.entry(index).or_default();
     let carried = &mut level.records.entry(with).or_default().carried;
     let place = carried.iter().position(|one| one.id == item);
     let place = place.ok_or("they don't have that")?;

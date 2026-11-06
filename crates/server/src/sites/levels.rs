@@ -1,18 +1,17 @@
 //! Making and entering a level, and telling the client about its other floors.
 
 use bevy::prelude::*;
+use shared::dungeon::Level;
 use shared::dungeon::Sight;
 use shared::poi::Poi;
 use shared::protocol::{
     LevelInfo, LevelKind, RememberedLevel, SeenStairs, ServerMessage, level_chunk,
 };
 use shared::shop::sells;
-use shared::site::{Exit, Site, SiteLevel, StairsDirection};
+use shared::site::{Exit, Site, SiteLevel, Stairs, StairsDirection};
 
-use super::{
-    Arrival, NewKeepers, Visit, add_masks, all_cells, beside, keepers_of, level_chunks, memory,
-    send_cells, update_sight,
-};
+use super::remembered::{mirror_of_first, send_remembered};
+use super::{Arrival, NewKeepers, Place, Visit, beside, keepers_of, level_chunks, update_sight};
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, now};
@@ -22,6 +21,8 @@ pub(super) struct NewVisit {
     pub(super) poi: Poi,
     pub(super) id: SiteId,
     pub(super) site: Site,
+    /// They came in from the wilderness, where leaving takes them back.
+    pub(super) from_wilderness: bool,
 }
 
 /// Level `index` of a site with players' changes over it, and its stairs as
@@ -33,39 +34,40 @@ pub(super) fn level_of(
 ) -> (SiteLevel, Vec<SeenStairs>) {
     let site = &new.site;
     let mut level = site.level(index);
-    let saved = world
-        .site_mut(new.id, new.poi.kind)
-        .levels
-        .entry(index)
-        .or_default();
+    let saved = world.site_mut(new.id).levels.entry(index).or_default();
     for (&(x, y), &cell) in &saved.changes {
         level.level.set(x, y, cell);
     }
     let stairs = level
         .stairs
         .iter()
-        .map(|&stairs| SeenStairs {
-            x: stairs.x,
-            y: stairs.y,
-            direction: stairs.direction,
-            // Only for looks: the other level is generated without changes.
-            descends: site.stairs_descend(index, &level.level, stairs),
-            style: site.stairs_style(index, stairs),
-            open_to_sky: match stairs.to {
-                Exit::WorldMap => true,
-                // Also only for looks, and only worth generating going up.
-                Exit::Level(other) => {
-                    stairs.direction == StairsDirection::Up
-                        && site
-                            .level(other)
-                            .level
-                            .cell(stairs.x, stairs.y)
-                            .is_outside()
-                }
-            },
-        })
+        .map(|&stairs| seen_stairs(site, index, &level.level, stairs))
         .collect();
     (level, stairs)
+}
+
+/// Stairs on level `index` of a site (`level`) as players see them.
+pub(super) fn seen_stairs(site: &Site, index: u32, level: &Level, stairs: Stairs) -> SeenStairs {
+    SeenStairs {
+        x: stairs.x,
+        y: stairs.y,
+        direction: stairs.direction,
+        // Only for looks: the other level is generated without changes.
+        descends: site.stairs_descend(index, level, stairs),
+        style: site.stairs_style(index, stairs),
+        open_to_sky: match stairs.to {
+            Exit::WorldMap => true,
+            // Also only for looks, and only worth generating going up.
+            Exit::Level(other) => {
+                stairs.direction == StairsDirection::Up
+                    && site
+                        .level(other)
+                        .level
+                        .cell(stairs.x, stairs.y)
+                        .is_outside()
+            }
+        },
+    }
 }
 
 /// Sends what the character remembers of the site's levels other than
@@ -119,7 +121,7 @@ pub(super) fn enter_level(
     entering_site: bool,
 ) -> bool {
     let (level, stairs) = level_of(world, &new, index);
-    let saved = world.site_mut(new.id, new.poi.kind).levels.entry(index);
+    let saved = world.site_mut(new.id).levels.entry(index);
     saved.or_default().last_visit = now();
     let site = &new.site;
     let position = match arrival {
@@ -150,20 +152,30 @@ pub(super) fn enter_level(
     if entering_site && !send_other_levels(client, world, &new, index) {
         return false;
     }
-    let NewVisit { poi, id, site } = new;
+    let mirrors = mirror_of_first(world, &new, index, &level);
+    let NewVisit {
+        poi,
+        id,
+        site,
+        from_wilderness,
+    } = new;
     let mut visit = Visit {
         looked_from,
         loaded,
         view,
         view_from: None,
-        poi,
+        place: Place::Site {
+            poi,
+            site: Box::new(site),
+            from_wilderness,
+        },
         id,
-        site,
         index,
         level,
         stairs,
         position,
         sent: CellMasks::new(),
+        mirrors,
     };
     if visit.is_town() {
         let looks = visit.level.buildings.iter().map(|b| b.look.clone());
@@ -175,7 +187,6 @@ pub(super) fn enter_level(
         let shops = shops.filter(|b| !sells(b.look.kind).is_empty());
         let keepers = NewKeepers {
             id: visit.id,
-            kind: visit.poi.kind,
             index,
             shops: shops.map(|b| b.look.id).collect(),
         };
@@ -190,27 +201,9 @@ pub(super) fn enter_level(
             return false;
         }
     }
-    // A town's layout is known from the start, and so isn't kept as memory.
-    let remembered = if visit.is_town() {
-        all_cells(&visit.level.level)
-    } else {
-        memory(client, &visit).clone()
-    };
-    if !send_cells(client, &visit, &remembered, true) {
+    if !send_remembered(client, &mut visit) {
         return false;
     }
-    // Their neighbours too, not as remembered: they shape what is.
-    let level = &visit.level.level;
-    let is_remembered = |x, y| {
-        let (chunk, bit) = level_chunk(x, y);
-        remembered.get(&chunk).is_some_and(|m| m & (1 << bit) != 0)
-    };
-    let neighbours = beside(level, is_remembered, &remembered);
-    if !send_cells(client, &visit, &neighbours, false) {
-        return false;
-    }
-    visit.sent = remembered;
-    add_masks(&mut visit.sent, neighbours);
     client.visit = Some(visit);
     client.character.hall = None;
     client.unsaved = true;
@@ -222,14 +215,22 @@ pub(super) fn arrive_again(client: &mut Client, world: &mut ServerWorld) -> bool
     let Some(visit) = client.visit.take() else {
         return true;
     };
+    let from_wilderness = visit.came_from_wilderness();
     let Visit {
-        poi,
+        place,
         id,
-        site,
         index,
         position,
         ..
     } = visit;
-    let new = NewVisit { poi, id, site };
+    let Place::Site { poi, site, .. } = place else {
+        return super::wild::enter_wilderness(client, world, position);
+    };
+    let new = NewVisit {
+        poi,
+        id,
+        site: *site,
+        from_wilderness,
+    };
     enter_level(client, world, new, index, Arrival::At(position), false)
 }

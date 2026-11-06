@@ -35,11 +35,7 @@ fn in_a_village() -> (TestClient, Id, (i64, i64)) {
         .find(|b| !sells(b.look.kind).is_empty());
     let look = &shop.expect("a village with a shop").look;
     let front = (look.door.0 + look.faces.0, look.door.1 + look.faces.1);
-    let saved = test
-        .world
-        .site(visit.id, visit.poi.kind)
-        .levels
-        .get(&visit.index);
+    let saved = test.world.site(visit.id).levels.get(&visit.index);
     let keeper = saved.unwrap().buildings[&look.id].keeper.expect("a keeper");
     (test, keeper, front)
 }
@@ -77,19 +73,14 @@ fn a_shop_only_opens_from_beside_its_door_and_keeps_its_stock() {
 fn a_keeper_stays_and_takes_over_what_a_shop_had() {
     let (mut test, keeper, _) = in_a_village();
     let visit = test.client.visit.as_ref().unwrap();
-    let (id, kind, index) = (visit.id, visit.poi.kind, visit.index);
+    let (id, index) = (visit.id, visit.index);
     let building = {
-        let level = &test.world.site(id, kind).levels[&index];
+        let level = &test.world.site(id).levels[&index];
         let mut buildings = level.buildings.iter();
         *buildings.find(|(_, b)| b.keeper == Some(keeper)).unwrap().0
     };
     let old = Item::new(Id::for_test(9), shared::item::ItemKind::Apple);
-    let level = test
-        .world
-        .site_mut(id, kind)
-        .levels
-        .entry(index)
-        .or_default();
+    let level = test.world.site_mut(id).levels.entry(index).or_default();
     level
         .buildings
         .get_mut(&building)
@@ -97,14 +88,9 @@ fn a_keeper_stays_and_takes_over_what_a_shop_had() {
         .stock
         .push(old.clone());
     let shops = vec![building];
-    let new = NewKeepers {
-        id,
-        kind,
-        index,
-        shops,
-    };
+    let new = NewKeepers { id, index, shops };
     assert_eq!(keepers_of(&mut test.world, &new), vec![(building, keeper)]);
-    let level = &test.world.site(id, kind).levels[&index];
+    let level = &test.world.site(id).levels[&index];
     assert!(level.buildings[&building].stock.is_empty());
     assert!(level.records[&keeper].carried.contains(&old));
 }
@@ -666,7 +652,7 @@ fn changes_are_applied_over_the_generated_level() {
         seed: castle_seed(),
         ruin: 0,
     };
-    let level = test.world.site_mut(id, PoiKind::Castle).levels.entry(0);
+    let level = test.world.site_mut(id).levels.entry(0);
     level.or_default().changes.insert((x + 1, y), Cell::Water);
     enter(&mut test, 0);
     let level = &test.client.visit.as_ref().unwrap().level.level;
@@ -732,9 +718,9 @@ fn sites_keep_the_generator_version_they_were_made_with() {
         seed: castle_seed(),
         ruin: 0,
     };
-    let current = test.world.site_mut(id, PoiKind::Castle).version;
+    let current = test.world.site_mut(id).version;
     enter(&mut test, 0);
-    assert_eq!(test.world.site(id, PoiKind::Castle).version, current);
+    assert_eq!(test.world.site(id).version, current);
     assert_eq!(test.client.character.site_versions[&id], current);
 }
 
@@ -750,11 +736,11 @@ fn castle_id() -> SiteId {
 fn a_site_whose_version_cannot_run_is_made_anew() {
     let mut test = TestClient::new();
     let id = castle_id();
-    let current = test.world.site(id, PoiKind::Castle).version;
-    test.world.site_mut(id, PoiKind::Castle).version = 99;
+    let current = test.world.site(id).version;
+    test.world.site_mut(id).version = 99;
     let answers = enter(&mut test, 0);
     assert!(matches!(answers[0], ServerMessage::EnterLevel(_)));
-    assert_eq!(test.world.site(id, PoiKind::Castle).version, current);
+    assert_eq!(test.world.site(id).version, current);
 }
 
 #[test]
@@ -764,7 +750,7 @@ fn memory_of_another_version_of_a_site_is_dropped() {
     enter(&mut test, 0);
     assert!(!test.client.character.memory[&id].is_empty());
     test.send(&[ClientMessage::DevBackToStart]);
-    let current = test.world.site(id, PoiKind::Castle).version;
+    let current = test.world.site(id).version;
     test.client.character.site_versions.insert(id, current + 1);
     let unseen = std::collections::BTreeMap::from([(7, CellMasks::from([((100, 100), 1)]))]);
     test.client.character.memory.insert(id, unseen);
@@ -779,7 +765,7 @@ fn coming_back_to_a_changed_site_puts_the_player_out_with_the_map_sent() {
     test.send(&[ClientMessage::DevTeleport { x: 70, y: -3 }]);
     enter(&mut test, 1);
     let id = castle_id();
-    let current = test.world.site(id, PoiKind::Castle).version;
+    let current = test.world.site(id).version;
     test.client.character.site_versions.insert(id, current + 1);
     test.client.unsaved = true;
 
@@ -807,7 +793,7 @@ fn coming_back_to_a_site_that_cannot_run_puts_the_player_out() {
     test.client.character.site_versions.insert(id, 99);
     test.client.unsaved = true;
     let mut world = test.leave();
-    world.site_mut(id, PoiKind::Castle).version = 99;
+    world.site_mut(id).version = 99;
     world.save_sites();
 
     let test = TestClient::of(world);
@@ -838,7 +824,7 @@ fn generating_a_site_starts_it_afresh_where_the_player_stands() {
 
     // Again, from inside it: as new.
     test.send(&[generate]);
-    let site = test.world.site(castle_id(), PoiKind::Castle);
+    let site = test.world.site(castle_id());
     assert!(site.levels[&0].changes.is_empty());
     let again: u32 = test.client.character.memory[&castle_id()][&0]
         .values()
@@ -868,7 +854,7 @@ fn generating_a_kind_that_cannot_be_ruined_ignores_the_ruin() {
 
 /// A player's change on a level of the castle, saved.
 fn change_castle(test: &mut TestClient, level: u32) {
-    let save = test.world.site_mut(castle_id(), PoiKind::Castle);
+    let save = test.world.site_mut(castle_id());
     let level = save.levels.entry(level).or_default();
     level.changes.insert((1, 1), Cell::Floor);
     test.world.save_sites();
@@ -886,7 +872,7 @@ fn forgetting_on_the_server_deletes_the_save_and_keeps_the_player_there() {
     assert!(matches!(answers[0], ServerMessage::EnterLevel(_)));
     let visit = test.client.visit.as_ref().unwrap();
     assert_eq!((visit.index, visit.position), (1, position));
-    let site = test.world.site(castle_id(), PoiKind::Castle);
+    let site = test.world.site(castle_id());
     assert!(site.levels[&1].changes.is_empty());
 }
 
@@ -903,17 +889,13 @@ fn forgetting_the_world_map_forgets_every_site() {
     // Only the character's memory...
     test.send(&[ClientMessage::DevForgetMap]);
     assert!(test.client.character.memory.is_empty());
-    assert!(
-        !test.world.site(id, PoiKind::Castle).levels[&0]
-            .changes
-            .is_empty()
-    );
+    assert!(!test.world.site(id).levels[&0].changes.is_empty());
 
     // ...and the server's, on disk too.
     let answers = test.send(&[ClientMessage::DevForgetMapOnServer]);
     assert_eq!(answers[0], ServerMessage::ForgetWorldMap);
     assert!(test.world.storage.load_site(id).unwrap().is_none());
-    assert!(test.world.site(id, PoiKind::Castle).levels.is_empty());
+    assert!(test.world.site(id).levels.is_empty());
 }
 
 #[test]
@@ -951,7 +933,7 @@ fn levels_record_when_they_were_last_visited() {
         ruin: 0,
     };
     let mut world = test.leave();
-    let last = world.site(id, PoiKind::Castle).levels[&0].last_visit;
+    let last = world.site(id).levels[&0].last_visit;
     assert!(last > 0);
 }
 

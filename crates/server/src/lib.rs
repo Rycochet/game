@@ -29,6 +29,7 @@ mod sites;
 mod stack_limits;
 mod storage;
 mod tls;
+mod wilderness;
 mod world_map;
 
 use bevy::app::ScheduleRunnerPlugin;

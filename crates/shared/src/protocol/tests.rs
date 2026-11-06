@@ -64,6 +64,8 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             chunk: ChunkPos { x: 2, y: -1 },
         },
         ClientMessage::UseExit,
+        ClientMessage::Explore,
+        ClientMessage::LeaveWilderness,
         ClientMessage::SetPaused(true),
         ClientMessage::MoveItem {
             item: Id(uuid::Uuid::from_u128(7)),
@@ -312,6 +314,9 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             remembered: true,
         }),
         ServerMessage::OnWorldMap { x: 100, y: -4 },
+        ServerMessage::WildernessWindow {
+            bounds: (-64, 128, 192, 192),
+        },
         ServerMessage::EnterHall {
             x: 8,
             y: 0,

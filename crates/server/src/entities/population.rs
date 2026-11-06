@@ -27,7 +27,7 @@ impl ServerWorld {
         let plan = spawns(poi.seed, index, poi.kind, &level.level, &stairs);
         let self_tick = self.action_clock.ticks();
         let made_at = self.made_now();
-        let saved = self.site_mut(id, poi.kind).levels.entry(index).or_default();
+        let saved = self.site_mut(id).levels.entry(index).or_default();
         let unsettled = std::mem::take(&mut saved.unsettled);
         let mut scents = std::mem::take(&mut saved.scents);
         scents.sweep(self_tick);
@@ -80,7 +80,6 @@ impl ServerWorld {
             level: level.level.clone(),
             due,
             away: 0,
-            poi_kind: poi.kind,
             empty_since: None,
             scents,
             last_at: BTreeMap::new(),
@@ -183,15 +182,15 @@ impl ServerWorld {
                 })
                 .collect();
             let scents = population.scents.clone();
-            notes.push((site, level, population.poi_kind, unsettled, scents));
+            notes.push((site, level, unsettled, scents));
         }
-        for (site, level, kind, unsettled, scents) in notes {
-            let known = self.site(site, kind).levels.get(&level);
+        for (site, level, unsettled, scents) in notes {
+            let known = self.site(site).levels.get(&level);
             let same =
                 known.is_none_or(|saved| saved.unsettled == unsettled && saved.scents == scents);
             let nothing = unsettled.is_empty() && scents.is_empty();
             if !same || (known.is_none() && !nothing) {
-                let saved = self.site_mut(site, kind).levels.entry(level).or_default();
+                let saved = self.site_mut(site).levels.entry(level).or_default();
                 saved.unsettled = unsettled;
                 saved.scents = scents;
             }

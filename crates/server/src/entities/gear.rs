@@ -88,10 +88,10 @@ pub(crate) fn give(
     let event = Event::Gave(item.kind);
     mob.memory.remember(character, event);
     // Saved with the level it belongs on, wherever it has got to.
-    let (kind, home_level) = (population.poi_kind, mob.home_level);
+    let home_level = mob.home_level;
     let memory = mob.memory.clone();
     let saved = world
-        .site_mut(place.0, kind)
+        .site_mut(place.0)
         .levels
         .entry(home_level)
         .or_default();
@@ -126,7 +126,6 @@ pub(crate) fn kill(
     }
     let dead = population.mobs.remove(index);
     population.due.retain(|&(_, id)| id != mob);
-    let kind = population.poi_kind;
     // Its home level was waiting for it to come back.
     if !dead.way_back.is_empty()
         && let Some(home) = world.populations.0.get_mut(&(place.0, dead.home_level))
@@ -134,7 +133,7 @@ pub(crate) fn kill(
         home.away = home.away.saturating_sub(1);
     }
     // What it had is saved with the level it belongs on, wherever it has got to.
-    let site = world.site_mut(place.0, kind);
+    let site = world.site_mut(place.0);
     let saved = site.levels.entry(dead.home_level).or_default();
     saved.dead.insert(dead.number);
     saved.mobs.remove(&dead.number);

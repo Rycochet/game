@@ -73,7 +73,7 @@ impl Theme {
         match kind {
             Some(LevelKind::Hall { .. }) => HALL,
             Some(LevelKind::Poi(kind)) => Self::of(Some(kind)),
-            None => Self::of(None),
+            Some(LevelKind::Wilderness) | None => Self::of(None),
         }
     }
 

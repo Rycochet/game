@@ -155,6 +155,14 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::UseExit);
             true
         }
+        ClientMessage::Explore => {
+            client.waiting.push_back(Action::Explore);
+            true
+        }
+        ClientMessage::LeaveWilderness => {
+            client.waiting.push_back(Action::LeaveWilderness);
+            true
+        }
         ClientMessage::OpenTrade { with } => {
             client.waiting.push_back(Action::OpenTrade { with });
             true
