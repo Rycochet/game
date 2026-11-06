@@ -68,9 +68,9 @@ impl CreatureKind {
         match self {
             Halfling => Temper::Friendly,
             Chicken | Horse => Temper::Timid,
-            Lizardfolk => Temper::Territorial,
+            Lizardfolk | Wolf => Temper::Territorial,
             Goblin | Kobold | Minotaur | Orc => Temper::Hostile,
-            Beggar | Birdfolk | Centaur | Dwarf | Elf | Giant | Human => Temper::Neutral,
+            Beggar | Birdfolk | Cattle | Centaur | Dwarf | Elf | Giant | Human => Temper::Neutral,
         }
     }
 
@@ -89,6 +89,7 @@ impl CreatureKind {
         match self {
             Beggar | Human => senses(Normal, DarkSight::None, Normal, Poor),
             Birdfolk => senses(Keen, DarkSight::None, Normal, Poor),
+            Cattle => senses(Normal, DarkSight::Low, Keen, Keen),
             Centaur => senses(Keen, DarkSight::None, Normal, Normal),
             Chicken => senses(Normal, DarkSight::None, Normal, Poor),
             Dwarf => senses(Normal, DarkSight::Dark, Normal, Normal),
@@ -99,6 +100,7 @@ impl CreatureKind {
             Horse => senses(Normal, DarkSight::Low, Keen, Keen),
             Kobold | Orc => senses(Normal, DarkSight::Dark, Normal, Keen),
             Minotaur => senses(Normal, DarkSight::Low, Normal, Keen),
+            Wolf => senses(Keen, DarkSight::Dark, Keen, Keen),
         }
     }
 }

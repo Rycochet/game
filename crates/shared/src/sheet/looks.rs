@@ -128,6 +128,22 @@ const HORSE_COAT: &[Choice] = &[
     colour("White", [234, 232, 226]),
 ];
 
+const CATTLE_COAT: &[Choice] = &[
+    colour("Black", [38, 34, 32]),
+    colour("Brown", [110, 72, 46]),
+    colour("Red", [146, 70, 42]),
+    colour("White", [232, 228, 218]),
+    colour("Dun", [176, 146, 104]),
+];
+
+const WOLF_COAT: &[Choice] = &[
+    colour("Grey", [136, 132, 126]),
+    colour("White", [226, 224, 218]),
+    colour("Black", [42, 40, 40]),
+    colour("Brown", [104, 78, 56]),
+    colour("Tan", [168, 132, 92]),
+];
+
 const BULL_COAT: &[Choice] = &[
     colour("Brown", [104, 70, 46]),
     colour("Black", [40, 34, 32]),
@@ -155,7 +171,7 @@ impl Trait {
     /// The choices a creature of this kind has for this trait, in order.
     pub fn choices_for(self, kind: CreatureKind) -> &'static [Choice] {
         use CreatureKind::{
-            Birdfolk, Dwarf, Elf, Goblin, Horse, Kobold, Lizardfolk, Minotaur, Orc,
+            Birdfolk, Cattle, Dwarf, Elf, Goblin, Horse, Kobold, Lizardfolk, Minotaur, Orc, Wolf,
         };
         match self {
             Self::Height => HEIGHT,
@@ -171,6 +187,8 @@ impl Trait {
             },
             Self::CoatColour => match kind {
                 Horse => HORSE_COAT,
+                Cattle => CATTLE_COAT,
+                Wolf => WOLF_COAT,
                 Minotaur => BULL_COAT,
                 _ => HORSE_COAT,
             },

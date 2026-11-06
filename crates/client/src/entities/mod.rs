@@ -62,6 +62,7 @@ fn picture(kind: CreatureKind) -> &'static str {
         | CreatureKind::Minotaur
         | CreatureKind::Birdfolk => "monsters/humanfighter.png",
         CreatureKind::Beggar => "monsters/humandruid01.png",
+        CreatureKind::Cattle => "monsters/cowright.png",
         CreatureKind::Chicken => "monsters/chicken1.png",
         CreatureKind::Giant => "monsters/gianthill.png",
         CreatureKind::Horse => "monsters/horse01.png",
@@ -69,6 +70,7 @@ fn picture(kind: CreatureKind) -> &'static str {
         CreatureKind::Halfling => "monsters/halflingfighter.png",
         CreatureKind::Lizardfolk => "monsters/lizardgreen.png",
         CreatureKind::Orc => "monsters/orcfighter.png",
+        CreatureKind::Wolf => "monsters/doggrey.png",
     }
 }
 

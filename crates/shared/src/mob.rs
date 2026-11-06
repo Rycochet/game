@@ -112,12 +112,17 @@ impl Memory {
 fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
     match site {
         _ if site.is_town() => &[(CreatureKind::Beggar, 100)],
-        PoiKind::Farm => &[(CreatureKind::Chicken, 80), (CreatureKind::Horse, 20)],
+        PoiKind::Farm => &[
+            (CreatureKind::Chicken, 70),
+            (CreatureKind::Horse, 15),
+            (CreatureKind::Cattle, 15),
+        ],
         _ => &[
-            (CreatureKind::Kobold, 44),
+            (CreatureKind::Kobold, 40),
             (CreatureKind::Goblin, 20),
             (CreatureKind::Orc, 10),
-            (CreatureKind::Chicken, 12),
+            (CreatureKind::Chicken, 10),
+            (CreatureKind::Wolf, 6),
             (CreatureKind::Giant, 8),
             (CreatureKind::Lizardfolk, 6),
         ],

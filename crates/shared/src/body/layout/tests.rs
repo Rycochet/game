@@ -64,6 +64,15 @@ fn bipeds_and_the_first_animals_have_layouts() {
     }
     assert!(Layout::of(CreatureKind::Horse).is_some());
     assert!(Layout::of(CreatureKind::Chicken).is_some());
+    assert!(Layout::of(CreatureKind::Wolf).is_some());
+    assert!(Layout::of(CreatureKind::Cattle).is_some());
+    // Every animal drawn is a kind.
+    for beast in super::super::BEASTS {
+        let kind = CreatureKind::ALL
+            .into_iter()
+            .find(|kind| kind.def().name == beast.name);
+        assert!(kind.is_some(), "{}", beast.name);
+    }
     assert!(Layout::of(CreatureKind::Centaur).is_none());
 }
 

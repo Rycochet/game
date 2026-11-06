@@ -10,6 +10,7 @@ use crate::sheet::{Feeling, Reaction};
 pub enum CreatureKind {
     Beggar,
     Birdfolk,
+    Cattle,
     Centaur,
     Chicken,
     Dwarf,
@@ -24,6 +25,7 @@ pub enum CreatureKind {
     Lizardfolk,
     Minotaur,
     Orc,
+    Wolf,
 }
 
 impl CreatureKind {
