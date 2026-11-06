@@ -9,8 +9,10 @@ use super::geometry::{centre, corners};
 use super::picture::{Drawn, paint};
 use super::screen::{CHOOSER_SIDE, Chooser, CornerLabel, ValuesText};
 
-/// How far past its corner a corner's name sits, as a share of the triangle.
-const LABEL_OUT: f32 = 0.18;
+/// How far above the top corner, or below a lower one, a corner's name sits, in
+/// the chooser's units. Straight up and down, as the triangles stay upright, so
+/// the two lower corners meeting between triangles keep their names apart.
+const LABEL_OUT: f32 = 0.028;
 /// Half a short name's size, in interface pixels, to put its middle there.
 const LABEL_HALF: Vec2 = Vec2::new(12.0, 8.0);
 
@@ -55,7 +57,8 @@ pub(super) fn place_labels(draft: Res<Draft>, mut labels: Query<(&CornerLabel, &
             .unwrap_or(0);
         let middle = centre(row, draft.build.turn);
         let corner = corners(row, draft.build.turn)[column];
-        let at = (corner + (corner - middle) * LABEL_OUT) * CHOOSER_SIDE - LABEL_HALF;
+        let below = if corner.y > middle.y { 1.0 } else { -1.0 };
+        let at = (corner + Vec2::new(0.0, LABEL_OUT * below)) * CHOOSER_SIDE - LABEL_HALF;
         node.left = px(at.x);
         node.top = px(at.y);
     }

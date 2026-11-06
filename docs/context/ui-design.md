@@ -26,6 +26,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Close button | have | A normal raised button, with a letter X. |
 | Checkbox | have | A whole clickable row with a drawn tick, for picking things out of a list (the debug menu's toggles); settings use switches. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
 | Toggle row | have | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
+| Colour picker | have | Square swatches edge to edge in a box like an active button, wrapping like words; one line as tall as a dropdown. A swatch is a colour or a picture (patterns, gradients). The chosen one has a flat border with a white one inside; each names itself in a tooltip, and the label above says what is chosen. For looks: hair, skin, coat, feathers. |
 | Slider | have | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
 | Text box | have | Sunken, a line tall even when empty, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. |
 | Dropdown | have | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
