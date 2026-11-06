@@ -8,11 +8,17 @@
 
 use crate::creature::CreatureKind;
 
+mod biped_view;
 mod bipeds;
+mod layout;
 mod parts;
 mod proportions;
+mod trig;
 
 pub use bipeds::{Biped, FIRST_BIPEDS};
+pub use layout::{
+    Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station,
+};
 pub use parts::{Feet, Horns, NONE, Parts, Snout, Wings};
 pub use proportions::{PERSON, Proportions};
 
@@ -162,14 +168,9 @@ const GIANT: Frame = Frame {
 };
 
 impl Frame {
-    /// The shape of a kind that stands on two legs: the first peoples' from their
-    /// proportions.
+    /// The shape of a kind that stands on two legs: the view of its layout.
     pub fn of(kind: CreatureKind) -> Option<Frame> {
-        match kind {
-            CreatureKind::Human | CreatureKind::Beggar => Some(PERSON.frame()),
-            CreatureKind::Giant => Some(GIANT),
-            _ => Biped::of(kind).map(|biped| biped.proportions.frame()),
-        }
+        Layout::of(kind)?.frame()
     }
 
     /// How tall a kind on two legs usually stands, in millimetres. Its frame is always a
