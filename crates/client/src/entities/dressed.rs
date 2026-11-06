@@ -1,5 +1,5 @@
-//! Tokens of characters wearing something drawn show a picture of them dressed in
-//! place of their icon; with nothing drawn on, they keep the icon.
+//! Tokens of kinds standing on two legs show a picture of their body, dressed in
+//! whatever is drawn, in place of their icon; other kinds keep the icon.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -24,8 +24,8 @@ pub(super) struct Drawing<'w> {
 }
 
 impl Drawing<'_> {
-    /// The picture of a creature of this kind, looking like this, wearing these, if any
-    /// is drawn.
+    /// The picture of a creature of this kind, looking like this, wearing these, if
+    /// its kind has a body to draw.
     pub(super) fn dressed(
         &mut self,
         kind: CreatureKind,
