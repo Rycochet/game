@@ -3,7 +3,9 @@ use bevy::math::Affine2;
 
 use super::*;
 
-/// A slider from (100, 50), 200 across; and the app it is in.
+/// A slider from (100, 50), 200 across; and the app it is in. Its mark's
+/// centre runs from 107 to 293 (inside the border, half a mark in), so 153.5 is
+/// a quarter of the way.
 fn test() -> (App, Entity) {
     test_at(1.0)
 }
@@ -46,7 +48,7 @@ fn value(app: &App, slider: Entity) -> f32 {
 fn the_mouse_holds_a_slider_until_let_go() {
     let (mut app, slider) = test();
     let world = app.world_mut();
-    world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 55.0));
+    world.resource_mut::<UiPointer>().0 = Some(Vec2::new(153.5, 55.0));
     world
         .resource_mut::<ButtonInput<MouseButton>>()
         .press(MouseButton::Left);
@@ -67,7 +69,7 @@ fn the_mouse_holds_a_slider_until_let_go() {
     world
         .resource_mut::<ButtonInput<MouseButton>>()
         .release(MouseButton::Left);
-    world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 55.0));
+    world.resource_mut::<UiPointer>().0 = Some(Vec2::new(153.5, 55.0));
     world.run_system_once(hold_sliders).unwrap();
     assert_eq!(value(&app, slider), 1.0);
 }
@@ -76,7 +78,7 @@ fn the_mouse_holds_a_slider_until_let_go() {
 fn a_finger_drags_a_slider_it_landed_on() {
     let (mut app, slider) = test();
     let world = app.world_mut();
-    world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 300.0));
+    world.resource_mut::<UiPointer>().0 = Some(Vec2::new(153.5, 300.0));
     *world.resource_mut::<TouchGesture>() = TouchGesture {
         drag: Vec2::new(1.0, 0.0),
         drag_start: Vec2::new(200.0, 55.0),
@@ -98,7 +100,7 @@ fn a_finger_finds_its_slider_at_any_size() {
     for scale in [0.5, 2.0] {
         let (mut app, slider) = test_at(scale);
         let world = app.world_mut();
-        world.resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 300.0));
+        world.resource_mut::<UiPointer>().0 = Some(Vec2::new(153.5, 300.0));
         // Where it landed is in window pixels.
         *world.resource_mut::<TouchGesture>() = TouchGesture {
             drag: Vec2::new(1.0, 0.0),
@@ -107,6 +109,27 @@ fn a_finger_finds_its_slider_at_any_size() {
         };
         world.run_system_once(drag_sliders).unwrap();
         assert_eq!(value(&app, slider), 0.25, "at {scale}");
+    }
+}
+
+#[test]
+fn the_mark_stops_half_a_mark_inside_the_frame() {
+    let (mut app, slider) = test();
+    let world = app.world_mut();
+    world
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .press(MouseButton::Left);
+    world.write_message(ButtonPressed(slider));
+    for (x, expected) in [
+        (101.0, 0.0),
+        (107.0, 0.0),
+        (200.0, 0.5),
+        (293.0, 1.0),
+        (299.0, 1.0),
+    ] {
+        app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::new(x, 55.0));
+        app.world_mut().run_system_once(hold_sliders).unwrap();
+        assert_eq!(value(&app, slider), expected, "at {x}");
     }
 }
 
