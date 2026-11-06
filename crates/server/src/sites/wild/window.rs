@@ -4,7 +4,7 @@
 use shared::dungeon::Level;
 use shared::poi::ChunkPos;
 use shared::protocol::SeenStairs;
-use shared::site::{SiteLevel, Stairs};
+use shared::site::{BuildingLook, FieldLook, Rect, SiteLevel, Stairs};
 use shared::wilderness::{BLOCK_SIZE, BlockPos, SCALE};
 use std::collections::BTreeSet;
 
@@ -21,6 +21,9 @@ pub(super) struct Window {
     pub(super) stairs: Vec<SeenStairs>,
     pub(super) mirrors: Vec<Mirror>,
     pub(super) cutouts: Vec<(ChunkPos, (i64, i64, i64, i64))>,
+    /// Town cutouts' buildings and farm cutouts' fields, as players see them.
+    pub(super) buildings: Vec<BuildingLook>,
+    pub(super) fields: Vec<FieldLook>,
 }
 
 /// The window round a player at `(x, y)`.
@@ -76,6 +79,8 @@ pub(super) fn window(world: &mut ServerWorld, (x, y): (i64, i64)) -> Window {
         stairs: Vec::new(),
         mirrors: Vec::new(),
         cutouts: Vec::new(),
+        buildings: Vec::new(),
+        fields: Vec::new(),
     };
     for chunk in chunks {
         add_cutout(world, &frame, chunk, &mut window);
@@ -143,6 +148,23 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
     for stairs in cutout.stairs() {
         let x = stairs.x + turn;
         window.level.stairs.push(Stairs { x, ..*stairs });
+    }
+    let turned = |rect: Rect| Rect {
+        x: rect.x + turn,
+        ..rect
+    };
+    for building in &wild_chunk.buildings {
+        window.buildings.push(BuildingLook {
+            rects: building.rects.iter().copied().map(turned).collect(),
+            door: (building.door.0 + turn, building.door.1),
+            ..building.clone()
+        });
+    }
+    for field in &wild_chunk.fields {
+        window.fields.push(FieldLook {
+            rect: turned(field.rect),
+            ..*field
+        });
     }
     let Some((ox, oy)) = cutout.offset() else {
         return;

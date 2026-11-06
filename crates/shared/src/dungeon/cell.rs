@@ -69,6 +69,8 @@ pub enum Cell {
     /// Water shallow enough to wade: walkable outside, drawn as water at half
     /// depth. Within `wilderness::SHALLOWS_REACH` of land in the wilderness.
     Shallows,
+    /// A road over water in the wilderness: walkable, drawn as boards.
+    Bridge,
 }
 
 impl Cell {
@@ -100,6 +102,7 @@ impl Cell {
                 | Self::Cobblestone
                 | Self::Flagstones
                 | Self::DressedStone
+                | Self::Bridge
         )
     }
 

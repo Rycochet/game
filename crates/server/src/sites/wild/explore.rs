@@ -3,7 +3,8 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
-use shared::protocol::{LevelInfo, LevelKind, ServerMessage};
+use shared::protocol::{LevelInfo, LevelKind, ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
+use shared::site::{BuildingLook, FieldLook};
 
 use super::window::window;
 use crate::ServerWorld;
@@ -75,9 +76,13 @@ pub(in crate::sites) fn enter_wilderness(
         entering_site: true,
     };
     client.changed_map();
-    if !client.link.send(&ServerMessage::EnterLevel(info)) || !send_remembered(client, &mut visit) {
+    if !client.link.send(&ServerMessage::EnterLevel(info))
+        || !send_looks(client, made.buildings, made.fields)
+        || !send_remembered(client, &mut visit)
+    {
         return false;
     }
+    ask_roads(world, position);
     client.character.world_position = world.wilderness.wild.point_of(position.0, position.1);
     client.character.hall = None;
     client.visit = Some(visit);
@@ -125,13 +130,31 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     if !client
         .link
         .send(&ServerMessage::WildernessWindow { bounds })
+        || !send_looks(client, made.buildings, made.fields)
     {
         return false;
     }
+    ask_roads(world, (x, y));
     let mut visit = client.visit.take().expect("checked above");
     let sent = send_remembered(client, &mut visit);
     client.visit = Some(visit);
     sent && update_sight(client)
+}
+
+/// The window's towns' buildings and farms' fields, before its cells (the
+/// client marks the buildings' cells as theirs): always, so ones left behind
+/// go.
+fn send_looks(client: &Client, buildings: Vec<BuildingLook>, fields: Vec<FieldLook>) -> bool {
+    client.link.send(&ServerMessage::Buildings(buildings))
+        && client.link.send(&ServerMessage::Fields(fields))
+}
+
+/// Asks for the roads round the player, as the world map does round those on
+/// it; the chunks they pass are made again with them as they come.
+fn ask_roads(world: &ServerWorld, (x, y): (i64, i64)) {
+    let (px, py) = world.wilderness.wild.point_of(x, y);
+    let reach = WORLD_MAP_SIGHT + WORLD_MAP_PRELOAD;
+    world.ask_roads((px - reach, py - reach), (px + reach, py + reach));
 }
 
 /// The walkable cell nearest `at` on `level` (by rings round it), or `at`.

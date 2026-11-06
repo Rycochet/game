@@ -18,6 +18,7 @@ pub(crate) fn send_roads(mut connections: ResMut<Connections>, mut worlds: ResMu
             continue;
         };
         world.road_steps.add(road);
+        world.wilderness.add_road(road.clone());
         let playing = |client: &&mut super::Client| {
             !client.gone && client.phase == Phase::Playing && client.world == Some(*id)
         };

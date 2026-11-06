@@ -5,11 +5,14 @@
 //! are put together for a visit (`sites`).
 
 use shared::dungeon::Level;
-use shared::poi::ChunkPos;
+use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::protocol::SeenStairs;
+use shared::road::Road;
+use shared::site::{BuildingLook, FieldLook};
 use shared::wilderness::{BlockPos, ChunkPlan, Wilderness};
 use shared::world::WorldParams;
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 
 /// How far in the wilderness can be seen, and others made out, in cells: it is
 /// mostly open, as trees don't block sight.
@@ -31,6 +34,10 @@ pub(crate) struct WildChunk {
     pub(crate) plan: ChunkPlan,
     /// The cutout's stairs as players see them, in wilderness cells.
     pub(crate) stairs: Vec<SeenStairs>,
+    /// A town cutout's buildings and a farm's fields as players see them, in
+    /// wilderness cells.
+    pub(crate) buildings: Vec<BuildingLook>,
+    pub(crate) fields: Vec<FieldLook>,
 }
 
 /// The wilderness of one world.
@@ -38,6 +45,8 @@ pub(crate) struct WildernessMaps {
     pub(crate) wild: Wilderness,
     chunks: BTreeMap<ChunkPos, WildChunk>,
     blocks: HashMap<BlockPos, Level>,
+    /// Every road worked out so far (`shared::road`), as they come.
+    roads: Vec<Arc<Road>>,
 }
 
 impl WildernessMaps {
@@ -46,7 +55,42 @@ impl WildernessMaps {
             wild: Wilderness::new(params),
             chunks: BTreeMap::new(),
             blocks: HashMap::new(),
+            roads: Vec::new(),
         }
+    }
+
+    /// A road has been worked out: the chunks it passes near are made again
+    /// when next needed, with it.
+    pub(crate) fn add_road(&mut self, road: Arc<Road>) {
+        let near: Vec<ChunkPos> = self
+            .chunks
+            .keys()
+            .copied()
+            .filter(|&chunk| self.passes_near(&road, chunk))
+            .collect();
+        for chunk in near {
+            self.forget(Some(chunk));
+        }
+        self.roads.push(road);
+    }
+
+    /// The roads that may pass through or near a chunk.
+    pub(crate) fn roads_near(&self, chunk: ChunkPos) -> Vec<&Road> {
+        let chunk = self.wrapped(chunk);
+        let near = |road: &&Arc<Road>| self.passes_near(road, chunk);
+        self.roads.iter().filter(near).map(|road| &**road).collect()
+    }
+
+    /// Whether a road's box comes within a world map point of a chunk, on any
+    /// copy of the planet.
+    fn passes_near(&self, road: &Road, chunk: ChunkPos) -> bool {
+        let ((min_x, min_y), (max_x, max_y)) = road.bounds();
+        let points = self.wild.points();
+        let (west, north) = (chunk.x * CHUNK_SIZE - 1, chunk.y * CHUNK_SIZE - 1);
+        let (east, south) = (west + CHUNK_SIZE * 2 + 2, north + CHUNK_SIZE + 2);
+        [-points, 0, points].iter().any(|shift| {
+            min_x + shift <= east && max_x + shift >= west && min_y <= south && max_y >= north
+        })
     }
 
     /// A chunk's plan, if worked out already.

@@ -27,7 +27,7 @@ pub(super) fn road_tile(cell: Cell) -> Option<usize> {
     match cell {
         Cell::DirtTrack => Some(0),
         Cell::GravelTrack => Some(1),
-        Cell::WoodenBoards => Some(2),
+        Cell::WoodenBoards | Cell::Bridge => Some(2),
         Cell::Cobblestone => Some(3),
         Cell::Flagstones => Some(4),
         Cell::DressedStone => Some(5),

@@ -15,7 +15,7 @@ fn pois(world: &WorldParams) -> PoiMap {
 
 /// The plan of the chunk a cell is in, with no poi.
 fn bare_plan(wild: &Wilderness, x: i64, y: i64) -> ChunkPlan {
-    ChunkPlan::new(wild, wild.chunk_of(x, y), None)
+    ChunkPlan::new(wild, wild.chunk_of(x, y), None, &[])
 }
 
 /// The first point in a stretch of the planet that `wanted` picks, by its

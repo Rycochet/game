@@ -3,7 +3,7 @@
 
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::SeenStairs;
-use shared::site::{Exit, Generator, Site, StairsDirection};
+use shared::site::{BuildingLook, Exit, FieldLook, Generator, Rect, Site, StairsDirection};
 use shared::wilderness::ChunkPlan;
 
 use super::super::levels::seen_stairs;
@@ -18,13 +18,50 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
     }
     let poi = world.pois.in_chunk(chunk);
     let site = poi.and_then(|poi| site_as_saved(world, &poi));
-    let wild = &world.wilderness.wild;
-    let plan = ChunkPlan::new(wild, chunk, poi.zip(site.as_ref()));
-    let stairs = match (plan.cutout(), &site) {
-        (Some(cutout), Some(site)) => cutout_stairs(cutout, site),
-        _ => Vec::new(),
+    let maps = &world.wilderness;
+    let roads = maps.roads_near(chunk);
+    let plan = ChunkPlan::new(&maps.wild, chunk, poi.zip(site.as_ref()), &roads);
+    let (mut stairs, mut buildings, mut fields) = (Vec::new(), Vec::new(), Vec::new());
+    if let (Some(cutout), Some(site)) = (plan.cutout(), &site) {
+        stairs = cutout_stairs(cutout, site);
+        if let Some(offset) = cutout.offset() {
+            (buildings, fields) = looks(site, offset);
+        }
+    }
+    world.wilderness.keep_chunk(WildChunk {
+        plan,
+        stairs,
+        buildings,
+        fields,
+    });
+}
+
+/// A site's first level's town buildings and farm fields, moved by `offset`.
+fn looks(site: &Site, (ox, oy): (i64, i64)) -> (Vec<BuildingLook>, Vec<FieldLook>) {
+    let first = site.level(0);
+    let moved = |rect: Rect| Rect {
+        x: rect.x + ox,
+        y: rect.y + oy,
+        ..rect
     };
-    world.wilderness.keep_chunk(WildChunk { plan, stairs });
+    let buildings = first
+        .buildings
+        .iter()
+        .map(|building| BuildingLook {
+            rects: building.look.rects.iter().copied().map(moved).collect(),
+            door: (building.look.door.0 + ox, building.look.door.1 + oy),
+            ..building.look.clone()
+        })
+        .collect();
+    let fields = first
+        .fields
+        .iter()
+        .map(|field| FieldLook {
+            rect: moved(field.rect),
+            ..*field
+        })
+        .collect();
+    (buildings, fields)
 }
 
 /// A poi's site made with the generator version saved with it (the current one
