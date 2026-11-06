@@ -17,7 +17,8 @@ fn it_says_what_the_kind_is_and_how_much_it_can_carry() {
     );
     assert!(words.contains("Spirit: Presence "), "{words}");
     assert!(words.contains("Stealth › Sneaking 51.2"));
-    assert!(words.contains("Night Vision"));
+    // Abilities have a page of their own.
+    assert!(!words.contains("Night Vision"), "{words}");
     assert!(words.contains("Can carry "), "{words}");
     assert!(!words.contains("Light"), "{words}");
     assert!(words.contains("Speed 100%"));

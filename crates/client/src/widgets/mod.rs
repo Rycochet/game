@@ -2,6 +2,7 @@
 //! buttons, tooltips and panels that can be moved about. Use these rather than
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
+mod ability;
 mod aura;
 mod auto_scroll;
 mod clipboard;
@@ -41,6 +42,7 @@ use bevy::prelude::*;
 
 use crate::common::PointerSystems;
 
+pub use ability::{ABILITY, AbilityLook, spawn_ability};
 pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]
@@ -76,7 +78,7 @@ pub use soft_keyboard::Key as SoftKey;
 pub use spinner::Spinner;
 pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};
 pub use switch::{Switch, SwitchFlipped, spawn_switch};
-pub use tabs::{TabChosen, spawn_tabs, spawn_toggle_row};
+pub use tabs::{ChooseTab, TabChosen, spawn_tabs, spawn_toggle_row};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
 pub use theme::{
     ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, ROW_TINT, TextSize,
@@ -136,6 +138,7 @@ impl Plugin for WidgetsPlugin {
             .add_message::<SoftKeyPressed>()
             .add_message::<DropdownChosen>()
             .add_message::<TabChosen>()
+            .add_message::<ChooseTab>()
             .add_message::<SwitchFlipped>()
             .add_message::<KeyChosen>()
             .init_resource::<key_box::KeyWaiting>()
@@ -223,7 +226,7 @@ impl Plugin for WidgetsPlugin {
             .add_systems(
                 Update,
                 (
-                    tabs::press_tabs,
+                    (tabs::choose_tabs, tabs::press_tabs).chain(),
                     feedback::spread_ripples,
                     feedback::show_button_tooltips,
                     progress::show_progress,

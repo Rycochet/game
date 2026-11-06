@@ -67,7 +67,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | --- | --- | --- |
 | Panel | have | One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. |
 | Full-screen layer | have | 90% of the window, 75% for one above it. |
-| Tabs | have | Folder-style, for switching between views of one thing (Settings). |
+| Tabs | have | Folder-style, for switching between views of one thing (Settings, the Character panel). |
 | Menu | later | Right-click item menu: use, split, drop. |
 | Card, Accordion, AppBar, Drawer, Breadcrumbs, Pagination, Stepper, BottomNavigation, Link, ImageList | no | |
 
@@ -76,6 +76,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | Piece | Status | Here |
 | --- | --- | --- |
 | Item | have | Any contiguous shape of cells, shown with a picture or colour, with an edge showing quality. Held at true size and solid, for now: the green and red cells already show where it goes. |
+| Ability | have | An ability's icon in a frame 1.5 cells across, named on hovering (`widgets::spawn_ability`): square if active, round if passive, greyed with a dull red frame when it can't be used now. Action bar slots (frames to drop them in, with key labels and an automatic sweep) come next. |
 | Item slot | have | Any size of item shrunk to fit. Hint icons come with type limits: leave room for them. |
 | Container | have | A grid in a panel (`widgets::spawn_container`). Fixed width; fixed height, or growing and scrolling for what has no limit, such as a shop or the ground. Its weight under it when it is carried or carriable (`12.34kg / 45.00kg`), never for stock. Controls (sort, filter) at its top right, slots (Drop, bin) at its bottom right. |
 | Stack | have | Items that look the same in one place, with a count; dropping on one joins it. Limits are the server's. Split by shift+click or a tap: a dark box with the name, a slider and the stack to pick up. A mixed stack has a red "!" in its corner, and any press opens the box with a row for each kind and one for all. |

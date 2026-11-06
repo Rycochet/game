@@ -17,6 +17,10 @@ pub struct Other {
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct SheetText;
 
+/// The Character panel's Abilities page, which `abilities` fills in.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct AbilitiesPage;
+
 /// How much energy the player gains per tick (`shared::energy`), from what they are
 /// and what they carry. The server keeps its own.
 #[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]

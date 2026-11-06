@@ -123,6 +123,30 @@ fn state_of(index: usize, selected: usize) -> ButtonState {
     }
 }
 
+/// Asks for another of this row to be chosen, as a press on it would but without
+/// `TabChosen` (whoever asked knows).
+#[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChooseTab(pub Entity, pub usize);
+
+/// Chooses the tabs asked for.
+pub(super) fn choose_tabs(
+    mut asked: MessageReader<ChooseTab>,
+    mut rows: Query<&mut Tabs>,
+    mut tabs: Query<(&Tab, &mut ButtonState)>,
+) {
+    for &ChooseTab(row, index) in asked.read() {
+        let Ok(mut tabs_row) = rows.get_mut(row) else {
+            continue;
+        };
+        tabs_row.selected = index;
+        for (tab, mut state) in &mut tabs {
+            if tab.row == row {
+                state.set_if_neq(state_of(tab.index, index));
+            }
+        }
+    }
+}
+
 /// A press on a tab chooses it. Choosing the one already chosen says nothing.
 pub(super) fn press_tabs(
     mut pressed: MessageReader<ButtonPressed>,

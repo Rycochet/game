@@ -20,7 +20,12 @@ pub enum Action {
     NextTarget,
     /// The next creature in towards the player.
     PreviousTarget,
+    /// The Character panel on its Character tab.
     Character,
+    /// The Character panel on its Inventory tab.
+    Inventory,
+    /// The Character panel on its Abilities tab.
+    Abilities,
     FullMap,
     TurnItem,
     DebugMenu,
@@ -56,7 +61,7 @@ impl Group {
 }
 
 impl Action {
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 16] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
@@ -67,6 +72,8 @@ impl Action {
         Self::NextTarget,
         Self::PreviousTarget,
         Self::Character,
+        Self::Inventory,
+        Self::Abilities,
         Self::FullMap,
         Self::TurnItem,
         Self::DebugMenu,
@@ -85,7 +92,9 @@ impl Action {
             Self::ResetView => "Reset View",
             Self::NextTarget => "Next Target",
             Self::PreviousTarget => "Previous Target",
-            Self::Character => "Character and Inventory",
+            Self::Character => "Character",
+            Self::Inventory => "Inventory",
+            Self::Abilities => "Abilities",
             Self::FullMap => "Full Map",
             Self::TurnItem => "Turn Held Item",
             Self::DebugMenu => "Debug Menu",
@@ -106,6 +115,8 @@ impl Action {
             Self::NextTarget => "next_target",
             Self::PreviousTarget => "previous_target",
             Self::Character => "character",
+            Self::Inventory => "inventory",
+            Self::Abilities => "abilities",
             Self::FullMap => "full_map",
             Self::TurnItem => "turn_item",
             Self::DebugMenu => "debug_menu",
@@ -123,7 +134,8 @@ impl Action {
             Self::Explore | Self::LeaveWilderness => Group::Movement,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
-            Self::Character | Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
+            Self::Character | Self::Inventory | Self::Abilities => Group::Interface,
+            Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
             Self::FullScreen => Group::Interface,
         }
     }
@@ -144,7 +156,10 @@ impl Action {
             Self::ResetView => [key(KeyCode::Home), None],
             Self::NextTarget => [key(KeyCode::Tab), None],
             Self::PreviousTarget => [shift(KeyCode::Tab), None],
-            Self::Character => [key(KeyCode::KeyC), key(KeyCode::KeyI)],
+            Self::Character => [key(KeyCode::KeyC), None],
+            Self::Inventory => [key(KeyCode::KeyI), None],
+            // K is kept for the Skills page.
+            Self::Abilities => [key(KeyCode::KeyB), None],
             Self::FullMap => [key(KeyCode::KeyM), None],
             Self::TurnItem => [key(KeyCode::KeyR), None],
             Self::DebugMenu => [key(KeyCode::Backquote), None],

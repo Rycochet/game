@@ -16,6 +16,7 @@ mod grids;
 mod held;
 mod icons;
 mod own;
+mod pages;
 mod show;
 mod shown;
 
@@ -25,6 +26,8 @@ pub(super) use fixed::spawn_fixed_parts;
 pub(super) use held::{show_button, show_held, show_tooltip};
 use icons::{bin_icon, drop_icon, person_icon};
 pub(super) use own::{forget_closed, toggle_inventory};
+pub(super) use pages::switch_pages;
+use pages::{Page, Pages};
 pub(super) use show::{show_grids, show_weights};
 
 const BUTTON: f32 = 34.0;
@@ -48,6 +51,10 @@ pub(super) struct OpenGrids {
     /// Each with the size its grid was drawn at.
     open: Vec<(Holder, Entity, (u8, u8))>,
     opened: u32,
+    /// The Character panel's tabs, while it is open.
+    pages: Option<Pages>,
+    /// The tab it shows, or will open on: the last chosen.
+    page: Page,
 }
 
 /// The grid of a panel: where its cells are, for working out what is under the

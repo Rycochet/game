@@ -1,6 +1,6 @@
 # client: character
 
-What the character is like: the left of the Character panel, which `inventory` opens, in words for now: kind and size, the nine attributes a row (Body, Mind, Spirit) to a line, Health and Mana (most of each and where it comes from), carrying and speed, skills, abilities, looks. Native and web.
+What the character is like: the Character panel's Character tab, which `inventory` opens, in words for now: kind and size, the nine attributes a row (Body, Mind, Spirit) to a line, Health and Mana (most of each and where it comes from), carrying and speed, skills, looks. Abilities have their own tab (`abilities`). Native and web.
 
 ## Files
 

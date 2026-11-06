@@ -3,6 +3,7 @@
 //! This file only creates the window and registers each feature module's
 //! plugin. Game logic lives in the modules themselves.
 
+mod abilities;
 mod character;
 mod character_create;
 mod common;
@@ -117,6 +118,7 @@ fn main() {
         vitals::VitalsPlugin,
         hover::HoverPlugin,
         target::TargetPlugin,
+        abilities::AbilitiesPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is
