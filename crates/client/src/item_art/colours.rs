@@ -4,13 +4,14 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::sheet::Appearance;
 
-/// Skin (or coat), a taur's lower body's coat, and feathers, as red, green and blue
-/// from 0 to 255.
+/// Skin (or coat), a taur's lower body's coat, feathers and hair, as red, green and
+/// blue from 0 to 255.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Colours {
     pub skin: [u8; 3],
     pub coat: [u8; 3],
     pub feathers: [u8; 3],
+    pub hair: [u8; 3],
 }
 
 impl Colours {
@@ -20,6 +21,7 @@ impl Colours {
         skin: [199, 184, 163],
         coat: [199, 184, 163],
         feathers: [242, 242, 238],
+        hair: [92, 62, 40],
     };
 
     /// A creature of this kind looking like this: plain where it has no choice. A body
@@ -33,6 +35,7 @@ impl Colours {
             skin,
             coat: appearance.coat(kind).unwrap_or(skin),
             feathers: appearance.feathers(kind).unwrap_or(Self::PLAIN.feathers),
+            hair: appearance.hair_colour(kind).unwrap_or(Self::PLAIN.hair),
         }
     }
 }

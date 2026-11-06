@@ -3,11 +3,13 @@
 
 use bevy::prelude::*;
 use shared::armour::hands::Hand;
-use shared::body::Layout;
+use shared::body::{Hair, Layout};
 use shared::creature::CreatureKind;
 use shared::item_form::ItemForm;
 use shared::sheet::Appearance;
 use shared::wear::WornLook;
+
+mod cover;
 
 use super::armour::{set, worn};
 use super::colours::{Colours, material};
@@ -31,11 +33,13 @@ pub fn character_look(
     worn: &[WornLook],
 ) -> Option<Look> {
     let layout = Layout::of(kind)?;
+    let hair = appearance.hair(kind);
     if layout.worn_frame().is_none() {
         return Some(Look::Body {
             layout: Box::new(layout),
             height: layout.spine.base[1],
             colours: Colours::of(kind, appearance),
+            hair,
         });
     }
     let worn: Vec<Look> = worn.iter().filter_map(piece_look).collect();
@@ -43,6 +47,7 @@ pub fn character_look(
         kind,
         worn,
         colours: Colours::of(kind, appearance),
+        hair,
     })
 }
 
@@ -98,11 +103,13 @@ fn piece_look(worn: &WornLook) -> Option<Look> {
     })
 }
 
-/// A body of this kind wearing these, filling its picture, in its own colours.
+/// A body of this kind wearing these, filling its picture, in its own colours, with
+/// what can be seen of its hair.
 pub(super) fn character_parts(
     kind: CreatureKind,
     worn: &[Look],
     colours: Colours,
+    hair: Hair,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
@@ -121,6 +128,10 @@ pub(super) fn character_parts(
         (coat, material(colours.coat)),
         (body::wings(&layout), material(colours.feathers)),
     ];
+    // The hair on the upper body's head, for a taur, under whatever covers it.
+    let head = layout.upper_body().unwrap_or(layout);
+    let cover = cover::cover_of(worn, &frame, offset.y);
+    pieces.push((body::hair(&head, hair, cover), material(colours.hair)));
     // An aventail hangs from the helmet worn with it.
     let rim = worn.iter().find_map(|look| match look {
         Look::Head { head, .. } => Some(head.form.rim(&frame)),

@@ -41,7 +41,7 @@ const fn speckled(name: &'static str, rgb: [u8; 3], specks: [u8; 3]) -> Choice {
     }
 }
 
-const fn word(name: &'static str) -> Choice {
+pub(super) const fn word(name: &'static str) -> Choice {
     Choice {
         name,
         colour: None,
@@ -201,6 +201,8 @@ impl Trait {
         };
         match self {
             Self::Height => HEIGHT,
+            Self::HairStyle => super::hair::style_choices(kind),
+            Self::Beard => super::hair::beard_choices(kind),
             Self::HairColour => HAIR,
             Self::SkinShade => match kind {
                 Dwarf => DWARF_SKIN,

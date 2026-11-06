@@ -1,7 +1,7 @@
 //! `Look`: what can be seen of an item, which its picture is kept by, and `look_of`.
 
 use bevy::prelude::*;
-use shared::body::Layout;
+use shared::body::{Hair, Layout};
 
 use super::Colours;
 use shared::creature::{CreatureKind, Size};
@@ -91,6 +91,7 @@ pub enum Look {
         kind: CreatureKind,
         worn: Vec<Look>,
         colours: Colours,
+        hair: Hair,
     },
     /// A bare body standing as its layout says, with its parts, drawn as tall as
     /// `height` millimetres beside a person (up to a person's height): what worn things
@@ -99,6 +100,7 @@ pub enum Look {
         layout: Box<Layout>,
         height: i32,
         colours: Colours,
+        hair: Hair,
     },
 }
 

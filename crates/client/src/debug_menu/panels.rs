@@ -9,6 +9,7 @@ mod armour;
 mod arms;
 mod feet;
 mod footwear;
+mod hair;
 mod legs;
 mod neck;
 mod page;

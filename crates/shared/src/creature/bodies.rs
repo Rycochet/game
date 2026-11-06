@@ -96,7 +96,7 @@ impl CreatureKind {
         use crate::sheet::Attribute::Agility;
         use Ability::{Flutter, Kick, NightVision, Trample};
         use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
-        use Trait::{CoatColour, FeatherColour, HairColour, Height, SkinShade};
+        use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, SkinShade};
         match self {
             Self::Birdfolk => BIRDFOLK,
             Self::Cattle => CATTLE,
@@ -123,7 +123,7 @@ impl CreatureKind {
                 bonus_set: &[],
                 skills: &[(Foraging, 1)],
                 abilities: &[],
-                looks: &[HairColour, SkinShade, Height],
+                looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
             },
             Self::Centaur => CreatureDef {
                 name: "Centaur",
@@ -139,7 +139,7 @@ impl CreatureKind {
                 bonus_set: &[],
                 skills: &[(Running, 4), (Foraging, 1)],
                 abilities: &[Kick, Trample],
-                looks: &[HairColour, SkinShade, CoatColour, Height],
+                looks: &[HairColour, HairStyle, Beard, SkinShade, CoatColour, Height],
             },
             Self::Chicken => CreatureDef {
                 name: "Chicken",
@@ -170,7 +170,7 @@ impl CreatureKind {
                 bonus_set: &[],
                 skills: &[(Climbing, 1)],
                 abilities: &[Trample],
-                looks: &[HairColour, SkinShade, Height],
+                looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
             },
             Self::Horse => CreatureDef {
                 name: "Horse",
@@ -200,7 +200,7 @@ impl CreatureKind {
                 bonus_set: &[],
                 skills: &[(Swimming, 1), (Climbing, 1)],
                 abilities: &[],
-                looks: &[HairColour, SkinShade, Height],
+                looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
             },
             Self::Kobold => CreatureDef {
                 name: "Kobold",

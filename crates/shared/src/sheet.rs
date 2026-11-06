@@ -15,6 +15,7 @@ use crate::item::Inventory;
 mod attributes;
 mod build;
 mod from_build;
+mod hair;
 mod kind_bonus;
 mod looks;
 
@@ -51,6 +52,9 @@ pub enum Trait {
     HairColour,
     Height,
     SkinShade,
+    // New traits go at the end: messages carry a trait by its place in this list.
+    HairStyle,
+    Beard,
 }
 
 impl Trait {
@@ -61,6 +65,8 @@ impl Trait {
             Self::HairColour => "Hair",
             Self::Height => "Height",
             Self::SkinShade => "Skin",
+            Self::HairStyle => "Hair style",
+            Self::Beard => "Beard",
         }
     }
 }

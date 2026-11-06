@@ -23,7 +23,20 @@ const UPPER_BODY: [BodyPart; 8] = [
     fingers(10),
 ];
 
-const LOOKS: &[Trait] = &[Trait::HairColour, Trait::SkinShade, Trait::CoatColour];
+const LOOKS: &[Trait] = &[
+    Trait::HairColour,
+    Trait::HairStyle,
+    Trait::SkinShade,
+    Trait::CoatColour,
+];
+/// A scorpion man may have a beard; a drider, a dark elf, has none.
+const BEARDED: &[Trait] = &[
+    Trait::HairColour,
+    Trait::HairStyle,
+    Trait::Beard,
+    Trait::SkinShade,
+    Trait::CoatColour,
+];
 
 /// A dark elf on a giant spider's body, cursed, hunting in the deep places.
 pub(super) const DRIDER: CreatureDef = CreatureDef {
@@ -56,5 +69,5 @@ pub(super) const SCORPION_MAN: CreatureDef = CreatureDef {
     bonus_set: &[],
     skills: &[(Skill::Climbing, 1)],
     abilities: &[Ability::NightVision],
-    looks: LOOKS,
+    looks: BEARDED,
 };

@@ -13,7 +13,7 @@ use Attribute::{Agility, Intellect, Strength, Toughness};
 
 use Ability::{Flutter, NightVision, Trample};
 use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
-use Trait::{CoatColour, FeatherColour, HairColour, Height, SkinShade};
+use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, SkinShade};
 
 /// A body with these layers at one of its locations instead.
 const fn with(
@@ -68,7 +68,7 @@ const fn people(
         bonus_set,
         skills: &[],
         abilities: &[],
-        looks: &[HairColour, SkinShade, Height],
+        looks: &[HairColour, HairStyle, SkinShade, Height],
     }
 }
 
@@ -78,6 +78,7 @@ pub(super) const HALFLING: CreatureDef = CreatureDef {
 };
 
 pub(super) const DWARF: CreatureDef = CreatureDef {
+    looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
     skills: &[(Climbing, 1)],
     abilities: &[NightVision],
     ..people(
@@ -101,6 +102,7 @@ pub(super) const ELF: CreatureDef = CreatureDef {
 };
 
 pub(super) const ORC: CreatureDef = CreatureDef {
+    looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
     skills: &[(Running, 1)],
     abilities: &[NightVision],
     ..people(

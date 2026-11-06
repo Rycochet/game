@@ -7,7 +7,7 @@ use std::f32::consts::{PI, TAU};
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
-use shared::body::{Layout, Role};
+use shared::body::{Hair, Layout, Role};
 
 use super::colours::{Colours, material};
 use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
@@ -15,12 +15,14 @@ use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
 mod arms;
 mod features;
 mod fit;
+mod hair;
 mod legs;
 mod trunk;
 
 pub(super) use features::wings;
 use fit::fitted;
 pub(super) use fit::turn_of;
+pub(super) use hair::{Cover, hair};
 pub(super) use trunk::{trunk_depth, trunk_half};
 
 /// What an upright body's picture takes up, wide and long: only the proportions
@@ -205,21 +207,23 @@ pub(super) fn mesh_of(triangles: &[Triangle]) -> Mesh {
 }
 
 /// A bare body standing as this layout says, as tall as `height` beside a person, in
-/// these colours.
+/// these colours, with this hair.
 pub(super) fn body_parts(
     layout: &Layout,
     height: i32,
     colours: Colours,
+    hair: Hair,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
-    let (skin, coat, feathers) = fitted(layout, height);
+    let [skin, coat, feathers, hair] = fitted(layout, height, hair);
     [
         (skin, colours.skin),
         (coat, colours.coat),
         (feathers, colours.feathers),
+        (hair, colours.hair),
     ]
     .into_iter()
     .filter(|(triangles, _)| !triangles.is_empty())

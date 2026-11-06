@@ -137,13 +137,14 @@ fn each_kind_draws_in_its_own_colours() {
         plain.feathers(CreatureKind::Birdfolk),
         Some([242, 242, 238])
     );
-    // Every trait has choices, and every colour trait's choices are all colours,
+    // Every trait has choices, and every colour trait's choices are all colours (all
+    // but height and hair's shapes),
     // a hen's speckles too (a colour with specks over it).
     for kind in CreatureKind::ALL {
         for &which in kind.def().looks {
             let choices = which.choices_for(kind);
             assert!(!choices.is_empty(), "{kind:?} {which:?}");
-            if which != Trait::Height {
+            if !matches!(which, Trait::Height | Trait::HairStyle | Trait::Beard) {
                 assert!(
                     choices.iter().all(|c| c.colour.is_some()),
                     "{kind:?} {which:?}"
