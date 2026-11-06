@@ -2,11 +2,11 @@
 //! shorter is drawn that much smaller on the same ground; an animal fills its own.
 
 use bevy::prelude::*;
-use shared::body::{Layout, NONE, PERSON};
+use shared::body::{Hair, Layout, NONE, PERSON};
 
 use super::{
-    MARGIN_PIXELS, PIXELS_PER_CELL, TILT, TURN, Triangle, VIEW_WIDTH, build, build_coated, cells,
-    features,
+    Cover, MARGIN_PIXELS, PIXELS_PER_CELL, TILT, TURN, Triangle, VIEW_WIDTH, build, build_coated,
+    cells, features, hair,
 };
 
 /// How far an animal or a taur is turned to its right: nearly side on.
@@ -39,14 +39,18 @@ fn bounds(triangles: &[Triangle], view: Quat) -> (Vec3, Vec3) {
 /// The body turned and tipped as it is seen, then placed in its picture with room for
 /// its black edge: a person of the usual height fills it, anything shorter (`height`, in
 /// millimetres) is drawn that much smaller on the same ground, and anything that would
-/// still overflow it (wide horns, say) is fitted to it. The skin, then any feathers.
-pub(super) fn fitted(
-    layout: &Layout,
-    height: i32,
-) -> (Vec<Triangle>, Vec<Triangle>, Vec<Triangle>) {
+/// still overflow it (wide horns, say) is fitted to it. The skin, a taur's coat, any
+/// feathers, then any hair (on the upper body's head, for a taur).
+pub(super) fn fitted(layout: &Layout, height: i32, styled: Hair) -> [Vec<Triangle>; 4] {
     let ((skin, coat), feathers) = (build_coated(layout), features::wings(layout));
+    let head = layout.upper_body().unwrap_or(*layout);
+    let hair = hair(&head, styled, Cover::default());
     let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(turn_of(layout));
-    let all: Vec<Triangle> = skin.iter().chain(&coat).chain(&feathers).copied().collect();
+    let all: Vec<Triangle> = [&skin, &coat, &feathers, &hair]
+        .into_iter()
+        .flatten()
+        .copied()
+        .collect();
     let (low, high) = bounds(&all, view);
     let (wide, long) = cells(layout);
     let (wide, long) = (wide as f32, long as f32);
@@ -80,5 +84,5 @@ pub(super) fn fitted(
             })
             .collect()
     };
-    (placed(skin), placed(coat), placed(feathers))
+    [skin, coat, feathers, hair].map(placed)
 }

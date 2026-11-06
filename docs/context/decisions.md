@@ -950,3 +950,7 @@ Owner: World Gates stand in the wilderness as in the Hall of Worlds (the same mo
 ## 2026-11-06: Changing shape keeps what fits and drops the rest
 
 Owner's decisions. A creature changing kind keeps on whatever its new body still takes, by the same rules as putting it on, and drops what it can't wear (cursed things too) on the ground where it stands, with anything its new pack has no room for, instead of losing it (2026-11-04). Changing shape needs ground, so it is refused on the world map, and in the Hall, the debug Change Creature included (2026-11-06): the wilderness can be entered anywhere, so changing there costs little extra time. The server checks it (`connections::change_kind`); the client only disables the buttons.
+
+## 2026-11-06: Hair as looks, cut at a helmet's rim
+
+Hair style and beard are two more looks (`Trait::HairStyle`, `Trait::Beard`), chosen per kind from the research like colours, as words in dropdowns; their shapes are `shared::body::HairStyle` / `Beard`, so drawing doesn't go by names. They are added at the end of `Trait`, which messages carry by place. The client draws hair round the skull of any `Layout` (`item_art/body/hair.rs`); under head armour only what hangs below `HeadForm::rim` shows (owner), an aventail hides it all and a bevor the beard. Animals' manes and tail hair follow as PR 2 of the Hair task.

@@ -26,12 +26,14 @@ pub(super) fn parts_of(
             layout,
             height,
             colours,
-        } => super::body::body_parts(&layout, height, colours, meshes, materials),
+            hair,
+        } => super::body::body_parts(&layout, height, colours, hair, meshes, materials),
         Look::Character {
             kind,
             worn,
             colours,
-        } => super::character::character_parts(kind, &worn, colours, meshes, materials),
+            hair,
+        } => super::character::character_parts(kind, &worn, colours, hair, meshes, materials),
         Look::Footwear { footwear, quality } => {
             super::footwear::footwear_parts(&footwear, quality, meshes, materials)
         }

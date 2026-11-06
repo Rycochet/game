@@ -4,7 +4,9 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 
 ## Files
 
+- `Hair { style: HairStyle, beard: Beard }`, `Hair::NONE`: hair to draw on a head (`item_art`).
 - `crates/shared/src/body.rs`: `Frame` (the figures for each body shape: `HUMAN`, the person every frame is measured against, and `GIANT`; the first peoples' come from their proportions), `Frame::of`, `Frame::joint`, `Joint`, `Side`. Tests.
+- `crates/shared/src/body/hair.rs`: `HairStyle` (Bald, Short, Long, TiedBack, Braids, Topknot, Crest, Curly), `Beard` (None, Short, Full, Long, Braided, Forked), each with `name`, and `Hair { style, beard }` (`NONE`): the shapes hair is drawn in. Which a creature has is a look (`sheet`).
 - `crates/shared/src/body/parts.rs`: `Parts` (what a body has beyond a person's: `Snout`, ears, `Horns`, tusks, tail, `Feet`, `Wings`; shapes as kinds, sizes as millimetres) and `NONE`.
 - `crates/shared/src/body/bipeds.rs`: `Biped` (a name, usual height, proportions and parts), `FIRST_BIPEDS` (the first peoples from the research, each a `CreatureKind` of the same name), `Biped::of(kind)`, `Parts::of(kind)`.
 - `crates/shared/src/body/layout.rs`: `Layout`, any body's layout: `Spine` (from the hips' middle to the neck base, `pitch` 0 upright to 90 level, `Station`s at hips, waist, chest), `Neck`, `Head`, up to `MAX_LIMBS` `Limb` slots (`Role`, `Girdle`, side, up to `MAX_BONES` `Bone`s, foot) and `Parts`; `Layout::of`, `limb`, `root`, `joints`, `Spine::at`. Tests in `layout/tests.rs`.
