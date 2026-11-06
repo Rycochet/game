@@ -3,6 +3,7 @@
 
 mod actions;
 mod bodies;
+mod delete_character;
 mod menu;
 mod panels;
 
@@ -38,7 +39,10 @@ impl Plugin for DebugMenuPlugin {
             .init_resource::<panels::PicturesForm>()
             .add_message::<DebugAction>()
             .add_message::<panels::GenerateKind>()
-            .add_systems(Startup, menu::spawn_menu)
+            .add_systems(
+                Startup,
+                (menu::spawn_menu, delete_character::spawn_delete_dialog),
+            )
             .add_systems(
                 PreUpdate,
                 menu::take_input
@@ -51,6 +55,7 @@ impl Plugin for DebugMenuPlugin {
                     panels::forget_closed,
                     remind_of_god_mode,
                     run_actions,
+                    delete_character::run_delete_dialog,
                     bodies::fill_panels,
                     bodies::apply_sliders,
                     panels::open_generate_panel,
@@ -239,6 +244,8 @@ fn run_actions(
             }
             DebugAction::ShowDebugInfo => info.0 = !info.0,
             DebugAction::TeleportMode => *mode = toggled(*mode, ClickMode::Teleport),
+            // Asks first (`delete_character`).
+            DebugAction::DeleteCharacter => {}
             DebugAction::ViewPlanet => {
                 view_planet.write(ViewPlanet);
             }

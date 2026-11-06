@@ -178,6 +178,10 @@ pub enum ClientMessage {
     /// comes off into the new inventory, and what doesn't fit is lost. Answered with
     /// `Inventory`.
     DevSetCreature(CreatureKind),
+    /// Developer tools: the character is deleted, save and all, and the account
+    /// given a new one in its place, which is made as on first joining:
+    /// answered with `Characters` with none to choose, then `CreateCharacter`.
+    DevDeleteCharacter,
     /// Developer tools: jump to a point on the map the player is on (in a
     /// site, only onto a walkable cell), answered with `Teleported`. Only an
     /// embedded (single-player) server accepts it; others ignore it.
@@ -264,6 +268,7 @@ impl ClientMessage {
                 | Self::DevGenerateSite { .. }
                 | Self::DevGiveItem { .. }
                 | Self::DevSetCreature(_)
+                | Self::DevDeleteCharacter
                 | Self::DevDetectMonsters(_)
                 | Self::DevTruesight(_)
                 | Self::DevGodMode(_)

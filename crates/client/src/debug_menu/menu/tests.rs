@@ -49,7 +49,7 @@ fn return_on_a_disabled_entry_does_nothing() {
 fn return_on_a_highlighted_entry_chooses_it() {
     let shown = on_show("");
     assert_eq!(
-        return_chooses(&shown, Some(5), &facts()),
+        return_chooses(&shown, Some(6), &facts()),
         Some(DebugAction::ForgetMap)
     );
 }

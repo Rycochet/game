@@ -59,7 +59,9 @@ impl Plugin for PlayerPlugin {
                 )
                     .run_if(not(in_state(GameView::Connecting)))
                     // Nobody to tell while the connection is down.
-                    .run_if(|status: Res<ServerStatus>| status.is_connected()),
+                    .run_if(|status: Res<ServerStatus>| status.is_connected())
+                    // Nobody to move while a new character is being made.
+                    .run_if(|making: Res<crate::common::MakingCharacter>| !making.0),
             );
     }
 }

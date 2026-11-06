@@ -40,7 +40,9 @@ mod window_save;
 mod world;
 
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
-pub use creatures::{CarryLimit, MakingCharacter, Other, PlayerSpeed, SheetText, SpentEnergy};
+pub use creatures::{
+    CarryLimit, MakesCharacters, MakingCharacter, Other, PlayerSpeed, SheetText, SpentEnergy,
+};
 pub use debug::{DebugInfo, DetectMonsters, GodMode, KillMob, ServerDevTools, Truesight};
 pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
@@ -102,6 +104,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<PlayerSpeed>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
+            .init_resource::<MakesCharacters>()
             .init_resource::<DetectMonsters>()
             .init_resource::<GodMode>()
             .init_resource::<Truesight>()

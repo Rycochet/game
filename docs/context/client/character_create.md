@@ -23,7 +23,7 @@ The screen for making a new character: name, kind and its looks, and the three t
 
 ## Used by
 
-- Nothing directly. `connection` sets `MakingCharacter` on `Characters` with none to choose; `loading_screen` leaves the input and hides its bar while it is set.
+- Nothing directly. `connection` sets `MakingCharacter` on `Characters` with none to choose (on first joining, or after the debug menu's Delete Character, when the screen opens over the game and `player` takes no steps meanwhile); `loading_screen` leaves the input and hides its bar while it is set.
 
 ## Notes
 

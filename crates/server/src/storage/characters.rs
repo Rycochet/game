@@ -76,6 +76,13 @@ impl Storage {
             .map_or_else(BTreeSet::new, |save| save.gates))
     }
 
+    /// Deletes a character's save (dev tools), if they have one.
+    pub fn remove_character(&self, id: &CharacterId) {
+        if let Some(queue) = &self.queue {
+            queue.remove(SaveKey::Character(*id));
+        }
+    }
+
     /// Saves a character who is in `world`, knowing `here` of it.
     pub fn save_character(
         &self,

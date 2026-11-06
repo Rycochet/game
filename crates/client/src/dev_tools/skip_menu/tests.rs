@@ -23,4 +23,5 @@ fn others_leave_it() {
         "HOW_DEBUG_TITLE"
     ])));
     assert!(!sets_up_start(names(&["HOW_DEBUG_SKIP_MENU"])));
+    assert!(!sets_up_start(names(&["HOW_DEBUG_SKIP_CREATION"])));
 }

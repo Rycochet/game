@@ -44,3 +44,16 @@ pub struct SpentEnergy(pub u32);
 /// on hanging up.
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MakingCharacter(pub bool);
+
+/// Whether a new character is made with `character_create`'s screen, which
+/// `connection` tells the server in `Hello`. Off, the server makes a plain one
+/// of the usual kind: `dev_tools` turns it off for runs that skip the menu
+/// (`HOW_DEBUG_SKIP_CREATION`).
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MakesCharacters(pub bool);
+
+impl Default for MakesCharacters {
+    fn default() -> Self {
+        Self(true)
+    }
+}

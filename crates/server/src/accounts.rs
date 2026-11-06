@@ -234,6 +234,23 @@ impl Accounts {
         Ok(())
     }
 
+    /// Takes a character off its account, which must have been loaded: the
+    /// account's id, if it was on one.
+    pub(crate) fn remove_character(&mut self, character: &CharacterId) -> Option<AccountId> {
+        let account = self.loaded.iter_mut().find_map(|(id, account)| {
+            let before = account.characters.len();
+            account.characters.retain(|c| c.id != *character);
+            (account.characters.len() < before).then_some(*id)
+        })?;
+        self.save(&account);
+        Some(account)
+    }
+
+    /// Whether an account is a guest's (the single player's is one).
+    pub(crate) fn is_guest(&mut self, id: &AccountId) -> Result<bool, String> {
+        Ok(self.account(id)?.guest)
+    }
+
     /// Notes that a character is being played now.
     pub(crate) fn played(&mut self, id: &AccountId, character: &CharacterId) -> Result<(), String> {
         self.account(id)?;

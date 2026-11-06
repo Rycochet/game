@@ -5,6 +5,7 @@ use shared::protocol::{ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessa
 
 use super::answer_dev::answer_dev;
 use super::answer_items::answer_items;
+use super::delete_character::delete_character;
 use super::new_character::{Asked, create, join_or_make};
 use super::{Action, Client, MOST_WAITING, Phase};
 use crate::accounts::{Accounts, LoginKey, MAX_CHARACTERS};
@@ -123,6 +124,9 @@ pub(crate) fn answer(
                 Err(reason) => refuse(client, reason),
             }
         }
+        // Making a new one after deleting the last (dev tools): steps and the
+        // like sent before may still be on their way.
+        _ if client.phase == Phase::Choosing && client.character_id.is_some() => true,
         _ if client.phase != Phase::Playing => refuse(client, "say hello first".into()),
         ClientMessage::Ping { sent } => client.link.send(&ServerMessage::Pong {
             sent,
@@ -218,5 +222,6 @@ pub(crate) fn answer(
         | ClientMessage::DevSetCreature(..)
         | ClientMessage::DevSetWorldClock { .. }
         | ClientMessage::DevGoToWorld { .. } => answer_dev(client, message, world),
+        ClientMessage::DevDeleteCharacter => delete_character(client, world, accounts),
     }
 }

@@ -95,7 +95,7 @@ pub(super) fn connect(world: &mut World) {
     world.resource_mut::<ServerClock>().local_server = connection.local;
     connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
-        makes_characters: true,
+        makes_characters: world.resource::<crate::common::MakesCharacters>().0,
     });
     world.insert_resource(connection);
     // Steps start again from the server's word.
