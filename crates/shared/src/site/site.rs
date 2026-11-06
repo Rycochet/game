@@ -2,8 +2,8 @@
 
 use super::building::BuildingOptions;
 use super::{
-    BUILDING_VERSION, CAVE_VERSION, Exit, FARM_VERSION, Generator, HERBALIST_VERSION, SiteLevel,
-    Stairs, StairsStyle, TOWN_VERSION,
+    BUILDING_VERSION, CAVE_VERSION, Exit, FARM_VERSION, Generator, HERBALIST_VERSION,
+    OASIS_VERSION, SiteLevel, Stairs, StairsStyle, TOWN_VERSION,
 };
 use crate::poi::PoiKind;
 use crate::rng::Seed;
@@ -24,6 +24,7 @@ pub(super) enum Plan {
     Town(super::town::Plan),
     Farm(super::farm::Plan),
     Herbalist(super::herbalist::Plan),
+    Oasis(super::oasis::Plan),
 }
 
 impl Site {
@@ -79,6 +80,9 @@ impl Site {
             Generator::Herbalist(options) if version == HERBALIST_VERSION => {
                 Plan::Herbalist(super::herbalist::Plan::new(&options, seed))
             }
+            Generator::Oasis(options) if version == OASIS_VERSION => {
+                Plan::Oasis(super::oasis::Plan::new(&options, seed))
+            }
             _ => return None,
         };
         Some(Self {
@@ -123,7 +127,7 @@ impl Site {
         match &self.plan {
             Plan::Building(plan) => plan.floors(),
             Plan::Cave(plan) => plan.levels(),
-            Plan::Town(_) => 1,
+            Plan::Town(_) | Plan::Oasis(_) => 1,
             Plan::Farm(plan) => plan.levels(),
             Plan::Herbalist(plan) => plan.house().floors(),
         }
@@ -139,6 +143,7 @@ impl Site {
             Plan::Town(plan) => plan.level(),
             Plan::Farm(plan) => plan.level(index),
             Plan::Herbalist(plan) => plan.level(index),
+            Plan::Oasis(plan) => plan.level(),
         }
     }
 

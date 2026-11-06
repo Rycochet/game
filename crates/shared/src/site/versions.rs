@@ -28,3 +28,6 @@ pub const FARM_VERSION: u32 = 1 + FORGET_BEFORE;
 
 /// The herbalist's hut generator's version (as `BUILDING_VERSION`).
 pub const HERBALIST_VERSION: u32 = 1 + FORGET_BEFORE;
+
+/// The oasis generator's version (as `BUILDING_VERSION`).
+pub const OASIS_VERSION: u32 = 1 + FORGET_BEFORE;

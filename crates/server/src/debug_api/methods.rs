@@ -193,6 +193,8 @@ fn mark(cell: Cell) -> char {
         Cell::FieldGate => 'G',
         Cell::HerbBed => 'h',
         Cell::WorldGate => 'W',
+        Cell::Grass => '`',
+        Cell::Tree => 'T',
     }
 }
 

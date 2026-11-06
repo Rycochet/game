@@ -48,7 +48,7 @@ const ATLAS_TILE_PIXELS: u32 = 32;
 
 /// Where things are in the atlas: the order `make_town_atlas.py` puts them.
 const GARDEN_TILE: usize = 6;
-const HEDGE_TILE: usize = 7;
+pub(super) const HEDGE_TILE: usize = 7;
 const FIRST_WALL_TILE: usize = 8;
 const FIRST_ROOF_TILE: usize = 13;
 const WINDOW_TILE: usize = 18;

@@ -131,3 +131,36 @@ fn world_gates_have_their_chunks_to_themselves() {
         assert_eq!(map.in_chunk(gate.chunk), None, "{gate:?}");
     }
 }
+
+#[test]
+fn oases_stand_only_in_desert_and_other_pois_are_rarer_there() {
+    let desert = crate::surface::SurfaceGenerator::Desert;
+    let world = WorldParams::with_generator(Seed::new(12345), desert);
+    let map = PoiMap::new(&world, world.seed.derive("pois"));
+    let chunks = || (-20..20).flat_map(|y| (0..60).map(move |x| ChunkPos { x, y }));
+    let pois: Vec<Poi> = chunks().filter_map(|chunk| map.in_chunk(chunk)).collect();
+    let oases = pois.iter().filter(|poi| poi.kind == PoiKind::Oasis).count();
+    assert!(oases > 5, "{oases} oases");
+    assert!(
+        pois.iter()
+            .all(|poi| poi.kind != PoiKind::Oasis || poi.desert)
+    );
+    // Chunks whose middle is desert, against the desert's other pois: without
+    // the rule about 80% of them would have one, with it about a fifth.
+    let sandy = chunks()
+        .filter(|chunk| {
+            let (x, y) = (chunk.x * CHUNK_SIZE + 32, chunk.y * CHUNK_SIZE + 32);
+            let height = map.surface.sample(x, y).height;
+            map.climate.sample(x, y, height).biome() == crate::climate::Biome::Desert
+        })
+        .count();
+    let others = pois
+        .iter()
+        .filter(|poi| poi.desert && poi.kind != PoiKind::Oasis)
+        .count();
+    assert!(sandy > 800, "{sandy} desert chunks");
+    assert!(
+        others * 100 < sandy * 35,
+        "{others} pois in {sandy} desert chunks"
+    );
+}

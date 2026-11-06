@@ -6,7 +6,7 @@ use shared::site::{Outline, PoiLook};
 
 use super::{
     ADOBE, DARK_STONE, EARTH, FARMHOUSE_SHARE, GRASS, GREY_ROOF, MOSS, PLASTER, PoiModel, REACH,
-    RED_ROOF, STONE, THATCH, WOOD, building, circle, half_size, hashed, rectangle, ruined,
+    RED_ROOF, STONE, THATCH, WOOD, building, circle, half_size, hashed, oasis, rectangle, ruined,
     underground,
 };
 
@@ -30,6 +30,7 @@ pub fn build(kind: PoiKind, look: PoiLook, variety: u64) -> PoiModel {
             }
         }
         PoiLook::Cave { entrance } => underground(&mut model, kind, entrance),
+        PoiLook::Oasis { pools } => oasis(&mut model, pools, variety),
         PoiLook::Farm {
             width,
             height,

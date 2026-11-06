@@ -8,6 +8,7 @@ use super::super::CELL_SIZE;
 use super::super::field;
 use super::super::holes::build_hole;
 use super::super::liquid::build_cell;
+use super::super::oasis::build_grass_or_tree;
 use super::super::stairs::{build_stairs, hides_viewer};
 use super::super::town;
 use super::super::walls::{Layers, Scene, build_opening, build_wall};
@@ -41,6 +42,8 @@ pub(super) fn build_cell_at(
         build_hole(layers, scene, (x, y));
     } else if cell == Cell::Field && field::build_field(layers, scene, (x, y)) {
         // Drawn: anything else of a field is the land's own ground.
+    } else if build_grass_or_tree(layers, scene, (x, y)) {
+        // An oasis's grass, and any tree on it.
     } else {
         let found = stairs.iter().find(|s| (s.x, s.y) == (x, y));
         build_open_cell(layers, scene, (x, y), found);

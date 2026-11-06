@@ -12,6 +12,7 @@ mod base;
 mod build;
 mod building;
 mod model;
+mod oasis;
 mod output;
 mod shapes;
 mod underground;
@@ -20,6 +21,7 @@ pub use base::base_mesh;
 pub use build::build;
 use building::{building, ruined};
 pub use model::PoiModel;
+use oasis::oasis;
 use shapes::{circle, edge, half_size, hashed, rectangle, ring};
 use underground::underground;
 

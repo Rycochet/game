@@ -10,7 +10,7 @@ Temperature, moisture and the biome they make, at any world map position, follow
 ## Public API
 
 - `SNOW_TEMPERATURE`: land colder than this is snow, around height 90 on average.
-- `Climate::new(&WorldParams)`, `.sample(x, y, height) -> ClimateSample` (by the world's generator, a desert world `DESERT_DRYNESS` (0.2) drier still: for surfaces in metres it turns the height into metres and gives `sample_metres`, so callers needn't care), `.sample_metres(x, y, metres)` (the planet's own climate, below; the air cools at Earth's 6.5 °C a km from the sea).
+- `Climate::new(&WorldParams)`, `.sample(x, y, height) -> ClimateSample` (by the world's generator, a desert world `DESERT_DRYNESS` (0.35) drier still: for surfaces in metres it turns the height into metres and gives `sample_metres`, so callers needn't care), `.sample_metres(x, y, metres)` (the planet's own climate, below; the air cools at Earth's 6.5 °C a km from the sea).
 - `ICE_LATITUDE` (80): always ice past it (its edge wanders 3° with the local temperature); `SEA_ICE` (-6 °C): the sea is frozen below this yearly average; `moisture_belt(latitude)` (`-1..=1`, for poi kinds later).
 - `CELSIUS_AT_ZERO` (-10.5), `CELSIUS_PER_UNIT` (50): the scale in °C, so snow is about -8 °C and the equator's sea about 27 °C; `ClimateSample::celsius()`.
 - `ClimateSample { temperature, moisture }` (both `0..=1`), `.biome()`.

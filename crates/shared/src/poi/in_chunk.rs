@@ -23,6 +23,10 @@ pub(super) const FARMS_PER_THOUSAND: u64 = 60;
 /// The same for herbalists' huts.
 pub(super) const HUTS_PER_THOUSAND: u64 = 40;
 
+/// Of each 1000 chunks with a poi in desert, how many are oases instead, by
+/// a separate hash; they are kept, unlike the desert's other pois.
+const OASES_PER_THOUSAND: u64 = 100;
+
 /// In desert, only one chunk in this many keeps its poi (owner: a quarter as
 /// many there).
 const DESERT_KEEPS_ONE_IN: u64 = 4;
@@ -66,28 +70,41 @@ impl PoiMap {
                     + EDGE_MARGIN
                     + rng.range_u64(0, (CHUNK_SIZE - 2 * EDGE_MARGIN) as u64) as i64;
                 let height = self.surface.sample(x, y).height;
-                (height > self.land_above).then(|| Poi {
-                    kind: if kind.is_town() {
-                        kind
-                    } else {
-                        self.kept_to_land(chunk, x, y, height).unwrap_or(kind)
-                    },
-                    chunk,
-                    x,
-                    y,
-                    seed,
-                    desert: self.climate.sample(x, y, height).biome() == Biome::Desert,
+                (height > self.land_above).then(|| {
+                    let desert = self.climate.sample(x, y, height).biome() == Biome::Desert;
+                    let oasis =
+                        desert && !kind.is_town() && self.roll("oases", chunk) < OASES_PER_THOUSAND;
+                    Poi {
+                        kind: if kind.is_town() {
+                            kind
+                        } else if oasis {
+                            PoiKind::Oasis
+                        } else {
+                            self.kept_to_land(chunk, x, y, height).unwrap_or(kind)
+                        },
+                        chunk,
+                        x,
+                        y,
+                        seed,
+                        desert,
+                    }
                 })
             })
             .filter(|poi| !self.ground.past_the_ice(poi.y))
             .filter(|poi| {
                 !poi.desert
+                    || poi.kind == PoiKind::Oasis
                     || self
                         .seed
                         .derive("desert")
                         .at(&[chunk.x, chunk.y])
                         .is_multiple_of(DESERT_KEEPS_ONE_IN)
             })
+    }
+
+    /// A chunk's roll out of 1000 for something of its own (`name`).
+    fn roll(&self, name: &str, chunk: ChunkPos) -> u64 {
+        self.seed.derive(name).at(&[chunk.x, chunk.y]) % 1000
     }
 
     /// What a chunk's poi, standing here, is instead of what it rolled, if

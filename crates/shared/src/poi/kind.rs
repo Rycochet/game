@@ -46,10 +46,12 @@ pub enum PoiKind {
     City,
     Farm,
     HerbalistHut,
+    /// Pools ringed by grass and trees, only in desert.
+    Oasis,
 }
 
 impl PoiKind {
-    pub const ALL: [Self; 40] = [
+    pub const ALL: [Self; 41] = [
         Self::Boulders,
         Self::Ruins,
         Self::GrassyCave,
@@ -90,6 +92,7 @@ impl PoiKind {
         Self::City,
         Self::Farm,
         Self::HerbalistHut,
+        Self::Oasis,
     ];
 
     /// How many of `ALL` come from the chunk's plain roll: the rest have their

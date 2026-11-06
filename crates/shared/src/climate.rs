@@ -47,7 +47,7 @@ const MOISTURE_NOISE: f64 = 0.55;
 const WORLD_MOISTURE: f64 = 0.25;
 /// How much drier a desert world is than its `climate` alone would make it,
 /// so most of it is desert, with grassland and savanna where noise is wet.
-const DESERT_DRYNESS: f64 = 0.2;
+const DESERT_DRYNESS: f64 = 0.35;
 
 /// The temperature scale in degrees Celsius: 0 is this cold, and each whole
 /// unit this many degrees warmer, so `SNOW_TEMPERATURE` is about -8 °C and the

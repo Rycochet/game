@@ -89,7 +89,7 @@ impl Theme {
             | AdobeStore | StonePyramid | SandPyramid | Hamlet | Village | Town | City => STONE,
             ThatchedHut | StiltHut | GreenStiltHut | RedTent | BlueTent | GreenTent
             | RedRoofCottage | GreyRoofCottage | SnowyCottage | WoodenTower | Farm
-            | HerbalistHut => WOOD,
+            | HerbalistHut | Oasis => WOOD,
             Crypt | MossyCrypt | BloodyCrypt | Mausoleum | Grave | Ruins | Barrel | Barrels => {
                 CRYPT
             }

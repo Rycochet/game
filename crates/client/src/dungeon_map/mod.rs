@@ -18,6 +18,7 @@ pub use herbs::HERB_STAGES;
 mod holes;
 mod liquid;
 mod mesh;
+mod oasis;
 mod picking;
 mod rain;
 mod sight_lines;
