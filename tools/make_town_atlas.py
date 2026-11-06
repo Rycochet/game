@@ -7,7 +7,7 @@ import random
 
 from PIL import Image, ImageDraw
 
-TILES = "crates/client/assets/angbandtk/"
+TILES = "spare_assets/angbandtk/"
 OUT = "crates/client/assets/town_atlas.png"
 CROPS = "crates/client/assets/field_crops.png"
 PLANTS = "crates/client/assets/herb_plants.png"
