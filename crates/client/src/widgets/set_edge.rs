@@ -1,5 +1,6 @@
 //! The metal edge of a set item (`assets/shaders/set_edge.wesl`): one material for
-//! each quality, all with the same bands, which slide with `common::BandShift`.
+//! each quality, all with the same bands, which slide with `common::BandShift`: slowly
+//! by themselves, and faster as the view changes (`view3d`).
 
 use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderType};
@@ -8,6 +9,13 @@ use shared::item::Quality;
 
 use super::Floating;
 use crate::common::{BandShift, quality_colour};
+
+/// How fast the bands drift by themselves, in pixels a second: slowly, so they
+/// catch the light even while nothing moves (owner's wish, speed Claude's).
+const DRIFT_SPEED: f32 = 12.0;
+/// The bands' spacing, as `BAND_PIXELS` in the shader: sliding this far looks the
+/// same, so the shift is kept below it.
+const BAND_PIXELS: f32 = 58.0;
 
 /// Order matches `struct Edge` in the shader.
 #[derive(ShaderType, Clone, Copy, Debug, Default)]
@@ -44,22 +52,25 @@ impl SetEdges {
     }
 }
 
-/// A metal edge `width` thick, in a parent it stands `out` beyond the inside of.
-/// It is not what the pointer is on.
-pub fn set_edge(quality: Option<Quality>, width: f32, out: f32) -> impl Bundle {
-    (
-        SetEdge(quality),
-        Floating,
-        Node {
-            position_type: PositionType::Absolute,
-            left: px(-out),
-            top: px(-out),
-            right: px(-out),
-            bottom: px(-out),
-            border: UiRect::all(px(width)),
-            ..default()
-        },
-    )
+/// A metal edge with these sides (`border`), in a parent it stands `out` beyond the
+/// inside of on each side it has, so a shape's cells join up. It is not what the
+/// pointer is on.
+pub fn set_edge(quality: Option<Quality>, border: UiRect, out: f32) -> impl Bundle {
+    (SetEdge(quality), Floating, edge_node(border, out))
+}
+
+/// The node `set_edge` draws: standing out only where it has a side.
+fn edge_node(border: UiRect, out: f32) -> Node {
+    let beyond = |side: Val| if side == px(0) { px(0) } else { px(-out) };
+    Node {
+        position_type: PositionType::Absolute,
+        left: beyond(border.left),
+        top: beyond(border.top),
+        right: beyond(border.right),
+        bottom: beyond(border.bottom),
+        border,
+        ..default()
+    }
 }
 
 pub(super) fn make_set_edges(
@@ -84,6 +95,16 @@ pub(super) fn give_set_edges(
             .entity(entity)
             .insert(MaterialNode(edges.of(edge.0)));
     }
+}
+
+/// Slides the bands a little every frame, by real time so pausing doesn't stop it.
+pub(super) fn drift_bands(time: Res<Time<Real>>, mut shift: ResMut<BandShift>) {
+    shift.0 = drifted(shift.0, time.delta_secs());
+}
+
+/// The shift after drifting for `seconds`, kept within one band.
+fn drifted(shift: f32, seconds: f32) -> f32 {
+    (shift + DRIFT_SPEED * seconds).rem_euclid(BAND_PIXELS)
 }
 
 pub(super) fn slide_bands(

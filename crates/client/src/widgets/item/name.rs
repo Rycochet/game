@@ -32,7 +32,11 @@ pub(in crate::widgets) fn spawn_name_box(mut commands: Commands) {
         ))
         .with_children(|holder| {
             spawn_tooltip(holder, NameText, "");
-            holder.spawn((NameEdge, set_edge(None, NAME_EDGE, 0.0), Visibility::Hidden));
+            holder.spawn((
+                NameEdge,
+                set_edge(None, UiRect::all(px(NAME_EDGE)), 0.0),
+                Visibility::Hidden,
+            ));
         });
 }
 

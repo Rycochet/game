@@ -149,7 +149,7 @@ fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item
     }
     if item.set {
         let width = item_edge_width(item.quality);
-        slot.with_child(set_edge(item.quality, width, width));
+        slot.with_child(set_edge(item.quality, UiRect::all(px(width)), width));
     }
     slot.with_child((
         BodyNode,

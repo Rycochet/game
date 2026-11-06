@@ -123,8 +123,8 @@ pub fn spawn_item_cells<B: Bundle>(
         }
         first = false;
         if set {
-            let width = item_edge_width(quality);
-            node.with_child(set_edge(quality, width, width));
+            // The same sides as its own edge, so a picture's goes round the whole shape.
+            node.with_child(set_edge(quality, border, edge));
         }
     }
     // Over plain cells, inside their frame.
