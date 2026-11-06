@@ -119,7 +119,7 @@ impl Look {
             Self::Neck { neck, .. } => neck.cells,
             Self::Footwear { footwear, .. } => footwear.cells,
             Self::Set { set, .. } => set.cells,
-            Self::Body { .. } => super::body::CELLS,
+            Self::Body { layout, .. } => super::body::cells(layout),
             Self::Character { .. } => super::character::CELLS,
         }
     }

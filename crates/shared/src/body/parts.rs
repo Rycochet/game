@@ -44,6 +44,8 @@ pub enum Wings {
     None,
     /// The arms are wings: feathers along them, hands at their tips.
     Arms,
+    /// A bird's wings, folded along its sides.
+    Folded,
 }
 
 /// Everything a body has beyond a person's. Lengths are how far each reaches out from

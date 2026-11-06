@@ -8,6 +8,7 @@
 
 use crate::creature::CreatureKind;
 
+mod beasts;
 mod biped_view;
 mod bipeds;
 mod layout;
@@ -15,6 +16,7 @@ mod parts;
 mod proportions;
 mod trig;
 
+pub use beasts::{BEASTS, Beast, Bird, Fourfoot, Plan};
 pub use bipeds::{Biped, FIRST_BIPEDS};
 pub use layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station,

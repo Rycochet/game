@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::blade::Family;
-use shared::body::Layout;
+use shared::body::{BEASTS, Layout};
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 use shared::item_form::Cut;
@@ -142,7 +142,8 @@ pub(super) fn spawn_ring_row(grid: &mut ChildSpawnerCommands, row: u128) {
     });
 }
 
-/// Every kind that stands on two legs, bare, at its usual height beside a person.
+/// Every kind whose body is drawn, bare: those on two legs at their usual height beside
+/// a person, animals filling their pictures; then animals not yet kinds.
 pub(super) fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
     grid.spawn(Node {
         align_items: AlignItems::Center,
@@ -153,6 +154,14 @@ pub(super) fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
         for kind in CreatureKind::ALL {
             if Layout::of(kind).is_some() {
                 spawn_picture(cells, Shown::Body(kind));
+            }
+        }
+        for (index, beast) in BEASTS.iter().enumerate() {
+            if !CreatureKind::ALL
+                .iter()
+                .any(|kind| kind.def().name == beast.name)
+            {
+                spawn_picture(cells, Shown::Beast(index));
             }
         }
     });

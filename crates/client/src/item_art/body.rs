@@ -22,8 +22,19 @@ pub(super) use features::wings;
 use fit::fitted;
 pub(super) use trunk::{trunk_depth, trunk_half};
 
-/// What a body's picture takes up, wide and long: only the proportions matter.
+/// What an upright body's picture takes up, wide and long: only the proportions
+/// matter. An animal's is square, as its token is.
 pub(super) const CELLS: (u8, u8) = (1, 2);
+const BEAST_CELLS: (u8, u8) = (2, 2);
+
+/// What a body's picture takes up.
+pub(super) fn cells(layout: &Layout) -> (u8, u8) {
+    if layout.frame().is_some() {
+        CELLS
+    } else {
+        BEAST_CELLS
+    }
+}
 /// How many of a picture's pixels are one cell, for the margin's sake.
 const PIXELS_PER_CELL: f32 = 64.0;
 /// Pixels kept clear round it, for its black edge.
@@ -125,13 +136,14 @@ pub(super) fn build(layout: &Layout) -> Vec<Triangle> {
     // The neck, a little into the trunk and the head.
     let axes = trunk::Axes::of(layout);
     let neck_base = axes.at(layout.spine.neck_base as f32);
-    let chin = neck_base + Vec3::Y * layout.neck.length as f32;
+    let chin = point(layout.chin());
+    let up_neck = (chin - neck_base).normalize_or(Vec3::Y);
     let neck = layout.neck.radius as f32;
     limb(
         &mut triangles,
         &[
             (neck_base - axes.along * 20.0, neck),
-            (chin + Vec3::Y * 20.0, neck),
+            (chin + up_neck * 20.0, neck),
         ],
     );
     let head = layout.head;

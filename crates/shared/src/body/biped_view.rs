@@ -23,7 +23,7 @@ impl Layout {
         let from_hip = |height: i32| height - f.hip;
         let arm_role = match parts.wings {
             super::Wings::Arms => Role::WingArm,
-            super::Wings::None => Role::Arm,
+            super::Wings::None | super::Wings::Folded => Role::Arm,
         };
         // The forearm and hand fall nearer straight down and a little forwards.
         let forearm_way = [f.forearm_spread, -1000, f.forearm_forward];
@@ -90,6 +90,7 @@ impl Layout {
             neck: Neck {
                 length: f.chin - f.neck_base,
                 radius: f.neck,
+                pitch: 0,
             },
             head: Head {
                 length: f.height - f.chin,
@@ -100,9 +101,10 @@ impl Layout {
         }
     }
 
-    /// Its frame, if it stands upright on two legs with two arms (or wing-arms).
+    /// Its frame, if it stands upright on two legs with two arms (or wing-arms) and its
+    /// neck upright.
     pub fn frame(&self) -> Option<Frame> {
-        if self.spine.pitch != 0 {
+        if self.spine.pitch != 0 || self.neck.pitch != 0 {
             return None;
         }
         let arm = self
