@@ -55,6 +55,7 @@ A red ring turns under your target. Tab and Shift + Tab go through enemies from 
 | Close what is on top | Esc, or click outside it (not the startup menu: press Play) | Tap outside it |
 | Open or close the Character panel | Click the person at the bottom left | Tap the person |
 | Show your character, your clothes and what you carry, or your abilities | C, I or B (the same key again closes it), or the tabs at the top of the panel | Tap the tabs |
+| Show the skills you know, as a tree round you | K (again, or Esc, closes it), or the Skills button on the Abilities tab; drag to move the tree, the wheel to zoom, click a skill to see more | Tap the Skills button; drag to move, pinch to zoom, tap a skill |
 | Pick up an item, and put it down | Press on it, drag, let go; or click it, then click where it goes | Hold a finger on it, drag, let go |
 | Turn an item you are holding | Right-click or R | Tap with a second finger |
 | Put back an item you are holding | Esc, or drop it where it can't go | Drop it where it can't go |

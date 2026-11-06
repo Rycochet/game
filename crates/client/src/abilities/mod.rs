@@ -10,7 +10,7 @@ pub struct AbilitiesPlugin;
 
 impl Plugin for AbilitiesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, page::fill_pages);
+        app.add_systems(Update, (page::fill_pages, page::open_skills));
     }
 }
 

@@ -1,0 +1,37 @@
+use super::*;
+
+#[test]
+fn zooming_keeps_what_is_under_the_pointer_there() {
+    let mut view = SkillsView {
+        pan: Vec2::new(30.0, -10.0),
+        ..default()
+    };
+    let pointer = Vec2::new(120.0, 80.0);
+    let on_tree = (pointer - view.pan) / view.zoom;
+    view.zoom_about(1.5, pointer);
+    assert!((view.zoom - 1.5).abs() < 1e-6);
+    assert!(view.on_page(on_tree).distance(pointer) < 1e-3);
+}
+
+#[test]
+fn zoom_stays_within_its_limits() {
+    let mut view = SkillsView::default();
+    view.zoom_about(100.0, Vec2::ZERO);
+    assert_eq!(view.zoom, MAX_ZOOM);
+    view.zoom_about(0.0001, Vec2::ZERO);
+    assert_eq!(view.zoom, MIN_ZOOM);
+}
+
+#[test]
+fn fitting_centres_the_character_and_shows_everything() {
+    let mut view = SkillsView {
+        pan: Vec2::new(500.0, 500.0),
+        ..default()
+    };
+    view.fit(Vec2::new(800.0, 600.0), 490.0);
+    assert_eq!(view.pan, Vec2::ZERO);
+    assert!(490.0 * view.zoom <= 300.0);
+    // A small tree isn't blown up past its usual size.
+    view.fit(Vec2::new(800.0, 600.0), 130.0);
+    assert_eq!(view.zoom, 1.0);
+}

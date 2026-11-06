@@ -4,7 +4,7 @@ use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
 
 use super::{Action, SystemMenu, show_ended_page};
-use crate::common::{ChosenServer, GameView, Session, TouchGesture};
+use crate::common::{ChosenServer, GameView, Session, SkillsPageOpen, TouchGesture};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::ButtonPressed;
@@ -21,7 +21,7 @@ pub(super) fn take_input(
     mut pressed: MessageReader<ButtonPressed>,
     actions: Query<&Action>,
     debug_menu: Res<DebugMenu>,
-    full_map: Res<FullMap>,
+    (full_map, skills): (Res<FullMap>, Res<SkillsPageOpen>),
     mut menu: ResMut<SystemMenu>,
     mut session: ResMut<Session>,
     mut chosen: ResMut<ChosenServer>,
@@ -45,8 +45,8 @@ pub(super) fn take_input(
         mouse.reset(MouseButton::Right);
         scroll.delta = Vec2::ZERO;
         *gesture = TouchGesture::default();
-    } else if escape && !debug_menu.open && !full_map.open {
-        // (Those two close on it instead, seeing it after this.)
+    } else if escape && !debug_menu.open && !full_map.open && !skills.0 {
+        // (Those close on it instead, seeing it after this.)
         keys.clear_just_pressed(KeyCode::Escape);
         action = Some(Action::Open);
     }

@@ -104,6 +104,6 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 ## Building it (later tasks, in order)
 
 1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way, and the triangles in a character creation screen (built, `client/character_create.md`; one character per account for now, with Character Selection later before it).
-2. The tree, practice, checks and rust clock (the tree's nodes, practice flowing up and values are built; practice from use, checks and rust are not), with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
+2. The tree, practice, checks and rust clock (the tree's nodes, practice flowing up and values are built, and shown on the Skills page, `client/skills_page.md`; practice from use, checks and rust are not), with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
 3. Abilities and opposition (begun: `shared::ability`, active and passive, the action bar; abilities don't hook onto skills yet: Attack will use the node of the weapon held, `combat/melee/<type>/<weapon>`, once combat comes).
 4. Specialising, once quests, trainers and books exist.

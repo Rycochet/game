@@ -26,6 +26,8 @@ pub enum Action {
     Inventory,
     /// The Character panel on its Abilities tab.
     Abilities,
+    /// The Skills page.
+    Skills,
     FullMap,
     TurnItem,
     DebugMenu,
@@ -61,7 +63,7 @@ impl Group {
 }
 
 impl Action {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
@@ -74,6 +76,7 @@ impl Action {
         Self::Character,
         Self::Inventory,
         Self::Abilities,
+        Self::Skills,
         Self::FullMap,
         Self::TurnItem,
         Self::DebugMenu,
@@ -95,6 +98,7 @@ impl Action {
             Self::Character => "Character",
             Self::Inventory => "Inventory",
             Self::Abilities => "Abilities",
+            Self::Skills => "Skills",
             Self::FullMap => "Full Map",
             Self::TurnItem => "Turn Held Item",
             Self::DebugMenu => "Debug Menu",
@@ -117,6 +121,7 @@ impl Action {
             Self::Character => "character",
             Self::Inventory => "inventory",
             Self::Abilities => "abilities",
+            Self::Skills => "skills",
             Self::FullMap => "full_map",
             Self::TurnItem => "turn_item",
             Self::DebugMenu => "debug_menu",
@@ -134,7 +139,7 @@ impl Action {
             Self::Explore | Self::LeaveWilderness => Group::Movement,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
-            Self::Character | Self::Inventory | Self::Abilities => Group::Interface,
+            Self::Character | Self::Inventory | Self::Abilities | Self::Skills => Group::Interface,
             Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
             Self::FullScreen => Group::Interface,
         }
@@ -158,8 +163,8 @@ impl Action {
             Self::PreviousTarget => [shift(KeyCode::Tab), None],
             Self::Character => [key(KeyCode::KeyC), None],
             Self::Inventory => [key(KeyCode::KeyI), None],
-            // K is kept for the Skills page.
             Self::Abilities => [key(KeyCode::KeyB), None],
+            Self::Skills => [key(KeyCode::KeyK), None],
             Self::FullMap => [key(KeyCode::KeyM), None],
             Self::TurnItem => [key(KeyCode::KeyR), None],
             Self::DebugMenu => [key(KeyCode::Backquote), None],

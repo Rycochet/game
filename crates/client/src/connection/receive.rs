@@ -86,6 +86,7 @@ pub(super) fn receive(
                 break;
             }
             Ok(Some(ServerMessage::Welcome {
+                name,
                 world: info,
                 time: world_time,
                 server_clock: seconds,
@@ -127,6 +128,7 @@ pub(super) fn receive(
                     next_view.set(GameView::WorldMap);
                 }
                 from_server.write(FromServer(ServerMessage::Welcome {
+                    name,
                     world: info,
                     time: world_time,
                     server_clock: seconds,

@@ -194,6 +194,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             can_create: true,
         },
         ServerMessage::Welcome {
+            name: "Brin".into(),
             world: WorldInfo {
                 id: crate::world::WorldSeed::new(7).id(),
                 terrain_seed: Seed::new(8),

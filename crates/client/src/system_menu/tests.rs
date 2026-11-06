@@ -17,6 +17,7 @@ fn test_app(menu: SystemMenu) -> App {
         .init_resource::<TouchGesture>()
         .init_resource::<DebugMenu>()
         .init_resource::<FullMap>()
+        .init_resource::<crate::common::SkillsPageOpen>()
         .insert_resource(Session::Playing)
         .init_resource::<ChosenServer>()
         .insert_resource(menu);
@@ -74,7 +75,7 @@ fn escape_opens_it_and_closes_what_is_on_top() {
 }
 
 #[test]
-fn escape_is_left_for_the_debug_menu_and_the_full_map() {
+fn escape_is_left_for_the_debug_menu_the_full_map_and_skills() {
     let mut app = test_app(SystemMenu::Closed);
     app.world_mut().resource_mut::<DebugMenu>().open = true;
     assert_eq!(press_escape(&mut app), SystemMenu::Closed);
@@ -86,6 +87,12 @@ fn escape_is_left_for_the_debug_menu_and_the_full_map() {
 
     let mut app = test_app(SystemMenu::Closed);
     app.world_mut().resource_mut::<FullMap>().open = true;
+    assert_eq!(press_escape(&mut app), SystemMenu::Closed);
+
+    let mut app = test_app(SystemMenu::Closed);
+    app.world_mut()
+        .resource_mut::<crate::common::SkillsPageOpen>()
+        .0 = true;
     assert_eq!(press_escape(&mut app), SystemMenu::Closed);
 }
 
