@@ -21,6 +21,7 @@ pub(super) fn ground_colour(cell: Cell) -> [u8; 3] {
         Cell::Flagstones => [226, 220, 210],
         Cell::DressedStone => [222, 226, 232],
         Cell::Water => [150, 195, 240],
+        Cell::Shallows => [180, 214, 244],
         Cell::Lava => [240, 140, 120],
         Cell::Hole => HOLE,
         Cell::Field => [214, 222, 160],

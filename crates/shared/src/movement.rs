@@ -140,9 +140,15 @@ impl WorldGround {
     /// can't be crossed (owner: the map stretches badly near the poles). Not
     /// in the showcase's plain beyond the pole.
     pub fn past_the_ice(&self, y: i64) -> bool {
-        // 80° of the 90° to a pole, a quarter of the width away: 2/9 of it.
-        !crate::showcase::in_plain(y) && y.abs() * 9 >= self.width * 2
+        past_the_ice(self.width, y)
     }
+}
+
+/// `WorldGround::past_the_ice` for a planet `width` points round, without
+/// making its ground.
+pub fn past_the_ice(width: i64, y: i64) -> bool {
+    // 80° of the 90° to a pole, a quarter of the width away: 2/9 of it.
+    !crate::showcase::in_plain(y) && y.abs() * 9 >= width * 2
 }
 
 /// How finely heights count for walking. Whole numbers, because game state is.

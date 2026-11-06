@@ -195,6 +195,7 @@ fn mark(cell: Cell) -> char {
         Cell::WorldGate => 'W',
         Cell::Grass => '`',
         Cell::Tree => 'T',
+        Cell::Shallows => '-',
     }
 }
 
