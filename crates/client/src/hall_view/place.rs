@@ -8,12 +8,15 @@ use std::collections::BTreeMap;
 
 use super::GateModel;
 use super::visited::{GateWater, WaterMaterials};
-use crate::common::{CurrentDungeon, CurrentWorld};
+use crate::common::{CurrentDungeon, CurrentWorld, LightSource, MapPosition, SmoothPosition};
 use crate::dungeon_map::CELL_SIZE;
 use shared::wilderness::SCALE;
 
 /// How fast the water runs down, in pictures a second.
 const FLOW: f32 = 0.6;
+
+/// How far a World Gate's light reaches in the wilderness, in cells (owner).
+const GATE_LIGHT_RADIUS: u32 = 8;
 
 /// The gates standing (each frame, with its runes and water as children), by
 /// their cell as the client counts it, and the stone they share.
@@ -36,6 +39,10 @@ pub(super) fn place_gates(
     if !dungeon.is_changed() {
         return;
     }
+    let in_wilderness = dungeon
+        .info
+        .as_ref()
+        .is_some_and(|info| matches!(info.kind, LevelKind::Wilderness));
     let wanted: BTreeMap<(i64, i64), GatePlace> = match dungeon.info.as_ref() {
         Some(info) => match info.kind {
             LevelKind::Hall { origin } => {
@@ -95,6 +102,23 @@ pub(super) fn place_gates(
             ))
             .add_children(&[runes, sheet])
             .id();
+        if in_wilderness {
+            // A light round the gate, as on the world map: `dungeon_map` lights
+            // the ground and tokens from any `LightSource` with a position.
+            // The Hall has its own even light.
+            let position = MapPosition {
+                x: cell.0,
+                y: cell.1,
+            };
+            commands.entity(frame).insert((
+                position,
+                SmoothPosition::from(position),
+                LightSource {
+                    radius: GATE_LIGHT_RADIUS,
+                    colour: Color::WHITE,
+                },
+            ));
+        }
         gates.standing.insert(cell, frame);
     }
 }
