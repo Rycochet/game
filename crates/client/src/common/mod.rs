@@ -24,6 +24,7 @@ mod creatures;
 mod debug;
 mod display;
 mod dungeon;
+mod item_text;
 mod items;
 mod map;
 mod pointer;
@@ -50,6 +51,7 @@ pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
 };
 pub use dungeon::CurrentDungeon;
+pub use item_text::{DroppedOnText, HeldOverText, KnownItem, KnownItems, TakesItemText};
 pub use items::{
     BandShift, GROUND, GaveItem, HeldGift, HeldOverGifts, HeldStock, HoveredBag, NO_QUALITY_NAME,
     StockCell, TakesGifts, TookItem, quality_colour,
@@ -99,6 +101,9 @@ impl Plugin for CommonPlugin {
             .init_resource::<HerbGrowthShift>()
             .init_resource::<ServerClock>()
             .add_message::<WorldChanged>()
+            .add_message::<DroppedOnText>()
+            .init_resource::<KnownItems>()
+            .init_resource::<HeldOverText>()
             .init_resource::<SkyNow>()
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()

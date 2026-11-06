@@ -28,6 +28,7 @@ pub(super) fn let_go_of(
         took,
         spent,
         stacks,
+        ..
     } = out;
     if let Some((with, item)) = holding.stock.take() {
         held_stock.set_if_neq(HeldStock(None));

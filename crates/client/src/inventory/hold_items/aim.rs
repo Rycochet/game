@@ -8,8 +8,8 @@ use super::super::hold::Target;
 use super::super::{Carried, Hand, HeldBy, Holding};
 use super::{Under, worth_wearing};
 use crate::common::{
-    Action, Controls, GROUND, GameView, HeldGift, HeldOverGifts, HeldStock, TouchGesture,
-    UiPointer, in_interface,
+    Action, Controls, GROUND, GameView, HeldGift, HeldOverGifts, HeldOverText, HeldStock,
+    TouchGesture, UiPointer, in_interface,
 };
 use crate::widgets::{CELL, logical_rect, shown_at};
 
@@ -24,7 +24,11 @@ pub(super) fn aim_held(
     mouse: &mut ResMut<ButtonInput<MouseButton>>,
     gesture: &mut ResMut<TouchGesture>,
     (keys, controls): (&mut ResMut<ButtonInput<KeyCode>>, &Controls),
-    (over_gifts, held_stock): (&mut ResMut<HeldOverGifts>, &mut ResMut<HeldStock>),
+    (over_gifts, held_stock, over_text): (
+        &mut ResMut<HeldOverGifts>,
+        &mut ResMut<HeldStock>,
+        &mut ResMut<HeldOverText>,
+    ),
 ) -> Option<(HeldBy, Target, Option<Vec2>, Option<Vec2>)> {
     let Under {
         grids,
@@ -32,6 +36,7 @@ pub(super) fn aim_held(
         stacks,
     } = under;
     over_gifts.0 = None;
+    over_text.set_if_neq(HeldOverText(None));
     let from_stock = holding.stock.as_ref().map(|(with, _)| *with);
     held_stock.set_if_neq(HeldStock(
         holding
@@ -86,7 +91,7 @@ pub(super) fn aim_held(
             })
     });
     // Only what is in front counts: the bin destroys things.
-    let (on_bin, on_drop, on_body, on_row, on_gifts) = at
+    let (on_bin, on_drop, on_body, on_row, on_gifts, on_text) = at
         .and_then(|at| {
             nodes
                 .iter()
@@ -94,13 +99,14 @@ pub(super) fn aim_held(
                     visible.get() && shown_at(at, node, transform, *clip)
                 })
                 .max_by_key(|(stack, ..)| stack.0)
-                .map(|(.., is_bin, is_drop, is_body, row, gifts, _)| {
+                .map(|(.., is_bin, is_drop, is_body, row, gifts, text, _)| {
                     (
                         is_bin,
                         is_drop,
                         is_body,
                         row.map(|row| row.0),
                         gifts.map(|gifts| gifts.0),
+                        text.map(|text| text.0),
                     )
                 })
         })
@@ -114,7 +120,11 @@ pub(super) fn aim_held(
         rotation: held.item.rotation,
         corner: at - (Vec2::new(held.item.grip.0 as f32, held.item.grip.1 as f32) + 0.5) * CELL,
     });
-    let aim = if let Some((with, item)) = &holding.stock {
+    // Written into the box: the item itself stays where it was.
+    over_text.set_if_neq(HeldOverText(on_text));
+    let aim = if on_text.is_some() {
+        Target::Nowhere
+    } else if let Some((with, item)) = &holding.stock {
         let from_ground = *with == GROUND;
         if on_drop {
             // On the ground already, or someone else's.

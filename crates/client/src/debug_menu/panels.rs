@@ -37,6 +37,7 @@ mod time_text;
 mod world_rate;
 mod world_time;
 
+pub(super) use every_widget::show_typed_items;
 use every_widget::spawn_every_widget;
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
 pub(super) use generate_form::{

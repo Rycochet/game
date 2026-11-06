@@ -17,6 +17,7 @@ mod ground;
 mod hall_view;
 mod inventory;
 mod item_art;
+mod item_text;
 mod loading_screen;
 mod minimap;
 mod planet_view;
@@ -109,6 +110,7 @@ fn main() {
         item_art::ItemArtPlugin,
         planet_view::PlanetViewPlugin,
         hall_view::HallViewPlugin,
+        item_text::ItemTextPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is

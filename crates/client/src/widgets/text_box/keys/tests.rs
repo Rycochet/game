@@ -28,7 +28,7 @@ fn type_into(edited: &mut Edited, keys: &[KeyboardInput]) {
 
 #[test]
 fn arrows_with_shift_select_and_typing_replaces() {
-    let mut edited = Edited::at_end("hello");
+    let mut edited = Edited::at_end("hello", false);
     type_into(
         &mut edited,
         &[
@@ -45,7 +45,7 @@ fn arrows_with_shift_select_and_typing_replaces() {
 
 #[test]
 fn ctrl_moves_by_words_and_home_end_go_to_the_ends() {
-    let mut edited = Edited::at_end("one two");
+    let mut edited = Edited::at_end("one two", false);
     type_into(
         &mut edited,
         &[
@@ -62,7 +62,7 @@ fn ctrl_moves_by_words_and_home_end_go_to_the_ends() {
 
 #[test]
 fn ctrl_a_selects_all_and_other_shortcuts_type_nothing() {
-    let mut edited = Edited::at_end("abc");
+    let mut edited = Edited::at_end("abc", false);
     type_into(
         &mut edited,
         &[
@@ -87,7 +87,10 @@ fn an_owner_changing_the_text_puts_the_caret_at_the_end() {
         text: "old".into(),
         ..default()
     };
-    assert_eq!(current(&text_box, &cursor), Edited::at_end("new words"));
+    assert_eq!(
+        current(&text_box, &cursor),
+        Edited::at_end("new words", false)
+    );
 }
 
 #[test]

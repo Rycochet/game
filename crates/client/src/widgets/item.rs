@@ -40,7 +40,7 @@ const CELL_BORDER: f32 = 1.0;
 /// How thick the metal edge of a set item's name is.
 const NAME_EDGE: f32 = 3.0;
 /// How far from the pointer an item's name goes.
-const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);
+pub(super) const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);
 /// How thick an edge showing quality is, to be seen beside the kind's colour.
 const QUALITY_BORDER: f32 = 2.0;
 
