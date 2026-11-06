@@ -22,9 +22,9 @@ pub(super) const CELLS: (u8, u8) = (2, 2);
 /// A piece's own picture never comes into it: only its form.
 const ANY: (u8, u8) = (1, 1);
 
-/// How a creature of this kind looks wearing these, if it stands on two legs and
-/// anything it wears is drawn: what its token shows in place of its icon, its body in
-/// its own colours.
+/// How a creature of this kind looks wearing these, if it stands on two legs: what
+/// its token shows in place of its icon, its body in its own colours, bare when
+/// nothing it wears is drawn.
 pub fn character_look(
     kind: CreatureKind,
     appearance: &Appearance,
@@ -32,7 +32,7 @@ pub fn character_look(
 ) -> Option<Look> {
     Frame::of(kind)?;
     let worn: Vec<Look> = worn.iter().filter_map(piece_look).collect();
-    (!worn.is_empty()).then_some(Look::Character {
+    Some(Look::Character {
         kind,
         worn,
         colours: Colours::of(kind, appearance),
@@ -117,3 +117,6 @@ pub(super) fn character_parts(
     }
     set::fit(pieces, CELLS, meshes, materials)
 }
+
+#[cfg(test)]
+mod tests;
