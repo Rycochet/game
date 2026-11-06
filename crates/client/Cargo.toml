@@ -33,13 +33,14 @@ dirs.workspace = true
 # browser pastes into the page's hidden input.
 arboard = { version = "3", default-features = false }
 
-# The browser's WebSocket, location and storage, and asking servers what they
-# are (`XmlHttpRequest`).
+# The browser's WebSocket, location, storage and clipboard, and asking servers
+# what they are (`XmlHttpRequest`).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = [
     "BinaryType",
+    "Clipboard",
     "CssStyleDeclaration",
     "Crypto",
     "Document",
@@ -53,6 +54,7 @@ web-sys = { version = "0.3", features = [
     "Location",
     "MediaQueryList",
     "MessageEvent",
+    "Navigator",
     "PointerEvent",
     "Storage",
     "WebSocket",

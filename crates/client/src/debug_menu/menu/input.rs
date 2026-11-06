@@ -130,7 +130,10 @@ pub(in crate::debug_menu) fn take_input(
             (KeyCode::ArrowLeft, HighlightStep::Left),
             (KeyCode::ArrowRight, HighlightStep::Right),
         ] {
-            if keys.just_pressed(key) {
+            // Until Up or Down starts a highlight, Left and Right move the
+            // filter's caret instead.
+            let sideways = matches!(step, HighlightStep::Left | HighlightStep::Right);
+            if keys.just_pressed(key) && !(sideways && level.highlight.is_none()) {
                 level.highlight = next_highlight(level.highlight, shown.len(), rows, step);
             }
         }

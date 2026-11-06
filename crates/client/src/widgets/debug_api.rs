@@ -83,6 +83,7 @@ struct Widgets<'w, 's> {
     states: Query<'w, 's, &'static ButtonState>,
     pressable: Query<'w, 's, (), With<Pressable>>,
     text_boxes: Query<'w, 's, &'static TextBox>,
+    text_cursors: Query<'w, 's, &'static super::text_box::Cursor>,
     key_boxes: Query<'w, 's, &'static KeyBox>,
     waiting: Res<'w, super::key_box::KeyWaiting>,
     dropdowns: Query<'w, 's, &'static Dropdown>,

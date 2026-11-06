@@ -174,6 +174,7 @@ impl Plugin for WidgetsPlugin {
                     .before(bevy::ui::UiSystems::Layout),
             )
             .init_resource::<text_box::PressedThisFrame>()
+            .init_resource::<text_box::Held>()
             .init_resource::<dropdown::OpenList>()
             .configure_sets(
                 PreUpdate,
@@ -197,9 +198,11 @@ impl Plugin for WidgetsPlugin {
                 (
                     feedback::track_pointer,
                     text_box::note_press,
+                    text_box::drag_to_select,
                     slider::drag_sliders,
                     scroll::scroll_areas,
                     moveable::take_presses,
+                    text_box::select_by_pointer,
                     text_box::take_text,
                     key_box::take_keys,
                     dropdown::run_dropdowns,
@@ -221,7 +224,12 @@ impl Plugin for WidgetsPlugin {
                     auto_scroll::auto_scroll,
                     slider::hold_sliders,
                     slider::place_marks,
-                    text_box::show_text_boxes,
+                    (
+                        text_box::show_text_boxes,
+                        text_box::show_carets,
+                        text_box::show_selections,
+                    )
+                        .chain(),
                     text_box::place_soft_keyboard,
                     dropdown::show_dropdowns,
                     (switch::flip_switches, switch::show_switches).chain(),

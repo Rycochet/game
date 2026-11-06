@@ -5,7 +5,7 @@ nav_order: 7
 
 # Debug menu
 
-The debug menu holds tools for trying things out while the game is being made. Open it with backtick (`` ` ``) or the warning button at the top left. Type to filter the list, then choose an entry with a click, a tap, or the arrow keys and Return.
+The debug menu holds tools for trying things out while the game is being made. Open it with backtick (`` ` ``) or the warning button at the top left. Type to filter the list, then choose an entry with a click, a tap, or the arrow keys and Return (Left and Right move along what you typed until Up or Down picks an entry).
 
 An entry that can't be used right now stays in the list, greyed out. Entries marked **Server** also need the server to allow them. Single player always does, and a networked server only with `HOW_DEBUG_TOOLS` set to `true` (see [Server environment variables](environment-variables)), which then allows them for everyone connected.
 

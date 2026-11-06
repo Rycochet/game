@@ -29,6 +29,10 @@ pub const ROW_TINT: Color = Color::srgba(0.25, 0.17, 0.1, 0.08);
 
 /// What is pressed into a panel: a text box, a slider's plain track.
 pub(super) const SUNKEN_BACKGROUND: Color = Color::srgb(0.87, 0.8, 0.65);
+/// Behind what is selected in a text box with the keyboard.
+pub(super) const SELECTION: Color = Color::srgba(0.85, 0.62, 0.25, 0.6);
+/// The same in a box without it: paler, but still seen.
+pub(super) const SELECTION_WITHOUT_KEYBOARD: Color = Color::srgba(0.85, 0.62, 0.25, 0.28);
 /// The edge of a text box saying something is wrong.
 pub(super) const ERROR_EDGE: Color = Color::srgb(0.75, 0.12, 0.12);
 /// Words warning that something can't be done, on parchment.
