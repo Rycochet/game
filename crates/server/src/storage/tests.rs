@@ -162,6 +162,7 @@ fn saves_are_read_back() {
                 records: BTreeMap::new(),
                 dead: BTreeSet::from([3]),
                 scents: Default::default(),
+                wild_blocks: BTreeMap::from([((2, 5), 77)]),
                 ground: BTreeMap::from([(
                     (3, 4),
                     vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],

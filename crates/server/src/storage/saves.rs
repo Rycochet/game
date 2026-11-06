@@ -101,6 +101,11 @@ pub struct LevelSave {
     /// Everyone's scent marks, while any nose could still smell them.
     #[serde(default)]
     pub scents: crate::entities::Scents,
+    /// The wilderness's only: blocks whose mobs have something saved (`dead`,
+    /// `records`), by `(x, y)`, with when someone was last near (seconds
+    /// since 1970): they reset after nobody has been for a while.
+    #[serde(default)]
+    pub wild_blocks: BTreeMap<(i64, i64), u64>,
 }
 
 /// What a mob has come to know and own.

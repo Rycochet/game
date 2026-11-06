@@ -167,6 +167,11 @@ impl ServerWorld {
     pub(crate) fn save_mobs(&mut self) {
         let mut notes = Vec::new();
         for (&(site, level), population) in &self.populations.0 {
+            // A wild area's number isn't a level, and only changes are kept
+            // there: its mobs and scent start again after a restart.
+            if site == SiteId::Wilderness {
+                continue;
+            }
             let unsettled: BTreeMap<u32, SavedMob> = population
                 .mobs
                 .iter()

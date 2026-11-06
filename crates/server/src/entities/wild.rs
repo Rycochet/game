@@ -9,6 +9,8 @@
 //! wilderness's level 0).
 
 mod blocks;
+mod resets;
+mod trails;
 
 #[cfg(test)]
 mod tests;
@@ -21,6 +23,8 @@ use super::Mob;
 use crate::ServerWorld;
 use crate::connections::{Client, Phase};
 use crate::storage::SiteId;
+
+pub(crate) use resets::touched;
 
 /// How long a block nobody's area holds keeps its mobs (owner: so turning
 /// back makes nothing vanish).

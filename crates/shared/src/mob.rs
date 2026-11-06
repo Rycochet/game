@@ -15,8 +15,10 @@ use crate::sheet::{Appearance, Attributes, Build, Feeling, Trait};
 use crate::wear::WornLook;
 
 mod scent;
+mod trail;
 mod wild;
 pub use scent::{BASE_SCENT, MOST_SCENT, SCENT_KEPT_FOR, can_smell, scent_strength, smells_for};
+pub use trail::{TRAIL_LONGEST, TRAIL_SHORTEST, wild_trail};
 pub use wild::{wild_mob_id, wild_spawns};
 
 /// Marks these hashes as being for mobs, apart from anything else from the seed.
