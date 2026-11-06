@@ -21,9 +21,9 @@ Abilities, the named things a creature can do: active ones done when asked (and 
 
 ## Used by
 
-- `sheet` (re-exports `Ability`), `creature` (kinds' abilities), `protocol` (`ClientMessage::ActionBar`, `ServerMessage::ActionBar`), server `connections/action_bar.rs` and `storage` (`CharacterSave::action_bar`), client `character`.
+- `sheet` (re-exports `Ability`), `creature` (kinds' abilities), `protocol` (`ClientMessage::ActionBar`, `ServerMessage::ActionBar`), server `connections/action_bar.rs` and `storage` (`CharacterSave::action_bar`), client `abilities` (the Abilities page).
 
 ## Notes
 
 - Bar rules (owner): an ability is in at most one slot; placing it from the Abilities page onto a filled slot replaces what was there, and placing one already on the bar moves it with its `auto`; swapping keeps each slot's `auto` with its ability; taking one off (dropping it on the Abilities page) forgets its `auto`. Only active, known abilities can be placed. One no longer known (after shapeshifting) stays in its slot, shown as unusable.
-- Which of the kinds' abilities are active is Claude's guess (Night Vision passive, the rest active); see `decisions.md`.
+- Which of the kinds' abilities are active was Claude's guess, agreed by the owner for now (Night Vision passive, the rest active); see `decisions.md`.

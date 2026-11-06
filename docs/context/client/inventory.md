@@ -1,6 +1,6 @@
 # client: inventory
 
-The Character panel (what the character is like, what they wear and what they carry, left to right), a moveable panel for each open bag, and picking items up, holding them and putting them down. `C`, `I` or the person button at the bottom left opens it. Native and web.
+The Character panel, in tabs: Character (what the character is like, `character`'s words), Inventory (what they wear and carry, and the ground) and Abilities (`abilities` fills it); a moveable panel for each open bag; and picking items up, holding them and putting them down. Native and web.
 
 ## Files
 
@@ -11,12 +11,12 @@ The Character panel (what the character is like, what they wear and what they ca
 - `crates/client/src/inventory/give.rs`: `NearbyPanel`, `GiveRow`, `show_nearby`, `show_give_aim`.
 - `crates/client/src/inventory/ground.rs`: `Ground`, `spawn_section`, `read_server`, `show_section`, `show_aim`.
 - `crates/client/src/inventory/filter.rs`: `GridFilter`, `FilterIcons`, `make_icons` (`Startup`), `spawn_filter`, `chosen`, `dims`, `keep_filters` (icons on new filters, greying empty categories, the ground grid's filter). `filter/icons.rs`: the pictures for All and each category, drawn in code.
-- `crates/client/src/inventory/panels.rs`: `OpenGrids` and the panels' components, the module list. In `panels/`: `fixed.rs` (`spawn_fixed_parts`), `icons.rs` (the person, bin and ground icons, drawn in code), `grids.rs` (`OpenGrids::open`, each grid with its sort and filter buttons above it), `own.rs` (`toggle_inventory`, `forget_closed`: a grid whose drawn size changes is drawn again in place), `shown.rs` (`shown_size`, `grows`: a growing bag's grid drawn to the rows in use plus room for the largest thing it takes, never past its most rows), `bins.rs` (`show_bins`, `show_drop`), `show.rs` (`show_grids`, `show_weights`), `aim.rs` (`show_aim`), `held.rs` (`show_held`, `show_tooltip`, `show_button`).
+- `crates/client/src/inventory/panels.rs`: `OpenGrids` and the panels' components, the module list. In `panels/`: `fixed.rs` (`spawn_fixed_parts`), `icons.rs` (the person, bin and ground icons, drawn in code), `grids.rs` (`OpenGrids::open`, each grid with its sort and filter buttons above it), `pages.rs` (`Page`, `Pages`, `spawn_pages`: the tab row and a page per tab, only the chosen one laid out; `switch_pages`), `own.rs` (`toggle_inventory`: the button and the tabs' keys, `forget_closed`: a grid whose drawn size changes is drawn again in place), `shown.rs` (`shown_size`, `grows`: a growing bag's grid drawn to the rows in use plus room for the largest thing it takes, never past its most rows), `bins.rs` (`show_bins`, `show_drop`), `show.rs` (`show_grids`, `show_weights`), `aim.rs` (`show_aim`), `held.rs` (`show_held`, `show_tooltip`, `show_button`).
 
 ## Public API
 
 - `InventoryPlugin`.
-- `OpenCharacter` (message): opens the Character panel, or brings it to the front (`ground`).
+- `OpenCharacter` (message): opens the Character panel on its Inventory tab, or brings it to the front (`ground`).
 - `Carried(Inventory)` (resource): what is carried, as the server last said plus any move since.
 - `Stacks(StackLimits)` (resource): how big the server lets stacks get, from `Welcome` (`debug_menu`'s Give Item).
 - `InventoryDebug` (message, native): `OpenInventory`, `OpenBags`, `PickUp(index)`, `DropSome`. Used by `dev_tools`.
@@ -58,3 +58,4 @@ The Character panel (what the character is like, what they wear and what they ca
 - Mixed stacks (owner's design): a stack with something known to differ has a red "!" in its top right corner (`widgets`). Any press on it, a tap or a finger held on it opens the split box with rows instead of a slider: All, then each kind in it, top's first, each with a small picture keeping its glow, its name and how many. Pressing a row holds those items (`Holding::group`, lifted out in `Carried` by `lift_group`), and every message letting go sends is wrapped in `FromStack`. Snapping back puts them on top of the stack; once nothing differs the mark goes. Mixed stacks on the ground or in a shop are picked up whole for now.
 - Filters (owner's design): a small button at the top right above each carried grid, and beside "On the ground", opens a list of All then each `ItemCategory`, with pictures; categories with nothing in that grid are greyed. The button shows the chosen one's picture. What isn't in it is faded (`ItemLook::dimmed`) but can still be picked up and named; a stack goes by its top. Each grid has its own, kept on its button, so closing a panel resets it to All.
 - Sorting (owner's design): the Sort button, left of a carried grid's filter, lays it out again in one go (`Inventory::sort_grid`): what looks the same stacked, then largest first from the top left. The client sorts first and sends `SortGrid` only if that worked and changed something, so a sort that can't fit everything does nothing; the server does the same and answers with `Inventory`. Nothing happens while something is held. Not on the ground, which the server lays out.
+- Tabs (owner): C opens the Character panel on Character, I on Inventory, B on Abilities (`common::Action`); the key of the tab on show closes it, another key switches tab. The person button opens or closes it on the tab last shown; `OpenCharacter` always shows Inventory and never closes it. Hidden pages stay spawned (`Display::None`), so grids and the ground section keep working; a hidden grid has no size, so nothing is dropped on it. Ids: `inventory/tabs`.

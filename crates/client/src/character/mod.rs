@@ -1,5 +1,5 @@
-//! What the character is like: the left of the Character panel, which `inventory`
-//! opens, and how fast they go. See `docs/context/client/character.md`.
+//! What the character is like: the Character panel's Character tab, which
+//! `inventory` opens, and how fast they go. See `docs/context/client/character.md`.
 
 use bevy::prelude::*;
 use shared::energy::NORMAL_SPEED;
@@ -82,11 +82,6 @@ fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow
     if !sheet.skills.is_empty() {
         lines.push(String::new());
         lines.extend(skill_lines(&sheet.skills));
-    }
-    if !def.abilities.is_empty() {
-        lines.push(String::new());
-        let abilities: Vec<_> = def.abilities.iter().map(|a| a.name()).collect();
-        lines.push(abilities.join(", "));
     }
     lines.push(String::new());
     for &which in def.looks {

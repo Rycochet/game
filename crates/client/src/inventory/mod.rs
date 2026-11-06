@@ -106,6 +106,7 @@ impl Plugin for InventoryPlugin {
                     .chain(),
             );
         app.add_systems(Update, early_pictures::ask_early);
+        app.add_systems(Update, panels::switch_pages.after(panels::toggle_inventory));
         // Before the grids are drawn, so a sort shows at once.
         app.add_systems(
             Update,
