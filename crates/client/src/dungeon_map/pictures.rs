@@ -87,6 +87,7 @@ fn floor_tint(kind: Option<LevelKind>) -> Color {
 #[allow(clippy::too_many_arguments)]
 pub(super) fn colour_ground(
     world: Option<Res<CurrentWorld>>,
+    dungeon: Res<CurrentDungeon>,
     place: Res<WorldReturn>,
     style: Res<SurfaceStyle>,
     clock: Res<GameClock>,
@@ -107,7 +108,12 @@ pub(super) fn colour_ground(
     };
     let climate = world.climate.sample(x, y, sample.height);
     let water = world.water_level(&clock);
-    let colour = style.ground_colour(sample, climate, water, world.surface.floor());
+    // The wilderness tints each cell from this (`wild_ground`).
+    let colour = if dungeon.is_wilderness() {
+        super::wild_ground::land_colour(&world, &style, water, place.0)
+    } else {
+        style.ground_colour(sample, climate, water, world.surface.floor())
+    };
     if *painted == Some(colour) {
         return;
     }

@@ -68,6 +68,7 @@ fn all_sides_of_a_building_use_its_wall_picture() {
         camera,
         Shape::Built,
         &Sight::new(&level),
+        None,
     );
     let mesh = &meshes.solid[Surface::Town as usize];
     let normals = mesh

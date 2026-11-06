@@ -58,6 +58,41 @@ impl CurrentDungeon {
         self.info = Some(info);
     }
 
+    /// The wilderness's level is now `bounds` (`ServerMessage::WildernessWindow`):
+    /// what is known of it where the two overlap stays.
+    pub fn move_window(&mut self, bounds: (i64, i64, i64, i64)) {
+        let (min_x, min_y, width, height) = bounds;
+        let mut level = Level::new(min_x, min_y, width, height);
+        let mut known = Sight::new(&level);
+        let mut remembered = Sight::new(&level);
+        for y in min_y..min_y + height {
+            for x in min_x..min_x + width {
+                if self.known.is_seen(x, y) {
+                    level.set(x, y, self.level.cell(x, y));
+                    level.set_room(x, y, self.level.room(x, y));
+                    known.insert(x, y);
+                }
+                if self.remembered.is_seen(x, y) {
+                    remembered.insert(x, y);
+                }
+            }
+        }
+        (self.level, self.known, self.remembered) = (level, known, remembered);
+        let level = &self.level;
+        self.stairs
+            .retain(|stairs| level.contains(stairs.x, stairs.y));
+        if let Some(info) = &mut self.info {
+            info.bounds = bounds;
+        }
+    }
+
+    /// Whether the player is in the wilderness.
+    pub fn is_wilderness(&self) -> bool {
+        self.info
+            .as_ref()
+            .is_some_and(|info| info.kind == LevelKind::Wilderness)
+    }
+
     /// A town's buildings: their cells are marked as theirs on the level.
     pub fn add_buildings(&mut self, buildings: &[BuildingLook]) {
         for building in buildings {

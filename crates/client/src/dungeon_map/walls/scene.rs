@@ -1,5 +1,6 @@
 //! What building a cell's meshes needs to know.
 
+use super::super::wild_ground::Tints;
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
 use shared::site::{BuildingLook, FieldLook};
@@ -24,4 +25,6 @@ pub struct Scene<'a> {
     pub fields: &'a [FieldLook],
     /// Whether the place is a ruin.
     pub ruined: bool,
+    /// The wilderness's ground colours, cell by cell (none anywhere else).
+    pub tint: Option<&'a Tints>,
 }

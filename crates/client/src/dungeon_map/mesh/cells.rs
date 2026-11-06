@@ -1,5 +1,6 @@
 //! What stands at a remembered cell, and flat open cells or stairs.
 
+use crate::dungeon_map::liquid::LooksLiquid;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::protocol::SeenStairs;
@@ -8,7 +9,7 @@ use super::super::CELL_SIZE;
 use super::super::field;
 use super::super::holes::build_hole;
 use super::super::liquid::build_cell;
-use super::super::oasis::build_grass_or_tree;
+use super::super::oasis::{build_grass_or_tree, build_tree};
 use super::super::stairs::{build_stairs, hides_viewer};
 use super::super::town;
 use super::super::walls::{Layers, Scene, build_opening, build_wall};
@@ -24,8 +25,9 @@ pub(super) fn build_cell_at(
     let level = scene.level;
     let cell = level.cell(x, y);
     if cell.is_wall() {
-        // A town's buildings are drawn whole, in `build`.
-        if level.room(x, y).is_none() {
+        // A town's buildings are drawn whole, in `build`; seen from the
+        // wilderness, which isn't told them, as walls.
+        if level.room(x, y).is_none() || scene.buildings.is_empty() {
             let before = layer_sizes(layers);
             build_wall(layers, scene, (x, y));
             // Only sent to truesight: otherwise it arrives as a wall.
@@ -42,6 +44,12 @@ pub(super) fn build_cell_at(
         build_hole(layers, scene, (x, y));
     } else if cell == Cell::Field && field::build_field(layers, scene, (x, y)) {
         // Drawn: anything else of a field is the land's own ground.
+    } else if scene.tint.is_some() && matches!(cell, Cell::Grass | Cell::Tree) {
+        // The wilderness: its own ground, and any tree on it.
+        build_open_cell(layers, scene, (x, y), None);
+        if cell == Cell::Tree {
+            build_tree(layers, scene, (x, y));
+        }
     } else if build_grass_or_tree(layers, scene, (x, y)) {
         // An oasis's grass, and any tree on it.
     } else {
@@ -59,7 +67,7 @@ pub(super) fn build_open_cell(
     stairs: Option<&SeenStairs>,
 ) {
     let Scene { level, light, .. } = *scene;
-    if level.cell(x, y).is_liquid() {
+    if level.cell(x, y).looks_liquid() {
         build_cell(layers, scene, (x, y));
         return;
     }
@@ -99,7 +107,15 @@ pub(super) fn build_open_cell(
             );
         }
         None => {
-            layers.solid[surface as usize].face(centre, Vec3::Y, CELL_SIZE / 2.0, floor_light);
+            let cell = level.cell(x, y);
+            let tint = scene
+                .tint
+                .filter(|_| surface == Surface::Ground)
+                .map_or(Vec3::ONE, |tints| tints.at(x, y, cell == Cell::Grass));
+            // After the ambient light, which would wash it out at night.
+            let lit = |p| with_ambient(floor_light(p)) * tint;
+            let half = CELL_SIZE / 2.0;
+            layers.solid[surface as usize].quad(centre, Vec3::Y, Vec3::NEG_Z, (half, half), lit);
         }
     }
 }

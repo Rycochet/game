@@ -1,5 +1,6 @@
 //! Noise and texture coordinates for wall faces and floors.
 
+use crate::dungeon_map::liquid::LooksLiquid;
 use shared::dungeon::{Cell, Level};
 
 use super::super::CELL_SIZE;
@@ -41,7 +42,7 @@ pub(super) fn floor_near(level: &Level, around: [(i64, i64); 3]) -> Surface {
         .iter()
         .map(|&(x, y)| level.cell(x, y))
         .find(|&cell| {
-            cell.is_open() && !cell.is_liquid() && !cell.is_opening() && cell != Cell::Hole
+            cell.is_open() && !cell.looks_liquid() && !cell.is_opening() && cell != Cell::Hole
         })
         .map_or(Surface::Floor, Surface::of_flat)
 }

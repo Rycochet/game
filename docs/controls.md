@@ -16,6 +16,10 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | Take steps | Arrow keys or W, A, S, D | |
 | Travel somewhere | Click the place | Tap the place |
 | Enter a place, take stairs, leave a site | Click it, and walk there | Tap it |
+| Explore the wilderness where you stand on the world map | Shift + . (`>`) | The Explore button |
+| Leave the wilderness, from anywhere out in the open | Shift + , (`<`) | The Leave button |
+
+In the wilderness you walk the land between places on foot, 16 steps to each step on the world map, and find places by walking up to them. A place you walk into from the wilderness leads back out into it; one you enter from the world map leads back to the world map. You can't explore from water, or leave the wilderness from inside a building or cave or into water.
 
 How fast you go depends on your kind of creature, what you carry, and the ground: the heavier the load, the slower everything is.
 

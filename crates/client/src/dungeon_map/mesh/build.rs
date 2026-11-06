@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 use super::super::theme::Shape;
 use super::super::town;
 use super::super::walls::{Layers, Scene};
+use super::super::wild_ground::Tints;
 use super::{
     Builder, DungeonMeshes, LightGrid, Surface, View, build_cell_at, copy_as_memory, sizes,
 };
@@ -40,6 +41,7 @@ pub fn build(
     camera: Vec3,
     shape: Shape,
     cut: &Sight,
+    tint: Option<&Tints>,
 ) -> DungeonMeshes {
     let mut layers = Layers {
         solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
@@ -59,6 +61,7 @@ pub fn build(
         lit_buildings,
         fields,
         ruined,
+        tint,
     };
     let (min_x, min_y, width, height) = level.bounds();
 

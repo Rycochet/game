@@ -1,5 +1,6 @@
 //! What is round a liquid cell: its outline in each quarter, surfaces and light.
 
+use super::LooksLiquid;
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level};
 
@@ -9,7 +10,7 @@ use super::Outline;
 
 /// Whether liquid carries on past this cell: it is liquid, or a wall.
 pub(super) fn wet(cell: Cell) -> bool {
-    cell.is_liquid() || cell.is_wall()
+    cell.looks_liquid() || cell.is_wall()
 }
 
 /// The three other cells round the corner of `(x, y)` in a quarter, beside it,
@@ -25,14 +26,14 @@ pub(super) fn around((x, y): (i64, i64), (sx, sz): (f32, f32)) -> [(i64, i64); 3
 pub fn outline_at(level: &Level, (x, y): (i64, i64), quarter: (f32, f32)) -> Option<Outline> {
     let cell = level.cell(x, y);
     let [a, b, c] = around((x, y), quarter).map(|(x, y)| level.cell(x, y));
-    if cell.is_liquid() {
+    if cell.looks_liquid() {
         return Some(Outline::of(wet(a), wet(b), wet(c)));
     }
-    if !cell.is_wall() || ![a, b, c].iter().any(|cell| cell.is_liquid()) {
+    if !cell.is_wall() || ![a, b, c].iter().any(|cell| cell.looks_liquid()) {
         return None;
     }
     let joins =
-        |near: Cell, other: Cell| near.is_liquid() || (near.is_wall() && wet(other) && wet(c));
+        |near: Cell, other: Cell| near.looks_liquid() || (near.is_wall() && wet(other) && wet(c));
     let (beside, ahead) = (joins(a, b), joins(b, a));
     if !beside && !ahead {
         return None;
@@ -56,10 +57,10 @@ pub fn surfaces_near(level: &Level, (x, y): (i64, i64)) -> (Surface, Surface) {
     ];
     let cells = || NEAR.iter().map(|&(dx, dy)| level.cell(x + dx, y + dy));
     let liquid = cells()
-        .find(|cell| cell.is_liquid())
+        .find(|cell| cell.looks_liquid())
         .map_or(Surface::Water, Surface::of_flat);
     let floor = cells()
-        .find(|&cell| cell.is_open() && !cell.is_liquid())
+        .find(|&cell| cell.is_open() && !cell.looks_liquid())
         .map_or(Surface::Floor, Surface::of_flat);
     (liquid, floor)
 }

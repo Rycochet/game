@@ -31,6 +31,16 @@ pub fn build_grass_or_tree(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64
     let patch = Rect::from_corners(Vec2::splat(-HALF_CELL), Vec2::splat(HALF_CELL));
     town::flat_patch(layers, scene, layer, centre, patch, GRASS_TILE);
     if cell == Cell::Tree {
+        build_tree(layers, scene, (x, y));
+    }
+    true
+}
+
+/// The tree standing on a cell (not the ground under it).
+pub fn build_tree(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)) {
+    let layer = town::flat_layer(scene, x, y);
+    let centre = town::cell_centre(x, y);
+    {
         let trunk = Vec3::new(TRUNK_HALF, 0.0, TRUNK_HALF);
         let top = Vec3::Y * TRUNK_HEIGHT;
         block(
@@ -51,7 +61,6 @@ pub fn build_grass_or_tree(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64
             HEDGE_TILE,
         );
     }
-    true
 }
 
 /// A block from `low` to `high` in one tile of the town's picture: its top

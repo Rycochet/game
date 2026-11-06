@@ -1,5 +1,6 @@
 //! How much outside light spills to each cell, and the light from outside on every cell.
 
+use crate::dungeon_map::liquid::LooksLiquid;
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, line_is_clear};
 use shared::protocol::SeenStairs;
@@ -25,7 +26,7 @@ pub(in crate::dungeon_map) struct Spill {
 /// in places that are all in the open apart from their buildings; underground,
 /// they don't.
 pub(super) fn under_sky(cell: Cell, open_air: bool) -> bool {
-    cell.is_outside() || (open_air && cell.is_liquid())
+    cell.is_outside() || (open_air && cell.looks_liquid())
 }
 
 impl Spill {
