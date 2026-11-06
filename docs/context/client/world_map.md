@@ -24,7 +24,7 @@ The world map: the surface as a lit 3D terrain mesh rendered by the GPU, with th
 
 ## Depends on
 
-- `hall_view` (`GateModel`, `GateWater`), `shared::hall` (`GatePlace`), `common` (`CurrentWorld` with its `KnownRoads` and gates, `GameClock`, `GameView`, `SkyNow`, `ViewStats`, `Weather`, `MapPosition`, `SmoothPosition`, `Token`, `Icon`, `Portal`, `Clickable`), `player` (`Player`, `TravelTo`, `PlayerSystems`), `shared::poi`, `shared::protocol` (`SeenPoi`, `WORLD_MAP_SIGHT`), `shared::road`, `shared::vegetation`, `surface_style`, `view3d` (`OrbitCamera`, `ViewCamera`, `ViewGrid`, `TokenView`, `View3dSystems`, `ClickedToken`, token size).
+- `hall_view` (`GateModel`, `GateWater`), `shared::hall` (`GatePlace`), `common` (`CurrentWorld` with its `KnownRoads` and gates, `GameClock`, `GameView`, `SkyNow`, `ViewStats`, `MapPosition`, `SmoothPosition`, `Token`, `Icon`, `Portal`, `Clickable`), `player` (`Player`, `TravelTo`, `PlayerSystems`), `shared::poi`, `shared::protocol` (`SeenPoi`, `WORLD_MAP_SIGHT`), `shared::road`, `shared::vegetation`, `surface_style`, `view3d` (`OrbitCamera`, `ViewCamera`, `ViewGrid`, `TokenView`, `View3dSystems`, `ClickedToken`, token size).
 
 ## Used by
 

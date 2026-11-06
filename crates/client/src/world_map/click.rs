@@ -7,7 +7,7 @@ use super::rivers::KnownRivers;
 use super::terrain::HeightCache;
 use super::view_square;
 use crate::common::{
-    ClickMode, CurrentWorld, GameClock, MapPosition, PointerPosition, Preferences, Weather,
+    ClickMode, CurrentWorld, GameClock, MapPosition, PointerPosition, Preferences,
 };
 use crate::connection::ToServer;
 use crate::player::{Player, TravelTo};
@@ -27,7 +27,6 @@ pub(super) fn pick_on_click(
     player: Single<&MapPosition, With<Player>>,
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
-    weather: Res<Weather>,
     style: Res<SurfaceStyle>,
     known_rivers: Res<KnownRivers>,
     cache: Option<ResMut<HeightCache>>,
@@ -63,7 +62,6 @@ pub(super) fn pick_on_click(
                 &known_rivers,
                 &style,
                 water_level,
-                weather.snow_line,
                 (x, z),
             )
         },

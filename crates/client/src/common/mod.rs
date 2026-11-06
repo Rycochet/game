@@ -31,7 +31,6 @@ mod states;
 mod token;
 mod video;
 mod view;
-mod weather;
 mod window;
 #[cfg(not(target_arch = "wasm32"))]
 mod window_follow;
@@ -67,7 +66,6 @@ pub use video::{
     RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
 };
 pub use view::{ViewFacing, ViewStats};
-pub use weather::{NORMAL_SNOW_LINE, Weather};
 pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois, WorldChanged};
 
@@ -98,7 +96,6 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerClock>()
             .add_message::<WorldChanged>()
             .init_resource::<SkyNow>()
-            .init_resource::<Weather>()
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()
             .init_resource::<ClickMode>()

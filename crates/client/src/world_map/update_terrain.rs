@@ -7,9 +7,7 @@ use shared::celestial::brightest;
 use super::rivers::KnownRivers;
 use super::terrain::{HeightCache, TerrainGrid, ViewSquare};
 use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, MAX_HALF, StripMeshes, Terrain};
-use crate::common::{
-    CurrentWorld, GameClock, MapPosition, Preferences, ViewDistance, ViewStats, Weather,
-};
+use crate::common::{CurrentWorld, GameClock, MapPosition, Preferences, ViewDistance, ViewStats};
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{OrbitCamera, ViewCamera};
@@ -17,7 +15,7 @@ use crate::view3d::{OrbitCamera, ViewCamera};
 /// The window last cut: its turn and size, and whether lit at noon.
 type LastCut = (f32, f32, bool);
 
-/// When the player reaches a new grid point, the hour, weather or style change,
+/// When the player reaches a new grid point, the hour or style change,
 /// or the view turns: moves the terrain to the player, works out any grid
 /// points the window now needs, and cuts the window (lined up with the camera)
 /// and its edge faces out of the grid.
@@ -27,7 +25,6 @@ pub(super) fn update_terrain(
     orbit: Single<&OrbitCamera, With<ViewCamera>>,
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
-    weather: Res<Weather>,
     style: Res<SurfaceStyle>,
     cache: Option<ResMut<HeightCache>>,
     mut grid: ResMut<TerrainGrid>,
@@ -53,13 +50,9 @@ pub(super) fn update_terrain(
     // Turning or zooming changes the square.
     let reframed = cut.is_none_or(|(yaw, half, _)| (yaw, half) != (orbit.yaw, square.half));
     let relit = cut.is_some_and(|(.., noon)| noon != video.midday_sun);
-    // A new hour (for the tide), weather, style or light changes how every
+    // A new hour (for the tide), style or light changes how every
     // point is drawn.
-    let redraw_all = clock.is_changed()
-        || weather.is_changed()
-        || style.is_changed()
-        || cache.is_added()
-        || relit;
+    let redraw_all = clock.is_changed() || style.is_changed() || cache.is_added() || relit;
     // More of the world, which may have pois the woods make way for.
     if !(player.is_changed() || redraw_all || reframed || world.is_changed()) {
         return;
@@ -91,7 +84,7 @@ pub(super) fn update_terrain(
         &known_rivers,
         &style,
         water_level,
-        weather.snow_line,
+        world.surface.floor(),
         light_from,
         centre,
         square,
@@ -107,9 +100,9 @@ pub(super) fn update_terrain(
         &grid,
         &mut cache,
         &world.surface,
+        &world.climate,
         &style,
         water_level,
-        weather.snow_line,
         centre,
         square,
     );
@@ -122,7 +115,6 @@ pub(super) fn update_terrain(
         world.surface.width(),
         &style,
         water_level,
-        weather.snow_line,
         square,
     );
     if let Some(mut mesh) = meshes.get_mut(&river_strips.0) {

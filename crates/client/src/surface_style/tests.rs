@@ -22,7 +22,7 @@ fn ground_colour_follows_the_biome_or_snow() {
             height: 60.0,
             jitter: 0.0,
         };
-        style.ground_colour(sample, climate, 50.0, 128.0)
+        style.ground_colour(sample, climate, 50.0, 0.0)
     };
     let [r, g, b, _] = colour(0.9, 0.05);
     assert!(r > g && g > b, "desert is sandy: {r} {g} {b}");
@@ -44,7 +44,7 @@ fn shore_is_the_biome_colour_turned_and_darkened() {
             height,
             jitter: 2.0,
         };
-        style.shade(sample, climate, height, 50.0, 128.0, 0.0)
+        style.shade(sample, climate, height, 50.0, 0.0, 0.0)
     };
     let (land, land_lightness) = shade(50.5);
     let (shore, shore_lightness) = shade(49.5);

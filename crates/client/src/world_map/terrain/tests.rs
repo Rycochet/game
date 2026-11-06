@@ -80,7 +80,7 @@ fn tokens_rest_on_the_drawn_triangles() {
         Vegetation::new(&params),
     );
     let (rivers, style) = (KnownRivers::default(), SurfaceStyle::default());
-    let (water, snow_line) = (params.sea_level, 1.0);
+    let (water, floor) = (params.sea_level, surface.floor());
     let mut cache = HeightCache::default();
     let mut grid = TerrainGrid::default();
     let square = ViewSquare {
@@ -97,7 +97,7 @@ fn tokens_rest_on_the_drawn_triangles() {
         &rivers,
         &style,
         water,
-        snow_line,
+        floor,
         (1.0, 0.0),
         centre,
         square,
@@ -114,7 +114,6 @@ fn tokens_rest_on_the_drawn_triangles() {
             &rivers,
             &style,
             water,
-            snow_line,
             (
                 centre.0 as f64 + f64::from(dx),
                 centre.1 as f64 + f64::from(dz),

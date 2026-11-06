@@ -59,7 +59,7 @@ impl TerrainGrid {
 
     /// Makes sure every point the window `square` around `centre` needs is
     /// worked out. `redraw_all` throws away what is kept
-    /// first (for a new hour, weather or style).
+    /// first (for a new hour or style).
     #[allow(clippy::too_many_arguments)]
     pub fn fill(
         &mut self,
@@ -70,7 +70,7 @@ impl TerrainGrid {
         rivers: &KnownRivers,
         style: &SurfaceStyle,
         water_level: f64,
-        snow_line: f64,
+        floor: f64,
         light_from: (f64, f64),
         centre: (i64, i64),
         square: ViewSquare,
@@ -92,7 +92,6 @@ impl TerrainGrid {
                 rivers,
                 style,
                 water_level,
-                snow_line,
                 (x, z),
             )
         };
@@ -135,9 +134,9 @@ impl TerrainGrid {
                 let away = sample.height + across * from_east.abs() + along * from_south.abs();
                 let place = cache.climate(climate, surface, x, z);
                 let (band, lightness) =
-                    style.shade(sample, place, away, water_level, snow_line, SLOPE_SHADING);
+                    style.shade(sample, place, away, water_level, floor, SLOPE_SHADING);
                 let mut colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness));
-                if style.is_frozen_water(sample, water_level, snow_line) {
+                if style.is_frozen_water(sample, place, water_level) {
                     // Brighter than white, so after the sun dims this flat
                     // surface it shows at the style's ice colour.
                     for channel in &mut colour[..3] {
@@ -146,7 +145,7 @@ impl TerrainGrid {
                 }
                 // Alpha below 1 tells the shader this is moving water.
                 if sample.height <= water_level
-                    && !style.is_frozen_water(sample, water_level, snow_line)
+                    && !style.is_frozen_water(sample, place, water_level)
                 {
                     colour[3] = 0.0;
                 }
@@ -155,7 +154,7 @@ impl TerrainGrid {
                 // Snow, shore and water change with the weather and tide, so
                 // what shows is decided here rather than in `shared`.
                 let cover = cache.cover(vegetation, climate, surface, x, z);
-                let kind = style.kind(sample, place, water_level, snow_line);
+                let kind = style.kind(sample, place, water_level);
                 let open_land = kind == SurfaceKind::Land;
                 self.snowy[i] = kind == SurfaceKind::Snow;
                 self.covers[i] = Vec4::new(

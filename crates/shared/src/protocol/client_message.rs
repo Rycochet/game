@@ -196,9 +196,6 @@ pub enum ClientMessage {
     /// Developer tools: change a cell of the level the player is on (not the
     /// one they stand on). Only an embedded server accepts it.
     DevSetCell { x: i64, y: i64, cell: Cell },
-    /// Developer tools: set the snow line (which freezes water), answered
-    /// with `SnowLine`. Only an embedded server accepts it.
-    DevSnowLine(u32),
     /// Developer tools: move the world's time to this many game minutes since
     /// the world began, and/or have it run at another rate from now on, answered
     /// with `WorldClock` to everyone in that world.
@@ -247,7 +244,6 @@ impl ClientMessage {
                 | Self::DevToHall
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
-                | Self::DevSnowLine(_)
                 | Self::DevSetWorldClock { .. }
                 | Self::DevGoToWorld { .. }
                 | Self::DevRevealPois

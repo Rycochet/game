@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 use super::ViewPlanet;
 use super::bar::{Bar, spawn_bar};
 use super::showing::{Choice, PlanetView, SceneAssets, Showing, build_globe};
-use crate::common::{CurrentWorld, ServerClock, Weather};
+use crate::common::{CurrentWorld, ServerClock};
 use crate::widgets::{layer_z, leaves_presses};
 
 /// Above the menus and their layers.
@@ -26,7 +26,6 @@ pub(super) fn open(
     mut view: ResMut<PlanetView>,
     world: Option<Res<CurrentWorld>>,
     clock: Res<ServerClock>,
-    weather: Res<Weather>,
     window: Single<&Window, With<PrimaryWindow>>,
     time: Res<Time<Real>>,
     mut commands: Commands,
@@ -55,7 +54,6 @@ pub(super) fn open(
         bar,
         choice,
         globe,
-        snow_line: weather.snow_line,
         start_hours: clock.hours(),
         opened: time.elapsed_secs_f64(),
         typing: false,

@@ -40,7 +40,7 @@ fn planet(
         showing.choice.generator = SurfaceGenerator::ALL
             .into_iter()
             .find(|kind| kind.name().eq_ignore_ascii_case(&name))
-            .ok_or_else(|| refused("generator is Classic, Continents or Plates"))?;
+            .ok_or_else(|| refused("generator is Desert, Continents or Plates"))?;
     }
     if let Some(seed) = asked.seed {
         showing.choice.seed = Seed::new(seed);

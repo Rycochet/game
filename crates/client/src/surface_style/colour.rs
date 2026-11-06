@@ -12,18 +12,19 @@ use super::{
 impl SurfaceStyle {
     /// Band and lightness for a point, as the prototype worked them out.
     /// Land is shaded by its slope against `away_height`, the height a step
-    /// further from the light, scaled by `slope_strength` (1.0 = prototype). Underwater points
-    /// get lighter with height, and with ice as the snow line falls.
+    /// further from the light, scaled by `slope_strength` (1.0 = prototype).
+    /// Underwater points get lighter with height, from darkest at `floor`
+    /// (`Surface::floor`, the deepest the world's seas go).
     pub fn shade(
         &self,
         sample: SurfaceSample,
         climate: ClimateSample,
         away_height: f64,
         water_level: f64,
-        snow_line: f64,
+        floor: f64,
         slope_strength: f64,
     ) -> (Band, f64) {
-        let kind = self.kind(sample, climate, water_level, snow_line);
+        let kind = self.kind(sample, climate, water_level);
         if kind == SurfaceKind::Land {
             let colour = self.living_colour(climate, sample);
             let slope = (sample.height - away_height) / 64.0;
@@ -47,15 +48,18 @@ impl SurfaceStyle {
             );
         }
         let band = self.band(kind);
-        let lightness = if self.is_frozen_water(sample, water_level, snow_line) {
+        let lightness = if self.is_frozen_water(sample, climate, water_level) {
             self.ice_lightness
         } else if sample.height > water_level {
             let slope = (sample.height - away_height) / 64.0;
             let shade = slope * (2000.0 - band.saturation * 2000.0) * slope_strength;
             (64.0 - band.hue / 2.0 - shade) / 100.0
         } else {
-            let ice = ((self.ice_start - snow_line) / self.ice_start).clamp(0.0, 1.0);
-            (sample.height / 2.0 + 15.0) / 100.0 + ice
+            // As deep as the world's seas go, squeezed into the water level's
+            // depth, so a world with no seas deeper than its water (`floor` 0)
+            // shades exactly by height.
+            let depth = ((sample.height - floor) / (water_level - floor)).clamp(0.0, 1.0);
+            (water_level * depth / 2.0 + 15.0) / 100.0
         };
         (band, lightness)
     }
@@ -67,10 +71,9 @@ impl SurfaceStyle {
         sample: SurfaceSample,
         climate: ClimateSample,
         water_level: f64,
-        snow_line: f64,
+        floor: f64,
     ) -> [u8; 4] {
-        let (band, lightness) =
-            self.shade(sample, climate, sample.height, water_level, snow_line, 0.0);
+        let (band, lightness) = self.shade(sample, climate, sample.height, water_level, floor, 0.0);
         hsl_to_rgba(band.hue, band.saturation, lightness)
     }
 
@@ -105,8 +108,13 @@ impl SurfaceStyle {
     }
 
     /// Whether a point is frozen water (the same rule as walking on it).
-    pub fn is_frozen_water(&self, sample: SurfaceSample, water_level: f64, snow_line: f64) -> bool {
-        sample.is_frozen(water_level, snow_line)
+    pub fn is_frozen_water(
+        &self,
+        sample: SurfaceSample,
+        climate: ClimateSample,
+        water_level: f64,
+    ) -> bool {
+        sample.is_frozen(water_level, climate)
     }
 
     /// The height a point should be drawn at: anything below the water is

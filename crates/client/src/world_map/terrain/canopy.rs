@@ -21,7 +21,6 @@ pub fn canopy_lift(
     rivers: &KnownRivers,
     style: &SurfaceStyle,
     water_level: f64,
-    snow_line: f64,
     (x, z): (i64, i64),
 ) -> f32 {
     let cover = cache.cover(vegetation, climate, surface, x, z);
@@ -30,7 +29,7 @@ pub fn canopy_lift(
     }
     let sample = cache.get(surface, x, z);
     let place = cache.climate(climate, surface, x, z);
-    if style.kind(sample, place, water_level, snow_line) != SurfaceKind::Land {
+    if style.kind(sample, place, water_level) != SurfaceKind::Land {
         return 0.0;
     }
     let t = ((cover.trees - CANOPY_FROM) / (CANOPY_FULL - CANOPY_FROM)).clamp(0.0, 1.0);
@@ -67,7 +66,6 @@ pub fn shown_height_at(
     rivers: &KnownRivers,
     style: &SurfaceStyle,
     water_level: f64,
-    snow_line: f64,
     (x, y): (f64, f64),
 ) -> f32 {
     let mut at = |px: i64, py: i64| {
@@ -80,7 +78,6 @@ pub fn shown_height_at(
             rivers,
             style,
             water_level,
-            snow_line,
             (px, py),
         );
         style.shown_height(sample, water_level) as f32 * HEIGHT_SCALE + lift

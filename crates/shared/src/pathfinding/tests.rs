@@ -224,7 +224,7 @@ fn ground() -> WorldGround {
 fn water() -> WorldConditions {
     WorldConditions {
         water: WorldParams::from_seed(Seed::new(12345)).high_water(),
-        snow_line: 128.0,
+        ice: true,
     }
 }
 
@@ -268,7 +268,7 @@ fn world_routes_go_round_a_summit() {
     let ground = WorldGround::new(&world);
     let conditions = WorldConditions {
         water: world.high_water(),
-        snow_line: 128.0,
+        ice: true,
     };
     // The highest of the broad land round the start.
     let height = |(x, y): (i64, i64)| surface.broad_height(x, y);

@@ -3,20 +3,29 @@
 //! The surface is wrapped around a cylinder in 3D noise space, so travelling
 //! east or west eventually returns to the start. North/south does not wrap.
 //! One grid unit is about 1 km. There is more than one way of making it (see
-//! `SurfaceGenerator`); the worlds themselves all use `Classic` for now.
+//! `SurfaceGenerator`), chosen per world in `WorldParams::generator`.
 
-mod classic;
 mod continents;
+mod desert;
 
+use crate::climate::{ClimateSample, SEA_ICE};
 use crate::showcase;
 use crate::world::WorldParams;
-use classic::Classic;
 use continents::Continents;
 use core::f64::consts::TAU;
+use desert::Desert;
 use fastnoise_lite::{FastNoiseLite, NoiseType};
 
 /// Metres for each unit of the height scale, measuring up from the sea.
 pub const METRES_PER_UNIT: f64 = 100.0;
+
+/// How deep the deepest seas a generator in metres makes are, on the height
+/// scale below its sea level (8 km). Water is shaded by depth down to here.
+const DEEPEST: f64 = 80.0;
+
+/// Degrees Celsius a point's `jitter` moves where the sea freezes, so the
+/// edge of the ice is ragged rather than following the smooth climate.
+const ICE_JITTER: f64 = 0.25;
 
 /// Height and texture at one grid position.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -30,10 +39,11 @@ pub struct SurfaceSample {
 }
 
 impl SurfaceSample {
-    /// Whether this point is ice: under water, with the snow line below it.
-    /// Freezing spreads from the shallows as the snow line falls.
-    pub fn is_frozen(&self, water_level: f64, snow_line: f64) -> bool {
-        self.height <= water_level && self.height + self.jitter > snow_line
+    /// Whether this point is ice: under water, where the climate over it
+    /// (`Climate::sample` at its height) is colder than `SEA_ICE`. Both
+    /// drawing and walking go by this.
+    pub fn is_frozen(&self, water_level: f64, climate: ClimateSample) -> bool {
+        self.height <= water_level && climate.celsius() + self.jitter * ICE_JITTER < SEA_ICE
     }
 }
 
@@ -54,9 +64,10 @@ pub struct PlateSample {
 /// The ways of making a surface.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum SurfaceGenerator {
-    /// Layered noise on one scale: what every world uses for now.
+    /// Layered noise on one scale: hills everywhere, nothing continent-sized.
+    /// The old generator, kept for dry desert worlds.
     #[default]
-    Classic,
+    Desert,
     /// Continents and oceans with shelves, worked out in metres, with rare
     /// mountain ranges inland.
     Continents,
@@ -68,23 +79,42 @@ pub enum SurfaceGenerator {
 
 impl SurfaceGenerator {
     pub const ALL: [SurfaceGenerator; 3] = [
-        SurfaceGenerator::Classic,
+        SurfaceGenerator::Desert,
         SurfaceGenerator::Continents,
         SurfaceGenerator::Plates,
     ];
 
     pub fn name(self) -> &'static str {
         match self {
-            SurfaceGenerator::Classic => "Classic",
+            SurfaceGenerator::Desert => "Desert",
             SurfaceGenerator::Continents => "Continents",
             SurfaceGenerator::Plates => "Plates",
         }
     }
+
+    /// The generator with this name (any case), as `name` gives it.
+    pub fn named(name: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|kind| kind.name().eq_ignore_ascii_case(name))
+    }
+
+    /// The generator every world uses when `HOW_DEBUG_GENERATOR` names one, for
+    /// trying one out in the game. A client and its server must both have it
+    /// (as the native client's own server does), or they disagree.
+    pub fn forced() -> Option<Self> {
+        Self::named(&std::env::var("HOW_DEBUG_GENERATOR").ok()?)
+    }
+
+    /// Whether it works in metres, with a climate from the planet.
+    pub fn in_metres(self) -> bool {
+        self != SurfaceGenerator::Desert
+    }
 }
 
 enum Generator {
-    Classic(Classic),
-    // Boxed: it is much larger than `Classic`. With plates for `Plates`.
+    Desert(Desert),
+    // Boxed: it is much larger than `Desert`. With plates for `Plates`.
     Continents(Box<Continents>),
 }
 
@@ -99,16 +129,16 @@ pub struct Surface {
 }
 
 impl Surface {
-    /// The world's own surface.
+    /// The world's own surface, by its `generator`.
     pub fn new(world: &WorldParams) -> Self {
-        Self::with_generator(world, SurfaceGenerator::Classic)
+        Self::with_generator(world, world.generator)
     }
 
     /// The surface another generator would make for this world.
     pub fn with_generator(world: &WorldParams, kind: SurfaceGenerator) -> Self {
         let width = (world.circumference / 1000).max(1) as i64;
         let generator = match kind {
-            SurfaceGenerator::Classic => Generator::Classic(Classic::new(world)),
+            SurfaceGenerator::Desert => Generator::Desert(Desert::new(world)),
             SurfaceGenerator::Continents | SurfaceGenerator::Plates => {
                 let with_plates = kind == SurfaceGenerator::Plates;
                 Generator::Continents(Box::new(Continents::new(world, width, with_plates)))
@@ -139,7 +169,7 @@ impl Surface {
             return showcase::FLAT_HEIGHT;
         }
         match &self.generator {
-            Generator::Classic(classic) => classic.broad_height(x, y, self.width),
+            Generator::Desert(desert) => desert.broad_height(x, y, self.width),
             Generator::Continents(continents) => self.on_scale(continents.metres(x, y, true).0),
         }
     }
@@ -152,7 +182,7 @@ impl Surface {
             };
         }
         match &self.generator {
-            Generator::Classic(classic) => classic.sample(x, y, self.width),
+            Generator::Desert(desert) => desert.sample(x, y, self.width),
             Generator::Continents(continents) => {
                 let (metres, jitter) = continents.metres(x, y, false);
                 SurfaceSample {
@@ -167,7 +197,16 @@ impl Surface {
     pub fn plate_at(&self, x: i64, y: i64) -> Option<PlateSample> {
         match &self.generator {
             Generator::Continents(continents) => continents.plate_at(x, y),
-            Generator::Classic(_) => None,
+            Generator::Desert(_) => None,
+        }
+    }
+
+    /// The lowest height water is shaded down to: the deepest it gets.
+    pub fn floor(&self) -> f64 {
+        if self.kind.in_metres() {
+            self.sea_level - DEEPEST
+        } else {
+            0.0
         }
     }
 

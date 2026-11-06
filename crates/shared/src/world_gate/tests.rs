@@ -46,10 +46,10 @@ fn gates_stand_on_dry_land_apart_and_away_from_the_poles() {
 
 #[test]
 fn a_planet_of_water_has_no_gates() {
-    // Classic's heights don't follow the sea, so raising it drowns the land.
+    // Desert's heights don't follow the sea, so raising it drowns the land.
     let mut world = world(3);
     world.sea_level = 1000.0;
-    let surface = Surface::with_generator(&world, SurfaceGenerator::Classic);
+    let surface = Surface::with_generator(&world, SurfaceGenerator::Desert);
     let found = WorldGates::find(&world, &surface);
     assert!(found.gates.is_empty());
     assert_eq!(

@@ -30,7 +30,6 @@ fn facts(view: GameView) -> Facts {
         has_fields: false,
         has_herbs: false,
         walking: false,
-        cycling: false,
         detecting: false,
         god_mode: false,
         truesight: false,

@@ -12,7 +12,6 @@ fn facts() -> Facts {
         has_fields: false,
         has_herbs: false,
         walking: false,
-        cycling: false,
         detecting: false,
         god_mode: false,
         truesight: false,
@@ -50,7 +49,7 @@ fn return_on_a_disabled_entry_does_nothing() {
 fn return_on_a_highlighted_entry_chooses_it() {
     let shown = on_show("");
     assert_eq!(
-        return_chooses(&shown, Some(6), &facts()),
+        return_chooses(&shown, Some(5), &facts()),
         Some(DebugAction::ForgetMap)
     );
 }

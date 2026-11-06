@@ -145,7 +145,6 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             mob: Id::for_test(9),
         },
         ClientMessage::DevTeleport { x: -3, y: 4 },
-        ClientMessage::DevSnowLine(40),
         ClientMessage::DevGoToWorld { seed: 77 },
         ClientMessage::EnterGate { entrance: 5 },
         ClientMessage::DevSetWorldClock {
@@ -197,7 +196,6 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             },
             time: WorldTime::at(5.25, 2.0, ClockRate::NORMAL),
             server_clock: 2.0,
-            snow_line: 128,
             x: -4,
             y: 9,
             dev_tools: true,
@@ -205,7 +203,6 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             stacks: StackLimits::default(),
         },
         ServerMessage::ForgetWorldMap,
-        ServerMessage::SnowLine(40),
         ServerMessage::Hour(6),
         ServerMessage::WorldClock(WorldTime::at(405.0, 10.0, ClockRate::NORMAL)),
         ServerMessage::Paused {

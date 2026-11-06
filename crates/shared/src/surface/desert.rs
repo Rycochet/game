@@ -19,11 +19,11 @@ const BROAD_OCTAVES: u32 = 3;
 /// The layer also used for `jitter`.
 const JITTER_OCTAVE: u32 = 5;
 
-pub(super) struct Classic {
+pub(super) struct Desert {
     noise: FastNoiseLite,
 }
 
-impl Classic {
+impl Desert {
     pub(super) fn new(world: &WorldParams) -> Self {
         Self {
             noise: new_noise(world, "land"),

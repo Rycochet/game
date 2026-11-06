@@ -27,13 +27,10 @@ impl Plugin for SurfaceStylePlugin {
 /// biome's colour, and colours blend between neighbouring cells' centres.
 const PALETTE_STEPS: f64 = 10.0;
 
-/// How much warmer than snow, and how far below the snow line, rivers freeze
-/// once they are `RIVER_FREEZE_INLAND` above the water. At the water, only
-/// `RIVER_FREEZE_AT_SEA` below the snow line, about when the shallows freeze.
+/// How much warmer than snow rivers freeze once they are
+/// `RIVER_FREEZE_INLAND` above the water; at the water, only as cold as snow.
 const RIVER_FREEZE_TEMPERATURE: f64 = 0.07;
-const RIVER_FREEZE_HEIGHT: f64 = 8.0;
 const RIVER_FREEZE_INLAND: f64 = 16.0;
-const RIVER_FREEZE_AT_SEA: f64 = 4.0;
 
 /// Heights where land starts going to tundra's colours, and is all tundra.
 /// Snow is around 90.

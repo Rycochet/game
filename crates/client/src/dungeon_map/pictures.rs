@@ -10,7 +10,7 @@ use super::mesh::Surface;
 use super::sight_lines::{MaskSide, SurfaceMaterial};
 use super::theme::Theme;
 use super::{MEMORY_ALPHA, SurfaceMaterials, load_tile};
-use crate::common::{CurrentDungeon, CurrentWorld, GameClock, MapPosition, Weather, WorldReturn};
+use crate::common::{CurrentDungeon, CurrentWorld, GameClock, MapPosition, WorldReturn};
 use crate::surface_style::SurfaceStyle;
 
 /// The wall and floor pictures for the kind of place the player is in.
@@ -90,7 +90,6 @@ pub(super) fn colour_ground(
     place: Res<WorldReturn>,
     style: Res<SurfaceStyle>,
     clock: Res<GameClock>,
-    weather: Res<Weather>,
     surfaces: Res<SurfaceMaterials>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
@@ -107,8 +106,8 @@ pub(super) fn colour_ground(
         ..world.surface.sample(x, y)
     };
     let climate = world.climate.sample(x, y, sample.height);
-    let conditions = world.conditions(&clock, &weather);
-    let colour = style.ground_colour(sample, climate, conditions.water, conditions.snow_line);
+    let water = world.water_level(&clock);
+    let colour = style.ground_colour(sample, climate, water, world.surface.floor());
     if *painted == Some(colour) {
         return;
     }

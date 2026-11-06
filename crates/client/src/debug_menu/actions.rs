@@ -12,7 +12,6 @@ pub enum DebugAction {
     AutoWalk,
     ChangeCellMode,
     ChangeCreature,
-    CycleTemperature,
     DetectMonsters,
     FieldsState,
     ForgetMap,
@@ -47,7 +46,6 @@ pub(super) struct Facts {
     pub has_fields: bool,
     pub has_herbs: bool,
     pub walking: bool,
-    pub cycling: bool,
     pub detecting: bool,
     pub god_mode: bool,
     pub truesight: bool,
@@ -64,11 +62,10 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 28] = [
+    pub(super) const ALL: [Self; 27] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
-        Self::CycleTemperature,
         Self::DetectMonsters,
         Self::FieldsState,
         Self::ForgetMap,
@@ -100,7 +97,6 @@ impl DebugAction {
             Self::AutoWalk => "Auto Walk",
             Self::ChangeCellMode => "Change Cell Mode",
             Self::ChangeCreature => "Change Creature",
-            Self::CycleTemperature => "Cycle Temperature",
             Self::DetectMonsters => "Detect Monsters",
             Self::FieldsState => "Fields State",
             Self::ForgetMap => "Forget Map",
@@ -184,7 +180,6 @@ impl DebugAction {
             self,
             Self::ChangeCellMode
                 | Self::ChangeCreature
-                | Self::CycleTemperature
                 | Self::DetectMonsters
                 | Self::ForgetMap
                 | Self::ForgetMapOnServer
@@ -208,7 +203,6 @@ impl DebugAction {
         match self {
             Self::AutoWalk => Some(facts.walking),
             Self::ChangeCellMode => Some(facts.changing_cells),
-            Self::CycleTemperature => Some(facts.cycling),
             Self::DetectMonsters => Some(facts.detecting),
             Self::GodMode => Some(facts.god_mode),
             Self::Truesight => Some(facts.truesight),
