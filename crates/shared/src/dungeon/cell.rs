@@ -66,6 +66,9 @@ pub enum Cell {
     Grass,
     /// A tree on grass: not walkable, but seen and lit past.
     Tree,
+    /// Water shallow enough to wade: walkable outside, drawn as water at half
+    /// depth. Within `wilderness::SHALLOWS_REACH` of land in the wilderness.
+    Shallows,
 }
 
 impl Cell {
@@ -83,6 +86,7 @@ impl Cell {
                 | Self::CoveredGround
                 | Self::WorldGate
                 | Self::Grass
+                | Self::Shallows
         ) || self.is_road()
     }
 
@@ -111,6 +115,7 @@ impl Cell {
                 | Self::HerbBed
                 | Self::Grass
                 | Self::Tree
+                | Self::Shallows
         ) || self.is_road()
     }
 

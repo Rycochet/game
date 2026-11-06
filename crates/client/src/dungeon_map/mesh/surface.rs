@@ -40,7 +40,7 @@ impl Surface {
             | Cell::HerbBed
             | Cell::Grass
             | Cell::Tree => Self::Ground,
-            Cell::Water => Self::Water,
+            Cell::Water | Cell::Shallows => Self::Water,
             Cell::Lava => Self::Lava,
             _ => Self::Floor,
         }
