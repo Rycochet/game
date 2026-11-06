@@ -18,8 +18,8 @@ fn every_body_stays_inside_its_picture_with_room_for_its_edge() {
         let (wide, long) = (wide as f32, long as f32);
         let per_cell = VIEW_WIDTH / wide.max(long);
         let edge = OUTLINE_PIXELS / PIXELS_PER_CELL * per_cell;
-        let (skin, feathers) = fitted(&layout, height);
-        for corner in skin.iter().chain(&feathers).flatten() {
+        let (skin, coat, feathers) = fitted(&layout, height);
+        for corner in skin.iter().chain(&coat).chain(&feathers).flatten() {
             assert!(corner.is_finite());
             assert!(corner.x.abs() + edge <= wide * per_cell / 2.0, "{layout:?}");
             assert!(corner.y.abs() + edge <= long * per_cell / 2.0, "{layout:?}");

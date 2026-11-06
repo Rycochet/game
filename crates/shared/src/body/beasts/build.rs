@@ -135,6 +135,7 @@ pub(super) fn fourfoot(four: &Fourfoot, parts: Parts) -> Layout {
         head: head(four.head),
         limbs: slots(&limbs),
         parts,
+        upper: None,
     }
 }
 
@@ -180,6 +181,7 @@ pub(super) fn bird(bird: &Bird, parts: Parts) -> Layout {
         head: head(bird.head),
         limbs: slots(&limbs),
         parts,
+        upper: None,
     }
 }
 

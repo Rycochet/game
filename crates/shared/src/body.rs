@@ -14,15 +14,17 @@ mod bipeds;
 mod layout;
 mod parts;
 mod proportions;
+mod taurs;
 mod trig;
 
 pub use beasts::{BEASTS, Beast, Bird, Fourfoot, Plan};
 pub use bipeds::{Biped, FIRST_BIPEDS};
 pub use layout::{
-    Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station,
+    Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station, Upper,
 };
 pub use parts::{Feet, Horns, NONE, Parts, Snout, Wings};
 pub use proportions::{PERSON, Proportions};
+pub use taurs::{TAURS, Taur};
 
 /// Which side of the body, as its owner sees it: left is towards the picture's right.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

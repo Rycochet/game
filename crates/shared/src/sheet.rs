@@ -98,6 +98,11 @@ impl Appearance {
             .find_map(|which| self.choice(kind, which)?.colour)
     }
 
+    /// The colour of its coat, if it has one: a taur's lower body's.
+    pub fn coat(&self, kind: CreatureKind) -> Option<[u8; 3]> {
+        self.choice(kind, Trait::CoatColour)?.colour
+    }
+
     /// The colour of its feathers, if it has any.
     pub fn feathers(&self, kind: CreatureKind) -> Option<[u8; 3]> {
         self.choice(kind, Trait::FeatherColour)?.colour

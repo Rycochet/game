@@ -98,13 +98,14 @@ impl Layout {
             },
             limbs,
             parts,
+            upper: None,
         }
     }
 
     /// Its frame, if it stands upright on two legs with two arms (or wing-arms) and its
     /// neck upright.
     pub fn frame(&self) -> Option<Frame> {
-        if self.spine.pitch != 0 || self.neck.pitch != 0 {
+        if self.spine.pitch != 0 || self.neck.pitch != 0 || self.upper.is_some() {
             return None;
         }
         let arm = self

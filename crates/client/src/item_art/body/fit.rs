@@ -5,11 +5,22 @@ use bevy::prelude::*;
 use shared::body::{Layout, NONE, PERSON};
 
 use super::{
-    MARGIN_PIXELS, PIXELS_PER_CELL, TILT, TURN, Triangle, VIEW_WIDTH, build, cells, features,
+    MARGIN_PIXELS, PIXELS_PER_CELL, TILT, TURN, Triangle, VIEW_WIDTH, build, build_coated, cells,
+    features,
 };
 
-/// How far an animal is turned to its right: nearly side on.
+/// How far an animal or a taur is turned to its right: nearly side on.
 const BEAST_TURN: f32 = 1.15;
+
+/// How far a body is turned to its right in a picture: a little, so an upright body's
+/// sides show, or nearly side on for anything long.
+pub(in crate::item_art) fn turn_of(layout: &Layout) -> f32 {
+    if layout.frame().is_some() {
+        TURN
+    } else {
+        BEAST_TURN
+    }
+}
 
 /// How tall a person usually stands, in millimetres: the height that fills a picture.
 const AVERAGE_HEIGHT: i32 = 1750;
@@ -29,16 +40,13 @@ fn bounds(triangles: &[Triangle], view: Quat) -> (Vec3, Vec3) {
 /// its black edge: a person of the usual height fills it, anything shorter (`height`, in
 /// millimetres) is drawn that much smaller on the same ground, and anything that would
 /// still overflow it (wide horns, say) is fitted to it. The skin, then any feathers.
-pub(super) fn fitted(layout: &Layout, height: i32) -> (Vec<Triangle>, Vec<Triangle>) {
-    let (skin, feathers) = (build(layout), features::wings(layout));
-    // An animal turned further, so its side shows.
-    let turn = if layout.frame().is_some() {
-        TURN
-    } else {
-        BEAST_TURN
-    };
-    let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(turn);
-    let all: Vec<Triangle> = skin.iter().chain(&feathers).copied().collect();
+pub(super) fn fitted(
+    layout: &Layout,
+    height: i32,
+) -> (Vec<Triangle>, Vec<Triangle>, Vec<Triangle>) {
+    let ((skin, coat), feathers) = (build_coated(layout), features::wings(layout));
+    let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(turn_of(layout));
+    let all: Vec<Triangle> = skin.iter().chain(&coat).chain(&feathers).copied().collect();
     let (low, high) = bounds(&all, view);
     let (wide, long) = cells(layout);
     let (wide, long) = (wide as f32, long as f32);
@@ -72,5 +80,5 @@ pub(super) fn fitted(layout: &Layout, height: i32) -> (Vec<Triangle>, Vec<Triang
             })
             .collect()
     };
-    (placed(skin), placed(feathers))
+    (placed(skin), placed(coat), placed(feathers))
 }

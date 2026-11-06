@@ -94,17 +94,18 @@ pub(in crate::item_art) fn set_parts(
 ) -> Vec<Part> {
     let frame = Frame::of(CreatureKind::Human).expect("people have a frame");
     let pieces = build(&look.form, &frame, look.digits, quality);
-    fit(pieces, look.cells, meshes, materials)
+    fit(pieces, look.cells, TURN, meshes, materials)
 }
 
 /// Parts built on a frame, turned as a body is seen and fitted to these cells.
 pub(in crate::item_art) fn fit(
     mut pieces: Coloured,
     cells: (u8, u8),
+    turned: f32,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
-    let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(TURN);
+    let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(turned);
     let turn = |triangles: &mut Vec<Triangle>, change: &dyn Fn(Vec3) -> Vec3| {
         for triangle in triangles.iter_mut() {
             *triangle = triangle.map(change);
