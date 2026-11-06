@@ -1,7 +1,7 @@
-//! What a creature is like: stats, skills, abilities and how it looks. See
-//! `docs/context/shared/creature.md`.
+//! What a creature is like: attributes, skills, abilities and how it looks. See
+//! `docs/context/shared/creature.md` and `docs/context/abilities-skills.md`.
 //!
-//! Stats and skills are for gameplay that doesn't exist yet, apart from what
+//! Attributes and skills are for gameplay that doesn't exist yet, apart from what
 //! strength says about carrying. Appearance never affects the rules.
 
 use std::collections::BTreeMap;
@@ -12,18 +12,15 @@ use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
 use crate::item::Inventory;
 
+mod attributes;
+mod build;
+mod from_build;
 mod looks;
 
+pub use attributes::{Attribute, Attributes, Row};
+pub use build::{Build, Dot, POINTS_TOTAL, TURN_STEPS, WEIGHT_TOTAL};
+pub use from_build::{POINT_WEIGHT, SPREAD};
 pub use looks::Choice;
-
-/// A creature's base stats.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Stats {
-    pub strength: u8,
-    pub dexterity: u8,
-    pub intelligence: u8,
-    pub constitution: u8,
-}
 
 /// Something that can be learned, and be better or worse at.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -158,7 +155,13 @@ pub enum Load {
 /// What one creature is like: starts from its kind, and can grow from there.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sheet {
-    pub stats: Stats,
+    /// What it is like now. Missing from saves made before there were nine
+    /// (`settled` fills it in).
+    #[serde(default)]
+    pub attributes: Attributes,
+    /// How its attributes were chosen, kept to show and to work them out again.
+    #[serde(default)]
+    pub build: Build,
     pub skills: BTreeMap<Skill, u8>,
     pub appearance: Appearance,
 }
@@ -170,21 +173,39 @@ impl Default for Sheet {
 }
 
 impl Sheet {
-    /// A plain one of this kind.
+    /// A plain one of this kind: its dots in the middle, Body at the top.
     pub fn new(kind: CreatureKind) -> Self {
-        let def = kind.def();
+        Self::built(kind, Build::CENTRED)
+    }
+
+    /// One of this kind, its attributes chosen with these triangles, which must be
+    /// valid (`Build::is_valid`).
+    pub fn built(kind: CreatureKind, build: Build) -> Self {
         Self {
-            stats: def.stats,
-            skills: def.skills.iter().copied().collect(),
+            attributes: Attributes::for_kind(kind, &build),
+            build,
+            skills: kind.def().skills.iter().copied().collect(),
             appearance: Appearance::default(),
         }
     }
 
+    /// As loaded: a save from before the nine attributes has none, so they are
+    /// worked out again from its build (the centre, for such a save).
+    pub fn settled(mut self, kind: CreatureKind) -> Self {
+        if self.attributes == Attributes::default() {
+            if !self.build.is_valid() {
+                self.build = Build::CENTRED;
+            }
+            self.attributes = Attributes::for_kind(kind, &self.build);
+        }
+        self
+    }
+
     /// How much it can carry before it is overloaded, in grams: by strength, and
-    /// more the bigger it is.
+    /// more the bigger it is. A person of median strength (100) carries 30 kg.
     pub fn capacity(&self, size: Size) -> u32 {
-        const GRAMS_PER_STRENGTH_AND_SIZE: u32 = 1000;
-        self.stats.strength as u32 * (size as u32 + 1) * GRAMS_PER_STRENGTH_AND_SIZE
+        const GRAMS_PER_STRENGTH_AND_SIZE: u32 = 100;
+        self.attributes.strength as u32 * (size as u32 + 1) * GRAMS_PER_STRENGTH_AND_SIZE
     }
 
     /// How weighed down this makes it: burdened past half what it can carry.

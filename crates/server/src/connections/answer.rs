@@ -100,6 +100,7 @@ pub(crate) fn answer(
             name,
             kind,
             appearance,
+            build,
         } => {
             let Some(account) = client.account.filter(|_| client.phase == Phase::Choosing) else {
                 return refuse(client, "not the time to make a character".into());
@@ -114,10 +115,14 @@ pub(crate) fn answer(
                     "that look doesn't suit that kind of creature".into(),
                 );
             }
+            // The server works the attributes out: only the triangles come from it.
+            if !build.is_valid() {
+                return refuse(client, "those attributes can't be chosen".into());
+            }
             match accounts.create_character(&account, &name) {
                 Ok(id) => {
                     client.character_id = Some(id);
-                    client.starting_as = Some((kind, appearance));
+                    client.starting_as = Some((kind, appearance, build));
                     client.phase = Phase::Joining;
                     true
                 }

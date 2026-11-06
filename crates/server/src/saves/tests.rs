@@ -91,3 +91,19 @@ fn a_new_folder_just_notes_its_format() {
     assert!(set_aside_folders(&folder.0).is_empty());
     assert!(folder.0.join(FORMAT_FILE).exists());
 }
+
+#[test]
+fn a_sheet_saved_with_the_four_old_stats_still_loads() {
+    use shared::creature::CreatureKind;
+    use shared::sheet::Sheet;
+
+    let old = "(stats: (strength: 10, dexterity: 10, intelligence: 10, constitution: 10), \
+               skills: {}, appearance: ({}))";
+    let sheet: Sheet = ron::from_str(old).unwrap();
+    // Joining works its attributes out from the centre (`Sheet::settled`).
+    let human = CreatureKind::Human;
+    assert_eq!(
+        sheet.settled(human).attributes,
+        Sheet::new(human).attributes
+    );
+}

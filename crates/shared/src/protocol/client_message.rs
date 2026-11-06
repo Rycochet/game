@@ -11,7 +11,7 @@ use crate::item::{Favour, Holder, ItemKind, Quality, Rotation};
 use crate::item_form::RollRequest;
 use crate::movement::Step;
 use crate::poi::{ChunkPos, PoiKind};
-use crate::sheet::Appearance;
+use crate::sheet::{Appearance, Build};
 use crate::world::ClockRate;
 
 /// From a client to the server.
@@ -33,6 +33,9 @@ pub enum ClientMessage {
         kind: CreatureKind,
         /// How they look: refused unless it suits the kind.
         appearance: Appearance,
+        /// Their triangles: refused unless valid. The server works out the
+        /// attributes from them.
+        build: Build,
     },
     /// Asks the server's clock, now and then. `sent` is the client's own time,
     /// handed back in `Pong` so it can tell how long the round trip took.

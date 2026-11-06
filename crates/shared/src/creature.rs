@@ -8,6 +8,7 @@
 // Split into files (`cargo xtask lint` keeps files small).
 mod bodies;
 mod def;
+mod guesses;
 mod kind;
 mod layer;
 mod peoples;

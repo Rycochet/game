@@ -4,13 +4,19 @@ use crate::item::StackLimits;
 use crate::item::{Item, ItemKind};
 
 #[test]
-fn every_kind_has_stats_and_looks() {
+fn every_kind_has_attributes_and_looks() {
     for kind in CreatureKind::ALL {
         let def = kind.def();
-        assert!(def.stats.strength > 0, "{}", def.name);
+        for which in Attribute::ALL {
+            assert!(def.attributes.get(which) > 0, "{} {which:?}", def.name);
+        }
         assert!(!def.looks.is_empty(), "{}", def.name);
         let sheet = Sheet::new(kind);
-        assert_eq!(sheet.stats, def.stats);
+        assert_eq!(sheet.build, Build::CENTRED);
+        assert_eq!(
+            sheet.attributes,
+            Attributes::for_kind(kind, &Build::CENTRED)
+        );
         assert_eq!(sheet.skills.len(), def.skills.len());
         assert!(sheet.appearance.suits(kind));
     }
@@ -53,10 +59,35 @@ fn stones(count: u128) -> Inventory {
     inventory
 }
 
+/// A human with every attribute at the median.
+fn median_human() -> Sheet {
+    Sheet {
+        attributes: Attributes::all(100),
+        ..Sheet::new(CreatureKind::Human)
+    }
+}
+
+#[test]
+fn a_save_from_before_the_nine_works_them_out() {
+    // An old save has none, and its build defaults to the centre.
+    let old = Sheet {
+        attributes: Attributes::default(),
+        build: Build::default(),
+        ..Sheet::new(CreatureKind::Dwarf)
+    };
+    assert_eq!(
+        old.settled(CreatureKind::Dwarf),
+        Sheet::new(CreatureKind::Dwarf)
+    );
+    // One that has them keeps them.
+    let grown = median_human();
+    assert_eq!(grown.clone().settled(CreatureKind::Human), grown);
+}
+
 #[test]
 fn weight_moves_a_human_through_the_loads() {
-    // Strength 10 and size 3: 30 kg.
-    let sheet = Sheet::new(CreatureKind::Human);
+    // Median strength (100) and size 3: 30 kg.
+    let sheet = median_human();
     assert_eq!(sheet.capacity(Size::Medium), 30_000);
     assert_eq!(sheet.load(&stones(3)), Load::Light);
     assert_eq!(sheet.load(&stones(4)), Load::Burdened);
@@ -74,7 +105,7 @@ fn its_own_body_doesnt_weigh_a_creature_down() {
 
 #[test]
 fn weight_and_kind_decide_the_speed() {
-    let sheet = Sheet::new(CreatureKind::Human);
+    let sheet = median_human();
     assert_eq!(sheet.speed(&stones(1)), NORMAL_SPEED);
     assert_eq!(sheet.speed(&stones(5)), NORMAL_SPEED * 3 / 4);
     assert_eq!(sheet.speed(&stones(7)), NORMAL_SPEED * 2 / 5);

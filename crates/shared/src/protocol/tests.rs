@@ -52,6 +52,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             name: "Some One".into(),
             kind: CreatureKind::Kobold,
             appearance: Appearance::default(),
+            build: crate::sheet::Build::CENTRED,
         },
         ClientMessage::Step {
             map: 2,

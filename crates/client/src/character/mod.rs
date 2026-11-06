@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use shared::energy::NORMAL_SPEED;
 use shared::item::Inventory;
 use shared::protocol::ServerMessage;
-use shared::sheet::Sheet;
+use shared::sheet::{Row, Sheet};
 
 use crate::common::{CarryLimit, PlayerSpeed, SheetText};
 use crate::connection::FromServer;
@@ -52,14 +52,17 @@ fn publish_limit(sheet: Res<CharacterSheet>, carried: Res<Carried>, mut limit: R
 /// What the panel says.
 fn describe(sheet: &Sheet, carried: &Inventory) -> String {
     let def = carried.creature.def();
-    let stats = sheet.stats;
-    let mut lines = vec![
-        format!("{}, {:?}", def.name, def.size),
-        String::new(),
-        format!("Strength {}", stats.strength),
-        format!("Dexterity {}", stats.dexterity),
-        format!("Intelligence {}", stats.intelligence),
-        format!("Constitution {}", stats.constitution),
+    let mut lines = vec![format!("{}, {:?}", def.name, def.size), String::new()];
+    // The nine attributes, a row to a line.
+    for row in Row::ALL {
+        let values: Vec<_> = row
+            .attributes()
+            .iter()
+            .map(|&which| format!("{} {}", which.name(), sheet.attributes.get(which)))
+            .collect();
+        lines.push(format!("{}: {}", row.name(), values.join(", ")));
+    }
+    lines.extend([
         String::new(),
         // How much is carried now is shown under the inventory instead.
         format!(
@@ -67,7 +70,7 @@ fn describe(sheet: &Sheet, carried: &Inventory) -> String {
             sheet.capacity(def.size) as f32 / 1000.0
         ),
         format!("Speed {}%", sheet.speed(carried) * 100 / NORMAL_SPEED),
-    ];
+    ]);
     if !sheet.skills.is_empty() {
         lines.push(String::new());
         for (skill, level) in &sheet.skills {
