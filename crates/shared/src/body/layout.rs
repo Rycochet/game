@@ -120,7 +120,8 @@ pub struct Upper {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Layout {
     pub spine: Spine,
-    /// The lower body's neck and head; with an upper body, the upper body's are used.
+    /// The neck and head; a taur's lower body has none (all 0), the upper body's
+    /// being its own.
     pub neck: Neck,
     pub head: Head,
     pub limbs: [Option<Limb>; MAX_LIMBS],
