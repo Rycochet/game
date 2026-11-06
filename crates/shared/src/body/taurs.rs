@@ -4,7 +4,7 @@
 //! upper body is a frame from proportions at a person's, as a biped's is, so everything
 //! worn on a person's upper body is built on it and moved into place.
 
-use super::layout::{Layout, Role, Upper};
+use super::layout::{Head, Layout, Role, Upper};
 use super::{BEASTS, Frame, NONE, PERSON, Parts, Plan, Proportions};
 use crate::creature::CreatureKind;
 
@@ -106,6 +106,13 @@ impl Taur {
                     tail_hair: beast.parts.tail_hair,
                     feet: beast.parts.feet,
                     ..self.parts
+                };
+                // The person stands where the beast's neck was: it has none below, so
+                // blending into or out of it, nothing of it shows.
+                layout.neck.length = 0;
+                layout.head = Head {
+                    length: 0,
+                    half: (0, 0),
                 };
                 (layout, four.barrel.1)
             }

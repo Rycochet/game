@@ -11,15 +11,18 @@ use crate::creature::CreatureKind;
 mod beasts;
 mod biped_view;
 mod bipeds;
+mod blend;
 mod hair;
 mod layout;
 mod parts;
 mod proportions;
+mod scaled;
 mod taurs;
 mod trig;
 
 pub use beasts::{BEASTS, Beast, Bird, Fourfoot, Plan};
 pub use bipeds::{Biped, FIRST_BIPEDS};
+pub use blend::WHOLE as BLEND_WHOLE;
 pub use hair::{Beard, Hair, HairStyle};
 pub use layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station, Upper,
