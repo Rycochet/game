@@ -57,11 +57,11 @@ fn new_guest() -> (ClientLink, Connections, ServerWorld) {
 #[test]
 fn a_new_guest_makes_their_character_before_joining() {
     let (end, connections, world) = new_guest();
-    // Nothing happens until they have made it.
+    // Nothing happens until they have made it: what they ask meanwhile is ignored.
     end.send(&ClientMessage::UseExit);
     let (connections, _world) = tick(connections, world);
-    assert!(matches!(answers(&end)[..], [ServerMessage::Refused(_)]));
-    assert!(connections.clients.is_empty());
+    assert!(answers(&end).is_empty());
+    assert_eq!(connections.clients[0].phase, Phase::Choosing);
 
     let (end, mut connections, world) = new_guest();
     end.send(&make("Brin", CreatureKind::Dwarf, strong()));
@@ -136,4 +136,47 @@ fn the_single_player_makes_theirs_too() {
     assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
     assert_eq!(sheet_in(&told), Some(Sheet::new(CreatureKind::Elf)));
     assert_eq!(connections.clients.len(), 1);
+}
+
+#[test]
+fn deleting_a_character_asks_for_a_new_one_with_a_new_id() {
+    let world = ServerWorld::new(WorldSeed::new(1));
+    let mut connections = Connections::default();
+    let (end, link) = local_pair();
+    connections.add_single_player(link);
+    end.send(&MAKES);
+    end.send(&make("Ash", CreatureKind::Elf, Build::CENTRED));
+    let (connections, world) = tick(connections, world);
+    let told = answers(&end);
+    assert!(matches!(told[1], ServerMessage::Welcome { .. }), "{told:?}");
+    let old = connections.clients[0].character_id.unwrap();
+
+    end.send(&ClientMessage::DevDeleteCharacter);
+    // Something sent before, still on its way: ignored, not refused.
+    end.send(&ClientMessage::UseExit);
+    let (connections, world) = tick(connections, world);
+    let told = answers(&end);
+    assert!(
+        matches!(told[..], [ServerMessage::Characters { .. }]),
+        "{told:?}"
+    );
+    let new = connections.clients[0].character_id.unwrap();
+    assert_ne!(new, old);
+    assert_eq!(connections.clients[0].phase, Phase::Choosing);
+
+    end.send(&make("Bo", CreatureKind::Dwarf, strong()));
+    let (mut connections, _world) = tick(connections, world);
+    let told = answers(&end);
+    assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
+    assert_eq!(
+        sheet_in(&told),
+        Some(Sheet::built(CreatureKind::Dwarf, strong()))
+    );
+    assert_eq!(connections.clients[0].character_id, Some(new));
+    // The account has only the new one.
+    let key = crate::accounts::LoginKey::SinglePlayer;
+    let account = connections.accounts.log_in(&key).unwrap();
+    let characters = &connections.accounts.account(&account).unwrap().characters;
+    assert_eq!(characters.len(), 1);
+    assert_eq!((characters[0].id, characters[0].name.as_str()), (new, "Bo"));
 }

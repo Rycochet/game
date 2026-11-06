@@ -67,6 +67,9 @@
 //! - `HOW_DEBUG_SKIP_MENU=true`: straight past the startup menu into the game, as
 //!   if Play was pressed. On by default when any other variable here (but the
 //!   debug API's and `HOW_DEBUG_KEEP_DRAWING`) is set; `false` keeps the menu.
+//! - `HOW_DEBUG_SKIP_CREATION=true`: a new character is a plain human the server
+//!   makes, with no creation screen. On by default whenever the menu is skipped;
+//!   `false` shows the screen.
 //! - `HOW_DEBUG_KEEP_DRAWING=false`: with the debug API or a screenshot running,
 //!   frames keep their focused rate in the background (`common::KeepDrawing`);
 //!   this slows them to a second apart again, as players have it.

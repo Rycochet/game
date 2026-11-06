@@ -180,6 +180,23 @@ impl Client {
         false
     }
 
+    /// Forgets everything about its character but the connection: for one being
+    /// deleted, before another is made. Nothing is saved.
+    pub(super) fn forget_character(&mut self) {
+        // The link moves to the fresh client; a spare one stands in meanwhile.
+        let (_, spare) = shared::protocol::local_pair();
+        let link = std::mem::replace(&mut self.link, spare);
+        let fresh = Client::new(link, None);
+        let kept = (self.host, self.account, self.world, self.makes_characters);
+        *self = Client {
+            host: kept.0,
+            account: kept.1,
+            world: kept.2,
+            makes_characters: kept.3,
+            ..fresh
+        };
+    }
+
     /// Disconnects it: the player leaves their level, and the character is
     /// saved.
     pub(super) fn disconnect(&mut self, world: &mut ServerWorld) {

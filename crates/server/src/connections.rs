@@ -26,6 +26,7 @@ mod answer_items;
 // Split into files (`cargo xtask lint` keeps files small).
 mod answer;
 mod client;
+mod delete_character;
 mod give_items;
 mod messages;
 mod moving;
