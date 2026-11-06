@@ -77,7 +77,7 @@ pub fn find_world_path(
             }
             // The rule of `step_on_world_map`, with the samples kept.
             let there = elevation(next);
-            if here.is_some() && there.is_none() {
+            if (here.is_some() && there.is_none()) || ground.past_the_ice(next.1) {
                 continue;
             }
             let road = roads.kind_of(at, next);

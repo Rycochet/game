@@ -12,8 +12,9 @@ use crate::surface_style::SurfaceStyle;
 /// no grid point is skipped.
 const STEP: f32 = 0.5;
 
-/// Highest the terrain can be drawn (surface heights stay under 128).
-const MAX_HEIGHT: f32 = 128.0 * HEIGHT_SCALE;
+/// Highest the terrain can be drawn: surfaces in metres reach about 90 above
+/// a sea up to 60, plus woods.
+const MAX_HEIGHT: f32 = 256.0 * HEIGHT_SCALE;
 
 /// The grid point the ray first hits on the terrain window `square` centred
 /// on `centre`, or `None` if it misses (or only hits an edge face). Works from

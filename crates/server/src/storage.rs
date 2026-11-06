@@ -40,11 +40,11 @@ pub const DATA_FOLDER_VARIABLE: &str = "HOW_DATA";
 /// Bump when a save changes in a way older servers can't read (adding a
 /// field with a default doesn't need it). A server refuses a world saved
 /// with a newer format than its own.
-pub const SAVE_FORMAT: u32 = 3;
+pub const SAVE_FORMAT: u32 = 4;
 
 /// Saves from before this format are moved out of the way on starting
 /// (`saves::set_aside_old_saves`): raising it wipes every server's saves.
-pub const OLDEST_SAVE_FORMAT: u32 = 3;
+pub const OLDEST_SAVE_FORMAT: u32 = 4;
 
 /// The server's data folder: `HOW_DATA` if set, otherwise
 /// `Hall of Worlds/server` in the user's data folder (`%APPDATA%` on

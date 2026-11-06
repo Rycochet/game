@@ -51,6 +51,18 @@ impl Default for TerrainGrid {
 }
 
 impl TerrainGrid {
+    /// The lowest drawn height of the points worked out (the water where there
+    /// is any), which the window's frame hangs from.
+    pub(super) fn lowest_shown(&self) -> f32 {
+        self.keys
+            .iter()
+            .zip(&self.shown)
+            .filter(|(key, _)| key.is_some())
+            .map(|(_, &shown)| shown)
+            .reduce(f32::min)
+            .unwrap_or(0.0)
+    }
+
     /// Where the point at `(dx, dz)` from the centre is kept.
     pub(super) fn slot(&self, dx: i64, dz: i64) -> usize {
         let (x, z) = (self.centre.0 + dx, self.centre.1 + dz);

@@ -45,6 +45,9 @@ const COOLING_FROM: f64 = 40.0;
 const MOISTURE_NOISE: f64 = 0.55;
 /// How far the world's `climate` moves the moisture each way.
 const WORLD_MOISTURE: f64 = 0.25;
+/// How much drier a desert world is than its `climate` alone would make it,
+/// so most of it is desert, with grassland and savanna where noise is wet.
+const DESERT_DRYNESS: f64 = 0.2;
 
 /// The temperature scale in degrees Celsius: 0 is this cold, and each whole
 /// unit this many degrees warmer, so `SNOW_TEMPERATURE` is about -8 °C and the
@@ -172,7 +175,12 @@ impl Climate {
             moisture: noise("moisture"),
             width: (world.circumference / 1000).max(1) as i64,
             warmth: world.warmth,
-            wetness: (world.climate - 0.5) * 2.0 * WORLD_MOISTURE,
+            wetness: (world.climate - 0.5) * 2.0 * WORLD_MOISTURE
+                - if world.generator.in_metres() {
+                    0.0
+                } else {
+                    DESERT_DRYNESS
+                },
             sunlit: Sunlit::new(world),
             in_metres: world.generator.in_metres(),
             sea_level: world.sea_level,

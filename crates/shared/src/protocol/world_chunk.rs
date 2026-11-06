@@ -32,7 +32,7 @@ impl From<Poi> for SeenPoi {
     fn from(poi: Poi) -> Self {
         Self {
             kind: poi.kind,
-            look: PoiLook::of(poi.kind, poi.seed),
+            look: PoiLook::of(poi.kind, poi.seed, poi.desert),
             chunk: poi.chunk,
             x: poi.x,
             y: poi.y,

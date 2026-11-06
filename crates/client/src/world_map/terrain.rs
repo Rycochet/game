@@ -42,9 +42,10 @@ pub const REACH: i64 = (MAX_HALF * std::f32::consts::SQRT_2) as i64 + 5;
 /// it must hold, so moving never evicts points still in view.
 const STORE_SIDE: i64 = 640;
 
-/// Bottom of the edge faces, as a fraction of the water level (0 = height 0,
-/// as in the prototype; raised to make the faces shorter).
-const FRONT_BASE: f32 = 0.3;
+/// How far the edge faces reach below the lowest drawn point in the window, in
+/// the starting view: measured from the ground in view, not the sea, so
+/// highlands far above it still stand on a frame of the same depth.
+const FRAME_DEPTH: f32 = 25.0;
 
 /// Undoes the sun's dimming of flat frozen water (lit flat ice measured at
 /// ~71% of its colour in linear light).

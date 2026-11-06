@@ -11,7 +11,8 @@ The planet surface height at any integer grid position (1 unit ≈ 1 km). Ported
 ## Public API
 
 - `Surface::new(&WorldParams)` (the world's own, by `WorldParams::generator`), `Surface::with_generator(&WorldParams, SurfaceGenerator)`, `.generator()`, `.width()` (grid units around the equator; `x` wraps at this), `.sample(x, y) -> SurfaceSample`, `.broad_height(x, y)` (only the 3 largest layers: hills and mountains without small bumps, what walking counts as climbing).
-- `SurfaceGenerator` (`Desert`, the old layered noise, the default; `Continents`, `Plates`; `ALL`, `.name()`, `named(name)`, `in_metres()`, `forced()`: `HOW_DEBUG_GENERATOR`, read here so a native client and its own server agree). Every world uses `Desert` until the generator is rolled per world (planned).
+- `SurfaceGenerator` (`Desert`, the old layered noise, the default; `Continents`, `Plates`; `ALL`, `.name()`, `named(name)`, `in_metres()`, `forced()`: `HOW_DEBUG_GENERATOR`, read here so a native client and its own server agree). Each world's is rolled (`WorldParams::generator`).
+- `Surface::lowest_sampled()`: the lowest ground among 96 by 48 points over the planet, which a desert world's sea is put under.
 - `Surface::floor()`: the lowest height water is shaded down to: 0 for `Desert`, 8 km below the sea for surfaces in metres.
 - `Surface::plate_at(x, y) -> Option<PlateSample>` (`plate`, `continental`, `edge` in plate cells, `closing` `-2..2`): `Plates` only, for showing them.
 - `Surface::metres(height) -> i32`: a height on the scale as whole metres from the world's `sea_level`, `METRES_PER_UNIT` (100) to a unit. Generators in metres are turned into the scale the same way, so everything else reads them unchanged (peaks may pass 127.5).

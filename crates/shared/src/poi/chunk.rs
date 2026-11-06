@@ -26,4 +26,8 @@ pub struct Poi {
     pub y: i64,
     /// What its map (dungeon, building, town) is generated from.
     pub seed: Seed,
+    /// Whether it stands in desert (`Biome::Desert`), where more of what
+    /// stands is ruined (`Generator::for_site`).
+    #[serde(default)]
+    pub desert: bool,
 }

@@ -14,6 +14,8 @@ use crate::rng::Seed;
 /// Of each 100 buildings that can be ruined, how many are, evenly from 1 to
 /// `MOST_RUIN`.
 const RUINED_PERCENT: u64 = 30;
+/// The same in desert (owner: more ruins there).
+const DESERT_RUINED_PERCENT: u64 = 60;
 const MOST_RUIN: u64 = 5;
 
 /// How a site is generated, with the options that tune it.
@@ -92,14 +94,20 @@ impl Generator {
         )
     }
 
-    /// The generator of one poi's site: its kind's, ruined as its map seed says.
-    pub fn for_site(kind: PoiKind, seed: Seed) -> Self {
+    /// The generator of one poi's site: its kind's, ruined as its map seed
+    /// says, more often in desert (`Poi::desert`).
+    pub fn for_site(kind: PoiKind, seed: Seed, desert: bool) -> Self {
         if !Self::is_sturdy(kind) {
             return Self::for_poi(kind);
         }
+        let percent = if desert {
+            DESERT_RUINED_PERCENT
+        } else {
+            RUINED_PERCENT
+        };
         let roll = seed.derive("how ruined").at(&[0]) % 100;
-        let ruin = roll.saturating_sub(100 - RUINED_PERCENT) * MOST_RUIN / RUINED_PERCENT;
-        let ruined = roll >= 100 - RUINED_PERCENT;
+        let ruin = roll.saturating_sub(100 - percent) * MOST_RUIN / percent;
+        let ruined = roll >= 100 - percent;
         Self::for_poi(kind).with_ruin(if ruined { ruin as u8 + 1 } else { 0 })
     }
 }

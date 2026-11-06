@@ -46,7 +46,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 
 ## Notes
 
-- The inventory is the character's own grid, sized by their kind of creature (owner, 2026-11-04: it was called the pockets). Old saves name its fields `pockets` and `pockets_size`, read through `serde` aliases until the item wipe.
+- The inventory is the character's own grid, sized by their kind of creature (owner, 2026-11-04: it was called the pockets). (The item wipe of 2026-11-06 removed the aliases that read old saves.)
 - Everything carried is one tree starting from the inventory and what is worn: a worn bag's grid works as any other. `placed` is `None` for something worn. An item's id goes with it through any move.
 - What may go in a container, in the order refused: not into itself; only a shape with fewer cells that fits within the container's **outside** (so a 2 × 2 pouch holding a 4 × 4 grid takes rings but not a stone, and each step in is smaller, which alone stops endless nesting); no more than `MAX_DEPTH` grids deep, counting grids inside what is moved; `max_each` and `max_total` for every container it would end up in, counting contents at every level; then room in the grid.
 - A container it is already in gains no weight from a move within it. Weights are checked outward: a bag inside another counts with all it holds against the outer one's `max_each`.

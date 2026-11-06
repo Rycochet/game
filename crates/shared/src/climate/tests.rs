@@ -2,8 +2,10 @@ use super::*;
 use crate::rng::Seed;
 use std::collections::HashSet;
 
+/// A desert world's climate: the one worked out from height alone.
 fn climate() -> Climate {
-    Climate::new(&WorldParams::from_seed(Seed::new(12345)))
+    let desert = crate::surface::SurfaceGenerator::Desert;
+    Climate::new(&WorldParams::with_generator(Seed::new(12345), desert))
 }
 
 // Golden values: if these change, every world's biomes change.
@@ -17,14 +19,20 @@ fn golden_samples() {
     assert_eq!(format!("{samples:?}"), GOLDEN_SAMPLES);
 }
 
-const GOLDEN_SAMPLES: &str = "[ClimateSample { temperature: 0.7043175649105904, moisture: 0.40719585531164515 }, ClimateSample { temperature: 0.5568165204644837, moisture: 0.684561532044379 }, ClimateSample { temperature: 0.26386628147396207, moisture: 0.7074358110386562 }]";
+const GOLDEN_SAMPLES: &str = "[ClimateSample { temperature: 0.7796512991825173, moisture: 0.1176027453232152 }, ClimateSample { temperature: 0.6321502547364105, moisture: 0.39496842205594906 }, ClimateSample { temperature: 0.339200015745889, moisture: 0.4178427010502262 }]";
 
 /// Snow is about as common as when it was a fixed height of 90.
 #[test]
 fn snow_covers_about_as_much_as_a_fixed_height_did() {
     let (mut snow, mut high, mut land) = (0, 0, 0);
     for seed in 1..=6 {
-        let params = WorldParams::from_seed(Seed::new(seed));
+        // Desert's climate with an ordinary planet's warmth and wetness, as
+        // the constants were tuned on.
+        let desert = crate::surface::SurfaceGenerator::Desert;
+        let mut params = WorldParams::with_generator(Seed::new(seed), desert);
+        params.warmth = 0.0;
+        params.climate = 0.9;
+        params.sea_level = 40.0;
         let climate = Climate::new(&params);
         let surface = crate::surface::Surface::new(&params);
         let quarter = (params.circumference / 4000) as i64;

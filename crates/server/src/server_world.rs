@@ -122,10 +122,9 @@ impl ServerWorld {
                 if save.seed != seed {
                     return Err("its saved seed isn't the one asked for".into());
                 }
-                // Older versions differ only in having no towns (1), or no farms or
-                // herbalists' huts (2):
-                // their worlds carry on with some pois turned into those.
-                if !(1..=WORLD_MAP_VERSION).contains(&save.world_map_version) {
+                // Every world made before the generators were rolled per world
+                // (version 5) was wiped with the saves (`OLDEST_SAVE_FORMAT`).
+                if save.world_map_version != WORLD_MAP_VERSION {
                     return Err(format!(
                         "it was made with world map version {}; this server has {WORLD_MAP_VERSION}",
                         save.world_map_version

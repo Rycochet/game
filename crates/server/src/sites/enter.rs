@@ -86,6 +86,7 @@ pub(super) fn dev_poi(client: &Client, kind: PoiKind, seed: u64) -> Poi {
         x,
         y,
         seed: Seed::new(seed),
+        desert: false,
     }
 }
 
@@ -124,7 +125,7 @@ pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitS
 pub(super) fn make_site(world: &mut ServerWorld, poi: &Poi, id: SiteId) -> Option<Site> {
     let generator = match id {
         SiteId::Dev { ruin, .. } => Generator::for_poi(poi.kind).with_ruin(ruin),
-        SiteId::Poi(_) => Generator::for_site(poi.kind, poi.seed),
+        SiteId::Poi(_) => Generator::for_site(poi.kind, poi.seed, poi.desert),
     };
     let version = world.site(id, poi.kind).version;
     let site = Site::with_generator(poi.kind, poi.seed, version, generator);

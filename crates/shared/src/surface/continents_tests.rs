@@ -79,11 +79,29 @@ fn oceans_have_shelves_and_depths() {
 }
 
 #[test]
-fn desert_is_still_the_default() {
-    let world = WorldParams::from_seed(Seed::new(12345));
-    assert_eq!(Surface::new(&world).generator(), SurfaceGenerator::Desert);
-    assert_eq!(
-        Surface::new(&world).sample(5, 5),
-        Surface::with_generator(&world, SurfaceGenerator::Desert).sample(5, 5)
-    );
+fn generators_are_rolled_in_their_shares() {
+    let mut counts = [0; 3];
+    for seed in 0..2000 {
+        let world = WorldParams::from_seed(Seed::new(seed));
+        let at = SurfaceGenerator::ALL
+            .iter()
+            .position(|&kind| kind == world.generator);
+        counts[at.unwrap()] += 1;
+        assert_eq!(Surface::new(&world).generator(), world.generator);
+    }
+    let [desert, continents, plates] = counts;
+    assert!((5..=50).contains(&desert), "{counts:?}");
+    assert!((1300..=1500).contains(&continents), "{counts:?}");
+    assert!((480..=680).contains(&plates), "{counts:?}");
+}
+
+#[test]
+fn a_desert_worlds_sea_is_below_nearly_all_its_ground() {
+    let desert = WorldParams::with_generator(Seed::new(12345), SurfaceGenerator::Desert);
+    let surface = Surface::new(&desert);
+    let below = (0..200)
+        .flat_map(|y| (0..200).map(move |x| (x * 37, y * 29 - 2900)))
+        .filter(|&(x, y)| surface.sample(x, y).height <= desert.high_water())
+        .count();
+    assert!(below < 40, "{below} of 40,000 under water");
 }
