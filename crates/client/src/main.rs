@@ -29,6 +29,7 @@ mod touch;
 mod trade;
 mod ui;
 mod view3d;
+mod vitals;
 mod widgets;
 mod world_map;
 
@@ -111,6 +112,7 @@ fn main() {
         planet_view::PlanetViewPlugin,
         hall_view::HallViewPlugin,
         item_text::ItemTextPlugin,
+        vitals::VitalsPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is
