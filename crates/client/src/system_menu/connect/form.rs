@@ -7,7 +7,7 @@ use super::super::icons::ConnectIcons;
 use super::super::{Action, SystemMenu};
 use super::check::AddressCheck;
 use super::popups::{CertificateBox, ForgetWords};
-use super::{AddressBox, ServerList, spawn_server_row};
+use super::{AddressBox, SUGGESTED_SERVER, ServerList, spawn_server_row};
 use crate::common::{ChosenServer, Preferences, SavedServer, Session};
 use crate::widgets::{ButtonPressed, TextBox, TextFocus};
 
@@ -39,7 +39,7 @@ pub(super) fn address_in(text: &str) -> Option<String> {
 }
 
 /// Each time Connect opens: the box holds the server Play would join, or the
-/// latest one, and has the keyboard; nothing pasted is kept from before, but
+/// latest one, or else `SUGGESTED_SERVER`, and has the keyboard; nothing pasted is kept from before, but
 /// for the key just refused.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(in crate::system_menu) fn open_connect(
@@ -62,9 +62,10 @@ pub(in crate::system_menu) fn open_connect(
             form.pasted = Some((server.address.clone(), server.key.clone()));
         }
         let latest = chosen.0.as_ref().or(preferences.servers.first());
+        // With no server known yet, the game's own is suggested.
         address.1.text = latest
             .map(|server| server.address.clone())
-            .unwrap_or_default();
+            .unwrap_or_else(|| SUGGESTED_SERVER.to_owned());
         focus.0 = Some(address.0);
     }
     if *menu == SystemMenu::Certificate && before == SystemMenu::Connect {
