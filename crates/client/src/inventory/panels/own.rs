@@ -8,16 +8,17 @@ use super::super::{Carried, OpenCharacter};
 use super::grids::spawn_cells;
 use super::shown::shown_size;
 use super::{GridNode, InventoryButton, OpenGrids};
-use crate::common::GameView;
+use crate::common::{Action, GameView, Preferences};
 use crate::widgets::{ButtonPressed, RaisePanel};
 
-/// The button, `C` or `I` opens or closes the Character panel.
+/// The button, or Character and Inventory's keys (C, I), opens or closes the Character panel.
 #[allow(clippy::too_many_arguments)]
 pub(in crate::inventory) fn toggle_inventory(
     mut pressed: MessageReader<ButtonPressed>,
     mut asked: MessageReader<OpenCharacter>,
     button: Query<(), With<InventoryButton>>,
     keys: Res<ButtonInput<KeyCode>>,
+    preferences: Res<Preferences>,
     view: Res<State<GameView>>,
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
@@ -27,7 +28,7 @@ pub(in crate::inventory) fn toggle_inventory(
     mut raise: MessageWriter<RaisePanel>,
 ) {
     let by_button = pressed.read().any(|press| button.contains(press.0));
-    let by_key = keys.any_just_pressed([KeyCode::KeyC, KeyCode::KeyI]);
+    let by_key = preferences.controls.just_pressed(&keys, Action::Character);
     if (by_button || by_key) && *view.get() != GameView::Connecting {
         // Things are given by dragging them from there.
         if open.inventory_open() {

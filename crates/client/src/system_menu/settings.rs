@@ -1,12 +1,15 @@
-//! The pages of Settings, under its tabs: Gameplay (`gameplay`), Interface
+//! The pages of Settings, under its tabs: Gameplay (`gameplay`), Controls
+//! (`controls`), Interface
 //! (its size, and "Enable Touch") and Video (`video`). Interface choices go
 //! straight into `Preferences`.
 
+mod controls;
 mod gameplay;
 mod keep;
 mod rows;
 mod video;
 
+pub(super) use controls::{TakenKeys, fill_controls_page, forget_taken, use_controls_page};
 pub(super) use gameplay::{fill_gameplay_page, use_gameplay_page};
 pub(super) use keep::{VideoTrial, run_trial, spawn_keep_requester};
 pub(super) use video::{VideoForm, VideoShown, fill_video_page, use_video_options, use_video_page};
@@ -19,7 +22,7 @@ use crate::widgets::{
     TouchOnly, UiId, spawn_tabs,
 };
 
-const PAGES: [&str; 3] = ["Gameplay", "Interface", "Video"];
+const PAGES: [&str; 4] = ["Gameplay", "Controls", "Interface", "Video"];
 const FONT: TextSize = TextSize::Large;
 const ROW_GAP: f32 = 12.0;
 const LABEL_GAP: f32 = 16.0;
@@ -76,6 +79,9 @@ pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
         match PAGES[index] {
             "Gameplay" => {
                 page.insert(gameplay::GameplayPage);
+            }
+            "Controls" => {
+                page.insert(controls::ControlsPage);
             }
             "Interface" => {
                 page.insert(InterfacePage);

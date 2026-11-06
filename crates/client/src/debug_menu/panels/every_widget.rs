@@ -5,12 +5,13 @@ use shared::poi::PoiKind;
 
 use super::super::actions::kind_name;
 use super::{CHECK_ROW, EVERY_WIDGET_HEIGHT, FONT};
+use crate::common::{Binding, Mods};
 use crate::widgets::{
     ALLOWED, BUTTON_PADDING, ButtonState, ButtonStyle, ColourPicker, Dropdown, GRID_COLOUR, INK,
-    Pressable, SAMPLE_GRADIENT, Swatch, TextBox, UiId, field_label, raised_box, spawn_button,
-    spawn_check_button, spawn_close_button, spawn_colour_picker, spawn_dropdown,
-    spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs, spawn_text_box,
-    spawn_toggle_row, spawn_tooltip,
+    KeyBox, Pressable, SAMPLE_GRADIENT, Swatch, TextBox, UiId, field_label, raised_box,
+    spawn_button, spawn_check_button, spawn_close_button, spawn_colour_picker, spawn_dropdown,
+    spawn_key_box, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs,
+    spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
 
 /// One of each thing `widgets` makes, to see how they look together.
@@ -153,7 +154,20 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
         error: true,
         ..default()
     };
-    spawn_text_box(content, wrong, FONT, node).insert(id("Wrong"));
+    spawn_text_box(content, wrong, FONT, node.clone()).insert(id("Wrong"));
+    let key_box = KeyBox {
+        binding: Some(Binding::new(KeyCode::KeyG, Mods::SHIFT)),
+        warned: false,
+    };
+    spawn_key_box(content, key_box, ButtonState::Normal, FONT, node.clone()).insert(id("Key box"));
+    spawn_key_box(
+        content,
+        KeyBox::default(),
+        ButtonState::Disabled,
+        FONT,
+        node,
+    )
+    .insert(id("Disabled key box"));
     content.spawn(raised_box()).with_child((
         Text::new("Raised box"),
         FONT.font(),

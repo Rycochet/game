@@ -7,6 +7,8 @@ nav_order: 4
 
 Everything can be done with a mouse or by touch, and on touch screens a tap is a click.
 
+The keys below are the ones the game starts with. To change them, open Settings, Controls: each action can have two keys, and a key can be held with Ctrl, Alt, Shift or Super (Cmd, or the Windows key), as Shift + G. Esc can't be changed.
+
 ## Moving
 
 | Action | Keyboard and mouse | Touch |

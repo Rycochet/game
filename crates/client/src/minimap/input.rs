@@ -11,20 +11,21 @@ use super::{
     minimap_picture_size, over_full_map, shows_known, units_per_pixel,
 };
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameView, OtherLevels, SmoothPosition, TouchGesture, UiPointer,
-    in_interface,
+    Action, CurrentDungeon, CurrentWorld, GameView, OtherLevels, Preferences, SmoothPosition,
+    TouchGesture, UiPointer, in_interface,
 };
 use crate::player::Player;
 use crate::view3d::OrbitCamera;
 
 /// The maps get the input first, in `PreUpdate`: what they use is taken away
-/// before the game's systems look. M or clicking the minimap opens the full
+/// before the game's systems look. Full Map's key (M) or clicking the minimap opens the full
 /// map; M, Esc, its close button or clicking outside it closes it. While it is
 /// open the mouse and fingers are the map's: dragging moves it, and the wheel
 /// or a pinch zooms it.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn take_input(
     mut keys: ResMut<ButtonInput<KeyCode>>,
+    preferences: Res<Preferences>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     mut scroll: ResMut<AccumulatedMouseScroll>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -44,7 +45,7 @@ pub(super) fn take_input(
     if view == GameView::Connecting {
         return;
     }
-    if keys.just_pressed(KeyCode::KeyM) {
+    if preferences.controls.just_pressed(&keys, Action::FullMap) {
         let open = !full.open;
         full.set_open(open);
     }
@@ -85,7 +86,9 @@ pub(super) fn take_input(
         full.set_open(false);
         return;
     }
-    keys.clear_just_pressed(KeyCode::Home);
+    preferences
+        .controls
+        .clear_just_pressed(&mut keys, Action::ResetView);
 
     // A press anywhere is the map's.
     if mouse.clear_just_pressed(MouseButton::Left) {

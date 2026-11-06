@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use shared::protocol::OnlineSettings;
 
-use super::{SavedServer, VideoPrefs, WindowPrefs};
+use super::{Controls, SavedServer, VideoPrefs, WindowPrefs};
 
 /// The player's choices, loaded at start and saved whenever they change.
 #[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
@@ -42,6 +42,8 @@ pub struct Preferences {
     /// "Pause When Not in Focus": single player pauses while another window is
     /// in front.
     pub pause_unfocused: bool,
+    /// Which keys do what (Settings, Controls); only changes are saved.
+    pub controls: Controls,
 }
 
 /// How big the interface is drawn: its own size is 100%.

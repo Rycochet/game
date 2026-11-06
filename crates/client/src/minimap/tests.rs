@@ -60,7 +60,8 @@ fn app() -> App {
         .init_resource::<UiScale>()
         .init_resource::<TouchGesture>()
         .init_resource::<OtherLevels>()
-        .init_resource::<FullMap>();
+        .init_resource::<FullMap>()
+        .init_resource::<crate::common::Preferences>();
     app.world_mut().spawn((Window::default(), PrimaryWindow));
     app.world_mut().spawn(OrbitCamera::new(0.5, 100.0, 0.0));
     app.world_mut()

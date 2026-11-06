@@ -91,6 +91,14 @@ fn add_value(widgets: &Widgets, entity: Entity, kind: Kind, about: &mut Value) {
                 about["focused"] = json!(widgets.focus.0 == Some(entity));
             }
         }
+        Kind::KeyBox => {
+            if let Ok(key_box) = widgets.key_boxes.get(entity) {
+                about["value"] = json!(key_box.binding.map(|binding| binding.to_name()));
+                about["shows"] = json!(key_box.binding.map(|binding| binding.label()));
+                about["warned"] = json!(key_box.warned);
+                about["waiting"] = json!(widgets.waiting.entity == Some(entity));
+            }
+        }
         Kind::Dropdown => {
             if let Ok(dropdown) = widgets.dropdowns.get(entity) {
                 let greyed: Vec<usize> = (0..dropdown.options.len())

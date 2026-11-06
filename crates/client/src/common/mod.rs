@@ -3,8 +3,10 @@
 //! Keep this small: only types that genuinely need to be shared between
 //! feature modules belong here. See `docs/context/client/common.md`.
 
+pub mod controls;
 mod floors;
 mod hosting;
+pub use controls::{Action, Binding, Controls, Group, Mods};
 mod preferences;
 mod servers;
 pub use floors::{FirstFloor, OtherLevels};

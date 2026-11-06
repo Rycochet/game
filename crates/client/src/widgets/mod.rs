@@ -17,6 +17,7 @@ mod filter_list;
 mod fullscreen;
 mod hover_tip;
 mod item;
+mod key_box;
 mod moveable;
 mod new_seed_icon;
 mod progress;
@@ -61,6 +62,7 @@ pub use item::{
     item_label, item_picture, logical_rect, picture_in_square, shown_at, spawn_item_cells,
     spawn_item_grid,
 };
+pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use progress::{Progress, spawn_progress_bar};
@@ -75,7 +77,8 @@ pub use switch::{Switch, SwitchFlipped, spawn_switch};
 pub use tabs::{TabChosen, spawn_tabs, spawn_toggle_row};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
 pub use theme::{
-    ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, TextSize, WARNING_TEXT,
+    ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, ROW_TINT, TextSize,
+    WARNING_TEXT,
 };
 use theme::{RAISED_BACKGROUND, SHADED_EDGE};
 #[cfg(any(test, feature = "debug-api"))]
@@ -132,6 +135,8 @@ impl Plugin for WidgetsPlugin {
             .add_message::<DropdownChosen>()
             .add_message::<TabChosen>()
             .add_message::<SwitchFlipped>()
+            .add_message::<KeyChosen>()
+            .init_resource::<key_box::KeyWaiting>()
             .init_resource::<switch::Slides>()
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
@@ -196,6 +201,7 @@ impl Plugin for WidgetsPlugin {
                     scroll::scroll_areas,
                     moveable::take_presses,
                     text_box::take_text,
+                    key_box::take_keys,
                     dropdown::run_dropdowns,
                 )
                     .chain()
@@ -228,6 +234,7 @@ impl Plugin for WidgetsPlugin {
                 (
                     feedback::show_button_looks,
                     feedback::show_edges,
+                    key_box::show_key_boxes,
                     scroll::bring_back_places,
                 )
                     .before(bevy::ui::UiSystems::Layout),
