@@ -49,6 +49,7 @@ mod plain_pictures;
 mod showing;
 mod spawn_scene;
 mod update_meshes;
+mod wild_ground;
 
 pub use click::DoorClicked;
 use click::pick_on_click;
@@ -98,6 +99,7 @@ impl Plugin for DungeonMapPlugin {
             .init_resource::<Shown>()
             .init_resource::<OutsideLight>()
             .init_resource::<TownLights>()
+            .init_resource::<wild_ground::GroundTint>()
             .add_plugins(MaterialPlugin::<rain::RainMaterial>::default())
             .add_plugins(MaterialPlugin::<SurfaceMaterial>::default())
             .add_systems(Startup, spawn_scene)
@@ -127,6 +129,7 @@ impl Plugin for DungeonMapPlugin {
                     daylight::token_ambient,
                     sight_lines::update_outlines,
                     sight_lines::place_mask,
+                    wild_ground::work_out_tint,
                     update_meshes,
                     update_crops,
                     update_herbs,

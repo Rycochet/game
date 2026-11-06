@@ -934,3 +934,7 @@ Every key the game reads for something the player does is an `Action` in `common
 ## 2026-11-06: Nightly builds
 
 Owner's request: native builds of the three OSes, the web client and the server are saved as Actions artifacts once a day (kept 14 days), not on every merge, so CI stays light. They come from the commit the Docker image `:latest` was built from, the web client and server copied out of the image rather than built again, and the image itself is only retagged `:nightly` (and `:nightly-<date>`), not rebuilt. A day with nothing new builds nothing. Artifacts rather than a public Release for now (downloading them needs a GitHub login). The Build workflow stays, run by hand for any branch.
+
+## 2026-11-06: The wilderness on the client
+
+Exploring and leaving are actions like any other (`Action::Explore`, Shift + ., and `Action::LeaveWilderness`, Shift + ,: `>` and `<` on UK and US keyboards), rebindable in Settings. With touch on, an Explore or Leave button sits at the bottom middle: a stopgap until the owner's better plans for touch. The wilderness is drawn as any level, with its ground tinted cell by cell in the land's colours (as the world map has them) and shallows drawn as water always half deep. A town set into it is drawn with plain walls until the server sends its buildings there.

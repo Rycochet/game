@@ -10,6 +10,7 @@
 //! In a built place the side is the thickness of a floor; in a natural one it
 //! goes the height of a wall, fading to black.
 
+use crate::dungeon_map::liquid::LooksLiquid;
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level};
 
@@ -138,7 +139,7 @@ fn floor_surface(level: &Level, (x, y): (i64, i64), (sx, sy): (i64, i64)) -> Sur
     [(x + sx, y), (x, y + sy), (x + sx, y + sy)]
         .iter()
         .map(|&(x, y)| level.cell(x, y))
-        .find(|&cell| cell != Cell::Hole && cell.is_open() && !cell.is_liquid())
+        .find(|&cell| cell != Cell::Hole && cell.is_open() && !cell.looks_liquid())
         .map_or(Surface::Floor, Surface::of_flat)
 }
 

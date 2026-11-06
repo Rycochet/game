@@ -5,7 +5,7 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 
 use super::super::CELL_SIZE;
-use super::{MEMORY_SHADE, RAISED, RAISED_NORMAL, with_ambient};
+use super::{MEMORY_SHADE, RAISED, RAISED_NORMAL};
 
 /// Collects quads into one mesh.
 #[derive(Default)]
@@ -18,27 +18,6 @@ pub struct Builder {
 }
 
 impl Builder {
-    /// A square face a whole cell across, centred on `centre`, facing
-    /// `normal`, textured once. `light_at` gives each corner's light from
-    /// its position; the vertex colour is that light on top of the ambient.
-    pub(super) fn face(
-        &mut self,
-        centre: Vec3,
-        normal: Vec3,
-        half: f32,
-        light_at: impl Fn(Vec3) -> Vec3,
-    ) {
-        // "Up" on the face: north on floors and tops, up on walls.
-        let up = if normal == Vec3::Y {
-            Vec3::NEG_Z
-        } else {
-            Vec3::Y
-        };
-        self.quad(centre, normal, up, (half, half), |p| {
-            with_ambient(light_at(p))
-        });
-    }
-
     /// A rectangle `2 × half_across` by `2 × half_up` (along `up`), with each
     /// corner's vertex colour from `colour_at` its position. The picture keeps
     /// its scale (one per cell), so small parts show part of it.

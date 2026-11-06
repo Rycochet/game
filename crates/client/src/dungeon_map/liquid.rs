@@ -39,6 +39,18 @@ pub use shade::{depth_shade, opacity};
 
 const HALF_CELL: f32 = CELL_SIZE / 2.0;
 
+/// Drawn as liquid: liquid, and shallow water (walkable, but water to look at,
+/// always half deep).
+pub trait LooksLiquid {
+    fn looks_liquid(self) -> bool;
+}
+
+impl LooksLiquid for shared::dungeon::Cell {
+    fn looks_liquid(self) -> bool {
+        self.is_liquid() || self == Self::Shallows
+    }
+}
+
 /// Half the width of a narrow channel, so also how far a shore stands back
 /// from the edge of the cell.
 pub const CHANNEL_HALF: f32 = CELL_SIZE / 4.0;

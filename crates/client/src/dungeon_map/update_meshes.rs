@@ -10,6 +10,7 @@ use super::daylight::{OutsideLight, Spill, TownLights};
 use super::mesh::{LightGrid, View};
 use super::sight_lines::SightLines;
 use super::theme::Theme;
+use super::wild_ground::GroundTint;
 use super::{MemoryPart, SeeThroughPart, Shown, SolidPart, StairsThroughPart};
 use crate::common::{
     CurrentDungeon, LightSource, MapPosition, Preferences, Remembered, SharesSight, ViewStats,
@@ -64,11 +65,12 @@ pub(super) fn update_meshes(
         Res<Preferences>,
         Local<Option<(u8, bool)>>,
     ),
-    (town_lights, mut window_glow, lines, mut lines_seen): (
+    (town_lights, mut window_glow, lines, mut lines_seen, tint): (
         Res<TownLights>,
         Local<Spill>,
         Res<SightLines>,
         Local<u64>,
+        Res<GroundTint>,
     ),
 ) {
     let camera = camera.translation;
@@ -81,6 +83,7 @@ pub(super) fn update_meshes(
         || looked_again
         || outside.is_changed()
         || town_lights.is_changed()
+        || tint.is_changed()
         || *lines_seen != lines.changes
         || *settings_seen != Some(settings)
         || lights
@@ -216,6 +219,7 @@ pub(super) fn update_meshes(
         camera,
         theme.shape,
         &cut,
+        tint.tints(),
     );
     shown.sight = Some(sight.clone());
     dungeon.bypass_change_detection().remembered = remembered;

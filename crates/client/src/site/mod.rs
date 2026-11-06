@@ -10,6 +10,7 @@
 //! the level.
 
 mod hall;
+mod wilderness;
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, ServerMessage};
@@ -27,17 +28,27 @@ pub struct SitePlugin;
 impl Plugin for SitePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Heading>()
+            .add_systems(Startup, wilderness::spawn_buttons)
             .add_systems(
                 Update,
-                follow_clicked_portal
-                    .in_set(PlayerSystems::Input)
-                    .after(View3dSystems::Click),
+                (
+                    follow_clicked_portal
+                        .in_set(PlayerSystems::Input)
+                        .after(View3dSystems::Click),
+                    wilderness::explore_or_leave.in_set(PlayerSystems::Input),
+                ),
             )
             // After everything else this frame, so the view being left
             // never sees the new position (the view changes next frame).
             .add_systems(
                 PostUpdate,
-                (change_map, hall::follow_player, use_on_arrival).chain(),
+                (
+                    change_map,
+                    hall::follow_player,
+                    wilderness::follow_point,
+                    use_on_arrival,
+                )
+                    .chain(),
             );
     }
 }
@@ -95,7 +106,9 @@ fn use_on_arrival(
                 return;
             }
             let on_stairs = dungeon.stairs.iter().any(|s| (s.x, s.y) == (x, y));
-            if on_stairs || leads_out(&dungeon.level, x, y) {
+            // The wilderness's edge is only where the server's window ends.
+            let edge = !dungeon.is_wilderness() && leads_out(&dungeon.level, x, y);
+            if on_stairs || edge {
                 to_server.write(ToServer(ClientMessage::UseExit));
             }
         }
@@ -144,6 +157,7 @@ fn change_map(
             ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),
             ServerMessage::Fields(fields) => dungeon.fields.clone_from(fields),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
+            &ServerMessage::WildernessWindow { bounds } => dungeon.move_window(bounds),
             ServerMessage::RememberedLevel(remembered) => others.add(&dungeon, remembered),
             &ServerMessage::OnWorldMap { x, y } => {
                 *others = OtherLevels::default();

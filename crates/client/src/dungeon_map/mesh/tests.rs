@@ -46,6 +46,7 @@ fn faces_seen(level: &Level, cells: &[(i64, i64)]) -> Vec<WallFace> {
         camera,
         Shape::Built,
         &Sight::new(level),
+        None,
     )
     .solid_faces
 }
@@ -114,6 +115,7 @@ fn walls_seen_side_on_are_drawn_see_through() {
         camera,
         shape,
         &Sight::new(&level),
+        None,
     );
     assert!(meshes.has_see_through);
     let on_the_wall = meshes
@@ -161,6 +163,7 @@ fn remembered_far_sides_are_drawn_as_memory() {
         camera,
         shape,
         &Sight::new(&level),
+        None,
     );
     assert!(north_side(&meshes));
 }
@@ -182,6 +185,7 @@ fn through_a_door(views: &[View], sight: &Sight, level: &Level) -> DungeonMeshes
         Vec3::new(0.0, 600.0, 900.0),
         Shape::Built,
         &Sight::new(level),
+        None,
     )
 }
 
@@ -279,6 +283,7 @@ fn memory_seen_from_the_south(level: &Level) -> Vec<[f32; 3]> {
         Vec3::new(0.0, 600.0, 900.0),
         Shape::Built,
         &Sight::new(level),
+        None,
     );
     meshes.memory[Surface::Wall as usize]
         .attribute(Mesh::ATTRIBUTE_POSITION)
@@ -340,6 +345,7 @@ fn floors_stop_at_the_foot_of_the_wall() {
             camera,
             shape,
             &Sight::new(&level),
+            None,
         );
         let positions = meshes.solid[Surface::Floor as usize]
             .attribute(Mesh::ATTRIBUTE_POSITION)
@@ -381,6 +387,7 @@ fn the_ground_is_filled_only_under_solid_walls() {
             camera,
             shape,
             &Sight::new(&level),
+            None,
         );
         let solid = &meshes.solid[Surface::Wall as usize];
         solid
@@ -502,6 +509,7 @@ fn only_what_is_seen_is_built() {
         camera,
         shape,
         &Sight::new(&level),
+        None,
     );
     assert!(meshes.has_solid.iter().any(|&has| has));
     // The south wall's inner sides face away from the camera.
@@ -532,6 +540,7 @@ fn only_what_is_seen_is_built() {
         camera,
         shape,
         &Sight::new(&room),
+        None,
     );
     assert!(plain.has_memory.iter().all(|&has| !has));
 
@@ -551,6 +560,7 @@ fn only_what_is_seen_is_built() {
         camera,
         shape,
         room_sight,
+        None,
     );
     assert!(cut.has_memory[Surface::Floor as usize]);
     assert!(cut.has_memory[Surface::Wall as usize]);
@@ -570,6 +580,7 @@ fn only_what_is_seen_is_built() {
         camera,
         shape,
         &Sight::new(&level),
+        None,
     );
     assert!(meshes.has_solid.iter().all(|&has| !has));
     assert!(!meshes.has_see_through);
@@ -589,6 +600,7 @@ fn only_what_is_seen_is_built() {
         camera,
         shape,
         &Sight::new(&level),
+        None,
     );
     assert!(meshes.has_solid.iter().all(|&has| !has));
     assert!(meshes.has_memory[Surface::Floor as usize]);

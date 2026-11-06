@@ -11,6 +11,10 @@ pub enum Action {
     StepDown,
     StepLeft,
     StepRight,
+    /// Into the wilderness from the world map.
+    Explore,
+    /// Out of the wilderness to the world map.
+    LeaveWilderness,
     ResetView,
     Character,
     FullMap,
@@ -41,11 +45,13 @@ impl Group {
 }
 
 impl Action {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 12] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
         Self::StepRight,
+        Self::Explore,
+        Self::LeaveWilderness,
         Self::ResetView,
         Self::Character,
         Self::FullMap,
@@ -61,6 +67,8 @@ impl Action {
             Self::StepDown => "Step Down",
             Self::StepLeft => "Step Left",
             Self::StepRight => "Step Right",
+            Self::Explore => "Explore Wilderness",
+            Self::LeaveWilderness => "Leave Wilderness",
             Self::ResetView => "Reset View",
             Self::Character => "Character and Inventory",
             Self::FullMap => "Full Map",
@@ -77,6 +85,8 @@ impl Action {
             Self::StepDown => "step_down",
             Self::StepLeft => "step_left",
             Self::StepRight => "step_right",
+            Self::Explore => "explore",
+            Self::LeaveWilderness => "leave_wilderness",
             Self::ResetView => "reset_view",
             Self::Character => "character",
             Self::FullMap => "full_map",
@@ -93,6 +103,7 @@ impl Action {
     pub fn group(self) -> Group {
         match self {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
+            Self::Explore | Self::LeaveWilderness => Group::Movement,
             Self::ResetView => Group::Camera,
             Self::Character | Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
             Self::FullScreen => Group::Interface,
@@ -103,11 +114,15 @@ impl Action {
     pub fn defaults(self) -> [Option<Binding>; SLOTS] {
         let key = |key| Some(Binding::new(key, Mods::NONE));
         let alt = |key| Some(Binding::new(key, Mods::ALT));
+        // `>` and `<` on UK and US keyboards.
+        let shift = |key| Some(Binding::new(key, Mods::SHIFT));
         match self {
             Self::StepUp => [key(KeyCode::ArrowUp), key(KeyCode::KeyW)],
             Self::StepDown => [key(KeyCode::ArrowDown), key(KeyCode::KeyS)],
             Self::StepLeft => [key(KeyCode::ArrowLeft), key(KeyCode::KeyA)],
             Self::StepRight => [key(KeyCode::ArrowRight), key(KeyCode::KeyD)],
+            Self::Explore => [shift(KeyCode::Period), None],
+            Self::LeaveWilderness => [shift(KeyCode::Comma), None],
             Self::ResetView => [key(KeyCode::Home), None],
             Self::Character => [key(KeyCode::KeyC), key(KeyCode::KeyI)],
             Self::FullMap => [key(KeyCode::KeyM), None],

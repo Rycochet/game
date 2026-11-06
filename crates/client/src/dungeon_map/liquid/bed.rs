@@ -1,5 +1,6 @@
 //! How deep a liquid cell's bed is, and whether it is a narrow channel.
 
+use super::LooksLiquid;
 use shared::dungeon::Level;
 
 use super::{FULL_DEPTH, HALF_CELL, NARROW_DEPTH, Outline, Point, around, wet};
@@ -38,12 +39,15 @@ pub(super) fn bed_at(
     quarter: (f32, f32),
     outline: Outline,
 ) -> Bed {
+    if level.cell(x, y) == shared::dungeon::Cell::Shallows {
+        return Bed::Flat(NARROW_DEPTH);
+    }
     if !is_narrow(level, x, y) {
         return Bed::Flat(FULL_DEPTH);
     }
     let [beside, ahead, _] = around((x, y), quarter);
     // The next cell of the channel, if it is narrow too, keeps the same depth.
-    let carries_on = |(x, y): (i64, i64)| level.cell(x, y).is_liquid() && is_narrow(level, x, y);
+    let carries_on = |(x, y): (i64, i64)| level.cell(x, y).looks_liquid() && is_narrow(level, x, y);
     match outline {
         Outline::AlongEast if !carries_on(beside) => Bed::SlopeEast,
         Outline::AlongSouth if !carries_on(ahead) => Bed::SlopeSouth,
