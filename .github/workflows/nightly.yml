@@ -1,0 +1,148 @@
+# Nightly builds: once a day (and when run by hand), if anything has merged
+# since the last one, saves downloadable builds of what the Docker image
+# `:latest` was built from:
+# - the web client and the standalone Linux server, copied out of that image
+#   (no second build of the slow web client)
+# - native packages (`cargo xtask package`: client, server and assets) for
+#   Windows, macOS and Linux, built from the same commit as the image
+# Then the image gets the tags `:nightly` and `:nightly-<date>`, pointing at
+# the same image as `:latest` (no rebuild). The tags move only after every
+# build has worked, so a failed night is tried again the next night.
+name: Nightly
+
+on:
+  schedule:
+    # 04:00 UTC every day.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Build even if :nightly is already the latest image
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  # Registry image names must be lowercase.
+  IMAGE: ghcr.io/rycochet/hall-of-worlds
+
+jobs:
+  image:
+    name: Image and web client
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      build: ${{ steps.check.outputs.build }}
+      sha: ${{ steps.check.outputs.sha }}
+      short: ${{ steps.check.outputs.short }}
+      date: ${{ steps.check.outputs.date }}
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # The Docker workflow labels each image with the commit it was built
+      # from. No :nightly yet (the first run) counts as a different commit.
+      - id: check
+        name: Compare :latest with :nightly
+        run: |
+          docker pull --quiet "$IMAGE:latest"
+          latest=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE:latest")
+          nightly=""
+          if docker pull --quiet "$IMAGE:nightly"; then
+            nightly=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE:nightly")
+          fi
+          echo ":latest is $latest, :nightly is ${nightly:-missing}"
+          if [ -z "$latest" ]; then
+            echo "::error:::latest has no revision label"
+            exit 1
+          fi
+          if [ "$latest" = "$nightly" ] && [ "${{ inputs.force }}" != "true" ]; then
+            echo "Nothing new since the last nightly build."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "sha=$latest" >> "$GITHUB_OUTPUT"
+          echo "short=${latest::7}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      # From the commit's own tag, which can't move to a newer merge midway.
+      - name: Copy the web client and server out of the image
+        if: steps.check.outputs.build == 'true'
+        run: |
+          image="$IMAGE:sha-${{ steps.check.outputs.short }}"
+          docker pull --quiet "$image"
+          docker create --name nightly "$image"
+          mkdir -p out/server
+          docker cp nightly:/srv/web out/web
+          docker cp nightly:/usr/local/bin/hall-of-worlds-server out/server/
+          docker rm nightly
+      - if: steps.check.outputs.build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hall-of-worlds-web-${{ steps.check.outputs.date }}-${{ steps.check.outputs.short }}
+          path: out/web
+          retention-days: 14
+          if-no-files-found: error
+      - if: steps.check.outputs.build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hall-of-worlds-server-Linux-${{ steps.check.outputs.date }}-${{ steps.check.outputs.short }}
+          path: out/server
+          retention-days: 14
+          if-no-files-found: error
+
+  native:
+    name: Build (${{ matrix.os }})
+    needs: image
+    if: needs.image.outputs.build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.image.outputs.sha }}
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo xtask package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hall-of-worlds-${{ runner.os }}-${{ needs.image.outputs.date }}-${{ needs.image.outputs.short }}
+          path: target/package
+          retention-days: 14
+          if-no-files-found: error
+
+  tag:
+    name: Tag the image
+    needs: [image, native]
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Copies the image's manifest under the new tags, in the registry.
+      - name: Add :nightly and :nightly-<date>
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE:nightly" \
+            --tag "$IMAGE:nightly-${{ needs.image.outputs.date }}" \
+            "$IMAGE:sha-${{ needs.image.outputs.short }}"
