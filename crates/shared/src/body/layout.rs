@@ -77,6 +77,8 @@ pub enum Role {
 pub enum Girdle {
     Hips,
     Shoulders,
+    /// This far along the spine from the hips, as a spider's legs are spread along it.
+    Along(i32),
 }
 
 /// One bone of a limb. Its far end is `way` × `span` / 1000 from its near end: `way` is
@@ -168,6 +170,7 @@ impl Layout {
         let along = match limb.girdle {
             Girdle::Hips => 0,
             Girdle::Shoulders => self.spine.shoulders,
+            Girdle::Along(along) => along,
         };
         let [x, y, z] = self.spine.at(along);
         [x + limb.side.sign() * limb.apart, y, z]

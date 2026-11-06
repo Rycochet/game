@@ -3,6 +3,7 @@
 use super::animals::{CATTLE, WOLF};
 use super::guesses::{PERSON, medians};
 use super::peoples::{BIRDFOLK, DWARF, ELF, GOBLIN, HALFLING, LIZARDFOLK, MINOTAUR, ON_TOES, ORC};
+use super::taurs::{DRIDER, SCORPION_MAN};
 use super::{BodyPart, CreatureDef, CreatureKind, Layer, Location, Size};
 use crate::sheet::{Ability, Skill, Trait};
 
@@ -99,6 +100,8 @@ impl CreatureKind {
         match self {
             Self::Birdfolk => BIRDFOLK,
             Self::Cattle => CATTLE,
+            Self::Drider => DRIDER,
+            Self::ScorpionMan => SCORPION_MAN,
             Self::Wolf => WOLF,
             Self::Dwarf => DWARF,
             Self::Elf => ELF,

@@ -32,6 +32,10 @@ pub(super) const CREDITS: &[(&str, &str)] = &[
     ),
     ("Emoji font: Noto Emoji", "Google"),
     (
+        "Some creatures (the drider): System Reference Document 5.1, CC BY 4.0",
+        "Wizards of the Coast LLC",
+    ),
+    (
         "Built with",
         "Bevy, and the many open source libraries it and the game use",
     ),

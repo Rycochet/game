@@ -2,7 +2,7 @@
 //! dog's raised heels, hooves, or a bird's toes.
 
 use bevy::prelude::*;
-use shared::body::{Feet, Layout, Limb};
+use shared::body::{Feet, Layout, Limb, Role};
 
 use super::{Triangle, blob, limb, point};
 
@@ -10,7 +10,7 @@ use super::{Triangle, blob, limb, point};
 /// below it.
 pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout, leg: &Limb, feet: Feet) {
     let joints: Vec<Vec3> = layout.joints(leg).into_iter().map(point).collect();
-    if leg.bones.iter().flatten().count() != 3 {
+    if leg.role != Role::Leg || leg.bones.iter().flatten().count() != 3 {
         beast(triangles, leg, &joints, feet);
         return;
     }
@@ -106,7 +106,7 @@ pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout, leg: &Limb, 
 }
 
 /// A beast's leg, bent at every joint down to its last above the ground, then a hoof
-/// widening to the ground or a paw on it.
+/// widening to the ground, a paw on it, or (with no foot) a leg tapering to a point.
 fn beast(triangles: &mut Vec<Triangle>, leg: &Limb, joints: &[Vec3], feet: Feet) {
     let bones: Vec<_> = leg.bones.iter().flatten().collect();
     let Some(first) = bones.first() else {
@@ -120,7 +120,9 @@ fn beast(triangles: &mut Vec<Triangle>, leg: &Limb, joints: &[Vec3], feet: Feet)
     let (ankle, radius) = path[path.len() - 1];
     let ground = joints[joints.len() - 1];
     let foot = leg.foot as f32;
-    if feet == Feet::Hooves {
+    if leg.foot == 0 {
+        limb(triangles, &[(ankle, radius), (ground, radius * 0.3)]);
+    } else if feet == Feet::Hooves {
         limb(
             triangles,
             &[
