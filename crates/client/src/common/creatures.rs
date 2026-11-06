@@ -1,5 +1,5 @@
 //! Other creatures on the map, the Character panel's words, the player's speed, the
-//! most they can carry and spent energy.
+//! most they can carry, spent energy and making a character.
 
 use bevy::prelude::*;
 
@@ -37,3 +37,10 @@ pub struct CarryLimit(pub u32);
 /// The server works out the same, and keeps its own.
 #[derive(Message, Clone, Copy, Debug)]
 pub struct SpentEnergy(pub u32);
+
+/// The server asked for a new character to be made (`ServerMessage::Characters`
+/// with none to choose): `character_create` shows its screen until it is sent,
+/// and the loading screen leaves it the input. `connection` sets it, and clears it
+/// on hanging up.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MakingCharacter(pub bool);

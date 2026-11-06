@@ -41,6 +41,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Icon | have | Pictures, or drawn in code. |
 | Scroll area | have | Wheel, finger or bar. |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
+| Triangle chooser | have | Only in making a character (`character_create`): three triangles turning round a middle, a dot in each, each with a radar chart behind it (the kind's bonus as a gold inner layer, round-ended). Drawn into a picture; dots dragged, the whole turned by dragging beside them; keys 1–3, arrows, Q/E. |
 | Badge | have | A stack's count: white with a black outline, bottom centre inside the item's frame. |
 | Table, Chip, Avatar, Divider | later | |
 

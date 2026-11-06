@@ -5,20 +5,26 @@ use shared::protocol::{ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessa
 
 use super::answer_dev::answer_dev;
 use super::answer_items::answer_items;
+use super::new_character::{Asked, create, join_or_make};
 use super::{Action, Client, MOST_WAITING, Phase};
 use crate::accounts::{Accounts, LoginKey, MAX_CHARACTERS};
 use crate::{ServerOptions, ServerWorld};
 
-/// A client has logged in: a guest goes straight to their one character, anyone
-/// else is told theirs to choose from.
-pub(super) fn logged_in(client: &mut Client, key: &LoginKey, accounts: &mut Accounts) -> bool {
+/// A client has logged in: a guest goes to their one character (made first, if
+/// new: `join_or_make`), anyone else is told theirs to choose from.
+pub(super) fn logged_in(
+    client: &mut Client,
+    key: &LoginKey,
+    accounts: &mut Accounts,
+    world: &ServerWorld,
+) -> bool {
     let answered = (|| {
         let id = accounts.log_in(key)?;
         let account = accounts.account(&id)?;
+        client.account = Some(id);
         let answered = if account.guest {
             client.character_id = Some(accounts.guest_character(&id)?);
-            client.phase = Phase::Joining;
-            true
+            join_or_make(client, world)
         } else {
             client.phase = Phase::Choosing;
             client.link.send(&ServerMessage::Characters {
@@ -26,7 +32,6 @@ pub(super) fn logged_in(client: &mut Client, key: &LoginKey, accounts: &mut Acco
                 can_create: account.characters.len() < MAX_CHARACTERS,
             })
         };
-        client.account = Some(id);
         Ok::<bool, String>(answered)
     })();
     answered.unwrap_or_else(|error| client.refuse_for_saves(&error))
@@ -56,12 +61,17 @@ pub(crate) fn answer(
             refuse(client, "hello again?".into())
         }
         // Needs no login: welcomed by `handle_messages`, which can see other
-        // clients.
-        ClientMessage::Hello { .. } if client.character_id.is_some() => {
-            client.phase = Phase::Joining;
-            true
+        // clients, once made if new.
+        ClientMessage::Hello {
+            makes_characters, ..
+        } if client.character_id.is_some() => {
+            client.makes_characters = makes_characters;
+            join_or_make(client, world)
         }
-        ClientMessage::Hello { .. } => {
+        ClientMessage::Hello {
+            makes_characters, ..
+        } => {
+            client.makes_characters = makes_characters;
             client.phase = Phase::LoggingIn;
             let methods = if options.guests {
                 vec![LoginMethod::Guest]
@@ -78,7 +88,7 @@ pub(crate) fn answer(
             if matches!(key, LoginKey::Guest(_)) && !options.guests {
                 return refuse(client, "this server doesn't take guests".into());
             }
-            logged_in(client, &key, accounts)
+            logged_in(client, &key, accounts, world)
         }
         ClientMessage::ChooseCharacter { id } => {
             let Some(account) = client.account.filter(|_| client.phase == Phase::Choosing) else {
@@ -102,30 +112,14 @@ pub(crate) fn answer(
             appearance,
             build,
         } => {
-            let Some(account) = client.account.filter(|_| client.phase == Phase::Choosing) else {
-                return refuse(client, "not the time to make a character".into());
+            let asked = Asked {
+                name,
+                kind,
+                appearance,
+                build,
             };
-            // A client can ask for anything: the server decides what may be played.
-            if !kind.def().playable {
-                return refuse(client, format!("{} can't be played", kind.def().name));
-            }
-            if !appearance.suits(kind) {
-                return refuse(
-                    client,
-                    "that look doesn't suit that kind of creature".into(),
-                );
-            }
-            // The server works the attributes out: only the triangles come from it.
-            if !build.is_valid() {
-                return refuse(client, "those attributes can't be chosen".into());
-            }
-            match accounts.create_character(&account, &name) {
-                Ok(id) => {
-                    client.character_id = Some(id);
-                    client.starting_as = Some((kind, appearance, build));
-                    client.phase = Phase::Joining;
-                    true
-                }
+            match create(client, asked, accounts) {
+                Ok(()) => true,
                 Err(reason) => refuse(client, reason),
             }
         }

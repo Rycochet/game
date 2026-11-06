@@ -95,6 +95,7 @@ pub(super) fn connect(world: &mut World) {
     world.resource_mut::<ServerClock>().local_server = connection.local;
     connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
+        makes_characters: true,
     });
     world.insert_resource(connection);
     // Steps start again from the server's word.
@@ -111,6 +112,8 @@ pub(super) fn give_up(commands: &mut Commands, status: &mut ServerStatus, reason
 /// Ends the connection.
 pub(super) fn hang_up(commands: &mut Commands) {
     commands.remove_resource::<ServerConnection>();
+    // A character half made is asked for again on connecting again.
+    commands.insert_resource(crate::common::MakingCharacter(false));
     #[cfg(target_arch = "wasm32")]
     commands.queue(|world: &mut World| {
         world.remove_non_send::<super::socket::BrowserSocket>();

@@ -13,6 +13,7 @@ fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
     let (client, server) = start_embedded(seed, Some(folder.0.clone()));
     assert!(client.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
+        makes_characters: false,
     }));
     assert!(client.send(&ClientMessage::DevTeleport { x: 5, y: 6 }));
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -61,6 +62,7 @@ fn its_player_can_open_it_to_others_and_close_it_again() {
     let (client, server) = start_embedded(WorldSeed::new(99), Some(folder.0.clone()));
     assert!(client.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
+        makes_characters: false,
     }));
     let deadline = Instant::now() + Duration::from_secs(20);
     let next_online = || loop {

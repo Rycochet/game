@@ -7,13 +7,15 @@ use bevy::input::InputSystems;
 use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy::winit::WinitSettings;
 
 use crate::common::{
-    GameView, KeepDrawing, LoadingStep, PointerSystems, Preferences, ServerStatus, Session,
-    TouchGesture, frame_settings, interface_area,
+    GameView, LoadingStep, MakingCharacter, PointerSystems, ServerStatus, Session, TouchGesture,
+    interface_area,
 };
+
+mod frames;
 use crate::widgets::{Progress, TextSize, WidgetSystems, layer_z, spawn_progress_bar};
+use frames::keep_frame_rate;
 
 /// Built into the program, rather than loaded, to be there on the first frame.
 const TITLE_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/CinzelDecorative-Bold.ttf");
@@ -56,11 +58,16 @@ impl Plugin for LoadingScreenPlugin {
             .add_systems(Startup, spawn_screen)
             .add_systems(
                 PreUpdate,
-                // At the startup menu, the menu over the screen takes what it wants.
+                // At the startup menu, the menu over the screen takes what it
+                // wants, as making a character does.
                 take_all_input
-                    .run_if(|step: Res<LoadingStep>, session: Res<Session>| {
-                        *step != LoadingStep::Ready && session.is_playing()
-                    })
+                    .run_if(
+                        |step: Res<LoadingStep>,
+                         session: Res<Session>,
+                         making: Res<MakingCharacter>| {
+                            *step != LoadingStep::Ready && session.is_playing() && !making.0
+                        },
+                    )
                     .after(InputSystems)
                     .after(PointerSystems)
                     .before(WidgetSystems::Presses),
@@ -203,17 +210,18 @@ fn update_step(
     step.set_if_neq(next_step(*step, frames.0, *settled));
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn show_screen(
     step: Res<LoadingStep>,
     status: Res<ServerStatus>,
     session: Res<Session>,
+    making: Res<MakingCharacter>,
     mut screen: Single<&mut Visibility, (With<LoadingScreen>, Without<Bar>)>,
     mut bar: Single<&mut Visibility, (With<Bar>, Without<LoadingScreen>)>,
     mut progress: Single<&mut Progress, With<Bar>>,
     mut text: Single<(&mut Text, &mut TextColor), With<BarText>>,
 ) {
-    if !step.is_changed() && !status.is_changed() && !session.is_changed() {
+    if !step.is_changed() && !status.is_changed() && !session.is_changed() && !making.is_changed() {
         return;
     }
     let shown_if = |shown: bool| {
@@ -224,8 +232,8 @@ fn show_screen(
         }
     };
     screen.set_if_neq(shown_if(*step != LoadingStep::Ready));
-    // Only the title behind the startup menu.
-    bar.set_if_neq(shown_if(session.is_playing()));
+    // Only the title behind the startup menu, or the screen making a character.
+    bar.set_if_neq(shown_if(session.is_playing() && !making.0));
     let (words, full) = bar_shows(*step, &status);
     progress.0 = full;
     text.0.0 = words;
@@ -275,23 +283,6 @@ fn remove_page_screen(step: Res<LoadingStep>, mut removed: Local<bool>) {
         .and_then(|document| document.get_element_by_id("loading"));
     if let Some(screen) = screen {
         screen.remove();
-    }
-}
-
-/// Keeps loading quick even with the window in the background, where frames are
-/// otherwise a second apart (as they are after it, unless `KeepDrawing`).
-fn keep_frame_rate(
-    step: Res<LoadingStep>,
-    session: Res<Session>,
-    keep: Res<KeepDrawing>,
-    preferences: Res<Preferences>,
-    mut settings: ResMut<WinitSettings>,
-) {
-    let changed = step.is_changed() || session.is_changed() || keep.is_changed();
-    if changed || preferences.is_changed() {
-        // Not at the startup menu, which only waits for the player.
-        let loading = *step != LoadingStep::Ready && session.is_playing();
-        *settings = frame_settings(loading || keep.0, &preferences.video);
     }
 }
 

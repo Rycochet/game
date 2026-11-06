@@ -100,7 +100,7 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 
 ## Building it (later tasks, in order)
 
-1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way (built); the triangles in a character creation screen (next; one character per account for now, with Character Selection later before it).
+1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way, and the triangles in a character creation screen (built, `client/character_create.md`; one character per account for now, with Character Selection later before it).
 2. The tree, practice, checks and rust clock, with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
 3. Abilities and opposition.
 4. Specialising, once quests, trainers and books exist.
