@@ -7,7 +7,7 @@
 use bevy::prelude::*;
 use shared::dungeon::Sight;
 use shared::movement::{Step, step_on_level};
-use shared::poi::{Poi, PoiKind};
+use shared::poi::Poi;
 use shared::protocol::SeenStairs;
 use shared::site::{Exit, Site, SiteLevel};
 
@@ -20,8 +20,11 @@ mod keepers;
 mod leave;
 mod levels;
 mod moves;
+mod place;
+mod remembered;
 mod sight;
 mod trade;
+mod wild;
 
 use cells::{add_masks, all_cells, beside, level_chunks, nearby_cells, send_cells};
 use enter::enter_site;
@@ -32,19 +35,19 @@ use leave::leave_for_poi;
 pub(super) use leave::{forget_site, leave, put_out, use_exit};
 use levels::{NewVisit, arrive_again, enter_level};
 pub(super) use moves::{set_cell, stepped, teleport};
+use place::{Mirror, Place};
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
+pub(super) use wild::{explore, follow, leave_wilderness};
 
 /// How far in a town others can be made out, in cells.
 const TOWN_SIGHT: u32 = 40;
 
-/// A player's stay on a site level.
+/// A player's stay on a site level, or in the wilderness.
 pub(crate) struct Visit {
-    /// The poi the site is behind.
-    poi: Poi,
+    place: Place,
     id: SiteId,
-    site: Site,
     index: u32,
     level: SiteLevel,
     /// Its stairs as players see them.
@@ -61,6 +64,8 @@ pub(crate) struct Visit {
     /// from `view_from`, and only again once the player has moved.
     view: Sight,
     view_from: Option<(i64, i64)>,
+    /// Its cells that are another map's too.
+    mirrors: Vec<Mirror>,
 }
 
 impl Visit {
@@ -124,9 +129,7 @@ impl Visit {
             let (from_x, from_y) = self.position;
             let level = &self.level.level;
             self.view = Sight::new(level);
-            // Towns are big, and work out no sight otherwise.
-            let reach = self.is_town().then_some(TOWN_SIGHT);
-            self.view.add_view(level, from_x, from_y, reach);
+            self.view.add_view(level, from_x, from_y, self.reach());
             self.view_from = Some(self.position);
         }
         self.view.is_seen(x, y)
@@ -137,14 +140,77 @@ impl Visit {
         self.id
     }
 
-    /// What kind of poi it is behind.
-    pub(crate) fn kind(&self) -> PoiKind {
-        self.poi.kind
+    /// The poi it is behind, if a site's.
+    pub(crate) fn poi(&self) -> Option<&Poi> {
+        match &self.place {
+            Place::Site { poi, .. } => Some(poi),
+            Place::Wilderness { .. } => None,
+        }
+    }
+
+    /// Its site, if a site's.
+    pub(crate) fn site(&self) -> Option<&Site> {
+        match &self.place {
+            Place::Site { site, .. } => Some(site),
+            Place::Wilderness { .. } => None,
+        }
+    }
+
+    /// Whether it is in the wilderness.
+    pub(crate) fn is_wilderness(&self) -> bool {
+        matches!(self.place, Place::Wilderness { .. })
+    }
+
+    /// Where a cell's column is kept (remembered, changed): where it is round
+    /// the planet in the wilderness (see `wild`), else itself.
+    pub(crate) fn kept_at(&self, x: i64) -> i64 {
+        self.wraps_at().map_or(x, |width| x.rem_euclid(width))
+    }
+
+    /// Whether a cell is another map's too, or a poi's cutout in the
+    /// wilderness (see `sight::learnt_elsewhere`).
+    fn shares(&self, x: i64, y: i64) -> bool {
+        let inside = |(min_x, min_y, width, height): (i64, i64, i64, i64)| {
+            (min_x..min_x + width).contains(&x) && (min_y..min_y + height).contains(&y)
+        };
+        self.mirrors.iter().any(|mirror| inside(mirror.bounds))
+            || match &self.place {
+                Place::Wilderness { cutouts, .. } => cutouts.iter().any(|&(_, b)| inside(b)),
+                Place::Site { .. } => false,
+            }
+    }
+
+    /// Where its cells wrap round the planet: the wilderness's width.
+    pub(crate) fn wraps_at(&self) -> Option<i64> {
+        match self.place {
+            Place::Wilderness { width, .. } => Some(width),
+            Place::Site { .. } => None,
+        }
+    }
+
+    /// Whether they came into the site from the wilderness.
+    pub(crate) fn came_from_wilderness(&self) -> bool {
+        matches!(
+            self.place,
+            Place::Site {
+                from_wilderness: true,
+                ..
+            }
+        )
     }
 
     /// Whether the site is a town, whose layout players always know.
     fn is_town(&self) -> bool {
-        self.site.kind().is_town()
+        self.site().is_some_and(|site| site.kind().is_town())
+    }
+
+    /// How far can be seen, in cells: open towns and the wilderness have a
+    /// limit, or sight would be worked out across all of them.
+    fn reach(&self) -> Option<u32> {
+        match &self.place {
+            Place::Wilderness { .. } => Some(crate::wilderness::SIGHT),
+            Place::Site { .. } => self.is_town().then_some(TOWN_SIGHT),
+        }
     }
 
     /// What is saved with the character.
@@ -153,6 +219,7 @@ impl Visit {
             site: self.id,
             level: self.index,
             position: self.position,
+            from_wilderness: self.came_from_wilderness(),
         }
     }
 }

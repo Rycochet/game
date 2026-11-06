@@ -58,9 +58,12 @@ pub(crate) fn set_cell(
         return true;
     }
     visit.level.level.set(x, y, cell);
-    let site = world.site_mut(visit.id, visit.poi.kind);
-    let saved = site.levels.entry(visit.index).or_default();
-    saved.changes.insert((x, y), cell);
+    // A cutout's cell in the wilderness is its site's.
+    let mut mirrored = visit.mirrors.iter().filter(|_| visit.is_wilderness());
+    let mirrored = mirrored.find_map(|m| m.of(x, y).map(|at| (m.id, m.index, at)));
+    let (id, index, at) = mirrored.unwrap_or((visit.id, visit.index, (visit.kept_at(x), y)));
+    let saved = world.site_mut(id).levels.entry(index).or_default();
+    saved.changes.insert(at, cell);
     // Everything may look different from everywhere now.
     visit.view_from = None;
     visit.looked_from = Sight::new(&visit.level.level);

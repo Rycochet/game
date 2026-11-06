@@ -79,7 +79,7 @@ fn mob_ids(test: &mut TestClient) -> BTreeSet<Id> {
         seed: 7,
         ruin: 0,
     };
-    let site = test.world.site(id, PoiKind::Castle);
+    let site = test.world.site(id);
     site.levels[&0].mobs.values().copied().collect()
 }
 
@@ -556,9 +556,8 @@ fn a_mob_is_dressed_once_and_keeps_its_things_after_a_restart() {
     test.send(&[CASTLE]);
     let belongings = |test: &mut TestClient| -> Vec<(Id, Inventory)> {
         let (&(site, level), mobs) = test.world.populations.0.iter().next().unwrap();
-        let kind = mobs.poi_kind;
         let ids: Vec<Id> = mobs.mobs.iter().map(|mob| mob.id).collect();
-        let saved = &test.world.site(site, kind).levels[&level];
+        let saved = &test.world.site(site).levels[&level];
         let of = |id: Id| (id, saved.records[&id].gear.clone().unwrap());
         ids.into_iter().map(of).collect()
     };
@@ -627,7 +626,7 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
         seed: 7,
         ruin: 0,
     };
-    let record = &test.world.site(id, PoiKind::Castle).levels[&0].records[&mob];
+    let record = &test.world.site(id).levels[&0].records[&mob];
     assert_eq!(record.carried.len(), 1);
 }
 
@@ -648,7 +647,7 @@ fn next_to_a_laden_mob(test: &mut TestClient) -> (Id, (i64, i64)) {
     let population = test.world.populations.0.values_mut().next().unwrap();
     population.mobs[0].position = (x + 1, y);
     let mob = population.mobs[0].id;
-    let site = test.world.site_mut(dev_castle(), PoiKind::Castle);
+    let site = test.world.site_mut(dev_castle());
     let record = site.levels.get_mut(&0).unwrap().records.get_mut(&mob);
     let record = record.unwrap();
     let mut gear = Inventory::default();
@@ -679,7 +678,7 @@ fn a_killed_mob_leaves_all_it_had_and_goes_for_good() {
         ServerMessage::GroundSeen { x, y, .. } if (*x, *y) == at
     )));
 
-    let level = &test.world.site(dev_castle(), PoiKind::Castle).levels[&0];
+    let level = &test.world.site(dev_castle()).levels[&0];
     let left: Vec<Id> = level.ground[&at].iter().map(|item| item.id).collect();
     assert_eq!(left, [Id::for_test(50), Id::for_test(51)]);
     assert!(!level.records.contains_key(&mob));
@@ -691,7 +690,7 @@ fn a_killed_mob_leaves_all_it_had_and_goes_for_good() {
     let population = test.world.populations.0.values().next().unwrap();
     assert!(!population.mobs.is_empty());
     assert!(population.mobs.iter().all(|one| one.id != mob));
-    let level = &test.world.site(dev_castle(), PoiKind::Castle).levels[&0];
+    let level = &test.world.site(dev_castle()).levels[&0];
     assert!(!level.mobs.values().any(|id| *id == mob));
 }
 
@@ -711,7 +710,7 @@ fn a_mob_stays_dead_after_a_restart() {
     test.send(&[]);
     let mobs = test.world.populations.0.values().next().unwrap();
     assert!(mobs.mobs.iter().all(|one| one.id != mob));
-    let level = &test.world.site(dev_castle(), PoiKind::Castle).levels[&0];
+    let level = &test.world.site(dev_castle()).levels[&0];
     assert_eq!(level.ground[&at].len(), 2);
 }
 

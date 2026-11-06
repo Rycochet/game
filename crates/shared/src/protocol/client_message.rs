@@ -60,6 +60,13 @@ pub enum ClientMessage {
     /// Use what the player stands on: stairs, or outside ground at the edge
     /// of the level (back to the world map).
     UseExit,
+    /// Explore the wilderness where the player stands on the world map
+    /// (`shared::wilderness`), answered with `EnterLevel`. Refused in water.
+    Explore,
+    /// Leave the wilderness for the world map where the player stands,
+    /// answered with `OnWorldMap`. Only from outside ground (not inside a
+    /// building or cave), and not into water.
+    LeaveWilderness,
     /// Stop or restart the world's clock, answered with `Paused`. Only a server
     /// with just this player on it pauses (`Welcome`'s `can_pause`); others
     /// ignore it.

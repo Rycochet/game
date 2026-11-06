@@ -137,6 +137,7 @@ fn site_file_name(site: SiteId) -> String {
         SiteId::Dev { kind, seed, ruin } => {
             format!("dev_{}_{seed}_ruin{ruin}.ron", kind as usize)
         }
+        SiteId::Wilderness => "wilderness.ron".into(),
     }
 }
 

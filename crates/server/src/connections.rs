@@ -150,6 +150,8 @@ enum Action {
     EnterSite { chunk: ChunkPos },
     EnterGate { entrance: u8 },
     UseExit,
+    Explore,
+    LeaveWilderness,
     OpenTrade { with: Id },
     Ground(GroundAction),
 }

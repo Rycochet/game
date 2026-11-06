@@ -81,6 +81,8 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
             Action::EnterGate { entrance } => (gates::enter_gate(client, world, entrance), 0),
             Action::UseExit => (sites::use_exit(client, world), 0),
+            Action::Explore => (sites::explore(client, world), 0),
+            Action::LeaveWilderness => (sites::leave_wilderness(client, world), 0),
             Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
             Action::Ground(action) => ground::act(client, world, action),
         };
@@ -125,7 +127,7 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
                     return (true, 0);
                 }
             }
-            let stayed = sites::stepped(client, step);
+            let stayed = sites::stepped(client, step) && sites::follow(client, world);
             let to = client.visit.as_ref().map_or(from, Visit::position);
             if to == from {
                 return (stayed, 0);

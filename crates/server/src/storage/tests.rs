@@ -130,6 +130,7 @@ fn saves_are_read_back() {
             site,
             level: 1,
             position: (3, -4),
+            from_wilderness: true,
         }),
         pois: BTreeMap::from([(
             ChunkPos { x: 1, y: 1 },

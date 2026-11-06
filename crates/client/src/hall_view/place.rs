@@ -36,7 +36,7 @@ pub(super) fn place_gates(
     }
     let hall = dungeon.info.as_ref().and_then(|info| match info.kind {
         LevelKind::Hall { origin } => Some((origin, info.bounds)),
-        LevelKind::Poi(_) => None,
+        LevelKind::Poi(_) | LevelKind::Wilderness => None,
     });
     let Some((origin, (min_x, _, width, _))) = hall else {
         remove(&mut gates, &mut commands);

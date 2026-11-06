@@ -20,6 +20,9 @@ pub enum SiteId {
     /// Developer tools: a site of this kind and map seed, a building ruined
     /// this much.
     Dev { kind: PoiKind, seed: u64, ruin: u8 },
+    /// The world's wilderness (`shared::wilderness`): what players have
+    /// changed of it, and what they have left there.
+    Wilderness,
 }
 
 /// `world.ron`.
@@ -218,6 +221,10 @@ pub struct VisitSave {
     pub site: SiteId,
     pub level: u32,
     pub position: (i64, i64),
+    /// They walked into the site from the wilderness, where leaving it takes
+    /// them back.
+    #[serde(default)]
+    pub from_wilderness: bool,
 }
 
 /// What a character knows of a poi they have seen.

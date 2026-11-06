@@ -12,7 +12,6 @@ use shared::energy::{Energy, SITE_SCALE};
 use shared::id::Id;
 use shared::mob::Memory;
 use shared::movement::STRAIGHT_COST;
-use shared::poi::PoiKind;
 use shared::protocol::CharacterId;
 use shared::sheet::{Appearance, Feeling};
 use shared::wear::WornLook;
@@ -179,8 +178,6 @@ pub(crate) struct Population {
     due: BTreeSet<(u64, Id)>,
     /// How many of its mobs are on other levels, so it must stay for their return.
     away: u32,
-    /// What kind of poi the site is behind, to reach its save.
-    poi_kind: PoiKind,
     empty_since: Option<Instant>,
     /// Everyone's scent marks on it.
     scents: Scents,

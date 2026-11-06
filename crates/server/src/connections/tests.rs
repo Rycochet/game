@@ -1080,19 +1080,15 @@ fn a_site_that_cant_be_reached_is_refused_and_not_saved_over() {
     assert!(refused(&answers));
 
     // Asked for anyway, somewhere that can't refuse: blank, and not saved.
-    test.world
-        .site_mut(id, PoiKind::Castle)
-        .levels
-        .entry(9)
-        .or_default();
+    test.world.site_mut(id).levels.entry(9).or_default();
     test.world.save_sites();
     assert!(queue.flush(Duration::from_secs(5)));
     assert_eq!(backend.holds(&key), before);
 
     // Back to normal: the real one again.
     backend.cant_read.store(false, Ordering::Relaxed);
-    test.world.open_site(id, PoiKind::Castle).unwrap();
-    assert!(test.world.site(id, PoiKind::Castle).levels.is_empty());
+    test.world.open_site(id).unwrap();
+    assert!(test.world.site(id).levels.is_empty());
 }
 
 #[test]

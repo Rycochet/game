@@ -7,7 +7,6 @@ use shared::energy::{dressing_cost, handling_cost};
 use shared::ground::Load;
 use shared::id::Id;
 use shared::item::{Holder, Item, Rotation};
-use shared::poi::PoiKind;
 use shared::protocol::ServerMessage;
 
 use crate::ServerWorld;
@@ -58,15 +57,15 @@ pub(crate) struct GroundTold {
 }
 
 /// The cell the player stands on, and which level it is on.
-fn standing_on(client: &Client) -> Option<(SiteId, PoiKind, u32, (i64, i64))> {
+fn standing_on(client: &Client) -> Option<(SiteId, u32, (i64, i64))> {
     let visit = client.visit.as_ref()?;
-    Some((visit.id(), visit.kind(), visit.index(), visit.position()))
+    Some((visit.id(), visit.index(), visit.position()))
 }
 
 /// The level the player is on, to change.
 fn level_mut<'a>(world: &'a mut ServerWorld, client: &Client) -> Option<&'a mut LevelSave> {
-    let (id, kind, index, _) = standing_on(client)?;
-    Some(world.site_mut(id, kind).levels.entry(index).or_default())
+    let (id, index, _) = standing_on(client)?;
+    Some(world.site_mut(id).levels.entry(index).or_default())
 }
 
 /// Takes this off the ground under the player. What is left empty goes.
@@ -133,8 +132,8 @@ fn dropped(
 
 /// Something on the ground under the player, as it is: it stays there until `take_up`.
 fn lying(client: &Client, world: &mut ServerWorld, item: Id) -> Result<Item, &'static str> {
-    let (id, kind, index, at) = standing_on(client).ok_or("not in a site")?;
-    let level = world.site(id, kind).levels.get(&index);
+    let (id, index, at) = standing_on(client).ok_or("not in a site")?;
+    let level = world.site(id).levels.get(&index);
     let pile = level.and_then(|level| level.ground.get(&at));
     let found = pile.and_then(|pile| pile.iter().find(|one| one.id == item));
     found.cloned().ok_or("that isn't on the ground here")
@@ -217,10 +216,10 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
         if client.phase != Phase::Playing {
             continue;
         }
-        let Some((id, kind, index, at)) = standing_on(client) else {
+        let Some((id, index, at)) = standing_on(client) else {
             continue;
         };
-        let level = world.site(id, kind).levels.get(&index);
+        let level = world.site(id).levels.get(&index);
         let items = level.and_then(|level| level.ground.get(&at));
         let pile = items.map(|items| {
             let counted = items.iter().map(|item| (item.id, item.count()));
@@ -243,10 +242,10 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
 /// Tells a client about bags: on arriving, those its character remembers; after that
 /// only what has just been seen to differ, which is all its character remembers too.
 fn tell_bags(client: &mut Client, world: &mut ServerWorld) {
-    let Some((id, kind, index, _)) = standing_on(client) else {
+    let Some((id, index, _)) = standing_on(client) else {
         return;
     };
-    let level = world.site(id, kind).levels.get(&index);
+    let level = world.site(id).levels.get(&index);
     let ground = level.map(|level| &level.ground);
     let piles: Vec<((i64, i64), Load)> = ground
         .into_iter()

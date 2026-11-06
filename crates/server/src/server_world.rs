@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use shared::celestial::Celestial;
 use shared::item::StackLimits;
 use shared::movement::{WorldConditions, WorldGround};
-use shared::poi::{PoiKind, PoiMap};
+use shared::poi::PoiMap;
 use shared::protocol::WorldInfo;
 use shared::site::Generator;
 use shared::surface::Surface;
@@ -62,6 +62,8 @@ pub struct ServerWorld {
     /// Sites forgotten since `super::connections::handle_messages` last looked, for
     /// putting out anyone else in them.
     forgotten: Forgotten,
+    /// The wilderness's generator and what was made of it lately.
+    pub(crate) wilderness: crate::wilderness::WildernessMaps,
 }
 
 /// Which sites have been forgotten.
@@ -150,7 +152,6 @@ impl ServerWorld {
             roads: shared.roads.clone(),
             road_steps: shared::road::RoadSteps::new(Surface::new(&params).width()),
             celestial: Celestial::from_seed(params.seed),
-            params,
             server_clock: shared.clock.clone(),
             time,
             action_clock: shared.action_clock.clone(),
@@ -164,6 +165,8 @@ impl ServerWorld {
             populations: Populations::default(),
             stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),
+            wilderness: crate::wilderness::WildernessMaps::new(&params),
+            params,
         };
         // Only new worlds, and those saved before going by the server's clock:
         // otherwise `world.ron` only changes when its time is moved.
@@ -181,18 +184,19 @@ impl ServerWorld {
         }
     }
 
-    /// Loads what is saved about a site (for a `kind` of poi), or makes it new
-    /// (with its generator's current version) if nobody has been in. An error if
-    /// its save couldn't be reached. Done on going into a site, where someone can
-    /// be told, so that `site` doesn't need to fail.
-    pub(crate) fn open_site(&mut self, id: SiteId, kind: PoiKind) -> Result<(), String> {
+    /// Loads what is saved about a site, or makes it new (with its generator's
+    /// current version) if nobody has been in. An error if its save couldn't be
+    /// reached. Done on going into a site, where someone can be told, so that
+    /// `site` doesn't need to fail.
+    pub(crate) fn open_site(&mut self, id: SiteId) -> Result<(), String> {
         if self.sites.contains_key(&id) && !self.unreachable_sites.contains(&id) {
             return Ok(());
         }
+        let version = self.new_version(id);
         let save = self.storage.load_site(id)?.unwrap_or_else(|| {
             self.unsaved_sites.mark(id);
             SiteSave {
-                version: Generator::for_poi(kind).version(),
+                version,
                 ..default()
             }
         });
@@ -203,14 +207,14 @@ impl ServerWorld {
 
     /// What is saved about a site. Normally open already; if it isn't and its save
     /// can't be reached, it is blank for now and not saved.
-    pub(crate) fn site(&mut self, id: SiteId, kind: PoiKind) -> &mut SiteSave {
+    pub(crate) fn site(&mut self, id: SiteId) -> &mut SiteSave {
         if !self.sites.contains_key(&id)
-            && let Err(error) = self.open_site(id, kind)
+            && let Err(error) = self.open_site(id)
         {
             error!("Using a blank {id:?}, which won't be saved: {error}");
             self.unreachable_sites.insert(id);
             let save = SiteSave {
-                version: Generator::for_poi(kind).version(),
+                version: self.new_version(id),
                 ..default()
             };
             self.sites.insert(id, save);
@@ -219,9 +223,20 @@ impl ServerWorld {
     }
 
     /// `site`, to be saved: something about it is changing.
-    pub(crate) fn site_mut(&mut self, id: SiteId, kind: PoiKind) -> &mut SiteSave {
+    pub(crate) fn site_mut(&mut self, id: SiteId) -> &mut SiteSave {
         self.unsaved_sites.mark(id);
-        self.site(id, kind)
+        self.site(id)
+    }
+
+    /// The generator version a site is made with when first entered: its
+    /// generator's current one.
+    fn new_version(&self, id: SiteId) -> u32 {
+        let kind = match id {
+            SiteId::Poi(chunk) => self.pois.in_chunk(chunk).map(|poi| poi.kind),
+            SiteId::Dev { kind, .. } => Some(kind),
+            SiteId::Wilderness => return shared::wilderness::WILDERNESS_VERSION,
+        };
+        kind.map_or(0, |kind| Generator::for_poi(kind).version())
     }
 
     /// Saves the sites that have changed.
@@ -244,6 +259,9 @@ impl ServerWorld {
         self.storage.remove_site(id);
         self.populations.forget_site(id);
         self.forgotten.sites.insert(id);
+        if let SiteId::Poi(chunk) = id {
+            self.wilderness.forget(Some(chunk));
+        }
     }
 
     /// Forgets every site, as `forget_site`.
@@ -254,6 +272,7 @@ impl ServerWorld {
         self.storage.remove_sites();
         self.populations.forget_all();
         self.forgotten.all = true;
+        self.wilderness.forget(None);
     }
 
     /// The sites forgotten since this was last asked.

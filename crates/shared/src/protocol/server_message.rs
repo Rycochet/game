@@ -84,8 +84,12 @@ pub enum ServerMessage {
     /// enough to see any of it (towns are seen by all, so it gives nothing
     /// away). Sent once per connection; the client keeps it.
     Road(Road),
-    /// The player is now on this site level; its cells follow.
+    /// The player is now on this site level (or in the wilderness); its cells
+    /// follow.
     EnterLevel(LevelInfo),
+    /// The wilderness's level is now this rectangle round the player: what
+    /// the client has of it stays, and cells come as usual. Not a new map.
+    WildernessWindow { bounds: (i64, i64, i64, i64) },
     /// Cells of the current level.
     LevelCells(LevelChunk),
     /// Another level of this site that the player knows, sent after

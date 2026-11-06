@@ -1,6 +1,6 @@
 # shared: wilderness
 
-The land between pois at walking scale: one endless map per world, `SCALE` (16) cells to a world map point, wrapping east–west with the planet. Made on demand in 64 × 64 blocks from the public terrain (height, climate, vegetation) and each chunk's plan (its poi's cutout). A block nobody has changed can be made again at will, so only players' changes need saving (owner). Nothing uses it yet: the server (exploring with `>`, leaving with `<`) and the client come next (plan in `decisions.md`).
+The land between pois at walking scale: one endless map per world, `SCALE` (16) cells to a world map point, wrapping east–west with the planet. Made on demand in 64 × 64 blocks from the public terrain (height, climate, vegetation) and each chunk's plan (its poi's cutout). A block nobody has changed can be made again at will, so only players' changes need saving (owner). The server runs visits to it (exploring, a window of blocks round the player, cutouts' stairs, leaving); the client's keys and drawing come next (plan in `decisions.md`).
 
 ## Files
 
@@ -20,7 +20,7 @@ The land between pois at walking scale: one endless map per world, `SCALE` (16) 
 
 ## Used by
 
-- Nothing yet.
+- `server` (`wilderness::WildernessMaps`, `sites::wild`: visits to it).
 
 ## Notes
 
