@@ -260,9 +260,10 @@ fn a_save_from_before_gates_were_kept_still_loads() {
         inventory: Inventory::default(),
         sheet: Sheet::default(),
         gates: BTreeSet::new(),
+        playtime: 0,
     };
     let text = ron::to_string(&save).unwrap();
-    let old = text.replace(",gates:[]", "");
+    let old = text.replace(",gates:[],playtime:0", "");
     assert_ne!(old, text);
     assert_eq!(ron::from_str::<CharacterSave>(&old).unwrap(), save);
 }

@@ -115,6 +115,8 @@ fn go_online(
     options.guests = true;
     options.pausable = false;
     options.player_limit = settings.player_limit;
+    // Others who join may be sent away; the host never is.
+    options.idle_minutes = crate::IDLE_MINUTES;
     if worlds.clock().is_paused() {
         worlds.clock().resume();
         connections.tell_host(&ServerMessage::Paused {

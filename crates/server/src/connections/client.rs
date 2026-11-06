@@ -41,6 +41,7 @@ impl Client {
             sheet: Sheet::default(),
             gates: BTreeSet::new(),
             ground_told: GroundTold::default(),
+            activity: super::playtime::Activity::default(),
             energy: Energy::default(),
             speed: NORMAL_SPEED,
             waiting: VecDeque::new(),
@@ -161,6 +162,7 @@ impl Client {
                 inventory: self.inventory.clone(),
                 sheet: self.sheet.clone(),
                 gates: self.gates.clone(),
+                playtime: self.activity.played,
             },
         );
         self.unsaved = false;

@@ -37,6 +37,8 @@
 //! - `HOW_DEBUG_TOOLS`: `true` accepts dev tools messages from anyone connected.
 //! - `HOW_SERVER_NAME`: what the server calls itself (default `Hall of Worlds`).
 //! - `HOW_PLAYER_LIMIT`: the most players at once (default 0, no limit).
+//! - `HOW_IDLE_MINUTES`: minutes a player may do nothing before being
+//!   disconnected (default 15, 0 for never).
 //! - `HOW_STACK_GRAMS_PER_CELL`: the most a stack of items may weigh for each cell
 //!   it takes up, in grams (default 2000).
 //! - `HOW_STACK_MAX`: the most items in one stack (default 99).
@@ -48,9 +50,9 @@ use std::net::SocketAddr;
 use std::process;
 
 use server::{
-    DEFAULT_WORLD_SEED, NetworkPlugin, Security, ServerName, ServerOptions, WebClient,
-    check_health, debug_api::DebugApiPlugin, default_data_folder, headless_app, log_plugin,
-    option_on,
+    DEFAULT_WORLD_SEED, IDLE_MINUTES, NetworkPlugin, Security, ServerName, ServerOptions,
+    WebClient, check_health, debug_api::DebugApiPlugin, default_data_folder, headless_app,
+    log_plugin, option_on,
 };
 use shared::world::WorldSeed;
 
@@ -95,6 +97,13 @@ fn main() {
         }),
         Err(_) => 0,
     };
+    let idle_minutes = match env::var("HOW_IDLE_MINUTES") {
+        Ok(minutes) => minutes.trim().parse().unwrap_or_else(|_| {
+            eprintln!("HOW_IDLE_MINUTES is a number of minutes, 0 for never, not {minutes:?}");
+            process::exit(1);
+        }),
+        Err(_) => IDLE_MINUTES,
+    };
     let mut app = headless_app(
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {
@@ -103,6 +112,7 @@ fn main() {
             pausable: false,
             guests,
             player_limit,
+            idle_minutes,
             ..Default::default()
         },
         Some(data.clone()),

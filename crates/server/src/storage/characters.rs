@@ -18,6 +18,8 @@ pub struct Everywhere {
     pub sheet: Sheet,
     /// `CharacterSave::gates`.
     pub gates: BTreeSet<u32>,
+    /// `CharacterSave::playtime`.
+    pub playtime: u64,
 }
 
 impl Storage {
@@ -76,6 +78,11 @@ impl Storage {
             .map_or_else(BTreeSet::new, |save| save.gates))
     }
 
+    /// How long a character has been played, in action ticks (0 if new).
+    pub fn load_playtime(&self, id: &CharacterId) -> Result<u64, String> {
+        Ok(self.character(id)?.map_or(0, |save| save.playtime))
+    }
+
     /// Deletes a character's save (dev tools), if they have one.
     pub fn remove_character(&self, id: &CharacterId) {
         if let Some(queue) = &self.queue {
@@ -110,6 +117,7 @@ impl Storage {
                     inventory: everywhere.inventory,
                     sheet: everywhere.sheet,
                     gates: everywhere.gates,
+                    playtime: everywhere.playtime,
                 }),
             );
         }

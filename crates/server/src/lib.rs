@@ -40,7 +40,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub use accounts::new_guest_token;
-pub use connections::Connections;
+pub use connections::{Connections, IDLE_MINUTES};
 pub use embedded::{EmbeddedServer, start_embedded};
 pub use environment::{log_plugin, option_on};
 pub use network::{NetworkPlugin, OnlinePlugin, WebClient, check_health};
@@ -102,6 +102,10 @@ pub struct ServerOptions {
     pub online: bool,
     /// The most players at once, 0 for no limit (`HOW_PLAYER_LIMIT`).
     pub player_limit: u16,
+    /// Minutes a player may do nothing before being disconnected, 0 for never
+    /// (`HOW_IDLE_MINUTES`, `IDLE_MINUTES` by default on a networked server;
+    /// an embedded server's host is never sent away).
+    pub idle_minutes: u16,
 }
 
 impl ServerOptions {
