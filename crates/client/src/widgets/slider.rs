@@ -56,20 +56,32 @@ pub fn spawn_slider<'a>(
         None => slider.insert(BackgroundColor(SUNKEN_BACKGROUND)),
     };
     let id = slider.id();
-    slider.with_child((
-        SliderMark(id),
-        Node {
-            position_type: PositionType::Absolute,
-            left: percent(value * 100.0),
-            width: px(MARK_WIDTH),
-            height: percent(100),
-            margin: UiRect::left(px(-MARK_WIDTH / 2.0)),
-            border: UiRect::all(px(MARK_EDGE)),
-            ..default()
-        },
-        BackgroundColor(RAISED_BACKGROUND),
-        raised_border(),
-    ));
+    // The mark's centre runs along a rail half a mark in from each end, so the
+    // whole mark stays inside the frame.
+    slider.with_children(|slider| {
+        slider
+            .spawn(Node {
+                position_type: PositionType::Absolute,
+                left: px(MARK_WIDTH / 2.0),
+                right: px(MARK_WIDTH / 2.0),
+                height: percent(100),
+                ..default()
+            })
+            .with_child((
+                SliderMark(id),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: percent(value * 100.0),
+                    width: px(MARK_WIDTH),
+                    height: percent(100),
+                    margin: UiRect::left(px(-MARK_WIDTH / 2.0)),
+                    border: UiRect::all(px(MARK_EDGE)),
+                    ..default()
+                },
+                BackgroundColor(RAISED_BACKGROUND),
+                raised_border(),
+            ));
+    });
     slider
 }
 
@@ -78,12 +90,14 @@ fn value_at(x: f32, left: f32, width: f32) -> f32 {
     ((x - left) / width.max(1.0)).clamp(0.0, 1.0)
 }
 
-/// How far along a slider's node a point in the interface's pixels is.
+/// How far along a slider's node a point in the interface's pixels is: along
+/// the rail its mark's centre runs on, inside the border and half a mark in.
 fn along(node: &ComputedNode, transform: &UiGlobalTransform, at: Vec2) -> f32 {
     let scale = node.inverse_scale_factor;
     let size = node.size() * scale;
     let centre = transform.translation * scale;
-    value_at(at.x, centre.x - size.x / 2.0, size.x)
+    let inset = BORDER + MARK_WIDTH / 2.0;
+    value_at(at.x, centre.x - size.x / 2.0 + inset, size.x - inset * 2.0)
 }
 
 /// Moves a slider to where the pointer is, if that is a move.
