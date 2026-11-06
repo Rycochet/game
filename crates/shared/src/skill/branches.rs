@@ -3,6 +3,7 @@
 mod athletics;
 mod combat;
 mod crafting;
+mod defence;
 mod gathering;
 mod lore;
 mod magic;

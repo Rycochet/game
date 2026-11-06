@@ -1,8 +1,8 @@
 //! How `Skills` is written. In saves (formats people can read, RON) it is a list of
 //! each node's path and practice, `[("athletics/climbing", 100)]`, so the tree can
-//! change between versions; a path no longer in the tree is dropped. A save from
-//! before the tree was a map of old names to levels, `{Climbing: 1}`, read by the
-//! old names (`old`). In messages (postcard) each node goes by its number.
+//! change between versions; a node that moved is found where it went (`old::moved`),
+//! and a path no longer in the tree is dropped. A save from before the tree was a
+//! map of old names to levels, `{Climbing: 1}`, read by the old names (`old`). In messages (postcard) each node goes by its number.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -11,7 +11,7 @@ use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::old::old_skill;
+use super::old::{moved, old_skill};
 use super::{SkillId, Skills, level_practice};
 
 impl Serialize for Skills {
@@ -68,8 +68,10 @@ impl<'de> Visitor<'de> for ByPath {
     fn visit_seq<L: SeqAccess<'de>>(self, mut list: L) -> Result<Skills, L::Error> {
         let mut skills = Skills::default();
         while let Some((path, practice)) = list.next_element::<(String, u32)>()? {
-            if let Some(id) = SkillId::find(&path) {
-                skills.0.insert(id, practice);
+            let found = SkillId::find(&path).or_else(|| moved(&path).and_then(SkillId::find));
+            if let Some(id) = found {
+                let kept = skills.0.entry(id).or_insert(0);
+                *kept = kept.saturating_add(practice);
             }
         }
         Ok(skills)
