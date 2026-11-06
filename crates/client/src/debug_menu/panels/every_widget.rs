@@ -6,10 +6,11 @@ use shared::poi::PoiKind;
 use super::super::actions::kind_name;
 use super::{CHECK_ROW, EVERY_WIDGET_HEIGHT, FONT};
 use crate::widgets::{
-    ALLOWED, BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, GRID_COLOUR, INK, Pressable,
-    TextBox, UiId, field_label, raised_box, spawn_button, spawn_check_button, spawn_close_button,
-    spawn_dropdown, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs,
-    spawn_text_box, spawn_toggle_row, spawn_tooltip,
+    ALLOWED, BUTTON_PADDING, ButtonState, ButtonStyle, ColourPicker, Dropdown, GRID_COLOUR, INK,
+    Pressable, SAMPLE_GRADIENT, Swatch, TextBox, UiId, field_label, raised_box, spawn_button,
+    spawn_check_button, spawn_close_button, spawn_colour_picker, spawn_dropdown,
+    spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs, spawn_text_box,
+    spawn_toggle_row, spawn_tooltip,
 };
 
 /// One of each thing `widgets` makes, to see how they look together.
@@ -100,6 +101,26 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
     );
     spawn_close_button(content, default()).insert(id("Close"));
     spawn_slider(content, 0.5, None, 160.0).insert(id("Slider"));
+    let colours = [
+        ("Red", [190, 60, 50]),
+        ("Green", [70, 150, 70]),
+        ("Blue", [60, 90, 180]),
+    ];
+    let mut picker = ColourPicker {
+        swatches: colours
+            .iter()
+            .map(|&(_, [r, g, b])| Swatch::Colour(Color::srgb_u8(r, g, b)))
+            .collect(),
+        names: colours.iter().map(|&(name, _)| name.to_owned()).collect(),
+        selected: 0,
+    };
+    picker.swatches.push(Swatch::Picture(SAMPLE_GRADIENT));
+    picker.names.push("Gradient".into());
+    let node = Node {
+        width: px(200),
+        ..default()
+    };
+    spawn_colour_picker(content, picker, FONT, node).insert(id("Colour picker"));
     let kinds = || PoiKind::ALL.map(kind_name).to_vec();
     for searchable in [false, true] {
         let dropdown = Dropdown {

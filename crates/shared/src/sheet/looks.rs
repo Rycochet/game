@@ -7,23 +7,46 @@ use crate::creature::CreatureKind;
 
 use super::Trait;
 
-/// One choice for a trait: what it is called and, for a colour, its colour.
+/// One choice for a trait: what it is called and, for a colour, its colour and
+/// any pattern over it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Choice {
     pub name: &'static str,
-    /// Red, green and blue, 0 to 255.
+    /// Red, green and blue, 0 to 255: the main colour, what a body is drawn in.
     pub colour: Option<[u8; 3]>,
+    pub pattern: Pattern,
+}
+
+/// What is over a colour, for pictures of it (the colour picker's swatches).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Pattern {
+    Plain,
+    /// Small spots of this colour.
+    Speckled([u8; 3]),
 }
 
 const fn colour(name: &'static str, rgb: [u8; 3]) -> Choice {
     Choice {
         name,
         colour: Some(rgb),
+        pattern: Pattern::Plain,
+    }
+}
+
+const fn speckled(name: &'static str, rgb: [u8; 3], specks: [u8; 3]) -> Choice {
+    Choice {
+        name,
+        colour: Some(rgb),
+        pattern: Pattern::Speckled(specks),
     }
 }
 
 const fn word(name: &'static str) -> Choice {
-    Choice { name, colour: None }
+    Choice {
+        name,
+        colour: None,
+        pattern: Pattern::Plain,
+    }
 }
 
 const HEIGHT: &[Choice] = &[
@@ -115,7 +138,7 @@ const BULL_COAT: &[Choice] = &[
 const HEN_FEATHERS: &[Choice] = &[
     colour("Brown", [128, 84, 52]),
     colour("Black", [36, 34, 34]),
-    word("Speckled"),
+    speckled("Speckled", [214, 206, 192], [52, 46, 42]),
     colour("White", [240, 238, 232]),
 ];
 

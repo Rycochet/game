@@ -187,24 +187,3 @@ fn spawn_chooser(panel: &mut ChildSpawnerCommands, picture: Handle<Image>) {
             }
         });
 }
-
-/// Fills the looks box with a list for each of the kind's looks.
-pub(super) fn spawn_looks(looks: &mut ChildSpawnerCommands, draft: &Draft) {
-    for (index, &which) in draft.kind.def().looks.iter().enumerate() {
-        looks.spawn(field_label(which.name()));
-        let options = which
-            .choices_for(draft.kind)
-            .iter()
-            .map(|choice| choice.name.to_owned())
-            .collect();
-        let selected = draft.appearance.0.get(&which).copied().unwrap_or(0) as usize;
-        let list = Dropdown {
-            options,
-            selected,
-            ..default()
-        };
-        let id = UiId::new(FORM, "look").at(index);
-        spawn_dropdown(looks, list, TextSize::Medium, Node::default())
-            .insert((super::form::LookList(which), id));
-    }
-}

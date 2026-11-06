@@ -137,10 +137,20 @@ fn each_kind_draws_in_its_own_colours() {
         plain.feathers(CreatureKind::Birdfolk),
         Some([242, 242, 238])
     );
-    // Every colour trait's choices have colours, but for a hen's speckles.
+    // Every trait has choices, and every colour trait's choices are all colours,
+    // a hen's speckles too (a colour with specks over it).
     for kind in CreatureKind::ALL {
         for &which in kind.def().looks {
-            assert!(!which.choices_for(kind).is_empty(), "{kind:?} {which:?}");
+            let choices = which.choices_for(kind);
+            assert!(!choices.is_empty(), "{kind:?} {which:?}");
+            if which != Trait::Height {
+                assert!(
+                    choices.iter().all(|c| c.colour.is_some()),
+                    "{kind:?} {which:?}"
+                );
+            }
         }
     }
+    let speckled = Trait::FeatherColour.choices_for(CreatureKind::Chicken)[2];
+    assert!(matches!(speckled.pattern, Pattern::Speckled(_)));
 }

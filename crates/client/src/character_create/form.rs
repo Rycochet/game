@@ -4,10 +4,13 @@ use bevy::prelude::*;
 use shared::sheet::Trait;
 
 use super::draft::Draft;
-use super::screen::{BeginButton, CreateLayer, KindList, LooksBox, NameBox, spawn_looks};
+use super::looks::{PatternPictures, spawn_looks};
+use super::screen::{BeginButton, CreateLayer, KindList, LooksBox, NameBox};
 use crate::common::MakingCharacter;
 use crate::connection::ToServer;
-use crate::widgets::{ButtonPressed, ButtonState, DropdownChosen, TextBox, TextEdited, TextFocus};
+use crate::widgets::{
+    ButtonPressed, ButtonState, ColourChosen, DropdownChosen, TextBox, TextEdited, TextFocus,
+};
 
 /// The list choosing one of the kind's looks.
 #[derive(Component)]
@@ -42,6 +45,7 @@ pub(super) fn show_screen(
 pub(super) fn read_choices(
     mut edited: MessageReader<TextEdited>,
     mut chosen: MessageReader<DropdownChosen>,
+    mut colours: MessageReader<ColourChosen>,
     names: Query<&TextBox, With<NameBox>>,
     kinds: Query<(), With<KindList>>,
     looks: Query<&LookList>,
@@ -52,7 +56,15 @@ pub(super) fn read_choices(
             draft.name = name.text.clone();
         }
     }
-    for &DropdownChosen(list, index) in chosen.read() {
+    let picked = colours
+        .read()
+        .map(|&ColourChosen(picker, index)| (picker, index));
+    let listed: Vec<(Entity, usize)> = chosen
+        .read()
+        .map(|&DropdownChosen(list, index)| (list, index))
+        .chain(picked)
+        .collect();
+    for (list, index) in listed {
         if kinds.contains(list) {
             if let Some(&kind) = Draft::playable().get(index) {
                 draft.choose_kind(kind);
@@ -68,6 +80,8 @@ pub(super) fn fill_looks(
     mut commands: Commands,
     draft: Res<Draft>,
     looks_box: Single<Entity, With<LooksBox>>,
+    mut pictures: ResMut<PatternPictures>,
+    mut images: ResMut<Assets<Image>>,
     mut shown_for: Local<Option<shared::creature::CreatureKind>>,
 ) {
     if *shown_for == Some(draft.kind) {
@@ -77,7 +91,7 @@ pub(super) fn fill_looks(
     commands
         .entity(*looks_box)
         .despawn_related::<Children>()
-        .with_children(|looks| spawn_looks(looks, &draft));
+        .with_children(|looks| spawn_looks(looks, &draft, &mut pictures, &mut images));
 }
 
 /// Begin sends the character, once it has a name; the server's welcome follows.

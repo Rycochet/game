@@ -5,6 +5,7 @@
 mod aura;
 mod auto_scroll;
 mod clipboard;
+mod colour_picker;
 mod container;
 #[cfg(not(target_arch = "wasm32"))]
 mod copy_button;
@@ -42,6 +43,7 @@ pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]
 pub use clipboard::copy_to_clipboard;
+pub use colour_picker::{ColourChosen, ColourPicker, SAMPLE_GRADIENT, Swatch, spawn_colour_picker};
 pub use container::{ContainerLook, ContainerSize, spawn_container};
 #[cfg(not(target_arch = "wasm32"))]
 pub use copy_button::spawn_copy_button;
@@ -124,6 +126,7 @@ impl Plugin for WidgetsPlugin {
         app.add_message::<ButtonPressed>()
             .add_message::<RaisePanel>()
             .add_message::<SliderMoved>()
+            .add_message::<ColourChosen>()
             .add_message::<TextEdited>()
             .add_message::<SoftKeyPressed>()
             .add_message::<DropdownChosen>()
@@ -138,7 +141,13 @@ impl Plugin for WidgetsPlugin {
             .add_systems(Update, (aura::give_auras, aura::pulse_auras))
             .add_plugins(UiMaterialPlugin::<set_edge::SetEdgeMaterial>::default())
             .add_systems(Startup, set_edge::make_set_edges)
-            .add_systems(Startup, new_seed_icon::make_new_seed_icon)
+            .add_systems(
+                Startup,
+                (
+                    new_seed_icon::make_new_seed_icon,
+                    colour_picker::make_sample_gradient,
+                ),
+            )
             .add_systems(Update, (set_edge::give_set_edges, set_edge::slide_bands))
             .add_systems(
                 Startup,
@@ -210,6 +219,7 @@ impl Plugin for WidgetsPlugin {
                     text_box::place_soft_keyboard,
                     dropdown::show_dropdowns,
                     (switch::flip_switches, switch::show_switches).chain(),
+                    (colour_picker::press_swatches, colour_picker::show_swatches).chain(),
                 ),
             )
             .init_resource::<scroll::ScrollMemory>()

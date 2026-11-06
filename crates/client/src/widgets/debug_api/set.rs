@@ -105,6 +105,17 @@ fn change_of(widgets: &Widgets, entity: Entity, asked: &SetAsked) -> BrpResult<C
             }
             Ok(Change::Choose(at))
         }
+        Kind::ColourPicker => {
+            let picker = widgets.pickers.get(entity).map_err(|_| refused("gone"))?;
+            let at = option_at(&picker.names, value)?;
+            let swatch = widgets
+                .swatches
+                .iter()
+                .find(|(_, swatch)| swatch.picker == entity && swatch.index == at)
+                .map(|(swatch, _)| swatch)
+                .ok_or_else(|| refused("no such swatch"))?;
+            Ok(Change::Press(swatch))
+        }
         Kind::Slider => {
             let to = value
                 .as_f64()

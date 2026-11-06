@@ -102,6 +102,13 @@ fn add_value(widgets: &Widgets, entity: Entity, kind: Kind, about: &mut Value) {
                 about["greyed"] = json!(greyed);
             }
         }
+        Kind::ColourPicker => {
+            if let Ok(picker) = widgets.pickers.get(entity) {
+                about["value"] = json!(picker.names.get(picker.selected));
+                about["index"] = json!(picker.selected);
+                about["options"] = json!(picker.names);
+            }
+        }
         Kind::Slider => {
             if let Ok(slider) = widgets.sliders.get(entity) {
                 about["value"] = json!(slider.0);

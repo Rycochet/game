@@ -11,6 +11,7 @@ mod draft;
 mod form;
 mod geometry;
 mod input;
+mod looks;
 mod name;
 mod picture;
 mod screen;
@@ -24,6 +25,7 @@ impl Plugin for CharacterCreatePlugin {
         app.init_resource::<draft::Draft>()
             .init_resource::<input::Holding>()
             .init_resource::<name::NameRolls>()
+            .init_resource::<looks::PatternPictures>()
             .add_systems(Startup, screen::spawn_screen)
             .add_systems(Update, form::show_screen)
             .add_systems(
@@ -38,6 +40,7 @@ impl Plugin for CharacterCreatePlugin {
                     show::draw_triangles,
                     show::place_labels,
                     show::show_values,
+                    looks::show_look_labels,
                 )
                     .chain()
                     .after(form::show_screen)

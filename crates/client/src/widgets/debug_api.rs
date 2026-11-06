@@ -17,7 +17,8 @@ use super::scroll::ScrollArea;
 use super::slider::Slider;
 use super::tabs::{Tab, Tabs};
 use super::{
-    ButtonState, ButtonTooltip, Checked, Dropdown, Pressable, Switch, TextBox, TextFocus, UiId,
+    ButtonState, ButtonTooltip, Checked, ColourPicker, Dropdown, Pressable, Switch, TextBox,
+    TextFocus, UiId,
 };
 
 pub(super) fn add(app: &mut App) {
@@ -34,6 +35,7 @@ pub(super) fn add(app: &mut App) {
 enum Kind {
     TextBox,
     Dropdown,
+    ColourPicker,
     Slider,
     Tabs,
     Check,
@@ -49,6 +51,7 @@ impl Kind {
         match self {
             Self::TextBox => "text_box",
             Self::Dropdown => "dropdown",
+            Self::ColourPicker => "colour_picker",
             Self::Slider => "slider",
             Self::Tabs => "tabs",
             Self::Check => "check",
@@ -79,6 +82,8 @@ struct Widgets<'w, 's> {
     pressable: Query<'w, 's, (), With<Pressable>>,
     text_boxes: Query<'w, 's, &'static TextBox>,
     dropdowns: Query<'w, 's, &'static Dropdown>,
+    pickers: Query<'w, 's, &'static ColourPicker>,
+    swatches: Query<'w, 's, (Entity, &'static super::colour_picker::SwatchOf)>,
     sliders: Query<'w, 's, &'static Slider>,
     rows: Query<'w, 's, &'static Tabs>,
     tabs: Query<'w, 's, (Entity, &'static Tab)>,
@@ -107,6 +112,8 @@ impl Widgets<'_, '_> {
             Kind::TextBox
         } else if self.dropdowns.contains(entity) {
             Kind::Dropdown
+        } else if self.pickers.contains(entity) {
+            Kind::ColourPicker
         } else if self.sliders.contains(entity) {
             Kind::Slider
         } else if self.rows.contains(entity) {
