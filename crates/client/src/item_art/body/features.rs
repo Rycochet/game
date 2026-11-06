@@ -171,6 +171,11 @@ fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts) {
 
 /// A tail from the base of the back, out behind and curving down, kept off the ground.
 fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
+    limb(triangles, &tail_path(layout, length));
+}
+
+/// Where a tail this long runs, from its root to its tip, and how thick it is there.
+pub(super) fn tail_path(layout: &Layout, length: f32) -> [(Vec3, f32); 4] {
     let f = |value: i32| value as f32;
     // Behind the hips, whichever way the back leans; high on the rump of a level back,
     // where it hangs nearly straight down.
@@ -202,15 +207,12 @@ fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
         let p = base + Vec3::new(0.0, -length * down, -length * back);
         Vec3::new(p.x, p.y.max(30.0), p.z)
     };
-    limb(
-        triangles,
-        &[
-            (base, thick),
-            (along(shape[0].0, shape[0].1), thick * 0.7),
-            (along(shape[1].0, shape[1].1), thick * 0.4),
-            (along(shape[2].0, shape[2].1), 8.0),
-        ],
-    );
+    [
+        (base, thick),
+        (along(shape[0].0, shape[0].1), thick * 0.7),
+        (along(shape[1].0, shape[1].1), thick * 0.4),
+        (along(shape[2].0, shape[2].1), 8.0),
+    ]
 }
 
 /// Feathers along an arm that is a wing, spread out to the side and back from it, a

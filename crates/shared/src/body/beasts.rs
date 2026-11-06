@@ -75,6 +75,8 @@ pub const BEASTS: [Beast; 4] = [
             ears: 90,
             tail: 900,
             feet: Feet::Hooves,
+            mane: 140,
+            tail_hair: 700,
             ..NONE
         },
     },
@@ -115,6 +117,7 @@ pub const BEASTS: [Beast; 4] = [
             horn_length: 350,
             tail: 800,
             feet: Feet::Hooves,
+            tail_hair: 220,
             ..NONE
         },
     },

@@ -132,6 +132,7 @@ pub(super) fn character_parts(
     let head = layout.upper_body().unwrap_or(layout);
     let cover = cover::cover_of(worn, &frame, offset.y);
     pieces.push((body::hair(&head, hair, cover), material(colours.hair)));
+    pieces.push((body::coat_hair(&layout), material(colours.mane)));
     // An aventail hangs from the helmet worn with it.
     let rim = worn.iter().find_map(|look| match look {
         Look::Head { head, .. } => Some(head.form.rim(&frame)),
