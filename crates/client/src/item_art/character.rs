@@ -31,7 +31,7 @@ pub fn character_look(
     worn: &[WornLook],
 ) -> Option<Look> {
     let layout = Layout::of(kind)?;
-    if layout.frame().is_none() {
+    if layout.worn_frame().is_none() {
         return Some(Look::Body {
             layout: Box::new(layout),
             height: layout.spine.base[1],
@@ -109,11 +109,16 @@ pub(super) fn character_parts(
     let Some(layout) = Layout::of(kind) else {
         return Vec::new();
     };
-    let Some(frame) = layout.frame() else {
+    // What is worn is built on the frame and moved into place: on a taur, up onto its
+    // lower body.
+    let Some((frame, offset)) = layout.worn_frame() else {
         return Vec::new();
     };
+    let offset = Vec3::new(offset[0] as f32, offset[1] as f32, offset[2] as f32);
+    let (skin, coat) = body::build_coated(&layout);
     let mut pieces: set::Coloured = vec![
-        (body::build(&layout), material(colours.skin)),
+        (skin, material(colours.skin)),
+        (coat, material(colours.coat)),
         (body::wings(&layout), material(colours.feathers)),
     ];
     // An aventail hangs from the helmet worn with it.
@@ -122,9 +127,16 @@ pub(super) fn character_parts(
         _ => None,
     });
     for look in worn {
-        pieces.extend(worn::worn(look, &frame, rim.as_deref()));
+        for (triangles, stuff) in worn::worn(look, &frame, rim.as_deref()) {
+            let moved = triangles
+                .into_iter()
+                .map(|triangle| triangle.map(|corner| corner + offset))
+                .collect();
+            pieces.push((moved, stuff));
+        }
     }
-    set::fit(pieces, CELLS, meshes, materials)
+    pieces.retain(|(triangles, _)| !triangles.is_empty());
+    set::fit(pieces, CELLS, body::turn_of(&layout), meshes, materials)
 }
 
 #[cfg(test)]

@@ -6,7 +6,7 @@
 //! stands upright on two legs with two arms (`biped_view.rs`).
 
 use super::trig::{ONE, cos, sin};
-use super::{Beast, Biped, GIANT, PERSON, Parts, Side};
+use super::{Beast, Biped, Frame, GIANT, PERSON, Parts, Side, Taur};
 use crate::creature::CreatureKind;
 
 /// The most limbs a body has: a spider's eight legs.
@@ -105,14 +105,26 @@ pub struct Limb {
     pub foot: i32,
 }
 
+/// A person's upper body standing on a beast's, as a centaur's: its frame (only the
+/// part from the hips up is drawn or worn on), and where on the lower body the middle
+/// of its hips is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Upper {
+    pub frame: Frame,
+    pub at: [i32; 3],
+}
+
 /// A whole body, standing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Layout {
     pub spine: Spine,
+    /// The lower body's neck and head; with an upper body, the upper body's are used.
     pub neck: Neck,
     pub head: Head,
     pub limbs: [Option<Limb>; MAX_LIMBS],
     pub parts: Parts,
+    /// An upright upper body standing on this one, if any.
+    pub upper: Option<Upper>,
 }
 
 impl Layout {
@@ -124,7 +136,8 @@ impl Layout {
             CreatureKind::Giant => Some(Self::biped(&GIANT, parts)),
             _ => Biped::of(kind)
                 .map(|biped| Self::biped(&biped.proportions.frame(), parts))
-                .or_else(|| Beast::of(kind).map(|beast| beast.layout())),
+                .or_else(|| Beast::of(kind).map(|beast| beast.layout()))
+                .or_else(|| Taur::of(kind).map(|taur| taur.layout())),
         }
     }
 

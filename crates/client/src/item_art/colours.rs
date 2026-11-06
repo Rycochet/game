@@ -4,10 +4,12 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::sheet::Appearance;
 
-/// Skin (or coat) and feathers, as red, green and blue from 0 to 255.
+/// Skin (or coat), a taur's lower body's coat, and feathers, as red, green and blue
+/// from 0 to 255.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Colours {
     pub skin: [u8; 3],
+    pub coat: [u8; 3],
     pub feathers: [u8; 3],
 }
 
@@ -16,17 +18,20 @@ impl Colours {
     /// the arms.
     pub const PLAIN: Self = Self {
         skin: [199, 184, 163],
+        coat: [199, 184, 163],
         feathers: [242, 242, 238],
     };
 
     /// A creature of this kind looking like this: plain where it has no choice. A body
     /// covered in feathers alone (a bird's) is drawn in its feathers' colour.
     pub fn of(kind: CreatureKind, appearance: &Appearance) -> Self {
+        let skin = appearance
+            .skin(kind)
+            .or_else(|| appearance.feathers(kind))
+            .unwrap_or(Self::PLAIN.skin);
         Self {
-            skin: appearance
-                .skin(kind)
-                .or_else(|| appearance.feathers(kind))
-                .unwrap_or(Self::PLAIN.skin),
+            skin,
+            coat: appearance.coat(kind).unwrap_or(skin),
             feathers: appearance.feathers(kind).unwrap_or(Self::PLAIN.feathers),
         }
     }

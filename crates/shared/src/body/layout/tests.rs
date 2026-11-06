@@ -59,7 +59,8 @@ fn limbs_joints_are_the_frames_joints() {
 #[test]
 fn bipeds_and_the_first_animals_have_layouts() {
     for kind in CreatureKind::ALL {
-        let drawn = Frame::of(kind).is_some() || Beast::of(kind).is_some();
+        let drawn =
+            Frame::of(kind).is_some() || Beast::of(kind).is_some() || Taur::of(kind).is_some();
         assert_eq!(Layout::of(kind).is_some(), drawn, "{kind:?}");
     }
     assert!(Layout::of(CreatureKind::Horse).is_some());
@@ -73,7 +74,7 @@ fn bipeds_and_the_first_animals_have_layouts() {
             .find(|kind| kind.def().name == beast.name);
         assert!(kind.is_some(), "{}", beast.name);
     }
-    assert!(Layout::of(CreatureKind::Centaur).is_none());
+    assert!(Layout::of(CreatureKind::Centaur).is_some());
 }
 
 #[test]
@@ -121,4 +122,20 @@ fn sines_from_the_table() {
     assert_eq!(cos(0), 10_000);
     assert_eq!(cos(60), 5000);
     assert_eq!(cos(180), -10_000);
+}
+
+#[test]
+fn a_centaur_wears_on_a_persons_frame_above_its_horse() {
+    let layout = Layout::of(CreatureKind::Centaur).expect("a centaur");
+    assert_eq!(layout.frame(), None);
+    let (frame, offset) = layout.worn_frame().expect("an upper body");
+    assert_eq!(frame, PERSON.frame());
+    // Its hips stand on the horse's back, its head well above a person's.
+    let hip = frame.hip + offset[1];
+    assert!(hip > 1000, "{hip}");
+    assert!(frame.height + offset[1] > 2000);
+    let upper = layout.upper_body().expect("an upper body");
+    assert_eq!(upper.limbs().count(), 2);
+    assert!(upper.limbs().all(|limb| limb.role == Role::Arm));
+    assert_eq!(upper.spine.base[1], hip);
 }

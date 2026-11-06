@@ -20,6 +20,7 @@ mod trunk;
 
 pub(super) use features::wings;
 use fit::fitted;
+pub(super) use fit::turn_of;
 pub(super) use trunk::{trunk_depth, trunk_half};
 
 /// What an upright body's picture takes up, wide and long: only the proportions
@@ -168,6 +169,24 @@ pub(super) fn build(layout: &Layout) -> Vec<Triangle> {
     triangles
 }
 
+/// The body's skin, and apart from it the coat of a taur's lower body, which may be
+/// another colour.
+pub(super) fn build_coated(layout: &Layout) -> (Vec<Triangle>, Vec<Triangle>) {
+    let Some(upper) = layout.upper_body() else {
+        return (build(layout), Vec::new());
+    };
+    // The lower body: trunk, legs and tail, its neck and head left to the upper body.
+    let mut coat = Vec::new();
+    trunk::build(&mut coat, layout);
+    for limb in layout.limbs() {
+        legs::build(&mut coat, layout, limb, layout.parts.feet);
+    }
+    if layout.parts.tail > 0 {
+        features::tail(&mut coat, layout, layout.parts.tail as f32);
+    }
+    (build(&upper), coat)
+}
+
 /// A flat-faced mesh of these triangles, as weapons' are.
 pub(super) fn mesh_of(triangles: &[Triangle]) -> Mesh {
     let mut positions = Vec::with_capacity(triangles.len() * 3);
@@ -198,16 +217,20 @@ pub(super) fn body_parts(
 ) -> Vec<Part> {
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
-    let (skin, feathers) = fitted(layout, height);
-    [(skin, colours.skin), (feathers, colours.feathers)]
-        .into_iter()
-        .filter(|(triangles, _)| !triangles.is_empty())
-        .map(|(triangles, colour)| Part {
-            mesh: meshes.add(mesh_of(&triangles)),
-            material: materials.add(material(colour)),
-            transform: Transform::from_rotation(camera.rotation),
-        })
-        .collect()
+    let (skin, coat, feathers) = fitted(layout, height);
+    [
+        (skin, colours.skin),
+        (coat, colours.coat),
+        (feathers, colours.feathers),
+    ]
+    .into_iter()
+    .filter(|(triangles, _)| !triangles.is_empty())
+    .map(|(triangles, colour)| Part {
+        mesh: meshes.add(mesh_of(&triangles)),
+        material: materials.add(material(colour)),
+        transform: Transform::from_rotation(camera.rotation),
+    })
+    .collect()
 }
 
 #[cfg(test)]

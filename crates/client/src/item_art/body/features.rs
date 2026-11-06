@@ -148,7 +148,7 @@ fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts) {
 }
 
 /// A tail from the base of the back, out behind and curving down, kept off the ground.
-fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
+pub(super) fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
     let f = |value: i32| value as f32;
     // Behind the hips, whichever way the back leans; high on the rump of a level back,
     // where it hangs nearly straight down.
