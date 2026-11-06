@@ -8,6 +8,7 @@
 mod block;
 mod course;
 mod cutout;
+mod gate;
 mod plan;
 mod samples;
 mod scale;
@@ -19,7 +20,8 @@ mod course_tests;
 mod tests;
 
 pub use cutout::Cutout;
-pub use plan::ChunkPlan;
+pub use gate::{GATE_PAD, GateSpot};
+pub use plan::{ChunkPlan, gates_of};
 pub use scale::{BLOCK_SIZE, BlockPos, SCALE};
 
 use crate::climate::Climate;

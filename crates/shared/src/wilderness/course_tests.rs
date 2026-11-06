@@ -40,7 +40,7 @@ fn rivers_run_through_the_land_as_water_with_shallow_banks() {
             x: n % 40,
             y: n / 40 - 5,
         })
-        .map(|chunk| ChunkPlan::new(&wild, chunk, None, &[]))
+        .map(|chunk| ChunkPlan::new(&wild, chunk, None, &[], &[]))
         .find(|plan| {
             let (x, y, width, height) = wild.chunk_bounds(plan.chunk());
             let middle = (x + width / 4, y + height / 4, width / 2, height / 2);
@@ -78,7 +78,7 @@ fn roads_are_surfaced_by_kind_and_bridge_water() {
             x: n % 40,
             y: n / 40 - 5,
         })
-        .map(|chunk| ChunkPlan::new(&wild, chunk, None, &[]))
+        .map(|chunk| ChunkPlan::new(&wild, chunk, None, &[], &[]))
         .find(|plan| plan.has_rivers() && plan.cutout().is_none())
         .expect("a river");
     let chunk = plan.chunk();
@@ -105,7 +105,7 @@ fn roads_are_surfaced_by_kind_and_bridge_water() {
         kind: RoadKind::Road,
         points: (px - 6..=px + 6).map(|px| (px, py)).collect(),
     };
-    let plan = ChunkPlan::new(&wild, chunk, None, &[&road]);
+    let plan = ChunkPlan::new(&wild, chunk, None, &[], &[&road]);
     assert!(plan.has_roads());
     let block = wild.block(wild.block_of(cx, cy), &plan);
     let mut level = vec![block];

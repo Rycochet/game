@@ -73,6 +73,7 @@ pub(super) fn update_terrain(
         &world.climate,
         &world.surface,
         &world.pois,
+        &world.gates,
         &world.roads,
         centre,
     );

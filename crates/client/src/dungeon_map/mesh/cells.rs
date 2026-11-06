@@ -44,7 +44,7 @@ pub(super) fn build_cell_at(
         build_hole(layers, scene, (x, y));
     } else if cell == Cell::Field && field::build_field(layers, scene, (x, y)) {
         // Drawn: anything else of a field is the land's own ground.
-    } else if scene.tint.is_some() && matches!(cell, Cell::Grass | Cell::Tree) {
+    } else if scene.tint.is_some() && matches!(cell, Cell::Grass | Cell::Tree | Cell::WorldGate) {
         // The wilderness: its own ground, and any tree on it.
         build_open_cell(layers, scene, (x, y), None);
         if cell == Cell::Tree {
@@ -72,7 +72,11 @@ pub(super) fn build_open_cell(
         return;
     }
     let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
-    let surface = Surface::of_flat(level.cell(x, y));
+    // A World Gate's floor in the wilderness is the land's own ground.
+    let surface = match level.cell(x, y) {
+        Cell::WorldGate if scene.tint.is_some() => Surface::Ground,
+        cell => Surface::of_flat(cell),
+    };
     if !scene.sight.is_seen(x, y) {
         let grey = Vec3::splat(MEMORY_SHADE);
         match stairs {

@@ -2,9 +2,10 @@
 //! the window along as the player walks.
 
 use bevy::prelude::*;
-use shared::dungeon::{Level, Sight};
+use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::{LevelInfo, LevelKind, ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
 use shared::site::{BuildingLook, FieldLook};
+use shared::wilderness::gates_of;
 
 use super::window::window;
 use crate::ServerWorld;
@@ -106,6 +107,9 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     }
     let wild = &world.wilderness.wild;
     client.character.world_position = wild.point_of(x, y);
+    if visit.level.level.cell(x, y) == Cell::WorldGate {
+        return through_gate(client, world, (x, y));
+    }
     if wild.block_of(x, y) == centre {
         return true;
     }
@@ -141,6 +145,25 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     sent && update_sight(client)
 }
 
+/// The player has stepped onto a World Gate's cell: through it into the Hall
+/// of Worlds, as from the world map (coming back arrives on the world map).
+/// A gate leading nowhere (a world that isn't one of the Hall's) does nothing.
+fn through_gate(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)) -> bool {
+    let wild = &world.wilderness.wild;
+    let at = (wild.wrap(x), y);
+    let gates = gates_of(wild, &world.pois);
+    let Some(gate) = gates.iter().find(|gate| gate.cell == at) else {
+        return true;
+    };
+    if world.gate(gate.entrance).is_none() {
+        return true;
+    }
+    super::super::leave(client, world);
+    client.visit = None;
+    client.unsaved = true;
+    crate::gates::enter_gate(client, world, gate.entrance)
+}
+
 /// The window's towns' buildings and farms' fields, before its cells (the
 /// client marks the buildings' cells as theirs): always, so ones left behind
 /// go.
@@ -157,7 +180,8 @@ fn ask_roads(world: &ServerWorld, (x, y): (i64, i64)) {
     world.ask_roads((px - reach, py - reach), (px + reach, py + reach));
 }
 
-/// The walkable cell nearest `at` on `level` (by rings round it), or `at`.
+/// The walkable cell nearest `at` on `level` (by rings round it), or `at`;
+/// never a World Gate's, which would take them straight through.
 fn nearest_walkable(level: &Level, (x, y): (i64, i64)) -> (i64, i64) {
     (0..=ARRIVAL_SEARCH)
         .flat_map(|ring| {
@@ -167,6 +191,6 @@ fn nearest_walkable(level: &Level, (x, y): (i64, i64)) -> (i64, i64) {
                     .map(move |dx| (x + dx, y + dy))
             })
         })
-        .find(|&(cx, cy)| level.is_walkable(cx, cy))
+        .find(|&(cx, cy)| level.is_walkable(cx, cy) && level.cell(cx, cy) != Cell::WorldGate)
         .unwrap_or((x, y))
 }
