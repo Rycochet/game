@@ -38,6 +38,8 @@ docker compose pull
 docker compose up -d
 ```
 
+The `latest` image changes every time something is added to the game, which can be several times a day. For something steadier, use `nightly` in its place: it changes at most once a day. `nightly-<date>` (such as `nightly-2026-11-06`) keeps a particular day's.
+
 ## Other ways to secure it
 
 Change the `environment` and `ports` of the example:

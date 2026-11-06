@@ -94,7 +94,7 @@ Domains (not live yet): `hallofworlds.com` landing page / adverts / email, `hall
 
 ## 2026-10-28: Docker image published to GHCR on every merge
 
-A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 8080 (now by the game server itself, below; at first by static-web-server alongside it). The Docker workflow builds and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master` (no PR builds), from `Dockerfile.github` since 2026-11-05 (below). The Build workflow, run manually, keeps native (client + server, three OSes) and web release builds as artifacts.
+A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 8080 (now by the game server itself, below; at first by static-web-server alongside it). The Docker workflow builds and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master` (no PR builds), from `Dockerfile.github` since 2026-11-05 (below). The Build workflow, run manually, keeps native (client + server, three OSes) and web release builds as artifacts; the Nightly workflow does the same daily and tags the image `:nightly`.
 
 ## 2026-10-28: Licence: CC BY-NC 4.0
 
@@ -128,7 +128,7 @@ Also the owner's choice: the map's outline stays the same on screen and the view
 
 ## 2026-10-28: CI cut down to `cargo check`
 
-The repo is public with auto-merge enabled, and the full CI (`cargo xtask test` on three OSes, Docker test builds on PRs, release builds of every merge) was too much work. For now, the owner's call: PRs and `master` run only `cargo check --release --workspace` on Linux (still reported as the required "All tests passed" check, so auto-merge keeps working); the Docker image is built and published only on merge to `master`; the Build workflow is manual. `cargo xtask test` stays the local must-pass test before merging. Restore the full test workflow later (from git history).
+The repo is public with auto-merge enabled, and the full CI (`cargo xtask test` on three OSes, Docker test builds on PRs, release builds of every merge) was too much work. For now, the owner's call: PRs and `master` run only `cargo check --release --workspace` on Linux (still reported as the required "All tests passed" check, so auto-merge keeps working); the Docker image is built and published only on merge to `master`; the Build workflow is manual, and native builds are otherwise made once a day (see "Nightly builds"). `cargo xtask test` stays the local must-pass test before merging. Restore the full test workflow later (from git history).
 
 ## 2026-10-28: Dungeon view, sharing the camera and tokens with the world map
 
@@ -930,3 +930,7 @@ A wilderness visit is a site visit whose level is a window: the 3 × 3 blocks ro
 ## 2026-11-06: Key bindings
 
 Every key the game reads for something the player does is an `Action` in `common::controls`, with two bindings each, changed in Settings, Controls and kept in `Preferences` (only the changes, so new actions get their defaults). A binding is a key with any of Ctrl, Alt, Shift and Super held, or a modifier on its own; a plain binding works whatever is held unless a binding of the same key needing more matches (owner's request: Shift + G is its own combination). Esc is fixed: it opens the menu and closes what is on top, and in a key box it cancels; Backspace empties a key box, so neither can be bound. Typing, list navigation (arrows, Return), Shift-click and the creation screen's keys stay fixed. New keys (such as the wilderness's) are added as actions, never read as `KeyCode`s directly. A gamepad's button will be a third column of its own (owner, for later).
+
+## 2026-11-06: Nightly builds
+
+Owner's request: native builds of the three OSes, the web client and the server are saved as Actions artifacts once a day (kept 14 days), not on every merge, so CI stays light. They come from the commit the Docker image `:latest` was built from, the web client and server copied out of the image rather than built again, and the image itself is only retagged `:nightly` (and `:nightly-<date>`), not rebuilt. A day with nothing new builds nothing. Artifacts rather than a public Release for now (downloading them needs a GitHub login). The Build workflow stays, run by hand for any branch.
