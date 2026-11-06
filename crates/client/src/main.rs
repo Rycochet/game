@@ -25,6 +25,7 @@ mod minimap;
 mod planet_view;
 mod player;
 mod site;
+mod skills_page;
 mod surface_style;
 mod system_menu;
 mod target;
@@ -120,6 +121,7 @@ fn main() {
         target::TargetPlugin,
         abilities::AbilitiesPlugin,
     ));
+    app.add_plugins(skills_page::SkillsPagePlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

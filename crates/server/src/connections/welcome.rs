@@ -145,6 +145,7 @@ pub(super) fn send_welcome(
 ) -> bool {
     let (x, y) = client.world_position();
     let welcome = ServerMessage::Welcome {
+        name: client.name.clone(),
         world: world.info(),
         time: world.time(),
         server_clock: world.server_clock.seconds(),

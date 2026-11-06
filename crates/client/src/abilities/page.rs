@@ -1,4 +1,4 @@
-//! The Abilities page: a Skills button (disabled until the Skills page exists), then
+//! The Abilities page: a Skills button opening the Skills page, then
 //! every ability the character knows, flowing in rows, Attack first. Drawn again
 //! when the body they are in changes.
 
@@ -7,16 +7,20 @@ use shared::ability::{Ability, known};
 use shared::creature::CreatureKind;
 
 use super::icons::icon_path;
-use crate::common::AbilitiesPage;
+use crate::common::{AbilitiesPage, SkillsPageOpen};
 use crate::inventory::Carried;
 use crate::widgets::{
-    ABILITY, AbilityLook, BUTTON_PADDING, ButtonState, ButtonTooltip, TextSize, UiId,
-    spawn_ability, spawn_button,
+    ABILITY, AbilityLook, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonTooltip, Pressable,
+    TextSize, UiId, spawn_ability, spawn_button,
 };
 
 /// How many abilities a row holds before the next row starts.
 const PER_ROW: f32 = 8.0;
 const GAP: f32 = 6.0;
+
+/// The button opening the Skills page.
+#[derive(Component)]
+pub(super) struct SkillsButton;
 
 /// The body a page was drawn for.
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
@@ -56,7 +60,7 @@ fn spawn_contents(page: &mut ChildSpawnerCommands, kind: CreatureKind, assets: &
             .with_children(|row| {
                 spawn_button(
                     row,
-                    ButtonState::Disabled,
+                    ButtonState::Normal,
                     "Skills",
                     TextSize::Medium,
                     Node {
@@ -65,8 +69,10 @@ fn spawn_contents(page: &mut ChildSpawnerCommands, kind: CreatureKind, assets: &
                     },
                 )
                 .insert((
+                    SkillsButton,
+                    Pressable,
                     UiId::new("abilities", "skills"),
-                    ButtonTooltip("Skills (coming soon)".into()),
+                    ButtonTooltip("The skills you know (K)".into()),
                 ));
             });
         column
@@ -85,6 +91,17 @@ fn spawn_contents(page: &mut ChildSpawnerCommands, kind: CreatureKind, assets: &
                 }
             });
     });
+}
+
+/// The Skills button opens the Skills page.
+pub(super) fn open_skills(
+    mut pressed: MessageReader<ButtonPressed>,
+    buttons: Query<(), With<SkillsButton>>,
+    mut open: ResMut<SkillsPageOpen>,
+) {
+    if pressed.read().any(|press| buttons.contains(press.0)) {
+        open.0 = true;
+    }
 }
 
 /// How an ability shows on the page.
