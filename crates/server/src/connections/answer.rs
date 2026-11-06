@@ -234,7 +234,8 @@ pub(crate) fn answer(
         | ClientMessage::DevSetCreature { .. }
         | ClientMessage::DevSetWorldClock { .. }
         | ClientMessage::DevGoToWorld { .. }
-        | ClientMessage::DevVitals(_) => answer_dev(client, message, world),
+        | ClientMessage::DevVitals(_)
+        | ClientMessage::DevSkills(_) => answer_dev(client, message, world),
         ClientMessage::DevDeleteCharacter => delete_character(client, world, accounts),
     }
 }

@@ -17,6 +17,7 @@ pub enum DebugAction {
     FieldsState,
     ForgetMap,
     ForgetMapOnServer,
+    ForgetSkills,
     GeneratePoi,
     GiveItem,
     GoToWorld,
@@ -26,6 +27,7 @@ pub enum DebugAction {
     Hurt,
     ItemPictures,
     KillMob,
+    LearnSomeSkills,
     ResetView,
     RevealMap,
     ShowDebugInfo,
@@ -67,7 +69,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 32] = [
+    pub(super) const ALL: [Self; 34] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -76,6 +78,7 @@ impl DebugAction {
         Self::FieldsState,
         Self::ForgetMap,
         Self::ForgetMapOnServer,
+        Self::ForgetSkills,
         Self::GeneratePoi,
         Self::GiveItem,
         Self::GoToWorld,
@@ -85,6 +88,7 @@ impl DebugAction {
         Self::Hurt,
         Self::ItemPictures,
         Self::KillMob,
+        Self::LearnSomeSkills,
         Self::ResetView,
         Self::RevealMap,
         Self::ShowDebugInfo,
@@ -112,6 +116,7 @@ impl DebugAction {
             Self::FieldsState => "Fields State",
             Self::ForgetMap => "Forget Map",
             Self::ForgetMapOnServer => "Forget Map (Server)",
+            Self::ForgetSkills => "Forget Skills",
             Self::GeneratePoi => "Generate POI",
             Self::GiveItem => "Give Item",
             Self::GodMode => "God Mode",
@@ -121,6 +126,7 @@ impl DebugAction {
             Self::Hurt => "Hurt",
             Self::ItemPictures => "Item Pictures",
             Self::KillMob => "Kill Mob",
+            Self::LearnSomeSkills => "Learn Some Skills",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
             Self::ShowDebugInfo => "Show Debug Info",
@@ -199,6 +205,7 @@ impl DebugAction {
                 | Self::DetectMonsters
                 | Self::ForgetMap
                 | Self::ForgetMapOnServer
+                | Self::ForgetSkills
                 | Self::GeneratePoi
                 | Self::GiveItem
                 | Self::GodMode
@@ -206,6 +213,7 @@ impl DebugAction {
                 | Self::HealFully
                 | Self::Hurt
                 | Self::KillMob
+                | Self::LearnSomeSkills
                 | Self::RevealMap
                 | Self::SpendMana
                 | Self::TeleportMode

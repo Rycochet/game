@@ -7,12 +7,11 @@
 use super::bodies::{SKIN, TEN_FINGERS, biped};
 use super::guesses::PERSON;
 use super::{BodyPart, CreatureDef, Layer, Location, Size};
-use crate::sheet::{Ability, Attribute, Skill, Trait};
+use crate::sheet::{Ability, Attribute, Trait};
 
 use Attribute::{Agility, Intellect, Strength, Toughness};
 
 use Ability::{Flutter, NightVision, Trample};
-use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
 use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, SkinShade};
 
 /// A body with these layers at one of its locations instead.
@@ -73,13 +72,13 @@ const fn people(
 }
 
 pub(super) const HALFLING: CreatureDef = CreatureDef {
-    skills: &[(Stealth, 3), (Foraging, 1)],
+    skills: &[("stealth/sneaking", 900), ("gathering/foraging", 100)],
     ..people("Halfling", 28_000, Size::Small, (5, 3), &[(Agility, 15)])
 };
 
 pub(super) const DWARF: CreatureDef = CreatureDef {
     looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
-    skills: &[(Climbing, 1)],
+    skills: &[("athletics/climbing", 100)],
     abilities: &[NightVision],
     ..people(
         "Dwarf",
@@ -91,7 +90,7 @@ pub(super) const DWARF: CreatureDef = CreatureDef {
 };
 
 pub(super) const ELF: CreatureDef = CreatureDef {
-    skills: &[(Stealth, 2), (Foraging, 2)],
+    skills: &[("stealth/sneaking", 400), ("gathering/foraging", 400)],
     ..people(
         "Elf",
         58_000,
@@ -103,7 +102,7 @@ pub(super) const ELF: CreatureDef = CreatureDef {
 
 pub(super) const ORC: CreatureDef = CreatureDef {
     looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
-    skills: &[(Running, 1)],
+    skills: &[("athletics/running", 100)],
     abilities: &[NightVision],
     ..people(
         "Orc",
@@ -115,7 +114,7 @@ pub(super) const ORC: CreatureDef = CreatureDef {
 };
 
 pub(super) const GOBLIN: CreatureDef = CreatureDef {
-    skills: &[(Stealth, 2), (Climbing, 2)],
+    skills: &[("stealth/sneaking", 400), ("athletics/climbing", 400)],
     abilities: &[NightVision],
     looks: &[SkinShade, Height],
     ..people("Goblin", 24_000, Size::Small, (4, 3), &[(Agility, 15)])
@@ -123,7 +122,7 @@ pub(super) const GOBLIN: CreatureDef = CreatureDef {
 
 pub(super) const LIZARDFOLK: CreatureDef = CreatureDef {
     body: &ON_TOES,
-    skills: &[(Swimming, 3)],
+    skills: &[("athletics/swimming", 900)],
     looks: &[SkinShade, Height],
     ..people(
         "Lizardfolk",
@@ -136,7 +135,7 @@ pub(super) const LIZARDFOLK: CreatureDef = CreatureDef {
 
 pub(super) const MINOTAUR: CreatureDef = CreatureDef {
     body: &HOOVES,
-    skills: &[(Running, 2)],
+    skills: &[("athletics/running", 400)],
     abilities: &[Trample],
     looks: &[CoatColour, Height],
     ..people(
@@ -150,7 +149,7 @@ pub(super) const MINOTAUR: CreatureDef = CreatureDef {
 
 pub(super) const BIRDFOLK: CreatureDef = CreatureDef {
     body: &WINGED,
-    skills: &[(Climbing, 1)],
+    skills: &[("athletics/climbing", 100)],
     abilities: &[Flutter],
     looks: &[FeatherColour, Height],
     ..people("Birdfolk", 35_000, Size::Medium, (5, 3), &[(Agility, 20)])

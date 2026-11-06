@@ -28,6 +28,7 @@ mod change_kind;
 mod answer;
 mod client;
 mod delete_character;
+mod dev_skills;
 mod give_items;
 mod look_up;
 mod messages;

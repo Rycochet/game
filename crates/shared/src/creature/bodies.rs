@@ -5,7 +5,7 @@ use super::guesses::{PERSON, medians};
 use super::peoples::{BIRDFOLK, DWARF, ELF, GOBLIN, HALFLING, LIZARDFOLK, MINOTAUR, ON_TOES, ORC};
 use super::taurs::{DRIDER, SCORPION_MAN};
 use super::{BodyPart, CreatureDef, CreatureKind, Layer, Location, Size};
-use crate::sheet::{Ability, Skill, Trait};
+use crate::sheet::{Ability, Trait};
 
 pub(super) const SKIN: &[Layer] = &[Layer::Skin];
 pub(super) const SKIN_OUTER: &[Layer] = &[Layer::Skin, Layer::Outer];
@@ -95,7 +95,6 @@ impl CreatureKind {
     pub const fn def(self) -> CreatureDef {
         use crate::sheet::Attribute::Agility;
         use Ability::{Flutter, Kick, NightVision, Trample};
-        use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
         use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, SkinShade};
         match self {
             Self::Birdfolk => BIRDFOLK,
@@ -121,7 +120,7 @@ impl CreatureKind {
                 playable: false,
                 attributes: medians(60, 70, 60, 90),
                 bonus_set: &[],
-                skills: &[(Foraging, 1)],
+                skills: &[("gathering/foraging", 100)],
                 abilities: &[],
                 looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
             },
@@ -137,7 +136,7 @@ impl CreatureKind {
                 playable: false,
                 attributes: medians(140, 100, 130, 90),
                 bonus_set: &[],
-                skills: &[(Running, 4), (Foraging, 1)],
+                skills: &[("athletics/running", 1600), ("gathering/foraging", 100)],
                 abilities: &[Kick, Trample],
                 looks: &[HairColour, HairStyle, Beard, SkinShade, CoatColour, Height],
             },
@@ -152,7 +151,7 @@ impl CreatureKind {
                 playable: false,
                 attributes: medians(10, 80, 20, 10),
                 bonus_set: &[],
-                skills: &[(Foraging, 3)],
+                skills: &[("gathering/foraging", 900)],
                 abilities: &[Flutter],
                 looks: &[FeatherColour],
             },
@@ -168,7 +167,7 @@ impl CreatureKind {
                 playable: false,
                 attributes: medians(200, 60, 180, 70),
                 bonus_set: &[],
-                skills: &[(Climbing, 1)],
+                skills: &[("athletics/climbing", 100)],
                 abilities: &[Trample],
                 looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
             },
@@ -183,7 +182,7 @@ impl CreatureKind {
                 playable: false,
                 attributes: medians(160, 100, 140, 30),
                 bonus_set: &[],
-                skills: &[(Running, 5), (Swimming, 1)],
+                skills: &[("athletics/running", 2500), ("athletics/swimming", 100)],
                 abilities: &[Kick, Trample],
                 looks: &[CoatColour, Height],
             },
@@ -198,7 +197,7 @@ impl CreatureKind {
                 playable: true,
                 attributes: PERSON,
                 bonus_set: &[],
-                skills: &[(Swimming, 1), (Climbing, 1)],
+                skills: &[("athletics/swimming", 100), ("athletics/climbing", 100)],
                 abilities: &[],
                 looks: &[HairColour, HairStyle, Beard, SkinShade, Height],
             },
@@ -214,7 +213,7 @@ impl CreatureKind {
                 // Playable, so a person's medians, with its bonus.
                 attributes: PERSON,
                 bonus_set: &[(Agility, 15)],
-                skills: &[(Stealth, 3), (Climbing, 2)],
+                skills: &[("stealth/sneaking", 900), ("athletics/climbing", 400)],
                 abilities: &[NightVision],
                 looks: &[SkinShade, Height],
             },

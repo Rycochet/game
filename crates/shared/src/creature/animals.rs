@@ -5,7 +5,7 @@
 use super::bodies::HORSE;
 use super::guesses::medians;
 use super::{CreatureDef, Size};
-use crate::sheet::{Ability, Skill, Trait};
+use crate::sheet::{Ability, Trait};
 
 /// Cows, bulls and oxen: heavy, slow and calm.
 pub(super) const CATTLE: CreatureDef = CreatureDef {
@@ -20,7 +20,7 @@ pub(super) const CATTLE: CreatureDef = CreatureDef {
     playable: false,
     attributes: medians(170, 40, 160, 20),
     bonus_set: &[],
-    skills: &[(Skill::Running, 1), (Skill::Swimming, 1)],
+    skills: &[("athletics/running", 100), ("athletics/swimming", 100)],
     abilities: &[Ability::Kick, Ability::Trample],
     looks: &[Trait::CoatColour],
 };
@@ -38,9 +38,9 @@ pub(super) const WOLF: CreatureDef = CreatureDef {
     attributes: medians(90, 140, 90, 40),
     bonus_set: &[],
     skills: &[
-        (Skill::Running, 4),
-        (Skill::Stealth, 3),
-        (Skill::Swimming, 1),
+        ("athletics/running", 1600),
+        ("stealth/sneaking", 900),
+        ("athletics/swimming", 100),
     ],
     abilities: &[Ability::NightVision],
     looks: &[Trait::CoatColour],

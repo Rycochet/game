@@ -4,7 +4,8 @@ What the character is like: the left of the Character panel, which `inventory` o
 
 ## Files
 
-- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested). `vitals_lines.rs`: "Health 31 (Toughness 26, +5 for now)": the most from the last `Vitals`, its parts from the sheet; playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or changes do, so the parts stay right.
+- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested).
+- `crates/client/src/character/skill_lines.rs`: `skill_lines`: a line per known skill with no known skill under it, by path, with what a check counts ("Athletics › Climbing 25.8"), until the Skills page shows the tree. `vitals_lines.rs`: "Health 31 (Toughness 26, +5 for now)": the most from the last `Vitals`, its parts from the sheet; playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or changes do, so the parts stay right.
 
 ## Public API
 
@@ -13,7 +14,7 @@ What the character is like: the left of the Character panel, which `inventory` o
 
 ## Depends on
 
-- `common` (`SheetText`, `PlayerSpeed`, `CarryLimit`, `OwnVitals`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
+- `common` (`SheetText`, `PlayerSpeed`, `CarryLimit`, `OwnVitals`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::skill`, `shared::item`, `shared::protocol`.
 
 ## Used by
 

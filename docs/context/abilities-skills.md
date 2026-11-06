@@ -1,11 +1,11 @@
-# Attributes, skills and abilities (plan; attributes built)
+# Attributes, skills and abilities (plan; attributes and the tree's data built)
 
 The owner's design for what a creature is like and what it is good at, the same for players and mobs: a player is steered by a person, a mob by rules, and both have the same sheet. Worked out in conversation on 2026-11-05. Numbers marked *to balance* are first guesses, to be settled with a curves tool (below) rather than here. Why: see `decisions.md`.
 
 ## Words
 
 - **Attributes:** what a body, mind and spirit are (in code: `sheet::Attributes`, the nine below).
-- **Skills:** what has been learned, as a tree (today: `sheet::Skill`, a flat list of five).
+- **Skills:** what has been learned, as a tree (the nodes and each creature's practice are built: `shared/skill.md`).
 - **Abilities:** named actions that draw on skills and attributes (today: `sheet::Ability`, things a kind does by nature such as Kick). Things that aren't actions, such as NightVision, move to a separate list of senses or traits.
 
 ## Attributes
@@ -36,11 +36,11 @@ Built (2026-11-06), summarised in `docs/context/shared/creature.md`. The old fou
 
 ## Skills
 
-A strict tree, 3–4 levels for most branches; weapons one level more than magic, as attacks happen far more often than casting. Draft of the top levels:
+A strict tree, 3–4 levels for most branches; weapons one level more than magic, as attacks happen far more often than casting. Draft of the top levels (the built draft, with deeper levels, is in `shared::skill`'s `branches/`):
 
 | Branch | Children (draft) |
 |---|---|
-| Combat | melee (unarmed, 1-handed, 2-handed, polearms), ranged (thrown, bows, crossbows, slings), anticipation (reading opponents), shields, armour (light, heavy) |
+| Combat | melee (unarmed by kind of creature, then each type of weapon with each weapon under it), ranged (thrown, bows, crossbows, slings), anticipation (reading opponents), shields, armour (light, heavy) |
 | Magic | arcane (leans on Intellect), divine (Empathy), wild |
 | Athletics | climbing, swimming, running, jumping, dodging |
 | Stealth | sneaking, hiding, locks, traps |
@@ -49,6 +49,8 @@ A strict tree, 3–4 levels for most branches; weapons one level more than magic
 | Crafting | building, smithing, leatherwork, tailoring, cooking, alchemy |
 | Social | persuading, intimidating, trading, animals, leading |
 | Lore | researching, creatures, history, languages, appraising |
+
+Under melee, the third level is the type of weapon and the fourth the weapon itself: `combat/melee/longsword/longsword`, `combat/melee/shortsword/khopesh`. Fighting with no weapon is `combat/melee/unarmed/<kind>`, practising the current form's kind while shapeshifted (owner, 2026-11-06). Skills are learned by doing: a character knows a node once it has practised it (an axe in hand near a tree shows what can be done to it), and only known ones are shown. The Attack ability will hook onto the node of the weapon in hand, after the tree exists.
 
 Later, not planned yet: investing in businesses, becoming a mayor.
 
@@ -102,6 +104,6 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 ## Building it (later tasks, in order)
 
 1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way, and the triangles in a character creation screen (built, `client/character_create.md`; one character per account for now, with Character Selection later before it).
-2. The tree, practice, checks and rust clock, with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
+2. The tree, practice, checks and rust clock (the tree's nodes, practice flowing up and values are built; practice from use, checks and rust are not), with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
 3. Abilities and opposition.
 4. Specialising, once quests, trainers and books exist.

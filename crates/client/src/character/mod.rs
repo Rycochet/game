@@ -12,8 +12,10 @@ use crate::common::{CarryLimit, OwnVitals, PlayerSpeed, SheetText};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 
+mod skill_lines;
 mod vitals_lines;
 
+use skill_lines::skill_lines;
 use vitals_lines::vitals_lines;
 
 pub struct CharacterPlugin;
@@ -79,9 +81,7 @@ fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow
     ]);
     if !sheet.skills.is_empty() {
         lines.push(String::new());
-        for (skill, level) in &sheet.skills {
-            lines.push(format!("{skill:?} {level}"));
-        }
+        lines.extend(skill_lines(&sheet.skills));
     }
     if !def.abilities.is_empty() {
         lines.push(String::new());

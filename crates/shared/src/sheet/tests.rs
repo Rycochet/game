@@ -17,7 +17,7 @@ fn every_kind_has_attributes_and_looks() {
             sheet.attributes,
             Attributes::for_kind(kind, &Build::CENTRED)
         );
-        assert_eq!(sheet.skills.len(), def.skills.len());
+        assert_eq!(sheet.skills, crate::skill::Skills::starting(kind));
         assert!(sheet.appearance.suits(kind));
     }
 }

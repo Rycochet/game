@@ -5,6 +5,7 @@
 mod cells;
 mod family;
 mod form;
+mod names;
 mod parts;
 mod properties;
 mod roll;
@@ -13,6 +14,7 @@ mod within;
 
 pub use family::Family;
 pub use form::BladeForm;
+pub use names::weapon_names;
 pub use parts::{
     Attachment, Back, BladeShape, BladeWidth, Build, Curve, Decoration, Edges, Guard, HandleShape,
     Hands, Point, Pommel, Ricasso, Section, SidePart, Tips, Top,

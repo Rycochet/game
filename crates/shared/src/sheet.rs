@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
 use crate::item::Inventory;
+use crate::skill::Skills;
 use crate::vitals::Vitals;
 
 mod attributes;
@@ -27,16 +28,6 @@ pub use from_build::{POINT_WEIGHT, SPREAD};
 pub use kind_bonus::{BONUS_POINTS, bonus_from};
 pub use looks::{Choice, Pattern};
 pub use shapeshift::TrueForm;
-
-/// Something that can be learned, and be better or worse at.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum Skill {
-    Climbing,
-    Foraging,
-    Running,
-    Stealth,
-    Swimming,
-}
 
 /// Something a creature can do because of what it is. No more than a name so far.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -178,7 +169,9 @@ pub struct Sheet {
     /// How its attributes were chosen, kept to show and to work them out again.
     #[serde(default)]
     pub build: Build,
-    pub skills: BTreeMap<Skill, u8>,
+    /// What it has learned (`skill::Skills`): saves from before the tree are read
+    /// by the old names.
+    pub skills: Skills,
     pub appearance: Appearance,
     /// Health and Mana: full in a save from before them.
     #[serde(default)]
@@ -206,7 +199,7 @@ impl Sheet {
         Self {
             attributes: Attributes::for_kind(kind, &build),
             build,
-            skills: kind.def().skills.iter().copied().collect(),
+            skills: Skills::starting(kind),
             appearance: Appearance::default(),
             vitals: Vitals::default(),
             true_form: None,
