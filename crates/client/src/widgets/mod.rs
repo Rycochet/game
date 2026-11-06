@@ -155,7 +155,13 @@ impl Plugin for WidgetsPlugin {
                     colour_picker::make_sample_gradient,
                 ),
             )
-            .add_systems(Update, (set_edge::give_set_edges, set_edge::slide_bands))
+            .add_systems(
+                Update,
+                (
+                    set_edge::give_set_edges,
+                    (set_edge::drift_bands, set_edge::slide_bands).chain(),
+                ),
+            )
             .add_systems(
                 Startup,
                 (item::spawn_name_box, spinner::make_spinner_picture),
