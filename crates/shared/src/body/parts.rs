@@ -68,6 +68,11 @@ pub struct Parts {
     pub abdomen: i32,
     pub feet: Feet,
     pub wings: Wings,
+    /// A mane along the top of the neck, hanging this far down its sides, as a
+    /// horse's.
+    pub mane: i32,
+    /// Long hair hanging this far from the tail: a horse's whole tail, a cow's switch.
+    pub tail_hair: i32,
 }
 
 /// A person: nothing more.
@@ -83,4 +88,6 @@ pub const NONE: Parts = Parts {
     abdomen: 0,
     feet: Feet::Plantigrade,
     wings: Wings::None,
+    mane: 0,
+    tail_hair: 0,
 };

@@ -103,6 +103,7 @@ impl Taur {
                 };
                 layout.parts = Parts {
                     tail: beast.parts.tail,
+                    tail_hair: beast.parts.tail_hair,
                     feet: beast.parts.feet,
                     ..self.parts
                 };
@@ -128,6 +129,7 @@ impl Layout {
         let upper = self.upper?;
         let parts = Parts {
             tail: 0,
+            tail_hair: 0,
             sting: false,
             abdomen: 0,
             ..self.parts

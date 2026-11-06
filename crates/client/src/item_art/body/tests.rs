@@ -40,3 +40,18 @@ fn hairs() -> [Hair; 5] {
         with(HairStyle::TiedBack, Beard::Full),
     ]
 }
+
+#[test]
+fn horses_have_manes_and_tails_of_hair() {
+    let drawn = |kind| coat_hair(&Layout::of(kind).expect("drawn"));
+    let horse = drawn(CreatureKind::Horse);
+    assert!(!horse.is_empty());
+    // A centaur keeps the horse's tail but has no horse's neck for a mane, so less.
+    let centaur = drawn(CreatureKind::Centaur);
+    assert!(!centaur.is_empty() && centaur.len() < horse.len());
+    assert!(!drawn(CreatureKind::Cattle).is_empty());
+    assert!(drawn(CreatureKind::Human).is_empty());
+    assert!(drawn(CreatureKind::Wolf).is_empty());
+    // Hair hangs off the ground.
+    assert!(horse.iter().flatten().all(|corner| corner.y > 0.0));
+}

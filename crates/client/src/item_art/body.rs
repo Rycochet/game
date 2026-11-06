@@ -13,12 +13,14 @@ use super::colours::{Colours, material};
 use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
 
 mod arms;
+mod coat_hair;
 mod features;
 mod fit;
 mod hair;
 mod legs;
 mod trunk;
 
+pub(super) use coat_hair::coat_hair;
 pub(super) use features::wings;
 use fit::fitted;
 pub(super) use fit::turn_of;
@@ -218,12 +220,13 @@ pub(super) fn body_parts(
 ) -> Vec<Part> {
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
-    let [skin, coat, feathers, hair] = fitted(layout, height, hair);
+    let [skin, coat, feathers, hair, mane] = fitted(layout, height, hair);
     [
         (skin, colours.skin),
         (coat, colours.coat),
         (feathers, colours.feathers),
         (hair, colours.hair),
+        (mane, colours.mane),
     ]
     .into_iter()
     .filter(|(triangles, _)| !triangles.is_empty())

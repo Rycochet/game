@@ -4,14 +4,16 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::sheet::Appearance;
 
-/// Skin (or coat), a taur's lower body's coat, feathers and hair, as red, green and
-/// blue from 0 to 255.
+/// Skin (or coat), a taur's lower body's coat, feathers, hair, and an animal's mane and
+/// tail hair, as red, green and blue from 0 to 255.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Colours {
     pub skin: [u8; 3],
     pub coat: [u8; 3],
     pub feathers: [u8; 3],
     pub hair: [u8; 3],
+    /// A darker shade of the coat, as horses' manes and tails often are.
+    pub mane: [u8; 3],
 }
 
 impl Colours {
@@ -22,6 +24,7 @@ impl Colours {
         coat: [199, 184, 163],
         feathers: [242, 242, 238],
         hair: [92, 62, 40],
+        mane: darker([199, 184, 163]),
     };
 
     /// A creature of this kind looking like this: plain where it has no choice. A body
@@ -31,13 +34,23 @@ impl Colours {
             .skin(kind)
             .or_else(|| appearance.feathers(kind))
             .unwrap_or(Self::PLAIN.skin);
+        let coat = appearance.coat(kind).unwrap_or(skin);
         Self {
             skin,
-            coat: appearance.coat(kind).unwrap_or(skin),
+            coat,
+            mane: darker(coat),
             feathers: appearance.feathers(kind).unwrap_or(Self::PLAIN.feathers),
             hair: appearance.hair_colour(kind).unwrap_or(Self::PLAIN.hair),
         }
     }
+}
+
+/// A darker shade of a coat, for its long hair.
+const fn darker(rgb: [u8; 3]) -> [u8; 3] {
+    const fn shade(value: u8) -> u8 {
+        (value as u16 * 2 / 5) as u8
+    }
+    [shade(rgb[0]), shade(rgb[1]), shade(rgb[2])]
 }
 
 /// A material in one of these colours, as bodies are drawn.
