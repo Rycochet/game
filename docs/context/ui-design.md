@@ -30,6 +30,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Slider | have | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
 | Text box | have | Sunken, a line tall even when empty, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. |
 | Dropdown | have | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
+| Key box | have | A text box's look, showing a key binding ("Shift + G") or nothing, centred. A click or tap makes it wait ("Press key", or the modifiers held so far, "Shift + …") for the next key, with any modifiers held, or a modifier pressed and let go alone; Esc or a click elsewhere cancels, Backspace empties it. Disabled grey; an error edge when its binding was taken by another. Settings, Controls. A gamepad's box would wait for a button ("Press button"). |
 | Switch | have | A pill about a phone's size (52 × 32), with a tick in the left half of its track and a cross in the right; the round thumb covers one, so off shows the cross. Green track when on, grey when off. A press anywhere flips it and the thumb slides across (jumps with Reduce Motion). For settings that apply at once: every on/off setting in Settings. |
 | Fab, ButtonGroup, Rating, SpeedDial | no | |
 

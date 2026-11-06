@@ -19,8 +19,8 @@ use super::panels::{BinNode, DropNode, ItemCell, OpenGrids};
 use super::split::{PickRow, Split, SplitCell};
 use super::{CLICK_PIXELS, CLICK_SECONDS, Carried, Hand, Holding};
 use crate::common::{
-    GameView, GaveItem, HeldOverGifts, HeldStock, SpentEnergy, StockCell, TakesGifts, TookItem,
-    TouchGesture, UiPointer,
+    GameView, GaveItem, HeldOverGifts, HeldStock, Preferences, SpentEnergy, StockCell, TakesGifts,
+    TookItem, TouchGesture, UiPointer,
 };
 use crate::connection::ToServer;
 use crate::widgets::{ButtonPressed, Floating, RaisePanel};
@@ -104,12 +104,13 @@ pub(super) fn hold_items(
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
     mut out: Outbox,
-    (mut over_gifts, mut held_stock, view, mut keys, mut split): (
+    (mut over_gifts, mut held_stock, view, mut keys, mut split, preferences): (
         ResMut<HeldOverGifts>,
         ResMut<HeldStock>,
         Res<State<GameView>>,
         ResMut<ButtonInput<KeyCode>>,
         ResMut<Split>,
+        Res<Preferences>,
     ),
     time: Res<Time<Real>>,
     (mut last_press, mut was_down): (Local<Option<(shared::id::Id, f64)>>, Local<bool>),
@@ -170,7 +171,7 @@ pub(super) fn hold_items(
         (&pointer, &ui_scale, &view),
         &mut mouse,
         &mut gesture,
-        &mut keys,
+        (&mut keys, &preferences.controls),
         (&mut over_gifts, &mut held_stock),
     ) else {
         return;

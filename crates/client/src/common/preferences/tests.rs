@@ -34,6 +34,12 @@ fn preferences_read_back_as_saved() {
             ..Default::default()
         },
         pause_unfocused: true,
+        controls: {
+            let mut controls = crate::common::Controls::default();
+            let shift_g = crate::common::Binding::new(KeyCode::KeyG, crate::common::Mods::SHIFT);
+            controls.set(crate::common::Action::FullMap, 1, Some(shift_g));
+            controls
+        },
     };
     assert_eq!(Preferences::from_text(&preferences.to_text()), preferences);
 }

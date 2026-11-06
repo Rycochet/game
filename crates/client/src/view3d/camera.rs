@@ -7,7 +7,7 @@ use std::f32::consts::{FRAC_PI_2, TAU};
 use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
 
-use crate::common::TouchGesture;
+use crate::common::{Action, Preferences, TouchGesture};
 
 /// Turn or tilt per pixel of mouse movement while right-dragging.
 const RADIANS_PER_PIXEL: f32 = 0.005;
@@ -160,10 +160,11 @@ impl OrbitCamera {
 }
 
 /// Right-drag turns (sideways) and tilts (up and down) every `OrbitCamera`,
-/// the wheel zooms, and Home returns to the starting view.
+/// the wheel zooms, and Reset View (Home) returns to the starting view.
 pub fn control_with_mouse(
     buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
+    preferences: Res<Preferences>,
     motion: Res<AccumulatedMouseMotion>,
     scroll: Res<AccumulatedMouseScroll>,
     mut cameras: Query<&mut OrbitCamera>,
@@ -173,7 +174,7 @@ pub fn control_with_mouse(
         MouseScrollUnit::Line => scroll.delta.y,
         MouseScrollUnit::Pixel => scroll.delta.y / PIXELS_PER_NOTCH,
     };
-    let reset = keys.just_pressed(KeyCode::Home);
+    let reset = preferences.controls.just_pressed(&keys, Action::ResetView);
     if !(dragging || notches != 0.0 || reset) {
         // Leave the cameras untouched, so their change detection stays quiet.
         return;

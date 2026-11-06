@@ -8,7 +8,8 @@ use super::super::hold::Target;
 use super::super::{Carried, Hand, HeldBy, Holding};
 use super::{Under, worth_wearing};
 use crate::common::{
-    GROUND, GameView, HeldGift, HeldOverGifts, HeldStock, TouchGesture, UiPointer, in_interface,
+    Action, Controls, GROUND, GameView, HeldGift, HeldOverGifts, HeldStock, TouchGesture,
+    UiPointer, in_interface,
 };
 use crate::widgets::{CELL, logical_rect, shown_at};
 
@@ -22,7 +23,7 @@ pub(super) fn aim_held(
     (pointer, ui_scale, view): (&UiPointer, &UiScale, &State<GameView>),
     mouse: &mut ResMut<ButtonInput<MouseButton>>,
     gesture: &mut ResMut<TouchGesture>,
-    keys: &mut ResMut<ButtonInput<KeyCode>>,
+    (keys, controls): (&mut ResMut<ButtonInput<KeyCode>>, &Controls),
     (over_gifts, held_stock): (&mut ResMut<HeldOverGifts>, &mut ResMut<HeldStock>),
 ) -> Option<(HeldBy, Target, Option<Vec2>, Option<Vec2>)> {
     let Under {
@@ -54,7 +55,7 @@ pub(super) fn aim_held(
     let turn = mouse.just_pressed(MouseButton::Right) || gesture.other_finger_tapped;
     // So the camera doesn't turn with the same press.
     mouse.reset(MouseButton::Right);
-    if turn || keys.clear_just_pressed(KeyCode::KeyR) {
+    if turn || controls.clear_just_pressed(keys, Action::TurnItem) {
         held.item = match &holding.stock {
             Some((_, item)) => held.item.turned_as(item),
             None => held.item.turned(&carried.0),

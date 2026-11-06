@@ -95,6 +95,16 @@ impl Plugin for SystemMenuPlugin {
                     settings::fill_gameplay_page,
                     settings::use_gameplay_page,
                 ),
+            )
+            .init_resource::<settings::TakenKeys>()
+            .add_systems(
+                Update,
+                (
+                    settings::use_controls_page,
+                    settings::fill_controls_page,
+                    settings::forget_taken,
+                )
+                    .chain(),
             );
         // Alt+Enter, and this game's own server opened to others: native only.
         #[cfg(not(target_arch = "wasm32"))]

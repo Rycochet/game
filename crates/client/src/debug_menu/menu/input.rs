@@ -13,7 +13,7 @@ use super::{
     TOGGLE_SECONDS, WarningButton, columns_in, entries_on_show, first_column, on_show,
     return_chooses, rows_in,
 };
-use crate::common::{TouchGesture, interface_area};
+use crate::common::{Action, Preferences, TouchGesture, interface_area};
 use crate::minimap::FullMap;
 use crate::widgets::{
     ButtonPressed, HighlightStep, SoftKey, SoftKeyPressed, TextBox, TextEdited, TextFocus,
@@ -52,7 +52,7 @@ pub(in crate::debug_menu) fn take_input(
     readers: MenuReaders,
     nodes: MenuNodes,
     mut focus: ResMut<TextFocus>,
-    full_map: Res<FullMap>,
+    (full_map, preferences): (Res<FullMap>, Res<Preferences>),
     (window, ui_scale): (Single<&Window, With<PrimaryWindow>>, Res<UiScale>),
     sources: FactSources,
     // Real time: game time is capped per frame, so it runs slow when unfocused.
@@ -78,7 +78,7 @@ pub(in crate::debug_menu) fn take_input(
     let soft: Vec<SoftKey> = soft_keys.read().map(|key| key.0).collect();
     // Not over the full map: it would be the bigger of the two.
     let toggled = !full_map.open
-        && (keys.just_pressed(KeyCode::Backquote)
+        && (preferences.controls.just_pressed(&keys, Action::DebugMenu)
             || presses.iter().any(|&entity| warning.contains(entity)));
     if toggled {
         let open = !menu.open;

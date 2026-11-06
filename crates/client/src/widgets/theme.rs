@@ -24,6 +24,9 @@ pub(super) const HINT_TEXT: Color = Color::srgb(0.55, 0.5, 0.42);
 pub(super) const TOOLTIP_BACKGROUND: Color = Color::srgb(0.13, 0.1, 0.08);
 pub(super) const TOOLTIP_TEXT: Color = NO_QUALITY_NAME;
 
+/// Every other row of a table, so a row's parts are easy to follow across.
+pub const ROW_TINT: Color = Color::srgba(0.25, 0.17, 0.1, 0.08);
+
 /// What is pressed into a panel: a text box, a slider's plain track.
 pub(super) const SUNKEN_BACKGROUND: Color = Color::srgb(0.87, 0.8, 0.65);
 /// The edge of a text box saying something is wrong.

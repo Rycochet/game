@@ -10,6 +10,7 @@ use bevy::ui::UiGlobalTransform;
 use super::soft_keyboard;
 use super::theme::{HINT_TEXT, SUNKEN_BACKGROUND};
 use super::{ButtonPressed, INK, Pressable, TextSize, sunken_border};
+use crate::common::{Action, Preferences};
 
 const CARET: &str = "_";
 /// Held with V, they paste (Ctrl, or Cmd on a Mac).
@@ -61,7 +62,7 @@ pub struct SoftKeyPressed(pub soft_keyboard::Key);
 
 /// A press happened this frame, before anything took it.
 #[derive(Resource, Default)]
-pub(super) struct PressedThisFrame(bool);
+pub(super) struct PressedThisFrame(pub(super) bool);
 
 /// A place where a tap should raise the on-screen keyboard, other than a box.
 #[derive(Component)]
@@ -151,7 +152,9 @@ pub(super) fn take_text(
     mut soft_keys: MessageWriter<SoftKeyPressed>,
     mut told_soft_keyboard: Local<(Option<Entity>, String)>,
     mut commands_held: Local<Vec<KeyCode>>,
+    preferences: Res<Preferences>,
 ) {
+    let controls = &preferences.controls;
     let on_box = pressed
         .read()
         .map(|press| press.0)
@@ -198,7 +201,7 @@ pub(super) fn take_text(
     for key in typed.iter().filter(|key| key.state == KeyState::Pressed) {
         match &key.logical_key {
             // Opens and closes the debug menu.
-            _ if key.key_code == KeyCode::Backquote => {}
+            _ if controls.uses_key(Action::DebugMenu, key.key_code) => {}
             _ if command && key.key_code == KeyCode::KeyV => {
                 if let Some(pasted) = super::clipboard::paste() {
                     text.push_str(&allowed(&pasted, digits_only));

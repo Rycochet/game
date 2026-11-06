@@ -6,7 +6,7 @@ use super::super::item::{ItemTip, ItemTooltip};
 use super::super::slider::Slider;
 use super::super::text_box::{TextBox, TextFocus};
 use super::super::theme::{ERROR_EDGE, HOVER_EDGE};
-use super::super::{ButtonState, INK, Switch, sunken_border};
+use super::super::{ButtonState, INK, KeyBox, Switch, sunken_border};
 use super::{ButtonStyle, ButtonTooltip, Pointed, TOOLTIP_DELAY, TOOLTIP_OFFSET, Touch, look};
 use crate::common::UiPointer;
 
@@ -15,7 +15,8 @@ use crate::common::UiPointer;
 #[allow(clippy::type_complexity)]
 pub(in crate::widgets) fn show_button_looks(
     pointed: Res<Pointed>,
-    // A switch's track and thumb show its state instead (`switch`).
+    // A switch's track and thumb show its state instead (`switch`), and a key
+    // box its own (`key_box`).
     mut buttons: Query<
         (
             Entity,
@@ -25,7 +26,7 @@ pub(in crate::widgets) fn show_button_looks(
             &mut BorderColor,
             &Children,
         ),
-        Without<Switch>,
+        (Without<Switch>, Without<KeyBox>),
     >,
     mut labels: Query<&mut TextColor>,
 ) {

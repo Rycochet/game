@@ -7,9 +7,12 @@ use server::debug_api::{BrpResult, Value, json, params, refused};
 
 use super::super::slider::Slider;
 use super::super::text_box::allowed;
-use super::super::{ButtonPressed, Dropdown, DropdownChosen, SliderMoved, TextBox, TextEdited};
+use super::super::{
+    ButtonPressed, Dropdown, DropdownChosen, KeyBox, KeyChosen, SliderMoved, TextBox, TextEdited,
+};
 use super::describe::IdAsked;
 use super::{Kind, Widgets};
+use crate::common::Binding;
 
 #[derive(Deserialize)]
 struct SetAsked {
@@ -20,6 +23,7 @@ struct SetAsked {
 /// What a set comes to, worked out before anything changes.
 enum Change {
     Text(String),
+    Key(Option<Binding>),
     Choose(usize),
     Slide(f32),
     Press(Entity),
@@ -27,7 +31,8 @@ enum Change {
     Scroll(f32),
 }
 
-/// `client.ui.set {id, value}`: a text box's words, a dropdown's or tab row's
+/// `client.ui.set {id, value}`: a text box's words, a key box's binding (its
+/// saved name, as `Shift+KeyG`, or "" to empty it), a dropdown's or tab row's
 /// option (its index or words), a slider's place (0 to 1), whether a check
 /// button is ticked or a switch on, or how far a scroll area is scrolled (interface pixels).
 #[allow(clippy::type_complexity)]
@@ -39,7 +44,9 @@ pub(super) fn set(
         Query<&mut Dropdown>,
         Query<&mut Slider>,
         Query<&mut ScrollPosition>,
+        Query<&mut KeyBox>,
     )>,
+    mut keys_chosen: MessageWriter<KeyChosen>,
     mut pressed: MessageWriter<ButtonPressed>,
     mut edited: MessageWriter<TextEdited>,
     mut chosen: MessageWriter<DropdownChosen>,
@@ -56,6 +63,13 @@ pub(super) fn set(
             if let Ok(mut text_box) = all.p1().get_mut(entity) {
                 text_box.text = allowed(&text, text_box.digits_only);
                 edited.write(TextEdited(entity));
+            }
+        }
+        Change::Key(binding) => {
+            if let Ok(mut key_box) = all.p5().get_mut(entity) {
+                key_box.binding = binding;
+                key_box.warned = false;
+                keys_chosen.write(KeyChosen(entity, binding));
             }
         }
         Change::Choose(at) => {
@@ -96,6 +110,19 @@ fn change_of(widgets: &Widgets, entity: Entity, asked: &SetAsked) -> BrpResult<C
                 _ => return Err(refused("a text box takes words or a number")),
             };
             Ok(Change::Text(text))
+        }
+        Kind::KeyBox => {
+            let binding = match value {
+                Value::Null => None,
+                Value::String(name) if name.is_empty() => None,
+                Value::String(name) => Some(Binding::from_name(name).ok_or_else(|| {
+                    refused(
+                        "a key box takes a binding's name, as `Shift+KeyG`, or \"\" to empty it",
+                    )
+                })?),
+                _ => return Err(refused("a key box takes a binding's name, or \"\"")),
+            };
+            Ok(Change::Key(binding))
         }
         Kind::Dropdown => {
             let dropdown = widgets.dropdowns.get(entity).map_err(|_| refused("gone"))?;
