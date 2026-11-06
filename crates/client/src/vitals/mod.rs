@@ -8,7 +8,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::window::PrimaryWindow;
 use shared::protocol::ServerMessage;
 
-use crate::common::{BottomHud, GameView, OwnVitals, ToldVitals, interface_area};
+use crate::common::{BottomHud, GameView, OwnVitals, ToldVitals, VitalsCircle, interface_area};
 use crate::connection::FromServer;
 use crate::widgets::{HoverTip, UiId};
 
@@ -106,12 +106,14 @@ fn show_circle(
     mut images: ResMut<Assets<Image>>,
     mut circle: Single<(&mut Node, &mut Visibility, &mut HoverTip), With<Circle>>,
     mut bottom: ResMut<BottomHud>,
+    mut placed: ResMut<VitalsCircle>,
 ) {
     let (node, visibility, tip) = &mut *circle;
     let told = own.0.filter(|_| *view.get() != GameView::Connecting);
     let Some(told) = told else {
         visibility.set_if_neq(Visibility::Hidden);
         bottom.set_if_neq(BottomHud(0.0));
+        placed.set_if_neq(VitalsCircle::default());
         return;
     };
     visibility.set_if_neq(Visibility::Inherited);
@@ -121,6 +123,10 @@ fn show_circle(
     node.height = px(across);
     node.left = px(((room.x - across) / 2.0).round());
     bottom.set_if_neq(BottomHud(BOTTOM_GAP + across));
+    placed.set_if_neq(VitalsCircle {
+        across,
+        bottom: BOTTOM_GAP,
+    });
     let (health, mana) = told.now(time.elapsed_secs_f64());
     let words = format!(
         "Health {} / {}\nMana {} / {}",

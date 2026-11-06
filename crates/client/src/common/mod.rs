@@ -78,7 +78,7 @@ pub use video::{
     RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
 };
 pub use view::{ViewFacing, ViewStats};
-pub use vitals::{BottomHud, OwnVitals, ToldVitals};
+pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
 pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois, WorldChanged};
 
@@ -97,6 +97,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<KeepDrawing>()
             .init_resource::<OwnVitals>()
             .init_resource::<BottomHud>()
+            .init_resource::<VitalsCircle>()
             .init_resource::<HoveredOnMap>()
             .init_resource::<HoveredInSky>()
             .init_resource::<Target>()

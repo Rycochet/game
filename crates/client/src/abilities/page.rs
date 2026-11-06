@@ -22,6 +22,10 @@ const GAP: f32 = 6.0;
 #[derive(Component)]
 pub(super) struct SkillsButton;
 
+/// An ability on the page, which can be dragged to the action bar.
+#[derive(Component, Clone, Copy)]
+pub(super) struct PageAbility(pub Ability);
+
 /// The body a page was drawn for.
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
 pub(super) struct DrawnFor(CreatureKind);
@@ -87,7 +91,9 @@ fn spawn_contents(page: &mut ChildSpawnerCommands, kind: CreatureKind, assets: &
                 for ability in known(kind) {
                     let frame = spawn_ability(list, look(ability, kind, assets));
                     let id = UiId::new("abilities", ability_id(ability));
-                    list.commands().entity(frame).insert(id);
+                    list.commands()
+                        .entity(frame)
+                        .insert((id, PageAbility(ability)));
                 }
             });
     });
@@ -105,7 +111,7 @@ pub(super) fn open_skills(
 }
 
 /// How an ability shows on the page.
-fn look(ability: Ability, kind: CreatureKind, assets: &AssetServer) -> AbilityLook {
+pub(super) fn look(ability: Ability, kind: CreatureKind, assets: &AssetServer) -> AbilityLook {
     AbilityLook {
         icon: assets.load(icon_path(ability)),
         name: ability.name().into(),

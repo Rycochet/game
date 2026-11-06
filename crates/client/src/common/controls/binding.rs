@@ -144,6 +144,33 @@ impl Binding {
         Some(Self::new(key, mods))
     }
 
+    /// At most three letters, for the corner of an action bar slot: "1", "F12",
+    /// "S1" (Shift), "^1" (Ctrl), "A1" (Alt), "W1" (Super), "N1" (keypad).
+    pub fn short_label(self) -> String {
+        let marks = [
+            (Mods::SHIFT, 'S'),
+            (Mods::CTRL, '^'),
+            (Mods::ALT, 'A'),
+            (Mods::SUPER, 'W'),
+        ];
+        let mut short: String = marks
+            .into_iter()
+            .filter(|(each, _)| self.mods.contains(*each))
+            .map(|(_, letter)| letter)
+            .collect();
+        let key = key_label(self.key);
+        if let Some(number) = key.strip_prefix("Num ") {
+            short.push('N');
+            short.push_str(number);
+        } else if key.contains(' ') {
+            // "Up Arrow" is "UA": the first letter of each word.
+            short.extend(key.split(' ').filter_map(|word| word.chars().next()));
+        } else {
+            short.push_str(key);
+        }
+        short.chars().take(3).collect()
+    }
+
     /// As Settings shows it: "Shift + G", "Up Arrow".
     pub fn label(self) -> String {
         let mut parts = self.mods.labels();

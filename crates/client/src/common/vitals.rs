@@ -40,3 +40,13 @@ fn refilled(told: VitalNow, ticks: f32) -> f32 {
 /// hovered stand above it.
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
 pub struct BottomHud(pub f32);
+
+/// Where the Health and Mana circle is drawn, in interface pixels, at the bottom
+/// middle of the window: how far across (0 while hidden) and how far its bottom
+/// stands above the window's. The action bar stands either side of it.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
+pub struct VitalsCircle {
+    pub across: f32,
+    /// Its bottom edge, above the window's.
+    pub bottom: f32,
+}
