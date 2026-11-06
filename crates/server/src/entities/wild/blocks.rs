@@ -3,13 +3,14 @@
 
 use shared::energy::Energy;
 use shared::mob::{Memory, scent_strength, wild_mob_id, wild_spawns};
+use shared::rng::Seed;
 use shared::sheet::Sheet;
 use shared::wilderness::BlockPos;
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Instant;
 
 use super::super::{Doing, Mob, Population, dressed};
-use super::{AREA_BLOCKS, WILD_BLOCK_KEPT, place};
+use super::{AREA_BLOCKS, WILD_BLOCK_KEPT, place, resets, trails};
 use crate::ServerWorld;
 use crate::storage::SiteId;
 
@@ -51,19 +52,25 @@ pub(super) fn centre(world: &mut ServerWorld, area: u32, centre: BlockPos, at: (
         .due
         .retain(|(_, id)| population.mobs.iter().any(|mob| mob.id == *id));
     keep(world, leaving);
-    for block in held.difference(&wanted) {
-        world.wilderness.areas.owner.remove(block);
+    for &block in held.difference(&wanted) {
+        world.wilderness.areas.owner.remove(&block);
+        resets::been_near(world, block);
     }
+    let seed = world.seed.pois().derive("wild mobs");
     for &block in wanted.difference(&held) {
         world.wilderness.areas.owner.insert(block, area);
-        let mobs = match world.wilderness.areas.kept.remove(&block) {
-            Some((mobs, _)) => mobs,
-            None => spawned(world, block, at),
+        let (mobs, new) = match world.wilderness.areas.kept.remove(&block) {
+            Some((mobs, _)) => (mobs, false),
+            None => (spawned(world, seed, block, at), true),
         };
         let tick = world.action_clock.ticks();
         let Some(population) = world.populations.0.get_mut(&place(area)) else {
             return;
         };
+        // Made new: they have been about lately, and left their scent.
+        if new {
+            trails::lay_trails(population, seed, &mobs, tick);
+        }
         for mob in mobs {
             // A mob kept while chasing carries on as it was.
             if mob.doing != Doing::Idle {
@@ -77,11 +84,18 @@ pub(super) fn centre(world: &mut ServerWorld, area: u32, centre: BlockPos, at: (
 /// Lets an area go: everyone in it is kept with the block they stand in.
 pub(super) fn close(world: &mut ServerWorld, area: u32) {
     world.wilderness.areas.areas.remove(&area);
-    world
+    let held: Vec<BlockPos> = world
         .wilderness
         .areas
         .owner
-        .retain(|_, owner| *owner != area);
+        .iter()
+        .filter(|&(_, &owner)| owner == area)
+        .map(|(&block, _)| block)
+        .collect();
+    for block in held {
+        world.wilderness.areas.owner.remove(&block);
+        resets::been_near(world, block);
+    }
     if let Some(population) = world.populations.0.remove(&place(area)) {
         keep(world, population.mobs);
     }
@@ -131,15 +145,15 @@ pub(super) fn forget_old(world: &mut ServerWorld, now: Instant) {
 }
 
 /// A block's own mobs, made new (in the frame of a player at `at`), unless
-/// some of them are about already or have died.
-fn spawned(world: &mut ServerWorld, block: BlockPos, at: (i64, i64)) -> Vec<Mob> {
+/// some of them are about already or have died (and it hasn't reset since).
+fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64)) -> Vec<Mob> {
     if world.wilderness.areas.living.contains_key(&block) {
         return Vec::new();
     }
-    let seed = world.seed.pois().derive("wild mobs");
     let biome = world.wilderness.wild.biome_of(block);
     let width = world.wilderness.wild.width();
     let plan = wild_spawns(seed, block, world.wilderness.block(block), biome);
+    resets::reset_if_due(world, seed, block, &plan);
     let made_at = world.made_now();
     let saved = world.site(SiteId::Wilderness).levels.get(&0);
     let dead = saved.map(|level| level.dead.clone()).unwrap_or_default();

@@ -12,6 +12,7 @@ use shared::sheet::Sheet;
 use super::cells_apart;
 use crate::ServerWorld;
 use crate::connections::Client;
+use crate::storage::SiteId;
 
 /// A new mob's belongings: it wears what it can, and keeps the rest in its
 /// inventory while there is room. Only what is worn or a blade is made to its size.
@@ -89,7 +90,11 @@ pub(crate) fn give(
     mob.memory.remember(character, event);
     // Saved with the level it belongs on, wherever it has got to.
     let home_level = mob.home_level;
+    let home = mob.home;
     let memory = mob.memory.clone();
+    if place.0 == SiteId::Wilderness {
+        super::wild::touched(world, home);
+    }
     let saved = world
         .site_mut(place.0)
         .levels
@@ -110,6 +115,8 @@ pub(crate) fn kill(
 ) -> Result<(), &'static str> {
     let visit = client.visit.as_mut().ok_or("not in a site")?;
     let place = visit.population();
+    // Where things fall: in the wilderness the area's number isn't a level.
+    let here_index = visit.index();
     let population = world
         .populations
         .0
@@ -132,6 +139,9 @@ pub(crate) fn kill(
     {
         home.away = home.away.saturating_sub(1);
     }
+    if place.0 == SiteId::Wilderness {
+        super::wild::touched(world, dead.home);
+    }
     // What it had is saved with the level it belongs on, wherever it has got to.
     let site = world.site_mut(place.0);
     let saved = site.levels.entry(dead.home_level).or_default();
@@ -142,7 +152,7 @@ pub(crate) fn kill(
     let mut left = record.gear.map_or_else(Vec::new, Inventory::spilled);
     left.extend(record.carried);
     if !left.is_empty() {
-        let here = site.levels.entry(place.1).or_default();
+        let here = site.levels.entry(here_index).or_default();
         here.ground.entry(at).or_default().extend(left);
     }
     Ok(())
