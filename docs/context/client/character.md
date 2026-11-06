@@ -1,10 +1,10 @@
 # client: character
 
-What the character is like: the left of the Character panel, which `inventory` opens, in words for now: kind and size, the nine attributes a row (Body, Mind, Spirit) to a line, carrying and speed, skills, abilities, looks. Native and web.
+What the character is like: the left of the Character panel, which `inventory` opens, in words for now: kind and size, the nine attributes a row (Body, Mind, Spirit) to a line, Health and Mana (most of each and where it comes from), carrying and speed, skills, abilities, looks. Native and web.
 
 ## Files
 
-- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested).
+- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested). `vitals_lines.rs`: "Health 31 (Toughness 26, +5 for now)": the most from the last `Vitals`, its parts from the sheet; playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or changes do, so the parts stay right.
 
 ## Public API
 
@@ -13,7 +13,7 @@ What the character is like: the left of the Character panel, which `inventory` o
 
 ## Depends on
 
-- `common` (`SheetText`, `PlayerSpeed`, `CarryLimit`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
+- `common` (`SheetText`, `PlayerSpeed`, `CarryLimit`, `OwnVitals`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
 
 ## Used by
 

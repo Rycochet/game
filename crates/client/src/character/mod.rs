@@ -6,10 +6,15 @@ use shared::energy::NORMAL_SPEED;
 use shared::item::Inventory;
 use shared::protocol::ServerMessage;
 use shared::sheet::{Row, Sheet};
+use shared::vitals::VitalNow;
 
-use crate::common::{CarryLimit, PlayerSpeed, SheetText};
+use crate::common::{CarryLimit, OwnVitals, PlayerSpeed, SheetText};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
+
+mod vitals_lines;
+
+use vitals_lines::vitals_lines;
 
 pub struct CharacterPlugin;
 
@@ -50,7 +55,7 @@ fn publish_limit(sheet: Res<CharacterSheet>, carried: Res<Carried>, mut limit: R
 }
 
 /// What the panel says.
-fn describe(sheet: &Sheet, carried: &Inventory) -> String {
+fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow)>) -> String {
     let def = carried.creature.def();
     let mut lines = vec![format!("{}, {:?}", def.name, def.size), String::new()];
     // The nine attributes, a row to a line.
@@ -62,8 +67,9 @@ fn describe(sheet: &Sheet, carried: &Inventory) -> String {
             .collect();
         lines.push(format!("{}: {}", row.name(), values.join(", ")));
     }
+    lines.push(String::new());
+    lines.extend(vitals_lines(sheet, most));
     lines.extend([
-        String::new(),
         // How much is carried now is shown under the inventory instead.
         format!(
             "Can carry {:.2} kg",
@@ -96,10 +102,12 @@ fn describe(sheet: &Sheet, carried: &Inventory) -> String {
 fn show_words(
     sheet: Res<CharacterSheet>,
     carried: Res<Carried>,
+    own: Res<OwnVitals>,
     mut texts: Query<&mut Text, With<SheetText>>,
 ) {
+    let most = own.0.map(|told| (told.health, told.mana));
     for mut text in &mut texts {
-        let words = describe(&sheet.0, &carried.0);
+        let words = describe(&sheet.0, &carried.0, most);
         if text.0 != words {
             text.0 = words;
         }

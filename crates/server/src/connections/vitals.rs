@@ -28,13 +28,18 @@ impl Client {
         })
     }
 
-    /// Every tick: forgets changes that have ended, and tells the client if
-    /// how much there can be has changed (refilling it works out itself).
+    /// Every tick: forgets changes that have ended (sending the sheet again),
+    /// and tells the client if how much there can be has changed (refilling
+    /// it works out itself).
     /// `false` if it has gone.
     pub(super) fn keep_vitals(&mut self, now: u64) -> bool {
         let before = self.limits(now);
         if self.sheet.vitals.forget_ended(before, now) {
             self.unsaved = true;
+            // Its Character panel shows the changes.
+            if !self.link.send(&ServerMessage::Sheet(self.sheet.clone())) {
+                return false;
+            }
         }
         if self.vitals_told == Some(self.limits(now)) {
             return true;
@@ -65,6 +70,7 @@ impl Client {
             }
         }
         self.unsaved = true;
-        self.send_vitals(now)
+        // Practice and changes are on the sheet, for the Character panel.
+        self.link.send(&ServerMessage::Sheet(self.sheet.clone())) && self.send_vitals(now)
     }
 }

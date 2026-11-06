@@ -34,6 +34,7 @@ mod states;
 mod token;
 mod video;
 mod view;
+mod vitals;
 mod window;
 #[cfg(not(target_arch = "wasm32"))]
 mod window_follow;
@@ -72,6 +73,7 @@ pub use video::{
     RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
 };
 pub use view::{ViewFacing, ViewStats};
+pub use vitals::{BottomHud, OwnVitals, ToldVitals};
 pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois, WorldChanged};
 
@@ -88,6 +90,8 @@ impl Plugin for CommonPlugin {
             .insert_resource(preferences);
         app.insert_resource(ClearColor(Color::BLACK))
             .init_resource::<KeepDrawing>()
+            .init_resource::<OwnVitals>()
+            .init_resource::<BottomHud>()
             .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()
             .init_resource::<OtherLevels>()

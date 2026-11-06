@@ -8,13 +8,14 @@ use shared::hall::GateCode;
 use super::gate_runes;
 use super::projection::Projection;
 use super::{
-    CORNER_GAP, FULL_MAP_MARGIN, FullMap, HoverBox, HoverRunes, HoverRunesPicture, HoverText,
-    ICON_PIXELS, Room, TITLE_HEIGHT, WorldHoverBox, WorldHoverText, full_map_area, full_map_corner,
-    hovered_name, minimap_across, minimap_picture_size, minimap_trim, poi_name, under_the_sky,
-    units_per_pixel,
+    CORNER_GAP, FULL_MAP_MARGIN, FullMap, HOVER_LIFT, HoverBox, HoverRunes, HoverRunesPicture,
+    HoverText, ICON_PIXELS, Room, TITLE_HEIGHT, WorldHoverBox, WorldHoverText, full_map_area,
+    full_map_corner, hovered_name, minimap_across, minimap_picture_size, minimap_trim, poi_name,
+    under_the_sky, units_per_pixel,
 };
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameView, OtherLevels, Portal, SkyNow, SmoothPosition, UiPointer,
+    BottomHud, CurrentDungeon, CurrentWorld, GameView, OtherLevels, Portal, SkyNow, SmoothPosition,
+    UiPointer,
 };
 use crate::player::Player;
 use crate::view3d::{HoveredToken, OrbitCamera};
@@ -178,9 +179,16 @@ pub(super) fn name_hovered_token(
     (sky_now, dungeon, pointer): (Res<SkyNow>, Res<CurrentDungeon>, Res<UiPointer>),
     window: Single<&Window, With<PrimaryWindow>>,
     ui_scale: Res<UiScale>,
-    mut holder: Single<&mut Visibility, With<WorldHoverBox>>,
+    mut holder: Single<(&mut Visibility, &mut Node), With<WorldHoverBox>>,
     mut text: Single<&mut Text, With<WorldHoverText>>,
+    bottom_hud: Res<BottomHud>,
 ) {
+    // Above whatever the interface keeps at the bottom (the vitals circle).
+    let lift = (FULL_MAP_MARGIN + HOVER_LIFT).max(bottom_hud.0 + HOVER_LIFT);
+    let (shown_now, node) = &mut *holder;
+    if node.bottom != px(lift) {
+        node.bottom = px(lift);
+    }
     let window = Room::of(&window, &ui_scale);
     let body = pointer
         .0
@@ -201,7 +209,7 @@ pub(super) fn name_hovered_token(
     } else {
         Visibility::Hidden
     };
-    holder.set_if_neq(shown);
+    shown_now.set_if_neq(shown);
     if let Some(name) = name
         && text.0 != name
     {
