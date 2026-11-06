@@ -3,15 +3,21 @@
 use super::super::grid::{self, Reach, chance, roll};
 use super::super::{Exit, SiteLevel, Stairs, StairsDirection};
 use super::{
-    BORDER, CELLS_PER_SKYLIGHT, Plan, SECRET_DOOR_PERCENT, SKYLIGHT_CLEARANCE, add_doors, add_pool,
-    dig_cave, dig_mouths, furthest_cave, join_caves, nearest_reached, place_caves, wind,
+    BORDER, CELLS_PER_SKYLIGHT, Mouth, Plan, SECRET_DOOR_PERCENT, SKYLIGHT_CLEARANCE, add_doors,
+    add_pool, dig_cave, dig_mouths, furthest_cave, join_caves, nearest_reached, place_caves, wind,
 };
 use crate::dungeon::{Cell, Level, RoomId};
 use crate::rng::Seed;
 
 impl Plan {
     /// The level before any skylights are opened in it.
+    #[cfg(test)]
     pub(in crate::site) fn without_skylights(&self, index: u32) -> SiteLevel {
+        self.dug(index).0
+    }
+
+    /// The level before any skylights are opened in it, and its mouths.
+    pub(super) fn dug(&self, index: u32) -> (SiteLevel, Vec<Mouth>) {
         let mut rng = Seed::new(self.seed.derive("cave level").at(&[index as i64])).rng();
         let width = roll(&mut rng, self.options.size.0, self.options.size.1);
         let height = roll(&mut rng, self.options.size.0, self.options.size.1);
@@ -35,8 +41,10 @@ impl Plan {
         // The way in.
         let mut stairs = Vec::new();
         let mut entrance = None;
+        let mut mouths = Vec::new();
         let arrival = if opening {
-            let mouth = dig_mouths(&mut level, &mut rng, &caves, inner);
+            let mouth;
+            (mouth, mouths) = dig_mouths(&mut level, &mut rng, &caves, inner);
             entrance = Some(mouth);
             mouth
         } else {
@@ -114,13 +122,14 @@ impl Plan {
             );
         }
 
-        SiteLevel {
+        let made = SiteLevel {
             level,
             stairs,
             entrance,
             buildings: Vec::new(),
             fields: Vec::new(),
-        }
+        };
+        (made, mouths)
     }
 }
 

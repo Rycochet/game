@@ -7,6 +7,8 @@ use shared::protocol::{LevelInfo, LevelKind, ServerMessage, WORLD_MAP_PRELOAD, W
 use shared::site::{BuildingLook, FieldLook};
 use shared::wilderness::gates_of;
 
+use super::arrival::arrival;
+use super::in_poi::{poi_here, tell_poi};
 use super::window::window;
 use crate::ServerWorld;
 use crate::connections::Client;
@@ -17,8 +19,9 @@ use crate::storage::{CellMasks, SiteId};
 /// How far round where the player would arrive a walkable cell is looked for.
 const ARRIVAL_SEARCH: i64 = 48;
 
-/// The player explores the wilderness where they stand on the world map:
-/// refused in water, a site or the Hall.
+/// The player explores the wilderness where they stand on the world map
+/// (outside a poi they are at: `arrival`): refused in water, a site or the
+/// Hall.
 pub(crate) fn explore(client: &mut Client, world: &mut ServerWorld) -> bool {
     if client.visit.is_some() || client.character.hall.is_some() {
         warn!("A client tried to explore from inside somewhere");
@@ -29,7 +32,7 @@ pub(crate) fn explore(client: &mut Client, world: &mut ServerWorld) -> bool {
         info!("Refused exploring from water at ({px}, {py})");
         return true;
     }
-    let at = world.wilderness.wild.centre_of(px, py);
+    let at = arrival(client, world);
     enter_wilderness(client, world, at)
 }
 
@@ -56,6 +59,7 @@ pub(in crate::sites) fn enter_wilderness(
             centre: made.centre,
             width,
             cutouts: made.cutouts,
+            in_poi: poi_here(world, position),
         },
         id: SiteId::Wilderness,
         index: 0,
@@ -78,7 +82,9 @@ pub(in crate::sites) fn enter_wilderness(
         entering_site: true,
     };
     client.changed_map();
+    let in_poi = poi_here(world, position);
     if !client.link.send(&ServerMessage::EnterLevel(info))
+        || !client.link.send(&ServerMessage::InPoi(in_poi))
         || !send_looks(client, made.buildings, made.fields)
         || !send_remembered(client, &mut visit)
     {
@@ -111,6 +117,9 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     if visit.level.level.cell(x, y) == Cell::WorldGate {
         return through_gate(client, world, (x, y));
     }
+    if !tell_poi(client, world) {
+        return false;
+    }
     if wild.block_of(x, y) == centre {
         return true;
     }
@@ -123,10 +132,15 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     visit.loaded = Sight::new(level);
     visit.view = Sight::new(level);
     visit.view_from = None;
+    let in_poi = match visit.place {
+        Place::Wilderness { in_poi, .. } => in_poi,
+        Place::Site { .. } => None,
+    };
     visit.place = Place::Wilderness {
         centre: made.centre,
         width,
         cutouts: made.cutouts,
+        in_poi,
     };
     visit.level = made.level;
     visit.stairs = made.stairs;

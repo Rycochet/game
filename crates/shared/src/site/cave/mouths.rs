@@ -5,15 +5,24 @@ use super::{BORDER, Cave, SECOND_MOUTH_PERCENT, wind};
 use crate::dungeon::{Cell, Level};
 use crate::rng::Rng;
 
+/// A mouth's passage: its two cells just inside the mouth's ground, and the
+/// way out from them.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Mouth {
+    pub(super) passage: [(i64, i64); 2],
+    pub(super) out: (i64, i64),
+}
+
 /// Digs the cave mouths: outside ground on the south edge (and sometimes the
 /// east or west), as wide as the mouth, with a passage in. Returns where you
-/// arrive from the world map: the middle of the south ground.
+/// arrive from the world map (the middle of the south ground) and the mouths,
+/// south first.
 pub(super) fn dig_mouths(
     level: &mut Level,
     rng: &mut Rng,
     caves: &[Cave],
     bounds: (i64, i64, i64, i64),
-) -> (i64, i64) {
+) -> ((i64, i64), Vec<Mouth>) {
     let (_, _, width, height) = level.bounds();
     let mouth = |level: &mut Level, rng: &mut Rng, south: bool, east: bool| {
         let span = roll(rng, 4, 8);
@@ -45,22 +54,27 @@ pub(super) fn dig_mouths(
             .min_by_key(|c| (c.x - start.0).pow(2) + (c.y - start.1).pow(2))
             .expect("a cave");
         let side = if south { (1, 0) } else { (0, 1) };
+        let beside = (start.0 + side.0, start.1 + side.1);
         wind(level, rng, start, (nearest.x, nearest.y), bounds);
-        wind(
-            level,
-            rng,
-            (start.0 + side.0, start.1 + side.1),
-            (nearest.x, nearest.y),
-            bounds,
-        );
-        (x0 + w / 2, y0 + h / 2)
+        wind(level, rng, beside, (nearest.x, nearest.y), bounds);
+        let out = match (south, east) {
+            (true, _) => (0, 1),
+            (false, true) => (1, 0),
+            (false, false) => (-1, 0),
+        };
+        let passage = Mouth {
+            passage: [start, beside],
+            out,
+        };
+        ((x0 + w / 2, y0 + h / 2), passage)
     };
-    let arrival = mouth(level, rng, true, false);
+    let (arrival, south) = mouth(level, rng, true, false);
+    let mut mouths = vec![south];
     if chance(rng, SECOND_MOUTH_PERCENT) {
         let east = chance(rng, 50);
-        mouth(level, rng, false, east);
+        mouths.push(mouth(level, rng, false, east).1);
     }
-    arrival
+    (arrival, mouths)
 }
 
 /// The centre of the cave furthest (by walking) from `from`.

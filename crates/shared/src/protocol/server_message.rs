@@ -95,6 +95,11 @@ pub enum ServerMessage {
     /// The wilderness's level is now this rectangle round the player: what
     /// the client has of it stays, and cells come as usual. Not a new map.
     WildernessWindow { bounds: (i64, i64, i64, i64) },
+    /// In the wilderness, the kind of poi whose cutout the player now stands
+    /// in (its site's first level set in, a cave mouth's hill, or the clearing
+    /// round a way down), or none: sent after `EnterLevel` into the wilderness
+    /// and whenever it changes.
+    InPoi(Option<crate::poi::PoiKind>),
     /// Cells of the current level.
     LevelCells(LevelChunk),
     /// Another level of this site that the player knows, sent after

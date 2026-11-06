@@ -158,6 +158,7 @@ fn change_map(
             ServerMessage::Fields(fields) => dungeon.fields.clone_from(fields),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
             &ServerMessage::WildernessWindow { bounds } => dungeon.move_window(bounds),
+            &ServerMessage::InPoi(kind) => dungeon.in_poi = kind,
             ServerMessage::RememberedLevel(remembered) => others.add(&dungeon, remembered),
             &ServerMessage::OnWorldMap { x, y } => {
                 *others = OtherLevels::default();
