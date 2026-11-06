@@ -8,6 +8,10 @@ repository.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[lib]
+# No doc tests (examples in comments) to run.
+doctest = false
+
 # Native only: used by the server and xtask, never by the client.
 [dependencies]
 # zstd with an old build as its dictionary (zstd-safe: MIT/Apache-2.0; the

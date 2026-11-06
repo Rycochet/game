@@ -1,3 +1,8 @@
 [alias]
 # `cargo xtask test` etc. runs the helper program in xtask/.
 xtask = "run --quiet --package xtask --"
+
+# Windows: link with LLVM's linker, which comes with Rust, instead of
+# Microsoft's link.exe: much quicker on programs as large as Bevy's.
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"

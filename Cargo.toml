@@ -63,10 +63,15 @@ serde_json = "1"
 # Compile our own code with light optimisation so it still builds quickly...
 [profile.dev]
 opt-level = 1
+# Only line numbers (for panics and backtraces), not the full debug info a
+# debugger reads: the owner doesn't use one, and linking is much quicker.
+debug = "line-tables-only"
 
-# ...but fully optimise dependencies (Bevy etc), which only build once.
+# ...but fully optimise dependencies (Bevy etc), which only build once, with
+# no debug info at all (it made each test program's .pdb about 1.2 GB).
 [profile.dev.package."*"]
 opt-level = 3
+debug = false
 
 [profile.release]
 codegen-units = 1
