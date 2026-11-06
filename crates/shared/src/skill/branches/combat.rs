@@ -2,12 +2,14 @@
 //! Under melee, the third level is the type of weapon and the fourth the weapon itself
 //! (`combat/melee/longsword/longsword`, `combat/melee/shortsword/khopesh`), and
 //! fighting with no weapon is `combat/melee/unarmed/<kind of creature>` (owner,
-//! 2026-11-06). A first draft, for the owner to change.
+//! 2026-11-06). Defending is under melee too (`defence.rs`). A first draft, for the
+//! owner to change.
 
 use crate::blade::Family;
 use crate::sheet::Attribute::{Agility, Empathy, Perception, Strength, Toughness};
 
 use super::super::draft::{Draft, Filled, branch, filled, leaf};
+use super::defence::DEFENCE;
 
 const MELEE: Draft = branch(
     "melee",
@@ -74,6 +76,7 @@ const MELEE: Draft = branch(
             &[leaf("quarterstaff", "Quarterstaff", &[])],
         ),
         branch("whip", "Whip", &[Agility], &[leaf("whip", "Whip", &[])]),
+        DEFENCE,
     ],
 );
 
@@ -132,17 +135,6 @@ pub(in super::super) const COMBAT: Draft = branch(
         MELEE,
         RANGED,
         leaf("anticipation", "Anticipation", &[Perception, Empathy]),
-        branch(
-            "shield",
-            "Shield",
-            &[Strength, Toughness],
-            &[
-                leaf("buckler", "Buckler", &[Agility]),
-                leaf("round", "Round Shield", &[]),
-                leaf("kite", "Kite Shield", &[]),
-                leaf("tower", "Tower Shield", &[Strength]),
-            ],
-        ),
         branch(
             "armour",
             "Armour",

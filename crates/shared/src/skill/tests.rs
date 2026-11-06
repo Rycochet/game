@@ -123,3 +123,32 @@ fn a_sheet_starts_with_its_kinds_skills() {
     assert_eq!(sheet.skills, Skills::starting(CreatureKind::Halfling));
     assert!(!sheet.skills.is_empty());
 }
+
+#[test]
+fn defence_has_each_melee_weapon_type_unarmed_and_the_shields() {
+    let melee = SkillId::find("combat/melee").unwrap();
+    let defence = SkillId::find("combat/melee/defence").unwrap();
+    let types: Vec<_> = melee
+        .children()
+        .iter()
+        .filter(|&&id| id != defence)
+        .map(|id| id.key())
+        .collect();
+    let defended: Vec<_> = defence.children().iter().map(|id| id.key()).collect();
+    assert_eq!(&defended[..types.len()], &types[..]);
+    assert_eq!(
+        &defended[types.len()..],
+        ["buckler", "roundshield", "kiteshield", "towershield"]
+    );
+    assert!(defence.children().iter().all(|id| id.children().is_empty()));
+    assert!(SkillId::find("combat/shield").is_none());
+}
+
+#[test]
+fn shields_saved_before_they_moved_are_found_under_defence() {
+    let old: Skills =
+        ron::from_str("[(\"combat/shield\", 30), (\"combat/shield/round\", 60)]").unwrap();
+    let round = SkillId::find("combat/melee/defence/roundshield").unwrap();
+    assert_eq!(old.practice(round), 60);
+    assert_eq!(old.practice(round.parent().unwrap()), 30);
+}

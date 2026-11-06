@@ -40,7 +40,7 @@ A strict tree, 3–4 levels for most branches; weapons one level more than magic
 
 | Branch | Children (draft) |
 |---|---|
-| Combat | melee (unarmed by kind of creature, then each type of weapon with each weapon under it), ranged (thrown, bows, crossbows, slings), anticipation (reading opponents), shields, armour (light, heavy) |
+| Combat | melee (unarmed by kind of creature, then each type of weapon with each weapon under it, and defence: each weapon type, unarmed and the shields), ranged (thrown, bows, crossbows, slings), anticipation (reading opponents), armour (light, heavy) |
 | Magic | arcane (leans on Intellect), divine (Empathy), wild |
 | Athletics | climbing, swimming, running, jumping, dodging |
 | Stealth | sneaking, hiding, locks, traps |
@@ -50,7 +50,7 @@ A strict tree, 3–4 levels for most branches; weapons one level more than magic
 | Social | persuading, intimidating, trading, animals, leading |
 | Lore | researching, creatures, history, languages, appraising |
 
-Under melee, the third level is the type of weapon and the fourth the weapon itself: `combat/melee/longsword/longsword`, `combat/melee/shortsword/khopesh`. Fighting with no weapon is `combat/melee/unarmed/<kind>`, practising the current form's kind while shapeshifted (owner, 2026-11-06). Skills are learned by doing: a character knows a node once it has practised it (an axe in hand near a tree shows what can be done to it), and only known ones are shown. The Attack ability will hook onto the node of the weapon in hand, after the tree exists.
+Under melee, the third level is the type of weapon and the fourth the weapon itself: `combat/melee/longsword/longsword`, `combat/melee/shortsword/khopesh`. Fighting with no weapon is `combat/melee/unarmed/<kind>`, practising the current form's kind while shapeshifted (owner, 2026-11-06). Skills are learned by doing: a character knows a node once it has practised it (an axe in hand near a tree shows what can be done to it), and only known ones are shown. Defending is `combat/melee/defence/<weapon type>` (one level less deep: no single weapons), with `defence/unarmed` and the shields beside the weapon types (`combat/melee/defence/buckler`). Under melee because attack and defence overlap (the owner has trained with swords), so each benefits the other; shields are there so all defending practises Defence and a single passive defence ability can draw on it. Shields can be specialised, the weapon types under Defence can't. Ranged has no defence: dodging stays in athletics (owner, 2026-11-06). The Attack ability will hook onto the node of the weapon in hand, after the tree exists.
 
 Later, not planned yet: investing in businesses, becoming a mayor.
 
