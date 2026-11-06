@@ -10,6 +10,10 @@ use super::{Triangle, blob, limb, point};
 /// below it.
 pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout, leg: &Limb, feet: Feet) {
     let joints: Vec<Vec3> = layout.joints(leg).into_iter().map(point).collect();
+    if leg.bones.iter().flatten().count() != 3 {
+        beast(triangles, leg, &joints, feet);
+        return;
+    }
     let [Some(upper), Some(lower), ..] = leg.bones else {
         return;
     };
@@ -98,5 +102,38 @@ pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout, leg: &Limb, 
                 Vec3::new(ankle_radius * 1.3, ankle.y / 2.0, (toes.z - heel.z) / 2.0),
             );
         }
+    }
+}
+
+/// A beast's leg, bent at every joint down to its last above the ground, then a hoof
+/// widening to the ground or a paw on it.
+fn beast(triangles: &mut Vec<Triangle>, leg: &Limb, joints: &[Vec3], feet: Feet) {
+    let bones: Vec<_> = leg.bones.iter().flatten().collect();
+    let Some(first) = bones.first() else {
+        return;
+    };
+    let mut path = vec![(joints[0], first.radius as f32)];
+    for (at, bone) in bones.iter().enumerate().take(bones.len() - 1) {
+        path.push((joints[at + 1], bone.end_radius as f32));
+    }
+    limb(triangles, &path);
+    let (ankle, radius) = path[path.len() - 1];
+    let ground = joints[joints.len() - 1];
+    let foot = leg.foot as f32;
+    if feet == Feet::Hooves {
+        limb(
+            triangles,
+            &[
+                (ankle, radius),
+                (ground + Vec3::Z * foot * 0.3, radius * 1.4),
+            ],
+        );
+    } else {
+        limb(triangles, &[(ankle, radius), (ground, radius * 0.9)]);
+        blob(
+            triangles,
+            ground + Vec3::new(0.0, radius, foot * 0.25),
+            Vec3::new(radius * 1.3, radius, foot * 0.5),
+        );
     }
 }

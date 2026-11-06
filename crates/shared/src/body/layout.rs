@@ -6,7 +6,7 @@
 //! stands upright on two legs with two arms (`biped_view.rs`).
 
 use super::trig::{ONE, cos, sin};
-use super::{Biped, GIANT, PERSON, Parts, Side};
+use super::{Beast, Biped, GIANT, PERSON, Parts, Side};
 use crate::creature::CreatureKind;
 
 /// The most limbs a body has: a spider's eight legs.
@@ -45,6 +45,9 @@ pub struct Neck {
     pub length: i32,
     /// Its thickness, as a radius.
     pub radius: i32,
+    /// How far it leans forwards, in degrees: 0 upright, as a person's; a horse's
+    /// reaches up and forwards.
+    pub pitch: i32,
 }
 
 /// The head, from the chin to the crown.
@@ -113,14 +116,27 @@ pub struct Layout {
 }
 
 impl Layout {
-    /// A kind's body, for the kinds drawn so far: those on two legs.
+    /// A kind's body, for the kinds drawn so far: those on two legs, and animals.
     pub fn of(kind: CreatureKind) -> Option<Layout> {
         let parts = Parts::of(kind);
         match kind {
             CreatureKind::Human | CreatureKind::Beggar => Some(Self::biped(&PERSON.frame(), parts)),
             CreatureKind::Giant => Some(Self::biped(&GIANT, parts)),
-            _ => Biped::of(kind).map(|biped| Self::biped(&biped.proportions.frame(), parts)),
+            _ => Biped::of(kind)
+                .map(|biped| Self::biped(&biped.proportions.frame(), parts))
+                .or_else(|| Beast::of(kind).map(|beast| beast.layout())),
         }
+    }
+
+    /// Where the neck's top is: the chin, under the head.
+    pub fn chin(&self) -> [i32; 3] {
+        let [x, y, z] = self.spine.at(self.spine.neck_base);
+        let length = self.neck.length;
+        [
+            x,
+            y + length * cos(self.neck.pitch) / ONE,
+            z + length * sin(self.neck.pitch) / ONE,
+        ]
     }
 
     /// The limbs it has.

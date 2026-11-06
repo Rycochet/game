@@ -139,8 +139,12 @@ impl Biped {
 }
 
 impl Parts {
-    /// What a kind's body has beyond a person's: nothing for a kind without a biped.
+    /// What a kind's body has beyond a person's: nothing for a kind with no body of its
+    /// own drawn yet.
     pub fn of(kind: CreatureKind) -> Parts {
-        Biped::of(kind).map_or(NONE, |biped| biped.parts)
+        Biped::of(kind)
+            .map(|biped| biped.parts)
+            .or_else(|| super::Beast::of(kind).map(|beast| beast.parts))
+            .unwrap_or(NONE)
     }
 }

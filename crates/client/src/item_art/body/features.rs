@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use shared::body::{Horns, Layout, Parts, Role, Side, Snout, Wings};
 
 use super::trunk::Axes;
-use super::{Triangle, limb, point};
+use super::{Triangle, blob, limb, point};
 
 /// Everything in `parts` but the legs, feet and feathers.
 pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout) {
@@ -18,14 +18,15 @@ pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout) {
 
 /// The middle of the head, on top of the neck.
 pub(super) fn skull(layout: &Layout) -> Vec3 {
-    let axes = Axes::of(layout);
-    let chin = axes.at(layout.spine.neck_base as f32) + Vec3::Y * layout.neck.length as f32;
-    chin + Vec3::Y * (layout.head.length / 2) as f32
+    point(layout.chin()) + Vec3::Y * (layout.head.length / 2) as f32
 }
 
 /// The feathers of wings, if it has any: drawn apart from the skin, in their own colour.
 pub(in crate::item_art) fn wings(layout: &Layout) -> Vec<Triangle> {
     let mut triangles = Vec::new();
+    if layout.parts.wings == Wings::Folded {
+        folded(&mut triangles, layout);
+    }
     if layout.parts.wings == Wings::Arms {
         for side in Side::BOTH {
             if let Some(arm) = layout.limb(Role::WingArm, side) {
@@ -149,8 +150,21 @@ fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts) {
 /// A tail from the base of the back, out behind and curving down, kept off the ground.
 fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
     let f = |value: i32| value as f32;
-    let axes = Axes::of(layout);
-    let base = axes.at(0.0) - axes.front * f(layout.spine.hips.half.1) * 0.8;
+    // Behind the hips, whichever way the back leans; high on the rump of a level back,
+    // where it hangs nearly straight down.
+    let deep = f(layout.spine.hips.half.1);
+    let level = layout.spine.pitch >= 45;
+    let base = Axes::of(layout).at(0.0) - Vec3::Z * deep * 0.8
+        + if level {
+            Vec3::Y * deep * 0.5
+        } else {
+            Vec3::ZERO
+        };
+    let shape = if level {
+        [(0.15, 0.25), (0.55, 0.35), (0.95, 0.4)]
+    } else {
+        [(0.25, 0.35), (0.45, 0.75), (0.5, 1.0)]
+    };
     let thigh = layout
         .limbs()
         .find(|limb| matches!(limb.role, Role::Leg | Role::Hindleg))
@@ -165,9 +179,9 @@ fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
         triangles,
         &[
             (base, thick),
-            (along(0.25, 0.35), thick * 0.7),
-            (along(0.45, 0.75), thick * 0.4),
-            (along(0.5, 1.0), 8.0),
+            (along(shape[0].0, shape[0].1), thick * 0.7),
+            (along(shape[1].0, shape[1].1), thick * 0.4),
+            (along(shape[2].0, shape[2].1), 8.0),
         ],
     );
 }
@@ -192,5 +206,21 @@ fn feathers(triangles: &mut Vec<Triangle>, path: &[Vec3], reach: f32, side: Side
             triangles.push([p, q, r]);
             triangles.push([p, r, q]);
         }
+    }
+}
+
+/// A bird's wings folded along its sides, from the shoulders back past the hips.
+fn folded(triangles: &mut Vec<Triangle>, layout: &Layout) {
+    let axes = Axes::of(layout);
+    let s = &layout.spine;
+    let (across, deep) = (s.chest.half.0 as f32, s.chest.half.1 as f32);
+    let length = s.shoulders as f32;
+    for side in Side::BOTH {
+        let out = Vec3::X * side.sign() as f32 * across * 0.75;
+        blob(
+            triangles,
+            axes.at(length * 0.4) + out,
+            Vec3::new(across * 0.25, deep * 0.6, length * 0.55),
+        );
     }
 }

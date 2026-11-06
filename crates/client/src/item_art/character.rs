@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use shared::armour::hands::Hand;
-use shared::body::{Frame, Layout};
+use shared::body::Layout;
 use shared::creature::CreatureKind;
 use shared::item_form::ItemForm;
 use shared::sheet::Appearance;
@@ -22,15 +22,22 @@ pub(super) const CELLS: (u8, u8) = (2, 2);
 /// A piece's own picture never comes into it: only its form.
 const ANY: (u8, u8) = (1, 1);
 
-/// How a creature of this kind looks wearing these, if it stands on two legs: what
-/// its token shows in place of its icon, its body in its own colours, bare when
-/// nothing it wears is drawn.
+/// How a creature of this kind looks wearing these, if its body is drawn: what its
+/// token shows in place of its icon, its body in its own colours, bare when nothing it
+/// wears is drawn. An animal is its bare body, as nothing is drawn on it yet.
 pub fn character_look(
     kind: CreatureKind,
     appearance: &Appearance,
     worn: &[WornLook],
 ) -> Option<Look> {
-    Frame::of(kind)?;
+    let layout = Layout::of(kind)?;
+    if layout.frame().is_none() {
+        return Some(Look::Body {
+            layout: Box::new(layout),
+            height: layout.spine.base[1],
+            colours: Colours::of(kind, appearance),
+        });
+    }
     let worn: Vec<Look> = worn.iter().filter_map(piece_look).collect();
     Some(Look::Character {
         kind,

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::blade::Family;
-use shared::body::{Frame, Layout};
+use shared::body::{BEASTS, Frame, Layout};
 use shared::creature::{CreatureKind, Size};
 use shared::id::Id;
 use shared::item::{Item, ItemKind, Quality};
@@ -74,6 +74,8 @@ pub(super) enum Shown {
     Blade(Family, u128),
     /// A kind's bare body, at its usual height beside a person.
     Body(CreatureKind),
+    /// One of `BEASTS` drawn before it is a kind, filling its picture.
+    Beast(usize),
     /// A piece of armour.
     Armour(super::armour::ArmourShown),
     /// A pair of footwear.
@@ -107,6 +109,11 @@ impl Shown {
                 layout: Box::new(Layout::of(kind)?),
                 height: Frame::usual_height(kind),
                 colours: Colours::of(kind, &Appearance::default()),
+            }),
+            Self::Beast(index) => Some(Look::Body {
+                layout: Box::new(BEASTS[index].layout()),
+                height: 0,
+                colours: Colours::PLAIN,
             }),
             Self::Armour(shown) => shown.look(quality),
             Self::Footwear(shown) => shown.look(quality),

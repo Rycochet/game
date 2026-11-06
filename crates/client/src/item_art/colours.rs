@@ -19,10 +19,14 @@ impl Colours {
         feathers: [242, 242, 238],
     };
 
-    /// A creature of this kind looking like this: plain where it has no choice.
+    /// A creature of this kind looking like this: plain where it has no choice. A body
+    /// covered in feathers alone (a bird's) is drawn in its feathers' colour.
     pub fn of(kind: CreatureKind, appearance: &Appearance) -> Self {
         Self {
-            skin: appearance.skin(kind).unwrap_or(Self::PLAIN.skin),
+            skin: appearance
+                .skin(kind)
+                .or_else(|| appearance.feathers(kind))
+                .unwrap_or(Self::PLAIN.skin),
             feathers: appearance.feathers(kind).unwrap_or(Self::PLAIN.feathers),
         }
     }

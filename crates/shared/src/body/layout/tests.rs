@@ -25,7 +25,9 @@ fn limbs_joints_are_the_frames_joints() {
         let Some(layout) = Layout::of(kind) else {
             continue;
         };
-        let frame = layout.frame().expect("a frame");
+        let Some(frame) = layout.frame() else {
+            continue;
+        };
         for side in Side::BOTH {
             let arm = layout
                 .limb(Role::Arm, side)
@@ -55,13 +57,36 @@ fn limbs_joints_are_the_frames_joints() {
 }
 
 #[test]
-fn only_bodies_with_arms_and_legs_have_layouts_so_far() {
+fn bipeds_and_the_first_animals_have_layouts() {
     for kind in CreatureKind::ALL {
-        assert_eq!(
-            Layout::of(kind).is_some(),
-            Frame::of(kind).is_some(),
-            "{kind:?}"
-        );
+        let drawn = Frame::of(kind).is_some() || Beast::of(kind).is_some();
+        assert_eq!(Layout::of(kind).is_some(), drawn, "{kind:?}");
+    }
+    assert!(Layout::of(CreatureKind::Horse).is_some());
+    assert!(Layout::of(CreatureKind::Chicken).is_some());
+    assert!(Layout::of(CreatureKind::Centaur).is_none());
+}
+
+#[test]
+fn every_beast_stands_on_the_ground_without_a_frame() {
+    for beast in super::super::BEASTS {
+        let layout = beast.layout();
+        assert_eq!(layout.frame(), None, "{}", beast.name);
+        let mut legs = 0;
+        for limb in layout.limbs() {
+            let joints = layout.joints(limb);
+            assert_eq!(
+                joints.last().map(|joint| joint[1]),
+                Some(0),
+                "{}",
+                beast.name
+            );
+            legs += 1;
+        }
+        let four = matches!(beast.plan, super::super::Plan::Fourfoot(_));
+        assert_eq!(legs, if four { 4 } else { 2 }, "{}", beast.name);
+        // The head is above the back.
+        assert!(layout.chin()[1] > layout.spine.at(layout.spine.neck_base)[1]);
     }
 }
 
