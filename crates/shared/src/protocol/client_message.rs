@@ -111,6 +111,10 @@ pub enum ClientMessage {
     /// its door, after any steps to get there. Answered with `TradeStock` if it can
     /// be.
     OpenTrade { with: Id },
+    /// What these items are, for showing them where they are written into text
+    /// (`crate::item_text`): answered with `ItemsLookedUp`. Only the first
+    /// `MOST_LOOKED_UP` of a message are looked up.
+    LookUpItems(Vec<Id>),
     /// Takes something from who they are trading with, to this place. Answered with
     /// `Inventory` and `TradeStock`, whether or not it could be done.
     TakeItem {

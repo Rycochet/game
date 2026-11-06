@@ -167,6 +167,10 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::OpenTrade { with });
             true
         }
+        ClientMessage::LookUpItems(ids) => {
+            client.ask_after(ids);
+            true
+        }
         ClientMessage::SetOnline(_) if !client.host => {
             warn!("A client asked to open the server to others, which only its host may");
             true

@@ -518,7 +518,7 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
 }
 
 /// Something new in the inventory, with these secrets, and its id.
-fn given(
+pub(super) fn given(
     test: &mut TestClient,
     kind: ItemKind,
     size: Option<shared::creature::Size>,

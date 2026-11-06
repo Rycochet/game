@@ -16,6 +16,7 @@ mod feet_def;
 mod item;
 mod item_def;
 mod kind;
+mod look_up;
 mod made;
 mod neck_def;
 mod placed;
@@ -52,6 +53,9 @@ pub const INVENTORY_SIZE: (u8, u8) = (6, 4);
 
 #[cfg(test)]
 mod add_tests;
+
+#[cfg(test)]
+mod look_up_tests;
 
 #[cfg(test)]
 mod stack_tests;

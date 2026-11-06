@@ -148,6 +148,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::DevKillMob {
             mob: Id::for_test(9),
         },
+        ClientMessage::LookUpItems(vec![Id::for_test(10), Id::for_test(11)]),
         ClientMessage::DevTeleport { x: -3, y: 4 },
         ClientMessage::DevGoToWorld { seed: 77 },
         ClientMessage::EnterGate { entrance: 5 },
@@ -347,6 +348,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ServerMessage::EntityGone {
             id: Id(uuid::Uuid::from_u128(4)),
+        },
+        ServerMessage::ItemsLookedUp {
+            found: vec![crate::item::Item::new(Id::for_test(10), ItemKind::Ring)],
+            unknown: vec![Id::for_test(11)],
         },
         ServerMessage::Inventory({
             let mut inventory = Inventory::default();

@@ -53,6 +53,7 @@ impl Client {
             map: 0,
             hall_origin: 0,
             last_step: None,
+            looking_up: Vec::new(),
         }
     }
 

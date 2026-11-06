@@ -17,6 +17,7 @@ use super::entities::Populations;
 use super::roads::RoadWorker;
 use super::storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved};
 
+mod find_item;
 mod sharing;
 mod time;
 

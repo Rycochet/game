@@ -5,10 +5,11 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 ## Files
 
 - `crates/shared/src/id.rs`: `Id`, a version 6 UUID (text in saves, 16 bytes in messages). Nothing here makes one: `server::ids::new_id` does.
-- `crates/shared/src/item.rs`: the module list, the re-exports below (every type is used as `item::X`) and the constants `MAX_SHAPE_SIDE`, `MAX_DEPTH`, `INVENTORY_SIZE`. Tests for every rule below in `item/tests.rs`, `item/add_tests.rs` and `item/stack_tests.rs`. In `item/`:
+- `crates/shared/src/item.rs`: the module list, the re-exports below (every type is used as `item::X`) and the constants `MAX_SHAPE_SIDE`, `MAX_DEPTH`, `INVENTORY_SIZE`. Tests for every rule below in `item/tests.rs`, `item/add_tests.rs`, `item/stack_tests.rs` and `item/look_up_tests.rs`. In `item/`:
   - `kind.rs`: `ItemKind` (`ALL`, `blade_family`, `comes_in_sizes` and other questions about a kind). `def.rs`: `ItemKind::def`, the table of what each kind is (the neck pieces' rows in `neck_def.rs`, footwear's in `feet_def.rs`). `category.rs`: `ItemCategory`, `ItemKind::category`. `item_def.rs`: `ItemDef`, `ContainerDef`, `WearDef`, and the helpers the table is written with (`plain`, `bag`, `wear`, `taking`, `worn`).
   - `item.rs`: `Item` (`new`, `name`, `shape`, `total_weight`, `set_gems`), `MadeAt`. `made.rs`: `Made`. `quality.rs`: `Quality`, `artifact_name`. `secrets.rs`: `Favour`, `Known`, and `Item`'s magic and secrets (`can_be_magical`, `roll_secrets`, `hide_secrets`).
   - `stack.rs`: `StackLimits`, and `Item`'s stacks (`count`, `top`, `members`, `groups`, `looks_like`, `is_even`, `take_top`, `split_top`, `put_on`, `own_weight`); `StackLimits::most_of(item)`: the most of it one stack could hold (1 for bags).
+  - `look_up.rs`: `Item::find_within(id)` (itself, anything inside at any depth, or stacked on it), `Item::alone()` (a copy with nothing in it or stacked on it), `Inventory::find_within(id)` (the same through carried, worn and the bin: unlike `find`, it looks into stacks). For items looked up by id (`item_text`).
   - `placed.rs`: `Placed`, `Holder`. `refused.rs`: `MoveRefused`. `shape.rs`: `Shape`, `Rotation`. `drop.rs`: `Drop`, `ODDS_OUT_OF`, `roll_drop`.
   - `inventory.rs`: `Inventory`, its weights. `inventory/`: `lookup.rs` (`find`, `grid`, `placed`, what holds what), `rules.rs` (`check_move`, `check_add`, the rules below), `changes.rs` (`add`, `move_item`, the bin), `room.rs` (`first_place_for`, `give`), `stacking.rs` (`stack_room`, `stack_onto`, `add_to_stack`, `first_stack_for`, taking a stack's top), `parts.rs` (`part_of`, `lift_part`, `lift_group`, `settle_parts`), `cost.rs` (`move_cost`, `put_down_cost`), `sort.rs` (`sorted_grid`, `sort_grid`).
 - `crates/shared/src/item_form.rs`: `ItemForm` and the module list, re-exporting the types below. Tests. In `item_form/`:
@@ -42,7 +43,7 @@ Ids, kinds of item, and carrying items in grids: the rules both sides check move
 
 ## Used by
 
-- `protocol`, `server` (`connections`, `storage`, `ids`), client `inventory`, `debug_menu`, `dev_tools`.
+- `protocol`, `item_text`, `server` (`connections`, `storage`, `ids`), client `inventory`, `debug_menu`, `dev_tools`.
 
 ## Notes
 
