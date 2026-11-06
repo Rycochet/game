@@ -47,6 +47,8 @@ pub(crate) struct WildernessMaps {
     blocks: HashMap<BlockPos, Level>,
     /// Every road worked out so far (`shared::road`), as they come.
     roads: Vec<Arc<Road>>,
+    /// Who of the wilderness's mobs are about, and where.
+    pub(crate) areas: crate::entities::WildAreas,
 }
 
 impl WildernessMaps {
@@ -56,6 +58,7 @@ impl WildernessMaps {
             chunks: BTreeMap::new(),
             blocks: HashMap::new(),
             roads: Vec::new(),
+            areas: Default::default(),
         }
     }
 

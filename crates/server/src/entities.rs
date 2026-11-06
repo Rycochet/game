@@ -31,6 +31,7 @@ mod scent;
 mod sync;
 mod territory;
 mod tracking;
+mod wild;
 
 use crossing::cross;
 use gear::dressed;
@@ -41,6 +42,7 @@ pub(super) use run::run_mobs;
 use run::world_gap;
 pub(crate) use scent::Scents;
 pub(super) use sync::{in_hall, sync};
+pub(crate) use wild::{WildAreas, keep_wild_areas};
 
 /// How long a level nobody is on stays in use.
 const KEPT_FOR: Duration = Duration::from_secs(60);

@@ -54,6 +54,7 @@ pub(crate) fn save_all(connections: &mut Connections, worlds: &mut ServerWorlds)
 /// Every tick: mobs do what they are doing.
 pub(crate) fn run_mobs(mut connections: ResMut<Connections>, mut worlds: ResMut<ServerWorlds>) {
     for_each_world(&mut connections.clients, &mut worlds, |clients, world| {
+        crate::entities::keep_wild_areas(clients, world);
         crate::entities::run_mobs(clients, world);
     });
 }

@@ -958,3 +958,7 @@ Owner's decisions. A creature changing kind keeps on whatever its new body still
 ## 2026-11-06: Hair as looks, cut at a helmet's rim
 
 Hair style and beard are two more looks (`Trait::HairStyle`, `Trait::Beard`), chosen per kind from the research like colours, as words in dropdowns; their shapes are `shared::body::HairStyle` / `Beard`, so drawing doesn't go by names. They are added at the end of `Trait`, which messages carry by place. The client draws hair round the skull of any `Layout` (`item_art/body/hair.rs`); under head armour only what hangs below `HeadForm::rim` shows (owner), an aventail hides it all and a bevor the beard. Animals' manes and tail hair follow as PR 2 of the Hair task.
+
+## 2026-11-06: Mobs in the wilderness
+
+Owner's design: creatures live in each block by its biome; each player in the wilderness has a live area of 5 × 5 blocks (the 3 × 3 they see and one ring further out, where mobs already act), shared with players whose middle 3 × 3 they are in; a block belongs to one area at a time; a block let go of keeps its mobs as they were for 5 minutes, so turning back makes nothing vanish, then they are let go and start at home next time. Wild mobs' ids come from the secret seed, so only changes (deaths, memories, what they were given) are saved. Players near the planet's seam in one area may see its mobs a planet's width out: rare, kept simple. Scent trails laid ahead into unvisited blocks come next.

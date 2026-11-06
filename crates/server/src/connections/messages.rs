@@ -119,7 +119,7 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
     match &client.visit {
         Some(visit) => {
             let from = visit.position();
-            let place = (visit.id(), visit.index());
+            let place = visit.population();
             // Someone who won't move aside is in the way; anyone else swaps places.
             if let Some(to) = visit.landing(step) {
                 let kind = client.inventory.creature;

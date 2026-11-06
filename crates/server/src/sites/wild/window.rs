@@ -27,12 +27,23 @@ pub(super) struct Window {
 }
 
 /// The window round a player at `(x, y)`.
-pub(super) fn window(world: &mut ServerWorld, (x, y): (i64, i64)) -> Window {
+pub(super) fn window(world: &mut ServerWorld, at: (i64, i64)) -> Window {
+    window_of(world, at, WINDOW_BLOCKS)
+}
+
+/// The cells of the block a player at `(x, y)` is in and `blocks` round it,
+/// in their frame: a live area's level, for its mobs to find their way on.
+pub(crate) fn area_level(world: &mut ServerWorld, at: (i64, i64), blocks: i64) -> Level {
+    window_of(world, at, blocks).level.level
+}
+
+/// The window round a player at `(x, y)`, `blocks` each side of theirs.
+fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window {
     let wild = &world.wilderness.wild;
     let width = wild.width();
     let centre = wild.block_of(x, y);
     let (bx, by, columns, rows) = wild.block_bounds(centre);
-    let reach = WINDOW_BLOCKS * BLOCK_SIZE;
+    let reach = blocks * BLOCK_SIZE;
     let frame = Frame {
         // The player's x less where it is round the planet.
         shift: x - wild.wrap(x),

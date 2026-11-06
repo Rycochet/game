@@ -34,6 +34,10 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
         .filter_map(|someone| someone.level)
         .collect();
     world.populations.0.retain(|level, population| {
+        // The wilderness's live areas keep their own (`wild`).
+        if level.0 == crate::storage::SiteId::Wilderness {
+            return true;
+        }
         if in_use.contains(level) || !population.is_settled() {
             population.empty_since = None;
             return true;
@@ -43,10 +47,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
 
     let width = world.width;
     for client in clients.iter_mut().filter(playing) {
-        let here = client
-            .visit
-            .as_ref()
-            .map(|visit| (visit.id(), visit.index()));
+        let here = client.visit.as_ref().map(|visit| visit.population());
         let me = client.character.world_position;
         let my_hall = client.character.hall.filter(|_| client.visit.is_none());
         let my_kind = client.inventory.creature;

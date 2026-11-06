@@ -65,7 +65,7 @@ pub(crate) fn give(
 ) -> Result<(), &'static str> {
     let character = client.character_id.ok_or("nobody to remember")?;
     let visit = client.visit.as_mut().ok_or("not in a site")?;
-    let (from, place) = (visit.position(), (visit.id(), visit.index()));
+    let (from, place) = (visit.position(), visit.population());
     let population = world
         .populations
         .0
@@ -109,7 +109,7 @@ pub(crate) fn kill(
     mob: Id,
 ) -> Result<(), &'static str> {
     let visit = client.visit.as_mut().ok_or("not in a site")?;
-    let place = (visit.id(), visit.index());
+    let place = visit.population();
     let population = world
         .populations
         .0
