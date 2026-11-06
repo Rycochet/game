@@ -29,6 +29,7 @@ mod answer;
 mod client;
 mod delete_character;
 mod give_items;
+mod look_up;
 mod messages;
 mod moving;
 mod new_character;
@@ -247,8 +248,13 @@ pub struct Client {
     map: u32,
     /// The last step dealt with this tick, to send `Position` for.
     last_step: Option<u32>,
+    /// Items it has asked after (`LookUpItems`), answered once every client's
+    /// messages this tick have been read.
+    looking_up: Vec<Id>,
 }
 
+#[cfg(test)]
+mod look_up_tests;
 #[cfg(test)]
 mod new_character_tests;
 #[cfg(test)]

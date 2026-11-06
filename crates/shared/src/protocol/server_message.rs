@@ -26,6 +26,10 @@ pub enum ServerMessage {
     },
     /// What someone the player is trading with has to trade.
     TradeStock { with: Id, items: Vec<Item> },
+    /// The answer to `LookUpItems`: each item as the player may know it, alone
+    /// (nothing in it or stacked on it), and never where it is; `unknown` are the
+    /// ids the server has nowhere it looks (destroyed, or in nothing loaded).
+    ItemsLookedUp { found: Vec<Item>, unknown: Vec<Id> },
     /// What is on the ground under the player, when they arrive on it or it changes,
     /// and only for someone standing there. Empty once there is nothing.
     GroundItems { x: i64, y: i64, items: Vec<Item> },

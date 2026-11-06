@@ -197,6 +197,7 @@ pub(super) fn receive(
                 | ServerMessage::Teleported { .. }
                 | ServerMessage::Inventory(_)
                 | ServerMessage::TradeStock { .. }
+                | ServerMessage::ItemsLookedUp { .. }
                 | ServerMessage::GroundItems { .. }
                 | ServerMessage::GroundSeen { .. }
                 | ServerMessage::GroundGone { .. }

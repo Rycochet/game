@@ -124,7 +124,6 @@ impl ServerWorlds {
     }
 
     /// Every open world, in order.
-    #[cfg(any(test, feature = "debug-api"))]
     pub(crate) fn iter(&self) -> impl Iterator<Item = (WorldId, &ServerWorld)> {
         self.open.iter().map(|(id, world)| (*id, world))
     }

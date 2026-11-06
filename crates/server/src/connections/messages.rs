@@ -6,6 +6,7 @@ use shared::movement::{Step, world_step_cost};
 use shared::protocol::ServerMessage;
 use shared::world::WorldId;
 
+use super::look_up::answer_look_ups;
 use super::moving::change_world;
 use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
@@ -61,6 +62,7 @@ pub(crate) fn handle_messages(
         let world = clients[i].world;
         put_out_of_forgotten_sites(clients, i, worlds.of(world));
     }
+    answer_look_ups(clients, &mut worlds);
     clients.retain(|client| !client.gone);
 }
 
