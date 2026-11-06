@@ -55,6 +55,22 @@ You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 
 Esc goes to whatever is on top first: a text box, a dropdown, the debug menu or the full map, and only then the system menu.
 
+## Typing
+
+Click or tap a box to type in it. While you type, the line showing where your typing goes stays solid; when you stop, it fades in and out. These keys can't be changed. On a Mac, Cmd takes the place of Ctrl, and Option moves by words.
+
+| Action | Keyboard and mouse | Touch |
+| ------ | ------------------ | ----- |
+| Move along the writing | Left and Right; with Ctrl, a word at a time | Tap the place |
+| Go to the start or the end | Home or End | Tap there |
+| Select | Shift with any of the moves above, drag across it, or Shift + click | Drag a finger across it |
+| Select a word, or all of it | Double-click, or triple-click | Double-tap, or triple-tap |
+| Select all of it | Ctrl + A | Triple-tap |
+| Delete | Backspace or Delete; with Ctrl, a word at a time | The on-screen keyboard |
+| Cut, copy and paste | Ctrl + X, Ctrl + C, Ctrl + V | |
+
+Typing or pasting with something selected writes over it. A box you leave keeps what was selected in it, in a paler colour; clicking back into it first only lets you type there again, and a second click puts the line where you clicked.
+
 ## While the system menu is open
 
 The menu takes all the keys, the wheel and the gestures, so nothing behind it reacts. In single player the game is paused too, unless Online is on (and, if you turn on "Pause When Not in Focus" under Settings, Gameplay, while another window is in front). On a networked server it isn't, and a journey you clicked on carries on: see [Pausing](client#pausing).

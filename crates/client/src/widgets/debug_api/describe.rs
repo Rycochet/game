@@ -89,6 +89,17 @@ fn add_value(widgets: &Widgets, entity: Entity, kind: Kind, about: &mut Value) {
                 about["value"] = json!(text_box.text);
                 about["error"] = json!(text_box.error);
                 about["focused"] = json!(widgets.focus.0 == Some(entity));
+                if let Ok(cursor) = widgets.text_cursors.get(entity) {
+                    // In characters; kept while the box hasn't the keyboard.
+                    let len = text_box.text.chars().count();
+                    let (caret, anchor) = (cursor.caret.min(len), cursor.anchor.min(len));
+                    about["caret"] = json!(caret);
+                    about["selection"] = if caret == anchor {
+                        Value::Null
+                    } else {
+                        json!([caret.min(anchor), caret.max(anchor)])
+                    };
+                }
             }
         }
         Kind::KeyBox => {

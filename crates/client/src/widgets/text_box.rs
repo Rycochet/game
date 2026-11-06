@@ -1,25 +1,28 @@
 //! Boxes to type into. One has the keyboard at a time (`TextFocus`): a click or
 //! tap on a box gives it the keyboard, and something else covering the screen
-//! can give it to its own box.
+//! can give it to its own box. The caret can be anywhere in the writing, and
+//! some of it selected, by keys, clicks or a finger (`edit` has the rules).
 
-use bevy::input::ButtonState as KeyState;
-use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
-use bevy::ui::UiGlobalTransform;
+use bevy::text::LineBreak;
 
-use super::soft_keyboard;
-use super::theme::{HINT_TEXT, SUNKEN_BACKGROUND};
-use super::{ButtonPressed, INK, Pressable, TextSize, sunken_border};
-use crate::common::{Action, Preferences};
+use super::theme::SUNKEN_BACKGROUND;
+use super::{INK, Pressable, TextSize, sunken_border};
 
-const CARET: &str = "_";
-/// Held with V, they paste (Ctrl, or Cmd on a Mac).
-const COMMAND_KEYS: [KeyCode; 4] = [
-    KeyCode::ControlLeft,
-    KeyCode::ControlRight,
-    KeyCode::SuperLeft,
-    KeyCode::SuperRight,
-];
+mod caret;
+mod clicks;
+mod edit;
+mod keys;
+mod layout;
+mod selection;
+mod show;
+
+pub(super) use caret::show_carets;
+pub(super) use clicks::{drag_to_select, select_by_pointer};
+pub(super) use keys::{Held, take_text};
+pub(super) use selection::show_selections;
+pub(super) use show::{place_soft_keyboard, show_text_boxes};
+
 const SIDE_PADDING: f32 = 8.0;
 const BORDER: f32 = 2.0;
 
@@ -40,13 +43,39 @@ pub struct TextBox {
     pub suffix: String,
 }
 
-/// The writing of a `TextBox`, whose entity it holds.
-#[derive(Component)]
-pub(super) struct TextBoxLabel(Entity);
+/// Where a box's caret is and what is selected, kept apart from `TextBox` so
+/// that its owners can still make one by its fields.
+#[derive(Component, Clone, Debug, Default)]
+pub(super) struct Cursor {
+    pub caret: usize,
+    pub anchor: usize,
+    /// What the box said when this was last set: if its owner changes the
+    /// text, the caret goes to the end.
+    pub text: String,
+    /// How far the writing is slid left, in interface pixels, to keep the
+    /// caret in sight.
+    pub scroll: f32,
+    /// When the caret last moved or the writing changed, by the real clock: it
+    /// stays solid a while after.
+    pub moved_at: f32,
+}
 
-/// The grey writing after it (`TextBox::suffix`), part of the label's text.
+/// The writing of a `TextBox`, whose entity it holds. Its own text is the
+/// prefix; each character typed is a span after it, then the suffix.
 #[derive(Component)]
-pub(super) struct TextBoxSuffix(Entity);
+pub(super) struct TextBoxLabel(pub Entity);
+
+/// One character of a box's writing, by its place.
+#[derive(Component)]
+pub(super) struct TextBoxChar(pub usize);
+
+/// The grey writing after it (`TextBox::suffix`), the label's last span.
+#[derive(Component)]
+pub(super) struct TextBoxSuffix(pub Entity);
+
+/// The line showing where typing goes, in the box it holds.
+#[derive(Component)]
+pub(super) struct TextBoxCaret(pub Entity);
 
 /// Which box has the keyboard. Something that owns a box can set it.
 #[derive(Resource, Default)]
@@ -58,7 +87,7 @@ pub struct TextEdited(pub Entity);
 
 /// Return or Esc in the browser's hidden input, which the game's keys don't see.
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SoftKeyPressed(pub soft_keyboard::Key);
+pub struct SoftKeyPressed(pub super::soft_keyboard::Key);
 
 /// A press happened this frame, before anything took it.
 #[derive(Resource, Default)]
@@ -80,14 +109,23 @@ pub fn spawn_text_box<'a>(
         Val::Auto => px(line_height(size) + BORDER * 2.0),
         given => given,
     };
+    let cursor = Cursor {
+        caret: text_box.text.chars().count(),
+        anchor: text_box.text.chars().count(),
+        text: text_box.text.clone(),
+        ..default()
+    };
     let mut holder = parent.spawn((
         text_box,
+        cursor,
         Pressable,
         Node {
             border: UiRect::all(px(BORDER)),
             padding: UiRect::horizontal(px(SIDE_PADDING)),
             align_items: AlignItems::Center,
             overflow: Overflow::clip(),
+            // Writing slid along is cut at the padding, not the edge.
+            overflow_clip_margin: OverflowClipMargin::content_box(),
             min_height,
             ..node
         },
@@ -96,19 +134,45 @@ pub fn spawn_text_box<'a>(
     ));
     let entity = holder.id();
     holder.with_children(|holder| {
-        holder
-            .spawn((
-                TextBoxLabel(entity),
-                Text::new(""),
-                size.font(),
-                TextColor(INK),
-            ))
-            .with_child((
-                TextBoxSuffix(entity),
-                TextSpan::default(),
-                size.font(),
-                TextColor(HINT_TEXT),
-            ));
+        // First, so behind the writing.
+        holder.spawn((
+            selection::TextBoxSelection(entity),
+            Node {
+                position_type: PositionType::Absolute,
+                height: px(line_height(size)),
+                ..default()
+            },
+            BackgroundColor(Color::NONE),
+            Visibility::Hidden,
+        ));
+        holder.spawn((
+            TextBoxLabel(entity),
+            Text::new(""),
+            TextLayout {
+                linebreak: LineBreak::NoWrap,
+                ..default()
+            },
+            size.font(),
+            TextColor(INK),
+            // Placed over the box rather than sizing it, so long writing
+            // slides left (`Node::left`) instead of widening the box.
+            Node {
+                position_type: PositionType::Absolute,
+                left: px(SIDE_PADDING),
+                ..default()
+            },
+        ));
+        holder.spawn((
+            TextBoxCaret(entity),
+            Node {
+                position_type: PositionType::Absolute,
+                width: px(caret::WIDTH),
+                height: px(line_height(size)),
+                ..default()
+            },
+            BackgroundColor(INK),
+            Visibility::Hidden,
+        ));
     });
     holder
 }
@@ -137,156 +201,6 @@ pub(super) fn note_press(
     mut noted: ResMut<PressedThisFrame>,
 ) {
     noted.0 = mouse.just_pressed(MouseButton::Left);
-}
-
-/// Who has the keyboard, and what they type.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn take_text(
-    mut focus: ResMut<TextFocus>,
-    mut boxes: Query<&mut TextBox>,
-    mut pressed: MessageReader<ButtonPressed>,
-    noted: Res<PressedThisFrame>,
-    mut typed: MessageReader<KeyboardInput>,
-    mut keys: ResMut<ButtonInput<KeyCode>>,
-    mut edited: MessageWriter<TextEdited>,
-    mut soft_keys: MessageWriter<SoftKeyPressed>,
-    mut told_soft_keyboard: Local<(Option<Entity>, String)>,
-    mut commands_held: Local<Vec<KeyCode>>,
-    preferences: Res<Preferences>,
-) {
-    let controls = &preferences.controls;
-    let on_box = pressed
-        .read()
-        .map(|press| press.0)
-        .filter(|&entity| boxes.contains(entity))
-        .last();
-    let holds_keys = |focus: &TextFocus, boxes: &Query<&mut TextBox>| {
-        focus
-            .0
-            .and_then(|entity| boxes.get(entity).ok())
-            .is_some_and(|text_box| text_box.takes_keys)
-    };
-    if on_box.is_some() {
-        focus.0 = on_box;
-    } else if noted.0 && holds_keys(&focus, &boxes) {
-        focus.0 = None;
-    }
-    let typed: Vec<KeyboardInput> = typed.read().cloned().collect();
-    // Followed from the keys themselves, as a box with the keyboard clears the
-    // pressed keys every frame.
-    for key in &typed {
-        if COMMAND_KEYS.contains(&key.key_code) {
-            commands_held.retain(|held| *held != key.key_code);
-            if key.state == KeyState::Pressed {
-                commands_held.push(key.key_code);
-            }
-        }
-    }
-    let soft: Vec<_> = soft_keyboard::take_keys();
-    let gave_up = !soft.is_empty();
-    for key in soft {
-        soft_keys.write(SoftKeyPressed(key));
-    }
-    let Some(entity) = focus.0 else {
-        return;
-    };
-    let Ok(mut text_box) = boxes.get_mut(entity) else {
-        focus.0 = None;
-        return;
-    };
-
-    let digits_only = text_box.digits_only;
-    let mut text = text_box.text.clone();
-    let command = !commands_held.is_empty();
-    for key in typed.iter().filter(|key| key.state == KeyState::Pressed) {
-        match &key.logical_key {
-            // Opens and closes the debug menu.
-            _ if controls.uses_key(Action::DebugMenu, key.key_code) => {}
-            _ if command && key.key_code == KeyCode::KeyV => {
-                if let Some(pasted) = super::clipboard::paste() {
-                    text.push_str(&allowed(&pasted, digits_only));
-                }
-            }
-            // Other shortcuts type nothing.
-            Key::Character(_) if command => {}
-            Key::Backspace => {
-                text.pop();
-            }
-            Key::Space => text.push_str(&allowed(" ", digits_only)),
-            Key::Character(typed) => text.push_str(&allowed(typed, digits_only)),
-            _ => {}
-        }
-    }
-    if text != text_box.text {
-        // The browser's hidden input is told below.
-    } else if let Some(typed) = soft_keyboard::typed(&text) {
-        text = allowed(&typed, digits_only);
-    }
-    if text != text_box.text {
-        text_box.text.clone_from(&text);
-        edited.write(TextEdited(entity));
-    }
-    if told_soft_keyboard.0 != Some(entity) || told_soft_keyboard.1 != text {
-        soft_keyboard::show_text(&text);
-        *told_soft_keyboard = (Some(entity), text);
-    }
-    if text_box.takes_keys {
-        let done = keys.just_pressed(KeyCode::Enter)
-            || keys.just_pressed(KeyCode::NumpadEnter)
-            || keys.just_pressed(KeyCode::Escape)
-            || gave_up;
-        if done {
-            focus.0 = None;
-        }
-        keys.reset_all();
-    }
-}
-
-/// Keeps what boxes say on show, with a caret in the one with the keyboard.
-pub(super) fn show_text_boxes(
-    focus: Res<TextFocus>,
-    boxes: Query<&TextBox>,
-    mut labels: Query<(&TextBoxLabel, &mut Text)>,
-    mut suffixes: Query<(&TextBoxSuffix, &mut TextSpan)>,
-) {
-    for (suffix, mut span) in &mut suffixes {
-        if let Ok(text_box) = boxes.get(suffix.0)
-            && span.0 != text_box.suffix
-        {
-            span.0.clone_from(&text_box.suffix);
-        }
-    }
-    for (label, mut text) in &mut labels {
-        let Ok(text_box) = boxes.get(label.0) else {
-            continue;
-        };
-        let caret = if focus.0 == Some(label.0) { CARET } else { "" };
-        let wanted = format!("{}{}{caret}", text_box.prefix, text_box.text);
-        if text.0 != wanted {
-            text.0 = wanted;
-        }
-    }
-}
-
-/// Tells the browser where a tap should raise the on-screen keyboard.
-#[allow(clippy::type_complexity)]
-pub(super) fn place_soft_keyboard(
-    ui_scale: Res<UiScale>,
-    places: Query<
-        (&ComputedNode, &UiGlobalTransform, &InheritedVisibility),
-        Or<(With<TextBox>, With<RaisesKeyboard>)>,
-    >,
-) {
-    let places = places
-        .iter()
-        .filter(|(.., visible)| visible.get())
-        .map(|(node, transform, _)| {
-            // In the browser's pixels, the window's logical ones.
-            let scale = node.inverse_scale_factor * ui_scale.0;
-            Rect::from_center_size(transform.translation * scale, node.size() * scale)
-        })
-        .collect();
-    soft_keyboard::set_boxes(places);
 }
 
 #[cfg(test)]

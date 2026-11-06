@@ -19,8 +19,8 @@ mod platform {
     use super::{Key, Rect};
 
     pub fn set_boxes(_places: Vec<Rect>) {}
-    pub fn show_text(_text: &str) {}
-    pub fn typed(_current: &str) -> Option<String> {
+    pub fn show_text(_text: &str, _anchor: usize, _caret: usize) {}
+    pub fn typed(_current: &str) -> Option<(String, usize)> {
         None
     }
     pub fn take_keys() -> Vec<Key> {
@@ -126,19 +126,52 @@ mod platform {
         });
     }
 
-    pub fn show_text(text: &str) {
+    /// What the box says, with its selection from `anchor` to `caret` (in
+    /// characters), so typing there goes where the caret is.
+    pub fn show_text(text: &str, anchor: usize, caret: usize) {
         HIDDEN.with(|hidden| {
             if let Some(hidden) = hidden {
                 hidden.input.set_value(text);
+                let (from, to) = (
+                    utf16(text, anchor.min(caret)),
+                    utf16(text, anchor.max(caret)),
+                );
+                let way = if caret < anchor {
+                    "backward"
+                } else {
+                    "forward"
+                };
+                let _ = hidden
+                    .input
+                    .set_selection_range_with_direction(from, to, way);
             }
         });
     }
 
-    /// What has been typed there, if it differs from `current`.
-    pub fn typed(current: &str) -> Option<String> {
+    /// The browser counts places in UTF-16 units, the box in characters.
+    fn utf16(text: &str, place: usize) -> u32 {
+        text.chars().take(place).map(char::len_utf16).sum::<usize>() as u32
+    }
+
+    /// What has been typed there, if it differs from `current`, and where the
+    /// caret is now, in characters.
+    pub fn typed(current: &str) -> Option<(String, usize)> {
         HIDDEN.with(|hidden| {
-            let value = hidden.as_ref()?.input.value();
-            (value != current).then_some(value)
+            let input = &hidden.as_ref()?.input;
+            let value = input.value();
+            if value == current {
+                return None;
+            }
+            let units = input.selection_end().ok().flatten().unwrap_or(u32::MAX) as usize;
+            let mut counted = 0;
+            let caret = value
+                .chars()
+                .take_while(|c| {
+                    counted += c.len_utf16();
+                    counted <= units
+                })
+                .count();
+            Some((value, caret))
         })
     }
 
