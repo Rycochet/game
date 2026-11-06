@@ -40,6 +40,7 @@ impl Client {
             seen_feelings: BTreeMap::new(),
             seen_worn: BTreeMap::new(),
             sheet: Sheet::default(),
+            action_bar: Default::default(),
             gates: BTreeSet::new(),
             ground_told: GroundTold::default(),
             activity: super::playtime::Activity::default(),
@@ -165,6 +166,7 @@ impl Client {
                 sheet: self.sheet.clone(),
                 gates: self.gates.clone(),
                 playtime: self.activity.played,
+                action_bar: self.action_bar.clone(),
             },
         );
         self.unsaved = false;

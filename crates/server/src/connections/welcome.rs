@@ -94,17 +94,19 @@ pub(super) fn welcome(
             let inventory = world.storage.load_inventory(id)?;
             let gates = world.storage.load_gates(id)?;
             let played = world.storage.load_playtime(id)?;
+            let bar = world.storage.load_action_bar(id)?;
             Ok((
                 character,
                 inventory,
                 world.storage.load_sheet(id)?,
                 gates,
-                played,
+                (played, bar),
             ))
         });
     // Not `Playing` yet, so nothing blank can be saved over the real character.
     match loaded {
-        Ok((character, inventory, sheet, gates, played)) => {
+        Ok((character, inventory, sheet, gates, (played, bar))) => {
+            client.action_bar = bar;
             (client.character, client.other_worlds) = character;
             client.activity = Activity::joined(played, world.action_clock.ticks());
             client.gates = gates;
@@ -133,7 +135,8 @@ pub(super) fn welcome(
 }
 
 /// Tells the client the world they are in and where on its world map, then
-/// what they are like, the gates they have gone through and what they carry.
+/// what they are like, their action bar, the gates they have gone through and
+/// what they carry.
 /// `false` if the client has gone.
 pub(super) fn send_welcome(
     client: &mut Client,
@@ -156,6 +159,7 @@ pub(super) fn send_welcome(
             .link
             .send(&ServerMessage::Sheet(client.sheet.clone()))
         && client.send_vitals(world.action_clock.ticks())
+        && client.send_action_bar()
         && client.send_visited_gates()
         && client.send_inventory()
 }

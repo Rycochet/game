@@ -206,6 +206,7 @@ pub(super) fn receive(
                 | ServerMessage::Sheet(_)
                 | ServerMessage::Vitals { .. }
                 | ServerMessage::VisitedGates(_)
+                | ServerMessage::ActionBar(_)
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::EntityMoved { .. }
                 | ServerMessage::EntityGone { .. }),

@@ -22,21 +22,13 @@ mod kind_bonus;
 mod looks;
 mod shapeshift;
 
+pub use crate::ability::Ability;
 pub use attributes::{Attribute, Attributes, Row};
 pub use build::{Build, Dot, POINTS_TOTAL, TURN_STEPS, WEIGHT_TOTAL};
 pub use from_build::{POINT_WEIGHT, SPREAD};
 pub use kind_bonus::{BONUS_POINTS, bonus_from};
 pub use looks::{Choice, Pattern};
 pub use shapeshift::TrueForm;
-
-/// Something a creature can do because of what it is. No more than a name so far.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum Ability {
-    Flutter,
-    Kick,
-    NightVision,
-    Trample,
-}
 
 /// Something that differs between creatures of a kind, only to look at.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

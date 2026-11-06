@@ -85,7 +85,7 @@ fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow
     }
     if !def.abilities.is_empty() {
         lines.push(String::new());
-        let abilities: Vec<_> = def.abilities.iter().map(|a| format!("{a:?}")).collect();
+        let abilities: Vec<_> = def.abilities.iter().map(|a| a.name()).collect();
         lines.push(abilities.join(", "));
     }
     lines.push(String::new());

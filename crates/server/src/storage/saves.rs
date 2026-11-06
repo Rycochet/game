@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use shared::ability::ActionBar;
 use shared::dungeon::Cell;
 use shared::ground::Load;
 use shared::id::Id;
@@ -171,6 +172,9 @@ pub struct CharacterSave {
     /// saves.
     #[serde(default)]
     pub playtime: u64,
+    /// Their action bar. Older saves start with the new character's (Attack first).
+    #[serde(default)]
+    pub action_bar: ActionBar,
 }
 
 /// What a character knows of one world, and where they are in it.
