@@ -4,15 +4,11 @@
 use bevy::prelude::*;
 use shared::item::Shape;
 
-use super::super::Floating;
+use super::super::{Floating, spawn_outlined_text};
 use super::{CELL, ITEM_LABEL_FONT};
 
-/// How far round the number its outline reaches, in logical pixels.
-const OUTLINE: f32 = 1.0;
 /// How far above the bottom of the frame the number sits, inside its edge.
 const ABOVE_EDGE: f32 = 1.0;
-const NUMBER: Color = Color::WHITE;
-const OUTLINE_COLOUR: Color = Color::BLACK;
 
 /// The count over an item's cells, if there are more than one. `edge` is how thick
 /// its frame is. None of it is what the pointer is on (`Floating`), so presses and
@@ -41,35 +37,6 @@ pub(super) fn spawn_count(
         ..default()
     };
     parent.spawn((Floating, across)).with_children(|strip| {
-        strip
-            .spawn((Floating, Node::default()))
-            .with_children(|number| {
-                // The outline: the number in black, nudged each way, behind it.
-                for dx in [-OUTLINE, 0.0, OUTLINE] {
-                    for dy in [-OUTLINE, 0.0, OUTLINE] {
-                        if (dx, dy) == (0.0, 0.0) {
-                            continue;
-                        }
-                        number.spawn((
-                            Floating,
-                            Text::new(words.clone()),
-                            ITEM_LABEL_FONT.font(),
-                            TextColor(OUTLINE_COLOUR),
-                            Node {
-                                position_type: PositionType::Absolute,
-                                left: px(dx),
-                                top: px(dy),
-                                ..default()
-                            },
-                        ));
-                    }
-                }
-                number.spawn((
-                    Floating,
-                    Text::new(words),
-                    ITEM_LABEL_FONT.font(),
-                    TextColor(NUMBER),
-                ));
-            });
+        spawn_outlined_text(strip, &words, ITEM_LABEL_FONT);
     });
 }

@@ -24,6 +24,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
 - `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `spawn_toggle_row`, `TabChosen`, `ChooseTab`, `choose_tabs`, `press_tabs`. Unit test.
 - `crates/client/src/widgets/ability.rs`: `ABILITY`, `AbilityLook`, `spawn_ability`.
+- `crates/client/src/widgets/outlined.rs`: `spawn_outlined_text(parent, words, size)`: white words with a black outline (the words nudged each way in black behind them), `Floating`, readable over any picture: a stack's count, an action bar slot's key.
 - `crates/client/src/widgets/progress.rs`: `Progress`, `spawn_progress_bar`, `show_progress`. Unit test.
 - `crates/client/src/widgets/item.rs`: how items look: `spawn_item_grid`, `spawn_item_cells`, `ItemTooltip`, colours and sizes. Unit tests. In `item/`: `look.rs` (`ItemLook::of` shows a stack's top, with its `count`), `nodes.rs`, `cells.rs`, `count.rs` (a stack's count: white with a black outline, bottom centre inside the frame, `Floating` so presses and names reach the cells), `mixed.rs` (a mixed stack's red "!" in its top right corner; `ItemLook::mixed`), `picture.rs`, `name.rs`.
 - `crates/client/src/widgets/container.rs`: `spawn_container`, `ContainerLook`, `ContainerSize`: every grid of items' frame. Unit tests.

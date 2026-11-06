@@ -28,6 +28,8 @@ pub enum Action {
     Abilities,
     /// The Skills page.
     Skills,
+    /// Use the action bar's slot (0 to 9, keys 1 to 0).
+    UseSlot(u8),
     FullMap,
     TurnItem,
     DebugMenu,
@@ -41,14 +43,16 @@ pub enum Group {
     Movement,
     Camera,
     Targeting,
+    ActionBar,
     Interface,
 }
 
 impl Group {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::Movement,
         Self::Camera,
         Self::Targeting,
+        Self::ActionBar,
         Self::Interface,
     ];
 
@@ -57,13 +61,14 @@ impl Group {
             Self::Movement => "Movement",
             Self::Camera => "Camera",
             Self::Targeting => "Targeting",
+            Self::ActionBar => "Action Bar",
             Self::Interface => "Interface",
         }
     }
 }
 
 impl Action {
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 27] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
@@ -73,6 +78,16 @@ impl Action {
         Self::ResetView,
         Self::NextTarget,
         Self::PreviousTarget,
+        Self::UseSlot(0),
+        Self::UseSlot(1),
+        Self::UseSlot(2),
+        Self::UseSlot(3),
+        Self::UseSlot(4),
+        Self::UseSlot(5),
+        Self::UseSlot(6),
+        Self::UseSlot(7),
+        Self::UseSlot(8),
+        Self::UseSlot(9),
         Self::Character,
         Self::Inventory,
         Self::Abilities,
@@ -99,6 +114,7 @@ impl Action {
             Self::Inventory => "Inventory",
             Self::Abilities => "Abilities",
             Self::Skills => "Skills",
+            Self::UseSlot(slot) => BAR_NAMES[slot as usize % BAR_NAMES.len()],
             Self::FullMap => "Full Map",
             Self::TurnItem => "Turn Held Item",
             Self::DebugMenu => "Debug Menu",
@@ -122,11 +138,20 @@ impl Action {
             Self::Inventory => "inventory",
             Self::Abilities => "abilities",
             Self::Skills => "skills",
+            Self::UseSlot(slot) => BAR_IDS[slot as usize % BAR_IDS.len()],
             Self::FullMap => "full_map",
             Self::TurnItem => "turn_item",
             Self::DebugMenu => "debug_menu",
             Self::FullScreen => "full_screen",
         }
+    }
+
+    /// Its place in `ALL`, which key choices are kept by.
+    pub fn index(self) -> usize {
+        Self::ALL
+            .iter()
+            .position(|&each| each == self)
+            .expect("every action is in ALL")
     }
 
     pub fn from_id(id: &str) -> Option<Self> {
@@ -139,6 +164,7 @@ impl Action {
             Self::Explore | Self::LeaveWilderness => Group::Movement,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
+            Self::UseSlot(_) => Group::ActionBar,
             Self::Character | Self::Inventory | Self::Abilities | Self::Skills => Group::Interface,
             Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
             Self::FullScreen => Group::Interface,
@@ -165,6 +191,7 @@ impl Action {
             Self::Inventory => [key(KeyCode::KeyI), None],
             Self::Abilities => [key(KeyCode::KeyB), None],
             Self::Skills => [key(KeyCode::KeyK), None],
+            Self::UseSlot(slot) => [key(BAR_KEYS[slot as usize % BAR_KEYS.len()]), None],
             Self::FullMap => [key(KeyCode::KeyM), None],
             Self::TurnItem => [key(KeyCode::KeyR), None],
             Self::DebugMenu => [key(KeyCode::Backquote), None],
@@ -172,3 +199,42 @@ impl Action {
         }
     }
 }
+
+/// The action bar's slots, as Settings shows them.
+const BAR_NAMES: [&str; 10] = [
+    "Action 1",
+    "Action 2",
+    "Action 3",
+    "Action 4",
+    "Action 5",
+    "Action 6",
+    "Action 7",
+    "Action 8",
+    "Action 9",
+    "Action 10",
+];
+const BAR_IDS: [&str; 10] = [
+    "action_1",
+    "action_2",
+    "action_3",
+    "action_4",
+    "action_5",
+    "action_6",
+    "action_7",
+    "action_8",
+    "action_9",
+    "action_10",
+];
+/// The keys along the top of the keyboard, 1 to 0.
+const BAR_KEYS: [KeyCode; 10] = [
+    KeyCode::Digit1,
+    KeyCode::Digit2,
+    KeyCode::Digit3,
+    KeyCode::Digit4,
+    KeyCode::Digit5,
+    KeyCode::Digit6,
+    KeyCode::Digit7,
+    KeyCode::Digit8,
+    KeyCode::Digit9,
+    KeyCode::Digit0,
+];

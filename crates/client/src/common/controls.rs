@@ -33,7 +33,7 @@ impl Default for Controls {
 impl Controls {
     /// The action's bindings, in order.
     pub fn keys(&self, action: Action) -> [Option<Binding>; SLOTS] {
-        self.keys[action as usize]
+        self.keys[action.index()]
     }
 
     /// Gives the action this binding (or none) in this slot. Whatever else had
@@ -49,7 +49,7 @@ impl Controls {
             for other in Action::ALL {
                 for other_slot in 0..SLOTS {
                     let same_place = other == action && other_slot == slot;
-                    let place = &mut self.keys[other as usize][other_slot];
+                    let place = &mut self.keys[other.index()][other_slot];
                     if !same_place && *place == Some(binding) {
                         *place = None;
                         lost.push((other, other_slot));
@@ -57,7 +57,7 @@ impl Controls {
                 }
             }
         }
-        self.keys[action as usize][slot] = binding;
+        self.keys[action.index()][slot] = binding;
         lost
     }
 

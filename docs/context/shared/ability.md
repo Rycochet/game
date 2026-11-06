@@ -21,7 +21,7 @@ Abilities, the named things a creature can do: active ones done when asked (and 
 
 ## Used by
 
-- `sheet` (re-exports `Ability`), `creature` (kinds' abilities), `protocol` (`ClientMessage::ActionBar`, `ServerMessage::ActionBar`), server `connections/action_bar.rs` and `storage` (`CharacterSave::action_bar`), client `abilities` (the Abilities page).
+- `sheet` (re-exports `Ability`), `creature` (kinds' abilities), `protocol` (`ClientMessage::ActionBar`, `ServerMessage::ActionBar`), server `connections/action_bar.rs` and `storage` (`CharacterSave::action_bar`), client `abilities` (the Abilities page and the action bar).
 
 ## Notes
 

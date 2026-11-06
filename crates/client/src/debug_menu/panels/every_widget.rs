@@ -7,11 +7,12 @@ use super::super::actions::kind_name;
 use super::{CHECK_ROW, EVERY_WIDGET_HEIGHT, FONT};
 use crate::common::{Binding, Mods};
 use crate::widgets::{
-    ALLOWED, BUTTON_PADDING, ButtonState, ButtonStyle, ColourPicker, Dropdown, GRID_COLOUR, INK,
-    ItemText, KeyBox, Pressable, SAMPLE_GRADIENT, Swatch, TextBox, TextEdited, UiId, field_label,
-    raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_colour_picker,
-    spawn_dropdown, spawn_item_text, spawn_key_box, spawn_progress_bar, spawn_scroll_area,
-    spawn_slider, spawn_switch, spawn_tabs, spawn_text_box, spawn_toggle_row, spawn_tooltip,
+    ALLOWED, AbilityLook, BUTTON_PADDING, ButtonState, ButtonStyle, ColourPicker, Dropdown,
+    GRID_COLOUR, INK, ItemText, KeyBox, Pressable, SAMPLE_GRADIENT, Swatch, TextBox, TextEdited,
+    UiId, field_label, raised_box, spawn_ability, spawn_button, spawn_check_button,
+    spawn_close_button, spawn_colour_picker, spawn_dropdown, spawn_item_text, spawn_key_box,
+    spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs, spawn_text_box,
+    spawn_toggle_row, spawn_tooltip,
 };
 
 /// The sample text box taking items.
@@ -113,6 +114,28 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
     content.commands().entity(tabs).insert(id("Tabs"));
     let toggles = spawn_toggle_row(content, &["Toggle", "Other", "Third"], 0, FONT);
     content.commands().entity(toggles).insert(id("Toggles"));
+    // Abilities: active, passive and one that can't be used now. The icons are a
+    // plain square here.
+    content
+        .spawn(Node {
+            column_gap: px(6),
+            ..default()
+        })
+        .with_children(|row| {
+            for (name, passive, usable) in [
+                ("Active ability", false, true),
+                ("Passive ability", true, true),
+                ("Ability that can't be used now", false, false),
+            ] {
+                let look = AbilityLook {
+                    icon: default(),
+                    name: name.into(),
+                    passive,
+                    usable,
+                };
+                spawn_ability(row, look);
+            }
+        });
     spawn_progress_bar(
         content,
         0.6,

@@ -152,3 +152,31 @@ fn clearing_takes_the_press() {
     assert!(controls.clear_just_pressed(&mut keys, Action::Character));
     assert!(!controls.just_pressed(&keys, Action::Character));
 }
+
+#[test]
+fn short_labels_fit_a_slot_corner() {
+    let ctrl = Binding::new(KeyCode::Digit1, Mods::CTRL);
+    let shift_alt = Binding::new(KeyCode::F12, Mods::SHIFT.with(Mods::ALT));
+    assert_eq!(key(KeyCode::Digit1).short_label(), "1");
+    assert_eq!(key(KeyCode::F12).short_label(), "F12");
+    assert_eq!(shift(KeyCode::Digit1).short_label(), "S1");
+    assert_eq!(ctrl.short_label(), "^1");
+    assert_eq!(key(KeyCode::Numpad1).short_label(), "N1");
+    assert_eq!(key(KeyCode::ArrowUp).short_label(), "UA");
+    assert_eq!(shift_alt.short_label(), "SAF");
+    for action in Action::ALL {
+        for binding in action.defaults().into_iter().flatten() {
+            assert!(binding.short_label().chars().count() <= 3);
+        }
+    }
+}
+
+#[test]
+fn every_action_has_its_own_place_and_the_bar_is_one_to_zero() {
+    for (index, action) in Action::ALL.into_iter().enumerate() {
+        assert_eq!(action.index(), index);
+        assert_eq!(Action::from_id(action.id()), Some(action));
+    }
+    assert_eq!(Action::UseSlot(0).defaults()[0], Some(key(KeyCode::Digit1)));
+    assert_eq!(Action::UseSlot(9).defaults()[0], Some(key(KeyCode::Digit0)));
+}

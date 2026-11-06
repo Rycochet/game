@@ -31,7 +31,7 @@ impl Controls {
             let Some(action) = Action::from_id(id) else {
                 continue;
             };
-            controls.keys[action as usize] = names
+            controls.keys[action.index()] = names
                 .clone()
                 .map(|name| name.and_then(|name| Binding::from_name(&name)));
             changed.push(action);
@@ -43,13 +43,13 @@ impl Controls {
                 continue;
             }
             for slot in 0..SLOTS {
-                let taken = controls.keys[action as usize][slot].is_some_and(|binding| {
+                let taken = controls.keys[action.index()][slot].is_some_and(|binding| {
                     changed
                         .iter()
                         .any(|&other| controls.keys(other).contains(&Some(binding)))
                 });
                 if taken {
-                    controls.keys[action as usize][slot] = None;
+                    controls.keys[action.index()][slot] = None;
                 }
             }
         }
