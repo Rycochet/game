@@ -231,7 +231,7 @@ pub(crate) fn answer(
         | ClientMessage::DevTruesight(..)
         | ClientMessage::DevGodMode(..)
         | ClientMessage::DevKillMob { .. }
-        | ClientMessage::DevSetCreature(..)
+        | ClientMessage::DevSetCreature { .. }
         | ClientMessage::DevSetWorldClock { .. }
         | ClientMessage::DevGoToWorld { .. }
         | ClientMessage::DevVitals(_) => answer_dev(client, message, world),

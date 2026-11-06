@@ -17,6 +17,7 @@ mod sets;
 mod waist;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod change_creature;
 mod every_widget;
 mod generate;
 mod generate_form;
@@ -37,6 +38,8 @@ mod time_text;
 mod world_rate;
 mod world_time;
 
+use change_creature::spawn_creature_buttons;
+pub(super) use change_creature::{ChosenChange, press_creature_buttons, update_creature_buttons};
 pub(super) use every_widget::show_typed_items;
 use every_widget::spawn_every_widget;
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
@@ -44,8 +47,7 @@ pub(super) use generate_form::{
     GenerateButton, GenerateForm, GenerateKind, NewSeedButton, RuinButton, SeedBox,
 };
 use generate_form::{SEED_WIDTH, new_seed};
-pub(super) use give::CreatureButton;
-use give::{spawn_creature_buttons, spawn_give_panel};
+use give::spawn_give_panel;
 use give_form::give_kinds;
 pub(super) use give_form::{
     GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveForm, GiveNoSpace, GiveOption,
@@ -56,8 +58,7 @@ use give_option::{FIELDS, any, ui_name};
 pub(super) use give_options::{choose_give_option, fill_give_options};
 pub(super) use give_preview::show_give_preview;
 pub(super) use give_systems::{
-    choose_give_options, edit_give_boxes, press_creature_buttons, press_give_button,
-    start_give_panel, update_creature_buttons,
+    choose_give_options, edit_give_boxes, press_give_button, start_give_panel,
 };
 use go_to_world::spawn_go_to_world;
 pub(super) use go_to_world::{press_go_to_world_buttons, update_go_to_world_button};

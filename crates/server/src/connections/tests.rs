@@ -8,7 +8,9 @@ use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::item::{Inventory, Item, ItemKind, Quality};
 use shared::movement::Step;
-use shared::protocol::{CharacterId, ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessage};
+use shared::protocol::{
+    CharacterId, ClientMessage, KindChange, LoginMethod, PROTOCOL_VERSION, ServerMessage,
+};
 use shared::sheet::{Appearance, Sheet};
 use shared::world::MINUTES_PER_HOUR;
 fn tester() -> CharacterId {
@@ -328,7 +330,10 @@ fn a_new_body_drops_what_it_cant_wear_and_is_kept() {
     let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
     let mut test = TestClient::of(open());
     test.enter_a_castle();
-    let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
+    let answers = test.send(&[ClientMessage::DevSetCreature {
+        kind: CreatureKind::Kobold,
+        how: KindChange::Permanent,
+    }]);
     let changed = inventory(&answers);
     assert_eq!(changed.creature, CreatureKind::Kobold);
     // Human shoes are too big for it: they drop, and what fits loosely stays on.
@@ -352,7 +357,10 @@ fn what_a_new_body_cant_wear_drops_under_it_and_they_are_told() {
         .map(|item| item.id)
         .collect();
     assert!(!worn.is_empty(), "a new character starts dressed");
-    let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
+    let answers = test.send(&[ClientMessage::DevSetCreature {
+        kind: CreatureKind::Kobold,
+        how: KindChange::Permanent,
+    }]);
     // A human's shoes are too big for a kobold: they lie at its feet, and the
     // rest still fits, loosely.
     let at = test.client.visit.as_ref().unwrap().position();
@@ -379,7 +387,10 @@ fn no_body_changes_on_the_world_map() {
     let mut test = TestClient::new();
     assert!(test.client.visit.is_none());
     let before = test.client.inventory.clone();
-    let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
+    let answers = test.send(&[ClientMessage::DevSetCreature {
+        kind: CreatureKind::Kobold,
+        how: KindChange::Permanent,
+    }]);
     assert_eq!(test.client.inventory, before);
     assert_eq!(test.client.sheet, Sheet::new(CreatureKind::Human));
     // Told again what they are, to put right any guess.
@@ -487,7 +498,10 @@ fn items_saved_before_quality_still_load() {
 fn items_are_made_for_the_wearer_or_the_size_asked_for() {
     let mut test = TestClient::new();
     test.enter_a_castle();
-    test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
+    test.send(&[ClientMessage::DevSetCreature {
+        kind: CreatureKind::Giant,
+        how: KindChange::Permanent,
+    }]);
     test.send(&[ClientMessage::DevTruesight(true)]);
     let answers = test.send(&[give(ItemKind::Gloves)]);
     let gloves = inventory(&answers).items.last().unwrap().item.made;
@@ -638,7 +652,10 @@ fn wrong_sized_magic_gives_itself_away_by_fitting() {
 
     let mut test = TestClient::new();
     test.enter_a_castle();
-    test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
+    test.send(&[ClientMessage::DevSetCreature {
+        kind: CreatureKind::Giant,
+        how: KindChange::Permanent,
+    }]);
     let far = given(&mut test, ItemKind::Hat, Some(Size::Tiny), true, None);
     let answers = test.send(&[ClientMessage::WearItem { item: far }]);
     assert!(!inventory(&answers).is_worn(far), "past its reach");
@@ -676,7 +693,10 @@ fn a_character_is_told_their_sheet_and_a_new_body_gives_a_new_one() {
     let mut test = TestClient::new();
     assert_eq!(sheet(&test.welcome), Some(Sheet::new(CreatureKind::Human)));
     test.enter_a_castle();
-    let answers = test.send(&[ClientMessage::DevSetCreature(CreatureKind::Giant)]);
+    let answers = test.send(&[ClientMessage::DevSetCreature {
+        kind: CreatureKind::Giant,
+        how: KindChange::Permanent,
+    }]);
     assert_eq!(sheet(&answers), Some(Sheet::new(CreatureKind::Giant)));
 }
 

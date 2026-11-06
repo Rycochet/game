@@ -19,12 +19,14 @@ mod from_build;
 mod hair;
 mod kind_bonus;
 mod looks;
+mod shapeshift;
 
 pub use attributes::{Attribute, Attributes, Row};
 pub use build::{Build, Dot, POINTS_TOTAL, TURN_STEPS, WEIGHT_TOTAL};
 pub use from_build::{POINT_WEIGHT, SPREAD};
 pub use kind_bonus::{BONUS_POINTS, bonus_from};
 pub use looks::{Choice, Pattern};
+pub use shapeshift::TrueForm;
 
 /// Something that can be learned, and be better or worse at.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -181,6 +183,9 @@ pub struct Sheet {
     /// Health and Mana: full in a save from before them.
     #[serde(default)]
     pub vitals: Vitals,
+    /// What it really is while shapeshifted into another kind's body (`shapeshift`).
+    #[serde(default)]
+    pub true_form: Option<TrueForm>,
 }
 
 impl Default for Sheet {
@@ -204,17 +209,24 @@ impl Sheet {
             skills: kind.def().skills.iter().copied().collect(),
             appearance: Appearance::default(),
             vitals: Vitals::default(),
+            true_form: None,
         }
     }
 
-    /// As loaded: a save from before the nine attributes has none, so they are
-    /// worked out again from its build (the centre, for such a save).
+    /// As loaded, its body of kind `kind`: a save from before the nine attributes has
+    /// none, so they are worked out again from its build (the centre, for such a save).
     pub fn settled(mut self, kind: CreatureKind) -> Self {
         if self.attributes == Attributes::default() {
             if !self.build.is_valid() {
                 self.build = Build::CENTRED;
             }
-            self.attributes = Attributes::for_kind(kind, &self.build);
+            // Its own kind's, shapeshifted again if it was.
+            let own = self.own_kind(kind);
+            self.true_form = None;
+            self.attributes = Attributes::for_kind(own, &self.build);
+            if own != kind {
+                self.shapeshift(own, kind);
+            }
         }
         self
     }

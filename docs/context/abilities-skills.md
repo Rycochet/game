@@ -81,6 +81,7 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 - Dodge: athletics/dodging with combat/anticipation against a blade, or with survival/observation against a trap.
 - Some come with a kind (Kick), others are learned.
 - Spells are abilities drawing on magic nodes.
+- **Shapeshifting** (owner, 2026-11-06): a physical change takes the form's Body row and body, and keeps the creature's own Mind and Spirit (built as `Sheet::shapeshift`, for now only from the debug Change Creature). Senses that come with a kind (a wolf's nose, an owl's eyes) are to be abilities linked to the kind, and so come with a form: decided when abilities are added. A disguise is an illusion: looks only, every rule keeping the real kind.
 
 ## Specialising
 
