@@ -104,6 +104,8 @@ pub struct WorldConditions {
 /// The world map's ground, as far as walking on it goes.
 pub struct WorldGround {
     surface: Surface,
+    /// Grid units around the equator: the poles are a quarter of it away.
+    width: i64,
     /// Where the sea is frozen, to walk on.
     climate: Climate,
 }
@@ -111,6 +113,7 @@ pub struct WorldGround {
 impl WorldGround {
     pub fn new(world: &WorldParams) -> Self {
         Self {
+            width: Surface::new(world).width(),
             surface: Surface::new(world),
             climate: Climate::new(world),
         }
@@ -121,11 +124,24 @@ impl WorldGround {
     /// bumps, which are the same whichever way round a route goes and would
     /// drown out the mountains). `None` if it is open water; ice can be walked.
     pub fn elevation(&self, x: i64, y: i64, conditions: WorldConditions) -> Option<i32> {
+        if self.past_the_ice(y) {
+            return None;
+        }
         let WorldConditions { water, ice } = conditions;
         let sample = self.surface.sample(x, y);
         let frozen = || ice && sample.is_frozen(water, self.climate.sample(x, y, sample.height));
         (sample.height > water || frozen())
             .then(|| (self.surface.broad_height(x, y) * ELEVATIONS_PER_HEIGHT).floor() as i32)
+    }
+}
+
+impl WorldGround {
+    /// Whether `y` is past `climate::ICE_LATITUDE` (80°), where the ice caps
+    /// can't be crossed (owner: the map stretches badly near the poles). Not
+    /// in the showcase's plain beyond the pole.
+    pub fn past_the_ice(&self, y: i64) -> bool {
+        // 80° of the 90° to a pole, a quarter of the width away: 2/9 of it.
+        !crate::showcase::in_plain(y) && y.abs() * 9 >= self.width * 2
     }
 }
 
@@ -141,7 +157,7 @@ pub(crate) const SLOPE_COST: u32 = 45;
 /// Where `step` from `(x, y)` leads on the world map, if it can be taken: onto
 /// dry ground or ice. Anyone standing in open water may step anywhere, so that
 /// nobody caught there (by the rising tide, thawing ice, a new world's start, a
-/// teleport) is stuck.
+/// teleport) is stuck; but never past the ice (`WorldGround::past_the_ice`).
 pub fn step_on_world_map(
     ground: &WorldGround,
     conditions: WorldConditions,
@@ -149,8 +165,9 @@ pub fn step_on_world_map(
     step: Step,
 ) -> Option<(i64, i64)> {
     let (x, y) = step.from(from);
-    let allowed = ground.elevation(from.0, from.1, conditions).is_none()
-        || ground.elevation(x, y, conditions).is_some();
+    let allowed = (ground.elevation(from.0, from.1, conditions).is_none()
+        || ground.elevation(x, y, conditions).is_some())
+        && !ground.past_the_ice(y);
     allowed.then_some((x, y))
 }
 

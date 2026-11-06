@@ -27,10 +27,10 @@ pub struct Item {
     pub contents: Vec<Placed>,
     pub made: Made,
     /// How good it is: it can change later, and it is still the same item. `None`
-    /// for kinds without quality, and things saved before quality.
+    /// for kinds without quality.
     #[serde(default)]
     pub quality: Option<Quality>,
-    /// `None` for things saved before this was kept.
+    /// Where and when it was made, when that is known.
     #[serde(default)]
     pub made_at: Option<MadeAt>,
     /// Its own name, if it has one: every artifact does.
@@ -39,8 +39,7 @@ pub struct Item {
     /// Part of a set, of whatever quality it is.
     #[serde(default)]
     pub set: bool,
-    /// What it is physically like, for kinds rolled that way, and not for things
-    /// saved before this was kept.
+    /// What it is physically like, for kinds rolled that way.
     #[serde(default)]
     pub form: Option<ItemForm>,
     /// Blessed, cursed or neither.

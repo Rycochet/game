@@ -2,6 +2,7 @@
 
 use super::{CHUNK_SIZE, ChunkPos};
 use crate::climate::Climate;
+use crate::movement::WorldGround;
 use crate::rng::Seed;
 use crate::surface::Surface;
 use crate::world::WorldParams;
@@ -20,6 +21,8 @@ pub struct PoiMap {
     pub(super) land_above: f64,
     /// The world's World Gates: their chunks have no other poi.
     gates: WorldGates,
+    /// For where the ice can't be crossed, which has no pois.
+    pub(super) ground: WorldGround,
 }
 
 impl PoiMap {
@@ -40,6 +43,7 @@ impl PoiMap {
             surface,
             climate: Climate::new(world),
             land_above,
+            ground: WorldGround::new(world),
         }
     }
 

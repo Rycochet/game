@@ -43,9 +43,10 @@ impl PoiLook {
         matches!(self, Self::Building { ruin, .. } | Self::Farm { ruin, .. } if ruin > 0)
     }
 
-    /// The look of the site a poi of this kind and map seed leads to.
-    pub fn of(kind: PoiKind, seed: Seed) -> Self {
-        match Generator::for_site(kind, seed) {
+    /// The look of the site a poi of this kind and map seed leads to, in
+    /// desert or not (`Poi::desert`).
+    pub fn of(kind: PoiKind, seed: Seed, desert: bool) -> Self {
+        match Generator::for_site(kind, seed, desert) {
             Generator::Building(options) => {
                 let plan = super::building::Plan::new(&options, seed);
                 let (width, height) = plan.footprint();

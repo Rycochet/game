@@ -7,7 +7,7 @@
 
 use crate::celestial::Celestial;
 use crate::rng::Seed;
-use crate::surface::SurfaceGenerator;
+use crate::surface::{Surface, SurfaceGenerator};
 use core::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -18,7 +18,32 @@ pub use time::{ClockRate, WorldTime};
 /// The world map generator's version (`WorldParams`, `surface`). Bump it only
 /// when the generated terrain changes in a way that matters, not for
 /// cosmetic changes: existing worlds keep the version they were made with.
-pub const WORLD_MAP_VERSION: u32 = 4;
+pub const WORLD_MAP_VERSION: u32 = 5;
+
+/// The furthest the tide reaches, on the height scale (10 m), for the most
+/// tilted planet (owner: realistic tides).
+const TIDE_REACH: f64 = 0.1;
+
+/// How often each generator is rolled, in percent (owner): `Desert` rarely,
+/// `Continents` most, `Plates` the rest.
+const DESERT_PERCENT: u64 = 1;
+const CONTINENTS_PERCENT: u64 = 70;
+
+/// A desert world's `climate` (wetness) and `warmth` ranges: dry and warm.
+const DESERT_CLIMATE: (f64, f64) = (0.0, 0.1);
+const DESERT_WARMTH: (f64, f64) = (0.03, 0.1);
+/// How far below the lowest of its sampled ground a desert world's sea is,
+/// so only the rare deepest hollows hold water (owner: almost none).
+const DESERT_SEA_BELOW: f64 = 0.5;
+
+/// Which generator a world's land is made by.
+fn roll_generator(seed: Seed) -> SurfaceGenerator {
+    match seed.derive("generator").rng().range_u64(0, 100) {
+        roll if roll < DESERT_PERCENT => SurfaceGenerator::Desert,
+        roll if roll < DESERT_PERCENT + CONTINENTS_PERCENT => SurfaceGenerator::Continents,
+        _ => SurfaceGenerator::Plates,
+    }
+}
 
 /// The smallest planet's radius in metres (version 4: was 500).
 pub const SMALLEST_RADIUS: u64 = 1_500_000;
@@ -108,12 +133,28 @@ pub const MINUTES_PER_HOUR: f64 = 60.0;
 pub const GAME_HOUR_SECONDS: u64 = 60 * GAME_MINUTE_SECONDS;
 
 impl WorldParams {
+    /// The world for a terrain seed, with the generator it rolls (or
+    /// `HOW_DEBUG_GENERATOR`'s).
     pub fn from_seed(seed: Seed) -> Self {
+        let generator = SurfaceGenerator::forced().unwrap_or_else(|| roll_generator(seed));
+        Self::with_generator(seed, generator)
+    }
+
+    /// The world a terrain seed would be with another generator, as View
+    /// Planet shows it: what depends on the generator (a desert's dry, warm
+    /// climate and low sea) follows it.
+    pub fn with_generator(seed: Seed, generator: SurfaceGenerator) -> Self {
         let radius = seed
             .derive("radius")
             .rng()
             .range_u64(SMALLEST_RADIUS, 6_500_000);
-        Self {
+        let desert = generator == SurfaceGenerator::Desert;
+        let (climate, warmth) = if desert {
+            (DESERT_CLIMATE, DESERT_WARMTH)
+        } else {
+            ((0.0, 1.0), (-0.1, 0.1))
+        };
+        let mut world = Self {
             seed,
             radius,
             circumference: (2.0 * PI * radius as f64) as u64,
@@ -121,23 +162,33 @@ impl WorldParams {
             density: seed.derive("density").rng().range_f64(0.5, 1.5),
             tilt: seed.derive("tilt").rng().range_f64(0.0, 1.0),
             sea_level: seed.derive("sealevel").rng().range_f64(20.0, 60.0),
-            climate: seed.derive("climate").rng().range_f64(0.0, 1.0),
-            warmth: seed.derive("warmth").rng().range_f64(-0.1, 0.1),
-            generator: SurfaceGenerator::forced().unwrap_or_default(),
+            climate: seed.derive("climate").rng().range_f64(climate.0, climate.1),
+            warmth: seed.derive("warmth").rng().range_f64(warmth.0, warmth.1),
+            generator,
+        };
+        if desert {
+            // Below nearly all the ground: only the deepest hollows hold water.
+            world.sea_level = Surface::new(&world).lowest_sampled() - DESERT_SEA_BELOW;
         }
+        world
     }
 
     /// How far the sea is above `sea_level` at a time (in hours): the moons'
-    /// pull (`Celestial::tide_pull`) times the tides' reach, `4 × tilt` (a tilt
-    /// of 0.25 gives 1 unit). With no moons it stays at `sea_level`.
+    /// pull (`Celestial::tide_pull`) times the tides' reach, `TIDE_REACH ×
+    /// tilt` (at most 10 m). With no moons it stays at `sea_level`.
     pub fn tide(&self, celestial: &Celestial, hour: f64) -> f64 {
-        celestial.tide_pull(hour) * 4.0 * self.tilt
+        celestial.tide_pull(hour) * self.tide_reach()
+    }
+
+    /// How far the tide reaches above or below `sea_level`, on the height scale.
+    pub fn tide_reach(&self) -> f64 {
+        TIDE_REACH * self.tilt
     }
 
     /// The highest the water gets (high tide): ground above this is always
     /// dry land.
     pub fn high_water(&self) -> f64 {
-        self.sea_level + 4.0 * self.tilt
+        self.sea_level + self.tide_reach()
     }
 
     /// The water height at a time (in hours), with the moons' tide.

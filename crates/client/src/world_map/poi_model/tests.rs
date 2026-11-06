@@ -8,7 +8,7 @@ use super::*;
 fn looks() -> impl Iterator<Item = (PoiKind, PoiLook)> {
     PoiKind::ALL
         .into_iter()
-        .flat_map(|kind| (0..8).map(move |seed| (kind, PoiLook::of(kind, Seed::new(seed)))))
+        .flat_map(|kind| (0..8).map(move |seed| (kind, PoiLook::of(kind, Seed::new(seed), false))))
 }
 
 #[test]

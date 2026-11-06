@@ -201,6 +201,22 @@ impl Surface {
         }
     }
 
+    /// The lowest ground among points spread over the planet (96 by 48 of
+    /// them), for placing a desert world's sea.
+    pub fn lowest_sampled(&self) -> f64 {
+        let (across, down) = (96, 48);
+        let mut lowest = f64::INFINITY;
+        for row in 0..down {
+            // The poles are a quarter of the way round from the equator.
+            let y = (row * 2 - down + 1) * self.width / (4 * down);
+            for column in 0..across {
+                let x = column * self.width / across;
+                lowest = lowest.min(self.sample(x, y).height);
+            }
+        }
+        lowest
+    }
+
     /// The lowest height water is shaded down to: the deepest it gets.
     pub fn floor(&self) -> f64 {
         if self.kind.in_metres() {

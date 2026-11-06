@@ -74,6 +74,7 @@ pub fn poi_at(chunk: ChunkPos) -> Option<Poi> {
         x: chunk.x * CHUNK_SIZE + CHUNK_SIZE / 2,
         y: chunk.y * CHUNK_SIZE + CHUNK_SIZE / 2,
         seed,
+        desert: false,
     })
 }
 
@@ -85,7 +86,7 @@ fn seed_for(kind: PoiKind, row: i64) -> Option<Seed> {
     let ruin = (-row).max(0) as u8;
     (0..RUIN_TRIES)
         .map(|n| Seed::new(SEEDS.at(&[kind as i64, row, n])))
-        .find(|&seed| Generator::for_site(kind, seed).ruin() == ruin)
+        .find(|&seed| Generator::for_site(kind, seed, false).ruin() == ruin)
 }
 
 #[cfg(test)]

@@ -26,10 +26,7 @@ pub(super) struct Planet {
 
 impl Planet {
     pub(super) fn new(world: &CurrentWorld, seed: Seed, generator: SurfaceGenerator) -> Self {
-        let params = WorldParams {
-            generator,
-            ..WorldParams::from_seed(seed)
-        };
+        let params = WorldParams::with_generator(seed, generator);
         let surface = Surface::new(&params);
         Self {
             gates: WorldGates::find(&params, &surface),

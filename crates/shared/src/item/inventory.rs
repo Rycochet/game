@@ -22,12 +22,9 @@ pub struct Inventory {
     pub creature: CreatureKind,
     /// They have had their first clothes.
     pub outfitted: bool,
-    /// What is in their own grid, not worn. Saved as `pockets` before it was
-    /// named the inventory: the alias reads those, until the item wipe.
-    #[serde(alias = "pockets")]
+    /// What is in their own grid, not worn.
     pub items: Vec<Placed>,
     /// How big their own grid is, from their kind of creature.
-    #[serde(alias = "pockets_size")]
     pub size: (u8, u8),
     /// What they have on: see `shared::wear`.
     pub worn: Vec<Item>,

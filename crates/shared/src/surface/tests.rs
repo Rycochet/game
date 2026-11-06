@@ -2,7 +2,8 @@ use super::*;
 use crate::rng::Seed;
 
 fn surface() -> Surface {
-    Surface::new(&WorldParams::from_seed(Seed::new(12345)))
+    let desert = SurfaceGenerator::Desert;
+    Surface::new(&WorldParams::with_generator(Seed::new(12345), desert))
 }
 
 // Golden values: if these change, every generated world changes.

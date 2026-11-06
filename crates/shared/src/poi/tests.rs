@@ -27,7 +27,8 @@ fn golden_pois() {
     assert_eq!(format!("{found:?}"), GOLDEN_POIS);
 }
 
-const GOLDEN_POIS: &str = "[Some((Fort, 29864, -176, 6668956521734191959)), Some((BlueTent, 33, -145, 12428200609095318837)), None, None]";
+const GOLDEN_POIS: &str =
+    "[None, None, None, Some((ArcheryRange, 166, -161, 14946549129168680566))]";
 
 #[test]
 fn about_the_right_share_of_chunks_have_one() {

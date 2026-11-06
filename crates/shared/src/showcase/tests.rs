@@ -25,7 +25,11 @@ fn every_kind_has_a_column_of_variants() {
             let poi = pois.in_chunk(chunk).expect("a poi in every chunk");
             assert_eq!((poi.kind, poi.chunk), (kind, chunk));
             assert_eq!(pois.chunk_at(poi.x, poi.y), chunk);
-            assert_eq!(Generator::for_site(kind, poi.seed).ruin(), 0, "{kind:?}");
+            assert_eq!(
+                Generator::for_site(kind, poi.seed, false).ruin(),
+                0,
+                "{kind:?}"
+            );
             seeds.insert(poi.seed.value());
         }
         assert_eq!(seeds.len() as i64, VARIANTS);
@@ -58,7 +62,7 @@ fn ruins_run_north_counting_up() {
         for ruin in 1..=RUIN_LEVELS {
             let poi = at(ruin).expect("every level of ruin");
             assert_eq!(poi.kind, kind);
-            let generator = Generator::for_site(kind, poi.seed);
+            let generator = Generator::for_site(kind, poi.seed, false);
             assert_eq!(i64::from(generator.ruin()), ruin, "{kind:?}");
         }
     }

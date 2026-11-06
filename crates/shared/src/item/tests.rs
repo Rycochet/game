@@ -616,21 +616,6 @@ fn an_inventory_reads_back_from_a_message() {
 }
 
 #[test]
-fn an_inventory_saved_as_pockets_still_loads() {
-    let mut inventory = carrying(&[ItemKind::Coin]);
-    inventory.size = (5, 3);
-    let mut saved = serde_json::to_value(&inventory).unwrap();
-    let fields = saved.as_object_mut().unwrap();
-    let items = fields.remove("items").unwrap();
-    let size = fields.remove("size").unwrap();
-    fields.insert("pockets".into(), items);
-    fields.insert("pockets_size".into(), size);
-    let old = saved.to_string();
-    let loaded: Inventory = serde_json::from_str(&old).unwrap();
-    assert_eq!(loaded, inventory);
-}
-
-#[test]
 fn a_bag_of_holding_takes_things_down_to_its_most_rows() {
     let container = ItemKind::BagOfHolding.def().container.unwrap();
     assert!(container.grows && !ItemKind::Backpack.def().container.unwrap().grows);

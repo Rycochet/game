@@ -8,10 +8,10 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 
 ## Public API
 
-- Constants: `CHUNK_SIZE` (64 grid points), `EDGE_MARGIN` (8: pois stand at least this far inside their chunk, so two are at least 16 apart, a token's width), `POI_CHANCE_PERCENT` (80, the owner's choice), `LAND_TRIES` (8 random spots tried for dry land; a chunk with none has no poi, so seas and coasts have fewer).
+- Constants: `CHUNK_SIZE` (64 grid points), `EDGE_MARGIN` (8: pois stand at least this far inside their chunk, so two are at least 16 apart, a token's width), `POI_CHANCE_PERCENT` (80, the owner's choice), `LAND_TRIES` (8 random spots tried for dry land; a chunk with none has no poi, so seas and coasts have fewer). In desert (`Biome::Desert` where it stands) only one chunk in `DESERT_KEEPS_ONE_IN` (4, owner) keeps its poi, by a hash of its own; no poi stands past the ice (`WorldGround::past_the_ice`, 80°).
 - `PoiKind`: 40 kinds: 34 (`Boulders` … `Mausoleum`) named after the tiles `l2_terrain066`–`099` and in their order, all equally likely, then the towns (`Hamlet`, `Village`, `Town`, `City`; `is_town()`) and `Farm` and `HerbalistHut`, with their own odds; `ALL`.
 - `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded. `PoiKind`, `ChunkPos` and `Poi` are serde-serialisable (sent in `protocol::WorldChunk`).
-- `Poi { kind, chunk, x, y, seed }`: `x, y` its exact world grid position; `seed` is what its map is generated from.
+- `Poi { kind, chunk, x, y, seed, desert }`: `x, y` its exact world grid position; `seed` is what its map is generated from; `desert` whether it stands in desert, where more are ruined (`Generator::for_site`).
 - `PoiMap::new(&WorldParams, pois_seed)` (the secret `WorldSeed::pois`; keeps its own `Surface`, and finds the world's World Gates with it), `.world_gates()` (their chunks have no other poi), `.width()`, `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Poi>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Poi>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
 
 ## Depends on
