@@ -62,6 +62,10 @@ pub enum Cell {
     /// The floor a World Gate stands on, in the Hall of Worlds
     /// (`shared::hall`): walkable floor, with the gate's own model on it.
     WorldGate,
+    /// Walkable outside ground, grassed: round an oasis's pools.
+    Grass,
+    /// A tree on grass: not walkable, but seen and lit past.
+    Tree,
 }
 
 impl Cell {
@@ -78,6 +82,7 @@ impl Cell {
                 | Self::HerbBed
                 | Self::CoveredGround
                 | Self::WorldGate
+                | Self::Grass
         ) || self.is_road()
     }
 
@@ -104,6 +109,8 @@ impl Cell {
                 | Self::Fence
                 | Self::FieldGate
                 | Self::HerbBed
+                | Self::Grass
+                | Self::Tree
         ) || self.is_road()
     }
 
@@ -122,7 +129,7 @@ impl Cell {
         self.is_walkable()
             || matches!(
                 self,
-                Self::Water | Self::Lava | Self::Window | Self::Hole | Self::Fence
+                Self::Water | Self::Lava | Self::Window | Self::Hole | Self::Fence | Self::Tree
             )
     }
 

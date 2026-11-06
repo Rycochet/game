@@ -66,8 +66,8 @@ impl StairsStyle {
                 &[Ladder, LogLadder, RopeLadder, SlatLadder, KnottedRope]
             }
             Farm | HerbalistHut => &[Turning, Ladder],
-            // Towns have no stairs yet.
-            Hamlet | Village | Town | City => &[Turning],
+            // Towns and oases have no stairs yet.
+            Hamlet | Village | Town | City | Oasis => &[Turning],
         }
     }
 }

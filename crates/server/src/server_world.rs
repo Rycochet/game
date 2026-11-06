@@ -124,7 +124,9 @@ impl ServerWorld {
                 }
                 // Every world made before the generators were rolled per world
                 // (version 5) was wiped with the saves (`OLDEST_SAVE_FORMAT`).
-                if save.world_map_version != WORLD_MAP_VERSION {
+                // Version 6 only added oases: a world from 5 carries on, with
+                // some of its desert pois turned into them.
+                if !(5..=WORLD_MAP_VERSION).contains(&save.world_map_version) {
                     return Err(format!(
                         "it was made with world map version {}; this server has {WORLD_MAP_VERSION}",
                         save.world_map_version

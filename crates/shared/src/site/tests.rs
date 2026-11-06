@@ -440,8 +440,9 @@ fn cave_rooms_are_not_rectangles() {
 /// Rooms are only on floor-like cells, and some exist.
 #[test]
 fn rooms_are_marked() {
-    // (In towns, rooms are buildings: tested in `town`.)
-    for site in every_site(2).filter(|site| !site.kind().is_town()) {
+    // (In towns, rooms are buildings: tested in `town`. Oases are all outside.)
+    let has_rooms = |kind: PoiKind| !kind.is_town() && kind != PoiKind::Oasis;
+    for site in every_site(2).filter(|site| has_rooms(site.kind())) {
         // (A stilt hut's rooms are upstairs.)
         let on_stilts = matches!(site.kind(), PoiKind::StiltHut | PoiKind::GreenStiltHut);
         let level = site.level(u32::from(on_stilts)).level;

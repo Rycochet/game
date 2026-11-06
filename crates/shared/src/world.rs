@@ -18,7 +18,7 @@ pub use time::{ClockRate, WorldTime};
 /// The world map generator's version (`WorldParams`, `surface`). Bump it only
 /// when the generated terrain changes in a way that matters, not for
 /// cosmetic changes: existing worlds keep the version they were made with.
-pub const WORLD_MAP_VERSION: u32 = 5;
+pub const WORLD_MAP_VERSION: u32 = 6;
 
 /// The furthest the tide reaches, on the height scale (10 m), for the most
 /// tilted planet (owner: realistic tides).
@@ -31,7 +31,7 @@ const CONTINENTS_PERCENT: u64 = 70;
 
 /// A desert world's `climate` (wetness) and `warmth` ranges: dry and warm.
 const DESERT_CLIMATE: (f64, f64) = (0.0, 0.1);
-const DESERT_WARMTH: (f64, f64) = (0.03, 0.1);
+const DESERT_WARMTH: (f64, f64) = (0.25, 0.35);
 /// How far below the lowest of its sampled ground a desert world's sea is,
 /// so only the rare deepest hollows hold water (owner: almost none).
 const DESERT_SEA_BELOW: f64 = 0.5;

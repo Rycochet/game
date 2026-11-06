@@ -37,7 +37,9 @@ impl Surface {
             | Cell::Field
             | Cell::Fence
             | Cell::FieldGate
-            | Cell::HerbBed => Self::Ground,
+            | Cell::HerbBed
+            | Cell::Grass
+            | Cell::Tree => Self::Ground,
             Cell::Water => Self::Water,
             Cell::Lava => Self::Lava,
             _ => Self::Floor,

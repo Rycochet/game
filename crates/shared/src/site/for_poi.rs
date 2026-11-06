@@ -5,6 +5,7 @@ use super::building::{BuildingOptions, Outline};
 use super::cave::{CaveEntrance, CaveOptions};
 use super::farm::FarmOptions;
 use super::herbalist::HerbalistOptions;
+use super::oasis::OasisOptions;
 use super::town::TownOptions;
 use crate::poi::PoiKind;
 
@@ -102,6 +103,13 @@ impl Generator {
                 },
                 strips: (3, 5),
                 length: (7, 12),
+            }),
+            Oasis => Self::Oasis(OasisOptions {
+                size: (40, 56),
+                pools: (1, 2),
+                radius: (5, 9),
+                grass: (2, 4),
+                trees_percent: 30,
             }),
             // Natural caves: walk in from the side.
             GrassyCave | EarthCave => cave((40, 70), (1, 3), CaveEntrance::Opening, false, 30, 0),

@@ -27,6 +27,8 @@ pub(super) fn ground_colour(cell: Cell) -> [u8; 3] {
         Cell::Fence => [150, 110, 70],
         Cell::FieldGate => [226, 238, 214],
         Cell::HerbBed => [205, 222, 180],
+        Cell::Grass => [176, 214, 150],
+        Cell::Tree => [96, 150, 84],
         _ => WHITE,
     }
 }

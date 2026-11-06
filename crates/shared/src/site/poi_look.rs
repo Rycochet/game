@@ -35,6 +35,9 @@ pub enum PoiLook {
         ruin: u8,
         fields: u8,
     },
+    Oasis {
+        pools: u8,
+    },
 }
 
 impl PoiLook {
@@ -85,6 +88,9 @@ impl PoiLook {
                     fields: plan.fields() as u8,
                 }
             }
+            Generator::Oasis(options) => Self::Oasis {
+                pools: super::oasis::Plan::pools(&options, seed),
+            },
         }
     }
 }

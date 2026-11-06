@@ -2,10 +2,14 @@ use super::*;
 use crate::rng::Seed;
 use std::collections::HashSet;
 
-/// A desert world's climate: the one worked out from height alone.
+/// A desert world's climate, the one worked out from height alone, with an
+/// ordinary warmth and wetness so samples aren't all at the ends.
 fn climate() -> Climate {
     let desert = crate::surface::SurfaceGenerator::Desert;
-    Climate::new(&WorldParams::with_generator(Seed::new(12345), desert))
+    let mut params = WorldParams::with_generator(Seed::new(12345), desert);
+    params.warmth = 0.0;
+    params.climate = 0.9;
+    Climate::new(&params)
 }
 
 // Golden values: if these change, every world's biomes change.
@@ -19,7 +23,7 @@ fn golden_samples() {
     assert_eq!(format!("{samples:?}"), GOLDEN_SAMPLES);
 }
 
-const GOLDEN_SAMPLES: &str = "[ClimateSample { temperature: 0.7796512991825173, moisture: 0.1176027453232152 }, ClimateSample { temperature: 0.6321502547364105, moisture: 0.39496842205594906 }, ClimateSample { temperature: 0.339200015745889, moisture: 0.4178427010502262 }]";
+const GOLDEN_SAMPLES: &str = "[ClimateSample { temperature: 0.7202156176366317, moisture: 0.4076479553245008 }, ClimateSample { temperature: 0.5727145731905249, moisture: 0.6850136320572346 }, ClimateSample { temperature: 0.27976433420000335, moisture: 0.7078879110515118 }]";
 
 /// Snow is about as common as when it was a fixed height of 90.
 #[test]
