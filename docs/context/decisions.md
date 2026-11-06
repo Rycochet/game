@@ -365,7 +365,7 @@ Browsers can't raise the on-screen keyboard from a canvas, and only focus an inp
 
 ## 2026-11-01: A loading screen until the game takes input
 
-A full-screen title and step bar (`loading_screen`) covers the game from the first frame until a few frames after the server's welcome, and takes all input (owner). It replaces the red "Connecting..." line, so it also comes back while the connection is lost and shows a server's refusal. Steps are `common::LoadingStep`, with fixed places on the bar until startup work is timed. The title uses Cinzel Decorative (OFL), built into the program to be there on the first frame. The web page stays black until the wasm has loaded: a browser splash waits until web work is asked for.
+A full-screen title and step bar (`loading_screen`) covers the game from the first frame until a few frames after the server's welcome, and takes all input (owner). It replaces the red "Connecting..." line, so it also comes back while the connection is lost and shows a server's refusal. Steps are `common::LoadingStep`, with fixed places on the bar until startup work is timed. The title uses Cinzel Decorative (OFL), built into the program to be there on the first frame, cut down to the title's letters (`HallOfWorldsTitle.ttf`, 62 KB to 3 KB) as it is only for the title until artwork replaces it (owner, 2026-11-06). The web page stays black until the wasm has loaded: a browser splash waits until web work is asked for.
 
 ## 2026-11-01: Standalone servers can opt in to dev tools
 
