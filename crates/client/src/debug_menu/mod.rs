@@ -11,7 +11,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::movement::Step;
-use shared::protocol::{ClientMessage, DevVitals, ServerMessage};
+use shared::protocol::{ClientMessage, DevSkills, DevVitals, ServerMessage};
 
 use crate::common::{
     ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, GameView, GodMode, KillMob,
@@ -254,6 +254,12 @@ fn run_actions(
             }
             DebugAction::VitalsBonus => {
                 to_server.write(ToServer(ClientMessage::DevVitals(DevVitals::Bonus)));
+            }
+            DebugAction::LearnSomeSkills => {
+                to_server.write(ToServer(ClientMessage::DevSkills(DevSkills::LearnSome)));
+            }
+            DebugAction::ForgetSkills => {
+                to_server.write(ToServer(ClientMessage::DevSkills(DevSkills::Forget)));
             }
             DebugAction::ResetView => {
                 for mut camera in &mut cameras {

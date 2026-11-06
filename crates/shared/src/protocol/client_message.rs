@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::OnlineSettings;
+use super::dev_skills::DevSkills;
 use super::dev_vitals::DevVitals;
 use super::kind_change::KindChange;
 use super::login::{CharacterId, Credentials};
@@ -261,6 +262,9 @@ pub enum ClientMessage {
     /// Developer tools: harm, spend, fill or raise the character's Health and
     /// Mana (`DevVitals`), answered with `Vitals`.
     DevVitals(DevVitals),
+    /// Developer tools: practise some skills at random, or forget all but the
+    /// kind's own (`DevSkills`), answered with `Sheet`.
+    DevSkills(DevSkills),
 }
 
 impl ClientMessage {
@@ -290,6 +294,7 @@ impl ClientMessage {
                 | Self::DevGodMode(_)
                 | Self::DevKillMob { .. }
                 | Self::DevVitals(_)
+                | Self::DevSkills(_)
         )
     }
 }

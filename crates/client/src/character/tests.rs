@@ -16,7 +16,7 @@ fn it_says_what_the_kind_is_and_how_much_it_can_carry() {
         "{words}"
     );
     assert!(words.contains("Spirit: Presence "), "{words}");
-    assert!(words.contains("Stealth 3"));
+    assert!(words.contains("Stealth › Sneaking 51.2"));
     assert!(words.contains("NightVision"));
     assert!(words.contains("Can carry "), "{words}");
     assert!(!words.contains("Light"), "{words}");
@@ -40,4 +40,17 @@ fn it_says_where_health_and_mana_come_from() {
     let lines = vitals_lines(&sheet, Some((told(25), told(12))));
     assert_eq!(lines[0], "Health 25 (Toughness 20, +3 play, +2 practice)");
     assert_eq!(lines[1], "Mana 12 (Will 12)");
+}
+
+#[test]
+fn skills_are_listed_by_path_at_the_ends_of_what_is_known() {
+    use shared::skill::{SkillId, Skills};
+    let mut skills = Skills::default();
+    skills.practise(SkillId::find("athletics/climbing").unwrap(), 100);
+    skills.practise(SkillId::find("athletics/running").unwrap(), 400);
+    // Climbing 10 + Athletics sqrt(250) 15.81; Running 20 + 15.81.
+    assert_eq!(
+        super::skill_lines::skill_lines(&skills),
+        ["Athletics › Climbing 25.8", "Athletics › Running 35.8"]
+    );
 }

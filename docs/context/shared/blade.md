@@ -14,6 +14,7 @@ Weapons made of a handle with a blade or head on it, from knives to polearms: wh
 
 - `roll_blade(rng, family, quality)`: an ordinary weapon. `roll_blade_at(.., size)`: one that must be this size. `roll_blade_at_within(.., size, limits) -> Option<BladeForm>`: the same within limits, never changing family or size. `roll_blade_within(.., limits) -> Option<Rolled>`: one that suits a request. `commission_blade(rng, name, quality, size, limits)`: a named weapon at any size, keeping its name, only when asked for. `limits_for_wielder(size, spare_grams)`. Items normally get these through `item_form`.
 - `BladeForm { family, build, blade, handle, width, edges, curve, point, shape, section, fuller, hands, guard, pommel, ricasso, langets, handle_shape, sides, top, back, tips, blade_metal, handle_material, fittings, decoration, generic_only }`, with `name()`, `attachment()`, `shape()`, `grams()`, `grams_at(size)`. Lengths are whole millimetres at an ordinary person's scale, and an item's size would go on top.
+- `weapon_names(family)` (`names.rs`): every name a weapon of the family may go by (its rows', then the generic names of cells its rows reach), for the skill tree.
 - `Family::ALL`, and the property enums: `Build`, `BladeWidth`, `Edges`, `Curve`, `Point`, `BladeShape`, `Section`, `Hands`, `Attachment`, `Guard`, `Pommel`, `Ricasso`, `HandleShape`, `SidePart`, `Top`, `Back`, `Tips`, `Decoration`. `Family::kind`, `Rolled { form, size }`.
 
 ## Depends on
@@ -22,7 +23,7 @@ Weapons made of a handle with a blade or head on it, from knives to polearms: wh
 
 ## Used by
 
-- `item`, `item_form`; `server` (`entities`, for mobs' gear); client `item_art` (models) and `debug_menu` (Item Pictures).
+- `item`, `item_form`, `skill`; `server` (`entities`, for mobs' gear); client `item_art` (models) and `debug_menu` (Item Pictures).
 
 ## Notes
 

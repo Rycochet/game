@@ -32,6 +32,7 @@ pub mod sheet;
 pub mod shop;
 pub mod showcase;
 pub mod site;
+pub mod skill;
 pub mod surface;
 pub mod vegetation;
 pub mod vitals;

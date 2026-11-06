@@ -1,7 +1,7 @@
 //! What a kind of creature is like: its body parts, size and attributes.
 
 use super::{Layer, Location, Size};
-use crate::sheet::{Ability, Attribute, Attributes, Skill, Trait, bonus_from};
+use crate::sheet::{Ability, Attribute, Attributes, Trait, bonus_from};
 
 /// One location on a body: which layers go there, and how many places it has for
 /// things that take only one (fingers for rings).
@@ -33,8 +33,9 @@ pub struct CreatureDef {
     /// The bonuses this kind sets; the rest of `BONUS_POINTS` is shared among
     /// the others (`bonus`). Setting one to 0 keeps it from any share.
     pub bonus_set: &'static [(Attribute, u16)],
-    /// Skills it starts with, and how good at them.
-    pub skills: &'static [(Skill, u8)],
+    /// Skills it starts with: paths in the skill tree, and how much practice
+    /// (`skill::Skills::starting`).
+    pub skills: &'static [(&'static str, u32)],
     /// What it can do because of what it is.
     pub abilities: &'static [Ability],
     /// What can differ between creatures of this kind, to look at.
