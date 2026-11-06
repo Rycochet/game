@@ -15,7 +15,7 @@ fn pois(world: &WorldParams) -> PoiMap {
 
 /// The plan of the chunk a cell is in, with no poi.
 fn bare_plan(wild: &Wilderness, x: i64, y: i64) -> ChunkPlan {
-    ChunkPlan::new(wild, wild.chunk_of(x, y), None, &[])
+    ChunkPlan::new(wild, wild.chunk_of(x, y), None, &[], &[])
 }
 
 /// The first point in a stretch of the planet that `wanted` picks, by its
@@ -304,4 +304,29 @@ fn golden_block() {
         ((px, py), fingerprint(&level)),
         ((0, -300), 7151180237052611686)
     );
+}
+
+#[test]
+fn world_gates_stand_in_a_clearing() {
+    let world = world();
+    let (wild, pois) = (Wilderness::new(&world), pois(&world));
+    let gates = gates_of(&wild, &pois);
+    assert!(!gates.is_empty());
+    for gate in gates.iter().take(4) {
+        let (x, y) = gate.cell;
+        let plan = ChunkPlan::new(&wild, wild.chunk_of(x, y), None, &gates, &[]);
+        assert!(plan.cutout().is_none(), "a gate's chunk has no poi");
+        let level = wild.block(wild.block_of(x, y), &plan);
+        assert_eq!(level.cell(x, y), Cell::WorldGate);
+        let (min_x, min_y, width, height) = level.bounds();
+        for cy in min_y..min_y + height {
+            for cx in min_x..min_x + width {
+                let (dx, dy) = ((cx - x).abs() - GATE_PAD, (cy - y).abs() - GATE_PAD);
+                let near = dx.max(0).pow(2) + dy.max(0).pow(2) < CLEARED * CLEARED;
+                if near {
+                    assert_ne!(level.cell(cx, cy), Cell::Tree, "({cx}, {cy})");
+                }
+            }
+        }
+    }
 }

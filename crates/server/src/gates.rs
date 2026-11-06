@@ -23,7 +23,7 @@ impl ServerWorld {
     }
 
     /// World Gate `entrance`, if it has one.
-    fn gate(&self, entrance: u8) -> Option<GateInfo> {
+    pub(crate) fn gate(&self, entrance: u8) -> Option<GateInfo> {
         let address = GateAddress::for_world(self.seed, entrance)?;
         let gate = self.pois.world_gates().gates.get(usize::from(entrance))?;
         Some(GateInfo {

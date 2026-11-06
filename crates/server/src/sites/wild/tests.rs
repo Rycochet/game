@@ -259,3 +259,26 @@ fn a_road_found_runs_through_the_wilderness() {
         .count();
     assert!(surfaced > 100, "{surfaced}");
 }
+
+#[test]
+fn stepping_onto_a_world_gate_goes_through_it() {
+    // New characters arrive at a World Gate.
+    let mut test = TestClient::new();
+    test.send(&[ClientMessage::Explore]);
+    let wild = &test.world.wilderness.wild;
+    let (x, y) = position(&test);
+    let gates = shared::wilderness::gates_of(wild, &test.world.pois);
+    let gate = gates
+        .iter()
+        .find(|gate| (gate.cell.0 - wild.wrap(x)).abs() < 64 && (gate.cell.1 - y).abs() < 64)
+        .expect("the gate they arrived at");
+    let visit = test.client.visit.as_ref().unwrap();
+    assert_eq!(
+        visit.level.level.cell(gate.cell.0, gate.cell.1),
+        Cell::WorldGate
+    );
+    assert_ne!((wild.wrap(x), y), gate.cell, "not arrived on it");
+    test.walk_to(gate.cell);
+    assert!(test.client.visit.is_none());
+    assert!(test.client.character.hall.is_some(), "in the Hall");
+}

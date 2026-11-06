@@ -3,6 +3,7 @@
 //! them into the mesh. Woods are also cleared round them, and round the pois
 //! this character knows of.
 
+use shared::protocol::GateInfo;
 use std::collections::BTreeMap;
 
 use bevy::prelude::*;
@@ -112,12 +113,14 @@ impl KnownRivers {
     /// Makes sure every chunk whose river could reach the window is known, and
     /// the woods are cleared round them and `pois`. `true` if that changed the
     /// woods where the window can be, so what is drawn there is out of date.
+    #[allow(clippy::too_many_arguments)]
     pub fn update(
         &mut self,
         rivers: &Rivers,
         climate: &Climate,
         surface: &Surface,
         pois: &KnownPois,
+        gates: &[GateInfo],
         roads: &KnownRoads,
         (x, y): (i64, i64),
     ) -> bool {
@@ -127,11 +130,19 @@ impl KnownRivers {
             y: y.div_euclid(CHUNK_SIZE),
         };
         let reach = CLEARING_SIDE / 2 - 1;
-        let near_pois: Vec<(i64, i64)> = pois
+        let width = rivers.width();
+        // World Gates too: always known, so nothing is given away.
+        let gates = gates.iter().map(|gate| {
+            let turns = (x - gate.x + width / 2).div_euclid(width);
+            (gate.x + turns * width, gate.y)
+        });
+        let mut near_pois: Vec<(i64, i64)> = pois
             .in_area((x - reach, y - reach), (x + reach, y + reach))
             .iter()
             .map(|poi| (poi.x, poi.y))
+            .chain(gates.filter(|&(gx, gy)| (gx - x).abs() <= reach && (gy - y).abs() <= reach))
             .collect();
+        near_pois.sort();
         let window = super::terrain::REACH + CHUNK_SIZE + clearing::POI_CLEARED_TO as i64;
         let in_window =
             |&(px, py): &(i64, i64)| (px - x).abs() <= window && (py - y).abs() <= window;

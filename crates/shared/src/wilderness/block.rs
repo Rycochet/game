@@ -56,6 +56,19 @@ impl Wilderness {
         let mut level = Level::new(min_x, min_y, width, height);
         for y in min_y..min_y + height {
             for x in min_x..min_x + width {
+                if let Some(gate) = plan
+                    .gates()
+                    .iter()
+                    .find(|gate| gate.contains(self.wrap(x), y))
+                {
+                    let cell = if (self.wrap(x), y) == gate.cell {
+                        Cell::WorldGate
+                    } else {
+                        Cell::Ground
+                    };
+                    level.set(x, y, cell);
+                    continue;
+                }
                 if let Some(cutout) = plan.cutout().filter(|cutout| cutout.contains(x, y)) {
                     level.set(x, y, cutout.level().cell(x, y));
                     level.set_room(x, y, cutout.level().room(x, y));
@@ -104,10 +117,11 @@ impl Wilderness {
 /// How much of the land's own tree cover a cell keeps near its chunk's
 /// cutout: none within `CLEARED`, all from `CLEARED_TO`, evenly between.
 fn clearing(plan: &ChunkPlan, x: i64, y: i64) -> f64 {
-    let Some(cutout) = plan.cutout() else {
+    let cutout = plan.cutout().map(|cutout| cutout.distance_squared(x, y));
+    let gates = plan.gates().iter().map(|gate| gate.distance_squared(x, y));
+    let Some(squared) = cutout.into_iter().chain(gates).min() else {
         return 1.0;
     };
-    let squared = cutout.distance_squared(x, y);
     if squared < CLEARED * CLEARED {
         0.0
     } else if squared >= CLEARED_TO * CLEARED_TO {

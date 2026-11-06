@@ -8,8 +8,9 @@ use std::collections::BTreeMap;
 
 use super::GateModel;
 use super::visited::{GateWater, WaterMaterials};
-use crate::common::CurrentDungeon;
+use crate::common::{CurrentDungeon, CurrentWorld};
 use crate::dungeon_map::CELL_SIZE;
+use shared::wilderness::SCALE;
 
 /// How fast the water runs down, in pictures a second.
 const FLOW: f32 = 0.6;
@@ -26,6 +27,7 @@ pub(super) struct Gates {
 /// away those off it; anywhere else, takes them all away.
 pub(super) fn place_gates(
     dungeon: Res<CurrentDungeon>,
+    world: Option<Res<CurrentWorld>>,
     mut gates: ResMut<Gates>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -34,18 +36,22 @@ pub(super) fn place_gates(
     if !dungeon.is_changed() {
         return;
     }
-    let hall = dungeon.info.as_ref().and_then(|info| match info.kind {
-        LevelKind::Hall { origin } => Some((origin, info.bounds)),
-        LevelKind::Poi(_) | LevelKind::Wilderness => None,
-    });
-    let Some((origin, (min_x, _, width, _))) = hall else {
-        remove(&mut gates, &mut commands);
-        return;
+    let wanted: BTreeMap<(i64, i64), GatePlace> = match dungeon.info.as_ref() {
+        Some(info) => match info.kind {
+            LevelKind::Hall { origin } => {
+                let (min_x, _, width, _) = info.bounds;
+                (LEVEL_TOP..LEVEL_TOP + LEVEL_ROWS)
+                    .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
+                    .filter_map(|(x, y)| GatePlace::at(x + origin, y).map(|gate| ((x, y), gate)))
+                    .collect()
+            }
+            LevelKind::Wilderness => {
+                world.map_or_else(BTreeMap::new, |world| wilderness_gates(&world, info.bounds))
+            }
+            LevelKind::Poi(_) => BTreeMap::new(),
+        },
+        None => BTreeMap::new(),
     };
-    let wanted: BTreeMap<(i64, i64), GatePlace> = (LEVEL_TOP..LEVEL_TOP + LEVEL_ROWS)
-        .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
-        .filter_map(|(x, y)| GatePlace::at(x + origin, y).map(|gate| ((x, y), gate)))
-        .collect();
     gates.standing.retain(|cell, frame| {
         let stays = wanted.contains_key(cell);
         if !stays {
@@ -91,6 +97,30 @@ pub(super) fn place_gates(
             .id();
         gates.standing.insert(cell, frame);
     }
+}
+
+/// The World Gates standing in the wilderness's window, by their cell (the
+/// middle cell of their world map point, in the window's frame), each built as
+/// the Hall's gate it leads to.
+fn wilderness_gates(
+    world: &CurrentWorld,
+    (min_x, min_y, width, height): (i64, i64, i64, i64),
+) -> BTreeMap<(i64, i64), GatePlace> {
+    let planet = world.surface.width() * SCALE;
+    world
+        .gates
+        .iter()
+        .filter_map(|gate| {
+            let (x, y) = (gate.x * SCALE + SCALE / 2, gate.y * SCALE + SCALE / 2);
+            let x = [-planet, 0, planet]
+                .into_iter()
+                .map(|turn| x + turn)
+                .find(|x| (min_x..min_x + width).contains(x))?;
+            (min_y..min_y + height)
+                .contains(&y)
+                .then(|| ((x, y), GatePlace::from_number(gate.place)))
+        })
+        .collect()
 }
 
 /// Runs the water down every gate's opening, by sliding its pictures.

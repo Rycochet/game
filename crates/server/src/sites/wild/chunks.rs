@@ -4,7 +4,7 @@
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::SeenStairs;
 use shared::site::{BuildingLook, Exit, FieldLook, Generator, Rect, Site, StairsDirection};
-use shared::wilderness::ChunkPlan;
+use shared::wilderness::{ChunkPlan, gates_of};
 
 use super::super::levels::seen_stairs;
 use crate::ServerWorld;
@@ -20,7 +20,8 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
     let site = poi.and_then(|poi| site_as_saved(world, &poi));
     let maps = &world.wilderness;
     let roads = maps.roads_near(chunk);
-    let plan = ChunkPlan::new(&maps.wild, chunk, poi.zip(site.as_ref()), &roads);
+    let gates = gates_of(&maps.wild, &world.pois);
+    let plan = ChunkPlan::new(&maps.wild, chunk, poi.zip(site.as_ref()), &gates, &roads);
     let (mut stairs, mut buildings, mut fields) = (Vec::new(), Vec::new(), Vec::new());
     if let (Some(cutout), Some(site)) = (plan.cutout(), &site) {
         stairs = cutout_stairs(cutout, site);
