@@ -2,7 +2,7 @@
 //! shorter is drawn that much smaller on the same ground.
 
 use bevy::prelude::*;
-use shared::body::{Frame, NONE, PERSON, Parts};
+use shared::body::{Layout, NONE, PERSON};
 
 use super::{
     CELLS, MARGIN_PIXELS, PIXELS_PER_CELL, TILT, TURN, Triangle, VIEW_WIDTH, build, features,
@@ -26,8 +26,8 @@ fn bounds(triangles: &[Triangle], view: Quat) -> (Vec3, Vec3) {
 /// its black edge: a person of the usual height fills it, anything shorter (`height`, in
 /// millimetres) is drawn that much smaller on the same ground, and anything that would
 /// still overflow it (wide horns, say) is fitted to it. The skin, then any feathers.
-pub(super) fn fitted(frame: &Frame, parts: &Parts, height: i32) -> (Vec<Triangle>, Vec<Triangle>) {
-    let (skin, feathers) = (build(frame, parts), features::wings(frame, parts));
+pub(super) fn fitted(layout: &Layout, height: i32) -> (Vec<Triangle>, Vec<Triangle>) {
+    let (skin, feathers) = (build(layout), features::wings(layout));
     let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(TURN);
     let all: Vec<Triangle> = skin.iter().chain(&feathers).copied().collect();
     let (low, high) = bounds(&all, view);
@@ -38,7 +38,7 @@ pub(super) fn fitted(frame: &Frame, parts: &Parts, height: i32) -> (Vec<Triangle
         let size = high - low;
         (room(long) / size.y).min(room(wide) / size.x)
     };
-    let person = fit(bounds(&build(&PERSON.frame(), &NONE), view));
+    let person = fit(bounds(&build(&Layout::biped(&PERSON.frame(), NONE)), view));
     let shorter = height.min(AVERAGE_HEIGHT) as f32 / AVERAGE_HEIGHT as f32;
     let scale = (person * shorter).min(fit((low, high)));
     let middle = (low + high) / 2.0;

@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use shared::armour::hands::Hand;
-use shared::body::Frame;
+use shared::body::{Frame, Layout};
 use shared::creature::CreatureKind;
 use shared::item_form::ItemForm;
 use shared::sheet::Appearance;
@@ -99,13 +99,15 @@ pub(super) fn character_parts(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
-    let Some(frame) = Frame::of(kind) else {
+    let Some(layout) = Layout::of(kind) else {
         return Vec::new();
     };
-    let parts = shared::body::Parts::of(kind);
+    let Some(frame) = layout.frame() else {
+        return Vec::new();
+    };
     let mut pieces: set::Coloured = vec![
-        (body::build(&frame, &parts), material(colours.skin)),
-        (body::wings(&frame, &parts), material(colours.feathers)),
+        (body::build(&layout), material(colours.skin)),
+        (body::wings(&layout), material(colours.feathers)),
     ];
     // An aventail hangs from the helmet worn with it.
     let rim = worn.iter().find_map(|look| match look {

@@ -23,11 +23,10 @@ pub(super) fn parts_of(
             super::blade::blade_parts(&blade, quality, meshes, materials)
         }
         Look::Body {
-            frame,
-            parts,
+            layout,
             height,
             colours,
-        } => super::body::body_parts(&frame, &parts, height, colours, meshes, materials),
+        } => super::body::body_parts(&layout, height, colours, meshes, materials),
         Look::Character {
             kind,
             worn,

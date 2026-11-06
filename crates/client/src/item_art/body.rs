@@ -7,17 +7,20 @@ use std::f32::consts::{PI, TAU};
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
-use shared::body::{Frame, Joint, Parts, Side};
+use shared::body::{Layout, Role};
 
 use super::colours::{Colours, material};
 use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
 
+mod arms;
 mod features;
 mod fit;
 mod legs;
+mod trunk;
 
 pub(super) use features::wings;
 use fit::fitted;
+pub(super) use trunk::{trunk_depth, trunk_half};
 
 /// What a body's picture takes up, wide and long: only the proportions matter.
 pub(super) const CELLS: (u8, u8) = (1, 2);
@@ -30,7 +33,7 @@ const TURN: f32 = 0.35;
 /// Seen a little from above, about as a token is.
 const TILT: f32 = 0.25;
 /// Points round anything round, and rings along a head.
-const ROUND: usize = 12;
+pub(super) const ROUND: usize = 12;
 const HEAD_RINGS: usize = 8;
 
 pub(super) type Triangle = [Vec3; 3];
@@ -114,106 +117,42 @@ pub(super) fn blob(triangles: &mut Vec<Triangle>, centre: Vec3, half: Vec3) {
     loft(triangles, &rings);
 }
 
-/// The trunk's levels from the crotch up to the neck: each height, with its half widths
-/// across and front to back.
-fn trunk_levels(frame: &Frame) -> [(f32, (f32, f32)); 6] {
-    let f = |value: i32| value as f32;
-    let half = |(across, deep): (i32, i32)| (f(across), f(deep));
-    [
-        (f(frame.hip) - f(frame.thigh), half(frame.hips_half)),
-        (f(frame.hip), half(frame.hips_half)),
-        (f(frame.waist), half(frame.waist_half)),
-        (f(frame.chest), half(frame.chest_half)),
-        (
-            f(frame.shoulder),
-            (f(frame.shoulder_half), f(frame.chest_half.1) * 0.7),
-        ),
-        (
-            f(frame.neck_base),
-            (f(frame.neck) * 1.6, f(frame.neck) * 1.2),
-        ),
-    ]
-}
-
-/// The trunk's half widths across and front to back at a height, as it is drawn: what
-/// armour on it is offset from.
-pub(super) fn trunk_half(frame: &Frame, y: f32) -> (f32, f32) {
-    let levels = trunk_levels(frame);
-    let (first, last) = (levels[0], levels[levels.len() - 1]);
-    if y <= first.0 {
-        return first.1;
-    }
-    if y >= last.0 {
-        return last.1;
-    }
-    let at = levels
-        .windows(2)
-        .find(|pair| y <= pair[1].0)
-        .expect("between the ends");
-    let t = (y - at[0].0) / (at[1].0 - at[0].0);
-    (
-        at[0].1.0 + (at[1].1.0 - at[0].1.0) * t,
-        at[0].1.1 + (at[1].1.1 - at[0].1.1) * t,
-    )
-}
-
-/// How far in front of the middle (or behind it) the trunk's skin is at this height and
-/// this far across: 0 past its side.
-pub(super) fn trunk_depth(frame: &Frame, x: f32, y: f32) -> f32 {
-    let (across, deep) = trunk_half(frame, y);
-    deep * (1.0 - (x / across).powi(2)).max(0.0).sqrt()
-}
-
-/// The body, in millimetres, standing as its frame says, with whatever it has beyond a
-/// person's.
-pub(super) fn build(frame: &Frame, parts: &Parts) -> Vec<Triangle> {
-    let f = |value: i32| value as f32;
+/// The body, in millimetres, standing as its layout says, with whatever it has beyond
+/// a person's.
+pub(super) fn build(layout: &Layout) -> Vec<Triangle> {
     let mut triangles = Vec::new();
-    // The trunk, from the crotch up to where the arms join.
-    let trunk: Vec<_> = trunk_levels(frame)
-        .into_iter()
-        .map(|(y, halves)| level(y, halves, 0.0))
-        .collect();
-    loft(&mut triangles, &trunk);
-    let neck = f(frame.neck);
+    trunk::build(&mut triangles, layout);
+    // The neck, a little into the trunk and the head.
+    let axes = trunk::Axes::of(layout);
+    let neck_base = axes.at(layout.spine.neck_base as f32);
+    let chin = neck_base + Vec3::Y * layout.neck.length as f32;
+    let neck = layout.neck.radius as f32;
     limb(
         &mut triangles,
         &[
-            (Vec3::new(0.0, f(frame.neck_base) - 20.0, 0.0), neck),
-            (Vec3::new(0.0, f(frame.chin) + 20.0, 0.0), neck),
+            (neck_base - axes.along * 20.0, neck),
+            (chin + Vec3::Y * 20.0, neck),
         ],
     );
-    let skull = point(frame.joint(Joint::Skull));
-    let head_half = Vec3::new(
-        f(frame.head.0),
-        f(frame.height - frame.chin) / 2.0,
-        f(frame.head.1),
+    let head = layout.head;
+    blob(
+        &mut triangles,
+        features::skull(layout),
+        Vec3::new(
+            head.half.0 as f32,
+            head.length as f32 / 2.0,
+            head.half.1 as f32,
+        ),
     );
-    blob(&mut triangles, skull, head_half);
-    for side in Side::BOTH {
-        let joint = |joint: Joint| point(frame.joint(joint));
-        let (upper, fore) = (f(frame.upper_arm), f(frame.forearm));
-        limb(
-            &mut triangles,
-            &[
-                (joint(Joint::Shoulder(side)), upper),
-                (joint(Joint::Elbow(side)), fore * 1.05),
-                (joint(Joint::Wrist(side)), fore * 0.7),
-            ],
-        );
-        blob(
-            &mut triangles,
-            joint(Joint::Wrist(side)).lerp(joint(Joint::Fingertips(side)), 0.5),
-            Vec3::new(fore * 0.45, f(frame.hand_length) / 2.0, fore * 1.1),
-        );
-        blob(
-            &mut triangles,
-            joint(Joint::Shoulder(side)),
-            Vec3::splat(upper * 1.15),
-        );
-        legs::build(&mut triangles, frame, parts.feet, side);
+    for limb in layout.limbs() {
+        match limb.role {
+            Role::Arm | Role::WingArm => arms::build(&mut triangles, layout, limb),
+            Role::Leg | Role::Foreleg | Role::Hindleg | Role::JointedLeg => {
+                legs::build(&mut triangles, layout, limb, layout.parts.feet)
+            }
+        }
     }
-    features::build(&mut triangles, frame, parts);
+    features::build(&mut triangles, layout);
     triangles
 }
 
@@ -236,11 +175,10 @@ pub(super) fn mesh_of(triangles: &[Triangle]) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
 }
 
-/// A bare body standing on this frame, with these parts, as tall as `height` beside a
-/// person, in these colours.
+/// A bare body standing as this layout says, as tall as `height` beside a person, in
+/// these colours.
 pub(super) fn body_parts(
-    frame: &Frame,
-    parts: &Parts,
+    layout: &Layout,
     height: i32,
     colours: Colours,
     meshes: &mut Assets<Mesh>,
@@ -248,7 +186,7 @@ pub(super) fn body_parts(
 ) -> Vec<Part> {
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
-    let (skin, feathers) = fitted(frame, parts, height);
+    let (skin, feathers) = fitted(layout, height);
     [(skin, colours.skin), (feathers, colours.feathers)]
         .into_iter()
         .filter(|(triangles, _)| !triangles.is_empty())

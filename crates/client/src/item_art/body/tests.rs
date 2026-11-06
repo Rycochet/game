@@ -9,15 +9,18 @@ fn every_body_stays_inside_its_picture_with_room_for_its_edge() {
     let edge = OUTLINE_PIXELS / PIXELS_PER_CELL * per_cell;
     let kinds = CreatureKind::ALL
         .into_iter()
-        .filter_map(Frame::of)
-        .map(|frame| (frame, shared::body::NONE, 1750));
-    let coming = FIRST_BIPEDS.map(|biped| (biped.proportions.frame(), biped.parts, biped.height));
-    for (frame, parts, height) in kinds.chain(coming) {
-        let (skin, feathers) = fitted(&frame, &parts, height);
+        .filter_map(Layout::of)
+        .map(|layout| (layout, 1750));
+    let coming = FIRST_BIPEDS.map(|biped| {
+        let layout = Layout::biped(&biped.proportions.frame(), biped.parts);
+        (layout, biped.height)
+    });
+    for (layout, height) in kinds.chain(coming) {
+        let (skin, feathers) = fitted(&layout, height);
         for corner in skin.iter().chain(&feathers).flatten() {
             assert!(corner.is_finite());
-            assert!(corner.x.abs() + edge <= wide * per_cell / 2.0, "{frame:?}");
-            assert!(corner.y.abs() + edge <= long * per_cell / 2.0, "{frame:?}");
+            assert!(corner.x.abs() + edge <= wide * per_cell / 2.0, "{layout:?}");
+            assert!(corner.y.abs() + edge <= long * per_cell / 2.0, "{layout:?}");
         }
     }
 }
