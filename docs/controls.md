@@ -39,6 +39,7 @@ You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 | ------ | ------------------ | ----- |
 | Open or close the full map | M, or click the minimap | Tap the minimap |
 | Move and zoom the full map | Drag, mouse wheel | Drag, pinch |
+| See what something is | Point at it: a creature, a door, stairs, a bag, a place on the world map, a sun or moon | Hold a finger on it |
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
 | Windowed or full screen (native only) | Alt+Enter, or Settings, Video | Settings, Video |
 | Close what is on top | Esc, or click outside it (not the startup menu: press Play) | Tap outside it |

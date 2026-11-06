@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::super::ViewCamera;
 use super::{DIAMETER, ICON_ART_SIZE, IconAnchor, TokenView};
-use crate::common::{Clickable, PointerPosition};
+use crate::common::{Clickable, HoverName, PointerPosition};
 
 /// The `Clickable` token the left mouse button was just pressed on, if any
 /// (nearest the camera when several overlap). Set every frame in
@@ -12,13 +12,15 @@ use crate::common::{Clickable, PointerPosition};
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClickedToken(pub Option<Entity>);
 
-/// The clickable token the mouse is over (nearest the camera when several
-/// overlap), if any. Set every frame in `View3dSystems::Click`.
+/// The token the mouse is over that can be clicked or has a `HoverName`
+/// (nearest the camera when several overlap), if any. Set every frame in
+/// `View3dSystems::Click`.
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HoveredToken(pub Option<Entity>);
 
-/// Finds the clickable token under the cursor: within the token's circle on
-/// screen, or its icon's main picture. A left click on it is `ClickedToken`.
+/// Finds the token under the cursor: within the token's circle on screen, or
+/// its icon's main picture. One with a name is hovered even if it can't be
+/// clicked; a left click is `ClickedToken` only on a clickable one.
 #[allow(clippy::too_many_arguments)]
 pub fn find_token_under_cursor(
     mouse: Res<ButtonInput<MouseButton>>,
@@ -27,33 +29,37 @@ pub fn find_token_under_cursor(
     views: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
     anchors: Query<(&IconAnchor, &GlobalTransform)>,
     clickable: Query<(), With<Clickable>>,
+    named: Query<(), With<HoverName>>,
     mut hovered: ResMut<HoveredToken>,
     mut clicked: ResMut<ClickedToken>,
 ) {
-    let found = pointer.0.and_then(|cursor| {
-        let (camera, camera_transform) = *camera;
-        token_at(
-            cursor,
-            camera,
-            camera_transform,
-            &views,
-            &anchors,
-            &clickable,
-        )
-    });
+    let (camera, camera_transform) = *camera;
+    let find = |wanted: &dyn Fn(Entity) -> bool| {
+        pointer
+            .0
+            .and_then(|cursor| token_at(cursor, camera, camera_transform, &views, &anchors, wanted))
+    };
+    let found = find(&|owner| clickable.contains(owner) || named.contains(owner));
     hovered.set_if_neq(HoveredToken(found));
+    // A creature that can't be clicked may stand in front of one that can.
     let pressed = mouse.just_pressed(MouseButton::Left);
-    clicked.set_if_neq(ClickedToken(found.filter(|_| pressed)));
+    let click = match found {
+        _ if !pressed => None,
+        Some(owner) if clickable.contains(owner) => Some(owner),
+        Some(_) => find(&|owner| clickable.contains(owner)),
+        None => None,
+    };
+    clicked.set_if_neq(ClickedToken(click));
 }
 
-/// The clickable token at a point on the screen.
+/// The nearest token at a point on the screen whose owner is `wanted`.
 pub(super) fn token_at(
     cursor: Vec2,
     camera: &Camera,
     camera_transform: &GlobalTransform,
     views: &Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
     anchors: &Query<(&IconAnchor, &GlobalTransform)>,
-    clickable: &Query<(), With<Clickable>>,
+    wanted: &dyn Fn(Entity) -> bool,
 ) -> Option<Entity> {
     let right = camera_transform.right();
     let eye = camera_transform.translation();
@@ -77,7 +83,7 @@ pub(super) fn token_at(
 
     let mut best: Option<(f32, Entity)> = None;
     for (view, transform, visibility) in views {
-        if !visibility.get() || clickable.get(view.owner).is_err() {
+        if !visibility.get() || !wanted(view.owner) {
             continue;
         }
         let base = transform.translation();

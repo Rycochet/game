@@ -234,6 +234,14 @@ impl Accounts {
         Ok(())
     }
 
+    /// A character's name, if its account has been loaded (as logging in does).
+    pub(crate) fn character_name(&self, character: &CharacterId) -> Option<String> {
+        self.loaded.values().find_map(|account| {
+            let found = account.characters.iter().find(|c| c.id == *character)?;
+            Some(found.name.clone())
+        })
+    }
+
     /// Takes a character off its account, which must have been loaded: the
     /// account's id, if it was on one.
     pub(crate) fn remove_character(&mut self, character: &CharacterId) -> Option<AccountId> {

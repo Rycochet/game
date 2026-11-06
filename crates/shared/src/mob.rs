@@ -286,6 +286,9 @@ fn looks(roll: &impl Fn(i64) -> u64, kind: CreatureKind) -> Appearance {
 pub struct EntityLook {
     pub id: Id,
     pub kind: CreatureKind,
+    /// Another player's character's name; `None` for a mob, which goes by
+    /// its kind.
+    pub name: Option<String>,
     pub appearance: Appearance,
     /// How it feels about the player being told.
     pub feeling: Feeling,

@@ -15,6 +15,7 @@ mod entities;
 mod fonts;
 mod ground;
 mod hall_view;
+mod hover;
 mod inventory;
 mod item_art;
 mod item_text;
@@ -113,6 +114,7 @@ fn main() {
         hall_view::HallViewPlugin,
         item_text::ItemTextPlugin,
         vitals::VitalsPlugin,
+        hover::HoverPlugin,
     ));
 
     // Native only: developer tools. (The embedded single-player server is

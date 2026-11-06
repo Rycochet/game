@@ -8,17 +8,16 @@ use shared::hall::GateCode;
 use super::gate_runes;
 use super::projection::Projection;
 use super::{
-    CORNER_GAP, FULL_MAP_MARGIN, FullMap, HOVER_LIFT, HoverBox, HoverRunes, HoverRunesPicture,
-    HoverText, ICON_PIXELS, Room, TITLE_HEIGHT, WorldHoverBox, WorldHoverText, full_map_area,
-    full_map_corner, hovered_name, minimap_across, minimap_picture_size, minimap_trim, poi_name,
-    under_the_sky, units_per_pixel,
+    CORNER_GAP, FULL_MAP_MARGIN, FullMap, HoverBox, HoverRunes, HoverRunesPicture, HoverText,
+    ICON_PIXELS, Room, TITLE_HEIGHT, full_map_area, full_map_corner, hovered_name, minimap_across,
+    minimap_picture_size, minimap_trim, under_the_sky, units_per_pixel,
 };
 use crate::common::{
-    BottomHud, CurrentDungeon, CurrentWorld, GameView, OtherLevels, Portal, SkyNow, SmoothPosition,
+    CurrentDungeon, CurrentWorld, GameView, HoveredInSky, OtherLevels, SkyNow, SmoothPosition,
     UiPointer,
 };
 use crate::player::Player;
-use crate::view3d::{HoveredToken, OrbitCamera};
+use crate::view3d::OrbitCamera;
 
 /// Names what the mouse is over on the full map, in a box near the bottom of
 /// the parchment.
@@ -167,52 +166,22 @@ pub(super) fn hovered_body(
         .map(|number| super::sky::name(&sky_now.bodies[number]))
 }
 
-/// Names what the pointer is over in a box like the full map's near the bottom
-/// of the window: a sun or moon by the minimap, or a poi on the world map. The
-/// full map covers it when open.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn name_hovered_token(
+/// Names the sun or moon by the minimap that the pointer is on, for the hover
+/// box (`hover`). The full map covers them when open.
+pub(super) fn find_hovered_body(
     view: Res<State<GameView>>,
     full: Res<FullMap>,
-    hovered: Res<HoveredToken>,
-    portals: Query<&Portal>,
     (sky_now, dungeon, pointer): (Res<SkyNow>, Res<CurrentDungeon>, Res<UiPointer>),
     window: Single<&Window, With<PrimaryWindow>>,
     ui_scale: Res<UiScale>,
-    mut holder: Single<(&mut Visibility, &mut Node), With<WorldHoverBox>>,
-    mut text: Single<&mut Text, With<WorldHoverText>>,
-    bottom_hud: Res<BottomHud>,
+    mut hovered: ResMut<HoveredInSky>,
 ) {
-    // Above whatever the interface keeps at the bottom (the vitals circle).
-    let lift = (FULL_MAP_MARGIN + HOVER_LIFT).max(bottom_hud.0 + HOVER_LIFT);
-    let (shown_now, node) = &mut *holder;
-    if node.bottom != px(lift) {
-        node.bottom = px(lift);
-    }
     let window = Room::of(&window, &ui_scale);
     let body = pointer
         .0
         .filter(|_| !full.open)
         .and_then(|at| hovered_body(*view.get(), &dungeon, &sky_now, &window, at));
-    let name = body.or_else(|| {
-        hovered
-            .0
-            .filter(|_| !full.open && *view.get() == GameView::WorldMap)
-            .and_then(|token| portals.get(token).ok())
-            .map(|portal| match portal {
-                Portal::Poi(poi) => poi_name(poi),
-                Portal::Gate(_) => "World Gate".to_owned(),
-            })
-    });
-    let shown = if name.is_some() {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    };
-    shown_now.set_if_neq(shown);
-    if let Some(name) = name
-        && text.0 != name
-    {
-        text.0 = name;
+    if hovered.0 != body {
+        hovered.0 = body;
     }
 }

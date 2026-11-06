@@ -18,7 +18,7 @@ The maps: the round minimap always in the window's top-right corner, and the ful
 ## Public API
 
 - `MinimapPlugin`.
-- `FullMap` (resource): `open`, `centre` (`None` follows the player), `zoom`. Used by `dev_tools`.
+- `FullMap` (resource): `open`, `centre` (`None` follows the player), `zoom`. Used by `dev_tools` and `hover` (which hides its box while it is open).
 
 ## Depends on
 
@@ -52,7 +52,7 @@ The maps: the round minimap always in the window's top-right corner, and the ful
 - Hatching (owner's): inside remembered wall cells, reaching a quarter of a cell in from each side that meets something open, including a dungeon door (so its sides don't look open), or a wall of a different building (so touching buildings are hatched on both sides). Town doors, house or shop, have none, and nothing hatches towards them.
 - Touching corners (owner's): where two walls meet only at a corner with open cells either side, you can walk between them, so each loses a triangle at that corner (`Sides::cut`, `CORNER_CUT`) in the floor's colour.
 - A shop's sign is its door picture from the town atlas (`door_picture`); a house has its own look, a red diamond on the line of its wall (the diamond is Claude's choice), so it differs from a dungeon's door.
-- Hovering a poi on the world map itself names it in a box near the bottom of the window (`name_hovered_token`, from `view3d::HoveredToken`), like the full map's box, lifted above `common::BottomHud` (the vitals circle).
+- The sun or moon the pointer is on by the minimap goes in `common::HoveredInSky` (`find_hovered_body`), for `hover`'s box near the bottom of the window, which also names pois and anything else on the map. Pois' names and `words` are `common`'s (`poi_name`, `words`).
 - Pois' completed look reads `Token::completed` on their entities, which exist only near the player, and nothing marks them completed yet. It should move to the server's per-player poi state once something does.
 - World map colours (owner's decision): the maps show the world as it normally is, water at mid-tide (`WorldParams::sea_level`), whatever the tide (the 3D view still follows it), so a chunk's colours never go out of date and the maps don't redraw for them.
 - `dungeon_map` adds to `remembered` without marking it changed, so maps redraw at least every `REDRAW_SECONDS`; so does the minimap, for its sky. The world map's full map doesn't: it redraws only when what it is drawn from changes, `CurrentWorld` changes (chunks or roads arriving) or it is still filling, as a repaint of it takes tens of milliseconds.

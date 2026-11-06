@@ -66,6 +66,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                 seen.push(EntityLook {
                     id: someone.id,
                     kind: someone.look.0,
+                    name: Some(someone.name.clone()).filter(|name| !name.is_empty()),
                     appearance: someone.look.1.clone(),
                     feeling: Feeling::None,
                     x: match my_hall {
@@ -87,6 +88,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                     seen.push(EntityLook {
                         id: mob.id,
                         kind: mob.kind,
+                        name: None,
                         appearance: mob.appearance.clone(),
                         feeling: mob.feeling(my_kind, client.character_id.as_ref()),
                         x: mob.position.0,

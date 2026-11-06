@@ -42,6 +42,7 @@ use crate::view3d::{TOKEN_DIAMETER, View3dSystems};
 // Split into files (`cargo xtask lint` keeps files small).
 mod click;
 mod growth;
+mod hover;
 mod lights;
 mod parts;
 mod pictures;
@@ -145,6 +146,12 @@ impl Plugin for DungeonMapPlugin {
             .add_systems(
                 Update,
                 (grey_pictures, plain_pictures::plain_pictures).chain(),
+            )
+            .add_systems(
+                Update,
+                hover::name_hovered_place
+                    .after(PlayerSystems::Travel)
+                    .after(View3dSystems::Place),
             );
     }
 }

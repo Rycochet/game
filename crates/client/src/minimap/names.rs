@@ -3,14 +3,10 @@
 use bevy::prelude::*;
 use shared::protocol::SeenPoi;
 
+pub(super) use crate::common::{poi_name, words};
+
 use super::grid::CellLook;
 use crate::common::{CurrentDungeon, CurrentWorld, FirstFloor, GameView, SmoothPosition};
-
-/// What a poi is called.
-pub(super) fn poi_name(poi: &SeenPoi) -> String {
-    let ruined = if poi.look.is_ruined() { "Ruined" } else { "" };
-    words(&format!("{ruined}{:?}", poi.kind))
-}
 
 /// The name of a shop door or world map poi at a grid position.
 /// `icon_reach` is how far a poi's picture reaches, in logical pixels.
@@ -77,18 +73,4 @@ pub(super) fn location_title(
         }
         _ => words(&dungeon.floor_name(first_floor)),
     }
-}
-
-/// Spaces out a name written in code style: "StoneTower" as "Stone tower".
-pub(super) fn words(name: &str) -> String {
-    let mut out = String::new();
-    for (index, letter) in name.chars().enumerate() {
-        if letter.is_uppercase() && index > 0 {
-            out.push(' ');
-            out.extend(letter.to_lowercase());
-        } else {
-            out.push(letter);
-        }
-    }
-    out
 }
