@@ -6,19 +6,24 @@
 use bevy::prelude::*;
 use bevy::text::LineBreak;
 
+use super::item_text::InlineHeight;
 use super::theme::SUNKEN_BACKGROUND;
 use super::{INK, Pressable, TextSize, sunken_border};
+use crate::common::TakesItemText;
 
 mod caret;
 mod clicks;
+mod dropped;
 mod edit;
 mod keys;
 mod layout;
 mod selection;
 mod show;
+mod units;
 
 pub(super) use caret::show_carets;
 pub(super) use clicks::{drag_to_select, select_by_pointer};
+pub(super) use dropped::take_dropped_items;
 pub(super) use keys::{Held, take_text};
 pub(super) use selection::show_selections;
 pub(super) use show::{place_soft_keyboard, show_text_boxes};
@@ -41,6 +46,9 @@ pub struct TextBox {
     pub error: bool,
     /// Written after the text (and the caret) in grey, and not part of it.
     pub suffix: String,
+    /// Items can be dropped on it, and items written in (`${item:<uuid>}`) show
+    /// as pictures and count as one place each.
+    pub accepts_items: bool,
 }
 
 /// Where a box's caret is and what is selected, kept apart from `TextBox` so
@@ -109,12 +117,14 @@ pub fn spawn_text_box<'a>(
         Val::Auto => px(line_height(size) + BORDER * 2.0),
         given => given,
     };
+    let end = edit::Edited::at_end(&text_box.text, text_box.accepts_items).caret;
     let cursor = Cursor {
-        caret: text_box.text.chars().count(),
-        anchor: text_box.text.chars().count(),
+        caret: end,
+        anchor: end,
         text: text_box.text.clone(),
         ..default()
     };
+    let takes_items = text_box.accepts_items;
     let mut holder = parent.spawn((
         text_box,
         cursor,
@@ -147,6 +157,7 @@ pub fn spawn_text_box<'a>(
         ));
         holder.spawn((
             TextBoxLabel(entity),
+            InlineHeight(line_height(size)),
             Text::new(""),
             TextLayout {
                 linebreak: LineBreak::NoWrap,
@@ -174,6 +185,17 @@ pub fn spawn_text_box<'a>(
             Visibility::Hidden,
         ));
     });
+    if takes_items {
+        // On its parts too: whichever the pointer is on counts as the box.
+        holder.insert(TakesItemText(entity));
+        let commands = holder.commands_mut();
+        commands.queue(move |world: &mut World| {
+            let parts = world.get::<Children>(entity).map(|c| c.to_vec());
+            for part in parts.unwrap_or_default() {
+                world.entity_mut(part).insert(TakesItemText(entity));
+            }
+        });
+    }
     holder
 }
 

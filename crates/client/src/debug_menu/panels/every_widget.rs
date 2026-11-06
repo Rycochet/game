@@ -8,11 +8,34 @@ use super::{CHECK_ROW, EVERY_WIDGET_HEIGHT, FONT};
 use crate::common::{Binding, Mods};
 use crate::widgets::{
     ALLOWED, BUTTON_PADDING, ButtonState, ButtonStyle, ColourPicker, Dropdown, GRID_COLOUR, INK,
-    KeyBox, Pressable, SAMPLE_GRADIENT, Swatch, TextBox, UiId, field_label, raised_box,
-    spawn_button, spawn_check_button, spawn_close_button, spawn_colour_picker, spawn_dropdown,
-    spawn_key_box, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs,
-    spawn_text_box, spawn_toggle_row, spawn_tooltip,
+    ItemText, KeyBox, Pressable, SAMPLE_GRADIENT, Swatch, TextBox, TextEdited, UiId, field_label,
+    raised_box, spawn_button, spawn_check_button, spawn_close_button, spawn_colour_picker,
+    spawn_dropdown, spawn_item_text, spawn_key_box, spawn_progress_bar, spawn_scroll_area,
+    spawn_slider, spawn_switch, spawn_tabs, spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
+
+/// The sample text box taking items.
+#[derive(Component)]
+pub(in crate::debug_menu) struct TakesItems;
+
+/// Writing showing what that box says.
+#[derive(Component)]
+pub(in crate::debug_menu) struct Typed;
+
+/// Shows what the sample box says below it, items and all.
+pub(in crate::debug_menu) fn show_typed_items(
+    mut edited: MessageReader<TextEdited>,
+    boxes: Query<&TextBox, With<TakesItems>>,
+    mut shown: Query<&mut ItemText, With<Typed>>,
+) {
+    for TextEdited(entity) in edited.read() {
+        if let Ok(text_box) = boxes.get(*entity) {
+            for mut text in &mut shown {
+                text.0.clone_from(&text_box.text);
+            }
+        }
+    }
+}
 
 /// One of each thing `widgets` makes, to see how they look together.
 pub(super) fn spawn_every_widget(content: &mut ChildSpawnerCommands) {
@@ -140,6 +163,7 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
     let text_box = TextBox {
         text: "Text box".into(),
         takes_keys: true,
+        accepts_items: true,
         ..default()
     };
     let node = Node {
@@ -147,7 +171,9 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
         ..default()
     };
     content.spawn(field_label("Label"));
-    spawn_text_box(content, text_box, FONT, node.clone()).insert(id("Text box"));
+    spawn_text_box(content, text_box, FONT, node.clone()).insert((id("Text box"), TakesItems));
+    // What the box says, items and all: drop one from the inventory on the box.
+    spawn_item_text(content, "Text box", FONT, INK, Node::default()).insert(Typed);
     let wrong = TextBox {
         text: "Something wrong".into(),
         takes_keys: true,

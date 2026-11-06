@@ -962,3 +962,7 @@ Hair style and beard are two more looks (`Trait::HairStyle`, `Trait::Beard`), ch
 ## 2026-11-06: Mobs in the wilderness
 
 Owner's design: creatures live in each block by its biome; each player in the wilderness has a live area of 5 × 5 blocks (the 3 × 3 they see and one ring further out, where mobs already act), shared with players whose middle 3 × 3 they are in; a block belongs to one area at a time; a block let go of keeps its mobs as they were for 5 minutes, so turning back makes nothing vanish, then they are let go and start at home next time. Wild mobs' ids come from the secret seed, so only changes (deaths, memories, what they were given) are saved. Players near the planet's seam in one area may see its mobs a planet's width out: rare, kept simple. Scent trails laid ahead into unvisited blocks come next.
+
+## 2026-11-06: Items shown in text
+
+Owner: an item dropped on a text box that takes items is written in as `${item:<uuid>}` at the caret and goes back where it was; it shows as the item's picture in its quality's frame and is named on hovering, as anywhere. Claude's choices: a box only treats items so with `TextBox::accepts_items` (elsewhere the text is plain), where each counts as one place; the picture is a Bevy `InlineImage` a line tall, and its frame a separate node placed over it, since a text can hold neither borders nor nodes; what an item is lives in `common::KnownItems`, filled by the client `item_text` module from what is carried or the server, kept a minute while on show. Shown only in Show Widgets until something uses it.

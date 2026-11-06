@@ -19,8 +19,8 @@ use super::panels::{BinNode, DropNode, ItemCell, OpenGrids};
 use super::split::{PickRow, Split, SplitCell};
 use super::{CLICK_PIXELS, CLICK_SECONDS, Carried, Hand, Holding};
 use crate::common::{
-    GameView, GaveItem, HeldOverGifts, HeldStock, Preferences, SpentEnergy, StockCell, TakesGifts,
-    TookItem, TouchGesture, UiPointer,
+    DroppedOnText, GameView, GaveItem, HeldOverGifts, HeldOverText, HeldStock, Preferences,
+    SpentEnergy, StockCell, TakesGifts, TakesItemText, TookItem, TouchGesture, UiPointer,
 };
 use crate::connection::ToServer;
 use crate::widgets::{ButtonPressed, Floating, RaisePanel};
@@ -65,6 +65,7 @@ pub(super) struct Under<'w, 's> {
             Has<BodyNode>,
             Option<&'static GiveRow>,
             Option<&'static TakesGifts>,
+            Option<&'static TakesItemText>,
             Option<&'static CalculatedClip>,
         ),
         Without<Floating>,
@@ -81,6 +82,7 @@ pub(super) struct Outbox<'w> {
     took: MessageWriter<'w, TookItem>,
     spent: MessageWriter<'w, SpentEnergy>,
     stacks: Res<'w, super::Stacks>,
+    on_text: (ResMut<'w, HeldOverText>, MessageWriter<'w, DroppedOnText>),
 }
 
 /// Everything about holding: picking up with the mouse, turning, following the
@@ -172,7 +174,7 @@ pub(super) fn hold_items(
         &mut mouse,
         &mut gesture,
         (&mut keys, &preferences.controls),
-        (&mut over_gifts, &mut held_stock),
+        (&mut over_gifts, &mut held_stock, &mut out.on_text.0),
     ) else {
         return;
     };
@@ -199,6 +201,16 @@ pub(super) fn hold_items(
     }
     holding.held = None;
     holding.aim = None;
+    if let Some(on) = out.on_text.0.0.take() {
+        // Written in where it is let go; it goes back where it was.
+        out.on_text.1.write(DroppedOnText {
+            on,
+            item: held.item.id,
+        });
+        holding.stock = None;
+        held_stock.set_if_neq(HeldStock(None));
+        return;
+    }
     let_go_of(
         held,
         aim,

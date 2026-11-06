@@ -1,7 +1,10 @@
 //! Editing what a box says: where the caret is, what is selected, and what keys
 //! and clicks do to them. Plain Rust, so it can be tested without Bevy. Places
-//! are counted in characters, not bytes: the caret sits before the character
-//! with its number, and after the last at the text's length.
+//! are counted in units (`units`), not bytes: characters, and items written in
+//! as one each in a box that takes them. The caret sits before the unit with its
+//! number, and after the last at the text's length.
+
+use super::units::{Unit, byte_of_place, place_of_byte, units};
 
 /// Where the caret goes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,33 +28,28 @@ pub(in crate::widgets) struct Edited {
     pub text: String,
     pub caret: usize,
     pub anchor: usize,
-}
-
-/// What sort of character it is, for moving by words: a word runs over
-/// characters of one sort.
-fn sort(c: char) -> u8 {
-    if c.is_whitespace() {
-        0
-    } else if c.is_alphanumeric() || c == '_' {
-        1
-    } else {
-        2
-    }
+    /// Items written in count as one place each (a box that takes items).
+    pub items: bool,
 }
 
 impl Edited {
     /// The caret at the end, nothing selected.
-    pub fn at_end(text: &str) -> Self {
-        let end = text.chars().count();
+    pub fn at_end(text: &str, items: bool) -> Self {
+        let end = units(text, items).len();
         Self {
             text: text.to_owned(),
             caret: end,
             anchor: end,
+            items,
         }
     }
 
+    pub fn units(&self) -> Vec<Unit> {
+        units(&self.text, self.items)
+    }
+
     pub fn len(&self) -> usize {
-        self.text.chars().count()
+        self.units().len()
     }
 
     /// Where the selection starts and ends, if there is one.
@@ -63,20 +61,23 @@ impl Edited {
     /// What is selected; empty with nothing selected.
     pub fn selected(&self) -> String {
         self.selection().map_or_else(String::new, |(from, to)| {
-            self.text.chars().skip(from).take(to - from).collect()
+            self.text[self.byte(from)..self.byte(to)].to_owned()
         })
     }
 
-    /// Where the character numbered `place` starts, in bytes.
-    fn byte(&self, place: usize) -> usize {
-        self.text
-            .char_indices()
-            .nth(place)
-            .map_or(self.text.len(), |(byte, _)| byte)
+    /// Where the unit numbered `place` starts, in bytes.
+    pub fn byte(&self, place: usize) -> usize {
+        byte_of_place(&self.units(), place, self.text.len())
     }
 
-    fn chars(&self) -> Vec<char> {
-        self.text.chars().collect()
+    /// The place at this byte (inside an item: after it).
+    pub fn place_of_byte(&self, byte: usize) -> usize {
+        place_of_byte(&self.units(), byte)
+    }
+
+    /// Each unit's sort, for moving by words.
+    fn chars(&self) -> Vec<u8> {
+        self.units().into_iter().map(Unit::sort).collect()
     }
 
     /// Where a motion from the caret ends.
@@ -90,25 +91,23 @@ impl Edited {
             Motion::End => chars.len(),
             Motion::To(place) => place.min(chars.len()),
             Motion::WordLeft => {
-                while at > 0 && sort(chars[at - 1]) == 0 {
+                while at > 0 && chars[at - 1] == 0 {
                     at -= 1;
                 }
-                if let Some(&c) = at.checked_sub(1).and_then(|i| chars.get(i)) {
-                    let word = sort(c);
-                    while at > 0 && sort(chars[at - 1]) == word {
+                if let Some(&word) = at.checked_sub(1).and_then(|i| chars.get(i)) {
+                    while at > 0 && chars[at - 1] == word {
                         at -= 1;
                     }
                 }
                 at
             }
             Motion::WordRight => {
-                if let Some(&c) = chars.get(at) {
-                    let word = sort(c);
-                    while at < chars.len() && sort(chars[at]) == word && word != 0 {
+                if let Some(&word) = chars.get(at) {
+                    while at < chars.len() && chars[at] == word && word != 0 {
                         at += 1;
                     }
                 }
-                while at < chars.len() && sort(chars[at]) == 0 {
+                while at < chars.len() && chars[at] == 0 {
                     at += 1;
                 }
                 at
@@ -149,7 +148,7 @@ impl Edited {
         self.remove_selection();
         let at = self.byte(self.caret);
         self.text.insert_str(at, typed);
-        self.caret += typed.chars().count();
+        self.caret = self.place_of_byte(at + typed.len());
         self.anchor = self.caret;
     }
 
@@ -198,13 +197,13 @@ impl Edited {
         }
         // At the end, the word before.
         let at = place.min(chars.len() - 1);
-        let word = sort(chars[at]);
+        let word = chars[at];
         let mut from = at;
-        while from > 0 && sort(chars[from - 1]) == word {
+        while from > 0 && chars[from - 1] == word {
             from -= 1;
         }
         let mut to = at + 1;
-        while to < chars.len() && sort(chars[to]) == word {
+        while to < chars.len() && chars[to] == word {
             to += 1;
         }
         self.anchor = from;

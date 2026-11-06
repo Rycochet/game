@@ -17,6 +17,7 @@ mod filter_list;
 mod fullscreen;
 mod hover_tip;
 mod item;
+mod item_text;
 mod key_box;
 mod moveable;
 mod new_seed_icon;
@@ -62,6 +63,7 @@ pub use item::{
     item_label, item_picture, logical_rect, picture_in_square, shown_at, spawn_item_cells,
     spawn_item_grid,
 };
+pub use item_text::{ItemText, spawn_item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
 pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
@@ -225,6 +227,7 @@ impl Plugin for WidgetsPlugin {
                     slider::hold_sliders,
                     slider::place_marks,
                     (
+                        text_box::take_dropped_items,
                         text_box::show_text_boxes,
                         text_box::show_carets,
                         text_box::show_selections,
@@ -252,6 +255,7 @@ impl Plugin for WidgetsPlugin {
                 scroll::keep_places.after(bevy::ui::UiSystems::Layout),
             )
             .add_systems(Last, ui_id::warn_of_duplicates);
+        item_text::add(app);
         #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
         debug_api::add(app);
     }

@@ -5,6 +5,7 @@ fn edited(text: &str, caret: usize, anchor: usize) -> Edited {
         text: text.to_owned(),
         caret,
         anchor,
+        items: false,
     }
 }
 
@@ -125,5 +126,43 @@ fn double_and_triple_clicks_select_a_word_and_everything() {
 
 #[test]
 fn at_end_puts_the_caret_after_the_text() {
-    assert_eq!(Edited::at_end("abc"), edited("abc", 3, 3));
+    assert_eq!(Edited::at_end("abc", false), edited("abc", 3, 3));
+}
+
+const RING: &str = "${item:00000000-0000-0000-0000-000000000001}";
+
+fn with_items(text: &str, caret: usize) -> Edited {
+    Edited {
+        text: text.to_owned(),
+        caret,
+        anchor: caret,
+        items: true,
+    }
+}
+
+#[test]
+fn an_item_is_one_place() {
+    let text = format!("a {RING} b");
+    let mut box_ = with_items(&text, 2);
+    assert_eq!(box_.len(), 5);
+    box_.move_caret(Motion::Right, true);
+    assert_eq!(box_.selected(), RING, "copied whole");
+    box_.move_caret(Motion::Right, false);
+    box_.backspace(false);
+    assert_eq!(box_.text, "a  b");
+}
+
+#[test]
+fn an_item_pasted_in_is_one_place_and_the_caret_goes_after_it() {
+    let mut box_ = with_items("ab", 1);
+    box_.insert(RING);
+    assert_eq!((box_.caret, box_.len()), (2, 3));
+    box_.move_caret(Motion::WordLeft, false);
+    assert_eq!(box_.caret, 1);
+}
+
+#[test]
+fn a_box_without_items_counts_each_character() {
+    let box_ = Edited::at_end(RING, false);
+    assert_eq!(box_.len(), RING.chars().count());
 }

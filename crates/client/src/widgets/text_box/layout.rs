@@ -1,6 +1,7 @@
 //! Where the places between a box's characters are on the screen, from how
 //! Bevy laid its writing out: each character is a span of its own, so each has
-//! a run of its own, as wide as it advances (spaces too).
+//! a run of its own, as wide as it advances (spaces too); each item is an inline
+//! box.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -72,6 +73,13 @@ pub(super) fn edges(
             None => Run::Other,
         }
     });
+    // Items are boxes in the layout, not runs of writing.
+    let boxes = info.inline_boxes.iter().map(|(entity, _, rect)| {
+        chars
+            .get(*entity)
+            .map_or(Run::Other, |c| Run::Char(c.0, rect.min.x, rect.max.x))
+    });
+    let runs = runs.chain(boxes);
     let scale = node.inverse_scale_factor;
     edges_of(runs, count)
         .into_iter()

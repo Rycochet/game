@@ -1,11 +1,13 @@
 //! Keeps what boxes say on show: the prefix as the label's own text, a span per
-//! character after it (so each can be found on the screen), and the suffix in
-//! grey.
+//! character after it (so each can be found on the screen), an inline picture
+//! per item in a box that takes them, and the suffix in grey.
 
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
+use super::units::units;
 use super::{RaisesKeyboard, TextBox, TextBoxChar, TextBoxLabel, TextBoxSuffix};
+use crate::widgets::item_text::{InlineHeight, spawn_inline_item};
 use crate::widgets::soft_keyboard;
 use crate::widgets::theme::HINT_TEXT;
 
@@ -23,11 +25,12 @@ pub(in crate::widgets) fn show_text_boxes(
         &mut Text,
         &TextFont,
         &TextColor,
+        &InlineHeight,
         Option<&Shown>,
     )>,
     mut suffixes: Query<(&TextBoxSuffix, &mut TextSpan)>,
 ) {
-    for (label, text_box, mut text, font, colour, shown) in &mut labels {
+    for (label, text_box, mut text, font, colour, height, shown) in &mut labels {
         let Ok(owner) = boxes.get(text_box.0) else {
             continue;
         };
@@ -39,13 +42,18 @@ pub(in crate::widgets) fn show_text_boxes(
             label.despawn_related::<Children>();
             label.insert(Shown(owner.text.clone()));
             label.with_children(|spans| {
-                for (place, c) in owner.text.chars().enumerate() {
-                    spans.spawn((
-                        TextBoxChar(place),
-                        TextSpan(c.to_string()),
-                        font.clone(),
-                        *colour,
-                    ));
+                for (place, unit) in units(&owner.text, owner.accepts_items).iter().enumerate() {
+                    match unit.item {
+                        Some(id) => spawn_inline_item(spans, id, height.0, TextBoxChar(place)),
+                        None => {
+                            spans.spawn((
+                                TextBoxChar(place),
+                                TextSpan(unit.c.to_string()),
+                                font.clone(),
+                                *colour,
+                            ));
+                        }
+                    }
                 }
                 spans.spawn((
                     TextBoxSuffix(text_box.0),

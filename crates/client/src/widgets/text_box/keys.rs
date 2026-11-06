@@ -67,14 +67,13 @@ impl Held {
 /// changed the writing since.
 pub(super) fn current(text_box: &TextBox, cursor: &Cursor) -> Edited {
     if cursor.text != text_box.text {
-        return Edited::at_end(&text_box.text);
+        return Edited::at_end(&text_box.text, text_box.accepts_items);
     }
-    let len = text_box.text.chars().count();
-    Edited {
-        text: text_box.text.clone(),
-        caret: cursor.caret.min(len),
-        anchor: cursor.anchor.min(len),
-    }
+    let mut edited = Edited::at_end(&text_box.text, text_box.accepts_items);
+    let len = edited.caret;
+    edited.caret = cursor.caret.min(len);
+    edited.anchor = cursor.anchor.min(len);
+    edited
 }
 
 /// Keeps an edit; `true` if the writing changed. `now` is when, to keep the
@@ -198,13 +197,15 @@ pub(in crate::widgets) fn take_text(
         && let Some((typed, caret)) = soft_keyboard::typed(&edited.text)
     {
         // The browser's hidden input, typed into on a device without keys.
+        // It counts characters, not places.
         edited.text = allowed(&typed, digits_only);
-        let len = edited.text.chars().count();
-        edited.caret = caret.min(len);
+        let byte = edited.text.char_indices().nth(caret);
+        edited.caret = edited.place_of_byte(byte.map_or(edited.text.len(), |(at, _)| at));
         edited.anchor = edited.caret;
     }
     if told_soft_keyboard.0 != Some(entity) || told_soft_keyboard.1 != edited {
-        soft_keyboard::show_text(&edited.text, edited.anchor, edited.caret);
+        let chars = |place| edited.text[..edited.byte(place)].chars().count();
+        soft_keyboard::show_text(&edited.text, chars(edited.anchor), chars(edited.caret));
         *told_soft_keyboard = (Some(entity), edited.clone());
     }
     if keep(edited, &mut text_box, &mut cursor, now) {
