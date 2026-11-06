@@ -11,9 +11,31 @@ use super::{Triangle, blob, limb, point};
 pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout) {
     let parts = &layout.parts;
     head(triangles, layout, parts);
-    if parts.tail > 0 {
-        tail(triangles, layout, parts.tail as f32);
+    rear(triangles, layout);
+}
+
+/// An abdomen and a tail, if it has them.
+pub(super) fn rear(triangles: &mut Vec<Triangle>, layout: &Layout) {
+    if layout.parts.abdomen > 0 {
+        abdomen(triangles, layout);
     }
+    if layout.parts.tail > 0 {
+        tail(triangles, layout, layout.parts.tail as f32);
+    }
+}
+
+/// A spider's round abdomen, or a scorpion's long one, behind the hips: wider and
+/// deeper than the front body, as long as it says.
+fn abdomen(triangles: &mut Vec<Triangle>, layout: &Layout) {
+    let f = |value: i32| value as f32;
+    let (across, deep) = layout.spine.chest.half;
+    let length = f(layout.parts.abdomen);
+    let axes = Axes::of(layout);
+    blob(
+        triangles,
+        axes.at(-length / 2.0) - axes.front * f(deep) * 0.2,
+        Vec3::new(f(across) * 1.3, f(deep) * 1.3, length / 2.0),
+    );
 }
 
 /// The middle of the head, on top of the neck.
@@ -148,19 +170,24 @@ fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts) {
 }
 
 /// A tail from the base of the back, out behind and curving down, kept off the ground.
-pub(super) fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
+fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
     let f = |value: i32| value as f32;
     // Behind the hips, whichever way the back leans; high on the rump of a level back,
     // where it hangs nearly straight down.
     let deep = f(layout.spine.hips.half.1);
     let level = layout.spine.pitch >= 45;
-    let base = Axes::of(layout).at(0.0) - Vec3::Z * deep * 0.8
+    // From the end of an abdomen, if it has one.
+    let behind = f(layout.parts.abdomen) * 0.95;
+    let base = Axes::of(layout).at(-behind) - Vec3::Z * deep * 0.8
         + if level {
             Vec3::Y * deep * 0.5
         } else {
             Vec3::ZERO
         };
-    let shape = if level {
+    // Down is negative for a sting curling up over the back, ending forwards.
+    let shape = if layout.parts.sting {
+        [(-0.3, 0.25), (-0.7, 0.2), (-0.8, -0.1)]
+    } else if level {
         [(0.15, 0.25), (0.55, 0.35), (0.95, 0.4)]
     } else {
         [(0.25, 0.35), (0.45, 0.75), (0.5, 1.0)]

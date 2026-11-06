@@ -13,6 +13,7 @@ pub enum CreatureKind {
     Cattle,
     Centaur,
     Chicken,
+    Drider,
     Dwarf,
     Elf,
     Giant,
@@ -25,6 +26,7 @@ pub enum CreatureKind {
     Lizardfolk,
     Minotaur,
     Orc,
+    ScorpionMan,
     Wolf,
 }
 

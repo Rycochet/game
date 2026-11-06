@@ -20,4 +20,8 @@ These keep their own licences. The [attribution file](https://github.com/Rycoche
 - **Lexend:** Bonnie Shaver-Troup, Thomas Jockin, Santiago Orozco, Héctor Gómez and Superunion (SIL Open Font License 1.1).
 - **Noto Emoji:** Google (SIL Open Font License 1.1).
 
+## Creatures
+
+- **Some creatures (the drider):** from the System Reference Document 5.1 ("SRD 5.1") by Wizards of the Coast LLC, available at <https://dnd.wizards.com/resources/systems-reference-document>. The SRD 5.1 is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/legalcode).
+
 The game is built with [Bevy](https://bevy.org/) and other open source libraries, which keep their own licences.

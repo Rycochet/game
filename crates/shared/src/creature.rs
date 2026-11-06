@@ -16,6 +16,7 @@ mod names;
 mod peoples;
 mod senses;
 mod size;
+mod taurs;
 
 pub use def::{BodyPart, CreatureDef};
 pub use kind::CreatureKind;
@@ -25,12 +26,13 @@ pub use size::Size;
 
 impl CreatureKind {
     /// Every kind, alphabetically.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 19] = [
         Self::Beggar,
         Self::Birdfolk,
         Self::Cattle,
         Self::Centaur,
         Self::Chicken,
+        Self::Drider,
         Self::Dwarf,
         Self::Elf,
         Self::Giant,
@@ -42,6 +44,7 @@ impl CreatureKind {
         Self::Lizardfolk,
         Self::Minotaur,
         Self::Orc,
+        Self::ScorpionMan,
         Self::Wolf,
     ];
 }

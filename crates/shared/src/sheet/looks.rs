@@ -91,6 +91,31 @@ const ELF_SKIN: &[Choice] = &[
     colour("Bark brown", [120, 88, 62]),
 ];
 
+const DARK_ELF_SKIN: &[Choice] = &[
+    colour("Ash grey", [128, 126, 130]),
+    colour("Slate", [88, 92, 104]),
+    colour("Dusky blue", [70, 78, 112]),
+    colour("Black", [38, 36, 42]),
+];
+
+const BRONZE_SKIN: &[Choice] = &[
+    colour("Bronze", [168, 112, 62]),
+    colour("Brown", [120, 80, 52]),
+    colour("Tan", [190, 142, 104]),
+];
+
+const SPIDER_CHITIN: &[Choice] = &[
+    colour("Black", [30, 28, 32]),
+    colour("Brown", [82, 60, 44]),
+    colour("Purple", [72, 44, 88]),
+];
+
+const SCORPION_CHITIN: &[Choice] = &[
+    colour("Black", [34, 30, 30]),
+    colour("Red-brown", [112, 52, 34]),
+    colour("Sand", [186, 158, 104]),
+];
+
 const ORC_SKIN: &[Choice] = &[
     colour("Grey-green", [120, 140, 104]),
     colour("Olive", [128, 128, 72]),
@@ -171,7 +196,8 @@ impl Trait {
     /// The choices a creature of this kind has for this trait, in order.
     pub fn choices_for(self, kind: CreatureKind) -> &'static [Choice] {
         use CreatureKind::{
-            Birdfolk, Cattle, Dwarf, Elf, Goblin, Horse, Kobold, Lizardfolk, Minotaur, Orc, Wolf,
+            Birdfolk, Cattle, Drider, Dwarf, Elf, Goblin, Horse, Kobold, Lizardfolk, Minotaur, Orc,
+            ScorpionMan, Wolf,
         };
         match self {
             Self::Height => HEIGHT,
@@ -179,6 +205,8 @@ impl Trait {
             Self::SkinShade => match kind {
                 Dwarf => DWARF_SKIN,
                 Elf => ELF_SKIN,
+                Drider => DARK_ELF_SKIN,
+                ScorpionMan => BRONZE_SKIN,
                 Orc => ORC_SKIN,
                 Goblin => GOBLIN_SKIN,
                 Kobold => KOBOLD_SKIN,
@@ -188,6 +216,8 @@ impl Trait {
             Self::CoatColour => match kind {
                 Horse => HORSE_COAT,
                 Cattle => CATTLE_COAT,
+                Drider => SPIDER_CHITIN,
+                ScorpionMan => SCORPION_CHITIN,
                 Wolf => WOLF_COAT,
                 Minotaur => BULL_COAT,
                 _ => HORSE_COAT,

@@ -64,12 +64,14 @@ fn picture(kind: CreatureKind) -> &'static str {
         CreatureKind::Beggar => "monsters/humandruid01.png",
         CreatureKind::Cattle => "monsters/cowright.png",
         CreatureKind::Chicken => "monsters/chicken1.png",
+        CreatureKind::Drider => "monsters/spiderblack.png",
         CreatureKind::Giant => "monsters/gianthill.png",
         CreatureKind::Horse => "monsters/horse01.png",
         CreatureKind::Kobold => "monsters/koboldfighter.png",
         CreatureKind::Halfling => "monsters/halflingfighter.png",
         CreatureKind::Lizardfolk => "monsters/lizardgreen.png",
         CreatureKind::Orc => "monsters/orcfighter.png",
+        CreatureKind::ScorpionMan => "monsters/scorpionbrown.png",
         CreatureKind::Wolf => "monsters/doggrey.png",
     }
 }

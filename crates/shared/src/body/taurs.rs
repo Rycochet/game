@@ -1,29 +1,86 @@
-//! Taurs: a person's upper body standing on a beast's, where the beast's neck would
-//! be, as a centaur's on a horse. The lower body is one of `BEASTS`, at its own size;
-//! the upper body is a frame from proportions at a person's, as a biped's is, so
-//! everything worn on a person's upper body is built on it and moved into place.
+//! Taurs: a person's upper body standing on another body, where its neck would be: a
+//! centaur's on a horse, a drider's on a spider, a scorpion man's on a scorpion. A beast
+//! below is one of `BEASTS`, at its own size, or eight legs (`taurs/arthropod.rs`); the
+//! upper body is a frame from proportions at a person's, as a biped's is, so everything
+//! worn on a person's upper body is built on it and moved into place.
 
 use super::layout::{Layout, Role, Upper};
 use super::{BEASTS, Frame, NONE, PERSON, Parts, Plan, Proportions};
 use crate::creature::CreatureKind;
 
-/// A taur, by name: the beast below, the person above and its head's parts.
+mod arthropod;
+
+pub use arthropod::Arthropod;
+
+/// What a taur stands on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Lower {
+    /// One of `BEASTS`, by name.
+    Beast(&'static str),
+    /// Eight legs.
+    Arthropod(Arthropod),
+}
+
+/// A taur, by name: the body below, the person above, and its parts: the head's, and
+/// for eight legs the abdomen and tail (a beast's tail and feet are its own).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Taur {
     pub name: &'static str,
-    /// The name of the beast in `BEASTS` it stands on.
-    pub lower: &'static str,
+    pub lower: Lower,
     pub upper: Proportions,
-    /// What its head has beyond a person's; the tail and feet are the beast's.
     pub parts: Parts,
 }
 
-pub const TAURS: [Taur; 1] = [Taur {
-    name: "Centaur",
-    lower: "Horse",
-    upper: PERSON,
-    parts: NONE,
-}];
+/// A slender person, as an elf (the research's dark elf on its spider).
+const SLENDER: Proportions = Proportions {
+    heads: 85,
+    breadth: 900,
+    limbs: 800,
+    arms: 1030,
+    legs: 1059,
+};
+
+pub const TAURS: [Taur; 3] = [
+    Taur {
+        name: "Centaur",
+        lower: Lower::Beast("Horse"),
+        upper: PERSON,
+        parts: NONE,
+    },
+    Taur {
+        name: "Drider",
+        lower: Lower::Arthropod(Arthropod {
+            height: 1150,
+            front: 800,
+            barrel: (320, 260),
+            reach: 1300,
+            leg: 55,
+        }),
+        upper: SLENDER,
+        parts: Parts {
+            ears: 60,
+            abdomen: 1200,
+            ..NONE
+        },
+    },
+    Taur {
+        name: "Scorpion Man",
+        lower: Lower::Arthropod(Arthropod {
+            height: 1100,
+            front: 700,
+            barrel: (300, 220),
+            reach: 1100,
+            leg: 50,
+        }),
+        upper: PERSON,
+        parts: Parts {
+            abdomen: 1000,
+            tail: 1300,
+            sting: true,
+            ..NONE
+        },
+    },
+];
 
 impl Taur {
     /// The taur of this kind, by its name.
@@ -31,39 +88,48 @@ impl Taur {
         TAURS.into_iter().find(|taur| taur.name == kind.def().name)
     }
 
-    /// The beast's layout with the upper body standing where its neck would be: the
-    /// person's hips sunk into the top of its chest, above its forelegs.
+    /// The lower body's layout with the upper body standing where its neck would be:
+    /// the person's hips sunk into the top of its front, over its forelegs.
     pub fn layout(&self) -> Layout {
-        let beast = BEASTS
-            .into_iter()
-            .find(|beast| beast.name == self.lower)
-            .expect("a taur stands on one of the beasts");
-        let mut layout = beast.layout();
-        let Plan::Fourfoot(four) = beast.plan else {
-            return layout;
+        let (mut layout, deep) = match self.lower {
+            Lower::Beast(name) => {
+                let beast = BEASTS
+                    .into_iter()
+                    .find(|beast| beast.name == name)
+                    .expect("a taur stands on one of the beasts");
+                let mut layout = beast.layout();
+                let Plan::Fourfoot(four) = beast.plan else {
+                    return layout;
+                };
+                layout.parts = Parts {
+                    tail: beast.parts.tail,
+                    feet: beast.parts.feet,
+                    ..self.parts
+                };
+                (layout, four.barrel.1)
+            }
+            Lower::Arthropod(arthropod) => (arthropod.layout(self.parts), arthropod.barrel.1),
         };
-        let deep = four.barrel.1;
-        let [x, _, z] = layout.spine.at(layout.spine.shoulders);
+        // The person's hips sink into the top of the lower body, a third of its depth
+        // down from its top and a third of it in front of its shoulders.
+        let [x, y, z] = layout.spine.at(layout.spine.shoulders);
         layout.upper = Some(Upper {
             frame: self.upper.frame(),
-            at: [x, four.withers - deep / 3, z + deep / 3],
+            at: [x, y + deep * 2 / 3, z + deep / 3],
         });
-        layout.parts = Parts {
-            tail: beast.parts.tail,
-            feet: beast.parts.feet,
-            ..self.parts
-        };
         layout
     }
 }
 
 impl Layout {
     /// The upper body as a layout of its own, in place: its trunk from the hips up,
-    /// arms, neck and head, with no legs or tail.
+    /// arms, neck and head, with no legs, tail or abdomen.
     pub fn upper_body(&self) -> Option<Layout> {
         let upper = self.upper?;
         let parts = Parts {
             tail: 0,
+            sting: false,
+            abdomen: 0,
             ..self.parts
         };
         let mut body = Layout::biped(&upper.frame, parts);

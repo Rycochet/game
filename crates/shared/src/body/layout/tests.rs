@@ -139,3 +139,42 @@ fn a_centaur_wears_on_a_persons_frame_above_its_horse() {
     assert!(upper.limbs().all(|limb| limb.role == Role::Arm));
     assert_eq!(upper.spine.base[1], hip);
 }
+
+#[test]
+fn eight_legged_taurs_stand_on_eight_legs_and_wear_above() {
+    for kind in [CreatureKind::Drider, CreatureKind::ScorpionMan] {
+        let layout = Layout::of(kind).expect("a taur");
+        let legs: Vec<_> = layout.limbs().collect();
+        assert_eq!(legs.len(), 8, "{kind:?}");
+        for leg in legs {
+            assert_eq!(leg.role, Role::JointedLeg);
+            let joints = layout.joints(leg);
+            assert_eq!(joints.last().map(|joint| joint[1]), Some(0), "{kind:?}");
+            // The knee rises above the body before the leg falls.
+            assert!(joints[1][1] > joints[0][1], "{kind:?}");
+        }
+        let (frame, offset) = layout.worn_frame().expect("an upper body");
+        assert!(frame.height + offset[1] > 2000, "{kind:?}");
+        assert!(layout.parts.abdomen > 0);
+    }
+    assert!(Layout::of(CreatureKind::ScorpionMan).is_some_and(|layout| layout.parts.sting));
+}
+
+#[test]
+fn an_upper_body_has_nothing_of_the_lower_ones_behind() {
+    for kind in [
+        CreatureKind::Centaur,
+        CreatureKind::Drider,
+        CreatureKind::ScorpionMan,
+    ] {
+        let parts = Layout::of(kind)
+            .and_then(|layout| layout.upper_body())
+            .expect("upper")
+            .parts;
+        assert_eq!(
+            (parts.tail, parts.abdomen, parts.sting),
+            (0, 0, false),
+            "{kind:?}"
+        );
+    }
+}

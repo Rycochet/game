@@ -60,8 +60,12 @@ pub struct Parts {
     pub horn_length: i32,
     /// Tusks up from the lower jaw.
     pub tusks: i32,
-    /// A tail this long, from the base of the back.
+    /// A tail this long, from the base of the back (or the end of the abdomen).
     pub tail: i32,
+    /// Whether the tail curls up over the back to a sting, as a scorpion's.
+    pub sting: bool,
+    /// A separate rear body this long behind the hips, as a spider's or a scorpion's.
+    pub abdomen: i32,
     pub feet: Feet,
     pub wings: Wings,
 }
@@ -75,6 +79,8 @@ pub const NONE: Parts = Parts {
     horn_length: 0,
     tusks: 0,
     tail: 0,
+    sting: false,
+    abdomen: 0,
     feet: Feet::Plantigrade,
     wings: Wings::None,
 };

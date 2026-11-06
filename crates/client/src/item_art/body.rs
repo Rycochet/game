@@ -181,9 +181,7 @@ pub(super) fn build_coated(layout: &Layout) -> (Vec<Triangle>, Vec<Triangle>) {
     for limb in layout.limbs() {
         legs::build(&mut coat, layout, limb, layout.parts.feet);
     }
-    if layout.parts.tail > 0 {
-        features::tail(&mut coat, layout, layout.parts.tail as f32);
-    }
+    features::rear(&mut coat, layout);
     (build(&upper), coat)
 }
 
