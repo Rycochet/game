@@ -26,6 +26,6 @@ World Gates: the ways onto a planet, `WORLD_GATES` (16) on every one, each on la
 ## Notes
 
 - Every seed is a planet (owner: seeds are simple maths, not chosen), so nearly every planet must find all 16. Candidates are spots spread evenly over the area within 60° of the equator, from `seed.derive("world gates")`, 512 new ones a round. Each needs land joined to it (the fill may reach 70°) and spacing from the gates already found. Only gates still missing are looked for in the next round, which asks for less: 2, 1.5, 1, then 0.25 screens of land (a screen is about 400 × 400 grid points), and spacing 1, 0.7, 0.4, then 0.15 of the planet's, which is the smaller of 1,000 points or a twelfth of its width (owner: size-based). A planet of water tries every round and gives up (2,048 tries).
-- Measured on 1,000 seeds in a row each (planets are at least `world::SMALLEST_RADIUS`, 1,500 km, raised for this): all 3,000 found all 16. Classic 998 in round 1; Continents 662, 166, 139, 33 by round; Plates 690, 209, 92, 9.
+- Measured on 1,000 seeds in a row each (planets are at least `world::SMALLEST_RADIUS`, 1,500 km, raised for this): all 3,000 found all 16. Desert 998 in round 1; Continents 662, 166, 139, 33 by round; Plates 690, 209, 92, 9.
 - Land is judged as the walking rules and pois do: above `high_water`, broad height for the coarse cells, the full surface for the spot.
 - No floats beyond the surface's own; candidates and fills go in a fixed order (the fill's queue), so the result is the same everywhere.

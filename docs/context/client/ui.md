@@ -4,7 +4,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Files
 
-- `crates/client/src/ui/mod.rs`: `UiPlugin`; the status text (position, hour and ping (a dash in single player) with symbols for labels, the snow line while `debug_menu::TemperatureCycle` is running, a ghost for `common::GodMode`, eyes for `common::Truesight` (the font has no single eye) and the mode clicks are in (`common::ClickMode`), both in red, `ViewStats` line; beside the warning button, only those while `GameView::Connecting` or with `common::DebugInfo` off). Connecting and refusals are on `loading_screen`.
+- `crates/client/src/ui/mod.rs`: `UiPlugin`; the status text (position, hour and ping (a dash in single player) with symbols for labels, a ghost for `common::GodMode`, eyes for `common::Truesight` (the font has no single eye) and the mode clicks are in (`common::ClickMode`), both in red, `ViewStats` line; beside the warning button, only those while `GameView::Connecting` or with `common::DebugInfo` off). Connecting and refusals are on `loading_screen`.
 
 ## Public API
 
@@ -12,7 +12,7 @@ On-screen interface: currently a status text top-left. Uses Bevy UI (`Node`, `Te
 
 ## Depends on
 
-- `common` (`ClickMode`, `DebugInfo`, `GameView`, `GodMode`, `Truesight`, `GameClock`, `ViewStats`, `Weather`, `MapPosition`, `ServerClock`), `player` (`Player`), `debug_menu` (`TemperatureCycle`), `fonts` (`with_icons`).
+- `common` (`ClickMode`, `DebugInfo`, `GameView`, `GodMode`, `Truesight`, `GameClock`, `ViewStats`, `MapPosition`, `ServerClock`), `player` (`Player`), `fonts` (`with_icons`).
 
 ## Used by
 

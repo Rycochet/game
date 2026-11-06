@@ -13,7 +13,7 @@ use super::{
 };
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, Other, PlayerSpeed,
-    SmoothPosition, Weather,
+    SmoothPosition,
 };
 
 /// Moves along the route found when the journey was asked for, always ending
@@ -30,7 +30,6 @@ pub(super) fn travel(
     dungeon: Res<CurrentDungeon>,
     world: Option<Res<CurrentWorld>>,
     clock: Res<GameClock>,
-    weather: Res<Weather>,
     mut requests: MessageReader<TravelTo>,
     mut arrived: MessageWriter<Arrived>,
     mut stepped: MessageWriter<Stepped>,
@@ -51,7 +50,7 @@ pub(super) fn travel(
         .then_some(world.as_ref())
         .flatten()
         .map(|world| {
-            let conditions = world.conditions(&clock, &weather);
+            let conditions = world.conditions(&clock);
             (&world.ground, conditions, world.roads.steps())
         });
 

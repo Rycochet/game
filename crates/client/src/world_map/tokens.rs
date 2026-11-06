@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::rivers::KnownRivers;
 use super::terrain::{HeightCache, ViewSquare};
 use super::view_square;
-use crate::common::{CurrentWorld, GameClock, MapPosition, Preferences, SmoothPosition, Weather};
+use crate::common::{CurrentWorld, GameClock, MapPosition, Preferences, SmoothPosition};
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
 use crate::view3d::{OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView, ViewCamera};
@@ -17,7 +17,6 @@ use crate::view3d::{OrbitCamera, TOKEN_DIAMETER, TOKEN_HALF_THICKNESS, TokenView
 pub(super) fn rest_tokens_on_terrain(
     world: Res<CurrentWorld>,
     clock: Res<GameClock>,
-    weather: Res<Weather>,
     style: Res<SurfaceStyle>,
     known_rivers: Res<KnownRivers>,
     cache: Option<ResMut<HeightCache>>,
@@ -38,7 +37,6 @@ pub(super) fn rest_tokens_on_terrain(
             &known_rivers,
             &style,
             water_level,
-            weather.snow_line,
             (f64::from(x), f64::from(z)),
         );
         transform.translation.y = ground + TOKEN_HALF_THICKNESS;

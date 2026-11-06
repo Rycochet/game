@@ -7,6 +7,7 @@
 
 use crate::celestial::Celestial;
 use crate::rng::Seed;
+use crate::surface::SurfaceGenerator;
 use core::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -91,11 +92,9 @@ pub struct WorldParams {
     /// How much warmer than usual the planet is on average, `-0.1..0.1` of
     /// `shared::climate`'s temperature scale.
     pub warmth: f64,
+    /// How its surface is made (`shared::surface`).
+    pub generator: SurfaceGenerator,
 }
-
-/// The snow line in normal weather: above every height there is, so nothing is
-/// frozen.
-pub const NORMAL_SNOW_LINE: u32 = 128;
 
 /// Real seconds in a game minute, by the server's clock. Clients use it to run
 /// smoothly between the server's answers.
@@ -124,6 +123,7 @@ impl WorldParams {
             sea_level: seed.derive("sealevel").rng().range_f64(20.0, 60.0),
             climate: seed.derive("climate").rng().range_f64(0.0, 1.0),
             warmth: seed.derive("warmth").rng().range_f64(-0.1, 0.1),
+            generator: SurfaceGenerator::forced().unwrap_or_default(),
         }
     }
 

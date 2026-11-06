@@ -5,7 +5,6 @@ mod actions;
 mod bodies;
 mod menu;
 mod panels;
-mod temperature;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -15,7 +14,7 @@ use shared::protocol::{ClientMessage, ServerMessage};
 
 use crate::common::{
     ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, GameView, GodMode, KillMob,
-    NORMAL_SNOW_LINE, ServerDevTools, Truesight,
+    ServerDevTools, Truesight,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::planet_view::ViewPlanet;
@@ -32,7 +31,6 @@ pub struct DebugMenuPlugin;
 impl Plugin for DebugMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AutoWalk>()
-            .init_resource::<TemperatureCycle>()
             .init_resource::<DebugMenu>()
             .init_resource::<OpenPanels>()
             .init_resource::<panels::GenerateForm>()
@@ -83,7 +81,6 @@ impl Plugin for DebugMenuPlugin {
                     panels::fill_pictures,
                     panels::show_pictures,
                     panels::update_panel_buttons,
-                    temperature::temperature_cycle,
                     menu::show_menu,
                 )
                     .chain(),
@@ -102,22 +99,12 @@ impl Plugin for DebugMenuPlugin {
 #[derive(Resource, Default)]
 pub struct AutoWalk(pub bool);
 
-/// Where the temperature cycle is in its cycle.
-#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TemperatureCycle {
-    #[default]
-    Off,
-    Cooling,
-    Warming,
-}
-
 /// What the menu's entries depend on.
 #[derive(SystemParam)]
 struct FactSources<'w> {
     view: Res<'w, State<GameView>>,
     dungeon: Res<'w, CurrentDungeon>,
     walk: Res<'w, AutoWalk>,
-    cycle: Res<'w, TemperatureCycle>,
     detect: Res<'w, DetectMonsters>,
     god: Res<'w, GodMode>,
     truesight: Res<'w, Truesight>,
@@ -136,7 +123,6 @@ impl FactSources<'_> {
             has_fields: !self.dungeon.fields.is_empty(),
             has_herbs: self.dungeon.level_has(Cell::HerbBed),
             walking: self.walk.0,
-            cycling: *self.cycle != TemperatureCycle::Off,
             detecting: self.detect.0,
             god_mode: self.god.0,
             truesight: self.truesight.0,
@@ -197,7 +183,6 @@ fn run_actions(
     mut actions: MessageReader<DebugAction>,
     mut commands: Commands,
     mut walk: ResMut<AutoWalk>,
-    mut cycle: ResMut<TemperatureCycle>,
     mut detect: ResMut<DetectMonsters>,
     mut god: ResMut<GodMode>,
     mut truesight: ResMut<Truesight>,
@@ -215,18 +200,6 @@ fn run_actions(
         match action {
             DebugAction::AutoWalk => walk.0 = !walk.0,
             DebugAction::ChangeCellMode => *mode = toggled(*mode, ClickMode::ChangeCell),
-            DebugAction::CycleTemperature => {
-                *cycle = match *cycle {
-                    TemperatureCycle::Off => TemperatureCycle::Cooling,
-                    // Off at once: a slow warming would leave the box ticked.
-                    _ => {
-                        to_server.write(ToServer(ClientMessage::DevSnowLine(
-                            NORMAL_SNOW_LINE as u32,
-                        )));
-                        TemperatureCycle::Off
-                    }
-                };
-            }
             DebugAction::DetectMonsters => {
                 detect.0 = !detect.0;
                 to_server.write(ToServer(ClientMessage::DevDetectMonsters(detect.0)));

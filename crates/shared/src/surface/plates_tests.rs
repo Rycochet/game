@@ -70,7 +70,7 @@ fn plates_meet_and_raise_ranges() {
 #[test]
 fn only_plates_has_plates() {
     let world = WorldParams::from_seed(Seed::new(3));
-    for kind in [SurfaceGenerator::Classic, SurfaceGenerator::Continents] {
+    for kind in [SurfaceGenerator::Desert, SurfaceGenerator::Continents] {
         assert_eq!(Surface::with_generator(&world, kind).plate_at(10, 10), None);
     }
 }

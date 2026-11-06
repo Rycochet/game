@@ -112,10 +112,6 @@ pub(super) fn answer_dev(
                     client.send_inventory()
                 }
         }
-        ClientMessage::DevSnowLine(snow_line) => {
-            world.snow_line = snow_line;
-            client.link.send(&ServerMessage::SnowLine(snow_line))
-        }
         ClientMessage::DevGoToWorld { seed } => {
             // Once its messages this tick have been read (`handle_messages`), as
             // it needs every world.

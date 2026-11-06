@@ -135,7 +135,6 @@ pub(super) fn send_welcome(
         world: world.info(),
         time: world.time(),
         server_clock: world.server_clock.seconds(),
-        snow_line: world.snow_line,
         x,
         y,
         dev_tools: options.dev_tools_for(client.host),

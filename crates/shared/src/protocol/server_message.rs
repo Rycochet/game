@@ -39,14 +39,13 @@ pub enum ServerMessage {
     /// Never on the map: they stand behind the door.
     Keepers(Vec<(u16, Id)>),
     /// The player is in the game: the world they are in, its time (worked out
-    /// from the server's clock, which reads `server_clock` seconds now) and snow
-    /// line, and where they are on its world map (where they left off). If they
+    /// from the server's clock, which reads `server_clock` seconds now),
+    /// and where they are on its world map (where they left off). If they
     /// were in a site, `EnterLevel` follows.
     Welcome {
         world: WorldInfo,
         time: WorldTime,
         server_clock: f64,
-        snow_line: u32,
         x: i64,
         y: i64,
         /// Whether this server accepts developer tools messages.
@@ -59,9 +58,6 @@ pub enum ServerMessage {
     /// Everything the client knows of the world map is forgotten; the chunks
     /// it may know again follow (`DevForgetMap`).
     ForgetWorldMap,
-    /// The snow line has moved: above it everything is frozen, and ice can be
-    /// walked on.
-    SnowLine(u32),
     /// A new whole hour has begun on the clock (`% 24` is the time of day).
     /// The tide, and so where can be walked on the world map, follows it.
     Hour(u32),

@@ -121,7 +121,6 @@ pub(super) fn fill_texture(
     let colouring = Colouring {
         layer: globe.layer,
         water: globe.planet.params.sea_level,
-        snow_line: showing.snow_line,
         broad: width >= size.x as i64 * BROAD_FROM,
     };
     let started = Instant::now();

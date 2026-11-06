@@ -62,11 +62,6 @@ fn steps_into_water_are_refused() {
     test.send(&[ClientMessage::DevTeleport { x, y }]);
     test.steps(&[(1, 0)]);
     assert_eq!(test.client.world_position(), (x, y));
-    // Frozen over, it can be walked on.
-    let answers = test.send(&[ClientMessage::DevSnowLine(0)]);
-    assert_eq!(answers, [ServerMessage::SnowLine(0)]);
-    test.steps(&[(1, 0)]);
-    assert_eq!(test.client.world_position(), (x + 1, y));
 }
 
 #[test]

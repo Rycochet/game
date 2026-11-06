@@ -91,7 +91,7 @@ impl Roads {
             ground: WorldGround::new(world),
             conditions: WorldConditions {
                 water: world.high_water(),
-                snow_line: f64::INFINITY,
+                ice: false,
             },
         }
     }

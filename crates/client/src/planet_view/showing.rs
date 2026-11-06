@@ -30,8 +30,6 @@ pub(super) struct Showing {
     pub(super) bar: Bar,
     pub(super) choice: Choice,
     pub(super) globe: Globe,
-    /// The snow line on opening, which the picture is coloured for.
-    pub(super) snow_line: f64,
     /// The world's hour on opening, and the real time then.
     pub(super) start_hours: f64,
     pub(super) opened: f64,
@@ -53,7 +51,7 @@ impl Choice {
     pub(super) fn of(world: &CurrentWorld) -> Self {
         Self {
             seed: world.params.seed,
-            generator: SurfaceGenerator::Classic,
+            generator: world.params.generator,
             layer: Layer::Surface,
         }
     }

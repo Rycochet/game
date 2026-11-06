@@ -36,7 +36,7 @@ fn longest_road() -> (crate::road::Road, RoadSteps, WorldGround, WorldConditions
     }
     let conditions = WorldConditions {
         water: world.high_water(),
-        snow_line: 128.0,
+        ice: true,
     };
     (
         longest.expect("roads"),

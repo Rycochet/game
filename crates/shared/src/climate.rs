@@ -9,6 +9,7 @@
 mod planet;
 
 use crate::showcase;
+use crate::surface::METRES_PER_UNIT;
 use crate::world::WorldParams;
 use core::f64::consts::TAU;
 use fastnoise_lite::{FastNoiseLite, NoiseType};
@@ -150,6 +151,11 @@ pub struct Climate {
     wetness: f64,
     /// The planet's sunlight, for surfaces in metres.
     sunlit: Sunlit,
+    /// Whether the world's surface is in metres, so its climate comes from
+    /// the planet (`sample_metres`).
+    in_metres: bool,
+    /// The world's sea level on the height scale, where 0 m is.
+    sea_level: f64,
 }
 
 impl Climate {
@@ -168,11 +174,20 @@ impl Climate {
             warmth: world.warmth,
             wetness: (world.climate - 0.5) * 2.0 * WORLD_MOISTURE,
             sunlit: Sunlit::new(world),
+            in_metres: world.generator.in_metres(),
+            sea_level: world.sea_level,
         }
     }
 
-    /// The climate at a position whose ground is at `height`.
+    /// The climate at a position whose ground is at `height` on the height
+    /// scale, the way the world's generator has it: from the planet for a
+    /// surface in metres (`sample_metres`), cooling with the height itself
+    /// otherwise.
     pub fn sample(&self, x: i64, y: i64, height: f64) -> ClimateSample {
+        if self.in_metres {
+            let metres = ((height - self.sea_level) * METRES_PER_UNIT).round() as i32;
+            return self.sample_metres(x, y, metres);
+        }
         let climb = (height - COOLING_FROM).max(0.0) / COOLING_HEIGHT;
         self.cooled_by(x, y, HEIGHT_COOLING * climb)
     }

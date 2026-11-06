@@ -63,7 +63,7 @@ fn steps_cost_the_distance_they_cover() {
 fn water() -> WorldConditions {
     WorldConditions {
         water: WorldParams::from_seed(crate::rng::Seed::new(12345)).high_water(),
-        snow_line: 128.0,
+        ice: true,
     }
 }
 
@@ -72,10 +72,7 @@ fn the_tide_covers_and_uncovers_ground() {
     let world = WorldParams::from_seed(crate::rng::Seed::new(12345));
     let ground = WorldGround::new(&world);
     let (low, high) = (world.sea_level - 4.0 * world.tilt, world.high_water());
-    let at = |water| WorldConditions {
-        water,
-        snow_line: 128.0,
-    };
+    let at = |water| WorldConditions { water, ice: true };
     let east = Step::new(1, 0).unwrap();
     // Dry ground with ground beside it that only the low tide uncovers.
     let (x, y) = (0..4000)
@@ -94,15 +91,21 @@ fn the_tide_covers_and_uncovers_ground() {
 }
 
 #[test]
-fn ice_can_be_walked_on() {
-    let (ground, dry, wet) = shore();
-    let east = Step::new(1, 0).unwrap();
-    let frozen = WorldConditions {
-        snow_line: 0.0,
-        ..water()
-    };
-    assert_eq!(step_on_world_map(&ground, water(), dry, east), None);
-    assert_eq!(step_on_world_map(&ground, frozen, dry, east), Some(wet));
+fn frozen_sea_can_be_walked_on_but_not_roads_laid_on() {
+    let mut world = WorldParams::from_seed(crate::rng::Seed::new(12345));
+    world.generator = crate::surface::SurfaceGenerator::Continents;
+    let ground = WorldGround::new(&world);
+    let water = world.sea_level;
+    let walking = WorldConditions { water, ice: true };
+    let roads = WorldConditions { water, ice: false };
+    // Sea near a pole, frozen over.
+    let pole = (world.circumference / 1000) as i64 / 4;
+    let frozen = (pole * 9 / 10..pole)
+        .flat_map(|y| (0..200).map(move |x| (x * 50, y)))
+        .find(|&(x, y)| {
+            ground.elevation(x, y, roads).is_none() && ground.elevation(x, y, walking).is_some()
+        });
+    assert!(frozen.is_some(), "no frozen sea near the pole");
 }
 
 /// A world's ground, with a dry point and a wet point next to each other.

@@ -9,7 +9,7 @@ use super::{
 };
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, Other, PlayerSpeed,
-    SpentEnergy, Weather,
+    SpentEnergy,
 };
 
 /// Takes the steps asked for this frame, in order: in a dungeon, only onto
@@ -24,7 +24,6 @@ pub(super) fn take_steps(
     dungeon: Res<CurrentDungeon>,
     world: Option<Res<CurrentWorld>>,
     clock: Res<GameClock>,
-    weather: Res<Weather>,
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
     mut energy: ResMut<PlayerEnergy>,
@@ -61,12 +60,7 @@ pub(super) fn take_steps(
         let to = match view.get() {
             GameView::Dungeon => step_on_level(&dungeon.level, from, step),
             _ => world.as_ref().and_then(|world| {
-                step_on_world_map(
-                    &world.ground,
-                    world.conditions(&clock, &weather),
-                    from,
-                    step,
-                )
+                step_on_world_map(&world.ground, world.conditions(&clock), from, step)
             }),
         };
         let Some((x, y)) = to else {
@@ -79,7 +73,7 @@ pub(super) fn take_steps(
         let cost = match view.get() {
             GameView::Dungeon => site_step_cost(from, (x, y)),
             _ => world.as_ref().map_or(0, |world| {
-                let conditions = world.conditions(&clock, &weather);
+                let conditions = world.conditions(&clock);
                 let ends = (
                     world.ground.elevation(from.0, from.1, conditions),
                     world.ground.elevation(x, y, conditions),

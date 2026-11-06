@@ -24,7 +24,7 @@ use panels::{debug_action, debug_menu, inventory, map, show_floor, system_menu};
 use places::{Place, enter_site, set_cells, teleport};
 use state::{done, screenshot, state};
 use view::{cursor, interface, view, window_size};
-use world::{celestial, reveal_pois, set_time, snow_line};
+use world::{celestial, reveal_pois, set_time};
 
 pub(super) fn add(app: &mut App) {
     app.add_debug_method("client.state", state)
@@ -35,7 +35,6 @@ pub(super) fn add(app: &mut App) {
         .add_debug_method("client.set_cells", set_cells)
         .add_debug_method("client.set_time", set_time)
         .add_debug_method("client.go_to_world", world::go_to_world)
-        .add_debug_method("client.snow_line", snow_line)
         .add_debug_method("client.reveal_pois", reveal_pois)
         .add_debug_method("client.give_item", give_item)
         .add_debug_method("client.wear_item", wear_item)

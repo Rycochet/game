@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use shared::movement::WorldConditions;
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 
-use crate::common::{CurrentWorld, NORMAL_SNOW_LINE};
+use crate::common::CurrentWorld;
 use crate::surface_style::SurfaceStyle;
 
 /// World points per stored colour in a chunk's first, quick version: a
@@ -37,12 +37,11 @@ pub struct WorldTiles {
 }
 
 /// What the maps show (owner's decision): the world as it normally is, water
-/// at mid-tide and snow at its normal line, whatever the tide or weather, so
-/// a chunk's colours never go out of date.
+/// at mid-tide, whatever the tide, so a chunk's colours never go out of date.
 fn map_conditions(world: &CurrentWorld) -> WorldConditions {
     WorldConditions {
         water: world.params.sea_level,
-        snow_line: NORMAL_SNOW_LINE,
+        ice: true,
     }
 }
 
@@ -172,7 +171,7 @@ fn tile_colours(
             let sample = world.surface.sample(x, y);
             let climate = world.climate.sample(x, y, sample.height);
             let [red, green, blue, _] =
-                style.ground_colour(sample, climate, conditions.water, conditions.snow_line);
+                style.ground_colour(sample, climate, conditions.water, world.surface.floor());
             colours.push([red, green, blue]);
         }
     }

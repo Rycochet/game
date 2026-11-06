@@ -765,7 +765,7 @@ The minimap and full map colour the world map with the water at `sea_level` (mid
 
 ## 2026-11-04: Several surface generators, chosen deliberately
 
-`shared::surface` can make the land more than one way (`SurfaceGenerator`): `Classic` (the original layered noise), `Continents` (planet-sized land and oceans in whole metres from the sea, with shelves, plateaus and rare long mountain ranges) and `Plates` (`Continents` shaped by drifting plates: ranges, arcs, trenches, ridges and rifts where they meet). Owner: the old noise is good for randomness but doesn't look like a real planet, and may still suit some worlds (a dry one). Every world keeps `Classic` until a generator is chosen per world on purpose, which will be its own change (saved in `WorldParams`, a `WORLD_MAP_VERSION` bump, the world map drawn relative to the local height, walking, tides, rivers and pois retuned in metres). Until then the others are seen only in View Planet, whose bar picks the generator, seed and layer.
+`shared::surface` can make the land more than one way (`SurfaceGenerator`): `Desert` (the original layered noise, called `Classic` until it was kept for desert worlds), `Continents` (planet-sized land and oceans in whole metres from the sea, with shelves, plateaus and rare long mountain ranges) and `Plates` (`Continents` shaped by drifting plates: ranges, arcs, trenches, ridges and rifts where they meet). Owner: the old noise is good for randomness but doesn't look like a real planet, and may still suit some worlds (a dry one). Every world keeps `Desert` until a generator is chosen per world on purpose, which will be its own change (saved in `WorldParams`, a `WORLD_MAP_VERSION` bump, the world map drawn relative to the local height, walking, tides, rivers and pois retuned in metres). Until then the others are seen only in View Planet, whose bar picks the generator, seed and layer.
 
 New generators work in metres (sea level 0, Earth-like: most land low, peaks to about 9 km, ocean floors about 4 km down), turned into the old height scale at 100 m a unit for everything else; their climate cools at Earth's 6.5 °C a km. The old 0-127 scale (once kept small for the browser) no longer limits heights.
 
@@ -779,7 +779,7 @@ Owner's decision: chats no longer leave the game running after a change, which g
 
 ## 2026-11-04: Climate from the planet, for surfaces in metres
 
-For the generators in metres (`Continents`, `Plates`) the climate comes from the planet itself (owner): the tilt sets where the tropics are and how sunlight spreads to the poles, the suns' sizes how warm it is overall, belts of rain follow latitude, and past 80° there is always ice, with a polar limit approaching it, so the poles are frozen whatever the suns do. Owner: the map stretches badly near the poles, so later, when a generator is used in the game, the ice past 80° should be impassable, so no one reaches the pinch; and pois may be biased by the belts of rain. `Classic`'s climate is unchanged.
+For the generators in metres (`Continents`, `Plates`) the climate comes from the planet itself (owner): the tilt sets where the tropics are and how sunlight spreads to the poles, the suns' sizes how warm it is overall, belts of rain follow latitude, and past 80° there is always ice, with a polar limit approaching it, so the poles are frozen whatever the suns do. Owner: the map stretches badly near the poles, so later, when a generator is used in the game, the ice past 80° should be impassable, so no one reaches the pinch; and pois may be biased by the belts of rain. `Desert`'s climate is unchanged.
 
 ## 2026-11-04: World Gates
 
@@ -880,3 +880,9 @@ Owner: everything leaves scent, players and mobs, so that mobs can track players
 ## 2026-11-05: Tokens rest at their centre on the world map
 
 Owner's request: every token on the world map (pois, World Gates, players, mobs) rests with its centre on the drawn ground at its own point, rather than on the highest ground under its radius. That rule kept tokens out of slopes but left pois' bases floating in mid-air, with the poi standing above its own spot. Now the uphill side of a base dips into a slope instead; the newer surface generators keep land gentle enough for this to stay small.
+
+## 2026-11-06: Snow and sea ice from the climate alone; generators chosen per world
+
+Owner: the snow line (a height above which everything froze, normally above every height, lowered only by the Cycle Temperature debug entry) is redundant now snow follows real height and climate, so it is gone: the protocol's `SnowLine` and `DevSnowLine`, the client's `Weather`, Cycle Temperature, `HOW_DEBUG_SNOW` and `client.snow_line`. Sea freezes where the climate over it is colder than `climate::SEA_ICE` (`SurfaceSample::is_frozen`), for drawing and walking alike; roads still never cross it (`WorldConditions::ice`). Land snow and frozen rivers were already the climate's.
+
+The generator is part of a world's settings (`WorldParams::generator`), and `Climate::sample` follows it, so no caller has to know which generator a world uses. The old generator is now `Desert`, kept for dry desert worlds (owner). Water is shaded by depth down to `Surface::floor`, so deep oceans in metres aren't black. Planned next, in one breaking change: the roll per world (Desert 1%, Continents 70%, Plates 29%), desert worlds (dry, warm, the sea just above their lowest ground so the tide can drain it), tides of at most 10 m, impassable ice past 80°, fewer and more ruined pois in desert biome, and resets of characters, sites and items; then oases.

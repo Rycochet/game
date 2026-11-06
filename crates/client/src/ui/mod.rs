@@ -4,9 +4,8 @@ use bevy::prelude::*;
 
 use crate::common::{
     ClickMode, DebugInfo, GameClock, GameView, GodMode, KillMob, MapPosition, ServerClock,
-    Truesight, ViewStats, Weather,
+    Truesight, ViewStats,
 };
-use crate::debug_menu::TemperatureCycle;
 use crate::fonts;
 use crate::player::Player;
 
@@ -37,7 +36,6 @@ const STATUS_LEFT: f32 = 56.0;
 const POSITION_ICON: char = '\u{1F4CD}';
 const HOUR_ICON: char = '\u{1F550}';
 const PING_ICON: char = '\u{1F4F6}';
-const SNOW_LINE_ICON: char = '\u{2744}';
 const GOD_MODE_ICON: &str = "\u{1F47B}";
 const KILL_MOB_ICON: &str = "\u{1F480}";
 const TRUESIGHT_ICON: &str = "\u{1F440}";
@@ -79,8 +77,6 @@ fn update_status_text(
     player: Single<&MapPosition, With<Player>>,
     clock: Res<GameClock>,
     server_clock: Res<ServerClock>,
-    weather: Res<Weather>,
-    cycle: Res<TemperatureCycle>,
     stats: Res<ViewStats>,
     info: Res<DebugInfo>,
     view: Res<State<GameView>>,
@@ -127,16 +123,13 @@ fn update_status_text(
         Some(ms) if !server_clock.local_server => format!("{ms:.0}ms"),
         _ => "-".to_string(),
     };
-    let mut status = format!(
+    let status = format!(
         "{POSITION_ICON} {},{}  {HOUR_ICON} {}d{:02}h  {PING_ICON} {ping}",
         player.x,
         player.y,
         clock.hour / 24,
         clock.hour % 24
     );
-    if *cycle != TemperatureCycle::Off {
-        status += &format!("  {SNOW_LINE_ICON} {:.0}", weather.snow_line);
-    }
     text.0 = status;
     stats_text.0 = format!("\n{}", stats.summary);
 }

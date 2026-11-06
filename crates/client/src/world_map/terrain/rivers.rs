@@ -61,7 +61,6 @@ pub fn build_rivers(
     world_width: i64,
     style: &SurfaceStyle,
     water_level: f64,
-    snow_line: f64,
     square: ViewSquare,
 ) -> (Mesh, Mesh) {
     let mut flowing = Vec4::from(linear(hsl_to_rgba(style.water.hue - 20.0, 0.9, 0.5)));
@@ -95,8 +94,7 @@ pub fn build_rivers(
                 continue;
             }
             let ground = grid.height_at(&grid.ground, a) as f64 / HEIGHT_SCALE as f64;
-            let frozen_here =
-                style.river_is_frozen(river.temperatures[i], ground, water_level, snow_line);
+            let frozen_here = style.river_is_frozen(river.temperatures[i], ground, water_level);
             let colour = if frozen_here { frozen } else { flowing };
             let side = (b - a).perp().normalize_or_zero();
             // A corner this far across from the river's middle.

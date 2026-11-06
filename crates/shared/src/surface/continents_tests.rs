@@ -79,11 +79,11 @@ fn oceans_have_shelves_and_depths() {
 }
 
 #[test]
-fn classic_is_still_the_default() {
+fn desert_is_still_the_default() {
     let world = WorldParams::from_seed(Seed::new(12345));
-    assert_eq!(Surface::new(&world).generator(), SurfaceGenerator::Classic);
+    assert_eq!(Surface::new(&world).generator(), SurfaceGenerator::Desert);
     assert_eq!(
         Surface::new(&world).sample(5, 5),
-        Surface::with_generator(&world, SurfaceGenerator::Classic).sample(5, 5)
+        Surface::with_generator(&world, SurfaceGenerator::Desert).sample(5, 5)
     );
 }

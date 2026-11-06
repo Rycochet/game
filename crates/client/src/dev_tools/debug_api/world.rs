@@ -50,22 +50,6 @@ pub(super) fn set_time(
     done()
 }
 
-#[derive(Deserialize)]
-pub(super) struct SnowLineParams {
-    /// 128 is normal, 0 frozen.
-    line: u32,
-}
-
-/// `client.snow_line { "line": 0 }` (`HOW_DEBUG_SNOW`).
-pub(super) fn snow_line(
-    In(request): In<Option<Value>>,
-    mut to_server: MessageWriter<ToServer>,
-) -> BrpResult {
-    let SnowLineParams { line } = params(request)?;
-    to_server.write(ToServer(ClientMessage::DevSnowLine(line)));
-    done()
-}
-
 /// `client.reveal_pois`: every poi, on this connection (`HOW_DEBUG_REVEAL_POIS`).
 pub(super) fn reveal_pois(
     _: In<Option<Value>>,

@@ -13,7 +13,7 @@ use shared::weather::WeatherField;
 use shared::world::{WorldId, WorldParams};
 use std::collections::BTreeMap;
 
-use super::{GameClock, KnownRoads, MOST_PLANETS_IN_AN_AREA, Weather};
+use super::{GameClock, KnownRoads, MOST_PLANETS_IN_AN_AREA};
 
 /// The player has been moved to another world while playing (a `Welcome` for
 /// a world other than `CurrentWorld`'s): whatever was kept of the last one,
@@ -76,10 +76,10 @@ impl CurrentWorld {
     }
 
     /// What decides where can be walked now.
-    pub fn conditions(&self, clock: &GameClock, weather: &Weather) -> WorldConditions {
+    pub fn conditions(&self, clock: &GameClock) -> WorldConditions {
         WorldConditions {
             water: self.water_level(clock),
-            snow_line: weather.snow_line,
+            ice: true,
         }
     }
 }

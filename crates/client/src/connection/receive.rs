@@ -10,7 +10,7 @@ use super::ping::TimedPong;
 use super::prediction::{Prediction, correction};
 use super::{Connecting, FromServer, ServerConnection, give_up, hang_up, log_in};
 use crate::common::{
-    CurrentWorld, GameClock, GameView, Hosting, MapPosition, ServerClock, ServerStatus, Weather,
+    CurrentWorld, GameClock, GameView, Hosting, MapPosition, ServerClock, ServerStatus,
     WorldChanged,
 };
 use crate::player::Player;
@@ -32,7 +32,6 @@ pub(super) fn receive(
     mut server_dev_tools: ResMut<crate::common::ServerDevTools>,
     mut server_clock: ResMut<ServerClock>,
     time: Res<Time<Real>>,
-    mut weather: ResMut<Weather>,
     mut hosting: ResMut<Hosting>,
     mut player: Query<&mut MapPosition, With<Player>>,
 ) {
@@ -67,11 +66,6 @@ pub(super) fn receive(
                     received: Instant::now(),
                 });
             }
-            Ok(Some(ServerMessage::SnowLine(snow_line))) => {
-                weather.set_if_neq(Weather {
-                    snow_line: snow_line as f64,
-                });
-            }
             Ok(Some(ServerMessage::LoginOptions { methods })) => {
                 if let Err(reason) = log_in(&connection, &mut connecting, &methods) {
                     give_up(&mut commands, &mut status, reason);
@@ -88,7 +82,6 @@ pub(super) fn receive(
                 world: info,
                 time: world_time,
                 server_clock: seconds,
-                snow_line,
                 x,
                 y,
                 dev_tools,
@@ -103,9 +96,6 @@ pub(super) fn receive(
                     hour: (minutes / MINUTES_PER_HOUR) as u32,
                 });
                 server_clock.set(seconds, world_time);
-                weather.set_if_neq(Weather {
-                    snow_line: snow_line as f64,
-                });
                 if info.world_map_version != WORLD_MAP_VERSION {
                     error!(
                         "The world needs world map version {}; this client has {WORLD_MAP_VERSION}",
@@ -133,7 +123,6 @@ pub(super) fn receive(
                     world: info,
                     time: world_time,
                     server_clock: seconds,
-                    snow_line,
                     x,
                     y,
                     dev_tools,

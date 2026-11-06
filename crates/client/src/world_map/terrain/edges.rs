@@ -3,7 +3,7 @@
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
-use shared::climate::ClimateSample;
+use shared::climate::Climate;
 use shared::surface::Surface;
 
 use super::super::HEIGHT_SCALE;
@@ -22,9 +22,9 @@ pub fn build_edges(
     grid: &TerrainGrid,
     cache: &mut HeightCache,
     surface: &Surface,
+    climate: &Climate,
     style: &SurfaceStyle,
     water_level: f64,
-    snow_line: f64,
     (cx, cy): (i64, i64),
     square: ViewSquare,
 ) -> Mesh {
@@ -60,16 +60,11 @@ pub fn build_edges(
             let (x, z) = (cx + point.x.round() as i64, cy + point.y.round() as i64);
             let sample = cache.get(surface, x, z);
             let west = cache.get(surface, x - 1, z).height;
-            // Only the water strip uses this: nearly all water, which has no
-            // biome colour, with a sliver of shore at most.
-            let (band, lightness) = style.shade(
-                sample,
-                ClimateSample::default(),
-                west,
-                water_level,
-                snow_line,
-                0.0,
-            );
+            let place = cache.climate(climate, surface, x, z);
+            // Only the water strip uses this: nearly all water, with a sliver
+            // of shore at most.
+            let floor = surface.floor();
+            let (band, lightness) = style.shade(sample, place, west, water_level, floor, 0.0);
             let water_colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness / 2.0));
             // Earth strip: ground down to the base.
             positions.extend_from_slice(&[[point.x, ground, point.y], [point.x, base, point.y]]);

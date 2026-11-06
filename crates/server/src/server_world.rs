@@ -8,9 +8,7 @@ use shared::poi::{PoiKind, PoiMap};
 use shared::protocol::WorldInfo;
 use shared::site::Generator;
 use shared::surface::Surface;
-use shared::world::{
-    MINUTES_PER_HOUR, NORMAL_SNOW_LINE, WORLD_MAP_VERSION, WorldParams, WorldSeed, WorldTime,
-};
+use shared::world::{MINUTES_PER_HOUR, WORLD_MAP_VERSION, WorldParams, WorldSeed, WorldTime};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
@@ -50,8 +48,6 @@ pub struct ServerWorld {
     pub(crate) hour: u32,
     /// `time` has been moved or sped up, which everyone in the world needs telling.
     pub(crate) clock_moved: bool,
-    /// Above it everything is frozen (not saved: normal weather on starting).
-    pub(crate) snow_line: u32,
     pub(crate) storage: Storage,
     /// The sites entered so far (loaded when first needed).
     pub(super) sites: BTreeMap<SiteId, SiteSave>,
@@ -159,7 +155,6 @@ impl ServerWorld {
             action_clock: shared.action_clock.clone(),
             hour: (minutes / MINUTES_PER_HOUR) as u32,
             clock_moved: false,
-            snow_line: NORMAL_SNOW_LINE,
             seed,
             storage,
             sites: BTreeMap::new(),
@@ -181,7 +176,7 @@ impl ServerWorld {
     pub(crate) fn conditions(&self) -> WorldConditions {
         WorldConditions {
             water: self.params.water_level(&self.celestial, self.hour as f64),
-            snow_line: self.snow_line as f64,
+            ice: true,
         }
     }
 

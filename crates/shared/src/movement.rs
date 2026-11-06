@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::climate::Climate;
 use crate::dungeon::Level;
 use crate::road::RoadKind;
 use crate::surface::Surface;
@@ -95,19 +96,23 @@ pub fn step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
 pub struct WorldConditions {
     /// How high the water is (`WorldParams::water_level`, for the hour).
     pub water: f64,
-    /// The height above which everything is frozen.
-    pub snow_line: f64,
+    /// Whether frozen sea counts as ground: always for walking, never for
+    /// laying roads.
+    pub ice: bool,
 }
 
 /// The world map's ground, as far as walking on it goes.
 pub struct WorldGround {
     surface: Surface,
+    /// Where the sea is frozen, to walk on.
+    climate: Climate,
 }
 
 impl WorldGround {
     pub fn new(world: &WorldParams) -> Self {
         Self {
             surface: Surface::new(world),
+            climate: Climate::new(world),
         }
     }
 
@@ -116,9 +121,10 @@ impl WorldGround {
     /// bumps, which are the same whichever way round a route goes and would
     /// drown out the mountains). `None` if it is open water; ice can be walked.
     pub fn elevation(&self, x: i64, y: i64, conditions: WorldConditions) -> Option<i32> {
-        let WorldConditions { water, snow_line } = conditions;
+        let WorldConditions { water, ice } = conditions;
         let sample = self.surface.sample(x, y);
-        (sample.height > water || sample.is_frozen(water, snow_line))
+        let frozen = || ice && sample.is_frozen(water, self.climate.sample(x, y, sample.height));
+        (sample.height > water || frozen())
             .then(|| (self.surface.broad_height(x, y) * ELEVATIONS_PER_HEIGHT).floor() as i32)
     }
 }
