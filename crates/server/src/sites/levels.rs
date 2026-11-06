@@ -176,6 +176,7 @@ pub(super) fn enter_level(
         position,
         sent: CellMasks::new(),
         mirrors,
+        wild_area: 0,
     };
     if visit.is_town() {
         let looks = visit.level.buildings.iter().map(|b| b.look.clone());

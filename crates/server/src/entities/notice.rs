@@ -39,7 +39,7 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
         .filter(|client| client.phase == Phase::Playing && !client.is_gone())
         .map(|client| {
             let (level, position) = match (&client.visit, client.character.hall) {
-                (Some(visit), _) => (Some((visit.id(), visit.index())), visit.position()),
+                (Some(visit), _) => (Some(visit.population()), visit.position()),
                 (None, Some(at)) => (None, at),
                 (None, None) => (None, client.character.world_position),
             };

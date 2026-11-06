@@ -64,6 +64,7 @@ pub(in crate::sites) fn enter_wilderness(
         position,
         sent: CellMasks::new(),
         mirrors: made.mirrors,
+        wild_area: 0,
     };
     let info = LevelInfo {
         kind: LevelKind::Wilderness,

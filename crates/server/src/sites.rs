@@ -39,7 +39,7 @@ use place::{Mirror, Place};
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
-pub(super) use wild::{explore, follow, leave_wilderness};
+pub(super) use wild::{area_level, explore, follow, leave_wilderness};
 
 /// How far in a town others can be made out, in cells.
 const TOWN_SIGHT: u32 = 40;
@@ -66,12 +66,21 @@ pub(crate) struct Visit {
     view_from: Option<(i64, i64)>,
     /// Its cells that are another map's too.
     mirrors: Vec<Mirror>,
+    /// In the wilderness, which live area's mobs are about the player
+    /// (`entities::WildAreas`); 0 until one is given.
+    wild_area: u32,
 }
 
 impl Visit {
     /// Where the player is on the level.
     pub(crate) fn position(&self) -> (i64, i64) {
         self.position
+    }
+
+    /// Puts the player somewhere else, for tests.
+    #[cfg(test)]
+    pub(crate) fn move_for_test(&mut self, at: (i64, i64)) {
+        self.position = at;
     }
 
     /// The level's first stairs, for tests.
@@ -109,6 +118,25 @@ impl Visit {
     /// Which level of the site it is.
     pub(crate) fn index(&self) -> u32 {
         self.index
+    }
+
+    /// Whose mobs are about the player: the level's, or in the wilderness their
+    /// live area's.
+    pub(crate) fn population(&self) -> (SiteId, u32) {
+        if self.is_wilderness() {
+            (self.id, self.wild_area)
+        } else {
+            (self.id, self.index)
+        }
+    }
+
+    /// The wilderness's live area the player is in.
+    pub(crate) fn wild_area(&self) -> u32 {
+        self.wild_area
+    }
+
+    pub(crate) fn set_wild_area(&mut self, area: u32) {
+        self.wild_area = area;
     }
 
     /// Which site it is, for the debug API.

@@ -23,7 +23,7 @@ pub(super) fn answer_dev(
         }
         ClientMessage::DevTeleport { x, y } => match &client.visit {
             Some(visit) => {
-                let place = (visit.id(), visit.index());
+                let place = visit.population();
                 let stayed = sites::teleport(client, x, y);
                 if let Some(visit) = &client.visit {
                     world.move_mob_aside(place, visit.position());

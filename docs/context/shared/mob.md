@@ -4,11 +4,12 @@ Who is on a site level to begin with, from the site's secret seed, and what a pl
 
 ## Files
 
-- `crates/shared/src/mob.rs`: `Spawn`, `spawns`, `EntityLook`. Tests. In `mob/`: `scent.rs` (how strong a trail is, how long a nose follows it).
+- `crates/shared/src/mob.rs`: `Spawn`, `spawns`, `EntityLook`. Tests. In `mob/`: `scent.rs` (how strong a trail is, how long a nose follows it), `wild.rs` (the wilderness's mobs; tests in `wild_tests.rs`).
 
 ## Public API
 
 - `spawns(seed, index, site_kind, level, stairs) -> Vec<Spawn>`: the level's mobs, each with its `number`, kind, position, appearance, `attributes` (a build rolled near the centre, `sheet::Build::rolled`, plus its kind's bonus) and `gear` (kinds and qualities, rolled by `item::roll_drop`).
+- `wild_spawns(seed, block, level, biome) -> Vec<Spawn>`: a wilderness block's creatures from the secret seed and its position alone: nothing in 45% of blocks (and always in desert), else a pack or herd of 1 to 3 of one kind round a den on open ground (`Ground` or `Grass`): wolves in forests, tundra and taiga; horses and cattle (with a few wolves) in grassland and savanna; a mix in woodland. Each number is a hash, its own across the wilderness. `wild_mob_id(seed, number)`: their ids (UUID v5 of a hash), always the same, so nothing needs saving for one nobody has touched.
 - `Memory` (`remember`, `forget_old`, `warmth_for`), `Event` (`Gave`, `Trespassed(tick)`), `GIVE_REACH`, `TRESPASS_FORGOTTEN_AFTER` (3 minutes of action ticks): what a mob remembers, as facts about characters, each warming or cooling how it feels about them. Only the latest trespass by each character is kept, and it is forgotten after that time; being hurt, once there is combat, is never forgotten (owner, 2026-11-05).
 - Scent: `scent_strength(inventory)` (percent: `BASE_SCENT` 100 carrying nothing, plus 4 per kg worn and 1 per kg carried, up to `MOST_SCENT` 200; weight stands in for metal), `smells_for(acuity)` (action ticks on the weakest trail: poor 30 s, normal 2 min, keen 5 min, none 0), `can_smell(acuity, strength, laid, now)` (the nose's time × strength), `SCENT_KEPT_FOR` (keenest × strongest: 10 min; older marks can go).
 - `EntityLook { id, kind, appearance, feeling, x, y, worn }`: all a player learns of a mob or another player. Never stats. `worn` is what can be seen of what it wears (`Inventory::shown`), for its picture.

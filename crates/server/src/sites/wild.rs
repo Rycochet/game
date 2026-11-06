@@ -20,3 +20,4 @@ pub(crate) use exits::leave_wilderness;
 pub(super) use exits::{back_to_wilderness, into_site};
 pub(super) use explore::enter_wilderness;
 pub(crate) use explore::{explore, follow};
+pub(crate) use window::area_level;
