@@ -6,6 +6,7 @@
 //! human top on those.
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod animals;
 mod bodies;
 mod def;
 mod guesses;
@@ -24,9 +25,10 @@ pub use size::Size;
 
 impl CreatureKind {
     /// Every kind, alphabetically.
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 17] = [
         Self::Beggar,
         Self::Birdfolk,
+        Self::Cattle,
         Self::Centaur,
         Self::Chicken,
         Self::Dwarf,
@@ -40,6 +42,7 @@ impl CreatureKind {
         Self::Lizardfolk,
         Self::Minotaur,
         Self::Orc,
+        Self::Wolf,
     ];
 }
 

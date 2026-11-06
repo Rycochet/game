@@ -23,7 +23,7 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 - `Frame` fields: heights of the main levels from the ground, half widths and depths, limb radii, limb lengths, `arm_spread`.
 - `Frame::usual_height(kind)`: how tall a kind on two legs usually stands, in millimetres (its frame is always a person's height).
 - `Parts { snout, snout_length, ears, horns, horn_length, tusks, tail, feet, wings }`, `NONE`, `Snout::{Flat, Muzzle, Long, Beak}`, `Horns::{None, Back, Bull}`, `Feet::{Plantigrade, Digitigrade, Hooves, Talons}`, `Wings::{None, Arms, Folded}`.
-- `Beast { name, plan, parts }`, `Plan::{Fourfoot, Bird}`, `BEASTS`: wolf and cattle are drawn before they are kinds. `Parts::of(kind)` covers beasts too.
+- `Beast { name, plan, parts }`, `Plan::{Fourfoot, Bird}`, `BEASTS`: each a `CreatureKind` of the same name (a test checks). `Parts::of(kind)` covers beasts too.
 - `Biped { name, height, proportions, parts }`, `FIRST_BIPEDS`: halfling, dwarf, elf, orc, goblin, kobold, lizardfolk, minotaur and birdfolk. `Biped::of(kind)` finds a kind's by name; `Parts::of(kind)` is its parts, `NONE` for any other kind.
 - `Frame::joint(Joint) -> [i32; 3]`: x towards the body's left, y up, z forwards, origin on the ground between the feet.
 - `Joint::{Crown, Skull, Chin, NeckBase, Shoulder, Elbow, Wrist, Fingertips, Chest, Waist, Hip, Knee, Ankle, Toes, Heel}`, `Side::{Left, Right}` (`BOTH`, `sign`).

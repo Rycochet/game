@@ -1,5 +1,6 @@
 //! The body parts of each kind of creature.
 
+use super::animals::{CATTLE, WOLF};
 use super::guesses::{PERSON, medians};
 use super::peoples::{BIRDFOLK, DWARF, ELF, GOBLIN, HALFLING, LIZARDFOLK, MINOTAUR, ON_TOES, ORC};
 use super::{BodyPart, CreatureDef, CreatureKind, Layer, Location, Size};
@@ -97,6 +98,8 @@ impl CreatureKind {
         use Trait::{CoatColour, FeatherColour, HairColour, Height, SkinShade};
         match self {
             Self::Birdfolk => BIRDFOLK,
+            Self::Cattle => CATTLE,
+            Self::Wolf => WOLF,
             Self::Dwarf => DWARF,
             Self::Elf => ELF,
             Self::Goblin => GOBLIN,
