@@ -1,10 +1,10 @@
-# Attributes, skills and abilities (plan, not built)
+# Attributes, skills and abilities (plan; attributes built)
 
 The owner's design for what a creature is like and what it is good at, the same for players and mobs: a player is steered by a person, a mob by rules, and both have the same sheet. Worked out in conversation on 2026-11-05. Numbers marked *to balance* are first guesses, to be settled with a curves tool (below) rather than here. Why: see `decisions.md`.
 
 ## Words
 
-- **Attributes:** what a body and mind are (in code today: `sheet::Stats`, with strength, dexterity, intelligence and constitution).
+- **Attributes:** what a body, mind and spirit are (in code: `sheet::Attributes`, the nine below).
 - **Skills:** what has been learned, as a tree (today: `sheet::Skill`, a flat list of five).
 - **Abilities:** named actions that draw on skills and attributes (today: `sheet::Ability`, things a kind does by nature such as Kick). Things that aren't actions, such as NightVision, move to a separate list of senses or traits.
 
@@ -18,17 +18,18 @@ Nine, in a grid. Each row is one side of a creature, each column one way of bein
 | **Mind** | Intellect: reasoning, learning, lore, arcane magic | Perception: noticing, reactions, aim | Will: resisting things done to the mind (fear, confusion, sleep), concentration |
 | **Spirit** | Presence: commanding, persuading, intimidating | Empathy: reading people and creatures, territory, divine magic | Aura: resisting things done to the self (magic, curses, possession) |
 
-Today's four map to Strength, Agility, Intellect and Toughness. The values in `creature/peoples.rs` and `creature/bodies.rs` are first guesses on a scale near 10, and will be set again when this is built.
+Built (2026-11-06), summarised in `docs/context/shared/creature.md`. The old four (strength, dexterity, intelligence, constitution) became Strength, Agility, Intellect and Toughness; medians and bonuses in `creature/guesses.rs`, `peoples.rs` and `bodies.rs` are still first guesses.
 
 - **Scale:** integers, with a kind's median at 100, leaving room for small differences and slow growth (`u8` won't do). *To balance.*
-- **Each kind has a median and a range** for every attribute. Mobs are rolled within it from the seeded RNG; NPCs get more spread, as they live longer and should be more interesting.
+- **Each kind has a median and a range** for every attribute. Mobs are rolled within it from the seeded RNG; NPCs get more spread, as they live longer and should be more interesting. The range is a share of the median either side (`SPREAD`), the same for every kind so far.
+- **Kind bonuses** (owner, 2026-11-06): a kind may add a bonus to some, all or none of the nine, on top of what the triangles give, for players and mobs alike. The peoples share a person's medians and differ only by these. Placeholder values for now; the real ones come later.
 - **Starting values** come from the triangles (below). **Growth** comes from use: each use of a skill gives a little practice to the attributes its node leans on, far slower than the skill itself, and slower still the further above the starting value. **Temporary changes** (injury, fatigue, hunger, potions, curses, blessings) sit on top and are never saved into the base. **Permanent changes** are rare and earned (rituals, artifacts, perhaps age).
 
 ### Choosing them: three triangles
 
 - Each row is a triangle with its attributes at the corners. A dot inside it splits the row between its three (barycentric weights). A corner gives that attribute the kind's maximum and the other two the minimum; the centre gives an even share.
 - The three triangles sit round a shared centre and turn together. There are 4 points: each row gets 1, plus a share of the last 1 by how high it sits (rows below the middle get none). Body at the top gives 2, 1, 1; two rows equally high give 1.5, 1.5, 1. At most two rows share the extra point, so every character leans somewhere. How a row's points widen its range is *to balance*.
-- The triangles stay one size. Behind each is a radar chart of its three attributes, so turning them shows at once what grows and shrinks.
+- The triangles stay one size. Behind each is a radar chart of its three attributes, so turning them shows at once what grows and shrinks. The chart has two layers: the centremost, in its own colour, is the kind's bonus, and outside it what the triangle adds. The bonus layer is the hull of three small circles of one radius, one on each axis at its bonus (a bonus of 0 at the chart's centre), so it is a round-ended triangle that never vanishes, and only real bonuses push a corner out (owner, 2026-11-06).
 - The client sends the dots and the turn as integers; the server checks them and works out the attributes. Mouse placement means two players copying a build will still differ a little, which is welcome.
 - Mobs use the same four values, set near a role's target and jittered by the RNG; a kind may fix the turn.
 - Works by mouse, touch (drag), keys (nudge) and later gamepad.
@@ -99,7 +100,7 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 
 ## Building it (later tasks, in order)
 
-1. Attributes: the nine, kinds' medians and ranges, the triangles in character creation, mobs rolled the same way.
+1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way (built); the triangles in a character creation screen (next; one character per account for now, with Character Selection later before it).
 2. The tree, practice, checks and rust clock, with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
 3. Abilities and opposition.
 4. Specialising, once quests, trainers and books exist.

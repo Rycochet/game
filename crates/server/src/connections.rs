@@ -9,7 +9,7 @@ use shared::item::Inventory;
 use shared::movement::Step;
 use shared::poi::ChunkPos;
 use shared::protocol::{CharacterId, ServerLink, ServerMessage};
-use shared::sheet::{Appearance, Feeling, Sheet};
+use shared::sheet::{Appearance, Build, Feeling, Sheet};
 use shared::wear::WornLook;
 use shared::world::WorldId;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -220,7 +220,7 @@ pub struct Client {
     /// What it has asked to do and hasn't had the energy for yet, in order.
     waiting: VecDeque<Action>,
     /// What a character being made here asked to be, for when they first join.
-    starting_as: Option<(CreatureKind, Appearance)>,
+    starting_as: Option<(CreatureKind, Appearance, Build)>,
     /// Whether `character` (or the visit) changed since it was saved.
     pub(crate) unsaved: bool,
     /// The site level the player is on, if any.

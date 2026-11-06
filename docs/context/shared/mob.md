@@ -8,7 +8,7 @@ Who is on a site level to begin with, from the site's secret seed, and what a pl
 
 ## Public API
 
-- `spawns(seed, index, site_kind, level, stairs) -> Vec<Spawn>`: the level's mobs, each with its `number`, kind, position, appearance and `gear` (kinds and qualities, rolled by `item::roll_drop`).
+- `spawns(seed, index, site_kind, level, stairs) -> Vec<Spawn>`: the level's mobs, each with its `number`, kind, position, appearance, `attributes` (a build rolled near the centre, `sheet::Build::rolled`, plus its kind's bonus) and `gear` (kinds and qualities, rolled by `item::roll_drop`).
 - `Memory` (`remember`, `forget_old`, `warmth_for`), `Event` (`Gave`, `Trespassed(tick)`), `GIVE_REACH`, `TRESPASS_FORGOTTEN_AFTER` (3 minutes of action ticks): what a mob remembers, as facts about characters, each warming or cooling how it feels about them. Only the latest trespass by each character is kept, and it is forgotten after that time; being hurt, once there is combat, is never forgotten (owner, 2026-11-05).
 - Scent: `scent_strength(inventory)` (percent: `BASE_SCENT` 100 carrying nothing, plus 4 per kg worn and 1 per kg carried, up to `MOST_SCENT` 200; weight stands in for metal), `smells_for(acuity)` (action ticks on the weakest trail: poor 30 s, normal 2 min, keen 5 min, none 0), `can_smell(acuity, strength, laid, now)` (the nose's time × strength), `SCENT_KEPT_FOR` (keenest × strongest: 10 min; older marks can go).
 - `EntityLook { id, kind, appearance, feeling, x, y, worn }`: all a player learns of a mob or another player. Never stats. `worn` is what can be seen of what it wears (`Inventory::shown`), for its picture.

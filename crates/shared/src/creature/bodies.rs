@@ -1,8 +1,9 @@
 //! The body parts of each kind of creature.
 
+use super::guesses::{NONE, PERSON, bonus, medians};
 use super::peoples::{BIRDFOLK, DWARF, ELF, GOBLIN, HALFLING, LIZARDFOLK, MINOTAUR, ON_TOES, ORC};
 use super::{BodyPart, CreatureDef, CreatureKind, Layer, Location, Size};
-use crate::sheet::{Ability, Skill, Stats, Trait};
+use crate::sheet::{Ability, Skill, Trait};
 
 pub(super) const SKIN: &[Layer] = &[Layer::Skin];
 pub(super) const SKIN_OUTER: &[Layer] = &[Layer::Skin, Layer::Outer];
@@ -93,14 +94,6 @@ impl CreatureKind {
         use Ability::{Flutter, Kick, NightVision, Trample};
         use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
         use Trait::{CoatColour, FeatherColour, HairColour, Height, SkinShade};
-        const fn stats(strength: u8, dexterity: u8, intelligence: u8, constitution: u8) -> Stats {
-            Stats {
-                strength,
-                dexterity,
-                intelligence,
-                constitution,
-            }
-        }
         match self {
             Self::Birdfolk => BIRDFOLK,
             Self::Dwarf => DWARF,
@@ -119,7 +112,8 @@ impl CreatureKind {
                 speed: 80,
                 uses_stairs: true,
                 playable: false,
-                stats: stats(6, 7, 9, 6),
+                attributes: medians(60, 70, 60, 90),
+                bonus: NONE,
                 skills: &[(Foraging, 1)],
                 abilities: &[],
                 looks: &[HairColour, SkinShade, Height],
@@ -134,7 +128,8 @@ impl CreatureKind {
                 uses_stairs: false,
                 // Too big to stand in one cell, so not for players (owner, 2026-11-04).
                 playable: false,
-                stats: stats(14, 10, 9, 13),
+                attributes: medians(140, 100, 130, 90),
+                bonus: NONE,
                 skills: &[(Running, 4), (Foraging, 1)],
                 abilities: &[Kick, Trample],
                 looks: &[HairColour, SkinShade, CoatColour, Height],
@@ -148,7 +143,8 @@ impl CreatureKind {
                 speed: 70,
                 uses_stairs: false,
                 playable: false,
-                stats: stats(1, 8, 1, 2),
+                attributes: medians(10, 80, 20, 10),
+                bonus: NONE,
                 skills: &[(Foraging, 3)],
                 abilities: &[Flutter],
                 looks: &[FeatherColour],
@@ -163,7 +159,8 @@ impl CreatureKind {
                 body: &TEN_FINGERS,
                 // Too big to stand in one cell, so not for players (owner, 2026-11-04).
                 playable: false,
-                stats: stats(20, 6, 7, 18),
+                attributes: medians(200, 60, 180, 70),
+                bonus: NONE,
                 skills: &[(Climbing, 1)],
                 abilities: &[Trample],
                 looks: &[HairColour, SkinShade, Height],
@@ -177,7 +174,8 @@ impl CreatureKind {
                 speed: 150,
                 uses_stairs: false,
                 playable: false,
-                stats: stats(16, 10, 3, 14),
+                attributes: medians(160, 100, 140, 30),
+                bonus: NONE,
                 skills: &[(Running, 5), (Swimming, 1)],
                 abilities: &[Kick, Trample],
                 looks: &[CoatColour, Height],
@@ -191,7 +189,8 @@ impl CreatureKind {
                 inventory: (6, 4),
                 body: &TEN_FINGERS,
                 playable: true,
-                stats: stats(10, 10, 10, 10),
+                attributes: PERSON,
+                bonus: NONE,
                 skills: &[(Swimming, 1), (Climbing, 1)],
                 abilities: &[],
                 looks: &[HairColour, SkinShade, Height],
@@ -205,7 +204,9 @@ impl CreatureKind {
                 speed: 100,
                 uses_stairs: true,
                 playable: true,
-                stats: stats(7, 13, 9, 8),
+                // Playable, so a person's medians, with its bonus.
+                attributes: PERSON,
+                bonus: bonus(0, 15, 0, 0),
                 skills: &[(Stealth, 3), (Climbing, 2)],
                 abilities: &[NightVision],
                 looks: &[SkinShade, Height],

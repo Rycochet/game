@@ -862,9 +862,9 @@ fn a_server_can_turn_guests_away() {
 fn a_new_character_is_what_they_asked_if_it_is_allowed() {
     use std::collections::BTreeMap;
 
-    use shared::sheet::Trait;
+    use shared::sheet::{Build, Dot, Trait};
 
-    let make = |key, kind, appearance| {
+    let make = |key, kind, appearance, build| {
         let world = ServerWorld::new(WorldSeed::new(1));
         let mut connections = Connections::default();
         let (end, _) = logged_in_to_account(&mut connections, key);
@@ -872,22 +872,34 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
             name: "Some One".into(),
             kind,
             appearance,
+            build,
         });
         let _ = tick(connections, world);
         answers(&end)
     };
     let red = Appearance(BTreeMap::from([(Trait::HairColour, 3)]));
+    let centred = Build::CENTRED;
 
-    // Kinds nobody may play (too big for one cell, as a giant), and looks that don't
-    // suit them.
-    let told = make("a", CreatureKind::Horse, Appearance::default());
+    // Kinds nobody may play (too big for one cell, as a giant), looks that don't
+    // suit them, and triangles with a dot outside.
+    let told = make("a", CreatureKind::Horse, Appearance::default(), centred);
     assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
-    let told = make("d", CreatureKind::Giant, Appearance::default());
+    let told = make("d", CreatureKind::Giant, Appearance::default(), centred);
     assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
-    let told = make("b", CreatureKind::Kobold, red.clone());
+    let told = make("b", CreatureKind::Kobold, red.clone(), centred);
+    assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+    let outside = Build {
+        dots: [Dot([900, 900, 0]), Dot::CENTRE, Dot::CENTRE],
+        turn: 0,
+    };
+    let told = make("e", CreatureKind::Dwarf, red.clone(), outside);
     assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
 
-    let told = make("c", CreatureKind::Dwarf, red.clone());
+    let strong = Build {
+        dots: [Dot([1000, 0, 0]), Dot::CENTRE, Dot::CENTRE],
+        turn: 90,
+    };
+    let told = make("c", CreatureKind::Dwarf, red.clone(), strong);
     let sheet = told.iter().find_map(|answer| match answer {
         ServerMessage::Sheet(sheet) => Some(sheet.clone()),
         _ => None,
@@ -896,7 +908,7 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
         sheet,
         Some(Sheet {
             appearance: red,
-            ..Sheet::new(CreatureKind::Dwarf)
+            ..Sheet::built(CreatureKind::Dwarf, strong)
         })
     );
     let carried = inventory(&told);
@@ -921,6 +933,7 @@ fn accounts_choose_or_make_a_character_and_only_their_own() {
     end.send(&ClientMessage::CreateCharacter {
         kind: CreatureKind::Human,
         appearance: Appearance::default(),
+        build: shared::sheet::Build::CENTRED,
         name: "Some One".into(),
     });
     let (connections, world) = tick(connections, world);
@@ -963,6 +976,7 @@ fn choosing_is_only_for_accounts_about_to_choose() {
     end.send(&ClientMessage::CreateCharacter {
         kind: CreatureKind::Human,
         appearance: Appearance::default(),
+        build: shared::sheet::Build::CENTRED,
         name: "Another".into(),
     });
     let (connections, _world) = tick(connections, world);

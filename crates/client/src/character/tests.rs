@@ -10,7 +10,12 @@ fn it_says_what_the_kind_is_and_how_much_it_can_carry() {
     };
     let words = describe(&Sheet::new(CreatureKind::Kobold), &carried);
     assert!(words.starts_with("Kobold, Small"), "{words}");
-    assert!(words.contains("Strength 7"));
+    let strength = Sheet::new(CreatureKind::Kobold).attributes.strength;
+    assert!(
+        words.contains(&format!("Body: Strength {strength}, Agility ")),
+        "{words}"
+    );
+    assert!(words.contains("Spirit: Presence "), "{words}");
     assert!(words.contains("Stealth 3"));
     assert!(words.contains("NightVision"));
     assert!(words.contains("Can carry "), "{words}");

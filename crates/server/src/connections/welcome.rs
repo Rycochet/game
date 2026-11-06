@@ -4,7 +4,7 @@ use shared::creature::CreatureKind;
 use shared::item::{Inventory, Item, ItemKind, MadeAt, Quality, StackLimits};
 use shared::item_form::{ItemOrder, make_item};
 use shared::protocol::ServerMessage;
-use shared::sheet::{Appearance, Sheet};
+use shared::sheet::{Appearance, Build, Sheet};
 
 use super::{Client, Phase};
 use crate::sites::{self};
@@ -37,22 +37,23 @@ pub(crate) fn made_for(
     )
 }
 
-/// What a joining character is like: as saved; or as they asked when being made;
-/// or if they didn't ask, plain for their kind.
+/// What a joining character is like: as saved (with attributes worked out for a
+/// save from before there were nine); or as they asked when being made; or if they
+/// didn't ask, plain for their kind.
 pub(super) fn start_sheet(
     saved: Option<Sheet>,
-    asked: Option<(CreatureKind, Appearance)>,
+    asked: Option<(CreatureKind, Appearance, Build)>,
     inventory: &mut Inventory,
 ) -> Sheet {
     if let Some(sheet) = saved {
-        return sheet;
+        return sheet.settled(inventory.creature);
     }
     match asked {
-        Some((kind, appearance)) => {
+        Some((kind, appearance, build)) => {
             inventory.change_body(kind, StackLimits::NONE);
             Sheet {
                 appearance,
-                ..Sheet::new(kind)
+                ..Sheet::built(kind, build)
             }
         }
         None => Sheet::new(inventory.creature),

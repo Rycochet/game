@@ -11,7 +11,7 @@ use crate::item::{Drop, ItemKind, Quality, roll_drop};
 use crate::poi::PoiKind;
 use crate::protocol::CharacterId;
 use crate::rng::Seed;
-use crate::sheet::{Appearance, Feeling, Trait};
+use crate::sheet::{Appearance, Attributes, Build, Feeling, Trait};
 use crate::wear::WornLook;
 
 mod scent;
@@ -28,6 +28,8 @@ const MOST_BEGGARS: usize = 3;
 const FROM_STAIRS: i64 = 6;
 /// How many places are tried for each.
 const TRIES: i64 = 16;
+/// The roll a mob's attributes come from, apart from its place, look and gear.
+const ATTRIBUTE_ROLL: i64 = 2000;
 
 /// One of a level's mobs, as generated.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -37,6 +39,8 @@ pub struct Spawn {
     pub kind: CreatureKind,
     pub position: (i64, i64),
     pub appearance: Appearance,
+    /// Rolled near its kind's medians, with its kind's bonus.
+    pub attributes: Attributes,
     /// What it starts with, innermost clothes first: it wears what it can.
     pub gear: Vec<(ItemKind, Option<Quality>)>,
 }
@@ -249,6 +253,10 @@ pub fn spawns(
             kind,
             position,
             appearance: looks(&roll, kind),
+            attributes: Attributes::for_kind(
+                kind,
+                &Build::rolled(&mut Seed::new(roll(ATTRIBUTE_ROLL)).rng()),
+            ),
             gear: roll_gear(&roll, kind),
         });
     }

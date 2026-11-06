@@ -1,6 +1,6 @@
 # client: character
 
-What the character is like: the left of the Character panel, which `inventory` opens, in words for now. Native and web.
+What the character is like: the left of the Character panel, which `inventory` opens, in words for now: kind and size, the nine attributes a row (Body, Mind, Spirit) to a line, carrying and speed, skills, abilities, looks. Native and web.
 
 ## Files
 

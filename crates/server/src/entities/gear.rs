@@ -26,7 +26,8 @@ pub(super) fn dressed(
         size: kind.def().inventory,
         ..Inventory::default()
     };
-    // Past half of what it can carry it is burdened: see `Sheet::load`.
+    // Past half of what it can carry it is burdened: see `Sheet::load`. Its
+    // kind's plain sheet is near enough for choosing what it carries.
     let lifting = Sheet::new(kind).capacity(kind.def().size) / 2;
     for &(item, quality) in gear {
         let quality = quality.unwrap_or_default();

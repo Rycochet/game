@@ -65,7 +65,11 @@ impl ServerWorld {
                     home_level: index,
                     way_back: Vec::new(),
                     energy: Energy::default(),
-                    speed: Sheet::new(spawn.kind).speed(&carrying),
+                    speed: Sheet {
+                        attributes: spawn.attributes,
+                        ..Sheet::new(spawn.kind)
+                    }
+                    .speed(&carrying),
                     shown: carrying.shown(),
                     scent: scent_strength(&carrying),
                 }
