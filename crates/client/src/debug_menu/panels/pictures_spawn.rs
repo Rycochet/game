@@ -2,12 +2,11 @@
 
 use bevy::prelude::*;
 use shared::blade::Family;
-use shared::body::{Frame, Parts};
+use shared::body::Layout;
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 use shared::item_form::Cut;
 use shared::material::Material;
-use shared::sheet::Appearance;
 
 use super::page::PicturePage;
 use super::{
@@ -15,7 +14,6 @@ use super::{
     PICTURE_ROW_LABEL, PICTURES_HEIGHT, PicturePages, PictureQualities, PicturesGrid, RING_COLUMNS,
     Shown, gem_to_show,
 };
-use crate::item_art::Colours;
 use crate::widgets::{
     BUTTON_PADDING, Dropdown, INK, Pressable, UiId, spawn_dropdown, spawn_scroll_area,
     spawn_toggle_row,
@@ -153,10 +151,8 @@ pub(super) fn spawn_body_row(grid: &mut ChildSpawnerCommands) {
     .with_children(|cells| {
         cells.spawn(picture_label("Bodies", PICTURE_ROW_LABEL));
         for kind in CreatureKind::ALL {
-            if let Some(frame) = Frame::of(kind) {
-                let height = Frame::usual_height(kind);
-                let colours = Colours::of(kind, &Appearance::default());
-                spawn_picture(cells, Shown::Body(frame, Parts::of(kind), height, colours));
+            if Layout::of(kind).is_some() {
+                spawn_picture(cells, Shown::Body(kind));
             }
         }
     });

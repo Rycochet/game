@@ -2,12 +2,13 @@
 
 use bevy::prelude::*;
 use shared::blade::Family;
-use shared::body::{Frame, Parts};
-use shared::creature::Size;
+use shared::body::{Frame, Layout};
+use shared::creature::{CreatureKind, Size};
 use shared::id::Id;
 use shared::item::{Item, ItemKind, Quality};
 use shared::item_form::{Cut, GemForm, give_form};
 use shared::material::Material;
+use shared::sheet::Appearance;
 
 use super::page::PicturePage;
 use crate::item_art::{Colours, Look, look_of};
@@ -71,9 +72,8 @@ pub(super) enum Shown {
     Ring(u128),
     /// A weapon of this family, likewise.
     Blade(Family, u128),
-    /// A bare body to dress.
-    /// A body on a frame, with its parts and usual height in millimetres.
-    Body(Frame, Parts, i32, Colours),
+    /// A kind's bare body, at its usual height beside a person.
+    Body(CreatureKind),
     /// A piece of armour.
     Armour(super::armour::ArmourShown),
     /// A pair of footwear.
@@ -103,11 +103,10 @@ impl Shown {
                 give_form(&mut blade, Some(Size::Medium), &mut || Id::for_test(0));
                 look_of(&blade)
             }
-            Self::Body(frame, parts, height, colours) => Some(Look::Body {
-                frame,
-                parts,
-                height,
-                colours,
+            Self::Body(kind) => Some(Look::Body {
+                layout: Box::new(Layout::of(kind)?),
+                height: Frame::usual_height(kind),
+                colours: Colours::of(kind, &Appearance::default()),
             }),
             Self::Armour(shown) => shown.look(quality),
             Self::Footwear(shown) => shown.look(quality),

@@ -1,38 +1,51 @@
-//! What a body has beyond a person's, drawn on its frame: snouts and beaks, pointed ears,
+//! What a body has beyond a person's, drawn on its layout: snouts and beaks, pointed ears,
 //! horns, tusks, a tail, and feathers along arms that are wings.
 
 use bevy::prelude::*;
-use shared::body::{Frame, Horns, Joint, Parts, Side, Snout, Wings};
+use shared::body::{Horns, Layout, Parts, Role, Side, Snout, Wings};
 
+use super::trunk::Axes;
 use super::{Triangle, limb, point};
 
 /// Everything in `parts` but the legs, feet and feathers.
-pub(super) fn build(triangles: &mut Vec<Triangle>, frame: &Frame, parts: &Parts) {
-    head(triangles, frame, parts);
+pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout) {
+    let parts = &layout.parts;
+    head(triangles, layout, parts);
     if parts.tail > 0 {
-        tail(triangles, frame, parts.tail as f32);
+        tail(triangles, layout, parts.tail as f32);
     }
 }
 
+/// The middle of the head, on top of the neck.
+pub(super) fn skull(layout: &Layout) -> Vec3 {
+    let axes = Axes::of(layout);
+    let chin = axes.at(layout.spine.neck_base as f32) + Vec3::Y * layout.neck.length as f32;
+    chin + Vec3::Y * (layout.head.length / 2) as f32
+}
+
 /// The feathers of wings, if it has any: drawn apart from the skin, in their own colour.
-pub(in crate::item_art) fn wings(frame: &Frame, parts: &Parts) -> Vec<Triangle> {
+pub(in crate::item_art) fn wings(layout: &Layout) -> Vec<Triangle> {
     let mut triangles = Vec::new();
-    if parts.wings == Wings::Arms {
+    if layout.parts.wings == Wings::Arms {
         for side in Side::BOTH {
-            feathers(&mut triangles, frame, side);
+            if let Some(arm) = layout.limb(Role::WingArm, side) {
+                let path: Vec<Vec3> = layout.joints(arm).into_iter().map(point).collect();
+                let reach = arm.bones[0].map_or(0, |bone| bone.span) as f32;
+                feathers(&mut triangles, &path, reach, side);
+            }
         }
     }
     triangles
 }
 
 /// The snout, ears, horns and tusks, placed by the head's middle and half sizes.
-fn head(triangles: &mut Vec<Triangle>, frame: &Frame, parts: &Parts) {
+fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts) {
     let f = |value: i32| value as f32;
-    let middle = point(frame.joint(Joint::Skull));
+    let middle = skull(layout);
     let (across, up, deep) = (
-        f(frame.head.0),
-        f(frame.height - frame.chin) / 2.0,
-        f(frame.head.1),
+        f(layout.head.half.0),
+        f(layout.head.length) / 2.0,
+        f(layout.head.half.1),
     );
     let at = |x: f32, y: f32, z: f32| middle + Vec3::new(x, y, z);
     let length = f(parts.snout_length);
@@ -134,10 +147,16 @@ fn head(triangles: &mut Vec<Triangle>, frame: &Frame, parts: &Parts) {
 }
 
 /// A tail from the base of the back, out behind and curving down, kept off the ground.
-fn tail(triangles: &mut Vec<Triangle>, frame: &Frame, length: f32) {
+fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
     let f = |value: i32| value as f32;
-    let base = Vec3::new(0.0, f(frame.hip), -f(frame.hips_half.1) * 0.8);
-    let thick = f(frame.thigh) * 0.55;
+    let axes = Axes::of(layout);
+    let base = axes.at(0.0) - axes.front * f(layout.spine.hips.half.1) * 0.8;
+    let thigh = layout
+        .limbs()
+        .find(|limb| matches!(limb.role, Role::Leg | Role::Hindleg))
+        .and_then(|limb| limb.bones[0])
+        .map_or(f(layout.spine.hips.half.0) * 0.5, |bone| f(bone.radius));
+    let thick = thigh * 0.55;
     let along = |down: f32, back: f32| {
         let p = base + Vec3::new(0.0, -length * down, -length * back);
         Vec3::new(p.x, p.y.max(30.0), p.z)
@@ -155,15 +174,7 @@ fn tail(triangles: &mut Vec<Triangle>, frame: &Frame, length: f32) {
 
 /// Feathers along an arm that is a wing, spread out to the side and back from it, a
 /// little down, longest at the hand. Both faces are drawn, as the vane is thin.
-fn feathers(triangles: &mut Vec<Triangle>, frame: &Frame, side: Side) {
-    let joint = |joint: Joint| point(frame.joint(joint));
-    let path = [
-        joint(Joint::Shoulder(side)),
-        joint(Joint::Elbow(side)),
-        joint(Joint::Wrist(side)),
-        joint(Joint::Fingertips(side)),
-    ];
-    let reach = frame.elbow_length as f32;
+fn feathers(triangles: &mut Vec<Triangle>, path: &[Vec3], reach: f32, side: Side) {
     let edge: Vec<(Vec3, Vec3)> = (0..=9)
         .map(|step| {
             let t = step as f32 / 9.0 * 3.0;
