@@ -18,6 +18,7 @@ mod features;
 mod fit;
 mod hair;
 mod legs;
+mod morph;
 mod trunk;
 
 pub(super) use coat_hair::coat_hair;
@@ -25,6 +26,9 @@ pub(super) use features::wings;
 use fit::fitted;
 pub(super) use fit::turn_of;
 pub(super) use hair::{Cover, hair};
+pub(super) use morph::morph_parts;
+#[cfg(test)]
+pub(super) use morph::placed as morph_placed;
 pub(super) use trunk::{trunk_depth, trunk_half};
 
 /// What an upright body's picture takes up, wide and long: only the proportions
@@ -138,6 +142,27 @@ pub(super) fn blob(triangles: &mut Vec<Triangle>, centre: Vec3, half: Vec3) {
 pub(super) fn build(layout: &Layout) -> Vec<Triangle> {
     let mut triangles = Vec::new();
     trunk::build(&mut triangles, layout);
+    neck_and_head(&mut triangles, layout);
+    limbs(&mut triangles, layout);
+    features::rear(&mut triangles, layout);
+    triangles
+}
+
+/// Each limb, by its role.
+fn limbs(triangles: &mut Vec<Triangle>, layout: &Layout) {
+    for limb in layout.limbs() {
+        match limb.role {
+            Role::Arm | Role::WingArm => arms::build(triangles, layout, limb),
+            Role::Leg | Role::Foreleg | Role::Hindleg | Role::JointedLeg => {
+                legs::build(triangles, layout, limb, layout.parts.feet)
+            }
+        }
+    }
+}
+
+/// The neck from the top of the spine, and the head on it with its snout, ears, horns
+/// and tusks.
+fn neck_and_head(triangles: &mut Vec<Triangle>, layout: &Layout) {
     // The neck, a little into the trunk and the head.
     let axes = trunk::Axes::of(layout);
     let neck_base = axes.at(layout.spine.neck_base as f32);
@@ -145,7 +170,7 @@ pub(super) fn build(layout: &Layout) -> Vec<Triangle> {
     let up_neck = (chin - neck_base).normalize_or(Vec3::Y);
     let neck = layout.neck.radius as f32;
     limb(
-        &mut triangles,
+        triangles,
         &[
             (neck_base - axes.along * 20.0, neck),
             (chin + up_neck * 20.0, neck),
@@ -153,7 +178,7 @@ pub(super) fn build(layout: &Layout) -> Vec<Triangle> {
     );
     let head = layout.head;
     blob(
-        &mut triangles,
+        triangles,
         features::skull(layout),
         Vec3::new(
             head.half.0 as f32,
@@ -161,16 +186,7 @@ pub(super) fn build(layout: &Layout) -> Vec<Triangle> {
             head.half.1 as f32,
         ),
     );
-    for limb in layout.limbs() {
-        match limb.role {
-            Role::Arm | Role::WingArm => arms::build(&mut triangles, layout, limb),
-            Role::Leg | Role::Foreleg | Role::Hindleg | Role::JointedLeg => {
-                legs::build(&mut triangles, layout, limb, layout.parts.feet)
-            }
-        }
-    }
-    features::build(&mut triangles, layout);
-    triangles
+    features::head(triangles, layout, &layout.parts);
 }
 
 /// The body's skin, and apart from it the coat of a taur's lower body, which may be
@@ -179,12 +195,14 @@ pub(super) fn build_coated(layout: &Layout) -> (Vec<Triangle>, Vec<Triangle>) {
     let Some(upper) = layout.upper_body() else {
         return (build(layout), Vec::new());
     };
-    // The lower body: trunk, legs and tail, its neck and head left to the upper body.
+    // The lower body: trunk, legs and tail, its neck and head left to the upper body,
+    // unless it still has one of its own, as when shapeshifting into or out of a taur.
     let mut coat = Vec::new();
     trunk::build(&mut coat, layout);
-    for limb in layout.limbs() {
-        legs::build(&mut coat, layout, limb, layout.parts.feet);
+    if layout.head.length > 0 {
+        neck_and_head(&mut coat, layout);
     }
+    limbs(&mut coat, layout);
     features::rear(&mut coat, layout);
     (build(&upper), coat)
 }

@@ -34,6 +34,7 @@ pub(super) fn parts_of(
             colours,
             hair,
         } => super::character::character_parts(kind, &worn, colours, hair, meshes, materials),
+        Look::Morph(morph) => super::body::morph_parts(&morph, meshes, materials),
         Look::Footwear { footwear, quality } => {
             super::footwear::footwear_parts(&footwear, quality, meshes, materials)
         }

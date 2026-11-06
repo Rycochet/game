@@ -102,6 +102,9 @@ pub enum Look {
         colours: Colours,
         hair: Hair,
     },
+    /// A body part of the way to becoming another, bare, filling a square picture as
+    /// a token's: a creature changing its kind.
+    Morph(Box<super::MorphLook>),
 }
 
 impl Look {
@@ -122,7 +125,7 @@ impl Look {
             Self::Footwear { footwear, .. } => footwear.cells,
             Self::Set { set, .. } => set.cells,
             Self::Body { layout, .. } => super::body::cells(layout),
-            Self::Character { .. } => super::character::CELLS,
+            Self::Character { .. } | Self::Morph(_) => super::character::CELLS,
         }
     }
 

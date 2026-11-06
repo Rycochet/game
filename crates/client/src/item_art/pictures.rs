@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Duration;
 
 use super::Look;
@@ -21,6 +21,8 @@ pub struct ItemPictures {
     /// models.
     pub(super) drawn: u64,
     pub(super) building: Duration,
+    /// The pictures drawn and copied so far.
+    pub(super) finished: HashSet<AssetId<Image>>,
 }
 
 impl Default for ItemPictures {
@@ -31,11 +33,17 @@ impl Default for ItemPictures {
             detail: 1,
             drawn: 0,
             building: Duration::ZERO,
+            finished: HashSet::default(),
         }
     }
 }
 
 impl ItemPictures {
+    /// Whether a picture asked for has been drawn yet: until then it is empty.
+    pub fn is_drawn(&self, picture: &Handle<Image>) -> bool {
+        self.finished.contains(&picture.id())
+    }
+
     /// The picture of this, this many pixels along its longest side (more, on a
     /// large interface).
     pub fn picture(&mut self, look: Look, asked: u32, images: &mut Assets<Image>) -> Handle<Image> {

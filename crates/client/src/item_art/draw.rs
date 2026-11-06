@@ -56,6 +56,8 @@ pub(super) fn draw_pictures(
         if batch.frames_left == 0 {
             // Copied in the frames before.
             pictures.drawn += batch.cells.len() as u64;
+            let finished = batch.cells.iter().map(|(_, picture)| picture.id());
+            pictures.finished.extend(finished);
             commands.entity(entity).despawn();
             continue;
         }
