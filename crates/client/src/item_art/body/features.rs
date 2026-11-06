@@ -7,13 +7,6 @@ use shared::body::{Horns, Layout, Parts, Role, Side, Snout, Wings};
 use super::trunk::Axes;
 use super::{Triangle, blob, limb, point};
 
-/// Everything in `parts` but the legs, feet and feathers.
-pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout) {
-    let parts = &layout.parts;
-    head(triangles, layout, parts);
-    rear(triangles, layout);
-}
-
 /// An abdomen and a tail, if it has them.
 pub(super) fn rear(triangles: &mut Vec<Triangle>, layout: &Layout) {
     if layout.parts.abdomen > 0 {
@@ -62,7 +55,7 @@ pub(in crate::item_art) fn wings(layout: &Layout) -> Vec<Triangle> {
 }
 
 /// The snout, ears, horns and tusks, placed by the head's middle and half sizes.
-fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts) {
+pub(super) fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts) {
     let f = |value: i32| value as f32;
     let middle = skull(layout);
     let (across, up, deep) = (

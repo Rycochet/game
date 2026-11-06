@@ -2,6 +2,7 @@
 //! says they can be seen. See `docs/context/client/entities.md`.
 
 mod dressed;
+mod morph;
 
 use std::collections::HashMap;
 
@@ -39,6 +40,7 @@ impl Plugin for EntitiesPlugin {
                     show_moving,
                     show_own_kind,
                     dressed::show_own_dress,
+                    morph::play_morphs,
                 )
                     .chain()
                     .after(PlayerSystems::Travel),
@@ -99,10 +101,13 @@ fn picture_size(kind: CreatureKind) -> TokenSize {
 #[derive(Resource, Default)]
 struct Others(HashMap<Id, Entity>);
 
+#[allow(clippy::too_many_arguments)]
 fn read_server(
     mut from_server: MessageReader<FromServer>,
     mut others: ResMut<Others>,
     mut positions: Query<&mut MapPosition, With<Other>>,
+    seen: Query<(&Other, &morph::SeenLooks)>,
+    time: Res<Time>,
     detect: Res<DetectMonsters>,
     mut to_server: MessageWriter<ToServer>,
     mut drawing: dressed::Drawing,
@@ -130,12 +135,27 @@ fn read_server(
                             ..default()
                         },
                         Icon(picture(look.kind).into()),
+                        morph::SeenLooks(look.appearance.clone()),
                     ))
                     .id();
-                if let Some(picture) = drawing.dressed(look.kind, &look.appearance, &look.worn) {
-                    commands.entity(spawned).insert(picture);
+                let picture = drawing.dressed(look.kind, &look.appearance, &look.worn);
+                // Seen again as another kind: it changes into it.
+                let old = others.0.insert(look.id, spawned);
+                let was = old.and_then(|old| seen.get(old).ok());
+                let morph = was.filter(|(other, _)| other.kind != look.kind).and_then(
+                    |(other, morph::SeenLooks(appearance))| {
+                        let from = (other.kind, appearance);
+                        let to = (look.kind, &look.appearance);
+                        drawing.morph(from, to, picture.clone(), time.elapsed_secs_f64())
+                    },
+                );
+                match morph {
+                    Some(morph) => {
+                        commands.entity(spawned).insert(morph);
+                    }
+                    None => dressed::show(&mut commands, spawned, picture),
                 }
-                if let Some(old) = others.0.insert(look.id, spawned) {
+                if let Some(old) = old {
                     commands.entity(old).despawn();
                 }
             }

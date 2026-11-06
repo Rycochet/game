@@ -11,6 +11,7 @@ mod debug_api;
 mod footwear;
 mod gem;
 mod looks;
+mod morph;
 mod ring;
 
 use bevy::prelude::*;
@@ -23,6 +24,7 @@ pub use looks::{
     ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, SetLook, ShouldersLook,
     TorsoLook, WaistLook,
 };
+pub use morph::{MORPH_STEPS, MorphLook, morph_look};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod batch;
