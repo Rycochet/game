@@ -188,6 +188,7 @@ pub(super) fn receive(
             Ok(Some(
                 message @ (ServerMessage::EnterLevel(_)
                 | ServerMessage::WildernessWindow { .. }
+                | ServerMessage::InPoi(_)
                 | ServerMessage::EnterHall { .. }
                 | ServerMessage::Buildings(_)
                 | ServerMessage::Fields(_)

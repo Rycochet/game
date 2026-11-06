@@ -3,10 +3,13 @@
 
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::SeenStairs;
-use shared::site::{BuildingLook, Exit, FieldLook, Generator, Rect, Site, StairsDirection};
-use shared::wilderness::{ChunkPlan, gates_of};
+use shared::site::{
+    BuildingLook, Exit, FieldLook, Generator, Rect, Site, SiteLevel, StairsDirection,
+};
+use shared::wilderness::{ChunkPlan, Cutout, gates_of};
 
 use super::super::levels::seen_stairs;
+use super::arrival::FROM_STAIRS;
 use crate::ServerWorld;
 use crate::storage::SiteId;
 use crate::wilderness::WildChunk;
@@ -23,10 +26,13 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
     let gates = gates_of(&maps.wild, &world.pois);
     let plan = ChunkPlan::new(&maps.wild, chunk, poi.zip(site.as_ref()), &gates, &roads);
     let (mut stairs, mut buildings, mut fields) = (Vec::new(), Vec::new(), Vec::new());
+    let mut entrance = None;
     if let (Some(cutout), Some(site)) = (plan.cutout(), &site) {
-        stairs = cutout_stairs(cutout, site);
+        let first = site.level(0);
+        stairs = cutout_stairs(cutout, site, &first);
+        entrance = entrance_of(cutout, &first);
         if let Some(offset) = cutout.offset() {
-            (buildings, fields) = looks(site, offset);
+            (buildings, fields) = looks(&first, offset);
         }
     }
     world.wilderness.keep_chunk(WildChunk {
@@ -34,12 +40,22 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
         stairs,
         buildings,
         fields,
+        entrance,
     });
 }
 
+/// Where exploring from a cutout's poi arrives: its first level's entrance
+/// from the world map, or `FROM_STAIRS` south of the way down into a site
+/// entered from above.
+fn entrance_of(cutout: &Cutout, first: &SiteLevel) -> Option<(i64, i64)> {
+    match cutout.offset() {
+        Some((ox, oy)) => first.arrival(Exit::WorldMap).map(|(x, y)| (x + ox, y + oy)),
+        None => cutout.stairs().first().map(|s| (s.x, s.y + FROM_STAIRS)),
+    }
+}
+
 /// A site's first level's town buildings and farm fields, moved by `offset`.
-fn looks(site: &Site, (ox, oy): (i64, i64)) -> (Vec<BuildingLook>, Vec<FieldLook>) {
-    let first = site.level(0);
+fn looks(first: &SiteLevel, (ox, oy): (i64, i64)) -> (Vec<BuildingLook>, Vec<FieldLook>) {
     let moved = |rect: Rect| Rect {
         x: rect.x + ox,
         y: rect.y + oy,
@@ -88,8 +104,7 @@ fn site_as_saved(world: &mut ServerWorld, poi: &Poi) -> Option<Site> {
 /// A cutout's stairs as players see them: the site's first level's, moved, or
 /// the way down into a site entered from above, built as the stairs it arrives
 /// at.
-fn cutout_stairs(cutout: &shared::wilderness::Cutout, site: &Site) -> Vec<SeenStairs> {
-    let first = site.level(0);
+fn cutout_stairs(cutout: &Cutout, site: &Site, first: &SiteLevel) -> Vec<SeenStairs> {
     match cutout.offset() {
         Some((ox, oy)) => cutout
             .stairs()

@@ -1,11 +1,11 @@
-//! A chunk's poi set into the wilderness: its site's first level, or only the
-//! way down into it.
+//! A chunk's poi set into the wilderness: its site's first level (for a cave
+//! mouth, only its hill), or only the way down into it.
 
 use super::{CLEARED_TO, ENTRANCE_CLEARING, Wilderness};
 use crate::dungeon::{Cell, Level};
 use crate::poi::Poi;
 use crate::protocol::LEVEL_CHUNK_SIZE;
-use crate::site::{Exit, SiteLevel, Stairs, StairsDirection};
+use crate::site::{Exit, Generator, SiteLevel, Stairs, StairsDirection};
 
 /// Where a poi's site meets the wilderness.
 #[derive(Clone, Debug)]
@@ -19,6 +19,10 @@ pub struct Cutout {
     level: Level,
     /// The ways from the cutout into the site's levels, in wilderness cells.
     stairs: Vec<Stairs>,
+    /// Cells of `level` left to the wilderness, row by row (empty when none
+    /// are): round a cave mouth's hill, its outside ground joined to the
+    /// level's edge, where the land itself is.
+    left_out: Vec<bool>,
 }
 
 impl Cutout {
@@ -49,6 +53,7 @@ impl Cutout {
                 offset: None,
                 level,
                 stairs: vec![stairs],
+                left_out: Vec::new(),
             };
         }
         let (lx, ly, width, height) = first.level.bounds();
@@ -77,11 +82,16 @@ impl Cutout {
                 ..stairs
             })
             .collect();
+        let left_out = match Generator::for_poi(poi.kind) {
+            Generator::Cave(_) => outside_ground(&level),
+            _ => Vec::new(),
+        };
         Self {
             poi,
             offset: Some((ox, oy)),
             level,
             stairs,
+            left_out,
         }
     }
 
@@ -106,9 +116,15 @@ impl Cutout {
         &self.stairs
     }
 
-    /// Whether a wilderness cell is the cutout's.
+    /// Whether a wilderness cell is the cutout's: in its level, and not
+    /// left to the land round a cave mouth's hill.
     pub fn contains(&self, x: i64, y: i64) -> bool {
-        self.level.contains(x, y)
+        if !self.level.contains(x, y) {
+            return false;
+        }
+        let (min_x, min_y, width, _) = self.level.bounds();
+        let index = ((y - min_y) * width + (x - min_x)) as usize;
+        !self.left_out.get(index).copied().unwrap_or(false)
     }
 
     /// The square of the distance in cells from a cell to the cutout, 0 inside.
@@ -118,6 +134,27 @@ impl Cutout {
         let dy = (min_y - y).max(y - (min_y + height - 1)).max(0);
         dx * dx + dy * dy
     }
+}
+
+/// A level's outside ground joined to its edge, row by row.
+fn outside_ground(level: &Level) -> Vec<bool> {
+    let (min_x, min_y, width, height) = level.bounds();
+    let index = |x: i64, y: i64| ((y - min_y) * width + (x - min_x)) as usize;
+    let mut outside = vec![false; (width * height) as usize];
+    let mut queue: Vec<(i64, i64)> = (min_y..min_y + height)
+        .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
+        .filter(|&(x, y)| {
+            x == min_x || y == min_y || x == min_x + width - 1 || y == min_y + height - 1
+        })
+        .collect();
+    while let Some((x, y)) = queue.pop() {
+        if !level.contains(x, y) || outside[index(x, y)] || level.cell(x, y) != Cell::Ground {
+            continue;
+        }
+        outside[index(x, y)] = true;
+        queue.extend([(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]);
+    }
+    outside
 }
 
 const STEP: i64 = LEVEL_CHUNK_SIZE;

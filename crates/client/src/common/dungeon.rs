@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, RoomId, Sight};
+use shared::poi::PoiKind;
 use shared::protocol::{LevelChunk, LevelInfo, LevelKind, SeenStairs};
 use shared::site::{BuildingLook, FieldLook};
 
@@ -28,6 +29,9 @@ pub struct CurrentDungeon {
     pub buildings: Vec<BuildingLook>,
     /// A farm's fields (none anywhere else).
     pub fields: Vec<FieldLook>,
+    /// In the wilderness, the kind of poi set into it that the player stands
+    /// in, as the server says (`ServerMessage::InPoi`).
+    pub in_poi: Option<PoiKind>,
 }
 
 impl Default for CurrentDungeon {
@@ -41,6 +45,7 @@ impl Default for CurrentDungeon {
             stairs: Vec::new(),
             buildings: Vec::new(),
             fields: Vec::new(),
+            in_poi: None,
         }
     }
 }
@@ -55,6 +60,7 @@ impl CurrentDungeon {
         self.stairs.clear();
         self.buildings.clear();
         self.fields.clear();
+        self.in_poi = None;
         self.info = Some(info);
     }
 
@@ -159,9 +165,13 @@ impl CurrentDungeon {
             .any(|y| (min_x..min_x + width).any(|x| self.remembered.is_seen(x, y)))
     }
 
-    /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3".
+    /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3", or
+    /// "Wilderness: RockCave" in a poi set into the wilderness.
     pub fn describe(&self) -> String {
         let name = self.floor_name(FirstFloor(1));
+        if let Some(kind) = self.in_poi.filter(|_| self.is_wilderness()) {
+            return format!("{name}: {kind:?}");
+        }
         match &self.info {
             Some(info)
                 if info.kind.poi().is_some_and(|kind| !kind.is_town())

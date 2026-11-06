@@ -11,8 +11,10 @@
 //!
 //! The way in is a hole with stairs down from the world map, or a cave mouth:
 //! a strip of outside ground (as wide as the mouth, not the cave) on the
-//! south edge, sometimes another on the east or west. Every level's size is
-//! its own, unrelated to the levels above and below.
+//! south edge, sometimes another on the east or west; since `CAVE_VERSION`
+//! that level is then a hill of rock round its caves (`outcrop`), its mouths'
+//! passages running out through it. Every level's size is its own, unrelated
+//! to the levels above and below.
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod dig;
@@ -21,6 +23,7 @@ mod join;
 mod level;
 mod mouths;
 mod options;
+mod outcrop;
 mod place;
 mod plan;
 mod pool;
@@ -29,7 +32,7 @@ use dig::dig_cave;
 use doors::add_doors;
 use join::{join_caves, nearest_reached, wind};
 use level::open_skylights;
-use mouths::{dig_mouths, furthest_cave};
+use mouths::{Mouth, dig_mouths, furthest_cave};
 pub use options::{CaveEntrance, CaveOptions};
 use place::{Cave, place_caves};
 pub use plan::Plan;

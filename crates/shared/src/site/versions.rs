@@ -17,8 +17,12 @@ pub const BUILDING_VERSION: u32 = 1 + FORGET_BEFORE;
 /// under `BUILDING_VERSION` is still the plain hut it was first made as.
 pub const STILTS_VERSION: u32 = 1 + BUILDING_VERSION;
 
-/// The cave generator's version (as `BUILDING_VERSION`).
-pub const CAVE_VERSION: u32 = 1 + FORGET_BEFORE;
+/// The cave generator's version (as `BUILDING_VERSION`): a cave mouth's top
+/// level is a hill of rock round its caves.
+pub const CAVE_VERSION: u32 = 1 + BOXED_CAVE_VERSION;
+
+/// Caves from before: a cave mouth's top level the whole rectangle of rock.
+pub const BOXED_CAVE_VERSION: u32 = 1 + FORGET_BEFORE;
 
 /// The town generator's version (as `BUILDING_VERSION`).
 pub const TOWN_VERSION: u32 = 1 + FORGET_BEFORE;

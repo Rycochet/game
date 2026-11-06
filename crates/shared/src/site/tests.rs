@@ -35,7 +35,8 @@ fn only_a_ruined_generator_makes_a_ruin() {
 }
 
 /// Skylights: only on the top level of natural caves, walkable, in the
-/// middle of the cave, and they change nothing else.
+/// middle of the cave, and they change nothing else (before a cave mouth's
+/// level is made a hill, so with the version from before that).
 #[test]
 fn skylights_open_a_few_floor_cells_of_natural_caves() {
     let mut lights = 0;
@@ -45,7 +46,8 @@ fn skylights_open_a_few_floor_cells_of_natural_caves() {
             let Generator::Cave(options) = Generator::for_poi(kind) else {
                 panic!("{kind:?} is a cave");
             };
-            let (new, old) = (Site::new(kind, seed), cave::Plan::new(&options, seed));
+            let new = Site::with_version(kind, seed, BOXED_CAVE_VERSION).unwrap();
+            let old = cave::Plan::new(&options, seed, false);
             assert_eq!(new.levels(), old.levels());
             for index in 0..new.levels() {
                 let (now, then) = (new.level(index), old.without_skylights(index));

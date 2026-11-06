@@ -7,11 +7,15 @@
 //! 0; stepping over the seam puts the player back in `0..width`, as a new map.
 //! What is remembered is kept by where it is round the planet.
 
+mod arrival;
 mod chunks;
 mod exits;
 mod explore;
+mod in_poi;
 mod window;
 
+#[cfg(test)]
+mod arrival_tests;
 #[cfg(test)]
 mod tests;
 

@@ -294,6 +294,45 @@ fn a_cutout_is_its_sites_first_level_in_a_clearing() {
     }
 }
 
+/// A cave mouth's cutout is only its hill: the outside ground round it, out
+/// to the level's edge, is the land's, and its rock is all set in.
+#[test]
+fn a_cave_mouth_sets_in_only_its_hill() {
+    let world = world();
+    let (wild, pois) = (Wilderness::new(&world), pois(&world));
+    let mut caves = 0;
+    for n in 0..800 {
+        let chunk = ChunkPos {
+            x: n % 40,
+            y: n / 40 - 10,
+        };
+        let plan = ChunkPlan::with_new_site(&wild, &pois, chunk);
+        let Some(cutout) = plan.cutout().filter(|c| c.offset().is_some()) else {
+            continue;
+        };
+        if !matches!(
+            crate::site::Generator::for_poi(cutout.poi().kind),
+            crate::site::Generator::Cave(_)
+        ) {
+            continue;
+        }
+        caves += 1;
+        let level = cutout.level();
+        let (min_x, min_y, width, height) = level.bounds();
+        assert!(!cutout.contains(min_x, min_y));
+        assert!(!cutout.contains(min_x + width - 1, min_y + height - 1));
+        for y in min_y..min_y + height {
+            for x in min_x..min_x + width {
+                let cell = level.cell(x, y);
+                if cell != Cell::Ground {
+                    assert!(cutout.contains(x, y), "({x}, {y})");
+                }
+            }
+        }
+    }
+    assert!(caves > 0, "no cave mouth in the test stretch");
+}
+
 #[test]
 fn golden_block() {
     let wild = Wilderness::new(&world());

@@ -2,8 +2,8 @@
 
 use super::building::BuildingOptions;
 use super::{
-    BUILDING_VERSION, CAVE_VERSION, Exit, FARM_VERSION, Generator, HERBALIST_VERSION,
-    OASIS_VERSION, SiteLevel, Stairs, StairsStyle, TOWN_VERSION,
+    BOXED_CAVE_VERSION, BUILDING_VERSION, CAVE_VERSION, Exit, FARM_VERSION, Generator,
+    HERBALIST_VERSION, OASIS_VERSION, SiteLevel, Stairs, StairsStyle, TOWN_VERSION,
 };
 use crate::poi::PoiKind;
 use crate::rng::Seed;
@@ -69,7 +69,10 @@ impl Site {
                 Plan::Building(super::building::Plan::new(&options, seed))
             }
             Generator::Cave(options) if version == CAVE_VERSION => {
-                Plan::Cave(super::cave::Plan::new(&options, seed))
+                Plan::Cave(super::cave::Plan::new(&options, seed, true))
+            }
+            Generator::Cave(options) if version == BOXED_CAVE_VERSION => {
+                Plan::Cave(super::cave::Plan::new(&options, seed, false))
             }
             Generator::Town(options) if version == TOWN_VERSION => {
                 Plan::Town(super::town::Plan::new(&options, seed))

@@ -1,6 +1,6 @@
 //! What a visit is to, and the cells it shares with another map.
 
-use shared::poi::{ChunkPos, Poi};
+use shared::poi::{ChunkPos, Poi, PoiKind};
 use shared::site::Site;
 use shared::wilderness::BlockPos;
 
@@ -17,11 +17,13 @@ pub(crate) enum Place {
     },
     /// The wilderness, its level a window of blocks round `centre`, its cells
     /// wrapping at `width`. `cutouts`: the pois set into it there, and the
-    /// cells they take (seeing one makes the poi known).
+    /// cells they take (seeing one makes the poi known). `in_poi`: the kind of
+    /// poi whose cutout the player stands in, as last told to the client.
     Wilderness {
         centre: BlockPos,
         width: i64,
         cutouts: Vec<(ChunkPos, (i64, i64, i64, i64))>,
+        in_poi: Option<PoiKind>,
     },
 }
 

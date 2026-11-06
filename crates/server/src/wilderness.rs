@@ -38,6 +38,9 @@ pub(crate) struct WildChunk {
     /// wilderness cells.
     pub(crate) buildings: Vec<BuildingLook>,
     pub(crate) fields: Vec<FieldLook>,
+    /// Where exploring from the poi on the world map arrives, in wilderness
+    /// cells: its site's entrance, or beside its way down (`sites::wild`).
+    pub(crate) entrance: Option<(i64, i64)>,
 }
 
 /// The wilderness of one world.
