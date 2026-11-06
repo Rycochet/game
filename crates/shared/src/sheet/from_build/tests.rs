@@ -5,10 +5,11 @@ use crate::sheet::{Attribute, Dot};
 fn a_centred_human_has_the_medians_with_body_raised_for_its_point() {
     let human = Attributes::for_kind(CreatureKind::Human, &Build::CENTRED);
     // Body has 2 points at the top: 25% more. Mind and Spirit are at the median.
-    assert_eq!(human.strength, 125);
-    assert_eq!(human.agility, 125);
-    assert_eq!(human.intellect, 100);
-    assert_eq!(human.aura, 100);
+    // A human sets no bonus, so has 6 on each.
+    assert_eq!(human.strength, 125 + 6);
+    assert_eq!(human.agility, 125 + 6);
+    assert_eq!(human.intellect, 100 + 6);
+    assert_eq!(human.aura, 100 + 6);
 }
 
 #[test]
@@ -20,26 +21,27 @@ fn a_corner_gives_its_kinds_most_and_the_others_least() {
     };
     let human = Attributes::for_kind(CreatureKind::Human, &build);
     // Body has 1.5 points: 12.5% more than 160 and 70.
-    assert_eq!(human.strength, 180);
-    assert_eq!(human.agility, 79);
-    assert_eq!(human.perception, 160);
-    assert_eq!(human.intellect, 70);
-    assert_eq!(human.aura, 180);
+    assert_eq!(human.strength, 180 + 6);
+    assert_eq!(human.agility, 79 + 6);
+    assert_eq!(human.perception, 160 + 6);
+    assert_eq!(human.intellect, 70 + 6);
+    assert_eq!(human.aura, 180 + 6);
 }
 
 #[test]
 fn a_kinds_bonus_goes_on_top() {
     let dwarf = Attributes::for_kind(CreatureKind::Dwarf, &Build::CENTRED);
     let human = Attributes::for_kind(CreatureKind::Human, &Build::CENTRED);
-    let bonus = CreatureKind::Dwarf.def().bonus;
+    // The same medians: only their bonuses differ.
+    let (theirs, ours) = (
+        CreatureKind::Dwarf.def().bonus(),
+        CreatureKind::Human.def().bonus(),
+    );
     for which in Attribute::ALL {
-        assert_eq!(
-            dwarf.get(which),
-            human.get(which) + bonus.get(which),
-            "{which:?}"
-        );
+        let without = human.get(which) - ours.get(which);
+        assert_eq!(dwarf.get(which), without + theirs.get(which), "{which:?}");
     }
-    assert!(bonus.toughness > 0);
+    assert_eq!(theirs.toughness, 20);
 }
 
 #[test]

@@ -1,9 +1,12 @@
-//! Drawing the chooser: each triangle with its radar chart behind it, the kind's
-//! bonus as its inner layer, and its dot. Painted pixel by pixel into an image,
+//! Drawing the chooser: the ring they turn on, with arrows in the gaps, then each
+//! triangle with its radar chart behind it, the kind's bonus as its inner layer,
+//! and its dot. Painted pixel by pixel into an image,
 //! again whenever the draft changes.
 
 use bevy::math::Vec2;
 use shared::sheet::{Attributes, Build, Row};
+
+mod ring;
 
 use super::geometry::{chart, corners, distance_to_line, distance_to_shape, dot_place};
 
@@ -43,6 +46,7 @@ pub(super) struct Drawn<'a> {
 /// The picture's pixels, RGBA, `PIXELS` square.
 pub(super) fn paint(drawn: &Drawn) -> Vec<u8> {
     let mut pixels = vec![0; (PIXELS * PIXELS * 4) as usize];
+    ring::paint_ring(&mut pixels, PIXELS, drawn.build.turn);
     let pixel = 1.0 / PIXELS as f32;
     for row in Row::ALL {
         let shapes = Shapes::of(drawn, row);

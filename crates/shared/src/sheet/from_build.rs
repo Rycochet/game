@@ -18,6 +18,7 @@ impl Attributes {
     /// valid (`Build::is_valid`).
     pub fn for_kind(kind: CreatureKind, build: &Build) -> Self {
         let def = kind.def();
+        let bonus = def.bonus();
         let points = build.points();
         let mut attributes = Self::default();
         for row in Row::ALL {
@@ -31,7 +32,7 @@ impl Attributes {
                 // Rounded once at the end, so a dot in the middle gives the median.
                 const PARTS: i64 = 100_000 * 1000;
                 let shaped = median * (100_000 + lean * SPREAD) * raised;
-                let value = (shaped + PARTS / 2) / PARTS + def.bonus.get(which) as i64;
+                let value = (shaped + PARTS / 2) / PARTS + bonus.get(which) as i64;
                 attributes.set(which, value.clamp(1, u16::MAX as i64) as u16);
             }
         }

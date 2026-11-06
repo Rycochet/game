@@ -20,6 +20,7 @@ const COMMAND_KEYS: [KeyCode; 4] = [
     KeyCode::SuperRight,
 ];
 const SIDE_PADDING: f32 = 8.0;
+const BORDER: f32 = 2.0;
 
 /// A box to type into. Change `text` to change what it says.
 #[derive(Component, Clone, Debug, Default)]
@@ -73,14 +74,20 @@ pub fn spawn_text_box<'a>(
     size: TextSize,
     node: Node,
 ) -> EntityCommands<'a> {
+    // Empty writing has no height: the box keeps a line's, unless given one.
+    let min_height = match node.min_height {
+        Val::Auto => px(line_height(size) + BORDER * 2.0),
+        given => given,
+    };
     let mut holder = parent.spawn((
         text_box,
         Pressable,
         Node {
-            border: UiRect::all(px(2)),
+            border: UiRect::all(px(BORDER)),
             padding: UiRect::horizontal(px(SIDE_PADDING)),
             align_items: AlignItems::Center,
             overflow: Overflow::clip(),
+            min_height,
             ..node
         },
         BackgroundColor(SUNKEN_BACKGROUND),
@@ -103,6 +110,12 @@ pub fn spawn_text_box<'a>(
             ));
     });
     holder
+}
+
+/// How tall a line of writing this size is: Bevy's own line height, 1.2 times
+/// the font's size.
+pub(super) fn line_height(size: TextSize) -> f32 {
+    size.pixels() * 1.2
 }
 
 /// The words naming a box, to go above it.

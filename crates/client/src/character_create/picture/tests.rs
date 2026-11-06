@@ -11,10 +11,11 @@ fn at(pixels: &[u8], point: Vec2) -> [u8; 4] {
 fn drawn_for(kind: CreatureKind) -> Vec<u8> {
     let build = Build::CENTRED;
     let attributes = Attributes::for_kind(kind, &build);
+    let bonus = kind.def().bonus();
     paint(&Drawn {
         build: &build,
         attributes: &attributes,
-        bonus: &kind.def().bonus,
+        bonus: &bonus,
         chosen: Row::Body,
     })
 }
@@ -34,13 +35,14 @@ fn the_middle_is_clear_and_each_triangle_is_drawn() {
 
 #[test]
 fn a_bonus_shows_in_its_own_colour_and_none_still_shows_a_little() {
-    let dwarf = drawn_for(CreatureKind::Dwarf);
+    let minotaur = drawn_for(CreatureKind::Minotaur);
     let human = drawn_for(CreatureKind::Human);
-    // Part way to the toughness corner: the dwarf's bonus reaches it, a human's doesn't.
+    // Towards the strength corner, past the dot's ring: a minotaur's bonus (30)
+    // reaches it, a human's (6) doesn't.
     let middle = super::super::geometry::centre(Row::Body, 0);
-    let toughness = corners(Row::Body, 0)[2];
-    let point = middle + (toughness - middle) * 0.06;
-    assert_ne!(at(&dwarf, point), at(&human, point));
+    let strength = corners(Row::Body, 0)[0];
+    let point = middle + (strength - middle).normalize() * 0.03;
+    assert_ne!(at(&minotaur, point), at(&human, point));
     // With no bonus, a little round shape is left at the middle.
     let bonus_colour = at(&human, middle);
     assert!(bonus_colour[0] > bonus_colour[2], "{bonus_colour:?}");

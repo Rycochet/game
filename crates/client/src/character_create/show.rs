@@ -24,10 +24,11 @@ pub(super) fn draw_triangles(
         return;
     }
     let attributes = draft.attributes();
+    let bonus = draft.kind.def().bonus();
     let drawn = Drawn {
         build: &draft.build,
         attributes: &attributes,
-        bonus: &draft.kind.def().bonus,
+        bonus: &bonus,
         chosen: draft.chosen,
     };
     if let Some(mut image) = images.get_mut(&chooser.0) {
