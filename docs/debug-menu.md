@@ -13,7 +13,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | ----- | ------ | ------------ |
 | Auto Walk | | Toggles walking east, one step a frame, on the world map. |
 | Change Cell Mode | Yes | Toggles clicks in a site changing the cell clicked, from floor to wall to door to window and back, to try wall shapes. |
-| Change Creature | Yes | Opens a panel with a button for each kind of creature. Choosing one makes your character that kind: everything comes off into the new inventory, and whatever doesn't fit is lost. |
+| Change Creature | Yes | Opens a panel with a button for each kind of creature. Choosing one makes your character that kind: whatever the new body can still wear stays on, and what it can't, or has no room to carry, drops to the ground where you stand. Not on the world map or in the Hall of Worlds, which have no ground: step into the wilderness first. |
 | Delete Character | Yes | Asks first, then deletes your character, everything they carry and know included, and opens the screen for making a new one. Until characters can be chosen, this is how to make another. |
 | Detect Monsters | Yes | Toggles being shown every mob on the current level, whether you can see it or not. |
 | Fields State | | Opens a panel stepping through the stages of the crops in view, on a level with fields. Changes only what is drawn. |

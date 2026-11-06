@@ -60,7 +60,8 @@ pub(super) struct SetCreatureParams {
 }
 
 /// `client.set_creature { "kind": "Human" }`: as Change Creature
-/// (`HOW_DEBUG_CREATURE`); what no longer fits is lost.
+/// (`HOW_DEBUG_CREATURE`): what the new body can't wear, or has no room for,
+/// drops on the ground; refused on the world map and in the Hall.
 pub(super) fn set_creature(
     In(request): In<Option<Value>>,
     mut to_server: MessageWriter<ToServer>,

@@ -22,6 +22,7 @@ use crate::storage::CharacterWorldSave;
 
 mod answer_dev;
 mod answer_items;
+mod change_kind;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod answer;

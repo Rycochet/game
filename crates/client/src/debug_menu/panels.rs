@@ -55,7 +55,7 @@ pub(super) use give_options::{choose_give_option, fill_give_options};
 pub(super) use give_preview::show_give_preview;
 pub(super) use give_systems::{
     choose_give_options, edit_give_boxes, press_creature_buttons, press_give_button,
-    start_give_panel,
+    start_give_panel, update_creature_buttons,
 };
 use go_to_world::spawn_go_to_world;
 pub(super) use go_to_world::{press_go_to_world_buttons, update_go_to_world_button};

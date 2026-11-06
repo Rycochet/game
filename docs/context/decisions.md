@@ -946,3 +946,7 @@ Owner's request: the caret can be anywhere in a box, text can be selected by key
 ## 2026-11-06: World Gates in the wilderness
 
 Owner: World Gates stand in the wilderness as in the Hall of Worlds (the same model, runes and water), on the land's own ground, with the same clearing as a poi round them; stepping onto one goes through it, and coming back from the Hall always arrives on the world map, from where the wilderness is a key away. Gates are public, so woods on the world map clear round them too. Their places come from the public terrain, so the wilderness finds them as the world map does.
+
+## 2026-11-06: Changing shape keeps what fits and drops the rest
+
+Owner's decisions. A creature changing kind keeps on whatever its new body still takes, by the same rules as putting it on, and drops what it can't wear (cursed things too) on the ground where it stands, with anything its new pack has no room for, instead of losing it (2026-11-04). Changing shape needs ground, so it is refused on the world map, and in the Hall, the debug Change Creature included (2026-11-06): the wilderness can be entered anywhere, so changing there costs little extra time. The server checks it (`connections::change_kind`); the client only disables the buttons.
