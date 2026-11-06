@@ -57,17 +57,21 @@ pub(super) fn give_item(
 pub(super) struct SetCreatureParams {
     /// By name: `"Human"`, ...
     kind: CreatureKind,
+    /// For good unless `"Temporary"`.
+    #[serde(default)]
+    how: shared::protocol::KindChange,
 }
 
-/// `client.set_creature { "kind": "Human" }`: as Change Creature
+/// `client.set_creature { "kind": "Human", "how"?: "Permanent" | "Temporary" }`: as
+/// Change Creature
 /// (`HOW_DEBUG_CREATURE`): what the new body can't wear, or has no room for,
 /// drops on the ground; refused on the world map and in the Hall.
 pub(super) fn set_creature(
     In(request): In<Option<Value>>,
     mut to_server: MessageWriter<ToServer>,
 ) -> BrpResult {
-    let SetCreatureParams { kind } = params(request)?;
-    to_server.write(ToServer(ClientMessage::DevSetCreature(kind)));
+    let SetCreatureParams { kind, how } = params(request)?;
+    to_server.write(ToServer(ClientMessage::DevSetCreature { kind, how }));
     done()
 }
 

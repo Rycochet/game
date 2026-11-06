@@ -27,12 +27,14 @@ use crate::poi::CHUNK_SIZE;
 // Split into files (`cargo xtask lint` keeps files small).
 mod client_message;
 mod dev_vitals;
+mod kind_change;
 mod ping;
 mod server_message;
 mod world_chunk;
 
 pub use client_message::ClientMessage;
 pub use dev_vitals::{DEV_BONUS, DEV_BONUS_TICKS, DevVitals};
+pub use kind_change::KindChange;
 pub use server_message::ServerMessage;
 pub use world_chunk::{GateInfo, SeenPoi, WorldChunk, WorldInfo};
 

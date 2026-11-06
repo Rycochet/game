@@ -141,7 +141,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::BinFromGround {
             item: Id::for_test(8),
         },
-        ClientMessage::DevSetCreature(CreatureKind::Chicken),
+        ClientMessage::DevSetCreature {
+            kind: CreatureKind::Chicken,
+            how: crate::protocol::KindChange::Temporary,
+        },
         ClientMessage::DevVitals(super::DevVitals::Hurt(4)),
         ClientMessage::DevDetectMonsters(true),
         ClientMessage::DevTruesight(true),

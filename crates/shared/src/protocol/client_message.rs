@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::OnlineSettings;
 use super::dev_vitals::DevVitals;
+use super::kind_change::KindChange;
 use super::login::{CharacterId, Credentials};
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
@@ -186,10 +187,10 @@ pub enum ClientMessage {
     /// Developer tools: this mob dies, if it is in sight. What it had falls where it
     /// stood, and it doesn't come back.
     DevKillMob { mob: Id },
-    /// Developer tools: the character becomes this kind of creature. Everything
-    /// comes off into the new inventory, and what doesn't fit is lost. Answered with
-    /// `Inventory`.
-    DevSetCreature(CreatureKind),
+    /// Developer tools: the character becomes this kind of creature, for good or
+    /// only its body (`how`). What its new body can't wear drops. Answered with
+    /// `Sheet` and `Inventory`.
+    DevSetCreature { kind: CreatureKind, how: KindChange },
     /// Developer tools: the character is deleted, save and all, and the account
     /// given a new one in its place, which is made as on first joining:
     /// answered with `Characters` with none to choose, then `CreateCharacter`.
@@ -282,7 +283,7 @@ impl ClientMessage {
                 | Self::DevForgetMapOnServer
                 | Self::DevGenerateSite { .. }
                 | Self::DevGiveItem { .. }
-                | Self::DevSetCreature(_)
+                | Self::DevSetCreature { .. }
                 | Self::DevDeleteCharacter
                 | Self::DevDetectMonsters(_)
                 | Self::DevTruesight(_)

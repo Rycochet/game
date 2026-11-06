@@ -98,7 +98,9 @@ pub(super) fn answer_dev(
             }
             true
         }
-        ClientMessage::DevSetCreature(kind) => super::change_kind::change_kind(client, world, kind),
+        ClientMessage::DevSetCreature { kind, how } => {
+            super::change_kind::change_kind(client, world, kind, how)
+        }
         ClientMessage::DevGoToWorld { seed } => {
             // Once its messages this tick have been read (`handle_messages`), as
             // it needs every world.

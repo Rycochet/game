@@ -36,6 +36,7 @@ impl Plugin for DebugMenuPlugin {
             .init_resource::<OpenPanels>()
             .init_resource::<panels::GenerateForm>()
             .init_resource::<panels::GiveForm>()
+            .init_resource::<panels::ChosenChange>()
             .init_resource::<panels::PicturesForm>()
             .add_message::<DebugAction>()
             .add_message::<panels::GenerateKind>()

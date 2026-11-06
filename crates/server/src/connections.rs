@@ -267,6 +267,8 @@ mod look_up_tests;
 #[cfg(test)]
 mod new_character_tests;
 #[cfg(test)]
+mod shapeshift_tests;
+#[cfg(test)]
 pub(crate) mod tests;
 #[cfg(test)]
 mod vitals_tests;

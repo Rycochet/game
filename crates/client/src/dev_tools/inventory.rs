@@ -78,7 +78,10 @@ pub(super) fn add(app: &mut App) {
                         }
                     }
                     if let Some(kind) = creature {
-                        to_server.write(ToServer(ClientMessage::DevSetCreature(kind)));
+                        to_server.write(ToServer(ClientMessage::DevSetCreature {
+                            kind,
+                            how: shared::protocol::KindChange::Permanent,
+                        }));
                     }
                     for kind in [ItemKind::Backpack, ItemKind::Pouch, ItemKind::Boomerang] {
                         to_server.write(ToServer(ClientMessage::DevGiveItem {

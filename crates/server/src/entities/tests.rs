@@ -352,7 +352,10 @@ fn something_timid_runs_away() {
 #[test]
 fn a_friendly_one_comes_near_and_keeps_its_distance() {
     let mut test = beside_a_mob(CreatureKind::Kobold, 3);
-    test.send(&[ClientMessage::DevSetCreature(CreatureKind::Kobold)]);
+    test.send(&[ClientMessage::DevSetCreature {
+        kind: CreatureKind::Kobold,
+        how: shared::protocol::KindChange::Permanent,
+    }]);
     run(&mut test, 40);
     assert_eq!(
         cells_apart(the_mob(&test).position, player(&test)),

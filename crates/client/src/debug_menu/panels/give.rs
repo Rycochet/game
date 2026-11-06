@@ -1,9 +1,8 @@
 //! Give Item's panel, laid out to read like what it makes ("Give 3 Large Size
-//! Identical / Quality Rare Set Blessed Magical Longsword"), and Change Creature's
-//! buttons.
+//! Identical / Quality Rare Set Blessed Magical Longsword").
 
 use bevy::prelude::*;
-use shared::creature::{CreatureKind, Size};
+use shared::creature::Size;
 use shared::item::Quality;
 
 use super::{
@@ -177,21 +176,3 @@ fn dropdown<'a, S: Into<String>>(
     spawned.insert(choice);
     spawned
 }
-
-/// A button for each kind of creature, only working where there is ground to drop
-/// what the new body can't wear on (`update_creature_buttons`).
-pub(super) fn spawn_creature_buttons(content: &mut ChildSpawnerCommands) {
-    content.spawn(words("Not on the world map or in the Hall"));
-    for kind in CreatureKind::ALL {
-        let node = Node {
-            padding: BUTTON_PADDING,
-            ..default()
-        };
-        spawn_button(content, ButtonState::Normal, kind.def().name, FONT, node)
-            .insert((CreatureButton(kind), Pressable));
-    }
-}
-
-/// Asks the server to make the character this kind of creature.
-#[derive(Component, Clone, Copy)]
-pub(in crate::debug_menu) struct CreatureButton(pub(super) CreatureKind);
