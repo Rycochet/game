@@ -33,4 +33,6 @@ The system menu opens with Esc or the gear button in the top-right corner. Wheth
 | Single player (the server built into the native client) | The game pauses: the server's clock stops, and every world's time with it, and so does anything going by them. "Paused" shows in the menu. Not while Online is on, as others may be playing. |
 | A networked server, and so every browser | Nothing pauses. The world carries on, the keys don't reach the game, and a journey you clicked on keeps going. |
 
+Playtime only counts while you are doing something: it stops 5 minutes after you last did anything. On a networked server, or as a guest on a game that is Online, doing nothing for 15 minutes disconnects you (the server may set another time). Single player never disconnects you.
+
 So pausing needs both of these: a server that allows it, which only the built-in one does while it isn't online, and the system menu being open (or, with "Pause When Not in Focus" on under Settings, Gameplay, another window being in front). A networked server never pauses, for anyone, whatever its settings. The game carries on as soon as the menu is closed.

@@ -6,6 +6,7 @@ use shared::item_form::{ItemOrder, make_item};
 use shared::protocol::ServerMessage;
 use shared::sheet::{Appearance, Build, Sheet};
 
+use super::playtime::Activity;
 use super::{Client, Phase};
 use crate::sites::{self};
 use crate::{ServerOptions, ServerWorld, world_map};
@@ -92,12 +93,20 @@ pub(super) fn welcome(
         .and_then(|character| {
             let inventory = world.storage.load_inventory(id)?;
             let gates = world.storage.load_gates(id)?;
-            Ok((character, inventory, world.storage.load_sheet(id)?, gates))
+            let played = world.storage.load_playtime(id)?;
+            Ok((
+                character,
+                inventory,
+                world.storage.load_sheet(id)?,
+                gates,
+                played,
+            ))
         });
     // Not `Playing` yet, so nothing blank can be saved over the real character.
     match loaded {
-        Ok((character, inventory, sheet, gates)) => {
+        Ok((character, inventory, sheet, gates, played)) => {
             (client.character, client.other_worlds) = character;
+            client.activity = Activity::joined(played, world.action_clock.ticks());
             client.gates = gates;
             // Never saved in this world (or forgotten): new here, so they
             // arrive through one of its World Gates.

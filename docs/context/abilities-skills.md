@@ -95,7 +95,7 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 - **Rust** takes a node back towards a floor (around half the best it reached), and relearning up to that best is faster than learning was. Rate and floor are set per node; siblings in use slow it or raise the floor.
 - **The rust clock:** each node keeps the playtime before which it can't rust again. Opposition (about an hour), plain disuse (per node) and an unused specialisation (about 24 hours) each take one step only when the clock has passed, then move it on. Several links don't stack, and loss is always slower than gain.
 - **Practising a node pushes its own clock forward**, so using both sides of a link keeps both: opposition only wears down what has been set aside.
-- Playtime is counted per character in ticks and saved with it, so time offline never counts.
+- Playtime is counted per character in ticks and saved with it, so time offline never counts, and only up to 5 minutes after the player last did something (built: server `connections/playtime.rs`).
 - Separate from rust: worn gear may also make a check harder at the time (clanking armour while sneaking). That is a rule about the gear.
 
 ## Building it (later tasks, in order)

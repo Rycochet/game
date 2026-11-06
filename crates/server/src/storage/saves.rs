@@ -166,6 +166,11 @@ pub struct CharacterSave {
     /// kept for them all.
     #[serde(default)]
     pub gates: BTreeSet<u32>,
+    /// How long they have been played, in action ticks: only while their
+    /// player was doing things (`connections::playtime`). Missing from older
+    /// saves.
+    #[serde(default)]
+    pub playtime: u64,
 }
 
 /// What a character knows of one world, and where they are in it.

@@ -8,6 +8,7 @@ use shared::world::WorldId;
 
 use super::look_up::answer_look_ups;
 use super::moving::change_world;
+use super::playtime::shows_activity;
 use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
 use crate::ground::{self};
@@ -31,6 +32,9 @@ pub(crate) fn handle_messages(
         let stay = loop {
             match client.link.receive() {
                 Ok(Some(message)) => {
+                    if shows_activity(&message) {
+                        client.activity.did_something(world.action_clock.ticks());
+                    }
                     if !answer(client, message, world, accounts, &options) {
                         break false;
                     }
@@ -39,7 +43,12 @@ pub(crate) fn handle_messages(
                         break true;
                     }
                 }
-                Ok(None) => break act(client, world) && client.send_position(),
+                Ok(None) => {
+                    break act(client, world)
+                        && client.send_position()
+                        && (client.phase != Phase::Playing
+                            || client.keep_time(world.action_clock.ticks(), options.idle_minutes));
+                }
                 Err(error) => {
                     info!("A client left ({error:?})");
                     break false;

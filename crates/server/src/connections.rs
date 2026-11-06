@@ -33,6 +33,7 @@ mod look_up;
 mod messages;
 mod moving;
 mod new_character;
+mod playtime;
 mod roads;
 mod systems;
 mod visited_gates;
@@ -41,6 +42,7 @@ mod welcome;
 pub(super) use answer::answer;
 pub(super) use messages::handle_messages;
 pub(crate) use moving::Arrival;
+pub use playtime::IDLE_MINUTES;
 pub(super) use roads::send_roads;
 #[cfg(feature = "debug-api")]
 pub(super) use systems::save_all;
@@ -222,6 +224,8 @@ pub struct Client {
     gates: BTreeSet<u32>,
     /// What it was last told is on the ground under the player.
     pub(crate) ground_told: GroundTold,
+    /// Its character's playtime, and when its player last did anything.
+    pub(crate) activity: playtime::Activity,
     /// How much it can do now, and how fast that comes back.
     energy: Energy,
     speed: u32,
@@ -253,6 +257,8 @@ pub struct Client {
     looking_up: Vec<Id>,
 }
 
+#[cfg(test)]
+mod idle_tests;
 #[cfg(test)]
 mod look_up_tests;
 #[cfg(test)]
