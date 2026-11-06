@@ -7,6 +7,7 @@ use super::dev_skills::DevSkills;
 use super::dev_vitals::DevVitals;
 use super::kind_change::KindChange;
 use super::login::{CharacterId, Credentials};
+use crate::ability::BarChange;
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::id::Id;
@@ -265,36 +266,7 @@ pub enum ClientMessage {
     /// Developer tools: practise some skills at random, or forget all but the
     /// kind's own (`DevSkills`), answered with `Sheet`.
     DevSkills(DevSkills),
-}
-
-impl ClientMessage {
-    /// Whether it is a developer tools message (`Dev...`), which only an
-    /// embedded server accepts.
-    pub fn is_dev_tool(&self) -> bool {
-        matches!(
-            self,
-            Self::DevTeleport { .. }
-                | Self::DevBackToStart
-                | Self::DevToShowcase
-                | Self::DevToHall
-                | Self::DevEnterSite { .. }
-                | Self::DevSetCell { .. }
-                | Self::DevSetWorldClock { .. }
-                | Self::DevGoToWorld { .. }
-                | Self::DevRevealPois
-                | Self::DevRevealMap
-                | Self::DevForgetMap
-                | Self::DevForgetMapOnServer
-                | Self::DevGenerateSite { .. }
-                | Self::DevGiveItem { .. }
-                | Self::DevSetCreature { .. }
-                | Self::DevDeleteCharacter
-                | Self::DevDetectMonsters(_)
-                | Self::DevTruesight(_)
-                | Self::DevGodMode(_)
-                | Self::DevKillMob { .. }
-                | Self::DevVitals(_)
-                | Self::DevSkills(_)
-        )
-    }
+    /// Change the action bar (`ability::BarChange`), answered with `ActionBar`:
+    /// what it is now, whether the change was made or refused.
+    ActionBar(BarChange),
 }

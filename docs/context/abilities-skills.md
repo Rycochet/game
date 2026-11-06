@@ -6,7 +6,7 @@ The owner's design for what a creature is like and what it is good at, the same 
 
 - **Attributes:** what a body, mind and spirit are (in code: `sheet::Attributes`, the nine below).
 - **Skills:** what has been learned, as a tree (the nodes and each creature's practice are built: `shared/skill.md`).
-- **Abilities:** named actions that draw on skills and attributes (today: `sheet::Ability`, things a kind does by nature such as Kick). Things that aren't actions, such as NightVision, move to a separate list of senses or traits.
+- **Abilities:** named actions that draw on skills and attributes (today: `shared::ability`: Attack, which everyone knows, and things a kind does by nature such as Kick; active ones go on the action bar, passive ones such as Night Vision just work). Things that aren't actions, such as NightVision, move to a separate list of senses or traits.
 
 ## Attributes
 
@@ -105,5 +105,5 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 
 1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way, and the triangles in a character creation screen (built, `client/character_create.md`; one character per account for now, with Character Selection later before it).
 2. The tree, practice, checks and rust clock (the tree's nodes, practice flowing up and values are built; practice from use, checks and rust are not), with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
-3. Abilities and opposition.
+3. Abilities and opposition (begun: `shared::ability`, active and passive, the action bar; abilities don't hook onto skills yet: Attack will use the node of the weapon held, `combat/melee/<type>/<weapon>`, once combat comes).
 4. Specialising, once quests, trainers and books exist.

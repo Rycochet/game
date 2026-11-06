@@ -1,6 +1,7 @@
 //! Loading and saving characters.
 
 use bevy::prelude::*;
+use shared::ability::ActionBar;
 use shared::item::Inventory;
 use shared::protocol::CharacterId;
 use shared::sheet::Sheet;
@@ -20,6 +21,8 @@ pub struct Everywhere {
     pub gates: BTreeSet<u32>,
     /// `CharacterSave::playtime`.
     pub playtime: u64,
+    /// `CharacterSave::action_bar`.
+    pub action_bar: ActionBar,
 }
 
 impl Storage {
@@ -83,6 +86,13 @@ impl Storage {
         Ok(self.character(id)?.map_or(0, |save| save.playtime))
     }
 
+    /// A character's action bar (a new character's if they are new).
+    pub fn load_action_bar(&self, id: &CharacterId) -> Result<ActionBar, String> {
+        Ok(self
+            .character(id)?
+            .map_or_else(ActionBar::default, |save| save.action_bar))
+    }
+
     /// Deletes a character's save (dev tools), if they have one.
     pub fn remove_character(&self, id: &CharacterId) {
         if let Some(queue) = &self.queue {
@@ -118,6 +128,7 @@ impl Storage {
                     sheet: everywhere.sheet,
                     gates: everywhere.gates,
                     playtime: everywhere.playtime,
+                    action_bar: everywhere.action_bar,
                 }),
             );
         }

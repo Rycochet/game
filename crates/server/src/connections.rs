@@ -25,6 +25,7 @@ mod answer_items;
 mod change_kind;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod action_bar;
 mod answer;
 mod client;
 mod delete_character;
@@ -224,6 +225,8 @@ pub struct Client {
     pub(crate) seen_worn: BTreeMap<Id, Vec<WornLook>>,
     /// What the character is like.
     pub(crate) sheet: Sheet,
+    /// Its action bar (`CharacterSave::action_bar`).
+    action_bar: shared::ability::ActionBar,
     /// The World Gates it has gone through (`CharacterSave::gates`).
     gates: BTreeSet<u32>,
     /// What it was last told is on the ground under the player.
@@ -263,6 +266,8 @@ pub struct Client {
     looking_up: Vec<Id>,
 }
 
+#[cfg(test)]
+mod action_bar_tests;
 #[cfg(test)]
 mod idle_tests;
 #[cfg(test)]

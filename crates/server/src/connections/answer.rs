@@ -196,6 +196,7 @@ pub(crate) fn answer(
                 clock: world.server_clock.seconds(),
             })
         }
+        ClientMessage::ActionBar(change) => client.change_bar(change),
         ClientMessage::DropItem { .. }
         | ClientMessage::TakeFromGround { .. }
         | ClientMessage::WearFromGround { .. }

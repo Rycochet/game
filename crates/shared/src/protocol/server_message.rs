@@ -6,6 +6,7 @@ use super::OnlineState;
 use super::level::{LevelChunk, LevelInfo, RememberedLevel};
 use super::login::{CharacterSummary, LoginMethod};
 use super::{WorldChunk, WorldInfo};
+use crate::ability::ActionBar;
 use crate::ground::Load;
 use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
@@ -157,4 +158,7 @@ pub enum ServerMessage {
     /// Something has gone out of sight, or away; `died` if it died, which only
     /// those who could see it are told.
     EntityGone { id: Id, died: bool },
+    /// The character's action bar: after `Sheet`, and answering every
+    /// `ClientMessage::ActionBar`, so a refused change is put right.
+    ActionBar(ActionBar),
 }

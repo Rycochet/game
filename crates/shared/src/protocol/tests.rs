@@ -147,6 +147,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ClientMessage::DevVitals(super::DevVitals::Hurt(4)),
         ClientMessage::DevSkills(super::DevSkills::LearnSome),
+        ClientMessage::ActionBar(crate::ability::BarChange::Swap { a: 0, b: 9 }),
         ClientMessage::DevDetectMonsters(true),
         ClientMessage::DevTruesight(true),
         ClientMessage::DevGodMode(true),
@@ -365,6 +366,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             id: Id(uuid::Uuid::from_u128(4)),
             died: true,
         },
+        ServerMessage::ActionBar(crate::ability::ActionBar::default()),
         ServerMessage::ItemsLookedUp {
             found: vec![crate::item::Item::new(Id::for_test(10), ItemKind::Ring)],
             unknown: vec![Id::for_test(11)],

@@ -253,7 +253,7 @@ fn a_character_keeps_the_gates_they_have_gone_through() {
 }
 
 #[test]
-fn a_save_from_before_gates_were_kept_still_loads() {
+fn a_save_from_before_gates_playtime_and_the_action_bar_still_loads() {
     let save = CharacterSave {
         world: WorldSeed::new(5).id(),
         worlds: BTreeMap::new(),
@@ -261,9 +261,12 @@ fn a_save_from_before_gates_were_kept_still_loads() {
         sheet: Sheet::default(),
         gates: BTreeSet::new(),
         playtime: 0,
+        action_bar: shared::ability::ActionBar::default(),
     };
     let text = ron::to_string(&save).unwrap();
-    let old = text.replace(",gates:[],playtime:0", "");
+    // Gates, playtime and the action bar are the last fields: a save from
+    // before them all ends after the sheet.
+    let old = format!("{})", &text[..text.find(",gates:").unwrap()]);
     assert_ne!(old, text);
     assert_eq!(ron::from_str::<CharacterSave>(&old).unwrap(), save);
 }
