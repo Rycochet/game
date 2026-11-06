@@ -4,6 +4,7 @@
 //! plugin. Game logic lives in the modules themselves.
 
 mod character;
+mod character_create;
 mod common;
 mod connection;
 mod debug_menu;
@@ -101,6 +102,7 @@ fn main() {
         system_menu::SystemMenuPlugin,
         inventory::InventoryPlugin,
         character::CharacterPlugin,
+        character_create::CharacterCreatePlugin,
         entities::EntitiesPlugin,
         ground::GroundPlugin,
         trade::TradePlugin,

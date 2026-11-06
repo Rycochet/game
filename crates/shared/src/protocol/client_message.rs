@@ -18,15 +18,23 @@ use crate::world::ClockRate;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ClientMessage {
     /// The first message on a new connection, answered with `LoginOptions`
-    /// (an embedded server, which has no logins: with `Welcome`).
-    Hello { protocol: u32 },
+    /// (an embedded server, which has no logins: with `Welcome`, or for a new
+    /// character `Characters`). `makes_characters`: the client has a screen for
+    /// making one, so a new guest's or single player's character is made with
+    /// it (`Characters` with none to choose, then `CreateCharacter`) rather
+    /// than plain for their kind.
+    Hello {
+        protocol: u32,
+        makes_characters: bool,
+    },
     /// Logs in, once `LoginOptions` has arrived. A guest is answered with
     /// `Welcome`, anyone else with `Characters`.
     Login(Credentials),
     /// Plays this character of the account's, answered with `Welcome`.
     ChooseCharacter { id: CharacterId },
     /// Makes a new character and plays them, answered with `Welcome`. The
-    /// server checks the name and how many the account has.
+    /// server checks the name and how many the account has. For a guest or the
+    /// single player, whose one character is new, it names that one.
     CreateCharacter {
         name: String,
         /// What they are: refused unless it is `CreatureDef::playable`.

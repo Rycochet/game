@@ -43,6 +43,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
     let client = vec![
         ClientMessage::Hello {
             protocol: PROTOCOL_VERSION,
+            makes_characters: false,
         },
         ClientMessage::Login(Credentials::Guest(GuestToken([7; 32]))),
         ClientMessage::ChooseCharacter {

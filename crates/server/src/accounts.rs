@@ -216,6 +216,24 @@ impl Accounts {
         Ok(character)
     }
 
+    /// Gives a character already made (a guest's, the single player's) the name
+    /// its player chose. Its account must have been loaded, as logging in does.
+    pub(crate) fn rename_character(
+        &mut self,
+        character: &CharacterId,
+        name: &str,
+    ) -> Result<(), String> {
+        let name = checked_name(name)?;
+        let account = self.loaded.iter_mut().find_map(|(id, account)| {
+            let found = account.characters.iter_mut().find(|c| c.id == *character)?;
+            found.name = name.clone();
+            Some(*id)
+        });
+        let account = account.ok_or("no such character")?;
+        self.save(&account);
+        Ok(())
+    }
+
     /// Notes that a character is being played now.
     pub(crate) fn played(&mut self, id: &AccountId, character: &CharacterId) -> Result<(), String> {
         self.account(id)?;

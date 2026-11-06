@@ -29,6 +29,7 @@ mod client;
 mod give_items;
 mod messages;
 mod moving;
+mod new_character;
 mod roads;
 mod systems;
 mod visited_gates;
@@ -177,6 +178,8 @@ pub struct Client {
     /// What the host last asked of opening the server to others, not yet done.
     pub(crate) asked_online: Option<Option<shared::protocol::OnlineSettings>>,
     pub(crate) phase: Phase,
+    /// It said it can make a character (`Hello`), so a new one is made by it.
+    makes_characters: bool,
     /// The account it logged in to (none on an embedded server).
     account: Option<AccountId>,
     /// Its character: given when it connected, or decided by logging in.
@@ -242,6 +245,8 @@ pub struct Client {
     last_step: Option<u32>,
 }
 
+#[cfg(test)]
+mod new_character_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 #[cfg(test)]

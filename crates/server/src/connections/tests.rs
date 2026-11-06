@@ -158,9 +158,11 @@ impl TestClient {
 
 pub(crate) const HELLO: ClientMessage = ClientMessage::Hello {
     protocol: PROTOCOL_VERSION,
+    makes_characters: false,
 };
 
-const GUEST: ClientMessage = ClientMessage::Login(Credentials::Guest(GuestToken([1; 32])));
+pub(super) const GUEST: ClientMessage =
+    ClientMessage::Login(Credentials::Guest(GuestToken([1; 32])));
 
 fn give(kind: ItemKind) -> ClientMessage {
     ClientMessage::DevGiveItem {
@@ -749,7 +751,7 @@ pub(crate) fn tick_both(connections: &mut Connections, world: &mut ServerWorld) 
 }
 
 /// Runs `handle_messages` once over these connections.
-fn tick(connections: Connections, world: ServerWorld) -> (Connections, ServerWorld) {
+pub(super) fn tick(connections: Connections, world: ServerWorld) -> (Connections, ServerWorld) {
     tick_with(connections, world, true)
 }
 
@@ -776,7 +778,7 @@ fn tick_with(
     )
 }
 
-fn answers(end: &ClientLink) -> Vec<ServerMessage> {
+pub(super) fn answers(end: &ClientLink) -> Vec<ServerMessage> {
     std::iter::from_fn(|| end.receive().ok().flatten()).collect()
 }
 
@@ -790,10 +792,13 @@ fn logged_in_to_account(
     connections.add(link);
     let client = connections.clients.last_mut().unwrap();
     client.phase = Phase::LoggingIn;
+    // Not a guest's, so the world isn't looked at.
+    let world = ServerWorld::new(WorldSeed::new(1));
     assert!(logged_in(
         client,
         &LoginKey::Test(key),
-        &mut connections.accounts
+        &mut connections.accounts,
+        &world
     ));
     let told = answers(&end);
     (end, told)

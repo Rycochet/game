@@ -10,8 +10,8 @@ use super::ping::TimedPong;
 use super::prediction::{Prediction, correction};
 use super::{Connecting, FromServer, ServerConnection, give_up, hang_up, log_in};
 use crate::common::{
-    CurrentWorld, GameClock, GameView, Hosting, MapPosition, ServerClock, ServerStatus,
-    WorldChanged,
+    CurrentWorld, GameClock, GameView, Hosting, MakingCharacter, MapPosition, ServerClock,
+    ServerStatus, WorldChanged,
 };
 use crate::player::Player;
 
@@ -72,7 +72,14 @@ pub(super) fn receive(
                     break;
                 }
             }
-            // Nothing logs in to an account yet, so nothing should send this.
+            // A new character, to be made with `character_create`'s screen.
+            Ok(Some(ServerMessage::Characters { list, can_create }))
+                if list.is_empty() && can_create =>
+            {
+                commands.insert_resource(MakingCharacter(true));
+            }
+            // Nothing logs in to an account with characters yet: choosing one is
+            // to come, before making one.
             Ok(Some(ServerMessage::Characters { .. })) => {
                 let reason = "This version can't choose a character on this server".to_owned();
                 give_up(&mut commands, &mut status, reason);
