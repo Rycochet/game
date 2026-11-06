@@ -46,12 +46,18 @@ fn worn_pieces_are_on_the_arm_off_its_skin_and_above_the_wrist() {
                 side,
                 bend: 0.0,
             };
+            // Points down the arm's middle every 5 mm, worked out once for every corner
+            // (working them out for each corner made this test take minutes).
+            let middle: Vec<(f32, Vec3)> = (0..=200)
+                .map(|step| step as f32 * 5.0)
+                .map(|down| (down, arm.centre(down)))
+                .collect();
             let model = build_arm(&look.form, &frame, side);
             for corner in model.parts.iter().flat_map(|(_, t)| t.iter().flatten()) {
                 // Down the arm, as `Arm` measures it, to the nearest point of its middle.
-                let (down, away) = (0..=200)
-                    .map(|step| step as f32 * 5.0)
-                    .map(|down| (down, (*corner - arm.centre(down)).length()))
+                let (down, away) = middle
+                    .iter()
+                    .map(|&(down, centre)| (down, (*corner - centre).length()))
                     .min_by(|a, b| a.1.total_cmp(&b.1))
                     .unwrap();
                 assert!(down > 0.0 && down < arm.elbow() + 255.0, "{look:?} {down}");
