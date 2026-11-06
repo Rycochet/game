@@ -22,7 +22,7 @@ Built (2026-11-06), summarised in `docs/context/shared/creature.md`. The old fou
 
 - **Scale:** integers, with a kind's median at 100, leaving room for small differences and slow growth (`u8` won't do). *To balance.*
 - **Each kind has a median and a range** for every attribute. Mobs are rolled within it from the seeded RNG; NPCs get more spread, as they live longer and should be more interesting. The range is a share of the median either side (`SPREAD`), the same for every kind so far.
-- **Kind bonuses** (owner, 2026-11-06): a kind may add a bonus to some, all or none of the nine, on top of what the triangles give, for players and mobs alike. The peoples share a person's medians and differ only by these. Placeholder values for now; the real ones come later.
+- **Kind bonuses** (owner, 2026-11-06): a kind may add a bonus to some, all or none of the nine, on top of what the triangles give, for players and mobs alike. The peoples share a person's medians and differ only by these. Every kind has the same points in all (`BONUS_POINTS`): what it sets comes first, and the rest is shared evenly among the attributes it doesn't set. Placeholder values for now; the real ones come later.
 - **Starting values** come from the triangles (below). **Growth** comes from use: each use of a skill gives a little practice to the attributes its node leans on, far slower than the skill itself, and slower still the further above the starting value. **Temporary changes** (injury, fatigue, hunger, potions, curses, blessings) sit on top and are never saved into the base. **Permanent changes** are rare and earned (rituals, artifacts, perhaps age).
 
 ### Choosing them: three triangles

@@ -11,6 +11,7 @@ mod def;
 mod guesses;
 mod kind;
 mod layer;
+mod names;
 mod peoples;
 mod senses;
 mod size;

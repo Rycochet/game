@@ -9,8 +9,9 @@ use shared::sheet::Attribute;
 use super::draft::Draft;
 use super::picture::PIXELS;
 use crate::widgets::{
-    ButtonState, ButtonStyle, Dropdown, INK, Pressable, TextBox, TextSize, UiId, field_label,
-    panel_title, spawn_button, spawn_dropdown, spawn_fullscreen_layer, spawn_text_box,
+    ButtonState, ButtonStyle, ButtonTooltip, Dropdown, INK, Pressable, TextBox, TextSize, UiId,
+    field_label, panel_title, spawn_button, spawn_dropdown, spawn_fullscreen_layer,
+    spawn_new_seed_button, spawn_text_box,
 };
 
 /// The form all its widgets' ids are in.
@@ -18,6 +19,8 @@ pub(super) const FORM: &str = "character_create";
 /// How big the triangles are drawn, in interface pixels.
 pub(super) const CHOOSER_SIDE: f32 = 480.0;
 const COLUMN_WIDTH: f32 = 300.0;
+/// The random name button: as tall as the name box.
+const RANDOM_SIDE: f32 = 24.0;
 
 #[derive(Component)]
 pub(super) struct CreateLayer;
@@ -25,6 +28,9 @@ pub(super) struct CreateLayer;
 pub(super) struct NameBox;
 #[derive(Component)]
 pub(super) struct KindList;
+/// The button beside the name box suggesting another.
+#[derive(Component)]
+pub(super) struct RandomName;
 /// Holds a list for each of the kind's looks, filled again for each kind.
 #[derive(Component)]
 pub(super) struct LooksBox;
@@ -82,8 +88,25 @@ fn spawn_choices(column: &mut ChildSpawnerCommands, draft: &Draft) {
         takes_keys: true,
         ..default()
     };
-    spawn_text_box(column, name, TextSize::Medium, Node::default())
-        .insert((NameBox, UiId::new(FORM, "name")));
+    column
+        .spawn(Node {
+            column_gap: px(4),
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            let grows = Node {
+                flex_grow: 1.0,
+                ..default()
+            };
+            spawn_text_box(row, name, TextSize::Medium, grows)
+                .insert((NameBox, UiId::new(FORM, "name")));
+            spawn_new_seed_button(row, RANDOM_SIDE).insert((
+                RandomName,
+                ButtonTooltip("Random name".into()),
+                UiId::new(FORM, "random_name"),
+            ));
+        });
     column.spawn(field_label("Kind"));
     let kinds = Draft::playable();
     let options = kinds

@@ -15,11 +15,13 @@ use crate::item::Inventory;
 mod attributes;
 mod build;
 mod from_build;
+mod kind_bonus;
 mod looks;
 
 pub use attributes::{Attribute, Attributes, Row};
 pub use build::{Build, Dot, POINTS_TOTAL, TURN_STEPS, WEIGHT_TOTAL};
 pub use from_build::{POINT_WEIGHT, SPREAD};
+pub use kind_bonus::{BONUS_POINTS, bonus_from};
 pub use looks::Choice;
 
 /// Something that can be learned, and be better or worse at.

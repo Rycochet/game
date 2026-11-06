@@ -1,6 +1,6 @@
 //! The body parts of each kind of creature.
 
-use super::guesses::{NONE, PERSON, bonus, medians};
+use super::guesses::{PERSON, medians};
 use super::peoples::{BIRDFOLK, DWARF, ELF, GOBLIN, HALFLING, LIZARDFOLK, MINOTAUR, ON_TOES, ORC};
 use super::{BodyPart, CreatureDef, CreatureKind, Layer, Location, Size};
 use crate::sheet::{Ability, Skill, Trait};
@@ -91,6 +91,7 @@ pub(super) const CENTAUR: [BodyPart; 10] = [
 
 impl CreatureKind {
     pub const fn def(self) -> CreatureDef {
+        use crate::sheet::Attribute::Agility;
         use Ability::{Flutter, Kick, NightVision, Trample};
         use Skill::{Climbing, Foraging, Running, Stealth, Swimming};
         use Trait::{CoatColour, FeatherColour, HairColour, Height, SkinShade};
@@ -113,7 +114,7 @@ impl CreatureKind {
                 uses_stairs: true,
                 playable: false,
                 attributes: medians(60, 70, 60, 90),
-                bonus: NONE,
+                bonus_set: &[],
                 skills: &[(Foraging, 1)],
                 abilities: &[],
                 looks: &[HairColour, SkinShade, Height],
@@ -129,7 +130,7 @@ impl CreatureKind {
                 // Too big to stand in one cell, so not for players (owner, 2026-11-04).
                 playable: false,
                 attributes: medians(140, 100, 130, 90),
-                bonus: NONE,
+                bonus_set: &[],
                 skills: &[(Running, 4), (Foraging, 1)],
                 abilities: &[Kick, Trample],
                 looks: &[HairColour, SkinShade, CoatColour, Height],
@@ -144,7 +145,7 @@ impl CreatureKind {
                 uses_stairs: false,
                 playable: false,
                 attributes: medians(10, 80, 20, 10),
-                bonus: NONE,
+                bonus_set: &[],
                 skills: &[(Foraging, 3)],
                 abilities: &[Flutter],
                 looks: &[FeatherColour],
@@ -160,7 +161,7 @@ impl CreatureKind {
                 // Too big to stand in one cell, so not for players (owner, 2026-11-04).
                 playable: false,
                 attributes: medians(200, 60, 180, 70),
-                bonus: NONE,
+                bonus_set: &[],
                 skills: &[(Climbing, 1)],
                 abilities: &[Trample],
                 looks: &[HairColour, SkinShade, Height],
@@ -175,7 +176,7 @@ impl CreatureKind {
                 uses_stairs: false,
                 playable: false,
                 attributes: medians(160, 100, 140, 30),
-                bonus: NONE,
+                bonus_set: &[],
                 skills: &[(Running, 5), (Swimming, 1)],
                 abilities: &[Kick, Trample],
                 looks: &[CoatColour, Height],
@@ -190,7 +191,7 @@ impl CreatureKind {
                 body: &TEN_FINGERS,
                 playable: true,
                 attributes: PERSON,
-                bonus: NONE,
+                bonus_set: &[],
                 skills: &[(Swimming, 1), (Climbing, 1)],
                 abilities: &[],
                 looks: &[HairColour, SkinShade, Height],
@@ -206,7 +207,7 @@ impl CreatureKind {
                 playable: true,
                 // Playable, so a person's medians, with its bonus.
                 attributes: PERSON,
-                bonus: bonus(0, 15, 0, 0),
+                bonus_set: &[(Agility, 15)],
                 skills: &[(Stealth, 3), (Climbing, 2)],
                 abilities: &[NightVision],
                 looks: &[SkinShade, Height],

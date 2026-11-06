@@ -10,6 +10,8 @@ use shared::sheet::{Appearance, Attributes, Build, Row};
 #[derive(Resource, Clone, Debug, PartialEq)]
 pub(super) struct Draft {
     pub name: String,
+    /// The last name suggested, to tell whether the player has typed their own.
+    pub suggested: String,
     pub kind: CreatureKind,
     pub appearance: Appearance,
     pub build: Build,
@@ -21,6 +23,7 @@ impl Default for Draft {
     fn default() -> Self {
         Self {
             name: String::new(),
+            suggested: String::new(),
             kind: CreatureKind::Human,
             appearance: Appearance::default(),
             build: Build::CENTRED,

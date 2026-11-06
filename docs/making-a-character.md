@@ -5,7 +5,7 @@ nav_order: 4.2
 
 # Making a character
 
-The first time you play, as a guest or on your own, you make your character before you arrive in the world. You choose a name, what kind of creature you are, how you look, and what your body, mind and spirit are like. For now each player has one character.
+The first time you play, as a guest or on your own, you make your character before you arrive in the world. You choose a name (one is suggested for your kind, and the button beside it suggests another), what kind of creature you are, how you look, and what your body, mind and spirit are like. For now each player has one character.
 
 ## Kind and looks
 
@@ -39,7 +39,9 @@ Each row is a triangle with its three attributes at the corners. Where you put t
 
 The three triangles turn together round the middle. The row at the top gets an extra point, which raises all three of its attributes. Two rows level near the top share it, and rows below the middle get none of it, so every character leans one way.
 
-Behind each triangle is a chart of its three attributes. Its inner layer, in gold, is what your kind adds, which differs from kind to kind; the coloured layer round it is what your choices give. The values are listed beside the triangles as you go.
+The triangles stay the same way up as they turn, so each attribute keeps its corner: power at the top, finesse at the lower right, resistance at the lower left. The arrows on the ring show they turn.
+
+Behind each triangle is a chart of its three attributes. Its inner layer, in gold, is what your kind adds. Every kind has the same bonus points in all: some put more into a few attributes, and the rest is shared evenly; the coloured layer round it is what your choices give. The values are listed beside the triangles as you go.
 
 ## Controls
 

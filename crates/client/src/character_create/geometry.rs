@@ -8,9 +8,9 @@ use shared::sheet::{Build, Dot, Row, TURN_STEPS, WEIGHT_TOTAL};
 /// The middle the triangles turn round.
 pub(super) const MIDDLE: Vec2 = Vec2::new(0.5, 0.5);
 /// How far each triangle's middle is from it.
-const APART: f32 = 0.27;
+const APART: f32 = 0.24;
 /// How far each triangle's corners are from its own middle.
-pub(super) const REACH: f32 = 0.2;
+pub(super) const REACH: f32 = 0.18;
 /// The value a chart's axis reaches its corner at.
 pub(super) const SHOWN_MOST: f32 = 250.0;
 
@@ -31,12 +31,23 @@ pub(super) fn centre(row: Row, turn: u16) -> Vec2 {
     MIDDLE + towards(row_angle(row, turn)) * APART
 }
 
-/// A row's triangle's corners, in its column order (power, finesse, resistance),
-/// the first pointing away from the middle.
+/// A row's triangle's corners, in its column order: power at the top, finesse at
+/// the lower right, resistance at the lower left. They stay that way up however
+/// the triangles are turned, so each attribute keeps its place.
 pub(super) fn corners(row: Row, turn: u16) -> [Vec2; 3] {
-    let angle = row_angle(row, turn);
     let middle = centre(row, turn);
-    [0.0, 120.0, 240.0].map(|offset| middle + towards(angle + offset) * REACH)
+    [0.0, 120.0, 240.0].map(|angle| middle + towards(angle) * REACH)
+}
+
+/// The angles of the gaps between the triangles, in degrees clockwise from up:
+/// a sixth of a turn from each.
+pub(super) fn gaps(turn: u16) -> [f32; 3] {
+    Row::ALL.map(|row| row_angle(row, turn) + TURN_STEPS as f32 / 6.0)
+}
+
+/// The point this far from the middle at this angle.
+pub(super) fn round_middle(degrees: f32, radius: f32) -> Vec2 {
+    MIDDLE + towards(degrees) * radius
 }
 
 /// Where a dot sits in its triangle.

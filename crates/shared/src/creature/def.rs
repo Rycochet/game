@@ -1,7 +1,7 @@
 //! What a kind of creature is like: its body parts, size and attributes.
 
 use super::{Layer, Location, Size};
-use crate::sheet::{Ability, Attributes, Skill, Trait};
+use crate::sheet::{Ability, Attribute, Attributes, Skill, Trait, bonus_from};
 
 /// One location on a body: which layers go there, and how many places it has for
 /// things that take only one (fingers for rings).
@@ -30,9 +30,9 @@ pub struct CreatureDef {
     pub playable: bool,
     /// The middle of its range for each attribute, before its bonus.
     pub attributes: Attributes,
-    /// What being this kind adds on top of what is chosen or rolled: some, all
-    /// or none of the nine.
-    pub bonus: Attributes,
+    /// The bonuses this kind sets; the rest of `BONUS_POINTS` is shared among
+    /// the others (`bonus`). Setting one to 0 keeps it from any share.
+    pub bonus_set: &'static [(Attribute, u16)],
     /// Skills it starts with, and how good at them.
     pub skills: &'static [(Skill, u8)],
     /// What it can do because of what it is.
@@ -42,6 +42,12 @@ pub struct CreatureDef {
 }
 
 impl CreatureDef {
+    /// What being this kind adds on top of what is chosen or rolled: the same
+    /// points in all for every kind (`sheet::bonus_from`).
+    pub fn bonus(&self) -> Attributes {
+        bonus_from(self.bonus_set)
+    }
+
     pub fn part(&self, location: Location) -> Option<&'static BodyPart> {
         self.body.iter().find(|part| part.location == location)
     }

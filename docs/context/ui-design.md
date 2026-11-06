@@ -27,7 +27,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Checkbox | have | A whole clickable row with a drawn tick, for picking things out of a list (the debug menu's toggles); settings use switches. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
 | Toggle row | have | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
 | Slider | have | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
-| Text box | have | Sunken, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. |
+| Text box | have | Sunken, a line tall even when empty, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. |
 | Dropdown | have | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
 | Switch | have | A pill about a phone's size (52 × 32), with a tick in the left half of its track and a cross in the right; the round thumb covers one, so off shows the cross. Green track when on, grey when off. A press anywhere flips it and the thumb slides across (jumps with Reduce Motion). For settings that apply at once: every on/off setting in Settings. |
 | Fab, ButtonGroup, Rating, SpeedDial | no | |
@@ -41,7 +41,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Icon | have | Pictures, or drawn in code. |
 | Scroll area | have | Wheel, finger or bar. |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
-| Triangle chooser | have | Only in making a character (`character_create`): three triangles turning round a middle, a dot in each, each with a radar chart behind it (the kind's bonus as a gold inner layer, round-ended). Drawn into a picture; dots dragged, the whole turned by dragging beside them; keys 1–3, arrows, Q/E. |
+| Triangle chooser | have | Only in making a character (`character_create`): three triangles turning round a middle on a ring in a button's colour, with curved two-headed arrows in the gaps, always the same way up, a dot in each, each with a radar chart behind it (the kind's bonus as a gold inner layer, round-ended). Drawn into a picture; dots dragged, the whole turned by dragging beside them; keys 1–3, arrows, Q/E. |
 | Badge | have | A stack's count: white with a black outline, bottom centre inside the item's frame. |
 | Table, Chip, Avatar, Divider | later | |
 

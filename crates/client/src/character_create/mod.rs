@@ -11,6 +11,7 @@ mod draft;
 mod form;
 mod geometry;
 mod input;
+mod name;
 mod picture;
 mod screen;
 mod show;
@@ -22,6 +23,7 @@ impl Plugin for CharacterCreatePlugin {
         let making = |making: Res<MakingCharacter>| making.0;
         app.init_resource::<draft::Draft>()
             .init_resource::<input::Holding>()
+            .init_resource::<name::NameRolls>()
             .add_systems(Startup, screen::spawn_screen)
             .add_systems(Update, form::show_screen)
             .add_systems(
@@ -29,6 +31,7 @@ impl Plugin for CharacterCreatePlugin {
                 (
                     form::read_choices,
                     form::fill_looks,
+                    name::suggest_names,
                     input::point_at_triangles,
                     input::keys_for_triangles,
                     form::press_begin,
