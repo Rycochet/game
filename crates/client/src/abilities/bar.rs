@@ -4,13 +4,14 @@
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use shared::ability::{ActionBar, BAR_SLOTS};
+use shared::ability::{Ability, ActionBar, BAR_SLOTS};
 use shared::creature::CreatureKind;
 
 use super::drag::Aim;
 use super::own_bar::OwnBar;
 use super::page::look;
-use crate::common::{Action, Preferences, VitalsCircle, interface_area};
+use super::vitals_now::affords;
+use crate::common::{Action, OwnVitals, Preferences, VitalsCircle, interface_area};
 use crate::inventory::Carried;
 use crate::widgets::{
     ABILITY, ALLOWED, Floating, GRID_LINE, REFUSED, TextSize, UiId, set_edge, spawn_ability,
@@ -98,6 +99,8 @@ pub(super) struct Shown {
     kind: CreatureKind,
     keys: Vec<(String, String)>,
     aim: Option<(u8, bool)>,
+    /// Too little Mana for what costs it (all cost the same so far: Heal's).
+    low_mana: bool,
 }
 
 /// Draws each slot again when what it shows changes.
@@ -107,6 +110,7 @@ pub(super) fn show_bar(
     carried: Res<Carried>,
     preferences: Res<Preferences>,
     aim: Res<Aim>,
+    (vitals, time): (Res<OwnVitals>, Res<Time>),
     assets: Res<AssetServer>,
     slots: Query<(Entity, &SlotNode)>,
     mut shown: Local<Option<Shown>>,
@@ -123,6 +127,7 @@ pub(super) fn show_bar(
         kind: carried.0.creature,
         keys,
         aim: aim.0,
+        low_mana: !affords(Ability::Heal, &vitals, time.elapsed_secs_f64()),
     };
     if shown.as_ref() == Some(&now) {
         return;
@@ -142,9 +147,17 @@ fn spawn_slot(inside: &mut ChildSpawnerCommands, slot: u8, now: &Shown, assets: 
     match held {
         Some(held) => {
             let mut look = look(held.ability, now.kind, assets);
+            let ability = held.ability;
             if !full.is_empty() {
-                look.name = format!("{} ({full})", look.name);
+                look.name = format!(
+                    "{} ({full})
+{}",
+                    ability.name(),
+                    ability.description()
+                );
             }
+            // Greyed while there isn't the Mana for it.
+            look.usable &= !now.low_mana || ability.mana_cost() == 0;
             spawn_ability(inside, look);
             if held.ability.is_active() {
                 super::wait::spawn_shade(inside);

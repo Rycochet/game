@@ -20,11 +20,21 @@ pub struct BarSlot {
     pub auto: bool,
 }
 
-/// A character's action bar.
+/// A character's action bar. Automatic slots take turns from the first to the
+/// last: the first whose ability can be done is (owner, 2026-11-07), so their
+/// order is the player's to choose.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActionBar {
     pub slots: [Option<BarSlot>; BAR_SLOTS],
+    /// How many of `GIVEN` it has been given: a bar saved before one was added
+    /// gets it once (`catch_up`), and keeps it off if the player takes it off.
+    #[serde(default)]
+    pub given: u8,
 }
+
+/// Abilities new characters' bars start with, beyond Attack, in the order they
+/// were added: older bars are given each once.
+const GIVEN: [Ability; 1] = [Ability::Heal];
 
 /// A change the player asks for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,19 +65,40 @@ pub enum BarRefusal {
     NotAutomatic,
 }
 
-/// A new character's: Attack in the first slot.
+/// A new character's: Heal in the first slot and Attack in the second, so
+/// with both automatic, healing comes first (Claude's suggestion, 2026-11-07).
 impl Default for ActionBar {
     fn default() -> Self {
         let mut slots = [None; BAR_SLOTS];
-        slots[0] = Some(BarSlot {
-            ability: Ability::Attack,
-            auto: false,
-        });
-        Self { slots }
+        for (slot, ability) in [Ability::Heal, Ability::Attack].into_iter().enumerate() {
+            slots[slot] = Some(BarSlot {
+                ability,
+                auto: false,
+            });
+        }
+        Self {
+            slots,
+            given: GIVEN.len() as u8,
+        }
     }
 }
 
 impl ActionBar {
+    /// Gives a bar saved before some of `GIVEN` were added each of those, in
+    /// the first empty slot (none if it is full, or already there).
+    pub fn catch_up(&mut self) {
+        for &ability in GIVEN.iter().skip(usize::from(self.given)) {
+            let empty = self.slots.iter().position(Option::is_none);
+            if let (None, Some(slot)) = (self.slot_of(ability), empty) {
+                self.slots[slot] = Some(BarSlot {
+                    ability,
+                    auto: false,
+                });
+            }
+        }
+        self.given = GIVEN.len() as u8;
+    }
+
     /// Makes the change for a creature in a body of kind `kind`, or says why not
     /// (and changes nothing). An ability it no longer knows (after shapeshifting)
     /// stays where it is, only it can't be used.

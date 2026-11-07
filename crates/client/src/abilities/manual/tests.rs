@@ -4,7 +4,7 @@ use shared::id::Id;
 use shared::protocol::ClientMessage;
 
 use super::{Manual, ask_wanted};
-use crate::common::{OwnAbility, Target};
+use crate::common::{OwnAbility, OwnVitals, Target};
 use crate::connection::ToServer;
 use crate::inventory::Carried;
 
@@ -14,6 +14,7 @@ fn app(own: OwnAbility) -> App {
     let mut app = App::new();
     app.init_resource::<Time>()
         .init_resource::<Carried>()
+        .init_resource::<OwnVitals>()
         .insert_resource(Target(Some(Id::for_test(1))))
         .insert_resource(own)
         .insert_resource(Manual {
@@ -87,4 +88,39 @@ fn holds_automatic_ones_until_it_lands() {
     assert!(!manual.holds(3.0));
     manual.forget();
     assert_eq!((manual.wanted, manual.sent), (None, None));
+}
+
+#[test]
+fn heal_without_the_mana_is_not_asked_for() {
+    let mut app = app(OwnAbility::default());
+    app.world_mut().resource_mut::<Manual>().wanted = Some(Ability::Heal);
+    app.update();
+    assert!(sent(&mut app).is_empty());
+}
+
+#[test]
+fn heal_by_hand_is_on_the_player_unless_the_target_is_a_friend() {
+    use crate::common::ToldVitals;
+    use shared::vitals::{Points, VitalNow};
+    let mut app = app(OwnAbility::default());
+    let full = VitalNow {
+        value: Points::whole(20),
+        most: 20,
+        refills_in: 0,
+    };
+    app.insert_resource(OwnVitals(Some(ToldVitals {
+        health: full,
+        mana: full,
+        at: 0.0,
+    })));
+    app.world_mut().resource_mut::<Manual>().wanted = Some(Ability::Heal);
+    // The target isn't among those seen, so it isn't known to be a friend.
+    app.update();
+    assert!(matches!(
+        sent(&mut app)[..],
+        [ClientMessage::UseAbility {
+            ability: Ability::Heal,
+            target: None
+        }]
+    ));
 }

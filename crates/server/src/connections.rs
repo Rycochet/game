@@ -32,6 +32,7 @@ mod combat;
 mod delete_character;
 mod dev_skills;
 mod give_items;
+mod heal;
 mod look_up;
 mod messages;
 mod moving;
@@ -174,7 +175,8 @@ enum Action {
     Ground(GroundAction),
     UseAbility {
         ability: shared::ability::Ability,
-        target: Id,
+        /// `None`: on themselves.
+        target: Option<Id>,
     },
 }
 

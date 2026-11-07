@@ -14,4 +14,7 @@ pub enum Landed {
     Fizzled,
     /// It was called off before it landed.
     Cancelled,
+    /// It gave this much Health (some of it lost if beyond the most), and the
+    /// one healed has this much left, per mille.
+    Healed { amount: Points, left: u16 },
 }

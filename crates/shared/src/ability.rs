@@ -2,7 +2,8 @@
 //! `docs/context/shared/ability.md`.
 //!
 //! Active ones are done when asked (and can go on the action bar); passive ones
-//! work by themselves. Every creature knows Attack; the rest come with its kind.
+//! work by themselves. Every creature knows Attack and Heal; the rest come with
+//! its kind.
 
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +24,9 @@ pub enum Ability {
     // New abilities go at the end: messages carry one by its place in this list.
     /// Striking with what is held, or without: every creature knows it.
     Attack,
+    /// Mana turned into Health, on yourself or another (`magic`): every
+    /// creature knows it for now, as there is no way to learn spells yet.
+    Heal,
 }
 
 /// Whether an ability is done when asked, or works by itself.
@@ -36,8 +40,9 @@ pub enum Use {
 
 impl Ability {
     /// Every ability, in the order they are listed to players.
-    pub const ALL: [Ability; 5] = [
+    pub const ALL: [Ability; 6] = [
         Self::Attack,
+        Self::Heal,
         Self::Flutter,
         Self::Kick,
         Self::NightVision,
@@ -48,6 +53,7 @@ impl Ability {
     pub const fn name(self) -> &'static str {
         match self {
             Self::Attack => "Attack",
+            Self::Heal => "Heal",
             Self::Flutter => "Flutter",
             Self::Kick => "Kick",
             Self::NightVision => "Night Vision",
@@ -59,7 +65,7 @@ impl Ability {
     pub const fn use_kind(self) -> Use {
         match self {
             Self::NightVision => Use::Passive,
-            Self::Attack | Self::Flutter | Self::Kick | Self::Trample => Use::Active,
+            Self::Attack | Self::Heal | Self::Flutter | Self::Kick | Self::Trample => Use::Active,
         }
     }
 
@@ -73,6 +79,28 @@ impl Ability {
             Self::Trample => &[Strength, Toughness],
             Self::Flutter => &[Agility],
             Self::NightVision => &[Perception],
+            // As its skill, Healing, under Divine.
+            Self::Heal => &[Empathy],
+        }
+    }
+
+    /// What it does, in a line for its tip.
+    pub const fn description(self) -> &'static str {
+        match self {
+            Self::Attack => "Strikes your target with what you hold, or without.",
+            Self::Heal => "Heals you or your allies, and tries to keep you alive if you ask.",
+            Self::Flutter => "Takes to the air for a moment.",
+            Self::Kick => "Kicks out at your target.",
+            Self::NightVision => "Sees in the dark.",
+            Self::Trample => "Charges down whoever is in the way.",
+        }
+    }
+
+    /// The Mana it spends, in whole points (`magic`).
+    pub const fn mana_cost(self) -> u32 {
+        match self {
+            Self::Heal => crate::magic::HEAL_MANA,
+            _ => 0,
         }
     }
 
@@ -83,9 +111,10 @@ impl Ability {
 
     /// Whether it may be made automatic on the action bar, to be done whenever it
     /// can be (owner, 2026-11-07): only what is safe to leave on, as it waits
-    /// until it can be done. Attack (a target, in reach, an enemy) so far.
+    /// until it can be done. Attack (a target, in reach, an enemy) and Heal
+    /// (on yourself, at a quarter of your Health) so far.
     pub const fn can_be_automatic(self) -> bool {
-        matches!(self, Self::Attack)
+        matches!(self, Self::Attack | Self::Heal)
     }
 
     /// Whether a creature in a body of kind `kind` can do it now. Only whether it
@@ -96,13 +125,16 @@ impl Ability {
     }
 }
 
+/// What every creature knows, whatever its kind.
+const EVERYONE_KNOWS: [Ability; 2] = [Ability::Attack, Ability::Heal];
+
 /// The abilities a creature in a body of kind `kind` knows, in `Ability::ALL`'s
-/// order: Attack, and its kind's own. Shapeshifted, the form's.
+/// order: Attack, Heal, and its kind's own. Shapeshifted, the form's.
 pub fn known(kind: CreatureKind) -> Vec<Ability> {
     let own = kind.def().abilities;
     Ability::ALL
         .into_iter()
-        .filter(|ability| *ability == Ability::Attack || own.contains(ability))
+        .filter(|ability| EVERYONE_KNOWS.contains(ability) || own.contains(ability))
         .collect()
 }
 

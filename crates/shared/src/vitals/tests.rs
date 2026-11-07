@@ -87,11 +87,37 @@ fn more_harm_puts_refilling_off_again() {
     assert_eq!(vitals.at(Vital::Health, most, later), w(15));
     vitals.hurt(w(5), most, later, 0);
     assert_eq!(vitals.at(Vital::Health, most, later + CALM_AFTER), w(10));
-    // Mana waits too, though none was spent.
+    // Mana never waits (owner, 2026-11-07).
+    assert_eq!(vitals.told(Vital::Mana, most, later).refills_in, 0);
+}
+
+#[test]
+fn mana_refills_straight_away_after_casting() {
+    let mut vitals = Vitals::default();
+    let most = limits(&vitals, 0, 0);
+    assert!(vitals.spend_mana(w(10), most, 1000, 0));
+    assert_eq!(vitals.told(Vital::Mana, most, 1000).refills_in, 0);
+    assert_eq!(vitals.at(Vital::Mana, most, 1000 + REFILL_TICKS / 4), w(15));
+    // Casting isn't fighting: Health doesn't wait either.
+    assert_eq!(vitals.told(Vital::Health, most, 1000).refills_in, 0);
+}
+
+#[test]
+fn restoring_stops_at_the_most_and_keeps_the_wait() {
+    let mut vitals = Vitals::default();
+    let most = limits(&vitals, 0, 0);
+    vitals.hurt(w(15), most, 0, 0);
+    vitals.restore(Vital::Health, w(6), most, 10);
+    assert_eq!(vitals.at(Vital::Health, most, 10), w(11));
     assert_eq!(
-        vitals.told(Vital::Mana, most, later).refills_in as u64,
-        CALM_AFTER
+        vitals.told(Vital::Health, most, 10).refills_in as u64,
+        CALM_AFTER - 10
     );
+    vitals.restore(Vital::Health, w(120), most, 20);
+    assert_eq!(vitals.at(Vital::Health, most, 20), w(20));
+    // Full is kept as full, so a higher most is full too.
+    let higher = Limits { health: 30, ..most };
+    assert_eq!(vitals.at(Vital::Health, higher, 20), w(30));
 }
 
 #[test]

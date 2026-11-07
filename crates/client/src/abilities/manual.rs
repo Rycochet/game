@@ -5,10 +5,12 @@
 use bevy::prelude::*;
 use shared::ability::Ability;
 use shared::protocol::ClientMessage;
+use shared::sheet::Feeling;
 
 use super::own_bar::OwnBar;
 use super::use_ability::{ASK_WAIT, UseSlot, ask};
-use crate::common::{OwnAbility, Target};
+use super::vitals_now::affords;
+use crate::common::{Other, OwnAbility, OwnVitals, Target};
 use crate::connection::ToServer;
 use crate::inventory::Carried;
 
@@ -63,12 +65,16 @@ pub(super) fn use_slots(
     }
 }
 
-/// Asks for the wanted ability at the target as soon as the player can act.
-/// One asked for and still waiting on the server (an automatic one, or one
-/// chosen before) is taken back first, so this goes in its place.
+/// Asks for the wanted ability at the target as soon as the player can act
+/// (Heal: at the target unless it is an enemy, otherwise at the player). One
+/// asked for and still waiting on the server (an automatic one, or one chosen
+/// before) is taken back first, so this goes in its place.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn ask_wanted(
     carried: Res<Carried>,
     target: Res<Target>,
+    others: Query<&Other>,
+    vitals: Res<OwnVitals>,
     time: Res<Time>,
     mut manual: ResMut<Manual>,
     mut own: ResMut<OwnAbility>,
@@ -83,9 +89,24 @@ pub(super) fn ask_wanted(
         return;
     }
     manual.wanted = None;
-    let Some(target) = target.0.filter(|_| ability.can_use(carried.0.creature)) else {
-        debug!("{} needs a target", ability.name());
+    if !ability.can_use(carried.0.creature) || !affords(ability, &vitals, now) {
+        debug!("{} can't be done now", ability.name());
         return;
+    }
+    let target = match ability {
+        // Never an enemy by hand: healing one is to come another way.
+        Ability::Heal => target.0.filter(|id| {
+            others
+                .iter()
+                .any(|other| other.id == *id && other.feeling != Feeling::Unfriendly)
+        }),
+        _ => match target.0 {
+            Some(target) => Some(target),
+            None => {
+                debug!("{} needs a target", ability.name());
+                return;
+            }
+        },
     };
     if waiting_on_server {
         to_server.write(ToServer(ClientMessage::WithdrawAbility));

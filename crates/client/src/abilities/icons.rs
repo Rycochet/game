@@ -7,6 +7,7 @@ use shared::ability::Ability;
 pub(super) fn icon_path(ability: Ability) -> &'static str {
     match ability {
         Ability::Attack => "icons/lorc/pointy-sword.png",
+        Ability::Heal => "icons/delapouite/healing.png",
         Ability::Flutter => "icons/lorc/feathered-wing.png",
         Ability::Kick => "icons/delapouite/high-kick.png",
         Ability::NightVision => "icons/delapouite/night-vision.png",

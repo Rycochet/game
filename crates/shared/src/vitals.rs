@@ -27,7 +27,7 @@ const TICKS: u64 = ACTION_TICKS_PER_SECOND as u64;
 pub const ATTRIBUTE_PER_POINT: u32 = 5;
 /// How long refilling from nothing to full takes: 5 minutes (owner, 2026-11-06).
 pub const REFILL_TICKS: u64 = 5 * 60 * TICKS;
-/// How long after the last fighting or casting refilling starts: 10 seconds.
+/// How long after the last fighting Health starts refilling: 10 seconds.
 pub const CALM_AFTER: u64 = 10 * TICKS;
 /// Playtime for each point added to both: 24 hours (owner, 2026-11-06).
 pub const PLAYTIME_PER_POINT: u64 = 24 * 60 * 60 * TICKS;
@@ -142,24 +142,31 @@ impl Vitals {
         self.practise(Vital::Health, amount, playtime);
     }
 
-    /// Spends this much Mana, if there is that much (`false` if not): neither
-    /// refills for a while, and what is spent is practice for Mana.
+    /// Spends this much Mana, if there is that much (`false` if not): what is
+    /// spent is practice for Mana. Mana keeps refilling, and casting isn't
+    /// fighting (owner, 2026-11-07).
     pub fn spend_mana(&mut self, amount: Points, limits: Limits, now: u64, playtime: u64) -> bool {
         if self.at(Vital::Mana, limits, now) < amount {
             return false;
         }
-        self.in_combat(limits, now);
+        self.settle(limits, now);
         self.mana.take(amount, limits.mana);
         self.practise(Vital::Mana, amount, playtime);
         true
     }
 
-    /// Fighting or casting: neither refills until `CALM_AFTER` from now.
+    /// Gives back this much of one, never past the most; what is beyond it is
+    /// lost. A wait for refilling stays.
+    pub fn restore(&mut self, vital: Vital, amount: Points, limits: Limits, now: u64) {
+        self.settle(limits, now);
+        self.track_mut(vital).give(amount, limits.get(vital));
+    }
+
+    /// Fighting: Health doesn't refill until `CALM_AFTER` from now. Mana always
+    /// refills (owner, 2026-11-07).
     pub fn in_combat(&mut self, limits: Limits, now: u64) {
         self.settle(limits, now);
-        for vital in Vital::ALL {
-            self.track_mut(vital).calm_from(now + CALM_AFTER);
-        }
+        self.health.calm_from(now + CALM_AFTER);
     }
 
     /// Lays a change on, settling first.

@@ -11,8 +11,10 @@ use shared::sheet::Feeling;
 
 use super::manual::Manual;
 use super::own_bar::OwnBar;
+use super::vitals_now::{affords, wants_healing};
 use crate::common::{
-    CurrentDungeon, GameView, MapPosition, Other, OwnAbility, PlayerSpeed, SpentEnergy, Target,
+    CurrentDungeon, GameView, MapPosition, Other, OwnAbility, OwnVitals, PlayerSpeed, SpentEnergy,
+    Target,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
@@ -72,10 +74,10 @@ pub(super) fn take_timing(
     }
 }
 
-/// Asks the server for an ability at the target, and waits for its answer.
+/// Asks the server for an ability at the target (`None`: the player).
 pub(super) fn ask(
     ability: Ability,
-    target: shared::id::Id,
+    target: Option<shared::id::Id>,
     now: f64,
     own: &mut OwnAbility,
     to_server: &mut MessageWriter<ToServer>,
@@ -84,9 +86,11 @@ pub(super) fn ask(
     to_server.write(ToServer(ClientMessage::UseAbility { ability, target }));
 }
 
-/// Automatic abilities, done whenever they can be: Attack with an enemy
-/// targeted, in sight and in reach. Never while the player is moving or an
-/// ability they chose by hand is waiting or winding up: those come first.
+/// Automatic abilities, done whenever they can be, taking turns in the bar's
+/// order: the first whose time has come is asked for (owner, 2026-11-07).
+/// Attack with an enemy targeted, in sight and in reach; Heal on the player at
+/// a quarter of their Health, with the Mana. Never while the player is moving
+/// or an ability they chose by hand is waiting or winding up: those come first.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn use_automatic(
     view: Res<State<GameView>>,
@@ -94,7 +98,7 @@ pub(super) fn use_automatic(
     carried: Res<Carried>,
     target: Res<Target>,
     dungeon: Res<CurrentDungeon>,
-    time: Res<Time>,
+    (time, vitals): (Res<Time>, Res<OwnVitals>),
     player: Single<&MapPosition, With<Player>>,
     others: Query<(&Other, &MapPosition)>,
     (moving, manual): (Res<PlayerMoving>, Res<Manual>),
@@ -109,24 +113,34 @@ pub(super) fn use_automatic(
     {
         return;
     }
-    let Some(id) = target.0 else {
-        return;
-    };
-    let Some((_, at)) = others
-        .iter()
-        .find(|(other, _)| other.id == id && other.feeling == Feeling::Unfriendly)
-    else {
-        return;
-    };
-    let reach = Wielded::of(&carried.0).main.reach();
-    if !in_reach(&dungeon.level, (player.x, player.y), (at.x, at.y), reach) {
-        return;
-    }
+    let kind = carried.0.creature;
     let automatic = bar.0.slots[..BAR_SLOTS]
         .iter()
         .flatten()
-        .any(|slot| slot.auto && slot.ability == Ability::Attack);
-    if automatic && Ability::Attack.can_use(carried.0.creature) {
-        ask(Ability::Attack, id, now, &mut own, &mut to_server);
+        .filter(|slot| slot.auto && slot.ability.can_use(kind))
+        .map(|slot| slot.ability)
+        .filter(|ability| affords(*ability, &vitals, now));
+    for ability in automatic {
+        let at = match ability {
+            Ability::Attack => {
+                let reach = Wielded::of(&carried.0).main.reach();
+                let enemy = target.0.and_then(|id| {
+                    others
+                        .iter()
+                        .find(|(other, _)| other.id == id && other.feeling == Feeling::Unfriendly)
+                });
+                enemy
+                    .filter(|(_, at)| {
+                        in_reach(&dungeon.level, (player.x, player.y), (at.x, at.y), reach)
+                    })
+                    .map(|(other, _)| Some(other.id))
+            }
+            Ability::Heal => wants_healing(&vitals, now).then_some(None),
+            _ => None,
+        };
+        if let Some(at) = at {
+            ask(ability, at, now, &mut own, &mut to_server);
+            return;
+        }
     }
 }

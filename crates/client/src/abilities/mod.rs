@@ -18,6 +18,7 @@ mod own_bar;
 mod page;
 mod spots;
 mod use_ability;
+mod vitals_now;
 mod wait;
 
 pub struct AbilitiesPlugin;

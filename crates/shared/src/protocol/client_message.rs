@@ -269,9 +269,13 @@ pub enum ClientMessage {
     /// Change the action bar (`ability::BarChange`), answered with `ActionBar`:
     /// what it is now, whether the change was made or refused.
     ActionBar(BarChange),
-    /// Use an ability on a creature (Attack, so far), when there is the energy:
-    /// answered with `AbilityStarted`, or nothing if it can't be done.
-    UseAbility { ability: Ability, target: Id },
+    /// Use an ability on a creature, or on yourself when `target` is `None`
+    /// (Heal), when there is the energy: answered with `AbilityStarted`, or
+    /// nothing if it can't be done.
+    UseAbility {
+        ability: Ability,
+        target: Option<Id>,
+    },
     /// Call off the ability winding up, if it hasn't landed: answered with
     /// `AbilityLanded` and `Landed::Cancelled`.
     CancelAbility,

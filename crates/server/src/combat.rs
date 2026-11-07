@@ -9,12 +9,21 @@ use shared::rng::{Rng, Seed};
 use shared::skill::{SkillId, Windows};
 use shared::vitals::{Limits, Vital, Vitals};
 
-/// An ability begun and not landed yet: an attack, so far.
+/// What an ability winding up will do when it lands.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Act {
+    /// An attack.
+    Strike(Swing),
+    /// A Heal (players only, so far).
+    Heal,
+}
+
+/// An ability begun and not landed yet.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Pending {
-    /// Who it is aimed at.
+    /// Who it is aimed at (a player healing themselves: their own id).
     pub target: Id,
-    pub swing: Swing,
+    pub act: Act,
     /// The action tick it lands at.
     pub lands_at: u64,
 }
@@ -25,6 +34,9 @@ pub(crate) struct Pending {
 pub(crate) struct Fight {
     pub pending: Option<Pending>,
     pub attacks: u64,
+    /// A Heal that landed on another player, given once every client has
+    /// had its turn (`connections::heal_players`).
+    pub heal_out: Option<Id>,
 }
 
 /// A player's open practice windows (`shared::skill::Windows`): one per skill, and

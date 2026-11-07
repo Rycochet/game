@@ -26,7 +26,7 @@ fn change(change: BarChange) -> ClientMessage {
 }
 
 #[test]
-fn a_new_character_is_told_attack_is_first() {
+fn a_new_character_is_told_heal_then_attack() {
     assert_eq!(bar(&TestClient::new().welcome), ActionBar::default());
 }
 
@@ -34,7 +34,7 @@ fn a_new_character_is_told_attack_is_first() {
 fn changes_are_made_by_the_rules_and_refusals_put_right() {
     let mut test = TestClient::new();
     let moved = test.send(&[
-        change(BarChange::Swap { a: 0, b: 2 }),
+        change(BarChange::Swap { a: 1, b: 2 }),
         change(BarChange::ToggleAuto { slot: 2 }),
     ]);
     let attack = Some(BarSlot {
@@ -47,7 +47,10 @@ fn changes_are_made_by_the_rules_and_refusals_put_right() {
         slot: 0,
         ability: Ability::NightVision,
     })]);
-    assert_eq!(bar(&refused).slots[0], None);
+    assert_eq!(
+        bar(&refused).slots[0].map(|s| s.ability),
+        Some(Ability::Heal)
+    );
     assert_eq!(bar(&refused).slots[2], attack);
 }
 
@@ -57,7 +60,7 @@ fn kept_in_the_save() {
     let seed = WorldSeed::new(1);
     let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
     let mut test = TestClient::of(open());
-    test.send(&[change(BarChange::Swap { a: 0, b: 9 })]);
+    test.send(&[change(BarChange::Swap { a: 1, b: 9 })]);
     test.leave();
     let again = TestClient::of(open());
     assert_eq!(

@@ -10,7 +10,7 @@ use crate::connections::messages::act;
 use crate::connections::tests::TestClient;
 
 /// A player in a castle with a mob of this kind right beside them, east.
-fn beside(kind: CreatureKind) -> (TestClient, Id) {
+pub(super) fn beside(kind: CreatureKind) -> (TestClient, Id) {
     let mut test = TestClient::new();
     test.send(&[ClientMessage::DevEnterSite {
         kind: PoiKind::Castle,
@@ -31,7 +31,7 @@ fn beside(kind: CreatureKind) -> (TestClient, Id) {
 
 /// Lets ticks go by with the player's ability landing and what they asked
 /// for done, and mobs acting if `mobs`.
-fn run(test: &mut TestClient, ticks: u64, mobs: bool) {
+pub(super) fn run(test: &mut TestClient, ticks: u64, mobs: bool) {
     for _ in 0..ticks {
         test.world.action_clock.advance(1);
         land_ability(&mut test.client, &mut test.world);
@@ -42,7 +42,7 @@ fn run(test: &mut TestClient, ticks: u64, mobs: bool) {
     }
 }
 
-fn mob_health(test: &TestClient, id: Id) -> Option<Points> {
+pub(super) fn mob_health(test: &TestClient, id: Id) -> Option<Points> {
     let tick = test.world.action_clock.ticks();
     let mob = test
         .world
@@ -57,11 +57,11 @@ fn mob_health(test: &TestClient, id: Id) -> Option<Points> {
 fn attack(target: Id) -> ClientMessage {
     ClientMessage::UseAbility {
         ability: Ability::Attack,
-        target,
+        target: Some(target),
     }
 }
 
-fn received(test: &mut TestClient) -> Vec<ServerMessage> {
+pub(super) fn received(test: &mut TestClient) -> Vec<ServerMessage> {
     std::iter::from_fn(|| test.end.receive().unwrap()).collect()
 }
 
