@@ -3,8 +3,10 @@
 //! `connections/combat.rs` (players) and `entities/fight.rs` (mobs).
 
 use shared::combat::Swing;
+use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::rng::{Rng, Seed};
+use shared::skill::{SkillId, Windows};
 use shared::vitals::{Limits, Vital, Vitals};
 
 /// An ability begun and not landed yet: an attack, so far.
@@ -23,6 +25,14 @@ pub(crate) struct Pending {
 pub(crate) struct Fight {
     pub pending: Option<Pending>,
     pub attacks: u64,
+}
+
+/// A player's open practice windows (`shared::skill::Windows`): one per skill, and
+/// one per kind of creature for the blocks spent fighting it. Not saved.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Learning {
+    pub skills: Windows<SkillId>,
+    pub foes: Windows<CreatureKind>,
 }
 
 /// How many action ticks this much energy takes to come back, at this speed.

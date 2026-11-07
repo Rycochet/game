@@ -127,6 +127,8 @@ pub(crate) struct MobHit {
     pub harm: Points,
     /// Health left, per mille: none when it died.
     pub left: u16,
+    /// What kind of creature it is.
+    pub kind: CreatureKind,
 }
 
 /// Who struck a mob, and with what.
@@ -154,6 +156,7 @@ pub(crate) fn hit_mob(
     let limits = one.vitals.limits(&one.attributes, 0, tick);
     one.vitals.hurt(harm, limits, tick, 0);
     let left = health_left(&one.vitals, limits, tick);
+    let kind = one.kind;
     // Whatever it was doing, it goes for whoever hit it.
     let after_them = matches!(one.doing, Doing::Going { after, .. } if after == by.id);
     if !after_them {
@@ -172,5 +175,5 @@ pub(crate) fn hit_mob(
     if one.health(tick) == Points::ZERO {
         bury(world, place, here_index, mob);
     }
-    Some(MobHit { harm, left })
+    Some(MobHit { harm, left, kind })
 }

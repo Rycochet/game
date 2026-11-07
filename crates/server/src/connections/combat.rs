@@ -4,6 +4,7 @@
 use bevy::prelude::*;
 use shared::ability::Ability;
 use shared::combat::{CANCEL_PENALTY, Fighter, PRACTICE_PER_BLOW, Swing, Wielded, in_reach};
+use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::protocol::{Landed, ServerMessage};
 use shared::vitals::{Points, Vital};
@@ -44,12 +45,23 @@ impl Client {
         })
     }
 
-    /// Practises these skills, keeping the sheet to be saved.
-    fn practise(&mut self, skills: impl IntoIterator<Item = shared::skill::SkillId>) {
+    /// Practises these skills fighting a creature of this kind at action tick
+    /// `now`, keeping the sheet to be saved. Each skill takes one practice every 5
+    /// seconds, and each kind counts once in that time as a block fought.
+    fn practise(
+        &mut self,
+        skills: impl IntoIterator<Item = shared::skill::SkillId>,
+        foe: CreatureKind,
+        now: u64,
+    ) {
         for skill in skills {
-            self.sheet.skills.practise(skill, PRACTICE_PER_BLOW);
-            self.unsaved = true;
+            let amount = self.learning.skills.take(skill, PRACTICE_PER_BLOW, now);
+            self.sheet.skills.practise(skill, amount);
         }
+        if self.learning.foes.take(foe, 1, now) > 0 {
+            self.sheet.foes.fought(foe);
+        }
+        self.unsaved = true;
     }
 }
 
@@ -126,7 +138,7 @@ pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool
     let Some(hit) = hit_mob(world, place, target, striker, tick) else {
         return true;
     };
-    client.practise(practised);
+    client.practise(practised, hit.kind, tick);
     debug!(
         "A player's blow did {:?} to {target:?}, {} per mille left",
         hit.harm, hit.left
@@ -211,7 +223,7 @@ pub(crate) fn take_mob_blows(
                     wielded,
                 };
                 let harm = attacker.harm(&swing, &client.fighter(), &mut luck(tick, mob, target));
-                let left = struck(client, world, harm, tick);
+                let left = struck(client, world, harm, kind, tick);
                 debug!("{mob:?} did {harm:?} to a player, {left} per mille left");
                 ServerMessage::AbilityLanded {
                     who: Some(mob),
@@ -224,13 +236,20 @@ pub(crate) fn take_mob_blows(
     }
 }
 
-/// The player takes this much harm, practising Defence, and is killed if it
-/// was the last of their Health. How much is left, per mille.
-fn struck(client: &mut Client, world: &mut ServerWorld, harm: Points, tick: u64) -> u16 {
+/// The player takes this much harm from a creature of this kind, practising
+/// Defence, and is killed if it was the last of their Health. How much is left,
+/// per mille.
+fn struck(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    harm: Points,
+    foe: CreatureKind,
+    tick: u64,
+) -> u16 {
     let limits = client.limits(tick);
     let played = client.activity.played;
     client.sheet.vitals.hurt(harm, limits, tick, played);
-    client.practise(client.fighter().practised_defending());
+    client.practise(client.fighter().practised_defending(), foe, tick);
     let left = health_left(&client.sheet.vitals, limits, tick);
     if client.sheet.vitals.at(Vital::Health, limits, tick) == Points::ZERO {
         killed(client, world, tick);

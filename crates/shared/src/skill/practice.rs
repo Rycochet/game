@@ -1,6 +1,6 @@
 //! `Skills`: how much one creature has practised each node, and the values that
 //! gives. Practice flows up the tree, halving at each level; a node's value is the
-//! square root of its practice, and a check adds the values along the path, so
+//! cube root of its practice, and a check adds the values along the path, so
 //! every level counts (`docs/context/abilities-skills.md`).
 
 use std::collections::BTreeMap;
@@ -8,13 +8,14 @@ use std::collections::BTreeMap;
 use super::SkillId;
 use crate::creature::CreatureKind;
 
-/// Values are in hundredths: 1,000 practice is a value of 31.62, kept as 3162.
+/// Values are in hundredths: 1,000 practice is a value of 10.00, kept as 1000, and
+/// 100% takes 1,000,000 (owner, 2026-11-07: square roots grew far too fast).
 pub const VALUE_SCALE: u32 = 100;
 
 /// The practice an old skill level stood for (saves from before the tree, and the
-/// kinds' starting skills): its square times 100, so level 3 is a value of 30.
+/// kinds' starting skills): its cube times 1,000, so level 3 is a value of 30.
 pub const fn level_practice(level: u32) -> u32 {
-    level * level * 100
+    level * level * level * 1000
 }
 
 /// Practice per node: only nodes with some are kept, so a node is known once it
@@ -67,11 +68,11 @@ impl Skills {
         }
     }
 
-    /// This node's own value, in hundredths (`VALUE_SCALE`): the square root of its
+    /// This node's own value, in hundredths (`VALUE_SCALE`): the cube root of its
     /// practice.
     pub fn value(&self, id: SkillId) -> u32 {
-        let scaled = self.practice(id) as u64 * (VALUE_SCALE * VALUE_SCALE) as u64;
-        scaled.isqrt() as u32
+        let scale = u64::from(VALUE_SCALE);
+        cube_root(u64::from(self.practice(id)) * scale * scale * scale) as u32
     }
 
     /// What a check with this node counts, in hundredths: its value and every value
@@ -79,4 +80,19 @@ impl Skills {
     pub fn total(&self, id: SkillId) -> u32 {
         id.upwards().map(|node| self.value(node)).sum()
     }
+}
+
+/// The whole number cube root, rounded down: no floats, so client and server agree.
+fn cube_root(n: u64) -> u64 {
+    // The largest cube that fits a `u64` is 2,642,245 cubed.
+    let (mut low, mut high) = (0u64, 2_642_245u64);
+    while low < high {
+        let middle = (low + high).div_ceil(2);
+        if middle * middle * middle <= n {
+            low = middle;
+        } else {
+            high = middle - 1;
+        }
+    }
+    low
 }

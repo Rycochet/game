@@ -70,12 +70,12 @@ fn practice_flows_up_halving() {
     skills.practise(sword, 1000);
     let practice: Vec<_> = sword.upwards().map(|id| skills.practice(id)).collect();
     assert_eq!(practice, [1000, 500, 250, 125]);
-    assert_eq!(skills.value(sword), 3162);
-    // 31.62 + 22.36 + 15.81 + 11.18, as in the plan's worked example.
-    assert_eq!(skills.total(sword), 3162 + 2236 + 1581 + 1118);
+    assert_eq!(skills.value(sword), 1000);
+    // Cube roots: 10.00 + 7.93 + 6.29 + 5.00.
+    assert_eq!(skills.total(sword), 1000 + 793 + 629 + 500);
     let other = SkillId::find("combat/melee/longsword/claymore").unwrap();
     assert!(!skills.knows(other));
-    assert_eq!(skills.total(other), 2236 + 1581 + 1118);
+    assert_eq!(skills.total(other), 793 + 629 + 500);
 }
 
 #[test]
@@ -153,4 +153,31 @@ fn shields_saved_before_they_moved_are_found_under_defence() {
     let round = SkillId::find("combat/melee/defence/roundshield").unwrap();
     assert_eq!(old.practice(round), 60);
     assert_eq!(old.practice(round.parent().unwrap()), 30);
+}
+
+#[test]
+fn a_hundred_percent_takes_a_million_practice() {
+    let sword = SkillId::find("combat/melee/longsword/longsword").unwrap();
+    let mut skills = Skills::default();
+    skills.practise(sword, 999_999);
+    assert_eq!(skills.value(sword), 9999);
+    skills.practise(sword, 1);
+    assert_eq!(skills.value(sword), 100 * VALUE_SCALE);
+    skills.practise(sword, u32::MAX);
+    assert_eq!(skills.value(sword), 162_549);
+}
+
+#[test]
+fn a_window_gives_its_largest_amount_once() {
+    let mut windows = Windows::default();
+    assert_eq!(windows.take("a", 8, 0), 8);
+    // Inside the window: nothing more for the same, only the rest for a larger one.
+    assert_eq!(windows.take("a", 8, 50), 0);
+    assert_eq!(windows.take("a", 12, 60), 4);
+    assert_eq!(windows.take("a", 5, 70), 0);
+    // Others have their own windows.
+    assert_eq!(windows.take("b", 8, 70), 8);
+    // Once it has closed, a new one opens.
+    assert_eq!(windows.take("a", 8, WINDOW_TICKS), 8);
+    assert_eq!(windows.take("b", 8, WINDOW_TICKS), 0);
 }

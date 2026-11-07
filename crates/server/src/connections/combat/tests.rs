@@ -166,3 +166,25 @@ fn an_unfriendly_mob_attacks_and_a_player_killed_is_put_out_whole() {
             .any(|message| matches!(message, ServerMessage::Killed))
     );
 }
+
+#[test]
+fn blows_practise_once_every_five_seconds() {
+    let (mut test, mob) = beside(CreatureKind::Dwarf);
+    let melee = shared::skill::SkillId::find("combat/melee").unwrap();
+    // Two blows inside one window: practice and a block fought, once.
+    for _ in 0..2 {
+        test.send(&[attack(mob)]);
+        run(&mut test, 30, false);
+    }
+    assert_eq!(test.client.fight.attacks, 2, "both landed");
+    // A quarter of a blow's practice reaches melee, two levels up.
+    let per_blow = shared::combat::PRACTICE_PER_BLOW / 4;
+    assert_eq!(test.client.sheet.skills.practice(melee), per_blow);
+    assert_eq!(test.client.sheet.foes.of(CreatureKind::Dwarf).fought, 1);
+    // Once the window has closed, the next blow counts again.
+    run(&mut test, shared::skill::WINDOW_TICKS, false);
+    test.send(&[attack(mob)]);
+    run(&mut test, 30, false);
+    assert_eq!(test.client.sheet.skills.practice(melee), 2 * per_blow);
+    assert_eq!(test.client.sheet.foes.of(CreatureKind::Dwarf).fought, 2);
+}

@@ -257,6 +257,8 @@ pub struct Client {
     waiting: VecDeque<Action>,
     /// The ability it is winding up, and its attacks so far.
     fight: crate::combat::Fight,
+    /// Its open practice windows, by skill and by kind of foe.
+    learning: crate::combat::Learning,
     /// What a character being made here asked to be, for when they first join.
     starting_as: Option<(CreatureKind, Appearance, Build)>,
     /// Whether `character` (or the visit) changed since it was saved.
