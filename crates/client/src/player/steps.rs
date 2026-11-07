@@ -8,8 +8,8 @@ use super::{
     MOST_STEPS_WAITING, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick, enemy_cells,
 };
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, Other, PlayerSpeed,
-    SpentEnergy,
+    CancelledEnergy, CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition,
+    Other, PlayerSpeed, SpentEnergy,
 };
 
 /// Takes the steps asked for this frame, in order: in a dungeon, only onto
@@ -20,6 +20,7 @@ use crate::common::{
 pub(super) fn take_steps(
     mut requests: MessageReader<TakeStep>,
     mut spent: MessageReader<SpentEnergy>,
+    mut cancelled: MessageReader<CancelledEnergy>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
     world: Option<Res<CurrentWorld>>,
@@ -43,6 +44,10 @@ pub(super) fn take_steps(
     for &SpentEnergy(cost) in spent.read() {
         energy.energy.spend(tick, speed.0, cost);
         energy.stopped_for += cost as f64 / (speed.0.max(1) as f64 * ACTION_TICKS_PER_SECOND);
+    }
+    for &CancelledEnergy(penalty) in cancelled.read() {
+        energy.energy.cancel(tick, speed.0, penalty);
+        energy.stopped_for = 0.0;
     }
     for &TakeStep(step) in requests.read() {
         if energy.waiting.len() < MOST_STEPS_WAITING {

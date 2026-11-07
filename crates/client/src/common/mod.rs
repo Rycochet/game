@@ -48,8 +48,8 @@ mod world;
 
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{
-    AbilitiesPage, CarryLimit, MakesCharacters, MakingCharacter, Other, PlayerSpeed, SheetText,
-    SkillsPageOpen, SpentEnergy,
+    AbilitiesPage, CancelledEnergy, CarryLimit, MakesCharacters, MakingCharacter, Other,
+    PlayerSpeed, SheetText, SkillsPageOpen, SpentEnergy,
 };
 pub use debug::{DebugInfo, DetectMonsters, GodMode, KillMob, ServerDevTools, Truesight};
 pub use display::{

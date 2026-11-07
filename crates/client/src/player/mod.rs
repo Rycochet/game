@@ -7,7 +7,7 @@
 
 use bevy::prelude::*;
 
-use crate::common::{GameView, ServerStatus, SpentEnergy};
+use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod keys;
@@ -44,6 +44,7 @@ impl Plugin for PlayerPlugin {
             .add_message::<TakeStep>()
             .add_message::<Stepped>()
             .add_message::<SpentEnergy>()
+            .add_message::<CancelledEnergy>()
             .configure_sets(
                 Update,
                 (PlayerSystems::Input, PlayerSystems::Travel).chain(),

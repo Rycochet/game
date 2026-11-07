@@ -11,7 +11,7 @@ use shared::sheet::Feeling;
 
 use super::own_bar::OwnBar;
 use crate::common::{
-    CurrentDungeon, GameView, MapPosition, Other, OwnAbility, PlayerSpeed, Target,
+    CurrentDungeon, GameView, MapPosition, Other, OwnAbility, PlayerSpeed, SpentEnergy, Target,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
@@ -32,6 +32,7 @@ pub(super) fn take_timing(
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
     mut own: ResMut<OwnAbility>,
+    mut spent: MessageWriter<SpentEnergy>,
 ) {
     let now = time.elapsed_secs_f64();
     let seconds = |ticks: u32| f64::from(ticks) / ACTION_TICKS_PER_SECOND;
@@ -43,6 +44,8 @@ pub(super) fn take_timing(
                 ready_in,
                 ..
             } => {
+                // Steps wait for it here as on the server, and a journey stops.
+                spent.write(SpentEnergy(ready_in.saturating_mul(speed.0)));
                 *own = OwnAbility {
                     started: now,
                     lands: now + seconds(*lands_in),

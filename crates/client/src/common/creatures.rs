@@ -47,6 +47,11 @@ pub struct CarryLimit(pub u32);
 #[derive(Message, Clone, Copy, Debug)]
 pub struct SpentEnergy(pub u32);
 
+/// What the player spent energy on was called off before it was done: all
+/// they still owe comes back but for this much (`Energy::cancel`).
+#[derive(Message, Clone, Copy, Debug)]
+pub struct CancelledEnergy(pub u32);
+
 /// The server asked for a new character to be made (`ServerMessage::Characters`
 /// with none to choose): `character_create` shows its screen until it is sent,
 /// and the loading screen leaves it the input. `connection` sets it, and clears it

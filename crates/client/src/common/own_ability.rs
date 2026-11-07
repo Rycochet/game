@@ -28,4 +28,9 @@ impl OwnAbility {
     pub fn is_busy(&self, now: f64) -> bool {
         now < (self.ready - ASK_AHEAD).max(self.asked_until)
     }
+
+    /// Whether it is still winding up, so it can be called off.
+    pub fn is_winding_up(&self, now: f64) -> bool {
+        now < self.lands
+    }
 }

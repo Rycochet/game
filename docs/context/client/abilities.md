@@ -12,7 +12,9 @@ What the character can do: the Character panel's Abilities page (B), every abili
 - `crates/client/src/abilities/spots.rs`: `Spot` (`Slot`, `Listed`, `Page`), `Spots` (what is in front at a point).
 - `crates/client/src/abilities/drag.rs`: `Drag`, `Aim`, `drag_abilities` (`PreUpdate`, after `PointerSystems`, before `WidgetSystems::Presses`, so presses on abilities never reach panels or the map), `drop_change`.
 - `crates/client/src/abilities/held.rs`: `spawn_held`, `show_held` (the dragged icon at the pointer), `use_by_key`.
-- `crates/client/src/abilities/use_ability.rs`: `UseSlot` (message: a slot clicked, tapped or its key), `take_timing` (`AbilityStarted` and a cancel into `common::OwnAbility`), `use_slots` (its ability at the target, if it can be done and nothing is waiting: `UseAbility`), `use_automatic` (each frame: an automatic Attack slot, an enemy targeted, in sight and in reach by the held weapon, in a site).
+- `crates/client/src/abilities/use_ability.rs`: `UseSlot` (message: a slot clicked, tapped or its key), `take_timing` (`AbilityStarted` and a cancel into `common::OwnAbility`, and the cost as `SpentEnergy`, so steps wait here as on the server and a journey stops), `use_slots` (its ability at the target, if it can be done and nothing is waiting: `UseAbility`), `use_automatic` (each frame: an automatic Attack slot, an enemy targeted, in sight and in reach by the held weapon, in a site).
+- `crates/client/src/abilities/wait.rs`: `WaitShade` (spawned over every active ability on the bar), `wait_left`, `show_wait` (the shade drains from the top as the wait to act again ends; every ability waits alike, sharing energy).
+- `crates/client/src/abilities/cancel.rs`: `cancel_by_escape` (`PreUpdate`, before `WidgetSystems::Front`: Esc while winding up calls it off instead of opening the menu, unless something Esc closes is open), `cancel_by_moving` (a `TakeStep` or `TravelTo` while winding up); both send `CancelAbility` and `common::CancelledEnergy` (owner, 2026-11-07).
 
 ## Public API
 

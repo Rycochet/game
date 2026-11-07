@@ -8,6 +8,7 @@ use crate::common::PointerSystems;
 use crate::widgets::WidgetSystems;
 
 mod bar;
+mod cancel;
 mod drag;
 mod held;
 mod icons;
@@ -15,6 +16,7 @@ mod own_bar;
 mod page;
 mod spots;
 mod use_ability;
+mod wait;
 
 pub struct AbilitiesPlugin;
 
@@ -26,6 +28,11 @@ impl Plugin for AbilitiesPlugin {
             .add_message::<use_ability::UseSlot>()
             .add_systems(Startup, (bar::spawn_bar, held::spawn_held))
             // Before widgets take presses on panels, and the map clicks.
+            // Before the system menu sees Esc.
+            .add_systems(
+                PreUpdate,
+                cancel::cancel_by_escape.before(WidgetSystems::Front),
+            )
             .add_systems(
                 PreUpdate,
                 drag::drag_abilities
@@ -42,7 +49,9 @@ impl Plugin for AbilitiesPlugin {
                     use_ability::take_timing,
                     use_ability::use_slots,
                     use_ability::use_automatic,
+                    cancel::cancel_by_moving,
                     (bar::place_bar, bar::show_bar, held::show_held),
+                    wait::show_wait,
                 )
                     .chain(),
             );
