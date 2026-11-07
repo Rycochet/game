@@ -42,6 +42,7 @@ impl Plugin for DebugMenuPlugin {
                 panels::add_dev_area_panel,
                 panels::add_create_mob_panel,
                 panels::add_inspect_mob_panel,
+                panels::add_kept_choices,
             ))
             .add_systems(
                 Startup,

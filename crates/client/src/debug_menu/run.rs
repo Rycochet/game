@@ -152,6 +152,8 @@ pub(super) fn run_actions(
                 }
             }
             DebugAction::ShowDebugInfo => info.0 = !info.0,
+            // Made again by `panels::kept_choices`.
+            DebugAction::RegenerateDevArea => {}
             DebugAction::TeleportMode => *mode = toggled(*mode, ClickMode::Teleport),
             // Asks first (`delete_character`).
             DebugAction::DeleteCharacter => {}

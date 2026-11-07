@@ -44,45 +44,56 @@ pub const USAGE: &str = "\
           with HOW_DEBUG_API=true. See docs/context/debug-api.md.";
 
 pub fn run(args: &[String]) -> ExitCode {
-    let request = match Request::parse(args) {
-        Ok(request) => request,
+    match perform(args) {
+        Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("{error}\n\nUsage:\n{USAGE}");
-            return ExitCode::FAILURE;
+            eprintln!("{error}");
+            ExitCode::FAILURE
         }
-    };
-    let body = match call(request.port, &request.body()) {
-        Ok(body) => body,
-        Err(error) => {
-            eprintln!(
-                "==> Nothing answered on port {} ({error}). Is the game running, built with \
-                 `--features debug-api` and started with HOW_DEBUG_API=true?",
-                request.port
-            );
-            return ExitCode::FAILURE;
-        }
-    };
+    }
+}
+
+/// Calls one method as `cargo xtask api` would (`args` as on its command line),
+/// prints the answer and waits for what it says is coming. Why not, if it
+/// failed or answered with an error. Also for `cargo xtask scenario`.
+pub fn perform(args: &[String]) -> Result<(), String> {
+    let request = Request::parse(args).map_err(|error| format!("{error}\n\nUsage:\n{USAGE}"))?;
+    let body = call(request.port, &request.body()).map_err(|error| {
+        format!(
+            "==> Nothing answered on port {} ({error}). Is the game running, built with \
+             `--features debug-api` and started with HOW_DEBUG_API=true?",
+            request.port
+        )
+    })?;
     println!("{}", pretty(&body));
     if let Some(file) = string_field(&body, "wait_for_file") {
         let file = PathBuf::from(file);
         if !wait_for_file(&file) {
-            eprintln!("==> {} didn't appear", file.display());
-            return ExitCode::FAILURE;
+            return Err(format!("==> {} didn't appear", file.display()));
         }
         println!("==> Saved {}", file.display());
     }
     if body.contains("\"wait_for_input\":true") {
         if !wait_for_input(request.port) {
-            eprintln!("==> The input queued wasn't all played");
-            return ExitCode::FAILURE;
+            return Err("==> The input queued wasn't all played".into());
         }
         println!("==> Played");
     }
     if body.contains("\"error\":") {
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
+        return Err(format!("==> {} answered with an error", request.method));
     }
+    Ok(())
+}
+
+/// Whether the game answers on the client's port yet.
+pub fn answers() -> bool {
+    call(
+        CLIENT_PORT,
+        &Request::parse(&["client.state".into()])
+            .expect("a method")
+            .body(),
+    )
+    .is_ok()
 }
 
 #[cfg(test)]

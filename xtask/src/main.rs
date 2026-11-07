@@ -9,6 +9,7 @@ mod dockerfiles;
 mod fight;
 mod icons;
 mod latest;
+mod scenario;
 mod sizes;
 mod target_dir;
 mod web_deltas;
@@ -132,12 +133,17 @@ fn main() -> ExitCode {
         Some("compress-web") => compress_web::run(&env::args().skip(2).collect::<Vec<_>>()),
         Some("web-deltas") => web_deltas::run(&env::args().skip(2).collect::<Vec<_>>()),
         Some("api") => api::run(&env::args().skip(2).collect::<Vec<_>>()),
+        Some("scenario") => {
+            scenario::run(&workspace_root(), &env::args().skip(2).collect::<Vec<_>>())
+        }
         Some("fight") => fight::run(&env::args().skip(2).collect::<Vec<_>>()),
         _ => {
             eprintln!(
                 "{USAGE}
+{}
 {}",
-                api::USAGE
+                api::USAGE,
+                scenario::USAGE
             );
             ExitCode::FAILURE
         }

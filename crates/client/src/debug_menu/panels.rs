@@ -34,6 +34,7 @@ mod give_systems;
 mod give_target;
 mod go_to_world;
 mod inspect_mob;
+mod kept_choices;
 mod layout;
 mod open;
 mod pictures_form;
@@ -81,6 +82,7 @@ use go_to_world::spawn_go_to_world;
 pub(super) use go_to_world::{press_go_to_world_buttons, update_go_to_world_button};
 pub(super) use inspect_mob::add_inspect_mob_panel;
 use inspect_mob::spawn_inspect_panel;
+pub(super) use kept_choices::add_kept_choices;
 use layout::{row, words};
 pub(super) use open::{OpenPanels, forget_closed};
 use pictures_form::{

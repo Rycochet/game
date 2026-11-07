@@ -44,17 +44,20 @@ fn can_place(view: &GameView, dungeon: &CurrentDungeon, dev_tools: bool) -> bool
     *view == GameView::Dungeon && in_site && dev_tools
 }
 
-/// A panel opening shows the order kept, with a new seed the first time.
+/// A panel opening shows the order kept, with a new seed the first time if
+/// none was kept.
 fn start_create_mob_panel(
     mut seeds: Query<&mut TextBox, Added<MobSeed>>,
     mut dropdowns: Query<(&MobChoice, &mut Dropdown), Added<MobChoice>>,
     mut still: Query<&mut Checked, Added<MobStill>>,
     mut order: ResMut<CreateMobOrder>,
     mut made: ResMut<SeedsMade>,
+    preferences: Res<crate::common::Preferences>,
     time: Res<Time<Real>>,
 ) {
     for mut text_box in &mut seeds {
-        if made.0 == 0 {
+        // A new seed the first time, unless one was kept from last time.
+        if made.0 == 0 && preferences.create_mob.is_none() {
             made.0 += 1;
             order.0.seed = new_seed(time.elapsed().as_nanos() as u64, made.0);
         }

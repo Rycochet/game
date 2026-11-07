@@ -4,6 +4,20 @@ use super::*;
 fn preferences_read_back_as_saved() {
     let preferences = Preferences {
         item_pictures: Some("Rings".into()),
+        dev_area: Some(DevAreaPrefs {
+            size: 64,
+            generator: "Boreal Forest".into(),
+            mobs: "Wolf".into(),
+            count: 3,
+            seed: "woods".into(),
+        }),
+        create_mob: Some(CreateMobPrefs {
+            kind: "Orc".into(),
+            attitude: "Friendly".into(),
+            gear: true,
+            still: false,
+            seed: 9,
+        }),
         interface_size: InterfaceSize::Percent(150),
         touch: true,
         servers: vec![SavedServer {

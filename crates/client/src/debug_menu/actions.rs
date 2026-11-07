@@ -33,6 +33,7 @@ pub enum DebugAction {
     ItemPictures,
     KillMob,
     LearnSomeSkills,
+    RegenerateDevArea,
     ResetView,
     RevealMap,
     ShowDebugInfo,
@@ -77,7 +78,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 39] = [
+    pub(super) const ALL: [Self; 40] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -102,6 +103,7 @@ impl DebugAction {
         Self::ItemPictures,
         Self::KillMob,
         Self::LearnSomeSkills,
+        Self::RegenerateDevArea,
         Self::ResetView,
         Self::RevealMap,
         Self::ShowDebugInfo,
@@ -145,6 +147,7 @@ impl DebugAction {
             Self::FreezeMobs => "Freeze Mobs",
             Self::InspectMob => "Inspect Mob",
             Self::LearnSomeSkills => "Learn Some Skills",
+            Self::RegenerateDevArea => "Regenerate Dev Area",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
             Self::ShowDebugInfo => "Show Debug Info",
@@ -237,6 +240,7 @@ impl DebugAction {
                 | Self::FreezeMobs
                 | Self::InspectMob
                 | Self::LearnSomeSkills
+                | Self::RegenerateDevArea
                 | Self::RevealMap
                 | Self::SpendMana
                 | Self::TeleportMode

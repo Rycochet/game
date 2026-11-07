@@ -20,6 +20,10 @@ use super::{Controls, SavedServer, VideoPrefs, WindowPrefs};
 pub struct Preferences {
     /// The page Item Pictures in the debug menu last showed, by its name.
     pub item_pictures: Option<String>,
+    /// The debug menu's Dev Area as last set, for its panel and Regenerate.
+    pub dev_area: Option<DevAreaPrefs>,
+    /// The debug menu's Create Mob as last set.
+    pub create_mob: Option<CreateMobPrefs>,
     /// How big the interface is drawn.
     pub interface_size: InterfaceSize,
     /// "Enable Touch": the interface is never drawn smaller than its own size,
@@ -44,6 +48,30 @@ pub struct Preferences {
     pub pause_unfocused: bool,
     /// Which keys do what (Settings, Controls); only changes are saved.
     pub controls: Controls,
+}
+
+/// Dev Area's choices, kept by name (a name no longer known is the default).
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, Debug)]
+#[serde(default)]
+pub struct DevAreaPrefs {
+    pub size: u16,
+    pub generator: String,
+    /// "Default", "None" or a kind's name.
+    pub mobs: String,
+    pub count: u8,
+    pub seed: String,
+}
+
+/// Create Mob's choices, kept by name.
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, Debug)]
+#[serde(default)]
+pub struct CreateMobPrefs {
+    pub kind: String,
+    /// "Default" or a feeling's name.
+    pub attitude: String,
+    pub gear: bool,
+    pub still: bool,
+    pub seed: u64,
 }
 
 /// How big the interface is drawn: its own size is 100%.

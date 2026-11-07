@@ -14,7 +14,7 @@ pub use floors::{FirstFloor, OtherLevels};
 pub use hosting::Hosting;
 #[cfg(not(target_arch = "wasm32"))]
 pub use preferences::client_file;
-pub use preferences::{InterfaceSize, Preferences};
+pub use preferences::{CreateMobPrefs, DevAreaPrefs, InterfaceSize, Preferences};
 pub use servers::{ChosenServer, SavedServer};
 
 use bevy::prelude::*;
