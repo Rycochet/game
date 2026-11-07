@@ -1,7 +1,8 @@
 //! Drawing the tree: a round node for each known skill, coloured by the attributes
 //! it leans on and showing its icon, joined to its parent (or to the plain circle
-//! in the middle, for the character) by a line. Drawn again whenever
-//! what is known changes; `place` moves and sizes them as the page is moved and
+//! in the middle, for the character) by a line. Drawn again only when a skill is
+//! learned (or forgotten), not on every bit of practice: `values` keeps the rings
+//! up to date in place, and `place` moves and sizes them as the page is moved and
 //! zoomed.
 
 use bevy::prelude::*;
@@ -39,11 +40,30 @@ pub(super) struct SkillLine {
     pub to: Vec2,
 }
 
-/// What the tree was last drawn from.
-#[derive(Default)]
-pub(super) struct Drawn(Option<Skills>);
+/// A skill's ring, kept up to date by `values::show_values`.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct RingOf(pub SkillId);
 
-/// Draws the tree again when the page is open and what is known has changed.
+/// Which skills the tree was last drawn with.
+#[derive(Default)]
+pub(super) struct Drawn(Option<Vec<SkillId>>);
+
+impl Drawn {
+    /// Remembers which skills `skills` knows, saying whether that differs from
+    /// what was drawn: practice alone doesn't need the tree drawn again (and doing
+    /// so on every blow made the rings flicker, and could crash).
+    pub(super) fn changed_to(&mut self, skills: &Skills) -> bool {
+        let known: Vec<_> = skills.known().map(|(id, _)| id).collect();
+        if self.0.as_ref() == Some(&known) {
+            return false;
+        }
+        self.0 = Some(known);
+        true
+    }
+}
+
+/// Draws the tree again when the page is open and which skills are known has
+/// changed.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn build_tree(
     open: Res<SkillsPageOpen>,
@@ -55,10 +75,9 @@ pub(super) fn build_tree(
     mut commands: Commands,
 ) {
     let skills = &sheet.0.skills;
-    if !open.0 || drawn.0.as_ref() == Some(skills) {
+    if !open.0 || !drawn.changed_to(skills) {
         return;
     }
-    drawn.0 = Some(skills.clone());
     let placed = layout(skills);
     let canvas = *canvas;
     let mut origin = commands.entity(*origin);
@@ -70,8 +89,7 @@ pub(super) fn build_tree(
         spawn_middle(origin, canvas);
         for one in &placed {
             let icon = icon_path(one.id).map(|path| assets.load(path));
-            let value = skills.value(one.id) as f32 / VALUE_SCALE as f32;
-            spawn_skill(origin, one, value, icon, canvas);
+            spawn_skill(origin, one, ring_value(skills, one.id), icon, canvas);
         }
     });
 }
@@ -167,8 +185,14 @@ fn spawn_skill(
     }
     node.with_child((
         skill_ring(SkillRing::of(value, false)),
+        RingOf(one.id),
         leaves_presses(canvas),
     ));
+}
+
+/// A skill's own value as its ring shows it.
+pub(super) fn ring_value(skills: &Skills, id: SkillId) -> f32 {
+    skills.value(id) as f32 / VALUE_SCALE as f32
 }
 
 /// A value in hundredths as words, to a tenth: 2581 is "25.8".
@@ -176,3 +200,6 @@ pub(super) fn tenths(hundredths: u32) -> String {
     let tenths = hundredths * 10 / VALUE_SCALE;
     format!("{}.{}", tenths / 10, tenths % 10)
 }
+
+#[cfg(test)]
+mod tests;

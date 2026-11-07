@@ -191,7 +191,7 @@ pub(super) fn give_auras(
                 })
             })
             .clone();
-        commands.entity(entity).insert(MaterialNode(material));
+        commands.entity(entity).try_insert(MaterialNode(material));
     }
 }
 
