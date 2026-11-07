@@ -10,10 +10,10 @@ use crate::common::{Binding, Mods};
 use crate::widgets::{
     ALLOWED, AbilityLook, BUTTON_PADDING, ButtonState, ButtonStyle, ColourPicker, Dropdown,
     GRID_COLOUR, INK, ItemText, KeyBox, Pressable, SAMPLE_GRADIENT, Shade, Swatch, TextBox,
-    TextEdited, UiId, attribute_colour, field_label, raised_box, spawn_ability, spawn_button,
-    spawn_check_button, spawn_close_button, spawn_colour_picker, spawn_dropdown, spawn_item_text,
-    spawn_key_box, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs,
-    spawn_text_box, spawn_toggle_row, spawn_tooltip,
+    TextEdited, UiId, attribute_colour, field_label, queued_stripe, raised_box, spawn_ability,
+    spawn_button, spawn_check_button, spawn_close_button, spawn_colour_picker, spawn_dropdown,
+    spawn_item_text, spawn_key_box, spawn_progress_bar, spawn_scroll_area, spawn_slider,
+    spawn_switch, spawn_tabs, spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
 
 /// A sample ability, given a real icon once spawned (`give_sample_icons`).
@@ -157,6 +157,7 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
                     Shade::Active,
                 ),
                 ("A skill's shade", false, true, Shade::Skill),
+                ("Queued to be used", false, true, Shade::Active),
             ] {
                 let look = AbilityLook {
                     icon: default(),
@@ -165,8 +166,14 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
                     usable,
                     colour: attribute_colour(&[Attribute::Strength, Attribute::Perception], shade),
                 };
+                let queued = look.name == "Queued to be used";
                 let frame = spawn_ability(row, look);
                 row.commands().entity(frame).insert(SampleAbility);
+                if queued {
+                    row.commands()
+                        .entity(frame)
+                        .with_child(queued_stripe(3.0, 0.0));
+                }
             }
         });
     super::ring_samples::spawn_ring_samples(content);

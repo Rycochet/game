@@ -21,6 +21,12 @@ Right-click Attack on the action bar (or hold a finger on it) to have it used by
 
 Made automatic, Heal heals you whenever your Health is at a quarter or less and you have the Mana.
 
+## Lining abilities up
+
+Abilities you use yourself wait their turn: press several while you are still busy and they are used one after another, in the order you pressed them. Each one waiting has yellow and black stripes running round it on the action bar; press it again to take it out of the line. One that can't be done when its turn comes is passed over. Moving clears the line.
+
+What you do yourself always comes first. While you walk somewhere or have abilities lined up, automatic ones wait, and start again once you have arrived and the last has landed.
+
 ## Automatic abilities take turns
 
 When several abilities are automatic, they are tried from left to right along the action bar (keys 1 to 0), and the first that can be done is. Attack can be done whenever an enemy is in reach, so anything to its right waits until it can't: put Heal before Attack to stop and heal when you are low, or after it to keep fighting.

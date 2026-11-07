@@ -1,6 +1,7 @@
 //! The action bar: ten slots, five either side of the Health and Mana circle, each
 //! with its key's short name over its bottom right. A slot whose ability is used
-//! by itself has a sliding metal edge, as set items do.
+//! by itself has a sliding metal edge, as set items do; one queued to be used
+//! has hazard stripes chasing round inside it.
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -8,14 +9,15 @@ use shared::ability::{Ability, ActionBar, BAR_SLOTS};
 use shared::creature::CreatureKind;
 
 use super::drag::Aim;
+use super::manual::Manual;
 use super::own_bar::OwnBar;
 use super::page::look;
 use super::vitals_now::affords;
 use crate::common::{Action, OwnVitals, Preferences, VitalsCircle, interface_area};
 use crate::inventory::Carried;
 use crate::widgets::{
-    ABILITY, ALLOWED, Floating, GRID_LINE, REFUSED, TextSize, UiId, set_edge, spawn_ability,
-    spawn_outlined_text, stops_presses,
+    ABILITY, ALLOWED, Floating, GRID_LINE, REFUSED, TextSize, UiId, queued_stripe, set_edge,
+    spawn_ability, spawn_outlined_text, stops_presses,
 };
 
 /// Between slots, and between the bar and the circle.
@@ -26,6 +28,9 @@ const EMPTY_EDGE: f32 = 2.0;
 const EMPTY_BACKGROUND: Color = Color::srgba(0.1, 0.08, 0.06, 0.6);
 /// How thick the edge of a slot used by itself is.
 const AUTO_EDGE: f32 = 3.0;
+/// How thick the stripes of a queued slot are, inside the edge of one used by
+/// itself.
+const QUEUED_STRIPE: f32 = 3.0;
 
 /// One side of the bar: 0 left of the circle, 1 right.
 #[derive(Component)]
@@ -101,6 +106,8 @@ pub(super) struct Shown {
     aim: Option<(u8, bool)>,
     /// Too little Mana for what costs it (all cost the same so far: Heal's).
     low_mana: bool,
+    /// Queued to be used, by hand.
+    queued: Vec<Ability>,
 }
 
 /// Draws each slot again when what it shows changes.
@@ -109,7 +116,7 @@ pub(super) fn show_bar(
     bar: Res<OwnBar>,
     carried: Res<Carried>,
     preferences: Res<Preferences>,
-    aim: Res<Aim>,
+    (aim, manual): (Res<Aim>, Res<Manual>),
     (vitals, time): (Res<OwnVitals>, Res<Time>),
     assets: Res<AssetServer>,
     slots: Query<(Entity, &SlotNode)>,
@@ -128,6 +135,7 @@ pub(super) fn show_bar(
         keys,
         aim: aim.0,
         low_mana: !affords(Ability::Heal, &vitals, time.elapsed_secs_f64()),
+        queued: manual.queued.iter().copied().collect(),
     };
     if shown.as_ref() == Some(&now) {
         return;
@@ -179,6 +187,12 @@ fn spawn_slot(inside: &mut ChildSpawnerCommands, slot: u8, now: &Shown, assets: 
     }
     if held.is_some_and(|held| held.auto) {
         inside.spawn(set_edge(None, UiRect::all(px(AUTO_EDGE)), 0.0));
+    }
+    if held.is_some_and(|held| now.queued.contains(&held.ability)) {
+        inside.spawn((
+            queued_stripe(QUEUED_STRIPE, AUTO_EDGE),
+            UiId::new("bar", "queued").at(slot as usize),
+        ));
     }
     if let Some((_, allowed)) = now.aim.filter(|(aimed, _)| *aimed == slot) {
         let colour = if allowed { ALLOWED } else { REFUSED };
