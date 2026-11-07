@@ -27,11 +27,8 @@ const DOT_LIGHT: [u8; 4] = [250, 242, 220, 255];
 
 /// Each row's chart colour: what its triangle adds.
 const fn row_colour(row: Row) -> [u8; 4] {
-    match row {
-        Row::Body => [176, 76, 60, 150],
-        Row::Mind => [60, 104, 176, 150],
-        Row::Spirit => [96, 150, 84, 150],
-    }
+    let [red, green, blue] = crate::widgets::row_rgb(row);
+    [red, green, blue, 150]
 }
 
 /// What is drawn: the build, the attributes it gives and the kind's bonus.

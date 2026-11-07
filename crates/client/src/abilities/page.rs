@@ -11,7 +11,7 @@ use crate::common::{AbilitiesPage, SkillsPageOpen};
 use crate::inventory::Carried;
 use crate::widgets::{
     ABILITY, AbilityLook, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonTooltip, Pressable,
-    TextSize, UiId, spawn_ability, spawn_button,
+    Shade, TextSize, UiId, attribute_colour, spawn_ability, spawn_button,
 };
 
 /// How many abilities a row holds before the next row starts.
@@ -118,6 +118,7 @@ pub(super) fn look(ability: Ability, kind: CreatureKind, assets: &AssetServer) -
         passive: !ability.is_active(),
         // A passive ability is never done, so it is never shown as unusable.
         usable: !ability.is_active() || ability.can_use(kind),
+        colour: attribute_colour(ability.leans(), Shade::of_ability(!ability.is_active())),
     }
 }
 

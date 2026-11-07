@@ -49,6 +49,16 @@ pub enum Attribute {
 }
 
 impl Attribute {
+    /// The row it is in: Body, Mind or Spirit.
+    pub const fn row(self) -> Row {
+        use Attribute::*;
+        match self {
+            Strength | Agility | Toughness => Row::Body,
+            Intellect | Perception | Will => Row::Mind,
+            Presence | Empathy | Aura => Row::Spirit,
+        }
+    }
+
     /// Row by row, in column order.
     pub const ALL: [Self; 9] = [
         Self::Strength,

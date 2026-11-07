@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::creature::CreatureKind;
+use crate::sheet::Attribute;
 
 mod bar;
 
@@ -59,6 +60,19 @@ impl Ability {
         match self {
             Self::NightVision => Use::Passive,
             Self::Attack | Self::Flutter | Self::Kick | Self::Trample => Use::Active,
+        }
+    }
+
+    /// The attributes it leans on (first guesses, owner OK 2026-11-07), which colour
+    /// it: Attack as the combat skills (it may follow the weapon held's skill later),
+    /// the kinds' own by what their bodies do.
+    pub const fn leans(self) -> &'static [Attribute] {
+        use Attribute::*;
+        match self {
+            Self::Attack | Self::Kick => &[Strength, Agility],
+            Self::Trample => &[Strength, Toughness],
+            Self::Flutter => &[Agility],
+            Self::NightVision => &[Perception],
         }
     }
 

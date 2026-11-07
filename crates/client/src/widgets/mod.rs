@@ -3,6 +3,7 @@
 //! styling Bevy's `Node`s directly. See `docs/context/client/widgets.md`.
 
 mod ability;
+mod attribute_colour;
 mod aura;
 mod auto_scroll;
 mod clipboard;
@@ -44,6 +45,7 @@ use bevy::prelude::*;
 use crate::common::PointerSystems;
 
 pub use ability::{ABILITY, AbilityLook, spawn_ability};
+pub use attribute_colour::{Shade, attribute_colour, row_rgb};
 pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]

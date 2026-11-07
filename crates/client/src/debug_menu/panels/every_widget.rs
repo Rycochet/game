@@ -2,18 +2,43 @@
 
 use bevy::prelude::*;
 use shared::poi::PoiKind;
+use shared::sheet::Attribute;
 
 use super::super::actions::kind_name;
 use super::{CHECK_ROW, EVERY_WIDGET_HEIGHT, FONT};
 use crate::common::{Binding, Mods};
 use crate::widgets::{
     ALLOWED, AbilityLook, BUTTON_PADDING, ButtonState, ButtonStyle, ColourPicker, Dropdown,
-    GRID_COLOUR, INK, ItemText, KeyBox, Pressable, SAMPLE_GRADIENT, Swatch, TextBox, TextEdited,
-    UiId, field_label, raised_box, spawn_ability, spawn_button, spawn_check_button,
-    spawn_close_button, spawn_colour_picker, spawn_dropdown, spawn_item_text, spawn_key_box,
-    spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs, spawn_text_box,
-    spawn_toggle_row, spawn_tooltip,
+    GRID_COLOUR, INK, ItemText, KeyBox, Pressable, SAMPLE_GRADIENT, Shade, Swatch, TextBox,
+    TextEdited, UiId, attribute_colour, field_label, raised_box, spawn_ability, spawn_button,
+    spawn_check_button, spawn_close_button, spawn_colour_picker, spawn_dropdown, spawn_item_text,
+    spawn_key_box, spawn_progress_bar, spawn_scroll_area, spawn_slider, spawn_switch, spawn_tabs,
+    spawn_text_box, spawn_toggle_row, spawn_tooltip,
 };
+
+/// A sample ability, given a real icon once spawned (`give_sample_icons`).
+#[derive(Component)]
+pub(in crate::debug_menu) struct SampleAbility;
+
+/// Gives the sample abilities an icon, so their colours show round it.
+pub(in crate::debug_menu) fn give_sample_icons(
+    samples: Query<Entity, Added<SampleAbility>>,
+    children: Query<&Children>,
+    mut images: Query<&mut ImageNode>,
+    assets: Res<AssetServer>,
+) {
+    for sample in &samples {
+        let icon: Handle<Image> = assets.load(SAMPLE_ICON);
+        for inside in children.iter_descendants(sample) {
+            if let Ok(mut image) = images.get_mut(inside) {
+                image.image = icon.clone();
+            }
+        }
+    }
+}
+
+/// The samples' icon (drawn for Attack).
+const SAMPLE_ICON: &str = "icons/lorc/pointy-sword.png";
 
 /// The sample text box taking items.
 #[derive(Component)]
@@ -114,26 +139,34 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
     content.commands().entity(tabs).insert(id("Tabs"));
     let toggles = spawn_toggle_row(content, &["Toggle", "Other", "Third"], 0, FONT);
     content.commands().entity(toggles).insert(id("Toggles"));
-    // Abilities: active, passive and one that can't be used now. The icons are a
-    // plain square here.
+    // Abilities: active, passive and one that can't be used now, then the shade a
+    // skill takes (`give_sample_icons` gives them an icon).
     content
         .spawn(Node {
             column_gap: px(6),
             ..default()
         })
         .with_children(|row| {
-            for (name, passive, usable) in [
-                ("Active ability", false, true),
-                ("Passive ability", true, true),
-                ("Ability that can't be used now", false, false),
+            for (name, passive, usable, shade) in [
+                ("Active ability", false, true, Shade::Active),
+                ("Passive ability", true, true, Shade::Passive),
+                (
+                    "Ability that can't be used now",
+                    false,
+                    false,
+                    Shade::Active,
+                ),
+                ("A skill's shade", false, true, Shade::Skill),
             ] {
                 let look = AbilityLook {
                     icon: default(),
                     name: name.into(),
                     passive,
                     usable,
+                    colour: attribute_colour(&[Attribute::Strength, Attribute::Perception], shade),
                 };
-                spawn_ability(row, look);
+                let frame = spawn_ability(row, look);
+                row.commands().entity(frame).insert(SampleAbility);
             }
         });
     spawn_progress_bar(

@@ -40,8 +40,8 @@ mod world_time;
 
 use change_creature::spawn_creature_buttons;
 pub(super) use change_creature::{ChosenChange, press_creature_buttons, update_creature_buttons};
-pub(super) use every_widget::show_typed_items;
 use every_widget::spawn_every_widget;
+pub(super) use every_widget::{give_sample_icons, show_typed_items};
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
 pub(super) use generate_form::{
     GenerateButton, GenerateForm, GenerateKind, NewSeedButton, RuinButton, SeedBox,
