@@ -1,0 +1,15 @@
+# A fight to try out: a 32-cell Dev Area split by a wall, three goblins on the
+# far side, a sword to fight them with, and a picture of it.
+#   cargo xtask scenario scenarios/goblins_behind_cover.txt --start
+# Each line is what would follow `cargo xtask api`.
+
+client.wait frames=60
+client.dev_area size=32 generator=Cover mobs=Goblin count=3 seed=goblins
+client.wait frames=30
+client.give_item kind=Sword quality=Common
+# What the server gives arrives a few frames later.
+client.wait frames=20
+client.wear_item kind=Sword
+client.create_mob kind=Goblin x=24 y=16 still=true seed=7
+client.wait frames=30
+client.screenshot path=target/shots/goblins_behind_cover.png

@@ -56,6 +56,10 @@ Server (`server/src/debug_api/methods.rs`; `--server` for the embedded one):
 - `server.tick {hold?, count?}` (`methods/tick.rs`): holds the action clock (`clock::TickHold`, a resource only the debug API adds) so it no longer follows real time, and moves it on by `count` ticks, one a frame; `hold: false` lets it run again. Answers `ticks`, `held`, `steps` still to come. For watching fights and mobs a step at a time.
 - `server.save`: saves everything changed and answers once it is written (`written`: whether all of it was, within 8 s).
 
+## Scenarios
+
+`cargo xtask scenario <file> [--start]` (`xtask/src/scenario.rs`) plays a file of calls in order, each line what would follow `cargo xtask api` (`--server`, `key=value` pairs with `"..."` for spaces, or JSON from a `{`), `#` for comments, waiting for files and input as `api` does and stopping at the first that fails. With `--start` it builds the client with the debug API, starts it with its own scratch data folder (in the system's temp folder) and `HOW_DEBUG_TITLE=Dev:`, plays the file and closes it. Kept in `scenarios/` (`*.txt`, each saying how to run it at the top); a test checks every line names a method.
+
 ## Adding a method
 
 - In the module that owns what it shows or does: `app.add_debug_method("<area>.<what>", handler)` in its plugin (`server::debug_api::AddDebugMethod`), the handler a system taking `In<Option<Value>>` (the params) and returning `BrpResult` (`Ok(json!(...))`). `params::<T>(request)?` reads the params into a `Deserialize` type (missing params read as `{}`). Methods added before or after `DebugApiPlugin` both work (`register_methods` puts them in place in `finish`); without the API they do nothing.
