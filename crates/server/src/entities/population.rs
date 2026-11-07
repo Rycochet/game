@@ -24,7 +24,10 @@ impl ServerWorld {
             return;
         }
         let stairs: Vec<_> = level.stairs.iter().map(|s| (s.x, s.y)).collect();
-        let plan = spawns(poi.seed, index, poi.kind, &level.level, &stairs);
+        let plan = match id {
+            SiteId::DevArea(area) => area.spawns(level),
+            _ => spawns(poi.seed, index, poi.kind, &level.level, &stairs),
+        };
         let self_tick = self.action_clock.ticks();
         let made_at = self.made_now();
         let saved = self.site_mut(id).levels.entry(index).or_default();

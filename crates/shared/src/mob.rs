@@ -13,10 +13,12 @@ use crate::rng::Seed;
 use crate::sheet::{Appearance, Attributes, Build, Feeling, Trait};
 use crate::wear::WornLook;
 
+mod chosen;
 mod memory;
 mod scent;
 mod trail;
 mod wild;
+pub use chosen::chosen_spawns;
 pub use memory::{
     Event, FIRST_HARM_OPINION, GIFT_OPINION, Memory, Regard, TRESPASS_FORGOTTEN_AFTER,
 };

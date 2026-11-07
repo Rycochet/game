@@ -16,6 +16,7 @@ use crate::item_form::RollRequest;
 use crate::movement::Step;
 use crate::poi::{ChunkPos, PoiKind};
 use crate::sheet::{Appearance, Build};
+use crate::site::DevArea;
 use crate::world::ClockRate;
 
 /// From a client to the server.
@@ -263,6 +264,9 @@ pub enum ClientMessage {
     /// new, and go straight into it, where the player stands on the world map.
     /// It is not added to the world map.
     DevGenerateSite { kind: PoiKind, seed: u64, ruin: u8 },
+    /// Developer tools: make a Dev Area as if new and go into it; its way out
+    /// leads back to where the player was before the first of them.
+    DevGenerateArea(DevArea),
     /// Developer tools: harm, spend, fill or raise the character's Health and
     /// Mana (`DevVitals`), answered with `Vitals`.
     DevVitals(DevVitals),

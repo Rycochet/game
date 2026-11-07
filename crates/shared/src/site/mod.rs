@@ -14,6 +14,7 @@
 
 mod building;
 mod cave;
+mod dev_area;
 mod farm;
 mod grid;
 mod herbalist;
@@ -24,6 +25,7 @@ mod town;
 
 pub use building::{BuildingOptions, Outline};
 pub use cave::{CaveEntrance, CaveOptions};
+pub use dev_area::{DEV_AREA_KIND, DEV_AREA_SIZES, DevArea, DevLayout, DevMobs, MOST_DEV_MOBS};
 pub use farm::{FarmOptions, FieldLook};
 pub use herbalist::HerbalistOptions;
 pub use oasis::OasisOptions;
@@ -46,8 +48,8 @@ pub use poi_look::PoiLook;
 pub use site::Site;
 pub use stairs::{Stairs, StairsDirection, StairsStyle};
 pub use versions::{
-    BOXED_CAVE_VERSION, BUILDING_VERSION, CAVE_VERSION, FARM_VERSION, FORGET_BEFORE,
-    HERBALIST_VERSION, OASIS_VERSION, STILTS_VERSION, TOWN_VERSION,
+    BOXED_CAVE_VERSION, BUILDING_VERSION, CAVE_VERSION, DEV_AREA_VERSION, FARM_VERSION,
+    FORGET_BEFORE, HERBALIST_VERSION, OASIS_VERSION, STILTS_VERSION, TOWN_VERSION,
 };
 
 #[cfg(test)]

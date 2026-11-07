@@ -8,6 +8,8 @@
 //!   starting position (the embedded server allows it): `kind` is an index
 //!   into `PoiKind::ALL`, `seed` its map seed (default 1), `level` the
 //!   level (default 0, the way in).
+//! - `HOW_DEBUG_DEV_AREA=size,generator,mobs,count,seed`: start in a Dev Area,
+//!   as the debug menu makes (`64,moat,wolf,3,test`); each optional.
 //! - `HOW_DEBUG_CELLS=x,y,kind;...`: on arriving in a site, change cells of the
 //!   level, from where the player stands (`kind`: `floor`, `wall`, `door`,
 //!   `window`, `water` or `lava`), to look at walls and liquids the generators
@@ -84,6 +86,7 @@ use bevy::prelude::*;
 use crate::common::GameView;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod dev_area;
 mod forced;
 mod inventory;
 mod keep_drawing;
@@ -135,6 +138,7 @@ impl Plugin for DevToolsPlugin {
         .add_systems(Update, apply_forced);
 
         start::add(app);
+        dev_area::add(app);
         forced::read(app);
         menus::add(app);
         inventory::add(app);

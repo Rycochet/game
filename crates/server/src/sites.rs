@@ -15,6 +15,7 @@ use crate::storage::{CellMasks, SiteId, VisitSave};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod cells;
+mod dev_area;
 mod enter;
 mod keepers;
 mod leave;
@@ -27,6 +28,7 @@ mod trade;
 mod wild;
 
 use cells::{add_masks, all_cells, beside, level_chunks, nearby_cells, send_cells};
+pub(super) use dev_area::generate_area;
 use enter::enter_site;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};
 use keepers::{NewKeepers, keepers_of};
@@ -263,6 +265,8 @@ enum Arrival {
     LeftAt((i64, i64)),
 }
 
+#[cfg(test)]
+mod dev_area_tests;
 #[cfg(test)]
 mod left_at_tests;
 #[cfg(test)]

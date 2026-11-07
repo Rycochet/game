@@ -90,8 +90,11 @@ pub(super) fn explore_or_leave(
     {
         to_server.write(ToServer(ClientMessage::Explore));
     }
-    if in_wilderness
-        && (controls.just_pressed(&keys, Action::LeaveWilderness) || presses.contains(&leave.0))
+    // In any site too: the server takes it as going back from a Dev Area, and
+    // ignores it elsewhere.
+    let in_site = *view.get() == GameView::Dungeon;
+    if (in_site && controls.just_pressed(&keys, Action::LeaveWilderness))
+        || (in_wilderness && presses.contains(&leave.0))
     {
         to_server.write(ToServer(ClientMessage::LeaveWilderness));
     }

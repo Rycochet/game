@@ -86,6 +86,9 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
         None if leads_out(&visit.level.level, x, y) => Exit::WorldMap,
         None => return true,
     };
+    if let SiteId::DevArea(_) = visit.id {
+        return super::dev_area::back_from_area(client, world);
+    }
     if visit.came_from_wilderness()
         && let Some(at) = back_to_wilderness(world, visit, exit, (x, y))
     {
@@ -157,6 +160,13 @@ pub(crate) fn leave(client: &Client, world: &mut ServerWorld) {
 /// Killed: out of the site (or the wilderness) onto the world map, at its poi or
 /// where they were, keeping what they know of it. `false` if the client has gone.
 pub(crate) fn killed(client: &mut Client, world: &mut ServerWorld) -> bool {
+    if client
+        .visit
+        .as_ref()
+        .is_some_and(|visit| matches!(visit.id, SiteId::DevArea(_)))
+    {
+        return super::dev_area::back_from_area(client, world);
+    }
     leave(client, world);
     // Worked out while the visit says where in the wilderness they are.
     let here = client.world_position();

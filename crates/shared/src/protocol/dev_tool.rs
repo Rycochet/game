@@ -21,6 +21,7 @@ impl ClientMessage {
                 | Self::DevForgetMap
                 | Self::DevForgetMapOnServer
                 | Self::DevGenerateSite { .. }
+                | Self::DevGenerateArea(_)
                 | Self::DevGiveItem { .. }
                 | Self::DevSetCreature { .. }
                 | Self::DevDeleteCharacter

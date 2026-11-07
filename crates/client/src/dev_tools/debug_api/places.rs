@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use serde::Deserialize;
-use server::debug_api::{BrpResult, Value, params, refused};
+use server::debug_api::{BrpResult, Value, json, params, refused};
 use shared::dungeon::Cell;
 use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
@@ -10,6 +10,7 @@ use shared::protocol::ClientMessage;
 use super::done;
 use crate::common::{GameView, MapPosition};
 use crate::connection::ToServer;
+use crate::dev_tools::dev_area::dev_area_of;
 use crate::player::Player;
 
 #[derive(Deserialize)]
@@ -97,4 +98,44 @@ pub(super) fn set_cells(
         to_server.write(ToServer(ClientMessage::DevSetCell { x, y, cell }));
     }
     done()
+}
+
+#[derive(Deserialize)]
+pub(super) struct DevAreaParams {
+    size: Option<u16>,
+    generator: Option<String>,
+    mobs: Option<String>,
+    count: Option<u8>,
+    /// A number, or any words (hashed, as the panel does).
+    seed: Option<Value>,
+}
+
+/// `client.dev_area { "size": 64, "generator": "Moat", "mobs": "Wolf", "count": 3,
+/// "seed": "test" }`: makes a Dev Area and goes in (`HOW_DEBUG_DEV_AREA`); all
+/// optional, as the panel starts. Its stairs lead back.
+pub(super) fn dev_area(
+    In(request): In<Option<Value>>,
+    mut to_server: MessageWriter<ToServer>,
+) -> BrpResult {
+    let DevAreaParams {
+        size,
+        generator,
+        mobs,
+        count,
+        seed,
+    } = params(request)?;
+    let seed = seed.map(|seed| match seed {
+        Value::String(text) => text,
+        other => other.to_string(),
+    });
+    let area = dev_area_of(
+        size,
+        generator.as_deref(),
+        mobs.as_deref(),
+        count,
+        seed.as_deref(),
+    )
+    .map_err(|why| refused(&why))?;
+    to_server.write(ToServer(ClientMessage::DevGenerateArea(area)));
+    Ok(json!({ "size": area.size, "seed": area.seed }))
 }

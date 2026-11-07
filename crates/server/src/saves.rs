@@ -12,6 +12,9 @@ use shared::road::RoadLink;
 use shared::world::WorldId;
 use time::OffsetDateTime;
 
+mod site_file;
+use site_file::site_file_name;
+
 use crate::accounts::{AccountId, AccountSave, LoginSave};
 use crate::storage::{
     CharacterSave, OLDEST_SAVE_FORMAT, RoadSave, SAVE_FORMAT, ServerSave, SiteId, SiteSave,
@@ -123,21 +126,6 @@ impl FileBackend {
             SaveKey::Account(id) => self.data.join("accounts").join(format!("{}.ron", id.0)),
             SaveKey::Login(hash) => self.data.join("logins").join(format!("{hash}.ron")),
         }
-    }
-}
-
-fn site_file_name(site: SiteId) -> String {
-    match site {
-        SiteId::Poi(chunk) => format!("poi_{}_{}.ron", chunk.x, chunk.y),
-        SiteId::Dev {
-            kind,
-            seed,
-            ruin: 0,
-        } => format!("dev_{}_{seed}.ron", kind as usize),
-        SiteId::Dev { kind, seed, ruin } => {
-            format!("dev_{}_{seed}_ruin{ruin}.ron", kind as usize)
-        }
-        SiteId::Wilderness => "wilderness.ron".into(),
     }
 }
 

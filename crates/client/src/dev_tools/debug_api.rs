@@ -21,7 +21,7 @@ use drawing::{fields_stage, herbs_shift, stairs_style, token};
 use items::{give_item, set_creature, wear_item};
 use moving::{step, travel, walk, yes};
 use panels::{debug_action, debug_menu, inventory, map, show_floor, system_menu};
-use places::{Place, enter_site, set_cells, teleport};
+use places::{Place, dev_area, enter_site, set_cells, teleport};
 use state::{done, screenshot, state};
 use view::{cursor, interface, view, window_size};
 use world::{celestial, reveal_pois, set_time};
@@ -32,6 +32,7 @@ pub(super) fn add(app: &mut App) {
         // Asking the server.
         .add_debug_method("client.teleport", teleport)
         .add_debug_method("client.enter_site", enter_site)
+        .add_debug_method("client.dev_area", dev_area)
         .add_debug_method("client.set_cells", set_cells)
         .add_debug_method("client.set_time", set_time)
         .add_debug_method("client.go_to_world", world::go_to_world)

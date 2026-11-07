@@ -10,6 +10,7 @@ use shared::item::{Inventory, Item};
 use shared::mob::Memory;
 use shared::poi::{ChunkPos, PoiKind};
 use shared::sheet::Sheet;
+use shared::site::DevArea;
 use shared::world::{ClockRate, WorldId, WorldSeed};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -21,6 +22,9 @@ pub enum SiteId {
     /// Developer tools: a site of this kind and map seed, a building ruined
     /// this much.
     Dev { kind: PoiKind, seed: u64, ruin: u8 },
+    /// Developer tools: a Dev Area made from these choices. Never kept: it is
+    /// forgotten when made again and when left.
+    DevArea(DevArea),
     /// The world's wilderness (`shared::wilderness`): what players have
     /// changed of it, and what they have left there.
     Wilderness,
@@ -205,6 +209,19 @@ pub struct CharacterWorldSave {
     /// again puts them back there.
     #[serde(default)]
     pub left_at: BTreeMap<SiteId, (u32, (i64, i64))>,
+    /// Developer tools: where leaving a Dev Area takes them, while in one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dev_return: Option<DevReturn>,
+}
+
+/// Where a character was before going into a Dev Area, to go back to.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DevReturn {
+    pub world_position: (i64, i64),
+    /// The site level, or the wilderness, they were on, if any.
+    pub visit: Option<VisitSave>,
+    /// Where in the Hall they were, if there.
+    pub hall: Option<(i64, i64)>,
 }
 
 impl CharacterWorldSave {

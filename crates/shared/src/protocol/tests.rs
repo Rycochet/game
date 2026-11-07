@@ -175,6 +175,15 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             seed: 9,
             ruin: 2,
         },
+        ClientMessage::DevGenerateArea(crate::site::DevArea {
+            size: 64,
+            layout: crate::site::DevLayout::Moat,
+            mobs: crate::site::DevMobs::Kind {
+                kind: crate::creature::CreatureKind::Wolf,
+                count: 3,
+            },
+            seed: 5,
+        }),
         ClientMessage::DevEnterSite {
             kind: PoiKind::Crypt,
             seed: 3,

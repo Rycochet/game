@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
-    FIRST_AT, NEXT_AT, spawn_creature_buttons, spawn_every_widget, spawn_give_panel,
-    spawn_go_to_world, spawn_item_pictures, spawn_step_buttons, spawn_world_time,
+    FIRST_AT, NEXT_AT, spawn_creature_buttons, spawn_dev_area_panel, spawn_every_widget,
+    spawn_give_panel, spawn_go_to_world, spawn_item_pictures, spawn_step_buttons, spawn_world_time,
 };
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
 
@@ -65,6 +65,7 @@ impl OpenPanels {
                 DebugAction::ItemPictures => spawn_item_pictures(content),
                 DebugAction::WorldTime => spawn_world_time(content),
                 DebugAction::GoToWorld => spawn_go_to_world(content),
+                DebugAction::DevArea => spawn_dev_area_panel(content),
                 _ => spawn_step_buttons(content, action),
             });
         commands
@@ -87,6 +88,7 @@ pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
         DebugAction::ItemPictures => "debug.item_pictures",
         DebugAction::WorldTime => "debug.world_time",
         DebugAction::GoToWorld => "debug.go_to_world",
+        DebugAction::DevArea => "debug.dev_area",
         DebugAction::StairsStyle => "debug.stairs",
         DebugAction::FieldsState => "debug.fields",
         DebugAction::HerbsState => "debug.herbs",

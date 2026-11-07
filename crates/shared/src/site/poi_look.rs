@@ -91,6 +91,7 @@ impl PoiLook {
             Generator::Oasis(options) => Self::Oasis {
                 pools: super::oasis::Plan::pools(&options, seed),
             },
+            Generator::DevArea(_) => unreachable!("no poi is a Dev Area"),
         }
     }
 }
