@@ -10,12 +10,14 @@
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod assets;
+mod flash;
 mod parts;
 mod pick;
 mod sync;
 
 pub use assets::TokenAssets;
 use assets::{outline_width, prism};
+pub use flash::{TokenFlash, flash_tokens};
 pub use parts::{IconAnchor, TokenView};
 pub use pick::{ClickedToken, HoveredToken, find_token_under_cursor};
 pub use sync::{resize_tokens, sync_icons, sync_tokens};

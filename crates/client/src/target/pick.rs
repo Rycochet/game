@@ -1,31 +1,90 @@
-//! Targeting a creature by pointing at it: a right click, or a long press of a
-//! finger.
+//! Targeting by pointing: a right click, or a long press of a finger, on a
+//! creature targets it; on nothing at all, it clears the target.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use shared::id::Id;
 
-use crate::common::{Other, PointerPosition, Target, TouchGesture};
+use super::choose::{Pointing, pointing};
+use crate::common::{
+    HoveredBag, HoveredInSky, HoveredOnMap, Other, PointerPosition, Target, TouchGesture,
+};
 use crate::view3d::HoveredToken;
+use crate::widgets::OverInterface;
 
 /// How far the pointer may move between pressing and letting go of the right
 /// button for it to count as a click rather than turning the camera, in pixels.
 /// (A right press is to open a menu of choices later, targeting among them.)
 const CLICK_SLOP: f32 = 5.0;
 
-/// How long a finger stays still on a creature to target it, in seconds.
+/// How long a finger stays still to target, or clear the target, in seconds.
 const LONG_PRESS: f32 = 0.5;
 
-/// A right click on a creature targets it. Pressing and dragging turns the
-/// camera instead.
+/// What is under the pointer, as far as targeting goes. Anything that takes
+/// right presses for itself (the action bar, a held item, the maps) has
+/// taken them by now, in `PreUpdate`.
+#[derive(SystemParam)]
+pub(super) struct UnderPointer<'w, 's> {
+    hovered: Res<'w, HoveredToken>,
+    others: Query<'w, 's, &'static Other>,
+    interface: Res<'w, OverInterface>,
+    bag: Res<'w, HoveredBag>,
+    place: Res<'w, HoveredOnMap>,
+    sky: Res<'w, HoveredInSky>,
+}
+
+impl UnderPointer<'_, '_> {
+    /// The creature under the pointer, if any.
+    fn creature(&self) -> Option<Id> {
+        let token = self.hovered.0?;
+        self.others.get(token).ok().map(|other| other.id)
+    }
+
+    /// Whether anything else on the map that answers the pointer is under it.
+    fn something(&self) -> bool {
+        self.hovered.0.is_some()
+            || self.bag.0.is_some()
+            || self.place.0.is_some()
+            || self.sky.0.is_some()
+    }
+
+    /// What pointing here does.
+    fn pointing(&self) -> Pointing {
+        if self.interface.0 {
+            return Pointing::Keep;
+        }
+        pointing(self.creature(), self.something())
+    }
+}
+
+/// Points at what is under the pointer: `true` if the target changed or was
+/// cleared (so the press is used up).
+fn point(under: &UnderPointer, target: &mut ResMut<Target>) -> bool {
+    match under.pointing() {
+        Pointing::Target(id) => {
+            target.set_if_neq(Target(Some(id)));
+            true
+        }
+        Pointing::Clear => {
+            target.set_if_neq(Target(None));
+            true
+        }
+        Pointing::Keep => false,
+    }
+}
+
+/// A right click on a creature targets it, and on nothing clears the target.
+/// Pressing and dragging turns the camera instead.
 pub(super) fn pick_by_right_click(
     mouse: Res<ButtonInput<MouseButton>>,
     pointer: Res<PointerPosition>,
-    hovered: Res<HoveredToken>,
-    others: Query<&Other>,
+    under: UnderPointer,
     mut pressed_at: Local<Option<Vec2>>,
     mut target: ResMut<Target>,
 ) {
     if mouse.just_pressed(MouseButton::Right) {
-        *pressed_at = pointer.0;
+        // A press on the interface isn't a press on the map behind it.
+        *pressed_at = pointer.0.filter(|_| !under.interface.0);
     }
     if !mouse.just_released(MouseButton::Right) {
         return;
@@ -34,12 +93,8 @@ pub(super) fn pick_by_right_click(
         (Some(from), Some(to)) => from.distance(to) <= CLICK_SLOP,
         _ => false,
     };
-    if let Some(other) = hovered
-        .0
-        .filter(|_| still)
-        .and_then(|token| others.get(token).ok())
-    {
-        target.set_if_neq(Target(Some(other.id)));
+    if still {
+        point(&under, &mut target);
     }
 }
 
@@ -48,17 +103,18 @@ pub(super) fn pick_by_right_click(
 pub(super) struct Press {
     /// How long it has been still.
     held: f32,
-    /// It targeted someone, so lifting it isn't a tap on the map.
+    /// It targeted someone, or cleared the target, so lifting it isn't a tap
+    /// on the map.
     targeted: bool,
 }
 
-/// A finger held still on a creature for `LONG_PRESS` targets it, and the tap
-/// its lifting makes is taken away (`eat_tap`), so it doesn't walk there.
+/// A finger held still for `LONG_PRESS` on a creature targets it, and on
+/// nothing clears the target; the tap its lifting makes is taken away
+/// (`eat_tap`), so it doesn't walk there.
 pub(super) fn pick_by_long_press(
     time: Res<Time>,
     gesture: Res<TouchGesture>,
-    hovered: Res<HoveredToken>,
-    others: Query<&Other>,
+    under: UnderPointer,
     mut press: ResMut<LongPress>,
     mut target: ResMut<Target>,
 ) {
@@ -72,8 +128,7 @@ pub(super) fn pick_by_long_press(
     if before >= LONG_PRESS || press.held < LONG_PRESS {
         return;
     }
-    if let Some(other) = hovered.0.and_then(|token| others.get(token).ok()) {
-        target.set_if_neq(Target(Some(other.id)));
+    if point(&under, &mut target) {
         press.targeted = true;
     }
 }

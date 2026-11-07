@@ -4,7 +4,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 ## Files
 
-- `crates/client/src/widgets/feedback.rs`: `ButtonStyle`, `ButtonTooltip`; `track_pointer` (first in `Presses`), `show_button_looks`, `show_edges`, `spread_ripples`, button names after a wait. Unit tests. In `feedback/`: `looks.rs`, `pointer.rs`, `show.rs`.
+- `crates/client/src/widgets/feedback.rs`: `ButtonStyle`, `ButtonTooltip`, `OverInterface`; `track_pointer` (first in `Presses`; also sets `OverInterface`), `show_button_looks`, `show_edges`, `spread_ripples`, button names after a wait. Unit tests. In `feedback/`: `looks.rs`, `pointer.rs`, `show.rs`.
 - `crates/client/src/widgets/scale.rs`: how big the interface is drawn: `apply_interface_scale` (`PreUpdate`, before `PointerSystems`) sets Bevy's `UiScale` from `Preferences` and the window, `interface_scale`, `TouchOnly`, `INTERFACE_PERCENTS`. Unit tests.
 - `crates/client/src/widgets/theme.rs`: the colours, `TextSize` and the soft shadow. Unit test.
 - `crates/client/src/widgets/mod.rs`: `WidgetsPlugin`, sizes, `ButtonState`, `raised_box`, `panel`, `panel_frame`, `panel_title`, `spawn_tooltip`, `spawn_button`, `spawn_icon_button`, `spawn_small_icon_button`, `spawn_check_button`, `spawn_close_button`. Beside it: `button_state.rs` (`ButtonState`, `WidgetSystems`, presses), `boxes.rs` (panels, tooltips), `buttons.rs`.
@@ -46,6 +46,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 ## Public API
 
 - `Spinner`: give a sized node it to show a turning spinner while it is on show.
+- `OverInterface(bool)` (resource, `PreUpdate`): the pointer is on a panel, a node that `stops_presses` or a button this frame; for what the pointer does to the map behind (`target`: a right click on nothing clears the target).
 - `WidgetsPlugin`; `WidgetSystems` (system sets, `Presses`, `Front`, then `Modal`): anything covering the screen reads presses in `Modal`, or `Front` to be ahead of those (the system menu); anything else taking clicks in `PreUpdate` runs after both.
 - `INTERFACE_PERCENTS`: the sizes Settings offers after Auto. `TouchOnly(bool)` (resource): the device has only a touch screen (browsers say, with `any-pointer: fine`; natively never), so touch is on whatever the setting.
 - `INK`, `PARCHMENT`, `CLOSE_PIXELS`, `BUTTON_PADDING`, `PANEL_EDGE`.

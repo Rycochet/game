@@ -32,6 +32,10 @@ pub struct TokenAssets {
     pub(super) icon_quad: Handle<Mesh>,
     /// One material per icon file, made the first time it is shown.
     pub(super) icon_materials: HashMap<String, Handle<StandardMaterial>>,
+    /// A body flashing red (`TokenFlash`).
+    pub(super) flash_body: Handle<StandardMaterial>,
+    /// Each icon's red silhouette, made the first time it flashes.
+    pub(super) flash_icons: HashMap<String, Handle<StandardMaterial>>,
 }
 
 /// The outline width in grid units that shows as `OUTLINE_PIXELS` in a window
@@ -119,6 +123,12 @@ impl TokenAssets {
             }),
             icon_quad: meshes.add(Rectangle::from_length(ICON_FILE_PIXELS * ICON_PIXEL)),
             icon_materials: HashMap::default(),
+            flash_body: materials.add(StandardMaterial {
+                base_color: super::flash::FLASH_RED,
+                unlit: true,
+                ..default()
+            }),
+            flash_icons: HashMap::default(),
         }
     }
 }

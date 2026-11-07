@@ -1,6 +1,6 @@
 //! Targeting creatures: a right click (or a long press) on one, Tab and
 //! Shift+Tab to go through them from nearest to furthest, and targets chosen
-//! for the player; a red reticule turning on the target's token. See
+//! for the player; a black reticule turning on the target's token. See
 //! `docs/context/client/target.md`.
 
 mod auto;

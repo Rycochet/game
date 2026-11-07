@@ -47,6 +47,18 @@ pub(crate) struct Learning {
     pub foes: Windows<CreatureKind>,
 }
 
+/// A creature harmed this tick, for others who see it (`ServerWorld::harmed`).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Harm {
+    /// Who was harmed.
+    pub id: Id,
+    /// Health left, per mille.
+    pub left: u16,
+    /// The player told already, by `AbilityLanded`: the one who struck, or
+    /// the one struck.
+    pub told: Id,
+}
+
 /// How many action ticks this much energy takes to come back, at this speed.
 pub(crate) fn ticks_for(energy: u32, speed: u32) -> u64 {
     u64::from(energy).div_ceil(u64::from(speed.max(1)))

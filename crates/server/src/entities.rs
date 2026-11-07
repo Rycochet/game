@@ -234,4 +234,6 @@ impl Populations {
 }
 
 #[cfg(test)]
+mod harmed_tests;
+#[cfg(test)]
 mod tests;

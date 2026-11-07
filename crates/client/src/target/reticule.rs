@@ -1,4 +1,4 @@
-//! The reticule round the target: a red ring with four ticks pointing in, flat
+//! The reticule round the target: a black ring with four ticks pointing in, flat
 //! on top of the target's token, under its picture, turning slowly.
 
 use std::f32::consts::{PI, TAU};
@@ -16,18 +16,20 @@ const INNER: f32 = TOKEN_DIAMETER * 0.40;
 /// The ticks reach in this far, and are this wide.
 const TICK_IN: f32 = TOKEN_DIAMETER * 0.28;
 const TICK_WIDTH: f32 = TOKEN_DIAMETER * 0.07;
-/// The black outline's width round the red, in 3D units.
+/// The white outline's width round the black, in 3D units.
 const OUTLINE: f32 = TOKEN_DIAMETER * 0.025;
-/// How high above the token's top the red and its outline lie, so they don't
+/// How high above the token's top the ring and its outline lie, so they don't
 /// flicker in and out of it.
-const RED_LIFT: f32 = 0.3;
+const RING_LIFT: f32 = 0.3;
 const OUTLINE_LIFT: f32 = 0.15;
 /// One turn every this many seconds.
 const TURN_SECONDS: f32 = 8.0;
 /// Pieces round the ring.
 const SEGMENTS: u32 = 48;
 
-const RED: Color = Color::srgb(0.85, 0.08, 0.08);
+/// Black, seen on any token by its white outline (owner, 2026-11-07).
+const RING: Color = Color::BLACK;
+const OUTLINE_COLOUR: Color = Color::WHITE;
 
 /// The reticule's root.
 #[derive(Component)]
@@ -46,19 +48,19 @@ pub(super) fn spawn_reticule(
         cull_mode: None,
         ..default()
     };
-    let red = materials.add(unlit(RED));
-    let black = materials.add(unlit(Color::BLACK));
+    let ring = materials.add(unlit(RING));
+    let outline = materials.add(unlit(OUTLINE_COLOUR));
     commands
         .spawn((Reticule, Transform::default(), Visibility::Hidden))
         .with_children(|reticule| {
             reticule.spawn((
                 Mesh3d(meshes.add(reticule_mesh(0.0))),
-                MeshMaterial3d(red),
-                Transform::from_xyz(0.0, RED_LIFT, 0.0),
+                MeshMaterial3d(ring),
+                Transform::from_xyz(0.0, RING_LIFT, 0.0),
             ));
             reticule.spawn((
                 Mesh3d(meshes.add(reticule_mesh(OUTLINE))),
-                MeshMaterial3d(black),
+                MeshMaterial3d(outline),
                 Transform::from_xyz(0.0, OUTLINE_LIFT, 0.0),
             ));
         });

@@ -8,11 +8,10 @@ use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::protocol::{Landed, ServerMessage};
 use shared::skill::{familiarity, taught};
-use shared::vitals::{Points, Vital};
 
 use super::Client;
 use crate::ServerWorld;
-use crate::combat::{Act, Pending, health_left, luck, ticks_for};
+use crate::combat::{Act, Pending, luck, ticks_for};
 use crate::entities::{MobBlow, Striker, hit_mob};
 
 impl Client {
@@ -239,7 +238,7 @@ pub(crate) fn take_mob_blows(
                     wielded,
                 };
                 let harm = attacker.harm(&swing, &client.fighter(), &mut luck(tick, mob, target));
-                let left = struck(client, world, harm, kind, tick);
+                let left = struck::struck(client, world, harm, kind, tick);
                 debug!("{mob:?} did {harm:?} to a player, {left} per mille left");
                 ServerMessage::AbilityLanded {
                     who: Some(mob),
@@ -252,46 +251,7 @@ pub(crate) fn take_mob_blows(
     }
 }
 
-/// The player takes this much harm from a creature of this kind, practising
-/// Defence, and is killed if it was the last of their Health. How much is left,
-/// per mille.
-fn struck(
-    client: &mut Client,
-    world: &mut ServerWorld,
-    harm: Points,
-    foe: CreatureKind,
-    tick: u64,
-) -> u16 {
-    let limits = client.limits(tick);
-    let played = client.activity.played;
-    client.sheet.vitals.hurt(harm, limits, tick, played);
-    client.practise(client.fighter().practised_defending(), foe, tick);
-    let left = health_left(&client.sheet.vitals, limits, tick);
-    if client.sheet.vitals.at(Vital::Health, limits, tick) == Points::ZERO {
-        killed(client, world, tick);
-        return left;
-    }
-    client
-        .link
-        .send(&ServerMessage::Sheet(client.sheet.clone()));
-    client.send_vitals(tick);
-    left
-}
-
-/// Killed: put out of the site onto the world map, whole again, and told
-/// (owner, 2026-11-07, for now).
-fn killed(client: &mut Client, world: &mut ServerWorld, tick: u64) {
-    client.fight.pending = None;
-    client.waiting.clear();
-    client.sheet.vitals.fill();
-    client.unsaved = true;
-    crate::sites::killed(client, world);
-    client
-        .link
-        .send(&ServerMessage::Sheet(client.sheet.clone()));
-    client.send_vitals(tick);
-    client.link.send(&ServerMessage::Killed);
-}
+mod struck;
 
 #[cfg(test)]
 mod heal_tests;

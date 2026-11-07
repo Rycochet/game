@@ -10,7 +10,7 @@ use shared::protocol::ServerMessage;
 
 use crate::common::{BottomHud, GameView, OwnVitals, ToldVitals, VitalsCircle, interface_area};
 use crate::connection::FromServer;
-use crate::widgets::{HoverTip, UiId};
+use crate::widgets::{HoverTip, UiId, stops_presses};
 
 mod killed;
 mod paint;
@@ -55,18 +55,22 @@ fn spawn_circle(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     ));
-    commands.spawn((
-        Circle,
-        UiId::new("hud", "vitals"),
-        ImageNode::new(image.clone()),
-        Node {
-            position_type: PositionType::Absolute,
-            bottom: px(BOTTOM_GAP),
-            ..default()
-        },
-        HoverTip(String::new()),
-        Visibility::Hidden,
-    ));
+    let circle = commands
+        .spawn((
+            Circle,
+            UiId::new("hud", "vitals"),
+            ImageNode::new(image.clone()),
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: px(BOTTOM_GAP),
+                ..default()
+            },
+            HoverTip(String::new()),
+            Visibility::Hidden,
+        ))
+        .id();
+    // Presses on it go no further: not walking, nor clearing the target.
+    commands.entity(circle).insert(stops_presses(circle));
     commands.insert_resource(CirclePicture {
         image,
         painted: None,
