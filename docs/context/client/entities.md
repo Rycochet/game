@@ -9,7 +9,8 @@ Others on the map: mobs and other players, as tokens, for as long as the server 
 - `crates/client/src/entities/hover_name.rs`: `hover_name` (the `common::HoverName` each other gets: another player's character name from `EntityLook::name`, else the kind's).
 - `crates/client/src/entities/dressed.rs`: `dressed` (an `IconPicture` of a kind wearing these in its own colours, from `item_art::character_look`), `show_own_dress` (the player's own token, from `inventory::Carried` and `character::CharacterSheet`, whenever what is worn or how they look changes).
 - `crates/client/src/entities/pictures.rs`: `picture` (each kind's token picture), `picture_size`.
-- `crates/client/src/entities/health_bars.rs`: `SeenHealth` (what the player's blows and Heals left others, per mille, from `Landed::Hit` and `Landed::Healed`), `take_health`, `refilled_share` (refilled here as Health refills, after `CALM_AFTER`, as nobody says again), `under_token` (a bar's place under a token, as wide as its base, by projecting it through `view3d::ViewCamera`), `show_health_bars` (`PostUpdate`, after transforms: a red bar under every token in sight whose owner isn't at full Health, the player's from `common::OwnVitals`; owner, 2026-11-07).
+- `crates/client/src/entities/health_bars.rs`: `SeenHealth` (what the player's blows and Heals, and others' blows seen, left others, per mille, from `Landed::Hit`, `Landed::Healed` and `Harmed`), `take_health`, `refilled_share` (refilled here as Health refills, after `CALM_AFTER`, as nobody says again), `under_token` (a bar's place under a token, as wide as its base, by projecting it through `view3d::ViewCamera`), `show_health_bars` (`PostUpdate`, after transforms: a red bar under every token in sight whose owner isn't at full Health, the player's from `common::OwnVitals`; owner, 2026-11-07).
+- `crates/client/src/entities/flash.rs`: `harmed` (who a message says was harmed: `AbilityLanded` with a `Hit` doing harm, at the player or their target, or `Harmed`), `flash_harmed` (puts `view3d::TokenFlash` on their token; owner, 2026-11-07).
 - `crates/client/src/entities/wind_up_bars.rs`: `SeenWindUps` (others' wind-ups aimed at the player, from `AbilityStarted`), `take_wind_ups`, `show_wind_up_bars` (a gold bar filling under the health bar for any wind-up of a second or more: the player's from `common::OwnAbility`, or one aimed at them; attacks are quicker, so show only on the action bar).
 
 ## Public API
@@ -18,7 +19,7 @@ Others on the map: mobs and other players, as tokens, for as long as the server 
 
 ## Depends on
 
-- `common` (`Clickable`, `HoverName`, `GameView`, `Icon`, `KillMob`, `MapPosition`, `SmoothPosition`, `Token`, `TokenSize`), `connection` (`FromServer`), `inventory` (`Carried`), `character` (`CharacterSheet`), `player` (`Player`, `PlayerSystems`), `view3d` (`ClickedToken`, `View3dSystems`), `item_art` (`ItemPictures`, `character_look`, `morph_look`, `MORPH_STEPS`), `shared::creature`, `shared::id`, `shared::protocol`.
+- `common` (`Clickable`, `HoverName`, `GameView`, `Icon`, `KillMob`, `MapPosition`, `SmoothPosition`, `Token`, `TokenSize`), `connection` (`FromServer`), `inventory` (`Carried`), `character` (`CharacterSheet`), `player` (`Player`, `PlayerSystems`), `view3d` (`ClickedToken`, `View3dSystems`, `TokenFlash`), `item_art` (`ItemPictures`, `character_look`, `morph_look`, `MORPH_STEPS`), `shared::creature`, `shared::id`, `shared::protocol`.
 
 ## Used by
 

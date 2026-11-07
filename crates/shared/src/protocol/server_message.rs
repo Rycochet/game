@@ -184,4 +184,8 @@ pub enum ServerMessage {
     /// The player was killed: they are on the world map, at full Health, and
     /// are to be told so.
     Killed,
+    /// Someone in sight was harmed, by a blow the player neither struck nor
+    /// took (those are told by `AbilityLanded`), and has `left` per mille of
+    /// their Health.
+    Harmed { id: Id, left: u16 },
 }

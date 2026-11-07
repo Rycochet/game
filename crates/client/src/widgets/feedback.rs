@@ -11,6 +11,7 @@ mod show;
 pub use looks::{ButtonStyle, ButtonTooltip};
 pub(super) use looks::{Pointed, Ripple};
 use looks::{Touch, look, ripple_shape};
+pub use pointer::OverInterface;
 pub(super) use pointer::{spread_ripples, track_pointer};
 pub(super) use show::{show_button_looks, show_button_tooltips, show_edges};
 

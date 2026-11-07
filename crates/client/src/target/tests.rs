@@ -63,3 +63,13 @@ fn after_a_death_the_nearest_other_enemy_is_chosen() {
     );
     assert_eq!(nearest_enemy((0, 0), &all[..1], Id::for_test(1)), None);
 }
+
+#[test]
+fn pointing_at_a_creature_targets_it_and_at_nothing_clears_the_target() {
+    use super::choose::{Pointing, pointing};
+    let mob = Id::for_test(1);
+    assert_eq!(pointing(Some(mob), true), Pointing::Target(mob));
+    assert_eq!(pointing(None, false), Pointing::Clear);
+    // A poi, a bag, a door or stairs, a sun or moon: left alone.
+    assert_eq!(pointing(None, true), Pointing::Keep);
+}

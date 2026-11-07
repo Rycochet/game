@@ -10,6 +10,7 @@ use std::time::Instant;
 
 use super::{KEPT_FOR, Someone, everyone_playing, world_gap};
 use crate::ServerWorld;
+use crate::combat::Harm;
 use crate::connections::{Client, Phase};
 use crate::hall::HALL_SIGHT;
 
@@ -99,10 +100,26 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
             }
         }
         tell(client, seen, &world.died);
+        tell_harmed(client, &world.harmed);
     }
-    // Everyone who saw them die has been told.
+    // Everyone who saw them die, or harmed, has been told.
     world.died.clear();
+    world.harmed.clear();
     super::harmed_by::credit_kills(clients, world);
+}
+
+/// Tells a client of everyone it sees who was harmed, unless it was told
+/// already (it struck the blow, or took it).
+fn tell_harmed(client: &mut Client, harmed: &[Harm]) {
+    let me = client.entity_id();
+    for harm in harmed {
+        if harm.told != me && client.seen_entities.contains_key(&harm.id) {
+            client.link.send(&ServerMessage::Harmed {
+                id: harm.id,
+                left: harm.left,
+            });
+        }
+    }
 }
 
 /// How far east `to` is from `from` in the Hall, the near way round (west is

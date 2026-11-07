@@ -18,9 +18,11 @@ use super::roads::RoadWorker;
 use super::storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved};
 
 mod find_item;
+mod forgetting;
 mod sharing;
 mod time;
 
+pub(crate) use forgetting::Forgotten;
 pub(crate) use sharing::Shared;
 
 /// One world the server runs (`ServerWorlds` holds them all).
@@ -61,6 +63,9 @@ pub struct ServerWorld {
     /// Mobs that died since players were last told who they see, so those who
     /// saw them go are told they died (`entities::sync`).
     pub(crate) died: BTreeSet<shared::id::Id>,
+    /// Creatures harmed since players were last told who they see, so others
+    /// who see them are told (`entities::sync`).
+    pub(crate) harmed: Vec<crate::combat::Harm>,
     /// Mobs killed since `entities::sync` last told who helped.
     pub(crate) kills: Vec<crate::entities::Kill>,
     /// How big stacks of items may get here.
@@ -70,23 +75,6 @@ pub struct ServerWorld {
     forgotten: Forgotten,
     /// The wilderness's generator and what was made of it lately.
     pub(crate) wilderness: crate::wilderness::WildernessMaps,
-}
-
-/// Which sites have been forgotten.
-#[derive(Default)]
-pub(crate) struct Forgotten {
-    all: bool,
-    sites: BTreeSet<SiteId>,
-}
-
-impl Forgotten {
-    pub(crate) fn is_empty(&self) -> bool {
-        !self.all && self.sites.is_empty()
-    }
-
-    pub(crate) fn includes(&self, id: SiteId) -> bool {
-        self.all || self.sites.contains(&id)
-    }
 }
 
 impl ServerWorld {
@@ -170,6 +158,7 @@ impl ServerWorld {
             unreachable_sites: BTreeSet::new(),
             populations: Populations::default(),
             died: BTreeSet::new(),
+            harmed: Vec::new(),
             kills: Vec::new(),
             stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),
@@ -256,36 +245,6 @@ impl ServerWorld {
                 self.storage.save_site(id, save);
             }
         }
-    }
-
-    /// Forgets a site: it is made anew when next entered, with its generator's
-    /// current version and no players' changes.
-    pub(crate) fn forget_site(&mut self, id: SiteId) {
-        self.sites.remove(&id);
-        self.unreachable_sites.remove(&id);
-        self.unsaved_sites.unmark(&id);
-        self.storage.remove_site(id);
-        self.populations.forget_site(id);
-        self.forgotten.sites.insert(id);
-        if let SiteId::Poi(chunk) = id {
-            self.wilderness.forget(Some(chunk));
-        }
-    }
-
-    /// Forgets every site, as `forget_site`.
-    pub(crate) fn forget_sites(&mut self) {
-        self.sites.clear();
-        self.unreachable_sites.clear();
-        self.unsaved_sites.take();
-        self.storage.remove_sites();
-        self.populations.forget_all();
-        self.forgotten.all = true;
-        self.wilderness.forget(None);
-    }
-
-    /// The sites forgotten since this was last asked.
-    pub(crate) fn take_forgotten(&mut self) -> Forgotten {
-        std::mem::take(&mut self.forgotten)
     }
 
     /// What a joining client is told about the world.

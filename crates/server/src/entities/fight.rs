@@ -10,7 +10,7 @@ use shared::vitals::{Points, Vital};
 use super::gear::bury;
 use super::{ATTACK_GAP, Doing, Mob, Spot};
 use crate::ServerWorld;
-use crate::combat::{Act, Pending, health_left, luck, ticks_for};
+use crate::combat::{Act, Harm, Pending, health_left, luck, ticks_for};
 use crate::storage::SiteId;
 
 /// What a mob did to a player this tick, for the player's client to be told
@@ -161,6 +161,13 @@ pub(crate) fn hit_mob(
     let left = health_left(&one.vitals, limits, tick);
     let kind = one.kind;
     one.harmed_by.harmed(by.id, tick);
+    if harm != Points::ZERO {
+        world.harmed.push(Harm {
+            id: mob,
+            left,
+            told: by.id,
+        });
+    }
     // Whatever it was doing, it goes for whoever hit it.
     let after_them = matches!(one.doing, Doing::Going { after, .. } if after == by.id);
     if !after_them {

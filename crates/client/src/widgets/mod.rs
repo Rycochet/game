@@ -56,7 +56,7 @@ pub use container::{ContainerLook, ContainerSize, spawn_container};
 #[cfg(not(target_arch = "wasm32"))]
 pub use copy_button::spawn_copy_button;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
-pub use feedback::{ButtonStyle, ButtonTooltip};
+pub use feedback::{ButtonStyle, ButtonTooltip, OverInterface};
 pub use filter_list::{HighlightStep, matches_filter, next_highlight};
 pub use fullscreen::{
     darkening, layer_share, layer_z, leaves_presses, spawn_dialog, spawn_fullscreen_layer,
@@ -151,6 +151,7 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<switch::Slides>()
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
+            .init_resource::<OverInterface>()
             .init_resource::<crate::common::BandShift>()
             .init_resource::<aura::Auras>()
             .add_plugins(UiMaterialPlugin::<aura::AuraMaterial>::default())

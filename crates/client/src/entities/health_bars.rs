@@ -1,6 +1,6 @@
 //! Health bars: under the token of anyone hurt, as wide as its base, and only
 //! while they aren't at full Health (owner, 2026-11-07). The player's from
-//! their own Health; others' from what the player's blows left them, refilled
+//! their own Health; others' from what blows seen left them, refilled
 //! here as Health refills (`shared::vitals`), as nobody tells it again.
 
 use std::collections::BTreeMap;
@@ -22,7 +22,7 @@ const EMPTY: Color = Color::srgba(0.0, 0.0, 0.0, 0.7);
 /// How tall a bar is, as a share of its width.
 const HEIGHT_OF_WIDTH: f32 = 0.12;
 
-/// What the player's blows last left others with, per mille, and when.
+/// What blows seen last left others with, per mille, and when.
 #[derive(Resource, Default)]
 pub(super) struct SeenHealth(BTreeMap<Id, (u16, f64)>);
 
@@ -47,6 +47,9 @@ pub(super) fn take_health(
                 landed: Landed::Hit { left, .. } | Landed::Healed { left, .. },
                 ..
             } => {
+                seen.0.insert(*id, (*left, now));
+            }
+            ServerMessage::Harmed { id, left } => {
                 seen.0.insert(*id, (*left, now));
             }
             ServerMessage::EntityGone { id, .. } => {

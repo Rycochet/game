@@ -62,3 +62,26 @@ pub(super) fn nearest_enemy(player: (i64, i64), seen: &[Seen], except: Id) -> Op
         .min_by_key(|one| (distance(player, one.at), one.id))
         .map(|one| one.id)
 }
+
+/// What pointing at something (a right click, or a finger held still) does to
+/// the target.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Pointing {
+    /// Targets this creature.
+    Target(Id),
+    /// Nothing is there: no target (owner, 2026-11-07).
+    Clear,
+    /// Something else that answers the pointer is there: left alone.
+    Keep,
+}
+
+/// What pointing does, at `creature` if one is under the pointer, or at
+/// `something` else that answers it (the interface, a poi, a bag, a door or
+/// stairs, a sun or moon).
+pub(super) fn pointing(creature: Option<Id>, something: bool) -> Pointing {
+    match creature {
+        Some(id) => Pointing::Target(id),
+        None if something => Pointing::Keep,
+        None => Pointing::Clear,
+    }
+}

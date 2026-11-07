@@ -20,7 +20,7 @@ use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{
     ClickedToken, DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, HoveredToken,
-    TokenView,
+    TokenFlash, TokenView,
 };
 use token::{IconAnchor, TokenAssets};
 
@@ -64,6 +64,7 @@ impl Plugin for View3dPlugin {
                     token::resize_tokens,
                     token::sync_tokens,
                     token::sync_icons,
+                    token::flash_tokens,
                     place_camera_and_tokens,
                     bands::drift_bands,
                 )

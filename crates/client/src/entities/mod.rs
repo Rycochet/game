@@ -2,6 +2,7 @@
 //! says they can be seen. See `docs/context/client/entities.md`.
 
 mod dressed;
+mod flash;
 mod health_bars;
 mod hover_name;
 mod morph;
@@ -66,6 +67,7 @@ impl Plugin for EntitiesPlugin {
                         .after(PlayerSystems::Travel),
                     kill_clicked.after(View3dSystems::Click),
                     offer_to_kill.after(read_server),
+                    flash::flash_harmed.after(read_server),
                 ),
             );
     }

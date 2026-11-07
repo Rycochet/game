@@ -53,6 +53,10 @@ pub(super) fn take_input(
     // A floor's button: that floor, round the player's place.
     let buttons = super::floors::buttons(view, full.open, &dungeon, &levels);
     let button = cursor.and_then(|at| super::floors::under(&window, at, buttons.len()));
+    // A right click on the maps isn't one on the map behind (`target`).
+    if button.is_some() {
+        mouse.clear_just_pressed(MouseButton::Right);
+    }
     if let Some(row) = button
         && mouse.clear_just_pressed(MouseButton::Left)
     {
@@ -77,8 +81,11 @@ pub(super) fn take_input(
         );
         let over_minimap =
             cursor.is_some_and(|at| at.distance(middle) <= minimap_across(&window) / 2.0);
-        if over_minimap && mouse.clear_just_pressed(MouseButton::Left) {
-            full.set_open(true);
+        if over_minimap {
+            mouse.clear_just_pressed(MouseButton::Right);
+            if mouse.clear_just_pressed(MouseButton::Left) {
+                full.set_open(true);
+            }
         }
         return;
     }
