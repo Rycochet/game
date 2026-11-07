@@ -68,6 +68,8 @@ pub struct ServerWorld {
     pub(crate) harmed: Vec<crate::combat::Harm>,
     /// Mobs killed since `entities::sync` last told who helped.
     pub(crate) kills: Vec<crate::entities::Kill>,
+    /// Developer tools' Freeze Mobs: no mob in this world thinks or moves.
+    pub(crate) mobs_frozen: bool,
     /// How big stacks of items may get here.
     pub(crate) stacks: StackLimits,
     /// Sites forgotten since `super::connections::handle_messages` last looked, for
@@ -160,6 +162,7 @@ impl ServerWorld {
             died: BTreeSet::new(),
             harmed: Vec::new(),
             kills: Vec::new(),
+            mobs_frozen: false,
             stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),
             wilderness: crate::wilderness::WildernessMaps::new(&params),

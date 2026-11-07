@@ -194,4 +194,7 @@ pub enum ServerMessage {
     /// took (those are told by `AbilityLanded`), and has `left` per mille of
     /// their Health.
     Harmed { id: Id, left: u16 },
+    /// Developer tools: what the server knows of a mob, as lines to show
+    /// (`DevMobTool::Inspect`).
+    DevMobInfo { mob: Id, lines: Vec<String> },
 }

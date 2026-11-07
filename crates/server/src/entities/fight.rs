@@ -198,7 +198,7 @@ pub(crate) fn hit_mob(
     let dead = one.health(tick) == Points::ZERO;
     record_of(world, place.0, keep).memory = memory;
     if dead {
-        bury(world, place, here_index, mob);
+        bury(world, place, here_index, mob, true);
     }
     Some(MobHit { harm, left, kind })
 }

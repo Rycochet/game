@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::Cell;
-use shared::protocol::{ClientMessage, DevMob};
+use shared::protocol::{ClientMessage, DevMob, DevMobTool};
 
 use super::Shown;
 use crate::common::{ClickMode, CreateMobOrder, CurrentDungeon, HoveredBag, PointerPosition};
@@ -51,7 +51,7 @@ pub(super) fn pick_on_click(
     if *mode == ClickMode::PlaceMob {
         if let Some((x, y)) = super::picking::floor_cell(ray) {
             let mob = DevMob { x, y, ..order.0 };
-            to_server.write(ToServer(ClientMessage::DevCreateMob(mob)));
+            to_server.write(ToServer(ClientMessage::DevMobs(DevMobTool::Create(mob))));
         }
         return;
     }

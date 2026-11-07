@@ -35,6 +35,8 @@ pub(super) fn add(app: &mut App) {
         .add_debug_method("client.enter_site", enter_site)
         .add_debug_method("client.dev_area", dev_area)
         .add_debug_method("client.create_mob", mobs::create_mob)
+        .add_debug_method("client.inspect_mob", mobs::inspect_mob)
+        .add_debug_method("client.inspected", mobs::inspected)
         .add_debug_method("client.set_cells", set_cells)
         .add_debug_method("client.set_time", set_time)
         .add_debug_method("client.go_to_world", world::go_to_world)

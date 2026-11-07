@@ -1,6 +1,7 @@
 //! Others on the map: mobs and other players, as tokens, for as long as the server
 //! says they can be seen. See `docs/context/client/entities.md`.
 
+mod dev_clicks;
 mod dressed;
 mod flash;
 mod health_bars;
@@ -20,13 +21,12 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use shared::sheet::Feeling;
 
 use crate::common::{
-    Attitude, Clickable, DetectMonsters, GameView, Icon, KillMob, MapPosition, Other,
-    SmoothPosition, Token,
+    Attitude, DetectMonsters, GameView, Icon, MapPosition, Other, SmoothPosition, Token,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
 use crate::player::{Player, PlayerSystems};
-use crate::view3d::{ClickedToken, View3dSystems};
+use crate::view3d::View3dSystems;
 
 /// How fast others are shown moving, in grid units a second: the same as an
 /// ordinary player, so they keep up with what the server says.
@@ -65,8 +65,8 @@ impl Plugin for EntitiesPlugin {
                     )
                         .chain()
                         .after(PlayerSystems::Travel),
-                    kill_clicked.after(View3dSystems::Click),
-                    offer_to_kill.after(read_server),
+                    dev_clicks::mob_clicked.after(View3dSystems::Click),
+                    dev_clicks::offer_mobs.after(read_server),
                     flash::flash_harmed.after(read_server),
                 ),
             );
@@ -177,37 +177,6 @@ fn read_server(
             }
             _ => {}
         }
-    }
-}
-
-/// With Kill Mob on, mobs' tokens can be clicked, which also stops the click walking
-/// there. Other players feel nothing, so stay as they are.
-fn offer_to_kill(
-    kill: Res<KillMob>,
-    others: Query<(Entity, &Other, Has<Clickable>)>,
-    mut commands: Commands,
-) {
-    for (entity, other, clickable) in &others {
-        let wanted = kill.0 && other.feeling != Feeling::None;
-        if wanted && !clickable {
-            commands.entity(entity).insert(Clickable);
-        } else if clickable && !wanted {
-            commands.entity(entity).remove::<Clickable>();
-        }
-    }
-}
-
-/// A click or tap on a mob's token with Kill Mob on. It goes when the server says.
-fn kill_clicked(
-    kill: Res<KillMob>,
-    clicked: Res<ClickedToken>,
-    others: Query<&Other>,
-    mut to_server: MessageWriter<ToServer>,
-) {
-    if kill.0
-        && let Some(other) = clicked.0.and_then(|entity| others.get(entity).ok())
-    {
-        to_server.write(ToServer(ClientMessage::DevKillMob { mob: other.id }));
     }
 }
 

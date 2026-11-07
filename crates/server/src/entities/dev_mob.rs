@@ -1,9 +1,11 @@
-//! Developer tools: a mob made to order on a cell of the player's level
-//! (Create Mob). It is never kept: it goes when the level is let go.
+//! Developer tools for mobs (`DevMobTool`): one made to order on a cell of the
+//! player's level (Create Mob; never kept), looking into one, deleting one, and
+//! freezing them all.
 
 use shared::dungeon::{Cell, Level};
+use shared::id::Id;
 use shared::mob::chosen_spawns;
-use shared::protocol::DevMob;
+use shared::protocol::{DevMob, DevMobTool, ServerMessage};
 use shared::rng::Seed;
 
 use super::made::DEV_MOB_NUMBERS;
@@ -12,9 +14,67 @@ use crate::ServerWorld;
 use crate::connections::Client;
 use crate::ids::new_id;
 
+/// Does what was asked. Whether the client is still welcome.
+pub(crate) fn dev_mobs(client: &mut Client, world: &mut ServerWorld, tool: DevMobTool) -> bool {
+    let done = match tool {
+        DevMobTool::Create(order) => create_mob(client, world, order),
+        DevMobTool::Inspect(mob) => return inspect(client, world, mob),
+        DevMobTool::Delete(mob) => delete(client, world, mob),
+        DevMobTool::Freeze(on) => {
+            world.mobs_frozen = on;
+            Ok(())
+        }
+    };
+    if let Err(why) = done {
+        bevy::log::info!("Refused {tool:?}: {why}");
+    }
+    true
+}
+
+/// The mob's population and level index, if it is on the player's level and in
+/// their sight.
+fn in_sight(
+    client: &mut Client,
+    world: &ServerWorld,
+    mob: Id,
+) -> Option<((crate::storage::SiteId, u32), u32)> {
+    let visit = client.visit.as_mut()?;
+    let place = visit.population();
+    let population = world.populations.0.get(&place)?;
+    let at = population.mobs.iter().find(|one| one.id == mob)?.position;
+    visit.can_see(at.0, at.1).then_some((place, visit.index()))
+}
+
+/// Takes a mob in sight away for good, leaving nothing.
+fn delete(client: &mut Client, world: &mut ServerWorld, mob: Id) -> Result<(), &'static str> {
+    let (place, index) = in_sight(client, world, mob).ok_or("no such mob in sight")?;
+    super::gear::bury(world, place, index, mob, false);
+    Ok(())
+}
+
+/// Tells the client everything the server knows of a mob in sight.
+fn inspect(client: &mut Client, world: &mut ServerWorld, mob: Id) -> bool {
+    let Some((place, _)) = in_sight(client, world, mob) else {
+        bevy::log::info!("Refused to inspect {mob:?}: not in sight");
+        return true;
+    };
+    let tick = world.action_clock.ticks();
+    let kind = client.inventory.creature;
+    let character = client.character_id;
+    let Some(one) = world.populations.0[&place]
+        .mobs
+        .iter()
+        .find(|one| one.id == mob)
+    else {
+        return true;
+    };
+    let lines = super::inspect::describe(one, kind, character.as_ref(), tick, world.mobs_frozen);
+    client.link.send(&ServerMessage::DevMobInfo { mob, lines })
+}
+
 /// Puts the mob on its cell of the player's site level, if it can stand there
 /// and nobody is there. Not in the wilderness, whose mobs belong to its blocks.
-pub(crate) fn create_mob(
+fn create_mob(
     client: &mut Client,
     world: &mut ServerWorld,
     order: DevMob,

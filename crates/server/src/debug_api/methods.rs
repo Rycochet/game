@@ -11,6 +11,7 @@ use super::{AddDebugMethod, BrpResult, Value, json, params, refused};
 use crate::connections::{Client, save_all};
 use crate::{Connections, ServerOptions, ServerWorlds};
 
+mod tick;
 mod worlds;
 
 use worlds::{WorldParams, chosen};
@@ -29,7 +30,9 @@ pub(crate) fn add_server_methods(app: &mut App, data: Option<PathBuf>) {
     .add_debug_method("server.cells", cells)
     .add_debug_method("server.sites", sites)
     .add_debug_method("server.worlds", worlds::worlds)
-    .add_debug_method("server.save", save);
+    .add_debug_method("server.save", save)
+    .add_debug_method("server.tick", tick::tick);
+    app.init_resource::<crate::clock::TickHold>();
 }
 
 /// `server.state`: which server answered (process and data folder, so a

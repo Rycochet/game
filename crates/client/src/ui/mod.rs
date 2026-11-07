@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use crate::common::{
-    ClickMode, DebugInfo, GameClock, GameView, GodMode, KillMob, MapPosition, ServerClock,
-    Truesight, ViewStats,
+    ClickMode, DebugInfo, DeleteMob, FreezeMobs, GameClock, GameView, GodMode, InspectMob, KillMob,
+    MapPosition, ServerClock, Truesight, ViewStats,
 };
 use crate::fonts;
 use crate::player::Player;
@@ -72,6 +72,14 @@ fn spawn_status_text(mut commands: Commands) {
     ));
 }
 
+/// The dev tools that change what clicking a mob does, and Freeze Mobs.
+#[derive(bevy::ecs::system::SystemParam)]
+struct MobModes<'w> {
+    inspect: Res<'w, InspectMob>,
+    delete: Res<'w, DeleteMob>,
+    freeze: Res<'w, FreezeMobs>,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn update_status_text(
     player: Single<&MapPosition, With<Player>>,
@@ -84,6 +92,7 @@ fn update_status_text(
     god: Res<GodMode>,
     kill: Res<KillMob>,
     truesight: Res<Truesight>,
+    mobs: MobModes,
     mut text: Single<&mut Text, With<StatusText>>,
     mut mode_text: Single<&mut TextSpan, (With<ModeText>, Without<StatsText>)>,
     mut stats_text: Single<&mut TextSpan, (With<StatsText>, Without<ModeText>)>,
@@ -100,6 +109,9 @@ fn update_status_text(
         (god.0, GOD_MODE_ICON),
         (kill.0, KILL_MOB_ICON),
         (truesight.0, TRUESIGHT_ICON),
+        (mobs.inspect.0, "Inspect Mob"),
+        (mobs.delete.0, "Delete Mob"),
+        (mobs.freeze.0, "Mobs Frozen"),
         (!mode.is_empty(), mode),
     ];
     let says: Vec<&str> = says

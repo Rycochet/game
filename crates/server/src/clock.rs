@@ -110,6 +110,14 @@ impl Drop for Repeating {
 #[cfg(test)]
 mod tests;
 
+/// Developer tools (`server.tick`, debug API only): while `held`, the action clock
+/// doesn't follow real time, and only moves on by `steps`, one a frame.
+#[derive(bevy::prelude::Resource, Default)]
+pub struct TickHold {
+    pub held: bool,
+    pub steps: u64,
+}
+
 /// Ticks of action time: what creatures' energy goes by (`shared::energy`), one
 /// for the whole server. Apart from `ServerClock` as it has to be a whole number.
 /// It stops when that is paused, and when the server is off.

@@ -14,6 +14,10 @@ const SWEEP_EVERY: u64 = 200;
 
 /// Lets each level's mobs do what they are doing, as far as they have the energy.
 pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
+    // Developer tools' Freeze Mobs.
+    if world.mobs_frozen {
+        return;
+    }
     let tick = world.action_clock.ticks();
     let everyone = everyone_playing(clients);
     let mut crossings = Vec::new();
