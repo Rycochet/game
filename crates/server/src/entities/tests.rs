@@ -342,6 +342,39 @@ fn guards_stand_at_the_edge_or_nearer_home() {
 }
 
 #[test]
+fn a_guard_beside_a_blocked_spot_keeps_to_one_cell() {
+    use super::territory::{TERRITORY, guard_cell};
+    use shared::dungeon::{Cell, Level};
+    let test = beside_a_mob(CreatureKind::Lizardfolk, 4);
+    let mut mob = the_mob(&test);
+    mob.home = (0, 0);
+    mob.position = (2, 0);
+    let mut level = Level::new(-12, -12, 25, 25);
+    for y in -11..=11 {
+        for x in -11..=11 {
+            level.set(x, y, Cell::Floor);
+        }
+    }
+    // A tree, say, where it would stand.
+    level.set(TERRITORY, 0, Cell::Wall);
+    let intruder = (11, 0);
+    let first = guard_cell(&level, &mob, intruder, &BTreeSet::from([mob.position]));
+    assert_eq!(cells_apart(first, (TERRITORY, 0)), 1);
+    // Once there, the cell it stands on is still the one to stand on.
+    mob.position = first;
+    for _ in 0..4 {
+        let again = guard_cell(&level, &mob, intruder, &BTreeSet::from([mob.position]));
+        assert_eq!(again, first);
+    }
+    // A second guard, with the first on the spot, stands beside it.
+    level.set(TERRITORY, 0, Cell::Floor);
+    mob.position = (2, 1);
+    let taken = BTreeSet::from([(TERRITORY, 0), mob.position]);
+    let beside = guard_cell(&level, &mob, intruder, &taken);
+    assert_eq!(cells_apart(beside, (TERRITORY, 0)), 1);
+}
+
+#[test]
 fn something_timid_runs_away() {
     let mut test = beside_a_mob(CreatureKind::Chicken, 2);
     let started = the_mob(&test).position;

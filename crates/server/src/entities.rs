@@ -25,6 +25,7 @@ use crate::storage::SiteId;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod crossing;
+mod doubling_back;
 mod fight;
 mod gear;
 mod harmed_by;
@@ -42,6 +43,7 @@ mod tracking;
 mod wild;
 
 use crossing::cross;
+use doubling_back::Pacing;
 pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;
 pub(super) use gear::{give, kill};
@@ -154,6 +156,8 @@ pub(crate) struct Mob {
     fight: Fight,
     /// Who has harmed it lately, to share in killing it. Not saved.
     harmed_by: HarmedBy,
+    /// Its last steps, so it doesn't pace back and forth. Not saved.
+    pacing: Pacing,
 }
 
 impl Mob {

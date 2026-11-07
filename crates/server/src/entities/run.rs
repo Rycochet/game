@@ -107,6 +107,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             };
             // Mobs leave scent too.
             scents.walked(mob.id, was_at, mob.position, mob.scent, tick);
+            mob.pacing.turn_ended(was_at, mob.position);
             taken.remove(&was_at);
             taken.insert(mob.position);
             mob.energy.spend(tick, mob.speed, cost);
