@@ -12,7 +12,9 @@ use super::layout::{Placed, SIZES, layout, size_of};
 use super::spawn::{Canvas, FORM, Origin};
 use crate::character::CharacterSheet;
 use crate::common::SkillsPageOpen;
-use crate::widgets::{INK, Shade, UiId, attribute_colour, leaves_presses, spawn_outlined_icon};
+use crate::widgets::{
+    INK, Shade, SkillRing, UiId, attribute_colour, leaves_presses, skill_ring, spawn_outlined_icon,
+};
 
 const LINE_THICKNESS: f32 = 2.0;
 const LINE_COLOUR: Color = Color::srgba(0.25, 0.17, 0.1, 0.55);
@@ -68,7 +70,8 @@ pub(super) fn build_tree(
         spawn_middle(origin, canvas);
         for one in &placed {
             let icon = icon_path(one.id).map(|path| assets.load(path));
-            spawn_skill(origin, one, icon, canvas);
+            let value = skills.value(one.id) as f32 / VALUE_SCALE as f32;
+            spawn_skill(origin, one, value, icon, canvas);
         }
     });
 }
@@ -124,10 +127,12 @@ fn spawn_middle(origin: &mut ChildSpawnerCommands, canvas: Entity) {
 }
 
 /// A known skill: coloured by what it leans on, its icon in white with a black
-/// outline, as abilities' are.
+/// outline, as abilities' are, and a ring round its edge for how good it is (its own
+/// value; specialising isn't built yet).
 fn spawn_skill(
     origin: &mut ChildSpawnerCommands,
     one: &Placed,
+    value: f32,
     icon: Option<Handle<Image>>,
     canvas: Entity,
 ) {
@@ -160,6 +165,10 @@ fn spawn_skill(
             .with_children(|holder| spawn_outlined_icon(holder, icon, Color::WHITE));
         });
     }
+    node.with_child((
+        skill_ring(SkillRing::of(value, false)),
+        leaves_presses(canvas),
+    ));
 }
 
 /// A value in hundredths as words, to a tenth: 2581 is "25.8".

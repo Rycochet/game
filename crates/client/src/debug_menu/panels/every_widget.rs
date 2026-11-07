@@ -169,6 +169,7 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
                 row.commands().entity(frame).insert(SampleAbility);
             }
         });
+    super::ring_samples::spawn_ring_samples(content);
     spawn_progress_bar(
         content,
         0.6,

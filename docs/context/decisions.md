@@ -1048,3 +1048,7 @@ Owner's design. Each row of attributes has a colour, the creation screen's trian
 ## 2026-11-07: Default ports 24690 and 24691
 
 Owner's request: 8080 and 8081 are used by many other programs, so the plain and secure ports are now 24690 and 24691 (`DEFAULT_PORT`, `HOW_ADDRESS`, `HOW_TLS_ADDRESS`, the Docker image). Neither is registered with IANA, both are below the ranges operating systems hand out for outgoing connections, and 469 spells HOW on a phone's keypad. 443 stays the second port Connect tries. Saved Server Options on exactly 8081 move to 24691, as that was only the default; remembered servers keep the port they were saved with. Connect doesn't also try 8081 for addresses typed without a port.
+
+## 2026-11-07: Skill rings
+
+Owner's design (Skills page follow-ups, PR 4 of 4). Each skill's circle has a ring round the inside of its edge, filled clockwise from the top by its own value (not counting the skills above it, which have their own rings), from a sliver when just learned to a full circle at 100. The whole ring takes the colour of its fifth, through the item qualities Common, Uncommon, Rare, Epic and Legendary, changing all at once at each threshold. Artifact is kept for specialising: a specialised skill gets a second full ring over it, filled from 100 to 120, drawn like a set item's metal edge with its sliding bands. Drawn by a shader (`widgets::skill_ring`), as the interface can't draw arcs. Specialising isn't built yet, so only Show Widgets shows the second ring.

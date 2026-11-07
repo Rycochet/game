@@ -7,7 +7,7 @@ fn it_says_the_chosen_skills_path_values_and_attributes() {
     skills.practise(climbing, 100);
     assert_eq!(
         describe(&skills, Some(climbing)),
-        "Athletics › Climbing: 17.0 in checks (10.0 of its own), from 100 practice. \
+        "Athletics › Climbing: 10.0 (17.0 in checks), from 100 practice. \
          Leans on Strength and Agility."
     );
     assert!(describe(&skills, None).starts_with("Point at or choose"));

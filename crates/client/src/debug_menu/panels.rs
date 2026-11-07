@@ -33,6 +33,7 @@ mod open;
 mod pictures_form;
 mod pictures_spawn;
 mod pictures_systems;
+mod ring_samples;
 mod steps;
 mod time_text;
 mod world_rate;
