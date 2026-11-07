@@ -2,6 +2,7 @@
 
 use bevy::math::DVec2;
 use bevy::prelude::*;
+use shared::dungeon::Cell;
 use shared::energy::{NORMAL_SPEED, site_step_cost};
 use shared::movement::{Step, step_cost, step_on_level, step_on_world_map, world_step_cost};
 use shared::pathfinding::{Path, find_path, find_world_path, straighten};
@@ -42,8 +43,16 @@ pub(super) fn travel(
     let (mut tile, mut smooth, mut travel) = player.into_inner();
     let enemies = enemy_cells(&others, *god);
     // Only through cells the player has seen, so that a route gives nothing away
-    // (and memory may be out of date: the server checks), and round enemies.
-    let known = |x, y| dungeon.remembered.is_seen(x, y) && !enemies.contains(&(x, y));
+    // (and memory may be out of date: the server checks), round enemies, and
+    // never through a World Gate on the way somewhere else.
+    let (remembered, level, enemies) = (&dungeon.remembered, &dungeon.level, &enemies);
+    let route_to = |goal: (i64, i64)| {
+        move |x, y| {
+            remembered.is_seen(x, y)
+                && !enemies.contains(&(x, y))
+                && ((x, y) == goal || level.cell(x, y) != Cell::WorldGate)
+        }
+    };
 
     // On the world map, the ground and the conditions now; in a dungeon, `None`.
     let ground = (*view.get() == GameView::WorldMap)
@@ -72,6 +81,7 @@ pub(super) fn travel(
                 find_world_path(ground, conditions, roads, from, to)
             }
             None => {
+                let known = route_to(to);
                 let path = find_path(&dungeon.level, from, to, None, known);
                 straighten(&dungeon.level, from, &path, known)
             }
@@ -148,6 +158,7 @@ pub(super) fn travel(
                 let in_the_way = enemies.contains(&next);
                 if in_the_way && ground.is_none() {
                     // An enemy has come between: go round it, from here.
+                    let known = route_to(travel.goal);
                     let path = find_path(&dungeon.level, at, travel.goal, None, known);
                     let path = Path {
                         cells: straighten(&dungeon.level, at, &path, known).cells,

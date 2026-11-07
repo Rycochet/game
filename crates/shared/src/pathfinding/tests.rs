@@ -392,3 +392,21 @@ fn a_distance_map_agrees_with_a_found_path_and_leads_both_ways() {
     assert_eq!(map.cost((-2, 0)), None);
     assert_eq!(map.cost((100, 100)), None);
 }
+
+#[test]
+fn distance_maps_never_go_through_world_gates() {
+    // A wall across the room with a World Gate as the only way through.
+    let mut level = Level::test_room();
+    for y in -3..=3 {
+        level.set(2, y, Cell::Wall);
+    }
+    level.set(2, 0, Cell::WorldGate);
+    let goal = (5, 0);
+    // A player could walk through it,
+    assert!(find_path(&level, (0, 0), goal, None, |_, _| true).reached);
+    // but mobs can't: the far side is out of their reach, and none stands on it.
+    let map = DistanceMap::to(&level, goal);
+    assert_eq!(map.cost((0, 0)), None);
+    assert_eq!(map.cost((2, 0)), None);
+    assert_eq!(map.towards(&level, (1, 0), |_| true), None);
+}

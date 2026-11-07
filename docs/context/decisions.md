@@ -1056,3 +1056,7 @@ Owner's design (Skills page follow-ups, PR 4 of 4). Each skill's circle has a ri
 ## 2026-11-07: UPnP for hosting from the game
 
 Owner's request: when a player's own game goes online, it asks the router to forward the port (UPnP), on by default with a switch in Server Options to turn it off. Only the embedded server does this: a standalone server's host sets up their own network. Going online never fails because of the router: Server Options says how it went (forwarded, with the address to copy; refused, and why; or forwarded but behind the provider's shared address, CGNAT, which forwarding can't get through). `igd-next` (MIT), on tokio and hyper as the server already uses them, rather than `portmapper` (also NAT-PMP and PCP, but much more besides). Claude's choices: forwardings last an hour and are renewed, so a game that stops without removing one leaves it for an hour at most; the external address isn't added to the certificate, which is made once.
+
+## 2026-11-07: Only players go through World Gates
+
+Owner: for now only players can go through World Gates, so mobs treat a gate's cell as blocked, in their steps and in the paths they plan (`movement::mob_step_on_level`, `mob_can_stand`, used by every mob step, guard spot, trail and distance map). On the client, clicking a gate's model walks onto its cell (unlike stairs, whose models let clicks through), and a route never crosses a gate it isn't going to, so walking past one never takes a player into the Hall by surprise.

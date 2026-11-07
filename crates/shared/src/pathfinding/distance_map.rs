@@ -5,10 +5,11 @@ use std::collections::BinaryHeap;
 
 use super::DIRECTIONS;
 use crate::dungeon::Level;
-use crate::movement::{Step, step_cost, step_on_level};
+use crate::movement::{Step, mob_can_stand, mob_step_on_level, step_cost};
 
 /// How long it takes to reach one goal from everywhere on a level, in
 /// `movement::step_cost` units: for many mobs after one target, sharing the work.
+/// By the mobs' rules (`movement::mob_step_on_level`): never over a World Gate.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DistanceMap {
     min: (i64, i64),
@@ -41,8 +42,8 @@ impl DistanceMap {
                 for reach in [1, 2] {
                     let from = (cell.0 - dx * reach, cell.1 - dy * reach);
                     let step = Step::new(dx, dy).expect("a direction is a step");
-                    if !level.is_walkable(from.0, from.1)
-                        || step_on_level(level, from, step) != Some(cell)
+                    if !mob_can_stand(level, from.0, from.1)
+                        || mob_step_on_level(level, from, step) != Some(cell)
                     {
                         continue;
                     }
@@ -109,7 +110,7 @@ impl DistanceMap {
             .iter()
             .filter_map(|&(dx, dy)| {
                 let step = Step::new(dx, dy)?;
-                let to = step_on_level(level, from, step)?;
+                let to = mob_step_on_level(level, from, step)?;
                 if !free(to) {
                     return None;
                 }
