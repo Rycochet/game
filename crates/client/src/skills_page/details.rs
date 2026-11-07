@@ -32,10 +32,10 @@ pub(super) fn describe(skills: &Skills, chosen: Option<SkillId>) -> String {
     path.reverse();
     let leans: Vec<_> = id.leans().iter().map(|which| which.name()).collect();
     format!(
-        "{}: {} in checks ({} of its own), from {} practice. Leans on {}.",
+        "{}: {} ({} in checks), from {} practice. Leans on {}.",
         path.join(" › "),
-        tenths(skills.total(id)),
         tenths(skills.value(id)),
+        tenths(skills.total(id)),
         skills.practice(id),
         leans.join(" and "),
     )

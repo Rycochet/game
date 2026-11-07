@@ -28,6 +28,7 @@ mod progress;
 mod scale;
 mod scroll;
 mod set_edge;
+mod skill_ring;
 mod slider;
 mod soft_keyboard;
 mod spinner;
@@ -77,6 +78,7 @@ pub use progress::{Progress, spawn_progress_bar};
 pub use scale::{INTERFACE_PERCENTS, TouchOnly};
 pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area};
 pub use set_edge::set_edge;
+pub use skill_ring::{SkillRing, skill_ring};
 pub use slider::{SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
 pub use spinner::Spinner;
@@ -154,6 +156,7 @@ impl Plugin for WidgetsPlugin {
             .add_plugins(UiMaterialPlugin::<aura::AuraMaterial>::default())
             .add_systems(Update, (aura::give_auras, aura::pulse_auras))
             .add_plugins(UiMaterialPlugin::<set_edge::SetEdgeMaterial>::default())
+            .add_plugins(UiMaterialPlugin::<skill_ring::SkillRingMaterial>::default())
             .add_systems(Startup, set_edge::make_set_edges)
             .add_systems(
                 Startup,
@@ -167,6 +170,8 @@ impl Plugin for WidgetsPlugin {
                 (
                     set_edge::give_set_edges,
                     (set_edge::drift_bands, set_edge::slide_bands).chain(),
+                    skill_ring::give_rings,
+                    skill_ring::slide_rings.after(set_edge::drift_bands),
                 ),
             )
             .add_systems(
