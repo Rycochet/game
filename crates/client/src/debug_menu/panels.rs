@@ -18,6 +18,8 @@ mod waist;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod change_creature;
+mod create_mob;
+mod create_mob_systems;
 mod dev_area;
 mod dev_area_systems;
 mod every_widget;
@@ -44,6 +46,9 @@ mod world_time;
 
 use change_creature::spawn_creature_buttons;
 pub(super) use change_creature::{ChosenChange, press_creature_buttons, update_creature_buttons};
+use create_mob::spawn_create_mob_panel;
+pub(super) use create_mob::{MobChoice, MobClickToPlace, MobCreate, MobNewSeed, MobSeed, MobStill};
+pub(super) use create_mob_systems::add_create_mob_panel;
 use dev_area::spawn_dev_area_panel;
 pub(super) use dev_area::{
     DevAreaChoice, DevAreaCount, DevAreaCountStep, DevAreaForm, DevAreaGenerate, DevAreaNewSeed,

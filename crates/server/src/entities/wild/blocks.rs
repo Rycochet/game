@@ -1,10 +1,8 @@
 //! An area taking blocks in and letting them go: their mobs made, kept and
 //! brought back.
 
-use shared::energy::Energy;
-use shared::mob::{Memory, scent_strength, wild_mob_id, wild_spawns};
+use shared::mob::{Memory, wild_mob_id, wild_spawns};
 use shared::rng::Seed;
-use shared::sheet::Sheet;
 use shared::wilderness::BlockPos;
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Instant;
@@ -170,32 +168,10 @@ fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64))
                 .and_then(|record| record.gear.clone())
                 .unwrap_or_else(|| dressed(spawn.kind, &spawn.gear, made_at));
             let position = (spawn.position.0 + turns * width, spawn.position.1);
+            let spawn = shared::mob::Spawn { position, ..spawn };
             Mob {
-                id,
-                kind: spawn.kind,
-                appearance: spawn.appearance,
-                position,
-                home: position,
-                doing: Doing::Idle,
-                target: None,
-                number: spawn.number,
                 memory: record.map_or_else(Memory::default, |r| r.memory.clone()),
-                home_level: 0,
-                way_back: Vec::new(),
-                energy: Energy::default(),
-                speed: Sheet {
-                    attributes: spawn.attributes,
-                    ..Sheet::new(spawn.kind)
-                }
-                .speed(&carrying),
-                shown: carrying.shown(),
-                scent: scent_strength(&carrying),
-                attributes: spawn.attributes,
-                vitals: Default::default(),
-                wielded: shared::combat::Wielded::of(&carrying),
-                fight: Default::default(),
-                harmed_by: Default::default(),
-                pacing: Default::default(),
+                ..Mob::new(id, &spawn, &carrying, 0)
             }
         })
         .collect();

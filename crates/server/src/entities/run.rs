@@ -57,7 +57,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
         }
 
         // Anyone at rest, settling or guarding may notice someone.
-        for mob in mobs.iter_mut() {
+        for mob in mobs.iter_mut().filter(|mob| !mob.still) {
             mind_territory(mob, level, &spots, tick);
             if let Some(doing) = notice(mob, level, &spots) {
                 let at_rest = mob.doing == Doing::Idle;
@@ -80,6 +80,12 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             let Some(mob) = mobs.iter_mut().find(|mob| mob.id == id) else {
                 continue;
             };
+            // Developer tools' Still: whatever happened, it does nothing.
+            if mob.still {
+                mob.doing = Doing::Idle;
+                mob.target = None;
+                continue;
+            }
             let mut crossing = None;
             let seen = |cell| {
                 standing

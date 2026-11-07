@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::OnlineSettings;
+use super::dev_mob::DevMob;
 use super::dev_skills::DevSkills;
 use super::dev_vitals::DevVitals;
 use super::kind_change::KindChange;
@@ -267,6 +268,9 @@ pub enum ClientMessage {
     /// Developer tools: make a Dev Area as if new and go into it; its way out
     /// leads back to where the player was before the first of them.
     DevGenerateArea(DevArea),
+    /// Developer tools: put a mob made to order on a cell of the player's site
+    /// level (`DevMob`). Not kept: it goes when the level is let go.
+    DevCreateMob(DevMob),
     /// Developer tools: harm, spend, fill or raise the character's Health and
     /// Mana (`DevVitals`), answered with `Vitals`.
     DevVitals(DevVitals),

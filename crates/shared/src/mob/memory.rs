@@ -173,6 +173,12 @@ impl Memory {
             .unwrap_or(start)
     }
 
+    /// Developer tools: it stands with this character so from now on, as if
+    /// something had changed its mind.
+    pub fn set_standing(&mut self, about: CharacterId, standing: Feeling) {
+        self.regard_mut(about).standing = Some(standing);
+    }
+
     /// What it thinks of this character, in thousandths of a Health point.
     pub fn opinion(&self, about: &CharacterId) -> i64 {
         let gifts = self

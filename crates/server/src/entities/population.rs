@@ -2,11 +2,10 @@
 
 use shared::creature::CreatureKind;
 use shared::dungeon::line_is_clear;
-use shared::energy::Energy;
-use shared::mob::{Memory, scent_strength, spawns};
+use shared::mob::{Memory, spawns};
 use shared::poi::Poi;
 use shared::protocol::CharacterId;
-use shared::sheet::{Feeling, Sheet};
+use shared::sheet::Feeling;
 use shared::site::SiteLevel;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -55,33 +54,12 @@ impl ServerWorld {
                     due.insert((tick, id));
                 }
                 Mob {
-                    id,
-                    kind: spawn.kind,
-                    appearance: spawn.appearance,
                     position: carried_on.map_or(spawn.position, |saved| saved.position),
-                    home: spawn.position,
                     doing: carried_on.map_or(Doing::Idle, |saved| saved.doing),
-                    target: None,
-                    number: spawn.number,
                     memory: records
                         .get(&id)
                         .map_or_else(Memory::default, |r| r.memory.clone()),
-                    home_level: index,
-                    way_back: Vec::new(),
-                    energy: Energy::default(),
-                    speed: Sheet {
-                        attributes: spawn.attributes,
-                        ..Sheet::new(spawn.kind)
-                    }
-                    .speed(&carrying),
-                    shown: carrying.shown(),
-                    scent: scent_strength(&carrying),
-                    attributes: spawn.attributes,
-                    vitals: Default::default(),
-                    wielded: shared::combat::Wielded::of(&carrying),
-                    fight: Default::default(),
-                    harmed_by: Default::default(),
-                    pacing: Default::default(),
+                    ..Mob::new(id, &spawn, &carrying, index)
                 }
             })
             .collect();
@@ -186,7 +164,10 @@ impl ServerWorld {
                 .mobs
                 .iter()
                 .filter(|mob| {
-                    mob.doing != Doing::Idle && mob.home_level == level && mob.way_back.is_empty()
+                    mob.doing != Doing::Idle
+                        && mob.home_level == level
+                        && mob.way_back.is_empty()
+                        && !mob.is_dev_made()
                 })
                 .map(|mob| {
                     let saved = SavedMob {

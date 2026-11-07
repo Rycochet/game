@@ -184,6 +184,15 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             },
             seed: 5,
         }),
+        ClientMessage::DevCreateMob(super::DevMob {
+            kind: crate::creature::CreatureKind::Goblin,
+            x: -4,
+            y: 9,
+            attitude: Some(crate::sheet::Feeling::Friendly),
+            gear: true,
+            still: true,
+            seed: 12,
+        }),
         ClientMessage::DevEnterSite {
             kind: PoiKind::Crypt,
             seed: 3,

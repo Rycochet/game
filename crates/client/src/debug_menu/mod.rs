@@ -41,7 +41,7 @@ impl Plugin for DebugMenuPlugin {
             .init_resource::<panels::PicturesForm>()
             .add_message::<DebugAction>()
             .add_message::<panels::GenerateKind>()
-            .add_plugins(panels::add_dev_area_panel)
+            .add_plugins((panels::add_dev_area_panel, panels::add_create_mob_panel))
             .add_systems(
                 Startup,
                 (menu::spawn_menu, delete_character::spawn_delete_dialog),
@@ -281,6 +281,7 @@ fn run_actions(
                 open.toggle(action, &mut commands, &mut raise, &nodes);
             }
             DebugAction::ChangeCreature
+            | DebugAction::CreateMob
             | DebugAction::DevArea
             | DebugAction::FieldsState
             | DebugAction::GiveItem
