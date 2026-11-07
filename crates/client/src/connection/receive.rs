@@ -199,6 +199,7 @@ pub(super) fn receive(
                 | ServerMessage::OnWorldMap { .. }
                 | ServerMessage::Teleported { .. }
                 | ServerMessage::Inventory(_)
+                | ServerMessage::NotWorn { .. }
                 | ServerMessage::TradeStock { .. }
                 | ServerMessage::ItemsLookedUp { .. }
                 | ServerMessage::GroundItems { .. }

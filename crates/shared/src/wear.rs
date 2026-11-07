@@ -16,8 +16,10 @@ mod changes;
 mod check;
 mod secrets;
 mod shown;
+mod swap;
 
 pub use shown::WornLook;
+pub use swap::Swapped;
 
 /// Whether something is made for a number of fingers, so only fits hands with that
 /// many unless magical: anything over each finger, but not mittens, which take any
@@ -46,7 +48,7 @@ pub enum Fit {
 }
 
 /// Why something can't be put on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum WearRefused {
     /// It isn't carried.
     NoSuchItem,
@@ -60,8 +62,13 @@ pub enum WearRefused {
     WrongFingers,
     /// Something on the same layer is in the way.
     Clash(Id),
-    /// Something on a higher layer covers one of its locations.
+    /// Something on a higher layer covers one of its locations, or one of what
+    /// would come off for it.
     Covered(Id),
+    /// What is in its way won't come off: cursed, or blessed for someone else.
+    Stuck(Id),
+    /// What is in its way has no room in the inventory to go.
+    NoRoom(Id),
 }
 
 impl WearRefused {
@@ -116,5 +123,7 @@ fn coverage(item: &Item) -> Vec<(Location, Layer)> {
     own.chain(padding).collect()
 }
 
+#[cfg(test)]
+mod swap_tests;
 #[cfg(test)]
 mod tests;

@@ -67,7 +67,7 @@ A black ring turns under your target. Tab and Shift + Tab go through enemies fro
 | Put back an item you are holding | Esc, or drop it where it can't go | Drop it where it can't go |
 | See an item's name | Point at it | Tap it |
 | Open a bag | Double-click it | Double-tap it |
-| Put on or take off clothes | Drag them onto the clothes panel, or off it into a grid | The same |
+| Put on or take off clothes | Drag them onto the clothes panel, or off it into a grid; whatever is in the way comes off into your inventory, and a red line says why if it can't | The same |
 | Give something to someone near | Drag it onto their name in the Nearby panel | The same |
 | Throw an item away, with all that is in it | Drop it on the bin under your inventory. Take it back until you throw away something else, which destroys it | The same |
 | Open the [debug menu](debug-menu) | Backtick (`` ` ``), or click the warning button at the top left | Tap the warning button |

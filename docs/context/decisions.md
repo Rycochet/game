@@ -1078,3 +1078,7 @@ Owner's design. A mob keeps two things about each character, apart: its **standi
 ## 2026-11-07: Skills is a Character panel tab
 
 Owner's request. The Skills page is the Character panel's fourth tab (K), no longer a full-screen layer, and the Abilities page has no Skills button. As a tab it takes input only over its tree, leaving the rest of the screen to the game (`client/skills_page.md`).
+
+## 2026-11-07: Putting something on swaps out what is in its way
+
+Owner's request. A player putting something on takes off whatever on its layer is in its way into their inventory, even several things for one, by `shared::wear::wear_swapping`, which both sides use. It is refused, changing nothing, if any of that is covered, won't come off or has no room, and the player is told why (`ServerMessage::NotWorn`, shown under the clothes). Mobs still dress by the plain rule.

@@ -8,6 +8,7 @@ use shared::item::Item;
 use shared::protocol::ClientMessage;
 
 use super::super::hold::{Target, stack_onto};
+use super::super::wear_note::try_wearing;
 use super::super::{Carried, HeldBy, Holding};
 use super::Outbox;
 use crate::common::{GROUND, GaveItem, HeldOverGifts, HeldStock, SpentEnergy, TookItem};
@@ -28,8 +29,16 @@ pub(super) fn let_go_of(
         took,
         spent,
         stacks,
+        wear: (note, god, time),
         ..
     } = out;
+    if aim == (Target::Body { allowed: false }) {
+        let new = holding.stock.as_ref().map(|(_, item)| item);
+        let tried = try_wearing(&carried.0, (held.item.id, new), god.0, stacks.0);
+        if let Err(why) = tried {
+            note.say(why, &carried.0, time.elapsed_secs_f64());
+        }
+    }
     if let Some((with, item)) = holding.stock.take() {
         held_stock.set_if_neq(HeldStock(None));
         if let Some(gift) = over_gifts.0 {
@@ -50,8 +59,12 @@ pub(super) fn let_go_of(
             let all_of_it = top.is_none();
             let wearing = top.unwrap_or(item);
             let grams = wearing.total_weight();
-            // Otherwise only the server can say.
-            if carried.0.wear_new(wearing).is_ok() {
+            // Otherwise only the server can say. What is in its way comes off.
+            if carried
+                .0
+                .wear_new_swapping(wearing, god.0, stacks.0)
+                .is_ok()
+            {
                 if all_of_it {
                     took.write(TookItem { with, item: id });
                 }
@@ -117,8 +130,8 @@ pub(super) fn let_go_of(
         let top = carried.0.find(item).map(Item::top);
         let grams = top.map_or(0, Item::total_weight);
         send(ToServer(ClientMessage::WearItem { item }));
-        // Otherwise only the server can say.
-        if carried.0.wear(item).is_ok() {
+        // Otherwise only the server can say. What is in its way comes off.
+        if carried.0.wear_swapping(item, god.0, stacks.0).is_ok() {
             spent.write(SpentEnergy(dressing_cost(grams)));
         }
         return;

@@ -42,6 +42,7 @@ mod roads;
 mod systems;
 mod visited_gates;
 mod vitals;
+mod wearing;
 mod welcome;
 
 pub(super) use answer::answer;
@@ -303,5 +304,7 @@ mod shapeshift_tests;
 pub(crate) mod tests;
 #[cfg(test)]
 mod vitals_tests;
+#[cfg(test)]
+mod wearing_tests;
 #[cfg(test)]
 mod worlds_tests;
