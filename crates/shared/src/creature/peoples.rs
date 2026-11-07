@@ -16,10 +16,10 @@ use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, Ski
 
 /// A body with these layers at one of its locations instead.
 const fn with(
-    mut body: [BodyPart; 11],
+    mut body: [BodyPart; 12],
     location: Location,
     layers: &'static [Layer],
-) -> [BodyPart; 11] {
+) -> [BodyPart; 12] {
     let mut at = 0;
     while at < body.len() {
         if body[at].location as u8 == location as u8 {
@@ -31,16 +31,16 @@ const fn with(
 }
 
 /// On its toes, hooves or talons: a person's boots and sabatons don't go on its feet.
-const fn not_plantigrade(body: [BodyPart; 11]) -> [BodyPart; 11] {
+const fn not_plantigrade(body: [BodyPart; 12]) -> [BodyPart; 12] {
     with(body, Location::Feet, SKIN)
 }
 
 /// On its toes, with eight fingers: kobolds and lizardfolk.
-pub(super) const ON_TOES: [BodyPart; 11] = not_plantigrade(biped(8));
-const HOOVES: [BodyPart; 11] = not_plantigrade(TEN_FINGERS);
+pub(super) const ON_TOES: [BodyPart; 12] = not_plantigrade(biped(8));
+const HOOVES: [BodyPart; 12] = not_plantigrade(TEN_FINGERS);
 /// Its arms are wings and it stands on talons: nothing but rings and the like on its
-/// arms, hands or feet.
-const WINGED: [BodyPart; 11] = not_plantigrade(with(
+/// arms, hands or feet, though its hands can still hold a weapon.
+const WINGED: [BodyPart; 12] = not_plantigrade(with(
     with(biped(6), Location::Arms, SKIN),
     Location::Hands,
     SKIN,

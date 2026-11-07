@@ -7,6 +7,7 @@ mod damage;
 mod power;
 mod reach;
 mod weapon;
+mod wielded;
 
 pub use cost::{
     ATTACK_WIND_UP, COST_PER_GRAM_MILLI, DUAL_SAVING, MEDIAN, SKILL_SAVING, UNARMED_COST,
@@ -19,6 +20,9 @@ pub use damage::{
 pub use power::{SKILL_FLOOR, power};
 pub use reach::in_reach;
 pub use weapon::Weapon;
+pub use wielded::Wielded;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod wielded_tests;

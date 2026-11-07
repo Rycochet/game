@@ -3,11 +3,12 @@
 //! with the same holding as everything else.
 
 use bevy::prelude::*;
-use shared::creature::Layer;
+use shared::creature::{Layer, Location};
 use shared::id::Id;
 use shared::item::{Inventory, Item, Rotation, Shape};
 use shared::wear::{Fit, Remover};
 
+use super::hands::{held_now, in_hands};
 use super::hold::Target;
 use super::panels::ItemCell;
 use super::{Carried, Holding};
@@ -197,7 +198,24 @@ pub(super) fn show_clothes(
                 rows.spawn((BodyNode, Node::default()))
                     .with_children(|row| {
                         row.spawn(words(format!("{:?}", part.location), NAME_WIDTH));
+                        let holding: Vec<&Item> = if part.location == Location::Held {
+                            held_now(inventory, held)
+                        } else {
+                            Vec::new()
+                        };
+                        let hands = (part.location == Location::Held).then(|| in_hands(&holding));
                         for layer in Layer::ALL {
+                            if let Some(hands) = hands {
+                                // A slot for each hand, under Out and Over.
+                                match layer {
+                                    Layer::Outer => spawn_slot(row, inventory, hands[0], god.0),
+                                    Layer::Over => spawn_slot(row, inventory, hands[1], god.0),
+                                    _ => {
+                                        row.spawn((BodyNode, slot_node()));
+                                    }
+                                }
+                                continue;
+                            }
                             if !part.layers.contains(&layer) {
                                 row.spawn((BodyNode, slot_node()));
                                 continue;

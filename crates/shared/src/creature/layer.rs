@@ -36,4 +36,7 @@ pub enum Location {
     /// For packs and cloaks: armour for the back is on `Torso`, so it never stops a
     /// pack going on.
     Back,
+    /// What is held to fight with: two places, one for each hand, though neither is
+    /// the left or the right (owner, 2026-11-07). A two-handed weapon takes both.
+    Held,
 }

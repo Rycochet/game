@@ -6,6 +6,7 @@
 //! nothing on a higher layer is at any of its locations.
 
 use crate::armour::hands::Fingers;
+use crate::blade::Hands;
 use crate::creature::{Layer, Location, Size};
 use crate::id::Id;
 use crate::item::{Item, Made, Quality, WearDef};
@@ -25,6 +26,15 @@ fn made_for_fingers(item: &Item, wear: &WearDef) -> bool {
     let mitten =
         matches!(&item.form, Some(ItemForm::Hands(hands)) if hands.fingers == Fingers::Mitten);
     !wear.one_place && wear.locations.contains(&Location::Fingers) && !mitten
+}
+
+/// Whether it takes only one place of its location (a ring, a one-handed weapon),
+/// rather than all of it: a two-handed blade takes both hands, though its kind
+/// says one place, as blades of one kind differ.
+pub fn takes_one_place(item: &Item) -> bool {
+    let two_handed =
+        matches!(&item.form, Some(ItemForm::Blade(blade)) if blade.hands == Hands::Two);
+    item.kind.def().wear.is_some_and(|wear| wear.one_place) && !two_handed
 }
 
 /// How an item fits its wearer.

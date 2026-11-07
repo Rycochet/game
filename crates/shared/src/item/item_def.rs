@@ -85,6 +85,18 @@ pub(super) const fn bag(
     }
 }
 
+/// Held in a hand to fight with (`Location::Held`), by anyone a size either way
+/// of whom it was made for. A two-handed one takes both hands (`Item::takes_one_place`).
+pub(super) const HELD: WearDef = WearDef {
+    layer: Layer::Outer,
+    locations: &[Location::Held],
+    one_place: true,
+    padded: &[],
+    down: 1,
+    up: 1,
+    adjustable: true,
+};
+
 pub(super) const fn wear(
     layer: Layer,
     locations: &'static [Location],

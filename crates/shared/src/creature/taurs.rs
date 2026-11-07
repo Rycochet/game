@@ -5,14 +5,14 @@
 //! skills and weights are first guesses.
 
 use super::bodies::{
-    ALL_LAYERS, BACK, MIDDLE_OUTER, MIDDLE_OUTER_OVER, SKIN_TO_OUTER, fingers, part,
+    ALL_LAYERS, BACK, HELD, MIDDLE_OUTER, MIDDLE_OUTER_OVER, SKIN_TO_OUTER, fingers, part,
 };
 use super::guesses::medians;
 use super::{BodyPart, CreatureDef, Location, Size};
 use crate::sheet::{Ability, Trait};
 
 /// A person's upper body: nothing worn below the waist, as there is no person there.
-const UPPER_BODY: [BodyPart; 8] = [
+const UPPER_BODY: [BodyPart; 9] = [
     part(Location::Head, SKIN_TO_OUTER),
     part(Location::Neck, SKIN_TO_OUTER),
     part(Location::Shoulders, MIDDLE_OUTER_OVER),
@@ -21,6 +21,7 @@ const UPPER_BODY: [BodyPart; 8] = [
     part(Location::Torso, ALL_LAYERS),
     part(Location::Hands, MIDDLE_OUTER),
     fingers(10),
+    HELD,
 ];
 
 const LOOKS: &[Trait] = &[

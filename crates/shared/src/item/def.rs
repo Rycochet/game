@@ -1,6 +1,6 @@
 //! What each kind of item is: its name, weight, cells, and how it is carried or worn.
 
-use super::item_def::{bag, plain, wear};
+use super::item_def::{HELD, bag, plain, wear};
 use super::{ItemDef, ItemKind, Shape, WearDef};
 use crate::creature::{Layer, Location};
 
@@ -56,7 +56,7 @@ impl ItemKind {
                     false,
                 )),
                 // A blade's weight and shape are its form's: these are only for one without.
-                Self::Axe => plain("Axe", 900, Shape::rectangle(1, 3)),
+                Self::Axe => plain("Axe", 900, Shape::rectangle(1, 3)).worn(HELD),
                 Self::Backpack => bag(
                     "Backpack",
                     1200,
@@ -128,7 +128,7 @@ impl ItemKind {
                     Shape::rectangle(2, 4),
                 )
                 .worn(wear(Outer, &[Waist, Legs], (0, 0), false)),
-                Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)),
+                Self::Dagger => plain("Dagger", 400, Shape::rectangle(1, 2)).worn(HELD),
                 // Sabatons, mail shoes and foot guards, over shoes or boots; its form says
                 // its name, cells and weight.
                 Self::FootArmour => plain("Foot Armour", 800, Shape::rectangle(2, 2)).worn(wear(
@@ -174,7 +174,7 @@ impl ItemKind {
                     (0, 0),
                     false,
                 )),
-                Self::Knife => plain("Knife", 200, Shape::rectangle(1, 2)),
+                Self::Knife => plain("Knife", 200, Shape::rectangle(1, 2)).worn(HELD),
                 Self::Lantern => plain("Lantern", 800, Shape::rectangle(1, 2)),
                 // Both legs, or a single Classical greave; its form says its name, cells
                 // and weight.
@@ -184,7 +184,7 @@ impl ItemKind {
                     (0, 0),
                     false,
                 )),
-                Self::Longsword => plain("Longsword", 2000, Shape::rectangle(1, 6)),
+                Self::Longsword => plain("Longsword", 2000, Shape::rectangle(1, 6)).worn(HELD),
                 Self::Necklace => {
                     plain("Necklace", 40, square).worn(wear(Skin, &[Neck], (5, 5), true))
                 }
@@ -194,7 +194,7 @@ impl ItemKind {
                 // Under gauntlets.
                 Self::PaddedGloves => plain("Padded Gloves", 150, Shape::rectangle(2, 1))
                     .worn(wear(Middle, &[Hands, Fingers], (1, 0), false)),
-                Self::Polearm => plain("Polearm", 3000, Shape::rectangle(1, 8)),
+                Self::Polearm => plain("Polearm", 3000, Shape::rectangle(1, 8)).worn(HELD),
                 Self::Pouch => bag(
                     "Pouch",
                     80,
@@ -207,7 +207,7 @@ impl ItemKind {
                     one_place: true,
                     ..wear(Skin, &[Fingers], (1, 1), true)
                 }),
-                Self::ShortSword => plain("Short Sword", 900, Shape::rectangle(1, 4)),
+                Self::ShortSword => plain("Short Sword", 900, Shape::rectangle(1, 4)).worn(HELD),
                 // A pair: its form says its kind, name, cells and weight.
                 Self::ShoulderArmour => plain("Shoulder Armour", 2600, Shape::rectangle(3, 2))
                     .worn(wear(Outer, &[Shoulders], (0, 0), false)),
@@ -220,7 +220,7 @@ impl ItemKind {
                     None,
                 ),
                 Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
-                Self::Spear => plain("Spear", 1500, Shape::rectangle(1, 8)),
+                Self::Spear => plain("Spear", 1500, Shape::rectangle(1, 8)).worn(HELD),
                 Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)).without_quality(),
                 // Belted over armour, to the knee, which doesn't count as the legs.
                 Self::Surcoat => plain("Surcoat", 800, Shape::rectangle(2, 3)).worn(wear(
@@ -229,7 +229,7 @@ impl ItemKind {
                     (1, 1),
                     true,
                 )),
-                Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)),
+                Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)).worn(HELD),
                 Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
                     Skin,
                     &[Torso, Arms],
