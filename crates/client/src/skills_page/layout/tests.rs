@@ -60,11 +60,49 @@ fn siblings_share_their_parents_slice_by_what_ends_under_them() {
     skills.practise(find("athletics/running"), 100);
     let placed = layout(&skills);
     let at = |path: &str| placed.iter().find(|one| one.id == find(path)).unwrap().at;
-    // Athletics alone has the whole circle, and its two ends a half each,
-    // their middles a quarter of the way round either side of the top.
-    for (path, degrees) in [("athletics/climbing", 90.0), ("athletics/running", 270.0)] {
+    // Athletics alone has the whole circle, so it sits at the bottom (180
+    // degrees); its two ends share the 90 degrees its children may spread over,
+    // a half each, round its line.
+    for (path, degrees) in [
+        ("athletics/climbing", 180.0 - 22.5),
+        ("athletics/running", 180.0 + 22.5),
+    ] {
         let angle = f32::to_radians(degrees);
         let expected = Vec2::new(angle.sin(), -angle.cos()) * RINGS[2];
         assert!(at(path).distance(expected) < 0.01, "{path}");
     }
+}
+
+/// Every node is further out than its parent, along its parent's own line.
+fn assert_outwards(placed: &[Placed]) {
+    for one in placed {
+        if one.from == Vec2::ZERO {
+            continue;
+        }
+        let along = (one.at - one.from).dot(one.from.normalize());
+        assert!(along > 0.0, "{} points back ({along})", one.id.path());
+    }
+}
+
+#[test]
+fn branches_always_point_outwards() {
+    // One branch alone, as a new character has (the owner's screenshot).
+    let mut alone = Skills::default();
+    for path in ["athletics/climbing", "athletics/swimming"] {
+        alone.practise(find(path), 100);
+    }
+    assert_outwards(&layout(&alone));
+    // One deep branch with many ends.
+    let mut melee = Skills::default();
+    for &child in find("combat/melee/longsword").children() {
+        melee.practise(child, 100);
+    }
+    melee.practise(find("combat/melee/defence/buckler"), 100);
+    assert_outwards(&layout(&melee));
+    // Everything known at once.
+    let mut everything = Skills::default();
+    for id in SkillId::all().filter(|id| id.children().is_empty()) {
+        everything.practise(id, 100);
+    }
+    assert_outwards(&layout(&everything));
 }
