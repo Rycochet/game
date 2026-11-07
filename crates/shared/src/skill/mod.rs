@@ -10,6 +10,7 @@
 
 mod branches;
 mod draft;
+mod familiar;
 mod id;
 mod old;
 mod practice;
@@ -17,6 +18,7 @@ mod save_format;
 mod tree;
 mod window;
 
+pub use familiar::{FAMILIAR_HALVING, familiarity, taught};
 pub use id::SkillId;
 pub use practice::{Skills, VALUE_SCALE, level_practice};
 pub use tree::key_of;

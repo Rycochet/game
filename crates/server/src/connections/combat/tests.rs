@@ -155,6 +155,12 @@ fn blows_kill_a_mob_for_good() {
     }
     assert_eq!(mob_health(&test, mob), None);
     assert!(test.world.died.contains(&mob));
+    // The killer shares in it once everyone is told who died.
+    crate::entities::sync(std::slice::from_mut(&mut test.client), &mut test.world, &[]);
+    let dwarves = test.client.sheet.foes.of(CreatureKind::Dwarf);
+    assert_eq!(dwarves.defeated, 1);
+    assert!(dwarves.fought > 0);
+    assert!(test.world.kills.is_empty());
 }
 
 #[test]

@@ -147,6 +147,11 @@ pub(super) fn bury(world: &mut ServerWorld, place: (SiteId, u32), here_index: u3
     let at = population.mobs[index].position;
     let dead = population.mobs.remove(index);
     world.died.insert(mob);
+    world.kills.push(super::Kill {
+        place,
+        kind: dead.kind,
+        by: dead.harmed_by.clone(),
+    });
     population.due.retain(|&(_, id)| id != mob);
     // Its home level was waiting for it to come back.
     if !dead.way_back.is_empty()

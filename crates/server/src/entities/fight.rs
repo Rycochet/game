@@ -160,6 +160,7 @@ pub(crate) fn hit_mob(
     one.vitals.hurt(harm, limits, tick, 0);
     let left = health_left(&one.vitals, limits, tick);
     let kind = one.kind;
+    one.harmed_by.harmed(by.id, tick);
     // Whatever it was doing, it goes for whoever hit it.
     let after_them = matches!(one.doing, Doing::Going { after, .. } if after == by.id);
     if !after_them {

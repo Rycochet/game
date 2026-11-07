@@ -111,6 +111,9 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             taken.insert(mob.position);
             mob.energy.spend(tick, mob.speed, cost);
             mob.target = mob.doing.target();
+            if mob.doing.gave_up() {
+                mob.harmed_by.clear();
+            }
             if let Some(crossing) = crossing {
                 crossings.push(crossing);
             } else if mob.doing != Doing::Idle {

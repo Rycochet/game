@@ -20,6 +20,15 @@ impl Doing {
             _ => None,
         }
     }
+
+    /// Whether it has given up fighting: at rest, settling or going home. Who
+    /// harmed it is forgotten then (`HarmedBy`), so a later fight starts afresh.
+    pub(crate) fn gave_up(&self) -> bool {
+        matches!(
+            self,
+            Self::Idle | Self::Settling { .. } | Self::GoingHome { .. }
+        )
+    }
 }
 
 #[cfg(test)]

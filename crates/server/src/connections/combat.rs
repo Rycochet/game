@@ -7,6 +7,7 @@ use shared::combat::{CANCEL_PENALTY, Fighter, PRACTICE_PER_BLOW, Swing, Wielded,
 use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::protocol::{Landed, ServerMessage};
+use shared::skill::{familiarity, taught};
 use shared::vitals::{Points, Vital};
 
 use super::Client;
@@ -46,16 +47,20 @@ impl Client {
     }
 
     /// Practises these skills fighting a creature of this kind at action tick
-    /// `now`, keeping the sheet to be saved. Each skill takes one practice every 5
-    /// seconds, and each kind counts once in that time as a block fought.
+    /// `now`, keeping the sheet to be saved. A kind fought often teaches less
+    /// (`skill::taught`); each skill takes one practice every 5 seconds, and each
+    /// kind counts once in that time as a block fought.
     fn practise(
         &mut self,
         skills: impl IntoIterator<Item = shared::skill::SkillId>,
         foe: CreatureKind,
         now: u64,
     ) {
+        let familiar = familiarity(self.sheet.foes.of(foe).fought);
         for skill in skills {
-            let amount = self.learning.skills.take(skill, PRACTICE_PER_BLOW, now);
+            let value = self.sheet.skills.value(skill);
+            let amount = taught(PRACTICE_PER_BLOW, familiar, value);
+            let amount = self.learning.skills.take(skill, amount, now);
             self.sheet.skills.practise(skill, amount);
         }
         if self.learning.foes.take(foe, 1, now) > 0 {
