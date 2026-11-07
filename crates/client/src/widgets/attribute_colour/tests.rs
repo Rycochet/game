@@ -21,12 +21,17 @@ fn one_row_takes_its_colour_and_two_rows_mix() {
 fn active_is_darker_and_passive_lighter_than_the_row() {
     let [red, green, blue] = row_rgb(Row::Body);
     let row = rgb(Color::srgb_u8(red, green, blue));
-    let active = rgb(attribute_colour(&[Attribute::Strength], false));
-    let passive = rgb(attribute_colour(&[Attribute::Strength], true));
+    let active = rgb(attribute_colour(&[Attribute::Strength], Shade::Active));
+    let passive = rgb(attribute_colour(&[Attribute::Strength], Shade::Passive));
     for index in 0..3 {
         assert!(active[index] < row[index] + 1e-6);
         assert!(passive[index] > row[index] - 1e-6);
     }
+    // A skill's is the rows' own colour, between the two.
+    let skill = rgb(attribute_colour(&[Attribute::Strength], Shade::Skill));
+    for index in 0..3 {
+        assert!((skill[index] - row[index]).abs() < 1e-3);
+    }
     // Leaning on nothing still has a colour.
-    assert_ne!(attribute_colour(&[], false), Color::BLACK);
+    assert_ne!(attribute_colour(&[], Shade::Active), Color::BLACK);
 }

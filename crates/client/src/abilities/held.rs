@@ -8,7 +8,7 @@ use super::drag::Drag;
 use super::icons::icon_path;
 use super::use_ability::UseSlot;
 use crate::common::{Action, Preferences};
-use crate::widgets::{ABILITY, Floating, HELD_ITEM_Z, attribute_colour};
+use crate::widgets::{ABILITY, Floating, HELD_ITEM_Z, Shade, attribute_colour};
 
 /// The picture following the pointer while an ability is dragged.
 #[derive(Component)]
@@ -59,7 +59,7 @@ pub(super) fn show_held(
     }
     // Over the colour of what it leans on, as on the page and the bar.
     let ability = held.ability;
-    let colour = attribute_colour(ability.leans(), !ability.is_active());
+    let colour = attribute_colour(ability.leans(), Shade::of_ability(!ability.is_active()));
     background.set_if_neq(BackgroundColor(colour));
     node.left = px(held.at.x - ABILITY / 2.0);
     node.top = px(held.at.y - ABILITY / 2.0);

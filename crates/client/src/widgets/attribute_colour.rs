@@ -22,18 +22,36 @@ pub const fn row_rgb(row: Row) -> [u8; 3] {
     }
 }
 
+/// How a blend of the rows' colours is shaded, by what it is for (owner,
+/// 2026-11-07): so active abilities, passive ones and skills each read apart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shade {
+    /// An ability done when asked: dark.
+    Active,
+    /// An ability always at work: pastel.
+    Passive,
+    /// A skill, which just is, and serves either kind of ability: in between,
+    /// the rows' own colours.
+    Skill,
+}
+
+impl Shade {
+    /// An ability's: `Passive` if it is, otherwise `Active`.
+    pub fn of_ability(passive: bool) -> Self {
+        if passive { Self::Passive } else { Self::Active }
+    }
+}
+
 /// The rows' colours mixed by how many of these attributes are in each, then
-/// darkened (active) or made pastel (passive).
-pub fn attribute_colour(leans: &[Attribute], passive: bool) -> Color {
+/// shaded for what it is for.
+pub fn attribute_colour(leans: &[Attribute], shade: Shade) -> Color {
     let [red, green, blue] = blend(leans);
-    let shade = |channel: f32| {
-        if passive {
-            channel + (1.0 - channel) * PASTEL
-        } else {
-            channel * DARKENED
-        }
+    let shaded = |channel: f32| match shade {
+        Shade::Active => channel * DARKENED,
+        Shade::Passive => channel + (1.0 - channel) * PASTEL,
+        Shade::Skill => channel,
     };
-    Color::srgb(shade(red), shade(green), shade(blue))
+    Color::srgb(shaded(red), shaded(green), shaded(blue))
 }
 
 /// The rows' colours mixed, each channel from 0 to 1.
