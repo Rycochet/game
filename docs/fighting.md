@@ -28,7 +28,7 @@ How long an attack takes depends on what you hold:
 | Sword | One a second |
 | Polearm | One every two seconds |
 
-Long and heavy weapons are slower, and strength makes them quicker. Skill with the weapon makes every attack a little quicker. Heavier loads slow everything you do.
+Long and heavy weapons are slower, and agility makes them quicker. Skill with the weapon makes every attack a little quicker. Heavier loads slow everything you do.
 
 ## Harm
 

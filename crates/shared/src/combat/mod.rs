@@ -12,7 +12,7 @@ mod wielded;
 
 pub use cost::{
     ATTACK_WIND_UP, CANCEL_PENALTY, COST_PER_GRAM_MILLI, DUAL_SAVING, MEDIAN, SKILL_SAVING,
-    UNARMED_COST, attack_cost, skill_percent, strength_lightens, weapon_cost, wind_up,
+    UNARMED_COST, agility_quickens, attack_cost, skill_percent, weapon_cost, wind_up,
 };
 pub use damage::{
     ARMOUR_HALF, Blow, EDGE, UNARMED_DAMAGE, blow, metal_factor, off_hand_share, past_defence,

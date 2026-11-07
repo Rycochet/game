@@ -24,13 +24,15 @@ pub const CANCEL_PENALTY: u32 = 420;
 /// the rest is the recovery after it.
 pub const ATTACK_WIND_UP: u64 = 250;
 
-/// How much strength lightens a weapon, per mille: the median's is 1000, twice
-/// as strong halves it, never past half or double.
-pub fn strength_lightens(strength: u16) -> u64 {
-    (MEDIAN * 1000 / u64::from(strength.max(1))).clamp(500, 2000)
+/// How much agility quickens a weapon, per mille of its weight's cost: the
+/// median's is 1000, twice as agile halves it, never past half or double.
+/// (Owner: the body's three attributes are melee's three sides: Toughness for
+/// Health, Agility for speed, Strength for harm.)
+pub fn agility_quickens(agility: u16) -> u64 {
+    (MEDIAN * 1000 / u64::from(agility.max(1))).clamp(500, 2000)
 }
 
-/// What the weapon alone costs to swing, before strength and skill: bare hands
+/// What the weapon alone costs to swing, before agility and skill: bare hands
 /// plus its handling weight. Also how hard it hits (`damage::weapon_base`).
 pub fn weapon_cost(weapon: &Weapon) -> u64 {
     u64::from(UNARMED_COST) + u64::from(weapon.handling_grams()) * COST_PER_GRAM_MILLI / 1000
@@ -43,12 +45,12 @@ pub fn skill_percent(value_hundredths: u32) -> u64 {
 }
 
 /// What one attack costs: bare hands' cost, plus the weapon's handling weight
-/// lightened by strength, then up to `SKILL_SAVING` off by skill with the weapon
+/// quickened by agility, then up to `SKILL_SAVING` off by skill with the weapon
 /// (a percentage, `skill_percent`). With a weapon in each hand, `dual` is the
 /// dual wielding skill's percentage, taking up to `DUAL_SAVING` more off.
-pub fn attack_cost(weapon: &Weapon, strength: u16, skill: u64, dual: Option<u64>) -> u32 {
+pub fn attack_cost(weapon: &Weapon, agility: u16, skill: u64, dual: Option<u64>) -> u32 {
     let weight = weapon_cost(weapon) - u64::from(UNARMED_COST);
-    let cost = u64::from(UNARMED_COST) + weight * strength_lightens(strength) / 1000;
+    let cost = u64::from(UNARMED_COST) + weight * agility_quickens(agility) / 1000;
     let cost = cost * (1000 - SKILL_SAVING * skill.min(100) / 100) / 1000;
     let cost = match dual {
         Some(dual) => cost * (1000 - DUAL_SAVING * dual.min(100) / 100) / 1000,

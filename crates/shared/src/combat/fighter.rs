@@ -62,8 +62,8 @@ impl Fighter<'_> {
     pub fn swing(&self, n: u64) -> Swing {
         let (weapon, off_hand) = self.wielded.for_attack(n);
         let skill = skill_percent(self.value(weapon.attack_skill(self.kind)));
-        let strength = self.attributes.strength;
-        let cost = attack_cost(&weapon, strength, skill, self.dual_percent());
+        let agility = self.attributes.agility;
+        let cost = attack_cost(&weapon, agility, skill, self.dual_percent());
         Swing {
             weapon,
             off_hand,

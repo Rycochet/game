@@ -6,7 +6,7 @@ Combat's rules, the same for players and mobs on both sides: what an attack cost
 
 - `crates/shared/src/combat/mod.rs`: re-exports.
 - `combat/weapon.rs`: `Weapon { family, grams, length_mm, quality, metal_tier }`, `UNARMED`, `of(item)` (blades only), `handling_grams`, `reach`, `is_edged`.
-- `combat/cost.rs`: `attack_cost`, `weapon_cost`, `strength_lightens`, `skill_percent`, `wind_up`, and their constants.
+- `combat/cost.rs`: `attack_cost`, `weapon_cost`, `agility_quickens`, `skill_percent`, `wind_up`, and their constants.
 - `combat/damage.rs`: the three stages (`blow`, `past_defence`, `through_armour`), `Blow` (all of them, `harm() -> Points`), `roll_blow`, `off_hand_share`, `quality_factor`, `metal_factor`, `weapon_base`, `strength_hits`.
 - `combat/power.rs`: `power`, `SKILL_FLOOR`.
 - `combat/wielded.rs`: `Wielded`.
@@ -15,7 +15,7 @@ Combat's rules, the same for players and mobs on both sides: what an attack cost
 
 ## Public API
 
-- `attack_cost(weapon, strength, skill %, dual %?)`: `UNARMED_COST` (2100: two a second at normal speed) plus handling weight × `COST_PER_GRAM_MILLI` (1.75), the weight part lightened by strength (`strength_lightens`, median 100, between half and double), then up to `SKILL_SAVING` (15%) off by skill, and with a weapon in each hand up to `DUAL_SAVING` (20%) more by dual wielding. `wind_up(cost)`: `ATTACK_WIND_UP` (a quarter) waited before it lands.
+- `attack_cost(weapon, agility, skill %, dual %?)`: `UNARMED_COST` (2100: two a second at normal speed) plus handling weight × `COST_PER_GRAM_MILLI` (1.75), the weight part quickened by agility (`agility_quickens`, median 100, between half and double; bare hands' part never changes), then up to `SKILL_SAVING` (15%) off by skill, and with a weapon in each hand up to `DUAL_SAVING` (20%) more by dual wielding. `wind_up(cost)`: `ATTACK_WIND_UP` (a quarter) waited before it lands.
 - `Weapon::handling_grams`: grams counted for more the longer it is (a metre counts as it weighs), as polearms are slow by leverage. `reach`: 2 cells for polearms and spears, else 1 (owner).
 - Damage, per mille, to `Points`: `blow` = `UNARMED_DAMAGE` (1 Health) × `weapon_base` (its `weapon_cost` against a fist's, so weight trades speed for size of blow at about the same harm a second) × `strength_hits` (√ of strength against the median) and, for weapons, × `EDGE` (1.2) × `quality_factor` (Poor 0.8 to Artifact 2.0) × `metal_factor` (tier 1 to 4: 0.85, 1.0, 1.1, 1.25) × luck (`roll_blow`: two rolls, 500 to 1500). Then `off_hand_share` (half, plus half the dual skill's percentage), `past_defence` (attack ÷ (attack + defence)) and `through_armour` (`ARMOUR_HALF` 100 ÷ (100 + armour)).
 - `power(attributes, leans, total)`: the average of the attributes a skill leans on × its total along its path (`Skills::total`, hundredths), never below `SKILL_FLOOR`. `skill_percent(value)`: a node's own value as a percentage, at most 100.

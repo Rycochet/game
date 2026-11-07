@@ -31,7 +31,7 @@ fn bare_hands_attack_twice_a_second_and_a_sword_once() {
 }
 
 #[test]
-fn strength_lightens_only_the_weapon_and_only_so_far() {
+fn agility_quickens_only_the_weapon_and_only_so_far() {
     assert_eq!(attack_cost(&sword(), 200, 0, None), 2100 + 1050);
     assert_eq!(attack_cost(&sword(), 1000, 0, None), 2100 + 1050);
     assert_eq!(attack_cost(&sword(), 25, 0, None), 2100 + 4200);
