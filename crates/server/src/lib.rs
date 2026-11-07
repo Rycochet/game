@@ -172,7 +172,22 @@ impl Plugin for ServerPlugin {
 
 /// Moves the action clock on by real time, so that a slow frame doesn't slow
 /// everyone down, unless the server's clock is paused.
-fn advance_action_clock(time: Res<Time>, worlds: Res<ServerWorlds>, mut owed: Local<f64>) {
+fn advance_action_clock(
+    time: Res<Time>,
+    worlds: Res<ServerWorlds>,
+    hold: Option<ResMut<clock::TickHold>>,
+    mut owed: Local<f64>,
+) {
+    // Only with the debug API (`server.tick`): a tick a frame, as asked.
+    if let Some(mut hold) = hold
+        && hold.held
+    {
+        if hold.steps > 0 {
+            hold.steps -= 1;
+            worlds.action_clock().advance(1);
+        }
+        return;
+    }
     if worlds.clock().is_paused() {
         return;
     }

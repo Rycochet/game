@@ -22,7 +22,7 @@ impl ClientMessage {
                 | Self::DevForgetMapOnServer
                 | Self::DevGenerateSite { .. }
                 | Self::DevGenerateArea(_)
-                | Self::DevCreateMob(_)
+                | Self::DevMobs(_)
                 | Self::DevGiveItem { .. }
                 | Self::DevSetCreature { .. }
                 | Self::DevDeleteCharacter

@@ -32,6 +32,7 @@ mod fight;
 mod gear;
 mod harmed_by;
 mod heal;
+mod inspect;
 mod made;
 mod moves;
 mod notice;
@@ -47,7 +48,7 @@ mod wild;
 
 use crossing::cross;
 pub(crate) use dev_gift::{give_to_mob, mob_in_sight};
-pub(crate) use dev_mob::create_mob;
+pub(crate) use dev_mob::dev_mobs;
 use doubling_back::Pacing;
 pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;

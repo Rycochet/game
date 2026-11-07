@@ -134,13 +134,21 @@ pub(crate) fn kill(
     if !visit.can_see(at.0, at.1) {
         return Err("out of sight");
     }
-    bury(world, place, here_index, mob);
+    bury(world, place, here_index, mob, true);
     Ok(())
 }
 
 /// A mob on this level (`place`, whose own level is `here_index`) has died: it
-/// goes, never to be made again, and what it had falls where it stood.
-pub(super) fn bury(world: &mut ServerWorld, place: (SiteId, u32), here_index: u32, mob: Id) {
+/// goes, never to be made again, and if it `leaves` anything (it wasn't
+/// deleted by developer tools) what it had falls where it stood and its killers
+/// count it.
+pub(super) fn bury(
+    world: &mut ServerWorld,
+    place: (SiteId, u32),
+    here_index: u32,
+    mob: Id,
+    leaves: bool,
+) {
     let Some(population) = world.populations.0.get_mut(&place) else {
         return;
     };
@@ -150,11 +158,13 @@ pub(super) fn bury(world: &mut ServerWorld, place: (SiteId, u32), here_index: u3
     let at = population.mobs[index].position;
     let dead = population.mobs.remove(index);
     world.died.insert(mob);
-    world.kills.push(super::Kill {
-        place,
-        kind: dead.kind,
-        by: dead.harmed_by.clone(),
-    });
+    if leaves {
+        world.kills.push(super::Kill {
+            place,
+            kind: dead.kind,
+            by: dead.harmed_by.clone(),
+        });
+    }
     population.due.retain(|&(_, id)| id != mob);
     // Its home level was waiting for it to come back.
     if !dead.way_back.is_empty()
@@ -176,6 +186,9 @@ pub(super) fn bury(world: &mut ServerWorld, place: (SiteId, u32), here_index: u3
     saved.mobs.remove(&dead.number);
     saved.unsettled.remove(&dead.number);
     let record = saved.records.remove(&mob).unwrap_or_default();
+    if !leaves {
+        return;
+    }
     let mut left = record.gear.map_or_else(Vec::new, Inventory::spilled);
     left.extend(record.carried);
     if !left.is_empty() {

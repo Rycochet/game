@@ -7,8 +7,8 @@ use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
     FIRST_AT, NEXT_AT, spawn_create_mob_panel, spawn_creature_buttons, spawn_dev_area_panel,
-    spawn_every_widget, spawn_give_panel, spawn_go_to_world, spawn_item_pictures,
-    spawn_step_buttons, spawn_world_time,
+    spawn_every_widget, spawn_give_panel, spawn_go_to_world, spawn_inspect_panel,
+    spawn_item_pictures, spawn_step_buttons, spawn_world_time,
 };
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
 
@@ -68,6 +68,7 @@ impl OpenPanels {
                 DebugAction::GoToWorld => spawn_go_to_world(content),
                 DebugAction::DevArea => spawn_dev_area_panel(content),
                 DebugAction::CreateMob => spawn_create_mob_panel(content),
+                DebugAction::InspectMob => spawn_inspect_panel(content),
                 _ => spawn_step_buttons(content, action),
             });
         commands
@@ -92,6 +93,7 @@ pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
         DebugAction::GoToWorld => "debug.go_to_world",
         DebugAction::DevArea => "debug.dev_area",
         DebugAction::CreateMob => "debug.create_mob",
+        DebugAction::InspectMob => "debug.inspect_mob",
         DebugAction::StairsStyle => "debug.stairs",
         DebugAction::FieldsState => "debug.fields",
         DebugAction::HerbsState => "debug.herbs",

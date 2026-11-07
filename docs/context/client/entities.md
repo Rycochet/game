@@ -4,7 +4,7 @@ Others on the map: mobs and other players, as tokens, for as long as the server 
 
 ## Files
 
-- `crates/client/src/entities/mod.rs`: `EntitiesPlugin`, `Others` (id to token), `read_server`, `show_moving`, `show_own_kind`, `offer_to_kill`, `kill_clicked`, `picture`, `picture_size`. Unit tests.
+- `crates/client/src/entities/mod.rs`: `EntitiesPlugin`, `Others` (id to token), `read_server`, `show_moving`, `show_own_kind`, `picture`, `picture_size`; `dev_clicks.rs` (`offer_mobs`, `mob_clicked`: with Kill, Inspect or Delete Mob on, mobs are clickable and a click sends that). Unit tests.
 - `crates/client/src/entities/morph.rs`: `Morphing` (a token changing from one body into another: the steps' pictures, then its new one), `Drawing::morph`, `play_morphs`, `SeenLooks` (how another creature was last seen to look).
 - `crates/client/src/entities/hover_name.rs`: `hover_name` (the `common::HoverName` each other gets: another player's character name from `EntityLook::name`, else the kind's).
 - `crates/client/src/entities/dressed.rs`: `dressed` (an `IconPicture` of a kind wearing these in its own colours, from `item_art::character_look`), `show_own_dress` (the player's own token, from `inventory::Carried` and `character::CharacterSheet`, whenever what is worn or how they look changes).

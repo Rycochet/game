@@ -38,7 +38,7 @@ mod world_chunk;
 
 pub use client_message::ClientMessage;
 pub use combat::Landed;
-pub use dev_mob::DevMob;
+pub use dev_mob::{DevMob, DevMobTool};
 pub use dev_skills::{DEV_SKILLS_LEARNT, DevSkills};
 pub use dev_vitals::{DEV_BONUS, DEV_BONUS_TICKS, DevVitals};
 pub use kind_change::KindChange;

@@ -16,6 +16,9 @@ fn facts() -> Facts {
         god_mode: false,
         truesight: false,
         killing: false,
+        inspecting: false,
+        deleting: false,
+        freezing: false,
         teleporting: false,
         changing_cells: false,
         showing_info: false,
@@ -49,7 +52,7 @@ fn return_on_a_disabled_entry_does_nothing() {
 fn return_on_a_highlighted_entry_chooses_it() {
     let shown = on_show("");
     assert_eq!(
-        return_chooses(&shown, Some(8), &facts()),
+        return_chooses(&shown, Some(9), &facts()),
         Some(DebugAction::ForgetMap)
     );
 }

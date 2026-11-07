@@ -33,6 +33,7 @@ mod give_preview;
 mod give_systems;
 mod give_target;
 mod go_to_world;
+mod inspect_mob;
 mod layout;
 mod open;
 mod pictures_form;
@@ -78,6 +79,8 @@ pub(super) use give_systems::{
 pub(super) use give_target::{GiveTo, GiveToWords, follow_target};
 use go_to_world::spawn_go_to_world;
 pub(super) use go_to_world::{press_go_to_world_buttons, update_go_to_world_button};
+pub(super) use inspect_mob::add_inspect_mob_panel;
+use inspect_mob::spawn_inspect_panel;
 use layout::{row, words};
 pub(super) use open::{OpenPanels, forget_closed};
 use pictures_form::{

@@ -52,7 +52,8 @@ pub use creatures::{
     PlayerSpeed, SheetText, SkillsPage, SpentEnergy,
 };
 pub use debug::{
-    CreateMobOrder, DebugInfo, DetectMonsters, GodMode, KillMob, ServerDevTools, Truesight,
+    CreateMobOrder, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GodMode, InspectMob,
+    InspectedMob, KillMob, ServerDevTools, Truesight,
 };
 pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
@@ -135,6 +136,10 @@ impl Plugin for CommonPlugin {
             .init_resource::<Truesight>()
             .init_resource::<KillMob>()
             .init_resource::<CreateMobOrder>()
+            .init_resource::<InspectMob>()
+            .init_resource::<DeleteMob>()
+            .init_resource::<FreezeMobs>()
+            .init_resource::<InspectedMob>()
             .init_resource::<ServerDevTools>()
             .init_resource::<DebugInfo>()
             .init_resource::<PointerPosition>()

@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
+use shared::id::Id;
 use shared::protocol::DevMob;
 
 /// Whether the server accepts developer tools messages (from its `Welcome`).
@@ -37,6 +38,19 @@ pub struct Truesight(pub bool);
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KillMob(pub bool);
 
+/// Debug: clicking a mob asks the server all it knows of it (Inspect Mob). Only
+/// one of this, `KillMob` and `DeleteMob` is on.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InspectMob(pub bool);
+
+/// Debug: clicking a mob takes it away for good, leaving nothing (Delete Mob).
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DeleteMob(pub bool);
+
+/// Debug: no mob in the world thinks or moves (Freeze Mobs), as the server is told.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FreezeMobs(pub bool);
+
 /// Debug: the mob a click puts on a cell in Mob Mode (`ClickMode::PlaceMob`),
 /// as Create Mob's panel has it; the click gives its `x` and `y`.
 #[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,4 +68,12 @@ impl Default for CreateMobOrder {
             seed: 1,
         })
     }
+}
+
+/// Debug: the mob Inspect Mob last asked about and what the server said of it,
+/// shown in its panel and asked again while that is open.
+#[derive(Resource, Default, Clone, Debug, PartialEq, Eq)]
+pub struct InspectedMob {
+    pub mob: Option<Id>,
+    pub lines: Vec<String>,
 }

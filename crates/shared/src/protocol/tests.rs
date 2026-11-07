@@ -184,7 +184,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             },
             seed: 5,
         }),
-        ClientMessage::DevCreateMob(super::DevMob {
+        ClientMessage::DevMobs(super::DevMobTool::Create(super::DevMob {
             kind: crate::creature::CreatureKind::Goblin,
             x: -4,
             y: 9,
@@ -192,7 +192,9 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             gear: true,
             still: true,
             seed: 12,
-        }),
+        })),
+        ClientMessage::DevMobs(super::DevMobTool::Inspect(crate::id::Id::for_test(4))),
+        ClientMessage::DevMobs(super::DevMobTool::Freeze(true)),
         ClientMessage::DevEnterSite {
             kind: PoiKind::Crypt,
             seed: 3,
@@ -201,6 +203,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
     ];
     let server = vec![
+        ServerMessage::DevMobInfo {
+            mob: crate::id::Id::for_test(4),
+            lines: vec!["Goblin".into(), "Doing: Idle".into()],
+        },
         ServerMessage::LoginOptions {
             methods: vec![LoginMethod::Guest],
         },

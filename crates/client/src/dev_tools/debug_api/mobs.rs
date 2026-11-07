@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 use server::debug_api::{BrpResult, Value, params, refused};
 use shared::creature::CreatureKind;
-use shared::protocol::{ClientMessage, DevMob};
+use shared::protocol::{ClientMessage, DevMob, DevMobTool};
 use shared::sheet::Feeling;
 
 use super::done;
@@ -42,14 +42,46 @@ pub(super) fn create_mob(
     if p.attitude == Some(Feeling::None) {
         return Err(refused("attitude: Friendly, Neutral or Unfriendly"));
     }
-    to_server.write(ToServer(ClientMessage::DevCreateMob(DevMob {
-        kind: p.kind,
-        x: p.x,
-        y: p.y,
-        attitude: p.attitude,
-        gear: p.gear,
-        still: p.still,
-        seed: p.seed,
-    })));
+    to_server.write(ToServer(ClientMessage::DevMobs(DevMobTool::Create(
+        DevMob {
+            kind: p.kind,
+            x: p.x,
+            y: p.y,
+            attitude: p.attitude,
+            gear: p.gear,
+            still: p.still,
+            seed: p.seed,
+        },
+    ))));
     done()
+}
+
+#[derive(Deserialize)]
+pub(super) struct InspectParams {
+    /// The mob's id, as `server.mobs` gives it.
+    id: shared::id::Id,
+}
+
+/// `client.inspect_mob { "id": "..." }`: asks the server all it knows of a mob in
+/// sight, as a click in Inspect Mob does; the answer opens the panel and is
+/// read back with `client.inspected`.
+pub(super) fn inspect_mob(
+    In(request): In<Option<Value>>,
+    mut to_server: MessageWriter<ToServer>,
+) -> BrpResult {
+    let InspectParams { id } = params(request)?;
+    to_server.write(ToServer(ClientMessage::DevMobs(DevMobTool::Inspect(id))));
+    done()
+}
+
+/// `client.inspected`: the mob Inspect Mob last asked about and what the
+/// server said of it, as lines.
+pub(super) fn inspected(
+    _: In<Option<Value>>,
+    inspected: Res<crate::common::InspectedMob>,
+) -> BrpResult {
+    Ok(server::debug_api::json!({
+        "mob": inspected.mob,
+        "lines": inspected.lines,
+    }))
 }

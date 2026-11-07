@@ -14,12 +14,14 @@ pub enum DebugAction {
     ChangeCreature,
     CreateMob,
     DeleteCharacter,
+    DeleteMob,
     DetectMonsters,
     DevArea,
     FieldsState,
     ForgetMap,
     ForgetMapOnServer,
     ForgetSkills,
+    FreezeMobs,
     GeneratePoi,
     GiveItem,
     GoToWorld,
@@ -27,6 +29,7 @@ pub enum DebugAction {
     HealFully,
     HerbsState,
     Hurt,
+    InspectMob,
     ItemPictures,
     KillMob,
     LearnSomeSkills,
@@ -59,6 +62,9 @@ pub(super) struct Facts {
     pub god_mode: bool,
     pub truesight: bool,
     pub killing: bool,
+    pub inspecting: bool,
+    pub deleting: bool,
+    pub freezing: bool,
     pub teleporting: bool,
     pub changing_cells: bool,
     pub showing_info: bool,
@@ -71,18 +77,20 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 36] = [
+    pub(super) const ALL: [Self; 39] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
         Self::CreateMob,
         Self::DeleteCharacter,
+        Self::DeleteMob,
         Self::DetectMonsters,
         Self::DevArea,
         Self::FieldsState,
         Self::ForgetMap,
         Self::ForgetMapOnServer,
         Self::ForgetSkills,
+        Self::FreezeMobs,
         Self::GeneratePoi,
         Self::GiveItem,
         Self::GoToWorld,
@@ -90,6 +98,7 @@ impl DebugAction {
         Self::HealFully,
         Self::HerbsState,
         Self::Hurt,
+        Self::InspectMob,
         Self::ItemPictures,
         Self::KillMob,
         Self::LearnSomeSkills,
@@ -132,6 +141,9 @@ impl DebugAction {
             Self::Hurt => "Hurt",
             Self::ItemPictures => "Item Pictures",
             Self::KillMob => "Kill Mob",
+            Self::DeleteMob => "Delete Mob",
+            Self::FreezeMobs => "Freeze Mobs",
+            Self::InspectMob => "Inspect Mob",
             Self::LearnSomeSkills => "Learn Some Skills",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
@@ -221,6 +233,9 @@ impl DebugAction {
                 | Self::HealFully
                 | Self::Hurt
                 | Self::KillMob
+                | Self::DeleteMob
+                | Self::FreezeMobs
+                | Self::InspectMob
                 | Self::LearnSomeSkills
                 | Self::RevealMap
                 | Self::SpendMana
@@ -243,6 +258,9 @@ impl DebugAction {
             Self::GodMode => Some(facts.god_mode),
             Self::Truesight => Some(facts.truesight),
             Self::KillMob => Some(facts.killing),
+            Self::InspectMob => Some(facts.inspecting),
+            Self::DeleteMob => Some(facts.deleting),
+            Self::FreezeMobs => Some(facts.freezing),
             Self::ShowDebugInfo => Some(facts.showing_info),
             Self::SunsAndMoons => Some(facts.suns_and_moons_open),
             Self::WorldTime => Some(facts.world_time_open),
