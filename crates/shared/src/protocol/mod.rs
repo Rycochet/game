@@ -19,7 +19,7 @@ pub use level::{
 };
 pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
 pub use login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
-pub use online::{OnlineSettings, OnlineState};
+pub use online::{OnlineSettings, OnlineState, RouterPort};
 pub use version::{GAME_NAME, ServerVersion, VERSION_PATH};
 
 use crate::poi::CHUNK_SIZE;
@@ -45,7 +45,7 @@ pub use world_chunk::{GateInfo, SeenPoi, WorldChunk, WorldInfo};
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 55;
+pub const PROTOCOL_VERSION: u32 = 56;
 
 /// The most items one `ClientMessage::LookUpItems` is answered for.
 pub const MOST_LOOKED_UP: usize = 64;

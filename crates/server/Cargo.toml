@@ -34,6 +34,9 @@ rcgen.workspace = true
 x509-parser.workspace = true
 time.workspace = true
 instant-acme.workspace = true
+# Asks the router to forward the port when a player's own game goes online
+# (UPnP; MIT), on tokio and hyper, which the server already has.
+igd-next = { version = "0.18", default-features = false, features = ["aio_tokio"] }
 # Deltas of the web client from builds browsers already have.
 web_delta.workspace = true
 # Reading the hash a browser names its build by (MIT/Apache-2.0).

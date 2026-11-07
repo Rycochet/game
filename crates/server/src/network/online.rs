@@ -2,15 +2,20 @@
 //! player) asks with `SetOnline`, and its secure port opens, or closes again.
 //! Only the secure port: there is no proxy in front of a player's own game.
 //!
+//! Unless Server Options says not to, the router is asked to forward the port
+//! too (`upnp`), and the host told how that went when it knows.
+//!
 //! While open, guests may log in, nobody can pause, and dev tools are the host's
 //! alone. Closing tells the other players it is going offline on purpose, so
 //! they don't try again, and saves them.
 
 use bevy::prelude::*;
-use shared::protocol::{OnlineSettings, OnlineState, ServerAddress, ServerMessage};
+use shared::protocol::{OnlineSettings, OnlineState, RouterPort, ServerAddress, ServerMessage};
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Mutex;
+
+mod upnp;
 
 use super::NewConnections;
 use super::health::{Heartbeat, track_heartbeat};
@@ -39,6 +44,12 @@ struct Online {
     /// Dropping it tells the network thread to stop.
     closing: Option<tokio::sync::watch::Sender<()>>,
     thread: Option<std::thread::JoinHandle<()>>,
+    /// The certificate and fingerprint the host was told of, to tell them
+    /// again with the router's news.
+    certificate: String,
+    fingerprint: String,
+    /// Asking the router to forward the port, unless turned off.
+    router: Option<upnp::RouterWork>,
 }
 
 impl Drop for Online {
@@ -65,6 +76,7 @@ impl Plugin for OnlinePlugin {
                     .run_if(resource_exists::<NewConnections>)
                     .before(connections::handle_messages),
                 go_online.after(connections::handle_messages),
+                tell_router_news.after(go_online),
             ),
         );
     }
@@ -127,13 +139,39 @@ fn go_online(
     let (certificate, fingerprint) = ports.certificate.unwrap_or_default();
     info!("Open to other players as {:?}", settings.name);
     commands.insert_resource(NewConnections(Mutex::new(ports.accepted)));
+    let (router, news) = match settings.bind_address.trim().parse() {
+        Ok(bind) if settings.upnp => (
+            Some(upnp::RouterWork::start(settings.port, bind)),
+            RouterPort::Opening,
+        ),
+        _ => (None, RouterPort::Off),
+    };
+    connections.tell_host(&ServerMessage::Online(OnlineState::Online {
+        certificate: certificate.clone(),
+        fingerprint: fingerprint.clone(),
+        router: news,
+    }));
     slot.0 = Some(Online {
         closing: Some(closing),
         thread: Some(ports.thread),
-    });
-    connections.tell_host(&ServerMessage::Online(OnlineState::Online {
         certificate,
         fingerprint,
+        router,
+    });
+}
+
+/// Tells the host what the router said, once it has.
+fn tell_router_news(slot: Res<OnlineSlot>, connections: Res<Connections>) {
+    let Some(online) = &slot.0 else {
+        return;
+    };
+    let Some(news) = online.router.as_ref().and_then(upnp::RouterWork::latest) else {
+        return;
+    };
+    connections.tell_host(&ServerMessage::Online(OnlineState::Online {
+        certificate: online.certificate.clone(),
+        fingerprint: online.fingerprint.clone(),
+        router: news,
     }));
 }
 

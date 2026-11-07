@@ -19,6 +19,8 @@ pub struct OnlineSettings {
     pub port: u16,
     /// The most players at once, the host among them; 0 for no limit.
     pub player_limit: u16,
+    /// Whether to ask this network's router to forward the port here (UPnP).
+    pub upnp: bool,
 }
 
 impl Default for OnlineSettings {
@@ -29,6 +31,7 @@ impl Default for OnlineSettings {
             bind_address: "0.0.0.0".into(),
             port: DEFAULT_PORT,
             player_limit: 0,
+            upnp: true,
         }
     }
 }
@@ -52,12 +55,28 @@ impl OnlineSettings {
 pub enum OnlineState {
     Offline,
     /// Open, with this certificate (PEM) and its key's fingerprint, for
-    /// players to check.
+    /// players to check, and how asking the router to forward the port went.
     Online {
         certificate: String,
         fingerprint: String,
+        router: RouterPort,
     },
     /// It couldn't be opened, and why (the port is taken, say).
+    Failed(String),
+}
+
+/// Asking this network's router to forward the port (UPnP), while online.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum RouterPort {
+    /// Not asked: turned off in Server Options.
+    Off,
+    /// Looking for the router, or waiting for its answer.
+    Opening,
+    /// Forwarded: players outside reach it at `external` (`ip:port`).
+    /// `shared` is true when that address is itself a private or shared one
+    /// (the internet provider's own network), so players outside still can't.
+    Open { external: String, shared: bool },
+    /// It couldn't be forwarded, and why.
     Failed(String),
 }
 
