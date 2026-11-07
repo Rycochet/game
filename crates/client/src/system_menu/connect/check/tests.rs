@@ -22,10 +22,10 @@ fn another_protocol_is_no_use() {
     let mut version = ServerVersion::this();
     version.protocol += 1;
     let result = ProbeResult::Found {
-        port: 8081,
+        port: 24691,
         version,
     };
-    let Checked::Failed(reason) = checked(&asked(), &[8081], result) else {
+    let Checked::Failed(reason) = checked(&asked(), &[24691], result) else {
         panic!("not failed");
     };
     assert!(reason.contains("newer"), "{reason}");
@@ -39,7 +39,7 @@ fn reasons_name_the_ports_tried() {
         ProbeResult::NoAnswer,
     );
     assert!(
-        matches!(&both, Checked::Failed(reason) if reason.starts_with("No answer on port 8081 or 443"))
+        matches!(&both, Checked::Failed(reason) if reason.starts_with("No answer on port 24691 or 443"))
     );
     let one = checked(&asked(), &[9000], ProbeResult::NoAnswer);
     assert!(

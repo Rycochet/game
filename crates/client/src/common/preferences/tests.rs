@@ -53,3 +53,12 @@ fn unreadable_or_unknown_preferences_are_the_defaults() {
         Some("Gems")
     );
 }
+
+#[test]
+fn server_options_saved_on_the_old_default_port_take_the_new_one() {
+    let preferences = Preferences::from_text("(online_settings: (port: 8081))");
+    assert_eq!(
+        preferences.online_settings.port,
+        shared::protocol::DEFAULT_PORT
+    );
+}

@@ -3,19 +3,19 @@
 # client, on one port.
 #
 #   docker build -t hall-of-worlds .
-#   docker run -p 8081:8081 -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
+#   docker run -p 24691:24691 -p 24690:24690 -v hall-of-worlds:/data hall-of-worlds
 #
-# Port 8081 serves the web client's files and the game's WebSocket (`/ws`) over
+# Port 24691 serves the web client's files and the game's WebSocket (`/ws`) over
 # HTTPS, with a self-signed certificate kept in /data unless HOW_TLS_CERTIFICATE
 # and HOW_TLS_KEY name your own (readable by the `hall` user), or
-# HOW_LETS_ENCRYPT_DOMAIN asks Let's Encrypt for one (publish it as -p 443:8081).
-# Port 8080 only answers that connections must be secure.
+# HOW_LETS_ENCRYPT_DOMAIN asks Let's Encrypt for one (publish it as -p 443:24691).
+# Port 24690 only answers that connections must be secure.
 #
-# Behind a reverse proxy, set HOW_BEHIND_PROXY=true: port 8080 then serves
-# everything too, and 8081 stays open in case the proxy prefers it. HOW_DISABLE_SSL=true
-# as well doesn't open 8081 or set up a certificate:
+# Behind a reverse proxy, set HOW_BEHIND_PROXY=true: port 24690 then serves
+# everything too, and 24691 stays open in case the proxy prefers it. HOW_DISABLE_SSL=true
+# as well doesn't open 24691 or set up a certificate:
 #
-#   docker run -p 8080:8080 -e HOW_BEHIND_PROXY=true -e HOW_DISABLE_SSL=true -v hall-of-worlds:/data hall-of-worlds
+#   docker run -p 24690:24690 -e HOW_BEHIND_PROXY=true -e HOW_DISABLE_SSL=true -v hall-of-worlds:/data hall-of-worlds
 #
 # Saves go in /data: mount a volume there to keep them.
 #
@@ -66,11 +66,11 @@ RUN useradd --system --no-create-home hall \
  && mkdir /data \
  && chown hall /data
 USER hall
-ENV HOW_ADDRESS=0.0.0.0:8080 \
+ENV HOW_ADDRESS=0.0.0.0:24690 \
     HOW_WEB=/srv/web \
     HOW_DATA=/data
 VOLUME /data
-EXPOSE 8080 8081
+EXPOSE 24690 24691
 # Asks /_healthz on the plain port (HOW_ADDRESS), which answers even while
 # only the secure port serves the game. Making a new world takes a while.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3     CMD ["/usr/local/bin/hall-of-worlds-server", "--health"]

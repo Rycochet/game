@@ -11,8 +11,8 @@ A server is set up entirely by environment variables, and none of them are requi
 
 | Variable | Default | What it does |
 | -------- | ------- | ------------ |
-| `HOW_ADDRESS` | `0.0.0.0:8080` | The plain port's address. It only answers that connections must be secure, unless `HOW_BEHIND_PROXY` is on. |
-| `HOW_TLS_ADDRESS` | `0.0.0.0:8081` | The secure port's address, for HTTPS and `wss://`. |
+| `HOW_ADDRESS` | `0.0.0.0:24690` | The plain port's address. It only answers that connections must be secure, unless `HOW_BEHIND_PROXY` is on. |
+| `HOW_TLS_ADDRESS` | `0.0.0.0:24691` | The secure port's address, for HTTPS and `wss://`. |
 | `HOW_BEHIND_PROXY` | `false` | `true` also serves everything on the plain port, for a reverse proxy to reach. The secure port stays open, so the proxy can use either. |
 | `HOW_DISABLE_SSL` | `false` | `true` doesn't open the secure port or set up a certificate. The server refuses to start unless `HOW_BEHIND_PROXY` is on too, and if a certificate of your own or Let's Encrypt is set. |
 | `HOW_WEB` | none (`/srv/web` in Docker) | The folder holding the web client. Without it, only the game itself is served. The last few builds it served are kept in the data folder, so browsers that have one download only what changed. |
@@ -65,6 +65,6 @@ The native client reads `HOW_DATA` too, for its single-player saves, as well as 
 
 | Variable | Default | What it does |
 | -------- | ------- | ------------ |
-| `HOW_SERVER` | none | A server for Play to join, such as `wss://game.example.com:8081/ws`, until logging out; a server chosen in Connect comes first. Without either, Play is single player. |
+| `HOW_SERVER` | none | A server for Play to join, such as `wss://game.example.com:24691/ws`, until logging out; a server chosen in Connect comes first. Without either, Play is single player. |
 | `HOW_SERVER_KEY` | none | The key fingerprint `HOW_SERVER` must have, from its log. Without it, any certificate is accepted. See [Connecting a native client](hosting/#connecting-a-native-client). |
 | `HOW_PREFERENCES` | `Hall of Worlds/client/client.ron` in the user's data folder | The file keeping the player's choices between runs. |

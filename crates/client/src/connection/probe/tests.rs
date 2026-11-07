@@ -6,17 +6,17 @@ fn server() -> PortAnswer {
 
 #[test]
 fn the_first_port_with_a_server_wins() {
-    let ports = [8081, 443];
+    let ports = [24691, 443];
     let found = |port| {
         Some(ProbeResult::Found {
             port,
             version: ServerVersion::this(),
         })
     };
-    assert_eq!(decide(&ports, &[Some(server()), None]), found(8081));
+    assert_eq!(decide(&ports, &[Some(server()), None]), found(24691));
     assert_eq!(
         decide(&ports, &[Some(server()), Some(server())]),
-        found(8081)
+        found(24691)
     );
     assert_eq!(
         decide(&ports, &[Some(PortAnswer::Silent), Some(server())]),
@@ -30,13 +30,13 @@ fn the_first_port_with_a_server_wins() {
 
 #[test]
 fn a_later_server_waits_for_the_ports_before_it() {
-    assert_eq!(decide(&[8081, 443], &[None, Some(server())]), None);
-    assert_eq!(decide(&[8081, 443], &[None, None]), None);
+    assert_eq!(decide(&[24691, 443], &[None, Some(server())]), None);
+    assert_eq!(decide(&[24691, 443], &[None, None]), None);
 }
 
 #[test]
 fn why_nothing_was_found() {
-    let ports = [8081, 443];
+    let ports = [24691, 443];
     let silent = Some(PortAnswer::Silent);
     let other = Some(PortAnswer::Other);
     let refused = Some(PortAnswer::Refused("wrong key".into()));

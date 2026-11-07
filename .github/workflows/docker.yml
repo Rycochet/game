@@ -1,4 +1,4 @@
-# Builds the server image (game server + web client on port 8080).
+# Builds the server image (game server + web client on port 24690).
 # master (after every merge): build and publish to the GitHub Container
 # Registry as ghcr.io/rycochet/hall-of-worlds:latest (plus a commit tag).
 # Run by hand on another branch, it publishes only the commit tag.

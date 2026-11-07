@@ -46,11 +46,11 @@ Source code is in `crates/`: `shared` holds game rules and world generation used
 
 ### Docker
 
-The `Dockerfile` builds an x86-64 image with the game server, which serves the web client and the game (WebSockets) securely on port 8081 with a self-signed certificate (or your own), and saves in `/data`. To use a certificate from Let's Encrypt, add `-e HOW_LETS_ENCRYPT_DOMAIN=game.example.com` (which accepts its terms) and publish `-p 443:8081`: the domain's public port 443 must reach this server. Behind a reverse proxy, add `-e HOW_BEHIND_PROXY=true`, which opens port 8080 for it as well (and `-e HOW_DISABLE_SSL=true` if 8081 shouldn't open at all):
+The `Dockerfile` builds an x86-64 image with the game server, which serves the web client and the game (WebSockets) securely on port 24691 with a self-signed certificate (or your own), and saves in `/data`. To use a certificate from Let's Encrypt, add `-e HOW_LETS_ENCRYPT_DOMAIN=game.example.com` (which accepts its terms) and publish `-p 443:24691`: the domain's public port 443 must reach this server. Behind a reverse proxy, add `-e HOW_BEHIND_PROXY=true`, which opens port 24690 for it as well (and `-e HOW_DISABLE_SSL=true` if 24691 shouldn't open at all):
 
 ```bash
 docker build -t hall-of-worlds .
-docker run -p 8081:8081 -p 8080:8080 -v hall-of-worlds:/data hall-of-worlds
+docker run -p 24691:24691 -p 24690:24690 -v hall-of-worlds:/data hall-of-worlds
 ```
 
 It works behind an HTTPS proxy (such as Cloudflare) that passes WebSockets: nothing but that one port is needed.

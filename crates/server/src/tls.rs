@@ -28,7 +28,7 @@ use files::generated;
 pub(super) use files::{create_private_folder, read_pair, write_private};
 
 /// Where secure connections are taken, unless `HOW_TLS_ADDRESS` says.
-const DEFAULT_TLS_ADDRESS: &str = "0.0.0.0:8081";
+const DEFAULT_TLS_ADDRESS: &str = "0.0.0.0:24691";
 
 /// The names a generated certificate always covers (`HOW_TLS_NAMES` adds more).
 const LOCAL_NAMES: [&str; 3] = ["localhost", "127.0.0.1", "::1"];
@@ -135,7 +135,7 @@ impl Security {
         }
         let address = settings.address.as_deref().unwrap_or(DEFAULT_TLS_ADDRESS);
         let address = address.parse().map_err(|_| {
-            format!("HOW_TLS_ADDRESS={address} is not an address and port, such as 0.0.0.0:8081")
+            format!("HOW_TLS_ADDRESS={address} is not an address and port, such as 0.0.0.0:24691")
         })?;
         let folder = data.join("tls");
         let names = settings

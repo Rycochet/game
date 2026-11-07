@@ -33,6 +33,20 @@ impl Default for OnlineSettings {
     }
 }
 
+/// The secure port's default until 2026-11-07, moved as many other programs
+/// use it too.
+const OLD_DEFAULT_PORT: u16 = 8081;
+
+impl OnlineSettings {
+    /// Settings saved with the old default port take the new one: nobody chose
+    /// that port, it was only the default. Any other port is kept.
+    pub fn move_off_old_default(&mut self) {
+        if self.port == OLD_DEFAULT_PORT {
+            self.port = DEFAULT_PORT;
+        }
+    }
+}
+
 /// Whether a server is open to other players.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum OnlineState {
@@ -46,3 +60,6 @@ pub enum OnlineState {
     /// It couldn't be opened, and why (the port is taken, say).
     Failed(String),
 }
+
+#[cfg(test)]
+mod tests;

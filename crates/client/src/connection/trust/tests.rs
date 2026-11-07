@@ -2,7 +2,7 @@ use super::*;
 
 use std::time::Duration;
 
-const ADDRESS: &str = "game.example:8081";
+const ADDRESS: &str = "game.example:24691";
 
 fn trust(key: Option<(String, KeyFrom)>) -> ServerTrust {
     ServerTrust {
