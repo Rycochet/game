@@ -36,6 +36,9 @@ fn a_chosen_folder_tab_runs_into_the_panel() {
     let chosen = look(ButtonState::Selected, ButtonStyle::Folder, Touch::Away);
     assert_eq!(chosen.1.bottom, chosen.0);
     assert_eq!(chosen.2, INK);
+    // Its lit edges are an ordinary button's background.
+    let (plain, _, _) = ButtonState::Normal.colours();
+    assert_eq!((chosen.1.top, chosen.1.left), (plain, plain));
 }
 
 #[test]

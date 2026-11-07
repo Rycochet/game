@@ -58,9 +58,13 @@ pub(super) fn look(
 ) -> (Color, BorderColor, Color) {
     let (mut background, mut border, mut text) = state.colours();
     if state == ButtonState::Selected && style == ButtonStyle::Folder {
+        // Its lit edges are an ordinary button's background (owner, 2026-11-07).
+        let (lit, _, _) = ButtonState::Normal.colours();
         let [red, green, blue] = PARCHMENT;
         background = Color::srgb_u8(red, green, blue);
         border = BorderColor {
+            top: lit,
+            left: lit,
             bottom: background,
             ..raised_border()
         };

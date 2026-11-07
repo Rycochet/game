@@ -4,8 +4,8 @@
 use bevy::prelude::*;
 
 use super::{
-    BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, SHADED_EDGE, TextSize,
-    spawn_button,
+    BUTTON_BORDER, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, SHADED_EDGE,
+    TextSize, spawn_button,
 };
 
 /// Between folder tabs.
@@ -18,6 +18,12 @@ const TAB_LINE: f32 = 2.0;
 pub(super) struct Tabs {
     pub(super) selected: usize,
 }
+
+/// A folder tab's own piece of the line under the row, over its bottom border, so
+/// an unchosen tab's bottom is one straight line with no corners cut by its sides'
+/// shading (owner, 2026-11-07). Hidden on the chosen tab, which is open below.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct TabFoot(Entity);
 
 /// One of a row: its row, and where in it.
 #[derive(Component, Clone, Copy, Debug)]
@@ -110,9 +116,53 @@ fn spawn_row(
                 size,
                 node.clone(),
             )
-            .insert((Tab { row, index }, style, Pressable));
+            .insert((Tab { row, index }, style, Pressable))
+            .with_children(|tab| {
+                if style == ButtonStyle::Folder {
+                    let tab_entity = tab.target_entity();
+                    tab.spawn(foot(tab_entity, index == selected));
+                }
+            });
         }
     });
+}
+
+/// Covers the tab's bottom border, reaching under its sides' borders too.
+fn foot(tab: Entity, chosen: bool) -> impl Bundle {
+    (
+        TabFoot(tab),
+        Node {
+            position_type: PositionType::Absolute,
+            left: px(-BUTTON_BORDER),
+            right: px(-BUTTON_BORDER),
+            bottom: px(-BUTTON_BORDER),
+            height: px(TAB_LINE),
+            ..default()
+        },
+        BackgroundColor(SHADED_EDGE),
+        if chosen {
+            Visibility::Hidden
+        } else {
+            Visibility::Inherited
+        },
+    )
+}
+
+/// Shows each tab's foot unless it is chosen.
+pub(super) fn show_tab_feet(
+    mut feet: Query<(&TabFoot, &mut Visibility)>,
+    tabs: Query<&ButtonState, With<Tab>>,
+) {
+    for (foot, mut visibility) in &mut feet {
+        let chosen = tabs
+            .get(foot.0)
+            .is_ok_and(|state| *state == ButtonState::Selected);
+        visibility.set_if_neq(if chosen {
+            Visibility::Hidden
+        } else {
+            Visibility::Inherited
+        });
+    }
 }
 
 fn state_of(index: usize, selected: usize) -> ButtonState {

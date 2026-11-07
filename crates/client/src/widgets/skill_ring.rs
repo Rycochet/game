@@ -2,8 +2,8 @@
 //! (`assets/shaders/skill_ring.wesl`): filled clockwise from the top, from a sliver
 //! when just learned to a full circle at 100, all in the colour of its fifth's item
 //! quality (Common below 20 up to Legendary from 80). A specialised skill gets a
-//! second full ring over it for 100 to 120, as a set item's metal edge in the
-//! Artifact colour with its sliding bands (owner, 2026-11-07).
+//! second, thinner ring inside the first for 100 to 120, as a set item's metal edge
+//! in the Artifact colour with its sliding bands (owner, 2026-11-07).
 
 use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderType};
@@ -35,6 +35,8 @@ pub struct SkillRing {
     /// How much of the first ring is filled, 0 to 1.
     pub fill: f32,
     pub quality: Quality,
+    /// Whether it has the specialisation's ring at all.
+    pub specialised: bool,
     /// How much of the specialisation's ring is filled, 0 to 1.
     pub special: f32,
 }
@@ -54,6 +56,7 @@ impl SkillRing {
         Self {
             fill,
             quality: LEVELS[fifth],
+            specialised,
             special,
         }
     }
@@ -104,7 +107,8 @@ fn params(ring: &SkillRing, shift: f32) -> RingParams {
         colour: colour(ring.quality),
         special_colour: colour(Quality::Artifact),
         fill: ring.fill,
-        special: ring.special,
+        // Below 0 for no second ring, which the shader then leaves out.
+        special: if ring.specialised { ring.special } else { -1.0 },
         shift,
         inner: INNER,
     }
@@ -144,7 +148,7 @@ pub(super) fn slide_rings(
         return;
     }
     for (ring, node) in &rings {
-        if ring.special > 0.0
+        if ring.specialised
             && let Some(mut material) = materials.get_mut(&node.0)
         {
             material.params.shift = shift.0;
