@@ -15,10 +15,12 @@ mod old;
 mod practice;
 mod save_format;
 mod tree;
+mod window;
 
 pub use id::SkillId;
 pub use practice::{Skills, VALUE_SCALE, level_practice};
 pub use tree::key_of;
+pub use window::{WINDOW_TICKS, Windows};
 
 #[cfg(test)]
 mod tests;

@@ -55,7 +55,7 @@ With a weapon in each hand you **fight with two weapons**: your hands take turns
 
 ## Getting better
 
-You learn by doing. Every blow that lands teaches you the skill of the weapon you used (and fighting with two weapons, if you are), and being attacked teaches you to defend with what you hold. Your skills are on the Skills page (K).
+You learn by doing. Every blow that lands teaches you the skill of the weapon you used (and fighting with two weapons, if you are), and being attacked teaches you to defend with what you hold. Each skill learns from at most one blow every five seconds, so a quick weapon learns no faster than a slow one. Skills come quickly at first and ever more slowly towards mastery, which takes a great deal of fighting. Your skills are on the Skills page (K).
 
 ## Dying
 

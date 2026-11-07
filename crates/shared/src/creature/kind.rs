@@ -6,7 +6,9 @@ use super::Temper;
 use crate::sheet::{Feeling, Reaction};
 
 /// A kind of creature. Saved by name, so new ones can go anywhere in the list.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub enum CreatureKind {
     Beggar,
     Birdfolk,

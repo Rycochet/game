@@ -34,7 +34,8 @@ pub struct CreatureDef {
     /// the others (`bonus`). Setting one to 0 keeps it from any share.
     pub bonus_set: &'static [(Attribute, u16)],
     /// Skills it starts with: paths in the skill tree, and how much practice
-    /// (`skill::Skills::starting`).
+    /// (`skill::Skills::starting`): a level's cube times 1,000
+    /// (`skill::level_practice`), so 27,000 is 30%.
     pub skills: &'static [(&'static str, u32)],
     /// What it can do because of what it is.
     pub abilities: &'static [Ability],

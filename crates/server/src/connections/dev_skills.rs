@@ -6,8 +6,8 @@ use shared::skill::{SkillId, Skills};
 
 use super::Client;
 
-/// The least and most practice `DevSkills::LearnSome` gives a node.
-const PRACTICE: (u64, u64) = (100, 2500);
+/// The least and most practice `DevSkills::LearnSome` gives a node: 10% to 50%.
+const PRACTICE: (u64, u64) = (1_000, 125_000);
 
 impl Client {
     /// Dev tools: practises some skills or forgets them, and sends the sheet. `now`

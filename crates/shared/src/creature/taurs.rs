@@ -10,6 +10,7 @@ use super::bodies::{
 use super::guesses::medians;
 use super::{BodyPart, CreatureDef, Location, Size};
 use crate::sheet::{Ability, Trait};
+use crate::skill::level_practice;
 
 /// A person's upper body: nothing worn below the waist, as there is no person there.
 const UPPER_BODY: [BodyPart; 9] = [
@@ -51,7 +52,10 @@ pub(super) const DRIDER: CreatureDef = CreatureDef {
     playable: false,
     attributes: medians(130, 120, 120, 100),
     bonus_set: &[],
-    skills: &[("athletics/climbing", 2500), ("stealth/sneaking", 900)],
+    skills: &[
+        ("athletics/climbing", level_practice(5)),
+        ("stealth/sneaking", level_practice(3)),
+    ],
     abilities: &[Ability::NightVision],
     looks: LOOKS,
 };
@@ -68,7 +72,7 @@ pub(super) const SCORPION_MAN: CreatureDef = CreatureDef {
     playable: false,
     attributes: medians(150, 90, 150, 90),
     bonus_set: &[],
-    skills: &[("athletics/climbing", 100)],
+    skills: &[("athletics/climbing", level_practice(1))],
     abilities: &[Ability::NightVision],
     looks: BEARDED,
 };

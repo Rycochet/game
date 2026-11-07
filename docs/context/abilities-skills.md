@@ -56,17 +56,19 @@ Later, not planned yet: investing in businesses, becoming a mayor.
 
 - **Each node names the attributes it leans on**, and its children inherit them unless they say otherwise (melee: Strength and Agility; rapier: mostly Agility). Combinations are written once per branch, not per check.
 - **Practice flows up, halving each level:** using a scimitar gives 1 to scimitar, ½ to 1-handed, ¼ to melee, ⅛ to combat. *To balance.*
-- **A node's value is a root of its practice** (square root as a start), so every node has diminishing returns.
+- **A node's value is a root of its practice:** the cube root, so 100% takes 1,000,000 (built; owner, 2026-11-07: square roots, 100% at 10,000, grew far too fast), and every node has diminishing returns.
+- **One practice per skill every 5 seconds** (built: `skill::Windows`), the largest in that time counting, so a quick weapon learns no faster than a slow one. At 8 a blow, nonstop fighting reaches 10% in about 10 minutes, 25% in under 3 hours, 50% in about 22 and 100% in about 174 (owner, 2026-11-07).
+- **Familiar foes teach less** (planned next): characters count the 5-second blocks they spend fighting each kind of creature (`sheet::Foes`, built: a block counts for hitting one or being hit by one). Familiarity is the square root of those blocks, as a percentage; while it is no higher than the practised skill's own percentage, practice is in full, and past that it halves for every 10 points over, attacking and defending alike, so farming one kind stalls (about 20% after 1,000 kills of a 20-second fight). Kills are remembered too, for later: a mob remembers who harmed it and when, and a kill goes to everyone who harmed it in the last 2 minutes; the list is forgotten when it stops fighting, and one player's part when they die or leave the level (owner, 2026-11-07).
 - **A check adds the values along the path.** Every level counts, like octaves of noise, so a lifelong brawler picking up a sword for the first time still beats someone who has never fought.
 - **Learning speed** is practice × a root of the attribute against the kind's median. With square roots in both places, playing four times as long matches being twice as smart: first choices count, months of play catch up. *To balance.*
 
-Worked example, 1,000 uses each, square roots:
+Worked example, 1,000 practice each, cube roots:
 
 | Character | Scimitar | Another 1-handed weapon |
 |---|---|---|
-| All scimitar | 31.6 + 22.4 + 15.8 + 11.2 = 81 | 0 + 22.4 + 15.8 + 11.2 = 49 |
-| 100 each with ten 1-handed weapons | 59 | 59 |
-| All unarmed (under melee), picking up a sword | | 0 + 0 + 22.4 + 15.8 = 38 |
+| All scimitar | 10.0 + 7.9 + 6.3 + 5.0 = 29.2 | 0 + 7.9 + 6.3 + 5.0 = 19.2 |
+| 100 each with ten 1-handed weapons | 23.9 | 23.9 |
+| All unarmed (under melee), picking up a sword | | 0 + 0 + 6.3 + 5.0 = 11.3 |
 | Never fought | | 0, plus a small floor |
 
 ## Checks

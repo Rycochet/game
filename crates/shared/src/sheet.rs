@@ -16,6 +16,7 @@ use crate::vitals::Vitals;
 
 mod attributes;
 mod build;
+mod foes;
 mod from_build;
 mod hair;
 mod kind_bonus;
@@ -25,6 +26,7 @@ mod shapeshift;
 pub use crate::ability::Ability;
 pub use attributes::{Attribute, Attributes, Row};
 pub use build::{Build, Dot, POINTS_TOTAL, TURN_STEPS, WEIGHT_TOTAL};
+pub use foes::{Foe, Foes};
 pub use from_build::{POINT_WEIGHT, SPREAD};
 pub use kind_bonus::{BONUS_POINTS, bonus_from};
 pub use looks::{Choice, Pattern};
@@ -171,6 +173,9 @@ pub struct Sheet {
     /// What it really is while shapeshifted into another kind's body (`shapeshift`).
     #[serde(default)]
     pub true_form: Option<TrueForm>,
+    /// What it remembers of each kind of creature it has fought (`Foes`).
+    #[serde(default)]
+    pub foes: Foes,
 }
 
 impl Default for Sheet {
@@ -195,6 +200,7 @@ impl Sheet {
             appearance: Appearance::default(),
             vitals: Vitals::default(),
             true_form: None,
+            foes: Foes::default(),
         }
     }
 

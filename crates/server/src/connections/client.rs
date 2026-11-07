@@ -49,6 +49,7 @@ impl Client {
             speed: NORMAL_SPEED,
             waiting: VecDeque::new(),
             fight: Default::default(),
+            learning: Default::default(),
             starting_as: None,
             unsaved: false,
             visit: None,
