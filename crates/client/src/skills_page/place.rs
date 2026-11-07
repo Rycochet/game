@@ -6,19 +6,17 @@ use bevy::prelude::*;
 
 use super::build::{SkillLine, SkillNode};
 use super::view::SkillsView;
-use crate::common::SkillsPageOpen;
 
 /// The outline round the skill hovered over or chosen.
 pub(super) const PICKED_OUTLINE: Color = Color::srgb(0.85, 0.55, 0.1);
 
 #[allow(clippy::type_complexity)]
 pub(super) fn place_tree(
-    open: Res<SkillsPageOpen>,
     view: Res<SkillsView>,
     mut nodes: Query<(&SkillNode, &mut Node, &mut Outline), Without<SkillLine>>,
     mut lines: Query<(&SkillLine, &mut Node, &mut UiTransform), Without<SkillNode>>,
 ) {
-    if !open.0 {
+    if !view.shown {
         return;
     }
     let picked = view.hovered.or(view.chosen);

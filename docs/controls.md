@@ -56,7 +56,7 @@ A black ring turns under your target. Tab and Shift + Tab go through enemies fro
 | Close what is on top | Esc, or click outside it (not the startup menu: press Play) | Tap outside it |
 | Open or close the Character panel | Click the person at the bottom left | Tap the person |
 | Show your character, your clothes and what you carry, or your abilities | C, I or B (the same key again closes it), or the tabs at the top of the panel | Tap the tabs |
-| Show the skills you know, as a tree round you | K (again, or Esc, closes it), or the Skills button on the Abilities tab; drag to move the tree, the wheel to zoom, click a skill to see more | Tap the Skills button; drag to move, pinch to zoom, tap a skill |
+| Show the skills you know, as a tree round you | K (again closes it), or the Skills tab on the Character panel; drag to move the tree, the wheel to zoom, click a skill to see more | Tap the Skills tab; drag to move, pinch to zoom, tap a skill |
 | Use an ability on the action bar (either side of the Health and Mana circle) | 1 to 0, or click it | Tap it |
 | Line up abilities while busy, or take one out of the line | Use them in turn; use one again to take it out (moving yellow and black stripes show it is waiting) | The same |
 | Put an ability on the action bar, move it, or take it off | Drag it from the Abilities tab onto a slot, from slot to slot, or from a slot back onto the Abilities tab | The same |

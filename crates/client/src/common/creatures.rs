@@ -21,10 +21,9 @@ pub struct SheetText;
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct AbilitiesPage;
 
-/// Whether the Skills page is open: `skills_page` opens and closes it (K), the
-/// Abilities page's Skills button sets it, and the system menu leaves Esc to it.
-#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct SkillsPageOpen(pub bool);
+/// The Character panel's Skills page, which `skills_page` fills in.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct SkillsPage;
 
 /// How much energy the player gains per tick (`shared::energy`), from what they are
 /// and what they carry. The server keeps its own.

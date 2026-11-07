@@ -1,11 +1,11 @@
 # client: abilities
 
-What the character can do: the Character panel's Abilities page (B), every ability they know (`shared::ability::known`, for the body they are in) as ability widgets flowing in rows, Attack first, under a Skills button opening the Skills page (`common::SkillsPageOpen`); and the action bar, ten slots, five either side of the Health and Mana circle, with dragging between them. Not the panel or its tabs: those are `inventory`'s, which spawns the page as a `common::AbilitiesPage` node. Native and web.
+What the character can do: the Character panel's Abilities page (B), every ability they know (`shared::ability::known`, for the body they are in) as ability widgets flowing in rows, Attack first; and the action bar, ten slots, five either side of the Health and Mana circle, with dragging between them. Not the panel or its tabs: those are `inventory`'s, which spawns the page as a `common::AbilitiesPage` node. Native and web.
 
 ## Files
 
 - `crates/client/src/abilities/mod.rs`: `AbilitiesPlugin`, the module list.
-- `crates/client/src/abilities/page.rs`: `fill_pages` (fills each new `AbilitiesPage`, and again when the body changes: `DrawnFor`), `PageAbility` (on each ability there), `look` (how an ability shows, also on the bar), `open_skills` (the Skills button sets `common::SkillsPageOpen`), `ability_id` (widget ids `abilities/<id>`).
+- `crates/client/src/abilities/page.rs`: `fill_pages` (fills each new `AbilitiesPage`, and again when the body changes: `DrawnFor`), `PageAbility` (on each ability there), `look` (how an ability shows, also on the bar), `ability_id` (widget ids `abilities/<id>`).
 - `crates/client/src/abilities/icons.rs`: `icon_path`: each ability's game-icons.net icon in `assets/icons/` (listed in `xtask/icons.txt`; a test checks each is there).
 - `crates/client/src/abilities/own_bar.rs`: `OwnBar` (the bar as the server last said, with changes since), `take_bar`, `OwnBar::change` (checked by `ActionBar::apply`, made here and sent as `ClientMessage::ActionBar`).
 - `crates/client/src/abilities/bar.rs`: `BarSide`, `SlotNode`, `spawn_bar` (Startup), `place_bar` (either side of `common::VitalsCircle`, hidden with it), `show_bar` (each slot drawn again when the bar, body, keys, aim or having Heal's Mana change: its ability or an empty frame, the key's `Binding::short_label` bottom right in outlined words, a `set_edge` for automatic use, a `widgets::queued_stripe` inside it while queued (id `bar/queued.<slot>`), green or red while something dragged is over it).
@@ -24,7 +24,7 @@ What the character can do: the Character panel's Abilities page (B), every abili
 
 ## Depends on
 
-- `player` (`PlayerMoving`, `PlayerSystems`, `TakeStep`, `TravelTo`), `common` (`AbilitiesPage`, `SkillsPageOpen`, `VitalsCircle`, `OwnVitals`, `Other`, `Target`, `Action::UseSlot`, `Preferences`, `UiPointer`, `TouchGesture`, `PointerSystems`), `connection` (`FromServer`, `ToServer`), `inventory` (`Carried`, for the body), `widgets` (`spawn_ability`, `set_edge`, `queued_stripe`, `spawn_outlined_text`, `stops_presses`, buttons), `shared::ability`, `shared::magic`.
+- `player` (`PlayerMoving`, `PlayerSystems`, `TakeStep`, `TravelTo`), `common` (`AbilitiesPage`, `VitalsCircle`, `OwnVitals`, `Other`, `Target`, `Action::UseSlot`, `Preferences`, `UiPointer`, `TouchGesture`, `PointerSystems`), `connection` (`FromServer`, `ToServer`), `inventory` (`Carried`, for the body), `widgets` (`spawn_ability`, `set_edge`, `queued_stripe`, `spawn_outlined_text`, `stops_presses`, buttons), `shared::ability`, `shared::magic`.
 
 ## Used by
 
@@ -39,5 +39,5 @@ What the character can do: the Character panel's Abilities page (B), every abili
 - Each ability stands on the colour of what it leans on (`widgets::attribute_colour` of `Ability::leans`), dark when active and pastel when passive, on the page, the bar and while dragged.
 - Heal by hand (owner, 2026-11-07): the target if it isn't an enemy, otherwise the player; never an enemy, though the server allows it (healing one, for taming, is to come from the right-press menu of choices).
 - Passive abilities are drawn round and never greyed; active ones the player can't use now are greyed with a dull red frame (also on the bar, after a shapeshift, and while there isn't the Mana). The tip names the ability (on the bar with its key in full) over its `description`.
-- Ids: `abilities/skills`, `abilities/<ability>` (`attack`, `heal`, `night_vision`, ...), `bar/slot.<0..9>`.
+- Ids: `abilities/<ability>` (`attack`, `heal`, `night_vision`, ...), `bar/slot.<0..9>`.
 - Narrow screens will show only the first few slots and may move the circle: a later mobile task (owner).

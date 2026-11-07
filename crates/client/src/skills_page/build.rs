@@ -11,8 +11,8 @@ use shared::skill::{SkillId, Skills, VALUE_SCALE};
 use super::icons::icon_path;
 use super::layout::{Placed, SIZES, layout, size_of};
 use super::spawn::{Canvas, FORM, Origin};
+use super::view::SkillsView;
 use crate::character::CharacterSheet;
-use crate::common::SkillsPageOpen;
 use crate::widgets::{
     INK, Shade, SkillRing, UiId, attribute_colour, leaves_presses, skill_ring, spawn_outlined_icon,
 };
@@ -62,25 +62,32 @@ impl Drawn {
     }
 }
 
-/// Draws the tree again when the page is open and which skills are known has
-/// changed.
+/// Draws the tree again when the page is on show and which skills are known has
+/// changed, or the page is new (the Character panel opened again).
 #[allow(clippy::too_many_arguments)]
 pub(super) fn build_tree(
-    open: Res<SkillsPageOpen>,
+    view: Res<SkillsView>,
     sheet: Res<CharacterSheet>,
-    origin: Single<Entity, With<Origin>>,
-    canvas: Single<Entity, With<Canvas>>,
+    origin: Option<Single<(Entity, Ref<Origin>)>>,
+    canvas: Option<Single<Entity, With<Canvas>>>,
     assets: Res<AssetServer>,
     mut drawn: Local<Drawn>,
     mut commands: Commands,
 ) {
+    let (Some(origin), Some(canvas)) = (origin, canvas) else {
+        return;
+    };
+    let (origin, mark) = *origin;
+    if mark.is_added() {
+        *drawn = Drawn::default();
+    }
     let skills = &sheet.0.skills;
-    if !open.0 || !drawn.changed_to(skills) {
+    if !view.shown || !drawn.changed_to(skills) {
         return;
     }
     let placed = layout(skills);
     let canvas = *canvas;
-    let mut origin = commands.entity(*origin);
+    let mut origin = commands.entity(origin);
     origin.despawn_children();
     origin.with_children(|origin| {
         for one in &placed {

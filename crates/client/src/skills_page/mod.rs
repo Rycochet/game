@@ -1,6 +1,6 @@
-//! The Skills page (K, or the Abilities page's Skills button): a full-screen layer
-//! showing the skills the character knows as a radial tree round them, moved by
-//! dragging and zoomed by the wheel or a pinch. See
+//! The Skills page, the Character panel's Skills tab (K): the skills the character
+//! knows as a radial tree round them, moved by dragging and zoomed by the wheel or
+//! a pinch. See
 //! `docs/context/client/skills_page.md`.
 
 use bevy::prelude::*;
@@ -23,16 +23,16 @@ pub struct SkillsPagePlugin;
 impl Plugin for SkillsPagePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<view::SkillsView>()
-            .add_systems(Startup, spawn::spawn_page)
             .add_systems(
                 PreUpdate,
                 input::take_input
-                    .in_set(WidgetSystems::Modal)
+                    .after(WidgetSystems::Modal)
                     .run_if(not(in_state(GameView::Connecting))),
             )
             .add_systems(
                 Update,
                 (
+                    spawn::fill_page,
                     build::build_tree,
                     values::show_values,
                     place::place_tree,

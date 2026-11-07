@@ -7,7 +7,7 @@ use shared::combat::CANCEL_PENALTY;
 use shared::protocol::ClientMessage;
 
 use super::manual::Manual;
-use crate::common::{CancelledEnergy, OwnAbility, SkillsPageOpen};
+use crate::common::{CancelledEnergy, OwnAbility};
 use crate::connection::ToServer;
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
@@ -36,13 +36,13 @@ pub(super) fn cancel_by_escape(
     time: Res<Time>,
     menu: Res<SystemMenu>,
     debug_menu: Res<DebugMenu>,
-    (full_map, skills): (Res<FullMap>, Res<SkillsPageOpen>),
+    full_map: Res<FullMap>,
     mut own: ResMut<OwnAbility>,
     mut to_server: MessageWriter<ToServer>,
     mut cancelled: MessageWriter<CancelledEnergy>,
 ) {
     let now = time.elapsed_secs_f64();
-    let open = menu.is_open() || debug_menu.open || full_map.open || skills.0;
+    let open = menu.is_open() || debug_menu.open || full_map.open;
     if open || !own.is_winding_up(now) || !keys.just_pressed(KeyCode::Escape) {
         return;
     }

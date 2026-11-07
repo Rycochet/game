@@ -30,6 +30,8 @@ pub(super) struct SkillsView {
     pub drag_from: Option<Vec2>,
     /// Fit the tree to the page once it has been laid out (just opened).
     pub fit_wanted: bool,
+    /// Whether the Skills tab is on show, laid out.
+    pub shown: bool,
 }
 
 impl Default for SkillsView {
@@ -43,6 +45,7 @@ impl Default for SkillsView {
             pressed_at: None,
             drag_from: None,
             fit_wanted: true,
+            shown: false,
         }
     }
 }

@@ -11,11 +11,16 @@ use crate::character::CharacterSheet;
 pub(super) fn show_details(
     view: Res<SkillsView>,
     sheet: Res<CharacterSheet>,
-    mut text: Single<&mut Text, With<Details>>,
+    mut texts: Query<&mut Text, With<Details>>,
 ) {
+    if !view.shown {
+        return;
+    }
     let words = describe(&sheet.0.skills, view.hovered.or(view.chosen));
-    if text.0 != words {
-        text.0 = words;
+    for mut text in &mut texts {
+        if text.0 != words {
+            text.0 = words.clone();
+        }
     }
 }
 

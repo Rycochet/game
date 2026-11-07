@@ -1,19 +1,21 @@
-//! The page's parts, spawned once and shown while it is open: a full-screen layer
-//! with a title row (zoom out, zoom in, fit, close), the tree's canvas and a line
+//! The page's parts, put in the Character panel's Skills tab whenever that panel
+//! opens: a row of buttons (zoom out, zoom in, fit), the tree's canvas and a line
 //! of details under it.
 
 use bevy::prelude::*;
 
+use crate::common::SkillsPage;
 use crate::widgets::{
     BUTTON_PADDING, ButtonState, ButtonTooltip, INK, Pressable, TextSize, UiId, leaves_presses,
-    panel_title, spawn_button, spawn_close_button, spawn_fullscreen_layer,
+    spawn_button,
 };
 
 /// The form all its widgets' ids are in.
 pub(super) const FORM: &str = "skills";
+/// The canvas's size: the panel fits its pages, so this is the tab's.
+const CANVAS_WIDTH: f32 = 640.0;
+const CANVAS_HEIGHT: f32 = 480.0;
 
-#[derive(Component)]
-pub(super) struct SkillsLayer;
 /// Where the tree is drawn: presses on it are the page's to read.
 #[derive(Component)]
 pub(super) struct Canvas;
@@ -24,42 +26,47 @@ pub(super) struct Origin;
 #[derive(Component)]
 pub(super) struct Details;
 
-/// What a button on the title row does.
+/// What a button above the tree does.
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
 pub(super) enum PageButton {
     ZoomOut,
     ZoomIn,
     Fit,
-    Close,
 }
 
-pub(super) fn spawn_page(mut commands: Commands) {
-    let content = Node {
-        flex_direction: FlexDirection::Column,
-        padding: UiRect::all(px(12)),
-        row_gap: px(8),
-        ..default()
-    };
-    let (layer, panel) = spawn_fullscreen_layer(&mut commands, 0, content);
-    commands.entity(layer).insert(SkillsLayer);
-    commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel);
-        let canvas = panel
-            .spawn((
-                Canvas,
-                Node {
-                    flex_grow: 1.0,
-                    overflow: Overflow::clip(),
-                    ..default()
-                },
-                BackgroundColor(Color::srgba(0.25, 0.17, 0.1, 0.06)),
-            ))
-            .id();
-        panel
-            .commands()
-            .entity(canvas)
-            .insert(leaves_presses(canvas));
-        panel.commands().entity(canvas).with_child((
+/// Fills each new Skills tab.
+pub(super) fn fill_page(pages: Query<Entity, Added<SkillsPage>>, mut commands: Commands) {
+    for page in &pages {
+        commands.entity(page).with_children(|page| {
+            page.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                row_gap: px(8),
+                ..default()
+            })
+            .with_children(spawn_parts);
+        });
+    }
+}
+
+fn spawn_parts(column: &mut ChildSpawnerCommands) {
+    spawn_buttons(column);
+    let canvas = column
+        .spawn((
+            Canvas,
+            Node {
+                width: px(CANVAS_WIDTH),
+                height: px(CANVAS_HEIGHT),
+                overflow: Overflow::clip(),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.25, 0.17, 0.1, 0.06)),
+        ))
+        .id();
+    column
+        .commands()
+        .entity(canvas)
+        .insert(leaves_presses(canvas))
+        .with_child((
             Origin,
             leaves_presses(canvas),
             Node {
@@ -69,30 +76,26 @@ pub(super) fn spawn_page(mut commands: Commands) {
                 ..default()
             },
         ));
-        panel.spawn((
-            Details,
-            Text::default(),
-            TextSize::Medium.font(),
-            TextColor(INK),
-        ));
-    });
+    column.spawn((
+        Details,
+        Text::default(),
+        TextSize::Medium.font(),
+        TextColor(INK),
+        Node {
+            max_width: px(CANVAS_WIDTH),
+            ..default()
+        },
+    ));
 }
 
-fn spawn_title_row(panel: &mut ChildSpawnerCommands) {
-    panel
+fn spawn_buttons(column: &mut ChildSpawnerCommands) {
+    column
         .spawn(Node {
-            align_items: AlignItems::Center,
+            justify_content: JustifyContent::End,
             column_gap: px(8),
             ..default()
         })
         .with_children(|row| {
-            row.spawn((
-                panel_title("Skills"),
-                Node {
-                    flex_grow: 1.0,
-                    ..default()
-                },
-            ));
             for (button, label, name, tip) in [
                 (PageButton::ZoomOut, "-", "zoom_out", "Zoom out"),
                 (PageButton::ZoomIn, "+", "zoom_in", "Zoom in"),
@@ -116,10 +119,5 @@ fn spawn_title_row(panel: &mut ChildSpawnerCommands) {
                     ButtonTooltip(tip.into()),
                 ));
             }
-            spawn_close_button(row, Node::default()).insert((
-                PageButton::Close,
-                Pressable,
-                UiId::new(FORM, "close"),
-            ));
         });
 }
