@@ -58,6 +58,7 @@ A red ring turns under your target. Tab and Shift + Tab go through enemies from 
 | Show the skills you know, as a tree round you | K (again, or Esc, closes it), or the Skills button on the Abilities tab; drag to move the tree, the wheel to zoom, click a skill to see more | Tap the Skills button; drag to move, pinch to zoom, tap a skill |
 | Use an ability on the action bar (either side of the Health and Mana circle) | 1 to 0, or click it | Tap it |
 | Put an ability on the action bar, move it, or take it off | Drag it from the Abilities tab onto a slot, from slot to slot, or from a slot back onto the Abilities tab | The same |
+| Call off an ability that is winding up | Esc, or take a step | Take a step |
 | Have an ability on the action bar used by itself, or not | Right-click it (a moving edge shows it is on) | Hold a finger on it |
 | Pick up an item, and put it down | Press on it, drag, let go; or click it, then click where it goes | Hold a finger on it, drag, let go |
 | Turn an item you are holding | Right-click or R | Tap with a second finger |

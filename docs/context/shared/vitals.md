@@ -1,6 +1,6 @@
 # shared: vitals
 
-Health and Mana: how much harm a creature can take and how much magic it has left, with how much there can be and refilling out of combat. The same rules for players and, later, mobs. Nothing harms or casts yet but dev tools; what happens at 0 Health comes with combat.
+Health and Mana: how much harm a creature can take and how much magic it has left, with how much there can be and refilling out of combat. The same rules for players and mobs. Attacks harm (`shared::combat`); nothing casts yet. What happens at 0 Health is the server's (`server/server.md`).
 
 ## Files
 
@@ -23,7 +23,7 @@ Health and Mana: how much harm a creature can take and how much magic it has lef
 
 - Stored like `energy`: a value and the action tick it refills from (`since`), so any later tick is a formula. Refilling is a straight line at most ÷ `REFILL_TICKS` a tick, so it uses the same attribute as the most, and "other factors" can scale it later. Integers only.
 - Amounts are `Points`, thousandths of a point (owner, 2026-11-07: rounding whole points made harm too easy or too hard), so harm and refilling keep their fractions; the most stays in whole points, and players see whole points rounded up (`Points::shown`), so the living never show 0. Practice is kept in thousandths too. A `Track` saved in whole points (no `milli` flag) is turned into thousandths on reading (`TrackSave`).
-- Being hurt or spending mana is combat (`in_combat`): neither refills until `CALM_AFTER` after it. Later, dealing harm should call it too.
+- Being hurt or spending mana is combat (`in_combat`): neither refills until `CALM_AFTER` after it. Starting an attack calls it too (server `connections/combat.rs`).
 - The most = attribute ÷ 5 + playtime ÷ a day + √(practice ÷ 25) + changes, never below 1. Practice is what was taken or spent, at most `PRACTICE_PER_HOUR` a playtime hour each (counted by the hour playtime is in, so a clock as the rust plan has).
 - Full is kept as full (`u32::MAX` in a `Track`), so a new or old save starts full and full stays full when the most rises; below full stays the same number. Anything that changes the most (a change laid on or ended) settles first, at the old limits.
 - Changes end at an action tick, not playtime, so a potion wears off in real time, offline too. `forget_ended` settles at the limits with them before dropping them.

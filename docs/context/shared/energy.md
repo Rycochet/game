@@ -1,6 +1,6 @@
 # shared: energy
 
-Time for doing things: the same rule for players and, later, mobs, on both sides. A creature gains its speed in energy per tick, can act with 0 or more, and acting spends the action's cost, which can go below 0.
+Time for doing things: the same rule for players and mobs, on both sides. A creature gains its speed in energy per tick, can act with 0 or more, and acting spends the action's cost, which can go below 0.
 
 ## Files
 

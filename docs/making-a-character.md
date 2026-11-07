@@ -31,7 +31,7 @@ You have nine attributes, in three rows:
 - **Empathy:** reading people and creatures, and divine magic.
 - **Aura:** standing up to magic, curses and possession.
 
-For now only Strength does anything: it decides how much you can carry.
+For now only some of them do anything: Strength decides how much you can carry and how hard you hit, Strength and Agility how well you fight, Agility and Perception how well you defend, Toughness your Health and Will your Mana. See [Fighting](fighting).
 
 ## The triangles
 
