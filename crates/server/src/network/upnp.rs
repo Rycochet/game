@@ -1,6 +1,7 @@
 //! Asking this network's router to forward the open port here (UPnP), so
-//! players on the internet can reach a player's own game without setting up
-//! port forwarding by hand.
+//! players on the internet can reach a player's own game, or a standalone
+//! server with `HOW_UPNP` (`upnp_plugin`), without setting up port forwarding
+//! by hand.
 //!
 //! It runs on a thread of its own, as finding the router can take seconds:
 //! it finds the router, forwards the port for an hour at a time (renewing it
@@ -42,14 +43,15 @@ pub(super) struct RouterWork {
 }
 
 impl RouterWork {
-    /// Starts asking the router to forward `port` to this computer, which
-    /// listens on `bind` (all its addresses if unspecified).
-    pub(super) fn start(port: u16, bind: IpAddr) -> Self {
+    /// Starts asking the router to forward its `external` port to this
+    /// computer's port `local` listens on (all its addresses if unspecified).
+    pub(super) fn start(external: u16, local: SocketAddr) -> Self {
+        let (port, bind) = (local.port(), local.ip());
         let (stop, stopped) = watch::channel(());
         let (tell, answers) = mpsc::channel();
         let thread = std::thread::Builder::new()
             .name("upnp".into())
-            .spawn(move || run(port, bind, tell, stopped))
+            .spawn(move || run(external, port, bind, tell, stopped))
             .ok();
         Self {
             stop: Some(stop),
@@ -75,12 +77,18 @@ impl Drop for RouterWork {
     }
 }
 
-fn run(port: u16, bind: IpAddr, tell: mpsc::Sender<RouterPort>, stopped: watch::Receiver<()>) {
+fn run(
+    external: u16,
+    port: u16,
+    bind: IpAddr,
+    tell: mpsc::Sender<RouterPort>,
+    stopped: watch::Receiver<()>,
+) {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build();
     match runtime {
-        Ok(runtime) => runtime.block_on(forward(port, bind, tell, stopped)),
+        Ok(runtime) => runtime.block_on(forward(external, port, bind, tell, stopped)),
         Err(error) => {
             let _ = tell.send(RouterPort::Failed(format!("can't start ({error})")));
         }
@@ -88,13 +96,14 @@ fn run(port: u16, bind: IpAddr, tell: mpsc::Sender<RouterPort>, stopped: watch::
 }
 
 async fn forward(
+    external: u16,
     port: u16,
     bind: IpAddr,
     tell: mpsc::Sender<RouterPort>,
     mut stopped: watch::Receiver<()>,
 ) {
     let fail = |reason: String| {
-        warn!("Can't forward port {port} on the router: {reason}");
+        warn!("Can't forward port {external} on the router: {reason}");
         let _ = tell.send(RouterPort::Failed(reason));
     };
     if bind.is_loopback() {
@@ -113,13 +122,13 @@ async fn forward(
         return fail("can't tell this computer's address on the network".into());
     };
     let to = SocketAddr::new(local, port);
-    let lease = match add(&gateway, to).await {
+    let lease = match add(&gateway, external, to).await {
         Ok(lease) => lease,
         Err(reason) => return fail(reason),
     };
     let answer = match gateway.get_external_ip().await {
         Ok(ip) => RouterPort::Open {
-            external: SocketAddr::new(ip, port).to_string(),
+            external: SocketAddr::new(ip, external).to_string(),
             shared: is_shared(ip),
         },
         // Forwarded all the same.
@@ -128,30 +137,29 @@ async fn forward(
             shared: false,
         },
     };
-    info!("The router forwards port {port} to {to}: {answer:?}");
+    info!("The router forwards port {external} to {to}: {answer:?}");
     let _ = tell.send(answer);
     loop {
         tokio::select! {
             _ = stopped.changed() => break,
             _ = tokio::time::sleep(RENEW_EVERY), if lease > 0 => {
-                if let Err(reason) = add(&gateway, to).await {
-                    warn!("Can't renew port {port} on the router: {reason}");
+                if let Err(reason) = add(&gateway, external, to).await {
+                    warn!("Can't renew port {external} on the router: {reason}");
                 }
             }
         }
     }
-    let removing = gateway.remove_port(PortMappingProtocol::TCP, port);
+    let removing = gateway.remove_port(PortMappingProtocol::TCP, external);
     match tokio::time::timeout(REMOVE_FOR, removing).await {
-        Ok(Ok(())) => info!("The router no longer forwards port {port}"),
-        _ => warn!("Can't remove port {port} from the router; it lapses within the hour"),
+        Ok(Ok(())) => info!("The router no longer forwards port {external}"),
+        _ => warn!("Can't remove port {external} from the router; it lapses within the hour"),
     }
 }
 
-/// Forwards the port, for `LEASE` or, if the router only allows that, for
-/// good; the lease it got (0 for good), or why not.
-async fn add(gateway: &Gateway<Tokio>, to: SocketAddr) -> Result<u32, String> {
+/// Forwards the router's `port` to `to`, for `LEASE` or, if the router only
+/// allows that, for good; the lease it got (0 for good), or why not.
+async fn add(gateway: &Gateway<Tokio>, port: u16, to: SocketAddr) -> Result<u32, String> {
     let tcp = PortMappingProtocol::TCP;
-    let port = to.port();
     match gateway.add_port(tcp, port, to, LEASE, DESCRIPTION).await {
         Ok(()) => Ok(LEASE),
         Err(AddPortError::OnlyPermanentLeasesSupported) => {

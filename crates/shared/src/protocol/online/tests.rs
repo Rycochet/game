@@ -21,9 +21,9 @@ fn a_chosen_port_is_kept() {
 }
 
 #[test]
-fn settings_saved_before_upnp_turn_it_on() {
+fn settings_saved_before_upnp_leave_it_off() {
     let settings: OnlineSettings = ron::from_str("(port: 9000)").unwrap();
-    assert!(settings.upnp);
+    assert!(!settings.upnp);
     assert_eq!(settings.port, 9000);
 }
 

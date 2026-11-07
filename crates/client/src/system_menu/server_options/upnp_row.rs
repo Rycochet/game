@@ -3,7 +3,9 @@
 //! button copying the address players on the internet connect to.
 //!
 //! Like the boxes above, the switch is kept when Server Options closes, which
-//! opens the server again if it is online.
+//! opens the server again if it is online. `HOW_UPNP`, if set when the game
+//! started, decides instead (the server reads it too): the switch shows it,
+//! disabled, with a tip saying why.
 
 use bevy::prelude::*;
 use shared::protocol::{OnlineSettings, OnlineState, RouterPort};
@@ -11,7 +13,7 @@ use shared::protocol::{OnlineSettings, OnlineState, RouterPort};
 use super::super::{Action, BUTTON_ROW, FONT, GAP, SystemMenu};
 use crate::common::{Hosting, Preferences};
 use crate::widgets::{
-    ButtonPressed, ButtonState, INK, Pressable, Switch, TextSize, UiId, WARNING_TEXT,
+    ButtonPressed, ButtonState, HoverTip, INK, Pressable, Switch, TextSize, UiId, WARNING_TEXT,
     copy_to_clipboard, field_label, spawn_copy_button, spawn_switch,
 };
 
@@ -27,15 +29,37 @@ pub(in crate::system_menu) struct RouterText;
 #[derive(Component)]
 pub(in crate::system_menu) struct RouterCopy;
 
+/// The tip on the switch's row while `HOW_UPNP` decides.
+const SET_BY_ENVIRONMENT: &str = "Set by HOW_UPNP when the game was started.";
+
+/// The settings as the server uses them: `HOW_UPNP`, if set, wins.
+pub(super) fn in_use(settings: &OnlineSettings, environment: Option<bool>) -> OnlineSettings {
+    OnlineSettings {
+        upnp: environment.unwrap_or(settings.upnp),
+        ..settings.clone()
+    }
+}
+
 pub(super) fn spawn_upnp_rows(panel: &mut ChildSpawnerCommands, width: f32) {
     let row = Node {
         align_items: AlignItems::Center,
         column_gap: px(GAP),
         ..default()
     };
-    panel.spawn(row.clone()).with_children(|row| {
+    let environment = server::upnp_from_environment();
+    let state = match environment {
+        None => ButtonState::Normal,
+        Some(false) => ButtonState::Disabled,
+        Some(true) => ButtonState::DisabledSelected,
+    };
+    let mut switch_row = panel.spawn(row.clone());
+    if environment.is_some() {
+        switch_row.insert(HoverTip(SET_BY_ENVIRONMENT.into()));
+    }
+    switch_row.with_children(|row| {
         row.spawn(field_label("Open the port on my router (UPnP)"));
-        spawn_switch(row, ButtonState::Normal, true, default())
+        let on = environment.unwrap_or(false);
+        spawn_switch(row, state, on, default())
             .insert((UpnpSwitch, UiId::new("server_options", "upnp")));
     });
     panel.spawn(row).with_children(|row| {
@@ -142,11 +166,13 @@ pub(in crate::system_menu) fn run_upnp_rows(
 ) {
     let before = std::mem::replace(&mut *last, *menu);
     let open = *menu == SystemMenu::ServerOptions;
+    let environment = server::upnp_from_environment();
+    let settings = in_use(&preferences.online_settings, environment);
     if open && before != SystemMenu::ServerOptions {
-        switch.0 = preferences.online_settings.upnp;
+        switch.0 = settings.upnp;
     }
     if open && (before != SystemMenu::ServerOptions || hosting.is_changed()) {
-        let (words, warning, address) = router_words(&hosting.0, &preferences.online_settings);
+        let (words, warning, address) = router_words(&hosting.0, &settings);
         line.0.0 = words;
         line.1.0 = if warning { WARNING_TEXT } else { INK };
         **copy_button = if address.is_some() {
@@ -160,13 +186,13 @@ pub(in crate::system_menu) fn run_upnp_rows(
             .read()
             .filter_map(|press| actions.get(press.0).ok())
             .any(|action| *action == Action::CopyRouterAddress);
-        let (.., address) = router_words(&hosting.0, &preferences.online_settings);
+        let (.., address) = router_words(&hosting.0, &settings);
         if copy && let Some(address) = address {
             copy_to_clipboard(&address);
         }
     }
-    if before == SystemMenu::ServerOptions && !open && preferences.online_settings.upnp != switch.0
-    {
+    let closed = before == SystemMenu::ServerOptions && !open;
+    if closed && environment.is_none() && preferences.online_settings.upnp != switch.0 {
         preferences.online_settings.upnp = switch.0;
     }
 }

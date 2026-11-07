@@ -25,6 +25,9 @@
 //! - `HOW_LETS_ENCRYPT_EMAIL`: where Let's Encrypt can write to you (optional).
 //! - `HOW_DEBUG_LETS_ENCRYPT_STAGING`: `true` uses Let's Encrypt's test service,
 //!   whose certificates nobody trusts, to try things without its rate limits.
+//! - `HOW_UPNP`: `true` asks the router to forward the secure port (443 with
+//!   Let's Encrypt) while the server runs. Ignored, with a warning, behind a
+//!   reverse proxy.
 //! - `HOW_TLS_NAMES`: names and addresses a made certificate covers as well as
 //!   this machine, separated by commas.
 //! - `HOW_WEB`: the web client's folder (`trunk build`'s `dist`) to
@@ -51,8 +54,8 @@ use std::process;
 
 use server::{
     DEFAULT_WORLD_SEED, IDLE_MINUTES, NetworkPlugin, Security, ServerName, ServerOptions,
-    WebClient, check_health, debug_api::DebugApiPlugin, default_data_folder, headless_app,
-    log_plugin, option_on,
+    UpnpChoice, UpnpPlugin, WebClient, check_health, debug_api::DebugApiPlugin,
+    default_data_folder, headless_app, log_plugin, option_on,
 };
 use shared::world::WorldSeed;
 
@@ -84,6 +87,7 @@ fn main() {
         eprintln!("{error}");
         process::exit(1);
     });
+    let upnp = UpnpPlugin::from_environment(&security);
     let guests = option_on("HOW_GUESTS", true);
     if !guests {
         eprintln!("HOW_GUESTS is false, which leaves no way to log in to this server yet");
@@ -130,6 +134,15 @@ fn main() {
         // After the log plugin, so what it says is logged.
         DebugApiPlugin { port_offset: 0 },
     ));
+    match upnp {
+        UpnpChoice::Forward(plugin) => {
+            app.add_plugins(plugin);
+        }
+        UpnpChoice::BehindProxy => bevy::log::warn!(
+            "HOW_UPNP is ignored behind a reverse proxy (HOW_BEHIND_PROXY): forward the proxy's port instead"
+        ),
+        UpnpChoice::Off => {}
+    }
     bevy::log::info!("Saving in {}", data.display());
     if dev_tools {
         bevy::log::warn!("Dev tools are on: anyone connected can teleport and change the world");

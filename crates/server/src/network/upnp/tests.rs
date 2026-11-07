@@ -25,7 +25,7 @@ fn a_chosen_listen_address_is_the_one_forwarded_to() {
 
 #[test]
 fn listening_only_here_never_asks_a_router() {
-    let work = RouterWork::start(24691, "127.0.0.1".parse().unwrap());
+    let work = RouterWork::start(24691, "127.0.0.1:24691".parse().unwrap());
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     let answer = loop {
         if let Some(answer) = work.latest() {

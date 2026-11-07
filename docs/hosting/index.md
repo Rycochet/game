@@ -59,6 +59,8 @@ Change the `environment` and `ports` of the example:
 
 These can't be mixed: settings that disagree stop the server from starting, and it says why.
 
+With none of these behind a proxy, `HOW_UPNP: "true"` asks your router to forward the port for you (UPnP), if it allows that: 443 with Let's Encrypt, otherwise 24691. The log says whether it worked. In Docker this only works with `network_mode: host` in place of `ports`, as the router's answers can't reach a container on Docker's own network. Behind a proxy it is ignored, with a warning, as the proxy's port is the one to forward.
+
 ## Connecting a native client
 
 Players choose **Connect...** on the startup menu and type the server's address, such as `game.example.com` or `game.example.com:24691`. Without a port, the client tries 24691 and then 443, so a server on either needs no port typed; it asks `/_version` to tell a Hall of Worlds server from any other web server. The client remembers the servers it has joined, and Play goes back to the last one.
@@ -81,7 +83,7 @@ HOW_SERVER=wss://game.example.com:24691/ws hall-of-worlds
 
 - **Players are guests for now.** There are no logins yet, and anyone who can reach the server can play. A guest gets their own character, tied to that browser or native client.
 - **A networked server never pauses.** The system menu (or a player's window going into the background) doesn't stop the world for anyone, whatever the settings, and nor does a native client's own server while Online is on: see [Pausing](../client#pausing).
-- **Hosting from the game itself:** a native client can open its own world to others with Online in the system menu, on one secure port (24691 unless Server Options says otherwise), with a certificate it makes. Unless Server Options turns it off, it asks your router to forward that port to the computer (UPnP) while it is online, and says there how that went and the address players on the internet connect to. Otherwise, or if the router has no UPnP or refuses, forward the port yourself. If your internet provider shares one address between many homes, Server Options says so: no forwarding gets players through then. A standalone server is better for a world that is always there.
+- **Hosting from the game itself:** a native client can open its own world to others with Online in the system menu, on one secure port (24691 unless Server Options says otherwise), with a certificate it makes. With UPnP turned on in Server Options (or `HOW_UPNP=true`), it asks your router to forward that port to the computer while it is online, and says there how that went and the address players on the internet connect to. Otherwise, or if the router has no UPnP or refuses, forward the port yourself. Windows may ask whether the game can use the network the first time: allow it, or the router's answer can't get through. If your internet provider shares one address between many homes, Server Options says so: no forwarding gets players through then. A standalone server is better for a world that is always there.
 - **Time stops only when the server does.** The server's clock is saved, and carries on from there next time. Every world's time goes by it, so a world nobody is in keeps its time going too.
 - **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the server's side of the [debug menu](../debug-menu).
 - **Stopping:** the server saves everyone when asked to stop (`docker compose down`, Ctrl+C or SIGTERM).

@@ -38,10 +38,26 @@ fn a_shared_address_or_a_refusal_is_a_warning_with_nothing_to_copy() {
 
 #[test]
 fn offline_says_what_going_online_will_do() {
-    let mut settings = OnlineSettings::default();
+    let mut settings = OnlineSettings {
+        upnp: true,
+        ..Default::default()
+    };
     let (words, ..) = router_words(&OnlineState::Offline, &settings);
     assert!(words.contains("asks the router"), "{words}");
     settings.upnp = false;
     let (words, ..) = router_words(&OnlineState::Offline, &settings);
     assert!(words.contains("forwarded"), "{words}");
+}
+
+#[test]
+fn the_environment_wins_over_the_switch() {
+    let settings = OnlineSettings::default();
+    assert!(!in_use(&settings, None).upnp);
+    assert!(in_use(&settings, Some(true)).upnp);
+    let on = OnlineSettings {
+        upnp: true,
+        ..Default::default()
+    };
+    assert!(!in_use(&on, Some(false)).upnp);
+    assert!(in_use(&on, None).upnp);
 }
