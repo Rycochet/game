@@ -34,7 +34,7 @@ An entry that can't be used right now stays in the list, greyed out. Entries mar
 | Reveal Map | Yes | Shows you the whole of this level. Not in towns. |
 | Show Debug Info | | Toggles the status text: position, hour, ping and view statistics. |
 | Show Widgets | | Opens a panel with one of every piece of the interface. Drop an item from the inventory on its text box to write it in. |
-| Spend Mana | Yes | Spends 5 Mana, if you have that much, as casting would: refilling waits 10 seconds, and it counts towards raising your most Mana. |
+| Spend Mana | Yes | Spends 5 Mana, if you have that much, as casting would: it counts towards raising your most Mana. |
 | Stairs Style | | Opens a panel stepping through the styles of stairs, on a level with stairs. Changes only what is drawn. |
 | Suns and Moons | | Toggles a panel changing the colours of the suns and moons, and how bright the suns are. Only on your screen, until you next join the world. |
 | Teleport Mode | Yes | Toggles clicks on the map taking you there at once, through walls in a site. |

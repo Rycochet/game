@@ -5,7 +5,7 @@ nav_order: 4.3
 
 # Fighting
 
-Every creature can fight, with weapons or with its bare hands. You fight with **Attack**, an ability every creature knows, which starts in the first slot of your action bar.
+Every creature can fight, with weapons or with its bare hands. You fight with **Attack**, an ability every creature knows, and can mend wounds with **Heal**, the first spell. New characters start with Heal in the first slot of the action bar and Attack in the second.
 
 ## Attacking
 
@@ -14,6 +14,16 @@ Target a creature (right-click it, hold a finger on it, or press Tab), then use 
 Each attack winds up for a short moment before it lands. If your target has moved out of reach or out of sight when it lands, the attack misses and the time is lost. You can call off an attack that is still winding up with Esc, or by moving, and you can act again almost at once.
 
 Right-click Attack on the action bar (or hold a finger on it) to have it used by itself: you then attack your target whenever it is an enemy in reach and you are ready. A creature that attacks you becomes your target if you have no target in sight.
+
+## Healing
+
+**Heal** turns 6 Mana into Health. Use it like Attack: it heals your target if they aren't an enemy, otherwise (or with no target) it heals you. Others can be healed from up to 6 cells away, in sight. It always spends its 6 Mana, even on someone already whole; healing beyond their most is lost. At first each point of Mana gives 2 Health, rising with the Healing skill to 20 for a master.
+
+Made automatic, Heal heals you whenever your Health is at a quarter or less and you have the Mana.
+
+## Automatic abilities take turns
+
+When several abilities are automatic, they are tried from left to right along the action bar (keys 1 to 0), and the first that can be done is. Attack can be done whenever an enemy is in reach, so anything to its right waits until it can't: put Heal before Attack to stop and heal when you are low, or after it to keep fighting.
 
 ## How quick you are
 
@@ -45,7 +55,7 @@ Armour doesn't protect you yet. Parrying and blocking with a shield are planned.
 
 ## Health
 
-Your Health is the red half of the circle at the bottom of the screen, and comes mostly from Toughness. Anyone who is hurt shows a red bar under their token until they are whole again. Out of a fight for 10 seconds, Health refills, from empty to full in about five minutes.
+Your Health is the red half of the circle at the bottom of the screen, and comes mostly from Toughness. Anyone who is hurt shows a red bar under their token until they are whole again. Out of a fight for 10 seconds, Health refills, from empty to full in about five minutes. Mana, the blue half, comes mostly from Will and refills all the time, fighting or not, at the same pace.
 
 ## Holding weapons
 

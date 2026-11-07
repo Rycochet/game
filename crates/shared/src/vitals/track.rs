@@ -147,6 +147,14 @@ impl Track {
             .saturating_sub(amount.milli());
     }
 
+    /// Adds this much (settled first) out of `most`: full at the most, and
+    /// what is beyond it lost.
+    pub(super) fn give(&mut self, amount: Points, most: u32) {
+        let most = Points::whole(most).milli();
+        let value = self.value.min(most).saturating_add(amount.milli());
+        self.value = if value >= most { u32::MAX } else { value };
+    }
+
     /// No refilling before this tick.
     pub(super) fn calm_from(&mut self, tick: u64) {
         self.since = self.since.max(tick);

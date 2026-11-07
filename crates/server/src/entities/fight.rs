@@ -10,7 +10,7 @@ use shared::vitals::{Points, Vital};
 use super::gear::bury;
 use super::{ATTACK_GAP, Doing, Mob, Spot};
 use crate::ServerWorld;
-use crate::combat::{Pending, health_left, luck, ticks_for};
+use crate::combat::{Act, Pending, health_left, luck, ticks_for};
 use crate::storage::SiteId;
 
 /// What a mob did to a player this tick, for the player's client to be told
@@ -77,16 +77,19 @@ pub(super) fn mob_turn(
             .is_some_and(|spot| in_reach(level, mob.position, spot.position, swing.weapon.reach()))
     };
     if let Some(pending) = mob.fight.pending.take() {
+        let Act::Strike(swing) = pending.act else {
+            return Some(0);
+        };
         mob.fight.attacks += 1;
         let target = pending.target;
-        blows.push(if reaches(mob, target, &pending.swing) {
+        blows.push(if reaches(mob, target, &swing) {
             MobBlow::Landed {
                 mob: mob.id,
                 target,
                 kind: mob.kind,
                 attributes: mob.attributes,
                 wielded: mob.wielded,
-                swing: pending.swing,
+                swing,
             }
         } else {
             MobBlow::Fizzled {
@@ -110,7 +113,7 @@ pub(super) fn mob_turn(
     let lands_in = ticks_for(swing.wind_up, mob.speed);
     mob.fight.pending = Some(Pending {
         target: after,
-        swing,
+        act: Act::Strike(swing),
         lands_at: tick + lands_in,
     });
     blows.push(MobBlow::Started {

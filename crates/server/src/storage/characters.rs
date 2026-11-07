@@ -90,7 +90,10 @@ impl Storage {
     pub fn load_action_bar(&self, id: &CharacterId) -> Result<ActionBar, String> {
         Ok(self
             .character(id)?
-            .map_or_else(ActionBar::default, |save| save.action_bar))
+            .map_or_else(ActionBar::default, |mut save| {
+                save.action_bar.catch_up();
+                save.action_bar
+            }))
     }
 
     /// Deletes a character's save (dev tools), if they have one.

@@ -44,7 +44,7 @@ pub(super) fn take_health(
         match message {
             ServerMessage::AbilityLanded {
                 target: Some(id),
-                landed: Landed::Hit { left, .. },
+                landed: Landed::Hit { left, .. } | Landed::Healed { left, .. },
                 ..
             } => {
                 seen.0.insert(*id, (*left, now));

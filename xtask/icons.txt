@@ -5,6 +5,7 @@ lorc/feathered-wing
 delapouite/high-kick
 delapouite/night-vision
 lorc/boot-stomp
+delapouite/healing
 # Skills (skills_page/icons.rs)
 lorc/anvil
 lorc/paw

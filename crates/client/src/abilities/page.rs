@@ -114,7 +114,12 @@ pub(super) fn open_skills(
 pub(super) fn look(ability: Ability, kind: CreatureKind, assets: &AssetServer) -> AbilityLook {
     AbilityLook {
         icon: assets.load(icon_path(ability)),
-        name: ability.name().into(),
+        name: format!(
+            "{}
+{}",
+            ability.name(),
+            ability.description()
+        ),
         passive: !ability.is_active(),
         // A passive ability is never done, so it is never shown as unusable.
         usable: !ability.is_active() || ability.can_use(kind),
@@ -126,6 +131,7 @@ pub(super) fn look(ability: Ability, kind: CreatureKind, assets: &AssetServer) -
 pub(super) fn ability_id(ability: Ability) -> &'static str {
     match ability {
         Ability::Attack => "attack",
+        Ability::Heal => "heal",
         Ability::Flutter => "flutter",
         Ability::Kick => "kick",
         Ability::NightVision => "night_vision",

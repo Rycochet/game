@@ -11,7 +11,7 @@ use shared::vitals::{Points, Vital};
 
 use super::Client;
 use crate::ServerWorld;
-use crate::combat::{Pending, health_left, luck, ticks_for};
+use crate::combat::{Act, Pending, health_left, luck, ticks_for};
 use crate::entities::{MobBlow, Striker, hit_mob};
 
 impl Client {
@@ -25,7 +25,7 @@ impl Client {
     }
 
     /// Where a mob on the player's level is, if it is there and in sight.
-    fn mob_in_sight(&mut self, world: &ServerWorld, mob: Id) -> Option<(i64, i64)> {
+    pub(super) fn mob_in_sight(&mut self, world: &ServerWorld, mob: Id) -> Option<(i64, i64)> {
         let visit = self.visit.as_mut()?;
         let at = world
             .populations
@@ -66,19 +66,26 @@ impl Client {
 }
 
 /// Begins an ability the client asked for, if it can be done now: Attack, at
-/// a mob in sight and in reach. Whether the client is still there, and what it
-/// cost (nothing if it wasn't begun).
+/// a mob in sight and in reach, or Heal (`heal.rs`). Whether the client is
+/// still there, and what it cost (nothing if it wasn't begun).
 pub(super) fn start_ability(
     client: &mut Client,
     world: &mut ServerWorld,
     ability: Ability,
-    target: Id,
+    target: Option<Id>,
 ) -> (bool, u32) {
     let kind = client.inventory.creature;
-    if ability != Ability::Attack || !ability.can_use(kind) || client.fight.pending.is_some() {
+    if !ability.can_use(kind) || client.fight.pending.is_some() {
         debug!("Not starting {ability:?}: can't, or already winding up");
         return (true, 0);
     }
+    if ability == Ability::Heal {
+        return super::heal::start_heal(client, world, target);
+    }
+    let (Ability::Attack, Some(target)) = (ability, target) else {
+        debug!("Not starting {ability:?}: not done yet, or no target");
+        return (true, 0);
+    };
     let Some(at) = client.mob_in_sight(world, target) else {
         debug!("Not starting {ability:?}: {target:?} isn't in sight");
         return (true, 0);
@@ -92,7 +99,7 @@ pub(super) fn start_ability(
     let lands_in = ticks_for(swing.wind_up, client.speed);
     client.fight.pending = Some(Pending {
         target,
-        swing,
+        act: Act::Strike(swing),
         lands_at: tick + lands_in,
     });
     let limits = client.limits(tick);
@@ -116,10 +123,14 @@ pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool
         return true;
     };
     client.fight.pending = None;
+    let swing = match pending.act {
+        Act::Strike(swing) => swing,
+        Act::Heal => return super::heal::land_heal(client, world, pending.target),
+    };
     client.fight.attacks += 1;
     let target = pending.target;
     let at = client.mob_in_sight(world, target);
-    let reached = at.filter(|&at| client.reaches(at, &pending.swing));
+    let reached = at.filter(|&at| client.reaches(at, &swing));
     let (Some(_), Some(visit)) = (reached, client.visit.as_ref()) else {
         return client.link.send(&ServerMessage::AbilityLanded {
             who: None,
@@ -132,9 +143,9 @@ pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool
         id: client.entity_id(),
         position: visit.position(),
         fighter: client.fighter(),
-        swing: pending.swing,
+        swing,
     };
-    let practised = striker.fighter.practised_by(&pending.swing);
+    let practised = striker.fighter.practised_by(&swing);
     let Some(hit) = hit_mob(world, place, target, striker, tick) else {
         return true;
     };
@@ -277,5 +288,7 @@ fn killed(client: &mut Client, world: &mut ServerWorld, tick: u64) {
     client.link.send(&ServerMessage::Killed);
 }
 
+#[cfg(test)]
+mod heal_tests;
 #[cfg(test)]
 mod tests;
