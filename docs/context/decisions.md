@@ -1019,7 +1019,7 @@ Owner's design (Abilities and action bar, PR 4 of 5). The Character panel has th
 
 ## 2026-11-06: The Skills page
 
-Owner's design (Skills page, PR 3 of 3): a full-screen layer opened by K or the Abilities page's Skills button, showing only the skills the character knows as a radial tree with the character's name in the middle (owner: the name, not the kind), dragged and zoomed by mouse, fingers or keys. The known top levels share the circle by the square root of how many known skills end under each, in the tree's order clockwise from the top; a fixed ninth each was tried and crowded the tree. Zooming spreads nodes apart rather than scaling them, so words stay sharp. The page hit-tests its own nodes rather than making them buttons, so a drag can start on one. `Welcome` now carries the character's name, which the client didn't know.
+Owner's design (Skills page, PR 3 of 3): a full-screen layer opened by K or the Abilities page's Skills button, showing only the skills the character knows as a radial tree with the character's name in the middle (owner: the name, not the kind), dragged and zoomed by mouse, fingers or keys. The known top levels share the circle by the square root of how many known skills end under each, in the tree's order clockwise from the top; a fixed ninth each was tried and crowded the tree. Branches always point outwards: a node's children spread no wider than its level allows round its own line (owner, 2026-11-07). Zooming spreads nodes apart rather than scaling them, so words stay sharp. The page hit-tests its own nodes rather than making them buttons, so a drag can start on one. `Welcome` now carries the character's name, which the client didn't know.
 
 ## 2026-11-06: The action bar
 

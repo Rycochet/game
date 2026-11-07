@@ -3,7 +3,8 @@
 //! tree's order (Combat first), sharing the circle by the square root of how many
 //! known skills end beneath each, so a small branch still has room beside a big one;
 //! below them each known node gets a share of its parent's slice by how many end
-//! beneath it. Only known skills are placed.
+//! beneath it, never wider than its level allows (`MAX_SLICE`), so every branch
+//! points outwards, even a lone one. Only known skills are placed.
 
 use bevy::math::Vec2;
 use shared::skill::{SkillId, Skills};
@@ -11,6 +12,12 @@ use shared::skill::{SkillId, Skills};
 /// How far out each level's ring is, at zoom 1, in interface pixels: the
 /// character, then the top levels and each level below.
 pub(super) const RINGS: [f32; 5] = [0.0, 160.0, 300.0, 440.0, 580.0];
+
+/// How wide, in degrees, the children of a node at each level may spread round its
+/// line. A child stays further out along its parent's line while the angle between
+/// them is under the arccos of the two rings' ratio (58°, 47° and 41° between the
+/// levels), so these keep half of each well inside that.
+const MAX_SLICE: [f32; 5] = [360.0, 90.0, 72.0, 60.0, 60.0];
 
 /// One known skill's place.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -58,6 +65,10 @@ fn place(
         at,
         from: parent,
     });
+    // Its children spread no wider than this level allows, round its own line, so
+    // each stays further out along it (a lone top level has the whole circle).
+    let half = (to_angle - from_angle).min(MAX_SLICE[usize::from(id.depth())].to_radians()) / 2.0;
+    let (from_angle, to_angle) = (angle - half, angle + half);
     let known: Vec<_> = known_children(skills, id).collect();
     let total: u32 = known.iter().map(|&child| ends_under(skills, child)).sum();
     let mut start = from_angle;
