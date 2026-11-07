@@ -144,7 +144,7 @@ mod native {
         #[test]
         fn each_server_and_slot_has_its_own_key() {
             assert_eq!(key("wss://example.org/ws", None), "example.org:443");
-            assert_eq!(key("ws://example.org:8080/ws", None), "example.org:8080");
+            assert_eq!(key("ws://example.org:24690/ws", None), "example.org:24690");
             assert_eq!(key("wss://a:1/ws", Some("two")), "a:1#two");
         }
 

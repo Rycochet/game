@@ -5,7 +5,7 @@ use std::fmt;
 
 /// The port a server's address means when it names none: the secure port a
 /// server listens on unless told otherwise.
-pub const DEFAULT_PORT: u16 = 8081;
+pub const DEFAULT_PORT: u16 = 24691;
 
 /// The port tried next when an address names none and nothing answers on
 /// `DEFAULT_PORT`: HTTPS's own, as a server behind a proxy or with Let's

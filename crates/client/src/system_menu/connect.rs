@@ -30,7 +30,7 @@ pub(super) use show::show_connect;
 const CONNECT_WIDTH: f32 = 520.0;
 /// The most of the window's height the list takes before it scrolls.
 const LIST_SHARE: f32 = 40.0;
-const EXAMPLE: &str = "For example: play.example.com, or play.example.com:8081";
+const EXAMPLE: &str = "For example: play.example.com, or play.example.com:24691";
 /// The game's own public server, in the box when no other server is known.
 const SUGGESTED_SERVER: &str = "hallofworlds.app";
 #[cfg(target_arch = "wasm32")]

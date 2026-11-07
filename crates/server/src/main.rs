@@ -8,10 +8,10 @@
 //!
 //! Set by environment variables:
 //!
-//! - `HOW_ADDRESS`: the plain port (default `0.0.0.0:8080`), which only answers
+//! - `HOW_ADDRESS`: the plain port (default `0.0.0.0:24690`), which only answers
 //!   that connections must be secure, unless `HOW_BEHIND_PROXY` is on.
 //! - `HOW_TLS_ADDRESS`: the secure port for HTTPS and `wss://` (default
-//!   `0.0.0.0:8081`).
+//!   `0.0.0.0:24691`).
 //! - `HOW_BEHIND_PROXY`: `true` also serves everything on the plain port, for a
 //!   reverse proxy to reach. The secure port stays open.
 //! - `HOW_DISABLE_SSL`: `true` doesn't open the secure port or set up a
@@ -56,13 +56,13 @@ use server::{
 };
 use shared::world::WorldSeed;
 
-const DEFAULT_ADDRESS: &str = "0.0.0.0:8080";
+const DEFAULT_ADDRESS: &str = "0.0.0.0:24690";
 
 fn main() {
     let address: SocketAddr = env::var("HOW_ADDRESS")
         .unwrap_or_else(|_| DEFAULT_ADDRESS.into())
         .parse()
-        .expect("HOW_ADDRESS is an address and port, such as 0.0.0.0:8080");
+        .expect("HOW_ADDRESS is an address and port, such as 0.0.0.0:24690");
     if env::args().nth(1).as_deref() == Some("--health") {
         match check_health(address) {
             Ok(()) => process::exit(0),

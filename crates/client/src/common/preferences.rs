@@ -60,10 +60,12 @@ pub enum InterfaceSize {
 impl Preferences {
     /// As saved, or the default.
     fn from_text(text: &str) -> Self {
-        ron::from_str(text).unwrap_or_else(|error| {
+        let mut preferences: Self = ron::from_str(text).unwrap_or_else(|error| {
             warn!("Can't read the saved preferences, so using the defaults: {error}");
             Self::default()
-        })
+        });
+        preferences.online_settings.move_off_old_default();
+        preferences
     }
 
     fn to_text(&self) -> String {

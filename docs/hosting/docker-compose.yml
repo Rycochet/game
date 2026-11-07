@@ -1,11 +1,11 @@
-# Hall of Worlds server, with a self-signed certificate: https://<this computer>:8081
+# Hall of Worlds server, with a self-signed certificate: https://<this computer>:24691
 services:
   hall-of-worlds:
     image: ghcr.io/rycochet/hall-of-worlds:latest
     restart: unless-stopped
     ports:
-      - "8081:8081" # The game and the web client, over HTTPS.
-      - "8080:8080" # Only answers health checks, and that connections must be secure.
+      - "24691:24691" # The game and the web client, over HTTPS.
+      - "24690:24690" # Only answers health checks, and that connections must be secure.
     environment:
       # Other names or addresses this server is reached by, so the certificate
       # covers them. Change this, or remove it if you only use localhost.

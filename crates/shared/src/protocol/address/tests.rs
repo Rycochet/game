@@ -15,8 +15,8 @@ fn hosts_with_and_without_ports() {
         Some(("play.example.com".into(), 9000))
     );
     assert_eq!(
-        parsed("192.168.0.2:8081"),
-        Some(("192.168.0.2".into(), 8081))
+        parsed("192.168.0.2:24691"),
+        Some(("192.168.0.2".into(), 24691))
     );
     assert_eq!(
         parsed("localhost"),
@@ -50,7 +50,7 @@ fn not_addresses() {
 fn shown_as_typed_and_its_socket() {
     let address = ServerAddress::parse("play.example.com").unwrap();
     assert_eq!(address.to_string(), "play.example.com");
-    assert_eq!(address.url(), "wss://play.example.com:8081/ws");
+    assert_eq!(address.url(), "wss://play.example.com:24691/ws");
     let address = ServerAddress::parse("[::1]:9000").unwrap();
     assert_eq!(address.to_string(), "[::1]:9000");
     assert_eq!(address.url(), "wss://[::1]:9000/ws");
@@ -67,8 +67,8 @@ fn ports_tried_and_shown() {
         vec![9000]
     );
     assert_eq!(
-        ServerAddress::ports_to_try("play.example.com:8081"),
-        vec![8081]
+        ServerAddress::ports_to_try("play.example.com:24691"),
+        vec![24691]
     );
     assert!(ServerAddress::ports_to_try("not an address").is_empty());
 
@@ -81,5 +81,5 @@ fn ports_tried_and_shown() {
         "https://play.example.com:443/_version"
     );
     let address = ServerAddress::parse("[::1]").unwrap();
-    assert_eq!(address.with_port(), "[::1]:8081");
+    assert_eq!(address.with_port(), "[::1]:24691");
 }

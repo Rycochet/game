@@ -32,11 +32,11 @@ RUN useradd --system --no-create-home hall \
  && mkdir /data \
  && chown hall /data
 USER hall
-ENV HOW_ADDRESS=0.0.0.0:8080 \
+ENV HOW_ADDRESS=0.0.0.0:24690 \
     HOW_WEB=/srv/web \
     HOW_DATA=/data
 VOLUME /data
-EXPOSE 8080 8081
+EXPOSE 24690 24691
 # Asks /_healthz on the plain port (HOW_ADDRESS), which answers even while
 # only the secure port serves the game. Making a new world takes a while.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3     CMD ["/usr/local/bin/hall-of-worlds-server", "--health"]
