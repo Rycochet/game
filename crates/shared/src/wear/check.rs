@@ -5,7 +5,7 @@ use crate::creature::{Layer, Location};
 use crate::id::Id;
 use crate::item::{Inventory, Item};
 use crate::item_form::ItemForm;
-use crate::wear::{Fit, WearRefused, coverage, made_for_fingers};
+use crate::wear::{Fit, WearRefused, coverage, made_for_fingers, takes_one_place};
 
 impl Inventory {
     pub fn is_worn(&self, id: Id) -> bool {
@@ -79,21 +79,15 @@ impl Inventory {
     /// What on the same layer is in its way. Things taking one place only get in
     /// each other's way once every place is taken.
     fn clash(&self, item: &Item) -> Option<Id> {
-        let wear = item.kind.def().wear?;
+        let one_place = takes_one_place(item);
         for (location, layer) in coverage(item) {
             let here = || {
                 self.worn
                     .iter()
                     .filter(move |other| coverage(other).contains(&(location, layer)))
             };
-            let whole = |other: &&Item| {
-                other
-                    .kind
-                    .def()
-                    .wear
-                    .is_some_and(|theirs| !theirs.one_place)
-            };
-            if !wear.one_place {
+            let whole = |other: &&Item| !takes_one_place(other);
+            if !one_place {
                 if let Some(other) = here().next() {
                     return Some(other.id);
                 }

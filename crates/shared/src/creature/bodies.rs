@@ -31,6 +31,13 @@ pub(super) const BACK: BodyPart = BodyPart {
     places: 2,
 };
 
+/// Two hands to hold weapons in (`Location::Held`).
+pub(super) const HELD: BodyPart = BodyPart {
+    location: Location::Held,
+    layers: &[Layer::Outer],
+    places: 2,
+};
+
 pub(super) const fn fingers(places: u8) -> BodyPart {
     BodyPart {
         location: Location::Fingers,
@@ -41,7 +48,7 @@ pub(super) const fn fingers(places: u8) -> BodyPart {
 
 /// A two-legged body with hands of this many fingers in all. Surcoats and
 /// tabards go Over from the shoulders to the legs.
-pub(super) const fn biped(finger_count: u8) -> [BodyPart; 11] {
+pub(super) const fn biped(finger_count: u8) -> [BodyPart; 12] {
     [
         part(Location::Head, SKIN_TO_OUTER),
         part(Location::Neck, SKIN_TO_OUTER),
@@ -54,10 +61,11 @@ pub(super) const fn biped(finger_count: u8) -> [BodyPart; 11] {
         fingers(finger_count),
         part(Location::Legs, ALL_LAYERS),
         part(Location::Feet, SKIN_TO_OUTER),
+        HELD,
     ]
 }
 
-pub(super) const TEN_FINGERS: [BodyPart; 11] = biped(10);
+pub(super) const TEN_FINGERS: [BodyPart; 12] = biped(10);
 
 pub(super) const CHICKEN: [BodyPart; 6] = [
     part(Location::Head, SKIN),
@@ -78,7 +86,7 @@ pub(super) const HORSE: [BodyPart; 6] = [
     part(Location::Tail, SKIN),
 ];
 
-pub(super) const CENTAUR: [BodyPart; 10] = [
+pub(super) const CENTAUR: [BodyPart; 11] = [
     part(Location::Head, SKIN_TO_OUTER),
     part(Location::Neck, SKIN_TO_OUTER),
     part(Location::Shoulders, MIDDLE_OUTER_OVER),
@@ -89,6 +97,7 @@ pub(super) const CENTAUR: [BodyPart; 10] = [
     fingers(10),
     part(Location::Forelegs, SKIN_OUTER),
     part(Location::Hindlegs, SKIN_OUTER),
+    HELD,
 ];
 
 impl CreatureKind {

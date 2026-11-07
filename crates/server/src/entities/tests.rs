@@ -37,7 +37,8 @@ fn mobs_only_get_blades_they_can_carry_and_lift() {
             let gear = [(ItemKind::Sword, Some(Quality::Common))];
             let carrying = dressed(kind, &gear, made_at);
             assert!(carrying.total_weight() <= lifting);
-            armed += !carrying.items.is_empty() as u32;
+            // Held when it can be, carried otherwise.
+            armed += !(carrying.items.is_empty() && carrying.worn.is_empty()) as u32;
         }
         assert_eq!(armed, tries, "{kind:?} should always find something");
     }
