@@ -130,7 +130,10 @@ fn show_circle(
     let (health, mana) = told.now(time.elapsed_secs_f64());
     let words = format!(
         "Health {} / {}\nMana {} / {}",
-        health as u32, told.health.most, mana as u32, told.mana.most
+        health.ceil() as u32,
+        told.health.most,
+        mana.ceil() as u32,
+        told.mana.most
     );
     if tip.0 != words {
         tip.0 = words;

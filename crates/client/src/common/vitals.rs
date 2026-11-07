@@ -32,7 +32,7 @@ impl ToldVitals {
 fn refilled(told: VitalNow, ticks: f32) -> f32 {
     let most = told.most as f32;
     let refilling = (ticks - told.refills_in as f32).max(0.0);
-    (told.value.min(told.most) as f32 + refilling * most / REFILL_TICKS as f32).min(most)
+    (told.value.as_f32().min(most) + refilling * most / REFILL_TICKS as f32).min(most)
 }
 
 /// How much of the window's bottom, in interface pixels, the interface keeps

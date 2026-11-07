@@ -85,6 +85,20 @@ An ability draws on several nodes with weights, and on attributes: Throw Spear i
 - Spells are abilities drawing on magic nodes.
 - **Shapeshifting** (owner, 2026-11-06): a physical change takes the form's Body row and body, and keeps the creature's own Mind and Spirit (built as `Sheet::shapeshift`, for now only from the debug Change Creature). Senses that come with a kind (a wolf's nose, an owl's eyes) are to be abilities linked to the kind, and so come with a form: decided when abilities are added. A disguise is an illusion: looks only, every rule keeping the real kind.
 
+## Combat
+
+The owner's design (2026-11-06/07), the first active ability being Attack. Rules built so far: `shared::combat` (`shared/combat.md`); the rest is the plan for the Attack chat's later PRs.
+
+- **Energy alone:** abilities cost energy (`shared::energy`), with no cooldowns until an ability needs one; mana limits magic.
+- **Wind-up and recovery:** an ability's cost is split: the wind-up is waited before its effect lands, the recovery after. Steps stay act-first. The server says exactly when (`lands_at`, `ready_at`), so the client shows progress (a sweep over the action bar slot, a bar over the token for long ones), and others' wind-ups are sent so players can react.
+- **Cancelling:** anything with a wind-up can be cancelled until it lands, never after, leaving only a small wait. **Fizzling:** when it lands the ability checks its target is still valid (in reach, in sight); if not it fizzles, the energy spent and mana partly refunded (mana is charged on landing). **Interruption** by being hit is to be an opposed check, not automatic.
+- **Attacks:** about one a second with a sword, two with bare hands, one every two seconds with a polearm, by handling weight (length counts), lightened by strength, a little cheaper with skill. Polearms and spears reach two cells.
+- **Harm:** no hit or miss roll. A blow (weapon, strength, luck; quality counts most, then metal, then weight), then the attacker's power against the defender's passive Defence as a share (equals take half), then armour's share (never nothing). Health and Mana are kept in thousandths. Two equal median creatures fight for well under half a minute.
+- **Defence:** passive and free, always at work; Parry (and Block with a shield) are to be active abilities opening a short window.
+- **Dual wielding** (`combat/melee/dual`, beside the weapon types, specialisable): hits take turns, the bigger weapon always the main hand; the off hand does half plus half the skill's percentage, and the skill takes up to a fifth off each attack's cost, so a master is about a quarter quicker. Untrained, it is worse than one weapon.
+- **Automatic abilities** fire whenever they can (Attack: a target, in reach, an enemy), so they can be left on; not every ability may be automatic. Being attacked with no target in sight makes the attacker the target.
+- **Death,** for now: a player at 0 Health is put out of the poi (or the wilderness) onto the world map, told "You have been killed, try again!", at full Health with everything they carried.
+
 ## Specialising
 
 - A deliberate choice, never automatic. Any level except the top, one per group of siblings (a sword under melee and a bow under ranged can both be specialised), as many as can be earned. Permanent.

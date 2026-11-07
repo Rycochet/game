@@ -1,5 +1,9 @@
 use super::*;
 
+fn w(points: u32) -> Points {
+    Points::whole(points)
+}
+
 fn median() -> Attributes {
     Attributes::all(100)
 }
@@ -19,8 +23,8 @@ fn a_median_creature_has_20_of_each_and_starts_full() {
             mana: 20
         }
     );
-    assert_eq!(vitals.at(Vital::Health, limits, 0), 20);
-    assert_eq!(vitals.at(Vital::Mana, limits, 5), 20);
+    assert_eq!(vitals.at(Vital::Health, limits, 0), w(20));
+    assert_eq!(vitals.at(Vital::Mana, limits, 5), w(20));
 }
 
 #[test]
@@ -55,25 +59,34 @@ fn a_day_of_playtime_adds_a_point_to_both() {
 fn harm_waits_then_refills_in_five_minutes_from_empty() {
     let mut vitals = Vitals::default();
     let most = limits(&vitals, 0, 0);
-    vitals.hurt(20, most, 1000, 0);
-    assert_eq!(vitals.at(Vital::Health, most, 1000), 0);
-    assert_eq!(vitals.at(Vital::Health, most, 1000 + CALM_AFTER), 0);
+    vitals.hurt(w(20), most, 1000, 0);
+    assert_eq!(vitals.at(Vital::Health, most, 1000), w(0));
+    assert_eq!(vitals.at(Vital::Health, most, 1000 + CALM_AFTER), w(0));
     let start = 1000 + CALM_AFTER;
-    assert_eq!(vitals.at(Vital::Health, most, start + REFILL_TICKS / 2), 10);
-    assert_eq!(vitals.at(Vital::Health, most, start + REFILL_TICKS - 1), 19);
-    assert_eq!(vitals.at(Vital::Health, most, start + REFILL_TICKS), 20);
-    assert_eq!(vitals.at(Vital::Health, most, start + REFILL_TICKS * 9), 20);
+    assert_eq!(
+        vitals.at(Vital::Health, most, start + REFILL_TICKS / 2),
+        w(10)
+    );
+    assert_eq!(
+        vitals.at(Vital::Health, most, start + REFILL_TICKS - 1),
+        Points(19_996)
+    );
+    assert_eq!(vitals.at(Vital::Health, most, start + REFILL_TICKS), w(20));
+    assert_eq!(
+        vitals.at(Vital::Health, most, start + REFILL_TICKS * 9),
+        w(20)
+    );
 }
 
 #[test]
 fn more_harm_puts_refilling_off_again() {
     let mut vitals = Vitals::default();
     let most = limits(&vitals, 0, 0);
-    vitals.hurt(10, most, 0, 0);
+    vitals.hurt(w(10), most, 0, 0);
     let later = CALM_AFTER + REFILL_TICKS / 4;
-    assert_eq!(vitals.at(Vital::Health, most, later), 15);
-    vitals.hurt(5, most, later, 0);
-    assert_eq!(vitals.at(Vital::Health, most, later + CALM_AFTER), 10);
+    assert_eq!(vitals.at(Vital::Health, most, later), w(15));
+    vitals.hurt(w(5), most, later, 0);
+    assert_eq!(vitals.at(Vital::Health, most, later + CALM_AFTER), w(10));
     // Mana waits too, though none was spent.
     assert_eq!(
         vitals.told(Vital::Mana, most, later).refills_in as u64,
@@ -85,33 +98,33 @@ fn more_harm_puts_refilling_off_again() {
 fn health_stops_at_nothing() {
     let mut vitals = Vitals::default();
     let most = limits(&vitals, 0, 0);
-    vitals.hurt(500, most, 0, 0);
-    assert_eq!(vitals.at(Vital::Health, most, 0), 0);
+    vitals.hurt(w(500), most, 0, 0);
+    assert_eq!(vitals.at(Vital::Health, most, 0), w(0));
 }
 
 #[test]
 fn mana_can_only_be_spent_if_there_is_enough() {
     let mut vitals = Vitals::default();
     let most = limits(&vitals, 0, 0);
-    assert!(vitals.spend_mana(15, most, 0, 0));
-    assert!(!vitals.spend_mana(6, most, 0, 0));
-    assert_eq!(vitals.at(Vital::Mana, most, 0), 5);
-    assert_eq!(vitals.at(Vital::Health, most, 0), 20);
+    assert!(vitals.spend_mana(w(15), most, 0, 0));
+    assert!(!vitals.spend_mana(w(6), most, 0, 0));
+    assert_eq!(vitals.at(Vital::Mana, most, 0), w(5));
+    assert_eq!(vitals.at(Vital::Health, most, 0), w(20));
 }
 
 #[test]
 fn practice_raises_the_most_but_only_so_much_an_hour() {
     let mut vitals = Vitals::default();
     let most = limits(&vitals, 0, 0);
-    vitals.hurt(500, most, 0, 0);
-    assert_eq!(vitals.health.practice, PRACTICE_PER_HOUR);
-    vitals.hurt(500, most, 0, 10);
-    assert_eq!(vitals.health.practice, PRACTICE_PER_HOUR);
+    vitals.hurt(w(500), most, 0, 0);
+    assert_eq!(vitals.health.practice, w(PRACTICE_PER_HOUR).milli());
+    vitals.hurt(w(500), most, 0, 10);
+    assert_eq!(vitals.health.practice, w(PRACTICE_PER_HOUR).milli());
     // The next hour of playtime has room again.
     for hour in 1..=4 {
-        vitals.hurt(500, most, 0, hour * PLAYTIME_HOUR);
+        vitals.hurt(w(500), most, 0, hour * PLAYTIME_HOUR);
     }
-    assert_eq!(vitals.health.practice, 100);
+    assert_eq!(vitals.health.practice, w(100).milli());
     let parts = vitals.most(Vital::Health, &median(), 0, 0);
     assert_eq!(parts.practice, 2);
     assert_eq!(
@@ -136,12 +149,12 @@ fn changes_last_until_they_end() {
     let raised = limits(&vitals, 0, 50);
     assert_eq!(raised.health, 25);
     // Full stays full when the most rises.
-    assert_eq!(vitals.at(Vital::Health, raised, 50), 25);
+    assert_eq!(vitals.at(Vital::Health, raised, 50), w(25));
     assert!(!vitals.forget_ended(raised, 99));
     assert!(vitals.forget_ended(raised, 100));
     assert!(vitals.changes.is_empty());
     let after = limits(&vitals, 0, 100);
-    assert_eq!(vitals.at(Vital::Health, after, 100), 20);
+    assert_eq!(vitals.at(Vital::Health, after, 100), w(20));
 }
 
 #[test]
@@ -160,7 +173,7 @@ fn a_change_can_never_take_the_most_below_one() {
 fn a_client_refills_what_it_is_told_the_same_way() {
     let mut vitals = Vitals::default();
     let most = limits(&vitals, 0, 0);
-    vitals.hurt(12, most, 300, 0);
+    vitals.hurt(w(12), most, 300, 0);
     let told = vitals.told(Vital::Health, most, 300);
     for later in [
         0,
@@ -182,6 +195,31 @@ fn saves_from_before_load_full() {
     assert_eq!(vitals, Vitals::default());
     assert_eq!(
         vitals.at(Vital::Health, Limits { health: 7, mana: 3 }, 0),
-        7
+        w(7)
     );
+}
+
+#[test]
+fn harm_keeps_its_fractions() {
+    let mut vitals = Vitals::default();
+    let most = limits(&vitals, 0, 0);
+    for _ in 0..3 {
+        vitals.hurt(Points(333), most, 0, 0);
+    }
+    assert_eq!(vitals.at(Vital::Health, most, 0), Points(19_001));
+    assert_eq!(vitals.at(Vital::Health, most, 0).shown(), 20);
+}
+
+#[test]
+fn saves_in_whole_points_turn_into_thousandths() {
+    let old = r#"{"value":12,"since":5,"practice":40,"this_hour":3}"#;
+    let track: Track = serde_json::from_str(old).unwrap();
+    assert_eq!(track.at(20, 5), w(12));
+    assert_eq!(track.practice, w(40).milli());
+    let full: Track =
+        serde_json::from_str(r#"{"value":4294967295,"since":0,"practice":0,"this_hour":0}"#)
+            .unwrap();
+    assert_eq!(full, Track::default());
+    let again: Track = serde_json::from_str(&serde_json::to_string(&track).unwrap()).unwrap();
+    assert_eq!(again, track);
 }

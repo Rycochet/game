@@ -13,9 +13,11 @@ use crate::energy::ACTION_TICKS_PER_SECOND;
 use crate::sheet::{Attribute, Attributes};
 
 mod limits;
+mod points;
 mod track;
 
 pub use limits::{Limits, MostParts};
+pub use points::{PER_POINT, Points};
 pub use track::{Track, VitalNow, refilled};
 
 /// Action ticks in a second, as a whole number.
@@ -29,10 +31,10 @@ pub const REFILL_TICKS: u64 = 5 * 60 * TICKS;
 pub const CALM_AFTER: u64 = 10 * TICKS;
 /// Playtime for each point added to both: 24 hours (owner, 2026-11-06).
 pub const PLAYTIME_PER_POINT: u64 = 24 * 60 * 60 * TICKS;
-/// Practice is turned into points by a square root of it in steps of this:
-/// 25 gives 1 point, 100 gives 2, 2500 gives 10.
+/// Practice (whole points of it) is turned into points by a square root of it
+/// in steps of this: 25 gives 1 point, 100 gives 2, 2500 gives 10.
 pub const PRACTICE_STEP: u32 = 25;
-/// The most practice each can gain in an hour of playtime.
+/// The most practice each can gain in an hour of playtime, in whole points.
 pub const PRACTICE_PER_HOUR: u32 = 20;
 /// An hour of playtime, for that limit.
 const PLAYTIME_HOUR: u64 = 60 * 60 * TICKS;
@@ -109,7 +111,7 @@ impl Vitals {
     }
 
     /// How much of it there is at this tick.
-    pub fn at(&self, vital: Vital, limits: Limits, now: u64) -> u32 {
+    pub fn at(&self, vital: Vital, limits: Limits, now: u64) -> Points {
         self.track(vital).at(limits.get(vital), now)
     }
 
@@ -134,7 +136,7 @@ impl Vitals {
 
     /// Takes this much harm: neither refills for a while, and the harm is
     /// practice for Health. Health never goes below 0.
-    pub fn hurt(&mut self, amount: u32, limits: Limits, now: u64, playtime: u64) {
+    pub fn hurt(&mut self, amount: Points, limits: Limits, now: u64, playtime: u64) {
         self.in_combat(limits, now);
         self.health.take(amount, limits.health);
         self.practise(Vital::Health, amount, playtime);
@@ -142,7 +144,7 @@ impl Vitals {
 
     /// Spends this much Mana, if there is that much (`false` if not): neither
     /// refills for a while, and what is spent is practice for Mana.
-    pub fn spend_mana(&mut self, amount: u32, limits: Limits, now: u64, playtime: u64) -> bool {
+    pub fn spend_mana(&mut self, amount: Points, limits: Limits, now: u64, playtime: u64) -> bool {
         if self.at(Vital::Mana, limits, now) < amount {
             return false;
         }
@@ -178,7 +180,7 @@ impl Vitals {
     }
 
     /// Practice from use, as much of it as this hour of playtime has room for.
-    fn practise(&mut self, vital: Vital, amount: u32, playtime: u64) {
+    fn practise(&mut self, vital: Vital, amount: Points, playtime: u64) {
         let hour = playtime / PLAYTIME_HOUR;
         if hour != self.practice_hour {
             self.practice_hour = hour;
@@ -186,7 +188,8 @@ impl Vitals {
             self.mana.this_hour = 0;
         }
         let track = self.track_mut(vital);
-        let gained = amount.min(PRACTICE_PER_HOUR.saturating_sub(track.this_hour));
+        let room = Points::whole(PRACTICE_PER_HOUR).milli();
+        let gained = amount.milli().min(room.saturating_sub(track.this_hour));
         track.this_hour += gained;
         track.practice += gained;
     }
@@ -202,7 +205,7 @@ impl Vitals {
         MostParts {
             attribute: u32::from(attributes.get(vital.attribute())) / ATTRIBUTE_PER_POINT,
             playtime: (playtime / PLAYTIME_PER_POINT) as u32,
-            practice: (self.track(vital).practice / PRACTICE_STEP).isqrt(),
+            practice: (self.track(vital).practice / Points::whole(PRACTICE_STEP).milli()).isqrt(),
             changes: self
                 .changes
                 .iter()
