@@ -28,6 +28,7 @@ mod dungeon;
 mod item_text;
 mod items;
 mod map;
+mod own_ability;
 mod pointer;
 mod roads;
 mod sky;
@@ -64,6 +65,7 @@ pub use items::{
 pub use map::{
     Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, WorldReturn,
 };
+pub use own_ability::OwnAbility;
 pub use pointer::{
     PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface, interface_area,
 };
@@ -101,6 +103,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<HoveredOnMap>()
             .init_resource::<HoveredInSky>()
             .init_resource::<Target>()
+            .init_resource::<OwnAbility>()
             .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()
             .init_resource::<OtherLevels>()

@@ -9,6 +9,7 @@ use shared::ability::{Ability, BarChange};
 
 use super::own_bar::OwnBar;
 use super::spots::{Spot, Spots};
+use super::use_ability::UseSlot;
 use crate::common::{TouchGesture, UiPointer, in_interface};
 use crate::connection::ToServer;
 use crate::inventory::Carried;
@@ -77,6 +78,7 @@ pub(super) fn drag_abilities(
     mut drag: ResMut<Drag>,
     mut aim: ResMut<Aim>,
     mut to_server: MessageWriter<ToServer>,
+    mut used: MessageWriter<UseSlot>,
 ) {
     let kind = carried.0.creature;
     let spot = pointer.0.and_then(|at| spots.at(at));
@@ -132,7 +134,7 @@ pub(super) fn drag_abilities(
         aim.set_if_neq(Aim(None));
         if mouse.just_released(MouseButton::Left) {
             if let Some((_, From::Slot(slot), _)) = drag.pressed {
-                debug!("Using action bar slot {slot}: nothing yet, until combat");
+                used.write(UseSlot(slot));
             }
             drag.pressed = None;
         }

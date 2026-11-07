@@ -153,3 +153,19 @@ pub(crate) fn leave(client: &Client, world: &mut ServerWorld) {
         site.levels.entry(visit.index).or_default().last_visit = now();
     }
 }
+
+/// Killed: out of the site (or the wilderness) onto the world map, at its poi or
+/// where they were, keeping what they know of it. `false` if the client has gone.
+pub(crate) fn killed(client: &mut Client, world: &mut ServerWorld) -> bool {
+    leave(client, world);
+    // Worked out while the visit says where in the wilderness they are.
+    let here = client.world_position();
+    let Some(visit) = client.visit.take() else {
+        return true;
+    };
+    let (x, y) = visit.poi().map_or(here, |poi| (poi.x, poi.y));
+    client.character.world_position = (x, y);
+    client.unsaved = true;
+    client.changed_map();
+    client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
+}

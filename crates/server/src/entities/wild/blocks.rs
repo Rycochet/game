@@ -190,6 +190,10 @@ fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64))
                 .speed(&carrying),
                 shown: carrying.shown(),
                 scent: scent_strength(&carrying),
+                attributes: spawn.attributes,
+                vitals: Default::default(),
+                wielded: shared::combat::Wielded::of(&carrying),
+                fight: Default::default(),
             }
         })
         .collect();

@@ -79,20 +79,40 @@ fn swapping_keeps_each_auto_and_clearing_forgets_it() {
         kind,
     )
     .unwrap();
-    bar.apply(BarChange::ToggleAuto { slot: 1 }, kind).unwrap();
+    bar.apply(BarChange::ToggleAuto { slot: 0 }, kind).unwrap();
     bar.apply(BarChange::Swap { a: 0, b: 1 }, kind).unwrap();
-    assert_eq!(bar.slots[0], slot(Ability::Kick, true));
-    assert_eq!(bar.slots[1], slot(Ability::Attack, false));
-    bar.apply(BarChange::Clear { slot: 0 }, kind).unwrap();
+    assert_eq!(bar.slots[0], slot(Ability::Kick, false));
+    assert_eq!(bar.slots[1], slot(Ability::Attack, true));
+    bar.apply(BarChange::Clear { slot: 1 }, kind).unwrap();
     bar.apply(
         BarChange::Place {
-            slot: 0,
+            slot: 1,
+            ability: Ability::Attack,
+        },
+        kind,
+    )
+    .unwrap();
+    assert_eq!(bar.slots[1], slot(Ability::Attack, false));
+}
+
+#[test]
+fn only_some_abilities_can_be_made_automatic() {
+    let mut bar = ActionBar::default();
+    let kind = kicker();
+    bar.apply(
+        BarChange::Place {
+            slot: 1,
             ability: Ability::Kick,
         },
         kind,
     )
     .unwrap();
-    assert_eq!(bar.slots[0], slot(Ability::Kick, false));
+    assert_eq!(
+        bar.apply(BarChange::ToggleAuto { slot: 1 }, kind),
+        Err(BarRefusal::NotAutomatic)
+    );
+    assert!(Ability::Attack.can_be_automatic());
+    assert!(bar.apply(BarChange::ToggleAuto { slot: 0 }, kind).is_ok());
 }
 
 #[test]

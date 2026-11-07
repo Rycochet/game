@@ -12,6 +12,7 @@ fn blade(family: Family, grams: u32, length_mm: u32) -> Weapon {
         length_mm,
         quality: Quality::Common,
         metal_tier: 2,
+        skill: None,
     }
 }
 
@@ -161,4 +162,62 @@ fn a_blade_item_is_a_weapon_and_other_things_are_not() {
     assert_eq!(weapon.grams, item.total_weight());
     assert!(weapon.length_mm > 500);
     assert!(Weapon::of(&Item::new(Id::for_test(3), ItemKind::Hat)).is_none());
+}
+
+#[test]
+fn a_fighter_swings_and_practises_its_own_skills() {
+    use crate::creature::CreatureKind;
+    use crate::skill::{SkillId, Skills};
+    let attributes = Attributes::all(100);
+    let skills = Skills::default();
+    let unarmed = Fighter {
+        kind: CreatureKind::Human,
+        attributes: &attributes,
+        skills: Some(&skills),
+        wielded: Wielded {
+            main: Weapon::UNARMED,
+            off: None,
+        },
+    };
+    let swing = unarmed.swing(0);
+    assert_eq!(swing.cost, UNARMED_COST);
+    assert_eq!(swing.wind_up, wind_up(UNARMED_COST));
+    assert_eq!(
+        unarmed.practised_by(&swing),
+        vec![SkillId::find("combat/melee/unarmed/human").unwrap()]
+    );
+    assert_eq!(
+        unarmed.practised_defending(),
+        SkillId::find("combat/melee/defence/unarmed")
+    );
+    // Two hands: turns, the off hand with dual wielding practised too.
+    let dual = Fighter {
+        wielded: Wielded {
+            main: sword(),
+            off: Some(blade(Family::Dagger, 300, 350)),
+        },
+        ..unarmed
+    };
+    let (first, second) = (dual.swing(0), dual.swing(1));
+    assert!(!first.off_hand && second.off_hand);
+    assert!(second.cost < first.cost);
+    let practised = dual.practised_by(&second);
+    assert!(practised.contains(&SkillId::find("combat/melee/dual").unwrap()));
+    assert!(practised.contains(&SkillId::find("combat/melee/dagger").unwrap()));
+}
+
+#[test]
+fn every_blade_finds_a_skill_to_practise() {
+    use crate::creature::CreatureKind;
+    for family in Family::ALL {
+        let weapon = blade(family, 1000, 1000);
+        assert!(
+            weapon.attack_skill(CreatureKind::Human).is_some(),
+            "{family:?}"
+        );
+        assert!(weapon.defence_skill().is_some(), "{family:?}");
+    }
+    for kind in CreatureKind::ALL {
+        assert!(Weapon::UNARMED.attack_skill(kind).is_some(), "{kind:?}");
+    }
 }

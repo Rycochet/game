@@ -1,0 +1,262 @@
+//! A player fighting: beginning an attack, its landing or fizzling, calling it
+//! off, being hit by mobs, and being killed.
+
+use bevy::prelude::*;
+use shared::ability::Ability;
+use shared::combat::{CANCEL_PENALTY, Fighter, PRACTICE_PER_BLOW, Swing, Wielded, in_reach};
+use shared::id::Id;
+use shared::protocol::{Landed, ServerMessage};
+use shared::vitals::{Points, Vital};
+
+use super::Client;
+use crate::ServerWorld;
+use crate::combat::{Pending, health_left, luck, ticks_for};
+use crate::entities::{MobBlow, Striker, hit_mob};
+
+impl Client {
+    fn fighter(&self) -> Fighter<'_> {
+        Fighter {
+            kind: self.inventory.creature,
+            attributes: &self.sheet.attributes,
+            skills: Some(&self.sheet.skills),
+            wielded: Wielded::of(&self.inventory),
+        }
+    }
+
+    /// Where a mob on the player's level is, if it is there and in sight.
+    fn mob_in_sight(&mut self, world: &ServerWorld, mob: Id) -> Option<(i64, i64)> {
+        let visit = self.visit.as_mut()?;
+        let at = world
+            .populations
+            .0
+            .get(&visit.population())?
+            .mobs
+            .iter()
+            .find(|one| one.id == mob)?
+            .position;
+        visit.can_see(at.0, at.1).then_some(at)
+    }
+
+    /// Whether a swing from where the player stands reaches this cell.
+    fn reaches(&self, at: (i64, i64), swing: &Swing) -> bool {
+        self.visit.as_ref().is_some_and(|visit| {
+            in_reach(visit.cells(), visit.position(), at, swing.weapon.reach())
+        })
+    }
+
+    /// Practises these skills, keeping the sheet to be saved.
+    fn practise(&mut self, skills: impl IntoIterator<Item = shared::skill::SkillId>) {
+        for skill in skills {
+            self.sheet.skills.practise(skill, PRACTICE_PER_BLOW);
+            self.unsaved = true;
+        }
+    }
+}
+
+/// Begins an ability the client asked for, if it can be done now: Attack, at
+/// a mob in sight and in reach. Whether the client is still there, and what it
+/// cost (nothing if it wasn't begun).
+pub(super) fn start_ability(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    ability: Ability,
+    target: Id,
+) -> (bool, u32) {
+    let kind = client.inventory.creature;
+    if ability != Ability::Attack || !ability.can_use(kind) || client.fight.pending.is_some() {
+        debug!("Not starting {ability:?}: can't, or already winding up");
+        return (true, 0);
+    }
+    let Some(at) = client.mob_in_sight(world, target) else {
+        debug!("Not starting {ability:?}: {target:?} isn't in sight");
+        return (true, 0);
+    };
+    let swing = client.fighter().swing(client.fight.attacks);
+    if !client.reaches(at, &swing) {
+        debug!("Not starting {ability:?}: {target:?} is out of reach");
+        return (true, 0);
+    }
+    let tick = world.action_clock.ticks();
+    let lands_in = ticks_for(swing.wind_up, client.speed);
+    client.fight.pending = Some(Pending {
+        target,
+        swing,
+        lands_at: tick + lands_in,
+    });
+    let limits = client.limits(tick);
+    client.sheet.vitals.in_combat(limits, tick);
+    let stayed = client.link.send(&ServerMessage::AbilityStarted {
+        who: None,
+        ability,
+        target: Some(target),
+        lands_in: lands_in as u32,
+        ready_in: ticks_for(swing.cost, client.speed) as u32,
+    });
+    (stayed, swing.cost)
+}
+
+/// Every tick: lands the player's ability once its wind-up is over, on its
+/// target if it is still in sight and reach, or fizzles. `false` if the client
+/// has gone.
+pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let tick = world.action_clock.ticks();
+    let Some(pending) = client.fight.pending.filter(|p| p.lands_at <= tick) else {
+        return true;
+    };
+    client.fight.pending = None;
+    client.fight.attacks += 1;
+    let target = pending.target;
+    let at = client.mob_in_sight(world, target);
+    let reached = at.filter(|&at| client.reaches(at, &pending.swing));
+    let (Some(_), Some(visit)) = (reached, client.visit.as_ref()) else {
+        return client.link.send(&ServerMessage::AbilityLanded {
+            who: None,
+            target: Some(target),
+            landed: Landed::Fizzled,
+        });
+    };
+    let place = (visit.population(), visit.index());
+    let striker = Striker {
+        id: client.entity_id(),
+        position: visit.position(),
+        fighter: client.fighter(),
+        swing: pending.swing,
+    };
+    let practised = striker.fighter.practised_by(&pending.swing);
+    let Some(hit) = hit_mob(world, place, target, striker, tick) else {
+        return true;
+    };
+    client.practise(practised);
+    debug!(
+        "A player's blow did {:?} to {target:?}, {} per mille left",
+        hit.harm, hit.left
+    );
+    let landed = Landed::Hit {
+        harm: hit.harm,
+        left: hit.left,
+    };
+    client
+        .link
+        .send(&ServerMessage::Sheet(client.sheet.clone()))
+        && client.link.send(&ServerMessage::AbilityLanded {
+            who: None,
+            target: Some(target),
+            landed,
+        })
+}
+
+/// Calls off the player's ability if it hasn't landed: they can act again
+/// after only `CANCEL_PENALTY`. `false` if the client has gone.
+pub(super) fn cancel_ability(client: &mut Client, world: &ServerWorld) -> bool {
+    let tick = world.action_clock.ticks();
+    let Some(pending) = client.fight.pending.filter(|p| p.lands_at > tick) else {
+        return true;
+    };
+    client.fight.pending = None;
+    client.energy.cancel(tick, client.speed, CANCEL_PENALTY);
+    client.link.send(&ServerMessage::AbilityLanded {
+        who: None,
+        target: Some(pending.target),
+        landed: Landed::Cancelled,
+    })
+}
+
+/// Tells players what mobs did to them this tick, harming them, and putting
+/// out anyone killed.
+pub(crate) fn take_mob_blows(
+    clients: &mut [Client],
+    world: &mut ServerWorld,
+    blows: Vec<MobBlow>,
+    tick: u64,
+) {
+    for blow in blows {
+        let target = match &blow {
+            MobBlow::Started { target, .. }
+            | MobBlow::Landed { target, .. }
+            | MobBlow::Fizzled { target, .. } => *target,
+        };
+        let Some(client) = clients.iter_mut().find(|c| c.entity_id() == target) else {
+            continue;
+        };
+        let message = match blow {
+            MobBlow::Started {
+                mob,
+                lands_in,
+                ready_in,
+                ..
+            } => ServerMessage::AbilityStarted {
+                who: Some(mob),
+                ability: Ability::Attack,
+                target: None,
+                lands_in,
+                ready_in,
+            },
+            MobBlow::Fizzled { mob, .. } => ServerMessage::AbilityLanded {
+                who: Some(mob),
+                target: None,
+                landed: Landed::Fizzled,
+            },
+            MobBlow::Landed {
+                mob,
+                kind,
+                attributes,
+                wielded,
+                swing,
+                ..
+            } => {
+                let attacker = Fighter {
+                    kind,
+                    attributes: &attributes,
+                    skills: None,
+                    wielded,
+                };
+                let harm = attacker.harm(&swing, &client.fighter(), &mut luck(tick, mob, target));
+                let left = struck(client, world, harm, tick);
+                debug!("{mob:?} did {harm:?} to a player, {left} per mille left");
+                ServerMessage::AbilityLanded {
+                    who: Some(mob),
+                    target: None,
+                    landed: Landed::Hit { harm, left },
+                }
+            }
+        };
+        client.link.send(&message);
+    }
+}
+
+/// The player takes this much harm, practising Defence, and is killed if it
+/// was the last of their Health. How much is left, per mille.
+fn struck(client: &mut Client, world: &mut ServerWorld, harm: Points, tick: u64) -> u16 {
+    let limits = client.limits(tick);
+    let played = client.activity.played;
+    client.sheet.vitals.hurt(harm, limits, tick, played);
+    client.practise(client.fighter().practised_defending());
+    let left = health_left(&client.sheet.vitals, limits, tick);
+    if client.sheet.vitals.at(Vital::Health, limits, tick) == Points::ZERO {
+        killed(client, world, tick);
+        return left;
+    }
+    client
+        .link
+        .send(&ServerMessage::Sheet(client.sheet.clone()));
+    client.send_vitals(tick);
+    left
+}
+
+/// Killed: put out of the site onto the world map, whole again, and told
+/// (owner, 2026-11-07, for now).
+fn killed(client: &mut Client, world: &mut ServerWorld, tick: u64) {
+    client.fight.pending = None;
+    client.waiting.clear();
+    client.sheet.vitals.fill();
+    client.unsaved = true;
+    crate::sites::killed(client, world);
+    client
+        .link
+        .send(&ServerMessage::Sheet(client.sheet.clone()));
+    client.send_vitals(tick);
+    client.link.send(&ServerMessage::Killed);
+}
+
+#[cfg(test)]
+mod tests;

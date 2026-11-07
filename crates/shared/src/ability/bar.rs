@@ -51,6 +51,8 @@ pub enum BarRefusal {
     Unknown,
     /// There is nothing in the slot to make automatic.
     Empty,
+    /// It can't be made automatic (`Ability::can_be_automatic`).
+    NotAutomatic,
 }
 
 /// A new character's: Attack in the first slot.
@@ -92,6 +94,9 @@ impl ActionBar {
             }
             BarChange::ToggleAuto { slot } => {
                 let held = self.slots[index(slot)?].as_mut().ok_or(BarRefusal::Empty)?;
+                if !held.auto && !held.ability.can_be_automatic() {
+                    return Err(BarRefusal::NotAutomatic);
+                }
                 held.auto = !held.auto;
             }
         }

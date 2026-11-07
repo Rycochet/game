@@ -10,6 +10,7 @@
 
 mod accounts;
 mod clock;
+mod combat;
 mod connections;
 pub mod debug_api;
 mod embedded;

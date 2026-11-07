@@ -2,6 +2,7 @@
 
 use shared::dungeon::line_is_clear;
 
+use super::fight::{MobBlow, mob_turn};
 use super::territory::mind_territory;
 use super::tracking::track;
 use super::{Doing, Maps, Population, Spot, Taken, act, cross, everyone_playing, notice};
@@ -16,6 +17,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
     let tick = world.action_clock.ticks();
     let everyone = everyone_playing(clients);
     let mut crossings = Vec::new();
+    let mut blows: Vec<MobBlow> = Vec::new();
     for (&place, population) in &mut world.populations.0 {
         let here = || {
             everyone
@@ -85,7 +87,10 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                     .any(|&spot| line_is_clear(level, spot, cell))
             };
             let was_at = mob.position;
-            let cost = if matches!(mob.doing, Doing::Tracking { .. }) {
+            let fighting = mob_turn(mob, level, &spots, tick, &mut blows);
+            let cost = if let Some(cost) = fighting {
+                cost
+            } else if matches!(mob.doing, Doing::Tracking { .. }) {
                 track(mob, level, &spots, scents, &taken, tick)
             } else {
                 act(
@@ -110,13 +115,14 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                 crossings.push(crossing);
             } else if mob.doing != Doing::Idle {
                 // At least the next tick, so one turn can't run for ever here.
-                due.insert((mob.energy.ready_at(tick + 1, mob.speed), id));
+                due.insert((mob.next_due(tick), id));
             }
         }
     }
     for crossing in crossings {
         cross(&mut world.populations, crossing, tick, &everyone);
     }
+    crate::connections::take_mob_blows(clients, world, blows, tick);
 }
 
 /// How far apart on the world map, the nearer way round the planet.

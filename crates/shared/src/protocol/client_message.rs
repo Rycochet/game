@@ -7,7 +7,7 @@ use super::dev_skills::DevSkills;
 use super::dev_vitals::DevVitals;
 use super::kind_change::KindChange;
 use super::login::{CharacterId, Credentials};
-use crate::ability::BarChange;
+use crate::ability::{Ability, BarChange};
 use crate::creature::{CreatureKind, Size};
 use crate::dungeon::Cell;
 use crate::id::Id;
@@ -269,4 +269,10 @@ pub enum ClientMessage {
     /// Change the action bar (`ability::BarChange`), answered with `ActionBar`:
     /// what it is now, whether the change was made or refused.
     ActionBar(BarChange),
+    /// Use an ability on a creature (Attack, so far), when there is the energy:
+    /// answered with `AbilityStarted`, or nothing if it can't be done.
+    UseAbility { ability: Ability, target: Id },
+    /// Call off the ability winding up, if it hasn't landed: answered with
+    /// `AbilityLanded` and `Landed::Cancelled`.
+    CancelAbility,
 }

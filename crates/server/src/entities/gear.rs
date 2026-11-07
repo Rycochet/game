@@ -131,6 +131,20 @@ pub(crate) fn kill(
     if !visit.can_see(at.0, at.1) {
         return Err("out of sight");
     }
+    bury(world, place, here_index, mob);
+    Ok(())
+}
+
+/// A mob on this level (`place`, whose own level is `here_index`) has died: it
+/// goes, never to be made again, and what it had falls where it stood.
+pub(super) fn bury(world: &mut ServerWorld, place: (SiteId, u32), here_index: u32, mob: Id) {
+    let Some(population) = world.populations.0.get_mut(&place) else {
+        return;
+    };
+    let Some(index) = population.mobs.iter().position(|one| one.id == mob) else {
+        return;
+    };
+    let at = population.mobs[index].position;
     let dead = population.mobs.remove(index);
     world.died.insert(mob);
     population.due.retain(|&(_, id)| id != mob);
@@ -156,5 +170,4 @@ pub(crate) fn kill(
         let here = site.levels.entry(here_index).or_default();
         here.ground.entry(at).or_default().extend(left);
     }
-    Ok(())
 }

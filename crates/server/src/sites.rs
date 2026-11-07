@@ -32,7 +32,7 @@ pub(super) use enter::{dev_enter, enter_poi, generate, resume};
 use keepers::{NewKeepers, keepers_of};
 pub(super) use keepers::{give_to_keeper, keeper_building, keeper_stock, take_from_keeper};
 use leave::leave_for_poi;
-pub(super) use leave::{forget_site, leave, put_out, use_exit};
+pub(super) use leave::{forget_site, killed, leave, put_out, use_exit};
 use levels::{NewVisit, arrive_again, enter_level};
 pub(super) use moves::{set_cell, stepped, teleport};
 use place::{Mirror, Place};
@@ -145,8 +145,7 @@ impl Visit {
         self.id
     }
 
-    /// The level's cells as the server has them, for the debug API.
-    #[cfg(feature = "debug-api")]
+    /// The level's cells as the server has them (for reach, and the debug API).
     pub(crate) fn cells(&self) -> &shared::dungeon::Level {
         &self.level.level
     }

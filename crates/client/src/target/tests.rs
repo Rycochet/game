@@ -1,7 +1,7 @@
 use shared::id::Id;
 use shared::sheet::Feeling;
 
-use super::choose::{Seen, cycle, enemy_beside, in_order, nearest_enemy};
+use super::choose::{Seen, cycle, in_order, nearest_enemy};
 
 fn seen(number: u128, at: (i64, i64), feeling: Feeling) -> Seen {
     Seen {
@@ -62,16 +62,4 @@ fn after_a_death_the_nearest_other_enemy_is_chosen() {
         Some(Id::for_test(2))
     );
     assert_eq!(nearest_enemy((0, 0), &all[..1], Id::for_test(1)), None);
-}
-
-#[test]
-fn only_an_enemy_right_beside_counts() {
-    let far = seen(1, (2, 0), Feeling::Unfriendly);
-    let friend = seen(2, (1, 1), Feeling::Friendly);
-    let enemy = seen(3, (-1, 1), Feeling::Unfriendly);
-    assert_eq!(enemy_beside((0, 0), &[far, friend]), None);
-    assert_eq!(
-        enemy_beside((0, 0), &[far, friend, enemy]),
-        Some(Id::for_test(3))
-    );
 }

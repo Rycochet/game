@@ -17,6 +17,9 @@ pub const SKILL_SAVING: u64 = 150;
 /// The most dual wielding skill takes off each hand's attack, per mille: 20%, so
 /// attacks come up to 25% faster.
 pub const DUAL_SAVING: u64 = 200;
+/// What calling off a wind-up still costs: a moment to recover (two ticks at
+/// normal speed).
+pub const CANCEL_PENALTY: u32 = 420;
 /// The share of an attack's cost waited before it lands (the wind-up), per mille;
 /// the rest is the recovery after it.
 pub const ATTACK_WIND_UP: u64 = 250;

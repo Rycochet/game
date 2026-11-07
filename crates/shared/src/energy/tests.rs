@@ -101,3 +101,17 @@ fn the_heavier_it_is_the_longer_it_takes_to_put_on() {
     assert!(dressing_cost(20_000) > dressing_cost(150));
     assert_eq!(dressing_cost(0), 350);
 }
+
+#[test]
+fn cancelling_gives_back_all_but_the_penalty() {
+    let mut energy = Energy::default();
+    energy.spend(0, 210, 4200);
+    energy.cancel(2, 210, 420);
+    assert_eq!(energy.at(2, 210), -420);
+    assert_eq!(energy.ready_at(2, 210), 4);
+    // Owing less than the penalty already, nothing changes.
+    let mut nearly = Energy::default();
+    nearly.spend(0, 210, 500);
+    nearly.cancel(2, 210, 420);
+    assert_eq!(nearly.at(2, 210), -80);
+}
