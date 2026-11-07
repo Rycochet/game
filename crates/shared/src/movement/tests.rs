@@ -27,6 +27,24 @@ fn steps_on_a_level_need_walkable_cells() {
 }
 
 #[test]
+fn only_players_step_onto_world_gates() {
+    let mut level = Level::test_room();
+    let east = Step::new(1, 0).unwrap();
+    level.set(1, 0, Cell::WorldGate);
+    assert_eq!(step_on_level(&level, (0, 0), east), Some((1, 0)));
+    assert_eq!(mob_step_on_level(&level, (0, 0), east), None);
+    assert!(!mob_can_stand(&level, 1, 0));
+    // Nor landing on one by a jump.
+    level.set(1, 0, Cell::Water);
+    level.set(2, 0, Cell::WorldGate);
+    assert_eq!(step_on_level(&level, (0, 0), east), Some((2, 0)));
+    assert_eq!(mob_step_on_level(&level, (0, 0), east), None);
+    // Anywhere else, the same as anyone.
+    let south = Step::new(0, 1).unwrap();
+    assert_eq!(mob_step_on_level(&level, (0, 0), south), Some((0, 1)));
+}
+
+#[test]
 fn one_cell_of_liquid_is_jumped() {
     let mut level = Level::test_room();
     let east = Step::new(1, 0).unwrap();

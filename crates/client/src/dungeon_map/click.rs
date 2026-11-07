@@ -66,9 +66,10 @@ pub(super) fn pick_on_click(
     }
     let front = door.and_then(|id| dungeon.buildings.iter().find(|b| b.id == id));
     let front = front.map(|b| (b.door.0 + b.faces.0, b.door.1 + b.faces.1));
-    let picked = front.or_else(|| {
-        super::picking::pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces)
-    });
+    let (level, seen, walls) = (&dungeon.level, &dungeon.remembered, &shown.solid_faces);
+    let picked = front
+        .or_else(|| super::gate_picking::gate_clicked(ray, level, seen, walls))
+        .or_else(|| super::picking::pick(ray, level, seen, walls));
     if let Some((x, y)) = picked {
         // Dev tools: Teleport Mode jumps there instead (through walls), if the
         // server allows it.

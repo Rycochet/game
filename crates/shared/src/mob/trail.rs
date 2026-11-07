@@ -4,7 +4,7 @@
 //! scent along it, aged).
 
 use crate::dungeon::Level;
-use crate::movement::{Step, step_on_level};
+use crate::movement::{Step, mob_step_on_level};
 use crate::rng::Seed;
 
 #[cfg(test)]
@@ -56,7 +56,7 @@ pub fn wild_trail(seed: Seed, number: u32, home: (i64, i64), level: &Level) -> V
         // Straight on, else a little aside, else further aside.
         let next = [0, 1, 7, 2, 6].iter().find_map(|&aside| {
             let (dx, dy) = HEADINGS[(heading + aside) % 8];
-            let to = step_on_level(level, at, Step::new(dx, dy)?)?;
+            let to = mob_step_on_level(level, at, Step::new(dx, dy)?)?;
             Some(((heading + aside) % 8, to))
         });
         let Some((went, to)) = next else {

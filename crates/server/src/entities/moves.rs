@@ -2,7 +2,7 @@
 
 use shared::dungeon::{Level, line_is_clear};
 use shared::energy::site_step_cost;
-use shared::movement::{Step, step_on_level};
+use shared::movement::{Step, mob_can_stand, mob_step_on_level};
 use shared::rng::Seed;
 use std::collections::BTreeSet;
 
@@ -23,7 +23,7 @@ pub(super) fn take_step(
     step: Option<Step>,
     taken: &Taken,
 ) -> Option<u32> {
-    let to = step_on_level(level, mob.position, step?)?;
+    let to = mob_step_on_level(level, mob.position, step?)?;
     if taken.contains(&to) {
         return None;
     }
@@ -156,7 +156,7 @@ pub(super) fn act(
                 last_seen: target.position,
             };
             let mut spot = guard_spot(mob.home, target.position);
-            if !level.is_walkable(spot.0, spot.1) {
+            if !mob_can_stand(level, spot.0, spot.1) {
                 spot = nearest_free(level, spot, |cell| !free(cell)).unwrap_or(mob.home);
             }
             if mob.position == spot {
@@ -217,7 +217,7 @@ pub(super) fn nearest_free(
             (-reach..=reach).find_map(|dx| {
                 let spot = (cell.0 + dx, cell.1 + dy);
                 let on_edge = dx.abs().max(dy.abs()) == reach;
-                (on_edge && level.is_walkable(spot.0, spot.1) && !taken(spot)).then_some(spot)
+                (on_edge && mob_can_stand(level, spot.0, spot.1) && !taken(spot)).then_some(spot)
             })
         })
     })

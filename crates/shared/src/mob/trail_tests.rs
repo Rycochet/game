@@ -36,7 +36,7 @@ fn trails_start_at_home_and_go_by_legal_steps() {
         for pair in trail.windows(2) {
             let (dx, dy) = (pair[1].0 - pair[0].0, pair[1].1 - pair[0].1);
             let step = Step::new(dx, dy).expect("one cell at a time on open ground");
-            assert_eq!(step_on_level(&level, pair[0], step), Some(pair[1]));
+            assert_eq!(mob_step_on_level(&level, pair[0], step), Some(pair[1]));
         }
     }
 }

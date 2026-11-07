@@ -112,7 +112,7 @@ pub fn floor_cell(ray: Ray3d) -> Option<(i64, i64)> {
 }
 
 /// How far along the ray it crosses the wall side, if it does from the front.
-fn hits_face(origin: Vec3, direction: Vec3, face: &WallFace) -> Option<f32> {
+pub(super) fn hits_face(origin: Vec3, direction: Vec3, face: &WallFace) -> Option<f32> {
     let towards = direction.dot(face.normal);
     if towards >= 0.0 {
         return None;

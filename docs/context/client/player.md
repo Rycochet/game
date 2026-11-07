@@ -9,7 +9,7 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 ## Public API
 
 - `Player` (component): marks the single player entity.
-- `TravelTo { x, y }` (message): travel to a grid point by the quickest route, or to the nearest point it can reach: in the dungeon through cells the player has seen, on the world map round water and along roads where they are quicker. A new one replaces the current journey from wherever the player is.
+- `TravelTo { x, y }` (message): travel to a grid point by the quickest route, or to the nearest point it can reach: in the dungeon through cells the player has seen, never through a World Gate's cell unless it is the goal, on the world map round water and along roads where they are quicker. A new one replaces the current journey from wherever the player is.
 - `Arrived { x, y }` (message): a journey (`TravelTo`) has ended there, where it was asked to go. Not sent for keyboard steps or other direct moves, nor when it stopped short (so clicking a wall beside stairs doesn't take them). Used by `site` to enter pois, take stairs and leave by outside ground.
 - `TakeStep(Step)` (message): ask for a step (keyboard, auto walk, dev tools).
 - `Stepped { step, moved }` (message): the player took a step (by `TakeStep` or travelling), which moved them by `moved` (two cells for a jump); `connection` sends it to the server. Not sent when the position is set from elsewhere (the server's word: arriving on a level, corrections).

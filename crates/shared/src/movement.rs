@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::climate::Climate;
-use crate::dungeon::Level;
+use crate::dungeon::{Cell, Level};
 use crate::road::RoadKind;
 use crate::surface::Surface;
 use crate::world::WorldParams;
@@ -69,6 +69,17 @@ pub fn step_on_level(level: &Level, from: (i64, i64), step: Step) -> Option<(i64
     }
     let (far_x, far_y) = step.from((x, y));
     (level.cell(x, y).is_jumpable() && level.is_walkable(far_x, far_y)).then_some((far_x, far_y))
+}
+
+/// Whether a mob can stand on a cell: walkable, and not a World Gate's, as
+/// only players go through gates (to the Hall of Worlds).
+pub fn mob_can_stand(level: &Level, x: i64, y: i64) -> bool {
+    level.is_walkable(x, y) && level.cell(x, y) != Cell::WorldGate
+}
+
+/// `step_on_level` for a mob: never onto a World Gate's cell.
+pub fn mob_step_on_level(level: &Level, from: (i64, i64), step: Step) -> Option<(i64, i64)> {
+    step_on_level(level, from, step).filter(|&(x, y)| mob_can_stand(level, x, y))
 }
 
 /// What a step costs per cell it covers, in units of time: walking is timed by
