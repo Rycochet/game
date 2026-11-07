@@ -165,10 +165,14 @@ pub(super) fn bury(world: &mut ServerWorld, place: (SiteId, u32), here_index: u3
     if place.0 == SiteId::Wilderness {
         super::wild::touched(world, dead.home);
     }
-    // What it had is saved with the level it belongs on, wherever it has got to.
+    // What it had is saved with the level it belongs on, wherever it has got to;
+    // one made by developer tools is never kept, so nothing is marked dead.
+    let dev_made = dead.is_dev_made();
     let site = world.site_mut(place.0);
     let saved = site.levels.entry(dead.home_level).or_default();
-    saved.dead.insert(dead.number);
+    if !dev_made {
+        saved.dead.insert(dead.number);
+    }
     saved.mobs.remove(&dead.number);
     saved.unsettled.remove(&dead.number);
     let record = saved.records.remove(&mob).unwrap_or_default();

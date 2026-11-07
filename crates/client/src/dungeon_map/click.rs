@@ -2,10 +2,10 @@
 
 use bevy::prelude::*;
 use shared::dungeon::Cell;
-use shared::protocol::ClientMessage;
+use shared::protocol::{ClientMessage, DevMob};
 
 use super::Shown;
-use crate::common::{ClickMode, CurrentDungeon, HoveredBag, PointerPosition};
+use crate::common::{ClickMode, CreateMobOrder, CurrentDungeon, HoveredBag, PointerPosition};
 use crate::connection::ToServer;
 use crate::player::TravelTo;
 use crate::view3d::{ClickedToken, ViewCamera};
@@ -16,7 +16,8 @@ use crate::view3d::{ClickedToken, ViewCamera};
 /// pathfinding). Clicks on clickable tokens are left to `site`; so is using
 /// stairs, by arriving on their cell. In Teleport Mode it asks the server to teleport
 /// the player there, and in Change Cell Mode it changes the cell (floor, wall,
-/// door, window, and round again) to try walls out (dev tools).
+/// door, window, and round again) to try walls out (dev tools); in Mob Mode it
+/// puts a mob made to order there.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn pick_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
@@ -27,6 +28,7 @@ pub(super) fn pick_on_click(
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
     bag: Res<HoveredBag>,
+    order: Res<CreateMobOrder>,
     mut travel: MessageWriter<TravelTo>,
     mut door_clicked: MessageWriter<DoorClicked>,
     mut to_server: MessageWriter<ToServer>,
@@ -45,6 +47,14 @@ pub(super) fn pick_on_click(
     let Ok(ray) = camera.viewport_to_world(camera_transform, cursor) else {
         return;
     };
+    // Dev tools: Mob Mode puts the mob Create Mob has set up on the cell.
+    if *mode == ClickMode::PlaceMob {
+        if let Some((x, y)) = super::picking::floor_cell(ray) {
+            let mob = DevMob { x, y, ..order.0 };
+            to_server.write(ToServer(ClientMessage::DevCreateMob(mob)));
+        }
+        return;
+    }
     if *mode == ClickMode::ChangeCell {
         if let Some((x, y)) = super::picking::floor_cell(ray) {
             let cell = match dungeon.level.cell(x, y) {

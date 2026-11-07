@@ -26,11 +26,13 @@ use crate::storage::SiteId;
 // Split into files (`cargo xtask lint` keeps files small).
 mod crossing;
 mod dev_gift;
+mod dev_mob;
 mod doubling_back;
 mod fight;
 mod gear;
 mod harmed_by;
 mod heal;
+mod made;
 mod moves;
 mod notice;
 mod population;
@@ -45,6 +47,7 @@ mod wild;
 
 use crossing::cross;
 pub(crate) use dev_gift::{give_to_mob, mob_in_sight};
+pub(crate) use dev_mob::create_mob;
 use doubling_back::Pacing;
 pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;
@@ -160,6 +163,8 @@ pub(crate) struct Mob {
     harmed_by: HarmedBy,
     /// Its last steps, so it doesn't pace back and forth. Not saved.
     pacing: Pacing,
+    /// Developer tools: it does nothing, even when hit (Create Mob's Still).
+    still: bool,
 }
 
 impl Mob {
@@ -242,6 +247,8 @@ impl Populations {
     }
 }
 
+#[cfg(test)]
+mod dev_mob_tests;
 #[cfg(test)]
 mod harmed_tests;
 #[cfg(test)]

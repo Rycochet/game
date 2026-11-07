@@ -26,6 +26,8 @@ pub enum ClickMode {
     Teleport,
     /// Changes the cell there, to try walls out (in a site).
     ChangeCell,
+    /// Puts a mob made to order (`CreateMobOrder`) on the cell (in a site).
+    PlaceMob,
 }
 
 /// Whether the client is connected to the server (set by `connection`).

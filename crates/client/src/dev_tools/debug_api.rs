@@ -10,6 +10,7 @@ use server::debug_api::AddDebugMethod;
 // Split into files (`cargo xtask lint` keeps files small).
 mod drawing;
 mod items;
+mod mobs;
 mod moving;
 mod panels;
 mod places;
@@ -33,6 +34,7 @@ pub(super) fn add(app: &mut App) {
         .add_debug_method("client.teleport", teleport)
         .add_debug_method("client.enter_site", enter_site)
         .add_debug_method("client.dev_area", dev_area)
+        .add_debug_method("client.create_mob", mobs::create_mob)
         .add_debug_method("client.set_cells", set_cells)
         .add_debug_method("client.set_time", set_time)
         .add_debug_method("client.go_to_world", world::go_to_world)

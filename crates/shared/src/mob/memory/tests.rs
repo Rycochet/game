@@ -116,3 +116,18 @@ fn being_hit_is_never_forgotten() {
     );
     assert!(memory.0.len() <= MOST_REMEMBERED);
 }
+
+#[test]
+fn a_standing_set_by_hand_holds_until_something_changes_it() {
+    let mut memory = Memory::default();
+    memory.set_standing(who(1), Feeling::Unfriendly);
+    assert_eq!(
+        memory.standing(&who(1), Feeling::Friendly),
+        Feeling::Unfriendly
+    );
+    assert_eq!(
+        memory.standing(&who(2), Feeling::Friendly),
+        Feeling::Friendly
+    );
+    assert_eq!(memory.opinion(&who(1)), 0);
+}

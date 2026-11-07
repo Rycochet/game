@@ -1,6 +1,8 @@
-//! Debug switches: dev tools on the server, debug info, detect monsters, god mode, truesight, kill mob.
+//! Debug switches: dev tools on the server, debug info, detect monsters, god mode, truesight, kill mob, the mob Mob Mode makes.
 
 use bevy::prelude::*;
+use shared::creature::CreatureKind;
+use shared::protocol::DevMob;
 
 /// Whether the server accepts developer tools messages (from its `Welcome`).
 #[derive(Resource, Default, Clone, Copy, Debug)]
@@ -34,3 +36,22 @@ pub struct Truesight(pub bool);
 /// each kill.
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KillMob(pub bool);
+
+/// Debug: the mob a click puts on a cell in Mob Mode (`ClickMode::PlaceMob`),
+/// as Create Mob's panel has it; the click gives its `x` and `y`.
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CreateMobOrder(pub DevMob);
+
+impl Default for CreateMobOrder {
+    fn default() -> Self {
+        Self(DevMob {
+            kind: CreatureKind::Goblin,
+            x: 0,
+            y: 0,
+            attitude: None,
+            gear: true,
+            still: false,
+            seed: 1,
+        })
+    }
+}
