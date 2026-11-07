@@ -78,6 +78,7 @@ impl ServerWorld {
                     wielded: shared::combat::Wielded::of(&carrying),
                     fight: Default::default(),
                     harmed_by: Default::default(),
+                    pacing: Default::default(),
                 }
             })
             .collect();

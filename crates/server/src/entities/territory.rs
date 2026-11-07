@@ -3,9 +3,10 @@
 
 use shared::creature::Temper;
 use shared::dungeon::{Level, line_is_clear};
+use shared::movement::mob_can_stand;
 use shared::sheet::Feeling;
 
-use super::{Doing, Mob, Spot, cells_apart};
+use super::{Doing, Mob, Spot, Taken, cells_apart, nearest_free};
 
 /// How far round its home a territorial mob counts as its own, in cells.
 pub(super) const TERRITORY: i64 = 6;
@@ -57,6 +58,24 @@ pub(super) fn territorial_doing(mob: &Mob, spot: &Spot, feeling: Feeling) -> Opt
             gap: super::ATTACK_GAP,
         }),
     }
+}
+
+/// The cell a guard stands on against someone: its `guard_spot`, or the nearest
+/// free cell to it if that can't be stood on or someone else is there. Its own cell
+/// counts as free: otherwise, beside a spot it can't have, it would go back and
+/// forth between two cells, each looking taken while it stood on it.
+pub(super) fn guard_cell(
+    level: &Level,
+    mob: &Mob,
+    intruder: (i64, i64),
+    taken: &Taken,
+) -> (i64, i64) {
+    let spot = guard_spot(mob.home, intruder);
+    let others = |cell: (i64, i64)| cell != mob.position && taken.contains(&cell);
+    if mob_can_stand(level, spot.0, spot.1) && !others(spot) {
+        return spot;
+    }
+    nearest_free(level, spot, others).unwrap_or(mob.home)
 }
 
 /// Where to stand against someone: between them and home, at the territory's edge,

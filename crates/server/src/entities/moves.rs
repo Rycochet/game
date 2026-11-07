@@ -6,7 +6,8 @@ use shared::movement::{Step, mob_can_stand, mob_step_on_level};
 use shared::rng::Seed;
 use std::collections::BTreeSet;
 
-use super::territory::{LEASH, guard_spot, is_territorial};
+use super::doubling_back::walk_towards;
+use super::territory::{LEASH, guard_cell, is_territorial};
 use super::timid::too_near;
 use super::tracking::start_tracking;
 use super::{
@@ -97,8 +98,7 @@ pub(super) fn act(
                 }
                 return THINKING_COST;
             }
-            let step = maps.to(level, goal).towards(level, mob.position, free);
-            take_step(mob, level, step, taken).unwrap_or_else(|| {
+            walk_towards(mob, level, maps, goal, taken).unwrap_or_else(|| {
                 // No way there.
                 mob.doing = settle;
                 THINKING_COST
@@ -122,8 +122,7 @@ pub(super) fn act(
                 });
                 return shared::energy::CHANGE_MAP_COST;
             }
-            let step = maps.to(level, stairs).towards(level, mob.position, free);
-            take_step(mob, level, step, taken).unwrap_or_else(|| {
+            walk_towards(mob, level, maps, stairs, taken).unwrap_or_else(|| {
                 mob.doing = settle;
                 THINKING_COST
             })
@@ -162,16 +161,13 @@ pub(super) fn act(
                 against,
                 last_seen: target.position,
             };
-            let mut spot = guard_spot(mob.home, target.position);
-            if !mob_can_stand(level, spot.0, spot.1) {
-                spot = nearest_free(level, spot, |cell| !free(cell)).unwrap_or(mob.home);
-            }
+            let spot = guard_cell(level, mob, target.position, taken);
+            mob.pacing.aim_at(spot);
             if mob.position == spot {
                 // Standing its ground.
                 return THINKING_COST;
             }
-            let step = maps.to(level, spot).towards(level, mob.position, free);
-            take_step(mob, level, step, taken).unwrap_or(THINKING_COST)
+            walk_towards(mob, level, maps, spot, taken).unwrap_or(THINKING_COST)
         }
         Doing::Settling { steps_left } => {
             mob.doing = match steps_left.checked_sub(1) {
@@ -185,8 +181,7 @@ pub(super) fn act(
             let hop = mob.way_back.last().copied();
             let goal = hop.map_or(mob.home, |hop| hop.stairs);
             let late = tick.saturating_sub(since) > HOME_WITHIN;
-            let step = maps.to(level, goal).towards(level, mob.position, free);
-            let walked = take_step(mob, level, step, taken);
+            let walked = walk_towards(mob, level, maps, goal, taken);
             // Stuck or lost, it gets there when nobody can see.
             if (late || walked.is_none()) && !seen(mob.position) && !seen(goal) && free(goal) {
                 mob.position = goal;

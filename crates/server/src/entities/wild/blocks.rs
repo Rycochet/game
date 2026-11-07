@@ -195,6 +195,7 @@ fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64))
                 wielded: shared::combat::Wielded::of(&carrying),
                 fight: Default::default(),
                 harmed_by: Default::default(),
+                pacing: Default::default(),
             }
         })
         .collect();
