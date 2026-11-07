@@ -3,7 +3,6 @@
 
 use shared::creature::Temper;
 use shared::dungeon::{Level, line_is_clear};
-use shared::mob::Event;
 use shared::sheet::Feeling;
 
 use super::{Doing, Mob, Spot, cells_apart};
@@ -35,7 +34,7 @@ pub(super) fn mind_territory(mob: &mut Mob, level: &Level, spots: &[Spot], tick:
         let seen = cells_apart(spot.position, mob.position) <= sees_within
             && line_is_clear(level, mob.position, spot.position);
         if inside && seen && mob.feeling(spot.kind, Some(&character)) != Feeling::Friendly {
-            mob.memory.remember(character, Event::Trespassed(tick));
+            mob.memory.remember_trespass(character, tick);
         }
     }
 }

@@ -28,7 +28,10 @@ fn only_going_after_an_enemy_targets_them() {
     assert_eq!(following.target(), Some(them));
     for nobody in [
         Doing::Idle,
-        Doing::Fleeing { from: them },
+        Doing::Fleeing {
+            from: them,
+            struck: false,
+        },
         Doing::Settling { steps_left: 3 },
         Doing::GoingHome { since: 0 },
         Doing::Guarding {

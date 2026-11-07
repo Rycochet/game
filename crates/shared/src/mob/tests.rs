@@ -116,31 +116,6 @@ fn towns_have_beggars_and_farms_have_animals() {
 }
 
 #[test]
-fn memories_warm_a_mob_to_whoever_it_remembers() {
-    let (a, b) = (
-        CharacterId(crate::id::Id::for_test(1)),
-        CharacterId(crate::id::Id::for_test(2)),
-    );
-    let mut memory = Memory::default();
-    memory.remember(a, Event::Gave(ItemKind::Coin));
-    assert_eq!(memory.warmth_for(&a), 30);
-    assert_eq!(memory.warmth_for(&b), 0);
-    for _ in 0..MOST_REMEMBERED {
-        memory.remember(b, Event::Gave(ItemKind::Coin));
-    }
-    // Only so much is kept.
-    assert_eq!(memory.warmth_for(&a), 0);
-    assert_eq!(memory.warmth_for(&b), 30 * MOST_REMEMBERED as i32);
-    // A beggar given one thing goes from neutral to friendly.
-    let warmer = Feeling::Neutral.warmth() + 30;
-    assert_eq!(Feeling::from_warmth(warmer), Feeling::Friendly);
-    // A kobold stops being unfriendly after one, and takes three to be friendly.
-    assert_eq!(Feeling::from_warmth(-50 + 30), Feeling::Neutral);
-    assert_eq!(Feeling::from_warmth(-50 + 60), Feeling::Neutral);
-    assert_eq!(Feeling::from_warmth(-50 + 90), Feeling::Friendly);
-}
-
-#[test]
 fn a_move_is_small_enough_to_send_often() {
     let moved = crate::protocol::ServerMessage::EntityMoved {
         id: Id::for_test(u128::MAX),
@@ -166,24 +141,6 @@ fn a_look_reads_back_from_a_message() {
     };
     let bytes = postcard::to_allocvec(&look).unwrap();
     assert_eq!(postcard::from_bytes::<EntityLook>(&bytes).unwrap(), look);
-}
-
-#[test]
-fn a_trespass_angers_once_and_is_forgotten() {
-    let who = CharacterId(crate::id::Id::for_test(1));
-    let mut memory = Memory::default();
-    memory.remember(who, Event::Gave(ItemKind::Coin));
-    // Staying in its territory only keeps the latest trespass.
-    for tick in 0..10 {
-        memory.remember(who, Event::Trespassed(tick));
-    }
-    assert_eq!(memory.warmth_for(&who), 30 - 50);
-    assert_eq!(Feeling::from_warmth(-50), Feeling::Unfriendly);
-    memory.forget_old(9 + TRESPASS_FORGOTTEN_AFTER - 1);
-    assert_eq!(memory.warmth_for(&who), 30 - 50);
-    // Gifts are kept; the trespass goes.
-    memory.forget_old(9 + TRESPASS_FORGOTTEN_AFTER);
-    assert_eq!(memory.warmth_for(&who), 30);
 }
 
 #[test]

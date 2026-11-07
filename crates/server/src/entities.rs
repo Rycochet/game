@@ -37,6 +37,7 @@ mod scent;
 mod sync;
 mod target;
 mod territory;
+mod timid;
 mod tracking;
 mod wild;
 
@@ -89,9 +90,12 @@ pub enum Doing {
         arrives: (i64, i64),
         gap: i64,
     },
-    /// Getting away from someone it can see.
+    /// Keeping away from someone it can see (`timid`). `struck`: it has just
+    /// struck at them, so steps away before it may again.
     Fleeing {
         from: Id,
+        #[serde(default)]
+        struck: bool,
     },
     /// Wandering from where it lost someone, so as not to wait there.
     Settling {
@@ -156,9 +160,8 @@ impl Mob {
     /// How it feels about a creature of this kind, played by this character, with
     /// what it remembers of them.
     fn feeling(&self, kind: CreatureKind, character: Option<&CharacterId>) -> Feeling {
-        let start = self.kind.feeling_about(kind).warmth();
-        let warmed = character.map_or(0, |character| self.memory.warmth_for(character));
-        Feeling::from_warmth(start + warmed)
+        let start = self.kind.feeling_about(kind);
+        character.map_or(start, |character| self.memory.standing(character, start))
     }
 }
 
@@ -237,3 +240,5 @@ impl Populations {
 mod harmed_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod timid_tests;

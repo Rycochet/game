@@ -11,6 +11,7 @@ use shared::wear::WornLook;
 use std::collections::BTreeMap;
 
 use super::territory::{is_territorial, territorial_doing};
+use super::timid::too_near;
 use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob};
 use crate::connections::{Client, Phase};
 use crate::storage::SiteId;
@@ -116,7 +117,10 @@ pub(super) fn notice(mob: &Mob, level: &Level, spots: &[Spot]) -> Option<Doing> 
             }
             match mob.kind.reaction(feeling) {
                 Reaction::Ignore => None,
-                Reaction::Flee => Some(Doing::Fleeing { from: spot.id }),
+                Reaction::Flee => too_near(mob, spot).then_some(Doing::Fleeing {
+                    from: spot.id,
+                    struck: false,
+                }),
                 Reaction::Approach => Some(going(FRIENDLY_GAP)),
                 Reaction::Attack => Some(going(ATTACK_GAP)),
             }

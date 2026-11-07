@@ -114,26 +114,6 @@ pub enum Feeling {
     Unfriendly,
 }
 
-impl Feeling {
-    /// Where this feeling starts on the scale memories shift.
-    pub fn warmth(self) -> i32 {
-        match self {
-            Self::None | Self::Neutral => 0,
-            Self::Friendly => 50,
-            Self::Unfriendly => -50,
-        }
-    }
-
-    /// The feeling this far along the scale.
-    pub fn from_warmth(warmth: i32) -> Self {
-        match warmth {
-            25.. => Self::Friendly,
-            ..=-25 => Self::Unfriendly,
-            _ => Self::Neutral,
-        }
-    }
-}
-
 /// What a creature does on noticing another.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Reaction {

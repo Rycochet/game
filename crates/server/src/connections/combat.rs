@@ -254,6 +254,8 @@ pub(crate) fn take_mob_blows(
 mod struck;
 
 #[cfg(test)]
+mod grudge_tests;
+#[cfg(test)]
 mod heal_tests;
 #[cfg(test)]
 mod tests;
