@@ -8,7 +8,8 @@ The Skills page: a full-screen layer showing the skills the character knows as a
 - `skills_page/spawn.rs`: `spawn_page` (Startup): the layer (depth 0), title row (`PageButton::{ZoomOut, ZoomIn, Fit, Close}`), the `Canvas` (presses on it are left to the page), its `Origin` (the middle, which nodes are placed from) and the `Details` line. `FORM` (`skills`).
 - `skills_page/layout.rs`: `layout(skills)` (pure, unit tested): `Placed { id, at, from }` for each known skill, `RINGS`, `MAX_SLICE`, `SIZES` (each level's circle at zoom 1; 50% larger than at first, owner), `size_of`. `layout/rings.rs`: `radii`: each ring pushed out, inside out, until no two circles touch (`GAP` between them).
 - `skills_page/view.rs`: `SkillsView` (resource: pan, zoom, `max_zoom`, chosen and hovered skill, press and drag, `fit_wanted`), `zoom_about`, `fit`, `on_page`. Unit tested.
-- `skills_page/build.rs`: `build_tree` (draws the nodes and lines again when what is known changes, while open), `SkillNode`, `SkillLine`, `tenths`.
+- `skills_page/build.rs`: `build_tree` (draws the nodes and lines again, while open, only when which skills are known changes: `Drawn`, unit tested), `SkillNode`, `SkillLine`, `RingOf` (a ring's skill), `ring_value`, `tenths`.
+- `skills_page/values.rs`: `show_values`: keeps each `RingOf` ring's `SkillRing` up to date while open, changing only those that differ, so practice from every blow doesn't draw the tree again (that made the rings flicker and, with the ring widget, crashed).
 - `skills_page/place.rs`: `place_tree`: places and sizes from the view each frame while open (circles grow with the zoom); lines are thin nodes turned by `UiTransform`; the hovered skill, or else the chosen one, gets an orange `Outline`, leaving the border for the coming ring.
 - `skills_page/input.rs`: `take_input` (`PreUpdate`, `WidgetSystems::Modal`).
 - `skills_page/details.rs`: `show_details`, `describe` (unit tested).

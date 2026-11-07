@@ -110,17 +110,27 @@ fn params(ring: &SkillRing, shift: f32) -> RingParams {
     }
 }
 
-/// Gives each new or changed ring its own material.
+/// Gives each new ring its own material, and changes a changed ring's in place.
+/// `try_insert`: a ring may be despawned (its page drawn again) before the material
+/// lands, which is no reason to crash.
+#[allow(clippy::type_complexity)]
 pub(super) fn give_rings(
-    rings: Query<(Entity, &SkillRing), Changed<SkillRing>>,
+    rings: Query<
+        (Entity, &SkillRing, Option<&MaterialNode<SkillRingMaterial>>),
+        Changed<SkillRing>,
+    >,
     shift: Res<BandShift>,
     mut materials: ResMut<Assets<SkillRingMaterial>>,
     mut commands: Commands,
 ) {
-    for (entity, ring) in &rings {
+    for (entity, ring, given) in &rings {
         let params = params(ring, shift.0);
+        if let Some(mut material) = given.and_then(|node| materials.get_mut(&node.0)) {
+            material.params = params;
+            continue;
+        }
         let material = materials.add(SkillRingMaterial { params });
-        commands.entity(entity).insert(MaterialNode(material));
+        commands.entity(entity).try_insert(MaterialNode(material));
     }
 }
 

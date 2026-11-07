@@ -93,7 +93,7 @@ pub(super) fn give_set_edges(
     for (entity, edge) in &new {
         commands
             .entity(entity)
-            .insert(MaterialNode(edges.of(edge.0)));
+            .try_insert(MaterialNode(edges.of(edge.0)));
     }
 }
 

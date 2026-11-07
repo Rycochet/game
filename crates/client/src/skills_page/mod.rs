@@ -15,6 +15,7 @@ mod input;
 mod layout;
 mod place;
 mod spawn;
+mod values;
 mod view;
 
 pub struct SkillsPagePlugin;
@@ -31,7 +32,13 @@ impl Plugin for SkillsPagePlugin {
             )
             .add_systems(
                 Update,
-                (build::build_tree, place::place_tree, details::show_details).chain(),
+                (
+                    build::build_tree,
+                    values::show_values,
+                    place::place_tree,
+                    details::show_details,
+                )
+                    .chain(),
             );
     }
 }
