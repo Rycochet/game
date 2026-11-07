@@ -21,8 +21,8 @@ You have nine attributes, in three rows:
 | Mind | Intellect | Perception | Will |
 | Spirit | Presence | Empathy | Aura |
 
-- **Strength:** force and carrying.
-- **Agility:** precision, balance and moving quietly.
+- **Strength:** force, carrying and how hard you hit.
+- **Agility:** precision, balance, how quick you are in a fight and moving quietly.
 - **Toughness:** health, and standing up to injury, poison and disease.
 - **Intellect:** reasoning, learning and arcane magic.
 - **Perception:** noticing things, reactions and aim.
@@ -31,7 +31,7 @@ You have nine attributes, in three rows:
 - **Empathy:** reading people and creatures, and divine magic.
 - **Aura:** standing up to magic, curses and possession.
 
-For now only some of them do anything: Strength decides how much you can carry and how hard you hit, Strength and Agility how well you fight, Agility and Perception how well you defend, Toughness your Health and Will your Mana. See [Fighting](fighting).
+For now only some of them do anything: Strength decides how much you can carry and how hard you hit, Agility how quick your attacks are, Strength and Agility how well you fight, Agility and Perception how well you defend, Toughness your Health and Will your Mana. See [Fighting](fighting).
 
 ## The triangles
 

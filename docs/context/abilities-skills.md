@@ -14,7 +14,7 @@ Nine, in a grid. Each row is one side of a creature, each column one way of bein
 
 | | Power | Finesse | Resistance |
 |---|---|---|---|
-| **Body** | Strength: force, damage, carrying | Agility: precision, balance, quiet movement | Toughness: health, injury, poison, disease, endurance |
+| **Body** | Strength: force, damage, carrying | Agility: precision, balance, speed in a fight, quiet movement | Toughness: health, injury, poison, disease, endurance |
 | **Mind** | Intellect: reasoning, learning, lore, arcane magic | Perception: noticing, reactions, aim | Will: resisting things done to the mind (fear, confusion, sleep), concentration |
 | **Spirit** | Presence: commanding, persuading, intimidating | Empathy: reading people and creatures, territory, divine magic | Aura: resisting things done to the self (magic, curses, possession) |
 
@@ -92,7 +92,7 @@ The owner's design (2026-11-06/07), the first active ability being Attack. Built
 - **Energy alone:** abilities cost energy (`shared::energy`), with no cooldowns until an ability needs one; mana limits magic.
 - **Wind-up and recovery:** an ability's cost is split: the wind-up is waited before its effect lands, the recovery after. Steps stay act-first. The server says exactly when (`lands_at`, `ready_at`), so the client shows progress (a sweep over the action bar slot, a bar over the token for long ones), and others' wind-ups are sent so players can react.
 - **Cancelling:** anything with a wind-up can be cancelled until it lands, never after, leaving only a small wait. **Fizzling:** when it lands the ability checks its target is still valid (in reach, in sight); if not it fizzles, the energy spent and mana partly refunded (mana is charged on landing). **Interruption** by being hit is to be an opposed check, not automatic.
-- **Attacks:** about one a second with a sword, two with bare hands, one every two seconds with a polearm, by handling weight (length counts), lightened by strength, a little cheaper with skill. Polearms and spears reach two cells.
+- **Attacks:** about one a second with a sword, two with bare hands, one every two seconds with a polearm, by handling weight (length counts), quickened by agility, a little cheaper with skill. The body row is melee's three sides (owner): Toughness for Health, Agility for speed, Strength for harm. Polearms and spears reach two cells.
 - **Harm:** no hit or miss roll. A blow (weapon, strength, luck; quality counts most, then metal, then weight), then the attacker's power against the defender's passive Defence as a share (equals take half), then armour's share (never nothing). Heavier weapons are to pierce armour, their mass lowering the armour figure they are checked against (owner, not built). Health and Mana are kept in thousandths. Two equal median creatures fight for well under half a minute.
 - **Defence:** passive and free, always at work; Parry (and Block with a shield) are to be active abilities opening a short window.
 - **Dual wielding** (`combat/melee/dual`, beside the weapon types, specialisable): hits take turns, the bigger weapon always the main hand; the off hand does half plus half the skill's percentage, and the skill takes up to a fifth off each attack's cost, so a master is about a quarter quicker. Untrained, it is worse than one weapon.
