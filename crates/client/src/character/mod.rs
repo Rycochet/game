@@ -12,10 +12,8 @@ use crate::common::{CarryLimit, OwnVitals, PlayerSpeed, SheetText};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 
-mod skill_lines;
 mod vitals_lines;
 
-use skill_lines::skill_lines;
 use vitals_lines::vitals_lines;
 
 pub struct CharacterPlugin;
@@ -79,10 +77,6 @@ fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow
         ),
         format!("Speed {}%", sheet.speed(carried) * 100 / NORMAL_SPEED),
     ]);
-    if !sheet.skills.is_empty() {
-        lines.push(String::new());
-        lines.extend(skill_lines(&sheet.skills));
-    }
     lines.push(String::new());
     for &which in def.looks {
         lines.push(format!(

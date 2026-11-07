@@ -1,11 +1,15 @@
-//! `SkillsView`: whether the page is open, how it is moved and zoomed, and which
-//! skill is chosen. Places are in interface pixels from the middle of the page.
+//! `SkillsView`: how the page is moved and zoomed, and which skill is chosen or
+//! hovered over. Places are in interface pixels from the middle of the page.
 
 use bevy::prelude::*;
 use shared::skill::SkillId;
 
-pub(super) const MIN_ZOOM: f32 = 0.3;
-pub(super) const MAX_ZOOM: f32 = 3.0;
+use super::layout::SIZES;
+
+pub(super) const MIN_ZOOM: f32 = 0.1;
+/// How far in it may zoom: until the smallest level's circle is this many times
+/// the size the middle was when the tree was fitted (owner, 2026-11-07).
+const ZOOM_IN_TO: f32 = 2.0;
 /// What each zoom button, wheel notch or key press multiplies the zoom by.
 pub(super) const ZOOM_STEP: f32 = 1.2;
 /// Room left round the tree when it is fitted to the page, as a share.
@@ -17,6 +21,10 @@ pub(super) struct SkillsView {
     pub pan: Vec2,
     pub zoom: f32,
     pub chosen: Option<SkillId>,
+    /// The skill under the pointer, if any: it shows over the chosen one.
+    pub hovered: Option<SkillId>,
+    /// How far in it may zoom (`ZOOM_IN_TO`), set on fitting.
+    pub max_zoom: f32,
     /// Where the mouse was pressed on the page, and where it last was, while held.
     pub pressed_at: Option<Vec2>,
     pub drag_from: Option<Vec2>,
@@ -30,6 +38,8 @@ impl Default for SkillsView {
             pan: Vec2::ZERO,
             zoom: 1.0,
             chosen: None,
+            hovered: None,
+            max_zoom: ZOOM_IN_TO * SIZES[0] / SIZES[SIZES.len() - 1],
             pressed_at: None,
             drag_from: None,
             fit_wanted: true,
@@ -46,22 +56,21 @@ impl SkillsView {
     /// Zooms by `factor` keeping what is at `about` (from the middle of the page)
     /// where it is.
     pub fn zoom_about(&mut self, factor: f32, about: Vec2) {
-        let zoom = (self.zoom * factor).clamp(MIN_ZOOM, MAX_ZOOM);
+        let zoom = (self.zoom * factor).clamp(MIN_ZOOM, self.max_zoom);
         let on_tree = (about - self.pan) / self.zoom;
         self.zoom = zoom;
         self.pan = about - on_tree * zoom;
     }
 
-    /// The character in the middle, zoomed so everything as far as `reach` from
-    /// it fits a page `size` across, but never past zoom 1.
-    pub fn fit(&mut self, size: Vec2, reach: f32) {
-        self.pan = Vec2::ZERO;
-        let room = size.min_element() / 2.0 * FIT_MARGIN;
-        self.zoom = if reach <= 0.0 {
-            1.0
-        } else {
-            (room / reach).clamp(MIN_ZOOM, 1.0)
-        };
+    /// The tree's extent (`low` to `high` at zoom 1, circles included) in the middle
+    /// of a page `size` across, as big as fits but never past zoom 1; and zooming in
+    /// allowed until the smallest circles are twice the middle's size now.
+    pub fn fit(&mut self, size: Vec2, (low, high): (Vec2, Vec2)) {
+        let extent = (high - low).max(Vec2::ONE);
+        let zoom = (size * FIT_MARGIN / extent).min_element();
+        self.zoom = zoom.clamp(MIN_ZOOM, 1.0);
+        self.pan = -(low + high) / 2.0 * self.zoom;
+        self.max_zoom = ZOOM_IN_TO * SIZES[0] * self.zoom / SIZES[SIZES.len() - 1];
     }
 }
 

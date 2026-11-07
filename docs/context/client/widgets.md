@@ -23,7 +23,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - `crates/client/src/widgets/colour_picker.rs`: `ColourPicker`, `Swatch`, `ColourChosen`, `spawn_colour_picker`, `SwatchOf` (for the debug API), `press_swatches`, `show_swatches`. Unit tests. `colour_picker/sample.rs`: `SAMPLE_GRADIENT`, made at start for Show Widgets.
 - `crates/client/src/widgets/slider.rs`: `Slider`, `SliderMoved`, `spawn_slider`, and the systems moving them. Unit tests.
 - `crates/client/src/widgets/tabs.rs`: `spawn_tabs`, `spawn_toggle_row`, `TabChosen`, `ChooseTab`, `choose_tabs`, `press_tabs`. Unit test.
-- `crates/client/src/widgets/ability.rs`: `ABILITY`, `AbilityLook`, `spawn_ability`.
+- `crates/client/src/widgets/ability.rs`: `ABILITY`, `AbilityLook`, `spawn_ability`, `spawn_outlined_icon` (an icon in a colour with a 1 px black outline, filling its parent; abilities and the Skills page).
 - `crates/client/src/widgets/attribute_colour.rs`: `row_rgb`, `Shade`, `attribute_colour`. Unit tests.
 - `crates/client/src/widgets/outlined.rs`: `spawn_outlined_text(parent, words, size)`: white words with a black outline (the words nudged each way in black behind them), `Floating`, readable over any picture: a stack's count, an action bar slot's key.
 - `crates/client/src/widgets/progress.rs`: `Progress`, `spawn_progress_bar`, `show_progress`. Unit test.

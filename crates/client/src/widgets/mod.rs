@@ -44,7 +44,7 @@ use bevy::prelude::*;
 
 use crate::common::PointerSystems;
 
-pub use ability::{ABILITY, AbilityLook, spawn_ability};
+pub use ability::{ABILITY, AbilityLook, spawn_ability, spawn_outlined_icon};
 pub use attribute_colour::{Shade, attribute_colour, row_rgb};
 pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;

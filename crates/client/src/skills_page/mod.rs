@@ -13,7 +13,6 @@ mod details;
 mod icons;
 mod input;
 mod layout;
-mod name;
 mod place;
 mod spawn;
 mod view;
@@ -23,7 +22,6 @@ pub struct SkillsPagePlugin;
 impl Plugin for SkillsPagePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<view::SkillsView>()
-            .init_resource::<name::OwnName>()
             .add_systems(Startup, spawn::spawn_page)
             .add_systems(
                 PreUpdate,
@@ -33,13 +31,7 @@ impl Plugin for SkillsPagePlugin {
             )
             .add_systems(
                 Update,
-                (
-                    name::read_name,
-                    build::build_tree,
-                    place::place_tree,
-                    details::show_details,
-                )
-                    .chain(),
+                (build::build_tree, place::place_tree, details::show_details).chain(),
             );
     }
 }

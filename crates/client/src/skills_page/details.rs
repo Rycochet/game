@@ -13,7 +13,7 @@ pub(super) fn show_details(
     sheet: Res<CharacterSheet>,
     mut text: Single<&mut Text, With<Details>>,
 ) {
-    let words = describe(&sheet.0.skills, view.chosen);
+    let words = describe(&sheet.0.skills, view.hovered.or(view.chosen));
     if text.0 != words {
         text.0 = words;
     }
@@ -25,7 +25,7 @@ pub(super) fn describe(skills: &Skills, chosen: Option<SkillId>) -> String {
         return "Nothing learned yet: skills are learned by doing.".into();
     }
     let Some(id) = chosen.filter(|&id| skills.knows(id)) else {
-        return "Choose a skill to see more. Drag to move the tree; the wheel or a pinch zooms."
+        return "Point at or choose a skill to see more. Drag to move the tree; the wheel or a pinch zooms."
             .into();
     };
     let mut path: Vec<_> = id.upwards().map(SkillId::name).collect();

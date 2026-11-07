@@ -112,11 +112,15 @@ pub(super) fn take_input(
         }
     }
     if view.fit_wanted && !nodes.is_empty() && size.min_element() > 0.0 {
-        let reach = nodes
-            .iter()
-            .map(|node| node.at.length())
-            .fold(0.0, f32::max);
-        view.fit(size, reach);
+        // The whole tree, circles included, at zoom 1.
+        let extent = nodes.iter().fold(
+            (Vec2::splat(f32::MAX), Vec2::splat(f32::MIN)),
+            |(low, high), node| {
+                let half = Vec2::splat(node.size / 2.0);
+                (low.min(node.at - half), high.max(node.at + half))
+            },
+        );
+        view.fit(size, extent);
         view.fit_wanted = false;
     }
     point_and_drag(&mut inputs, &mut view, &nodes, (corner, size, middle));
@@ -182,6 +186,13 @@ fn point_and_drag(
     if touch.drag != Vec2::ZERO {
         view.pan += in_interface(touch.drag, &inputs.ui_scale);
     }
+    // What is under the pointer shows in the line below, while not dragging.
+    let dragging = view
+        .pressed_at
+        .is_some_and(|from| inside.is_some_and(|at| from.distance(at) > CLICK_SLOP));
+    view.hovered = inside
+        .filter(|_| !dragging)
+        .and_then(|at| chosen_at(view, nodes, at - middle));
 }
 
 /// The skill whose node is nearest `at` (from the middle of the page), if `at`
@@ -195,7 +206,7 @@ fn chosen_at(
         .iter()
         .filter_map(|node| {
             let distance = view.on_page(node.at).distance(at);
-            (distance <= node.size / 2.0 + NODE_SLOP).then_some((node, distance))
+            (distance <= node.size * view.zoom / 2.0 + NODE_SLOP).then_some((node, distance))
         })
         .min_by(|a, b| a.1.total_cmp(&b.1))
         .and_then(|(node, _)| node.id)

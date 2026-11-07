@@ -1,11 +1,11 @@
 # client: character
 
-What the character is like: the Character panel's Character tab, which `inventory` opens, in words for now: kind and size, the nine attributes a row (Body, Mind, Spirit) to a line, Health and Mana (most of each and where it comes from), carrying and speed, skills, looks. Abilities have their own tab (`abilities`). Native and web.
+What the character is like: the Character panel's Character tab, which `inventory` opens, in words for now: kind and size, the nine attributes a row (Body, Mind, Spirit) to a line, Health and Mana (most of each and where it comes from), carrying and speed, looks. Skills are on the Skills page (`skills_page`). Abilities have their own tab (`abilities`). Native and web.
 
 ## Files
 
 - `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested).
-- `crates/client/src/character/skill_lines.rs`: `skill_lines`: a line per known skill with no known skill under it, by path, with what a check counts ("Athletics › Climbing 25.8"), until the Skills page shows the tree. `vitals_lines.rs`: "Health 31 (Toughness 26, +5 for now)": the most from the last `Vitals`, its parts from the sheet; playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or changes do, so the parts stay right.
+- `crates/client/src/character/vitals_lines.rs`: "Health 31 (Toughness 26, +5 for now)": the most from the last `Vitals`, its parts from the sheet; playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or changes do, so the parts stay right.
 
 ## Public API
 
@@ -14,7 +14,7 @@ What the character is like: the Character panel's Character tab, which `inventor
 
 ## Depends on
 
-- `common` (`SheetText`, `PlayerSpeed`, `CarryLimit`, `OwnVitals`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::skill`, `shared::item`, `shared::protocol`.
+- `common` (`SheetText`, `PlayerSpeed`, `CarryLimit`, `OwnVitals`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
 
 ## Used by
 
