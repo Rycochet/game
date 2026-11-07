@@ -94,6 +94,14 @@ impl Energy {
         self.spend(tick, speed, 0);
     }
 
+    /// Gives back what is still owed beyond `penalty`, as when what it was spent
+    /// on is called off before it was done: it can act again after only that
+    /// much more.
+    pub fn cancel(&mut self, tick: u64, speed: u32, penalty: u32) {
+        self.energy = self.at(tick, speed).max(-i64::from(penalty));
+        self.at = tick;
+    }
+
     /// The first tick at or after `tick` when it can act, at this speed.
     pub fn ready_at(&self, tick: u64, speed: u32) -> u64 {
         let now = self.at(tick, speed);

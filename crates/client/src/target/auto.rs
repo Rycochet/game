@@ -1,31 +1,38 @@
-//! Targets chosen for the player: an enemy coming up to them, and the next
-//! enemy when the target dies.
+//! Targets chosen for the player: whoever attacks them, and the next enemy
+//! when the target dies.
 
 use bevy::prelude::*;
 use shared::protocol::ServerMessage;
 
-use super::choose::{enemy_beside, nearest_enemy};
+use super::choose::nearest_enemy;
 use super::seen::seen_now;
 use crate::common::{MapPosition, Other, Target};
 use crate::connection::FromServer;
 use crate::player::Player;
 
-/// With no target in sight, the first enemy to come right up to the player
-/// becomes it. (Once there is combat, whoever attacks them is to.)
-pub(super) fn pick_enemy_beside(
-    player: Single<&MapPosition, With<Player>>,
+/// With no target in sight, whoever begins an attack on the player becomes it
+/// (owner), so an automatic Attack answers them.
+pub(super) fn pick_attacker(
+    mut from_server: MessageReader<FromServer>,
     others: Query<(&Other, &MapPosition)>,
     mut target: ResMut<Target>,
 ) {
-    let seen = seen_now(&others);
-    let in_sight = target
-        .0
-        .is_some_and(|id| seen.iter().any(|one| one.id == id));
-    if in_sight {
-        return;
-    }
-    if let Some(enemy) = enemy_beside((player.x, player.y), &seen) {
-        target.set_if_neq(Target(Some(enemy)));
+    for FromServer(message) in from_server.read() {
+        let ServerMessage::AbilityStarted {
+            who: Some(attacker),
+            target: None,
+            ..
+        } = message
+        else {
+            continue;
+        };
+        let seen = seen_now(&others);
+        let in_sight = target
+            .0
+            .is_some_and(|id| seen.iter().any(|one| one.id == id));
+        if !in_sight {
+            target.set_if_neq(Target(Some(*attacker)));
+        }
     }
 }
 

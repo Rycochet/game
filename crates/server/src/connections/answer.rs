@@ -197,6 +197,20 @@ pub(crate) fn answer(
             })
         }
         ClientMessage::ActionBar(change) => client.change_bar(change),
+        ClientMessage::UseAbility { ability, target } => {
+            // One at a time: an automatic one asks again once it can.
+            if !client
+                .waiting
+                .iter()
+                .any(|a| matches!(a, Action::UseAbility { .. }))
+            {
+                client
+                    .waiting
+                    .push_back(Action::UseAbility { ability, target });
+            }
+            true
+        }
+        ClientMessage::CancelAbility => super::combat::cancel_ability(client, world),
         ClientMessage::DropItem { .. }
         | ClientMessage::TakeFromGround { .. }
         | ClientMessage::WearFromGround { .. }

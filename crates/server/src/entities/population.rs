@@ -73,6 +73,10 @@ impl ServerWorld {
                     .speed(&carrying),
                     shown: carrying.shown(),
                     scent: scent_strength(&carrying),
+                    attributes: spawn.attributes,
+                    vitals: Default::default(),
+                    wielded: shared::combat::Wielded::of(&carrying),
+                    fight: Default::default(),
                 }
             })
             .collect();

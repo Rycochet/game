@@ -2,11 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::Landed;
 use super::OnlineState;
 use super::level::{LevelChunk, LevelInfo, RememberedLevel};
 use super::login::{CharacterSummary, LoginMethod};
 use super::{WorldChunk, WorldInfo};
-use crate::ability::ActionBar;
+use crate::ability::{Ability, ActionBar};
 use crate::ground::Load;
 use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
@@ -163,4 +164,24 @@ pub enum ServerMessage {
     /// The character's action bar: after `Sheet`, and answering every
     /// `ClientMessage::ActionBar`, so a refused change is put right.
     ActionBar(ActionBar),
+    /// Someone has begun an ability: `who` is `None` for the player, `target`
+    /// `None` when it is aimed at the player. It lands in `lands_in` action ticks
+    /// and they can act again in `ready_in`. The player is told of their own, and
+    /// of those aimed at them.
+    AbilityStarted {
+        who: Option<Id>,
+        ability: Ability,
+        target: Option<Id>,
+        lands_in: u32,
+        ready_in: u32,
+    },
+    /// What became of it (`who` and `target` as in `AbilityStarted`).
+    AbilityLanded {
+        who: Option<Id>,
+        target: Option<Id>,
+        landed: Landed,
+    },
+    /// The player was killed: they are on the world map, at full Health, and
+    /// are to be told so.
+    Killed,
 }

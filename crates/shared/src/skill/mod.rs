@@ -18,6 +18,7 @@ mod tree;
 
 pub use id::SkillId;
 pub use practice::{Skills, VALUE_SCALE, level_practice};
+pub use tree::key_of;
 
 #[cfg(test)]
 mod tests;

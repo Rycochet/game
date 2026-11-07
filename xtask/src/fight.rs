@@ -29,6 +29,7 @@ fn blade(family: Family, grams: u32, length_mm: u32) -> Weapon {
         length_mm,
         quality: Quality::Common,
         metal_tier: 2,
+        skill: None,
     }
 }
 

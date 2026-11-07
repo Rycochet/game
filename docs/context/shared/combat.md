@@ -10,6 +10,7 @@ Combat's rules, the same for players and mobs on both sides: what an attack cost
 - `combat/damage.rs`: the three stages (`blow`, `past_defence`, `through_armour`), `Blow` (all of them, `harm() -> Points`), `roll_blow`, `off_hand_share`, `quality_factor`, `metal_factor`, `weapon_base`, `strength_hits`.
 - `combat/power.rs`: `power`, `SKILL_FLOOR`.
 - `combat/wielded.rs`: `Wielded`.
+- `combat/fighter.rs`: `Fighter`, `Swing`, `PRACTICE_PER_BLOW`.
 - `combat/reach.rs`: `in_reach`.
 
 ## Public API
@@ -19,15 +20,17 @@ Combat's rules, the same for players and mobs on both sides: what an attack cost
 - Damage, per mille, to `Points`: `blow` = `UNARMED_DAMAGE` (1 Health) × `weapon_base` (its `weapon_cost` against a fist's, so weight trades speed for size of blow at about the same harm a second) × `strength_hits` (√ of strength against the median) and, for weapons, × `EDGE` (1.2) × `quality_factor` (Poor 0.8 to Artifact 2.0) × `metal_factor` (tier 1 to 4: 0.85, 1.0, 1.1, 1.25) × luck (`roll_blow`: two rolls, 500 to 1500). Then `off_hand_share` (half, plus half the dual skill's percentage), `past_defence` (attack ÷ (attack + defence)) and `through_armour` (`ARMOUR_HALF` 100 ÷ (100 + armour)).
 - `power(attributes, leans, total)`: the average of the attributes a skill leans on × its total along its path (`Skills::total`, hundredths), never below `SKILL_FLOOR`. `skill_percent(value)`: a node's own value as a percentage, at most 100.
 - `Wielded { main, off }` (`of(inventory)`, `is_dual`, `for_attack(n)`): the weapons held (`creature::Location::Held`), the bigger to swing always the main hand (owner); bare hands when nothing is held; hands take turns when dual wielding, the main first.
+- `Fighter { kind, attributes, skills, wielded }` (skills `None` for mobs, counting from the floor): `swing(n)` (the `n`th attack: weapon, hand, cost, wind-up), `attack_power`, `defence_power` (by the main hand's Defence node), `harm(swing, defender, rng)` (armour 0 for now), `practised_by(swing)` (the weapon's node, and `combat/melee/dual` with two weapons), `practised_defending()`. `PRACTICE_PER_BLOW` (8: halved each level up, so all four levels gain; a first guess). `CANCEL_PENALTY` (420: two ticks at normal speed).
+- `Weapon::skill` (its own node by name, `combat/melee/<type>/<weapon>`), `attack_skill(kind)` (that, its type's, or `unarmed/<kind>`), `defence_skill()` (`defence/<type>` or `defence/unarmed`).
 - `in_reach(level, from, to, reach)`: within `reach` cells (diagonals count one), not the same cell, and a clear line (`dungeon::line_is_clear`).
 
 ## Depends on
 
-- `shared::blade` (`Family`), `creature` (`Location::Held`), `item` (`Item`, `Quality`), `item_form` (`ItemForm::Blade`), `material` (`tier`), `sheet` (`Attributes`), `dungeon` (`Level`, `line_is_clear`), `rng`, `vitals` (`Points`).
+- `shared::blade` (`Family`), `skill` (`SkillId`, `Skills`, `key_of`), `creature` (`Location::Held`), `item` (`Item`, `Quality`), `item_form` (`ItemForm::Blade`), `material` (`tier`), `sheet` (`Attributes`), `dungeon` (`Level`, `line_is_clear`), `rng`, `vitals` (`Points`).
 
 ## Used by
 
-- `xtask` (`fight`). Server and client combat to come.
+- `xtask` (`fight`), `server` (`combat.rs`, `connections/combat.rs`, `entities/fight.rs`), client `abilities` (reach, for automatic use).
 
 ## Notes
 

@@ -6,6 +6,7 @@ use shared::ability::BAR_SLOTS;
 
 use super::drag::Drag;
 use super::icons::icon_path;
+use super::use_ability::UseSlot;
 use crate::common::{Action, Preferences};
 use crate::widgets::{ABILITY, Floating, HELD_ITEM_Z};
 
@@ -50,13 +51,17 @@ pub(super) fn show_held(
 }
 
 /// A slot's key uses it: nothing yet, until combat.
-pub(super) fn use_by_key(keys: Res<ButtonInput<KeyCode>>, preferences: Res<Preferences>) {
+pub(super) fn use_by_key(
+    keys: Res<ButtonInput<KeyCode>>,
+    preferences: Res<Preferences>,
+    mut used: MessageWriter<UseSlot>,
+) {
     for slot in 0..BAR_SLOTS as u8 {
         if preferences
             .controls
             .just_pressed(&keys, Action::UseSlot(slot))
         {
-            debug!("Using action bar slot {slot}: nothing yet, until combat");
+            used.write(UseSlot(slot));
         }
     }
 }

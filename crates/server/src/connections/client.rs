@@ -48,6 +48,7 @@ impl Client {
             energy: Energy::default(),
             speed: NORMAL_SPEED,
             waiting: VecDeque::new(),
+            fight: Default::default(),
             starting_as: None,
             unsaved: false,
             visit: None,

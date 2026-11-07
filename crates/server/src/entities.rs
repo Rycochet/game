@@ -6,6 +6,7 @@
 //! nobody can leave a chasing mob frozen at the stairs for when they come back.
 
 use serde::{Deserialize, Serialize};
+use shared::combat::Wielded;
 use shared::creature::CreatureKind;
 use shared::dungeon::Level;
 use shared::energy::{Energy, SITE_SCALE};
@@ -13,15 +14,18 @@ use shared::id::Id;
 use shared::mob::Memory;
 use shared::movement::STRAIGHT_COST;
 use shared::protocol::CharacterId;
-use shared::sheet::{Appearance, Feeling};
+use shared::sheet::{Appearance, Attributes, Feeling};
+use shared::vitals::Vitals;
 use shared::wear::WornLook;
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant};
 
+use crate::combat::Fight;
 use crate::storage::SiteId;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod crossing;
+mod fight;
 mod gear;
 mod moves;
 mod notice;
@@ -35,6 +39,7 @@ mod tracking;
 mod wild;
 
 use crossing::cross;
+pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;
 pub(super) use gear::{give, kill};
 use moves::{Taken, act, nearest_free, take_step};
@@ -131,6 +136,13 @@ pub(crate) struct Mob {
     shown: Vec<WornLook>,
     /// How strong a trail it leaves, as a percentage.
     scent: u32,
+    /// What it is like, for fighting (`Spawn::attributes`).
+    attributes: Attributes,
+    /// Its Health: not saved, so a mob unloaded is whole again.
+    vitals: Vitals,
+    /// What it holds to fight with, from what it was made with.
+    wielded: Wielded,
+    fight: Fight,
 }
 
 impl Mob {

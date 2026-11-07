@@ -5,6 +5,7 @@ The player's Health and Mana, shown as a circle at the bottom middle of the wind
 ## Files
 
 - `crates/client/src/vitals/mod.rs`: `VitalsPlugin`; `spawn_circle` (Startup: the node, `UiId` `hud/vitals`, a `HoverTip`), `take_vitals` (puts `ServerMessage::Vitals` with no `who` in `common::OwnVitals`), `show_circle` (places and sizes it, writes `common::BottomHud` and `common::VitalsCircle`, paints when a level moves a quarter of a pixel, keeps the tip's words: "Health 18 / 20", "Mana 20 / 20"). `ACROSS_OF_HEIGHT` (0.1 of the window's height: half the minimap), `BOTTOM_GAP`.
+- `crates/client/src/vitals/killed.rs`: `spawn_killed`, `show_killed`: the requester saying "You have been killed, try again!" with OK (`killed/ok`), shown on `ServerMessage::Killed` and blocking the game until closed (owner, 2026-11-07, for now).
 - `crates/client/src/vitals/paint.rs`: `paint(side, health, mana)`: the picture's bytes in screen pixels, smoothed edges, the border the minimap's brown, bevelled lit from the top left so each half stands up like a button (owner, 2026-11-06), down the middle too.
 
 ## Public API

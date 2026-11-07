@@ -12,6 +12,7 @@ use crate::common::{BottomHud, GameView, OwnVitals, ToldVitals, VitalsCircle, in
 use crate::connection::FromServer;
 use crate::widgets::{HoverTip, UiId};
 
+mod killed;
 mod paint;
 
 /// The circle across, as a share of the window's height: half the minimap's
@@ -24,8 +25,9 @@ pub struct VitalsPlugin;
 
 impl Plugin for VitalsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_circle)
-            .add_systems(Update, (take_vitals, show_circle).chain());
+        app.add_systems(Startup, (spawn_circle, killed::spawn_killed))
+            .add_systems(Update, (take_vitals, show_circle).chain())
+            .add_systems(Update, killed::show_killed);
     }
 }
 

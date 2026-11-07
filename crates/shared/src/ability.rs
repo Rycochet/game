@@ -67,6 +67,13 @@ impl Ability {
         matches!(self.use_kind(), Use::Active)
     }
 
+    /// Whether it may be made automatic on the action bar, to be done whenever it
+    /// can be (owner, 2026-11-07): only what is safe to leave on, as it waits
+    /// until it can be done. Attack (a target, in reach, an enemy) so far.
+    pub const fn can_be_automatic(self) -> bool {
+        matches!(self, Self::Attack)
+    }
+
     /// Whether a creature in a body of kind `kind` can do it now. Only whether it
     /// is active and known, for now; later also what it costs and how soon it can
     /// be done again.

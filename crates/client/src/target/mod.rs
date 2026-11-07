@@ -38,7 +38,7 @@ impl Plugin for TargetPlugin {
                     pick::pick_by_long_press,
                     keys::cycle_by_keys,
                     auto::pick_after_death,
-                    auto::pick_enemy_beside,
+                    auto::pick_attacker,
                 )
                     .chain()
                     .after(View3dSystems::Click)

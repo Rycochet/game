@@ -17,6 +17,7 @@ The skill tree as data: every node (Combat › Melee › Longsword › Longsword
 
 - `SkillId`: `all`, `top_levels`, `find(path)`, `name`, `key`, `path`, `parent`, `children`, `depth` (1 at the top), `leans` (its own attributes, or its parent's), `upwards` (itself, then each node above), `number` / `from_number` (for messages).
 - `Skills`: `starting(kind)`, `practice(id)`, `knows(id)`, `known()` (parents first), `is_empty`, `practise(id, amount)` (flows up, halving each level), `value(id)` (square root of practice, in hundredths), `total(id)` (values along the path: what a check would count).
+- `key_of(name)`: a name as a node's key (lower case, no spaces or hyphens), for finding a weapon's node by its name (`combat`).
 - `VALUE_SCALE` (100), `level_practice(level)` (level² × 100: what an old level stood for).
 
 ## Depends on

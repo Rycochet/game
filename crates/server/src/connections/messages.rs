@@ -44,7 +44,8 @@ pub(crate) fn handle_messages(
                     }
                 }
                 Ok(None) => {
-                    break act(client, world)
+                    break super::combat::land_ability(client, world)
+                        && act(client, world)
                         && client.send_position()
                         && (client.phase != Phase::Playing || {
                             let now = world.action_clock.ticks();
@@ -98,6 +99,9 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             Action::LeaveWilderness => (sites::leave_wilderness(client, world), 0),
             Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
             Action::Ground(action) => ground::act(client, world, action),
+            Action::UseAbility { ability, target } => {
+                super::combat::start_ability(client, world, ability, target)
+            }
         };
         if !stayed {
             return false;

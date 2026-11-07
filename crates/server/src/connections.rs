@@ -28,6 +28,7 @@ mod change_kind;
 mod action_bar;
 mod answer;
 mod client;
+mod combat;
 mod delete_character;
 mod dev_skills;
 mod give_items;
@@ -43,6 +44,7 @@ mod vitals;
 mod welcome;
 
 pub(super) use answer::answer;
+pub(crate) use combat::take_mob_blows;
 pub(super) use messages::handle_messages;
 pub(crate) use moving::Arrival;
 pub use playtime::IDLE_MINUTES;
@@ -153,14 +155,27 @@ const MOST_WAITING: usize = 64;
 /// player is have to wait behind the steps that lead there.
 #[derive(Clone, Debug)]
 enum Action {
-    Step { number: u32, step: Step },
-    EnterSite { chunk: ChunkPos },
-    EnterGate { entrance: u8 },
+    Step {
+        number: u32,
+        step: Step,
+    },
+    EnterSite {
+        chunk: ChunkPos,
+    },
+    EnterGate {
+        entrance: u8,
+    },
     UseExit,
     Explore,
     LeaveWilderness,
-    OpenTrade { with: Id },
+    OpenTrade {
+        with: Id,
+    },
     Ground(GroundAction),
+    UseAbility {
+        ability: shared::ability::Ability,
+        target: Id,
+    },
 }
 
 /// How far a client has got, from connecting to playing.
@@ -240,6 +255,8 @@ pub struct Client {
     speed: u32,
     /// What it has asked to do and hasn't had the energy for yet, in order.
     waiting: VecDeque<Action>,
+    /// The ability it is winding up, and its attacks so far.
+    fight: crate::combat::Fight,
     /// What a character being made here asked to be, for when they first join.
     starting_as: Option<(CreatureKind, Appearance, Build)>,
     /// Whether `character` (or the visit) changed since it was saved.

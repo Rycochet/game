@@ -209,6 +209,9 @@ pub(super) fn receive(
                 | ServerMessage::Vitals { .. }
                 | ServerMessage::VisitedGates(_)
                 | ServerMessage::ActionBar(_)
+                | ServerMessage::AbilityStarted { .. }
+                | ServerMessage::AbilityLanded { .. }
+                | ServerMessage::Killed
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::EntityMoved { .. }
                 | ServerMessage::EntityGone { .. }),

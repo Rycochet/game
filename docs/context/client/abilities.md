@@ -12,6 +12,7 @@ What the character can do: the Character panel's Abilities page (B), every abili
 - `crates/client/src/abilities/spots.rs`: `Spot` (`Slot`, `Listed`, `Page`), `Spots` (what is in front at a point).
 - `crates/client/src/abilities/drag.rs`: `Drag`, `Aim`, `drag_abilities` (`PreUpdate`, after `PointerSystems`, before `WidgetSystems::Presses`, so presses on abilities never reach panels or the map), `drop_change`.
 - `crates/client/src/abilities/held.rs`: `spawn_held`, `show_held` (the dragged icon at the pointer), `use_by_key`.
+- `crates/client/src/abilities/use_ability.rs`: `UseSlot` (message: a slot clicked, tapped or its key), `take_timing` (`AbilityStarted` and a cancel into `common::OwnAbility`), `use_slots` (its ability at the target, if it can be done and nothing is waiting: `UseAbility`), `use_automatic` (each frame: an automatic Attack slot, an enemy targeted, in sight and in reach by the held weapon, in a site).
 
 ## Public API
 
@@ -28,7 +29,7 @@ What the character can do: the Character panel's Abilities page (B), every abili
 ## Notes
 
 - Owner's design: from the page onto a slot puts an ability there (replacing what was there; one already on the bar moves, with its automatic use); slot onto slot swaps; slot onto the page takes it off and forgets its automatic use; dropped anywhere else nothing changes, so nothing is lost by accident. Abilities can't be sorted on the page; filtering and searching come later.
-- Mouse: press and drag to move; a click on a slot uses it; right-click on a slot turns automatic use on or off. Touch: drag to move; a tap uses; a finger held still on a slot turns automatic use on or off (a drag starts only when the finger moves). Keys: `Action::UseSlot(0..9)`, 1 to 0 by default, in Settings' Action Bar group. Using does nothing yet but log: combat is a later task.
+- Mouse: press and drag to move; a click on a slot uses it; right-click on a slot turns automatic use on or off. Touch: drag to move; a tap uses; a finger held still on a slot turns automatic use on or off (a drag starts only when the finger moves). Keys: `Action::UseSlot(0..9)`, 1 to 0 by default, in Settings' Action Bar group. Using one asks the server for it at the target; an automatic one is asked for whenever it can be done (owner: target, in reach, an enemy for Attack), so it can be left on. The next is asked a quarter of a second before the last's recovery ends (`OwnAbility::is_busy`), as the server keeps it until then; otherwise slow frames would slow attacks. Only abilities that may be made automatic can be.
 - The bar takes presses (`stops_presses`), so clicks on it never walk the player; right-clicks on a slot never target.
 - Passive abilities are drawn round and never greyed; active ones the player can't use now are greyed with a dull red frame (also on the bar, after a shapeshift). The slot's tip names the ability and its key in full.
 - Ids: `abilities/skills`, `abilities/<ability>` (`attack`, `night_vision`, ...), `bar/slot.<0..9>`.

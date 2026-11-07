@@ -1,6 +1,6 @@
 # shared: ability
 
-Abilities, the named things a creature can do: active ones done when asked (and put on the action bar), passive ones always at work. It also holds the action bar's slots and the rules for changing them, which the client predicts with and the server checks by. Not how an ability works when used: nothing is used yet (combat is a later task), and abilities don't hook onto skills yet (after the skill tree, owner). Plan: `docs/context/abilities-skills.md`.
+Abilities, the named things a creature can do: active ones done when asked (and put on the action bar), passive ones always at work. It also holds the action bar's slots and the rules for changing them, which the client predicts with and the server checks by. How Attack works when used is `shared::combat`'s and the server's; abilities don't hook onto skills by name yet, Attack using the held weapon's node. Plan: `docs/context/abilities-skills.md`.
 
 ## Files
 
@@ -11,9 +11,10 @@ Abilities, the named things a creature can do: active ones done when asked (and 
 
 - `Ability`: `Attack` (every creature), and the kinds' own `Flutter`, `Kick`, `NightVision` (passive), `Trample`. Also `sheet::Ability`. Messages carry it by its place, so new ones go at the end of the enum; `ALL` is the order players see (Attack first).
 - `known(kind)`: Attack and the kind's own (`CreatureDef::abilities`), for the body it is in now, so shapeshifting changes them.
+- `Ability::can_be_automatic()`: whether a slot may be made automatic, done whenever it can be (owner, 2026-11-07): Attack only so far; `BarChange::ToggleAuto` refuses the rest (`BarRefusal::NotAutomatic`), though turning one off always works.
 - `Ability::can_use(kind)`: active and known. It will gain costs and waiting times; the client greys out what fails it.
 - `ActionBar { slots: [Option<BarSlot { ability, auto }>; 10] }`: `Default` is a new character's (Attack in the first slot, also for saves from before the bar); `apply(change, kind)`, `slot_of(ability)`.
-- `BarChange::{Place { slot, ability }, Clear { slot }, Swap { a, b }, ToggleAuto { slot }}`; `BarRefusal::{NoSlot, Passive, Unknown, Empty}`.
+- `BarChange::{Place { slot, ability }, Clear { slot }, Swap { a, b }, ToggleAuto { slot }}`; `BarRefusal::{NoSlot, Passive, Unknown, Empty, NotAutomatic}`.
 
 ## Depends on
 

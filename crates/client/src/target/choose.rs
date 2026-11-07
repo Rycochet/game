@@ -62,16 +62,3 @@ pub(super) fn nearest_enemy(player: (i64, i64), seen: &[Seen], except: Id) -> Op
         .min_by_key(|one| (distance(player, one.at), one.id))
         .map(|one| one.id)
 }
-
-/// An enemy standing next to the player, if any (the lowest id if several came
-/// at once). For now this stands in for being attacked: once there is combat,
-/// whoever attacks the player is to become their target instead (owner).
-pub(super) fn enemy_beside(player: (i64, i64), seen: &[Seen]) -> Option<Id> {
-    seen.iter()
-        .filter(|one| {
-            let (dx, dy) = (one.at.0 - player.0, one.at.1 - player.1);
-            one.is_enemy() && dx.abs().max(dy.abs()) == 1
-        })
-        .map(|one| one.id)
-        .min()
-}

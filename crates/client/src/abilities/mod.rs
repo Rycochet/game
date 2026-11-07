@@ -14,6 +14,7 @@ mod icons;
 mod own_bar;
 mod page;
 mod spots;
+mod use_ability;
 
 pub struct AbilitiesPlugin;
 
@@ -22,6 +23,7 @@ impl Plugin for AbilitiesPlugin {
         app.init_resource::<own_bar::OwnBar>()
             .init_resource::<drag::Drag>()
             .init_resource::<drag::Aim>()
+            .add_message::<use_ability::UseSlot>()
             .add_systems(Startup, (bar::spawn_bar, held::spawn_held))
             // Before widgets take presses on panels, and the map clicks.
             .add_systems(
@@ -37,6 +39,9 @@ impl Plugin for AbilitiesPlugin {
                     page::open_skills,
                     own_bar::take_bar,
                     held::use_by_key,
+                    use_ability::take_timing,
+                    use_ability::use_slots,
+                    use_ability::use_automatic,
                     (bar::place_bar, bar::show_bar, held::show_held),
                 )
                     .chain(),

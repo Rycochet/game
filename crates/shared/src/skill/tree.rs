@@ -36,7 +36,7 @@ pub(super) struct Tree {
 pub(super) static TREE: LazyLock<Tree> = LazyLock::new(Tree::build);
 
 /// A name as a key: lower case, without spaces or hyphens ("Battle Axe": `battleaxe`).
-pub(super) fn key_of(name: &str) -> String {
+pub fn key_of(name: &str) -> String {
     name.chars()
         .filter(|c| !c.is_whitespace() && *c != '-')
         .flat_map(char::to_lowercase)
