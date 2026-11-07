@@ -1,7 +1,7 @@
-//! `Foes`: what a character remembers of fighting each kind of creature. So far the
-//! 5-second blocks spent fighting each (`skill::Windows`): a block counts if they hit
-//! one of that kind, or were hit by one. Practice against a kind fought often will
-//! fall off with it (plan: `docs/context/abilities-skills.md`).
+//! `Foes`: what a character remembers of fighting each kind of creature: the 5-second
+//! blocks spent fighting each (`skill::Windows`; a block counts if they hit one of
+//! that kind, or were hit by one), which make practice against it fall off
+//! (`skill::familiarity`), and how many they have helped kill.
 
 use std::collections::BTreeMap;
 
@@ -15,6 +15,9 @@ pub struct Foe {
     /// The 5-second blocks spent fighting this kind.
     #[serde(default)]
     pub fought: u32,
+    /// How many of this kind they have helped kill.
+    #[serde(default)]
+    pub defeated: u32,
 }
 
 /// Each kind of creature fought, and what is remembered of it.
@@ -31,5 +34,11 @@ impl Foes {
     pub fn fought(&mut self, kind: CreatureKind) {
         let foe = self.0.entry(kind).or_default();
         foe.fought = foe.fought.saturating_add(1);
+    }
+
+    /// Another of this kind killed, with their help.
+    pub fn defeated(&mut self, kind: CreatureKind) {
+        let foe = self.0.entry(kind).or_default();
+        foe.defeated = foe.defeated.saturating_add(1);
     }
 }

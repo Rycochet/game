@@ -77,6 +77,7 @@ impl ServerWorld {
                     vitals: Default::default(),
                     wielded: shared::combat::Wielded::of(&carrying),
                     fight: Default::default(),
+                    harmed_by: Default::default(),
                 }
             })
             .collect();

@@ -11,6 +11,7 @@ The skill tree as data: every node (Combat › Melee › Longsword › Longsword
 - `skill/id.rs`: `SkillId`.
 - `skill/practice.rs`: `Skills`, `VALUE_SCALE`, `level_practice`, a whole number cube root.
 - `skill/window.rs`: `Windows`, `WINDOW_TICKS`.
+- `skill/familiar.rs`: `familiarity`, `taught`, `FAMILIAR_HALVING`.
 - `skill/save_format.rs`: how `Skills` is written in saves and messages.
 - `skill/old.rs`: the five skills from before the tree, by name (`old_skill`), and where nodes that moved went (`moved`).
 
@@ -21,6 +22,7 @@ The skill tree as data: every node (Combat › Melee › Longsword › Longsword
 - `key_of(name)`: a name as a node's key (lower case, no spaces or hyphens), for finding a weapon's node by its name (`combat`).
 - `VALUE_SCALE` (100), `level_practice(level)` (level³ × 1,000: what an old level, or a kind's starting skill, stands for; level 3 is 30%).
 - `Windows<K>` (`take(key, amount, now)`: all of it with no window open, opening one for `WINDOW_TICKS`, 100 action ticks or 5 seconds; inside one only what is above the largest given so far), for the server's one practice per skill every 5 seconds and blocks fought per kind (owner, 2026-11-07).
+- `familiarity(fought)` (the square root of blocks fought against a kind, in hundredths like values), `taught(amount, familiarity, value)` (all of it while familiarity is no higher than the skill's own value, then halved every `FAMILIAR_HALVING`, 10%, above it, in a straight line between, rounded): familiar foes teach less, so farming one kind stalls; a test prints the curve of 1,000 kills of one kind (`farming_one_kind_stalls`, `--nocapture`).
 
 ## Depends on
 

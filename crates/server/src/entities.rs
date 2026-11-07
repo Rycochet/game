@@ -27,6 +27,7 @@ use crate::storage::SiteId;
 mod crossing;
 mod fight;
 mod gear;
+mod harmed_by;
 mod heal;
 mod moves;
 mod notice;
@@ -43,6 +44,8 @@ use crossing::cross;
 pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;
 pub(super) use gear::{give, kill};
+use harmed_by::HarmedBy;
+pub(crate) use harmed_by::Kill;
 pub(crate) use heal::heal_mob;
 use moves::{Taken, act, nearest_free, take_step};
 use notice::{Maps, Someone, Spot, cells_apart, everyone_playing, notice};
@@ -145,6 +148,8 @@ pub(crate) struct Mob {
     /// What it holds to fight with, from what it was made with.
     wielded: Wielded,
     fight: Fight,
+    /// Who has harmed it lately, to share in killing it. Not saved.
+    harmed_by: HarmedBy,
 }
 
 impl Mob {

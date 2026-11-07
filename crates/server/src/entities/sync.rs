@@ -102,6 +102,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
     }
     // Everyone who saw them die has been told.
     world.died.clear();
+    super::harmed_by::credit_kills(clients, world);
 }
 
 /// How far east `to` is from `from` in the Hall, the near way round (west is
