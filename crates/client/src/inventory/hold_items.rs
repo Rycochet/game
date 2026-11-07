@@ -72,6 +72,7 @@ pub(super) struct Under<'w, 's> {
     >,
     /// How big stacks may get.
     stacks: Res<'w, super::Stacks>,
+    god: Res<'w, crate::common::GodMode>,
 }
 
 /// What letting go of something tells the server and the rest of the client.
@@ -83,6 +84,12 @@ pub(super) struct Outbox<'w> {
     spent: MessageWriter<'w, SpentEnergy>,
     stacks: Res<'w, super::Stacks>,
     on_text: (ResMut<'w, HeldOverText>, MessageWriter<'w, DroppedOnText>),
+    /// Why a drop on the clothes was refused, and the rule it goes by.
+    wear: (
+        ResMut<'w, super::wear_note::WearNote>,
+        Res<'w, crate::common::GodMode>,
+        Res<'w, Time<Real>>,
+    ),
 }
 
 /// Everything about holding: picking up with the mouse, turning, following the

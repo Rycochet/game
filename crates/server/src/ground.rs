@@ -178,14 +178,13 @@ pub(crate) fn act(
             let top = found.take_top();
             let rest = top.is_some().then(|| found.clone());
             let wearing = top.unwrap_or(found);
-            let (worn, grams) = (wearing.id, wearing.total_weight());
-            client
-                .inventory
-                .wear_new(wearing)
+            let grams = wearing.total_weight();
+            // What is in its way comes off, or the player is told why not.
+            let taking_off = client
+                .put_on_new(wearing, world.stacks)
                 .map_err(|_| "it can't go on")?;
-            client.inventory.magic_found_out(worn);
             leave_on_ground(client, world, item, rest);
-            Ok(dressing_cost(grams) + handling_cost(grams))
+            Ok(dressing_cost(grams) + handling_cost(grams) + taking_off)
         }),
         GroundAction::Bin { item } => lying(client, world, item).map(|found| {
             client.inventory.to_bin_new(found);

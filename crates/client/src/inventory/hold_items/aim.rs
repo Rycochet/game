@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use shared::item::StackLimits;
 
 use super::super::hold::Target;
+use super::super::wear_note::try_wearing;
 use super::super::{Carried, Hand, HeldBy, Holding};
 use super::{Under, worth_wearing};
 use crate::common::{
@@ -34,6 +35,7 @@ pub(super) fn aim_held(
         grids,
         nodes,
         stacks,
+        god,
     } = under;
     over_gifts.0 = None;
     over_text.set_if_neq(HeldOverText(None));
@@ -134,7 +136,12 @@ pub(super) fn aim_held(
         } else if from_ground && on_body {
             // Only the top of a stack goes on.
             Target::Body {
-                allowed: worth_wearing(carried.0.check_wear_new(item.top())),
+                allowed: worth_wearing(try_wearing(
+                    &carried.0,
+                    (held.item.id, Some(item)),
+                    god.0,
+                    stacks.0,
+                )),
             }
         } else if on_bin || on_body || on_row.is_some() {
             Target::Nowhere
@@ -167,8 +174,14 @@ pub(super) fn aim_held(
         if carried.0.is_worn(held.item.id) {
             Target::Nowhere
         } else {
+            // What is in its way comes off (owner, 2026-11-07).
             Target::Body {
-                allowed: worth_wearing(carried.0.check_wear(held.item.id)),
+                allowed: worth_wearing(try_wearing(
+                    &carried.0,
+                    (held.item.id, None),
+                    god.0,
+                    stacks.0,
+                )),
             }
         }
     } else {

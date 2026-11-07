@@ -81,6 +81,12 @@ pub enum ServerMessage {
     Pong { sent: f64, clock: f64 },
     /// The server won't talk to this client, and why.
     Refused(String),
+    /// Something the player tried to put on didn't go on, and why (with its
+    /// `Inventory` after, as for any refused move).
+    NotWorn {
+        item: crate::id::Id,
+        why: crate::wear::WearRefused,
+    },
     /// Whether the server is open to other players, the answer to `SetOnline`.
     Online(OnlineState),
     /// The server is closing to other players on purpose (its host turned Online

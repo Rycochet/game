@@ -196,19 +196,8 @@ pub(super) fn answer_items(
         }
         ClientMessage::WearItem { item } => {
             let tick = world.action_clock.ticks();
-            // Only the top of a stack goes on.
-            let top = client
-                .inventory
-                .find(item)
-                .map_or(item, |found| found.top().id);
-            match client.inventory.wear(item) {
-                Ok(_) => {
-                    client.unsaved = true;
-                    client.inventory.magic_found_out(top);
-                    client.spend_dressing(top, tick);
-                }
-                Err(why) => warn!("Refused wearing {item:?}: {why:?}"),
-            }
+            // What is in its way comes off, or the player is told why not.
+            client.put_on(item, world.stacks, tick);
             client.update_speed(world.action_clock.ticks());
             client.send_inventory()
         }

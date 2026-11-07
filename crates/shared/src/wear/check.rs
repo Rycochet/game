@@ -78,7 +78,7 @@ impl Inventory {
 
     /// What on the same layer is in its way. Things taking one place only get in
     /// each other's way once every place is taken.
-    fn clash(&self, item: &Item) -> Option<Id> {
+    pub(super) fn clash(&self, item: &Item) -> Option<Id> {
         let one_place = takes_one_place(item);
         for (location, layer) in coverage(item) {
             let here = || {

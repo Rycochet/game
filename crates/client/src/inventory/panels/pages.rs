@@ -8,6 +8,7 @@ use shared::item::Holder;
 
 use super::super::body::spawn_rows;
 use super::super::ground::spawn_section;
+use super::super::wear_note::wear_note;
 use super::grids::spawn_grid;
 use super::{COLUMN_GAP, FONT};
 use crate::common::{AbilitiesPage, SheetText, SkillsPage};
@@ -93,7 +94,17 @@ pub(super) fn spawn_pages(
     let inventory = content
         .spawn(page(Page::Inventory))
         .with_children(|columns| {
-            spawn_rows(columns);
+            // The clothes, and under them why something didn't go on.
+            columns
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    row_gap: px(COLUMN_GAP / 2.0),
+                    ..default()
+                })
+                .with_children(|column| {
+                    spawn_rows(column);
+                    column.spawn(wear_note());
+                });
             spawn_grid(columns, Holder::Inventory, size, false);
             ground = Some(spawn_section(columns));
         })

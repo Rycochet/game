@@ -28,6 +28,7 @@ mod server;
 mod sort;
 mod split;
 mod ui_ids;
+mod wear_note;
 
 #[cfg(not(target_arch = "wasm32"))]
 use debug::run_debug;
@@ -58,6 +59,7 @@ impl Plugin for InventoryPlugin {
             .init_resource::<ground::Ground>()
             .init_resource::<HeldOverGifts>()
             .init_resource::<HeldStock>()
+            .init_resource::<wear_note::WearNote>()
             .add_message::<TookItem>()
             .add_message::<OpenCharacter>()
             .add_message::<GaveItem>()
@@ -94,7 +96,7 @@ impl Plugin for InventoryPlugin {
                     ground::show_aim,
                     (panels::show_grids, panels::show_weights),
                     body::show_clothes,
-                    body::show_body_aim,
+                    (body::show_body_aim, wear_note::show_wear_note),
                     give::show_nearby,
                     give::show_give_aim,
                     panels::show_aim,
