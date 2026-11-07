@@ -17,7 +17,7 @@ The `crates/web_delta` crate: delta downloads of the web client, a new build of 
 ## Used by
 
 - server (`network/web_files/`): deltas from the builds it served before, and serving them.
-- xtask (`web-deltas`): deltas made beforehand, for releases.
+- xtask (`web-deltas`): deltas made beforehand, for releases; the Nightly workflow uses it for the past week's nightly images.
 
 ## Notes
 
