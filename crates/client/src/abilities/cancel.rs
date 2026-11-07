@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use shared::combat::CANCEL_PENALTY;
 use shared::protocol::ClientMessage;
 
+use super::manual::Manual;
 use crate::common::{CancelledEnergy, OwnAbility, SkillsPageOpen};
 use crate::connection::ToServer;
 use crate::debug_menu::DebugMenu;
@@ -49,19 +50,29 @@ pub(super) fn cancel_by_escape(
     cancel(now, &mut own, &mut to_server, &mut cancelled);
 }
 
-/// A step or a journey asked for while winding up calls it off, so the
-/// player can move away.
+/// A step or a journey asked for takes the place of any ability: one chosen
+/// by hand is forgotten, one asked for and still waiting on the server is
+/// taken back, and one winding up is called off, so the player can move away.
 pub(super) fn cancel_by_moving(
     mut steps: MessageReader<TakeStep>,
     mut journeys: MessageReader<TravelTo>,
     time: Res<Time>,
     mut own: ResMut<OwnAbility>,
+    mut manual: ResMut<Manual>,
     mut to_server: MessageWriter<ToServer>,
     mut cancelled: MessageWriter<CancelledEnergy>,
 ) {
     let moving = steps.read().count() + journeys.read().count() > 0;
+    if !moving {
+        return;
+    }
     let now = time.elapsed_secs_f64();
-    if moving && own.is_winding_up(now) {
+    manual.forget();
+    if now < own.asked_until {
+        to_server.write(ToServer(ClientMessage::WithdrawAbility));
+        own.asked_until = 0.0;
+    }
+    if own.is_winding_up(now) {
         cancel(now, &mut own, &mut to_server, &mut cancelled);
     }
 }

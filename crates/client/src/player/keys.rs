@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::movement::Step;
 
-use super::{PlayerEnergy, TakeStep};
+use super::{PlayerEnergy, PlayerMoving, TakeStep};
 use crate::common::{Action, Preferences, ViewFacing};
 
 /// Asks for a step while a key is held, as soon as the last one has gone: energy
@@ -13,6 +13,7 @@ pub(super) fn move_player(
     preferences: Res<Preferences>,
     facing: Res<ViewFacing>,
     energy: Res<PlayerEnergy>,
+    mut moving: ResMut<PlayerMoving>,
     mut steps: MessageWriter<TakeStep>,
 ) {
     // A key tapped and released within one frame is "just pressed" but no
@@ -33,7 +34,11 @@ pub(super) fn move_player(
         dy += 1;
     }
 
-    if (dx != 0 || dy != 0) && energy.waiting.is_empty() {
+    let held = dx != 0 || dy != 0;
+    if moving.keys != held {
+        moving.keys = held;
+    }
+    if held && energy.waiting.is_empty() {
         // The keys mean screen directions, so follow the way the map is turned.
         let (dx, dy) = facing.screen_to_grid(dx, dy);
         if let Some(step) = Step::new(dx, dy) {

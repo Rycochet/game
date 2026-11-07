@@ -211,6 +211,12 @@ pub(crate) fn answer(
             true
         }
         ClientMessage::CancelAbility => super::combat::cancel_ability(client, world),
+        ClientMessage::WithdrawAbility => {
+            client
+                .waiting
+                .retain(|action| !matches!(action, Action::UseAbility { .. }));
+            true
+        }
         ClientMessage::DropItem { .. }
         | ClientMessage::TakeFromGround { .. }
         | ClientMessage::WearFromGround { .. }
