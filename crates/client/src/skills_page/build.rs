@@ -6,6 +6,7 @@
 use bevy::prelude::*;
 use shared::skill::{SkillId, Skills, VALUE_SCALE};
 
+use super::icons::icon_path;
 use super::layout::{Placed, layout};
 use super::name::OwnName;
 use super::spawn::{Canvas, FORM, Origin};
@@ -56,12 +57,14 @@ pub(super) struct NodeLabel {
 pub(super) struct Drawn(Option<(Skills, String)>);
 
 /// Draws the tree again when the page is open and what is known has changed.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn build_tree(
     open: Res<SkillsPageOpen>,
     sheet: Res<CharacterSheet>,
     name: Res<OwnName>,
     origin: Single<Entity, With<Origin>>,
     canvas: Single<Entity, With<Canvas>>,
+    assets: Res<AssetServer>,
     mut drawn: Local<Drawn>,
     mut commands: Commands,
 ) {
@@ -79,7 +82,15 @@ pub(super) fn build_tree(
         for one in &placed {
             spawn_line(origin, one, canvas);
         }
-        spawn_node(origin, None, Vec2::ZERO, &name.0, String::new(), canvas);
+        spawn_node(
+            origin,
+            None,
+            Vec2::ZERO,
+            &name.0,
+            String::new(),
+            None,
+            canvas,
+        );
         for one in &placed {
             let name = one.id.name();
             spawn_node(
@@ -88,6 +99,7 @@ pub(super) fn build_tree(
                 one.at,
                 name,
                 tip(skills, one.id),
+                icon_path(one.id).map(|path| assets.load(path)),
                 canvas,
             );
         }
@@ -117,6 +129,7 @@ fn spawn_node(
     at: Vec2,
     name: &str,
     tip: String,
+    icon: Option<Handle<Image>>,
     canvas: Entity,
 ) {
     let depth = id.map_or(0, |id| usize::from(id.depth()));
@@ -125,48 +138,62 @@ fn spawn_node(
         Some(id) => UiId::new(FORM, "node").at(usize::from(id.number())),
         None => UiId::new(FORM, "you"),
     };
-    origin
-        .spawn((
-            SkillNode { id, at, size },
-            ui_id,
-            HoverTip(tip),
+    let mut node = origin.spawn((
+        SkillNode { id, at, size },
+        ui_id,
+        HoverTip(tip),
+        leaves_presses(canvas),
+        Node {
+            position_type: PositionType::Absolute,
+            width: px(size),
+            height: px(size),
+            border: UiRect::all(px(2)),
+            border_radius: BorderRadius::MAX,
+            ..default()
+        },
+        BackgroundColor(FILLS[depth.min(FILLS.len() - 1)]),
+        BorderColor::all(INK),
+    ));
+    if let Some(icon) = icon {
+        // The icons are white, so tinting them draws them in ink.
+        node.with_child((
+            ImageNode::new(icon).with_color(INK),
             leaves_presses(canvas),
             Node {
                 position_type: PositionType::Absolute,
-                width: px(size),
-                height: px(size),
-                border: UiRect::all(px(2)),
-                border_radius: BorderRadius::MAX,
+                left: percent(16),
+                top: percent(16),
+                width: percent(68),
+                height: percent(68),
                 ..default()
             },
-            BackgroundColor(FILLS[depth.min(FILLS.len() - 1)]),
-            BorderColor::all(INK),
-        ))
-        .with_child((
-            NodeLabel {
-                // Deeper names go first, so the page doesn't fill with words.
-                hidden_below: [0.0, 0.0, 0.3, 0.4, 0.5][depth.min(4)],
-            },
-            leaves_presses(canvas),
-            Node {
-                position_type: PositionType::Absolute,
-                top: px(size + 2.0),
-                left: px(size / 2.0 - LABEL_WIDTH / 2.0),
-                width: px(LABEL_WIDTH),
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            children![(
-                Text::new(name),
-                if depth <= 1 {
-                    TextSize::Medium.font()
-                } else {
-                    TextSize::Small.font()
-                },
-                TextLayout::justify(Justify::Center),
-                TextColor(INK),
-            )],
         ));
+    }
+    node.with_child((
+        NodeLabel {
+            // Deeper names go first, so the page doesn't fill with words.
+            hidden_below: [0.0, 0.0, 0.3, 0.4, 0.5][depth.min(4)],
+        },
+        leaves_presses(canvas),
+        Node {
+            position_type: PositionType::Absolute,
+            top: px(size + 2.0),
+            left: px(size / 2.0 - LABEL_WIDTH / 2.0),
+            width: px(LABEL_WIDTH),
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        children![(
+            Text::new(name),
+            if depth <= 1 {
+                TextSize::Medium.font()
+            } else {
+                TextSize::Small.font()
+            },
+            TextLayout::justify(Justify::Center),
+            TextColor(INK),
+        )],
+    ));
 }
 
 /// What hovering over a skill says: its name and what a check with it counts.

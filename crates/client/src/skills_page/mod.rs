@@ -10,6 +10,7 @@ use crate::widgets::WidgetSystems;
 
 mod build;
 mod details;
+mod icons;
 mod input;
 mod layout;
 mod name;
