@@ -3,7 +3,7 @@ use crate::storage::SiteId;
 use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::item::{Inventory, ItemKind, MadeAt, Quality};
-use shared::mob::{Event, GIVE_REACH, Memory};
+use shared::mob::{GIFT_OPINION, GIVE_REACH, Memory};
 use shared::poi::PoiKind;
 use shared::protocol::ServerMessage;
 use shared::sheet::{Feeling, Sheet};
@@ -215,7 +215,7 @@ fn a_player_going_into_a_site_goes_out_of_sight_and_is_seen_inside() {
 
 /// A client in a site, and a mob on its level made this kind, `apart` cells east
 /// of the player in the same room, so that they can see each other.
-fn beside_a_mob(kind: CreatureKind, apart: i64) -> TestClient {
+pub(super) fn beside_a_mob(kind: CreatureKind, apart: i64) -> TestClient {
     let mut test = TestClient::new();
     test.send(&[CASTLE]);
     let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(apart);
@@ -229,18 +229,18 @@ fn beside_a_mob(kind: CreatureKind, apart: i64) -> TestClient {
 }
 
 /// Lets this many ticks go by, with mobs acting.
-fn run(test: &mut TestClient, ticks: u64) {
+pub(super) fn run(test: &mut TestClient, ticks: u64) {
     for _ in 0..ticks {
         test.world.action_clock.advance(1);
         run_mobs(std::slice::from_mut(&mut test.client), &mut test.world);
     }
 }
 
-fn the_mob(test: &TestClient) -> Mob {
+pub(super) fn the_mob(test: &TestClient) -> Mob {
     test.world.populations.0.values().next().unwrap().mobs[0].clone()
 }
 
-fn player(test: &TestClient) -> (i64, i64) {
+pub(super) fn player(test: &TestClient) -> (i64, i64) {
     test.client.visit.as_ref().unwrap().position()
 }
 
@@ -528,7 +528,7 @@ fn with_a_gift(kind: CreatureKind) -> (TestClient, Id) {
 }
 
 #[test]
-fn a_beggar_given_something_remembers_and_warms_to_the_giver() {
+fn a_beggar_given_something_thinks_better_of_the_giver_but_stands_as_before() {
     let (mut test, coin) = with_a_gift(CreatureKind::Beggar);
     let beggar = the_mob(&test).id;
     run(&mut test, 3);
@@ -540,15 +540,17 @@ fn a_beggar_given_something_remembers_and_warms_to_the_giver() {
         to: beggar,
     }]);
     assert!(test.client.inventory.find(coin).is_none());
-    // The token changes colour.
+    let tester = test.client.character_id.unwrap();
+    assert_eq!(the_mob(&test).memory.opinion(&tester), GIFT_OPINION);
+    // A gift alone doesn't change how it stands (owner, 2026-11-07): the token
+    // keeps its colour, and it stays where it is.
     let told = answers.iter().find_map(|answer| match answer {
         ServerMessage::EntitySeen(look) if look.id == beggar => Some(look.feeling),
         _ => None,
     });
-    assert_eq!(told, Some(Feeling::Friendly));
-    // And it comes along.
+    assert_eq!(told, None);
     run(&mut test, 3);
-    assert!(matches!(the_mob(&test).doing, Doing::Going { .. }));
+    assert_eq!(the_mob(&test).doing, Doing::Idle);
 }
 
 #[test]
@@ -624,7 +626,7 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
     let mut test = TestClient::of(open());
     let tester = test.client.character_id.unwrap();
     assert_eq!(the_mob(&test).id, mob);
-    assert_eq!(the_mob(&test).memory.warmth_for(&tester), 30);
+    assert_eq!(the_mob(&test).memory.opinion(&tester), GIFT_OPINION);
     let id = SiteId::Dev {
         kind: PoiKind::Castle,
         seed: 7,
@@ -814,15 +816,6 @@ fn a_player_swaps_with_someone_friendly_but_not_with_an_enemy() {
             .iter()
             .any(|answer| matches!(answer, ServerMessage::Position { .. }))
     );
-    // Given enough, it stops being an enemy and moves over.
-    let mob = the_mob(&test).id;
-    let tester = test.client.character_id.unwrap();
-    let population = test.world.populations.0.values_mut().next().unwrap();
-    let event = Event::Gave(shared::item::ItemKind::Coin);
-    population.mobs[0].memory.remember(tester, event);
-    assert_eq!(the_mob(&test).id, mob);
-    test.steps(&[east]);
-    assert_eq!(player(&test), (from.0 + 1, from.1));
 }
 
 #[test]

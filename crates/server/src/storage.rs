@@ -29,8 +29,8 @@ mod unsaved;
 pub use characters::Everywhere;
 pub use roads::RoadSave;
 pub use saves::{
-    CellMasks, CharacterSave, CharacterWorldSave, KnownPoi, LevelSave, SavedMob, ServerSave,
-    SiteId, SiteSave, VisitSave, WorldSave,
+    CellMasks, CharacterSave, CharacterWorldSave, KnownPoi, LevelSave, MobRecord, SavedMob,
+    ServerSave, SiteId, SiteSave, VisitSave, WorldSave,
 };
 pub use unsaved::{Unsaved, now};
 

@@ -48,12 +48,13 @@ impl CreatureKind {
     }
 
     /// What this kind does about something it feels this way about, by its temper:
-    /// a timid kind keeps away from all but friends, which it leaves be; a friendly
+    /// a timid kind keeps away from everyone, friends least (how far is the
+    /// server's); a friendly
     /// one comes over to anyone it doesn't dislike.
     pub fn reaction(self, feeling: Feeling) -> Reaction {
         match (self.temper(), feeling) {
             (_, Feeling::None) => Reaction::Ignore,
-            (Temper::Timid, Feeling::Friendly) => Reaction::Ignore,
+            // Even friends are kept a little way off (`server::entities::timid`).
             (Temper::Timid, _) => Reaction::Flee,
             (_, Feeling::Friendly) => Reaction::Approach,
             (Temper::Friendly, Feeling::Neutral) => Reaction::Approach,

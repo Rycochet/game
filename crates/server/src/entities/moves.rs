@@ -7,6 +7,7 @@ use shared::rng::Seed;
 use std::collections::BTreeSet;
 
 use super::territory::{LEASH, guard_spot, is_territorial};
+use super::timid::too_near;
 use super::tracking::start_tracking;
 use super::{
     Crossing, Doing, HOME_WITHIN, Maps, Mob, SETTLING_STEPS, Spot, THINKING_COST, cells_apart,
@@ -127,13 +128,19 @@ pub(super) fn act(
                 THINKING_COST
             })
         }
-        Doing::Fleeing { from } => {
+        Doing::Fleeing { from, .. } => {
             let threat = spots
                 .iter()
                 .find(|spot| spot.id == from && line_is_clear(level, mob.position, spot.position));
-            let Some(threat) = threat else {
+            // Out of sight, or far enough: no further.
+            let Some(threat) = threat.filter(|threat| too_near(mob, threat)) else {
                 mob.doing = settle;
                 return THINKING_COST;
+            };
+            // Cornered or not, it may strike again after this.
+            mob.doing = Doing::Fleeing {
+                from,
+                struck: false,
             };
             let step = maps
                 .to(level, threat.position)

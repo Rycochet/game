@@ -9,14 +9,17 @@ use crate::dungeon::{Cell, Level};
 use crate::id::Id;
 use crate::item::{Drop, ItemKind, Quality, roll_drop};
 use crate::poi::PoiKind;
-use crate::protocol::CharacterId;
 use crate::rng::Seed;
 use crate::sheet::{Appearance, Attributes, Build, Feeling, Trait};
 use crate::wear::WornLook;
 
+mod memory;
 mod scent;
 mod trail;
 mod wild;
+pub use memory::{
+    Event, FIRST_HARM_OPINION, GIFT_OPINION, Memory, Regard, TRESPASS_FORGOTTEN_AFTER,
+};
 pub use scent::{BASE_SCENT, MOST_SCENT, SCENT_KEPT_FOR, can_smell, scent_strength, smells_for};
 pub use trail::{TRAIL_LONGEST, TRAIL_SHORTEST, wild_trail};
 pub use wild::{wild_mob_id, wild_spawns};
@@ -51,66 +54,6 @@ pub struct Spawn {
 
 /// How near someone must be to give something, in cells.
 pub const GIVE_REACH: i64 = 2;
-
-/// How many things a mob remembers: the oldest go first.
-const MOST_REMEMBERED: usize = 32;
-
-/// How long, in action ticks, a mob stays angry at someone who came into its
-/// territory: 3 minutes. Being hurt, once there is combat, is never forgotten
-/// (owner, 2026-11-05).
-pub const TRESPASS_FORGOTTEN_AFTER: u64 = 3 * 60 * 20;
-
-/// Something that happened, as a mob remembers it. Things, not words, so it can
-/// say what it means for how the mob feels.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Event {
-    Gave(ItemKind),
-    /// Came into its territory, at this action tick.
-    Trespassed(u64),
-}
-
-impl Event {
-    /// How much warmer it makes the mob feel about whoever did it.
-    fn warmth(self) -> i32 {
-        match self {
-            Self::Gave(_) => 30,
-            // Enough to turn neutral into unfriendly while it lasts.
-            Self::Trespassed(_) => -50,
-        }
-    }
-}
-
-/// What a mob remembers, about which characters.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Memory(Vec<(CharacterId, Event)>);
-
-impl Memory {
-    pub fn remember(&mut self, about: CharacterId, event: Event) {
-        // Only the latest trespass counts, so staying put doesn't fill its memory.
-        if matches!(event, Event::Trespassed(_)) {
-            self.0
-                .retain(|(who, old)| !(*who == about && matches!(old, Event::Trespassed(_))));
-        }
-        if self.0.len() >= MOST_REMEMBERED {
-            self.0.remove(0);
-        }
-        self.0.push((about, event));
-    }
-
-    /// Lets go of trespasses older than `TRESPASS_FORGOTTEN_AFTER` at this tick.
-    pub fn forget_old(&mut self, now: u64) {
-        self.0.retain(|(_, event)| match event {
-            Event::Trespassed(at) => now.saturating_sub(*at) < TRESPASS_FORGOTTEN_AFTER,
-            Event::Gave(_) => true,
-        });
-    }
-
-    /// How much warmer it feels about this character than it would have.
-    pub fn warmth_for(&self, about: &CharacterId) -> i32 {
-        let events = self.0.iter().filter(|(who, _)| who == about);
-        events.map(|(_, event)| event.warmth()).sum()
-    }
-}
 
 /// What can be found in a kind of place, with how many of each in 100.
 fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {

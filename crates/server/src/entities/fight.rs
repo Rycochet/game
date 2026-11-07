@@ -4,11 +4,14 @@ use shared::combat::{Fighter, Swing, Wielded, in_reach};
 use shared::creature::CreatureKind;
 use shared::dungeon::Level;
 use shared::id::Id;
+use shared::protocol::CharacterId;
 use shared::sheet::Attributes;
+use shared::sheet::Feeling;
 use shared::vitals::{Points, Vital};
 
-use super::gear::bury;
-use super::{ATTACK_GAP, Doing, Mob, Spot};
+use super::gear::{bury, record_of};
+use super::timid::{is_timid, strikes_at};
+use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob, SETTLING_STEPS, Spot};
 use crate::ServerWorld;
 use crate::combat::{Act, Harm, Pending, health_left, luck, ticks_for};
 use crate::storage::SiteId;
@@ -99,13 +102,13 @@ pub(super) fn mob_turn(
         });
         return Some(0);
     }
-    // Only one after an enemy: closing in to attack.
-    let Doing::Going { after, gap, .. } = mob.doing else {
-        return None;
+    // One after an enemy, closing in to attack, or a timid one caught near one.
+    let timid = strikes_at(mob, spots).map(|spot| spot.id);
+    let after = match (timid, mob.doing) {
+        (Some(from), _) => from,
+        (None, Doing::Going { after, gap, .. }) if gap == ATTACK_GAP => after,
+        _ => return None,
     };
-    if gap != ATTACK_GAP {
-        return None;
-    }
     let swing = mob.fighter().swing(mob.fight.attacks);
     if !reaches(mob, after, &swing) {
         return None;
@@ -116,6 +119,13 @@ pub(super) fn mob_turn(
         act: Act::Strike(swing),
         lands_at: tick + lands_in,
     });
+    if timid.is_some() {
+        // Once: it steps away before it may strike again.
+        mob.doing = Doing::Fleeing {
+            from: after,
+            struck: true,
+        };
+    }
     blows.push(MobBlow::Started {
         mob: mob.id,
         target: after,
@@ -143,8 +153,9 @@ pub(crate) struct Striker<'a> {
 }
 
 /// A player's blow lands on a mob on `place` (whose own level is `here_index`):
-/// it is harmed, turns on them, and dies if that was the last of its Health.
-/// `None` if it is no longer there.
+/// it is harmed, remembers it (`Memory::remember_harm`, saved), does what its
+/// standing with them now says (`after_hit`), and dies if that was the last of
+/// its Health. `None` if it is no longer there.
 pub(crate) fn hit_mob(
     world: &mut ServerWorld,
     (place, here_index): ((SiteId, u32), u32),
@@ -168,23 +179,57 @@ pub(crate) fn hit_mob(
             told: by.id,
         });
     }
-    // Whatever it was doing, it goes for whoever hit it.
-    let after_them = matches!(one.doing, Doing::Going { after, .. } if after == by.id);
-    if !after_them {
-        let at_rest = one.doing == Doing::Idle;
-        one.doing = Doing::Going {
-            after: by.id,
-            last_seen: by.position,
-            gap: ATTACK_GAP,
-        };
-        one.target = Some(by.id);
-        if at_rest {
+    // A player's entity id is their character's.
+    let character = CharacterId(by.id);
+    let start = one.kind.feeling_about(by.fighter.kind);
+    one.memory.remember_harm(character, harm, start);
+    let feeling = one.feeling(by.fighter.kind, Some(&character));
+    let at_rest = one.doing == Doing::Idle;
+    if let Some(doing) = after_hit(one, &by, feeling) {
+        one.doing = doing;
+        one.target = doing.target();
+        if at_rest && doing != Doing::Idle {
             let due = one.next_due(tick);
             population.due.insert((due, mob));
         }
     }
-    if one.health(tick) == Points::ZERO {
+    let keep = (one.id, one.home_level, one.home);
+    let memory = one.memory.clone();
+    let dead = one.health(tick) == Points::ZERO;
+    record_of(world, place.0, keep).memory = memory;
+    if dead {
         bury(world, place, here_index, mob);
     }
     Some(MobHit { harm, left, kind })
+}
+
+/// What a mob does once hit, by how it now stands with whoever hit it: a timid
+/// one keeps away, an unfriendly one goes for them, and one only cooled to
+/// neutral stops coming over but doesn't fight back. `None` to carry on.
+fn after_hit(mob: &Mob, by: &Striker, feeling: Feeling) -> Option<Doing> {
+    if is_timid(mob) {
+        let fleeing = matches!(mob.doing, Doing::Fleeing { from, .. } if from == by.id);
+        return (!fleeing).then_some(Doing::Fleeing {
+            from: by.id,
+            struck: false,
+        });
+    }
+    match (feeling, mob.doing) {
+        (Feeling::Unfriendly, Doing::Going { after, gap, .. })
+            if after == by.id && gap == ATTACK_GAP =>
+        {
+            None
+        }
+        (Feeling::Unfriendly, _) => Some(Doing::Going {
+            after: by.id,
+            last_seen: by.position,
+            gap: ATTACK_GAP,
+        }),
+        (_, Doing::Going { after, gap, .. }) if after == by.id && gap == FRIENDLY_GAP => {
+            Some(Doing::Settling {
+                steps_left: SETTLING_STEPS,
+            })
+        }
+        _ => None,
+    }
 }

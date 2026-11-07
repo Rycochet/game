@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 use shared::id::Id;
 use shared::item::Item;
-use shared::mob::Event;
 use shared::shop::DOOR_REACH;
 
 use crate::ServerWorld;
@@ -68,7 +67,7 @@ pub(crate) fn give_to_keeper(
         .ok_or("can't hand that over")?;
     let level = world.site_mut(id).levels.entry(index).or_default();
     let record = level.records.entry(with).or_default();
-    record.memory.remember(character, Event::Gave(item.kind));
+    record.memory.remember_gift(character);
     record.carried.push(item);
     Ok(record.carried.clone())
 }

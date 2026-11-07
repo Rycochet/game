@@ -6,13 +6,13 @@ use shared::dungeon::line_is_clear;
 use shared::id::Id;
 use shared::item::{Inventory, ItemKind, MadeAt, Quality, StackLimits};
 use shared::item_form::give_blade_within;
-use shared::mob::{Event, GIVE_REACH};
+use shared::mob::GIVE_REACH;
 use shared::sheet::Sheet;
 
 use super::cells_apart;
 use crate::ServerWorld;
 use crate::connections::Client;
-use crate::storage::SiteId;
+use crate::storage::{MobRecord, SiteId};
 
 /// A new mob's belongings: it wears what it can, and keeps the rest in its
 /// inventory while there is room. Only what is worn or a blade is made to its size.
@@ -86,24 +86,27 @@ pub(crate) fn give(
         .inventory
         .hand_over(item)
         .ok_or("can't hand that over")?;
-    let event = Event::Gave(item.kind);
-    mob.memory.remember(character, event);
-    // Saved with the level it belongs on, wherever it has got to.
-    let home_level = mob.home_level;
-    let home = mob.home;
-    let memory = mob.memory.clone();
-    if place.0 == SiteId::Wilderness {
-        super::wild::touched(world, home);
-    }
-    let saved = world
-        .site_mut(place.0)
-        .levels
-        .entry(home_level)
-        .or_default();
-    let record = saved.records.entry(to).or_default();
+    mob.memory.remember_gift(character);
+    let (home_level, home, memory) = (mob.home_level, mob.home, mob.memory.clone());
+    let record = record_of(world, place.0, (to, home_level, home));
     record.memory = memory;
     record.carried.push(item);
     Ok(())
+}
+
+/// What is kept of a mob (`id`, `home_level`, `home`) on `site`: saved with the
+/// level it belongs on, wherever it has got to. In the wilderness its block is
+/// marked, to be kept until it resets.
+pub(super) fn record_of(
+    world: &mut ServerWorld,
+    site: SiteId,
+    (id, home_level, home): (Id, u32, (i64, i64)),
+) -> &mut MobRecord {
+    if site == SiteId::Wilderness {
+        super::wild::touched(world, home);
+    }
+    let saved = world.site_mut(site).levels.entry(home_level).or_default();
+    saved.records.entry(id).or_default()
 }
 
 /// A mob in the player's sight dies (dev tools). All it had falls where it stood, and

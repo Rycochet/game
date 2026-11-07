@@ -62,11 +62,11 @@ fn temper_decides_what_a_kind_does_about_strangers() {
     assert_eq!(Minotaur.temper(), Temper::Hostile);
     assert_eq!(Minotaur.feeling_about(Human), Feeling::Unfriendly);
     assert_eq!(Orc.feeling_about(Orc), Feeling::Friendly);
-    // Timid ones keep away from all but friends, and leave friends be.
+    // Timid ones keep away from everyone: friends only a little.
     for timid in [Chicken, Horse] {
         assert_eq!(timid.reaction(Feeling::Neutral), Reaction::Flee);
         assert_eq!(timid.reaction(Feeling::Unfriendly), Reaction::Flee);
-        assert_eq!(timid.reaction(Feeling::Friendly), Reaction::Ignore);
+        assert_eq!(timid.reaction(Feeling::Friendly), Reaction::Flee);
     }
     // Friendly ones come over to strangers too.
     assert_eq!(Halfling.reaction(Feeling::Neutral), Reaction::Approach);
