@@ -275,4 +275,8 @@ pub enum ClientMessage {
     /// Call off the ability winding up, if it hasn't landed: answered with
     /// `AbilityLanded` and `Landed::Cancelled`.
     CancelAbility,
+    /// Take back an ability asked for that is still waiting for the energy to
+    /// begin (the player moved or chose another): one already begun is left
+    /// alone, so nothing is lost for it. Not answered.
+    WithdrawAbility,
 }

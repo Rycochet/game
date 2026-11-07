@@ -9,17 +9,18 @@ use shared::energy::ACTION_TICKS_PER_SECOND;
 use shared::protocol::{ClientMessage, Landed, ServerMessage};
 use shared::sheet::Feeling;
 
+use super::manual::Manual;
 use super::own_bar::OwnBar;
 use crate::common::{
     CurrentDungeon, GameView, MapPosition, Other, OwnAbility, PlayerSpeed, SpentEnergy, Target,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
-use crate::player::Player;
+use crate::player::{Player, PlayerMoving};
 
 /// How long an ask is waited on before asking again, in seconds: the server
 /// answers at once if it does at all.
-const ASK_WAIT: f64 = 1.0;
+pub(super) const ASK_WAIT: f64 = 1.0;
 
 /// A slot on the action bar was used.
 #[derive(Message, Clone, Copy, Debug)]
@@ -32,6 +33,7 @@ pub(super) fn take_timing(
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
     mut own: ResMut<OwnAbility>,
+    mut manual: ResMut<Manual>,
     mut spent: MessageWriter<SpentEnergy>,
 ) {
     let now = time.elapsed_secs_f64();
@@ -40,6 +42,7 @@ pub(super) fn take_timing(
         match message {
             ServerMessage::AbilityStarted {
                 who: None,
+                ability,
                 lands_in,
                 ready_in,
                 ..
@@ -52,6 +55,7 @@ pub(super) fn take_timing(
                     ready: now + seconds(*ready_in),
                     asked_until: 0.0,
                 };
+                manual.begun(*ability, own.lands);
             }
             ServerMessage::AbilityLanded {
                 who: None,
@@ -61,6 +65,7 @@ pub(super) fn take_timing(
                 let penalty = f64::from(CANCEL_PENALTY) / f64::from(speed.0.max(1));
                 own.lands = now;
                 own.ready = now + penalty / ACTION_TICKS_PER_SECOND;
+                manual.lands = now;
             }
             _ => {}
         }
@@ -68,7 +73,7 @@ pub(super) fn take_timing(
 }
 
 /// Asks the server for an ability at the target, and waits for its answer.
-fn ask(
+pub(super) fn ask(
     ability: Ability,
     target: shared::id::Id,
     now: f64,
@@ -79,33 +84,9 @@ fn ask(
     to_server.write(ToServer(ClientMessage::UseAbility { ability, target }));
 }
 
-/// A slot used: its ability, at the target, if it can be done now.
-pub(super) fn use_slots(
-    mut used: MessageReader<UseSlot>,
-    bar: Res<OwnBar>,
-    carried: Res<Carried>,
-    target: Res<Target>,
-    time: Res<Time>,
-    mut own: ResMut<OwnAbility>,
-    mut to_server: MessageWriter<ToServer>,
-) {
-    let now = time.elapsed_secs_f64();
-    for &UseSlot(slot) in used.read() {
-        let Some(held) = bar.0.slots.get(usize::from(slot)).copied().flatten() else {
-            continue;
-        };
-        if !held.ability.can_use(carried.0.creature) || own.is_busy(now) {
-            continue;
-        }
-        match target.0 {
-            Some(target) => ask(held.ability, target, now, &mut own, &mut to_server),
-            None => debug!("{} needs a target", held.ability.name()),
-        }
-    }
-}
-
 /// Automatic abilities, done whenever they can be: Attack with an enemy
-/// targeted, in sight and in reach.
+/// targeted, in sight and in reach. Never while the player is moving or an
+/// ability they chose by hand is waiting or winding up: those come first.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn use_automatic(
     view: Res<State<GameView>>,
@@ -116,11 +97,16 @@ pub(super) fn use_automatic(
     time: Res<Time>,
     player: Single<&MapPosition, With<Player>>,
     others: Query<(&Other, &MapPosition)>,
+    (moving, manual): (Res<PlayerMoving>, Res<Manual>),
     mut own: ResMut<OwnAbility>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     let now = time.elapsed_secs_f64();
-    if *view.get() != GameView::Dungeon || own.is_busy(now) {
+    if *view.get() != GameView::Dungeon
+        || own.is_busy(now)
+        || moving.is_moving()
+        || manual.holds(now)
+    {
         return;
     }
     let Some(id) = target.0 else {

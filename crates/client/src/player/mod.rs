@@ -12,12 +12,15 @@ use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 // Split into files (`cargo xtask lint` keeps files small).
 mod keys;
 mod messages;
+mod moving;
 mod state;
 mod steps;
 mod travel;
 
 use keys::move_player;
 pub use messages::{Arrived, Player, PlayerSystems, Stepped, TakeStep, TravelTo};
+pub use moving::PlayerMoving;
+use moving::note_moving;
 use state::{PlayerEnergy, Travel, action_tick, spawn_player};
 use steps::take_steps;
 use travel::{enemy_cells, travel};
@@ -39,6 +42,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerEnergy>()
+            .init_resource::<PlayerMoving>()
             .add_message::<TravelTo>()
             .add_message::<Arrived>()
             .add_message::<TakeStep>()
@@ -56,7 +60,9 @@ impl Plugin for PlayerPlugin {
                 (
                     move_player.in_set(PlayerSystems::Input),
                     // After everything in `Input` asked for its steps.
-                    (take_steps, travel).chain().in_set(PlayerSystems::Travel),
+                    (take_steps, travel, note_moving)
+                        .chain()
+                        .in_set(PlayerSystems::Travel),
                 )
                     .run_if(not(in_state(GameView::Connecting)))
                     // Nobody to tell while the connection is down.

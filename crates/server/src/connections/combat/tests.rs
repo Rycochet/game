@@ -111,6 +111,25 @@ fn a_cancelled_attack_does_no_harm_and_soon_lets_the_player_act() {
 }
 
 #[test]
+fn an_attack_waiting_for_energy_can_be_withdrawn() {
+    let (mut test, mob) = beside(CreatureKind::Dwarf);
+    test.time_passes = false;
+    test.send(&[attack(mob)]);
+    // Landed, but not yet able to act again: the next waits for the energy.
+    run(&mut test, 5, false);
+    test.send(&[attack(mob)]);
+    assert_eq!(test.client.waiting.len(), 1);
+    test.send(&[ClientMessage::WithdrawAbility]);
+    assert!(test.client.waiting.is_empty());
+    run(&mut test, 100, false);
+    assert!(
+        !received(&mut test)
+            .iter()
+            .any(|message| matches!(message, ServerMessage::AbilityStarted { who: None, .. }))
+    );
+}
+
+#[test]
 fn a_mob_out_of_reach_is_not_attacked() {
     let (mut test, mob) = beside(CreatureKind::Dwarf);
     test.world.populations.0.values_mut().next().unwrap().mobs[0]
