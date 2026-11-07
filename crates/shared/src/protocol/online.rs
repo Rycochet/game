@@ -19,7 +19,8 @@ pub struct OnlineSettings {
     pub port: u16,
     /// The most players at once, the host among them; 0 for no limit.
     pub player_limit: u16,
-    /// Whether to ask this network's router to forward the port here (UPnP).
+    /// Whether to ask this network's router to forward the port here (UPnP):
+    /// off unless chosen. `HOW_UPNP`, if set, wins over it.
     pub upnp: bool,
 }
 
@@ -31,7 +32,7 @@ impl Default for OnlineSettings {
             bind_address: "0.0.0.0".into(),
             port: DEFAULT_PORT,
             player_limit: 0,
-            upnp: true,
+            upnp: false,
         }
     }
 }

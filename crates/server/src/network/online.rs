@@ -15,12 +15,11 @@ use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-mod upnp;
-
 use super::NewConnections;
 use super::health::{Heartbeat, track_heartbeat};
 use super::ports::{OpenPorts, open_ports};
 use super::routes::{Stop, accept_connections};
+use super::upnp;
 use crate::connections::{self, Connections};
 use crate::tls::{CertificateSource, Security};
 use crate::{ServerName, ServerOptions, ServerWorlds};
@@ -139,11 +138,14 @@ fn go_online(
     let (certificate, fingerprint) = ports.certificate.unwrap_or_default();
     info!("Open to other players as {:?}", settings.name);
     commands.insert_resource(NewConnections(Mutex::new(ports.accepted)));
+    // `HOW_UPNP`, if set, wins over Server Options.
+    let wanted = crate::upnp_from_environment().unwrap_or(settings.upnp);
     let (router, news) = match settings.bind_address.trim().parse() {
-        Ok(bind) if settings.upnp => (
-            Some(upnp::RouterWork::start(settings.port, bind)),
-            RouterPort::Opening,
-        ),
+        Ok(bind) if wanted => {
+            let local = SocketAddr::new(bind, settings.port);
+            let work = upnp::RouterWork::start(settings.port, local);
+            (Some(work), RouterPort::Opening)
+        }
         _ => (None, RouterPort::Off),
     };
     connections.tell_host(&ServerMessage::Online(OnlineState::Online {

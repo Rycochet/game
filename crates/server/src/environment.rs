@@ -45,6 +45,17 @@ pub(crate) fn option_value(value: Option<&str>, default: bool) -> bool {
     default != changed
 }
 
+/// `HOW_UPNP`, if set: whether to ask the router to forward the port. A
+/// standalone server reads it alone (off if unset); in a native client it wins
+/// over Server Options' switch.
+pub fn upnp_from_environment() -> Option<bool> {
+    upnp_value(env::var("HOW_UPNP").ok().as_deref())
+}
+
+pub(crate) fn upnp_value(value: Option<&str>) -> Option<bool> {
+    value.map(|value| option_value(Some(value), false))
+}
+
 /// The logging settings `LOG_LEVEL` asks for.
 pub fn log_plugin() -> LogPlugin {
     log_plugin_for(env::var(LOG_LEVEL_VARIABLE).ok().as_deref())

@@ -42,6 +42,8 @@ mod routes;
 mod socket;
 mod stop;
 mod tls_listener;
+mod upnp;
+mod upnp_plugin;
 mod web_files;
 
 pub use health::HEALTH_PATH;
@@ -55,6 +57,7 @@ use routes::{Stop, accept_connections};
 use socket::upgrade;
 use stop::{stop_signal, stop_when_asked};
 use tls_listener::TlsListener;
+pub use upnp_plugin::{UpnpChoice, UpnpPlugin};
 pub use web_files::WebClient;
 
 /// The largest message a client may send (they are all tiny).

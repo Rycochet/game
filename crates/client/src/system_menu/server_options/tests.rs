@@ -9,7 +9,7 @@ fn what_is_kept_shows_again() {
         port: 9000,
         player_limit: 6,
         // Not a box: the switch is kept by `upnp_row`.
-        upnp: true,
+        upnp: false,
     };
     let mut back = OnlineSettings::default();
     for (which, ..) in BOXES {

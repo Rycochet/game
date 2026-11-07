@@ -95,3 +95,10 @@ fn the_user_documentation_lists_every_server_variable() {
         );
     }
 }
+
+#[test]
+fn upnp_is_only_decided_when_set() {
+    assert_eq!(upnp_value(None), None);
+    assert_eq!(upnp_value(Some("TRUE")), Some(true));
+    assert_eq!(upnp_value(Some("false")), Some(false));
+}
