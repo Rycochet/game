@@ -14,7 +14,7 @@ Temperature, moisture and the biome they make, at any world map position, follow
 - `ICE_LATITUDE` (80): always ice past it (its edge wanders 3° with the local temperature); `SEA_ICE` (-6 °C): the sea is frozen below this yearly average; `moisture_belt(latitude)` (`-1..=1`, for poi kinds later).
 - `CELSIUS_AT_ZERO` (-10.5), `CELSIUS_PER_UNIT` (50): the scale in °C, so snow is about -8 °C and the equator's sea about 27 °C; `ClimateSample::celsius()`.
 - `ClimateSample { temperature, moisture }` (both `0..=1`), `.biome()`.
-- `Biome`: `Tundra`, `BorealForest`, `Grassland`, `Woodland`, `SeasonalForest`, `TemperateRainforest`, `Desert`, `Savanna`, `TropicalRainforest`; `ALL`; `Biome::of(temperature, moisture)`.
+- `Biome`: `Tundra`, `BorealForest`, `Grassland`, `Woodland`, `SeasonalForest`, `TemperateRainforest`, `Desert`, `Savanna`, `TropicalRainforest`; `ALL`; `Biome::of(temperature, moisture)`. Ordered and saved by name (a Dev Area keeps one).
 
 ## Depends on
 

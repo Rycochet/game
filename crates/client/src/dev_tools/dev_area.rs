@@ -63,7 +63,7 @@ pub(super) fn dev_area_of(
     let layout = match layout.filter(|name| !name.is_empty()) {
         None => DevLayout::Empty,
         Some(name) => DevLayout::named(name).ok_or_else(|| {
-            let names = DevLayout::ALL.map(DevLayout::name);
+            let names: Vec<_> = DevLayout::all().into_iter().map(DevLayout::name).collect();
             format!("no generator {name:?}: one of {}", names.join(", "))
         })?,
     };
