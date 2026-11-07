@@ -40,7 +40,7 @@ docker compose up -d
 
 Before 7 November 2026 the ports were 8080 and 8081. If you update from then, change both sides of `ports` in your `docker-compose.yml` (and anything in front of the server, such as a proxy's or a tunnel's origin) to 24690 and 24691, or set `HOW_ADDRESS` and `HOW_TLS_ADDRESS` to keep the old ones.
 
-The `latest` image changes every time something is added to the game, which can be several times a day. For something steadier, use `nightly` in its place: it changes at most once a day. `nightly-<date>` (such as `nightly-2026-11-06`) keeps a particular day's.
+The `latest` image changes every time something is added to the game, which can be several times a day. For something steadier, use `nightly` in its place: it changes at most once a day. `nightly-<date>` (such as `nightly-2026-11-06`) keeps a particular day's. Players whose browsers last played on any of the past week's nightly images download only what has changed in the web client, not all of it.
 
 ## Other ways to secure it
 
