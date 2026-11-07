@@ -25,6 +25,7 @@ mod moveable;
 mod new_seed_icon;
 mod outlined;
 mod progress;
+mod queued_stripe;
 mod scale;
 mod scroll;
 mod set_edge;
@@ -75,6 +76,7 @@ pub use moveable::{spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use outlined::spawn_outlined_text;
 pub use progress::{Progress, spawn_progress_bar};
+pub use queued_stripe::queued_stripe;
 pub use scale::{INTERFACE_PERCENTS, TouchOnly};
 pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area};
 pub use set_edge::set_edge;
@@ -159,6 +161,15 @@ impl Plugin for WidgetsPlugin {
             .add_plugins(UiMaterialPlugin::<set_edge::SetEdgeMaterial>::default())
             .add_plugins(UiMaterialPlugin::<skill_ring::SkillRingMaterial>::default())
             .add_systems(Startup, set_edge::make_set_edges)
+            .add_plugins(UiMaterialPlugin::<queued_stripe::QueuedStripeMaterial>::default())
+            .add_systems(Startup, queued_stripe::make_queued_stripes)
+            .add_systems(
+                Update,
+                (
+                    queued_stripe::give_queued_stripes,
+                    queued_stripe::chase_stripes,
+                ),
+            )
             .add_systems(
                 Startup,
                 (
