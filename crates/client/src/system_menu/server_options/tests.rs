@@ -8,6 +8,8 @@ fn what_is_kept_shows_again() {
         bind_address: "192.168.0.2".into(),
         port: 9000,
         player_limit: 6,
+        // Not a box: the switch is kept by `upnp_row`.
+        upnp: true,
     };
     let mut back = OnlineSettings::default();
     for (which, ..) in BOXES {

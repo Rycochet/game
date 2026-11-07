@@ -55,7 +55,7 @@ fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
 
 #[test]
 fn its_player_can_open_it_to_others_and_close_it_again() {
-    use shared::protocol::{OnlineSettings, OnlineState};
+    use shared::protocol::{OnlineSettings, OnlineState, RouterPort};
     use std::net::{TcpListener, TcpStream};
 
     let folder = TestFolder::new();
@@ -81,13 +81,21 @@ fn its_player_can_open_it_to_others_and_close_it_again() {
     let settings = OnlineSettings {
         bind_address: "127.0.0.1".into(),
         port,
+        // A test never asks a real router.
+        upnp: false,
         ..Default::default()
     };
     assert!(client.send(&ClientMessage::SetOnline(Some(settings))));
-    let OnlineState::Online { fingerprint, .. } = next_online() else {
+    let OnlineState::Online {
+        fingerprint,
+        router,
+        ..
+    } = next_online()
+    else {
         panic!("not online");
     };
     assert_eq!(fingerprint.len(), 64);
+    assert_eq!(router, RouterPort::Off);
     assert!(TcpStream::connect(("127.0.0.1", port)).is_ok());
 
     assert!(client.send(&ClientMessage::SetOnline(None)));

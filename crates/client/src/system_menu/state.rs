@@ -121,6 +121,9 @@ pub(super) enum Action {
     /// Copies the server's certificate.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     CopyCertificate,
+    /// Copies the address the router says players on the internet connect to.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    CopyRouterAddress,
     Quit,
     ReallyQuit,
 }
@@ -146,6 +149,7 @@ impl Action {
             Self::ReallyToggleOnline => "yes",
             Self::ServerOptions => "server_options",
             Self::CopyCertificate => "copy",
+            Self::CopyRouterAddress => "copy_address",
             Self::Quit | Self::ReallyQuit => "quit",
         };
         let id = UiId::new(form, name);
