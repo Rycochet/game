@@ -7,8 +7,8 @@ use super::herbalist::HerbalistOptions;
 use super::oasis::OasisOptions;
 use super::town::TownOptions;
 use super::{
-    BUILDING_VERSION, CAVE_VERSION, FARM_VERSION, HERBALIST_VERSION, OASIS_VERSION, STILTS_VERSION,
-    TOWN_VERSION,
+    BUILDING_VERSION, CAVE_VERSION, DEV_AREA_VERSION, FARM_VERSION, HERBALIST_VERSION,
+    OASIS_VERSION, STILTS_VERSION, TOWN_VERSION,
 };
 use crate::poi::PoiKind;
 use crate::rng::Seed;
@@ -37,6 +37,8 @@ pub enum Generator {
     Herbalist(HerbalistOptions),
     /// Open ground with pools ringed by grass and trees.
     Oasis(OasisOptions),
+    /// Developer tools: a walled area made to order (`DevArea`).
+    DevArea(super::DevArea),
 }
 
 impl Generator {
@@ -50,6 +52,7 @@ impl Generator {
             Self::Farm(_) => FARM_VERSION,
             Self::Herbalist(_) => HERBALIST_VERSION,
             Self::Oasis(_) => OASIS_VERSION,
+            Self::DevArea(_) => DEV_AREA_VERSION,
         }
     }
 

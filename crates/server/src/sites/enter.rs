@@ -99,6 +99,8 @@ pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitS
         SiteId::Poi(chunk) => world.pois.in_chunk(chunk),
         SiteId::Dev { kind, seed, .. } => Some(dev_poi(client, kind, seed)),
         SiteId::Wilderness => return super::wild::enter_wilderness(client, world, saved.position),
+        // Never kept: back where they came from.
+        SiteId::DevArea(_) => return super::dev_area::back_from_area(client, world),
     };
     let Some(poi) = poi else {
         warn!("A character was in {id:?}, which isn't there");
@@ -135,6 +137,7 @@ pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitS
 pub(super) fn make_site(world: &mut ServerWorld, poi: &Poi, id: SiteId) -> Option<Site> {
     let generator = match id {
         SiteId::Dev { ruin, .. } => Generator::for_poi(poi.kind).with_ruin(ruin),
+        SiteId::DevArea(area) => Generator::DevArea(area),
         SiteId::Poi(_) | SiteId::Wilderness => Generator::for_site(poi.kind, poi.seed, poi.desert),
     };
     let version = world.site(id).version;

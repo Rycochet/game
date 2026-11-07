@@ -14,6 +14,7 @@ pub enum DebugAction {
     ChangeCreature,
     DeleteCharacter,
     DetectMonsters,
+    DevArea,
     FieldsState,
     ForgetMap,
     ForgetMapOnServer,
@@ -69,12 +70,13 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 34] = [
+    pub(super) const ALL: [Self; 35] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
         Self::DeleteCharacter,
         Self::DetectMonsters,
+        Self::DevArea,
         Self::FieldsState,
         Self::ForgetMap,
         Self::ForgetMapOnServer,
@@ -113,6 +115,7 @@ impl DebugAction {
             Self::ChangeCreature => "Change Creature",
             Self::DeleteCharacter => "Delete Character",
             Self::DetectMonsters => "Detect Monsters",
+            Self::DevArea => "Dev Area",
             Self::FieldsState => "Fields State",
             Self::ForgetMap => "Forget Map",
             Self::ForgetMapOnServer => "Forget Map (Server)",
@@ -203,6 +206,7 @@ impl DebugAction {
                 | Self::ChangeCreature
                 | Self::DeleteCharacter
                 | Self::DetectMonsters
+                | Self::DevArea
                 | Self::ForgetMap
                 | Self::ForgetMapOnServer
                 | Self::ForgetSkills

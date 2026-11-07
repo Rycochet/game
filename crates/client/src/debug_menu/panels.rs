@@ -18,6 +18,8 @@ mod waist;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod change_creature;
+mod dev_area;
+mod dev_area_systems;
 mod every_widget;
 mod generate;
 mod generate_form;
@@ -42,6 +44,12 @@ mod world_time;
 
 use change_creature::spawn_creature_buttons;
 pub(super) use change_creature::{ChosenChange, press_creature_buttons, update_creature_buttons};
+use dev_area::spawn_dev_area_panel;
+pub(super) use dev_area::{
+    DevAreaChoice, DevAreaCount, DevAreaCountStep, DevAreaForm, DevAreaGenerate, DevAreaNewSeed,
+    DevAreaSeed,
+};
+pub(super) use dev_area_systems::add_dev_area_panel;
 use every_widget::spawn_every_widget;
 pub(super) use every_widget::{give_sample_icons, show_typed_items};
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};

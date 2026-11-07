@@ -126,6 +126,11 @@ fn saves_are_read_back() {
         left_at: BTreeMap::from([(site, (1, (5, -6)))]),
         world_position: (-40, 7),
         hall: Some((12, 3)),
+        dev_return: Some(crate::storage::DevReturn {
+            world_position: (8, 9),
+            visit: None,
+            hall: Some((4, 1)),
+        }),
         visit: Some(VisitSave {
             site,
             level: 1,

@@ -35,3 +35,6 @@ pub const HERBALIST_VERSION: u32 = 1 + FORGET_BEFORE;
 
 /// The oasis generator's version (as `BUILDING_VERSION`).
 pub const OASIS_VERSION: u32 = 1 + FORGET_BEFORE;
+
+/// The Dev Area generator's version (as `BUILDING_VERSION`).
+pub const DEV_AREA_VERSION: u32 = 1 + FORGET_BEFORE;

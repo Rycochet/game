@@ -17,6 +17,12 @@ use crate::world_map::look_around;
 /// from outside ground (not inside a building or cave), onto a place the
 /// world map lets them stand now.
 pub(crate) fn leave_wilderness(client: &mut Client, world: &mut ServerWorld) -> bool {
+    // The same key leaves a Dev Area from anywhere in it.
+    if let Some(visit) = &client.visit
+        && let crate::storage::SiteId::DevArea(_) = visit.id
+    {
+        return super::super::dev_area::back_from_area(client, world);
+    }
     let Some(visit) = client.visit.as_ref().filter(|visit| visit.is_wilderness()) else {
         return true;
     };
