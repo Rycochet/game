@@ -1,26 +1,18 @@
-//! The Abilities page: a Skills button opening the Skills page, then
-//! every ability the character knows, flowing in rows, Attack first. Drawn again
-//! when the body they are in changes.
+//! The Abilities page: every ability the character knows, flowing in rows, Attack
+//! first. Drawn again when the body they are in changes.
 
 use bevy::prelude::*;
 use shared::ability::{Ability, known};
 use shared::creature::CreatureKind;
 
 use super::icons::icon_path;
-use crate::common::{AbilitiesPage, SkillsPageOpen};
+use crate::common::AbilitiesPage;
 use crate::inventory::Carried;
-use crate::widgets::{
-    ABILITY, AbilityLook, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonTooltip, Pressable,
-    Shade, TextSize, UiId, attribute_colour, spawn_ability, spawn_button,
-};
+use crate::widgets::{ABILITY, AbilityLook, Shade, UiId, attribute_colour, spawn_ability};
 
 /// How many abilities a row holds before the next row starts.
 const PER_ROW: f32 = 8.0;
 const GAP: f32 = 6.0;
-
-/// The button opening the Skills page.
-#[derive(Component)]
-pub(super) struct SkillsButton;
 
 /// An ability on the page, which can be dragged to the action bar.
 #[derive(Component, Clone, Copy)]
@@ -48,66 +40,23 @@ pub(super) fn fill_pages(
     }
 }
 
-/// The Skills button above the abilities.
 fn spawn_contents(page: &mut ChildSpawnerCommands, kind: CreatureKind, assets: &AssetServer) {
     page.spawn(Node {
-        flex_direction: FlexDirection::Column,
+        flex_wrap: FlexWrap::Wrap,
+        column_gap: px(GAP),
         row_gap: px(GAP),
+        width: px(PER_ROW * ABILITY + (PER_ROW - 1.0) * GAP),
         ..default()
     })
-    .with_children(|column| {
-        column
-            .spawn(Node {
-                justify_content: JustifyContent::End,
-                ..default()
-            })
-            .with_children(|row| {
-                spawn_button(
-                    row,
-                    ButtonState::Normal,
-                    "Skills",
-                    TextSize::Medium,
-                    Node {
-                        padding: BUTTON_PADDING,
-                        ..default()
-                    },
-                )
-                .insert((
-                    SkillsButton,
-                    Pressable,
-                    UiId::new("abilities", "skills"),
-                    ButtonTooltip("The skills you know (K)".into()),
-                ));
-            });
-        column
-            .spawn(Node {
-                flex_wrap: FlexWrap::Wrap,
-                column_gap: px(GAP),
-                row_gap: px(GAP),
-                width: px(PER_ROW * ABILITY + (PER_ROW - 1.0) * GAP),
-                ..default()
-            })
-            .with_children(|list| {
-                for ability in known(kind) {
-                    let frame = spawn_ability(list, look(ability, kind, assets));
-                    let id = UiId::new("abilities", ability_id(ability));
-                    list.commands()
-                        .entity(frame)
-                        .insert((id, PageAbility(ability)));
-                }
-            });
+    .with_children(|list| {
+        for ability in known(kind) {
+            let frame = spawn_ability(list, look(ability, kind, assets));
+            let id = UiId::new("abilities", ability_id(ability));
+            list.commands()
+                .entity(frame)
+                .insert((id, PageAbility(ability)));
+        }
     });
-}
-
-/// The Skills button opens the Skills page.
-pub(super) fn open_skills(
-    mut pressed: MessageReader<ButtonPressed>,
-    buttons: Query<(), With<SkillsButton>>,
-    mut open: ResMut<SkillsPageOpen>,
-) {
-    if pressed.read().any(|press| buttons.contains(press.0)) {
-        open.0 = true;
-    }
 }
 
 /// How an ability shows on the page.

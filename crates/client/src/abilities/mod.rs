@@ -47,7 +47,6 @@ impl Plugin for AbilitiesPlugin {
                 Update,
                 (
                     page::fill_pages,
-                    page::open_skills,
                     own_bar::take_bar,
                     held::use_by_key,
                     use_ability::take_timing,

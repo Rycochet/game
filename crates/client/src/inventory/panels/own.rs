@@ -11,11 +11,12 @@ use super::{GridNode, InventoryButton, OpenGrids, Page};
 use crate::common::{Action, GameView, Preferences};
 use crate::widgets::{ButtonPressed, ChooseTab, RaisePanel};
 
-/// The keys for the Character panel's tabs (C, I, B).
-const TAB_KEYS: [(Action, Page); 3] = [
+/// The keys for the Character panel's tabs (C, I, B, K).
+const TAB_KEYS: [(Action, Page); 4] = [
     (Action::Character, Page::Character),
     (Action::Inventory, Page::Inventory),
     (Action::Abilities, Page::Abilities),
+    (Action::Skills, Page::Skills),
 ];
 
 /// The button opens or closes the Character panel, on the tab last shown. A tab's key

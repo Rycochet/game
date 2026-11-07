@@ -1,5 +1,6 @@
 //! The Character panel's tabs: Character (what they are like), Inventory (what they
-//! wear and carry, and the ground) and Abilities (filled by `abilities`). Only the
+//! wear and carry, and the ground), Abilities (filled by `abilities`) and Skills
+//! (filled by `skills_page`). Only the
 //! chosen tab's page is laid out; the others are kept, hidden.
 
 use bevy::prelude::*;
@@ -9,7 +10,7 @@ use super::super::body::spawn_rows;
 use super::super::ground::spawn_section;
 use super::grids::spawn_grid;
 use super::{COLUMN_GAP, FONT};
-use crate::common::{AbilitiesPage, SheetText};
+use crate::common::{AbilitiesPage, SheetText, SkillsPage};
 use crate::widgets::{INK, TabChosen, UiId, spawn_tabs};
 
 /// A tab of the Character panel, in the order they are shown.
@@ -19,11 +20,17 @@ pub(in crate::inventory) enum Page {
     #[default]
     Inventory,
     Abilities,
+    Skills,
 }
 
 impl Page {
-    const ALL: [Self; 3] = [Self::Character, Self::Inventory, Self::Abilities];
-    const NAMES: [&str; 3] = ["Character", "Inventory", "Abilities"];
+    const ALL: [Self; 4] = [
+        Self::Character,
+        Self::Inventory,
+        Self::Abilities,
+        Self::Skills,
+    ];
+    const NAMES: [&str; 4] = ["Character", "Inventory", "Abilities", "Skills"];
 
     fn index(self) -> usize {
         self as usize
@@ -34,7 +41,7 @@ impl Page {
 #[derive(Clone, Copy, Debug)]
 pub(in crate::inventory) struct Pages {
     pub(super) row: Entity,
-    pages: [Entity; 3],
+    pages: [Entity; 4],
 }
 
 impl Pages {
@@ -92,9 +99,10 @@ pub(super) fn spawn_pages(
         })
         .id();
     let abilities = content.spawn((page(Page::Abilities), AbilitiesPage)).id();
+    let skills = content.spawn((page(Page::Skills), SkillsPage)).id();
     let pages = Pages {
         row,
-        pages: [character, inventory, abilities],
+        pages: [character, inventory, abilities, skills],
     };
     (pages, ground.expect("spawned"))
 }
