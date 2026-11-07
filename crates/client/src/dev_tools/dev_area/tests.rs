@@ -33,3 +33,13 @@ fn wrong_names_say_what_would_do() {
     assert!(why.contains("Wolf"), "{why}");
     assert!(parse_dev_area("big").is_err());
 }
+
+#[test]
+fn reads_biomes_and_kinds_of_place() {
+    use shared::climate::Biome;
+    use shared::poi::PoiKind;
+    let forest = parse_dev_area("128,boreal forest").unwrap();
+    assert_eq!(forest.layout, DevLayout::Biome(Biome::BorealForest));
+    let tower = parse_dev_area("64,StoneTower,default").unwrap();
+    assert_eq!(tower.layout, DevLayout::Building(PoiKind::StoneTower));
+}

@@ -1,9 +1,10 @@
 use super::*;
+use crate::climate::Biome;
 use crate::dungeon::Cell;
 use crate::site::{Exit, Generator, Site, SiteLevel};
 use std::collections::BTreeSet;
 
-fn area(size: u16, layout: DevLayout, mobs: DevMobs) -> DevArea {
+pub(super) fn area(size: u16, layout: DevLayout, mobs: DevMobs) -> DevArea {
     DevArea {
         size,
         layout,
@@ -12,7 +13,7 @@ fn area(size: u16, layout: DevLayout, mobs: DevMobs) -> DevArea {
     }
 }
 
-fn level_of(area: DevArea) -> SiteLevel {
+pub(super) fn level_of(area: DevArea) -> SiteLevel {
     let generator = Generator::DevArea(area);
     let site = Site::with_generator(
         DEV_AREA_KIND,
@@ -26,7 +27,7 @@ fn level_of(area: DevArea) -> SiteLevel {
 }
 
 /// Every cell that can be walked to from `from`, a step at a time (no corners).
-fn reachable(level: &SiteLevel, from: (i64, i64)) -> BTreeSet<(i64, i64)> {
+pub(super) fn reachable(level: &SiteLevel, from: (i64, i64)) -> BTreeSet<(i64, i64)> {
     let mut seen = BTreeSet::from([from]);
     let mut todo = vec![from];
     while let Some((x, y)) = todo.pop() {
@@ -81,12 +82,24 @@ fn seeds_from_numbers_and_words() {
 
 #[test]
 fn layouts_are_named() {
-    for layout in DevLayout::ALL {
+    let all = DevLayout::all();
+    assert_eq!(all.len(), 3 + 9 + PoiKind::ALL.len());
+    for layout in all {
+        let name = layout.name();
         assert_eq!(
-            DevLayout::named(&layout.name().to_uppercase()),
-            Some(layout)
+            DevLayout::named(&name.to_uppercase()),
+            Some(layout),
+            "{name}"
         );
     }
+    assert_eq!(
+        DevLayout::named("boreal_forest"),
+        Some(DevLayout::Biome(Biome::BorealForest))
+    );
+    assert_eq!(
+        DevLayout::named("Stone Tower"),
+        Some(DevLayout::Building(PoiKind::StoneTower))
+    );
 }
 
 #[test]

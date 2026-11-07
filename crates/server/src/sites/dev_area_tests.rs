@@ -169,3 +169,34 @@ fn the_leave_key_goes_back_from_anywhere_in_an_area() {
     );
     assert!(test.client.visit.is_none());
 }
+
+#[test]
+fn areas_round_sites_and_biomes_are_entered_with_their_own_mobs() {
+    use shared::climate::Biome;
+    let layouts = [
+        DevLayout::Building(PoiKind::Castle),
+        DevLayout::Building(PoiKind::Town),
+        DevLayout::Building(PoiKind::Farm),
+        DevLayout::Biome(Biome::BorealForest),
+    ];
+    for layout in layouts {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevTeleport { x: 70, y: -3 }]);
+        let made = DevArea {
+            size: 64,
+            layout,
+            mobs: DevMobs::Default,
+            seed: 2,
+        };
+        let answers = generate(&mut test, made);
+        let Some(ServerMessage::EnterLevel(info)) = answers.first() else {
+            panic!("{layout:?}: {answers:?}");
+        };
+        assert_eq!(info.kind, shared::protocol::LevelKind::Poi(made.kind()));
+        let level = test.client.visit.as_ref().unwrap().level.clone();
+        let mobs = &test.world.populations.0[&(SiteId::DevArea(made), 0)].mobs;
+        assert_eq!(mobs.len(), made.spawns(&level).len(), "{layout:?}");
+        test.send(&[ClientMessage::LeaveWilderness]);
+        assert!(test.client.visit.is_none(), "{layout:?}");
+    }
+}

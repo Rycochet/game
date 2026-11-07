@@ -130,8 +130,9 @@ pub(super) fn spawn_dev_area_panel(content: &mut ChildSpawnerCommands) {
         let size = DEV_AREA_SIZES.iter().position(|&s| s == form.size);
         dropdown(line, DevAreaChoice::Size, sizes, size.unwrap_or(0), false);
         line.spawn(words("Generator"));
-        let layouts = DevLayout::ALL.map(DevLayout::name);
-        let layout = DevLayout::ALL.iter().position(|&l| l == form.layout);
+        let all = DevLayout::all();
+        let layout = all.iter().position(|&l| l == form.layout);
+        let layouts = all.into_iter().map(DevLayout::name);
         dropdown(
             line,
             DevAreaChoice::Layout,

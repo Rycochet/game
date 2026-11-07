@@ -47,7 +47,7 @@ fn start_dev_area_panel(
     for (choice, mut dropdown) in &mut dropdowns {
         let selected = match choice {
             DevAreaChoice::Size => DEV_AREA_SIZES.iter().position(|&s| s == form.size),
-            DevAreaChoice::Layout => DevLayout::ALL.iter().position(|&l| l == form.layout),
+            DevAreaChoice::Layout => DevLayout::all().iter().position(|&l| l == form.layout),
             DevAreaChoice::Mobs => Some(form.mobs_index()),
         };
         dropdown.selected = selected.unwrap_or(0);
@@ -62,7 +62,7 @@ fn choose_dev_area_options(
     for &DropdownChosen(dropdown, index) in chosen.read() {
         match choices.get(dropdown) {
             Ok(DevAreaChoice::Size) => form.size = DEV_AREA_SIZES[index],
-            Ok(DevAreaChoice::Layout) => form.layout = DevLayout::ALL[index],
+            Ok(DevAreaChoice::Layout) => form.layout = DevLayout::all()[index],
             Ok(DevAreaChoice::Mobs) => form.choose_mobs(index),
             Err(_) => {}
         }

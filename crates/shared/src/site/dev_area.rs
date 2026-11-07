@@ -8,50 +8,20 @@ use crate::creature::CreatureKind;
 use crate::poi::PoiKind;
 use crate::rng::Seed;
 
+mod biome;
+mod building;
 mod layout;
+mod layouts;
 mod mobs;
 pub(super) use layout::Plan;
+pub use layouts::DevLayout;
 
 /// The sides an area may have, in cells inside its walls.
 pub const DEV_AREA_SIZES: [u16; 4] = [16, 32, 64, 128];
 /// The most mobs of one kind an area may be made with.
 pub const MOST_DEV_MOBS: u8 = 32;
-/// The kind of place it is drawn as (stone walls).
+/// The kind of place a plain or biome area is drawn as (stone walls).
 pub const DEV_AREA_KIND: PoiKind = PoiKind::Castle;
-
-/// What fills an area inside its walls.
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
-pub enum DevLayout {
-    /// Open ground.
-    #[default]
-    Empty,
-    /// Deep water up the middle, two cells wide, with a gap at each end: it
-    /// can be seen across but not walked.
-    Moat,
-    /// The same of wall: nothing can be seen through it.
-    Cover,
-}
-
-impl DevLayout {
-    pub const ALL: [Self; 3] = [Self::Empty, Self::Moat, Self::Cover];
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Empty => "Empty",
-            Self::Moat => "Moat",
-            Self::Cover => "Cover",
-        }
-    }
-
-    /// The one named so, in any case.
-    pub fn named(name: &str) -> Option<Self> {
-        Self::ALL
-            .into_iter()
-            .find(|layout| layout.name().eq_ignore_ascii_case(name))
-    }
-}
 
 /// Who is put in an area.
 #[derive(
@@ -104,8 +74,16 @@ impl DevArea {
             DevMobs::None => 1,
             DevMobs::Kind { kind, count } => 2 + (kind as i64) * 256 + i64::from(count),
         };
-        let choices = [i64::from(self.size), self.layout as i64, mobs];
+        let choices = [i64::from(self.size), self.layout.number(), mobs];
         Seed::new(self.seed).at(&choices)
+    }
+
+    /// The kind of place it is drawn as: a building's own, else stone.
+    pub fn kind(&self) -> PoiKind {
+        match self.layout {
+            DevLayout::Building(kind) => kind,
+            _ => DEV_AREA_KIND,
+        }
     }
 
     /// The seed for what was typed: a number as it is, any other words hashed.
@@ -116,5 +94,7 @@ impl DevArea {
     }
 }
 
+#[cfg(test)]
+mod grown_tests;
 #[cfg(test)]
 mod tests;

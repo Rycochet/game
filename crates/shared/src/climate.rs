@@ -86,7 +86,9 @@ impl ClimateSample {
 }
 
 /// What grows at a place: the Whittaker diagram's nine biomes.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum Biome {
     Tundra,
     BorealForest,

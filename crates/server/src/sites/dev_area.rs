@@ -2,7 +2,7 @@
 //! way back from them to wherever the player was before the first one.
 
 use shared::protocol::ServerMessage;
-use shared::site::{DEV_AREA_KIND, DevArea, Exit};
+use shared::site::{DevArea, Exit};
 
 use super::enter::dev_poi;
 use super::{Arrival, Visit, enter_site, leave, resume};
@@ -29,7 +29,7 @@ pub(crate) fn generate_area(client: &mut Client, world: &mut ServerWorld, area: 
     }
     let id = SiteId::DevArea(area);
     forget_if_area(client, world, id);
-    let poi = dev_poi(client, DEV_AREA_KIND, area.seed);
+    let poi = dev_poi(client, area.kind(), area.seed);
     let arrival = Arrival::From(Exit::WorldMap);
     enter_site(client, world, poi, id, 0, arrival, false)
 }
