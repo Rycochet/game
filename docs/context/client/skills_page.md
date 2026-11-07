@@ -36,6 +36,6 @@ The Skills page: a full-screen layer showing the skills the character knows as a
 - Ids: `skills/zoom_out`, `zoom_in`, `fit`, `close`, `you` (the middle), `node.<number>` (each skill by `SkillId::number`).
 - Each skill's circle is coloured by the attributes it leans on (`widgets::attribute_colour` with `Shade::Skill`, between abilities' dark and pastel: skills serve both kinds of ability, owner) and shows its icon in white with a black outline (`widgets::spawn_outlined_icon`), as abilities do. No names under skills, and the middle is a plain circle with no name (owner, 2026-11-07).
 - The line under the tree says the hovered skill, or else the chosen one: its path, its own value, what a check with it counts, its practice and the attributes it leans on. No hover tips.
-- Each skill has a ring round the inside of its edge for its own value (`widgets::skill_ring`, full at 100, coloured by fifths Common to Legendary); a specialisation's second ring waits for specialising to be built.
+- Each skill has a ring round the inside of its edge for its own value (`widgets::skill_ring`, full at 100, coloured by fifths Common to Legendary); a specialisation's second, thinner ring inside it waits for specialising to be built.
 - The line under the tree leads with the skill's own value, then what a check with it counts: "Lore: 35.2 (35.2 in checks)".
 - Not yet: the gamepad.

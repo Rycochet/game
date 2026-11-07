@@ -99,8 +99,8 @@ pub(super) fn warn_of_duplicates(added: Query<(), Added<UiId>>, ids: Query<&UiId
     }
 }
 
-/// Put on a check button from `spawn_check_button`: whether it is ticked, as it
-/// was spawned (they are spawned again to change).
+/// Put on a check button from `spawn_check_button`: whether it is ticked. Change
+/// it and the tick follows.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Checked(pub bool);
 

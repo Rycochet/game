@@ -247,7 +247,7 @@ impl Plugin for WidgetsPlugin {
             .add_systems(
                 Update,
                 (
-                    (tabs::choose_tabs, tabs::press_tabs).chain(),
+                    (tabs::choose_tabs, tabs::press_tabs, tabs::show_tab_feet).chain(),
                     feedback::spread_ripples,
                     feedback::show_button_tooltips,
                     progress::show_progress,
@@ -266,6 +266,7 @@ impl Plugin for WidgetsPlugin {
                     text_box::place_soft_keyboard,
                     dropdown::show_dropdowns,
                     (switch::flip_switches, switch::show_switches).chain(),
+                    buttons::show_checks,
                     (colour_picker::press_swatches, colour_picker::show_swatches).chain(),
                 ),
             )

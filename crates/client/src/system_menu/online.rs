@@ -1,4 +1,4 @@
-//! "Online" (native only): a toggle with Server Options' gear attached, opening
+//! "Online" (native only): a check button with Server Options' gear attached, opening
 //! this game's own server to other players. The ports open once playing on it
 //! (`connection` asks); while playing there, turning it either way asks first.
 //! If it can't open, it goes back off and says why.
@@ -11,8 +11,8 @@ use super::{
 };
 use crate::common::{Hosting, Preferences, ServerClock, Session};
 use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonStyle, ButtonTooltip, INK, Pressable, spawn_button,
-    spawn_dialog, spawn_icon_button,
+    ButtonPressed, ButtonState, ButtonStyle, ButtonTooltip, Checked, INK, Pressable, spawn_button,
+    spawn_check_button, spawn_dialog, spawn_icon_button,
 };
 
 const WORDS_WIDTH: f32 = 420.0;
@@ -39,14 +39,16 @@ pub(super) fn spawn_online_row(section: &mut ChildSpawnerCommands, gear: Handle<
                 height: px(BUTTON_ROW),
                 ..default()
             };
-            spawn_button(row, ButtonState::Normal, "Online", FONT, node).insert((
-                OnlineToggle,
-                MenuButton::Online,
-                Action::ToggleOnline,
-                Action::ToggleOnline.ui_id("menu"),
-                Pressable,
-                ButtonTooltip("Let other players join this game".into()),
-            ));
+            spawn_check_button(row, ButtonState::Normal, Some(false), "Online", FONT, node).insert(
+                (
+                    OnlineToggle,
+                    MenuButton::Online,
+                    Action::ToggleOnline,
+                    Action::ToggleOnline.ui_id("menu"),
+                    Pressable,
+                    ButtonTooltip("Let other players join this game".into()),
+                ),
+            );
             let node = Node {
                 width: px(BUTTON_ROW),
                 height: px(BUTTON_ROW),
@@ -183,17 +185,13 @@ pub(super) fn use_online(
     }
 }
 
-/// The toggle is held down while on.
+/// The toggle's box is ticked while on (owner, 2026-11-07).
 pub(super) fn show_online(
     preferences: Res<Preferences>,
-    mut toggles: Query<&mut ButtonState, With<OnlineToggle>>,
+    mut toggles: Query<&mut Checked, With<OnlineToggle>>,
 ) {
-    for mut state in &mut toggles {
-        state.set_if_neq(if preferences.online {
-            ButtonState::Selected
-        } else {
-            ButtonState::Normal
-        });
+    for mut checked in &mut toggles {
+        checked.set_if_neq(Checked(preferences.online));
     }
 }
 

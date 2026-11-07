@@ -131,12 +131,55 @@ pub fn spawn_check_button<'a>(
             ..default()
         });
         slot.insert(BorderColor::from(INK));
-        if checked == Some(true) {
-            slot.with_children(|slot| spawn_strokes(slot, &TICK_STROKES, INK));
+        if checked.is_some() {
+            // Always there, shown by `Checked`, so changing that is enough.
+            slot.with_children(|slot| {
+                slot.spawn((
+                    CheckTick,
+                    Node {
+                        position_type: PositionType::Absolute,
+                        width: percent(100),
+                        height: percent(100),
+                        ..default()
+                    },
+                    visible_if(checked == Some(true)),
+                ))
+                .with_children(|tick| spawn_strokes(tick, &TICK_STROKES, INK));
+            });
         }
         inside.spawn((Text::new(label), size.font(), TextColor(text)));
     });
     button
+}
+
+/// A check button's tick, inside its box.
+#[derive(Component)]
+pub(super) struct CheckTick;
+
+fn visible_if(shown: bool) -> Visibility {
+    if shown {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    }
+}
+
+/// Shows or hides each check button's tick as its `Checked` changes.
+pub(super) fn show_checks(
+    buttons: Query<(&super::Checked, &Children), Changed<super::Checked>>,
+    boxes: Query<&Children>,
+    mut ticks: Query<&mut Visibility, With<CheckTick>>,
+) {
+    for (checked, inside) in &buttons {
+        for tick in inside
+            .iter()
+            .flat_map(|slot| boxes.get(slot).into_iter().flatten())
+        {
+            if let Ok(mut visibility) = ticks.get_mut(*tick) {
+                visibility.set_if_neq(visible_if(checked.0));
+            }
+        }
+    }
 }
 
 /// A straight line drawn on something: its length, where it goes and how it is turned.

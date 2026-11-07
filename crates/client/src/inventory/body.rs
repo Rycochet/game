@@ -1,6 +1,6 @@
 //! The clothes on the Character panel: a row for each place on the character's body and a column
-//! for each layer. Items are dragged on to wear them and off to take them off,
-//! with the same holding as everything else.
+//! for each layer, then the Held column (`hands`). Items are dragged on to wear them
+//! and off to take them off, with the same holding as everything else.
 
 use bevy::prelude::*;
 use shared::creature::{Layer, Location};
@@ -8,7 +8,7 @@ use shared::id::Id;
 use shared::item::{Inventory, Item, Rotation, Shape};
 use shared::wear::{Fit, Remover};
 
-use super::hands::{held_now, in_hands};
+use super::hands::spawn_held_column;
 use super::hold::Target;
 use super::panels::ItemCell;
 use super::{Carried, Holding};
@@ -24,12 +24,14 @@ const NAME_WIDTH: f32 = 80.0;
 const FONT: TextSize = TextSize::Small;
 const BORDER: f32 = 1.0;
 const COVERED_ALPHA: f32 = 0.45;
+/// Between the clothes and the Held column.
+const COLUMN_GAP: f32 = 8.0;
 
 /// On the panel's slots and everything in them: dropping here means wearing.
 #[derive(Component, Clone, Copy)]
 pub(super) struct BodyNode;
 
-/// What holds the rows, and shows whether a drop would work.
+/// What holds the rows and the Held column, and shows whether a drop would work.
 #[derive(Component)]
 pub(super) struct BodyRows;
 
@@ -39,14 +41,14 @@ pub(super) fn spawn_rows(parent: &mut ChildSpawnerCommands) {
         BodyRows,
         BodyNode,
         Node {
-            flex_direction: FlexDirection::Column,
+            column_gap: px(COLUMN_GAP),
             ..default()
         },
         BackgroundColor(Color::NONE),
     ));
 }
 
-fn words(text: impl Into<String>, width: f32) -> impl Bundle {
+pub(super) fn words(text: impl Into<String>, width: f32) -> impl Bundle {
     (
         BodyNode,
         Text::new(text),
@@ -59,7 +61,7 @@ fn words(text: impl Into<String>, width: f32) -> impl Bundle {
     )
 }
 
-fn slot_node() -> Node {
+pub(super) fn slot_node() -> Node {
     Node {
         width: px(CELL),
         height: px(CELL),
@@ -69,7 +71,12 @@ fn slot_node() -> Node {
 }
 
 /// How a slot is drawn: the worn things here, last on top.
-fn spawn_slot(row: &mut ChildSpawnerCommands, carried: &Inventory, here: &[&Item], god: bool) {
+pub(super) fn spawn_slot(
+    row: &mut ChildSpawnerCommands,
+    carried: &Inventory,
+    here: &[&Item],
+    god: bool,
+) {
     let Some(item) = here.last() else {
         row.spawn((
             BodyNode,
@@ -179,63 +186,70 @@ pub(super) fn show_clothes(
     for entity in &rows {
         commands.entity(entity).despawn_related::<Children>();
         let inventory = &carried.0;
-        let def = inventory.creature.def();
-        commands.entity(entity).with_children(|rows| {
-            rows.spawn((
+        commands.entity(entity).with_children(|both| {
+            both.spawn((
                 BodyNode,
-                Text::new(format!("{}, {:?}", def.name, def.size)),
-                FONT.font(),
-                TextColor(INK),
-            ));
-            rows.spawn((BodyNode, Node::default()))
-                .with_children(|row| {
-                    row.spawn(words("", NAME_WIDTH));
-                    for layer in Layer::ALL {
-                        row.spawn(words(layer_letter(layer), CELL));
-                    }
-                });
-            for part in def.body {
-                rows.spawn((BodyNode, Node::default()))
-                    .with_children(|row| {
-                        row.spawn(words(format!("{:?}", part.location), NAME_WIDTH));
-                        let holding: Vec<&Item> = if part.location == Location::Held {
-                            held_now(inventory, held)
-                        } else {
-                            Vec::new()
-                        };
-                        let hands = (part.location == Location::Held).then(|| in_hands(&holding));
-                        for layer in Layer::ALL {
-                            if let Some(hands) = hands {
-                                // A slot for each hand, under Out and Over.
-                                match layer {
-                                    Layer::Outer => spawn_slot(row, inventory, hands[0], god.0),
-                                    Layer::Over => spawn_slot(row, inventory, hands[1], god.0),
-                                    _ => {
-                                        row.spawn((BodyNode, slot_node()));
-                                    }
-                                }
-                                continue;
-                            }
-                            if !part.layers.contains(&layer) {
-                                row.spawn((BodyNode, slot_node()));
-                                continue;
-                            }
-                            let here: Vec<&Item> = inventory
-                                .worn
-                                .iter()
-                                .filter(|item| Some(item.id) != held)
-                                .filter(|item| {
-                                    item.kind.def().wear.is_some_and(|wear| {
-                                        wear.layer == layer
-                                            && wear.locations.contains(&part.location)
-                                    })
-                                })
-                                .collect();
-                            spawn_slot(row, inventory, &here, god.0);
-                        }
-                    });
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+            ))
+            .with_children(|rows| spawn_table(rows, inventory, held, god.0));
+            spawn_held_column(both, inventory, held, god.0);
+        });
+    }
+}
+
+/// The table of clothes: a row per place on the body but Held, a column per layer.
+fn spawn_table(
+    rows: &mut ChildSpawnerCommands,
+    inventory: &Inventory,
+    held: Option<Id>,
+    god: bool,
+) {
+    let def = inventory.creature.def();
+    rows.spawn((
+        BodyNode,
+        Text::new(format!("{}, {:?}", def.name, def.size)),
+        FONT.font(),
+        TextColor(INK),
+    ));
+    rows.spawn((BodyNode, Node::default()))
+        .with_children(|row| {
+            row.spawn(words("", NAME_WIDTH));
+            for layer in Layer::ALL {
+                row.spawn(words(layer_letter(layer), CELL));
             }
         });
+    for part in def
+        .body
+        .iter()
+        .filter(|part| part.location != Location::Held)
+    {
+        rows.spawn((BodyNode, Node::default()))
+            .with_children(|row| {
+                row.spawn(words(format!("{:?}", part.location), NAME_WIDTH));
+                for layer in Layer::ALL {
+                    // Only rings are on fingers alone: what else covers them shows
+                    // on Hands (owner, 2026-11-07).
+                    let fingers_only = part.location == Location::Fingers && layer != Layer::Skin;
+                    if fingers_only || !part.layers.contains(&layer) {
+                        row.spawn((BodyNode, slot_node()));
+                        continue;
+                    }
+                    let here: Vec<&Item> = inventory
+                        .worn
+                        .iter()
+                        .filter(|item| Some(item.id) != held)
+                        .filter(|item| {
+                            item.kind.def().wear.is_some_and(|wear| {
+                                wear.layer == layer && wear.locations.contains(&part.location)
+                            })
+                        })
+                        .collect();
+                    spawn_slot(row, inventory, &here, god);
+                }
+            });
     }
 }
 
