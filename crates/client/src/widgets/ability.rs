@@ -76,8 +76,9 @@ pub fn spawn_ability(parent: &mut ChildSpawnerCommands, look: AbilityLook) -> En
 const OUTLINE: f32 = 1.0;
 
 /// The icon filling its parent, in `colour`, with a black outline: the icon in
-/// black nudged each way behind it, as outlined words are drawn.
-fn spawn_outlined_icon(parent: &mut ChildSpawnerCommands, icon: Handle<Image>, colour: Color) {
+/// black nudged each way behind it, as outlined words are drawn. Abilities and the
+/// Skills page's nodes.
+pub fn spawn_outlined_icon(parent: &mut ChildSpawnerCommands, icon: Handle<Image>, colour: Color) {
     parent
         .spawn(Node {
             width: percent(100.0),

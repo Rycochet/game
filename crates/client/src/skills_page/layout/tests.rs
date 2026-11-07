@@ -106,3 +106,42 @@ fn branches_always_point_outwards() {
     }
     assert_outwards(&layout(&everything));
 }
+
+/// No two circles touch, the character's included, with the room between them.
+fn assert_apart(placed: &[Placed]) {
+    let mut circles: Vec<(Vec2, f32, &str)> = vec![(Vec2::ZERO, SIZES[0], "the middle")];
+    circles.extend(
+        placed
+            .iter()
+            .map(|one| (one.at, size_of(one.id), one.id.path())),
+    );
+    for (index, &(at, size, path)) in circles.iter().enumerate() {
+        for &(other_at, other_size, other) in &circles[index + 1..] {
+            let room = (size + other_size) / 2.0;
+            assert!(
+                at.distance(other_at) >= room,
+                "{path} and {other} touch: {} < {room}",
+                at.distance(other_at)
+            );
+        }
+    }
+}
+
+#[test]
+fn circles_never_touch() {
+    let mut melee = Skills::default();
+    for &child in find("combat/melee/longsword").children() {
+        melee.practise(child, 100);
+    }
+    for &child in find("combat/melee/unarmed").children() {
+        melee.practise(child, 100);
+    }
+    assert_apart(&layout(&melee));
+    let mut everything = Skills::default();
+    for id in SkillId::all().filter(|id| id.children().is_empty()) {
+        everything.practise(id, 100);
+    }
+    let placed = layout(&everything);
+    assert_apart(&placed);
+    assert_outwards(&placed);
+}
