@@ -146,6 +146,9 @@ fn spawn_slot(inside: &mut ChildSpawnerCommands, slot: u8, now: &Shown, assets: 
                 look.name = format!("{} ({full})", look.name);
             }
             spawn_ability(inside, look);
+            if held.ability.is_active() {
+                super::wait::spawn_shade(inside);
+            }
         }
         None => {
             inside.spawn((

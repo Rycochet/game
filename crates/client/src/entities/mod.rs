@@ -2,8 +2,13 @@
 //! says they can be seen. See `docs/context/client/entities.md`.
 
 mod dressed;
+mod health_bars;
 mod hover_name;
 mod morph;
+mod pictures;
+mod wind_up_bars;
+
+use pictures::{picture, picture_size};
 
 use std::collections::HashMap;
 
@@ -15,7 +20,7 @@ use shared::sheet::Feeling;
 
 use crate::common::{
     Attitude, Clickable, DetectMonsters, GameView, Icon, KillMob, MapPosition, Other,
-    SmoothPosition, Token, TokenSize,
+    SmoothPosition, Token,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
@@ -33,49 +38,36 @@ pub struct EntitiesPlugin;
 
 impl Plugin for EntitiesPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Others>().add_systems(
-            Update,
-            (
+        app.init_resource::<Others>()
+            .init_resource::<health_bars::SeenHealth>()
+            .init_resource::<wind_up_bars::SeenWindUps>()
+            .add_systems(
+                PostUpdate,
                 (
-                    read_server,
-                    show_moving,
-                    show_own_kind,
-                    dressed::show_own_dress,
-                    morph::play_morphs,
+                    health_bars::take_health,
+                    health_bars::show_health_bars,
+                    wind_up_bars::take_wind_ups,
+                    wind_up_bars::show_wind_up_bars,
                 )
                     .chain()
-                    .after(PlayerSystems::Travel),
-                kill_clicked.after(View3dSystems::Click),
-                offer_to_kill.after(read_server),
-            ),
-        );
-    }
-}
-
-/// The picture for a kind of creature.
-fn picture(kind: CreatureKind) -> &'static str {
-    match kind {
-        // (No centaur, dwarf, light elf, goblin, minotaur or birdfolk among the pictures
-        // yet.)
-        CreatureKind::Centaur
-        | CreatureKind::Human
-        | CreatureKind::Dwarf
-        | CreatureKind::Elf
-        | CreatureKind::Goblin
-        | CreatureKind::Minotaur
-        | CreatureKind::Birdfolk => "monsters/humanfighter.png",
-        CreatureKind::Beggar => "monsters/humandruid01.png",
-        CreatureKind::Cattle => "monsters/cowright.png",
-        CreatureKind::Chicken => "monsters/chicken1.png",
-        CreatureKind::Drider => "monsters/spiderblack.png",
-        CreatureKind::Giant => "monsters/gianthill.png",
-        CreatureKind::Horse => "monsters/horse01.png",
-        CreatureKind::Kobold => "monsters/koboldfighter.png",
-        CreatureKind::Halfling => "monsters/halflingfighter.png",
-        CreatureKind::Lizardfolk => "monsters/lizardgreen.png",
-        CreatureKind::Orc => "monsters/orcfighter.png",
-        CreatureKind::ScorpionMan => "monsters/scorpionbrown.png",
-        CreatureKind::Wolf => "monsters/doggrey.png",
+                    .after(TransformSystems::Propagate),
+            )
+            .add_systems(
+                Update,
+                (
+                    (
+                        read_server,
+                        show_moving,
+                        show_own_kind,
+                        dressed::show_own_dress,
+                        morph::play_morphs,
+                    )
+                        .chain()
+                        .after(PlayerSystems::Travel),
+                    kill_clicked.after(View3dSystems::Click),
+                    offer_to_kill.after(read_server),
+                ),
+            );
     }
 }
 
@@ -86,15 +78,6 @@ fn attitude(feeling: Feeling) -> Attitude {
         Feeling::Friendly => Attitude::Friendly,
         Feeling::Neutral => Attitude::Neutral,
         Feeling::Unfriendly => Attitude::Unfriendly,
-    }
-}
-
-/// How big a kind of creature's picture is drawn.
-fn picture_size(kind: CreatureKind) -> TokenSize {
-    match kind {
-        CreatureKind::Chicken => TokenSize::Small,
-        CreatureKind::Giant | CreatureKind::Minotaur => TokenSize::Large,
-        _ => TokenSize::Default,
     }
 }
 

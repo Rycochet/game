@@ -36,3 +36,4 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 - A new native window takes keyboard focus, so typing elsewhere at that moment can move the player.
 - Enemies (`common::Other` that is `Unfriendly`) can't be stepped onto and routes go round them, finding a new way if one comes between. Anyone else swaps places, which the server tells of as their move. With `common::GodMode` on, enemies swap too and routes go straight through them.
 - `SpentEnergy` (common) spends energy on what isn't a step, and stops a journey for as long as that takes (`PlayerEnergy::stopped_for`).
+- `CancelledEnergy` (common) gives back the energy owed beyond its penalty, and ends a journey's pause: an ability called off (`abilities`).
