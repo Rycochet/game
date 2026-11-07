@@ -10,6 +10,7 @@ pub mod blade;
 pub mod body;
 pub mod celestial;
 pub mod climate;
+pub mod combat;
 pub mod creature;
 pub mod dungeon;
 pub mod energy;

@@ -9,6 +9,8 @@ publish.workspace = true
 # Brotli copies of the web build's files (`compress-web`), in pure Rust
 # (BSD-3-Clause/MIT), so no brotli tool needs installing.
 brotli = "8"
+# The combat rules, for fight simulations (`fight`).
+shared.workspace = true
 # Deltas for browsers that have an older build (`web-deltas`).
 web_delta.workspace = true
 # Draws the game-icons.net SVGs as PNGs (`icons`), in pure Rust (Apache-2.0 OR

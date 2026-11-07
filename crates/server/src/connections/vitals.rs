@@ -2,7 +2,7 @@
 //! change, and the dev tools that change them.
 
 use shared::protocol::{DEV_BONUS, DEV_BONUS_TICKS, DevVitals, ServerMessage};
-use shared::vitals::{Change, Limits, Vital};
+use shared::vitals::{Change, Limits, Points, Vital};
 
 use super::Client;
 
@@ -53,9 +53,9 @@ impl Client {
         let played = self.activity.played;
         let vitals = &mut self.sheet.vitals;
         match what {
-            DevVitals::Hurt(amount) => vitals.hurt(amount, limits, now, played),
+            DevVitals::Hurt(amount) => vitals.hurt(Points::whole(amount), limits, now, played),
             DevVitals::SpendMana(amount) => {
-                vitals.spend_mana(amount, limits, now, played);
+                vitals.spend_mana(Points::whole(amount), limits, now, played);
             }
             DevVitals::Fill => vitals.fill(),
             DevVitals::Bonus => {

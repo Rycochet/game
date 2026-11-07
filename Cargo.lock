@@ -7829,6 +7829,7 @@ version = "0.1.0"
 dependencies = [
  "brotli",
  "resvg",
+ "shared",
  "web_delta",
 ]
 

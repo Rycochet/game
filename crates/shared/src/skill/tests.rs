@@ -133,6 +133,8 @@ fn defence_has_each_melee_weapon_type_unarmed_and_the_shields() {
         .iter()
         .filter(|&&id| id != defence)
         .map(|id| id.key())
+        // Dual wielding isn't a type of weapon to defend with.
+        .filter(|&key| key != "dual")
         .collect();
     let defended: Vec<_> = defence.children().iter().map(|id| id.key()).collect();
     assert_eq!(&defended[..types.len()], &types[..]);

@@ -341,7 +341,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ServerMessage::Vitals {
             who: None,
             health: crate::vitals::VitalNow {
-                value: 3,
+                value: crate::vitals::Points(3_500),
                 most: 20,
                 refills_in: 150,
             },

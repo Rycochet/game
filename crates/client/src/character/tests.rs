@@ -31,9 +31,9 @@ fn it_says_where_health_and_mana_come_from() {
     let mut sheet = Sheet::new(CreatureKind::Human);
     sheet.attributes.toughness = 100;
     sheet.attributes.will = 60;
-    sheet.vitals.health.practice = 100;
+    sheet.vitals.health.practice = 100_000;
     let told = |most| shared::vitals::VitalNow {
-        value: 1,
+        value: shared::vitals::Points::whole(1),
         most,
         refills_in: 0,
     };

@@ -3,19 +3,23 @@
 use serde::{Deserialize, Serialize};
 
 use super::REFILL_TICKS;
+use super::points::{PER_POINT, Points};
 
 /// How much of one there is, and its practice. Refills in a straight line,
-/// empty to full in `REFILL_TICKS`, from the tick `since`.
+/// empty to full in `REFILL_TICKS`, from the tick `since`. Kept in thousandths
+/// (`Points`); the most is in whole points.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "TrackSave", into = "TrackSave")]
 pub struct Track {
-    /// How much there was at `since`: `u32::MAX` is full, whatever the most.
+    /// How much there was at `since`, in thousandths: `u32::MAX` is full,
+    /// whatever the most.
     value: u32,
     /// The action tick it refills from: when it was last settled, or later
     /// while in combat.
     since: u64,
-    /// Practice gained by using it, which raises its most.
+    /// Practice gained by using it, which raises its most, in thousandths.
     pub practice: u32,
-    /// Practice gained in the current hour of playtime.
+    /// Practice gained in the current hour of playtime, in thousandths.
     pub(super) this_hour: u32,
 }
 
@@ -30,11 +34,59 @@ impl Default for Track {
     }
 }
 
+/// How a `Track` is saved and sent. Saves from before thousandths have no
+/// `milli`, and their whole points are turned into thousandths on reading.
+#[derive(Serialize, Deserialize)]
+struct TrackSave {
+    value: u32,
+    since: u64,
+    practice: u32,
+    this_hour: u32,
+    #[serde(default)]
+    milli: bool,
+}
+
+impl From<TrackSave> for Track {
+    fn from(save: TrackSave) -> Self {
+        let scale = |value: u32| {
+            if save.milli {
+                value
+            } else {
+                value.saturating_mul(PER_POINT)
+            }
+        };
+        Self {
+            // Full stays full.
+            value: if save.value == u32::MAX {
+                u32::MAX
+            } else {
+                scale(save.value)
+            },
+            since: save.since,
+            practice: scale(save.practice),
+            this_hour: scale(save.this_hour),
+        }
+    }
+}
+
+impl From<Track> for TrackSave {
+    fn from(track: Track) -> Self {
+        Self {
+            value: track.value,
+            since: track.since,
+            practice: track.practice,
+            this_hour: track.this_hour,
+            milli: true,
+        }
+    }
+}
+
 /// What a client is told of one at a moment: it refills it itself from there
 /// with `refilled`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VitalNow {
-    pub value: u32,
+    pub value: Points,
+    /// In whole points.
     pub most: u32,
     /// Action ticks from now until it starts refilling.
     pub refills_in: u32,
@@ -42,7 +94,7 @@ pub struct VitalNow {
 
 impl VitalNow {
     /// How much there is this many action ticks after it was told.
-    pub fn after(self, ticks: u64) -> u32 {
+    pub fn after(self, ticks: u64) -> Points {
         refilled(
             self.value,
             self.most,
@@ -51,17 +103,19 @@ impl VitalNow {
     }
 }
 
-/// `value` out of `most` after refilling for this many action ticks.
-pub fn refilled(value: u32, most: u32, ticks: u64) -> u32 {
-    let value = value.min(most);
-    let gained = ticks.saturating_mul(u64::from(most)) / REFILL_TICKS;
-    u64::from(value).saturating_add(gained).min(u64::from(most)) as u32
+/// `value` out of `most` (whole points) after refilling for this many action
+/// ticks.
+pub fn refilled(value: Points, most: u32, ticks: u64) -> Points {
+    let most = u64::from(most) * u64::from(PER_POINT);
+    let value = u64::from(value.milli()).min(most);
+    let gained = ticks.saturating_mul(most) / REFILL_TICKS;
+    Points(value.saturating_add(gained).min(most) as u32)
 }
 
 impl Track {
-    /// How much there is at this tick, out of `most`.
-    pub fn at(&self, most: u32, now: u64) -> u32 {
-        refilled(self.value, most, now.saturating_sub(self.since))
+    /// How much there is at this tick, out of `most` (whole points).
+    pub fn at(&self, most: u32, now: u64) -> Points {
+        refilled(Points(self.value), most, now.saturating_sub(self.since))
     }
 
     /// What a client is told of it at this tick.
@@ -77,13 +131,20 @@ impl Track {
     /// full, whatever the most comes to be.
     pub(super) fn settle(&mut self, most: u32, now: u64) {
         let value = self.at(most, now);
-        self.value = if value >= most { u32::MAX } else { value };
+        self.value = if value >= Points::whole(most) {
+            u32::MAX
+        } else {
+            value.milli()
+        };
         self.since = self.since.max(now);
     }
 
     /// Takes this much away (settled first) out of `most`, never below 0.
-    pub(super) fn take(&mut self, amount: u32, most: u32) {
-        self.value = self.value.min(most).saturating_sub(amount);
+    pub(super) fn take(&mut self, amount: Points, most: u32) {
+        self.value = self
+            .value
+            .min(Points::whole(most).milli())
+            .saturating_sub(amount.milli());
     }
 
     /// No refilling before this tick.

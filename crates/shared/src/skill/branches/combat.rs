@@ -2,8 +2,9 @@
 //! Under melee, the third level is the type of weapon and the fourth the weapon itself
 //! (`combat/melee/longsword/longsword`, `combat/melee/shortsword/khopesh`), and
 //! fighting with no weapon is `combat/melee/unarmed/<kind of creature>` (owner,
-//! 2026-11-06). Defending is under melee too (`defence.rs`). A first draft, for the
-//! owner to change.
+//! 2026-11-06); `combat/melee/dual` is fighting with a weapon in each hand.
+//! Defending is under melee too (`defence.rs`). A first draft, for the owner to
+//! change.
 
 use crate::blade::Family;
 use crate::sheet::Attribute::{Agility, Empathy, Perception, Strength, Toughness};
@@ -76,6 +77,9 @@ const MELEE: Draft = branch(
             &[leaf("quarterstaff", "Quarterstaff", &[])],
         ),
         branch("whip", "Whip", &[Agility], &[leaf("whip", "Whip", &[])]),
+        // A weapon in each hand, taking turns: beside the weapon types so it can be
+        // specialised like them (owner, 2026-11-07). Not a type to defend with.
+        leaf("dual", "Dual Wielding", &[Agility]),
         DEFENCE,
     ],
 );

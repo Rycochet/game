@@ -6,6 +6,7 @@
 mod api;
 mod compress_web;
 mod dockerfiles;
+mod fight;
 mod icons;
 mod latest;
 mod sizes;
@@ -49,6 +50,9 @@ Tasks:
           Write a delta (deltas/<hash>.dcz) into a web build for each old
           build's wasm given, for the server to send browsers that have
           that old build. Give the wasm as published, never rebuilt.
+  fight [fights=2000] [armour=0]
+          Fights between equal median creatures by the combat rules, with
+          each kind of weapon: how many seconds they last.
 ";
 
 /// A named cargo command: what `lint` and `test` are made of.
@@ -128,6 +132,7 @@ fn main() -> ExitCode {
         Some("compress-web") => compress_web::run(&env::args().skip(2).collect::<Vec<_>>()),
         Some("web-deltas") => web_deltas::run(&env::args().skip(2).collect::<Vec<_>>()),
         Some("api") => api::run(&env::args().skip(2).collect::<Vec<_>>()),
+        Some("fight") => fight::run(&env::args().skip(2).collect::<Vec<_>>()),
         _ => {
             eprintln!(
                 "{USAGE}
