@@ -191,6 +191,7 @@ fn give(kind: ItemKind) -> ClientMessage {
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     }
 }
 
@@ -425,6 +426,7 @@ fn only_things_with_quality_can_be_part_of_a_set() {
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     };
     test.send(&[give(ItemKind::Hat), give(ItemKind::Apple)]);
     let set_of = |kind| {
@@ -450,6 +452,7 @@ fn a_new_ring_has_a_form_and_fits_its_wearer_and_a_new_gem_rolls_its_size() {
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     };
     let carried = inventory(&test.send(&[give(ItemKind::Ring)]));
     let ring = &carried.items[0].item;
@@ -478,6 +481,7 @@ fn artifacts_are_always_named() {
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     };
     let carried = inventory(&test.send(&[artifact]));
     assert_eq!(carried.items.len(), 1, "the sword fits, with this seed");
@@ -518,6 +522,7 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     };
     let mut made = |kind| {
         let answers = test.send(&[large(kind)]);
@@ -550,6 +555,7 @@ pub(super) fn given(
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     }]);
     inventory(&answers).items.last().unwrap().item.id
 }
@@ -676,6 +682,7 @@ fn asking_for_magic_on_something_plain_raises_its_quality() {
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     }]);
     let hat = inventory(&answers).items.last().unwrap().item.clone();
     assert!(hat.is_magical());

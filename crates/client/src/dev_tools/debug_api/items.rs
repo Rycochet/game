@@ -49,6 +49,7 @@ pub(super) fn give_item(
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     }));
     done()
 }

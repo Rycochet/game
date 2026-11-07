@@ -18,6 +18,7 @@ fn give(kind: ItemKind, seed: u64, count: u32, identical: bool) -> ClientMessage
         count,
         identical,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     }
 }
 
@@ -122,6 +123,7 @@ fn give_asking(kind: ItemKind, request: RollRequest) -> ClientMessage {
             count,
             identical,
             request,
+            to: None,
         },
         _ => unreachable!(),
     }
@@ -149,4 +151,89 @@ fn what_is_asked_of_its_form_is_kept_or_nothing_is_given() {
     };
     test.send(&[give_asking(ItemKind::Sword, request)]);
     assert_eq!(test.client.inventory.items.len(), before);
+}
+
+/// Stands the player in a castle room with its first mob beside them: its id.
+fn beside_a_mob(test: &mut TestClient) -> shared::id::Id {
+    test.send(&[ClientMessage::DevEnterSite {
+        kind: PoiKind::Castle,
+        seed: 7,
+        level: 0,
+        ruin: 0,
+    }]);
+    let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(3);
+    test.send(&[ClientMessage::DevTeleport { x, y }]);
+    let population = test.world.populations.0.values_mut().next().unwrap();
+    population.mobs[0].position = (x + 1, y);
+    let mob = population.mobs[0].id;
+    test.send(&[]);
+    mob
+}
+
+fn give_to(kind: ItemKind, count: u32, to: shared::id::Id) -> ClientMessage {
+    match give(kind, 5, count, true) {
+        ClientMessage::DevGiveItem {
+            kind,
+            size,
+            magical,
+            quality,
+            set,
+            favour,
+            seed,
+            count,
+            identical,
+            request,
+            ..
+        } => ClientMessage::DevGiveItem {
+            kind,
+            size,
+            magical,
+            quality,
+            set,
+            favour,
+            seed,
+            count,
+            identical,
+            request,
+            to: Some(to),
+        },
+        _ => unreachable!(),
+    }
+}
+
+/// What the castle's records say a mob carries.
+fn carried_by(test: &mut TestClient, mob: shared::id::Id) -> Vec<Item> {
+    let site = test.world.site(crate::storage::SiteId::Dev {
+        kind: PoiKind::Castle,
+        seed: 7,
+        ruin: 0,
+    });
+    let levels = site.levels.values();
+    let mut records = levels.filter_map(|level| level.records.get(&mob));
+    records
+        .next()
+        .map(|record| record.carried.clone())
+        .unwrap_or_default()
+}
+
+#[test]
+fn a_target_mob_in_sight_gets_the_items_and_the_player_none() {
+    let mut test = TestClient::new();
+    let mob = beside_a_mob(&mut test);
+    let before = carried_by(&mut test, mob).len();
+    test.send(&[give_to(ItemKind::Coin, 3, mob)]);
+    let carried = carried_by(&mut test, mob);
+    assert_eq!(carried.len(), before + 3);
+    assert!(carried.iter().any(|item| item.kind == ItemKind::Coin));
+    assert!(of_kind(&test.client.inventory, ItemKind::Coin).is_empty());
+}
+
+#[test]
+fn a_target_that_is_no_mob_in_sight_is_left_for_other_players() {
+    let mut test = TestClient::new();
+    let _ = beside_a_mob(&mut test);
+    test.send(&[give_to(ItemKind::Coin, 3, shared::id::Id::for_test(999))]);
+    assert!(of_kind(&test.client.inventory, ItemKind::Coin).is_empty());
+    // Left for the pass over other players, which finds nobody by it.
+    assert_eq!(test.client.dev_gifts.len(), 1);
 }

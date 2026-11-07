@@ -25,6 +25,7 @@ use crate::storage::SiteId;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod crossing;
+mod dev_gift;
 mod doubling_back;
 mod fight;
 mod gear;
@@ -43,6 +44,7 @@ mod tracking;
 mod wild;
 
 use crossing::cross;
+pub(crate) use dev_gift::{give_to_mob, mob_in_sight};
 use doubling_back::Pacing;
 pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;

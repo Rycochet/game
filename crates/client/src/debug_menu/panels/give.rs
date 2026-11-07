@@ -7,12 +7,12 @@ use shared::item::Quality;
 
 use super::{
     CHECK_ROW, FIELDS, FONT, GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveNoSpace,
-    GiveOption, GiveOptionsLine, GivePreview, GiveRandomSeed, GiveSeed, SEED_WIDTH, SetChoice, any,
-    give_kinds, row, ui_name, words,
+    GiveOption, GiveOptionsLine, GivePreview, GiveRandomSeed, GiveSeed, GiveToWords, SEED_WIDTH,
+    SetChoice, any, give_kinds, row, ui_name, words,
 };
 use crate::widgets::{
-    BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, Pressable, TextBox, UiId, WARNING_TEXT,
-    spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
+    BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, INK, Pressable, TextBox, UiId,
+    WARNING_TEXT, spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
 };
 
 const COUNT_WIDTH: f32 = 64.0;
@@ -107,6 +107,12 @@ pub(super) fn spawn_give_panel(content: &mut ChildSpawnerCommands) {
     content.spawn(bottom).with_children(|line| {
         let no_space = (Text::new("No space"), FONT.font(), TextColor(WARNING_TEXT));
         line.spawn((no_space, Visibility::Hidden, GiveNoSpace));
+        line.spawn((
+            Text::new("to you"),
+            FONT.font(),
+            TextColor(INK),
+            GiveToWords,
+        ));
         button(line, "Give").insert((ButtonStyle::Main, GiveButton, id("give")));
     });
 }

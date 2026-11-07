@@ -5,7 +5,7 @@ use shared::item_form::ItemOrder;
 use shared::protocol::ClientMessage;
 
 use super::Client;
-use super::give_items::give_items;
+use super::give_items::{Batch, give_items};
 use crate::sites::{self};
 use crate::{ServerWorld, hall, world_map};
 
@@ -68,6 +68,7 @@ pub(super) fn answer_dev(
             count,
             identical,
             request,
+            to,
         } => {
             let order = ItemOrder {
                 kind,
@@ -78,7 +79,13 @@ pub(super) fn answer_dev(
                 favour,
                 request,
             };
-            give_items(client, world, &order, seed, count, identical)
+            let batch = Batch {
+                order,
+                seed,
+                count,
+                identical,
+            };
+            give_items(client, world, batch, to)
         }
         ClientMessage::DevDetectMonsters(on) => {
             client.detect_monsters = on;

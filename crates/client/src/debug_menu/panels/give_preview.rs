@@ -9,7 +9,7 @@ use shared::item::{Inventory, Item, StackLimits};
 use shared::item_form::{ItemOrder, Refused, RollRequest, batch_seed, try_make_item};
 use shared::protocol::LevelKind;
 
-use super::{GiveButton, GiveChoice, GiveCount, GiveForm, GiveNoSpace, GivePreview, any};
+use super::{GiveButton, GiveChoice, GiveCount, GiveForm, GiveNoSpace, GivePreview, GiveTo, any};
 use crate::common::{CurrentDungeon, GameView};
 use crate::inventory::{Carried, Stacks};
 use crate::widgets::{ButtonState, CELL, ItemLook, ItemName, TextBox, spawn_item_cells};
@@ -20,6 +20,7 @@ use crate::widgets::{ButtonState, CELL, ItemLook, ItemName, TextBox, spawn_item_
 pub(in crate::debug_menu) fn show_give_preview(
     mut commands: Commands,
     mut form: ResMut<GiveForm>,
+    to: Res<GiveTo>,
     carried: Res<Carried>,
     stacks: Res<Stacks>,
     view: Res<State<GameView>>,
@@ -37,11 +38,13 @@ pub(in crate::debug_menu) fn show_give_preview(
     };
     let fresh = preview.drawn.is_none();
     let moved = view.is_changed() || dungeon.is_changed();
-    if !(fresh || moved || form.is_changed() || carried.is_changed() || stacks.is_changed()) {
+    let changed = form.is_changed() || to.is_changed() || carried.is_changed();
+    if !(fresh || moved || changed || stacks.is_changed()) {
         return;
     }
     let (order, seed) = (form.order(), form.seed.unwrap_or_default());
-    let wearer = carried.0.creature;
+    // Made for whoever gets it.
+    let wearer = to.0.map_or(carried.0.creature, |(_, kind)| kind);
     let first = one_of(&order, wearer, seed, 0, form.identical);
     // What a refused request would have been: drawn, but not to be given.
     let item = first.clone().unwrap_or_else(|_| {
@@ -58,12 +61,15 @@ pub(in crate::debug_menu) fn show_give_preview(
             count.text = form.count.to_string();
         }
     }
-    if preview.drawn != Some((order, seed)) {
-        preview.drawn = Some((order, seed));
+    if preview.drawn != Some((order, seed, wearer)) {
+        preview.drawn = Some((order, seed, wearer));
         draw(&mut commands, entity, &mut node, &item);
     }
-    let has_ground = *view.get() == GameView::Dungeon
-        && (dungeon.info.as_ref()).is_some_and(|info| !matches!(info.kind, LevelKind::Hall { .. }));
+    // A target's room is the server's to judge: mobs take anything given.
+    let has_ground = to.0.is_some()
+        || *view.get() == GameView::Dungeon
+            && (dungeon.info.as_ref())
+                .is_some_and(|info| !matches!(info.kind, LevelKind::Hall { .. }));
     let batch = Batch {
         order,
         wearer,

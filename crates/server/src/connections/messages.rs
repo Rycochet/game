@@ -75,6 +75,7 @@ pub(crate) fn handle_messages(
         put_out_of_forgotten_sites(clients, i, worlds.of(world));
     }
     super::heal::heal_players(clients, &mut worlds);
+    super::give_items::give_to_players(clients, &mut worlds);
     answer_look_ups(clients, &mut worlds);
     clients.retain(|client| !client.gone);
 }

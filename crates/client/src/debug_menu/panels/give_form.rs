@@ -114,8 +114,8 @@ pub(in crate::debug_menu) struct GiveRandomSeed;
 /// Where the item to be given is drawn.
 #[derive(Component, Default)]
 pub(in crate::debug_menu) struct GivePreview {
-    /// The order and seed it was drawn for.
-    pub(super) drawn: Option<(ItemOrder, u64)>,
+    /// The order, seed and wearer it was drawn for.
+    pub(super) drawn: Option<(ItemOrder, u64, shared::creature::CreatureKind)>,
 }
 
 /// The line of options for its form, shown for kinds that take any.
