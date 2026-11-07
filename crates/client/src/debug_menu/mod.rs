@@ -92,6 +92,7 @@ impl Plugin for DebugMenuPlugin {
                     panels::show_pictures,
                     panels::update_panel_buttons,
                     panels::show_typed_items,
+                    panels::give_sample_icons,
                     menu::show_menu,
                 )
                     .chain(),

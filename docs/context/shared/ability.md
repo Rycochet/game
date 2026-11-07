@@ -4,7 +4,7 @@ Abilities, the named things a creature can do: active ones done when asked (and 
 
 ## Files
 
-- `crates/shared/src/ability.rs`: `Ability` (`ALL`, `name`, `use_kind`, `is_active`, `can_use`), `Use`, `known(kind)`. Tests.
+- `crates/shared/src/ability.rs`: `Ability` (`ALL`, `name`, `leans` (the attributes it leans on, which colour it: Attack and Kick Strength and Agility, Trample Strength and Toughness, Flutter Agility, Night Vision Perception), `use_kind`, `is_active`, `can_use`), `Use`, `known(kind)`. Tests.
 - `crates/shared/src/ability/bar.rs`: `ActionBar`, `BarSlot`, `BarChange`, `BarRefusal`, `BAR_SLOTS`.
 
 ## Public API

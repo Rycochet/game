@@ -138,3 +138,17 @@ fn only_known_active_abilities_can_be_used() {
     assert!(Ability::Kick.can_use(kicker()));
     assert!(!Ability::NightVision.can_use(CreatureKind::Human));
 }
+
+#[test]
+fn every_ability_leans_on_something() {
+    for ability in Ability::ALL {
+        assert!(!ability.leans().is_empty(), "{ability:?}");
+    }
+    use crate::sheet::{Attribute, Row};
+    assert_eq!(Attribute::Perception.row(), Row::Mind);
+    for row in Row::ALL {
+        for attribute in row.attributes() {
+            assert_eq!(attribute.row(), row);
+        }
+    }
+}

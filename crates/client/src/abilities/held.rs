@@ -8,7 +8,7 @@ use super::drag::Drag;
 use super::icons::icon_path;
 use super::use_ability::UseSlot;
 use crate::common::{Action, Preferences};
-use crate::widgets::{ABILITY, Floating, HELD_ITEM_Z};
+use crate::widgets::{ABILITY, Floating, HELD_ITEM_Z, attribute_colour};
 
 /// The picture following the pointer while an ability is dragged.
 #[derive(Component)]
@@ -19,10 +19,13 @@ pub(super) fn spawn_held(mut commands: Commands) {
         HeldPicture,
         Floating,
         ImageNode::default(),
+        BackgroundColor::default(),
         Node {
             position_type: PositionType::Absolute,
             width: px(ABILITY),
             height: px(ABILITY),
+            padding: UiRect::all(px(4.0)),
+            border_radius: BorderRadius::all(px(4.0)),
             ..default()
         },
         GlobalZIndex(HELD_ITEM_Z),
@@ -34,9 +37,17 @@ pub(super) fn spawn_held(mut commands: Commands) {
 pub(super) fn show_held(
     drag: Res<Drag>,
     assets: Res<AssetServer>,
-    mut picture: Single<(&mut ImageNode, &mut Node, &mut Visibility), With<HeldPicture>>,
+    mut picture: Single<
+        (
+            &mut ImageNode,
+            &mut BackgroundColor,
+            &mut Node,
+            &mut Visibility,
+        ),
+        With<HeldPicture>,
+    >,
 ) {
-    let (image, node, visibility) = &mut *picture;
+    let (image, background, node, visibility) = &mut *picture;
     let Some(held) = drag.held else {
         visibility.set_if_neq(Visibility::Hidden);
         return;
@@ -46,6 +57,10 @@ pub(super) fn show_held(
     if image.image != icon {
         image.image = icon;
     }
+    // Over the colour of what it leans on, as on the page and the bar.
+    let ability = held.ability;
+    let colour = attribute_colour(ability.leans(), !ability.is_active());
+    background.set_if_neq(BackgroundColor(colour));
     node.left = px(held.at.x - ABILITY / 2.0);
     node.top = px(held.at.y - ABILITY / 2.0);
 }
