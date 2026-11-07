@@ -105,6 +105,7 @@ pub(in crate::debug_menu) fn press_give_button(
     mut pressed: MessageReader<ButtonPressed>,
     buttons: Query<&ButtonState, With<GiveButton>>,
     form: Res<GiveForm>,
+    to: Res<super::GiveTo>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     for press in pressed.read() {
@@ -126,6 +127,7 @@ pub(in crate::debug_menu) fn press_give_button(
             count: form.count,
             identical: form.identical || form.count == 1,
             request: order.request,
+            to: to.0.map(|(id, _)| id),
         }));
     }
 }

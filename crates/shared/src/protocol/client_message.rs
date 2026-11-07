@@ -151,9 +151,9 @@ pub enum ClientMessage {
     WearFromGround { item: Id },
     /// Throws away something from the ground under the player, as `BinItem`.
     BinFromGround { item: Id },
-    /// Developer tools: new items of this kind in the character's inventory,
-    /// made for this size (or their own) and their fingers, answered with
-    /// `Inventory`.
+    /// Developer tools: new items of this kind in the character's inventory, or
+    /// for `to`, made for this size (or the one getting them's own) and their
+    /// fingers, answered with `Inventory`.
     DevGiveItem {
         kind: ItemKind,
         size: Option<Size>,
@@ -176,6 +176,9 @@ pub enum ClientMessage {
         /// What their form must be like (`item_form::RollRequest`); refused, giving
         /// nothing, if any of them can't keep to it (`try_make_item`).
         request: RollRequest,
+        /// Who gets them: a mob or another player in sight (the target), or
+        /// `None` for the character. Nothing is given if `to` isn't in sight.
+        to: Option<Id>,
     },
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),

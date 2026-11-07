@@ -109,6 +109,7 @@ fn what_is_given_to_a_keeper_joins_the_stock_from_beside_the_door_only() {
         count: 1,
         identical: true,
         request: shared::item_form::RollRequest::NONE,
+        to: None,
     };
     test.send(&[coin]);
     let item = test.client.inventory.items.last().unwrap().item.id;

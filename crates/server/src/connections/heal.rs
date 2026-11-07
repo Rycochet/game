@@ -176,7 +176,7 @@ pub(super) fn heal_players(clients: &mut [Client], worlds: &mut ServerWorlds) {
 }
 
 /// Two different clients at once.
-fn pair(clients: &mut [Client], i: usize, j: usize) -> (&mut Client, &mut Client) {
+pub(super) fn pair(clients: &mut [Client], i: usize, j: usize) -> (&mut Client, &mut Client) {
     if i < j {
         let (low, high) = clients.split_at_mut(j);
         (&mut low[i], &mut high[0])

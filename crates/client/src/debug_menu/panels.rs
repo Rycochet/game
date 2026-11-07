@@ -27,6 +27,7 @@ mod give_option;
 mod give_options;
 mod give_preview;
 mod give_systems;
+mod give_target;
 mod go_to_world;
 mod layout;
 mod open;
@@ -61,6 +62,7 @@ pub(super) use give_preview::show_give_preview;
 pub(super) use give_systems::{
     choose_give_options, edit_give_boxes, press_give_button, start_give_panel,
 };
+pub(super) use give_target::{GiveTo, GiveToWords, follow_target};
 use go_to_world::spawn_go_to_world;
 pub(super) use go_to_world::{press_go_to_world_buttons, update_go_to_world_button};
 use layout::{row, words};

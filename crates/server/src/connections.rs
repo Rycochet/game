@@ -285,6 +285,8 @@ pub struct Client {
     /// Items it has asked after (`LookUpItems`), answered once every client's
     /// messages this tick have been read.
     looking_up: Vec<Id>,
+    /// Give Item's batches for other players, given once every message is read.
+    dev_gifts: Vec<(Id, give_items::Batch)>,
 }
 
 #[cfg(test)]
