@@ -45,6 +45,16 @@ pub fn find_world_path(
         }
         *known
     };
+    // Whether a good swimmer can swim into the sea at each water point,
+    // worked out once too.
+    let mut swimmable = vec![None; (side * side) as usize];
+    let mut can_swim = |point: (i64, i64)| {
+        if !gait.swims_deep() {
+            return false;
+        }
+        *swimmable[index(point)]
+            .get_or_insert_with(|| ground.swimmable(point.0, point.1, conditions, gait))
+    };
 
     // As in `find_path`.
     let mut best = vec![u32::MAX; (side * side) as usize];
@@ -57,7 +67,7 @@ pub fn find_world_path(
     if !roads.is_empty() {
         cheapest = cheapest.min(1000 * 100 / FASTEST_PERCENT);
     }
-    if !rivers.is_empty() {
+    if !rivers.is_empty() || gait.swims_deep() {
         cheapest = cheapest.min(gait.swim_per_mille());
     }
     let least = |at: (i64, i64)| estimate(at, to) * cheapest / 1000;
@@ -80,14 +90,16 @@ pub fn find_world_path(
             if !inside(next) {
                 continue;
             }
-            // The rule of `step_on_world_map`, with the samples kept.
+            // The rule of `step_on_world_map_by`, with the samples kept.
             let there = elevation(next);
-            if (here.is_some() && there.is_none()) || ground.past_the_ice(next.1) {
+            let into_water = here.is_some() && there.is_none();
+            if (into_water && !can_swim(next)) || ground.past_the_ice(next.1) {
                 continue;
             }
             let road = roads.kind_of(at, next);
-            let next_cost =
-                cost + world_step_cost(at, next, (here, there), road, rivers.contains(next), gait);
+            // In water, swimming; across a river, wading.
+            let wet = there.is_none() || rivers.contains(next);
+            let next_cost = cost + world_step_cost(at, next, (here, there), road, wet, gait);
             if next_cost >= best[index(next)] {
                 continue;
             }

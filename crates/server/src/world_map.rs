@@ -6,7 +6,7 @@ mod arrival;
 use std::collections::btree_map::Entry;
 
 use bevy::prelude::*;
-use shared::movement::{Step, step_on_world_map};
+use shared::movement::{Gait, Step, step_on_world_map_by};
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
 use shared::showcase;
@@ -16,13 +16,15 @@ use crate::storage::KnownPoi;
 use crate::{ServerWorld, sites};
 pub(crate) use arrival::{arrival, nearest_gate};
 
-/// The player takes a step on the world map, unless it leads into water (a
+/// The player takes a step on the world map, unless it leads into water (but
+/// a good swimmer may swim the sea near the coast) (a
 /// refused step is left for `Position` to put right). `false` if the client
 /// has gone.
 pub(crate) fn stepped(client: &mut Client, world: &ServerWorld, step: Step) -> bool {
     let conditions = world.conditions();
-    let Some(to) = step_on_world_map(&world.ground, conditions, client.world_position(), step)
-    else {
+    let gait = Gait::of(&client.sheet.skills);
+    let from = client.world_position();
+    let Some(to) = step_on_world_map_by(&world.ground, conditions, from, step, gait) else {
         info!(
             "Refused a step into water from {:?}",
             client.world_position()

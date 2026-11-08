@@ -62,7 +62,7 @@ impl Client {
 
     /// What a world map step from `from` to `to` (before any wrapping) costs,
     /// with the elevations at each end: its slope, any road, wading a river
-    /// off the road, and the player's skills. Whether the client is still
+    /// off the road or swimming the sea, and the player's skills. Whether the client is still
     /// there, and the cost.
     pub(super) fn world_step(
         &mut self,
@@ -72,7 +72,8 @@ impl Client {
     ) -> (bool, u32) {
         world.river_points.cover(&world.rivers, to);
         let road = world.road_steps.kind_of(from, to);
-        let river = world.river_points.contains(to);
+        // Swimming the sea, or wading a river.
+        let river = ends.1.is_none() || world.river_points.contains(to);
         let gait = Gait::of(&self.sheet.skills);
         let cost = world_step_time(from, to, ends, road, river, gait);
         let moved = Moved {

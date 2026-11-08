@@ -1,12 +1,13 @@
-//! Wading: steps into shallow water (`Cell::Shallows`) on any level take longer,
-//! less so with Swimming (`Gait::swim`).
+//! Wading: steps into shallow water (`Cell::Shallows`), or swimming into deep
+//! water (`Cell::Water`, for a good swimmer: `step_on_level_by`), on any level
+//! take longer, less so with Swimming (`Gait::swim`).
 
 use super::{Gait, step_cost, wild_step_cost};
 use crate::dungeon::{Cell, Level};
 
-/// Whether a step landing on `to` wades.
+/// Whether a step landing on `to` wades or swims.
 pub fn wades(level: &Level, to: (i64, i64)) -> bool {
-    level.cell(to.0, to.1) == Cell::Shallows
+    matches!(level.cell(to.0, to.1), Cell::Shallows | Cell::Water)
 }
 
 /// What a step on a level costs, in `step_cost` units: its distance, its slope

@@ -5,7 +5,7 @@ use std::collections::BinaryHeap;
 
 use super::{DIRECTIONS, Path, distance_squared, estimate};
 use crate::dungeon::Level;
-use crate::movement::{Step, step_cost, step_on_level};
+use crate::movement::{Gait, Step, step_cost, step_on_level_by};
 
 /// The quickest route from `from` to `to`, using only legal steps that land on
 /// cells `allowed` accepts (the client: cells the player knows; a monster: all
@@ -21,15 +21,24 @@ pub fn find_path(
     max_cost: Option<u32>,
     allowed: impl Fn(i64, i64) -> bool,
 ) -> Path {
-    find_path_by(level, from, to, max_cost, allowed, step_cost, 1000)
+    find_path_by(
+        level,
+        from,
+        to,
+        max_cost,
+        allowed,
+        step_cost,
+        Gait::UNSKILLED,
+    )
 }
 
 /// `find_path` with steps priced by `cost_of` (from, to) instead of their
 /// distance alone, such as the wilderness's slopes and wading
-/// (`movement::level_step_cost`). `cheapest` is the least a step can cost
-/// against `step_cost`, per mille (1000 if never less; a good swimmer wades
-/// quicker than they walk): the search's estimate is scaled by it, or it would
-/// be too high and routes not the quickest.
+/// (`movement::level_step_cost`), for someone with this `gait`: a good
+/// swimmer steps into water (`movement::step_on_level_by`), and may wade
+/// quicker than they walk, so the search's estimate is scaled by that (or it
+/// would be too high and routes not the quickest): `cost_of` is never less than
+/// `Gait::swim` of `step_cost`, nor `step_cost` itself for anyone slower.
 pub fn find_path_by(
     level: &Level,
     from: (i64, i64),
@@ -37,8 +46,9 @@ pub fn find_path_by(
     max_cost: Option<u32>,
     allowed: impl Fn(i64, i64) -> bool,
     cost_of: impl Fn((i64, i64), (i64, i64)) -> u32,
-    cheapest: u32,
+    gait: Gait,
 ) -> Path {
+    let cheapest = gait.swim_per_mille();
     let least = |at: (i64, i64)| estimate(at, to) * cheapest.min(1000) / 1000;
     let (min_x, min_y, width, height) = level.bounds();
     let index = |(x, y): (i64, i64)| ((y - min_y) * width + (x - min_x)) as usize;
@@ -70,7 +80,7 @@ pub fn find_path_by(
         }
         for (dx, dy) in DIRECTIONS {
             let step = Step::new(dx, dy).expect("directions are steps");
-            let Some(next) = step_on_level(level, at, step) else {
+            let Some(next) = step_on_level_by(level, at, step, gait) else {
                 continue;
             };
             let next_cost = cost + cost_of(at, next);

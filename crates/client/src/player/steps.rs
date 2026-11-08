@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::energy::{ACTION_TICKS_PER_SECOND, level_step_energy};
-use shared::movement::{step_on_level, step_on_world_map, wades, world_step_time};
+use shared::movement::{step_on_level_by, step_on_world_map_by, wades, world_step_time};
 
 use super::{
     MOST_STEPS_WAITING, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick, enemy_cells,
@@ -65,9 +65,9 @@ pub(super) fn take_steps(
         }
         let from = (position.x, position.y);
         let to = match view.get() {
-            GameView::Dungeon => step_on_level(&dungeon.level, from, step),
+            GameView::Dungeon => step_on_level_by(&dungeon.level, from, step, gait.0),
             _ => world.as_ref().and_then(|world| {
-                step_on_world_map(&world.ground, world.conditions(&clock), from, step)
+                step_on_world_map_by(&world.ground, world.conditions(&clock), from, step, gait.0)
             }),
         };
         let Some((x, y)) = to else {
@@ -94,7 +94,8 @@ pub(super) fn take_steps(
                     (x, y),
                     ends,
                     world.roads.steps().kind_of(from, (x, y)),
-                    rivers.points.contains((x, y)),
+                    // Swimming the sea, or wading a river.
+                    ends.1.is_none() || rivers.points.contains((x, y)),
                     gait.0,
                 )
             }),
