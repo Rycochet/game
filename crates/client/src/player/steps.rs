@@ -94,15 +94,10 @@ pub(super) fn take_steps(
                     world.ground.elevation(from.0, from.1, conditions),
                     world.ground.elevation(x, y, conditions),
                 );
-                world_step_time(
-                    from,
-                    (x, y),
-                    ends,
-                    world.roads.steps().kind_of(from, (x, y)),
-                    // Swimming the sea, or wading a river.
-                    ends.1.is_none() || rivers.points.contains((x, y)),
-                    gait.0,
-                )
+                let road = world.roads.steps().kind_of(from, (x, y));
+                let on_river = rivers.points.contains((x, y));
+                let footing = world.ground.footing((x, y), conditions, road, on_river);
+                world_step_time(from, (x, y), ends, footing, gait.0)
             }),
         };
         energy.energy.spend(tick, speed.0, cost);

@@ -4,6 +4,8 @@ use shared::movement::{MOVEMENT_SKILLS, RUN_PRACTICE, climb_practice};
 use shared::protocol::ServerMessage;
 use shared::skill::WINDOW_TICKS;
 
+use shared::dungeon::Cell;
+
 use super::Moved;
 use crate::connections::tests::TestClient;
 
@@ -14,6 +16,7 @@ fn moved(on_world_map: bool, elevations: u32) -> Moved {
         swam: 0,
         jumped: false,
         sneaked: false,
+        terrain: None,
     }
 }
 
@@ -87,7 +90,9 @@ fn wilderness_slopes_cost_more_and_practise_climbing() {
     let before = test.client.sheet.skills.practice(climbing);
     let running = MOVEMENT_SKILLS.running;
     let ran = test.client.sheet.skills.practice(running);
-    let (stayed, cost) = test.client.level_step(&test.world, (from, to), true, false);
+    let (stayed, cost) = test
+        .client
+        .level_step(&test.world, (from, to), true, Some(Cell::Floor));
     assert!(stayed);
     assert!(cost > site_step_cost(from, to), "{cost} on a hillside");
     assert!(test.client.sheet.skills.practice(climbing) > before);
@@ -119,7 +124,9 @@ fn wading_is_slower_and_practises_swimming() {
     let before = test.client.sheet.skills.practice(swimming);
     let (from, to) = ((0, 0), (1, 0));
     let gait = shared::movement::Gait::of(&test.client.sheet.skills);
-    let (stayed, cost) = test.client.level_step(&test.world, (from, to), false, true);
+    let (stayed, cost) =
+        test.client
+            .level_step(&test.world, (from, to), false, Some(Cell::Shallows));
     assert!(stayed);
     // Between an untrained swimmer's 1.7 times as long and a record's 0.71.
     assert_eq!(cost, gait.swim(70) * 15);
@@ -157,10 +164,20 @@ fn world_map_rivers_are_waded() {
 fn the_sea_is_swum() {
     let mut test = TestClient::new();
     let gait = shared::movement::Gait::of(&test.client.sheet.skills);
-    let (from, to) = ((0, 0), (1, 0));
-    let (stayed, cost) = test
-        .client
-        .world_step(&mut test.world, (from, to), (Some(8), None));
+    // A coast: land, with the sea to the east.
+    let conditions = test.world.conditions();
+    let ground = &test.world.ground;
+    let from = (-1500..1500)
+        .step_by(4)
+        .flat_map(|y| (-1500..1500).map(move |x| (x, y)))
+        .find(|&(x, y)| {
+            ground.elevation(x, y, conditions).is_some()
+                && ground.elevation(x + 1, y, conditions).is_none()
+        })
+        .expect("a coast");
+    let to = (from.0 + 1, from.1);
+    let ends = (ground.elevation(from.0, from.1, conditions), None);
+    let (stayed, cost) = test.client.world_step(&mut test.world, (from, to), ends);
     assert!(stayed);
     assert_eq!(cost, gait.swim(70), "swum, and not run");
 }
@@ -175,9 +192,38 @@ fn jumps_are_quicker_with_practice_and_practise_jumping() {
     let (from, to) = ((0, 0), (2, 0));
     let (stayed, cost) = test
         .client
-        .level_step(&test.world, (from, to), false, false);
+        .level_step(&test.world, (from, to), false, Some(Cell::Floor));
     assert!(stayed);
     assert_eq!(cost, gait.jump(140) * 15);
     assert!(cost <= site_step_cost(from, to));
     assert!(test.client.sheet.skills.practice(jumping) > before);
+}
+
+#[test]
+fn rough_country_is_slower_and_practises_pioneering() {
+    use shared::movement::{Gait, Terrain, wild_step_cost};
+    let mut test = TestClient::new();
+    // The middle of a land point, on open ground.
+    let conditions = test.world.conditions();
+    let ground = &test.world.ground;
+    let (px, py) = (-1500..1500)
+        .step_by(8)
+        .flat_map(|y| (-1500..1500).step_by(8).map(move |x| (x, y)))
+        .find(|&(x, y)| {
+            ground.terrain(x, y, conditions) == Some(Terrain::Desert)
+                || ground.terrain(x, y, conditions) == Some(Terrain::Forest)
+        })
+        .expect("rough country");
+    let from = (px * 16, py * 16);
+    let to = (from.0 + 1, from.1);
+    let (stayed, cost) = test
+        .client
+        .level_step(&test.world, (from, to), true, Some(Cell::Ground));
+    assert!(stayed);
+    let flat = wild_step_cost(from, to, (0, 0), Gait::UNSKILLED) * 15;
+    assert!(cost > flat, "{cost} against {flat}");
+    let practised = Terrain::ALL
+        .iter()
+        .any(|terrain| test.client.sheet.skills.practice(terrain.skill()) > 0);
+    assert!(practised);
 }

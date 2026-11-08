@@ -4,6 +4,7 @@
 
 use std::sync::LazyLock;
 
+use super::{PIONEER_SAVING_PER_MILLE, Terrain};
 use crate::skill::{SkillId, Skills};
 
 /// A skill's value at 100%, in hundredths (`skill::VALUE_SCALE`): the effects
@@ -68,6 +69,8 @@ pub struct Gait {
     running: u32,
     swimming: u32,
     jumping: u32,
+    /// Pioneering in each terrain, in `Terrain::ALL`'s order.
+    pioneering: [u32; Terrain::ALL.len()],
 }
 
 impl Gait {
@@ -77,6 +80,7 @@ impl Gait {
         running: 0,
         swimming: 0,
         jumping: 0,
+        pioneering: [0; Terrain::ALL.len()],
     };
 
     /// From a creature's skills.
@@ -86,6 +90,7 @@ impl Gait {
             running: skills.value(MOVEMENT_SKILLS.running).min(FULL),
             swimming: skills.value(MOVEMENT_SKILLS.swimming).min(FULL),
             jumping: skills.value(MOVEMENT_SKILLS.jumping).min(FULL),
+            pioneering: Terrain::ALL.map(|terrain| skills.value(terrain.skill()).min(FULL)),
         }
     }
 
@@ -109,6 +114,27 @@ impl Gait {
         }
         let past = f64::from(self.swimming - DEEP_WATER_FROM);
         DEEPEST_SEA * past / f64::from(FULL - DEEP_WATER_FROM)
+    }
+
+    /// What a step costing `cost` on open ground comes to over `terrain`: its
+    /// extra cut by Pioneering there, by two thirds at 100%.
+    pub fn cross(self, terrain: Terrain, cost: u32) -> u32 {
+        let skill = self.pioneering[terrain as usize];
+        let extra = u64::from(terrain.per_mille() - 1000);
+        let saved = u64::from(PIONEER_SAVING_PER_MILLE) * u64::from(skill);
+        let kept = extra * (u64::from(FULL) * 1000 - saved) / (u64::from(FULL) * 1000);
+        (u64::from(cost) * (1000 + kept) / 1000) as u32
+    }
+
+    /// The least a step over any terrain costs against open ground, per mille:
+    /// every land point on the world map has a terrain, so off roads and water
+    /// no step is cheaper, which routes' estimates can count on.
+    pub fn cheapest_terrain_per_mille(self) -> u32 {
+        Terrain::ALL
+            .iter()
+            .map(|&terrain| self.cross(terrain, 1000))
+            .min()
+            .unwrap_or(1000)
     }
 
     /// How long a jump takes, per mille of its distance: from all of it at 0%

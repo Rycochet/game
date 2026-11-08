@@ -49,10 +49,10 @@ pub fn level_step_energy(
     from: (i64, i64),
     to: (i64, i64),
     heights: Option<(i32, i32)>,
-    wading: bool,
+    footing: crate::movement::Footing,
     gait: crate::movement::Gait,
 ) -> u32 {
-    crate::movement::level_step_cost(from, to, heights, wading, gait) * SITE_STEP_SCALE
+    crate::movement::level_step_cost(from, to, heights, footing, gait) * SITE_STEP_SCALE
 }
 
 /// Ticks a cell takes at least while sneaking (`ability::Ability::Sneak`): one

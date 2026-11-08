@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 use super::*;
-use crate::movement::{Gait, WorldConditions, WorldGround, world_step_cost};
+use crate::movement::{Footing, Gait, WorldConditions, WorldGround, world_step_cost};
 use crate::poi::PoiMap;
 use crate::river::RiverPoints;
 use crate::rng::Seed;
@@ -66,8 +66,15 @@ fn walked(
             at,
             cell,
             ends,
-            roads.kind_of(at, cell),
-            false,
+            {
+                let road = roads.kind_of(at, cell);
+                let terrain = road.is_none().then(|| ground.land_terrain(cell.0, cell.1));
+                Footing {
+                    road,
+                    wet: false,
+                    terrain,
+                }
+            },
             Gait::UNSKILLED,
         );
         at = cell;

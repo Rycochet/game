@@ -1,11 +1,11 @@
 use super::*;
 use crate::dungeon::Cell;
 use crate::dungeon::Level;
-use crate::movement::step_on_world_map;
 use crate::movement::{
     DIAGONAL_COST, Gait, STRAIGHT_COST, Step, WorldConditions, WorldGround, step_cost,
     step_on_level, world_step_cost,
 };
+use crate::movement::{Footing, step_on_world_map};
 use crate::river::RiverPoints;
 use crate::rng::Seed;
 use crate::road::RoadSteps;
@@ -245,7 +245,13 @@ fn assert_walkable_on_world_map(ground: &WorldGround, from: (i64, i64), path: &P
         );
         // Steps into water are swum.
         let wet = ends.1.is_none();
-        cost += world_step_cost(at, cell, ends, None, wet, Gait::UNSKILLED);
+        let terrain = (!wet).then(|| ground.land_terrain(cell.0, cell.1));
+        let footing = Footing {
+            road: None,
+            wet,
+            terrain,
+        };
+        cost += world_step_cost(at, cell, ends, footing, Gait::UNSKILLED);
         at = cell;
     }
     assert_eq!(cost, path.cost);

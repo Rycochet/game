@@ -5,7 +5,10 @@
 //! same height does. The sea is flat at the lowest tide, where the wilderness
 //! keeps it.
 
-use super::{ELEVATIONS_PER_HEIGHT, FlatGround, Gait, SLOPE_COST, WorldGround, step_cost};
+use super::{
+    ELEVATIONS_PER_HEIGHT, FlatGround, Gait, SLOPE_COST, Terrain, WorldConditions, WorldGround,
+    step_cost,
+};
 
 /// Cells to a world map point (`wilderness::SCALE`, which depends on this
 /// module, so it is repeated here; a test checks they agree).
@@ -21,6 +24,9 @@ pub struct WildHeights {
     rows: i64,
     /// Each point's elevation, in 16ths, row by row.
     points: Vec<i32>,
+    /// Each point's terrain (`WorldGround::terrain`, the sea at low water),
+    /// which its nearest cells take.
+    terrains: Vec<Option<Terrain>>,
     /// The sea's height, in 16ths: nothing is lower.
     floor: i32,
     /// Ground kept level (cutouts), which wins over the slopes.
@@ -36,9 +42,16 @@ impl WildHeights {
         let columns = (min_x + width.max(1) - 1).div_euclid(CELLS_PER_POINT) + 2 - min_px;
         let rows = (min_y + height.max(1) - 1).div_euclid(CELLS_PER_POINT) + 2 - min_py;
         let mut points = Vec::with_capacity((columns * rows) as usize);
+        let mut terrains = Vec::with_capacity(points.capacity());
+        let conditions = WorldConditions {
+            water: ground.low_water,
+            ice: true,
+        };
         for py in min_py..min_py + rows {
             for px in min_px..min_px + columns {
                 points.push(ground.broad_elevation(px, py) * CELLS_PER_POINT as i32);
+                let wrapped = px.rem_euclid(ground.width.max(1));
+                terrains.push(ground.terrain(wrapped, py, conditions));
             }
         }
         Self {
@@ -47,6 +60,7 @@ impl WildHeights {
             columns,
             rows,
             points,
+            terrains,
             floor: ground.low_water_elevation() * CELLS_PER_POINT as i32,
             flats: Vec::new(),
         }
@@ -64,6 +78,17 @@ impl WildHeights {
         let (px, py) = (x.div_euclid(CELLS_PER_POINT), y.div_euclid(CELLS_PER_POINT));
         (self.min_px..self.min_px + self.columns - 1).contains(&px)
             && (self.min_py..self.min_py + self.rows - 1).contains(&py)
+    }
+
+    /// A cell's terrain, for what slows walking on it: its nearest point's.
+    /// `None` outside the rectangle or in the sea.
+    pub fn terrain(&self, x: i64, y: i64) -> Option<Terrain> {
+        if !self.covers(x, y) {
+            return None;
+        }
+        let nearest = |c: i64| (c + CELLS_PER_POINT / 2).div_euclid(CELLS_PER_POINT);
+        let index = (nearest(y) - self.min_py) * self.columns + nearest(x) - self.min_px;
+        self.terrains.get(index as usize).copied().flatten()
     }
 
     fn point(&self, px: i64, py: i64) -> i64 {

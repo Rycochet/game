@@ -1,9 +1,9 @@
 //! What steps on a level cost the player, as the server prices them: slopes in
-//! the wilderness, wading, jumps, and a sneaking pace while sneaking.
+//! the wilderness, wading, terrain, jumps, and a sneaking pace while sneaking.
 
 use shared::dungeon::Level;
 use shared::energy::{SITE_STEP_SCALE, sneak_step_energy};
-use shared::movement::{Gait, level_step_cost, wades};
+use shared::movement::{Gait, footing_on, level_step_cost};
 
 use crate::common::WildCellHeights;
 
@@ -21,8 +21,8 @@ impl LevelCosts<'_> {
     /// A step, in `step_cost` units, for routes: its distance, slope, wading
     /// and jumping.
     pub(super) fn cost(&self, from: (i64, i64), to: (i64, i64)) -> u32 {
-        let wading = wades(self.level, to);
-        level_step_cost(from, to, self.heights.ends(from, to), wading, self.gait)
+        let footing = footing_on(self.level, to, self.heights.terrain(to));
+        level_step_cost(from, to, self.heights.ends(from, to), footing, self.gait)
     }
 
     /// The energy a step takes: no quicker than a sneaking pace while sneaking.

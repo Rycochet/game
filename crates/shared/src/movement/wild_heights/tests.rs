@@ -1,5 +1,5 @@
 use super::*;
-use crate::movement::{WorldConditions, world_step_cost};
+use crate::movement::{Footing, WorldConditions, world_step_cost};
 use crate::world::{WorldParams, WorldSeed};
 
 fn ground() -> (WorldParams, WorldGround) {
@@ -66,6 +66,7 @@ fn the_sea_is_flat() {
         columns: 2,
         rows: 2,
         points: vec![-1000; 4],
+        terrains: Vec::new(),
         floor: -16,
         flats: Vec::new(),
     };
@@ -83,6 +84,7 @@ fn sixteen_cells_cost_what_a_world_map_step_does() {
         columns: 3,
         rows: 2,
         points: vec![0, 64, 128, 0, 64, 128],
+        terrains: Vec::new(),
         floor: -1000,
         flats: Vec::new(),
     };
@@ -96,8 +98,11 @@ fn sixteen_cells_cost_what_a_world_map_step_does() {
         (0, 0),
         (1, 0),
         (Some(0), Some(4)),
-        None,
-        false,
+        Footing {
+            road: None,
+            wet: false,
+            terrain: None,
+        },
         Gait::UNSKILLED,
     );
     assert_eq!(walked, 16 * world);

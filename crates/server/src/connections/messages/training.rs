@@ -5,10 +5,12 @@
 //! heavy load (`shared::movement`'s training settings), at
 //! most once per skill every 5 seconds, as blows are.
 
+use shared::dungeon::Cell;
 use shared::energy::level_step_energy;
 use shared::movement::{
-    Gait, JUMP_PRACTICE, MOVEMENT_SKILLS, RIVER_SWIM_PRACTICE, RUN_PRACTICE, SNEAK_PRACTICE,
-    SWIM_PRACTICE, WildHeights, climb_practice, climbed, is_jump, weight_practice, world_step_time,
+    Gait, JUMP_PRACTICE, MOVEMENT_SKILLS, PIONEER_PRACTICE, RIVER_SWIM_PRACTICE, RUN_PRACTICE,
+    SNEAK_PRACTICE, SWIM_PRACTICE, Terrain, WildHeights, climb_practice, climbed, footing_of,
+    is_jump, weight_practice, world_step_time,
 };
 use shared::protocol::ServerMessage;
 
@@ -30,6 +32,8 @@ pub(super) struct Moved {
     /// At a sneaking pace in the wilderness, watched by something wary:
     /// practises Sneaking.
     pub sneaked: bool,
+    /// The terrain it slowed over: practises its Pioneering skill.
+    pub terrain: Option<Terrain>,
 }
 
 impl Client {
@@ -43,30 +47,37 @@ impl Client {
         world: &ServerWorld,
         (from, to): ((i64, i64), (i64, i64)),
         wild: bool,
-        wading: bool,
+        landed_on: Option<Cell>,
     ) -> (bool, u32) {
-        let ends = wild.then(|| {
+        let heights = wild.then(|| {
             let corner = (from.0.min(to.0), from.1.min(to.1));
             let size = ((from.0 - to.0).abs() + 1, (from.1 - to.1).abs() + 1);
             let flats = self.visit.as_ref().map(|visit| visit.flats());
-            let heights = WildHeights::new(&world.ground, (corner.0, corner.1, size.0, size.1))
-                .with_flats(flats.unwrap_or_default());
-            (heights.at(from.0, from.1), heights.at(to.0, to.1))
+            WildHeights::new(&world.ground, (corner.0, corner.1, size.0, size.1))
+                .with_flats(flats.unwrap_or_default())
         });
+        let ends = heights
+            .as_ref()
+            .map(|heights| (heights.at(from.0, from.1), heights.at(to.0, to.1)));
+        let terrain = heights
+            .as_ref()
+            .and_then(|heights| heights.terrain(to.0, to.1));
+        let footing = footing_of(landed_on.unwrap_or(Cell::Floor), terrain);
         let gait = Gait::of(&self.sheet.skills);
         // 16ths of an elevation a cell: elevations per world map point, as
         // steepness counts there.
         let cells = (from.0 - to.0).abs().max((from.1 - to.1).abs()).max(1) as u32;
-        let cost = self.sneak_cost(level_step_energy(from, to, ends, wading, gait), cells);
+        let cost = self.sneak_cost(level_step_energy(from, to, ends, footing, gait), cells);
         let now = world.action_clock.ticks();
         let slow = self.learning.sneak.stepped(now, cells);
         let sneaked = wild && slow && self.watched(world);
         let moved = Moved {
             on_world_map: false,
             elevations: ends.map_or(0, |(a, b)| a.abs_diff(b) / cells),
-            swam: if wading { SWIM_PRACTICE } else { 0 },
+            swam: if footing.wades() { SWIM_PRACTICE } else { 0 },
             jumped: is_jump(from, to),
             sneaked,
+            terrain: footing.slowed_by(),
         };
         (self.practise_moving(moved, now), cost)
     }
@@ -84,9 +95,11 @@ impl Client {
         world.river_points.cover(&world.rivers, to);
         let road = world.road_steps.kind_of(from, to);
         // Swimming the sea, or wading a river.
-        let river = ends.1.is_none() || world.river_points.contains(to);
+        let on_river = world.river_points.contains(to);
+        let footing = world.ground.footing(to, world.conditions(), road, on_river);
+        let river = footing.wades();
         let gait = Gait::of(&self.sheet.skills);
-        let cost = world_step_time(from, to, ends, road, river, gait);
+        let cost = world_step_time(from, to, ends, footing, gait);
         let moved = Moved {
             on_world_map: true,
             elevations: climbed(ends),
@@ -97,6 +110,7 @@ impl Client {
             },
             jumped: false,
             sneaked: false,
+            terrain: footing.slowed_by(),
         };
         let now = world.action_clock.ticks();
         (self.practise_moving(moved, now), cost)
@@ -133,6 +147,15 @@ impl Client {
         let skills = &*MOVEMENT_SKILLS;
         let running = if moved.on_world_map { RUN_PRACTICE } else { 0 };
         let mut rusted = false;
+        if let Some(terrain) = moved.terrain {
+            let skill = terrain.skill();
+            let amount = self.learning.skills.take(skill, PIONEER_PRACTICE, now);
+            if amount > 0 {
+                self.sheet.skills.practise(skill, amount);
+                rusted |= self.sheet.skills.used(skill, played);
+                self.unsaved = true;
+            }
+        }
         for (skill, amount) in [
             (skills.running, running),
             (skills.climbing, climb_practice(moved.elevations)),

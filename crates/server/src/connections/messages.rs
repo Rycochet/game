@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::energy::{CHANGE_MAP_COST, site_step_cost};
-use shared::movement::{Step, wades};
+use shared::movement::Step;
 use shared::protocol::ServerMessage;
 use shared::world::WorldId;
 
@@ -158,7 +158,7 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
             let wild = visit.is_wilderness();
             let gait = shared::movement::Gait::of(&client.sheet.skills);
             let landing = visit.landing(step, gait);
-            let wading = landing.is_some_and(|at| wades(visit.cells(), at));
+            let landed_on = landing.map(|at| visit.cells().cell(at.0, at.1));
             // Someone who won't move aside is in the way; anyone else swaps places.
             if let Some(to) = landing {
                 let kind = client.inventory.creature;
@@ -176,7 +176,7 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
             world.swap_mob(place, to, from);
             // Where it led before any wrapping round the planet.
             let landed = landing.unwrap_or(to);
-            let (moved, cost) = client.level_step(world, (from, landed), wild, wading);
+            let (moved, cost) = client.level_step(world, (from, landed), wild, landed_on);
             (stayed && moved, cost)
         }
         None => {
