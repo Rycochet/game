@@ -9,11 +9,12 @@ use shared::wilderness::gates_of;
 
 use super::arrival::arrival;
 use super::in_poi::{poi_here, tell_poi};
+use super::town::send_town;
 use super::window::window;
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::sites::remembered::send_remembered;
-use crate::sites::{Mirror, Place, Visit, keepers_in_window, update_sight};
+use crate::sites::{Mirror, Place, Visit, keep_within, keepers_in_window, update_sight};
 use crate::storage::{CellMasks, SiteId};
 
 /// How far round where the player would arrive a walkable cell is looked for.
@@ -95,7 +96,7 @@ pub(in crate::sites) fn enter_wilderness(
     client.character.hall = None;
     client.visit = Some(visit);
     client.unsaved = true;
-    update_sight(client)
+    send_town(client) && update_sight(client)
 }
 
 /// After a step in the wilderness: keeps the window round the player, and
@@ -121,7 +122,7 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
         return false;
     }
     if wild.block_of(x, y) == centre {
-        return true;
+        return send_town(client);
     }
     let made = window(world, (x, y));
     let Some(visit) = &mut client.visit else {
@@ -146,6 +147,8 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     visit.stairs = made.stairs;
     visit.mirrors = made.mirrors;
     let bounds = visit.level.level.bounds();
+    // The client lets go of what is outside the window now.
+    keep_within(&mut visit.sent, bounds);
     let mirrors = visit.mirrors.clone();
     if !client
         .link
@@ -158,7 +161,7 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     let mut visit = client.visit.take().expect("checked above");
     let sent = send_remembered(client, &mut visit);
     client.visit = Some(visit);
-    sent && update_sight(client)
+    sent && send_town(client) && update_sight(client)
 }
 
 /// The player has stepped onto a World Gate's cell: through it into the Hall

@@ -29,7 +29,9 @@ mod trade;
 mod up_down;
 mod wild;
 
-use cells::{add_masks, all_cells, beside, level_chunks, nearby_cells, send_cells};
+use cells::{
+    add_masks, all_cells, beside, cells_in, keep_within, level_chunks, nearby_cells, send_cells,
+};
 pub(super) use dev_area::generate_area;
 use enter::enter_site;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};
@@ -262,10 +264,6 @@ enum Arrival {
     From(Exit),
     /// Back where they were (a saved visit), if it is still walkable.
     At((i64, i64)),
-    /// Where they last walked out of the site, if it is still walkable and
-    /// their map of the site is still the one they had: otherwise at its
-    /// entrance, on its first level.
-    LeftAt((i64, i64)),
 }
 
 #[cfg(test)]

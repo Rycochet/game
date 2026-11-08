@@ -1,6 +1,6 @@
 # client: site
 
-Moving between maps: entering a world map poi's site, taking stairs between its levels, and leaving. The server decides all of it (it has the sites; the client doesn't): this module asks, then applies the answers. Drawing (stairs included) is `dungeon_map`.
+Moving between maps: entering a world map poi (into the wilderness where it is set in, as the server decides), taking stairs between its levels, and leaving. The server decides all of it (it has the sites; the client doesn't): this module asks, then applies the answers. Drawing (stairs included) is `dungeon_map`.
 
 ## Files
 

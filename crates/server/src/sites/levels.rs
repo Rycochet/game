@@ -125,8 +125,8 @@ pub(super) fn enter_level(
     saved.or_default().last_visit = now();
     let site = &new.site;
     let position = match arrival {
-        Arrival::At((x, y)) | Arrival::LeftAt((x, y)) if level.level.is_walkable(x, y) => (x, y),
-        Arrival::At(_) | Arrival::LeftAt(_) => level.arrive(Exit::WorldMap),
+        Arrival::At((x, y)) if level.level.is_walkable(x, y) => (x, y),
+        Arrival::At(_) => level.arrive(Exit::WorldMap),
         Arrival::From(from) => level.arrive(from),
     };
     world.move_mob_aside((new.id, index), position);

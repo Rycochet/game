@@ -44,7 +44,7 @@ fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window
     let centre = wild.block_of(x, y);
     let (bx, by, columns, rows) = wild.block_bounds(centre);
     let reach = blocks * BLOCK_SIZE;
-    let frame = Frame {
+    let mut frame = Frame {
         // The player's x less where it is round the planet.
         shift: x - wild.wrap(x),
         width,
@@ -68,6 +68,8 @@ fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window
     for &chunk in chunks.iter().chain(&chunks) {
         ensure_chunk(world, chunk);
     }
+    frame.bounds = with_towns(world, &frame, &chunks);
+    let (min_x, min_y, columns, rows) = frame.bounds;
     let mut level = Level::new(min_x, min_y, columns, rows);
     for cy in min_y..min_y + rows {
         for cx in min_x..min_x + columns {
@@ -126,6 +128,46 @@ impl Frame {
     }
 }
 
+/// How far along a cutout at `bounds` round the planet is in the window's
+/// frame, if it lies in the window at all. Cutouts are kept inside their
+/// chunk, which never lies across the seam.
+fn turn_of(frame: &Frame, (min_x, min_y, columns, rows): (i64, i64, i64, i64)) -> Option<i64> {
+    let (wx, wy, wc, wr) = frame.bounds;
+    [-frame.width, 0, frame.width]
+        .into_iter()
+        .map(|turn| turn + frame.shift)
+        .find(|&turn| {
+            min_x + turn < wx + wc
+                && min_x + columns + turn > wx
+                && min_y < wy + wr
+                && min_y + rows > wy
+        })
+}
+
+/// The window's bounds grown to take in the whole of any town set in that
+/// lies partly in it, so all of it can be sent (towns are known whole) and
+/// kept by the client while it is near.
+fn with_towns(world: &ServerWorld, frame: &Frame, chunks: &[ChunkPos]) -> (i64, i64, i64, i64) {
+    let (mut min_x, mut min_y, columns, rows) = frame.bounds;
+    let (mut max_x, mut max_y) = (min_x + columns, min_y + rows);
+    for &chunk in chunks {
+        let Some(wild_chunk) = world.wilderness.chunk(chunk) else {
+            continue;
+        };
+        let Some(cutout) = wild_chunk.plan.cutout() else {
+            continue;
+        };
+        let bounds = cutout.level().bounds();
+        let Some(turn) = turn_of(frame, bounds).filter(|_| !wild_chunk.town.is_empty()) else {
+            continue;
+        };
+        let (x, y, town_columns, town_rows) = bounds;
+        (min_x, min_y) = (min_x.min(x + turn), min_y.min(y));
+        (max_x, max_y) = (max_x.max(x + turn + town_columns), max_y.max(y + town_rows));
+    }
+    (min_x, min_y, max_x - min_x, max_y - min_y)
+}
+
 /// A chunk's cutout in the window: its stairs, the poi it shows, and its
 /// site's first level's changes, kept for both.
 fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &mut Window) {
@@ -136,18 +178,7 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
         return;
     };
     let (min_x, min_y, columns, rows) = cutout.level().bounds();
-    // Cutouts are kept inside their chunk, which never lies across the seam.
-    let turn = [-frame.width, 0, frame.width]
-        .into_iter()
-        .map(|turn| turn + frame.shift)
-        .find(|&turn| {
-            let (wx, wy, wc, wr) = frame.bounds;
-            min_x + turn < wx + wc
-                && min_x + columns + turn > wx
-                && min_y < wy + wr
-                && min_y + rows > wy
-        });
-    let Some(turn) = turn else {
+    let Some(turn) = turn_of(frame, cutout.level().bounds()) else {
         return;
     };
     let bounds = (min_x + turn, min_y, columns, rows);

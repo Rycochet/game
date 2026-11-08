@@ -60,8 +60,9 @@ pub enum ClientMessage {
     /// (`EnterLevel`, `OnWorldMap`) since `Welcome`, so a step meant for the
     /// last map is ignored on the next; `number` counts the client's steps.
     Step { map: u32, number: u32, step: Step },
-    /// Go into the site of the poi in this world map chunk (the player
-    /// must be at it).
+    /// Go into the poi in this world map chunk (the player must be near
+    /// enough, `poi::can_enter_from`): into the wilderness where it is set
+    /// in, at its entrance or where they last walked out of it.
     EnterSite { chunk: ChunkPos },
     /// Use what the player stands on: stairs, or outside ground at the edge
     /// of the level (back to the world map).

@@ -63,25 +63,34 @@ fn a_site_mob_killed_in_the_wilderness_stays_dead_in_its_site() {
     let wild = test.world.site(SiteId::Wilderness).levels.get(&0);
     assert!(wild.is_none_or(|level| !level.dead.contains(&dead.number)));
 
-    // Out to the world map and into the farm: the others come home to it,
-    // and nobody is in two places.
+    // Out to the world map and into the farm again, by a click: in the
+    // wilderness, with the others back and the dead one still gone.
     test.send(&[ClientMessage::Up]);
     keep_wild_areas(std::slice::from_mut(&mut test.client), &mut test.world);
+    test.client.character.world_position = (farm.x, farm.y);
     test.send(&[ClientMessage::EnterSite { chunk: farm.chunk }]);
-    let visit = test.client.visit.as_ref().expect("in the farm");
-    assert_eq!(visit.population(), (id, 0));
-    let numbers: Vec<u32> = test.world.populations.0[&(id, 0)]
-        .mobs
-        .iter()
-        .map(|mob| mob.number)
-        .collect();
+    keep_wild_areas(std::slice::from_mut(&mut test.client), &mut test.world);
+    let numbers: Vec<u32> = farm_mobs(&test, &farm).iter().map(|m| m.number).collect();
     assert!(!numbers.contains(&dead.number), "still dead");
     for mob in alive {
-        assert!(numbers.contains(&mob.number), "home again");
+        assert!(numbers.contains(&mob.number), "about again");
     }
-    let kept = test.world.wilderness.areas.kept.values();
-    assert!(
+}
+
+#[test]
+fn a_site_visit_takes_back_its_mobs_resting_in_the_wilderness() {
+    let (mut test, farm) = at_a_farm();
+    let id = SiteId::Poi(farm.chunk);
+    test.send(&[ClientMessage::Up]);
+    keep_wild_areas(std::slice::from_mut(&mut test.client), &mut test.world);
+    let kept = |test: &TestClient| {
+        let kept = test.world.wilderness.areas.kept.values();
         kept.flat_map(|(mobs, _)| mobs)
-            .all(|mob| mob.kept_in != Some(id))
-    );
+            .filter(|mob| mob.kept_in == Some(id))
+            .count()
+    };
+    assert!(kept(&test) > 0, "resting where they were");
+    let about = take_site_mobs_back(&mut test.world, id);
+    assert!(about.is_empty(), "nobody is about");
+    assert_eq!(kept(&test), 0, "home to the farm's own visit");
 }

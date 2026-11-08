@@ -4,13 +4,14 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 
 ## Files
 
-- `crates/shared/src/poi.rs`: `PoiMap`, `Poi`, `PoiKind`, `ChunkPos`, constants. Golden and invariant tests. In `poi/`: `kind.rs`, `chunk.rs` (`ChunkPos`, `Poi`), `poi_map.rs`, `in_chunk.rs` (a chunk's poi, towns), `area.rs`.
+- `crates/shared/src/poi.rs`: `PoiMap`, `Poi`, `PoiKind`, `ChunkPos`, constants. Golden and invariant tests. In `poi/`: `kind.rs`, `chunk.rs` (`ChunkPos`, `Poi`), `poi_map.rs`, `in_chunk.rs` (a chunk's poi, towns), `area.rs`, `enter.rs` (`ENTER_DISTANCE`, `can_enter_from`).
 
 ## Public API
 
 - Constants: `CHUNK_SIZE` (64 grid points), `EDGE_MARGIN` (8: pois stand at least this far inside their chunk, so two are at least 16 apart, a token's width), `POI_CHANCE_PERCENT` (80, the owner's choice), `LAND_TRIES` (8 random spots tried for dry land; a chunk with none has no poi, so seas and coasts have fewer). In desert (`Biome::Desert` where it stands) only one chunk in `DESERT_KEEPS_ONE_IN` (4, owner) keeps its poi, by a hash of its own; no poi stands past the ice (`WorldGround::past_the_ice`, 80°).
 - `PoiKind`: 40 kinds: 34 (`Boulders` … `Mausoleum`) named after the tiles `l2_terrain066`–`099` and in their order, all equally likely, then the towns (`Hamlet`, `Village`, `Town`, `City`; `is_town()`) and `Farm` and `HerbalistHut`, with their own odds; `ALL`.
 - `ChunkPos { x, y }`: chunk `x` is always `0..columns()` (wraps), `y` unbounded. `PoiKind`, `ChunkPos` and `Poi` are serde-serialisable (sent in `protocol::WorldChunk`).
+- `ENTER_DISTANCE` (11) and `can_enter_from(&poi, (x, y), width)`: how near a poi's middle a player must stand on the world map to go into it, by Down or a click (a straight line, the near way round): the player's and pois' tokens are 16 points across, and at 11 apart about a fifth of their area overlaps (owner). The server checks it; Down goes into the nearest such poi the player knows of.
 - `Poi { kind, chunk, x, y, seed, desert }`: `x, y` its exact world grid position; `seed` is what its map is generated from; `desert` whether it stands in desert, where more are ruined (`Generator::for_site`).
 - `PoiMap::new(&WorldParams, pois_seed)` (the secret `WorldSeed::pois`; keeps its own `Surface`, and finds the world's World Gates with it), `.world_gates()` (their chunks have no other poi), `.width()`, `.columns()`, `.chunk_at(x, y)`, `.in_chunk(chunk) -> Option<Poi>` (`x` in `0..width`), `.in_area(min, max) -> Vec<Poi>` (inclusive, any planet-width frame; results in the caller's frame, sorted by `(y, x)`), `.chunks_in_area(min, max) -> Vec<ChunkPos>` (every chunk touching the area, wrapped, sorted).
 

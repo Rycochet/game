@@ -1,8 +1,7 @@
 //! Entering a site: from a poi, by a dev tool, or again after loading a save.
 
 use bevy::prelude::*;
-use shared::poi::{ChunkPos, Poi, PoiKind};
-use shared::protocol::ENTER_REACH;
+use shared::poi::{ChunkPos, Poi, PoiKind, can_enter_from};
 use shared::rng::Seed;
 use shared::site::{Exit, Generator, MAX_RUIN, Site};
 
@@ -12,29 +11,24 @@ use crate::connections::Client;
 use crate::storage::{SiteId, VisitSave};
 use crate::world_map::{self};
 
-/// Enters the site of the poi in `chunk`, if the player is at it.
+/// Goes into the poi in `chunk`, if the player is near enough to it on the
+/// world map (`poi::can_enter_from`): into the wilderness, where its first
+/// level is set in, at its entrance or where they last walked out of it
+/// (`wild::poi_arrival`).
 pub(crate) fn enter_poi(client: &mut Client, world: &mut ServerWorld, chunk: ChunkPos) -> bool {
     let Some(poi) = world_map::known_poi(client, world, chunk) else {
         warn!("A client tried to enter {chunk:?}, with no poi it knows of");
         return true;
     };
-    let (x, y) = client.world_position();
-    // East-west, the nearer way round the planet.
-    let dx = (poi.x - x).rem_euclid(world.width);
-    let near = dx.min(world.width - dx) <= ENTER_REACH && (poi.y - y).abs() <= ENTER_REACH;
+    let near = can_enter_from(&poi, client.world_position(), world.width);
     if client.visit.is_some() || client.character.hall.is_some() || !near {
         warn!("A client tried to enter {chunk:?} from elsewhere");
         return true;
     }
     client.character.pois.entry(chunk).or_default().visited = true;
     client.unsaved = true;
-    let id = SiteId::Poi(chunk);
-    // Back where they last walked out, if they have been in before.
-    let (index, arrival) = match client.character.left_at.get(&id) {
-        Some(&(index, cell)) => (index, Arrival::LeftAt(cell)),
-        None => (0, Arrival::From(Exit::WorldMap)),
-    };
-    enter_site(client, world, poi, id, index, arrival, false)
+    let at = super::wild::poi_arrival(client, world, &poi);
+    super::wild::enter_wilderness(client, world, at)
 }
 
 /// Developer tools: enters a made-up site at any level, where the player
@@ -120,16 +114,21 @@ pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitS
         info!("A character was in {id:?}, which has changed: putting them out");
         return leave_for_poi(client, world, poi, id);
     }
+    // Saved before entering a poi went into the wilderness: a first level
+    // set in is the wilderness's now, and leaving any other goes there.
+    if let SiteId::Poi(chunk) = id
+        && saved.level == 0
+    {
+        super::wild::ensure_chunk(world, chunk);
+        let cutout = world.wilderness.chunk(chunk).and_then(|c| c.plan.cutout());
+        if let Some((ox, oy)) = cutout.and_then(|cutout| cutout.offset()) {
+            let (x, y) = saved.position;
+            return super::wild::enter_wilderness(client, world, (x + ox, y + oy));
+        }
+    }
+    let from_wilderness = saved.from_wilderness || matches!(id, SiteId::Poi(_));
     let at = Arrival::At(saved.position);
-    enter_site(
-        client,
-        world,
-        poi,
-        id,
-        saved.level,
-        at,
-        saved.from_wilderness,
-    )
+    enter_site(client, world, poi, id, saved.level, at, from_wilderness)
 }
 
 /// Generates a site with the generator version it was first made with. If this
@@ -159,8 +158,8 @@ pub(super) fn enter_site(
     world: &mut ServerWorld,
     poi: Poi,
     id: SiteId,
-    mut index: u32,
-    mut arrival: Arrival,
+    index: u32,
+    arrival: Arrival,
     from_wilderness: bool,
 ) -> bool {
     if let Err(error) = world.open_site(id) {
@@ -176,10 +175,6 @@ pub(super) fn enter_site(
         client.character.memory.remove(&id);
         client.character.bags.remove(&id);
         client.character.left_at.remove(&id);
-        // Where they walked out was on another map.
-        if let Arrival::LeftAt(_) = arrival {
-            (index, arrival) = (0, Arrival::From(Exit::WorldMap));
-        }
     }
     client.unsaved = true;
     let index = index.min(site.levels() - 1);

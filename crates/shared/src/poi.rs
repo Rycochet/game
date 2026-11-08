@@ -10,11 +10,13 @@
 // Split into files (`cargo xtask lint` keeps files small).
 mod area;
 mod chunk;
+mod enter;
 mod in_chunk;
 mod kind;
 mod poi_map;
 
 pub use chunk::{ChunkPos, Poi};
+pub use enter::{ENTER_DISTANCE, can_enter_from};
 pub use kind::PoiKind;
 pub use poi_map::PoiMap;
 

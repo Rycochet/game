@@ -12,15 +12,19 @@ mod chunks;
 mod exits;
 mod explore;
 mod in_poi;
+mod town;
 mod window;
 
 #[cfg(test)]
 mod arrival_tests;
 #[cfg(test)]
+mod enter_tests;
+#[cfg(test)]
 mod shop_tests;
 #[cfg(test)]
 mod tests;
 
+pub(super) use arrival::poi_arrival;
 pub(super) use chunks::ensure_chunk;
 pub(crate) use exits::leave_by_key;
 pub(super) use exits::{back_to_wilderness, into_site};
