@@ -98,7 +98,7 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             Action::EnterGate { entrance } => (gates::enter_gate(client, world, entrance), 0),
             Action::UseExit => (sites::use_exit(client, world), 0),
             Action::Explore => (sites::explore(client, world), 0),
-            Action::LeaveWilderness => (sites::leave_wilderness(client, world), 0),
+            Action::Leave => (sites::leave_by_key(client, world), 0),
             Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
             Action::Ground(action) => ground::act(client, world, action),
             Action::UseAbility { ability, target } => {

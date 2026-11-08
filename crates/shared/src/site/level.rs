@@ -1,9 +1,10 @@
 //! One generated level of a site, and the ways out of it.
 
-use super::Stairs;
 use super::farm::FieldLook;
 use super::town::TownBuilding;
+use super::{Generator, Stairs};
 use crate::dungeon::Level;
+use crate::poi::PoiKind;
 
 /// Where a way out of a level leads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -27,6 +28,9 @@ pub struct SiteLevel {
     pub fields: Vec<FieldLook>,
 }
 
+#[cfg(test)]
+mod tests;
+
 /// Whether walking to `(x, y)` leaves for the world map: outside ground or
 /// road on the very edge of the level (beside the edge, not just any ground).
 pub fn leads_out(level: &Level, x: i64, y: i64) -> bool {
@@ -35,6 +39,20 @@ pub fn leads_out(level: &Level, x: i64, y: i64) -> bool {
         && super::grid::STEPS
             .iter()
             .any(|(dx, dy)| !level.contains(x + dx, y + dy))
+}
+
+/// Whether the Leave key takes the player at `(x, y)` on level `index` of a
+/// site behind a poi of `kind` out to the world map (owner's rules): only on
+/// the level entered from the world map, from any outside cell, but in a cave
+/// only from its edge (`leads_out`), not a skylight or ground inside the hill.
+pub fn can_leave(kind: PoiKind, index: u32, level: &Level, x: i64, y: i64) -> bool {
+    if index != 0 {
+        return false;
+    }
+    match Generator::for_poi(kind) {
+        Generator::Cave(_) => leads_out(level, x, y),
+        _ => level.cell(x, y).is_outside(),
+    }
 }
 
 impl SiteLevel {

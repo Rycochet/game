@@ -939,7 +939,7 @@ Since 2026-11-07 (owner's request) the nightly image is no longer the same image
 
 ## 2026-11-06: The wilderness on the client
 
-Exploring and leaving are actions like any other (`Action::Explore`, Shift + ., and `Action::LeaveWilderness`, Shift + ,: `>` and `<` on UK and US keyboards), rebindable in Settings. With touch on, an Explore or Leave button sits at the bottom middle: a stopgap until the owner's better plans for touch. The wilderness is drawn as any level, with its ground tinted cell by cell in the land's colours (as the world map has them) and shallows drawn as water always half deep. A town set into it is drawn as a town from the buildings sent with the window.
+Exploring and leaving are actions like any other (`Action::Explore`, Shift + ., and `Action::Leave`, Shift + ,: `>` and `<` on UK and US keyboards), rebindable in Settings. An Explore or Leave button sits at the bottom middle whenever it would work (see 2026-11-08): a stopgap until the owner's better plans for touch. The wilderness is drawn as any level, with its ground tinted cell by cell in the land's colours (as the world map has them) and shallows drawn as water always half deep. A town set into it is drawn as a town from the buildings sent with the window.
 
 ## 2026-11-06: Editing in text boxes
 
@@ -1082,3 +1082,7 @@ Owner's request. The Skills page is the Character panel's fourth tab (K), no lon
 ## 2026-11-07: Putting something on swaps out what is in its way
 
 Owner's request. A player putting something on takes off whatever on its layer is in its way into their inventory, even several things for one, by `shared::wear::wear_swapping`, which both sides use. It is refused, changing nothing, if any of that is covered, won't come off or has no room, and the player is told why (`ServerMessage::NotWorn`, shown under the clothes). Mobs still dress by the plain rule.
+
+## 2026-11-08: Leaving a site from anywhere outside
+
+Owner's request. The Leave key (`<`) leaves any site for the world map from an outside cell of the level entered from the world map (a town's middle, a building's yard, a farm's fields), but a cave only from the edge of its map, so skylights and the ground inside its hill don't count. One shared rule, `shared::site::can_leave`, for the server's check and the client's button. Leaving this way records the cell in `left_at` as walking out does, so coming back in arrives there. The Explore and Leave buttons show whenever they would work, with or without touch. Claude's choices: the action and message are renamed `Leave` (the saved key binding keeps the id `leave_wilderness`, and the buttons their widget ids); the Leave button in the wilderness doesn't know when the tide has made the world map water there, so the server may still refuse it then.

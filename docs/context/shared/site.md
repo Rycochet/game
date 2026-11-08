@@ -4,7 +4,7 @@ Sites: the maps world map pois lead to (buildings, caves, crypts, towns, farms, 
 
 ## Files
 
-- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_poi`: the kind → generator table). Tests: only runnable versions make sites, connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`HOW_DEBUG_SITE_KINDS=20,4 HOW_DEBUG_SITE_SEED=1 HOW_DEBUG_SITE_RUIN=0 cargo test -p shared print_sites -- --ignored --nocapture`). In `site/`: `level.rs` (`SiteLevel`, `Exit`, `leads_out`), `stairs.rs`, `site.rs` (`Site` and its plan), `descent.rs` (where stairs down lead), `generator.rs` (`Generator`, ruin), `for_poi.rs` (the kind → generator table), `versions.rs` (`FORGET_BEFORE`, generator versions), `poi_look.rs` (`PoiLook`).
+- `crates/shared/src/site/mod.rs`: `Site`, `SiteLevel`, `Stairs`, `StairsDirection`, `Exit`, `Generator` (with `for_poi`: the kind → generator table). Tests: only runnable versions make sites, connectivity and matching stairs for every kind, buildings' doors and wall thickness, caves never rectangular, rooms marked, golden fingerprints; an ignored `print_sites` test prints levels as text (`HOW_DEBUG_SITE_KINDS=20,4 HOW_DEBUG_SITE_SEED=1 HOW_DEBUG_SITE_RUIN=0 cargo test -p shared print_sites -- --ignored --nocapture`). In `site/`: `level.rs` (`SiteLevel`, `Exit`, `leads_out`, `can_leave`), `stairs.rs`, `site.rs` (`Site` and its plan), `descent.rs` (where stairs down lead), `generator.rs` (`Generator`, ruin), `for_poi.rs` (the kind → generator table), `versions.rs` (`FORGET_BEFORE`, generator versions), `poi_look.rs` (`PoiLook`).
 - `crates/shared/src/site/building.rs`: `BuildingOptions`, `Outline`, the building `Plan` (outlines per floor, stairs) and BSP floor generation. In `building/`: `options.rs`, `shape.rs`, `plan.rs` (`Plan::new`), `floors.rs` (each floor's level, basement, stilts), `fill.rs` (rooms, pillars, windows), `splitter.rs` (BSP), `doors.rs`, `entrances.rs`.
 - `crates/shared/src/site/ruin.rs`: damage to a building's finished floors (`MAX_RUIN`, `ruin_floors`). Tests: floorplan kept, eaten ground floor connected, upper floors supported, stairs kept and connected, floors dropped.
 - `crates/shared/src/site/cave.rs`: `CaveOptions`, `CaveEntrance`, the cave `Plan` and level generation. In `cave/`: `options.rs`, `plan.rs`, `level.rs` (one level, skylights), `outcrop.rs` (a cave mouth's level as a hill), `place.rs`, `dig.rs`, `join.rs` (winding passages), `mouths.rs`, `doors.rs`, `pool.rs`.
@@ -19,6 +19,7 @@ Sites: the maps world map pois lead to (buildings, caves, crypts, towns, farms, 
 
 - `Site::new(kind, seed)` (the generator's current version), `Site::with_version(kind, seed, version) -> Option<Site>` (`None` if that version can't run any more), `Site::with_generator(kind, seed, version, generator)` (the same with other options, such as a ruined building), `.kind()`, `.is_ruined()` (named as a ruin), `.is_building()` (floors go up; otherwise levels go down), `.has_basement()` (its last level is below the ground, whatever its index says), `.levels()`, `.level(index) -> SiteLevel` (0 is the one entered from the world map).
 - `leads_out(level, x, y)`: whether arriving there leaves for the world map: `Ground` or road on the very edge of the level (beside its rectangle's edge).
+- `can_leave(kind, index, level, x, y)`: whether the Leave key (`<`) takes the player out from there (owner's rule): on level 0 only, from any outside cell (`Cell::is_outside`), but in a cave only where `leads_out` (not a skylight or ground inside the hill).
 - `SiteLevel { level, stairs, entrance, buildings, fields }` (`buildings`: a town's, `fields`: a farm's ground floor's, empty elsewhere); `arrival(from: Exit)`: where you arrive coming from the world map (the entrance) or another level (the stairs leading back there); `arrive(from)`: the same, falling back to the first stairs or the entrance (dev tools' jumps between levels).
 - `Site::stairs_descend(index, level, stairs) -> (dx, dy)`: the way a staircase goes down, agreeing with the other end (generates the other level to look). Only for looks; moved here from the client so the server can send it.
 - `Site::stairs_style(index, stairs) -> StairsStyle`: what a staircase is built as (`Spiral`, `Turning`, `Ladder`, `LogLadder`, `RopeLadder`, `SlatLadder`, `KnottedRope`): from a hash of the seed and the upper level joined, among those suiting the kind (`StairsStyle::choices`), the same at both ends. Only for looks; draws nothing from the generators' sequences, so sites and their golden tests are unchanged.
@@ -42,7 +43,7 @@ Sites: the maps world map pois lead to (buildings, caves, crypts, towns, farms, 
 
 ## Used by
 
-- `server` (`sites`: everything about sites), `shared::protocol` (`StairsDirection`); client `site` (`leads_out`), `dungeon_map` (`StairsDirection`).
+- `server` (`sites`: everything about sites), `shared::protocol` (`StairsDirection`); client `site` (`leads_out`, `can_leave`), `dungeon_map` (`StairsDirection`).
 
 ## Notes
 

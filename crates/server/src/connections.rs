@@ -169,7 +169,7 @@ enum Action {
     },
     UseExit,
     Explore,
-    LeaveWilderness,
+    Leave,
     OpenTrade {
         with: Id,
     },

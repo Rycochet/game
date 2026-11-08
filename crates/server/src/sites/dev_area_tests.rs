@@ -161,7 +161,7 @@ fn the_leave_key_goes_back_from_anywhere_in_an_area() {
     generate(&mut test, area(4, DevMobs::None));
     test.send(&[ClientMessage::DevTeleport { x: 20, y: 5 }]);
     assert_eq!(in_area(&test).1, (20, 5), "off the stairs");
-    let answers = test.send(&[ClientMessage::LeaveWilderness]);
+    let answers = test.send(&[ClientMessage::Leave]);
     assert!(
         answers
             .iter()
@@ -196,7 +196,7 @@ fn areas_round_sites_and_biomes_are_entered_with_their_own_mobs() {
         let level = test.client.visit.as_ref().unwrap().level.clone();
         let mobs = &test.world.populations.0[&(SiteId::DevArea(made), 0)].mobs;
         assert_eq!(mobs.len(), made.spawns(&level).len(), "{layout:?}");
-        test.send(&[ClientMessage::LeaveWilderness]);
+        test.send(&[ClientMessage::Leave]);
         assert!(test.client.visit.is_none(), "{layout:?}");
     }
 }

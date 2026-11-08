@@ -101,7 +101,7 @@ fn walking_moves_the_window_and_leaving_comes_out_where_the_player_is() {
     assert!(windows >= 1);
     let at = test.world.wilderness.wild.point_of(x, y);
     assert_eq!(test.client.world_position(), at);
-    let answers = test.send(&[ClientMessage::LeaveWilderness]);
+    let answers = test.send(&[ClientMessage::Leave]);
     assert!(test.client.visit.is_none(), "{answers:?}");
     assert!(answers.contains(&ServerMessage::OnWorldMap { x: at.0, y: at.1 }));
 }
@@ -128,7 +128,7 @@ fn changes_are_kept_by_place_and_leaving_is_only_from_outside() {
             x: beside.0,
             y: beside.1,
         },
-        ClientMessage::LeaveWilderness,
+        ClientMessage::Leave,
     ]);
     assert!(
         test.client
