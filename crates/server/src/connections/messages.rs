@@ -96,9 +96,13 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             }
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
             Action::EnterGate { entrance } => (gates::enter_gate(client, world, entrance), 0),
+            Action::UseExit | Action::Down | Action::Up if client.sheet.vitals.fighting(tick) => {
+                info!("Refused changing floors while fighting");
+                (true, 0)
+            }
             Action::UseExit => (sites::use_exit(client, world), 0),
-            Action::Explore => (sites::explore(client, world), 0),
-            Action::Leave => (sites::leave_by_key(client, world), 0),
+            Action::Down => (sites::go_down(client, world), 0),
+            Action::Up => (sites::go_up(client, world), 0),
             Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
             Action::Ground(action) => ground::act(client, world, action),
             Action::UseAbility { ability, target } => {

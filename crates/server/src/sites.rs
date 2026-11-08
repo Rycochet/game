@@ -25,6 +25,7 @@ mod place;
 mod remembered;
 mod sight;
 mod trade;
+mod up_down;
 mod wild;
 
 use cells::{add_masks, all_cells, beside, level_chunks, nearby_cells, send_cells};
@@ -41,6 +42,7 @@ use place::{Mirror, Place};
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
+pub(super) use up_down::{go_down, go_up};
 pub(super) use wild::{area_level, explore, follow, leave_by_key};
 
 /// How far in a town others can be made out, in cells.
@@ -273,3 +275,5 @@ mod leave_key_tests;
 mod left_at_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod up_down_tests;

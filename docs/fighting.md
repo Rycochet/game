@@ -61,7 +61,7 @@ Armour doesn't protect you yet. Parrying and blocking with a shield are planned.
 
 ## Health
 
-Your Health is the red half of the circle at the bottom of the screen, and comes mostly from Toughness. Anyone who is hurt shows a red bar under their token until they are whole again. Out of a fight for 10 seconds, Health refills, from empty to full in about five minutes. Mana, the blue half, comes mostly from Will and refills all the time, fighting or not, at the same pace.
+Your Health is the red half of the circle at the bottom of the screen, and comes mostly from Toughness. Anyone who is hurt shows a red bar under their token until they are whole again. You can't take stairs or leave a place in a fight. Out of a fight for 10 seconds, Health refills, from empty to full in about five minutes. Mana, the blue half, comes mostly from Will and refills all the time, fighting or not, at the same pace.
 
 ## Holding weapons
 

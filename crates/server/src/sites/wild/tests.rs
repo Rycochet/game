@@ -10,7 +10,7 @@ use crate::storage::SiteId;
 /// A client who has just explored the wilderness from where they started.
 fn explored() -> (TestClient, Vec<ServerMessage>) {
     let mut test = TestClient::new();
-    let answers = test.send(&[ClientMessage::Explore]);
+    let answers = test.send(&[ClientMessage::Down]);
     (test, answers)
 }
 
@@ -40,7 +40,7 @@ fn on_cutout_stairs(wanted: impl Fn(&Cutout) -> bool) -> (TestClient, ChunkPlan)
     let plan = chunk_near_start(&test, wanted);
     let cutout = plan.cutout().unwrap();
     test.client.character.world_position = (cutout.poi().x, cutout.poi().y);
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     let stairs = cutout.stairs()[0];
     test.send(&[ClientMessage::DevTeleport {
         x: stairs.x,
@@ -54,7 +54,7 @@ fn on_cutout_stairs(wanted: impl Fn(&Cutout) -> bool) -> (TestClient, ChunkPlan)
 fn exploring_starts_where_the_player_stands_and_remembers_what_is_seen() {
     let mut test = TestClient::new();
     let start = test.client.world_position();
-    let answers = test.send(&[ClientMessage::Explore]);
+    let answers = test.send(&[ClientMessage::Down]);
     let info = answers.iter().find_map(|answer| match answer {
         ServerMessage::EnterLevel(info) => Some(info),
         _ => None,
@@ -101,7 +101,7 @@ fn walking_moves_the_window_and_leaving_comes_out_where_the_player_is() {
     assert!(windows >= 1);
     let at = test.world.wilderness.wild.point_of(x, y);
     assert_eq!(test.client.world_position(), at);
-    let answers = test.send(&[ClientMessage::Leave]);
+    let answers = test.send(&[ClientMessage::Up]);
     assert!(test.client.visit.is_none(), "{answers:?}");
     assert!(answers.contains(&ServerMessage::OnWorldMap { x: at.0, y: at.1 }));
 }
@@ -128,7 +128,7 @@ fn changes_are_kept_by_place_and_leaving_is_only_from_outside() {
             x: beside.0,
             y: beside.1,
         },
-        ClientMessage::Leave,
+        ClientMessage::Up,
     ]);
     assert!(
         test.client
@@ -195,7 +195,7 @@ fn exploring_from_water_or_a_site_is_refused() {
         level: 0,
         ruin: 0,
     }]);
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     assert!(!test.client.visit.as_ref().unwrap().is_wilderness());
     let mut test = TestClient::new();
     let (x, y) = test.client.world_position();
@@ -209,7 +209,7 @@ fn exploring_from_water_or_a_site_is_refused() {
         })
         .expect("sea somewhere east");
     test.client.character.world_position = water;
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     assert!(test.client.visit.is_none());
     assert_eq!(SCALE, 16);
 }
@@ -220,7 +220,7 @@ fn a_town_set_into_the_wilderness_has_its_buildings_sent() {
     let plan = chunk_near_start(&test, |c| c.poi().kind.is_town());
     let cutout = plan.cutout().unwrap();
     test.client.character.world_position = (cutout.poi().x, cutout.poi().y);
-    let answers = test.send(&[ClientMessage::Explore]);
+    let answers = test.send(&[ClientMessage::Down]);
     let buildings = answers.iter().find_map(|answer| match answer {
         ServerMessage::Buildings(buildings) => Some(buildings),
         _ => None,
@@ -249,7 +249,7 @@ fn a_road_found_runs_through_the_wilderness() {
         points: (px - 8..=px + 8).map(|x| (x, py)).collect(),
     };
     test.world.wilderness.add_road(std::sync::Arc::new(road));
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     let visit = test.client.visit.as_ref().unwrap();
     let level = &visit.level.level;
     let (min_x, min_y, width, height) = level.bounds();
@@ -264,7 +264,7 @@ fn a_road_found_runs_through_the_wilderness() {
 fn stepping_onto_a_world_gate_goes_through_it() {
     // New characters arrive at a World Gate.
     let mut test = TestClient::new();
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     let wild = &test.world.wilderness.wild;
     let (x, y) = position(&test);
     let gates = shared::wilderness::gates_of(wild, &test.world.pois);

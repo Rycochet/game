@@ -4,7 +4,8 @@
 //! The server decides all of it: clicking a `Portal` token (a world map
 //! poi) sends the player travelling to it, and arriving asks the server
 //! to go in. Inside, arriving (by a click) on stairs or on outside ground at
-//! the very edge of the level asks the server to use it. The server answers
+//! the very edge of the level asks the server to use it, unless the player is
+//! fighting: then the Down and Up keys take the stairs once it is over. The server answers
 //! with the level the player is now on and its cells as they come into
 //! sight, or with where they are back on the world map; `dungeon_map` draws
 //! the level.
@@ -18,7 +19,8 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use shared::site::leads_out;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameView, MapPosition, OtherLevels, Portal, WorldReturn,
+    CurrentDungeon, CurrentWorld, GameView, MapPosition, OtherLevels, OwnVitals, Portal,
+    WorldReturn,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::player::{Arrived, Player, PlayerSystems, TravelTo};
@@ -36,7 +38,7 @@ impl Plugin for SitePlugin {
                     follow_clicked_portal
                         .in_set(PlayerSystems::Input)
                         .after(View3dSystems::Click),
-                    buttons::explore_or_leave.in_set(PlayerSystems::Input),
+                    buttons::down_or_up.in_set(PlayerSystems::Input),
                 ),
             )
             // After everything else this frame, so the view being left
@@ -79,13 +81,16 @@ fn follow_clicked_portal(
 
 /// When a journey ends: on the portal it was heading for, ask to enter it;
 /// in a site, on stairs or on outside ground at the edge of the level, ask
-/// to use them.
+/// to use them, unless fighting (the server would refuse).
+#[allow(clippy::too_many_arguments)]
 fn use_on_arrival(
     mut arrivals: MessageReader<Arrived>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
     portals: Query<(&MapPosition, &Portal)>,
     mut heading: ResMut<Heading>,
+    vitals: Res<OwnVitals>,
+    time: Res<Time>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     let Some(&Arrived { x, y }) = arrivals.read().last() else {
@@ -103,7 +108,7 @@ fn use_on_arrival(
             }));
         }
         _ => {
-            if *view.get() != GameView::Dungeon {
+            if *view.get() != GameView::Dungeon || vitals.fighting(time.elapsed_secs_f64()) {
                 return;
             }
             let on_stairs = dungeon.stairs.iter().any(|s| (s.x, s.y) == (x, y));

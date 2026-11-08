@@ -168,4 +168,9 @@ impl Track {
     pub(super) fn calm_from(&mut self, tick: u64) {
         self.since = self.since.max(tick);
     }
+
+    /// Whether it is still waiting to refill at this tick.
+    pub(super) fn waiting(&self, now: u64) -> bool {
+        self.since > now
+    }
 }

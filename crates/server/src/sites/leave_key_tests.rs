@@ -33,7 +33,7 @@ fn find(test: &TestClient, wanted: impl Fn(Cell, bool) -> bool) -> (i64, i64) {
 /// Puts the player at `at` and presses Leave: whether they left.
 fn leave_from(test: &mut TestClient, at: (i64, i64)) -> bool {
     test.client.visit.as_mut().unwrap().position = at;
-    let answers = test.send(&[ClientMessage::Leave]);
+    let answers = test.send(&[ClientMessage::Up]);
     let left = matches!(answers[..], [ServerMessage::OnWorldMap { .. }, ..]);
     assert_eq!(left, test.client.visit.is_none());
     left

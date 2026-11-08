@@ -11,7 +11,7 @@ use crate::connections::tests::TestClient;
 fn exploring() -> TestClient {
     let world = crate::ServerWorld::new(shared::world::WorldSeed::new(12345));
     let mut test = TestClient::of(world);
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     areas_tick(&mut test);
     test
 }
@@ -49,7 +49,7 @@ fn a_player_in_the_wilderness_has_an_area_with_its_mobs() {
 fn mobs_kept_while_away_come_back_as_they_were_and_go_after_a_while() {
     let mut test = exploring();
     let before = mobs_about(&test);
-    test.send(&[ClientMessage::Leave]);
+    test.send(&[ClientMessage::Up]);
     areas_tick(&mut test);
     assert!(test.world.wilderness.areas.areas.is_empty());
     let kept: usize = test
@@ -62,18 +62,18 @@ fn mobs_kept_while_away_come_back_as_they_were_and_go_after_a_while() {
         .sum();
     assert_eq!(kept, before.len());
     // Back within the time: the same mobs, not new ones.
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     areas_tick(&mut test);
     assert_eq!(mobs_about(&test), before);
     // Away for longer: let go, and made again at home (the same ones, as
     // they are worked out from the seed).
-    test.send(&[ClientMessage::Leave]);
+    test.send(&[ClientMessage::Up]);
     areas_tick(&mut test);
     let later = Instant::now() + WILD_BLOCK_KEPT + Duration::from_secs(1);
     blocks::forget_old(&mut test.world, later);
     assert!(test.world.wilderness.areas.kept.is_empty());
     assert!(test.world.wilderness.areas.living.is_empty());
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     areas_tick(&mut test);
     assert_eq!(mobs_about(&test), before);
 }
@@ -102,7 +102,7 @@ fn walking_away_moves_the_area_with_the_player() {
 
 /// Leaves the wilderness and lets everything kept there go.
 fn leave_and_forget(test: &mut TestClient) {
-    test.send(&[ClientMessage::Leave]);
+    test.send(&[ClientMessage::Up]);
     areas_tick(test);
     let later = Instant::now() + WILD_BLOCK_KEPT + Duration::from_secs(1);
     blocks::forget_old(&mut test.world, later);
@@ -142,7 +142,7 @@ fn a_block_left_alone_long_enough_brings_its_dead_back() {
     leave_and_forget(&mut test);
     saved(&mut test).dead.insert(mob.number);
     touched(&mut test.world, mob.home);
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     areas_tick(&mut test);
     assert!(!mobs_about(&test).contains(&mob.id), "still dead");
     leave_and_forget(&mut test);
@@ -152,7 +152,7 @@ fn a_block_left_alone_long_enough_brings_its_dead_back() {
     let blocks = &mut saved(&mut test).wild_blocks;
     assert!(blocks.contains_key(&(block.x, block.y)));
     blocks.insert((block.x, block.y), long_ago);
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     areas_tick(&mut test);
     assert!(mobs_about(&test).contains(&mob.id), "made again");
     assert!(saved(&mut test).dead.is_empty());

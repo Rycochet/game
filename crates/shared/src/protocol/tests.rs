@@ -70,8 +70,8 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             chunk: ChunkPos { x: 2, y: -1 },
         },
         ClientMessage::UseExit,
-        ClientMessage::Explore,
-        ClientMessage::Leave,
+        ClientMessage::Down,
+        ClientMessage::Up,
         ClientMessage::SetPaused(true),
         ClientMessage::MoveItem {
             item: Id(uuid::Uuid::from_u128(7)),
