@@ -114,8 +114,11 @@ pub(in crate::widgets) fn take_presses(
             Some(PanelPart::LeftForOwner(_)) | None => {}
         }
     }
-    if !mouse.pressed(MouseButton::Left) {
-        dragging.mouse = None;
+    if !mouse.pressed(MouseButton::Left)
+        && let Some(panel) = dragging.mouse.take()
+        && let Ok((mut moveable, _)) = panels.get_mut(panel)
+    {
+        moveable.dropped = true;
     }
     if let (Some(panel), Some(from), Some(to)) = (dragging.mouse, dragging.from, pointer.0) {
         dragging.from = Some(to);
@@ -142,5 +145,12 @@ pub(in crate::widgets) fn take_presses(
             }
             gesture.drag = Vec2::ZERO;
         }
+    }
+    // The finger dragging a panel has lifted.
+    if gesture.first_finger.is_none()
+        && let Some((_, Some(panel))) = dragging.touch.take()
+        && let Ok((mut moveable, _)) = panels.get_mut(panel)
+    {
+        moveable.dropped = true;
     }
 }

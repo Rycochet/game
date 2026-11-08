@@ -3,9 +3,9 @@
 
 use bevy::prelude::*;
 
-use super::icons::{Pointing, arrow, keypad, ladder};
+use super::icons::{Pointing, arrow, dpad, ladder};
 use super::{BUTTON, CORNER_GAP, FORM, GAP, TOGGLE};
-use crate::common::PadButton;
+use crate::common::{PadButton, Preferences};
 use crate::widgets::{
     ButtonState, ButtonTooltip, HoldButton, HoverTip, PanelPlace, Pressable, UiId,
     spawn_grip_panel, spawn_icon_button,
@@ -19,18 +19,27 @@ pub(super) struct StepPad;
 #[derive(Component)]
 pub(super) struct PadToggle;
 
-/// The pad's two rows, left to right: each button, its widget name and its
-/// first tip (`site` keeps Up's and Down's).
-const ROWS: [[(PadButton, &str, &str); 3]; 2] = [
+/// One place on the pad: a button, its widget name and its first tip (`site`
+/// keeps Up's and Down's), or a gap.
+type Place = Option<(PadButton, &'static str, &'static str)>;
+
+/// The pad's three rows, left to right, round the middle like a d-pad, with
+/// Down and Up either side of Step Up (owner, 2026-11-08).
+const ROWS: [[Place; 3]; 3] = [
     [
-        (PadButton::Up, "up", "Up"),
-        (PadButton::StepUp, "step_up", "Step Up"),
-        (PadButton::Down, "down", "Down"),
+        Some((PadButton::Down, "down", "Down")),
+        Some((PadButton::StepUp, "step_up", "Step Up")),
+        Some((PadButton::Up, "up", "Up")),
     ],
     [
-        (PadButton::StepLeft, "step_left", "Step Left"),
-        (PadButton::StepDown, "step_down", "Step Down"),
-        (PadButton::StepRight, "step_right", "Step Right"),
+        Some((PadButton::StepLeft, "step_left", "Step Left")),
+        None,
+        Some((PadButton::StepRight, "step_right", "Step Right")),
+    ],
+    [
+        None,
+        Some((PadButton::StepDown, "step_down", "Step Down")),
+        None,
     ],
 ];
 
@@ -46,8 +55,12 @@ fn picture_of(button: PadButton) -> Image {
     }
 }
 
-pub(super) fn spawn_pad(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    let icon = images.add(keypad());
+pub(super) fn spawn_pad(
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
+    preferences: Res<Preferences>,
+) {
+    let icon = images.add(dpad());
     commands
         .spawn((
             Node {
@@ -74,25 +87,33 @@ pub(super) fn spawn_pad(mut commands: Commands, mut images: ResMut<Assets<Image>
             ));
         });
 
-    // Just above the toggle button, to start with.
-    let place = PanelPlace::BottomRight(Vec2::new(CORNER_GAP, CORNER_GAP + TOGGLE + GAP));
+    // Where it was left, or just above the toggle button.
+    let place = preferences.step_pad.at.map_or(
+        PanelPlace::BottomRight(Vec2::new(CORNER_GAP, CORNER_GAP + TOGGLE + GAP)),
+        |(x, y)| PanelPlace::Share(Vec2::new(x, y)),
+    );
     let (panel, content) = spawn_grip_panel(&mut commands, place);
     commands
         .entity(panel)
         .insert((StepPad, UiId::new(FORM, "panel")));
     for row in ROWS {
-        let pictures = row.map(|(button, ..)| images.add(picture_of(button)));
+        let pictures = row.map(|place| place.map(|(button, ..)| images.add(picture_of(button))));
         let row = commands
             .spawn(Node {
                 column_gap: px(GAP),
                 ..default()
             })
             .with_children(|row_of| {
-                for ((button, name, tip), picture) in row.into_iter().zip(pictures) {
+                for (place, picture) in row.into_iter().zip(pictures) {
                     let node = Node {
                         width: px(BUTTON),
                         height: px(BUTTON),
                         ..default()
+                    };
+                    let (Some((button, name, tip)), Some(picture)) = (place, picture) else {
+                        // A gap as big as a button.
+                        row_of.spawn(node);
+                        continue;
                     };
                     spawn_icon_button(row_of, ButtonState::Normal, picture, node).insert((
                         button,

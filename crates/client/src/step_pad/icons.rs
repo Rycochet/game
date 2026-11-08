@@ -1,4 +1,4 @@
-//! The pad's pictures: a numeric keypad for the button that opens it, arrows,
+//! The pad's pictures: a d-pad for the button that opens it, arrows,
 //! and ladders in perspective for Up (narrow at the top, climbing away) and
 //! Down (narrow at the bottom, going down away).
 
@@ -15,30 +15,29 @@ pub(super) enum Pointing {
     Right,
 }
 
-/// A numeric keypad: a rounded frame round three columns of keys in four
-/// rows, the bottom row a wide 0 and a dot.
-pub(super) fn keypad() -> Image {
-    const KEY: Vec2 = Vec2::new(10.0, 8.0);
-    const GAP: Vec2 = Vec2::new(3.0, 4.0);
-    const FIRST: Vec2 = Vec2::new(14.0, 10.0);
+/// A d-pad: a cross with rounded ends, a small triangle cut into each arm
+/// pointing out.
+pub(super) fn dpad() -> Image {
+    const MIDDLE: Vec2 = Vec2::new(32.0, 32.0);
+    // Each arm, from the middle: half as wide as it is, and how far it reaches.
+    const HALF_WIDTH: f32 = 9.0;
+    const REACH: f32 = 28.0;
     picture(|at| {
-        let frame = outside_box(at, Vec2::new(32.0, 32.0), Vec2::new(24.0, 28.0), 5.0);
-        if frame.abs() <= 1.5 {
-            return true;
+        let long = Vec2::new(HALF_WIDTH, REACH);
+        let cross = outside_box(at, MIDDLE, long, 3.0).min(outside_box(at, MIDDLE, long.yx(), 3.0));
+        if cross > 0.0 {
+            return false;
         }
-        (0..4).any(|row| {
-            // The bottom row's first key is as wide as two.
-            let keys: &[(f32, f32)] = if row == 3 {
-                &[(0.0, 2.0), (2.0, 1.0)]
-            } else {
-                &[(0.0, 1.0), (1.0, 1.0), (2.0, 1.0)]
-            };
-            keys.iter().any(|&(column, wide)| {
-                let corner = FIRST + Vec2::new(column, row as f32) * (KEY + GAP);
-                let size = Vec2::new(KEY.x * wide + GAP.x * (wide - 1.0), KEY.y);
-                outside_box(at, corner + size / 2.0, size / 2.0, 1.5) <= 0.0
-            })
-        })
+        // The triangles, in the arm's own terms: `out` from the middle, `side`
+        // across, mirrored so one test covers all four.
+        let off = at - MIDDLE;
+        let (out, side) = if off.x.abs() > off.y.abs() {
+            (off.x.abs(), off.y.abs())
+        } else {
+            (off.y.abs(), off.x.abs())
+        };
+        let in_triangle = (12.0..=22.0).contains(&out) && side <= (22.0 - out) * 0.55;
+        !in_triangle
     })
 }
 

@@ -74,7 +74,7 @@ pub use item::{
 };
 pub use item_text::{ItemText, spawn_item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
-pub use moveable::{PanelPlace, spawn_grip_panel, spawn_moveable_panel, stops_presses};
+pub use moveable::{PanelMoved, PanelPlace, spawn_grip_panel, spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use outlined::spawn_outlined_text;
 pub use progress::{Progress, spawn_progress_bar};
@@ -142,6 +142,7 @@ impl Plugin for WidgetsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<ButtonPressed>()
             .add_message::<RaisePanel>()
+            .add_message::<PanelMoved>()
             .add_message::<SliderMoved>()
             .add_message::<ColourChosen>()
             .add_message::<TextEdited>()

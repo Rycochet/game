@@ -1,6 +1,6 @@
 //! The movement pad: a moveable panel, open by default, with buttons held to
 //! step (screen directions, as the step keys) and Up and Down ladders for
-//! stairs, exploring and leaving, and the small keypad button at the bottom
+//! stairs, exploring and leaving, and the small d-pad button at the bottom
 //! right that opens and closes it. See `docs/context/client/step_pad.md`.
 
 use bevy::prelude::*;
@@ -28,12 +28,17 @@ pub struct StepPadPlugin;
 
 impl Plugin for StepPadPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<show::PadOpen>()
-            .add_systems(Startup, spawn::spawn_pad)
+        app.add_systems(Startup, spawn::spawn_pad)
             .add_systems(PreUpdate, show::read_pad.after(WidgetSystems::Presses))
             .add_systems(
                 Update,
-                (show::toggle_pad, show::show_pad, show::tint_icons).chain(),
+                (
+                    show::toggle_pad,
+                    show::remember_place,
+                    show::show_pad,
+                    show::tint_icons,
+                )
+                    .chain(),
             );
     }
 }

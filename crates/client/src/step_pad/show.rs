@@ -1,33 +1,39 @@
-//! Opening and closing the pad, showing it only on a map, and reading which
-//! arrows are held.
+//! Opening and closing the pad, showing it only on a map, remembering both
+//! that and where it was dragged to (`Preferences::step_pad`), and reading
+//! which arrows are held.
 
 use bevy::prelude::*;
 
 use super::spawn::{PadToggle, StepPad};
-use crate::common::{GameView, PadButton, PadSteps};
-use crate::widgets::{ButtonPressed, ButtonState, HoldButton, INK};
+use crate::common::{GameView, PadButton, PadSteps, Preferences};
+use crate::widgets::{ButtonPressed, ButtonState, HoldButton, INK, PanelMoved};
 
 /// How strongly a disabled button's picture shows.
 const DISABLED_ALPHA: f32 = 0.3;
 
-/// Whether the pad is open: it is when the game starts.
-#[derive(Resource)]
-pub(super) struct PadOpen(pub(super) bool);
-
-impl Default for PadOpen {
-    fn default() -> Self {
-        Self(true)
-    }
-}
-
-/// The toggle button opens and closes the pad.
+/// The toggle button opens and closes the pad, remembered between runs.
 pub(super) fn toggle_pad(
     mut pressed: MessageReader<ButtonPressed>,
     toggle: Single<Entity, With<PadToggle>>,
-    mut open: ResMut<PadOpen>,
+    mut preferences: ResMut<Preferences>,
 ) {
     if pressed.read().any(|press| press.0 == *toggle) {
-        open.0 = !open.0;
+        preferences.step_pad.closed = !preferences.step_pad.closed;
+    }
+}
+
+/// Remembers where the pad was dragged to, as a share of the window, once
+/// let go (so the preferences aren't saved on every frame of a drag).
+pub(super) fn remember_place(
+    mut moved: MessageReader<PanelMoved>,
+    pad: Single<Entity, With<StepPad>>,
+    mut preferences: ResMut<Preferences>,
+) {
+    if let Some(moved) = moved.read().filter(|moved| moved.panel == *pad).last() {
+        let at = Some((moved.share.x, moved.share.y));
+        if preferences.step_pad.at != at {
+            preferences.step_pad.at = at;
+        }
     }
 }
 
@@ -35,21 +41,22 @@ pub(super) fn toggle_pad(
 /// button is flat-edged while it is. Hidden by `Display::None`, the pad keeps
 /// its place.
 pub(super) fn show_pad(
-    open: Res<PadOpen>,
+    preferences: Res<Preferences>,
     view: Res<State<GameView>>,
     mut pad: Single<&mut Node, (With<StepPad>, Without<PadToggle>)>,
     toggle: Single<(&mut Node, &mut ButtonState), With<PadToggle>>,
 ) {
+    let open = !preferences.step_pad.closed;
     let on_a_map = matches!(view.get(), GameView::WorldMap | GameView::Dungeon);
     let shown = |yes: bool| if yes { Display::Flex } else { Display::None };
-    if pad.display != shown(on_a_map && open.0) {
-        pad.display = shown(on_a_map && open.0);
+    if pad.display != shown(on_a_map && open) {
+        pad.display = shown(on_a_map && open);
     }
     let (mut node, mut state) = toggle.into_inner();
     if node.display != shown(on_a_map) {
         node.display = shown(on_a_map);
     }
-    let look = if open.0 {
+    let look = if open {
         ButtonState::Active
     } else {
         ButtonState::Normal
