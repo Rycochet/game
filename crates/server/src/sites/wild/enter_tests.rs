@@ -59,10 +59,11 @@ fn a_town_stepped_into_is_sent_whole() {
     let poi = at_a_town(&mut test);
     let answers = test.send(&[ClientMessage::EnterSite { chunk: poi.chunk }]);
     let visit = test.client.visit.as_ref().unwrap();
-    let &(_, town) = visit_cutouts(&test)
+    let town = visit_cutouts(&test)
         .iter()
-        .find(|(chunk, _)| *chunk == poi.chunk)
-        .expect("the town set in");
+        .find(|set_in| set_in.chunk == poi.chunk)
+        .expect("the town set in")
+        .bounds;
     // The window takes in all of it.
     let (wx, wy, wc, wr) = visit.level.level.bounds();
     let (tx, ty, tc, tr) = town;
@@ -81,7 +82,7 @@ fn a_town_stepped_into_is_sent_whole() {
     }
 }
 
-fn visit_cutouts(test: &TestClient) -> Vec<(shared::poi::ChunkPos, (i64, i64, i64, i64))> {
+fn visit_cutouts(test: &TestClient) -> Vec<crate::sites::SetIn> {
     match &test.client.visit.as_ref().unwrap().place {
         crate::sites::Place::Wilderness { cutouts, .. } => cutouts.clone(),
         crate::sites::Place::Site { .. } => Vec::new(),

@@ -11,6 +11,7 @@ mod arrival;
 mod chunks;
 mod exits;
 mod explore;
+mod found;
 mod in_poi;
 mod town;
 mod window;
@@ -19,6 +20,8 @@ mod window;
 mod arrival_tests;
 #[cfg(test)]
 mod enter_tests;
+#[cfg(test)]
+mod found_tests;
 #[cfg(test)]
 mod shop_tests;
 #[cfg(test)]
@@ -30,4 +33,5 @@ pub(crate) use exits::leave_by_key;
 pub(super) use exits::{back_to_wilderness, into_site};
 pub(super) use explore::enter_wilderness;
 pub(crate) use explore::{explore, follow};
+pub(super) use found::found_by_sight;
 pub(crate) use window::area_level;

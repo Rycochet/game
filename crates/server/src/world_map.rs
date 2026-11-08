@@ -73,12 +73,15 @@ pub(crate) const ALL_POIS_KNOWN: bool = true;
 /// The poi of a chunk, if this client may know of it: towns are seen by all,
 /// anything else only once the character has learned of it.
 pub(crate) fn known_poi(client: &Client, world: &ServerWorld, chunk: ChunkPos) -> Option<Poi> {
+    let poi = world.pois.in_chunk(chunk)?;
+    knows_of(client, chunk, poi.kind).then_some(poi)
+}
+
+/// Whether this client may know of the poi of `kind` in `chunk` (see
+/// `known_poi`).
+pub(crate) fn knows_of(client: &Client, chunk: ChunkPos, kind: shared::poi::PoiKind) -> bool {
     let seen = client.character.pois.get(&chunk);
-    world.pois.in_chunk(chunk).filter(|poi| {
-        poi.kind.is_town()
-            || client.reveal_pois
-            || seen.is_some_and(|seen| seen.known || seen.visited)
-    })
+    kind.is_town() || client.reveal_pois || seen.is_some_and(|seen| seen.known || seen.visited)
 }
 
 /// Developer tools: shows every poi, on this connection only.

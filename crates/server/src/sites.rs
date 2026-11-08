@@ -41,7 +41,7 @@ use leave::leave_for_poi;
 pub(super) use leave::{forget_site, killed, leave, put_out, use_exit};
 use levels::{NewVisit, arrive_again, enter_level};
 pub(super) use moves::{set_cell, stepped, teleport};
-use place::{Mirror, Place};
+use place::{Mirror, Place, SetIn};
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
@@ -209,7 +209,7 @@ impl Visit {
         };
         self.mirrors.iter().any(|mirror| inside(mirror.bounds))
             || match &self.place {
-                Place::Wilderness { cutouts, .. } => cutouts.iter().any(|&(_, b)| inside(b)),
+                Place::Wilderness { cutouts, .. } => cutouts.iter().any(|c| inside(c.bounds)),
                 Place::Site { .. } => false,
             }
     }

@@ -203,6 +203,7 @@ pub(super) fn receive(
                 | ServerMessage::Buildings(_)
                 | ServerMessage::Fields(_)
                 | ServerMessage::Borders(_)
+                | ServerMessage::PoiFound { .. }
                 | ServerMessage::LevelCells(_)
                 | ServerMessage::RememberedLevel(_)
                 | ServerMessage::OnWorldMap { .. }

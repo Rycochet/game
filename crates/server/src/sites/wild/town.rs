@@ -40,11 +40,6 @@ fn town_here(visit: &Visit) -> Option<(i64, i64, i64, i64)> {
     if !kind.is_town() {
         return None;
     }
-    let (x, y) = visit.position;
-    cutouts
-        .iter()
-        .map(|&(_, bounds)| bounds)
-        .find(|&(min_x, min_y, width, height)| {
-            (min_x..min_x + width).contains(&x) && (min_y..min_y + height).contains(&y)
-        })
+    let here = cutouts.iter().find(|set_in| set_in.takes(visit.position));
+    here.map(|set_in| set_in.bounds)
 }

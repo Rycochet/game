@@ -16,15 +16,37 @@ pub(crate) enum Place {
         from_wilderness: bool,
     },
     /// The wilderness, its level a window of blocks round `centre`, its cells
-    /// wrapping at `width`. `cutouts`: the pois set into it there, and the
-    /// cells they take (seeing one makes the poi known). `in_poi`: the kind of
-    /// poi whose cutout the player stands in, as last told to the client.
+    /// wrapping at `width`. `cutouts`: the pois set into it there. `in_poi`:
+    /// the kind of poi whose cutout the player stands in, as last told to the
+    /// client.
     Wilderness {
         centre: BlockPos,
         width: i64,
-        cutouts: Vec<(ChunkPos, (i64, i64, i64, i64))>,
+        cutouts: Vec<SetIn>,
         in_poi: Option<PoiKind>,
     },
+}
+
+/// A poi set into a wilderness window, in the window's cells.
+#[derive(Clone, Debug)]
+pub(crate) struct SetIn {
+    pub(crate) chunk: ChunkPos,
+    pub(crate) kind: PoiKind,
+    /// The cells its cutout takes: `(min_x, min_y, width, height)`.
+    pub(crate) bounds: (i64, i64, i64, i64),
+    /// Its way in: its first level's entrance, or the way down into a site
+    /// entered from above. Seeing it makes the poi known (`wild::found`).
+    pub(crate) entrance: Option<(i64, i64)>,
+    /// The cells round it (`Cutout::border`).
+    pub(crate) border: Vec<(i64, i64)>,
+}
+
+impl SetIn {
+    /// Whether a cell is in its cutout's bounds.
+    pub(crate) fn takes(&self, (x, y): (i64, i64)) -> bool {
+        let (min_x, min_y, width, height) = self.bounds;
+        (min_x..min_x + width).contains(&x) && (min_y..min_y + height).contains(&y)
+    }
 }
 
 /// Cells of a visit's level that are also another map's: a site's first level
