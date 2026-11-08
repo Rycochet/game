@@ -8,6 +8,9 @@ use crate::rng::Seed;
 use crate::world::WorldParams;
 use core::f64::consts::TAU;
 
+mod lightning;
+pub use lightning::{LIGHTNING_AREA, LIGHTNING_RAIN, LIGHTNING_WARMEST};
+
 /// Grid units per noise unit: single clouds, and the weather fronts they
 /// gather in.
 const CLOUD_ZOOM: f64 = 110.0;
@@ -34,6 +37,8 @@ pub struct WeatherField {
     cloud: Simplex4,
     front: Simplex4,
     width: f64,
+    /// What decides when lightning flashes (`lightning`).
+    lightning: Seed,
 }
 
 impl WeatherField {
@@ -42,6 +47,7 @@ impl WeatherField {
             cloud: Simplex4::new(world.seed.derive("clouds")),
             front: Simplex4::new(world.seed.derive("fronts")),
             width: (world.circumference / 1000).max(1) as f64,
+            lightning: world.seed.derive("lightning"),
         }
     }
 

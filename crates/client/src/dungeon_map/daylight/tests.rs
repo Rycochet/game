@@ -7,6 +7,14 @@ use std::collections::BTreeSet;
 
 use super::*;
 
+/// The light outside, straight down.
+fn out(light: Vec3) -> OutsideLight {
+    OutsideLight {
+        light,
+        travel: Vec2::ZERO,
+    }
+}
+
 /// `#` wall, `.` floor, `,` ground, `W` window, `+` door.
 fn level(rows: &[&str]) -> Level {
     let mut level = Level::new(0, 0, rows[0].len() as i64, rows.len() as i64);
@@ -109,7 +117,7 @@ fn covered_ground_has_only_what_spills_under_it() {
     }
     let spill = spilling(&hut, Vec2::ZERO);
     let light = Vec3::ONE;
-    let grid = light_from_outside(&hut, &spill, light, false, false);
+    let grid = light_from_outside(&hut, &spill, &out(light), 0.0, false, false);
     assert_eq!(grid.at(0, 1), light);
     let edge = grid.at(2, 1).x;
     assert!(edge > 0.0 && edge < 1.0);
@@ -122,9 +130,9 @@ fn water_is_only_under_the_sky_in_open_air_places() {
     let mut pool = pool;
     pool.set(1, 1, Cell::Water);
     let spill = Spill::default();
-    let inside = light_from_outside(&pool, &spill, Vec3::ONE, false, false);
+    let inside = light_from_outside(&pool, &spill, &out(Vec3::ONE), 0.0, false, false);
     assert_eq!(inside.at(1, 1), Vec3::ZERO);
-    let open = light_from_outside(&pool, &spill, Vec3::ONE, false, true);
+    let open = light_from_outside(&pool, &spill, &out(Vec3::ONE), 0.0, false, true);
     assert_eq!(open.at(1, 1), Vec3::ONE);
 }
 
@@ -182,7 +190,40 @@ fn lights_come_on_over_about_an_hour() {
 #[test]
 fn a_town_has_it_all_over() {
     let town = level(&["#.,"]);
-    let grid = light_from_outside(&town, &Spill::default(), Vec3::splat(0.5), true, false);
+    let grid = light_from_outside(
+        &town,
+        &Spill::default(),
+        &out(Vec3::splat(0.5)),
+        0.0,
+        true,
+        false,
+    );
     assert_eq!(grid.at(0, 0), Vec3::splat(0.5));
     assert_eq!(grid.at(1, 0), Vec3::splat(0.5));
+}
+
+#[test]
+fn lightning_whites_out_open_ground_and_spills_further_in() {
+    let hut = level(&[",,,,,,,,", ",,,,,,,,", ",,,,,,,,"]);
+    let mut hut = hut;
+    for y in 0..3 {
+        for x in 2..8 {
+            hut.set(x, y, Cell::CoveredGround);
+        }
+    }
+    let spill = spilling(&hut, Vec2::ZERO);
+    // At night: dark, then brighter than daylight in a flash.
+    let night = out(Vec3::splat(0.05));
+    let dark = light_from_outside(&hut, &spill, &night, 0.0, false, false);
+    let flash = light_from_outside(&hut, &spill, &night, 1.0, false, false);
+    assert_eq!(flash.at(0, 1), FLASH_LIGHT);
+    assert!(dark.at(0, 1).x < 0.1);
+    // Under cover, much more than the open ground's share would give.
+    let share = flash.at(4, 1).x / flash.at(0, 1).x;
+    let usual = dark.at(4, 1).x / dark.at(0, 1).x;
+    assert!(share > usual * 3.0, "{share} against {usual}");
+    assert!(flash.at(4, 1).x <= FLASH_LIGHT.x);
+    // A flash never darkens a bright day.
+    let day = out(Vec3::splat(1.5));
+    assert!(day.in_flash(1.0).cmpge(Vec3::splat(1.5)).all());
 }

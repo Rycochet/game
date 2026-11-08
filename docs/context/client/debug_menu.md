@@ -28,7 +28,7 @@ The debug menu: backtick or the warning button top left opens a full-screen laye
 
 ## Depends on
 
-- `common` (`ClickMode`, `DebugInfo`, `CurrentDungeon`, `GameView`, `GodMode`, `Truesight`, `KillMob`, `HerbGrowthShift`, `TouchGesture`), `connection` (`ToServer`, `FromServer`), `player` (`TakeStep`, `PlayerSystems`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `planet_view` (`ViewPlanet`: View Planet), `widgets`, `item_art`, `dungeon_map` (`CROP_STAGES`, `HERB_STAGES`), `shared::movement`, `shared::showcase`, `shared::site`.
+- `common` (`ClickMode`, `DebugInfo`, `CurrentDungeon`, `GameView`, `GodMode`, `Truesight`, `KillMob`, `HerbGrowthShift`, `TouchGesture`, `LightningStrike`: Lightning Now), `connection` (`ToServer`, `FromServer`), `player` (`TakeStep`, `PlayerSystems`), `view3d` (`OrbitCamera`), `minimap` (`FullMap`), `planet_view` (`ViewPlanet`: View Planet), `widgets`, `item_art`, `dungeon_map` (`CROP_STAGES`, `HERB_STAGES`), `shared::movement`, `shared::showcase`, `shared::site`.
 
 ## Used by
 

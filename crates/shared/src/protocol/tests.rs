@@ -241,6 +241,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ServerMessage::ForgetWorldMap,
         ServerMessage::Hour(6),
+        ServerMessage::Lightning,
         ServerMessage::WorldClock(WorldTime::at(405.0, 10.0, ClockRate::NORMAL)),
         ServerMessage::Paused {
             paused: true,

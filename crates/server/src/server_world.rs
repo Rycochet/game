@@ -19,6 +19,7 @@ use super::storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved};
 
 mod find_item;
 mod forgetting;
+mod lightning;
 mod sharing;
 mod time;
 
@@ -51,6 +52,11 @@ pub struct ServerWorld {
     pub(crate) hour: u32,
     /// `time` has been moved or sped up, which everyone in the world needs telling.
     pub(crate) clock_moved: bool,
+    /// The whole second of the server's clock lightning was last looked for in.
+    pub(crate) lightning_second: i64,
+    /// The weather and climate, for lightning (`lightning_at`).
+    weather: shared::weather::WeatherField,
+    climate: shared::climate::Climate,
     pub(crate) storage: Storage,
     /// The sites entered so far (loaded when first needed).
     pub(super) sites: BTreeMap<SiteId, SiteSave>,
@@ -153,6 +159,9 @@ impl ServerWorld {
             action_clock: shared.action_clock.clone(),
             hour: (minutes / MINUTES_PER_HOUR) as u32,
             clock_moved: false,
+            lightning_second: now.floor() as i64,
+            weather: shared::weather::WeatherField::new(&params),
+            climate: shared::climate::Climate::new(&params),
             seed,
             storage,
             sites: BTreeMap::new(),

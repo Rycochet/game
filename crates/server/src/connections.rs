@@ -33,6 +33,7 @@ mod delete_character;
 mod dev_skills;
 mod give_items;
 mod heal;
+mod lightning;
 mod look_up;
 mod messages;
 mod moving;
@@ -47,6 +48,7 @@ mod welcome;
 
 pub(super) use answer::answer;
 pub(crate) use combat::take_mob_blows;
+pub(super) use lightning::tell_of_lightning;
 pub(super) use messages::handle_messages;
 pub(crate) use moving::Arrival;
 pub use playtime::IDLE_MINUTES;

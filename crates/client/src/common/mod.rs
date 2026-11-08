@@ -27,6 +27,7 @@ mod display;
 mod dungeon;
 mod item_text;
 mod items;
+mod lightning;
 mod map;
 mod own_ability;
 mod pointer;
@@ -65,6 +66,7 @@ pub use items::{
     BandShift, GROUND, GaveItem, HeldGift, HeldOverGifts, HeldStock, HoveredBag, NO_QUALITY_NAME,
     StockCell, TakesGifts, TookItem, quality_colour,
 };
+pub use lightning::{Lightning, LightningStrike};
 pub use map::{
     Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, WorldReturn,
 };
@@ -120,10 +122,12 @@ impl Plugin for CommonPlugin {
             .init_resource::<HerbGrowthShift>()
             .init_resource::<ServerClock>()
             .add_message::<WorldChanged>()
+            .add_message::<LightningStrike>()
             .add_message::<DroppedOnText>()
             .init_resource::<KnownItems>()
             .init_resource::<HeldOverText>()
             .init_resource::<SkyNow>()
+            .init_resource::<Lightning>()
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()
             .init_resource::<ClickMode>()

@@ -5,13 +5,16 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use shared::world::GAME_HOUR_SECONDS;
 
+use super::super::lights::{FLASH_COLOUR, FLASH_LIT};
 use super::super::map_sky::MapSky;
 use super::super::view_square;
 use super::{
     CLOUD_HEIGHT, CloudMaterial, PLAYER_GLOW, PrecipitationMaterial, SKY_INTERVAL, SKY_REACH,
     SKY_SIDE, SKY_SPACING, SkyAssets, SkyParams, TerrainMaterial,
 };
-use crate::common::{CurrentWorld, MapPosition, Preferences, ServerClock, Shadows, VideoPrefs};
+use crate::common::{
+    CurrentWorld, Lightning, MapPosition, Preferences, ServerClock, Shadows, VideoPrefs,
+};
 use crate::player::Player;
 use crate::view3d::{OrbitCamera, ViewCamera};
 
@@ -103,6 +106,7 @@ pub fn update(
     clock: Res<ServerClock>,
     sky_now: Res<MapSky>,
     preferences: Res<Preferences>,
+    lightning: Res<Lightning>,
     assets: Option<ResMut<SkyAssets>>,
     player: Single<&MapPosition, With<Player>>,
     orbit: Single<&OrbitCamera, With<ViewCamera>>,
@@ -187,8 +191,10 @@ pub fn update(
         right: square.right,
         towards: square.towards,
         centre: Vec2::new(px as f32, py as f32),
+        // Lightning lights the clouds and rain up too.
         light: sky_now
             .lit()
+            .lerp(FLASH_COLOUR * FLASH_LIT, lightning.0)
             .extend(PLAYER_GLOW * (1.0 - sky_now.flat.max_element().min(1.0))),
         shown: shown(video),
         still: Vec4::new(

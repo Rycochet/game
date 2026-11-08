@@ -9,7 +9,10 @@ use std::collections::BTreeSet;
 
 use super::super::mesh::LightGrid;
 use super::super::town::window_faces;
-use super::{LEAST_STRETCH, SPILL_REACH, SPILL_STRENGTH, STAIRS_REACH, STRETCH, WINDOW_REACH};
+use super::OutsideLight;
+use super::{
+    FLASH_SPILL, LEAST_STRETCH, SPILL_REACH, SPILL_STRENGTH, STAIRS_REACH, STRETCH, WINDOW_REACH,
+};
 
 /// How much of the outside light spills to each cell, kept until the level or
 /// the light changes: it costs too much to work out each time the camera moves.
@@ -141,13 +144,18 @@ impl Spill {
 pub(in crate::dungeon_map) fn light_from_outside(
     level: &Level,
     spill: &Spill,
-    light: Vec3,
+    outside: &OutsideLight,
+    flash: f32,
     town: bool,
     open_air: bool,
 ) -> LightGrid {
+    let light = outside.in_flash(flash);
     if town {
         return LightGrid::filled(level, light);
     }
+    // Lightning spills in further: as if many times as strong, never more than
+    // what is outside.
+    let spills = 1.0 + (FLASH_SPILL - 1.0) * flash;
     let mut grid = LightGrid::new(level);
     let (min_x, min_y, width, height) = level.bounds();
     for y in min_y..min_y + height {
@@ -155,7 +163,7 @@ pub(in crate::dungeon_map) fn light_from_outside(
             if under_sky(level.cell(x, y), open_air) {
                 grid.set(x, y, light);
             } else {
-                grid.set(x, y, light * spill.at(x, y));
+                grid.set(x, y, light * (spill.at(x, y) * spills).min(1.0));
             }
         }
     }

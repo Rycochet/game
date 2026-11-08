@@ -6,12 +6,13 @@ use shared::celestial::{brightest, flat_light};
 use super::super::mesh::with_ambient;
 use super::super::sight_lines::SurfaceMaterial;
 use super::super::{CropPart, HerbPart, Surface, SurfaceMaterials, TOKEN_AMBIENT_BRIGHTNESS};
-use super::{CLOUD_SHADOW, OPEN_AMBIENT_BRIGHTNESS};
+use super::{CLOUD_SHADOW, FLASH_LIGHT, OPEN_AMBIENT_BRIGHTNESS};
 
 /// How much darker remembered places are with Remembered Places set to Dim.
 const MEMORY_DIM: f32 = 0.5;
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, MapPosition, Preferences, Remembered, WorldReturn,
+    CurrentDungeon, CurrentWorld, GameClock, Lightning, MapPosition, Preferences, Remembered,
+    WorldReturn,
 };
 use crate::player::Player;
 
@@ -26,9 +27,16 @@ pub(in crate::dungeon_map) struct OutsideLight {
 }
 
 impl OutsideLight {
-    /// How much to multiply what is out in the open and unlit by.
-    pub fn lit(&self) -> Vec3 {
-        with_ambient(self.light)
+    /// The light on open ground with lightning flashing this brightly
+    /// (`common::Lightning`): towards `FLASH_LIGHT`, never darker.
+    pub fn in_flash(&self, flash: f32) -> Vec3 {
+        self.light.max(self.light.lerp(FLASH_LIGHT, flash))
+    }
+
+    /// How much to multiply what is out in the open and unlit by, with
+    /// lightning flashing this brightly (0 for none).
+    pub fn lit_in(&self, flash: f32) -> Vec3 {
+        with_ambient(self.in_flash(flash))
     }
 }
 
@@ -65,6 +73,7 @@ pub(in crate::dungeon_map) fn update_outside(
 pub(in crate::dungeon_map) fn tint_outside(
     preferences: Res<Preferences>,
     outside: Res<OutsideLight>,
+    lightning: Res<Lightning>,
     surfaces: Res<SurfaceMaterials>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
     plants: Query<&MeshMaterial3d<SurfaceMaterial>, Or<(With<CropPart>, With<HerbPart>)>>,
@@ -74,11 +83,12 @@ pub(in crate::dungeon_map) fn tint_outside(
         Remembered::Dim => MEMORY_DIM,
         Remembered::Show | Remembered::Hide => 1.0,
     };
-    if !outside.is_changed() && !(preferences.is_changed() && *dimmed != dim) {
+    let flashed = outside.is_changed() || lightning.is_changed();
+    if !flashed && !(preferences.is_changed() && *dimmed != dim) {
         return;
     }
     *dimmed = dim;
-    let lit = outside.lit();
+    let lit = outside.lit_in(lightning.0);
     let tint = |material: &mut StandardMaterial, by: Vec3| {
         let alpha = material.base_color.alpha();
         material.base_color = Color::linear_rgba(by.x, by.y, by.z, alpha);
@@ -103,6 +113,7 @@ pub(in crate::dungeon_map) fn tint_outside(
 pub(in crate::dungeon_map) fn token_ambient(
     preferences: Res<Preferences>,
     outside: Res<OutsideLight>,
+    lightning: Res<Lightning>,
     dungeon: Res<CurrentDungeon>,
     player: Single<&MapPosition, With<Player>>,
     ambient: Option<ResMut<GlobalAmbientLight>>,
@@ -111,10 +122,11 @@ pub(in crate::dungeon_map) fn token_ambient(
         return;
     };
     let open = dungeon.is_town() || dungeon.level.cell(player.x, player.y).is_outside();
-    let strongest = outside.light.max_element();
+    let light = outside.in_flash(lightning.0);
+    let strongest = light.max_element();
     let (brightness, tint) = if open && strongest > 0.0 {
         let extra = (OPEN_AMBIENT_BRIGHTNESS - TOKEN_AMBIENT_BRIGHTNESS) * strongest;
-        (TOKEN_AMBIENT_BRIGHTNESS + extra, outside.light / strongest)
+        (TOKEN_AMBIENT_BRIGHTNESS + extra, light / strongest)
     } else {
         (TOKEN_AMBIENT_BRIGHTNESS, Vec3::ONE)
     };

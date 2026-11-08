@@ -43,5 +43,11 @@ const LIGHTS_SPREAD_MINUTES: u64 = 60;
 pub(super) const WINDOW_LIGHT: Vec3 = Vec3::new(1.0, 0.85, 0.6);
 const WINDOW_REACH: f32 = 3.0;
 
+/// Lightning: a full flash lights open ground this brightly (linear RGB, more
+/// than full daylight, so it whites out), and what spills in from outside
+/// is this many times as strong, so it reaches further inside.
+const FLASH_LIGHT: Vec3 = Vec3::new(2.6, 2.8, 3.0);
+const FLASH_SPILL: f32 = 10.0;
+
 #[cfg(test)]
 mod tests;

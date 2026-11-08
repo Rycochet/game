@@ -17,7 +17,9 @@ use shared::rng::Seed;
 
 use super::daylight::OutsideLight;
 use super::{CELL_SIZE, Shown};
-use crate::common::{CurrentDungeon, CurrentWorld, Preferences, ServerClock, WorldReturn};
+use crate::common::{
+    CurrentDungeon, CurrentWorld, Lightning, Preferences, ServerClock, WorldReturn,
+};
 
 /// Quads of precipitation per cell, shown in proportion to how hard it is
 /// falling: the same density as on the world map.
@@ -148,6 +150,7 @@ pub fn update(
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
     outside_light: Res<OutsideLight>,
+    lightning: Res<Lightning>,
     part: Single<(&Mesh3d, &MeshMaterial3d<RainMaterial>, &mut Visibility), With<RainPart>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<RainMaterial>>,
@@ -202,7 +205,7 @@ pub fn update(
             fall_height: FALL_HEIGHT,
             // Alpha: the share the Weather setting draws.
             light: outside_light
-                .lit()
+                .lit_in(lightning.0)
                 .extend(preferences.video.precipitation.share()),
         };
     }

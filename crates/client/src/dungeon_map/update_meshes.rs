@@ -13,7 +13,8 @@ use super::theme::Theme;
 use super::wild_ground::GroundTint;
 use super::{MemoryPart, SeeThroughPart, Shown, SolidPart, StairsThroughPart};
 use crate::common::{
-    CurrentDungeon, LightSource, MapPosition, Preferences, Remembered, SharesSight, ViewStats,
+    CurrentDungeon, LightSource, Lightning, MapPosition, Preferences, Remembered, SharesSight,
+    ViewStats,
 };
 use crate::player::Player;
 use crate::view3d::ViewCamera;
@@ -65,12 +66,13 @@ pub(super) fn update_meshes(
         Res<Preferences>,
         Local<Option<(u8, bool)>>,
     ),
-    (town_lights, mut window_glow, lines, mut lines_seen, tint): (
+    (town_lights, mut window_glow, lines, mut lines_seen, tint, lightning): (
         Res<TownLights>,
         Local<Spill>,
         Res<SightLines>,
         Local<u64>,
         Res<GroundTint>,
+        Res<Lightning>,
     ),
 ) {
     let camera = camera.translation;
@@ -82,6 +84,7 @@ pub(super) fn update_meshes(
     let changed = *built_for != Some(camera)
         || looked_again
         || outside.is_changed()
+        || lightning.is_changed()
         || town_lights.is_changed()
         || tint.is_changed()
         || *lines_seen != lines.changes
@@ -185,7 +188,8 @@ pub(super) fn update_meshes(
     let mut light = if in_hall {
         LightGrid::filled(level, Vec3::splat(HALL_LIGHT))
     } else {
-        super::daylight::light_from_outside(level, &spill, outside.light, is_town, open_air)
+        let flash = lightning.0;
+        super::daylight::light_from_outside(level, &spill, &outside, flash, is_town, open_air)
     };
     if is_town {
         if dungeon.is_changed() || town_lights.is_changed() {
