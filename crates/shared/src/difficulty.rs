@@ -84,6 +84,17 @@ impl Difficulty {
         matches!(self, Self::Hard | Self::Ironman)
     }
 
+    /// Hours of rust every skill takes on dying (`Skills::rust_for_hours`):
+    /// Normal 8, Hard 24, mild enough to be a "doh" rather than a reason to
+    /// quit (owner, 2026-11-08). Easy loses none, and Ironman is deleted.
+    pub fn rust_on_death(self) -> u32 {
+        match self {
+            Self::Normal => 8,
+            Self::Hard => 24,
+            Self::Easy | Self::Ironman => 0,
+        }
+    }
+
     /// Whether dying deletes the character.
     pub fn permanent_death(self) -> bool {
         self == Self::Ironman

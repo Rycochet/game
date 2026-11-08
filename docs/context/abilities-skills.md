@@ -110,8 +110,12 @@ The owner's design (2026-11-06/07), the first active ability being Attack. Built
 
 ## Rust and opposition
 
-- **Opposition links** go one way, between any two nodes: heavy armour wears down sneaking, not the other way round; a mirror link is added only if wanted. Melee and ranged oppose each other; combat opposes magic one way.
-- **Rust** takes a node back towards a floor (around half the best it reached), and relearning up to that best is faster than learning was. Rate and floor are set per node; siblings in use slow it or raise the floor.
+Built (2026-11-08) for disuse under Melee, opposition and dying: `shared/skill.md`. Rate and floor are one setting for now (`Rust`); siblings in use slowing rust or raising the floor, and specialisations falling, are not built.
+
+
+- **Opposition links** go one way, between any two nodes (never a node and its own ancestor or descendant), and hit only the node they name, not its children (owner, 2026-11-08): heavy armour wears down sneaking, not the other way round; a mirror link is added only if wanted. Melee and ranged oppose each other; combat opposes magic one way.
+- **Rust** takes a node back towards a floor (around half the best it reached), and relearning up to that best is faster than learning was (twice as fast). Rate and floor are set on a node and passed down to everything under it unless it says otherwise; siblings in use slow it or raise the floor. Disuse: weapon skills (all of Melee) after 8 hours unused, then a step an hour, each 1% of what is above the floor. *To balance.*
+- **Dying** costs every skill the steps 8 hours (Normal) or 24 hours (Hard) of disuse would take, whatever its clock: mild, a "doh" rather than a ragequit (owner, 2026-11-08).
 - **The rust clock:** each node keeps the playtime before which it can't rust again. Opposition (about an hour), plain disuse (per node) and an unused specialisation (about 24 hours) each take one step only when the clock has passed, then move it on. Several links don't stack, and loss is always slower than gain.
 - **Practising a node pushes its own clock forward**, so using both sides of a link keeps both: opposition only wears down what has been set aside.
 - Playtime is counted per character in ticks and saved with it, so time offline never counts, and only up to 5 minutes after the player last did something (built: server `connections/playtime.rs`).
@@ -120,6 +124,6 @@ The owner's design (2026-11-06/07), the first active ability being Attack. Built
 ## Building it (later tasks, in order)
 
 1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way, and the triangles in a character creation screen (built, `client/character_create.md`; one character per account for now, with Character Selection later before it).
-2. The tree, practice, checks and rust clock (the tree's nodes, practice flowing up and values are built, and shown on the Skills page, `client/skills_page.md`; practice from use, checks and rust are not), with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
-3. Abilities and opposition (begun: `shared::ability`, active and passive, the action bar, and Attack, which draws on the node of the weapon held and practises it with every blow; see Combat for what is still to come; opposition is not built).
+2. The tree, practice, checks and rust clock (the tree's nodes, practice flowing up and from use, values and rust are built, and shown on the Skills page, `client/skills_page.md`; checks are not), with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
+3. Abilities and opposition (begun: `shared::ability`, active and passive, the action bar, and Attack, which draws on the node of the weapon held and practises it with every blow; see Combat for what is still to come; opposition is built with rust).
 4. Specialising, once quests, trainers and books exist.

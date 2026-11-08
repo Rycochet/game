@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use super::rust::Rust;
 use super::tree::TREE;
 use crate::sheet::Attribute;
 
@@ -77,6 +78,11 @@ impl SkillId {
     /// The attributes it leans on: its own, or its parent's if it names none.
     pub fn leans(self) -> &'static [Attribute] {
         TREE.nodes[self.index()].leans
+    }
+
+    /// How it rusts: its own, or as the nearest node above it that says.
+    pub fn rust(self) -> Rust {
+        TREE.nodes[self.index()].rust
     }
 
     /// Itself, then each node above it up to its top level.

@@ -6,6 +6,7 @@ use std::sync::LazyLock;
 use super::SkillId;
 use super::branches::TOP;
 use super::draft::{Draft, Filled};
+use super::rust::Rust;
 use crate::blade::weapon_names;
 use crate::creature::CreatureKind;
 use crate::sheet::Attribute;
@@ -21,6 +22,8 @@ pub(super) struct Node {
     pub children: Vec<SkillId>,
     /// Its own, or else its parent's.
     pub leans: &'static [Attribute],
+    /// Its own, or else its parent's (`Rust::STEADY` at the top).
+    pub rust: Rust,
     /// 1 for a top level.
     pub depth: u8,
 }
@@ -63,17 +66,24 @@ impl Tree {
         key: String,
         name: &'static str,
         leans: &'static [Attribute],
+        rust: Option<Rust>,
         parent: Option<SkillId>,
     ) -> SkillId {
         let id = SkillId::from_index(self.nodes.len());
-        let (path, depth, inherited) = match parent {
+        let (path, depth, inherited, rusts) = match parent {
             Some(parent) => {
                 let up = &self.nodes[parent.index()];
-                (format!("{}/{key}", up.path), up.depth + 1, up.leans)
+                (
+                    format!("{}/{key}", up.path),
+                    up.depth + 1,
+                    up.leans,
+                    up.rust,
+                )
             }
-            None => (key.clone(), 1, &[][..]),
+            None => (key.clone(), 1, &[][..], Rust::STEADY),
         };
         let leans = if leans.is_empty() { inherited } else { leans };
+        let rust = rust.unwrap_or(rusts);
         self.by_path.insert(path.clone(), id);
         self.nodes.push(Node {
             key,
@@ -82,6 +92,7 @@ impl Tree {
             parent,
             children: Vec::new(),
             leans,
+            rust,
             depth,
         });
         if let Some(parent) = parent {
@@ -91,7 +102,13 @@ impl Tree {
     }
 
     fn add_draft(&mut self, draft: &Draft, parent: Option<SkillId>) -> SkillId {
-        let id = self.add(draft.key.to_string(), draft.name, draft.leans, parent);
+        let id = self.add(
+            draft.key.to_string(),
+            draft.name,
+            draft.leans,
+            draft.rust,
+            parent,
+        );
         for child in draft.children {
             self.add_draft(child, Some(id));
         }
@@ -99,13 +116,13 @@ impl Tree {
             Filled::Nothing => {}
             Filled::Weapons(family) => {
                 for name in weapon_names(family) {
-                    self.add(key_of(name), name, &[], Some(id));
+                    self.add(key_of(name), name, &[], None, Some(id));
                 }
             }
             Filled::Kinds => {
                 for kind in CreatureKind::ALL {
                     let name = kind.def().name;
-                    self.add(key_of(name), name, &[], Some(id));
+                    self.add(key_of(name), name, &[], None, Some(id));
                 }
             }
         }

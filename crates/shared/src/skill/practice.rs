@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 
 use super::SkillId;
+use super::learned::Learned;
 use crate::creature::CreatureKind;
 
 /// Values are in hundredths: 1,000 practice is a value of 10.00, kept as 1000, and
@@ -18,10 +19,10 @@ pub const fn level_practice(level: u32) -> u32 {
     level * level * level * 1000
 }
 
-/// Practice per node: only nodes with some are kept, so a node is known once it
-/// has any. Integers only, as client and server must agree.
+/// Practice per node, and what rust goes by: only nodes with some are kept, so a
+/// node is known once it has any. Integers only, as client and server must agree.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Skills(pub(super) BTreeMap<SkillId, u32>);
+pub struct Skills(pub(super) BTreeMap<SkillId, Learned>);
 
 impl Skills {
     /// What a new creature of this kind starts knowing.
@@ -37,7 +38,7 @@ impl Skills {
 
     /// How much this node has been practised.
     pub fn practice(&self, id: SkillId) -> u32 {
-        self.0.get(&id).copied().unwrap_or(0)
+        self.0.get(&id).map_or(0, |learned| learned.practice)
     }
 
     /// Whether it has been practised at all.
@@ -47,23 +48,28 @@ impl Skills {
 
     /// Every known node and its practice, parents before their children.
     pub fn known(&self) -> impl Iterator<Item = (SkillId, u32)> + '_ {
-        self.0.iter().map(|(&id, &practice)| (id, practice))
+        self.0.iter().map(|(&id, learned)| (id, learned.practice))
     }
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// The most practice this node has ever had: rust stops at a share of it.
+    pub fn best(&self, id: SkillId) -> u32 {
+        self.0.get(&id).map_or(0, |learned| learned.best)
+    }
+
     /// Gives this node `amount`, its parent half that, the next a quarter, and so
-    /// on until it rounds down to nothing or reaches the top.
+    /// on until it rounds down to nothing or reaches the top. Practice below the
+    /// best a node reached counts double. Using it, for rust, is `used`.
     pub fn practise(&mut self, id: SkillId, amount: u32) {
         let mut amount = amount;
         for node in id.upwards() {
             if amount == 0 {
                 break;
             }
-            let practice = self.0.entry(node).or_insert(0);
-            *practice = practice.saturating_add(amount);
+            self.0.entry(node).or_default().gain(amount);
             amount /= 2;
         }
     }

@@ -116,6 +116,8 @@ pub(super) fn welcome(
             }
             client.inventory = inventory;
             client.sheet = start_sheet(sheet, client.starting_as.take(), &mut client.inventory);
+            // Skills from before rust count as used now.
+            client.sheet.skills.settle(played);
             give_first_clothes(&mut client.inventory, world.made_now());
             client.speed = client.sheet.speed(&client.inventory);
             client.unsaved = true;

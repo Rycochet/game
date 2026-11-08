@@ -9,79 +9,84 @@
 use crate::blade::Family;
 use crate::sheet::Attribute::{Agility, Empathy, Perception, Strength, Toughness};
 
-use super::super::draft::{Draft, Filled, branch, filled, leaf};
+use super::super::draft::{Draft, Filled, branch, filled, leaf, rusting};
+use super::super::rust::Rust;
 use super::defence::DEFENCE;
 
-const MELEE: Draft = branch(
-    "melee",
-    "Melee",
-    &[Strength, Agility],
-    &[
-        filled(
-            "unarmed",
-            "Unarmed",
-            &[Strength, Agility, Toughness],
-            Filled::Kinds,
-        ),
-        filled("knife", "Knife", &[Agility], Filled::Weapons(Family::Knife)),
-        filled(
-            "dagger",
-            "Dagger",
-            &[Agility],
-            Filled::Weapons(Family::Dagger),
-        ),
-        filled(
-            "shortsword",
-            "Short Sword",
-            &[Agility, Strength],
-            Filled::Weapons(Family::ShortSword),
-        ),
-        filled("sword", "Sword", &[], Filled::Weapons(Family::Sword)),
-        filled(
-            "longsword",
-            "Longsword",
-            &[Strength, Agility],
-            Filled::Weapons(Family::LongSword),
-        ),
-        filled("axe", "Axe", &[Strength], Filled::Weapons(Family::Axe)),
-        filled(
-            "spear",
-            "Spear",
-            &[Agility, Strength],
-            Filled::Weapons(Family::Spear),
-        ),
-        filled(
-            "polearm",
-            "Polearm",
-            &[Strength],
-            Filled::Weapons(Family::Polearm),
-        ),
-        branch("club", "Club", &[Strength], &[leaf("club", "Club", &[])]),
-        branch("mace", "Mace", &[Strength], &[leaf("mace", "Mace", &[])]),
-        branch(
-            "hammer",
-            "Hammer",
-            &[Strength],
-            &[leaf("warhammer", "War Hammer", &[])],
-        ),
-        branch(
-            "flail",
-            "Flail",
-            &[Strength, Agility],
-            &[leaf("flail", "Flail", &[])],
-        ),
-        branch(
-            "staff",
-            "Staff",
-            &[Agility],
-            &[leaf("quarterstaff", "Quarterstaff", &[])],
-        ),
-        branch("whip", "Whip", &[Agility], &[leaf("whip", "Whip", &[])]),
-        // A weapon in each hand, taking turns: beside the weapon types so it can be
-        // specialised like them (owner, 2026-11-07). Not a type to defend with.
-        leaf("dual", "Dual Wielding", &[Agility]),
-        DEFENCE,
-    ],
+// Weapon skills rust when set aside, all of them through Melee (owner, 2026-11-08).
+const MELEE: Draft = rusting(
+    branch(
+        "melee",
+        "Melee",
+        &[Strength, Agility],
+        &[
+            filled(
+                "unarmed",
+                "Unarmed",
+                &[Strength, Agility, Toughness],
+                Filled::Kinds,
+            ),
+            filled("knife", "Knife", &[Agility], Filled::Weapons(Family::Knife)),
+            filled(
+                "dagger",
+                "Dagger",
+                &[Agility],
+                Filled::Weapons(Family::Dagger),
+            ),
+            filled(
+                "shortsword",
+                "Short Sword",
+                &[Agility, Strength],
+                Filled::Weapons(Family::ShortSword),
+            ),
+            filled("sword", "Sword", &[], Filled::Weapons(Family::Sword)),
+            filled(
+                "longsword",
+                "Longsword",
+                &[Strength, Agility],
+                Filled::Weapons(Family::LongSword),
+            ),
+            filled("axe", "Axe", &[Strength], Filled::Weapons(Family::Axe)),
+            filled(
+                "spear",
+                "Spear",
+                &[Agility, Strength],
+                Filled::Weapons(Family::Spear),
+            ),
+            filled(
+                "polearm",
+                "Polearm",
+                &[Strength],
+                Filled::Weapons(Family::Polearm),
+            ),
+            branch("club", "Club", &[Strength], &[leaf("club", "Club", &[])]),
+            branch("mace", "Mace", &[Strength], &[leaf("mace", "Mace", &[])]),
+            branch(
+                "hammer",
+                "Hammer",
+                &[Strength],
+                &[leaf("warhammer", "War Hammer", &[])],
+            ),
+            branch(
+                "flail",
+                "Flail",
+                &[Strength, Agility],
+                &[leaf("flail", "Flail", &[])],
+            ),
+            branch(
+                "staff",
+                "Staff",
+                &[Agility],
+                &[leaf("quarterstaff", "Quarterstaff", &[])],
+            ),
+            branch("whip", "Whip", &[Agility], &[leaf("whip", "Whip", &[])]),
+            // A weapon in each hand, taking turns: beside the weapon types so it can be
+            // specialised like them (owner, 2026-11-07). Not a type to defend with.
+            leaf("dual", "Dual Wielding", &[Agility]),
+            DEFENCE,
+        ],
+    ),
+    Rust::DISUSED,
 );
 
 const RANGED: Draft = branch(

@@ -43,8 +43,8 @@ pub(super) fn struck(
     left
 }
 
-/// Killed: what their difficulty drops falls where they died (Hard and
-/// Ironman), then they are put out of the site onto the world map, whole
+/// Killed: their skills take their difficulty's rust, what it drops falls
+/// where they died (Hard and Ironman), then they are put out of the site onto the world map, whole
 /// again, and told (owner, 2026-11-07, for now). On Ironman they are deleted
 /// after this tick's blows (`died_for_good`).
 fn killed(client: &mut Client, world: &mut ServerWorld, tick: u64) {
@@ -53,6 +53,10 @@ fn killed(client: &mut Client, world: &mut ServerWorld, tick: u64) {
     client.sheet.vitals.fill();
     client.unsaved = true;
     let difficulty = client.playing_on();
+    client
+        .sheet
+        .skills
+        .rust_for_hours(difficulty.rust_on_death());
     let dropped = client.inventory.drop_on_death(difficulty);
     if !dropped.is_empty() {
         info!("{} dropped {} things on dying", client.name, dropped.len());

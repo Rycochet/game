@@ -1,6 +1,7 @@
 //! How `Skills` is written. In saves (formats people can read, RON) it is a list of
-//! each node's path and practice, `[("athletics/climbing", 100)]`, so the tree can
-//! change between versions; a node that moved is found where it went (`old::moved`),
+//! each node's path, practice and what rust goes by (`saved_node.rs`),
+//! `[("athletics/climbing", 100, 120, 7200, 79200)]`, so the tree can change
+//! between versions; a node that moved is found where it went (`old::moved`),
 //! and a path no longer in the tree is dropped. A save from before the tree was a
 //! map of old names to levels, `{Climbing: 1}`, read by the old names (`old`). In messages (postcard) each node goes by its number.
 
@@ -11,7 +12,9 @@ use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use super::learned::{Learned, NOT_SEEN};
 use super::old::{moved, old_skill};
+use super::saved_node::SavedNode;
 use super::{SkillId, Skills, level_practice};
 
 impl Serialize for Skills {
@@ -20,8 +23,14 @@ impl Serialize for Skills {
             return self.0.serialize(serializer);
         }
         let mut list = serializer.serialize_seq(Some(self.0.len()))?;
-        for (id, practice) in &self.0 {
-            list.serialize_element(&(id.path(), practice))?;
+        for (id, learned) in &self.0 {
+            let Learned {
+                practice,
+                best,
+                used,
+                clock,
+            } = *learned;
+            list.serialize_element(&(id.path(), practice, best, used, clock))?;
         }
         list.end()
     }
@@ -32,7 +41,7 @@ impl<'de> Deserialize<'de> for Skills {
         if deserializer.is_human_readable() {
             deserializer.deserialize_any(ByPath)
         } else {
-            BTreeMap::<SkillId, u32>::deserialize(deserializer).map(Skills)
+            BTreeMap::<SkillId, Learned>::deserialize(deserializer).map(Skills)
         }
     }
 }
@@ -67,12 +76,17 @@ impl<'de> Visitor<'de> for ByPath {
 
     fn visit_seq<L: SeqAccess<'de>>(self, mut list: L) -> Result<Skills, L::Error> {
         let mut skills = Skills::default();
-        while let Some((path, practice)) = list.next_element::<(String, u32)>()? {
+        while let Some(SavedNode { path, learned }) = list.next_element()? {
             let found = SkillId::find(&path).or_else(|| moved(&path).and_then(SkillId::find));
-            if let Some(id) = found {
-                let kept = skills.0.entry(id).or_insert(0);
-                *kept = kept.saturating_add(practice);
-            }
+            let Some(id) = found else {
+                continue;
+            };
+            // Two old paths moved to one node: theirs together.
+            let kept = skills.0.entry(id).or_default();
+            kept.practice = kept.practice.saturating_add(learned.practice);
+            kept.best = kept.best.saturating_add(learned.best);
+            kept.used = kept.used.max(learned.used);
+            kept.clock = kept.clock.max(learned.clock);
         }
         Ok(skills)
     }
@@ -83,6 +97,9 @@ impl<'de> Visitor<'de> for ByPath {
             if let Some(id) = old_skill(&name).and_then(SkillId::find) {
                 skills.practise(id, level_practice(level));
             }
+        }
+        for learned in skills.0.values_mut() {
+            learned.used = NOT_SEEN;
         }
         Ok(skills)
     }
