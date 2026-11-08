@@ -81,12 +81,22 @@ pub(super) fn shows_activity(message: &ClientMessage) -> bool {
 }
 
 impl Client {
-    /// Counts its playtime to `now`, and sends it away if it has done nothing
+    /// Counts its playtime to `now`, rusting skills set aside, and sends it
+    /// away if it has done nothing
     /// for `idle_minutes` (0: never). The host, whose server it is, is never
     /// sent away. `false` if the client is to be disconnected.
     pub(super) fn keep_time(&mut self, now: u64, idle_minutes: u16) -> bool {
+        let before = self.activity.played;
         if self.activity.count(now) {
             self.unsaved = true;
+            // Skills rust from disuse, looked at once a minute of playtime.
+            let played = self.activity.played;
+            if played / TICKS_PER_MINUTE != before / TICKS_PER_MINUTE
+                && self.sheet.skills.rust(played)
+                && !self.link.send(&ServerMessage::Sheet(self.sheet.clone()))
+            {
+                return false;
+            }
         }
         let limit = u64::from(idle_minutes) * TICKS_PER_MINUTE;
         if self.host || limit == 0 || self.activity.idle_for(now) < limit {

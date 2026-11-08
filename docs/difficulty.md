@@ -10,8 +10,8 @@ Each character plays on one of four difficulties. A server may allow only some o
 | Difficulty | Harm you take | Health and Mana refill | When you die |
 | ---------- | ------------- | ---------------------- | ------------ |
 | Easy | A fifth less | Twice as fast | Nothing is lost. |
-| Normal | As usual | As usual | As the game is meant to be played. |
-| Hard | A fifth more | As usual | You drop everything but what is worn against the skin. |
+| Normal | As usual | As usual | Your skills slip a little. |
+| Hard | A fifth more | As usual | Your skills slip more, and you drop everything but what is worn against the skin. |
 | Ironman | A fifth more | As usual | You drop everything, and the character is gone for good. |
 
 ## Choosing
@@ -23,6 +23,8 @@ While playing, you can change between Easy, Normal and Hard at any time in **Set
 ## Dying
 
 On Normal and Easy you keep everything when you die. You wake on the world map with full Health, outside the place you died.
+
+On Normal, every skill you know slips back a little, as much as eight hours without using it would take; on Hard, as much as a day would. It is a setback rather than a disaster: a skill never slips below half the most it has been, and you relearn the lost part twice as fast. See [Fighting](fighting#getting-better).
 
 On Hard, everything you carry and wear falls in a bag where you died, except clothes worn against the skin alone, such as a T-shirt or socks. Rings, necklaces, weapons and anything worn over other things drop. Go back for the bag before someone else finds it.
 

@@ -73,6 +73,8 @@ With a weapon in each hand you **fight with two weapons**: your hands take turns
 
 You learn by doing. Every blow that lands teaches you the skill of the weapon you used (and fighting with two weapons, if you are), and being attacked teaches you to defend with what you hold. Each skill learns from at most one blow every five seconds, so a quick weapon learns no faster than a slow one. Skills come quickly at first and ever more slowly towards mastery, which takes a great deal of fighting. Creatures you have fought a lot teach you less, until your skill catches up with how well you know them, so you learn most from fighting many kinds. Your skills are on the Skills page (K).
 
+Skills you set aside **slip back**. A weapon skill you haven't used for eight hours of play starts to slip, a little every hour, but never below half the most it has been, and you relearn what you lost twice as fast. Fighting also wears down your magic a little if you don't cast as well, and fighting in melee wears down your ranged skills (and the other way round), but only the broad skill, never the single spells or weapons under it. Using a skill at least once an hour keeps it from slipping. Only time you are playing counts.
+
 ## Dying
 
 When your Health runs out you are killed, and told so. You come back on the world map outside the place where you died (or outside the wilderness), whole again and with everything you carried.

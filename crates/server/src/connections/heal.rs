@@ -37,6 +37,7 @@ impl Client {
             .skills
             .take(heal_skill(), PRACTICE_PER_CAST, now);
         self.sheet.skills.practise(heal_skill(), practice);
+        self.sheet.skills.used(heal_skill(), played);
         self.unsaved = true;
         true
     }

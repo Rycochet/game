@@ -95,7 +95,10 @@ fn saves_keep_paths_and_messages_numbers() {
     let mut skills = Skills::default();
     skills.practise(SkillId::find("magic/arcane/fire").unwrap(), 40);
     let written = ron::to_string(&skills).unwrap();
-    assert!(written.contains("(\"magic/arcane/fire\",40)"), "{written}");
+    assert!(
+        written.contains("(\"magic/arcane/fire\",40,40,0,0)"),
+        "{written}"
+    );
     assert_eq!(ron::from_str::<Skills>(&written).unwrap(), skills);
     let bytes = postcard::to_allocvec(&skills).unwrap();
     assert_eq!(postcard::from_bytes::<Skills>(&bytes).unwrap(), skills);

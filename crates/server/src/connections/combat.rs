@@ -48,7 +48,8 @@ impl Client {
     /// Practises these skills fighting a creature of this kind at action tick
     /// `now`, keeping the sheet to be saved. A kind fought often teaches less
     /// (`skill::taught`); each skill takes one practice every 5 seconds, and each
-    /// kind counts once in that time as a block fought.
+    /// kind counts once in that time as a block fought. Using them keeps them
+    /// from rusting, and wears down what they oppose (`Skills::used`).
     fn practise(
         &mut self,
         skills: impl IntoIterator<Item = shared::skill::SkillId>,
@@ -56,11 +57,13 @@ impl Client {
         now: u64,
     ) {
         let familiar = familiarity(self.sheet.foes.of(foe).fought);
+        let played = self.activity.played;
         for skill in skills {
             let value = self.sheet.skills.value(skill);
             let amount = taught(PRACTICE_PER_BLOW, familiar, value);
             let amount = self.learning.skills.take(skill, amount, now);
             self.sheet.skills.practise(skill, amount);
+            self.sheet.skills.used(skill, played);
         }
         if self.learning.foes.take(foe, 1, now) > 0 {
             self.sheet.foes.fought(foe);

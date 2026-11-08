@@ -24,6 +24,7 @@ impl Client {
                     let end = ends[rng.range_u64(0, ends.len() as u64) as usize];
                     let amount = rng.range_u64(PRACTICE.0, PRACTICE.1) as u32;
                     self.sheet.skills.practise(end, amount);
+                    self.sheet.skills.used(end, self.activity.played);
                 }
             }
             DevSkills::Forget => {

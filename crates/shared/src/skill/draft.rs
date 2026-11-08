@@ -1,5 +1,6 @@
 //! `Draft`: how the tree is written in `branches/`, one node and what is under it.
 
+use super::rust::Rust;
 use crate::blade::Family;
 use crate::sheet::Attribute;
 
@@ -11,6 +12,8 @@ pub(super) struct Draft {
     pub leans: &'static [Attribute],
     pub children: &'static [Draft],
     pub filled: Filled,
+    /// How it rusts; none to rust as its parent does.
+    pub rust: Option<Rust>,
 }
 
 /// Children filled in from other tables, after any written ones.
@@ -36,6 +39,7 @@ pub(super) const fn branch(
         leans,
         children,
         filled: Filled::Nothing,
+        rust: None,
     }
 }
 
@@ -61,5 +65,15 @@ pub(super) const fn filled(
         leans,
         children: &[],
         filled,
+        rust: None,
+    }
+}
+
+/// The same node, rusting this way, as does everything under it that doesn't say
+/// otherwise.
+pub(super) const fn rusting(draft: Draft, rust: Rust) -> Draft {
+    Draft {
+        rust: Some(rust),
+        ..draft
     }
 }
