@@ -6,7 +6,7 @@ use shared::sheet::Trait;
 use super::draft::Draft;
 use super::looks::{PatternPictures, spawn_looks};
 use super::screen::{BeginButton, CreateLayer, KindList, LooksBox, NameBox};
-use crate::common::MakingCharacter;
+use crate::common::{MakingCharacter, PlayDifficulty, Preferences};
 use crate::connection::ToServer;
 use crate::widgets::{
     ButtonPressed, ButtonState, ColourChosen, DropdownChosen, TextBox, TextEdited, TextFocus,
@@ -21,6 +21,8 @@ pub(super) struct LookList(pub Trait);
 #[allow(clippy::type_complexity)]
 pub(super) fn show_screen(
     making: Res<MakingCharacter>,
+    play: Res<PlayDifficulty>,
+    preferences: Res<Preferences>,
     mut draft: ResMut<Draft>,
     mut focus: ResMut<TextFocus>,
     mut layer: Single<&mut Visibility, With<CreateLayer>>,
@@ -30,7 +32,11 @@ pub(super) fn show_screen(
         return;
     }
     if making.0 {
-        *draft = Draft::default();
+        *draft = Draft {
+            // The player's own, or the nearest the server allows.
+            difficulty: play.allowed.closest(preferences.difficulty),
+            ..Draft::default()
+        };
         name.1.text.clear();
         focus.0 = Some(name.0);
     }

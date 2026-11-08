@@ -26,6 +26,10 @@ fn preferences_read_back_as_saved() {
         }],
         last_server: Some("play.example.com:9000".into()),
         online: true,
+        server_difficulties: shared::difficulty::Difficulties::only(
+            shared::difficulty::Difficulty::Hard,
+        ),
+        difficulty: shared::difficulty::Difficulty::Easy,
         online_settings: shared::protocol::OnlineSettings {
             name: "Ryc's world".into(),
             player_limit: 4,

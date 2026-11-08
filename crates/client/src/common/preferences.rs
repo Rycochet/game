@@ -10,6 +10,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use shared::difficulty::{Difficulties, Difficulty};
 use shared::protocol::OnlineSettings;
 
 use super::{Controls, SavedServer, VideoPrefs, WindowPrefs};
@@ -39,6 +40,12 @@ pub struct Preferences {
     pub online: bool,
     /// How it is opened (Server Options).
     pub online_settings: OnlineSettings,
+    /// The difficulties the built-in server allows (Server Options' tickboxes),
+    /// unless `HOW_DIFFICULTIES` says otherwise.
+    pub server_difficulties: Difficulties,
+    /// The player's own difficulty (Settings, Gameplay, before connecting): what
+    /// a new character starts on, and a character with none of their own yet.
+    pub difficulty: Difficulty,
     /// The window as last left (native): where, how big, and how shown.
     pub window: WindowPrefs,
     /// Video settings for speed and clutter.

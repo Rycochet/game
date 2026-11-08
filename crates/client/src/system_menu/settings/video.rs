@@ -100,7 +100,13 @@ pub(in crate::system_menu) fn fill_video_page(
     let on = window.map(|on| on.0);
     let was = last.replace((*menu, on));
     let opening = *menu == SystemMenu::Settings
-        && !matches!(was, Some((SystemMenu::Settings | SystemMenu::KeepVideo, _)));
+        && !matches!(
+            was,
+            Some((
+                SystemMenu::Settings | SystemMenu::KeepVideo | SystemMenu::Ironman,
+                _
+            ))
+        );
     // (Also when the window is on another monitor, with other resolutions.)
     let moved = was.is_some_and(|(_, was_on)| was_on != on);
     let holding = mouse.pressed(MouseButton::Left) || touches.iter().next().is_some();

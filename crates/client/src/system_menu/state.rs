@@ -17,6 +17,9 @@ pub enum SystemMenu {
     /// Settings, and above it the requester asking whether to keep the video
     /// settings just applied.
     KeepVideo,
+    /// Settings, and above it the requester asking whether to make Ironman the
+    /// player's own difficulty.
+    Ironman,
     /// The menu, and above it the credits.
     Credits,
     /// The menu, and above it Connect (at the startup menu only).
@@ -60,6 +63,7 @@ impl SystemMenu {
             (Self::Menu, Action::ServerOptions) => Self::ServerOptions,
             (Self::Settings, Action::ApplyVideo) => Self::KeepVideo,
             (Self::KeepVideo, Action::KeepVideo | Action::Back) => Self::Settings,
+            (Self::Ironman, Action::ChooseIronman | Action::Back) => Self::Settings,
             (
                 Self::Confirming
                 | Self::Settings
@@ -91,6 +95,8 @@ pub(super) enum Action {
     ApplyVideo,
     /// Keeps the video settings just applied (going back is `Back`).
     KeepVideo,
+    /// The requester's yes to Ironman as the player's own difficulty.
+    ChooseIronman,
     Credits,
     /// Leaves the server for the startup menu.
     LogOut,
@@ -138,6 +144,7 @@ impl Action {
             Self::Settings => "settings",
             Self::ApplyVideo => "apply",
             Self::KeepVideo | Self::KeepCertificate => "keep",
+            Self::ChooseIronman => "ironman",
             Self::Credits => "credits",
             Self::LogOut => "log_out",
             Self::Connect | Self::ConnectNow => "connect",

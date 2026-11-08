@@ -132,6 +132,7 @@ fn spawn_choices(column: &mut ChildSpawnerCommands, draft: &Draft) {
             ..default()
         },
     ));
+    super::difficulty::spawn_difficulty(column);
     column.spawn((
         ValuesText,
         Text::new(""),

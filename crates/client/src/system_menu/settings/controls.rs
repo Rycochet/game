@@ -208,7 +208,9 @@ pub(in crate::system_menu) fn forget_taken(
 ) {
     let in_settings = matches!(
         *menu,
-        super::super::SystemMenu::Settings | super::super::SystemMenu::KeepVideo
+        super::super::SystemMenu::Settings
+            | super::super::SystemMenu::KeepVideo
+            | super::super::SystemMenu::Ironman
     );
     if !in_settings && !taken.0.is_empty() {
         taken.0.clear();
