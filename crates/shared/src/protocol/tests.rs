@@ -65,7 +65,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ClientMessage::UseExit,
         ClientMessage::Explore,
-        ClientMessage::LeaveWilderness,
+        ClientMessage::Leave,
         ClientMessage::SetPaused(true),
         ClientMessage::MoveItem {
             item: Id(uuid::Uuid::from_u128(7)),

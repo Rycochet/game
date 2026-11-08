@@ -1,8 +1,9 @@
 //! Leaving sites: forgetting them, being put out, using the exit.
 
+use bevy::prelude::*;
 use shared::poi::Poi;
 use shared::protocol::ServerMessage;
-use shared::site::{Exit, leads_out};
+use shared::site::{Exit, Site, can_leave, leads_out};
 
 use super::wild::{back_to_wilderness, enter_wilderness, into_site};
 use super::{Arrival, NewVisit, Place, Visit, enter_level, enter_site};
@@ -86,6 +87,36 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
         None if leads_out(&visit.level.level, x, y) => Exit::WorldMap,
         None => return true,
     };
+    take_exit(client, world, exit)
+}
+
+/// The Leave key in a site (not the wilderness): out to the world map from
+/// where the player stands, if `can_leave` lets them, as walking off the edge
+/// does (coming back in, they arrive there).
+pub(crate) fn leave_site(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = &client.visit else {
+        return true;
+    };
+    let (x, y) = visit.position;
+    let Some(kind) = visit.site().map(Site::kind) else {
+        return true;
+    };
+    if !can_leave(kind, visit.index, &visit.level.level, x, y) {
+        info!(
+            "Refused leaving a site from ({x}, {y}) on level {}",
+            visit.index
+        );
+        return true;
+    }
+    take_exit(client, world, Exit::WorldMap)
+}
+
+/// Takes `exit` from the cell the player stands on in a site.
+fn take_exit(client: &mut Client, world: &mut ServerWorld, exit: Exit) -> bool {
+    let Some(visit) = &client.visit else {
+        return true;
+    };
+    let (x, y) = visit.position;
     if let SiteId::DevArea(_) = visit.id {
         return super::dev_area::back_from_area(client, world);
     }

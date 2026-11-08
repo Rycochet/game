@@ -9,6 +9,7 @@
 //! sight, or with where they are back on the world map; `dungeon_map` draws
 //! the level.
 
+mod buttons;
 mod hall;
 mod wilderness;
 
@@ -28,14 +29,14 @@ pub struct SitePlugin;
 impl Plugin for SitePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Heading>()
-            .add_systems(Startup, wilderness::spawn_buttons)
+            .add_systems(Startup, buttons::spawn_buttons)
             .add_systems(
                 Update,
                 (
                     follow_clicked_portal
                         .in_set(PlayerSystems::Input)
                         .after(View3dSystems::Click),
-                    wilderness::explore_or_leave.in_set(PlayerSystems::Input),
+                    buttons::explore_or_leave.in_set(PlayerSystems::Input),
                 ),
             )
             // After everything else this frame, so the view being left

@@ -43,7 +43,7 @@ mod stairs;
 mod versions;
 
 pub use generator::Generator;
-pub use level::{Exit, SiteLevel, leads_out};
+pub use level::{Exit, SiteLevel, can_leave, leads_out};
 pub use poi_look::PoiLook;
 pub use site::Site;
 pub use stairs::{Stairs, StairsDirection, StairsStyle};

@@ -41,7 +41,7 @@ use place::{Mirror, Place};
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
-pub(super) use wild::{area_level, explore, follow, leave_wilderness};
+pub(super) use wild::{area_level, explore, follow, leave_by_key};
 
 /// How far in a town others can be made out, in cells.
 const TOWN_SIGHT: u32 = 40;
@@ -267,6 +267,8 @@ enum Arrival {
 
 #[cfg(test)]
 mod dev_area_tests;
+#[cfg(test)]
+mod leave_key_tests;
 #[cfg(test)]
 mod left_at_tests;
 #[cfg(test)]

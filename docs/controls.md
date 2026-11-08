@@ -17,7 +17,7 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | Travel somewhere | Click the place | Tap the place |
 | Enter a place, take stairs, leave a site | Click it, and walk there | Tap it |
 | Explore the wilderness where you stand on the world map | Shift + . (`>`) | The Explore button |
-| Leave the wilderness, from anywhere out in the open (or a Dev Area, from anywhere in it) | Shift + , (`<`) | The Leave button |
+| Leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`) | The Leave button |
 
 In the wilderness you walk the land between places on foot, 16 steps to each step on the world map, and find places by walking up to them. A place you walk into from the wilderness leads back out into it; one you enter from the world map leads back to the world map. You can't explore from water, or leave the wilderness from inside a building or cave or into water.
 

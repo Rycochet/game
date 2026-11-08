@@ -49,7 +49,7 @@ fn a_player_in_the_wilderness_has_an_area_with_its_mobs() {
 fn mobs_kept_while_away_come_back_as_they_were_and_go_after_a_while() {
     let mut test = exploring();
     let before = mobs_about(&test);
-    test.send(&[ClientMessage::LeaveWilderness]);
+    test.send(&[ClientMessage::Leave]);
     areas_tick(&mut test);
     assert!(test.world.wilderness.areas.areas.is_empty());
     let kept: usize = test
@@ -67,7 +67,7 @@ fn mobs_kept_while_away_come_back_as_they_were_and_go_after_a_while() {
     assert_eq!(mobs_about(&test), before);
     // Away for longer: let go, and made again at home (the same ones, as
     // they are worked out from the seed).
-    test.send(&[ClientMessage::LeaveWilderness]);
+    test.send(&[ClientMessage::Leave]);
     areas_tick(&mut test);
     let later = Instant::now() + WILD_BLOCK_KEPT + Duration::from_secs(1);
     blocks::forget_old(&mut test.world, later);
@@ -102,7 +102,7 @@ fn walking_away_moves_the_area_with_the_player() {
 
 /// Leaves the wilderness and lets everything kept there go.
 fn leave_and_forget(test: &mut TestClient) {
-    test.send(&[ClientMessage::LeaveWilderness]);
+    test.send(&[ClientMessage::Leave]);
     areas_tick(test);
     let later = Instant::now() + WILD_BLOCK_KEPT + Duration::from_secs(1);
     blocks::forget_old(&mut test.world, later);

@@ -69,10 +69,11 @@ pub enum ClientMessage {
     /// Explore the wilderness where the player stands on the world map
     /// (`shared::wilderness`), answered with `EnterLevel`. Refused in water.
     Explore,
-    /// Leave the wilderness for the world map where the player stands,
-    /// answered with `OnWorldMap`. Only from outside ground (not inside a
-    /// building or cave), and not into water.
-    LeaveWilderness,
+    /// Leave for the world map, answered with `OnWorldMap`: the wilderness
+    /// where the player stands, only from outside ground (not inside a
+    /// building or cave) and not into water; a site from where
+    /// `site::can_leave` allows, at its poi; a Dev Area from anywhere.
+    Leave,
     /// Stop or restart the world's clock, answered with `Paused`. Only a server
     /// with just this player on it pauses (`Welcome`'s `can_pause`); others
     /// ignore it.

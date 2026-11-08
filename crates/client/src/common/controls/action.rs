@@ -13,8 +13,8 @@ pub enum Action {
     StepRight,
     /// Into the wilderness from the world map.
     Explore,
-    /// Out of the wilderness to the world map.
-    LeaveWilderness,
+    /// Out of the wilderness, or a site from outside ground, to the world map.
+    Leave,
     ResetView,
     /// The next creature out from the player, or the nearest without a target.
     NextTarget,
@@ -74,7 +74,7 @@ impl Action {
         Self::StepLeft,
         Self::StepRight,
         Self::Explore,
-        Self::LeaveWilderness,
+        Self::Leave,
         Self::ResetView,
         Self::NextTarget,
         Self::PreviousTarget,
@@ -106,7 +106,7 @@ impl Action {
             Self::StepLeft => "Step Left",
             Self::StepRight => "Step Right",
             Self::Explore => "Explore Wilderness",
-            Self::LeaveWilderness => "Leave Wilderness",
+            Self::Leave => "Leave",
             Self::ResetView => "Reset View",
             Self::NextTarget => "Next Target",
             Self::PreviousTarget => "Previous Target",
@@ -130,7 +130,8 @@ impl Action {
             Self::StepLeft => "step_left",
             Self::StepRight => "step_right",
             Self::Explore => "explore",
-            Self::LeaveWilderness => "leave_wilderness",
+            // Its old name, so saved key bindings still find it.
+            Self::Leave => "leave_wilderness",
             Self::ResetView => "reset_view",
             Self::NextTarget => "next_target",
             Self::PreviousTarget => "previous_target",
@@ -161,7 +162,7 @@ impl Action {
     pub fn group(self) -> Group {
         match self {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
-            Self::Explore | Self::LeaveWilderness => Group::Movement,
+            Self::Explore | Self::Leave => Group::Movement,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
             Self::UseSlot(_) => Group::ActionBar,
@@ -183,7 +184,7 @@ impl Action {
             Self::StepLeft => [key(KeyCode::ArrowLeft), key(KeyCode::KeyA)],
             Self::StepRight => [key(KeyCode::ArrowRight), key(KeyCode::KeyD)],
             Self::Explore => [shift(KeyCode::Period), None],
-            Self::LeaveWilderness => [shift(KeyCode::Comma), None],
+            Self::Leave => [shift(KeyCode::Comma), None],
             Self::ResetView => [key(KeyCode::Home), None],
             Self::NextTarget => [key(KeyCode::Tab), None],
             Self::PreviousTarget => [shift(KeyCode::Tab), None],

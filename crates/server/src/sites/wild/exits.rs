@@ -13,19 +13,20 @@ use crate::sites::{Arrival, Visit, leave};
 use crate::storage::SiteId;
 use crate::world_map::look_around;
 
-/// The player leaves the wilderness for the world map where they stand: only
-/// from outside ground (not inside a building or cave), onto a place the
-/// world map lets them stand now.
-pub(crate) fn leave_wilderness(client: &mut Client, world: &mut ServerWorld) -> bool {
-    // The same key leaves a Dev Area from anywhere in it.
-    if let Some(visit) = &client.visit
-        && let crate::storage::SiteId::DevArea(_) = visit.id
-    {
-        return super::super::dev_area::back_from_area(client, world);
-    }
-    let Some(visit) = client.visit.as_ref().filter(|visit| visit.is_wilderness()) else {
+/// The Leave key: out of a Dev Area from anywhere in it, out of a site from
+/// outside ground (`leave_site`), or out of the wilderness for the world map
+/// where they stand: only from outside ground (not inside a building or cave),
+/// onto a place the world map lets them stand now.
+pub(crate) fn leave_by_key(client: &mut Client, world: &mut ServerWorld) -> bool {
+    let Some(visit) = &client.visit else {
         return true;
     };
+    if let crate::storage::SiteId::DevArea(_) = visit.id {
+        return super::super::dev_area::back_from_area(client, world);
+    }
+    if !visit.is_wilderness() {
+        return crate::sites::leave::leave_site(client, world);
+    }
     let (x, y) = visit.position;
     if !visit.level.level.cell(x, y).is_outside() {
         info!("Refused leaving the wilderness from under cover at ({x}, {y})");
