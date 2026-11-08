@@ -8,6 +8,11 @@ use bevy::prelude::*;
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
 pub struct Lightning(pub f32);
 
+/// A bolt of lightning strikes here (in wilderness cells), from the server's
+/// `Lightning` message; the views draw it where they can (`lightning::spawn_bolt`).
+#[derive(Message, Clone, Copy, Debug)]
+pub struct BoltStruck(pub shared::protocol::Strike);
+
 /// Starts a flash now, as the server's `Lightning` message does (the debug
 /// menu's Lightning Now).
 #[derive(Message, Clone, Copy, Debug, Default)]

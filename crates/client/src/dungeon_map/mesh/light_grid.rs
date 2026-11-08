@@ -49,7 +49,7 @@ impl LightGrid {
             for col in 0..self.width {
                 let i = (row * self.width + col) as usize;
                 let amount = by(col + self.min_x, row + self.min_y);
-                self.light[i] = (self.light[i] + colour * amount).min(Vec3::ONE);
+                self.light[i] = brighter(self.light[i], colour * amount);
             }
         }
     }
@@ -83,7 +83,7 @@ impl LightGrid {
                 let distance = Vec2::new((cx - x) as f32, (cy - y) as f32).length();
                 let strength = 1.0 - (distance / reach).powi(2);
                 if let Some(i) = self.index(cx, cy) {
-                    self.light[i] = (self.light[i] + colour * strength).min(Vec3::ONE);
+                    self.light[i] = brighter(self.light[i], colour * strength);
                 }
             }
         }
@@ -104,4 +104,10 @@ impl LightGrid {
         }
         (count > 0.0).then(|| total / count)
     }
+}
+
+/// `light` with `more` added, up to full light: lights never take a cell past
+/// it, but never darken one already past it (lightning's flash).
+fn brighter(light: Vec3, more: Vec3) -> Vec3 {
+    (light + more).min(Vec3::ONE.max(light))
 }

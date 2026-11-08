@@ -1089,4 +1089,4 @@ Owner's request. The Leave key (`<`) leaves any site for the world map from an o
 
 ## 2026-11-08: Lightning is told by the server
 
-Lightning only looks like something for now, but the server works out when it flashes (`shared::weather`'s `lightning`, once a second, for each player) and tells those it flashes for, rather than each client rolling it. Everyone in the same storm sees the same flashes. The owner's next step, bolts striking a spot nobody is standing on, needs a choice only the server can make, as it alone knows where everyone is.
+Lightning only looks like something for now, but the server works out when it flashes (`shared::weather`'s `lightning`, once a second, for each player) and tells those it flashes for, rather than each client rolling it. Everyone in the same storm sees the same flashes. Bolts strike a spot nobody stands on and no poi is near, which only the server can choose, as it alone knows where everyone is; it sends the spot and a seed, and every client draws the same bolt there.

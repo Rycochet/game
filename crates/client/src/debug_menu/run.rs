@@ -167,6 +167,9 @@ pub(super) fn run_actions(
             DebugAction::LightningNow => {
                 lightning.write(LightningStrike);
             }
+            DebugAction::LightningStrikeHere => {
+                to_server.write(ToServer(ClientMessage::DevLightning));
+            }
             DebugAction::WorldTime | DebugAction::SunsAndMoons => {
                 open.toggle(action, &mut commands, &mut raise, &nodes);
             }

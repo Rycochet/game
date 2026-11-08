@@ -34,6 +34,7 @@ pub enum DebugAction {
     KillMob,
     LearnSomeSkills,
     LightningNow,
+    LightningStrikeHere,
     RegenerateDevArea,
     ResetView,
     RevealMap,
@@ -79,7 +80,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 41] = [
+    pub(super) const ALL: [Self; 42] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -105,6 +106,7 @@ impl DebugAction {
         Self::KillMob,
         Self::LearnSomeSkills,
         Self::LightningNow,
+        Self::LightningStrikeHere,
         Self::RegenerateDevArea,
         Self::ResetView,
         Self::RevealMap,
@@ -122,52 +124,6 @@ impl DebugAction {
         Self::VitalsBonus,
         Self::WorldTime,
     ];
-
-    pub(super) fn name(self) -> &'static str {
-        match self {
-            Self::AutoWalk => "Auto Walk",
-            Self::ChangeCellMode => "Change Cell Mode",
-            Self::ChangeCreature => "Change Creature",
-            Self::CreateMob => "Create Mob",
-            Self::DeleteCharacter => "Delete Character",
-            Self::DetectMonsters => "Detect Monsters",
-            Self::DevArea => "Dev Area",
-            Self::FieldsState => "Fields State",
-            Self::ForgetMap => "Forget Map",
-            Self::ForgetMapOnServer => "Forget Map (Server)",
-            Self::ForgetSkills => "Forget Skills",
-            Self::GeneratePoi => "Generate POI",
-            Self::GiveItem => "Give Item",
-            Self::GodMode => "God Mode",
-            Self::GoToWorld => "Go to World",
-            Self::HealFully => "Heal Fully",
-            Self::HerbsState => "Herbs State",
-            Self::Hurt => "Hurt",
-            Self::ItemPictures => "Item Pictures",
-            Self::KillMob => "Kill Mob",
-            Self::DeleteMob => "Delete Mob",
-            Self::FreezeMobs => "Freeze Mobs",
-            Self::InspectMob => "Inspect Mob",
-            Self::LearnSomeSkills => "Learn Some Skills",
-            Self::LightningNow => "Lightning Now",
-            Self::RegenerateDevArea => "Regenerate Dev Area",
-            Self::ResetView => "Reset View",
-            Self::RevealMap => "Reveal Map",
-            Self::ShowDebugInfo => "Show Debug Info",
-            Self::ShowWidgets => "Show Widgets",
-            Self::SpendMana => "Spend Mana",
-            Self::StairsStyle => "Stairs Style",
-            Self::SunsAndMoons => "Suns and Moons",
-            Self::TeleportMode => "Teleport Mode",
-            Self::TeleportToHall => "Teleport to Hall of Worlds",
-            Self::TeleportToPoiShowcase => "Teleport to POI Showcase",
-            Self::TeleportToStart => "Teleport to Start",
-            Self::Truesight => "Truesight",
-            Self::ViewPlanet => "View Planet",
-            Self::VitalsBonus => "Vitals Bonus",
-            Self::WorldTime => "World Time",
-        }
-    }
 
     /// The action with this name, as the menu shows it, in any case (dev
     /// tools: the debug API runs entries by name).
@@ -215,7 +171,9 @@ impl DebugAction {
             Self::HerbsState => facts.view == GameView::Dungeon && facts.has_herbs,
             Self::StairsStyle => facts.view == GameView::Dungeon && facts.has_stairs,
             Self::TeleportToPoiShowcase => shared::showcase::ENABLED,
-            Self::LightningNow => matches!(facts.view, GameView::WorldMap | GameView::Dungeon),
+            Self::LightningNow | Self::LightningStrikeHere => {
+                matches!(facts.view, GameView::WorldMap | GameView::Dungeon)
+            }
             _ => true,
         }
     }
@@ -244,6 +202,7 @@ impl DebugAction {
                 | Self::FreezeMobs
                 | Self::InspectMob
                 | Self::LearnSomeSkills
+                | Self::LightningStrikeHere
                 | Self::RegenerateDevArea
                 | Self::RevealMap
                 | Self::SpendMana
@@ -295,6 +254,8 @@ pub(super) fn kind_name(kind: PoiKind) -> String {
     }
     name
 }
+
+mod names;
 
 #[cfg(test)]
 mod tests;

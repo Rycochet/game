@@ -20,6 +20,7 @@ use super::storage::{SAVE_FORMAT, SiteId, SiteSave, Storage, Unsaved};
 mod find_item;
 mod forgetting;
 mod lightning;
+pub(crate) use lightning::apart;
 mod sharing;
 mod time;
 
@@ -54,6 +55,8 @@ pub struct ServerWorld {
     pub(crate) clock_moved: bool,
     /// The whole second of the server's clock lightning was last looked for in.
     pub(crate) lightning_second: i64,
+    /// Players who asked for lightning by them now (developer tools).
+    pub(crate) lightning_asked: BTreeSet<shared::id::Id>,
     /// The weather and climate, for lightning (`lightning_at`).
     weather: shared::weather::WeatherField,
     climate: shared::climate::Climate,
@@ -160,6 +163,7 @@ impl ServerWorld {
             hour: (minutes / MINUTES_PER_HOUR) as u32,
             clock_moved: false,
             lightning_second: now.floor() as i64,
+            lightning_asked: BTreeSet::new(),
             weather: shared::weather::WeatherField::new(&params),
             climate: shared::climate::Climate::new(&params),
             seed,

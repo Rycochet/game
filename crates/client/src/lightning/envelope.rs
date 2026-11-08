@@ -26,5 +26,25 @@ pub(super) fn strength(seconds: f32, gentle: bool) -> Option<f32> {
     }
 }
 
+/// A bolt shows fully for `FLASH_SECONDS`, then fades over `BOLT_FADE`. With
+/// Reduce Motion it fades in and out as a gentle flash does, this bright.
+const BOLT_FADE: f32 = 0.25;
+const GENTLE_BOLT: f32 = 0.5;
+
+/// How opaque a bolt is `seconds` after it struck (0 to 1), or `None` once it
+/// has gone.
+pub(super) fn bolt_alpha(seconds: f32, gentle: bool) -> Option<f32> {
+    if gentle {
+        return strength(seconds, true).map(|glow| glow / GENTLE_MOST * GENTLE_BOLT);
+    }
+    if seconds < FLASH_SECONDS {
+        Some(1.0)
+    } else if seconds < FLASH_SECONDS + BOLT_FADE {
+        Some(1.0 - (seconds - FLASH_SECONDS) / BOLT_FADE)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests;

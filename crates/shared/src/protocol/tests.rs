@@ -166,6 +166,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::DevBackToStart,
         ClientMessage::DevToShowcase,
         ClientMessage::DevToHall,
+        ClientMessage::DevLightning,
         ClientMessage::DevRevealPois,
         ClientMessage::DevRevealMap,
         ClientMessage::DevForgetMap,
@@ -241,7 +242,14 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ServerMessage::ForgetWorldMap,
         ServerMessage::Hour(6),
-        ServerMessage::Lightning,
+        ServerMessage::Lightning {
+            flash: true,
+            strike: Some(Strike {
+                x: -40,
+                y: 7,
+                seed: 9,
+            }),
+        },
         ServerMessage::WorldClock(WorldTime::at(405.0, 10.0, ClockRate::NORMAL)),
         ServerMessage::Paused {
             paused: true,
