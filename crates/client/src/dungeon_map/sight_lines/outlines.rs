@@ -91,7 +91,7 @@ pub fn place_mask(
 ) {
     let (camera, transform, orbit) = *view;
     // The ground the camera looks at (the player's, on raised land).
-    let floor = transform.translation.y - orbit.pitch.sin() * orbit.distance;
+    let floor = transform.translation.y - orbit.shown_pitch().sin() * orbit.distance;
     let Some(wanted) = view_area(camera, transform, dungeon.level.bounds(), floor) else {
         return;
     };

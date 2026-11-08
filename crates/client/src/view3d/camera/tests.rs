@@ -68,3 +68,19 @@ fn tilt_and_zoom_stay_in_range_and_reset() {
     camera.reset();
     assert_eq!((camera.pitch, camera.distance), (30f32.to_radians(), 100.0));
 }
+
+#[test]
+fn tilting_while_raised_starts_from_what_is_shown() {
+    let mut camera = OrbitCamera::new(20f32.to_radians(), 400.0, 0.0);
+    camera.set_raise(10f32.to_radians());
+    assert!((camera.shown_pitch() - 30f32.to_radians()).abs() < 1e-5);
+    // Turning alone keeps the setting.
+    camera.turn(Vec2::new(10.0, 0.0));
+    assert!((camera.pitch - 20f32.to_radians()).abs() < 1e-5);
+    // Tilting takes what is shown as the setting, then tilts.
+    camera.turn(Vec2::new(0.0, -10.0));
+    let expected = 30f32.to_radians() - 10.0 * RADIANS_PER_PIXEL;
+    assert!((camera.pitch - expected).abs() < 1e-5);
+    assert_eq!(camera.raise(), 0.0);
+    assert!((camera.shown_pitch() - expected).abs() < 1e-5);
+}
