@@ -12,11 +12,13 @@ use crate::world::WorldParams;
 
 mod gait;
 mod training;
+mod wild_heights;
 
 pub use gait::{CLIMB_SAVING_PER_MILLE, FULL, Gait, MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS};
 pub use training::{
     CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RUN_PRACTICE, climb_practice,
 };
+pub use wild_heights::{WildHeights, wild_step_cost};
 
 /// One step: `dx` and `dy` each -1, 0 or 1, not both 0 (`y` south). Made
 /// only through `Step::new`, also when read from a message, so a step is
@@ -127,6 +129,8 @@ pub struct WorldGround {
     width: i64,
     /// Where the sea is frozen, to walk on.
     climate: Climate,
+    /// The lowest tide, which the wilderness's sea is fixed at.
+    low_water: f64,
 }
 
 impl WorldGround {
@@ -135,6 +139,7 @@ impl WorldGround {
             width: Surface::new(world).width(),
             surface: Surface::new(world),
             climate: Climate::new(world),
+            low_water: world.sea_level - world.tide_reach(),
         }
     }
 

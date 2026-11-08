@@ -41,6 +41,7 @@ mod token;
 mod video;
 mod view;
 mod vitals;
+mod wild_heights;
 mod window;
 #[cfg(not(target_arch = "wasm32"))]
 mod window_follow;
@@ -90,6 +91,7 @@ pub use video::{
 };
 pub use view::{ViewFacing, ViewStats};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
+pub use wild_heights::WildCellHeights;
 pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois, WorldChanged};
 
@@ -140,6 +142,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ClickMode>()
             .init_resource::<PlayerSpeed>()
             .init_resource::<PlayerGait>()
+            .init_resource::<WildCellHeights>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
             .init_resource::<MakesCharacters>()

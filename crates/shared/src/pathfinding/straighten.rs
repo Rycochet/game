@@ -15,13 +15,25 @@ pub fn straighten(
     path: &Path,
     allowed: impl Fn(i64, i64) -> bool,
 ) -> Path {
+    straighten_by(level, from, path, allowed, step_cost)
+}
+
+/// `straighten` for a route found by `find_path_by`, with the same `cost_of`,
+/// so a line replaces part of it only if it costs exactly the same.
+pub fn straighten_by(
+    level: &Level,
+    from: (i64, i64),
+    path: &Path,
+    allowed: impl Fn(i64, i64) -> bool,
+    cost_of: impl Fn((i64, i64), (i64, i64)) -> u32,
+) -> Path {
     let mut points = vec![from];
     points.extend_from_slice(&path.cells);
 
     // The cost of the route up to each point, to compare lines against.
     let mut cost_to = vec![0];
     for pair in points.windows(2) {
-        cost_to.push(cost_to[cost_to.len() - 1] + step_cost(pair[0], pair[1]));
+        cost_to.push(cost_to[cost_to.len() - 1] + cost_of(pair[0], pair[1]));
     }
     let is_jump = |a: (i64, i64), b: (i64, i64)| (b.0 - a.0).abs() > 1 || (b.1 - a.1).abs() > 1;
 
@@ -41,7 +53,8 @@ pub fn straighten(
         let replaced = (anchor + 2..=stretch_end).rev().find_map(|end| {
             let line = line_cells(points[anchor], points[end]);
             let budget = cost_to[end] - cost_to[anchor];
-            line_is_as_good(level, points[anchor], &line, budget, &allowed).then_some((end, line))
+            line_is_as_good(level, points[anchor], &line, budget, &allowed, &cost_of)
+                .then_some((end, line))
         });
         match replaced {
             Some((end, line)) => {
@@ -54,7 +67,7 @@ pub fn straighten(
             }
         }
     }
-    Path::through(from, cells, path.reached)
+    Path::through(from, cells, path.reached, &cost_of)
 }
 
 /// The fewest-steps line from one point to another, without the first: as many
@@ -83,6 +96,7 @@ pub(super) fn line_is_as_good(
     line: &[(i64, i64)],
     budget: u32,
     allowed: &impl Fn(i64, i64) -> bool,
+    cost_of: &impl Fn((i64, i64), (i64, i64)) -> u32,
 ) -> bool {
     let mut at = from;
     let mut cost = 0;
@@ -93,7 +107,7 @@ pub(super) fn line_is_as_good(
         if step_on_level(level, at, step) != Some(cell) || !allowed(cell.0, cell.1) {
             return false;
         }
-        cost += step_cost(at, cell);
+        cost += cost_of(at, cell);
         at = cell;
     }
     cost == budget

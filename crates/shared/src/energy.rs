@@ -43,6 +43,17 @@ pub fn site_step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
     step_cost(from, to) * SITE_STEP_SCALE
 }
 
+/// How much a step in the wilderness costs: its distance and slope
+/// (`movement::wild_step_cost`, by the heights at each end and `gait`).
+pub fn wild_step_energy(
+    from: (i64, i64),
+    to: (i64, i64),
+    heights: (i32, i32),
+    gait: crate::movement::Gait,
+) -> u32 {
+    crate::movement::wild_step_cost(from, to, heights, gait) * SITE_STEP_SCALE
+}
+
 /// How much putting on or taking off something this heavy costs: plate takes
 /// longer than a hat.
 pub fn dressing_cost(grams: u32) -> u32 {

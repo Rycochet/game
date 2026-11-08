@@ -143,6 +143,7 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
         Some(visit) => {
             let from = visit.position();
             let place = visit.population();
+            let landing = visit.landing(step).filter(|_| visit.is_wilderness());
             // Someone who won't move aside is in the way; anyone else swaps places.
             if let Some(to) = visit.landing(step) {
                 let kind = client.inventory.creature;
@@ -158,7 +159,14 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
                 return (stayed, 0);
             }
             world.swap_mob(place, to, from);
-            (stayed, site_step_cost(from, to))
+            match landing {
+                // Where it led before any wrapping round the planet.
+                Some(landed) => {
+                    let (moved, cost) = client.wild_step(world, from, landed);
+                    (stayed && moved, cost)
+                }
+                None => (stayed, site_step_cost(from, to)),
+            }
         }
         None => {
             let from = client.world_position();
@@ -176,7 +184,7 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
             let road = world.road_steps.kind_of(from, to);
             let cost = world_step_time(from, to, ends, road, Gait::of(&client.sheet.skills));
             let now = world.action_clock.ticks();
-            let stayed = stayed && client.practise_moving(climbed(ends), now);
+            let stayed = stayed && client.practise_moving(true, climbed(ends), now);
             (stayed, cost)
         }
     }

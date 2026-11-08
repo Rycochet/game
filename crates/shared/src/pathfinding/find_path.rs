@@ -21,6 +21,21 @@ pub fn find_path(
     max_cost: Option<u32>,
     allowed: impl Fn(i64, i64) -> bool,
 ) -> Path {
+    find_path_by(level, from, to, max_cost, allowed, step_cost)
+}
+
+/// `find_path` with steps priced by `cost_of` (from, to) instead of their
+/// distance alone, such as the wilderness's slopes
+/// (`movement::wild_step_cost`): never less than `step_cost`, or the search's
+/// estimate would be too high and routes not the quickest.
+pub fn find_path_by(
+    level: &Level,
+    from: (i64, i64),
+    to: (i64, i64),
+    max_cost: Option<u32>,
+    allowed: impl Fn(i64, i64) -> bool,
+    cost_of: impl Fn((i64, i64), (i64, i64)) -> u32,
+) -> Path {
     let (min_x, min_y, width, height) = level.bounds();
     let index = |(x, y): (i64, i64)| ((y - min_y) * width + (x - min_x)) as usize;
     if !level.contains(from.0, from.1) {
@@ -54,7 +69,7 @@ pub fn find_path(
             let Some(next) = step_on_level(level, at, step) else {
                 continue;
             };
-            let next_cost = cost + step_cost(at, next);
+            let next_cost = cost + cost_of(at, next);
             if next_cost >= best[index(next)]
                 || max_cost.is_some_and(|max| next_cost > max)
                 || !allowed(next.0, next.1)
@@ -76,5 +91,5 @@ pub fn find_path(
         at = came_from[index(at)];
     }
     cells.reverse();
-    Path::through(from, cells, end == to)
+    Path::through(from, cells, end == to, &cost_of)
 }

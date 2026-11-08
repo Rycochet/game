@@ -3,9 +3,11 @@
 use bevy::math::DVec2;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
-use shared::energy::{NORMAL_SPEED, site_step_cost};
-use shared::movement::{Step, step_cost, step_on_level, step_on_world_map, world_step_time};
-use shared::pathfinding::{Path, find_path, find_world_path, straighten};
+use shared::energy::{NORMAL_SPEED, SITE_STEP_SCALE};
+use shared::movement::{
+    Step, step_cost, step_on_level, step_on_world_map, wild_step_cost, world_step_time,
+};
+use shared::pathfinding::{Path, find_path_by, find_world_path, straighten_by};
 use shared::sheet::Feeling;
 
 use super::{
@@ -14,7 +16,7 @@ use super::{
 };
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, Other, PlayerGait,
-    PlayerSpeed, SmoothPosition,
+    PlayerSpeed, SmoothPosition, WildCellHeights,
 };
 
 /// Moves along the route found when the journey was asked for, always ending
@@ -36,12 +38,18 @@ pub(super) fn travel(
     mut stepped: MessageWriter<Stepped>,
     speed_now: Res<PlayerSpeed>,
     gait: Res<PlayerGait>,
+    heights: Res<WildCellHeights>,
     mut energy: ResMut<PlayerEnergy>,
     god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
+    // A step on a level, in `step_cost` units: with the wilderness's slopes.
+    let level_cost = |from: (i64, i64), to: (i64, i64)| match heights.ends(from, to) {
+        Some(ends) => wild_step_cost(from, to, ends, gait.0),
+        None => step_cost(from, to),
+    };
     let enemies = enemy_cells(&others, *god);
     // Only through cells the player has seen, so that a route gives nothing away
     // (and memory may be out of date: the server checks), round enemies, and
@@ -83,8 +91,8 @@ pub(super) fn travel(
             }
             None => {
                 let known = route_to(to);
-                let path = find_path(&dungeon.level, from, to, None, known);
-                straighten(&dungeon.level, from, &path, known)
+                let path = find_path_by(&dungeon.level, from, to, None, known, level_cost);
+                straighten_by(&dungeon.level, from, &path, known, level_cost)
             }
         };
         travel.goal = to;
@@ -139,6 +147,7 @@ pub(super) fn travel(
                     world_step_time(at, next, ends, road, gait.0) as f64
                         / step_cost(at, next) as f64
                 }
+                None if next != at => level_cost(at, next) as f64 / step_cost(at, next) as f64,
                 _ => 1.0,
             };
             let moved = towards(now, to, left / slowness);
@@ -162,9 +171,10 @@ pub(super) fn travel(
                 if in_the_way && ground.is_none() {
                     // An enemy has come between: go round it, from here.
                     let known = route_to(travel.goal);
-                    let path = find_path(&dungeon.level, at, travel.goal, None, known);
+                    let path =
+                        find_path_by(&dungeon.level, at, travel.goal, None, known, level_cost);
                     let path = Path {
-                        cells: straighten(&dungeon.level, at, &path, known).cells,
+                        cells: straighten_by(&dungeon.level, at, &path, known, level_cost).cells,
                         ..path
                     };
                     travel.route_arrives = path.reached;
@@ -200,7 +210,7 @@ pub(super) fn travel(
                         );
                         world_step_time(at, next, ends, roads.kind_of(at, next), gait.0)
                     }
-                    None => site_step_cost(at, next),
+                    None => level_cost(at, next) * SITE_STEP_SCALE,
                 };
                 energy.energy.spend(tick, speed_now.0, cost);
                 stepped.write(Stepped::between(step, at, next));

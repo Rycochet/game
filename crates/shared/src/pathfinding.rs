@@ -15,10 +15,10 @@ mod straighten;
 mod world_path;
 
 pub use distance_map::DistanceMap;
-pub use find_path::find_path;
+pub use find_path::{find_path, find_path_by};
 use measure::{distance_squared, estimate};
 pub use path::Path;
-pub use straighten::straighten;
+pub use straighten::{straighten, straighten_by};
 pub use world_path::{WORLD_ROUTE_REACH, find_world_path};
 
 /// The order steps are tried in, so equally quick routes always come out the

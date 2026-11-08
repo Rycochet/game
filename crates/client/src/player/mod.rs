@@ -16,6 +16,7 @@ mod moving;
 mod state;
 mod steps;
 mod travel;
+mod wild_heights;
 
 use keys::move_player;
 pub use messages::{Arrived, Player, PlayerSystems, Stepped, TakeStep, TravelTo};
@@ -24,6 +25,7 @@ use moving::note_moving;
 use state::{PlayerEnergy, Travel, action_tick, spawn_player};
 use steps::take_steps;
 use travel::{enemy_cells, travel};
+use wild_heights::keep_wild_heights;
 
 /// How far the player's light reaches in dungeons, in cells.
 const LIGHT_RADIUS: u32 = 6;
@@ -60,7 +62,7 @@ impl Plugin for PlayerPlugin {
                 (
                     move_player.in_set(PlayerSystems::Input),
                     // After everything in `Input` asked for its steps.
-                    (take_steps, travel, note_moving)
+                    (keep_wild_heights, take_steps, travel, note_moving)
                         .chain()
                         .in_set(PlayerSystems::Travel),
                 )
