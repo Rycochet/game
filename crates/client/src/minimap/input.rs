@@ -96,6 +96,15 @@ pub(super) fn take_input(
     preferences
         .controls
         .clear_just_pressed(&mut keys, Action::ResetView);
+    // The camera behind stays still while the map is open.
+    for action in [
+        Action::TurnLeft,
+        Action::TurnRight,
+        Action::ZoomIn,
+        Action::ZoomOut,
+    ] {
+        preferences.controls.release(&mut keys, action);
+    }
 
     // A press anywhere is the map's.
     if mouse.clear_just_pressed(MouseButton::Left) {

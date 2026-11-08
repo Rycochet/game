@@ -13,11 +13,11 @@ The keys below are the ones the game starts with. To change them, open Settings,
 
 | Action | Keyboard and mouse | Touch |
 | ------ | ------------------ | ----- |
-| Take steps | Arrow keys or W, A, S, D | |
+| Take steps | W, A, S, D, or 8, 4, 2, 6 on the number pad (hold to keep walking) | |
 | Travel somewhere | Click the place | Tap the place |
 | Enter a place, take stairs, leave a site | Click it, and walk there | Tap it |
-| Explore the wilderness where you stand on the world map | Shift + . (`>`) | The Explore button |
-| Leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`) | The Leave button |
+| Explore the wilderness where you stand on the world map | Shift + . (`>`), or 0 on the number pad | The Explore button |
+| Leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad | The Leave button |
 
 In the wilderness you walk the land between places on foot, 16 steps to each step on the world map, and find places by walking up to them. A place you walk into from the wilderness leads back out into it; one you enter from the world map leads back to the world map. You can't explore from water, or leave the wilderness from inside a building or cave or into water.
 
@@ -41,8 +41,11 @@ A black ring turns under your target. Tab and Shift + Tab go through enemies fro
 | Action | Keyboard and mouse | Touch |
 | ------ | ------------------ | ----- |
 | Turn and tilt | Drag with the right button | Twist two fingers to turn, move both up or down to tilt |
-| Zoom | Mouse wheel | Pinch |
-| Back to the starting view | Home | Reset View in the [debug menu](debug-menu) |
+| Turn left or right | 7 or 9 on the number pad | |
+| Zoom | Mouse wheel, = and -, or + and - on the number pad | Pinch |
+| Back to the starting view | Home, or 5 on the number pad | Reset View in the [debug menu](debug-menu) |
+
+A camera key moves the camera a little each time you press it, and keeps it moving for as long as you hold it.
 
 ## Maps and menus
 

@@ -59,6 +59,16 @@ impl Controls {
         taken
     }
 
+    /// Lets go of all its keys, whatever is held with them, so nothing after
+    /// sees them down, held or pressed, until they are pressed again.
+    pub fn release(&self, keys: &mut ButtonInput<KeyCode>, action: Action) {
+        for binding in self.keys(action).into_iter().flatten() {
+            for side in sides(binding.key) {
+                keys.reset(side);
+            }
+        }
+    }
+
     // Only Full Screen uses it, natively.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     /// Whether a key going down, with `held` down (as its own events say), is

@@ -32,11 +32,11 @@ fn a_key_given_to_another_action_leaves_the_first() {
 #[test]
 fn a_key_moved_within_an_action_leaves_its_other_slot() {
     let mut controls = Controls::default();
-    let lost = controls.set(Action::StepUp, 1, Some(key(KeyCode::ArrowUp)));
+    let lost = controls.set(Action::StepUp, 1, Some(key(KeyCode::KeyW)));
     assert_eq!(lost, vec![(Action::StepUp, 0)]);
     assert_eq!(
         controls.keys(Action::StepUp),
-        [None, Some(key(KeyCode::ArrowUp))]
+        [None, Some(key(KeyCode::KeyW))]
     );
 }
 
@@ -83,7 +83,7 @@ fn only_changes_are_saved_and_defaults_fill_the_rest() {
     let mut controls = Controls::default();
     controls.set(Action::StepUp, 1, Some(shift(KeyCode::KeyM)));
     let text = ron::to_string(&controls).expect("saved");
-    assert_eq!(text, r#"{"step_up":(Some("ArrowUp"),Some("Shift+KeyM"))}"#);
+    assert_eq!(text, r#"{"step_up":(Some("KeyW"),Some("Shift+KeyM"))}"#);
     let back: Controls = ron::from_str(&text).expect("read");
     assert_eq!(back, controls);
     assert_eq!(ron::to_string(&Controls::default()).expect("saved"), "{}");
@@ -143,6 +143,42 @@ fn events_match_with_what_is_held() {
     let controls = Controls::default();
     assert!(controls.is_key_of(Action::FullScreen, KeyCode::Enter, Mods::ALT));
     assert!(!controls.is_key_of(Action::FullScreen, KeyCode::Enter, Mods::NONE));
+}
+
+#[test]
+fn number_pad_defaults_are_in_the_second_column() {
+    let numpad = |binding: &Option<Binding>| {
+        binding.is_some_and(|binding| format!("{:?}", binding.key).starts_with("Numpad"))
+    };
+    for action in Action::ALL {
+        let [first, _] = action.defaults();
+        assert!(!numpad(&first), "{action:?} has the number pad first");
+    }
+    for (action, key) in [
+        (Action::StepUp, KeyCode::Numpad8),
+        (Action::StepDown, KeyCode::Numpad2),
+        (Action::StepLeft, KeyCode::Numpad4),
+        (Action::StepRight, KeyCode::Numpad6),
+        (Action::TurnLeft, KeyCode::Numpad7),
+        (Action::TurnRight, KeyCode::Numpad9),
+        (Action::ResetView, KeyCode::Numpad5),
+        (Action::ZoomIn, KeyCode::NumpadAdd),
+        (Action::ZoomOut, KeyCode::NumpadSubtract),
+        (Action::Explore, KeyCode::Numpad0),
+        (Action::Leave, KeyCode::NumpadDecimal),
+    ] {
+        assert_eq!(action.defaults()[1], Some(Binding::new(key, Mods::NONE)));
+    }
+}
+
+#[test]
+fn releasing_lets_go_of_held_keys() {
+    let controls = Controls::default();
+    let mut keys = input(&[KeyCode::Numpad7]);
+    keys.clear();
+    assert!(controls.pressed(&keys, Action::TurnLeft));
+    controls.release(&mut keys, Action::TurnLeft);
+    assert!(!controls.active(&keys, Action::TurnLeft));
 }
 
 #[test]

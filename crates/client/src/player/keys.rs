@@ -46,3 +46,6 @@ pub(super) fn move_player(
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

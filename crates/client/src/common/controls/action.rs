@@ -15,6 +15,11 @@ pub enum Action {
     Explore,
     /// Out of the wilderness, or a site from outside ground, to the world map.
     Leave,
+    /// The camera swings round the player to the left, by a step or while held.
+    TurnLeft,
+    TurnRight,
+    ZoomIn,
+    ZoomOut,
     ResetView,
     /// The next creature out from the player, or the nearest without a target.
     NextTarget,
@@ -68,13 +73,17 @@ impl Group {
 }
 
 impl Action {
-    pub const ALL: [Self; 27] = [
+    pub const ALL: [Self; 31] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
         Self::StepRight,
         Self::Explore,
         Self::Leave,
+        Self::TurnLeft,
+        Self::TurnRight,
+        Self::ZoomIn,
+        Self::ZoomOut,
         Self::ResetView,
         Self::NextTarget,
         Self::PreviousTarget,
@@ -107,6 +116,10 @@ impl Action {
             Self::StepRight => "Step Right",
             Self::Explore => "Explore Wilderness",
             Self::Leave => "Leave",
+            Self::TurnLeft => "Turn Camera Left",
+            Self::TurnRight => "Turn Camera Right",
+            Self::ZoomIn => "Zoom In",
+            Self::ZoomOut => "Zoom Out",
             Self::ResetView => "Reset View",
             Self::NextTarget => "Next Target",
             Self::PreviousTarget => "Previous Target",
@@ -132,6 +145,10 @@ impl Action {
             Self::Explore => "explore",
             // Its old name, so saved key bindings still find it.
             Self::Leave => "leave_wilderness",
+            Self::TurnLeft => "turn_camera_left",
+            Self::TurnRight => "turn_camera_right",
+            Self::ZoomIn => "zoom_in",
+            Self::ZoomOut => "zoom_out",
             Self::ResetView => "reset_view",
             Self::NextTarget => "next_target",
             Self::PreviousTarget => "previous_target",
@@ -163,6 +180,7 @@ impl Action {
         match self {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
             Self::Explore | Self::Leave => Group::Movement,
+            Self::TurnLeft | Self::TurnRight | Self::ZoomIn | Self::ZoomOut => Group::Camera,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
             Self::UseSlot(_) => Group::ActionBar,
@@ -172,20 +190,26 @@ impl Action {
         }
     }
 
-    /// The game's own keys for it.
+    /// The game's own keys for it. The number pad's are always in the second
+    /// column.
     pub fn defaults(self) -> [Option<Binding>; SLOTS] {
         let key = |key| Some(Binding::new(key, Mods::NONE));
         let alt = |key| Some(Binding::new(key, Mods::ALT));
         // `>` and `<` on UK and US keyboards.
         let shift = |key| Some(Binding::new(key, Mods::SHIFT));
         match self {
-            Self::StepUp => [key(KeyCode::ArrowUp), key(KeyCode::KeyW)],
-            Self::StepDown => [key(KeyCode::ArrowDown), key(KeyCode::KeyS)],
-            Self::StepLeft => [key(KeyCode::ArrowLeft), key(KeyCode::KeyA)],
-            Self::StepRight => [key(KeyCode::ArrowRight), key(KeyCode::KeyD)],
-            Self::Explore => [shift(KeyCode::Period), None],
-            Self::Leave => [shift(KeyCode::Comma), None],
-            Self::ResetView => [key(KeyCode::Home), None],
+            Self::StepUp => [key(KeyCode::KeyW), key(KeyCode::Numpad8)],
+            Self::StepDown => [key(KeyCode::KeyS), key(KeyCode::Numpad2)],
+            Self::StepLeft => [key(KeyCode::KeyA), key(KeyCode::Numpad4)],
+            Self::StepRight => [key(KeyCode::KeyD), key(KeyCode::Numpad6)],
+            Self::Explore => [shift(KeyCode::Period), key(KeyCode::Numpad0)],
+            Self::Leave => [shift(KeyCode::Comma), key(KeyCode::NumpadDecimal)],
+            Self::TurnLeft => [None, key(KeyCode::Numpad7)],
+            Self::TurnRight => [None, key(KeyCode::Numpad9)],
+            // As the Skills page zooms.
+            Self::ZoomIn => [key(KeyCode::Equal), key(KeyCode::NumpadAdd)],
+            Self::ZoomOut => [key(KeyCode::Minus), key(KeyCode::NumpadSubtract)],
+            Self::ResetView => [key(KeyCode::Home), key(KeyCode::Numpad5)],
             Self::NextTarget => [key(KeyCode::Tab), None],
             Self::PreviousTarget => [shift(KeyCode::Tab), None],
             Self::Character => [key(KeyCode::KeyC), None],
