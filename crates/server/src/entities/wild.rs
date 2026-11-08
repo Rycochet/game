@@ -10,8 +10,11 @@
 
 mod blocks;
 mod resets;
+mod site_mobs;
 mod trails;
 
+#[cfg(test)]
+mod site_mobs_tests;
 #[cfg(test)]
 mod tests;
 
@@ -25,6 +28,7 @@ use crate::connections::{Client, Phase};
 use crate::storage::SiteId;
 
 pub(crate) use resets::touched;
+pub(crate) use site_mobs::take_site_mobs_back;
 
 /// How long a block nobody's area holds keeps its mobs (owner: so turning
 /// back makes nothing vanish).

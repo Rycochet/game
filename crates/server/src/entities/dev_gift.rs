@@ -42,8 +42,8 @@ pub(crate) fn give_to_mob(
         .iter()
         .find(|mob| mob.id == id)
         .ok_or("no such mob here")?;
-    let (home_level, home) = (mob.home_level, mob.home);
-    record_of(world, place.0, (id, home_level, home))
+    let (home_level, home, site) = (mob.home_level, mob.home, mob.kept_with(place.0));
+    record_of(world, site, (id, home_level, home))
         .carried
         .extend(items);
     Ok(())

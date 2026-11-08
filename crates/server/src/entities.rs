@@ -166,6 +166,9 @@ pub(crate) struct Mob {
     pacing: Pacing,
     /// Developer tools: it does nothing, even when hit (Create Mob's Still).
     still: bool,
+    /// A site's own mob about in the wilderness: the site whose first level
+    /// keeps it (`home_level` 0), its `home` in wilderness cells.
+    kept_in: Option<SiteId>,
 }
 
 impl Mob {

@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::Instant;
 
 use super::super::{Doing, Mob, Population, dressed};
-use super::{AREA_BLOCKS, WILD_BLOCK_KEPT, place, resets, trails};
+use super::{AREA_BLOCKS, WILD_BLOCK_KEPT, place, resets, site_mobs, trails};
 use crate::ServerWorld;
 use crate::storage::SiteId;
 
@@ -142,7 +142,8 @@ pub(super) fn forget_old(world: &mut ServerWorld, now: Instant) {
     }
 }
 
-/// A block's own mobs, made new (in the frame of a player at `at`), unless
+/// A block's own mobs, and those of a site set in whose homes are in it
+/// (`site_mobs`), made new (in the frame of a player at `at`), unless
 /// some of them are about already or have died (and it hasn't reset since).
 fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64)) -> Vec<Mob> {
     if world.wilderness.areas.living.contains_key(&block) {
@@ -158,7 +159,7 @@ fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64))
     let records: BTreeMap<_, _> = saved.map(|level| level.records.clone()).unwrap_or_default();
     // Into the frame of the player the area is round.
     let turns = (at.0 - block.x * shared::wilderness::BLOCK_SIZE + width / 2).div_euclid(width);
-    let mobs: Vec<Mob> = plan
+    let mut mobs: Vec<Mob> = plan
         .into_iter()
         .filter(|spawn| !dead.contains(&spawn.number))
         .map(|spawn| {
@@ -175,6 +176,7 @@ fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64))
             }
         })
         .collect();
+    mobs.extend(site_mobs::site_mobs(world, block, turns * width));
     if !mobs.is_empty() {
         world
             .wilderness
