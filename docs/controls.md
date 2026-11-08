@@ -13,11 +13,13 @@ The keys below are the ones the game starts with. To change them, open Settings,
 
 | Action | Keyboard and mouse | Touch |
 | ------ | ------------------ | ----- |
-| Take steps | W, A, S, D, or 8, 4, 2, 6 on the number pad (hold to keep walking) | |
+| Take steps | W, A, S, D, or 8, 4, 2, 6 on the number pad (hold to keep walking), or hold an arrow on the movement pad | Hold an arrow on the movement pad |
 | Travel somewhere | Click the place | Tap the place |
 | Enter a place, take stairs, leave a site | Click it, and walk there | Tap it |
-| Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad | The Up or Leave button |
-| Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map | Shift + . (`>`), or 0 on the number pad | The Down or Explore button |
+| Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad, or the movement pad's Up ladder | The movement pad's Up ladder |
+| Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map | Shift + . (`>`), or 0 on the number pad, or the movement pad's Down ladder | The movement pad's Down ladder |
+
+The movement pad is the small panel at the bottom right, open when the game starts; the keypad button in the corner opens and closes it, and its top edge drags it somewhere else. Its top row is Up (a ladder narrowing towards the top), a step up the screen and Down (a ladder narrowing towards the bottom); its bottom row steps left, down and right. The arrows go the way the keys do, by the screen, however the camera is turned, and keep walking as long as they are held, stopping when you let go or slide off them. The ladders are greyed out when they would do nothing; hold the pointer or a finger on one to see what it does here.
 
 In the wilderness you walk the land between places on foot, 16 steps to each step on the world map, and find places by walking up to them. A place you walk into from the wilderness leads back out into it; one you enter from the world map leads back to the world map. You can't explore from water, or leave the wilderness from inside a building or cave or into water.
 

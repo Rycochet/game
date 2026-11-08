@@ -21,6 +21,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Piece | Status | Here |
 | --- | --- | --- |
 | Button | have | Normal, selected, active, disabled. A main style (one per area) and a quiet one with no box until hovered. No spinner. |
+| Hold button | have | A button pressed only while held by the mouse or a finger, let go when the pointer slides off or lets go (the movement pad). |
 | Icon button | have | Square, with padding and an optional tooltip naming it. |
 | Small icon button | have | 22 px, for controls on the edge of something, such as the sort and filter buttons above a grid. An icon dropdown is one, opening a list of options with their pictures, some greyed. |
 | Close button | have | A normal raised button, with a letter X. |
@@ -66,7 +67,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Panel | have | One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. |
+| Panel | have | One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. A **grip panel** has no title or close button, only a narrow grip of thinner stripes along its top (the movement pad). |
 | Full-screen layer | have | 90% of the window, 75% for one above it. |
 | Tabs | have | Folder-style, for switching between views of one thing (Settings, the Character panel). |
 | Menu | later | Right-click item menu: use, split, drop. |

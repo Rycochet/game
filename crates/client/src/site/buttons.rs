@@ -1,65 +1,26 @@
-//! The Down and Up buttons at the bottom middle of the screen, shown whenever
-//! pressing them would work (with or without touch), and their keys (Shift +
-//! . and Shift + ,: `>` and `<` on UK and US keyboards). On stairs they read
-//! Down or Up; otherwise Explore (on the world map) and Leave (to it). While
-//! the player is fighting they are greyed and the keys do nothing: no changing
-//! floors in a fight.
+//! Down and Up: the movement pad's ladder buttons (`step_pad` spawns them)
+//! and their keys (Shift + . and Shift + ,: `>` and `<` on UK and US
+//! keyboards). The buttons are enabled whenever pressing them would work: on
+//! stairs, or exploring from the world map and leaving to it. While the player
+//! is fighting they are disabled and the keys do nothing: no changing floors
+//! in a fight.
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, LevelKind};
 use shared::site::{StairsDirection, can_leave};
 
-use crate::common::{Action, CurrentDungeon, GameView, MapPosition, OwnVitals, Preferences};
+use crate::common::{
+    Action, CurrentDungeon, GameView, MapPosition, OwnVitals, PadButton, Preferences,
+};
 use crate::connection::ToServer;
 use crate::player::Player;
-use crate::widgets::{
-    ButtonPressed, ButtonState, HoverTip, Pressable, TextSize, UiId, spawn_button,
-};
+use crate::widgets::{ButtonPressed, ButtonState, HoverTip};
 
-/// The buttons' widget form (named when they were only for the wilderness).
-const FORM: &str = "wilderness";
 /// The buttons' tip while fighting.
 const FIGHTING: &str = "Not while fighting";
-
-/// The button to go down stairs, or explore the wilderness from the world map.
-#[derive(Component)]
-pub(super) struct DownButton;
-
-/// The button to go up stairs, or leave the wilderness or a site for the
-/// world map.
-#[derive(Component)]
-pub(super) struct UpButton;
-
-/// The buttons, side by side at the bottom of the screen in the middle (for
-/// now: the owner has better plans), hidden until they can be used.
-pub(super) fn spawn_buttons(mut commands: Commands) {
-    let row = Node {
-        position_type: PositionType::Absolute,
-        bottom: px(16.0),
-        width: percent(100.0),
-        justify_content: JustifyContent::Center,
-        ..default()
-    };
-    commands.spawn(row).with_children(|row| {
-        let hidden = || Node {
-            display: Display::None,
-            ..default()
-        };
-        let normal = ButtonState::Normal;
-        spawn_button(row, normal, "Explore", TextSize::Large, hidden()).insert((
-            DownButton,
-            Pressable,
-            HoverTip(String::new()),
-            UiId::new(FORM, "down"),
-        ));
-        spawn_button(row, normal, "Leave", TextSize::Large, hidden()).insert((
-            UpButton,
-            Pressable,
-            HoverTip(String::new()),
-            UiId::new(FORM, "up"),
-        ));
-    });
-}
+/// Their tips when they would do nothing here.
+const NO_DOWN: &str = "Down: on stairs going down, or Explore from the world map";
+const NO_UP: &str = "Up: on stairs going up, or Leave where a way out is";
 
 /// Whether the server would let the player leave from where they stand, as
 /// far as the client can tell: in the wilderness from outside ground (the
@@ -77,44 +38,17 @@ fn can_leave_here(dungeon: &CurrentDungeon, at: &MapPosition) -> bool {
     }
 }
 
-/// A button's parts this changes.
-type ButtonParts = (
-    Entity,
-    &'static mut Node,
-    &'static mut ButtonState,
-    &'static mut HoverTip,
-    &'static Children,
-);
-
-/// One button as it should look: shown or not, its words, and greyed (with
-/// a tip saying why) while fighting.
-fn show(
-    (node, state, tip, children): (&mut Node, &mut ButtonState, &mut HoverTip, &Children),
-    texts: &mut Query<&mut Text>,
-    (shown, label, fighting): (bool, &str, bool),
-) {
-    let display = if shown { Display::Flex } else { Display::None };
-    if node.display != display {
-        node.display = display;
-    }
-    let wanted = if fighting {
-        ButtonState::Disabled
-    } else {
+/// One button as it should look: enabled or not, and its tip, which says
+/// what it does now, or why it can't.
+fn show(mut state: Mut<ButtonState>, mut tip: Mut<HoverTip>, (usable, words): (bool, &str)) {
+    let wanted = if usable {
         ButtonState::Normal
+    } else {
+        ButtonState::Disabled
     };
-    if *state != wanted {
-        *state = wanted;
-    }
-    let words = if fighting { FIGHTING } else { "" };
+    state.set_if_neq(wanted);
     if tip.0 != words {
         tip.0 = words.to_string();
-    }
-    for &child in children {
-        if let Ok(mut text) = texts.get_mut(child)
-            && text.0 != label
-        {
-            text.0 = label.to_string();
-        }
     }
 }
 
@@ -130,9 +64,7 @@ pub(super) fn down_or_up(
     (vitals, time): (Res<OwnVitals>, Res<Time>),
     player: Option<Single<&MapPosition, With<Player>>>,
     mut pressed: MessageReader<ButtonPressed>,
-    mut down: Single<ButtonParts, (With<DownButton>, Without<UpButton>)>,
-    mut up: Single<ButtonParts, With<UpButton>>,
-    mut texts: Query<&mut Text>,
+    mut buttons: Query<(Entity, &PadButton, &mut ButtonState, &mut HoverTip)>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     let on_world_map = *view.get() == GameView::WorldMap;
@@ -148,18 +80,32 @@ pub(super) fn down_or_up(
     let fighting = vitals.fighting(time.elapsed_secs_f64());
 
     let (down_shown, up_shown) = (on_world_map || on_down, on_up || can_leave);
-    let down_label = if on_down { "Down" } else { "Explore" };
-    let up_label = if on_up { "Up" } else { "Leave" };
-    let (d, u) = (&mut *down, &mut *up);
-    let down_entity = d.0;
-    let up_entity = u.0;
-    let down_look = (down_shown, down_label, fighting);
-    show((&mut d.1, &mut d.2, &mut d.3, d.4), &mut texts, down_look);
-    show(
-        (&mut u.1, &mut u.2, &mut u.3, u.4),
-        &mut texts,
-        (up_shown, up_label, fighting),
-    );
+    let down_words = match (fighting, down_shown, on_down) {
+        (true, ..) => FIGHTING,
+        (_, false, _) => NO_DOWN,
+        (_, true, true) => "Down",
+        (_, true, false) => "Explore",
+    };
+    let up_words = match (fighting, up_shown, on_up) {
+        (true, ..) => FIGHTING,
+        (_, false, _) => NO_UP,
+        (_, true, true) => "Up",
+        (_, true, false) => "Leave",
+    };
+    let (mut down_entity, mut up_entity) = (None, None);
+    for (entity, button, state, tip) in &mut buttons {
+        match button {
+            PadButton::Down => {
+                down_entity = Some(entity);
+                show(state, tip, (down_shown && !fighting, down_words));
+            }
+            PadButton::Up => {
+                up_entity = Some(entity);
+                show(state, tip, (up_shown && !fighting, up_words));
+            }
+            _ => {}
+        }
+    }
 
     let presses: Vec<Entity> = pressed.read().map(|press| press.0).collect();
     if fighting {
@@ -169,12 +115,12 @@ pub(super) fn down_or_up(
     // The keys whatever the buttons show: the server decides (a Dev Area is
     // left from anywhere).
     if ((on_world_map || in_site) && controls.just_pressed(&keys, Action::Down))
-        || (down_shown && presses.contains(&down_entity))
+        || (down_shown && down_entity.is_some_and(|e| presses.contains(&e)))
     {
         to_server.write(ToServer(ClientMessage::Down));
     }
     if (in_site && controls.just_pressed(&keys, Action::Up))
-        || (up_shown && presses.contains(&up_entity))
+        || (up_shown && up_entity.is_some_and(|e| presses.contains(&e)))
     {
         to_server.write(ToServer(ClientMessage::Up));
     }

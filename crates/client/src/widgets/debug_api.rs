@@ -17,8 +17,8 @@ use super::scroll::ScrollArea;
 use super::slider::Slider;
 use super::tabs::{Tab, Tabs};
 use super::{
-    ButtonState, ButtonTooltip, Checked, ColourPicker, Dropdown, KeyBox, Pressable, Switch,
-    TextBox, TextFocus, UiId,
+    ButtonState, ButtonTooltip, Checked, ColourPicker, Dropdown, HoldButton, KeyBox, Pressable,
+    Switch, TextBox, TextFocus, UiId,
 };
 
 pub(super) fn add(app: &mut App) {
@@ -41,6 +41,7 @@ enum Kind {
     Tabs,
     Check,
     Switch,
+    Hold,
     Panel,
     Scroll,
     Button,
@@ -58,6 +59,7 @@ impl Kind {
             Self::Tabs => "tabs",
             Self::Check => "check",
             Self::Switch => "switch",
+            Self::Hold => "hold_button",
             Self::Panel => "panel",
             Self::Scroll => "scroll",
             Self::Button => "button",
@@ -94,6 +96,7 @@ struct Widgets<'w, 's> {
     tabs: Query<'w, 's, (Entity, &'static Tab)>,
     checked: Query<'w, 's, &'static Checked>,
     switches: Query<'w, 's, &'static Switch>,
+    holds: Query<'w, 's, &'static HoldButton>,
     panels: Query<'w, 's, (), With<MoveablePanel>>,
     scrolls: Query<'w, 's, &'static ScrollPosition, With<ScrollArea>>,
     children: Query<'w, 's, &'static Children>,
@@ -129,6 +132,8 @@ impl Widgets<'_, '_> {
             Kind::Check
         } else if self.switches.contains(entity) {
             Kind::Switch
+        } else if self.holds.contains(entity) {
+            Kind::Hold
         } else if self.panels.contains(entity) {
             Kind::Panel
         } else if self.scrolls.contains(entity) {

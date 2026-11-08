@@ -8,7 +8,8 @@ use server::debug_api::{BrpResult, Value, json, params, refused};
 use super::super::slider::Slider;
 use super::super::text_box::allowed;
 use super::super::{
-    ButtonPressed, Dropdown, DropdownChosen, KeyBox, KeyChosen, SliderMoved, TextBox, TextEdited,
+    ButtonPressed, Dropdown, DropdownChosen, HoldButton, KeyBox, KeyChosen, SliderMoved, TextBox,
+    TextEdited,
 };
 use super::describe::IdAsked;
 use super::{Kind, Widgets};
@@ -29,12 +30,13 @@ enum Change {
     Press(Entity),
     Nothing,
     Scroll(f32),
+    Hold(bool),
 }
 
 /// `client.ui.set {id, value}`: a text box's words, a key box's binding (its
 /// saved name, as `Shift+KeyG`, or "" to empty it), a dropdown's or tab row's
 /// option (its index or words), a slider's place (0 to 1), whether a check
-/// button is ticked or a switch on, or how far a scroll area is scrolled (interface pixels).
+/// button is ticked or a switch on, whether a hold button is held, or how far a scroll area is scrolled (interface pixels).
 #[allow(clippy::type_complexity)]
 pub(super) fn set(
     In(request): In<Option<Value>>,
@@ -45,6 +47,7 @@ pub(super) fn set(
         Query<&mut Slider>,
         Query<&mut ScrollPosition>,
         Query<&mut KeyBox>,
+        Query<&mut HoldButton>,
     )>,
     mut keys_chosen: MessageWriter<KeyChosen>,
     mut pressed: MessageWriter<ButtonPressed>,
@@ -87,6 +90,12 @@ pub(super) fn set(
         Change::Scroll(y) => {
             if let Ok(mut position) = all.p4().get_mut(entity) {
                 position.y = y;
+            }
+        }
+        Change::Hold(held) => {
+            // Held from the next frame, as by the mouse, until set false.
+            if let Ok(mut hold) = all.p6().get_mut(entity) {
+                hold.by_api = held;
             }
         }
         Change::Press(button) => {
@@ -176,6 +185,12 @@ fn change_of(widgets: &Widgets, entity: Entity, asked: &SetAsked) -> BrpResult<C
             } else {
                 Change::Press(entity)
             })
+        }
+        Kind::Hold => {
+            let held = value
+                .as_bool()
+                .ok_or_else(|| refused("a hold button takes true (held) or false"))?;
+            Ok(Change::Hold(held))
         }
         Kind::Scroll => {
             let to = value

@@ -44,6 +44,9 @@ pub(in crate::widgets) fn place_panels(
             moveable.at = in_new_window(moveable.at, old, window);
         }
         let size = computed.size() * computed.inverse_scale_factor;
+        if let Some(gap) = moveable.from_bottom_right.take() {
+            moveable.at = window - size - gap;
+        }
         let at = on_screen(moveable.at, size, window);
         if moveable.at != at {
             moveable.at = at;

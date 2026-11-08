@@ -6,7 +6,7 @@ use super::super::item::{ItemTip, ItemTooltip};
 use super::super::slider::Slider;
 use super::super::text_box::{TextBox, TextFocus};
 use super::super::theme::{ERROR_EDGE, HOVER_EDGE};
-use super::super::{ButtonState, INK, KeyBox, Switch, sunken_border};
+use super::super::{ButtonState, HoldButton, INK, KeyBox, Switch, sunken_border};
 use super::{ButtonStyle, ButtonTooltip, Pointed, TOOLTIP_DELAY, TOOLTIP_OFFSET, Touch, look};
 use crate::common::UiPointer;
 
@@ -25,13 +25,16 @@ pub(in crate::widgets) fn show_button_looks(
             &mut BackgroundColor,
             &mut BorderColor,
             &Children,
+            Option<&HoldButton>,
         ),
         (Without<Switch>, Without<KeyBox>),
     >,
     mut labels: Query<&mut TextColor>,
 ) {
-    for (entity, state, style, mut background, mut border, children) in &mut buttons {
-        let touch = if pointed.pressed == Some(entity) && pointed.hovered == Some(entity) {
+    for (entity, state, style, mut background, mut border, children, hold) in &mut buttons {
+        // A finger holding a hold button isn't the mouse's press.
+        let held = hold.is_some_and(HoldButton::held);
+        let touch = if held || pointed.pressed == Some(entity) && pointed.hovered == Some(entity) {
             Touch::Pressed
         } else if pointed.hovered == Some(entity) {
             Touch::Hovered

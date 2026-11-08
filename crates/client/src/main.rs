@@ -27,6 +27,7 @@ mod planet_view;
 mod player;
 mod site;
 mod skills_page;
+mod step_pad;
 mod surface_style;
 mod system_menu;
 mod target;
@@ -124,6 +125,7 @@ fn main() {
     ));
     app.add_plugins(skills_page::SkillsPagePlugin);
     app.add_plugins(lightning::LightningPlugin);
+    app.add_plugins(step_pad::StepPadPlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

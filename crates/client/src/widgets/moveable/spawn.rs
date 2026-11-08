@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use super::super::{PANEL_EDGE, RaisePanel, SHADED_EDGE, panel, panel_title, spawn_close_button};
 use super::{
-    CLOSE_MARGIN, CONTENT_GAP, FIRST_PANEL_Z, MIN_STRIPES_WIDTH, PADDING, STRIPE_GAP,
-    STRIPE_THICKNESS, STRIPES, TITLE_GAP, TOP_PADDING,
+    CLOSE_MARGIN, CONTENT_GAP, FIRST_PANEL_Z, GRIP_GAP, GRIP_PADDING, GRIP_THICKNESS,
+    MIN_STRIPES_WIDTH, PADDING, STRIPE_GAP, STRIPE_THICKNESS, STRIPES, TITLE_GAP, TOP_PADDING,
 };
 
 /// A panel that can be moved. `at` is where its top-left corner is wanted, in
@@ -16,6 +16,32 @@ pub(in crate::widgets) struct MoveablePanel {
     /// The window's size when last placed, to keep it in the same part of the
     /// window when that changes.
     pub(super) window: Option<Vec2>,
+    /// Until first placed: how far its bottom-right corner is wanted from the
+    /// window's, in place of `at`.
+    pub(super) from_bottom_right: Option<Vec2>,
+}
+
+/// Where a moveable panel first goes, in logical pixels.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PanelPlace {
+    /// Its top-left corner here.
+    TopLeft(Vec2),
+    /// Its bottom-right corner this far left of and above the window's.
+    BottomRight(Vec2),
+}
+
+impl MoveablePanel {
+    fn new(place: PanelPlace) -> Self {
+        let (at, from_bottom_right) = match place {
+            PanelPlace::TopLeft(at) => (at, None),
+            PanelPlace::BottomRight(gap) => (Vec2::ZERO, Some(gap)),
+        };
+        Self {
+            at,
+            window: None,
+            from_bottom_right,
+        }
+    }
 }
 
 /// What a click on this node does.
@@ -34,28 +60,7 @@ pub(in crate::widgets) enum PanelPart {
 /// entity to put its contents in; the panel fits them. It is despawned when
 /// closed.
 pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (Entity, Entity) {
-    let root = commands
-        .spawn((
-            panel(),
-            MoveablePanel { at, window: None },
-            GlobalZIndex(FIRST_PANEL_Z),
-            Visibility::Hidden,
-        ))
-        .id();
-    commands.entity(root).insert((
-        PanelPart::Body(root),
-        Node {
-            position_type: PositionType::Absolute,
-            flex_direction: FlexDirection::Column,
-            border: UiRect::all(px(PANEL_EDGE)),
-            padding: UiRect {
-                top: px(TOP_PADDING),
-                ..UiRect::all(px(PADDING))
-            },
-            row_gap: px(CONTENT_GAP),
-            ..default()
-        },
-    ));
+    let root = spawn_root(commands, PanelPlace::TopLeft(at), TOP_PADDING);
     let content = commands
         .spawn(Node {
             flex_direction: FlexDirection::Column,
@@ -94,6 +99,74 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
     // In front of any panels already open.
     commands.write_message(RaisePanel(root));
     (root, content)
+}
+
+/// A moveable panel with no title or close button, moved by the narrow grip
+/// along its top: thinner lines, nearer the edge. Returns the panel, and the
+/// entity to put its contents in; the panel fits them. Hide it with
+/// `Display::None` to keep its place.
+pub fn spawn_grip_panel(commands: &mut Commands, place: PanelPlace) -> (Entity, Entity) {
+    let root = spawn_root(commands, place, 0.0);
+    let grip = commands
+        .spawn((
+            PanelPart::TitleBar(root),
+            Node {
+                flex_direction: FlexDirection::Column,
+                row_gap: px(GRIP_GAP),
+                // The room above and below the lines grips too, for fingers.
+                padding: UiRect::vertical(px(GRIP_PADDING)),
+                ..default()
+            },
+        ))
+        .with_children(|grip| {
+            for _ in 0..STRIPES {
+                grip.spawn((
+                    Node {
+                        height: px(GRIP_THICKNESS),
+                        ..default()
+                    },
+                    BackgroundColor(SHADED_EDGE),
+                ));
+            }
+        })
+        .id();
+    let content = commands
+        .spawn(Node {
+            flex_direction: FlexDirection::Column,
+            row_gap: px(CONTENT_GAP),
+            ..default()
+        })
+        .id();
+    commands.entity(root).add_children(&[grip, content]);
+    commands.write_message(RaisePanel(root));
+    (root, content)
+}
+
+/// A moveable panel's outside, hidden until placed, with `top` padding.
+fn spawn_root(commands: &mut Commands, place: PanelPlace, top: f32) -> Entity {
+    let root = commands
+        .spawn((
+            panel(),
+            MoveablePanel::new(place),
+            GlobalZIndex(FIRST_PANEL_Z),
+            Visibility::Hidden,
+        ))
+        .id();
+    commands.entity(root).insert((
+        PanelPart::Body(root),
+        Node {
+            position_type: PositionType::Absolute,
+            flex_direction: FlexDirection::Column,
+            border: UiRect::all(px(PANEL_EDGE)),
+            padding: UiRect {
+                top: px(top),
+                ..UiRect::all(px(PADDING))
+            },
+            row_gap: px(CONTENT_GAP),
+            ..default()
+        },
+    ));
+    root
 }
 
 /// Put this on a node for presses on it to go no further. `entity` is the node.
