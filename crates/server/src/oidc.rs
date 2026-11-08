@@ -90,7 +90,8 @@ impl Logins {
                 return Ok(None);
             }
         };
-        let secret = LoginSecret::load(data, env::var("HOW_LOGIN_SECRET").ok().as_deref())?;
+        let given = crate::environment::secret("HOW_LOGIN_SECRET")?;
+        let secret = LoginSecret::load(data, given.as_deref())?;
         Ok(Self::start(settings, callback, secret))
     }
 

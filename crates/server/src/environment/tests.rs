@@ -94,7 +94,50 @@ fn variables_in_the_source() -> std::collections::BTreeSet<String> {
 }
 
 /// What follows a provider's name in its variables.
-const OIDC_PARTS: [&str; 4] = ["_CLIENT_ID", "_CLIENT_SECRET", "_ISSUER", "_LABEL"];
+const OIDC_PARTS: [&str; 5] = [
+    "_CLIENT_ID",
+    "_CLIENT_SECRET",
+    "_CLIENT_SECRET_FILE",
+    "_ISSUER",
+    "_LABEL",
+];
+
+#[test]
+fn a_secret_comes_from_its_file_if_one_is_named() {
+    let folder = crate::storage::tests::TestFolder::new();
+    std::fs::create_dir_all(&folder.0).unwrap();
+    let file = folder.0.join("secret.txt");
+    std::fs::write(
+        &file,
+        "from the file
+",
+    )
+    .unwrap();
+    let path = file.display().to_string();
+    let lookup = |pairs: Vec<(&'static str, String)>| {
+        move |name: &str| {
+            pairs
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, v)| v.clone())
+        }
+    };
+    let plain = lookup(vec![("S", " plain ".into())]);
+    assert_eq!(secret_value("S", plain).unwrap().as_deref(), Some("plain"));
+    let both = lookup(vec![("S", "plain".into()), ("S_FILE", path.clone())]);
+    assert_eq!(
+        secret_value("S", both).unwrap().as_deref(),
+        Some("from the file")
+    );
+    let blank_file = lookup(vec![("S", "plain".into()), ("S_FILE", " ".into())]);
+    assert_eq!(
+        secret_value("S", blank_file).unwrap().as_deref(),
+        Some("plain")
+    );
+    assert_eq!(secret_value("S", lookup(vec![])).unwrap(), None);
+    let missing = lookup(vec![("S_FILE", format!("{path}.gone"))]);
+    assert!(secret_value("S", missing).is_err());
+}
 
 #[test]
 fn the_user_documentation_lists_every_server_variable() {

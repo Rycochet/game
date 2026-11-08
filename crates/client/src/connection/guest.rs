@@ -45,11 +45,15 @@ pub(super) fn token(target: &Target) -> Result<GuestToken, String> {
         // An embedded server has no logins, so this doesn't get used.
         return server::new_guest_token();
     };
+    native::token(&storage_key(url), native::file().as_deref())
+}
+
+/// What a server's secrets are kept under natively: `host:port`, and the
+/// `HOW_DEBUG_GUEST` slot if there is one.
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn storage_key(url: &str) -> String {
     let slot = std::env::var("HOW_DEBUG_GUEST").ok();
-    native::token(
-        &native::key(url, slot.as_deref()),
-        native::file().as_deref(),
-    )
+    native::key(url, slot.as_deref())
 }
 
 #[cfg(not(target_arch = "wasm32"))]

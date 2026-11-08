@@ -1,10 +1,12 @@
 //! Which providers the environment sets up: `HOW_OIDC_<NAME>_CLIENT_ID` and
-//! `_CLIENT_SECRET` for each, with `_ISSUER` and `_LABEL` (optional for the
-//! providers in `KNOWN`), and where they send players back to (`HOW_LOGIN_URL`).
+//! `_CLIENT_SECRET` (or `_CLIENT_SECRET_FILE`) for each, with `_ISSUER` and
+//! `_LABEL` (optional for the providers in `KNOWN`), and where they send players
+//! back to (`HOW_LOGIN_URL`).
 
 use url::Url;
 
 use super::CALLBACK_PATH;
+use crate::environment::secret_value;
 
 /// Providers that need only a client id and secret: their name (as in the
 /// variables, lower case), issuer and label.
@@ -31,11 +33,13 @@ pub(crate) struct ProviderSettings {
 pub(super) fn providers_from(
     variables: &[(String, String)],
 ) -> (Vec<ProviderSettings>, Vec<String>) {
+    let value = |name: &str| {
+        let found = variables.iter().find(|(key, _)| key == name);
+        found.map(|(_, value)| value.clone())
+    };
     let get = |name: &str| {
-        variables
-            .iter()
-            .find(|(key, _)| key == name)
-            .map(|(_, value)| value.trim().to_owned())
+        value(name)
+            .map(|value| value.trim().to_owned())
             .filter(|value| !value.is_empty())
     };
     let mut names: Vec<&str> = variables
@@ -51,13 +55,20 @@ pub(super) fn providers_from(
         let variable = |part: &str| format!("{PREFIX}{name}_{part}");
         let lower = name.to_lowercase();
         let known = KNOWN.iter().find(|(known, ..)| *known == lower);
-        let (Some(client_id), Some(client_secret)) =
-            (get(&variable("CLIENT_ID")), get(&variable("CLIENT_SECRET")))
+        let client_secret = match secret_value(&variable("CLIENT_SECRET"), value) {
+            Ok(secret) => secret,
+            Err(problem) => {
+                warnings.push(format!("{problem}, so {lower} logins are off"));
+                continue;
+            }
+        };
+        let (Some(client_id), Some(client_secret)) = (get(&variable("CLIENT_ID")), client_secret)
         else {
             warnings.push(format!(
-                "{} or {} isn't set, so {lower} logins are off",
+                "{} or {} (or {}) isn't set, so {lower} logins are off",
                 variable("CLIENT_ID"),
-                variable("CLIENT_SECRET")
+                variable("CLIENT_SECRET"),
+                variable("CLIENT_SECRET_FILE")
             ));
             continue;
         };

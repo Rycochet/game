@@ -52,12 +52,16 @@ Players can log in through a provider's website, such as Google, if you set one 
 | `HOW_GUEST_MODE` | `false` | `true` treats everyone as a guest, as if no provider were set up, whatever the variables below say. Handy for trying things out. |
 | `HOW_OIDC_<NAME>_CLIENT_ID` | none | The client id a provider gave you, where `<NAME>` is any name you choose for it, such as `GOOGLE`. With its secret, players can log in through that provider. |
 | `HOW_OIDC_<NAME>_CLIENT_SECRET` | none | The client secret that provider gave you. Keep it to yourself. |
+| `HOW_OIDC_<NAME>_CLIENT_SECRET_FILE` | none | A file holding the client secret instead, such as a Docker secret. If set, it is used in place of `HOW_OIDC_<NAME>_CLIENT_SECRET`. If the file can't be read, that provider is left out. |
 | `HOW_OIDC_<NAME>_ISSUER` | Google's for `GOOGLE` | The provider's address, where its OpenID Connect settings are found (`<issuer>/.well-known/openid-configuration`). Any provider that supports OpenID Connect works. It must be `https://`, except on the server's own machine. |
 | `HOW_OIDC_<NAME>_LABEL` | `Google` for `GOOGLE`, otherwise the name | What players see the provider called. |
 | `HOW_LOGIN_URL` | `https://` and `HOW_LETS_ENCRYPT_DOMAIN`, if that is set | The address players reach the server at, such as `https://game.example.com`. Providers send players back to `/login/callback` there. Without it, providers can't be used. |
 | `HOW_LOGIN_SECRET` | made on the first run | What email addresses are made into keys with. Servers that share players must all have the same one. Without it, the server makes one the first time and keeps it in its data folder; once kept, a different one stops the server from starting, as it would lose every account. |
+| `HOW_LOGIN_SECRET_FILE` | none | A file holding the login secret instead, such as a Docker secret. If set, it is used in place of `HOW_LOGIN_SECRET`. If the file can't be read, the server doesn't start. |
 
 A provider that is set up wrongly, or can't be reached when the server starts, is left out, with a warning in the log saying why.
+
+Every secret can be given in a file instead, by adding `_FILE` to its name. The file's contents are used, without the spaces or line ends round them, and the file wins if both are set.
 
 ## Logging
 

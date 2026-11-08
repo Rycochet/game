@@ -1,9 +1,9 @@
 //! What both native programs read from the environment: the log level, a
-//! refusal to run on the old variable names, and yes-or-no options.
+//! refusal to run on the old variable names, yes-or-no options and secrets.
 
-use std::env;
+use std::{env, fs};
 
-use bevy::log::{DEFAULT_FILTER, Level, LogPlugin, warn};
+use bevy::log::{DEFAULT_FILTER, Level, LogPlugin, info, warn};
 use shared::difficulty::Difficulties;
 
 /// How much to log: `error`, `warn`, `info` (the default), `debug` or `trace`.
@@ -44,6 +44,33 @@ pub(crate) fn option_value(value: Option<&str>, default: bool) -> bool {
         .iter()
         .any(|word| word.eq_ignore_ascii_case(value));
     default != changed
+}
+
+/// A secret (`HOW_..._SECRET`): the contents of the file `<name>_FILE` names,
+/// if that is set, which wins over `<name>` itself (for Docker's secrets and the
+/// like). `None` if neither is set; blank counts as not set, and the spaces and
+/// line ends round a value are left out. An error if the file can't be read.
+pub(crate) fn secret(name: &str) -> Result<Option<String>, String> {
+    secret_value(name, |variable| env::var(variable).ok())
+}
+
+/// `secret`, with the variables from `get`.
+pub(crate) fn secret_value(
+    name: &str,
+    get: impl Fn(&str) -> Option<String>,
+) -> Result<Option<String>, String> {
+    let set = |variable: &str| get(variable).filter(|value| !value.trim().is_empty());
+    let file = format!("{name}_FILE");
+    let Some(path) = set(&file) else {
+        return Ok(set(name).map(|value| value.trim().to_owned()));
+    };
+    if set(name).is_some() {
+        info!("{file} and {name} are both set: the file is used");
+    }
+    let path = path.trim();
+    let text =
+        fs::read_to_string(path).map_err(|error| format!("{file}: can't read {path} ({error})"))?;
+    Ok(Some(text.trim().to_owned()).filter(|text| !text.is_empty()))
 }
 
 /// `HOW_UPNP`, if set: whether to ask the router to forward the port. A

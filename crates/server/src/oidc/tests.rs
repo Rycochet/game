@@ -352,3 +352,26 @@ fn a_provider_that_cant_be_reached_is_left_out() {
     let callback = "http://localhost/login/callback".to_owned();
     assert!(Logins::start(vec![settings], callback, LoginSecret::new("s")).is_none());
 }
+
+#[test]
+fn a_client_secret_can_come_from_a_file() {
+    let folder = TestFolder::new();
+    std::fs::create_dir_all(&folder.0).unwrap();
+    let file = folder.0.join("google_secret");
+    std::fs::write(&file, "from a file\n").unwrap();
+    let path = file.display().to_string();
+    let (providers, warnings) = providers_from(&variables(&[
+        ("HOW_OIDC_GOOGLE_CLIENT_ID", "id"),
+        ("HOW_OIDC_GOOGLE_CLIENT_SECRET_FILE", &path),
+        ("HOW_OIDC_BROKEN_CLIENT_ID", "id"),
+        ("HOW_OIDC_BROKEN_CLIENT_SECRET_FILE", "nowhere/at/all"),
+        ("HOW_OIDC_BROKEN_ISSUER", "https://auth.example.com"),
+    ]));
+    assert_eq!(providers.len(), 1);
+    assert_eq!(providers[0].client_secret, "from a file");
+    assert_eq!(warnings.len(), 1, "{warnings:?}");
+    assert!(
+        warnings[0].contains("broken logins are off"),
+        "{warnings:?}"
+    );
+}

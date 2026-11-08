@@ -8,7 +8,7 @@ use shared::world::WORLD_MAP_VERSION;
 
 use super::ping::TimedPong;
 use super::prediction::{Prediction, correction};
-use super::{Connecting, FromServer, ServerConnection, give_up, hang_up, log_in};
+use super::{FromServer, ServerConnection, give_up, hang_up};
 use crate::common::{
     CurrentWorld, GameClock, GameView, Hosting, MakingCharacter, MapPosition, ServerClock,
     ServerStatus, WorldChanged,
@@ -20,7 +20,6 @@ use crate::player::Player;
 pub(super) fn receive(
     mut commands: Commands,
     connection: Res<ServerConnection>,
-    mut connecting: ResMut<Connecting>,
     mut status: ResMut<ServerStatus>,
     mut world: Option<ResMut<CurrentWorld>>,
     view: Res<State<GameView>>,
@@ -66,12 +65,6 @@ pub(super) fn receive(
                     received: Instant::now(),
                 });
             }
-            Ok(Some(ServerMessage::LoginOptions { methods })) => {
-                if let Err(reason) = log_in(&connection, &mut connecting, &methods) {
-                    give_up(&mut commands, &mut status, reason);
-                    break;
-                }
-            }
             // A new character, to be made with `character_create`'s screen.
             Ok(Some(ServerMessage::Characters {
                 list,
@@ -84,13 +77,6 @@ pub(super) fn receive(
                     current: None,
                     allowed: difficulties,
                 });
-            }
-            // Nothing logs in to an account with characters yet: choosing one is
-            // to come, before making one.
-            Ok(Some(ServerMessage::Characters { .. })) => {
-                let reason = "This version can't choose a character on this server".to_owned();
-                give_up(&mut commands, &mut status, reason);
-                break;
             }
             Ok(Some(ServerMessage::Welcome {
                 name,
@@ -158,13 +144,16 @@ pub(super) fn receive(
                 give_up(&mut commands, &mut status, reason);
                 break;
             }
-            // Answers to logging in through a provider, which this client
-            // doesn't do yet: it only logs in as a guest.
+            // Logging in, and an account's characters: `log_in`'s.
             Ok(Some(
-                ServerMessage::OpenLogin { .. }
+                message @ (ServerMessage::LoginOptions { .. }
+                | ServerMessage::Characters { .. }
+                | ServerMessage::OpenLogin { .. }
                 | ServerMessage::LoggedIn { .. }
-                | ServerMessage::LoginFailed(_),
-            )) => {}
+                | ServerMessage::LoginFailed(_)),
+            )) => {
+                from_server.write(FromServer(message));
+            }
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");
                 *status = ServerStatus::Refused(format!("The server refused: {reason}"));
