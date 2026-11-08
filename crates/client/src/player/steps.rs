@@ -1,7 +1,7 @@
 //! Taking the steps asked for, as energy allows.
 
 use bevy::prelude::*;
-use shared::energy::{ACTION_TICKS_PER_SECOND, site_step_cost};
+use shared::energy::{ACTION_TICKS_PER_SECOND, site_step_cost, wild_step_energy};
 use shared::movement::{step_on_level, step_on_world_map, world_step_time};
 
 use super::{
@@ -9,7 +9,7 @@ use super::{
 };
 use crate::common::{
     CancelledEnergy, CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition,
-    Other, PlayerGait, PlayerSpeed, SpentEnergy,
+    Other, PlayerGait, PlayerSpeed, SpentEnergy, WildCellHeights,
 };
 
 /// Takes the steps asked for this frame, in order: in a dungeon, only onto
@@ -28,6 +28,7 @@ pub(super) fn take_steps(
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
     gait: Res<PlayerGait>,
+    heights: Res<WildCellHeights>,
     mut energy: ResMut<PlayerEnergy>,
     mut stepped: MessageWriter<Stepped>,
     god: Res<GodMode>,
@@ -77,7 +78,11 @@ pub(super) fn take_steps(
             continue;
         }
         let cost = match view.get() {
-            GameView::Dungeon => site_step_cost(from, (x, y)),
+            // The wilderness's slopes, as the server prices them.
+            GameView::Dungeon => match heights.ends(from, (x, y)) {
+                Some(ends) => wild_step_energy(from, (x, y), ends, gait.0),
+                None => site_step_cost(from, (x, y)),
+            },
             _ => world.as_ref().map_or(0, |world| {
                 let conditions = world.conditions(&clock);
                 let ends = (

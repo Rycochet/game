@@ -458,3 +458,22 @@ fn distance_maps_never_go_through_world_gates() {
     assert_eq!(map.cost((2, 0)), None);
     assert_eq!(map.towards(&level, (1, 0), |_| true), None);
 }
+
+#[test]
+fn routes_go_round_costly_ground_when_that_is_quicker() {
+    let level = empty_room();
+    // A ridge across x = 10 from the top to y = 14, costly to cross.
+    let cost_of = |from: (i64, i64), to: (i64, i64)| {
+        let ridge = to.0 == 10 && to.1 < 15;
+        step_cost(from, to) + if ridge { 2000 } else { 0 }
+    };
+    let path = find_path_by(&level, (5, 2), (15, 2), None, anywhere, cost_of);
+    assert!(path.reached);
+    assert!(path.cells.iter().all(|&(x, y)| x != 10 || y >= 15));
+    let straight = straighten_by(&level, (5, 2), &path, anywhere, cost_of);
+    assert_eq!(straight.cost, path.cost, "straightening keeps it as quick");
+    assert!(straight.cells.iter().all(|&(x, y)| x != 10 || y >= 15));
+    // Plain distance would go straight across.
+    let flat = find_path(&level, (5, 2), (15, 2), None, anywhere);
+    assert_eq!(flat.cells.len(), 10);
+}
