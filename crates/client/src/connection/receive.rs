@@ -73,9 +73,9 @@ pub(super) fn receive(
                 }
             }
             // A new character, to be made with `character_create`'s screen.
-            Ok(Some(ServerMessage::Characters { list, can_create }))
-                if list.is_empty() && can_create =>
-            {
+            Ok(Some(ServerMessage::Characters {
+                list, can_create, ..
+            })) if list.is_empty() && can_create => {
                 commands.insert_resource(MakingCharacter(true));
             }
             // Nothing logs in to an account with characters yet: choosing one is
@@ -189,6 +189,7 @@ pub(super) fn receive(
             }
             Ok(Some(
                 message @ (ServerMessage::EnterLevel(_)
+                | ServerMessage::Difficulty { .. }
                 | ServerMessage::WildernessWindow { .. }
                 | ServerMessage::InPoi(_)
                 | ServerMessage::EnterHall { .. }

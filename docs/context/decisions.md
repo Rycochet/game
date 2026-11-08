@@ -1090,3 +1090,7 @@ Owner's request. The Leave key (`<`) leaves any site for the world map from an o
 ## 2026-11-08: Lightning is told by the server
 
 Lightning only looks like something for now, but the server works out when it flashes (`shared::weather`'s `lightning`, once a second, for each player) and tells those it flashes for, rather than each client rolling it. Everyone in the same storm sees the same flashes. Bolts strike a spot nobody stands on and no poi is near, which only the server can choose, as it alone knows where everyone is; it sends the spot and a seed, and every client draws the same bolt there.
+
+## 2026-11-08: Difficulty is per character, within what the server allows
+
+Easy, Normal, Hard and Ironman (`shared::difficulty`), owner's design. Each character keeps its own (saved with it); a server allows some (`HOW_DIFFICULTIES`, or the embedded server's Server Options tickboxes, at least one always ticked), and anyone on one it stops allowing is moved to the nearest, the easier on a tie, checked on joining and whenever the allowed ones change. Players may change between Easy, Normal and Hard at any time, but Ironman is only chosen when making a character and never changed to or from by the player (a server's rules can still move them). The player's own default (a client setting) is used for a new character and for older saves with none, never as Ironman. Harm from creatures is scaled for players only; refilling speed is part of `vitals::Limits`, so the client refills at the server's rate. Skill loss on dying waits for rust.

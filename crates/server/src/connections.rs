@@ -31,6 +31,7 @@ mod client;
 mod combat;
 mod delete_character;
 mod dev_skills;
+pub(crate) mod difficulty;
 mod give_items;
 mod heal;
 mod lightning;
@@ -266,6 +267,10 @@ pub struct Client {
     learning: crate::combat::Learning,
     /// What a character being made here asked to be, for when they first join.
     starting_as: Option<(CreatureKind, Appearance, Build)>,
+    /// Its character's difficulty: from `Hello`, making them or their save.
+    pub(crate) difficulty: Option<shared::difficulty::Difficulty>,
+    /// What the host last asked the server to allow, not yet done.
+    asked_difficulties: Option<shared::difficulty::Difficulties>,
     /// Whether `character` (or the visit) changed since it was saved.
     pub(crate) unsaved: bool,
     /// The site level the player is on, if any.
@@ -294,6 +299,8 @@ pub struct Client {
 
 #[cfg(test)]
 mod action_bar_tests;
+#[cfg(test)]
+mod difficulty_tests;
 #[cfg(test)]
 mod idle_tests;
 #[cfg(test)]

@@ -6,10 +6,11 @@ use shared::protocol::{ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessa
 use super::answer_dev::answer_dev;
 use super::answer_items::answer_items;
 use super::delete_character::delete_character;
-use super::new_character::{Asked, create, join_or_make};
+use super::new_character::{create, join_or_make};
 use super::{Action, Client, MOST_WAITING, Phase};
 use crate::accounts::{Accounts, LoginKey, MAX_CHARACTERS};
 use crate::{ServerOptions, ServerWorld};
+use shared::difficulty::Difficulties;
 
 /// A client has logged in: a guest goes to their one character (made first, if
 /// new: `join_or_make`), anyone else is told theirs to choose from.
@@ -18,6 +19,7 @@ pub(super) fn logged_in(
     key: &LoginKey,
     accounts: &mut Accounts,
     world: &ServerWorld,
+    allowed: Difficulties,
 ) -> bool {
     let answered = (|| {
         let id = accounts.log_in(key)?;
@@ -25,12 +27,13 @@ pub(super) fn logged_in(
         client.account = Some(id);
         let answered = if account.guest {
             client.character_id = Some(accounts.guest_character(&id)?);
-            join_or_make(client, world)
+            join_or_make(client, world, allowed)
         } else {
             client.phase = Phase::Choosing;
             client.link.send(&ServerMessage::Characters {
                 list: account.characters.clone(),
                 can_create: account.characters.len() < MAX_CHARACTERS,
+                difficulties: allowed,
             })
         };
         Ok::<bool, String>(answered)
@@ -64,15 +67,21 @@ pub(crate) fn answer(
         // Needs no login: welcomed by `handle_messages`, which can see other
         // clients, once made if new.
         ClientMessage::Hello {
-            makes_characters, ..
+            makes_characters,
+            difficulty,
+            ..
         } if client.character_id.is_some() => {
             client.makes_characters = makes_characters;
-            join_or_make(client, world)
+            client.difficulty = Some(difficulty.for_existing());
+            join_or_make(client, world, options.difficulties)
         }
         ClientMessage::Hello {
-            makes_characters, ..
+            makes_characters,
+            difficulty,
+            ..
         } => {
             client.makes_characters = makes_characters;
+            client.difficulty = Some(difficulty.for_existing());
             client.phase = Phase::LoggingIn;
             let methods = if options.guests {
                 vec![LoginMethod::Guest]
@@ -89,7 +98,7 @@ pub(crate) fn answer(
             if matches!(key, LoginKey::Guest(_)) && !options.guests {
                 return refuse(client, "this server doesn't take guests".into());
             }
-            logged_in(client, &key, accounts, world)
+            logged_in(client, &key, accounts, world, options.difficulties)
         }
         ClientMessage::ChooseCharacter { id } => {
             let Some(account) = client.account.filter(|_| client.phase == Phase::Choosing) else {
@@ -107,19 +116,8 @@ pub(crate) fn answer(
             client.phase = Phase::Joining;
             true
         }
-        ClientMessage::CreateCharacter {
-            name,
-            kind,
-            appearance,
-            build,
-        } => {
-            let asked = Asked {
-                name,
-                kind,
-                appearance,
-                build,
-            };
-            match create(client, asked, accounts) {
+        ClientMessage::CreateCharacter(asked) => {
+            match create(client, asked, accounts, options.difficulties) {
                 Ok(()) => true,
                 Err(reason) => refuse(client, reason),
             }
@@ -178,6 +176,15 @@ pub(crate) fn answer(
         ClientMessage::SetOnline(settings) => {
             // For `network::online`, which can reach the ports.
             client.asked_online = Some(settings);
+            true
+        }
+        ClientMessage::SetDifficulty(to) => {
+            let now = world.action_clock.ticks();
+            client.change_difficulty(to, options.difficulties, now)
+        }
+        ClientMessage::SetDifficulties(allowed) => {
+            // For `difficulty::apply_difficulties`, which reaches everyone.
+            client.ask_difficulties(allowed);
             true
         }
         ClientMessage::SetPaused(_) if !options.pausable => {
@@ -260,6 +267,8 @@ pub(crate) fn answer(
         | ClientMessage::DevGoToWorld { .. }
         | ClientMessage::DevVitals(_)
         | ClientMessage::DevSkills(_) => answer_dev(client, message, world),
-        ClientMessage::DevDeleteCharacter => delete_character(client, world, accounts),
+        ClientMessage::DevDeleteCharacter => {
+            delete_character(client, world, accounts, options.difficulties)
+        }
     }
 }

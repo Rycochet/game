@@ -238,6 +238,8 @@ pub(crate) fn take_mob_blows(
                     wielded,
                 };
                 let harm = attacker.harm(&swing, &client.fighter(), &mut luck(tick, mob, target));
+                // Less on Easy, more on Hard and Ironman.
+                let harm = client.playing_on().harm_taken(harm);
                 let left = struck::struck(client, world, harm, kind, tick);
                 debug!("{mob:?} did {harm:?} to a player, {left} per mille left");
                 ServerMessage::AbilityLanded {

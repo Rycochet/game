@@ -36,6 +36,7 @@ fn it_says_where_health_and_mana_come_from() {
         value: shared::vitals::Points::whole(1),
         most,
         refills_in: 0,
+        refill: shared::vitals::REFILL_TICKS as u32,
     };
     // 20 from Toughness and 2 from practice: the 3 left are from playing.
     let lines = vitals_lines(&sheet, Some((told(25), told(12))));

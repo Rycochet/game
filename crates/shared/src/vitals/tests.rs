@@ -20,7 +20,8 @@ fn a_median_creature_has_20_of_each_and_starts_full() {
         limits,
         Limits {
             health: 20,
-            mana: 20
+            mana: 20,
+            refill: REFILL_TICKS
         }
     );
     assert_eq!(vitals.at(Vital::Health, limits, 0), w(20));
@@ -37,7 +38,8 @@ fn the_most_comes_from_its_own_attribute() {
         limits,
         Limits {
             health: 30,
-            mana: 12
+            mana: 12,
+            refill: REFILL_TICKS
         }
     );
 }
@@ -50,7 +52,8 @@ fn a_day_of_playtime_adds_a_point_to_both() {
         limits(&vitals, PLAYTIME_PER_POINT * 3, 0),
         Limits {
             health: 23,
-            mana: 23
+            mana: 23,
+            refill: REFILL_TICKS
         }
     );
 }
@@ -157,7 +160,8 @@ fn practice_raises_the_most_but_only_so_much_an_hour() {
         limits(&vitals, 0, 0),
         Limits {
             health: 22,
-            mana: 20
+            mana: 20,
+            refill: REFILL_TICKS
         }
     );
 }
@@ -220,7 +224,15 @@ fn saves_from_before_load_full() {
     let vitals: Vitals = serde_json::from_str("{}").unwrap();
     assert_eq!(vitals, Vitals::default());
     assert_eq!(
-        vitals.at(Vital::Health, Limits { health: 7, mana: 3 }, 0),
+        vitals.at(
+            Vital::Health,
+            Limits {
+                health: 7,
+                mana: 3,
+                refill: REFILL_TICKS
+            },
+            0
+        ),
         w(7)
     );
 }
@@ -240,7 +252,7 @@ fn harm_keeps_its_fractions() {
 fn saves_in_whole_points_turn_into_thousandths() {
     let old = r#"{"value":12,"since":5,"practice":40,"this_hour":3}"#;
     let track: Track = serde_json::from_str(old).unwrap();
-    assert_eq!(track.at(20, 5), w(12));
+    assert_eq!(track.at(20, REFILL_TICKS, 5), w(12));
     assert_eq!(track.practice, w(40).milli());
     let full: Track =
         serde_json::from_str(r#"{"value":4294967295,"since":0,"practice":0,"this_hour":0}"#)
@@ -248,4 +260,33 @@ fn saves_in_whole_points_turn_into_thousandths() {
     assert_eq!(full, Track::default());
     let again: Track = serde_json::from_str(&serde_json::to_string(&track).unwrap()).unwrap();
     assert_eq!(again, track);
+}
+
+#[test]
+fn a_faster_refill_fills_sooner_and_the_client_agrees() {
+    let mut vitals = Vitals::default();
+    let usual = limits(&vitals, 0, 0);
+    let quick = Limits {
+        refill: REFILL_TICKS / 2,
+        ..usual
+    };
+    vitals.hurt(w(20), quick, 0, 0);
+    let start = CALM_AFTER;
+    assert_eq!(
+        vitals.at(Vital::Health, quick, start + REFILL_TICKS / 4),
+        w(10)
+    );
+    assert_eq!(
+        vitals.at(Vital::Health, quick, start + REFILL_TICKS / 2),
+        w(20)
+    );
+    assert_eq!(
+        vitals.at(Vital::Health, usual, start + REFILL_TICKS / 4),
+        w(5)
+    );
+    let told = vitals.told(Vital::Health, quick, 0);
+    assert_eq!(
+        told.after(start + REFILL_TICKS / 4),
+        vitals.at(Vital::Health, quick, start + REFILL_TICKS / 4)
+    );
 }

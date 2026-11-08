@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::ability::ActionBar;
+use shared::difficulty::Difficulty;
 use shared::item::Inventory;
 use shared::protocol::CharacterId;
 use shared::sheet::Sheet;
@@ -23,6 +24,8 @@ pub struct Everywhere {
     pub playtime: u64,
     /// `CharacterSave::action_bar`.
     pub action_bar: ActionBar,
+    /// `CharacterSave::difficulty`.
+    pub difficulty: Option<Difficulty>,
 }
 
 impl Storage {
@@ -96,6 +99,11 @@ impl Storage {
             }))
     }
 
+    /// A character's difficulty, if they have one saved.
+    pub fn load_difficulty(&self, id: &CharacterId) -> Result<Option<Difficulty>, String> {
+        Ok(self.character(id)?.and_then(|save| save.difficulty))
+    }
+
     /// Deletes a character's save (dev tools), if they have one.
     pub fn remove_character(&self, id: &CharacterId) {
         if let Some(queue) = &self.queue {
@@ -132,6 +140,7 @@ impl Storage {
                     gates: everywhere.gates,
                     playtime: everywhere.playtime,
                     action_bar: everywhere.action_bar,
+                    difficulty: everywhere.difficulty,
                 }),
             );
         }

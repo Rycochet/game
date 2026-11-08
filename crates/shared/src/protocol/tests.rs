@@ -44,17 +44,23 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::Hello {
             protocol: PROTOCOL_VERSION,
             makes_characters: false,
+            difficulty: crate::difficulty::Difficulty::Hard,
         },
         ClientMessage::Login(Credentials::Guest(GuestToken([7; 32]))),
         ClientMessage::ChooseCharacter {
             id: CharacterId(crate::id::Id::for_test(1)),
         },
-        ClientMessage::CreateCharacter {
+        ClientMessage::CreateCharacter(super::NewCharacter {
             name: "Some One".into(),
             kind: CreatureKind::Kobold,
             appearance: Appearance::default(),
             build: crate::sheet::Build::CENTRED,
-        },
+            difficulty: crate::difficulty::Difficulty::Ironman,
+        }),
+        ClientMessage::SetDifficulty(crate::difficulty::Difficulty::Easy),
+        ClientMessage::SetDifficulties(crate::difficulty::Difficulties::only(
+            crate::difficulty::Difficulty::Normal,
+        )),
         ClientMessage::Step {
             map: 2,
             number: 9,
@@ -218,6 +224,11 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 last_played: 99,
             }],
             can_create: true,
+            difficulties: crate::difficulty::Difficulties::ALL,
+        },
+        ServerMessage::Difficulty {
+            current: Some(crate::difficulty::Difficulty::Easy),
+            allowed: crate::difficulty::Difficulties::ALL,
         },
         ServerMessage::Welcome {
             name: "Brin".into(),
@@ -378,6 +389,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 value: crate::vitals::Points(3_500),
                 most: 20,
                 refills_in: 150,
+                refill: 3_000,
             },
             mana: crate::vitals::VitalNow::default(),
         },

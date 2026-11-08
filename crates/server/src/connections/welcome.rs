@@ -83,10 +83,7 @@ pub(super) fn welcome(
     world: &mut ServerWorld,
     options: &ServerOptions,
 ) -> bool {
-    let id = client
-        .character_id
-        .as_ref()
-        .expect("decided before joining");
+    let id = &client.character_id.expect("decided before joining");
     let loaded = world
         .storage
         .load_character(id, world.seed.id())
@@ -95,18 +92,20 @@ pub(super) fn welcome(
             let gates = world.storage.load_gates(id)?;
             let played = world.storage.load_playtime(id)?;
             let bar = world.storage.load_action_bar(id)?;
+            let difficulty = world.storage.load_difficulty(id)?;
             Ok((
                 character,
                 inventory,
                 world.storage.load_sheet(id)?,
                 gates,
-                (played, bar),
+                (played, bar, difficulty),
             ))
         });
     // Not `Playing` yet, so nothing blank can be saved over the real character.
     match loaded {
-        Ok((character, inventory, sheet, gates, (played, bar))) => {
+        Ok((character, inventory, sheet, gates, (played, bar, difficulty))) => {
             client.action_bar = bar;
+            client.decide_difficulty(difficulty, options.difficulties);
             (client.character, client.other_worlds) = character;
             client.activity = Activity::joined(played, world.action_clock.ticks());
             client.gates = gates;
@@ -135,8 +134,8 @@ pub(super) fn welcome(
 }
 
 /// Tells the client the world they are in and where on its world map, then
-/// what they are like, their action bar, the gates they have gone through and
-/// what they carry.
+/// what they are like, their action bar, the gates they have gone through,
+/// what they carry and their difficulty.
 /// `false` if the client has gone.
 pub(super) fn send_welcome(
     client: &mut Client,
@@ -163,4 +162,5 @@ pub(super) fn send_welcome(
         && client.send_action_bar()
         && client.send_visited_gates()
         && client.send_inventory()
+        && client.send_difficulty(options.difficulties)
 }

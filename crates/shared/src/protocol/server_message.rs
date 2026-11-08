@@ -9,6 +9,7 @@ use super::level::{LevelChunk, LevelInfo, RememberedLevel};
 use super::login::{CharacterSummary, LoginMethod};
 use super::{WorldChunk, WorldInfo};
 use crate::ability::{Ability, ActionBar};
+use crate::difficulty::{Difficulties, Difficulty};
 use crate::ground::Load;
 use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
@@ -23,10 +24,19 @@ use crate::world::WorldTime;
 pub enum ServerMessage {
     /// The answer to `Hello`: the ways to log in here.
     LoginOptions { methods: Vec<LoginMethod> },
-    /// The account's characters, to choose from or add to (if `can_create`).
+    /// The account's characters, to choose from or add to (if `can_create`),
+    /// and the difficulties a new one may have.
     Characters {
         list: Vec<CharacterSummary>,
         can_create: bool,
+        difficulties: Difficulties,
+    },
+    /// The character's difficulty (`None` while there is no character yet) and
+    /// the ones the server allows: after `Welcome`, after `SetDifficulty`, and
+    /// whenever the server's change.
+    Difficulty {
+        current: Option<Difficulty>,
+        allowed: Difficulties,
     },
     /// What someone the player is trading with has to trade.
     TradeStock { with: Id, items: Vec<Item> },

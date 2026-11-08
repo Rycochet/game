@@ -179,6 +179,10 @@ pub struct CharacterSave {
     /// Their action bar. Older saves start with the new character's (Attack first).
     #[serde(default)]
     pub action_bar: ActionBar,
+    /// How hard the game is for them; missing from older saves, which take
+    /// their player's default on joining.
+    #[serde(default)]
+    pub difficulty: Option<shared::difficulty::Difficulty>,
 }
 
 /// What a character knows of one world, and where they are in it.

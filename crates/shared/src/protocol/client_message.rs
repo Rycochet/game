@@ -7,16 +7,16 @@ use super::dev_mob::DevMobTool;
 use super::dev_skills::DevSkills;
 use super::dev_vitals::DevVitals;
 use super::kind_change::KindChange;
-use super::login::{CharacterId, Credentials};
+use super::login::{CharacterId, Credentials, NewCharacter};
 use crate::ability::{Ability, BarChange};
 use crate::creature::{CreatureKind, Size};
+use crate::difficulty::{Difficulties, Difficulty};
 use crate::dungeon::Cell;
 use crate::id::Id;
 use crate::item::{Favour, Holder, ItemKind, Quality, Rotation};
 use crate::item_form::RollRequest;
 use crate::movement::Step;
 use crate::poi::{ChunkPos, PoiKind};
-use crate::sheet::{Appearance, Build};
 use crate::site::DevArea;
 use crate::world::ClockRate;
 
@@ -28,10 +28,12 @@ pub enum ClientMessage {
     /// character `Characters`). `makes_characters`: the client has a screen for
     /// making one, so a new guest's or single player's character is made with
     /// it (`Characters` with none to choose, then `CreateCharacter`) rather
-    /// than plain for their kind.
+    /// than plain for their kind. `difficulty`: the player's default, for a
+    /// character with none saved (`Difficulty::for_existing`).
     Hello {
         protocol: u32,
         makes_characters: bool,
+        difficulty: Difficulty,
     },
     /// Logs in, once `LoginOptions` has arrived. A guest is answered with
     /// `Welcome`, anyone else with `Characters`.
@@ -41,16 +43,14 @@ pub enum ClientMessage {
     /// Makes a new character and plays them, answered with `Welcome`. The
     /// server checks the name and how many the account has. For a guest or the
     /// single player, whose one character is new, it names that one.
-    CreateCharacter {
-        name: String,
-        /// What they are: refused unless it is `CreatureDef::playable`.
-        kind: CreatureKind,
-        /// How they look: refused unless it suits the kind.
-        appearance: Appearance,
-        /// Their triangles: refused unless valid. The server works out the
-        /// attributes from them.
-        build: Build,
-    },
+    CreateCharacter(NewCharacter),
+    /// Changes the character's difficulty, answered with `Difficulty` either
+    /// way: refused unless the server allows it, and never to or from Ironman.
+    SetDifficulty(Difficulty),
+    /// The difficulties the server allows (none counts as all of them): only
+    /// the embedded server's own player, and not while `HOW_DIFFICULTIES` sets
+    /// them. Everyone on one no longer allowed is moved to the nearest.
+    SetDifficulties(Difficulties),
     /// Asks the server's clock, now and then. `sent` is the client's own time,
     /// handed back in `Pong` so it can tell how long the round trip took.
     Ping { sent: f64 },

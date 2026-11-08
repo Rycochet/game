@@ -374,6 +374,7 @@ fn pings_are_answered_without_the_game_and_the_rest_reach_it() {
     let hello = ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
         makes_characters: false,
+        difficulty: shared::difficulty::Difficulty::Normal,
     };
     let bytes = postcard_bytes(&hello);
     socket.send(WsMessage::Binary(bytes.into())).unwrap();

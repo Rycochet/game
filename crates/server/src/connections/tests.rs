@@ -171,6 +171,7 @@ impl TestClient {
 pub(crate) const HELLO: ClientMessage = ClientMessage::Hello {
     protocol: PROTOCOL_VERSION,
     makes_characters: false,
+    difficulty: shared::difficulty::Difficulty::Normal,
 };
 
 pub(super) const GUEST: ClientMessage =
@@ -891,7 +892,8 @@ fn logged_in_to_account(
         client,
         &LoginKey::Test(key),
         &mut connections.accounts,
-        &world
+        &world,
+        shared::difficulty::Difficulties::ALL,
     ));
     let told = answers(&end);
     (end, told)
@@ -966,12 +968,15 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
         let world = ServerWorld::new(WorldSeed::new(1));
         let mut connections = Connections::default();
         let (end, _) = logged_in_to_account(&mut connections, key);
-        end.send(&ClientMessage::CreateCharacter {
-            name: "Some One".into(),
-            kind,
-            appearance,
-            build,
-        });
+        end.send(&ClientMessage::CreateCharacter(
+            shared::protocol::NewCharacter {
+                name: "Some One".into(),
+                kind,
+                appearance,
+                build,
+                difficulty: shared::difficulty::Difficulty::Normal,
+            },
+        ));
         let _ = tick(connections, world);
         answers(&end)
     };
@@ -1025,15 +1030,19 @@ fn accounts_choose_or_make_a_character_and_only_their_own() {
         told,
         [ServerMessage::Characters {
             list: Vec::new(),
-            can_create: true
+            can_create: true,
+            difficulties: shared::difficulty::Difficulties::ALL,
         }]
     );
-    end.send(&ClientMessage::CreateCharacter {
-        kind: CreatureKind::Human,
-        appearance: Appearance::default(),
-        build: shared::sheet::Build::CENTRED,
-        name: "Some One".into(),
-    });
+    end.send(&ClientMessage::CreateCharacter(
+        shared::protocol::NewCharacter {
+            kind: CreatureKind::Human,
+            appearance: Appearance::default(),
+            build: shared::sheet::Build::CENTRED,
+            name: "Some One".into(),
+            difficulty: shared::difficulty::Difficulty::Normal,
+        },
+    ));
     let (connections, world) = tick(connections, world);
     assert!(matches!(answers(&end)[0], ServerMessage::Welcome { .. }));
     let mut connections = connections;
@@ -1041,7 +1050,12 @@ fn accounts_choose_or_make_a_character_and_only_their_own() {
     // Back later: there they are. (Dropping the first connection is `join`'s
     // job, when this one chooses.)
     let (second, told) = logged_in_to_account(&mut connections, "someone");
-    let [ServerMessage::Characters { list, can_create }] = &told[..] else {
+    let [
+        ServerMessage::Characters {
+            list, can_create, ..
+        },
+    ] = &told[..]
+    else {
         panic!("no characters: {told:?}");
     };
     assert!(*can_create);
@@ -1071,12 +1085,15 @@ fn choosing_is_only_for_accounts_about_to_choose() {
     end.send(&GUEST);
     let (connections, world) = tick(connections, world);
     answers(&end);
-    end.send(&ClientMessage::CreateCharacter {
-        kind: CreatureKind::Human,
-        appearance: Appearance::default(),
-        build: shared::sheet::Build::CENTRED,
-        name: "Another".into(),
-    });
+    end.send(&ClientMessage::CreateCharacter(
+        shared::protocol::NewCharacter {
+            kind: CreatureKind::Human,
+            appearance: Appearance::default(),
+            build: shared::sheet::Build::CENTRED,
+            name: "Another".into(),
+            difficulty: shared::difficulty::Difficulty::Normal,
+        },
+    ));
     let (connections, _world) = tick(connections, world);
     assert!(matches!(answers(&end)[..], [ServerMessage::Refused(_)]));
     assert!(connections.clients.is_empty());

@@ -5,7 +5,7 @@ Health and Mana: how much harm a creature can take and how much magic it has lef
 ## Files
 
 - `crates/shared/src/vitals/points.rs`: `Points` (thousandths: `whole`, `milli`, `shown`, `as_f32`), `PER_POINT`.
-- `crates/shared/src/vitals.rs`: `Vital::{Health, Mana}` (`ALL`, `name`, `attribute`: Toughness, Will), `Change { vital, amount, until }` (`lasts`), `Vitals` (on `Sheet`: `health`, `mana`, `changes`; `at`, `told`, `settle`, `fill`, `hurt`, `spend_mana`, `restore`, `in_combat`, `add_change`, `forget_ended`, `most`, `limits`), the numbers below. In `vitals/`: `track.rs` (`Track`: one of them, `refilled`, `VitalNow { value, most, refills_in }` with `after`), `limits.rs` (`Limits { health, mana }`, `MostParts { attribute, playtime, practice, changes }` with `total`).
+- `crates/shared/src/vitals.rs`: `Vital::{Health, Mana}` (`ALL`, `name`, `attribute`: Toughness, Will), `Change { vital, amount, until }` (`lasts`), `Vitals` (on `Sheet`: `health`, `mana`, `changes`; `at`, `told`, `settle`, `fill`, `hurt`, `spend_mana`, `restore`, `in_combat`, `add_change`, `forget_ended`, `most`, `limits`), the numbers below. In `vitals/`: `track.rs` (`Track`: one of them, `refilled`, `VitalNow { value, most, refills_in, refill }` with `after`), `limits.rs` (`Limits { health, mana, refill }`: `refill` is the ticks from empty to full, `REFILL_TICKS` from `Vitals::limits`, set by the server's `Client::limits` from the character's `Difficulty`; `MostParts { attribute, playtime, practice, changes }` with `total`).
 
 ## Public API
 
@@ -17,7 +17,7 @@ Health and Mana: how much harm a creature can take and how much magic it has lef
 
 ## Used by
 
-- `combat` (`Points`), `sheet` (`Sheet::vitals`), `protocol` (`ServerMessage::Vitals`, `ClientMessage::DevVitals`), `server` (`connections/vitals.rs`).
+- `difficulty` (`Points`, `REFILL_TICKS`), `combat` (`Points`), `sheet` (`Sheet::vitals`), `protocol` (`ServerMessage::Vitals`, `ClientMessage::DevVitals`), `server` (`connections/vitals.rs`).
 
 ## Notes
 
@@ -28,4 +28,5 @@ Health and Mana: how much harm a creature can take and how much magic it has lef
 - Full is kept as full (`u32::MAX` in a `Track`), so a new or old save starts full and full stays full when the most rises; below full stays the same number. Anything that changes the most (a change laid on or ended) settles first, at the old limits.
 - Changes end at an action tick, not playtime, so a potion wears off in real time, offline too. `forget_ended` settles at the limits with them before dropping them.
 - Refilling goes by the server's `ActionClock`, which runs while a player is offline on a networked server: logging out refills them (owner: fine, as the monsters around them refill too). Pausing stops it.
-- A client is told `VitalNow` (value, most, ticks until refilling starts) and refills it itself with `after`, which matches `at` (tested).
+- A client is told `VitalNow` (value, most, ticks until refilling starts, ticks to refill from empty) and refills it itself with `after`, which matches `at` (tested).
+- Refilling speed comes from `Limits::refill` (Easy is twice as fast: `shared::difficulty`). Anything changing it settles first at the old speed (server `connections/difficulty.rs`).

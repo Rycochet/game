@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
-use shared::protocol::ClientMessage;
+use shared::protocol::{ClientMessage, NewCharacter};
 use shared::sheet::{Appearance, Attributes, Build, Row};
 
 /// What has been chosen so far. Only the server's word counts: this is what is
@@ -60,12 +60,13 @@ impl Draft {
     }
 
     pub fn message(&self) -> ClientMessage {
-        ClientMessage::CreateCharacter {
+        ClientMessage::CreateCharacter(NewCharacter {
             name: self.name.trim().to_owned(),
             kind: self.kind,
             appearance: self.appearance.clone(),
             build: self.build,
-        }
+            difficulty: shared::difficulty::Difficulty::Normal,
+        })
     }
 }
 

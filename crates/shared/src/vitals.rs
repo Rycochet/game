@@ -112,19 +112,21 @@ impl Vitals {
 
     /// How much of it there is at this tick.
     pub fn at(&self, vital: Vital, limits: Limits, now: u64) -> Points {
-        self.track(vital).at(limits.get(vital), now)
+        self.track(vital).at(limits.get(vital), limits.refill, now)
     }
 
     /// What the client is told of it at this tick.
     pub fn told(&self, vital: Vital, limits: Limits, now: u64) -> VitalNow {
-        self.track(vital).told(limits.get(vital), now)
+        self.track(vital)
+            .told(limits.get(vital), limits.refill, now)
     }
 
     /// Fixes both at what they are now: before anything changes how much
     /// there can be.
     pub fn settle(&mut self, limits: Limits, now: u64) {
         for vital in Vital::ALL {
-            self.track_mut(vital).settle(limits.get(vital), now);
+            self.track_mut(vital)
+                .settle(limits.get(vital), limits.refill, now);
         }
     }
 
@@ -222,11 +224,12 @@ impl Vitals {
         }
     }
 
-    /// The most of both now.
+    /// The most of both now, refilling at the usual rate.
     pub fn limits(&self, attributes: &Attributes, playtime: u64, now: u64) -> Limits {
         Limits {
             health: self.most(Vital::Health, attributes, playtime, now).total(),
             mana: self.most(Vital::Mana, attributes, playtime, now).total(),
+            refill: REFILL_TICKS,
         }
     }
 }

@@ -62,8 +62,8 @@ impl Activity {
 }
 
 /// Whether this message is the player doing something. Pings, looking items
-/// up and the like happen by themselves; so do logging in and the host's own
-/// settings.
+/// up and the like happen by themselves; so do logging in, the host's own
+/// settings and the player's difficulty.
 pub(super) fn shows_activity(message: &ClientMessage) -> bool {
     !matches!(
         message,
@@ -75,6 +75,8 @@ pub(super) fn shows_activity(message: &ClientMessage) -> bool {
             | ClientMessage::LookUpItems(_)
             | ClientMessage::SetOnline(_)
             | ClientMessage::SetPaused(_)
+            | ClientMessage::SetDifficulty(_)
+            | ClientMessage::SetDifficulties(_)
     )
 }
 

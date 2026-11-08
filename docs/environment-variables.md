@@ -38,6 +38,7 @@ Without any of these, the server makes a self-signed certificate and keeps it in
 | `HOW_GUESTS` | `true` | Whether people can play without an account. `false` stops the server from starting for now, as there is no other way to log in yet. |
 | `HOW_SERVER_NAME` | `Hall of Worlds` | What the server calls itself, for instance when telling players it is going offline. |
 | `HOW_PLAYER_LIMIT` | `0` | The most players at once; anyone more is told the server is full. `0` is no limit. |
+| `HOW_DIFFICULTIES` | all | Which [difficulties](difficulty.md) characters may play on, as names separated by commas: `Easy`, `Normal`, `Hard`, `Ironman` (in any case). Blank or unset allows all of them. Unknown names are warned about in the log and ignored; if none is known, all are allowed. Characters on one that isn't allowed are moved to the nearest that is. In the native client, if set, it decides instead of Server Options' tickboxes. |
 | `HOW_IDLE_MINUTES` | `15` | How many minutes a player may do nothing before being disconnected. `0` never disconnects anyone. |
 | `HOW_STACK_GRAMS_PER_CELL` | `2000` | The most a stack of identical items may weigh, in grams, for each cell it takes up in a bag. |
 | `HOW_STACK_MAX` | `99` | The most items in one stack, however light they are. |
@@ -62,7 +63,7 @@ A real server can ignore these.
 
 ## For the native client
 
-The native client reads `HOW_DATA` too, for its single-player saves, and `HOW_UPNP`, for its own server when it goes online, as well as these. They have no effect on a server.
+The native client reads `HOW_DATA` too, for its single-player saves, `HOW_UPNP`, for its own server when it goes online, and `HOW_DIFFICULTIES`, for its own server's difficulties, as well as these. They have no effect on a server.
 
 | Variable | Default | What it does |
 | -------- | ------- | ------------ |

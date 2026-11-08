@@ -102,3 +102,23 @@ fn upnp_is_only_decided_when_set() {
     assert_eq!(upnp_value(Some("TRUE")), Some(true));
     assert_eq!(upnp_value(Some("false")), Some(false));
 }
+
+#[test]
+fn difficulties_are_a_list_of_names() {
+    use shared::difficulty::{Difficulties, Difficulty};
+    assert_eq!(difficulties_value(None), None);
+    assert_eq!(difficulties_value(Some("  ")), None);
+    assert_eq!(
+        difficulties_value(Some("easy,Ironman")),
+        Some(Difficulties::only(Difficulty::Easy).with(Difficulty::Ironman))
+    );
+    // Unknown names are left out; with none known, every one is allowed.
+    assert_eq!(
+        difficulties_value(Some("Hard, Nightmare")),
+        Some(Difficulties::only(Difficulty::Hard))
+    );
+    assert_eq!(
+        difficulties_value(Some("Nightmare")),
+        Some(Difficulties::ALL)
+    );
+}
