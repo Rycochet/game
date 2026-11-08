@@ -245,10 +245,10 @@ pub enum ClientMessage {
     /// within `ENTER_REACH` of it, on the world map): into the Hall of Worlds,
     /// before the gate it leads to (`EnterHall`). Waits behind the steps there.
     EnterGate { entrance: u8 },
-    /// Developer tools: to the world of this seed (any number is a planet),
-    /// where the player was on its world map, or at one of its World Gates if
-    /// new there; answered with a fresh `Welcome` and `OnWorldMap`.
-    DevGoToWorld { seed: u64 },
+    /// Developer tools: to the world of this seed (any number; none: this one),
+    /// at World Gate `gate` (from 0) if it has it, else where the player was,
+    /// or a gate if new there; answered with `Welcome` (if new) and `OnWorldMap`.
+    DevGoToWorld { seed: Option<u64>, gate: Option<u8> },
     /// Developer tools: show every poi, known or not, for this connection.
     /// Only an embedded server accepts it.
     DevRevealPois,

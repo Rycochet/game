@@ -182,7 +182,8 @@ pub(super) fn run_actions(
             | DebugAction::HerbsState
             | DebugAction::ItemPictures
             | DebugAction::ShowWidgets
-            | DebugAction::StairsStyle => open.open(action, &mut commands, &mut raise, &nodes),
+            | DebugAction::StairsStyle
+            | DebugAction::TeleportToGate => open.open(action, &mut commands, &mut raise, &nodes),
         }
     }
 }

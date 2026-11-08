@@ -8,7 +8,7 @@ use super::showing::PlanetView;
 
 /// A gate's ring on the picture: its radius in pixels, its thickness, and
 /// its colour (bright, as nothing on a planet is this colour).
-const RING: f32 = 5.0;
+pub(super) const RING: f32 = 5.0;
 const RING_WIDTH: f32 = 1.6;
 const RING_COLOUR: [u8; 4] = [255, 40, 220, 255];
 

@@ -164,7 +164,8 @@ fn dev_tools_move_a_player_to_another_world_and_back() {
     answers(&end);
 
     end.send(&ClientMessage::DevGoToWorld {
-        seed: OTHER.value(),
+        seed: Some(OTHER.value()),
+        gate: None,
     });
     app.run_system_once(handle_messages).unwrap();
     let told = answers(&end);
@@ -189,7 +190,10 @@ fn dev_tools_move_a_player_to_another_world_and_back() {
     assert_eq!(storage.character_world(&id), Ok(Some(OTHER.id())));
 
     // Back where they were.
-    end.send(&ClientMessage::DevGoToWorld { seed: HOME.value() });
+    end.send(&ClientMessage::DevGoToWorld {
+        seed: Some(HOME.value()),
+        gate: None,
+    });
     app.run_system_once(handle_messages).unwrap();
     let told = answers(&end);
     assert!(told.contains(&ServerMessage::OnWorldMap {
@@ -208,7 +212,10 @@ fn going_to_the_world_they_are_in_changes_nothing() {
     let mut app = server(&folder, &[]);
     let (end, _) = join(&mut app, character(1));
     answers(&end);
-    end.send(&ClientMessage::DevGoToWorld { seed: HOME.value() });
+    end.send(&ClientMessage::DevGoToWorld {
+        seed: Some(HOME.value()),
+        gate: None,
+    });
     app.run_system_once(handle_messages).unwrap();
     assert_eq!(answers(&end), []);
 }
@@ -342,4 +349,65 @@ fn only_the_halls_planets_have_gates() {
     let beyond = crate::ServerWorld::new(WorldSeed::new(1 << 40));
     assert!(beyond.gates().is_empty());
     assert!(beyond.info().gates.is_empty());
+}
+
+/// Where World Gate `number` of the world of `seed` stands, opening it.
+fn world_gate_of(app: &mut bevy::prelude::World, seed: WorldSeed, number: usize) -> (i64, i64) {
+    let mut worlds = app.resource_mut::<ServerWorlds>();
+    let id = worlds.open(seed).unwrap();
+    let gate = &worlds.get(id).unwrap().pois.world_gates().gates[number];
+    (gate.x, gate.y)
+}
+
+#[test]
+fn dev_tools_go_to_a_world_gate_of_the_world_they_are_in() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let end = at_home_gate(&mut app, 0);
+    end.send(&ClientMessage::DevGoToWorld {
+        seed: None,
+        gate: Some(9),
+    });
+    app.run_system_once(handle_messages).unwrap();
+    let gate = world_gate_of(&mut app, HOME, 9);
+    let client = &app.resource::<Connections>().clients[0];
+    assert_eq!(client.world, Some(HOME.id()));
+    assert_eq!(client.world_position(), gate);
+    assert!(answers(&end).contains(&ServerMessage::OnWorldMap {
+        x: gate.0,
+        y: gate.1,
+    }));
+}
+
+#[test]
+fn dev_tools_go_to_a_world_gate_of_another_world_even_beyond_the_hall() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let (end, _) = join(&mut app, character(1));
+    answers(&end);
+    // Its gates lead nowhere, but still stand where they are.
+    let beyond = WorldSeed::new(1 << 40);
+    end.send(&ClientMessage::DevGoToWorld {
+        seed: Some(beyond.value()),
+        gate: Some(2),
+    });
+    app.run_system_once(handle_messages).unwrap();
+    let gate = world_gate_of(&mut app, beyond, 2);
+    let client = &app.resource::<Connections>().clients[0];
+    assert_eq!(client.world, Some(beyond.id()));
+    assert_eq!(client.world_position(), gate);
+}
+
+#[test]
+fn dev_tools_ignore_a_world_gate_that_isnt_there() {
+    let folder = TestFolder::new();
+    let mut app = server(&folder, &[]);
+    let (end, _) = join(&mut app, character(1));
+    answers(&end);
+    end.send(&ClientMessage::DevGoToWorld {
+        seed: None,
+        gate: Some(200),
+    });
+    app.run_system_once(handle_messages).unwrap();
+    assert_eq!(answers(&end), []);
 }

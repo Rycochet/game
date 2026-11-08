@@ -11,12 +11,11 @@ use std::f32::consts::FRAC_PI_2;
 
 use super::PLANET_LAYER;
 use super::moon_look::MoonLook;
+use super::orbit::Orbit;
 use super::sky::moon_distance;
 
-/// The camera's field of view, and how far above the equator it looks from,
-/// so the north pole shows.
-const FIELD_OF_VIEW: f32 = 30.0;
-const CAMERA_PITCH: f32 = 20.0;
+/// The camera's field of view, in degrees.
+pub(super) const FIELD_OF_VIEW: f32 = 30.0;
 /// Room round the furthest moon, or the globe if it has none.
 const MARGIN: f32 = 1.15;
 /// A moon's radius for each unit of its size (`0.3..1`), in the globe's radii.
@@ -36,6 +35,10 @@ pub(super) struct Scene {
     pub(super) suns: Vec<Entity>,
     /// Each moon, with its number in `Celestial::bodies` and its looks.
     pub(super) moons: Vec<(Entity, usize, MoonLook)>,
+    /// The camera, which `Orbit` places, and how far from the globe's middle
+    /// it starts: far enough back for the furthest moon.
+    pub(super) camera: Entity,
+    pub(super) distance: f32,
 }
 
 pub(super) fn spawn_scene(
@@ -131,22 +134,28 @@ pub(super) fn spawn_scene(
         moons.push((moon, number, look));
     }
 
-    spawn_camera(commands, root, picture, furthest);
+    let (camera, distance) = spawn_camera(commands, root, picture, furthest);
     Scene {
         root,
         globe,
         suns,
         moons,
+        camera,
+        distance,
     }
 }
 
-/// Far enough back that everything out to `furthest` fits.
-fn spawn_camera(commands: &mut Commands, root: Entity, picture: Handle<Image>, furthest: f32) {
+/// Far enough back that everything out to `furthest` fits: the camera, and
+/// that distance. `Orbit` places it each frame.
+fn spawn_camera(
+    commands: &mut Commands,
+    root: Entity,
+    picture: Handle<Image>,
+    furthest: f32,
+) -> (Entity, f32) {
     let half_view = (FIELD_OF_VIEW / 2.0).to_radians();
     let distance = MARGIN * furthest / half_view.sin();
-    let pitch = CAMERA_PITCH.to_radians();
-    let from = Vec3::new(0.0, pitch.sin(), pitch.cos()) * distance;
-    commands.spawn((
+    let camera = commands.spawn((
         Camera3d::default(),
         Camera {
             // Before anything that shows it.
@@ -167,8 +176,9 @@ fn spawn_camera(commands: &mut Commands, root: Entity, picture: Handle<Image>, f
         },
         Tonemapping::None,
         DebandDither::Disabled,
-        Transform::from_translation(from).looking_at(Vec3::ZERO, Vec3::Y),
+        Orbit::default().transform(distance),
         RenderLayers::layer(PLANET_LAYER),
         ChildOf(root),
     ));
+    (camera.id(), distance)
 }

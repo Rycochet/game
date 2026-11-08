@@ -44,6 +44,7 @@ pub enum DebugAction {
     StairsStyle,
     SunsAndMoons,
     TeleportMode,
+    TeleportToGate,
     TeleportToHall,
     TeleportToPoiShowcase,
     TeleportToStart,
@@ -80,7 +81,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 42] = [
+    pub(super) const ALL: [Self; 43] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -116,6 +117,7 @@ impl DebugAction {
         Self::StairsStyle,
         Self::SunsAndMoons,
         Self::TeleportMode,
+        Self::TeleportToGate,
         Self::TeleportToHall,
         Self::TeleportToPoiShowcase,
         Self::TeleportToStart,
@@ -145,10 +147,17 @@ impl DebugAction {
         self == Self::GeneratePoi
     }
 
-    /// What the menu's entry says: an entry with a submenu ends in "...", and its
-    /// plain `name` is the submenu's title.
+    /// Whether choosing it only offers a further choice: a submenu, or a panel
+    /// that is only a list to pick from (Teleport to Gate, as the owner named
+    /// it).
+    pub(super) fn offers_choice(self) -> bool {
+        self.has_submenu() || self == Self::TeleportToGate
+    }
+
+    /// What the menu's entry says: one offering a further choice ends in
+    /// "...", and its plain `name` is the submenu's or panel's title.
     pub(super) fn label(self) -> String {
-        if self.has_submenu() {
+        if self.offers_choice() {
             format!("{}...", self.name())
         } else {
             self.name().to_owned()
@@ -207,6 +216,7 @@ impl DebugAction {
                 | Self::RevealMap
                 | Self::SpendMana
                 | Self::TeleportMode
+                | Self::TeleportToGate
                 | Self::TeleportToHall
                 | Self::TeleportToPoiShowcase
                 | Self::TeleportToStart

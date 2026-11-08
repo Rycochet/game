@@ -20,6 +20,9 @@ pub(super) fn spin(
     let globe = &showing.globe;
     let celestial = globe.planet.celestial(&world);
     let (sky, scene) = (&globe.sky, &globe.scene);
+    if let Ok(mut camera) = places.get_mut(scene.camera) {
+        camera.set_if_neq(showing.orbit.transform(scene.distance));
+    }
     if let Ok(mut globe) = places.get_mut(scene.globe) {
         globe.rotation = sky.globe_turn(hours);
     }

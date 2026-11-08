@@ -1,6 +1,7 @@
 //! While open, the view has all input. The bar's controls get theirs first, as
-//! widgets do; any other click or tap, or Esc, closes it; and nothing behind it
-//! sees any of it.
+//! widgets do; the camera's controls are read (`steer`); a click or tap goes to
+//! a gate's ring or closes it, and so does Esc; and nothing behind it sees any
+//! of it.
 
 use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
@@ -32,11 +33,19 @@ pub(super) fn take_input(
     let settled = time.elapsed_secs_f64() - showing.opened > SETTLING_SECONDS;
     // A tap arrives as a click, which the bar's widgets have taken if it was
     // theirs; one elsewhere still shows here.
-    let clicked = mouse.get_just_pressed().next().is_some();
+    // The right button turns the camera (`steer`), so only the left closes.
+    let clicked = mouse.just_pressed(MouseButton::Left);
     // The click that takes the keyboard from the seed box only does that.
-    let pressed = keys.just_pressed(KeyCode::Escape) || (clicked && !showing.typing);
-    if settled && pressed {
+    // A click goes to a gate's ring under it, or closes the view, once the
+    // ring is known (`teleport::answer_click`).
+    let clicked = clicked && !showing.typing;
+    if settled && keys.just_pressed(KeyCode::Escape) {
         close(&mut view, &mut commands);
+    } else if settled
+        && clicked
+        && let Some(showing) = view.showing.as_mut()
+    {
+        showing.clicked = true;
     }
     keys.reset_all();
     mouse.reset_all();

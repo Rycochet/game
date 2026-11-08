@@ -41,6 +41,7 @@ impl DebugAction {
             Self::StairsStyle => "Stairs Style",
             Self::SunsAndMoons => "Suns and Moons",
             Self::TeleportMode => "Teleport Mode",
+            Self::TeleportToGate => "Teleport to Gate",
             Self::TeleportToHall => "Teleport to Hall of Worlds",
             Self::TeleportToPoiShowcase => "Teleport to POI Showcase",
             Self::TeleportToStart => "Teleport to Start",

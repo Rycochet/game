@@ -11,17 +11,19 @@ use crate::connection::ToServer;
 
 #[derive(Deserialize)]
 pub(super) struct GoToWorldParams {
-    seed: u64,
+    seed: Option<u64>,
+    gate: Option<u8>,
 }
 
-/// `client.go_to_world { "seed": 2 }`: asks the server to move the player to
-/// that seed's world (Go to World).
+/// `client.go_to_world { "seed": 2, "gate": 0 }`: asks the server to move the
+/// player to that seed's world (Go to World; none: this one), at that World
+/// Gate (from 0) if given (Teleport to Gate).
 pub(super) fn go_to_world(
     In(request): In<Option<Value>>,
     mut to_server: MessageWriter<ToServer>,
 ) -> BrpResult {
-    let GoToWorldParams { seed } = params(request)?;
-    to_server.write(ToServer(ClientMessage::DevGoToWorld { seed }));
+    let GoToWorldParams { seed, gate } = params(request)?;
+    to_server.write(ToServer(ClientMessage::DevGoToWorld { seed, gate }));
     done()
 }
 

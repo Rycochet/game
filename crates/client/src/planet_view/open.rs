@@ -7,6 +7,7 @@ use bevy::window::PrimaryWindow;
 
 use super::ViewPlanet;
 use super::bar::{Bar, spawn_bar};
+use super::orbit::Orbit;
 use super::showing::{Choice, PlanetView, SceneAssets, Showing, build_globe};
 use crate::common::{CurrentWorld, ServerClock};
 use crate::widgets::{layer_z, leaves_presses};
@@ -17,7 +18,8 @@ const VIEW_LAYER: i32 = 50;
 const SMALLEST_PICTURE: u32 = 256;
 const LARGEST_PICTURE: u32 = 2048;
 /// The note at the bottom.
-const NOTE: &str = "Click, tap or press Esc to close";
+const NOTE: &str =
+    "Right-drag or two fingers to turn, wheel or pinch to zoom; click, tap or Esc to close";
 const NOTE_COLOUR: Color = Color::srgb(0.55, 0.55, 0.6);
 
 #[allow(clippy::too_many_arguments)]
@@ -47,13 +49,17 @@ pub(super) fn open(
     ));
     let choice = Choice::of(&world);
     let globe = build_globe(&mut commands, &mut assets, &world, choice, picture.clone());
-    let (layer, bar) = spawn_layer(&mut commands, picture.clone(), choice);
+    let (layer, image, bar) = spawn_layer(&mut commands, picture.clone(), choice);
     view.showing = Some(Showing {
         layer,
         picture,
         bar,
         choice,
         globe,
+        orbit: Orbit::default(),
+        image,
+        pointed: None,
+        clicked: false,
         start_hours: clock.hours(),
         opened: time.elapsed_secs_f64(),
         typing: false,
@@ -63,7 +69,11 @@ pub(super) fn open(
 /// The black layer, with the picture in the middle as large as fits, the bar
 /// at the top and a note at the bottom. Presses on it are left for the view
 /// (to close it), and go no further.
-fn spawn_layer(commands: &mut Commands, picture: Handle<Image>, choice: Choice) -> (Entity, Bar) {
+fn spawn_layer(
+    commands: &mut Commands,
+    picture: Handle<Image>,
+    choice: Choice,
+) -> (Entity, Entity, Bar) {
     let mut layer = commands.spawn((
         Node {
             position_type: PositionType::Absolute,
@@ -78,9 +88,9 @@ fn spawn_layer(commands: &mut Commands, picture: Handle<Image>, choice: Choice) 
     ));
     let entity = layer.id();
     layer.insert(leaves_presses(entity));
-    let mut bar = None;
+    let (mut bar, mut image) = (None, None);
     layer.with_children(|layer| {
-        layer.spawn((
+        let node = layer.spawn((
             ImageNode::new(picture),
             Node {
                 width: Val::VMin(100.0),
@@ -88,6 +98,7 @@ fn spawn_layer(commands: &mut Commands, picture: Handle<Image>, choice: Choice) 
                 ..default()
             },
         ));
+        image = Some(node.id());
         bar = Some(spawn_bar(layer, choice));
         layer.spawn((
             Text::new(NOTE),
@@ -99,8 +110,6 @@ fn spawn_layer(commands: &mut Commands, picture: Handle<Image>, choice: Choice) 
             },
         ));
     });
-    (
-        entity,
-        bar.expect("the layer's children are spawned straight away"),
-    )
+    let spawned = "the layer's children are spawned straight away";
+    (entity, image.expect(spawned), bar.expect(spawned))
 }
