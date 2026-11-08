@@ -202,6 +202,7 @@ pub(super) fn receive(
                 | ServerMessage::EnterHall { .. }
                 | ServerMessage::Buildings(_)
                 | ServerMessage::Fields(_)
+                | ServerMessage::Borders(_)
                 | ServerMessage::LevelCells(_)
                 | ServerMessage::RememberedLevel(_)
                 | ServerMessage::OnWorldMap { .. }

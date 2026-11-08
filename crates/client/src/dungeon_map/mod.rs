@@ -11,6 +11,7 @@
 //! walls block. Left-click a seen walkable cell to travel there.
 
 mod bolts;
+mod border;
 mod daylight;
 mod field;
 mod herbs;
@@ -140,6 +141,7 @@ impl Plugin for DungeonMapPlugin {
                     sync_lights,
                     rain::update,
                     bolts::strike,
+                    border::draw_borders,
                 )
                     .chain()
                     .after(PlayerSystems::Travel)

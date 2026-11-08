@@ -3,6 +3,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
+use shared::poi::ChunkPos;
 use shared::protocol::{LevelInfo, LevelKind, ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
 use shared::site::{BuildingLook, FieldLook};
 use shared::wilderness::gates_of;
@@ -16,6 +17,7 @@ use crate::connections::Client;
 use crate::sites::remembered::send_remembered;
 use crate::sites::{Mirror, Place, Visit, keep_within, keepers_in_window, update_sight};
 use crate::storage::{CellMasks, SiteId};
+use crate::world_map::known_poi;
 
 /// How far round where the player would arrive a walkable cell is looked for.
 const ARRIVAL_SEARCH: i64 = 48;
@@ -47,7 +49,8 @@ pub(in crate::sites) fn enter_wilderness(
         return client.refuse_for_saves(&error);
     }
     let x = world.wilderness.wild.wrap(x);
-    let made = window(world, (x, y));
+    let mut made = window(world, (x, y));
+    let looks = Looks::of(&mut made);
     let level = &made.level.level;
     let position = nearest_walkable(level, (x, y));
     let width = world.wilderness.wild.width();
@@ -86,7 +89,7 @@ pub(in crate::sites) fn enter_wilderness(
     let in_poi = poi_here(world, position);
     if !client.link.send(&ServerMessage::EnterLevel(info))
         || !client.link.send(&ServerMessage::InPoi(in_poi))
-        || !send_looks(client, world, (made.buildings, made.fields), &visit.mirrors)
+        || !send_looks(client, world, looks, &visit.mirrors)
         || !send_remembered(client, &mut visit)
     {
         return false;
@@ -124,7 +127,8 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     if wild.block_of(x, y) == centre {
         return send_town(client);
     }
-    let made = window(world, (x, y));
+    let mut made = window(world, (x, y));
+    let looks = Looks::of(&mut made);
     let Some(visit) = &mut client.visit else {
         return true;
     };
@@ -153,7 +157,7 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     if !client
         .link
         .send(&ServerMessage::WildernessWindow { bounds })
-        || !send_looks(client, world, (made.buildings, made.fields), &mirrors)
+        || !send_looks(client, world, looks, &mirrors)
     {
         return false;
     }
@@ -186,16 +190,33 @@ fn through_gate(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)
 /// The window's towns' buildings, who keeps their shops and farms' fields,
 /// before its cells (the client marks the buildings' cells as theirs):
 /// always, so ones left behind go.
-fn send_looks(
-    client: &Client,
-    world: &mut ServerWorld,
-    (buildings, fields): (Vec<BuildingLook>, Vec<FieldLook>),
-    mirrors: &[Mirror],
-) -> bool {
+fn send_looks(client: &Client, world: &mut ServerWorld, made: Looks, mirrors: &[Mirror]) -> bool {
     let keepers = keepers_in_window(world, mirrors);
-    client.link.send(&ServerMessage::Buildings(buildings))
+    // Only round pois they know: a hatched ring would give a secret away.
+    let borders = made.borders.into_iter();
+    let borders = borders.filter(|(chunk, _)| known_poi(client, world, *chunk).is_some());
+    let borders = borders.flat_map(|(_, cells)| cells).collect();
+    client.link.send(&ServerMessage::Buildings(made.buildings))
         && client.link.send(&ServerMessage::Keepers(keepers))
-        && client.link.send(&ServerMessage::Fields(fields))
+        && client.link.send(&ServerMessage::Fields(made.fields))
+        && client.link.send(&ServerMessage::Borders(borders))
+}
+
+/// What is sent with each window besides its cells.
+struct Looks {
+    buildings: Vec<BuildingLook>,
+    fields: Vec<FieldLook>,
+    borders: Vec<(ChunkPos, Vec<(i64, i64)>)>,
+}
+
+impl Looks {
+    fn of(made: &mut super::window::Window) -> Self {
+        Looks {
+            buildings: std::mem::take(&mut made.buildings),
+            fields: std::mem::take(&mut made.fields),
+            borders: std::mem::take(&mut made.borders),
+        }
+    }
 }
 
 /// Asks for the roads round the player, as the world map does round those on

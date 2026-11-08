@@ -5,6 +5,7 @@ use shared::dungeon::{Cell, Level, RoomId, Sight};
 use shared::poi::PoiKind;
 use shared::protocol::{LevelChunk, LevelInfo, LevelKind, SeenStairs};
 use shared::site::{BuildingLook, FieldLook};
+use std::collections::BTreeSet;
 
 use super::floors::FirstFloor;
 
@@ -32,6 +33,10 @@ pub struct CurrentDungeon {
     /// In the wilderness, the kind of poi set into it that the player stands
     /// in, as the server says (`ServerMessage::InPoi`).
     pub in_poi: Option<PoiKind>,
+    /// In the wilderness, the cells round the cutouts of pois the player
+    /// knows (`ServerMessage::Borders`): drawn hatched, and a click on one
+    /// walks there and leaves for the world map.
+    pub borders: BTreeSet<(i64, i64)>,
 }
 
 impl Default for CurrentDungeon {
@@ -46,6 +51,7 @@ impl Default for CurrentDungeon {
             buildings: Vec::new(),
             fields: Vec::new(),
             in_poi: None,
+            borders: BTreeSet::new(),
         }
     }
 }
@@ -61,6 +67,7 @@ impl CurrentDungeon {
         self.buildings.clear();
         self.fields.clear();
         self.in_poi = None;
+        self.borders.clear();
         self.info = Some(info);
     }
 

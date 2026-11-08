@@ -107,3 +107,34 @@ fn a_saved_visit_to_a_first_level_set_in_comes_back_in_the_wilderness() {
     assert!(visit.is_wilderness());
     assert_eq!(visit.position(), (ex, ey));
 }
+
+#[test]
+fn the_border_round_a_known_poi_is_sent_and_leads_out() {
+    let mut test = TestClient::new();
+    let poi = at_a_town(&mut test);
+    let answers = test.send(&[ClientMessage::EnterSite { chunk: poi.chunk }]);
+    let border = answers.iter().find_map(|answer| match answer {
+        ServerMessage::Borders(cells) => Some(cells.clone()),
+        _ => None,
+    });
+    let border = border.expect("sent with the window");
+    let plan = chunk_near_start(&test, |c| c.poi().chunk == poi.chunk);
+    let mut expected = plan.cutout().unwrap().border();
+    let mut got = border.clone();
+    expected.sort_unstable();
+    got.sort_unstable();
+    assert_eq!(got, expected, "the town is away from the seam");
+    // Walking onto it does nothing; Up there leaves for the world map.
+    let level = &test.client.visit.as_ref().unwrap().level.level;
+    let &(x, y) = border
+        .iter()
+        .find(|&&(x, y)| level.is_walkable(x, y) && level.cell(x, y).is_outside())
+        .expect("open ground round the town");
+    test.send(&[ClientMessage::DevTeleport { x, y }]);
+    assert_eq!(position(&test), (x, y));
+    let answers = test.send(&[ClientMessage::Up]);
+    assert!(matches!(
+        answers[..],
+        [ServerMessage::OnWorldMap { .. }, ..]
+    ));
+}

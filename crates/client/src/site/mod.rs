@@ -4,7 +4,8 @@
 //! The server decides all of it: clicking a `Portal` token (a world map
 //! poi) sends the player travelling to it, and arriving asks the server
 //! to go in. Inside, arriving (by a click) on stairs or on outside ground at
-//! the very edge of the level asks the server to use it, unless the player is
+//! the very edge of the level asks the server to use it (and on the hatched
+//! border round a poi in the wilderness, to leave), unless the player is
 //! fighting: then the Down and Up keys take the stairs once it is over. The server answers
 //! with the level the player is now on and its cells as they come into
 //! sight, or with where they are back on the world map; `dungeon_map` draws
@@ -80,7 +81,8 @@ fn follow_clicked_portal(
 
 /// When a journey ends: on the portal it was heading for, ask to enter it;
 /// in a site, on stairs or on outside ground at the edge of the level, ask
-/// to use them, unless fighting (the server would refuse).
+/// to use them, and on the border round a poi in the wilderness, ask to
+/// leave for the world map, unless fighting (the server would refuse).
 #[allow(clippy::too_many_arguments)]
 fn use_on_arrival(
     mut arrivals: MessageReader<Arrived>,
@@ -115,6 +117,9 @@ fn use_on_arrival(
             let edge = !dungeon.is_wilderness() && leads_out(&dungeon.level, x, y);
             if on_stairs || edge {
                 to_server.write(ToServer(ClientMessage::UseExit));
+            } else if dungeon.borders.contains(&(x, y)) {
+                // The hatched border round a poi: back to the world map.
+                to_server.write(ToServer(ClientMessage::Up));
             }
         }
     }
@@ -161,6 +166,7 @@ fn change_map(
             }
             ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),
             ServerMessage::Fields(fields) => dungeon.fields.clone_from(fields),
+            ServerMessage::Borders(cells) => dungeon.borders = cells.iter().copied().collect(),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
             &ServerMessage::WildernessWindow { bounds } => dungeon.move_window(bounds),
             &ServerMessage::InPoi(kind) => dungeon.in_poi = kind,

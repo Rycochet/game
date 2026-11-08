@@ -6,6 +6,7 @@
 //! only changes need keeping.
 
 mod block;
+mod border;
 mod course;
 mod cutout;
 mod gate;
@@ -19,6 +20,7 @@ mod course_tests;
 #[cfg(test)]
 mod tests;
 
+pub use border::BORDER;
 pub use cutout::Cutout;
 pub use gate::{GATE_PAD, GateSpot};
 pub use plan::{ChunkPlan, gates_of};
