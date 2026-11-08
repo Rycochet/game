@@ -3,8 +3,10 @@
 use bevy::prelude::*;
 use shared::id::Id;
 use shared::item::Item;
-use shared::shop::DOOR_REACH;
+use shared::shop::sells;
 
+use super::Mirror;
+use super::shop_here::shop_of;
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::ids::new_id;
@@ -33,14 +35,35 @@ pub(super) struct NewKeepers {
     pub(super) shops: Vec<u16>,
 }
 
+/// Who keeps the shops of the towns set into a wilderness window (`mirrors`),
+/// by building, made as `keepers_of` does: they are the towns' own.
+pub(super) fn keepers_in_window(world: &mut ServerWorld, mirrors: &[Mirror]) -> Vec<(u16, Id)> {
+    let mut keepers = Vec::new();
+    for mirror in mirrors {
+        let SiteId::Poi(chunk) = mirror.id else {
+            continue;
+        };
+        let Some(wild) = world.wilderness.chunk(chunk) else {
+            continue;
+        };
+        let shops = wild.town.iter().filter(|b| !sells(b.look.kind).is_empty());
+        let shops: Vec<u16> = shops.map(|b| b.look.id).collect();
+        if shops.is_empty() {
+            continue;
+        }
+        let town = NewKeepers {
+            id: mirror.id,
+            index: mirror.index,
+            shops,
+        };
+        keepers.extend(keepers_of(world, &town));
+    }
+    keepers
+}
+
 /// Which building on the player's level this is the keeper of, if any.
 pub(crate) fn keeper_building(client: &Client, world: &mut ServerWorld, with: Id) -> Option<u16> {
-    let visit = client.visit.as_ref()?;
-    let level = world.site(visit.id).levels.get(&visit.index)?;
-    let mut buildings = level.buildings.iter();
-    buildings
-        .find(|(_, save)| save.keeper == Some(with))
-        .map(|(&building, _)| building)
+    shop_of(client, world, with).map(|shop| shop.building.look.id)
 }
 
 /// Gives a shop's keeper something, from beside its door: it joins what the shop has,
@@ -52,20 +75,20 @@ pub(crate) fn give_to_keeper(
     with: Id,
 ) -> Result<Vec<Item>, &'static str> {
     let character = client.character_id.ok_or("nobody to remember")?;
-    let building = keeper_building(client, world, with).ok_or("no such keeper here")?;
+    let shop = shop_of(client, world, with).ok_or("no such keeper here")?;
     let visit = client.visit.as_ref().ok_or("not in a site")?;
-    let town = visit.level.buildings.iter().find(|b| b.look.id == building);
-    let door = town.ok_or("no such building here")?.look.door;
-    let (x, y) = visit.position;
-    if (x - door.0).abs().max((y - door.1).abs()) > DOOR_REACH {
+    if !shop.in_reach(visit.position) {
         return Err("too far away");
     }
-    let (id, index) = (visit.id, visit.index);
     let item = client
         .inventory
         .hand_over(item)
         .ok_or("can't hand that over")?;
-    let level = world.site_mut(id).levels.entry(index).or_default();
+    let level = world
+        .site_mut(shop.id)
+        .levels
+        .entry(shop.index)
+        .or_default();
     let record = level.records.entry(with).or_default();
     record.memory.remember_gift(character);
     record.carried.push(item);
@@ -78,9 +101,8 @@ pub(crate) fn keeper_stock(
     world: &mut ServerWorld,
     with: Id,
 ) -> Option<Vec<Item>> {
-    keeper_building(client, world, with)?;
-    let visit = client.visit.as_ref()?;
-    let level = world.site(visit.id).levels.get(&visit.index)?;
+    let shop = shop_of(client, world, with)?;
+    let level = world.site(shop.id).levels.get(&shop.index)?;
     Some(level.records.get(&with)?.carried.clone())
 }
 
@@ -93,16 +115,16 @@ pub(crate) fn take_from_keeper(
     item: Id,
     (to, x, y, rotation): (shared::item::Holder, u8, u8, shared::item::Rotation),
 ) -> Result<(), &'static str> {
-    let building = keeper_building(client, world, with).ok_or("no such keeper here")?;
+    let shop = shop_of(client, world, with).ok_or("no such keeper here")?;
     let visit = client.visit.as_ref().ok_or("not in a site")?;
-    let town = visit.level.buildings.iter().find(|b| b.look.id == building);
-    let door = town.ok_or("no such building here")?.look.door;
-    let (at_x, at_y) = visit.position;
-    if (at_x - door.0).abs().max((at_y - door.1).abs()) > DOOR_REACH {
+    if !shop.in_reach(visit.position) {
         return Err("too far away");
     }
-    let (id, index) = (visit.id, visit.index);
-    let level = world.site_mut(id).levels.entry(index).or_default();
+    let level = world
+        .site_mut(shop.id)
+        .levels
+        .entry(shop.index)
+        .or_default();
     let carried = &mut level.records.entry(with).or_default().carried;
     let place = carried.iter().position(|one| one.id == item);
     let place = place.ok_or("they don't have that")?;
