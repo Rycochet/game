@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
+use shared::difficulty::Difficulty;
 use shared::protocol::{ClientMessage, NewCharacter};
 use shared::sheet::{Appearance, Attributes, Build, Row};
 
@@ -17,6 +18,8 @@ pub(super) struct Draft {
     pub build: Build,
     /// The triangle the keys move the dot of.
     pub chosen: Row,
+    /// How hard the game is to be for them: the only time Ironman is chosen.
+    pub difficulty: Difficulty,
 }
 
 impl Default for Draft {
@@ -28,6 +31,7 @@ impl Default for Draft {
             appearance: Appearance::default(),
             build: Build::CENTRED,
             chosen: Row::Body,
+            difficulty: Difficulty::Normal,
         }
     }
 }
@@ -65,7 +69,7 @@ impl Draft {
             kind: self.kind,
             appearance: self.appearance.clone(),
             build: self.build,
-            difficulty: shared::difficulty::Difficulty::Normal,
+            difficulty: self.difficulty,
         })
     }
 }

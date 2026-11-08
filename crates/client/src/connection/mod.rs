@@ -32,6 +32,7 @@ use crate::player::PlayerSystems;
 // Split into files (`cargo xtask lint` keeps files small).
 mod clock;
 mod connect;
+mod difficulty;
 #[cfg(not(target_arch = "wasm32"))]
 mod hosting;
 mod log_in;
@@ -82,7 +83,7 @@ impl Plugin for ConnectionPlugin {
                     .chain(),
             )
             .add_systems(Update, send_steps.after(PlayerSystems::Travel))
-            .add_systems(Update, remember_server)
+            .add_systems(Update, (remember_server, difficulty::keep_difficulty))
             .add_systems(
                 Update,
                 (
@@ -102,6 +103,6 @@ impl Plugin for ConnectionPlugin {
         #[cfg(target_arch = "wasm32")]
         app.add_systems(Last, pump_socket.after(send));
         #[cfg(not(target_arch = "wasm32"))]
-        app.add_systems(Update, hosting::ask_to_host);
+        app.add_systems(Update, (hosting::ask_to_host, difficulty::ask_difficulties));
     }
 }

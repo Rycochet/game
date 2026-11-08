@@ -5,7 +5,7 @@ use super::ServerConnection;
 use super::ping::LatestPong;
 use super::prediction::Prediction;
 use super::socket::Target;
-use crate::common::{ChosenServer, LoadingStep, ServerClock, ServerStatus};
+use crate::common::{ChosenServer, LoadingStep, Preferences, ServerClock, ServerStatus};
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, GuestToken, PROTOCOL_VERSION};
 use std::time::Duration;
@@ -56,7 +56,7 @@ pub(super) fn connect(world: &mut World) {
             let (link, embedded) = server::start_embedded(
                 shared::world::WorldSeed::new(server::DEFAULT_WORLD_SEED),
                 Some(server::default_data_folder()),
-                shared::difficulty::Difficulties::ALL,
+                world.resource::<Preferences>().server_difficulties,
             );
             ServerConnection {
                 link,
@@ -97,7 +97,8 @@ pub(super) fn connect(world: &mut World) {
     connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
         makes_characters: world.resource::<crate::common::MakesCharacters>().0,
-        difficulty: shared::difficulty::Difficulty::Normal,
+        // For a character with none of their own yet.
+        difficulty: world.resource::<Preferences>().difficulty,
     });
     world.insert_resource(connection);
     // Steps start again from the server's word.
@@ -116,6 +117,7 @@ pub(super) fn hang_up(commands: &mut Commands) {
     commands.remove_resource::<ServerConnection>();
     // A character half made is asked for again on connecting again.
     commands.insert_resource(crate::common::MakingCharacter(false));
+    commands.insert_resource(crate::common::PlayDifficulty::default());
     #[cfg(target_arch = "wasm32")]
     commands.queue(|world: &mut World| {
         world.remove_non_send::<super::socket::BrowserSocket>();

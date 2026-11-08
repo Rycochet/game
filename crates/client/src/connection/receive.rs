@@ -74,9 +74,16 @@ pub(super) fn receive(
             }
             // A new character, to be made with `character_create`'s screen.
             Ok(Some(ServerMessage::Characters {
-                list, can_create, ..
+                list,
+                can_create,
+                difficulties,
             })) if list.is_empty() && can_create => {
                 commands.insert_resource(MakingCharacter(true));
+                // What the new character may be.
+                commands.insert_resource(crate::common::PlayDifficulty {
+                    current: None,
+                    allowed: difficulties,
+                });
             }
             // Nothing logs in to an account with characters yet: choosing one is
             // to come, before making one.

@@ -92,7 +92,7 @@ impl Plugin for SystemMenuPlugin {
                     settings::fill_video_page,
                     (settings::use_video_page, settings::run_trial).chain(),
                     settings::use_video_options,
-                    settings::fill_gameplay_page,
+                    (settings::use_difficulty, settings::fill_gameplay_page).chain(),
                     settings::use_gameplay_page,
                 ),
             )
@@ -125,6 +125,7 @@ impl Plugin for SystemMenuPlugin {
                     server_options::run_upnp_rows,
                 )
                     .chain(),
+                server_options::run_difficulty_boxes,
             ),
         );
     }

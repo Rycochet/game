@@ -43,6 +43,7 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
             SystemMenu::Confirming,
             SystemMenu::Settings,
             SystemMenu::KeepVideo,
+            SystemMenu::Ironman,
             SystemMenu::Credits,
             SystemMenu::Connect,
             SystemMenu::Certificate,

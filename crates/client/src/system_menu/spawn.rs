@@ -82,6 +82,7 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
     spawn_requester(&mut commands);
     spawn_settings(&mut commands);
     super::settings::spawn_keep_requester(&mut commands);
+    super::settings::spawn_ironman_requester(&mut commands);
     super::credits::spawn_credits(&mut commands);
     let icons = super::icons::ConnectIcons::new(&mut images);
     super::connect::spawn_connect(&mut commands, &icons);
@@ -182,7 +183,11 @@ pub(super) fn spawn_settings(commands: &mut Commands) {
     let panel = spawn_layer(
         commands,
         ABOVE_MENU_LAYER,
-        &[SystemMenu::Settings, SystemMenu::KeepVideo],
+        &[
+            SystemMenu::Settings,
+            SystemMenu::KeepVideo,
+            SystemMenu::Ironman,
+        ],
         percent(SETTINGS_WIDTH),
         percent(SETTINGS_HEIGHT),
         Node {

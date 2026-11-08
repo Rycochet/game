@@ -23,6 +23,7 @@ use bevy::prelude::*;
 mod clock;
 mod creatures;
 mod debug;
+mod difficulty;
 mod display;
 mod dungeon;
 mod item_text;
@@ -56,6 +57,7 @@ pub use debug::{
     CreateMobOrder, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GodMode, InspectMob,
     InspectedMob, KillMob, ServerDevTools, Truesight,
 };
+pub use difficulty::{IRONMAN_QUESTION, PlayDifficulty, difficulty_words};
 pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
 };
@@ -117,6 +119,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerStatus>()
             .init_resource::<Session>()
             .init_resource::<Hosting>()
+            .init_resource::<PlayDifficulty>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()
             .init_resource::<HerbGrowthShift>()

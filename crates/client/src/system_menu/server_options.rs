@@ -1,14 +1,17 @@
 //! Server Options (native only, from Online's gear): how this game's own server
 //! is opened to other players, and its certificate to give them, with a Copy
 //! button. What is typed is kept when it closes, and the server opens again
-//! with it if it is online. The router's rows are in `upnp_row`.
+//! with it if it is online. The router's rows are in `upnp_row`, the
+//! difficulties' tickboxes in `difficulty_row`.
 
 use bevy::prelude::*;
 use shared::protocol::{OnlineSettings, OnlineState, ServerAddress};
 use std::net::IpAddr;
 
+mod difficulty_row;
 mod upnp_row;
 
+pub(super) use difficulty_row::run_difficulty_boxes;
 pub(super) use upnp_row::run_upnp_rows;
 
 use super::spawn::{spawn_layer, spawn_title_row};
@@ -101,6 +104,7 @@ pub(super) fn spawn_server_options(commands: &mut Commands) {
             spawn_text_box(panel, text_box, FONT, node)
                 .insert((which, UiId::new("server_options", which.ui_name())));
         }
+        difficulty_row::spawn_difficulty_row(panel);
         upnp_row::spawn_upnp_rows(panel, OPTIONS_WIDTH - 2.0 * MARGIN);
         // Its words, and the button copying it beside them.
         panel
