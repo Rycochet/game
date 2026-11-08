@@ -267,10 +267,11 @@ fn a_save_from_before_gates_playtime_and_the_action_bar_still_loads() {
         gates: BTreeSet::new(),
         playtime: 0,
         action_bar: shared::ability::ActionBar::default(),
+        difficulty: None,
     };
     let text = ron::to_string(&save).unwrap();
-    // Gates, playtime and the action bar are the last fields: a save from
-    // before them all ends after the sheet.
+    // Gates, playtime, the action bar and difficulty are the last fields: a
+    // save from before them all ends after the sheet.
     let old = format!("{})", &text[..text.find(",gates:").unwrap()]);
     assert_ne!(old, text);
     assert_eq!(ron::from_str::<CharacterSave>(&old).unwrap(), save);

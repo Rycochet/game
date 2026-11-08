@@ -117,14 +117,16 @@ impl Vitals {
 
     /// What the client is told of it at this tick.
     pub fn told(&self, vital: Vital, limits: Limits, now: u64) -> VitalNow {
-        self.track(vital).told(limits.get(vital), limits.refill, now)
+        self.track(vital)
+            .told(limits.get(vital), limits.refill, now)
     }
 
     /// Fixes both at what they are now: before anything changes how much
     /// there can be.
     pub fn settle(&mut self, limits: Limits, now: u64) {
         for vital in Vital::ALL {
-            self.track_mut(vital).settle(limits.get(vital), limits.refill, now);
+            self.track_mut(vital)
+                .settle(limits.get(vital), limits.refill, now);
         }
     }
 

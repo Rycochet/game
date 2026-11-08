@@ -56,6 +56,7 @@ pub(super) fn connect(world: &mut World) {
             let (link, embedded) = server::start_embedded(
                 shared::world::WorldSeed::new(server::DEFAULT_WORLD_SEED),
                 Some(server::default_data_folder()),
+                shared::difficulty::Difficulties::ALL,
             );
             ServerConnection {
                 link,
@@ -96,6 +97,7 @@ pub(super) fn connect(world: &mut World) {
     connection.link.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
         makes_characters: world.resource::<crate::common::MakesCharacters>().0,
+        difficulty: shared::difficulty::Difficulty::Normal,
     });
     world.insert_resource(connection);
     // Steps start again from the server's word.

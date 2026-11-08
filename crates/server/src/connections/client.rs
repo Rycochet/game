@@ -1,6 +1,7 @@
 //! What a connected `Client` can do: its position, speed, inventory, saving and leaving.
 
 use bevy::prelude::*;
+use shared::difficulty::Difficulty;
 use shared::energy::{Energy, NORMAL_SPEED, dressing_cost};
 use shared::id::Id;
 use shared::item::{Inventory, Item};
@@ -52,6 +53,8 @@ impl Client {
             dev_gifts: Vec::new(),
             learning: Default::default(),
             starting_as: None,
+            difficulty: None,
+            asked_difficulties: None,
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),
@@ -170,6 +173,7 @@ impl Client {
                 gates: self.gates.clone(),
                 playtime: self.activity.played,
                 action_bar: self.action_bar.clone(),
+                difficulty: self.difficulty,
             },
         );
         self.unsaved = false;
@@ -203,6 +207,8 @@ impl Client {
             account: kept.1,
             world: kept.2,
             makes_characters: kept.3,
+            // The player's default for a new one, never Ironman.
+            difficulty: self.difficulty.map(Difficulty::for_existing),
             ..fresh
         };
     }

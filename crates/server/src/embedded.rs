@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 use std::thread::{self, JoinHandle};
 
+use shared::difficulty::Difficulties;
 use shared::protocol::{ClientLink, local_pair};
 use shared::world::WorldSeed;
 
@@ -24,11 +25,13 @@ impl Drop for EmbeddedServer {
 }
 
 /// Starts a server on its own thread, with its own Bevy world, saving in
-/// `data` (if any), and returns the client's end of its one connection. The
-/// client's log is used. The server stops once that link is dropped.
+/// `data` (if any) and allowing these difficulties (Server Options), and
+/// returns the client's end of its one connection. The client's log is used.
+/// The server stops once that link is dropped.
 pub fn start_embedded(
     world_seed: WorldSeed,
     data: Option<PathBuf>,
+    difficulties: Difficulties,
 ) -> (ClientLink, EmbeddedServer) {
     let (client, server) = local_pair();
     let thread = thread::Builder::new()
@@ -36,11 +39,15 @@ pub fn start_embedded(
         .spawn(move || {
             // Single player: the player's own server, so dev tools are fine,
             // and it has nothing to do once the game has gone.
+            let fixed = crate::difficulties_from_environment();
             let options = ServerOptions {
                 dev_tools: true,
                 exit_when_alone: true,
                 pausable: true,
                 guests: false,
+                // Server Options' tickboxes, unless `HOW_DIFFICULTIES` says.
+                difficulties: fixed.unwrap_or(difficulties),
+                difficulties_fixed: fixed.is_some(),
                 ..Default::default()
             };
             // Made on the thread itself: a Bevy `App` can't move between

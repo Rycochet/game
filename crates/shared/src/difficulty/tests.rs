@@ -19,7 +19,10 @@ fn harm_is_a_fifth_less_or_more() {
     assert_eq!(Difficulty::Hard.harm_taken(harm), Points(12_000));
     assert_eq!(Difficulty::Ironman.harm_taken(harm), Points(12_000));
     // No overflow at the top.
-    assert_eq!(Difficulty::Hard.harm_taken(Points(u32::MAX)), Points(u32::MAX));
+    assert_eq!(
+        Difficulty::Hard.harm_taken(Points(u32::MAX)),
+        Points(u32::MAX)
+    );
 }
 
 #[test]

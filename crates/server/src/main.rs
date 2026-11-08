@@ -40,6 +40,9 @@
 //! - `HOW_DEBUG_TOOLS`: `true` accepts dev tools messages from anyone connected.
 //! - `HOW_SERVER_NAME`: what the server calls itself (default `Hall of Worlds`).
 //! - `HOW_PLAYER_LIMIT`: the most players at once (default 0, no limit).
+//! - `HOW_DIFFICULTIES`: the difficulties characters may have, as names
+//!   separated by commas (`Easy`, `Normal`, `Hard`, `Ironman`); all of them if
+//!   blank or unset. Unknown names are warned about and ignored.
 //! - `HOW_IDLE_MINUTES`: minutes a player may do nothing before being
 //!   disconnected (default 15, 0 for never).
 //! - `HOW_STACK_GRAMS_PER_CELL`: the most a stack of items may weigh for each cell
@@ -143,6 +146,16 @@ fn main() {
         ),
         UpnpChoice::Off => {}
     }
+    // Once logging has started, so unknown names are warned about.
+    if let Some(allowed) = server::difficulties_from_environment() {
+        let mut options = app.world_mut().resource_mut::<ServerOptions>();
+        options.difficulties = allowed;
+        options.difficulties_fixed = true;
+    }
+    bevy::log::info!(
+        "Difficulties allowed: {}",
+        app.world().resource::<ServerOptions>().difficulties.names()
+    );
     bevy::log::info!("Saving in {}", data.display());
     if dev_tools {
         bevy::log::warn!("Dev tools are on: anyone connected can teleport and change the world");

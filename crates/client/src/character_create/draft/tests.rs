@@ -26,9 +26,9 @@ fn it_needs_a_name_and_sends_it_trimmed() {
     assert!(!draft.ready());
     draft.name = "  Brin ".into();
     assert!(draft.ready());
-    let ClientMessage::CreateCharacter { name, build, .. } = draft.message() else {
+    let ClientMessage::CreateCharacter(made) = draft.message() else {
         panic!("not making a character");
     };
-    assert_eq!(name, "Brin");
-    assert_eq!(build, Build::CENTRED);
+    assert_eq!(made.name, "Brin");
+    assert_eq!(made.build, Build::CENTRED);
 }

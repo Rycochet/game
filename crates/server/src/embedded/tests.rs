@@ -10,10 +10,11 @@ use crate::storage::tests::TestFolder;
 fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
     let folder = TestFolder::new();
     let seed = WorldSeed::new(99);
-    let (client, server) = start_embedded(seed, Some(folder.0.clone()));
+    let (client, server) = start_embedded(seed, Some(folder.0.clone()), Default::default());
     assert!(client.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
         makes_characters: false,
+        difficulty: shared::difficulty::Difficulty::Normal,
     }));
     assert!(client.send(&ClientMessage::DevTeleport { x: 5, y: 6 }));
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -59,10 +60,15 @@ fn its_player_can_open_it_to_others_and_close_it_again() {
     use std::net::{TcpListener, TcpStream};
 
     let folder = TestFolder::new();
-    let (client, server) = start_embedded(WorldSeed::new(99), Some(folder.0.clone()));
+    let (client, server) = start_embedded(
+        WorldSeed::new(99),
+        Some(folder.0.clone()),
+        Default::default(),
+    );
     assert!(client.send(&ClientMessage::Hello {
         protocol: PROTOCOL_VERSION,
         makes_characters: false,
+        difficulty: shared::difficulty::Difficulty::Normal,
     }));
     let deadline = Instant::now() + Duration::from_secs(20);
     let next_online = || loop {

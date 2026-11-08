@@ -7,12 +7,17 @@ use shared::vitals::{Change, Limits, Points, Vital};
 use super::Client;
 
 impl Client {
-    /// The most Health and Mana its character can have at this tick.
+    /// The most Health and Mana its character can have at this tick, and how
+    /// fast they refill on its difficulty.
     pub(crate) fn limits(&self, now: u64) -> Limits {
         let sheet = &self.sheet;
-        sheet
+        let limits = sheet
             .vitals
-            .limits(&sheet.attributes, self.activity.played, now)
+            .limits(&sheet.attributes, self.activity.played, now);
+        Limits {
+            refill: self.playing_on().refill_ticks(),
+            ..limits
+        }
     }
 
     /// Tells the client its Health and Mana as they are now. `false` if it

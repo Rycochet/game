@@ -12,6 +12,7 @@ use crate::ServerWorld;
 const MAKES: ClientMessage = ClientMessage::Hello {
     protocol: PROTOCOL_VERSION,
     makes_characters: true,
+    difficulty: shared::difficulty::Difficulty::Normal,
 };
 
 fn strong() -> Build {
@@ -22,12 +23,13 @@ fn strong() -> Build {
 }
 
 fn make(name: &str, kind: CreatureKind, build: Build) -> ClientMessage {
-    ClientMessage::CreateCharacter {
+    ClientMessage::CreateCharacter(shared::protocol::NewCharacter {
         name: name.into(),
         kind,
         appearance: Appearance::default(),
         build,
-    }
+        difficulty: shared::difficulty::Difficulty::Normal,
+    })
 }
 
 fn sheet_in(told: &[ServerMessage]) -> Option<Sheet> {
@@ -48,7 +50,7 @@ fn new_guest() -> (ClientLink, Connections, ServerWorld) {
     let (connections, world) = tick(connections, world);
     let told = answers(&end);
     assert!(
-        matches!(&told[1], ServerMessage::Characters { list, can_create: true } if list.is_empty()),
+        matches!(&told[1], ServerMessage::Characters { list, can_create: true, .. } if list.is_empty()),
         "{told:?}"
     );
     (end, connections, world)

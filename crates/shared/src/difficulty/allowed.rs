@@ -83,7 +83,11 @@ impl Difficulties {
     pub fn parse(text: &str) -> (Self, Vec<String>) {
         let mut allowed = Self(0);
         let mut unknown = Vec::new();
-        for name in text.split(',').map(str::trim).filter(|name| !name.is_empty()) {
+        for name in text
+            .split(',')
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+        {
             match Difficulty::from_name(name) {
                 Some(difficulty) => allowed = allowed.with(difficulty),
                 None => unknown.push(name.to_owned()),

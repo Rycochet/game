@@ -3,7 +3,8 @@
 
 use std::env;
 
-use bevy::log::{DEFAULT_FILTER, Level, LogPlugin};
+use bevy::log::{DEFAULT_FILTER, Level, LogPlugin, warn};
+use shared::difficulty::Difficulties;
 
 /// How much to log: `error`, `warn`, `info` (the default), `debug` or `trace`.
 const LOG_LEVEL_VARIABLE: &str = "LOG_LEVEL";
@@ -54,6 +55,24 @@ pub fn upnp_from_environment() -> Option<bool> {
 
 pub(crate) fn upnp_value(value: Option<&str>) -> Option<bool> {
     value.map(|value| option_value(Some(value), false))
+}
+
+/// `HOW_DIFFICULTIES`, if set to anything but blank: the difficulties allowed,
+/// as names separated by commas. Unknown names are warned about (so read it
+/// once logging has started) and left out; with none known, all are allowed.
+/// A standalone server allows all without it; in a native client it wins over
+/// Server Options' tickboxes.
+pub fn difficulties_from_environment() -> Option<Difficulties> {
+    difficulties_value(env::var("HOW_DIFFICULTIES").ok().as_deref())
+}
+
+pub(crate) fn difficulties_value(value: Option<&str>) -> Option<Difficulties> {
+    let value = value.filter(|value| !value.trim().is_empty())?;
+    let (allowed, unknown) = Difficulties::parse(value);
+    for name in unknown {
+        warn!("HOW_DIFFICULTIES: {name:?} isn't a difficulty, so it is ignored");
+    }
+    Some(allowed)
 }
 
 /// The logging settings `LOG_LEVEL` asks for.

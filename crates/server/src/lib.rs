@@ -36,6 +36,7 @@ mod world_map;
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
+use shared::difficulty::Difficulties;
 use shared::world::WorldSeed;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -43,7 +44,9 @@ use std::time::Duration;
 pub use accounts::new_guest_token;
 pub use connections::{Connections, IDLE_MINUTES};
 pub use embedded::{EmbeddedServer, start_embedded};
-pub use environment::{log_plugin, option_on, upnp_from_environment};
+pub use environment::{
+    difficulties_from_environment, log_plugin, option_on, upnp_from_environment,
+};
 pub use network::{NetworkPlugin, OnlinePlugin, UpnpChoice, UpnpPlugin, WebClient, check_health};
 pub use shared::protocol::CharacterId;
 pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
@@ -107,6 +110,11 @@ pub struct ServerOptions {
     /// (`HOW_IDLE_MINUTES`, `IDLE_MINUTES` by default on a networked server;
     /// an embedded server's host is never sent away).
     pub idle_minutes: u16,
+    /// The difficulties characters may have here (`HOW_DIFFICULTIES`, or
+    /// Server Options on an embedded server).
+    pub difficulties: Difficulties,
+    /// Whether `HOW_DIFFICULTIES` set them, so the host can't change them.
+    pub difficulties_fixed: bool,
 }
 
 impl ServerOptions {
@@ -155,6 +163,7 @@ impl Plugin for ServerPlugin {
                 (
                     advance_action_clock,
                     connections::handle_messages,
+                    connections::difficulty::apply_difficulties,
                     connections::send_roads,
                     connections::run_mobs,
                     connections::sync_entities,

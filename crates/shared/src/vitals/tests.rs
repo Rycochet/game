@@ -224,7 +224,15 @@ fn saves_from_before_load_full() {
     let vitals: Vitals = serde_json::from_str("{}").unwrap();
     assert_eq!(vitals, Vitals::default());
     assert_eq!(
-        vitals.at(Vital::Health, Limits { health: 7, mana: 3, refill: REFILL_TICKS }, 0),
+        vitals.at(
+            Vital::Health,
+            Limits {
+                health: 7,
+                mana: 3,
+                refill: REFILL_TICKS
+            },
+            0
+        ),
         w(7)
     );
 }
@@ -264,9 +272,18 @@ fn a_faster_refill_fills_sooner_and_the_client_agrees() {
     };
     vitals.hurt(w(20), quick, 0, 0);
     let start = CALM_AFTER;
-    assert_eq!(vitals.at(Vital::Health, quick, start + REFILL_TICKS / 4), w(10));
-    assert_eq!(vitals.at(Vital::Health, quick, start + REFILL_TICKS / 2), w(20));
-    assert_eq!(vitals.at(Vital::Health, usual, start + REFILL_TICKS / 4), w(5));
+    assert_eq!(
+        vitals.at(Vital::Health, quick, start + REFILL_TICKS / 4),
+        w(10)
+    );
+    assert_eq!(
+        vitals.at(Vital::Health, quick, start + REFILL_TICKS / 2),
+        w(20)
+    );
+    assert_eq!(
+        vitals.at(Vital::Health, usual, start + REFILL_TICKS / 4),
+        w(5)
+    );
     let told = vitals.told(Vital::Health, quick, 0);
     assert_eq!(
         told.after(start + REFILL_TICKS / 4),

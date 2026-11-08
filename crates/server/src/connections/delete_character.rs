@@ -16,6 +16,7 @@ pub(super) fn delete_character(
     client: &mut Client,
     world: &mut ServerWorld,
     accounts: &mut Accounts,
+    allowed: shared::difficulty::Difficulties,
 ) -> bool {
     let Some(old) = client.character_id else {
         return true;
@@ -39,5 +40,6 @@ pub(super) fn delete_character(
     client.link.send(&ServerMessage::Characters {
         list: Vec::new(),
         can_create: true,
+        difficulties: allowed,
     })
 }

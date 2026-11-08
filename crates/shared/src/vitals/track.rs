@@ -118,7 +118,12 @@ impl Track {
     /// How much there is at this tick, out of `most` (whole points), refilling
     /// from nothing to full in `refill` ticks.
     pub fn at(&self, most: u32, refill: u64, now: u64) -> Points {
-        refilled(Points(self.value), most, refill, now.saturating_sub(self.since))
+        refilled(
+            Points(self.value),
+            most,
+            refill,
+            now.saturating_sub(self.since),
+        )
     }
 
     /// What a client is told of it at this tick.

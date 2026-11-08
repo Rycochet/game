@@ -105,6 +105,7 @@ fn heal_by_hand_is_on_the_player_unless_the_target_is_a_friend() {
         value: Points::whole(20),
         most: 20,
         refills_in: 0,
+        refill: shared::vitals::REFILL_TICKS as u32,
     };
     app.insert_resource(OwnVitals(Some(ToldVitals {
         health: full,
