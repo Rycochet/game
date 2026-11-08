@@ -1,4 +1,5 @@
-//! Deleting a character (dev tools), and asking for a new one in its place.
+//! Deleting a character (dev tools, or dying on Ironman), and asking for a new
+//! one in its place.
 
 use bevy::prelude::*;
 use shared::protocol::ServerMessage;
@@ -17,11 +18,12 @@ pub(super) fn delete_character(
     world: &mut ServerWorld,
     accounts: &mut Accounts,
     allowed: shared::difficulty::Difficulties,
+    why: &str,
 ) -> bool {
     let Some(old) = client.character_id else {
         return true;
     };
-    info!("Deleting character {old:?} (dev tools)");
+    info!("Deleting character {old:?} ({why})");
     sites::leave(client, world);
     world.storage.remove_character(&old);
     let account = accounts.remove_character(&old).or(client.account);

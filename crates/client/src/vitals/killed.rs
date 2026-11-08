@@ -1,13 +1,14 @@
 //! Being killed: a requester saying so, which blocks the game until it is
 //! closed (owner, 2026-11-07, for now). The server has already put the player
-//! on the world map, whole again.
+//! on the world map, whole again; on Ironman it has deleted the character, and
+//! the creation screen follows.
 
 use bevy::prelude::*;
 use shared::protocol::ServerMessage;
 
 use crate::connection::FromServer;
 use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonStyle, INK, Pressable, TextSize, UiId, spawn_button,
+    ButtonPressed, ButtonState, ButtonStyle, INK, Pressable, TextSize, UiId, layer_z, spawn_button,
     spawn_dialog,
 };
 
@@ -23,13 +24,26 @@ pub(super) struct KilledRequester;
 #[derive(Component)]
 pub(super) struct KilledOk;
 
+/// Its words.
+#[derive(Component)]
+pub(super) struct KilledWords;
+
+const TRY_AGAIN: &str = "You have been killed, try again!";
+const FOR_GOOD: &str = "You have been killed. On Ironman death is permanent: your character \
+     and everything they had are gone. Make a new one to play again.";
+
 pub(super) fn spawn_killed(mut commands: Commands) {
     let dialog = spawn_dialog(&mut commands, KILLED_LAYER, "Killed");
     commands.entity(dialog.layer).insert(KilledRequester);
     commands.entity(dialog.content).with_child((
-        Text::new("You have been killed, try again!"),
+        KilledWords,
+        Text::new(TRY_AGAIN),
         FONT.font(),
         TextColor(INK),
+        Node {
+            max_width: px(420.0),
+            ..default()
+        },
     ));
     commands.entity(dialog.buttons).with_children(|row| {
         let node = Node {
@@ -51,14 +65,24 @@ pub(super) fn show_killed(
     mut from_server: MessageReader<FromServer>,
     mut pressed: MessageReader<ButtonPressed>,
     oks: Query<(), With<KilledOk>>,
-    mut requester: Single<&mut Visibility, With<KilledRequester>>,
+    mut requester: Single<(&mut Visibility, &mut GlobalZIndex), With<KilledRequester>>,
+    mut words: Single<&mut Text, With<KilledWords>>,
 ) {
+    let (visibility, z) = &mut *requester;
     for FromServer(message) in from_server.read() {
-        if matches!(message, ServerMessage::Killed) {
-            requester.set_if_neq(Visibility::Inherited);
+        if let ServerMessage::Killed { permanent } = message {
+            words.0 = if *permanent { FOR_GOOD } else { TRY_AGAIN }.into();
+            // Over the creation screen that follows a permanent death.
+            let depth = if *permanent {
+                KILLED_LAYER + 1
+            } else {
+                KILLED_LAYER
+            };
+            z.set_if_neq(GlobalZIndex(layer_z(depth)));
+            visibility.set_if_neq(Visibility::Inherited);
         }
     }
     if pressed.read().any(|press| oks.contains(press.0)) {
-        requester.set_if_neq(Visibility::Hidden);
+        visibility.set_if_neq(Visibility::Hidden);
     }
 }

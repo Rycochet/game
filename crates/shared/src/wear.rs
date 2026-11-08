@@ -14,10 +14,12 @@ use crate::item_form::ItemForm;
 
 mod changes;
 mod check;
+mod death;
 mod secrets;
 mod shown;
 mod swap;
 
+pub use death::kept_on_hard;
 pub use shown::WornLook;
 pub use swap::Swapped;
 
@@ -123,6 +125,8 @@ fn coverage(item: &Item) -> Vec<(Location, Layer)> {
     own.chain(padding).collect()
 }
 
+#[cfg(test)]
+mod death_tests;
 #[cfg(test)]
 mod swap_tests;
 #[cfg(test)]

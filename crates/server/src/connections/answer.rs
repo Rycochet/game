@@ -268,7 +268,7 @@ pub(crate) fn answer(
         | ClientMessage::DevVitals(_)
         | ClientMessage::DevSkills(_) => answer_dev(client, message, world),
         ClientMessage::DevDeleteCharacter => {
-            delete_character(client, world, accounts, options.difficulties)
+            delete_character(client, world, accounts, options.difficulties, "dev tools")
         }
     }
 }

@@ -188,7 +188,7 @@ fn an_unfriendly_mob_attacks_and_a_player_killed_is_put_out_whole() {
     assert!(
         received(&mut test)
             .iter()
-            .any(|message| matches!(message, ServerMessage::Killed))
+            .any(|message| matches!(message, ServerMessage::Killed { permanent: false }))
     );
 }
 

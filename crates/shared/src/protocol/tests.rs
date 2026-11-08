@@ -226,6 +226,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             can_create: true,
             difficulties: crate::difficulty::Difficulties::ALL,
         },
+        ServerMessage::Killed { permanent: true },
         ServerMessage::Difficulty {
             current: Some(crate::difficulty::Difficulty::Easy),
             allowed: crate::difficulty::Difficulties::ALL,
