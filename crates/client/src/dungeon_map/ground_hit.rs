@@ -49,7 +49,9 @@ impl Ground<'_> {
                 (point.z / CELL_SIZE).round() as i64,
             )
         };
-        if self.0.is_none() {
+        // Flat off the wilderness, where `WildCellHeights` is there but holds
+        // no heights (every level the view draws but the wilderness).
+        if self.0.is_none_or(|heights| heights.heights.is_none()) {
             let distance = -origin.y / direction.y;
             let point = origin + direction * distance;
             return Some((distance, point, cell_of(point)));

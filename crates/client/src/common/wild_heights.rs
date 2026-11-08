@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use shared::movement::{FlatGround, WildHeights};
 
 /// How high a 16th of an elevation is drawn, in cells: one step of height
-/// (owner's choice, 2026-11-08, from 1/16, 1/8 and 1/4).
-pub const DRAWN_PER_16TH: f32 = 0.0625;
+/// (owner's choice, 2026-11-08: 1/16 from screenshots, then 1/8 after playing).
+pub const DRAWN_PER_16TH: f32 = 0.125;
 
 /// The heights of the wilderness level's cells, worked out by `player` from the
 /// world map's ground and the flats the server told of, whenever the level is

@@ -83,3 +83,19 @@ fn flat_ground_is_the_floor() {
     assert_eq!(cell, (3, 2));
     assert!((distance - 400.0).abs() < 1e-3);
 }
+
+#[test]
+fn no_heights_is_the_floor_too() {
+    // What clicks pass everywhere but the wilderness: the resource, empty.
+    let none = WildCellHeights::default();
+    let ground = Ground(Some(&none));
+    let from = Vec3::new(3.0 * CELL_SIZE, 400.0, 2.0 * CELL_SIZE);
+    let (distance, _, cell) = ground.hit(Ray3d::new(from, Dir3::NEG_Y)).unwrap();
+    assert_eq!(cell, (3, 2));
+    assert!((distance - 400.0).abs() < 1e-3);
+    // Slanted, as from the camera.
+    let target = Vec3::new(-5.0 * CELL_SIZE, 0.0, 7.0 * CELL_SIZE);
+    let camera = target + Vec3::new(0.0, 600.0, 800.0);
+    let ray = Ray3d::new(camera, Dir3::new(target - camera).unwrap());
+    assert_eq!(ground.hit(ray).map(|(_, _, cell)| cell), Some((-5, 7)));
+}
