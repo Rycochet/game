@@ -165,7 +165,11 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
                     let (moved, cost) = client.wild_step(world, from, landed);
                     (stayed && moved, cost)
                 }
-                None => (stayed, site_step_cost(from, to)),
+                None => {
+                    let now = world.action_clock.ticks();
+                    let stayed = stayed && client.practise_moving(false, 0, now);
+                    (stayed, site_step_cost(from, to))
+                }
             }
         }
         None => {

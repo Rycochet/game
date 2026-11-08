@@ -155,3 +155,16 @@ fn each_kind_draws_in_its_own_colours() {
     let speckled = Trait::FeatherColour.choices_for(CreatureKind::Chicken)[2];
     assert!(matches!(speckled.pattern, Pattern::Speckled(_)));
 }
+
+#[test]
+fn weight_training_adds_its_value_to_what_can_be_carried() {
+    let mut sheet = median_human();
+    let node = crate::movement::MOVEMENT_SKILLS.weight_training;
+    // 50%: a half again.
+    sheet.skills.practise(node, 125_000);
+    assert_eq!(sheet.capacity(Size::Medium), 45_000);
+    // 100% and past it: twice as much, and no more.
+    sheet.skills.practise(node, 2_000_000);
+    assert_eq!(sheet.capacity(Size::Medium), 60_000);
+    assert_eq!(sheet.load(&stones(7)), Load::Burdened);
+}

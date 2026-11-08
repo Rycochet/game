@@ -14,5 +14,6 @@ pub(in super::super) const ATHLETICS: Draft = branch(
         leaf("running", "Running", &[Toughness, Agility]),
         leaf("jumping", "Jumping", &[Strength, Agility]),
         leaf("dodging", "Dodging", &[Agility, Perception]),
+        leaf("weighttraining", "Weight Training", &[Strength, Toughness]),
     ],
 );
