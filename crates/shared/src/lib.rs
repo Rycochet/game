@@ -12,6 +12,7 @@ pub mod celestial;
 pub mod climate;
 pub mod combat;
 pub mod creature;
+pub mod difficulty;
 pub mod dungeon;
 pub mod energy;
 pub mod footwear;

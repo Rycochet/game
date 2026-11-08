@@ -4,11 +4,15 @@ use serde::{Deserialize, Serialize};
 
 use super::Vital;
 
-/// The most of each, worked out at one tick (`Vitals::limits`).
+/// The most of each, worked out at one tick (`Vitals::limits`), and how fast
+/// they refill.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Limits {
     pub health: u32,
     pub mana: u32,
+    /// Action ticks to refill from nothing to full: `REFILL_TICKS`, or less
+    /// on Easy (`Difficulty::refill_ticks`). 0 counts as 1.
+    pub refill: u64,
 }
 
 impl Limits {

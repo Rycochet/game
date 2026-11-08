@@ -5,7 +5,10 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::creature::CreatureKind;
+use crate::difficulty::Difficulty;
 use crate::id::Id;
+use crate::sheet::{Appearance, Build};
 
 /// A way of logging in that a server offers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,6 +67,22 @@ pub struct CharacterSummary {
     pub name: String,
     /// When last played (seconds since 1970), 0 for never.
     pub last_played: u64,
+}
+
+/// What a client asks a new character to be (`ClientMessage::CreateCharacter`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct NewCharacter {
+    pub name: String,
+    /// What they are: refused unless it is `CreatureDef::playable`.
+    pub kind: CreatureKind,
+    /// How they look: refused unless it suits the kind.
+    pub appearance: Appearance,
+    /// Their triangles: refused unless valid. The server works out the
+    /// attributes from them.
+    pub build: Build,
+    /// How hard the game is for them: the server's nearest allowed one if it
+    /// isn't allowed. The only time Ironman can be chosen.
+    pub difficulty: Difficulty,
 }
 
 #[cfg(test)]

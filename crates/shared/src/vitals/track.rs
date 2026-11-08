@@ -2,11 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::REFILL_TICKS;
 use super::points::{PER_POINT, Points};
 
 /// How much of one there is, and its practice. Refills in a straight line,
-/// empty to full in `REFILL_TICKS`, from the tick `since`. Kept in thousandths
+/// empty to full in `Limits::refill` (`REFILL_TICKS`), from the tick `since`. Kept in thousandths
 /// (`Points`); the most is in whole points.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(from = "TrackSave", into = "TrackSave")]
@@ -90,6 +89,8 @@ pub struct VitalNow {
     pub most: u32,
     /// Action ticks from now until it starts refilling.
     pub refills_in: u32,
+    /// Action ticks to refill from nothing to full (`Limits::refill`).
+    pub refill: u32,
 }
 
 impl VitalNow {
@@ -98,39 +99,42 @@ impl VitalNow {
         refilled(
             self.value,
             self.most,
+            self.refill.into(),
             ticks.saturating_sub(self.refills_in.into()),
         )
     }
 }
 
 /// `value` out of `most` (whole points) after refilling for this many action
-/// ticks.
-pub fn refilled(value: Points, most: u32, ticks: u64) -> Points {
+/// ticks, at `refill` ticks from nothing to full.
+pub fn refilled(value: Points, most: u32, refill: u64, ticks: u64) -> Points {
     let most = u64::from(most) * u64::from(PER_POINT);
     let value = u64::from(value.milli()).min(most);
-    let gained = ticks.saturating_mul(most) / REFILL_TICKS;
+    let gained = ticks.saturating_mul(most) / refill.max(1);
     Points(value.saturating_add(gained).min(most) as u32)
 }
 
 impl Track {
-    /// How much there is at this tick, out of `most` (whole points).
-    pub fn at(&self, most: u32, now: u64) -> Points {
-        refilled(Points(self.value), most, now.saturating_sub(self.since))
+    /// How much there is at this tick, out of `most` (whole points), refilling
+    /// from nothing to full in `refill` ticks.
+    pub fn at(&self, most: u32, refill: u64, now: u64) -> Points {
+        refilled(Points(self.value), most, refill, now.saturating_sub(self.since))
     }
 
     /// What a client is told of it at this tick.
-    pub fn told(&self, most: u32, now: u64) -> VitalNow {
+    pub fn told(&self, most: u32, refill: u64, now: u64) -> VitalNow {
         VitalNow {
-            value: self.at(most, now),
+            value: self.at(most, refill, now),
             most,
             refills_in: self.since.saturating_sub(now).min(u32::MAX.into()) as u32,
+            refill: refill.min(u32::MAX.into()) as u32,
         }
     }
 
     /// Fixes it at what it is now; a wait for refilling stays. Full stays
     /// full, whatever the most comes to be.
-    pub(super) fn settle(&mut self, most: u32, now: u64) {
-        let value = self.at(most, now);
+    pub(super) fn settle(&mut self, most: u32, refill: u64, now: u64) {
+        let value = self.at(most, refill, now);
         self.value = if value >= Points::whole(most) {
             u32::MAX
         } else {
