@@ -6,7 +6,6 @@ use shared::creature::CreatureKind;
 use shared::energy::Energy;
 use shared::id::Id;
 use shared::item::Inventory;
-use shared::movement::Step;
 use shared::poi::ChunkPos;
 use shared::protocol::{CharacterId, ServerLink, ServerMessage};
 use shared::sheet::{Appearance, Build, Feeling, Sheet};
@@ -16,7 +15,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::ServerWorlds;
 use crate::accounts::{AccountId, Accounts};
-use crate::ground::{GroundAction, GroundTold};
+use crate::ground::GroundTold;
 use crate::sites::Visit;
 use crate::storage::CharacterWorldSave;
 
@@ -24,6 +23,7 @@ mod answer_dev;
 mod answer_items;
 mod change_kind;
 
+mod action;
 mod action_bar;
 mod answer;
 mod client;
@@ -34,6 +34,7 @@ pub(crate) mod difficulty;
 mod give_items;
 mod heal;
 mod lightning;
+mod login;
 mod look_up;
 mod messages;
 mod moving;
@@ -46,9 +47,11 @@ mod vitals;
 mod wearing;
 mod welcome;
 
+use action::Action;
 pub(super) use answer::answer;
 pub(crate) use combat::take_mob_blows;
 pub(super) use lightning::tell_of_lightning;
+pub(super) use login::finish_logins;
 pub(super) use messages::handle_messages;
 pub(crate) use moving::Arrival;
 pub use playtime::IDLE_MINUTES;
@@ -155,34 +158,6 @@ const SAVES_TROUBLE: &str = "the server can't reach its saves just now: try agai
 /// and put right by `Position`.
 const MOST_WAITING: usize = 64;
 
-/// Something that takes time, waiting its turn. Things that depend on where the
-/// player is have to wait behind the steps that lead there.
-#[derive(Clone, Debug)]
-enum Action {
-    Step {
-        number: u32,
-        step: Step,
-    },
-    EnterSite {
-        chunk: ChunkPos,
-    },
-    EnterGate {
-        entrance: u8,
-    },
-    UseExit,
-    Down,
-    Up,
-    OpenTrade {
-        with: Id,
-    },
-    Ground(GroundAction),
-    UseAbility {
-        ability: shared::ability::Ability,
-        /// `None`: on themselves.
-        target: Option<Id>,
-    },
-}
-
 /// How far a client has got, from connecting to playing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Phase {
@@ -212,6 +187,8 @@ pub struct Client {
     makes_characters: bool,
     /// The account it logged in to (none on an embedded server).
     account: Option<AccountId>,
+    /// The login it began on a provider's website, by its state (`oidc`).
+    login_state: Option<String>,
     /// Its character: given when it connected, or decided by logging in.
     pub(crate) character_id: Option<CharacterId>,
     /// Its character's name, as others see it: set on joining.
@@ -304,6 +281,8 @@ mod action_bar_tests;
 mod difficulty_tests;
 #[cfg(test)]
 mod idle_tests;
+#[cfg(test)]
+mod login_tests;
 #[cfg(test)]
 mod look_up_tests;
 #[cfg(test)]

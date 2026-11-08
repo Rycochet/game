@@ -1,4 +1,4 @@
-use super::answer::logged_in;
+use super::login::logged_in;
 use super::messages::act;
 use crate::accounts::{Accounts, LoginKey};
 use crate::ground::{self};
@@ -90,6 +90,7 @@ impl TestClient {
                 &mut self.world,
                 &mut self.accounts,
                 &options,
+                None,
             );
             if self.client.phase == Phase::Joining {
                 welcome(&mut self.client, &mut self.world, &options);
@@ -888,12 +889,14 @@ fn logged_in_to_account(
     client.phase = Phase::LoggingIn;
     // Not a guest's, so the world isn't looked at.
     let world = ServerWorld::new(WorldSeed::new(1));
+    let id = connections.accounts.log_in(&LoginKey::Test(key)).unwrap();
     assert!(logged_in(
         client,
-        &LoginKey::Test(key),
+        id,
+        "in a test",
         &mut connections.accounts,
         &world,
-        shared::difficulty::Difficulties::ALL,
+        &ServerOptions::default(),
     ));
     let told = answers(&end);
     (end, told)
@@ -1323,7 +1326,8 @@ fn the_hour_and_moved_clocks_are_told_and_a_restart_carries_on() {
         },
         &mut world,
         &mut connections.accounts,
-        &options
+        &options,
+        None
     ));
     let (_connections, world) = tell(connections, world);
     let told = answers(&end);
@@ -1410,7 +1414,8 @@ fn messages_before_hello_are_refused() {
         message,
         &mut world,
         &mut accounts,
-        &options
+        &options,
+        None
     ));
     assert!(matches!(end.receive(), Ok(Some(ServerMessage::Refused(_)))));
 }

@@ -10,11 +10,10 @@
 
 use std::collections::BTreeMap;
 
-use ring::digest::{SHA256, digest};
 use ring::rand::{SecureRandom, SystemRandom};
 use serde::{Deserialize, Serialize};
 use shared::id::Id;
-use shared::protocol::{CharacterId, CharacterSummary, Credentials, GuestToken};
+use shared::protocol::{CharacterId, CharacterSummary, GuestToken};
 
 use crate::ids::new_id;
 use crate::save_queue::SaveQueue;
@@ -48,48 +47,10 @@ pub(crate) struct AccountSave {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct LoginSave {
     account: AccountId,
-}
-
-/// A way of logging in, proved by whoever makes one.
-pub(crate) enum LoginKey {
-    Guest(GuestToken),
-    /// The embedded server's one player, who has nothing to log in with.
-    SinglePlayer,
-    /// The only way to an account that isn't a guest's, until there are logins.
-    #[cfg(test)]
-    Test(&'static str),
-}
-
-impl From<&Credentials> for LoginKey {
-    fn from(credentials: &Credentials) -> Self {
-        match credentials {
-            Credentials::Guest(token) => Self::Guest(*token),
-        }
-    }
-}
-
-impl LoginKey {
-    fn is_guest(&self) -> bool {
-        matches!(self, Self::Guest(_) | Self::SinglePlayer)
-    }
-
-    /// Its file name. A method's name comes first, so the same key from another
-    /// method is another login.
-    fn hash(&self) -> String {
-        let mut text = match self {
-            Self::Guest(_) => b"guest:".to_vec(),
-            Self::SinglePlayer => b"single player:".to_vec(),
-            #[cfg(test)]
-            Self::Test(_) => b"test:".to_vec(),
-        };
-        match self {
-            Self::Guest(token) => text.extend(token.0),
-            Self::SinglePlayer => {}
-            #[cfg(test)]
-            Self::Test(key) => text.extend(key.as_bytes()),
-        }
-        hex(digest(&SHA256, &text).as_ref())
-    }
+    /// When it stops working (seconds since 1970): only a session's, put off
+    /// each time it is used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    expires: Option<u64>,
 }
 
 /// Every account seen so far, and where they are kept (with no queue, only
@@ -100,6 +61,8 @@ pub struct Accounts {
     /// By login hash.
     logins: BTreeMap<String, AccountId>,
     loaded: BTreeMap<AccountId, AccountSave>,
+    /// Sessions used since starting, by login hash (`session`).
+    sessions: BTreeMap<String, LoginSave>,
 }
 
 impl Accounts {
@@ -126,9 +89,13 @@ impl Accounts {
         let id = match saved {
             Some(Save::Login(login)) => login.account,
             _ => {
-                let id = AccountId(new_id());
+                let id = key.account_id().unwrap_or_else(|| AccountId(new_id()));
                 if let Some(queue) = &self.queue {
-                    queue.save(login, Save::Login(LoginSave { account: id }));
+                    let save = LoginSave {
+                        account: id,
+                        expires: None,
+                    };
+                    queue.save(login, Save::Login(save));
                 }
                 self.loaded.insert(
                     id,
@@ -284,7 +251,7 @@ fn checked_name(name: &str) -> Result<String, String> {
     Ok(name.to_owned())
 }
 
-fn hex(bytes: &[u8]) -> String {
+pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
@@ -297,6 +264,14 @@ pub fn new_guest_token() -> Result<GuestToken, String> {
         .map_err(|_| "the system can't provide secure random numbers".to_owned())?;
     Ok(GuestToken(token))
 }
+
+// Split into files (`cargo xtask lint` keeps files small).
+mod login_key;
+mod session;
+
+pub(crate) use login_key::{EmailKey, LoginKey};
+#[cfg(test)]
+use session::session_hash;
 
 #[cfg(test)]
 mod tests;

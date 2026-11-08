@@ -210,6 +210,7 @@ fn open(
         &security,
         None,
         Stop::Closing(closed),
+        None,
     )?;
     Ok((ports, closing))
 }

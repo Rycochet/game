@@ -158,6 +158,13 @@ pub(super) fn receive(
                 give_up(&mut commands, &mut status, reason);
                 break;
             }
+            // Answers to logging in through a provider, which this client
+            // doesn't do yet: it only logs in as a guest.
+            Ok(Some(
+                ServerMessage::OpenLogin { .. }
+                | ServerMessage::LoggedIn { .. }
+                | ServerMessage::LoginFailed(_),
+            )) => {}
             Ok(Some(ServerMessage::Refused(reason))) => {
                 error!("The server refused to connect: {reason}");
                 *status = ServerStatus::Refused(format!("The server refused: {reason}"));

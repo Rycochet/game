@@ -31,6 +31,7 @@ use std::time::Duration;
 use crate::ServerWorlds;
 use crate::clock::ServerClock;
 use crate::connections::{self};
+use crate::oidc::Logins;
 use crate::tls::{Certificates, Security};
 
 // Split into files (`cargo xtask lint` keeps files small).
@@ -94,6 +95,8 @@ pub struct NetworkPlugin {
     pub address: SocketAddr,
     pub web: Option<WebClient>,
     pub security: Security,
+    /// Logging in through providers, whose page to come back to is served here.
+    pub logins: Option<Logins>,
 }
 
 /// The secure port, and the certificate it uses.
@@ -128,6 +131,9 @@ struct Sockets {
     heartbeat: Heartbeat,
     ping_every: Duration,
     silent_after: Duration,
+    /// Logging in through providers (`oidc`), whose page players come back to
+    /// is served with the game.
+    logins: Option<Logins>,
 }
 
 impl Plugin for NetworkPlugin {
@@ -143,6 +149,7 @@ impl Plugin for NetworkPlugin {
             &self.security,
             self.web.clone(),
             Stop::Signal(stop.0.clone()),
+            self.logins.clone(),
         )
         .unwrap_or_else(|error| panic!("{error}"));
         app.insert_resource(NewConnections(Mutex::new(ports.accepted)))

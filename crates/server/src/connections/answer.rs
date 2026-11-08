@@ -6,40 +6,12 @@ use shared::protocol::{ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessa
 use super::answer_dev::answer_dev;
 use super::answer_items::answer_items;
 use super::delete_character::delete_character;
+use super::login::log_in;
 use super::new_character::{create, join_or_make};
 use super::{Action, Client, MOST_WAITING, Phase};
-use crate::accounts::{Accounts, LoginKey, MAX_CHARACTERS};
+use crate::accounts::Accounts;
+use crate::oidc::Logins;
 use crate::{ServerOptions, ServerWorld};
-use shared::difficulty::Difficulties;
-
-/// A client has logged in: a guest goes to their one character (made first, if
-/// new: `join_or_make`), anyone else is told theirs to choose from.
-pub(super) fn logged_in(
-    client: &mut Client,
-    key: &LoginKey,
-    accounts: &mut Accounts,
-    world: &ServerWorld,
-    allowed: Difficulties,
-) -> bool {
-    let answered = (|| {
-        let id = accounts.log_in(key)?;
-        let account = accounts.account(&id)?;
-        client.account = Some(id);
-        let answered = if account.guest {
-            client.character_id = Some(accounts.guest_character(&id)?);
-            join_or_make(client, world, allowed)
-        } else {
-            client.phase = Phase::Choosing;
-            client.link.send(&ServerMessage::Characters {
-                list: account.characters.clone(),
-                can_create: account.characters.len() < MAX_CHARACTERS,
-                difficulties: allowed,
-            })
-        };
-        Ok::<bool, String>(answered)
-    })();
-    answered.unwrap_or_else(|error| client.refuse_for_saves(&error))
-}
 
 /// Answers one message; `false` if the client should be disconnected.
 pub(crate) fn answer(
@@ -48,6 +20,7 @@ pub(crate) fn answer(
     world: &mut ServerWorld,
     accounts: &mut Accounts,
     options: &ServerOptions,
+    logins: Option<&Logins>,
 ) -> bool {
     let refuse = |client: &Client, reason: String| {
         client.link.send(&ServerMessage::Refused(reason));
@@ -83,22 +56,17 @@ pub(crate) fn answer(
             client.makes_characters = makes_characters;
             client.difficulty = Some(difficulty.for_existing());
             client.phase = Phase::LoggingIn;
-            let methods = if options.guests {
-                vec![LoginMethod::Guest]
-            } else {
-                Vec::new()
-            };
+            let mut methods = logins.map(Logins::methods).unwrap_or_default();
+            if options.guests {
+                methods.insert(0, LoginMethod::Guest);
+            }
             client.link.send(&ServerMessage::LoginOptions { methods })
         }
         ClientMessage::Login(_) if client.phase != Phase::LoggingIn => {
             refuse(client, "not the time to log in".into())
         }
         ClientMessage::Login(credentials) => {
-            let key = LoginKey::from(&credentials);
-            if matches!(key, LoginKey::Guest(_)) && !options.guests {
-                return refuse(client, "this server doesn't take guests".into());
-            }
-            logged_in(client, &key, accounts, world, options.difficulties)
+            log_in(client, credentials, world, accounts, options, logins)
         }
         ClientMessage::ChooseCharacter { id } => {
             let Some(account) = client.account.filter(|_| client.phase == Phase::Choosing) else {

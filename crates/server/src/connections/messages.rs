@@ -12,6 +12,7 @@ use super::playtime::shows_activity;
 use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
 use crate::ground::{self};
+use crate::oidc::Logins;
 use crate::sites::{self, Visit};
 use crate::{ServerOptions, ServerWorld, ServerWorlds, gates, hall, world_map};
 
@@ -23,6 +24,7 @@ pub(crate) fn handle_messages(
     mut connections: ResMut<Connections>,
     mut worlds: ResMut<ServerWorlds>,
     options: Res<ServerOptions>,
+    logins: Option<Res<Logins>>,
 ) {
     let Connections { clients, accounts } = &mut *connections;
     for i in 0..clients.len() {
@@ -37,7 +39,14 @@ pub(crate) fn handle_messages(
                     if shows_activity(&message) {
                         client.activity.did_something(world.action_clock.ticks());
                     }
-                    if !answer(client, message, world, accounts, &options) {
+                    if !answer(
+                        client,
+                        message,
+                        world,
+                        accounts,
+                        &options,
+                        logins.as_deref(),
+                    ) {
                         break false;
                     }
                     // The rest once it has been welcomed (below).
@@ -240,7 +249,8 @@ pub(super) fn join(
         let same_account = account.is_some() && other.account == account;
         let same = same_account || other.character_id == character;
         if j != i && !other.gone && other.phase == Phase::Playing && same {
-            info!("{character:?} connected again: dropping the older connection");
+            let who = account.map_or_else(|| other.in_log(), |id| format!("Account {}", id.0));
+            info!("{who} connected again: dropping the older connection");
             other.link.send(&ServerMessage::Refused(
                 "this account is playing somewhere else now".into(),
             ));

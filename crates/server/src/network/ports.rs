@@ -12,6 +12,7 @@ use super::routes::{Stop, serve};
 use super::web_files::WebClient;
 use super::{Heartbeat, PING_EVERY, SILENT_AFTER, SecurePort, Sockets};
 use crate::clock::ServerClock;
+use crate::oidc::Logins;
 use crate::tls::{Certificates, Security};
 
 /// Ports being served.
@@ -24,7 +25,8 @@ pub(crate) struct OpenPorts {
 }
 
 /// Binds the ports and serves them on a thread of their own until `stop`: the
-/// plain one (`plain`, if any) and, with TLS, the secure one in `security`.
+/// plain one (`plain`, if any) and, with TLS, the secure one in `security`;
+/// with `logins`, the page players come back to from providers too.
 /// An `Err` says why it can't, before anything is served.
 pub(crate) fn open_ports(
     clock: ServerClock,
@@ -33,6 +35,7 @@ pub(crate) fn open_ports(
     security: &Security,
     web: Option<WebClient>,
     stop: Stop,
+    logins: Option<Logins>,
 ) -> Result<OpenPorts, String> {
     let bind = |address: SocketAddr| {
         TcpListener::bind(address).map_err(|error| format!("Can't listen on {address}: {error}"))
@@ -85,6 +88,7 @@ pub(crate) fn open_ports(
         heartbeat,
         ping_every: PING_EVERY,
         silent_after: SILENT_AFTER,
+        logins,
     };
     let thread = thread::Builder::new()
         .name("network".into())

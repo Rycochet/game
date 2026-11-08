@@ -28,6 +28,7 @@ impl Client {
             world: None,
             going_to: None,
             account: None,
+            login_state: None,
             character_id,
             name: String::new(),
             gone: false,
@@ -65,6 +66,15 @@ impl Client {
             hall_origin: 0,
             last_step: None,
             looking_up: Vec::new(),
+        }
+    }
+
+    /// Who it is, for the log: its character's id (which leads to the
+    /// account), never a name.
+    pub(crate) fn in_log(&self) -> String {
+        match self.character_id {
+            Some(id) => format!("Character {}", id.0),
+            None => "A client".into(),
         }
     }
 

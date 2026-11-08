@@ -33,6 +33,7 @@ Also keeps `common::ServerClock`: `run_clock` runs the server's clock in real ti
 
 ## Notes
 
+- Only guests log in so far: `receive` ignores `OpenLogin`, `LoggedIn` and `LoginFailed`, which only come after logging in through a provider (Accounts and logins, PR 2).
 - `receive` runs in `PreUpdate`, so the state changes on the same frame `Welcome` arrives, and `OnEnter(GameView::WorldMap)` already finds `CurrentWorld`. `dev_tools` starting positions apply after it (on leaving `Connecting`), so they win over the saved one.
 - `ServerConnection`'s fields are dropped in order: the link first (the server sees its client leave, saves and stops), then the `EmbeddedServer`, whose drop waits for that. Swapping them would hang on quitting.
 - Map changes are counted in `PostUpdate`, after `site` has applied them: steps taken earlier in that frame were still on the last map. Steps sent just before a map change are never confirmed; the server ignores them.
