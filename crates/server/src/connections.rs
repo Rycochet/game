@@ -52,6 +52,7 @@ pub(super) use answer::answer;
 pub(crate) use combat::take_mob_blows;
 pub(super) use lightning::tell_of_lightning;
 pub(super) use login::finish_logins;
+pub(crate) use messages::Sneak;
 pub(super) use messages::handle_messages;
 pub(crate) use moving::Arrival;
 pub use playtime::IDLE_MINUTES;

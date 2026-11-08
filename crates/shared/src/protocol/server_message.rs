@@ -240,4 +240,7 @@ pub enum ServerMessage {
     /// Logging in didn't work, and why: the client may try again or another
     /// way, as it is still logging in.
     LoginFailed(String),
+    /// Whether the player is sneaking now (`Ability::Sneak`, a toggle): after
+    /// they turn it on or off, and `false` on joining, as it isn't kept.
+    Sneaking(bool),
 }

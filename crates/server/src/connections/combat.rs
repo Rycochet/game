@@ -82,6 +82,9 @@ pub(super) fn start_ability(
     target: Option<Id>,
 ) -> (bool, u32) {
     let kind = client.inventory.creature;
+    if ability.is_toggle() && ability.can_use(kind) {
+        return (client.toggle_sneak(), 0);
+    }
     if !ability.can_use(kind) || client.fight.pending.is_some() {
         debug!("Not starting {ability:?}: can't, or already winding up");
         return (true, 0);

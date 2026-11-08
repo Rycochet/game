@@ -1,13 +1,14 @@
 //! What steps cost by the player's movement skills, and the practice they
 //! give: Running for every step on the world map, Climbing for steep ones there
-//! and in the wilderness, Swimming for wading, Jumping for jumps, and Weight
-//! Training under a heavy load (`shared::movement`'s training settings), at
+//! and in the wilderness, Swimming for wading, Jumping for jumps, Sneaking for
+//! a slow pace in the wilderness under a wary eye, and Weight Training under a
+//! heavy load (`shared::movement`'s training settings), at
 //! most once per skill every 5 seconds, as blows are.
 
 use shared::energy::level_step_energy;
 use shared::movement::{
-    Gait, JUMP_PRACTICE, MOVEMENT_SKILLS, RIVER_SWIM_PRACTICE, RUN_PRACTICE, SWIM_PRACTICE,
-    WildHeights, climb_practice, climbed, is_jump, weight_practice, world_step_time,
+    Gait, JUMP_PRACTICE, MOVEMENT_SKILLS, RIVER_SWIM_PRACTICE, RUN_PRACTICE, SNEAK_PRACTICE,
+    SWIM_PRACTICE, WildHeights, climb_practice, climbed, is_jump, weight_practice, world_step_time,
 };
 use shared::protocol::ServerMessage;
 
@@ -26,13 +27,17 @@ pub(super) struct Moved {
     pub swam: u32,
     /// A jump over something: practises Jumping.
     pub jumped: bool,
+    /// At a sneaking pace in the wilderness, watched by something wary:
+    /// practises Sneaking.
+    pub sneaked: bool,
 }
 
 impl Client {
     /// What a step on a level from `from` to `to` (where it landed before any
     /// wrapping round the planet) costs: in the wilderness (`wild`) by its slope
-    /// and the player's Climbing, and slower if `wading`, less so by Swimming.
-    /// Whether the client is still there, and the cost.
+    /// and the player's Climbing, and slower if `wading`, less so by Swimming;
+    /// no quicker than a sneaking pace while sneaking. Whether the client is
+    /// still there, and the cost.
     pub(super) fn level_step(
         &mut self,
         world: &ServerWorld,
@@ -49,24 +54,27 @@ impl Client {
             (heights.at(from.0, from.1), heights.at(to.0, to.1))
         });
         let gait = Gait::of(&self.sheet.skills);
-        let cost = level_step_energy(from, to, ends, wading, gait);
         // 16ths of an elevation a cell: elevations per world map point, as
         // steepness counts there.
         let cells = (from.0 - to.0).abs().max((from.1 - to.1).abs()).max(1) as u32;
+        let cost = self.sneak_cost(level_step_energy(from, to, ends, wading, gait), cells);
+        let now = world.action_clock.ticks();
+        let slow = self.learning.sneak.stepped(now, cells);
+        let sneaked = wild && slow && self.watched(world);
         let moved = Moved {
             on_world_map: false,
             elevations: ends.map_or(0, |(a, b)| a.abs_diff(b) / cells),
             swam: if wading { SWIM_PRACTICE } else { 0 },
             jumped: is_jump(from, to),
+            sneaked,
         };
-        let now = world.action_clock.ticks();
         (self.practise_moving(moved, now), cost)
     }
 
     /// What a world map step from `from` to `to` (before any wrapping) costs,
     /// with the elevations at each end: its slope, any road, wading a river
-    /// off the road or swimming the sea, and the player's skills. Whether the client is still
-    /// there, and the cost.
+    /// off the road or swimming the sea, and the player's skills. Whether the
+    /// client is still there, and the cost.
     pub(super) fn world_step(
         &mut self,
         world: &mut ServerWorld,
@@ -88,9 +96,27 @@ impl Client {
                 0
             },
             jumped: false,
+            sneaked: false,
         };
         let now = world.action_clock.ticks();
         (self.practise_moving(moved, now), cost)
+    }
+
+    /// Whether something wary on the player's level watches them where they
+    /// stand (`entities::watched_warily`).
+    fn watched(&self, world: &ServerWorld) -> bool {
+        let Some(visit) = &self.visit else {
+            return false;
+        };
+        let kind = self.inventory.creature;
+        let character = self.character_id.as_ref();
+        crate::entities::watched_warily(
+            world,
+            visit.population(),
+            visit.position(),
+            kind,
+            character,
+        )
     }
 
     /// Practice from a step: Running on the world map, Climbing by its
@@ -112,6 +138,10 @@ impl Client {
             (skills.climbing, climb_practice(moved.elevations)),
             (skills.swimming, moved.swam),
             (skills.jumping, if moved.jumped { JUMP_PRACTICE } else { 0 }),
+            (
+                skills.sneaking,
+                if moved.sneaked { SNEAK_PRACTICE } else { 0 },
+            ),
             (skills.weight_training, weight_practice(load)),
         ] {
             if amount == 0 {

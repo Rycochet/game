@@ -115,3 +115,18 @@ fn cancelling_gives_back_all_but_the_penalty() {
     nearly.cancel(2, 210, 420);
     assert_eq!(nearly.at(2, 210), -80);
 }
+
+#[test]
+fn sneaking_holds_steps_to_a_cell_every_two_seconds() {
+    let step = site_step_cost((0, 0), (1, 0));
+    let sneaking = sneak_step_energy(step, 1, NORMAL_SPEED);
+    let seconds = f64::from(sneaking) / f64::from(NORMAL_SPEED) / ACTION_TICKS_PER_SECOND;
+    assert_eq!(seconds, 2.0);
+    // A jump covers two cells: four seconds.
+    assert_eq!(sneak_step_energy(2 * step, 2, NORMAL_SPEED), 2 * sneaking);
+    // Something already slower stays as it is.
+    assert_eq!(
+        sneak_step_energy(u32::MAX / 2, 1, NORMAL_SPEED),
+        u32::MAX / 2
+    );
+}

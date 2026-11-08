@@ -16,7 +16,10 @@ use crate::oidc::Logins;
 use crate::sites::{self, Visit};
 use crate::{ServerOptions, ServerWorld, ServerWorlds, gates, hall, world_map};
 
+mod sneaking;
 mod training;
+
+pub(crate) use sneaking::Sneak;
 
 /// Answers every message that has arrived, and forgets clients that have
 /// gone (or were refused), saving them first.

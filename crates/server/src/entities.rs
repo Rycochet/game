@@ -44,6 +44,9 @@ mod target;
 mod territory;
 mod timid;
 mod tracking;
+mod watching;
+#[cfg(test)]
+mod watching_tests;
 mod wild;
 
 use crossing::cross;
@@ -62,6 +65,7 @@ pub(super) use run::run_mobs;
 use run::world_gap;
 pub(crate) use scent::Scents;
 pub(super) use sync::{in_hall, sync};
+pub(crate) use watching::watched_warily;
 pub(crate) use wild::{WildAreas, keep_wild_areas};
 
 /// How long a level nobody is on stays in use.

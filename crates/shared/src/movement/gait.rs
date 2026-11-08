@@ -46,6 +46,7 @@ pub struct MovementSkills {
     pub weight_training: SkillId,
     pub swimming: SkillId,
     pub jumping: SkillId,
+    pub sneaking: SkillId,
 }
 
 /// Where Climbing and Running are in the tree.
@@ -56,6 +57,7 @@ pub static MOVEMENT_SKILLS: LazyLock<MovementSkills> = LazyLock::new(|| Movement
         .expect("Weight Training is in the tree"),
     swimming: SkillId::find("athletics/swimming").expect("Swimming is in the tree"),
     jumping: SkillId::find("athletics/jumping").expect("Jumping is in the tree"),
+    sneaking: SkillId::find("stealth/sneaking").expect("Sneaking is in the tree"),
 });
 
 /// How well a creature climbs, runs, swims and jumps: each skill's value up to

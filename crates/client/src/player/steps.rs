@@ -1,15 +1,16 @@
 //! Taking the steps asked for, as energy allows.
 
 use bevy::prelude::*;
-use shared::energy::{ACTION_TICKS_PER_SECOND, level_step_energy};
-use shared::movement::{step_on_level_by, step_on_world_map_by, wades, world_step_time};
+use shared::energy::ACTION_TICKS_PER_SECOND;
+use shared::movement::{step_on_level_by, step_on_world_map_by, world_step_time};
 
+use super::level_costs::LevelCosts;
 use super::{
     MOST_STEPS_WAITING, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick, enemy_cells,
 };
 use crate::common::{
     CancelledEnergy, CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition,
-    NearRivers, Other, PlayerGait, PlayerSpeed, SpentEnergy, WildCellHeights,
+    NearRivers, Other, PlayerGait, PlayerSpeed, Sneaking, SpentEnergy, WildCellHeights,
 };
 
 /// Takes the steps asked for this frame, in order: in a dungeon, only onto
@@ -27,7 +28,7 @@ pub(super) fn take_steps(
     clock: Res<GameClock>,
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
-    gait: Res<PlayerGait>,
+    (gait, sneaking): (Res<PlayerGait>, Res<Sneaking>),
     (heights, rivers): (Res<WildCellHeights>, Res<NearRivers>),
     mut energy: ResMut<PlayerEnergy>,
     mut stepped: MessageWriter<Stepped>,
@@ -78,11 +79,15 @@ pub(super) fn take_steps(
             continue;
         }
         let cost = match view.get() {
-            // The wilderness's slopes, as the server prices them.
-            GameView::Dungeon => {
-                let wading = wades(&dungeon.level, (x, y));
-                level_step_energy(from, (x, y), heights.ends(from, (x, y)), wading, gait.0)
+            // Slopes, wading, jumps and sneaking, as the server prices them.
+            GameView::Dungeon => LevelCosts {
+                level: &dungeon.level,
+                heights: &heights,
+                gait: gait.0,
+                sneaking: sneaking.0,
+                speed: speed.0,
             }
+            .time(from, (x, y)),
             _ => world.as_ref().map_or(0, |world| {
                 let conditions = world.conditions(&clock);
                 let ends = (

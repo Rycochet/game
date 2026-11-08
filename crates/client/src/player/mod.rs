@@ -11,6 +11,7 @@ use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod keys;
+mod level_costs;
 mod messages;
 mod moving;
 mod rivers;

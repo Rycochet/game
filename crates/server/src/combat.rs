@@ -40,11 +40,13 @@ pub(crate) struct Fight {
 }
 
 /// A player's open practice windows (`shared::skill::Windows`): one per skill, and
-/// one per kind of creature for the blocks spent fighting it. Not saved.
+/// one per kind of creature for the blocks spent fighting it; and whether they
+/// sneak, with their recent steps for Sneaking's pace. Not saved.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Learning {
     pub skills: Windows<SkillId>,
     pub foes: Windows<CreatureKind>,
+    pub sneak: crate::connections::Sneak,
 }
 
 /// A creature harmed this tick, for others who see it (`ServerWorld::harmed`).

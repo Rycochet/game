@@ -196,3 +196,13 @@ fn every_ability_leans_on_something() {
         }
     }
 }
+
+#[test]
+fn everyone_knows_sneak_a_toggle_for_the_bar() {
+    assert!(Ability::Sneak.is_toggle());
+    assert!(Ability::Sneak.is_active(), "it goes on the bar");
+    assert!(!Ability::Sneak.can_be_automatic());
+    for kind in CreatureKind::ALL {
+        assert!(known(kind).contains(&Ability::Sneak), "{kind:?}");
+    }
+}

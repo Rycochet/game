@@ -217,6 +217,7 @@ pub(super) fn receive(
                 | ServerMessage::Vitals { .. }
                 | ServerMessage::VisitedGates(_)
                 | ServerMessage::ActionBar(_)
+                | ServerMessage::Sneaking(_)
                 | ServerMessage::AbilityStarted { .. }
                 | ServerMessage::AbilityLanded { .. }
                 | ServerMessage::Killed { .. }

@@ -68,18 +68,28 @@ impl Manual {
     }
 }
 
-/// A slot used: its ability queued, or taken out of the queue.
+/// A slot used: its ability queued, or taken out of the queue; a toggle
+/// (Sneak) asked for at once, as it needs no target and takes no time.
 pub(super) fn use_slots(
     mut used: MessageReader<UseSlot>,
     bar: Res<OwnBar>,
     carried: Res<Carried>,
     mut manual: ResMut<Manual>,
+    mut to_server: MessageWriter<ToServer>,
 ) {
     for &UseSlot(slot) in used.read() {
         let Some(held) = bar.0.slots.get(usize::from(slot)).copied().flatten() else {
             continue;
         };
-        if held.ability.can_use(carried.0.creature) {
+        if !held.ability.can_use(carried.0.creature) {
+            continue;
+        }
+        if held.ability.is_toggle() {
+            to_server.write(ToServer(ClientMessage::UseAbility {
+                ability: held.ability,
+                target: None,
+            }));
+        } else {
             manual.press(held.ability);
         }
     }
