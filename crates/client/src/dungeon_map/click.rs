@@ -5,7 +5,10 @@ use shared::dungeon::Cell;
 use shared::protocol::{ClientMessage, DevMob, DevMobTool};
 
 use super::Shown;
-use crate::common::{ClickMode, CreateMobOrder, CurrentDungeon, HoveredBag, PointerPosition};
+use super::ground_hit::Ground;
+use crate::common::{
+    ClickMode, CreateMobOrder, CurrentDungeon, HoveredBag, PointerPosition, WildCellHeights,
+};
 use crate::connection::ToServer;
 use crate::player::TravelTo;
 use crate::view3d::{ClickedToken, ViewCamera};
@@ -29,6 +32,7 @@ pub(super) fn pick_on_click(
     shown: Res<Shown>,
     bag: Res<HoveredBag>,
     order: Res<CreateMobOrder>,
+    heights: Res<WildCellHeights>,
     mut travel: MessageWriter<TravelTo>,
     mut door_clicked: MessageWriter<DoorClicked>,
     mut to_server: MessageWriter<ToServer>,
@@ -47,16 +51,17 @@ pub(super) fn pick_on_click(
     let Ok(ray) = camera.viewport_to_world(camera_transform, cursor) else {
         return;
     };
+    let ground = Ground(Some(&heights));
     // Dev tools: Mob Mode puts the mob Create Mob has set up on the cell.
     if *mode == ClickMode::PlaceMob {
-        if let Some((x, y)) = super::picking::floor_cell(ray) {
+        if let Some((x, y)) = super::picking::floor_cell(ray, ground) {
             let mob = DevMob { x, y, ..order.0 };
             to_server.write(ToServer(ClientMessage::DevMobs(DevMobTool::Create(mob))));
         }
         return;
     }
     if *mode == ClickMode::ChangeCell {
-        if let Some((x, y)) = super::picking::floor_cell(ray) {
+        if let Some((x, y)) = super::picking::floor_cell(ray, ground) {
             let cell = match dungeon.level.cell(x, y) {
                 Cell::Floor => Cell::Wall,
                 Cell::Wall => Cell::Door,
@@ -67,7 +72,7 @@ pub(super) fn pick_on_click(
         }
         return;
     }
-    let door = super::picking::door_clicked(ray, &dungeon.buildings, &shown.solid_faces);
+    let door = super::picking::door_clicked(ray, &dungeon.buildings, &shown.solid_faces, ground);
     if let Some(building) = door
         && *mode != ClickMode::Teleport
     {
@@ -78,8 +83,8 @@ pub(super) fn pick_on_click(
     let front = front.map(|b| (b.door.0 + b.faces.0, b.door.1 + b.faces.1));
     let (level, seen, walls) = (&dungeon.level, &dungeon.remembered, &shown.solid_faces);
     let picked = front
-        .or_else(|| super::gate_picking::gate_clicked(ray, level, seen, walls))
-        .or_else(|| super::picking::pick(ray, level, seen, walls));
+        .or_else(|| super::gate_picking::gate_clicked(ray, level, seen, walls, ground))
+        .or_else(|| super::picking::pick(ray, level, seen, walls, ground));
     if let Some((x, y)) = picked {
         // Dev tools: Teleport Mode jumps there instead (through walls), if the
         // server allows it.

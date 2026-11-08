@@ -11,7 +11,7 @@ use super::{
 };
 use crate::common::{CurrentDungeon, SharesSight, SmoothPosition};
 use crate::player::Player;
-use crate::view3d::ViewCamera;
+use crate::view3d::{OrbitCamera, ViewCamera};
 
 /// Marks the mesh of the outlines.
 #[derive(Component)]
@@ -84,13 +84,15 @@ pub fn update_outlines(
 #[allow(clippy::type_complexity)]
 pub fn place_mask(
     dungeon: Res<CurrentDungeon>,
-    view: Single<(&Camera, &Transform), (With<ViewCamera>, Without<MaskCamera>)>,
+    view: Single<(&Camera, &Transform, &OrbitCamera), (With<ViewCamera>, Without<MaskCamera>)>,
     mask_camera: Single<(&mut Transform, &mut Projection), With<MaskCamera>>,
     mut lines: ResMut<SightLines>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
-    let (camera, transform) = *view;
-    let Some(wanted) = view_area(camera, transform, dungeon.level.bounds()) else {
+    let (camera, transform, orbit) = *view;
+    // The ground the camera looks at (the player's, on raised land).
+    let floor = transform.translation.y - orbit.pitch.sin() * orbit.distance;
+    let Some(wanted) = view_area(camera, transform, dungeon.level.bounds(), floor) else {
         return;
     };
     if lines.area.is_some_and(|area| {

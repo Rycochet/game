@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::{CELL_SIZE, DungeonScene, TOKEN_LIGHT_HEIGHT, TOKEN_LIGHT_LUMENS, TokenLight};
-use crate::common::{LightSource, SmoothPosition};
+use crate::common::{LightSource, SmoothPosition, WildCellHeights};
 
 /// Keeps a real point light over each `LightSource`, so tokens near it are
 /// lit like the tiles are.
@@ -11,6 +11,7 @@ pub(super) fn sync_lights(
     mut commands: Commands,
     scene: Single<Entity, With<DungeonScene>>,
     sources: Query<(Entity, &LightSource, &SmoothPosition)>,
+    heights: Res<WildCellHeights>,
     mut lights: Query<(Entity, &TokenLight, &mut PointLight, &mut Transform)>,
 ) {
     for (entity, token_light, mut point, mut transform) in &mut lights {
@@ -20,11 +21,10 @@ pub(super) fn sync_lights(
         };
         point.color = source.colour;
         point.range = (source.radius as f32 + 1.0) * CELL_SIZE;
-        transform.translation = Vec3::new(
-            position.x as f32 * CELL_SIZE,
-            TOKEN_LIGHT_HEIGHT,
-            position.y as f32 * CELL_SIZE,
-        );
+        let (x, y) = (position.x as f32, position.y as f32);
+        let ground = heights.drawn_between(x, y) * CELL_SIZE;
+        transform.translation =
+            Vec3::new(x * CELL_SIZE, ground + TOKEN_LIGHT_HEIGHT, y * CELL_SIZE);
     }
     for (owner, source, _) in &sources {
         if lights.iter().any(|(_, light, _, _)| light.owner == owner) {

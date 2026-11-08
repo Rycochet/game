@@ -103,6 +103,9 @@ pub(super) fn send_cells(
     masks: &CellMasks,
     remembered: bool,
 ) -> bool {
+    if !super::wild::send_flats(client, visit, masks) {
+        return false;
+    }
     let truesight = client.truesight;
     level_chunks(
         &visit.level.level,

@@ -14,7 +14,7 @@ use super::wild_ground::GroundTint;
 use super::{MemoryPart, SeeThroughPart, Shown, SolidPart, StairsThroughPart};
 use crate::common::{
     CurrentDungeon, LightSource, Lightning, MapPosition, Preferences, Remembered, SharesSight,
-    ViewStats,
+    ViewStats, WildCellHeights,
 };
 use crate::player::Player;
 use crate::view3d::ViewCamera;
@@ -66,13 +66,14 @@ pub(super) fn update_meshes(
         Res<Preferences>,
         Local<Option<(u8, bool)>>,
     ),
-    (town_lights, mut window_glow, lines, mut lines_seen, tint, lightning): (
+    (town_lights, mut window_glow, lines, mut lines_seen, tint, lightning, heights): (
         Res<TownLights>,
         Local<Spill>,
         Res<SightLines>,
         Local<u64>,
         Res<GroundTint>,
         Res<Lightning>,
+        Res<WildCellHeights>,
     ),
 ) {
     let camera = camera.translation;
@@ -87,6 +88,7 @@ pub(super) fn update_meshes(
         || lightning.is_changed()
         || town_lights.is_changed()
         || tint.is_changed()
+        || heights.is_changed()
         || *lines_seen != lines.changes
         || *settings_seen != Some(settings)
         || lights
@@ -223,7 +225,7 @@ pub(super) fn update_meshes(
         camera,
         theme.shape,
         &cut,
-        tint.tints(),
+        tint.wild(&heights),
     );
     shown.sight = Some(sight.clone());
     dungeon.bypass_change_detection().remembered = remembered;

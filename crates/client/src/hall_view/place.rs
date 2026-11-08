@@ -26,6 +26,13 @@ pub(super) struct Gates {
     stone: Option<Handle<StandardMaterial>>,
 }
 
+impl Gates {
+    /// Each gate's frame, by its cell.
+    pub(super) fn standing(&self) -> &BTreeMap<(i64, i64), Entity> {
+        &self.standing
+    }
+}
+
 /// When the stretch of the Hall changes, stands the gates on it and takes
 /// away those off it; anywhere else, takes them all away.
 pub(super) fn place_gates(

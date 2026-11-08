@@ -5,7 +5,7 @@
 //! same height does. The sea is flat at the lowest tide, where the wilderness
 //! keeps it.
 
-use super::{ELEVATIONS_PER_HEIGHT, Gait, SLOPE_COST, WorldGround, step_cost};
+use super::{ELEVATIONS_PER_HEIGHT, FlatGround, Gait, SLOPE_COST, WorldGround, step_cost};
 
 /// Cells to a world map point (`wilderness::SCALE`, which depends on this
 /// module, so it is repeated here; a test checks they agree).
@@ -23,6 +23,8 @@ pub struct WildHeights {
     points: Vec<i32>,
     /// The sea's height, in 16ths: nothing is lower.
     floor: i32,
+    /// Ground kept level (cutouts), which wins over the slopes.
+    flats: Vec<FlatGround>,
 }
 
 impl WildHeights {
@@ -46,7 +48,15 @@ impl WildHeights {
             rows,
             points,
             floor: ground.low_water_elevation() * CELLS_PER_POINT as i32,
+            flats: Vec::new(),
         }
+    }
+
+    /// The same, with `flats` kept level (the server's cutouts in its window,
+    /// or those the client has been told of).
+    pub fn with_flats(mut self, flats: Vec<FlatGround>) -> Self {
+        self.flats = flats;
+        self
     }
 
     /// Whether a cell's height is known here.
@@ -63,10 +73,14 @@ impl WildHeights {
 
     /// A cell's height, in 16ths of an elevation: blended between the four
     /// points round its middle, as the wilderness blends its ground, and never
-    /// below the sea. 0 for a cell outside the rectangle.
+    /// below the sea; a flat's own height in one. 0 for a cell outside the
+    /// rectangle.
     pub fn at(&self, x: i64, y: i64) -> i32 {
         if !self.covers(x, y) {
             return 0;
+        }
+        if let Some(flat) = self.flats.iter().find(|flat| flat.contains(x, y)) {
+            return flat.height;
         }
         let (px, py) = (x.div_euclid(CELLS_PER_POINT), y.div_euclid(CELLS_PER_POINT));
         // The middle is (0.5..15.5) / 16 of the way across: in 32nds, odd.

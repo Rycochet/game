@@ -10,10 +10,12 @@ use crate::road::RoadKind;
 use crate::surface::Surface;
 use crate::world::WorldParams;
 
+mod flat_ground;
 mod gait;
 mod training;
 mod wild_heights;
 
+pub use flat_ground::FlatGround;
 pub use gait::{CLIMB_SAVING_PER_MILLE, FULL, Gait, MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS};
 pub use training::{
     CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RUN_PRACTICE, climb_practice,

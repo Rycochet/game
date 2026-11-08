@@ -10,7 +10,9 @@ use bevy::prelude::*;
 use shared::surface::SurfaceSample;
 use shared::wilderness::SCALE;
 
-use crate::common::{CurrentDungeon, CurrentWorld, GameClock, MapPosition, WorldReturn};
+use crate::common::{
+    CurrentDungeon, CurrentWorld, GameClock, MapPosition, WildCellHeights, WorldReturn,
+};
 use crate::surface_style::SurfaceStyle;
 
 /// Grass is the land's colour, a little darker.
@@ -40,6 +42,19 @@ impl GroundTint {
     pub fn tints(&self) -> Option<&Tints> {
         self.0.as_ref()
     }
+
+    /// What drawing the wilderness's land needs, or nothing anywhere else.
+    pub fn wild<'a>(&'a self, heights: &'a WildCellHeights) -> Option<Wild<'a>> {
+        let tints = self.tints()?;
+        Some(Wild { tints, heights })
+    }
+}
+
+/// The wilderness's land, for drawing: its colours and its cells' heights.
+#[derive(Clone, Copy)]
+pub struct Wild<'a> {
+    pub tints: &'a Tints,
+    pub heights: &'a WildCellHeights,
 }
 
 impl Tints {

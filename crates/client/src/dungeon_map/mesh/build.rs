@@ -9,7 +9,8 @@ use std::collections::BTreeSet;
 use super::super::theme::Shape;
 use super::super::town;
 use super::super::walls::{Layers, Scene};
-use super::super::wild_ground::Tints;
+use super::super::wild_ground::Wild;
+use super::raise::{Marks, build_edges};
 use super::{
     Builder, DungeonMeshes, LightGrid, Surface, View, build_cell_at, copy_as_memory, sizes,
 };
@@ -41,7 +42,7 @@ pub fn build(
     camera: Vec3,
     shape: Shape,
     cut: &Sight,
-    tint: Option<&Tints>,
+    wild: Option<Wild>,
 ) -> DungeonMeshes {
     let mut layers = Layers {
         solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
@@ -61,7 +62,8 @@ pub fn build(
         lit_buildings,
         fields,
         ruined,
-        tint,
+        tint: wild.map(|wild| wild.tints),
+        heights: wild.map(|wild| wild.heights),
     };
     let (min_x, min_y, width, height) = level.bounds();
 
@@ -71,7 +73,10 @@ pub fn build(
                 continue;
             }
             let before = sizes(&layers.solid);
+            let marks = Marks::of(&layers);
             build_cell_at(&mut layers, &scene, stairs, (x, y));
+            marks.lift(&mut layers, scene.ground(x, y));
+            build_edges(&mut layers, &scene, (x, y));
             if cut.is_seen(x, y) {
                 copy_as_memory(&mut layers, &before);
             }

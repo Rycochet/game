@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 
 use super::CELL_SIZE;
+use super::ground_hit::Ground;
 use super::mesh::WallFace;
 use super::picking::hits_face;
 
@@ -32,15 +33,14 @@ pub fn gate_clicked(
     level: &Level,
     sight: &Sight,
     solid_faces: &[WallFace],
+    ground: Ground,
 ) -> Option<(i64, i64)> {
     let direction = *ray.direction;
-    if direction.y >= 0.0 {
-        return None;
-    }
     let top = GATE_TALL * CELL_SIZE;
-    // From where the ray comes down past the top of the tallest gate to the floor.
-    let start = ((ray.origin.y - top) / -direction.y).max(0.0);
-    let end = ray.origin.y / -direction.y;
+    // From where the ray comes down past the top of the tallest gate to where
+    // it reaches the ground.
+    let (end, _, _) = ground.hit(ray)?;
+    let start = (end - top / -direction.y).max(0.0);
     let mut distance = start;
     while distance <= end {
         let point = ray.origin + direction * distance;
@@ -52,7 +52,7 @@ pub fn gate_clicked(
         let deep = (point.z - cell.1 as f32 * CELL_SIZE).abs();
         if across <= GATE_HALF_WIDE * CELL_SIZE
             && deep <= GATE_HALF_DEEP * CELL_SIZE
-            && point.y <= top
+            && point.y - ground.at(cell.0, cell.1) <= top
             && level.cell(cell.0, cell.1) == Cell::WorldGate
             && sight.is_seen(cell.0, cell.1)
         {

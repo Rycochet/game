@@ -167,6 +167,7 @@ fn change_map(
             ServerMessage::Buildings(buildings) => dungeon.add_buildings(buildings),
             ServerMessage::Fields(fields) => dungeon.fields.clone_from(fields),
             ServerMessage::Borders(cells) => dungeon.borders = cells.iter().copied().collect(),
+            ServerMessage::FlatGround(flats) => dungeon.add_flats(flats),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
             &ServerMessage::WildernessWindow { bounds } => dungeon.move_window(bounds),
             &ServerMessage::InPoi(kind) => dungeon.in_poi = kind,

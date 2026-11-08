@@ -2,14 +2,16 @@
 
 use bevy::prelude::*;
 
+use super::CELL_SIZE;
 use super::{CropPart, HerbPart, Shown};
-use crate::common::{CurrentDungeon, GameClock, HerbGrowthShift, WorldReturn};
+use crate::common::{CurrentDungeon, GameClock, HerbGrowthShift, WildCellHeights, WorldReturn};
 
 /// Builds the crops again when what is seen changes: never for the camera, as
 /// fields can hold many more faces than everything else put together.
 pub(super) fn update_crops(
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
+    heights: Res<WildCellHeights>,
     part: Single<(&Mesh3d, &mut Visibility), With<CropPart>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut built: Local<u64>,
@@ -19,7 +21,9 @@ pub(super) fn update_crops(
     };
     *built = shown.looks;
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
-    let crops = super::field::build_crops(&dungeon.fields, sight, &dungeon.remembered, ruined);
+    let ground = |x, y| heights.drawn(x, y) * CELL_SIZE;
+    let remembered = &dungeon.remembered;
+    let crops = super::field::build_crops(&dungeon.fields, sight, remembered, ruined, &ground);
     let (handle, mut visibility) = part.into_inner();
     let any = !crops.indices.is_empty();
     visibility.set_if_neq(if any {
@@ -40,7 +44,7 @@ pub(super) fn update_herbs(
     shown: Res<Shown>,
     clock: Res<GameClock>,
     shift: Res<HerbGrowthShift>,
-    place: Res<WorldReturn>,
+    (place, heights): (Res<WorldReturn>, Res<WildCellHeights>),
     part: Single<(&Mesh3d, &mut Visibility), With<HerbPart>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut built: Local<(u64, u32)>,
@@ -52,7 +56,9 @@ pub(super) fn update_herbs(
     };
     *built = now;
     let at = (place.0.x, place.0.y);
-    let plants = super::herbs::build_plants(&dungeon.level, sight, &dungeon.remembered, at, grown);
+    let ground = |x, y| heights.drawn(x, y) * CELL_SIZE;
+    let seen = (sight, &dungeon.remembered);
+    let plants = super::herbs::build_plants(&dungeon.level, seen, at, grown, &ground);
     let (handle, mut visibility) = part.into_inner();
     let any = !plants.indices.is_empty();
     visibility.set_if_neq(if any {

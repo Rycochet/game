@@ -1,5 +1,6 @@
 use super::*;
 use crate::dungeon_map::WALL_HEIGHT;
+use crate::dungeon_map::ground_hit::Ground;
 
 fn setup() -> (Level, Sight) {
     let level = Level::test_room();
@@ -17,7 +18,10 @@ fn straight_down_picks_the_cell_below() {
     let (level, sight) = setup();
     let above = Vec3::new(3.0 * CELL_SIZE + 5.0, 500.0, -2.0 * CELL_SIZE);
     let target = above.with_y(0.0);
-    assert_eq!(pick(ray(above, target), &level, &sight, &[]), Some((3, -2)));
+    assert_eq!(
+        pick(ray(above, target), &level, &sight, &[], Ground::FLAT),
+        Some((3, -2))
+    );
 }
 
 #[test]
@@ -30,7 +34,8 @@ fn walls_and_unseen_floors_are_not_picked() {
             ray(camera, Vec3::new(-2.0 * CELL_SIZE, 0.0, 0.0)),
             &level,
             &sight,
-            &[]
+            &[],
+            Ground::FLAT
         ),
         None
     );
@@ -40,7 +45,8 @@ fn walls_and_unseen_floors_are_not_picked() {
             ray(camera, Vec3::new(-5.0 * CELL_SIZE, 0.0, 0.0)),
             &level,
             &sight,
-            &[]
+            &[],
+            Ground::FLAT
         ),
         None
     );
@@ -52,7 +58,7 @@ fn clicks_beside_a_wall_mean_the_cell_beside_it() {
     // East of the short wall's line, in its cell.
     let above = Vec3::new(-2.0 * CELL_SIZE + 6.0, 500.0, 0.0);
     let down = ray(above, above.with_y(0.0));
-    assert_eq!(pick(down, &level, &sight, &[]), Some((-1, 0)));
+    assert_eq!(pick(down, &level, &sight, &[], Ground::FLAT), Some((-1, 0)));
 }
 
 #[test]
@@ -69,8 +75,11 @@ fn solid_sides_block_clicks() {
     let from = Vec3::new(4.0 * CELL_SIZE, WALL_HEIGHT * 0.9, 0.0);
     let through = ray(from, Vec3::new(-1.5 * CELL_SIZE, WALL_HEIGHT / 2.0, 0.0));
     assert!(hits_face(through.origin, *through.direction, &face).is_some());
-    assert_eq!(pick(through, &level, &sight, &[face]), None);
+    assert_eq!(pick(through, &level, &sight, &[face], Ground::FLAT), None);
     // A ray landing in front of it is fine.
     let in_front = ray(from, Vec3::new(1.0 * CELL_SIZE, 0.0, 0.0));
-    assert_eq!(pick(in_front, &level, &sight, &[face]), Some((1, 0)));
+    assert_eq!(
+        pick(in_front, &level, &sight, &[face], Ground::FLAT),
+        Some((1, 0))
+    );
 }

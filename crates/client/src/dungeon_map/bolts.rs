@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::CELL_SIZE;
 use super::parts::{DungeonScene, Shown};
-use crate::common::{BoltStruck, CurrentDungeon};
+use crate::common::{BoltStruck, CurrentDungeon, WildCellHeights};
 use crate::lightning::spawn_bolt;
 
 /// How tall a bolt is, and how wide its main stroke, against a cell.
@@ -19,6 +19,7 @@ pub(super) fn strike(
     mut commands: Commands,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
+    heights: Res<WildCellHeights>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -31,7 +32,8 @@ pub(super) fn strike(
         if !dungeon.is_wilderness() || !seen || !dungeon.level.cell(x, y).is_outside() {
             continue;
         }
-        let at = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
+        let ground = heights.drawn(x, y) * CELL_SIZE;
+        let at = Vec3::new(x as f32 * CELL_SIZE, ground, y as f32 * CELL_SIZE);
         let bolt = spawn_bolt(
             &mut commands,
             &mut meshes,
