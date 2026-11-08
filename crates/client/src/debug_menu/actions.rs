@@ -33,6 +33,7 @@ pub enum DebugAction {
     ItemPictures,
     KillMob,
     LearnSomeSkills,
+    LightningNow,
     RegenerateDevArea,
     ResetView,
     RevealMap,
@@ -78,7 +79,7 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 40] = [
+    pub(super) const ALL: [Self; 41] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
@@ -103,6 +104,7 @@ impl DebugAction {
         Self::ItemPictures,
         Self::KillMob,
         Self::LearnSomeSkills,
+        Self::LightningNow,
         Self::RegenerateDevArea,
         Self::ResetView,
         Self::RevealMap,
@@ -147,6 +149,7 @@ impl DebugAction {
             Self::FreezeMobs => "Freeze Mobs",
             Self::InspectMob => "Inspect Mob",
             Self::LearnSomeSkills => "Learn Some Skills",
+            Self::LightningNow => "Lightning Now",
             Self::RegenerateDevArea => "Regenerate Dev Area",
             Self::ResetView => "Reset View",
             Self::RevealMap => "Reveal Map",
@@ -212,6 +215,7 @@ impl DebugAction {
             Self::HerbsState => facts.view == GameView::Dungeon && facts.has_herbs,
             Self::StairsStyle => facts.view == GameView::Dungeon && facts.has_stairs,
             Self::TeleportToPoiShowcase => shared::showcase::ENABLED,
+            Self::LightningNow => matches!(facts.view, GameView::WorldMap | GameView::Dungeon),
             _ => true,
         }
     }

@@ -1086,3 +1086,7 @@ Owner's request. A player putting something on takes off whatever on its layer i
 ## 2026-11-08: Leaving a site from anywhere outside
 
 Owner's request. The Leave key (`<`) leaves any site for the world map from an outside cell of the level entered from the world map (a town's middle, a building's yard, a farm's fields), but a cave only from the edge of its map, so skylights and the ground inside its hill don't count. One shared rule, `shared::site::can_leave`, for the server's check and the client's button. Leaving this way records the cell in `left_at` as walking out does, so coming back in arrives there. The Explore and Leave buttons show whenever they would work, with or without touch. Claude's choices: the action and message are renamed `Leave` (the saved key binding keeps the id `leave_wilderness`, and the buttons their widget ids); the Leave button in the wilderness doesn't know when the tide has made the world map water there, so the server may still refuse it then.
+
+## 2026-11-08: Lightning is told by the server
+
+Lightning only looks like something for now, but the server works out when it flashes (`shared::weather`'s `lightning`, once a second, for each player) and tells those it flashes for, rather than each client rolling it. Everyone in the same storm sees the same flashes. The owner's next step, bolts striking a spot nobody is standing on, needs a choice only the server can make, as it alone knows where everyone is.

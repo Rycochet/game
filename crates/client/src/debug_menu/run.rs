@@ -8,7 +8,7 @@ use shared::protocol::{ClientMessage, DevMobTool, DevSkills, DevVitals, ServerMe
 use super::{AutoWalk, DebugAction, DebugMenu, OpenPanels};
 use crate::common::{
     ClickMode, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GodMode, InspectMob, KillMob,
-    Truesight,
+    LightningStrike, Truesight,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::planet_view::ViewPlanet;
@@ -83,7 +83,11 @@ pub(super) fn run_actions(
     mut raise: MessageWriter<crate::widgets::RaisePanel>,
     nodes: Query<(), With<Node>>,
     mut cameras: Query<&mut OrbitCamera>,
-    (mut to_server, mut view_planet): (MessageWriter<ToServer>, MessageWriter<ViewPlanet>),
+    (mut to_server, mut view_planet, mut lightning): (
+        MessageWriter<ToServer>,
+        MessageWriter<ViewPlanet>,
+        MessageWriter<LightningStrike>,
+    ),
 ) {
     for &action in actions.read() {
         match action {
@@ -159,6 +163,9 @@ pub(super) fn run_actions(
             DebugAction::DeleteCharacter => {}
             DebugAction::ViewPlanet => {
                 view_planet.write(ViewPlanet);
+            }
+            DebugAction::LightningNow => {
+                lightning.write(LightningStrike);
             }
             DebugAction::WorldTime | DebugAction::SunsAndMoons => {
                 open.toggle(action, &mut commands, &mut raise, &nodes);

@@ -160,6 +160,7 @@ impl Plugin for ServerPlugin {
                     connections::sync_entities,
                     connections::sync_ground,
                     connections::tell_the_time,
+                    connections::tell_of_lightning,
                     connections::save_changes.run_if(on_timer(SAVE_EVERY)),
                     exit_when_alone.run_if(|options: Res<ServerOptions>| options.exit_when_alone),
                 )

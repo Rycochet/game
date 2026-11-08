@@ -70,6 +70,9 @@ pub enum ServerMessage {
     /// A new whole hour has begun on the clock (`% 24` is the time of day).
     /// The tide, and so where can be walked on the world map, follows it.
     Hour(u32),
+    /// Lightning flashes where the player is (`WeatherField::lightning`),
+    /// checked once a second.
+    Lightning,
     /// The world's time has been moved, or now runs at another rate.
     WorldClock(WorldTime),
     /// The server's clock has stopped or started again, at this many seconds,

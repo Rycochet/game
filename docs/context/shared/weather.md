@@ -5,11 +5,13 @@ Cloud cover and rain at any place and time, from the public terrain seed and the
 ## Files
 
 - `crates/shared/src/weather.rs`: `WeatherField`, `WeatherSample`, private `Simplex4`. Golden, range, wrap and variety tests.
+- `crates/shared/src/weather/lightning.rs`: `WeatherField::lightning`, `LIGHTNING_RAIN`, `LIGHTNING_WARMEST`, `LIGHTNING_AREA`. Tests: none below the threshold or in sleet and snow, how often, shared across an area, golden seconds.
 
 ## Public API
 
 - `WeatherField::new(&WorldParams)`, `.sample(x, y, hours) -> WeatherSample` (`hours`: fractional game hours since the world began).
 - `WeatherSample { cover, rain }`, both `0..=1`.
+- `WeatherField::lightning(x, y, sample, temperature, second) -> bool`: whether lightning flashes there in that whole second of the server's clock. Only where `rain` is above `LIGHTNING_RAIN` (0.85) and the temperature (`climate`'s) is at least `LIGHTNING_WARMEST` (0.3, the shaders' sleet line); up to 9% of seconds in the worst of a storm, none at the threshold. Rolled by position hash on `LIGHTNING_AREA` (32-point) squares, so players near each other see the same flashes.
 
 ## Depends on
 
@@ -17,7 +19,7 @@ Cloud cover and rain at any place and time, from the public terrain seed and the
 
 ## Used by
 
-- Client `common` (`CurrentWorld::weather`), `world_map::sky`, `dungeon_map::rain`.
+- Client `common` (`CurrentWorld::weather`), `world_map::sky`, `dungeon_map::rain`; server `ServerWorld::lightning_at`.
 
 ## Notes
 

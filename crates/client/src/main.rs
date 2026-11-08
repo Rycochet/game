@@ -20,6 +20,7 @@ mod hover;
 mod inventory;
 mod item_art;
 mod item_text;
+mod lightning;
 mod loading_screen;
 mod minimap;
 mod planet_view;
@@ -122,6 +123,7 @@ fn main() {
         abilities::AbilitiesPlugin,
     ));
     app.add_plugins(skills_page::SkillsPagePlugin);
+    app.add_plugins(lightning::LightningPlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)
