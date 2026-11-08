@@ -4,38 +4,25 @@
 use bevy::prelude::*;
 use shared::movement::{FlatGround, WildHeights};
 
-/// How high a 16th of an elevation is drawn, in cells: one step of height.
-pub const DRAWN_PER_16TH: f32 = 0.125;
+/// How high a 16th of an elevation is drawn, in cells: one step of height
+/// (owner's choice, 2026-11-08, from 1/16, 1/8 and 1/4).
+pub const DRAWN_PER_16TH: f32 = 0.0625;
 
 /// The heights of the wilderness level's cells, worked out by `player` from the
 /// world map's ground and the flats the server told of, whenever the level is
 /// the wilderness and its window moves; `None` anywhere else. Step costs and
 /// routes there go by them, as the server's do, and the views draw by them.
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct WildCellHeights {
     /// The level's bounds they were worked out for.
     pub bounds: (i64, i64, i64, i64),
     /// The flats they were worked out with (`CurrentDungeon::flats`).
     pub flats: Vec<FlatGround>,
     pub heights: Option<WildHeights>,
-    /// Cells drawn per 16th (`DRAWN_PER_16TH`, unless dev tools change it).
-    pub drawn_step: f32,
     /// The height drawn at 0, in 16ths: the window's middle cell's, so what is
     /// drawn stays near the origin's height (far up, the depth buffer and
     /// floats lose precision and the ground shows through tokens).
     pub reference: i32,
-}
-
-impl Default for WildCellHeights {
-    fn default() -> Self {
-        Self {
-            bounds: (0, 0, 0, 0),
-            flats: Vec::new(),
-            heights: None,
-            drawn_step: DRAWN_PER_16TH,
-            reference: 0,
-        }
-    }
 }
 
 impl WildCellHeights {
@@ -51,7 +38,7 @@ impl WildCellHeights {
     pub fn drawn(&self, x: i64, y: i64) -> f32 {
         match &self.heights {
             Some(heights) if heights.covers(x, y) => {
-                (heights.at(x, y) - self.reference) as f32 * self.drawn_step
+                (heights.at(x, y) - self.reference) as f32 * DRAWN_PER_16TH
             }
             _ => 0.0,
         }

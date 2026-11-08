@@ -90,3 +90,6 @@ impl Ground<'_> {
         None
     }
 }
+
+#[cfg(test)]
+mod tests;

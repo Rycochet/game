@@ -18,7 +18,7 @@ mod state;
 mod view;
 mod world;
 
-use drawing::{fields_stage, height_step, herbs_shift, stairs_style, token};
+use drawing::{fields_stage, herbs_shift, stairs_style, token};
 use items::{give_item, set_creature, wear_item};
 use moving::{step, travel, walk, yes};
 use panels::{debug_action, debug_menu, inventory, map, show_floor, system_menu};
@@ -56,7 +56,6 @@ pub(super) fn add(app: &mut App) {
         .add_debug_method("client.stairs_style", stairs_style)
         .add_debug_method("client.fields_stage", fields_stage)
         .add_debug_method("client.herbs_shift", herbs_shift)
-        .add_debug_method("tmp.height_step", height_step)
         .add_debug_method("client.celestial", celestial)
         .add_debug_method("client.token", token)
         // What is open.

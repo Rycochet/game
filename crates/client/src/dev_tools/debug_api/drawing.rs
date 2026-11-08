@@ -93,33 +93,3 @@ pub(super) fn token(
         .ok_or_else(|| refused("no such shape, attitude or size"))?;
     done()
 }
-
-#[derive(Deserialize)]
-pub(super) struct HeightStepParams {
-    step: f32,
-}
-
-/// `tmp.height_step { "step": 0.25 }`: cells drawn per 16th of an elevation
-/// in the wilderness, for choosing it.
-pub(super) fn height_step(
-    In(request): In<Option<Value>>,
-    mut heights: ResMut<crate::common::WildCellHeights>,
-    player: Single<(&crate::common::MapPosition, &crate::common::SmoothPosition), With<Player>>,
-) -> BrpResult {
-    let HeightStepParams { step } = params(request)?;
-    if step >= 0.0 {
-        heights.drawn_step = step;
-    }
-    let (cell, smooth) = *player;
-    let around: Vec<Vec<f32>> = (-1..=1)
-        .map(|dy| {
-            (-1..=1)
-                .map(|dx| heights.drawn(cell.x + dx, cell.y + dy))
-                .collect()
-        })
-        .collect();
-    let between = heights.drawn_between(smooth.x as f32, smooth.y as f32);
-    Ok(
-        server::debug_api::json!({"cell": [cell.x, cell.y], "smooth": [smooth.x, smooth.y], "around": around, "between": between}),
-    )
-}
