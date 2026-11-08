@@ -163,7 +163,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ClientMessage::LookUpItems(vec![Id::for_test(10), Id::for_test(11)]),
         ClientMessage::DevTeleport { x: -3, y: 4 },
-        ClientMessage::DevGoToWorld { seed: 77 },
+        ClientMessage::DevGoToWorld {
+            seed: Some(77),
+            gate: Some(3),
+        },
         ClientMessage::EnterGate { entrance: 5 },
         ClientMessage::DevSetWorldClock {
             minutes: Some(90.5),

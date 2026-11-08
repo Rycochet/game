@@ -10,7 +10,9 @@ use super::bar::Bar;
 use super::clouds::{PlanetCloudMaterial, spawn_clouds};
 use super::globe::{Scene, spawn_scene};
 use super::layer::Layer;
+use super::orbit::Orbit;
 use super::planet::Planet;
+use super::pointed::PointedGate;
 use super::relief::new_relief_texture;
 use super::sky::Sky;
 use super::texture::{Fill, new_texture, texture_size};
@@ -30,6 +32,14 @@ pub(super) struct Showing {
     pub(super) bar: Bar,
     pub(super) choice: Choice,
     pub(super) globe: Globe,
+    /// Where the camera is round the globe; kept when the globe is built again.
+    pub(super) orbit: Orbit,
+    /// The node showing `picture`, for finding what the pointer is over.
+    pub(super) image: Entity,
+    /// The gate's ring under the pointer, and a click or tap waiting for it
+    /// to be known (`teleport::answer_click`).
+    pub(super) pointed: Option<PointedGate>,
+    pub(super) clicked: bool,
     /// The world's hour on opening, and the real time then.
     pub(super) start_hours: f64,
     pub(super) opened: f64,

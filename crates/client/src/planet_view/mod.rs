@@ -15,12 +15,17 @@ mod input;
 mod layer;
 mod moon_look;
 mod open;
+mod orbit;
+mod pick;
 mod planet;
+mod pointed;
 mod read_bar;
 mod relief;
 mod showing;
 mod sky;
 mod spin;
+mod steer;
+mod teleport;
 mod texture;
 
 use bevy::prelude::*;
@@ -47,7 +52,8 @@ impl Plugin for PlanetViewPlugin {
             .add_message::<ViewPlanet>()
             .add_systems(
                 PreUpdate,
-                input::take_input
+                (steer::steer, input::take_input)
+                    .chain()
                     .after(WidgetSystems::Presses)
                     .before(WidgetSystems::Front),
             )
@@ -58,7 +64,10 @@ impl Plugin for PlanetViewPlugin {
                     read_bar::read_bar,
                     gates::show_gate_words,
                     texture::fill_texture,
+                    teleport::teleport_button,
                     spin::spin,
+                    pointed::point_at_gates,
+                    teleport::answer_click,
                     clouds::move_clouds,
                     close::close_without_world,
                 )

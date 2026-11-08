@@ -17,6 +17,9 @@ pub(crate) enum Arrival {
     AsBefore,
     /// At this World Gate of it (through a Hall gate).
     Gate(u8),
+    /// Where its World Gate of this number stands, whether or not it leads to
+    /// the Hall (dev tools); as `AsBefore` if it has no such gate.
+    WorldGate(u8),
 }
 
 impl Client {
@@ -94,6 +97,10 @@ impl Arrival {
         match self {
             Self::AsBefore => None,
             Self::Gate(entrance) => world.gate_position(entrance),
+            Self::WorldGate(number) => {
+                let gates = &world.pois.world_gates().gates;
+                gates.get(usize::from(number)).map(|gate| (gate.x, gate.y))
+            }
         }
     }
 }

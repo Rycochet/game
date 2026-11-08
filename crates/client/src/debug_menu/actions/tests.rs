@@ -48,12 +48,15 @@ fn facts(view: GameView) -> Facts {
 }
 
 #[test]
-fn entries_with_submenus_end_in_dots_and_only_those() {
+fn entries_offering_a_choice_end_in_dots_and_only_those() {
     for action in DebugAction::ALL {
-        assert_eq!(action.label().ends_with("..."), action.has_submenu());
+        assert_eq!(action.label().ends_with("..."), action.offers_choice());
         assert!(!action.name().ends_with("..."));
     }
     assert_eq!(DebugAction::GeneratePoi.label(), "Generate POI...");
+    assert_eq!(DebugAction::TeleportToGate.label(), "Teleport to Gate...");
+    // Its panel opens straight away, with no second layer.
+    assert!(!DebugAction::TeleportToGate.has_submenu());
 }
 
 #[test]

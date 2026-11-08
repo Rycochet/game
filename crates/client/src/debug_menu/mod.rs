@@ -74,6 +74,8 @@ impl Plugin for DebugMenuPlugin {
                         panels::update_rate_buttons,
                         panels::press_go_to_world_buttons,
                         panels::update_go_to_world_button,
+                        panels::press_gate_buttons,
+                        panels::update_gate_buttons,
                     )
                         .chain(),
                     (

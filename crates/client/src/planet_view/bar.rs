@@ -1,6 +1,6 @@
 //! The bar across the top: which generator, which seed (typed, random or
-//! copied), Reset (back to the current world as it is) and which layer the
-//! picture shows.
+//! copied), Reset (back to the current world as it is), which layer the
+//! picture shows, and Teleport to Gate 1.
 
 use bevy::prelude::*;
 use shared::surface::SurfaceGenerator;
@@ -9,7 +9,7 @@ use super::layer::Layer;
 use super::showing::Choice;
 use crate::widgets::UiId;
 use crate::widgets::{
-    BUTTON_PADDING, ButtonState, Dropdown, INK, PANEL_EDGE, Pressable, TextBox, TextSize,
+    BUTTON_PADDING, ButtonState, Dropdown, HoverTip, INK, PANEL_EDGE, Pressable, TextBox, TextSize,
     field_label, panel, spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
     stops_presses,
 };
@@ -24,6 +24,8 @@ const DROPDOWN_WIDTH: f32 = 140.0;
 
 /// The bar's controls.
 pub(super) struct Bar {
+    /// The bar itself: the pointer on it is on none of the globe.
+    pub(super) root: Entity,
     pub(super) generator: Entity,
     pub(super) seed: Entity,
     pub(super) random: Entity,
@@ -32,6 +34,8 @@ pub(super) struct Bar {
     pub(super) copy: Entity,
     pub(super) reset: Entity,
     pub(super) layer: Entity,
+    /// Teleport to Gate 1 (`teleport`).
+    pub(super) teleport: Entity,
     /// How the World Gates were found.
     pub(super) gate_words: Entity,
 }
@@ -101,10 +105,24 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
         let names = Layer::ALL.map(|layer| layer.name().to_string());
         let id = UiId::new("planet", "layer");
         let layer = dropdown(id, row, names.to_vec(), choice.layer, &Layer::ALL);
+        let teleport = spawn_button(
+            row,
+            ButtonState::Normal,
+            "Teleport to Gate 1",
+            FONT,
+            control(None),
+        )
+        .insert((
+            Pressable,
+            HoverTip(String::new()),
+            UiId::new("planet", "teleport"),
+        ))
+        .id();
         let gate_words = row
             .spawn((Text::new(""), TextSize::Small.font(), TextColor(INK)))
             .id();
         parts = Some(Bar {
+            root: entity,
             generator,
             seed,
             random,
@@ -112,6 +130,7 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
             copy,
             reset,
             layer,
+            teleport,
             gate_words,
         });
     });

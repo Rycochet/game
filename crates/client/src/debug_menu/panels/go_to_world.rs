@@ -80,7 +80,10 @@ pub(in crate::debug_menu) fn press_go_to_world_buttons(
         if go.contains(press.0)
             && let Ok(seed) = seed.text.parse()
         {
-            to_server.write(ToServer(ClientMessage::DevGoToWorld { seed }));
+            to_server.write(ToServer(ClientMessage::DevGoToWorld {
+                seed: Some(seed),
+                gate: None,
+            }));
         }
     }
 }

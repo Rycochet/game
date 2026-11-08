@@ -116,11 +116,15 @@ pub(super) fn answer_dev(
         ClientMessage::DevSetCreature { kind, how } => {
             super::change_kind::change_kind(client, world, kind, how)
         }
-        ClientMessage::DevGoToWorld { seed } => {
+        ClientMessage::DevGoToWorld { seed, gate } => {
             // Once its messages this tick have been read (`handle_messages`), as
             // it needs every world.
-            let seed = shared::world::WorldSeed::new(seed);
-            client.go_to_world(seed, super::Arrival::AsBefore);
+            let seed = seed.map_or(world.seed, shared::world::WorldSeed::new);
+            let arrival = match gate {
+                Some(gate) => super::Arrival::WorldGate(gate),
+                None => super::Arrival::AsBefore,
+            };
+            client.go_to_world(seed, arrival);
             true
         }
         ClientMessage::DevSetWorldClock { minutes, rate } => {
