@@ -31,7 +31,6 @@ pub struct SitePlugin;
 impl Plugin for SitePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Heading>()
-            .add_systems(Startup, buttons::spawn_buttons)
             .add_systems(
                 Update,
                 (

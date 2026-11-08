@@ -155,6 +155,11 @@ fn add_value(widgets: &Widgets, entity: Entity, kind: Kind, about: &mut Value) {
                 about["value"] = json!(switch.0);
             }
         }
+        Kind::Hold => {
+            if let Ok(hold) = widgets.holds.get(entity) {
+                about["value"] = json!(hold.held());
+            }
+        }
         Kind::Scroll => {
             if let Ok(position) = widgets.scrolls.get(entity) {
                 about["value"] = json!(position.y);

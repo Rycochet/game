@@ -1,18 +1,19 @@
-//! Steps asked for while a key is held.
+//! Steps asked for while a key, or an arrow on the movement pad, is held.
 
 use bevy::prelude::*;
 use shared::movement::Step;
 
 use super::{PlayerEnergy, PlayerMoving, TakeStep};
-use crate::common::{Action, Preferences, ViewFacing};
+use crate::common::{Action, PadSteps, Preferences, ViewFacing};
 
-/// Asks for a step while a key is held, as soon as the last one has gone: energy
+/// Asks for a step while a key (or a pad arrow, `PadSteps`) is held, as soon as the last one has gone: energy
 /// sets the pace.
 pub(super) fn move_player(
     keys: Res<ButtonInput<KeyCode>>,
     preferences: Res<Preferences>,
     facing: Res<ViewFacing>,
     energy: Res<PlayerEnergy>,
+    pad: Option<Res<PadSteps>>,
     mut moving: ResMut<PlayerMoving>,
     mut steps: MessageWriter<TakeStep>,
 ) {
@@ -32,6 +33,11 @@ pub(super) fn move_player(
     }
     if active(Action::StepDown) {
         dy += 1;
+    }
+
+    if let Some(pad) = pad {
+        dx = (dx + pad.dx).clamp(-1, 1);
+        dy = (dy + pad.dy).clamp(-1, 1);
     }
 
     let held = dx != 0 || dy != 0;

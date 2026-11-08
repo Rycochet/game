@@ -50,3 +50,16 @@ fn a_held_key_never_lines_up_more_than_one_step() {
     assert_eq!(steps_asked(&mut app), 0);
     assert!(!app.world().resource::<PlayerMoving>().keys);
 }
+
+#[test]
+fn a_held_pad_arrow_steps_as_a_key_does() {
+    let mut app = app();
+    app.insert_resource(PadSteps { dx: -1, dy: 0 });
+    app.update();
+    assert_eq!(steps_asked(&mut app), 1);
+    assert!(app.world().resource::<PlayerMoving>().keys);
+    app.insert_resource(PadSteps::default());
+    app.update();
+    assert_eq!(steps_asked(&mut app), 0);
+    assert!(!app.world().resource::<PlayerMoving>().keys);
+}

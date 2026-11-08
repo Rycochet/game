@@ -17,6 +17,7 @@ mod dropdown;
 mod feedback;
 mod filter_list;
 mod fullscreen;
+mod hold_button;
 mod hover_tip;
 mod item;
 mod item_text;
@@ -63,6 +64,7 @@ pub use fullscreen::{
     darkening, layer_share, layer_z, leaves_presses, spawn_dialog, spawn_fullscreen_layer,
     spawn_sized_layer,
 };
+pub use hold_button::HoldButton;
 pub use hover_tip::HoverTip;
 pub use item::{
     CELL, Floating, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemName, ItemTip, ItemTooltip,
@@ -72,7 +74,7 @@ pub use item::{
 };
 pub use item_text::{ItemText, spawn_item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
-pub use moveable::{spawn_moveable_panel, stops_presses};
+pub use moveable::{PanelPlace, spawn_grip_panel, spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use outlined::spawn_outlined_text;
 pub use progress::{Progress, spawn_progress_bar};
@@ -287,6 +289,7 @@ impl Plugin for WidgetsPlugin {
             )
             .add_systems(Last, ui_id::warn_of_duplicates);
         item_text::add(app);
+        hold_button::add(app);
         #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
         debug_api::add(app);
     }

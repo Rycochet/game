@@ -16,7 +16,7 @@ Turns fingers into what the rest of the game reads, so no other module needs to 
 
 ## Used by
 
-- Nothing directly. Through `common`: `view3d` (camera, token clicks), `world_map` and `dungeon_map` (clicks), `minimap`, `inventory`.
+- Nothing directly. Through `common`: `view3d` (camera, token clicks), `world_map` and `dungeon_map` (clicks), `minimap`, `inventory`, `widgets` (hold buttons: `first_finger`, `tap`).
 
 ## Notes
 

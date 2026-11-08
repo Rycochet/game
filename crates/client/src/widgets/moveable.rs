@@ -9,7 +9,7 @@ mod spawn;
 pub(super) use drag::{Dragging, take_presses};
 pub(super) use place::place_panels;
 pub(super) use spawn::{MoveablePanel, PanelPart};
-pub use spawn::{spawn_moveable_panel, stops_presses};
+pub use spawn::{PanelPlace, spawn_grip_panel, spawn_moveable_panel, stops_presses};
 
 /// Above the maps, below full-screen layers; a panel clicked on goes above the
 /// others.
@@ -27,6 +27,11 @@ const STRIPES: usize = 3;
 const STRIPE_THICKNESS: f32 = 2.0;
 const STRIPE_GAP: f32 = 4.0;
 const MIN_STRIPES_WIDTH: f32 = 16.0;
+/// A grip panel's lines (`spawn_grip_panel`): thinner and closer together than
+/// a title bar's, with this much room above and below them, which grips too.
+const GRIP_THICKNESS: f32 = 1.0;
+const GRIP_GAP: f32 = 2.0;
+const GRIP_PADDING: f32 = 3.0;
 /// Round the close button, still on it, for fingers.
 const CLOSE_MARGIN: f32 = 4.0;
 

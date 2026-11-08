@@ -74,6 +74,7 @@ fn test_at(scale: f32) -> Test {
             MoveablePanel {
                 at: Vec2::new(100.0, 100.0),
                 window: None,
+                from_bottom_right: None,
             },
             GlobalZIndex(FIRST_PANEL_Z),
         ))
