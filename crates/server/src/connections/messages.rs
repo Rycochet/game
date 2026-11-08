@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::energy::{CHANGE_MAP_COST, site_step_cost};
-use shared::movement::{Gait, Step, climbed, world_step_time};
+use shared::movement::{Step, wades};
 use shared::protocol::ServerMessage;
 use shared::world::WorldId;
 
@@ -143,7 +143,9 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
         Some(visit) => {
             let from = visit.position();
             let place = visit.population();
-            let landing = visit.landing(step).filter(|_| visit.is_wilderness());
+            let wild = visit.is_wilderness();
+            let landing = visit.landing(step);
+            let wading = landing.is_some_and(|at| wades(visit.cells(), at));
             // Someone who won't move aside is in the way; anyone else swaps places.
             if let Some(to) = visit.landing(step) {
                 let kind = client.inventory.creature;
@@ -159,18 +161,10 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
                 return (stayed, 0);
             }
             world.swap_mob(place, to, from);
-            match landing {
-                // Where it led before any wrapping round the planet.
-                Some(landed) => {
-                    let (moved, cost) = client.wild_step(world, from, landed);
-                    (stayed && moved, cost)
-                }
-                None => {
-                    let now = world.action_clock.ticks();
-                    let stayed = stayed && client.practise_moving(false, 0, now);
-                    (stayed, site_step_cost(from, to))
-                }
-            }
+            // Where it led before any wrapping round the planet.
+            let landed = landing.unwrap_or(to);
+            let (moved, cost) = client.level_step(world, (from, landed), wild, wading);
+            (stayed && moved, cost)
         }
         None => {
             let from = client.world_position();
@@ -185,11 +179,8 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
                 world.ground.elevation(from.0, from.1, conditions),
                 world.ground.elevation(to.0, to.1, conditions),
             );
-            let road = world.road_steps.kind_of(from, to);
-            let cost = world_step_time(from, to, ends, road, Gait::of(&client.sheet.skills));
-            let now = world.action_clock.ticks();
-            let stayed = stayed && client.practise_moving(true, climbed(ends), now);
-            (stayed, cost)
+            let (moved, cost) = client.world_step(world, (from, to), ends);
+            (stayed && moved, cost)
         }
     }
 }

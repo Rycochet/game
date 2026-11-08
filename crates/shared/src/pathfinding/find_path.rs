@@ -21,13 +21,15 @@ pub fn find_path(
     max_cost: Option<u32>,
     allowed: impl Fn(i64, i64) -> bool,
 ) -> Path {
-    find_path_by(level, from, to, max_cost, allowed, step_cost)
+    find_path_by(level, from, to, max_cost, allowed, step_cost, 1000)
 }
 
 /// `find_path` with steps priced by `cost_of` (from, to) instead of their
-/// distance alone, such as the wilderness's slopes
-/// (`movement::wild_step_cost`): never less than `step_cost`, or the search's
-/// estimate would be too high and routes not the quickest.
+/// distance alone, such as the wilderness's slopes and wading
+/// (`movement::level_step_cost`). `cheapest` is the least a step can cost
+/// against `step_cost`, per mille (1000 if never less; a good swimmer wades
+/// quicker than they walk): the search's estimate is scaled by it, or it would
+/// be too high and routes not the quickest.
 pub fn find_path_by(
     level: &Level,
     from: (i64, i64),
@@ -35,7 +37,9 @@ pub fn find_path_by(
     max_cost: Option<u32>,
     allowed: impl Fn(i64, i64) -> bool,
     cost_of: impl Fn((i64, i64), (i64, i64)) -> u32,
+    cheapest: u32,
 ) -> Path {
+    let least = |at: (i64, i64)| estimate(at, to) * cheapest.min(1000) / 1000;
     let (min_x, min_y, width, height) = level.bounds();
     let index = |(x, y): (i64, i64)| ((y - min_y) * width + (x - min_x)) as usize;
     if !level.contains(from.0, from.1) {
@@ -51,7 +55,7 @@ pub fn find_path_by(
     // first, and `Reverse` turns that round.) The rest of the tuple settles
     // ties: closest to the goal, then by position.
     let mut open = BinaryHeap::new();
-    open.push(Reverse((estimate(from, to), estimate(from, to), from)));
+    open.push(Reverse((least(from), least(from), from)));
     let mut nearest = (distance_squared(from, to), from);
 
     while let Some(Reverse((total, left, at))) = open.pop() {
@@ -78,7 +82,7 @@ pub fn find_path_by(
             }
             best[index(next)] = next_cost;
             came_from[index(next)] = at;
-            let left = estimate(next, to);
+            let left = least(next);
             open.push(Reverse((next_cost + left, left, next)));
         }
     }

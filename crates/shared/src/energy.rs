@@ -43,15 +43,16 @@ pub fn site_step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
     step_cost(from, to) * SITE_STEP_SCALE
 }
 
-/// How much a step in the wilderness costs: its distance and slope
-/// (`movement::wild_step_cost`, by the heights at each end and `gait`).
-pub fn wild_step_energy(
+/// How much a step on a level costs: its distance, any slope in the
+/// wilderness and wading (`movement::level_step_cost`).
+pub fn level_step_energy(
     from: (i64, i64),
     to: (i64, i64),
-    heights: (i32, i32),
+    heights: Option<(i32, i32)>,
+    wading: bool,
     gait: crate::movement::Gait,
 ) -> u32 {
-    crate::movement::wild_step_cost(from, to, heights, gait) * SITE_STEP_SCALE
+    crate::movement::level_step_cost(from, to, heights, wading, gait) * SITE_STEP_SCALE
 }
 
 /// How much putting on or taking off something this heavy costs: plate takes

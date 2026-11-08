@@ -39,6 +39,10 @@ pub struct ServerWorld {
     roads: Arc<RoadWorker>,
     /// The steps along every road found so far, which cost less.
     pub(crate) road_steps: shared::road::RoadSteps,
+    /// The rivers, and the points they run through near where anyone has
+    /// walked (`training.rs`), which are waded.
+    pub(crate) rivers: shared::river::Rivers,
+    pub(crate) river_points: shared::river::RiverPoints,
     params: WorldParams,
     /// The suns and moons: the tide follows the moons.
     celestial: Celestial,
@@ -156,6 +160,8 @@ impl ServerWorld {
             ground: WorldGround::new(&params),
             roads: shared.roads.clone(),
             road_steps: shared::road::RoadSteps::new(Surface::new(&params).width()),
+            rivers: shared::river::Rivers::new(&params),
+            river_points: shared::river::RiverPoints::default(),
             celestial: Celestial::from_seed(params.seed),
             server_clock: shared.clock.clone(),
             time,

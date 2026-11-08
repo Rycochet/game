@@ -6,6 +6,7 @@ use crate::movement::{
     DIAGONAL_COST, Gait, STRAIGHT_COST, Step, WorldConditions, WorldGround, step_cost,
     step_on_level, world_step_cost,
 };
+use crate::river::RiverPoints;
 use crate::rng::Seed;
 use crate::road::RoadSteps;
 use crate::world::WorldParams;
@@ -242,7 +243,7 @@ fn assert_walkable_on_world_map(ground: &WorldGround, from: (i64, i64), path: &P
             ground.elevation(at.0, at.1, water()),
             ground.elevation(cell.0, cell.1, water()),
         );
-        cost += world_step_cost(at, cell, ends, None, Gait::UNSKILLED);
+        cost += world_step_cost(at, cell, ends, None, false, Gait::UNSKILLED);
         at = cell;
     }
     assert_eq!(cost, path.cost);
@@ -285,6 +286,7 @@ fn world_routes_go_round_a_summit() {
             &ground,
             conditions,
             &RoadSteps::default(),
+            &RiverPoints::default(),
             (peak.0 - 150, peak.1),
             (peak.0 + 150, peak.1),
             gait,
@@ -313,6 +315,7 @@ fn world_routes_go_round_water() {
         &ground,
         water(),
         &RoadSteps::default(),
+        &RiverPoints::default(),
         from,
         to,
         Gait::UNSKILLED,
@@ -338,6 +341,7 @@ fn world_routes_stop_at_the_nearest_shore_for_a_click_on_water() {
         &ground,
         water(),
         &RoadSteps::default(),
+        &RiverPoints::default(),
         from,
         wet,
         Gait::UNSKILLED,
@@ -357,6 +361,7 @@ fn world_routes_stay_within_reach_and_repeat_exactly() {
         &ground,
         water(),
         &RoadSteps::default(),
+        &RiverPoints::default(),
         from,
         far,
         Gait::UNSKILLED,
@@ -373,6 +378,7 @@ fn world_routes_stay_within_reach_and_repeat_exactly() {
             &ground,
             water(),
             &RoadSteps::default(),
+            &RiverPoints::default(),
             from,
             far,
             Gait::UNSKILLED
@@ -389,6 +395,7 @@ fn world_routes_start_from_water_too() {
         &ground,
         water(),
         &RoadSteps::default(),
+        &RiverPoints::default(),
         wet,
         to,
         Gait::UNSKILLED,
@@ -467,7 +474,7 @@ fn routes_go_round_costly_ground_when_that_is_quicker() {
         let ridge = to.0 == 10 && to.1 < 15;
         step_cost(from, to) + if ridge { 2000 } else { 0 }
     };
-    let path = find_path_by(&level, (5, 2), (15, 2), None, anywhere, cost_of);
+    let path = find_path_by(&level, (5, 2), (15, 2), None, anywhere, cost_of, 1000);
     assert!(path.reached);
     assert!(path.cells.iter().all(|&(x, y)| x != 10 || y >= 15));
     let straight = straighten_by(&level, (5, 2), &path, anywhere, cost_of);
@@ -476,4 +483,21 @@ fn routes_go_round_costly_ground_when_that_is_quicker() {
     // Plain distance would go straight across.
     let flat = find_path(&level, (5, 2), (15, 2), None, anywhere);
     assert_eq!(flat.cells.len(), 10);
+}
+
+#[test]
+fn routes_take_ground_quicker_than_walking_when_told_it_can_be() {
+    let level = empty_room();
+    // A strip along y = 10 a good swimmer crosses at half the cost.
+    let cost_of = |from: (i64, i64), to: (i64, i64)| {
+        let quick = from.1 == 10 && to.1 == 10;
+        if quick {
+            step_cost(from, to) / 2
+        } else {
+            step_cost(from, to)
+        }
+    };
+    let path = find_path_by(&level, (0, 9), (19, 9), None, anywhere, cost_of, 500);
+    assert!(path.reached);
+    assert!(path.cells.iter().filter(|&&(_, y)| y == 10).count() > 10);
 }

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::energy::{NORMAL_SPEED, SITE_STEP_SCALE};
 use shared::movement::{
-    Step, step_cost, step_on_level, step_on_world_map, wild_step_cost, world_step_time,
+    Step, level_step_cost, step_cost, step_on_level, step_on_world_map, wades, world_step_time,
 };
 use shared::pathfinding::{Path, find_path_by, find_world_path, straighten_by};
 use shared::sheet::Feeling;
@@ -15,8 +15,8 @@ use super::{
     action_tick,
 };
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, Other, PlayerGait,
-    PlayerSpeed, SmoothPosition, WildCellHeights,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, NearRivers, Other,
+    PlayerGait, PlayerSpeed, SmoothPosition, WildCellHeights,
 };
 
 /// Moves along the route found when the journey was asked for, always ending
@@ -38,7 +38,7 @@ pub(super) fn travel(
     mut stepped: MessageWriter<Stepped>,
     speed_now: Res<PlayerSpeed>,
     gait: Res<PlayerGait>,
-    heights: Res<WildCellHeights>,
+    (heights, rivers): (Res<WildCellHeights>, Res<NearRivers>),
     mut energy: ResMut<PlayerEnergy>,
     god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
@@ -46,10 +46,14 @@ pub(super) fn travel(
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
     // A step on a level, in `step_cost` units: with the wilderness's slopes.
-    let level_cost = |from: (i64, i64), to: (i64, i64)| match heights.ends(from, to) {
-        Some(ends) => wild_step_cost(from, to, ends, gait.0),
-        None => step_cost(from, to),
+    let level_cost = |from: (i64, i64), to: (i64, i64)| {
+        let wading = wades(&dungeon.level, to);
+        level_step_cost(from, to, heights.ends(from, to), wading, gait.0)
     };
+    // The least a level step can cost against walking: wading, for a good
+    // swimmer.
+    let cheapest = gait.0.swim_per_mille();
+    let rivers = &rivers.points;
     let enemies = enemy_cells(&others, *god);
     // Only through cells the player has seen, so that a route gives nothing away
     // (and memory may be out of date: the server checks), round enemies, and
@@ -87,11 +91,12 @@ pub(super) fn travel(
         let to = (request.x, request.y);
         let path = match ground {
             Some((ground, conditions, roads)) => {
-                find_world_path(ground, conditions, roads, from, to, gait.0)
+                find_world_path(ground, conditions, roads, rivers, from, to, gait.0)
             }
             None => {
                 let known = route_to(to);
-                let path = find_path_by(&dungeon.level, from, to, None, known, level_cost);
+                let path =
+                    find_path_by(&dungeon.level, from, to, None, known, level_cost, cheapest);
                 straighten_by(&dungeon.level, from, &path, known, level_cost)
             }
         };
@@ -144,7 +149,7 @@ pub(super) fn travel(
                         ground.elevation(next.0, next.1, conditions),
                     );
                     let road = roads.kind_of(at, next);
-                    world_step_time(at, next, ends, road, gait.0) as f64
+                    world_step_time(at, next, ends, road, rivers.contains(next), gait.0) as f64
                         / step_cost(at, next) as f64
                 }
                 None if next != at => level_cost(at, next) as f64 / step_cost(at, next) as f64,
@@ -171,8 +176,15 @@ pub(super) fn travel(
                 if in_the_way && ground.is_none() {
                     // An enemy has come between: go round it, from here.
                     let known = route_to(travel.goal);
-                    let path =
-                        find_path_by(&dungeon.level, at, travel.goal, None, known, level_cost);
+                    let path = find_path_by(
+                        &dungeon.level,
+                        at,
+                        travel.goal,
+                        None,
+                        known,
+                        level_cost,
+                        cheapest,
+                    );
                     let path = Path {
                         cells: straighten_by(&dungeon.level, at, &path, known, level_cost).cells,
                         ..path
@@ -188,8 +200,15 @@ pub(super) fn travel(
                 if legal != Some(next) {
                     // The tide or a thaw has cut the way: find another from here.
                     if let Some((ground, conditions, roads)) = ground {
-                        let path =
-                            find_world_path(ground, conditions, roads, at, travel.goal, gait.0);
+                        let path = find_world_path(
+                            ground,
+                            conditions,
+                            roads,
+                            rivers,
+                            at,
+                            travel.goal,
+                            gait.0,
+                        );
                         travel.route_arrives = path.reached;
                         travel.route = path.cells.into();
                         if travel.route.is_empty() {
@@ -208,7 +227,14 @@ pub(super) fn travel(
                             ground.elevation(at.0, at.1, conditions),
                             ground.elevation(next.0, next.1, conditions),
                         );
-                        world_step_time(at, next, ends, roads.kind_of(at, next), gait.0)
+                        world_step_time(
+                            at,
+                            next,
+                            ends,
+                            roads.kind_of(at, next),
+                            rivers.contains(next),
+                            gait.0,
+                        )
                     }
                     None => level_cost(at, next) * SITE_STEP_SCALE,
                 };

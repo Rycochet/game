@@ -5,6 +5,7 @@ use std::collections::BinaryHeap;
 
 use super::{DIRECTIONS, Path, distance_squared, estimate};
 use crate::movement::{Gait, Step, WorldConditions, WorldGround, world_step_cost};
+use crate::river::RiverPoints;
 use crate::road::{FASTEST_PERCENT, RoadSteps};
 
 /// How far a route on the world map may go from where it starts, each way, in
@@ -20,6 +21,7 @@ pub fn find_world_path(
     ground: &WorldGround,
     conditions: WorldConditions,
     roads: &RoadSteps,
+    rivers: &RiverPoints,
     from: (i64, i64),
     to: (i64, i64),
     gait: Gait,
@@ -50,13 +52,15 @@ pub fn find_world_path(
     best[index(from)] = 0;
     // With roads about, the least a route can cost is at the fastest road's
     // speed, or the route found may not be the quickest.
-    let least = |at: (i64, i64)| {
-        if roads.is_empty() {
-            estimate(at, to)
-        } else {
-            estimate(at, to) * 100 / FASTEST_PERCENT
-        }
-    };
+    // So may wading, for a good swimmer.
+    let mut cheapest = 1000;
+    if !roads.is_empty() {
+        cheapest = cheapest.min(1000 * 100 / FASTEST_PERCENT);
+    }
+    if !rivers.is_empty() {
+        cheapest = cheapest.min(gait.swim_per_mille());
+    }
+    let least = |at: (i64, i64)| estimate(at, to) * cheapest / 1000;
     let mut open = BinaryHeap::new();
     open.push(Reverse((least(from), least(from), from)));
     let mut nearest = (distance_squared(from, to), from);
@@ -82,7 +86,8 @@ pub fn find_world_path(
                 continue;
             }
             let road = roads.kind_of(at, next);
-            let next_cost = cost + world_step_cost(at, next, (here, there), road, gait);
+            let next_cost =
+                cost + world_step_cost(at, next, (here, there), road, rivers.contains(next), gait);
             if next_cost >= best[index(next)] {
                 continue;
             }

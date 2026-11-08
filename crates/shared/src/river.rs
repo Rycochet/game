@@ -13,6 +13,10 @@ use crate::rng::Seed;
 use crate::surface::Surface;
 use crate::world::WorldParams;
 
+mod points;
+
+pub use points::{RIVER_CHUNKS_ROUND, RiverPoints};
+
 /// The highest chance of a chunk having a source, in the wettest biomes.
 const MOST_LIKELY_PERCENT: u64 = 30;
 

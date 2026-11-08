@@ -32,6 +32,7 @@ mod lightning;
 mod map;
 mod own_ability;
 mod pointer;
+mod rivers;
 mod roads;
 mod sky;
 mod states;
@@ -78,6 +79,7 @@ pub use own_ability::OwnAbility;
 pub use pointer::{
     PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface, interface_area,
 };
+pub use rivers::NearRivers;
 pub use roads::KnownRoads;
 pub use sky::SkyNow;
 use sky::update_sky;
@@ -143,6 +145,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<PlayerSpeed>()
             .init_resource::<PlayerGait>()
             .init_resource::<WildCellHeights>()
+            .init_resource::<NearRivers>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
             .init_resource::<MakesCharacters>()

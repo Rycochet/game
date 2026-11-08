@@ -19,11 +19,20 @@ pub const CLIMB_SAVING_PER_MILLE: u32 = 900;
 /// 2026-11-08).
 pub const RUN_TENTHS: u32 = 41;
 
+/// How long wading or swimming takes against walking, per mille, at 0%: an
+/// average swimmer's 50 m a minute against walking's 85 (owner, 2026-11-08).
+pub const SWIM_SLOW_PER_MILLE: u32 = 1700;
+
+/// The same at 100%: a record's 100 m in 50 seconds, 120 m a minute, quicker
+/// than walking.
+pub const SWIM_FAST_PER_MILLE: u32 = 708;
+
 /// The movement skills' nodes, found once (`MOVEMENT_SKILLS`).
 pub struct MovementSkills {
     pub climbing: SkillId,
     pub running: SkillId,
     pub weight_training: SkillId,
+    pub swimming: SkillId,
 }
 
 /// Where Climbing and Running are in the tree.
@@ -32,13 +41,15 @@ pub static MOVEMENT_SKILLS: LazyLock<MovementSkills> = LazyLock::new(|| Movement
     running: SkillId::find("athletics/running").expect("Running is in the tree"),
     weight_training: SkillId::find("athletics/weighttraining")
         .expect("Weight Training is in the tree"),
+    swimming: SkillId::find("athletics/swimming").expect("Swimming is in the tree"),
 });
 
-/// How well a creature climbs and runs: each skill's value up to `FULL`.
+/// How well a creature climbs, runs and swims: each skill's value up to `FULL`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Gait {
     climbing: u32,
     running: u32,
+    swimming: u32,
 }
 
 impl Gait {
@@ -46,6 +57,7 @@ impl Gait {
     pub const UNSKILLED: Self = Self {
         climbing: 0,
         running: 0,
+        swimming: 0,
     };
 
     /// From a creature's skills.
@@ -53,7 +65,20 @@ impl Gait {
         Self {
             climbing: skills.value(MOVEMENT_SKILLS.climbing).min(FULL),
             running: skills.value(MOVEMENT_SKILLS.running).min(FULL),
+            swimming: skills.value(MOVEMENT_SKILLS.swimming).min(FULL),
         }
+    }
+
+    /// How long wading takes against walking, per mille: from
+    /// `SWIM_SLOW_PER_MILLE` at 0% to `SWIM_FAST_PER_MILLE` at 100%.
+    pub fn swim_per_mille(self) -> u32 {
+        let gained = (SWIM_SLOW_PER_MILLE - SWIM_FAST_PER_MILLE) * self.swimming / FULL;
+        SWIM_SLOW_PER_MILLE - gained
+    }
+
+    /// What a step costing `cost` on land comes to, waded. At least 1.
+    pub fn swim(self, cost: u32) -> u32 {
+        ((u64::from(cost) * u64::from(self.swim_per_mille()) / 1000) as u32).max(1)
     }
 
     /// What a slope costing `slope_cost` comes to with this Climbing: down to a

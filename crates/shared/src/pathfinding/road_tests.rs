@@ -5,6 +5,7 @@ use std::time::Instant;
 use super::*;
 use crate::movement::{Gait, WorldConditions, WorldGround, world_step_cost};
 use crate::poi::PoiMap;
+use crate::river::RiverPoints;
 use crate::rng::Seed;
 use crate::road::{RoadSteps, Roads};
 use crate::world::WorldParams;
@@ -61,7 +62,14 @@ fn walked(
             ground.elevation(at.0, at.1, conditions),
             ground.elevation(cell.0, cell.1, conditions),
         );
-        cost += world_step_cost(at, cell, ends, roads.kind_of(at, cell), Gait::UNSKILLED);
+        cost += world_step_cost(
+            at,
+            cell,
+            ends,
+            roads.kind_of(at, cell),
+            false,
+            Gait::UNSKILLED,
+        );
         at = cell;
     }
     cost
@@ -77,13 +85,22 @@ fn routes_take_roads_where_they_are_quicker_and_say_what_they_cost() {
         &ground,
         conditions,
         &RoadSteps::default(),
+        &RiverPoints::default(),
         from,
         to,
         Gait::UNSKILLED,
     );
     let plain_ms = start.elapsed().as_secs_f64() * 1000.0;
     let start = Instant::now();
-    let with = find_world_path(&ground, conditions, &steps, from, to, Gait::UNSKILLED);
+    let with = find_world_path(
+        &ground,
+        conditions,
+        &steps,
+        &RiverPoints::default(),
+        from,
+        to,
+        Gait::UNSKILLED,
+    );
     let roads_ms = start.elapsed().as_secs_f64() * 1000.0;
     eprintln!(
         "{} points of {:?}: {plain_ms:.0} ms without roads, {roads_ms:.0} ms with",

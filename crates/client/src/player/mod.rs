@@ -13,6 +13,7 @@ use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 mod keys;
 mod messages;
 mod moving;
+mod rivers;
 mod state;
 mod steps;
 mod travel;
@@ -22,6 +23,7 @@ use keys::move_player;
 pub use messages::{Arrived, Player, PlayerSystems, Stepped, TakeStep, TravelTo};
 pub use moving::PlayerMoving;
 use moving::note_moving;
+use rivers::keep_river_points;
 use state::{PlayerEnergy, Travel, action_tick, spawn_player};
 use steps::take_steps;
 use travel::{enemy_cells, travel};
@@ -62,7 +64,12 @@ impl Plugin for PlayerPlugin {
                 (
                     move_player.in_set(PlayerSystems::Input),
                     // After everything in `Input` asked for its steps.
-                    (keep_wild_heights, take_steps, travel, note_moving)
+                    (
+                        (keep_wild_heights, keep_river_points),
+                        take_steps,
+                        travel,
+                        note_moving,
+                    )
                         .chain()
                         .in_set(PlayerSystems::Travel),
                 )

@@ -177,16 +177,44 @@ fn water_stops_steps_on_the_world_map_but_not_out_of_it() {
 
 #[test]
 fn slopes_cost_extra_either_way() {
-    let flat = world_step_cost((0, 0), (1, 0), (Some(8), Some(8)), None, Gait::UNSKILLED);
+    let flat = world_step_cost(
+        (0, 0),
+        (1, 0),
+        (Some(8), Some(8)),
+        None,
+        false,
+        Gait::UNSKILLED,
+    );
     assert_eq!(flat, STRAIGHT_COST);
-    let up = world_step_cost((0, 0), (1, 0), (Some(8), Some(10)), None, Gait::UNSKILLED);
+    let up = world_step_cost(
+        (0, 0),
+        (1, 0),
+        (Some(8), Some(10)),
+        None,
+        false,
+        Gait::UNSKILLED,
+    );
     assert_eq!(up, STRAIGHT_COST + 2 * SLOPE_COST);
     assert_eq!(
         up,
-        world_step_cost((1, 0), (0, 0), (Some(10), Some(8)), None, Gait::UNSKILLED)
+        world_step_cost(
+            (1, 0),
+            (0, 0),
+            (Some(10), Some(8)),
+            None,
+            false,
+            Gait::UNSKILLED
+        )
     );
     assert_eq!(
-        world_step_cost((0, 0), (1, 1), (None, Some(50)), None, Gait::UNSKILLED),
+        world_step_cost(
+            (0, 0),
+            (1, 1),
+            (None, Some(50)),
+            None,
+            false,
+            Gait::UNSKILLED
+        ),
         DIAGONAL_COST
     );
 }
@@ -203,9 +231,48 @@ fn steps_between_points_add_up() {
 #[test]
 fn steps_along_roads_cost_less_by_their_speed() {
     use crate::road::RoadKind;
-    let up = |road| world_step_cost((0, 0), (1, 0), (Some(8), Some(10)), road, Gait::UNSKILLED);
+    let up = |road| {
+        world_step_cost(
+            (0, 0),
+            (1, 0),
+            (Some(8), Some(10)),
+            road,
+            false,
+            Gait::UNSKILLED,
+        )
+    };
     let open = up(None);
     assert_eq!(up(Some(RoadKind::Path)), open * 100 / 125);
     assert_eq!(up(Some(RoadKind::Highway)), open / 2);
     assert!(up(Some(RoadKind::Track)) > up(Some(RoadKind::Road)));
+}
+
+#[test]
+fn rivers_are_waded_off_roads_and_never_run() {
+    let mut skills = crate::skill::Skills::default();
+    skills.practise(MOVEMENT_SKILLS.running, 1_000_000);
+    let runner = Gait::of(&skills);
+    let dry = world_step_time((0, 0), (1, 0), (Some(8), Some(8)), None, false, runner);
+    let wet = world_step_time((0, 0), (1, 0), (Some(8), Some(8)), None, true, runner);
+    // Running is 4.1 times as quick; wading an untrained 1.7 times as slow.
+    assert_eq!(dry, 17);
+    assert_eq!(wet, 119);
+    // A road crosses a river by a bridge: no wading.
+    let road = Some(RoadKind::Path);
+    assert_eq!(
+        world_step_cost((0, 0), (1, 0), (Some(8), Some(8)), road, true, runner),
+        world_step_cost((0, 0), (1, 0), (Some(8), Some(8)), road, false, runner)
+    );
+}
+
+#[test]
+fn wading_on_a_level_takes_longer() {
+    let mut level = Level::new(0, 0, 3, 1);
+    level.set(1, 0, Cell::Shallows);
+    level.set(2, 0, Cell::Floor);
+    assert!(wades(&level, (1, 0)));
+    assert!(!wades(&level, (2, 0)));
+    let gait = Gait::UNSKILLED;
+    assert_eq!(level_step_cost((0, 0), (1, 0), None, true, gait), 119);
+    assert_eq!(level_step_cost((0, 0), (1, 0), None, false, gait), 70);
 }
