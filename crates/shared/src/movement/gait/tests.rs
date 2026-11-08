@@ -7,7 +7,21 @@ fn skilled(climbing: u32, running: u32) -> Gait {
         running,
         swimming: 0,
         jumping: 0,
+        pioneering: [0; Terrain::ALL.len()],
     }
+}
+
+#[test]
+fn pioneering_takes_two_thirds_off_a_terrains_extra() {
+    use crate::movement::Terrain;
+    assert_eq!(Gait::UNSKILLED.cross(Terrain::Desert, 1000), 2000);
+    assert_eq!(Gait::UNSKILLED.cross(Terrain::Grassland, 1000), 1200);
+    let mut skills = Skills::default();
+    skills.practise(Terrain::Desert.skill(), 1_000_000);
+    let pioneer = Gait::of(&skills);
+    assert_eq!(pioneer.cross(Terrain::Desert, 1000), 1333);
+    // Only in that terrain.
+    assert_eq!(pioneer.cross(Terrain::Snow, 1000), 1800);
 }
 
 #[test]

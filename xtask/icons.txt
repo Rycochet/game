@@ -129,3 +129,9 @@ skoll/footsteps
 skoll/gladius
 skoll/talk
 willdabeast/round-shield
+delapouite/hiking
+delapouite/grass
+delapouite/forest
+delapouite/jungle
+lorc/snowflake-1
+delapouite/desert

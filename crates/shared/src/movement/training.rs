@@ -27,6 +27,10 @@ pub const JUMP_PRACTICE: u32 = 40;
 /// 50% after 10 hours of it.
 pub const SNEAK_PRACTICE: u32 = 17;
 
+/// Practice for a terrain's Pioneering skill per step over it (off roads and
+/// water), on either map: about 50% after 10 hours there.
+pub const PIONEER_PRACTICE: u32 = 17;
+
 /// Practice for Swimming per step wading through shallows on a level: about
 /// 50% after 10 hours of it.
 pub const SWIM_PRACTICE: u32 = 17;

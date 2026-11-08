@@ -26,6 +26,11 @@ pub struct WildCellHeights {
 }
 
 impl WildCellHeights {
+    /// The terrain of a cell (`WildHeights::terrain`), if known.
+    pub fn terrain(&self, (x, y): (i64, i64)) -> Option<shared::movement::Terrain> {
+        self.heights.as_ref()?.terrain(x, y)
+    }
+
     /// The heights at each end of a step, if both are known.
     pub fn ends(&self, from: (i64, i64), to: (i64, i64)) -> Option<(i32, i32)> {
         let heights = self.heights.as_ref()?;

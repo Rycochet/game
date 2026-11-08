@@ -4,7 +4,7 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 use super::{DIRECTIONS, Path, distance_squared, estimate};
-use crate::movement::{Gait, Step, WorldConditions, WorldGround, world_step_cost};
+use crate::movement::{Footing, Gait, Step, WorldConditions, WorldGround, world_step_cost};
 use crate::river::RiverPoints;
 use crate::road::{FASTEST_PERCENT, RoadSteps};
 
@@ -56,6 +56,16 @@ pub fn find_world_path(
             .get_or_insert_with(|| ground.swimmable(point.0, point.1, conditions, gait))
     };
 
+    // Terrain by the square it is sampled in, looked at only when a step
+    // would land there off roads and water.
+    let mut terrains = std::collections::BTreeMap::new();
+    let mut terrain = |point: (i64, i64)| {
+        let corner = ground.terrain_square(point.0, point.1);
+        *terrains
+            .entry(corner)
+            .or_insert_with(|| ground.land_terrain(point.0, point.1))
+    };
+
     // As in `find_path`.
     let mut best = vec![u32::MAX; (side * side) as usize];
     let mut came_from = vec![from; best.len()];
@@ -63,13 +73,14 @@ pub fn find_world_path(
     // With roads about, the least a route can cost is at the fastest road's
     // speed, or the route found may not be the quickest.
     // So may wading, for a good swimmer.
-    let mut cheapest = 1000;
+    // Every land step crosses some terrain (`movement::Terrain`), so off roads
+    // and water a step costs at least the cheapest terrain's.
+    let mut cheapest = gait.cheapest_terrain_per_mille();
     if !roads.is_empty() {
         cheapest = cheapest.min(1000 * 100 / FASTEST_PERCENT);
     }
-    if !rivers.is_empty() || gait.swims_deep() {
-        cheapest = cheapest.min(gait.swim_per_mille());
-    }
+    // Water may be crossed (it can always be swum out of, and rivers waded).
+    cheapest = cheapest.min(gait.swim_per_mille());
     let least = |at: (i64, i64)| estimate(at, to) * cheapest / 1000;
     let mut open = BinaryHeap::new();
     open.push(Reverse((least(from), least(from), from)));
@@ -97,9 +108,14 @@ pub fn find_world_path(
                 continue;
             }
             let road = roads.kind_of(at, next);
-            // In water, swimming; across a river, wading.
+            // In water, swimming; across a river, wading; otherwise its terrain.
             let wet = there.is_none() || rivers.contains(next);
-            let next_cost = cost + world_step_cost(at, next, (here, there), road, wet, gait);
+            let footing = Footing {
+                road,
+                wet,
+                terrain: (road.is_none() && !wet).then(|| terrain(next)),
+            };
+            let next_cost = cost + world_step_cost(at, next, (here, there), footing, gait);
             if next_cost >= best[index(next)] {
                 continue;
             }

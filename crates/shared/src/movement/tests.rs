@@ -181,8 +181,11 @@ fn slopes_cost_extra_either_way() {
         (0, 0),
         (1, 0),
         (Some(8), Some(8)),
-        None,
-        false,
+        Footing {
+            road: None,
+            wet: false,
+            terrain: None,
+        },
         Gait::UNSKILLED,
     );
     assert_eq!(flat, STRAIGHT_COST);
@@ -190,8 +193,11 @@ fn slopes_cost_extra_either_way() {
         (0, 0),
         (1, 0),
         (Some(8), Some(10)),
-        None,
-        false,
+        Footing {
+            road: None,
+            wet: false,
+            terrain: None,
+        },
         Gait::UNSKILLED,
     );
     assert_eq!(up, STRAIGHT_COST + 2 * SLOPE_COST);
@@ -201,8 +207,11 @@ fn slopes_cost_extra_either_way() {
             (1, 0),
             (0, 0),
             (Some(10), Some(8)),
-            None,
-            false,
+            Footing {
+                road: None,
+                wet: false,
+                terrain: None
+            },
             Gait::UNSKILLED
         )
     );
@@ -211,8 +220,11 @@ fn slopes_cost_extra_either_way() {
             (0, 0),
             (1, 1),
             (None, Some(50)),
-            None,
-            false,
+            Footing {
+                road: None,
+                wet: false,
+                terrain: None
+            },
             Gait::UNSKILLED
         ),
         DIAGONAL_COST
@@ -236,8 +248,11 @@ fn steps_along_roads_cost_less_by_their_speed() {
             (0, 0),
             (1, 0),
             (Some(8), Some(10)),
-            road,
-            false,
+            Footing {
+                road,
+                wet: false,
+                terrain: None,
+            },
             Gait::UNSKILLED,
         )
     };
@@ -252,16 +267,56 @@ fn rivers_are_waded_off_roads_and_never_run() {
     let mut skills = crate::skill::Skills::default();
     skills.practise(MOVEMENT_SKILLS.running, 1_000_000);
     let runner = Gait::of(&skills);
-    let dry = world_step_time((0, 0), (1, 0), (Some(8), Some(8)), None, false, runner);
-    let wet = world_step_time((0, 0), (1, 0), (Some(8), Some(8)), None, true, runner);
+    let dry = world_step_time(
+        (0, 0),
+        (1, 0),
+        (Some(8), Some(8)),
+        Footing {
+            road: None,
+            wet: false,
+            terrain: None,
+        },
+        runner,
+    );
+    let wet = world_step_time(
+        (0, 0),
+        (1, 0),
+        (Some(8), Some(8)),
+        Footing {
+            road: None,
+            wet: true,
+            terrain: None,
+        },
+        runner,
+    );
     // Running is 4.1 times as quick; wading an untrained 1.7 times as slow.
     assert_eq!(dry, 17);
     assert_eq!(wet, 119);
     // A road crosses a river by a bridge: no wading.
-    let road = Some(RoadKind::Path);
+    let road = Some(crate::road::RoadKind::Path);
     assert_eq!(
-        world_step_cost((0, 0), (1, 0), (Some(8), Some(8)), road, true, runner),
-        world_step_cost((0, 0), (1, 0), (Some(8), Some(8)), road, false, runner)
+        world_step_cost(
+            (0, 0),
+            (1, 0),
+            (Some(8), Some(8)),
+            Footing {
+                road,
+                wet: true,
+                terrain: None
+            },
+            runner
+        ),
+        world_step_cost(
+            (0, 0),
+            (1, 0),
+            (Some(8), Some(8)),
+            Footing {
+                road,
+                wet: false,
+                terrain: None
+            },
+            runner
+        )
     );
 }
 
@@ -273,8 +328,32 @@ fn wading_on_a_level_takes_longer() {
     assert!(wades(&level, (1, 0)));
     assert!(!wades(&level, (2, 0)));
     let gait = Gait::UNSKILLED;
-    assert_eq!(level_step_cost((0, 0), (1, 0), None, true, gait), 119);
-    assert_eq!(level_step_cost((0, 0), (1, 0), None, false, gait), 70);
+    assert_eq!(
+        level_step_cost(
+            (0, 0),
+            (1, 0),
+            None,
+            Footing {
+                wet: true,
+                ..Footing::default()
+            },
+            gait
+        ),
+        119
+    );
+    assert_eq!(
+        level_step_cost(
+            (0, 0),
+            (1, 0),
+            None,
+            Footing {
+                wet: false,
+                ..Footing::default()
+            },
+            gait
+        ),
+        70
+    );
 }
 
 #[test]
@@ -285,10 +364,43 @@ fn jumps_cost_less_with_jumping() {
     assert!(is_jump((0, 0), (2, 0)));
     assert!(!is_jump((0, 0), (1, 1)));
     assert_eq!(
-        level_step_cost((0, 0), (2, 0), None, false, Gait::UNSKILLED),
+        level_step_cost(
+            (0, 0),
+            (2, 0),
+            None,
+            Footing {
+                wet: false,
+                ..Footing::default()
+            },
+            Gait::UNSKILLED
+        ),
         140
     );
-    assert_eq!(level_step_cost((0, 0), (2, 0), None, false, jumper), 98);
+    assert_eq!(
+        level_step_cost(
+            (0, 0),
+            (2, 0),
+            None,
+            Footing {
+                wet: false,
+                ..Footing::default()
+            },
+            jumper
+        ),
+        98
+    );
     // Walking is no quicker.
-    assert_eq!(level_step_cost((0, 0), (1, 0), None, false, jumper), 70);
+    assert_eq!(
+        level_step_cost(
+            (0, 0),
+            (1, 0),
+            None,
+            Footing {
+                wet: false,
+                ..Footing::default()
+            },
+            jumper
+        ),
+        70
+    );
 }

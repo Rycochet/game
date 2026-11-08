@@ -4,7 +4,9 @@ use bevy::math::DVec2;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::energy::{NORMAL_SPEED, SITE_STEP_SCALE};
-use shared::movement::{Step, step_cost, step_on_level_by, step_on_world_map_by, world_step_time};
+use shared::movement::{
+    Step, WorldGround, step_cost, step_on_level_by, step_on_world_map_by, world_step_time,
+};
 use shared::pathfinding::{Path, find_path_by, find_world_path, straighten_by};
 use shared::sheet::Feeling;
 
@@ -53,9 +55,10 @@ pub(super) fn travel(
     };
     let (level_cost, level_time) = (|a, b| costs.cost(a, b), |a, b| costs.time(a, b));
     let rivers = &rivers.points;
-    // A world map step swims the sea, or wades a river.
-    let wet =
-        |to: (i64, i64), ends: (Option<i32>, Option<i32>)| ends.1.is_none() || rivers.contains(to);
+    // What a world map step stands on: a road, water or its terrain.
+    let footing = |ground: &WorldGround, conditions, road, to: (i64, i64)| {
+        ground.footing(to, conditions, road, rivers.contains(to))
+    };
     let enemies = enemy_cells(&others, *god);
     // Only through cells the player has seen, so that a route gives nothing away
     // (and memory may be out of date: the server checks), round enemies, and
@@ -150,8 +153,8 @@ pub(super) fn travel(
                         ground.elevation(next.0, next.1, conditions),
                     );
                     let road = roads.kind_of(at, next);
-                    world_step_time(at, next, ends, road, wet(next, ends), gait.0) as f64
-                        / step_cost(at, next) as f64
+                    let on = footing(ground, conditions, road, next);
+                    world_step_time(at, next, ends, on, gait.0) as f64 / step_cost(at, next) as f64
                 }
                 None if next != at => {
                     level_time(at, next) as f64 / (step_cost(at, next) * SITE_STEP_SCALE) as f64
@@ -235,8 +238,7 @@ pub(super) fn travel(
                             at,
                             next,
                             ends,
-                            roads.kind_of(at, next),
-                            wet(next, ends),
+                            footing(ground, conditions, roads.kind_of(at, next), next),
                             gait.0,
                         )
                     }
