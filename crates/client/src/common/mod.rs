@@ -66,7 +66,7 @@ pub use items::{
     BandShift, GROUND, GaveItem, HeldGift, HeldOverGifts, HeldStock, HoveredBag, NO_QUALITY_NAME,
     StockCell, TakesGifts, TookItem, quality_colour,
 };
-pub use lightning::{Lightning, LightningStrike};
+pub use lightning::{BoltStruck, Lightning, LightningStrike};
 pub use map::{
     Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, WorldReturn,
 };
@@ -123,6 +123,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerClock>()
             .add_message::<WorldChanged>()
             .add_message::<LightningStrike>()
+            .add_message::<BoltStruck>()
             .add_message::<DroppedOnText>()
             .init_resource::<KnownItems>()
             .init_resource::<HeldOverText>()

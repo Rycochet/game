@@ -31,6 +31,7 @@ use crate::player::PlayerSystems;
 use crate::view3d::View3dSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod bolts;
 mod click;
 mod forget;
 mod gate_view;
@@ -133,6 +134,7 @@ impl Plugin for WorldMapPlugin {
                     pois::outline_hovered,
                     rest_tokens_on_terrain,
                     hide_tokens_outside_window,
+                    bolts::strike,
                 )
                     .after(View3dSystems::Place)
                     .run_if(in_view),

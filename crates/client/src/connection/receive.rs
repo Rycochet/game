@@ -214,7 +214,7 @@ pub(super) fn receive(
                 | ServerMessage::AbilityLanded { .. }
                 | ServerMessage::Killed
                 | ServerMessage::Harmed { .. }
-                | ServerMessage::Lightning
+                | ServerMessage::Lightning { .. }
                 | ServerMessage::DevMobInfo { .. }
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::EntityMoved { .. }

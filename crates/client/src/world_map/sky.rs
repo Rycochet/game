@@ -43,7 +43,7 @@ const _: () = assert!(SKY_COVERS >= MAX_HALF * std::f32::consts::SQRT_2);
 const _: () = assert!(DROP_TILE / 2.0 >= MAX_HALF * std::f32::consts::SQRT_2);
 
 /// Height of the cloud sheet, above the highest ground there is.
-const CLOUD_HEIGHT: f32 = 170.0;
+pub(super) const CLOUD_HEIGHT: f32 = 170.0;
 
 /// How much of the ground's own colour is added round the player, in the dark.
 /// None in full light, where it would only clip.

@@ -1,20 +1,25 @@
 //! Lightning: a flash for a moment when the server says it strikes where the
 //! player is (in the heaviest rain), or the debug menu's Lightning Now. The
-//! views brighten what is under the sky by `common::Lightning`.
+//! views brighten what is under the sky by `common::Lightning`, and draw the
+//! bolts it tells of (`common::BoltStruck`) with `spawn_bolt`.
 
 use bevy::prelude::*;
 use shared::protocol::ServerMessage;
 
-use crate::common::{Lightning, LightningStrike, Preferences};
+use crate::common::{BoltStruck, Lightning, LightningStrike, Preferences};
 use crate::connection::FromServer;
 
+mod bolt;
 mod envelope;
+mod shape;
+
+pub use bolt::spawn_bolt;
 
 pub struct LightningPlugin;
 
 impl Plugin for LightningPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, flash);
+        app.add_systems(Update, (flash, bolt::fade_bolts));
     }
 }
 
@@ -25,12 +30,19 @@ fn flash(
     preferences: Res<Preferences>,
     mut from_server: MessageReader<FromServer>,
     mut strikes: MessageReader<LightningStrike>,
+    mut bolts: MessageWriter<BoltStruck>,
     mut lightning: ResMut<Lightning>,
     mut since: Local<Option<f32>>,
 ) {
-    let told = from_server
-        .read()
-        .any(|FromServer(message)| matches!(message, ServerMessage::Lightning));
+    let mut told = false;
+    for FromServer(message) in from_server.read() {
+        if let ServerMessage::Lightning { flash, strike } = message {
+            told |= *flash;
+            if let Some(strike) = strike {
+                bolts.write(BoltStruck(*strike));
+            }
+        }
+    }
     if strikes.read().count() > 0 || told {
         *since = Some(0.0);
     }

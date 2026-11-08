@@ -240,6 +240,7 @@ pub(crate) fn answer(
         | ClientMessage::DevBackToStart
         | ClientMessage::DevToShowcase
         | ClientMessage::DevToHall
+        | ClientMessage::DevLightning
         | ClientMessage::DevEnterSite { .. }
         | ClientMessage::DevGenerateSite { .. }
         | ClientMessage::DevGenerateArea(_)

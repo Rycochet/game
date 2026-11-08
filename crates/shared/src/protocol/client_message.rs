@@ -220,6 +220,9 @@ pub enum ClientMessage {
     /// planet that has none there), answered with `EnterHall`. Only an embedded
     /// server accepts it.
     DevToHall,
+    /// Developer tools: lightning near the player now, whatever the weather:
+    /// a flash for them and a bolt close by, which others in sight see too.
+    DevLightning,
     /// Developer tools: go straight into a site of any kind and seed, at
     /// any level, a building ruined this much (0 to 5). Only an embedded
     /// (single-player) server accepts it.

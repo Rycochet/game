@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::Landed;
 use super::OnlineState;
+use super::Strike;
 use super::level::{LevelChunk, LevelInfo, RememberedLevel};
 use super::login::{CharacterSummary, LoginMethod};
 use super::{WorldChunk, WorldInfo};
@@ -70,9 +71,11 @@ pub enum ServerMessage {
     /// A new whole hour has begun on the clock (`% 24` is the time of day).
     /// The tide, and so where can be walked on the world map, follows it.
     Hour(u32),
-    /// Lightning flashes where the player is (`WeatherField::lightning`),
-    /// checked once a second.
-    Lightning,
+    /// Lightning: `flash` where the player is (`WeatherField::lightning`,
+    /// checked once a second), and a bolt striking here, near enough to be
+    /// seen, if one does (never on a player or by a poi). One message for each
+    /// bolt in sight, the flash with the first.
+    Lightning { flash: bool, strike: Option<Strike> },
     /// The world's time has been moved, or now runs at another rate.
     WorldClock(WorldTime),
     /// The server's clock has stopped or started again, at this many seconds,

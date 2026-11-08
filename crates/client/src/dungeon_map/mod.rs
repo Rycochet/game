@@ -10,6 +10,7 @@
 //! (`theme`). Light is dull everywhere, and brighter near light sources, which
 //! walls block. Left-click a seen walkable cell to travel there.
 
+mod bolts;
 mod daylight;
 mod field;
 mod herbs;
@@ -138,6 +139,7 @@ impl Plugin for DungeonMapPlugin {
                     hide_unseen_tokens,
                     sync_lights,
                     rain::update,
+                    bolts::strike,
                 )
                     .chain()
                     .after(PlayerSystems::Travel)

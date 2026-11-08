@@ -11,7 +11,7 @@ Cloud cover and rain at any place and time, from the public terrain seed and the
 
 - `WeatherField::new(&WorldParams)`, `.sample(x, y, hours) -> WeatherSample` (`hours`: fractional game hours since the world began).
 - `WeatherSample { cover, rain }`, both `0..=1`.
-- `WeatherField::lightning(x, y, sample, temperature, second) -> bool`: whether lightning flashes there in that whole second of the server's clock. Only where `rain` is above `LIGHTNING_RAIN` (0.85) and the temperature (`climate`'s) is at least `LIGHTNING_WARMEST` (0.3, the shaders' sleet line); up to 9% of seconds in the worst of a storm, none at the threshold. Rolled by position hash on `LIGHTNING_AREA` (32-point) squares, so players near each other see the same flashes.
+- `WeatherField::lightning(x, y, sample, temperature, second) -> bool`: whether lightning flashes there in that whole second of the server's clock. Only where `rain` is above `LIGHTNING_RAIN` (0.85) and the temperature (`climate`'s) is at least `LIGHTNING_WARMEST` (0.3, the shaders' sleet line); up to 9% of seconds in the worst of a storm, none at the threshold. Rolled by position hash on `LIGHTNING_AREA` (32-point) squares (`lightning_area(x, y)`), so players near each other see the same flashes.
 
 ## Depends on
 

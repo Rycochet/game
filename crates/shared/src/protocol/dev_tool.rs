@@ -12,6 +12,7 @@ impl ClientMessage {
                 | Self::DevBackToStart
                 | Self::DevToShowcase
                 | Self::DevToHall
+                | Self::DevLightning
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }
                 | Self::DevSetWorldClock { .. }
