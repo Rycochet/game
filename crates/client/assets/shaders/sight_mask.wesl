@@ -13,8 +13,9 @@ struct Mask {
     per_unit: vec2<f32>,
     // 1 only in sight, -1 only out of sight.
     side: f32,
+    // Seconds water has flowed for (0: still), wrapping every 8 s (`flowing::PERIOD`).
+    flow_time: f32,
     // Pads the uniform to 32 bytes: WebGL 2 needs a multiple of 16.
-    _pad_a: f32,
     _pad_b: f32,
     _pad_c: f32,
 }
@@ -33,6 +34,11 @@ const IN_FRONT: f32 = 2.4;
 const RAISED: f32 = 1.0;
 const RAISED_NORMAL: f32 = 0.5;
 
+// How fast water flows in each band (`FLOW_BANDS` in mesh/flow.rs), in pictures
+// (cells) a second: each a whole number of pictures in the 8 s
+// `flowing::PERIOD` the clock wraps at, so it never jumps.
+const SLOWEST_FLOW: f32 = 0.125;
+
 @fragment
 fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> FragmentOutput {
     // Sampled before anything can return, as derivatives need every fragment.
@@ -41,15 +47,27 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
     let place = (at - mask.origin) * mask.per_unit;
     let in_sight = textureSample(mask_picture, mask_sampler, place).r > 0.5;
     var ground = 0.0;
+    // Water flowing down raised ground: `band × 512 + degrees` (0: still).
+    var flow = 0.0;
     @if(VERTEX_UVS_B) {
         ground = in.uv_b.x;
+        flow = in.uv_b.y;
     }
     let raised = in.world_position.y - ground > RAISED && normal.y > RAISED_NORMAL;
     if !raised && ((mask.side > 0.0 && !in_sight) || (mask.side < 0.0 && in_sight)) {
         discard;
     }
 
-    var pbr_input = pbr_input_from_standard_material(in, is_front);
+    var input = in;
+    if mask.flow_time > 0.0 && flow > 0.5 {
+        let band = floor(flow / 512.0);
+        let angle = radians(flow - band * 512.0);
+        let speed = SLOWEST_FLOW * exp2(band - 1.0);
+        // The picture moves along the flow: east is `u`, south `v`.
+        let moved = vec2<f32>(cos(angle), sin(angle)) * speed * mask.flow_time;
+        input.uv = fract(in.uv - moved);
+    }
+    var pbr_input = pbr_input_from_standard_material(input, is_front);
     pbr_input.material.base_color = alpha_discard(
         pbr_input.material.flags,
         pbr_input.material.alpha_cutoff,

@@ -6,10 +6,12 @@ use shared::protocol::SeenStairs;
 use shared::site::{BuildingLook, FieldLook};
 use std::collections::BTreeSet;
 
+use super::super::liquid::LooksLiquid;
 use super::super::theme::Shape;
 use super::super::town;
 use super::super::walls::{Layers, Scene};
 use super::super::wild_ground::Wild;
+use super::flow::slope_liquid;
 use super::raise::{Marks, build_edges};
 use super::{
     Builder, DungeonMeshes, LightGrid, Surface, View, build_cell_at, copy_as_memory, sizes,
@@ -76,6 +78,9 @@ pub fn build(
             let marks = Marks::of(&layers);
             build_cell_at(&mut layers, &scene, stairs, (x, y));
             marks.lift(&mut layers, scene.ground(x, y));
+            if level.cell(x, y).looks_liquid() {
+                slope_liquid(&mut layers, &marks, &scene, (x, y));
+            }
             build_edges(&mut layers, &scene, (x, y));
             if cut.is_seen(x, y) {
                 copy_as_memory(&mut layers, &before);

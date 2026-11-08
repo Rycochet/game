@@ -45,6 +45,7 @@ use crate::view3d::{TOKEN_DIAMETER, View3dSystems};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod click;
+mod flowing;
 mod growth;
 mod hover;
 mod lights;
@@ -143,6 +144,7 @@ impl Plugin for DungeonMapPlugin {
                     rain::update,
                     bolts::strike,
                     border::draw_borders,
+                    flowing::run_flow,
                 )
                     .chain()
                     .after(PlayerSystems::Travel)
