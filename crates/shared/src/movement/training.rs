@@ -13,6 +13,20 @@ pub const MOST_CLIMB_PRACTICE: u32 = 40;
 /// map travel, 100% after 80.
 pub const RUN_PRACTICE: u32 = 17;
 
+/// Practice for Weight Training per step while carrying more than half of
+/// what can be carried (`sheet::Load::Burdened`), on any map: about 50% after
+/// 10 hours of such walking. Twice as much while overloaded.
+pub const WEIGHT_PRACTICE: u32 = 17;
+
+/// What a step teaches Weight Training under this load: nothing when light.
+pub fn weight_practice(load: crate::sheet::Load) -> u32 {
+    match load {
+        crate::sheet::Load::Light => 0,
+        crate::sheet::Load::Burdened => WEIGHT_PRACTICE,
+        crate::sheet::Load::Overloaded => 2 * WEIGHT_PRACTICE,
+    }
+}
+
 /// What a step climbing or descending `elevations` teaches Climbing: nothing on
 /// ground about flat (a single elevation, 25 m, or less), more the steeper.
 pub fn climb_practice(elevations: u32) -> u32 {

@@ -83,3 +83,19 @@ fn wilderness_slopes_cost_more_and_practise_climbing() {
     // Running is the world map's alone.
     assert_eq!(test.client.sheet.skills.practice(running), ran);
 }
+
+#[test]
+fn heavy_loads_practise_weight_training_on_any_map() {
+    use shared::sheet::Load;
+    let mut test = TestClient::new();
+    let node = MOVEMENT_SKILLS.weight_training;
+    test.client.sheet.attributes.strength = u8::MAX.into();
+    assert_eq!(test.client.sheet.load(&test.client.inventory), Load::Light);
+    assert!(test.client.practise_moving(false, 0, 0));
+    assert_eq!(test.client.sheet.skills.practice(node), 0, "light: nothing");
+    // Too weak for even their clothes.
+    test.client.sheet.attributes.strength = 1;
+    assert_ne!(test.client.sheet.load(&test.client.inventory), Load::Light);
+    assert!(test.client.practise_moving(false, 0, WINDOW_TICKS));
+    assert!(test.client.sheet.skills.practice(node) > 0);
+}

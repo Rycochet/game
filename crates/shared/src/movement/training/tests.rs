@@ -35,7 +35,12 @@ fn movement_practice_curve() {
     let running = hours_to(MOVEMENT_SKILLS.running, RUN_PRACTICE, &percents);
     // A mountain step of about 4 elevations (100 m).
     let climbing = hours_to(MOVEMENT_SKILLS.climbing, climb_practice(4), &percents);
-    for (name, hours) in [("Running", &running), ("Climbing", &climbing)] {
+    let weight = hours_to(MOVEMENT_SKILLS.weight_training, WEIGHT_PRACTICE, &percents);
+    for (name, hours) in [
+        ("Running", &running),
+        ("Climbing", &climbing),
+        ("Weight Training", &weight),
+    ] {
         let line: Vec<_> = percents
             .iter()
             .zip(hours.iter())
@@ -43,7 +48,15 @@ fn movement_practice_curve() {
             .collect();
         println!("{name}: {}", line.join(", "));
     }
-    for hours in [&running, &climbing] {
+    for hours in [&running, &climbing, &weight] {
         assert!((7.0..14.0).contains(&hours[1]), "50% after {} h", hours[1]);
     }
+}
+
+#[test]
+fn only_heavy_loads_train_weight() {
+    use crate::sheet::Load;
+    assert_eq!(weight_practice(Load::Light), 0);
+    assert_eq!(weight_practice(Load::Burdened), WEIGHT_PRACTICE);
+    assert_eq!(weight_practice(Load::Overloaded), 2 * WEIGHT_PRACTICE);
 }

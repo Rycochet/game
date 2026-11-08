@@ -3,7 +3,9 @@
 //! settings), at most once per skill every 5 seconds, as blows are.
 
 use shared::energy::wild_step_energy;
-use shared::movement::{Gait, MOVEMENT_SKILLS, RUN_PRACTICE, WildHeights, climb_practice};
+use shared::movement::{
+    Gait, MOVEMENT_SKILLS, RUN_PRACTICE, WildHeights, climb_practice, weight_practice,
+};
 use shared::protocol::ServerMessage;
 
 use crate::ServerWorld;
@@ -36,23 +38,27 @@ impl Client {
     }
 
     /// Practice from a step that climbed or descended `elevations` (a world map
-    /// step's, or as many 16ths a cell in the wilderness), and Running if it
-    /// was `on_world_map`. The client is sent its `Sheet` only when that
-    /// changes how it moves (or something rusted), as its steps are paced by
-    /// it. `false` if the client has gone.
+    /// step's, or as many 16ths a cell in the wilderness), Running if it was
+    /// `on_world_map`, and Weight Training while carrying more than half of
+    /// what can be carried, on any map. The client is sent its `Sheet` only
+    /// when that changes how it moves or what it can carry (or something
+    /// rusted), as its steps are paced by it. `false` if the client has gone.
     pub(super) fn practise_moving(
         &mut self,
         on_world_map: bool,
         elevations: u32,
         now: u64,
     ) -> bool {
-        let before = Gait::of(&self.sheet.skills);
+        let size = self.inventory.creature.def().size;
+        let before = (Gait::of(&self.sheet.skills), self.sheet.capacity(size));
+        let load = self.sheet.load(&self.inventory);
         let played = self.activity.played;
         let skills = &*MOVEMENT_SKILLS;
         let mut rusted = false;
         for (skill, amount) in [
             (skills.running, if on_world_map { RUN_PRACTICE } else { 0 }),
             (skills.climbing, climb_practice(elevations)),
+            (skills.weight_training, weight_practice(load)),
         ] {
             if amount == 0 {
                 continue;
@@ -65,8 +71,13 @@ impl Client {
             rusted |= self.sheet.skills.used(skill, played);
             self.unsaved = true;
         }
-        if !rusted && Gait::of(&self.sheet.skills) == before {
+        let after = (Gait::of(&self.sheet.skills), self.sheet.capacity(size));
+        if !rusted && after == before {
             return true;
+        }
+        // Carrying more may lighten the load, and so change the speed.
+        if after.1 != before.1 {
+            self.update_speed(now);
         }
         self.link.send(&ServerMessage::Sheet(self.sheet.clone()))
     }

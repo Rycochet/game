@@ -23,12 +23,15 @@ pub const RUN_TENTHS: u32 = 41;
 pub struct MovementSkills {
     pub climbing: SkillId,
     pub running: SkillId,
+    pub weight_training: SkillId,
 }
 
 /// Where Climbing and Running are in the tree.
 pub static MOVEMENT_SKILLS: LazyLock<MovementSkills> = LazyLock::new(|| MovementSkills {
     climbing: SkillId::find("athletics/climbing").expect("Climbing is in the tree"),
     running: SkillId::find("athletics/running").expect("Running is in the tree"),
+    weight_training: SkillId::find("athletics/weighttraining")
+        .expect("Weight Training is in the tree"),
 });
 
 /// How well a creature climbs and runs: each skill's value up to `FULL`.

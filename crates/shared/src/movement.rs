@@ -18,7 +18,8 @@ mod wild_heights;
 pub use flat_ground::FlatGround;
 pub use gait::{CLIMB_SAVING_PER_MILLE, FULL, Gait, MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS};
 pub use training::{
-    CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RUN_PRACTICE, climb_practice,
+    CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RUN_PRACTICE, WEIGHT_PRACTICE,
+    climb_practice, weight_practice,
 };
 pub use wild_heights::{WildHeights, wild_step_cost};
 

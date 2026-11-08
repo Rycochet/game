@@ -42,7 +42,7 @@ A strict tree, 3–4 levels for most branches; weapons one level more than magic
 |---|---|
 | Combat | melee (unarmed by kind of creature, then each type of weapon with each weapon under it, and defence: each weapon type, unarmed and the shields), ranged (thrown, bows, crossbows, slings), anticipation (reading opponents), armour (light, heavy) |
 | Magic | arcane (leans on Intellect), divine (Empathy), wild |
-| Athletics | climbing, swimming, running, jumping, dodging |
+| Athletics | climbing, swimming, running, jumping, dodging, weight training |
 | Stealth | sneaking, hiding, locks, traps |
 | Survival | observation (noticing traps and the like, rather than a bare Perception check), tracking, hunting, fishing |
 | Gathering | foraging, farming, mining, prospecting, herbalism |
@@ -123,7 +123,7 @@ Built (2026-11-08) for disuse under Melee, opposition and dying: `shared/skill.m
 
 ## Movement skills (owner, 2026-11-08)
 
-Speeds are ratios to an average walker (85 m a minute), with 100% at world-record level; each effect grows in a straight line with the node's own value. Practice comes from moving, at most once per skill every 5 seconds. Built: Climbing and Running on the world map, and Climbing in the wilderness (`shared/movement.md`). Planned, one PR each, in order:
+Speeds are ratios to an average walker (85 m a minute), with 100% at world-record level; each effect grows in a straight line with the node's own value. Practice comes from moving, at most once per skill every 5 seconds. Built: Climbing and Running on the world map, Climbing in the wilderness, and Weight Training (`shared/movement.md`). Planned, one PR each, in order:
 
 - Climbing: the slope's cost down to a tenth at 100%; only steps changing height by more than 25 m teach it. In the wilderness (built), slopes from the world points' heights, blended in 16ths, cost and teach as the world map does for the same height.
 - Running: world map only, walking at 0% to a marathon record's pace (about 350 m a minute, 4.1×) at 100%.

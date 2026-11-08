@@ -57,6 +57,7 @@ delapouite/swimfins
 delapouite/tomahawk
 delapouite/two-handed-sword
 delapouite/warhammer
+delapouite/weight-lifting-up
 delapouite/wood-beam
 delapouite/wood-club
 faithtoken/dragon-head
