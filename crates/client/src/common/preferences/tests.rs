@@ -52,6 +52,10 @@ fn preferences_read_back_as_saved() {
             ..Default::default()
         },
         pause_unfocused: true,
+        step_pad: super::StepPadPrefs {
+            closed: true,
+            at: Some((0.25, 0.75)),
+        },
         controls: {
             let mut controls = crate::common::Controls::default();
             let shift_g = crate::common::Binding::new(KeyCode::KeyG, crate::common::Mods::SHIFT);

@@ -74,7 +74,8 @@ fn test_at(scale: f32) -> Test {
             MoveablePanel {
                 at: Vec2::new(100.0, 100.0),
                 window: None,
-                from_bottom_right: None,
+                first: None,
+                dropped: false,
             },
             GlobalZIndex(FIRST_PANEL_Z),
         ))
@@ -134,6 +135,14 @@ impl Test {
             .get::<MoveablePanel>(self.root)
             .expect("a panel")
             .at
+    }
+
+    fn dropped(&self) -> bool {
+        self.app
+            .world()
+            .get::<MoveablePanel>(self.root)
+            .expect("a panel")
+            .dropped
     }
 
     fn presses(&mut self) -> Vec<Entity> {
@@ -229,6 +238,7 @@ fn the_mouse_drags_by_the_title_bar_until_let_go() {
     test.app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::new(150.0, 130.0));
     test.step();
     assert_eq!(test.panel_at(), Vec2::new(130.0, 120.0));
+    assert!(!test.dropped(), "still being dragged");
 
     test.app
         .world_mut()
@@ -237,6 +247,27 @@ fn the_mouse_drags_by_the_title_bar_until_let_go() {
     test.app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::new(300.0, 300.0));
     test.step();
     assert_eq!(test.panel_at(), Vec2::new(130.0, 120.0));
+    assert!(test.dropped(), "let go, for `place_panels` to say where");
+}
+
+#[test]
+fn lifting_the_finger_dragging_a_panel_lets_go_of_it() {
+    let mut test = test();
+    let start = Vec2::new(120.0, 110.0);
+    *test.app.world_mut().resource_mut::<TouchGesture>() = TouchGesture {
+        drag: Vec2::new(5.0, 5.0),
+        drag_start: start,
+        first_finger: Some(start),
+        ..default()
+    };
+    test.step();
+    assert!(!test.dropped());
+    test.app
+        .world_mut()
+        .resource_mut::<TouchGesture>()
+        .first_finger = None;
+    test.step();
+    assert!(test.dropped());
 }
 
 #[test]

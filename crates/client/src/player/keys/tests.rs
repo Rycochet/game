@@ -63,3 +63,47 @@ fn a_held_pad_arrow_steps_as_a_key_does() {
     assert_eq!(steps_asked(&mut app), 0);
     assert!(!app.world().resource::<PlayerMoving>().keys);
 }
+
+/// Puts the steps asked for this frame in line, as `take_steps` does when
+/// there isn't the energy to take them yet.
+fn line_up(app: &mut App) {
+    let asked: Vec<Step> = app
+        .world_mut()
+        .resource_mut::<Messages<TakeStep>>()
+        .drain()
+        .map(|take| take.0)
+        .collect();
+    app.world_mut()
+        .resource_mut::<PlayerEnergy>()
+        .waiting
+        .extend(asked);
+}
+
+#[test]
+fn a_click_lasting_a_few_frames_is_one_step() {
+    let mut app = app();
+    app.insert_resource(PadSteps { dx: 1, dy: 0 });
+    app.update();
+    // Taken at once.
+    assert_eq!(steps_asked(&mut app), 1);
+    // Still held next frame: the next is asked for, and waits for energy.
+    app.update();
+    line_up(&mut app);
+    assert_eq!(app.world().resource::<PlayerEnergy>().waiting.len(), 1);
+    // Let go before it is taken: it is dropped.
+    app.insert_resource(PadSteps::default());
+    app.update();
+    assert!(app.world().resource::<PlayerEnergy>().waiting.is_empty());
+}
+
+#[test]
+fn a_tap_whose_step_waits_for_energy_still_steps() {
+    let mut app = app();
+    app.insert_resource(PadSteps { dx: 0, dy: 1 });
+    app.update();
+    line_up(&mut app);
+    app.update();
+    app.insert_resource(PadSteps::default());
+    app.update();
+    assert_eq!(app.world().resource::<PlayerEnergy>().waiting.len(), 1);
+}

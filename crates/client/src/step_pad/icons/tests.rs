@@ -69,13 +69,17 @@ fn arrows_point_their_way() {
 }
 
 #[test]
-fn the_keypad_has_twelve_keys_less_one() {
-    let pad = keypad();
-    // Down the middle of the first column: four keys, and the frame twice.
-    let column: Vec<bool> = (0..SIZE).map(|y| alpha(&pad, 19, y) > 128).collect();
-    let runs = column.windows(2).filter(|pair| !pair[0] && pair[1]).count();
-    assert_eq!(runs, 6);
-    // The wide 0 fills the gap between the first two columns.
-    assert!(alpha(&pad, 25, 52) > 128);
-    assert!(alpha(&pad, 25, 14) < 128);
+fn the_dpad_is_a_cross_with_a_hole_in_each_arm() {
+    let pad = dpad();
+    // The middle is solid, the corners clear.
+    assert!(alpha(&pad, 32, 32) > 128);
+    assert!(alpha(&pad, 6, 6) < 128);
+    assert!(alpha(&pad, 57, 57) < 128);
+    // Each arm has its triangle cut out, and is solid past it.
+    for (x, y) in [(32, 16), (32, 47), (16, 32), (47, 32)] {
+        assert!(alpha(&pad, x, y) < 128, "a hole at ({x}, {y})");
+    }
+    for (x, y) in [(32, 58), (58, 32), (32, 5), (5, 32)] {
+        assert!(alpha(&pad, x, y) > 128, "solid at ({x}, {y})");
+    }
 }

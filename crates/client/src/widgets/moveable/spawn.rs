@@ -16,9 +16,11 @@ pub(in crate::widgets) struct MoveablePanel {
     /// The window's size when last placed, to keep it in the same part of the
     /// window when that changes.
     pub(super) window: Option<Vec2>,
-    /// Until first placed: how far its bottom-right corner is wanted from the
-    /// window's, in place of `at`.
-    pub(super) from_bottom_right: Option<Vec2>,
+    /// Until first placed: where it is wanted, in place of `at`.
+    pub(super) first: Option<PanelPlace>,
+    /// A drag has just let go of it: `place_panels` says where it ended up
+    /// (`PanelMoved`).
+    pub(super) dropped: bool,
 }
 
 /// Where a moveable panel first goes, in logical pixels.
@@ -28,18 +30,30 @@ pub enum PanelPlace {
     TopLeft(Vec2),
     /// Its bottom-right corner this far left of and above the window's.
     BottomRight(Vec2),
+    /// Its top-left corner at this share of the window across and down, as
+    /// `PanelMoved` gives it: for a place saved between runs.
+    Share(Vec2),
+}
+
+/// A moveable panel was dragged and let go: where its top-left corner is now,
+/// as a share of the window across and down (`PanelPlace::Share` puts it back).
+#[derive(Message, Clone, Copy, Debug, PartialEq)]
+pub struct PanelMoved {
+    pub panel: Entity,
+    pub share: Vec2,
 }
 
 impl MoveablePanel {
     fn new(place: PanelPlace) -> Self {
-        let (at, from_bottom_right) = match place {
-            PanelPlace::TopLeft(at) => (at, None),
-            PanelPlace::BottomRight(gap) => (Vec2::ZERO, Some(gap)),
+        let at = match place {
+            PanelPlace::TopLeft(at) => at,
+            PanelPlace::BottomRight(_) | PanelPlace::Share(_) => Vec2::ZERO,
         };
         Self {
             at,
             window: None,
-            from_bottom_right,
+            first: Some(place),
+            dropped: false,
         }
     }
 }

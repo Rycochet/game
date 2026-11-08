@@ -55,6 +55,19 @@ pub struct Preferences {
     pub pause_unfocused: bool,
     /// Which keys do what (Settings, Controls); only changes are saved.
     pub controls: Controls,
+    /// The movement pad as last left.
+    pub step_pad: StepPadPrefs,
+}
+
+/// The movement pad as last left: open unless closed with its button, and
+/// where it was dragged to, if it was.
+#[derive(Serialize, Deserialize, Default, Clone, Copy, PartialEq, Debug)]
+#[serde(default)]
+pub struct StepPadPrefs {
+    pub closed: bool,
+    /// Its top-left corner as a share of the window across and down, so it
+    /// keeps its part of a window of another size.
+    pub at: Option<(f32, f32)>,
 }
 
 /// Dev Area's choices, kept by name (a name no longer known is the default).
