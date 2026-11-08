@@ -7,6 +7,7 @@ use shared::mob::{Memory, Spawn, scent_strength};
 use shared::sheet::Sheet;
 
 use super::{Doing, Mob};
+use crate::storage::SiteId;
 
 /// Numbers from here on are mobs made by developer tools (Create Mob): no
 /// level's own mob has one, and nothing about them is kept.
@@ -43,7 +44,14 @@ impl Mob {
             harmed_by: Default::default(),
             pacing: Default::default(),
             still: false,
+            kept_in: None,
         }
+    }
+
+    /// The site whose save keeps it, for a mob on a level of `here`: its own
+    /// site's, if it is a site's mob about in the wilderness.
+    pub(super) fn kept_with(&self, here: SiteId) -> SiteId {
+        self.kept_in.unwrap_or(here)
     }
 
     /// Whether developer tools made it: it is never kept.

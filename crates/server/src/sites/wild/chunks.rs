@@ -1,6 +1,7 @@
 //! Working out a wilderness chunk: its poi's site as the server has it, the
 //! cutout made from it and its stairs as players see them.
 
+use shared::mob::{Spawn, spawns};
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::SeenStairs;
 use shared::site::{
@@ -26,7 +27,7 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
     let gates = gates_of(&maps.wild, &world.pois);
     let plan = ChunkPlan::new(&maps.wild, chunk, poi.zip(site.as_ref()), &gates, &roads);
     let (mut stairs, mut buildings, mut fields) = (Vec::new(), Vec::new(), Vec::new());
-    let (mut entrance, mut town) = (None, Vec::new());
+    let (mut entrance, mut town, mut spawns) = (None, Vec::new(), Vec::new());
     if let (Some(cutout), Some(site)) = (plan.cutout(), &site) {
         let first = site.level(0);
         stairs = cutout_stairs(cutout, site, &first);
@@ -34,6 +35,7 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
         if let Some(offset) = cutout.offset() {
             (buildings, fields) = looks(&first, offset);
             town.clone_from(&first.buildings);
+            spawns = first_level_mobs(cutout.poi(), &first, offset);
         }
     }
     world.wilderness.keep_chunk(WildChunk {
@@ -42,6 +44,7 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
         buildings,
         fields,
         town,
+        spawns,
         entrance,
     });
 }
@@ -54,6 +57,19 @@ fn entrance_of(cutout: &Cutout, first: &SiteLevel) -> Option<(i64, i64)> {
         Some((ox, oy)) => first.arrival(Exit::WorldMap).map(|(x, y)| (x + ox, y + oy)),
         None => cutout.stairs().first().map(|s| (s.x, s.y + FROM_STAIRS)),
     }
+}
+
+/// Who lives on a site's first level, as its own visit makes them, moved by
+/// `offset` into the wilderness.
+fn first_level_mobs(poi: &Poi, first: &SiteLevel, (ox, oy): (i64, i64)) -> Vec<Spawn> {
+    let stairs: Vec<_> = first.stairs.iter().map(|s| (s.x, s.y)).collect();
+    let made = spawns(poi.seed, 0, poi.kind, &first.level, &stairs);
+    made.into_iter()
+        .map(|spawn| Spawn {
+            position: (spawn.position.0 + ox, spawn.position.1 + oy),
+            ..spawn
+        })
+        .collect()
 }
 
 /// A site's first level's town buildings and farm fields, moved by `offset`.

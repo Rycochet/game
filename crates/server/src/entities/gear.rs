@@ -88,7 +88,8 @@ pub(crate) fn give(
         .ok_or("can't hand that over")?;
     mob.memory.remember_gift(character);
     let (home_level, home, memory) = (mob.home_level, mob.home, mob.memory.clone());
-    let record = record_of(world, place.0, (to, home_level, home));
+    let site = mob.kept_with(place.0);
+    let record = record_of(world, site, (to, home_level, home));
     record.memory = memory;
     record.carried.push(item);
     Ok(())
@@ -172,13 +173,15 @@ pub(super) fn bury(
     {
         home.away = home.away.saturating_sub(1);
     }
-    if place.0 == SiteId::Wilderness {
+    // A site's mob about in the wilderness is kept with its site.
+    let kept_with = dead.kept_with(place.0);
+    if kept_with == SiteId::Wilderness {
         super::wild::touched(world, dead.home);
     }
     // What it had is saved with the level it belongs on, wherever it has got to;
     // one made by developer tools is never kept, so nothing is marked dead.
     let dev_made = dead.is_dev_made();
-    let site = world.site_mut(place.0);
+    let site = world.site_mut(kept_with);
     let saved = site.levels.entry(dead.home_level).or_default();
     if !dev_made {
         saved.dead.insert(dead.number);
@@ -192,7 +195,11 @@ pub(super) fn bury(
     let mut left = record.gear.map_or_else(Vec::new, Inventory::spilled);
     left.extend(record.carried);
     if !left.is_empty() {
-        let here = site.levels.entry(here_index).or_default();
+        let here = world
+            .site_mut(place.0)
+            .levels
+            .entry(here_index)
+            .or_default();
         here.ground.entry(at).or_default().extend(left);
     }
 }

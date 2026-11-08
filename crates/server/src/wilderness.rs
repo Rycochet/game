@@ -5,6 +5,7 @@
 //! are put together for a visit (`sites`).
 
 use shared::dungeon::Level;
+use shared::mob::Spawn;
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::protocol::SeenStairs;
 use shared::road::Road;
@@ -41,6 +42,10 @@ pub(crate) struct WildChunk {
     /// A town cutout's buildings as its site has them, in the site's cells:
     /// what its shops are (`sites::shop_here`).
     pub(crate) town: Vec<TownBuilding>,
+    /// Who lives on a set-in first level of its site, as its own visit makes
+    /// them (`mob::spawns`), in wilderness cells: they live in the wilderness
+    /// too (`entities::wild`).
+    pub(crate) spawns: Vec<Spawn>,
     /// Where exploring from the poi on the world map arrives, in wilderness
     /// cells: its site's entrance, or beside its way down (`sites::wild`).
     pub(crate) entrance: Option<(i64, i64)>,

@@ -23,6 +23,11 @@ impl ServerWorld {
             return;
         }
         let stairs: Vec<_> = level.stairs.iter().map(|s| (s.x, s.y)).collect();
+        // A first level set into the wilderness: those about there stay there.
+        let about = match id {
+            SiteId::Poi(_) if index == 0 => super::wild::take_site_mobs_back(self, id),
+            _ => BTreeSet::new(),
+        };
         let plan = match id {
             SiteId::DevArea(area) => area.spawns(level),
             _ => spawns(poi.seed, index, poi.kind, &level.level, &stairs),
@@ -39,7 +44,7 @@ impl ServerWorld {
         let tick = self_tick;
         let mobs = plan
             .into_iter()
-            .filter(|spawn| !dead.contains(&spawn.number))
+            .filter(|spawn| !dead.contains(&spawn.number) && !about.contains(&spawn.number))
             .map(|spawn| {
                 let carried_on = unsettled.get(&spawn.number);
                 let id = *saved.mobs.entry(spawn.number).or_insert_with(new_id);

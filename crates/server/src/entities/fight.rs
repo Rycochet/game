@@ -194,9 +194,9 @@ pub(crate) fn hit_mob(
         }
     }
     let keep = (one.id, one.home_level, one.home);
-    let memory = one.memory.clone();
+    let (memory, kept_with) = (one.memory.clone(), one.kept_with(place.0));
     let dead = one.health(tick) == Points::ZERO;
-    record_of(world, place.0, keep).memory = memory;
+    record_of(world, kept_with, keep).memory = memory;
     if dead {
         bury(world, place, here_index, mob, true);
     }
