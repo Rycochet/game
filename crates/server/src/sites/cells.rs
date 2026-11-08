@@ -12,8 +12,12 @@ use crate::storage::CellMasks;
 
 /// Every cell of a level.
 pub(super) fn all_cells(level: &Level) -> CellMasks {
+    cells_in(level.bounds())
+}
+
+/// Every cell in `(min_x, min_y, width, height)`.
+pub(super) fn cells_in((min_x, min_y, width, height): (i64, i64, i64, i64)) -> CellMasks {
     let mut masks = CellMasks::new();
-    let (min_x, min_y, width, height) = level.bounds();
     for y in min_y..min_y + height {
         for x in min_x..min_x + width {
             let (chunk, bit) = level_chunk(x, y);
@@ -45,6 +49,16 @@ pub(super) fn beside(
         }
     }
     found
+}
+
+/// Leaves out of `masks` the cells outside `bounds`: those a client lets go
+/// of when the wilderness's window moves.
+pub(super) fn keep_within(masks: &mut CellMasks, bounds: (i64, i64, i64, i64)) {
+    let inside = cells_in(bounds);
+    for (chunk, mask) in masks.iter_mut() {
+        *mask &= inside.get(chunk).copied().unwrap_or(0);
+    }
+    masks.retain(|_, mask| *mask != 0);
 }
 
 /// Adds the cells in `more` to `masks`.

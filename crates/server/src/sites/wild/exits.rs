@@ -37,6 +37,16 @@ pub(crate) fn leave_by_key(client: &mut Client, world: &mut ServerWorld) -> bool
         info!("Refused leaving the wilderness into water at ({px}, {py})");
         return true;
     }
+    // From a site's first level set in, going into it again arrives here.
+    let walked_out = visit
+        .mirrors
+        .iter()
+        .find_map(|m| Some((m.id, m.index, m.of(x, y)?)));
+    if let Some((id, index, cell)) = walked_out {
+        client.character.left_at.insert(id, (index, cell));
+        let version = world.site(id).version;
+        client.character.site_versions.entry(id).or_insert(version);
+    }
     leave(client, world);
     client.visit = None;
     client.character.world_position = (px, py);
