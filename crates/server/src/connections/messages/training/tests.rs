@@ -12,6 +12,7 @@ fn moved(on_world_map: bool, elevations: u32) -> Moved {
         on_world_map,
         elevations,
         swam: 0,
+        jumped: false,
     }
 }
 
@@ -161,4 +162,21 @@ fn the_sea_is_swum() {
         .world_step(&mut test.world, (from, to), (Some(8), None));
     assert!(stayed);
     assert_eq!(cost, gait.swim(70), "swum, and not run");
+}
+
+#[test]
+fn jumps_are_quicker_with_practice_and_practise_jumping() {
+    use shared::energy::site_step_cost;
+    let mut test = TestClient::new();
+    let jumping = MOVEMENT_SKILLS.jumping;
+    let before = test.client.sheet.skills.practice(jumping);
+    let gait = shared::movement::Gait::of(&test.client.sheet.skills);
+    let (from, to) = ((0, 0), (2, 0));
+    let (stayed, cost) = test
+        .client
+        .level_step(&test.world, (from, to), false, false);
+    assert!(stayed);
+    assert_eq!(cost, gait.jump(140) * 15);
+    assert!(cost <= site_step_cost(from, to));
+    assert!(test.client.sheet.skills.practice(jumping) > before);
 }

@@ -38,7 +38,8 @@ pub fn find_path(
 /// swimmer steps into water (`movement::step_on_level_by`), and may wade
 /// quicker than they walk, so the search's estimate is scaled by that (or it
 /// would be too high and routes not the quickest): `cost_of` is never less than
-/// `Gait::swim` of `step_cost`, nor `step_cost` itself for anyone slower.
+/// `Gait::cheapest_per_mille` of `step_cost` (a swimmer's wading or a jumper's
+/// jump).
 pub fn find_path_by(
     level: &Level,
     from: (i64, i64),
@@ -48,7 +49,7 @@ pub fn find_path_by(
     cost_of: impl Fn((i64, i64), (i64, i64)) -> u32,
     gait: Gait,
 ) -> Path {
-    let cheapest = gait.swim_per_mille();
+    let cheapest = gait.cheapest_per_mille();
     let least = |at: (i64, i64)| estimate(at, to) * cheapest.min(1000) / 1000;
     let (min_x, min_y, width, height) = level.bounds();
     let index = |(x, y): (i64, i64)| ((y - min_y) * width + (x - min_x)) as usize;

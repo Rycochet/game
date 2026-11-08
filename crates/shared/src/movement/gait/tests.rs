@@ -6,7 +6,20 @@ fn skilled(climbing: u32, running: u32) -> Gait {
         climbing,
         running,
         swimming: 0,
+        jumping: 0,
     }
+}
+
+#[test]
+fn jumping_makes_jumps_quicker() {
+    let jumper = |jumping| Gait {
+        jumping,
+        ..Gait::UNSKILLED
+    };
+    assert_eq!(jumper(0).jump(140), 140);
+    assert_eq!(jumper(FULL).jump(140), 98);
+    assert_eq!(jumper(FULL).cheapest_per_mille(), JUMP_BEST_PER_MILLE);
+    assert_eq!(Gait::UNSKILLED.cheapest_per_mille(), 1000);
 }
 
 #[test]

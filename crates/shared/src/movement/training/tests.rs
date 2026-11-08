@@ -37,6 +37,25 @@ fn movement_practice_curve() {
     let climbing = hours_to(MOVEMENT_SKILLS.climbing, climb_practice(4), &percents);
     let weight = hours_to(MOVEMENT_SKILLS.weight_training, WEIGHT_PRACTICE, &percents);
     let swimming = hours_to(MOVEMENT_SKILLS.swimming, SWIM_PRACTICE, &percents);
+    // Jumps, not hours: one a window.
+    let jumps: Vec<f64> = hours_to(MOVEMENT_SKILLS.jumping, JUMP_PRACTICE, &percents)
+        .iter()
+        .map(|hours| hours * 3600.0 / 5.0)
+        .collect();
+    println!(
+        "Jumping: {}",
+        percents
+            .iter()
+            .zip(&jumps)
+            .map(|(percent, jumps)| format!("{percent}% after {jumps:.0} jumps"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    assert!(
+        (2_500.0..4_000.0).contains(&jumps[1]),
+        "50% after {} jumps",
+        jumps[1]
+    );
     for (name, hours) in [
         ("Running", &running),
         ("Climbing", &climbing),

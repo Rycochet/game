@@ -35,12 +35,17 @@ pub const DEEP_WATER_FROM: u32 = 5_000;
 /// height units (100 m): the continental shelf, never the deep ocean beyond.
 pub const DEEPEST_SEA: f64 = 2.0;
 
+/// How long a jump takes at 100% Jumping, per mille of its distance (all of it
+/// at 0%): a practised leap carries further for the effort. A setting to tune.
+pub const JUMP_BEST_PER_MILLE: u32 = 700;
+
 /// The movement skills' nodes, found once (`MOVEMENT_SKILLS`).
 pub struct MovementSkills {
     pub climbing: SkillId,
     pub running: SkillId,
     pub weight_training: SkillId,
     pub swimming: SkillId,
+    pub jumping: SkillId,
 }
 
 /// Where Climbing and Running are in the tree.
@@ -50,14 +55,17 @@ pub static MOVEMENT_SKILLS: LazyLock<MovementSkills> = LazyLock::new(|| Movement
     weight_training: SkillId::find("athletics/weighttraining")
         .expect("Weight Training is in the tree"),
     swimming: SkillId::find("athletics/swimming").expect("Swimming is in the tree"),
+    jumping: SkillId::find("athletics/jumping").expect("Jumping is in the tree"),
 });
 
-/// How well a creature climbs, runs and swims: each skill's value up to `FULL`.
+/// How well a creature climbs, runs, swims and jumps: each skill's value up to
+/// `FULL`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Gait {
     climbing: u32,
     running: u32,
     swimming: u32,
+    jumping: u32,
 }
 
 impl Gait {
@@ -66,6 +74,7 @@ impl Gait {
         climbing: 0,
         running: 0,
         swimming: 0,
+        jumping: 0,
     };
 
     /// From a creature's skills.
@@ -74,6 +83,7 @@ impl Gait {
             climbing: skills.value(MOVEMENT_SKILLS.climbing).min(FULL),
             running: skills.value(MOVEMENT_SKILLS.running).min(FULL),
             swimming: skills.value(MOVEMENT_SKILLS.swimming).min(FULL),
+            jumping: skills.value(MOVEMENT_SKILLS.jumping).min(FULL),
         }
     }
 
@@ -97,6 +107,24 @@ impl Gait {
         }
         let past = f64::from(self.swimming - DEEP_WATER_FROM);
         DEEPEST_SEA * past / f64::from(FULL - DEEP_WATER_FROM)
+    }
+
+    /// How long a jump takes, per mille of its distance: from all of it at 0%
+    /// to `JUMP_BEST_PER_MILLE` at 100%.
+    pub fn jump_per_mille(self) -> u32 {
+        1000 - (1000 - JUMP_BEST_PER_MILLE) * self.jumping / FULL
+    }
+
+    /// What a jump costing `cost` comes to with this Jumping. At least 1.
+    pub fn jump(self, cost: u32) -> u32 {
+        ((u64::from(cost) * u64::from(self.jump_per_mille()) / 1000) as u32).max(1)
+    }
+
+    /// The least any level step can cost against `step_cost`, per mille: what
+    /// routes' estimates are scaled by, as a good swimmer or jumper can go
+    /// quicker than walking. Never more than 1000.
+    pub fn cheapest_per_mille(self) -> u32 {
+        self.swim_per_mille().min(self.jump_per_mille()).min(1000)
     }
 
     /// What a step costing `cost` on land comes to, waded. At least 1.

@@ -123,13 +123,13 @@ Built (2026-11-08) for disuse under Melee, opposition and dying: `shared/skill.m
 
 ## Movement skills (owner, 2026-11-08)
 
-Speeds are ratios to an average walker (85 m a minute), with 100% at world-record level; each effect grows in a straight line with the node's own value. Practice comes from moving, at most once per skill every 5 seconds. Built: Climbing and Running on the world map, Climbing in the wilderness, Weight Training, and Swimming by wading shallows and rivers, and from 50% swimming deep water and the sea near the coast (`shared/movement.md`). Planned, one PR each, in order:
+Speeds are ratios to an average walker (85 m a minute), with 100% at world-record level; each effect grows in a straight line with the node's own value. Practice comes from moving, at most once per skill every 5 seconds. Built: Climbing and Running on the world map, Climbing in the wilderness, Weight Training, and Swimming by wading shallows and rivers, and from 50% swimming deep water and the sea near the coast, and Jumping (`shared/movement.md`). Planned, one PR each, in order:
 
 - Climbing: the slope's cost down to a tenth at 100%; only steps changing height by more than 25 m teach it. In the wilderness (built), slopes from the world points' heights, blended in 16ths, cost and teach as the world map does for the same height.
 - Running: world map only, walking at 0% to a marathon record's pace (about 350 m a minute, 4.1×) at 100%.
 - Weight Training (a new Athletics leaf, Strength and Toughness): capacity × (1 + value), so 100% doubles it; practised per distance while carrying more than half of it.
 - Swimming: wading shallows and rivers costs 1.7× walking at 0% (50 m a minute), 0.71× at 100% (a record's 100 m in 50 s); every wilderness cell teaches it, world map river points a little. Then deep water by skill: wilderness and site water, shallow coastal sea on the world map, never deep ocean.
-- Jumping: practised per jump, slowly (about 50% after a few thousand), making jumps cheaper; later perhaps jumping up to the edge of a hole above (a grappling hook would rival it).
+- Jumping (built): practised per jump, slowly (about 50% after 3,000), making jumps quicker, to 70% of their distance at 100%; later perhaps jumping up to the edge of a hole above (a grappling hook would rival it).
 - Sneaking: practised only in the wilderness, while averaging under 1 cell every 2 seconds over a minute (to tweak), and seen by something territorial or timid that isn't hostile. A Sneak toggle ability holds the pace under that; the benefit (harder to spot) comes with mob senses.
 - Pioneering (under Survival), a child per terrain that slows travel: grass and scrub 1.2×, forest 1.3×, jungle 1.5×, marsh and snow 1.8×, sand 2×; 100% takes off two thirds of the extra.
 - Riding is likely before long; navigation waits for sailing.

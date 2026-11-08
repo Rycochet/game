@@ -18,6 +18,10 @@ pub const RUN_PRACTICE: u32 = 17;
 /// 10 hours of such walking. Twice as much while overloaded.
 pub const WEIGHT_PRACTICE: u32 = 17;
 
+/// Practice for Jumping per jump: slow to learn (owner), about 50% after
+/// 3,000 jumps and 100% after 25,000.
+pub const JUMP_PRACTICE: u32 = 40;
+
 /// Practice for Swimming per step wading through shallows on a level: about
 /// 50% after 10 hours of it.
 pub const SWIM_PRACTICE: u32 = 17;
