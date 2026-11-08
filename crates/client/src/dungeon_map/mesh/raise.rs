@@ -7,8 +7,9 @@ use bevy::prelude::*;
 use shared::dungeon::Cell;
 
 use super::super::CELL_SIZE;
+use super::super::liquid::LooksLiquid;
 use super::super::walls::{Layers, Scene};
-use super::{MEMORY_SHADE, Surface, with_ambient};
+use super::{Builder, MEMORY_SHADE, Surface, with_ambient};
 
 /// How bright an edge's face is against the ground on top: darker towards
 /// its foot.
@@ -52,18 +53,23 @@ impl Marks {
         if by == 0.0 {
             return;
         }
-        for (builder, &from) in layers.solid.iter_mut().zip(&self.solid) {
-            builder.lift(from, by);
-        }
-        for (builder, &from) in layers.memory.iter_mut().zip(&self.memory) {
-            builder.lift(from, by);
-        }
-        layers.see_through.lift(self.see_through, by);
-        for (builder, &from) in layers.stairs_through.iter_mut().zip(&self.stairs_through) {
-            builder.lift(from, by);
-        }
+        self.each(layers, |builder, from| builder.lift(from, by));
         for face in &mut layers.solid_faces[self.faces..] {
             face.centre.y += by;
+        }
+    }
+
+    /// Does `change` to each mesh, with where it was before.
+    pub(super) fn each(&self, layers: &mut Layers, mut change: impl FnMut(&mut Builder, usize)) {
+        for (builder, &from) in layers.solid.iter_mut().zip(&self.solid) {
+            change(builder, from);
+        }
+        for (builder, &from) in layers.memory.iter_mut().zip(&self.memory) {
+            change(builder, from);
+        }
+        change(&mut layers.see_through, self.see_through);
+        for (builder, &from) in layers.stairs_through.iter_mut().zip(&self.stairs_through) {
+            change(builder, from);
         }
     }
 }
@@ -82,7 +88,9 @@ pub(super) fn build_edges(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)
     let seen = scene.sight.is_seen(x, y);
     for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
         let foot = scene.ground(x + dx, y + dy);
-        if top - foot < LEAST_DROP {
+        // Liquid meets liquid at its sloping surface (`flow`), with no face.
+        let liquid = |x, y| scene.level.cell(x, y).looks_liquid();
+        if top - foot < LEAST_DROP || (liquid(x, y) && liquid(x + dx, y + dy)) {
             continue;
         }
         let normal = Vec3::new(dx as f32, 0.0, dy as f32);

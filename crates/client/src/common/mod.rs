@@ -93,7 +93,7 @@ pub use video::{
 };
 pub use view::{ViewFacing, ViewStats};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
-pub use wild_heights::WildCellHeights;
+pub use wild_heights::{DRAWN_PER_16TH, WildCellHeights};
 pub use window::{KeepDrawing, frame_settings};
 pub use world::{CurrentWorld, KnownPois, WorldChanged};
 

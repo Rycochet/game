@@ -7,6 +7,7 @@
 mod build;
 mod builder;
 mod cells;
+mod flow;
 mod light;
 mod light_grid;
 mod memory;

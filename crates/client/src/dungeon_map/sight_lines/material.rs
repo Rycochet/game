@@ -26,8 +26,8 @@ impl MaskSide {
 }
 
 /// Order matches `struct Mask` in the shader. WebGL 2 refuses a uniform that
-/// isn't a multiple of 16 bytes (the game quits on entering a site), so three
-/// unused `f32`s pad the 20 bytes out to 32.
+/// isn't a multiple of 16 bytes (the game quits on entering a site), so two
+/// unused `f32`s pad the 24 bytes out to 32.
 #[derive(ShaderType, Reflect, Clone, Copy, Debug, Default)]
 pub struct MaskParams {
     /// The corner of the mask with the smallest world `x` and `z`.
@@ -35,7 +35,9 @@ pub struct MaskParams {
     /// One over the world size it covers.
     pub(super) per_unit: Vec2,
     side: f32,
-    _pad_a: f32,
+    /// Seconds water's picture has flowed for (`mesh::flow`), wrapping; 0 on
+    /// every material but the lit water's, and with Reduce Motion.
+    flow_time: f32,
     _pad_b: f32,
     _pad_c: f32,
 }
@@ -64,6 +66,18 @@ impl SightMask {
         let value = side.map_or(0.0, MaskSide::value);
         if self.params.side != value {
             self.params.side = value;
+        }
+    }
+
+    /// How long water's picture has flowed, in seconds (0: still).
+    pub fn flow_time(&self) -> f32 {
+        self.params.flow_time
+    }
+
+    /// How long water's picture has flowed, in seconds.
+    pub fn set_flow_time(&mut self, seconds: f32) {
+        if self.params.flow_time != seconds {
+            self.params.flow_time = seconds;
         }
     }
 

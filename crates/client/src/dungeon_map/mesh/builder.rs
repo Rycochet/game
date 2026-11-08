@@ -18,6 +18,8 @@ pub struct Builder {
     /// The height of the ground each vertex stands on (raised wilderness
     /// cells), which tops are measured from (`RAISED`).
     bases: Vec<f32>,
+    /// How water at each vertex flows (`flow::packed`; 0 still).
+    flows: Vec<f32>,
 }
 
 impl Builder {
@@ -50,6 +52,7 @@ impl Builder {
             self.uvs.push(uv);
             self.colours.push([lit.x, lit.y, lit.z, 1.0]);
             self.bases.push(0.0);
+            self.flows.push(0.0);
         }
         self.indices
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
@@ -96,6 +99,7 @@ impl Builder {
             self.uvs.push(uvs[i]);
             self.colours.push([lit.x, lit.y, lit.z, opacity[i]]);
             self.bases.push(0.0);
+            self.flows.push(0.0);
         }
         self.indices
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
@@ -113,6 +117,7 @@ impl Builder {
             into.normals.push(self.normals[i]);
             into.uvs.push(self.uvs[i]);
             into.bases.push(self.bases[i]);
+            into.flows.push(self.flows[i]);
             into.colours
                 .push([MEMORY_SHADE, MEMORY_SHADE, MEMORY_SHADE, alpha]);
         }
@@ -140,10 +145,33 @@ impl Builder {
         }
     }
 
-    /// The ground's height under each vertex reaches the shader as the second
-    /// picture coordinates' first part (`sight_mask.wesl`).
+    /// Moves each vertex added since `from` that lies below its ground (a
+    /// liquid's surface, bed and the foot of its sides) by `by` its place, and
+    /// gives them all `flow`.
+    pub(in crate::dungeon_map) fn slope(
+        &mut self,
+        from: usize,
+        by: impl Fn(Vec3) -> f32,
+        flow: f32,
+    ) {
+        for i in from..self.positions.len() {
+            let position = Vec3::from_array(self.positions[i]);
+            if position.y < self.bases[i] - 0.001 {
+                self.positions[i][1] += by(position);
+            }
+            self.flows[i] = flow;
+        }
+    }
+
+    /// The ground's height under each vertex and how water there flows reach
+    /// the shader as the second picture coordinates (`sight_mask.wesl`).
     pub(in crate::dungeon_map) fn into_mesh(self) -> Mesh {
-        let bases: Vec<[f32; 2]> = self.bases.iter().map(|&base| [base, 0.0]).collect();
+        let bases: Vec<[f32; 2]> = self
+            .bases
+            .iter()
+            .zip(&self.flows)
+            .map(|(&base, &flow)| [base, flow])
+            .collect();
         Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
