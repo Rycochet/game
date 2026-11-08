@@ -1,15 +1,16 @@
 # shared: river
 
-Rivers on the world map, from their chunk's position alone. Only something to look at for now: they don't affect walking, routes or pois (the owner's choice), so pois can stand on them and no `WORLD_MAP_VERSION` bump was needed. In `shared` because they will probably matter to the rules later. Drawn by client `world_map`.
+Rivers on the world map, from their chunk's position alone. They don't affect where can be walked or pois (the owner's choice), so pois can stand on them and no `WORLD_MAP_VERSION` bump was needed; but a world map step onto one off a road wades (`movement::world_step_cost`), practising Swimming. In `shared` because they will probably matter to the rules later. Drawn by client `world_map`.
 
 ## Files
 
-- `crates/shared/src/river.rs`: `Rivers`, `River`, constants. Tests.
+- `crates/shared/src/river.rs`: `Rivers`, `River`, constants. Tests. `river/points.rs`: `RiverPoints`, `RIVER_CHUNKS_ROUND`.
 
 ## Public API
 
 - `MAX_LENGTH` (256 steps: how far away a source can matter).
 - `Rivers::new(&WorldParams)`, `.columns()`, `.width()`, `.in_chunk(ChunkPos) -> Option<River>` (traces it each call: callers keep the result).
+- `RiverPoints` (`cover(&Rivers, point)`: traces every chunk within `RIVER_CHUNKS_ROUND` (5) of a point not traced yet, so every river through it is known, whether any were new; `contains(point)`, wrapping; `is_empty`): the river points near where someone walks, gathered as they go, the same on both sides.
 - `River { points, reaches_sea }`: one grid step apart from the source; `x` carries on past the planet's edge without wrapping.
 
 ## Depends on
@@ -18,7 +19,7 @@ Rivers on the world map, from their chunk's position alone. Only something to lo
 
 ## Used by
 
-- Client `common` (`CurrentWorld::rivers`), `world_map` (`KnownRivers`), `minimap` (`MapRivers`, traced again for the maps).
+- `movement` (wading), `pathfinding` (`find_world_path`), `server` (`ServerWorld::rivers`, `river_points`), client `common` (`CurrentWorld::rivers`, `NearRivers`), `player`, `world_map` (`KnownRivers`), `minimap` (`MapRivers`, traced again for the maps).
 
 ## Notes
 

@@ -92,7 +92,14 @@ fn sixteen_cells_cost_what_a_world_map_step_does() {
             wild_step_cost((x, 0), (x + 1, 0), ends, Gait::UNSKILLED)
         })
         .sum();
-    let world = world_step_cost((0, 0), (1, 0), (Some(0), Some(4)), None, Gait::UNSKILLED);
+    let world = world_step_cost(
+        (0, 0),
+        (1, 0),
+        (Some(0), Some(4)),
+        None,
+        false,
+        Gait::UNSKILLED,
+    );
     assert_eq!(walked, 16 * world);
 }
 

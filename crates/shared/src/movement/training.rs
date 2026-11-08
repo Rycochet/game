@@ -18,6 +18,14 @@ pub const RUN_PRACTICE: u32 = 17;
 /// 10 hours of such walking. Twice as much while overloaded.
 pub const WEIGHT_PRACTICE: u32 = 17;
 
+/// Practice for Swimming per step wading through shallows on a level: about
+/// 50% after 10 hours of it.
+pub const SWIM_PRACTICE: u32 = 17;
+
+/// Practice for Swimming per world map step across a river: simple, and not
+/// very effective (owner).
+pub const RIVER_SWIM_PRACTICE: u32 = 4;
+
 /// What a step teaches Weight Training under this load: nothing when light.
 pub fn weight_practice(load: crate::sheet::Load) -> u32 {
     match load {

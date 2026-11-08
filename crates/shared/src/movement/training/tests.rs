@@ -36,10 +36,12 @@ fn movement_practice_curve() {
     // A mountain step of about 4 elevations (100 m).
     let climbing = hours_to(MOVEMENT_SKILLS.climbing, climb_practice(4), &percents);
     let weight = hours_to(MOVEMENT_SKILLS.weight_training, WEIGHT_PRACTICE, &percents);
+    let swimming = hours_to(MOVEMENT_SKILLS.swimming, SWIM_PRACTICE, &percents);
     for (name, hours) in [
         ("Running", &running),
         ("Climbing", &climbing),
         ("Weight Training", &weight),
+        ("Swimming (wading)", &swimming),
     ] {
         let line: Vec<_> = percents
             .iter()
@@ -48,7 +50,7 @@ fn movement_practice_curve() {
             .collect();
         println!("{name}: {}", line.join(", "));
     }
-    for hours in [&running, &climbing, &weight] {
+    for hours in [&running, &climbing, &weight, &swimming] {
         assert!((7.0..14.0).contains(&hours[1]), "50% after {} h", hours[1]);
     }
 }

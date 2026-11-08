@@ -2,7 +2,24 @@ use super::*;
 use crate::skill::Skills;
 
 fn skilled(climbing: u32, running: u32) -> Gait {
-    Gait { climbing, running }
+    Gait {
+        climbing,
+        running,
+        swimming: 0,
+    }
+}
+
+#[test]
+fn swimming_goes_from_an_average_swimmer_to_a_record() {
+    let swimmer = |swimming| Gait {
+        swimming,
+        ..Gait::UNSKILLED
+    };
+    // 50 m a minute against walking's 85: 1.7 times as long.
+    assert_eq!(swimmer(0).swim(1000), 1700);
+    // 120 m a minute: quicker than walking.
+    assert_eq!(swimmer(FULL).swim(1000), 708);
+    assert_eq!(swimmer(FULL / 2).swim_per_mille(), 1204);
 }
 
 #[test]

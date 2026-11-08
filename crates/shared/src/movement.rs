@@ -13,14 +13,19 @@ use crate::world::WorldParams;
 mod flat_ground;
 mod gait;
 mod training;
+mod wading;
 mod wild_heights;
 
 pub use flat_ground::FlatGround;
-pub use gait::{CLIMB_SAVING_PER_MILLE, FULL, Gait, MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS};
-pub use training::{
-    CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RUN_PRACTICE, WEIGHT_PRACTICE,
-    climb_practice, weight_practice,
+pub use gait::{
+    CLIMB_SAVING_PER_MILLE, FULL, Gait, MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS,
+    SWIM_FAST_PER_MILLE, SWIM_SLOW_PER_MILLE,
 };
+pub use training::{
+    CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RIVER_SWIM_PRACTICE, RUN_PRACTICE,
+    SWIM_PRACTICE, WEIGHT_PRACTICE, climb_practice, weight_practice,
+};
+pub use wading::{level_step_cost, wades};
 pub use wild_heights::{WildHeights, wild_step_cost};
 
 /// One step: `dx` and `dy` each -1, 0 or 1, not both 0 (`y` south). Made
@@ -204,36 +209,45 @@ pub fn step_on_world_map(
     allowed.then_some((x, y))
 }
 
-/// What a step on the world map costs, given the elevation at each end and the
-/// road it runs along, if any (`RoadSteps::kind_of`): its distance, plus the
-/// slope (less with `gait`'s Climbing), divided by the road's speed. Water
-/// counts as flat. Routes are found by this; the time a step takes is
-/// `world_step_time`.
+/// What a step on the world map costs, given the elevation at each end, the
+/// road it runs along, if any (`RoadSteps::kind_of`), and whether it lands on
+/// a river (`river::RiverPoints`): its distance, plus the slope (less with
+/// `gait`'s Climbing), waded across a river off the road (`Gait::swim`), and
+/// divided by the road's speed along one. Water counts as flat. Routes are
+/// found by this; the time a step takes is `world_step_time`.
 pub fn world_step_cost(
     from: (i64, i64),
     to: (i64, i64),
     elevations: (Option<i32>, Option<i32>),
     road: Option<RoadKind>,
+    river: bool,
     gait: Gait,
 ) -> u32 {
     let cost = step_cost(from, to) + gait.climb(climbed(elevations) * SLOPE_COST);
     match road {
         Some(kind) => cost * 100 / kind.speed_percent(),
+        None if river => gait.swim(cost),
         None => cost,
     }
 }
 
 /// How long a step on the world map takes: `world_step_cost`, quicker with
-/// `gait`'s Running. Running is left out of routes, as it speeds every step
-/// alike and would make the search's estimate too high.
+/// `gait`'s Running unless wading. Running is left out of routes, as it speeds
+/// every step alike and would make the search's estimate too high.
 pub fn world_step_time(
     from: (i64, i64),
     to: (i64, i64),
     elevations: (Option<i32>, Option<i32>),
     road: Option<RoadKind>,
+    river: bool,
     gait: Gait,
 ) -> u32 {
-    gait.run(world_step_cost(from, to, elevations, road, gait))
+    let cost = world_step_cost(from, to, elevations, road, river, gait);
+    if river && road.is_none() {
+        cost
+    } else {
+        gait.run(cost)
+    }
 }
 
 /// How many elevations a step climbs or descends: none to or from water.
