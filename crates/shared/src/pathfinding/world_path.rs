@@ -4,7 +4,7 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 use super::{DIRECTIONS, Path, distance_squared, estimate};
-use crate::movement::{Step, WorldConditions, WorldGround, world_step_cost};
+use crate::movement::{Gait, Step, WorldConditions, WorldGround, world_step_cost};
 use crate::road::{FASTEST_PERCENT, RoadSteps};
 
 /// How far a route on the world map may go from where it starts, each way, in
@@ -13,7 +13,7 @@ use crate::road::{FASTEST_PERCENT, RoadSteps};
 pub const WORLD_ROUTE_REACH: i64 = 320;
 
 /// The quickest route across the world map in these `conditions`: legal
-/// steps, slopes costing extra, steps along `roads` less. If the goal can't be reached within
+/// steps, slopes costing extra, steps along `roads` less, slopes by `gait`'s Climbing. If the goal can't be reached within
 /// `WORLD_ROUTE_REACH`, the route goes to the nearest point that can,
 /// straight-line, so check `reached`.
 pub fn find_world_path(
@@ -22,6 +22,7 @@ pub fn find_world_path(
     roads: &RoadSteps,
     from: (i64, i64),
     to: (i64, i64),
+    gait: Gait,
 ) -> Path {
     /// Not looked at yet (a height the ground never has, water being `None`).
     const UNKNOWN: Option<i32> = Some(i32::MIN);
@@ -81,7 +82,7 @@ pub fn find_world_path(
                 continue;
             }
             let road = roads.kind_of(at, next);
-            let next_cost = cost + world_step_cost(at, next, (here, there), road);
+            let next_cost = cost + world_step_cost(at, next, (here, there), road, gait);
             if next_cost >= best[index(next)] {
                 continue;
             }

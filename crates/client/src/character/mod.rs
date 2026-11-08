@@ -4,11 +4,12 @@
 use bevy::prelude::*;
 use shared::energy::NORMAL_SPEED;
 use shared::item::Inventory;
+use shared::movement::Gait;
 use shared::protocol::ServerMessage;
 use shared::sheet::{Row, Sheet};
 use shared::vitals::VitalNow;
 
-use crate::common::{CarryLimit, OwnVitals, PlayerSpeed, SheetText};
+use crate::common::{CarryLimit, OwnVitals, PlayerGait, PlayerSpeed, SheetText};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 
@@ -39,13 +40,15 @@ fn read_server(mut from_server: MessageReader<FromServer>, mut sheet: ResMut<Cha
     }
 }
 
-/// What the player's speed comes to, for moving them.
+/// What the player's speed and gait come to, for moving them.
 fn publish_speed(
     sheet: Res<CharacterSheet>,
     carried: Res<Carried>,
     mut speed: ResMut<PlayerSpeed>,
+    mut gait: ResMut<PlayerGait>,
 ) {
     speed.set_if_neq(PlayerSpeed(sheet.0.speed(&carried.0)));
+    gait.set_if_neq(PlayerGait(Gait::of(&sheet.0.skills)));
 }
 
 /// The most the player can carry, for the weight under the inventory.

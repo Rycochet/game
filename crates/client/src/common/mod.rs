@@ -52,7 +52,7 @@ mod world;
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{
     AbilitiesPage, CancelledEnergy, CarryLimit, MakesCharacters, MakingCharacter, Other,
-    PlayerSpeed, SheetText, SkillsPage, SpentEnergy,
+    PlayerGait, PlayerSpeed, SheetText, SkillsPage, SpentEnergy,
 };
 pub use debug::{
     CreateMobOrder, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GodMode, InspectMob,
@@ -139,6 +139,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ViewFacing>()
             .init_resource::<ClickMode>()
             .init_resource::<PlayerSpeed>()
+            .init_resource::<PlayerGait>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
             .init_resource::<MakesCharacters>()

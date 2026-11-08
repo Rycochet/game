@@ -10,6 +10,14 @@ use crate::road::RoadKind;
 use crate::surface::Surface;
 use crate::world::WorldParams;
 
+mod gait;
+mod training;
+
+pub use gait::{CLIMB_SAVING_PER_MILLE, FULL, Gait, MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS};
+pub use training::{
+    CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RUN_PRACTICE, climb_practice,
+};
+
 /// One step: `dx` and `dy` each -1, 0 or 1, not both 0 (`y` south). Made
 /// only through `Step::new`, also when read from a message, so a step is
 /// never longer.
@@ -190,21 +198,41 @@ pub fn step_on_world_map(
 
 /// What a step on the world map costs, given the elevation at each end and the
 /// road it runs along, if any (`RoadSteps::kind_of`): its distance, plus the
-/// slope, divided by the road's speed. Water counts as flat.
+/// slope (less with `gait`'s Climbing), divided by the road's speed. Water
+/// counts as flat. Routes are found by this; the time a step takes is
+/// `world_step_time`.
 pub fn world_step_cost(
     from: (i64, i64),
     to: (i64, i64),
     elevations: (Option<i32>, Option<i32>),
     road: Option<RoadKind>,
+    gait: Gait,
 ) -> u32 {
-    let slope = match elevations {
-        (Some(a), Some(b)) => a.abs_diff(b),
-        _ => 0,
-    };
-    let cost = step_cost(from, to) + slope * SLOPE_COST;
+    let cost = step_cost(from, to) + gait.climb(climbed(elevations) * SLOPE_COST);
     match road {
         Some(kind) => cost * 100 / kind.speed_percent(),
         None => cost,
+    }
+}
+
+/// How long a step on the world map takes: `world_step_cost`, quicker with
+/// `gait`'s Running. Running is left out of routes, as it speeds every step
+/// alike and would make the search's estimate too high.
+pub fn world_step_time(
+    from: (i64, i64),
+    to: (i64, i64),
+    elevations: (Option<i32>, Option<i32>),
+    road: Option<RoadKind>,
+    gait: Gait,
+) -> u32 {
+    gait.run(world_step_cost(from, to, elevations, road, gait))
+}
+
+/// How many elevations a step climbs or descends: none to or from water.
+pub fn climbed(elevations: (Option<i32>, Option<i32>)) -> u32 {
+    match elevations {
+        (Some(a), Some(b)) => a.abs_diff(b),
+        _ => 0,
     }
 }
 

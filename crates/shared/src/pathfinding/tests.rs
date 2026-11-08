@@ -3,8 +3,8 @@ use crate::dungeon::Cell;
 use crate::dungeon::Level;
 use crate::movement::step_on_world_map;
 use crate::movement::{
-    DIAGONAL_COST, STRAIGHT_COST, Step, WorldConditions, WorldGround, step_cost, step_on_level,
-    world_step_cost,
+    DIAGONAL_COST, Gait, STRAIGHT_COST, Step, WorldConditions, WorldGround, step_cost,
+    step_on_level, world_step_cost,
 };
 use crate::rng::Seed;
 use crate::road::RoadSteps;
@@ -242,7 +242,7 @@ fn assert_walkable_on_world_map(ground: &WorldGround, from: (i64, i64), path: &P
             ground.elevation(at.0, at.1, water()),
             ground.elevation(cell.0, cell.1, water()),
         );
-        cost += world_step_cost(at, cell, ends, None);
+        cost += world_step_cost(at, cell, ends, None, Gait::UNSKILLED);
         at = cell;
     }
     assert_eq!(cost, path.cost);
@@ -280,23 +280,43 @@ fn world_routes_go_round_a_summit() {
             }
         }
     }
-    let path = find_world_path(
-        &ground,
-        conditions,
-        &RoadSteps::default(),
-        (peak.0 - 150, peak.1),
-        (peak.0 + 150, peak.1),
+    let highest = |gait| {
+        let path = find_world_path(
+            &ground,
+            conditions,
+            &RoadSteps::default(),
+            (peak.0 - 150, peak.1),
+            (peak.0 + 150, peak.1),
+            gait,
+        );
+        assert!(path.reached);
+        path.cells.iter().map(|&p| height(p)).fold(0.0, f64::max)
+    };
+    let walker = highest(Gait::UNSKILLED);
+    assert!(walker < top - 5.0, "{walker} against a summit of {top}");
+    // A climber at 100% goes much nearer the top.
+    let mut skills = crate::skill::Skills::default();
+    let climbing = crate::skill::SkillId::find("athletics/climbing").unwrap();
+    skills.practise(climbing, 1_000_000);
+    let climber = highest(Gait::of(&skills));
+    assert!(
+        climber > walker + 3.0,
+        "climber {climber}, walker {walker}, summit {top}"
     );
-    assert!(path.reached);
-    let highest = path.cells.iter().map(|&p| height(p)).fold(0.0, f64::max);
-    assert!(highest < top - 5.0, "{highest} against a summit of {top}");
 }
 
 #[test]
 fn world_routes_go_round_water() {
     let ground = ground();
     let (from, to) = across_water(&ground);
-    let path = find_world_path(&ground, water(), &RoadSteps::default(), from, to);
+    let path = find_world_path(
+        &ground,
+        water(),
+        &RoadSteps::default(),
+        from,
+        to,
+        Gait::UNSKILLED,
+    );
     assert_walkable_on_world_map(&ground, from, &path);
     assert!(
         path.cells
@@ -314,7 +334,14 @@ fn world_routes_stop_at_the_nearest_shore_for_a_click_on_water() {
     let ground = ground();
     let (from, to) = across_water(&ground);
     let wet = (to.0 - 40, to.1);
-    let path = find_world_path(&ground, water(), &RoadSteps::default(), from, wet);
+    let path = find_world_path(
+        &ground,
+        water(),
+        &RoadSteps::default(),
+        from,
+        wet,
+        Gait::UNSKILLED,
+    );
     assert!(!path.reached);
     assert_walkable_on_world_map(&ground, from, &path);
     let end = path.cells.last().copied().unwrap_or(from);
@@ -326,7 +353,14 @@ fn world_routes_stay_within_reach_and_repeat_exactly() {
     let ground = ground();
     let (from, _) = across_water(&ground);
     let far = (from.0 + 10 * WORLD_ROUTE_REACH, from.1);
-    let path = find_world_path(&ground, water(), &RoadSteps::default(), from, far);
+    let path = find_world_path(
+        &ground,
+        water(),
+        &RoadSteps::default(),
+        from,
+        far,
+        Gait::UNSKILLED,
+    );
     assert!(!path.reached);
     assert!(
         path.cells
@@ -335,7 +369,14 @@ fn world_routes_stay_within_reach_and_repeat_exactly() {
     );
     assert_eq!(
         path,
-        find_world_path(&ground, water(), &RoadSteps::default(), from, far)
+        find_world_path(
+            &ground,
+            water(),
+            &RoadSteps::default(),
+            from,
+            far,
+            Gait::UNSKILLED
+        )
     );
 }
 
@@ -344,7 +385,14 @@ fn world_routes_start_from_water_too() {
     let ground = ground();
     let (from, to) = across_water(&ground);
     let wet = (from.0 + 20, from.1);
-    let path = find_world_path(&ground, water(), &RoadSteps::default(), wet, to);
+    let path = find_world_path(
+        &ground,
+        water(),
+        &RoadSteps::default(),
+        wet,
+        to,
+        Gait::UNSKILLED,
+    );
     assert_walkable_on_world_map(&ground, wet, &path);
     assert!(!path.cells.is_empty());
 }

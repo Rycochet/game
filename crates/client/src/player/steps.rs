@@ -2,14 +2,14 @@
 
 use bevy::prelude::*;
 use shared::energy::{ACTION_TICKS_PER_SECOND, site_step_cost};
-use shared::movement::{step_on_level, step_on_world_map, world_step_cost};
+use shared::movement::{step_on_level, step_on_world_map, world_step_time};
 
 use super::{
     MOST_STEPS_WAITING, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick, enemy_cells,
 };
 use crate::common::{
     CancelledEnergy, CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition,
-    Other, PlayerSpeed, SpentEnergy,
+    Other, PlayerGait, PlayerSpeed, SpentEnergy,
 };
 
 /// Takes the steps asked for this frame, in order: in a dungeon, only onto
@@ -27,6 +27,7 @@ pub(super) fn take_steps(
     clock: Res<GameClock>,
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
+    gait: Res<PlayerGait>,
     mut energy: ResMut<PlayerEnergy>,
     mut stepped: MessageWriter<Stepped>,
     god: Res<GodMode>,
@@ -83,11 +84,12 @@ pub(super) fn take_steps(
                     world.ground.elevation(from.0, from.1, conditions),
                     world.ground.elevation(x, y, conditions),
                 );
-                world_step_cost(
+                world_step_time(
                     from,
                     (x, y),
                     ends,
                     world.roads.steps().kind_of(from, (x, y)),
+                    gait.0,
                 )
             }),
         };

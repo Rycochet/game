@@ -13,11 +13,11 @@ Finding a way across one level of a site or the world map: the quickest route of
 - `Path { steps, cells, cost, reached }`: the `Step`s to take, where each lands (not including the start), the time it takes in `movement::step_cost` units, and whether it ends on the goal.
 - `find_path(level, from, to, max_cost, allowed) -> Path`: the quickest route, landing only on cells `allowed` accepts. If the goal can't be reached (or is past `max_cost`), goes to the reachable cell nearest it in a straight line: check `reached`.
 - `straighten(level, from, &path, allowed) -> Path`: the same route, as quick and as legal, with its diagonals spread along each stretch instead of bunched. Separate because only looks care: skip it for anything that recalculates often.
-- `find_world_path(ground, conditions, roads, from, to) -> Path`: the same on the world map (`movement::WorldGround`, `WorldConditions`, `road::RoadSteps`), with slopes costing extra and steps along roads less, searching only within `WORLD_ROUTE_REACH` (320 points each way, more than the view shows). Otherwise goes to the nearest point it can reach: check `reached`.
+- `find_world_path(ground, conditions, roads, from, to, gait) -> Path`: the same on the world map (`movement::WorldGround`, `WorldConditions`, `road::RoadSteps`), with slopes costing extra (less with `gait`'s Climbing: a climber goes nearer summits, tested) and steps along roads less, searching only within `WORLD_ROUTE_REACH` (320 points each way, more than the view shows). Otherwise goes to the nearest point it can reach: check `reached`.
 
 ## Depends on
 
-- `shared::dungeon` (`Level`), `shared::road` (`RoadSteps`, `FASTEST_PERCENT`), `shared::movement` (`Step`, `step_on_level`, `mob_step_on_level`, `mob_can_stand`, `step_cost`, `WorldGround`, `world_step_cost`, the costs).
+- `shared::dungeon` (`Level`), `shared::road` (`RoadSteps`, `FASTEST_PERCENT`), `shared::movement` (`Step`, `step_on_level`, `mob_step_on_level`, `mob_can_stand`, `step_cost`, `WorldGround`, `world_step_cost`, `Gait`, the costs).
 
 ## Used by
 
