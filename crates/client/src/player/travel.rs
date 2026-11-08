@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::energy::{NORMAL_SPEED, SITE_STEP_SCALE};
 use shared::movement::{
-    Step, level_step_cost, step_cost, step_on_level, step_on_world_map, wades, world_step_time,
+    Step, level_step_cost, step_cost, step_on_level_by, step_on_world_map_by, wades,
+    world_step_time,
 };
 use shared::pathfinding::{Path, find_path_by, find_world_path, straighten_by};
 use shared::sheet::Feeling;
@@ -50,10 +51,10 @@ pub(super) fn travel(
         let wading = wades(&dungeon.level, to);
         level_step_cost(from, to, heights.ends(from, to), wading, gait.0)
     };
-    // The least a level step can cost against walking: wading, for a good
-    // swimmer.
-    let cheapest = gait.0.swim_per_mille();
     let rivers = &rivers.points;
+    // A world map step swims the sea, or wades a river.
+    let wet =
+        |to: (i64, i64), ends: (Option<i32>, Option<i32>)| ends.1.is_none() || rivers.contains(to);
     let enemies = enemy_cells(&others, *god);
     // Only through cells the player has seen, so that a route gives nothing away
     // (and memory may be out of date: the server checks), round enemies, and
@@ -95,9 +96,8 @@ pub(super) fn travel(
             }
             None => {
                 let known = route_to(to);
-                let path =
-                    find_path_by(&dungeon.level, from, to, None, known, level_cost, cheapest);
-                straighten_by(&dungeon.level, from, &path, known, level_cost)
+                let path = find_path_by(&dungeon.level, from, to, None, known, level_cost, gait.0);
+                straighten_by(&dungeon.level, from, &path, known, level_cost, gait.0)
             }
         };
         travel.goal = to;
@@ -149,7 +149,7 @@ pub(super) fn travel(
                         ground.elevation(next.0, next.1, conditions),
                     );
                     let road = roads.kind_of(at, next);
-                    world_step_time(at, next, ends, road, rivers.contains(next), gait.0) as f64
+                    world_step_time(at, next, ends, road, wet(next, ends), gait.0) as f64
                         / step_cost(at, next) as f64
                 }
                 None if next != at => level_cost(at, next) as f64 / step_cost(at, next) as f64,
@@ -168,9 +168,9 @@ pub(super) fn travel(
                 // The route was legal when it was found, but cells can change.
                 let legal = match ground {
                     Some((ground, conditions, _)) => {
-                        step_on_world_map(ground, conditions, at, step)
+                        step_on_world_map_by(ground, conditions, at, step, gait.0)
                     }
-                    None => step_on_level(&dungeon.level, at, step),
+                    None => step_on_level_by(&dungeon.level, at, step, gait.0),
                 };
                 let in_the_way = enemies.contains(&next);
                 if in_the_way && ground.is_none() {
@@ -183,10 +183,11 @@ pub(super) fn travel(
                         None,
                         known,
                         level_cost,
-                        cheapest,
+                        gait.0,
                     );
                     let path = Path {
-                        cells: straighten_by(&dungeon.level, at, &path, known, level_cost).cells,
+                        cells: straighten_by(&dungeon.level, at, &path, known, level_cost, gait.0)
+                            .cells,
                         ..path
                     };
                     travel.route_arrives = path.reached;
@@ -232,7 +233,7 @@ pub(super) fn travel(
                             next,
                             ends,
                             roads.kind_of(at, next),
-                            rivers.contains(next),
+                            wet(next, ends),
                             gait.0,
                         )
                     }

@@ -150,3 +150,15 @@ fn world_map_rivers_are_waded() {
         assert!(test.client.sheet.skills.practice(swimming) > before);
     }
 }
+
+#[test]
+fn the_sea_is_swum() {
+    let mut test = TestClient::new();
+    let gait = shared::movement::Gait::of(&test.client.sheet.skills);
+    let (from, to) = ((0, 0), (1, 0));
+    let (stayed, cost) = test
+        .client
+        .world_step(&mut test.world, (from, to), (Some(8), None));
+    assert!(stayed);
+    assert_eq!(cost, gait.swim(70), "swum, and not run");
+}

@@ -6,7 +6,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::Sight;
-use shared::movement::{Step, step_on_level};
+use shared::movement::{Gait, Step, step_on_level_by};
 use shared::poi::Poi;
 use shared::protocol::SeenStairs;
 use shared::site::{Exit, Site, SiteLevel};
@@ -122,9 +122,10 @@ impl Visit {
             .expect("a site has a room")
     }
 
-    /// Where a step from here lands, if it can be taken.
-    pub(crate) fn landing(&self, step: Step) -> Option<(i64, i64)> {
-        step_on_level(&self.level.level, self.position, step)
+    /// Where a step from here lands, if it can be taken by someone with this
+    /// `gait` (a good swimmer swims water instead of jumping it).
+    pub(crate) fn landing(&self, step: Step, gait: Gait) -> Option<(i64, i64)> {
+        step_on_level_by(&self.level.level, self.position, step, gait)
     }
 
     /// Which level of the site it is.

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Sight};
-use shared::movement::{Step, step_on_level};
+use shared::movement::{Gait, Step, step_on_level_by};
 use shared::protocol::{ServerMessage, level_chunk};
 
 use super::update_sight;
@@ -13,10 +13,11 @@ use crate::connections::Client;
 /// walkable cell (otherwise `Position` puts the client right), then sends
 /// what they now see or are about to.
 pub(crate) fn stepped(client: &mut Client, step: Step) -> bool {
+    let gait = Gait::of(&client.sheet.skills);
     let Some(visit) = &mut client.visit else {
         return true;
     };
-    let Some(position) = step_on_level(&visit.level.level, visit.position, step) else {
+    let Some(position) = step_on_level_by(&visit.level.level, visit.position, step, gait) else {
         let (x, y) = step.from(visit.position);
         info!("Refused a step onto an unwalkable cell ({x}, {y})");
         return true;

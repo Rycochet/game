@@ -144,10 +144,11 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
             let from = visit.position();
             let place = visit.population();
             let wild = visit.is_wilderness();
-            let landing = visit.landing(step);
+            let gait = shared::movement::Gait::of(&client.sheet.skills);
+            let landing = visit.landing(step, gait);
             let wading = landing.is_some_and(|at| wades(visit.cells(), at));
             // Someone who won't move aside is in the way; anyone else swaps places.
-            if let Some(to) = visit.landing(step) {
+            if let Some(to) = landing {
                 let kind = client.inventory.creature;
                 let character = client.character_id.as_ref();
                 if !client.god_mode && world.enemy_at(place, to, kind, character) {

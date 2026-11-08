@@ -2,7 +2,7 @@
 
 use super::Path;
 use crate::dungeon::Level;
-use crate::movement::{Step, step_cost, step_on_level};
+use crate::movement::{Gait, Step, step_cost, step_on_level_by};
 
 /// The same route, as quick and as legal, with its diagonals spread out along
 /// each stretch instead of bunched together, which looks like walking in a
@@ -15,17 +15,19 @@ pub fn straighten(
     path: &Path,
     allowed: impl Fn(i64, i64) -> bool,
 ) -> Path {
-    straighten_by(level, from, path, allowed, step_cost)
+    straighten_by(level, from, path, allowed, step_cost, Gait::UNSKILLED)
 }
 
-/// `straighten` for a route found by `find_path_by`, with the same `cost_of`,
-/// so a line replaces part of it only if it costs exactly the same.
+/// `straighten` for a route found by `find_path_by`, with the same `cost_of`
+/// and `gait`, so a line replaces part of it only if it is as legal and costs
+/// exactly the same.
 pub fn straighten_by(
     level: &Level,
     from: (i64, i64),
     path: &Path,
     allowed: impl Fn(i64, i64) -> bool,
     cost_of: impl Fn((i64, i64), (i64, i64)) -> u32,
+    gait: Gait,
 ) -> Path {
     let mut points = vec![from];
     points.extend_from_slice(&path.cells);
@@ -53,8 +55,16 @@ pub fn straighten_by(
         let replaced = (anchor + 2..=stretch_end).rev().find_map(|end| {
             let line = line_cells(points[anchor], points[end]);
             let budget = cost_to[end] - cost_to[anchor];
-            line_is_as_good(level, points[anchor], &line, budget, &allowed, &cost_of)
-                .then_some((end, line))
+            line_is_as_good(
+                level,
+                points[anchor],
+                &line,
+                budget,
+                &allowed,
+                &cost_of,
+                gait,
+            )
+            .then_some((end, line))
         });
         match replaced {
             Some((end, line)) => {
@@ -97,6 +107,7 @@ pub(super) fn line_is_as_good(
     budget: u32,
     allowed: &impl Fn(i64, i64) -> bool,
     cost_of: &impl Fn((i64, i64), (i64, i64)) -> u32,
+    gait: Gait,
 ) -> bool {
     let mut at = from;
     let mut cost = 0;
@@ -104,7 +115,7 @@ pub(super) fn line_is_as_good(
         let Some(step) = Step::new(cell.0 - at.0, cell.1 - at.1) else {
             return false;
         };
-        if step_on_level(level, at, step) != Some(cell) || !allowed(cell.0, cell.1) {
+        if step_on_level_by(level, at, step, gait) != Some(cell) || !allowed(cell.0, cell.1) {
             return false;
         }
         cost += cost_of(at, cell);

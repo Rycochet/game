@@ -243,7 +243,9 @@ fn assert_walkable_on_world_map(ground: &WorldGround, from: (i64, i64), path: &P
             ground.elevation(at.0, at.1, water()),
             ground.elevation(cell.0, cell.1, water()),
         );
-        cost += world_step_cost(at, cell, ends, None, false, Gait::UNSKILLED);
+        // Steps into water are swum.
+        let wet = ends.1.is_none();
+        cost += world_step_cost(at, cell, ends, None, wet, Gait::UNSKILLED);
         at = cell;
     }
     assert_eq!(cost, path.cost);
@@ -474,10 +476,18 @@ fn routes_go_round_costly_ground_when_that_is_quicker() {
         let ridge = to.0 == 10 && to.1 < 15;
         step_cost(from, to) + if ridge { 2000 } else { 0 }
     };
-    let path = find_path_by(&level, (5, 2), (15, 2), None, anywhere, cost_of, 1000);
+    let path = find_path_by(
+        &level,
+        (5, 2),
+        (15, 2),
+        None,
+        anywhere,
+        cost_of,
+        Gait::UNSKILLED,
+    );
     assert!(path.reached);
     assert!(path.cells.iter().all(|&(x, y)| x != 10 || y >= 15));
-    let straight = straighten_by(&level, (5, 2), &path, anywhere, cost_of);
+    let straight = straighten_by(&level, (5, 2), &path, anywhere, cost_of, Gait::UNSKILLED);
     assert_eq!(straight.cost, path.cost, "straightening keeps it as quick");
     assert!(straight.cells.iter().all(|&(x, y)| x != 10 || y >= 15));
     // Plain distance would go straight across.
@@ -488,16 +498,19 @@ fn routes_go_round_costly_ground_when_that_is_quicker() {
 #[test]
 fn routes_take_ground_quicker_than_walking_when_told_it_can_be() {
     let level = empty_room();
-    // A strip along y = 10 a good swimmer crosses at half the cost.
+    // A strip along y = 10 a record swimmer crosses quicker than walking.
+    let mut skills = crate::skill::Skills::default();
+    skills.practise(crate::movement::MOVEMENT_SKILLS.swimming, 1_000_000);
+    let swimmer = Gait::of(&skills);
     let cost_of = |from: (i64, i64), to: (i64, i64)| {
         let quick = from.1 == 10 && to.1 == 10;
         if quick {
-            step_cost(from, to) / 2
+            swimmer.swim(step_cost(from, to))
         } else {
             step_cost(from, to)
         }
     };
-    let path = find_path_by(&level, (0, 9), (19, 9), None, anywhere, cost_of, 500);
+    let path = find_path_by(&level, (0, 9), (19, 9), None, anywhere, cost_of, swimmer);
     assert!(path.reached);
     assert!(path.cells.iter().filter(|&&(_, y)| y == 10).count() > 10);
 }

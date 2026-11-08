@@ -123,7 +123,7 @@ Built (2026-11-08) for disuse under Melee, opposition and dying: `shared/skill.m
 
 ## Movement skills (owner, 2026-11-08)
 
-Speeds are ratios to an average walker (85 m a minute), with 100% at world-record level; each effect grows in a straight line with the node's own value. Practice comes from moving, at most once per skill every 5 seconds. Built: Climbing and Running on the world map, Climbing in the wilderness, Weight Training, and Swimming by wading shallows and rivers (`shared/movement.md`). Planned, one PR each, in order:
+Speeds are ratios to an average walker (85 m a minute), with 100% at world-record level; each effect grows in a straight line with the node's own value. Practice comes from moving, at most once per skill every 5 seconds. Built: Climbing and Running on the world map, Climbing in the wilderness, Weight Training, and Swimming by wading shallows and rivers, and from 50% swimming deep water and the sea near the coast (`shared/movement.md`). Planned, one PR each, in order:
 
 - Climbing: the slope's cost down to a tenth at 100%; only steps changing height by more than 25 m teach it. In the wilderness (built), slopes from the world points' heights, blended in 16ths, cost and teach as the world map does for the same height.
 - Running: world map only, walking at 0% to a marathon record's pace (about 350 m a minute, 4.1×) at 100%.

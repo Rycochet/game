@@ -27,6 +27,14 @@ pub const SWIM_SLOW_PER_MILLE: u32 = 1700;
 /// than walking.
 pub const SWIM_FAST_PER_MILLE: u32 = 708;
 
+/// Swimming from which deep water can be swum: water on a level, and the sea
+/// near the coast on the world map (50%).
+pub const DEEP_WATER_FROM: u32 = 5_000;
+
+/// How deep a sea 100% Swimming can cross on the world map, in the surface's
+/// height units (100 m): the continental shelf, never the deep ocean beyond.
+pub const DEEPEST_SEA: f64 = 2.0;
+
 /// The movement skills' nodes, found once (`MOVEMENT_SKILLS`).
 pub struct MovementSkills {
     pub climbing: SkillId,
@@ -74,6 +82,21 @@ impl Gait {
     pub fn swim_per_mille(self) -> u32 {
         let gained = (SWIM_SLOW_PER_MILLE - SWIM_FAST_PER_MILLE) * self.swimming / FULL;
         SWIM_SLOW_PER_MILLE - gained
+    }
+
+    /// Whether deep water can be swum (`DEEP_WATER_FROM`).
+    pub fn swims_deep(self) -> bool {
+        self.swimming >= DEEP_WATER_FROM
+    }
+
+    /// How deep a sea can be crossed on the world map, in height units: none
+    /// below `DEEP_WATER_FROM`, then up to `DEEPEST_SEA` at 100%.
+    pub fn deepest_sea(self) -> f64 {
+        if !self.swims_deep() {
+            return -1.0;
+        }
+        let past = f64::from(self.swimming - DEEP_WATER_FROM);
+        DEEPEST_SEA * past / f64::from(FULL - DEEP_WATER_FROM)
     }
 
     /// What a step costing `cost` on land comes to, waded. At least 1.
