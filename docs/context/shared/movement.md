@@ -4,7 +4,7 @@ How characters move: one step at a time to one of the 8 neighbouring grid points
 
 ## Files
 
-- `crates/shared/src/movement.rs`: `Step`, `step_on_level`, `mob_step_on_level`, `mob_can_stand`, `step_cost`, `WorldGround`, `step_on_world_map`, `world_step_cost`, `steps_between`. Tests: only single steps exist (also when decoded from a message), steps on a level need walkable cells, only players step onto World Gates, one cell of liquid is jumped, costs follow distance, water stops world map steps but not out of it, slopes cost extra, steps between points add up.
+- `crates/shared/src/movement.rs`: `Step`, `step_on_level`, `mob_step_on_level`, `mob_can_stand`, `step_cost`, `WorldGround`, `step_on_world_map`, `world_step_cost`, `world_step_time`, `climbed`, `steps_between`. In `movement/`: `gait.rs` (`Gait`, `MOVEMENT_SKILLS`), `training.rs` (practice from moving). Tests: only single steps exist (also when decoded from a message), steps on a level need walkable cells, only players step onto World Gates, one cell of liquid is jumped, costs follow distance, water stops world map steps but not out of it, slopes cost extra, steps between points add up.
 
 ## Public API
 
@@ -16,12 +16,15 @@ How characters move: one step at a time to one of the 8 neighbouring grid points
 - `past_the_ice(width, y)` (the same without a `WorldGround`, for `wilderness`), `WorldGround::past_the_ice(y)`: past `climate::ICE_LATITUDE` (80°, 2/9 of the width from the equator), where nobody may step, even from open water, and no poi stands (owner: the map stretches badly near the poles); not in the showcase plain. `step_on_world_map` and `pathfinding::find_world_path` refuse it.
 - `WorldGround::new(&WorldParams)`, `.elevation(x, y, conditions) -> Option<i32>` (`None` past the ice too): in whole quarters of `Surface::broad_height`, `None` for open water (sea frozen by the climate, `SurfaceSample::is_frozen`, counts as ground when `ice`).
 - `step_on_world_map(ground, conditions, from, step) -> Option<(x, y)>`: onto dry ground or ice; anyone standing in open water may step anywhere, so nobody caught by the tide, a thaw or put there is stuck.
-- `world_step_cost(from, to, elevations, road) -> u32`: `step_cost` plus `SLOPE_COST` (45) per elevation climbed or descended, water counting as flat, all divided by the road's speed when the step runs along one (`road::RoadSteps::kind_of`; `None` off roads).
+- `world_step_cost(from, to, elevations, road, gait) -> u32`: `step_cost` plus `SLOPE_COST` (45) per elevation climbed or descended (`climbed`), water counting as flat, the slope cut by `gait`'s Climbing, all divided by the road's speed when the step runs along one (`road::RoadSteps::kind_of`; `None` off roads). What routes are found by.
+- `world_step_time(...)`: the same, quicker by `gait`'s Running: what a step takes, charged by the server and paced by the client. Running is left out of routes, as it speeds every step alike and would push the search's estimate above the real cost.
+- `Gait` (`UNSKILLED`, `of(&Skills)`, `climb(slope_cost)`, `run(cost)`): Climbing and Running's values, up to `FULL` (100%; specialised past it changes nothing more). 100% Climbing takes `CLIMB_SAVING_PER_MILLE` (900) off slopes, so routes go almost straight over mountains; 100% Running is `RUN_TENTHS` (4.1) times as fast as walking on the world map, a marathon record's 350 m a minute against walking's 85 (owner, 2026-11-08). `MOVEMENT_SKILLS`: where the two are in the tree.
+- Training: `RUN_PRACTICE` (17) per world map step, `climb_practice(elevations)` (`CLIMB_PRACTICE_PER_ELEVATION`, 6, per elevation beyond the first, so ground within 25 m a step teaches nothing; at most `MOST_CLIMB_PRACTICE`, 40), given at most once per skill every 5 seconds by the server. A test prints the curves (`movement_practice_curve`, `--nocapture`): 50% after about 10 hours of travel, 100% after about 80.
 - `steps_between(from, to) -> Vec<Step>`: diagonal first, then straight (dev tools, tests).
 
 ## Depends on
 
-- `shared::dungeon` (`Level`), `shared::road` (`RoadKind`), `shared::surface`, `shared::world`, `serde`.
+- `shared::dungeon` (`Level`), `shared::road` (`RoadKind`), `shared::skill` (`Skills`, `SkillId`), `shared::surface`, `shared::world`, `serde`.
 
 ## Used by
 
@@ -29,6 +32,6 @@ How characters move: one step at a time to one of the 8 neighbouring grid points
 
 ## Notes
 
-- Time for steps is `shared::energy`, using the costs here. A limit comes with game time (turns or a step budget), in `step_cost` units. So slopes only steer routes and slow what the client shows of click travel; keyboard steps aren't slowed.
+- Time for steps is `shared::energy`, using the costs here: on the world map every step, by keyboard or click travel, is charged its `world_step_time`, slopes and all. Wilderness and site steps are flat for now (`energy::site_step_cost`).
 - Walkable ground follows the tide, by whole game hours, matching what the client draws. If an `Hour` message crosses a step in flight, that step may be refused and put right.
 - Climbs count on broad height, not the full surface: tried on real mountains, a higher flat cost or one growing with steepness on the full surface barely changed routes, because small bumps cost the same on any route and drown out the mountain. Tune with `SLOPE_COST` (its comment records what was seen at each value).

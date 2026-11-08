@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::energy::{CHANGE_MAP_COST, site_step_cost};
-use shared::movement::{Step, world_step_cost};
+use shared::movement::{Gait, Step, climbed, world_step_time};
 use shared::protocol::ServerMessage;
 use shared::world::WorldId;
 
@@ -14,6 +14,8 @@ use crate::accounts::Accounts;
 use crate::ground::{self};
 use crate::sites::{self, Visit};
 use crate::{ServerOptions, ServerWorld, ServerWorlds, gates, hall, world_map};
+
+mod training;
 
 /// Answers every message that has arrived, and forgets clients that have
 /// gone (or were refused), saving them first.
@@ -172,7 +174,10 @@ pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Ste
                 world.ground.elevation(to.0, to.1, conditions),
             );
             let road = world.road_steps.kind_of(from, to);
-            (stayed, world_step_cost(from, to, ends, road))
+            let cost = world_step_time(from, to, ends, road, Gait::of(&client.sheet.skills));
+            let now = world.action_clock.ticks();
+            let stayed = stayed && client.practise_moving(climbed(ends), now);
+            (stayed, cost)
         }
     }
 }

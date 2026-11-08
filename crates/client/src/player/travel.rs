@@ -4,7 +4,7 @@ use bevy::math::DVec2;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::energy::{NORMAL_SPEED, site_step_cost};
-use shared::movement::{Step, step_cost, step_on_level, step_on_world_map, world_step_cost};
+use shared::movement::{Step, step_cost, step_on_level, step_on_world_map, world_step_time};
 use shared::pathfinding::{Path, find_path, find_world_path, straighten};
 use shared::sheet::Feeling;
 
@@ -13,13 +13,13 @@ use super::{
     action_tick,
 };
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, Other, PlayerSpeed,
-    SmoothPosition,
+    CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, Other, PlayerGait,
+    PlayerSpeed, SmoothPosition,
 };
 
 /// Moves along the route found when the journey was asked for, always ending
 /// exactly on its last point, announcing each step: at constant speed, except
-/// that world map slopes are slower, by what they cost. Any other change to
+/// that world map slopes are slower, by what they cost, and Running quicker. Any other change to
 /// `MapPosition` (a step, the server) cancels travel and jumps there. A step
 /// is taken on leaving a cell, and a jump is shown from here too: straight to
 /// the cell it lands on, whatever is asked for meanwhile. A journey carries on
@@ -35,6 +35,7 @@ pub(super) fn travel(
     mut arrived: MessageWriter<Arrived>,
     mut stepped: MessageWriter<Stepped>,
     speed_now: Res<PlayerSpeed>,
+    gait: Res<PlayerGait>,
     mut energy: ResMut<PlayerEnergy>,
     god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
@@ -78,7 +79,7 @@ pub(super) fn travel(
         let to = (request.x, request.y);
         let path = match ground {
             Some((ground, conditions, roads)) => {
-                find_world_path(ground, conditions, roads, from, to)
+                find_world_path(ground, conditions, roads, from, to, gait.0)
             }
             None => {
                 let known = route_to(to);
@@ -126,7 +127,8 @@ pub(super) fn travel(
         // Normally part of one step a frame, but a slow frame may cover more.
         while let Some(&next) = travel.route.front() {
             let to = DVec2::new(next.0 as f64, next.1 as f64);
-            // How much longer this step takes than on flat ground.
+            // How much longer this step takes than on flat ground (less than 1
+            // when running makes it quicker).
             let slowness = match ground {
                 Some((ground, conditions, roads)) if next != at => {
                     let ends = (
@@ -134,7 +136,8 @@ pub(super) fn travel(
                         ground.elevation(next.0, next.1, conditions),
                     );
                     let road = roads.kind_of(at, next);
-                    world_step_cost(at, next, ends, road) as f64 / step_cost(at, next) as f64
+                    world_step_time(at, next, ends, road, gait.0) as f64
+                        / step_cost(at, next) as f64
                 }
                 _ => 1.0,
             };
@@ -175,7 +178,8 @@ pub(super) fn travel(
                 if legal != Some(next) {
                     // The tide or a thaw has cut the way: find another from here.
                     if let Some((ground, conditions, roads)) = ground {
-                        let path = find_world_path(ground, conditions, roads, at, travel.goal);
+                        let path =
+                            find_world_path(ground, conditions, roads, at, travel.goal, gait.0);
                         travel.route_arrives = path.reached;
                         travel.route = path.cells.into();
                         if travel.route.is_empty() {
@@ -194,7 +198,7 @@ pub(super) fn travel(
                             ground.elevation(at.0, at.1, conditions),
                             ground.elevation(next.0, next.1, conditions),
                         );
-                        world_step_cost(at, next, ends, roads.kind_of(at, next))
+                        world_step_time(at, next, ends, roads.kind_of(at, next), gait.0)
                     }
                     None => site_step_cost(at, next),
                 };

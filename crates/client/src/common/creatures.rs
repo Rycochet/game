@@ -36,6 +36,12 @@ impl Default for PlayerSpeed {
     }
 }
 
+/// How well the player climbs and runs (`shared::movement::Gait`), from their
+/// skills, which `character` keeps up to date: world map steps cost by it, as
+/// the server charges them.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct PlayerGait(pub shared::movement::Gait);
+
 /// The most the player can carry, in grams, from what they are (`Sheet::capacity`),
 /// which `character` keeps up to date.
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]

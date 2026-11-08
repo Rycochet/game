@@ -36,7 +36,7 @@ The skill tree as data: every node (Combat › Melee › Longsword › Longsword
 
 ## Used by
 
-- `shared::sheet` (`Sheet::skills`), `protocol` (`DevSkills`), `server` (`connections/dev_skills.rs`, `combat.rs` and `heal.rs` (`used`), `playtime.rs` (`rust` once a minute of playtime), `welcome.rs` (`settle`), `combat/struck.rs` (`rust_for_hours` by `Difficulty::rust_on_death`)), client `character`, `skills_page`.
+- `shared::sheet` (`Sheet::skills`), `shared::movement` (`Gait`, training), `protocol` (`DevSkills`), `server` (`connections/dev_skills.rs`, `combat.rs`, `heal.rs` and `messages/training.rs` (`used`), `playtime.rs` (`rust` once a minute of playtime), `welcome.rs` (`settle`), `combat/struck.rs` (`rust_for_hours` by `Difficulty::rust_on_death`)), client `character`, `skills_page`.
 
 ## Notes
 
