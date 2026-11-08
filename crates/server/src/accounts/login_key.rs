@@ -41,7 +41,7 @@ pub(crate) enum LoginKey {
 
 impl LoginKey {
     pub(super) fn is_guest(&self) -> bool {
-        matches!(self, Self::Guest(_) | Self::SinglePlayer)
+        matches!(self, Self::Guest(_))
     }
 
     /// The account it leads to, if that is decided by the key rather than made

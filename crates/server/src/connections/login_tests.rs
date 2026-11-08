@@ -4,7 +4,7 @@ use shared::protocol::{
 };
 use shared::world::WorldSeed;
 
-use super::tests::{HELLO, answers};
+use super::tests::{MAKES, answers};
 use super::*;
 use crate::oidc::Logins;
 use crate::oidc::tests::{FakeProvider, come_back};
@@ -30,7 +30,7 @@ impl Server {
     fn connect(&mut self) -> (ClientLink, Vec<ServerMessage>) {
         let (end, link) = local_pair();
         self.connections.as_mut().unwrap().add(link);
-        end.send(&HELLO);
+        end.send(&MAKES);
         self.tick();
         let told = answers(&end);
         (end, told)
@@ -163,8 +163,8 @@ fn a_failed_login_can_be_tried_again_or_another_way() {
         ClientMessage::Login(Credentials::Guest(GuestToken([2; 32]))),
     );
     assert!(
-        told.iter()
-            .any(|told| matches!(told, ServerMessage::Welcome { .. }))
+        matches!(told[..], [ServerMessage::Characters { .. }]),
+        "{told:?}"
     );
 }
 

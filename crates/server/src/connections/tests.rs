@@ -175,6 +175,13 @@ pub(crate) const HELLO: ClientMessage = ClientMessage::Hello {
     difficulty: shared::difficulty::Difficulty::Normal,
 };
 
+/// A client with the screens for choosing and making characters.
+pub(crate) const MAKES: ClientMessage = ClientMessage::Hello {
+    protocol: PROTOCOL_VERSION,
+    makes_characters: true,
+    difficulty: shared::difficulty::Difficulty::Normal,
+};
+
 pub(super) const GUEST: ClientMessage =
     ClientMessage::Login(Credentials::Guest(GuestToken([1; 32])));
 
@@ -883,19 +890,28 @@ fn logged_in_to_account(
     connections: &mut Connections,
     key: &'static str,
 ) -> (ClientLink, Vec<ServerMessage>) {
+    // With nothing saved, so no characters can be shown.
+    logged_in_with(connections, key, &ServerWorld::new(WorldSeed::new(1)))
+}
+
+/// Logs in to an account by `key`, its characters' saves in `world`.
+fn logged_in_with(
+    connections: &mut Connections,
+    key: &'static str,
+    world: &ServerWorld,
+) -> (ClientLink, Vec<ServerMessage>) {
     let (end, link) = local_pair();
     connections.add(link);
     let client = connections.clients.last_mut().unwrap();
     client.phase = Phase::LoggingIn;
-    // Not a guest's, so the world isn't looked at.
-    let world = ServerWorld::new(WorldSeed::new(1));
+    client.makes_characters = true;
     let id = connections.accounts.log_in(&LoginKey::Test(key)).unwrap();
     assert!(logged_in(
         client,
         id,
         "in a test",
         &mut connections.accounts,
-        &world,
+        world,
         &ServerOptions::default(),
     ));
     let told = answers(&end);
@@ -1024,7 +1040,8 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
 
 #[test]
 fn accounts_choose_or_make_a_character_and_only_their_own() {
-    let world = ServerWorld::new(WorldSeed::new(1));
+    // Saved, so they can be shown.
+    let (_backend, _queue, world) = world_in_memory();
     let mut connections = Connections::default();
 
     // New: nothing to choose, and room to make one.
@@ -1046,13 +1063,13 @@ fn accounts_choose_or_make_a_character_and_only_their_own() {
             difficulty: shared::difficulty::Difficulty::Normal,
         },
     ));
-    let (connections, world) = tick(connections, world);
+    let (mut connections, mut world) = tick(connections, world);
     assert!(matches!(answers(&end)[0], ServerMessage::Welcome { .. }));
-    let mut connections = connections;
+    connections.clients[0].save(&mut world);
 
     // Back later: there they are. (Dropping the first connection is `join`'s
     // job, when this one chooses.)
-    let (second, told) = logged_in_to_account(&mut connections, "someone");
+    let (second, told) = logged_in_with(&mut connections, "someone", &world);
     let [
         ServerMessage::Characters {
             list, can_create, ..
@@ -1062,9 +1079,9 @@ fn accounts_choose_or_make_a_character_and_only_their_own() {
         panic!("no characters: {told:?}");
     };
     assert!(*can_create);
-    assert_eq!(list[0].name, "Some One");
-    assert!(list[0].last_played > 0);
-    let theirs = list[0].id;
+    assert_eq!(list[0].summary.name, "Some One");
+    assert!(list[0].summary.last_played > 0);
+    let theirs = list[0].summary.id;
 
     // Someone else's can't be chosen.
     let (other, _) = logged_in_to_account(&mut connections, "someone else");
@@ -1103,7 +1120,7 @@ fn choosing_is_only_for_accounts_about_to_choose() {
 }
 
 /// A world saved in a backend that can be told to fail, and its queue.
-fn world_in_memory() -> (Arc<MemoryBackend>, SaveQueue, ServerWorld) {
+pub(super) fn world_in_memory() -> (Arc<MemoryBackend>, SaveQueue, ServerWorld) {
     let backend = Arc::new(MemoryBackend::default());
     let queue = SaveQueue::new(backend.clone());
     let seed = WorldSeed::new(1);

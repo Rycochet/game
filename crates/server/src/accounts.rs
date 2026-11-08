@@ -26,8 +26,8 @@ pub(crate) const MAX_CHARACTERS: usize = 8;
 /// The longest name a character may have, in characters.
 const MAX_NAME: usize = 24;
 
-/// What a guest's one character is called.
-const GUEST_NAME: &str = "Guest";
+/// What a character made without the client's screen is called.
+const PLAIN_NAME: &str = "Guest";
 
 /// Which account: made by the server, and the name of its file.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -36,7 +36,7 @@ pub(crate) struct AccountId(pub Id);
 /// An account's save.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub(crate) struct AccountSave {
-    /// A guest has one character, with nothing to choose.
+    /// A guest may have only one character.
     pub guest: bool,
     /// When it was made (seconds since 1970).
     pub created: u64,
@@ -131,6 +131,9 @@ impl Accounts {
                 },
             };
             self.loaded.insert(*id, save);
+            if self.date_characters(id) {
+                self.save(id);
+            }
         }
         Ok(&self.loaded[id])
     }
@@ -141,19 +144,45 @@ impl Accounts {
         }
     }
 
-    /// The character of a guest's account: their one, made now if need be.
-    pub(crate) fn guest_character(&mut self, id: &AccountId) -> Result<CharacterId, String> {
-        if let Some(character) = self.account(id)?.characters.first() {
-            return Ok(character.id);
+    /// Gives characters saved before there were creation times the time now:
+    /// whether any had none.
+    fn date_characters(&mut self, id: &AccountId) -> bool {
+        let Some(account) = self.loaded.get_mut(id) else {
+            return false;
+        };
+        let mut any = false;
+        for character in account.characters.iter_mut().filter(|c| c.created == 0) {
+            character.created = now();
+            any = true;
         }
-        self.add_character(id, GUEST_NAME.into())
+        any
     }
 
-    /// The embedded server's one character, made the first time and saved like
-    /// anyone else's. An error if saves can't be reached.
-    pub(crate) fn single_player(&mut self) -> Result<CharacterId, String> {
+    /// How many characters an account may have: a guest one.
+    pub(crate) fn most_characters(&mut self, id: &AccountId) -> Result<usize, String> {
+        Ok(if self.account(id)?.guest {
+            1
+        } else {
+            MAX_CHARACTERS
+        })
+    }
+
+    /// A character made without the client's screen, plainly named.
+    pub(crate) fn plain_character(&mut self, id: &AccountId) -> Result<CharacterId, String> {
+        self.add_character(id, PLAIN_NAME.into())
+    }
+
+    /// The embedded server's player's account, made the first time and saved like
+    /// anyone else's. Not a guest's, as it was once: it may have as many
+    /// characters as any. An error if saves can't be reached.
+    pub(crate) fn single_player(&mut self) -> Result<AccountId, String> {
         let id = self.log_in(&LoginKey::SinglePlayer)?;
-        self.guest_character(&id)
+        self.account(&id)?;
+        let account = self.loaded.get_mut(&id).expect("just loaded");
+        if std::mem::take(&mut account.guest) {
+            self.save(&id);
+        }
+        Ok(id)
     }
 
     /// Makes a character with the name the player chose. An error says what is
@@ -164,8 +193,12 @@ impl Accounts {
         name: &str,
     ) -> Result<CharacterId, String> {
         let name = checked_name(name)?;
-        if self.account(id)?.characters.len() >= MAX_CHARACTERS {
-            return Err(format!("an account can have {MAX_CHARACTERS} characters"));
+        let most = self.most_characters(id)?;
+        if self.account(id)?.characters.len() >= most {
+            return Err(match most {
+                1 => "a guest can have one character".into(),
+                _ => format!("an account can have {most} characters"),
+            });
         }
         self.add_character(id, name)
     }
@@ -178,27 +211,10 @@ impl Accounts {
             id: character,
             name,
             last_played: 0,
+            created: now(),
         });
         self.save(id);
         Ok(character)
-    }
-
-    /// Gives a character already made (a guest's, the single player's) the name
-    /// its player chose. Its account must have been loaded, as logging in does.
-    pub(crate) fn rename_character(
-        &mut self,
-        character: &CharacterId,
-        name: &str,
-    ) -> Result<(), String> {
-        let name = checked_name(name)?;
-        let account = self.loaded.iter_mut().find_map(|(id, account)| {
-            let found = account.characters.iter_mut().find(|c| c.id == *character)?;
-            found.name = name.clone();
-            Some(*id)
-        });
-        let account = account.ok_or("no such character")?;
-        self.save(&account);
-        Ok(())
     }
 
     /// A character's name, if its account has been loaded (as logging in does).
@@ -219,11 +235,6 @@ impl Accounts {
         })?;
         self.save(&account);
         Some(account)
-    }
-
-    /// Whether an account is a guest's (the single player's is one).
-    pub(crate) fn is_guest(&mut self, id: &AccountId) -> Result<bool, String> {
-        Ok(self.account(id)?.guest)
     }
 
     /// Notes that a character is being played now.

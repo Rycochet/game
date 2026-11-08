@@ -1,6 +1,6 @@
 use super::level::{LevelChunk, LevelInfo, RememberedLevel, SeenStairs};
 use super::link::{LinkError, local_pair, wired};
-use super::login::{CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod};
+use super::login::{CharacterId, Credentials, GuestToken, LoginMethod};
 use super::world_chunk::GateInfo;
 use super::*;
 use crate::creature::{CreatureKind, Size};
@@ -49,6 +49,9 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::Login(Credentials::Guest(GuestToken([7; 32]))),
         ClientMessage::ChooseCharacter {
             id: CharacterId(crate::id::Id::for_test(1)),
+        },
+        ClientMessage::DeleteCharacter {
+            id: CharacterId(crate::id::Id::for_test(2)),
         },
         ClientMessage::CreateCharacter(super::NewCharacter {
             name: "Some One".into(),
@@ -221,10 +224,18 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             methods: vec![LoginMethod::Guest],
         },
         ServerMessage::Characters {
-            list: vec![CharacterSummary {
-                id: CharacterId(crate::id::Id::for_test(1)),
-                name: "Some One".into(),
-                last_played: 99,
+            list: vec![ListedCharacter {
+                summary: CharacterSummary {
+                    id: CharacterId(crate::id::Id::for_test(1)),
+                    name: "Some One".into(),
+                    last_played: 99,
+                    created: 42,
+                },
+                kind: crate::creature::CreatureKind::default(),
+                appearance: crate::sheet::Appearance::default(),
+                worn: Vec::new(),
+                sheet: crate::sheet::Sheet::default(),
+                difficulty: Some(crate::difficulty::Difficulty::Hard),
             }],
             can_create: true,
             difficulties: crate::difficulty::Difficulties::ALL,

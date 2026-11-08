@@ -1,19 +1,13 @@
 //! Making a new guest's or single player's character with the client's screen.
 
 use shared::creature::CreatureKind;
-use shared::protocol::{ClientLink, ClientMessage, PROTOCOL_VERSION, ServerMessage, local_pair};
+use shared::protocol::{ClientLink, ClientMessage, ServerMessage, local_pair};
 use shared::sheet::{Appearance, Build, Dot, Sheet};
 use shared::world::WorldSeed;
 
-use super::tests::{GUEST, answers, tick};
+use super::tests::{GUEST, MAKES, answers, tick};
 use super::*;
 use crate::ServerWorld;
-
-const MAKES: ClientMessage = ClientMessage::Hello {
-    protocol: PROTOCOL_VERSION,
-    makes_characters: true,
-    difficulty: shared::difficulty::Difficulty::Normal,
-};
 
 fn strong() -> Build {
     Build {
@@ -141,7 +135,7 @@ fn the_single_player_makes_theirs_too() {
 }
 
 #[test]
-fn deleting_a_character_asks_for_a_new_one_with_a_new_id() {
+fn deleting_a_character_offers_the_rest_and_a_new_one_has_a_new_id() {
     let world = ServerWorld::new(WorldSeed::new(1));
     let mut connections = Connections::default();
     let (end, link) = local_pair();
@@ -162,8 +156,7 @@ fn deleting_a_character_asks_for_a_new_one_with_a_new_id() {
         matches!(told[..], [ServerMessage::Characters { .. }]),
         "{told:?}"
     );
-    let new = connections.clients[0].character_id.unwrap();
-    assert_ne!(new, old);
+    assert_eq!(connections.clients[0].character_id, None);
     assert_eq!(connections.clients[0].phase, Phase::Choosing);
 
     end.send(&make("Bo", CreatureKind::Dwarf, strong()));
@@ -174,7 +167,8 @@ fn deleting_a_character_asks_for_a_new_one_with_a_new_id() {
         sheet_in(&told),
         Some(Sheet::built(CreatureKind::Dwarf, strong()))
     );
-    assert_eq!(connections.clients[0].character_id, Some(new));
+    let new = connections.clients[0].character_id.unwrap();
+    assert_ne!(new, old);
     // The account has only the new one.
     let key = crate::accounts::LoginKey::SinglePlayer;
     let account = connections.accounts.log_in(&key).unwrap();

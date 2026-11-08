@@ -6,9 +6,9 @@
 use bevy::prelude::*;
 use shared::protocol::{Credentials, EmailAddress, ServerMessage};
 
-use super::new_character::join_or_make;
+use super::characters::offer_characters;
 use super::{Client, Connections, Phase};
-use crate::accounts::{AccountId, Accounts, LoginKey, MAX_CHARACTERS};
+use crate::accounts::{AccountId, Accounts, LoginKey};
 use crate::oidc::Logins;
 use crate::{ServerOptions, ServerWorld, ServerWorlds};
 
@@ -55,9 +55,8 @@ pub(super) fn log_in(
     }
 }
 
-/// A client has logged in to an account: a guest goes to their one character
-/// (made first, if new: `join_or_make`), anyone else is told theirs to choose
-/// from. `how` says how, for the log.
+/// A client has logged in to an account, and is offered its characters
+/// (`offer_characters`). `how` says how, for the log.
 pub(super) fn logged_in(
     client: &mut Client,
     id: AccountId,
@@ -67,23 +66,8 @@ pub(super) fn logged_in(
     options: &ServerOptions,
 ) -> bool {
     info!("Account {} logged in {how}", id.0);
-    let answered = (|| {
-        let account = accounts.account(&id)?;
-        client.account = Some(id);
-        let answered = if account.guest {
-            client.character_id = Some(accounts.guest_character(&id)?);
-            join_or_make(client, world, options.difficulties)
-        } else {
-            client.phase = Phase::Choosing;
-            client.link.send(&ServerMessage::Characters {
-                list: account.characters.clone(),
-                can_create: account.characters.len() < MAX_CHARACTERS,
-                difficulties: options.difficulties,
-            })
-        };
-        Ok::<bool, String>(answered)
-    })();
-    answered.unwrap_or_else(|error| client.refuse_for_saves(&error))
+    client.account = Some(id);
+    offer_characters(client, accounts, world, options.difficulties)
 }
 
 /// Finishes the logins players have come back from providers' websites with,

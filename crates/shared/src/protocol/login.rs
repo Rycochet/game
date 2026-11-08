@@ -116,15 +116,6 @@ fn from_hex(text: &str) -> Option<[u8; 32]> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CharacterId(pub Id);
 
-/// A character in the list to choose from.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CharacterSummary {
-    pub id: CharacterId,
-    pub name: String,
-    /// When last played (seconds since 1970), 0 for never.
-    pub last_played: u64,
-}
-
 /// What a client asks a new character to be (`ClientMessage::CreateCharacter`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NewCharacter {

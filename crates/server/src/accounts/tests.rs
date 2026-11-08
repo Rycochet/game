@@ -30,15 +30,16 @@ fn a_login_finds_its_account_again_after_a_restart() {
     let token = LoginKey::Guest(GuestToken([3; 32]));
     let mut accounts = Accounts::new(SaveQueue::in_folder(&folder.0));
     let id = accounts.log_in(&token).unwrap();
-    let character = accounts.guest_character(&id).unwrap();
+    let character = accounts.create_character(&id, "Brin").unwrap();
     assert!(accounts.account(&id).unwrap().guest);
     // Dropping it finishes writing, as stopping does.
     drop(accounts);
 
     let mut restarted = Accounts::new(SaveQueue::in_folder(&folder.0));
     assert_eq!(restarted.log_in(&token).unwrap(), id);
-    assert_eq!(restarted.guest_character(&id).unwrap(), character);
-    assert_eq!(restarted.account(&id).unwrap().characters.len(), 1);
+    let characters = &restarted.account(&id).unwrap().characters;
+    assert_eq!(characters.len(), 1);
+    assert_eq!(characters[0].id, character);
     // Someone else is someone else.
     let other = LoginKey::Guest(GuestToken([4; 32]));
     assert_ne!(restarted.log_in(&other).unwrap(), id);
@@ -50,20 +51,65 @@ fn a_guest_token_is_never_saved() {
     let token = GuestToken([0xcd; 32]);
     let mut accounts = Accounts::new(SaveQueue::in_folder(&folder.0));
     let id = accounts.log_in(&LoginKey::Guest(token)).unwrap();
-    accounts.guest_character(&id).unwrap();
+    accounts.create_character(&id, "Brin").unwrap();
     drop(accounts);
     assert!(!everything_in(&folder.0).contains(&token.to_hex()));
 }
 
 #[test]
-fn the_single_player_keeps_their_character_after_a_restart() {
+fn the_single_player_keeps_their_characters_after_a_restart() {
     let folder = TestFolder::new();
     let mut accounts = Accounts::new(SaveQueue::in_folder(&folder.0));
-    let character = accounts.single_player().unwrap();
+    let id = accounts.single_player().unwrap();
+    let character = accounts.create_character(&id, "Brin").unwrap();
+    accounts.create_character(&id, "Bo").unwrap();
     drop(accounts);
     let mut restarted = Accounts::new(SaveQueue::in_folder(&folder.0));
-    assert_eq!(restarted.single_player().unwrap(), character);
+    assert_eq!(restarted.single_player().unwrap(), id);
+    let characters = &restarted.account(&id).unwrap().characters;
+    assert_eq!(characters.len(), 2);
+    assert_eq!(characters[0].id, character);
     assert_eq!(character.0.0.get_version_num(), 6);
+}
+
+#[test]
+fn a_guest_may_have_one_character_and_the_single_player_many() {
+    let mut accounts = Accounts::default();
+    let guest = accounts
+        .log_in(&LoginKey::Guest(GuestToken([5; 32])))
+        .unwrap();
+    accounts.create_character(&guest, "Brin").unwrap();
+    let refused = accounts.create_character(&guest, "Bo").unwrap_err();
+    assert!(refused.contains("one character"), "{refused}");
+    let single = accounts.single_player().unwrap();
+    assert!(!accounts.account(&single).unwrap().guest);
+    assert_eq!(accounts.most_characters(&single).unwrap(), MAX_CHARACTERS);
+}
+
+#[test]
+fn the_single_player_account_saved_as_a_guests_is_one_no_longer() {
+    let mut accounts = Accounts::default();
+    let id = accounts.log_in(&LoginKey::SinglePlayer).unwrap();
+    accounts.loaded.get_mut(&id).unwrap().guest = true;
+    assert_eq!(accounts.single_player().unwrap(), id);
+    assert!(!accounts.account(&id).unwrap().guest);
+}
+
+#[test]
+fn characters_are_dated_when_made_and_old_ones_when_loaded() {
+    let backend = Arc::new(MemoryBackend::default());
+    let queue = SaveQueue::new(backend.clone());
+    let mut accounts = Accounts::new(queue.clone());
+    let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
+    accounts.create_character(&id, "Brin").unwrap();
+    assert_ne!(accounts.account(&id).unwrap().characters[0].created, 0);
+    // As a save from before creation times.
+    accounts.loaded.get_mut(&id).unwrap().characters[0].created = 0;
+    accounts.save(&id);
+    drop(accounts);
+    assert!(queue.flush(Duration::from_secs(5)));
+    let mut restarted = Accounts::new(queue);
+    assert_ne!(restarted.account(&id).unwrap().characters[0].created, 0);
 }
 
 #[test]
@@ -99,8 +145,6 @@ fn a_character_is_found_by_name_for_others_to_see() {
     let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
     let character = accounts.create_character(&id, "Brin").unwrap();
     assert_eq!(accounts.character_name(&character).as_deref(), Some("Brin"));
-    accounts.rename_character(&character, "Bo").unwrap();
-    assert_eq!(accounts.character_name(&character).as_deref(), Some("Bo"));
 }
 
 #[test]
@@ -129,7 +173,7 @@ fn an_email_login_has_the_same_account_wherever_the_secret_is_shared() {
     assert_ne!(other.unwrap(), id);
     let mut accounts = Accounts::default();
     accounts.log_in(&key).unwrap();
-    assert!(!accounts.is_guest(&id).unwrap());
+    assert!(!accounts.account(&id).unwrap().guest);
 }
 
 #[test]

@@ -62,9 +62,12 @@ pub(super) fn answer_login(
                 Ok(())
             }
             // The account's characters: until there is a screen to choose on,
-            // the one played last (one each for now).
+            // the one played last (or else made last).
             ServerMessage::Characters { list, .. } => {
-                let last = list.iter().max_by_key(|character| character.last_played);
+                let last = list
+                    .iter()
+                    .map(|character| &character.summary)
+                    .max_by_key(|summary| (summary.last_played, summary.created));
                 if let Some(character) = last {
                     let id = character.id;
                     connection.link.send(&ClientMessage::ChooseCharacter { id });

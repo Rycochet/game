@@ -24,25 +24,25 @@ use crate::world::ClockRate;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ClientMessage {
     /// The first message on a new connection, answered with `LoginOptions`
-    /// (an embedded server, which has no logins: with `Welcome`, or for a new
-    /// character `Characters`). `makes_characters`: the client has a screen for
-    /// making one, so a new guest's or single player's character is made with
-    /// it (`Characters` with none to choose, then `CreateCharacter`) rather
-    /// than plain for their kind. `difficulty`: the player's default, for a
-    /// character with none saved (`Difficulty::for_existing`).
+    /// (the embedded server's own player, who needs no login: with
+    /// `Characters`). `makes_characters`: the client has screens for choosing
+    /// and making characters; without them the account's latest is played, or
+    /// a plain one made. `difficulty`: the player's default, for a character
+    /// with none saved (`Difficulty::for_existing`).
     Hello {
         protocol: u32,
         makes_characters: bool,
         difficulty: Difficulty,
     },
-    /// Logs in, once `LoginOptions` has arrived. A guest is answered with
-    /// `Welcome`, anyone else with `Characters` (`Credentials::Provider` later).
+    /// Logs in, once `LoginOptions` has arrived, answered with `Characters`.
     Login(Credentials),
     /// Plays this character of the account's, answered with `Welcome`.
     ChooseCharacter { id: CharacterId },
+    /// Deletes this character of the account's, save and all, while choosing:
+    /// answered with `Characters` again.
+    DeleteCharacter { id: CharacterId },
     /// Makes a new character and plays them, answered with `Welcome`. The
-    /// server checks the name and how many the account has. For a guest or the
-    /// single player, whose one character is new, it names that one.
+    /// server checks the name and how many the account may have (a guest one).
     CreateCharacter(NewCharacter),
     /// Changes the character's difficulty, answered with `Difficulty` either
     /// way: refused unless the server allows it, and never to or from Ironman.
@@ -199,9 +199,8 @@ pub enum ClientMessage {
     /// only its body (`how`). What its new body can't wear drops. Answered with
     /// `Sheet` and `Inventory`.
     DevSetCreature { kind: CreatureKind, how: KindChange },
-    /// Developer tools: the character is deleted, save and all, and the account
-    /// given a new one in its place, which is made as on first joining:
-    /// answered with `Characters` with none to choose, then `CreateCharacter`.
+    /// Developer tools: the character is deleted, save and all, answered with
+    /// `Characters` to choose or make another.
     DevDeleteCharacter,
     /// Developer tools: jump to a point on the map the player is on (in a
     /// site, only onto a walkable cell), answered with `Teleported`. Only an

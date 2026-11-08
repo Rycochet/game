@@ -17,10 +17,19 @@ use crate::storage::{CharacterWorldSave, Everywhere};
 use crate::{ServerWorld, world_map};
 
 impl Client {
+    /// The embedded server's own player: logged in to `account` without a login.
+    pub(crate) fn host(link: ServerLink, account: crate::accounts::AccountId) -> Self {
+        Self {
+            host: true,
+            account: Some(account),
+            ..Self::new(link, None)
+        }
+    }
+
     pub(crate) fn new(link: ServerLink, character_id: Option<CharacterId>) -> Self {
         Self {
             link,
-            // Playing a character without logging in: the embedded server's own.
+            // Playing a character without logging in: a test's.
             host: character_id.is_some(),
             asked_online: None,
             phase: Phase::Greeting,
