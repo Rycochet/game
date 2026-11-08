@@ -7,6 +7,7 @@ use std::time::Duration;
 use super::*;
 use crate::save_queue::tests::MemoryBackend;
 use crate::storage::tests::TestFolder;
+use shared::protocol::SessionToken;
 
 /// Every file under a folder, as text: its path and contents.
 fn everything_in(folder: &Path) -> String {
@@ -117,4 +118,44 @@ fn saves_that_cant_be_reached_dont_make_a_new_account() {
 
     backend.cant_read.store(false, Ordering::Relaxed);
     assert_eq!(restarted.log_in(&token).unwrap(), id);
+}
+
+#[test]
+fn an_email_login_has_the_same_account_wherever_the_secret_is_shared() {
+    let key = LoginKey::Email(EmailKey([7; 32]));
+    let id = Accounts::default().log_in(&key).unwrap();
+    assert_eq!(Accounts::default().log_in(&key).unwrap(), id);
+    let other = Accounts::default().log_in(&LoginKey::Email(EmailKey([8; 32])));
+    assert_ne!(other.unwrap(), id);
+    let mut accounts = Accounts::default();
+    accounts.log_in(&key).unwrap();
+    assert!(!accounts.is_guest(&id).unwrap());
+}
+
+#[test]
+fn a_session_stands_for_its_account_until_it_runs_out_and_is_never_saved() {
+    let folder = TestFolder::new();
+    let queue = SaveQueue::in_folder(&folder.0);
+    let mut accounts = Accounts::new(queue.clone());
+    let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
+    let token = accounts.new_session(id).unwrap();
+    assert_eq!(accounts.session(&token).unwrap(), Some(id));
+    assert_eq!(accounts.session(&SessionToken([1; 32])).unwrap(), None);
+    assert!(queue.flush(Duration::from_secs(5)));
+    assert!(!everything_in(&folder.0).contains(&token.to_hex()));
+
+    // After a restart, until it runs out.
+    let mut restarted = Accounts::new(queue.clone());
+    assert_eq!(restarted.session(&token).unwrap(), Some(id));
+    let hash = session_hash(&token);
+    let ran_out = LoginSave {
+        account: id,
+        expires: Some(1),
+    };
+    queue.save(SaveKey::Login(hash.clone()), Save::Login(ran_out));
+    assert!(queue.flush(Duration::from_secs(5)));
+    let mut restarted = Accounts::new(queue.clone());
+    assert_eq!(restarted.session(&token).unwrap(), None);
+    assert!(queue.flush(Duration::from_secs(5)));
+    assert!(queue.load(&SaveKey::Login(hash)).unwrap().is_none());
 }

@@ -16,6 +16,7 @@ use super::web_files::{WebClient, WebFiles, web_files};
 use super::{CERTIFICATE_PATH, NewConnections, SecurePort, Sockets, TlsListener, WEB_PATH};
 use super::{stop_signal, upgrade};
 use crate::connections::Connections;
+use crate::oidc::Logins;
 use crate::tls::Certificates;
 
 /// Lets the connections that arrived join (they log in from there).
@@ -28,7 +29,8 @@ pub(super) fn accept_connections(new: Res<NewConnections>, mut connections: ResM
 }
 
 /// The routes that serve the game: its WebSockets, health and version, the
-/// certificate if there is one, and the web client's files under `WEB_PATH`
+/// page players come back to from providers and the certificate if there are
+/// any, and the web client's files under `WEB_PATH`
 /// (where `/` sends browsers).
 pub(super) fn game_routes(
     web: Option<Arc<WebFiles>>,
@@ -36,10 +38,14 @@ pub(super) fn game_routes(
     certificates: Option<Arc<Certificates>>,
 ) -> Router {
     let health = health_routes(sockets.heartbeat.clone());
+    let logins = sockets.logins.as_ref().map(Logins::routes);
     let mut router = Router::new()
         .route(SOCKET_PATH, get(upgrade))
         .with_state(sockets)
         .merge(health);
+    if let Some(logins) = logins {
+        router = router.merge(logins);
+    }
     if let Some(certificates) = certificates {
         router = router.route(
             CERTIFICATE_PATH,

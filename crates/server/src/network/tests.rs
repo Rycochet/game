@@ -43,6 +43,7 @@ fn serve_without_a_game(
         heartbeat: Heartbeat::default(),
         ping_every,
         silent_after,
+        logins: None,
     };
     thread::spawn(move || {
         serve(
@@ -96,6 +97,7 @@ fn serve_with_plain_too(
         heartbeat: Heartbeat::default(),
         ping_every: PING_EVERY,
         silent_after: SILENT_AFTER,
+        logins: None,
     };
     thread::spawn(move || {
         serve(

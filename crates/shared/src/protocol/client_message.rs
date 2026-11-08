@@ -36,7 +36,7 @@ pub enum ClientMessage {
         difficulty: Difficulty,
     },
     /// Logs in, once `LoginOptions` has arrived. A guest is answered with
-    /// `Welcome`, anyone else with `Characters`.
+    /// `Welcome`, anyone else with `Characters` (`Credentials::Provider` later).
     Login(Credentials),
     /// Plays this character of the account's, answered with `Welcome`.
     ChooseCharacter { id: CharacterId },

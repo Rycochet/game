@@ -19,7 +19,8 @@ pub use level::{
 };
 pub use link::{ClientLink, Link, LinkError, ServerLink, Wire, local_pair, wired};
 pub use login::{
-    CharacterId, CharacterSummary, Credentials, GuestToken, LoginMethod, NewCharacter,
+    CharacterId, CharacterSummary, Credentials, EmailAddress, GuestToken, LoginMethod,
+    NewCharacter, SessionToken,
 };
 pub use online::{OnlineSettings, OnlineState, RouterPort};
 pub use version::{GAME_NAME, ServerVersion, VERSION_PATH};
@@ -51,7 +52,7 @@ pub use world_chunk::{GateInfo, SeenPoi, WorldChunk, WorldInfo};
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 68;
+pub const PROTOCOL_VERSION: u32 = 69;
 
 /// The most items one `ClientMessage::LookUpItems` is answered for.
 pub const MOST_LOOKED_UP: usize = 64;

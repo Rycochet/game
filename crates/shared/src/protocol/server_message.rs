@@ -6,7 +6,7 @@ use super::Landed;
 use super::OnlineState;
 use super::Strike;
 use super::level::{LevelChunk, LevelInfo, RememberedLevel};
-use super::login::{CharacterSummary, LoginMethod};
+use super::login::{CharacterSummary, EmailAddress, LoginMethod, SessionToken};
 use super::{WorldChunk, WorldInfo};
 use crate::ability::{Ability, ActionBar};
 use crate::difficulty::{Difficulties, Difficulty};
@@ -227,4 +227,17 @@ pub enum ServerMessage {
     /// in or stepping inside it: it is known from now on (not sent for
     /// towns, which everyone knows of).
     PoiFound { kind: crate::poi::PoiKind },
+    /// The answer to logging in with `Credentials::Provider`: the provider's page for the player to log in
+    /// on, to open in their browser.
+    OpenLogin { url: String },
+    /// The player logged in on the provider's website: the token to log in
+    /// with next time (`Credentials::Session`), and the address the provider
+    /// gave, for the client to keep and show in its menus. `Characters` follows.
+    LoggedIn {
+        session: SessionToken,
+        email: EmailAddress,
+    },
+    /// Logging in didn't work, and why: the client may try again or another
+    /// way, as it is still logging in.
+    LoginFailed(String),
 }

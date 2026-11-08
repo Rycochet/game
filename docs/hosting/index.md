@@ -79,9 +79,32 @@ For testing, `HOW_SERVER` starts the client on a server straight away, using `ws
 HOW_SERVER=wss://game.example.com:24691/ws hall-of-worlds
 ```
 
+## Logging in with Google
+
+Players can play as guests, or log in with an account through a provider's website. Google is the one we use; any provider that supports OpenID Connect works the same way.
+
+1. In the Google Cloud console, under **APIs & Services**, set up the OAuth consent screen, then make an **OAuth client ID** of the type **Web application**.
+2. Add `https://<your server>/login/callback` as an **authorised redirect URI**, using the address players reach the server at (with its port, if it isn't 443).
+3. Give the server the client id and secret, and that address:
+
+```yaml
+    environment:
+      HOW_OIDC_GOOGLE_CLIENT_ID: "<client id>"
+      HOW_OIDC_GOOGLE_CLIENT_SECRET: "<client secret>"
+      HOW_LOGIN_URL: "https://game.example.com"
+```
+
+With Let's Encrypt, `HOW_LOGIN_URL` can be left out: the domain is used.
+
+The server only asks Google for the player's email address, and only one Google has checked. It keeps a key made from the address with a secret of its own, never the address itself, and forgets everything else Google says. The secret is made on the first run and kept in the data folder (`login-secret.txt`); servers that share players must be given the same one with `HOW_LOGIN_SECRET`.
+
+If the provider can't be reached when the server starts, or a setting is missing, the server says so in its log and lets players in as guests only. `HOW_GUEST_MODE: "true"` does that on purpose.
+
+Logging in with an account isn't in the game yet: the server is ready for it, and the client comes next.
+
 ## Things to know
 
-- **Players are guests for now.** There are no logins yet, and anyone who can reach the server can play. A guest gets their own character, tied to that browser or native client.
+- **Anyone who can reach the server can play as a guest,** unless `HOW_GUESTS` is `false` and a provider is set up. A guest gets their own character, tied to that browser or native client.
 - **A networked server never pauses.** The system menu (or a player's window going into the background) doesn't stop the world for anyone, whatever the settings, and nor does a native client's own server while Online is on: see [Pausing](../client#pausing).
 - **Hosting from the game itself:** a native client can open its own world to others with Online in the system menu, on one secure port (24691 unless Server Options says otherwise), with a certificate it makes. With UPnP turned on in Server Options (or `HOW_UPNP=true`), it asks your router to forward that port to the computer while it is online, and says there how that went and the address players on the internet connect to. Otherwise, or if the router has no UPnP or refuses, forward the port yourself. Windows may ask whether the game can use the network the first time: allow it, or the router's answer can't get through. If your internet provider shares one address between many homes, Server Options says so: no forwarding gets players through then. A standalone server is better for a world that is always there.
 - **Time stops only when the server does.** The server's clock is saved, and carries on from there next time. Every world's time goes by it, so a world nobody is in keeps its time going too.

@@ -41,18 +41,26 @@ igd-next = { version = "0.18", default-features = false, features = ["aio_tokio"
 web_delta.workspace = true
 # Reading the hash a browser names its build by (MIT/Apache-2.0).
 base64 = "0.22"
-uuid = { workspace = true, features = ["std", "rng", "v6"] }
+uuid = { workspace = true, features = ["std", "rng", "v5", "v6"] }
+# Logging in through providers' websites (OIDC): HTTPS requests to them, checked
+# with the operating system's authorities, and their addresses and answers.
+# All MIT/Apache-2.0, and already brought in by instant-acme.
+hyper = { version = "1", features = ["client", "http1"] }
+hyper-util = { version = "0.1", features = ["client-legacy", "http1", "tokio"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "ring", "tls12", "rustls-platform-verifier"] }
+http-body-util = "0.1"
+url = "2"
+serde_json.workspace = true
 # Headless: no rendering, windowing, audio or input.
 bevy = { workspace = true, features = ["std", "bevy_log", "multi_threaded"] }
 # Only with the `debug-api` feature.
 bevy_remote = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
 
 [features]
 # The debug API: Bevy's remote protocol on localhost, turned on at start by
 # `HOW_DEBUG_API`. Debug builds only: a release build with it refuses to
 # compile. See docs/context/debug-api.md.
-debug-api = ["dep:bevy_remote", "dep:serde_json"]
+debug-api = ["dep:bevy_remote"]
 
 [dev-dependencies]
 tungstenite.workspace = true

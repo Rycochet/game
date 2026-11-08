@@ -36,7 +36,17 @@
 //! - `HOW_DATA`: where to save (default: the user's data
 //!   folder).
 //! - `HOW_GUESTS`: `true` (the default) lets clients play without an account.
-//!   `false` stops the server from starting, until there is another way in.
+//!   `false` only lets in those logging in through a provider, if there are any.
+//! - `HOW_GUEST_MODE`: `true` treats every client as a guest, leaving out
+//!   providers whatever else is set (for trying things out, too).
+//! - `HOW_OIDC_<NAME>_CLIENT_ID` and `HOW_OIDC_<NAME>_CLIENT_SECRET`: logging in
+//!   through that provider's website (OIDC), with `HOW_OIDC_<NAME>_ISSUER` (not
+//!   needed for `GOOGLE`) and `HOW_OIDC_<NAME>_LABEL`, what players see it called.
+//!   Any that can't be used are warned about and left out.
+//! - `HOW_LOGIN_URL`: the address players reach the server at, which providers
+//!   send them back to (default `https://` and `HOW_LETS_ENCRYPT_DOMAIN`).
+//! - `HOW_LOGIN_SECRET`: what email addresses are hashed with, the same for
+//!   every server sharing players; made and kept in the data folder if unset.
 //! - `HOW_DEBUG_TOOLS`: `true` accepts dev tools messages from anyone connected.
 //! - `HOW_SERVER_NAME`: what the server calls itself (default `Hall of Worlds`).
 //! - `HOW_PLAYER_LIMIT`: the most players at once (default 0, no limit).
@@ -56,7 +66,7 @@ use std::net::SocketAddr;
 use std::process;
 
 use server::{
-    DEFAULT_WORLD_SEED, IDLE_MINUTES, NetworkPlugin, Security, ServerName, ServerOptions,
+    DEFAULT_WORLD_SEED, IDLE_MINUTES, Logins, NetworkPlugin, Security, ServerName, ServerOptions,
     UpnpChoice, UpnpPlugin, WebClient, check_health, debug_api::DebugApiPlugin,
     default_data_folder, headless_app, log_plugin, option_on,
 };
@@ -92,10 +102,7 @@ fn main() {
     });
     let upnp = UpnpPlugin::from_environment(&security);
     let guests = option_on("HOW_GUESTS", true);
-    if !guests {
-        eprintln!("HOW_GUESTS is false, which leaves no way to log in to this server yet");
-        process::exit(1);
-    }
+    let guest_mode = option_on("HOW_GUEST_MODE", false);
     let dev_tools = option_on("HOW_DEBUG_TOOLS", false);
     let player_limit = match env::var("HOW_PLAYER_LIMIT") {
         Ok(limit) => limit.trim().parse().unwrap_or_else(|_| {
@@ -127,12 +134,35 @@ fn main() {
     if let Ok(name) = env::var("HOW_SERVER_NAME") {
         app.insert_resource(ServerName(name));
     }
+    app.add_plugins(log_plugin());
+    // Once logging has started, so what goes wrong is logged.
+    let logins = if guest_mode {
+        bevy::log::info!("Guest mode (HOW_GUEST_MODE): everyone plays as a guest");
+        None
+    } else {
+        Logins::from_environment(&data).unwrap_or_else(|error| {
+            bevy::log::error!("{error}");
+            process::exit(1);
+        })
+    };
+    if logins.is_none() && !guests {
+        bevy::log::warn!(
+            "HOW_GUESTS is false, but there is no other way to log in: guests are let in"
+        );
+    }
+    {
+        let mut options = app.world_mut().resource_mut::<ServerOptions>();
+        options.guests = guests || logins.is_none();
+    }
+    if let Some(logins) = &logins {
+        app.insert_resource(logins.clone());
+    }
     app.add_plugins((
-        log_plugin(),
         NetworkPlugin {
             address,
             web,
             security,
+            logins,
         },
         // After the log plugin, so what it says is logged.
         DebugApiPlugin { port_offset: 0 },

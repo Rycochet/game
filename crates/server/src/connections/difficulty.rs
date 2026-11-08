@@ -60,7 +60,7 @@ impl Client {
         now: u64,
     ) -> bool {
         if allowed.contains(to) && self.playing_on().may_change_to(to) {
-            info!("{} now plays on {}", self.name, to.name());
+            info!("{} now plays on {}", self.in_log(), to.name());
             self.set_difficulty(to, now);
         }
         self.send_difficulty(allowed)

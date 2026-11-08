@@ -23,7 +23,8 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 - `server.ron`: the server's own clock, which every world's time goes by.
 - `worlds/`: each world, its time, the sites in it that have been entered, what players have changed or left in its wilderness, and its roads (`roads/`, each worked out once and kept; safe to delete, as they are worked out again).
 - `characters/`: what each character knows, and where they are.
-- `accounts/` and `logins/`: who owns which characters. No login secret is stored.
+- `accounts/` and `logins/`: who owns which characters. No password, token or email address is stored, only keys made from them.
+- `login-secret.txt`: what email addresses are made into keys with, if players log in through a provider. Losing it loses every account that logs in that way, and anyone with it and your saves can check whether an address has an account here, so back it up and keep it to yourself.
 - `tls/`: its certificates (single player's too, once Online has been on). **`tls/key.pem` is its private key**, so keep it to yourself.
 - `save_format.ron`: which format the saves here are in.
 - `web-history/`: the last few builds of the web client this server served, and what changed between them and the current one, so a browser that has an older build downloads only that. Only on a server serving the web client; safe to delete, at the cost of whole downloads after the next update.
@@ -34,7 +35,7 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 - `client.ron`: choices kept between runs, such as the interface size and "Enable Touch" from Settings, the page Item Pictures last showed, the servers joined with Connect (and any certificate pasted in for them), Online with its Server Options, and the window: where it was, its size, and how it was shown (Settings, Video). The path can be changed with `HOW_PREFERENCES`.
 - `guest_tokens.ron`: the secret that makes you the same guest on each server, beside `client.ron`. Anyone with it can play as you.
 
-Clearing a browser's data for a server's address, or losing `guest_tokens.ron`, loses that guest's character, as there's no other way to log in yet.
+Clearing a browser's data for a server's address, or losing `guest_tokens.ron`, loses that guest's character, as a guest has no other way to log in.
 
 ## Backing up
 

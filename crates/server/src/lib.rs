@@ -23,6 +23,7 @@ mod ids;
 mod latency;
 mod lets_encrypt;
 mod network;
+mod oidc;
 mod roads;
 mod save_queue;
 mod saves;
@@ -48,6 +49,7 @@ pub use environment::{
     difficulties_from_environment, log_plugin, option_on, upnp_from_environment,
 };
 pub use network::{NetworkPlugin, OnlinePlugin, UpnpChoice, UpnpPlugin, WebClient, check_health};
+pub use oidc::Logins;
 pub use shared::protocol::CharacterId;
 pub use storage::{DATA_FOLDER_VARIABLE, default_data_folder};
 pub use tls::{CertificateFacts, CertificateSource, Security, certificate_facts};
@@ -162,6 +164,7 @@ impl Plugin for ServerPlugin {
                 Update,
                 (
                     advance_action_clock,
+                    connections::finish_logins,
                     connections::handle_messages,
                     connections::difficulty::apply_difficulties,
                     connections::send_roads,

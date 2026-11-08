@@ -80,8 +80,21 @@ fn variables_in_the_source() -> std::collections::BTreeSet<String> {
     }
     // The prefix alone, where the source talks about the names in general.
     names.remove("HOW_");
+    names.remove("HOW_OIDC_");
+    // A provider's are documented as a pattern, for any name.
+    let provider = |name: &str| {
+        let part = OIDC_PARTS.iter().find(|part| name.ends_with(*part))?;
+        name.starts_with("HOW_OIDC_")
+            .then(|| format!("HOW_OIDC_<NAME>{part}"))
+    };
     names
+        .into_iter()
+        .map(|name| provider(&name).unwrap_or(name))
+        .collect()
 }
+
+/// What follows a provider's name in its variables.
+const OIDC_PARTS: [&str; 4] = ["_CLIENT_ID", "_CLIENT_SECRET", "_ISSUER", "_LABEL"];
 
 #[test]
 fn the_user_documentation_lists_every_server_variable() {

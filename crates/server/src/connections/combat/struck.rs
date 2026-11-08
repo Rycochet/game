@@ -59,7 +59,11 @@ fn killed(client: &mut Client, world: &mut ServerWorld, tick: u64) {
         .rust_for_hours(difficulty.rust_on_death());
     let dropped = client.inventory.drop_on_death(difficulty);
     if !dropped.is_empty() {
-        info!("{} dropped {} things on dying", client.name, dropped.len());
+        info!(
+            "{} dropped {} things on dying",
+            client.in_log(),
+            dropped.len()
+        );
         for item in dropped {
             crate::ground::put_down(client, world, item);
         }
