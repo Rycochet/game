@@ -204,8 +204,9 @@ pub enum ServerMessage {
         landed: Landed,
     },
     /// The player was killed: they are on the world map, at full Health, and
-    /// are to be told so.
-    Killed,
+    /// are to be told so. `permanent` on Ironman: the character has been
+    /// deleted, and `Characters` follows for a new one.
+    Killed { permanent: bool },
     /// Someone in sight was harmed, by a blow the player neither struck nor
     /// took (those are told by `AbilityLanded`), and has `left` per mille of
     /// their Health.

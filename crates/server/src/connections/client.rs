@@ -55,6 +55,7 @@ impl Client {
             starting_as: None,
             difficulty: None,
             asked_difficulties: None,
+            died_for_good: false,
             unsaved: false,
             visit: None,
             world_chunks: BTreeSet::new(),

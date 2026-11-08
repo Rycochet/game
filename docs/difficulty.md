@@ -11,8 +11,8 @@ Each character plays on one of four difficulties. A server may allow only some o
 | ---------- | ------------- | ---------------------- | ------------ |
 | Easy | A fifth less | Twice as fast | Nothing is lost. |
 | Normal | As usual | As usual | As the game is meant to be played. |
-| Hard | A fifth more | As usual | Nothing extra is lost yet. |
-| Ironman | A fifth more | As usual | Nothing extra is lost yet. |
+| Hard | A fifth more | As usual | You drop everything but what is worn against the skin. |
+| Ironman | A fifth more | As usual | You drop everything, and the character is gone for good. |
 
 ## Choosing
 
@@ -20,7 +20,13 @@ When you make a character, choose their difficulty on the character screen, from
 
 While playing, you can change between Easy, Normal and Hard at any time in **Settings**, **Gameplay**, from those the server allows. Ironman is only chosen when making a character, and you are asked first, as death is then permanent. An Ironman character can never change to another difficulty, and no character can change to Ironman.
 
-What Hard and Ironman cost you when you die is coming soon.
+## Dying
+
+On Normal and Easy you keep everything when you die. You wake on the world map with full Health, outside the place you died.
+
+On Hard, everything you carry and wear falls in a bag where you died, except clothes worn against the skin alone, such as a T-shirt or socks. Rings, necklaces, weapons and anything worn over other things drop. Go back for the bag before someone else finds it.
+
+On Ironman, everything you carry and wear falls where you died, and the character is deleted. You are taken back to making a new character.
 
 ## For server hosts
 

@@ -21,7 +21,7 @@ How hard the game is for one character (Easy, Normal, Hard, Ironman), and which 
 
 ## Notes
 
-- Owner's design (2026-11-08): Easy takes a fifth less harm, refills twice as fast and loses nothing on dying; Normal is the game as meant; Hard takes a fifth more and drops all but skin-layer clothes on dying; Ironman takes a fifth more, drops everything and deletes the character. What dying costs (`drops_on_death`, `permanent_death`) isn't acted on yet: it is the third PR of the difficulty task. Normal and Hard are also to lose 8 and 24 hours of skill rust on dying, once rust exists.
+- Owner's design (2026-11-08): Easy takes a fifth less harm, refills twice as fast and loses nothing on dying; Normal is the game as meant; Hard takes a fifth more and drops all but skin-layer clothes on dying; Ironman takes a fifth more, drops everything and deletes the character. What dying drops is `Inventory::drop_on_death` (`shared::wear`, `wear/death.rs`: Hard keeps what `kept_on_hard` says, worn on the Skin layer alone, not padded, not jewellery); the server puts it on the ground where they fell and deletes an Ironman character (server `connections/combat/struck.rs`). Normal and Hard are also to lose 8 and 24 hours of skill rust on dying, once rust exists.
 - Ironman is chosen only when making a character, and a player can never change to or from it; a server's rules (what it allows) can still move anyone, Ironman included, onto the nearest allowed.
 - Only harm from creatures is scaled, only for players (`Difficulty::harm_taken` on the server); mobs have no difficulty.
 - Integers only: harm in thousandths (`Points`).

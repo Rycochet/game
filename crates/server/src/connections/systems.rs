@@ -52,11 +52,30 @@ pub(crate) fn save_all(connections: &mut Connections, worlds: &mut ServerWorlds)
 }
 
 /// Every tick: mobs do what they are doing.
-pub(crate) fn run_mobs(mut connections: ResMut<Connections>, mut worlds: ResMut<ServerWorlds>) {
+pub(crate) fn run_mobs(
+    mut connections: ResMut<Connections>,
+    mut worlds: ResMut<ServerWorlds>,
+    options: Res<crate::ServerOptions>,
+) {
     for_each_world(&mut connections.clients, &mut worlds, |clients, world| {
         crate::entities::keep_wild_areas(clients, world);
         crate::entities::run_mobs(clients, world);
     });
+    // Killed on Ironman: deleted, and asked for a new character.
+    let Connections {
+        clients, accounts, ..
+    } = &mut *connections;
+    for client in clients.iter_mut().filter(|client| client.died_for_good) {
+        let world = worlds.of(client.world);
+        let why = "died on Ironman";
+        super::delete_character::delete_character(
+            client,
+            world,
+            accounts,
+            options.difficulties,
+            why,
+        );
+    }
 }
 
 /// Every tick: tells everyone who has come into or gone out of their sight, or

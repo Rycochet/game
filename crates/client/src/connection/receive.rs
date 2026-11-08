@@ -220,7 +220,7 @@ pub(super) fn receive(
                 | ServerMessage::ActionBar(_)
                 | ServerMessage::AbilityStarted { .. }
                 | ServerMessage::AbilityLanded { .. }
-                | ServerMessage::Killed
+                | ServerMessage::Killed { .. }
                 | ServerMessage::Harmed { .. }
                 | ServerMessage::Lightning { .. }
                 | ServerMessage::DevMobInfo { .. }

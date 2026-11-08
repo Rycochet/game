@@ -24,7 +24,6 @@ mod answer_dev;
 mod answer_items;
 mod change_kind;
 
-// Split into files (`cargo xtask lint` keeps files small).
 mod action_bar;
 mod answer;
 mod client;
@@ -269,6 +268,8 @@ pub struct Client {
     starting_as: Option<(CreatureKind, Appearance, Build)>,
     /// Its character's difficulty: from `Hello`, making them or their save.
     pub(crate) difficulty: Option<shared::difficulty::Difficulty>,
+    /// Killed on Ironman: deleted once the mobs' turn is done (`systems`).
+    pub(crate) died_for_good: bool,
     /// What the host last asked the server to allow, not yet done.
     asked_difficulties: Option<shared::difficulty::Difficulties>,
     /// Whether `character` (or the visit) changed since it was saved.
