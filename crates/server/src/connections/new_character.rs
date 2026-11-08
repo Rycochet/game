@@ -35,9 +35,9 @@ pub(super) fn join_or_make(
     true
 }
 
-/// Makes the character a client asked for, or says why not. An account's new
-/// character is added to it; a guest's or the single player's, already given,
-/// is named. Their difficulty is the one asked for, or the nearest allowed.
+/// Makes the character a client asked for, or says why not: added to the
+/// account (or, with none, the one already given: tests). Their difficulty is
+/// the one asked for, or the nearest allowed.
 pub(super) fn create(
     client: &mut Client,
     asked: NewCharacter,
@@ -59,12 +59,9 @@ pub(super) fn create(
     if !asked.build.is_valid() {
         return Err("those attributes can't be chosen".into());
     }
-    let id = match (client.character_id, client.account) {
-        (Some(id), _) => {
-            accounts.rename_character(&id, &asked.name)?;
-            id
-        }
-        (None, Some(account)) => accounts.create_character(&account, &asked.name)?,
+    let id = match (client.account, client.character_id) {
+        (Some(account), _) => accounts.create_character(&account, &asked.name)?,
+        (None, Some(id)) => id,
         (None, None) => return Err("not logged in".into()),
     };
     client.character_id = Some(id);

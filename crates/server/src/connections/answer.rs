@@ -5,6 +5,7 @@ use shared::protocol::{ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessa
 
 use super::answer_dev::answer_dev;
 use super::answer_items::answer_items;
+use super::characters::{delete_chosen, offer_characters};
 use super::delete_character::delete_character;
 use super::login::log_in;
 use super::new_character::{create, join_or_make};
@@ -37,8 +38,18 @@ pub(crate) fn answer(
         ClientMessage::Hello { .. } if client.phase != Phase::Greeting => {
             refuse(client, "hello again?".into())
         }
-        // Needs no login: welcomed by `handle_messages`, which can see other
-        // clients, once made if new.
+        // The embedded server's own player: logged in already.
+        ClientMessage::Hello {
+            makes_characters,
+            difficulty,
+            ..
+        } if client.account.is_some() => {
+            client.makes_characters = makes_characters;
+            client.difficulty = Some(difficulty.for_existing());
+            offer_characters(client, accounts, world, options.difficulties)
+        }
+        // Needs no login (tests): welcomed by `handle_messages`, which can see
+        // other clients, once made if new.
         ClientMessage::Hello {
             makes_characters,
             difficulty,
@@ -84,15 +95,18 @@ pub(crate) fn answer(
             client.phase = Phase::Joining;
             true
         }
+        ClientMessage::DeleteCharacter { id } => {
+            delete_chosen(client, id, accounts, world, options.difficulties)
+        }
         ClientMessage::CreateCharacter(asked) => {
             match create(client, asked, accounts, options.difficulties) {
                 Ok(()) => true,
                 Err(reason) => refuse(client, reason),
             }
         }
-        // Making a new one after deleting the last (dev tools): steps and the
-        // like sent before may still be on their way.
-        _ if client.phase == Phase::Choosing && client.character_id.is_some() => true,
+        // Choosing again after one was deleted (dev tools, Ironman): steps and
+        // the like sent before may still be on their way.
+        _ if client.phase == Phase::Choosing => true,
         _ if client.phase != Phase::Playing => refuse(client, "say hello first".into()),
         ClientMessage::Ping { sent } => client.link.send(&ServerMessage::Pong {
             sent,

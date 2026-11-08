@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use super::Landed;
 use super::OnlineState;
 use super::Strike;
+use super::characters::ListedCharacter;
 use super::level::{LevelChunk, LevelInfo, RememberedLevel};
-use super::login::{CharacterSummary, EmailAddress, LoginMethod, SessionToken};
+use super::login::{EmailAddress, LoginMethod, SessionToken};
 use super::{WorldChunk, WorldInfo};
 use crate::ability::{Ability, ActionBar};
 use crate::difficulty::{Difficulties, Difficulty};
@@ -24,10 +25,11 @@ use crate::world::WorldTime;
 pub enum ServerMessage {
     /// The answer to `Hello`: the ways to log in here.
     LoginOptions { methods: Vec<LoginMethod> },
-    /// The account's characters, to choose from or add to (if `can_create`),
-    /// and the difficulties a new one may have.
+    /// The account's characters, to choose from, delete or add to (if
+    /// `can_create`), and the difficulties a new one may have: on logging in,
+    /// and again after one is deleted.
     Characters {
-        list: Vec<CharacterSummary>,
+        list: Vec<ListedCharacter>,
         can_create: bool,
         difficulties: Difficulties,
     },

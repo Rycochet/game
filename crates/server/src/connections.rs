@@ -22,6 +22,7 @@ use crate::storage::CharacterWorldSave;
 mod answer_dev;
 mod answer_items;
 mod change_kind;
+mod characters;
 
 mod action;
 mod action_bar;
@@ -89,11 +90,12 @@ impl Connections {
         self.clients.push(Client::new(link, Some(character)));
     }
 
-    /// The embedded server's one player, with their character. Refused if saves
-    /// can't be reached, as anyone else would be.
+    /// The embedded server's own player, already logged in to their account,
+    /// to choose a character. Refused if saves can't be reached, as anyone else
+    /// would be.
     pub fn add_single_player(&mut self, link: ServerLink) {
         match self.accounts.single_player() {
-            Ok(character) => self.add_playing(link, character),
+            Ok(account) => self.clients.push(Client::host(link, account)),
             Err(error) => {
                 let mut client = Client::new(link, None);
                 client.refuse_for_saves(&error);

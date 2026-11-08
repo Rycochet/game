@@ -136,7 +136,7 @@ Speeds are ratios to an average walker (85 m a minute), with 100% at world-recor
 
 ## Building it (later tasks, in order)
 
-1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way, and the triangles in a character creation screen (built, `client/character_create.md`; one character per account for now, with Character Selection later before it).
+1. Attributes: the nine, kinds' medians, ranges and bonuses, mobs rolled the same way, and the triangles in a character creation screen (built, `client/character_create.md`; Character Select before it is being built).
 2. The tree, practice, checks and rust clock (the tree's nodes, practice flowing up and from use, values and rust are built, and shown on the Skills page, `client/skills_page.md`; checks are not), with a tool printing the curves (a character after so many hours of a way of playing) and those curves on a players' page.
 3. Abilities and opposition (begun: `shared::ability`, active and passive, the action bar, and Attack, which draws on the node of the weapon held and practises it with every blow; see Combat for what is still to come; opposition is built with rust).
 4. Specialising, once quests, trainers and books exist.

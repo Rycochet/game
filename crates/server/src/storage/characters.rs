@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use shared::ability::ActionBar;
 use shared::difficulty::Difficulty;
 use shared::item::Inventory;
-use shared::protocol::CharacterId;
+use shared::protocol::{CharacterId, CharacterSummary, ListedCharacter};
 use shared::sheet::Sheet;
 use shared::world::WorldId;
 use std::collections::{BTreeMap, BTreeSet};
@@ -75,6 +75,19 @@ impl Storage {
     /// What a character is like: `None` if they are new.
     pub fn load_sheet(&self, id: &CharacterId) -> Result<Option<Sheet>, String> {
         Ok(self.character(id)?.map(|save| save.sheet))
+    }
+
+    /// A character to offer their player, as their save says they are now:
+    /// `None` if they have no save yet.
+    pub fn listed(&self, summary: &CharacterSummary) -> Result<Option<ListedCharacter>, String> {
+        Ok(self.character(&summary.id)?.map(|save| ListedCharacter {
+            summary: summary.clone(),
+            kind: save.inventory.creature,
+            appearance: save.sheet.appearance.clone(),
+            worn: save.inventory.shown(),
+            sheet: save.sheet,
+            difficulty: save.difficulty,
+        }))
     }
 
     /// The World Gates a character has gone through (`CharacterSave::gates`).
