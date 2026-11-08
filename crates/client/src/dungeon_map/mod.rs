@@ -18,6 +18,7 @@ mod herbs;
 pub use field::CROP_STAGES;
 pub use herbs::HERB_STAGES;
 mod gate_picking;
+mod ground_hit;
 mod holes;
 mod liquid;
 mod mesh;

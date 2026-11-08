@@ -21,6 +21,7 @@ pub(super) fn show_scene(
     commands.insert_resource(ViewGrid {
         cell_size: 1.0,
         floor: world.params.sea_level as f32 * HEIGHT_SCALE,
+        raised: false,
     });
 }
 

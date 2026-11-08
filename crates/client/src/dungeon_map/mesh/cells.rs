@@ -99,8 +99,10 @@ pub(super) fn build_open_cell(
         Some(found) => {
             let lit = with_ambient(light.at(x, y));
             let floor_colour = |p| with_ambient(floor_light(p));
-            let through = hides_viewer(found, scene.views, scene.camera)
-                .then_some(&mut layers.stairs_through[..]);
+            // Measured from their ground, on raised land.
+            let camera = scene.camera - Vec3::Y * scene.ground(x, y);
+            let through =
+                hides_viewer(found, scene.views, camera).then_some(&mut layers.stairs_through[..]);
             build_stairs(
                 &mut layers.solid,
                 through,

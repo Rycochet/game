@@ -2,6 +2,7 @@
 //! and those round it, with players' changes and the pois' cutouts in them.
 
 use shared::dungeon::Level;
+use shared::movement::FlatGround;
 use shared::poi::ChunkPos;
 use shared::protocol::SeenStairs;
 use shared::site::{BuildingLook, FieldLook, Rect, SiteLevel, Stairs};
@@ -197,6 +198,7 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
             .iter()
             .map(|&(x, y)| (x + turn, y))
             .collect(),
+        flat: FlatGround::of_cutout(&world.ground, bounds),
     });
     for stairs in &wild_chunk.stairs {
         let x = stairs.x + turn;

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::bag::size_of;
 use super::{Bags, Heading, STAR_LONG, sparkle_scale, sparkle_up};
-use crate::common::{ClickMode, HoveredBag, MapPosition, PointerPosition};
+use crate::common::{ClickMode, HoveredBag, MapPosition, PointerPosition, WildCellHeights};
 use crate::dungeon_map::{CELL_SIZE, Shown};
 use crate::inventory::OpenCharacter;
 use crate::player::{Arrived, Player, TakeStep, TravelTo};
@@ -17,6 +17,7 @@ pub(super) fn find_hovered(
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     bags: Res<Bags>,
     shown: Res<Shown>,
+    heights: Res<WildCellHeights>,
     mut hovered: ResMut<HoveredBag>,
 ) {
     let (camera, transform) = *camera;
@@ -24,7 +25,8 @@ pub(super) fn find_hovered(
         let mut best: Option<(f32, (i64, i64))> = None;
         for (&cell, bag) in &bags.0 {
             let size = size_of(bag.load);
-            let foot = Vec3::new(cell.0 as f32 * CELL_SIZE, 0.0, cell.1 as f32 * CELL_SIZE);
+            let ground = heights.drawn(cell.0, cell.1) * CELL_SIZE;
+            let foot = Vec3::new(cell.0 as f32 * CELL_SIZE, ground, cell.1 as f32 * CELL_SIZE);
             let in_sight = shown
                 .sight
                 .as_ref()

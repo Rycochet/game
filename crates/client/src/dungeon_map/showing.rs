@@ -24,6 +24,7 @@ pub(super) fn show_scene(
     commands.insert_resource(ViewGrid {
         cell_size: CELL_SIZE,
         floor: 0.0,
+        raised: true,
     });
 }
 

@@ -5,6 +5,7 @@
 
 mod gate;
 mod place;
+mod raise;
 mod sight;
 mod visited;
 
@@ -30,7 +31,7 @@ impl Plugin for HallViewPlugin {
             )
             .add_systems(
                 Update,
-                (place::place_gates, place::run_water)
+                (place::place_gates, raise::raise_gates, place::run_water)
                     .chain()
                     .run_if(in_state(GameView::Dungeon)),
             )

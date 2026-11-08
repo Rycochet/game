@@ -1,9 +1,11 @@
 //! Every building of the town, and which are seen or in the way.
 
+use bevy::prelude::*;
 use shared::dungeon::RoomId;
 use shared::site::BuildingLook;
 use std::collections::BTreeSet;
 
+use super::super::mesh::Marks;
 use super::super::walls::{Layers, Scene};
 use super::super::{CELL_SIZE, WALL_HEIGHT};
 use super::{ROOF_RISE, build_cell, cell_centre};
@@ -15,12 +17,17 @@ pub fn build_buildings(layers: &mut Layers, scene: &Scene) {
         let id = RoomId(building.id);
         let seen = building_seen(scene, building, id);
         let hides = hidden.contains(&building.id);
+        let marks = Marks::of(layers);
         for rect in &building.rects {
             for y in rect.y..rect.y + rect.height {
                 for x in rect.x..rect.x + rect.width {
                     build_cell(layers, scene, building, (x, y), id, seen, hides);
                 }
             }
+        }
+        // On a cutout's flat ground, all at one height.
+        if let Some(rect) = building.rects.first() {
+            marks.lift(layers, scene.ground(rect.x, rect.y));
         }
     }
 }
@@ -32,7 +39,8 @@ pub(super) fn in_the_way(scene: &Scene) -> BTreeSet<u16> {
     let top = WALL_HEIGHT + ROOF_RISE;
     for view in scene.views {
         let target = cell_centre(view.cell.0, view.cell.1);
-        let camera = scene.camera;
+        // Measured from the viewer's ground, on raised land.
+        let camera = scene.camera - Vec3::Y * scene.ground(view.cell.0, view.cell.1);
         if camera.y <= top {
             continue;
         }

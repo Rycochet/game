@@ -15,7 +15,7 @@ use bevy::prelude::*;
 use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{MapPosition, Preferences, SmoothPosition, ViewFacing};
+use crate::common::{MapPosition, Preferences, SmoothPosition, ViewFacing, WildCellHeights};
 use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{
@@ -97,11 +97,24 @@ pub struct ViewCamera;
 /// How the current view lays out its grid in 3D, set by the view when it
 /// becomes current. Grid position `(x, y)` is drawn at
 /// `(x × cell_size, floor, y × cell_size)`; the camera looks at the floor and
-/// tokens stand on it.
+/// tokens stand on it. `raised`: the wilderness's cells are raised by their
+/// heights (`common::WildCellHeights`, none on other levels), and so are the
+/// camera and tokens.
 #[derive(Resource, Clone, Copy, Debug, PartialEq)]
 pub struct ViewGrid {
     pub cell_size: f32,
     pub floor: f32,
+    pub raised: bool,
+}
+
+impl ViewGrid {
+    /// The floor's height at grid position `(x, y)`, in world units.
+    pub fn floor_at(&self, heights: &WildCellHeights, x: f32, y: f32) -> f32 {
+        match self.raised {
+            true => self.floor + heights.drawn_between(x, y) * self.cell_size,
+            false => self.floor,
+        }
+    }
 }
 
 impl Default for ViewGrid {
@@ -109,6 +122,7 @@ impl Default for ViewGrid {
         Self {
             cell_size: 1.0,
             floor: 0.0,
+            raised: false,
         }
     }
 }
@@ -161,6 +175,7 @@ fn place_camera_and_tokens(
     player: Single<(Option<&MapPosition>, &SmoothPosition), With<Player>>,
     preferences: Res<Preferences>,
     grid: Res<ViewGrid>,
+    heights: Res<WildCellHeights>,
     assets: Res<TokenAssets>,
     positions: Query<(Option<&MapPosition>, &SmoothPosition)>,
     mut facing: ResMut<ViewFacing>,
@@ -181,7 +196,9 @@ fn place_camera_and_tokens(
     };
 
     let (x, y) = shown_at(*player);
-    let target = Vec3::new(x * size, grid.floor, y * size);
+    // On raised ground the camera keeps the player's cell where it is on
+    // screen, and the land moves under them.
+    let target = Vec3::new(x * size, grid.floor_at(&heights, x, y), y * size);
     *camera = orbit.transform(target);
     // Only write when it changes, so change detection stays meaningful.
     facing.set_if_neq(ViewFacing(orbit.quarter_turns()));
@@ -191,7 +208,8 @@ fn place_camera_and_tokens(
             continue;
         };
         let (x, y) = shown_at(position);
-        transform.translation = Vec3::new(x * size, grid.floor + token::HALF_THICKNESS, y * size);
+        let floor = grid.floor_at(&heights, x, y);
+        transform.translation = Vec3::new(x * size, floor + token::HALF_THICKNESS, y * size);
     }
 
     // Token views never rotate, so turning each anchor to the camera's

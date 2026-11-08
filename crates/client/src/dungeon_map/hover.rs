@@ -4,8 +4,9 @@ use bevy::prelude::*;
 use shared::site::StairsDirection;
 
 use super::Shown;
+use super::ground_hit::Ground;
 use super::picking::{door_clicked, pick};
-use crate::common::{CurrentDungeon, GameView, HoveredOnMap, PointerPosition};
+use crate::common::{CurrentDungeon, GameView, HoveredOnMap, PointerPosition, WildCellHeights};
 use crate::view3d::ViewCamera;
 
 /// What the hatched border round a poi in the wilderness is called.
@@ -19,20 +20,28 @@ pub(super) fn name_hovered_place(
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
+    heights: Res<WildCellHeights>,
     mut hovered: ResMut<HoveredOnMap>,
 ) {
     let (camera, camera_transform) = *camera;
+    let ground = Ground(Some(&heights));
     let name = pointer
         .0
         .filter(|_| *view.get() == GameView::Dungeon)
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
         .and_then(|ray| {
-            let door = door_clicked(ray, &dungeon.buildings, &shown.solid_faces);
+            let door = door_clicked(ray, &dungeon.buildings, &shown.solid_faces, ground);
             if let Some(id) = door {
                 let building = dungeon.buildings.iter().find(|b| b.id == id)?;
                 return Some(building.kind.name().to_owned());
             }
-            let (x, y) = pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces)?;
+            let (x, y) = pick(
+                ray,
+                &dungeon.level,
+                &dungeon.remembered,
+                &shown.solid_faces,
+                ground,
+            )?;
             if dungeon.borders.contains(&(x, y)) {
                 return Some(BORDER_NAME.to_owned());
             }

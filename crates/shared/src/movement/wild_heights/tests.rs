@@ -67,6 +67,7 @@ fn the_sea_is_flat() {
         rows: 2,
         points: vec![-1000; 4],
         floor: -16,
+        flats: Vec::new(),
     };
     assert_eq!(deep.at(3, 5), -16);
     assert_eq!(deep.at(7, 9), -16);
@@ -83,6 +84,7 @@ fn sixteen_cells_cost_what_a_world_map_step_does() {
         rows: 2,
         points: vec![0, 64, 128, 0, 64, 128],
         floor: -1000,
+        flats: Vec::new(),
     };
     let walked: u32 = (8..24)
         .map(|x| {
@@ -92,4 +94,27 @@ fn sixteen_cells_cost_what_a_world_map_step_does() {
         .sum();
     let world = world_step_cost((0, 0), (1, 0), (Some(0), Some(4)), None, Gait::UNSKILLED);
     assert_eq!(walked, 16 * world);
+}
+
+#[test]
+fn flat_ground_is_level_at_its_middle_height() {
+    let (world, ground) = ground();
+    let (px, py) = hillside(&ground, &world);
+    let (x0, y0) = (px * CELLS_PER_POINT, py * CELLS_PER_POINT);
+    let flat = FlatGround::of_cutout(&ground, (x0, y0, 20, 10));
+    let sloped = WildHeights::new(&ground, (x0 - 4, y0 - 4, 40, 40));
+    assert_eq!(flat.height, sloped.at(x0 + 10, y0 + 5));
+    let heights = sloped.clone().with_flats(vec![flat]);
+    for y in y0..y0 + 10 {
+        for x in x0..x0 + 20 {
+            assert_eq!(heights.at(x, y), flat.height);
+        }
+    }
+    // Outside it, the slopes as before.
+    assert_eq!(heights.at(x0 + 25, y0), sloped.at(x0 + 25, y0));
+    assert_ne!(
+        sloped.at(x0, y0),
+        sloped.at(x0 + 19, y0),
+        "a slope to level"
+    );
 }

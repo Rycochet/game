@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, RoomId, Sight};
+use shared::movement::FlatGround;
 use shared::poi::PoiKind;
 use shared::protocol::{LevelChunk, LevelInfo, LevelKind, SeenStairs};
 use shared::site::{BuildingLook, FieldLook};
@@ -37,6 +38,9 @@ pub struct CurrentDungeon {
     /// knows (`ServerMessage::Borders`): drawn hatched, and a click on one
     /// walks there and leaves for the world map.
     pub borders: BTreeSet<(i64, i64)>,
+    /// In the wilderness, the ground kept level that the server has told of
+    /// (`ServerMessage::FlatGround`): pois' cutouts.
+    pub flats: Vec<FlatGround>,
 }
 
 impl Default for CurrentDungeon {
@@ -52,6 +56,7 @@ impl Default for CurrentDungeon {
             fields: Vec::new(),
             in_poi: None,
             borders: BTreeSet::new(),
+            flats: Vec::new(),
         }
     }
 }
@@ -68,7 +73,17 @@ impl CurrentDungeon {
         self.fields.clear();
         self.in_poi = None;
         self.borders.clear();
+        self.flats.clear();
         self.info = Some(info);
+    }
+
+    /// Ground kept level, told by the server: each kept once.
+    pub fn add_flats(&mut self, flats: &[FlatGround]) {
+        for flat in flats {
+            if !self.flats.contains(flat) {
+                self.flats.push(*flat);
+            }
+        }
     }
 
     /// The wilderness's level is now `bounds` (`ServerMessage::WildernessWindow`):

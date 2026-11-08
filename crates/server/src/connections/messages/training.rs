@@ -24,7 +24,9 @@ impl Client {
     ) -> (bool, u32) {
         let corner = (from.0.min(to.0), from.1.min(to.1));
         let size = ((from.0 - to.0).abs() + 1, (from.1 - to.1).abs() + 1);
-        let heights = WildHeights::new(&world.ground, (corner.0, corner.1, size.0, size.1));
+        let flats = self.visit.as_ref().map(|visit| visit.flats());
+        let heights = WildHeights::new(&world.ground, (corner.0, corner.1, size.0, size.1))
+            .with_flats(flats.unwrap_or_default());
         let ends = (heights.at(from.0, from.1), heights.at(to.0, to.1));
         let cost = wild_step_energy(from, to, ends, Gait::of(&self.sheet.skills));
         // 16ths of an elevation a cell: elevations per world map point, as

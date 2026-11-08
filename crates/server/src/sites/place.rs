@@ -1,5 +1,6 @@
 //! What a visit is to, and the cells it shares with another map.
 
+use shared::movement::FlatGround;
 use shared::poi::{ChunkPos, Poi, PoiKind};
 use shared::site::Site;
 use shared::wilderness::BlockPos;
@@ -39,6 +40,18 @@ pub(crate) struct SetIn {
     pub(crate) entrance: Option<(i64, i64)>,
     /// The cells round it (`Cutout::border`).
     pub(crate) border: Vec<(i64, i64)>,
+    /// Its bounds, kept level (`shared::movement::FlatGround`).
+    pub(crate) flat: FlatGround,
+}
+
+impl Place {
+    /// The ground kept level in the wilderness: its cutouts' (none elsewhere).
+    pub(crate) fn flats(&self) -> Vec<FlatGround> {
+        match self {
+            Place::Wilderness { cutouts, .. } => cutouts.iter().map(|set_in| set_in.flat).collect(),
+            _ => Vec::new(),
+        }
+    }
 }
 
 impl SetIn {

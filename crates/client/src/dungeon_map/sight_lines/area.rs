@@ -21,15 +21,17 @@ impl Area {
     }
 }
 
-/// The floor the camera shows, as far as the level goes.
+/// The floor the camera shows, as far as the level goes, taking the floor to
+/// be at height `floor` (the ground the camera looks at, on raised land).
 pub(super) fn view_area(
     camera: &Camera,
     transform: &Transform,
     bounds: (i64, i64, i64, i64),
+    floor: f32,
 ) -> Option<Area> {
     let size = camera.logical_viewport_size()?;
     let global = GlobalTransform::from(*transform);
-    let far = transform.translation.y.abs() * 8.0 + CELL_SIZE * 8.0;
+    let far = (transform.translation.y - floor).abs() * 8.0 + CELL_SIZE * 8.0;
     let mut low = Vec2::splat(f32::MAX);
     let mut high = Vec2::splat(f32::MIN);
     for corner in [
@@ -41,7 +43,7 @@ pub(super) fn view_area(
         let ray = camera.viewport_to_world(&global, corner).ok()?;
         // A corner above the horizon has no floor: as far as anything shows.
         let along = if ray.direction.y < -1.0e-3 {
-            (-ray.origin.y / ray.direction.y).min(far)
+            ((floor - ray.origin.y) / ray.direction.y).min(far)
         } else {
             far
         };

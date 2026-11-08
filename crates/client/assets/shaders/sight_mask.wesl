@@ -28,7 +28,8 @@ struct Mask {
 const IN_FRONT: f32 = 2.4;
 
 // Tops, facing up over the floor: sight stops at the wall below them, so they go
-// by the cell, as they always did. Match `RAISED` in mesh.rs.
+// by the cell, as they always did. Match `RAISED` in mesh.rs. Measured from the
+// ground under them, which raised wilderness cells give as `uv_b.x`.
 const RAISED: f32 = 1.0;
 const RAISED_NORMAL: f32 = 0.5;
 
@@ -39,7 +40,11 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
     let at = in.world_position.xz + normal.xz * IN_FRONT;
     let place = (at - mask.origin) * mask.per_unit;
     let in_sight = textureSample(mask_picture, mask_sampler, place).r > 0.5;
-    let raised = in.world_position.y > RAISED && normal.y > RAISED_NORMAL;
+    var ground = 0.0;
+    @if(VERTEX_UVS_B) {
+        ground = in.uv_b.x;
+    }
+    let raised = in.world_position.y - ground > RAISED && normal.y > RAISED_NORMAL;
     if !raised && ((mask.side > 0.0 && !in_sight) || (mask.side < 0.0 && in_sight)) {
         discard;
     }

@@ -11,6 +11,7 @@ mod light;
 mod light_grid;
 mod memory;
 mod meshes;
+mod raise;
 mod surface;
 
 pub use build::build;
@@ -22,6 +23,7 @@ pub use light::{faces_camera, with_ambient};
 pub use light_grid::LightGrid;
 use memory::{copy_as_memory, layer_sizes, sizes, tint_since};
 pub use meshes::{DungeonMeshes, View, WallFace};
+pub(in crate::dungeon_map) use raise::Marks;
 pub use surface::Surface;
 
 /// How bright remembered (out of sight) surfaces are drawn, on their grey

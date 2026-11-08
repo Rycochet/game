@@ -84,6 +84,11 @@ impl Visit {
         self.position
     }
 
+    /// The ground kept level here: the wilderness's cutouts in its window.
+    pub(crate) fn flats(&self) -> Vec<shared::movement::FlatGround> {
+        self.place.flats()
+    }
+
     /// Puts the player somewhere else, for tests.
     #[cfg(test)]
     pub(crate) fn move_for_test(&mut self, at: (i64, i64)) {

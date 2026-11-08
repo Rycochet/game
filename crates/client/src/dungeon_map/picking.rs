@@ -1,11 +1,13 @@
 //! Turns a mouse click on the dungeon into a walkable cell, by following the
-//! camera ray to the floor unless a solid wall side is in the way. Stairs
-//! don't catch clicks above the floor, so what is behind them can be clicked.
+//! camera ray to the floor (raised in the wilderness: `Ground`) unless a solid
+//! wall side is in the way. Stairs don't catch clicks above the floor, so what
+//! is behind them can be clicked.
 
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
 use shared::site::BuildingLook;
 
+use super::ground_hit::Ground;
 use super::mesh::WallFace;
 use super::{CELL_SIZE, WALL_HEIGHT};
 
@@ -14,6 +16,7 @@ pub fn door_clicked(
     ray: Ray3d,
     buildings: &[BuildingLook],
     solid_faces: &[WallFace],
+    ground: Ground,
 ) -> Option<u16> {
     let direction = *ray.direction;
     let mut nearest: Option<(f32, u16)> = None;
@@ -22,7 +25,7 @@ pub fn door_clicked(
         let normal = Vec3::new(dx as f32, 0.0, dy as f32);
         let centre = Vec3::new(
             building.door.0 as f32 * CELL_SIZE,
-            WALL_HEIGHT / 2.0,
+            ground.at(building.door.0, building.door.1) + WALL_HEIGHT / 2.0,
             building.door.1 as f32 * CELL_SIZE,
         ) + normal * CELL_SIZE * 0.05;
         let face = WallFace {
@@ -52,19 +55,11 @@ pub fn pick(
     level: &Level,
     sight: &Sight,
     solid_faces: &[WallFace],
+    ground: Ground,
 ) -> Option<(i64, i64)> {
     let direction = *ray.direction;
-    // Only rays going down reach the floor (at height 0).
-    if direction.y >= 0.0 {
-        return None;
-    }
-    let floor_distance = -ray.origin.y / direction.y;
-    let point = ray.origin + direction * floor_distance;
-    let (x, y) = (
-        (point.x / CELL_SIZE).round() as i64,
-        (point.z / CELL_SIZE).round() as i64,
-    );
-    let distance = floor_distance;
+    // Only rays going down reach the floor.
+    let (distance, point, (x, y)) = ground.hit(ray)?;
     let blocked = solid_faces
         .iter()
         .any(|face| hits_face(ray.origin, direction, face).is_some_and(|d| d < distance));
@@ -99,16 +94,8 @@ pub fn pick(
 }
 
 /// The cell under the point the ray reaches the floor at, walkable or not.
-pub fn floor_cell(ray: Ray3d) -> Option<(i64, i64)> {
-    let direction = *ray.direction;
-    if direction.y >= 0.0 {
-        return None;
-    }
-    let point = ray.origin + direction * (-ray.origin.y / direction.y);
-    Some((
-        (point.x / CELL_SIZE).round() as i64,
-        (point.z / CELL_SIZE).round() as i64,
-    ))
+pub fn floor_cell(ray: Ray3d, ground: Ground) -> Option<(i64, i64)> {
+    ground.hit(ray).map(|(_, _, cell)| cell)
 }
 
 /// How far along the ray it crosses the wall side, if it does from the front.

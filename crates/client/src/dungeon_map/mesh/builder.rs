@@ -15,6 +15,9 @@ pub struct Builder {
     uvs: Vec<[f32; 2]>,
     pub colours: Vec<[f32; 4]>,
     pub indices: Vec<u32>,
+    /// The height of the ground each vertex stands on (raised wilderness
+    /// cells), which tops are measured from (`RAISED`).
+    bases: Vec<f32>,
 }
 
 impl Builder {
@@ -46,6 +49,7 @@ impl Builder {
             self.normals.push(normal.to_array());
             self.uvs.push(uv);
             self.colours.push([lit.x, lit.y, lit.z, 1.0]);
+            self.bases.push(0.0);
         }
         self.indices
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
@@ -91,6 +95,7 @@ impl Builder {
             self.normals.push(normal.to_array());
             self.uvs.push(uvs[i]);
             self.colours.push([lit.x, lit.y, lit.z, opacity[i]]);
+            self.bases.push(0.0);
         }
         self.indices
             .extend([0, 1, 2, 0, 2, 3].map(|corner| first + corner));
@@ -107,13 +112,14 @@ impl Builder {
             into.positions.push(self.positions[i]);
             into.normals.push(self.normals[i]);
             into.uvs.push(self.uvs[i]);
+            into.bases.push(self.bases[i]);
             into.colours
                 .push([MEMORY_SHADE, MEMORY_SHADE, MEMORY_SHADE, alpha]);
         }
         for triangle in self.indices[indices..].as_chunks::<3>().0 {
             let raised = triangle.iter().all(|&i| {
                 let i = i as usize;
-                self.positions[i][1] > RAISED && self.normals[i][1] > RAISED_NORMAL
+                self.positions[i][1] - self.bases[i] > RAISED && self.normals[i][1] > RAISED_NORMAL
             });
             if !raised {
                 into.indices
@@ -122,7 +128,22 @@ impl Builder {
         }
     }
 
+    /// Raises everything added since vertex `from` by `by`, onto ground that
+    /// high.
+    pub(in crate::dungeon_map) fn lift(&mut self, from: usize, by: f32) {
+        for (position, base) in self.positions[from..]
+            .iter_mut()
+            .zip(&mut self.bases[from..])
+        {
+            position[1] += by;
+            *base += by;
+        }
+    }
+
+    /// The ground's height under each vertex reaches the shader as the second
+    /// picture coordinates' first part (`sight_mask.wesl`).
     pub(in crate::dungeon_map) fn into_mesh(self) -> Mesh {
+        let bases: Vec<[f32; 2]> = self.bases.iter().map(|&base| [base, 0.0]).collect();
         Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
@@ -130,6 +151,7 @@ impl Builder {
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, self.positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals)
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, bases)
         .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, self.colours)
         .with_inserted_indices(Indices::U32(self.indices))
     }

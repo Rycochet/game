@@ -42,8 +42,11 @@ fn vertex(in: Vertex) -> Output {
     out.clip = vec4<f32>(0.0, 0.0, 2.0, 1.0);
     out.colour = vec4<f32>(0.0);
 
+    // The drop's ground (whole world units: raised wilderness cells) and its
+    // random number, together in its height.
+    let ground = floor(in.drop.y);
+    let random = in.drop.y - ground;
     // Harder rain lights up more of the quads.
-    let random = in.drop.y;
     if weather.rain * 1.05 < fract(random * 57.3) + 0.03 {
         return out;
     }
@@ -73,7 +76,7 @@ fn vertex(in: Vertex) -> Output {
 
     let height = weather.fall_height * fract(random - weather.time * speed / weather.fall_height);
     let view_right = view.world_from_view[0].xyz;
-    let place = vec3<f32>(in.drop.x, height, in.drop.z)
+    let place = vec3<f32>(in.drop.x, ground + height, in.drop.z)
         + view_right * in.corner.x * size.x
         + vec3<f32>(0.0, 1.0, 0.0) * in.corner.y * size.y;
     out.clip = view.clip_from_world * vec4<f32>(place, 1.0);

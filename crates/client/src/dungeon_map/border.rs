@@ -10,7 +10,7 @@ use bevy::prelude::*;
 
 use super::CELL_SIZE;
 use super::parts::DungeonScene;
-use crate::common::CurrentDungeon;
+use crate::common::{CurrentDungeon, WildCellHeights};
 
 /// How far apart the stripes are, and how wide, in cells: lines where the
 /// sum of a point's coordinates is a multiple of `GAP`, so they run on from
@@ -32,7 +32,7 @@ pub(super) struct BorderPart;
 /// Draws the border again whenever its cells change: made the first time it
 /// is needed, under the scene, so it shows and hides with it.
 pub(super) fn draw_borders(
-    dungeon: Res<CurrentDungeon>,
+    (dungeon, heights): (Res<CurrentDungeon>, Res<WildCellHeights>),
     scene: Query<Entity, With<DungeonScene>>,
     mut part: Query<&mut Mesh3d, With<BorderPart>>,
     mut drawn: Local<Option<Vec<(i64, i64)>>>,
@@ -40,14 +40,14 @@ pub(super) fn draw_borders(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
-    if !dungeon.is_changed() {
+    if !dungeon.is_changed() && !heights.is_changed() {
         return;
     }
     let cells: Vec<(i64, i64)> = dungeon.borders.iter().copied().collect();
-    if drawn.as_ref() == Some(&cells) {
+    if drawn.as_ref() == Some(&cells) && !heights.is_changed() {
         return;
     }
-    let mesh = meshes.add(stripes(&cells));
+    let mesh = meshes.add(stripes(&cells, &heights));
     if let Ok(mut current) = part.single_mut() {
         current.0 = mesh;
     } else if let Ok(scene) = scene.single() {
@@ -73,17 +73,19 @@ pub(super) fn draw_borders(
 
 /// The stripes over `cells`: in each, the pieces of the lines `u + v = k`
 /// (`u`, `v` from 0 to 1 across the cell) for `k` a multiple of `GAP`.
-fn stripes(cells: &[(i64, i64)]) -> Mesh {
+/// Each on its cell's ground.
+fn stripes(cells: &[(i64, i64)], heights: &WildCellHeights) -> Mesh {
     let (mut positions, mut indices) = (Vec::new(), Vec::new());
     let lines = (1..(2.0 / GAP) as i32).map(|step| step as f32 * GAP);
     let lines: Vec<f32> = lines.collect();
     // Half the stripe's width, across it (it runs at 45°).
     let half = WIDTH / 2.0 * std::f32::consts::FRAC_1_SQRT_2;
     for &(x, y) in cells {
+        let ground = heights.drawn(x, y);
         let place = |u: f32, v: f32| {
             [
                 (x as f32 - 0.5 + u) * CELL_SIZE,
-                LIFT * CELL_SIZE,
+                (ground + LIFT) * CELL_SIZE,
                 (y as f32 - 0.5 + v) * CELL_SIZE,
             ]
         };

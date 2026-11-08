@@ -35,3 +35,4 @@ The land between pois at walking scale: one endless map per world, `SCALE` (16) 
 - `BORDER` (2, owner) and `Cutout::border()`: the wilderness cells within `BORDER` of the cutout's own each way (diagonals too), not its own: the hatched ring round a poi where a click leads back to the world map. It follows `contains`, so a cave mouth's runs round its hill, and a way down alone's round its 5 × 5 clearing (tested).
 - `Wilderness::biome_of(block)`: the biome at a block's middle, for who lives there (`mob::wild_spawns`).
 - Scent laid ahead: a block's new mobs have lately walked a trail from their den and back (`mob::wild_trail`), into the blocks round it; the server lays it as aged marks.
+- Height: cells carry none here; how high each is (for walking and drawing) is `movement::WildHeights`, from the same points, with each cutout's rectangle kept level (`movement::FlatGround::of_cutout`, owner).

@@ -18,7 +18,7 @@ use shared::rng::Seed;
 use super::daylight::OutsideLight;
 use super::{CELL_SIZE, Shown};
 use crate::common::{
-    CurrentDungeon, CurrentWorld, Lightning, Preferences, ServerClock, WorldReturn,
+    CurrentDungeon, CurrentWorld, Lightning, Preferences, ServerClock, WildCellHeights, WorldReturn,
 };
 
 /// Quads of precipitation per cell, shown in proportion to how hard it is
@@ -107,19 +107,21 @@ pub fn spawn(
 }
 
 /// `DROPS_PER_CELL` quads over each cell, each corner holding the drop's place
-/// on the ground, with a random number as its height for the shader. Drops
-/// come from their cell's position, so they stay put as others come into sight.
-fn drops_mesh(cells: &[(i64, i64)]) -> Mesh {
+/// on the ground, with a random number as its height for the shader, added to
+/// the ground's height rounded to a whole unit. Drops come from their cell's
+/// position, so they stay put as others come into sight.
+fn drops_mesh(cells: &[(i64, i64)], heights: &WildCellHeights) -> Mesh {
     let seed = Seed::new(1);
     let mut positions = Vec::new();
     let mut corners = Vec::new();
     let mut indices = Vec::new();
     for &(x, y) in cells {
         let mut rng = Seed::new(seed.at(&[x, y])).rng();
+        let ground = (heights.drawn(x, y) * CELL_SIZE).round();
         for _ in 0..DROPS_PER_CELL {
             let place = [
                 (x as f32 + rng.range_f64(-0.5, 0.5) as f32) * CELL_SIZE,
-                rng.range_f64(0.0, 1.0) as f32,
+                ground + rng.range_f64(0.0, 0.999) as f32,
                 (y as f32 + rng.range_f64(-0.5, 0.5) as f32) * CELL_SIZE,
             ];
             let first = positions.len() as u32;
@@ -155,7 +157,7 @@ pub fn update(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<RainMaterial>>,
     mut outside: Local<Vec<(i64, i64)>>,
-    preferences: Res<Preferences>,
+    (preferences, heights): (Res<Preferences>, Res<WildCellHeights>),
 ) {
     let Some(world) = world else {
         return;
@@ -187,7 +189,7 @@ pub fn update(
             if !cells.is_empty()
                 && let Some(mut stored) = meshes.get_mut(&mesh.0)
             {
-                *stored = drops_mesh(&cells);
+                *stored = drops_mesh(&cells, &heights);
             }
             *outside = cells;
         }

@@ -21,8 +21,12 @@ pub(super) fn keep_wild_heights(
         return;
     };
     let bounds = dungeon.level.bounds();
-    if heights.heights.is_none() || heights.bounds != bounds {
+    if heights.heights.is_none() || heights.bounds != bounds || heights.flats != dungeon.flats {
         heights.bounds = bounds;
-        heights.heights = Some(WildHeights::new(&world.ground, bounds));
+        heights.flats.clone_from(&dungeon.flats);
+        let found = WildHeights::new(&world.ground, bounds).with_flats(dungeon.flats.clone());
+        let (min_x, min_y, width, height) = bounds;
+        heights.reference = found.at(min_x + width / 2, min_y + height / 2);
+        heights.heights = Some(found);
     }
 }

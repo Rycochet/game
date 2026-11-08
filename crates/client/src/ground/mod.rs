@@ -16,6 +16,7 @@ mod clicks;
 #[cfg(not(target_arch = "wasm32"))]
 mod debug;
 mod parts;
+mod raise;
 mod server;
 mod show;
 mod spawn;
@@ -27,6 +28,7 @@ pub use debug::GroundDebug;
 #[cfg(not(target_arch = "wasm32"))]
 use debug::run_debug;
 use parts::{Bag, BagAssets, BagMeshes, BagPart, Bags, Heading, OfBag, Sparkle, Star};
+use raise::raise_bags;
 use server::read_server;
 use show::show_bags;
 use spawn::set_bag;
@@ -70,6 +72,7 @@ impl Plugin for GroundPlugin {
                 Update,
                 (
                     read_server,
+                    raise_bags.after(read_server),
                     find_hovered.in_set(View3dSystems::Click),
                     (change_of_mind, follow_click)
                         .chain()
