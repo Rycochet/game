@@ -22,6 +22,10 @@ pub(super) struct Connecting {
     pub(super) environment: bool,
     /// The token to log in as a guest with, once one is needed.
     pub(super) guest: Option<GuestToken>,
+    /// The ways the server offered to log in (`LoginOptions`).
+    pub(super) methods: Vec<shared::protocol::LoginMethod>,
+    /// Whether the kept account's session was tried, so a refusal forgets it.
+    pub(super) tried_session: bool,
     /// Counting down to the next try; `None` to try now.
     pub(super) retry: Option<Timer>,
 }
@@ -117,6 +121,7 @@ pub(super) fn hang_up(commands: &mut Commands) {
     commands.remove_resource::<ServerConnection>();
     // A character half made is asked for again on connecting again.
     commands.insert_resource(crate::common::MakingCharacter(false));
+    commands.insert_resource(crate::common::LoggingIn::Not);
     commands.insert_resource(crate::common::PlayDifficulty::default());
     #[cfg(target_arch = "wasm32")]
     commands.queue(|world: &mut World| {

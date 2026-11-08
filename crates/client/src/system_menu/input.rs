@@ -4,7 +4,7 @@ use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
 
 use super::{Action, SystemMenu, show_ended_page};
-use crate::common::{ChosenServer, GameView, Session, TouchGesture};
+use crate::common::{ChosenServer, GameView, LoginChoice, Session, TouchGesture};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::ButtonPressed;
@@ -26,6 +26,7 @@ pub(super) fn take_input(
     mut session: ResMut<Session>,
     mut chosen: ResMut<ChosenServer>,
     mut exit: MessageWriter<AppExit>,
+    mut login: MessageWriter<LoginChoice>,
 ) {
     let at_start = !session.is_playing();
     if at_start && !menu.is_open() {
@@ -67,6 +68,10 @@ pub(super) fn take_input(
             // server's again.
             *session = Session::AtStart;
             chosen.0 = None;
+        }
+        // At the startup menu: forget the account kept for Play's server.
+        (Action::LogOut, SystemMenu::Menu) => {
+            login.write(LoginChoice::LogOut);
         }
         (Action::Connect, SystemMenu::Menu) if !at_start => {}
         // On to Connect, to try another way, if it was Connect's server.

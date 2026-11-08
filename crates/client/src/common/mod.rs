@@ -3,10 +3,12 @@
 //! Keep this small: only types that genuinely need to be shared between
 //! feature modules belong here. See `docs/context/client/common.md`.
 
+mod browser;
 pub mod controls;
 mod floors;
 mod hosting;
 mod hover;
+mod login;
 pub use controls::{Action, Binding, Controls, Group, Mods};
 mod preferences;
 mod servers;
@@ -51,6 +53,7 @@ mod window_open;
 mod window_save;
 mod world;
 
+pub use browser::open_in_browser;
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{
     AbilitiesPage, CancelledEnergy, CarryLimit, MakesCharacters, MakingCharacter, Other,
@@ -72,6 +75,7 @@ pub use items::{
     StockCell, TakesGifts, TookItem, quality_colour,
 };
 pub use lightning::{BoltStruck, Lightning, LightningStrike};
+pub use login::{AccountEmail, LoggingIn, LoginChoice, LoginProvider};
 pub use map::{
     Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, WorldReturn,
 };
@@ -148,6 +152,9 @@ impl Plugin for CommonPlugin {
             .init_resource::<NearRivers>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
+            .init_resource::<LoggingIn>()
+            .init_resource::<AccountEmail>()
+            .add_message::<LoginChoice>()
             .init_resource::<MakesCharacters>()
             .init_resource::<DetectMonsters>()
             .init_resource::<GodMode>()

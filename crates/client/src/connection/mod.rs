@@ -40,13 +40,14 @@ mod log_out;
 mod messages;
 mod receive;
 mod remember;
+mod saved_login;
 mod send;
 
 use clock::{apply_pong, run_clock, send_local_pings, stop_game_time};
 #[cfg(target_arch = "wasm32")]
 use connect::pump_socket;
 use connect::{Connecting, connect, give_up, hang_up};
-use log_in::log_in;
+use log_in::{answer_login, choose_login, show_account};
 use log_out::{back_at_start, log_out, now_playing, start_playing};
 pub use messages::{FromServer, ServerConnection, ToServer};
 pub use probe::{ProbeResult, ServerProbe};
@@ -67,6 +68,8 @@ impl Plugin for ConnectionPlugin {
                 target: Target::choose(&ChosenServer::default(), true),
                 environment: true,
                 guest: None,
+                methods: Vec::new(),
+                tried_session: false,
                 retry: None,
             })
             .add_systems(
@@ -78,12 +81,21 @@ impl Plugin for ConnectionPlugin {
                         .run_if(not(resource_exists::<ServerConnection>))
                         .run_if(|session: Res<Session>| session.is_playing()),
                     receive.run_if(resource_exists::<ServerConnection>),
+                    answer_login.run_if(resource_exists::<ServerConnection>),
                     stop_game_time,
                 )
                     .chain(),
             )
             .add_systems(Update, send_steps.after(PlayerSystems::Travel))
-            .add_systems(Update, (remember_server, difficulty::keep_difficulty))
+            .add_systems(
+                Update,
+                (
+                    remember_server,
+                    difficulty::keep_difficulty,
+                    choose_login,
+                    show_account,
+                ),
+            )
             .add_systems(
                 Update,
                 (

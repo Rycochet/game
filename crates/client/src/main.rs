@@ -22,6 +22,7 @@ mod item_art;
 mod item_text;
 mod lightning;
 mod loading_screen;
+mod login;
 mod minimap;
 mod notices;
 mod planet_view;
@@ -106,6 +107,7 @@ fn main() {
         ui::UiPlugin,
         loading_screen::LoadingScreenPlugin,
     ));
+    app.add_plugins(login::LoginPlugin);
     // (Apart: a tuple of plugins can only be so long.)
     app.add_plugins((
         system_menu::SystemMenuPlugin,

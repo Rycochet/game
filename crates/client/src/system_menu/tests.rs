@@ -11,6 +11,7 @@ fn test_app(menu: SystemMenu) -> App {
     let mut app = App::new();
     app.add_message::<ButtonPressed>()
         .add_message::<AppExit>()
+        .add_message::<crate::common::LoginChoice>()
         .init_resource::<ButtonInput<KeyCode>>()
         .init_resource::<ButtonInput<MouseButton>>()
         .init_resource::<AccumulatedMouseScroll>()

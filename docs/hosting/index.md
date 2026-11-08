@@ -96,11 +96,29 @@ Players can play as guests, or log in with an account through a provider's websi
 
 With Let's Encrypt, `HOW_LOGIN_URL` can be left out: the domain is used.
 
+To keep the client secret out of the Compose file, give it as a Docker secret and name its file with `HOW_OIDC_GOOGLE_CLIENT_SECRET_FILE`. `HOW_LOGIN_SECRET_FILE` does the same for the login secret.
+
+```yaml
+services:
+  hall-of-worlds:
+    environment:
+      HOW_OIDC_GOOGLE_CLIENT_ID: "<client id>"
+      HOW_OIDC_GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google_client_secret
+    secrets:
+      - google_client_secret
+
+secrets:
+  google_client_secret:
+    file: ./google_client_secret.txt
+```
+
+The file must be readable by the container's `hall` user (`chmod 644` on it does that). If the service has `read_only: true`, Compose only allows secrets from a `file:`, as above, as it can't write `environment:` ones into the container; set `HOW_OIDC_GOOGLE_CLIENT_SECRET` itself instead if you'd rather keep them in the environment.
+
 The server only asks Google for the player's email address, and only one Google has checked. It keeps a key made from the address with a secret of its own, never the address itself, and forgets everything else Google says. The secret is made on the first run and kept in the data folder (`login-secret.txt`); servers that share players must be given the same one with `HOW_LOGIN_SECRET`.
 
 If the provider can't be reached when the server starts, or a setting is missing, the server says so in its log and lets players in as guests only. `HOW_GUEST_MODE: "true"` does that on purpose.
 
-Logging in with an account isn't in the game yet: the server is ready for it, and the client comes next.
+Players then choose Log in with Google or Play as Guest when they join. The page opens in their own browser, and once they have logged in there they go back to the game. Their game remembers the login, so they only see that page again after 90 days without playing, or after using Logout on the startup menu. Logins only go over a secure connection, so a server reached through an unsecured port offers guests only.
 
 ## Things to know
 

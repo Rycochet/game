@@ -9,8 +9,8 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::common::{
-    GameView, LoadingStep, MakingCharacter, PointerSystems, ServerStatus, Session, TouchGesture,
-    interface_area,
+    GameView, LoadingStep, LoggingIn, MakingCharacter, PointerSystems, ServerStatus, Session,
+    TouchGesture, interface_area,
 };
 
 mod frames;
@@ -65,8 +65,12 @@ impl Plugin for LoadingScreenPlugin {
                     .run_if(
                         |step: Res<LoadingStep>,
                          session: Res<Session>,
-                         making: Res<MakingCharacter>| {
-                            *step != LoadingStep::Ready && session.is_playing() && !making.0
+                         making: Res<MakingCharacter>,
+                         logging_in: Res<LoggingIn>| {
+                            *step != LoadingStep::Ready
+                                && session.is_playing()
+                                && !making.0
+                                && !logging_in.shows()
                         },
                     )
                     .after(InputSystems)
@@ -217,12 +221,14 @@ fn show_screen(
     status: Res<ServerStatus>,
     session: Res<Session>,
     making: Res<MakingCharacter>,
+    logging_in: Res<LoggingIn>,
     mut screen: Single<&mut Visibility, (With<LoadingScreen>, Without<Bar>)>,
     mut bar: Single<&mut Visibility, (With<Bar>, Without<LoadingScreen>)>,
     mut progress: Single<&mut Progress, With<Bar>>,
     mut text: Single<(&mut Text, &mut TextColor), With<BarText>>,
 ) {
-    if !step.is_changed() && !status.is_changed() && !session.is_changed() && !making.is_changed() {
+    let changed = step.is_changed() || status.is_changed() || session.is_changed();
+    if !changed && !making.is_changed() && !logging_in.is_changed() {
         return;
     }
     let shown_if = |shown: bool| {
@@ -233,8 +239,11 @@ fn show_screen(
         }
     };
     screen.set_if_neq(shown_if(*step != LoadingStep::Ready));
-    // Only the title behind the startup menu, or the screen making a character.
-    bar.set_if_neq(shown_if(session.is_playing() && !making.0));
+    // Only the title behind the startup menu, or the screens making a character
+    // and logging in.
+    bar.set_if_neq(shown_if(
+        session.is_playing() && !making.0 && !logging_in.shows(),
+    ));
     let (words, full) = bar_shows(*step, &status);
     progress.0 = full;
     text.0.0 = words;
