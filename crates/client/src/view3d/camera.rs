@@ -1,6 +1,10 @@
 //! A camera that circles a point, turned and tilted by dragging with the right
-//! mouse button and zoomed with the wheel, or by two fingers. Shared by every
-//! 3D view.
+//! mouse button and zoomed with the wheel, or by two fingers, or turned and
+//! zoomed by keys (`keys.rs`). Shared by every 3D view.
+
+mod keys;
+
+pub use keys::control_with_keys;
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
