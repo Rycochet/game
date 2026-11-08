@@ -219,4 +219,8 @@ pub enum ServerMessage {
     /// shown hatched, a click on one walks there and leaves for the world
     /// map (`Up`).
     Borders(Vec<(i64, i64)>),
+    /// The player has just found a poi in the wilderness, by seeing its way
+    /// in or stepping inside it: it is known from now on (not sent for
+    /// towns, which everyone knows of).
+    PoiFound { kind: crate::poi::PoiKind },
 }

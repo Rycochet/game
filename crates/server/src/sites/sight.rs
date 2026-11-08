@@ -3,7 +3,7 @@
 use shared::dungeon::{Cell, Sight};
 use shared::protocol::level_chunk;
 
-use super::{Place, Visit, add_masks, all_cells, arrive_again, beside, nearby_cells, send_cells};
+use super::{Visit, add_masks, all_cells, arrive_again, beside, nearby_cells, send_cells};
 use crate::connections::Client;
 use crate::storage::CellMasks;
 use crate::{LEVEL_PRELOAD_STEPS, ServerWorld};
@@ -117,19 +117,20 @@ pub(super) fn update_sight(client: &mut Client) -> bool {
         }
     }
     client.unsaved |= learnt;
-    learnt_elsewhere(client, &visit, &shared_cells);
+    let told = learnt_elsewhere(client, &visit, &shared_cells);
     // Their neighbours too: a wall's shape depends on what is beside it.
     let extra = beside(level, |cx, cy| visit.loaded.is_seen(cx, cy), &visit.sent);
     add_masks(&mut new, extra);
     let sent = send_cells(client, &visit, &new, false);
     let visit = client.visit.insert(visit);
     add_masks(&mut visit.sent, new);
-    sent
+    told && sent
 }
 
 /// Cells just seen that are another map's too, or a poi's cutout in the
-/// wilderness: they are remembered there as well, and the poi is known.
-fn learnt_elsewhere(client: &mut Client, visit: &Visit, cells: &[(i64, i64)]) {
+/// wilderness: they are remembered there as well, and a poi whose way in is
+/// among them is known (`wild::found`). `false` if the client has gone.
+fn learnt_elsewhere(client: &mut Client, visit: &Visit, cells: &[(i64, i64)]) -> bool {
     for mirror in &visit.mirrors {
         let memory = client.character.memory.entry(mirror.id).or_default();
         let memory = memory.entry(mirror.index).or_default();
@@ -140,16 +141,5 @@ fn learnt_elsewhere(client: &mut Client, visit: &Visit, cells: &[(i64, i64)]) {
             }
         }
     }
-    if let Place::Wilderness { cutouts, .. } = &visit.place {
-        for &(chunk, (min_x, min_y, width, height)) in cutouts {
-            let inside = |&(x, y): &(i64, i64)| {
-                (min_x..min_x + width).contains(&x) && (min_y..min_y + height).contains(&y)
-            };
-            let poi = client.character.pois.entry(chunk).or_default();
-            if !poi.known && cells.iter().any(inside) {
-                poi.known = true;
-                client.unsaved = true;
-            }
-        }
-    }
+    super::wild::found_by_sight(client, visit, cells)
 }

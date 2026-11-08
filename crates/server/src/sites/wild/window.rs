@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 
 use super::ensure_chunk;
 use crate::ServerWorld;
-use crate::sites::Mirror;
+use crate::sites::{Mirror, SetIn};
 use crate::storage::SiteId;
 use crate::wilderness::WINDOW_BLOCKS;
 
@@ -20,12 +20,10 @@ pub(super) struct Window {
     pub(super) level: SiteLevel,
     pub(super) stairs: Vec<SeenStairs>,
     pub(super) mirrors: Vec<Mirror>,
-    pub(super) cutouts: Vec<(ChunkPos, (i64, i64, i64, i64))>,
+    pub(super) cutouts: Vec<SetIn>,
     /// Town cutouts' buildings and farm cutouts' fields, as players see them.
     pub(super) buildings: Vec<BuildingLook>,
     pub(super) fields: Vec<FieldLook>,
-    /// The cells round each cutout (`WildChunk::border`), by its chunk.
-    pub(super) borders: Vec<(ChunkPos, Vec<(i64, i64)>)>,
 }
 
 /// The window round a player at `(x, y)`.
@@ -96,7 +94,6 @@ fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window
         cutouts: Vec::new(),
         buildings: Vec::new(),
         fields: Vec::new(),
-        borders: Vec::new(),
     };
     for chunk in chunks {
         add_cutout(world, &frame, chunk, &mut window);
@@ -185,7 +182,22 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
         return;
     };
     let bounds = (min_x + turn, min_y, columns, rows);
-    window.cutouts.push((chunk, bounds));
+    // Its way in: where its own visit starts, or the way down.
+    let entrance = match cutout.offset() {
+        Some(_) => wild_chunk.entrance,
+        None => cutout.stairs().first().map(|stairs| (stairs.x, stairs.y)),
+    };
+    window.cutouts.push(SetIn {
+        chunk,
+        kind: cutout.poi().kind,
+        bounds,
+        entrance: entrance.map(|(x, y)| (x + turn, y)),
+        border: wild_chunk
+            .border
+            .iter()
+            .map(|&(x, y)| (x + turn, y))
+            .collect(),
+    });
     for stairs in &wild_chunk.stairs {
         let x = stairs.x + turn;
         window.stairs.push(SeenStairs { x, ..*stairs });
@@ -205,8 +217,6 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
             ..building.clone()
         });
     }
-    let border = wild_chunk.border.iter().map(|&(x, y)| (x + turn, y));
-    window.borders.push((chunk, border.collect()));
     for field in &wild_chunk.fields {
         window.fields.push(FieldLook {
             rect: turned(field.rect),

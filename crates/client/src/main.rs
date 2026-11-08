@@ -23,6 +23,7 @@ mod item_text;
 mod lightning;
 mod loading_screen;
 mod minimap;
+mod notices;
 mod planet_view;
 mod player;
 mod site;
@@ -126,6 +127,7 @@ fn main() {
     app.add_plugins(skills_page::SkillsPagePlugin);
     app.add_plugins(lightning::LightningPlugin);
     app.add_plugins(step_pad::StepPadPlugin);
+    app.add_plugins(notices::NoticesPlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

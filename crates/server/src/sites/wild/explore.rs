@@ -3,21 +3,20 @@
 
 use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
-use shared::poi::ChunkPos;
 use shared::protocol::{LevelInfo, LevelKind, ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
 use shared::site::{BuildingLook, FieldLook};
 use shared::wilderness::gates_of;
 
 use super::arrival::arrival;
+use super::found::{found_by_standing, send_borders};
 use super::in_poi::{poi_here, tell_poi};
 use super::town::send_town;
 use super::window::window;
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::sites::remembered::send_remembered;
-use crate::sites::{Mirror, Place, Visit, keep_within, keepers_in_window, update_sight};
+use crate::sites::{Mirror, Place, SetIn, Visit, keep_within, keepers_in_window, update_sight};
 use crate::storage::{CellMasks, SiteId};
-use crate::world_map::known_poi;
 
 /// How far round where the player would arrive a walkable cell is looked for.
 const ARRIVAL_SEARCH: i64 = 48;
@@ -89,7 +88,7 @@ pub(in crate::sites) fn enter_wilderness(
     let in_poi = poi_here(world, position);
     if !client.link.send(&ServerMessage::EnterLevel(info))
         || !client.link.send(&ServerMessage::InPoi(in_poi))
-        || !send_looks(client, world, looks, &visit.mirrors)
+        || !send_looks(client, world, looks, (&visit.mirrors, set_ins(&visit)))
         || !send_remembered(client, &mut visit)
     {
         return false;
@@ -99,7 +98,7 @@ pub(in crate::sites) fn enter_wilderness(
     client.character.hall = None;
     client.visit = Some(visit);
     client.unsaved = true;
-    send_town(client) && update_sight(client)
+    send_town(client) && update_sight(client) && found_by_standing(client)
 }
 
 /// After a step in the wilderness: keeps the window round the player, and
@@ -121,7 +120,7 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     if visit.level.level.cell(x, y) == Cell::WorldGate {
         return through_gate(client, world, (x, y));
     }
-    if !tell_poi(client, world) {
+    if !tell_poi(client, world) || !found_by_standing(client) {
         return false;
     }
     if wild.block_of(x, y) == centre {
@@ -154,10 +153,11 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     // The client lets go of what is outside the window now.
     keep_within(&mut visit.sent, bounds);
     let mirrors = visit.mirrors.clone();
+    let cutouts = set_ins(visit).to_vec();
     if !client
         .link
         .send(&ServerMessage::WildernessWindow { bounds })
-        || !send_looks(client, world, looks, &mirrors)
+        || !send_looks(client, world, looks, (&mirrors, &cutouts))
     {
         return false;
     }
@@ -187,26 +187,34 @@ fn through_gate(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)
     crate::gates::enter_gate(client, world, gate.entrance)
 }
 
-/// The window's towns' buildings, who keeps their shops and farms' fields,
-/// before its cells (the client marks the buildings' cells as theirs):
-/// always, so ones left behind go.
-fn send_looks(client: &Client, world: &mut ServerWorld, made: Looks, mirrors: &[Mirror]) -> bool {
+/// The window's towns' buildings, who keeps their shops, farms' fields and
+/// the borders round pois the player knows, before its cells (the client
+/// marks the buildings' cells as theirs): always, so ones left behind go.
+fn send_looks(
+    client: &Client,
+    world: &mut ServerWorld,
+    made: Looks,
+    (mirrors, cutouts): (&[Mirror], &[SetIn]),
+) -> bool {
     let keepers = keepers_in_window(world, mirrors);
-    // Only round pois they know: a hatched ring would give a secret away.
-    let borders = made.borders.into_iter();
-    let borders = borders.filter(|(chunk, _)| known_poi(client, world, *chunk).is_some());
-    let borders = borders.flat_map(|(_, cells)| cells).collect();
     client.link.send(&ServerMessage::Buildings(made.buildings))
         && client.link.send(&ServerMessage::Keepers(keepers))
         && client.link.send(&ServerMessage::Fields(made.fields))
-        && client.link.send(&ServerMessage::Borders(borders))
+        && send_borders(client, cutouts)
+}
+
+/// The pois set into a wilderness visit's window.
+fn set_ins(visit: &Visit) -> &[SetIn] {
+    match &visit.place {
+        Place::Wilderness { cutouts, .. } => cutouts,
+        Place::Site { .. } => &[],
+    }
 }
 
 /// What is sent with each window besides its cells.
 struct Looks {
     buildings: Vec<BuildingLook>,
     fields: Vec<FieldLook>,
-    borders: Vec<(ChunkPos, Vec<(i64, i64)>)>,
 }
 
 impl Looks {
@@ -214,7 +222,6 @@ impl Looks {
         Looks {
             buildings: std::mem::take(&mut made.buildings),
             fields: std::mem::take(&mut made.fields),
-            borders: std::mem::take(&mut made.borders),
         }
     }
 }
