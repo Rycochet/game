@@ -214,4 +214,9 @@ pub enum ServerMessage {
     /// Developer tools: what the server knows of a mob, as lines to show
     /// (`DevMobTool::Inspect`).
     DevMobInfo { mob: Id, lines: Vec<String> },
+    /// The cells of the wilderness's window round the cutouts of pois the
+    /// player knows (`wilderness::Cutout::border`), sent with each window:
+    /// shown hatched, a click on one walks there and leaves for the world
+    /// map (`Up`).
+    Borders(Vec<(i64, i64)>),
 }

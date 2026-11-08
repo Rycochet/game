@@ -8,8 +8,11 @@ use super::picking::{door_clicked, pick};
 use crate::common::{CurrentDungeon, GameView, HoveredOnMap, PointerPosition};
 use crate::view3d::ViewCamera;
 
+/// What the hatched border round a poi in the wilderness is called.
+const BORDER_NAME: &str = "Way back to the world map";
+
 /// Names what the pointer is over on the site's map: a building's door (a
-/// shop's by what it sells) or stairs. Nothing elsewhere, or off the site.
+/// shop's by what it sells), the border round a poi, or stairs. Nothing elsewhere, or off the site.
 pub(super) fn name_hovered_place(
     view: Res<State<GameView>>,
     pointer: Res<PointerPosition>,
@@ -30,6 +33,9 @@ pub(super) fn name_hovered_place(
                 return Some(building.kind.name().to_owned());
             }
             let (x, y) = pick(ray, &dungeon.level, &dungeon.remembered, &shown.solid_faces)?;
+            if dungeon.borders.contains(&(x, y)) {
+                return Some(BORDER_NAME.to_owned());
+            }
             let stairs = dungeon.stairs.iter().find(|s| (s.x, s.y) == (x, y))?;
             Some(stairs_name(stairs.direction).to_owned())
         });

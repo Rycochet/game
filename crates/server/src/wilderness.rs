@@ -46,6 +46,8 @@ pub(crate) struct WildChunk {
     /// them (`mob::spawns`), in wilderness cells: they live in the wilderness
     /// too (`entities::wild`).
     pub(crate) spawns: Vec<Spawn>,
+    /// The cells round its cutout, in wilderness cells (`Cutout::border`).
+    pub(crate) border: Vec<(i64, i64)>,
     /// Where exploring from the poi on the world map arrives, in wilderness
     /// cells: its site's entrance, or beside its way down (`sites::wild`).
     pub(crate) entrance: Option<(i64, i64)>,

@@ -15,7 +15,7 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | ------ | ------------------ | ----- |
 | Take steps | W, A, S, D, or 8, 4, 2, 6 on the number pad (hold to keep walking), or hold an arrow on the movement pad | Hold an arrow on the movement pad |
 | Travel somewhere | Click the place | Tap the place |
-| Enter a place, take stairs, leave a site | Click it, and walk there | Tap it |
+| Enter a place, take stairs, leave a site (in the wilderness, the hatched ground round a place you know leads back to the world map) | Click it, and walk there | Tap it |
 | Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad, or the movement pad's Up ladder | The movement pad's Up ladder |
 | Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map (going into a place you know of whose circle your own overlaps by about a fifth) | Shift + . (`>`), or 0 on the number pad, or the movement pad's Down ladder | The movement pad's Down ladder |
 

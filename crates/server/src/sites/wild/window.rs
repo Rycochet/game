@@ -24,6 +24,8 @@ pub(super) struct Window {
     /// Town cutouts' buildings and farm cutouts' fields, as players see them.
     pub(super) buildings: Vec<BuildingLook>,
     pub(super) fields: Vec<FieldLook>,
+    /// The cells round each cutout (`WildChunk::border`), by its chunk.
+    pub(super) borders: Vec<(ChunkPos, Vec<(i64, i64)>)>,
 }
 
 /// The window round a player at `(x, y)`.
@@ -94,6 +96,7 @@ fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window
         cutouts: Vec::new(),
         buildings: Vec::new(),
         fields: Vec::new(),
+        borders: Vec::new(),
     };
     for chunk in chunks {
         add_cutout(world, &frame, chunk, &mut window);
@@ -202,6 +205,8 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
             ..building.clone()
         });
     }
+    let border = wild_chunk.border.iter().map(|&(x, y)| (x + turn, y));
+    window.borders.push((chunk, border.collect()));
     for field in &wild_chunk.fields {
         window.fields.push(FieldLook {
             rect: turned(field.rect),
