@@ -19,15 +19,15 @@ mod wild_heights;
 
 pub use flat_ground::FlatGround;
 pub use gait::{
-    CLIMB_SAVING_PER_MILLE, DEEP_WATER_FROM, DEEPEST_SEA, FULL, Gait, MOVEMENT_SKILLS,
-    MovementSkills, RUN_TENTHS, SWIM_FAST_PER_MILLE, SWIM_SLOW_PER_MILLE,
+    CLIMB_SAVING_PER_MILLE, DEEP_WATER_FROM, DEEPEST_SEA, FULL, Gait, JUMP_BEST_PER_MILLE,
+    MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS, SWIM_FAST_PER_MILLE, SWIM_SLOW_PER_MILLE,
 };
 pub use swimming::{step_on_level_by, step_on_world_map_by};
 pub use training::{
-    CLIMB_PRACTICE_PER_ELEVATION, MOST_CLIMB_PRACTICE, RIVER_SWIM_PRACTICE, RUN_PRACTICE,
-    SWIM_PRACTICE, WEIGHT_PRACTICE, climb_practice, weight_practice,
+    CLIMB_PRACTICE_PER_ELEVATION, JUMP_PRACTICE, MOST_CLIMB_PRACTICE, RIVER_SWIM_PRACTICE,
+    RUN_PRACTICE, SWIM_PRACTICE, WEIGHT_PRACTICE, climb_practice, weight_practice,
 };
-pub use wading::{level_step_cost, wades};
+pub use wading::{is_jump, level_step_cost, wades};
 pub use wild_heights::{WildHeights, wild_step_cost};
 
 /// One step: `dx` and `dy` each -1, 0 or 1, not both 0 (`y` south). Made

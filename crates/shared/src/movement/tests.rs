@@ -276,3 +276,19 @@ fn wading_on_a_level_takes_longer() {
     assert_eq!(level_step_cost((0, 0), (1, 0), None, true, gait), 119);
     assert_eq!(level_step_cost((0, 0), (1, 0), None, false, gait), 70);
 }
+
+#[test]
+fn jumps_cost_less_with_jumping() {
+    let mut skills = crate::skill::Skills::default();
+    skills.practise(MOVEMENT_SKILLS.jumping, 1_000_000);
+    let jumper = Gait::of(&skills);
+    assert!(is_jump((0, 0), (2, 0)));
+    assert!(!is_jump((0, 0), (1, 1)));
+    assert_eq!(
+        level_step_cost((0, 0), (2, 0), None, false, Gait::UNSKILLED),
+        140
+    );
+    assert_eq!(level_step_cost((0, 0), (2, 0), None, false, jumper), 98);
+    // Walking is no quicker.
+    assert_eq!(level_step_cost((0, 0), (1, 0), None, false, jumper), 70);
+}

@@ -1,13 +1,13 @@
 //! What steps cost by the player's movement skills, and the practice they
 //! give: Running for every step on the world map, Climbing for steep ones there
-//! and in the wilderness, Swimming for wading, and Weight Training under a
-//! heavy load (`shared::movement`'s training settings), at most once per skill
-//! every 5 seconds, as blows are.
+//! and in the wilderness, Swimming for wading, Jumping for jumps, and Weight
+//! Training under a heavy load (`shared::movement`'s training settings), at
+//! most once per skill every 5 seconds, as blows are.
 
 use shared::energy::level_step_energy;
 use shared::movement::{
-    Gait, MOVEMENT_SKILLS, RIVER_SWIM_PRACTICE, RUN_PRACTICE, SWIM_PRACTICE, WildHeights,
-    climb_practice, climbed, weight_practice, world_step_time,
+    Gait, JUMP_PRACTICE, MOVEMENT_SKILLS, RIVER_SWIM_PRACTICE, RUN_PRACTICE, SWIM_PRACTICE,
+    WildHeights, climb_practice, climbed, is_jump, weight_practice, world_step_time,
 };
 use shared::protocol::ServerMessage;
 
@@ -24,6 +24,8 @@ pub(super) struct Moved {
     pub elevations: u32,
     /// Swimming practice from wading.
     pub swam: u32,
+    /// A jump over something: practises Jumping.
+    pub jumped: bool,
 }
 
 impl Client {
@@ -55,6 +57,7 @@ impl Client {
             on_world_map: false,
             elevations: ends.map_or(0, |(a, b)| a.abs_diff(b) / cells),
             swam: if wading { SWIM_PRACTICE } else { 0 },
+            jumped: is_jump(from, to),
         };
         let now = world.action_clock.ticks();
         (self.practise_moving(moved, now), cost)
@@ -84,6 +87,7 @@ impl Client {
             } else {
                 0
             },
+            jumped: false,
         };
         let now = world.action_clock.ticks();
         (self.practise_moving(moved, now), cost)
@@ -107,6 +111,7 @@ impl Client {
             (skills.running, running),
             (skills.climbing, climb_practice(moved.elevations)),
             (skills.swimming, moved.swam),
+            (skills.jumping, if moved.jumped { JUMP_PRACTICE } else { 0 }),
             (skills.weight_training, weight_practice(load)),
         ] {
             if amount == 0 {
