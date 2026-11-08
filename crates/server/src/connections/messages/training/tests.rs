@@ -13,6 +13,7 @@ fn moved(on_world_map: bool, elevations: u32) -> Moved {
         elevations,
         swam: 0,
         jumped: false,
+        sneaked: false,
     }
 }
 

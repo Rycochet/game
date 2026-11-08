@@ -16,6 +16,7 @@ mod icons;
 mod manual;
 mod own_bar;
 mod page;
+mod sneak;
 mod spots;
 mod use_ability;
 mod vitals_now;
@@ -50,6 +51,7 @@ impl Plugin for AbilitiesPlugin {
                     own_bar::take_bar,
                     held::use_by_key,
                     use_ability::take_timing,
+                    sneak::take_sneaking,
                     // Moving first, then what was chosen by hand, then
                     // automatic abilities if nothing else is waiting.
                     cancel::cancel_by_moving,

@@ -85,5 +85,6 @@ pub(super) fn ability_id(ability: Ability) -> &'static str {
         Ability::Kick => "kick",
         Ability::NightVision => "night_vision",
         Ability::Trample => "trample",
+        Ability::Sneak => "sneak",
     }
 }

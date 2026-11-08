@@ -25,7 +25,7 @@ pub use gait::{
 pub use swimming::{step_on_level_by, step_on_world_map_by};
 pub use training::{
     CLIMB_PRACTICE_PER_ELEVATION, JUMP_PRACTICE, MOST_CLIMB_PRACTICE, RIVER_SWIM_PRACTICE,
-    RUN_PRACTICE, SWIM_PRACTICE, WEIGHT_PRACTICE, climb_practice, weight_practice,
+    RUN_PRACTICE, SNEAK_PRACTICE, SWIM_PRACTICE, WEIGHT_PRACTICE, climb_practice, weight_practice,
 };
 pub use wading::{is_jump, level_step_cost, wades};
 pub use wild_heights::{WildHeights, wild_step_cost};

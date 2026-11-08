@@ -4,20 +4,18 @@ use bevy::math::DVec2;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::energy::{NORMAL_SPEED, SITE_STEP_SCALE};
-use shared::movement::{
-    Step, level_step_cost, step_cost, step_on_level_by, step_on_world_map_by, wades,
-    world_step_time,
-};
+use shared::movement::{Step, step_cost, step_on_level_by, step_on_world_map_by, world_step_time};
 use shared::pathfinding::{Path, find_path_by, find_world_path, straighten_by};
 use shared::sheet::Feeling;
 
+use super::level_costs::LevelCosts;
 use super::{
     Arrived, DUNGEON_TRAVEL_SPEED, Player, PlayerEnergy, Stepped, TRAVEL_SPEED, Travel, TravelTo,
     action_tick,
 };
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition, NearRivers, Other,
-    PlayerGait, PlayerSpeed, SmoothPosition, WildCellHeights,
+    PlayerGait, PlayerSpeed, SmoothPosition, Sneaking, WildCellHeights,
 };
 
 /// Moves along the route found when the journey was asked for, always ending
@@ -39,18 +37,21 @@ pub(super) fn travel(
     mut stepped: MessageWriter<Stepped>,
     speed_now: Res<PlayerSpeed>,
     gait: Res<PlayerGait>,
-    (heights, rivers): (Res<WildCellHeights>, Res<NearRivers>),
+    (heights, rivers, sneaking): (Res<WildCellHeights>, Res<NearRivers>, Res<Sneaking>),
     mut energy: ResMut<PlayerEnergy>,
     god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
-    // A step on a level, in `step_cost` units: with the wilderness's slopes.
-    let level_cost = |from: (i64, i64), to: (i64, i64)| {
-        let wading = wades(&dungeon.level, to);
-        level_step_cost(from, to, heights.ends(from, to), wading, gait.0)
+    let costs = LevelCosts {
+        level: &dungeon.level,
+        heights: &heights,
+        gait: gait.0,
+        sneaking: sneaking.0,
+        speed: speed_now.0,
     };
+    let (level_cost, level_time) = (|a, b| costs.cost(a, b), |a, b| costs.time(a, b));
     let rivers = &rivers.points;
     // A world map step swims the sea, or wades a river.
     let wet =
@@ -152,7 +153,9 @@ pub(super) fn travel(
                     world_step_time(at, next, ends, road, wet(next, ends), gait.0) as f64
                         / step_cost(at, next) as f64
                 }
-                None if next != at => level_cost(at, next) as f64 / step_cost(at, next) as f64,
+                None if next != at => {
+                    level_time(at, next) as f64 / (step_cost(at, next) * SITE_STEP_SCALE) as f64
+                }
                 _ => 1.0,
             };
             let moved = towards(now, to, left / slowness);
@@ -237,7 +240,7 @@ pub(super) fn travel(
                             gait.0,
                         )
                     }
-                    None => level_cost(at, next) * SITE_STEP_SCALE,
+                    None => level_time(at, next),
                 };
                 energy.energy.spend(tick, speed_now.0, cost);
                 stepped.write(Stepped::between(step, at, next));

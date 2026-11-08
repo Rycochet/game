@@ -22,6 +22,11 @@ pub const WEIGHT_PRACTICE: u32 = 17;
 /// 3,000 jumps and 100% after 25,000.
 pub const JUMP_PRACTICE: u32 = 40;
 
+/// Practice for Sneaking per step in the wilderness at a sneaking pace while
+/// something wary (timid or territorial, and not out to attack) watches: about
+/// 50% after 10 hours of it.
+pub const SNEAK_PRACTICE: u32 = 17;
+
 /// Practice for Swimming per step wading through shallows on a level: about
 /// 50% after 10 hours of it.
 pub const SWIM_PRACTICE: u32 = 17;

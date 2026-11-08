@@ -1,15 +1,15 @@
 # shared: ability
 
-Abilities, the named things a creature can do: active ones done when asked (and put on the action bar), passive ones always at work. It also holds the action bar's slots and the rules for changing them, which the client predicts with and the server checks by. How Attack works when used is `shared::combat`'s and the server's, Heal's `shared::magic`'s; abilities don't hook onto skills by name yet, Attack using the held weapon's node and Heal Healing's. Plan: `docs/context/abilities-skills.md`.
+Abilities, the named things a creature can do: active ones done when asked (and put on the action bar), toggles turned on and off there, passive ones always at work. It also holds the action bar's slots and the rules for changing them, which the client predicts with and the server checks by. How Attack works when used is `shared::combat`'s and the server's, Heal's `shared::magic`'s; abilities don't hook onto skills by name yet, Attack using the held weapon's node and Heal Healing's. Plan: `docs/context/abilities-skills.md`.
 
 ## Files
 
-- `crates/shared/src/ability.rs`: `Ability` (`ALL`, `name`, `description` (a line for its tip), `leans` (the attributes it leans on, which colour it: Attack and Kick Strength and Agility, Trample Strength and Toughness, Flutter Agility, Night Vision Perception, Heal Empathy as Healing), `mana_cost`, `use_kind`, `is_active`, `can_use`), `Use`, `known(kind)`. Tests.
+- `crates/shared/src/ability.rs`: `Ability` (`ALL`, `name`, `description` (a line for its tip), `leans` (the attributes it leans on, which colour it: Attack and Kick Strength and Agility, Trample Strength and Toughness, Flutter Agility, Night Vision Perception, Heal Empathy as Healing), `mana_cost`, `use_kind`, `is_active` (active or a toggle: it goes on the bar), `is_toggle`, `can_use`), `Use::{Active, Passive, Toggle}`, `known(kind)`. Tests.
 - `crates/shared/src/ability/bar.rs`: `ActionBar`, `BarSlot`, `BarChange`, `BarRefusal`, `BAR_SLOTS`.
 
 ## Public API
 
-- `Ability`: `Attack` and `Heal` (every creature; Heal as there is no way to learn spells yet), and the kinds' own `Flutter`, `Kick`, `NightVision` (passive), `Trample`. Also `sheet::Ability`. Messages carry it by its place, so new ones go at the end of the enum; `ALL` is the order players see (Attack first).
+- `Ability`: `Attack`, `Heal` and `Sneak` (every creature; Heal as there is no way to learn spells yet; Sneak a toggle, holding steps on levels to a sneaking pace, `energy::sneak_step_energy`), and the kinds' own `Flutter`, `Kick`, `NightVision` (passive), `Trample`. Also `sheet::Ability`. Messages carry it by its place, so new ones go at the end of the enum; `ALL` is the order players see (Attack first).
 - `known(kind)`: Attack, Heal and the kind's own (`CreatureDef::abilities`), for the body it is in now, so shapeshifting changes them.
 - `Ability::can_be_automatic()`: whether a slot may be made automatic, done whenever it can be (owner, 2026-11-07): Attack and Heal so far; `BarChange::ToggleAuto` refuses the rest (`BarRefusal::NotAutomatic`), though turning one off always works.
 - `Ability::can_use(kind)`: active and known. The client greys out what fails it, and what costs more Mana (`mana_cost`) than there is.

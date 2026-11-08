@@ -37,6 +37,7 @@ mod pointer;
 mod rivers;
 mod roads;
 mod sky;
+mod sneaking;
 mod states;
 mod step_pad;
 mod target;
@@ -87,6 +88,7 @@ pub use rivers::NearRivers;
 pub use roads::KnownRoads;
 pub use sky::SkyNow;
 use sky::update_sky;
+pub use sneaking::Sneaking;
 pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use step_pad::{PadButton, PadSteps};
 pub use target::Target;
@@ -150,6 +152,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<PlayerGait>()
             .init_resource::<WildCellHeights>()
             .init_resource::<NearRivers>()
+            .init_resource::<Sneaking>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
             .init_resource::<LoggingIn>()

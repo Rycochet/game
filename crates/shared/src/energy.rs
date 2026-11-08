@@ -55,6 +55,18 @@ pub fn level_step_energy(
     crate::movement::level_step_cost(from, to, heights, wading, gait) * SITE_STEP_SCALE
 }
 
+/// Ticks a cell takes at least while sneaking (`ability::Ability::Sneak`): one
+/// every 2 seconds, the pace Sneaking is learned at (owner, 2026-11-08: to tweak
+/// once the movement skills are done).
+pub const SNEAK_TICKS_PER_CELL: u32 = 2 * ACTION_TICKS_PER_SECOND as u32;
+
+/// What a step on a level costs while sneaking, for someone gaining `speed` a
+/// tick: at least `SNEAK_TICKS_PER_CELL` of their energy for each cell it
+/// covers, so they go no quicker than that.
+pub fn sneak_step_energy(cost: u32, cells: u32, speed: u32) -> u32 {
+    cost.max(speed * SNEAK_TICKS_PER_CELL * cells.max(1))
+}
+
 /// How much putting on or taking off something this heavy costs: plate takes
 /// longer than a hat.
 pub fn dressing_cost(grams: u32) -> u32 {

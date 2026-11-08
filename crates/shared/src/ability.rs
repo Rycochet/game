@@ -1,9 +1,9 @@
 //! Abilities: named things a creature can do, which will hook onto skills. See
 //! `docs/context/shared/ability.md`.
 //!
-//! Active ones are done when asked (and can go on the action bar); passive ones
-//! work by themselves. Every creature knows Attack and Heal; the rest come with
-//! its kind.
+//! Active ones are done when asked (and can go on the action bar), toggles
+//! turned on and off there; passive ones work by themselves. Every creature
+//! knows Attack, Heal and Sneak; the rest come with its kind.
 
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +27,9 @@ pub enum Ability {
     /// Mana turned into Health, on yourself or another (`magic`): every
     /// creature knows it for now, as there is no way to learn spells yet.
     Heal,
+    /// Moving slowly and quietly, under the pace Sneaking is learned at
+    /// (`energy::SNEAK_TICKS_PER_CELL`): a toggle every creature knows.
+    Sneak,
 }
 
 /// Whether an ability is done when asked, or works by itself.
@@ -36,13 +39,16 @@ pub enum Use {
     Active,
     /// Always at work: it can't go on the action bar.
     Passive,
+    /// Turned on and off when asked, on the action bar: on until turned off.
+    Toggle,
 }
 
 impl Ability {
     /// Every ability, in the order they are listed to players.
-    pub const ALL: [Ability; 6] = [
+    pub const ALL: [Ability; 7] = [
         Self::Attack,
         Self::Heal,
+        Self::Sneak,
         Self::Flutter,
         Self::Kick,
         Self::NightVision,
@@ -58,6 +64,7 @@ impl Ability {
             Self::Kick => "Kick",
             Self::NightVision => "Night Vision",
             Self::Trample => "Trample",
+            Self::Sneak => "Sneak",
         }
     }
 
@@ -65,6 +72,7 @@ impl Ability {
     pub const fn use_kind(self) -> Use {
         match self {
             Self::NightVision => Use::Passive,
+            Self::Sneak => Use::Toggle,
             Self::Attack | Self::Heal | Self::Flutter | Self::Kick | Self::Trample => Use::Active,
         }
     }
@@ -79,6 +87,7 @@ impl Ability {
             Self::Trample => &[Strength, Toughness],
             Self::Flutter => &[Agility],
             Self::NightVision => &[Perception],
+            Self::Sneak => &[Agility],
             // As its skill, Healing, under Divine.
             Self::Heal => &[Empathy],
         }
@@ -93,6 +102,7 @@ impl Ability {
             Self::Kick => "Kicks out at your target.",
             Self::NightVision => "Sees in the dark.",
             Self::Trample => "Charges down whoever is in the way.",
+            Self::Sneak => "Moves slowly and quietly while it is on.",
         }
     }
 
@@ -104,9 +114,15 @@ impl Ability {
         }
     }
 
-    /// Whether it is done when asked, and so can go on the action bar.
+    /// Whether it is done (or turned on and off) when asked, and so can go on
+    /// the action bar.
     pub const fn is_active(self) -> bool {
-        matches!(self.use_kind(), Use::Active)
+        matches!(self.use_kind(), Use::Active | Use::Toggle)
+    }
+
+    /// Whether it is turned on and off rather than done.
+    pub const fn is_toggle(self) -> bool {
+        matches!(self.use_kind(), Use::Toggle)
     }
 
     /// Whether it may be made automatic on the action bar, to be done whenever it
@@ -126,10 +142,10 @@ impl Ability {
 }
 
 /// What every creature knows, whatever its kind.
-const EVERYONE_KNOWS: [Ability; 2] = [Ability::Attack, Ability::Heal];
+const EVERYONE_KNOWS: [Ability; 3] = [Ability::Attack, Ability::Heal, Ability::Sneak];
 
 /// The abilities a creature in a body of kind `kind` knows, in `Ability::ALL`'s
-/// order: Attack, Heal, and its kind's own. Shapeshifted, the form's.
+/// order: Attack, Heal, Sneak, and its kind's own. Shapeshifted, the form's.
 pub fn known(kind: CreatureKind) -> Vec<Ability> {
     let own = kind.def().abilities;
     Ability::ALL

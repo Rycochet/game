@@ -13,7 +13,7 @@ use super::manual::Manual;
 use super::own_bar::OwnBar;
 use super::page::look;
 use super::vitals_now::affords;
-use crate::common::{Action, OwnVitals, Preferences, VitalsCircle, interface_area};
+use crate::common::{Action, OwnVitals, Preferences, Sneaking, VitalsCircle, interface_area};
 use crate::inventory::Carried;
 use crate::widgets::{
     ABILITY, ALLOWED, Floating, GRID_LINE, REFUSED, TextSize, UiId, queued_stripe, set_edge,
@@ -108,6 +108,8 @@ pub(super) struct Shown {
     low_mana: bool,
     /// Queued to be used, by hand.
     queued: Vec<Ability>,
+    /// Sneak is on: its slot is edged.
+    sneaking: bool,
 }
 
 /// Draws each slot again when what it shows changes.
@@ -116,7 +118,7 @@ pub(super) fn show_bar(
     bar: Res<OwnBar>,
     carried: Res<Carried>,
     preferences: Res<Preferences>,
-    (aim, manual): (Res<Aim>, Res<Manual>),
+    (aim, manual, sneaking): (Res<Aim>, Res<Manual>, Res<Sneaking>),
     (vitals, time): (Res<OwnVitals>, Res<Time>),
     assets: Res<AssetServer>,
     slots: Query<(Entity, &SlotNode)>,
@@ -136,6 +138,7 @@ pub(super) fn show_bar(
         aim: aim.0,
         low_mana: !affords(Ability::Heal, &vitals, time.elapsed_secs_f64()),
         queued: manual.queued.iter().copied().collect(),
+        sneaking: sneaking.0,
     };
     if shown.as_ref() == Some(&now) {
         return;
@@ -187,6 +190,22 @@ fn spawn_slot(inside: &mut ChildSpawnerCommands, slot: u8, now: &Shown, assets: 
     }
     if held.is_some_and(|held| held.auto) {
         inside.spawn(set_edge(None, UiRect::all(px(AUTO_EDGE)), 0.0));
+    }
+    // A toggle that is on: a steady edge.
+    if held.is_some_and(|held| held.ability.is_toggle()) && now.sneaking {
+        inside.spawn((
+            Floating,
+            Node {
+                position_type: PositionType::Absolute,
+                width: percent(100.0),
+                height: percent(100.0),
+                border: UiRect::all(px(AUTO_EDGE)),
+                border_radius: BorderRadius::all(px(4.0)),
+                ..default()
+            },
+            BorderColor::from(ALLOWED),
+            UiId::new("bar", "on").at(slot as usize),
+        ));
     }
     if held.is_some_and(|held| now.queued.contains(&held.ability)) {
         inside.spawn((
