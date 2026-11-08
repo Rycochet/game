@@ -6,9 +6,9 @@ use shared::item::{Item, MadeAt, Quality};
 use shared::item_form::give_form;
 use shared::protocol::ServerMessage;
 use shared::rng::Seed;
-use shared::shop::{DOOR_REACH, Shop, catch_up, sells};
+use shared::shop::{Shop, catch_up, sells};
 
-use super::keeper_building;
+use super::shop_here::shop_of;
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::ids::new_id;
@@ -21,29 +21,21 @@ pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id)
         warn!("Refused opening a trade from outside any site");
         return true;
     };
-    let Some(building) = keeper_building(client, world, with) else {
+    let position = visit.position;
+    let Some(here) = shop_of(client, world, with) else {
         warn!("Refused opening a trade with someone who isn't here: {with:?}");
         return true;
     };
-    let Some(town) = visit.level.buildings.iter().find(|b| b.look.id == building) else {
-        warn!("Refused opening a building that isn't here: {building}");
-        return true;
-    };
-    let (x, y) = visit.position;
-    let door = town.look.door;
-    if sells(town.look.kind).is_empty() || (x - door.0).abs().max((y - door.1).abs()) > DOOR_REACH {
-        warn!("Refused opening {:?} from {x},{y}", town.look.kind);
+    let town = &here.building;
+    if sells(town.look.kind).is_empty() || !here.in_reach(position) {
+        warn!("Refused opening {:?} from {position:?}", town.look.kind);
         return true;
     }
-    let of_kind = visit.level.buildings.iter();
-    let of_kind = of_kind.filter(|b| b.look.kind == town.look.kind).count() as u32;
     let (kind, quality, trades) = (town.look.kind, town.quality, town.trades);
-    let Some(poi) = visit.poi() else {
-        return true;
-    };
-    let seed = poi.seed.derive("shop");
-    let seed = Seed::new(seed.at(&[visit.index as i64, building as i64]));
-    let (id, index) = (visit.id, visit.index);
+    let (building, of_kind) = (town.look.id, here.of_kind);
+    let seed = here.poi.seed.derive("shop");
+    let seed = Seed::new(seed.at(&[here.index as i64, building as i64]));
+    let (id, index) = (here.id, here.index);
     let now = world.minutes();
     let made = world.made_now();
     let level = world.site_mut(id).levels.entry(index).or_default();

@@ -1,6 +1,6 @@
 # client: trade
 
-Trading panels. For now a town shop's: clicking its door opens it from beside the door, or walks to the cell in front of it and opens it on arriving. Each panel shows what its keeper has in a grid. Dropping something on the grid gives it to the keeper; there is no buying or payment yet.
+Trading panels. For now a town shop's, in a town or a town set into the wilderness (the same keepers, sent with the window): clicking its door opens it from beside the door, or walks to the cell in front of it and opens it on arriving. Each panel shows what its keeper has in a grid. Dropping something on the grid gives it to the keeper; there is no buying or payment yet.
 
 ## Files
 

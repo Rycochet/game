@@ -13,7 +13,7 @@ use super::window::window;
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::sites::remembered::send_remembered;
-use crate::sites::{Place, Visit, update_sight};
+use crate::sites::{Mirror, Place, Visit, keepers_in_window, update_sight};
 use crate::storage::{CellMasks, SiteId};
 
 /// How far round where the player would arrive a walkable cell is looked for.
@@ -85,7 +85,7 @@ pub(in crate::sites) fn enter_wilderness(
     let in_poi = poi_here(world, position);
     if !client.link.send(&ServerMessage::EnterLevel(info))
         || !client.link.send(&ServerMessage::InPoi(in_poi))
-        || !send_looks(client, made.buildings, made.fields)
+        || !send_looks(client, world, (made.buildings, made.fields), &visit.mirrors)
         || !send_remembered(client, &mut visit)
     {
         return false;
@@ -146,10 +146,11 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     visit.stairs = made.stairs;
     visit.mirrors = made.mirrors;
     let bounds = visit.level.level.bounds();
+    let mirrors = visit.mirrors.clone();
     if !client
         .link
         .send(&ServerMessage::WildernessWindow { bounds })
-        || !send_looks(client, made.buildings, made.fields)
+        || !send_looks(client, world, (made.buildings, made.fields), &mirrors)
     {
         return false;
     }
@@ -179,11 +180,18 @@ fn through_gate(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, i64)
     crate::gates::enter_gate(client, world, gate.entrance)
 }
 
-/// The window's towns' buildings and farms' fields, before its cells (the
-/// client marks the buildings' cells as theirs): always, so ones left behind
-/// go.
-fn send_looks(client: &Client, buildings: Vec<BuildingLook>, fields: Vec<FieldLook>) -> bool {
+/// The window's towns' buildings, who keeps their shops and farms' fields,
+/// before its cells (the client marks the buildings' cells as theirs):
+/// always, so ones left behind go.
+fn send_looks(
+    client: &Client,
+    world: &mut ServerWorld,
+    (buildings, fields): (Vec<BuildingLook>, Vec<FieldLook>),
+    mirrors: &[Mirror],
+) -> bool {
+    let keepers = keepers_in_window(world, mirrors);
     client.link.send(&ServerMessage::Buildings(buildings))
+        && client.link.send(&ServerMessage::Keepers(keepers))
         && client.link.send(&ServerMessage::Fields(fields))
 }
 

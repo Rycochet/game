@@ -8,7 +8,7 @@ use shared::dungeon::Level;
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::protocol::SeenStairs;
 use shared::road::Road;
-use shared::site::{BuildingLook, FieldLook};
+use shared::site::{BuildingLook, FieldLook, TownBuilding};
 use shared::wilderness::{BlockPos, ChunkPlan, Wilderness};
 use shared::world::WorldParams;
 use std::collections::{BTreeMap, HashMap};
@@ -38,6 +38,9 @@ pub(crate) struct WildChunk {
     /// wilderness cells.
     pub(crate) buildings: Vec<BuildingLook>,
     pub(crate) fields: Vec<FieldLook>,
+    /// A town cutout's buildings as its site has them, in the site's cells:
+    /// what its shops are (`sites::shop_here`).
+    pub(crate) town: Vec<TownBuilding>,
     /// Where exploring from the poi on the world map arrives, in wilderness
     /// cells: its site's entrance, or beside its way down (`sites::wild`).
     pub(crate) entrance: Option<(i64, i64)>,

@@ -14,12 +14,12 @@ fn explored() -> (TestClient, Vec<ServerMessage>) {
     (test, answers)
 }
 
-fn position(test: &TestClient) -> (i64, i64) {
+pub(super) fn position(test: &TestClient) -> (i64, i64) {
     test.client.visit.as_ref().expect("in a visit").position()
 }
 
 /// The first chunk near the start whose cutout `wanted` picks, and its plan.
-fn chunk_near_start(test: &TestClient, wanted: impl Fn(&Cutout) -> bool) -> ChunkPlan {
+pub(super) fn chunk_near_start(test: &TestClient, wanted: impl Fn(&Cutout) -> bool) -> ChunkPlan {
     let world = &test.world;
     let (x, y) = test.client.world_position();
     let start = world.pois.chunk_at(x, y);

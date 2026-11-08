@@ -23,6 +23,7 @@ mod levels;
 mod moves;
 mod place;
 mod remembered;
+mod shop_here;
 mod sight;
 mod trade;
 mod up_down;
@@ -32,7 +33,7 @@ use cells::{add_masks, all_cells, beside, level_chunks, nearby_cells, send_cells
 pub(super) use dev_area::generate_area;
 use enter::enter_site;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};
-use keepers::{NewKeepers, keepers_of};
+use keepers::{NewKeepers, keepers_in_window, keepers_of};
 pub(super) use keepers::{give_to_keeper, keeper_building, keeper_stock, take_from_keeper};
 use leave::leave_for_poi;
 pub(super) use leave::{forget_site, killed, leave, put_out, use_exit};

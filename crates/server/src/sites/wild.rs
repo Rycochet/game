@@ -17,6 +17,8 @@ mod window;
 #[cfg(test)]
 mod arrival_tests;
 #[cfg(test)]
+mod shop_tests;
+#[cfg(test)]
 mod tests;
 
 pub(super) use chunks::ensure_chunk;
