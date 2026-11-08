@@ -153,12 +153,12 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::UseExit);
             true
         }
-        ClientMessage::Explore => {
-            client.waiting.push_back(Action::Explore);
+        ClientMessage::Down => {
+            client.waiting.push_back(Action::Down);
             true
         }
-        ClientMessage::Leave => {
-            client.waiting.push_back(Action::Leave);
+        ClientMessage::Up => {
+            client.waiting.push_back(Action::Up);
             true
         }
         ClientMessage::OpenTrade { with } => {

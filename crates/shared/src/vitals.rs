@@ -171,6 +171,13 @@ impl Vitals {
         self.health.calm_from(now + CALM_AFTER);
     }
 
+    /// Whether it is fighting at this tick: within `CALM_AFTER` of harming or
+    /// being harmed, while Health waits to refill. No changing floors then
+    /// (owner, 2026-11-08).
+    pub fn fighting(&self, now: u64) -> bool {
+        self.health.waiting(now)
+    }
+
     /// Lays a change on, settling first.
     pub fn add_change(&mut self, change: Change, limits: Limits, now: u64) {
         self.settle(limits, now);

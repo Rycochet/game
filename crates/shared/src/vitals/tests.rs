@@ -290,3 +290,17 @@ fn a_faster_refill_fills_sooner_and_the_client_agrees() {
         vitals.at(Vital::Health, quick, start + REFILL_TICKS / 4)
     );
 }
+
+#[test]
+fn fighting_lasts_calm_after_the_last_blow_but_not_after_casting() {
+    let mut vitals = Vitals::default();
+    let most = limits(&vitals, 0, 0);
+    assert!(!vitals.fighting(0));
+    assert!(vitals.spend_mana(w(5), most, 100, 0));
+    assert!(!vitals.fighting(100));
+    vitals.in_combat(most, 1000);
+    assert!(vitals.fighting(1000 + CALM_AFTER - 1));
+    assert!(!vitals.fighting(1000 + CALM_AFTER));
+    vitals.hurt(w(1), most, 2000, 0);
+    assert!(vitals.fighting(2000));
+}

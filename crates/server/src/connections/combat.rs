@@ -108,6 +108,8 @@ pub(super) fn start_ability(
     });
     let limits = client.limits(tick);
     client.sheet.vitals.in_combat(limits, tick);
+    // So the client knows it is fighting (no changing floors).
+    client.send_vitals(tick);
     let stayed = client.link.send(&ServerMessage::AbilityStarted {
         who: None,
         ability,

@@ -29,7 +29,7 @@ fn cutout_near_start(test: &TestClient, wanted: impl Fn(&Cutout) -> bool) -> Cut
 /// client is told of the poi they stand in.
 fn explore_from(test: &mut TestClient, cutout: &Cutout) -> ((i64, i64), Option<PoiKind>) {
     test.client.character.world_position = (cutout.poi().x, cutout.poi().y);
-    let answers = test.send(&[ClientMessage::Explore]);
+    let answers = test.send(&[ClientMessage::Down]);
     let told = answers.iter().find_map(|answer| match answer {
         ServerMessage::InPoi(kind) => Some(*kind),
         _ => None,

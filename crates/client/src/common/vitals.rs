@@ -26,6 +26,20 @@ impl ToldVitals {
         let ticks = ((now - self.at).max(0.0) * ACTION_TICKS_PER_SECOND) as f32;
         (refilled(self.health, ticks), refilled(self.mana, ticks))
     }
+
+    /// Whether the player is fighting `now` (by `Time`), as the server would
+    /// say: Health is still waiting to refill. No changing floors then.
+    pub fn fighting(&self, now: f64) -> bool {
+        let ticks = (now - self.at).max(0.0) * ACTION_TICKS_PER_SECOND;
+        ticks < f64::from(self.health.refills_in)
+    }
+}
+
+impl OwnVitals {
+    /// `ToldVitals::fighting`, `false` until told.
+    pub fn fighting(&self, now: f64) -> bool {
+        self.0.is_some_and(|told| told.fighting(now))
+    }
 }
 
 /// `VitalNow::after` with fractions.

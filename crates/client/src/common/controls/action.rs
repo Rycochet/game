@@ -11,10 +11,11 @@ pub enum Action {
     StepDown,
     StepLeft,
     StepRight,
-    /// Into the wilderness from the world map.
-    Explore,
-    /// Out of the wilderness, or a site from outside ground, to the world map.
-    Leave,
+    /// Up the stairs underfoot, or out of the wilderness, or a site from
+    /// outside ground, to the world map.
+    Up,
+    /// Down the stairs underfoot, or into the wilderness from the world map.
+    Down,
     /// The camera swings round the player to the left, by a step or while held.
     TurnLeft,
     TurnRight,
@@ -78,8 +79,8 @@ impl Action {
         Self::StepDown,
         Self::StepLeft,
         Self::StepRight,
-        Self::Explore,
-        Self::Leave,
+        Self::Up,
+        Self::Down,
         Self::TurnLeft,
         Self::TurnRight,
         Self::ZoomIn,
@@ -114,8 +115,8 @@ impl Action {
             Self::StepDown => "Step Down",
             Self::StepLeft => "Step Left",
             Self::StepRight => "Step Right",
-            Self::Explore => "Explore Wilderness",
-            Self::Leave => "Leave",
+            Self::Up => "Up / Leave",
+            Self::Down => "Down / Explore",
             Self::TurnLeft => "Turn Camera Left",
             Self::TurnRight => "Turn Camera Right",
             Self::ZoomIn => "Zoom In",
@@ -142,9 +143,8 @@ impl Action {
             Self::StepDown => "step_down",
             Self::StepLeft => "step_left",
             Self::StepRight => "step_right",
-            Self::Explore => "explore",
-            // Its old name, so saved key bindings still find it.
-            Self::Leave => "leave_wilderness",
+            Self::Up => "up",
+            Self::Down => "down",
             Self::TurnLeft => "turn_camera_left",
             Self::TurnRight => "turn_camera_right",
             Self::ZoomIn => "zoom_in",
@@ -179,7 +179,7 @@ impl Action {
     pub fn group(self) -> Group {
         match self {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
-            Self::Explore | Self::Leave => Group::Movement,
+            Self::Up | Self::Down => Group::Movement,
             Self::TurnLeft | Self::TurnRight | Self::ZoomIn | Self::ZoomOut => Group::Camera,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
@@ -202,8 +202,8 @@ impl Action {
             Self::StepDown => [key(KeyCode::KeyS), key(KeyCode::Numpad2)],
             Self::StepLeft => [key(KeyCode::KeyA), key(KeyCode::Numpad4)],
             Self::StepRight => [key(KeyCode::KeyD), key(KeyCode::Numpad6)],
-            Self::Explore => [shift(KeyCode::Period), key(KeyCode::Numpad0)],
-            Self::Leave => [shift(KeyCode::Comma), key(KeyCode::NumpadDecimal)],
+            Self::Up => [shift(KeyCode::Comma), key(KeyCode::NumpadDecimal)],
+            Self::Down => [shift(KeyCode::Period), key(KeyCode::Numpad0)],
             Self::TurnLeft => [None, key(KeyCode::Numpad7)],
             Self::TurnRight => [None, key(KeyCode::Numpad9)],
             // As the Skills page zooms.

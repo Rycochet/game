@@ -16,10 +16,12 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | Take steps | W, A, S, D, or 8, 4, 2, 6 on the number pad (hold to keep walking) | |
 | Travel somewhere | Click the place | Tap the place |
 | Enter a place, take stairs, leave a site | Click it, and walk there | Tap it |
-| Explore the wilderness where you stand on the world map | Shift + . (`>`), or 0 on the number pad | The Explore button |
-| Leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad | The Leave button |
+| Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad | The Up or Leave button |
+| Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map | Shift + . (`>`), or 0 on the number pad | The Down or Explore button |
 
 In the wilderness you walk the land between places on foot, 16 steps to each step on the world map, and find places by walking up to them. A place you walk into from the wilderness leads back out into it; one you enter from the world map leads back to the world map. You can't explore from water, or leave the wilderness from inside a building or cave or into water.
+
+You can't change floors in a fight: for 10 seconds after you last attack or are attacked, stairs, Up, Down and the edge of a map do nothing. Walking onto stairs then leaves you standing on them, and Up or Down takes them once the fight is over.
 
 How fast you go depends on your kind of creature, what you carry, and the ground: the heavier the load, the slower everything is.
 

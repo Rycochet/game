@@ -130,7 +130,7 @@ fn a_made_mob_killed_leaves_nothing_marked_dead() {
 #[test]
 fn not_in_the_wilderness() {
     let mut test = TestClient::new();
-    test.send(&[ClientMessage::Explore]);
+    test.send(&[ClientMessage::Down]);
     if test.client.visit.is_none() {
         return; // In water here: nothing to try.
     }

@@ -171,8 +171,8 @@ enum Action {
         entrance: u8,
     },
     UseExit,
-    Explore,
-    Leave,
+    Down,
+    Up,
     OpenTrade {
         with: Id,
     },

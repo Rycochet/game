@@ -164,8 +164,8 @@ fn number_pad_defaults_are_in_the_second_column() {
         (Action::ResetView, KeyCode::Numpad5),
         (Action::ZoomIn, KeyCode::NumpadAdd),
         (Action::ZoomOut, KeyCode::NumpadSubtract),
-        (Action::Explore, KeyCode::Numpad0),
-        (Action::Leave, KeyCode::NumpadDecimal),
+        (Action::Down, KeyCode::Numpad0),
+        (Action::Up, KeyCode::NumpadDecimal),
     ] {
         assert_eq!(action.defaults()[1], Some(Binding::new(key, Mods::NONE)));
     }
