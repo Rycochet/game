@@ -94,6 +94,7 @@ const ICONS: &[(&str, &str)] = &[
     ("athletics/running", "lorc/sprint"),
     ("athletics/jumping", "delapouite/jump-across"),
     ("athletics/dodging", "felbrigg/dodge"),
+    ("athletics/weighttraining", "delapouite/weight-lifting-up"),
     ("stealth", "lorc/hood"),
     ("stealth/sneaking", "skoll/footsteps"),
     ("stealth/hiding", "lorc/hidden"),

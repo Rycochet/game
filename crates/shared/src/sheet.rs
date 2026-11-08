@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
 use crate::item::Inventory;
+use crate::movement::{FULL, MOVEMENT_SKILLS};
 use crate::skill::Skills;
 use crate::vitals::Vitals;
 
@@ -203,10 +204,15 @@ impl Sheet {
     }
 
     /// How much it can carry before it is overloaded, in grams: by strength, and
-    /// more the bigger it is. A person of median strength (100) carries 30 kg.
+    /// more the bigger it is. A person of median strength (100) carries 30 kg,
+    /// and Weight Training adds its value as a share of that: twice as much at
+    /// 100% (owner).
     pub fn capacity(&self, size: Size) -> u32 {
         const GRAMS_PER_STRENGTH_AND_SIZE: u32 = 100;
-        self.attributes.strength as u32 * (size as u32 + 1) * GRAMS_PER_STRENGTH_AND_SIZE
+        let base =
+            self.attributes.strength as u32 * (size as u32 + 1) * GRAMS_PER_STRENGTH_AND_SIZE;
+        let trained = self.skills.value(MOVEMENT_SKILLS.weight_training).min(FULL);
+        (u64::from(base) * u64::from(FULL + trained) / u64::from(FULL)) as u32
     }
 
     /// How weighed down this makes it: burdened past half what it can carry.
