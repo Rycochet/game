@@ -48,7 +48,7 @@ pub(super) fn drift_bands(
 ) {
     let seconds = time.delta_secs();
     let at = Vec2::new(player.x as f32, player.y as f32);
-    let now = (camera.yaw, camera.pitch, camera.distance, at);
+    let now = (camera.yaw, camera.shown_pitch(), camera.distance, at);
     let Some((yaw, pitch, distance, from)) = seen.view.replace(now) else {
         return;
     };

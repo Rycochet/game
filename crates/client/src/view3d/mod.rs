@@ -8,6 +8,7 @@
 mod anti_aliasing;
 mod bands;
 mod camera;
+mod clearance;
 mod render_scale;
 mod token;
 
@@ -179,14 +180,15 @@ fn place_camera_and_tokens(
     assets: Res<TokenAssets>,
     positions: Query<(Option<&MapPosition>, &SmoothPosition)>,
     mut facing: ResMut<ViewFacing>,
+    time: Res<Time>,
     camera: Single<
-        (&OrbitCamera, &mut Transform),
+        (&mut OrbitCamera, &mut Transform),
         (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>),
     >,
     mut views: Query<(&TokenView, &mut Transform), Without<IconAnchor>>,
     mut anchors: Query<(&IconAnchor, &mut Transform), (Without<ViewCamera>, Without<TokenView>)>,
 ) {
-    let (orbit, mut camera) = camera.into_inner();
+    let (mut orbit, mut camera) = camera.into_inner();
     let size = grid.cell_size;
     // Reduce Motion: on the cell, without gliding between.
     let snap = preferences.video.reduce_motion;
@@ -199,6 +201,19 @@ fn place_camera_and_tokens(
     // On raised ground the camera keeps the player's cell where it is on
     // screen, and the land moves under them.
     let target = Vec3::new(x * size, grid.floor_at(&heights, x, y), y * size);
+    // Tilted up as far as a clear line to them over that land needs.
+    let wanted = match (grid.raised, &heights.heights) {
+        (true, Some(known)) => {
+            let ground = |cx: i64, cy: i64| {
+                let floor = grid.floor + heights.drawn(cx, cy) * size;
+                known.covers(cx, cy).then_some(floor)
+            };
+            clearance::clearing_raise(&orbit, target, size, ground)
+        }
+        _ => 0.0,
+    };
+    let raise = clearance::eased(orbit.raise(), wanted, time.delta_secs(), snap);
+    orbit.set_raise(raise);
     *camera = orbit.transform(target);
     // Only write when it changes, so change detection stays meaningful.
     facing.set_if_neq(ViewFacing(orbit.quarter_turns()));
@@ -220,7 +235,11 @@ fn place_camera_and_tokens(
         let scale = anchor.scale();
         transform.rotation = camera.rotation;
         transform.scale = Vec3::splat(scale);
-        transform.translation =
-            assets.icon_offset(camera.rotation, orbit.pitch, orbit.home_pitch(), scale);
+        transform.translation = assets.icon_offset(
+            camera.rotation,
+            orbit.shown_pitch(),
+            orbit.home_pitch(),
+            scale,
+        );
     }
 }

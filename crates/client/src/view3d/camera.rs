@@ -19,7 +19,7 @@ const RADIANS_PER_PIXEL: f32 = 0.005;
 /// Lowest and highest camera angle above the horizon. Straight down (90°)
 /// is avoided: the camera's "up" would be undefined there.
 const MIN_PITCH_DEGREES: f32 = 10.0;
-const MAX_PITCH_DEGREES: f32 = 85.0;
+pub(super) const MAX_PITCH_DEGREES: f32 = 85.0;
 
 /// Closest zoom, as a fraction of the starting distance (owner's choice). The
 /// starting view is also the furthest out.
@@ -40,7 +40,8 @@ pub struct OrbitCamera {
     /// looking north; positive turns the camera anticlockwise seen from above
     /// (towards the east).
     pub yaw: f32,
-    /// Angle above the horizon, in radians.
+    /// Angle above the horizon, in radians: the player's setting. What is
+    /// shown may be higher (`shown_pitch`), to keep over raised ground.
     pub pitch: f32,
     /// Distance from the point looked at.
     pub distance: f32,
@@ -56,6 +57,9 @@ pub struct OrbitCamera {
     /// The lowest it may tilt, in radians: `MIN_PITCH_DEGREES`, or more where
     /// a view wants it (`set_lowest_pitch`).
     lowest: f32,
+    /// How much higher it is shown than `pitch`, in radians, so the line to
+    /// the player clears raised wilderness ground (`clearance`); 0 elsewhere.
+    raise: f32,
 }
 
 impl OrbitCamera {
@@ -71,6 +75,7 @@ impl OrbitCamera {
             home: (0.0, pitch, distance),
             reach: 1.0,
             lowest: MIN_PITCH_DEGREES.to_radians(),
+            raise: 0.0,
         }
     }
 
@@ -78,6 +83,7 @@ impl OrbitCamera {
     pub fn reset(&mut self) {
         (self.yaw, self.pitch, self.distance) = self.home;
         self.distance *= self.reach;
+        self.raise = 0.0;
     }
 
     /// Lets it go `reach` times as far out as the starting view, and goes as
@@ -100,13 +106,33 @@ impl OrbitCamera {
         self.pitch = self.pitch.max(self.lowest);
     }
 
-    /// The camera's transform for looking at `target`.
+    /// The camera's transform for looking at `target`, at the pitch shown.
     pub fn transform(&self, target: Vec3) -> Transform {
+        self.transform_at(self.shown_pitch(), target)
+    }
+
+    /// The same at any pitch, in radians.
+    pub(super) fn transform_at(&self, pitch: f32, target: Vec3) -> Transform {
         let turn = Quat::from_rotation_y(self.yaw);
-        let ahead = self.look_ahead * self.distance * self.pitch.cos();
+        let ahead = self.look_ahead * self.distance * pitch.cos();
         let look_at = target + turn * Vec3::new(0.0, 0.0, ahead);
-        let offset = turn * Vec3::new(0.0, self.pitch.sin(), self.pitch.cos()) * self.distance;
+        let offset = turn * Vec3::new(0.0, pitch.sin(), pitch.cos()) * self.distance;
         Transform::from_translation(look_at + offset).looking_at(look_at, Vec3::Y)
+    }
+
+    /// The angle above the horizon shown, in radians: the setting, raised
+    /// over high ground.
+    pub fn shown_pitch(&self) -> f32 {
+        (self.pitch + self.raise).min(MAX_PITCH_DEGREES.to_radians())
+    }
+
+    /// How much higher it is shown than the setting, in radians.
+    pub(super) fn raise(&self) -> f32 {
+        self.raise
+    }
+
+    pub(super) fn set_raise(&mut self, raise: f32) {
+        self.raise = raise.max(0.0);
     }
 
     /// The camera's right and towards-the-camera directions along the ground,
@@ -128,8 +154,12 @@ impl OrbitCamera {
         // grabbing the map, so the camera moves the other way. Dragging down
         // pulls the near side down, so the camera looks down more steeply.
         self.yaw = (self.yaw - pixels.x * RADIANS_PER_PIXEL).rem_euclid(TAU);
-        self.pitch = (self.pitch + pixels.y * RADIANS_PER_PIXEL)
-            .clamp(self.lowest, MAX_PITCH_DEGREES.to_radians());
+        if pixels.y != 0.0 {
+            // Tilting starts from what is shown, which becomes the setting.
+            self.pitch = (self.shown_pitch() + pixels.y * RADIANS_PER_PIXEL)
+                .clamp(self.lowest, MAX_PITCH_DEGREES.to_radians());
+            self.raise = 0.0;
+        }
     }
 
     fn zoom_by(&mut self, notches: f32) {
