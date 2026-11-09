@@ -61,14 +61,5 @@ const ICON_GAP_PIXELS: f32 = 1.0;
 /// stand on the token rather than float above it.
 const ICON_SHADOW_PIXELS: f32 = 3.0;
 
-/// Tilting from the starting view to straight down slides the icon's feet
-/// (the bottom of the main picture, less its shadow) smoothly down towards a
-/// point this many screen pixels above the near edge of the token...
-const FEET_ABOVE_EDGE_PIXELS: f32 = 2.0;
-
-/// ...but only this fraction of the way: the full slide looked about double
-/// what was needed (owner's judgement).
-const ICON_SLIDE: f32 = 0.5;
-
 /// Grid units per icon art pixel, at `TokenSize::Default`.
 const ICON_PIXEL: f32 = ICON_ART_SIZE / ICON_ART_PIXELS;

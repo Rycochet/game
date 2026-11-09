@@ -186,11 +186,6 @@ impl OrbitCamera {
     pub fn zoom(&self) -> f32 {
         self.distance / self.home.2
     }
-
-    /// The starting pitch, in radians.
-    pub fn home_pitch(&self) -> f32 {
-        self.home.1
-    }
 }
 
 /// Right-drag turns (sideways) and tilts (up and down) every `OrbitCamera`,
