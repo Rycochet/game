@@ -2,20 +2,21 @@
 
 use bevy::prelude::*;
 use bevy::render::render_resource::Extent3d;
-use shared::site::StairsDirection;
 
 use super::canvas::Canvas;
+use super::frame::FrameCache;
 use super::grid::Looks;
 use super::lines::MapRivers;
 use super::overlay::{MarksLayer, Under};
 use super::projection::Projection;
+use super::redraw::{FILLING_SECONDS, KeptLand, Redraw};
 use super::sprites::Sprites;
 use super::world::WorldTiles;
 use super::{
     DrawnFrom, FULL_MAP_BUDGET_MS, ICON_PIXELS, MINIMAP_BUDGET_MS, MapPictures, REDRAW_SECONDS,
-    Room, SECRET_DOOR_EDGE, SECRET_DOOR_PIXELS, STAIRS_PIXELS, Screen, Sources, full_map_area,
-    full_map_compass, full_map_side, location_title, minimap_across, minimap_border, minimap_marks,
-    minimap_picture_size, prepare_stamps, under_the_sky, units_per_pixel,
+    Room, Screen, Sources, full_map_area, full_map_compass, full_map_side, location_title,
+    minimap_across, minimap_border, minimap_marks, minimap_picture_size, prepare_stamps,
+    under_the_sky, units_per_pixel,
 };
 use crate::common::GameView;
 use crate::widgets::PARCHMENT;
@@ -33,7 +34,8 @@ pub(super) fn draw_maps(
     mut layer: ResMut<MarksLayer>,
     mut last: Local<Option<DrawnFrom>>,
     mut pending: Local<bool>,
-    mut since: Local<f32>,
+    (mut since, mut since_filled): (Local<f32>, Local<f32>),
+    (mut kept, mut frame): (Local<KeptLand>, Local<FrameCache>),
 ) {
     let Sources {
         view,
@@ -142,11 +144,10 @@ pub(super) fn draw_maps(
     let on_the_clock = view != GameView::WorldMap || !full.open;
     let world_changed = world.as_ref().is_some_and(|world| world.is_changed());
     let due = on_the_clock && *since >= REDRAW_SECONDS;
-    if last.as_ref() == Some(&now) && !*pending && !world_changed && !due {
+    let why = Redraw::of(last.as_ref(), &now, (*pending, world_changed, due));
+    if why == Redraw::No {
         return;
     }
-    *since = 0.0;
-    *last = Some(now);
 
     let projection = Projection {
         centre,
@@ -201,6 +202,14 @@ pub(super) fn draw_maps(
         busy |= rivers.fill(world, grid_box, budget);
     }
     *pending = busy;
+    // Still filling in: painted now and then, not every frame.
+    *since_filled += time.delta_secs();
+    if why == Redraw::Filling && *since_filled < FILLING_SECONDS {
+        return;
+    }
+    *since_filled = 0.0;
+    *since = 0.0;
+    *last = Some(now.clone());
 
     let Some(mut image) = images.get_mut(if full.open {
         &pictures.full
@@ -224,43 +233,35 @@ pub(super) fn draw_maps(
         width: size.0,
         height: size.1,
     };
-    let [red, green, blue] = PARCHMENT;
-    canvas.fill([red, green, blue, 255]);
-    match (&looks, world.as_deref()) {
-        (Some(looks), _) => super::grid::draw(&mut canvas, &projection, looks, PARCHMENT, clip),
-        (None, Some(world)) => {
-            let width = world.surface.width();
-            tiles.draw(&mut canvas, &projection, width, clip, PARCHMENT);
-            // Thicker when zoomed in, but less than the zoom.
-            rivers.draw(&mut canvas, &projection, world, zoom.sqrt() * dots, clip);
-        }
-        (None, None) => {}
-    }
-    for (path, part, pixels, at, opacity) in &stamps {
-        if let Some(sprite) = sprites.get(path, *part, *pixels) {
-            canvas.sprite(sprite, *at, *opacity);
-        }
-    }
-
-    if let Some(looks) = &looks {
-        for (x, y) in looks.secret_doors() {
-            super::frame::secret_door_icon(
-                &mut canvas,
-                projection.to_picture(x as f64, y as f64),
-                SECRET_DOOR_PIXELS * zoom * dots,
-                SECRET_DOOR_EDGE * dots,
-                PARCHMENT,
-            );
-        }
-        for stairs in &dungeon.stairs {
-            if dungeon.remembered.is_seen(stairs.x, stairs.y) {
-                super::frame::stairs_icon(
-                    &mut canvas,
-                    projection.to_picture(stairs.x as f64, stairs.y as f64),
-                    STAIRS_PIXELS * zoom * dots,
-                    stairs.direction == StairsDirection::Down,
-                );
+    // On the clock with nothing else changed, the minimap's land is as it was:
+    // only its frame and sky are painted again. (In sites, what is remembered
+    // may have changed.)
+    let reuse = why == Redraw::Clock && view == GameView::WorldMap && !full.open;
+    if !(reuse && kept.restore(&now, canvas.pixels)) {
+        let [red, green, blue] = PARCHMENT;
+        canvas.fill([red, green, blue, 255]);
+        match (&looks, world.as_deref()) {
+            (Some(looks), _) => super::grid::draw(&mut canvas, &projection, looks, PARCHMENT, clip),
+            (None, Some(world)) => {
+                let width = world.surface.width();
+                tiles.draw(&mut canvas, &projection, width, clip, PARCHMENT);
+                // Thicker when zoomed in, but less than the zoom.
+                rivers.draw(&mut canvas, &projection, world, zoom.sqrt() * dots, clip);
             }
+            (None, None) => {}
+        }
+        for (path, part, pixels, at, opacity) in &stamps {
+            if let Some(sprite) = sprites.get(path, *part, *pixels) {
+                canvas.sprite(sprite, *at, *opacity);
+            }
+        }
+        if let Some(looks) = &looks {
+            super::site_icons::draw(&mut canvas, looks, dungeon, &projection, zoom * dots, dots);
+        }
+        if full.open {
+            kept.forget();
+        } else {
+            kept.keep(now, canvas.pixels);
         }
     }
 
@@ -274,7 +275,15 @@ pub(super) fn draw_maps(
     } else if !full.open {
         let sky = under_the_sky(view, players_level).then_some(&*sky_now);
         let turn = (grid_right, grid_down);
-        minimap_marks(&mut canvas, &window, &projection, clip, turn, sky, !in_hall);
+        minimap_marks(
+            &mut canvas,
+            (&window, &mut frame),
+            &projection,
+            clip,
+            turn,
+            sky,
+            !in_hall,
+        );
     }
     layer.0 = Some(Under {
         projection,

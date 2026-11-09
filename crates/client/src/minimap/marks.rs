@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::canvas::Canvas;
-use super::frame::RoundFrame;
+use super::frame::{FrameCache, RoundFrame};
 use super::projection::Projection;
 use super::{
     ARROW_INSET, BORDER, COMPASS_INSET, COMPASS_LINE, COMPASS_MIN_LENGTH, COMPASS_OF_HEIGHT,
@@ -75,7 +75,7 @@ pub(super) fn minimap_border(window: &Room) -> f32 {
 /// and moons round it when `sky` is given.
 pub(super) fn minimap_marks(
     canvas: &mut Canvas,
-    window: &Room,
+    (window, frame): (&Room, &mut FrameCache),
     projection: &Projection,
     clip: f32,
     (grid_right, grid_down): ((f64, f64), (f64, f64)),
@@ -91,7 +91,7 @@ pub(super) fn minimap_marks(
         notch: if north { NOTCH * trim } else { 0.0 },
         north: (-grid_right.1 as f32, -grid_down.1 as f32),
     };
-    round.draw(canvas);
+    frame.draw(&round, canvas);
     // Last, as they are outside what that cuts off.
     if let Some(sky_now) = sky {
         let middle = Vec2::from(projection.middle);

@@ -14,7 +14,7 @@ pub(super) fn ridge_colour(facing: f32, outer: bool) -> [u8; 3] {
 /// The minimap's outline around `centre`: a circle of `radius`, with a notch from
 /// the inside of its border to `notch` beyond it, towards `north` (a unit vector
 /// on the picture).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RoundFrame {
     pub centre: (f32, f32),
     pub radius: f32,
@@ -56,21 +56,42 @@ impl RoundFrame {
         circle.min(notch) - near * near * spread / 4.0
     }
 
-    /// Cuts the picture to the outline and draws the border on it.
+    /// Cuts the picture to the outline and draws the border on it (as
+    /// `FrameCache::draw` does, without keeping it).
+    #[cfg(test)]
     pub fn draw(&self, canvas: &mut Canvas) {
+        apply(&self.pixels(canvas.width, canvas.height), canvas);
+    }
+
+    /// What drawing it does to a picture `width` by `height`, pixel by pixel:
+    /// only the ring and what is outside it, as the map inside is left alone.
+    /// Worked out once per frame by `FrameCache`, as it is the costly part.
+    fn pixels(&self, width: u32, height: u32) -> Vec<FramePixel> {
         let inner = self.radius - self.border;
-        for y in 0..canvas.height {
-            for x in 0..canvas.width {
-                let (px, py) = (x as f32 + 0.5, y as f32 + 0.5);
+        let mut pixels = Vec::new();
+        for y in 0..height {
+            let py = y as f32 + 0.5;
+            // Rows crossing the inside skip it: nothing to do there, the
+            // usual case. (Squared, so no square root per pixel.)
+            let skip = (inner - 1.0).max(0.0);
+            let across = skip * skip - (py - self.centre.1).powi(2);
+            let hole = (across > 0.0).then(|| {
+                let half = across.sqrt();
+                (self.centre.0 - half, self.centre.0 + half)
+            });
+            for x in 0..width {
+                let px = x as f32 + 0.5;
+                if hole.is_some_and(|(from, to)| px > from && px < to) {
+                    continue;
+                }
                 let from_centre = (px - self.centre.0).hypot(py - self.centre.1);
-                // Well inside the border: nothing to do, the usual case.
                 if from_centre < inner - 1.0 {
                     continue;
                 }
+                let at = y * width + x;
                 let distance = self.distance(px, py);
-                let at = ((y * canvas.width + x) * 4) as usize;
                 if distance >= 0.5 {
-                    canvas.pixels[at..at + 4].fill(0);
+                    pixels.push(FramePixel::Clear(at));
                     continue;
                 }
                 // The way out, which round the notch isn't straight from the middle.
@@ -85,12 +106,77 @@ impl RoundFrame {
                 } else {
                     ridge_colour(facing, distance > -self.border / 2.0)
                 };
-                canvas.blend(x, y, colour, (from_centre - inner + 0.5).clamp(0.0, 1.0));
                 // The outer edge fades out over the picture's transparency.
-                if from_centre >= inner {
-                    canvas.pixels[at + 3] = ((0.5 - distance).clamp(0.0, 1.0) * 255.0) as u8;
+                let alpha = (from_centre >= inner)
+                    .then(|| ((0.5 - distance).clamp(0.0, 1.0) * 255.0) as u8);
+                pixels.push(FramePixel::Paint {
+                    at,
+                    colour,
+                    amount: (from_centre - inner + 0.5).clamp(0.0, 1.0),
+                    alpha,
+                });
+            }
+        }
+        pixels
+    }
+}
+
+/// One pixel of a frame's drawing.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum FramePixel {
+    /// Outside the outline: see-through.
+    Clear(u32),
+    /// The border: `colour` blended in by `amount`, then the transparency set.
+    Paint {
+        at: u32,
+        colour: [u8; 3],
+        amount: f32,
+        alpha: Option<u8>,
+    },
+}
+
+fn apply(pixels: &[FramePixel], canvas: &mut Canvas) {
+    for &pixel in pixels {
+        match pixel {
+            FramePixel::Clear(at) => {
+                let at = at as usize * 4;
+                canvas.pixels[at..at + 4].fill(0);
+            }
+            FramePixel::Paint {
+                at,
+                colour,
+                amount,
+                alpha,
+            } => {
+                canvas.blend(at % canvas.width, at / canvas.width, colour, amount);
+                if let Some(alpha) = alpha {
+                    canvas.pixels[at as usize * 4 + 3] = alpha;
                 }
             }
+        }
+    }
+}
+
+/// A frame's drawing kept for the next repaint, which is usually the same
+/// frame: worked out again only when it or the picture's size changes.
+#[derive(Default)]
+pub struct FrameCache {
+    kept: Option<(RoundFrame, (u32, u32), Vec<FramePixel>)>,
+}
+
+impl FrameCache {
+    /// Draws `frame` as `RoundFrame::draw` does.
+    pub fn draw(&mut self, frame: &RoundFrame, canvas: &mut Canvas) {
+        let size = (canvas.width, canvas.height);
+        let fresh = self
+            .kept
+            .as_ref()
+            .is_some_and(|(kept, kept_size, _)| kept == frame && *kept_size == size);
+        if !fresh {
+            self.kept = Some((*frame, size, frame.pixels(size.0, size.1)));
+        }
+        if let Some((_, _, pixels)) = &self.kept {
+            apply(pixels, canvas);
         }
     }
 }
