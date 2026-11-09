@@ -41,6 +41,8 @@ pub enum ClientMessage {
     /// Deletes this character of the account's, save and all, while choosing:
     /// answered with `Characters` again.
     DeleteCharacter { id: CharacterId },
+    /// Show the character as this role, one it may be (answered with `ShownRole`).
+    ShowRoleAs(crate::role::RoleId),
     /// Makes a new character and plays them, answered with `Welcome`. The
     /// server checks the name and how many the account may have (a guest one).
     CreateCharacter(NewCharacter),
@@ -115,8 +117,7 @@ pub enum ClientMessage {
     /// answered with `Inventory`, whether or not it could be done.
     GiveItem { item: Id, to: Id },
     /// Asks to trade with someone: for now a shop's keeper (`Keepers`), from beside
-    /// its door, after any steps to get there. Answered with `TradeStock` if it can
-    /// be.
+    /// its door, after any steps to get there. Answered with `TradeStock` if it can.
     OpenTrade { with: Id },
     /// What these items are, for showing them where they are written into text
     /// (`crate::item_text`): answered with `ItemsLookedUp`. Only the first

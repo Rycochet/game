@@ -94,18 +94,20 @@ pub(super) fn welcome(
             let played = world.storage.load_playtime(id)?;
             let bar = world.storage.load_action_bar(id)?;
             let difficulty = world.storage.load_difficulty(id)?;
+            let shown = world.storage.load_shown_as(id)?;
             Ok((
                 character,
                 inventory,
                 world.storage.load_sheet(id)?,
                 gates,
-                (played, bar, difficulty),
+                (played, bar, difficulty, shown),
             ))
         });
     // Not `Playing` yet, so nothing blank can be saved over the real character.
     match loaded {
-        Ok((character, inventory, sheet, gates, (played, bar, difficulty))) => {
+        Ok((character, inventory, sheet, gates, (played, bar, difficulty, shown))) => {
             client.action_bar = bar;
+            client.show_saved(shown);
             client.decide_difficulty(difficulty, options.difficulties);
             (client.character, client.other_worlds) = character;
             client.activity = Activity::joined(played, world.action_clock.ticks());
@@ -158,6 +160,7 @@ pub(super) fn send_welcome(
         stacks: world.stacks,
         role: client.badge(),
         powers: client.powers(),
+        shown: client.shown(),
     };
     client.link.send(&welcome)
         && client

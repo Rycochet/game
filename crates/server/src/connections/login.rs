@@ -80,7 +80,7 @@ pub(super) fn logged_in(
     }
     info!("Account {} logged in {how}", id.0);
     client.account = Some(id);
-    client.take_role(held);
+    client.take_role(held, &accounts.roles);
     offer_characters(client, accounts, world, options.difficulties)
 }
 

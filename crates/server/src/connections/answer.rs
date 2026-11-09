@@ -45,7 +45,8 @@ pub(crate) fn answer(
             difficulty,
             ..
         } if client.account.is_some() => {
-            client.take_role(accounts.roles.owner());
+            let owner = accounts.roles.owner();
+            client.take_role(owner, &accounts.roles);
             client.makes_characters = makes_characters;
             client.difficulty = Some(difficulty.for_existing());
             offer_characters(client, accounts, world, options.difficulties)
@@ -99,6 +100,12 @@ pub(crate) fn answer(
         }
         ClientMessage::DeleteCharacter { id } => {
             delete_chosen(client, id, accounts, world, options.difficulties)
+        }
+        ClientMessage::ShowRoleAs(id) => {
+            if !client.show_as(id) {
+                warn!("A client asked to be shown as a role it may not appear as");
+            }
+            client.link.send(&ServerMessage::ShownRole(client.shown()))
         }
         ClientMessage::CreateCharacter(asked) => {
             match create(client, asked, accounts, options.difficulties) {

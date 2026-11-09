@@ -135,6 +135,8 @@ Every account has a role, which decides what it may do beyond playing. A role ca
 | Banned | Nothing: turned away when logging in, told why and until when. |
 | Guest | Playing. Every guest has this role, and guests can't be given another. |
 
+**How staff are shown:** other players see a gold laurel crown before the name of a character whose role is anything but Player, Moderated, Banned or Guest, with the role's name (or title) after it, as in "Brin (Moderator)". Names can't contain anything that looks like it. Staff can choose to be shown as a role their own may appear as instead, such as Player to play unnoticed, with **Shown As** under Settings, Gameplay. It is kept with each character. By default the Owner may appear as any role, Admins as Developer, Moderator or Player, and Developers and Moderators as Player.
+
 **Claiming your server:** a new server has no Owner. When it starts, it writes a claim code to its log and to `owner-claim.txt` in its data folder. Log in with an account (not as a guest) and make a new character with the code as its name: you become the Owner, no character is made, and the game goes back to its menu. Connect again to play. The code works once, and a new one is made each time the server starts until it is used.
 
 **Changing roles by hand:** roles are kept in `roles.ron` in the data folder. **Only edit it while the server is stopped**, as a running server writes over it. In it you can:

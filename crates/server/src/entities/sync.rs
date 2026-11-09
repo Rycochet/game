@@ -78,6 +78,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                     },
                     y: someone.position.1,
                     worn: someone.worn.clone(),
+                    mark: someone.mark.clone(),
                 });
             }
         }
@@ -95,6 +96,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                         x: mob.position.0,
                         y: mob.position.1,
                         worn: mob.shown.clone(),
+                        mark: None,
                     });
                 }
             }
@@ -150,8 +152,10 @@ pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>, died: &BTreeSet<I
         .filter(|look| {
             let feeling = client.seen_feelings.get(&look.id);
             let worn = client.seen_worn.get(&look.id);
+            let mark = client.seen_marks.get(&look.id);
             feeling.is_some_and(|known| *known != look.feeling)
                 || worn.is_some_and(|known| *known != look.worn)
+                || mark.is_some_and(|known| *known != look.mark)
         })
         .map(|look| look.id)
         .collect();
@@ -159,6 +163,10 @@ pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>, died: &BTreeSet<I
     client.seen_worn = seen
         .iter()
         .map(|look| (look.id, look.worn.clone()))
+        .collect();
+    client.seen_marks = seen
+        .iter()
+        .map(|look| (look.id, look.mark.clone()))
         .collect();
     client.seen_entities.retain(|id, _| {
         let stays = now_seen.contains(id);

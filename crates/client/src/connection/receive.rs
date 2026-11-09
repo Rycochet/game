@@ -77,6 +77,7 @@ pub(super) fn receive(
                 stacks,
                 role,
                 powers,
+                shown,
             })) => {
                 let minutes = world_time.minutes(seconds);
                 server_dev_tools.0 = dev_tools;
@@ -121,6 +122,7 @@ pub(super) fn receive(
                     stacks,
                     role,
                     powers,
+                    shown,
                 }));
             }
             Ok(Some(ServerMessage::Online(state))) => {
@@ -135,10 +137,12 @@ pub(super) fn receive(
                 give_up(&mut commands, &mut status, reason);
                 break;
             }
-            // Logging in, and an account's characters: `log_in`'s.
+            // Logging in, an account's characters and the role it is shown as:
+            // read by `log_in` and Settings.
             Ok(Some(
                 message @ (ServerMessage::LoginOptions { .. }
                 | ServerMessage::Characters { .. }
+                | ServerMessage::ShownRole(_)
                 | ServerMessage::OpenLogin { .. }
                 | ServerMessage::LoggedIn { .. }
                 | ServerMessage::LoginFailed(_)),

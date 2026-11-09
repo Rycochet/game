@@ -105,7 +105,10 @@ mod boxes;
 mod button_state;
 mod buttons;
 
-pub use boxes::{panel, panel_frame, panel_title, raised_box, spawn_tooltip, tooltip_box};
+pub use boxes::{
+    panel, panel_frame, panel_title, raised_box, spawn_tooltip, spawn_tooltip_with_picture,
+    tooltip_box,
+};
 use boxes::{raised_border, sunken_border};
 pub use button_state::{ButtonPressed, ButtonState, Pressable, RaisePanel, WidgetSystems};
 use buttons::{Stroke, spawn_strokes};

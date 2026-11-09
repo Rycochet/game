@@ -5,8 +5,8 @@ The box near the bottom middle of the window naming what the pointer is over: an
 ## Files
 
 - `crates/client/src/hover/mod.rs`: `HoverPlugin`; `spawn::spawn_box` (Startup), `name::show_name` (PostUpdate, not while connecting).
-- `crates/client/src/hover/spawn.rs`: `HoverBox`, `HoverText`, `spawn_box` (a `widgets` tooltip in an absolute row across the window), `LIFT` (12 px above `common::BottomHud`), `LOWEST` (32 px).
-- `crates/client/src/hover/name.rs`: `Found` (what each module found), `name_of` (which wins), `show_name` (places, fills and shows or hides the box).
+- `crates/client/src/hover/spawn.rs`: `HoverBox`, `HoverText`, `HoverMark` (the staff mark: `icons/lorc/laurel-crown.png` in gold), `spawn_box` (a `widgets` tooltip with a picture, `spawn_tooltip_with_picture`, in an absolute row across the window), `LIFT` (12 px above `common::BottomHud`), `LOWEST` (32 px).
+- `crates/client/src/hover/name.rs`: `Found` (what each module found), `name_of` (which wins), `mark_of` (the hovered player's `StaffMark`, when their name is what shows), `show_name` (places, fills and shows or hides the box; a marked player's name reads "Brin (Admin)" with the mark before it).
 
 ## Public API
 
@@ -14,7 +14,7 @@ The box near the bottom middle of the window naming what the pointer is over: an
 
 ## Depends on
 
-- `common` (`HoverName`, `HoveredOnMap`, `HoveredInSky`, `HoveredBag`, `Portal`, `poi_name`, `BottomHud`, `GameView`), `view3d` (`HoveredToken`), `minimap` (`FullMap`), `widgets` (`spawn_tooltip`).
+- `common` (`HoverName`, `StaffMark`, `HoveredOnMap`, `HoveredInSky`, `HoveredBag`, `Portal`, `poi_name`, `BottomHud`, `GameView`), `view3d` (`HoveredToken`), `minimap` (`FullMap`), `widgets` (`spawn_tooltip_with_picture`).
 
 ## Used by
 

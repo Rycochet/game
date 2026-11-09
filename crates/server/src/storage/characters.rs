@@ -5,6 +5,7 @@ use shared::ability::ActionBar;
 use shared::difficulty::Difficulty;
 use shared::item::Inventory;
 use shared::protocol::{CharacterId, CharacterSummary, ListedCharacter};
+use shared::role::RoleId;
 use shared::sheet::Sheet;
 use shared::world::WorldId;
 use std::collections::{BTreeMap, BTreeSet};
@@ -26,6 +27,8 @@ pub struct Everywhere {
     pub action_bar: ActionBar,
     /// `CharacterSave::difficulty`.
     pub difficulty: Option<Difficulty>,
+    /// `CharacterSave::shown_as`.
+    pub shown_as: Option<RoleId>,
 }
 
 impl Storage {
@@ -117,6 +120,11 @@ impl Storage {
         Ok(self.character(id)?.and_then(|save| save.difficulty))
     }
 
+    /// The role a character chose to be shown as, if any.
+    pub fn load_shown_as(&self, id: &CharacterId) -> Result<Option<RoleId>, String> {
+        Ok(self.character(id)?.and_then(|save| save.shown_as))
+    }
+
     /// Deletes a character's save (dev tools), if they have one.
     pub fn remove_character(&self, id: &CharacterId) {
         if let Some(queue) = &self.queue {
@@ -154,6 +162,7 @@ impl Storage {
                     playtime: everywhere.playtime,
                     action_bar: everywhere.action_bar,
                     difficulty: everywhere.difficulty,
+                    shown_as: everywhere.shown_as,
                 }),
             );
         }

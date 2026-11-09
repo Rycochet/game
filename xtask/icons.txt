@@ -135,3 +135,5 @@ delapouite/forest
 delapouite/jungle
 lorc/snowflake-1
 delapouite/desert
+# The staff mark before marked players' names (hover/spawn.rs)
+lorc/laurel-crown

@@ -1,5 +1,5 @@
-//! Settings' Gameplay page: Difficulty (`difficulty`), and "Pause When Not in
-//! Focus", for single player. The pausing itself is asked for with the menu's
+//! Settings' Gameplay page: Difficulty (`difficulty`), "Shown As" while playing
+//! for staff (`shown_role`), and "Pause When Not in Focus", for single player. The pausing itself is asked for with the menu's
 //! (`ask_for_pause`).
 
 use bevy::prelude::*;
@@ -7,8 +7,10 @@ use bevy::prelude::*;
 use super::super::SystemMenu;
 use super::difficulty::{Choices, choices, spawn_difficulty_row};
 use super::rows::{spawn_switch_row, tip};
+use super::shown_role::{ShownAs, offered, spawn_shown_row};
 use crate::common::{IN_BROWSER, PlayDifficulty, Preferences, ServerClock, Session};
 use crate::widgets::{ButtonState, SwitchFlipped, UiId};
+use shared::role::ShownRole;
 
 #[derive(Component)]
 pub(in crate::system_menu) struct GameplayPage;
@@ -31,8 +33,8 @@ fn why_not(session: &Session, clock: &ServerClock) -> Option<&'static str> {
 }
 
 /// What the page last showed: Pause's switch and why not, Difficulty's
-/// choices, and whether the Ironman requester was up.
-type Shown = (bool, Option<&'static str>, Choices, bool);
+/// choices, whether the Ironman requester was up, and Shown As.
+type Shown = (bool, Option<&'static str>, Choices, bool, Option<ShownRole>);
 
 /// Builds the page again when what it shows changes (and at the start).
 #[allow(clippy::too_many_arguments)]
@@ -43,6 +45,7 @@ pub(in crate::system_menu) fn fill_gameplay_page(
     clock: Res<ServerClock>,
     play: Res<PlayDifficulty>,
     menu: Res<SystemMenu>,
+    shown_as: Res<ShownAs>,
     page: Single<Entity, With<GameplayPage>>,
     mut shown: Local<Option<Shown>>,
 ) {
@@ -51,11 +54,19 @@ pub(in crate::system_menu) fn fill_gameplay_page(
     // Again as the Ironman requester closes, putting back a choice not kept,
     // and on each word from the server, which may have refused one.
     let asking = *menu == SystemMenu::Ironman;
-    let now = (preferences.pause_unfocused, why_not, difficulty, asking);
+    let role = offered(&shown_as).filter(|_| session.is_playing()).cloned();
+    let now = (
+        preferences.pause_unfocused,
+        why_not,
+        difficulty,
+        asking,
+        role,
+    );
     if shown.as_ref() == Some(&now) && !play.is_changed() {
         return;
     }
     let difficulty = now.2.clone();
+    let role = now.4.clone();
     *shown = Some(now);
     let on = preferences.pause_unfocused;
     let state = match (why_not.is_some(), on) {
@@ -67,6 +78,9 @@ pub(in crate::system_menu) fn fill_gameplay_page(
     commands.entity(page).despawn_related::<Children>();
     commands.entity(page).with_children(|page| {
         spawn_difficulty_row(page, &difficulty, play.current.is_some());
+        if let Some(role) = &role {
+            spawn_shown_row(page, role);
+        }
         let label = "Pause When Not in Focus";
         let made = spawn_switch_row(page, label, tip(PAUSE, why_not), state, on);
         page.commands().entity(made).insert((

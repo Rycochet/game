@@ -110,6 +110,12 @@ impl Connections {
         self.clients.is_empty()
     }
 
+    /// Everyone connected, to change in tests.
+    #[cfg(test)]
+    pub(crate) fn clients_mut(&mut self) -> &mut [Client] {
+        &mut self.clients
+    }
+
     /// Everyone connected, for the debug API.
     #[cfg(feature = "debug-api")]
     pub(crate) fn clients(&self) -> &[Client] {
@@ -184,8 +190,8 @@ pub struct Client {
     /// The embedded server's own player (connected without logging in): its
     /// Owner, who may open it to others.
     pub(crate) host: bool,
-    /// Its account's role, once logged in (`role.rs`).
-    held: Option<crate::roles::Held>,
+    /// Its account's role, once logged in, and what it is shown as (`role.rs`).
+    role: role::RoleState,
     /// What the host last asked of opening the server to others, not yet done.
     pub(crate) asked_online: Option<Option<shared::protocol::OnlineSettings>>,
     pub(crate) phase: Phase,
@@ -226,6 +232,8 @@ pub struct Client {
     pub(crate) seen_feelings: BTreeMap<Id, Feeling>,
     /// What each could be seen wearing when last told, to tell again on a change.
     pub(crate) seen_worn: BTreeMap<Id, Vec<WornLook>>,
+    /// The marks each was told with, to tell again on a change.
+    pub(crate) seen_marks: BTreeMap<Id, Option<shared::role::RoleBadge>>,
     /// What the character is like.
     pub(crate) sheet: Sheet,
     /// Its action bar (`CharacterSave::action_bar`).

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// A role's id: one of the built-in ones (`OWNER` to `GUEST`) or a server's
 /// own, in lower case letters, digits, `-` and `_`.
 // Written as a plain string, so `roles.ron` reads `"admin"`.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct RoleId(pub String);
 
@@ -123,6 +123,30 @@ impl RoleBadge {
     pub fn shown(&self) -> &str {
         self.title.as_deref().unwrap_or(&self.name)
     }
+}
+
+/// The role a character is shown as to others, and the roles it may be shown
+/// as: the account's own first, then its `Powers::appears_as`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShownRole {
+    pub current: RoleId,
+    pub choices: Vec<RoleBadge>,
+}
+
+impl ShownRole {
+    /// The badge of the role it is shown as.
+    pub fn badge(&self) -> Option<&RoleBadge> {
+        self.choices.iter().find(|badge| badge.id == self.current)
+    }
+}
+
+/// Whether others see a mark before the names of characters shown as this
+/// role: every role but those of plain players, guests and those under
+/// sanctions.
+pub fn is_marked(id: &RoleId) -> bool {
+    ![PLAYER, GUEST, MODERATED, BANNED]
+        .iter()
+        .any(|plain| id.is(plain))
 }
 
 #[cfg(test)]

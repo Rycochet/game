@@ -72,7 +72,7 @@ pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
 };
 pub use dungeon::CurrentDungeon;
-pub use hover::{HoverName, HoveredInSky, HoveredOnMap, poi_name, words};
+pub use hover::{HoverName, HoveredInSky, HoveredOnMap, StaffMark, poi_name, words};
 pub use item_text::{DroppedOnText, HeldOverText, KnownItem, KnownItems, TakesItemText};
 pub use items::{
     BandShift, GROUND, GaveItem, HeldGift, HeldOverGifts, HeldStock, HoveredBag, NO_QUALITY_NAME,
