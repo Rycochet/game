@@ -13,6 +13,7 @@
 mod bolts;
 mod border;
 mod daylight;
+mod door_swing;
 mod field;
 mod herbs;
 pub use field::CROP_STAGES;
@@ -53,6 +54,7 @@ mod lights;
 mod parts;
 mod pictures;
 mod plain_pictures;
+mod put_meshes;
 mod showing;
 mod spawn_scene;
 mod update_meshes;
@@ -104,6 +106,7 @@ impl Plugin for DungeonMapPlugin {
         let in_view = in_state(GameView::Dungeon);
         app.add_message::<DoorClicked>()
             .init_resource::<Shown>()
+            .init_resource::<door_swing::DoorSwings>()
             .init_resource::<OutsideLight>()
             .init_resource::<TownLights>()
             .init_resource::<wild_ground::GroundTint>()
@@ -137,6 +140,7 @@ impl Plugin for DungeonMapPlugin {
                     sight_lines::update_outlines,
                     sight_lines::place_mask,
                     wild_ground::work_out_tint,
+                    door_swing::swing_doors,
                     update_meshes,
                     outlined::apply_outlined,
                     update_crops,

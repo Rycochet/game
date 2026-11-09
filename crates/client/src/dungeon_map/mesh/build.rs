@@ -4,13 +4,13 @@ use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
 use shared::protocol::SeenStairs;
 use shared::site::{BuildingLook, FieldLook};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::liquid::LooksLiquid;
 use super::super::outlined::Outlined;
 use super::super::theme::Shape;
 use super::super::town;
-use super::super::walls::{Layers, Scene};
+use super::super::walls::{Layers, LeafPose, Scene};
 use super::super::wild_ground::Wild;
 use super::cutaway::{cut_height, settle_in_the_way};
 use super::flow::slope_liquid;
@@ -31,6 +31,7 @@ pub(super) const RAISED_NORMAL: f32 = 0.5;
 /// drawn: cells the client doesn't know may be in sight as wall. `camera` is
 /// the camera's position, `shape` how the place's walls are built. Cells in
 /// `cut` are in sight only in part, so what is lit there is copied in grey too.
+#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     level: &Level,
@@ -47,6 +48,38 @@ pub fn build(
     shape: Shape,
     cut: &Sight,
     wild: Option<Wild>,
+) -> DungeonMeshes {
+    let looks = (buildings, lit_buildings, fields, ruined);
+    let no_swings = BTreeMap::new();
+    let seen = (views, sight, remembered, cut);
+    build_posed(
+        level,
+        seen,
+        light,
+        stairs,
+        looks,
+        (camera, shape),
+        wild,
+        &no_swings,
+    )
+}
+
+/// `build`, with door leaves part way through swinging drawn as `leaves` says.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn build_posed(
+    level: &Level,
+    (views, sight, remembered, cut): (&[View], &Sight, &Sight, &Sight),
+    light: &LightGrid,
+    stairs: &[SeenStairs],
+    (buildings, lit_buildings, fields, ruined): (
+        &[BuildingLook],
+        &BTreeSet<u16>,
+        &[FieldLook],
+        bool,
+    ),
+    (camera, shape): (Vec3, Shape),
+    wild: Option<Wild>,
+    leaves: &BTreeMap<(i64, i64), LeafPose>,
 ) -> DungeonMeshes {
     let mut layers = Layers {
         solid: Surface::ALL.iter().map(|_| Builder::default()).collect(),
@@ -69,6 +102,7 @@ pub fn build(
         ruined,
         tint: wild.map(|wild| wild.tints),
         heights: wild.map(|wild| wild.heights),
+        leaves,
     };
     let (min_x, min_y, width, height) = level.bounds();
     // The first viewer is the player.

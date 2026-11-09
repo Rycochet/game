@@ -3,22 +3,18 @@
 //!
 //! A leaf is hinged at one side of the hole (from a hash of the cell, only for
 //! looks), on the face of the wall it opens to, and drawn as the door hangs
-//! (`Level::swing`): shut in the hole, open flat to the wall on its side (half
-//! as far for a secret door), or broken, hanging askew. A door whose swing
-//! isn't known is drawn open, the way from the hash.
+//! (`LeafPose`, from `Level::swing`, or part way there while it swings:
+//! `door_swing`).
 
 use bevy::prelude::*;
-use shared::door::{Side, Swing};
 use shared::dungeon::Cell;
 
 use super::super::mesh::Surface;
 use super::super::outlined::{OUTLINE_WIDTH, Prism, add_face, grow_convex};
+use super::leaf_pose::{LeafPose, askew};
 use super::{
     FRAME_SHADE, Layer, Layers, OPENING_HALF, Opening, Scene, Tile, half_thickness, heights,
 };
-
-/// How far an open door's leaf is turned from shut.
-const LEAF_OPEN: f32 = std::f32::consts::FRAC_PI_2;
 
 /// A leaf's thickness, and the gap left round it in the hole.
 const LEAF_THICKNESS: f32 = 1.0;
@@ -33,43 +29,8 @@ const RIM_OUT: f32 = 0.05;
 /// from the black lines between a wall's stones.
 const CRACK_WIDTH: f32 = 1.0;
 
-/// How far a broken leaf hangs askew from its top hinge.
-const BROKEN_TILT: f32 = 0.25;
-
-/// How a leaf is drawn: how far it is turned from shut, which way (1 or -1
-/// along the wall's `out`), and whether it hangs broken.
-fn leaf_pose(swing: Option<Swing>, secret: bool, hashed: f32) -> (f32, f32, bool) {
-    let way = |side: Side| match side {
-        Side::South | Side::East => 1.0,
-        Side::North | Side::West => -1.0,
-    };
-    match swing {
-        None => (LEAF_OPEN, hashed, false),
-        Some(Swing::Closed) => (0.0, hashed, false),
-        Some(Swing::Open(side)) if secret => (LEAF_OPEN / 2.0, way(side), false),
-        Some(Swing::Open(side)) => (LEAF_OPEN, way(side), false),
-        Some(Swing::Broken(side)) => (LEAF_OPEN, way(side), true),
-    }
-}
-
-/// A leaf's outline turned askew about its top at the hinge, its lowest point
-/// kept on the floor.
-fn askew(profile: &[Vec2]) -> Vec<Vec2> {
-    let top = profile.iter().map(|p| p.y).fold(0.0, f32::max);
-    let (sin, cos) = BROKEN_TILT.sin_cos();
-    let turned: Vec<Vec2> = profile
-        .iter()
-        .map(|p| {
-            let (dx, dy) = (p.x, p.y - top);
-            Vec2::new(dx * cos + dy * sin, top - dx * sin + dy * cos)
-        })
-        .collect();
-    let lowest = turned.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
-    turned.into_iter().map(|p| p - Vec2::Y * lowest).collect()
-}
-
 /// Two numbers, each 1 or -1, the same every time for a cell.
-fn sides_of(x: i64, y: i64) -> (f32, f32) {
+pub(super) fn sides_of(x: i64, y: i64) -> (f32, f32) {
     let mixed = (x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
         ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F);
     let sign = |bit: u64| if mixed >> bit & 1 == 0 { 1.0 } else { -1.0 };
@@ -79,10 +40,12 @@ fn sides_of(x: i64, y: i64) -> (f32, f32) {
 impl Tile<'_> {
     /// A door's leaf, as it hangs, and the lines round its hole for the x-ray.
     pub(super) fn door_leaf(&self, layers: &mut Layers, layer: Layer, opening: &Opening) {
-        let (hinge_side, hashed) = sides_of(self.x, self.y);
-        let level = self.scene.level;
-        let secret = level.cell(self.x, self.y) == Cell::SecretDoor;
-        let (turned, swing, broken) = leaf_pose(level.swing(self.x, self.y), secret, hashed);
+        let (hinge_side, _) = sides_of(self.x, self.y);
+        // As it is drawn now: swinging, or as it hangs.
+        let at = (self.x, self.y);
+        let pose = self.scene.leaves.get(&at).copied();
+        let pose = pose.unwrap_or_else(|| LeafPose::of(self.scene.level, at));
+        let (turned, swing) = (pose.turned, pose.way);
         let shape = opening.shape;
         let hinge_a = hinge_side * OPENING_HALF;
         let hinge = self.centre
@@ -108,8 +71,8 @@ impl Tile<'_> {
         tops.sort_by(|p, q| q.x.total_cmp(&p.x));
         tops.dedup_by(|p, q| (p.x - q.x).abs() < 1e-3);
         profile.extend(tops);
-        if broken {
-            profile = askew(&profile);
+        if pose.tilt > 0.0 {
+            profile = askew(&profile, pose.tilt);
         }
         let place =
             |point: Vec2, depth: f32| hinge + way * point.x + Vec3::Y * point.y + through * depth;

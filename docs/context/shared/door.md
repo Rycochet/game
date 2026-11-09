@@ -28,4 +28,4 @@ Doors as more than a cell (owner's design, 2026-11-09): every `Cell::Door` and `
 - Starting chances (`start.rs`): 70% of doors inside start closed, 90% of those leading outside; herbalists' huts 85% and 95%. A ruin's doors are 30% broken, and half as many of the rest closed. Secret doors always start closed. Quality is always Common and material Wood for now (better doors and other materials are for future generators).
 - Locks are placed by the server the first time a level is used (`sites/doors/locks.rs`), keys going to its mobs.
 - Doors take damage from kicks (`damage`, thousandths of a point); at their `toughness` they break: `Broken` away from the kicker, any lock left unlocked on it (server `sites/doors/kick.rs`).
-- Not built yet: lock picking (with item durability, later), an animated swing, showing damage.
+- Not built yet: lock picking (with item durability, later), showing damage. (Leaves swing on the client: `dungeon_map/door_swing.rs`.)
