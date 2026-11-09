@@ -5,21 +5,19 @@
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
+use serde::Serialize;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
 use shared::protocol::CharacterId;
 use shared::road::RoadLink;
 use shared::world::WorldId;
-use time::OffsetDateTime;
 
+mod old_saves;
 mod site_file;
+pub(crate) use old_saves::set_aside_old_saves;
 use site_file::site_file_name;
 
-use crate::accounts::{AccountId, AccountSave, LoginSave};
-use crate::storage::{
-    CharacterSave, OLDEST_SAVE_FORMAT, RoadSave, SAVE_FORMAT, ServerSave, SiteId, SiteSave,
-    WorldSave,
-};
+use crate::accounts::{AccountId, AccountSave, LoginSave, NameIndex};
+use crate::storage::{CharacterSave, RoadSave, ServerSave, SiteId, SiteSave, WorldSave};
 
 /// Says which format a data folder's saves are in.
 const FORMAT_FILE: &str = "save_format.ron";
@@ -43,6 +41,8 @@ pub(crate) enum SaveKey {
     Account(AccountId),
     /// By the hash of the login.
     Login(String),
+    /// Every character's name, so no two are the same.
+    Names,
 }
 
 /// A whole save. Only passed along to be written, so its size doesn't matter.
@@ -56,6 +56,7 @@ pub(crate) enum Save {
     Character(CharacterSave),
     Account(AccountSave),
     Login(LoginSave),
+    Names(NameIndex),
 }
 
 /// Why a save couldn't be loaded. The difference matters: only something that
@@ -83,6 +84,9 @@ pub(crate) trait SaveBackend: Send + Sync {
 
     /// Keeps a broken save somewhere it won't be loaded or saved over.
     fn put_aside(&self, key: &SaveKey) -> Result<(), String>;
+
+    /// Every account saved (only for making the name index, once).
+    fn accounts(&self) -> Result<Vec<AccountId>, String>;
 }
 
 /// Saves as RON files in a data folder:
@@ -93,6 +97,7 @@ pub(crate) trait SaveBackend: Send + Sync {
 /// - `characters/<id>.ron`: a character, who can move between worlds.
 /// - `accounts/<id>.ron`: an account and its characters.
 /// - `logins/<hash>.ron`: which account a way of logging in belongs to.
+/// - `accounts/names.ron`: every character's name (moved with the accounts).
 pub(crate) struct FileBackend {
     data: PathBuf,
 }
@@ -125,6 +130,7 @@ impl FileBackend {
             SaveKey::Character(id) => self.data.join("characters").join(format!("{}.ron", id.0)),
             SaveKey::Account(id) => self.data.join("accounts").join(format!("{}.ron", id.0)),
             SaveKey::Login(hash) => self.data.join("logins").join(format!("{hash}.ron")),
+            SaveKey::Names => self.data.join("accounts").join("names.ron"),
         }
     }
 }
@@ -141,6 +147,7 @@ impl SaveBackend for FileBackend {
             SaveKey::Character(_) => read(&file)?.map(Save::Character),
             SaveKey::Account(_) => read(&file)?.map(Save::Account),
             SaveKey::Login(_) => read(&file)?.map(Save::Login),
+            SaveKey::Names => read(&file)?.map(Save::Names),
         })
     }
 
@@ -154,6 +161,7 @@ impl SaveBackend for FileBackend {
             Save::Character(save) => write(&file, save),
             Save::Account(save) => write(&file, save),
             Save::Login(save) => write(&file, save),
+            Save::Names(save) => write(&file, save),
         }
     }
 
@@ -176,71 +184,27 @@ impl SaveBackend for FileBackend {
         let aside = file.with_extension("ron.broken");
         fs::rename(&file, &aside).map_err(|error| format!("can't move it aside: {error}"))
     }
-}
 
-/// `save_format.ron`.
-#[derive(Serialize, Deserialize)]
-struct FormatSave {
-    format: u32,
-}
-
-/// Run before anything opens a data folder. If its saves are from before
-/// `OLDEST_SAVE_FORMAT`, moves them into a dated folder beside them, for the owner
-/// to delete: nothing is ever deleted here. Folders without a format file are from
-/// before there was one. An error if they can't be moved, as the server would then
-/// be mixing old saves with new.
-pub(crate) fn set_aside_old_saves(data: &Path) -> Result<(), String> {
-    let file = data.join(FORMAT_FILE);
-    // One that makes no sense says nothing, the same as there being none.
-    let format = read::<FormatSave>(&file)
-        .unwrap_or(None)
-        .map(|save| save.format);
-    if format.is_none_or(|format| format < OLDEST_SAVE_FORMAT) {
-        let found: Vec<_> = SAVE_FOLDERS
-            .iter()
-            .filter(|folder| data.join(folder).exists())
-            .collect();
-        if !found.is_empty() {
-            let aside = old_saves_folder(data);
-            fs::create_dir_all(&aside)
-                .map_err(|error| format!("can't make {}: {error}", aside.display()))?;
-            for folder in found {
-                fs::rename(data.join(folder), aside.join(folder))
-                    .map_err(|error| format!("can't move {folder} aside: {error}"))?;
-            }
-            // Logging may not have started yet, and a host needs to see this.
-            eprintln!(
-                "Saves from an older version can't be used, so they were moved to {}",
-                aside.display()
-            );
-        }
-    }
-    // Never lowered: a newer server's saves are refused later, with a reason.
-    if format.is_none_or(|format| format < SAVE_FORMAT) {
-        let format = FormatSave {
-            format: SAVE_FORMAT,
+    fn accounts(&self) -> Result<Vec<AccountId>, String> {
+        let folder = self.data.join("accounts");
+        let entries = match fs::read_dir(&folder) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => return Err(format!("can't read {}: {error}", folder.display())),
         };
-        write(&file, &format)?;
+        let mut found = Vec::new();
+        for entry in entries {
+            let path = entry.map_err(|error| error.to_string())?.path();
+            // Account files are named by their id; anything else isn't one.
+            let id = path
+                .file_name()
+                .and_then(|name| name.to_str()?.strip_suffix(".ron"));
+            if let Some(id) = id.and_then(|id| uuid::Uuid::parse_str(id).ok()) {
+                found.push(AccountId(shared::id::Id(id)));
+            }
+        }
+        Ok(found)
     }
-    Ok(())
-}
-
-/// `old-saves-<today>` in the data folder, numbered if there already is one.
-fn old_saves_folder(data: &Path) -> PathBuf {
-    let today = OffsetDateTime::now_utc().date();
-    let name = format!(
-        "old-saves-{}-{:02}-{:02}",
-        today.year(),
-        today.month() as u8,
-        today.day()
-    );
-    let mut folder = data.join(&name);
-    let mut number = 1;
-    while folder.exists() {
-        number += 1;
-        folder = data.join(format!("{name}-{number}"));
-    }
-    folder
 }
 
 /// Reads a file: `None` if there is none.

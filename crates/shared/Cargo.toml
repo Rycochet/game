@@ -19,6 +19,8 @@ postcard.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 uuid = { workspace = true, features = ["serde", "v5"] }
+# Taking accents off letters in typed names (MIT/Apache-2.0).
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 ron.workspace = true

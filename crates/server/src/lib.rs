@@ -162,7 +162,10 @@ impl Plugin for ServerPlugin {
         app.insert_resource(worlds)
             .insert_resource(self.options)
             .init_resource::<ServerName>()
-            .insert_resource(Connections::new(accounts::Accounts::new(queue, roles)))
+            .insert_resource(Connections::new(
+                accounts::Accounts::new(queue, roles)
+                    .unwrap_or_else(|error| panic!("The server can't read its accounts: {error}")),
+            ))
             .add_systems(Startup, announce)
             .add_systems(Startup, move || announce_claim(claim.as_deref()))
             .add_systems(

@@ -1,5 +1,6 @@
 use super::*;
 use crate::storage::tests::TestFolder;
+use crate::storage::{OLDEST_SAVE_FORMAT, SAVE_FORMAT};
 
 /// A data folder as an older server left it, with some certificates.
 fn old_folder() -> TestFolder {

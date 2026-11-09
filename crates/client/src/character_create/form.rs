@@ -52,14 +52,23 @@ pub(super) fn read_choices(
     mut edited: MessageReader<TextEdited>,
     mut chosen: MessageReader<DropdownChosen>,
     mut colours: MessageReader<ColourChosen>,
-    names: Query<&TextBox, With<NameBox>>,
+    mut names: Query<&mut TextBox, With<NameBox>>,
     kinds: Query<(), With<KindList>>,
     looks: Query<&LookList>,
     mut draft: ResMut<Draft>,
 ) {
     for edit in edited.read() {
-        if let Ok(name) = names.get(edit.0) {
-            draft.name = name.text.clone();
+        if let Ok(mut name) = names.get_mut(edit.0) {
+            // Only what can be in a name: lookalikes made plain as they are
+            // typed (the server folds and checks it again).
+            let folded: String = shared::name::fold(&name.text)
+                .chars()
+                .take(shared::name::MAX_NAME)
+                .collect();
+            if folded != name.text {
+                name.text.clone_from(&folded);
+            }
+            draft.name = folded;
         }
     }
     let picked = colours

@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use super::*;
 use crate::save_queue::tests::MemoryBackend;
+use crate::saves::{Save, SaveKey};
 use crate::storage::tests::TestFolder;
 use shared::protocol::SessionToken;
 
@@ -28,14 +29,16 @@ fn everything_in(folder: &Path) -> String {
 fn a_login_finds_its_account_again_after_a_restart() {
     let folder = TestFolder::new();
     let token = LoginKey::Guest(GuestToken([3; 32]));
-    let mut accounts = Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default());
+    let mut accounts =
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap();
     let id = accounts.log_in(&token).unwrap();
     let character = accounts.create_character(&id, "Brin").unwrap();
     assert!(accounts.account(&id).unwrap().guest);
     // Dropping it finishes writing, as stopping does.
     drop(accounts);
 
-    let mut restarted = Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default());
+    let mut restarted =
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap();
     assert_eq!(restarted.log_in(&token).unwrap(), id);
     let characters = &restarted.account(&id).unwrap().characters;
     assert_eq!(characters.len(), 1);
@@ -49,7 +52,8 @@ fn a_login_finds_its_account_again_after_a_restart() {
 fn a_guest_token_is_never_saved() {
     let folder = TestFolder::new();
     let token = GuestToken([0xcd; 32]);
-    let mut accounts = Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default());
+    let mut accounts =
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap();
     let id = accounts.log_in(&LoginKey::Guest(token)).unwrap();
     accounts.create_character(&id, "Brin").unwrap();
     drop(accounts);
@@ -59,12 +63,14 @@ fn a_guest_token_is_never_saved() {
 #[test]
 fn the_single_player_keeps_their_characters_after_a_restart() {
     let folder = TestFolder::new();
-    let mut accounts = Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default());
+    let mut accounts =
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap();
     let id = accounts.single_player().unwrap();
     let character = accounts.create_character(&id, "Brin").unwrap();
     accounts.create_character(&id, "Bo").unwrap();
     drop(accounts);
-    let mut restarted = Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default());
+    let mut restarted =
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap();
     assert_eq!(restarted.single_player().unwrap(), id);
     let characters = &restarted.account(&id).unwrap().characters;
     assert_eq!(characters.len(), 2);
@@ -99,7 +105,7 @@ fn the_single_player_account_saved_as_a_guests_is_one_no_longer() {
 fn characters_are_dated_when_made_and_old_ones_when_loaded() {
     let backend = Arc::new(MemoryBackend::default());
     let queue = SaveQueue::new(backend.clone());
-    let mut accounts = Accounts::new(Some(queue.clone()), Default::default());
+    let mut accounts = Accounts::new(Some(queue.clone()), Default::default()).unwrap();
     let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
     accounts.create_character(&id, "Brin").unwrap();
     assert_ne!(accounts.account(&id).unwrap().characters[0].created, 0);
@@ -108,7 +114,7 @@ fn characters_are_dated_when_made_and_old_ones_when_loaded() {
     accounts.save(&id);
     drop(accounts);
     assert!(queue.flush(Duration::from_secs(5)));
-    let mut restarted = Accounts::new(Some(queue), Default::default());
+    let mut restarted = Accounts::new(Some(queue), Default::default()).unwrap();
     assert_ne!(restarted.account(&id).unwrap().characters[0].created, 0);
 }
 
@@ -124,19 +130,83 @@ fn names_are_checked_and_characters_limited() {
     let mut accounts = Accounts::default();
     let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
     assert!(!accounts.account(&id).unwrap().guest);
-    for bad in ["", "   ", "a\nb", &"x".repeat(MAX_NAME + 1)] {
+    for bad in ["", "   ", "!?", &"x".repeat(shared::name::MAX_NAME + 1)] {
         assert!(accounts.create_character(&id, bad).is_err(), "{bad}");
     }
-    for _ in 0..MAX_CHARACTERS {
-        accounts
-            .create_character(&id, " Long Name Ünder 24 ")
-            .unwrap();
+    for number in 0..MAX_CHARACTERS {
+        let name = format!(" Long Name Ünder {number} ");
+        accounts.create_character(&id, &name).unwrap();
     }
     assert_eq!(
         accounts.account(&id).unwrap().characters[0].name,
-        "Long Name Ünder 24"
+        "Long Name Under 0"
     );
     assert!(accounts.create_character(&id, "One More").is_err());
+}
+
+#[test]
+fn a_name_is_taken_once_whatever_its_capitals_until_its_character_goes() {
+    let mut accounts = Accounts::default();
+    let one = accounts.log_in(&LoginKey::Test("one")).unwrap();
+    let two = accounts.log_in(&LoginKey::Test("two")).unwrap();
+    let brin = accounts.create_character(&one, "Brin").unwrap();
+    let taken = accounts.create_character(&two, "BRIN").unwrap_err();
+    assert!(taken.contains("taken"), "{taken}");
+    accounts.remove_character(&brin);
+    accounts.create_character(&two, "brin").unwrap();
+}
+
+#[test]
+fn plain_characters_are_numbered() {
+    let mut accounts = Accounts::default();
+    let one = accounts.log_in(&LoginKey::Test("one")).unwrap();
+    let two = accounts.log_in(&LoginKey::Test("two")).unwrap();
+    let first = accounts.plain_character(&one).unwrap();
+    let second = accounts.plain_character(&two).unwrap();
+    assert_eq!(accounts.character_name(&first).as_deref(), Some(PLAIN_NAME));
+    let numbered = format!("{PLAIN_NAME} 2");
+    assert_eq!(accounts.character_name(&second), Some(numbered));
+}
+
+#[test]
+fn older_saves_get_unique_names_once() {
+    let folder = TestFolder::new();
+    let queue = SaveQueue::in_folder(&folder.0);
+    // Saved before names were checked: one the same as another, one that can't be a name.
+    let summary = |name: &str| CharacterSummary {
+        id: CharacterId(new_id()),
+        name: name.into(),
+        last_played: 0,
+        created: 1,
+    };
+    let saved = |names: &[&str]| AccountSave {
+        guest: false,
+        created: 1,
+        characters: names.iter().map(|name| summary(name)).collect(),
+    };
+    let (one, two) = (AccountId(new_id()), AccountId(new_id()));
+    queue.save(
+        SaveKey::Account(one),
+        Save::Account(saved(&["Brin", "Ünder"])),
+    );
+    queue.save(SaveKey::Account(two), Save::Account(saved(&["brin", "☺"])));
+    drop(queue);
+
+    let mut accounts =
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap();
+    let mut names: Vec<String> = [one, two]
+        .iter()
+        .flat_map(|id| accounts.account(id).unwrap().characters.clone())
+        .map(|character| character.name)
+        .collect();
+    names.sort();
+    assert_eq!(names, ["Brin", "Character", "Under", "brin 2"]);
+    drop(accounts);
+    // Kept, so a restart neither renames again nor gives a name twice.
+    let mut restarted =
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap();
+    let three = restarted.log_in(&LoginKey::Test("three")).unwrap();
+    assert!(restarted.create_character(&three, "Under").is_err());
 }
 
 #[test]
@@ -153,12 +223,17 @@ fn saves_that_cant_be_reached_dont_make_a_new_account() {
     let queue = SaveQueue::new(backend.clone());
     let token = LoginKey::Guest(GuestToken([3; 32]));
     let id = Accounts::new(Some(queue.clone()), Default::default())
+        .unwrap()
         .log_in(&token)
         .unwrap();
     assert!(queue.flush(Duration::from_secs(5)));
 
+    // Starting needs the names taken, so it fails too, rather than giving one twice.
     backend.cant_read.store(true, Ordering::Relaxed);
-    let mut restarted = Accounts::new(Some(queue.clone()), Default::default());
+    assert!(Accounts::new(Some(queue.clone()), Default::default()).is_err());
+    backend.cant_read.store(false, Ordering::Relaxed);
+    let mut restarted = Accounts::new(Some(queue.clone()), Default::default()).unwrap();
+    backend.cant_read.store(true, Ordering::Relaxed);
     assert!(restarted.log_in(&token).is_err());
     assert!(restarted.account(&id).is_err());
 
@@ -182,7 +257,7 @@ fn an_email_login_has_the_same_account_wherever_the_secret_is_shared() {
 fn a_session_stands_for_its_account_until_it_runs_out_and_is_never_saved() {
     let folder = TestFolder::new();
     let queue = SaveQueue::in_folder(&folder.0);
-    let mut accounts = Accounts::new(Some(queue.clone()), Default::default());
+    let mut accounts = Accounts::new(Some(queue.clone()), Default::default()).unwrap();
     let id = accounts.log_in(&LoginKey::Test("someone")).unwrap();
     let token = accounts.new_session(id).unwrap();
     assert_eq!(accounts.session(&token).unwrap(), Some(id));
@@ -191,7 +266,7 @@ fn a_session_stands_for_its_account_until_it_runs_out_and_is_never_saved() {
     assert!(!everything_in(&folder.0).contains(&token.to_hex()));
 
     // After a restart, until it runs out.
-    let mut restarted = Accounts::new(Some(queue.clone()), Default::default());
+    let mut restarted = Accounts::new(Some(queue.clone()), Default::default()).unwrap();
     assert_eq!(restarted.session(&token).unwrap(), Some(id));
     let hash = session_hash(&token);
     let ran_out = LoginSave {
@@ -200,7 +275,7 @@ fn a_session_stands_for_its_account_until_it_runs_out_and_is_never_saved() {
     };
     queue.save(SaveKey::Login(hash.clone()), Save::Login(ran_out));
     assert!(queue.flush(Duration::from_secs(5)));
-    let mut restarted = Accounts::new(Some(queue.clone()), Default::default());
+    let mut restarted = Accounts::new(Some(queue.clone()), Default::default()).unwrap();
     assert_eq!(restarted.session(&token).unwrap(), None);
     assert!(queue.flush(Duration::from_secs(5)));
     assert!(queue.load(&SaveKey::Login(hash)).unwrap().is_none());

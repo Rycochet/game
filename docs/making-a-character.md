@@ -5,7 +5,7 @@ nav_order: 4.2
 
 # Making a character
 
-You make a character with the + on the Characters screen, which opens by itself the first time you play on a server. You choose a name (one is suggested for your kind, and the button beside it suggests another), what kind of creature you are, how you look, and what your body, mind and spirit are like, then press Begin. Cancel goes back without making anything.
+You make a character with the + on the Characters screen, which opens by itself the first time you play on a server. You choose a name (one is suggested for your kind, and the button beside it suggests another; see [Names](#names)), what kind of creature you are, how you look, and what your body, mind and spirit are like, then press Begin. Cancel goes back without making anything.
 
 On your own you can have up to 8 characters, and so can an account on a server. A guest has only one.
 
@@ -59,3 +59,9 @@ Behind each triangle is a chart of its three attributes. Its inner layer, in gol
 | Turn the triangles | Press beside them and drag round | Slide round beside them | Q and E |
 
 When you have a name, press **Begin**.
+
+## Names
+
+A name is 1 to 24 letters (A to Z) and digits, with single spaces, apostrophes and hyphens between them, such as "van der Barbarian", "O'Brien" or "Anne-Marie". As you type, curly apostrophes, long dashes and other lookalikes become the plain ones, and accents come off letters (Zoë becomes Zoe). Anything else that can't be in a name is left out.
+
+Each name can only be used once on a server, whatever its capitals: if someone has it, you are asked to choose another. A deleted character's name is free again.
