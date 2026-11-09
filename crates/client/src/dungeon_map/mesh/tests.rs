@@ -87,7 +87,7 @@ fn only_the_side_of_a_wall_facing_a_viewer_is_drawn() {
 /// A viewer in line with a wall sees both its sides, both see-through,
 /// whichever way the camera is.
 #[test]
-fn walls_seen_side_on_are_drawn_see_through() {
+fn walls_seen_side_on_are_in_the_way() {
     let mut level = room_with_wall();
     for x in -2..=2 {
         level.set(x, 0, Cell::Floor);
@@ -117,7 +117,8 @@ fn walls_seen_side_on_are_drawn_see_through() {
         &Sight::new(&level),
         None,
     );
-    assert!(meshes.has_see_through);
+    // In the way: solid now (`cutaway`), but still not clicked on.
+    assert!(!meshes.has_see_through);
     let on_the_wall = meshes
         .solid_faces
         .iter()
@@ -512,8 +513,9 @@ fn only_what_is_seen_is_built() {
         None,
     );
     assert!(meshes.has_solid.iter().any(|&has| has));
-    // The south wall's inner sides face away from the camera.
-    assert!(meshes.has_see_through);
+    // The south wall's inner sides face away from the camera: in the way,
+    // so drawn solid (`cutaway`), not see-through.
+    assert!(!meshes.has_see_through);
     assert!(!meshes.solid_faces.is_empty());
     // In a plain room everything is in sight, so nothing is only
     // remembered. (The short wall above has a far side, drawn as memory.)
