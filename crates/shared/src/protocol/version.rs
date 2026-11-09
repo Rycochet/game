@@ -22,6 +22,10 @@ pub struct ServerVersion {
     pub version: String,
     /// Its `PROTOCOL_VERSION`: only the same number can play together.
     pub protocol: u32,
+    /// What the server calls itself (`HOW_SERVER_NAME`), if it says: older
+    /// servers don't.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 impl ServerVersion {
@@ -31,6 +35,15 @@ impl ServerVersion {
             game: GAME_NAME.into(),
             version: env!("CARGO_PKG_VERSION").into(),
             protocol: PROTOCOL_VERSION,
+            name: None,
+        }
+    }
+
+    /// This program's, as a server with this name.
+    pub fn named(name: &str) -> Self {
+        Self {
+            name: Some(name.into()),
+            ..Self::this()
         }
     }
 

@@ -52,10 +52,13 @@ pub(in crate::system_menu) struct AddressCheck {
 }
 
 impl AddressCheck {
-    /// The server to connect to, if `text` is the address found to have one.
-    pub(super) fn ready_for(&self, text: &str) -> Option<&ServerAddress> {
+    /// The server to connect to and what it said it is, if `text` is the
+    /// address found to have one.
+    pub(super) fn ready_for(&self, text: &str) -> Option<(&ServerAddress, &ServerVersion)> {
         match (&self.of, &self.checked) {
-            (Some((of, _)), Checked::Found { address, .. }) if of == text => Some(address),
+            (Some((of, _)), Checked::Found { address, version }) if of == text => {
+                Some((address, version))
+            }
             _ => None,
         }
     }

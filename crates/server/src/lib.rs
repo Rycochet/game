@@ -130,7 +130,8 @@ pub struct ServerName(pub String);
 
 impl Default for ServerName {
     fn default() -> Self {
-        Self("Hall of Worlds".into())
+        // The game's own name: clients show the address instead of it.
+        Self(shared::protocol::GAME_NAME.into())
     }
 }
 

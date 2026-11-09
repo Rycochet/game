@@ -54,7 +54,7 @@ use log_out::{back_at_start, log_out, now_playing, start_playing};
 pub use messages::{FromServer, ServerConnection, ToServer};
 pub use probe::{ProbeResult, ServerProbe};
 use receive::receive;
-use remember::remember_server;
+use remember::{forget_when_unchosen, remember_server};
 use send::{count_map_changes, hang_up_on_exit, send, send_steps};
 #[cfg(not(target_arch = "wasm32"))]
 pub use trust::server_key;
@@ -95,6 +95,7 @@ impl Plugin for ConnectionPlugin {
                 Update,
                 (
                     remember_server,
+                    forget_when_unchosen,
                     difficulty::keep_difficulty,
                     choose_login,
                     show_account,

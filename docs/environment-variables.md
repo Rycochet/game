@@ -35,7 +35,7 @@ Without any of these, the server makes a self-signed certificate and keeps it in
 | Variable | Default | What it does |
 | -------- | ------- | ------------ |
 | `HOW_DATA` | `Hall of Worlds/server` in the user's data folder (`/data` in Docker) | Where to save. See [Saves and data](saves). |
-| `HOW_SERVER_NAME` | `Hall of Worlds` | What the server calls itself, for instance when telling players it is going offline. |
+| `HOW_SERVER_NAME` | `Hall of Worlds` | What the server calls itself, for instance when telling players it is going offline. Players who join through Connect see it on their startup menu; with the default, they see the server's address instead. |
 | `HOW_PLAYER_LIMIT` | `0` | The most players at once; anyone more is told the server is full. `0` is no limit. |
 | `HOW_DIFFICULTIES` | all | Which [difficulties](difficulty.md) characters may play on, as names separated by commas: `Easy`, `Normal`, `Hard`, `Ironman` (in any case). Blank or unset allows all of them. Unknown names are warned about in the log and ignored; if none is known, all are allowed. Characters on one that isn't allowed are moved to the nearest that is. In the native client, if set, it decides instead of Server Options' tickboxes. |
 | `HOW_IDLE_MINUTES` | `15` | How many minutes a player may do nothing before being disconnected. `0` never disconnects anyone. |

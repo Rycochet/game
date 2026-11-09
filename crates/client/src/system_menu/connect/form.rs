@@ -166,13 +166,14 @@ pub(in crate::system_menu) fn use_connect(
             // The port that answered is always kept with the server (owner).
             let found = check
                 .ready_for(&address.text)
-                .map(|found| found.with_port());
-            if let (Some(typed), Some(found)) = (in_box, found) {
+                .map(|(found, version)| (found.with_port(), version.name.clone()));
+            if let (Some(typed), Some((found, name))) = (in_box, found) {
                 let key = form.key_for(&typed, &preferences.servers);
                 address.text.clone_from(&found);
                 chosen.0 = Some(SavedServer {
                     address: found,
                     key,
+                    name,
                 });
                 *session = Session::Playing;
                 *menu = SystemMenu::Closed;

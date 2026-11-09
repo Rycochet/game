@@ -118,7 +118,7 @@ The server only asks Google for the player's email address, and only one Google 
 
 If the provider can't be reached when the server starts, or a setting is missing, the server says so in its log and lets players in as guests only. `HOW_GUEST_MODE: "true"` does that on purpose.
 
-Players then choose Log in with Google or Play as Guest when they join. The page opens in their own browser, and once they have logged in there they go back to the game. Their game remembers the login, so they only see that page again after 90 days without playing, or after using Logout on the startup menu. Logins only go over a secure connection, so a server reached through an unsecured port offers guests only.
+Players then choose Log in with Google or Play as Guest when they join. The page opens in their own browser, and once they have logged in there they go back to the game. Their game remembers the login, so they only see that page again after 90 days without playing, or after using Logout on the startup menu (which also takes Play back to single player until they choose the server in Connect again). Logins only go over a secure connection, so a server reached through an unsecured port offers guests only.
 
 ## Roles
 

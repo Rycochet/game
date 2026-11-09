@@ -654,7 +654,7 @@ Owner's decision, replacing remembering a server's key on the first visit (`know
 
 ## 2026-11-03: Connect and the remembered servers
 
-Servers are typed as `host[:port]` (`shared::protocol::ServerAddress`, `DEFAULT_PORT` 24691) and become `wss://host:port/ws`. Each server joined goes to the top of a list in `Preferences`, and Play goes back to the last one (`common::ChosenServer`); Logout goes back to the usual server. A refusal returns to the startup menu with a requester saying why, rather than leaving the loading screen up. Ctrl+V pastes into text boxes through `arboard` (MIT/Apache-2.0) natively.
+Servers are typed as `host[:port]` (`shared::protocol::ServerAddress`, `DEFAULT_PORT` 24691) and become `wss://host:port/ws`. Each server joined goes to the top of a list in `Preferences`, and Play goes back to the last one (`common::ChosenServer`); Logout (in game, or on the startup menu, where it also forgets the login) goes back to the usual server, and that is saved too, so a restart doesn't return to the old server (2026-11-09). The startup menu's corner names the server Play goes to: its `HOW_SERVER_NAME` from `/_version`, kept with the saved server, or the address while it has the default name. A refusal returns to the startup menu with a requester saying why, rather than leaving the loading screen up. Ctrl+V pastes into text boxes through `arboard` (MIT/Apache-2.0) natively.
 
 ## 2026-11-03: Online: a native client opens its own server to others
 

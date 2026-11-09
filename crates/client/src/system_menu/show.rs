@@ -56,14 +56,15 @@ pub(super) fn show_menu(
 
 /// Play at the startup menu, Continue while playing, Logout while playing on
 /// another computer's server or at the startup menu with an account kept for
-/// Play's server (`AccountEmail`), and Connect... only usable at the startup
-/// menu.
+/// Play's server (`AccountEmail`) or Play going to another server, and
+/// Connect... only usable at the startup menu.
 pub(super) fn show_buttons(
     session: Res<Session>,
     clock: Res<ServerClock>,
     account: Res<crate::common::AccountEmail>,
     playable: Res<crate::common::PlayableHere>,
     role: Res<crate::common::AccountRole>,
+    chosen: Res<crate::common::ChosenServer>,
     mut buttons: Query<(&MenuButton, &mut Node, &mut ButtonState)>,
 ) {
     for (button, mut node, mut state) in &mut buttons {
@@ -80,9 +81,11 @@ pub(super) fn show_buttons(
             MenuButton::Characters => !session.is_playing(),
             MenuButton::Continue => session.is_playing(),
             MenuButton::Accounts => session.is_playing() && role.has_accounts_panel(),
+            // At the startup menu: while there is an account to forget, or
+            // another server to leave for the usual one.
             MenuButton::LogOut => match session.is_playing() {
                 true => !clock.local_server,
-                false => account.0.is_some(),
+                false => account.0.is_some() || chosen.0.is_some(),
             },
             // Its looks are `online::show_online`'s.
             MenuButton::Online => true,
