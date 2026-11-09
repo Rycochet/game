@@ -226,6 +226,12 @@ pub enum ServerMessage {
     /// Developer tools: what the server knows of a mob, as lines to show
     /// (`DevMobTool::Inspect`).
     DevMobInfo { mob: Id, lines: Vec<String> },
+    /// Developer tools: the skills of the character (`who` none) or of another
+    /// player, after `ClientMessage::DevSkills` asked or changed them.
+    DevSkillsOf {
+        who: Option<Id>,
+        skills: crate::skill::Skills,
+    },
     /// The cells of the wilderness's window round the cutouts of pois the
     /// player knows (`wilderness::Cutout::border`), sent with each window:
     /// shown hatched, a click on one walks there and leaves for the world

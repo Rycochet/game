@@ -66,8 +66,8 @@ pub use creatures::{
     PlayerGait, PlayerSpeed, SheetText, SkillsPage, SpentEnergy,
 };
 pub use debug::{
-    CreateMobOrder, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GodMode, InspectMob,
-    InspectedMob, KillMob, ServerDevTools, TeleportToWorldAsked, Truesight,
+    CreateMobOrder, DebugInfo, DetectMonsters, FreezeMobs, GodMode, InspectedMob, ServerDevTools,
+    TeleportToWorldAsked, Truesight,
 };
 pub use difficulty::{IRONMAN_QUESTION, PlayDifficulty, difficulty_words};
 pub use display::{
@@ -175,10 +175,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<DetectMonsters>()
             .init_resource::<GodMode>()
             .init_resource::<Truesight>()
-            .init_resource::<KillMob>()
             .init_resource::<CreateMobOrder>()
-            .init_resource::<InspectMob>()
-            .init_resource::<DeleteMob>()
             .init_resource::<FreezeMobs>()
             .init_resource::<InspectedMob>()
             .init_resource::<ServerDevTools>()

@@ -168,7 +168,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             how: crate::protocol::KindChange::Temporary,
         },
         ClientMessage::DevVitals(super::DevVitals::Hurt(4)),
-        ClientMessage::DevSkills(super::DevSkills::LearnSome),
+        ClientMessage::DevSkills {
+            who: None,
+            change: super::DevSkills::LearnSome,
+        },
         ClientMessage::ActionBar(crate::ability::BarChange::Swap { a: 0, b: 9 }),
         ClientMessage::DevDetectMonsters(true),
         ClientMessage::DevTruesight(true),

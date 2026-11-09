@@ -220,6 +220,7 @@ pub(super) fn receive(
                 | ServerMessage::Harmed { .. }
                 | ServerMessage::Lightning { .. }
                 | ServerMessage::DevMobInfo { .. }
+                | ServerMessage::DevSkillsOf { .. }
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::EntityMoved { .. }
                 | ServerMessage::EntityGone { .. }),

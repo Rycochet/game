@@ -1,36 +1,15 @@
 //! Doing what the menu's entries say, and telling a new connection what dev
 //! tools were on.
 
-use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use shared::protocol::{ClientMessage, DevMobTool, DevSkills, ServerMessage};
+use shared::protocol::{ClientMessage, DevMobTool, ServerMessage};
 
 use super::{DebugAction, DebugMenu, OpenPanels};
 use crate::common::{
-    ClickMode, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GodMode, InspectMob, KillMob,
-    LightningStrike, Truesight,
+    ClickMode, DebugInfo, DetectMonsters, FreezeMobs, GodMode, LightningStrike, Truesight,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::planet_view::ViewPlanet;
-
-/// What clicks on mobs do (only one at a time), and whether they are frozen.
-#[derive(SystemParam)]
-pub(super) struct MobSwitches<'w> {
-    kill: ResMut<'w, KillMob>,
-    inspect: ResMut<'w, InspectMob>,
-    delete: ResMut<'w, DeleteMob>,
-    freeze: ResMut<'w, FreezeMobs>,
-}
-
-impl MobSwitches<'_> {
-    /// Turns one mob click on or off, the others off.
-    fn toggle(&mut self, action: DebugAction) {
-        let (kill, inspect, delete) = (self.kill.0, self.inspect.0, self.delete.0);
-        self.kill.0 = action == DebugAction::KillMob && !kill;
-        self.inspect.0 = action == DebugAction::InspectMob && !inspect;
-        self.delete.0 = action == DebugAction::DeleteMob && !delete;
-    }
-}
 
 /// A new connection knows nothing of god mode, truesight or frozen mobs.
 pub(super) fn remind_of_god_mode(
@@ -73,7 +52,7 @@ pub(super) fn run_actions(
     mut detect: ResMut<DetectMonsters>,
     mut god: ResMut<GodMode>,
     mut truesight: ResMut<Truesight>,
-    mut mobs: MobSwitches,
+    mut freeze: ResMut<FreezeMobs>,
     mut mode: ResMut<ClickMode>,
     mut info: ResMut<DebugInfo>,
     mut open: ResMut<OpenPanels>,
@@ -101,12 +80,9 @@ pub(super) fn run_actions(
                 truesight.0 = !truesight.0;
                 to_server.write(ToServer(ClientMessage::DevTruesight(truesight.0)));
             }
-            DebugAction::KillMob | DebugAction::InspectMob | DebugAction::DeleteMob => {
-                mobs.toggle(action);
-            }
             DebugAction::FreezeMobs => {
-                mobs.freeze.0 = !mobs.freeze.0;
-                let freeze = DevMobTool::Freeze(mobs.freeze.0);
+                freeze.0 = !freeze.0;
+                let freeze = DevMobTool::Freeze(freeze.0);
                 to_server.write(ToServer(ClientMessage::DevMobs(freeze)));
             }
             DebugAction::ForgetMap => {
@@ -128,12 +104,6 @@ pub(super) fn run_actions(
             DebugAction::RevealMap => {
                 to_server.write(ToServer(ClientMessage::DevRevealMap));
             }
-            DebugAction::LearnSomeSkills => {
-                to_server.write(ToServer(ClientMessage::DevSkills(DevSkills::LearnSome)));
-            }
-            DebugAction::ForgetSkills => {
-                to_server.write(ToServer(ClientMessage::DevSkills(DevSkills::Forget)));
-            }
             DebugAction::ShowDebugInfo => info.0 = !info.0,
             // Made again by `panels::kept_choices`.
             DebugAction::RegenerateDevArea => {}
@@ -154,7 +124,9 @@ pub(super) fn run_actions(
             | DebugAction::CreateMob
             | DebugAction::DevArea
             | DebugAction::DrawingStates
+            | DebugAction::ExamineMob
             | DebugAction::GiveItem
+            | DebugAction::LearnSkills
             | DebugAction::ItemPictures
             | DebugAction::ShowWidgets
             | DebugAction::TeleportToWorld

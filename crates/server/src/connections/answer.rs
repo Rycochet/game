@@ -253,7 +253,7 @@ pub(crate) fn answer(
         | ClientMessage::DevSetWorldClock { .. }
         | ClientMessage::DevGoToWorld { .. }
         | ClientMessage::DevVitals(_)
-        | ClientMessage::DevSkills(_) => answer_dev(client, message, world),
+        | ClientMessage::DevSkills { .. } => answer_dev(client, message, world),
         ClientMessage::DevDeleteCharacter => {
             delete_character(client, world, accounts, options.difficulties, "dev tools")
         }

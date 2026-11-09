@@ -41,20 +41,6 @@ pub struct GodMode(pub bool);
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Truesight(pub bool);
 
-/// Debug: clicking a mob kills it. Only this client knows it is on; the server checks
-/// each kill.
-#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct KillMob(pub bool);
-
-/// Debug: clicking a mob asks the server all it knows of it (Inspect Mob). Only
-/// one of this, `KillMob` and `DeleteMob` is on.
-#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct InspectMob(pub bool);
-
-/// Debug: clicking a mob takes it away for good, leaving nothing (Delete Mob).
-#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DeleteMob(pub bool);
-
 /// Debug: no mob in the world thinks or moves (Freeze Mobs), as the server is told.
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FreezeMobs(pub bool);

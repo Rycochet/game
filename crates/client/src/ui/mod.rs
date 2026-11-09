@@ -6,8 +6,8 @@ use bevy::prelude::*;
 use frame_rate::FrameTimes;
 
 use crate::common::{
-    ClickMode, DebugInfo, DeleteMob, FreezeMobs, GameClock, GameView, GodMode, InspectMob, KillMob,
-    MapPosition, ServerClock, Truesight, ViewStats,
+    ClickMode, DebugInfo, FreezeMobs, GameClock, GameView, GodMode, MapPosition, ServerClock,
+    Truesight, ViewStats,
 };
 use crate::fonts;
 use crate::player::Player;
@@ -43,7 +43,6 @@ const PING_ICON: char = '\u{1F4F6}';
 /// A clapperboard for frames: the icon font has no stopwatch (owner's choice).
 const FRAME_RATE_ICON: char = '\u{1F3AC}';
 const GOD_MODE_ICON: &str = "\u{1F47B}";
-const KILL_MOB_ICON: &str = "\u{1F480}";
 const TRUESIGHT_ICON: &str = "\u{1F440}";
 
 const MODE_COLOUR: Color = Color::srgb(1.0, 0.2, 0.2);
@@ -78,14 +77,6 @@ fn spawn_status_text(mut commands: Commands) {
     ));
 }
 
-/// The dev tools that change what clicking a mob does, and Freeze Mobs.
-#[derive(bevy::ecs::system::SystemParam)]
-struct MobModes<'w> {
-    inspect: Res<'w, InspectMob>,
-    delete: Res<'w, DeleteMob>,
-    freeze: Res<'w, FreezeMobs>,
-}
-
 #[allow(clippy::too_many_arguments)]
 fn update_status_text(
     player: Single<&MapPosition, With<Player>>,
@@ -96,9 +87,7 @@ fn update_status_text(
     view: Res<State<GameView>>,
     mode: Res<ClickMode>,
     god: Res<GodMode>,
-    kill: Res<KillMob>,
-    truesight: Res<Truesight>,
-    mobs: MobModes,
+    (truesight, freeze): (Res<Truesight>, Res<FreezeMobs>),
     mut text: Single<&mut Text, With<StatusText>>,
     mut mode_text: Single<&mut TextSpan, (With<ModeText>, Without<StatsText>)>,
     mut stats_text: Single<&mut TextSpan, (With<StatsText>, Without<ModeText>)>,
@@ -113,11 +102,8 @@ fn update_status_text(
     };
     let says = [
         (god.0, GOD_MODE_ICON),
-        (kill.0, KILL_MOB_ICON),
         (truesight.0, TRUESIGHT_ICON),
-        (mobs.inspect.0, "Inspect Mob"),
-        (mobs.delete.0, "Delete Mob"),
-        (mobs.freeze.0, "Mobs Frozen"),
+        (freeze.0, "Mobs Frozen"),
         (!mode.is_empty(), mode),
     ];
     let says: Vec<&str> = says

@@ -41,7 +41,9 @@ pub(super) fn answer_dev(
             true
         }
         ClientMessage::DevVitals(what) => client.dev_vitals(what, world.action_clock.ticks()),
-        ClientMessage::DevSkills(what) => client.dev_skills(what, world.action_clock.ticks()),
+        ClientMessage::DevSkills { who, change } => {
+            client.dev_skills(who, change, world.action_clock.ticks())
+        }
         ClientMessage::DevEnterSite {
             kind,
             seed,

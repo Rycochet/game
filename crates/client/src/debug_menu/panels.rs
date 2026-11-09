@@ -23,6 +23,7 @@ mod create_mob_systems;
 mod dev_area;
 mod dev_area_systems;
 mod every_widget;
+mod examine_mob;
 mod generate;
 mod generate_form;
 mod give;
@@ -32,9 +33,10 @@ mod give_options;
 mod give_preview;
 mod give_systems;
 mod give_target;
-mod inspect_mob;
 mod kept_choices;
 mod layout;
+mod learn_skills;
+mod learn_skills_systems;
 mod open;
 mod pictures_form;
 mod pictures_spawn;
@@ -61,6 +63,8 @@ pub(super) use dev_area::{
 pub(super) use dev_area_systems::add_dev_area_panel;
 use every_widget::spawn_every_widget;
 pub(super) use every_widget::{give_sample_icons, show_typed_items};
+pub(super) use examine_mob::add_examine_mob_panel;
+use examine_mob::spawn_examine_panel;
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
 pub(super) use generate_form::{
     GenerateButton, GenerateForm, GenerateKind, NewSeedButton, RuinButton, SeedBox,
@@ -80,10 +84,10 @@ pub(super) use give_systems::{
     choose_give_options, edit_give_boxes, press_give_button, start_give_panel,
 };
 pub(super) use give_target::{GiveTo, GiveToWords, follow_target};
-pub(super) use inspect_mob::add_inspect_mob_panel;
-use inspect_mob::spawn_inspect_panel;
 pub(super) use kept_choices::add_kept_choices;
 use layout::{row, words};
+use learn_skills::spawn_learn_skills;
+pub(super) use learn_skills_systems::add_learn_skills_panel;
 pub(super) use open::{OpenPanels, forget_closed};
 use pictures_form::{
     BLADE_PICTURE, HANDS_PICTURE, LARGE_PICTURE, LARGE_PICTURE_PIXELS, PAGES_WIDTH, PICTURE,

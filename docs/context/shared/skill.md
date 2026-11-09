@@ -17,6 +17,7 @@ The skill tree as data: every node (Combat › Melee › Longsword › Longsword
 - `skill/window.rs`: `Windows`, `WINDOW_TICKS`.
 - `skill/familiar.rs`: `familiarity`, `taught`, `FAMILIAR_HALVING`.
 - `skill/save_format.rs`: how `Skills` is written in saves and messages.
+- `skill/dev.rs`: dev tools' changes (Learn Skills): `practice_for(percent)` (the cube), `DEV_LEARN_PERCENT` (10), `Skills::percent`, `set_percent` (that node alone; 0 forgets), `learn` (as practising), `forget` (with everything under), `clear`, `set_all`. Tests in `dev_tests.rs`.
 - `skill/old.rs`: the five skills from before the tree, by name (`old_skill`), and where nodes that moved went (`moved`).
 
 ## Public API
@@ -36,7 +37,7 @@ The skill tree as data: every node (Combat › Melee › Longsword › Longsword
 
 ## Used by
 
-- `shared::sheet` (`Sheet::skills`), `shared::movement` (`Gait`, training), `protocol` (`DevSkills`), `server` (`connections/dev_skills.rs`, `combat.rs`, `heal.rs` and `messages/training.rs` (`used`), `playtime.rs` (`rust` once a minute of playtime), `welcome.rs` (`settle`), `combat/struck.rs` (`rust_for_hours` by `Difficulty::rust_on_death`)), client `character`, `skills_page`.
+- `shared::sheet` (`Sheet::skills`), `shared::movement` (`Gait`, training), `protocol` (`DevSkills`), `server` (`connections/dev_skills.rs` (the dev changes), `combat.rs`, `heal.rs` and `messages/training.rs` (`used`), `playtime.rs` (`rust` once a minute of playtime), `welcome.rs` (`settle`), `combat/struck.rs` (`rust_for_hours` by `Difficulty::rust_on_death`)), client `character`, `skills_page`.
 
 ## Notes
 

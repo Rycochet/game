@@ -274,9 +274,9 @@ pub enum ClientMessage {
     /// Developer tools: harm, spend, fill or raise the character's Health and
     /// Mana (`DevVitals`), answered with `Vitals`.
     DevVitals(DevVitals),
-    /// Developer tools: practise some skills at random, or forget all but the
-    /// kind's own (`DevSkills`), answered with `Sheet`.
-    DevSkills(DevSkills),
+    /// Developer tools: change the character's skills, or `who`'s (another player
+    /// in sight), answered with `DevSkillsOf` and their `Sheet`.
+    DevSkills { who: Option<Id>, change: DevSkills },
     /// Change the action bar (`ability::BarChange`), answered with `ActionBar`:
     /// what it is now, whether the change was made or refused.
     ActionBar(BarChange),
