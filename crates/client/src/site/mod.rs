@@ -20,7 +20,7 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use shared::site::leads_out;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameView, MapPosition, OtherLevels, OwnVitals, Portal,
+    ClickMode, CurrentDungeon, CurrentWorld, GameView, MapPosition, OtherLevels, OwnVitals, Portal,
     WorldReturn,
 };
 use crate::connection::{FromServer, ToServer};
@@ -60,23 +60,36 @@ impl Plugin for SitePlugin {
 #[derive(Resource, Default)]
 struct Heading(Option<Entity>);
 
-/// A click on a portal's token: travel to it, to use it there.
+/// A click on a portal's token: travel to it, to use it there. In Teleport
+/// Mode (dev tools) it jumps there and goes in at once, as the full map does.
 fn follow_clicked_portal(
     clicked: Res<ClickedToken>,
-    portals: Query<&MapPosition, With<Portal>>,
+    mode: Res<ClickMode>,
+    portals: Query<(&MapPosition, &Portal)>,
     mut heading: ResMut<Heading>,
     mut travel: MessageWriter<TravelTo>,
+    mut to_server: MessageWriter<ToServer>,
 ) {
     let Some(entity) = clicked.0 else {
         return;
     };
-    if let Ok(position) = portals.get(entity) {
-        heading.0 = Some(entity);
-        travel.write(TravelTo {
-            x: position.x,
-            y: position.y,
-        });
+    let Ok((position, portal)) = portals.get(entity) else {
+        return;
+    };
+    let (x, y) = (position.x, position.y);
+    if *mode == ClickMode::Teleport {
+        heading.0 = None;
+        to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
+        to_server.write(ToServer(match portal {
+            Portal::Poi(poi) => ClientMessage::EnterSite { chunk: poi.chunk },
+            Portal::Gate(gate) => ClientMessage::EnterGate {
+                entrance: gate.entrance,
+            },
+        }));
+        return;
     }
+    heading.0 = Some(entity);
+    travel.write(TravelTo { x, y });
 }
 
 /// When a journey ends: on the portal it was heading for, ask to enter it;

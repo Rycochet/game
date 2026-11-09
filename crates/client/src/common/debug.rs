@@ -9,7 +9,15 @@ use shared::protocol::DevMob;
 #[derive(Resource, Default, Clone, Copy, Debug)]
 pub struct ServerDevTools(pub bool);
 
-/// Whether the status text with position, hour, ping and stats is on show.
+/// Debug: open the debug menu's Teleport to World panel with this world's seed
+/// in it (none: the world the player is in), as View Planet's button does.
+#[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TeleportToWorldAsked {
+    pub seed: Option<u64>,
+}
+
+/// Whether the status text's hour and view stats are on show (Show Debug
+/// Info); its place, ping and frame rate always are.
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct DebugInfo(pub bool);
 

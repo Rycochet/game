@@ -1,6 +1,9 @@
 //! On-screen interface (HUD, menus). See `docs/context/client/ui.md`.
 
+mod frame_rate;
+
 use bevy::prelude::*;
+use frame_rate::FrameTimes;
 
 use crate::common::{
     ClickMode, DebugInfo, DeleteMob, FreezeMobs, GameClock, GameView, GodMode, InspectMob, KillMob,
@@ -13,8 +16,9 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_status_text)
-            .add_systems(Update, update_status_text);
+        app.init_resource::<FrameTimes>()
+            .add_systems(Startup, spawn_status_text)
+            .add_systems(Update, (frame_rate::note_frame, update_status_text).chain());
     }
 }
 
@@ -36,6 +40,8 @@ const STATUS_LEFT: f32 = 56.0;
 const POSITION_ICON: char = '\u{1F4CD}';
 const HOUR_ICON: char = '\u{1F550}';
 const PING_ICON: char = '\u{1F4F6}';
+/// A clapperboard for frames: the icon font has no stopwatch (owner's choice).
+const FRAME_RATE_ICON: char = '\u{1F3AC}';
 const GOD_MODE_ICON: &str = "\u{1F47B}";
 const KILL_MOB_ICON: &str = "\u{1F480}";
 const TRUESIGHT_ICON: &str = "\u{1F440}";
@@ -86,7 +92,7 @@ fn update_status_text(
     clock: Res<GameClock>,
     server_clock: Res<ServerClock>,
     stats: Res<ViewStats>,
-    info: Res<DebugInfo>,
+    (info, frames): (Res<DebugInfo>, Res<FrameTimes>),
     view: Res<State<GameView>>,
     mode: Res<ClickMode>,
     god: Res<GodMode>,
@@ -98,7 +104,7 @@ fn update_status_text(
     mut stats_text: Single<&mut TextSpan, (With<StatsText>, Without<ModeText>)>,
 ) {
     // Says when clicks don't do what they usually do, as it is easy to forget:
-    // even with the rest hidden.
+    // even before the first welcome.
     let mode = match *mode {
         ClickMode::Normal => "",
         ClickMode::Teleport => "Teleport Mode",
@@ -120,7 +126,7 @@ fn update_status_text(
         .collect();
     let mode = says.join(" ");
     // Nothing else to say before the first welcome.
-    if !info.0 || *view.get() == GameView::Connecting {
+    if *view.get() == GameView::Connecting {
         text.0 = String::new();
         stats_text.0 = String::new();
         mode_text.0 = mode;
@@ -136,13 +142,21 @@ fn update_status_text(
         Some(ms) if !server_clock.local_server => format!("{ms:.0}ms"),
         _ => "-".to_string(),
     };
-    let status = format!(
-        "{POSITION_ICON} {},{}  {HOUR_ICON} {}d{:02}h  {PING_ICON} {ping}",
-        player.x,
-        player.y,
-        clock.hour / 24,
-        clock.hour % 24
+    let rate = frames
+        .rate()
+        .map_or("-".to_string(), |rate| format!("{rate:.0}"));
+    let mut status = format!(
+        "{POSITION_ICON} {},{}  {FRAME_RATE_ICON} {rate}  {PING_ICON} {ping}",
+        player.x, player.y,
     );
+    // Show Debug Info adds the hour and the view's numbers.
+    if info.0 {
+        status += &format!("  {HOUR_ICON} {}d{:02}h", clock.hour / 24, clock.hour % 24);
+    }
     text.0 = status;
-    stats_text.0 = format!("\n{}", stats.summary);
+    stats_text.0 = if info.0 {
+        format!("\n{}", stats.summary)
+    } else {
+        String::new()
+    };
 }

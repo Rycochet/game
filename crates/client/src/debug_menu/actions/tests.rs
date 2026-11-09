@@ -4,8 +4,8 @@ use super::*;
 fn entries_are_found_by_name_in_any_case() {
     assert_eq!(DebugAction::named("God Mode"), Some(DebugAction::GodMode));
     assert_eq!(
-        DebugAction::named(" teleport to start "),
-        Some(DebugAction::TeleportToStart)
+        DebugAction::named(" teleport to world "),
+        Some(DebugAction::TeleportToWorld)
     );
     assert_eq!(DebugAction::named("Godmode"), None);
     assert_eq!(DebugAction::names().count(), DebugAction::ALL.len());
@@ -26,10 +26,6 @@ fn the_user_documentation_lists_every_entry() {
 fn facts(view: GameView) -> Facts {
     Facts {
         view,
-        has_stairs: false,
-        has_fields: false,
-        has_herbs: false,
-        walking: false,
         detecting: false,
         god_mode: false,
         truesight: false,
@@ -48,15 +44,14 @@ fn facts(view: GameView) -> Facts {
 }
 
 #[test]
-fn entries_offering_a_choice_end_in_dots_and_only_those() {
+fn entries_opening_something_end_in_dots_and_only_those() {
     for action in DebugAction::ALL {
-        assert_eq!(action.label().ends_with("..."), action.offers_choice());
+        assert_eq!(action.label().ends_with("..."), action.opens_something());
         assert!(!action.name().ends_with("..."));
     }
     assert_eq!(DebugAction::GeneratePoi.label(), "Generate POI...");
-    assert_eq!(DebugAction::TeleportToGate.label(), "Teleport to Gate...");
-    // Its panel opens straight away, with no second layer.
-    assert!(!DebugAction::TeleportToGate.has_submenu());
+    assert_eq!(DebugAction::TeleportToWorld.label(), "Teleport to World...");
+    assert_eq!(DebugAction::GodMode.label(), "God Mode");
 }
 
 #[test]
@@ -66,11 +61,13 @@ fn the_kinds_list_says_their_names_with_spaces() {
 }
 
 #[test]
-fn the_list_is_alphabetical() {
-    let names: Vec<_> = DebugAction::ALL.iter().map(|a| a.name()).collect();
-    let mut sorted = names.clone();
-    sorted.sort_by_key(|name| name.to_lowercase());
-    assert_eq!(names, sorted);
+fn the_list_keeps_each_group_together_in_order() {
+    let groups: Vec<Group> = DebugAction::ALL.iter().map(|a| a.group()).collect();
+    let mut sorted = groups.clone();
+    sorted.sort();
+    assert_eq!(groups, sorted);
+    let mut seen = std::collections::HashSet::new();
+    assert!(DebugAction::ALL.iter().all(|&action| seen.insert(action)));
 }
 
 #[test]
@@ -81,24 +78,12 @@ fn the_filter_ignores_case_and_matches_anywhere() {
 }
 
 #[test]
-fn site_options_need_a_site_and_what_they_change() {
-    let world = Facts {
-        has_stairs: true,
-        ..facts(GameView::WorldMap)
-    };
-    assert!(!DebugAction::StairsStyle.is_available(&world));
-    assert!(DebugAction::AutoWalk.is_available(&world));
-
-    let site = facts(GameView::Dungeon);
-    assert!(!DebugAction::StairsStyle.is_available(&site));
-    assert!(!DebugAction::FieldsState.is_available(&site));
-    assert!(!DebugAction::HerbsState.is_available(&site));
-    assert!(!DebugAction::AutoWalk.is_available(&site));
-    let stairs = Facts {
-        has_stairs: true,
-        ..site
-    };
-    assert!(DebugAction::StairsStyle.is_available(&stairs));
+fn level_tools_need_a_site() {
+    assert!(!DebugAction::OpenAllDoors.is_available(&facts(GameView::WorldMap)));
+    assert!(DebugAction::OpenAllDoors.is_available(&facts(GameView::Dungeon)));
+    assert!(!DebugAction::ChangeCellMode.is_available(&facts(GameView::WorldMap)));
+    // Drawing States stays open with its rows greyed instead.
+    assert!(DebugAction::DrawingStates.is_available(&facts(GameView::WorldMap)));
 }
 
 #[test]
@@ -113,7 +98,7 @@ fn reveal_needs_a_site_and_neither_map_option_works_in_a_town() {
     assert!(!DebugAction::RevealMap.is_available(&town));
     assert!(!DebugAction::ForgetMap.is_available(&town));
     // A town's generator can change like any other.
-    assert!(DebugAction::ForgetMapOnServer.is_available(&town));
+    assert!(DebugAction::RemakeSite.is_available(&town));
 }
 
 #[test]
@@ -123,10 +108,10 @@ fn what_the_server_must_allow_is_disabled_when_it_does_not() {
         ..facts(GameView::Dungeon)
     };
     assert!(!DebugAction::TeleportMode.is_available(&refused));
-    assert!(!DebugAction::TeleportToStart.is_available(&refused));
-    assert!(!DebugAction::ForgetMapOnServer.is_available(&refused));
+    assert!(!DebugAction::TeleportToWorld.is_available(&refused));
+    assert!(!DebugAction::RemakeSite.is_available(&refused));
     assert!(!DebugAction::RevealMap.is_available(&refused));
-    assert!(DebugAction::ResetView.is_available(&refused));
+    assert!(DebugAction::ItemPictures.is_available(&refused));
     assert!(DebugAction::ShowDebugInfo.is_available(&refused));
 }
 
@@ -135,9 +120,9 @@ fn only_toggles_have_a_state() {
     let site = facts(GameView::Dungeon);
     assert_eq!(DebugAction::ShowDebugInfo.is_on(&site), Some(true));
     assert_eq!(DebugAction::TeleportMode.is_on(&site), Some(false));
-    assert_eq!(DebugAction::ResetView.is_on(&site), None);
+    assert_eq!(DebugAction::Vitals.is_on(&site), None);
     // Panels that open and close show which.
     assert_eq!(DebugAction::SunsAndMoons.is_on(&site), Some(true));
     assert_eq!(DebugAction::WorldTime.is_on(&site), Some(false));
-    assert_eq!(DebugAction::FieldsState.is_on(&site), None);
+    assert_eq!(DebugAction::DrawingStates.is_on(&site), None);
 }

@@ -61,6 +61,8 @@ fn app() -> App {
         .init_resource::<TouchGesture>()
         .init_resource::<OtherLevels>()
         .init_resource::<FullMap>()
+        .init_resource::<hold::MinimapHold>()
+        .init_resource::<Time<Real>>()
         .init_resource::<crate::common::Preferences>();
     app.world_mut().spawn((Window::default(), PrimaryWindow));
     app.world_mut().spawn(OrbitCamera::new(0.5, 100.0, 0.0));
@@ -71,8 +73,19 @@ fn app() -> App {
 
 fn step(app: &mut App) {
     app.world_mut()
+        .run_system_once(hold::hold_minimap)
+        .expect("the system runs");
+    app.world_mut()
         .run_system_once(take_input)
         .expect("the system runs");
+}
+
+/// Lets go of the left button, a step later.
+fn let_go(app: &mut App) {
+    let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
+    mouse.release(MouseButton::Left);
+    mouse.clear();
+    step(app);
 }
 
 fn set_cursor(app: &mut App, at: Vec2) {
@@ -274,9 +287,36 @@ fn clicking_the_minimap_opens_the_map_and_stays_off_the_land() {
     let size = minimap_picture_size(&Room::of(&Window::default(), &UiScale::default()));
     let on = Vec2::new(1280.0 - CORNER_GAP - size / 2.0, CORNER_GAP + size / 2.0);
     click(&mut app, on);
-    assert!(app.world().resource::<FullMap>().open);
     let mouse = app.world().resource::<ButtonInput<MouseButton>>();
     assert!(!mouse.just_pressed(MouseButton::Left));
+    // It opens on letting go, as holding it does something else.
+    assert!(!app.world().resource::<FullMap>().open);
+    let_go(&mut app);
+    assert!(app.world().resource::<FullMap>().open);
+}
+
+#[test]
+fn holding_the_minimap_puts_the_view_back_and_opens_nothing() {
+    let mut app = app();
+    let mut camera = app.world_mut().query::<&mut OrbitCamera>();
+    camera.single_mut(app.world_mut()).expect("a camera").yaw = 2.0;
+    let size = minimap_picture_size(&Room::of(&Window::default(), &UiScale::default()));
+    let on = Vec2::new(1280.0 - CORNER_GAP - size / 2.0, CORNER_GAP + size / 2.0);
+    click(&mut app, on);
+    // A clock's first update is its start, with no time gone.
+    for _ in 0..2 {
+        app.world_mut()
+            .resource_mut::<Time<Real>>()
+            .update_with_duration(std::time::Duration::from_secs(1));
+    }
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .clear();
+    step(&mut app);
+    let mut camera = app.world_mut().query::<&OrbitCamera>();
+    assert_eq!(camera.single(app.world()).expect("a camera").yaw, 0.0);
+    let_go(&mut app);
+    assert!(!app.world().resource::<FullMap>().open);
 }
 
 #[test]

@@ -26,7 +26,7 @@ The screen for making a new character: name, kind and its looks, and the three t
 
 ## Used by
 
-- Nothing directly. `connection` sets `MakingCharacter` on `CharacterChoice::New` (from Character Select, which opens on first joining a server, or after the debug menu's Delete Character over the game, when `player` takes no steps meanwhile); `loading_screen` leaves the input and hides its bar while it is set.
+- Nothing directly. `connection` sets `MakingCharacter` on `CharacterChoice::New` (from Character Select, which opens on first joining a server or from the startup menu's Characters); `loading_screen` leaves the input and hides its bar while it is set.
 
 ## Notes
 

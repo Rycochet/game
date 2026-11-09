@@ -120,7 +120,10 @@ fn another_area_from_inside_one_still_goes_back_to_the_site_before() {
 #[test]
 fn the_hall_is_gone_back_to() {
     let mut test = TestClient::new();
-    test.send(&[ClientMessage::DevToHall]);
+    test.send(&[ClientMessage::DevToHall {
+        seed: None,
+        gate: None,
+    }]);
     let hall = test.client.character.hall.expect("in the Hall");
     generate(&mut test, area(4, DevMobs::None));
     assert_eq!(test.client.character.hall, None);

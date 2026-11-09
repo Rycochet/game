@@ -1,53 +1,93 @@
-//! Step buttons moving what a panel is for on or back, and greying them where they can't.
+//! Drawing States: a row each for stairs, fields and herbs, with buttons moving
+//! what is drawn of them on or back a step, greyed where the level has none.
 
 use crate::widgets::UiId;
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::site::StairsStyle;
 
-use super::super::actions::DebugAction;
-use super::FONT;
-use super::open::form_of;
+use super::{FONT, row, words};
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift};
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
 use crate::widgets::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, spawn_button};
 
-/// A button that moves what `action`'s panel is for on or back a step.
+/// The form of the panel's buttons, for the debug API.
+const FORM: &str = "debug.drawing_states";
+/// The width of the rows' words, so their buttons line up.
+const LABEL_WIDTH: f32 = 70.0;
+
+/// What a row of the panel steps through.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Drawn {
+    Stairs,
+    Fields,
+    Herbs,
+}
+
+impl Drawn {
+    const ALL: [Self; 3] = [Self::Stairs, Self::Fields, Self::Herbs];
+
+    fn words(self) -> &'static str {
+        match self {
+            Self::Stairs => "Stairs",
+            Self::Fields => "Fields",
+            Self::Herbs => "Herbs",
+        }
+    }
+
+    /// Its buttons' ids: `stairs_previous`, `stairs_next` and so on.
+    fn id(self, forward: bool) -> UiId {
+        let name = match (self, forward) {
+            (Self::Stairs, false) => "stairs_previous",
+            (Self::Stairs, true) => "stairs_next",
+            (Self::Fields, false) => "fields_previous",
+            (Self::Fields, true) => "fields_next",
+            (Self::Herbs, false) => "herbs_previous",
+            (Self::Herbs, true) => "herbs_next",
+        };
+        UiId::new(FORM, name)
+    }
+}
+
+/// A button that moves what its row is for on or back a step.
 #[derive(Component, Clone, Copy)]
 pub(in crate::debug_menu) struct StepButton {
-    action: DebugAction,
+    drawn: Drawn,
     forward: bool,
 }
 
-pub(super) fn spawn_step_buttons(content: &mut ChildSpawnerCommands, action: DebugAction) {
-    content
-        .spawn(Node {
-            column_gap: px(4),
-            ..default()
-        })
-        .with_children(|row| {
+pub(super) fn spawn_step_buttons(content: &mut ChildSpawnerCommands) {
+    for drawn in Drawn::ALL {
+        content.spawn(row()).with_children(|row| {
+            row.spawn(Node {
+                width: px(LABEL_WIDTH),
+                ..default()
+            })
+            .with_children(|label| {
+                label.spawn(words(drawn.words()));
+            });
             for (label, forward) in [("Previous", false), ("Next", true)] {
                 let node = Node {
                     padding: BUTTON_PADDING,
                     ..default()
                 };
                 spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
-                    StepButton { action, forward },
+                    StepButton { drawn, forward },
                     Pressable,
-                    UiId::new(form_of(action), if forward { "next" } else { "previous" }),
+                    drawn.id(forward),
                 ));
             }
         });
+    }
 }
 
-/// Whether a panel's buttons can do anything here.
-pub(super) fn can_step(action: DebugAction, view: GameView, dungeon: &CurrentDungeon) -> bool {
+/// Whether a row's buttons can do anything here.
+pub(super) fn can_step(drawn: Drawn, view: GameView, dungeon: &CurrentDungeon) -> bool {
     view == GameView::Dungeon
-        && match action {
-            DebugAction::StairsStyle => !dungeon.stairs.is_empty(),
-            DebugAction::FieldsState => !dungeon.fields.is_empty(),
-            DebugAction::HerbsState => dungeon.level_has(Cell::HerbBed),
-            _ => true,
+        && match drawn {
+            Drawn::Stairs => !dungeon.stairs.is_empty(),
+            Drawn::Fields => !dungeon.fields.is_empty(),
+            Drawn::Herbs => dungeon.level_has(Cell::HerbBed),
         }
 }
 
@@ -58,7 +98,7 @@ pub(super) fn previous_style(style: StairsStyle) -> StairsStyle {
     all[(at + all.len() - 1) % all.len()]
 }
 
-/// Moves what the pressed button's panel is for on or back a step: only what is
+/// Moves what the pressed button's row is for on or back a step: only what is
 /// drawn, and the next level goes back to its own.
 pub(in crate::debug_menu) fn press_panel_buttons(
     mut pressed: MessageReader<ButtonPressed>,
@@ -67,11 +107,11 @@ pub(in crate::debug_menu) fn press_panel_buttons(
     mut shift: ResMut<HerbGrowthShift>,
 ) {
     for press in pressed.read() {
-        let Ok(&StepButton { action, forward }) = buttons.get(press.0) else {
+        let Ok(&StepButton { drawn, forward }) = buttons.get(press.0) else {
             continue;
         };
-        match action {
-            DebugAction::StairsStyle => {
+        match drawn {
+            Drawn::Stairs => {
                 for stairs in &mut dungeon.stairs {
                     stairs.style = if forward {
                         stairs.style.next()
@@ -80,7 +120,7 @@ pub(in crate::debug_menu) fn press_panel_buttons(
                     };
                 }
             }
-            DebugAction::FieldsState => {
+            Drawn::Fields => {
                 for field in &mut dungeon.fields {
                     // As crops, which alone go through every stage.
                     field.livestock = false;
@@ -88,12 +128,11 @@ pub(in crate::debug_menu) fn press_panel_buttons(
                     field.variety = field.variety.wrapping_add(by);
                 }
             }
-            DebugAction::HerbsState => {
+            Drawn::Herbs => {
                 // Back is nearly all the way round, as the shift can't go below 0.
                 let by = if forward { 1 } else { HERB_STAGES - 1 };
                 shift.0 = (shift.0 + by) % HERB_STAGES;
             }
-            _ => {}
         }
     }
 }
@@ -105,7 +144,7 @@ pub(in crate::debug_menu) fn update_panel_buttons(
     mut buttons: Query<(&StepButton, &mut ButtonState)>,
 ) {
     for (button, mut state) in &mut buttons {
-        state.set_if_neq(if can_step(button.action, *view.get(), &dungeon) {
+        state.set_if_neq(if can_step(button.drawn, *view.get(), &dungeon) {
             ButtonState::Normal
         } else {
             ButtonState::Disabled

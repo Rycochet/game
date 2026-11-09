@@ -16,8 +16,8 @@ pub(super) struct GoToWorldParams {
 }
 
 /// `client.go_to_world { "seed": 2, "gate": 0 }`: asks the server to move the
-/// player to that seed's world (Go to World; none: this one), at that World
-/// Gate (from 0) if given (Teleport to Gate).
+/// player to that seed's world (none: this one), at that World Gate (from 0)
+/// if given, as the debug menu's Teleport to World does.
 pub(super) fn go_to_world(
     In(request): In<Option<Value>>,
     mut to_server: MessageWriter<ToServer>,

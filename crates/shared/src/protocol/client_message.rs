@@ -214,11 +214,10 @@ pub enum ClientMessage {
     /// from anywhere, answered with `OnWorldMap`. Only an embedded server accepts
     /// it, and only while the showcase is on.
     DevToShowcase,
-    /// Developer tools: to the Hall of Worlds, in front of the gate that leads
-    /// to the World Gate nearest the player (or the Hall's first gate, on a
-    /// planet that has none there), answered with `EnterHall`. Only an embedded
-    /// server accepts it.
-    DevToHall,
+    /// Developer tools: to the Hall of Worlds, before the gate leading to World
+    /// Gate `gate` (from 0; none: the nearest, or another world's first) of the
+    /// world with this `seed` (none: the player's own). Answered with `EnterHall`.
+    DevToHall { seed: Option<u64>, gate: Option<u8> },
     /// Developer tools: lightning near the player now, whatever the weather:
     /// a flash for them and a bolt close by, which others in sight see too.
     DevLightning,

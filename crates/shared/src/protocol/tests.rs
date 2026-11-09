@@ -189,7 +189,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
         ClientMessage::DevBackToStart,
         ClientMessage::DevToShowcase,
-        ClientMessage::DevToHall,
+        ClientMessage::DevToHall {
+            seed: None,
+            gate: None,
+        },
         ClientMessage::DevLightning,
         ClientMessage::DevRevealPois,
         ClientMessage::DevRevealMap,

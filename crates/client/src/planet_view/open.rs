@@ -33,7 +33,10 @@ pub(super) fn open(
     mut commands: Commands,
     mut assets: SceneAssets,
 ) {
-    if asked.read().count() == 0 || view.showing.is_some() {
+    let Some(&ViewPlanet { world: asked_for }) = asked.read().last() else {
+        return;
+    };
+    if view.showing.is_some() {
         return;
     }
     let Some(world) = world else {
@@ -47,7 +50,7 @@ pub(super) fn open(
         bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
         None,
     ));
-    let choice = Choice::of(&world);
+    let choice = Choice::of_seed(asked_for, &world);
     let globe = build_globe(&mut commands, &mut assets, &world, choice, picture.clone());
     let (layer, image, bar) = spawn_layer(&mut commands, picture.clone(), choice);
     view.showing = Some(Showing {
@@ -55,6 +58,8 @@ pub(super) fn open(
         picture,
         bar,
         choice,
+        world: asked_for,
+        home: choice,
         globe,
         orbit: Orbit::default(),
         image,

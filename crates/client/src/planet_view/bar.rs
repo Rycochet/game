@@ -1,6 +1,6 @@
 //! The bar across the top: which generator, which seed (typed, random or
 //! copied), Reset (back to the current world as it is), which layer the
-//! picture shows, and Teleport to Gate 1.
+//! picture shows, and Teleport to World....
 
 use bevy::prelude::*;
 use shared::surface::SurfaceGenerator;
@@ -34,7 +34,7 @@ pub(super) struct Bar {
     pub(super) copy: Entity,
     pub(super) reset: Entity,
     pub(super) layer: Entity,
-    /// Teleport to Gate 1 (`teleport`).
+    /// Teleport to World... (`teleport`).
     pub(super) teleport: Entity,
     /// How the World Gates were found.
     pub(super) gate_words: Entity,
@@ -108,7 +108,7 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
         let teleport = spawn_button(
             row,
             ButtonState::Normal,
-            "Teleport to Gate 1",
+            "Teleport to World...",
             FONT,
             control(None),
         )

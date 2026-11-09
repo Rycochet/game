@@ -31,6 +31,11 @@ pub(super) struct Showing {
     pub(super) picture: Handle<Image>,
     pub(super) bar: Bar,
     pub(super) choice: Choice,
+    /// The world it was opened for (none: the player's own), and that
+    /// world's own choice, which Reset goes back to and only whose gates can
+    /// be gone to.
+    pub(super) world: Option<u64>,
+    pub(super) home: Choice,
     pub(super) globe: Globe,
     /// Where the camera is round the globe; kept when the globe is built again.
     pub(super) orbit: Orbit,
@@ -62,6 +67,21 @@ impl Choice {
         Self {
             seed: world.params.seed,
             generator: world.params.generator,
+            layer: Layer::Surface,
+        }
+    }
+
+    /// The world with this seed, as the server makes it; with none, the
+    /// current one.
+    pub(super) fn of_seed(seed: Option<u64>, world: &CurrentWorld) -> Self {
+        let Some(seed) = seed else {
+            return Self::of(world);
+        };
+        let terrain = shared::world::WorldSeed::new(seed).terrain();
+        let params = shared::world::WorldParams::from_seed(terrain);
+        Self {
+            seed: params.seed,
+            generator: params.generator,
             layer: Layer::Surface,
         }
     }

@@ -6,11 +6,12 @@ use bevy::window::PrimaryWindow;
 use super::super::FactSources;
 use super::super::actions::kind_name;
 use super::{
-    COLUMN_WIDTH, DebugMenu, Entry, FONT, FilterBox, GAP, MenuEntry, MenuGrid, MenuRoot,
-    PageButton, ROW, WarningButton, columns_in, columns_of, entries_on_show, rows_in,
+    COLUMN_WIDTH, DebugMenu, Entry, FONT, FilterBox, GAP, HEADING, MenuEntry, MenuGrid, MenuRoot,
+    PageButton, ROW, Slot, WarningButton, columns_in, entries_on_show, headings_of, lay_out,
+    rows_in,
 };
 use crate::common::{GameView, interface_area};
-use crate::widgets::{ButtonState, Pressable, TextBox, spawn_check_button};
+use crate::widgets::{ButtonState, INK, Pressable, TextBox, spawn_check_button};
 
 /// What a grid was last built from.
 #[derive(PartialEq)]
@@ -94,7 +95,8 @@ pub(in crate::debug_menu) fn show_menu(
                 (entry, state, on)
             })
             .collect();
-        let columns = columns_of(entries.len(), rows);
+        let shown: Vec<Entry> = entries.iter().map(|&(entry, ..)| entry).collect();
+        let columns = lay_out(&headings_of(&shown), rows).len();
         for (page, mut visibility, mut state) in &mut pages {
             if page.layer != layer {
                 continue;
@@ -125,9 +127,9 @@ pub(in crate::debug_menu) fn show_menu(
             continue;
         }
         commands.entity(grid).despawn_children();
+        let laid_out = lay_out(&headings_of(&shown), now.rows);
         commands.entity(grid).with_children(|grid| {
-            let on_show = now.entries.chunks(now.rows);
-            for column in on_show.skip(now.first_column).take(now.fit) {
+            for column in laid_out.iter().skip(now.first_column).take(now.fit) {
                 grid.spawn(Node {
                     flex_direction: FlexDirection::Column,
                     row_gap: px(GAP),
@@ -135,11 +137,19 @@ pub(in crate::debug_menu) fn show_menu(
                     ..default()
                 })
                 .with_children(|column_node| {
-                    for &(entry, state, on) in column {
+                    for &slot in column {
                         let node = Node {
                             height: px(ROW),
                             ..default()
                         };
+                        let at = match slot {
+                            Slot::Heading(name) => {
+                                spawn_heading(column_node, name, node);
+                                continue;
+                            }
+                            Slot::Entry(at) => at,
+                        };
+                        let (entry, state, on) = now.entries[at];
                         let label = match entry {
                             Entry::Action(action) => action.label(),
                             Entry::Kind(kind) => kind_name(kind),
@@ -152,4 +162,12 @@ pub(in crate::debug_menu) fn show_menu(
         });
         drawn[layer] = Some(now);
     }
+}
+
+/// A group's heading, standing on the row it takes, over its entries.
+fn spawn_heading(column: &mut ChildSpawnerCommands, name: &str, mut node: Node) {
+    node.align_items = AlignItems::FlexEnd;
+    column.spawn(node).with_children(|row| {
+        row.spawn((Text::new(name), HEADING.font(), TextColor(INK)));
+    });
 }
