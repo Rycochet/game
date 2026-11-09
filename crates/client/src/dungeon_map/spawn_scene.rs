@@ -25,6 +25,7 @@ pub(super) fn spawn_scene(
     mut surface_materials: ResMut<Assets<SurfaceMaterial>>,
     mut images: ResMut<Assets<Image>>,
     mut rain_materials: ResMut<Assets<super::rain::RainMaterial>>,
+    mut xray: ResMut<Assets<crate::view3d::XrayMaterial>>,
 ) {
     let mask =
         super::sight_lines::spawn_mask(&mut commands, &mut images, &mut meshes, &mut materials);
@@ -168,6 +169,7 @@ pub(super) fn spawn_scene(
             NotShadowCaster,
         ));
     }
+    super::outlined::spawn_outlined(&mut commands, scene, &mut meshes, &mut materials, &mut xray);
     commands.entity(scene).with_child((
         CropPart,
         Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),

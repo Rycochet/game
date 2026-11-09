@@ -22,7 +22,7 @@ use cells::build_cell_at;
 pub(super) use light::corner_light;
 pub use light::{faces_camera, with_ambient};
 pub use light_grid::LightGrid;
-use memory::{copy_as_memory, layer_sizes, sizes, tint_since};
+use memory::{copy_as_memory, sizes};
 pub use meshes::{DungeonMeshes, View, WallFace};
 pub(in crate::dungeon_map) use raise::Marks;
 pub use surface::Surface;

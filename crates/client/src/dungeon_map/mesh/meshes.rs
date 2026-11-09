@@ -3,6 +3,8 @@
 use bevy::prelude::*;
 use shared::dungeon::Sight;
 
+use super::super::outlined::OutlinedMeshes;
+
 /// What a viewer (the player, or anything sharing its sight) sees from its
 /// cell.
 pub struct View {
@@ -39,4 +41,6 @@ pub struct DungeonMeshes {
     pub has_stairs_through: Vec<bool>,
     /// The solid wall sides, which block clicks.
     pub solid_faces: Vec<WallFace>,
+    /// Models' outlines, and what shows of them through what hides them.
+    pub outlined: OutlinedMeshes,
 }

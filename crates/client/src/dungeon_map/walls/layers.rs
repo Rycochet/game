@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use super::super::mesh::{Builder, Surface, WallFace};
+use super::super::outlined::Outlined;
 
 /// Which set of meshes something is drawn into.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,6 +25,8 @@ pub struct Layers {
     pub stairs_through: Vec<Builder>,
     /// The solid wall faces, which block clicks.
     pub solid_faces: Vec<WallFace>,
+    /// Models' outlines, and what shows of them through what hides them.
+    pub outlined: Outlined,
 }
 
 impl Layers {

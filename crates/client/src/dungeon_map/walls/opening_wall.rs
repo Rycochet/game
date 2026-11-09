@@ -1,6 +1,7 @@
 //! The wall round a door or window, and its sides.
 
 use bevy::prelude::*;
+use shared::dungeon::Cell;
 
 use super::super::mesh::{Surface, View, WallFace, faces_camera};
 use super::super::theme::Shape;
@@ -86,6 +87,14 @@ impl<'a> Tile<'a> {
             }
         }
         self.opening_frame(layers, frame_layer, &opening);
+        if scene.level.cell(self.x, self.y) == Cell::Door {
+            let layer = if in_sight {
+                Layer::Solid
+            } else {
+                Layer::Memory
+            };
+            self.door_leaf(layers, layer, &opening);
+        }
     }
 
     /// One side of a wall with a hole in it, cut into columns from one edge

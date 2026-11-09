@@ -23,6 +23,7 @@ mod holes;
 mod liquid;
 mod mesh;
 mod oasis;
+mod outlined;
 mod picking;
 mod rain;
 mod sight_lines;
@@ -137,6 +138,7 @@ impl Plugin for DungeonMapPlugin {
                     sight_lines::place_mask,
                     wild_ground::work_out_tint,
                     update_meshes,
+                    outlined::apply_outlined,
                     update_crops,
                     update_herbs,
                     hide_unseen_tokens,

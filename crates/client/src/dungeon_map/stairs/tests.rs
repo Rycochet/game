@@ -3,6 +3,7 @@ use shared::site::{StairsDirection, StairsStyle};
 
 use super::super::CELL_SIZE;
 use super::super::mesh::{Builder, Surface, View};
+use super::super::outlined::Outlined;
 use super::*;
 
 fn build(direction: StairsDirection, style: StairsStyle) -> Vec<Builder> {
@@ -18,6 +19,7 @@ fn build(direction: StairsDirection, style: StairsStyle) -> Vec<Builder> {
     build_stairs(
         &mut meshes,
         None,
+        &mut Outlined::default(),
         &stairs,
         Surface::Floor,
         Vec3::ONE,
@@ -51,6 +53,7 @@ fn only_ladders_going_up_have_light_under_them() {
         build_stairs(
             &mut meshes,
             None,
+            &mut Outlined::default(),
             &stairs,
             Surface::Floor,
             Vec3::ONE,
@@ -178,6 +181,7 @@ fn only_what_stands_above_the_floor_goes_see_through() {
     build_stairs(
         &mut meshes,
         Some(&mut through),
+        &mut Outlined::default(),
         &stairs,
         Surface::Floor,
         Vec3::ONE,

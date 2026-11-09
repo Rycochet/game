@@ -21,7 +21,7 @@ What every 3D view shares: the one camera (orbiting the player: turn, tilt, zoom
 - `ViewCamera` (marker on the camera), `OrbitCamera` (read or set `yaw` (0 looks north, positive moves the camera east), `pitch`, `distance`; used by `dev_tools` `HOW_DEBUG_VIEW`, `world_map`, `dungeon_map` and `hall_view`).
 - `ViewGrid` (resource, set by the current view on entering): `cell_size` (3D units per grid step), `floor` (height the camera looks at and tokens stand on) and `raised` (the dungeon view's: the wilderness's cells are raised by `common::WildCellHeights`, and `floor_at(heights, x, y)` adds that place's `drawn_between`, so the camera keeps the player's cell where it is on screen as the land moves under them, and tokens stand on their cells).
 - `TokenView` (`owner`), `TOKEN_DIAMETER`, `TOKEN_HALF_THICKNESS`: for views that place tokens themselves (the world map rests them on the terrain) or size things to them.
-- `XrayMaterial` (`outline(colour)`, `fill(colour)`, `picture(colour, image)`; its plugin is added here) and `XRAY_WHITE`: for any model that should show through what hides it (`ground`'s bags so far).
+- `XrayMaterial` (`outline(colour)`, `fill(colour)`, `picture(colour, image)`; its plugin is added here) and `XRAY_WHITE`: for any model that should show through what hides it (`ground`'s bags, `dungeon_map`'s stairs and doors).
 - `TokenFlash` (component, `Default`): put on a token's owner to draw its body and picture solid red for `FLASH_SECONDS` (0.1 s, by the clock, seen for at least a frame), then it is taken off; adding it again starts again. `entities` puts it on anyone harmed.
 
 ## Depends on
@@ -30,7 +30,7 @@ What every 3D view shares: the one camera (orbiting the player: turn, tilt, zoom
 
 ## Used by
 
-- `world_map`, `dungeon_map`, `site`, `dev_tools`, `ground` (`XrayMaterial`).
+- `world_map`, `dungeon_map`, `site`, `dev_tools`, `ground` and `dungeon_map` (`XrayMaterial`).
 
 ## Notes
 

@@ -1172,3 +1172,7 @@ Profiling the browser build found the world map rebuilding its whole terrain mes
 ## 2026-11-09: The web build uses thin LTO
 
 Owner's choice. The Docker image's web client stopped building after #352: compiling the client with the `web` profile's fat LTO peaked at 14.9 GB (measured locally), and GitHub's 16 GB runners stopped it (exit 143) about 11 minutes in. Thin LTO peaks at 6.7 GB and builds a little faster; the download grew from 9.00 to 9.55 MB brotli (6%). Keeping fat LTO with extra swap on the runner was turned down: untested, slower, and only putting off the limit as the client grows.
+
+## 2026-11-09: Door leaves, secret doors and stairs outlined
+
+Owner's design, PR 3 of the x-ray work. Doors get leaves in their frames, open (as the rules say every door is), one side or the other by a hash of the cell; secret doors known by truesight look like wall with a black door outline, and are to open half as far as doors once they can open; stairs get black outlines. All three show through what hides them in white (`view3d`'s x-ray): a door as its leaf and the lines round its hole, a secret door as its outline, stairs as a plain stand-in of their size, since stairs hide parts of themselves and their own faces would show through the rest. They are built with the level's meshes into three more meshes (`dungeon_map::outlined`), not one model each. Town doors aren't real doors and get none.
