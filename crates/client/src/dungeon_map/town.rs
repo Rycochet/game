@@ -22,6 +22,7 @@ mod faces;
 mod flat;
 mod hedge;
 mod hedges;
+mod opening;
 mod roof;
 
 pub(super) use atlas::atlas_uv;
@@ -38,6 +39,7 @@ pub use flat::build_flat;
 pub(super) use flat::{flat_layer, flat_patch, layer_colour};
 use hedge::Hedge;
 pub use hedges::build_hedges;
+use opening::Opening;
 use roof::{Roof, roof_centre};
 
 /// Tiles across and down the atlas.
@@ -71,9 +73,6 @@ const ROOF_RAMP: f32 = HALF_CELL + WALL_OUT;
 /// Shading, since it is all unlit: faces running north-south are a little
 /// darker, which shows corners.
 const SIDEWAYS_SHADE: f32 = 0.85;
-
-/// How far doors and windows stand in front of their wall, to stay in front.
-const OVERLAY_LIFT: f32 = 0.05;
 
 /// A window's half width, and its bottom and top.
 const WINDOW_HALF: f32 = CELL_SIZE * 0.25;

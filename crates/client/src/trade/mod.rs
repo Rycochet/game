@@ -56,7 +56,11 @@ impl Plugin for TradePlugin {
                         draw_grids,
                         show_gift_aim,
                     )
-                        .chain(),
+                        .chain()
+                        // A panel opened this frame isn't spawned until its
+                        // commands run, and `close_when_left` forgets a panel
+                        // that doesn't exist: it would be left with no grid.
+                        .after(close_when_left),
                     close_when_left.after(PlayerSystems::Travel),
                 ),
             );

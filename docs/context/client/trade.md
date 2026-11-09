@@ -22,6 +22,7 @@ Trading panels. For now a town shop's, in a town or a town set into the wilderne
 
 - A panel belongs to who it is with, an `Id`: a shop's keeper for now, from `ServerMessage::Keepers`. There is never more than one for the same one (a second click brings it to the front), but two shops side by side can both be open.
 - A panel only opens on `TradeStock`, so one the server refused never shows. The server checks `DOOR_REACH` itself.
+- `close_when_left` forgets a panel whose entity doesn't exist, so it runs before `read_server`: a panel opened that frame isn't spawned until its commands run, and would otherwise be left open with no grid.
 - A door of a building that sells nothing walks to it, as it always did.
 - A step of the player's own, or a journey elsewhere, drops the wish to open it, and stopping short never opens it (`Arrived`).
 - Grid (owner's design): 12 wide, as many rows as needed, oldest first, each item in the first place it fits along each row from the left. Below it all are as many empty rows as the longest side of any kind at its largest size. Worked out at each opening; places are not kept.
