@@ -19,16 +19,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
       - uses: Swatinem/rust-cache@v2
       - run: cargo xtask package
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: hall-of-worlds-${{ runner.os }}
           path: target/package
@@ -36,16 +36,16 @@ jobs:
 
   web:
     name: Build (web)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@v2
-      - uses: jetli/trunk-action@v0.5.0
+      - uses: jetli/trunk-action@v0.5.1
         with:
           version: v0.22.1
       - run: trunk build --release --cargo-profile web
       - run: cargo xtask compress-web dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: hall-of-worlds-web
           path: dist

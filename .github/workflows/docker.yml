@@ -39,10 +39,10 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # rust-toolchain.toml installs the pinned toolchain and the wasm target.
       - uses: Swatinem/rust-cache@v2
-      - uses: jetli/trunk-action@v0.5.0
+      - uses: jetli/trunk-action@v0.5.1
         with:
           version: v0.22.1
       - name: Build the server
@@ -58,21 +58,21 @@ jobs:
           mkdir image
           cp target/release/hall-of-worlds-server image/
           cp -r dist image/web
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           # Only what was gathered above (the repository's .dockerignore,
           # which leaves out target and dist, isn't used here).
