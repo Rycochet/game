@@ -17,8 +17,6 @@ pub enum MoveRefused {
     NoRoom,
     /// It is too heavy for a container it would end up in.
     TooHeavy,
-    /// It is worn, under something on a higher layer.
-    Covered,
     /// It doesn't look the same as the stack, or the stack has no room for it.
     NoStackRoom,
 }

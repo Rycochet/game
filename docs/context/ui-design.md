@@ -58,7 +58,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | --- | --- | --- |
 | Dialog | have | `spawn_dialog` over full-screen layers: title, content, buttons. The quit question uses it. |
 | Darkening | have | What is outside a layer; each layer's adds up. |
-| Progress bar | have | From the loading screen. |
+| Progress bar | have | From the loading screen. A progress widget for actions that take a while (changing clothes under other things, later others) is to be designed (owner, 2026-11-09); for now `entities` shows the gold wind-up bar under the player's token. |
 | Snackbar | have | `notices`: a parchment strip at the top middle, under the status text, for a few seconds, taking no clicks ("Found: Fort"). |
 | Alert | later | Likely soon: "Saved", "Connection lost". |
 | Spinner | have | A ring with a gap, turning on the real clock, for something under way that can't say how far it has got (Connect checking an address). Small, beside or in what it is about. |

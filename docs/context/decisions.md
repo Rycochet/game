@@ -1081,7 +1081,7 @@ Owner's request. The Skills page is the Character panel's fourth tab (K), no lon
 
 ## 2026-11-07: Putting something on swaps out what is in its way
 
-Owner's request. A player putting something on takes off whatever on its layer is in its way into their inventory, even several things for one, by `shared::wear::wear_swapping`, which both sides use. It is refused, changing nothing, if any of that is covered, won't come off or has no room, and the player is told why (`ServerMessage::NotWorn`, shown under the clothes). Mobs still dress by the plain rule.
+Owner's request. A player putting something on takes off whatever on its layer is in its way into their inventory, even several things for one, by `shared::wear::wear_swapping`, which both sides use. It is refused, changing nothing, if any of that won't come off or has no room (being covered no longer refuses: see 2026-11-09), and the player is told why (`ServerMessage::NotWorn`, shown under the clothes). Mobs still dress by the plain rule.
 
 ## 2026-11-08: Leaving a site from anywhere outside
 
@@ -1140,3 +1140,7 @@ The owner's design: every account, the single player's included, is offered its 
 ## 2026-11-09: Account roles in their own file
 
 One role per account (someone needing two hats gets a role that fits, made if need be). Roles are rows of a permission matrix rather than a hierarchy, as Developer and Moderator mustn't overlap; granting is a permission per role, and an account may only act on accounts holding a role it could grant, never itself. Built in: Owner (always everything; the embedded server's player, or claimed with a code typed as a character name), Admin, Developer, Moderator, Player and Guest (never stored), Moderated and Banned (sanctions as roles, so the audit log follows role changes). Kept in `roles.ron` beside the saves, not in them: hand-edited only while the server is off, the server refusing to start on a broken file, backed up on every change, with an audit log. `HOW_DEBUG_TOOLS` keeps giving players and guests the debug tools. Owner's decisions, planned in four PRs (roles; names; shown roles and the staff mark; the Accounts panel).
+
+## 2026-11-09: Covered clothes take longer instead of being refused
+
+Owner's decision after playing: refusing to put on or take off what is under something on a higher layer was more annoying than useful. Nothing worn is refused for being covered any more (wearing, swapping, moving, stacking, dropping, giving, binning); it is still shown faded with what it is under. Changing it costs more energy: `energy::covered_cost` of the weight of everything worn over it, counted once however many things change together (`Inventory::changing_cost`), on top of `dressing_cost` for each. Owner's numbers, to tweak: half a second at least for anything (a ring, from a real one), and the cover adds 1 s plus 4.5 s a kilogram, so a ring takes about 2 s under gloves and over 5 s under plate gauntlets. Only a player's own changes cost time: mobs dressed when made, changes of body and debug gifts are instant. While a progress widget is designed (a todo), the client shows the wait as the gold wind-up bar under the player's token (`entities::dressing_wait`), as a placeholder.

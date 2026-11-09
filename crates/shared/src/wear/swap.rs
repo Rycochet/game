@@ -1,18 +1,20 @@
 //! Putting something on in place of what is in its way (owner, 2026-11-07): what on
 //! its layer clashes with it comes off into the inventory, so a single place can
 //! take over from something on several. Refused, changing nothing, if any of that
-//! is under something, won't come off (a curse, or someone else's blessing), or
-//! has no room in the inventory, or if it couldn't go on anyway.
+//! won't come off (a curse, or someone else's blessing) or has no room in the
+//! inventory, or if it couldn't go on anyway. Under something, it only takes longer.
 
 use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
 use crate::wear::{Fit, Remover, WearRefused};
 
-/// What putting something on did: how it fits, and what came off for it.
+/// What putting something on did: how it fits, what came off for it, and the
+/// energy all that took (`Inventory::changing_cost`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Swapped {
     pub fit: Fit,
     pub taken_off: Vec<Id>,
+    pub cost: u32,
 }
 
 impl Inventory {
@@ -62,9 +64,6 @@ impl Inventory {
         }
         let mut off = Vec::new();
         while let Some(other) = self.clash(&item) {
-            if let Some(over) = self.covered_by(other) {
-                return Err(WearRefused::Covered(over));
-            }
             if !god && !self.may_remove(other, Remover::Wearer) {
                 return Err(WearRefused::Stuck(other));
             }
@@ -72,6 +71,8 @@ impl Inventory {
             off.extend(at.map(|at| self.worn.remove(at)));
         }
         let fit = self.check_wear_new(&item)?;
+        let changed: Vec<&Item> = std::iter::once(&item).chain(&off).collect();
+        let cost = self.changing_cost(&changed);
         self.worn.push(item);
         let taken_off = off.iter().map(|item| item.id).collect();
         for item in off {
@@ -79,6 +80,10 @@ impl Inventory {
             self.give(item, limits)
                 .map_err(|_| WearRefused::NoRoom(id))?;
         }
-        Ok(Swapped { fit, taken_off })
+        Ok(Swapped {
+            fit,
+            taken_off,
+            cost,
+        })
     }
 }

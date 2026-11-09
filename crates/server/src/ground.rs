@@ -3,7 +3,7 @@
 //! `LevelSave::ground`, so everyone on a level shares it.
 
 use bevy::prelude::*;
-use shared::energy::{dressing_cost, handling_cost};
+use shared::energy::handling_cost;
 use shared::ground::Load;
 use shared::id::Id;
 use shared::item::{Holder, Item, Rotation};
@@ -180,11 +180,11 @@ pub(crate) fn act(
             let wearing = top.unwrap_or(found);
             let grams = wearing.total_weight();
             // What is in its way comes off, or the player is told why not.
-            let taking_off = client
+            let dressing = client
                 .put_on_new(wearing, world.stacks)
                 .map_err(|_| "it can't go on")?;
             leave_on_ground(client, world, item, rest);
-            Ok(dressing_cost(grams) + handling_cost(grams) + taking_off)
+            Ok(dressing + handling_cost(grams))
         }),
         GroundAction::Bin { item } => lying(client, world, item).map(|found| {
             client.inventory.to_bin_new(found);

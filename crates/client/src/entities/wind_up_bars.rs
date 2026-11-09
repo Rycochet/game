@@ -10,6 +10,7 @@ use shared::energy::ACTION_TICKS_PER_SECOND;
 use shared::id::Id;
 use shared::protocol::ServerMessage;
 
+use super::dressing_wait::DressingWait;
 use super::health_bars::under_token;
 use crate::common::{Other, OwnAbility};
 use crate::connection::FromServer;
@@ -71,6 +72,7 @@ pub(super) fn show_wind_up_bars(
     time: Res<Time>,
     seen: Res<SeenWindUps>,
     own: Res<OwnAbility>,
+    dressing: Res<DressingWait>,
     ui_scale: Res<UiScale>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     tokens: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
@@ -84,7 +86,8 @@ pub(super) fn show_wind_up_bars(
     let progress_of = |owner: Entity| -> Option<f32> {
         let (other, is_player) = owners.get(owner).ok()?;
         if is_player {
-            return progress(own.started, own.lands, now);
+            let ability = progress(own.started, own.lands, now);
+            return ability.or_else(|| progress(dressing.started, dressing.ends, now));
         }
         let &(started, lands) = seen.0.get(&other?.id)?;
         progress(started, lands, now)

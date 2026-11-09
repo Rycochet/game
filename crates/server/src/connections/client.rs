@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use shared::difficulty::Difficulty;
-use shared::energy::{Energy, NORMAL_SPEED, dressing_cost};
+use shared::energy::{Energy, NORMAL_SPEED};
 use shared::id::Id;
 use shared::item::{Inventory, Item};
 use shared::protocol::{CharacterId, ServerLink, ServerMessage};
@@ -139,23 +139,14 @@ impl Client {
     }
 
     /// Whether the player's own attempt to take this off gets anywhere. A curse
-    /// holding it is found out by trying, unless something on top stopped the attempt.
+    /// holding it is found out by trying.
     pub(crate) fn may_take_off(&mut self, item: shared::id::Id) -> bool {
-        if self.god_mode
-            || self.inventory.covered_by(item).is_some()
-            || self.inventory.may_remove(item, Remover::Wearer)
-        {
+        if self.god_mode || self.inventory.may_remove(item, Remover::Wearer) {
             return true;
         }
         self.inventory.favour_found_out(item);
         self.unsaved = true;
         false
-    }
-
-    /// It has put this on or taken it off, which takes longer the heavier it is.
-    pub(super) fn spend_dressing(&mut self, item: shared::id::Id, tick: u64) {
-        let grams = self.inventory.find(item).map_or(0, Item::total_weight);
-        self.energy.spend(tick, self.speed, dressing_cost(grams));
     }
 
     /// If steps arrived this tick, tells the client where the player is

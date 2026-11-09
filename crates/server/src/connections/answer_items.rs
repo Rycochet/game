@@ -202,10 +202,13 @@ pub(super) fn answer_items(
             client.send_inventory()
         }
         ClientMessage::BinItem { item } => {
+            let cost = client.inventory.taking_off_cost(item);
             if !client.may_take_off(item) {
                 // Nothing more to say: it stays on.
             } else if client.inventory.to_bin(item) {
                 client.unsaved = true;
+                let tick = world.action_clock.ticks();
+                client.energy.spend(tick, client.speed, cost);
             } else {
                 warn!("Refused throwing away {item:?}");
             }

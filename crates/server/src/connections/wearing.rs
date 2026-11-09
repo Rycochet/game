@@ -1,12 +1,12 @@
 //! A player putting something on, from what they carry or from the ground: what is
 //! in its way comes off into their inventory (`shared::wear::Swapped`), and if it
-//! can't go on they are told why (`ServerMessage::NotWorn`).
+//! can't go on they are told why (`ServerMessage::NotWorn`). It all takes the time
+//! `Swapped::cost` says, longer under other things.
 
-use shared::energy::dressing_cost;
 use shared::id::Id;
 use shared::item::{Item, StackLimits};
 use shared::protocol::ServerMessage;
-use shared::wear::{Swapped, WearRefused};
+use shared::wear::WearRefused;
 
 use super::Client;
 
@@ -23,8 +23,7 @@ impl Client {
             Ok(swapped) => {
                 self.unsaved = true;
                 self.inventory.magic_found_out(top);
-                self.spend_dressing(top, tick);
-                self.spend_taking_off(&swapped, tick);
+                self.energy.spend(tick, self.speed, swapped.cost);
                 true
             }
             Err(why) => {
@@ -34,8 +33,8 @@ impl Client {
         }
     }
 
-    /// Puts on something from the ground: what taking off for it costs, or why
-    /// it can't go on (the player has been told).
+    /// Puts on something from the ground: what putting it on costs, with taking
+    /// off what is in its way, or why it can't go on (the player has been told).
     pub(crate) fn put_on_new(
         &mut self,
         item: Item,
@@ -48,28 +47,12 @@ impl Client {
         match tried {
             Ok(swapped) => {
                 self.inventory.magic_found_out(id);
-                Ok(self.taking_off_cost(&swapped))
+                Ok(swapped.cost)
             }
             Err(why) => {
                 self.not_worn(id, why);
                 Err(why)
             }
-        }
-    }
-
-    fn taking_off_cost(&self, swapped: &Swapped) -> u32 {
-        let grams = |id| self.inventory.find(id).map_or(0, Item::total_weight);
-        swapped
-            .taken_off
-            .iter()
-            .map(|&id| dressing_cost(grams(id)))
-            .sum()
-    }
-
-    fn spend_taking_off(&mut self, swapped: &Swapped, tick: u64) {
-        let cost = self.taking_off_cost(swapped);
-        if cost > 0 {
-            self.energy.spend(tick, self.speed, cost);
         }
     }
 

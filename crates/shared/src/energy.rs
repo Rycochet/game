@@ -67,12 +67,26 @@ pub fn sneak_step_energy(cost: u32, cells: u32, speed: u32) -> u32 {
     cost.max(speed * SNEAK_TICKS_PER_CELL * cells.max(1))
 }
 
+/// A second's worth of energy at `NORMAL_SPEED`.
+const SECOND: u32 = NORMAL_SPEED * ACTION_TICKS_PER_SECOND as u32;
+
 /// How much putting on or taking off something this heavy costs: plate takes
 /// longer than a hat.
 pub fn dressing_cost(grams: u32) -> u32 {
-    /// A hat's worth, whatever it weighs.
-    const AT_LEAST: u32 = 70 * SITE_SCALE;
+    /// A ring's worth, whatever it weighs: half a second (owner, 2026-11-09, from
+    /// a real one; to tweak).
+    const AT_LEAST: u32 = SECOND / 2;
     AT_LEAST + grams / 10
+}
+
+/// What more it costs to get at something worn under this much (owner,
+/// 2026-11-09): a second, and four and a half more for every kilogram on top, so
+/// a ring takes about 2 s under gloves and over 5 s under gauntlets. To tweak.
+pub fn covered_cost(grams_over: u32) -> u32 {
+    /// Tenths of a second per kilogram on top.
+    const TENTHS_PER_KG: u64 = 45;
+    let weight = grams_over as u64 * SECOND as u64 * TENTHS_PER_KG / 10_000;
+    SECOND.saturating_add(u32::try_from(weight).unwrap_or(u32::MAX))
 }
 
 /// How much moving something this heavy from one container to another costs: 10 kg

@@ -99,7 +99,22 @@ fn plain_walking_keeps_its_pace() {
 #[test]
 fn the_heavier_it_is_the_longer_it_takes_to_put_on() {
     assert!(dressing_cost(20_000) > dressing_cost(150));
-    assert_eq!(dressing_cost(0), 350);
+    assert_eq!(dressing_cost(0), 2100);
+}
+
+/// Seconds at `NORMAL_SPEED`.
+fn seconds(cost: u32) -> f64 {
+    cost as f64 / (NORMAL_SPEED as f64 * ACTION_TICKS_PER_SECOND)
+}
+
+#[test]
+fn getting_at_a_ring_takes_longer_under_heavier_things() {
+    let ring = dressing_cost(5);
+    assert!((seconds(ring) - 0.5).abs() < 0.01);
+    let under_gloves = seconds(ring + covered_cost(100));
+    assert!((1.8..=2.2).contains(&under_gloves), "{under_gloves}");
+    let under_gauntlets = seconds(ring + covered_cost(860));
+    assert!((5.0..=6.0).contains(&under_gauntlets), "{under_gauntlets}");
 }
 
 #[test]

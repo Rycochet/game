@@ -12,25 +12,34 @@ impl Inventory {
         self.worn.iter().any(|item| item.id == id)
     }
 
-    /// What is on a higher layer than any of these, at the same location.
-    fn covering(&self, places: &[(Location, Layer)], not: Id) -> Option<Id> {
+    /// Whether this worn item is on a higher layer than any of these places.
+    fn is_over(other: &Item, places: &[(Location, Layer)]) -> bool {
+        coverage(other).iter().any(|&(theirs, their_layer)| {
+            places
+                .iter()
+                .any(|&(location, layer)| theirs == location && their_layer > layer)
+        })
+    }
+
+    /// Something on top of this worn item. It still comes off, only more slowly
+    /// (`Inventory::changing_cost`), and is shown faded.
+    pub fn covered_by(&self, id: Id) -> Option<Id> {
+        let item = self.worn.iter().find(|item| item.id == id)?;
+        let places = coverage(item);
         self.worn
             .iter()
-            .filter(|other| other.id != not)
-            .find(|other| {
-                coverage(other).iter().any(|&(theirs, their_layer)| {
-                    places
-                        .iter()
-                        .any(|&(location, layer)| theirs == location && their_layer > layer)
-                })
-            })
+            .find(|other| other.id != id && Self::is_over(other, &places))
             .map(|other| other.id)
     }
 
-    /// What is on top of this worn item, stopping it coming off.
-    pub fn covered_by(&self, id: Id) -> Option<Id> {
-        let item = self.worn.iter().find(|item| item.id == id)?;
-        self.covering(&coverage(item), id)
+    /// Everything worn over any of these (worn or not), each once, leaving them out.
+    pub fn worn_over(&self, items: &[&Item]) -> Vec<&Item> {
+        let places: Vec<_> = items.iter().flat_map(|item| coverage(item)).collect();
+        self.worn
+            .iter()
+            .filter(|other| items.iter().all(|item| item.id != other.id))
+            .filter(|other| Self::is_over(other, &places))
+            .collect()
     }
 
     /// Whether this carried item can be put on, and how it would fit.
@@ -44,7 +53,6 @@ impl Inventory {
 
     /// Whether this could be put on, carried or not, and how it would fit.
     pub fn check_wear_new(&self, item: &Item) -> Result<Fit, WearRefused> {
-        let id = item.id;
         let wear = item.kind.def().wear.ok_or(WearRefused::NotClothing)?;
         let body = self.creature.def();
         let places = coverage(item);
@@ -69,9 +77,6 @@ impl Inventory {
         }
         if let Some(other) = self.clash(item) {
             return Err(WearRefused::Clash(other));
-        }
-        if let Some(other) = self.covering(&places, id) {
-            return Err(WearRefused::Covered(other));
         }
         Ok(fit)
     }

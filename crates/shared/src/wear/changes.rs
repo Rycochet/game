@@ -36,12 +36,8 @@ impl Inventory {
         }
     }
 
-    /// Takes out something to hand over, with all in it, unless it isn't carried or
-    /// is worn under something.
+    /// Takes out something to hand over, with all in it, unless it isn't carried.
     pub fn hand_over(&mut self, id: Id) -> Option<Item> {
-        if self.covered_by(id).is_some() {
-            return None;
-        }
         self.take(id)
     }
 

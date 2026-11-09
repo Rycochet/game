@@ -314,7 +314,7 @@ fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
     assert!(worn.is_worn(sabatons));
     assert!(worn.items.is_empty());
 
-    // The shoes are under the sabatons, so a refused move is put right.
+    // The shoes are under the sabatons, which only makes them slower to take off.
     let shoes = worn
         .worn
         .iter()
@@ -328,9 +328,9 @@ fn clothes_go_on_by_the_rules_and_come_off_with_a_move() {
         y: 0,
         rotation: Rotation::None,
     };
-    assert!(inventory(&test.send(&[take_off(shoes)])).is_worn(shoes));
-    let answers = test.send(&[take_off(sabatons)]);
-    assert!(!inventory(&answers).is_worn(sabatons));
+    let answers = test.send(&[take_off(shoes)]);
+    assert!(!inventory(&answers).is_worn(shoes));
+    assert!(inventory(&answers).is_worn(sabatons));
 }
 
 #[test]
@@ -803,6 +803,25 @@ fn heavy_loads_slow_a_character_and_dressing_takes_time() {
     let hat = inventory(&answers).items[0].item.id;
     test.send(&[ClientMessage::WearItem { item: hat }]);
     assert!(!test.client.energy.ready(0, test.client.speed));
+}
+
+#[test]
+fn a_ring_goes_on_under_gloves_but_takes_longer() {
+    let mut test = TestClient::new();
+    test.time_passes = false;
+    let answers = test.send(&[give(ItemKind::Gloves), give(ItemKind::Ring)]);
+    let items = &inventory(&answers).items;
+    let id_of = |kind| items.iter().find(|placed| placed.item.kind == kind);
+    let gloves = id_of(ItemKind::Gloves).unwrap().item.id;
+    let ring = id_of(ItemKind::Ring).unwrap().item.id;
+    test.send(&[ClientMessage::WearItem { item: gloves }]);
+    let speed = test.client.speed;
+    let after_gloves = test.client.energy.at(0, speed);
+    test.send(&[ClientMessage::WearItem { item: ring }]);
+    assert!(test.client.inventory.is_worn(ring));
+    // Half a second for the ring, and more than a second more past the gloves.
+    let a_second = i64::from(speed) * 20;
+    assert!(after_gloves - test.client.energy.at(0, speed) > a_second * 3 / 2);
 }
 
 #[test]

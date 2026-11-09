@@ -58,10 +58,9 @@ impl Inventory {
     }
 
     /// Throws a carried item away, with everything in it, destroying what was thrown
-    /// away before. `false` if it isn't carried, is worn under something, or is
-    /// there already.
+    /// away before. `false` if it isn't carried or is there already.
     pub fn to_bin(&mut self, id: Id) -> bool {
-        if self.in_bin(id) || self.covered_by(id).is_some() {
+        if self.in_bin(id) {
             return false;
         }
         let Some(item) = self.take(id) else {
