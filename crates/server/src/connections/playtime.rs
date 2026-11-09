@@ -3,6 +3,7 @@
 
 use shared::energy::ACTION_TICKS_PER_SECOND;
 use shared::protocol::{ClientMessage, ServerMessage};
+use shared::role::Permission;
 
 use super::Client;
 
@@ -99,7 +100,7 @@ impl Client {
             }
         }
         let limit = u64::from(idle_minutes) * TICKS_PER_MINUTE;
-        if self.host || limit == 0 || self.activity.idle_for(now) < limit {
+        if self.may(Permission::NeverIdle) || limit == 0 || self.activity.idle_for(now) < limit {
             return true;
         }
         bevy::log::info!(

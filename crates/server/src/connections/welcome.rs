@@ -4,6 +4,7 @@ use shared::creature::CreatureKind;
 use shared::item::{Inventory, Item, ItemKind, MadeAt, Quality, StackLimits};
 use shared::item_form::{ItemOrder, make_item};
 use shared::protocol::ServerMessage;
+use shared::role::Permission;
 use shared::sheet::{Appearance, Build, Sheet};
 
 use super::playtime::Activity;
@@ -152,9 +153,11 @@ pub(super) fn send_welcome(
         server_clock: world.server_clock.seconds(),
         x,
         y,
-        dev_tools: options.dev_tools_for(client.host),
-        can_pause: options.pausable && client.host,
+        dev_tools: client.may_debug(options),
+        can_pause: options.pausable && client.may(Permission::Pause),
         stacks: world.stacks,
+        role: client.badge(),
+        powers: client.powers(),
     };
     client.link.send(&welcome)
         && client

@@ -5,6 +5,7 @@
 use bevy::prelude::*;
 use shared::difficulty::{Difficulties, Difficulty};
 use shared::protocol::ServerMessage;
+use shared::role::Permission;
 
 use super::{Client, Connections, Phase};
 use crate::{ServerOptions, ServerWorlds};
@@ -68,10 +69,10 @@ impl Client {
 
     /// The host asks the server to allow these (`SetDifficulties`).
     pub(super) fn ask_difficulties(&mut self, allowed: Difficulties) {
-        if self.host {
+        if self.may(Permission::ServerOptions) {
             self.asked_difficulties = Some(allowed.or_all());
         } else {
-            warn!("Ignoring SetDifficulties from someone other than the host");
+            warn!("Ignoring SetDifficulties from someone without the permission");
         }
     }
 }

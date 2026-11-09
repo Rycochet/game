@@ -16,6 +16,7 @@ use shared::id::Id;
 use shared::protocol::{CharacterId, CharacterSummary, GuestToken};
 
 use crate::ids::new_id;
+use crate::roles::Roles;
 use crate::save_queue::SaveQueue;
 use crate::saves::{Save, SaveKey};
 use crate::storage::now;
@@ -63,13 +64,16 @@ pub struct Accounts {
     loaded: BTreeMap<AccountId, AccountSave>,
     /// Sessions used since starting, by login hash (`session`).
     sessions: BTreeMap<String, LoginSave>,
+    /// Which accounts hold which role.
+    pub(crate) roles: Roles,
 }
 
 impl Accounts {
-    /// The accounts saved through `queue`.
-    pub(crate) fn new(queue: SaveQueue) -> Self {
+    /// The accounts saved through `queue` (if any), with these roles.
+    pub(crate) fn new(queue: Option<SaveQueue>, roles: Roles) -> Self {
         Self {
-            queue: Some(queue),
+            queue,
+            roles,
             ..Self::default()
         }
     }

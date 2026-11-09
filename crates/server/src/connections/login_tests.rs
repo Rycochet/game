@@ -186,3 +186,86 @@ fn without_providers_only_guests_log_in() {
     }
     assert_eq!(server.connected(), 1);
 }
+
+fn named(name: &str) -> ClientMessage {
+    ClientMessage::CreateCharacter(shared::protocol::NewCharacter {
+        name: name.into(),
+        kind: shared::creature::CreatureKind::Human,
+        appearance: Default::default(),
+        build: Default::default(),
+        difficulty: shared::difficulty::Difficulty::Normal,
+    })
+}
+
+#[test]
+fn the_claim_code_as_a_name_makes_the_account_the_owner() {
+    let provider = FakeProvider::start();
+    let mut server = Server::new(Some(provider.logins("secret")));
+    let roles = &mut server.connections.as_mut().unwrap().accounts.roles;
+    let code = roles.start_claim().unwrap().unwrap();
+
+    // Not a guest's.
+    let (guest, _) = server.connect();
+    server.send(
+        &guest,
+        ClientMessage::Login(Credentials::Guest(GuestToken([3; 32]))),
+    );
+    let told = server.send(&guest, named(&code));
+    assert!(
+        matches!(&told[..], [ServerMessage::Refused(why)] if why.contains("guest")),
+        "{told:?}"
+    );
+
+    let (end, _) = server.connect();
+    through_provider(&mut server, &end, "good");
+    let clients = &server.connections.as_ref().unwrap().clients;
+    let account = clients.last().unwrap().account.unwrap();
+    let told = server.send(&end, named(&code));
+    assert_eq!(
+        told,
+        [ServerMessage::Refused(super::new_character::CLAIMED.into())]
+    );
+    let connections = server.connections.as_mut().unwrap();
+    assert!(
+        connections
+            .accounts
+            .account(&account)
+            .unwrap()
+            .characters
+            .is_empty()
+    );
+    let held = connections.accounts.roles.held(account, false, 0);
+    assert!(held.badge.id.is(shared::role::OWNER));
+}
+
+#[test]
+fn a_banned_account_is_turned_away_and_told_why() {
+    let provider = FakeProvider::start();
+    let mut server = Server::new(Some(provider.logins("secret")));
+    let (end, _) = server.connect();
+    let told = through_provider(&mut server, &end, "good");
+    let ServerMessage::LoggedIn { session, .. } = told[0] else {
+        panic!("{told:?}");
+    };
+    let connections = server.connections.as_mut().unwrap();
+    let account = connections.clients[0].account.unwrap();
+    let banned = shared::role::RoleId::new(shared::role::BANNED);
+    let change = crate::roles::Change {
+        to: &banned,
+        until: None,
+        reason: "cheating",
+    };
+    let roles = &mut connections.accounts.roles;
+    roles
+        .set_role(crate::roles::Actor::Server, account, false, change, 0)
+        .unwrap();
+
+    let (again, _) = server.connect();
+    let told = server.send(&again, ClientMessage::Login(Credentials::Session(session)));
+    assert_eq!(
+        told,
+        [ServerMessage::Refused(
+            "this account is banned: cheating".into()
+        )]
+    );
+}

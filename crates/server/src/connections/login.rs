@@ -10,7 +10,10 @@ use super::characters::offer_characters;
 use super::{Client, Connections, Phase};
 use crate::accounts::{AccountId, Accounts, LoginKey};
 use crate::oidc::Logins;
+use crate::roles::Held;
+use crate::storage::now;
 use crate::{ServerOptions, ServerWorld, ServerWorlds};
+use shared::role::BANNED;
 
 /// Logs in with what the client sent: `false` if it should be disconnected.
 pub(super) fn log_in(
@@ -65,9 +68,32 @@ pub(super) fn logged_in(
     world: &ServerWorld,
     options: &ServerOptions,
 ) -> bool {
+    let guest = match accounts.account(&id) {
+        Ok(account) => account.guest,
+        Err(error) => return client.refuse_for_saves(&error),
+    };
+    let held = accounts.roles.held(id, guest, now());
+    if held.badge.id.is(BANNED) {
+        info!("Account {} was turned away: banned", id.0);
+        client.link.send(&ServerMessage::Refused(banned(&held)));
+        return false;
+    }
     info!("Account {} logged in {how}", id.0);
     client.account = Some(id);
+    client.take_role(held);
     offer_characters(client, accounts, world, options.difficulties)
+}
+
+/// What a banned player is told.
+fn banned(held: &Held) -> String {
+    let until = match held.until {
+        Some(until) => format!(" until {}", crate::roles::log_stamp(until)),
+        None => String::new(),
+    };
+    match held.reason.as_str() {
+        "" => format!("this account is banned{until}"),
+        reason => format!("this account is banned{until}: {reason}"),
+    }
 }
 
 /// Finishes the logins players have come back from providers' websites with,

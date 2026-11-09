@@ -16,6 +16,7 @@ use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
 use crate::mob::EntityLook;
 use crate::road::Road;
+use crate::role::{Powers, RoleBadge};
 use crate::sheet::Sheet;
 use crate::vitals::VitalNow;
 use crate::world::WorldTime;
@@ -76,6 +77,10 @@ pub enum ServerMessage {
         can_pause: bool,
         /// How big stacks of items may get here.
         stacks: StackLimits,
+        /// The account's role here, and what it may do: only for showing the
+        /// right menus, as the server checks everything asked of it.
+        role: RoleBadge,
+        powers: Powers,
     },
     /// Everything the client knows of the world map is forgotten; the chunks
     /// it may know again follow (`DevForgetMap`).

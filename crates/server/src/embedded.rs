@@ -37,11 +37,11 @@ pub fn start_embedded(
     let thread = thread::Builder::new()
         .name("server".into())
         .spawn(move || {
-            // Single player: the player's own server, so dev tools are fine,
-            // and it has nothing to do once the game has gone.
+            // Single player: its player is the Owner (with every tool), others
+            // who join are players, and it has nothing to do once the game has
+            // gone.
             let fixed = crate::difficulties_from_environment();
             let options = ServerOptions {
-                dev_tools: true,
                 exit_when_alone: true,
                 pausable: true,
                 guests: false,

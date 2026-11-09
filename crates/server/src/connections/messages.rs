@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use shared::energy::{CHANGE_MAP_COST, site_step_cost};
 use shared::movement::Step;
 use shared::protocol::ServerMessage;
+use shared::role::Permission;
 use shared::world::WorldId;
 
 use super::look_up::answer_look_ups;
@@ -241,7 +242,10 @@ pub(super) fn join(
         .iter()
         .filter(|other| !other.gone && other.phase == Phase::Playing)
         .count();
-    if options.player_limit > 0 && !clients[i].host && playing >= options.player_limit.into() {
+    if options.player_limit > 0
+        && !clients[i].may(Permission::PastPlayerLimit)
+        && playing >= options.player_limit.into()
+    {
         info!("A player was turned away: the server is full");
         clients[i].link.send(&ServerMessage::Refused(
             "this server is full: try again later".into(),

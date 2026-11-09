@@ -763,6 +763,8 @@ fn killing_needs_dev_tools_and_sight() {
     let mut test = TestClient::new();
     let (mob, _) = next_to_a_laden_mob(&mut test);
     test.dev_tools = false;
+    // Not the host, who is the Owner and may use them anyway.
+    test.client.host = false;
     test.send(&[ClientMessage::DevKillMob { mob }]);
     assert_eq!(the_mob(&test).id, mob, "not allowed");
     test.dev_tools = true;
@@ -913,6 +915,8 @@ fn in_god_mode_a_player_walks_through_an_enemy() {
 fn god_mode_needs_dev_tools() {
     let mut test = TestClient::new();
     test.dev_tools = false;
+    // Not the host, who is the Owner and may use them anyway.
+    test.client.host = false;
     test.send(&[ClientMessage::DevGodMode(true)]);
     assert!(!test.client.god_mode);
 }

@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, LoginMethod, PROTOCOL_VERSION, ServerMessage};
+use shared::role::Permission;
 
 use super::answer_dev::answer_dev;
 use super::answer_items::answer_items;
@@ -44,6 +45,7 @@ pub(crate) fn answer(
             difficulty,
             ..
         } if client.account.is_some() => {
+            client.take_role(accounts.roles.owner());
             client.makes_characters = makes_characters;
             client.difficulty = Some(difficulty.for_existing());
             offer_characters(client, accounts, world, options.difficulties)
@@ -169,8 +171,8 @@ pub(crate) fn answer(
             client.ask_difficulties(allowed);
             true
         }
-        ClientMessage::SetPaused(_) if !options.pausable => {
-            warn!("A client asked to pause, which this server doesn't allow");
+        ClientMessage::SetPaused(_) if !options.pausable || !client.may(Permission::Pause) => {
+            warn!("A client asked to pause, which isn't allowed here or for them");
             true
         }
         ClientMessage::SetPaused(paused) => {
@@ -219,10 +221,10 @@ pub(crate) fn answer(
         | ClientMessage::TakeItem { .. }
         | ClientMessage::WearItem { .. }
         | ClientMessage::BinItem { .. } => answer_items(client, message, world),
-        // Dev tools are only for the embedded server; elsewhere a stray key
-        // or click is ignored rather than ending the game.
-        _ if message.is_dev_tool() && !options.dev_tools_for(client.host) => {
-            warn!("A client asked for dev tools ({message:?}), which this server doesn't allow");
+        // Only for those allowed them; for anyone else a stray key or click is
+        // ignored rather than ending the game.
+        _ if message.is_dev_tool() && !client.may_debug(options) => {
+            warn!("A client asked for dev tools ({message:?}), which it may not use");
             true
         }
         ClientMessage::DevTeleport { .. }
