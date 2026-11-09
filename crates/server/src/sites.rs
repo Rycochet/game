@@ -35,7 +35,7 @@ use cells::{
 };
 pub(super) use dev_area::generate_area;
 pub(crate) use doors::{DoorChange, Standing, door_act, mob_opened, share_doors};
-use doors::{DoorSite, VisitDoors, door_looks, remember_doors, set_doors};
+use doors::{DoorSite, VisitDoors, door_looks, ensure_locks, remember_doors, set_doors};
 use enter::enter_site;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};
 use keepers::{NewKeepers, keepers_in_window, keepers_of};

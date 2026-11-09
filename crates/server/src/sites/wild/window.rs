@@ -122,6 +122,14 @@ fn add_doors(world: &mut ServerWorld, window: &mut Window) {
         let Some(poi) = cutout.map(|cutout| *cutout.poi()) else {
             continue;
         };
+        // Its locks, if it is the first time anyone has come near.
+        let placed = world.site(mirror.id).levels.get(&mirror.index);
+        if !placed.is_some_and(|level| level.locks_placed)
+            && let Some(site) = crate::sites::enter::make_site(world, &poi, mirror.id)
+        {
+            let first = site.level(mirror.index);
+            crate::sites::ensure_locks(world, (mirror.id, &poi), mirror.index, &first);
+        }
         let site = DoorSite {
             id: mirror.id,
             index: mirror.index,

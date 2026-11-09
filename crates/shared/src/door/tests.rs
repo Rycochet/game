@@ -148,3 +148,95 @@ fn a_door_leading_outside_is_known_by_the_ground_beside_it() {
     level.set(1, 0, Cell::Ground);
     assert!(door_is_outside(&level, 0, 0));
 }
+
+/// Three rooms in a row, west to east, joined by doors at (2, 0) and (5, 0):
+/// x 0..=1, 3..=4 and 6..=7, all at y 0. Both doors closed.
+fn three_rooms() -> Level {
+    let mut level = Level::new(-1, -1, 10, 3);
+    for x in 0..=7 {
+        level.set(x, 0, Cell::Floor);
+    }
+    for x in [2, 5] {
+        level.set(x, 0, Cell::Door);
+        level.set_swing(x, 0, Swing::Closed);
+    }
+    level
+}
+
+#[test]
+fn reach_stops_at_shut_doors_and_secret_ones() {
+    let mut level = three_rooms();
+    let start = [(0, 0)];
+    let all = reach_without(&level, &start, &Default::default());
+    assert!(all.contains(&(7, 0)), "closed doors can be opened");
+    let shut = std::collections::BTreeSet::from([(5, 0)]);
+    let some = reach_without(&level, &start, &shut);
+    assert!(some.contains(&(4, 0)) && !some.contains(&(6, 0)));
+    level.set(2, 0, Cell::SecretDoor);
+    let none = reach_without(&level, &start, &Default::default());
+    assert!(!none.contains(&(3, 0)));
+}
+
+#[test]
+fn keys_are_never_behind_their_own_or_any_locked_door() {
+    let level = three_rooms();
+    // Holders in every room.
+    let holders = [(1, (0, 0)), (2, (4, 0)), (3, (7, 0))];
+    for seed in 0..300 {
+        let chosen = place_locks(Seed::new(seed), &level, &[(0, 0)], &holders);
+        let shut = chosen.iter().map(|&(at, _)| at).collect();
+        let reach = reach_without(&level, &[(0, 0)], &shut);
+        for (_, holder) in chosen {
+            let (_, at) = holders.iter().find(|(n, _)| *n == holder).unwrap();
+            assert!(reach.contains(at), "seed {seed}: key {holder} locked away");
+        }
+    }
+}
+
+#[test]
+fn some_doors_are_locked_but_not_most() {
+    let level = three_rooms();
+    let holders = [(1, (0, 0))];
+    let locked: usize = (0..1000)
+        .map(|seed| place_locks(Seed::new(seed), &level, &[(0, 0)], &holders).len())
+        .sum();
+    // About 10% of each of two doors.
+    assert!((120..290).contains(&locked), "{locked}");
+}
+
+#[test]
+fn a_key_is_found_in_bags_and_stacks() {
+    use crate::id::Id;
+    use crate::item::{Inventory, Item, ItemKind, Placed, Rotation};
+    use crate::item_form::ItemForm;
+    let lock = Id::for_test(7);
+    let mut key = Item::new(Id::for_test(1), ItemKind::Key);
+    key.form = Some(ItemForm::Key(lock));
+    let mut bag = Item::new(Id::for_test(2), ItemKind::Pouch);
+    bag.contents.push(Placed {
+        item: key,
+        x: 0,
+        y: 0,
+        rotation: Rotation::None,
+    });
+    let mut inventory = Inventory::default();
+    assert!(!carries_key(&inventory, lock));
+    inventory.items.push(Placed {
+        item: bag,
+        x: 0,
+        y: 0,
+        rotation: Rotation::None,
+    });
+    assert!(carries_key(&inventory, lock));
+    assert!(!carries_key(&inventory, Id::for_test(8)));
+}
+
+#[test]
+fn routes_go_round_locked_doors() {
+    let mut level = three_rooms();
+    level.set_locked(5, 0, true);
+    assert!(level.is_locked(5, 0) && level.is_shut(5, 0));
+    let open = level.with_doors_open();
+    assert!(open.is_walkable(2, 0) && !open.is_walkable(5, 0));
+    assert!(level.with_all_doors_open().is_walkable(5, 0));
+}

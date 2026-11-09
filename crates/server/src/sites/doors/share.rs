@@ -32,7 +32,7 @@ pub(crate) fn share_doors(clients: &mut [Client], world: &mut ServerWorld) {
         if change.key.site != SiteId::Wilderness {
             let place = (change.key.site, change.key.index);
             if let Some(population) = world.populations.0.get_mut(&place) {
-                population.set_swing(change.key.at, change.door.swing);
+                population.set_door(change.key.at, change.door);
             }
         }
     }
@@ -50,6 +50,10 @@ pub(crate) fn share_doors(clients: &mut [Client], world: &mut ServerWorld) {
                 let door = visit.doors.get_mut(&at).expect("found above");
                 door.door = change.door;
                 visit.level.level.set_swing(at.0, at.1, change.door.swing);
+                visit
+                    .level
+                    .level
+                    .set_locked(at.0, at.1, change.door.is_locked());
                 changed_at(visit, at.0, at.1);
                 any = true;
             }

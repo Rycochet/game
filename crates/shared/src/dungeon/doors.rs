@@ -3,7 +3,7 @@
 //! a secret door closed (a wall).
 
 use super::{CELL_UNITS, Cell, HALF_CELL, Level, WALL_HALF_UNITS, WallBar};
-use crate::door::Swing;
+use crate::door::{Side, Swing};
 
 impl Level {
     /// How the door at `(x, y)` hangs, if it has been set.
@@ -60,9 +60,34 @@ impl Level {
         })
     }
 
-    /// The same level with every closed door open (locked ones too, for
-    /// now): for finding routes through doors someone can open on the way.
+    /// Whether the door at `(x, y)` is known to be locked: on the server, the
+    /// truth; on a client, what the player has found by trying it.
+    pub fn is_locked(&self, x: i64, y: i64) -> bool {
+        self.locked.contains(&(x, y))
+    }
+
+    /// Marks the door at `(x, y)` locked or not. A locked door is closed.
+    pub fn set_locked(&mut self, x: i64, y: i64, locked: bool) {
+        if locked {
+            self.locked.insert((x, y));
+            self.set_swing(x, y, Swing::Closed);
+        } else {
+            self.locked.remove(&(x, y));
+        }
+    }
+
+    /// The same level with every closed door open but those known to be
+    /// locked: for finding routes through doors someone can open on the way.
     pub fn with_doors_open(&self) -> Level {
+        let mut open = self.with_all_doors_open();
+        for &(x, y) in &self.locked {
+            open.swings.insert((x, y), Swing::Closed);
+        }
+        open
+    }
+
+    /// The same level with every door open, locked or not.
+    pub fn with_all_doors_open(&self) -> Level {
         let mut open = self.clone();
         let shut: Vec<(i64, i64)> = (open.swings.iter())
             .filter(|(_, swing)| swing.is_shut())
@@ -70,16 +95,14 @@ impl Level {
             .collect();
         for at in shut {
             // Which side doesn't matter for routes.
-            open.swings
-                .insert(at, Swing::Open(crate::door::Side::North));
+            open.swings.insert(at, Swing::Open(Side::North));
         }
         // Secret doors with no swing set are closed too.
         let (min_x, min_y, width, height) = open.bounds();
         for y in min_y..min_y + height {
             for x in min_x..min_x + width {
                 if open.cell(x, y) == Cell::SecretDoor && open.swing(x, y).is_none() {
-                    open.swings
-                        .insert((x, y), Swing::Open(crate::door::Side::North));
+                    open.swings.insert((x, y), Swing::Open(Side::North));
                 }
             }
         }

@@ -111,7 +111,7 @@ impl ItemKind {
             Self::Apple => Food,
             Self::Coin | Self::Gem => Valuables,
             Self::Stone => Materials,
-            Self::Lantern => Other,
+            Self::Lantern | Self::Key => Other,
         }
     }
 }

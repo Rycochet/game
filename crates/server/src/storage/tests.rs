@@ -178,6 +178,7 @@ fn saves_are_read_back() {
                     vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],
                 )]),
                 changes: BTreeMap::from([((1, 2), Cell::Floor)]),
+                locks_placed: true,
                 doors: BTreeMap::from([(
                     (6, 7),
                     shared::door::Door {
@@ -185,6 +186,11 @@ fn saves_are_read_back() {
                         quality: shared::item::Quality::Common,
                         material: shared::material::Material::Wood,
                         style: shared::door::DoorStyle::Plain,
+                        lock: Some(shared::door::Lock {
+                            id: Id::for_test(9),
+                            quality: shared::item::Quality::Common,
+                            locked: true,
+                        }),
                     },
                 )]),
                 buildings: BTreeMap::from([(

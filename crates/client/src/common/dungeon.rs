@@ -27,6 +27,9 @@ pub struct CurrentDungeon {
     pub remembered: Sight,
     /// The level's known stairs.
     pub stairs: Vec<SeenStairs>,
+    /// The doors seen to have a lock (whether they are locked is on `level`,
+    /// once found by trying one).
+    pub door_locks: std::collections::BTreeSet<(i64, i64)>,
     /// A town's buildings (none anywhere else).
     pub buildings: Vec<BuildingLook>,
     /// A farm's fields (none anywhere else).
@@ -52,6 +55,7 @@ impl Default for CurrentDungeon {
             remembered: Sight::new(&level),
             level,
             stairs: Vec::new(),
+            door_locks: Default::default(),
             buildings: Vec::new(),
             fields: Vec::new(),
             in_poi: None,
@@ -69,6 +73,7 @@ impl CurrentDungeon {
         self.known = Sight::new(&self.level);
         self.remembered = Sight::new(&self.level);
         self.stairs.clear();
+        self.door_locks.clear();
         self.buildings.clear();
         self.fields.clear();
         self.in_poi = None;
@@ -180,6 +185,15 @@ impl CurrentDungeon {
         }
         for door in &chunk.doors {
             self.level.set_swing(door.x, door.y, door.swing);
+            // Seen open, or with no lock, it isn't locked (any more).
+            if !door.lock || !door.swing.is_shut() {
+                self.level.set_locked(door.x, door.y, false);
+            }
+            if door.lock {
+                self.door_locks.insert((door.x, door.y));
+            } else {
+                self.door_locks.remove(&(door.x, door.y));
+            }
         }
     }
 

@@ -63,18 +63,24 @@ pub(super) fn close_doors(
     }
 }
 
-/// The server wouldn't open a door: a journey waiting at it ends there. A door
+/// The server wouldn't open a door: a journey waiting at it ends there, and
+/// one found locked is remembered so (until the level is sent again). A door
 /// that opens lets the journey on, and may be asked again later.
 pub(super) fn door_answers(
     mut from_server: MessageReader<FromServer>,
-    dungeon: Res<CurrentDungeon>,
+    mut dungeon: ResMut<CurrentDungeon>,
     travel: Single<&mut Travel, With<Player>>,
 ) {
     let mut travel = travel.into_inner();
     for FromServer(message) in from_server.read() {
-        if let ServerMessage::DoorRefused { x, y } = *message
-            && travel.door_asked == Some((x, y))
-        {
+        let ServerMessage::DoorRefused { x, y, locked } = *message else {
+            continue;
+        };
+        // Known to be locked from now on, for routes.
+        if locked {
+            dungeon.level.set_locked(x, y, true);
+        }
+        if travel.door_asked == Some((x, y)) {
             info!("The door at ({x}, {y}) stays shut");
             travel.route.clear();
             travel.door_asked = None;

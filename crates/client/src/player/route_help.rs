@@ -11,10 +11,13 @@ use shared::sheet::Feeling;
 use super::Player;
 use crate::common::{GodMode, MapPosition, Other};
 
+/// What a door known to be locked adds to a route: as much as a long way round.
+const LOCKED_COST: u32 = 100 * STRAIGHT_COST;
+
 /// The quickest route on a level from `from` to `to` through the cells `known`
 /// accepts, by `cost_of`: through closed doors as if open (they are opened on
 /// the way), each costing a step more, so an open way round is taken if it is
-/// no longer.
+/// no longer; through one known to be locked only if there is no other way.
 pub(super) fn dungeon_route(
     level: &Level,
     (from, to): ((i64, i64), (i64, i64)),
@@ -22,14 +25,17 @@ pub(super) fn dungeon_route(
     cost_of: impl Fn((i64, i64), (i64, i64)) -> u32 + Copy,
     gait: Gait,
 ) -> Path {
-    let open = level.with_doors_open();
+    // Locked ones too, if there is no other way: they are tried.
+    let open = level.with_all_doors_open();
     let cost = |a, b: (i64, i64)| {
-        cost_of(a, b)
-            + if level.is_shut(b.0, b.1) {
-                STRAIGHT_COST
-            } else {
-                0
-            }
+        let door = if level.is_locked(b.0, b.1) {
+            LOCKED_COST
+        } else if level.is_shut(b.0, b.1) {
+            STRAIGHT_COST
+        } else {
+            0
+        };
+        cost_of(a, b) + door
     };
     let path = find_path_by(&open, from, to, None, known, cost, gait);
     Path {

@@ -34,9 +34,11 @@ impl Population {
         &self.level
     }
 
-    /// A door on its level has changed.
-    pub(crate) fn set_swing(&mut self, (x, y): (i64, i64), swing: Swing) {
-        self.level.set_swing(x, y, swing);
+    /// A door on its level has changed. Its mobs know which are locked: they
+    /// live there.
+    pub(crate) fn set_door(&mut self, (x, y): (i64, i64), door: shared::door::Door) {
+        self.level.set_swing(x, y, door.swing);
+        self.level.set_locked(x, y, door.is_locked());
         if let Some(doors) = &mut self.doors {
             doors.open = self.level.with_doors_open();
         }

@@ -26,6 +26,7 @@ impl DebugAction {
             Self::HerbsState => "Herbs State",
             Self::Hurt => "Hurt",
             Self::ItemPictures => "Item Pictures",
+            Self::KeyForThisDoor => "Key for This Door",
             Self::KillMob => "Kill Mob",
             Self::DeleteMob => "Delete Mob",
             Self::FreezeMobs => "Freeze Mobs",

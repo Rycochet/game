@@ -110,6 +110,10 @@ pub struct LevelSave {
     /// rolled (`shared::door::starting_door`). A reset never undoes them.
     #[serde(default)]
     pub doors: BTreeMap<(i64, i64), shared::door::Door>,
+    /// Whether some of its doors have been locked and their keys given out,
+    /// which happens once (`sites/doors/locks.rs`).
+    #[serde(default)]
+    pub locks_placed: bool,
     /// The wilderness's only: blocks whose mobs have something saved (`dead`,
     /// `records`), by `(x, y)`, with when someone was last near (seconds
     /// since 1970): they reset after nobody has been for a while.

@@ -78,6 +78,9 @@ fn found(kind: shared::poi::PoiKind) -> String {
     format!("Found: {}", words(&format!("{kind:?}")))
 }
 
+/// What a door found locked says.
+const LOCKED: &str = "Locked";
+
 /// Shows a notice when the server says something worth one, the newest in
 /// place of any showing, and hides it after `SHOWN_FOR`.
 fn show_notices(
@@ -88,10 +91,12 @@ fn show_notices(
     mut text: Single<&mut Text, With<NoticeText>>,
 ) {
     for FromServer(message) in from_server.read() {
-        if let &ServerMessage::PoiFound { kind } = message {
-            text.0 = found(kind);
-            shown.0 = SHOWN_FOR;
+        match message {
+            &ServerMessage::PoiFound { kind } => text.0 = found(kind),
+            ServerMessage::DoorRefused { locked: true, .. } => text.0 = LOCKED.to_owned(),
+            _ => continue,
         }
+        shown.0 = SHOWN_FOR;
     }
     if shown.0 > 0.0 {
         shown.0 -= time.delta_secs();

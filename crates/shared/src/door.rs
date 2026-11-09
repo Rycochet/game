@@ -11,11 +11,17 @@ use crate::item::Quality;
 use crate::material::Material;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod keys;
+mod lock;
 mod look;
+mod placing;
 mod start;
 mod swing;
 
+pub use keys::carries_key;
+pub use lock::Lock;
 pub use look::DoorLook;
+pub use placing::{place_locks, reach_without};
 pub use start::{door_is_outside, starting_door};
 pub use swing::{Side, Swing};
 
@@ -33,9 +39,17 @@ pub struct Door {
     /// What it is made of: wood for now.
     pub material: Material,
     pub style: DoorStyle,
+    /// Its lock, if it has one: without one it can't be locked.
+    #[serde(default)]
+    pub lock: Option<Lock>,
 }
 
 impl Door {
+    /// Whether it is locked: closed, with its lock turned.
+    pub fn is_locked(&self) -> bool {
+        self.lock.is_some_and(|lock| lock.locked)
+    }
+
     /// What players are told of it at `(x, y)`.
     pub fn look(&self, x: i64, y: i64) -> DoorLook {
         DoorLook {
@@ -44,6 +58,7 @@ impl Door {
             swing: self.swing,
             material: self.material,
             style: self.style,
+            lock: self.lock.is_some(),
         }
     }
 }

@@ -12,8 +12,8 @@ use shared::site::{Exit, Site, SiteLevel, Stairs, StairsDirection};
 
 use super::remembered::{mirror_of_first, send_remembered};
 use super::{
-    Arrival, DoorSite, NewKeepers, Place, Visit, VisitDoors, beside, door_looks, keepers_of,
-    level_chunks, set_doors, update_sight,
+    Arrival, DoorSite, NewKeepers, Place, Visit, VisitDoors, beside, door_looks, ensure_locks,
+    keepers_of, level_chunks, set_doors, update_sight,
 };
 use crate::ServerWorld;
 use crate::connections::Client;
@@ -46,6 +46,7 @@ pub(super) fn level_of(
         .iter()
         .map(|&stairs| seen_stairs(site, index, &level.level, stairs))
         .collect();
+    ensure_locks(world, (new.id, &new.poi), index, &level);
     let door_site = DoorSite {
         id: new.id,
         index,
