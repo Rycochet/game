@@ -20,6 +20,7 @@ fn preferences_read_back_as_saved() {
         }),
         interface_size: InterfaceSize::Percent(150),
         touch: true,
+        quiet_slow_drawing: true,
         servers: vec![SavedServer {
             address: "play.example.com:9000".into(),
             key: Some("ab12".into()),

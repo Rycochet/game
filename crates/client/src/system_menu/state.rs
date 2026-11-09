@@ -38,6 +38,9 @@ pub enum SystemMenu {
     GoingOffline,
     /// The menu, and above it why the server couldn't be opened to others.
     OnlineFailed,
+    /// The startup menu, and above it the warning that the game is drawn
+    /// without a graphics card (`slow_drawing`).
+    SlowDrawing,
 }
 
 impl SystemMenu {
@@ -72,8 +75,9 @@ impl SystemMenu {
                 | Self::ServerOptions
                 | Self::GoingOnline
                 | Self::GoingOffline
-                | Self::OnlineFailed,
-                Action::Back,
+                | Self::OnlineFailed
+                | Self::SlowDrawing,
+                Action::Back | Action::QuietSlowDrawing,
             ) => Self::Menu,
             (Self::Certificate | Self::Forgetting, Action::Back) => Self::Connect,
             (same, _) => same,
@@ -136,6 +140,8 @@ pub(super) enum Action {
     CopyRouterAddress,
     Quit,
     ReallyQuit,
+    /// The slow drawing warning's "Don't Warn Again".
+    QuietSlowDrawing,
 }
 
 impl Action {
@@ -164,6 +170,7 @@ impl Action {
             Self::CopyCertificate => "copy",
             Self::CopyRouterAddress => "copy_address",
             Self::Quit | Self::ReallyQuit => "quit",
+            Self::QuietSlowDrawing => "dont_warn",
         };
         let id = UiId::new(form, name);
         match self {

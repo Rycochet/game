@@ -4,10 +4,12 @@
 //! resolution) are in `display`. What each can be is in `choices`.
 
 mod choices;
+mod max_resolution;
 
 pub use choices::{
     AntiAliasing, Background, FrameRate, Precipitation, Remembered, Shadows, ViewDistance,
 };
+pub use max_resolution::MaxResolution;
 
 use serde::{Deserialize, Serialize};
 
@@ -25,6 +27,8 @@ pub struct VideoPrefs {
     /// How much of the window's resolution the world is drawn at, in percent
     /// (`RENDER_SCALES`); the interface is always drawn at full resolution.
     pub render_scale: u8,
+    /// The most lines the world is drawn with, whatever the window's size.
+    pub max_resolution: MaxResolution,
     pub anti_aliasing: AntiAliasing,
     /// What happens to the drawing while another window is in front.
     pub background: Background,
@@ -71,6 +75,13 @@ impl VideoPrefs {
     /// The render scale as a share of the window, `0.5..=1`.
     pub fn render_share(&self) -> f32 {
         f32::from(self.render_scale.clamp(RENDER_SCALES.0, RENDER_SCALES.1)) / 100.0
+    }
+
+    /// The share of a window `height` physical pixels tall the world is drawn
+    /// at: Render Scale, or less to keep to Max Resolution.
+    pub fn drawn_share(&self, height: u32) -> f32 {
+        self.render_share()
+            .min(self.max_resolution.share_of(height))
     }
 
     /// Brightness as a share of full daylight, `0..=0.49`.
@@ -124,10 +135,20 @@ impl Preset {
             Self::Medium => (FrameRate::Fps30, ViewDistance::Normal),
             Self::High => (FrameRate::Fps60, ViewDistance::Far),
         };
+        // A browser draws more slowly (one thread, WebGL), so it is held to
+        // fewer lines by default (owner, 2026-11-09).
+        let max_resolution = match (self, IN_BROWSER) {
+            (Self::Low, true) => MaxResolution::P720,
+            (Self::Medium, true) => MaxResolution::P1080,
+            (Self::High, true) => MaxResolution::P1440,
+            (Self::Low, false) => MaxResolution::P1080,
+            (_, false) => MaxResolution::Off,
+        };
         VideoPrefs {
             frame_rate,
             vsync: true,
             render_scale: if low { 75 } else { 100 },
+            max_resolution,
             anti_aliasing: if low {
                 AntiAliasing::Off
             } else {

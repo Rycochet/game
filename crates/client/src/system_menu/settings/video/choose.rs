@@ -5,8 +5,8 @@ use bevy::prelude::*;
 
 use super::options::{PercentText, VideoControl};
 use crate::common::{
-    AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, Precipitation, Preferences, Preset,
-    RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
+    AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, MaxResolution, Precipitation,
+    Preferences, Preset, RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
 };
 use crate::widgets::{DropdownChosen, SliderMoved, SwitchFlipped};
 
@@ -54,6 +54,7 @@ fn choose(prefs: &mut VideoPrefs, control: VideoControl, index: usize) {
             }
         }
         VideoControl::FrameRate => pick(&FrameRate::ALL, index, &mut prefs.frame_rate),
+        VideoControl::MaxResolution => pick(&MaxResolution::ALL, index, &mut prefs.max_resolution),
         VideoControl::AntiAliasing => pick(&AntiAliasing::ALL, index, &mut prefs.anti_aliasing),
         VideoControl::Background => pick(&Background::ALL, index, &mut prefs.background),
         VideoControl::Shadows => pick(&Shadows::ALL, index, &mut prefs.shadows),

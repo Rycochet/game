@@ -1,4 +1,5 @@
-//! Render Scale: below 100% the view's camera draws into a smaller picture,
+//! Render Scale and Max Resolution (`VideoPrefs::drawn_share`): below 100%
+//! the view's camera draws into a smaller picture,
 //! which a second camera stretches over the window, with the interface drawn
 //! on top at full resolution. At 100% the view's camera draws straight into
 //! the window and the second camera isn't there, as before the setting.
@@ -47,7 +48,7 @@ pub(super) fn apply_render_scale(
     mut scaled: Local<Option<Scaled>>,
 ) {
     let mut target = camera.into_inner();
-    let share = preferences.video.render_share();
+    let share = preferences.video.drawn_share(window.physical_height());
     if share >= 1.0 {
         if let Some(gone) = scaled.take() {
             *target = RenderTarget::Window(default());

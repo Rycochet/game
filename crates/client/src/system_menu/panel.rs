@@ -59,6 +59,7 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
             SystemMenu::GoingOnline,
             SystemMenu::GoingOffline,
             SystemMenu::OnlineFailed,
+            SystemMenu::SlowDrawing,
         ],
         px(MENU_WIDTH),
         Val::Auto,

@@ -103,6 +103,19 @@
             }
         </style>
         <script>
+            // Whether the browser would draw without a graphics card: it refuses
+            // WebGL when asked to fail on a "major performance caveat", yet gives
+            // it without. Read by the game (crates/client/src/system_menu/slow_drawing.rs).
+            (() => {
+                const context = (options) => document.createElement("canvas").getContext("webgl2", options);
+                const done = (gl) => gl?.getExtension("WEBGL_lose_context")?.loseContext();
+                const fast = context({ failIfMajorPerformanceCaveat: true });
+                const any = fast || context();
+                window.howSlowDrawing = !fast && !!any;
+                done(any);
+            })();
+        </script>
+        <script>
             // Safari's own pinch zoom, which it may start despite touch-action.
             document.addEventListener("gesturestart", (event) => event.preventDefault());
         </script>
