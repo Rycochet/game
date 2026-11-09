@@ -82,7 +82,9 @@ lto = "thin"
 # downloads it. Native releases and development builds don't use it.
 [profile.web]
 inherits = "release"
-lto = "fat"
+# Thin, not fat: fat LTO took the client's compile to 14.9 GB, and GitHub's
+# 16 GB runners stopped it (thin: 6.7 GB, the download 6% bigger).
+lto = "thin"
 debug = false
 # Not `true`: that also strips the section naming the wasm features used,
 # which wasm-opt reads, and it then refuses the build.
