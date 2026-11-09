@@ -53,7 +53,15 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::DeleteCharacter {
             id: CharacterId(crate::id::Id::for_test(2)),
         },
-        ClientMessage::ShowRoleAs(crate::role::RoleId::new(crate::role::PLAYER)),
+        ClientMessage::Role(super::RoleAsk::ShowAs(crate::role::RoleId::new(
+            crate::role::PLAYER,
+        ))),
+        ClientMessage::Role(super::RoleAsk::Give {
+            character: CharacterId(crate::id::Id::for_test(3)),
+            role: crate::role::RoleId::new(crate::role::BANNED),
+            minutes: Some(60),
+            reason: "spam".into(),
+        }),
         ClientMessage::CreateCharacter(super::NewCharacter {
             name: "Some One".into(),
             kind: CreatureKind::Kobold,
@@ -281,7 +289,22 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 choices: Vec::new(),
             },
         },
-        ServerMessage::ShownRole(crate::role::ShownRole::default()),
+        ServerMessage::Role(super::RoleAnswer::Shown(crate::role::ShownRole::default())),
+        ServerMessage::Role(super::RoleAnswer::Found(super::FoundAccount {
+            character: CharacterId(crate::id::Id::for_test(3)),
+            name: "Brin".into(),
+            others: vec!["Bo".into()],
+            guest: false,
+            yours: false,
+            role: crate::role::RoleBadge {
+                id: crate::role::RoleId::new(crate::role::BANNED),
+                name: "Banned".into(),
+                title: None,
+            },
+            until: Some("2026-11-10 10:00:00 UTC".into()),
+            reason: "spam".into(),
+            may_give: Vec::new(),
+        })),
         ServerMessage::ForgetWorldMap,
         ServerMessage::Hour(6),
         ServerMessage::Lightning {

@@ -41,8 +41,8 @@ pub enum ClientMessage {
     /// Deletes this character of the account's, save and all, while choosing:
     /// answered with `Characters` again.
     DeleteCharacter { id: CharacterId },
-    /// Show the character as this role, one it may be (answered with `ShownRole`).
-    ShowRoleAs(crate::role::RoleId),
+    /// About roles: what the character is shown as, and the Accounts panel's.
+    Role(super::RoleAsk),
     /// Makes a new character and plays them, answered with `Welcome`. The
     /// server checks the name and how many the account may have (a guest one).
     CreateCharacter(NewCharacter),

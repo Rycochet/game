@@ -43,6 +43,7 @@ mod new_character;
 mod playtime;
 mod roads;
 mod role;
+mod role_ask;
 mod systems;
 mod visited_gates;
 mod vitals;
@@ -301,6 +302,8 @@ mod login_tests;
 mod look_up_tests;
 #[cfg(test)]
 mod new_character_tests;
+#[cfg(test)]
+mod role_ask_tests;
 #[cfg(test)]
 mod shapeshift_tests;
 #[cfg(test)]

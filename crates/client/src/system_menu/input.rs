@@ -28,6 +28,7 @@ pub(super) fn take_input(
     mut exit: MessageWriter<AppExit>,
     mut login: MessageWriter<LoginChoice>,
     mut play_for: ResMut<PlayFor>,
+    mut accounts: MessageWriter<crate::common::OpenAccounts>,
 ) {
     let at_start = !session.is_playing();
     if at_start && !menu.is_open() {
@@ -79,6 +80,10 @@ pub(super) fn take_input(
             login.write(LoginChoice::LogOut);
         }
         (Action::Connect, SystemMenu::Menu) if !at_start => {}
+        (Action::Accounts, SystemMenu::Menu) => {
+            accounts.write(crate::common::OpenAccounts);
+            *menu = SystemMenu::Closed;
+        }
         // On to Connect, to try another way, if it was Connect's server.
         (Action::Back, SystemMenu::Refused) => {
             *menu = if chosen.0.is_some() {

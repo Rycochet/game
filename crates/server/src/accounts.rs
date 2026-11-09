@@ -278,6 +278,7 @@ pub fn new_guest_token() -> Result<GuestToken, String> {
 }
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod find;
 mod login_key;
 mod names;
 mod session;

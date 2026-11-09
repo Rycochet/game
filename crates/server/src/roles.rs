@@ -15,13 +15,13 @@ mod claim;
 mod defaults;
 mod disk;
 mod file;
+mod panel;
 mod set_role;
 mod stamp;
 
 use audit::Audit;
 use disk::Disk;
 use file::{HeldRole, RolesFile};
-#[cfg(test)]
 pub(crate) use set_role::{Actor, Change};
 pub(crate) use stamp::log_stamp;
 
@@ -32,6 +32,8 @@ pub(crate) struct Roles {
     audit: Audit,
     /// The code that makes its account the Owner, while there is none.
     claim: Option<String>,
+    /// Accounts whose role changed, for anyone playing on them (`take_changed`).
+    changed: Vec<AccountId>,
 }
 
 impl Default for Roles {
@@ -41,6 +43,7 @@ impl Default for Roles {
             disk: None,
             audit: Audit::default(),
             claim: None,
+            changed: Vec::new(),
         }
     }
 }
@@ -81,6 +84,7 @@ impl Roles {
             },
             disk: Some(disk),
             claim: None,
+            changed: Vec::new(),
         })
     }
 

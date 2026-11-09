@@ -85,7 +85,7 @@ pub(super) fn logged_in(
 }
 
 /// What a banned player is told.
-fn banned(held: &Held) -> String {
+pub(super) fn banned(held: &Held) -> String {
     let until = match held.until {
         Some(until) => format!(" until {}", crate::roles::log_stamp(until)),
         None => String::new(),

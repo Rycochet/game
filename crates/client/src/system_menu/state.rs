@@ -100,6 +100,8 @@ pub(super) enum Action {
     /// The requester's yes to Ironman as the player's own difficulty.
     ChooseIronman,
     Credits,
+    /// Opens the Accounts panel (`accounts_panel`), closing the menu.
+    Accounts,
     /// Leaves the server for the startup menu.
     LogOut,
     /// Opens Connect (at the startup menu).
@@ -149,6 +151,7 @@ impl Action {
             Self::KeepVideo | Self::KeepCertificate => "keep",
             Self::ChooseIronman => "ironman",
             Self::Credits => "credits",
+            Self::Accounts => "accounts",
             Self::LogOut => "log_out",
             Self::Connect | Self::ConnectNow => "connect",
             Self::PickServer(_) => "server",
@@ -185,6 +188,8 @@ pub(super) enum MenuButton {
     Connect,
     /// Native only: shows whether it is on.
     Online,
+    /// While playing, for a role with something on the Accounts panel.
+    Accounts,
 }
 
 /// The gear button.

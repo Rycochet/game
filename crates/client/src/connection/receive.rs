@@ -137,12 +137,12 @@ pub(super) fn receive(
                 give_up(&mut commands, &mut status, reason);
                 break;
             }
-            // Logging in, an account's characters and the role it is shown as:
-            // read by `log_in` and Settings.
+            // Logging in, an account's characters, and roles: read by `log_in`,
+            // Settings and the Accounts panel.
             Ok(Some(
                 message @ (ServerMessage::LoginOptions { .. }
                 | ServerMessage::Characters { .. }
-                | ServerMessage::ShownRole(_)
+                | ServerMessage::Role(_)
                 | ServerMessage::OpenLogin { .. }
                 | ServerMessage::LoggedIn { .. }
                 | ServerMessage::LoginFailed(_)),

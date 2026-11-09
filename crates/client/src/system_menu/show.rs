@@ -63,6 +63,7 @@ pub(super) fn show_buttons(
     clock: Res<ServerClock>,
     account: Res<crate::common::AccountEmail>,
     playable: Res<crate::common::PlayableHere>,
+    role: Res<crate::common::AccountRole>,
     mut buttons: Query<(&MenuButton, &mut Node, &mut ButtonState)>,
 ) {
     for (button, mut node, mut state) in &mut buttons {
@@ -78,6 +79,7 @@ pub(super) fn show_buttons(
             }
             MenuButton::Characters => !session.is_playing(),
             MenuButton::Continue => session.is_playing(),
+            MenuButton::Accounts => session.is_playing() && role.has_accounts_panel(),
             MenuButton::LogOut => match session.is_playing() {
                 true => !clock.local_server,
                 false => account.0.is_some(),
