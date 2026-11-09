@@ -40,6 +40,7 @@ mod look_up;
 mod messages;
 mod moving;
 mod new_character;
+mod other_protocol;
 mod playtime;
 mod roads;
 mod role;

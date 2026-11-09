@@ -33,3 +33,12 @@ fn another_protocol_is_recognised_but_not_compatible() {
     assert_eq!(version.version, "9.9.9");
     assert!(!version.compatible());
 }
+
+#[test]
+fn a_name_reads_back_and_older_servers_have_none() {
+    let named = ServerVersion::named("Kim's Keep");
+    let read = ServerVersion::from_json(&named.to_json()).unwrap();
+    assert_eq!(read.name.as_deref(), Some("Kim's Keep"));
+    let older = r#"{"game":"Hall of Worlds","version":"0.1.0","protocol":1}"#;
+    assert_eq!(ServerVersion::from_json(older).unwrap().name, None);
+}

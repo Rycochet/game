@@ -10,6 +10,7 @@ use super::characters::{delete_chosen, offer_characters};
 use super::delete_character::delete_character;
 use super::login::log_in;
 use super::new_character::{create, join_or_make};
+use super::other_protocol::other_protocol;
 use super::{Action, Client, MOST_WAITING, Phase};
 use crate::accounts::Accounts;
 use crate::oidc::Logins;
@@ -29,13 +30,9 @@ pub(crate) fn answer(
         false
     };
     match message {
-        ClientMessage::Hello { protocol, .. } if protocol != PROTOCOL_VERSION => refuse(
-            client,
-            format!(
-                "this server speaks protocol {PROTOCOL_VERSION}, not {protocol}: \
-                 the game needs updating (reload the page)"
-            ),
-        ),
+        ClientMessage::Hello { protocol, .. } if protocol != PROTOCOL_VERSION => {
+            refuse(client, other_protocol(protocol))
+        }
         ClientMessage::Hello { .. } if client.phase != Phase::Greeting => {
             refuse(client, "hello again?".into())
         }

@@ -23,6 +23,7 @@ fn preferences_read_back_as_saved() {
         servers: vec![SavedServer {
             address: "play.example.com:9000".into(),
             key: Some("ab12".into()),
+            name: Some("Play".into()),
         }],
         last_server: Some("play.example.com:9000".into()),
         played_on: ["built-in".to_owned()].into(),

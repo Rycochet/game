@@ -118,3 +118,14 @@ fn the_web_client_is_served_under_web() {
     let answer = get(address, "/index.html");
     assert!(answer.starts_with("HTTP/1.1 404"), "{answer}");
 }
+
+#[test]
+fn the_version_gives_the_server_name() {
+    let heartbeat = Heartbeat::default();
+    heartbeat.call("Kim's Keep");
+    let address = serve_plain(heartbeat, None);
+    let answer = get(address, VERSION_PATH);
+    let body = answer.split("\r\n\r\n").nth(1).unwrap();
+    let version = ServerVersion::from_json(body).unwrap();
+    assert_eq!(version.name.as_deref(), Some("Kim's Keep"));
+}

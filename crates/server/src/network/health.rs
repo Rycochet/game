@@ -3,7 +3,8 @@
 //! only says to use the secure one, so a health check needs no certificate.
 //!
 //! Healthy means the game is still running, not only the web server: the game
-//! stamps a `Heartbeat` every tick, and a stale one answers 503.
+//! stamps a `Heartbeat` every tick, and a stale one answers 503. The heartbeat
+//! also carries the server's name, which the version answer gives.
 
 use axum::Router;
 use axum::http::{StatusCode, header};
@@ -14,27 +15,46 @@ use shared::protocol::{ServerVersion, VERSION_PATH};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use crate::ServerName;
+
 /// Where the server says whether it is well (`200 ok`, or `503`).
 pub const HEALTH_PATH: &str = "/_healthz";
 
 /// The game is unwell once it hasn't ticked for this long (a tick is 50 ms).
 const HEALTHY_WITHIN: Duration = Duration::from_secs(10);
 
-/// When the game last ticked, readable by the network thread. Cloning it gives
-/// another handle on the same time.
+/// When the game last ticked, and what the server is called (`ServerName`, which
+/// the host can change while it runs), readable by the network thread. Cloning
+/// it gives another handle on the same.
 #[derive(Resource, Clone, Default)]
-pub(crate) struct Heartbeat(Arc<Mutex<Option<Instant>>>);
+pub(crate) struct Heartbeat {
+    last: Arc<Mutex<Option<Instant>>>,
+    name: Arc<Mutex<Option<String>>>,
+}
 
 impl Heartbeat {
     /// The game has ticked.
     pub(crate) fn beat(&self) {
-        *self.0.lock().expect("never poisoned") = Some(Instant::now());
+        *self.last.lock().expect("never poisoned") = Some(Instant::now());
     }
 
     /// Whether the game has ticked lately.
     fn healthy(&self) -> bool {
-        let last = *self.0.lock().expect("never poisoned");
+        let last = *self.last.lock().expect("never poisoned");
         last.is_some_and(|at| at.elapsed() < HEALTHY_WITHIN)
+    }
+
+    /// The server is called this now.
+    pub(super) fn call(&self, name: &str) {
+        *self.name.lock().expect("never poisoned") = Some(name.into());
+    }
+
+    /// The version answer: this program's, with the name if the game gave one.
+    fn version(&self) -> ServerVersion {
+        match &*self.name.lock().expect("never poisoned") {
+            Some(name) => ServerVersion::named(name),
+            None => ServerVersion::this(),
+        }
     }
 }
 
@@ -44,13 +64,21 @@ pub(crate) fn track_heartbeat(app: &mut App) -> Heartbeat {
         return heartbeat.clone();
     }
     let heartbeat = Heartbeat::default();
-    app.insert_resource(heartbeat.clone())
-        .add_systems(Last, |heartbeat: Res<Heartbeat>| heartbeat.beat());
+    app.insert_resource(heartbeat.clone()).add_systems(
+        Last,
+        |heartbeat: Res<Heartbeat>, name: Option<Res<ServerName>>| {
+            heartbeat.beat();
+            if let Some(name) = name.filter(|name| name.is_changed()) {
+                heartbeat.call(&name.0);
+            }
+        },
+    );
     heartbeat
 }
 
 /// The health and version routes.
 pub(super) fn health_routes(heartbeat: Heartbeat) -> Router {
+    let versions = heartbeat.clone();
     Router::new()
         .route(
             HEALTH_PATH,
@@ -67,7 +95,10 @@ pub(super) fn health_routes(heartbeat: Heartbeat) -> Router {
                 )
             }),
         )
-        .route(VERSION_PATH, get(version))
+        .route(
+            VERSION_PATH,
+            get(move || async move { version(versions.version()) }),
+        )
 }
 
 fn status_text(status: StatusCode) -> &'static str {
@@ -79,13 +110,13 @@ fn status_text(status: StatusCode) -> &'static str {
 }
 
 /// This server's `ServerVersion`, readable by web clients from other sites.
-async fn version() -> impl IntoResponse {
+fn version(version: ServerVersion) -> impl IntoResponse {
     (
         [
             (header::CONTENT_TYPE, "application/json"),
             (header::CACHE_CONTROL, "no-store"),
             (header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
         ],
-        ServerVersion::this().to_json(),
+        version.to_json(),
     )
 }

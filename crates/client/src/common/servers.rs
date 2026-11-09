@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
-use shared::protocol::ServerAddress;
+use shared::protocol::{GAME_NAME, ServerAddress};
 
 use super::Preferences;
 
@@ -19,11 +19,23 @@ pub struct SavedServer {
     /// player pasted one in. Without, any certificate is accepted.
     #[serde(default)]
     pub key: Option<String>,
+    /// What it called itself when Connect checked it, if it said.
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 impl SavedServer {
     pub fn parsed(&self) -> Option<ServerAddress> {
         ServerAddress::parse(&self.address)
+    }
+
+    /// What to call it: its name, or its address if it has none or only the
+    /// game's own (every server's until its host names it).
+    pub fn label(&self) -> &str {
+        match self.name.as_deref().map(str::trim) {
+            Some(name) if !name.is_empty() && name != GAME_NAME => name,
+            _ => &self.address,
+        }
     }
 }
 
@@ -42,6 +54,7 @@ impl ChosenServer {
             saved.cloned().unwrap_or(SavedServer {
                 address: address.clone(),
                 key: None,
+                name: None,
             })
         }))
     }

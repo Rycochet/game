@@ -4,6 +4,7 @@ fn server(address: &str, key: Option<&str>) -> SavedServer {
     SavedServer {
         address: address.into(),
         key: key.map(Into::into),
+        name: None,
     }
 }
 
@@ -41,4 +42,22 @@ fn forgetting_the_last_one_plays_the_usual_one() {
     preferences.forget_server("a.example");
     assert!(preferences.servers.is_empty());
     assert_eq!(preferences.last_server, None);
+}
+
+#[test]
+fn a_server_is_called_by_its_name_unless_it_is_the_default() {
+    let mut saved = server("play.example.com:9000", None);
+    assert_eq!(saved.label(), "play.example.com:9000");
+    saved.name = Some(GAME_NAME.into());
+    assert_eq!(saved.label(), "play.example.com:9000");
+    saved.name = Some("  ".into());
+    assert_eq!(saved.label(), "play.example.com:9000");
+    saved.name = Some("Kim's Keep".into());
+    assert_eq!(saved.label(), "Kim's Keep");
+}
+
+#[test]
+fn an_older_saved_server_has_no_name() {
+    let saved: SavedServer = ron::from_str(r#"(address: "a.example", key: None)"#).unwrap();
+    assert_eq!(saved.name, None);
 }
