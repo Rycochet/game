@@ -1,6 +1,6 @@
 //! A level: its cells and rooms.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::{Cell, WallBar, WallShape, bars_of};
 use crate::door::Swing;
@@ -30,6 +30,8 @@ pub struct Level {
     rooms: Vec<u16>,
     /// How each door hangs, where it has been set (see `doors.rs`).
     pub(super) swings: BTreeMap<(i64, i64), Swing>,
+    /// The doors known to be locked (see `doors.rs`).
+    pub(super) locked: BTreeSet<(i64, i64)>,
 }
 
 impl Level {
@@ -44,6 +46,7 @@ impl Level {
             cells: vec![Cell::Wall; (width * height) as usize],
             rooms: vec![NO_ROOM; (width * height) as usize],
             swings: BTreeMap::new(),
+            locked: BTreeSet::new(),
         }
     }
 

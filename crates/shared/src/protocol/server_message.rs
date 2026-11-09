@@ -257,7 +257,8 @@ pub enum ServerMessage {
     /// Whether the player is sneaking now (`Ability::Sneak`, a toggle): after
     /// they turn it on or off, and `false` on joining, as it isn't kept.
     Sneaking(bool),
-    /// A door the player asked to open (`DoorAsk::Open`) stays shut: click
-    /// travel stops there.
-    DoorRefused { x: i64, y: i64 },
+    /// A door the player asked to open (`DoorAsk::Open`) stays shut, `locked`
+    /// if they tried it and found it locked without its key: click travel
+    /// stops there.
+    DoorRefused { x: i64, y: i64, locked: bool },
 }

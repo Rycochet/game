@@ -120,6 +120,7 @@ impl ItemKind {
                     false,
                 )),
                 Self::Coin => plain("Coin", 10, square).without_quality(),
+                Self::Key => plain("Key", 30, square).without_quality(),
                 // Laminated to the knee, wrapping the thighs: Waist and Legs (the owner's
                 // decision). Its form says its cells and weight.
                 Self::CuirassierTassets => plain(

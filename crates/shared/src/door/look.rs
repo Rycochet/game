@@ -14,4 +14,7 @@ pub struct DoorLook {
     pub swing: Swing,
     pub material: Material,
     pub style: DoorStyle,
+    /// Whether it has a lock, which can be seen. Whether it is locked can't:
+    /// that is found by trying it (`ServerMessage::DoorRefused`).
+    pub lock: bool,
 }

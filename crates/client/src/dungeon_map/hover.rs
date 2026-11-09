@@ -48,7 +48,12 @@ pub(super) fn name_hovered_place(
                 return Some(BORDER_NAME.to_owned());
             }
             if let Some(name) = door_name(&dungeon.level, (x, y)) {
-                return Some(name.to_owned());
+                let lock = dungeon.door_locks.contains(&(x, y));
+                return Some(match (lock, dungeon.level.is_locked(x, y)) {
+                    (_, true) => format!("{name}, locked"),
+                    (true, false) => format!("{name} with a lock"),
+                    (false, false) => name.to_owned(),
+                });
             }
             let stairs = dungeon.stairs.iter().find(|s| (s.x, s.y) == (x, y))?;
             Some(stairs_name(stairs.direction).to_owned())

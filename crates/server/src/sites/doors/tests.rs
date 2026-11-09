@@ -75,7 +75,11 @@ fn a_door_not_beside_the_player_is_refused() {
     ask(&mut test, DoorAsk::DevAll { open: false });
     let (x, y) = (door.0 + 5, door.1 + 5);
     let answers = ask(&mut test, DoorAsk::Open { x, y });
-    assert!(answers.contains(&ServerMessage::DoorRefused { x, y }));
+    assert!(answers.contains(&ServerMessage::DoorRefused {
+        x,
+        y,
+        locked: false
+    }));
     assert_eq!(swing_of(&test, door), Swing::Closed);
 }
 
@@ -109,7 +113,11 @@ fn a_secret_door_must_be_found_and_opens_towards_the_player() {
     // It was seen as an ordinary door, which would count as found.
     test.client.character.doors.clear();
     let answers = ask(&mut test, DoorAsk::Open { x, y });
-    assert!(answers.contains(&ServerMessage::DoorRefused { x, y }));
+    assert!(answers.contains(&ServerMessage::DoorRefused {
+        x,
+        y,
+        locked: false
+    }));
     test.send(&[ClientMessage::DevTruesight(true)]);
     ask(&mut test, DoorAsk::Open { x, y });
     let towards = if runs { Side::North } else { Side::West };
@@ -136,4 +144,95 @@ fn a_change_reaches_the_mobs_on_the_level() {
     let clients = std::slice::from_mut(&mut test.client);
     crate::sites::share_doors(clients, &mut test.world);
     assert!(!mobs_level(&test).is_shut(door.0, door.1));
+}
+
+/// Puts a locked lock on the door at `at` of the player's level.
+fn lock_it(test: &mut TestClient, at: (i64, i64)) {
+    let visit = test.client.visit.as_mut().unwrap();
+    let door = visit.doors.get_mut(&at).unwrap();
+    door.door.swing = Swing::Closed;
+    door.door.lock = Some(shared::door::Lock {
+        id: shared::id::Id::for_test(77),
+        quality: shared::item::Quality::Common,
+        locked: true,
+    });
+    visit.level.level.set_locked(at.0, at.1, true);
+}
+
+fn locked(test: &TestClient, at: (i64, i64)) -> bool {
+    test.client.visit.as_ref().unwrap().doors[&at]
+        .door
+        .is_locked()
+}
+
+#[test]
+fn a_locked_door_opens_only_with_its_key_and_locks_again() {
+    let mut test = TestClient::new();
+    let (door, _) = beside_a_door(&mut test);
+    lock_it(&mut test, door);
+    let answers = ask(
+        &mut test,
+        DoorAsk::Open {
+            x: door.0,
+            y: door.1,
+        },
+    );
+    let refused = ServerMessage::DoorRefused {
+        x: door.0,
+        y: door.1,
+        locked: true,
+    };
+    assert!(answers.contains(&refused), "{answers:?}");
+    assert_eq!(swing_of(&test, door), Swing::Closed);
+
+    // With its key: unlocked, then opened.
+    ask(&mut test, DoorAsk::DevKey);
+    let key = Some(shared::item_form::ItemForm::Key(shared::id::Id::for_test(
+        77,
+    )));
+    let carried = test.client.inventory.items.iter();
+    assert!(carried.clone().any(|placed| placed.item.form == key));
+    ask(
+        &mut test,
+        DoorAsk::Open {
+            x: door.0,
+            y: door.1,
+        },
+    );
+    assert!(matches!(swing_of(&test, door), Swing::Open(_)));
+    assert!(!locked(&test, door));
+
+    // L closes it, then locks it.
+    ask(&mut test, DoorAsk::CloseNear);
+    assert_eq!(swing_of(&test, door), Swing::Closed);
+    assert!(!locked(&test, door));
+    ask(&mut test, DoorAsk::CloseNear);
+    assert!(locked(&test, door));
+    let visit = test.client.visit.as_ref().unwrap();
+    assert!(visit.level.level.is_locked(door.0, door.1));
+}
+
+#[test]
+fn locks_are_placed_once_with_their_keys_on_the_levels_mobs() {
+    let mut found = 0;
+    for seed in 1..12 {
+        let mut test = TestClient::new();
+        test.send(&[ClientMessage::DevEnterSite {
+            kind: shared::poi::PoiKind::Castle,
+            seed,
+            level: 0,
+            ruin: 0,
+        }]);
+        let visit = test.client.visit.as_ref().unwrap();
+        let saved = &test.world.site(visit.id).levels[&visit.index];
+        assert!(saved.locks_placed);
+        for door in saved.doors.values().filter(|door| door.lock.is_some()) {
+            let lock = door.lock.unwrap();
+            let key = Some(shared::item_form::ItemForm::Key(lock.id));
+            let carried = saved.records.values().flat_map(|record| &record.carried);
+            assert!(carried.into_iter().any(|item| item.form == key));
+            found += 1;
+        }
+    }
+    assert!(found > 0, "no castle had a lock");
 }

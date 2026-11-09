@@ -428,10 +428,15 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 swing: crate::door::Swing::Open(crate::door::Side::North),
                 material: crate::material::Material::Wood,
                 style: crate::door::DoorStyle::Plain,
+                lock: true,
             }],
             remembered: true,
         }),
-        ServerMessage::DoorRefused { x: 3, y: -4 },
+        ServerMessage::DoorRefused {
+            x: 3,
+            y: -4,
+            locked: true,
+        },
         ServerMessage::OnWorldMap { x: 100, y: -4 },
         ServerMessage::WildernessWindow {
             bounds: (-64, 128, 192, 192),

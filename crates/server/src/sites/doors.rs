@@ -20,10 +20,12 @@ use crate::storage::SiteId;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod act;
+mod locks;
 mod looks;
 mod share;
 
-use act::{close_near, dev_all, open_door};
+use act::{close_near, dev_all, dev_key, open_door};
+pub(super) use locks::ensure_locks;
 pub(super) use looks::{door_looks, remember_doors};
 pub(crate) use share::{DoorChange, Standing, share_doors};
 
@@ -79,6 +81,7 @@ pub(super) fn set_doors(
                 .copied()
                 .unwrap_or_else(|| first_door(poi, ruined, site.index, level, (x, y), at));
             level.set_swing(x, y, door.swing);
+            level.set_locked(x, y, door.is_locked());
             let key = DoorKey {
                 site: site.id,
                 index: site.index,
@@ -177,6 +180,7 @@ pub(crate) fn door_act(client: &mut Client, world: &mut ServerWorld, ask: DoorAs
         DoorAsk::Open { x, y } => open_door(client, world, x, y),
         DoorAsk::CloseNear => close_near(client, world),
         DoorAsk::DevAll { open } => (dev_all(client, world, open), 0),
+        DoorAsk::DevKey => (dev_key(client, world), 0),
     }
 }
 

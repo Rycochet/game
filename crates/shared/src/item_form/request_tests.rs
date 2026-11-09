@@ -51,6 +51,7 @@ fn material_of(form: &ItemForm) -> Option<Material> {
         ItemForm::Ring(ring) => ring.metal,
         ItemForm::Blade(blade) => blade.blade_metal,
         ItemForm::Gem(gem) => gem.material,
+        ItemForm::Key(_) => return None,
     })
 }
 

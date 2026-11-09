@@ -68,6 +68,7 @@ pub fn starting_door(
         quality: Quality::Common,
         material: Material::Wood,
         style: DoorStyle::Plain,
+        lock: None,
     }
 }
 
