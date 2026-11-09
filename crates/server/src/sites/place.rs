@@ -40,15 +40,18 @@ pub(crate) struct SetIn {
     pub(crate) entrance: Option<(i64, i64)>,
     /// The cells round it (`Cutout::border`).
     pub(crate) border: Vec<(i64, i64)>,
-    /// Its bounds, kept level (`shared::movement::FlatGround`).
-    pub(crate) flat: FlatGround,
+    /// Its covered ground kept level (`wilderness::Cutout::flats`).
+    pub(crate) flats: Vec<FlatGround>,
 }
 
 impl Place {
     /// The ground kept level in the wilderness: its cutouts' (none elsewhere).
     pub(crate) fn flats(&self) -> Vec<FlatGround> {
         match self {
-            Place::Wilderness { cutouts, .. } => cutouts.iter().map(|set_in| set_in.flat).collect(),
+            Place::Wilderness { cutouts, .. } => cutouts
+                .iter()
+                .flat_map(|set_in| set_in.flats.iter().copied())
+                .collect(),
             _ => Vec::new(),
         }
     }

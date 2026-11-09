@@ -9,6 +9,7 @@ mod block;
 mod border;
 mod course;
 mod cutout;
+mod flats;
 mod gate;
 mod plan;
 mod samples;

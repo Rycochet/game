@@ -198,7 +198,17 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
             .iter()
             .map(|&(x, y)| (x + turn, y))
             .collect(),
-        flat: FlatGround::of_cutout(&world.ground, bounds),
+        flats: wild_chunk
+            .flats
+            .iter()
+            .map(|flat| {
+                let (x, y, width, height) = flat.bounds;
+                FlatGround {
+                    bounds: (x + turn, y, width, height),
+                    ..*flat
+                }
+            })
+            .collect(),
     });
     for stairs in &wild_chunk.stairs {
         let x = stairs.x + turn;

@@ -52,9 +52,11 @@ impl Client {
         let heights = wild.then(|| {
             let corner = (from.0.min(to.0), from.1.min(to.1));
             let size = ((from.0 - to.0).abs() + 1, (from.1 - to.1).abs() + 1);
-            let flats = self.visit.as_ref().map(|visit| visit.flats());
-            WildHeights::new(&world.ground, (corner.0, corner.1, size.0, size.1))
-                .with_flats(flats.unwrap_or_default())
+            let bounds = (corner.0, corner.1, size.0, size.1);
+            match self.visit.as_ref() {
+                Some(visit) => visit.wild_heights(&world.ground, bounds),
+                None => WildHeights::new(&world.ground, bounds),
+            }
         });
         let ends = heights
             .as_ref()

@@ -4,7 +4,7 @@ The land between pois at walking scale: one endless map per world, `SCALE` (16) 
 
 ## Files
 
-- `crates/shared/src/wilderness.rs`: `Wilderness` (`new`, `width`, `points`), constants. In `wilderness/`: `scale.rs` (`SCALE`, `BLOCK_SIZE`, `BlockPos`, cells against points, chunks and blocks), `samples.rs` (point samples blended across cells), `water.rs` (open water, sea and rivers, and shallows), `course.rs` (rivers and roads as segments in cells), `gate.rs` (`GateSpot`), `cutout.rs` (`Cutout`), `border.rs` (`BORDER`, `Cutout::border`), `plan.rs` (`ChunkPlan`), `block.rs` (making cells).
+- `crates/shared/src/wilderness.rs`: `Wilderness` (`new`, `width`, `points`), constants. In `wilderness/`: `scale.rs` (`SCALE`, `BLOCK_SIZE`, `BlockPos`, cells against points, chunks and blocks), `samples.rs` (point samples blended across cells), `water.rs` (open water, sea and rivers, and shallows), `course.rs` (rivers and roads as segments in cells), `gate.rs` (`GateSpot`), `cutout.rs` (`Cutout`), `border.rs` (`BORDER`, `Cutout::border`), `flats.rs` (`Cutout::flats`), `plan.rs` (`ChunkPlan`), `block.rs` (making cells).
 
 ## Public API
 
@@ -35,4 +35,4 @@ The land between pois at walking scale: one endless map per world, `SCALE` (16) 
 - `BORDER` (2, owner) and `Cutout::border()`: the wilderness cells within `BORDER` of the cutout's own each way (diagonals too), not its own: the hatched ring round a poi where a click leads back to the world map. It follows `contains`, so a cave mouth's runs round its hill, and a way down alone's round its 5 × 5 clearing (tested).
 - `Wilderness::biome_of(block)`: the biome at a block's middle, for who lives there (`mob::wild_spawns`).
 - Scent laid ahead: a block's new mobs have lately walked a trail from their den and back (`mob::wild_trail`), into the blocks round it; the server lays it as aged marks.
-- Height: cells carry none here; how high each is (for walking and drawing) is `movement::WildHeights`, from the same points, with each cutout's rectangle kept level (`movement::FlatGround::of_cutout`, owner).
+- Height: cells carry none here; how high each is (for walking and drawing) is `movement::WildHeights`, from the same points, with each cutout's covered ground kept level (owner, 2026-11-09): `Cutout::flats(&WorldGround) -> Vec<FlatGround>`, its cells that aren't out in the open (`Cell::is_outside`) in groups joined side by side (in a town within one building, by room), groups whose rectangles overlap joined, each held at the land's average height on the open cells beside its walkable cells (its ways in), or its middle's; its open cells (streets, yards, fields) follow the land. Ponds are groups too (water isn't outside), so they stay flat. Tested on a sloping town.

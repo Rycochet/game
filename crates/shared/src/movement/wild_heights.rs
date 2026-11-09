@@ -5,10 +5,13 @@
 //! same height does. The sea is flat at the lowest tide, where the wilderness
 //! keeps it.
 
+use std::collections::BTreeMap;
+
 use super::{
     ELEVATIONS_PER_HEIGHT, FlatGround, Gait, SLOPE_COST, Terrain, WorldConditions, WorldGround,
     step_cost,
 };
+use crate::dungeon::Level;
 
 /// Cells to a world map point (`wilderness::SCALE`, which depends on this
 /// module, so it is repeated here; a test checks they agree).
@@ -29,8 +32,9 @@ pub struct WildHeights {
     terrains: Vec<Option<Terrain>>,
     /// The sea's height, in 16ths: nothing is lower.
     floor: i32,
-    /// Ground kept level (cutouts), which wins over the slopes.
-    flats: Vec<FlatGround>,
+    /// Cells kept level (the covered cells of pois' cutouts, `FlatGround`),
+    /// with their heights, which win over the slopes.
+    levelled: BTreeMap<(i64, i64), i32>,
 }
 
 impl WildHeights {
@@ -62,15 +66,35 @@ impl WildHeights {
             points,
             terrains,
             floor: ground.low_water_elevation() * CELLS_PER_POINT as i32,
-            flats: Vec::new(),
+            levelled: BTreeMap::new(),
         }
     }
 
     /// The same, with `flats` kept level (the server's cutouts in its window,
-    /// or those the client has been told of).
-    pub fn with_flats(mut self, flats: Vec<FlatGround>) -> Self {
-        self.flats = flats;
+    /// or those the client has been told of) where `level` has cells that
+    /// aren't out in the open: what is outside follows the land.
+    pub fn with_flats(mut self, flats: &[FlatGround], level: &Level) -> Self {
+        self.relevel(flats, level);
         self
+    }
+
+    /// Works out again which of its cells `flats` keep level, by `level`'s
+    /// cells now (the client's, as they come; a cell not yet known is a wall,
+    /// so levelled, which is harmless: it isn't drawn). Only cells it covers.
+    /// Whether any cell's height changed.
+    pub fn relevel(&mut self, flats: &[FlatGround], level: &Level) -> bool {
+        let before = std::mem::take(&mut self.levelled);
+        for flat in flats {
+            let (min_x, min_y, width, height) = flat.bounds;
+            for y in min_y..min_y + height {
+                for x in min_x..min_x + width {
+                    if self.covers(x, y) && !level.cell(x, y).is_outside() {
+                        self.levelled.insert((x, y), flat.height);
+                    }
+                }
+            }
+        }
+        self.levelled != before
     }
 
     /// Whether a cell's height is known here.
@@ -98,14 +122,14 @@ impl WildHeights {
 
     /// A cell's height, in 16ths of an elevation: blended between the four
     /// points round its middle, as the wilderness blends its ground, and never
-    /// below the sea; a flat's own height in one. 0 for a cell outside the
+    /// below the sea; a flat's own height for a covered cell in one. 0 for a cell outside the
     /// rectangle.
     pub fn at(&self, x: i64, y: i64) -> i32 {
         if !self.covers(x, y) {
             return 0;
         }
-        if let Some(flat) = self.flats.iter().find(|flat| flat.contains(x, y)) {
-            return flat.height;
+        if let Some(&height) = self.levelled.get(&(x, y)) {
+            return height;
         }
         let (px, py) = (x.div_euclid(CELLS_PER_POINT), y.div_euclid(CELLS_PER_POINT));
         // The middle is (0.5..15.5) / 16 of the way across: in 32nds, odd.
