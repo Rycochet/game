@@ -84,8 +84,9 @@ pub enum ServerMessage {
         /// The role the character is shown as to others, and what it may be.
         shown: ShownRole,
     },
-    /// The role the character is now shown as (after `ShowRoleAs`).
-    ShownRole(ShownRole),
+    /// About roles (answering `ClientMessage::Role`, or a change of the
+    /// account's role while playing).
+    Role(super::RoleAnswer),
     /// Everything the client knows of the world map is forgotten; the chunks
     /// it may know again follow (`DevForgetMap`).
     ForgetWorldMap,

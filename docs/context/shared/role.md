@@ -8,7 +8,7 @@ Account roles as both sides see them: role ids, permissions, what a role lets an
 
 ## Public API
 
-All of the above. `protocol::ServerMessage::Welcome` carries a `RoleBadge`, `Powers` and `ShownRole`; `ClientMessage::ShowRoleAs`, `ServerMessage::ShownRole` and `mob::EntityLook::mark` use them too.
+All of the above. `protocol::ServerMessage::Welcome` carries a `RoleBadge`, `Powers` and `ShownRole`; `protocol::RoleAsk` / `RoleAnswer` and `mob::EntityLook::mark` use them too.
 
 ## Depends on
 

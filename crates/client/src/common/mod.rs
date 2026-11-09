@@ -24,6 +24,7 @@ pub use servers::{ChosenServer, SavedServer};
 use bevy::prelude::*;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod account_role;
 mod clock;
 mod creatures;
 mod debug;
@@ -56,6 +57,7 @@ mod window_open;
 mod window_save;
 mod world;
 
+pub use account_role::{AccountRole, OpenAccounts};
 pub use browser::open_in_browser;
 pub use characters::{CharacterChoice, CharacterSelect, PlayFor, PlayableHere};
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
@@ -126,6 +128,8 @@ impl Plugin for CommonPlugin {
             .init_resource::<HoveredOnMap>()
             .init_resource::<HoveredInSky>()
             .init_resource::<Target>()
+            .init_resource::<AccountRole>()
+            .add_message::<OpenAccounts>()
             .init_resource::<PadSteps>()
             .init_resource::<OwnAbility>()
             .init_resource::<LoadingStep>()

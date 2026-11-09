@@ -101,12 +101,6 @@ pub(crate) fn answer(
         ClientMessage::DeleteCharacter { id } => {
             delete_chosen(client, id, accounts, world, options.difficulties)
         }
-        ClientMessage::ShowRoleAs(id) => {
-            if !client.show_as(id) {
-                warn!("A client asked to be shown as a role it may not appear as");
-            }
-            client.link.send(&ServerMessage::ShownRole(client.shown()))
-        }
         ClientMessage::CreateCharacter(asked) => {
             match create(client, asked, accounts, options.difficulties) {
                 Ok(()) => true,
@@ -152,6 +146,7 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::Up);
             true
         }
+        ClientMessage::Role(ask) => super::role_ask::answer_role(client, ask, accounts),
         ClientMessage::OpenTrade { with } => {
             client.waiting.push_back(Action::OpenTrade { with });
             true

@@ -1106,18 +1106,22 @@ fn others_see_the_mark_of_the_role_a_player_is_shown_as() {
     let [_, second] = two.tick();
     assert_eq!(marks(&second), [Some(RoleId::new(OWNER))]);
 
-    two.ends[0].send(&ClientMessage::ShowRoleAs(RoleId::new(PLAYER)));
+    two.ends[0].send(&ClientMessage::Role(shared::protocol::RoleAsk::ShowAs(
+        RoleId::new(PLAYER),
+    )));
     let [first, second] = two.tick();
     assert!(
         first.iter().any(
-            |answer| matches!(answer, ServerMessage::ShownRole(shown) if shown.current.is(PLAYER))
+            |answer| matches!(answer, ServerMessage::Role(shared::protocol::RoleAnswer::Shown(shown)) if shown.current.is(PLAYER))
         ),
         "{first:?}"
     );
     assert_eq!(marks(&second), [None]);
 
     // Nobody can be shown as a role they may not appear as.
-    two.ends[1].send(&ClientMessage::ShowRoleAs(RoleId::new(OWNER)));
+    two.ends[1].send(&ClientMessage::Role(shared::protocol::RoleAsk::ShowAs(
+        RoleId::new(OWNER),
+    )));
     let [first, _] = two.tick();
     assert!(marks(&first).is_empty());
 }

@@ -8,8 +8,6 @@ use super::file::HeldRole;
 use crate::accounts::AccountId;
 
 /// Who is changing a role.
-// Accounts give roles through the Accounts panel, still to come.
-#[allow(dead_code)]
 pub(crate) enum Actor<'a> {
     /// An account, which may only give roles in its `grants`, to accounts
     /// holding one of them, and never to itself.
@@ -82,7 +80,9 @@ impl Roles {
             reason: change.reason.to_owned(),
             by: by_name,
         });
-        self.change(&key, held, now, &what)
+        self.change(&key, held, now, &what)?;
+        self.changed.push(target);
+        Ok(())
     }
 
     /// If `name` is the claim code: the account becomes the Owner (`Ok`), or

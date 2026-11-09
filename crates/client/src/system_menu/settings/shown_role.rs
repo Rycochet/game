@@ -1,11 +1,11 @@
 //! Settings' Gameplay page: "Shown As", the role others see the character as,
 //! for accounts that may be shown as another role (staff playing as a plain
-//! player, say). Asked of the server (`ShowRoleAs`), which says what it now
-//! is (`ShownRole`). Here rather than on the Character page, which players
+//! player, say). Asked of the server (`RoleAsk::ShowAs`), which says what it
+//! now is (`RoleAnswer::Shown`). Here rather than on the Character page, which players
 //! share pictures of.
 
 use bevy::prelude::*;
-use shared::protocol::{ClientMessage, ServerMessage};
+use shared::protocol::{ClientMessage, RoleAnswer, RoleAsk, ServerMessage};
 use shared::role::{RoleId, ShownRole};
 
 use super::rows::{spawn_dropdown_row, tip};
@@ -32,7 +32,10 @@ pub(in crate::system_menu) fn keep_shown_role(
 ) {
     for FromServer(message) in from_server.read() {
         let now = match message {
-            ServerMessage::Welcome { shown, .. } | ServerMessage::ShownRole(shown) => shown,
+            ServerMessage::Welcome { shown, .. }
+            | ServerMessage::Role(RoleAnswer::Shown(shown) | RoleAnswer::Changed { shown, .. }) => {
+                shown
+            }
             _ => continue,
         };
         if shown.0.as_ref() != Some(now) {
@@ -76,7 +79,7 @@ pub(in crate::system_menu) fn use_shown_role(
 ) {
     for &DropdownChosen(list, index) in chosen.read() {
         if let Some(id) = lists.get(list).ok().and_then(|list| list.0.get(index)) {
-            to_server.write(ToServer(ClientMessage::ShowRoleAs(id.clone())));
+            to_server.write(ToServer(ClientMessage::Role(RoleAsk::ShowAs(id.clone()))));
         }
     }
 }

@@ -4,6 +4,7 @@
 //! plugin. Game logic lives in the modules themselves.
 
 mod abilities;
+mod accounts_panel;
 mod character;
 mod character_create;
 mod character_select;
@@ -131,6 +132,7 @@ fn main() {
     app.add_plugins(lightning::LightningPlugin);
     app.add_plugins(step_pad::StepPadPlugin);
     app.add_plugins(notices::NoticesPlugin);
+    app.add_plugins(accounts_panel::AccountsPanelPlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

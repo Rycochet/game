@@ -28,6 +28,7 @@ const SECTIONS: &[&[Entry]] = &[
         ("Connect...", Action::Connect, Some(MenuButton::Connect)),
     ],
     &[
+        ("Accounts", Action::Accounts, Some(MenuButton::Accounts)),
         ("Settings", Action::Settings, None),
         ("Credits", Action::Credits, None),
     ],

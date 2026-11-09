@@ -12,6 +12,7 @@ fn test_app(menu: SystemMenu) -> App {
     app.add_message::<ButtonPressed>()
         .add_message::<AppExit>()
         .add_message::<crate::common::LoginChoice>()
+        .add_message::<crate::common::OpenAccounts>()
         .init_resource::<ButtonInput<KeyCode>>()
         .init_resource::<ButtonInput<MouseButton>>()
         .init_resource::<AccumulatedMouseScroll>()
