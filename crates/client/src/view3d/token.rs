@@ -3,7 +3,8 @@
 //! Each token is a flat prism (its shape extruded upwards) in its attitude's
 //! colour, with a black outline, standing on the ground at its owner's exact
 //! position. Above it sits an icon anchor that always faces the camera,
-//! showing the entity's 2D `Icon` if it has one.
+//! showing the entity's 2D `Icon` if it has one. What is hidden behind
+//! something else shows through it in the token's colour (`xray`).
 //!
 //! The drawn parts live on a separate "view" entity rather than on the owner,
 //! so game entities don't carry rendering components.
@@ -14,13 +15,15 @@ mod flash;
 mod parts;
 mod pick;
 mod sync;
+mod xray;
 
 pub use assets::TokenAssets;
-use assets::{outline_width, prism};
+use assets::{outline_width, prism, raised_prism};
 pub use flash::{TokenFlash, flash_tokens};
 pub use parts::{IconAnchor, TokenView};
 pub use pick::{ClickedToken, HoveredToken, find_token_under_cursor};
 pub use sync::{resize_tokens, sync_icons, sync_tokens};
+pub use xray::{XRAY_WHITE, XrayMaterial};
 
 /// Token width in grid units: the diameter of the circle every shape fits in.
 pub const DIAMETER: f32 = 16.0;

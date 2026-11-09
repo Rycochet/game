@@ -7,12 +7,14 @@ use bevy::window::PrimaryWindow;
 
 use super::super::camera::OrbitCamera;
 use super::{
-    ICON_ART_PIXELS, ICON_FILE_PIXELS, IconAnchor, TokenAssets, TokenView, outline_width, prism,
+    ICON_ART_PIXELS, ICON_FILE_PIXELS, ICON_GAP_PIXELS, ICON_PIXEL, ICON_SHADOW_PIXELS, IconAnchor,
+    TokenAssets, TokenView, XrayMaterial, outline_width, prism, raised_prism,
 };
 use crate::common::{Icon, IconPicture, Token, TokenShape};
 
 /// Creates, restyles and removes token views to match the entities that have
 /// a `Token`.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn sync_tokens(
     mut commands: Commands,
     assets: Res<TokenAssets>,
@@ -20,6 +22,10 @@ pub fn sync_tokens(
     tokens: Query<Ref<Token>>,
     views: Query<(Entity, &TokenView)>,
     mut parts: Query<(&mut Mesh3d, &mut MeshMaterial3d<StandardMaterial>)>,
+    mut xray_parts: Query<
+        (&mut Mesh3d, &mut MeshMaterial3d<XrayMaterial>),
+        Without<MeshMaterial3d<StandardMaterial>>,
+    >,
     mut anchors: Query<&mut IconAnchor>,
 ) {
     for (view, token_view) in &views {
@@ -36,8 +42,19 @@ pub fn sync_tokens(
                     mesh.0 = assets.outlines[shape].clone();
                     material.0 = assets.outline[completed].clone();
                 }
+                let attitude = token.attitude as usize;
+                if let Ok((mut mesh, mut material)) = xray_parts.get_mut(token_view.xray_body) {
+                    mesh.0 = assets.bodies[shape].clone();
+                    material.0 = assets.xray_fill[attitude].clone();
+                }
+                if let Ok((mut mesh, mut material)) = xray_parts.get_mut(token_view.xray_outline) {
+                    mesh.0 = assets.xray_outlines[shape].clone();
+                    material.0 = assets.xray_outline[attitude].clone();
+                }
                 if let Ok(mut anchor) = anchors.get_mut(token_view.anchor) {
                     anchor.scale = token.size.scale();
+                    // Shown again, so its x-ray silhouette takes the new colour.
+                    anchor.shown = None;
                 }
             }
             Ok(_) => {}
@@ -80,6 +97,24 @@ pub(super) fn spawn_view(
             base,
         ))
         .id();
+    // Drawn through whatever hides them (`xray`): nothing shows while the
+    // token is in plain sight.
+    let xray_body = commands
+        .spawn((
+            Mesh3d(assets.bodies[shape].clone()),
+            MeshMaterial3d(assets.xray_fill[token.attitude as usize].clone()),
+            NotShadowCaster,
+            base,
+        ))
+        .id();
+    let xray_outline = commands
+        .spawn((
+            Mesh3d(assets.xray_outlines[shape].clone()),
+            MeshMaterial3d(assets.xray_outline[token.attitude as usize].clone()),
+            NotShadowCaster,
+            base,
+        ))
+        .id();
     let anchor = commands
         .spawn((
             IconAnchor {
@@ -98,21 +133,26 @@ pub(super) fn spawn_view(
                 owner,
                 body,
                 outline,
+                xray_body,
+                xray_outline,
                 anchor,
             },
             Transform::default(),
             Visibility::default(),
         ))
-        .add_children(&[body, outline, anchor]);
+        .add_children(&[body, outline, xray_body, xray_outline, anchor]);
 }
 
 /// Shows each token owner's `Icon` on its anchor, or its `IconPicture` in its place,
 /// replacing or removing the picture when either changes.
+#[allow(clippy::too_many_arguments)]
 pub fn sync_icons(
     mut commands: Commands,
     mut assets: ResMut<TokenAssets>,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut xray: ResMut<Assets<XrayMaterial>>,
+    tokens: Query<&Token>,
     icons: Query<(Option<&Icon>, Option<&IconPicture>)>,
     views: Query<&TokenView>,
     mut anchors: Query<(Entity, &mut IconAnchor, &ChildOf)>,
@@ -138,7 +178,7 @@ pub fn sync_icons(
         };
         let material = assets
             .icon_materials
-            .entry(key)
+            .entry(key.clone())
             .or_insert_with_key(|key| {
                 let image = match picture {
                     Some(picture) => picture.0.clone(),
@@ -154,8 +194,12 @@ pub fn sync_icons(
                     base_color_texture: Some(image),
                     // Unlit: the picture looks as drawn whatever the sun does.
                     unlit: true,
-                    // Pixels are either drawn or not, so no sorting problems.
-                    alpha_mode: AlphaMode::Mask(0.5),
+                    // Blended, after everything solid, so it writes no depth:
+                    // drawn into the depth, it would hide its own token's
+                    // back half from the x-ray, which would then show
+                    // through the picture. Pixel art is all there or not, and
+                    // drawn back to front with the rest.
+                    alpha_mode: AlphaMode::Blend,
                     ..default()
                 })
             })
@@ -166,12 +210,38 @@ pub fn sync_icons(
             Some(_) => ICON_ART_PIXELS / ICON_FILE_PIXELS,
             None => 1.0,
         };
-        commands.entity(anchor).with_child((
-            Mesh3d(quad),
-            MeshMaterial3d(material),
-            NotShadowCaster,
-            Transform::from_scale(Vec3::splat(scale)),
-        ));
+        let attitude = tokens
+            .get(view.owner)
+            .map_or(0, |token| token.attitude as usize);
+        let silhouette = assets
+            .xray_icons
+            .entry((key, attitude))
+            .or_insert_with(|| {
+                let image = materials
+                    .get(&material)
+                    .and_then(|usual| usual.base_color_texture.clone())
+                    .unwrap_or_default();
+                let colour = crate::common::Attitude::ALL[attitude].colour();
+                xray.add(XrayMaterial::picture(colour, image))
+            })
+            .clone();
+        commands.entity(anchor).with_children(|icon| {
+            icon.spawn((
+                Mesh3d(quad.clone()),
+                MeshMaterial3d(material),
+                NotShadowCaster,
+                Transform::from_scale(Vec3::splat(scale)),
+            ));
+            // Its feet sink into the token, which would hide them from the
+            // x-ray and show them over the token: raised clear of it.
+            let raised = (ICON_SHADOW_PIXELS - ICON_GAP_PIXELS) * ICON_PIXEL;
+            icon.spawn((
+                Mesh3d(quad),
+                MeshMaterial3d(silhouette),
+                NotShadowCaster,
+                Transform::from_xyz(0.0, raised, 0.0).with_scale(Vec3::splat(scale)),
+            ));
+        });
     }
 }
 
@@ -195,6 +265,9 @@ pub fn resize_tokens(
     for shape in TokenShape::ALL {
         if let Some(mut mesh) = meshes.get_mut(&assets.outlines[shape as usize]) {
             *mesh = prism(shape, outline);
+        }
+        if let Some(mut mesh) = meshes.get_mut(&assets.xray_outlines[shape as usize]) {
+            *mesh = raised_prism(shape, outline);
         }
     }
     assets.window_height = height;

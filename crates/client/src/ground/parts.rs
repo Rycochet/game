@@ -4,6 +4,8 @@ use bevy::prelude::*;
 use shared::ground::Load;
 use std::collections::BTreeMap;
 
+use crate::view3d::XrayMaterial;
+
 /// The bags known of on this level, by cell, as last seen.
 #[derive(Resource, Default)]
 pub(super) struct Bags(pub(super) BTreeMap<(i64, i64), Bag>);
@@ -28,6 +30,10 @@ pub(super) struct BagAssets {
     pub(super) sparkle: Handle<StandardMaterial>,
     pub(super) outline: Handle<StandardMaterial>,
     pub(super) star_edge: Handle<StandardMaterial>,
+    /// The bag drawn through whatever hides it (`view3d::XrayMaterial`), white:
+    /// its body's faint fill and its outline.
+    pub(super) xray_fill: Handle<XrayMaterial>,
+    pub(super) xray_outline: Handle<XrayMaterial>,
 }
 
 pub(super) struct BagMeshes {

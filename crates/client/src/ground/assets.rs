@@ -13,6 +13,7 @@ use super::{
     BagAssets, BagMeshes, LOWEST_SPARKLE, SPARKLE, SPARKLE_SCALE, STAR_EDGE, STAR_HOVER_OUTLINE,
     STAR_LONG, STAR_OUTLINE, STAR_SHORT, WEAVE_PIXELS,
 };
+use crate::view3d::{XRAY_WHITE, XrayMaterial};
 
 /// How big a look's sparkle is drawn.
 pub(super) fn sparkle_scale(load: Load) -> f32 {
@@ -77,6 +78,7 @@ pub(super) fn make_assets(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    mut xray: ResMut<Assets<XrayMaterial>>,
 ) {
     let mut bags = BTreeMap::new();
     for load in Load::ALL {
@@ -135,5 +137,7 @@ pub(super) fn make_assets(
             cull_mode: None,
             ..default()
         }),
+        xray_fill: xray.add(XrayMaterial::fill(XRAY_WHITE)),
+        xray_outline: xray.add(XrayMaterial::outline(XRAY_WHITE)),
     });
 }

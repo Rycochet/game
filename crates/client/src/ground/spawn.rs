@@ -61,6 +61,21 @@ pub(super) fn spawn_bag(
                 body,
             ))
             .id(),
+        // Seen through whatever hides it, whether in sight or remembered.
+        commands
+            .spawn((
+                Mesh3d(meshes.lit.clone()),
+                MeshMaterial3d(assets.xray_fill.clone()),
+                body,
+            ))
+            .id(),
+        commands
+            .spawn((
+                Mesh3d(meshes.outline.clone()),
+                MeshMaterial3d(assets.xray_outline.clone()),
+                body,
+            ))
+            .id(),
         commands
             .spawn((
                 BagPart::HoverOutline,

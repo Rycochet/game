@@ -9,6 +9,9 @@ pub struct TokenView {
     pub owner: Entity,
     pub(super) body: Entity,
     pub(super) outline: Entity,
+    /// The body and outline drawn through whatever hides them (`xray`).
+    pub(super) xray_body: Entity,
+    pub(super) xray_outline: Entity,
     pub(super) anchor: Entity,
 }
 
