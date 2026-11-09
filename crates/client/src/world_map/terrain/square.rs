@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use super::super::HALF_SIZE;
-use super::REACH;
 
 /// A corner of a triangle being clipped to the window.
 #[derive(Clone, Copy)]
@@ -59,21 +58,6 @@ impl ViewSquare {
     /// The point `u` halves to the right and `v` halves towards the camera.
     pub(super) fn at(&self, u: f32, v: f32) -> Vec2 {
         (self.right * u + self.towards * v) * self.half
-    }
-
-    /// How far the square reaches from the centre along x and z (its bounding
-    /// box), plus a little for the grid squares around its edge and rivers
-    /// crossing it. Only grid points within this are drawn.
-    pub(super) fn reach(&self) -> (i64, i64) {
-        let reach = |a: f32, b: f32| (self.half * (a.abs() + b.abs())).ceil() as i64 + 3;
-        let (x, z) = (
-            reach(self.right.x, self.towards.x),
-            reach(self.right.y, self.towards.y),
-        );
-        // `window_half` keeps the window within `MAX_HALF`, so this holds;
-        // cutting the reach short instead would cut the surface off unseen.
-        debug_assert!(x <= REACH && z <= REACH, "window wider than the stores");
-        (x, z)
     }
 
     /// How much of the starting view's width is on show (1 = all of it).

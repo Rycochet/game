@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use super::super::{HALF_SIZE, MAX_HALF, window_half};
 use super::edges::crossings;
+use super::rivers::clip;
 use super::*;
 
 #[test]
@@ -18,16 +19,52 @@ fn window_never_outgrows_the_stores() {
     assert_eq!(window_half(1.0), HALF_SIZE as f32);
     assert_eq!(window_half(0.6), HALF_SIZE as f32 * 0.6);
     assert_eq!(window_half(1.0 / 0.1), MAX_HALF);
-    // The largest window turned 45°, where its bounding box is widest, is
-    // still within what `TerrainGrid` keeps (`reach` asserts it).
+    // The largest window turned 45°, where its bounding box is widest: its
+    // chunks are still within what `TerrainGrid` keeps.
     let diagonal = Vec2::new(1.0, 1.0).normalize();
     let square = ViewSquare {
         right: diagonal,
         towards: Vec2::new(-diagonal.y, diagonal.x),
         half: window_half(10.0),
     };
-    let (x, z) = square.reach();
-    assert!(x <= REACH && z <= REACH);
+    let centre = (1000, -37);
+    let ((from_x, from_z), (to_x, to_z)) = chunks_area(&chunks_needed(square, centre));
+    for reach in [
+        centre.0 - from_x,
+        to_x - centre.0,
+        centre.1 - from_z,
+        to_z - centre.1,
+    ] {
+        assert!(reach <= REACH + CHUNK, "{reach}");
+    }
+}
+
+#[test]
+fn the_chunks_needed_cover_the_window_and_little_else() {
+    let turned = Vec2::new(0.6, 0.8);
+    let square = ViewSquare {
+        right: turned,
+        towards: Vec2::new(-turned.y, turned.x),
+        half: 70.0,
+    };
+    let centre = (-500, 333);
+    let needed = chunks_needed(square, centre);
+    let chunk_of = |x: f32, z: f32| {
+        (
+            (centre.0 + x.floor() as i64).div_euclid(CHUNK),
+            (centre.1 + z.floor() as i64).div_euclid(CHUNK),
+        )
+    };
+    for u in -10..=10 {
+        for v in -10..=10 {
+            let at = (square.right * u as f32 + square.towards * v as f32) * square.half / 10.0;
+            assert!(needed.contains(&chunk_of(at.x, at.y)), "{u},{v}");
+        }
+    }
+    // Fewer than the box round it, as its corners are cut off.
+    let ((from_x, from_z), (to_x, to_z)) = chunks_area(&needed);
+    let boxed = ((to_x - from_x) / CHUNK) * ((to_z - from_z) / CHUNK);
+    assert!((needed.len() as i64) < boxed, "{} of {boxed}", needed.len());
 }
 
 #[test]
@@ -100,7 +137,16 @@ fn tokens_rest_on_the_drawn_triangles() {
         floor,
         (1.0, 0.0),
         centre,
-        square,
+        &[(
+            (
+                centre.0 - square.half as i64 - 3,
+                centre.1 - square.half as i64 - 3,
+            ),
+            (
+                centre.0 + square.half as i64 + 3,
+                centre.1 + square.half as i64 + 3,
+            ),
+        )],
         false,
     );
     // Both halves of a grid square, and a grid point itself.

@@ -61,6 +61,10 @@ pub fn spawn(
             base_color: Color::WHITE,
             perceptual_roughness: 1.0,
             cull_mode,
+            // Keeps everything (water's alpha is 0), but tells Bevy the
+            // shaders may discard, so shadows use `terrain_prepass.wesl`,
+            // which cuts the window out as `terrain.wesl` does.
+            alpha_mode: AlphaMode::Mask(0.0),
             ..default()
         },
         extension: TerrainSky {
