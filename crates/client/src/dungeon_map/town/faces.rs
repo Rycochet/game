@@ -5,10 +5,11 @@ use bevy::prelude::*;
 use super::super::mesh::{Surface, WallFace, faces_camera};
 use super::super::walls::{Layer, Layers, Scene};
 use super::super::{CELL_SIZE, WALL_HEIGHT};
-use super::{SIDEWAYS_SHADE, atlas_uv, cell_centre, emit, layer_colour, light_at};
+use super::{Opening, SIDEWAYS_SHADE, atlas_uv, cell_centre, emit, layer_colour, light_at};
 
 /// A face of a wall (or a door or window on it), upright, running along `x` or
 /// `z`, facing `normal`, from `(a, ..)` to `(b, ..)` along it.
+#[derive(Clone, Debug)]
 pub(super) struct Piece {
     /// A point on the bottom of the face at one end, and at the other.
     pub(super) from: Vec3,
@@ -84,7 +85,9 @@ pub(super) fn upright(
     );
 }
 
-/// A wall's face: goes into whichever layer it belongs in.
+/// A wall's face: goes into whichever layer it belongs in, round any door or
+/// window `opening` on its cell.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn wall_face(
     layers: &mut Layers,
     scene: &Scene,
@@ -92,11 +95,19 @@ pub(super) fn wall_face(
     piece: Piece,
     tile: usize,
     hides: bool,
+    opening: Option<&Opening>,
 ) {
     let Some(layer) = face_layer(scene, own, outer, &piece, hides) else {
         return;
     };
-    upright(layers, scene, layer, &piece, (0.0, WALL_HEIGHT), tile);
+    match opening {
+        Some(opening) => {
+            for (part, heights) in opening.around(&piece, own) {
+                upright(layers, scene, layer, &part, heights, tile);
+            }
+        }
+        None => upright(layers, scene, layer, &piece, (0.0, WALL_HEIGHT), tile),
+    }
     if layer == Layer::Solid {
         let middle = (piece.from + piece.to) / 2.0;
         layers.solid_faces.push(WallFace {

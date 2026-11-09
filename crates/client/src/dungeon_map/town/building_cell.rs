@@ -7,8 +7,8 @@ use shared::site::BuildingLook;
 use super::super::CELL_SIZE;
 use super::super::walls::{Layer, Layers, Scene};
 use super::{
-    HALF_CELL, Piece, Roof, WALL_OUT, build_door_or_window, cell_centre, roof_centre, roof_tile,
-    strip, wall_face, wall_tile,
+    HALF_CELL, Opening, Piece, Roof, WALL_OUT, build_door_or_window, cell_centre, roof_centre,
+    roof_tile, strip, wall_face, wall_tile,
 };
 
 /// One cell of a building, in quarters: the part of a quarter inside the wall
@@ -41,6 +41,8 @@ pub(super) fn build_cell(
         return;
     }
     let wall = wall_tile(building.walls);
+    let opening = Opening::at(scene, building, (x, y));
+    let hole = opening.as_ref();
     let roof = Roof {
         centre,
         neighbours,
@@ -94,7 +96,7 @@ pub(super) fn build_cell(
                 normal: x_normal,
                 across: across_z(0.0, WALL_OUT),
             };
-            wall_face(layers, scene, ((x, y), beside_x), piece, wall, hides);
+            wall_face(layers, scene, ((x, y), beside_x), piece, wall, hides, hole);
         }
         if !south {
             let piece = Piece {
@@ -103,7 +105,7 @@ pub(super) fn build_cell(
                 normal: z_normal,
                 across: across_x(0.0, WALL_OUT),
             };
-            wall_face(layers, scene, ((x, y), beside_z), piece, wall, hides);
+            wall_face(layers, scene, ((x, y), beside_z), piece, wall, hides, hole);
         }
         if east && !(south && corner) {
             let outer = if south { diagonal } else { beside_z };
@@ -113,7 +115,7 @@ pub(super) fn build_cell(
                 normal: z_normal,
                 across: across_x(WALL_OUT, HALF_CELL),
             };
-            wall_face(layers, scene, ((x, y), outer), piece, wall, hides);
+            wall_face(layers, scene, ((x, y), outer), piece, wall, hides, hole);
         }
         if south && !(east && corner) {
             let outer = if east { diagonal } else { beside_x };
@@ -123,8 +125,10 @@ pub(super) fn build_cell(
                 normal: x_normal,
                 across: across_z(WALL_OUT, HALF_CELL),
             };
-            wall_face(layers, scene, ((x, y), outer), piece, wall, hides);
+            wall_face(layers, scene, ((x, y), outer), piece, wall, hides, hole);
         }
     }
-    build_door_or_window(layers, scene, building, (x, y), hides);
+    if let Some(opening) = opening {
+        build_door_or_window(layers, scene, building, (x, y), opening, hides);
+    }
 }
