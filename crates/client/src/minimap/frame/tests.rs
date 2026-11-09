@@ -142,3 +142,50 @@ fn a_secret_doors_s_is_inked_on_its_curves_and_edged_in_the_background() {
     // Just outside the stroke is the edge.
     assert_eq!(at(20, 9), BACKGROUND);
 }
+
+/// A map of varied colours and transparency, so blending shows up.
+fn varied(side: u32) -> Vec<u8> {
+    (0..side * side * 4)
+        .map(|at| (at * 37 % 251) as u8)
+        .collect()
+}
+
+fn framed(side: u32, frame: &RoundFrame, cache: Option<&mut FrameCache>) -> Vec<u8> {
+    let mut pixels = varied(side);
+    let mut canvas = Canvas {
+        pixels: &mut pixels,
+        width: side,
+        height: side,
+    };
+    match cache {
+        Some(cache) => cache.draw(frame, &mut canvas),
+        None => frame.draw(&mut canvas),
+    }
+    pixels
+}
+
+#[test]
+fn a_kept_frame_draws_as_a_fresh_one_and_follows_changes() {
+    let mut frame = RoundFrame {
+        centre: (60.0, 60.0),
+        radius: 50.0,
+        border: 6.0,
+        notch: 8.0,
+        north: (0.0, -1.0),
+    };
+    let mut cache = FrameCache::default();
+    let fresh = framed(120, &frame, None);
+    assert_eq!(framed(120, &frame, Some(&mut cache)), fresh);
+    // Again, from what was kept.
+    assert_eq!(framed(120, &frame, Some(&mut cache)), fresh);
+    // Turned: worked out again.
+    frame.north = (1.0, 0.0);
+    let turned = framed(120, &frame, None);
+    assert_ne!(turned, fresh);
+    assert_eq!(framed(120, &frame, Some(&mut cache)), turned);
+    // Another size.
+    assert_eq!(
+        framed(130, &frame, Some(&mut cache)),
+        framed(130, &frame, None)
+    );
+}
