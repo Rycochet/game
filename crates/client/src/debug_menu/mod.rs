@@ -12,8 +12,8 @@ use bevy::prelude::*;
 use shared::movement::Step;
 
 use crate::common::{
-    ClickMode, CurrentDungeon, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GameView, GodMode,
-    InspectMob, KillMob, ServerDevTools, Truesight,
+    ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, FreezeMobs, GameView, GodMode,
+    ServerDevTools, Truesight,
 };
 use crate::player::{PlayerSystems, TakeStep};
 use crate::widgets::WidgetSystems;
@@ -40,7 +40,8 @@ impl Plugin for DebugMenuPlugin {
             .add_plugins((
                 panels::add_dev_area_panel,
                 panels::add_create_mob_panel,
-                panels::add_inspect_mob_panel,
+                panels::add_examine_mob_panel,
+                panels::add_learn_skills_panel,
                 panels::add_kept_choices,
             ))
             .add_systems(Startup, menu::spawn_menu)
@@ -123,9 +124,6 @@ struct FactSources<'w> {
     detect: Res<'w, DetectMonsters>,
     god: Res<'w, GodMode>,
     truesight: Res<'w, Truesight>,
-    kill: Res<'w, KillMob>,
-    inspect: Res<'w, InspectMob>,
-    delete: Res<'w, DeleteMob>,
     freeze: Res<'w, FreezeMobs>,
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
@@ -140,9 +138,6 @@ impl FactSources<'_> {
             detecting: self.detect.0,
             god_mode: self.god.0,
             truesight: self.truesight.0,
-            killing: self.kill.0,
-            inspecting: self.inspect.0,
-            deleting: self.delete.0,
             freezing: self.freeze.0,
             teleporting: *self.mode == ClickMode::Teleport,
             changing_cells: *self.mode == ClickMode::ChangeCell,

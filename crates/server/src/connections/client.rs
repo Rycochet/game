@@ -62,7 +62,7 @@ impl Client {
             speed: NORMAL_SPEED,
             waiting: VecDeque::new(),
             fight: Default::default(),
-            dev_gifts: Vec::new(),
+            for_others: Vec::new(),
             learning: Default::default(),
             starting_as: None,
             difficulty: None,

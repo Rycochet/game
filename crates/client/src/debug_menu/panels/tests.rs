@@ -86,7 +86,9 @@ fn ids_in(spawn: impl FnOnce(&mut ChildSpawnerCommands)) -> Vec<crate::widgets::
 
 #[test]
 fn every_panels_widgets_each_have_their_own_id() {
-    let panels: [(&str, SpawnPanel); 7] = [
+    let panels: [(&str, SpawnPanel); 9] = [
+        ("Examine Mob", spawn_examine_panel),
+        ("Learn Skills", spawn_learn_skills),
         ("Show Widgets", spawn_every_widget),
         ("Item Pictures", spawn_item_pictures),
         ("World Time", spawn_world_time),

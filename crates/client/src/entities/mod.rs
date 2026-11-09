@@ -1,7 +1,6 @@
 //! Others on the map: mobs and other players, as tokens, for as long as the server
 //! says they can be seen. See `docs/context/client/entities.md`.
 
-mod dev_clicks;
 mod dressed;
 mod dressing_wait;
 mod flash;
@@ -27,7 +26,6 @@ use crate::common::{
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
 use crate::player::{Player, PlayerSystems};
-use crate::view3d::View3dSystems;
 
 /// How fast others are shown moving, in grid units a second: the same as an
 /// ordinary player, so they keep up with what the server says.
@@ -69,8 +67,6 @@ impl Plugin for EntitiesPlugin {
                     )
                         .chain()
                         .after(PlayerSystems::Travel),
-                    dev_clicks::mob_clicked.after(View3dSystems::Click),
-                    dev_clicks::offer_mobs.after(read_server),
                     flash::flash_harmed.after(read_server),
                 ),
             );

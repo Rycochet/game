@@ -9,6 +9,7 @@
 //! the node's path instead, so the tree can change between versions.
 
 mod branches;
+mod dev;
 mod draft;
 mod familiar;
 mod id;
@@ -22,6 +23,7 @@ mod saved_node;
 mod tree;
 mod window;
 
+pub use dev::{DEV_LEARN_PERCENT, practice_for};
 pub use familiar::{FAMILIAR_HALVING, familiarity, taught};
 pub use id::SkillId;
 pub use practice::{Skills, VALUE_SCALE, level_practice};
@@ -29,6 +31,8 @@ pub use rust::{HOUR, Rust, STEP_EVERY};
 pub use tree::key_of;
 pub use window::{WINDOW_TICKS, Windows};
 
+#[cfg(test)]
+mod dev_tests;
 #[cfg(test)]
 mod rust_tests;
 #[cfg(test)]

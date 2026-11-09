@@ -49,14 +49,8 @@ impl DebugAction {
             | Self::ChangeCreature
             | Self::GiveItem
             | Self::Vitals
-            | Self::LearnSomeSkills
-            | Self::ForgetSkills => Group::Character,
-            Self::CreateMob
-            | Self::InspectMob
-            | Self::KillMob
-            | Self::DeleteMob
-            | Self::FreezeMobs
-            | Self::DetectMobs => Group::Mobs,
+            | Self::LearnSkills => Group::Character,
+            Self::CreateMob | Self::ExamineMob | Self::FreezeMobs | Self::DetectMobs => Group::Mobs,
             Self::RevealMap
             | Self::ForgetMap
             | Self::RemakeSite

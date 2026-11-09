@@ -7,8 +7,9 @@ use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
     FIRST_AT, NEXT_AT, spawn_create_mob_panel, spawn_creature_buttons, spawn_dev_area_panel,
-    spawn_every_widget, spawn_give_panel, spawn_inspect_panel, spawn_item_pictures,
-    spawn_step_buttons, spawn_teleport_to_world, spawn_vitals_panel, spawn_world_time,
+    spawn_every_widget, spawn_examine_panel, spawn_give_panel, spawn_item_pictures,
+    spawn_learn_skills, spawn_step_buttons, spawn_teleport_to_world, spawn_vitals_panel,
+    spawn_world_time,
 };
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
 
@@ -69,7 +70,8 @@ impl OpenPanels {
                 DebugAction::Vitals => spawn_vitals_panel(content),
                 DebugAction::DevArea => spawn_dev_area_panel(content),
                 DebugAction::CreateMob => spawn_create_mob_panel(content),
-                DebugAction::InspectMob => spawn_inspect_panel(content),
+                DebugAction::ExamineMob => spawn_examine_panel(content),
+                DebugAction::LearnSkills => spawn_learn_skills(content),
                 DebugAction::DrawingStates => spawn_step_buttons(content),
                 _ => {}
             });
@@ -96,7 +98,8 @@ pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
         DebugAction::Vitals => "debug.vitals",
         DebugAction::DevArea => "debug.dev_area",
         DebugAction::CreateMob => "debug.create_mob",
-        DebugAction::InspectMob => "debug.inspect_mob",
+        DebugAction::ExamineMob => "debug.examine_mob",
+        DebugAction::LearnSkills => super::learn_skills::FORM,
         DebugAction::DrawingStates => "debug.drawing_states",
         _ => "debug.panel",
     }

@@ -90,7 +90,7 @@ pub(crate) fn handle_messages(
         put_out_of_forgotten_sites(clients, i, worlds.of(world));
     }
     super::heal::heal_players(clients, &mut worlds);
-    super::give_items::give_to_players(clients, &mut worlds);
+    super::for_others::do_for_others(clients, &mut worlds);
     answer_look_ups(clients, &mut worlds);
     super::role_ask::refresh_roles(clients, accounts, &mut worlds);
     clients.retain(|client| !client.gone);

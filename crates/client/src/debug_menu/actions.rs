@@ -13,21 +13,18 @@ pub enum DebugAction {
     ChangeCreature,
     CloseAllDoors,
     CreateMob,
-    DeleteMob,
     DetectMobs,
     DevArea,
     DrawingStates,
     ForgetMap,
-    ForgetSkills,
     FreezeMobs,
     GeneratePoi,
     GiveItem,
     GodMode,
-    InspectMob,
+    ExamineMob,
     ItemPictures,
     KeyForThisDoor,
-    KillMob,
-    LearnSomeSkills,
+    LearnSkills,
     LightningNow,
     LightningStrikeHere,
     OpenAllDoors,
@@ -52,9 +49,6 @@ pub(super) struct Facts {
     pub detecting: bool,
     pub god_mode: bool,
     pub truesight: bool,
-    pub killing: bool,
-    pub inspecting: bool,
-    pub deleting: bool,
     pub freezing: bool,
     pub teleporting: bool,
     pub changing_cells: bool,
@@ -69,7 +63,7 @@ pub(super) struct Facts {
 impl DebugAction {
     /// Every action, in the order the menu lists them: by group (`Group`),
     /// then as the owner ordered each group.
-    pub(super) const ALL: [Self; 34] = [
+    pub(super) const ALL: [Self; 31] = [
         // Display
         Self::ShowDebugInfo,
         Self::LightningNow,
@@ -88,13 +82,10 @@ impl DebugAction {
         Self::ChangeCreature,
         Self::GiveItem,
         Self::Vitals,
-        Self::LearnSomeSkills,
-        Self::ForgetSkills,
+        Self::LearnSkills,
         // Mobs
         Self::CreateMob,
-        Self::InspectMob,
-        Self::KillMob,
-        Self::DeleteMob,
+        Self::ExamineMob,
         Self::FreezeMobs,
         Self::DetectMobs,
         // Level
@@ -142,7 +133,9 @@ impl DebugAction {
                 | Self::ChangeCreature
                 | Self::GiveItem
                 | Self::Vitals
+                | Self::LearnSkills
                 | Self::CreateMob
+                | Self::ExamineMob
                 | Self::WorldTime
                 | Self::GeneratePoi
                 | Self::DevArea
@@ -201,9 +194,6 @@ impl DebugAction {
             Self::DetectMobs => Some(facts.detecting),
             Self::GodMode => Some(facts.god_mode),
             Self::Truesight => Some(facts.truesight),
-            Self::KillMob => Some(facts.killing),
-            Self::InspectMob => Some(facts.inspecting),
-            Self::DeleteMob => Some(facts.deleting),
             Self::FreezeMobs => Some(facts.freezing),
             Self::ShowDebugInfo => Some(facts.showing_info),
             Self::SunsAndMoons => Some(facts.suns_and_moons_open),

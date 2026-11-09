@@ -32,6 +32,7 @@ mod combat;
 mod delete_character;
 mod dev_skills;
 pub(crate) mod difficulty;
+mod for_others;
 mod give_items;
 mod heal;
 mod kick;
@@ -290,12 +291,14 @@ pub struct Client {
     /// Items it has asked after (`LookUpItems`), answered once every client's
     /// messages this tick have been read.
     looking_up: Vec<Id>,
-    /// Give Item's batches for other players, given once every message is read.
-    dev_gifts: Vec<(Id, give_items::Batch)>,
+    /// Dev tools for other players (Give Item, Learn Skills), once messages are read.
+    for_others: Vec<(Id, for_others::ForOther)>,
 }
 
 #[cfg(test)]
 mod action_bar_tests;
+#[cfg(test)]
+mod dev_skills_tests;
 #[cfg(test)]
 mod difficulty_tests;
 #[cfg(test)]

@@ -17,7 +17,7 @@ use crate::ids::new_id;
 
 mod to_players;
 
-pub(super) use to_players::give_to_players;
+pub(super) use to_players::give_to_player;
 
 /// What Give Item asked for, apart from who gets it.
 #[derive(Clone, Copy, Debug)]
@@ -52,7 +52,7 @@ pub(super) fn give_items(
         }
         return true;
     }
-    client.dev_gifts.push((to, batch));
+    super::for_others::ask(client, to, super::for_others::ForOther::Gift(batch));
     true
 }
 

@@ -235,5 +235,5 @@ fn a_target_that_is_no_mob_in_sight_is_left_for_other_players() {
     test.send(&[give_to(ItemKind::Coin, 3, shared::id::Id::for_test(999))]);
     assert!(of_kind(&test.client.inventory, ItemKind::Coin).is_empty());
     // Left for the pass over other players, which finds nobody by it.
-    assert_eq!(test.client.dev_gifts.len(), 1);
+    assert_eq!(test.client.for_others.len(), 1);
 }
