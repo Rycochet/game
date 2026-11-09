@@ -100,8 +100,8 @@ pub use step_pad::{PadButton, PadSteps};
 pub use target::Target;
 pub use token::{Attitude, Icon, IconPicture, Token, TokenShape, TokenSize};
 pub use video::{
-    AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, IN_BROWSER, Precipitation, Preset,
-    RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
+    AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, IN_BROWSER, MaxResolution, Precipitation,
+    Preset, RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
 };
 pub use view::{ViewFacing, ViewStats};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};

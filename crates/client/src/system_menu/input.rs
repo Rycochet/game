@@ -29,6 +29,7 @@ pub(super) fn take_input(
     mut login: MessageWriter<LoginChoice>,
     mut play_for: ResMut<PlayFor>,
     mut accounts: MessageWriter<crate::common::OpenAccounts>,
+    mut preferences: ResMut<crate::common::Preferences>,
 ) {
     let at_start = !session.is_playing();
     if at_start && !menu.is_open() {
@@ -91,6 +92,10 @@ pub(super) fn take_input(
             } else {
                 SystemMenu::Menu
             };
+        }
+        (Action::QuietSlowDrawing, SystemMenu::SlowDrawing) => {
+            preferences.quiet_slow_drawing = true;
+            *menu = SystemMenu::Menu;
         }
         // Nothing to go back to from the startup menu.
         (Action::Back, SystemMenu::Menu) if at_start => {}

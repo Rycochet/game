@@ -23,6 +23,7 @@ mod refusal;
 #[cfg(not(target_arch = "wasm32"))]
 mod server_options;
 mod show;
+mod slow_drawing;
 mod spawn;
 mod state;
 
@@ -78,6 +79,7 @@ impl Plugin for SystemMenuPlugin {
                     show_buttons,
                     credits::start_credits,
                     refusal::show_refusal,
+                    slow_drawing::warn_of_slow_drawing,
                     (
                         connect::open_connect,
                         connect::check_address,

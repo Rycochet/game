@@ -53,3 +53,31 @@ fn render_share_stays_in_range() {
     assert_eq!(share(10), 0.5);
     assert_eq!(share(200), 1.0);
 }
+
+#[test]
+fn max_resolution_holds_tall_windows_to_its_lines() {
+    let prefs = VideoPrefs {
+        render_scale: 100,
+        max_resolution: MaxResolution::P1080,
+        ..VideoPrefs::default()
+    };
+    assert_eq!(prefs.drawn_share(2160), 0.5);
+    assert_eq!(prefs.drawn_share(1080), 1.0);
+    assert_eq!(prefs.drawn_share(720), 1.0);
+    let off = VideoPrefs {
+        max_resolution: MaxResolution::Off,
+        ..prefs
+    };
+    assert_eq!(off.drawn_share(4320), 1.0);
+}
+
+#[test]
+fn render_scale_still_applies_below_max_resolution() {
+    let prefs = VideoPrefs {
+        render_scale: 50,
+        max_resolution: MaxResolution::P1440,
+        ..VideoPrefs::default()
+    };
+    // 1440 of 1620 lines would be 0.89: Render Scale's half is less.
+    assert_eq!(prefs.drawn_share(1620), 0.5);
+}

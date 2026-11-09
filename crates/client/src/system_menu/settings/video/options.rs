@@ -9,7 +9,8 @@ use super::super::rows::{
     spawn_dropdown_row, spawn_labelled, spawn_section, spawn_switch_row, tip,
 };
 use crate::common::{
-    AntiAliasing, Background, FrameRate, IN_BROWSER, Preset, RENDER_SCALES, VideoPrefs,
+    AntiAliasing, Background, FrameRate, IN_BROWSER, MaxResolution, Preset, RENDER_SCALES,
+    VideoPrefs,
 };
 use crate::widgets::{ButtonState, Dropdown, INK, UiId, spawn_slider};
 
@@ -23,6 +24,7 @@ pub(in crate::system_menu) enum VideoControl {
     FrameRate,
     VSync,
     RenderScale,
+    MaxResolution,
     AntiAliasing,
     Background,
     Brightness,
@@ -44,6 +46,7 @@ impl VideoControl {
             Self::FrameRate => "frame_rate",
             Self::VSync => "vsync",
             Self::RenderScale => "render_scale",
+            Self::MaxResolution => "max_resolution",
             Self::AntiAliasing => "anti_aliasing",
             Self::Background => "background",
             Self::Brightness => "brightness",
@@ -73,6 +76,7 @@ const VSYNC: &str = "Waits for the screen before showing each frame, so the pict
     doesn't tear. It can add a little delay to input. A medium difference.";
 const RENDER_SCALE: &str = "Draws the world at a lower resolution and stretches it to \
     fit. The interface stays sharp. Lower is faster, but blurrier. A big difference.";
+const MAX_RESOLUTION: &str = "The most lines the world is drawn with, however big the     window or screen. Bigger windows are then stretched, so full screen costs no more     to draw. The interface stays sharp. A big difference on large screens.";
 const ANTI_ALIASING: &str = "Smooths jagged edges. Higher costs more graphics power. \
     With it off the land may shimmer, and faded tokens look rougher. A medium difference.";
 const BACKGROUND: &str = "What the game does while another window is in front. Slow \
@@ -208,6 +212,21 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
             "Render Scale",
             RENDER_SCALE,
             at,
+        );
+
+        let list = dropdown(
+            &MaxResolution::ALL,
+            MaxResolution::name,
+            prefs.max_resolution,
+            Vec::new(),
+        );
+        let row = (MAX_RESOLUTION, None);
+        setting_row(
+            section,
+            VideoControl::MaxResolution,
+            "Max Resolution",
+            row,
+            list,
         );
 
         let greyed = AntiAliasing::ALL.iter().map(|it| !it.usable()).collect();

@@ -15,6 +15,9 @@ path = "src/main.rs"
 [dependencies]
 shared.workspace = true
 bevy = { workspace = true, features = ["default"] }
+# The graphics adapter's kind (`DeviceType`), which Bevy doesn't re-export: the
+# same version as Bevy's own, already built with it (MIT/Apache-2.0).
+wgpu-types = "30"
 # The player's locale, for how floors are numbered, on native and in browsers.
 sys-locale = { version = "0.3", features = ["js"] }
 # The player's preferences, and on native the servers this client has met.

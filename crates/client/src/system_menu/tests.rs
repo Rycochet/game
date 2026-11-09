@@ -22,6 +22,7 @@ fn test_app(menu: SystemMenu) -> App {
         .insert_resource(Session::Playing)
         .init_resource::<ChosenServer>()
         .init_resource::<crate::common::PlayFor>()
+        .init_resource::<crate::common::Preferences>()
         .insert_resource(menu);
     app
 }
@@ -169,4 +170,16 @@ fn characters_connects_to_choose_and_play_to_play_the_latest() {
     press_escape(&mut app);
     assert_eq!(press(&mut app, Action::Play), SystemMenu::Closed);
     assert_eq!(*app.world().resource::<PlayFor>(), PlayFor::Latest);
+}
+
+#[test]
+fn dont_warn_again_keeps_the_slow_drawing_warning_away() {
+    let mut app = at_start();
+    app.insert_resource(SystemMenu::SlowDrawing);
+    let button = app.world_mut().spawn(Action::QuietSlowDrawing).id();
+    app.world_mut().write_message(ButtonPressed(button));
+    app.world_mut().run_system_once(take_input).unwrap();
+    assert_eq!(*app.world().resource::<SystemMenu>(), SystemMenu::Menu);
+    let preferences = app.world().resource::<crate::common::Preferences>();
+    assert!(preferences.quiet_slow_drawing);
 }
