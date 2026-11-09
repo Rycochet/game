@@ -21,7 +21,7 @@ use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{
     ClickedToken, DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, HoveredToken,
-    TokenFlash, TokenView,
+    TokenFlash, TokenView, XRAY_WHITE, XrayMaterial,
 };
 use token::{IconAnchor, TokenAssets};
 
@@ -44,7 +44,8 @@ pub struct View3dPlugin;
 
 impl Plugin for View3dPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ViewGrid>()
+        app.add_plugins(MaterialPlugin::<XrayMaterial>::default())
+            .init_resource::<ViewGrid>()
             .init_resource::<ClickedToken>()
             .init_resource::<HoveredToken>()
             .configure_sets(Update, View3dSystems::Click.in_set(PlayerSystems::Input))
@@ -132,6 +133,7 @@ fn spawn_camera(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut xray: ResMut<Assets<XrayMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
     // Starts at the origin; `place_camera_and_tokens` moves it to the player.
@@ -162,6 +164,7 @@ fn spawn_camera(
     commands.insert_resource(TokenAssets::new(
         &mut meshes,
         &mut materials,
+        &mut xray,
         window.physical_height() as f32,
         orbit.distance,
     ));

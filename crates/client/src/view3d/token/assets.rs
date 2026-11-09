@@ -9,6 +9,7 @@ use super::super::CAMERA_FOV_DEGREES;
 use super::{
     COMPLETED_OPACITY, COMPLETED_SHADE, DIAMETER, HALF_THICKNESS, ICON_ART_PIXELS,
     ICON_FILE_PIXELS, ICON_GAP_PIXELS, ICON_PIXEL, ICON_SHADOW_PIXELS, OUTLINE_PIXELS,
+    XrayMaterial,
 };
 use crate::common::{Attitude, TokenShape};
 
@@ -23,6 +24,10 @@ pub struct TokenAssets {
     /// Indexed by `TokenShape as usize`.
     pub(super) bodies: [Handle<Mesh>; TokenShape::ALL.len()],
     pub(super) outlines: [Handle<Mesh>; TokenShape::ALL.len()],
+    /// The outline drawn through what hides it: as `outlines`, but not
+    /// below the ground, where the ground would hide it and the x-ray would
+    /// show it as a line under every token.
+    pub(super) xray_outlines: [Handle<Mesh>; TokenShape::ALL.len()],
     /// Indexed by `[completed as usize][Attitude as usize]`.
     pub(super) colours: [[Handle<StandardMaterial>; Attitude::ALL.len()]; 2],
     /// Indexed by `completed as usize`.
@@ -35,6 +40,12 @@ pub struct TokenAssets {
     pub(super) flash_body: Handle<StandardMaterial>,
     /// Each icon's red silhouette, made the first time it flashes.
     pub(super) flash_icons: HashMap<String, Handle<StandardMaterial>>,
+    /// Hidden tokens drawn through what hides them, by attitude: the body's
+    /// faint fill and the outline.
+    pub(super) xray_fill: [Handle<XrayMaterial>; Attitude::ALL.len()],
+    pub(super) xray_outline: [Handle<XrayMaterial>; Attitude::ALL.len()],
+    /// Each icon's x-ray silhouette by attitude, made the first time it shows.
+    pub(super) xray_icons: HashMap<(String, usize), Handle<XrayMaterial>>,
 }
 
 /// The outline width in grid units that shows as `OUTLINE_PIXELS` in a window
@@ -72,6 +83,7 @@ impl TokenAssets {
     pub fn new(
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<StandardMaterial>,
+        xray: &mut Assets<XrayMaterial>,
         window_height: f32,
         camera_distance: f32,
     ) -> Self {
@@ -81,6 +93,7 @@ impl TokenAssets {
             camera_distance,
             bodies: TokenShape::ALL.map(|shape| meshes.add(prism(shape, 0.0))),
             outlines: TokenShape::ALL.map(|shape| meshes.add(prism(shape, outline))),
+            xray_outlines: TokenShape::ALL.map(|shape| meshes.add(raised_prism(shape, outline))),
             colours: [false, true].map(|completed| {
                 Attitude::ALL.map(|attitude| {
                     // Lit, so the sun shades the top and sides differently and
@@ -108,6 +121,11 @@ impl TokenAssets {
                 ..default()
             }),
             flash_icons: HashMap::default(),
+            xray_fill: Attitude::ALL
+                .map(|attitude| xray.add(XrayMaterial::fill(attitude.colour()))),
+            xray_outline: Attitude::ALL
+                .map(|attitude| xray.add(XrayMaterial::outline(attitude.colour()))),
+            xray_icons: HashMap::default(),
         }
     }
 }
@@ -140,6 +158,11 @@ pub(super) fn fade(colour: Color, completed: bool) -> StandardMaterial {
         alpha_mode: AlphaMode::AlphaToCoverage,
         ..default()
     }
+}
+
+/// `prism(shape, grow)` moved up by `grow`, so its bottom is the token's.
+pub(super) fn raised_prism(shape: TokenShape, grow: f32) -> Mesh {
+    prism(shape, grow).translated_by(Vec3::Y * grow)
 }
 
 /// The token's shape extruded to its thickness, standing on the XZ plane and

@@ -126,7 +126,8 @@ fn silhouette(
         emissive: FLASH_RED.into(),
         perceptual_roughness: 1.0,
         reflectance: 0.0,
-        alpha_mode: AlphaMode::Mask(0.5),
+        // As the usual picture (`sync_icons`).
+        alpha_mode: AlphaMode::Blend,
         ..default()
     });
     assets.flash_icons.insert(key.to_string(), made.clone());
