@@ -72,11 +72,20 @@ pub enum ItemKind {
     TorsoArmour,
     Trousers,
     WaistArmour,
+    // Underclothes (`underclothes`), Skin layer.
+    Braies,
+    BreastBand,
+    Hose,
+    LinenCoif,
+    Loincloth,
+    Petticoat,
+    Shirt,
+    Wimple,
 }
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 65] = [
+    pub const ALL: [Self; 73] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -92,6 +101,8 @@ impl ItemKind {
         Self::BevoredHelm,
         Self::Boomerang,
         Self::Boots,
+        Self::Braies,
+        Self::BreastBand,
         Self::Caparison,
         Self::Chausses,
         Self::Cloak,
@@ -114,19 +125,24 @@ impl ItemKind {
         Self::HalfArmour,
         Self::Hat,
         Self::Helmet,
+        Self::Hose,
         Self::Key,
         Self::Knife,
         Self::Lantern,
         Self::LegArmour,
+        Self::LinenCoif,
+        Self::Loincloth,
         Self::Longsword,
         Self::Mantle,
         Self::Necklace,
         Self::PaddedChausses,
         Self::PaddedGloves,
+        Self::Petticoat,
         Self::Polearm,
         Self::Pouch,
         Self::Ring,
         Self::Sandals,
+        Self::Shirt,
         Self::Shoes,
         Self::ShortSword,
         Self::ShoulderArmour,
@@ -142,6 +158,7 @@ impl ItemKind {
         Self::TorsoArmour,
         Self::Trousers,
         Self::WaistArmour,
+        Self::Wimple,
     ];
 
     /// Whether it can be made at other sizes: what is worn, gems and blades. Everything

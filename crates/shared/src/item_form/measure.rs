@@ -18,6 +18,7 @@ impl ItemForm {
             Self::Feet(feet) => Some(feet.shape()),
             Self::Neck(neck) => Some(neck.shape()),
             Self::Footwear(footwear) => Some(footwear.shape()),
+            Self::Under(under) => Some(under.shape()),
             Self::Gem(_) | Self::Ring(_) | Self::Hands(_) | Self::Set(_) | Self::Key(_) => None,
         }
     }
@@ -37,6 +38,7 @@ impl ItemForm {
             Self::Feet(feet) => Some(feet.grams_at(size)),
             Self::Neck(neck) => Some(neck.grams_at(size)),
             Self::Footwear(footwear) => Some(footwear.grams_at(size)),
+            Self::Under(under) => Some(under.grams_at(size)),
             Self::Set(set) => Some(set.grams_at(size)),
             Self::Gem(_) | Self::Ring(_) | Self::Key(_) => None,
         }

@@ -56,7 +56,7 @@ pub(super) const fn biped(finger_count: u8) -> [BodyPart; 12] {
         BACK,
         part(Location::Arms, ALL_LAYERS),
         part(Location::Torso, ALL_LAYERS),
-        part(Location::Waist, MIDDLE_OUTER_OVER),
+        part(Location::Waist, ALL_LAYERS),
         part(Location::Hands, MIDDLE_OUTER),
         fingers(finger_count),
         part(Location::Legs, ALL_LAYERS),

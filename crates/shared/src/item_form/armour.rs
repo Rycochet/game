@@ -1,4 +1,4 @@
-//! Rolling the forms of armour and footwear, by item kind.
+//! Rolling the forms of armour, footwear and underclothes, by item kind.
 
 use super::ItemForm;
 use crate::armour::hands::{self, HandsPiece};
@@ -12,11 +12,13 @@ use crate::armour::{Style, arms, feet, shoulders};
 use crate::footwear::{self, FootwearPiece};
 use crate::item::{ItemKind, Quality};
 use crate::rng::Rng;
+use crate::underclothes::{self, UnderPiece};
 
 /// What is rolled for a kind of armour or footwear.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Piece {
     Footwear(FootwearPiece),
+    Under(UnderPiece),
     Arms,
     Hands(HandsPiece),
     Shoulders,
@@ -34,6 +36,9 @@ impl Piece {
     pub(super) fn of(kind: ItemKind) -> Option<Self> {
         if let Some(piece) = FootwearPiece::of(kind) {
             return Some(Self::Footwear(piece));
+        }
+        if let Some(piece) = UnderPiece::of(kind) {
+            return Some(Self::Under(piece));
         }
         Some(match kind {
             ItemKind::ArmArmour => Self::Arms,
@@ -70,6 +75,7 @@ impl Piece {
     pub(super) fn roll(self, rng: &mut Rng, quality: Quality, style: Option<Style>) -> ItemForm {
         match self {
             Self::Footwear(piece) => ItemForm::Footwear(footwear::roll(rng, piece, quality)),
+            Self::Under(piece) => ItemForm::Under(underclothes::roll(rng, piece, quality)),
             Self::Arms => ItemForm::Arms(arms::roll(rng, style, quality)),
             Self::Hands(piece) => ItemForm::Hands(hands::roll(rng, piece, style)),
             Self::Shoulders => ItemForm::Shoulders(shoulders::roll(rng, None, style)),
@@ -84,7 +90,8 @@ impl Piece {
     }
 }
 
-/// Whether a kind is armour with a form (not footwear, which has its own options).
+/// Whether a kind is armour with a form (not footwear or underclothes, which have
+/// their own options).
 pub(super) fn is_armour(kind: ItemKind) -> bool {
-    Piece::of(kind).is_some_and(|piece| !matches!(piece, Piece::Footwear(_)))
+    Piece::of(kind).is_some_and(|piece| !matches!(piece, Piece::Footwear(_) | Piece::Under(_)))
 }

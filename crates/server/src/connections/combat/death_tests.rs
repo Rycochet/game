@@ -49,7 +49,7 @@ fn worn_kinds(test: &TestClient) -> Vec<ItemKind> {
 fn normal_keeps_everything() {
     let (test, ground, told) = killed_on(Difficulty::Normal);
     assert!(ground.is_empty());
-    assert_eq!(test.client.inventory.worn.len(), 3, "their first clothes");
+    assert_eq!(test.client.inventory.worn.len(), 4, "their first clothes");
     assert!(!test.client.died_for_good);
     assert!(told.contains(&ServerMessage::Killed { permanent: false }));
 }
@@ -57,7 +57,8 @@ fn normal_keeps_everything() {
 #[test]
 fn hard_keeps_only_skin_clothes() {
     let (test, ground, told) = killed_on(Difficulty::Hard);
-    assert_eq!(worn_kinds(&test), vec![ItemKind::TShirt]);
+    // Underclothes stay on (owner, 2026-11-09): wearing better ones is the player's choice.
+    assert_eq!(worn_kinds(&test), vec![ItemKind::Shirt, ItemKind::Braies]);
     let mut dropped: Vec<_> = ground.iter().map(|item| item.kind).collect();
     dropped.sort_by_key(|kind| format!("{kind:?}"));
     assert_eq!(dropped, vec![ItemKind::Shoes, ItemKind::Trousers]);
@@ -69,7 +70,7 @@ fn hard_keeps_only_skin_clothes() {
 fn ironman_drops_everything_and_is_to_be_deleted() {
     let (test, ground, told) = killed_on(Difficulty::Ironman);
     assert!(test.client.inventory.worn.is_empty());
-    assert_eq!(ground.len(), 3);
+    assert_eq!(ground.len(), 4, "their first clothes");
     assert!(test.client.died_for_good);
     assert!(told.contains(&ServerMessage::Killed { permanent: true }));
 }

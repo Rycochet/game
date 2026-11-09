@@ -141,6 +141,27 @@ impl Item {
         }
     }
 
+    /// Where its kind is worn that its form leaves bare: a sleeveless shirt's arms,
+    /// the feet of footless and stirrup hose.
+    pub fn bare(&self) -> &'static [Location] {
+        match &self.form {
+            Some(ItemForm::Under(under)) => under.garment.bare(),
+            _ => &[],
+        }
+    }
+
+    /// Where it is worn: its kind's locations, less any its form leaves bare.
+    pub fn worn_locations(&self) -> Vec<Location> {
+        let bare = self.bare();
+        self.kind.def().wear.map_or(Vec::new(), |wear| {
+            wear.locations
+                .iter()
+                .copied()
+                .filter(|location| !bare.contains(location))
+                .collect()
+        })
+    }
+
     /// The gems set in it.
     pub fn set_gems(&self) -> impl Iterator<Item = &Item> {
         self.form.iter().flat_map(ItemForm::gems)

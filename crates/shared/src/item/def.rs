@@ -220,7 +220,6 @@ impl ItemKind {
                     Some(300),
                     None,
                 ),
-                Self::Socks => plain("Socks", 50, square).worn(wear(Skin, &[Feet], (1, 1), true)),
                 Self::Spear => plain("Spear", 1500, Shape::rectangle(1, 8)).worn(HELD),
                 Self::Stone => plain("Stone", 5000, Shape::rectangle(2, 2)).without_quality(),
                 // Belted over armour, to the knee, which doesn't count as the legs.
@@ -231,12 +230,6 @@ impl ItemKind {
                     true,
                 )),
                 Self::Sword => plain("Sword", 1400, Shape::rectangle(1, 5)).worn(HELD),
-                Self::TShirt => plain("T-Shirt", 200, Shape::rectangle(2, 2)).worn(wear(
-                    Skin,
-                    &[Torso, Arms],
-                    (1, 0),
-                    false,
-                )),
                 // Open at the sides, so it fits more than one size.
                 Self::Tabard => plain("Tabard", 500, Shape::rectangle(2, 3)).worn(wear(
                     Over,
@@ -257,11 +250,14 @@ impl ItemKind {
                     (1, 0),
                     false,
                 )),
+                // Underclothes, and the old T-shirt: in `under_def.rs`.
+                _ => self.under_def(),
             };
         // First guesses at how much work each is beside the usual.
         def.taking(match self {
             Self::Apple | Self::Coin | Self::Stone => 10,
-            Self::Socks | Self::TShirt | Self::Trousers | Self::Hat | Self::Tabard => 50,
+            Self::Trousers | Self::Hat | Self::Tabard => 50,
+            _ if self.is_under() => 50,
             Self::Ring | Self::Pouch | Self::Belt | Self::Boomerang => 75,
             Self::Gauntlets
             | Self::Helmet

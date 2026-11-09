@@ -243,9 +243,8 @@ fn spawn_table(
                         .iter()
                         .filter(|item| Some(item.id) != held)
                         .filter(|item| {
-                            item.kind.def().wear.is_some_and(|wear| {
-                                wear.layer == layer && wear.locations.contains(&part.location)
-                            })
+                            item.kind.def().wear.is_some_and(|wear| wear.layer == layer)
+                                && item.worn_locations().contains(&part.location)
                         })
                         .collect();
                     spawn_slot(row, inventory, &here, god);
