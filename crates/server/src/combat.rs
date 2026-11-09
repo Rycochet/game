@@ -16,6 +16,10 @@ pub(crate) enum Act {
     Strike(Swing),
     /// A Heal (players only, so far).
     Heal,
+    /// A kick at a creature (`Pending::target`).
+    Kick(Swing),
+    /// A kick at the door at this cell of the player's level.
+    KickDoor((i64, i64)),
 }
 
 /// An ability begun and not landed yet.

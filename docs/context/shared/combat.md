@@ -12,6 +12,7 @@ Combat's rules, the same for players and mobs on both sides: what an attack cost
 - `combat/wielded.rs`: `Wielded`.
 - `combat/fighter.rs`: `Fighter`, `Swing`, `PRACTICE_PER_BLOW`.
 - `combat/reach.rs`: `in_reach`.
+- `combat/kick.rs`: Kick (`Fighter::kick`, `kick_harm`, `kick_force`, `kick_skill`) and its constants.
 
 ## Public API
 
@@ -22,6 +23,7 @@ Combat's rules, the same for players and mobs on both sides: what an attack cost
 - `Wielded { main, off }` (`of(inventory)`, `is_dual`, `for_attack(n)`): the weapons held (`creature::Location::Held`), the bigger to swing always the main hand (owner); bare hands when nothing is held; hands take turns when dual wielding, the main first.
 - `Fighter { kind, attributes, skills, wielded }` (skills `None` for mobs, counting from the floor): `swing(n)` (the `n`th attack: weapon, hand, cost, wind-up), `attack_power`, `defence_power` (by the main hand's Defence node), `harm(swing, defender, rng)` (armour 0 for now), `practised_by(swing)` (the weapon's node, and `combat/melee/dual` with two weapons), `practised_defending()`. `PRACTICE_PER_BLOW` (8: halved each level up, so all four levels gain; a first guess; the server gives it at most once per skill every 5 seconds, `skill::Windows`). `CANCEL_PENALTY` (420: two ticks at normal speed).
 - `Weapon::skill` (its own node by name, `combat/melee/<type>/<weapon>`), `attack_skill(kind)` (that, its type's, or `unarmed/<kind>`), `defence_skill()` (`defence/<type>` or `defence/unarmed`).
+- Kick (owner, 2026-11-09; anyone with legs): `Fighter::kick()` an unarmed attack's cost by agility and the Kick skill (`combat/melee/kick`) × `KICK_COST_PER_MILLE` (2500: more than twice); `kick_harm(defender, shoved, rng)` an unarmed blow by the Kick skill's power × `KICK_HARM_PER_MILLE` (400) if it shoves the target a step, twice that if it can't (still less than a punch); `kick_force(rng)` against a thing (a door), the blow with no defence × `KICK_FORCE_PER_MILLE` (2000).
 - `in_reach(level, from, to, reach)`: within `reach` cells (diagonals count one), not the same cell, and a clear line (`dungeon::line_is_clear`). Heal's range uses it too (`magic`).
 
 ## Depends on

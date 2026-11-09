@@ -15,6 +15,10 @@ Each attack winds up for a short moment before it lands. If your target has move
 
 Right-click Attack on the action bar (or hold a finger on it) to have it used by itself: you then attack your target whenever it is an enemy in reach and you are ready. A creature that attacks you becomes your target if you have no target in sight.
 
+## Kicking
+
+**Kick** is known by every creature with legs; drag it onto your action bar from the Abilities page. It takes more than twice as long as a punch. Kicking your target shoves it a step away and hurts it less than a punch; if it has nowhere to go, against a wall or someone else, it hurts it twice as much, still less than a punch. With no target in reach, you kick the closed door beside you instead, and enough kicks break it open for good. Kicking practises the Kick skill, under Melee.
+
 ## Healing
 
 **Heal** turns 6 Mana into Health. Use it like Attack: it heals your target if they aren't an enemy, otherwise (or with no target) it heals you. Others can be healed from up to 6 cells away, in sight. It always spends its 6 Mana, even on someone already whole; healing beyond their most is lost. At first each point of Mana gives 2 Health, rising with the Healing skill to 20 for a master.

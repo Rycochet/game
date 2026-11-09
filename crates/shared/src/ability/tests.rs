@@ -87,7 +87,7 @@ fn passive_and_unknown_abilities_stay_off_the_bar() {
         Err(BarRefusal::Passive)
     );
     assert_eq!(
-        bar.apply(place(Ability::Kick), CreatureKind::Human),
+        bar.apply(place(Ability::Trample), CreatureKind::Human),
         Err(BarRefusal::Unknown)
     );
     assert_eq!(bar.apply(place(Ability::Kick), kicker()), Ok(()));
@@ -178,8 +178,10 @@ fn bad_slots_and_empty_autos_are_refused_without_change() {
 #[test]
 fn only_known_active_abilities_can_be_used() {
     assert!(Ability::Attack.can_use(CreatureKind::Human));
-    assert!(!Ability::Kick.can_use(CreatureKind::Human));
-    assert!(Ability::Kick.can_use(kicker()));
+    // Anyone with legs kicks (owner, 2026-11-09); trampling is a kind's own.
+    assert!(Ability::Kick.can_use(CreatureKind::Human));
+    assert!(!Ability::Trample.can_use(CreatureKind::Human));
+    assert!(Ability::Trample.can_use(kicker()));
     assert!(!Ability::NightVision.can_use(CreatureKind::Human));
 }
 

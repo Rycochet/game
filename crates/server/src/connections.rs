@@ -34,6 +34,7 @@ mod dev_skills;
 pub(crate) mod difficulty;
 mod give_items;
 mod heal;
+mod kick;
 mod lightning;
 mod login;
 mod look_up;

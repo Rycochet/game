@@ -21,6 +21,7 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 
 ## Public API
 
+- `has_legs(kind)` (`body/limbs.rs`): any limb it stands on; kinds with legs know Kick.
 - `has_hands(kind)` (`body/limbs.rs`): arms (not wings), or a person's upper body on a beast's; a kind whose body isn't drawn has none. Mobs with hands open doors.
 
 - `Layout::of(kind) -> Option<Layout>`: kinds drawn so far: on two legs, and the horse and chicken from `BEASTS`; and taurs (centaur, drider, scorpion man) from `TAURS`. The human's (and beggar's) is built from `PERSON.frame()`, the giant's from `GIANT`, the first peoples' from their `Biped`, with `Parts::of(kind)`.

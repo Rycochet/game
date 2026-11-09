@@ -136,7 +136,8 @@ pub(super) fn ask_wanted(
 
 /// Who an ability chosen by hand is aimed at: `Some(None)` for the player
 /// themselves, `None` if it can't be aimed. Heal goes to the target unless it
-/// is an enemy, otherwise to the player; anything else needs a target.
+/// is an enemy, otherwise to the player; Kick at the target or a door; anything
+/// else needs a target.
 fn aim(ability: Ability, target: Option<Id>, others: &Query<&Other>) -> Option<Option<Id>> {
     match ability {
         // Never an enemy by hand: healing one is to come another way.
@@ -145,6 +146,9 @@ fn aim(ability: Ability, target: Option<Id>, others: &Query<&Other>) -> Option<O
                 .iter()
                 .any(|other| other.id == *id && other.feeling != Feeling::Unfriendly)
         })),
+        // At the target, or with none (or none in reach: the server's to say)
+        // the closed door beside the player.
+        Ability::Kick => Some(target),
         _ => target.map(Some),
     }
 }

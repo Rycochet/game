@@ -17,4 +17,7 @@ pub enum Landed {
     /// It gave this much Health (some of it lost if beyond the most), and the
     /// one healed has this much left, per mille.
     Healed { amount: Points, left: u16 },
+    /// A kick landed on a door (`target` is `None`): this much of it is left,
+    /// per mille; 0 means it broke.
+    Door { left: u16 },
 }

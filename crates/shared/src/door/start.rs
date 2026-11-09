@@ -69,6 +69,7 @@ pub fn starting_door(
         material: Material::Wood,
         style: DoorStyle::Plain,
         lock: None,
+        damage: 0,
     }
 }
 

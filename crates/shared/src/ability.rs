@@ -99,7 +99,7 @@ impl Ability {
             Self::Attack => "Strikes your target with what you hold, or without.",
             Self::Heal => "Heals you or your allies, and tries to keep you alive if you ask.",
             Self::Flutter => "Takes to the air for a moment.",
-            Self::Kick => "Kicks out at your target.",
+            Self::Kick => "Kicks your target a step away, or the closed door beside you.",
             Self::NightVision => "Sees in the dark.",
             Self::Trample => "Charges down whoever is in the way.",
             Self::Sneak => "Moves slowly and quietly while it is on.",
@@ -150,7 +150,12 @@ pub fn known(kind: CreatureKind) -> Vec<Ability> {
     let own = kind.def().abilities;
     Ability::ALL
         .into_iter()
-        .filter(|ability| EVERYONE_KNOWS.contains(ability) || own.contains(ability))
+        .filter(|ability| {
+            EVERYONE_KNOWS.contains(ability)
+                || own.contains(ability)
+                // Anyone with legs can kick (owner, 2026-11-09).
+                || (*ability == Ability::Kick && crate::body::has_legs(kind))
+        })
         .collect()
 }
 
