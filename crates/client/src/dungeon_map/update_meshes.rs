@@ -7,7 +7,9 @@ use shared::poi::PoiKind;
 use shared::protocol::LevelKind;
 
 use super::daylight::{OutsideLight, Spill, TownLights};
-use super::mesh::{LightGrid, View};
+use super::door_swing::DoorSwings;
+use super::mesh::{LightGrid, View, build_posed};
+use super::put_meshes::put_meshes;
 use super::sight_lines::SightLines;
 use super::theme::Theme;
 use super::wild_ground::GroundTint;
@@ -60,11 +62,12 @@ pub(super) fn update_meshes(
     // Together, as Bevy limits how many things a system can ask for.
     // With the settings: Brightness and whether remembered places show, as
     // last built.
-    (outside, mut spill, preferences, mut settings_seen): (
+    (outside, mut spill, preferences, mut settings_seen, swings): (
         Res<OutsideLight>,
         Local<Spill>,
         Res<Preferences>,
         Local<Option<(u8, bool)>>,
+        Res<DoorSwings>,
     ),
     (town_lights, mut window_glow, lines, mut lines_seen, tint, lightning, heights): (
         Res<TownLights>,
@@ -89,6 +92,7 @@ pub(super) fn update_meshes(
         || town_lights.is_changed()
         || tint.is_changed()
         || heights.is_changed()
+        || swings.is_changed()
         || *lines_seen != lines.changes
         || *settings_seen != Some(settings)
         || lights
@@ -211,76 +215,61 @@ pub(super) fn update_meshes(
     light.raise_to(video.least_light());
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
     let theme = Theme::of_level(dungeon.info.as_ref().map(|info| info.kind));
-    let built = super::mesh::build(
-        level,
-        &views,
-        &drawn,
-        &remembered,
-        &light,
-        &dungeon.stairs,
-        &dungeon.buildings,
+    let looks = (
+        &dungeon.buildings[..],
         &town_lights.0,
-        &dungeon.fields,
+        &dungeon.fields[..],
         ruined,
-        camera,
-        theme.shape,
-        &cut,
-        tint.wild(&heights),
+    );
+    let (seen_now, place) = (
+        (&views[..], &drawn, &remembered, &cut),
+        (camera, theme.shape),
+    );
+    let (stairs, wild) = (&dungeon.stairs, tint.wild(&heights));
+    let built = build_posed(
+        level,
+        seen_now,
+        &light,
+        stairs,
+        looks,
+        place,
+        wild,
+        &swings.drawn,
     );
     shown.sight = Some(sight.clone());
     dungeon.bypass_change_detection().remembered = remembered;
     (shown.solid_faces, shown.outlined) = (built.solid_faces, Some(built.outlined));
 
-    // An empty mesh is hidden rather than drawn with no triangles.
-    let shown_if = |has_faces: bool| {
-        if has_faces {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        }
-    };
-    let mut solid_meshes: Vec<Option<Mesh>> = built.solid.into_iter().map(Some).collect();
-    for (part, handle, mut visibility) in &mut solid {
-        let i = part.0 as usize;
-        visibility.set_if_neq(shown_if(built.has_solid[i]));
-        // An empty mesh is left as it was (hidden): Bevy warns about meshes
-        // with no vertices.
-        if !built.has_solid[i] {
-            continue;
-        }
-        if let (Some(mut stored), Some(mesh)) = (meshes.get_mut(&handle.0), solid_meshes[i].take())
-        {
-            *stored = mesh;
-        }
-    }
-    let mut memory_meshes: Vec<Option<Mesh>> = built.memory.into_iter().map(Some).collect();
-    for (part, handle, mut visibility) in &mut memory {
-        let i = part.0 as usize;
-        visibility.set_if_neq(shown_if(built.has_memory[i] && settings.1 && !in_hall));
-        if !built.has_memory[i] {
-            continue;
-        }
-        if let (Some(mut stored), Some(mesh)) = (meshes.get_mut(&handle.0), memory_meshes[i].take())
-        {
-            *stored = mesh;
-        }
-    }
-    let mut through_meshes: Vec<Option<Mesh>> =
-        built.stairs_through.into_iter().map(Some).collect();
-    for (part, handle, mut visibility) in &mut stairs_through {
-        let i = part.0 as usize;
-        visibility.set_if_neq(shown_if(built.has_stairs_through[i]));
-        if !built.has_stairs_through[i] {
-            continue;
-        }
-        if let (Some(mut stored), Some(mesh)) =
-            (meshes.get_mut(&handle.0), through_meshes[i].take())
-        {
-            *stored = mesh;
-        }
-    }
+    let solid = solid
+        .iter_mut()
+        .map(|(part, mesh, shown)| (part.0 as usize, mesh, shown));
+    put_meshes(&mut meshes, built.solid, &built.has_solid, true, solid);
+    let memory = memory
+        .iter_mut()
+        .map(|(part, mesh, shown)| (part.0 as usize, mesh, shown));
+    let remembered_shown = settings.1 && !in_hall;
+    put_meshes(
+        &mut meshes,
+        built.memory,
+        &built.has_memory,
+        remembered_shown,
+        memory,
+    );
+    let through = stairs_through.iter_mut();
+    let through = through.map(|(part, mesh, shown)| (part.0 as usize, mesh, shown));
+    put_meshes(
+        &mut meshes,
+        built.stairs_through,
+        &built.has_stairs_through,
+        true,
+        through,
+    );
     let (see_through_mesh, mut see_through_visibility) = see_through.into_inner();
-    see_through_visibility.set_if_neq(shown_if(built.has_see_through));
+    see_through_visibility.set_if_neq(if built.has_see_through {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    });
     if built.has_see_through
         && let Some(mut stored) = meshes.get_mut(&see_through_mesh.0)
     {

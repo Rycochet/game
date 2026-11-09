@@ -6,7 +6,7 @@ use crate::common::WildCellHeights;
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
 use shared::site::{BuildingLook, FieldLook};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::mesh::{LightGrid, View};
 use super::super::theme::Shape;
@@ -31,6 +31,9 @@ pub struct Scene<'a> {
     pub tint: Option<&'a Tints>,
     /// The wilderness's cells' heights (none anywhere else).
     pub heights: Option<&'a WildCellHeights>,
+    /// Door leaves part way through a swing, by cell (`door_swing`); the rest
+    /// are drawn as they hang.
+    pub leaves: &'a BTreeMap<(i64, i64), super::LeafPose>,
 }
 
 impl Scene<'_> {

@@ -16,7 +16,9 @@ mod meshes;
 mod raise;
 mod surface;
 
+#[cfg(test)]
 pub use build::build;
+pub use build::build_posed;
 use build::{RAISED, RAISED_NORMAL};
 pub use builder::Builder;
 use cells::build_cell_at;
