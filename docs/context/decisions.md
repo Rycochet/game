@@ -1176,3 +1176,7 @@ Owner's choice. The Docker image's web client stopped building after #352: compi
 ## 2026-11-09: Door leaves, secret doors and stairs outlined
 
 Owner's design, PR 3 of the x-ray work. Doors get leaves in their frames, open (as the rules say every door is), one side or the other by a hash of the cell; secret doors known by truesight look like wall with a black door outline, and are to open half as far as doors once they can open; stairs get black outlines. All three show through what hides them in white (`view3d`'s x-ray): a door as its leaf and the lines round its hole, a secret door as its outline, stairs as a plain stand-in of their size, since stairs hide parts of themselves and their own faces would show through the rest. They are built with the level's meshes into three more meshes (`dungeon_map::outlined`), not one model each. Town doors aren't real doors and get none.
+
+## 2026-11-09: Walls in the way cut away near the player
+
+Owner's design, PR 4 of the x-ray work, in place of drawing walls between the camera and what is seen half see-through (which made visual artifacts): those walls are solid, and within 4 cells of the player cut down to a quarter of their height with a flat top, rising to full height by 6 cells so they don't jump as the player walks. Beyond that they hide what is behind them, and tokens, bags, stairs and doors show through as the x-ray draws them. Done when the level's meshes are built (moving the faces and lowering the cell's vertices), not in a shader. Town buildings in the way stay half see-through.

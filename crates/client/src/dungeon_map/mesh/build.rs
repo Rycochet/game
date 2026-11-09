@@ -12,6 +12,7 @@ use super::super::theme::Shape;
 use super::super::town;
 use super::super::walls::{Layers, Scene};
 use super::super::wild_ground::Wild;
+use super::cutaway::{cut_height, settle_in_the_way};
 use super::flow::slope_liquid;
 use super::raise::{Marks, build_edges};
 use super::{
@@ -70,6 +71,8 @@ pub fn build(
         heights: wild.map(|wild| wild.heights),
     };
     let (min_x, min_y, width, height) = level.bounds();
+    // The first viewer is the player.
+    let player = views.first().map(|view| view.cell);
 
     for y in min_y..min_y + height {
         for x in min_x..min_x + width {
@@ -78,7 +81,18 @@ pub fn build(
             }
             let before = sizes(&layers.solid);
             let marks = Marks::of(&layers);
+            let through = (
+                layers.see_through.positions.len(),
+                layers.see_through.indices.len(),
+            );
             build_cell_at(&mut layers, &scene, stairs, (x, y));
+            let cell = level.cell(x, y);
+            if cell.is_wall() || cell.is_opening() {
+                // Measured from its ground, on raised land.
+                let camera = scene.camera - Vec3::Y * scene.ground(x, y);
+                let cut = player.and_then(|player| cut_height(player, (x, y)));
+                settle_in_the_way(&mut layers, &marks, through, camera, cut);
+            }
             marks.lift(&mut layers, scene.ground(x, y));
             if level.cell(x, y).looks_liquid() {
                 slope_liquid(&mut layers, &marks, &scene, (x, y));

@@ -133,6 +133,60 @@ impl Builder {
         }
     }
 
+    /// Moves every quad added since `(vertices, indices)` into `into`, turned
+    /// to face `camera` if it faces away (so a wall's side seen from behind
+    /// shows as its side towards the camera), and returns whether there were
+    /// any. Everything here is built in quads.
+    pub(in crate::dungeon_map) fn move_facing(
+        &mut self,
+        (vertices, indices): (usize, usize),
+        into: &mut Builder,
+        camera: Vec3,
+    ) -> bool {
+        let quads = (self.positions.len() - vertices) / 4;
+        for quad in 0..quads {
+            let at = vertices + quad * 4;
+            let normal = Vec3::from_array(self.normals[at]);
+            let middle = (at..at + 4)
+                .map(|i| Vec3::from_array(self.positions[i]))
+                .sum::<Vec3>()
+                / 4.0;
+            let away = normal.dot(camera - middle) < 0.0;
+            let first = into.positions.len() as u32;
+            for i in at..at + 4 {
+                let n = if away { -normal } else { normal };
+                into.positions.push(self.positions[i]);
+                into.normals.push(n.to_array());
+                into.uvs.push(self.uvs[i]);
+                into.colours.push(self.colours[i]);
+                into.bases.push(self.bases[i]);
+                into.flows.push(self.flows[i]);
+            }
+            let order = if away {
+                [0, 2, 1, 0, 3, 2]
+            } else {
+                [0, 1, 2, 0, 2, 3]
+            };
+            into.indices.extend(order.map(|corner| first + corner));
+        }
+        self.positions.truncate(vertices);
+        self.normals.truncate(vertices);
+        self.uvs.truncate(vertices);
+        self.colours.truncate(vertices);
+        self.bases.truncate(vertices);
+        self.flows.truncate(vertices);
+        self.indices.truncate(indices);
+        quads > 0
+    }
+
+    /// Lowers everything added since vertex `from` that stands higher than
+    /// `height` to it, so a wall cut down keeps a flat top.
+    pub(in crate::dungeon_map) fn cut_down(&mut self, from: usize, height: f32) {
+        for position in &mut self.positions[from..] {
+            position[1] = position[1].min(height);
+        }
+    }
+
     /// Raises everything added since vertex `from` by `by`, onto ground that
     /// high.
     pub(in crate::dungeon_map) fn lift(&mut self, from: usize, by: f32) {
