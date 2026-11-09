@@ -3,6 +3,7 @@
 
 mod dev_clicks;
 mod dressed;
+mod dressing_wait;
 mod flash;
 mod health_bars;
 mod hover_name;
@@ -42,12 +43,15 @@ impl Plugin for EntitiesPlugin {
         app.init_resource::<Others>()
             .init_resource::<health_bars::SeenHealth>()
             .init_resource::<wind_up_bars::SeenWindUps>()
+            .init_resource::<dressing_wait::DressingWait>()
+            .add_message::<crate::common::Dressing>()
             .add_systems(
                 PostUpdate,
                 (
                     health_bars::take_health,
                     health_bars::show_health_bars,
                     wind_up_bars::take_wind_ups,
+                    dressing_wait::take_dressing,
                     wind_up_bars::show_wind_up_bars,
                 )
                     .chain()

@@ -82,6 +82,7 @@ pub(super) struct Outbox<'w> {
     gave: MessageWriter<'w, GaveItem>,
     took: MessageWriter<'w, TookItem>,
     spent: MessageWriter<'w, SpentEnergy>,
+    dressing: MessageWriter<'w, crate::common::Dressing>,
     stacks: Res<'w, super::Stacks>,
     on_text: (ResMut<'w, HeldOverText>, MessageWriter<'w, DroppedOnText>),
     /// Why a drop on the clothes was refused, and the rule it goes by.

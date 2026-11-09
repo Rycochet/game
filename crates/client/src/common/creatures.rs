@@ -52,6 +52,12 @@ pub struct CarryLimit(pub u32);
 #[derive(Message, Clone, Copy, Debug)]
 pub struct SpentEnergy(pub u32);
 
+/// Putting on or taking off took this much of the energy in `SpentEnergy`, which
+/// `entities` shows as a bar under the player's token while it is a second or
+/// more: a placeholder for a properly designed progress widget (owner, 2026-11-09).
+#[derive(Message, Clone, Copy, Debug)]
+pub struct Dressing(pub u32);
+
 /// What the player spent energy on was called off before it was done: all
 /// they still owe comes back but for this much (`Energy::cancel`).
 #[derive(Message, Clone, Copy, Debug)]

@@ -93,9 +93,6 @@ impl Inventory {
         rotation: Rotation,
     ) -> Result<(), MoveRefused> {
         let item = self.find(id).ok_or(MoveRefused::NoSuchItem)?;
-        if self.covered_by(id).is_some() {
-            return Err(MoveRefused::Covered);
-        }
         self.may_hold(holder, item)?;
         let shape = item.shape().turned(rotation);
         if self.grid(holder).is_none() {

@@ -36,9 +36,6 @@ impl Inventory {
         onto: Id,
         limits: StackLimits,
     ) -> Result<u32, MoveRefused> {
-        if self.covered_by(id).is_some() {
-            return Err(MoveRefused::Covered);
-        }
         let item = self.find(id).ok_or(MoveRefused::NoSuchItem)?;
         let count = self.stack_room(item, onto, limits)?;
         let part = match count == item.count() {

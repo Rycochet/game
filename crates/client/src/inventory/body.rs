@@ -121,8 +121,9 @@ pub(super) fn spawn_slot(
         BackgroundColor(tint),
         BorderColor::from(item_edge(item.quality)),
     ));
-    // Something under another can't be picked up, nor a curse once it is known.
-    if !covered && (god || carried.may_remove(item.id, Remover::Wearer)) {
+    // A curse once it is known can't be picked up. Something under another can,
+    // only more slowly (shown faded).
+    if god || carried.may_remove(item.id, Remover::Wearer) {
         slot.insert(Pressable);
     }
     if let Some(aura) = Aura::of(item) {
@@ -278,7 +279,8 @@ pub(super) fn show_body_aim(
     }
 }
 
-/// What a worn item's name adds: why it can't be moved, and how it fits.
+/// What a worn item's name adds: what is over it, slowing changing it, and how it
+/// fits.
 pub(super) fn worn_notes(carried: &Inventory, id: Id) -> String {
     let mut notes = String::new();
     if let Some(over) = carried.covered_by(id).and_then(|over| carried.find(over)) {

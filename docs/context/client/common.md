@@ -47,7 +47,7 @@ Shared building blocks for the client modules. Keep it small.
 - `HoveredBag` (resource): the cell of the bag on the ground the pointer is on; `ground` sets it, `dungeon_map` leaves such clicks alone, `hover` names it.
 - `Target` (resource): the creature the player has targeted, by id; set by `target`, kept while out of sight.
 - For `hover`'s box: `HoverName` (component: what a token is called; a token with one can be hovered though not clicked: `entities` puts it on others), `HoveredOnMap` (resource: the door or stairs under the pointer, from `dungeon_map`), `HoveredInSky` (resource: the sun or moon by the minimap, from `minimap`). `poi_name(poi)` and `words("StoneTower")` ("Stone tower") name things written in code style.
-- `GROUND`: who `StockCell` and `TakesGifts` say for the ground under the player. `SpentEnergy` (message): the player did something that takes energy; read by `player`.
+- `GROUND`: who `StockCell` and `TakesGifts` say for the ground under the player. `SpentEnergy` (message): the player did something that takes energy; read by `player`. `Dressing` (message): how much of that was putting on or taking off, from `inventory`, shown by `entities` (a placeholder for a progress widget).
 - `TakesGifts`, `HeldOverGifts`, `HeldGift`, `GaveItem`: dropping a held item on something to give it to someone, between `inventory` and `trade`.
 - `BandShift`: how far the bands on set items' edges have slid, from `view3d` for `widgets`.
 - `quality_colour`, `NO_QUALITY_NAME`: how an item's quality is shown, for `inventory` and `widgets`.

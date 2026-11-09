@@ -155,10 +155,9 @@ pub(super) fn aim_held(
             super::super::hold::target_for_new(&carried.0, item, held.item, over, limits)
         }
     } else if on_drop {
-        // Only sites have ground, and what is covered can't come off.
+        // Only sites have ground.
         Target::Drop {
-            allowed: *view.get() == GameView::Dungeon
-                && carried.0.covered_by(held.item.id).is_none(),
+            allowed: *view.get() == GameView::Dungeon,
         }
     } else if on_bin {
         // In it already: nothing happens.

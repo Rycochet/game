@@ -80,7 +80,6 @@ pub(super) fn pick_up_by_finger(
     };
     *decided = Some(start);
     if let Some(cell) = item_cell_in_front(start, nodes.iter())
-        && carried.0.covered_by(cell.id).is_none()
         && (god.0 || carried.0.may_remove(cell.id, Remover::Wearer))
     {
         // A mixed stack is chosen from first: see `split`.

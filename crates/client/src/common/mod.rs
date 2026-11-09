@@ -60,7 +60,7 @@ pub use browser::open_in_browser;
 pub use characters::{CharacterChoice, CharacterSelect, PlayFor, PlayableHere};
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{
-    AbilitiesPage, CancelledEnergy, CarryLimit, MakesCharacters, MakingCharacter, Other,
+    AbilitiesPage, CancelledEnergy, CarryLimit, Dressing, MakesCharacters, MakingCharacter, Other,
     PlayerGait, PlayerSpeed, SheetText, SkillsPage, SpentEnergy,
 };
 pub use debug::{

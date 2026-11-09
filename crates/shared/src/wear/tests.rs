@@ -1,6 +1,7 @@
 use super::*;
 use crate::armour::hands::Fingers;
 use crate::creature::{CreatureKind, Location, Size};
+use crate::energy::dressing_cost;
 use crate::id::Id;
 use crate::item::StackLimits;
 use crate::item::{Favour, Inventory, Item, Made, Quality};
@@ -42,28 +43,24 @@ fn take_off(inventory: &mut Inventory, n: u128) -> Result<(), MoveRefused> {
 }
 
 #[test]
-fn a_higher_layer_stops_what_is_under_it_going_on_or_coming_off() {
+fn a_higher_layer_only_slows_what_is_under_it() {
     use ItemKind::{Boots, Socks};
     let mut inventory = carrying(&[Socks, Boots]);
     assert_eq!(inventory.wear(id(2)), Ok(Fit::Exact));
-    // Socks can't go on under boots already on.
-    assert_eq!(
-        inventory.check_wear(id(1)),
-        Err(WearRefused::Covered(id(2)))
-    );
-    take_off(&mut inventory, 2).unwrap();
-    inventory.wear(id(1)).unwrap();
-    inventory.wear(id(2)).unwrap();
-    // Nor come off under them.
+    // Socks go on under boots already on...
+    let bare = dressing_cost(inventory.find(id(1)).unwrap().total_weight());
+    assert_eq!(inventory.wear(id(1)), Ok(Fit::Exact));
+    // ...but take longer to change there.
     assert_eq!(inventory.covered_by(id(1)), Some(id(2)));
-    assert_eq!(take_off(&mut inventory, 1), Err(MoveRefused::Covered));
-    assert!(!inventory.to_bin(id(1)));
-    take_off(&mut inventory, 2).unwrap();
-    assert_eq!(take_off(&mut inventory, 1), Err(MoveRefused::NoRoom));
+    assert!(inventory.taking_off_cost(id(1)) > bare + 4000);
+    assert_eq!(take_off(&mut inventory, 1), Ok(()));
+    assert_eq!(inventory.covered_by(id(2)), None);
     assert_eq!(
-        inventory.move_item(id(1), Holder::Inventory, 32, 30, Rotation::None),
-        Ok(())
+        inventory.taking_off_cost(id(2)),
+        dressing_cost(inventory.find(id(2)).unwrap().total_weight())
     );
+    inventory.wear(id(1)).unwrap();
+    assert!(inventory.to_bin(id(1)));
 }
 
 #[test]
@@ -92,10 +89,8 @@ fn padded_armour_takes_the_middle_layer_too() {
     inventory.wear(id(4)).unwrap();
     inventory.wear(id(2)).unwrap();
     // Its padding covers what is under it as well.
-    assert_eq!(
-        inventory.check_wear(id(3)),
-        Err(WearRefused::Covered(id(2)))
-    );
+    assert_eq!(inventory.wear(id(3)), Ok(Fit::Exact));
+    assert_eq!(inventory.covered_by(id(3)), Some(id(2)));
     // And nothing Middle goes on under it.
     assert_eq!(inventory.check_wear(id(1)), Err(WearRefused::Clash(id(2))));
 }
@@ -143,12 +138,9 @@ fn gloves_lock_rings_and_fingerless_ones_dont() {
     let mut inventory = carrying(&[Ring, Gloves, Ring, Gauntlets, FingerlessGloves]);
     inventory.wear(id(1)).unwrap();
     inventory.wear(id(2)).unwrap();
-    // The ring on stays locked, and another can't go on.
+    // The ring on is covered, and another goes on under the glove too.
     assert_eq!(inventory.covered_by(id(1)), Some(id(2)));
-    assert_eq!(
-        inventory.check_wear(id(3)),
-        Err(WearRefused::Covered(id(2)))
-    );
+    assert_eq!(inventory.check_wear(id(3)), Ok(Fit::Exact));
     // A gauntlet goes over a glove.
     assert_eq!(inventory.wear(id(4)), Ok(Fit::Exact));
     assert_eq!(inventory.covered_by(id(2)), Some(id(4)));

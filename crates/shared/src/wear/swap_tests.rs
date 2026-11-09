@@ -1,5 +1,6 @@
 use super::*;
 use crate::creature::CreatureKind;
+use crate::energy::{covered_cost, dressing_cost};
 use crate::id::Id;
 use crate::item::{Favour, Inventory, Item, ItemKind, Made, StackLimits};
 
@@ -68,14 +69,19 @@ fn a_full_set_of_rings_gives_up_one() {
 }
 
 #[test]
-fn nothing_changes_when_what_would_come_off_is_covered() {
+fn what_comes_off_from_under_something_only_takes_longer() {
     use ItemKind::{Boots, Socks};
     let mut inventory = carrying(&[Socks, Boots, Socks]);
     inventory.wear(id(1)).unwrap();
     inventory.wear(id(2)).unwrap();
-    let before = inventory.clone();
-    assert_eq!(swap(&mut inventory, 3), Err(WearRefused::Covered(id(2))));
-    assert_eq!(inventory, before);
+    let swapped = swap(&mut inventory, 3).unwrap();
+    assert_eq!(swapped.taken_off, vec![id(1)]);
+    assert!(carried(&inventory, 1));
+    // Both pairs of socks, and getting past the boots once.
+    let socks = |n| inventory.find(id(n)).unwrap().total_weight();
+    let boots = inventory.find(id(2)).unwrap().total_weight();
+    let own = dressing_cost(socks(1)) + dressing_cost(socks(3));
+    assert_eq!(swapped.cost, own + covered_cost(boots));
 }
 
 #[test]

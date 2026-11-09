@@ -3,7 +3,7 @@
 //! sure to agree with is shown at once.
 
 use bevy::prelude::*;
-use shared::energy::{dressing_cost, handling_cost};
+use shared::energy::handling_cost;
 use shared::item::Item;
 use shared::protocol::ClientMessage;
 
@@ -11,7 +11,7 @@ use super::super::hold::{Target, stack_onto};
 use super::super::wear_note::try_wearing;
 use super::super::{Carried, HeldBy, Holding};
 use super::Outbox;
-use crate::common::{GROUND, GaveItem, HeldOverGifts, HeldStock, SpentEnergy, TookItem};
+use crate::common::{Dressing, GROUND, GaveItem, HeldOverGifts, HeldStock, SpentEnergy, TookItem};
 use crate::connection::ToServer;
 
 /// Lets go of it, as aimed.
@@ -28,6 +28,7 @@ pub(super) fn let_go_of(
         gave,
         took,
         spent,
+        dressing,
         stacks,
         wear: (note, god, time),
         ..
@@ -60,15 +61,12 @@ pub(super) fn let_go_of(
             let wearing = top.unwrap_or(item);
             let grams = wearing.total_weight();
             // Otherwise only the server can say. What is in its way comes off.
-            if carried
-                .0
-                .wear_new_swapping(wearing, god.0, stacks.0)
-                .is_ok()
-            {
+            if let Ok(swapped) = carried.0.wear_new_swapping(wearing, god.0, stacks.0) {
                 if all_of_it {
                     took.write(TookItem { with, item: id });
                 }
-                spent.write(SpentEnergy(dressing_cost(grams) + handling_cost(grams)));
+                spent.write(SpentEnergy(swapped.cost + handling_cost(grams)));
+                dressing.write(Dressing(swapped.cost));
             }
         } else if let Some(onto) = stack_onto(aim).filter(|_| with == GROUND) {
             let id = held.item.id;
@@ -127,28 +125,31 @@ pub(super) fn let_go_of(
     if aim == (Target::Body { allowed: true }) {
         let item = held.item.id;
         // Only the top of a stack goes on.
-        let top = carried.0.find(item).map(Item::top);
-        let grams = top.map_or(0, Item::total_weight);
         send(ToServer(ClientMessage::WearItem { item }));
         // Otherwise only the server can say. What is in its way comes off.
-        if carried.0.wear_swapping(item, god.0, stacks.0).is_ok() {
-            spent.write(SpentEnergy(dressing_cost(grams)));
+        if let Ok(swapped) = carried.0.wear_swapping(item, god.0, stacks.0) {
+            spent.write(SpentEnergy(swapped.cost));
+            dressing.write(Dressing(swapped.cost));
         }
         return;
     }
     if aim == (Target::Drop { allowed: true }) {
         let item = held.item.id;
         let cost = carried.0.put_down_cost(item);
+        let taking_off = carried.0.taking_off_cost(item);
         if carried.0.hand_over(item).is_some() {
             send(ToServer(ClientMessage::DropItem { item }));
             spent.write(SpentEnergy(cost));
+            dressing.write(Dressing(taking_off));
         }
         return;
     }
     if let Target::Someone(to) = aim {
         let item = held.item.id;
         let cost = carried.0.put_down_cost(item);
+        let taking_off = carried.0.taking_off_cost(item);
         if carried.0.hand_over(item).is_some() {
+            dressing.write(Dressing(taking_off));
             send(ToServer(if to == GROUND {
                 ClientMessage::DropItem { item }
             } else {
@@ -163,8 +164,11 @@ pub(super) fn let_go_of(
     }
     if aim == Target::Bin {
         let item = held.item.id;
+        let taking_off = carried.0.taking_off_cost(item);
         if carried.0.to_bin(item) {
             send(ToServer(ClientMessage::BinItem { item }));
+            spent.write(SpentEnergy(taking_off));
+            dressing.write(Dressing(taking_off));
         }
         return;
     }
@@ -172,8 +176,10 @@ pub(super) fn let_go_of(
         let item = held.item.id;
         let to = carried.0.placed(onto).map(|(holder, _)| holder);
         let cost = to.map_or(0, |to| carried.0.move_cost(item, to));
+        let taking_off = carried.0.taking_off_cost(item);
         if carried.0.stack_onto(item, onto, stacks.0).is_ok() {
             spent.write(SpentEnergy(cost));
+            dressing.write(Dressing(taking_off));
             send(ToServer(ClientMessage::StackItem { item, onto }));
         }
         return;
@@ -182,8 +188,10 @@ pub(super) fn let_go_of(
         // Shown at once; `Inventory` follows, putting it right if the server disagrees.
         let item = held.item.id;
         let cost = carried.0.move_cost(item, to);
+        let taking_off = carried.0.taking_off_cost(item);
         if carried.0.move_item(item, to, x, y, rotation).is_ok() {
             spent.write(SpentEnergy(cost));
+            dressing.write(Dressing(taking_off));
             send(ToServer(ClientMessage::MoveItem {
                 item,
                 to,

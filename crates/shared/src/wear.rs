@@ -64,9 +64,6 @@ pub enum WearRefused {
     WrongFingers,
     /// Something on the same layer is in the way.
     Clash(Id),
-    /// Something on a higher layer covers one of its locations, or one of what
-    /// would come off for it.
-    Covered(Id),
     /// What is in its way won't come off: cursed, or blessed for someone else.
     Stuck(Id),
     /// What is in its way has no room in the inventory to go.

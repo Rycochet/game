@@ -153,13 +153,15 @@ fn clothes_go_straight_on_and_off() {
 }
 
 #[test]
-fn what_is_under_something_stays_on() {
+fn what_is_under_something_comes_off_too() {
     let (mut test, sabatons) = holding(ItemKind::FootArmour);
     let worn = carrying(&test.send(&[ClientMessage::WearItem { item: sabatons }]));
     let shoes = worn.worn.iter().find(|item| item.kind == ItemKind::Shoes);
     let shoes = shoes.unwrap().id;
     let answers = test.send(&[ClientMessage::DropItem { item: shoes }]);
-    assert!(carrying(&answers).is_worn(shoes));
+    assert!(!carrying(&answers).is_worn(shoes));
+    assert!(carrying(&answers).is_worn(sabatons));
+    assert!(ground(&answers).iter().any(|item| item.id == shoes));
 }
 
 #[test]
