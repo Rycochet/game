@@ -66,6 +66,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: shop        | `crates/shared/src/shop.rs`     | `docs/context/shared/shop.md`       | What town shops sell, make times, biased rolls, and catching stock up on opening |
 | shared: mob         | `crates/shared/src/mob.rs`    | `docs/context/shared/mob.md`        | Who is on a site level from its seed, and what a player learns of what is on the map |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
+| shared: name        | `crates/shared/src/name.rs`     | `docs/context/shared/name.md`         | Characters' names: what may be in one, folding what is typed (lookalikes made plain, accents off), checking, keys for uniqueness and numbered names |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |
 | shared: protocol    | `crates/shared/src/protocol/`   | `docs/context/shared/protocol.md`     | Client/server messages (world map chunks, site levels in 8×8 chunks), in-process `Link` (postcard bytes), server addresses as typed |
 | shared: site        | `crates/shared/src/site/`       | `docs/context/shared/site.md`         | Sites behind pois: building (BSP) with ruin and basements, cave (with skylights), town, farm, herbalist's hut and oasis generators, levels, stairs |

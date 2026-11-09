@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use shared::id::Id;
@@ -59,6 +60,17 @@ impl SaveBackend for MemoryBackend {
             }
         }
         Ok(())
+    }
+
+    fn accounts(&self) -> Result<Vec<AccountId>, String> {
+        let saves = self.saves.lock().unwrap();
+        Ok(saves
+            .keys()
+            .filter_map(|key| match key {
+                SaveKey::Account(id) => Some(*id),
+                _ => None,
+            })
+            .collect())
     }
 
     fn put_aside(&self, key: &SaveKey) -> Result<(), String> {

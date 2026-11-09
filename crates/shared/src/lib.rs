@@ -26,6 +26,7 @@ pub mod magic;
 pub mod material;
 pub mod mob;
 pub mod movement;
+pub mod name;
 pub mod pathfinding;
 pub mod poi;
 pub mod protocol;

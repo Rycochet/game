@@ -1244,10 +1244,9 @@ fn guests_come_back_by_their_token_and_the_newest_connection_wins() {
     let seed = WorldSeed::new(1);
     let storage = crate::storage::Storage::in_folder(&folder.0, seed.id());
     let world = ServerWorld::open(seed, storage).unwrap();
-    let mut connections = Connections::new(Accounts::new(
-        Some(SaveQueue::in_folder(&folder.0)),
-        Default::default(),
-    ));
+    let mut connections = Connections::new(
+        Accounts::new(Some(SaveQueue::in_folder(&folder.0)), Default::default()).unwrap(),
+    );
     let (first, link) = local_pair();
     connections.add(link);
     first.send(&HELLO);

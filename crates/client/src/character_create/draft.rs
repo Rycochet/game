@@ -58,14 +58,14 @@ impl Draft {
         }
     }
 
-    /// Whether it can be sent: it needs a name.
+    /// Whether it can be sent: it needs a name that can be one.
     pub fn ready(&self) -> bool {
-        !self.name.trim().is_empty()
+        shared::name::checked(&self.name).is_ok()
     }
 
     pub fn message(&self) -> ClientMessage {
         ClientMessage::CreateCharacter(NewCharacter {
-            name: self.name.trim().to_owned(),
+            name: shared::name::checked(&self.name).unwrap_or_default(),
             kind: self.kind,
             appearance: self.appearance.clone(),
             build: self.build,

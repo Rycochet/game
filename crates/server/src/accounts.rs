@@ -24,9 +24,6 @@ use crate::storage::now;
 /// How many characters an account may have.
 pub(crate) const MAX_CHARACTERS: usize = 8;
 
-/// The longest name a character may have, in characters.
-const MAX_NAME: usize = 24;
-
 /// What a character made without the client's screen is called.
 const PLAIN_NAME: &str = "Guest";
 
@@ -66,16 +63,21 @@ pub struct Accounts {
     sessions: BTreeMap<String, LoginSave>,
     /// Which accounts hold which role.
     pub(crate) roles: Roles,
+    /// Every character's name (`names.rs`).
+    names: NameIndex,
 }
 
 impl Accounts {
-    /// The accounts saved through `queue` (if any), with these roles.
-    pub(crate) fn new(queue: Option<SaveQueue>, roles: Roles) -> Self {
-        Self {
+    /// The accounts saved through `queue` (if any), with these roles. An error
+    /// if the names taken can't be found out.
+    pub(crate) fn new(queue: Option<SaveQueue>, roles: Roles) -> Result<Self, String> {
+        let mut accounts = Self {
             queue,
             roles,
             ..Self::default()
-        }
+        };
+        accounts.index_names()?;
+        Ok(accounts)
     }
 
     /// The account this login belongs to: made now if it is the first time. An
@@ -173,7 +175,9 @@ impl Accounts {
 
     /// A character made without the client's screen, plainly named.
     pub(crate) fn plain_character(&mut self, id: &AccountId) -> Result<CharacterId, String> {
-        self.add_character(id, PLAIN_NAME.into())
+        let character = CharacterId(new_id());
+        let name = self.take_numbered(PLAIN_NAME, character);
+        self.add_character(id, character, name)
     }
 
     /// The embedded server's player's account, made the first time and saved like
@@ -196,7 +200,6 @@ impl Accounts {
         id: &AccountId,
         name: &str,
     ) -> Result<CharacterId, String> {
-        let name = checked_name(name)?;
         let most = self.most_characters(id)?;
         if self.account(id)?.characters.len() >= most {
             return Err(match most {
@@ -204,11 +207,17 @@ impl Accounts {
                 _ => format!("an account can have {most} characters"),
             });
         }
-        self.add_character(id, name)
+        let character = CharacterId(new_id());
+        let name = self.take_name(name, character)?;
+        self.add_character(id, character, name)
     }
 
-    fn add_character(&mut self, id: &AccountId, name: String) -> Result<CharacterId, String> {
-        let character = CharacterId(new_id());
+    fn add_character(
+        &mut self,
+        id: &AccountId,
+        character: CharacterId,
+        name: String,
+    ) -> Result<CharacterId, String> {
         self.account(id)?;
         let account = self.loaded.get_mut(id).expect("just loaded");
         account.characters.push(CharacterSummary {
@@ -237,6 +246,7 @@ impl Accounts {
             account.characters.retain(|c| c.id != *character);
             (account.characters.len() < before).then_some(*id)
         })?;
+        self.free_name(*character);
         self.save(&account);
         Some(account)
     }
@@ -251,19 +261,6 @@ impl Accounts {
         }
         Ok(())
     }
-}
-
-/// The name without the spaces around it, or what is wrong with it.
-fn checked_name(name: &str) -> Result<String, String> {
-    let name = name.trim();
-    let length = name.chars().count();
-    if !(1..=MAX_NAME).contains(&length) {
-        return Err(format!("a name is 1 to {MAX_NAME} characters long"));
-    }
-    if name.chars().any(char::is_control) {
-        return Err("a name can't contain control characters".into());
-    }
-    Ok(name.to_owned())
 }
 
 pub(crate) fn hex(bytes: &[u8]) -> String {
@@ -282,9 +279,11 @@ pub fn new_guest_token() -> Result<GuestToken, String> {
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod login_key;
+mod names;
 mod session;
 
 pub(crate) use login_key::{EmailKey, LoginKey};
+pub(crate) use names::NameIndex;
 #[cfg(test)]
 use session::session_hash;
 

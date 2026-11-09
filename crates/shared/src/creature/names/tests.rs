@@ -10,6 +10,8 @@ fn names_are_short_capitalised_and_never_three_alike() {
             assert!((3..=14).contains(&length), "{kind:?}: {name}");
             assert!(name.starts_with(|c: char| c.is_ascii_uppercase()), "{name}");
             assert!(!three_alike(&name), "{name}");
+            // Suggested as typed, so it must already be a name as kept.
+            assert_eq!(crate::name::checked(&name).as_deref(), Ok(name.as_str()));
         }
     }
 }
