@@ -81,11 +81,10 @@ pub(super) fn take_input(
         );
         let over_minimap =
             cursor.is_some_and(|at| at.distance(middle) <= minimap_across(&window) / 2.0);
+        // A left press there is `hold::hold_minimap`'s, opening the map on
+        // letting go.
         if over_minimap {
             mouse.clear_just_pressed(MouseButton::Right);
-            if mouse.clear_just_pressed(MouseButton::Left) {
-                full.set_open(true);
-            }
         }
         return;
     }

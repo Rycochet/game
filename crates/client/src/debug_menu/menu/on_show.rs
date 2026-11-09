@@ -34,6 +34,17 @@ pub(super) fn entries_on_show(layer: usize, filter: &str) -> Vec<Entry> {
     }
 }
 
+/// The heading each entry is under: its group's, or none in the submenu.
+pub(super) fn headings_of(entries: &[Entry]) -> Vec<Option<&'static str>> {
+    entries
+        .iter()
+        .map(|entry| match entry {
+            Entry::Action(action) => Some(action.group().name()),
+            Entry::Kind(_) => None,
+        })
+        .collect()
+}
+
 /// What Return chooses: the highlighted entry, or with none, the first that
 /// can be used. A disabled entry that is highlighted does nothing.
 pub(super) fn return_chooses(

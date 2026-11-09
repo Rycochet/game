@@ -3,16 +3,15 @@
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use shared::protocol::{ClientMessage, DevMobTool, DevSkills, DevVitals, ServerMessage};
+use shared::protocol::{ClientMessage, DevMobTool, DevSkills, ServerMessage};
 
-use super::{AutoWalk, DebugAction, DebugMenu, OpenPanels};
+use super::{DebugAction, DebugMenu, OpenPanels};
 use crate::common::{
     ClickMode, DebugInfo, DeleteMob, DetectMonsters, FreezeMobs, GodMode, InspectMob, KillMob,
     LightningStrike, Truesight,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::planet_view::ViewPlanet;
-use crate::view3d::OrbitCamera;
 
 /// What clicks on mobs do (only one at a time), and whether they are frozen.
 #[derive(SystemParam)]
@@ -71,7 +70,6 @@ fn toggled(mode: ClickMode, this: ClickMode) -> ClickMode {
 pub(super) fn run_actions(
     mut actions: MessageReader<DebugAction>,
     mut commands: Commands,
-    mut walk: ResMut<AutoWalk>,
     mut detect: ResMut<DetectMonsters>,
     mut god: ResMut<GodMode>,
     mut truesight: ResMut<Truesight>,
@@ -82,7 +80,6 @@ pub(super) fn run_actions(
     mut menu: ResMut<DebugMenu>,
     mut raise: MessageWriter<crate::widgets::RaisePanel>,
     nodes: Query<(), With<Node>>,
-    mut cameras: Query<&mut OrbitCamera>,
     (mut to_server, mut view_planet, mut lightning): (
         MessageWriter<ToServer>,
         MessageWriter<ViewPlanet>,
@@ -91,9 +88,8 @@ pub(super) fn run_actions(
 ) {
     for &action in actions.read() {
         match action {
-            DebugAction::AutoWalk => walk.0 = !walk.0,
             DebugAction::ChangeCellMode => *mode = toggled(*mode, ClickMode::ChangeCell),
-            DebugAction::DetectMonsters => {
+            DebugAction::DetectMobs => {
                 detect.0 = !detect.0;
                 to_server.write(ToServer(ClientMessage::DevDetectMonsters(detect.0)));
             }
@@ -116,13 +112,10 @@ pub(super) fn run_actions(
             DebugAction::ForgetMap => {
                 to_server.write(ToServer(ClientMessage::DevForgetMap));
             }
-            DebugAction::ForgetMapOnServer => {
+            DebugAction::RemakeSite => {
                 to_server.write(ToServer(ClientMessage::DevForgetMapOnServer));
             }
             DebugAction::GeneratePoi => menu.open_submenu(),
-            DebugAction::TeleportToStart => {
-                to_server.write(ToServer(ClientMessage::DevBackToStart));
-            }
             DebugAction::KeyForThisDoor => {
                 let ask = shared::protocol::DoorAsk::DevKey;
                 to_server.write(ToServer(ClientMessage::Door(ask)));
@@ -135,43 +128,18 @@ pub(super) fn run_actions(
             DebugAction::RevealMap => {
                 to_server.write(ToServer(ClientMessage::DevRevealMap));
             }
-            DebugAction::TeleportToHall => {
-                to_server.write(ToServer(ClientMessage::DevToHall));
-            }
-            DebugAction::TeleportToPoiShowcase => {
-                to_server.write(ToServer(ClientMessage::DevToShowcase));
-            }
-            DebugAction::Hurt => {
-                to_server.write(ToServer(ClientMessage::DevVitals(DevVitals::Hurt(5))));
-            }
-            DebugAction::SpendMana => {
-                to_server.write(ToServer(ClientMessage::DevVitals(DevVitals::SpendMana(5))));
-            }
-            DebugAction::HealFully => {
-                to_server.write(ToServer(ClientMessage::DevVitals(DevVitals::Fill)));
-            }
-            DebugAction::VitalsBonus => {
-                to_server.write(ToServer(ClientMessage::DevVitals(DevVitals::Bonus)));
-            }
             DebugAction::LearnSomeSkills => {
                 to_server.write(ToServer(ClientMessage::DevSkills(DevSkills::LearnSome)));
             }
             DebugAction::ForgetSkills => {
                 to_server.write(ToServer(ClientMessage::DevSkills(DevSkills::Forget)));
             }
-            DebugAction::ResetView => {
-                for mut camera in &mut cameras {
-                    camera.reset();
-                }
-            }
             DebugAction::ShowDebugInfo => info.0 = !info.0,
             // Made again by `panels::kept_choices`.
             DebugAction::RegenerateDevArea => {}
             DebugAction::TeleportMode => *mode = toggled(*mode, ClickMode::Teleport),
-            // Asks first (`delete_character`).
-            DebugAction::DeleteCharacter => {}
             DebugAction::ViewPlanet => {
-                view_planet.write(ViewPlanet);
+                view_planet.write(ViewPlanet { world: None });
             }
             DebugAction::LightningNow => {
                 lightning.write(LightningStrike);
@@ -185,14 +153,12 @@ pub(super) fn run_actions(
             DebugAction::ChangeCreature
             | DebugAction::CreateMob
             | DebugAction::DevArea
-            | DebugAction::FieldsState
+            | DebugAction::DrawingStates
             | DebugAction::GiveItem
-            | DebugAction::GoToWorld
-            | DebugAction::HerbsState
             | DebugAction::ItemPictures
             | DebugAction::ShowWidgets
-            | DebugAction::StairsStyle
-            | DebugAction::TeleportToGate => open.open(action, &mut commands, &mut raise, &nodes),
+            | DebugAction::TeleportToWorld
+            | DebugAction::Vitals => open.open(action, &mut commands, &mut raise, &nodes),
         }
     }
 }

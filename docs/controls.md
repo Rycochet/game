@@ -54,7 +54,7 @@ A black ring turns under your target. Tab and Shift + Tab go through enemies fro
 | Turn and tilt | Drag with the right button | Twist two fingers to turn, move both up or down to tilt |
 | Turn left or right | 7 or 9 on the number pad | |
 | Zoom | Mouse wheel, = and -, or + and - on the number pad | Pinch |
-| Back to the starting view | Home, or 5 on the number pad | Reset View in the [debug menu](debug-menu) |
+| Back to the starting view | Home, or 5 on the number pad | Hold the minimap (with the mouse or a finger) |
 
 A camera key moves the camera a little each time you press it, and keeps it moving for as long as you hold it.
 

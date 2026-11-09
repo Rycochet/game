@@ -28,6 +28,7 @@ mod draw;
 mod forget;
 mod full_map;
 mod gate_runes;
+mod hold;
 mod hover;
 mod input;
 mod layout;
@@ -146,6 +147,7 @@ pub struct MinimapPlugin;
 impl Plugin for MinimapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FullMap>()
+            .init_resource::<hold::MinimapHold>()
             .init_resource::<WorldTiles>()
             .init_resource::<MapRivers>()
             .init_resource::<Sprites>()
@@ -159,7 +161,12 @@ impl Plugin for MinimapPlugin {
             )
             .add_systems(
                 PreUpdate,
-                (go_into_clicked_poi, take_input, floors::back_to_own_floor)
+                (
+                    go_into_clicked_poi,
+                    hold::hold_minimap,
+                    take_input,
+                    floors::back_to_own_floor,
+                )
                     .chain()
                     .after(InputSystems)
                     .after(PointerSystems)

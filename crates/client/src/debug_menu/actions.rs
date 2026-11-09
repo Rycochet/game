@@ -9,27 +9,20 @@ use crate::widgets::matches_filter;
 /// One entry in the debug menu. Sending it does what it says.
 #[derive(bevy::prelude::Message, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DebugAction {
-    AutoWalk,
     ChangeCellMode,
     ChangeCreature,
     CloseAllDoors,
     CreateMob,
-    DeleteCharacter,
     DeleteMob,
-    DetectMonsters,
+    DetectMobs,
     DevArea,
-    FieldsState,
+    DrawingStates,
     ForgetMap,
-    ForgetMapOnServer,
     ForgetSkills,
     FreezeMobs,
     GeneratePoi,
     GiveItem,
-    GoToWorld,
     GodMode,
-    HealFully,
-    HerbsState,
-    Hurt,
     InspectMob,
     ItemPictures,
     KeyForThisDoor,
@@ -39,21 +32,16 @@ pub enum DebugAction {
     LightningStrikeHere,
     OpenAllDoors,
     RegenerateDevArea,
-    ResetView,
+    RemakeSite,
     RevealMap,
     ShowDebugInfo,
     ShowWidgets,
-    SpendMana,
-    StairsStyle,
     SunsAndMoons,
     TeleportMode,
-    TeleportToGate,
-    TeleportToHall,
-    TeleportToPoiShowcase,
-    TeleportToStart,
+    TeleportToWorld,
     Truesight,
     ViewPlanet,
-    VitalsBonus,
+    Vitals,
     WorldTime,
 }
 
@@ -61,10 +49,6 @@ pub enum DebugAction {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct Facts {
     pub view: GameView,
-    pub has_stairs: bool,
-    pub has_fields: bool,
-    pub has_herbs: bool,
-    pub walking: bool,
     pub detecting: bool,
     pub god_mode: bool,
     pub truesight: bool,
@@ -83,54 +67,50 @@ pub(super) struct Facts {
 }
 
 impl DebugAction {
-    /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 46] = [
-        Self::AutoWalk,
-        Self::ChangeCellMode,
-        Self::ChangeCreature,
-        Self::CloseAllDoors,
-        Self::CreateMob,
-        Self::DeleteCharacter,
-        Self::DeleteMob,
-        Self::DetectMonsters,
-        Self::DevArea,
-        Self::FieldsState,
-        Self::ForgetMap,
-        Self::ForgetMapOnServer,
-        Self::ForgetSkills,
-        Self::FreezeMobs,
-        Self::GeneratePoi,
-        Self::GiveItem,
-        Self::GoToWorld,
-        Self::GodMode,
-        Self::HealFully,
-        Self::HerbsState,
-        Self::Hurt,
-        Self::InspectMob,
-        Self::ItemPictures,
-        Self::KeyForThisDoor,
-        Self::KillMob,
-        Self::LearnSomeSkills,
-        Self::LightningNow,
-        Self::LightningStrikeHere,
-        Self::OpenAllDoors,
-        Self::RegenerateDevArea,
-        Self::ResetView,
-        Self::RevealMap,
+    /// Every action, in the order the menu lists them: by group (`Group`),
+    /// then as the owner ordered each group.
+    pub(super) const ALL: [Self; 34] = [
+        // Display
         Self::ShowDebugInfo,
-        Self::ShowWidgets,
-        Self::SpendMana,
-        Self::StairsStyle,
+        Self::LightningNow,
         Self::SunsAndMoons,
-        Self::TeleportMode,
-        Self::TeleportToGate,
-        Self::TeleportToHall,
-        Self::TeleportToPoiShowcase,
-        Self::TeleportToStart,
-        Self::Truesight,
+        Self::DrawingStates,
+        // Galleries
+        Self::ItemPictures,
+        Self::ShowWidgets,
         Self::ViewPlanet,
-        Self::VitalsBonus,
+        // Travel
+        Self::TeleportMode,
+        Self::TeleportToWorld,
+        // Character
+        Self::GodMode,
+        Self::Truesight,
+        Self::ChangeCreature,
+        Self::GiveItem,
+        Self::Vitals,
+        Self::LearnSomeSkills,
+        Self::ForgetSkills,
+        // Mobs
+        Self::CreateMob,
+        Self::InspectMob,
+        Self::KillMob,
+        Self::DeleteMob,
+        Self::FreezeMobs,
+        Self::DetectMobs,
+        // Level
+        Self::RevealMap,
+        Self::ForgetMap,
+        Self::RemakeSite,
+        Self::ChangeCellMode,
+        Self::OpenAllDoors,
+        Self::CloseAllDoors,
+        Self::KeyForThisDoor,
+        // World
         Self::WorldTime,
+        Self::LightningStrikeHere,
+        Self::GeneratePoi,
+        Self::DevArea,
+        Self::RegenerateDevArea,
     ];
 
     /// The action with this name, as the menu shows it, in any case (dev
@@ -148,22 +128,31 @@ impl DebugAction {
         Self::ALL.into_iter().map(Self::name)
     }
 
-    /// Whether choosing it opens a submenu, rather than doing something.
-    pub(super) fn has_submenu(self) -> bool {
-        self == Self::GeneratePoi
+    /// Whether choosing it opens something: a panel, a dialog, a submenu or
+    /// a full-screen view (owner's rule: those end in "...").
+    pub(super) fn opens_something(self) -> bool {
+        matches!(
+            self,
+            Self::SunsAndMoons
+                | Self::DrawingStates
+                | Self::ItemPictures
+                | Self::ShowWidgets
+                | Self::ViewPlanet
+                | Self::TeleportToWorld
+                | Self::ChangeCreature
+                | Self::GiveItem
+                | Self::Vitals
+                | Self::CreateMob
+                | Self::WorldTime
+                | Self::GeneratePoi
+                | Self::DevArea
+        )
     }
 
-    /// Whether choosing it only offers a further choice: a submenu, or a panel
-    /// that is only a list to pick from (Teleport to Gate, as the owner named
-    /// it).
-    pub(super) fn offers_choice(self) -> bool {
-        self.has_submenu() || self == Self::TeleportToGate
-    }
-
-    /// What the menu's entry says: one offering a further choice ends in
-    /// "...", and its plain `name` is the submenu's or panel's title.
+    /// What the menu's entry says: one that opens something ends in "...",
+    /// and its plain `name` is that panel's or submenu's title.
     pub(super) fn label(self) -> String {
-        if self.offers_choice() {
+        if self.opens_something() {
             format!("{}...", self.name())
         } else {
             self.name().to_owned()
@@ -176,19 +165,13 @@ impl DebugAction {
             return false;
         }
         match self {
-            // In a site it would stop at a wall.
-            Self::AutoWalk => facts.view == GameView::WorldMap,
-            Self::ChangeCellMode => facts.view == GameView::Dungeon,
-            Self::OpenAllDoors | Self::CloseAllDoors | Self::KeyForThisDoor => {
-                facts.view == GameView::Dungeon
-            }
+            Self::ChangeCellMode
+            | Self::OpenAllDoors
+            | Self::CloseAllDoors
+            | Self::KeyForThisDoor => facts.view == GameView::Dungeon,
             // A town is known from the start, and would only come straight back.
             Self::ForgetMap => !facts.in_town,
             Self::RevealMap => facts.view == GameView::Dungeon && !facts.in_town,
-            Self::FieldsState => facts.view == GameView::Dungeon && facts.has_fields,
-            Self::HerbsState => facts.view == GameView::Dungeon && facts.has_herbs,
-            Self::StairsStyle => facts.view == GameView::Dungeon && facts.has_stairs,
-            Self::TeleportToPoiShowcase => shared::showcase::ENABLED,
             Self::LightningNow | Self::LightningStrikeHere => {
                 matches!(facts.view, GameView::WorldMap | GameView::Dungeon)
             }
@@ -196,54 +179,26 @@ impl DebugAction {
         }
     }
 
-    /// Whether it does nothing unless the server accepts dev tools.
+    /// Whether it does nothing unless the server accepts dev tools: all but
+    /// what only changes this screen.
     fn needs_server_dev_tools(self) -> bool {
-        matches!(
+        !matches!(
             self,
-            Self::ChangeCellMode
-                | Self::ChangeCreature
-                | Self::CloseAllDoors
-                | Self::KeyForThisDoor
-                | Self::OpenAllDoors
-                | Self::CreateMob
-                | Self::DeleteCharacter
-                | Self::DetectMonsters
-                | Self::DevArea
-                | Self::ForgetMap
-                | Self::ForgetMapOnServer
-                | Self::ForgetSkills
-                | Self::GeneratePoi
-                | Self::GiveItem
-                | Self::GodMode
-                | Self::GoToWorld
-                | Self::HealFully
-                | Self::Hurt
-                | Self::KillMob
-                | Self::DeleteMob
-                | Self::FreezeMobs
-                | Self::InspectMob
-                | Self::LearnSomeSkills
-                | Self::LightningStrikeHere
-                | Self::RegenerateDevArea
-                | Self::RevealMap
-                | Self::SpendMana
-                | Self::TeleportMode
-                | Self::TeleportToGate
-                | Self::TeleportToHall
-                | Self::TeleportToPoiShowcase
-                | Self::TeleportToStart
-                | Self::Truesight
-                | Self::VitalsBonus
-                | Self::WorldTime
+            Self::ShowDebugInfo
+                | Self::LightningNow
+                | Self::SunsAndMoons
+                | Self::DrawingStates
+                | Self::ItemPictures
+                | Self::ShowWidgets
+                | Self::ViewPlanet
         )
     }
 
     /// For one that toggles, whether it is on.
     pub(super) fn is_on(self, facts: &Facts) -> Option<bool> {
         match self {
-            Self::AutoWalk => Some(facts.walking),
             Self::ChangeCellMode => Some(facts.changing_cells),
-            Self::DetectMonsters => Some(facts.detecting),
+            Self::DetectMobs => Some(facts.detecting),
             Self::GodMode => Some(facts.god_mode),
             Self::Truesight => Some(facts.truesight),
             Self::KillMob => Some(facts.killing),
@@ -277,7 +232,11 @@ pub(super) fn kind_name(kind: PoiKind) -> String {
     name
 }
 
+mod group;
 mod names;
+
+#[cfg(test)]
+use group::Group;
 
 #[cfg(test)]
 mod tests;

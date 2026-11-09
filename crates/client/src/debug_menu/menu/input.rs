@@ -10,14 +10,13 @@ use super::super::actions::DebugAction;
 use super::super::panels::GenerateKind;
 use super::{
     ACTIONS, DebugMenu, Entry, FilterBox, MenuClose, MenuEntry, MenuRoot, PageButton,
-    TOGGLE_SECONDS, WarningButton, columns_in, entries_on_show, first_column, on_show,
-    return_chooses, rows_in,
+    TOGGLE_SECONDS, WarningButton, columns_in, entries_on_show, first_column, headings_of, lay_out,
+    layout, on_show, return_chooses, rows_in,
 };
 use crate::common::{Action, Preferences, TouchGesture, interface_area};
 use crate::minimap::FullMap;
 use crate::widgets::{
     ButtonPressed, HighlightStep, SoftKey, SoftKeyPressed, TextBox, TextEdited, TextFocus,
-    next_highlight,
 };
 
 /// Presses on these close the top layer: its close button, and outside it.
@@ -124,6 +123,7 @@ pub(in crate::debug_menu) fn take_input(
             level.first_column = 0;
         }
         let shown = entries_on_show(layer, &level.filter);
+        let columns = lay_out(&headings_of(&shown), rows);
         for (key, step) in [
             (KeyCode::ArrowUp, HighlightStep::Up),
             (KeyCode::ArrowDown, HighlightStep::Down),
@@ -134,7 +134,7 @@ pub(in crate::debug_menu) fn take_input(
             // filter's caret instead.
             let sideways = matches!(step, HighlightStep::Left | HighlightStep::Right);
             if keys.just_pressed(key) && !(sideways && level.highlight.is_none()) {
-                level.highlight = next_highlight(level.highlight, shown.len(), rows, step);
+                level.highlight = layout::step(&columns, level.highlight, shown.len(), step);
             }
         }
         // Moving the columns by hand, the highlight would only pull them back.
@@ -154,8 +154,7 @@ pub(in crate::debug_menu) fn take_input(
                 level.first_column.saturating_sub(1)
             };
         }
-        level.first_column =
-            first_column(level.first_column, level.highlight, shown.len(), rows, fit);
+        level.first_column = first_column(&columns, level.first_column, level.highlight, fit);
 
         let mut chosen = None;
         if keys.just_pressed(KeyCode::Enter)
@@ -174,7 +173,7 @@ pub(in crate::debug_menu) fn take_input(
             }
         }
         match chosen {
-            Some(Entry::Action(action)) if action.has_submenu() => {
+            Some(Entry::Action(DebugAction::GeneratePoi)) => {
                 menu.open_submenu();
                 back = false;
             }

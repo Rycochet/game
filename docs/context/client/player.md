@@ -26,7 +26,7 @@ The player's position on the current view's grid (world map or dungeon): keyboar
 
 ## Notes
 
-- Takes no steps while `common::MakingCharacter` is on or `common::CharacterSelect` is open (those screens are up, over the game after Delete Character): the server would ignore them.
+- Takes no steps while `common::MakingCharacter` is on or `common::CharacterSelect` is open (those screens are up): the server would ignore them.
 
 - Any other change to `MapPosition` (a step, the server putting the player somewhere) cancels travel and jumps there: `travel` notices because `MapPosition` differs from the value it last set (private `Travel` component).
 - `move_player` and `travel` don't run while `GameView::Connecting` (there is no world yet), nor while `common::ServerStatus` isn't `Connected`.

@@ -1,5 +1,5 @@
-//! The moveable panels the menu opens: Previous and Next for what a place draws,
-//! the world's time, and one showing every widget.
+//! The moveable panels the menu opens: Drawing States, the world's time,
+//! Teleport to World, Vitals, Give Item and the rest.
 
 use bevy::prelude::*;
 
@@ -32,7 +32,6 @@ mod give_options;
 mod give_preview;
 mod give_systems;
 mod give_target;
-mod go_to_world;
 mod inspect_mob;
 mod kept_choices;
 mod layout;
@@ -42,8 +41,10 @@ mod pictures_spawn;
 mod pictures_systems;
 mod ring_samples;
 mod steps;
-mod teleport_to_gate;
+mod teleport_to_world;
+mod teleport_to_world_systems;
 mod time_text;
+mod vitals;
 mod world_rate;
 mod world_time;
 
@@ -79,8 +80,6 @@ pub(super) use give_systems::{
     choose_give_options, edit_give_boxes, press_give_button, start_give_panel,
 };
 pub(super) use give_target::{GiveTo, GiveToWords, follow_target};
-use go_to_world::spawn_go_to_world;
-pub(super) use go_to_world::{press_go_to_world_buttons, update_go_to_world_button};
 pub(super) use inspect_mob::add_inspect_mob_panel;
 use inspect_mob::spawn_inspect_panel;
 pub(super) use kept_choices::add_kept_choices;
@@ -101,8 +100,13 @@ use pictures_spawn::{
 pub(super) use pictures_systems::{choose_pictures, fill_pictures, show_pictures};
 use steps::spawn_step_buttons;
 pub(super) use steps::{press_panel_buttons, update_panel_buttons};
-use teleport_to_gate::spawn_teleport_to_gate;
-pub(super) use teleport_to_gate::{press_gate_buttons, update_gate_buttons};
+pub(super) use teleport_to_world::TeleportForm;
+use teleport_to_world::spawn_teleport_to_world;
+pub(super) use teleport_to_world_systems::{
+    open_teleport_asked, press_teleport_buttons, update_teleport_buttons,
+};
+use vitals::spawn_vitals_panel;
+pub(super) use vitals::{press_vitals_buttons, update_vitals_buttons};
 pub(super) use world_rate::{press_rate_buttons, update_rate_buttons};
 use world_time::spawn_world_time;
 pub(super) use world_time::{edit_time_box, press_time_steps};

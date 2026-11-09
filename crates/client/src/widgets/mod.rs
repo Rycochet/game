@@ -59,7 +59,7 @@ pub use container::{ContainerLook, ContainerSize, spawn_container};
 pub use copy_button::spawn_copy_button;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip, OverInterface};
-pub use filter_list::{HighlightStep, matches_filter, next_highlight};
+pub use filter_list::{HighlightStep, matches_filter};
 pub use fullscreen::{
     darkening, layer_share, layer_z, leaves_presses, spawn_dialog, spawn_fullscreen_layer,
     spawn_sized_layer,

@@ -233,7 +233,7 @@ pub(crate) fn answer(
         ClientMessage::DevTeleport { .. }
         | ClientMessage::DevBackToStart
         | ClientMessage::DevToShowcase
-        | ClientMessage::DevToHall
+        | ClientMessage::DevToHall { .. }
         | ClientMessage::DevLightning
         | ClientMessage::DevEnterSite { .. }
         | ClientMessage::DevGenerateSite { .. }

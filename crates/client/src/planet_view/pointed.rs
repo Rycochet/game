@@ -9,7 +9,7 @@ use super::gates::RING;
 use super::pick::{Sight, gate_spot, gate_under};
 use super::showing::PlanetView;
 use super::teleport::why_not;
-use crate::common::{CurrentWorld, ServerDevTools, UiPointer};
+use crate::common::{ServerDevTools, UiPointer};
 use crate::widgets::{ItemTip, ItemTooltip, shown_at};
 
 /// Where the name goes from the pointer, as other tooltips have it.
@@ -26,14 +26,13 @@ pub(super) struct PointedGate {
 #[allow(clippy::too_many_arguments)]
 pub(super) fn point_at_gates(
     mut view: ResMut<PlanetView>,
-    world: Option<Res<CurrentWorld>>,
     dev_tools: Res<ServerDevTools>,
     pointer: Res<UiPointer>,
     nodes: Query<(&ComputedNode, &UiGlobalTransform)>,
     places: Query<&Transform>,
     mut tooltip: ResMut<ItemTooltip>,
 ) {
-    let (Some(showing), Some(world)) = (view.showing.as_mut(), world) else {
+    let Some(showing) = view.showing.as_mut() else {
         return;
     };
     showing.pointed = None;
@@ -72,7 +71,7 @@ pub(super) fn point_at_gates(
     let Some(number) = gate_under(on_picture, &spots, &sight) else {
         return;
     };
-    let why = why_not(showing, &world, dev_tools.0);
+    let why = why_not(showing, dev_tools.0);
     let words = match why {
         None => format!("Gate {}", number + 1),
         Some(why) => format!("Gate {} (can't go: {why})", number + 1),

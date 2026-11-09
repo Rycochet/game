@@ -65,14 +65,17 @@ pub(super) fn read_bar(
     if presses.contains(&bar.reset) {
         choice = Choice {
             layer: choice.layer,
-            ..Choice::of(&world)
+            ..showing.home
         };
         if let Ok(mut seed_box) = boxes.get_mut(bar.seed) {
             seed_box.text = choice.seed.value().to_string();
             seed_box.error = false;
         }
         if let Ok(mut generator) = dropdowns.get_mut(bar.generator) {
-            generator.selected = 0;
+            let at = SurfaceGenerator::ALL
+                .iter()
+                .position(|&g| g == choice.generator);
+            generator.selected = at.unwrap_or(0);
         }
     }
     showing.choice = choice;

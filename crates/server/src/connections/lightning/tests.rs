@@ -70,7 +70,10 @@ fn asking_brings_lightning_whatever_the_weather_but_not_in_the_hall() {
     // Asked once, told once.
     assert_eq!(tell_one(&mut test, 1235, false), []);
 
-    test.send(&[ClientMessage::DevToHall]);
+    test.send(&[ClientMessage::DevToHall {
+        seed: None,
+        gate: None,
+    }]);
     answers(&test.end);
     test.send(&[ClientMessage::DevLightning]);
     assert_eq!(tell_one(&mut test, 1236, false), []);

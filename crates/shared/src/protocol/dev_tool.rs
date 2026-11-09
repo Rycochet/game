@@ -11,7 +11,7 @@ impl ClientMessage {
             Self::DevTeleport { .. }
                 | Self::DevBackToStart
                 | Self::DevToShowcase
-                | Self::DevToHall
+                | Self::DevToHall { .. }
                 | Self::DevLightning
                 | Self::DevEnterSite { .. }
                 | Self::DevSetCell { .. }

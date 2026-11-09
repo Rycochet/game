@@ -1,8 +1,8 @@
 use shared::site::StairsStyle;
 
-use super::super::actions::DebugAction;
 use super::generate_form::NEW_SEEDS;
-use super::steps::{can_step, previous_style};
+use super::steps::{Drawn, can_step, previous_style};
+use super::teleport_to_world::seed_in;
 use super::time_text::{read_time, time_text};
 use super::*;
 use crate::common::{CurrentDungeon, GameView};
@@ -25,14 +25,10 @@ fn previous_undoes_next_for_every_style() {
 fn panels_need_a_site_with_what_they_change() {
     let dungeon = CurrentDungeon::default();
     let in_site = |action| can_step(action, GameView::Dungeon, &dungeon);
-    assert!(!in_site(DebugAction::StairsStyle));
-    assert!(!in_site(DebugAction::FieldsState));
-    assert!(!in_site(DebugAction::HerbsState));
-    assert!(!can_step(
-        DebugAction::StairsStyle,
-        GameView::WorldMap,
-        &dungeon
-    ));
+    assert!(!in_site(Drawn::Stairs));
+    assert!(!in_site(Drawn::Fields));
+    assert!(!in_site(Drawn::Herbs));
+    assert!(!can_step(Drawn::Stairs, GameView::WorldMap, &dungeon));
 }
 
 #[test]
@@ -90,11 +86,13 @@ fn ids_in(spawn: impl FnOnce(&mut ChildSpawnerCommands)) -> Vec<crate::widgets::
 
 #[test]
 fn every_panels_widgets_each_have_their_own_id() {
-    let panels: [(&str, SpawnPanel); 5] = [
+    let panels: [(&str, SpawnPanel); 7] = [
         ("Show Widgets", spawn_every_widget),
         ("Item Pictures", spawn_item_pictures),
         ("World Time", spawn_world_time),
-        ("Go to World", spawn_go_to_world),
+        ("Teleport to World", spawn_teleport_to_world),
+        ("Vitals", spawn_vitals_panel),
+        ("Drawing States", spawn_step_buttons),
         ("Change Creature", spawn_creature_buttons),
     ];
     for (name, spawn) in panels {
@@ -119,4 +117,12 @@ fn give_items_widgets_each_have_their_own_id() {
         .collect();
     assert!(ids.len() > 10);
     assert!(crate::widgets::duplicate_ids(&ids).is_empty());
+}
+
+#[test]
+fn a_blank_seed_is_this_world_and_words_are_none() {
+    assert_eq!(seed_in(""), Ok(None));
+    assert_eq!(seed_in("  "), Ok(None));
+    assert_eq!(seed_in(" 42 "), Ok(Some(42)));
+    assert_eq!(seed_in("4x2"), Err(()));
 }

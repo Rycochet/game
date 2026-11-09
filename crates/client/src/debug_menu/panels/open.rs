@@ -7,8 +7,8 @@ use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
     FIRST_AT, NEXT_AT, spawn_create_mob_panel, spawn_creature_buttons, spawn_dev_area_panel,
-    spawn_every_widget, spawn_give_panel, spawn_go_to_world, spawn_inspect_panel,
-    spawn_item_pictures, spawn_step_buttons, spawn_teleport_to_gate, spawn_world_time,
+    spawn_every_widget, spawn_give_panel, spawn_inspect_panel, spawn_item_pictures,
+    spawn_step_buttons, spawn_teleport_to_world, spawn_vitals_panel, spawn_world_time,
 };
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
 
@@ -65,12 +65,13 @@ impl OpenPanels {
                 DebugAction::ChangeCreature => spawn_creature_buttons(content),
                 DebugAction::ItemPictures => spawn_item_pictures(content),
                 DebugAction::WorldTime => spawn_world_time(content),
-                DebugAction::GoToWorld => spawn_go_to_world(content),
-                DebugAction::TeleportToGate => spawn_teleport_to_gate(content),
+                DebugAction::TeleportToWorld => spawn_teleport_to_world(content),
+                DebugAction::Vitals => spawn_vitals_panel(content),
                 DebugAction::DevArea => spawn_dev_area_panel(content),
                 DebugAction::CreateMob => spawn_create_mob_panel(content),
                 DebugAction::InspectMob => spawn_inspect_panel(content),
-                _ => spawn_step_buttons(content, action),
+                DebugAction::DrawingStates => spawn_step_buttons(content),
+                _ => {}
             });
         commands
             .entity(panel)
@@ -91,15 +92,13 @@ pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
         DebugAction::ChangeCreature => "debug.change_creature",
         DebugAction::ItemPictures => "debug.item_pictures",
         DebugAction::WorldTime => "debug.world_time",
-        DebugAction::GoToWorld => "debug.go_to_world",
-        DebugAction::TeleportToGate => "debug.teleport_to_gate",
+        DebugAction::TeleportToWorld => super::teleport_to_world::FORM,
+        DebugAction::Vitals => "debug.vitals",
         DebugAction::DevArea => "debug.dev_area",
         DebugAction::CreateMob => "debug.create_mob",
         DebugAction::InspectMob => "debug.inspect_mob",
-        DebugAction::StairsStyle => "debug.stairs",
-        DebugAction::FieldsState => "debug.fields",
-        DebugAction::HerbsState => "debug.herbs",
-        _ => "debug.steps",
+        DebugAction::DrawingStates => "debug.drawing_states",
+        _ => "debug.panel",
     }
 }
 

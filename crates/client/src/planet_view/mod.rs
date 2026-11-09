@@ -39,9 +39,12 @@ const PLANET_LAYER: usize = 8;
 /// Game hours that pass each real second: a day a minute.
 const HOURS_PER_SECOND: f64 = 24.0 / 60.0;
 
-/// Shows the planet, as the debug menu's View Planet does.
+/// Shows the planet, as the debug menu's View Planet does: of the world with
+/// this seed, or with none the player's own.
 #[derive(Message, Clone, Copy, Debug)]
-pub struct ViewPlanet;
+pub struct ViewPlanet {
+    pub world: Option<u64>,
+}
 
 pub struct PlanetViewPlugin;
 

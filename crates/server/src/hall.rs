@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use shared::hall::{self, GateAddress, GatePlace};
 use shared::movement::{Step, step_on_level};
 use shared::protocol::ServerMessage;
+use shared::world::WorldSeed;
 
 use crate::connections::Client;
 use crate::{ServerWorld, sites};
@@ -71,19 +72,28 @@ pub(crate) fn enter(client: &mut Client, world: &mut ServerWorld, (x, y): (i64, 
     })
 }
 
-/// Developer tools: to the Hall, in front of the gate leading to the World Gate
-/// nearest the player, or of its first gate if this planet isn't one of the
-/// Hall's.
-pub(crate) fn to_hall(client: &mut Client, world: &mut ServerWorld) -> bool {
-    let nearest = crate::world_map::nearest_gate(world, client.world_position());
-    let entrance = world
-        .pois
-        .world_gates()
-        .gates
-        .iter()
-        .position(|gate| (gate.x, gate.y) == nearest);
+/// Developer tools: to the Hall, in front of the gate leading to World Gate
+/// `gate` of the world with this seed (none: the player's own). With no gate,
+/// the one nearest the player on their own world, or the first of another.
+/// A world that isn't one of the Hall's puts them at the Hall's first gate.
+pub(crate) fn to_hall(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    seed: Option<u64>,
+    gate: Option<u8>,
+) -> bool {
+    let to = seed.map_or(world.seed, WorldSeed::new);
+    let entrance = gate.or_else(|| {
+        if to != world.seed {
+            return Some(0);
+        }
+        let nearest = crate::world_map::nearest_gate(world, client.world_position());
+        let gates = &world.pois.world_gates().gates;
+        let at = gates.iter().position(|gate| (gate.x, gate.y) == nearest)?;
+        u8::try_from(at).ok()
+    });
     let place = entrance
-        .and_then(|entrance| GateAddress::for_world(world.seed, entrance as u8))
+        .and_then(|entrance| GateAddress::for_world(to, entrance))
         .map_or(GatePlace::from_number(0), GateAddress::place);
     enter(client, world, place.front())
 }

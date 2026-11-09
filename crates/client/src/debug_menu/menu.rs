@@ -6,15 +6,17 @@ use crate::widgets::TextSize;
 // Split into files (`cargo xtask lint` keeps files small).
 mod columns;
 mod input;
+mod layout;
 mod on_show;
 mod parts;
 mod show;
 mod spawn;
 mod state;
 
-use columns::{columns_in, columns_of, first_column, rows_in};
+use columns::{columns_in, rows_in};
 pub(super) use input::take_input;
-use on_show::{entries_on_show, on_show, return_chooses};
+use layout::{Slot, first_column, lay_out};
+use on_show::{entries_on_show, headings_of, on_show, return_chooses};
 use parts::Entry;
 pub(super) use parts::{
     FilterBox, MenuClose, MenuEntry, MenuGrid, MenuRoot, PageButton, WarningButton,
@@ -45,6 +47,8 @@ const COLUMN_GAP: f32 = GAP * 2.0;
 const COLUMN_WIDTH: f32 = 300.0;
 const PAGE_BUTTON: f32 = 34.0;
 const FONT: TextSize = TextSize::Large;
+/// The groups' headings.
+const HEADING: TextSize = TextSize::Medium;
 
 #[cfg(test)]
 mod tests;

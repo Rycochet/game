@@ -3,14 +3,12 @@
 
 mod actions;
 mod bodies;
-mod delete_character;
 mod menu;
 mod panels;
 mod run;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use shared::dungeon::Cell;
 use shared::movement::Step;
 
 use crate::common::{
@@ -36,6 +34,7 @@ impl Plugin for DebugMenuPlugin {
             .init_resource::<panels::GiveTo>()
             .init_resource::<panels::ChosenChange>()
             .init_resource::<panels::PicturesForm>()
+            .init_resource::<panels::TeleportForm>()
             .add_message::<DebugAction>()
             .add_message::<panels::GenerateKind>()
             .add_plugins((
@@ -44,10 +43,7 @@ impl Plugin for DebugMenuPlugin {
                 panels::add_inspect_mob_panel,
                 panels::add_kept_choices,
             ))
-            .add_systems(
-                Startup,
-                (menu::spawn_menu, delete_character::spawn_delete_dialog),
-            )
+            .add_systems(Startup, menu::spawn_menu)
             .add_systems(
                 PreUpdate,
                 menu::take_input
@@ -60,7 +56,6 @@ impl Plugin for DebugMenuPlugin {
                     panels::forget_closed,
                     run::remind_of_god_mode,
                     run::run_actions,
-                    delete_character::run_delete_dialog,
                     bodies::fill_panels,
                     bodies::apply_sliders,
                     panels::open_generate_panel,
@@ -72,10 +67,11 @@ impl Plugin for DebugMenuPlugin {
                         panels::edit_time_box,
                         panels::press_rate_buttons,
                         panels::update_rate_buttons,
-                        panels::press_go_to_world_buttons,
-                        panels::update_go_to_world_button,
-                        panels::press_gate_buttons,
-                        panels::update_gate_buttons,
+                        panels::open_teleport_asked,
+                        panels::press_teleport_buttons,
+                        panels::update_teleport_buttons,
+                        panels::press_vitals_buttons,
+                        panels::update_vitals_buttons,
                     )
                         .chain(),
                     (
@@ -114,7 +110,8 @@ impl Plugin for DebugMenuPlugin {
     }
 }
 
-/// While on, the player walks east one step per frame.
+/// While on, the player walks east one step per frame (dev tools:
+/// `HOW_DEBUG_WALK` and the debug API; no longer in the menu).
 #[derive(Resource, Default)]
 pub struct AutoWalk(pub bool);
 
@@ -123,7 +120,6 @@ pub struct AutoWalk(pub bool);
 struct FactSources<'w> {
     view: Res<'w, State<GameView>>,
     dungeon: Res<'w, CurrentDungeon>,
-    walk: Res<'w, AutoWalk>,
     detect: Res<'w, DetectMonsters>,
     god: Res<'w, GodMode>,
     truesight: Res<'w, Truesight>,
@@ -141,10 +137,6 @@ impl FactSources<'_> {
     fn facts(&self) -> Facts {
         Facts {
             view: *self.view.get(),
-            has_stairs: !self.dungeon.stairs.is_empty(),
-            has_fields: !self.dungeon.fields.is_empty(),
-            has_herbs: self.dungeon.level_has(Cell::HerbBed),
-            walking: self.walk.0,
             detecting: self.detect.0,
             god_mode: self.god.0,
             truesight: self.truesight.0,

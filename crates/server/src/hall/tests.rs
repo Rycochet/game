@@ -8,7 +8,10 @@ use crate::connections::tests::TestClient;
 /// it, and where that counts from.
 fn in_the_hall() -> (TestClient, (i64, i64), i64) {
     let mut test = TestClient::new();
-    let answers = test.send(&[ClientMessage::DevToHall]);
+    let answers = test.send(&[ClientMessage::DevToHall {
+        seed: None,
+        gate: None,
+    }]);
     let at = answers
         .iter()
         .find_map(|message| match message {
@@ -24,6 +27,26 @@ fn position(answers: &[ServerMessage]) -> Option<(i64, i64)> {
         ServerMessage::Position { x, y, .. } => Some((*x, *y)),
         _ => None,
     })
+}
+
+#[test]
+fn dev_tools_can_choose_another_worlds_gate() {
+    let mut test = TestClient::new();
+    let answers = test.send(&[ClientMessage::DevToHall {
+        seed: Some(12345),
+        gate: Some(3),
+    }]);
+    let (x, y, origin) = answers
+        .iter()
+        .find_map(|message| match message {
+            ServerMessage::EnterHall { x, y, origin } => Some((*x, *y, *origin)),
+            _ => None,
+        })
+        .expect("in the Hall");
+    let wanted = shared::hall::GateAddress::for_world(WorldSeed::new(12345), 3)
+        .expect("a world of the Hall")
+        .place();
+    assert_eq!((x + origin, y), wanted.front());
 }
 
 #[test]
@@ -52,7 +75,10 @@ fn steps_stay_on_the_floor() {
 #[test]
 fn walking_round_the_seam_carries_on() {
     let mut test = TestClient::new();
-    test.send(&[ClientMessage::DevToHall]);
+    test.send(&[ClientMessage::DevToHall {
+        seed: None,
+        gate: None,
+    }]);
     test.client.character.hall = Some((HALL_LENGTH - 1, 1));
     test.steps(&[(1, 0)]);
     assert_eq!(test.client.character.hall, Some((HALL_LENGTH, 1)));

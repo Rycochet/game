@@ -1,5 +1,6 @@
-//! Going to a World Gate from the view: by the bar's Teleport to Gate 1, or by
-//! clicking a gate's ring. Only on the planet the player is on, as it is: the
+//! Going to a World Gate from the view, by clicking a gate's ring, or opening
+//! the debug menu's Teleport to World with this planet's seed by the bar's
+//! Teleport to World.... Only on the planet it was opened for, as it is: the
 //! bar's seed is a terrain seed, which can't be turned back into the world's
 //! own seed for the server, and another generator would place the gates
 //! elsewhere than the server has them.
@@ -9,62 +10,55 @@ use shared::protocol::ClientMessage;
 
 use super::close::close;
 use super::showing::{PlanetView, Showing};
-use crate::common::{CurrentWorld, ServerDevTools};
+use crate::common::{ServerDevTools, TeleportToWorldAsked};
 use crate::connection::ToServer;
 use crate::widgets::{ButtonPressed, ButtonState, HoverTip};
 
 /// Why the view's gates can't be gone to now, if they can't.
-pub(super) fn why_not(
-    showing: &Showing,
-    world: &CurrentWorld,
-    dev_tools: bool,
-) -> Option<&'static str> {
+pub(super) fn why_not(showing: &Showing, dev_tools: bool) -> Option<&'static str> {
     if !dev_tools {
         Some("the server doesn't allow dev tools")
-    } else if showing.choice.seed != world.params.seed {
-        Some("only the planet you are on")
-    } else if showing.choice.generator != world.params.generator {
+    } else if showing.choice.seed != showing.home.seed {
+        Some("only the planet it was opened for")
+    } else if showing.choice.generator != showing.home.generator {
         Some("not this planet's own generator")
     } else {
         None
     }
 }
 
-/// Asks the server for World Gate `gate` (from 0) of the world the player is
-/// in, and closes the view.
+/// Asks the server for World Gate `gate` (from 0) of the world on show, and
+/// closes the view.
 pub(super) fn go_to_gate(
     gate: u8,
     view: &mut PlanetView,
     to_server: &mut MessageWriter<ToServer>,
     commands: &mut Commands,
 ) {
+    let seed = view.showing.as_ref().and_then(|showing| showing.world);
     to_server.write(ToServer(ClientMessage::DevGoToWorld {
-        seed: None,
+        seed,
         gate: Some(gate),
     }));
     close(view, commands);
 }
 
-/// Greys Teleport to Gate 1 where it can't go, saying why when pointed at,
-/// and goes when it is pressed.
-#[allow(clippy::too_many_arguments)]
+/// Greys Teleport to World... where the planet on show isn't a world's,
+/// saying why when pointed at; pressed, it closes the view and opens the
+/// debug menu's panel with this world's seed.
 pub(super) fn teleport_button(
     mut view: ResMut<PlanetView>,
-    world: Option<Res<CurrentWorld>>,
     dev_tools: Res<ServerDevTools>,
     mut pressed: MessageReader<ButtonPressed>,
     mut buttons: Query<(&mut ButtonState, &mut HoverTip)>,
-    mut to_server: MessageWriter<ToServer>,
+    mut asked: MessageWriter<TeleportToWorldAsked>,
     mut commands: Commands,
 ) {
-    let (Some(showing), Some(world)) = (view.showing.as_ref(), world) else {
+    let Some(showing) = view.showing.as_ref() else {
         return;
     };
     let teleport = showing.bar.teleport;
-    let why = why_not(showing, &world, dev_tools.0).or_else(|| {
-        let none = showing.globe.planet.gates.gates.is_empty();
-        none.then_some("this planet has no World Gates")
-    });
+    let why = why_not(showing, dev_tools.0);
     if let Ok((mut state, mut tip)) = buttons.get_mut(teleport) {
         state.set_if_neq(match why {
             Some(_) => ButtonState::Disabled,
@@ -76,7 +70,10 @@ pub(super) fn teleport_button(
         }
     }
     if why.is_none() && pressed.read().any(|press| press.0 == teleport) {
-        go_to_gate(0, &mut view, &mut to_server, &mut commands);
+        asked.write(TeleportToWorldAsked {
+            seed: showing.world,
+        });
+        close(&mut view, &mut commands);
     }
 }
 
