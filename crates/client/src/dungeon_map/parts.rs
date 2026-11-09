@@ -5,6 +5,7 @@ use shared::dungeon::Sight;
 use std::collections::BTreeMap;
 
 use super::mesh::{Surface, WallFace};
+use super::outlined::OutlinedMeshes;
 use super::sight_lines::SurfaceMaterial;
 
 /// The root of everything this view draws, hidden while another view is
@@ -18,6 +19,8 @@ pub(super) struct DungeonScene;
 pub struct Shown {
     pub sight: Option<Sight>,
     pub(super) solid_faces: Vec<WallFace>,
+    /// Models' outline meshes last built, for `apply_outlined` to put in place.
+    pub(super) outlined: Option<OutlinedMeshes>,
     /// Counts the times sight was worked out again, or the level changed.
     pub(super) looks: u64,
 }

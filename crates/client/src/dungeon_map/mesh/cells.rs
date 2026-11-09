@@ -12,8 +12,8 @@ use super::super::liquid::build_cell;
 use super::super::oasis::{build_grass_or_tree, build_tree};
 use super::super::stairs::{build_stairs, hides_viewer};
 use super::super::town;
-use super::super::walls::{Layers, Scene, build_opening, build_wall};
-use super::{MEMORY_SHADE, Surface, corner_light, layer_sizes, tint_since, with_ambient};
+use super::super::walls::{Layers, Scene, build_opening, build_secret_door, build_wall};
+use super::{MEMORY_SHADE, Surface, corner_light, with_ambient};
 
 /// Whatever stands at a remembered cell.
 pub(super) fn build_cell_at(
@@ -28,12 +28,9 @@ pub(super) fn build_cell_at(
         // A town's buildings are drawn whole, in `build`; seen from the
         // wilderness, which isn't told them, as walls.
         if level.room(x, y).is_none() || scene.buildings.is_empty() {
-            let before = layer_sizes(layers);
             build_wall(layers, scene, (x, y));
             // Only sent to truesight: otherwise it arrives as a wall.
-            if cell == Cell::SecretDoor {
-                tint_since(layers, &before);
-            }
+            build_secret_door(layers, scene, (x, y));
         }
     } else if cell.is_road() || cell == Cell::Garden {
         town::build_flat(layers, scene, (x, y));
@@ -80,7 +77,15 @@ pub(super) fn build_open_cell(
     if !scene.sight.is_seen(x, y) {
         let grey = Vec3::splat(MEMORY_SHADE);
         match stairs {
-            Some(found) => build_stairs(&mut layers.memory, None, found, surface, grey, &|_| grey),
+            Some(found) => build_stairs(
+                &mut layers.memory,
+                None,
+                &mut layers.outlined,
+                found,
+                surface,
+                grey,
+                &|_| grey,
+            ),
             None => {
                 let half = CELL_SIZE / 2.0;
                 layers.memory[surface as usize].quad(
@@ -106,6 +111,7 @@ pub(super) fn build_open_cell(
             build_stairs(
                 &mut layers.solid,
                 through,
+                &mut layers.outlined,
                 found,
                 surface,
                 lit,

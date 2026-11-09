@@ -15,6 +15,7 @@ use super::{CELL_SIZE, WALL_HEIGHT};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod build;
+mod door_leaf;
 mod faces;
 mod floor;
 mod layers;
@@ -33,6 +34,7 @@ mod wall_quarter;
 
 use build::Tile;
 pub use build::{build_opening, build_wall};
+pub use door_leaf::build_secret_door;
 pub use layers::{Layer, Layers};
 use opening::{Opening, RISING_SHADE};
 use patch::{Patch, cuts};

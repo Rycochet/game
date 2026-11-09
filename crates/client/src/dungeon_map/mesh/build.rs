@@ -7,6 +7,7 @@ use shared::site::{BuildingLook, FieldLook};
 use std::collections::BTreeSet;
 
 use super::super::liquid::LooksLiquid;
+use super::super::outlined::Outlined;
 use super::super::theme::Shape;
 use super::super::town;
 use super::super::walls::{Layers, Scene};
@@ -52,6 +53,7 @@ pub fn build(
         see_through: Builder::default(),
         stairs_through: Surface::ALL.iter().map(|_| Builder::default()).collect(),
         solid_faces: Vec::new(),
+        outlined: Outlined::default(),
     };
     let scene = Scene {
         level,
@@ -100,6 +102,7 @@ pub fn build(
         see_through,
         stairs_through,
         solid_faces,
+        outlined,
     } = layers;
     DungeonMeshes {
         has_solid: solid.iter().map(|b| !b.indices.is_empty()).collect(),
@@ -114,5 +117,6 @@ pub fn build(
             .collect(),
         stairs_through: stairs_through.into_iter().map(Builder::into_mesh).collect(),
         solid_faces,
+        outlined: outlined.into_meshes(),
     }
 }

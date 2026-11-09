@@ -5,6 +5,7 @@ use std::f32::consts::TAU;
 
 use super::super::CELL_SIZE;
 use super::super::mesh::{Builder, Surface};
+use super::super::outlined::{OUTLINE_WIDTH, Outlined, add_face, grown_face};
 use super::{
     MODEL_DEEPEST_SHADE, PLANK_U, PLANK_V, ROPE_TINT, ROPE_UV, STAIRS_DOWN_DEPTH, facing_shade,
     floor_uv,
@@ -16,6 +17,8 @@ pub(super) struct Model<'a> {
     pub(super) meshes: &'a mut [Builder],
     /// Where what stands above the floor goes, when see-through.
     pub(super) through: Option<&'a mut [Builder]>,
+    /// Where its black outline goes (not while see-through).
+    pub(super) outlined: &'a mut Outlined,
     pub(super) lit: Vec3,
     pub(super) base: Vec3,
     /// How high it would be, and the height it is cut off at.
@@ -64,11 +67,16 @@ impl Model<'_> {
     ) {
         let shade = facing_shade(normal);
         let colours = corners.map(|p| self.colour_at(p) * shade * tint);
-        let target = match self.through.as_deref_mut() {
-            Some(through) if corners.iter().any(|p| p.y > 0.01) => through,
-            _ => &mut *self.meshes,
-        };
-        target[surface as usize].free(corners, normal, uvs, colours);
+        match self.through.as_deref_mut() {
+            Some(through) if corners.iter().any(|p| p.y > 0.01) => {
+                through[surface as usize].free(corners, normal, uvs, colours);
+            }
+            _ => {
+                self.meshes[surface as usize].free(corners, normal, uvs, colours);
+                let hull = grown_face(corners, normal, OUTLINE_WIDTH);
+                add_face(&mut self.outlined.black, hull, normal);
+            }
+        }
     }
 
     /// A bar from `from` to `to` with `sides` flat sides and a cap at its

@@ -31,6 +31,7 @@ pub(in crate::dungeon_map) struct Marks {
     memory: Vec<usize>,
     see_through: usize,
     stairs_through: Vec<usize>,
+    outlined: [usize; 3],
     faces: usize,
 }
 
@@ -44,6 +45,7 @@ impl Marks {
             memory: lengths(&layers.memory),
             see_through: layers.see_through.positions.len(),
             stairs_through: lengths(&layers.stairs_through),
+            outlined: layers.outlined.sizes(),
             faces: layers.solid_faces.len(),
         }
     }
@@ -69,6 +71,9 @@ impl Marks {
         }
         change(&mut layers.see_through, self.see_through);
         for (builder, &from) in layers.stairs_through.iter_mut().zip(&self.stairs_through) {
+            change(builder, from);
+        }
+        for (builder, from) in layers.outlined.builders().into_iter().zip(self.outlined) {
             change(builder, from);
         }
     }

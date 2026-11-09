@@ -229,7 +229,7 @@ pub(super) fn update_meshes(
     );
     shown.sight = Some(sight.clone());
     dungeon.bypass_change_detection().remembered = remembered;
-    shown.solid_faces = built.solid_faces;
+    (shown.solid_faces, shown.outlined) = (built.solid_faces, Some(built.outlined));
 
     // An empty mesh is hidden rather than drawn with no triangles.
     let shown_if = |has_faces: bool| {
