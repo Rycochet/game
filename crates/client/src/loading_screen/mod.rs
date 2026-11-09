@@ -9,11 +9,12 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::common::{
-    GameView, LoadingStep, LoggingIn, MakingCharacter, PointerSystems, ServerStatus, Session,
-    TouchGesture, interface_area,
+    CharacterSelect, GameView, LoadingStep, LoggingIn, MakingCharacter, PointerSystems,
+    ServerStatus, Session, TouchGesture, interface_area,
 };
 
 mod frames;
+mod takes_input;
 use crate::widgets::{Progress, TextSize, WidgetSystems, layer_z, spawn_progress_bar};
 use frames::keep_frame_rate;
 
@@ -62,17 +63,7 @@ impl Plugin for LoadingScreenPlugin {
                 // At the startup menu, the menu over the screen takes what it
                 // wants, as making a character does.
                 take_all_input
-                    .run_if(
-                        |step: Res<LoadingStep>,
-                         session: Res<Session>,
-                         making: Res<MakingCharacter>,
-                         logging_in: Res<LoggingIn>| {
-                            *step != LoadingStep::Ready
-                                && session.is_playing()
-                                && !making.0
-                                && !logging_in.shows()
-                        },
-                    )
+                    .run_if(takes_input::takes_input)
                     .after(InputSystems)
                     .after(PointerSystems)
                     .before(WidgetSystems::Presses),
@@ -221,6 +212,7 @@ fn show_screen(
     status: Res<ServerStatus>,
     session: Res<Session>,
     making: Res<MakingCharacter>,
+    select: Res<CharacterSelect>,
     logging_in: Res<LoggingIn>,
     mut screen: Single<&mut Visibility, (With<LoadingScreen>, Without<Bar>)>,
     mut bar: Single<&mut Visibility, (With<Bar>, Without<LoadingScreen>)>,
@@ -228,7 +220,8 @@ fn show_screen(
     mut text: Single<(&mut Text, &mut TextColor), With<BarText>>,
 ) {
     let changed = step.is_changed() || status.is_changed() || session.is_changed();
-    if !changed && !making.is_changed() && !logging_in.is_changed() {
+    let choosing = making.is_changed() || select.is_changed();
+    if !changed && !choosing && !logging_in.is_changed() {
         return;
     }
     let shown_if = |shown: bool| {
@@ -239,10 +232,10 @@ fn show_screen(
         }
     };
     screen.set_if_neq(shown_if(*step != LoadingStep::Ready));
-    // Only the title behind the startup menu, or the screens making a character
-    // and logging in.
+    // Only the title behind the startup menu, or the screens choosing and making
+    // a character and logging in.
     bar.set_if_neq(shown_if(
-        session.is_playing() && !making.0 && !logging_in.shows(),
+        session.is_playing() && !making.0 && !select.open && !logging_in.shows(),
     ));
     let (words, full) = bar_shows(*step, &status);
     progress.0 = full;

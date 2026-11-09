@@ -62,11 +62,21 @@ pub(super) fn show_buttons(
     session: Res<Session>,
     clock: Res<ServerClock>,
     account: Res<crate::common::AccountEmail>,
+    playable: Res<crate::common::PlayableHere>,
     mut buttons: Query<(&MenuButton, &mut Node, &mut ButtonState)>,
 ) {
     for (button, mut node, mut state) in &mut buttons {
         let shown = match button {
-            MenuButton::Play => !session.is_playing(),
+            MenuButton::Play => {
+                // Only with a character to go back to there.
+                state.set_if_neq(if playable.0 {
+                    ButtonState::Normal
+                } else {
+                    ButtonState::Disabled
+                });
+                !session.is_playing()
+            }
+            MenuButton::Characters => !session.is_playing(),
             MenuButton::Continue => session.is_playing(),
             MenuButton::LogOut => match session.is_playing() {
                 true => !clock.local_server,

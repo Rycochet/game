@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 use super::{Connecting, hang_up};
-use crate::common::{CurrentWorld, GameView, ServerStatus, Session};
+use crate::common::{CurrentWorld, GameView, PlayFor, ServerStatus, Session};
 
 /// Once back at the startup menu (`Session::AtStart`), hangs up if connected and
 /// forgets the world. A refusal is kept, for the menu to say why.
@@ -17,7 +17,10 @@ pub(super) fn log_out(
     view: Res<State<GameView>>,
     mut next_view: ResMut<NextState<GameView>>,
     connection: Option<Res<super::ServerConnection>>,
+    mut play_for: ResMut<PlayFor>,
 ) {
+    // Connect's next server is for Play, unless Characters says otherwise.
+    play_for.set_if_neq(PlayFor::Latest);
     if connection.is_some() {
         info!("Logged out");
         hang_up(&mut commands);

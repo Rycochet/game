@@ -32,6 +32,9 @@ dirs.workspace = true
 # Pasting into text boxes and copying (MIT/Apache-2.0). In a browser, the
 # browser pastes into the page's hidden input.
 arboard = { version = "3", default-features = false }
+# The local time zone, for when characters were made and last played
+# (MIT/Apache-2.0); a browser has its own.
+time = { workspace = true, features = ["local-offset"] }
 
 # The browser's WebSocket, location, storage and clipboard, and asking servers
 # what they are (`XmlHttpRequest`).

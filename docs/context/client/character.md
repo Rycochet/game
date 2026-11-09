@@ -5,12 +5,14 @@ What the character is like: the Character panel's Character tab, which `inventor
 ## Files
 
 - `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested).
+- `crates/client/src/character/listed.rs`: `describe_listed(ListedCharacter)`: what the tab would say of a character offered to choose from, as far as their save tells (kind, attributes, carrying, difficulty, looks; no Health, Mana or speed), for `character_select`.
 - `crates/client/src/character/vitals_lines.rs`: "Health 31 (Toughness 26, +5 for now)": the most from the last `Vitals`, its parts from the sheet; playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or changes do, so the parts stay right.
 
 ## Public API
 
 - `CharacterPlugin`.
 - `CharacterSheet(Sheet)` (resource): what the server last said.
+- `describe_listed(&ListedCharacter) -> String`.
 
 ## Depends on
 
@@ -18,7 +20,7 @@ What the character is like: the Character panel's Character tab, which `inventor
 
 ## Used by
 
-- Nothing directly.
+- `character_select` (`describe_listed`).
 
 ## Notes
 

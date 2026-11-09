@@ -17,6 +17,11 @@ type Entry = (&'static str, Action, Option<MenuButton>);
 const SECTIONS: &[&[Entry]] = &[
     &[
         ("Play", Action::Play, Some(MenuButton::Play)),
+        (
+            "Characters",
+            Action::Characters,
+            Some(MenuButton::Characters),
+        ),
         ("Continue", Action::Back, Some(MenuButton::Continue)),
         // With the gear for Server Options; native only.
         ("Online", Action::ToggleOnline, Some(MenuButton::Online)),

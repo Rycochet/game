@@ -17,7 +17,7 @@ mod ring;
 use bevy::prelude::*;
 use bevy::render::{ExtractSchedule, Render, RenderApp, RenderSystems};
 
-pub use character::character_look;
+pub use character::{character_look, portrait_look};
 pub use colours::Colours;
 pub use footwear::FootwearLook;
 pub use looks::{

@@ -57,6 +57,9 @@ pub struct Preferences {
     pub controls: Controls,
     /// The movement pad as last left.
     pub step_pad: StepPadPrefs,
+    /// The servers this computer has a character on, as `connection` names them
+    /// (the built-in one too), for Play.
+    pub played_on: std::collections::BTreeSet<String>,
 }
 
 /// The movement pad as last left: open unless closed with its button, and

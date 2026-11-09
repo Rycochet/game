@@ -25,6 +25,7 @@ fn preferences_read_back_as_saved() {
             key: Some("ab12".into()),
         }],
         last_server: Some("play.example.com:9000".into()),
+        played_on: ["built-in".to_owned()].into(),
         online: true,
         server_difficulties: shared::difficulty::Difficulties::only(
             shared::difficulty::Difficulty::Hard,

@@ -4,7 +4,8 @@ The screen covering everything from the first frame until the game can take inpu
 
 ## Files
 
-- `crates/client/src/loading_screen/mod.rs`: `LoadingScreenPlugin`; `next_step` (from frames run and frames since the welcome), `title_font_size`, `bar_shows`, `take_all_input` (`PreUpdate`, before the widgets: clears keys, mouse, wheel and fingers while up, but not at the startup menu, which takes them, nor while `common::MakingCharacter` or `common::LoggingIn::shows`, whose screens take them), `show_screen` (the bar hidden at the startup menu, while making a character and while logging in), `fit_title` (size and place by window and `Session`), `remove_page_screen` (web only). Unit tests. `frames.rs`: `keep_frame_rate`.
+- `crates/client/src/loading_screen/mod.rs`: `LoadingScreenPlugin`; `next_step` (from frames run and frames since the welcome), `title_font_size`, `bar_shows`, `take_all_input` (`PreUpdate`, before the widgets: clears keys, mouse, wheel and fingers while up, but not at the startup menu, which takes them, nor while `common::MakingCharacter`, `common::CharacterSelect::open` or `common::LoggingIn::shows`, whose screens take them), `show_screen` (the bar hidden at the startup menu, while making a character and while logging in), `fit_title` (size and place by window and `Session`), `remove_page_screen` (web only). Unit tests. `frames.rs`: `keep_frame_rate`.
+- `crates/client/src/loading_screen/takes_input.rs`: `takes_input`, when `take_all_input` runs (up after Play, but not while choosing or making a character or logging in).
 
 ## Public API
 
@@ -14,7 +15,7 @@ The screen covering everything from the first frame until the game can take inpu
 
 ## Depends on
 
-- `common` (`LoadingStep`, `ServerStatus`, `GameView`, `TouchGesture`, `PointerSystems`, `frame_settings`, `KeepDrawing`, `Session`, `MakingCharacter`), `widgets` (`WidgetSystems`, for ordering; `layer_z`).
+- `common` (`LoadingStep`, `ServerStatus`, `GameView`, `TouchGesture`, `PointerSystems`, `frame_settings`, `KeepDrawing`, `Session`, `MakingCharacter`, `CharacterSelect`), `widgets` (`WidgetSystems`, for ordering; `layer_z`).
 
 ## Used by
 

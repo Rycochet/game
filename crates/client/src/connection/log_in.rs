@@ -1,8 +1,8 @@
 //! Logging in: with the account kept for this server, on a provider's page in
-//! the player's browser, or as a guest; and choosing the account's character.
+//! the player's browser, or as a guest.
 //! `receive` hands the server's login messages on as `FromServer`, answered by
 //! `answer_login`; what the player chooses on `login`'s screen comes as
-//! `LoginChoice` (`choose_login`).
+//! `LoginChoice` (`choose_login`). Characters are `characters`' to answer.
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, Credentials, LoginMethod, ServerMessage};
@@ -59,19 +59,6 @@ pub(super) fn answer_login(
                     email.0 = None;
                 }
                 *logging_in = choosing(&connecting, Some(reason.clone()));
-                Ok(())
-            }
-            // The account's characters: until there is a screen to choose on,
-            // the one played last (or else made last).
-            ServerMessage::Characters { list, .. } => {
-                let last = list
-                    .iter()
-                    .map(|character| &character.summary)
-                    .max_by_key(|summary| (summary.last_played, summary.created));
-                if let Some(character) = last {
-                    let id = character.id;
-                    connection.link.send(&ClientMessage::ChooseCharacter { id });
-                }
                 Ok(())
             }
             _ => Ok(()),

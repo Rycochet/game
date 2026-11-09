@@ -10,8 +10,8 @@ use super::ping::TimedPong;
 use super::prediction::{Prediction, correction};
 use super::{FromServer, ServerConnection, give_up, hang_up};
 use crate::common::{
-    CurrentWorld, GameClock, GameView, Hosting, MakingCharacter, MapPosition, ServerClock,
-    ServerStatus, WorldChanged,
+    CurrentWorld, GameClock, GameView, Hosting, MapPosition, ServerClock, ServerStatus,
+    WorldChanged,
 };
 use crate::player::Player;
 
@@ -63,19 +63,6 @@ pub(super) fn receive(
                     round_trip: time.elapsed_secs_f64() - sent,
                     clock,
                     received: Instant::now(),
-                });
-            }
-            // A new character, to be made with `character_create`'s screen.
-            Ok(Some(ServerMessage::Characters {
-                list,
-                can_create,
-                difficulties,
-            })) if list.is_empty() && can_create => {
-                commands.insert_resource(MakingCharacter(true));
-                // What the new character may be.
-                commands.insert_resource(crate::common::PlayDifficulty {
-                    current: None,
-                    allowed: difficulties,
                 });
             }
             Ok(Some(ServerMessage::Welcome {

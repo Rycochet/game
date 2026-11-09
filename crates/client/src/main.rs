@@ -6,6 +6,7 @@
 mod abilities;
 mod character;
 mod character_create;
+mod character_select;
 mod common;
 mod connection;
 mod debug_menu;
@@ -107,7 +108,7 @@ fn main() {
         ui::UiPlugin,
         loading_screen::LoadingScreenPlugin,
     ));
-    app.add_plugins(login::LoginPlugin);
+    app.add_plugins((login::LoginPlugin, character_select::CharacterSelectPlugin));
     // (Apart: a tuple of plugins can only be so long.)
     app.add_plugins((
         system_menu::SystemMenuPlugin,

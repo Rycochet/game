@@ -90,6 +90,8 @@ pub(super) enum Action {
     Back,
     /// From the startup menu: connects, and closes the menu.
     Play,
+    /// From the startup menu: connects to choose a character.
+    Characters,
     Settings,
     /// The Video page's Apply.
     ApplyVideo,
@@ -141,6 +143,7 @@ impl Action {
             Self::Open => "menu",
             Self::Back => "back",
             Self::Play => "play",
+            Self::Characters => "characters",
             Self::Settings => "settings",
             Self::ApplyVideo => "apply",
             Self::KeepVideo | Self::KeepCertificate => "keep",
@@ -172,6 +175,8 @@ impl Action {
 pub(super) enum MenuButton {
     /// At the startup menu.
     Play,
+    /// At the startup menu: the screen for choosing.
+    Characters,
     /// While playing.
     Continue,
     /// While playing on another computer's server (not the one built in).

@@ -40,6 +40,8 @@ pub const WARNING_TEXT: Color = ERROR_EDGE;
 
 /// A main button's background.
 pub(super) const MAIN_BACKGROUND: Color = Color::srgb(0.85, 0.62, 0.25);
+/// A button that destroys something (Delete): red, with light words.
+pub(super) const DANGER_BACKGROUND: Color = Color::srgb(0.72, 0.16, 0.13);
 /// The edge of a text box or slider under the pointer.
 pub(super) const HOVER_EDGE: Color = Color::srgb(0.7, 0.4, 0.1);
 /// What spreads from a press, at its strongest.

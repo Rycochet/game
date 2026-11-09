@@ -5,8 +5,8 @@ use shared::sheet::Trait;
 
 use super::draft::Draft;
 use super::looks::{PatternPictures, spawn_looks};
-use super::screen::{BeginButton, CreateLayer, KindList, LooksBox, NameBox};
-use crate::common::{MakingCharacter, PlayDifficulty, Preferences};
+use super::screen::{BeginButton, CancelButton, CreateLayer, KindList, LooksBox, NameBox};
+use crate::common::{CharacterChoice, MakingCharacter, PlayDifficulty, Preferences};
 use crate::connection::ToServer;
 use crate::widgets::{
     ButtonPressed, ButtonState, ColourChosen, DropdownChosen, TextBox, TextEdited, TextFocus,
@@ -101,12 +101,15 @@ pub(super) fn fill_looks(
 }
 
 /// Begin sends the character, once it has a name; the server's welcome follows.
+/// Cancel goes back to choosing (or the startup menu), making nothing.
 pub(super) fn press_begin(
     mut pressed: MessageReader<ButtonPressed>,
     mut begin: Single<(Entity, &mut ButtonState), With<BeginButton>>,
+    cancel: Single<Entity, With<CancelButton>>,
     draft: Res<Draft>,
     mut making: ResMut<MakingCharacter>,
     mut to_server: MessageWriter<ToServer>,
+    mut choices: MessageWriter<CharacterChoice>,
 ) {
     let state = if draft.ready() {
         ButtonState::Normal
@@ -114,8 +117,12 @@ pub(super) fn press_begin(
         ButtonState::Disabled
     };
     begin.1.set_if_neq(state);
-    if pressed.read().any(|press| press.0 == begin.0) && draft.ready() {
-        to_server.write(ToServer(draft.message()));
-        making.0 = false;
+    for press in pressed.read() {
+        if press.0 == begin.0 && draft.ready() {
+            to_server.write(ToServer(draft.message()));
+            making.0 = false;
+        } else if press.0 == *cancel {
+            choices.write(CharacterChoice::CancelNew);
+        }
     }
 }

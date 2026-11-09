@@ -33,7 +33,21 @@ pub(super) fn parts_of(
             worn,
             colours,
             hair,
-        } => super::character::character_parts(kind, &worn, colours, hair, meshes, materials),
+        } => super::character::character_parts(kind, &worn, colours, hair, None, meshes, materials),
+        Look::Portrait(character) => match *character {
+            Look::Character {
+                kind,
+                worn,
+                colours,
+                hair,
+            } => {
+                let standing = Some(super::character::portrait_scale(kind));
+                super::character::character_parts(
+                    kind, &worn, colours, hair, standing, meshes, materials,
+                )
+            }
+            _ => Vec::new(),
+        },
         Look::Morph(morph) => super::body::morph_parts(&morph, meshes, materials),
         Look::Footwear { footwear, quality } => {
             super::footwear::footwear_parts(&footwear, quality, meshes, materials)

@@ -10,6 +10,10 @@ use shared::sheet::Appearance;
 use shared::wear::WornLook;
 
 mod cover;
+mod portrait;
+
+pub use portrait::portrait_look;
+pub(super) use portrait::{PORTRAIT_CELLS, portrait_scale};
 
 use super::armour::{set, worn};
 use super::colours::{Colours, material};
@@ -103,13 +107,16 @@ fn piece_look(worn: &WornLook) -> Option<Look> {
     })
 }
 
-/// A body of this kind wearing these, filling its picture, in its own colours, with
-/// what can be seen of its hair.
+/// A body of this kind wearing these, filling its picture (or, with `standing`,
+/// in a portrait at that scale: `portrait_scale`), in its own colours, with what
+/// can be seen of its hair.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn character_parts(
     kind: CreatureKind,
     worn: &[Look],
     colours: Colours,
     hair: Hair,
+    standing: Option<f32>,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
@@ -148,7 +155,13 @@ pub(super) fn character_parts(
         }
     }
     pieces.retain(|(triangles, _)| !triangles.is_empty());
-    set::fit(pieces, CELLS, body::turn_of(&layout), meshes, materials)
+    let cells = if standing.is_some() {
+        PORTRAIT_CELLS
+    } else {
+        CELLS
+    };
+    let turned = body::turn_of(&layout);
+    set::fit_standing(pieces, cells, turned, standing, meshes, materials)
 }
 
 #[cfg(test)]
