@@ -34,7 +34,9 @@ use cells::{
     add_masks, all_cells, beside, cells_in, keep_within, level_chunks, nearby_cells, send_cells,
 };
 pub(super) use dev_area::generate_area;
-pub(crate) use doors::{DoorChange, Standing, door_act, mob_opened, share_doors};
+pub(crate) use doors::{
+    DoorChange, Standing, door_act, door_to_kick, kick_door, mob_opened, share_doors,
+};
 use doors::{DoorSite, VisitDoors, door_looks, ensure_locks, remember_doors, set_doors};
 use enter::enter_site;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};

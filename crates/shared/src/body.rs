@@ -28,7 +28,7 @@ pub use hair::{Beard, Hair, HairStyle};
 pub use layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station, Upper,
 };
-pub use limbs::has_hands;
+pub use limbs::{has_hands, has_legs};
 pub use parts::{Feet, Horns, NONE, Parts, Snout, Wings};
 pub use proportions::{PERSON, Proportions};
 pub use taurs::{TAURS, Taur};

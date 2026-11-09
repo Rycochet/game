@@ -20,11 +20,13 @@ use crate::storage::SiteId;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod act;
+mod kick;
 mod locks;
 mod looks;
 mod share;
 
 use act::{close_near, dev_all, dev_key, open_door};
+pub(crate) use kick::{door_to_kick, kick_door};
 pub(super) use locks::ensure_locks;
 pub(super) use looks::{door_looks, remember_doors};
 pub(crate) use share::{DoorChange, Standing, share_doors};
@@ -181,6 +183,14 @@ pub(crate) fn door_act(client: &mut Client, world: &mut ServerWorld, ask: DoorAs
         DoorAsk::CloseNear => close_near(client, world),
         DoorAsk::DevAll { open } => (dev_all(client, world, open), 0),
         DoorAsk::DevKey => (dev_key(client, world), 0),
+    }
+}
+
+impl Visit {
+    /// The doors of the visit's level, for tests.
+    #[cfg(test)]
+    pub(crate) fn doors_for_test(&self) -> &VisitDoors {
+        &self.doors
     }
 }
 

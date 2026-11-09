@@ -15,7 +15,7 @@ use crate::combat::{Act, Pending, luck, ticks_for};
 use crate::entities::{MobBlow, Striker, hit_mob};
 
 impl Client {
-    fn fighter(&self) -> Fighter<'_> {
+    pub(super) fn fighter(&self) -> Fighter<'_> {
         Fighter {
             kind: self.inventory.creature,
             attributes: &self.sheet.attributes,
@@ -39,7 +39,7 @@ impl Client {
     }
 
     /// Whether a swing from where the player stands reaches this cell.
-    fn reaches(&self, at: (i64, i64), swing: &Swing) -> bool {
+    pub(super) fn reaches(&self, at: (i64, i64), swing: &Swing) -> bool {
         self.visit.as_ref().is_some_and(|visit| {
             in_reach(visit.cells(), visit.position(), at, swing.weapon.reach())
         })
@@ -50,7 +50,7 @@ impl Client {
     /// (`skill::taught`); each skill takes one practice every 5 seconds, and each
     /// kind counts once in that time as a block fought. Using them keeps them
     /// from rusting, and wears down what they oppose (`Skills::used`).
-    fn practise(
+    pub(super) fn practise(
         &mut self,
         skills: impl IntoIterator<Item = shared::skill::SkillId>,
         foe: CreatureKind,
@@ -91,6 +91,9 @@ pub(super) fn start_ability(
     }
     if ability == Ability::Heal {
         return super::heal::start_heal(client, world, target);
+    }
+    if ability == Ability::Kick {
+        return super::kick::start_kick(client, world, target);
     }
     let (Ability::Attack, Some(target)) = (ability, target) else {
         debug!("Not starting {ability:?}: not done yet, or no target");
@@ -138,6 +141,8 @@ pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool
     let swing = match pending.act {
         Act::Strike(swing) => swing,
         Act::Heal => return super::heal::land_heal(client, world, pending.target),
+        Act::Kick(swing) => return super::kick::land_kick(client, world, pending.target, swing),
+        Act::KickDoor(at) => return super::kick::land_door_kick(client, world, at),
     };
     client.fight.attacks += 1;
     let target = pending.target;
@@ -156,6 +161,7 @@ pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool
         position: visit.position(),
         fighter: client.fighter(),
         swing,
+        kicked: None,
     };
     let practised = striker.fighter.practised_by(&swing);
     let Some(hit) = hit_mob(world, place, target, striker, tick) else {
@@ -269,5 +275,7 @@ mod death_tests;
 mod grudge_tests;
 #[cfg(test)]
 mod heal_tests;
+#[cfg(test)]
+mod kick_tests;
 #[cfg(test)]
 mod tests;

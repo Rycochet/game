@@ -191,6 +191,7 @@ fn saves_are_read_back() {
                             quality: shared::item::Quality::Common,
                             locked: true,
                         }),
+                        damage: 4_500,
                     },
                 )]),
                 buildings: BTreeMap::from([(

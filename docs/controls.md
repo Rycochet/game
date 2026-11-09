@@ -34,6 +34,8 @@ Doors are open, closed or broken. Walking into a closed door opens it, away from
 
 Some doors have a lock, which you can see. Whether one is locked you only find out by trying it. With its key anywhere in your pack, walking into a locked door unlocks it and opens it; without, "Locked" shows and it stays shut. Keys are carried by the creatures of the place, so a locked door's key is always somewhere you can get to without going through it.
 
+Anyone with legs can kick: put Kick on your action bar from the Abilities page. Kicking your target shoves it a step away, or hurts it more if it has nowhere to go; with no target in reach, you kick the closed door beside you. Enough kicks break a door open for good.
+
 ## Targeting
 
 | Action | Keyboard and mouse | Touch |

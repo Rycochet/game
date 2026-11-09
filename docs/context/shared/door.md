@@ -4,7 +4,7 @@ Doors as more than a cell (owner's design, 2026-11-09): every `Cell::Door` and `
 
 ## Files
 
-- `crates/shared/src/door.rs`: `Door { swing, quality, material, style, lock }` (`look`, `is_locked`), `DoorStyle` (only `Plain`: styles are a future research task), `door_cost` (opening or closing: a straight step's time). In `door/`: `swing.rs` (`Swing`, `Side`), `start.rs` (`starting_door`, `door_is_outside`, the closed and broken chances), `look.rs` (`DoorLook`), `lock.rs` (`Lock`), `keys.rs` (`carries_key`), `placing.rs` (`place_locks`, `reach_without`).
+- `crates/shared/src/door.rs`: `Door { swing, quality, material, style, lock, damage }` (`look`, `is_locked`, `toughness`: `BASE_TOUGHNESS` 20 points for a Common wooden door, three times for metal, by quality rank), `DoorStyle` (only `Plain`: styles are a future research task), `door_cost` (opening or closing: a straight step's time). In `door/`: `swing.rs` (`Swing`, `Side`), `start.rs` (`starting_door`, `door_is_outside`, the closed and broken chances), `look.rs` (`DoorLook`), `lock.rs` (`Lock`), `keys.rs` (`carries_key`), `placing.rs` (`place_locks`, `reach_without`).
 
 ## Public API
 
@@ -27,4 +27,5 @@ Doors as more than a cell (owner's design, 2026-11-09): every `Cell::Door` and `
 
 - Starting chances (`start.rs`): 70% of doors inside start closed, 90% of those leading outside; herbalists' huts 85% and 95%. A ruin's doors are 30% broken, and half as many of the rest closed. Secret doors always start closed. Quality is always Common and material Wood for now (better doors and other materials are for future generators).
 - Locks are placed by the server the first time a level is used (`sites/doors/locks.rs`), keys going to its mobs.
-- Not built yet: Kick and doors taking damage (PR 3), lock picking (with item durability, later), an animated swing.
+- Doors take damage from kicks (`damage`, thousandths of a point); at their `toughness` they break: `Broken` away from the kicker, any lock left unlocked on it (server `sites/doors/kick.rs`).
+- Not built yet: lock picking (with item durability, later), an animated swing, showing damage.

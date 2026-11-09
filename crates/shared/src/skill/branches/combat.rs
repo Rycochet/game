@@ -83,6 +83,8 @@ const MELEE: Draft = rusting(
             // A weapon in each hand, taking turns: beside the weapon types so it can be
             // specialised like them (owner, 2026-11-07). Not a type to defend with.
             leaf("dual", "Dual Wielding", &[Agility]),
+            // Kicking, by anyone with legs: shoves creatures, breaks doors.
+            leaf("kick", "Kick", &[Strength, Agility]),
             DEFENCE,
         ],
     ),

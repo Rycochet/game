@@ -5,6 +5,7 @@
 mod cost;
 mod damage;
 mod fighter;
+mod kick;
 mod power;
 mod reach;
 mod weapon;
@@ -19,11 +20,14 @@ pub use damage::{
     quality_factor, roll_blow, strength_hits, through_armour, weapon_base,
 };
 pub use fighter::{Fighter, PRACTICE_PER_BLOW, Swing};
+pub use kick::{KICK_COST_PER_MILLE, KICK_FORCE_PER_MILLE, KICK_HARM_PER_MILLE, kick_skill};
 pub use power::{SKILL_FLOOR, power};
 pub use reach::in_reach;
 pub use weapon::Weapon;
 pub use wielded::Wielded;
 
+#[cfg(test)]
+mod kick_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

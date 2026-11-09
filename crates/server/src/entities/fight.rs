@@ -150,6 +150,8 @@ pub(crate) struct Striker<'a> {
     pub position: (i64, i64),
     pub fighter: Fighter<'a>,
     pub swing: Swing,
+    /// A kick, not a blow: whether it shoves the mob a step away (`Fighter::kick_harm`).
+    pub kicked: Option<bool>,
 }
 
 /// A player's blow lands on a mob on `place` (whose own level is `here_index`):
@@ -166,7 +168,10 @@ pub(crate) fn hit_mob(
     let population = world.populations.0.get_mut(&place)?;
     let one = population.mobs.iter_mut().find(|one| one.id == mob)?;
     let mut rng = luck(tick, by.id, mob);
-    let harm = by.fighter.harm(&by.swing, &one.fighter(), &mut rng);
+    let harm = match by.kicked {
+        Some(shoved) => by.fighter.kick_harm(&one.fighter(), shoved, &mut rng),
+        None => by.fighter.harm(&by.swing, &one.fighter(), &mut rng),
+    };
     let limits = one.vitals.limits(&one.attributes, 0, tick);
     one.vitals.hurt(harm, limits, tick, 0);
     let left = health_left(&one.vitals, limits, tick);
