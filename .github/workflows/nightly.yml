@@ -53,7 +53,7 @@ jobs:
       deltas: ${{ steps.deltas.outputs.made }}
     steps:
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -116,7 +116,7 @@ jobs:
             rm -rf "old/$tag"
           done < old/tags
       - if: steps.check.outputs.build == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.check.outputs.sha }}
           path: source
@@ -142,21 +142,21 @@ jobs:
             echo "made=false" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.deltas.outputs.made == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightly-deltas
           path: out/web/deltas
           retention-days: 1
           if-no-files-found: error
       - if: steps.check.outputs.build == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hall-of-worlds-web-${{ steps.check.outputs.date }}-${{ steps.check.outputs.short }}
           path: out/web
           retention-days: 14
           if-no-files-found: error
       - if: steps.check.outputs.build == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hall-of-worlds-server-Linux-${{ steps.check.outputs.date }}-${{ steps.check.outputs.short }}
           path: out/server
@@ -170,10 +170,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.image.outputs.sha }}
       - name: Install Linux dependencies
@@ -181,7 +181,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
       - uses: Swatinem/rust-cache@v2
       - run: cargo xtask package
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: hall-of-worlds-${{ runner.os }}-${{ needs.image.outputs.date }}-${{ needs.image.outputs.short }}
           path: target/package
@@ -195,9 +195,9 @@ jobs:
     permissions:
       packages: write
     steps:
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -206,7 +206,7 @@ jobs:
       # pushed straight under the nightly tags (its labels, such as the
       # revision the check above reads, carry over from that image).
       - if: needs.image.outputs.deltas == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: nightly-deltas
           path: context/deltas

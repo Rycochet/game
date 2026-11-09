@@ -24,9 +24,9 @@ jobs:
   check:
     name: Check
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Needed by the build scripts of Bevy's audio/input/window crates.
       - name: Install Linux dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
@@ -42,7 +42,7 @@ jobs:
     # passing, but draft PRs can't be merged anyway.
     if: ${{ always() && !github.event.pull_request.draft }}
     needs: [check]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - if: needs.check.result != 'success'
         run: exit 1
