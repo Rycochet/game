@@ -68,7 +68,7 @@ fn the_sea_is_flat() {
         points: vec![-1000; 4],
         terrains: Vec::new(),
         floor: -16,
-        flats: Vec::new(),
+        levelled: BTreeMap::new(),
     };
     assert_eq!(deep.at(3, 5), -16);
     assert_eq!(deep.at(7, 9), -16);
@@ -86,7 +86,7 @@ fn sixteen_cells_cost_what_a_world_map_step_does() {
         points: vec![0, 64, 128, 0, 64, 128],
         terrains: Vec::new(),
         floor: -1000,
-        flats: Vec::new(),
+        levelled: BTreeMap::new(),
     };
     let walked: u32 = (8..24)
         .map(|x| {
@@ -109,24 +109,30 @@ fn sixteen_cells_cost_what_a_world_map_step_does() {
 }
 
 #[test]
-fn flat_ground_is_level_at_its_middle_height() {
+fn flat_ground_levels_only_covered_cells() {
     let (world, ground) = ground();
     let (px, py) = hillside(&ground, &world);
     let (x0, y0) = (px * CELLS_PER_POINT, py * CELLS_PER_POINT);
-    let flat = FlatGround::of_cutout(&ground, (x0, y0, 20, 10));
+    let flat = FlatGround {
+        bounds: (x0, y0, 20, 10),
+        height: 7,
+    };
+    // A level all wall (covered) but for one row of open ground.
+    let mut level = Level::new(x0 - 4, y0 - 4, 40, 40);
+    for x in x0..x0 + 20 {
+        level.set(x, y0, crate::dungeon::Cell::Ground);
+    }
     let sloped = WildHeights::new(&ground, (x0 - 4, y0 - 4, 40, 40));
-    assert_eq!(flat.height, sloped.at(x0 + 10, y0 + 5));
-    let heights = sloped.clone().with_flats(vec![flat]);
-    for y in y0..y0 + 10 {
+    let heights = sloped.clone().with_flats(&[flat], &level);
+    for y in y0 + 1..y0 + 10 {
         for x in x0..x0 + 20 {
-            assert_eq!(heights.at(x, y), flat.height);
+            assert_eq!(heights.at(x, y), 7);
         }
     }
-    // Outside it, the slopes as before.
-    assert_eq!(heights.at(x0 + 25, y0), sloped.at(x0 + 25, y0));
-    assert_ne!(
-        sloped.at(x0, y0),
-        sloped.at(x0 + 19, y0),
-        "a slope to level"
-    );
+    // Open ground in it, and anything outside it, follow the slopes.
+    for x in x0..x0 + 20 {
+        assert_eq!(heights.at(x, y0), sloped.at(x, y0));
+    }
+    assert_eq!(heights.at(x0 + 25, y0 + 5), sloped.at(x0 + 25, y0 + 5));
+    assert_ne!(sloped.at(x0, y0), sloped.at(x0 + 19, y0), "a slope");
 }

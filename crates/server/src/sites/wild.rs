@@ -22,6 +22,8 @@ mod arrival_tests;
 #[cfg(test)]
 mod enter_tests;
 #[cfg(test)]
+mod flats_tests;
+#[cfg(test)]
 mod found_tests;
 #[cfg(test)]
 mod shop_tests;

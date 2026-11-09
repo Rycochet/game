@@ -6,6 +6,7 @@
 
 use shared::dungeon::Level;
 use shared::mob::Spawn;
+use shared::movement::FlatGround;
 use shared::poi::{CHUNK_SIZE, ChunkPos};
 use shared::protocol::SeenStairs;
 use shared::road::Road;
@@ -48,6 +49,8 @@ pub(crate) struct WildChunk {
     pub(crate) spawns: Vec<Spawn>,
     /// The cells round its cutout, in wilderness cells (`Cutout::border`).
     pub(crate) border: Vec<(i64, i64)>,
+    /// Its covered ground kept level, in wilderness cells (`Cutout::flats`).
+    pub(crate) flats: Vec<FlatGround>,
     /// Where exploring from the poi on the world map arrives, in wilderness
     /// cells: its site's entrance, or beside its way down (`sites::wild`).
     pub(crate) entrance: Option<(i64, i64)>,

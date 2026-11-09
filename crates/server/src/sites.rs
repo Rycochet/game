@@ -89,6 +89,17 @@ impl Visit {
         self.place.flats()
     }
 
+    /// The wilderness's heights over `bounds` (a step's), with its cutouts'
+    /// covered cells kept level by the cells here.
+    pub(crate) fn wild_heights(
+        &self,
+        ground: &shared::movement::WorldGround,
+        bounds: (i64, i64, i64, i64),
+    ) -> shared::movement::WildHeights {
+        shared::movement::WildHeights::new(ground, bounds)
+            .with_flats(&self.flats(), &self.level.level)
+    }
+
     /// Puts the player somewhere else, for tests.
     #[cfg(test)]
     pub(crate) fn move_for_test(&mut self, at: (i64, i64)) {

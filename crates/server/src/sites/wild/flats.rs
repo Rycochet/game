@@ -28,7 +28,7 @@ pub(in crate::sites) fn send_flats(client: &Client, visit: &Visit, masks: &CellM
             let cells = cells_in(set_in.bounds);
             touches(&cells, masks) && !touches(&cells, &visit.sent)
         })
-        .map(|set_in| set_in.flat)
+        .flat_map(|set_in| set_in.flats.iter().copied())
         .collect();
     new.is_empty() || client.link.send(&ServerMessage::FlatGround(new))
 }
