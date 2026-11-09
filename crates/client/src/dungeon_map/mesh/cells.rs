@@ -24,7 +24,7 @@ pub(super) fn build_cell_at(
 ) {
     let level = scene.level;
     let cell = level.cell(x, y);
-    if cell.is_wall() {
+    if level.is_wall(x, y) {
         // A town's buildings are drawn whole, in `build`; seen from the
         // wilderness, which isn't told them, as walls.
         if level.room(x, y).is_none() || scene.buildings.is_empty() {
@@ -35,7 +35,7 @@ pub(super) fn build_cell_at(
     } else if cell.is_road() || cell == Cell::Garden {
         town::build_flat(layers, scene, (x, y));
         town::build_hedges(layers, scene, (x, y));
-    } else if cell.is_opening() {
+    } else if level.is_opening(x, y) {
         build_opening(layers, scene, (x, y));
     } else if cell == Cell::Hole {
         build_hole(layers, scene, (x, y));

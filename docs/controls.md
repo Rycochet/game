@@ -18,6 +18,7 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | Enter a place, take stairs, leave a site (in the wilderness, the hatched ground round a place you know leads back to the world map) | Click it, and walk there | Tap it |
 | Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad, or the movement pad's Up ladder | The movement pad's Up ladder |
 | Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map (going into a place you know of whose circle your own overlaps by about a fifth) | Shift + . (`>`), or 0 on the number pad, or the movement pad's Down ladder | The movement pad's Down ladder |
+| Close the open doors beside you | L | Not yet |
 
 The movement pad is the small panel at the bottom right, open when the game starts; the d-pad button in the corner opens and closes it, and its top edge drags it somewhere else. The game remembers whether it is open and where you left it. Its arrows sit round the middle like a d-pad, with Down (a ladder narrowing towards the bottom) and Up (a ladder narrowing towards the top) either side of the up arrow. The arrows go the way the keys do, by the screen, however the camera is turned, and keep walking as long as they are held, stopping when you let go or slide off them. The ladders are greyed out when they would do nothing; hold the pointer or a finger on one to see what it does here.
 
@@ -28,6 +29,8 @@ You can't change floors in a fight: for 10 seconds after you last attack or are 
 How fast you go depends on your kind of creature, what you carry, and the ground: the heavier the load, the slower everything is.
 
 You can't walk onto an enemy. Walking onto anyone else swaps places with them.
+
+Doors are open, closed or broken. Walking into a closed door opens it, away from you, and clicking somewhere beyond one walks you there, opening the doors on the way; clicking a closed door itself walks up to it and opens it. Closed doors stop sight and light. You can't close a door while anyone or anything is in its doorway, and a broken door can't be closed at all. A secret door opens towards you, once you have found it.
 
 ## Targeting
 

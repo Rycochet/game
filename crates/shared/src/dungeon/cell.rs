@@ -9,10 +9,11 @@ pub enum Cell {
     Floor,
     /// Solid: blocks movement, sight and light.
     Wall,
-    /// A doorway. Doors are open for now (opening and closing them comes
-    /// with mobs), so it behaves like floor.
+    /// A doorway with a door in it (`crate::door`). Open, it behaves like
+    /// floor; closed, it blocks movement, sight and light (`Level::is_shut`):
+    /// the rules here are the cell's alone, as if it were open.
     Door,
-    /// A hidden door: a wall until someone finds it (finding comes later).
+    /// A hidden door: a wall while closed, and to anyone who hasn't found it.
     /// Generators only put them where nothing depends on them.
     SecretDoor,
     /// Outside ground round a building or cave mouth: walkable, and the way

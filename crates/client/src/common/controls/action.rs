@@ -16,6 +16,8 @@ pub enum Action {
     Up,
     /// Down the stairs underfoot, or into the wilderness from the world map.
     Down,
+    /// Close the open doors beside the player (until the FAB menu has a way).
+    CloseDoors,
     /// The camera swings round the player to the left, by a step or while held.
     TurnLeft,
     TurnRight,
@@ -74,13 +76,14 @@ impl Group {
 }
 
 impl Action {
-    pub const ALL: [Self; 31] = [
+    pub const ALL: [Self; 32] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
         Self::StepRight,
         Self::Up,
         Self::Down,
+        Self::CloseDoors,
         Self::TurnLeft,
         Self::TurnRight,
         Self::ZoomIn,
@@ -117,6 +120,7 @@ impl Action {
             Self::StepRight => "Step Right",
             Self::Up => "Up / Leave",
             Self::Down => "Down / Explore",
+            Self::CloseDoors => "Close Doors",
             Self::TurnLeft => "Turn Camera Left",
             Self::TurnRight => "Turn Camera Right",
             Self::ZoomIn => "Zoom In",
@@ -145,6 +149,7 @@ impl Action {
             Self::StepRight => "step_right",
             Self::Up => "up",
             Self::Down => "down",
+            Self::CloseDoors => "close_doors",
             Self::TurnLeft => "turn_camera_left",
             Self::TurnRight => "turn_camera_right",
             Self::ZoomIn => "zoom_in",
@@ -179,7 +184,7 @@ impl Action {
     pub fn group(self) -> Group {
         match self {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
-            Self::Up | Self::Down => Group::Movement,
+            Self::Up | Self::Down | Self::CloseDoors => Group::Movement,
             Self::TurnLeft | Self::TurnRight | Self::ZoomIn | Self::ZoomOut => Group::Camera,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
@@ -204,6 +209,7 @@ impl Action {
             Self::StepRight => [key(KeyCode::KeyD), key(KeyCode::Numpad6)],
             Self::Up => [shift(KeyCode::Comma), key(KeyCode::NumpadDecimal)],
             Self::Down => [shift(KeyCode::Period), key(KeyCode::Numpad0)],
+            Self::CloseDoors => [key(KeyCode::KeyL), None],
             Self::TurnLeft => [None, key(KeyCode::Numpad7)],
             Self::TurnRight => [None, key(KeyCode::Numpad9)],
             // As the Skills page zooms.

@@ -81,6 +81,10 @@ pub struct ServerWorld {
     pub(crate) harmed: Vec<crate::combat::Harm>,
     /// Mobs killed since `entities::sync` last told who helped.
     pub(crate) kills: Vec<crate::entities::Kill>,
+    /// Doors changed since everyone on their levels was last told
+    /// (`sites::share_doors`), and where players stood then.
+    pub(crate) door_changes: Vec<crate::sites::DoorChange>,
+    pub(crate) standing: crate::sites::Standing,
     /// Developer tools' Freeze Mobs: no mob in this world thinks or moves.
     pub(crate) mobs_frozen: bool,
     /// How big stacks of items may get here.
@@ -181,6 +185,8 @@ impl ServerWorld {
             died: BTreeSet::new(),
             harmed: Vec::new(),
             kills: Vec::new(),
+            door_changes: Vec::new(),
+            standing: Default::default(),
             mobs_frozen: false,
             stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),

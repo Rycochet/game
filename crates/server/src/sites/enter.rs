@@ -174,6 +174,7 @@ pub(super) fn enter_site(
     if known.is_some_and(|known| known != version) {
         client.character.memory.remove(&id);
         client.character.bags.remove(&id);
+        client.character.doors.remove(&id);
         client.character.left_at.remove(&id);
     }
     client.unsaved = true;

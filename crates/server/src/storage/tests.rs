@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use super::*;
+use shared::door::{Side, Swing};
 
 /// A new, empty data folder for one test (in the system's temporary
 /// folder), removed when dropped.
@@ -122,6 +123,10 @@ fn saves_are_read_back() {
             site,
             BTreeMap::from([(1, BTreeMap::from([((2, 3), Load::Full)]))]),
         )]),
+        doors: BTreeMap::from([(
+            site,
+            BTreeMap::from([(1, BTreeMap::from([((4, 5), Swing::Open(Side::West))]))]),
+        )]),
         site_versions: BTreeMap::from([(site, 3)]),
         left_at: BTreeMap::from([(site, (1, (5, -6)))]),
         world_position: (-40, 7),
@@ -173,6 +178,15 @@ fn saves_are_read_back() {
                     vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],
                 )]),
                 changes: BTreeMap::from([((1, 2), Cell::Floor)]),
+                doors: BTreeMap::from([(
+                    (6, 7),
+                    shared::door::Door {
+                        swing: Swing::Broken(Side::North),
+                        quality: shared::item::Quality::Common,
+                        material: shared::material::Material::Wood,
+                        style: shared::door::DoorStyle::Plain,
+                    },
+                )]),
                 buildings: BTreeMap::from([(
                     4,
                     BuildingSave {

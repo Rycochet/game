@@ -27,6 +27,7 @@ use crate::storage::SiteId;
 mod crossing;
 mod dev_gift;
 mod dev_mob;
+mod doors;
 mod doubling_back;
 mod fight;
 mod gear;
@@ -52,6 +53,7 @@ mod wild;
 use crossing::cross;
 pub(crate) use dev_gift::{give_to_mob, mob_in_sight};
 pub(crate) use dev_mob::dev_mobs;
+pub(crate) use doors::{MobDoors, Opened};
 use doubling_back::Pacing;
 pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;
@@ -220,6 +222,8 @@ pub(crate) struct Population {
     pub(crate) mobs: Vec<Mob>,
     /// Its shape, to find ways about.
     level: Level,
+    /// For opening doors on the way, a site level's (not the wilderness's).
+    doors: Option<MobDoors>,
     /// Who is due to act: the tick, and which mob. A mob at rest isn't here, so
     /// costs nothing however long it rests.
     due: BTreeSet<(u64, Id)>,
@@ -257,6 +261,8 @@ impl Populations {
 
 #[cfg(test)]
 mod dev_mob_tests;
+#[cfg(test)]
+mod doors_tests;
 #[cfg(test)]
 mod harmed_tests;
 #[cfg(test)]

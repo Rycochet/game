@@ -11,7 +11,7 @@ use std::collections::BTreeSet;
 
 use super::ensure_chunk;
 use crate::ServerWorld;
-use crate::sites::{Mirror, SetIn};
+use crate::sites::{DoorSite, Mirror, SetIn, VisitDoors, set_doors};
 use crate::storage::SiteId;
 use crate::wilderness::WINDOW_BLOCKS;
 
@@ -25,6 +25,8 @@ pub(super) struct Window {
     /// Town cutouts' buildings and farm cutouts' fields, as players see them.
     pub(super) buildings: Vec<BuildingLook>,
     pub(super) fields: Vec<FieldLook>,
+    /// The doors of its cutouts, as they are now.
+    pub(super) doors: VisitDoors,
 }
 
 /// The window round a player at `(x, y)`.
@@ -95,6 +97,7 @@ fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window
         cutouts: Vec::new(),
         buildings: Vec::new(),
         fields: Vec::new(),
+        doors: VisitDoors::new(),
     };
     for chunk in chunks {
         add_cutout(world, &frame, chunk, &mut window);
@@ -105,7 +108,30 @@ fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window
             window.level.level.set(cx, cy, cell);
         }
     }
+    add_doors(world, &mut window);
     window
+}
+
+/// The doors of the pois set into the window: their sites' own.
+fn add_doors(world: &mut ServerWorld, window: &mut Window) {
+    for mirror in window.mirrors.clone() {
+        let SiteId::Poi(chunk) = mirror.id else {
+            continue;
+        };
+        let cutout = world.wilderness.chunk(chunk).and_then(|c| c.plan.cutout());
+        let Some(poi) = cutout.map(|cutout| *cutout.poi()) else {
+            continue;
+        };
+        let site = DoorSite {
+            id: mirror.id,
+            index: mirror.index,
+            poi: &poi,
+        };
+        let offset = (-mirror.offset.0, -mirror.offset.1);
+        let level = &mut window.level.level;
+        let doors = set_doors(world, &site, level, mirror.bounds, offset);
+        window.doors.extend(doors);
+    }
 }
 
 /// Where the player is in the planet, and the window's cells.

@@ -7,10 +7,11 @@ use shared::energy::{NORMAL_SPEED, SITE_STEP_SCALE};
 use shared::movement::{
     Step, WorldGround, step_cost, step_on_level_by, step_on_world_map_by, world_step_time,
 };
-use shared::pathfinding::{Path, find_path_by, find_world_path, straighten_by};
-use shared::sheet::Feeling;
+use shared::pathfinding::find_world_path;
 
+use super::doors::{AskDoor, wait_at_door};
 use super::level_costs::LevelCosts;
+use super::route_help::{dungeon_route, enemy_cells, nearest_cell, towards};
 use super::{
     Arrived, DUNGEON_TRAVEL_SPEED, Player, PlayerEnergy, Stepped, TRAVEL_SPEED, Travel, TravelTo,
     action_tick,
@@ -36,7 +37,7 @@ pub(super) fn travel(
     clock: Res<GameClock>,
     mut requests: MessageReader<TravelTo>,
     mut arrived: MessageWriter<Arrived>,
-    mut stepped: MessageWriter<Stepped>,
+    (mut stepped, mut asks): (MessageWriter<Stepped>, MessageWriter<AskDoor>),
     speed_now: Res<PlayerSpeed>,
     gait: Res<PlayerGait>,
     (heights, rivers, sneaking): (Res<WildCellHeights>, Res<NearRivers>, Res<Sneaking>),
@@ -98,11 +99,7 @@ pub(super) fn travel(
             Some((ground, conditions, roads)) => {
                 find_world_path(ground, conditions, roads, rivers, from, to, gait.0)
             }
-            None => {
-                let known = route_to(to);
-                let path = find_path_by(&dungeon.level, from, to, None, known, level_cost, gait.0);
-                straighten_by(&dungeon.level, from, &path, known, level_cost, gait.0)
-            }
+            None => dungeon_route(&dungeon.level, (from, to), route_to(to), level_cost, gait.0),
         };
         travel.goal = to;
         travel.route_arrives = path.reached;
@@ -143,6 +140,11 @@ pub(super) fn travel(
         let mut at = (tile.x, tile.y);
         // Normally part of one step a frame, but a slow frame may cover more.
         while let Some(&next) = travel.route.front() {
+            // A closed door: asked open once, and waited at until it is.
+            if ground.is_none() && next != at && dungeon.level.is_shut(next.0, next.1) {
+                wait_at_door(&mut travel, next, &mut asks);
+                break;
+            }
             let to = DVec2::new(next.0 as f64, next.1 as f64);
             // How much longer this step takes than on flat ground (less than 1
             // when running makes it quicker).
@@ -182,20 +184,8 @@ pub(super) fn travel(
                 if in_the_way && ground.is_none() {
                     // An enemy has come between: go round it, from here.
                     let known = route_to(travel.goal);
-                    let path = find_path_by(
-                        &dungeon.level,
-                        at,
-                        travel.goal,
-                        None,
-                        known,
-                        level_cost,
-                        gait.0,
-                    );
-                    let path = Path {
-                        cells: straighten_by(&dungeon.level, at, &path, known, level_cost, gait.0)
-                            .cells,
-                        ..path
-                    };
+                    let path =
+                        dungeon_route(&dungeon.level, (at, travel.goal), known, level_cost, gait.0);
                     travel.route_arrives = path.reached;
                     travel.route = path.cells.into();
                     now = DVec2::new(at.0 as f64, at.1 as f64);
@@ -265,35 +255,5 @@ pub(super) fn travel(
         let reached = MapPosition { x: at.0, y: at.1 };
         tile.set_if_neq(reached);
         travel.last = reached;
-    }
-}
-
-/// `distance` along the straight line from one point to another, stopping
-/// exactly on it.
-pub(super) fn towards(from: DVec2, to: DVec2, distance: f64) -> DVec2 {
-    if from.distance(to) <= distance {
-        to
-    } else {
-        from + (to - from).normalize() * distance
-    }
-}
-
-/// The cells of mobs that won't move aside for the player: none in god mode.
-pub(super) fn enemy_cells(
-    others: &Query<(&Other, &MapPosition), Without<Player>>,
-    god: GodMode,
-) -> Vec<(i64, i64)> {
-    others
-        .iter()
-        .filter(|(other, _)| !god.0 && other.feeling == Feeling::Unfriendly)
-        .map(|(_, at)| (at.x, at.y))
-        .collect()
-}
-
-/// The grid point a position is nearest: its cell, in a dungeon.
-pub(super) fn nearest_cell(position: DVec2) -> MapPosition {
-    MapPosition {
-        x: position.x.round() as i64,
-        y: position.y.round() as i64,
     }
 }

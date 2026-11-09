@@ -106,6 +106,10 @@ pub struct LevelSave {
     /// Everyone's scent marks, while any nose could still smell them.
     #[serde(default)]
     pub scents: crate::entities::Scents,
+    /// Doors someone has opened, closed or broken, by cell: the rest are as
+    /// rolled (`shared::door::starting_door`). A reset never undoes them.
+    #[serde(default)]
+    pub doors: BTreeMap<(i64, i64), shared::door::Door>,
     /// The wilderness's only: blocks whose mobs have something saved (`dead`,
     /// `records`), by `(x, y)`, with when someone was last near (seconds
     /// since 1970): they reset after nobody has been for a while.
@@ -210,6 +214,10 @@ pub struct CharacterWorldSave {
     /// The bags they last saw on each site level, by cell, as they looked then.
     #[serde(default)]
     pub bags: BTreeMap<SiteId, BTreeMap<u32, RememberedBags>>,
+    /// The doors they last saw on each site level, by cell, as they were then:
+    /// a secret door is here once found.
+    #[serde(default)]
+    pub doors: BTreeMap<SiteId, BTreeMap<u32, RememberedDoors>>,
     /// The generator version of each site as they last knew it: when a site's
     /// has changed, so has its map, and what they remember of it means nothing.
     pub site_versions: BTreeMap<SiteId, u32>,
@@ -233,11 +241,12 @@ pub struct DevReturn {
 }
 
 impl CharacterWorldSave {
-    /// Forgets everything they knew of a site: what they saw, the bags there,
-    /// its version and where they walked out.
+    /// Forgets everything they knew of a site: what they saw, the bags and
+    /// doors there, its version and where they walked out.
     pub fn forget_site(&mut self, id: &SiteId) {
         self.memory.remove(id);
         self.bags.remove(id);
+        self.doors.remove(id);
         self.site_versions.remove(id);
         self.left_at.remove(id);
     }
@@ -246,6 +255,7 @@ impl CharacterWorldSave {
     pub fn forget_sites(&mut self) {
         self.memory.clear();
         self.bags.clear();
+        self.doors.clear();
         self.site_versions.clear();
         self.left_at.clear();
     }
@@ -253,6 +263,9 @@ impl CharacterWorldSave {
 
 /// The bags a character remembers on a level, by cell.
 pub type RememberedBags = BTreeMap<(i64, i64), Load>;
+
+/// The doors a character remembers on a level, by cell, as they last saw them.
+pub type RememberedDoors = BTreeMap<(i64, i64), shared::door::Swing>;
 
 /// Where in a site a character is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

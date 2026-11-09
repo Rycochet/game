@@ -11,7 +11,10 @@ use shared::shop::sells;
 use shared::site::{Exit, Site, SiteLevel, Stairs, StairsDirection};
 
 use super::remembered::{mirror_of_first, send_remembered};
-use super::{Arrival, NewKeepers, Place, Visit, beside, keepers_of, level_chunks, update_sight};
+use super::{
+    Arrival, DoorSite, NewKeepers, Place, Visit, VisitDoors, beside, door_looks, keepers_of,
+    level_chunks, set_doors, update_sight,
+};
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::storage::{CellMasks, SiteId, now};
@@ -25,13 +28,13 @@ pub(super) struct NewVisit {
     pub(super) from_wilderness: bool,
 }
 
-/// Level `index` of a site with players' changes over it, and its stairs as
-/// players see them.
+/// Level `index` of a site with players' changes over it, its stairs as
+/// players see them, and its doors as they are now.
 pub(super) fn level_of(
     world: &mut ServerWorld,
     new: &NewVisit,
     index: u32,
-) -> (SiteLevel, Vec<SeenStairs>) {
+) -> (SiteLevel, Vec<SeenStairs>, VisitDoors) {
     let site = &new.site;
     let mut level = site.level(index);
     let saved = world.site_mut(new.id).levels.entry(index).or_default();
@@ -43,7 +46,14 @@ pub(super) fn level_of(
         .iter()
         .map(|&stairs| seen_stairs(site, index, &level.level, stairs))
         .collect();
-    (level, stairs)
+    let door_site = DoorSite {
+        id: new.id,
+        index,
+        poi: &new.poi,
+    };
+    let bounds = level.level.bounds();
+    let doors = set_doors(world, &door_site, &mut level.level, bounds, (0, 0));
+    (level, stairs, doors)
 }
 
 /// Stairs on level `index` of a site (`level`) as players see them.
@@ -87,16 +97,34 @@ pub(super) fn send_other_levels(
         if other == index || other >= new.site.levels() || !known {
             continue;
         }
-        let (level, stairs) = level_of(world, new, other);
+        let (level, stairs, doors) = level_of(world, new, other);
         let level = &level.level;
+        let looks = |x, y| {
+            door_looks(
+                client,
+                &doors,
+                (new.id, other),
+                level.cell(x, y),
+                (x, y),
+                (x, y),
+                true,
+            )
+        };
         let is_remembered = |x, y| {
             let (chunk, bit) = level_chunk(x, y);
             remembered.get(&chunk).is_some_and(|m| m & (1 << bit) != 0)
         };
         let neighbours = beside(level, is_remembered, remembered);
         let truesight = client.truesight;
-        let mut chunks = level_chunks(level, &stairs, remembered, true, truesight);
-        chunks.extend(level_chunks(level, &stairs, &neighbours, false, truesight));
+        let mut chunks = level_chunks(level, &stairs, remembered, true, truesight, &looks);
+        chunks.extend(level_chunks(
+            level,
+            &stairs,
+            &neighbours,
+            false,
+            truesight,
+            &looks,
+        ));
         let message = ServerMessage::RememberedLevel(RememberedLevel {
             index: other,
             bounds: level.bounds(),
@@ -120,7 +148,7 @@ pub(super) fn enter_level(
     arrival: Arrival,
     entering_site: bool,
 ) -> bool {
-    let (level, stairs) = level_of(world, &new, index);
+    let (level, stairs, doors) = level_of(world, &new, index);
     let saved = world.site_mut(new.id).levels.entry(index);
     saved.or_default().last_visit = now();
     let site = &new.site;
@@ -173,6 +201,7 @@ pub(super) fn enter_level(
         index,
         level,
         stairs,
+        doors,
         position,
         sent: CellMasks::new(),
         mirrors,

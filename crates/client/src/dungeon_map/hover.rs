@@ -1,6 +1,8 @@
-//! Naming the door or stairs the pointer is over, for the hover box.
+//! Naming the door, stairs or border the pointer is over, for the hover box.
 
 use bevy::prelude::*;
+use shared::door::Swing;
+use shared::dungeon::{Cell, Level};
 use shared::site::StairsDirection;
 
 use super::Shown;
@@ -45,12 +47,32 @@ pub(super) fn name_hovered_place(
             if dungeon.borders.contains(&(x, y)) {
                 return Some(BORDER_NAME.to_owned());
             }
+            if let Some(name) = door_name(&dungeon.level, (x, y)) {
+                return Some(name.to_owned());
+            }
             let stairs = dungeon.stairs.iter().find(|s| (s.x, s.y) == (x, y))?;
             Some(stairs_name(stairs.direction).to_owned())
         });
     if hovered.0 != name {
         hovered.0 = name;
     }
+}
+
+/// What a door is called, by how it hangs (one whose swing isn't known
+/// counts as open, as it is drawn).
+fn door_name(level: &Level, (x, y): (i64, i64)) -> Option<&'static str> {
+    let secret = match level.cell(x, y) {
+        Cell::Door => false,
+        Cell::SecretDoor => true,
+        _ => return None,
+    };
+    Some(match (level.swing(x, y), secret) {
+        (Some(Swing::Closed), false) => "Closed door",
+        (Some(Swing::Closed) | None, true) => "Closed secret door",
+        (Some(Swing::Broken(_)), _) => "Broken door",
+        (_, false) => "Open door",
+        (_, true) => "Open secret door",
+    })
 }
 
 /// What stairs are called, by the way they go.

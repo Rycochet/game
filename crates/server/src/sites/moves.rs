@@ -65,6 +65,12 @@ pub(crate) fn set_cell(
     let (id, index, at) = mirrored.unwrap_or((visit.id, visit.index, (visit.kept_at(x), y)));
     let saved = world.site_mut(id).levels.entry(index).or_default();
     saved.changes.insert(at, cell);
+    let key = super::doors::DoorKey {
+        site: id,
+        index,
+        at,
+    };
+    super::doors::cell_changed(world, visit, (x, y), key);
     // Everything may look different from everywhere now.
     visit.view_from = None;
     visit.looked_from = Sight::new(&visit.level.level);

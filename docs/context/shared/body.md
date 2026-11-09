@@ -21,6 +21,8 @@ Where things are on a standing body, in millimetres: the frame every worn thing'
 
 ## Public API
 
+- `has_hands(kind)` (`body/limbs.rs`): arms (not wings), or a person's upper body on a beast's; a kind whose body isn't drawn has none. Mobs with hands open doors.
+
 - `Layout::of(kind) -> Option<Layout>`: kinds drawn so far: on two legs, and the horse and chicken from `BEASTS`; and taurs (centaur, drider, scorpion man) from `TAURS`. The human's (and beggar's) is built from `PERSON.frame()`, the giant's from `GIANT`, the first peoples' from their `Biped`, with `Parts::of(kind)`.
 - `Layout { spine, neck, head, limbs, parts, upper }`; `Upper { frame, at }`: a person's upper body (its frame, from the hips up) standing with the middle of its hips at `at` on the lower body; a taur's lower body has no neck or head (length and head 0), the upper body's being its own. `Layout::worn_frame() -> Option<(Frame, [i32; 3])>`: a biped's own frame unmoved, or a taur's upper frame and its offset. `Layout::upper_body()`. `Layout::limb(role, side)`, `limbs()`, `chin()` (the neck's top, by its tilt), `root(limb)` (where it hangs from), `joints(limb)` (root, then each bone's end); `Spine::at(along)`. `Bone { span, way, radius, end_radius }`: its end is `way` (mm per metre, x outwards) × `span` / 1000 on. `Role::{Arm, WingArm, Leg, Foreleg, Hindleg, JointedLeg}`, `Girdle::{Hips, Shoulders, Along(mm)}`.
 - `Layout::blend(&a, &b, t) -> Layout`, `BLEND_WHOLE`: for shapeshifting; each end is exactly its own body. Blend layouts from `Layout::at_size(kind)`, so sizes change too. `Layout::scaled(share)`.

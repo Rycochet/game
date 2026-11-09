@@ -123,6 +123,11 @@ pub(super) fn run_actions(
             DebugAction::TeleportToStart => {
                 to_server.write(ToServer(ClientMessage::DevBackToStart));
             }
+            DebugAction::OpenAllDoors | DebugAction::CloseAllDoors => {
+                let open = action == DebugAction::OpenAllDoors;
+                let ask = shared::protocol::DoorAsk::DevAll { open };
+                to_server.write(ToServer(ClientMessage::Door(ask)));
+            }
             DebugAction::RevealMap => {
                 to_server.write(ToServer(ClientMessage::DevRevealMap));
             }

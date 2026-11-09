@@ -87,7 +87,10 @@ impl<'a> Tile<'a> {
             }
         }
         self.opening_frame(layers, frame_layer, &opening);
-        if scene.level.cell(self.x, self.y) == Cell::Door {
+        if matches!(
+            scene.level.cell(self.x, self.y),
+            Cell::Door | Cell::SecretDoor
+        ) {
             let layer = if in_sight {
                 Layer::Solid
             } else {

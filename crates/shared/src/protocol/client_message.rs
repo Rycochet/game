@@ -6,6 +6,7 @@ use super::OnlineSettings;
 use super::dev_mob::DevMobTool;
 use super::dev_skills::DevSkills;
 use super::dev_vitals::DevVitals;
+use super::door_ask::DoorAsk;
 use super::kind_change::KindChange;
 use super::login::{CharacterId, Credentials, NewCharacter};
 use crate::ability::{Ability, BarChange};
@@ -66,8 +67,7 @@ pub enum ClientMessage {
     /// enough, `poi::can_enter_from`): into the wilderness where it is set
     /// in, at its entrance or where they last walked out of it.
     EnterSite { chunk: ChunkPos },
-    /// Use what the player stands on: stairs, or outside ground at the edge
-    /// of the level (back to the world map).
+    /// Use what is underfoot: stairs, or outside ground at the level's edge (to the world map).
     UseExit,
     /// Down the stairs underfoot if they go down; on the world map, explore
     /// the wilderness there (`EnterLevel`; refused in water).
@@ -77,8 +77,7 @@ pub enum ClientMessage {
     /// site where `site::can_leave` allows; a Dev Area from anywhere.
     Up,
     /// Stop or restart the world's clock, answered with `Paused`. Only a server
-    /// with just this player on it pauses (`Welcome`'s `can_pause`); others
-    /// ignore it.
+    /// with just this player on it pauses (`Welcome`'s `can_pause`).
     SetPaused(bool),
     /// Opens the server to other players with these settings (or closes it, with
     /// `None`), answered with `Online`. Only the embedded server's own player
@@ -250,8 +249,7 @@ pub enum ClientMessage {
     /// at World Gate `gate` (from 0) if it has it, else where the player was,
     /// or a gate if new there; answered with `Welcome` (if new) and `OnWorldMap`.
     DevGoToWorld { seed: Option<u64>, gate: Option<u8> },
-    /// Developer tools: show every poi, known or not, for this connection.
-    /// Only an embedded server accepts it.
+    /// Developer tools: show every poi, known or not (embedded server only).
     DevRevealPois,
     /// Developer tools: the character knows the whole of the level they are on,
     /// answered as if arriving there again. Not in towns, known already.
@@ -297,4 +295,6 @@ pub enum ClientMessage {
     /// begin (the player moved or chose another): one already begun is left
     /// alone, so nothing is lost for it. Not answered.
     WithdrawAbility,
+    /// Open or close doors (`DoorAsk`), in turn with the player's steps.
+    Door(DoorAsk),
 }

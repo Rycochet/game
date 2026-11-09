@@ -3,7 +3,9 @@
 use shared::dungeon::{Cell, Sight};
 use shared::protocol::level_chunk;
 
-use super::{Visit, add_masks, all_cells, arrive_again, beside, nearby_cells, send_cells};
+use super::{
+    Visit, add_masks, all_cells, arrive_again, beside, nearby_cells, remember_doors, send_cells,
+};
 use crate::connections::Client;
 use crate::storage::CellMasks;
 use crate::{LEVEL_PRELOAD_STEPS, ServerWorld};
@@ -45,6 +47,9 @@ pub(crate) fn forget_level(client: &mut Client, world: &mut ServerWorld) -> bool
     // A town would only be sent whole again.
     if !visit.is_town() {
         memory(client, &visit).clear();
+        if let Some(levels) = client.character.doors.get_mut(&visit.id) {
+            levels.remove(&visit.index);
+        }
         client.visit = Some(visit);
         return arrive_again(client, world);
     }
@@ -93,6 +98,18 @@ pub(super) fn update_sight(client: &mut Client) -> bool {
         }
     }
 
+    // Doors seen are remembered as they are, and sent again if that is news.
+    let doors_seen: Vec<(i64, i64)> = (visit.doors.keys().copied())
+        .filter(|&(dx, dy)| seen.is_seen(dx, dy))
+        .collect();
+    for (dx, dy) in doors_seen {
+        if remember_doors(client, &visit, (dx, dy)) {
+            let (chunk, bit) = level_chunk(dx, dy);
+            if let Some(mask) = visit.sent.get_mut(&chunk) {
+                *mask &= !(1 << bit);
+            }
+        }
+    }
     let memory = memory(client, &visit);
     let mut learnt = false;
     let mut new = CellMasks::new();
