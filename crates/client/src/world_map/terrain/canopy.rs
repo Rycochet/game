@@ -54,7 +54,7 @@ pub(super) const CANOPY_FROM: f32 = 0.2;
 
 /// The height of the drawn surface at a fractional position: the grid
 /// points' drawn heights (woods included) interpolated across the triangle
-/// the point is in, split north-east to south-west as `build_window` draws
+/// the point is in, split north-east to south-west as `build_chunk` draws
 /// them. Tokens rest with their centre here, so a poi's base meets the ground
 /// at the poi itself (owner).
 #[allow(clippy::too_many_arguments)]

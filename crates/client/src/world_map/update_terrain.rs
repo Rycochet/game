@@ -6,7 +6,7 @@ use shared::celestial::brightest;
 
 use super::rivers::KnownRivers;
 use super::terrain::{HeightCache, TerrainGrid, ViewSquare};
-use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, MAX_HALF, StripMeshes, Terrain};
+use super::{EdgeFaces, FollowsPlayer, HALF_SIZE, MAX_HALF, StripMeshes};
 use crate::common::{CurrentWorld, GameClock, MapPosition, Preferences, ViewDistance, ViewStats};
 use crate::player::Player;
 use crate::surface_style::SurfaceStyle;
@@ -16,9 +16,9 @@ use crate::view3d::{OrbitCamera, ViewCamera};
 type LastCut = (f32, f32, bool);
 
 /// When the player reaches a new grid point, the hour or style change,
-/// or the view turns: moves the terrain to the player, works out any grid
-/// points the window now needs, and cuts the window (lined up with the camera)
-/// and its edge faces out of the grid.
+/// or the view turns: moves the edge faces to the player, works out any grid
+/// points the window's chunks now need (`chunks::update_chunks` builds them),
+/// and cuts the edge faces, rivers and roads to the window.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn update_terrain(
     player: Single<Ref<MapPosition>, With<Player>>,
@@ -32,7 +32,6 @@ pub(super) fn update_terrain(
     mut meshes: ResMut<Assets<Mesh>>,
     mut stats: ResMut<ViewStats>,
     mut followers: Query<&mut Transform, With<FollowsPlayer>>,
-    terrain: Single<&Mesh3d, With<Terrain>>,
     faces: Single<&Mesh3d, With<EdgeFaces>>,
     // Together, as Bevy limits how many things a system can ask for.
     (river_strips, river_banks, road_strips): StripMeshes,
@@ -88,15 +87,16 @@ pub(super) fn update_terrain(
         world.surface.floor(),
         light_from,
         centre,
-        square,
+        // Whole chunks, as `chunks::update_chunks` builds them.
+        &super::terrain::chunks_needed(square, centre)
+            .iter()
+            .map(|&chunk| super::terrain::chunks_area(&[chunk]))
+            .collect::<Vec<_>>(),
         redraw_all || clearings_moved,
     );
     let fill_ms = start.elapsed().as_secs_f32() * 1000.0;
 
     let start = Instant::now();
-    if let Some(mut mesh) = meshes.get_mut(&terrain.0) {
-        *mesh = super::terrain::build_window(&grid, square);
-    }
     let faces_mesh = super::terrain::build_edges(
         &grid,
         &mut cache,
@@ -135,7 +135,7 @@ pub(super) fn update_terrain(
         *mesh = road_mesh;
     }
     let cut_ms = start.elapsed().as_secs_f32() * 1000.0;
-    stats.summary = format!("World map: fill {fill_ms:.1} ms, cut window {cut_ms:.1} ms");
+    stats.summary = format!("World map: fill {fill_ms:.1} ms, cut edges {cut_ms:.1} ms");
 }
 
 /// Which way along the ground the brightest light is at an hour, `(east, south)`,

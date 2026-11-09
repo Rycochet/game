@@ -1,5 +1,6 @@
 //! What to draw at each grid point, and heights on the drawn triangles.
 
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 use shared::climate::Climate;
 use shared::surface::Surface;
@@ -8,7 +9,7 @@ use shared::vegetation::Vegetation;
 use super::super::rivers::KnownRivers;
 use super::super::{HEIGHT_SCALE, SLOPE_SHADING};
 use super::{
-    CANOPY_SHADING, Corner, HeightCache, ICE_BOOST, STORE_SIDE, ViewSquare, canopy_lift, linear,
+    CANOPY_SHADING, CHUNK, GridArea, HeightCache, ICE_BOOST, STORE_SIDE, canopy_lift, linear,
 };
 use crate::surface_style::{SurfaceKind, SurfaceStyle, hsl_to_rgba};
 
@@ -32,6 +33,9 @@ pub struct TerrainGrid {
     pub(super) snowy: Vec<bool>,
     /// The grid point the window is centred on (the player's).
     pub(super) centre: (i64, i64),
+    /// Terrain chunks (`CHUNK` points a side, by world position) with a point
+    /// worked out since `take_changed`: their meshes are out of date.
+    changed: HashSet<(i64, i64)>,
 }
 
 impl Default for TerrainGrid {
@@ -46,6 +50,7 @@ impl Default for TerrainGrid {
             covers: vec![Vec4::ZERO; len],
             snowy: vec![false; len],
             centre: (0, 0),
+            changed: HashSet::new(),
         }
     }
 }
@@ -69,9 +74,28 @@ impl TerrainGrid {
         (z.rem_euclid(STORE_SIDE) * STORE_SIDE + x.rem_euclid(STORE_SIDE)) as usize
     }
 
-    /// Makes sure every point the window `square` around `centre` needs is
-    /// worked out. `redraw_all` throws away what is kept
-    /// first (for a new hour or style).
+    /// Whether a terrain chunk's corners are all worked out (and so, as whole
+    /// chunks are filled, all of it).
+    pub fn has_chunk(&self, (cx, cz): (i64, i64)) -> bool {
+        let (x, z) = (cx * CHUNK, cz * CHUNK);
+        [
+            (x, z),
+            (x + CHUNK, z),
+            (x, z + CHUNK),
+            (x + CHUNK, z + CHUNK),
+        ]
+        .iter()
+        .all(|&(x, z)| self.keys[self.slot(x - self.centre.0, z - self.centre.1)] == Some((x, z)))
+    }
+
+    /// The terrain chunks with points worked out since this was last asked.
+    pub fn take_changed(&mut self) -> HashSet<(i64, i64)> {
+        std::mem::take(&mut self.changed)
+    }
+
+    /// Makes sure every point in `areas` (world positions, both corners
+    /// included, within `REACH + CHUNK` of `centre`) is worked out.
+    /// `redraw_all` throws away what is kept first (for a new hour or style).
     #[allow(clippy::too_many_arguments)]
     pub fn fill(
         &mut self,
@@ -85,7 +109,7 @@ impl TerrainGrid {
         floor: f64,
         light_from: (f64, f64),
         centre: (i64, i64),
-        square: ViewSquare,
+        areas: &[GridArea],
         redraw_all: bool,
     ) {
         if redraw_all {
@@ -112,73 +136,74 @@ impl TerrainGrid {
                 + lift_at(cache, x, z)
         };
 
-        let (reach_x, reach_z) = square.reach();
-        for dz in -reach_z..=reach_z {
-            for dx in -reach_x..=reach_x {
-                let i = self.slot(dx, dz);
-                let (x, z) = (centre.0 + dx, centre.1 + dz);
-                if self.keys[i] == Some((x, z)) {
-                    continue;
-                }
-                self.keys[i] = Some((x, z));
-                self.shown[i] = shown_at(cache, x, z);
-
-                // Slope from the neighbours either side (central differences).
-                let slope_x = shown_at(cache, x + 1, z) - shown_at(cache, x - 1, z);
-                let slope_z = shown_at(cache, x, z + 1) - shown_at(cache, x, z - 1);
-                self.normals[i] = Vec3::new(-slope_x, 2.0, -slope_z).normalize().to_array();
-
-                let sample = cache.get(surface, x, z);
-                self.ground[i] = sample.height as f32 * HEIGHT_SCALE;
-                // The prototype's strong slope shading, baked in per point
-                // because real lighting alone is much smoother.
-                // Woods count as raised ground, so their sunlit edges show.
-                // It is shaded by the height a step away from the light: a step
-                // along each axis, in the amounts the light comes from that way.
-                let (from_east, from_south) = light_from;
-                let lift_here = lift_at(cache, x, z);
-                let mut height_at = |x: i64, z: i64| {
-                    cache.get(surface, x, z).height
-                        + ((lift_at(cache, x, z) - lift_here) * CANOPY_SHADING) as f64
-                };
-                let across = height_at(x - from_east.signum() as i64, z) - sample.height;
-                let along = height_at(x, z - from_south.signum() as i64) - sample.height;
-                let away = sample.height + across * from_east.abs() + along * from_south.abs();
-                let place = cache.climate(climate, surface, x, z);
-                let (band, lightness) =
-                    style.shade(sample, place, away, water_level, floor, SLOPE_SHADING);
-                let mut colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness));
-                if style.is_frozen_water(sample, place, water_level) {
-                    // Brighter than white, so after the sun dims this flat
-                    // surface it shows at the style's ice colour.
-                    for channel in &mut colour[..3] {
-                        *channel *= ICE_BOOST;
+        for &((from_x, from_z), (to_x, to_z)) in areas {
+            for z in from_z..=to_z {
+                for x in from_x..=to_x {
+                    let i = self.slot(x - centre.0, z - centre.1);
+                    if self.keys[i] == Some((x, z)) {
+                        continue;
                     }
-                }
-                // Alpha below 1 tells the shader this is moving water.
-                if sample.height <= water_level
-                    && !style.is_frozen_water(sample, place, water_level)
-                {
-                    colour[3] = 0.0;
-                }
-                self.colours[i] = colour;
+                    self.keys[i] = Some((x, z));
+                    self.changed.extend(chunks_touching(x, z));
+                    self.shown[i] = shown_at(cache, x, z);
 
-                // Snow, shore and water change with the weather and tide, so
-                // what shows is decided here rather than in `shared`.
-                let cover = cache.cover(vegetation, climate, surface, x, z);
-                let kind = style.kind(sample, place, water_level);
-                let open_land = kind == SurfaceKind::Land;
-                self.snowy[i] = kind == SurfaceKind::Snow;
-                self.covers[i] = Vec4::new(
-                    if open_land {
-                        cover.trees * rivers.open_at(x, z)
-                    } else {
-                        0.0
-                    },
-                    if open_land { cover.growth } else { 0.0 },
-                    cover.narrow,
-                    cover.lush,
-                );
+                    // Slope from the neighbours either side (central differences).
+                    let slope_x = shown_at(cache, x + 1, z) - shown_at(cache, x - 1, z);
+                    let slope_z = shown_at(cache, x, z + 1) - shown_at(cache, x, z - 1);
+                    self.normals[i] = Vec3::new(-slope_x, 2.0, -slope_z).normalize().to_array();
+
+                    let sample = cache.get(surface, x, z);
+                    self.ground[i] = sample.height as f32 * HEIGHT_SCALE;
+                    // The prototype's strong slope shading, baked in per point
+                    // because real lighting alone is much smoother.
+                    // Woods count as raised ground, so their sunlit edges show.
+                    // It is shaded by the height a step away from the light: a step
+                    // along each axis, in the amounts the light comes from that way.
+                    let (from_east, from_south) = light_from;
+                    let lift_here = lift_at(cache, x, z);
+                    let mut height_at = |x: i64, z: i64| {
+                        cache.get(surface, x, z).height
+                            + ((lift_at(cache, x, z) - lift_here) * CANOPY_SHADING) as f64
+                    };
+                    let across = height_at(x - from_east.signum() as i64, z) - sample.height;
+                    let along = height_at(x, z - from_south.signum() as i64) - sample.height;
+                    let away = sample.height + across * from_east.abs() + along * from_south.abs();
+                    let place = cache.climate(climate, surface, x, z);
+                    let (band, lightness) =
+                        style.shade(sample, place, away, water_level, floor, SLOPE_SHADING);
+                    let mut colour = linear(hsl_to_rgba(band.hue, band.saturation, lightness));
+                    if style.is_frozen_water(sample, place, water_level) {
+                        // Brighter than white, so after the sun dims this flat
+                        // surface it shows at the style's ice colour.
+                        for channel in &mut colour[..3] {
+                            *channel *= ICE_BOOST;
+                        }
+                    }
+                    // Alpha below 1 tells the shader this is moving water.
+                    if sample.height <= water_level
+                        && !style.is_frozen_water(sample, place, water_level)
+                    {
+                        colour[3] = 0.0;
+                    }
+                    self.colours[i] = colour;
+
+                    // Snow, shore and water change with the weather and tide, so
+                    // what shows is decided here rather than in `shared`.
+                    let cover = cache.cover(vegetation, climate, surface, x, z);
+                    let kind = style.kind(sample, place, water_level);
+                    let open_land = kind == SurfaceKind::Land;
+                    self.snowy[i] = kind == SurfaceKind::Snow;
+                    self.covers[i] = Vec4::new(
+                        if open_land {
+                            cover.trees * rivers.open_at(x, z)
+                        } else {
+                            0.0
+                        },
+                        if open_land { cover.growth } else { 0.0 },
+                        cover.narrow,
+                        cover.lush,
+                    );
+                }
             }
         }
     }
@@ -186,7 +211,7 @@ impl TerrainGrid {
     /// The height of the drawn triangles at a point (relative to the centre),
     /// reading `values` (`shown` or `ground`). Each grid square is split into
     /// two triangles along the diagonal from its north-east to its south-west
-    /// corner, as `build_window` draws it.
+    /// corner, as `build_chunk` draws it.
     pub(super) fn height_at(&self, values: &[f32], point: Vec2) -> f32 {
         let (x, z) = (point.x.floor(), point.y.floor());
         let (fx, fz) = (point.x - x, point.y - z);
@@ -203,16 +228,15 @@ impl TerrainGrid {
                 + (1.0 - fz) * (north_east - south_east)
         }
     }
+}
 
-    /// The point at `(dx, dz)` from the centre, ready for clipping.
-    pub(super) fn corner(&self, dx: i64, dz: i64, square: ViewSquare) -> Corner {
-        let i = self.slot(dx, dz);
-        Corner {
-            position: Vec3::new(dx as f32, self.shown[i], dz as f32),
-            normal: Vec3::from(self.normals[i]),
-            colour: Vec4::from(self.colours[i]),
-            cover: self.covers[i],
-            inside: square.inside(Vec2::new(dx as f32, dz as f32)),
-        }
-    }
+/// The terrain chunks a point is a corner of: one, or on a chunk's edge two or
+/// four, as neighbouring chunks share their edge points.
+fn chunks_touching(x: i64, z: i64) -> impl Iterator<Item = (i64, i64)> {
+    let along = |at: i64| {
+        let chunk = at.div_euclid(CHUNK);
+        let before = (at.rem_euclid(CHUNK) == 0).then_some(chunk - 1);
+        std::iter::once(chunk).chain(before)
+    };
+    along(x).flat_map(move |cx| along(z).map(move |cz| (cx, cz)))
 }

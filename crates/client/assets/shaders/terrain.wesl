@@ -37,6 +37,15 @@ fn sky_at(place: vec2<f32>) -> vec4<f32> {
     );
 }
 
+// Whether a place is outside the window of terrain on show (`ViewSquare`): the
+// terrain is drawn in whole chunks reaching past it, so this cuts it to the
+// window, exactly. The same test is in terrain_prepass.wesl, for shadows.
+fn outside_window(place: vec2<f32>) -> bool {
+    let from_centre = place - sky.centre;
+    return abs(dot(from_centre, sky.right)) > sky.half
+        || abs(dot(from_centre, sky.towards)) > sky.half;
+}
+
 // How much a full cloud darkens the ground straight below it.
 const SHADOW: f32 = 0.2;
 
@@ -122,6 +131,9 @@ fn canopy_at(place: vec2<f32>, trees: f32, narrow: f32) -> Canopy {
 
 @fragment
 fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> FragmentOutput {
+    if outside_window(in.world_position.xz) {
+        discard;
+    }
     var pbr_input = pbr_input_from_standard_material(in, is_front);
     pbr_input.material.base_color = alpha_discard(
         pbr_input.material.flags,

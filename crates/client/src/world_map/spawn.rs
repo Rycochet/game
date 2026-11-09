@@ -39,17 +39,8 @@ pub(super) fn spawn_view(
     // Everything starts at the origin; `update_terrain` moves it to the player.
     super::lights::spawn(&mut commands);
 
-    commands.spawn((
-        WorldMapScene,
-        Terrain,
-        FollowsPlayer,
-        // Placeholder until the first update cuts the real window.
-        Mesh3d(meshes.add(Mesh::from(Cuboid::from_length(0.0)))),
-        // The mesh is replaced as the player moves, so its bounds go stale.
-        NoFrustumCulling,
-        Transform::default(),
-        visibility,
-    ));
+    // The terrain's chunks are its children (`chunks::update_chunks`).
+    commands.spawn((WorldMapScene, Terrain, Transform::default(), visibility));
 
     commands.spawn((
         WorldMapScene,
@@ -114,17 +105,12 @@ pub(super) fn spawn_view(
     commands.queue(attach_terrain_materials);
 }
 
-/// Terrain, rivers and roads are drawn with the sky's materials, made in `super::sky::spawn`.
+/// Rivers and roads are drawn with the sky's materials, made in `super::sky::spawn`
+/// (the terrain's chunks take theirs as they are made).
 /// (`Commands` run in order, so its resource exists by now.)
 pub(super) fn attach_terrain_materials(world: &mut World) {
     let assets = world.resource::<super::sky::SkyAssets>();
-    let (terrain, rivers) = (assets.terrain.clone(), assets.rivers.clone());
-    let mut query = world.query_filtered::<Entity, With<Terrain>>();
-    for entity in query.iter(world).collect::<Vec<_>>() {
-        world
-            .entity_mut(entity)
-            .insert(MeshMaterial3d(terrain.clone()));
-    }
+    let rivers = assets.rivers.clone();
     let mut query = world.query_filtered::<Entity, Or<(With<RiverStrips>, With<RoadStrips>)>>();
     for entity in query.iter(world).collect::<Vec<_>>() {
         world

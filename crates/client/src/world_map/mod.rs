@@ -32,6 +32,7 @@ use crate::view3d::View3dSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod bolts;
+mod chunks;
 mod click;
 mod forget;
 mod gate_view;
@@ -77,6 +78,7 @@ impl Plugin for WorldMapPlugin {
     fn build(&self, app: &mut App) {
         let in_view = in_state(GameView::WorldMap);
         app.init_resource::<TerrainGrid>()
+            .init_resource::<chunks::TerrainChunks>()
             .init_resource::<SpawnedPois>()
             .init_resource::<gates::SpawnedGates>()
             .init_resource::<PoiMeshes>()
@@ -115,7 +117,7 @@ impl Plugin for WorldMapPlugin {
                 Update,
                 (
                     map_sky::update.before(sky::update).before(lights::update),
-                    update_terrain,
+                    (update_terrain, chunks::update_chunks).chain(),
                     sky::update,
                     lights::update,
                     pois::spawn_nearby,

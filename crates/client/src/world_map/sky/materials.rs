@@ -54,6 +54,11 @@ impl MaterialExtension for TerrainSky {
     fn fragment_shader() -> ShaderRef {
         "shaders/terrain.wesl".into()
     }
+
+    /// Shadows: only what the window shows casts them.
+    fn prepass_fragment_shader() -> ShaderRef {
+        "shaders/terrain_prepass.wesl".into()
+    }
 }
 
 /// The see-through sheet of cloud.
