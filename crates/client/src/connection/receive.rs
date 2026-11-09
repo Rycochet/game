@@ -213,6 +213,7 @@ pub(super) fn receive(
                 | ServerMessage::VisitedGates(_)
                 | ServerMessage::ActionBar(_)
                 | ServerMessage::Sneaking(_)
+                | ServerMessage::DoorRefused { .. }
                 | ServerMessage::AbilityStarted { .. }
                 | ServerMessage::AbilityLanded { .. }
                 | ServerMessage::Killed { .. }

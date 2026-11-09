@@ -12,6 +12,7 @@ pub enum DebugAction {
     AutoWalk,
     ChangeCellMode,
     ChangeCreature,
+    CloseAllDoors,
     CreateMob,
     DeleteCharacter,
     DeleteMob,
@@ -35,6 +36,7 @@ pub enum DebugAction {
     LearnSomeSkills,
     LightningNow,
     LightningStrikeHere,
+    OpenAllDoors,
     RegenerateDevArea,
     ResetView,
     RevealMap,
@@ -81,10 +83,11 @@ pub(super) struct Facts {
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: alphabetical by name.
-    pub(super) const ALL: [Self; 43] = [
+    pub(super) const ALL: [Self; 45] = [
         Self::AutoWalk,
         Self::ChangeCellMode,
         Self::ChangeCreature,
+        Self::CloseAllDoors,
         Self::CreateMob,
         Self::DeleteCharacter,
         Self::DeleteMob,
@@ -108,6 +111,7 @@ impl DebugAction {
         Self::LearnSomeSkills,
         Self::LightningNow,
         Self::LightningStrikeHere,
+        Self::OpenAllDoors,
         Self::RegenerateDevArea,
         Self::ResetView,
         Self::RevealMap,
@@ -173,6 +177,7 @@ impl DebugAction {
             // In a site it would stop at a wall.
             Self::AutoWalk => facts.view == GameView::WorldMap,
             Self::ChangeCellMode => facts.view == GameView::Dungeon,
+            Self::OpenAllDoors | Self::CloseAllDoors => facts.view == GameView::Dungeon,
             // A town is known from the start, and would only come straight back.
             Self::ForgetMap => !facts.in_town,
             Self::RevealMap => facts.view == GameView::Dungeon && !facts.in_town,
@@ -193,6 +198,8 @@ impl DebugAction {
             self,
             Self::ChangeCellMode
                 | Self::ChangeCreature
+                | Self::CloseAllDoors
+                | Self::OpenAllDoors
                 | Self::CreateMob
                 | Self::DeleteCharacter
                 | Self::DetectMonsters

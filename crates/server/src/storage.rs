@@ -30,7 +30,7 @@ pub use characters::Everywhere;
 pub use roads::RoadSave;
 pub use saves::{
     CellMasks, CharacterSave, CharacterWorldSave, DevReturn, KnownPoi, LevelSave, MobRecord,
-    SavedMob, ServerSave, SiteId, SiteSave, VisitSave, WorldSave,
+    RememberedDoors, SavedMob, ServerSave, SiteId, SiteSave, VisitSave, WorldSave,
 };
 pub use unsaved::{Unsaved, now};
 

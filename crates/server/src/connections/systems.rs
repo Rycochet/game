@@ -78,6 +78,15 @@ pub(crate) fn run_mobs(
     }
 }
 
+/// Every tick: tells everyone on a level whose doors have changed, and its mobs.
+pub(crate) fn share_doors(mut connections: ResMut<Connections>, mut worlds: ResMut<ServerWorlds>) {
+    for_each_world(
+        &mut connections.clients,
+        &mut worlds,
+        crate::sites::share_doors,
+    );
+}
+
 /// Every tick: tells everyone who has come into or gone out of their sight, or
 /// moved. Who is on a level stays while it is in use. Everyone in the Hall can
 /// see each other, whichever world they came from.

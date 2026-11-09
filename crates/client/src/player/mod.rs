@@ -10,24 +10,28 @@ use bevy::prelude::*;
 use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod doors;
 mod keys;
 mod level_costs;
 mod messages;
 mod moving;
 mod rivers;
+mod route_help;
 mod state;
 mod steps;
 mod travel;
 mod wild_heights;
 
+use doors::{AskDoor, close_doors, door_answers, send_door_asks};
 use keys::move_player;
 pub use messages::{Arrived, Player, PlayerSystems, Stepped, TakeStep, TravelTo};
 pub use moving::PlayerMoving;
 use moving::note_moving;
 use rivers::keep_river_points;
+use route_help::enemy_cells;
 use state::{PlayerEnergy, Travel, action_tick, spawn_player};
 use steps::take_steps;
-use travel::{enemy_cells, travel};
+use travel::travel;
 use wild_heights::keep_wild_heights;
 
 /// How far the player's light reaches in dungeons, in cells.
@@ -51,6 +55,7 @@ impl Plugin for PlayerPlugin {
             .add_message::<TravelTo>()
             .add_message::<Arrived>()
             .add_message::<TakeStep>()
+            .add_message::<AskDoor>()
             .add_message::<Stepped>()
             .add_message::<SpentEnergy>()
             .add_message::<CancelledEnergy>()
@@ -64,11 +69,13 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     move_player.in_set(PlayerSystems::Input),
+                    close_doors.in_set(PlayerSystems::Input),
                     // After everything in `Input` asked for its steps.
                     (
-                        (keep_wild_heights, keep_river_points),
+                        (keep_wild_heights, keep_river_points, door_answers),
                         take_steps,
                         travel,
+                        send_door_asks,
                         note_moving,
                     )
                         .chain()

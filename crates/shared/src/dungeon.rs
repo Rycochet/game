@@ -11,6 +11,7 @@
 // Split into files (`cargo xtask lint` keeps files small).
 mod bars;
 mod cell;
+mod doors;
 mod level;
 mod line;
 mod sight;

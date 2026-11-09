@@ -24,6 +24,8 @@ pub(super) struct Travel {
     /// as far as the game goes, and is shown getting there: until they land
     /// they can't take another step or change direction.
     pub(super) jump: Option<MapPosition>,
+    /// A closed door asked open, not yet answered: not asked again meanwhile.
+    pub(super) door_asked: Option<(i64, i64)>,
 }
 
 /// The player's energy as far as the client can tell, the same way the server

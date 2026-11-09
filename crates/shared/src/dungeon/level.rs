@@ -1,6 +1,9 @@
 //! A level: its cells and rooms.
 
+use std::collections::BTreeMap;
+
 use super::{Cell, WallBar, WallShape, bars_of};
+use crate::door::Swing;
 
 /// Which room of a level a cell belongs to, as planned by its generator
 /// (corridors, walls and outside ground belong to none). For mobs later. In a
@@ -25,6 +28,8 @@ pub struct Level {
     cells: Vec<Cell>,
     /// The room of each cell, in the same order, `NO_ROOM` for none.
     rooms: Vec<u16>,
+    /// How each door hangs, where it has been set (see `doors.rs`).
+    pub(super) swings: BTreeMap<(i64, i64), Swing>,
 }
 
 impl Level {
@@ -38,6 +43,7 @@ impl Level {
             height,
             cells: vec![Cell::Wall; (width * height) as usize],
             rooms: vec![NO_ROOM; (width * height) as usize],
+            swings: BTreeMap::new(),
         }
     }
 
@@ -83,14 +89,21 @@ impl Level {
         }
     }
 
-    /// Whether `(x, y)` can be seen across and lit through.
+    /// Whether `(x, y)` can be seen across and lit through: a door only when
+    /// it isn't closed.
     pub fn is_open(&self, x: i64, y: i64) -> bool {
-        self.cell(x, y).is_open()
+        match self.cell(x, y) {
+            Cell::Door | Cell::SecretDoor => !self.is_shut(x, y),
+            cell => cell.is_open(),
+        }
     }
 
-    /// Whether `(x, y)` can be walked on.
+    /// Whether `(x, y)` can be walked on: a door only when it isn't closed.
     pub fn is_walkable(&self, x: i64, y: i64) -> bool {
-        self.cell(x, y).is_walkable()
+        match self.cell(x, y) {
+            Cell::Door | Cell::SecretDoor => !self.is_shut(x, y),
+            cell => cell.is_walkable(),
+        }
     }
 
     /// The room `(x, y)` is part of, if any.
@@ -108,7 +121,7 @@ impl Level {
 
     /// The shape of the wall at `(x, y)`, if there is a wall.
     pub fn wall_shape(&self, x: i64, y: i64) -> Option<WallShape> {
-        self.cell(x, y).is_wall().then(|| WallShape {
+        self.is_wall(x, y).then(|| WallShape {
             north: self.same_building((x, y), (x, y - 1)) && self.joins_wall(x, y - 1, false),
             east: self.same_building((x, y), (x + 1, y)) && self.joins_wall(x + 1, y, true),
             south: self.same_building((x, y), (x, y + 1)) && self.joins_wall(x, y + 1, false),
@@ -135,8 +148,8 @@ impl Level {
     /// Whether a wall beside `(x, y)`, to its east or west (`east_west`) or
     /// north or south, joins it: walls join walls, and openings in line.
     fn joins_wall(&self, x: i64, y: i64, east_west: bool) -> bool {
-        let cell = self.cell(x, y);
-        cell.is_wall() || (cell.is_opening() && self.opening_runs_east_west(x, y) == east_west)
+        self.is_wall(x, y)
+            || (self.is_opening(x, y) && self.opening_runs_east_west(x, y) == east_west)
     }
 
     /// Whether the door or window at `(x, y)` is in a wall running east-west

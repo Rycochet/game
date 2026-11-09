@@ -178,6 +178,9 @@ impl CurrentDungeon {
                 self.stairs.push(*stairs);
             }
         }
+        for door in &chunk.doors {
+            self.level.set_swing(door.x, door.y, door.swing);
+        }
     }
 
     /// Whether any of the level has been seen.

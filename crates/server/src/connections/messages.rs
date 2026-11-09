@@ -96,8 +96,7 @@ pub(crate) fn handle_messages(
     clients.retain(|client| !client.gone);
 }
 
-/// Does what a client has asked, as far as it has the energy, in order. `false` if
-/// the client has gone.
+/// Does what a client has asked, as far as it has the energy, in order. `false` if gone.
 pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
     let tick = world.action_clock.ticks();
     while client.energy.ready(tick, client.speed) {
@@ -121,6 +120,7 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             Action::Up => (sites::go_up(client, world), 0),
             Action::OpenTrade { with } => (sites::open_trade(client, world, with), 0),
             Action::Ground(action) => ground::act(client, world, action),
+            Action::Door(ask) => sites::door_act(client, world, ask),
             Action::UseAbility { ability, target } => {
                 super::combat::start_ability(client, world, ability, target)
             }

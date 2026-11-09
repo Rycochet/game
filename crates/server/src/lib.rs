@@ -178,6 +178,7 @@ impl Plugin for ServerPlugin {
                     connections::difficulty::apply_difficulties,
                     connections::send_roads,
                     connections::run_mobs,
+                    connections::share_doors,
                     connections::sync_entities,
                     connections::sync_ground,
                     connections::tell_the_time,

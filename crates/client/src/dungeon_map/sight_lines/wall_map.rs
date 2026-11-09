@@ -35,7 +35,10 @@ impl WallMap {
         let mut bars = Vec::with_capacity((width * height) as usize);
         for y in min_y..min_y + height {
             for x in min_x..min_x + width {
-                bars.push(level.wall_bars(x, y).map(|found| {
+                // A closed door stands like a wall across its cell.
+                let found = level.wall_bars(x, y);
+                let found = found.or_else(|| level.door_bar(x, y).map(|bar| [bar, bar]));
+                bars.push(found.map(|found| {
                     found.map(|(low, high)| {
                         (
                             Vec2d {

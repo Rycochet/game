@@ -136,6 +136,9 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::OpenTrade {
             with: Id::for_test(3),
         },
+        ClientMessage::Door(super::DoorAsk::Open { x: -2, y: 5 }),
+        ClientMessage::Door(super::DoorAsk::CloseNear),
+        ClientMessage::Door(super::DoorAsk::DevAll { open: false }),
         ClientMessage::TakeItem {
             with: Id::for_test(3),
             item: Id::for_test(4),
@@ -379,6 +382,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 mask: 1,
                 cells: vec![Cell::Floor],
                 stairs: Vec::new(),
+                doors: Vec::new(),
                 remembered: true,
             }],
         }),
@@ -418,8 +422,16 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 descends: (0, 1),
                 style: StairsStyle::Spiral,
             }],
+            doors: vec![crate::door::DoorLook {
+                x: -6,
+                y: 16,
+                swing: crate::door::Swing::Open(crate::door::Side::North),
+                material: crate::material::Material::Wood,
+                style: crate::door::DoorStyle::Plain,
+            }],
             remembered: true,
         }),
+        ServerMessage::DoorRefused { x: 3, y: -4 },
         ServerMessage::OnWorldMap { x: 100, y: -4 },
         ServerMessage::WildernessWindow {
             bounds: (-64, 128, 192, 192),

@@ -32,4 +32,5 @@ pub(super) enum Action {
         /// `None`: on themselves.
         target: Option<Id>,
     },
+    Door(shared::protocol::DoorAsk),
 }

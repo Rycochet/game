@@ -71,6 +71,10 @@ impl ServerWorld {
         let population = Population {
             mobs,
             level: level.level.clone(),
+            doors: Some(super::MobDoors {
+                poi,
+                open: level.level.with_doors_open(),
+            }),
             due,
             away: 0,
             empty_since: None,

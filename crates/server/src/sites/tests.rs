@@ -307,7 +307,11 @@ pub(super) fn path(level: &Level, from: (i64, i64), to: (i64, i64)) -> Vec<(i64,
 }
 
 /// Walks the player to `to` on their level.
+/// Doors on the way are opened first (Open All Doors), as walking into one
+/// opens it rather than stepping.
 pub(super) fn walk(test: &mut TestClient, to: (i64, i64)) -> Vec<ServerMessage> {
+    let open = shared::protocol::DoorAsk::DevAll { open: true };
+    crate::sites::door_act(&mut test.client, &mut test.world, open);
     let visit = test.client.visit.as_ref().unwrap();
     let steps = path(&visit.level.level, visit.position, to);
     test.steps(&steps)

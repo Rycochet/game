@@ -2,6 +2,7 @@
 
 use shared::dungeon::line_is_clear;
 
+use super::doors::{Opened, open_on_the_way, way_level};
 use super::fight::{MobBlow, mob_turn};
 use super::territory::mind_territory;
 use super::tracking::track;
@@ -22,6 +23,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
     let everyone = everyone_playing(clients);
     let mut crossings = Vec::new();
     let mut blows: Vec<MobBlow> = Vec::new();
+    let mut opened: Vec<Opened> = Vec::new();
     for (&place, population) in &mut world.populations.0 {
         let here = || {
             everyone
@@ -43,6 +45,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
         let Population {
             mobs,
             level,
+            doors,
             due,
             scents,
             last_at,
@@ -101,11 +104,18 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             let cost = if let Some(cost) = fighting {
                 cost
             } else if matches!(mob.doing, Doing::Tracking { .. }) {
-                track(mob, level, &spots, scents, &taken, tick)
+                track(
+                    mob,
+                    way_level(mob, level, doors.as_ref()),
+                    &spots,
+                    scents,
+                    &taken,
+                    tick,
+                )
             } else {
                 act(
                     mob,
-                    level,
+                    way_level(mob, level, doors.as_ref()),
                     &spots,
                     &mut maps,
                     tick,
@@ -115,6 +125,19 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                     place,
                 )
             };
+            // One with hands that came to a closed door opens it instead.
+            if let Some(doors) = doors
+                && let Some((at, swing)) = open_on_the_way(mob, level, was_at)
+            {
+                doors.open = level.with_doors_open();
+                let poi = doors.poi;
+                opened.push(Opened {
+                    place,
+                    poi,
+                    at,
+                    swing,
+                });
+            }
             // Mobs leave scent too.
             scents.walked(mob.id, was_at, mob.position, mob.scent, tick);
             mob.pacing.turn_ended(was_at, mob.position);
@@ -135,6 +158,9 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
     }
     for crossing in crossings {
         cross(&mut world.populations, crossing, tick, &everyone);
+    }
+    for door in opened {
+        crate::sites::mob_opened(world, door);
     }
     crate::connections::take_mob_blows(clients, world, blows, tick);
 }

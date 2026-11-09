@@ -33,6 +33,7 @@ impl ClientMessage {
                 | Self::DevKillMob { .. }
                 | Self::DevVitals(_)
                 | Self::DevSkills(_)
+                | Self::Door(super::DoorAsk::DevAll { .. })
         )
     }
 }

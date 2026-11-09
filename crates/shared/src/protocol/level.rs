@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::door::DoorLook;
 use crate::dungeon::Cell;
 use crate::poi::PoiKind;
 use crate::site::{StairsDirection, StairsStyle};
@@ -113,6 +114,9 @@ pub struct LevelChunk {
     pub cells: Vec<Cell>,
     /// Stairs on those cells.
     pub stairs: Vec<SeenStairs>,
+    /// The doors among those cells, as the player sees them now (or saw them
+    /// last, if `remembered`). A secret door only once found.
+    pub doors: Vec<DoorLook>,
     /// Whether these are cells the player saw on an earlier visit (sent on
     /// arriving), rather than ones they are about to see.
     pub remembered: bool,

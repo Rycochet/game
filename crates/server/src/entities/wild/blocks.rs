@@ -192,6 +192,7 @@ fn empty(level: shared::dungeon::Level) -> Population {
     Population {
         mobs: Vec::new(),
         level,
+        doors: None,
         due: Default::default(),
         away: 0,
         empty_since: None,

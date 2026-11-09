@@ -86,8 +86,7 @@ pub fn build(
                 layers.see_through.indices.len(),
             );
             build_cell_at(&mut layers, &scene, stairs, (x, y));
-            let cell = level.cell(x, y);
-            if cell.is_wall() || cell.is_opening() {
+            if level.is_wall(x, y) || level.is_opening(x, y) {
                 // Measured from its ground, on raised land.
                 let camera = scene.camera - Vec3::Y * scene.ground(x, y);
                 let cut = player.and_then(|player| cut_height(player, (x, y)));

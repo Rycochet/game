@@ -226,6 +226,10 @@ pub(crate) fn answer(
             warn!("A client asked for dev tools ({message:?}), which it may not use");
             true
         }
+        ClientMessage::Door(ask) => {
+            client.waiting.push_back(Action::Door(ask));
+            true
+        }
         ClientMessage::DevTeleport { .. }
         | ClientMessage::DevBackToStart
         | ClientMessage::DevToShowcase

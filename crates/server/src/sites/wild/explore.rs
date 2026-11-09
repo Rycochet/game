@@ -68,6 +68,7 @@ pub(in crate::sites) fn enter_wilderness(
         index: 0,
         level: made.level,
         stairs: made.stairs,
+        doors: made.doors,
         position,
         sent: CellMasks::new(),
         mirrors: made.mirrors,
@@ -148,6 +149,7 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     };
     visit.level = made.level;
     visit.stairs = made.stairs;
+    visit.doors = made.doors;
     visit.mirrors = made.mirrors;
     let bounds = visit.level.level.bounds();
     // The client lets go of what is outside the window now.

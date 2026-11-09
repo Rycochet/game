@@ -1,6 +1,7 @@
 //! Sending cells: all of a level, those beside what is seen, nearby, and level chunks.
 
 use bevy::prelude::*;
+use shared::door::DoorLook;
 use shared::dungeon::{Cell, Level};
 use shared::movement::{Step, step_on_level};
 use shared::protocol::{LevelChunk, SeenStairs, ServerMessage, level_chunk};
@@ -107,25 +108,28 @@ pub(super) fn send_cells(
         return false;
     }
     let truesight = client.truesight;
-    level_chunks(
-        &visit.level.level,
-        &visit.stairs,
-        masks,
-        remembered,
-        truesight,
-    )
-    .into_iter()
-    .all(|chunk| client.link.send(&ServerMessage::LevelCells(chunk)))
+    let level = &visit.level.level;
+    let place = (visit.id, visit.index);
+    let looks = |x, y| {
+        let kept = (visit.kept_at(x), y);
+        let cell = level.cell(x, y);
+        super::door_looks(client, &visit.doors, place, cell, (x, y), kept, remembered)
+    };
+    level_chunks(level, &visit.stairs, masks, remembered, truesight, &looks)
+        .into_iter()
+        .all(|chunk| client.link.send(&ServerMessage::LevelCells(chunk)))
 }
 
 /// The cells in `masks` as the player would see them, a chunk at a time, with
-/// any stairs on them.
+/// any stairs on them, and the doors as `looks` says they see them (a secret
+/// door it says nothing of is wall to them).
 pub(super) fn level_chunks(
     level: &Level,
     stairs: &[SeenStairs],
     masks: &CellMasks,
     remembered: bool,
     truesight: bool,
+    looks: &dyn Fn(i64, i64) -> Option<DoorLook>,
 ) -> Vec<LevelChunk> {
     let mut chunks = Vec::with_capacity(masks.len());
     for (&chunk, &mask) in masks {
@@ -134,15 +138,19 @@ pub(super) fn level_chunks(
             mask,
             cells: Vec::new(),
             stairs: Vec::new(),
+            doors: Vec::new(),
             remembered,
         };
         // The positions come from the mask; fill in what is there.
         let positions: Vec<(i64, i64)> = message.positions().collect();
+        let doors: Vec<DoorLook> = positions.iter().filter_map(|&(x, y)| looks(x, y)).collect();
         let cells = positions
             .iter()
             .map(|&(x, y)| match level.cell(x, y) {
                 // Hidden until found, but not from truesight.
-                Cell::SecretDoor if !truesight => Cell::Wall,
+                Cell::SecretDoor if !truesight && !doors.iter().any(|d| (d.x, d.y) == (x, y)) => {
+                    Cell::Wall
+                }
                 cell => cell,
             })
             .collect();
@@ -154,6 +162,7 @@ pub(super) fn level_chunks(
         chunks.push(LevelChunk {
             cells,
             stairs,
+            doors,
             ..message
         });
     }

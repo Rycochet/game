@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 use shared::energy::ACTION_TICKS_PER_SECOND;
 use shared::movement::{step_on_level_by, step_on_world_map_by, world_step_time};
+use shared::protocol::DoorAsk;
 
+use super::doors::AskDoor;
 use super::level_costs::LevelCosts;
 use super::{
     MOST_STEPS_WAITING, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick, enemy_cells,
@@ -31,7 +33,7 @@ pub(super) fn take_steps(
     (gait, sneaking): (Res<PlayerGait>, Res<Sneaking>),
     (heights, rivers): (Res<WildCellHeights>, Res<NearRivers>),
     mut energy: ResMut<PlayerEnergy>,
-    mut stepped: MessageWriter<Stepped>,
+    (mut stepped, mut asks): (MessageWriter<Stepped>, MessageWriter<AskDoor>),
     god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
     player: Single<(&mut MapPosition, &mut Travel), With<Player>>,
@@ -72,6 +74,14 @@ pub(super) fn take_steps(
             }),
         };
         let Some((x, y)) = to else {
+            // Walking into a closed door tries to open it.
+            let (dx, dy) = step.from(from);
+            let dungeon_view = *view.get() == GameView::Dungeon;
+            if dungeon_view && dungeon.level.is_shut(dx, dy) && travel.door_asked != Some((dx, dy))
+            {
+                travel.door_asked = Some((dx, dy));
+                asks.write(AskDoor(DoorAsk::Open { x: dx, y: dy }));
+            }
             continue;
         };
         // An enemy won't move aside; anyone else swaps places, as the server says.

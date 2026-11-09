@@ -16,6 +16,7 @@ use crate::storage::{CellMasks, SiteId, VisitSave};
 // Split into files (`cargo xtask lint` keeps files small).
 mod cells;
 mod dev_area;
+mod doors;
 mod enter;
 mod keepers;
 mod leave;
@@ -33,6 +34,8 @@ use cells::{
     add_masks, all_cells, beside, cells_in, keep_within, level_chunks, nearby_cells, send_cells,
 };
 pub(super) use dev_area::generate_area;
+pub(crate) use doors::{DoorChange, Standing, door_act, mob_opened, share_doors};
+use doors::{DoorSite, VisitDoors, door_looks, remember_doors, set_doors};
 use enter::enter_site;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};
 use keepers::{NewKeepers, keepers_in_window, keepers_of};
@@ -59,6 +62,8 @@ pub(crate) struct Visit {
     level: SiteLevel,
     /// Its stairs as players see them.
     stairs: Vec<SeenStairs>,
+    /// Its doors, as they are now (also set on `level`).
+    doors: VisitDoors,
     /// Where the player is.
     position: (i64, i64),
     /// The cells the client has been sent on this visit.

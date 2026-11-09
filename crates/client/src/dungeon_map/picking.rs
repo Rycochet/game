@@ -66,7 +66,10 @@ pub fn pick(
     if blocked {
         return None;
     }
-    let can_go = |&(x, y): &(i64, i64)| level.is_walkable(x, y) && sight.is_seen(x, y);
+    // A closed door too: travel there opens it.
+    let can_go = |&(x, y): &(i64, i64)| {
+        (level.is_walkable(x, y) || level.is_shut(x, y)) && sight.is_seen(x, y)
+    };
     if can_go(&(x, y)) {
         return Some((x, y));
     }

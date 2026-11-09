@@ -46,6 +46,7 @@ fn remembered(index: u32, bounds: (i64, i64, i64, i64)) -> RememberedLevel {
             mask: 1,
             cells: vec![shared::dungeon::Cell::Floor],
             stairs: Vec::new(),
+            doors: Vec::new(),
             remembered: true,
         }],
     }

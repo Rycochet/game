@@ -39,6 +39,12 @@ pub(super) fn clear_line(level: &Level, from: (i64, i64), to: (i64, i64)) -> boo
             {
                 return false;
             }
+            // A closed door stands across its whole cell.
+            if let Some((low, high)) = level.door_bar(column, row)
+                && line_hits_box(from, to, low, high)
+            {
+                return false;
+            }
         }
         if column == last {
             return true;
