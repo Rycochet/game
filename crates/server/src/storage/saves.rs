@@ -183,6 +183,10 @@ pub struct CharacterSave {
     /// their player's default on joining.
     #[serde(default)]
     pub difficulty: Option<shared::difficulty::Difficulty>,
+    /// The role they are shown as to others (`connections::role`), if their
+    /// account may be shown as another; missing from older saves.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shown_as: Option<shared::role::RoleId>,
 }
 
 /// What a character knows of one world, and where they are in it.

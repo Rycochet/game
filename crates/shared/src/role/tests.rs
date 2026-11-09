@@ -21,3 +21,13 @@ fn a_title_is_shown_in_place_of_the_name() {
     badge.title = Some("Archmage".into());
     assert_eq!(badge.shown(), "Archmage");
 }
+
+#[test]
+fn staff_are_marked_and_plain_players_arent() {
+    for id in [OWNER, ADMIN, DEVELOPER, MODERATOR, "game-master"] {
+        assert!(is_marked(&RoleId::new(id)), "{id}");
+    }
+    for id in [PLAYER, GUEST, MODERATED, BANNED] {
+        assert!(!is_marked(&RoleId::new(id)), "{id}");
+    }
+}

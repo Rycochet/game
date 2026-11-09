@@ -64,6 +64,7 @@ impl Plugin for SystemMenuPlugin {
             .init_resource::<connect::AddressCheck>()
             .init_resource::<settings::VideoForm>()
             .init_resource::<settings::VideoShown>()
+            .init_resource::<settings::ShownAs>()
             .init_resource::<settings::VideoTrial>()
             .add_systems(Startup, spawn_menu)
             .add_systems(
@@ -92,7 +93,13 @@ impl Plugin for SystemMenuPlugin {
                     settings::fill_video_page,
                     (settings::use_video_page, settings::run_trial).chain(),
                     settings::use_video_options,
-                    (settings::use_difficulty, settings::fill_gameplay_page).chain(),
+                    (
+                        settings::keep_shown_role,
+                        settings::use_difficulty,
+                        settings::fill_gameplay_page,
+                    )
+                        .chain(),
+                    settings::use_shown_role,
                     settings::use_gameplay_page,
                 ),
             )

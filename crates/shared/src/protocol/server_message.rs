@@ -16,7 +16,7 @@ use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
 use crate::mob::EntityLook;
 use crate::road::Road;
-use crate::role::{Powers, RoleBadge};
+use crate::role::{Powers, RoleBadge, ShownRole};
 use crate::sheet::Sheet;
 use crate::vitals::VitalNow;
 use crate::world::WorldTime;
@@ -81,7 +81,11 @@ pub enum ServerMessage {
         /// right menus, as the server checks everything asked of it.
         role: RoleBadge,
         powers: Powers,
+        /// The role the character is shown as to others, and what it may be.
+        shown: ShownRole,
     },
+    /// The role the character is now shown as (after `ShowRoleAs`).
+    ShownRole(ShownRole),
     /// Everything the client knows of the world map is forgotten; the chunks
     /// it may know again follow (`DevForgetMap`).
     ForgetWorldMap,

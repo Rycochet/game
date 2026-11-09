@@ -25,6 +25,8 @@ pub(crate) struct Someone {
     pub(super) look: (CreatureKind, Appearance),
     /// What can be seen of what they wear.
     pub(super) worn: Vec<WornLook>,
+    /// The mark before their name (`Client::mark`).
+    pub(super) mark: Option<shared::role::RoleBadge>,
     /// The site level they are on, if any.
     pub(super) level: Option<(SiteId, u32)>,
     /// They are in the Hall of Worlds (and `level` is `None`).
@@ -52,6 +54,7 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 name: client.name.clone(),
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
                 worn: client.inventory.shown(),
+                mark: client.mark(),
                 level,
                 in_hall: client.visit.is_none() && client.character.hall.is_some(),
                 position,

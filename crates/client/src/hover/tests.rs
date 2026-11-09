@@ -1,4 +1,4 @@
-use super::name::{Found, name_of};
+use super::name::{Found, mark_of, name_of};
 use crate::common::HoverName;
 
 #[test]
@@ -41,4 +41,22 @@ fn a_bag_comes_before_the_place_under_it() {
 #[test]
 fn nothing_hovered_shows_nothing() {
     assert_eq!(name_of(Found::default()), None);
+}
+
+#[test]
+fn a_mark_shows_only_with_a_players_name() {
+    use crate::common::{HoverName, StaffMark};
+    let name = HoverName("Brin".into());
+    let mark = StaffMark("Admin".into());
+    let player = Found {
+        token: Some((None, Some(&name))),
+        ..Found::default()
+    };
+    assert_eq!(mark_of(player, Some(&mark)), Some("Admin"));
+    assert_eq!(mark_of(player, None), None);
+    let behind_the_sky = Found {
+        sky: Some("Sol"),
+        ..player
+    };
+    assert_eq!(mark_of(behind_the_sky, Some(&mark)), None);
 }

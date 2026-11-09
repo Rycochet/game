@@ -129,6 +129,11 @@ fn read_server(
                         hover_name::hover_name(look),
                     ))
                     .id();
+                if let Some(mark) = &look.mark {
+                    commands
+                        .entity(spawned)
+                        .insert(crate::common::StaffMark(mark.shown().to_owned()));
+                }
                 let picture = drawing.dressed(look.kind, &look.appearance, &look.worn);
                 // Seen again as another kind: it changes into it.
                 let old = others.0.insert(look.id, spawned);

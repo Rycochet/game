@@ -122,6 +122,25 @@ impl Roles {
         }
     }
 
+    /// What is shown of a role, if there is one by this id.
+    pub(crate) fn badge(&self, id: &RoleId) -> Option<RoleBadge> {
+        self.file.role(id).map(|def| RoleBadge {
+            id: def.id.clone(),
+            name: def.name.clone(),
+            title: def.title.clone(),
+        })
+    }
+
+    /// The roles an account holding `held` may be shown as: its own first.
+    pub(crate) fn choices(&self, held: &Held) -> Vec<RoleBadge> {
+        let others = held
+            .powers
+            .appears_as
+            .iter()
+            .filter_map(|id| self.badge(id));
+        std::iter::once(held.badge.clone()).chain(others).collect()
+    }
+
     /// The Owner's role: the embedded server's own player's.
     pub(crate) fn owner(&self) -> Held {
         self.role(&RoleId::new(OWNER), None, String::new())

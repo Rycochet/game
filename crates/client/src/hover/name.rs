@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use super::spawn::{HoverBox, HoverText, LIFT, LOWEST};
+use super::spawn::{HoverBox, HoverMark, HoverText, LIFT, LOWEST};
 use crate::common::{
-    BottomHud, HoverName, HoveredBag, HoveredInSky, HoveredOnMap, Portal, poi_name,
+    BottomHud, HoverName, HoveredBag, HoveredInSky, HoveredOnMap, Portal, StaffMark, poi_name,
 };
 use crate::minimap::FullMap;
 use crate::view3d::HoveredToken;
@@ -38,6 +38,13 @@ pub(super) fn name_of(found: Found) -> Option<String> {
         .or_else(|| found.place.map(str::to_owned))
 }
 
+/// The role a hovered player is shown as, when their name is what the box
+/// shows (nothing in the sky is in front of them).
+pub(super) fn mark_of<'a>(found: Found, mark: Option<&'a StaffMark>) -> Option<&'a str> {
+    let named = found.sky.is_none() && matches!(found.token, Some((None, Some(_))));
+    mark.filter(|_| named).map(|mark| mark.0.as_str())
+}
+
 /// Shows the box with the name of what the pointer is over, or hides it. The
 /// full map names things itself, so the box hides while it is open.
 #[allow(clippy::too_many_arguments)]
@@ -45,6 +52,8 @@ pub(super) fn show_name(
     full: Res<FullMap>,
     hovered: Res<HoveredToken>,
     tokens: Query<(Option<&Portal>, Option<&HoverName>)>,
+    marks: Query<&StaffMark>,
+    mut picture: Single<&mut Node, (With<HoverMark>, Without<HoverBox>)>,
     (sky, bag, place): (Res<HoveredInSky>, Res<HoveredBag>, Res<HoveredOnMap>),
     bottom_hud: Res<BottomHud>,
     mut holder: Single<(&mut Visibility, &mut Node), With<HoverBox>>,
@@ -55,16 +64,26 @@ pub(super) fn show_name(
     if node.bottom != px(lift) {
         node.bottom = px(lift);
     }
-    let name = (!full.open)
-        .then(|| {
-            name_of(Found {
-                sky: sky.0.as_deref(),
-                token: hovered.0.and_then(|token| tokens.get(token).ok()),
-                bag: bag.0.is_some(),
-                place: place.0.as_deref(),
-            })
-        })
-        .flatten();
+    let found = Found {
+        sky: sky.0.as_deref(),
+        token: hovered.0.and_then(|token| tokens.get(token).ok()),
+        bag: bag.0.is_some(),
+        place: place.0.as_deref(),
+    };
+    let mark = mark_of(found, hovered.0.and_then(|token| marks.get(token).ok()));
+    let name = (!full.open).then(|| name_of(found)).flatten();
+    let name = match (name, mark) {
+        (Some(name), Some(role)) => Some(format!("{name} ({role})")),
+        (name, _) => name,
+    };
+    let display = if mark.is_some() {
+        Display::Flex
+    } else {
+        Display::None
+    };
+    if picture.display != display {
+        picture.display = display;
+    }
     shown_now.set_if_neq(if name.is_some() {
         Visibility::Inherited
     } else {

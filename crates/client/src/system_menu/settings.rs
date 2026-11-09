@@ -9,6 +9,7 @@ mod gameplay;
 mod ironman;
 mod keep;
 mod rows;
+mod shown_role;
 mod video;
 
 pub(super) use controls::{TakenKeys, fill_controls_page, forget_taken, use_controls_page};
@@ -16,6 +17,7 @@ pub(super) use difficulty::use_difficulty;
 pub(super) use gameplay::{fill_gameplay_page, use_gameplay_page};
 pub(super) use ironman::spawn_ironman_requester;
 pub(super) use keep::{VideoTrial, run_trial, spawn_keep_requester};
+pub(super) use shown_role::{ShownAs, keep_shown_role, use_shown_role};
 pub(super) use video::{VideoForm, VideoShown, fill_video_page, use_video_options, use_video_page};
 
 use bevy::prelude::*;

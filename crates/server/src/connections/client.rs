@@ -31,7 +31,7 @@ impl Client {
             link,
             // Playing a character without logging in: a test's.
             host: character_id.is_some(),
-            held: None,
+            role: Default::default(),
             asked_online: None,
             phase: Phase::Greeting,
             makes_characters: false,
@@ -51,6 +51,7 @@ impl Client {
             seen_entities: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
             seen_worn: BTreeMap::new(),
+            seen_marks: BTreeMap::new(),
             sheet: Sheet::default(),
             action_bar: Default::default(),
             gates: BTreeSet::new(),
@@ -186,6 +187,7 @@ impl Client {
                 playtime: self.activity.played,
                 action_bar: self.action_bar.clone(),
                 difficulty: self.difficulty,
+                shown_as: self.shown_to_save(),
             },
         );
         self.unsaved = false;
@@ -215,7 +217,7 @@ impl Client {
         let fresh = Client::new(link, None);
         let kept = (self.host, self.account, self.world, self.makes_characters);
         *self = Client {
-            held: self.held.take(),
+            role: std::mem::take(&mut self.role),
             host: kept.0,
             account: kept.1,
             world: kept.2,

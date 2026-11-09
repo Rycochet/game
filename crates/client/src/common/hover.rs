@@ -9,6 +9,13 @@ use shared::protocol::SeenPoi;
 #[derive(Component, Clone, Debug, PartialEq, Eq)]
 pub struct HoverName(pub String);
 
+/// Another player shown as a marked role (`shared::role::is_marked`): what
+/// the role is called, shown after their name with the staff mark before it.
+/// Names can only hold letters, digits, spaces, `'` and `-`, so the mark, a
+/// picture, can't be faked.
+#[derive(Component, Clone, Debug, PartialEq, Eq)]
+pub struct StaffMark(pub String);
+
 /// The name of the place on the site's map the pointer is over, such as a
 /// building's door or stairs. Set by `dungeon_map`.
 #[derive(Resource, Default, Clone, Debug, PartialEq, Eq)]

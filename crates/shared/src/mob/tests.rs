@@ -138,6 +138,7 @@ fn a_look_reads_back_from_a_message() {
         x: -2,
         y: 3,
         worn: Vec::new(),
+        mark: None,
     };
     let bytes = postcard::to_allocvec(&look).unwrap();
     assert_eq!(postcard::from_bytes::<EntityLook>(&bytes).unwrap(), look);

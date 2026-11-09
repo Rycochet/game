@@ -53,6 +53,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::DeleteCharacter {
             id: CharacterId(crate::id::Id::for_test(2)),
         },
+        ClientMessage::ShowRoleAs(crate::role::RoleId::new(crate::role::PLAYER)),
         ClientMessage::CreateCharacter(super::NewCharacter {
             name: "Some One".into(),
             kind: CreatureKind::Kobold,
@@ -275,7 +276,12 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 grants: [crate::role::RoleId::new(crate::role::MODERATED)].into(),
                 appears_as: Default::default(),
             },
+            shown: crate::role::ShownRole {
+                current: crate::role::RoleId::new(crate::role::PLAYER),
+                choices: Vec::new(),
+            },
         },
+        ServerMessage::ShownRole(crate::role::ShownRole::default()),
         ServerMessage::ForgetWorldMap,
         ServerMessage::Hour(6),
         ServerMessage::Lightning {
@@ -428,6 +434,11 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             x: 3,
             y: -4,
             worn: Vec::new(),
+            mark: Some(crate::role::RoleBadge {
+                id: crate::role::RoleId::new(crate::role::MODERATOR),
+                name: "Moderator".into(),
+                title: None,
+            }),
         }),
         ServerMessage::EntityMoved {
             id: Id(uuid::Uuid::from_u128(4)),

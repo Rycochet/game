@@ -241,6 +241,9 @@ pub struct EntityLook {
     pub y: i64,
     /// What can be seen of what it wears, innermost first, for its picture.
     pub worn: Vec<WornLook>,
+    /// Another player's character shown as a marked role
+    /// (`role::is_marked`): its badge, for the mark before its name.
+    pub mark: Option<crate::role::RoleBadge>,
 }
 
 #[cfg(test)]
