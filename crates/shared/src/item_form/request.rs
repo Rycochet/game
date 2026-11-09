@@ -8,6 +8,7 @@ use crate::footwear::FootwearPiece;
 use crate::item::ItemKind;
 use crate::item_form::{Cut, Limits};
 use crate::material::Material;
+use crate::underclothes::UnderPiece;
 
 /// What a new item must be like. Anything left `None` is rolled as usual, so
 /// `RollRequest::NONE` rolls exactly what `give_form` does.
@@ -113,7 +114,7 @@ impl RollRequest {
 /// The options a kind of item takes; none for kinds without a form.
 pub fn fields(kind: ItemKind) -> &'static [Field] {
     use Field::*;
-    if FootwearPiece::of(kind).is_some() {
+    if FootwearPiece::of(kind).is_some() || UnderPiece::of(kind).is_some() {
         return &[Material, Dye];
     }
     if kind.blade_family().is_some() {

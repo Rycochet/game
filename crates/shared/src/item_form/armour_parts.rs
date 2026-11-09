@@ -61,6 +61,7 @@ impl ItemForm {
                 form.upper = material;
                 form.sole = sole_of(form.build, material);
             }
+            Self::Under(form) => form.material = material,
             _ => return false,
         }
         self.keep_if_allowed(tried, piece)
@@ -107,6 +108,7 @@ impl ItemForm {
             Self::Feet(form) => vec![form.cloth.as_mut()],
             Self::Neck(form) => vec![form.cloth.as_mut()],
             Self::Footwear(form) => vec![Some(&mut form.dye)],
+            Self::Under(form) => vec![Some(&mut form.dye)],
             Self::Set(set) => {
                 let set = &mut **set;
                 let mut dyes = vec![set.torso.cover.as_mut(), set.torso.lacing.as_mut()];
@@ -138,6 +140,7 @@ impl ItemForm {
             (Self::Feet(form), _) => form.allowed(),
             (Self::Neck(form), _) => form.allowed(),
             (Self::Footwear(form), _) => form.allowed(),
+            (Self::Under(form), _) => form.allowed(),
             (Self::Set(form), _) => form.allowed(),
             _ => false,
         };

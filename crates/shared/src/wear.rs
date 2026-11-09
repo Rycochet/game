@@ -111,10 +111,10 @@ fn coverage(item: &Item) -> Vec<(Location, Layer)> {
     let Some(wear) = item.kind.def().wear else {
         return Vec::new();
     };
-    let own = wear
-        .locations
-        .iter()
-        .map(|&location| (location, wear.layer));
+    let own = item
+        .worn_locations()
+        .into_iter()
+        .map(|location| (location, wear.layer));
     let padding = item
         .padded()
         .iter()
@@ -128,3 +128,5 @@ mod death_tests;
 mod swap_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod under_tests;

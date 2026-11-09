@@ -67,7 +67,12 @@ pub(super) fn give_first_clothes(inventory: &mut Inventory, made_at: MadeAt) {
     if std::mem::replace(&mut inventory.outfitted, true) {
         return;
     }
-    for kind in [ItemKind::TShirt, ItemKind::Trousers, ItemKind::Shoes] {
+    for kind in [
+        ItemKind::Shirt,
+        ItemKind::Braies,
+        ItemKind::Trousers,
+        ItemKind::Shoes,
+    ] {
         // Straight on, as the inventory may be full. Only for bodies they fit: other
         // kinds of creature start with none.
         if inventory.creature == shared::creature::CreatureKind::Human {

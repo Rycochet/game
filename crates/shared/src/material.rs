@@ -14,7 +14,8 @@ pub enum Category {
     Metal,
     /// Plant stuff other than timber: rattan, cork.
     Plant,
-    /// Cloth and the fibres it is woven from.
+    /// Cloth and the fibres it is woven from: linen, hemp and ramie from plants,
+    /// wool and haircloth (goat or horse hair) from animals, silk, cotton, felt.
     Textile,
     Wood,
 }
@@ -42,7 +43,9 @@ pub enum Material {
     Fur,
     Garnet,
     Gold,
+    Haircloth,
     HardenedLeather,
+    Hemp,
     Horn,
     Iron,
     Leather,
@@ -50,6 +53,7 @@ pub enum Material {
     Mithril,
     Onyx,
     Peridot,
+    Ramie,
     Rattan,
     Rawhide,
     Ruby,
@@ -66,7 +70,7 @@ pub enum Material {
 
 impl Material {
     /// Every material, alphabetically by name.
-    pub const ALL: [Self; 40] = [
+    pub const ALL: [Self; 43] = [
         Self::Adamantine,
         Self::Amethyst,
         Self::Aquamarine,
@@ -87,7 +91,9 @@ impl Material {
         Self::Fur,
         Self::Garnet,
         Self::Gold,
+        Self::Haircloth,
         Self::HardenedLeather,
+        Self::Hemp,
         Self::Horn,
         Self::Iron,
         Self::Leather,
@@ -95,6 +101,7 @@ impl Material {
         Self::Mithril,
         Self::Onyx,
         Self::Peridot,
+        Self::Ramie,
         Self::Rattan,
         Self::Rawhide,
         Self::Ruby,
@@ -146,7 +153,9 @@ impl Material {
             Self::Fur => "Fur",
             Self::Garnet => "Garnet",
             Self::Gold => "Gold",
+            Self::Haircloth => "Haircloth",
             Self::HardenedLeather => "Hardened Leather",
+            Self::Hemp => "Hemp",
             Self::Horn => "Horn",
             Self::Iron => "Iron",
             Self::Leather => "Leather",
@@ -154,6 +163,7 @@ impl Material {
             Self::Mithril => "Mithril",
             Self::Onyx => "Onyx",
             Self::Peridot => "Peridot",
+            Self::Ramie => "Ramie",
             Self::Rattan => "Rattan",
             Self::Rawhide => "Rawhide",
             Self::Ruby => "Ruby",
@@ -188,85 +198,21 @@ impl Material {
             | Self::Silver
             | Self::Steel => Category::Metal,
             Self::Coir | Self::Cork | Self::Rattan | Self::Straw => Category::Plant,
-            Self::Cotton | Self::Felt | Self::Linen | Self::Silk | Self::Wool => Category::Textile,
+            Self::Cotton
+            | Self::Felt
+            | Self::Haircloth
+            | Self::Hemp
+            | Self::Linen
+            | Self::Ramie
+            | Self::Silk
+            | Self::Wool => Category::Textile,
             Self::Wood => Category::Wood,
             _ => Category::Gem,
         }
     }
-
-    /// How fine it is within its category, from 1. A first guess that rolls lean on.
-    pub fn tier(self) -> u64 {
-        match self {
-            Self::Amethyst
-            | Self::Bone
-            | Self::Brass
-            | Self::Citrine
-            | Self::Coir
-            | Self::Copper
-            | Self::Cork
-            | Self::Cotton
-            | Self::Felt
-            | Self::Garnet
-            | Self::Horn
-            | Self::Leather
-            | Self::Linen
-            | Self::Onyx
-            | Self::Peridot
-            | Self::Rattan
-            | Self::Rawhide
-            | Self::Straw
-            | Self::Wood
-            | Self::Wool => 1,
-            Self::Aquamarine
-            | Self::Bronze
-            | Self::BuffLeather
-            | Self::Chitin
-            | Self::Fur
-            | Self::HardenedLeather
-            | Self::Iron
-            | Self::Suede
-            | Self::Topaz => 2,
-            Self::Emerald
-            | Self::Ruby
-            | Self::Sapphire
-            | Self::Silk
-            | Self::Silver
-            | Self::Steel => 3,
-            Self::Adamantine | Self::Diamond | Self::DragonScale | Self::Gold | Self::Mithril => 4,
-        }
-    }
-
-    /// How heavy it is, as tenths of a gram for each cubic centimetre. A first guess.
-    pub fn density(self) -> u32 {
-        match self {
-            Self::Cork | Self::Straw => 2,
-            Self::Felt => 3,
-            Self::Rattan => 5,
-            Self::Wood => 7,
-            Self::Coir => 12,
-            Self::Suede => 8,
-            Self::BuffLeather | Self::Fur | Self::Leather => 9,
-            Self::Rawhide => 12,
-            Self::HardenedLeather => 11,
-            Self::Chitin | Self::Horn | Self::Silk | Self::Wool => 13,
-            Self::Cotton | Self::Linen => 15,
-            Self::Bone => 19,
-            Self::DragonScale => 20,
-            // Half the weight of steel, as the stories have it.
-            Self::Mithril => 39,
-            Self::Steel => 78,
-            Self::Iron => 79,
-            Self::Brass => 85,
-            Self::Bronze => 88,
-            // Heavier and harder than steel, as the stories have it.
-            Self::Adamantine => 95,
-            Self::Copper => 90,
-            Self::Silver => 105,
-            Self::Gold => 193,
-            _ => 35,
-        }
-    }
 }
+
+mod properties;
 
 #[cfg(test)]
 mod tests;

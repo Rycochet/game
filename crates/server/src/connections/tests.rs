@@ -223,7 +223,12 @@ fn a_character_is_told_what_they_carry_on_joining() {
     let kinds: Vec<_> = first.worn.iter().map(|item| item.kind).collect();
     assert_eq!(
         kinds,
-        [ItemKind::TShirt, ItemKind::Trousers, ItemKind::Shoes]
+        [
+            ItemKind::Shirt,
+            ItemKind::Braies,
+            ItemKind::Trousers,
+            ItemKind::Shoes
+        ]
     );
 }
 

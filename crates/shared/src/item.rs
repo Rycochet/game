@@ -26,6 +26,7 @@ mod secrets;
 mod set_def;
 mod shape;
 mod stack;
+mod under_def;
 
 pub use category::ItemCategory;
 pub use drop::{Drop, ODDS_OUT_OF, roll_drop};

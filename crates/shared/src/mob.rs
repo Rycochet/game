@@ -86,11 +86,11 @@ const GEAR_ROLLS: i64 = 1000;
 fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
     use ItemKind::{
         Apple, Axe, Belt, Boomerang, Boots, Cloak, Coin, Dagger, FullArmour, Gloves, Hat, Knife,
-        Longsword, Pouch, Sandals, Shoes, ShortSword, Socks, Spear, Stone, Sword, TShirt, Trousers,
+        Longsword, Pouch, Sandals, Shirt, Shoes, ShortSword, Socks, Spear, Stone, Sword, Trousers,
     };
     match kind {
         CreatureKind::Beggar => &[
-            (100, &[(TShirt, 1)]),
+            (100, &[(Shirt, 1)]),
             (100, &[(Trousers, 1)]),
             (50, &[(Shoes, 2), (Sandals, 1), (Socks, 1), (Hat, 1)]),
             (40, &[(Apple, 1), (Coin, 2), (Stone, 1)]),
@@ -103,7 +103,7 @@ fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
             (30, &[(Coin, 2), (Stone, 2), (Pouch, 1)]),
         ],
         CreatureKind::Kobold => &[
-            (50, &[(TShirt, 1), (Trousers, 1)]),
+            (50, &[(Shirt, 1), (Trousers, 1)]),
             // On their toes, so no boots.
             (30, &[(Gloves, 1), (Hat, 1)]),
             (
@@ -113,7 +113,7 @@ fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
             (30, &[(Coin, 2), (Stone, 2), (Apple, 1), (Pouch, 1)]),
         ],
         CreatureKind::Goblin => &[
-            (50, &[(TShirt, 1), (Trousers, 1)]),
+            (50, &[(Shirt, 1), (Trousers, 1)]),
             (30, &[(Gloves, 1), (Boots, 1), (Hat, 1)]),
             (70, &[(Knife, 2), (Dagger, 2), (ShortSword, 1)]),
             (30, &[(Coin, 1), (Stone, 2), (Apple, 1), (Pouch, 1)]),

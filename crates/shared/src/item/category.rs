@@ -102,6 +102,14 @@ impl ItemKind {
             | Self::Clogs
             | Self::Slippers
             | Self::Socks
+            | Self::Shirt
+            | Self::Braies
+            | Self::BreastBand
+            | Self::Loincloth
+            | Self::Hose
+            | Self::Petticoat
+            | Self::LinenCoif
+            | Self::Wimple
             | Self::Surcoat
             | Self::TShirt
             | Self::Tabard

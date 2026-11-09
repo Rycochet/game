@@ -68,7 +68,7 @@ fn mobs_start_with_what_their_kind_can_have_and_animals_with_nothing() {
         assert!(roll_gear(&roll, CreatureKind::Chicken).is_empty());
         assert!(roll_gear(&roll, CreatureKind::Horse).is_empty());
         let beggar = roll_gear(&roll, CreatureKind::Beggar);
-        assert_eq!(beggar[0].0, ItemKind::TShirt);
+        assert_eq!(beggar[0].0, ItemKind::Shirt);
     }
     assert!((150..270).contains(&kobolds_armed), "{kobolds_armed}");
     assert!(qualities.contains(&Quality::Poor) && qualities.contains(&Quality::Rare));

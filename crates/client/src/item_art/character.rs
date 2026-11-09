@@ -103,7 +103,12 @@ fn piece_look(worn: &WornLook) -> Option<Look> {
             set: SetLook::new(**form, Hand::digits(worn.fingers), ANY),
             quality,
         },
-        ItemForm::Gem(_) | ItemForm::Ring(_) | ItemForm::Blade(_) | ItemForm::Key(_) => {
+        // Underclothes get their models in the next change; not drawn yet.
+        ItemForm::Gem(_)
+        | ItemForm::Ring(_)
+        | ItemForm::Blade(_)
+        | ItemForm::Key(_)
+        | ItemForm::Under(_) => {
             return None;
         }
     })
