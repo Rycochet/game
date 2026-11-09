@@ -4,7 +4,7 @@ use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
 
 use super::{Action, SystemMenu, show_ended_page};
-use crate::common::{ChosenServer, GameView, LoginChoice, Session, TouchGesture};
+use crate::common::{ChosenServer, GameView, LoginChoice, PlayFor, Session, TouchGesture};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::widgets::ButtonPressed;
@@ -27,6 +27,7 @@ pub(super) fn take_input(
     mut chosen: ResMut<ChosenServer>,
     mut exit: MessageWriter<AppExit>,
     mut login: MessageWriter<LoginChoice>,
+    mut play_for: ResMut<PlayFor>,
 ) {
     let at_start = !session.is_playing();
     if at_start && !menu.is_open() {
@@ -59,7 +60,11 @@ pub(super) fn take_input(
             exit.write(AppExit::Success);
             show_ended_page();
         }
-        (Action::Play, SystemMenu::Menu) if at_start => {
+        (Action::Play | Action::Characters, SystemMenu::Menu) if at_start => {
+            *play_for = match action {
+                Action::Characters => PlayFor::Choose,
+                _ => PlayFor::Latest,
+            };
             *session = Session::Playing;
             *menu = SystemMenu::Closed;
         }

@@ -30,6 +30,7 @@ use crate::common::{ChosenServer, CurrentWorld, Session};
 use crate::player::PlayerSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod characters;
 mod clock;
 mod connect;
 mod difficulty;
@@ -43,6 +44,7 @@ mod remember;
 mod saved_login;
 mod send;
 
+use characters::{answer_characters, choose_character, show_playable};
 use clock::{apply_pong, run_clock, send_local_pings, stop_game_time};
 #[cfg(target_arch = "wasm32")]
 use connect::pump_socket;
@@ -70,6 +72,7 @@ impl Plugin for ConnectionPlugin {
                 guest: None,
                 methods: Vec::new(),
                 tried_session: false,
+                offered: false,
                 retry: None,
             })
             .add_systems(
@@ -82,6 +85,7 @@ impl Plugin for ConnectionPlugin {
                         .run_if(|session: Res<Session>| session.is_playing()),
                     receive.run_if(resource_exists::<ServerConnection>),
                     answer_login.run_if(resource_exists::<ServerConnection>),
+                    answer_characters.run_if(resource_exists::<ServerConnection>),
                     stop_game_time,
                 )
                     .chain(),
@@ -94,6 +98,8 @@ impl Plugin for ConnectionPlugin {
                     difficulty::keep_difficulty,
                     choose_login,
                     show_account,
+                    choose_character,
+                    show_playable,
                 ),
             )
             .add_systems(

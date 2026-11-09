@@ -1,14 +1,14 @@
 # client: character_create
 
-The screen for making a new character: name, kind and its looks, and the three triangles choosing the nine attributes, each with a two-layer radar chart. Shown while the server waits for one (`common::MakingCharacter`); it sends `CreateCharacter` and nothing else. Choosing between characters is not here (later, before this screen).
+The screen for making a new character: name, kind and its looks, and the three triangles choosing the nine attributes, each with a two-layer radar chart. Shown while `common::MakingCharacter` is set ("+" on Character Select); it sends `CreateCharacter`, or on Cancel `common::CharacterChoice::CancelNew`. Choosing between characters is `character_select`'s.
 
 ## Files
 
 - `crates/client/src/character_create/mod.rs`: `CharacterCreatePlugin`, its systems' order.
 - `draft.rs`: `Draft` (resource: name, kind, appearance, `Build`, the triangle keys move), `playable`, `attributes` (`Attributes::for_kind`, as the server works it out), `choose_kind` (looks start again), `ready` (has a name), `message`.
-- `screen.rs`: `spawn_screen` (at start, hidden: a full-screen layer, depth 0, choices on the left and the 480-pixel picture on the right), markers, `FORM`.
+- `screen.rs`: `spawn_screen` (at start, hidden: a full-screen layer, depth 0, choices on the left ending in Begin and Cancel side by side, and the 480-pixel picture on the right), markers, `FORM`.
 - `looks.rs`: `spawn_looks` (a `widgets` colour picker for each trait whose choices are all colours, its label saying the chosen one by `show_look_labels`; a dropdown for the rest: height, hair style and beard), `PatternPictures` (each pattern's picture painted once: specks seeded, the same every time), `LookLabel`.
-- `form.rs`: `show_screen` (shown by `MakingCharacter`, a fresh `Draft` and the name box focused each time), `read_choices` (the name box, kind list, look lists and colour pickers), `fill_looks` (the kind's look lists, again on a new kind), `press_begin` (disabled without a name; sends and clears `MakingCharacter`), `LookList`.
+- `form.rs`: `show_screen` (shown by `MakingCharacter`, a fresh `Draft` and the name box focused each time), `read_choices` (the name box, kind list, look lists and colour pickers), `fill_looks` (the kind's look lists, again on a new kind), `press_begin` (Begin, disabled without a name, sends and clears `MakingCharacter`; Cancel sends `CharacterChoice::CancelNew`, back to Character Select or the startup menu), `LookList`.
 - `geometry.rs`: the chooser's units (a 0 to 1 square, y down): triangle middles by row and turn (Body at the top at 0, clockwise, as `shared::sheet::Build::points` counts), corners always the same way up (power at the top, finesse lower right, resistance lower left, owner 2026-11-06), the gaps between triangles (`gaps`), dots to places and back (`dot_at` clamps to the triangle and keeps the weights adding up), turning, charts, distances to shapes.
 - `picture.rs`: `paint` draws the picture pixel by pixel (`PIXELS` 640 square): the ring the triangles turn on, in a button's colour, with a curved two-headed arrow in each gap just inside it (`picture/ring.rs`), then each triangle, its axes, the chart of what it gives in the row's colour, the kind's bonus over it in gold, the outline (thicker for the triangle the keys move) and the dot as a ring. Each row's colour is `widgets::row_rgb`, shared with abilities' backgrounds.
 - `difficulty.rs`: the Difficulty dropdown (`DifficultyBox` holder after the looks, `fill_difficulty` makes it again when `PlayDifficulty::allowed` or the choice changes; disabled with only one), `choose_difficulty` (into `Draft::difficulty`; Ironman only after the requester's yes, `spawn_ironman_requester`, a dialog above the screen). `show_screen` starts the draft on `Preferences::difficulty`, or the nearest allowed.
@@ -22,15 +22,15 @@ The screen for making a new character: name, kind and its looks, and the three t
 
 ## Depends on
 
-- `common` (`MakingCharacter`, `PlayDifficulty`, `Preferences`, `difficulty_words`, `IRONMAN_QUESTION`, `UiPointer`, `TouchGesture`, `in_interface`), `connection` (`ToServer`), `widgets` (layer, text box, dropdowns, button, `TextFocus`, `UiId`), `shared::sheet`, `shared::creature`, `shared::protocol`.
+- `common` (`MakingCharacter`, `CharacterChoice`, `PlayDifficulty`, `Preferences`, `difficulty_words`, `IRONMAN_QUESTION`, `UiPointer`, `TouchGesture`, `in_interface`), `connection` (`ToServer`), `widgets` (layer, text box, dropdowns, button, `TextFocus`, `UiId`), `shared::sheet`, `shared::creature`, `shared::protocol`.
 
 ## Used by
 
-- Nothing directly. `connection` sets `MakingCharacter` on `Characters` with none to choose (on first joining, or after the debug menu's Delete Character, when the screen opens over the game and `player` takes no steps meanwhile); `loading_screen` leaves the input and hides its bar while it is set.
+- Nothing directly. `connection` sets `MakingCharacter` on `CharacterChoice::New` (from Character Select, which opens on first joining a server, or after the debug menu's Delete Character over the game, when `player` takes no steps meanwhile); `loading_screen` leaves the input and hides its bar while it is set.
 
 ## Notes
 
-- Widget ids: `character_create/name`, `/random_name`, `/kind`, `/look.<n>` (a colour picker or a dropdown), `/difficulty`, `/ironman.yes`, `/ironman.no`, `/begin`, `/triangles` (the picture, a `Pressable`).
+- Widget ids: `character_create/name`, `/random_name`, `/kind`, `/look.<n>` (a colour picker or a dropdown), `/difficulty`, `/ironman.yes`, `/ironman.no`, `/begin`, `/cancel`, `/triangles` (the picture, a `Pressable`).
 - The bonus layer is the shape round the three bonus points (each on its axis, a bonus of 0 at the middle) grown by a small radius, so it is always at least a round dot and only real bonuses push it out (owner, 2026-11-06). The dot is a ring so a dot in the middle doesn't hide it.
 - Charts reach their corners at `SHOWN_MOST` (250), the same for every kind, so kinds can be compared.
 - Drawing uses floats: it is only for showing. What is sent is the integer `Build`, and the server works out the attributes itself.

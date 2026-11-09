@@ -105,6 +105,9 @@ pub enum Look {
     /// A body part of the way to becoming another, bare, filling a square picture as
     /// a token's: a creature changing its kind.
     Morph(Box<super::MorphLook>),
+    /// A `Character`, drawn standing in a tall picture to the same scale as every
+    /// other playable kind's, so their heights can be compared (`portrait_look`).
+    Portrait(Box<Look>),
 }
 
 impl Look {
@@ -126,6 +129,7 @@ impl Look {
             Self::Set { set, .. } => set.cells,
             Self::Body { layout, .. } => super::body::cells(layout),
             Self::Character { .. } | Self::Morph(_) => super::character::CELLS,
+            Self::Portrait(_) => super::character::PORTRAIT_CELLS,
         }
     }
 

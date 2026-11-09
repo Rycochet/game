@@ -38,6 +38,9 @@ pub(super) struct LooksBox;
 pub(super) struct ValuesText;
 #[derive(Component)]
 pub(super) struct BeginButton;
+/// Back to where the player came from, making nothing.
+#[derive(Component)]
+pub(super) struct CancelButton;
 /// The picture of the triangles, which takes presses on them.
 #[derive(Component)]
 pub(super) struct Chooser(pub Handle<Image>);
@@ -143,19 +146,35 @@ fn spawn_choices(column: &mut ChildSpawnerCommands, draft: &Draft) {
             ..default()
         },
     ));
-    spawn_button(
-        column,
-        ButtonState::Disabled,
-        "Begin",
-        TextSize::Large,
-        Node::default(),
-    )
-    .insert((
-        BeginButton,
-        ButtonStyle::Main,
-        Pressable,
-        UiId::new(FORM, "begin"),
-    ));
+    column
+        .spawn(Node {
+            column_gap: px(8),
+            ..default()
+        })
+        .with_children(|row| {
+            let grows = || Node {
+                flex_grow: 1.0,
+                ..default()
+            };
+            spawn_button(
+                row,
+                ButtonState::Disabled,
+                "Begin",
+                TextSize::Large,
+                grows(),
+            )
+            .insert((
+                BeginButton,
+                ButtonStyle::Main,
+                Pressable,
+                UiId::new(FORM, "begin"),
+            ));
+            spawn_button(row, ButtonState::Normal, "Cancel", TextSize::Large, grows()).insert((
+                CancelButton,
+                Pressable,
+                UiId::new(FORM, "cancel"),
+            ));
+        });
 }
 
 /// The right: the triangles' picture, with their corners' names over it.

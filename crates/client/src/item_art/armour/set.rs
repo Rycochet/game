@@ -99,9 +99,23 @@ pub(in crate::item_art) fn set_parts(
 
 /// Parts built on a frame, turned as a body is seen and fitted to these cells.
 pub(in crate::item_art) fn fit(
+    pieces: Coloured,
+    cells: (u8, u8),
+    turned: f32,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) -> Vec<Part> {
+    fit_standing(pieces, cells, turned, None, meshes, materials)
+}
+
+/// As `fit`, or with `scale` (the share of the picture's height a millimetre
+/// takes), drawn at that scale standing on the picture's floor instead, unless
+/// it would overflow: every character to the same scale.
+pub(in crate::item_art) fn fit_standing(
     mut pieces: Coloured,
     cells: (u8, u8),
     turned: f32,
+    scale: Option<f32>,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
@@ -123,8 +137,17 @@ pub(in crate::item_art) fn fit(
     let world_per_pixel = VIEW_WIDTH / (wide.max(long) * PIXELS_PER_CELL);
     let room = |cells: f32| (cells * PIXELS_PER_CELL - 2.0 * MARGIN_PIXELS) * world_per_pixel;
     let size = high - low;
-    let scale = (room(long) / size.y).min(room(wide) / size.x);
-    let middle = (low + high) / 2.0;
+    let filling = (room(long) / size.y).min(room(wide) / size.x);
+    let mut middle = (low + high) / 2.0;
+    let scale = match scale {
+        Some(share) => {
+            let scale = (share * room(long)).min(filling);
+            // Feet on the floor: the middle moved up so the lowest point is there.
+            middle.y = low.y + room(long) / scale / 2.0;
+            scale
+        }
+        None => filling,
+    };
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
     pieces
         .into_iter()

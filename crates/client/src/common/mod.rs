@@ -4,10 +4,12 @@
 //! feature modules belong here. See `docs/context/client/common.md`.
 
 mod browser;
+mod characters;
 pub mod controls;
 mod floors;
 mod hosting;
 mod hover;
+mod local_time;
 mod login;
 pub use controls::{Action, Binding, Controls, Group, Mods};
 mod preferences;
@@ -55,6 +57,7 @@ mod window_save;
 mod world;
 
 pub use browser::open_in_browser;
+pub use characters::{CharacterChoice, CharacterSelect, PlayFor, PlayableHere};
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{
     AbilitiesPage, CancelledEnergy, CarryLimit, MakesCharacters, MakingCharacter, Other,
@@ -76,6 +79,7 @@ pub use items::{
     StockCell, TakesGifts, TookItem, quality_colour,
 };
 pub use lightning::{BoltStruck, Lightning, LightningStrike};
+pub use local_time::local_date_time;
 pub use login::{AccountEmail, LoggingIn, LoginChoice, LoginProvider};
 pub use map::{
     Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, WorldReturn,
@@ -155,6 +159,10 @@ impl Plugin for CommonPlugin {
             .init_resource::<Sneaking>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
+            .init_resource::<CharacterSelect>()
+            .init_resource::<PlayFor>()
+            .init_resource::<PlayableHere>()
+            .add_message::<CharacterChoice>()
             .init_resource::<LoggingIn>()
             .init_resource::<AccountEmail>()
             .add_message::<LoginChoice>()

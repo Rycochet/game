@@ -26,6 +26,9 @@ pub(super) struct Connecting {
     pub(super) methods: Vec<shared::protocol::LoginMethod>,
     /// Whether the kept account's session was tried, so a refusal forgets it.
     pub(super) tried_session: bool,
+    /// Whether the server has offered characters since connecting: only its
+    /// first offer may be played at once (`characters`).
+    pub(super) offered: bool,
     /// Counting down to the next try; `None` to try now.
     pub(super) retry: Option<Timer>,
 }
@@ -105,6 +108,7 @@ pub(super) fn connect(world: &mut World) {
         difficulty: world.resource::<Preferences>().difficulty,
     });
     world.insert_resource(connection);
+    world.resource_mut::<Connecting>().offered = false;
     // Steps start again from the server's word.
     world.insert_resource(Prediction::default());
 }
@@ -121,6 +125,7 @@ pub(super) fn hang_up(commands: &mut Commands) {
     commands.remove_resource::<ServerConnection>();
     // A character half made is asked for again on connecting again.
     commands.insert_resource(crate::common::MakingCharacter(false));
+    commands.insert_resource(crate::common::CharacterSelect::default());
     commands.insert_resource(crate::common::LoggingIn::Not);
     commands.insert_resource(crate::common::PlayDifficulty::default());
     #[cfg(target_arch = "wasm32")]

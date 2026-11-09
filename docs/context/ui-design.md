@@ -20,7 +20,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Button | have | Normal, selected, active, disabled. A main style (one per area) and a quiet one with no box until hovered. No spinner. |
+| Button | have | Normal, selected, active, disabled. A main style (one per area), a quiet one with no box until hovered, and a red danger one for what can't be undone (Delete), always asked about in a requester. No spinner. |
 | Hold button | have | A button pressed only while held by the mouse or a finger, let go when the pointer slides off or lets go (the movement pad). |
 | Icon button | have | Square, with padding and an optional tooltip naming it. |
 | Small icon button | have | 22 px, for controls on the edge of something, such as the sort and filter buttons above a grid. An icon dropdown is one, opening a list of options with their pictures, some greyed. |

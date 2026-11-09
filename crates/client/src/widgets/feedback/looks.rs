@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::super::theme::{MAIN_BACKGROUND, PARCHMENT, RIPPLE};
+use super::super::theme::{DANGER_BACKGROUND, LIT_EDGE, MAIN_BACKGROUND, PARCHMENT, RIPPLE};
 use super::super::{ButtonState, INK, raised_border, sunken_border};
 use super::{DARKER_WHEN_PRESSED, LIGHTER_WHEN_HOVERED, RIPPLE_SECONDS};
 
@@ -17,6 +17,8 @@ pub enum ButtonStyle {
     Quiet,
     /// A tab: when chosen, of a piece with the panel below it.
     Folder,
+    /// Destroys something that can't be had back (Delete): red.
+    Danger,
 }
 
 /// The name of a button that only shows a picture, for hovering over it.
@@ -74,6 +76,10 @@ pub(super) fn look(
         match style {
             ButtonStyle::Plain | ButtonStyle::Folder => {}
             ButtonStyle::Main => background = MAIN_BACKGROUND,
+            ButtonStyle::Danger => {
+                background = DANGER_BACKGROUND;
+                text = LIT_EDGE;
+            }
             ButtonStyle::Quiet if touch == Touch::Away => {
                 background = Color::NONE;
                 border = BorderColor::from(Color::NONE);

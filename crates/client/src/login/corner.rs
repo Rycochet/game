@@ -33,7 +33,8 @@ pub(super) fn spawn_corner(mut commands: Commands) {
     ));
 }
 
-/// Shows the account at the startup menu and while making a character.
+/// Shows the account at the startup menu and while making a character (only
+/// there: CLAUDE.md's rule on email addresses).
 pub(super) fn show_corner(
     email: Res<AccountEmail>,
     session: Res<Session>,

@@ -13,7 +13,10 @@ use crate::common::{CarryLimit, OwnVitals, PlayerGait, PlayerSpeed, SheetText};
 use crate::connection::FromServer;
 use crate::inventory::Carried;
 
+mod listed;
 mod vitals_lines;
+
+pub use listed::describe_listed;
 
 use vitals_lines::vitals_lines;
 

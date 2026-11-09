@@ -20,6 +20,7 @@ fn test_app(menu: SystemMenu) -> App {
         .init_resource::<FullMap>()
         .insert_resource(Session::Playing)
         .init_resource::<ChosenServer>()
+        .init_resource::<crate::common::PlayFor>()
         .insert_resource(menu);
     app
 }
@@ -151,4 +152,20 @@ fn logging_out_goes_back_to_the_startup_menu() {
     assert_eq!(press(&mut app, Action::LogOut), SystemMenu::Menu);
     assert_eq!(session(&app), Session::AtStart);
     assert_eq!(press_escape(&mut app), SystemMenu::Menu);
+}
+
+#[test]
+fn characters_connects_to_choose_and_play_to_play_the_latest() {
+    use crate::common::PlayFor;
+    let mut app = at_start();
+    press_escape(&mut app);
+    assert_eq!(press(&mut app, Action::Characters), SystemMenu::Closed);
+    assert_eq!(session(&app), Session::Playing);
+    assert_eq!(*app.world().resource::<PlayFor>(), PlayFor::Choose);
+
+    let mut app = at_start();
+    app.insert_resource(PlayFor::Choose);
+    press_escape(&mut app);
+    assert_eq!(press(&mut app, Action::Play), SystemMenu::Closed);
+    assert_eq!(*app.world().resource::<PlayFor>(), PlayFor::Latest);
 }

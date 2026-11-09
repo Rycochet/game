@@ -5,7 +5,15 @@ nav_order: 4.2
 
 # Making a character
 
-The first time you play, as a guest or on your own, you make your character before you arrive in the world. You choose a name (one is suggested for your kind, and the button beside it suggests another), what kind of creature you are, how you look, and what your body, mind and spirit are like. For now each player has one character.
+You make a character with the + on the Characters screen, which opens by itself the first time you play on a server. You choose a name (one is suggested for your kind, and the button beside it suggests another), what kind of creature you are, how you look, and what your body, mind and spirit are like, then press Begin. Cancel goes back without making anything.
+
+On your own you can have up to 8 characters, and so can an account on a server. A guest has only one.
+
+## Choosing a character
+
+Characters on the startup menu shows your characters on the server Play goes to, the one you played last first, each drawn to the same scale, so a kobold stands much shorter than a minotaur. Under each is its name and when you last played it. Choose one to see what it is like and when you made it, then press Play. Delete removes the chosen character for good, after asking you first. Cancel goes back to the startup menu.
+
+Play on the startup menu goes straight back to the character you played last on that server. It is greyed out until you have a character there.
 
 ## Kind and looks
 
