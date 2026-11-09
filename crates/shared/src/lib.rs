@@ -32,6 +32,7 @@ pub mod protocol;
 pub mod river;
 pub mod rng;
 pub mod road;
+pub mod role;
 pub mod sheet;
 pub mod shop;
 pub mod showcase;

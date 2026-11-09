@@ -265,6 +265,16 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             dev_tools: true,
             can_pause: true,
             stacks: StackLimits::default(),
+            role: crate::role::RoleBadge {
+                id: crate::role::RoleId::new(crate::role::ADMIN),
+                name: "Admin".into(),
+                title: Some("Archmage".into()),
+            },
+            powers: crate::role::Powers {
+                permissions: [crate::role::Permission::LookUp].into(),
+                grants: [crate::role::RoleId::new(crate::role::MODERATED)].into(),
+                appears_as: Default::default(),
+            },
         },
         ServerMessage::ForgetWorldMap,
         ServerMessage::Hour(6),

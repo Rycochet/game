@@ -100,6 +100,8 @@ fn new_characters_arrive_through_a_world_gate() {
 fn dev_tools_are_ignored_where_not_allowed() {
     let mut test = TestClient::new();
     test.dev_tools = false;
+    // Not the host, who is the Owner and may use them anyway.
+    test.client.host = false;
     let arrived = test.client.world_position();
     assert!(
         test.send(&[ClientMessage::DevTeleport { x: 50, y: 0 }])

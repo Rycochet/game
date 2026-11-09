@@ -28,11 +28,17 @@ fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
     let world = ServerWorld::new(seed).info();
     // The clock has been running since the server started.
     let ServerMessage::Welcome {
-        time, server_clock, ..
+        time,
+        server_clock,
+        dev_tools,
+        role,
+        ..
     } = next_answer()
     else {
         panic!("no welcome");
     };
+    // Its player is its Owner, with the debug tools.
+    assert!(dev_tools && role.id.is(shared::role::OWNER), "{role:?}");
     let clock = time.minutes(server_clock);
     assert!((0.0..30.0).contains(&clock), "{clock}");
     let _ = world;

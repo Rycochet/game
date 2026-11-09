@@ -42,6 +42,7 @@ mod moving;
 mod new_character;
 mod playtime;
 mod roads;
+mod role;
 mod systems;
 mod visited_gates;
 mod vitals;
@@ -180,9 +181,11 @@ pub(crate) enum Phase {
 /// sent.
 pub struct Client {
     pub(crate) link: ServerLink,
-    /// The embedded server's own player (connected without logging in), who
-    /// keeps dev tools and pausing when others join, and may open it to them.
+    /// The embedded server's own player (connected without logging in): its
+    /// Owner, who may open it to others.
     pub(crate) host: bool,
+    /// Its account's role, once logged in (`role.rs`).
+    held: Option<crate::roles::Held>,
     /// What the host last asked of opening the server to others, not yet done.
     pub(crate) asked_online: Option<Option<shared::protocol::OnlineSettings>>,
     pub(crate) phase: Phase,

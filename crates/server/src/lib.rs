@@ -25,6 +25,7 @@ mod lets_encrypt;
 mod network;
 mod oidc;
 mod roads;
+mod roles;
 mod save_queue;
 mod saves;
 mod sites;
@@ -91,9 +92,13 @@ pub struct ServerPlugin {
 /// How a server is run.
 #[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct ServerOptions {
-    /// Whether clients may use developer tools (`DevEnterSite`): only for
-    /// the embedded single-player server.
+    /// Whether players and guests may use the debug tools too
+    /// (`HOW_DEBUG_TOOLS`), not only roles with the permission. The embedded
+    /// server's own player is its Owner, and so always may.
     pub dev_tools: bool,
+    /// Whether, while no account is the Owner, a claim code is made at start
+    /// (a networked server: the embedded server's own player is its Owner).
+    pub claims: bool,
     /// Whether the server stops (after saving) once its last client has
     /// left: the embedded server, whose one client is the game.
     pub exit_when_alone: bool,
@@ -117,15 +122,6 @@ pub struct ServerOptions {
     pub difficulties: Difficulties,
     /// Whether `HOW_DIFFICULTIES` set them, so the host can't change them.
     pub difficulties_fixed: bool,
-}
-
-impl ServerOptions {
-    /// Whether this client may use dev tools: on a server that allows them, its
-    /// host (the embedded server's own player) always, others unless it is an
-    /// embedded server open to other players.
-    pub(crate) fn dev_tools_for(&self, host: bool) -> bool {
-        self.dev_tools && (host || !self.online)
-    }
 }
 
 /// What the server calls itself (`HOW_SERVER_NAME`, or Server Options).
@@ -152,14 +148,23 @@ impl Plugin for ServerPlugin {
         };
         let worlds = ServerWorlds::start(self.world_seed, storage)
             .unwrap_or_else(|error| panic!("The server can't open its home world: {error}"));
+        let mut roles = match &self.data {
+            Some(data) => roles::Roles::open(data, storage::now())
+                .unwrap_or_else(|error| panic!("The server can't read its roles: {error}")),
+            None => roles::Roles::default(),
+        };
+        let claim = match self.options.claims {
+            true => roles
+                .start_claim()
+                .unwrap_or_else(|error| panic!("The server can't make a claim code: {error}")),
+            false => None,
+        };
         app.insert_resource(worlds)
             .insert_resource(self.options)
             .init_resource::<ServerName>()
-            .insert_resource(Connections::new(match queue {
-                Some(queue) => accounts::Accounts::new(queue),
-                None => accounts::Accounts::default(),
-            }))
+            .insert_resource(Connections::new(accounts::Accounts::new(queue, roles)))
             .add_systems(Startup, announce)
+            .add_systems(Startup, move || announce_claim(claim.as_deref()))
             .add_systems(
                 Update,
                 (
@@ -236,6 +241,15 @@ pub fn headless_app(world_seed: WorldSeed, options: ServerOptions, data: Option<
 fn exit_when_alone(connections: Res<Connections>, mut exit: MessageWriter<AppExit>) {
     if connections.is_empty() {
         exit.write(AppExit::Success);
+    }
+}
+
+/// Logged once logging has started (the plugin is built before it).
+fn announce_claim(code: Option<&str>) {
+    if let Some(code) = code {
+        warn!(
+            "This server has no Owner. Make a new character named {code} to become it (also in owner-claim.txt in the data folder)"
+        );
     }
 }
 

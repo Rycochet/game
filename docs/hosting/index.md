@@ -120,12 +120,38 @@ If the provider can't be reached when the server starts, or a setting is missing
 
 Players then choose Log in with Google or Play as Guest when they join. The page opens in their own browser, and once they have logged in there they go back to the game. Their game remembers the login, so they only see that page again after 90 days without playing, or after using Logout on the startup menu. Logins only go over a secure connection, so a server reached through an unsecured port offers guests only.
 
+## Roles
+
+Every account has a role, which decides what it may do beyond playing. A role can only be given by someone whose own role allows it, and never to yourself.
+
+| Role | What it may do |
+| ---- | -------------- |
+| Owner | Everything, always. A native client's own world is its player's. |
+| Admin | Everything except making Owners and Admins. |
+| Developer | The server's side of the [debug menu](../debug-menu), and nothing of moderation or accounts. |
+| Moderator | Moderating players (Moderated and Banned), finding characters by name and reading the audit log; let in when the server is full. |
+| Player | Playing. Every account starts as one. |
+| Moderated | Playing, with limits, usually for a time. |
+| Banned | Nothing: turned away when logging in, told why and until when. |
+| Guest | Playing. Every guest has this role, and guests can't be given another. |
+
+**Claiming your server:** a new server has no Owner. When it starts, it writes a claim code to its log and to `owner-claim.txt` in its data folder. Log in with an account (not as a guest) and make a new character with the code as its name: you become the Owner, no character is made, and the game goes back to its menu. Connect again to play. The code works once, and a new one is made each time the server starts until it is used.
+
+**Changing roles by hand:** roles are kept in `roles.ron` in the data folder. **Only edit it while the server is stopped**, as a running server writes over it. In it you can:
+
+- give an account a role, by its account id (from the server's log);
+- rename a role, or give it a `title` that is shown instead of its name;
+- change what each role may do, turning each permission on or off;
+- add roles of your own, with an id of lower case letters, digits, `-` and `_`.
+
+If the file can't be read, the server won't start, so nothing is lost. Each change the server makes keeps the previous file in `roles-backups/` (the last 10), and every role given, taken or run out is written to `audit.log`.
+
 ## Things to know
 
 - **Anyone who can reach the server can play as a guest,** unless `HOW_GUESTS` is `false` and a provider is set up. A guest gets their own character, tied to that browser or native client.
 - **A networked server never pauses.** The system menu (or a player's window going into the background) doesn't stop the world for anyone, whatever the settings, and nor does a native client's own server while Online is on: see [Pausing](../client#pausing).
 - **Hosting from the game itself:** a native client can open its own world to others with Online in the system menu, on one secure port (24691 unless Server Options says otherwise), with a certificate it makes. With UPnP turned on in Server Options (or `HOW_UPNP=true`), it asks your router to forward that port to the computer while it is online, and says there how that went and the address players on the internet connect to. Otherwise, or if the router has no UPnP or refuses, forward the port yourself. Windows may ask whether the game can use the network the first time: allow it, or the router's answer can't get through. If your internet provider shares one address between many homes, Server Options says so: no forwarding gets players through then. A standalone server is better for a world that is always there.
 - **Time stops only when the server does.** The server's clock is saved, and carries on from there next time. Every world's time goes by it, so a world nobody is in keeps its time going too.
-- **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the server's side of the [debug menu](../debug-menu).
+- **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the server's side of the [debug menu](../debug-menu). Give the Developer role to those who need it instead.
 - **Stopping:** the server saves everyone when asked to stop (`docker compose down`, Ctrl+C or SIGTERM).
 - **Health checks:** every port answers `/_healthz` with `200 ok` while the game is running, and `503` if it has stopped, even the plain port that otherwise only says to use the secure one. The Docker image checks it by itself (`docker ps` shows `healthy`), asking with the server's own `hall-of-worlds-server --health`, which needs no curl or wget. `/_version` says what the server is, as JSON, such as `{"game":"Hall of Worlds","version":"0.1.0","protocol":37}`.

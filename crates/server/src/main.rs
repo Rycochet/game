@@ -122,6 +122,7 @@ fn main() {
         WorldSeed::new(DEFAULT_WORLD_SEED),
         ServerOptions {
             dev_tools,
+            claims: true,
             exit_when_alone: false,
             pausable: false,
             guests,
@@ -188,7 +189,9 @@ fn main() {
     );
     bevy::log::info!("Saving in {}", data.display());
     if dev_tools {
-        bevy::log::warn!("Dev tools are on: anyone connected can teleport and change the world");
+        bevy::log::warn!(
+            "Debug tools are on for everyone (HOW_DEBUG_TOOLS): anyone connected can teleport and change the world"
+        );
     }
     app.run();
 }

@@ -809,6 +809,8 @@ fn heavy_loads_slow_a_character_and_dressing_takes_time() {
 fn giving_an_item_needs_dev_tools_and_room() {
     let mut test = TestClient::new();
     test.dev_tools = false;
+    // Not the host, who is the Owner and may use them anyway.
+    test.client.host = false;
     let give = give(ItemKind::Coin);
     assert!(test.send(std::slice::from_ref(&give)).is_empty());
 
@@ -1223,7 +1225,10 @@ fn guests_come_back_by_their_token_and_the_newest_connection_wins() {
     let seed = WorldSeed::new(1);
     let storage = crate::storage::Storage::in_folder(&folder.0, seed.id());
     let world = ServerWorld::open(seed, storage).unwrap();
-    let mut connections = Connections::new(Accounts::new(SaveQueue::in_folder(&folder.0)));
+    let mut connections = Connections::new(Accounts::new(
+        Some(SaveQueue::in_folder(&folder.0)),
+        Default::default(),
+    ));
     let (first, link) = local_pair();
     connections.add(link);
     first.send(&HELLO);

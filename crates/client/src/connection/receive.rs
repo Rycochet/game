@@ -75,6 +75,8 @@ pub(super) fn receive(
                 dev_tools,
                 can_pause,
                 stacks,
+                role,
+                powers,
             })) => {
                 let minutes = world_time.minutes(seconds);
                 server_dev_tools.0 = dev_tools;
@@ -117,6 +119,8 @@ pub(super) fn receive(
                     dev_tools,
                     can_pause,
                     stacks,
+                    role,
+                    powers,
                 }));
             }
             Ok(Some(ServerMessage::Online(state))) => {
