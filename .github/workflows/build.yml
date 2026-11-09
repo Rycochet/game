@@ -40,9 +40,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@v2
-      - uses: jetli/trunk-action@v0.5.1
-        with:
-          version: v0.22.1
+      # Trunk's release binary (its action still runs on Node 20). Keep the
+      # version the same as Dockerfile's and docker.yml's.
+      - name: Install Trunk
+        env:
+          TRUNK_VERSION: v0.22.1
+        run: |
+          file=trunk-x86_64-unknown-linux-gnu.tar.gz
+          url=https://github.com/trunk-rs/trunk/releases/download/$TRUNK_VERSION/$file
+          curl -fsSL -o "$file" "$url"
+          echo "$(curl -fsSL "$url.sha256")  $file" | sha256sum -c -
+          sudo tar -xzf "$file" -C /usr/local/bin trunk
+          rm "$file"
       - run: trunk build --release --cargo-profile web
       - run: cargo xtask compress-web dist
       - uses: actions/upload-artifact@v7
