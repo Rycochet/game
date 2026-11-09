@@ -177,7 +177,6 @@ fn place_camera_and_tokens(
     preferences: Res<Preferences>,
     grid: Res<ViewGrid>,
     heights: Res<WildCellHeights>,
-    assets: Res<TokenAssets>,
     positions: Query<(Option<&MapPosition>, &SmoothPosition)>,
     mut facing: ResMut<ViewFacing>,
     time: Res<Time>,
@@ -227,19 +226,14 @@ fn place_camera_and_tokens(
         transform.translation = Vec3::new(x * size, floor + token::HALF_THICKNESS, y * size);
     }
 
-    // Token views never rotate, so turning each anchor to the camera's
-    // rotation makes it face the screen; it sits above the token on screen,
-    // whatever the camera's angle.
+    // Token views never rotate, so turning each anchor about the vertical
+    // towards the camera makes it face the screen while standing upright.
     // Scaling the anchor scales its icon by the owner's `TokenSize`.
+    let rotation = TokenAssets::icon_rotation(camera.rotation);
     for (anchor, mut transform) in &mut anchors {
         let scale = anchor.scale();
-        transform.rotation = camera.rotation;
+        transform.rotation = rotation;
         transform.scale = Vec3::splat(scale);
-        transform.translation = assets.icon_offset(
-            camera.rotation,
-            orbit.shown_pitch(),
-            orbit.home_pitch(),
-            scale,
-        );
+        transform.translation = TokenAssets::icon_offset(scale);
     }
 }
