@@ -59,13 +59,16 @@ pub(super) fn show_menu(
 /// player's there; Characters at the startup menu, with that server there;
 /// Logout while playing on another computer's server, or at the startup menu
 /// with an account kept for this computer's own (`AccountEmail`: a browser's
-/// page's server); Connect... only usable at the startup menu.
+/// page's server); Online for this computer's own server (native) or, while
+/// playing on another, for staff who may lock it down; Connect... only usable
+/// at the startup menu.
 pub(super) fn show_buttons(
     session: Res<Session>,
     clock: Res<ServerClock>,
     account: Res<crate::common::AccountEmail>,
     playable: Res<crate::common::PlayableHere>,
     home: Res<crate::common::HomeServer>,
+    lockdown: Res<crate::common::Lockdown>,
     mut buttons: Query<(&MenuButton, &mut Node, &mut ButtonState)>,
 ) {
     let playing = session.is_playing();
@@ -89,8 +92,13 @@ pub(super) fn show_buttons(
                 true => !clock.local_server,
                 false => account.0.is_some(),
             },
-            // Its looks are `online::show_online`'s.
-            MenuButton::Online => true,
+            // Its looks are `online::show_online`'s. A browser has no server
+            // of its own; another computer's shows it only to its staff.
+            MenuButton::Online => match (playing, clock.local_server) {
+                (false, _) => !cfg!(target_arch = "wasm32"),
+                (true, true) => true,
+                (true, false) => lockdown.0.is_some(),
+            },
             MenuButton::Connect => {
                 // Log out first to go to another server.
                 state.set_if_neq(enabled(!playing));

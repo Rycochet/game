@@ -19,14 +19,13 @@ use crate::ground::GroundTold;
 use crate::sites::Visit;
 use crate::storage::CharacterWorldSave;
 
+mod action;
+mod action_bar;
+mod answer;
 mod answer_dev;
 mod answer_items;
 mod change_kind;
 mod characters;
-
-mod action;
-mod action_bar;
-mod answer;
 mod client;
 mod combat;
 mod delete_character;
@@ -38,6 +37,7 @@ mod give_items;
 mod heal;
 mod kick;
 mod lightning;
+pub(crate) mod lockdown;
 mod login;
 mod look_up;
 mod messages;
@@ -201,6 +201,8 @@ pub struct Client {
     role: role::RoleState,
     /// What the host last asked of opening the server to others, not yet done.
     pub(crate) asked_online: Option<Option<shared::protocol::OnlineSettings>>,
+    /// What it last asked of lockdown (`lockdown.rs`), not yet done.
+    asked_lockdown: Option<bool>,
     pub(crate) phase: Phase,
     /// It said it can make a character (`Hello`), so a new one is made by it.
     makes_characters: bool,
@@ -306,6 +308,8 @@ mod dev_skills_tests;
 mod difficulty_tests;
 #[cfg(test)]
 mod idle_tests;
+#[cfg(test)]
+mod lockdown_tests;
 #[cfg(test)]
 mod login_tests;
 #[cfg(test)]

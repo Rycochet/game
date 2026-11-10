@@ -15,7 +15,7 @@ pub use controls::{Action, Binding, Controls, Group, Mods};
 mod preferences;
 mod servers;
 pub use floors::{FirstFloor, OtherLevels};
-pub use hosting::Hosting;
+pub use hosting::{Hosting, Lockdown};
 #[cfg(not(target_arch = "wasm32"))]
 pub use preferences::client_file;
 pub use preferences::{CreateMobPrefs, DevAreaPrefs, InterfaceSize, Preferences};
@@ -141,6 +141,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<ServerStatus>()
             .init_resource::<Session>()
             .init_resource::<Hosting>()
+            .init_resource::<Lockdown>()
             .init_resource::<PlayDifficulty>()
             .init_state::<GameView>()
             .init_resource::<GameClock>()

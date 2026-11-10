@@ -157,6 +157,17 @@ pub(crate) fn answer(
             warn!("A client asked to open the server to others, which only its host may");
             true
         }
+        ClientMessage::SetLockdown(_)
+            if !options.lockable || !client.may(Permission::ServerOptions) =>
+        {
+            warn!("A client asked to change lockdown, which isn't possible here or for them");
+            true
+        }
+        ClientMessage::SetLockdown(on) => {
+            // For `lockdown::apply_lockdown`, which reaches everyone.
+            client.asked_lockdown = Some(on);
+            true
+        }
         ClientMessage::SetOnline(settings) => {
             // For `network::online`, which can reach the ports.
             client.asked_online = Some(settings);

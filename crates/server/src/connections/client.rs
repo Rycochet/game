@@ -33,6 +33,7 @@ impl Client {
             host: character_id.is_some(),
             role: Default::default(),
             asked_online: None,
+            asked_lockdown: None,
             phase: Phase::Greeting,
             makes_characters: false,
             world: None,

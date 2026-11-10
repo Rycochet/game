@@ -126,8 +126,8 @@ Every account has a role, which decides what it may do beyond playing. A role ca
 
 | Role | What it may do |
 | ---- | -------------- |
-| Owner | Everything, always. A native client's own world is its player's. |
-| Admin | Everything except making Owners and Admins. |
+| Owner | Everything, always, including lockdown. A native client's own world is its player's. |
+| Admin | Everything except making Owners and Admins, including lockdown. |
 | Developer | Every tool of the [debug menu](../debug-menu) except World Time and Freeze Mobs, and nothing of moderation or accounts. |
 | Moderator | Moderating players (Moderated and Banned), finding characters by name and reading the audit log; let in when the server is full. The debug menu's tools for looking after players: Show Debug Info, Teleport Mode, Teleport to World, God Mode, Truesight, Examine Mob with Kill and Destroy, Detect Mobs, and the doors' tools. |
 | Player | Playing. Every account starts as one. |
@@ -140,6 +140,8 @@ Every account has a role, which decides what it may do beyond playing. A role ca
 **Claiming your server:** a new server has no Owner. When it starts, it writes a claim code to its log and to `owner-claim.txt` in its data folder. Log in with an account (not as a guest) and make a new character with the code as its name: you become the Owner, no character is made, and the game goes back to its menu. Connect again to play. The code works once, and a new one is made each time the server starts until it is used.
 
 **Changing roles in the game:** staff whose role allows it have **Accounts...** in the debug menu while playing, under **Admin Tools**. Its **Find** page looks a character up by name and shows their account's role, and gives it another (one your role may give, for good or for an hour, a day, a week or 30 days, with a reason), or takes it away by giving Player. You can't change your own role, a guest's, or the role of anyone holding a role you couldn't give. **Roles** renames a role or gives it a title (by default only the Owner and Admins), and **Audit Log** shows what has been changed, newest first. Someone playing when their role changes gets the new one at once, and someone banned is sent away.
+
+**Lockdown:** a server can be locked down, so that only staff whose role may change Server Options (by default Owners and Admins) can play on it, for instance while fixing something. While playing there, they have **Online** in the system menu: ticked while everyone may play, and unticking it locks the server down, after asking. Anyone else playing is told the server is locked down and sent away, and anyone else logging in is turned away with the same words, until Online is ticked again. The server remembers it when restarted, and each change is written to `audit.log`. `HOW_LOCKDOWN` set to `true` (see [Server environment variables](../environment-variables)) starts it locked down.
 
 **Changing roles by hand:** roles are kept in `roles.ron` in the data folder. **Only edit it while the server is stopped**, as a running server writes over it. In it you can:
 

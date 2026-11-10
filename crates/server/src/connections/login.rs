@@ -13,7 +13,7 @@ use crate::oidc::Logins;
 use crate::roles::Held;
 use crate::storage::now;
 use crate::{ServerOptions, ServerWorld, ServerWorlds};
-use shared::role::BANNED;
+use shared::role::{BANNED, Permission};
 
 /// Logs in with what the client sent: `false` if it should be disconnected.
 pub(super) fn log_in(
@@ -76,6 +76,12 @@ pub(super) fn logged_in(
     if held.badge.id.is(BANNED) {
         info!("Account {} was turned away: banned", id.0);
         client.link.send(&ServerMessage::Refused(banned(&held)));
+        return false;
+    }
+    if options.lockdown && !held.powers.may(Permission::ServerOptions) {
+        info!("Account {} was turned away: locked down", id.0);
+        let reason = super::lockdown::LOCKED_DOWN.into();
+        client.link.send(&ServerMessage::Refused(reason));
         return false;
     }
     info!("Account {} logged in {how}", id.0);

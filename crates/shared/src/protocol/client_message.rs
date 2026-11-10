@@ -83,6 +83,10 @@ pub enum ClientMessage {
     /// `None`), answered with `Online`. Only the embedded server's own player
     /// may; others are ignored.
     SetOnline(Option<OnlineSettings>),
+    /// Locks a networked server down (only accounts with Server Options may
+    /// play; the others are sent away) or opens it again, answered with
+    /// `Lockdown` to everyone who may change it. Only for accounts that may.
+    SetLockdown(bool),
     /// Moves something the character carries to this place in this grid, turned
     /// this way, answered with `Inventory`, whether or not it could go.
     MoveItem {

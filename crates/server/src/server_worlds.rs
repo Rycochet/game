@@ -6,6 +6,8 @@
 use bevy::prelude::*;
 use shared::world::{WorldId, WorldSeed};
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use super::clock::{ActionClock, Repeating, ServerClock};
@@ -32,6 +34,9 @@ pub struct ServerWorlds {
     shared: Shared,
     /// The home world's saves (others' are the same, `for_world`).
     storage: Storage,
+    /// Whether the server is locked down, as saved with the clocks (the game
+    /// goes by `ServerOptions::lockdown`).
+    lockdown: Arc<AtomicBool>,
     /// Saves the server's clocks (`None`: nowhere to save them).
     _clock_saver: Option<Repeating>,
 }
@@ -40,24 +45,28 @@ impl ServerWorlds {
     /// The server's clocks as saved, and its home world, saved in `storage`
     /// (or new). An error if either can't be read.
     pub(crate) fn start(home: WorldSeed, storage: Storage) -> Result<Self, String> {
-        let (seconds, ticks) = match storage.load_server()? {
-            Some(save) => (save.clock, save.action_ticks),
+        let (seconds, ticks, lockdown) = match storage.load_server()? {
+            Some(save) => (save.clock, save.action_ticks, save.lockdown),
             // From before the server had clocks of its own: its one world kept
             // the action clock.
             None => (
                 0.0,
                 storage.load_world()?.map_or(0, |save| save.action_ticks),
+                false,
             ),
         };
         let shared = Shared::new(seconds, ticks);
         let world = ServerWorld::open_in(home, storage.clone(), &shared)?;
         let mut worlds = Self::with_home(world);
         worlds.storage = storage;
+        worlds.lockdown.store(lockdown, Ordering::Relaxed);
         worlds.save_server();
         worlds._clock_saver = worlds.storage.saves().then(|| {
             let (storage, shared) = (worlds.storage.clone(), worlds.shared.clone());
+            let lockdown = worlds.lockdown.clone();
             Repeating::start(CLOCK_SAVE_EVERY, move || {
-                save_server(&storage, &shared.clock, &shared.action_clock);
+                let lockdown = lockdown.load(Ordering::Relaxed);
+                save_server(&storage, &shared.clock, &shared.action_clock, lockdown);
             })
         });
         Ok(worlds)
@@ -72,6 +81,7 @@ impl ServerWorlds {
             storage: world.storage.clone(),
             open: BTreeMap::from([(home, world)]),
             empty_since: BTreeMap::new(),
+            lockdown: Arc::default(),
             _clock_saver: None,
         }
     }
@@ -210,16 +220,34 @@ impl ServerWorlds {
 
     /// Saves the server's clocks now.
     pub(crate) fn save_server(&self) {
-        save_server(&self.storage, &self.shared.clock, &self.shared.action_clock);
+        let lockdown = self.saved_lockdown();
+        save_server(
+            &self.storage,
+            &self.shared.clock,
+            &self.shared.action_clock,
+            lockdown,
+        );
+    }
+
+    /// Whether the server was locked down when it last saved (or since).
+    pub(crate) fn saved_lockdown(&self) -> bool {
+        self.lockdown.load(Ordering::Relaxed)
+    }
+
+    /// Keeps whether the server is locked down, saving it at once.
+    pub(crate) fn keep_lockdown(&self, on: bool) {
+        self.lockdown.store(on, Ordering::Relaxed);
+        self.save_server();
     }
 }
 
 /// Saves `server.ron`.
-fn save_server(storage: &Storage, clock: &ServerClock, action_clock: &ActionClock) {
+fn save_server(storage: &Storage, clock: &ServerClock, action_clock: &ActionClock, lockdown: bool) {
     storage.save_server(&ServerSave {
         format: SAVE_FORMAT,
         clock: clock.seconds(),
         action_ticks: action_clock.ticks(),
+        lockdown,
     });
 }
 

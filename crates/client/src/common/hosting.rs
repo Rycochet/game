@@ -1,5 +1,6 @@
 //! Opening this game's own server to other players (native only): whether it
-//! is, as the server last said.
+//! is, as the server last said; and whether a networked server is locked down,
+//! for its staff.
 
 use bevy::prelude::*;
 use shared::protocol::OnlineState;
@@ -14,3 +15,10 @@ impl Default for Hosting {
         Self(OnlineState::Offline)
     }
 }
+
+/// Whether the networked server being played on is locked down (only its staff
+/// may play), as it tells those who may change that
+/// (`ServerMessage::Lockdown`); `None` when not told, so their Online isn't
+/// shown. Set by `connection`, read by `system_menu`.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Lockdown(pub Option<bool>);

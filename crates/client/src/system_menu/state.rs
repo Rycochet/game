@@ -38,6 +38,12 @@ pub enum SystemMenu {
     GoingOffline,
     /// The menu, and above it why the server couldn't be opened to others.
     OnlineFailed,
+    /// The menu, and above it the requester asking whether to lock a networked
+    /// server down.
+    LockingDown,
+    /// The menu, and above it the requester asking whether to open a locked
+    /// down server to everyone again.
+    Reopening,
     /// The startup menu, and above it the warning that the game is drawn
     /// without a graphics card (`slow_drawing`).
     SlowDrawing,
@@ -76,6 +82,8 @@ impl SystemMenu {
                 | Self::GoingOnline
                 | Self::GoingOffline
                 | Self::OnlineFailed
+                | Self::LockingDown
+                | Self::Reopening
                 | Self::SlowDrawing,
                 Action::Back | Action::QuietSlowDrawing,
             ) => Self::Menu,
@@ -126,8 +134,8 @@ pub(super) enum Action {
     /// "Online": opens the built-in server to others, or closes it, asking
     /// first while playing on it.
     ToggleOnline,
-    /// The requester's yes, to letting others join or sending them away.
-    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    /// The requester's yes, to letting others join or sending them away, or
+    /// to locking a networked server down or opening it again.
     ReallyToggleOnline,
     /// The gear beside Online.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
@@ -192,7 +200,8 @@ pub(super) enum MenuButton {
     LogOut,
     /// Enabled only at the startup menu.
     Connect,
-    /// Native only: shows whether it is on.
+    /// Native at the startup menu and on this game's own server; on a
+    /// networked server only for staff who may lock it down.
     Online,
 }
 

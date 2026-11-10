@@ -122,6 +122,12 @@ pub struct ServerOptions {
     pub difficulties: Difficulties,
     /// Whether `HOW_DIFFICULTIES` set them, so the host can't change them.
     pub difficulties_fixed: bool,
+    /// Whether it can be locked down: a networked server (an embedded one goes
+    /// offline instead).
+    pub lockable: bool,
+    /// Whether it is locked down: only accounts with Server Options may play
+    /// (`connections::lockdown`). Set at start by `HOW_LOCKDOWN`, or as saved.
+    pub lockdown: bool,
 }
 
 /// What the server calls itself (`HOW_SERVER_NAME`, or Server Options).
@@ -160,8 +166,14 @@ impl Plugin for ServerPlugin {
                 .unwrap_or_else(|error| panic!("The server can't make a claim code: {error}")),
             false => None,
         };
+        let mut options = self.options;
+        options.lockdown = options.lockable && (options.lockdown || worlds.saved_lockdown());
+        worlds.keep_lockdown(options.lockdown);
+        if options.lockdown {
+            info!("Locked down: only staff with Server Options can play");
+        }
         app.insert_resource(worlds)
-            .insert_resource(self.options)
+            .insert_resource(options)
             .init_resource::<ServerName>()
             .insert_resource(Connections::new(
                 accounts::Accounts::new(queue, roles)
@@ -175,6 +187,7 @@ impl Plugin for ServerPlugin {
                     advance_action_clock,
                     connections::finish_logins,
                     connections::handle_messages,
+                    connections::lockdown::apply_lockdown,
                     connections::difficulty::apply_difficulties,
                     connections::send_roads,
                     connections::run_mobs,

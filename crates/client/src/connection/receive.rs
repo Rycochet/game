@@ -130,6 +130,9 @@ pub(super) fn receive(
                 server_clock.can_pause = !matches!(state, OnlineState::Online { .. });
                 hosting.0 = state;
             }
+            Ok(Some(ServerMessage::Lockdown(on))) => {
+                commands.insert_resource(crate::common::Lockdown(Some(on)));
+            }
             // On purpose: not worth trying again.
             Ok(Some(ServerMessage::GoingOffline(name))) => {
                 let reason =

@@ -104,6 +104,7 @@ fn main() {
     let guests = option_on("HOW_GUESTS", true);
     let guest_mode = option_on("HOW_GUEST_MODE", false);
     let dev_tools = option_on("HOW_DEBUG_TOOLS", false);
+    let lockdown = option_on("HOW_LOCKDOWN", false);
     let player_limit = match env::var("HOW_PLAYER_LIMIT") {
         Ok(limit) => limit.trim().parse().unwrap_or_else(|_| {
             eprintln!("HOW_PLAYER_LIMIT is a number of players, 0 for no limit, not {limit:?}");
@@ -128,6 +129,8 @@ fn main() {
             guests,
             player_limit,
             idle_minutes,
+            lockable: true,
+            lockdown,
             ..Default::default()
         },
         Some(data.clone()),
