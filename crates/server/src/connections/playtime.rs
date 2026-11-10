@@ -75,6 +75,7 @@ pub(super) fn shows_activity(message: &ClientMessage) -> bool {
             | ClientMessage::Ping { .. }
             | ClientMessage::LookUpItems(_)
             | ClientMessage::SetOnline(_)
+            | ClientMessage::SetLockdown(_)
             | ClientMessage::SetPaused(_)
             | ClientMessage::SetDifficulty(_)
             | ClientMessage::SetDifficulties(_)

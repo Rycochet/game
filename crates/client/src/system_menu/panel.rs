@@ -22,7 +22,7 @@ const SECTIONS: &[&[Entry]] = &[
             Action::Characters,
             Some(MenuButton::Characters),
         ),
-        // With the gear for Server Options; native only.
+        // With the gear for Server Options.
         ("Online", Action::ToggleOnline, Some(MenuButton::Online)),
         ("Connect...", Action::Connect, Some(MenuButton::Connect)),
     ],
@@ -36,8 +36,7 @@ const SECTIONS: &[&[Entry]] = &[
     ],
 ];
 
-/// `gear` is for Online's Server Options, which a browser hasn't.
-#[cfg_attr(target_arch = "wasm32", allow(unused_variables))]
+/// `gear` is for Online's Server Options (hidden in a browser).
 pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
     let panel = spawn_layer(
         commands,
@@ -57,6 +56,8 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
             SystemMenu::GoingOnline,
             SystemMenu::GoingOffline,
             SystemMenu::OnlineFailed,
+            SystemMenu::LockingDown,
+            SystemMenu::Reopening,
             SystemMenu::SlowDrawing,
         ],
         px(MENU_WIDTH),
@@ -93,8 +94,6 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
                 .with_children(|section_node| {
                     for &(label, action, shown) in *section {
                         if shown == Some(MenuButton::Online) {
-                            // In a browser there is no server of its own.
-                            #[cfg(not(target_arch = "wasm32"))]
                             super::online::spawn_online_row(section_node, gear.clone());
                             continue;
                         }

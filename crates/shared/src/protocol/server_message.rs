@@ -125,6 +125,10 @@ pub enum ServerMessage {
     /// off), so this connection is ending and isn't worth trying again: the
     /// server's name.
     GoingOffline(String),
+    /// Whether this networked server is locked down: told to accounts with
+    /// Server Options after `Welcome` and whenever it changes, so their
+    /// Online shows it (open while not). Never sent by an embedded server.
+    Lockdown(bool),
     /// A world map chunk, as this player knows it.
     WorldChunk(WorldChunk),
     /// A road between two towns, sent once it is worked out to anyone near

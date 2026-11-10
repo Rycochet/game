@@ -133,6 +133,7 @@ pub(super) fn hang_up(commands: &mut Commands) {
     commands.insert_resource(crate::common::CharacterSelect::default());
     commands.insert_resource(crate::common::LoggingIn::Not);
     commands.insert_resource(crate::common::PlayDifficulty::default());
+    commands.insert_resource(crate::common::Lockdown(None));
     #[cfg(target_arch = "wasm32")]
     commands.queue(|world: &mut World| {
         world.remove_non_send::<super::socket::BrowserSocket>();

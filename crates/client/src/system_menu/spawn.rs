@@ -89,11 +89,9 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
     super::connect::spawn_popups(&mut commands);
     super::refusal::spawn_refusal(&mut commands);
     super::slow_drawing::spawn_slow_drawing(&mut commands);
+    super::online::spawn_online_requesters(&mut commands);
     #[cfg(not(target_arch = "wasm32"))]
-    {
-        super::online::spawn_online_requesters(&mut commands);
-        super::server_options::spawn_server_options(&mut commands);
-    }
+    super::server_options::spawn_server_options(&mut commands);
     commands.insert_resource(icons);
 }
 

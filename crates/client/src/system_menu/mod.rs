@@ -16,7 +16,6 @@ mod credits;
 mod full_screen_key;
 mod icons;
 mod input;
-#[cfg(not(target_arch = "wasm32"))]
 mod online;
 mod panel;
 mod refusal;
@@ -110,6 +109,14 @@ impl Plugin for SystemMenuPlugin {
             .add_systems(
                 Update,
                 (
+                    online::use_online,
+                    online::show_online,
+                    online::show_online_failure,
+                ),
+            )
+            .add_systems(
+                Update,
+                (
                     settings::use_controls_page,
                     settings::fill_controls_page,
                     settings::forget_taken,
@@ -127,9 +134,6 @@ impl Plugin for SystemMenuPlugin {
         .add_systems(
             Update,
             (
-                online::use_online,
-                online::show_online,
-                online::show_online_failure,
                 (
                     server_options::run_server_options,
                     server_options::run_upnp_rows,

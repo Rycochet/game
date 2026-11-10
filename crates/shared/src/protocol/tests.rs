@@ -41,6 +41,7 @@ fn pings_and_pongs_are_recognised_from_their_bytes() {
 /// One of every message, so a message that can't be sent fails here.
 fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
     let client = vec![
+        ClientMessage::SetLockdown(true),
         ClientMessage::Hello {
             protocol: PROTOCOL_VERSION,
             makes_characters: false,
@@ -233,6 +234,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         },
     ];
     let server = vec![
+        ServerMessage::Lockdown(true),
         ServerMessage::DevMobInfo {
             mob: crate::id::Id::for_test(4),
             lines: vec!["Goblin".into(), "Doing: Idle".into()],

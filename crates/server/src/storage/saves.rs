@@ -55,7 +55,8 @@ pub struct WorldSave {
     pub action_ticks: u64,
 }
 
-/// `server.ron`: the server's own clocks, which every world goes by.
+/// `server.ron`: the server's own clocks, which every world goes by, and
+/// whether it is locked down.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ServerSave {
     /// The `SAVE_FORMAT` it was written with.
@@ -64,6 +65,10 @@ pub struct ServerSave {
     pub clock: f64,
     /// Ticks of action time (`clock::ActionClock`).
     pub action_ticks: u64,
+    /// Whether only accounts with Server Options may play (lockdown), kept
+    /// across restarts.
+    #[serde(default)]
+    pub lockdown: bool,
 }
 
 /// A site's file: made the first time anyone enters it.
