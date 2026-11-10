@@ -13,6 +13,7 @@ mod gem;
 mod looks;
 mod morph;
 mod ring;
+mod under;
 
 use bevy::prelude::*;
 use bevy::render::{ExtractSchedule, Render, RenderApp, RenderSystems};
@@ -25,6 +26,7 @@ pub use looks::{
     TorsoLook, WaistLook,
 };
 pub use morph::{MORPH_STEPS, MorphLook, morph_look};
+pub use under::UnderLook;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod batch;

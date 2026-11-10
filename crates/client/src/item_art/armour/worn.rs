@@ -5,7 +5,7 @@ use shared::body::Frame;
 
 use super::set::Coloured;
 use super::{Model, Stuff, arms, feet, hands, head, legs, neck, set, shoulders, torso, waist};
-use crate::item_art::{Look, footwear};
+use crate::item_art::{Look, footwear, under};
 
 /// A worn thing's parts on this frame, for the looks that are worn on a body; none
 /// for others. An aventail hangs from `rim`, the helmet worn with it, if any.
@@ -59,6 +59,11 @@ pub(in crate::item_art) fn worn(look: &Look, frame: &Frame, rim: Option<&[[i32; 
         } => add(footwear::build(&l.form, frame), &|s| {
             footwear::material_of(s, &l.form, *quality)
         }),
+        Look::Under { under: l, quality } => {
+            add(under::build(&l.form, frame, under::Fit::Tucked), &|s| {
+                under::material_of(s, &l.form, *quality)
+            })
+        }
         Look::Set { set: l, quality } => return set::build(&l.form, frame, l.digits, *quality),
         _ => {}
     }

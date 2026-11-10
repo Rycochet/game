@@ -89,7 +89,7 @@ pub(in crate::debug_menu) fn show_pictures(
             // A weapon or gauntlets need their full size for the black edge to be right, and
             // more room.
             let (box_side, pixels) = match picture.0 {
-                Shown::Armour(_) | Shown::Footwear(_) => (
+                Shown::Armour(_) | Shown::Footwear(_) | Shown::Under(_) => (
                     HANDS_PICTURE,
                     look.longest() as u32 * crate::widgets::PICTURE_PIXELS_PER_CELL,
                 ),

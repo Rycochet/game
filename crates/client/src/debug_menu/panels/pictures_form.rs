@@ -82,6 +82,8 @@ pub(super) enum Shown {
     Armour(super::armour::ArmourShown),
     /// A pair of footwear.
     Footwear(super::footwear::FootwearShown),
+    /// A piece of underclothing.
+    Under(super::under::UnderShown),
 }
 
 impl Shown {
@@ -122,6 +124,7 @@ impl Shown {
             Self::Hair(shown) => shown.look(quality),
             Self::Armour(shown) => shown.look(quality),
             Self::Footwear(shown) => shown.look(quality),
+            Self::Under(shown) => shown.look(quality),
         }
     }
 }

@@ -190,6 +190,9 @@ pub(in crate::item_art) fn colour_of(material: Material) -> Color {
         Material::Felt => Color::srgb(0.55, 0.52, 0.48),
         Material::Straw => Color::srgb(0.82, 0.72, 0.45),
         Material::Coir => Color::srgb(0.55, 0.4, 0.24),
+        Material::Hemp => Color::srgb(0.72, 0.66, 0.52),
+        Material::Ramie => Color::srgb(0.9, 0.88, 0.8),
+        Material::Haircloth => Color::srgb(0.26, 0.23, 0.2),
         _ => Color::srgb(0.5, 0.5, 0.5),
     }
 }

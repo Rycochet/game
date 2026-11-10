@@ -23,12 +23,12 @@ Underclothes, all worn on the Skin layer: shirts and chemises (with stays as an 
 
 ## Used by
 
-- `shared::item_form` (`ItemForm::Under`, rolled by `give_form`; material and dye can be asked for), `shared::item` (`Item::bare`), client `item_art` (not drawn yet: models are the next change).
+- `shared::item_form` (`ItemForm::Under`, rolled by `give_form`; material and dye can be asked for), `shared::item` (`Item::bare`), client `item_art` (`item_art/under/`: pictures and the dressed character; `ItemForm::drawn_worn` includes underclothes), `debug_menu` (Item Pictures' Underclothes page).
 
 ## Notes
 
 - Every choice is rolled from what the earlier ones allow (garment, material, cloth, decoration, dye, second colour); `allowed` is that grid, checked by a test, as are every name turning up, bare locations and weights.
-- Owner's decisions (2026-11-09): one Skin layer; braies, loincloths and petticoats are on the Waist alone (they hang from it), so hose go with them and a biped's Waist takes Skin; stays are an option on long shirts, not a kind; "Linen Coif", and "Hose" never "Chausses", beside the mail armour; footless and stirrup hose leave the feet for socks; nightwear can be worn any time; underclothes stay on at death on Hard. The old `TShirt` kind stays for saves but is no longer made.
+- Owner's decisions (2026-11-09): one Skin layer; braies, loincloths and petticoats are on the Waist alone (they hang from it), so hose go with them and a biped's Waist takes Skin; stays are an option on long shirts, not a kind; "Linen Coif", and "Hose" never "Chausses", beside the mail armour; footless and stirrup hose leave the feet for socks; nightwear can be worn any time; underclothes stay on at death on Hard. The old `TShirt` kind stays for saves but is no longer made. Drawn worn, they keep close to the body ("tucked in"), and pieces covered at every place they are worn aren't drawn (`Inventory::shown`).
 - A name comes from its garment's signature (a twisted strip is a Fundoshi); an unusual material or lawn goes first ("Silk Chemise"), a coif always says its material, stays go after ("Chemise and Stays").
 - Gold thread (cauls) only comes at Rare and better; the grid allows it at any quality.
 - Weights are the research's estimates from cloth areas (plain linen; woven wool for hose and socks), changed by material and lawn, plus stays, a sole or a codpiece; by the square of the size, as footwear.

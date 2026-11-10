@@ -52,6 +52,9 @@ pub(super) fn parts_of(
         Look::Footwear { footwear, quality } => {
             super::footwear::footwear_parts(&footwear, quality, meshes, materials)
         }
+        Look::Under { under, quality } => {
+            super::under::under_parts(&under, quality, meshes, materials)
+        }
         look => super::armour::armour_parts(look, meshes, materials),
     }
 }

@@ -25,7 +25,7 @@ fn on_ellipse((across, deep): (f32, f32), y: f32, angle: f32, off: f32) -> Vec3 
 }
 
 /// The body round the neck, from its frame.
-pub(super) struct Around<'a> {
+pub(in crate::item_art) struct Around<'a> {
     pub frame: &'a Frame,
 }
 

@@ -80,6 +80,11 @@ pub enum Look {
         footwear: super::FootwearLook,
         quality: Option<Quality>,
     },
+    /// Underclothes: a shirt, braies, hose, a coif and the rest.
+    Under {
+        under: super::UnderLook,
+        quality: Option<Quality>,
+    },
     /// An armour set: its pieces as worn together.
     Set {
         set: SetLook,
@@ -126,6 +131,7 @@ impl Look {
             Self::Feet { feet, .. } => feet.cells,
             Self::Neck { neck, .. } => neck.cells,
             Self::Footwear { footwear, .. } => footwear.cells,
+            Self::Under { under, .. } => under.cells,
             Self::Set { set, .. } => set.cells,
             Self::Body { layout, .. } => super::body::cells(layout),
             Self::Character { .. } | Self::Morph(_) => super::character::CELLS,
@@ -208,6 +214,13 @@ pub fn look_of(item: &Item) -> Option<Look> {
                     pattern: ring.pattern,
                     settings: settings.collect(),
                 },
+                quality,
+            })
+        }
+        ItemForm::Under(form) => {
+            let shape = item.shape();
+            Some(Look::Under {
+                under: super::UnderLook::new(*form, (shape.width, shape.height)),
                 quality,
             })
         }

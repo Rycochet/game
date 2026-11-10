@@ -9,7 +9,7 @@ Underclothes are what you wear next to the skin: shirts and chemises, braies, br
 
 On Hard, underclothes stay on you when you die, while everything else you wear is dropped.
 
-Every piece is made in its own way. One that matches a garment from history takes its name, such as Chemise or Fundoshi. A name puts an unusual material or fine linen first, as in "Silk Chemise" or "Lawn Shirt". Underclothes don't show on your character yet: pictures of them are planned.
+Every piece is made in its own way. One that matches a garment from history takes its name, such as Chemise or Fundoshi. A name puts an unusual material or fine linen first, as in "Silk Chemise" or "Lawn Shirt".
 
 ## Kinds
 

@@ -17,8 +17,8 @@ pub struct WornLook {
 }
 
 impl ItemForm {
-    /// Whether a character's picture draws it: armour and footwear, built in place on
-    /// the body. Clothes without a form, rings and the like aren't drawn yet.
+    /// Whether a character's picture draws it: armour, footwear and underclothes, built
+    /// in place on the body. Clothes without a form, rings and the like aren't drawn yet.
     pub fn drawn_worn(&self) -> bool {
         matches!(
             self,
@@ -32,6 +32,7 @@ impl ItemForm {
                 | Self::Feet(_)
                 | Self::Neck(_)
                 | Self::Footwear(_)
+                | Self::Under(_)
                 | Self::Set(_)
         )
     }
