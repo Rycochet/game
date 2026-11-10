@@ -2412,6 +2412,7 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "wgpu-types",
+ "winit",
  "winresource",
 ]
 
@@ -7960,6 +7961,7 @@ dependencies = [
  "brotli",
  "resvg",
  "shared",
+ "ttf-parser",
  "web_delta",
 ]
 

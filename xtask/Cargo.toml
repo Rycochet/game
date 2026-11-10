@@ -16,3 +16,6 @@ web_delta.workspace = true
 # Draws the game-icons.net SVGs as PNGs (`icons`), in pure Rust (Apache-2.0 OR
 # MIT); without fonts or images, as the icons are plain shapes.
 resvg = { version = "0.49", default-features = false }
+# The title font's letter outlines, for the app icon (`app-icon`), in pure
+# Rust (MIT OR Apache-2.0); already used by resvg.
+ttf-parser = "0.25"
