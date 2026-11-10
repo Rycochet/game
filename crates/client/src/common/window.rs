@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 use std::time::Duration;
 
-use super::{Background, VideoPrefs};
+use super::{Background, GraphicsPrefs};
 
 /// Whether frames keep their focused rate with the window in the background.
 /// Off for players unless they choose it (`Background::KeepDrawing`);
@@ -17,14 +17,14 @@ pub struct KeepDrawing(pub bool);
 /// wakes the app at once). Out of focus they are a second apart, unless
 /// `keep_drawing` (while loading, which shouldn't wait for them, or with
 /// `KeepDrawing` on) or the player chose to keep drawing.
-pub fn frame_settings(keep_drawing: bool, video: &VideoPrefs) -> WinitSettings {
-    let focused = match video.frame_rate.per_second() {
+pub fn frame_settings(keep_drawing: bool, graphics: &GraphicsPrefs) -> WinitSettings {
+    let focused = match graphics.frame_rate.per_second() {
         Some(fps) => UpdateMode::reactive(Duration::from_secs_f64(1.0 / fps)),
         None => UpdateMode::Continuous,
     };
     WinitSettings {
         focused_mode: focused,
-        unfocused_mode: if keep_drawing || video.background == Background::KeepDrawing {
+        unfocused_mode: if keep_drawing || graphics.background == Background::KeepDrawing {
             focused
         } else {
             UpdateMode::reactive_low_power(Duration::from_secs(1))
@@ -42,7 +42,7 @@ pub(super) fn apply_vsync(
     if !preferences.is_changed() {
         return;
     }
-    let mode = if preferences.video.vsync {
+    let mode = if preferences.graphics.vsync {
         PresentMode::AutoVsync
     } else {
         PresentMode::AutoNoVsync

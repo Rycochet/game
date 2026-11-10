@@ -7,7 +7,7 @@ nav_order: 7
 
 The debug menu holds tools for trying things out while the game is being made. Open it with backtick (`` ` ``) or the warning button at the top left. The entries are in groups, each under its heading. Type to filter them, then choose an entry with a click, a tap, or the arrow keys and Return (Left and Right move along what you typed until Up or Down picks an entry, then move to the nearest entry in the next column). An entry ending in "..." opens a panel, a list or a view; the others act at once, or turn something on or off.
 
-Each entry is a permission of its own, and you only see those you may use; with none, there is no debug menu at all, nor its button, key or row in Controls. Single player gives its own player all of them. A networked server gives each to the [roles](hosting/#roles) that have it: by default Owners and Admins have all of them, Developers all but World Time and Freeze Mobs, and Moderators those for looking after players. With `HOW_DEBUG_TOOLS` set to `true` (see [Server environment variables](environment-variables)), everyone connected has all but World Time and Freeze Mobs. Buttons inside a panel that do something of their own, such as Examine Mob's Kill, are hidden too without their permission. An entry that can't be used right now stays in the list, greyed out. Entries marked **Server** ask the server to do something, which it checks.
+Each entry is a permission of its own, and you only see those you may use; with none (and no Admin Tools), there is no debug menu at all, nor its button, key or row in Controls. Single player gives its own player all of them. A networked server gives each to the [roles](hosting/#roles) that have it: by default Owners and Admins have all of them, Developers all but World Time and Freeze Mobs, and Moderators those for looking after players. With `HOW_DEBUG_TOOLS` set to `true` (see [Server environment variables](environment-variables)), everyone connected has all but World Time and Freeze Mobs. Buttons inside a panel that do something of their own, such as Examine Mob's Kill, are hidden too without their permission. An entry that can't be used right now stays in the list, greyed out. Entries marked **Server** ask the server to do something, which it checks.
 
 ## Display
 
@@ -84,3 +84,11 @@ The whole world, and making places to try things in.
 | Generate POI | Yes | Lists every kind of place. Choosing one opens a panel to pick its ruin and seed, then Generate takes you into it. |
 | Dev Area | Yes | Opens a panel making a walled area to try things in: its size (16 to 128 cells a side), what fills it (nothing, a moat you can see across, a wall up the middle, the wild land of any biome, or the ground floor of any kind of place, cut off where it is bigger), who is in it (whoever would live there, nobody, or a kind of creature and how many) and a seed of any words. Generate puts you on its stairs; going up them, or Shift + , (`<`) anywhere in it, takes you back to where you were. It is never kept, but the panel's choices are, between runs. |
 | Regenerate Dev Area | Yes | Makes the Dev Area its panel was last set to again, as new, and puts you in it, without opening the panel. |
+
+## Admin Tools
+
+Looking after the server and its players. Unlike the others, this entry goes by your [role](hosting/#roles) rather than a permission of its own: you see it when your role lets you look players up, give roles, rename them or read the audit log, even with no other debug tool.
+
+| Entry | Server | What it does |
+| ----- | ------ | ------------ |
+| Accounts | Yes | Opens the Accounts panel: **Find** looks a character up by name and gives their account another role, **Roles** renames roles, and **Audit Log** shows what has been changed. See [Roles](hosting/#roles). |

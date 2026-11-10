@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use shared::difficulty::{Difficulties, Difficulty};
 use shared::protocol::OnlineSettings;
 
-use super::{Controls, SavedServer, VideoPrefs, WindowPrefs};
+use super::{Controls, GraphicsPrefs, SavedServer, WindowPrefs};
 
 /// The player's choices, loaded at start and saved whenever they change.
 #[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
@@ -32,9 +32,6 @@ pub struct Preferences {
     pub touch: bool,
     /// The servers on other computers connected to, the latest first.
     pub servers: Vec<SavedServer>,
-    /// The address of the one Play connects to, if it isn't the usual one
-    /// (single player, or in a browser the page's server).
-    pub last_server: Option<String>,
     /// "Online": the built-in server is opened to other players once playing on
     /// it (native only).
     pub online: bool,
@@ -48,8 +45,8 @@ pub struct Preferences {
     pub difficulty: Difficulty,
     /// The window as last left (native): where, how big, and how shown.
     pub window: WindowPrefs,
-    /// Video settings for speed and clutter.
-    pub video: VideoPrefs,
+    /// Graphics settings for speed and clutter.
+    pub graphics: GraphicsPrefs,
     /// "Pause When Not in Focus": single player pauses while another window is
     /// in front.
     pub pause_unfocused: bool,

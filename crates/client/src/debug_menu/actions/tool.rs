@@ -1,13 +1,15 @@
 //! The debug tool each entry needs permission for (`common::DebugTools`): an
-//! entry not permitted isn't shown.
+//! entry not permitted isn't shown. Accounts needs none: it goes by the
+//! account's role (`common::AccountRole`).
 
 use shared::role::DebugTool;
 
 use super::DebugAction;
 
 impl DebugAction {
-    pub(in crate::debug_menu) fn tool(self) -> DebugTool {
-        match self {
+    pub(in crate::debug_menu) fn tool(self) -> Option<DebugTool> {
+        Some(match self {
+            Self::Accounts => return None,
             Self::ShowDebugInfo => DebugTool::ShowDebugInfo,
             Self::LightningNow => DebugTool::LightningNow,
             Self::SunsAndMoons => DebugTool::SunsAndMoons,
@@ -38,6 +40,6 @@ impl DebugAction {
             Self::LightningStrikeHere => DebugTool::LightningStrikeHere,
             Self::GeneratePoi => DebugTool::GeneratePoi,
             Self::DevArea | Self::RegenerateDevArea => DebugTool::DevArea,
-        }
+        })
     }
 }

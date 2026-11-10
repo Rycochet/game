@@ -9,6 +9,7 @@ use crate::widgets::matches_filter;
 /// One entry in the debug menu. Sending it does what it says.
 #[derive(bevy::prelude::Message, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DebugAction {
+    Accounts,
     ChangeCellMode,
     ChangeCreature,
     CloseAllDoors,
@@ -59,12 +60,15 @@ pub(super) struct Facts {
     /// The debug tools this player may use: an entry needing another isn't
     /// shown.
     pub tools: DebugTools,
+    /// Whether the Accounts panel has anything for this account's role
+    /// (`common::AccountRole::has_accounts_panel`).
+    pub accounts: bool,
 }
 
 impl DebugAction {
     /// Every action, in the order the menu lists them: by group (`Group`),
     /// then as the owner ordered each group.
-    pub(super) const ALL: [Self; 31] = [
+    pub(super) const ALL: [Self; 32] = [
         // Display
         Self::ShowDebugInfo,
         Self::LightningNow,
@@ -103,6 +107,8 @@ impl DebugAction {
         Self::GeneratePoi,
         Self::DevArea,
         Self::RegenerateDevArea,
+        // Admin Tools
+        Self::Accounts,
     ];
 
     /// The action with this name, as the menu shows it, in any case (dev
@@ -125,7 +131,8 @@ impl DebugAction {
     pub(super) fn opens_something(self) -> bool {
         matches!(
             self,
-            Self::SunsAndMoons
+            Self::Accounts
+                | Self::SunsAndMoons
                 | Self::DrawingStates
                 | Self::ItemPictures
                 | Self::ShowWidgets
@@ -153,9 +160,13 @@ impl DebugAction {
         }
     }
 
-    /// Whether it is shown at all: only with permission for its tool.
+    /// Whether it is shown at all: only with permission for its tool, or for
+    /// Accounts, with something on its panel for this role.
     pub(super) fn is_permitted(self, facts: &Facts) -> bool {
-        facts.tools.may(self.tool())
+        match self.tool() {
+            Some(tool) => facts.tools.may(tool),
+            None => facts.accounts,
+        }
     }
 
     /// Whether it can be used now.

@@ -1,5 +1,5 @@
-//! Servers on other computers: the ones connected to before, and the one Play
-//! connects to.
+//! Servers: the ones on other computers connected to before, the one Connect
+//! chose, and whether this computer's own is there.
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -39,47 +39,50 @@ impl SavedServer {
     }
 }
 
-/// What Play connects to: a server on another computer, or `None` for the usual
-/// one (single player natively, the page's server in a browser). Starts as the
-/// last one connected to; set by Connect, cleared by Logout.
+/// What the game connects to: a server on another computer chosen in Connect,
+/// or `None` for this computer's own (single player natively, the page's
+/// server in a browser). Set by Connect; cleared on going back to the startup
+/// menu, as Continue and Characters are only ever for the computer's own
+/// (owner, 2026-11-10).
 #[derive(Resource, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ChosenServer(pub Option<SavedServer>);
 
-impl ChosenServer {
-    /// The last server connected to, from what is saved.
-    pub fn from_saved(preferences: &Preferences) -> Self {
-        let last = preferences.last_server.as_ref();
-        Self(last.map(|address| {
-            let saved = preferences.servers.iter().find(|s| s.address == *address);
-            saved.cloned().unwrap_or(SavedServer {
-                address: address.clone(),
-                key: None,
-                name: None,
-            })
-        }))
+/// Whether this computer's own server is there to play on, for the startup
+/// menu's Continue and Characters. Natively it always is (single player, or
+/// `HOW_SERVER`). A browser asks the server the page came from first
+/// (`connection`): a page hosted without a game server can only Connect.
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HomeServer {
+    /// Still asking.
+    Checking,
+    Found,
+    /// Nothing there to play on (a browser only).
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    Missing,
+}
+
+impl Default for HomeServer {
+    fn default() -> Self {
+        if cfg!(target_arch = "wasm32") {
+            Self::Checking
+        } else {
+            Self::Found
+        }
     }
 }
 
 impl Preferences {
-    /// After connecting to `server` (or the usual one): it goes to the top of the
-    /// list, with its key, and Play connects to it next time.
-    pub fn connected_to(&mut self, server: Option<&SavedServer>) {
-        let Some(server) = server else {
-            self.last_server = None;
-            return;
-        };
+    /// After joining `server`: it goes to the top of Connect's list, with its
+    /// key.
+    pub fn joined(&mut self, server: &SavedServer) {
         self.servers.retain(|saved| saved.address != server.address);
         self.servers.insert(0, server.clone());
         self.servers.truncate(MOST_SAVED);
-        self.last_server = Some(server.address.clone());
     }
 
     /// Forgets a server, as the bin beside it in Connect asks.
     pub fn forget_server(&mut self, address: &str) {
         self.servers.retain(|saved| saved.address != address);
-        if self.last_server.as_deref() == Some(address) {
-            self.last_server = None;
-        }
     }
 }
 

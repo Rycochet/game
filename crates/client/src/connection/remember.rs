@@ -1,5 +1,5 @@
-//! Remembering the server that welcomed the player, for Play and Connect, and
-//! forgetting it when Logout goes back to the usual one.
+//! Remembering a server chosen in Connect once it has welcomed the player, at
+//! the top of Connect's list.
 
 use bevy::prelude::*;
 use shared::protocol::ServerMessage;
@@ -7,8 +7,8 @@ use shared::protocol::ServerMessage;
 use super::FromServer;
 use crate::common::{ChosenServer, Preferences};
 
-/// On a welcome: the chosen server goes to the top of Connect's list, and Play
-/// connects there next time (or to the usual one, if none was chosen).
+/// On a welcome from a server chosen in Connect: it goes to the top of
+/// Connect's list.
 pub(super) fn remember_server(
     mut from_server: MessageReader<FromServer>,
     chosen: Res<ChosenServer>,
@@ -17,21 +17,9 @@ pub(super) fn remember_server(
     let welcomed = from_server
         .read()
         .any(|FromServer(message)| matches!(message, ServerMessage::Welcome { .. }));
-    if welcomed {
+    if let (true, Some(server)) = (welcomed, &chosen.0) {
         let mut changed = preferences.clone();
-        changed.connected_to(chosen.0.as_ref());
+        changed.joined(server);
         preferences.set_if_neq(changed);
-    }
-}
-
-/// When Play goes back to the usual server (Logout, or Connect forgetting the
-/// chosen one), it stays there next time the game starts too, not only once
-/// the usual server has welcomed the player.
-pub(super) fn forget_when_unchosen(
-    chosen: Res<ChosenServer>,
-    mut preferences: ResMut<Preferences>,
-) {
-    if chosen.is_changed() && chosen.0.is_none() && preferences.last_server.is_some() {
-        preferences.connected_to(None);
     }
 }

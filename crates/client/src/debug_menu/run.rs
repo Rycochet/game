@@ -59,14 +59,18 @@ pub(super) fn run_actions(
     mut menu: ResMut<DebugMenu>,
     mut raise: MessageWriter<crate::widgets::RaisePanel>,
     nodes: Query<(), With<Node>>,
-    (mut to_server, mut view_planet, mut lightning): (
+    (mut to_server, mut view_planet, mut lightning, mut accounts): (
         MessageWriter<ToServer>,
         MessageWriter<ViewPlanet>,
         MessageWriter<LightningStrike>,
+        MessageWriter<crate::common::OpenAccounts>,
     ),
 ) {
     for &action in actions.read() {
         match action {
+            DebugAction::Accounts => {
+                accounts.write(crate::common::OpenAccounts);
+            }
             DebugAction::ChangeCellMode => *mode = toggled(*mode, ClickMode::ChangeCell),
             DebugAction::DetectMobs => {
                 detect.0 = !detect.0;

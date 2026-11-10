@@ -193,7 +193,7 @@ fn place_camera_and_tokens(
     let (mut orbit, mut camera) = camera.into_inner();
     let size = grid.cell_size;
     // Reduce Motion: on the cell, without gliding between.
-    let snap = preferences.video.reduce_motion;
+    let snap = preferences.graphics.reduce_motion;
     let shown_at = |(cell, smooth): (Option<&MapPosition>, &SmoothPosition)| match cell {
         Some(cell) if snap => (cell.x as f32, cell.y as f32),
         _ => (smooth.x as f32, smooth.y as f32),

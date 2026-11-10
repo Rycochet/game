@@ -36,7 +36,7 @@ pub(super) fn update_chunks(
 ) {
     let start = Instant::now();
     let mut built = 0;
-    let square = view_square(&orbit, preferences.video.view_distance);
+    let square = view_square(&orbit, preferences.graphics.view_distance);
     let needed: HashSet<(i64, i64)> = chunks_needed(square, (player.x, player.y))
         .into_iter()
         .collect();

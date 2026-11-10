@@ -1,12 +1,12 @@
-//! The Video page's sections for what is drawn: Lighting, World Map, Sites and
+//! The Graphics page's sections for what is drawn: Lighting, World Map, Sites and
 //! Motion. Their rows are made as in `options`.
 
 use bevy::prelude::*;
 
 use super::super::rows::spawn_section;
-use super::options::{VideoControl, dropdown, setting_row, slider_row, switch_row};
+use super::options::{GraphicsControl, dropdown, setting_row, slider_row, switch_row};
 use crate::common::{
-    BRIGHTNESS_MOST, Precipitation, Remembered, Shadows, VideoPrefs, ViewDistance,
+    BRIGHTNESS_MOST, GraphicsPrefs, Precipitation, Remembered, Shadows, ViewDistance,
 };
 
 const BRIGHTNESS: &str = "Raises the darkest parts of what you can see, at night and \
@@ -35,12 +35,12 @@ const REDUCE_MOTION: &str = "Stills the world map's water, and makes tokens and 
     camera jump to their places instead of gliding. For anyone who finds movement \
     uncomfortable. Little difference to speed.";
 
-pub(super) fn spawn_lighting_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
+pub(super) fn spawn_lighting_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
     spawn_section(sections, "Lighting", |section| {
         let at = (0, BRIGHTNESS_MOST, prefs.brightness.min(BRIGHTNESS_MOST));
         slider_row(
             section,
-            VideoControl::Brightness,
+            GraphicsControl::Brightness,
             "Brightness",
             BRIGHTNESS,
             at,
@@ -48,36 +48,42 @@ pub(super) fn spawn_lighting_section(sections: &mut ChildSpawnerCommands, prefs:
         let list = dropdown(&Shadows::ALL, Shadows::name, prefs.shadows, Vec::new());
         setting_row(
             section,
-            VideoControl::Shadows,
+            GraphicsControl::Shadows,
             "Shadows",
             (SHADOWS, None),
             list,
         );
         let row = (MIDDAY_SUN, None);
         let on = prefs.midday_sun;
-        switch_row(section, VideoControl::MiddaySun, "Midday Sun", row, on);
+        switch_row(section, GraphicsControl::MiddaySun, "Midday Sun", row, on);
     });
 }
 
-pub(super) fn spawn_world_map_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
+pub(super) fn spawn_world_map_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
     spawn_section(sections, "World Map", |section| {
         let all = &ViewDistance::ALL;
         let list = dropdown(all, ViewDistance::name, prefs.view_distance, Vec::new());
         let row = (VIEW_DISTANCE, None);
         setting_row(
             section,
-            VideoControl::ViewDistance,
+            GraphicsControl::ViewDistance,
             "View Distance",
             row,
             list,
         );
         let row = (CLOUDS, None);
-        switch_row(section, VideoControl::Clouds, "Clouds", row, prefs.clouds);
+        switch_row(
+            section,
+            GraphicsControl::Clouds,
+            "Clouds",
+            row,
+            prefs.clouds,
+        );
         let all = &Precipitation::ALL;
         let list = dropdown(all, Precipitation::name, prefs.precipitation, Vec::new());
         setting_row(
             section,
-            VideoControl::Precipitation,
+            GraphicsControl::Precipitation,
             "Weather",
             (WEATHER, None),
             list,
@@ -85,7 +91,7 @@ pub(super) fn spawn_world_map_section(sections: &mut ChildSpawnerCommands, prefs
         let row = (FOLIAGE, None);
         switch_row(
             section,
-            VideoControl::Foliage,
+            GraphicsControl::Foliage,
             "Foliage",
             row,
             prefs.foliage,
@@ -93,13 +99,13 @@ pub(super) fn spawn_world_map_section(sections: &mut ChildSpawnerCommands, prefs
     });
 }
 
-pub(super) fn spawn_sites_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
+pub(super) fn spawn_sites_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
     spawn_section(sections, "Sites", |section| {
         let row = (FLOOR_TEXTURES, None);
         let on = prefs.floor_textures;
         switch_row(
             section,
-            VideoControl::FloorTextures,
+            GraphicsControl::FloorTextures,
             "Floor Textures",
             row,
             on,
@@ -113,7 +119,7 @@ pub(super) fn spawn_sites_section(sections: &mut ChildSpawnerCommands, prefs: &V
         let row = (REMEMBERED, None);
         setting_row(
             section,
-            VideoControl::Remembered,
+            GraphicsControl::Remembered,
             "Remembered Places",
             row,
             list,
@@ -121,13 +127,13 @@ pub(super) fn spawn_sites_section(sections: &mut ChildSpawnerCommands, prefs: &V
     });
 }
 
-pub(super) fn spawn_motion_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
+pub(super) fn spawn_motion_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
     spawn_section(sections, "Motion", |section| {
         let row = (REDUCE_MOTION, None);
         let on = prefs.reduce_motion;
         switch_row(
             section,
-            VideoControl::ReduceMotion,
+            GraphicsControl::ReduceMotion,
             "Reduce Motion",
             row,
             on,

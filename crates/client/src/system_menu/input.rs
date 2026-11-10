@@ -3,6 +3,7 @@
 use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
 
+use super::refusal::TriedServer;
 use super::{Action, SystemMenu, show_ended_page};
 use crate::common::{ChosenServer, GameView, LoginChoice, PlayFor, Session, TouchGesture};
 use crate::debug_menu::DebugMenu;
@@ -25,10 +26,10 @@ pub(super) fn take_input(
     mut menu: ResMut<SystemMenu>,
     mut session: ResMut<Session>,
     mut chosen: ResMut<ChosenServer>,
+    tried: Res<TriedServer>,
     mut exit: MessageWriter<AppExit>,
     mut login: MessageWriter<LoginChoice>,
     mut play_for: ResMut<PlayFor>,
-    mut accounts: MessageWriter<crate::common::OpenAccounts>,
     mut preferences: ResMut<crate::common::Preferences>,
 ) {
     let at_start = !session.is_playing();
@@ -62,7 +63,7 @@ pub(super) fn take_input(
             exit.write(AppExit::Success);
             show_ended_page();
         }
-        (Action::Play | Action::Characters, SystemMenu::Menu) if at_start => {
+        (Action::Continue | Action::Characters, SystemMenu::Menu) if at_start => {
             *play_for = match action {
                 Action::Characters => PlayFor::Choose,
                 _ => PlayFor::Latest,
@@ -71,23 +72,20 @@ pub(super) fn take_input(
             *menu = SystemMenu::Closed;
         }
         (Action::LogOut, SystemMenu::Menu) if !at_start => {
-            // The menu stays, as the startup menu, and Play is the usual
-            // server's again.
+            // The menu stays, as the startup menu.
             *session = Session::AtStart;
             chosen.0 = None;
         }
-        // At the startup menu: forget the account kept for Play's server.
+        // At the startup menu: forget the account kept for this computer's
+        // own server.
         (Action::LogOut, SystemMenu::Menu) => {
             login.write(LoginChoice::LogOut);
         }
         (Action::Connect, SystemMenu::Menu) if !at_start => {}
-        (Action::Accounts, SystemMenu::Menu) => {
-            accounts.write(crate::common::OpenAccounts);
-            *menu = SystemMenu::Closed;
-        }
+        (Action::Continue, SystemMenu::Menu) => *menu = SystemMenu::Closed,
         // On to Connect, to try another way, if it was Connect's server.
         (Action::Back, SystemMenu::Refused) => {
-            *menu = if chosen.0.is_some() {
+            *menu = if tried.0.is_some() {
                 SystemMenu::Connect
             } else {
                 SystemMenu::Menu

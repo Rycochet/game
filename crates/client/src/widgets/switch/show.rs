@@ -77,7 +77,7 @@ pub(in crate::widgets) fn show_switches(
     let place_of = |entity: Entity| {
         let (switch, state, id) = switches.get(entity).ok()?;
         let key = id.map_or(SlideKey::Entity(entity), |&id| SlideKey::Id(id));
-        let done = match (preferences.video.reduce_motion, slides.0.get(&key)) {
+        let done = match (preferences.graphics.reduce_motion, slides.0.get(&key)) {
             (false, Some(&started)) => share(started, now),
             _ => 1.0,
         };

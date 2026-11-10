@@ -4,12 +4,14 @@
 use bevy::prelude::*;
 
 use super::{Connecting, hang_up};
-use crate::common::{CurrentWorld, GameView, PlayFor, ServerStatus, Session};
+use crate::common::{ChosenServer, CurrentWorld, GameView, PlayFor, ServerStatus, Session};
 
 /// Once back at the startup menu (`Session::AtStart`), hangs up if connected and
 /// forgets the world. A refusal is kept, for the menu to say why.
-/// `HOW_SERVER` no longer counts after that: a native client's next Play is
-/// single player, unless a server is chosen in Connect.
+/// `HOW_SERVER` no longer counts after that: a native client's next Continue is
+/// single player. A server chosen in Connect is forgotten (`ChosenServer`), as
+/// Continue and Characters are for this computer's own (owner, 2026-11-10).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn log_out(
     mut commands: Commands,
     mut connecting: ResMut<Connecting>,
@@ -18,7 +20,9 @@ pub(super) fn log_out(
     mut next_view: ResMut<NextState<GameView>>,
     connection: Option<Res<super::ServerConnection>>,
     mut play_for: ResMut<PlayFor>,
+    mut chosen: ResMut<ChosenServer>,
 ) {
+    chosen.set_if_neq(ChosenServer(None));
     // Connect's next server is for Play, unless Characters says otherwise.
     play_for.set_if_neq(PlayFor::Latest);
     if connection.is_some() {

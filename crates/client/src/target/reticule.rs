@@ -92,7 +92,7 @@ pub(super) fn place_reticule(
     };
     visibility.set_if_neq(Visibility::Inherited);
     transform.translation = token.translation + Vec3::Y * TOKEN_HALF_THICKNESS;
-    if !preferences.video.reduce_motion {
+    if !preferences.graphics.reduce_motion {
         let turn = time.elapsed_secs() / TURN_SECONDS * TAU;
         transform.rotation = Quat::from_rotation_y(-turn);
     }

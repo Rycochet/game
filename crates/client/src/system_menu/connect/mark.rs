@@ -1,4 +1,4 @@
-//! The mark at the right end of Connect's address box: a spinner while the
+//! The mark just left of Connect's Connect button: a spinner while the
 //! address is being checked, then a green tick for a server this game can play
 //! on or a red cross, with the reason on hovering.
 
@@ -9,9 +9,7 @@ use super::check::{AddressCheck, Checked};
 use crate::widgets::{HoverTip, Spinner};
 
 /// The mark's size, in pixels.
-pub(super) const MARK: f32 = 24.0;
-/// Space kept clear for it at the end of the box.
-pub(super) const MARK_ROOM: f32 = MARK + 12.0;
+const MARK: f32 = 24.0;
 
 /// The mark, holding the spinner and the picture.
 #[derive(Component)]
@@ -23,16 +21,12 @@ pub(in crate::system_menu) struct MarkSpinner;
 #[derive(Component)]
 pub(in crate::system_menu) struct MarkPicture;
 
-/// The mark, inside the box (`box_height` tall) at its right end.
-pub(super) fn spawn_mark(address_box: &mut ChildSpawnerCommands, box_height: f32) {
-    // Placed from the box's padding, inside its 2-pixel border.
-    let top = (box_height - 4.0 - MARK) / 2.0;
+/// The mark, in the row of Connect's buttons, just left of Connect.
+pub(super) fn spawn_mark(row: &mut ChildSpawnerCommands) {
     let node = Node {
-        position_type: PositionType::Absolute,
-        right: px(6),
-        top: px(top),
         width: px(MARK),
         height: px(MARK),
+        flex_shrink: 0.0,
         ..default()
     };
     let part = || Node {
@@ -42,8 +36,7 @@ pub(super) fn spawn_mark(address_box: &mut ChildSpawnerCommands, box_height: f32
         display: Display::None,
         ..default()
     };
-    address_box
-        .spawn((AddressMark, node, HoverTip(String::new())))
+    row.spawn((AddressMark, node, HoverTip(String::new())))
         .with_children(|mark| {
             mark.spawn((MarkSpinner, Spinner, part()));
             mark.spawn((MarkPicture, ImageNode::default(), part()));

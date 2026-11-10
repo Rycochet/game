@@ -13,60 +13,63 @@ fn render_scale_moves_in_steps() {
 
 #[test]
 fn brightness_stops_below_half() {
-    let mut prefs = VideoPrefs::default();
-    assert_eq!(slide(&mut prefs, VideoControl::Brightness, 1.0), Some(49));
+    let mut prefs = GraphicsPrefs::default();
+    assert_eq!(
+        slide(&mut prefs, GraphicsControl::Brightness, 1.0),
+        Some(49)
+    );
     assert_eq!(prefs.brightness, 49);
     // The same place again changes nothing.
-    assert_eq!(slide(&mut prefs, VideoControl::Brightness, 1.0), None);
-    assert_eq!(slide(&mut prefs, VideoControl::Shadows, 1.0), None);
+    assert_eq!(slide(&mut prefs, GraphicsControl::Brightness, 1.0), None);
+    assert_eq!(slide(&mut prefs, GraphicsControl::Shadows, 1.0), None);
 }
 
 #[test]
 fn a_preset_sets_everything_but_the_players_own() {
-    let mut prefs = VideoPrefs {
+    let mut prefs = GraphicsPrefs {
         brightness: 20,
         reduce_motion: true,
         ..Preset::Low.prefs()
     };
-    choose(&mut prefs, VideoControl::Preset, 2);
+    choose(&mut prefs, GraphicsControl::Preset, 2);
     assert_eq!(prefs.preset(), Some(Preset::High));
     assert_eq!((prefs.brightness, prefs.reduce_motion), (20, true));
-    *switched(&mut prefs, VideoControl::VSync).unwrap() = false;
+    *switched(&mut prefs, GraphicsControl::VSync).unwrap() = false;
     assert!(!prefs.vsync);
     assert_eq!(prefs.preset(), None);
     // "Custom", after the presets, changes nothing.
-    choose(&mut prefs, VideoControl::Preset, Preset::ALL.len());
+    choose(&mut prefs, GraphicsControl::Preset, Preset::ALL.len());
     assert!(!prefs.vsync);
 }
 
 #[test]
 fn switches_set_their_own_setting() {
-    let mut prefs = VideoPrefs::default();
-    *switched(&mut prefs, VideoControl::Clouds).unwrap() = false;
+    let mut prefs = GraphicsPrefs::default();
+    *switched(&mut prefs, GraphicsControl::Clouds).unwrap() = false;
     assert!(!prefs.clouds);
-    *switched(&mut prefs, VideoControl::ReduceMotion).unwrap() = true;
+    *switched(&mut prefs, GraphicsControl::ReduceMotion).unwrap() = true;
     assert!(prefs.reduce_motion);
-    assert!(switched(&mut prefs, VideoControl::Shadows).is_none());
+    assert!(switched(&mut prefs, GraphicsControl::Shadows).is_none());
     // Switches aren't dropdowns: a choice changes nothing.
-    choose(&mut prefs, VideoControl::Clouds, 0);
+    choose(&mut prefs, GraphicsControl::Clouds, 0);
     assert!(!prefs.clouds);
-    choose(&mut prefs, VideoControl::Remembered, 2);
+    choose(&mut prefs, GraphicsControl::Remembered, 2);
     assert_eq!(prefs.remembered, Remembered::Hide);
 }
 
 #[test]
 fn the_page_is_built_again_once_the_slider_is_let_go() {
-    let prefs = VideoPrefs::default();
-    let shown = VideoShown {
+    let prefs = GraphicsPrefs::default();
+    let shown = GraphicsShown {
         prefs: Some(prefs),
         stale: true,
     };
     assert!(shown.needs_building(&prefs, false));
     assert!(!shown.needs_building(&prefs, true));
-    let fresh = VideoShown {
+    let fresh = GraphicsShown {
         prefs: Some(prefs),
         stale: false,
     };
     assert!(!fresh.needs_building(&prefs, false));
-    assert!(VideoShown::default().needs_building(&prefs, true));
+    assert!(GraphicsShown::default().needs_building(&prefs, true));
 }

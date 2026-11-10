@@ -54,48 +54,46 @@ pub(super) fn show_menu(
     }
 }
 
-/// Play at the startup menu, Continue while playing, Logout while playing on
-/// another computer's server or at the startup menu with an account kept for
-/// Play's server (`AccountEmail`) or Play going to another server, and
-/// Connect... only usable at the startup menu.
+/// Continue always, but at the startup menu only with this computer's own
+/// server there (`HomeServer`), and enabled only with a character of this
+/// player's there; Characters at the startup menu, with that server there;
+/// Logout while playing on another computer's server, or at the startup menu
+/// with an account kept for this computer's own (`AccountEmail`: a browser's
+/// page's server); Connect... only usable at the startup menu.
 pub(super) fn show_buttons(
     session: Res<Session>,
     clock: Res<ServerClock>,
     account: Res<crate::common::AccountEmail>,
     playable: Res<crate::common::PlayableHere>,
-    role: Res<crate::common::AccountRole>,
-    chosen: Res<crate::common::ChosenServer>,
+    home: Res<crate::common::HomeServer>,
     mut buttons: Query<(&MenuButton, &mut Node, &mut ButtonState)>,
 ) {
+    let playing = session.is_playing();
+    let home = *home == crate::common::HomeServer::Found;
+    let enabled = |on: bool| {
+        if on {
+            ButtonState::Normal
+        } else {
+            ButtonState::Disabled
+        }
+    };
     for (button, mut node, mut state) in &mut buttons {
         let shown = match button {
-            MenuButton::Play => {
-                // Only with a character to go back to there.
-                state.set_if_neq(if playable.0 {
-                    ButtonState::Normal
-                } else {
-                    ButtonState::Disabled
-                });
-                !session.is_playing()
+            MenuButton::Continue => {
+                // At the startup menu, only with a character to go back to.
+                state.set_if_neq(enabled(playing || playable.0));
+                playing || home
             }
-            MenuButton::Characters => !session.is_playing(),
-            MenuButton::Continue => session.is_playing(),
-            MenuButton::Accounts => session.is_playing() && role.has_accounts_panel(),
-            // At the startup menu: while there is an account to forget, or
-            // another server to leave for the usual one.
-            MenuButton::LogOut => match session.is_playing() {
+            MenuButton::Characters => !playing && home,
+            MenuButton::LogOut => match playing {
                 true => !clock.local_server,
-                false => account.0.is_some() || chosen.0.is_some(),
+                false => account.0.is_some(),
             },
             // Its looks are `online::show_online`'s.
             MenuButton::Online => true,
             MenuButton::Connect => {
                 // Log out first to go to another server.
-                state.set_if_neq(if session.is_playing() {
-                    ButtonState::Disabled
-                } else {
-                    ButtonState::Normal
-                });
+                state.set_if_neq(enabled(!playing));
                 true
             }
         };

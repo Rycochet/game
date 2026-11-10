@@ -4,11 +4,12 @@ use bevy::prelude::*;
 use shared::protocol::ServerAddress;
 
 use super::super::icons::ConnectIcons;
+use super::super::refusal::TriedServer;
 use super::super::{Action, SystemMenu};
 use super::check::AddressCheck;
 use super::popups::{CertificateBox, ForgetWords};
 use super::{AddressBox, SUGGESTED_SERVER, ServerList, spawn_server_row};
-use crate::common::{ChosenServer, Preferences, SavedServer, Session};
+use crate::common::{ChosenServer, PlayFor, Preferences, SavedServer, Session};
 use crate::widgets::{ButtonPressed, TextBox, TextFocus};
 
 /// What Connect has been told since it opened.
@@ -38,13 +39,13 @@ pub(super) fn address_in(text: &str) -> Option<String> {
     ServerAddress::parse(text).map(|address| address.to_string())
 }
 
-/// Each time Connect opens: the box holds the server Play would join, or the
-/// latest one, or else `SUGGESTED_SERVER`, and has the keyboard; nothing pasted is kept from before, but
-/// for the key just refused.
+/// Each time Connect opens: the box holds the server that just refused, or the
+/// latest one joined, or else `SUGGESTED_SERVER`, and has the keyboard; nothing
+/// pasted is kept from before, but for the key just refused.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(in crate::system_menu) fn open_connect(
     menu: Res<SystemMenu>,
-    chosen: Res<ChosenServer>,
+    tried: Res<TriedServer>,
     preferences: Res<Preferences>,
     mut form: ResMut<ConnectForm>,
     mut focus: ResMut<TextFocus>,
@@ -56,12 +57,11 @@ pub(in crate::system_menu) fn open_connect(
     if *menu == SystemMenu::Connect && !before.in_connect() {
         *form = ConnectForm::default();
         // Back from a refusal: the key just tried is still in the padlock.
-        if before == SystemMenu::Refused
-            && let Some(server) = &chosen.0
-        {
+        let tried = tried.0.as_ref().filter(|_| before == SystemMenu::Refused);
+        if let Some(server) = tried {
             form.pasted = Some((server.address.clone(), server.key.clone()));
         }
-        let latest = chosen.0.as_ref().or(preferences.servers.first());
+        let latest = tried.or(preferences.servers.first());
         // With no server known yet, the game's own is suggested.
         address.1.text = latest
             .map(|server| server.address.clone())
@@ -109,6 +109,7 @@ pub(in crate::system_menu) fn use_connect(
     mut menu: ResMut<SystemMenu>,
     mut session: ResMut<Session>,
     mut chosen: ResMut<ChosenServer>,
+    mut play_for: ResMut<PlayFor>,
     mut preferences: ResMut<Preferences>,
     mut form: ResMut<ConnectForm>,
     check: Res<AddressCheck>,
@@ -141,9 +142,6 @@ pub(in crate::system_menu) fn use_connect(
         (Action::ReallyForget, SystemMenu::Forgetting) => {
             if let Some(forgotten) = form.forgetting.take() {
                 preferences.forget_server(&forgotten);
-                if chosen.0.as_ref().is_some_and(|c| c.address == forgotten) {
-                    chosen.0 = None;
-                }
             }
             *menu = SystemMenu::Connect;
         }
@@ -175,6 +173,9 @@ pub(in crate::system_menu) fn use_connect(
                     key,
                     name,
                 });
+                // Straight to Character Select, or for a guest straight in
+                // (owner, 2026-11-10: `connection`).
+                *play_for = PlayFor::Choose;
                 *session = Session::Playing;
                 *menu = SystemMenu::Closed;
             }

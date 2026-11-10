@@ -7,6 +7,7 @@ impl DebugAction {
     /// "..." of one that opens something (`label`).
     pub(in crate::debug_menu) fn name(self) -> &'static str {
         match self {
+            Self::Accounts => "Accounts",
             Self::ChangeCellMode => "Change Cell Mode",
             Self::ChangeCreature => "Change Creature",
             Self::CloseAllDoors => "Close All Doors",

@@ -42,7 +42,7 @@ pub(super) fn strike(
         struck.clear();
         return;
     };
-    let square: ViewSquare = view_square(&orbit, preferences.video.view_distance);
+    let square: ViewSquare = view_square(&orbit, preferences.graphics.view_distance);
     let width = world.surface.width() as f32;
     for BoltStruck(strike) in struck.read() {
         // Cells to grid points: a point's middle cell is the point itself.

@@ -1,4 +1,4 @@
-//! What the Video settings with more than on and off can be.
+//! What the Graphics settings with more than on and off can be.
 
 use serde::{Deserialize, Serialize};
 

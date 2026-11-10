@@ -19,6 +19,7 @@ fn facts() -> Facts {
         world_time_open: false,
         suns_and_moons_open: false,
         tools: DebugTools::every(),
+        accounts: true,
     }
 }
 

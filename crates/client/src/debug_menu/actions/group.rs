@@ -18,6 +18,8 @@ pub(in crate::debug_menu) enum Group {
     Level,
     /// The whole world, and making places.
     World,
+    /// Looking after the server and its players.
+    AdminTools,
 }
 
 impl Group {
@@ -31,6 +33,7 @@ impl Group {
             Self::Mobs => "Mobs",
             Self::Level => "Level",
             Self::World => "World",
+            Self::AdminTools => "Admin Tools",
         }
     }
 }
@@ -63,6 +66,7 @@ impl DebugAction {
             | Self::GeneratePoi
             | Self::DevArea
             | Self::RegenerateDevArea => Group::World,
+            Self::Accounts => Group::AdminTools,
         }
     }
 }

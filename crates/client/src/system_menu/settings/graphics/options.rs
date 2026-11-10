@@ -1,4 +1,4 @@
-//! The Video settings that trade looks for speed, on Settings' Video page: the
+//! The Graphics settings that trade looks for speed, on Settings' Graphics page: the
 //! preset, then Display and Background (and, in `sections`, the rest), with
 //! the pieces their rows are made of. They apply as soon as they are chosen
 //! (`choose`); the modules drawing what they change follow `Preferences`.
@@ -9,8 +9,8 @@ use super::super::rows::{
     spawn_dropdown_row, spawn_labelled, spawn_section, spawn_switch_row, tip,
 };
 use crate::common::{
-    AntiAliasing, Background, FrameRate, IN_BROWSER, MaxResolution, Preset, RENDER_SCALES,
-    VideoPrefs,
+    AntiAliasing, Background, FrameRate, GraphicsPrefs, IN_BROWSER, MaxResolution, Preset,
+    RENDER_SCALES,
 };
 use crate::widgets::{ButtonState, Dropdown, INK, UiId, spawn_slider};
 
@@ -19,7 +19,7 @@ const PERCENT_WIDTH: f32 = 60.0;
 
 /// Which setting a control is.
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
-pub(in crate::system_menu) enum VideoControl {
+pub(in crate::system_menu) enum GraphicsControl {
     Preset,
     FrameRate,
     VSync,
@@ -39,7 +39,7 @@ pub(in crate::system_menu) enum VideoControl {
     ReduceMotion,
 }
 
-impl VideoControl {
+impl GraphicsControl {
     fn ui_name(self) -> &'static str {
         match self {
             Self::Preset => "preset",
@@ -65,9 +65,9 @@ impl VideoControl {
 
 /// The percentage beside a slider, by the slider's setting.
 #[derive(Component)]
-pub(in crate::system_menu) struct PercentText(pub(super) VideoControl);
+pub(in crate::system_menu) struct PercentText(pub(super) GraphicsControl);
 
-const PRESET: &str = "Sets the Video settings together, from fastest to best looking. \
+const PRESET: &str = "Sets the Graphics settings together, from fastest to best looking. \
     Brightness and Reduce Motion are yours, and stay as they are. Changing any other \
     makes this Custom.";
 const FRAME_RATE: &str = "The most frames the game draws each second. Lower limits use \
@@ -103,7 +103,7 @@ pub(super) fn dropdown<T: PartialEq + Copy>(
 /// Spawns a setting's dropdown row, marked, and disabled if `why_not`.
 pub(super) fn setting_row(
     parent: &mut ChildSpawnerCommands,
-    control: VideoControl,
+    control: GraphicsControl,
     label: &str,
     (what, why_not): (&str, Option<&str>),
     dropdown: Dropdown,
@@ -112,7 +112,7 @@ pub(super) fn setting_row(
     let mut commands = parent.commands();
     commands
         .entity(made)
-        .insert((control, UiId::new("settings.video", control.ui_name())));
+        .insert((control, UiId::new("settings.graphics", control.ui_name())));
     if why_not.is_some() {
         commands.entity(made).insert(ButtonState::Disabled);
     }
@@ -121,7 +121,7 @@ pub(super) fn setting_row(
 /// Spawns a setting's switch row, `on` or off, marked, and disabled if `why_not`.
 pub(super) fn switch_row(
     parent: &mut ChildSpawnerCommands,
-    control: VideoControl,
+    control: GraphicsControl,
     label: &str,
     (what, why_not): (&str, Option<&str>),
     on: bool,
@@ -135,13 +135,13 @@ pub(super) fn switch_row(
     parent
         .commands()
         .entity(made)
-        .insert((control, UiId::new("settings.video", control.ui_name())));
+        .insert((control, UiId::new("settings.graphics", control.ui_name())));
 }
 
 /// Spawns a setting's slider row, from `least` to `most` percent, at `percent`.
 pub(super) fn slider_row(
     parent: &mut ChildSpawnerCommands,
-    control: VideoControl,
+    control: GraphicsControl,
     label: &str,
     what: &str,
     (least, most, percent): (u8, u8, u8),
@@ -149,7 +149,7 @@ pub(super) fn slider_row(
     spawn_labelled(parent, label, tip(what, None), |row| {
         let value = f32::from(percent.clamp(least, most) - least) / f32::from(most - least);
         spawn_slider(row, value, None, WIDTH)
-            .insert((control, UiId::new("settings.video", control.ui_name())));
+            .insert((control, UiId::new("settings.graphics", control.ui_name())));
         row.spawn((
             PercentText(control),
             Text::new(format!("{percent}%")),
@@ -164,7 +164,7 @@ pub(super) fn slider_row(
 }
 
 /// Preset, at the top of the page: Custom while the settings are no preset.
-pub(super) fn spawn_preset_row(page: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
+pub(super) fn spawn_preset_row(page: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
     let mut names: Vec<String> = Preset::ALL.iter().map(|it| it.name().into()).collect();
     names.push("Custom".into());
     let chosen = prefs
@@ -180,10 +180,16 @@ pub(super) fn spawn_preset_row(page: &mut ChildSpawnerCommands, prefs: &VideoPre
         greyed,
         ..default()
     };
-    setting_row(page, VideoControl::Preset, "Preset", (PRESET, None), list);
+    setting_row(
+        page,
+        GraphicsControl::Preset,
+        "Preset",
+        (PRESET, None),
+        list,
+    );
 }
 
-pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
+pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
     spawn_section(sections, "Display", |section| {
         let list = dropdown(
             &FrameRate::ALL,
@@ -194,7 +200,7 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
         let row = (FRAME_RATE, None);
         setting_row(
             section,
-            VideoControl::FrameRate,
+            GraphicsControl::FrameRate,
             "Frame Rate Limit",
             row,
             list,
@@ -202,13 +208,13 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
 
         let why_not = IN_BROWSER.then_some(BROWSER_DECIDES);
         let row = (VSYNC, why_not);
-        switch_row(section, VideoControl::VSync, "VSync", row, prefs.vsync);
+        switch_row(section, GraphicsControl::VSync, "VSync", row, prefs.vsync);
 
         let (least, most) = RENDER_SCALES;
         let at = (least, most, prefs.render_scale);
         slider_row(
             section,
-            VideoControl::RenderScale,
+            GraphicsControl::RenderScale,
             "Render Scale",
             RENDER_SCALE,
             at,
@@ -223,7 +229,7 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
         let row = (MAX_RESOLUTION, None);
         setting_row(
             section,
-            VideoControl::MaxResolution,
+            GraphicsControl::MaxResolution,
             "Max Resolution",
             row,
             list,
@@ -240,7 +246,7 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
         let row = (words.as_str(), None);
         setting_row(
             section,
-            VideoControl::AntiAliasing,
+            GraphicsControl::AntiAliasing,
             "Anti-aliasing",
             row,
             list,
@@ -248,7 +254,7 @@ pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: 
     });
 }
 
-pub(super) fn spawn_background_section(sections: &mut ChildSpawnerCommands, prefs: &VideoPrefs) {
+pub(super) fn spawn_background_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
     spawn_section(sections, "Background", |section| {
         let list = dropdown(
             &Background::ALL,
@@ -260,7 +266,7 @@ pub(super) fn spawn_background_section(sections: &mut ChildSpawnerCommands, pref
         let row = (BACKGROUND, why_not);
         setting_row(
             section,
-            VideoControl::Background,
+            GraphicsControl::Background,
             "When Not in Focus",
             row,
             list,

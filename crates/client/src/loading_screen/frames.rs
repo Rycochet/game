@@ -18,6 +18,6 @@ pub(super) fn keep_frame_rate(
     if changed || preferences.is_changed() {
         // Not at the startup menu, which only waits for the player.
         let loading = *step != LoadingStep::Ready && session.is_playing();
-        *settings = frame_settings(loading || keep.0, &preferences.video);
+        *settings = frame_settings(loading || keep.0, &preferences.graphics);
     }
 }

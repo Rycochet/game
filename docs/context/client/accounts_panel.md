@@ -1,6 +1,6 @@
 # client: accounts_panel
 
-The Accounts panel, a moveable panel opened from the system menu's Accounts (`common::OpenAccounts`) for a role with something on it, and keeping the account's role (`common::AccountRole`) from `Welcome` and `RoleAnswer::Changed`. It only asks (`ClientMessage::Role(RoleAsk)`) and shows the answers: the server checks every permission.
+The Accounts panel, a moveable panel opened from the debug menu's Accounts... under Admin Tools (`common::OpenAccounts`) for a role with something on it, and keeping the account's role (`common::AccountRole`) from `Welcome` and `RoleAnswer::Changed`. It only asks (`ClientMessage::Role(RoleAsk)`) and shows the answers: the server checks every permission.
 
 ## Files
 
@@ -22,7 +22,7 @@ The Accounts panel, a moveable panel opened from the system menu's Accounts (`co
 
 ## Used by
 
-- `system_menu` (its Accounts entry, through `common`).
+- `debug_menu` (its Accounts... entry, through `common`).
 
 ## Notes
 

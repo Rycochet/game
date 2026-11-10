@@ -186,7 +186,7 @@ pub(super) fn spawn_settings(commands: &mut Commands) {
         ABOVE_MENU_LAYER,
         &[
             SystemMenu::Settings,
-            SystemMenu::KeepVideo,
+            SystemMenu::KeepGraphics,
             SystemMenu::Ironman,
         ],
         percent(SETTINGS_WIDTH),

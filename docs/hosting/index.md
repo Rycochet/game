@@ -63,7 +63,7 @@ With none of these behind a proxy, `HOW_UPNP: "true"` asks your router to forwar
 
 ## Connecting a native client
 
-Players choose **Connect...** on the startup menu and type the server's address, such as `game.example.com` or `game.example.com:24691`. Without a port, the client tries 24691 and then 443, so a server on either needs no port typed; it asks `/_version` to tell a Hall of Worlds server from any other web server. The client remembers the servers it has joined, and Play goes back to the last one.
+Players choose **Connect...** on the startup menu and type the server's address, such as `game.example.com` or `game.example.com:24691`. Without a port, the client tries 24691 and then 443, so a server on either needs no port typed; it asks `/_version` to tell a Hall of Worlds server from any other web server. The client remembers the servers it has joined, in a list to pick from in Connect...; Continue on the startup menu is only ever for the player's own single-player game.
 
 The client accepts any certificate the server has, so you can change yours whenever you like. A player who wants to be sure they've reached your server, and not an impostor, can paste its certificate (from `https://<your server>:24691/certificate`) or its key's fingerprint into the padlock beside the address. From then on, only a server with that key is accepted, and the client says plainly why if it isn't. The fingerprint is in the server's log when it starts:
 
@@ -118,7 +118,7 @@ The server only asks Google for the player's email address, and only one Google 
 
 If the provider can't be reached when the server starts, or a setting is missing, the server says so in its log and lets players in as guests only. `HOW_GUEST_MODE: "true"` does that on purpose.
 
-Players then choose Log in with Google or Play as Guest when they join. The page opens in their own browser, and once they have logged in there they go back to the game. Their game remembers the login, so they only see that page again after 90 days without playing, or after using Logout on the startup menu (which also takes Play back to single player until they choose the server in Connect again). Logins only go over a secure connection, so a server reached through an unsecured port offers guests only.
+Players then choose Log in with Google or Play as Guest when they join. The page opens in their own browser, and once they have logged in there they go back to the game. Their game remembers the login, so they only see that page again after 90 days without playing, or, in a browser on the server's own page, after Logout on the startup menu. Logins only go over a secure connection, so a server reached through an unsecured port offers guests only.
 
 ## Roles
 
@@ -139,7 +139,7 @@ Every account has a role, which decides what it may do beyond playing. A role ca
 
 **Claiming your server:** a new server has no Owner. When it starts, it writes a claim code to its log and to `owner-claim.txt` in its data folder. Log in with an account (not as a guest) and make a new character with the code as its name: you become the Owner, no character is made, and the game goes back to its menu. Connect again to play. The code works once, and a new one is made each time the server starts until it is used.
 
-**Changing roles in the game:** staff whose role allows it have **Accounts** in the system menu while playing. Its **Find** page looks a character up by name and shows their account's role, and gives it another (one your role may give, for good or for an hour, a day, a week or 30 days, with a reason), or takes it away by giving Player. You can't change your own role, a guest's, or the role of anyone holding a role you couldn't give. **Roles** renames a role or gives it a title (by default only the Owner and Admins), and **Audit Log** shows what has been changed, newest first. Someone playing when their role changes gets the new one at once, and someone banned is sent away.
+**Changing roles in the game:** staff whose role allows it have **Accounts...** in the debug menu while playing, under **Admin Tools**. Its **Find** page looks a character up by name and shows their account's role, and gives it another (one your role may give, for good or for an hour, a day, a week or 30 days, with a reason), or takes it away by giving Player. You can't change your own role, a guest's, or the role of anyone holding a role you couldn't give. **Roles** renames a role or gives it a title (by default only the Owner and Admins), and **Audit Log** shows what has been changed, newest first. Someone playing when their role changes gets the new one at once, and someone banned is sent away.
 
 **Changing roles by hand:** roles are kept in `roles.ron` in the data folder. **Only edit it while the server is stopped**, as a running server writes over it. In it you can:
 

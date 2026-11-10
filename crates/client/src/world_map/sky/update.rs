@@ -13,19 +13,19 @@ use super::{
     SKY_SIDE, SKY_SPACING, SkyAssets, SkyParams, TerrainMaterial,
 };
 use crate::common::{
-    CurrentWorld, Lightning, MapPosition, Preferences, ServerClock, Shadows, VideoPrefs,
+    CurrentWorld, GraphicsPrefs, Lightning, MapPosition, Preferences, ServerClock, Shadows,
 };
 use crate::player::Player;
 use crate::view3d::{OrbitCamera, ViewCamera};
 
-/// What the Video settings show, for the shaders (`SkyParams::shown`).
-fn shown(video: &VideoPrefs) -> Vec4 {
+/// What the Graphics settings show, for the shaders (`SkyParams::shown`).
+fn shown(graphics: &GraphicsPrefs) -> Vec4 {
     let on = |yes: bool| if yes { 1.0 } else { 0.0 };
     Vec4::new(
-        on(video.clouds),
-        on(video.clouds && video.shadows != Shadows::Off),
-        video.precipitation.share(),
-        on(video.foliage),
+        on(graphics.clouds),
+        on(graphics.clouds && graphics.shadows != Shadows::Off),
+        graphics.precipitation.share(),
+        on(graphics.foliage),
     )
 }
 
@@ -177,8 +177,8 @@ pub fn update(
         // Texel centres are half a spacing in from the texture's corner.
         Vec2::new(x as f32, y as f32) - Vec2::splat(SKY_SPACING as f32 / 2.0)
     };
-    let video = &preferences.video;
-    let square = view_square(&orbit, video.view_distance);
+    let graphics = &preferences.graphics;
+    let square = view_square(&orbit, graphics.view_distance);
     let sky_now = &sky_now.0;
     let params = SkyParams {
         origin_a: corner(state.origins[0]),
@@ -196,10 +196,10 @@ pub fn update(
             .lit()
             .lerp(FLASH_COLOUR * FLASH_LIT, lightning.0)
             .extend(PLAYER_GLOW * (1.0 - sky_now.flat.max_element().min(1.0))),
-        shown: shown(video),
+        shown: shown(graphics),
         still: Vec4::new(
-            video.least_light(),
-            if video.reduce_motion {
+            graphics.least_light(),
+            if graphics.reduce_motion {
                 0.0
             } else {
                 time.elapsed_secs()

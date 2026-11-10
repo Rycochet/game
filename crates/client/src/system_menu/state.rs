@@ -14,9 +14,9 @@ pub enum SystemMenu {
     Confirming,
     /// The menu, and above it the settings.
     Settings,
-    /// Settings, and above it the requester asking whether to keep the video
+    /// Settings, and above it the requester asking whether to keep the graphics
     /// settings just applied.
-    KeepVideo,
+    KeepGraphics,
     /// Settings, and above it the requester asking whether to make Ironman the
     /// player's own difficulty.
     Ironman,
@@ -64,8 +64,8 @@ impl SystemMenu {
             // (Connect's own presses are `connect::use_connect`'s.)
             (Self::Menu, Action::Connect) => Self::Connect,
             (Self::Menu, Action::ServerOptions) => Self::ServerOptions,
-            (Self::Settings, Action::ApplyVideo) => Self::KeepVideo,
-            (Self::KeepVideo, Action::KeepVideo | Action::Back) => Self::Settings,
+            (Self::Settings, Action::ApplyGraphics) => Self::KeepGraphics,
+            (Self::KeepGraphics, Action::KeepGraphics | Action::Back) => Self::Settings,
             (Self::Ironman, Action::ChooseIronman | Action::Back) => Self::Settings,
             (
                 Self::Confirming
@@ -90,22 +90,22 @@ impl SystemMenu {
 pub(super) enum Action {
     Open,
     /// Closes what is on top: its "No" or close button, or outside its panel.
-    /// Continue, on the menu.
     Back,
-    /// From the startup menu: connects, and closes the menu.
-    Play,
-    /// From the startup menu: connects to choose a character.
+    /// At the startup menu: plays the character played last on this
+    /// computer's own server (`PlayFor::Latest`). While playing: closes the
+    /// menu.
+    Continue,
+    /// From the startup menu: connects to this computer's own server to choose
+    /// a character.
     Characters,
     Settings,
-    /// The Video page's Apply.
-    ApplyVideo,
-    /// Keeps the video settings just applied (going back is `Back`).
-    KeepVideo,
+    /// The Graphics page's Apply.
+    ApplyGraphics,
+    /// Keeps the graphics settings just applied (going back is `Back`).
+    KeepGraphics,
     /// The requester's yes to Ironman as the player's own difficulty.
     ChooseIronman,
     Credits,
-    /// Opens the Accounts panel (`accounts_panel`), closing the menu.
-    Accounts,
     /// Leaves the server for the startup menu.
     LogOut,
     /// Opens Connect (at the startup menu).
@@ -150,14 +150,13 @@ impl Action {
         let name = match self {
             Self::Open => "menu",
             Self::Back => "back",
-            Self::Play => "play",
+            Self::Continue => "continue",
             Self::Characters => "characters",
             Self::Settings => "settings",
-            Self::ApplyVideo => "apply",
-            Self::KeepVideo | Self::KeepCertificate => "keep",
+            Self::ApplyGraphics => "apply",
+            Self::KeepGraphics | Self::KeepCertificate => "keep",
             Self::ChooseIronman => "ironman",
             Self::Credits => "credits",
-            Self::Accounts => "accounts",
             Self::LogOut => "log_out",
             Self::Connect | Self::ConnectNow => "connect",
             Self::PickServer(_) => "server",
@@ -183,20 +182,18 @@ impl Action {
 /// A menu button shown only some of the time (`show_buttons`).
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum MenuButton {
-    /// At the startup menu.
-    Play,
-    /// At the startup menu: the screen for choosing.
-    Characters,
-    /// While playing.
+    /// Always, but at the startup menu only with this computer's own server
+    /// there (`common::HomeServer`), and enabled only with a character there.
     Continue,
+    /// At the startup menu, with this computer's own server there: the screen
+    /// for choosing.
+    Characters,
     /// While playing on another computer's server (not the one built in).
     LogOut,
     /// Enabled only at the startup menu.
     Connect,
     /// Native only: shows whether it is on.
     Online,
-    /// While playing, for a role with something on the Accounts panel.
-    Accounts,
 }
 
 /// The gear button.

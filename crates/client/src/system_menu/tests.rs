@@ -12,7 +12,6 @@ fn test_app(menu: SystemMenu) -> App {
     app.add_message::<ButtonPressed>()
         .add_message::<AppExit>()
         .add_message::<crate::common::LoginChoice>()
-        .add_message::<crate::common::OpenAccounts>()
         .init_resource::<ButtonInput<KeyCode>>()
         .init_resource::<ButtonInput<MouseButton>>()
         .init_resource::<AccumulatedMouseScroll>()
@@ -21,6 +20,7 @@ fn test_app(menu: SystemMenu) -> App {
         .init_resource::<FullMap>()
         .insert_resource(Session::Playing)
         .init_resource::<ChosenServer>()
+        .init_resource::<super::refusal::TriedServer>()
         .init_resource::<crate::common::PlayFor>()
         .init_resource::<crate::common::Preferences>()
         .insert_resource(menu);
@@ -141,23 +141,24 @@ fn the_startup_menu_stays_until_play() {
     assert_eq!(press_escape(&mut app), SystemMenu::Menu);
     assert_eq!(press_escape(&mut app), SystemMenu::Menu);
     assert_eq!(session(&app), Session::AtStart);
-    assert_eq!(press(&mut app, Action::Play), SystemMenu::Closed);
+    assert_eq!(press(&mut app, Action::Continue), SystemMenu::Closed);
     assert_eq!(session(&app), Session::Playing);
 }
 
 #[test]
 fn logging_out_goes_back_to_the_startup_menu() {
     let mut app = test_app(SystemMenu::Menu);
-    // Play does nothing while playing.
-    assert_eq!(press(&mut app, Action::Play), SystemMenu::Menu);
+    // Continue only closes the menu while playing.
+    assert_eq!(press(&mut app, Action::Continue), SystemMenu::Closed);
     assert_eq!(session(&app), Session::Playing);
+    press(&mut app, Action::Open);
     assert_eq!(press(&mut app, Action::LogOut), SystemMenu::Menu);
     assert_eq!(session(&app), Session::AtStart);
     assert_eq!(press_escape(&mut app), SystemMenu::Menu);
 }
 
 #[test]
-fn characters_connects_to_choose_and_play_to_play_the_latest() {
+fn characters_connects_to_choose_and_continue_to_play_the_latest() {
     use crate::common::PlayFor;
     let mut app = at_start();
     press_escape(&mut app);
@@ -168,7 +169,7 @@ fn characters_connects_to_choose_and_play_to_play_the_latest() {
     let mut app = at_start();
     app.insert_resource(PlayFor::Choose);
     press_escape(&mut app);
-    assert_eq!(press(&mut app, Action::Play), SystemMenu::Closed);
+    assert_eq!(press(&mut app, Action::Continue), SystemMenu::Closed);
     assert_eq!(*app.world().resource::<PlayFor>(), PlayFor::Latest);
 }
 

@@ -44,9 +44,12 @@ pub(in crate::system_menu) fn fill_controls_page(
     taken: Res<TakenKeys>,
     page: Single<Entity, With<ControlsPage>>,
     tools: Res<DebugTools>,
-    mut shown: Local<Option<(Controls, TakenKeys, DebugTools)>>,
+    role: Res<crate::common::AccountRole>,
+    mut shown: Local<Option<(Controls, TakenKeys, bool)>>,
 ) {
-    let now = (preferences.controls.clone(), taken.clone(), *tools);
+    // No debug menu without anything in it (owner).
+    let debug_menu = tools.any() || role.has_accounts_panel();
+    let now = (preferences.controls.clone(), taken.clone(), debug_menu);
     if shown.as_ref() == Some(&now) {
         return;
     }
@@ -61,8 +64,7 @@ pub(in crate::system_menu) fn fill_controls_page(
                         .into_iter()
                         .filter(|action| action.group() == group)
                         .filter(|&action| !(IN_BROWSER && action == Action::FullScreen))
-                        // No debug menu without a debug tool (owner).
-                        .filter(|&action| tools.any() || action != Action::DebugMenu)
+                        .filter(|&action| debug_menu || action != Action::DebugMenu)
                         .collect();
                     for (row, &action) in actions.iter().enumerate() {
                         spawn_action_row(section, row, action, &preferences.controls, &taken);
@@ -212,7 +214,7 @@ pub(in crate::system_menu) fn forget_taken(
     let in_settings = matches!(
         *menu,
         super::super::SystemMenu::Settings
-            | super::super::SystemMenu::KeepVideo
+            | super::super::SystemMenu::KeepGraphics
             | super::super::SystemMenu::Ironman
     );
     if !in_settings && !taken.0.is_empty() {

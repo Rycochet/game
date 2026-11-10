@@ -97,10 +97,7 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
                     ..default()
                 };
                 spawn_text_box(row, text_box, FONT, node)
-                    .insert((AddressBox, UiId::new("connect", "address")))
-                    .with_children(|address_box| mark::spawn_mark(address_box, BUTTON_ROW))
-                    .entry::<Node>()
-                    .and_modify(|mut node| node.padding.right = px(mark::MARK_ROOM));
+                    .insert((AddressBox, UiId::new("connect", "address")));
                 let node = Node {
                     width: px(BUTTON_ROW),
                     height: px(BUTTON_ROW),
@@ -127,10 +124,13 @@ pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
         panel
             .spawn(Node {
                 justify_content: JustifyContent::End,
+                align_items: AlignItems::Center,
                 column_gap: px(GAP),
                 ..default()
             })
             .with_children(|row| {
+                // Left of Connect (owner, 2026-11-10).
+                mark::spawn_mark(row);
                 for (label, action, style) in [
                     ("Connect", Action::ConnectNow, ButtonStyle::Main),
                     ("Cancel", Action::Back, ButtonStyle::Plain),
