@@ -21,7 +21,7 @@ pub(super) fn links_in_area(
             (max.0 + reach, max.1 + reach),
         )
         .into_iter()
-        .filter(|poi| poi.kind.is_town() && !crate::showcase::chunk_in_plain(poi.chunk))
+        .filter(|poi| poi.kind.is_town())
         .collect();
     let mut links = BTreeMap::new();
     for (i, a) in towns.iter().enumerate() {

@@ -175,8 +175,7 @@ impl WorldGround {
 
 impl WorldGround {
     /// Whether `y` is past `climate::ICE_LATITUDE` (80°), where the ice caps
-    /// can't be crossed (owner: the map stretches badly near the poles). Not
-    /// in the showcase's plain beyond the pole.
+    /// can't be crossed (owner: the map stretches badly near the poles).
     pub fn past_the_ice(&self, y: i64) -> bool {
         past_the_ice(self.width, y)
     }
@@ -186,7 +185,7 @@ impl WorldGround {
 /// making its ground.
 pub fn past_the_ice(width: i64, y: i64) -> bool {
     // 80° of the 90° to a pole, a quarter of the width away: 2/9 of it.
-    !crate::showcase::in_plain(y) && y.abs() * 9 >= width * 2
+    y.abs() * 9 >= width * 2
 }
 
 /// How finely heights count for walking. Whole numbers, because game state is.

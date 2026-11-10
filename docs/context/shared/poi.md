@@ -17,7 +17,7 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 
 ## Depends on
 
-- `shared::showcase` (a chunk on its plain has that poi instead), `shared::world_gate`, `shared::rng`, `shared::climate` (where farms and huts stand), `shared::surface` (ground height), `shared::world` (`high_water`).
+- `shared::world_gate`, `shared::rng`, `shared::climate` (where farms and huts stand), `shared::surface` (ground height), `shared::world` (`high_water`).
 
 ## Used by
 

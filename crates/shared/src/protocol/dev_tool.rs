@@ -34,7 +34,6 @@ impl ClientMessage {
             Self::Door(DoorAsk::DevAll { open: false }) => DebugTool::CloseAllDoors,
             Self::Door(DoorAsk::DevKey) => DebugTool::KeyForThisDoor,
             Self::DevBackToStart
-            | Self::DevToShowcase
             | Self::DevEnterSite { .. }
             | Self::DevRevealPois
             | Self::DevDeleteCharacter => DebugTool::Other,

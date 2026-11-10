@@ -33,7 +33,6 @@ pub(super) fn answer_dev(
             None => world_map::teleport(client, world, x, y),
         },
         ClientMessage::DevBackToStart => world_map::back_to_start(client, world),
-        ClientMessage::DevToShowcase => world_map::to_showcase(client, world),
         ClientMessage::DevToHall { seed, gate } => hall::to_hall(client, world, seed, gate),
         // Told by `tell_of_lightning`, which knows where everyone is.
         ClientMessage::DevLightning => {

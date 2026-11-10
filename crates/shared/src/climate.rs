@@ -8,7 +8,6 @@
 
 mod planet;
 
-use crate::showcase;
 use crate::surface::METRES_PER_UNIT;
 use crate::world::WorldParams;
 use core::f64::consts::TAU;
@@ -208,9 +207,6 @@ impl Climate {
     /// its suns' heat, ice past `ICE_LATITUDE`, belts of rain; then the air
     /// cools at Earth's rate as it climbs from the sea.
     pub fn sample_metres(&self, x: i64, y: i64, metres: i32) -> ClimateSample {
-        if showcase::in_plain(y) {
-            return showcase::CLIMATE;
-        }
         // The poles are a quarter of the way round from the equator.
         let latitude = (y as f64 / (self.width as f64 / 4.0)).clamp(-1.0, 1.0);
         let kilometres = metres.max(0) as f64 / 1000.0;
@@ -232,9 +228,6 @@ impl Climate {
 
     /// The climate at a position, `cooling` colder for its height.
     fn cooled_by(&self, x: i64, y: i64, cooling: f64) -> ClimateSample {
-        if showcase::in_plain(y) {
-            return showcase::CLIMATE;
-        }
         // Poles are a quarter of the way round from the equator.
         let latitude = (y.abs() as f64 / (self.width as f64 / 4.0)).min(1.0);
         let temperature = EQUATOR_TEMPERATURE + self.warmth - POLE_COOLING * latitude

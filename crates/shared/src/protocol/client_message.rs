@@ -210,10 +210,6 @@ pub enum ClientMessage {
     /// from anywhere (out of a site too), answered with `OnWorldMap`. Only
     /// an embedded server accepts it; others ignore it.
     DevBackToStart,
-    /// Developer tools: to the plain with every kind of poi (`shared::showcase`),
-    /// from anywhere, answered with `OnWorldMap`. Only an embedded server accepts
-    /// it, and only while the showcase is on.
-    DevToShowcase,
     /// Developer tools: to the Hall of Worlds, before the gate leading to World
     /// Gate `gate` (from 0; none: the nearest, or another world's first) of the
     /// world with this `seed` (none: the player's own). Answered with `EnterHall`.
