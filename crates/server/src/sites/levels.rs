@@ -13,7 +13,7 @@ use shared::site::{Exit, Site, SiteLevel, Stairs, StairsDirection};
 use super::remembered::{mirror_of_first, send_remembered};
 use super::{
     Arrival, DoorSite, NewKeepers, Place, Visit, VisitDoors, beside, door_looks, ensure_locks,
-    keepers_of, level_chunks, set_doors, update_sight,
+    keepers_of, level_chunks, set_doors, town_name_of, update_sight,
 };
 use crate::ServerWorld;
 use crate::connections::Client;
@@ -169,6 +169,7 @@ pub(super) fn enter_level(
         bounds: level.level.bounds(),
         arrival: position,
         entering_site,
+        place_name: town_name_of(world, &new.poi),
     };
     let view = Sight::new(&level.level);
     world.populate(new.id, new.poi, index, &level);

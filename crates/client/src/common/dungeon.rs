@@ -37,6 +37,8 @@ pub struct CurrentDungeon {
     /// In the wilderness, the kind of poi set into it that the player stands
     /// in, as the server says (`ServerMessage::InPoi`).
     pub in_poi: Option<PoiKind>,
+    /// What that poi is called, if it has a name of its own (a town's).
+    pub in_poi_name: Option<String>,
     /// In the wilderness, the cells round the cutouts of pois the player
     /// knows (`ServerMessage::Borders`): drawn hatched, and a click on one
     /// walks there and leaves for the world map.
@@ -59,6 +61,7 @@ impl Default for CurrentDungeon {
             buildings: Vec::new(),
             fields: Vec::new(),
             in_poi: None,
+            in_poi_name: None,
             borders: BTreeSet::new(),
             flats: Vec::new(),
         }
@@ -77,6 +80,7 @@ impl CurrentDungeon {
         self.buildings.clear();
         self.fields.clear();
         self.in_poi = None;
+        self.in_poi_name = None;
         self.borders.clear();
         self.flats.clear();
         self.info = Some(info);
@@ -205,11 +209,15 @@ impl CurrentDungeon {
     }
 
     /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3", or
-    /// "Wilderness: RockCave" in a poi set into the wilderness.
+    /// "Wilderness: RockCave" in a poi set into the wilderness ("Wilderness:
+    /// Thornbury" in a town, by its name).
     pub fn describe(&self) -> String {
         let name = self.floor_name(FirstFloor(1));
         if let Some(kind) = self.in_poi.filter(|_| self.is_wilderness()) {
-            return format!("{name}: {kind:?}");
+            return match &self.in_poi_name {
+                Some(poi_name) => format!("{name}: {poi_name}"),
+                None => format!("{name}: {kind:?}"),
+            };
         }
         match &self.info {
             Some(info)
@@ -234,7 +242,7 @@ impl CurrentDungeon {
             LevelKind::Wilderness => return "Wilderness".into(),
         };
         if kind.is_town() {
-            return format!("{kind:?}");
+            return info.place_name.clone().unwrap_or(format!("{kind:?}"));
         }
         let what = if info.building { "floor" } else { "level" };
         let ruined = if info.ruined { "Ruined" } else { "" };

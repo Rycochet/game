@@ -40,6 +40,7 @@ pub mod shop;
 pub mod site;
 pub mod skill;
 pub mod surface;
+pub mod town_name;
 pub mod underclothes;
 pub mod vegetation;
 pub mod vitals;

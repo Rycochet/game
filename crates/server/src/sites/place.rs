@@ -18,13 +18,12 @@ pub(crate) enum Place {
     },
     /// The wilderness, its level a window of blocks round `centre`, its cells
     /// wrapping at `width`. `cutouts`: the pois set into it there. `in_poi`:
-    /// the kind of poi whose cutout the player stands in, as last told to the
-    /// client.
+    /// the poi whose cutout the player stands in, as last told to the client.
     Wilderness {
         centre: BlockPos,
         width: i64,
         cutouts: Vec<SetIn>,
-        in_poi: Option<PoiKind>,
+        in_poi: Option<Poi>,
     },
 }
 

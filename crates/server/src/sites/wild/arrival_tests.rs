@@ -31,7 +31,7 @@ fn explore_from(test: &mut TestClient, cutout: &Cutout) -> ((i64, i64), Option<P
     test.client.character.world_position = (cutout.poi().x, cutout.poi().y);
     let answers = test.send(&[ClientMessage::Down]);
     let told = answers.iter().find_map(|answer| match answer {
-        ServerMessage::InPoi(kind) => Some(*kind),
+        ServerMessage::InPoi { kind, .. } => Some(*kind),
         _ => None,
     });
     let at = test.client.visit.as_ref().expect("exploring").position();
@@ -71,9 +71,15 @@ fn exploring_from_a_way_down_arrives_beside_it_and_walking_off_is_told() {
     let answers = test.steps(&[(0, 1), (0, 1), (0, 1)]);
     let told: Vec<_> = answers
         .iter()
-        .filter(|answer| matches!(answer, ServerMessage::InPoi(_)))
+        .filter(|answer| matches!(answer, ServerMessage::InPoi { .. }))
         .collect();
-    assert_eq!(told, [&ServerMessage::InPoi(None)]);
+    assert_eq!(
+        told,
+        [&ServerMessage::InPoi {
+            kind: None,
+            name: None
+        }]
+    );
 }
 
 #[test]

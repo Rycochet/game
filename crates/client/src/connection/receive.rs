@@ -192,7 +192,7 @@ pub(super) fn receive(
                 message @ (ServerMessage::EnterLevel(_)
                 | ServerMessage::Difficulty { .. }
                 | ServerMessage::WildernessWindow { .. }
-                | ServerMessage::InPoi(_)
+                | ServerMessage::InPoi { .. }
                 | ServerMessage::EnterHall { .. }
                 | ServerMessage::Buildings(_)
                 | ServerMessage::Fields(_)

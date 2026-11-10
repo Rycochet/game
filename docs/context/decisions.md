@@ -1210,3 +1210,7 @@ Owner's decisions: Online (and its options) appears only for accounts with `Perm
 ## 2026-11-10: Change User on Character Select
 
 Owner's decision: switching accounts on a server is Character Select's **Change User** at the bottom left, shown only while logged in to an account there (never as a guest or in single player), rather than an icon beside each server in Connect. It forgets that server's login and connects again, so the server's login choice comes up, then Character Select. Connect's bin forgets a server's kept login as well as the server. The browser's startup-menu Logout stays for now.
+
+## 2026-11-10: Towns' names come from the server, and are learned
+
+Towns are named by `shared::town_name` from the poi's map seed and the ground's height (owner's design: a base by height, and at most one optional size word before or after). The map seed is secret, so only the server works names out and sends the name itself (`LevelInfo::place_name`, `ServerMessage::InPoi`), never the seed. A player learns a town's name by going in (or, later, from quests); the world map shows no name before that (PR 2 of the town names work keeps what each character knows).
