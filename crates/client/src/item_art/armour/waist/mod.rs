@@ -24,7 +24,7 @@ use shared::body::{Frame, Side};
 use shared::creature::CreatureKind;
 use shared::item::Quality;
 
-use self::hips::Hips;
+pub(in crate::item_art) use self::hips::Hips;
 use super::Model;
 use crate::item_art::body::mesh_of;
 use crate::item_art::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH, WaistLook};

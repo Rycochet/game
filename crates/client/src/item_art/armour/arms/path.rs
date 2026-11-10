@@ -25,7 +25,7 @@ const BEND_SPREAD: f32 = 45.0;
 /// forearm, from the slightly bent elbow, nearer straight down, as the frame has them;
 /// `bend` swings the forearm further forwards by that many radians at the elbow, for
 /// pictures of a piece alone.
-pub(super) struct Arm<'a> {
+pub(in crate::item_art) struct Arm<'a> {
     pub frame: &'a Frame,
     pub side: Side,
     pub bend: f32,

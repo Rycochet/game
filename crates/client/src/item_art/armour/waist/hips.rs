@@ -16,7 +16,7 @@ pub(super) const BACK: f32 = 3.0 * FRAC_PI_2;
 
 /// The hips of a frame.
 #[derive(Clone, Copy)]
-pub(super) struct Hips<'a> {
+pub(in crate::item_art) struct Hips<'a> {
     pub frame: &'a Frame,
 }
 
