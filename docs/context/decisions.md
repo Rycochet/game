@@ -1206,3 +1206,7 @@ Owner's decisions: the startup menu's Play is now Continue, as in game, and with
 ## 2026-11-10: Online by permission, and lockdown
 
 Owner's decisions: Online (and its options) appears only for accounts with `Permission::ServerOptions` (Owners and Admins by default; always the native game's own player), reusing that permission rather than adding one. On this game's own server it opens it to others as before. A networked server can't go offline in the same way, so instead it can be locked down: only accounts with the permission may play, anyone else is sent away and turned away at login. Its staff see Online on it, ticked while open to everyone, and turning it off or on asks first. Lockdown is remembered across restarts (`server.ron`), `HOW_LOCKDOWN=true` starts it on, and each change goes in the audit log. Server Options' gear stays this game's own.
+
+## 2026-11-10: Change User on Character Select
+
+Owner's decision: switching accounts on a server is Character Select's **Change User** at the bottom left, shown only while logged in to an account there (never as a guest or in single player), rather than an icon beside each server in Connect. It forgets that server's login and connects again, so the server's login choice comes up, then Character Select. Connect's bin forgets a server's kept login as well as the server. The browser's startup-menu Logout stays for now.

@@ -1,6 +1,6 @@
 //! What the screen's presses do: a cell chooses its character (or "+" goes on to
-//! making one), Play plays the chosen one, Delete asks first, and Cancel goes back
-//! to the startup menu.
+//! making one), Play plays the chosen one, Delete asks first, Cancel goes back
+//! to the startup menu, and Change User logs in again.
 
 use bevy::prelude::*;
 
@@ -8,7 +8,7 @@ use super::cells::Cell;
 use super::chosen::Chosen;
 use super::requester::Answer;
 use super::screen::Button;
-use crate::common::CharacterChoice;
+use crate::common::{CharacterChoice, LoginChoice};
 use crate::widgets::ButtonPressed;
 
 pub(super) fn press_buttons(
@@ -18,6 +18,7 @@ pub(super) fn press_buttons(
     answers: Query<&Answer>,
     mut chosen: ResMut<Chosen>,
     mut choices: MessageWriter<CharacterChoice>,
+    mut login: MessageWriter<LoginChoice>,
 ) {
     for press in pressed.read() {
         let entity = press.0;
@@ -52,6 +53,9 @@ pub(super) fn press_buttons(
             (Ok(Button::Delete), Some(_)) => chosen.deleting = true,
             (Ok(Button::Cancel), _) => {
                 choices.write(CharacterChoice::Cancel);
+            }
+            (Ok(Button::ChangeUser), _) => {
+                login.write(LoginChoice::ChangeUser);
             }
             _ => {}
         }

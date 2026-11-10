@@ -103,6 +103,7 @@ pub(super) fn choose_login(
     mut session: ResMut<Session>,
     mut email: ResMut<AccountEmail>,
     chosen: Res<crate::common::ChosenServer>,
+    mut play_for: ResMut<crate::common::PlayFor>,
 ) {
     for choice in choices.read() {
         match (choice, &connection) {
@@ -111,6 +112,22 @@ pub(super) fn choose_login(
             (LoginChoice::LogOut, _) => {
                 saved_login::forget(&at_start(&chosen, &connecting));
                 email.0 = None;
+            }
+            (LoginChoice::ForgetServer(address), _) => {
+                if let Some(address) = shared::protocol::ServerAddress::parse(address) {
+                    saved_login::forget(&Target::of_url(address.url()));
+                }
+            }
+            // Connects again (`connect`, at once), and with no account kept
+            // the server's login choice is shown, then Character Select.
+            (LoginChoice::ChangeUser, Some(_)) => {
+                saved_login::forget(&connecting.target);
+                email.0 = None;
+                info!("Changing user: logging in again");
+                super::hang_up(&mut commands);
+                connecting.retry = None;
+                // The new account's characters to choose from.
+                play_for.set_if_neq(crate::common::PlayFor::Choose);
             }
             (LoginChoice::Cancel, _) => {
                 *logging_in = LoggingIn::Not;

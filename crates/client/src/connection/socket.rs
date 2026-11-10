@@ -42,6 +42,14 @@ pub(super) enum Target {
 }
 
 impl Target {
+    /// A server by its socket's URL, with no key kept for it.
+    pub(super) fn of_url(url: String) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        return Self::Url { url, key: None };
+        #[cfg(target_arch = "wasm32")]
+        Self::Url { url }
+    }
+
     /// Native: the server chosen in Connect; otherwise `HOW_SERVER` (with
     /// `HOW_SERVER_KEY`), until logging out; otherwise single player.
     #[cfg(not(target_arch = "wasm32"))]
