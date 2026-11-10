@@ -10,14 +10,15 @@ use shared::protocol::ClientMessage;
 
 use super::close::close;
 use super::showing::{PlanetView, Showing};
-use crate::common::{ServerDevTools, TeleportToWorldAsked};
+use crate::common::{DebugTools, TeleportToWorldAsked};
 use crate::connection::ToServer;
 use crate::widgets::{ButtonPressed, ButtonState, HoverTip};
+use shared::role::DebugTool;
 
 /// Why the view's gates can't be gone to now, if they can't.
 pub(super) fn why_not(showing: &Showing, dev_tools: bool) -> Option<&'static str> {
     if !dev_tools {
-        Some("the server doesn't allow dev tools")
+        Some("you may not use Teleport to World")
     } else if showing.choice.seed != showing.home.seed {
         Some("only the planet it was opened for")
     } else if showing.choice.generator != showing.home.generator {
@@ -48,9 +49,9 @@ pub(super) fn go_to_gate(
 /// debug menu's panel with this world's seed.
 pub(super) fn teleport_button(
     mut view: ResMut<PlanetView>,
-    dev_tools: Res<ServerDevTools>,
+    tools: Res<DebugTools>,
     mut pressed: MessageReader<ButtonPressed>,
-    mut buttons: Query<(&mut ButtonState, &mut HoverTip)>,
+    mut buttons: Query<(&mut ButtonState, &mut HoverTip, &mut Node)>,
     mut asked: MessageWriter<TeleportToWorldAsked>,
     mut commands: Commands,
 ) {
@@ -58,8 +59,18 @@ pub(super) fn teleport_button(
         return;
     };
     let teleport = showing.bar.teleport;
-    let why = why_not(showing, dev_tools.0);
-    if let Ok((mut state, mut tip)) = buttons.get_mut(teleport) {
+    let permitted = tools.may(DebugTool::TeleportToWorld);
+    let why = why_not(showing, permitted);
+    if let Ok((mut state, mut tip, mut node)) = buttons.get_mut(teleport) {
+        // Hidden without permission (owner), as in the debug menu.
+        let display = if permitted {
+            Display::Flex
+        } else {
+            Display::None
+        };
+        if node.display != display {
+            node.display = display;
+        }
         state.set_if_neq(match why {
             Some(_) => ButtonState::Disabled,
             None => ButtonState::Normal,

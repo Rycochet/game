@@ -9,8 +9,9 @@ use super::gates::RING;
 use super::pick::{Sight, gate_spot, gate_under};
 use super::showing::PlanetView;
 use super::teleport::why_not;
-use crate::common::{ServerDevTools, UiPointer};
+use crate::common::{DebugTools, UiPointer};
 use crate::widgets::{ItemTip, ItemTooltip, shown_at};
+use shared::role::DebugTool;
 
 /// Where the name goes from the pointer, as other tooltips have it.
 const OFFSET: Vec2 = Vec2::new(16.0, 16.0);
@@ -26,7 +27,7 @@ pub(super) struct PointedGate {
 #[allow(clippy::too_many_arguments)]
 pub(super) fn point_at_gates(
     mut view: ResMut<PlanetView>,
-    dev_tools: Res<ServerDevTools>,
+    tools: Res<DebugTools>,
     pointer: Res<UiPointer>,
     nodes: Query<(&ComputedNode, &UiGlobalTransform)>,
     places: Query<&Transform>,
@@ -71,7 +72,7 @@ pub(super) fn point_at_gates(
     let Some(number) = gate_under(on_picture, &spots, &sight) else {
         return;
     };
-    let why = why_not(showing, dev_tools.0);
+    let why = why_not(showing, tools.may(DebugTool::TeleportToWorld));
     let words = match why {
         None => format!("Gate {}", number + 1),
         Some(why) => format!("Gate {} (can't go: {why})", number + 1),

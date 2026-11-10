@@ -280,7 +280,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             server_clock: 2.0,
             x: -4,
             y: 9,
-            dev_tools: true,
+            debug_tools: crate::role::DebugTool::ALL.into(),
             can_pause: true,
             stacks: StackLimits::default(),
             role: crate::role::RoleBadge {

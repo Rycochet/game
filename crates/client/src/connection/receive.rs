@@ -28,7 +28,7 @@ pub(super) fn receive(
     (mut from_server, mut world_changed): (MessageWriter<FromServer>, MessageWriter<WorldChanged>),
     mut prediction: ResMut<Prediction>,
     mut clock: ResMut<GameClock>,
-    mut server_dev_tools: ResMut<crate::common::ServerDevTools>,
+    mut debug_tools: ResMut<crate::common::DebugTools>,
     mut server_clock: ResMut<ServerClock>,
     time: Res<Time<Real>>,
     mut hosting: ResMut<Hosting>,
@@ -72,7 +72,7 @@ pub(super) fn receive(
                 server_clock: seconds,
                 x,
                 y,
-                dev_tools,
+                debug_tools: tools,
                 can_pause,
                 stacks,
                 role,
@@ -80,7 +80,7 @@ pub(super) fn receive(
                 shown,
             })) => {
                 let minutes = world_time.minutes(seconds);
-                server_dev_tools.0 = dev_tools;
+                *debug_tools = crate::common::DebugTools::of(tools.iter().copied());
                 server_clock.can_pause = can_pause;
                 server_clock.paused = false;
                 clock.set_if_neq(GameClock {
@@ -117,7 +117,7 @@ pub(super) fn receive(
                     server_clock: seconds,
                     x,
                     y,
-                    dev_tools,
+                    debug_tools: tools,
                     can_pause,
                     stacks,
                     role,

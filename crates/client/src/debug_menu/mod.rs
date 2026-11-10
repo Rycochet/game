@@ -12,8 +12,8 @@ use bevy::prelude::*;
 use shared::movement::Step;
 
 use crate::common::{
-    ClickMode, CurrentDungeon, DebugInfo, DetectMonsters, FreezeMobs, GameView, GodMode,
-    ServerDevTools, Truesight,
+    ClickMode, CurrentDungeon, DebugInfo, DebugTools, DetectMonsters, FreezeMobs, GameView,
+    GodMode, Truesight,
 };
 use crate::player::{PlayerSystems, TakeStep};
 use crate::widgets::WidgetSystems;
@@ -127,7 +127,7 @@ struct FactSources<'w> {
     freeze: Res<'w, FreezeMobs>,
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
-    server_dev_tools: Res<'w, ServerDevTools>,
+    tools: Res<'w, DebugTools>,
     panels: Res<'w, OpenPanels>,
 }
 
@@ -145,7 +145,7 @@ impl FactSources<'_> {
             in_town: *self.view.get() == GameView::Dungeon && self.dungeon.is_town(),
             world_time_open: self.panels.is_open(DebugAction::WorldTime),
             suns_and_moons_open: self.panels.is_open(DebugAction::SunsAndMoons),
-            dev_tools: self.server_dev_tools.0,
+            tools: *self.tools,
         }
     }
 }

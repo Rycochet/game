@@ -202,6 +202,12 @@ impl Roles {
         Ok(())
     }
 
+    /// Adds a line to the audit log that isn't about roles, such as a debug
+    /// tool used (`connections::dev_audit`).
+    pub(crate) fn record(&mut self, now: u64, what: &str) {
+        self.audit.record(now, what);
+    }
+
     /// The audit log's lines, when kept in memory (tests).
     #[cfg(test)]
     pub(crate) fn audit_lines(&self) -> &[String] {

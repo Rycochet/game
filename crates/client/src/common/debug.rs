@@ -4,10 +4,38 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::protocol::DevMob;
+use shared::role::DebugTool;
 
-/// Whether the server accepts developer tools messages (from its `Welcome`).
-#[derive(Resource, Default, Clone, Copy, Debug)]
-pub struct ServerDevTools(pub bool);
+/// The debug tools this player may use (from `Welcome`): what the menu and
+/// panels offer, as the server takes only these (owner, 2026-11-09: what isn't
+/// allowed is hidden, not greyed). One bit per `DebugTool`, so it can be copied.
+#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DebugTools(u64);
+
+impl DebugTools {
+    pub fn of(tools: impl IntoIterator<Item = DebugTool>) -> Self {
+        Self(
+            tools
+                .into_iter()
+                .fold(0, |bits, tool| bits | 1 << tool as u64),
+        )
+    }
+
+    /// Every tool, as a single player's own has (tests).
+    #[cfg(test)]
+    pub fn every() -> Self {
+        Self::of(DebugTool::ALL)
+    }
+
+    pub fn may(self, tool: DebugTool) -> bool {
+        self.0 & 1 << tool as u64 != 0
+    }
+
+    /// Whether there is any: without, the debug menu isn't there at all.
+    pub fn any(self) -> bool {
+        self.0 != 0
+    }
+}
 
 /// Debug: open the debug menu's Teleport to World panel with this world's seed
 /// in it (none: the world the player is in), as View Planet's button does.

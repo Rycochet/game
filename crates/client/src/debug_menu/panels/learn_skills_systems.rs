@@ -9,9 +9,10 @@ use shared::sheet::Feeling;
 use super::super::actions::DebugAction;
 use super::OpenPanels;
 use super::learn_skills::{LearnButton, LearnSkillsForm, SetAllBox, SkillBox, SkillCheck};
-use crate::common::{Other, ServerDevTools, Target};
+use crate::common::{DebugTools, Other, Target};
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{ButtonPressed, ButtonState, Checked, TextBox, TextFocus};
+use shared::role::DebugTool;
 
 /// Adds the panel's systems to the debug menu's plugin.
 pub(in crate::debug_menu) fn add_learn_skills_panel(app: &mut App) {
@@ -158,7 +159,7 @@ fn edit_skill_boxes(
 #[allow(clippy::too_many_arguments)]
 fn show_skills(
     form: Res<LearnSkillsForm>,
-    dev_tools: Res<ServerDevTools>,
+    tools: Res<DebugTools>,
     focus: Res<TextFocus>,
     target: Res<Target>,
     others: Query<&Other>,
@@ -166,7 +167,7 @@ fn show_skills(
     mut boxes: Query<(Entity, &SkillBox, &mut TextBox)>,
     mut buttons: Query<(&LearnButton, &mut ButtonState), Without<SkillCheck>>,
 ) {
-    let can = dev_tools.0 && form.skills.is_some();
+    let can = tools.may(DebugTool::LearnSkills) && form.skills.is_some();
     for (button, mut state) in &mut buttons {
         let (usable, chosen) = match button {
             LearnButton::You => (true, !form.for_target),
@@ -180,7 +181,7 @@ fn show_skills(
             (false, false) => ButtonState::Disabled,
         });
     }
-    if !form.is_changed() && !dev_tools.is_changed() {
+    if !form.is_changed() && !tools.is_changed() {
         return;
     }
     let skills = form.skills.as_ref();

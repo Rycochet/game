@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use super::rows::{spawn_section, spawn_sections, tip};
 use super::{FONT, LABEL_GAP, ROW_HEIGHT};
 use crate::common::controls::SLOTS;
-use crate::common::{Action, Binding, Controls, Group, IN_BROWSER, Mods, Preferences};
+use crate::common::{Action, Binding, Controls, DebugTools, Group, IN_BROWSER, Mods, Preferences};
 use crate::widgets::{
     ButtonPressed, ButtonState, HoverTip, INK, KeyBox, KeyChosen, ROW_TINT, UiId, spawn_button,
     spawn_key_box,
@@ -43,9 +43,10 @@ pub(in crate::system_menu) fn fill_controls_page(
     preferences: Res<Preferences>,
     taken: Res<TakenKeys>,
     page: Single<Entity, With<ControlsPage>>,
-    mut shown: Local<Option<(Controls, TakenKeys)>>,
+    tools: Res<DebugTools>,
+    mut shown: Local<Option<(Controls, TakenKeys, DebugTools)>>,
 ) {
-    let now = (preferences.controls.clone(), taken.clone());
+    let now = (preferences.controls.clone(), taken.clone(), *tools);
     if shown.as_ref() == Some(&now) {
         return;
     }
@@ -60,6 +61,8 @@ pub(in crate::system_menu) fn fill_controls_page(
                         .into_iter()
                         .filter(|action| action.group() == group)
                         .filter(|&action| !(IN_BROWSER && action == Action::FullScreen))
+                        // No debug menu without a debug tool (owner).
+                        .filter(|&action| tools.any() || action != Action::DebugMenu)
                         .collect();
                     for (row, &action) in actions.iter().enumerate() {
                         spawn_action_row(section, row, action, &preferences.controls, &taken);

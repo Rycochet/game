@@ -33,7 +33,7 @@ fn everyone_starts_a_player_and_guests_are_guests() {
 #[test]
 fn the_owner_may_do_everything_and_give_any_role_but_owner() {
     let owner = Roles::default().owner();
-    assert!(Permission::ALL.iter().all(|p| owner.powers.may(*p)));
+    assert!(Permission::all().all(|p| owner.powers.may(p)));
     assert!(owner.powers.grants.contains(&RoleId::new(ADMIN)));
     assert!(!owner.powers.grants.contains(&RoleId::new(OWNER)));
     assert!(!owner.powers.grants.contains(&RoleId::new(GUEST)));
@@ -59,8 +59,12 @@ fn developers_and_moderators_dont_overlap() {
     .unwrap();
     let developer = roles.held(account(1), false, 0).powers;
     let moderator = roles.held(account(2), false, 0).powers;
-    assert!(developer.may(Permission::DebugTools) && !developer.may(Permission::LookUp));
-    assert!(moderator.may(Permission::LookUp) && !moderator.may(Permission::DebugTools));
+    let tool = |tool| Permission::Debug(tool);
+    assert!(developer.may(tool(DebugTool::GiveItem)) && !developer.may(Permission::LookUp));
+    // World Time and Freeze Mobs are for Admins.
+    assert!(!developer.may(tool(DebugTool::WorldTime)));
+    assert!(moderator.may(Permission::LookUp) && !moderator.may(tool(DebugTool::GiveItem)));
+    assert!(moderator.may(tool(DebugTool::ExamineMob)) && moderator.may(tool(DebugTool::GodMode)));
 }
 
 #[test]
@@ -203,6 +207,8 @@ fn a_hand_edited_file_is_filled_in_and_checked() {
     // What the file says wins over the defaults; what it leaves out is filled in.
     let developer = roles.role(&RoleId::new(DEVELOPER), None, String::new());
     assert_eq!(developer.badge.shown(), "Wizard");
+    // The old single debug tools permission, off where it was on: none of them.
+    assert!(!developer.powers.may(Permission::Debug(DebugTool::GiveItem)));
     assert!(!developer.powers.may(Permission::DebugTools));
     assert!(roles.file.role(&RoleId::new(ADMIN)).is_some());
     let rewritten = fs::read_to_string(folder.0.join("roles.ron")).unwrap();
@@ -228,4 +234,33 @@ fn a_broken_file_stops_the_server_and_is_left_alone() {
             text
         );
     }
+}
+
+#[test]
+fn old_debug_tools_permissions_become_each_tool() {
+    let folder = TestFolder::new();
+    fs::create_dir_all(&folder.0).unwrap();
+    let written = r#"(
+        format: 1,
+        roles: [
+            (id: "moderator", name: "Moderator", permissions: {DebugTools: false, LookUp: true}),
+            (id: "builder", name: "Builder", permissions: {DebugTools: true}),
+        ],
+        accounts: {},
+    )"#;
+    fs::write(folder.0.join("roles.ron"), written).unwrap();
+    let roles = Roles::open(&folder.0, 0).unwrap();
+    let tool = |tool| Permission::Debug(tool);
+    // As it had by default: the new defaults.
+    let moderator = roles
+        .role(&RoleId::new(MODERATOR), None, String::new())
+        .powers;
+    assert!(moderator.may(tool(DebugTool::ExamineMob)));
+    // A server's own role had them all: every one but the Admins'.
+    let builder = roles
+        .role(&RoleId::new("builder"), None, String::new())
+        .powers;
+    assert!(builder.may(tool(DebugTool::GiveItem)) && !builder.may(tool(DebugTool::WorldTime)));
+    let rewritten = fs::read_to_string(folder.0.join("roles.ron")).unwrap();
+    assert!(!rewritten.contains("DebugTools") && rewritten.contains("Debug(GiveItem)"));
 }

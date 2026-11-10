@@ -8,11 +8,12 @@ use super::create_mob::ATTITUDES;
 use super::{
     MobChoice, MobClickToPlace, MobCreate, MobNewSeed, MobSeed, MobStill, OpenPanels, new_seed,
 };
-use crate::common::{ClickMode, CreateMobOrder, CurrentDungeon, GameView, ServerDevTools};
+use crate::common::{ClickMode, CreateMobOrder, CurrentDungeon, DebugTools, GameView};
 use crate::debug_menu::DebugAction;
 use crate::widgets::{
     ButtonPressed, ButtonState, Checked, Dropdown, DropdownChosen, TextBox, TextEdited,
 };
+use shared::role::DebugTool;
 
 /// How many seeds the new seed button has made, to keep them apart.
 #[derive(Resource, Default)]
@@ -34,7 +35,7 @@ pub(in crate::debug_menu) fn add_create_mob_panel(app: &mut App) {
 }
 
 /// Whether Mob Mode can be used: in a site that isn't the wilderness or the
-/// Hall, with a server that takes dev tools.
+/// Hall, with permission to make mobs.
 fn can_place(view: &GameView, dungeon: &CurrentDungeon, dev_tools: bool) -> bool {
     use shared::protocol::LevelKind;
     let in_site = dungeon
@@ -150,10 +151,10 @@ fn keep_mob_mode_where_it_works(
     open: Res<OpenPanels>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
-    dev_tools: Res<ServerDevTools>,
+    tools: Res<DebugTools>,
     mut mode: ResMut<ClickMode>,
 ) {
-    let usable = can_place(view.get(), &dungeon, dev_tools.0);
+    let usable = can_place(view.get(), &dungeon, tools.may(DebugTool::CreateMob));
     if *mode == ClickMode::PlaceMob && (!open.is_open(DebugAction::CreateMob) || !usable) {
         *mode = ClickMode::Normal;
     }
@@ -165,12 +166,15 @@ fn show_mob_mode(
     mode: Res<ClickMode>,
     view: Res<State<GameView>>,
     dungeon: Res<CurrentDungeon>,
-    dev_tools: Res<ServerDevTools>,
+    tools: Res<DebugTools>,
     mut create: Query<&mut ButtonState, With<MobCreate>>,
     mut words: Query<&mut Visibility, With<MobClickToPlace>>,
 ) {
     let on = *mode == ClickMode::PlaceMob;
-    let state = match (can_place(view.get(), &dungeon, dev_tools.0), on) {
+    let state = match (
+        can_place(view.get(), &dungeon, tools.may(DebugTool::CreateMob)),
+        on,
+    ) {
         (false, _) => ButtonState::Disabled,
         (true, true) => ButtonState::Selected,
         (true, false) => ButtonState::Normal,

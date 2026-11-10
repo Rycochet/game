@@ -3,7 +3,7 @@
 
 use shared::poi::PoiKind;
 
-use crate::common::GameView;
+use crate::common::{DebugTools, GameView};
 use crate::widgets::matches_filter;
 
 /// One entry in the debug menu. Sending it does what it says.
@@ -56,8 +56,9 @@ pub(super) struct Facts {
     pub in_town: bool,
     pub world_time_open: bool,
     pub suns_and_moons_open: bool,
-    /// Whether the server accepts developer tools messages.
-    pub dev_tools: bool,
+    /// The debug tools this player may use: an entry needing another isn't
+    /// shown.
+    pub tools: DebugTools,
 }
 
 impl DebugAction {
@@ -152,11 +153,13 @@ impl DebugAction {
         }
     }
 
+    /// Whether it is shown at all: only with permission for its tool.
+    pub(super) fn is_permitted(self, facts: &Facts) -> bool {
+        facts.tools.may(self.tool())
+    }
+
     /// Whether it can be used now.
     pub(super) fn is_available(self, facts: &Facts) -> bool {
-        if self.needs_server_dev_tools() && !facts.dev_tools {
-            return false;
-        }
         match self {
             Self::ChangeCellMode
             | Self::OpenAllDoors
@@ -170,21 +173,6 @@ impl DebugAction {
             }
             _ => true,
         }
-    }
-
-    /// Whether it does nothing unless the server accepts dev tools: all but
-    /// what only changes this screen.
-    fn needs_server_dev_tools(self) -> bool {
-        !matches!(
-            self,
-            Self::ShowDebugInfo
-                | Self::LightningNow
-                | Self::SunsAndMoons
-                | Self::DrawingStates
-                | Self::ItemPictures
-                | Self::ShowWidgets
-                | Self::ViewPlanet
-        )
     }
 
     /// For one that toggles, whether it is on.
@@ -224,6 +212,7 @@ pub(super) fn kind_name(kind: PoiKind) -> String {
 
 mod group;
 mod names;
+mod tool;
 
 #[cfg(test)]
 use group::Group;

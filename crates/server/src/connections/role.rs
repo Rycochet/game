@@ -1,7 +1,11 @@
 //! A client's role: what its account may do here, checked on everything asked
 //! of the server beyond playing, and the role its character is shown as.
 
-use shared::role::{PLAYER, Permission, Powers, RoleBadge, RoleId, ShownRole, is_marked};
+use std::collections::BTreeSet;
+
+use shared::role::{
+    DebugTool, PLAYER, Permission, Powers, RoleBadge, RoleId, ShownRole, is_marked,
+};
 
 use super::Client;
 use crate::ServerOptions;
@@ -36,10 +40,18 @@ impl Client {
                 .is_some_and(|held| held.powers.may(permission))
     }
 
-    /// Whether it may use the debug tools: by its role, or on a server that
-    /// gives them to everyone (`HOW_DEBUG_TOOLS`).
-    pub(super) fn may_debug(&self, options: &ServerOptions) -> bool {
-        options.dev_tools || self.may(Permission::DebugTools)
+    /// Whether it may use this debug tool: by its role, or on a server that
+    /// gives them to everyone (`HOW_DEBUG_TOOLS`), all but the Admin-only ones.
+    pub(super) fn may_debug(&self, tool: DebugTool, options: &ServerOptions) -> bool {
+        (options.dev_tools && !tool.admin_only()) || self.may(Permission::Debug(tool))
+    }
+
+    /// Every debug tool it may use, as `Welcome` tells it.
+    pub(super) fn debug_tools(&self, options: &ServerOptions) -> BTreeSet<DebugTool> {
+        DebugTool::ALL
+            .into_iter()
+            .filter(|&tool| self.may_debug(tool, options))
+            .collect()
     }
 
     /// What it is told of its role.

@@ -85,7 +85,7 @@ pub(super) use give_systems::{
 };
 pub(super) use give_target::{GiveTo, GiveToWords, follow_target};
 pub(super) use kept_choices::add_kept_choices;
-use layout::{row, words};
+use layout::{row, show_if, words};
 use learn_skills::spawn_learn_skills;
 pub(super) use learn_skills_systems::add_learn_skills_panel;
 pub(super) use open::{OpenPanels, forget_closed};

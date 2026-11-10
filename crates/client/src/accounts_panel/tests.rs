@@ -8,13 +8,18 @@ fn each_role_sees_the_tabs_it_may_use() {
         permissions: permissions.iter().copied().collect(),
         ..Powers::default()
     };
-    assert_eq!(tabs_for(&with(&[Permission::DebugTools])), []);
+    assert_eq!(
+        tabs_for(&with(&[Permission::Debug(
+            shared::role::DebugTool::GiveItem
+        )])),
+        []
+    );
     assert_eq!(
         tabs_for(&with(&[Permission::LookUp, Permission::ReadAudit])),
         [Tab::Find, Tab::Audit]
     );
     assert_eq!(
-        tabs_for(&with(&Permission::ALL)),
+        tabs_for(&with(&Permission::all().collect::<Vec<_>>())),
         [Tab::Find, Tab::Roles, Tab::Audit]
     );
 }

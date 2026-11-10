@@ -11,11 +11,12 @@ use shared::sheet::Feeling;
 
 use super::super::actions::DebugAction;
 use super::{FONT, OpenPanels, row};
-use crate::common::{InspectedMob, Other, ServerDevTools, Target};
+use crate::common::{DebugTools, InspectedMob, Other, Target};
 use crate::connection::{FromServer, ToServer};
 use crate::widgets::{
     BUTTON_PADDING, ButtonPressed, ButtonState, INK, Pressable, RaisePanel, UiId, spawn_button,
 };
+use shared::role::DebugTool;
 
 /// How often an open panel asks again, in seconds.
 const ASK_EVERY: f32 = 0.5;
@@ -168,20 +169,26 @@ fn press_buttons(
     }
 }
 
-/// Greys the buttons with no mob targeted, or without the server's dev tools.
+/// Greys the buttons with no mob targeted, and hides each without its own
+/// permission (owner: Give Item... too).
 fn grey_buttons(
     target: Res<Target>,
     others: Query<&Other>,
-    dev_tools: Res<ServerDevTools>,
-    mut buttons: Query<&mut ButtonState, With<ExamineButton>>,
+    tools: Res<DebugTools>,
+    mut buttons: Query<(&ExamineButton, &mut ButtonState, &mut Node)>,
 ) {
-    let can = dev_tools.0 && targeted_mob(&target, &others).is_some();
-    let state = if can {
+    let state = if targeted_mob(&target, &others).is_some() {
         ButtonState::Normal
     } else {
         ButtonState::Disabled
     };
-    for mut button in &mut buttons {
-        button.set_if_neq(state);
+    for (button, mut button_state, mut node) in &mut buttons {
+        let tool = match button {
+            ExamineButton::Kill => DebugTool::KillMob,
+            ExamineButton::Destroy => DebugTool::DestroyMob,
+            ExamineButton::GiveItem => DebugTool::GiveItem,
+        };
+        super::show_if(&mut node, tools.may(tool));
+        button_state.set_if_neq(state);
     }
 }

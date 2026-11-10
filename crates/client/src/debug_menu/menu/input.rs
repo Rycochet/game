@@ -76,7 +76,12 @@ pub(in crate::debug_menu) fn take_input(
     let edits: Vec<Entity> = edited.read().map(|edit| edit.0).collect();
     let soft: Vec<SoftKey> = soft_keys.read().map(|key| key.0).collect();
     // Not over the full map: it would be the bigger of the two.
+    // Without any debug tool there is no menu to open (owner, 2026-11-09).
+    if !sources.tools.any() && menu.open {
+        menu.set_open(false);
+    }
     let toggled = !full_map.open
+        && sources.tools.any()
         && (preferences.controls.just_pressed(&keys, Action::DebugMenu)
             || presses.iter().any(|&entity| warning.contains(entity)));
     if toggled {
@@ -122,7 +127,7 @@ pub(in crate::debug_menu) fn take_input(
             level.highlight = None;
             level.first_column = 0;
         }
-        let shown = entries_on_show(layer, &level.filter);
+        let shown = entries_on_show(layer, &level.filter, &facts);
         let columns = lay_out(&headings_of(&shown), rows);
         for (key, step) in [
             (KeyCode::ArrowUp, HighlightStep::Up),
@@ -162,7 +167,8 @@ pub(in crate::debug_menu) fn take_input(
             || soft.contains(&SoftKey::Return)
         {
             chosen = if layer == ACTIONS {
-                return_chooses(&on_show(&level.filter), level.highlight, &facts).map(Entry::Action)
+                return_chooses(&on_show(&level.filter, &facts), level.highlight, &facts)
+                    .map(Entry::Action)
             } else {
                 shown.get(level.highlight.unwrap_or(0)).copied()
             };

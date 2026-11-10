@@ -30,6 +30,7 @@ mod answer;
 mod client;
 mod combat;
 mod delete_character;
+mod dev_audit;
 mod dev_skills;
 pub(crate) mod difficulty;
 mod for_others;
@@ -297,6 +298,8 @@ pub struct Client {
 
 #[cfg(test)]
 mod action_bar_tests;
+#[cfg(test)]
+mod dev_audit_tests;
 #[cfg(test)]
 mod dev_skills_tests;
 #[cfg(test)]
