@@ -36,7 +36,7 @@ The user's data folder is `%APPDATA%` on Windows, `~/Library/Application Support
 
 - `client.ron`: choices kept between runs, such as the interface size and "Enable Touch" from Settings, the page Item Pictures last showed, the servers joined with Connect (and any certificate pasted in for them), Online with its Server Options, and the window: where it was, its size, and how it was shown (Settings, Graphics). The path can be changed with `HOW_PREFERENCES`.
 - `guest_tokens.ron`: the secret that makes you the same guest on each server, beside `client.ron`. Anyone with it can play as you.
-- `logins.ron`: for each server you have logged in to with an account, the token that logs you in again and the account's email address, beside `client.ron`. Anyone with it can play as you there until it runs out. Logout on the startup menu of a browser removes the page's server's.
+- `logins.ron`: for each server you have logged in to with an account, the token that logs you in again and the account's email address, beside `client.ron`. Anyone with it can play as you there until it runs out. Change User on Character Select removes that server's, and so does forgetting the server in Connect... (or, in a browser, Logout on the startup menu for the page's server).
 
 Clearing a browser's data for a server's address, or losing `guest_tokens.ron`, loses that guest's character, as a guest has no other way to log in.
 

@@ -24,3 +24,18 @@ fn a_login_is_kept_and_forgotten_per_server() {
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "not logins");
     let _ = std::fs::remove_dir_all(&folder);
 }
+
+#[test]
+fn a_server_forgotten_in_connect_is_kept_under_the_same_key_as_played() {
+    // Connect's bin forgets by the address; playing there keeps by the chosen
+    // server (`Target::choose`), with or without a key pasted in.
+    let chosen = crate::common::ChosenServer(Some(crate::common::SavedServer {
+        address: "play.example.com:24691".into(),
+        key: Some("ab12".into()),
+        name: None,
+    }));
+    let played = Target::choose(&chosen, false);
+    let address = shared::protocol::ServerAddress::parse("play.example.com:24691").unwrap();
+    assert_eq!(key(&Target::of_url(address.url())), key(&played));
+    assert!(key(&played).is_some());
+}

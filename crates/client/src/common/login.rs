@@ -41,7 +41,7 @@ impl LoggingIn {
     }
 }
 
-/// What the player chose on the login screen, or the account corner.
+/// What the player chose on the login screen, Character Select or the menus.
 #[derive(Message, Clone, Debug, PartialEq, Eq)]
 pub enum LoginChoice {
     /// Log in on this provider's page (by its name).
@@ -54,6 +54,12 @@ pub enum LoginChoice {
     /// Forget the account kept for this server, to log in another way next
     /// time.
     LogOut,
+    /// Character Select's Change User: forget the account kept for the server
+    /// being played on, and connect again to log in another way.
+    ChangeUser,
+    /// Connect's bin: forget the account kept for the server at this address
+    /// (as Connect shows it).
+    ForgetServer(String),
 }
 
 /// The email address of the account kept for the server Play goes to, for

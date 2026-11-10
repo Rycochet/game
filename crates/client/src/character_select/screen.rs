@@ -28,12 +28,14 @@ pub(super) struct InfoWords;
 #[derive(Component)]
 pub(super) struct InfoCreated;
 
-/// What the buttons along the bottom right do.
+/// What the buttons along the bottom right do, and Change User at the bottom
+/// left.
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Button {
     Play,
     Delete,
     Cancel,
+    ChangeUser,
 }
 
 pub(super) fn spawn_screen(mut commands: Commands) {
@@ -65,6 +67,7 @@ pub(super) fn spawn_screen(mut commands: Commands) {
                         ..default()
                     },
                 ));
+                super::change_user::spawn_change_user(left);
             });
         panel
             .spawn(Node {

@@ -9,7 +9,7 @@ use super::super::{Action, SystemMenu};
 use super::check::AddressCheck;
 use super::popups::{CertificateBox, ForgetWords};
 use super::{AddressBox, SUGGESTED_SERVER, ServerList, spawn_server_row};
-use crate::common::{ChosenServer, PlayFor, Preferences, SavedServer, Session};
+use crate::common::{ChosenServer, LoginChoice, PlayFor, Preferences, SavedServer, Session};
 use crate::widgets::{ButtonPressed, TextBox, TextFocus};
 
 /// What Connect has been told since it opened.
@@ -110,6 +110,7 @@ pub(in crate::system_menu) fn use_connect(
     mut session: ResMut<Session>,
     mut chosen: ResMut<ChosenServer>,
     mut play_for: ResMut<PlayFor>,
+    mut login: MessageWriter<LoginChoice>,
     mut preferences: ResMut<Preferences>,
     mut form: ResMut<ConnectForm>,
     check: Res<AddressCheck>,
@@ -142,6 +143,8 @@ pub(in crate::system_menu) fn use_connect(
         (Action::ReallyForget, SystemMenu::Forgetting) => {
             if let Some(forgotten) = form.forgetting.take() {
                 preferences.forget_server(&forgotten);
+                // Its login too, so joining it again asks how to log in.
+                login.write(LoginChoice::ForgetServer(forgotten));
             }
             *menu = SystemMenu::Connect;
         }
