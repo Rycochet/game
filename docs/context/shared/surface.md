@@ -4,7 +4,7 @@ The planet surface height at any integer grid position (1 unit ≈ 1 km). Ported
 
 ## Files
 
-- `crates/shared/src/surface.rs`: `Surface` (picks a generator, the showcase plain, metres), `SurfaceSample`, `SurfaceGenerator`, `PlateSample`, `METRES_PER_UNIT`, the shared noise set-up and cylinder mapping. Golden and wrap tests; `continents_tests.rs` (land share, how much is high, shelves and depths), `plates_tests.rs` (wrapping, land share, ranges, plates only where they should be).
+- `crates/shared/src/surface.rs`: `Surface` (picks a generator, metres), `SurfaceSample`, `SurfaceGenerator`, `PlateSample`, `METRES_PER_UNIT`, the shared noise set-up and cylinder mapping. Golden and wrap tests; `continents_tests.rs` (land share, how much is high, shelves and depths), `plates_tests.rs` (wrapping, land share, ranges, plates only where they should be).
 - `surface/desert.rs`: `Desert`, the original generator (7 layers from 256 grid units).
 - `surface/continents.rs`: `Continents`, worked out in whole metres, with plates for `Plates`; in `continents/`: `layers.rs` (layered, ridged and warped noise), `shape.rs` (how far into a continent, to metres), `plates.rs` (`Plates`, `Tectonics`: a point's plate and the next, the boundary between them wandering by noise), `plates/cells.rs` (`Cells`, `Plate`: one plate per cell of a grid 10 across the planet, centre, kind (40 % continental) and drift from the seed), `plates/boundary.rs` (`Boundary`: ranges, coastal ranges, trenches, island arcs, ocean ridges and rifts by how plates meet).
 

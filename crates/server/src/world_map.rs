@@ -9,7 +9,6 @@ use bevy::prelude::*;
 use shared::movement::{Gait, Step, step_on_world_map_by};
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
-use shared::showcase;
 
 use crate::connections::Client;
 use crate::storage::KnownPoi;
@@ -49,12 +48,6 @@ pub(crate) fn teleport(client: &mut Client, world: &ServerWorld, x: i64, y: i64)
 pub(crate) fn back_to_start(client: &mut Client, world: &mut ServerWorld) -> bool {
     let gate = nearest_gate(world, client.world_position());
     go_to(client, world, gate)
-}
-
-/// Developer tools: puts the player on the plain with every kind of poi, out of
-/// any site.
-pub(crate) fn to_showcase(client: &mut Client, world: &mut ServerWorld) -> bool {
-    !showcase::ENABLED || go_to(client, world, showcase::ARRIVAL)
 }
 
 /// Puts the player somewhere on the world map, out of any site or the Hall.

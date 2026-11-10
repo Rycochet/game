@@ -165,18 +165,12 @@ fn only_towns_are_seen_until_a_poi_is_known() {
 }
 
 #[test]
-fn the_key_goes_to_the_showcase_and_esc_comes_back() {
+fn back_to_start_goes_to_the_nearest_world_gate() {
     let mut test = TestClient::new();
-    let answers = test.send(&[ClientMessage::DevToShowcase]);
-    let (x, y) = showcase::ARRIVAL;
-    assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
-    assert!(
-        pois(&answers)
-            .iter()
-            .any(|poi| poi.kind == shared::poi::PoiKind::ALL[0])
-    );
+    let poi = test.world.pois.in_chunk(hidden_chunk(&test)).unwrap();
+    test.send(&[ClientMessage::DevTeleport { x: poi.x, y: poi.y }]);
     let answers = test.send(&[ClientMessage::DevBackToStart]);
-    let (x, y) = nearest_gate(&test.world, showcase::ARRIVAL);
+    let (x, y) = nearest_gate(&test.world, (poi.x, poi.y));
     assert_eq!(answers[0], ServerMessage::OnWorldMap { x, y });
 }
 
@@ -185,7 +179,7 @@ fn the_key_goes_to_the_showcase_and_esc_comes_back() {
 #[test]
 fn teleporting_to_a_poi_then_entering_goes_in() {
     let mut test = TestClient::new();
-    let chunk = ChunkPos { x: 3, y: 1000 };
+    let chunk = hidden_chunk(&test);
     let poi = test.world.pois.in_chunk(chunk).unwrap();
     test.send(&[
         ClientMessage::DevTeleport { x: poi.x, y: poi.y },

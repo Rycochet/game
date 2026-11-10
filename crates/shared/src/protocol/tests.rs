@@ -191,7 +191,6 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             rate: ClockRate::new(3, 2),
         },
         ClientMessage::DevBackToStart,
-        ClientMessage::DevToShowcase,
         ClientMessage::DevToHall {
             seed: None,
             gate: None,

@@ -16,7 +16,7 @@ Roads on the world map between towns, from the world alone, so the order anythin
 
 ## Depends on
 
-- `shared::movement` (`WorldGround`, `WorldConditions`, the step and slope costs), `shared::poi` (`PoiMap`, `ChunkPos`, `CHUNK_SIZE`), `shared::showcase` (its plain has no roads), `shared::world`, `serde`.
+- `shared::movement` (`WorldGround`, `WorldConditions`, the step and slope costs), `shared::poi` (`PoiMap`, `ChunkPos`, `CHUNK_SIZE`), `shared::world`, `serde`.
 
 ## Used by
 

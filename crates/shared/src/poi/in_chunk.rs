@@ -5,7 +5,6 @@ use super::{
 };
 use crate::climate::Biome;
 use crate::rng::Seed;
-use crate::showcase;
 
 /// Of each 1000 pois, how many are towns of each size, by a separate hash
 /// so every other chunk keeps the poi it had before towns existed.
@@ -39,9 +38,6 @@ impl PoiMap {
             x: chunk.x.rem_euclid(self.columns()),
             y: chunk.y,
         };
-        if showcase::chunk_in_plain(chunk) {
-            return showcase::poi_at(chunk);
-        }
         if self.has_gate(chunk) {
             return None;
         }
