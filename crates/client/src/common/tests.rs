@@ -60,15 +60,15 @@ fn screen_up_follows_the_view() {
 
 #[test]
 fn keep_drawing_keeps_the_focused_rate_unfocused() {
-    let video = VideoPrefs::default();
-    let kept = frame_settings(true, &video);
+    let graphics = GraphicsPrefs::default();
+    let kept = frame_settings(true, &graphics);
     assert_eq!(kept.unfocused_mode, kept.focused_mode);
-    let slowed = frame_settings(false, &video);
+    let slowed = frame_settings(false, &graphics);
     assert_ne!(slowed.unfocused_mode, slowed.focused_mode);
     // The player's choice keeps it too.
-    let chosen = VideoPrefs {
+    let chosen = GraphicsPrefs {
         background: Background::KeepDrawing,
-        ..video
+        ..graphics
     };
     let kept = frame_settings(false, &chosen);
     assert_eq!(kept.unfocused_mode, kept.focused_mode);

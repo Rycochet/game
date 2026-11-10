@@ -34,6 +34,8 @@ mod characters;
 mod clock;
 mod connect;
 mod difficulty;
+#[cfg(target_arch = "wasm32")]
+mod home;
 #[cfg(not(target_arch = "wasm32"))]
 mod hosting;
 mod log_in;
@@ -54,7 +56,7 @@ use log_out::{back_at_start, log_out, now_playing, start_playing};
 pub use messages::{FromServer, ServerConnection, ToServer};
 pub use probe::{ProbeResult, ServerProbe};
 use receive::receive;
-use remember::{forget_when_unchosen, remember_server};
+use remember::remember_server;
 use send::{count_map_changes, hang_up_on_exit, send, send_steps};
 #[cfg(not(target_arch = "wasm32"))]
 pub use trust::server_key;
@@ -73,6 +75,7 @@ impl Plugin for ConnectionPlugin {
                 methods: Vec::new(),
                 tried_session: false,
                 offered: false,
+                as_guest: false,
                 retry: None,
             })
             .add_systems(
@@ -95,7 +98,6 @@ impl Plugin for ConnectionPlugin {
                 Update,
                 (
                     remember_server,
-                    forget_when_unchosen,
                     difficulty::keep_difficulty,
                     choose_login,
                     show_account,
@@ -120,7 +122,9 @@ impl Plugin for ConnectionPlugin {
                     .run_if(resource_exists::<ServerConnection>),
             );
         #[cfg(target_arch = "wasm32")]
-        app.add_systems(Last, pump_socket.after(send));
+        app.add_systems(Last, pump_socket.after(send))
+            .add_systems(Startup, home::ask_home)
+            .add_systems(Update, home::take_home_answer);
         #[cfg(not(target_arch = "wasm32"))]
         app.add_systems(Update, (hosting::ask_to_host, difficulty::ask_difficulties));
     }

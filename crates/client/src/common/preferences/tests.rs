@@ -26,7 +26,6 @@ fn preferences_read_back_as_saved() {
             key: Some("ab12".into()),
             name: Some("Play".into()),
         }],
-        last_server: Some("play.example.com:9000".into()),
         played_on: ["built-in".to_owned()].into(),
         online: true,
         server_difficulties: shared::difficulty::Difficulties::only(
@@ -49,7 +48,7 @@ fn preferences_read_back_as_saved() {
             monitor: Some(r"\\.\DISPLAY2".into()),
             ..Default::default()
         },
-        video: crate::common::VideoPrefs {
+        graphics: crate::common::GraphicsPrefs {
             render_scale: 80,
             frame_rate: crate::common::FrameRate::Unlimited,
             ..Default::default()
@@ -86,4 +85,19 @@ fn server_options_saved_on_the_old_default_port_take_the_new_one() {
         preferences.online_settings.port,
         shared::protocol::DEFAULT_PORT
     );
+}
+
+#[test]
+fn settings_since_renamed_or_dropped_are_left_out() {
+    // Video became Graphics, and the last server Play went to is no longer
+    // kept (owner, 2026-11-10): an older file still loads, and saving drops them.
+    let old = r#"(video: (clouds: false), last_server: Some("a.example"), touch: true)"#;
+    let preferences: Preferences = ron::from_str(old).unwrap();
+    assert!(preferences.touch);
+    assert_eq!(
+        preferences.graphics,
+        crate::common::GraphicsPrefs::default()
+    );
+    let saved = ron::to_string(&preferences).unwrap();
+    assert!(!saved.contains("video") && !saved.contains("last_server"));
 }

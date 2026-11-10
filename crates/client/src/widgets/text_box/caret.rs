@@ -105,7 +105,7 @@ pub(in crate::widgets) fn show_carets(
             Visibility::Hidden
         };
         visibility.set_if_neq(wanted);
-        let alpha = strength(now - cursor.moved_at, preferences.video.reduce_motion);
+        let alpha = strength(now - cursor.moved_at, preferences.graphics.reduce_motion);
         colour.set_if_neq(BackgroundColor(INK.with_alpha(alpha)));
     }
 }

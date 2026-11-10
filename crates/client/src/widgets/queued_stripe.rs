@@ -92,7 +92,7 @@ pub(super) fn chase_stripes(
     stripes: Res<QueuedStripes>,
     mut materials: ResMut<Assets<QueuedStripeMaterial>>,
 ) {
-    if preferences.video.reduce_motion {
+    if preferences.graphics.reduce_motion {
         return;
     }
     if let Some(mut material) = materials.get_mut(&stripes.0) {

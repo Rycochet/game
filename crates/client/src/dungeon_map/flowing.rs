@@ -22,7 +22,7 @@ pub(super) fn run_flow(
     surfaces: Res<SurfaceMaterials>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
-    let flowing = heights.heights.is_some() && !preferences.video.reduce_motion;
+    let flowing = heights.heights.is_some() && !preferences.graphics.reduce_motion;
     let seconds = match flowing {
         // Never quite 0, which means still.
         true => (time.elapsed_secs() % PERIOD).max(1.0e-3),

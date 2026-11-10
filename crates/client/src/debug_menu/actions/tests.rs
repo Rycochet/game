@@ -37,6 +37,7 @@ fn facts(view: GameView) -> Facts {
         world_time_open: false,
         suns_and_moons_open: true,
         tools: DebugTools::every(),
+        accounts: true,
     }
 }
 
@@ -103,6 +104,7 @@ fn only_permitted_entries_are_shown() {
     use shared::role::DebugTool;
     let some = Facts {
         tools: DebugTools::of([DebugTool::TeleportMode, DebugTool::DevArea]),
+        accounts: false,
         ..facts(GameView::Dungeon)
     };
     assert!(DebugAction::TeleportMode.is_permitted(&some));
@@ -110,8 +112,15 @@ fn only_permitted_entries_are_shown() {
     assert!(DebugAction::RegenerateDevArea.is_permitted(&some));
     assert!(!DebugAction::TeleportToWorld.is_permitted(&some));
     assert!(!DebugAction::ItemPictures.is_permitted(&some));
+    // Accounts goes by the role, not a tool.
+    assert!(!DebugAction::Accounts.is_permitted(&some));
+    let staff = Facts {
+        accounts: true,
+        ..some
+    };
+    assert!(DebugAction::Accounts.is_permitted(&staff));
     // Every tool but Other has an entry.
-    let entries: Vec<_> = DebugAction::ALL.iter().map(|a| a.tool()).collect();
+    let entries: Vec<_> = DebugAction::ALL.iter().filter_map(|a| a.tool()).collect();
     for tool in DebugTool::ALL {
         let examine_buttons = matches!(tool, DebugTool::KillMob | DebugTool::DestroyMob);
         assert!(entries.contains(&tool) || examine_buttons || tool == DebugTool::Other);

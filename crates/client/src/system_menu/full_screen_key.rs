@@ -1,6 +1,6 @@
 //! Full Screen's keys (Alt+Enter at first; native): between windowed and the
 //! full screen mode last used, straight away, as that mode was kept once
-//! already. Not while typing, or while the Video page is asking whether to keep
+//! already. Not while typing, or while the Graphics page is asking whether to keep
 //! what was applied.
 
 use bevy::input::ButtonState;
@@ -48,7 +48,7 @@ pub(super) fn toggle_full_screen(
             toggle = true;
         }
     }
-    if !toggle || focus.0.is_some() || *menu == SystemMenu::KeepVideo {
+    if !toggle || focus.0.is_some() || *menu == SystemMenu::KeepGraphics {
         return;
     }
     in_use.0 = in_use.0.toggled(preferences.window.last_full_screen);

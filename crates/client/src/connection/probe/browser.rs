@@ -13,11 +13,18 @@ const WAIT_MS: u32 = 4000;
 
 /// Asks `address`, handing its answer to `done` when the browser has one.
 pub(super) fn ask(address: &ServerAddress, done: impl FnOnce(PortAnswer) + 'static) {
+    ask_url(&address.version_url(), done);
+    bevy::log::debug!("Asking {} what it is", address.with_port());
+}
+
+/// Asks `url` for a server's version (a relative one asks the page's own
+/// server).
+pub(super) fn ask_url(url: &str, done: impl FnOnce(PortAnswer) + 'static) {
     let Ok(request) = web_sys::XmlHttpRequest::new() else {
         done(PortAnswer::Silent);
         return;
     };
-    if request.open("GET", &address.version_url()).is_err() {
+    if request.open("GET", url).is_err() {
         done(PortAnswer::Silent);
         return;
     }
@@ -36,6 +43,6 @@ pub(super) fn ask(address: &ServerAddress, done: impl FnOnce(PortAnswer) + 'stat
     });
     let _ = request.add_event_listener_with_callback("loadend", on_end.unchecked_ref());
     if request.send().is_err() {
-        bevy::log::info!("Can't ask {} what it is", address.with_port());
+        bevy::log::info!("Can't ask {url} what it is");
     }
 }

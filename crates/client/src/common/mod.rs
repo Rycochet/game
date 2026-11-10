@@ -19,7 +19,7 @@ pub use hosting::Hosting;
 #[cfg(not(target_arch = "wasm32"))]
 pub use preferences::client_file;
 pub use preferences::{CreateMobPrefs, DevAreaPrefs, InterfaceSize, Preferences};
-pub use servers::{ChosenServer, SavedServer};
+pub use servers::{ChosenServer, HomeServer, SavedServer};
 
 use bevy::prelude::*;
 
@@ -31,6 +31,7 @@ mod debug;
 mod difficulty;
 mod display;
 mod dungeon;
+mod graphics;
 mod item_text;
 mod items;
 mod lightning;
@@ -45,7 +46,6 @@ mod states;
 mod step_pad;
 mod target;
 mod token;
-mod video;
 mod view;
 mod vitals;
 mod wild_heights;
@@ -74,6 +74,10 @@ pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
 };
 pub use dungeon::CurrentDungeon;
+pub use graphics::{
+    AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, GraphicsPrefs, IN_BROWSER, MaxResolution,
+    Precipitation, Preset, RENDER_SCALES, Remembered, Shadows, ViewDistance,
+};
 pub use hover::{HoverName, HoveredInSky, HoveredOnMap, StaffMark, poi_name, words};
 pub use item_text::{DroppedOnText, HeldOverText, KnownItem, KnownItems, TakesItemText};
 pub use items::{
@@ -99,10 +103,6 @@ pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use step_pad::{PadButton, PadSteps};
 pub use target::Target;
 pub use token::{Attitude, Icon, IconPicture, Token, TokenShape, TokenSize};
-pub use video::{
-    AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, IN_BROWSER, MaxResolution, Precipitation,
-    Preset, RENDER_SCALES, Remembered, Shadows, VideoPrefs, ViewDistance,
-};
 pub use view::{ViewFacing, ViewStats};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
 pub use wild_heights::{DRAWN_PER_16TH, WildCellHeights};
@@ -115,9 +115,10 @@ impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
         let preferences = preferences::load_preferences();
         window_open::open_as_saved(app, &preferences.window);
-        app.insert_resource(ChosenServer::from_saved(&preferences))
+        app.init_resource::<ChosenServer>()
+            .init_resource::<HomeServer>()
             .insert_resource(DisplayInUse(preferences.window.display))
-            .insert_resource(frame_settings(true, &preferences.video))
+            .insert_resource(frame_settings(true, &preferences.graphics))
             .init_resource::<RememberWindow>()
             .insert_resource(preferences);
         app.insert_resource(ClearColor(Color::BLACK))

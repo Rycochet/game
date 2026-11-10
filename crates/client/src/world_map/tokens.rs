@@ -52,7 +52,7 @@ pub(super) fn hide_tokens_outside_window(
     mut views: Query<(&TokenView, &mut Visibility)>,
     preferences: Res<Preferences>,
 ) {
-    let square = view_square(&orbit, preferences.video.view_distance);
+    let square = view_square(&orbit, preferences.graphics.view_distance);
     let inner = ViewSquare {
         half: square.half - TOKEN_DIAMETER / 2.0,
         ..square

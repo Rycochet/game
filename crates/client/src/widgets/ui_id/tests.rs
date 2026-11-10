@@ -3,8 +3,8 @@ use super::*;
 #[test]
 fn an_id_is_written_form_then_name() {
     assert_eq!(
-        UiId::new("settings.video", "resolution").to_string(),
-        "settings.video/resolution"
+        UiId::new("settings.graphics", "resolution").to_string(),
+        "settings.graphics/resolution"
     );
     let bag = Id::for_test(7);
     let id = UiId::of("bag", bag, "scroll");

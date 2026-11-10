@@ -79,7 +79,7 @@ pub(in crate::dungeon_map) fn tint_outside(
     plants: Query<&MeshMaterial3d<SurfaceMaterial>, Or<(With<CropPart>, With<HerbPart>)>>,
     mut dimmed: Local<f32>,
 ) {
-    let dim = match preferences.video.remembered {
+    let dim = match preferences.graphics.remembered {
         Remembered::Dim => MEMORY_DIM,
         Remembered::Show | Remembered::Hide => 1.0,
     };
@@ -130,7 +130,7 @@ pub(in crate::dungeon_map) fn token_ambient(
     } else {
         (TOKEN_AMBIENT_BRIGHTNESS, Vec3::ONE)
     };
-    let brightness = brightness.max(OPEN_AMBIENT_BRIGHTNESS * preferences.video.least_light());
+    let brightness = brightness.max(OPEN_AMBIENT_BRIGHTNESS * preferences.graphics.least_light());
     let color = Color::linear_rgb(tint.x, tint.y, tint.z);
     if ambient.brightness != brightness || ambient.color != color {
         ambient.brightness = brightness;

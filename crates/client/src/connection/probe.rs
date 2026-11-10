@@ -104,6 +104,15 @@ fn decide(ports: &[u16], answers: &[Option<PortAnswer>]) -> Option<ProbeResult> 
     })
 }
 
+/// Web: asks the server the page came from whether it is a game server this
+/// client can play on, handing the answer to `done`.
+#[cfg(target_arch = "wasm32")]
+pub(super) fn ask_page_server(done: impl FnOnce(bool) + 'static) {
+    browser::ask_url(shared::protocol::VERSION_PATH, move |answer| {
+        done(matches!(answer, PortAnswer::Server(version) if version.compatible()));
+    });
+}
+
 /// What a web server's answer to `/_version` means.
 fn read_answer(status: u16, body: &str) -> PortAnswer {
     match ServerVersion::from_json(body) {

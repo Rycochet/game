@@ -44,11 +44,11 @@ pub(super) fn update_terrain(
     let Some(mut cache) = cache else {
         return;
     };
-    let video = &preferences.video;
-    let square = view_square(&orbit, video.view_distance);
+    let graphics = &preferences.graphics;
+    let square = view_square(&orbit, graphics.view_distance);
     // Turning or zooming changes the square.
     let reframed = cut.is_none_or(|(yaw, half, _)| (yaw, half) != (orbit.yaw, square.half));
-    let relit = cut.is_some_and(|(.., noon)| noon != video.midday_sun);
+    let relit = cut.is_some_and(|(.., noon)| noon != graphics.midday_sun);
     // A new hour (for the tide), style or light changes how every
     // point is drawn.
     let redraw_all = clock.is_changed() || style.is_changed() || cache.is_added() || relit;
@@ -56,12 +56,12 @@ pub(super) fn update_terrain(
     if !(player.is_changed() || redraw_all || reframed || world.is_changed()) {
         return;
     }
-    *cut = Some((orbit.yaw, square.half, video.midday_sun));
+    *cut = Some((orbit.yaw, square.half, graphics.midday_sun));
 
     let start = Instant::now();
     let centre = (player.x, player.y);
     let water_level = world.water_level(&clock);
-    let hour = super::map_sky::shading_hour(video.midday_sun, clock.hour as f64);
+    let hour = super::map_sky::shading_hour(graphics.midday_sun, clock.hour as f64);
     let light_from = light_from(&world, hour);
     for mut transform in &mut followers {
         transform.translation = Vec3::new(player.x as f32, 0.0, player.y as f32);

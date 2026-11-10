@@ -1,24 +1,26 @@
 //! The pages of Settings, under its tabs: Gameplay (`gameplay`), Controls
 //! (`controls`), Interface
-//! (its size, and "Enable Touch") and Video (`video`). Interface choices go
+//! (its size, and "Enable Touch") and Graphics (`graphics`). Interface choices go
 //! straight into `Preferences`.
 
 mod controls;
 mod difficulty;
 mod gameplay;
+mod graphics;
 mod ironman;
 mod keep;
 mod rows;
 mod shown_role;
-mod video;
 
 pub(super) use controls::{TakenKeys, fill_controls_page, forget_taken, use_controls_page};
 pub(super) use difficulty::use_difficulty;
 pub(super) use gameplay::{fill_gameplay_page, use_gameplay_page};
+pub(super) use graphics::{
+    GraphicsForm, GraphicsShown, fill_graphics_page, use_graphics_options, use_graphics_page,
+};
 pub(super) use ironman::spawn_ironman_requester;
-pub(super) use keep::{VideoTrial, run_trial, spawn_keep_requester};
+pub(super) use keep::{GraphicsTrial, run_trial, spawn_keep_requester};
 pub(super) use shown_role::{ShownAs, keep_shown_role, use_shown_role};
-pub(super) use video::{VideoForm, VideoShown, fill_video_page, use_video_options, use_video_page};
 
 use bevy::prelude::*;
 
@@ -28,7 +30,7 @@ use crate::widgets::{
     TouchOnly, UiId, spawn_tabs,
 };
 
-const PAGES: [&str; 4] = ["Gameplay", "Controls", "Interface", "Video"];
+const PAGES: [&str; 4] = ["Gameplay", "Controls", "Interface", "Graphics"];
 const FONT: TextSize = TextSize::Large;
 const ROW_GAP: f32 = 12.0;
 const LABEL_GAP: f32 = 16.0;
@@ -92,8 +94,8 @@ pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
             "Interface" => {
                 page.insert(InterfacePage);
             }
-            "Video" => {
-                page.insert(video::VideoPage);
+            "Graphics" => {
+                page.insert(graphics::GraphicsPage);
             }
             _ => {}
         }

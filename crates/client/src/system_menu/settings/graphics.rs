@@ -1,4 +1,4 @@
-//! Settings' Video page: the preset, then sections. Window: how the window is
+//! Settings' Graphics page: the preset, then sections. Window: how the window is
 //! shown (Display mode) and full screen's resolution, which change nothing
 //! until Apply, which asks whether to keep them (`keep`); in a browser they are
 //! shown, disabled, as the browser looks after the window. Then the settings
@@ -9,13 +9,13 @@ mod choose;
 mod options;
 mod sections;
 
-pub(in crate::system_menu) use choose::{VideoShown, use_video_options};
+pub(in crate::system_menu) use choose::{GraphicsShown, use_graphics_options};
 
 use bevy::prelude::*;
 use bevy::window::{Monitor, OnMonitor, PrimaryWindow};
 
 use super::super::{Action, SystemMenu};
-use super::keep::VideoTrial;
+use super::keep::GraphicsTrial;
 use super::rows::{spawn_dropdown_row, spawn_section, spawn_sections, tip};
 use super::{FONT, ROW_HEIGHT};
 use crate::common::{
@@ -35,7 +35,7 @@ const APPLY_WIDTH: f32 = 120.0;
 const CAN_CHANGE: bool = cfg!(not(target_arch = "wasm32"));
 
 #[derive(Component)]
-pub(in crate::system_menu) struct VideoPage;
+pub(in crate::system_menu) struct GraphicsPage;
 
 #[derive(Component)]
 pub(in crate::system_menu) struct ModeDropdown;
@@ -49,7 +49,7 @@ pub(in crate::system_menu) struct ApplyButton;
 
 /// The page's choices, until applied.
 #[derive(Resource, Default)]
-pub(in crate::system_menu) struct VideoForm(DisplayChoice);
+pub(in crate::system_menu) struct GraphicsForm(DisplayChoice);
 
 /// Which entry is this resolution: the same one, else the same size, else the
 /// screen's own.
@@ -81,20 +81,20 @@ fn resolution_entries(monitor: Option<&Monitor>) -> (Vec<Option<Resolution>>, Ve
 
 /// Builds the page again on opening Settings (dropping choices not applied),
 /// when how the window is shown, or the monitor it is on, changes, and when
-/// the other Video settings change (`VideoShown`).
+/// the other Graphics settings change (`GraphicsShown`).
 #[allow(clippy::too_many_arguments)]
-pub(in crate::system_menu) fn fill_video_page(
+pub(in crate::system_menu) fn fill_graphics_page(
     mut commands: Commands,
     in_use: Res<DisplayInUse>,
     preferences: Res<Preferences>,
-    mut shown: ResMut<VideoShown>,
+    mut shown: ResMut<GraphicsShown>,
     mouse: Res<ButtonInput<MouseButton>>,
     touches: Res<Touches>,
     menu: Res<SystemMenu>,
-    mut form: ResMut<VideoForm>,
+    mut form: ResMut<GraphicsForm>,
     window: Single<Option<&OnMonitor>, With<PrimaryWindow>>,
     monitors: Query<&Monitor>,
-    page: Single<Entity, With<VideoPage>>,
+    page: Single<Entity, With<GraphicsPage>>,
     mut last: Local<Option<(SystemMenu, Option<Entity>)>>,
 ) {
     let on = window.map(|on| on.0);
@@ -103,19 +103,19 @@ pub(in crate::system_menu) fn fill_video_page(
         && !matches!(
             was,
             Some((
-                SystemMenu::Settings | SystemMenu::KeepVideo | SystemMenu::Ironman,
+                SystemMenu::Settings | SystemMenu::KeepGraphics | SystemMenu::Ironman,
                 _
             ))
         );
     // (Also when the window is on another monitor, with other resolutions.)
     let moved = was.is_some_and(|(_, was_on)| was_on != on);
     let holding = mouse.pressed(MouseButton::Left) || touches.iter().next().is_some();
-    let options = shown.needs_building(&preferences.video, holding);
+    let options = shown.needs_building(&preferences.graphics, holding);
     if was.is_some() && !opening && !moved && !in_use.is_changed() && !options {
         return;
     }
-    *shown = VideoShown {
-        prefs: Some(preferences.video),
+    *shown = GraphicsShown {
+        prefs: Some(preferences.graphics),
         stale: false,
     };
     form.0 = in_use.0;
@@ -123,19 +123,19 @@ pub(in crate::system_menu) fn fill_video_page(
     let (entries, labels) = resolution_entries(monitor);
     let page = *page;
     commands.entity(page).despawn_related::<Children>();
-    let video = preferences.video;
+    let graphics = preferences.graphics;
     commands.entity(page).with_children(|page| {
-        options::spawn_preset_row(page, &video);
-        spawn_sections(page, UiId::new("settings.video", "scroll"), |sections| {
+        options::spawn_preset_row(page, &graphics);
+        spawn_sections(page, UiId::new("settings.graphics", "scroll"), |sections| {
             spawn_section(sections, "Window", |section| {
                 spawn_window_rows(section, in_use.0, entries, labels);
             });
-            options::spawn_display_section(sections, &video);
-            sections::spawn_lighting_section(sections, &video);
-            sections::spawn_world_map_section(sections, &video);
-            sections::spawn_sites_section(sections, &video);
-            sections::spawn_motion_section(sections, &video);
-            options::spawn_background_section(sections, &video);
+            options::spawn_display_section(sections, &graphics);
+            sections::spawn_lighting_section(sections, &graphics);
+            sections::spawn_world_map_section(sections, &graphics);
+            sections::spawn_sites_section(sections, &graphics);
+            sections::spawn_motion_section(sections, &graphics);
+            options::spawn_background_section(sections, &graphics);
         });
     });
 }
@@ -165,7 +165,7 @@ fn spawn_window_rows(
     section
         .commands()
         .entity(mode_dropdown)
-        .insert((ModeDropdown, UiId::new("settings.video", "display_mode")));
+        .insert((ModeDropdown, UiId::new("settings.graphics", "display_mode")));
     let sizes = Dropdown {
         options: labels,
         selected: resolution_index(&entries, in_use.resolution),
@@ -175,7 +175,7 @@ fn spawn_window_rows(
     let size_dropdown = spawn_dropdown_row(section, "Resolution", size_tip, sizes, DROPDOWN_WIDTH);
     section.commands().entity(size_dropdown).insert((
         ResolutionDropdown(entries),
-        UiId::new("settings.video", "resolution"),
+        UiId::new("settings.graphics", "resolution"),
     ));
     if let Some(why) = why_not {
         section.spawn((Text::new(why), TextSize::Small.font(), TextColor(INK)));
@@ -193,8 +193,8 @@ fn spawn_window_rows(
             };
             spawn_button(row, ButtonState::Disabled, "Apply", FONT, node).insert((
                 ApplyButton,
-                Action::ApplyVideo,
-                Action::ApplyVideo.ui_id("settings.video"),
+                Action::ApplyGraphics,
+                Action::ApplyGraphics.ui_id("settings.graphics"),
                 ButtonStyle::Main,
                 Pressable,
             ));
@@ -211,15 +211,15 @@ type PageButton = (
 
 /// Takes the choices, applies them on Apply, and shows what can be used.
 #[allow(clippy::too_many_arguments)]
-pub(in crate::system_menu) fn use_video_page(
+pub(in crate::system_menu) fn use_graphics_page(
     mut chosen: MessageReader<DropdownChosen>,
     mut pressed: MessageReader<ButtonPressed>,
     resolution_dropdowns: Query<&ResolutionDropdown>,
     mode_dropdowns: Query<(), With<ModeDropdown>>,
     applies: Query<(), With<ApplyButton>>,
-    mut form: ResMut<VideoForm>,
+    mut form: ResMut<GraphicsForm>,
     mut in_use: ResMut<DisplayInUse>,
-    mut trial: ResMut<VideoTrial>,
+    mut trial: ResMut<GraphicsTrial>,
     time: Res<Time<Real>>,
     mut states: Query<PageButton>,
 ) {

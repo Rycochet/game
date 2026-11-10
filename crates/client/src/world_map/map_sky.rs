@@ -21,7 +21,7 @@ pub(super) fn update(
     preferences: Res<Preferences>,
     mut map: ResMut<MapSky>,
 ) {
-    if !preferences.video.midday_sun {
+    if !preferences.graphics.midday_sun {
         map.0.clone_from(&sky);
         return;
     }

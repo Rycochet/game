@@ -58,7 +58,7 @@ pub(super) fn fade_bolts(
     mut bolts: Query<(Entity, &mut Bolt, &MeshMaterial3d<StandardMaterial>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let gentle = preferences.video.reduce_motion;
+    let gentle = preferences.graphics.reduce_motion;
     for (entity, mut bolt, material) in &mut bolts {
         match envelope::bolt_alpha(bolt.age, gentle) {
             Some(alpha) => {

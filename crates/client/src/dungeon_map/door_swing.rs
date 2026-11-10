@@ -114,7 +114,7 @@ pub(super) fn swing_doors(
         .info
         .as_ref()
         .map(|info| (info.index, dungeon.level.bounds()));
-    let reduce = preferences.video.reduce_motion;
+    let reduce = preferences.graphics.reduce_motion;
     let now = time.elapsed_secs_f64();
     let level = (key, &dungeon.level, dungeon.is_changed());
     if swings.bypass_change_detection().update(level, now, reduce) {

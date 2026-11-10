@@ -16,19 +16,17 @@ type Entry = (&'static str, Action, Option<MenuButton>);
 /// The sections, top to bottom.
 const SECTIONS: &[&[Entry]] = &[
     &[
-        ("Play", Action::Play, Some(MenuButton::Play)),
+        ("Continue", Action::Continue, Some(MenuButton::Continue)),
         (
             "Characters",
             Action::Characters,
             Some(MenuButton::Characters),
         ),
-        ("Continue", Action::Back, Some(MenuButton::Continue)),
         // With the gear for Server Options; native only.
         ("Online", Action::ToggleOnline, Some(MenuButton::Online)),
         ("Connect...", Action::Connect, Some(MenuButton::Connect)),
     ],
     &[
-        ("Accounts", Action::Accounts, Some(MenuButton::Accounts)),
         ("Settings", Action::Settings, None),
         ("Credits", Action::Credits, None),
     ],
@@ -48,7 +46,7 @@ pub(super) fn spawn_main_panel(commands: &mut Commands, gear: Handle<Image>) {
             SystemMenu::Menu,
             SystemMenu::Confirming,
             SystemMenu::Settings,
-            SystemMenu::KeepVideo,
+            SystemMenu::KeepGraphics,
             SystemMenu::Ironman,
             SystemMenu::Credits,
             SystemMenu::Connect,

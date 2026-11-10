@@ -62,11 +62,12 @@ impl Plugin for SystemMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SystemMenu>()
             .init_resource::<connect::ConnectForm>()
+            .init_resource::<refusal::TriedServer>()
             .init_resource::<connect::AddressCheck>()
-            .init_resource::<settings::VideoForm>()
-            .init_resource::<settings::VideoShown>()
+            .init_resource::<settings::GraphicsForm>()
+            .init_resource::<settings::GraphicsShown>()
             .init_resource::<settings::ShownAs>()
-            .init_resource::<settings::VideoTrial>()
+            .init_resource::<settings::GraphicsTrial>()
             .add_systems(Startup, spawn_menu)
             .add_systems(
                 PreUpdate,
@@ -92,9 +93,9 @@ impl Plugin for SystemMenuPlugin {
                     ask_for_pause,
                     settings::fill_interface_page,
                     settings::use_pages,
-                    settings::fill_video_page,
-                    (settings::use_video_page, settings::run_trial).chain(),
-                    settings::use_video_options,
+                    settings::fill_graphics_page,
+                    (settings::use_graphics_page, settings::run_trial).chain(),
+                    settings::use_graphics_options,
                     (
                         settings::keep_shown_role,
                         settings::use_difficulty,

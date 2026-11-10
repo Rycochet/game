@@ -1,4 +1,4 @@
-//! "Keep these settings?": after Apply on the Video page the window shows the
+//! "Keep these settings?": after Apply on the Graphics page the window shows the
 //! new settings, and goes back to the old ones after `KEEP_SECONDS` unless Keep
 //! is pressed, so a mode the screen can't show doesn't leave it black.
 
@@ -16,7 +16,7 @@ const POPUP_LAYER: i32 = ABOVE_MENU_LAYER + 1;
 
 /// Settings applied but not yet kept.
 #[derive(Resource, Default)]
-pub(in crate::system_menu) struct VideoTrial(Option<Trial>);
+pub(in crate::system_menu) struct GraphicsTrial(Option<Trial>);
 
 #[derive(Clone, Copy)]
 struct Trial {
@@ -26,7 +26,7 @@ struct Trial {
     until: f64,
 }
 
-impl VideoTrial {
+impl GraphicsTrial {
     pub(super) fn start(&mut self, before: DisplayChoice, now: f64) {
         self.0 = Some(Trial {
             before,
@@ -42,10 +42,10 @@ pub(in crate::system_menu) struct Countdown;
 pub(in crate::system_menu) struct KeepButton;
 
 pub(in crate::system_menu) fn spawn_keep_requester(commands: &mut Commands) {
-    let dialog = spawn_dialog(commands, POPUP_LAYER, "Video");
+    let dialog = spawn_dialog(commands, POPUP_LAYER, "Graphics");
     commands
         .entity(dialog.layer)
-        .insert((Layer(&[SystemMenu::KeepVideo]), Action::Back));
+        .insert((Layer(&[SystemMenu::KeepGraphics]), Action::Back));
     commands.entity(dialog.content).with_children(|content| {
         content.spawn((
             Text::new("Keep these settings?"),
@@ -62,14 +62,14 @@ pub(in crate::system_menu) fn spawn_keep_requester(commands: &mut Commands) {
         };
         spawn_button(row, ButtonState::Normal, "Keep", FONT, node.clone()).insert((
             KeepButton,
-            Action::KeepVideo,
-            Action::KeepVideo.ui_id("settings.keep_video"),
+            Action::KeepGraphics,
+            Action::KeepGraphics.ui_id("settings.keep_graphics"),
             ButtonStyle::Main,
             Pressable,
         ));
         spawn_button(row, ButtonState::Normal, "Go back", FONT, node).insert((
             Action::Back,
-            Action::Back.ui_id("settings.keep_video"),
+            Action::Back.ui_id("settings.keep_graphics"),
             ButtonStyle::Plain,
             Pressable,
         ));
@@ -82,7 +82,7 @@ pub(in crate::system_menu) fn spawn_keep_requester(commands: &mut Commands) {
 pub(in crate::system_menu) fn run_trial(
     mut pressed: MessageReader<ButtonPressed>,
     keeps: Query<(), With<KeepButton>>,
-    mut trial: ResMut<VideoTrial>,
+    mut trial: ResMut<GraphicsTrial>,
     mut in_use: ResMut<DisplayInUse>,
     remember: Res<RememberWindow>,
     mut preferences: ResMut<Preferences>,
@@ -102,10 +102,10 @@ pub(in crate::system_menu) fn run_trial(
         return;
     }
     let now = time.elapsed_secs_f64();
-    if *menu != SystemMenu::KeepVideo || now >= until {
+    if *menu != SystemMenu::KeepGraphics || now >= until {
         in_use.0 = before;
         trial.0 = None;
-        if *menu == SystemMenu::KeepVideo {
+        if *menu == SystemMenu::KeepGraphics {
             *menu = SystemMenu::Settings;
         }
         return;

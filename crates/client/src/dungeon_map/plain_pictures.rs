@@ -33,7 +33,7 @@ pub(super) fn plain_pictures(
     mut materials: ResMut<Assets<SurfaceMaterial>>,
     mut copies: Local<PlainCopies>,
 ) {
-    let textured = preferences.video.floor_textures;
+    let textured = preferences.graphics.floor_textures;
     if textured && copies.picture.is_empty() {
         return;
     }

@@ -5,21 +5,21 @@ fn every_preset_is_recognised_and_medium_is_the_default() {
     for preset in Preset::ALL {
         assert_eq!(preset.prefs().preset(), Some(preset));
     }
-    assert_eq!(VideoPrefs::default().preset(), Some(Preset::Medium));
+    assert_eq!(GraphicsPrefs::default().preset(), Some(Preset::Medium));
 }
 
 #[test]
 fn changed_settings_are_no_preset() {
-    let prefs = VideoPrefs {
+    let prefs = GraphicsPrefs {
         render_scale: 90,
-        ..VideoPrefs::default()
+        ..GraphicsPrefs::default()
     };
     assert_eq!(prefs.preset(), None);
 }
 
 #[test]
 fn presets_leave_the_players_own_settings_alone() {
-    let mine = VideoPrefs {
+    let mine = GraphicsPrefs {
         brightness: 30,
         reduce_motion: true,
         ..Preset::Low.prefs()
@@ -32,9 +32,9 @@ fn presets_leave_the_players_own_settings_alone() {
 
 #[test]
 fn brightness_stays_below_half() {
-    let prefs = VideoPrefs {
+    let prefs = GraphicsPrefs {
         brightness: 90,
-        ..VideoPrefs::default()
+        ..GraphicsPrefs::default()
     };
     assert_eq!(prefs.least_light(), 0.49);
 }
@@ -42,9 +42,9 @@ fn brightness_stays_below_half() {
 #[test]
 fn render_share_stays_in_range() {
     let share = |render_scale| {
-        VideoPrefs {
+        GraphicsPrefs {
             render_scale,
-            ..VideoPrefs::default()
+            ..GraphicsPrefs::default()
         }
         .render_share()
     };
@@ -56,15 +56,15 @@ fn render_share_stays_in_range() {
 
 #[test]
 fn max_resolution_holds_tall_windows_to_its_lines() {
-    let prefs = VideoPrefs {
+    let prefs = GraphicsPrefs {
         render_scale: 100,
         max_resolution: MaxResolution::P1080,
-        ..VideoPrefs::default()
+        ..GraphicsPrefs::default()
     };
     assert_eq!(prefs.drawn_share(2160), 0.5);
     assert_eq!(prefs.drawn_share(1080), 1.0);
     assert_eq!(prefs.drawn_share(720), 1.0);
-    let off = VideoPrefs {
+    let off = GraphicsPrefs {
         max_resolution: MaxResolution::Off,
         ..prefs
     };
@@ -73,10 +73,10 @@ fn max_resolution_holds_tall_windows_to_its_lines() {
 
 #[test]
 fn render_scale_still_applies_below_max_resolution() {
-    let prefs = VideoPrefs {
+    let prefs = GraphicsPrefs {
         render_scale: 50,
         max_resolution: MaxResolution::P1440,
-        ..VideoPrefs::default()
+        ..GraphicsPrefs::default()
     };
     // 1440 of 1620 lines would be 0.89: Render Scale's half is less.
     assert_eq!(prefs.drawn_share(1620), 0.5);

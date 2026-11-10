@@ -13,7 +13,7 @@ pub(super) fn apply_anti_aliasing(
     if !preferences.is_changed() {
         return;
     }
-    let wanted = match preferences.video.anti_aliasing.in_use() {
+    let wanted = match preferences.graphics.anti_aliasing.in_use() {
         AntiAliasing::Off => Msaa::Off,
         AntiAliasing::Times2 => Msaa::Sample2,
         AntiAliasing::Times4 => Msaa::Sample4,

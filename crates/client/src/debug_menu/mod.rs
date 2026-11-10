@@ -128,6 +128,7 @@ struct FactSources<'w> {
     mode: Res<'w, ClickMode>,
     info: Res<'w, DebugInfo>,
     tools: Res<'w, DebugTools>,
+    role: Res<'w, crate::common::AccountRole>,
     panels: Res<'w, OpenPanels>,
 }
 
@@ -146,7 +147,14 @@ impl FactSources<'_> {
             world_time_open: self.panels.is_open(DebugAction::WorldTime),
             suns_and_moons_open: self.panels.is_open(DebugAction::SunsAndMoons),
             tools: *self.tools,
+            accounts: self.role.has_accounts_panel(),
         }
+    }
+
+    /// Whether there is a menu at all: only with a debug tool, or the Admin
+    /// Tools' Accounts (owner, 2026-11-09 and 2026-11-10).
+    fn any_entry(&self) -> bool {
+        self.tools.any() || self.role.has_accounts_panel()
     }
 }
 

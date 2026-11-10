@@ -48,7 +48,7 @@ pub(super) fn pick_on_click(
     if let Some((x, y)) = super::picking::pick(
         ray,
         (player.x, player.y),
-        view_square(orbit, preferences.video.view_distance),
+        view_square(orbit, preferences.graphics.view_distance),
         &mut cache,
         &world.surface,
         &style,

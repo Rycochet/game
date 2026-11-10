@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, Layer, SystemMenu};
-use crate::common::{ServerStatus, Session};
+use crate::common::{ChosenServer, SavedServer, ServerStatus, Session};
 use crate::widgets::{ButtonState, ButtonStyle, Pressable, spawn_button, spawn_dialog};
 
 const WORDS_WIDTH: f32 = 460.0;
@@ -14,6 +14,12 @@ const WORDS_COLOUR: Color = Color::srgb(0.62, 0.1, 0.06);
 /// Why.
 #[derive(Component)]
 pub(super) struct RefusalWords;
+
+/// The server chosen in Connect that just refused, if it was one: OK goes back
+/// to Connect with it in the box (and its key in the padlock), as going back to
+/// the startup menu forgets `ChosenServer`.
+#[derive(Resource, Default)]
+pub(super) struct TriedServer(pub(super) Option<SavedServer>);
 
 pub(super) fn spawn_refusal(commands: &mut Commands) {
     let dialog = spawn_dialog(commands, ABOVE_MENU_LAYER, "Can't connect");
@@ -46,9 +52,11 @@ pub(super) fn spawn_refusal(commands: &mut Commands) {
 }
 
 /// A refusal while playing (or trying to) goes back to the startup menu to say
-/// why. `connection` keeps the refusal until Play is pressed again.
+/// why. `connection` keeps the refusal until playing again.
 pub(super) fn show_refusal(
     status: Res<ServerStatus>,
+    chosen: Res<ChosenServer>,
+    mut tried: ResMut<TriedServer>,
     mut session: ResMut<Session>,
     mut menu: ResMut<SystemMenu>,
     mut words: Single<&mut Text, With<RefusalWords>>,
@@ -58,6 +66,7 @@ pub(super) fn show_refusal(
     }
     if let ServerStatus::Refused(reason) = &*status {
         words.0 = reason.clone();
+        tried.0.clone_from(&chosen.0);
         *session = Session::AtStart;
         *menu = SystemMenu::Refused;
     }

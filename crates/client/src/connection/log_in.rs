@@ -102,16 +102,15 @@ pub(super) fn choose_login(
     mut logging_in: ResMut<LoggingIn>,
     mut session: ResMut<Session>,
     mut email: ResMut<AccountEmail>,
-    mut chosen: ResMut<crate::common::ChosenServer>,
+    chosen: Res<crate::common::ChosenServer>,
 ) {
     for choice in choices.read() {
         match (choice, &connection) {
-            // At the startup menu: forget the account kept for Play's server,
-            // then Play goes to the usual one again (`remember` saves that).
+            // At the startup menu: forget the account kept for this
+            // computer's own server (a browser's page's server).
             (LoginChoice::LogOut, _) => {
                 saved_login::forget(&at_start(&chosen, &connecting));
                 email.0 = None;
-                chosen.set_if_neq(crate::common::ChosenServer(None));
             }
             (LoginChoice::Cancel, _) => {
                 *logging_in = LoggingIn::Not;
@@ -199,6 +198,7 @@ fn guest(connection: &ServerConnection, connecting: &mut Connecting) -> Result<(
         None => super::guest::token(&connecting.target)?,
     };
     connecting.guest = Some(token);
+    connecting.as_guest = true;
     connection
         .link
         .send(&ClientMessage::Login(Credentials::Guest(token)));

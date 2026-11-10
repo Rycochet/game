@@ -66,8 +66,8 @@ A camera key moves the camera a little each time you press it, and keeps it movi
 | Move and zoom the full map | Drag, mouse wheel | Drag, pinch |
 | See what something is | Point at it: a creature, a door, stairs, a bag, a place on the world map, a sun or moon | Hold a finger on it |
 | Open the system menu | Esc, or click the gear in the top-right corner | Tap the gear |
-| Windowed or full screen (native only) | Alt+Enter, or Settings, Video | Settings, Video |
-| Close what is on top | Esc, or click outside it (not the startup menu: press Play) | Tap outside it |
+| Windowed or full screen (native only) | Alt+Enter, or Settings, Graphics | Settings, Graphics |
+| Close what is on top | Esc, or click outside it (not the startup menu: press Continue) | Tap outside it |
 | Open or close the Character panel | Click the person at the bottom left | Tap the person |
 | Show your character, your clothes and what you carry, or your abilities | C, I or B (the same key again closes it), or the tabs at the top of the panel | Tap the tabs |
 | Show the skills you know, as a tree round you | K (again closes it), or the Skills tab on the Character panel; drag to move the tree, the wheel to zoom, click a skill to see more | Tap the Skills tab; drag to move, pinch to zoom, tap a skill |

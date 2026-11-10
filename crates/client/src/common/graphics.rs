@@ -1,4 +1,4 @@
-//! The Video settings that trade looks for speed or clutter, kept in
+//! The Graphics settings that trade looks for speed or clutter, kept in
 //! `Preferences`, and the presets that set them together. Each is used by the
 //! module that draws what it changes; the window's own (display mode,
 //! resolution) are in `display`. What each can be is in `choices`.
@@ -16,10 +16,10 @@ use serde::{Deserialize, Serialize};
 /// Whether this build runs in a browser, where some choices are the browser's.
 pub const IN_BROWSER: bool = cfg!(target_arch = "wasm32");
 
-/// Video settings for speed and clutter.
+/// Graphics settings for speed and clutter.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[serde(default)]
-pub struct VideoPrefs {
+pub struct GraphicsPrefs {
     /// The most frames drawn each second.
     pub frame_rate: FrameRate,
     /// Waits for the screen before showing a frame (native only).
@@ -58,13 +58,13 @@ pub struct VideoPrefs {
     pub reduce_motion: bool,
 }
 
-impl Default for VideoPrefs {
+impl Default for GraphicsPrefs {
     fn default() -> Self {
         Preset::Medium.prefs()
     }
 }
 
-impl VideoPrefs {
+impl GraphicsPrefs {
     /// The preset these are, if any. Choices no preset sets are left out.
     pub fn preset(&self) -> Option<Preset> {
         Preset::ALL
@@ -97,7 +97,7 @@ pub const RENDER_SCALES: (u8, u8) = (50, 100);
 /// eyes without lighting up the night (owner).
 pub const BRIGHTNESS_MOST: u8 = 49;
 
-/// Sets of Video settings, from fastest to best looking. Brightness and
+/// Sets of Graphics settings, from fastest to best looking. Brightness and
 /// Reduce Motion are the player's own, and never set by these.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Preset {
@@ -118,8 +118,8 @@ impl Preset {
     }
 
     /// `prefs` with everything this preset sets set, keeping the player's own.
-    pub fn over(self, prefs: VideoPrefs) -> VideoPrefs {
-        VideoPrefs {
+    pub fn over(self, prefs: GraphicsPrefs) -> GraphicsPrefs {
+        GraphicsPrefs {
             brightness: prefs.brightness,
             reduce_motion: prefs.reduce_motion,
             ..self.prefs()
@@ -128,7 +128,7 @@ impl Preset {
 
     /// The settings it chooses. Medium is the default, as the game was before
     /// there was a choice.
-    pub fn prefs(self) -> VideoPrefs {
+    pub fn prefs(self) -> GraphicsPrefs {
         let low = self == Self::Low;
         let (frame_rate, view_distance) = match self {
             Self::Low => (FrameRate::Fps30, ViewDistance::Near),
@@ -144,7 +144,7 @@ impl Preset {
             (Self::Low, false) => MaxResolution::P1080,
             (_, false) => MaxResolution::Off,
         };
-        VideoPrefs {
+        GraphicsPrefs {
             frame_rate,
             vsync: true,
             render_scale: if low { 75 } else { 100 },

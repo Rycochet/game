@@ -80,8 +80,8 @@ pub(super) fn update_meshes(
     ),
 ) {
     let camera = camera.translation;
-    let video = &preferences.video;
-    let settings = (video.brightness, video.remembered != Remembered::Hide);
+    let graphics = &preferences.graphics;
+    let settings = (graphics.brightness, graphics.remembered != Remembered::Hide);
     let looked_again = dungeon.is_changed()
         || player.is_changed()
         || sharers.iter().any(|position| position.is_changed());
@@ -212,7 +212,7 @@ pub(super) fn update_meshes(
             Vec3::new(colour.red, colour.green, colour.blue),
         );
     }
-    light.raise_to(video.least_light());
+    light.raise_to(graphics.least_light());
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
     let theme = Theme::of_level(dungeon.info.as_ref().map(|info| info.kind));
     let looks = (

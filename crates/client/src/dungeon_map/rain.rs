@@ -208,7 +208,7 @@ pub fn update(
             // Alpha: the share the Weather setting draws.
             light: outside_light
                 .lit_in(lightning.0)
-                .extend(preferences.video.precipitation.share()),
+                .extend(preferences.graphics.precipitation.share()),
         };
     }
 }

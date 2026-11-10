@@ -46,7 +46,7 @@ fn flash(
     if strikes.read().count() > 0 || told {
         *since = Some(0.0);
     }
-    let gentle = preferences.video.reduce_motion;
+    let gentle = preferences.graphics.reduce_motion;
     let strength = match *since {
         Some(seconds) => match envelope::strength(seconds, gentle) {
             Some(strength) => {

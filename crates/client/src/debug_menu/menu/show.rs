@@ -43,8 +43,8 @@ pub(in crate::debug_menu) fn show_menu(
     >,
     mut drawn: Local<[Option<GridDrawn>; 2]>,
 ) {
-    // Without any debug tool there is no menu (owner, 2026-11-09).
-    let hidden = *sources.view.get() == GameView::Connecting || !sources.tools.any();
+    // Without any entry there is no menu (owner, 2026-11-09).
+    let hidden = *sources.view.get() == GameView::Connecting || !sources.any_entry();
     warning.set_if_neq(if hidden {
         Visibility::Hidden
     } else {

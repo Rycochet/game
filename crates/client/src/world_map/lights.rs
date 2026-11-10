@@ -83,9 +83,9 @@ pub(super) fn update(
     )>,
 ) {
     let sky = &sky.0;
-    let video = &preferences.video;
+    let graphics = &preferences.graphics;
     if let Some(mut map) = shadow_map {
-        let size = match video.shadows {
+        let size = match graphics.shadows {
             Shadows::Low => SHADOW_MAP_LOW,
             Shadows::Off | Shadows::High => SHADOW_MAP_HIGH,
         };
@@ -118,7 +118,7 @@ pub(super) fn update(
         let strongest = red.max(green).max(blue);
         light.color = Color::linear_rgb(red / strongest, green / strongest, blue / strongest);
         light.illuminance = FLAT_LUX * strongest * boost(now) * exposure;
-        let casts = number == shadows && video.shadows != Shadows::Off;
+        let casts = number == shadows && graphics.shadows != Shadows::Off;
         if light.shadow_maps_enabled != casts {
             light.shadow_maps_enabled = casts;
         }
@@ -135,14 +135,14 @@ pub(super) fn update(
         let tint = tint.lerp(FLASH_COLOUR, lightning.0);
         ambient.color = Color::linear_rgb(tint.x, tint.y, tint.z);
         // Brightness: at least that share of what a noon sun gives.
-        let least = AMBIENT_BRIGHTNESS * video.least_light() / NIGHT_LIGHT;
+        let least = AMBIENT_BRIGHTNESS * graphics.least_light() / NIGHT_LIGHT;
         ambient.brightness = AMBIENT_BRIGHTNESS.max(least) + FLASH_AMBIENT * lightning.0;
     }
 
     // The edge faces are unlit, so their colours match the prototype's: they
     // only need dimming, or they would glow at night.
     if let Some(mut material) = materials.get_mut(&faces.0) {
-        let lit = sky.lit().max(Vec3::splat(video.least_light()));
+        let lit = sky.lit().max(Vec3::splat(graphics.least_light()));
         let lit = lit.lerp(FLASH_COLOUR * FLASH_LIT, lightning.0);
         material.base_color = Color::linear_rgb(lit.x, lit.y, lit.z);
     }

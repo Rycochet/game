@@ -35,9 +35,10 @@ fn note_played(preferences: &mut Preferences, target: &Target, any: bool) {
     }
 }
 
-/// Takes what the server offers. The first offer after connecting for Play goes
-/// straight to the character played last; anything else (Characters, none to
-/// play, or an offer after one was deleted) shows the screen.
+/// Takes what the server offers. The first offer after connecting for Continue,
+/// or as a guest, goes straight to the character played last (a guest with none
+/// straight to making one); anything else (Characters or Connect, none to play,
+/// or an offer after one was deleted) shows the screen.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn answer_characters(
     mut commands: Commands,
@@ -47,6 +48,7 @@ pub(super) fn answer_characters(
     mut select: ResMut<CharacterSelect>,
     play_for: Res<PlayFor>,
     mut preferences: ResMut<Preferences>,
+    mut making: ResMut<MakingCharacter>,
 ) {
     for FromServer(message) in from_server.read() {
         match message {
@@ -72,10 +74,15 @@ pub(super) fn answer_characters(
                 select.list = list.clone();
                 select.can_create = *can_create;
                 let latest = select.sorted().first().map(|c| c.summary.id);
+                let straight_in = first && (*play_for == PlayFor::Latest || connecting.as_guest);
                 match latest {
-                    Some(id) if first && *play_for == PlayFor::Latest => {
+                    Some(id) if straight_in => {
                         connection.link.send(&ClientMessage::ChooseCharacter { id });
                         select.open = false;
+                    }
+                    None if straight_in && connecting.as_guest && *can_create => {
+                        select.open = false;
+                        making.0 = true;
                     }
                     _ => {
                         select.open = true;
