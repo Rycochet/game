@@ -38,6 +38,9 @@ arboard = { version = "3", default-features = false }
 # The local time zone, for when characters were made and last played
 # (MIT/Apache-2.0); a browser has its own.
 time = { workspace = true, features = ["local-offset"] }
+# The window's icon, which Bevy has no setting for (Apache-2.0): the same
+# version as Bevy's own, already built with it.
+winit = { version = "0.30", default-features = false }
 
 # The browser's WebSocket, location, storage and clipboard, and asking servers
 # what they are (`XmlHttpRequest`).

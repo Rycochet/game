@@ -7,6 +7,12 @@
         <!-- Tells Trunk to compile the Rust crate to WebAssembly and load it. -->
         <link data-trunk rel="rust" href="crates/client/Cargo.toml" data-bin="hall-of-worlds" data-wasm-opt="s" />
         <link data-trunk rel="copy-dir" href="crates/client/assets" />
+        <!-- The HW icon, drawn by `cargo xtask app-icon`. -->
+        <link rel="icon" type="image/png" sizes="16x16" href="assets/app_icon/icon-16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="assets/app_icon/icon-32.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="assets/app_icon/icon-48.png" />
+        <link rel="icon" type="image/png" sizes="256x256" href="assets/app_icon/icon-256.png" />
+        <link rel="apple-touch-icon" href="assets/app_icon/apple-touch-icon.png" />
         <link rel="preload" href="assets/fonts/HallOfWorldsTitle.ttf" as="font" type="font/ttf" crossorigin />
         <style>
             @font-face {

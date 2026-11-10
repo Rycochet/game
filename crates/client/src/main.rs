@@ -5,6 +5,7 @@
 
 mod abilities;
 mod accounts_panel;
+mod app_icon;
 mod character;
 mod character_create;
 mod character_select;
@@ -133,6 +134,7 @@ fn main() {
     app.add_plugins(step_pad::StepPadPlugin);
     app.add_plugins(notices::NoticesPlugin);
     app.add_plugins(accounts_panel::AccountsPanelPlugin);
+    app.add_plugins(app_icon::AppIconPlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

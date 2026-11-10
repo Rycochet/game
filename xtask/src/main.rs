@@ -4,6 +4,7 @@
 //! macOS, Linux and in CI without installing anything extra.
 
 mod api;
+mod app_icon;
 mod compress_web;
 mod dockerfiles;
 mod fight;
@@ -34,6 +35,9 @@ Tasks:
           now, removing files back under the limit.
   icons   Draw the game-icons.net icons listed in xtask/icons.txt into
           the client's assets as PNGs, removing those no longer listed.
+  app-icon
+          Draw the game's own icon (the stylised HW, from the title font)
+          into the client's assets: PNGs, the favicons and the Windows .ico.
   hooks   Turn on the pre-commit hook for this checkout (once per clone).
   package Release build of the native client and server, put together
           with the game assets in package/ in cargo's target folder
@@ -127,6 +131,7 @@ fn main() -> ExitCode {
         ]),
         Some("sizes") => sizes::update(&workspace_root()),
         Some("icons") => icons::make(&workspace_root()),
+        Some("app-icon") => app_icon::make(&workspace_root()),
         Some("hooks") => hooks(),
         Some("package") => package(),
         Some("latest") => latest::run(),
