@@ -36,7 +36,7 @@ fn facts(view: GameView) -> Facts {
         in_town: false,
         world_time_open: false,
         suns_and_moons_open: true,
-        dev_tools: true,
+        tools: DebugTools::every(),
     }
 }
 
@@ -99,17 +99,23 @@ fn reveal_needs_a_site_and_neither_map_option_works_in_a_town() {
 }
 
 #[test]
-fn what_the_server_must_allow_is_disabled_when_it_does_not() {
-    let refused = Facts {
-        dev_tools: false,
+fn only_permitted_entries_are_shown() {
+    use shared::role::DebugTool;
+    let some = Facts {
+        tools: DebugTools::of([DebugTool::TeleportMode, DebugTool::DevArea]),
         ..facts(GameView::Dungeon)
     };
-    assert!(!DebugAction::TeleportMode.is_available(&refused));
-    assert!(!DebugAction::TeleportToWorld.is_available(&refused));
-    assert!(!DebugAction::RemakeSite.is_available(&refused));
-    assert!(!DebugAction::RevealMap.is_available(&refused));
-    assert!(DebugAction::ItemPictures.is_available(&refused));
-    assert!(DebugAction::ShowDebugInfo.is_available(&refused));
+    assert!(DebugAction::TeleportMode.is_permitted(&some));
+    // Regenerate Dev Area goes with Dev Area.
+    assert!(DebugAction::RegenerateDevArea.is_permitted(&some));
+    assert!(!DebugAction::TeleportToWorld.is_permitted(&some));
+    assert!(!DebugAction::ItemPictures.is_permitted(&some));
+    // Every tool but Other has an entry.
+    let entries: Vec<_> = DebugAction::ALL.iter().map(|a| a.tool()).collect();
+    for tool in DebugTool::ALL {
+        let examine_buttons = matches!(tool, DebugTool::KillMob | DebugTool::DestroyMob);
+        assert!(entries.contains(&tool) || examine_buttons || tool == DebugTool::Other);
+    }
 }
 
 #[test]

@@ -5,7 +5,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 use shared::id::Id;
-use shared::role::{BANNED, GUEST, MODERATED, OWNER, PLAYER, Permission, RoleId};
+use shared::role::{
+    ADMIN, BANNED, DEVELOPER, DebugTool, GUEST, MODERATED, OWNER, PLAYER, Permission, RoleId,
+};
 use uuid::Uuid;
 
 use super::defaults::default_roles;
@@ -75,6 +77,9 @@ impl RolesFile {
     /// version's), and gives the Owner everything: whether anything changed.
     pub fn fill_in(&mut self) -> bool {
         let before = self.clone();
+        for role in &mut self.roles {
+            take_old_debug_tools(role);
+        }
         for default in default_roles() {
             match self.roles.iter_mut().find(|role| role.id == default.id) {
                 Some(role) => {
@@ -86,7 +91,7 @@ impl RolesFile {
             }
         }
         for role in &mut self.roles {
-            for permission in Permission::ALL {
+            for permission in Permission::all() {
                 role.permissions.entry(permission).or_insert(false);
             }
         }
@@ -98,7 +103,7 @@ impl RolesFile {
             .collect();
         let owner = self.roles.iter_mut().find(|role| role.id.is(OWNER));
         let owner = owner.expect("filled in above");
-        owner.permissions = Permission::ALL.into_iter().map(|p| (p, true)).collect();
+        owner.permissions = Permission::all().map(|p| (p, true)).collect();
         owner.appears_as = others
             .iter()
             .filter(|id| can_appear_as(id))
@@ -161,6 +166,24 @@ impl RolesFile {
 
 /// Whether characters may be shown as this role: not as the Owner, a guest or
 /// someone under sanctions.
+/// A `roles.ron` from before each debug tool had its own permission has one,
+/// `DebugTools`, for all of them. Where it differs from what that role had by
+/// default (Owner, Admin and Developer had it), it is kept: on, every tool but
+/// the Admin-only ones; off, none. Otherwise the new defaults follow.
+fn take_old_debug_tools(role: &mut RoleDef) {
+    let Some(on) = role.permissions.remove(&Permission::DebugTools) else {
+        return;
+    };
+    let had_it = [OWNER, ADMIN, DEVELOPER].iter().any(|id| role.id.is(id));
+    if on == had_it {
+        return;
+    }
+    for tool in DebugTool::ALL {
+        let given = on && !tool.admin_only();
+        role.permissions.insert(Permission::Debug(tool), given);
+    }
+}
+
 fn can_appear_as(id: &RoleId) -> bool {
     ![OWNER, GUEST, MODERATED, BANNED]
         .iter()

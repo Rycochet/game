@@ -29,6 +29,7 @@ pub(crate) fn answer(
         client.link.send(&ServerMessage::Refused(reason));
         false
     };
+    super::dev_audit::note_use(client, &message, accounts, options);
     match message {
         ClientMessage::Hello { protocol, .. } if protocol != PROTOCOL_VERSION => {
             refuse(client, other_protocol(protocol))
@@ -222,7 +223,10 @@ pub(crate) fn answer(
         | ClientMessage::BinItem { .. } => answer_items(client, message, world),
         // Only for those allowed them; for anyone else a stray key or click is
         // ignored rather than ending the game.
-        _ if message.is_dev_tool() && !client.may_debug(options) => {
+        _ if message
+            .dev_tool()
+            .is_some_and(|tool| !client.may_debug(tool, options)) =>
+        {
             warn!("A client asked for dev tools ({message:?}), which it may not use");
             true
         }

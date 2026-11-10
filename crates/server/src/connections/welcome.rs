@@ -160,7 +160,7 @@ pub(super) fn send_welcome(
         server_clock: world.server_clock.seconds(),
         x,
         y,
-        dev_tools: client.may_debug(options),
+        debug_tools: client.debug_tools(options),
         can_pause: options.pausable && client.may(Permission::Pause),
         stacks: world.stacks,
         role: client.badge(),

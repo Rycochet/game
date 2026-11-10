@@ -128,8 +128,8 @@ Every account has a role, which decides what it may do beyond playing. A role ca
 | ---- | -------------- |
 | Owner | Everything, always. A native client's own world is its player's. |
 | Admin | Everything except making Owners and Admins. |
-| Developer | The server's side of the [debug menu](../debug-menu), and nothing of moderation or accounts. |
-| Moderator | Moderating players (Moderated and Banned), finding characters by name and reading the audit log; let in when the server is full. |
+| Developer | Every tool of the [debug menu](../debug-menu) except World Time and Freeze Mobs, and nothing of moderation or accounts. |
+| Moderator | Moderating players (Moderated and Banned), finding characters by name and reading the audit log; let in when the server is full. The debug menu's tools for looking after players: Show Debug Info, Teleport Mode, Teleport to World, God Mode, Truesight, Examine Mob with Kill and Destroy, Detect Mobs, and the doors' tools. |
 | Player | Playing. Every account starts as one. |
 | Moderated | Playing, with limits, usually for a time. |
 | Banned | Nothing: turned away when logging in, told why and until when. |
@@ -145,10 +145,10 @@ Every account has a role, which decides what it may do beyond playing. A role ca
 
 - give an account a role, by its account id (from the server's log);
 - rename a role, or give it a `title` that is shown instead of its name;
-- change what each role may do, turning each permission on or off;
+- change what each role may do, turning each permission on or off. Each debug menu tool is a permission of its own, written like `Debug(GiveItem)`; a file from before they were split, with one `DebugTools` permission, is turned into them the next time the server starts;
 - add roles of your own, with an id of lower case letters, digits, `-` and `_`.
 
-If the file can't be read, the server won't start, so nothing is lost. Each change the server makes keeps the previous file in `roles-backups/` (the last 10), and every role given, taken or run out is written to `audit.log`.
+If the file can't be read, the server won't start, so nothing is lost. Each change the server makes keeps the previous file in `roles-backups/` (the last 10). Every role given, taken or run out is written to `audit.log`, and so is every use of a debug menu tool by anyone but a native client's own player, by account and character id (just looking, such as Examine Mob's details, is left out).
 
 ## Things to know
 
@@ -156,6 +156,6 @@ If the file can't be read, the server won't start, so nothing is lost. Each chan
 - **A networked server never pauses.** The system menu (or a player's window going into the background) doesn't stop the world for anyone, whatever the settings, and nor does a native client's own server while Online is on: see [Pausing](../client#pausing).
 - **Hosting from the game itself:** a native client can open its own world to others with Online in the system menu, on one secure port (24691 unless Server Options says otherwise), with a certificate it makes. With UPnP turned on in Server Options (or `HOW_UPNP=true`), it asks your router to forward that port to the computer while it is online, and says there how that went and the address players on the internet connect to. Otherwise, or if the router has no UPnP or refuses, forward the port yourself. Windows may ask whether the game can use the network the first time: allow it, or the router's answer can't get through. If your internet provider shares one address between many homes, Server Options says so: no forwarding gets players through then. A standalone server is better for a world that is always there.
 - **Time stops only when the server does.** The server's clock is saved, and carries on from there next time. Every world's time goes by it, so a world nobody is in keeps its time going too.
-- **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the server's side of the [debug menu](../debug-menu). Give the Developer role to those who need it instead.
+- **Keep `HOW_DEBUG_TOOLS` off on a public server.** It lets anyone connected use the [debug menu](../debug-menu), all but World Time and Freeze Mobs. Give the Developer role to those who need it instead.
 - **Stopping:** the server saves everyone when asked to stop (`docker compose down`, Ctrl+C or SIGTERM).
 - **Health checks:** every port answers `/_healthz` with `200 ok` while the game is running, and `503` if it has stopped, even the plain port that otherwise only says to use the secure one. The Docker image checks it by itself (`docker ps` shows `healthy`), asking with the server's own `hall-of-worlds-server --health`, which needs no curl or wget. `/_version` says what the server is, as JSON, such as `{"game":"Hall of Worlds","version":"0.1.0","protocol":37}`.

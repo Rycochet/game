@@ -7,10 +7,11 @@ use shared::protocol::ClientMessage;
 use super::super::actions::DebugAction;
 use super::teleport_to_world::{TeleportButton, TeleportForm, WorldSeedBox, seed_in};
 use super::{GenerateForm, OpenPanels, new_seed};
-use crate::common::{ServerDevTools, TeleportToWorldAsked};
+use crate::common::{DebugTools, TeleportToWorldAsked};
 use crate::connection::ToServer;
 use crate::planet_view::ViewPlanet;
 use crate::widgets::{ButtonPressed, ButtonState, RaisePanel, TextBox};
+use shared::role::DebugTool;
 
 /// View Planet's Teleport to World...: the panel, with that world's seed in
 /// it (blank for the player's own), the gate back at Any.
@@ -78,15 +79,16 @@ pub(in crate::debug_menu) fn press_teleport_buttons(
 }
 
 /// Puts a seed View Planet asked for in the box, marks the gate chosen, and
-/// greys what can't be done: everything but View Planet without the server's
-/// dev tools, anything with a seed that isn't a number, and Go with nowhere
-/// new to go (this world, Any gate).
+/// greys what can't be done: anything with a seed that isn't a number, and Go
+/// with nowhere new to go (this world, Any gate). View Planet... is hidden
+/// without its own permission, the rest without Teleport to World's.
 pub(in crate::debug_menu) fn update_teleport_buttons(
-    dev_tools: Res<ServerDevTools>,
+    tools: Res<DebugTools>,
     mut form: ResMut<TeleportForm>,
     mut seed_box: Query<&mut TextBox, With<WorldSeedBox>>,
-    mut buttons: Query<(&TeleportButton, &mut ButtonState)>,
+    mut buttons: Query<(&TeleportButton, &mut ButtonState, &mut Node)>,
 ) {
+    let teleport = tools.may(DebugTool::TeleportToWorld);
     let Ok(mut text_box) = seed_box.single_mut() else {
         return;
     };
@@ -98,15 +100,16 @@ pub(in crate::debug_menu) fn update_teleport_buttons(
         text_box.error = seed.is_err();
     }
     let gate = form.gate;
-    for (&button, mut state) in &mut buttons {
+    for (&button, mut state, mut node) in &mut buttons {
+        let permitted = match button {
+            TeleportButton::ViewPlanet => tools.may(DebugTool::ViewPlanet),
+            _ => teleport,
+        };
+        super::show_if(&mut node, permitted);
         let can = match button {
-            TeleportButton::RandomSeed => true,
-            TeleportButton::Gate(_) => dev_tools.0,
-            TeleportButton::ViewPlanet => seed.is_ok(),
-            TeleportButton::Hall => dev_tools.0 && seed.is_ok(),
-            TeleportButton::Go => {
-                dev_tools.0 && seed.is_ok_and(|seed| seed.is_some() || gate.is_some())
-            }
+            TeleportButton::RandomSeed | TeleportButton::Gate(_) => true,
+            TeleportButton::ViewPlanet | TeleportButton::Hall => seed.is_ok(),
+            TeleportButton::Go => seed.is_ok_and(|seed| seed.is_some() || gate.is_some()),
         };
         let chosen = button == TeleportButton::Gate(gate);
         state.set_if_neq(match (can, chosen) {

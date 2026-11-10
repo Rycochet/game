@@ -1,5 +1,7 @@
 //! What the server sends a client.
 
+use std::collections::BTreeSet;
+
 use serde::{Deserialize, Serialize};
 
 use super::Landed;
@@ -16,7 +18,7 @@ use crate::id::Id;
 use crate::item::{Inventory, Item, StackLimits};
 use crate::mob::EntityLook;
 use crate::road::Road;
-use crate::role::{Powers, RoleBadge, ShownRole};
+use crate::role::{DebugTool, Powers, RoleBadge, ShownRole};
 use crate::sheet::Sheet;
 use crate::vitals::VitalNow;
 use crate::world::WorldTime;
@@ -71,8 +73,10 @@ pub enum ServerMessage {
         server_clock: f64,
         x: i64,
         y: i64,
-        /// Whether this server accepts developer tools messages.
-        dev_tools: bool,
+        /// The debug tools this client may use: by its role, everything but the
+        /// Admin-only ones on a server with `HOW_DEBUG_TOOLS`, or all of them for
+        /// a single player's own.
+        debug_tools: BTreeSet<DebugTool>,
         /// Whether this server pauses when asked: only single player's.
         can_pause: bool,
         /// How big stacks of items may get here.

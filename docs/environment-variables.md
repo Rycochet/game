@@ -76,7 +76,7 @@ A real server can ignore these.
 
 | Variable | Default | What it does |
 | -------- | ------- | ------------ |
-| `HOW_DEBUG_TOOLS` | `false` | `true` lets **anyone connected** use the entries of the [debug menu](debug-menu) that need the server, for private test servers. Without it, only accounts whose [role](hosting/#roles) allows them can. |
+| `HOW_DEBUG_TOOLS` | `false` | `true` lets **anyone connected** use the [debug menu](debug-menu), every tool but World Time and Freeze Mobs, for private test servers. Without it, only accounts whose [role](hosting/#roles) allows each tool can. |
 | `HOW_DEBUG_API` | `false` | Only in development builds made with `--features debug-api`, never in releases or the Docker image. `true` starts the debug API on port 15702, or give a port number; it only listens on this computer (127.0.0.1). The native client's own single-player server takes the next port. If the port is taken, the game logs it and starts without the API. |
 | `HOW_DEBUG_GENERATOR` | none | `Desert`, `Continents` or `Plates` makes every world's land that way instead of its own, to try one out. A client must have the same setting to play there, as the native client's own server does. |
 | `HOW_DEBUG_LETS_ENCRYPT_STAGING` | `false` | `true` uses Let's Encrypt's test service, whose certificates nobody trusts, to try things without its rate limits. |

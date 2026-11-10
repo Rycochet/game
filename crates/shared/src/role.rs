@@ -8,6 +8,10 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
+mod debug_tool;
+
+pub use debug_tool::DebugTool;
+
 /// A role's id: one of the built-in ones (`OWNER` to `GUEST`) or a server's
 /// own, in lower case letters, digits, `-` and `_`.
 // Written as a plain string, so `roles.ron` reads `"admin"`.
@@ -62,8 +66,8 @@ impl RoleId {
 /// them are in `Powers`, by role.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Permission {
-    /// The debug menu's tools (one permission for now).
-    DebugTools,
+    /// One of the debug menu's tools (written `Debug(GiveItem)` in `roles.ron`).
+    Debug(DebugTool),
     /// The server's own settings, such as the difficulties allowed.
     ServerOptions,
     /// Stopping the clock, where the server can be paused.
@@ -78,19 +82,25 @@ pub enum Permission {
     ReadAudit,
     /// Changing roles' names and titles.
     RenameRoles,
+    /// All the debug tools at once, as roles had them before each had its own:
+    /// only read from old `roles.ron` files, and turned into each `Debug` one
+    /// (`server::roles`). Never in `all()`, and nothing checks it.
+    DebugTools,
 }
 
 impl Permission {
-    pub const ALL: [Permission; 8] = [
-        Self::DebugTools,
-        Self::ServerOptions,
-        Self::Pause,
-        Self::NeverIdle,
-        Self::PastPlayerLimit,
-        Self::LookUp,
-        Self::ReadAudit,
-        Self::RenameRoles,
-    ];
+    /// Every permission there is, the debug tools' first.
+    pub fn all() -> impl Iterator<Item = Self> {
+        DebugTool::ALL.into_iter().map(Self::Debug).chain([
+            Self::ServerOptions,
+            Self::Pause,
+            Self::NeverIdle,
+            Self::PastPlayerLimit,
+            Self::LookUp,
+            Self::ReadAudit,
+            Self::RenameRoles,
+        ])
+    }
 }
 
 /// What a role lets its account do.
@@ -107,6 +117,16 @@ pub struct Powers {
 impl Powers {
     pub fn may(&self, permission: Permission) -> bool {
         self.permissions.contains(&permission)
+    }
+
+    /// The debug tools it may use.
+    pub fn debug_tools(&self) -> impl Iterator<Item = DebugTool> + '_ {
+        self.permissions
+            .iter()
+            .filter_map(|permission| match permission {
+                Permission::Debug(tool) => Some(*tool),
+                _ => None,
+            })
     }
 }
 

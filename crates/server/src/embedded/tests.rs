@@ -30,7 +30,7 @@ fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
     let ServerMessage::Welcome {
         time,
         server_clock,
-        dev_tools,
+        debug_tools,
         role,
         ..
     } = next_answer()
@@ -38,7 +38,8 @@ fn an_embedded_server_welcomes_its_client_and_saves_when_it_leaves() {
         panic!("no welcome");
     };
     // Its player is its Owner, with the debug tools.
-    assert!(dev_tools && role.id.is(shared::role::OWNER), "{role:?}");
+    let every = debug_tools.len() == shared::role::DebugTool::ALL.len();
+    assert!(every && role.id.is(shared::role::OWNER), "{role:?}");
     let clock = time.minutes(server_clock);
     assert!((0.0..30.0).contains(&clock), "{clock}");
     let _ = world;

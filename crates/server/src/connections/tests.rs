@@ -73,6 +73,22 @@ impl TestClient {
         test
     }
 
+    /// The audit log's lines so far.
+    pub fn audit_lines(&self) -> Vec<String> {
+        self.accounts.roles.audit_lines().to_vec()
+    }
+
+    /// The options `send` gives the server.
+    pub fn options(&self) -> ServerOptions {
+        ServerOptions {
+            dev_tools: self.dev_tools,
+            exit_when_alone: false,
+            pausable: self.pausable,
+            guests: true,
+            ..Default::default()
+        }
+    }
+
     /// Sends messages (in one tick), and returns everything answered
     /// since last time.
     pub fn send(&mut self, messages: &[ClientMessage]) -> Vec<ServerMessage> {

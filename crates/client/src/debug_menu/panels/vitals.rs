@@ -6,9 +6,10 @@ use bevy::prelude::*;
 use shared::protocol::{ClientMessage, DevVitals};
 
 use super::{FONT, row};
-use crate::common::ServerDevTools;
+use crate::common::DebugTools;
 use crate::connection::ToServer;
 use crate::widgets::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, UiId, spawn_button};
+use shared::role::DebugTool;
 
 /// How much Hurt takes and Spend Mana spends.
 const STEP: u32 = 5;
@@ -51,12 +52,12 @@ pub(in crate::debug_menu) fn press_vitals_buttons(
     }
 }
 
-/// Greys the buttons while the server doesn't take dev tools.
+/// Greys the buttons without permission (the panel can be open from before).
 pub(in crate::debug_menu) fn update_vitals_buttons(
-    dev_tools: Res<ServerDevTools>,
+    tools: Res<DebugTools>,
     mut buttons: Query<&mut ButtonState, With<VitalsButton>>,
 ) {
-    let state = if dev_tools.0 {
+    let state = if tools.may(DebugTool::Vitals) {
         ButtonState::Normal
     } else {
         ButtonState::Disabled

@@ -43,7 +43,9 @@ pub(in crate::debug_menu) fn show_menu(
     >,
     mut drawn: Local<[Option<GridDrawn>; 2]>,
 ) {
-    warning.set_if_neq(if *sources.view.get() == GameView::Connecting {
+    // Without any debug tool there is no menu (owner, 2026-11-09).
+    let hidden = *sources.view.get() == GameView::Connecting || !sources.tools.any();
+    warning.set_if_neq(if hidden {
         Visibility::Hidden
     } else {
         Visibility::Inherited
@@ -73,7 +75,7 @@ pub(in crate::debug_menu) fn show_menu(
         let room = interface_area(&window, &ui_scale);
         let rows = rows_in(room.y, layer);
         let fit = columns_in(room.x, layer);
-        let entries: Vec<_> = entries_on_show(layer, &level.filter)
+        let entries: Vec<_> = entries_on_show(layer, &level.filter, &facts)
             .into_iter()
             .enumerate()
             .map(|(at, entry)| {

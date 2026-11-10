@@ -3,7 +3,7 @@ use shared::poi::PoiKind;
 use super::super::actions::{DebugAction, Facts};
 use super::on_show::kinds_on_show;
 use super::*;
-use crate::common::GameView;
+use crate::common::{DebugTools, GameView};
 
 fn facts() -> Facts {
     Facts {
@@ -18,17 +18,17 @@ fn facts() -> Facts {
         in_town: false,
         world_time_open: false,
         suns_and_moons_open: false,
-        dev_tools: true,
+        tools: DebugTools::every(),
     }
 }
 
 #[test]
 fn return_with_nothing_highlighted_skips_what_is_disabled() {
     // The doors' tools, none possible on the world map.
-    let shown = on_show("door");
+    let shown = on_show("door", &facts());
     assert_eq!(shown.len(), 3);
     assert_eq!(return_chooses(&shown, None, &facts()), None);
-    let shown = on_show("s");
+    let shown = on_show("s", &facts());
     assert_eq!(
         return_chooses(&shown, None, &facts()),
         Some(DebugAction::ShowDebugInfo),
@@ -38,13 +38,13 @@ fn return_with_nothing_highlighted_skips_what_is_disabled() {
 
 #[test]
 fn return_on_a_disabled_entry_does_nothing() {
-    let shown = on_show("door");
+    let shown = on_show("door", &facts());
     assert_eq!(return_chooses(&shown, Some(0), &facts()), None);
 }
 
 #[test]
 fn return_on_a_highlighted_entry_chooses_it() {
-    let shown = on_show("");
+    let shown = on_show("", &facts());
     assert_eq!(
         return_chooses(&shown, Some(9), &facts()),
         Some(DebugAction::GodMode)

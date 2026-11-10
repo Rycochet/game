@@ -29,7 +29,7 @@ View Planet: the whole world as a turning globe, a day a minute, with drifting c
 
 ## Depends on
 
-- `common` (`CurrentWorld`, `ServerClock`, `TouchGesture`, `UiPointer`, `Controls`, `Action`, `Preferences`, `ServerDevTools`), `connection` (`ToServer`: `DevGoToWorld`), `surface_style` (`SurfaceStyle`, `SurfaceKind`), `widgets` (`layer_z`, `leaves_presses`, `stops_presses`, `WidgetSystems`, `ItemTooltip`, `HoverTip`, `shown_at`, `panel`, `spawn_dropdown`, `spawn_text_box`, `spawn_button`, `spawn_icon_button`, `spawn_new_seed_button`, `TextFocus`, ...), `shared::celestial`, `shared::surface` (`SurfaceGenerator`), `shared::climate`, `shared::vegetation`, `shared::world`, `shared::rng`, `shared::world_gate`. Bevy's `MaterialPlugin` for the clouds.
+- `common` (`CurrentWorld`, `ServerClock`, `TouchGesture`, `UiPointer`, `Controls`, `Action`, `Preferences`, `DebugTools`: Teleport to World, its button hidden and the rings refused without it), `connection` (`ToServer`: `DevGoToWorld`), `surface_style` (`SurfaceStyle`, `SurfaceKind`), `widgets` (`layer_z`, `leaves_presses`, `stops_presses`, `WidgetSystems`, `ItemTooltip`, `HoverTip`, `shown_at`, `panel`, `spawn_dropdown`, `spawn_text_box`, `spawn_button`, `spawn_icon_button`, `spawn_new_seed_button`, `TextFocus`, ...), `shared::celestial`, `shared::surface` (`SurfaceGenerator`), `shared::climate`, `shared::vegetation`, `shared::world`, `shared::rng`, `shared::world_gate`. Bevy's `MaterialPlugin` for the clouds.
 
 ## Used by
 

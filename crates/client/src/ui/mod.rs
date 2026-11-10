@@ -4,10 +4,11 @@ mod frame_rate;
 
 use bevy::prelude::*;
 use frame_rate::FrameTimes;
+use shared::role::DebugTool;
 
 use crate::common::{
-    ClickMode, DebugInfo, FreezeMobs, GameClock, GameView, GodMode, MapPosition, ServerClock,
-    Truesight, ViewStats,
+    ClickMode, DebugInfo, DebugTools, FreezeMobs, GameClock, GameView, GodMode, MapPosition,
+    ServerClock, Truesight, ViewStats,
 };
 use crate::fonts;
 use crate::player::Player;
@@ -35,6 +36,8 @@ struct StatsText;
 
 /// Where the status text goes, to clear the warning button.
 const STATUS_LEFT: f32 = 56.0;
+/// Where it goes with no warning button: no debug tools, so no debug menu.
+const STATUS_LEFT_ALONE: f32 = 16.0;
 
 /// What the status text's numbers are, as symbols.
 const POSITION_ICON: char = '\u{1F4CD}';
@@ -83,12 +86,12 @@ fn update_status_text(
     clock: Res<GameClock>,
     server_clock: Res<ServerClock>,
     stats: Res<ViewStats>,
-    (info, frames): (Res<DebugInfo>, Res<FrameTimes>),
+    (info, frames, tools): (Res<DebugInfo>, Res<FrameTimes>, Res<DebugTools>),
     view: Res<State<GameView>>,
     mode: Res<ClickMode>,
     god: Res<GodMode>,
     (truesight, freeze): (Res<Truesight>, Res<FreezeMobs>),
-    mut text: Single<&mut Text, With<StatusText>>,
+    mut text: Single<(&mut Text, &mut Node), With<StatusText>>,
     mut mode_text: Single<&mut TextSpan, (With<ModeText>, Without<StatsText>)>,
     mut stats_text: Single<&mut TextSpan, (With<StatsText>, Without<ModeText>)>,
 ) {
@@ -111,6 +114,15 @@ fn update_status_text(
         .filter_map(|(on, words)| on.then_some(words))
         .collect();
     let mode = says.join(" ");
+    let (text, node) = &mut *text;
+    let left = if tools.any() {
+        STATUS_LEFT
+    } else {
+        STATUS_LEFT_ALONE
+    };
+    if node.left != px(left) {
+        node.left = px(left);
+    }
     // Nothing else to say before the first welcome.
     if *view.get() == GameView::Connecting {
         text.0 = String::new();
@@ -135,12 +147,14 @@ fn update_status_text(
         "{POSITION_ICON} {},{}  {FRAME_RATE_ICON} {rate}  {PING_ICON} {ping}",
         player.x, player.y,
     );
-    // Show Debug Info adds the hour and the view's numbers.
-    if info.0 {
+    // Show Debug Info adds the hour and the view's numbers, for those who may
+    // use it.
+    let info = info.0 && tools.may(DebugTool::ShowDebugInfo);
+    if info {
         status += &format!("  {HOUR_ICON} {}d{:02}h", clock.hour / 24, clock.hour % 24);
     }
     text.0 = status;
-    stats_text.0 = if info.0 {
+    stats_text.0 = if info {
         format!("\n{}", stats.summary)
     } else {
         String::new()

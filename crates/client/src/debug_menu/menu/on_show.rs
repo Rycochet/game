@@ -7,11 +7,11 @@ use super::super::actions::{DebugAction, Facts, kind_name};
 use super::{ACTIONS, Entry};
 use crate::widgets::matches_filter;
 
-/// The actions on show, in order.
-pub(super) fn on_show(filter: &str) -> Vec<DebugAction> {
+/// The actions on show, in order: those permitted that match the filter.
+pub(super) fn on_show(filter: &str, facts: &Facts) -> Vec<DebugAction> {
     DebugAction::ALL
         .into_iter()
-        .filter(|action| action.matches(filter))
+        .filter(|action| action.is_permitted(facts) && action.matches(filter))
         .collect()
 }
 
@@ -26,9 +26,12 @@ pub(super) fn kinds_on_show(filter: &str) -> Vec<PoiKind> {
 }
 
 /// The entries on show in a layer.
-pub(super) fn entries_on_show(layer: usize, filter: &str) -> Vec<Entry> {
+pub(super) fn entries_on_show(layer: usize, filter: &str, facts: &Facts) -> Vec<Entry> {
     if layer == ACTIONS {
-        on_show(filter).into_iter().map(Entry::Action).collect()
+        on_show(filter, facts)
+            .into_iter()
+            .map(Entry::Action)
+            .collect()
     } else {
         kinds_on_show(filter).into_iter().map(Entry::Kind).collect()
     }
