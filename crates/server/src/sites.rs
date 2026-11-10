@@ -23,6 +23,7 @@ mod leave;
 mod levels;
 mod moves;
 mod place;
+mod place_name;
 mod remembered;
 mod shop_here;
 mod sight;
@@ -47,6 +48,7 @@ pub(super) use leave::{forget_site, killed, leave, put_out, use_exit};
 use levels::{NewVisit, arrive_again, enter_level};
 pub(super) use moves::{set_cell, stepped, teleport};
 use place::{Mirror, Place, SetIn};
+use place_name::town_name_of;
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
@@ -296,6 +298,8 @@ mod dev_area_tests;
 mod leave_key_tests;
 #[cfg(test)]
 mod left_at_tests;
+#[cfg(test)]
+mod place_name_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

@@ -14,6 +14,7 @@ fn info(index: u32, bounds: (i64, i64, i64, i64), entering_site: bool) -> LevelI
         bounds,
         arrival: (1, 1),
         entering_site,
+        place_name: None,
     }
 }
 

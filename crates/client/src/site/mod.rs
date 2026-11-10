@@ -183,7 +183,10 @@ fn change_map(
             ServerMessage::FlatGround(flats) => dungeon.add_flats(flats),
             ServerMessage::LevelCells(chunk) => dungeon.add(chunk),
             &ServerMessage::WildernessWindow { bounds } => dungeon.move_window(bounds),
-            &ServerMessage::InPoi(kind) => dungeon.in_poi = kind,
+            ServerMessage::InPoi { kind, name } => {
+                dungeon.in_poi = *kind;
+                dungeon.in_poi_name.clone_from(name);
+            }
             ServerMessage::RememberedLevel(remembered) => others.add(&dungeon, remembered),
             &ServerMessage::OnWorldMap { x, y } => {
                 *others = OtherLevels::default();

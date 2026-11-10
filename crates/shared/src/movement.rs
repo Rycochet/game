@@ -171,6 +171,12 @@ impl WorldGround {
         (sample.height > water || frozen())
             .then(|| (self.surface.broad_height(x, y) * ELEVATIONS_PER_HEIGHT).floor() as i32)
     }
+
+    /// How high the ground stands here, in whole metres above the sea
+    /// (`Surface::metres`): what towns' names go by.
+    pub fn metres(&self, x: i64, y: i64) -> i32 {
+        self.surface.metres(self.surface.sample(x, y).height)
+    }
 }
 
 impl WorldGround {

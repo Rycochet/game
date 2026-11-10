@@ -144,8 +144,12 @@ pub enum ServerMessage {
     /// In the wilderness, the kind of poi whose cutout the player now stands
     /// in (its site's first level set in, a cave mouth's hill, or the clearing
     /// round a way down), or none: sent after `EnterLevel` into the wilderness
-    /// and whenever it changes.
-    InPoi(Option<crate::poi::PoiKind>),
+    /// and whenever it changes. `name`: what it is called, if it has a name
+    /// of its own (a town's).
+    InPoi {
+        kind: Option<crate::poi::PoiKind>,
+        name: Option<String>,
+    },
     /// Cells of the current level.
     LevelCells(LevelChunk),
     /// Another level of this site that the player knows, sent after

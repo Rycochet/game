@@ -31,13 +31,13 @@ pub(super) fn send_town(client: &mut Client) -> bool {
 fn town_here(visit: &Visit) -> Option<(i64, i64, i64, i64)> {
     let Place::Wilderness {
         cutouts,
-        in_poi: Some(kind),
+        in_poi: Some(poi),
         ..
     } = &visit.place
     else {
         return None;
     };
-    if !kind.is_town() {
+    if !poi.kind.is_town() {
         return None;
     }
     let here = cutouts.iter().find(|set_in| set_in.takes(visit.position));

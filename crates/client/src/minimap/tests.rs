@@ -28,6 +28,7 @@ fn ruined_places_are_named_as_ruins() {
         bounds: (0, 0, 5, 5),
         arrival: (2, 2),
         entering_site: true,
+        place_name: None,
     });
     assert_eq!(
         words(&dungeon.describe()),
@@ -37,6 +38,27 @@ fn ruined_places_are_named_as_ruins() {
     let title = |first| location_title(GameView::Dungeon, None, &dungeon, first, &player);
     assert_eq!(title(FirstFloor(1)), "Ruined stone tower, floor 2");
     assert_eq!(title(FirstFloor(0)), "Ruined stone tower, floor 1");
+}
+
+#[test]
+fn towns_are_named_by_their_own_names() {
+    let mut dungeon = CurrentDungeon::default();
+    dungeon.enter(shared::protocol::LevelInfo {
+        kind: shared::protocol::LevelKind::Poi(shared::poi::PoiKind::Village),
+        ruined: false,
+        building: false,
+        index: 0,
+        levels: 1,
+        basement: false,
+        bounds: (0, 0, 5, 5),
+        arrival: (2, 2),
+        entering_site: true,
+        place_name: Some("Village of Thornbury".into()),
+    });
+    assert_eq!(dungeon.describe(), "Village of Thornbury");
+    let player = SmoothPosition::default();
+    let title = location_title(GameView::Dungeon, None, &dungeon, FirstFloor(1), &player);
+    assert_eq!(title, "Village of Thornbury");
 }
 
 /// A level with a little remembered, a window, and the player on it.
@@ -428,6 +450,7 @@ fn add_floor(app: &mut App) {
         bounds: (0, 0, 400, 400),
         arrival: (100, 100),
         entering_site: true,
+        place_name: None,
     };
     let mut other = CurrentDungeon::default();
     other.enter(shared::protocol::LevelInfo {

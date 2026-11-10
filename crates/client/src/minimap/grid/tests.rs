@@ -46,6 +46,7 @@ fn dungeon() -> CurrentDungeon {
         bounds: (0, 0, 5, 5),
         arrival: (2, 2),
         entering_site: true,
+        place_name: None,
     });
     for y in 0..5 {
         for x in 0..5 {
