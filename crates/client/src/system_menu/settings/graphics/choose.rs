@@ -3,18 +3,19 @@
 
 use bevy::prelude::*;
 
-use super::options::{GraphicsControl, PercentText};
+use super::options::{GraphicsControl, show_percent};
 use crate::common::{
     AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, GraphicsPrefs, MaxResolution,
     Precipitation, Preferences, Preset, RENDER_SCALES, Remembered, Shadows, ViewDistance,
 };
+use crate::dom::Dom;
 use crate::widgets::{DropdownChosen, SliderMoved, SwitchFlipped};
 
 /// Render Scale moves in steps of this many percent.
 const SCALE_STEP: u8 = 5;
 
 /// The Graphics settings the page shows. Moving a slider changes them without
-/// building the page again, which would drop the slider being dragged: then
+/// showing the page again, which would move the slider being dragged: then
 /// `stale` says the preset shown may be wrong, until the slider is let go.
 #[derive(Resource, Default)]
 pub(in crate::system_menu) struct GraphicsShown {
@@ -23,9 +24,9 @@ pub(in crate::system_menu) struct GraphicsShown {
 }
 
 impl GraphicsShown {
-    /// Whether the page should be built again to show `prefs`. `holding`: a
-    /// button or finger is down.
-    pub(super) fn needs_building(&self, prefs: &GraphicsPrefs, holding: bool) -> bool {
+    /// Whether the page should show `prefs` again. `holding`: a button or
+    /// finger is down.
+    pub(super) fn needs_showing(&self, prefs: &GraphicsPrefs, holding: bool) -> bool {
         self.prefs != Some(*prefs) || (self.stale && !holding)
     }
 }
@@ -82,14 +83,23 @@ fn switched(prefs: &mut GraphicsPrefs, control: GraphicsControl) -> Option<&mut 
     }
 }
 
+/// A slider's least, most and step, in percent, if this is one.
+pub(super) fn slider_range(control: GraphicsControl) -> Option<(u8, u8, u8)> {
+    match control {
+        GraphicsControl::RenderScale => Some((RENDER_SCALES.0, RENDER_SCALES.1, SCALE_STEP)),
+        GraphicsControl::Brightness => Some((0, BRIGHTNESS_MOST, 1)),
+        _ => None,
+    }
+}
+
 /// What a slider's place sets, if it is one: the setting and its new percent.
 fn slide(prefs: &mut GraphicsPrefs, control: GraphicsControl, value: f32) -> Option<u8> {
-    let (setting, range, step) = match control {
-        GraphicsControl::RenderScale => (&mut prefs.render_scale, RENDER_SCALES, SCALE_STEP),
-        GraphicsControl::Brightness => (&mut prefs.brightness, (0, BRIGHTNESS_MOST), 1),
-        _ => return None,
+    let (least, most, step) = slider_range(control)?;
+    let setting = match control {
+        GraphicsControl::RenderScale => &mut prefs.render_scale,
+        _ => &mut prefs.brightness,
     };
-    let percent = percent_at(value, range, step);
+    let percent = percent_at(value, (least, most), step);
     (*setting != percent).then(|| {
         *setting = percent;
         percent
@@ -104,13 +114,13 @@ pub(in crate::system_menu) fn use_graphics_options(
     controls: Query<&GraphicsControl>,
     mut preferences: ResMut<Preferences>,
     mut shown: ResMut<GraphicsShown>,
-    mut texts: Query<(&PercentText, &mut Text)>,
+    mut dom: Dom,
 ) {
     for &DropdownChosen(dropdown, index) in chosen.read() {
         if let Ok(&control) = controls.get(dropdown) {
             let mut prefs = preferences.graphics;
             choose(&mut prefs, control, index);
-            // (Built again by the change, to show the preset.)
+            // (Shown again by the change, with the preset.)
             preferences.graphics = prefs;
         }
     }
@@ -119,7 +129,7 @@ pub(in crate::system_menu) fn use_graphics_options(
             let mut prefs = preferences.graphics;
             if let Some(setting) = switched(&mut prefs, control) {
                 *setting = on;
-                // (Built again by the change, its thumb still sliding.)
+                // (Shown again by the change.)
                 preferences.graphics = prefs;
             }
         }
@@ -135,11 +145,7 @@ pub(in crate::system_menu) fn use_graphics_options(
         preferences.graphics = prefs;
         shown.prefs = Some(prefs);
         shown.stale = true;
-        for (text, mut words) in &mut texts {
-            if text.0 == control {
-                words.0 = format!("{percent}%");
-            }
-        }
+        show_percent(&mut dom, control, percent);
     }
 }
 

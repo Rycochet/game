@@ -64,12 +64,12 @@ fn the_page_is_built_again_once_the_slider_is_let_go() {
         prefs: Some(prefs),
         stale: true,
     };
-    assert!(shown.needs_building(&prefs, false));
-    assert!(!shown.needs_building(&prefs, true));
+    assert!(shown.needs_showing(&prefs, false));
+    assert!(!shown.needs_showing(&prefs, true));
     let fresh = GraphicsShown {
         prefs: Some(prefs),
         stale: false,
     };
-    assert!(!fresh.needs_building(&prefs, false));
-    assert!(GraphicsShown::default().needs_building(&prefs, true));
+    assert!(!fresh.needs_showing(&prefs, false));
+    assert!(GraphicsShown::default().needs_showing(&prefs, true));
 }

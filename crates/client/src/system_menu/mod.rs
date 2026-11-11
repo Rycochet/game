@@ -94,7 +94,7 @@ impl Plugin for SystemMenuPlugin {
                     ask_for_pause,
                     settings::show_interface_page,
                     settings::use_pages,
-                    settings::fill_graphics_page,
+                    settings::show_graphics_page,
                     (settings::use_graphics_page, settings::run_trial).chain(),
                     settings::use_graphics_options,
                     (

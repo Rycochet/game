@@ -127,16 +127,19 @@ pub(super) fn build_documents(
     theme: Res<Theme>,
     pictures: Res<Pictures>,
     assets: Res<AssetServer>,
-    new: Query<(Entity, &Document), Added<Document>>,
+    new: Query<(Entity, &Document, Option<&ChildOf>), Added<Document>>,
+    styles: Query<&TextStyle>,
 ) {
-    for (root, Document(template)) in &new {
+    for (root, Document(template), parent) in &new {
         match template.checked() {
             Ok(nodes) => {
-                let style = TextStyle {
+                // Inside another document's element, it writes as that does.
+                let around = parent.and_then(|parent| styles.get(parent.parent()).ok());
+                let style = around.copied().unwrap_or(TextStyle {
                     size: theme.text,
                     colour: theme.colour,
                     justify: Justify::Left,
-                };
+                });
                 commands.entity(root).insert(style);
                 let mut builder = Builder {
                     commands: &mut commands,
