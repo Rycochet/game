@@ -49,6 +49,12 @@ impl UiId {
         }
     }
 
+    /// Its form's name and its own, without which of several or its place in
+    /// a list.
+    pub fn parts(&self) -> (&'static str, &'static str) {
+        (self.form, self.name)
+    }
+
     /// Its form as written: `form`, or `form#<id>`.
     pub fn form(&self) -> String {
         match self.of {

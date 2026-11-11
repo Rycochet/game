@@ -98,6 +98,12 @@ impl Theme {
             ..default()
         };
         theme.set(Tag::Footer, "", footer);
+        // Dialogs are the menus': their writing is the menus' size.
+        let dialog = Look {
+            text: Some(TextSize::Large),
+            ..default()
+        };
+        theme.set(Tag::Dialog, "", dialog);
         // Controls keep a little room under them, as paragraphs do. Their
         // classes pick among the widgets' own looks (`controls`).
         let control = Look {

@@ -7,7 +7,6 @@ mod controls;
 mod difficulty;
 mod gameplay;
 mod graphics;
-mod ironman;
 mod keep;
 mod rows;
 mod shown_role;
@@ -18,8 +17,7 @@ pub(super) use gameplay::{fill_gameplay_page, use_gameplay_page};
 pub(super) use graphics::{
     GraphicsForm, GraphicsShown, fill_graphics_page, use_graphics_options, use_graphics_page,
 };
-pub(super) use ironman::spawn_ironman_requester;
-pub(super) use keep::{GraphicsTrial, run_trial, spawn_keep_requester};
+pub(super) use keep::{GraphicsTrial, KeepButton, run_trial};
 pub(super) use shown_role::{ShownAs, keep_shown_role, use_shown_role};
 
 use bevy::prelude::*;

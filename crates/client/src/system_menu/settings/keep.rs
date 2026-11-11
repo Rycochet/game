@@ -4,15 +4,12 @@
 
 use bevy::prelude::*;
 
-use super::super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, Layer, MENU_WIDTH, SystemMenu};
+use super::super::SystemMenu;
 use crate::common::{DisplayChoice, DisplayInUse, Preferences, RememberWindow};
-use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonStyle, INK, Pressable, spawn_button, spawn_dialog,
-};
+use crate::dom::Dom;
+use crate::widgets::ButtonPressed;
 
 const KEEP_SECONDS: f64 = 15.0;
-/// Above Settings.
-const POPUP_LAYER: i32 = ABOVE_MENU_LAYER + 1;
 
 /// Settings applied but not yet kept.
 #[derive(Resource, Default)]
@@ -36,45 +33,7 @@ impl GraphicsTrial {
 }
 
 #[derive(Component)]
-pub(in crate::system_menu) struct Countdown;
-
-#[derive(Component)]
 pub(in crate::system_menu) struct KeepButton;
-
-pub(in crate::system_menu) fn spawn_keep_requester(commands: &mut Commands) {
-    let dialog = spawn_dialog(commands, POPUP_LAYER, "Graphics");
-    commands
-        .entity(dialog.layer)
-        .insert((Layer(&[SystemMenu::KeepGraphics]), Action::Back));
-    commands.entity(dialog.content).with_children(|content| {
-        content.spawn((
-            Text::new("Keep these settings?"),
-            FONT.font(),
-            TextColor(INK),
-        ));
-        content.spawn((Countdown, Text::new(""), FONT.font(), TextColor(INK)));
-    });
-    commands.entity(dialog.buttons).with_children(|row| {
-        let node = Node {
-            width: px(MENU_WIDTH / 2.0),
-            height: px(BUTTON_ROW),
-            ..default()
-        };
-        spawn_button(row, ButtonState::Normal, "Keep", FONT, node.clone()).insert((
-            KeepButton,
-            Action::KeepGraphics,
-            Action::KeepGraphics.ui_id("settings.keep_graphics"),
-            ButtonStyle::Main,
-            Pressable,
-        ));
-        spawn_button(row, ButtonState::Normal, "Go back", FONT, node).insert((
-            Action::Back,
-            Action::Back.ui_id("settings.keep_graphics"),
-            ButtonStyle::Plain,
-            Pressable,
-        ));
-    });
-}
 
 /// Keeps the settings on Keep; goes back to the old ones when the requester
 /// closes any other way, or the time is up.
@@ -88,7 +47,8 @@ pub(in crate::system_menu) fn run_trial(
     mut preferences: ResMut<Preferences>,
     mut menu: ResMut<SystemMenu>,
     time: Res<Time<Real>>,
-    mut countdown: Single<&mut Text, With<Countdown>>,
+    mut dom: Dom,
+    mut shown: Local<String>,
 ) {
     let kept = pressed.read().any(|press| keeps.contains(press.0));
     let Some(Trial { before, until }) = trial.0 else {
@@ -111,7 +71,8 @@ pub(in crate::system_menu) fn run_trial(
         return;
     }
     let left = format!("Going back in {} s.", (until - now).ceil() as u32);
-    if countdown.0 != left {
-        countdown.0 = left;
+    if *shown != left {
+        dom.set_text("settings.keep_graphics/countdown", left.clone());
+        *shown = left;
     }
 }

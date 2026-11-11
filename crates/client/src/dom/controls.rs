@@ -94,14 +94,23 @@ impl Builder<'_, '_, '_> {
 }
 
 /// A widget's `Node`: as wide as its element when that is given a width or
-/// is one that fills the room it has, otherwise its own size.
+/// is one that fills the room it has, and as tall when it is given a height;
+/// otherwise its own size.
 fn node_in(attrs: &Attrs, fills: bool) -> Node {
     let width = if fills || attrs.width.is_some() {
         percent(100)
     } else {
         Val::Auto
     };
-    Node { width, ..default() }
+    let height = match attrs.height {
+        Some(_) => percent(100),
+        None => Val::Auto,
+    };
+    Node {
+        width,
+        height,
+        ..default()
+    }
 }
 
 #[cfg(test)]
