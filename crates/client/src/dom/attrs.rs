@@ -31,6 +31,9 @@ pub struct Attrs {
     pub inert: bool,
     /// What flows in it stays on one line (as HTML's `nowrap` on a cell).
     pub nowrap: bool,
+    /// It takes the room left in what it is stacked in, and what is in it
+    /// may scroll inside it: a page under its tabs.
+    pub fills: bool,
     pub align: Option<Align>,
     pub valign: Option<VAlign>,
     pub top: Option<Length>,
@@ -110,13 +113,14 @@ impl Attrs {
 
 /// The attributes every element takes (`id` and `form` are read apart).
 pub(super) fn is_global(name: &str) -> bool {
-    const GLOBAL: [&str; 19] = [
+    const GLOBAL: [&str; 20] = [
         "class",
         "title",
         "hidden",
         "disabled",
         "inert",
         "nowrap",
+        "fills",
         "align",
         "valign",
         "top",

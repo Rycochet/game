@@ -9,18 +9,19 @@ use shared::protocol::{OnlineSettings, OnlineState, ServerAddress};
 use std::net::IpAddr;
 
 mod difficulty_row;
+mod layer;
 mod upnp_row;
 
 pub(super) use difficulty_row::run_difficulty_boxes;
 pub(super) use upnp_row::run_upnp_rows;
 
-use super::spawn::{spawn_layer, spawn_title_row};
 use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
 use crate::common::{Hosting, Preferences};
 use crate::widgets::{
     ButtonPressed, INK, Pressable, TextBox, TextSize, UiId, copy_to_clipboard, field_label,
     spawn_copy_button, spawn_scroll_area, spawn_text_box,
 };
+use layer::{spawn_layer, spawn_title_row};
 
 const OPTIONS_WIDTH: f32 = 560.0;
 /// The most of the window's height the certificate takes before it scrolls.

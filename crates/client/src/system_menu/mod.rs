@@ -36,6 +36,8 @@ use state::{Action, GearButton, Layer, MenuButton, PausedText};
 const GEAR_BUTTON: f32 = 34.0;
 const CORNER_GAP: f32 = 8.0;
 
+// Server Options', which a browser doesn't have.
+#[cfg(not(target_arch = "wasm32"))]
 const MARGIN: f32 = 20.0;
 // Server Options', which a browser doesn't have.
 #[cfg(not(target_arch = "wasm32"))]
@@ -46,13 +48,16 @@ const GAP: f32 = 8.0;
 // Server Options', which a browser doesn't have.
 #[cfg(not(target_arch = "wasm32"))]
 const FONT: crate::widgets::TextSize = crate::widgets::TextSize::Large;
+// Server Options', which a browser doesn't have.
+#[cfg(not(target_arch = "wasm32"))]
 const SETTINGS_TITLE_ROW: f32 = 36.0;
 /// Round the close button, still on it, for fingers.
+// Server Options', which a browser doesn't have.
+#[cfg(not(target_arch = "wasm32"))]
 const CLOSE_MARGIN: f32 = 4.0;
-/// How much of the window's width and height Settings takes (owner's choice).
-const SETTINGS_WIDTH: f32 = 50.0;
-const SETTINGS_HEIGHT: f32 = 75.0;
 
+// Server Options', which a browser doesn't have.
+#[cfg(not(target_arch = "wasm32"))]
 const ABOVE_MENU_LAYER: i32 = 1;
 
 pub struct SystemMenuPlugin;
@@ -81,6 +86,7 @@ impl Plugin for SystemMenuPlugin {
                         panel::bind_main_panel,
                         connect::bind_popups,
                         connect::bind_connect,
+                        settings::bind_settings,
                     ),
                     show_menu,
                     show_buttons,
@@ -97,7 +103,7 @@ impl Plugin for SystemMenuPlugin {
                         .chain(),
                     connect::fill_server_list,
                     ask_for_pause,
-                    settings::fill_interface_page,
+                    settings::show_interface_page,
                     settings::use_pages,
                     settings::fill_graphics_page,
                     (settings::use_graphics_page, settings::run_trial).chain(),
