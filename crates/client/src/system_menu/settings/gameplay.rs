@@ -5,15 +5,13 @@
 use bevy::prelude::*;
 
 use super::super::SystemMenu;
-use super::difficulty::{Choices, choices, spawn_difficulty_row};
-use super::rows::{spawn_switch_row, tip};
-use super::shown_role::{ShownAs, offered, spawn_shown_row};
+use super::difficulty::{Choices, DifficultyList, choices, show_difficulty_row};
+use super::rows::tip_words;
+use super::shown_role::{ShownAs, ShownList, offered, show_shown_row};
 use crate::common::{IN_BROWSER, PlayDifficulty, Preferences, ServerClock, Session};
-use crate::widgets::{ButtonState, SwitchFlipped, UiId};
+use crate::dom::Dom;
+use crate::widgets::SwitchFlipped;
 use shared::role::ShownRole;
-
-#[derive(Component)]
-pub(in crate::system_menu) struct GameplayPage;
 
 #[derive(Component)]
 pub(in crate::system_menu) struct PauseSwitch;
@@ -36,58 +34,46 @@ fn why_not(session: &Session, clock: &ServerClock) -> Option<&'static str> {
 /// choices, whether the Ironman requester was up, and Shown As.
 type Shown = (bool, Option<&'static str>, Choices, bool, Option<ShownRole>);
 
-/// Builds the page again when what it shows changes (and at the start).
+/// Shows the page's rows again when what they show changes (and at the
+/// start, once the page is built).
 #[allow(clippy::too_many_arguments)]
-pub(in crate::system_menu) fn fill_gameplay_page(
-    mut commands: Commands,
+pub(in crate::system_menu) fn show_gameplay_page(
     preferences: Res<Preferences>,
     session: Res<Session>,
     clock: Res<ServerClock>,
     play: Res<PlayDifficulty>,
     menu: Res<SystemMenu>,
     shown_as: Res<ShownAs>,
-    page: Single<Entity, With<GameplayPage>>,
+    mut dom: Dom,
+    mut lists: Query<&mut DifficultyList>,
+    mut roles: Query<&mut ShownList>,
     mut shown: Local<Option<Shown>>,
 ) {
+    let (Ok(mut list), Ok(mut roles)) = (lists.single_mut(), roles.single_mut()) else {
+        return;
+    };
     let why_not = why_not(&session, &clock);
     let difficulty = choices(*play, preferences.difficulty);
     // Again as the Ironman requester closes, putting back a choice not kept,
     // and on each word from the server, which may have refused one.
     let asking = *menu == SystemMenu::Ironman;
     let role = offered(&shown_as).filter(|_| session.is_playing()).cloned();
-    let now = (
-        preferences.pause_unfocused,
-        why_not,
-        difficulty,
-        asking,
-        role,
-    );
+    let on = preferences.pause_unfocused;
+    let now = (on, why_not, difficulty, asking, role);
     if shown.as_ref() == Some(&now) && !play.is_changed() {
         return;
     }
-    let difficulty = now.2.clone();
-    let role = now.4.clone();
+    show_difficulty_row(&mut dom, &mut list, &now.2, play.current.is_some());
+    show_shown_row(&mut dom, &mut roles, now.4.as_ref());
+    dom.set_flag("settings.gameplay/pause_unfocused", "checked", on);
+    dom.set_flag(
+        "settings.gameplay/pause_unfocused",
+        "disabled",
+        why_not.is_some(),
+    );
+    let tip = tip_words(PAUSE, why_not);
+    dom.set("settings.gameplay/pause_unfocused_row", "title", &tip);
     *shown = Some(now);
-    let on = preferences.pause_unfocused;
-    let state = match (why_not.is_some(), on) {
-        (false, _) => ButtonState::Normal,
-        (true, false) => ButtonState::Disabled,
-        (true, true) => ButtonState::DisabledSelected,
-    };
-    let page = *page;
-    commands.entity(page).despawn_related::<Children>();
-    commands.entity(page).with_children(|page| {
-        spawn_difficulty_row(page, &difficulty, play.current.is_some());
-        if let Some(role) = &role {
-            spawn_shown_row(page, role);
-        }
-        let label = "Pause When Not in Focus";
-        let made = spawn_switch_row(page, label, tip(PAUSE, why_not), state, on);
-        page.commands().entity(made).insert((
-            PauseSwitch,
-            UiId::new("settings.gameplay", "pause_unfocused"),
-        ));
-    });
 }
 
 pub(in crate::system_menu) fn use_gameplay_page(

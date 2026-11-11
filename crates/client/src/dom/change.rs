@@ -6,6 +6,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 mod apply;
+mod options;
 
 pub(super) use apply::apply_changes;
 
@@ -28,6 +29,8 @@ pub(super) enum Change {
     Copy { template: String, index: usize },
     /// Everything in it taken out.
     Empty,
+    /// A `select`'s options, each its value and its words.
+    Options(Vec<(String, String)>),
 }
 
 /// How systems change documents. Ids are as written, `form/name`, with
@@ -81,6 +84,12 @@ impl Dom<'_> {
     /// Takes out everything in an element, to fill it again.
     pub fn empty(&mut self, id: &str) {
         self.ask(id, Change::Empty);
+    }
+
+    /// Gives a `select` these options instead of its own, each its value
+    /// and its words. Set its `value` after, to say which is chosen.
+    pub fn set_options(&mut self, id: &str, options: impl IntoIterator<Item = (String, String)>) {
+        self.ask(id, Change::Options(options.into_iter().collect()));
     }
 }
 

@@ -10,15 +10,14 @@ use shared::difficulty::Difficulty;
 use shared::protocol::ClientMessage;
 
 use super::super::{Action, SystemMenu};
-use super::rows::{spawn_dropdown_row, tip};
+use super::rows::tip_words;
 use crate::common::{PlayDifficulty, Preferences, difficulty_words};
 use crate::connection::ToServer;
-use crate::widgets::{ButtonPressed, ButtonState, Dropdown, DropdownChosen, UiId};
-
-const WIDTH: f32 = 200.0;
+use crate::dom::Dom;
+use crate::widgets::{ButtonPressed, DropdownChosen};
 
 /// The dropdown, with the difficulty each option is.
-#[derive(Component)]
+#[derive(Component, Default)]
 pub(in crate::system_menu) struct DifficultyList(Vec<Difficulty>);
 
 /// What the dropdown offers, which is chosen, and why it can't be changed.
@@ -73,36 +72,21 @@ fn words(playing: bool) -> String {
     format!("{what}\n\n{}", each.join("\n"))
 }
 
-/// Adds the row to the Gameplay page.
-pub(in crate::system_menu) fn spawn_difficulty_row(
-    page: &mut ChildSpawnerCommands,
+/// Shows the row as these choices have it.
+pub(in crate::system_menu) fn show_difficulty_row(
+    dom: &mut Dom,
+    list: &mut DifficultyList,
     choices: &Choices,
     playing: bool,
 ) {
-    let dropdown = Dropdown {
-        options: choices
-            .options
-            .iter()
-            .map(|d| d.name().to_owned())
-            .collect(),
-        selected: choices
-            .options
-            .iter()
-            .position(|&d| d == choices.selected)
-            .unwrap_or(0),
-        ..default()
-    };
-    let tip = tip(&words(playing), choices.why_not);
-    let made = spawn_dropdown_row(page, "Difficulty", tip, dropdown, WIDTH);
-    let mut commands = page.commands();
-    let mut made = commands.entity(made);
-    made.insert((
-        DifficultyList(choices.options.clone()),
-        UiId::new("settings.gameplay", "difficulty"),
-    ));
-    if choices.why_not.is_some() {
-        made.insert(ButtonState::Disabled);
-    }
+    const ID: &str = "settings.gameplay/difficulty";
+    let name = |difficulty: &Difficulty| difficulty.name().to_owned();
+    dom.set_options(ID, choices.options.iter().map(|d| (name(d), name(d))));
+    dom.set(ID, "value", choices.selected.name());
+    dom.set_flag(ID, "disabled", choices.why_not.is_some());
+    let tip = tip_words(&words(playing), choices.why_not);
+    dom.set("settings.gameplay/difficulty_row", "title", &tip);
+    list.0 = choices.options.clone();
 }
 
 /// A choice: asked of the server while playing; otherwise the player's own,

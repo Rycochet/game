@@ -66,10 +66,15 @@ pub(super) fn spawn_section(
 
 /// What a setting does, and why it can't be used, if it can't.
 pub(super) fn tip(what: &str, why_not: Option<&str>) -> HoverTip {
-    HoverTip(match why_not {
+    HoverTip(tip_words(what, why_not))
+}
+
+/// The same, as the words of a `title` in markup.
+pub(super) fn tip_words(what: &str, why_not: Option<&str>) -> String {
+    match why_not {
         Some(why) => format!("{what}\n\n{why}"),
         None => what.into(),
-    })
+    }
 }
 
 /// A row: the label, then what `control` spawns, with `tip` over all of it.

@@ -14,7 +14,7 @@ mod shown_role;
 
 pub(super) use controls::{TakenKeys, fill_controls_page, forget_taken, use_controls_page};
 pub(super) use difficulty::use_difficulty;
-pub(super) use gameplay::{fill_gameplay_page, use_gameplay_page};
+pub(super) use gameplay::{show_gameplay_page, use_gameplay_page};
 pub(super) use graphics::{
     GraphicsForm, GraphicsShown, fill_graphics_page, use_graphics_options, use_graphics_page,
 };

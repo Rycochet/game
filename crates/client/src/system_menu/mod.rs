@@ -100,7 +100,7 @@ impl Plugin for SystemMenuPlugin {
                     (
                         settings::keep_shown_role,
                         settings::use_difficulty,
-                        settings::fill_gameplay_page,
+                        settings::show_gameplay_page,
                     )
                         .chain(),
                     settings::use_shown_role,
