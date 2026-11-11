@@ -1,10 +1,13 @@
 //! Settings' layer, as markup: its title and close button, the tabs, a page
-//! for each, and the Interface page's rows. The other pages are filled by
-//! their own files, into the pages here.
+//! for each, and the Gameplay and Interface pages' rows (what Gameplay's
+//! show is `gameplay`'s). The other pages are filled by their own files,
+//! into the pages here.
 
 use bevy::prelude::*;
 
 use super::super::{Action, Layer, SystemMenu};
+use super::difficulty::DifficultyList;
+use super::shown_role::ShownList;
 use super::{
     Page, PageTabs, SCROLL_BARS, ScrollBarsSwitch, SizeDropdown, TOUCH, TOUCH_ONLY, TouchSwitch,
     controls, gameplay, graphics, size_index, size_options,
@@ -27,7 +30,26 @@ static SETTINGS: Template = html!(
       <option>Interface</option>
       <option>Graphics</option>
     </tab-bar>
-    <div id="gameplay_page" class="rows" fills/>
+    <div id="gameplay_page" fills>
+      <form id="settings.gameplay" class="rows">
+        <span id="difficulty_row" class="labelled" nowrap>
+          <label for="difficulty" width="240">Difficulty</label>
+          <select id="difficulty" width="200">
+            <option>Normal</option>
+          </select>
+        </span>
+        <span id="shown_as_row" class="labelled" nowrap hidden>
+          <label for="shown_as" width="240">Shown As</label>
+          <select id="shown_as" width="200">
+            <option>Player</option>
+          </select>
+        </span>
+        <span id="pause_unfocused_row" class="labelled" nowrap>
+          <label for="pause_unfocused" width="240">Pause When Not in Focus</label>
+          <input id="pause_unfocused" type="checkbox" switch/>
+        </span>
+      </form>
+    </div>
     <div id="controls_page" class="rows" fills hidden/>
     <div id="interface_page" fills hidden>
       <form id="settings.interface" class="rows">
@@ -87,7 +109,10 @@ pub(in crate::system_menu) fn bind_settings(
             ("settings", "layer") => bound.insert((Layer(SHOWN), Action::Back)),
             ("settings", "close") => bound.insert(Action::Back),
             ("settings", "page") => bound.insert(PageTabs),
-            ("settings", "gameplay_page") => bound.insert((Page(0), gameplay::GameplayPage)),
+            ("settings", "gameplay_page") => bound.insert(Page(0)),
+            ("settings.gameplay", "difficulty") => bound.insert(DifficultyList::default()),
+            ("settings.gameplay", "shown_as") => bound.insert(ShownList::default()),
+            ("settings.gameplay", "pause_unfocused") => bound.insert(gameplay::PauseSwitch),
             ("settings", "controls_page") => bound.insert((Page(1), controls::ControlsPage)),
             ("settings", "interface_page") => bound.insert(Page(2)),
             ("settings", "graphics_page") => bound.insert((Page(3), graphics::GraphicsPage)),
@@ -131,13 +156,14 @@ mod tests {
     use super::*;
     use crate::dom::{CheckedNode, Tag};
 
-    /// The words of every `option` in these nodes, in order.
+    /// The words of every `option` of the size's select, in order.
     fn options(nodes: &[CheckedNode], found: &mut Vec<String>) {
         for node in nodes {
             let CheckedNode::Element(element) = node else {
                 continue;
             };
-            if element.tag == Tag::Select {
+            let size = element.id.as_ref().is_some_and(|id| id.parts().1 == "size");
+            if element.tag == Tag::Select && size {
                 for option in &element.children {
                     if let CheckedNode::Element(option) = option
                         && let Some(CheckedNode::Text(words)) = option.children.first()

@@ -122,3 +122,30 @@ fn a_document_can_be_filled_in_the_frame_it_is_spawned() {
         Vec::<String>::new()
     );
 }
+
+static PICKER: Template = html!(
+    "picker",
+    r#"<form id="b"><select id="pick"><option>One</option></select></form>"#
+);
+
+#[test]
+fn a_selects_options_are_changed_and_its_value_chooses_among_them() {
+    let mut app = built(&PICKER);
+    change(&mut app, |dom| {
+        let options = [("e", "Easy"), ("h", "Hard")];
+        dom.set_options(
+            "b/pick",
+            options.map(|(value, words)| (value.to_owned(), words.to_owned())),
+        );
+        dom.set("b/pick", "value", "h");
+    });
+    let pick = find(&mut app, "b/pick");
+    let dropdown = app.world().get::<crate::widgets::Dropdown>(pick).unwrap();
+    assert_eq!(dropdown.options, ["Easy", "Hard"]);
+    assert_eq!(dropdown.selected, 1);
+
+    // None is refused, leaving what it had.
+    change(&mut app, |dom| dom.set_options("b/pick", []));
+    let dropdown = app.world().get::<crate::widgets::Dropdown>(pick).unwrap();
+    assert_eq!(dropdown.options, ["Easy", "Hard"]);
+}

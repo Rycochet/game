@@ -6,6 +6,7 @@ use std::borrow::Cow;
 
 use bevy::prelude::*;
 
+use super::options::set_options;
 use super::{Change, DomChange};
 use crate::dom::build::{Builder, Inside};
 use crate::dom::parts::{
@@ -35,6 +36,7 @@ pub(in crate::dom) fn apply_changes(world: &mut World) {
                 element.attrs.clear(element.tag, &name)
             }),
             Change::Copy { template, index } => copy(world, entity, &template, index),
+            Change::Options(options) => set_options(world, entity, options),
             Change::Empty => {
                 world.entity_mut(entity).despawn_related::<Children>();
                 Ok(())

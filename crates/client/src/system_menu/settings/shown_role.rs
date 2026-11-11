@@ -8,11 +8,9 @@ use bevy::prelude::*;
 use shared::protocol::{ClientMessage, RoleAnswer, RoleAsk, ServerMessage};
 use shared::role::{RoleId, ShownRole};
 
-use super::rows::{spawn_dropdown_row, tip};
 use crate::connection::{FromServer, ToServer};
-use crate::widgets::{Dropdown, DropdownChosen, UiId};
-
-const WIDTH: f32 = 200.0;
+use crate::dom::Dom;
+use crate::widgets::DropdownChosen;
 
 const WORDS: &str = "The role others see this character as. Staff are shown with a mark before \
      their name; shown as Player, there is none.";
@@ -22,7 +20,7 @@ const WORDS: &str = "The role others see this character as. Staff are shown with
 pub(in crate::system_menu) struct ShownAs(pub Option<ShownRole>);
 
 /// The dropdown, with the role each option is.
-#[derive(Component)]
+#[derive(Component, Default)]
 pub(in crate::system_menu) struct ShownList(Vec<RoleId>);
 
 /// Keeps what the server says.
@@ -49,26 +47,30 @@ pub(in crate::system_menu) fn offered(shown: &ShownAs) -> Option<&ShownRole> {
     shown.0.as_ref().filter(|shown| shown.choices.len() > 1)
 }
 
-/// Adds the row to the Gameplay page.
-pub(in crate::system_menu) fn spawn_shown_row(page: &mut ChildSpawnerCommands, shown: &ShownRole) {
-    let dropdown = Dropdown {
-        options: shown
-            .choices
-            .iter()
-            .map(|badge| badge.shown().to_owned())
-            .collect(),
-        selected: shown
-            .choices
-            .iter()
-            .position(|badge| badge.id == shown.current)
-            .unwrap_or(0),
-        ..default()
+/// Shows the row with these roles to choose from, or hides it with none.
+/// Roles may share a name, so each option's value is its place in the list.
+pub(in crate::system_menu) fn show_shown_row(
+    dom: &mut Dom,
+    list: &mut ShownList,
+    shown: Option<&ShownRole>,
+) {
+    const ID: &str = "settings.gameplay/shown_as";
+    dom.set_flag("settings.gameplay/shown_as_row", "hidden", shown.is_none());
+    let Some(shown) = shown else {
+        return;
     };
-    let made = spawn_dropdown_row(page, "Shown As", tip(WORDS, None), dropdown, WIDTH);
-    let ids = shown.choices.iter().map(|badge| badge.id.clone()).collect();
-    page.commands()
-        .entity(made)
-        .insert((ShownList(ids), UiId::new("settings.gameplay", "shown_as")));
+    let names = shown.choices.iter().map(|badge| badge.shown().to_owned());
+    dom.set_options(
+        ID,
+        names.enumerate().map(|(at, name)| (at.to_string(), name)),
+    );
+    let current = shown
+        .choices
+        .iter()
+        .position(|badge| badge.id == shown.current);
+    dom.set(ID, "value", &current.unwrap_or(0).to_string());
+    dom.set("settings.gameplay/shown_as_row", "title", WORDS);
+    list.0 = shown.choices.iter().map(|badge| badge.id.clone()).collect();
 }
 
 /// A choice is asked of the server.
