@@ -9,9 +9,10 @@ use super::super::SystemMenu;
 use super::super::icons::ConnectIcons;
 use super::check::AddressCheck;
 use super::form::{ConnectForm, address_in, pasted_key};
-use super::popups::{CertificateBox, CertificateStatus, KeepButton};
+use super::popups::{CertificateBox, KeepButton};
 use super::{AddressBox, ConnectNowButton, PadlockButton};
 use crate::common::Preferences;
+use crate::dom::Dom;
 use crate::widgets::{ButtonState, ButtonTooltip, TextBox};
 
 fn enabled_if(usable: bool) -> ButtonState {
@@ -49,7 +50,8 @@ pub(in crate::system_menu) fn show_connect(
     >,
     mut padlock: Query<(&mut ButtonState, &mut ButtonTooltip, &Children), With<PadlockButton>>,
     mut pictures: Query<&mut ImageNode>,
-    mut status: Single<&mut Text, With<CertificateStatus>>,
+    mut dom: Dom,
+    mut status: Local<String>,
 ) {
     if !menu.in_connect() {
         return;
@@ -94,7 +96,8 @@ pub(in crate::system_menu) fn show_connect(
         (None, true) => "Paste with Ctrl+V.".to_owned(),
         (None, false) => "That isn't a certificate or a fingerprint.".to_owned(),
     };
-    if status.0 != words {
-        status.0 = words;
+    if *status != words {
+        dom.set_text("connect.certificate/status", words.clone());
+        *status = words;
     }
 }

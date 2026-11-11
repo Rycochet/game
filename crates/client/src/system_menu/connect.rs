@@ -24,7 +24,7 @@ mod show;
 pub(super) use check::{AddressCheck, check_address};
 pub(super) use form::{ConnectForm, fill_server_list, open_connect, use_connect};
 pub(super) use mark::show_mark;
-pub(super) use popups::spawn_popups;
+pub(super) use popups::{bind_popups, spawn_popups};
 pub(super) use show::show_connect;
 
 const CONNECT_WIDTH: f32 = 520.0;

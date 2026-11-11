@@ -73,6 +73,12 @@ impl Theme {
             ..paragraph
         };
         theme.set(Tag::P, "faint", faint);
+        // Ordinary writing where what is round it is bigger (a dialog).
+        let medium = Look {
+            text: Some(TextSize::Medium),
+            ..paragraph
+        };
+        theme.set(Tag::P, "medium", medium);
         let title = Look {
             text: Some(TextSize::Title),
             ..paragraph

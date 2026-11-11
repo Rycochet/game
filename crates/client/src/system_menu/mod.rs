@@ -73,6 +73,7 @@ impl Plugin for SystemMenuPlugin {
                         requesters::bind_requesters,
                         credits::bind_credits,
                         panel::bind_main_panel,
+                        connect::bind_popups,
                     ),
                     show_menu,
                     show_buttons,
