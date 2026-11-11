@@ -12,7 +12,7 @@ fn what_is_kept_shows_again() {
         upnp: false,
     };
     let mut back = OnlineSettings::default();
-    for (which, ..) in BOXES {
+    for which in OptionBox::ALL {
         assert!(
             take(which, &shown(which, &settings), &mut back),
             "{which:?}"
@@ -38,4 +38,9 @@ fn what_isnt_right_changes_nothing() {
     assert_eq!(settings, before);
     // No public address at all is fine.
     assert!(take(OptionBox::PublicAddress, "", &mut settings));
+}
+
+#[test]
+fn the_layer_is_good_markup() {
+    SERVER_OPTIONS.assert_good();
 }

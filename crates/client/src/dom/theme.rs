@@ -116,6 +116,8 @@ impl Theme {
             text: Some(text),
             ..inline
         };
+        // The small words above a box, saying what it is for.
+        theme.set(Tag::Label, "field", sized(TextSize::Small));
         // What something is, above what it says: smaller and fainter.
         let faint = Look {
             colour: Some(INK.with_alpha(0.7)),
