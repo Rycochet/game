@@ -14,6 +14,7 @@ mod connection;
 mod debug_menu;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_tools;
+mod dom;
 mod dungeon_map;
 mod entities;
 mod fonts;
@@ -110,7 +111,11 @@ fn main() {
         ui::UiPlugin,
         loading_screen::LoadingScreenPlugin,
     ));
-    app.add_plugins((login::LoginPlugin, character_select::CharacterSelectPlugin));
+    app.add_plugins((
+        dom::DomPlugin,
+        login::LoginPlugin,
+        character_select::CharacterSelectPlugin,
+    ));
     // (Apart: a tuple of plugins can only be so long.)
     app.add_plugins((
         system_menu::SystemMenuPlugin,
