@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
-    FIRST_AT, NEXT_AT, change_creature, create_mob, dev_area, examine_mob, spawn_every_widget,
-    spawn_give_panel, spawn_item_pictures, spawn_learn_skills, steps, teleport_to_world, vitals,
+    FIRST_AT, NEXT_AT, change_creature, create_mob, dev_area, examine_mob, learn_skills,
+    spawn_every_widget, spawn_give_panel, spawn_item_pictures, steps, teleport_to_world, vitals,
     world_time,
 };
 use crate::dom::{Template, document_in};
@@ -64,7 +64,6 @@ impl OpenPanels {
                 DebugAction::SunsAndMoons => {}
                 DebugAction::GiveItem => spawn_give_panel(content),
                 DebugAction::ItemPictures => spawn_item_pictures(content),
-                DebugAction::LearnSkills => spawn_learn_skills(content),
                 _ => {}
             });
         if let Some(template) = template_of(action) {
@@ -90,6 +89,7 @@ fn template_of(action: DebugAction) -> Option<&'static Template> {
         DebugAction::ExamineMob => Some(&examine_mob::EXAMINE_MOB),
         DebugAction::CreateMob => Some(&create_mob::CREATE_MOB),
         DebugAction::DevArea => Some(&dev_area::DEV_AREA),
+        DebugAction::LearnSkills => Some(&learn_skills::LEARN_SKILLS),
         DebugAction::TeleportToWorld => Some(&teleport_to_world::TELEPORT_TO_WORLD),
         _ => None,
     }
