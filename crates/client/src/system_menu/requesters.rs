@@ -1,5 +1,6 @@
 //! The menu's requesters, written as markup: Quit, Ironman, Keep these
-//! settings, Can't connect and Slow drawing. What they do is unchanged: once
+//! settings, Can't connect, Slow drawing, Online's four questions (Go online,
+//! Go offline, Lock down, Open to everyone) and Can't go online. What they do is unchanged: once
 //! built, each dialog and button is given the `Layer` and `Action` the rest
 //! of the menu knows them by, found by its id.
 
@@ -60,6 +61,60 @@ static REQUESTERS: Template = html!(
     </footer>
   </dialog>
 </form>
+<form id="going_online">
+  <dialog id="requester" title="Go online" depth="1" hidden>
+    <p width="420" margin-bottom="0">
+      This will let other players connect to this game. Are you sure?
+    </p>
+    <footer>
+      <button id="yes" class="main" width="130" height="38">Yes</button>
+      <button id="back" width="130" height="38">No</button>
+    </footer>
+  </dialog>
+</form>
+<form id="going_offline">
+  <dialog id="requester" title="Go offline" depth="1" hidden>
+    <p width="420" margin-bottom="0">
+      Anyone else playing will be told the server is going offline, and disconnected.
+      Are you sure?
+    </p>
+    <footer>
+      <button id="yes" class="main" width="130" height="38">Yes</button>
+      <button id="back" width="130" height="38">No</button>
+    </footer>
+  </dialog>
+</form>
+<form id="locking_down">
+  <dialog id="requester" title="Lock down" depth="1" hidden>
+    <p width="420" margin-bottom="0">
+      Only staff who may change Server Options will be able to play here. Everyone
+      else playing will be sent away. Are you sure?
+    </p>
+    <footer>
+      <button id="yes" class="main" width="130" height="38">Yes</button>
+      <button id="back" width="130" height="38">No</button>
+    </footer>
+  </dialog>
+</form>
+<form id="reopening">
+  <dialog id="requester" title="Open to everyone" depth="1" hidden>
+    <p width="420" margin-bottom="0">
+      This will let everyone play on this server again. Are you sure?
+    </p>
+    <footer>
+      <button id="yes" class="main" width="130" height="38">Yes</button>
+      <button id="back" width="130" height="38">No</button>
+    </footer>
+  </dialog>
+</form>
+<form id="online_failed">
+  <dialog id="requester" title="Can't go online" depth="1" hidden>
+    <p id="words" width="420" margin-bottom="0"/>
+    <footer>
+      <button id="back" class="main" width="130" height="38">OK</button>
+    </footer>
+  </dialog>
+</form>
 "#
 );
 
@@ -71,12 +126,17 @@ pub(super) fn spawn_requesters(commands: &mut Commands, dom: &mut Dom, slow_draw
 }
 
 /// When each requester shows, by its form.
-const LAYERS: [(&str, Layer); 5] = [
+const LAYERS: [(&str, Layer); 10] = [
     ("quit", Layer(&[SystemMenu::Confirming])),
     ("ironman", Layer(&[SystemMenu::Ironman])),
     ("settings.keep_graphics", Layer(&[SystemMenu::KeepGraphics])),
     ("refused", Layer(&[SystemMenu::Refused])),
     ("slow_drawing", Layer(&[SystemMenu::SlowDrawing])),
+    ("going_online", Layer(&[SystemMenu::GoingOnline])),
+    ("going_offline", Layer(&[SystemMenu::GoingOffline])),
+    ("locking_down", Layer(&[SystemMenu::LockingDown])),
+    ("reopening", Layer(&[SystemMenu::Reopening])),
+    ("online_failed", Layer(&[SystemMenu::OnlineFailed])),
 ];
 
 /// What each button does, by its form and name. Any other goes back.
@@ -86,6 +146,8 @@ fn action_of(form: &str, name: &str) -> Action {
         ("ironman", "ironman") => Action::ChooseIronman,
         ("settings.keep_graphics", "keep") => Action::KeepGraphics,
         ("slow_drawing", "dont_warn") => Action::QuietSlowDrawing,
+        // Online's four questions share their Yes.
+        (_, "yes") => Action::ReallyToggleOnline,
         _ => Action::Back,
     }
 }
@@ -126,6 +188,9 @@ mod tests {
             ("settings.keep_graphics", Action::KeepGraphics),
             ("refused", Action::Back),
             ("slow_drawing", Action::QuietSlowDrawing),
+            ("going_online", Action::ReallyToggleOnline),
+            ("reopening", Action::ReallyToggleOnline),
+            ("online_failed", Action::Back),
         ] {
             let (_, name) = action.ui_id(form).parts();
             assert_eq!(action_of(form, name), action, "{form}/{name}");

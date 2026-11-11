@@ -36,7 +36,6 @@ use state::{Action, GearButton, Layer, MenuButton, PausedText};
 const GEAR_BUTTON: f32 = 34.0;
 const CORNER_GAP: f32 = 8.0;
 
-const MENU_WIDTH: f32 = 260.0;
 const MARGIN: f32 = 20.0;
 const BUTTON_ROW: f32 = 38.0;
 const GAP: f32 = 8.0;
