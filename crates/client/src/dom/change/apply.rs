@@ -8,7 +8,9 @@ use bevy::prelude::*;
 
 use super::{Change, DomChange};
 use crate::dom::build::{Builder, Inside};
-use crate::dom::parts::{Bar, Control, ControlOf, Element, TemplateBody, TextStyle, Words};
+use crate::dom::parts::{
+    Bar, Control, ControlOf, Element, SurfaceOf, TemplateBody, TextStyle, Words,
+};
 use crate::dom::pictures::Pictures;
 use crate::dom::theme::Theme;
 use crate::widgets::UiId;
@@ -121,9 +123,25 @@ fn copy(world: &mut World, into: Entity, template: &str, index: usize) -> Result
     let inside = Inside {
         style,
         index: Some(index),
+        document: document_of(world, into),
     };
     build(world, |builder| builder.nodes(into, &nodes, inside));
     Ok(())
+}
+
+/// The root of the document `entity` is in: the nearest thing holding it
+/// that is one, or that is a surface of one.
+fn document_of(world: &World, entity: Entity) -> Entity {
+    let mut at = entity;
+    loop {
+        if let Some(SurfaceOf(document)) = world.get::<SurfaceOf>(at) {
+            return *document;
+        }
+        match world.get::<ChildOf>(at) {
+            Some(parent) => at = parent.parent(),
+            None => return at,
+        }
+    }
 }
 
 /// Runs `with` on a builder, with the theme as it is now.

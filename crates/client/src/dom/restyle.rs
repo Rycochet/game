@@ -76,7 +76,12 @@ pub(super) fn restyle(
             Some(colour) => entity.try_insert(BackgroundColor(colour)),
             None => entity.try_remove::<BackgroundColor>(),
         };
-        match &attrs.title {
+        // A panel's or dialog's `title` is its heading, not a tip.
+        let tip = attrs
+            .title
+            .as_ref()
+            .filter(|_| !matches!(tag, Tag::Panel | Tag::Dialog));
+        match tip {
             Some(title) => entity.try_insert(HoverTip(title.to_string())),
             None => entity.try_remove::<HoverTip>(),
         };

@@ -6,7 +6,7 @@ use serde::Deserialize;
 use server::debug_api::{BrpResult, Value, json, params};
 
 use super::input::{Finder, Hit};
-use super::parts::{Control, Document, Element, InTable, Solid, Words};
+use super::parts::{Control, ControlOf, Document, Element, InTable, Solid, SurfaceOf, Words};
 use crate::common::in_interface;
 use crate::widgets::UiId;
 
@@ -72,11 +72,18 @@ type Part = (
 fn html(
     In(_): In<Option<Value>>,
     documents: Query<(Entity, &Document, &InheritedVisibility)>,
+    surfaces: Query<(&SurfaceOf, &ControlOf)>,
     parts: Query<Part>,
 ) -> BrpResult {
     let dump = |(root, Document(template), visible): (Entity, &Document, &InheritedVisibility)| {
         let mut markup = String::new();
         write_children(&parts, root, 0, &mut markup);
+        // Its panels and dialogs stand apart from it, so they come after.
+        for (SurfaceOf(document), ControlOf(element)) in &surfaces {
+            if *document == root {
+                write_node(&parts, *element, 0, &mut markup);
+            }
+        }
         json!({ "name": template.name, "shown": visible.get(), "html": markup })
     };
     let documents: Vec<Value> = documents.iter().map(dump).collect();

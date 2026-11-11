@@ -1,6 +1,6 @@
 # Plan: the interface as HTML
 
-Status: **PRs 1 to 3 of 11 built** (markup and layout; one hit test and the events; controls: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
+Status: **PRs 1 to 4 of 11 built** (markup and layout; one hit test and the events; controls; surfaces: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
 
 What PR 1 settled differently from the plan below:
 
@@ -23,6 +23,14 @@ What PR 3 settled:
 - **Toggle rows and tab bars hold `option`s** (`<toggle-row id="size"><option>Small</option>…</toggle-row>`), not radio buttons in a `fieldset`, and a colour picker's swatches are `option`s too: one shape for every choice.
 - **A checkbox is only its box**; its words go in a `label`, which presses it when clicked. A label doesn't yet light its control up when pointed at.
 - **Still to come for controls:** `maxlength`, the icon dropdown, and focus moving between controls by keys.
+
+What PR 4 settled:
+
+- **Panels that move and dialogs stand apart from their document**, spawned by the widgets in their own layers, and go when the document does. A panel closed by the player says so (`UiValue::Closed`), and its owner despawns the document.
+- **A dialog's buttons go in its `<footer>`.** `hidden` shows and hides a panel or a dialog.
+- **A scroll area's `max-height` in `%` is of the window's height**, as the old areas' were.
+- **Always Show Scroll Bars** is in Settings, Interface, and `scrollbars="always"` on a `scroll`.
+- **Moved to the Items PR (8):** drag and drop, and items in text, as both are about items. Tooltips from `title` came with PR 1.
 
 ## Why
 
@@ -247,11 +255,11 @@ Each passes `cargo xtask test`, keeps files under the size limit, and updates th
 1. **Markup and layout.** *Built.* New client module `dom`: the parser (our own, see the top), the element set so far, validation, the `Theme` table, spawning to Bevy nodes, text, `img`, `progress`, `canvas`, `template`, and changes by id (`Dom`). No input yet. Show Widgets has a sample of markup under its widgets.
 2. **One hit test and the event rules.** *Built.* `dom::Hit` (the drill-down search), the hover chain, events passed up from the target, capture, click and double click, the wheel staying with what the pointer is on. The old widgets light up and press by the same search, so nothing covered reacts. `client.ui.at`, `client.ui.html`.
 3. **Controls.** *Built.* `button`, `label`, checkbox and switch, text, range, `select`, `toggle-row`, `tab-bar`, `key-box`, `colour-picker`, hold buttons; `UiEvent` by id; the debug API by id as before. Show Widgets' sample has one of each.
-4. **Surfaces.** `dialog`, `panel`, `scroll` (with Always Show Scroll Bars in Settings), tooltips from `title`, drag and drop, items in text.
+4. **Surfaces.** *Built.* `dialog` (with `footer`), `panel` (fixed, `moveable`, `grip`), `scroll` (with Always Show Scroll Bars in Settings), tooltips from `title`. Drag and drop and items in text moved to PR 8.
 5. **Menus.** System menu, Settings, Connect, Server Options, Credits, the quit and other requesters.
 6. **Debug.** Debug menu and its panels.
 7. **Getting in.** Login, Character Select, Character Create (triangles as a canvas), loading screen.
-8. **Items.** `object`, `object-slot` and `object-grid` for both types, then the inventory, bags, trade, ground, split box, `container`, items in text.
+8. **Items.** `object`, `object-slot` and `object-grid` for both types, drag and drop, items in text, then the inventory, bags, trade, ground, split box, `container`, items in text.
 9. **Character panel.** Character, Abilities (the same elements with `type="ability"`; the action bar's slots `accepts="ability"` for now), Skills (canvas). Needs 8.
 10. **The rest of the screen.** Minimap and full map (canvases), step pad, vitals, HUD, notices, hover box, Accounts panel.
 11. **Remove the old way.** The `spawn_*` functions, per-widget hit tests, `Floating`, `stops_presses`, `leaves_presses`, `OverInterface`, `WidgetSystems`' ordering rules. Rewrite `widgets.md` as `dom.md`, update `ui-design.md`, `debug-api.md`, the table in `CLAUDE.md`, and record the decision.

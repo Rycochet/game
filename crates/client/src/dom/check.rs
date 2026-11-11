@@ -101,7 +101,8 @@ impl Checker {
             };
             set.map_err(|what| MarkupError::new(at, what))?;
         }
-        if tag.needs_id() && own_id.is_none() {
+        let moves = tag == Tag::Panel && (attrs.has("moveable") || attrs.has("grip"));
+        if (tag.needs_id() || moves) && own_id.is_none() {
             return Err(error(format!("`<{name}>` needs an `id`")));
         }
         if tag == Tag::Input && !attrs.has("type") {

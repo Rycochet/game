@@ -1,0 +1,78 @@
+//! Keeping panels and dialogs made from markup in step with their elements
+//! and their documents: shown or hidden, and gone when either goes.
+
+use std::collections::HashMap;
+
+use bevy::prelude::*;
+
+use super::controls::{UiEvent, UiValue};
+use super::parts::{Control, Document, Element, SurfaceOf};
+use super::tag::Tag;
+use crate::widgets::UiId;
+
+/// Shows or hides the widget round a panel or dialog as its element's
+/// `hidden` says. A hidden panel keeps its place.
+pub(super) fn follow_surfaces(
+    changed: Query<(&Element, &Control), Changed<Element>>,
+    mut layers: Query<&mut Visibility>,
+    mut roots: Query<&mut Node, Without<Element>>,
+) {
+    for (element, Control(widget)) in &changed {
+        let hidden = element.attrs.hidden;
+        match element.tag {
+            Tag::Dialog => {
+                let wanted = match hidden {
+                    true => Visibility::Hidden,
+                    false => Visibility::Inherited,
+                };
+                if let Ok(mut shown) = layers.get_mut(*widget)
+                    && *shown != wanted
+                {
+                    *shown = wanted;
+                }
+            }
+            Tag::Panel => {
+                let wanted = match hidden {
+                    true => Display::None,
+                    false => Display::Flex,
+                };
+                if let Ok(mut node) = roots.get_mut(*widget)
+                    && node.display != wanted
+                {
+                    node.display = wanted;
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// A panel or dialog goes when its document does. One that goes while its
+/// document is still there was closed by the player (a panel's close
+/// button), which is told by its id: its owner then despawns the document.
+pub(super) fn tidy_surfaces(
+    mut commands: Commands,
+    surfaces: Query<(Entity, &SurfaceOf, Option<&UiId>)>,
+    documents: Query<(), With<Document>>,
+    mut gone: RemovedComponents<SurfaceOf>,
+    mut known: Local<HashMap<Entity, UiId>>,
+    mut events: MessageWriter<UiEvent>,
+) {
+    for (surface, SurfaceOf(document), id) in &surfaces {
+        if !documents.contains(*document) {
+            known.remove(&surface);
+            commands.entity(surface).try_despawn();
+        } else if let Some(id) = id {
+            known.insert(surface, *id);
+        }
+    }
+    for surface in gone.read() {
+        if let Some(id) = known.remove(&surface) {
+            let value = UiValue::Closed;
+            events.write(UiEvent { id, value });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

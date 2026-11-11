@@ -74,6 +74,12 @@ impl Attrs {
         self.text(name).and_then(|value| value.parse().ok())
     }
 
+    /// One that is a length: `attrs.length("max-height")`.
+    pub fn length(&self, name: &str) -> Option<Length> {
+        let written = self.text(name)?;
+        values::length(name, written).ok()
+    }
+
     /// Whether one that stands alone is there: `attrs.has("checked")`.
     pub fn has(&self, name: &str) -> bool {
         self.text(name).is_some()

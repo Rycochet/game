@@ -43,6 +43,15 @@ pub enum Tag {
     KeyBox,
     /// Swatches, one chosen.
     ColourPicker,
+    /// A parchment panel; `moveable` by its title, or by a `grip`.
+    Panel,
+    /// A panel in front of everything, darkening the rest; `modal` for the
+    /// full-screen kind.
+    Dialog,
+    /// A dialog's row of buttons.
+    Footer,
+    /// What is in it scrolls when it is too tall.
+    Scroll,
 }
 
 /// What may be inside an element.
@@ -58,7 +67,7 @@ pub(super) enum Holds {
     Anything,
 }
 
-const ALL: [(&str, Tag); 26] = [
+const ALL: [(&str, Tag); 30] = [
     ("div", Tag::Div),
     ("span", Tag::Span),
     ("table", Tag::Table),
@@ -85,6 +94,10 @@ const ALL: [(&str, Tag); 26] = [
     ("tab-bar", Tag::TabBar),
     ("key-box", Tag::KeyBox),
     ("colour-picker", Tag::ColourPicker),
+    ("panel", Tag::Panel),
+    ("dialog", Tag::Dialog),
+    ("footer", Tag::Footer),
+    ("scroll", Tag::Scroll),
 ];
 
 /// The elements that hold `option`s.
@@ -122,6 +135,7 @@ impl Tag {
             Self::Tr => &[Self::Table],
             Self::Td | Self::Th => &[Self::Tr],
             Self::Option => &CHOOSERS,
+            Self::Footer => &[Self::Dialog],
             _ => &[],
         }
     }
@@ -134,7 +148,10 @@ impl Tag {
 
     /// Whether it is an error to leave its `id` out: code has to find it.
     pub(super) fn needs_id(self) -> bool {
-        matches!(self, Self::Form | Self::Template | Self::Canvas) || self.is_control()
+        matches!(
+            self,
+            Self::Form | Self::Template | Self::Canvas | Self::Dialog
+        ) || self.is_control()
     }
 
     /// Whether what is in it flows from the left, as words do.
@@ -178,6 +195,9 @@ impl Tag {
             Self::Select => &["value", "searchable"],
             Self::Option => &["value", "selected", "label", "src"],
             Self::ToggleRow | Self::TabBar | Self::ColourPicker | Self::KeyBox => &["value"],
+            Self::Panel => &["moveable", "grip"],
+            Self::Dialog => &["modal", "depth"],
+            Self::Scroll => &["max-height", "auto", "scrollbars"],
             _ => &[],
         }
     }

@@ -14,7 +14,8 @@ use keep::ScrollShare;
 use super::AutoScroll;
 use super::moveable::PanelPart;
 use super::{GRID_LINE, INK};
-use crate::common::{TouchGesture, UiPointer, in_interface};
+use crate::common::{Preferences, TouchGesture, UiPointer, in_interface};
+use crate::dom::AlwaysBars;
 
 const BAR_WIDTH: f32 = 10.0;
 const BAR_GAP: f32 = 4.0;
@@ -239,6 +240,8 @@ pub(super) fn scroll_areas(
 #[allow(clippy::type_complexity)]
 pub(super) fn show_scroll_bars(
     areas: Query<(&ComputedNode, &ScrollPosition), With<ScrollArea>>,
+    always: Query<(), With<AlwaysBars>>,
+    preferences: Option<Res<Preferences>>,
     mut bars: Query<(&ScrollBar, &mut Node), Without<ScrollThumb>>,
     mut thumbs: Query<(&ScrollThumb, &mut Node), Without<ScrollBar>>,
 ) {
@@ -246,7 +249,12 @@ pub(super) fn show_scroll_bars(
         let Ok((area, _)) = areas.get(bar.0) else {
             continue;
         };
-        let display = if furthest(area) > 0.0 {
+        // Always on show for an area that asks, or if the player wants to see
+        // every bar (Settings, Interface).
+        let every = preferences
+            .as_ref()
+            .is_some_and(|all| all.always_show_scroll_bars);
+        let display = if furthest(area) > 0.0 || every || always.contains(bar.0) {
             Display::Flex
         } else {
             Display::None

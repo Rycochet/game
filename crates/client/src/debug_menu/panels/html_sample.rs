@@ -3,8 +3,9 @@
 
 use bevy::prelude::*;
 
-use crate::dom::{Document, Dom, Template, UiEvent};
+use crate::dom::{Document, Dom, Template, UiEvent, UiValue, document};
 use crate::html;
+use crate::widgets::UiId;
 
 pub(super) static HTML_SAMPLE: Template = html!(
     "debug.html_sample",
@@ -88,11 +89,46 @@ pub(super) static HTML_SAMPLE: Template = html!(
   </table>
   <tab-bar id="tabs"><option>Tab</option><option>Other tab</option></tab-bar>
   <p id="said">Use a control, and what it says shows here.</p>
+  <h2>Surfaces</h2>
+  <span>
+    <button id="ask">Ask in a dialog</button>
+    <button id="open">Open a panel</button>
+  </span>
+  <scroll id="scroll" max-height="60" scrollbars="always">
+    <p>A scroll area, only three lines tall,</p>
+    <p>whose bar always shows,</p>
+    <p>with more in it</p>
+    <p>than fits,</p>
+    <p>so it scrolls.</p>
+  </scroll>
+  <panel title="A panel">
+    <p margin-bottom="0">A panel that stays where it is written.</p>
+  </panel>
+  <dialog id="question" title="A question" hidden>
+    <p>Is this dialog made from markup?</p>
+    <footer>
+      <button id="no">No</button>
+      <button id="yes" class="main">Yes</button>
+    </footer>
+  </dialog>
   <template id="row"><p margin-bottom="0">Copy <span id="number"/> of a template</p></template>
   <div id="rows"/>
   <canvas id="canvas" width="64" height="32" title="A canvas, for code to draw in"/>
 </form>
 "##
+);
+
+/// The panel the sample's Open a panel button opens.
+static HTML_PANEL: Template = html!(
+    "debug.html_panel",
+    r#"
+<form id="debug.html_panel">
+  <panel id="panel" title="From markup" moveable left="400" top="200">
+    <p>A panel that moves, made from markup.</p>
+    <label>It has a switch <input id="switch" type="checkbox" switch/></label>
+  </panel>
+</form>
+"#
 );
 
 /// How many copies of the sample's template it is filled with.
@@ -116,11 +152,33 @@ pub(in crate::debug_menu) fn fill_html_sample(
     }
 }
 
-/// Shows what the sample's controls say, as a screen's own code hears it.
-pub(in crate::debug_menu) fn show_html_events(mut events: MessageReader<UiEvent>, mut dom: Dom) {
+/// Shows what the sample's controls say, as a screen's own code hears it,
+/// and opens and closes its dialog and its panel.
+pub(in crate::debug_menu) fn show_html_events(
+    mut commands: Commands,
+    mut events: MessageReader<UiEvent>,
+    documents: Query<(Entity, &Document)>,
+    mut dom: Dom,
+) {
+    let id_of = |name| UiId::new("debug.html_sample", name);
+    let panel = documents
+        .iter()
+        .find(|(_, Document(template))| std::ptr::eq(*template, &HTML_PANEL));
     for UiEvent { id, value } in events.read() {
         if id.form() == "debug.html_sample" {
             dom.set_text("debug.html_sample/said", format!("{id}: {value:?}"));
+        }
+        if *id == id_of("ask") {
+            dom.set_flag("debug.html_sample/question", "hidden", false);
+        } else if [id_of("yes"), id_of("no"), id_of("question")].contains(id) {
+            dom.set_flag("debug.html_sample/question", "hidden", true);
+        } else if *id == id_of("open") && panel.is_none() {
+            commands.spawn(document(&HTML_PANEL));
+        } else if *id == UiId::new("debug.html_panel", "panel") && *value == UiValue::Closed {
+            // Its panel was closed: the rest of the document goes too.
+            if let Some((document, _)) = panel {
+                commands.entity(document).despawn();
+            }
         }
     }
 }
@@ -130,5 +188,6 @@ mod tests {
     #[test]
     fn the_sample_is_good_markup() {
         super::HTML_SAMPLE.assert_good();
+        super::HTML_PANEL.assert_good();
     }
 }
