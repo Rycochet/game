@@ -48,17 +48,6 @@ const GAP: f32 = 8.0;
 // Server Options', which a browser doesn't have.
 #[cfg(not(target_arch = "wasm32"))]
 const FONT: crate::widgets::TextSize = crate::widgets::TextSize::Large;
-// Server Options', which a browser doesn't have.
-#[cfg(not(target_arch = "wasm32"))]
-const SETTINGS_TITLE_ROW: f32 = 36.0;
-/// Round the close button, still on it, for fingers.
-// Server Options', which a browser doesn't have.
-#[cfg(not(target_arch = "wasm32"))]
-const CLOSE_MARGIN: f32 = 4.0;
-
-// Server Options', which a browser doesn't have.
-#[cfg(not(target_arch = "wasm32"))]
-const ABOVE_MENU_LAYER: i32 = 1;
 
 pub struct SystemMenuPlugin;
 
@@ -153,6 +142,7 @@ impl Plugin for SystemMenuPlugin {
                 )
                     .chain(),
                 server_options::run_difficulty_boxes,
+                server_options::bind_server_options,
             ),
         );
     }

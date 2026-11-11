@@ -9,23 +9,20 @@ use shared::protocol::{OnlineSettings, OnlineState, ServerAddress};
 use std::net::IpAddr;
 
 mod difficulty_row;
-mod layer;
 mod upnp_row;
 
 pub(super) use difficulty_row::run_difficulty_boxes;
 pub(super) use upnp_row::run_upnp_rows;
 
-use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
+use super::{Action, BUTTON_ROW, FONT, Layer, MARGIN, SystemMenu};
 use crate::common::{Hosting, Preferences};
+use crate::dom::{Template, document};
+use crate::html;
 use crate::widgets::{
-    ButtonPressed, INK, Pressable, TextBox, TextSize, UiId, copy_to_clipboard, field_label,
-    spawn_copy_button, spawn_scroll_area, spawn_text_box,
+    ButtonPressed, INK, Pressable, TextBox, TextSize, UiId, copy_to_clipboard, spawn_copy_button,
 };
-use layer::{spawn_layer, spawn_title_row};
 
 const OPTIONS_WIDTH: f32 = 560.0;
-/// The most of the window's height the certificate takes before it scrolls.
-const CERTIFICATE_SHARE: f32 = 20.0;
 const NO_CERTIFICATE: &str = "The certificate is made the first time the server goes online.";
 
 /// Which setting a box is for.
@@ -50,103 +47,124 @@ impl OptionBox {
     }
 }
 
-const BOXES: [(OptionBox, &str, bool); 5] = [
-    (OptionBox::Name, "Server name", false),
-    (
-        OptionBox::PublicAddress,
-        "Public address, for other players to type (host, or host:port)",
-        false,
-    ),
-    (
-        OptionBox::BindAddress,
-        "Listen on (0.0.0.0 for all of this computer's addresses)",
-        false,
-    ),
-    (OptionBox::Port, "Port", true),
-    (
-        OptionBox::PlayerLimit,
-        "Player limit (0 for no limit)",
-        true,
-    ),
-];
+impl OptionBox {
+    const ALL: [Self; 5] = [
+        Self::Name,
+        Self::PublicAddress,
+        Self::BindAddress,
+        Self::Port,
+        Self::PlayerLimit,
+    ];
+}
 
 /// Where the certificate is shown.
 #[derive(Component)]
 pub(super) struct CertificateText;
 
+/// The layer, as markup. The difficulties' tickboxes, the router's rows,
+/// the Copy button and the certificate's own words are still made by code,
+/// in the places left for them here.
+static SERVER_OPTIONS: Template = html!(
+    "system_menu.server_options",
+    r#"
+<form id="server_options">
+  <dialog id="layer" title="Server Options" modal closable depth="1" width="560" hidden>
+    <div class="tight">
+      <label class="field" for="name">Server name</label>
+      <input id="name" type="text"/>
+    </div>
+    <div class="tight">
+      <label class="field" for="public_address">
+        Public address, for other players to type (host, or host:port)
+      </label>
+      <input id="public_address" type="text"/>
+    </div>
+    <div class="tight">
+      <label class="field" for="bind_address">
+        Listen on (0.0.0.0 for all of this computer's addresses)
+      </label>
+      <input id="bind_address" type="text"/>
+    </div>
+    <div class="tight">
+      <label class="field" for="port">Port</label>
+      <input id="port" type="text" inputmode="numeric"/>
+    </div>
+    <div class="tight">
+      <label class="field" for="player_limit">Player limit (0 for no limit)</label>
+      <input id="player_limit" type="text" inputmode="numeric"/>
+    </div>
+    <div id="difficulties" class="tight"/>
+    <div id="router"/>
+    <span nowrap valign="middle">
+      <label class="field">Certificate, for players who want to check it is you</label>
+      <canvas id="copy_holder"/>
+    </span>
+    <scroll id="certificate" max-height="20%">
+      <canvas id="certificate_words"/>
+    </scroll>
+  </dialog>
+</form>
+"#
+);
+
 pub(super) fn spawn_server_options(commands: &mut Commands) {
-    let panel = spawn_layer(
-        commands,
-        ABOVE_MENU_LAYER,
-        &[SystemMenu::ServerOptions],
-        px(OPTIONS_WIDTH),
-        Val::Auto,
-        Node {
-            padding: UiRect::all(px(MARGIN)),
-            flex_direction: FlexDirection::Column,
-            row_gap: px(GAP),
-            ..default()
-        },
-    );
-    commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Server Options", "server_options");
-        for (which, label, digits_only) in BOXES {
-            panel.spawn(field_label(label));
-            let text_box = TextBox {
-                takes_keys: true,
-                digits_only,
-                ..default()
-            };
-            let node = Node {
-                width: percent(100),
-                height: px(BUTTON_ROW),
-                ..default()
-            };
-            spawn_text_box(panel, text_box, FONT, node)
-                .insert((which, UiId::new("server_options", which.ui_name())));
+    commands.spawn(document(&SERVER_OPTIONS));
+}
+
+/// Gives the built layer and its boxes what Server Options' systems know
+/// them by, found by their ids, and fills the places left for code.
+pub(super) fn bind_server_options(
+    mut commands: Commands,
+    new: Query<(Entity, &UiId), Added<UiId>>,
+) {
+    for (entity, id) in &new {
+        let ("server_options", name) = id.parts() else {
+            continue;
+        };
+        let mut bound = commands.entity(entity);
+        if let Some(which) = OptionBox::ALL
+            .into_iter()
+            .find(|which| which.ui_name() == name)
+        {
+            bound.insert(which);
+            continue;
         }
-        difficulty_row::spawn_difficulty_row(panel);
-        upnp_row::spawn_upnp_rows(panel, OPTIONS_WIDTH - 2.0 * MARGIN);
-        // Its words, and the button copying it beside them.
-        panel
-            .spawn(Node {
-                align_items: AlignItems::Center,
-                column_gap: px(GAP),
-                ..default()
-            })
-            .with_children(|row| {
-                row.spawn(field_label(
-                    "Certificate, for players who want to check it is you",
-                ));
+        match name {
+            "layer" => bound.insert((Layer(&[SystemMenu::ServerOptions]), Action::Back)),
+            "close" => bound.insert(Action::Back),
+            "difficulties" => bound.with_children(difficulty_row::spawn_difficulty_row),
+            "router" => bound.with_children(|rows| {
+                upnp_row::spawn_upnp_rows(rows, OPTIONS_WIDTH - 2.0 * MARGIN);
+            }),
+            "copy_holder" => bound.with_children(|holder| {
                 let node = Node {
                     width: px(BUTTON_ROW),
                     height: px(BUTTON_ROW),
                     flex_shrink: 0.0,
                     ..default()
                 };
-                spawn_copy_button(row, "Copy the certificate", FONT, node).insert((
+                spawn_copy_button(holder, "Copy the certificate", FONT, node).insert((
                     Action::CopyCertificate,
                     Action::CopyCertificate.ui_id("server_options"),
                     Pressable,
                 ));
-            });
-        let area = spawn_scroll_area(panel, Val::Vh(CERTIFICATE_SHARE));
-        let key = UiId::new("server_options", "certificate");
-        panel.commands().entity(area).insert(key);
-        panel.commands().entity(area).with_child((
-            CertificateText,
-            Text::new(NO_CERTIFICATE),
-            TextSize::Small.font(),
-            TextColor(INK),
-            // Its lines are long: they break anywhere rather than run out.
-            TextLayout::linebreak(LineBreak::AnyCharacter),
-            Node {
-                width: px(OPTIONS_WIDTH - 2.0 * MARGIN - 24.0),
-                flex_shrink: 0.0,
-                ..default()
-            },
-        ));
-    });
+            }),
+            "certificate_words" => bound.with_child((
+                CertificateText,
+                Text::new(NO_CERTIFICATE),
+                TextSize::Small.font(),
+                TextColor(INK),
+                // Its lines are long: they break anywhere rather than run out.
+                TextLayout::linebreak(LineBreak::AnyCharacter),
+                Node {
+                    width: px(OPTIONS_WIDTH - 2.0 * MARGIN - 24.0),
+                    flex_shrink: 0.0,
+                    ..default()
+                },
+            )),
+            _ => continue,
+        };
+    }
 }
 
 /// What a box holds for these settings.
