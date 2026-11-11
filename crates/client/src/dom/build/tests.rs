@@ -112,7 +112,7 @@ fn a_tables_rows_and_cells_are_placed_in_its_grid() {
     let (mut rows, mut cells) = (0, 0);
     for (spot, node, tinted) in spots.iter(world) {
         match spot {
-            InTable::Table { columns } => assert_eq!(*columns, 3),
+            InTable::Table { columns, .. } => assert_eq!(*columns, 3),
             InTable::Row { row, .. } => {
                 rows += 1;
                 assert_eq!(tinted, *row == 1);

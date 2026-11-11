@@ -7,6 +7,7 @@ use std::borrow::Cow;
 use bevy::prelude::*;
 
 use super::options::set_options;
+use super::rows::{are_rows, copy_rows};
 use super::{Change, DomChange};
 use crate::dom::build::{Builder, Inside};
 use crate::dom::parts::{
@@ -128,6 +129,9 @@ fn copy(world: &mut World, into: Entity, template: &str, index: usize) -> Result
         document: document_of(world, into),
         footer: false,
     };
+    if are_rows(&nodes) {
+        return copy_rows(world, into, &nodes, inside);
+    }
     build(world, |builder| builder.nodes(into, &nodes, inside));
     Ok(())
 }
@@ -148,7 +152,7 @@ fn document_of(world: &World, entity: Entity) -> Entity {
 }
 
 /// Runs `with` on a builder, with the theme as it is now.
-fn build(world: &mut World, with: impl FnOnce(&mut Builder)) {
+pub(super) fn build(world: &mut World, with: impl FnOnce(&mut Builder)) {
     let assets = world.resource::<AssetServer>().clone();
     world.resource_scope(|world, theme: Mut<Theme>| {
         world.resource_scope(|world, pictures: Mut<Pictures>| {

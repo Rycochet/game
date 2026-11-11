@@ -120,7 +120,7 @@ impl Plugin for SystemMenuPlugin {
                 Update,
                 (
                     settings::use_controls_page,
-                    settings::fill_controls_page,
+                    settings::show_controls_page,
                     settings::forget_taken,
                 )
                     .chain(),

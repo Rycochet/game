@@ -46,12 +46,17 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
     }
     match tag {
         Tag::Table => {
-            let columns = match around.spot {
-                Some(InTable::Table { columns }) => *columns,
-                _ => 1,
+            let (columns, wide) = match around.spot {
+                Some(InTable::Table { columns, wide }) => (*columns, *wide),
+                _ => (1, None),
             };
             node.display = Display::Grid;
-            node.grid_template_columns = RepeatedGridTrack::auto(columns);
+            // Each column as wide as what is in it; one may take the rest.
+            let track = |column| match Some(column) == wide {
+                true => RepeatedGridTrack::flex(1, 1.0),
+                false => RepeatedGridTrack::auto(1),
+            };
+            node.grid_template_columns = (0..columns).map(track).collect();
             let spacing = px(attrs.number("cellspacing").unwrap_or(0.0));
             (node.row_gap, node.column_gap) = (spacing, spacing);
         }
@@ -97,7 +102,10 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
         _ => stack(&mut node, attrs, around.look),
     }
     // A dialog given a height has what is in it fill that height.
-    if attrs.fills || (tag == Tag::Dialog && attrs.height.is_some()) {
+    // (A scroll area that fills is its widget's doing: what is in it is
+    // as tall as it is.)
+    let fills = attrs.fills && tag != Tag::Scroll;
+    if fills || (tag == Tag::Dialog && attrs.height.is_some()) {
         node.flex_grow = 1.0;
         node.min_height = px(0);
     }

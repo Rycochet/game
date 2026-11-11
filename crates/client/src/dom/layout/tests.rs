@@ -87,10 +87,13 @@ fn table_parts_take_their_places_in_the_grid() {
     let table = node(
         Tag::Table,
         &[("cellspacing", "4")],
-        Some(InTable::Table { columns: 3 }),
+        Some(InTable::Table {
+            columns: 3,
+            wide: None,
+        }),
     );
     assert_eq!(table.display, Display::Grid);
-    let three: Vec<RepeatedGridTrack> = RepeatedGridTrack::auto(3);
+    let three: Vec<RepeatedGridTrack> = vec![RepeatedGridTrack::auto(1); 3];
     assert_eq!(table.grid_template_columns, three);
     assert_eq!(table.column_gap, px(4));
     let spot = InTable::Cell {

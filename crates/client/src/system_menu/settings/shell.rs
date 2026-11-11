@@ -50,7 +50,34 @@ static SETTINGS: Template = html!(
         </span>
       </form>
     </div>
-    <div id="controls_page" class="rows" fills hidden/>
+    <div id="controls_page" fills hidden>
+      <form id="settings.controls" fills>
+        <scroll id="scroll" fills>
+          <div class="groups">
+            <div id="groups" class="groups"/>
+            <span align="right">
+              <button id="reset">Reset to Defaults</button>
+            </span>
+          </div>
+        </scroll>
+        <template id="group">
+          <div class="rows">
+            <div class="tight">
+              <h2 id="heading"/>
+              <hr/>
+            </div>
+            <table id="keys" class="striped" cellpadding="4" width="100%"/>
+          </div>
+        </template>
+        <template id="row">
+          <tr>
+            <td id="name" fills valign="middle"/>
+            <td><key-box id="first" width="200"/></td>
+            <td><key-box id="second" width="200"/></td>
+          </tr>
+        </template>
+      </form>
+    </div>
     <div id="interface_page" fills hidden>
       <form id="settings.interface" class="rows">
         <span class="labelled" nowrap
@@ -113,7 +140,11 @@ pub(in crate::system_menu) fn bind_settings(
             ("settings.gameplay", "difficulty") => bound.insert(DifficultyList::default()),
             ("settings.gameplay", "shown_as") => bound.insert(ShownList::default()),
             ("settings.gameplay", "pause_unfocused") => bound.insert(gameplay::PauseSwitch),
-            ("settings", "controls_page") => bound.insert((Page(1), controls::ControlsPage)),
+            ("settings", "controls_page") => bound.insert(Page(1)),
+            ("settings.controls", _) => {
+                controls::bind_controls(&mut bound, id);
+                continue;
+            }
             ("settings", "interface_page") => bound.insert(Page(2)),
             ("settings", "graphics_page") => bound.insert((Page(3), graphics::GraphicsPage)),
             ("settings.interface", "size") => bound.insert(SizeDropdown),
