@@ -111,7 +111,7 @@ impl Plugin for InventoryPlugin {
         // Once the grids have drawn themselves.
         app.add_systems(
             PostUpdate,
-            panels::mark_grids.after(crate::dom::DrawObjectGrids),
+            panels::mark_grids.after(crate::dom::DrawObjects),
         );
         app.add_systems(Update, early_pictures::ask_early);
         app.add_systems(Update, panels::switch_pages.after(panels::toggle_inventory));

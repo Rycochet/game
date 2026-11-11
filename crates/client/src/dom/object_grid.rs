@@ -17,10 +17,10 @@ use crate::widgets::{
     spawn_item_cells,
 };
 
-/// When grids are drawn (`PostUpdate`): an owner's system giving new cells
-/// its own markers goes `.after` this.
+/// When grids and slots are drawn (`PostUpdate`): an owner's system giving
+/// new cells its own markers goes `.after` this.
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct DrawObjectGrids;
+pub struct DrawObjects;
 
 /// One thing in a grid, and where: its top left cell, as turned.
 #[derive(Clone, Debug, PartialEq)]
@@ -57,8 +57,9 @@ pub struct GridShown {
 #[derive(Component, Clone, Copy, Debug)]
 pub struct GridBox(pub Entity);
 
-/// On each cell of a thing drawn in a grid (and its label): which grid, which
-/// thing, how it is turned, and which cell of its shape this is.
+/// On each cell of a thing drawn in a grid or a slot (and its label): which
+/// grid or slot, which thing, how it is turned, and which cell of its shape
+/// this is.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct ThingCell {
     pub grid: Entity,

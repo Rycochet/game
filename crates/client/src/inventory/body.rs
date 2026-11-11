@@ -5,25 +5,19 @@
 use bevy::prelude::*;
 use shared::creature::{Layer, Location};
 use shared::id::Id;
-use shared::item::{Inventory, Item, Rotation, Shape};
+use shared::item::{Inventory, Item};
 use shared::wear::{Fit, Remover};
 
 use super::hands::spawn_held_column;
 use super::hold::Target;
-use super::panels::ItemCell;
 use super::{Carried, Holding};
 use crate::common::GodMode;
-use crate::item_art::{ItemPicture, look_of};
-use crate::widgets::{
-    ALLOWED, Aura, AuraMask, CELL, Floating, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE,
-    ITEM_LABEL_FONT, PICTURE_PIXELS_PER_CELL, Pressable, REFUSED, TextSize, aura_glow, item_colour,
-    item_edge, item_edge_width, item_label, set_edge,
-};
+use crate::dom::{SlotShown, SlotThing};
+use crate::widgets::{ALLOWED, CELL, INK, REFUSED, TextSize};
 
 const NAME_WIDTH: f32 = 80.0;
 const FONT: TextSize = TextSize::Small;
 const BORDER: f32 = 1.0;
-const COVERED_ALPHA: f32 = 0.45;
 /// Between the clothes and the Held column.
 const COLUMN_GAP: f32 = 8.0;
 
@@ -70,103 +64,24 @@ pub(super) fn slot_node() -> Node {
     }
 }
 
-/// How a slot is drawn: the worn things here, last on top.
+/// A slot with the worn things here, the last on top: it draws itself
+/// (`dom::SlotShown`).
 pub(super) fn spawn_slot(
     row: &mut ChildSpawnerCommands,
     carried: &Inventory,
     here: &[&Item],
     god: bool,
 ) {
-    let Some(item) = here.last() else {
-        row.spawn((
-            BodyNode,
-            slot_node(),
-            BackgroundColor(GRID_COLOUR),
-            BorderColor::from(GRID_LINE),
-        ));
-        return;
-    };
-    let covered = carried.covered_by(item.id).is_some();
-    let alpha = if covered { COVERED_ALPHA } else { 1.0 };
-    let picture = look_of(item);
-    let tint = if picture.is_some() {
-        Color::NONE
-    } else {
-        item_colour(item.kind).with_alpha(alpha)
-    };
-    // Held by a cell it has, and it is never turned while worn.
-    let grip = item.shape().cells().next().unwrap_or((0, 0));
-    let cell = ItemCell {
-        id: item.id,
-        rotation: Rotation::None,
-        grip,
-    };
-    // A picture says what it is, leaving only how many.
-    let label = if picture.is_some() {
-        String::new()
-    } else {
-        item_label(item.kind)
-    };
-    let text = match here.len() {
-        1 => label,
-        many => format!("{label}{many}"),
-    };
-    let mut slot = row.spawn((
-        BodyNode,
-        cell,
-        Node {
-            border: UiRect::all(px(item_edge_width(item.quality))),
-            ..slot_node()
-        },
-        BackgroundColor(tint),
-        BorderColor::from(item_edge(item.quality)),
-    ));
-    // A curse once it is known can't be picked up. Something under another can,
-    // only more slowly (shown faded).
-    if god || carried.may_remove(item.id, Remover::Wearer) {
-        slot.insert(Pressable);
-    }
-    if let Some(aura) = Aura::of(item) {
-        // One cell here, whatever it takes up in a grid.
-        let mask = match &picture {
-            Some(look) => AuraMask::Picture(look.clone(), PICTURE_PIXELS_PER_CELL),
-            None => AuraMask::Cells(Shape::rectangle(1, 1)),
-        };
-        let node = Node {
-            width: percent(100),
-            height: percent(100),
-            ..default()
-        };
-        slot.with_child(aura_glow(aura, mask, node));
-    }
-    if let Some(look) = picture {
-        let node = Node {
-            position_type: PositionType::Absolute,
-            width: percent(100),
-            height: percent(100),
-            ..default()
-        };
-        slot.with_child((
-            Floating,
-            ItemPicture {
-                look,
-                pixels: PICTURE_PIXELS_PER_CELL,
-            },
-            ImageNode::default().with_color(Color::WHITE.with_alpha(alpha)),
-            node,
-        ));
-    }
-    if item.set {
-        let width = item_edge_width(item.quality);
-        slot.with_child(set_edge(item.quality, UiRect::all(px(width)), width));
-    }
-    slot.with_child((
-        BodyNode,
-        cell,
-        Text::new(text),
-        ITEM_LABEL_FONT.font(),
-        TextColor(ITEM_EDGE),
-    ));
+    let thing = here.last().map(|item| SlotThing {
+        item: (*item).clone(),
+        count: here.len(),
+        // Something under another can be picked up, only more slowly.
+        faded: carried.covered_by(item.id).is_some(),
+        // A curse once it is known can't be.
+        pressable: god || carried.may_remove(item.id, Remover::Wearer),
+    });
+    let shown = SlotShown { thing, ..default() };
+    row.spawn((BodyNode, shown));
 }
 
 /// Draws the rows again when what is worn, or the body, or what is held changes.
