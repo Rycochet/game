@@ -9,8 +9,9 @@ use shared::item::{Inventory, Item, StackLimits};
 use shared::item_form::{ItemOrder, Refused, RollRequest, batch_seed, try_make_item};
 use shared::protocol::LevelKind;
 
-use super::{GiveButton, GiveChoice, GiveCount, GiveForm, GiveNoSpace, GivePreview, GiveTo, any};
+use super::{GiveButton, GiveChoice, GiveCount, GiveForm, GivePreview, GiveTo, any};
 use crate::common::{CurrentDungeon, GameView};
+use crate::dom::Dom;
 use crate::inventory::{Carried, Stacks};
 use crate::widgets::{ButtonState, CELL, ItemLook, ItemName, TextBox, spawn_item_cells};
 
@@ -27,7 +28,7 @@ pub(in crate::debug_menu) fn show_give_preview(
     dungeon: Res<CurrentDungeon>,
     mut previews: Query<(Entity, &mut GivePreview, &mut Node)>,
     mut counts: Query<&mut TextBox, With<GiveCount>>,
-    mut warnings: Query<(&mut Text, &mut Visibility), With<GiveNoSpace>>,
+    mut dom: Dom,
     mut buttons: Query<
         (&mut ButtonState, Option<&GiveChoice>),
         Or<(With<GiveButton>, With<GiveChoice>)>,
@@ -81,16 +82,10 @@ pub(in crate::debug_menu) fn show_give_preview(
         Err(Refused(field)) => Some(format!("No such {}", &any(field)[4..])),
         Ok(_) => batch.problem(&carried.0, stacks.0, has_ground),
     };
-    for (mut text, mut shown) in &mut warnings {
-        let words = problem.clone().unwrap_or_default();
-        if text.0 != words {
-            text.0 = words;
-        }
-        shown.set_if_neq(match problem {
-            Some(_) => Visibility::Inherited,
-            None => Visibility::Hidden,
-        });
+    if let Some(words) = &problem {
+        dom.set_text("debug.give_item/no_space", words.clone());
     }
+    dom.set_flag("debug.give_item/no_space", "hidden", problem.is_none());
     for (mut state, choice) in &mut buttons {
         let usable = match choice {
             Some(GiveChoice::Identical) => form.count > 1,

@@ -118,10 +118,6 @@ pub(in crate::debug_menu) struct GivePreview {
     pub(super) drawn: Option<(ItemOrder, u64, shared::creature::CreatureKind)>,
 }
 
-/// The line of options for its form, shown for kinds that take any.
-#[derive(Component)]
-pub(in crate::debug_menu) struct GiveOptionsLine;
-
 /// A dropdown for one option of its form: "Any ..." then `values`.
 #[derive(Component)]
 pub(in crate::debug_menu) struct GiveOption {
