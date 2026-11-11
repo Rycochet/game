@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use super::spawn::{HoverBox, HoverMark, HoverText, LIFT, LOWEST};
 use crate::common::{
-    BottomHud, HoverName, HoveredBag, HoveredInSky, HoveredOnMap, Portal, StaffMark, poi_name,
+    BottomHud, CurrentWorld, HoverName, HoveredBag, HoveredInSky, HoveredOnMap, KnownPois, Portal,
+    StaffMark, poi_name,
 };
 use crate::minimap::FullMap;
 use crate::view3d::HoveredToken;
@@ -19,13 +20,18 @@ pub(super) struct Found<'a> {
     pub(super) bag: bool,
     /// A door or stairs on the site's map.
     pub(super) place: Option<&'a str>,
+    /// The pois known, for the names learned of them.
+    pub(super) pois: Option<&'a KnownPois>,
 }
 
 /// The name to show: the sky first, as it is drawn over the map, then a token
 /// standing on the map, then a bag, then the map itself.
 pub(super) fn name_of(found: Found) -> Option<String> {
     let token = found.token.and_then(|(portal, name)| match (portal, name) {
-        (Some(Portal::Poi(poi)), _) => Some(poi_name(poi)),
+        (Some(Portal::Poi(poi)), _) => {
+            let name = found.pois.and_then(|pois| pois.name_of(poi.chunk));
+            Some(poi_name(poi, name))
+        }
         (Some(Portal::Gate(_)), _) => Some("World Gate".to_owned()),
         (None, Some(name)) => Some(name.0.clone()),
         (None, None) => None,
@@ -54,7 +60,12 @@ pub(super) fn show_name(
     tokens: Query<(Option<&Portal>, Option<&HoverName>)>,
     marks: Query<&StaffMark>,
     mut picture: Single<&mut Node, (With<HoverMark>, Without<HoverBox>)>,
-    (sky, bag, place): (Res<HoveredInSky>, Res<HoveredBag>, Res<HoveredOnMap>),
+    (sky, bag, place, world): (
+        Res<HoveredInSky>,
+        Res<HoveredBag>,
+        Res<HoveredOnMap>,
+        Option<Res<CurrentWorld>>,
+    ),
     bottom_hud: Res<BottomHud>,
     mut holder: Single<(&mut Visibility, &mut Node), With<HoverBox>>,
     mut text: Single<&mut Text, With<HoverText>>,
@@ -69,6 +80,7 @@ pub(super) fn show_name(
         token: hovered.0.and_then(|token| tokens.get(token).ok()),
         bag: bag.0.is_some(),
         place: place.0.as_deref(),
+        pois: world.as_deref().map(|world| &world.pois),
     };
     let mark = mark_of(found, hovered.0.and_then(|token| marks.get(token).ok()));
     let name = (!full.open).then(|| name_of(found)).flatten();

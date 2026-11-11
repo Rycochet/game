@@ -15,6 +15,10 @@ pub struct WorldChunk {
     pub chunk: ChunkPos,
     /// Its poi, if it has one.
     pub poi: Option<SeenPoi>,
+    /// What the poi is called, if this player has learned a name for it (a
+    /// town they have been into or been told of). Kept beside `SeenPoi`,
+    /// which is plain data copied freely.
+    pub name: Option<String>,
 }
 
 /// A world map poi as a player knows it: what and where it is, not

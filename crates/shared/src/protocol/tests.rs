@@ -360,10 +360,12 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 x: 70,
                 y: -100,
             }),
+            name: Some("Village of Thornbury".into()),
         }),
         ServerMessage::WorldChunk(WorldChunk {
             chunk: ChunkPos { x: 0, y: 0 },
             poi: None,
+            name: None,
         }),
         ServerMessage::Road(crate::road::Road {
             link: crate::road::RoadLink::new(ChunkPos { x: 2, y: 0 }, ChunkPos { x: 1, y: -1 }),

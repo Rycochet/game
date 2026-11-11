@@ -91,6 +91,9 @@ pub struct KnownPois {
     /// By chunk, north-south first (so an area's rows can be looked up);
     /// `None` for a chunk known to have no poi.
     chunks: BTreeMap<(i64, i64), Option<SeenPoi>>,
+    /// What pois are called, by chunk as `chunks`, for those the server has
+    /// told this player the names of (towns they have learned).
+    names: BTreeMap<(i64, i64), String>,
 }
 
 impl KnownPois {
@@ -98,6 +101,7 @@ impl KnownPois {
         Self {
             width,
             chunks: BTreeMap::new(),
+            names: BTreeMap::new(),
         }
     }
 
@@ -106,8 +110,20 @@ impl KnownPois {
         *self = Self::new(self.width);
     }
 
-    pub fn insert(&mut self, chunk: ChunkPos, poi: Option<SeenPoi>) {
-        self.chunks.insert((chunk.y, chunk.x), poi);
+    /// What the server says is in a chunk, and what its poi is called if
+    /// the player knows.
+    pub fn insert(&mut self, chunk: ChunkPos, poi: Option<SeenPoi>, name: Option<String>) {
+        let key = (chunk.y, chunk.x);
+        self.chunks.insert(key, poi);
+        match name {
+            Some(name) => self.names.insert(key, name),
+            None => self.names.remove(&key),
+        };
+    }
+
+    /// The name of a chunk's poi, if the player has learned it.
+    pub fn name_of(&self, chunk: ChunkPos) -> Option<&str> {
+        self.names.get(&(chunk.y, chunk.x)).map(String::as_str)
     }
 
     /// Whether the server has sent a chunk (numbered as it does, wrapped round

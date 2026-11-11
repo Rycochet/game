@@ -9,7 +9,7 @@ use shared::wilderness::gates_of;
 
 use super::arrival::arrival;
 use super::found::{found_by_standing, send_borders};
-use super::in_poi::{poi_here, poi_message, tell_poi};
+use super::in_poi::{poi_here, tell_of, tell_poi};
 use super::town::send_town;
 use super::window::window;
 use crate::ServerWorld;
@@ -89,7 +89,7 @@ pub(in crate::sites) fn enter_wilderness(
     client.changed_map();
     let in_poi = poi_here(world, position);
     if !client.link.send(&ServerMessage::EnterLevel(info))
-        || !client.link.send(&poi_message(world, in_poi))
+        || !tell_of(client, world, in_poi)
         || !send_looks(client, world, looks, (&visit.mirrors, set_ins(&visit)))
         || !send_remembered(client, &mut visit)
     {

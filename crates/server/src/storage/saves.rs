@@ -288,12 +288,4 @@ pub struct VisitSave {
     pub from_wilderness: bool,
 }
 
-/// What a character knows of a poi they have seen.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct KnownPoi {
-    /// Whether they have learned where the chunk's poi is. Towns are always
-    /// known, and nothing teaches a character the others yet.
-    pub known: bool,
-    /// Whether they have been inside.
-    pub visited: bool,
-}
+pub use super::known_poi::KnownPoi;

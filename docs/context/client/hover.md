@@ -14,7 +14,7 @@ The box near the bottom middle of the window naming what the pointer is over: an
 
 ## Depends on
 
-- `common` (`HoverName`, `StaffMark`, `HoveredOnMap`, `HoveredInSky`, `HoveredBag`, `Portal`, `poi_name`, `BottomHud`, `GameView`), `view3d` (`HoveredToken`), `minimap` (`FullMap`), `widgets` (`spawn_tooltip_with_picture`).
+- `common` (`HoverName`, `StaffMark`, `HoveredOnMap`, `HoveredInSky`, `HoveredBag`, `Portal`, `poi_name`, `CurrentWorld`, `KnownPois`, `BottomHud`, `GameView`), `view3d` (`HoveredToken`), `minimap` (`FullMap`), `widgets` (`spawn_tooltip_with_picture`).
 
 ## Used by
 
@@ -22,7 +22,7 @@ The box near the bottom middle of the window naming what the pointer is over: an
 
 ## Notes
 
-- Who finds what: `view3d` the hovered token (clickable, or with a `common::HoverName`: `entities` gives every other creature one); `ground` the bag (`HoveredBag`); `dungeon_map` the door or stairs (`HoveredOnMap`); `minimap` the sun or moon (`HoveredInSky`). World map pois and gates are named from their `Portal`.
+- Who finds what: `view3d` the hovered token (clickable, or with a `common::HoverName`: `entities` gives every other creature one); `ground` the bag (`HoveredBag`); `dungeon_map` the door or stairs (`HoveredOnMap`); `minimap` the sun or moon (`HoveredInSky`). World map pois and gates are named from their `Portal`; a town whose name the player has learned by its name (`CurrentWorld`'s `KnownPois::name_of`, passed in `Found::pois`), never before (owner).
 - Order when several are under the pointer: the sky (drawn over everything), then a token, then a bag, then the map's door or stairs.
 - Hidden while the full map is open: it has its own box (`minimap`).
 - Lifted above whatever the interface keeps at the bottom (`BottomHud`: the vitals circle). By touch, a name shows while a finger is down, as the pointer is there only then.

@@ -147,6 +147,7 @@ fn saves_are_read_back() {
             KnownPoi {
                 known: true,
                 visited: true,
+                named: true,
             },
         )]),
         memory: BTreeMap::from([(site, BTreeMap::from([(1, CellMasks::from([((0, -1), 7)]))]))]),

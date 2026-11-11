@@ -17,7 +17,7 @@ Towns' names: a beginning and an ending that suits how high the town stands, som
 
 ## Used by
 
-- `server` (`sites/place_name.rs`: `LevelInfo::place_name` and `ServerMessage::InPoi`'s `name`).
+- `server` (`sites/place_name.rs`: `LevelInfo::place_name` and `ServerMessage::InPoi`'s `name`; `world_map/town_names.rs`: `WorldChunk::name` for towns a character has learned).
 
 ## Notes
 

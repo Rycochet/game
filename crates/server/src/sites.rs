@@ -48,7 +48,7 @@ pub(super) use leave::{forget_site, killed, leave, put_out, use_exit};
 use levels::{NewVisit, arrive_again, enter_level};
 pub(super) use moves::{set_cell, stepped, teleport};
 use place::{Mirror, Place, SetIn};
-use place_name::town_name_of;
+pub(crate) use place_name::town_name_of;
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
