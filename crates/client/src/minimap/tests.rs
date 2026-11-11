@@ -61,6 +61,27 @@ fn towns_are_named_by_their_own_names() {
     assert_eq!(title, "Village of Thornbury");
 }
 
+#[test]
+fn ruined_castles_keep_their_names() {
+    let mut dungeon = CurrentDungeon::default();
+    dungeon.enter(shared::protocol::LevelInfo {
+        kind: shared::protocol::LevelKind::Poi(shared::poi::PoiKind::Castle),
+        ruined: true,
+        building: true,
+        index: 1,
+        levels: 3,
+        basement: false,
+        bounds: (0, 0, 5, 5),
+        arrival: (2, 2),
+        entering_site: true,
+        place_name: Some("Castle Ravenhold".into()),
+    });
+    assert_eq!(dungeon.describe(), "Ruined Castle Ravenhold, floor 2 of 3");
+    let player = SmoothPosition::default();
+    let title = location_title(GameView::Dungeon, None, &dungeon, FirstFloor(1), &player);
+    assert_eq!(title, "Ruined Castle Ravenhold, floor 2");
+}
+
 /// A level with a little remembered, a window, and the player on it.
 fn app() -> App {
     let mut app = App::new();

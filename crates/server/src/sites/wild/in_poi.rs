@@ -6,8 +6,8 @@ use shared::protocol::ServerMessage;
 
 use crate::ServerWorld;
 use crate::connections::Client;
-use crate::sites::{Place, town_name_of};
-use crate::world_map::learn_town_name;
+use crate::sites::{Place, place_name_of};
+use crate::world_map::learn_place_name;
 
 /// The poi whose cutout a wilderness cell is in, if any (its chunk worked out
 /// already, as the window round it has).
@@ -26,7 +26,9 @@ pub(super) fn tell_of(client: &mut Client, world: &ServerWorld, poi: Option<Poi>
         return false;
     }
     match poi {
-        Some(poi) if poi.kind.is_town() => learn_town_name(client, world, poi.chunk),
+        Some(poi) if place_name_of(world, &poi).is_some() => {
+            learn_place_name(client, world, poi.chunk)
+        }
         _ => true,
     }
 }
@@ -35,7 +37,7 @@ pub(super) fn tell_of(client: &mut Client, world: &ServerWorld, poi: Option<Poi>
 fn poi_message(world: &ServerWorld, poi: Option<Poi>) -> ServerMessage {
     ServerMessage::InPoi {
         kind: poi.map(|poi| poi.kind),
-        name: poi.and_then(|poi| town_name_of(world, &poi)),
+        name: poi.and_then(|poi| place_name_of(world, &poi)),
     }
 }
 

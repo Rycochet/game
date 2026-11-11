@@ -92,7 +92,8 @@ pub struct KnownPois {
     /// `None` for a chunk known to have no poi.
     chunks: BTreeMap<(i64, i64), Option<SeenPoi>>,
     /// What pois are called, by chunk as `chunks`, for those the server has
-    /// told this player the names of (towns they have learned).
+    /// told this player the names of (towns, castles and forts they have
+    /// learned).
     names: BTreeMap<(i64, i64), String>,
 }
 

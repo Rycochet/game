@@ -118,3 +118,24 @@ fn going_into_a_town_teaches_its_name_for_the_world_map() {
     assert_eq!(named(&answers), Some(Some(name)));
     assert!(test.client.character.pois[&poi.chunk].named);
 }
+
+#[test]
+fn going_into_a_castle_or_fort_teaches_its_name_too() {
+    let mut test = TestClient::new();
+    let cutout = cutout_near_start(&test, |cutout| {
+        matches!(cutout.poi().kind, PoiKind::Castle | PoiKind::Fort)
+    });
+    let poi = *cutout.poi();
+    test.send(&[ClientMessage::DevTeleport { x: poi.x, y: poi.y }]);
+    let answers = test.send(&[ClientMessage::Down]);
+    let sent = answers.iter().find_map(|answer| match answer {
+        ServerMessage::WorldChunk(sent) if sent.chunk == poi.chunk => sent.name.clone(),
+        _ => None,
+    });
+    let name = sent.expect("the chunk sent again with its name");
+    assert!(
+        name.starts_with("Castle ") || name.starts_with("Fort "),
+        "{name}"
+    );
+    assert!(test.client.character.pois[&poi.chunk].named);
+}

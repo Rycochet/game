@@ -1,5 +1,6 @@
-//! Towns' names on the world map: sent with a chunk only once the character
-//! has learned the name, by going into the town or (later) being told of it.
+//! Places' names on the world map (towns', castles', forts'): sent with a
+//! chunk only once the character has learned the name, by going into the
+//! place or (later) being told of it.
 
 use shared::poi::ChunkPos;
 use shared::protocol::{ServerMessage, WorldChunk};
@@ -7,7 +8,7 @@ use shared::protocol::{ServerMessage, WorldChunk};
 use super::known_poi;
 use crate::ServerWorld;
 use crate::connections::Client;
-use crate::sites::town_name_of;
+use crate::sites::place_name_of;
 
 /// A chunk as this client may know it: its poi, if they know of it, and the
 /// poi's name, if they have learned it.
@@ -24,7 +25,7 @@ pub(super) fn chunk_message(
         .is_some_and(|known| known.knows_name());
     let name = poi
         .filter(|_| named)
-        .and_then(|poi| town_name_of(world, &poi));
+        .and_then(|poi| place_name_of(world, &poi));
     ServerMessage::WorldChunk(WorldChunk {
         chunk,
         poi: poi.map(Into::into),
@@ -32,10 +33,10 @@ pub(super) fn chunk_message(
     })
 }
 
-/// The character learns the name of the town in `chunk` (going into it, or
+/// The character learns the name of the place in `chunk` (going into it, or
 /// later being told of it by a quest), and the client is sent it at once if
 /// it has that chunk. `false` if the client has gone.
-pub(crate) fn learn_town_name(client: &mut Client, world: &ServerWorld, chunk: ChunkPos) -> bool {
+pub(crate) fn learn_place_name(client: &mut Client, world: &ServerWorld, chunk: ChunkPos) -> bool {
     let known = client.character.pois.entry(chunk).or_default();
     if known.named {
         return true;

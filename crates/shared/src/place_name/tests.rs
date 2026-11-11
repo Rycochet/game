@@ -11,16 +11,17 @@ const TOWNS: [PoiKind; 4] = [
 /// Names for many seeds of one kind and height.
 fn names(kind: PoiKind, metres: i32) -> Vec<String> {
     (0..2000)
-        .map(|seed| town_name(kind, Seed::new(seed), metres).unwrap())
+        .map(|seed| place_name(kind, Seed::new(seed), metres).unwrap())
         .collect()
 }
 
 #[test]
-fn only_towns_have_names() {
+fn only_towns_castles_and_forts_have_names() {
     for kind in PoiKind::ALL {
+        let named = kind.is_town() || matches!(kind, PoiKind::Castle | PoiKind::Fort);
         assert_eq!(
-            town_name(kind, Seed::new(1), 0).is_some(),
-            kind.is_town(),
+            place_name(kind, Seed::new(1), 0).is_some(),
+            named,
             "{kind:?}"
         );
     }
@@ -31,7 +32,7 @@ fn the_same_seed_gives_the_same_name() {
     for kind in TOWNS {
         for seed in 0..50 {
             let seed = Seed::new(seed);
-            assert_eq!(town_name(kind, seed, 300), town_name(kind, seed, 300));
+            assert_eq!(place_name(kind, seed, 300), place_name(kind, seed, 300));
         }
     }
 }
@@ -40,7 +41,7 @@ fn the_same_seed_gives_the_same_name() {
 fn golden_names() {
     let found: Vec<String> = (1..=8)
         .map(|seed| {
-            town_name(TOWNS[seed as usize % 4], Seed::new(seed), seed as i32 * 150).unwrap()
+            place_name(TOWNS[seed as usize % 4], Seed::new(seed), seed as i32 * 150).unwrap()
         })
         .collect();
     let expected = [

@@ -2,7 +2,7 @@
 //! remembering the pois they have seen.
 
 mod arrival;
-mod town_names;
+mod place_names;
 
 use std::collections::btree_map::Entry;
 
@@ -15,8 +15,8 @@ use crate::connections::Client;
 use crate::storage::KnownPoi;
 use crate::{ServerWorld, sites};
 pub(crate) use arrival::{arrival, nearest_gate};
-use town_names::chunk_message;
-pub(crate) use town_names::learn_town_name;
+use place_names::chunk_message;
+pub(crate) use place_names::learn_place_name;
 
 /// The player takes a step on the world map, unless it leads into water (but
 /// a good swimmer may swim the sea near the coast) (a
