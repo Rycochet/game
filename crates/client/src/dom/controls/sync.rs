@@ -1,14 +1,17 @@
 //! From a control's attributes to its widget, whenever code changes them
-//! (`Dom::set`): `disabled`, `selected`, `checked` and `value`.
+//! (`Dom::set`): `disabled`, `selected`, `checked`, `value`, and a button's
+//! `class`.
 
 use bevy::prelude::*;
 
+use super::buttons::style_of;
 use super::fields::{key_box_of, share_of, text_box_of};
 use super::state_of;
 use crate::dom::parts::{Choices, Control, Element};
 use crate::dom::tag::Tag;
 use crate::widgets::{
-    ButtonState, Checked, ChooseTab, ColourPicker, Dropdown, KeyBox, Slider, Switch, TextBox,
+    ButtonState, ButtonStyle, Checked, ChooseTab, ColourPicker, Dropdown, KeyBox, Slider, Switch,
+    TextBox,
 };
 
 /// The parts of widgets that attributes change.
@@ -22,6 +25,7 @@ pub(in crate::dom) struct Shown<'w, 's> {
     dropdowns: Query<'w, 's, &'static mut Dropdown>,
     key_boxes: Query<'w, 's, &'static mut KeyBox>,
     pickers: Query<'w, 's, &'static mut ColourPicker>,
+    styles: Query<'w, 's, Option<&'static ButtonStyle>>,
     tabs: MessageWriter<'w, ChooseTab>,
 }
 
@@ -37,12 +41,21 @@ fn put<T: PartialEq>(shown: Result<Mut<T>, impl Sized>, wanted: T) {
 
 /// Makes each control's widget as its element's attributes now say.
 pub(in crate::dom) fn follow_elements(
+    mut commands: Commands,
     changed: Query<(&Element, &Control, Option<&Choices>), Changed<Element>>,
     mut shown: Shown,
 ) {
     for (element, Control(widget), choices) in &changed {
         let (attrs, widget) = (&element.attrs, *widget);
         put(shown.states.get_mut(widget), state_of(attrs));
+        // A button's `class` says how much it stands out.
+        if element.tag == Tag::Button {
+            let wanted = style_of(attrs.class.as_deref()).unwrap_or_default();
+            let now = shown.styles.get(widget).ok().flatten().copied();
+            if now.unwrap_or_default() != wanted {
+                commands.entity(widget).try_insert(wanted);
+            }
+        }
         let on = attrs.has("checked");
         put(shown.checks.get_mut(widget), Checked(on));
         put(shown.switches.get_mut(widget), Switch(on));

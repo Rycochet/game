@@ -1,165 +1,122 @@
-//! The login screen: how to log in to this server (a button for each
-//! provider, Play as Guest if it takes guests, Cancel), then while the player
-//! logs in on the provider's page in their browser (Open Again, Back).
+//! The login screen, as markup: how to log in to this server (a button for
+//! each provider, Play as Guest if it takes guests, Cancel), then while the
+//! player logs in on the provider's page in their browser (Open Again, Back).
 
 use bevy::prelude::*;
 
 use crate::common::{LoggingIn, LoginChoice, open_in_browser};
-use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonStyle, INK, Pressable, REFUSED, TextSize, UiId, spawn_button,
-    spawn_dialog,
-};
+use crate::dom::{Dom, Template, document};
+use crate::html;
+use crate::widgets::{ButtonPressed, UiId};
 
-/// Its widgets' form, for their ids.
-const FORM: &str = "login";
+/// Over the loading screen, as making a character is. Each provider's
+/// button is a copy of the template; the buttons that don't go with what is
+/// asked are hidden, and the first on show is the main one.
+static LOGIN: Template = html!(
+    "login",
+    r#"
+<form id="login">
+  <dialog id="layer" title="Log in" depth="0" hidden>
+    <div class="rows" width="420">
+      <p id="words" class="medium"/>
+      <p id="failed" class="refused" hidden/>
+      <div id="buttons">
+        <div id="providers" hidden/>
+        <button id="guest" hidden>Play as Guest</button>
+        <button id="cancel" hidden>Cancel</button>
+        <button id="open_again" hidden>Open Again</button>
+        <button id="back" hidden>Back</button>
+      </div>
+    </div>
+    <template id="provider"><button id="provider"/></template>
+  </dialog>
+</form>
+"#
+);
 
-/// Over the loading screen, as making a character is.
-const LAYER: i32 = 0;
-
-const WIDTH: f32 = 420.0;
-const BUTTON_HEIGHT: f32 = 44.0;
-
-#[derive(Component)]
-pub(super) struct LoginLayer;
-
-/// What the screen says.
-#[derive(Component)]
-pub(super) struct Words;
-
-/// Where the buttons go, one under another.
-#[derive(Component)]
-pub(super) struct Buttons;
-
-/// What a button does.
-#[derive(Component, Clone, Debug)]
-pub(super) enum Press {
-    Choose(LoginChoice),
-    OpenAgain(String),
-}
+/// The buttons that are always there, shown or hidden.
+const FIXED: [&str; 4] = ["guest", "cancel", "open_again", "back"];
 
 pub(super) fn spawn_screen(mut commands: Commands) {
-    let dialog = spawn_dialog(&mut commands, LAYER, "Log in");
-    commands.entity(dialog.layer).insert(LoginLayer);
-    commands.entity(dialog.content).with_children(|content| {
-        content.spawn((
-            Words,
-            Text::new(""),
-            TextSize::Medium.font(),
-            TextColor(INK),
-            Node {
-                width: px(WIDTH),
-                ..default()
-            },
-        ));
-        content.spawn((
-            Buttons,
-            Node {
-                flex_direction: FlexDirection::Column,
-                width: px(WIDTH),
-                row_gap: px(8),
-                // Clear of the words above.
-                margin: UiRect::top(px(16)),
-                ..default()
-            },
-        ));
-    });
+    commands.spawn(document(&LOGIN));
 }
 
-/// Shows the screen while there is something to ask, built again for it.
-pub(super) fn show_screen(
-    mut commands: Commands,
-    logging_in: Res<LoggingIn>,
-    mut layer: Single<&mut Visibility, With<LoginLayer>>,
-    mut words: Single<(&mut Text, &mut TextColor), With<Words>>,
-    buttons: Single<Entity, With<Buttons>>,
-) {
-    if !logging_in.is_changed() {
-        return;
-    }
-    layer.set_if_neq(if logging_in.shows() {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    });
-    let (text, colour, presses) = match &*logging_in {
-        LoggingIn::Not => return,
+/// What the screen says and offers, for where logging in has got to: its
+/// words, whether they say a try failed, how many providers, and which of
+/// the fixed buttons.
+fn asked(logging_in: &LoggingIn) -> Option<(String, bool, Vec<String>, Vec<&'static str>)> {
+    match logging_in {
+        LoggingIn::Not => None,
         LoggingIn::Choosing {
             providers,
             guests,
             failed,
         } => {
-            let mut presses: Vec<(String, Press, &str)> = providers
-                .iter()
-                .map(|provider| {
-                    let choice = LoginChoice::Provider(provider.name.clone());
-                    (
-                        format!("Log in with {}", provider.label),
-                        Press::Choose(choice),
-                        "provider",
-                    )
-                })
-                .collect();
-            if *guests {
-                presses.push((
-                    "Play as Guest".into(),
-                    Press::Choose(LoginChoice::Guest),
-                    "guest",
-                ));
-            }
-            presses.push((
-                "Cancel".into(),
-                Press::Choose(LoginChoice::Cancel),
-                "cancel",
-            ));
-            let (text, colour) = match failed {
-                Some(reason) => (format!("Logging in didn't work: {reason}."), REFUSED),
-                None => (choosing_words(*guests), INK),
+            let labels = providers.iter();
+            let labels = labels.map(|provider| format!("Log in with {}", provider.label));
+            let shown = match guests {
+                true => vec!["guest", "cancel"],
+                false => vec!["cancel"],
             };
-            (text, colour, presses)
+            let (words, failed) = match failed {
+                Some(reason) => (format!("Logging in didn't work: {reason}."), true),
+                None => (choosing_words(*guests), false),
+            };
+            Some((words, failed, labels.collect(), shown))
         }
         LoggingIn::InBrowser { provider, url } => {
-            let mut presses = Vec::new();
-            if let Some(url) = url {
-                presses.push((
-                    "Open Again".into(),
-                    Press::OpenAgain(url.clone()),
-                    "open_again",
-                ));
-            }
-            presses.push(("Back".into(), Press::Choose(LoginChoice::Back), "back"));
-            let text = match url {
-                Some(_) => format!(
-                    "Log in with {} in your browser, then come back here. \
-                     If no page opened, press Open Again.",
-                    provider.label
+            let (words, shown) = match url {
+                Some(_) => (
+                    format!(
+                        "Log in with {} in your browser, then come back here. \
+                         If no page opened, press Open Again.",
+                        provider.label
+                    ),
+                    vec!["open_again", "back"],
                 ),
-                None => format!("Opening {}'s page in your browser...", provider.label),
+                None => (
+                    format!("Opening {}'s page in your browser...", provider.label),
+                    vec!["back"],
+                ),
             };
-            (text, INK, presses)
+            Some((words, false, Vec::new(), shown))
         }
+    }
+}
+
+/// Shows the screen while there is something to ask, set for it.
+pub(super) fn show_screen(logging_in: Res<LoggingIn>, mut dom: Dom) {
+    if !logging_in.is_changed() {
+        return;
+    }
+    dom.set_flag("login/layer", "hidden", !logging_in.shows());
+    let Some((words, failed, providers, shown)) = asked(&logging_in) else {
+        return;
     };
-    words.0.0 = text;
-    words.1.0 = colour;
-    commands.entity(*buttons).despawn_children();
-    commands.entity(*buttons).with_children(|column| {
-        for (index, (label, press, name)) in presses.into_iter().enumerate() {
-            let node = Node {
-                height: px(BUTTON_HEIGHT),
-                ..default()
-            };
-            let style = if index == 0 {
-                ButtonStyle::Main
-            } else {
-                ButtonStyle::Plain
-            };
-            let id = match name {
-                "provider" => UiId::new(FORM, name).at(index),
-                _ => UiId::new(FORM, name),
-            };
-            spawn_button(column, ButtonState::Normal, label, TextSize::Large, node)
-                .insert((press, id, style, Pressable));
-        }
-    });
+    // A failure is said in its own colour.
+    let (said, unsaid) = match failed {
+        true => ("login/failed", "login/words"),
+        false => ("login/words", "login/failed"),
+    };
+    dom.set_text(said, words);
+    dom.set_flag(said, "hidden", false);
+    dom.set_flag(unsaid, "hidden", true);
+    dom.empty("login/providers");
+    dom.set_flag("login/providers", "hidden", providers.is_empty());
+    for (at, label) in providers.iter().enumerate() {
+        dom.copy_template("login/provider", "login/providers", at);
+        dom.set_text(&format!("login/provider.{at}"), label.clone());
+    }
+    for name in FIXED {
+        dom.set_flag(&format!("login/{name}"), "hidden", !shown.contains(&name));
+        dom.clear(&format!("login/{name}"), "class");
+    }
+    // The first button on show is the main thing to do.
+    let first = match providers.is_empty() {
+        true => format!("login/{}", shown[0]),
+        false => "login/provider.0".to_owned(),
+    };
+    dom.set(&first, "class", "main");
 }
 
 fn choosing_words(guests: bool) -> String {
@@ -172,23 +129,48 @@ fn choosing_words(guests: bool) -> String {
     }
 }
 
-/// Does what the button pressed says.
+/// What the button with this id does now, if it is one of the screen's.
+fn choice_of(id: &UiId, logging_in: &LoggingIn) -> Option<Result<LoginChoice, String>> {
+    let ("login", name) = id.parts() else {
+        return None;
+    };
+    match (name, logging_in) {
+        ("provider", LoggingIn::Choosing { providers, .. }) => {
+            let provider = providers.get(id.index()?)?;
+            Some(Ok(LoginChoice::Provider(provider.name.clone())))
+        }
+        ("guest", _) => Some(Ok(LoginChoice::Guest)),
+        ("cancel", _) => Some(Ok(LoginChoice::Cancel)),
+        ("back", _) => Some(Ok(LoginChoice::Back)),
+        ("open_again", LoggingIn::InBrowser { url: Some(url), .. }) => Some(Err(url.clone())),
+        _ => None,
+    }
+}
+
+/// Does what the button pressed says: a choice, or the login page again.
 pub(super) fn press_buttons(
     mut pressed: MessageReader<ButtonPressed>,
-    buttons: Query<&Press>,
+    ids: Query<&UiId>,
+    logging_in: Res<LoggingIn>,
     mut choices: MessageWriter<LoginChoice>,
 ) {
     for press in pressed.read() {
-        match buttons.get(press.0) {
-            Ok(Press::Choose(choice)) => {
-                choices.write(choice.clone());
+        let Ok(id) = ids.get(press.0) else {
+            continue;
+        };
+        match choice_of(id, &logging_in) {
+            Some(Ok(choice)) => {
+                choices.write(choice);
             }
-            Ok(Press::OpenAgain(url)) => {
-                if let Err(reason) = open_in_browser(url) {
+            Some(Err(url)) => {
+                if let Err(reason) = open_in_browser(&url) {
                     warn!("Can't open the login page: {reason}");
                 }
             }
-            Err(_) => {}
+            None => {}
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
