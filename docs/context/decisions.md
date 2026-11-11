@@ -1262,3 +1262,7 @@ Fourth and last step of the owner's grid and slot work. The Abilities page is a 
 ## 2026-11-11: The frame round a grid is its own element
 
 Owner: "own element is better for consistency", against Claude's suggestion of plain markup. `container` (`title`, a `header` of controls, what it holds, a `footer`) is built once in `dom`, and the inventory's grid, bags and the ground's section use it; `widgets::spawn_container` is gone. The old widgets that go in it (sort, filter) are still spawned by `inventory` into the `header` once it is built, until they are markup too.
+
+## 2026-11-11: A pop-up element, with a padlock
+
+Owner, asked whether the split box should stay code or get a new surface: "New pop-up element", and then: "the element needs to have a padlock type icon floating at the top-right - clicking on it toggles a lock state which prevents it from auto-closing, this way it can survive clicks elsewhere and can be used as more of a detailed popup (item and skill info boxes etc)". So `popup` is a surface of its own: a dark box at a place, in front of the panels, which closes itself on Esc or a press elsewhere and tells its owner, unless locked by its padlock. Claude's reading, for the owner to change: a locked popup also stays through Esc (unlock it, then close it), and a new popup always starts unlocked. The split box is the first on it; the closing that was `inventory`'s is now the element's.

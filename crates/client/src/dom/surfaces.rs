@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
+use super::attrs::Length;
 use super::controls::{UiEvent, UiValue};
 use super::parts::{Control, Document, Element, SurfaceOf};
 use super::tag::Tag;
@@ -40,6 +41,25 @@ pub(super) fn follow_surfaces(
                     && node.display != wanted
                 {
                     node.display = wanted;
+                }
+            }
+            // Where its `left` and `top` say, in the interface's pixels.
+            Tag::Popup => {
+                let Ok(mut node) = roots.get_mut(*widget) else {
+                    continue;
+                };
+                let place = |side: Option<Length>| match side {
+                    Some(Length::Pixels(pixels)) => px(pixels),
+                    Some(Length::Percent(share)) => percent(share),
+                    None => Val::Auto,
+                };
+                let (left, top) = (place(element.attrs.left), place(element.attrs.top));
+                let display = match hidden {
+                    true => Display::None,
+                    false => Display::Flex,
+                };
+                if (node.left, node.top, node.display) != (left, top, display) {
+                    (node.left, node.top, node.display) = (left, top, display);
                 }
             }
             _ => {}

@@ -55,6 +55,9 @@ pub enum Tag {
     Container,
     /// A container's controls, at its top right.
     Header,
+    /// A dark box in front of the panels, at a place (`left`, `top`): a
+    /// choice to make where the pointer is. Its owner opens and closes it.
+    Popup,
     /// What is in it scrolls when it is too tall.
     Scroll,
     /// One thing shown, by its `type` and `for`: an item (`objects`).
@@ -78,7 +81,7 @@ pub(super) enum Holds {
     Anything,
 }
 
-const ALL: [(&str, Tag); 35] = [
+const ALL: [(&str, Tag); 36] = [
     ("div", Tag::Div),
     ("span", Tag::Span),
     ("table", Tag::Table),
@@ -110,6 +113,7 @@ const ALL: [(&str, Tag); 35] = [
     ("footer", Tag::Footer),
     ("container", Tag::Container),
     ("header", Tag::Header),
+    ("popup", Tag::Popup),
     ("scroll", Tag::Scroll),
     ("object", Tag::Object),
     ("object-grid", Tag::ObjectGrid),

@@ -201,6 +201,15 @@ impl Theme {
             ..default()
         };
         theme.set(Tag::Footer, "", footer);
+        // A popup's dark box: light writing, its things close.
+        let popup = Look {
+            gap: ROW,
+            // (As a tooltip's.)
+            colour: Some(crate::common::NO_QUALITY_NAME),
+            text: Some(TextSize::Medium),
+            ..default()
+        };
+        theme.set(Tag::Popup, "", popup);
         // The frame round a grid: its rows stacked, its controls close.
         theme.set(Tag::Container, "", stacked);
         theme.set(Tag::Header, "", inline);
