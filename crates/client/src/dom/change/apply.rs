@@ -124,6 +124,7 @@ fn copy(world: &mut World, into: Entity, template: &str, index: usize) -> Result
         style,
         index: Some(index),
         document: document_of(world, into),
+        footer: false,
     };
     build(world, |builder| builder.nodes(into, &nodes, inside));
     Ok(())

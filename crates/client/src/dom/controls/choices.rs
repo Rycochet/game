@@ -4,7 +4,7 @@
 
 use bevy::prelude::*;
 
-use super::{node_in, words_in};
+use super::words_in;
 use crate::dom::build::Builder;
 use crate::dom::check::{Checked, CheckedNode};
 use crate::dom::parts::Choices;
@@ -47,7 +47,13 @@ impl Builder<'_, '_, '_> {
         selected
     }
 
-    pub(super) fn select(&mut self, holder: Entity, element: &Checked, size: TextSize) -> Entity {
+    pub(super) fn select(
+        &mut self,
+        holder: Entity,
+        element: &Checked,
+        size: TextSize,
+        node: Node,
+    ) -> Entity {
         let dropdown = Dropdown {
             options: options(element).map(words_in).collect(),
             selected: self.choices(holder, element),
@@ -59,7 +65,7 @@ impl Builder<'_, '_, '_> {
         };
         let node = Node {
             padding: BUTTON_PADDING,
-            ..node_in(&element.attrs, true)
+            ..node
         };
         self.spawn_in(holder, |inside| {
             spawn_dropdown(inside, dropdown, size, node).id()
@@ -85,6 +91,7 @@ impl Builder<'_, '_, '_> {
         holder: Entity,
         element: &Checked,
         size: TextSize,
+        node: Node,
     ) -> Entity {
         let swatch = |option: &Checked| {
             let picture = option.attrs.text("src");
@@ -108,7 +115,6 @@ impl Builder<'_, '_, '_> {
             names: options(element).map(name).collect(),
             selected: self.choices(holder, element),
         };
-        let node = node_in(&element.attrs, true);
         self.spawn_in(holder, |inside| {
             spawn_colour_picker(inside, picker, size, node).id()
         })

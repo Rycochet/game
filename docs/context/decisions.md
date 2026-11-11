@@ -1236,3 +1236,7 @@ Fourth step of the interface as markup: `panel` (fixed where written, or `moveab
 ## 2026-11-11: Screens move to markup in slices, keeping their code
 
 Claude's choices, starting the move of real screens (the system menu's requesters first). A screen's template replaces the calls that spawned it, and a small system then gives each built widget the components the screen's own systems already find it by (`Layer`, `Action`), by its id, so what the screen does is untouched and each slice is small enough to check in the game. The plan's fifth PR became several for that reason: the system menu is about 5,000 lines. Words that change are set by id through `Dom`.
+
+## 2026-11-11: Sizes in markup are automatic
+
+Owner, on seeing `width` and `height` on every button of the first templates: layout is meant to be automatic by content, and buttons should fill their width unless told otherwise. So a control fills what it is stacked in and is its own size in a row; its height is the theme's row for the writing round it (the menus' bigger writing has 38-pixel rows); an icon button is a square of that; and the buttons of a dialog's footer share a minimum width. The templates lost 64 of their 76 size attributes: what is left is particular to its screen (a wrap width, a dialog's own width). A few requesters' buttons changed width by some pixels, as each had its own hand-picked number.

@@ -20,24 +20,24 @@ static MENU: Template = html!(
   <dialog id="layer" modal depth="0" width="260" hidden>
     <h1 id="paused" align="center" height="30" margin-bottom="24" hidden>Paused</h1>
     <div margin-bottom="24">
-      <button id="continue" width="100%" height="38" margin-bottom="8">Continue</button>
-      <button id="characters" width="100%" height="38" margin-bottom="8">Characters</button>
+      <button id="continue" margin-bottom="8">Continue</button>
+      <button id="characters" margin-bottom="8">Characters</button>
       <span id="online_row" class="joined" margin-bottom="8">
         <input id="online" type="checkbox" readonly label="Online"
-               width="176" height="38" margin-bottom="0"/>
-        <button id="server_options" width="38" height="38" margin-bottom="0">
+               width="176" margin-bottom="0"/>
+        <button id="server_options" margin-bottom="0">
           <img src="picture:gear"/>
         </button>
       </span>
-      <button id="connect" width="100%" height="38" margin-bottom="0">Connect...</button>
+      <button id="connect" margin-bottom="0">Connect...</button>
     </div>
     <div margin-bottom="24">
-      <button id="settings" width="100%" height="38" margin-bottom="8">Settings</button>
-      <button id="credits" width="100%" height="38" margin-bottom="0">Credits</button>
+      <button id="settings" margin-bottom="8">Settings</button>
+      <button id="credits" margin-bottom="0">Credits</button>
     </div>
     <div>
-      <button id="log_out" width="100%" height="38" margin-bottom="8">Logout</button>
-      <button id="quit" width="100%" height="38" margin-bottom="0">Quit</button>
+      <button id="log_out" margin-bottom="8">Logout</button>
+      <button id="quit" margin-bottom="0">Quit</button>
     </div>
   </dialog>
 </form>

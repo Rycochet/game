@@ -25,6 +25,8 @@ pub(super) struct Inside {
     pub index: Option<usize>,
     /// The root of the document it is in.
     pub document: Entity,
+    /// It is in a dialog's `footer`: its row of buttons.
+    pub footer: bool,
 }
 
 pub(super) struct Builder<'a, 'w, 's> {
@@ -140,6 +142,7 @@ pub(super) fn build_documents(
                     style,
                     index: None,
                     document: root,
+                    footer: false,
                 };
                 builder.nodes(root, &nodes, inside);
             }
