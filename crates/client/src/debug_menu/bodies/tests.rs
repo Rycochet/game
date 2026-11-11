@@ -9,3 +9,8 @@ fn a_colour_from_a_slider_finds_its_place_again() {
         }
     }
 }
+
+#[test]
+fn the_panel_is_good_markup() {
+    SUNS_AND_MOONS.assert_good();
+}

@@ -57,7 +57,7 @@ impl Plugin for DebugMenuPlugin {
                     panels::forget_closed,
                     run::remind_of_god_mode,
                     run::run_actions,
-                    bodies::fill_panels,
+                    (bodies::fill_panels, bodies::bind_bodies),
                     bodies::apply_sliders,
                     panels::open_generate_panel,
                     panels::press_generate_buttons,
