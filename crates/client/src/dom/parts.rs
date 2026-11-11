@@ -21,6 +21,18 @@ pub fn document(template: &'static Template) -> impl Bundle {
     (Document(template), node)
 }
 
+/// The same, built inside an element of another document (a page with a
+/// template of its own), taking the room there and writing as it does.
+pub fn document_in(template: &'static Template, parent: Entity) -> impl Bundle {
+    let node = Node {
+        flex_direction: FlexDirection::Column,
+        flex_grow: 1.0,
+        min_height: px(0),
+        ..default()
+    };
+    (Document(template), node, ChildOf(parent))
+}
+
 /// One element of a document. Its `Node` and looks follow it: change it
 /// through `Dom`, by its id.
 #[derive(Component, Clone, Debug)]

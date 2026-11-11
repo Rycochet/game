@@ -13,7 +13,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - `crates/client/src/dom/check.rs`: `check`: raw markup into `Checked` / `CheckedNode`, with ids, forms, `for` and where elements may go.
 - `crates/client/src/dom/theme.rs`: `Theme` (resource), `Look`.
 - `crates/client/src/dom/layout.rs`: `node_for`: an element's `Node` from its attributes, look and place in a table.
-- `crates/client/src/dom/parts.rs`: the components: `Document`, `document()`, `Element`, `Inert`, `Canvas`; private `TextStyle`, `Words`, `InTable`, `Bar`, `TemplateBody`.
+- `crates/client/src/dom/parts.rs`: the components: `Document`, `document()`, `document_in()`, `Element`, `Inert`, `Canvas`; private `TextStyle`, `Words`, `InTable`, `Bar`, `TemplateBody`.
 - `crates/client/src/dom/build.rs`: `Builder`, `build_documents`. In `build/`: `table.rs`, `progress.rs`, `surfaces.rs` (`panel`, `dialog`, `footer`, `scroll`), `title_row.rs` (a big dialog's title and close button).
 - `crates/client/src/dom/surfaces.rs`: `follow_surfaces` (a panel's or dialog's `hidden`), `tidy_surfaces` (they go with their document; one closed by the player says so).
 - `crates/client/src/dom/restyle.rs`: `restyle`: `Node`, background, tooltip, picture and bar of every new or changed `Element`.
@@ -27,7 +27,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 ## Public API
 
 - `html!("name", r#"…"#)` (or `include_str!` of a file beside the module): a `Template`, usually a `static`. The source is always part of the program.
-- `document(&TEMPLATE)`: the bundle to spawn (as a child of where it goes) for the template to be built there by the end of the frame. `Document(&Template)` is on its root.
+- `document(&TEMPLATE)`: the bundle to spawn (as a child of where it goes) for the template to be built there by the end of the frame. `Document(&Template)` is on its root. `document_in(&TEMPLATE, element)` builds one inside an element of another document, taking the room there and writing as it does: a page with a template of its own (Settings' Graphics page).
 - `Dom` (system parameter): `set_text(id, words)`, `set(id, name, value)`, `set_flag(id, name, on)`, `clear(id, name)`, `copy_template(template, into, index)` (a template of `tr`s goes into a `table`, as its next rows), `empty(id)`, `set_options(id, (value, words) pairs)` (a `select`'s options, for lists only known while playing; never none; set its `value` after). Ids are as written, `form/name`, and `form/name.<index>` inside a copy of a template. Changes are made in order at the end of the frame, after new documents are built, so a system may spawn a document and fill it in one go. One that can't be made (no such id, a value the attribute can't take) is logged and changes nothing.
 - `Template::assert_good()`: every module with templates has a test calling it for each.
 - `Theme`: `look(tag, class)`, `set(tag, class, look)`, `has`, `row(size)`, and the fields `rows` and `footer_button` (sizes controls take by themselves); `Theme::parchment()` is the game's. `Look`: text size, colour, margin, gap, background.

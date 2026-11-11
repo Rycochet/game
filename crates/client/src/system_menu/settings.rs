@@ -16,7 +16,7 @@ pub(super) use controls::{TakenKeys, forget_taken, show_controls_page, use_contr
 pub(super) use difficulty::use_difficulty;
 pub(super) use gameplay::{show_gameplay_page, use_gameplay_page};
 pub(super) use graphics::{
-    GraphicsForm, GraphicsShown, fill_graphics_page, use_graphics_options, use_graphics_page,
+    GraphicsForm, GraphicsShown, show_graphics_page, use_graphics_options, use_graphics_page,
 };
 pub(super) use keep::{GraphicsTrial, KeepButton, run_trial};
 pub(super) use shell::{bind_settings, show_interface_page, spawn_settings};
@@ -25,12 +25,7 @@ pub(super) use shown_role::{ShownAs, keep_shown_role, use_shown_role};
 use bevy::prelude::*;
 
 use crate::common::{InterfaceSize, Preferences};
-use crate::widgets::{DropdownChosen, INTERFACE_PERCENTS, SwitchFlipped, TabChosen, TextSize};
-
-const FONT: TextSize = TextSize::Large;
-const ROW_GAP: f32 = 12.0;
-const LABEL_GAP: f32 = 16.0;
-const ROW_HEIGHT: f32 = 36.0;
+use crate::widgets::{DropdownChosen, INTERFACE_PERCENTS, SwitchFlipped, TabChosen};
 
 const TOUCH: &str = "Keeps the interface at least its own size, for fingers.";
 const TOUCH_ONLY: &str = "Always on, as this device only has a touch screen.";

@@ -108,7 +108,7 @@ static SETTINGS: Template = html!(
         </span>
       </form>
     </div>
-    <div id="graphics_page" class="rows" fills hidden/>
+    <div id="graphics_page" fills hidden/>
   </dialog>
 </form>
 "#
@@ -131,6 +131,10 @@ pub(in crate::system_menu) fn bind_settings(
         SystemMenu::Ironman,
     ];
     for (entity, id) in &new {
+        // The Graphics page is a document of its own, built in its page.
+        if id.parts() == ("settings", "graphics_page") {
+            commands.spawn(graphics::page_in(entity));
+        }
         let mut bound = commands.entity(entity);
         match id.parts() {
             ("settings", "layer") => bound.insert((Layer(SHOWN), Action::Back)),
@@ -146,7 +150,11 @@ pub(in crate::system_menu) fn bind_settings(
                 continue;
             }
             ("settings", "interface_page") => bound.insert(Page(2)),
-            ("settings", "graphics_page") => bound.insert((Page(3), graphics::GraphicsPage)),
+            ("settings", "graphics_page") => bound.insert(Page(3)),
+            ("settings.graphics", _) => {
+                graphics::bind_graphics(&mut bound, id);
+                continue;
+            }
             ("settings.interface", "size") => bound.insert(SizeDropdown),
             ("settings.interface", "touch") => bound.insert(TouchSwitch),
             ("settings.interface", "scroll_bars") => bound.insert(ScrollBarsSwitch),

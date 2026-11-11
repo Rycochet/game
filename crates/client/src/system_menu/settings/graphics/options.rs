@@ -1,21 +1,15 @@
-//! The Graphics settings that trade looks for speed, on Settings' Graphics page: the
-//! preset, then Display and Background (and, in `sections`, the rest), with
-//! the pieces their rows are made of. They apply as soon as they are chosen
-//! (`choose`); the modules drawing what they change follow `Preferences`.
+//! The Graphics settings that trade looks for speed or say what is drawn, on
+//! Settings' Graphics page: which control is which, and showing them as the
+//! preferences have them. They apply as soon as they are chosen (`choose`);
+//! the modules drawing what they change follow `Preferences`.
 
 use bevy::prelude::*;
 
-use super::super::rows::{
-    spawn_dropdown_row, spawn_labelled, spawn_section, spawn_switch_row, tip,
-};
-use crate::common::{
-    AntiAliasing, Background, FrameRate, GraphicsPrefs, IN_BROWSER, MaxResolution, Preset,
-    RENDER_SCALES,
-};
-use crate::widgets::{ButtonState, Dropdown, INK, UiId, spawn_slider};
-
-const WIDTH: f32 = 200.0;
-const PERCENT_WIDTH: f32 = 60.0;
+use super::super::rows::tip_words;
+use super::choose::slider_range;
+use crate::common::{AntiAliasing, GraphicsPrefs, IN_BROWSER, Preset};
+use crate::dom::Dom;
+use crate::widgets::Dropdown;
 
 /// Which setting a control is.
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
@@ -40,7 +34,28 @@ pub(in crate::system_menu) enum GraphicsControl {
 }
 
 impl GraphicsControl {
-    fn ui_name(self) -> &'static str {
+    pub(super) const ALL: [Self; 17] = [
+        Self::Preset,
+        Self::FrameRate,
+        Self::VSync,
+        Self::RenderScale,
+        Self::MaxResolution,
+        Self::AntiAliasing,
+        Self::Background,
+        Self::Brightness,
+        Self::Shadows,
+        Self::MiddaySun,
+        Self::ViewDistance,
+        Self::Clouds,
+        Self::Precipitation,
+        Self::Foliage,
+        Self::FloorTextures,
+        Self::Remembered,
+        Self::ReduceMotion,
+    ];
+
+    /// Its control's name in the page's markup.
+    pub(super) fn ui_name(self) -> &'static str {
         match self {
             Self::Preset => "preset",
             Self::FrameRate => "frame_rate",
@@ -61,215 +76,99 @@ impl GraphicsControl {
             Self::ReduceMotion => "reduce_motion",
         }
     }
+
+    /// The control with this name in the markup, if there is one.
+    pub(super) fn named(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|it| it.ui_name() == name)
+    }
+
+    fn id(self) -> String {
+        format!("settings.graphics/{}", self.ui_name())
+    }
 }
 
-/// The percentage beside a slider, by the slider's setting.
-#[derive(Component)]
-pub(in crate::system_menu) struct PercentText(pub(super) GraphicsControl);
-
-const PRESET: &str = "Sets the Graphics settings together, from fastest to best looking. \
-    Brightness and Reduce Motion are yours, and stay as they are. Changing any other \
-    makes this Custom.";
-const FRAME_RATE: &str = "The most frames the game draws each second. Lower limits use \
-    less power and run cooler, which helps laptops on battery. A big difference.";
+// The tips that say more in a browser; the rest are in the markup.
 const VSYNC: &str = "Waits for the screen before showing each frame, so the picture \
     doesn't tear. It can add a little delay to input. A medium difference.";
-const RENDER_SCALE: &str = "Draws the world at a lower resolution and stretches it to \
-    fit. The interface stays sharp. Lower is faster, but blurrier. A big difference.";
-const MAX_RESOLUTION: &str = "The most lines the world is drawn with, however big the     window or screen. Bigger windows are then stretched, so full screen costs no more     to draw. The interface stays sharp. A big difference on large screens.";
 const ANTI_ALIASING: &str = "Smooths jagged edges. Higher costs more graphics power. \
     With it off the land may shimmer, and faded tokens look rougher. A medium difference.";
 const BACKGROUND: &str = "What the game does while another window is in front. Slow \
     down draws a frame a second to save power; Keep drawing suits streaming, or \
     watching it on another screen. A big difference while in the background.";
-const BROWSER_DECIDES: &str = "Not in the browser, which decides this itself.";
 
-/// A dropdown for a setting: its choices' names, the one chosen, and those that
-/// can't be (none if empty).
-pub(super) fn dropdown<T: PartialEq + Copy>(
-    all: &[T],
-    name: impl Fn(T) -> &'static str,
-    chosen: T,
-    greyed: Vec<bool>,
-) -> Dropdown {
-    Dropdown {
-        options: all.iter().map(|&it| name(it).into()).collect(),
-        selected: all.iter().position(|&it| it == chosen).unwrap_or(0),
-        greyed,
-        ..default()
+/// Anti-aliasing's choices that can't be used here are shown greyed.
+pub(super) fn grey_unusable(mut dropdown: Mut<Dropdown>) {
+    dropdown.greyed = AntiAliasing::ALL.iter().map(|it| !it.usable()).collect();
+}
+
+/// What stays as it is while the game runs: the sliders' ranges, and what
+/// a browser decides for itself, disabled with a tip saying so.
+pub(super) fn show_fixed(dom: &mut Dom) {
+    for control in GraphicsControl::ALL {
+        if let Some((least, most, step)) = slider_range(control) {
+            dom.set(&control.id(), "min", &least.to_string());
+            dom.set(&control.id(), "max", &most.to_string());
+            dom.set(&control.id(), "step", &step.to_string());
+        }
     }
+    let why_not = IN_BROWSER.then_some("Not in the browser, which decides this itself.");
+    let tip = tip_words(VSYNC, why_not);
+    dom.set("settings.graphics/vsync_row", "title", &tip);
+    dom.set_flag(&GraphicsControl::VSync.id(), "disabled", IN_BROWSER);
+    // Still usable in a browser: only one choice is missing.
+    let why_not = IN_BROWSER.then_some("2× isn't in the browser.");
+    let tip = tip_words(ANTI_ALIASING, why_not);
+    dom.set("settings.graphics/anti_aliasing_row", "title", &tip);
+    let why_not = IN_BROWSER.then_some("Not in the browser, which slows hidden tabs itself.");
+    let tip = tip_words(BACKGROUND, why_not);
+    dom.set("settings.graphics/background_row", "title", &tip);
+    dom.set_flag(&GraphicsControl::Background.id(), "disabled", IN_BROWSER);
 }
 
-/// Spawns a setting's dropdown row, marked, and disabled if `why_not`.
-pub(super) fn setting_row(
-    parent: &mut ChildSpawnerCommands,
-    control: GraphicsControl,
-    label: &str,
-    (what, why_not): (&str, Option<&str>),
-    dropdown: Dropdown,
-) {
-    let made = spawn_dropdown_row(parent, label, tip(what, why_not), dropdown, WIDTH);
-    let mut commands = parent.commands();
-    commands
-        .entity(made)
-        .insert((control, UiId::new("settings.graphics", control.ui_name())));
-    if why_not.is_some() {
-        commands.entity(made).insert(ButtonState::Disabled);
+/// The percentage beside a slider.
+pub(super) fn show_percent(dom: &mut Dom, control: GraphicsControl, percent: u8) {
+    let id = format!("{}_percent", control.id());
+    dom.set_text(&id, format!("{percent}%"));
+}
+
+/// Shows every setting as `prefs` have it. The preset is Custom while they
+/// are no preset.
+pub(super) fn show_options(dom: &mut Dom, prefs: &GraphicsPrefs) {
+    use GraphicsControl as Control;
+    let preset = prefs.preset().map_or("Custom", Preset::name);
+    let chosen = [
+        (Control::Preset, preset),
+        (Control::FrameRate, prefs.frame_rate.name()),
+        (Control::MaxResolution, prefs.max_resolution.name()),
+        (Control::AntiAliasing, prefs.anti_aliasing.in_use().name()),
+        (Control::Background, prefs.background.name()),
+        (Control::Shadows, prefs.shadows.name()),
+        (Control::ViewDistance, prefs.view_distance.name()),
+        (Control::Precipitation, prefs.precipitation.name()),
+        (Control::Remembered, prefs.remembered.name()),
+    ];
+    for (control, name) in chosen {
+        dom.set(&control.id(), "value", name);
     }
-}
-
-/// Spawns a setting's switch row, `on` or off, marked, and disabled if `why_not`.
-pub(super) fn switch_row(
-    parent: &mut ChildSpawnerCommands,
-    control: GraphicsControl,
-    label: &str,
-    (what, why_not): (&str, Option<&str>),
-    on: bool,
-) {
-    let state = match (why_not.is_some(), on) {
-        (false, _) => ButtonState::Normal,
-        (true, false) => ButtonState::Disabled,
-        (true, true) => ButtonState::DisabledSelected,
-    };
-    let made = spawn_switch_row(parent, label, tip(what, why_not), state, on);
-    parent
-        .commands()
-        .entity(made)
-        .insert((control, UiId::new("settings.graphics", control.ui_name())));
-}
-
-/// Spawns a setting's slider row, from `least` to `most` percent, at `percent`.
-pub(super) fn slider_row(
-    parent: &mut ChildSpawnerCommands,
-    control: GraphicsControl,
-    label: &str,
-    what: &str,
-    (least, most, percent): (u8, u8, u8),
-) {
-    spawn_labelled(parent, label, tip(what, None), |row| {
-        let value = f32::from(percent.clamp(least, most) - least) / f32::from(most - least);
-        spawn_slider(row, value, None, WIDTH)
-            .insert((control, UiId::new("settings.graphics", control.ui_name())));
-        row.spawn((
-            PercentText(control),
-            Text::new(format!("{percent}%")),
-            super::super::FONT.font(),
-            TextColor(INK),
-            Node {
-                width: px(PERCENT_WIDTH),
-                ..default()
-            },
-        ));
-    });
-}
-
-/// Preset, at the top of the page: Custom while the settings are no preset.
-pub(super) fn spawn_preset_row(page: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
-    let mut names: Vec<String> = Preset::ALL.iter().map(|it| it.name().into()).collect();
-    names.push("Custom".into());
-    let chosen = prefs
-        .preset()
-        .and_then(|preset| Preset::ALL.iter().position(|&it| it == preset))
-        .unwrap_or(Preset::ALL.len());
-    // Custom is only shown, not chosen.
-    let mut greyed = vec![false; Preset::ALL.len()];
-    greyed.push(true);
-    let list = Dropdown {
-        options: names,
-        selected: chosen,
-        greyed,
-        ..default()
-    };
-    setting_row(
-        page,
-        GraphicsControl::Preset,
-        "Preset",
-        (PRESET, None),
-        list,
-    );
-}
-
-pub(super) fn spawn_display_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
-    spawn_section(sections, "Display", |section| {
-        let list = dropdown(
-            &FrameRate::ALL,
-            FrameRate::name,
-            prefs.frame_rate,
-            Vec::new(),
-        );
-        let row = (FRAME_RATE, None);
-        setting_row(
-            section,
-            GraphicsControl::FrameRate,
-            "Frame Rate Limit",
-            row,
-            list,
-        );
-
-        let why_not = IN_BROWSER.then_some(BROWSER_DECIDES);
-        let row = (VSYNC, why_not);
-        switch_row(section, GraphicsControl::VSync, "VSync", row, prefs.vsync);
-
-        let (least, most) = RENDER_SCALES;
-        let at = (least, most, prefs.render_scale);
-        slider_row(
-            section,
-            GraphicsControl::RenderScale,
-            "Render Scale",
-            RENDER_SCALE,
-            at,
-        );
-
-        let list = dropdown(
-            &MaxResolution::ALL,
-            MaxResolution::name,
-            prefs.max_resolution,
-            Vec::new(),
-        );
-        let row = (MAX_RESOLUTION, None);
-        setting_row(
-            section,
-            GraphicsControl::MaxResolution,
-            "Max Resolution",
-            row,
-            list,
-        );
-
-        let greyed = AntiAliasing::ALL.iter().map(|it| !it.usable()).collect();
-        let chosen = prefs.anti_aliasing.in_use();
-        let list = dropdown(&AntiAliasing::ALL, AntiAliasing::name, chosen, greyed);
-        // Still usable in a browser: only one choice is missing.
-        let words = match IN_BROWSER {
-            true => format!("{ANTI_ALIASING}\n\n2× isn't in the browser."),
-            false => ANTI_ALIASING.into(),
-        };
-        let row = (words.as_str(), None);
-        setting_row(
-            section,
-            GraphicsControl::AntiAliasing,
-            "Anti-aliasing",
-            row,
-            list,
-        );
-    });
-}
-
-pub(super) fn spawn_background_section(sections: &mut ChildSpawnerCommands, prefs: &GraphicsPrefs) {
-    spawn_section(sections, "Background", |section| {
-        let list = dropdown(
-            &Background::ALL,
-            Background::name,
-            prefs.background,
-            Vec::new(),
-        );
-        let why_not = IN_BROWSER.then_some("Not in the browser, which slows hidden tabs itself.");
-        let row = (BACKGROUND, why_not);
-        setting_row(
-            section,
-            GraphicsControl::Background,
-            "When Not in Focus",
-            row,
-            list,
-        );
-    });
+    let switched = [
+        (Control::VSync, prefs.vsync),
+        (Control::MiddaySun, prefs.midday_sun),
+        (Control::Clouds, prefs.clouds),
+        (Control::Foliage, prefs.foliage),
+        (Control::FloorTextures, prefs.floor_textures),
+        (Control::ReduceMotion, prefs.reduce_motion),
+    ];
+    for (control, on) in switched {
+        dom.set_flag(&control.id(), "checked", on);
+    }
+    let slid = [
+        (Control::RenderScale, prefs.render_scale),
+        (Control::Brightness, prefs.brightness),
+    ];
+    for (control, percent) in slid {
+        let (least, most, _) = slider_range(control).unwrap_or((0, 100, 1));
+        let percent = percent.clamp(least, most);
+        dom.set(&control.id(), "value", &percent.to_string());
+        show_percent(dom, control, percent);
+    }
 }

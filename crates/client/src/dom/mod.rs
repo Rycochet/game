@@ -30,7 +30,7 @@ pub use input::Hit;
 #[cfg(test)]
 pub use input::find_now;
 pub use parts::{AlwaysBars, Solid};
-pub use parts::{Document, document};
+pub use parts::{Document, document, document_in};
 pub use template::Template;
 // What screens will use as they become markup: not all of it is yet.
 #[allow(unused_imports)]
