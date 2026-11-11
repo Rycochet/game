@@ -108,13 +108,11 @@ use pictures_spawn::{
 pub(super) use pictures_systems::{choose_pictures, fill_pictures, show_pictures};
 pub(super) use steps::{press_panel_buttons, update_panel_buttons};
 pub(super) use teleport_to_world::TeleportForm;
-use teleport_to_world::spawn_teleport_to_world;
 pub(super) use teleport_to_world_systems::{
     open_teleport_asked, press_teleport_buttons, update_teleport_buttons,
 };
 pub(super) use vitals::{press_vitals_buttons, update_vitals_buttons};
 pub(super) use world_rate::{press_rate_buttons, update_rate_buttons};
-use world_time::spawn_world_time;
 pub(super) use world_time::{edit_time_box, press_time_steps};
 
 const FONT: TextSize = TextSize::Medium;

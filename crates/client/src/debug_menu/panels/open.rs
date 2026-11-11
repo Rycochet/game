@@ -8,7 +8,7 @@ use super::super::bodies::BodiesToShow;
 use super::{
     FIRST_AT, NEXT_AT, change_creature, spawn_create_mob_panel, spawn_dev_area_panel,
     spawn_every_widget, spawn_examine_panel, spawn_give_panel, spawn_item_pictures,
-    spawn_learn_skills, spawn_teleport_to_world, spawn_world_time, steps, vitals,
+    spawn_learn_skills, steps, teleport_to_world, vitals, world_time,
 };
 use crate::dom::{Template, document_in};
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
@@ -64,8 +64,6 @@ impl OpenPanels {
                 DebugAction::SunsAndMoons => {}
                 DebugAction::GiveItem => spawn_give_panel(content),
                 DebugAction::ItemPictures => spawn_item_pictures(content),
-                DebugAction::WorldTime => spawn_world_time(content),
-                DebugAction::TeleportToWorld => spawn_teleport_to_world(content),
                 DebugAction::DevArea => spawn_dev_area_panel(content),
                 DebugAction::CreateMob => spawn_create_mob_panel(content),
                 DebugAction::ExamineMob => spawn_examine_panel(content),
@@ -91,6 +89,8 @@ fn template_of(action: DebugAction) -> Option<&'static Template> {
         DebugAction::ChangeCreature => Some(&change_creature::CHANGE_CREATURE),
         DebugAction::Vitals => Some(&vitals::VITALS),
         DebugAction::DrawingStates => Some(&steps::DRAWING_STATES),
+        DebugAction::WorldTime => Some(&world_time::WORLD_TIME),
+        DebugAction::TeleportToWorld => Some(&teleport_to_world::TELEPORT_TO_WORLD),
         _ => None,
     }
 }

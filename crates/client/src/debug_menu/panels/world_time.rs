@@ -9,42 +9,83 @@ use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 
 use super::time_text::{read_time, time_text};
-use super::world_rate::spawn_world_rate;
-use super::{CHECK_ROW, FONT};
+use super::world_rate::rate_named;
 use crate::common::ServerClock;
 use crate::connection::ToServer;
-use crate::widgets::{
-    ButtonPressed, ButtonState, Pressable, SoftKey, SoftKeyPressed, TextBox, TextFocus, TextSize,
-    spawn_button, spawn_text_box,
-};
+use crate::dom::Template;
+use crate::html;
+use crate::widgets::{ButtonPressed, SoftKey, SoftKeyPressed, TextBox, TextFocus};
 
 const HOUR: f64 = 60.0;
 const DAY: f64 = 24.0 * HOUR;
-/// The buttons before the box, by name and minutes, then those after it.
-const BACK: [(&str, f64); 6] = [
-    ("-1d", -DAY),
-    ("-12h", -12.0 * HOUR),
-    ("-1h", -HOUR),
-    ("-30m", -30.0),
-    ("-10m", -10.0),
-    ("-1m", -1.0),
+/// The buttons either side of the box, by their names in the markup, and
+/// the minutes each moves the clock.
+const STEPS: [(&str, f64); 12] = [
+    ("back_1d", -DAY),
+    ("back_12h", -12.0 * HOUR),
+    ("back_1h", -HOUR),
+    ("back_30m", -30.0),
+    ("back_10m", -10.0),
+    ("back_1m", -1.0),
+    ("on_1m", 1.0),
+    ("on_10m", 10.0),
+    ("on_30m", 30.0),
+    ("on_1h", HOUR),
+    ("on_12h", 12.0 * HOUR),
+    ("on_1d", DAY),
 ];
-const ON: [(&str, f64); 6] = [
-    ("+1m", 1.0),
-    ("+10m", 10.0),
-    ("+30m", 30.0),
-    ("+1h", HOUR),
-    ("+12h", 12.0 * HOUR),
-    ("+1d", DAY),
-];
-const STEP_FONT: TextSize = TextSize::Small;
-const STEP_PADDING: UiRect = UiRect {
-    left: Val::Px(6.0),
-    right: Val::Px(6.0),
-    top: Val::Px(2.0),
-    bottom: Val::Px(2.0),
-};
-const BOX_WIDTH: f32 = 150.0;
+
+/// The panel's contents, as markup: buttons and box touching (owner's
+/// choice), and below them how fast the world's time runs.
+pub(super) static WORLD_TIME: Template = html!(
+    "debug_menu.world_time",
+    r#"
+<form id="debug.world_time">
+  <div class="tight">
+  <span class="joined" nowrap valign="middle">
+    <small class="joined" nowrap>
+      <button id="back_1d">-1d</button>
+      <button id="back_12h">-12h</button>
+      <button id="back_1h">-1h</button>
+      <button id="back_30m">-30m</button>
+      <button id="back_10m">-10m</button>
+      <button id="back_1m">-1m</button>
+    </small>
+    <input id="time" type="text" width="150"/>
+    <small class="joined" nowrap>
+      <button id="on_1m">+1m</button>
+      <button id="on_10m">+10m</button>
+      <button id="on_30m">+30m</button>
+      <button id="on_1h">+1h</button>
+      <button id="on_12h">+12h</button>
+      <button id="on_1d">+1d</button>
+    </small>
+  </span>
+  <small class="joined" nowrap>
+    <button id="rate_quarter">x1/4</button>
+    <button id="rate_half">x1/2</button>
+    <button id="rate_1">x1</button>
+    <button id="rate_2">x2</button>
+    <button id="rate_10">x10</button>
+    <button id="rate_60">x60</button>
+    <button id="rate_600">x600</button>
+  </small>
+  </div>
+</form>
+"#
+);
+
+/// What a built part of the panel is known by, from its id.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId) {
+    let name = id.parts().1;
+    if name == "time" {
+        bound.insert(TimeBox);
+    } else if let Some((_, minutes)) = STEPS.iter().find(|(known, _)| *known == name) {
+        bound.insert(TimeStep(*minutes));
+    } else if let Some(rate) = rate_named(name) {
+        bound.insert(rate);
+    }
+}
 
 /// A button moving the world's clock by this many minutes.
 #[derive(Component, Clone, Copy)]
@@ -53,47 +94,6 @@ pub(in crate::debug_menu) struct TimeStep(f64);
 /// The box with the world's time in it.
 #[derive(Component)]
 pub(in crate::debug_menu) struct TimeBox;
-
-pub(super) fn spawn_world_time(content: &mut ChildSpawnerCommands) {
-    content
-        .spawn(Node {
-            // Buttons and box touching, all one height (owner's choice).
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|row| {
-            let step = |row: &mut ChildSpawnerCommands, (label, minutes): (&str, f64), id: UiId| {
-                let node = Node {
-                    height: px(CHECK_ROW),
-                    padding: STEP_PADDING,
-                    ..default()
-                };
-                spawn_button(row, ButtonState::Normal, label, STEP_FONT, node).insert((
-                    TimeStep(minutes),
-                    Pressable,
-                    id,
-                ));
-            };
-            for (at, back) in BACK.into_iter().enumerate() {
-                step(row, back, UiId::new("debug.world_time", "back").at(at));
-            }
-            let text_box = TextBox {
-                takes_keys: true,
-                ..default()
-            };
-            let node = Node {
-                width: px(BOX_WIDTH),
-                height: px(CHECK_ROW),
-                ..default()
-            };
-            spawn_text_box(row, text_box, FONT, node)
-                .insert((TimeBox, UiId::new("debug.world_time", "time")));
-            for (at, on) in ON.into_iter().enumerate() {
-                step(row, on, UiId::new("debug.world_time", "on").at(at));
-            }
-        });
-    spawn_world_rate(content);
-}
 
 /// Asks the server to move the clock by the pressed button's step. It stops at
 /// the world's beginning.

@@ -1,59 +1,34 @@
 //! The World Time panel's second row: buttons for how fast the world's time
 //! runs against the server's clock, the one it runs at chosen.
 
-use crate::widgets::UiId;
 use bevy::prelude::*;
 use shared::protocol::ClientMessage;
 use shared::world::ClockRate;
 
-use super::CHECK_ROW;
 use crate::common::ServerClock;
 use crate::connection::ToServer;
-use crate::widgets::{ButtonPressed, ButtonState, Pressable, TextSize, spawn_button};
+use crate::widgets::{ButtonPressed, ButtonState};
 
-/// The rates offered, by name, as game minutes for real ones.
+/// The rates offered, by their buttons' names in the markup, as game minutes
+/// for real ones.
 const RATES: [(&str, u32, u32); 7] = [
-    ("x1/4", 1, 4),
-    ("x1/2", 1, 2),
-    ("x1", 1, 1),
-    ("x2", 2, 1),
-    ("x10", 10, 1),
-    ("x60", 60, 1),
-    ("x600", 600, 1),
+    ("rate_quarter", 1, 4),
+    ("rate_half", 1, 2),
+    ("rate_1", 1, 1),
+    ("rate_2", 2, 1),
+    ("rate_10", 10, 1),
+    ("rate_60", 60, 1),
+    ("rate_600", 600, 1),
 ];
-const RATE_PADDING: UiRect = UiRect {
-    left: Val::Px(6.0),
-    right: Val::Px(6.0),
-    top: Val::Px(2.0),
-    bottom: Val::Px(2.0),
-};
 
 /// A button setting the world's time to run at this rate.
 #[derive(Component, Clone, Copy)]
 pub(in crate::debug_menu) struct RateButton(ClockRate);
 
-pub(super) fn spawn_world_rate(content: &mut ChildSpawnerCommands) {
-    content
-        .spawn(Node {
-            align_items: AlignItems::Center,
-            margin: UiRect::top(Val::Px(4.0)),
-            ..default()
-        })
-        .with_children(|row| {
-            for (at, (label, game, real)) in RATES.into_iter().enumerate() {
-                let rate = ClockRate::new(game, real).expect("none of them stop time");
-                let node = Node {
-                    height: px(CHECK_ROW),
-                    padding: RATE_PADDING,
-                    ..default()
-                };
-                spawn_button(row, ButtonState::Normal, label, TextSize::Small, node).insert((
-                    RateButton(rate),
-                    Pressable,
-                    UiId::new("debug.world_time", "rate").at(at),
-                ));
-            }
-        });
+/// The button with this name in the markup, if it is one of the rates'.
+pub(super) fn rate_named(name: &str) -> Option<RateButton> {
+    let &(_, game, real) = RATES.iter().find(|(known, ..)| *known == name)?;
+    ClockRate::new(game, real).map(RateButton)
 }
 
 /// Asks the server to run the world's time at the pressed button's rate.

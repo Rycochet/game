@@ -27,8 +27,15 @@ pub fn spawn_new_seed_button<'a>(
     button
 }
 
-pub(super) fn make_new_seed_icon(mut images: ResMut<Assets<Image>>) {
+pub(super) fn make_new_seed_icon(
+    mut images: ResMut<Assets<Image>>,
+    pictures: Option<ResMut<crate::dom::Pictures>>,
+) {
     let _ = images.insert(&NEW_SEED_ICON, new_seed_icon());
+    // Markup shows it as `picture:new_seed`.
+    if let Some(mut pictures) = pictures {
+        pictures.name("new_seed", NEW_SEED_ICON);
+    }
 }
 
 /// A round arrow, drawn here as there is no such letter in the font.
