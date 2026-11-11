@@ -135,31 +135,6 @@ fn a_bag_held_over_its_own_place_is_not_dropped_in_itself() {
 }
 
 #[test]
-fn turning_keeps_hold_of_the_same_cell() {
-    // A sword held by its second cell from the top.
-    let inventory = carrying(&[ItemKind::Sword]);
-    let sword = Held {
-        grip: (0, 1),
-        rotation: Rotation::Quarter,
-        ..held(1)
-    };
-    // As it was given, the sword lies across: this grip is on a 5 × 1 shape.
-    let across = Held {
-        grip: (1, 0),
-        ..sword
-    };
-    let turned = across.turned(&inventory);
-    assert_eq!(turned.rotation, Rotation::Half);
-    assert_eq!(turned.grip, (0, 1));
-    // Four turns come back to where it started.
-    let mut round = across;
-    for _ in 0..4 {
-        round = round.turned(&inventory);
-    }
-    assert_eq!(round, across);
-}
-
-#[test]
 fn something_that_looks_the_same_goes_on_its_stack() {
     let mut inventory = Inventory::default();
     let apples = [

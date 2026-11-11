@@ -24,7 +24,7 @@ mod shown;
 pub(super) use aim::show_aim;
 pub(super) use bins::{show_bins, show_drop};
 pub(super) use fixed::spawn_fixed_parts;
-pub(super) use held::{show_button, show_held, show_tooltip};
+pub(super) use held::{show_button, show_tooltip};
 use icons::{bin_icon, drop_icon, person_icon};
 pub(super) use mark::mark_grids;
 pub(super) use own::{forget_closed, toggle_inventory};
@@ -58,13 +58,6 @@ pub(super) struct OpenGrids {
     page: Page,
 }
 
-/// The grid of a panel as drawn: where its cells are, for working out what is
-/// under the pointer.
-#[derive(Component, Clone, Copy)]
-pub(super) struct GridNode {
-    pub holder: Holder,
-}
-
 /// A grid as its panel spawns it: `dom`'s grid of things (`GridShown`), which
 /// draws itself, and whose cells `mark_grids` makes ours.
 #[derive(Component, Clone, Copy)]
@@ -89,9 +82,6 @@ pub(super) struct ItemCell {
 
 #[derive(Component)]
 pub(super) struct InventoryButton;
-
-#[derive(Component)]
-pub(super) struct HeldItem;
 
 /// The bin and what is in it: what is dropped here is thrown away.
 #[derive(Component)]

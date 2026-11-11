@@ -1,116 +1,51 @@
-//! What is held now and where: turning it, following the pointer or finger, and
-//! what letting go there would do.
+//! What letting go of what is held, where it is, would do.
 
 use bevy::prelude::*;
 use shared::item::StackLimits;
 
-use super::super::hold::Target;
+use super::super::hold::{Held, Target};
 use super::super::wear_note::try_wearing;
-use super::super::{Carried, Hand, HeldBy, Holding};
+use super::super::{Carried, Holding};
 use super::{Under, worth_wearing};
-use crate::common::{
-    Action, Controls, GROUND, GameView, HeldGift, HeldOverGifts, HeldOverText, HeldStock,
-    TouchGesture, UiPointer, in_interface,
-};
-use crate::widgets::{CELL, logical_rect, shown_at};
+use crate::common::{GROUND, GameView, HeldGift, HeldOverGifts, HeldOverText};
+use crate::dom::HeldOver;
+use crate::widgets::CELL;
 
-/// The held thing, what letting go would do, where it is (in the interface's
-/// pixels) and where a finger is. Nothing when nothing is held.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub(super) fn aim_held(
-    holding: &mut ResMut<Holding>,
+/// What letting go of `held` at `at`, over this, would do. Says too whose
+/// grid of stock it is over, and what text it would be written into.
+pub(super) fn aim_at(
+    held: Held,
+    (at, over): (Option<Vec2>, HeldOver),
+    holding: &Holding,
     carried: &Carried,
     under: &Under,
-    (pointer, ui_scale, view): (&UiPointer, &UiScale, &State<GameView>),
-    mouse: &mut ResMut<ButtonInput<MouseButton>>,
-    gesture: &mut ResMut<TouchGesture>,
-    (keys, controls): (&mut ResMut<ButtonInput<KeyCode>>, &Controls),
-    (over_gifts, held_stock, over_text): (
-        &mut ResMut<HeldOverGifts>,
-        &mut ResMut<HeldStock>,
-        &mut ResMut<HeldOverText>,
-    ),
-) -> Option<(HeldBy, Target, Option<Vec2>, Option<Vec2>)> {
+    view: &State<GameView>,
+    (over_gifts, over_text): (&mut ResMut<HeldOverGifts>, &mut ResMut<HeldOverText>),
+) -> Target {
     let Under {
         grids,
-        nodes,
+        marks,
         stacks,
         god,
     } = under;
-    over_gifts.0 = None;
-    over_text.set_if_neq(HeldOverText(None));
     let from_stock = holding.stock.as_ref().map(|(with, _)| *with);
-    held_stock.set_if_neq(HeldStock(
-        holding
-            .held
-            .filter(|_| from_stock.is_some())
-            .map(|held| held.item.id),
-    ));
-    let Some(mut held) = holding.held else {
-        holding.aim = None;
-        holding.at = None;
-        holding.stock = None;
-        return None;
-    };
-    if holding.stock.is_none() && carried.0.find(held.item.id).is_none() {
-        // The server says it has gone.
-        holding.held = None;
-        holding.aim = None;
-        return None;
-    }
-
-    let turn = mouse.just_pressed(MouseButton::Right) || gesture.other_finger_tapped;
-    // So the camera doesn't turn with the same press.
-    mouse.reset(MouseButton::Right);
-    if turn || controls.clear_just_pressed(keys, Action::TurnItem) {
-        held.item = match &holding.stock {
-            Some((_, item)) => held.item.turned_as(item),
-            None => held.item.turned(&carried.0),
-        };
-    }
-    let finger = gesture.first_finger.map(|at| in_interface(at, ui_scale));
-    if held.by == Hand::Finger {
-        // Two fingers on the screen here are holding and turning, not moving the
-        // camera.
-        **gesture = TouchGesture::default();
-    }
-    let at = match held.by {
-        Hand::Finger => finger.or(holding.at),
-        Hand::Mouse | Hand::Clicked | Hand::Debug => pointer.0.or(holding.at),
-    };
-    holding.at = at;
-    let over = at.and_then(|at| {
-        grids
-            .iter()
-            .filter(|(_, node, transform, visible, _)| {
-                visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
-            })
-            .max_by_key(|(.., stack)| stack.0)
-            .map(|(grid, node, transform, ..)| {
-                let (corner, _) = logical_rect(node, transform);
-                let cell = ((at - corner) / CELL).floor();
-                (grid.holder, cell.x as i32, cell.y as i32)
-            })
+    // One of our grids, and the cell of it the pointer is in.
+    let cell = over.cell.and_then(|(grid, x, y)| {
+        let owner = grids.get(grid).ok()?;
+        Some((owner.holder, x, y))
     });
     // Only what is in front counts: the bin destroys things.
-    let (on_bin, on_drop, on_body, on_row, on_gifts, on_text) = at
-        .and_then(|at| {
-            nodes
-                .iter()
-                .filter(|(_, node, transform, visible, .., clip)| {
-                    visible.get() && shown_at(at, node, transform, *clip)
-                })
-                .max_by_key(|(stack, ..)| stack.0)
-                .map(|(.., is_bin, is_drop, is_body, row, gifts, text, _)| {
-                    (
-                        is_bin,
-                        is_drop,
-                        is_body,
-                        row.map(|row| row.0),
-                        gifts.map(|gifts| gifts.0),
-                        text.map(|text| text.0),
-                    )
-                })
+    let front = over.front.and_then(|front| marks.get(front).ok());
+    let (on_bin, on_drop, on_body, on_row, on_gifts, on_text) = front
+        .map(|(is_bin, is_drop, is_body, row, gifts, text)| {
+            (
+                is_bin,
+                is_drop,
+                is_body,
+                row.map(|row| row.0),
+                gifts.map(|gifts| gifts.0),
+                text.map(|text| text.0),
+            )
         })
         .unwrap_or_default();
     let on_row = on_row.or(on_gifts);
@@ -118,73 +53,68 @@ pub(super) fn aim_held(
     let on_gifts = on_gifts.filter(|&to| from_stock.is_none_or(|from| from == to));
     over_gifts.0 = on_gifts.zip(at).map(|(to, at)| HeldGift {
         to,
-        item: held.item.id,
-        rotation: held.item.rotation,
-        corner: at - (Vec2::new(held.item.grip.0 as f32, held.item.grip.1 as f32) + 0.5) * CELL,
+        item: held.id,
+        rotation: held.rotation,
+        corner: at - (Vec2::new(held.grip.0 as f32, held.grip.1 as f32) + 0.5) * CELL,
     });
     // Written into the box: the item itself stays where it was.
     over_text.set_if_neq(HeldOverText(on_text));
-    let aim = if on_text.is_some() {
-        Target::Nowhere
-    } else if let Some((with, item)) = &holding.stock {
+    if on_text.is_some() {
+        return Target::Nowhere;
+    }
+    if let Some((with, item)) = &holding.stock {
         let from_ground = *with == GROUND;
         if on_drop {
             // On the ground already, or someone else's.
-            Target::Drop { allowed: false }
-        } else if from_ground && on_bin {
-            Target::Bin
-        } else if from_ground && on_body {
+            return Target::Drop { allowed: false };
+        }
+        if from_ground && on_bin {
+            return Target::Bin;
+        }
+        if from_ground && on_body {
             // Only the top of a stack goes on.
-            Target::Body {
-                allowed: worth_wearing(try_wearing(
-                    &carried.0,
-                    (held.item.id, Some(item)),
-                    god.0,
-                    stacks.0,
-                )),
-            }
-        } else if on_bin || on_body || on_row.is_some() {
-            Target::Nowhere
-        } else {
-            // Only what is on the ground can go on a stack, not someone's stock.
-            let limits = if from_ground {
-                stacks.0
-            } else {
-                StackLimits::NONE
+            let tried = try_wearing(&carried.0, (held.id, Some(item)), god.0, stacks.0);
+            return Target::Body {
+                allowed: worth_wearing(tried),
             };
-            super::super::hold::target_for_new(&carried.0, item, held.item, over, limits)
         }
-    } else if on_drop {
+        if on_bin || on_body || on_row.is_some() {
+            return Target::Nowhere;
+        }
+        // Only what is on the ground can go on a stack, not someone's stock.
+        let limits = if from_ground {
+            stacks.0
+        } else {
+            StackLimits::NONE
+        };
+        return super::super::hold::target_for_new(&carried.0, item, held, cell, limits);
+    }
+    if on_drop {
         // Only sites have ground.
-        Target::Drop {
+        return Target::Drop {
             allowed: *view.get() == GameView::Dungeon,
-        }
-    } else if on_bin {
+        };
+    }
+    if on_bin {
         // In it already: nothing happens.
-        if carried.0.in_bin(held.item.id) {
-            Target::Nowhere
-        } else {
-            Target::Bin
-        }
-    } else if let Some(someone) = on_row {
-        Target::Someone(someone)
-    } else if on_body {
+        return match carried.0.in_bin(held.id) {
+            true => Target::Nowhere,
+            false => Target::Bin,
+        };
+    }
+    if let Some(someone) = on_row {
+        return Target::Someone(someone);
+    }
+    if on_body {
         // On it already: nothing happens, whatever it is over.
-        if carried.0.is_worn(held.item.id) {
-            Target::Nowhere
-        } else {
-            // What is in its way comes off (owner, 2026-11-07).
-            Target::Body {
-                allowed: worth_wearing(try_wearing(
-                    &carried.0,
-                    (held.item.id, None),
-                    god.0,
-                    stacks.0,
-                )),
-            }
+        if carried.0.is_worn(held.id) {
+            return Target::Nowhere;
         }
-    } else {
-        super::super::hold::target(&carried.0, held.item, over, stacks.0)
-    };
-    Some((held, aim, at, finger))
+        // What is in its way comes off (owner, 2026-11-07).
+        let tried = try_wearing(&carried.0, (held.id, None), god.0, stacks.0);
+        return Target::Body {
+            allowed: worth_wearing(tried),
+        };
+    }
+    super::super::hold::target(&carried.0, held, cell, stacks.0)
 }

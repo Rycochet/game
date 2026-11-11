@@ -3,22 +3,17 @@
 use bevy::prelude::*;
 
 use super::super::body::BodyNode;
-use super::{BinNode, GridNode, GridOwner, ItemCell};
-use crate::dom::{GridBox, SlotShown, ThingCell};
+use super::{BinNode, GridOwner, ItemCell};
+use crate::dom::{SlotShown, ThingCell};
 
-/// Marks each grid's cells as drawn, and each cell of an item in a grid or a
-/// slot, for finding what the pointer is over and picking things up.
+/// Marks each cell of an item in a grid or a slot, for finding what the
+/// pointer is over and picking things up.
 pub(in crate::inventory) fn mark_grids(
-    boxes: Query<(&GridOwner, &GridBox), Changed<GridBox>>,
     cells: Query<(Entity, &ThingCell), Added<ThingCell>>,
     owners: Query<(), With<GridOwner>>,
     slots: Query<(Has<BodyNode>, Has<BinNode>), With<SlotShown>>,
     mut commands: Commands,
 ) {
-    for (owner, GridBox(cells)) in &boxes {
-        let holder = owner.holder;
-        commands.entity(*cells).try_insert(GridNode { holder });
-    }
     for (entity, cell) in &cells {
         let ours = ItemCell {
             id: cell.item,

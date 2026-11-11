@@ -14,27 +14,6 @@ pub(super) struct Held {
     pub grip: (u8, u8),
 }
 
-impl Held {
-    /// A quarter turn further on, keeping hold of the same cell.
-    pub fn turned(self, inventory: &Inventory) -> Self {
-        let Some(item) = inventory.find(self.id) else {
-            return self;
-        };
-        self.turned_as(item)
-    }
-
-    /// The same for something held that isn't carried.
-    pub fn turned_as(self, item: &Item) -> Self {
-        let shape = item.shape().turned(self.rotation);
-        let quarter = Rotation::Quarter;
-        Self {
-            rotation: self.rotation.next(),
-            grip: quarter.turn_cell(self.grip.0, self.grip.1, shape.width, shape.height),
-            ..self
-        }
-    }
-}
-
 /// What dropping a held item would do.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Target {

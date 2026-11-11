@@ -3,14 +3,11 @@
 use bevy::prelude::*;
 
 use super::{
-    BUTTON, BinIcon, CORNER_GAP, DropIcon, HeldItem, InventoryButton, bin_icon, drop_icon,
-    person_icon,
+    BUTTON, BinIcon, CORNER_GAP, DropIcon, InventoryButton, bin_icon, drop_icon, person_icon,
 };
-use crate::widgets::{
-    ButtonState, ButtonTooltip, Floating, HELD_ITEM_Z, Pressable, spawn_icon_button,
-};
+use crate::widgets::{ButtonState, ButtonTooltip, Pressable, spawn_icon_button};
 
-/// The button, and the held item, which stands above panels.
+/// The button, and the bin's and Drop's pictures.
 pub(in crate::inventory) fn spawn_fixed_parts(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -42,14 +39,4 @@ pub(in crate::inventory) fn spawn_fixed_parts(
                 ButtonTooltip("Character".into()),
             ));
         });
-    commands.spawn((
-        HeldItem,
-        Floating,
-        Node {
-            position_type: PositionType::Absolute,
-            ..default()
-        },
-        GlobalZIndex(HELD_ITEM_Z),
-        Visibility::Hidden,
-    ));
 }
