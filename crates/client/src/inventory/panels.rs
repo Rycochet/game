@@ -36,7 +36,6 @@ const BUTTON: f32 = 34.0;
 const COLUMN_GAP: f32 = 16.0;
 const CORNER_GAP: f32 = 8.0;
 const FONT: TextSize = TextSize::Medium;
-const CELL_BORDER: f32 = 1.0;
 /// How far from the pointer an item's name goes.
 const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);
 /// How far above a held item its name goes, to its top.

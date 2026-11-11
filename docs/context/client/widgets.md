@@ -43,7 +43,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 
 `crates/client/src/widgets/weight.rs`: `weight_words` (a container's weight under its grid: `12.34kg / 45.00kg`, or `3.20kg` with no limit). Unit tests.
 
-`crates/client/src/widgets/stock.rs`: `StockGrid` (a grid of what isn't carried: a shop's, the ground; places kept here only; `items`, and `filter` to fade what isn't in a category), `StockGridNode`, `StockOf`, `StockAimAt`, `show_stock_aim`. `StockGrid::show(commands, holder, without)` puts it in a node as `dom`'s `GridShown` (with `StockOf`), which draws itself. Unit tests. `stock/place.rs`: where things go in it (`first_place`, `landing`, `rows_for`). `stock/mark.rs`: `mark_stock` (`PostUpdate`, after `dom::DrawObjectGrids`) puts `StockGridNode` on the drawn cells and `ItemName`, `TakesGifts` and `StockCell` on each drawn thing's.
+`crates/client/src/widgets/stock.rs`: `StockGrid` (a grid of what isn't carried: a shop's, the ground; places kept here only; `items`, and `filter` to fade what isn't in a category), `StockGridNode`, `StockOf`, `StockAimAt`, `show_stock_aim`. `StockGrid::show(commands, holder, without)` puts it in a node as `dom`'s `GridShown` (with `StockOf`), which draws itself. Unit tests. `stock/place.rs`: where things go in it (`first_place`, `landing`, `rows_for`). `stock/mark.rs`: `mark_stock` (`PostUpdate`, after `dom::DrawObjects`) puts `StockGridNode` on the drawn cells and `ItemName`, `TakesGifts` and `StockCell` on each drawn thing's.
 
 ## Public API
 

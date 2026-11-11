@@ -4,12 +4,12 @@ use bevy::prelude::*;
 
 use super::{StockGridNode, StockOf};
 use crate::common::{StockCell, TakesGifts};
-use crate::dom::{DrawObjectGrids, GridBox, GridShown, ThingCell};
+use crate::dom::{DrawObjects, GridBox, GridShown, ThingCell};
 use crate::widgets::ItemName;
 
 /// Marks them once the grids have drawn themselves.
 pub(in crate::widgets) fn add(app: &mut App) {
-    app.add_systems(PostUpdate, mark_stock.after(DrawObjectGrids));
+    app.add_systems(PostUpdate, mark_stock.after(DrawObjects));
 }
 
 /// Marks each stock grid's cells as drawn, and each cell of a thing in one:

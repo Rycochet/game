@@ -9,13 +9,11 @@ use super::super::sort::spawn_sort;
 use super::pages::spawn_pages;
 use super::shown::{grows, shown_size};
 use super::{
-    BinNode, BinSlot, CELL_BORDER, DropNode, FIRST_AT, GridOwner, MOST_HEIGHT, NEXT_AT, OpenGrids,
-    WeightText,
+    BinNode, BinSlot, DropNode, FIRST_AT, GridOwner, MOST_HEIGHT, NEXT_AT, OpenGrids, WeightText,
 };
-use crate::dom::GridShown;
+use crate::dom::{GridShown, SlotShown};
 use crate::widgets::{
-    CELL, ContainerLook, ContainerSize, GRID_LINE, RaisePanel, UiId, spawn_container,
-    spawn_moveable_panel,
+    ContainerLook, ContainerSize, RaisePanel, UiId, spawn_container, spawn_moveable_panel,
 };
 
 impl OpenGrids {
@@ -138,14 +136,10 @@ pub(super) fn spawn_grid(
     }
     if let Some(slots) = parts.slots {
         commands.entity(slots).with_children(|slots| {
-            let slot = || Node {
-                width: px(CELL),
-                height: px(CELL),
-                border: UiRect::all(px(CELL_BORDER)),
-                ..default()
-            };
-            slots.spawn((DropNode, slot(), BorderColor::from(GRID_LINE)));
-            slots.spawn((BinNode, BinSlot, slot(), BorderColor::from(GRID_LINE)));
+            // Slots drawing themselves: `show_drop` and `show_bins` say what
+            // each shows.
+            slots.spawn((DropNode, SlotShown::default()));
+            slots.spawn((BinNode, BinSlot, SlotShown::default()));
         });
     }
 }
