@@ -7,15 +7,13 @@ use shared::site::{Generator, MAX_RUIN};
 
 use super::super::actions::{DebugAction, kind_name};
 use super::{
-    CHECK_ROW, FIRST_AT, FONT, GenerateButton, GenerateForm, GenerateKind, NEXT_AT, NewSeedButton,
-    OpenPanels, RuinButton, SEED_WIDTH, SeedBox, new_seed, row, words,
+    FIRST_AT, GenerateButton, GenerateForm, GenerateKind, NEXT_AT, NewSeedButton, OpenPanels,
+    RuinButton, SeedBox, new_seed,
 };
 use crate::connection::ToServer;
-use crate::widgets::spawn_new_seed_button;
-use crate::widgets::{
-    BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, TextBox, spawn_button,
-    spawn_moveable_panel, spawn_text_box,
-};
+use crate::dom::{Dom, Template, document_in};
+use crate::html;
+use crate::widgets::{ButtonPressed, ButtonState, TextBox, spawn_moveable_panel};
 
 /// Opens the Generate POI panel for the kind chosen, in place of any open.
 #[allow(clippy::too_many_arguments)]
@@ -26,6 +24,7 @@ pub(in crate::debug_menu) fn open_generate_panel(
     mut form: ResMut<GenerateForm>,
     nodes: Query<(), With<Node>>,
     time: Res<Time<Real>>,
+    mut dom: Dom,
 ) {
     let Some(&GenerateKind(kind)) = kinds.read().last() else {
         return;
@@ -47,52 +46,51 @@ pub(in crate::debug_menu) fn open_generate_panel(
     form.ruin = 0;
     form.seeds_made += 1;
     let seed = new_seed(time.elapsed().as_nanos() as u64, form.seeds_made);
-    commands.entity(content).with_children(|content| {
-        content.spawn(words(kind_name(kind)));
-        content.spawn(row()).with_children(|row| {
-            row.spawn(words("Ruin"));
-            for ruin in 0..=MAX_RUIN {
-                let node = Node {
-                    padding: BUTTON_PADDING,
-                    ..default()
-                };
-                spawn_button(row, ButtonState::Normal, ruin.to_string(), FONT, node).insert((
-                    RuinButton(ruin),
-                    Pressable,
-                    UiId::new("debug.generate_poi", "ruin").at(usize::from(ruin)),
-                ));
+    commands.spawn(document_in(&GENERATE_POI, content));
+    // Filled as it is built, at the end of this frame.
+    dom.set_text("debug.generate_poi/kind", kind_name(kind));
+    dom.set("debug.generate_poi/seed", "value", &seed.to_string());
+}
+
+/// The panel's contents, as markup. Each amount of ruin's button is a copy
+/// of the template.
+pub(super) static GENERATE_POI: Template = html!(
+    "debug_menu.generate_poi",
+    r#"
+<form id="debug.generate_poi">
+  <p id="kind"/>
+  <span nowrap valign="middle">
+    Ruin
+    <span id="ruins" nowrap/>
+  </span>
+  <span nowrap valign="middle">
+    <label for="seed">Seed</label>
+    <input id="seed" type="text" inputmode="numeric" width="240"/>
+    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+  </span>
+  <button id="generate" class="main">Generate</button>
+  <template id="ruin"><button id="ruin"/></template>
+</form>
+"#
+);
+
+/// What a built part of the panel is known by, from its id; the place for
+/// ruin is filled with a button for each amount.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId, dom: &mut Dom) {
+    match (id.parts().1, id.index()) {
+        ("ruin", Some(ruin)) => bound.insert(RuinButton(ruin as u8)),
+        ("seed", _) => bound.insert(SeedBox),
+        ("new_seed", _) => bound.insert(NewSeedButton),
+        ("generate", _) => bound.insert(GenerateButton),
+        ("ruins", _) => {
+            for ruin in 0..=usize::from(MAX_RUIN) {
+                dom.copy_template("debug.generate_poi/ruin", "debug.generate_poi/ruins", ruin);
+                dom.set_text(&format!("debug.generate_poi/ruin.{ruin}"), ruin.to_string());
             }
-        });
-        content.spawn(row()).with_children(|row| {
-            row.spawn(words("Seed"));
-            let text_box = TextBox {
-                text: seed.to_string(),
-                digits_only: true,
-                takes_keys: true,
-                ..default()
-            };
-            let node = Node {
-                width: px(SEED_WIDTH),
-                height: px(CHECK_ROW),
-                ..default()
-            };
-            spawn_text_box(row, text_box, FONT, node)
-                .insert((SeedBox, UiId::new("debug.generate_poi", "seed")));
-            spawn_new_seed_button(row, CHECK_ROW)
-                .insert((NewSeedButton, UiId::new("debug.generate_poi", "new_seed")));
-        });
-        let node = Node {
-            padding: BUTTON_PADDING,
-            ..default()
-        };
-        spawn_button(content, ButtonState::Normal, "Generate", FONT, node)
-            .insert(ButtonStyle::Main)
-            .insert((
-                GenerateButton,
-                Pressable,
-                UiId::new("debug.generate_poi", "generate"),
-            ));
-    });
+            bound
+        }
+        _ => bound,
+    };
 }
 
 /// What the Generate POI panel's buttons do.

@@ -86,8 +86,7 @@ fn ids_in(spawn: impl FnOnce(&mut ChildSpawnerCommands)) -> Vec<crate::widgets::
 
 #[test]
 fn every_panels_widgets_each_have_their_own_id() {
-    let panels: [(&str, SpawnPanel); 4] = [
-        ("Examine Mob", spawn_examine_panel),
+    let panels: [(&str, SpawnPanel); 3] = [
         ("Learn Skills", spawn_learn_skills),
         ("Show Widgets", spawn_every_widget),
         ("Item Pictures", spawn_item_pictures),
@@ -106,6 +105,8 @@ fn the_panels_written_as_markup_are_good() {
     steps::DRAWING_STATES.assert_good();
     change_creature::CHANGE_CREATURE.assert_good();
     world_time::WORLD_TIME.assert_good();
+    examine_mob::EXAMINE_MOB.assert_good();
+    generate::GENERATE_POI.assert_good();
     teleport_to_world::TELEPORT_TO_WORLD.assert_good();
 }
 
