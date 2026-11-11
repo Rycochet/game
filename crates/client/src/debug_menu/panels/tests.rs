@@ -106,6 +106,8 @@ fn the_panels_written_as_markup_are_good() {
     change_creature::CHANGE_CREATURE.assert_good();
     world_time::WORLD_TIME.assert_good();
     examine_mob::EXAMINE_MOB.assert_good();
+    create_mob::CREATE_MOB.assert_good();
+    dev_area::DEV_AREA.assert_good();
     generate::GENERATE_POI.assert_good();
     teleport_to_world::TELEPORT_TO_WORLD.assert_good();
 }

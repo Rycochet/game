@@ -5,14 +5,9 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::site::{DEV_AREA_SIZES, DevArea, DevLayout, DevMobs, MOST_DEV_MOBS};
 
-use super::{CHECK_ROW, FONT, SEED_WIDTH, row, words};
-use crate::widgets::{
-    BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, Pressable, TextBox, UiId, spawn_button,
-    spawn_dropdown, spawn_new_seed_button, spawn_text_box,
-};
-
-const COUNT_WIDTH: f32 = 64.0;
-const ARROW_ROOM: f32 = 24.0;
+use crate::dom::Template;
+use crate::html;
+use crate::widgets::UiId;
 
 /// What the Dev Area panel is set to, besides its seed box. Kept while the
 /// game runs, so the panel opens as it was left.
@@ -120,114 +115,90 @@ pub(in crate::debug_menu) struct DevAreaNewSeed;
 #[derive(Component)]
 pub(in crate::debug_menu) struct DevAreaGenerate;
 
-/// The panel, as `DevAreaForm::default` has it; `start_dev_area_panel` then
-/// sets it to the form kept, with a seed if there is none.
-pub(super) fn spawn_dev_area_panel(content: &mut ChildSpawnerCommands) {
-    let form = DevAreaForm::default();
-    content.spawn(row()).with_children(|line| {
-        line.spawn(words("Size"));
-        let sizes = DEV_AREA_SIZES.map(|size| format!("{size} × {size}"));
-        let size = DEV_AREA_SIZES.iter().position(|&s| s == form.size);
-        dropdown(line, DevAreaChoice::Size, sizes, size.unwrap_or(0), false);
-        line.spawn(words("Generator"));
-        let all = DevLayout::all();
-        let layout = all.iter().position(|&l| l == form.layout);
-        let layouts = all.into_iter().map(DevLayout::name);
-        dropdown(
-            line,
-            DevAreaChoice::Layout,
-            layouts,
-            layout.unwrap_or(0),
-            true,
-        );
-    });
-    content.spawn(row()).with_children(|line| {
-        line.spawn(words("Mobs"));
-        let kinds = CreatureKind::ALL
-            .iter()
-            .map(|kind| kind.def().name.to_owned());
-        let mobs = ["Default".to_owned(), "None".to_owned()]
-            .into_iter()
-            .chain(kinds);
-        dropdown(line, DevAreaChoice::Mobs, mobs, form.mobs_index(), true);
-        button(line, "-").insert((DevAreaCountStep(-1), id("less")));
-        let count = TextBox {
-            text: form.count.to_string(),
-            digits_only: true,
-            takes_keys: true,
-            ..default()
-        };
-        let node = Node {
-            width: px(COUNT_WIDTH),
-            height: px(CHECK_ROW),
-            ..default()
-        };
-        spawn_text_box(line, count, FONT, node).insert((DevAreaCount, id("count")));
-        button(line, "+").insert((DevAreaCountStep(1), id("more")));
-    });
-    content.spawn(row()).with_children(|line| {
-        line.spawn(words("Seed"));
-        let seed = TextBox {
-            text: form.seed.clone(),
-            takes_keys: true,
-            ..default()
-        };
-        let node = Node {
-            width: px(SEED_WIDTH),
-            height: px(CHECK_ROW),
-            ..default()
-        };
-        spawn_text_box(line, seed, FONT, node).insert((DevAreaSeed, id("seed")));
-        spawn_new_seed_button(line, CHECK_ROW).insert((DevAreaNewSeed, id("new_seed")));
-    });
-    let bottom = Node {
-        justify_content: JustifyContent::End,
-        ..row()
-    };
-    content.spawn(bottom).with_children(|line| {
-        button(line, "Generate").insert((ButtonStyle::Main, DevAreaGenerate, id("generate")));
-    });
+/// The panel's contents, as markup; `start_dev_area_panel` gives the
+/// dropdowns their choices and sets it all to the form kept, with a seed if
+/// there is none.
+pub(super) static DEV_AREA: Template = html!(
+    "debug_menu.dev_area",
+    r#"
+<form id="debug.dev_area">
+  <span nowrap valign="middle">
+    <label for="size">Size</label>
+    <select id="size" width="130"><option>32 × 32</option></select>
+    <label for="generator">Generator</label>
+    <select id="generator" searchable width="200"><option>Empty</option></select>
+  </span>
+  <span nowrap valign="middle">
+    <label for="mobs">Mobs</label>
+    <select id="mobs" searchable width="200"><option>Default</option></select>
+    <button id="less">-</button>
+    <input id="count" type="text" inputmode="numeric" width="64"/>
+    <button id="more">+</button>
+  </span>
+  <span nowrap valign="middle">
+    <label for="seed">Seed</label>
+    <input id="seed" type="text" width="240"/>
+    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+  </span>
+  <span nowrap align="right">
+    <button id="generate" class="main">Generate</button>
+  </span>
+</form>
+"#
+);
+
+impl DevAreaChoice {
+    pub(super) const ALL: [Self; 3] = [Self::Size, Self::Layout, Self::Mobs];
+
+    /// Its dropdown's name in the markup.
+    pub(super) fn ui_name(self) -> &'static str {
+        match self {
+            Self::Size => "size",
+            Self::Layout => "generator",
+            Self::Mobs => "mobs",
+        }
+    }
+
+    /// What it offers, in order.
+    pub(super) fn options(self) -> Vec<String> {
+        match self {
+            Self::Size => DEV_AREA_SIZES
+                .iter()
+                .map(|size| format!("{size} × {size}"))
+                .collect(),
+            Self::Layout => DevLayout::all()
+                .into_iter()
+                .map(|layout| layout.name())
+                .collect(),
+            Self::Mobs => {
+                let kinds = CreatureKind::ALL.iter().map(|kind| kind.def().name);
+                ["Default", "None"]
+                    .into_iter()
+                    .chain(kinds)
+                    .map(str::to_owned)
+                    .collect()
+            }
+        }
+    }
 }
 
-/// A widget of the Dev Area panel.
-fn id(name: &'static str) -> UiId {
-    UiId::new("debug.dev_area", name)
-}
-
-fn button<'a>(line: &'a mut ChildSpawnerCommands, label: &str) -> EntityCommands<'a> {
-    let node = Node {
-        padding: BUTTON_PADDING,
-        ..default()
+/// What a built part of the panel is known by, from its id.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId) {
+    let name = id.parts().1;
+    if let Some(choice) = DevAreaChoice::ALL
+        .into_iter()
+        .find(|it| it.ui_name() == name)
+    {
+        bound.insert(choice);
+        return;
+    }
+    match name {
+        "less" => bound.insert(DevAreaCountStep(-1)),
+        "more" => bound.insert(DevAreaCountStep(1)),
+        "count" => bound.insert(DevAreaCount),
+        "seed" => bound.insert(DevAreaSeed),
+        "new_seed" => bound.insert(DevAreaNewSeed),
+        "generate" => bound.insert(DevAreaGenerate),
+        _ => bound,
     };
-    let mut button = spawn_button(line, ButtonState::Normal, label, FONT, node);
-    button.insert(Pressable);
-    button
-}
-
-fn dropdown<S: Into<String>>(
-    line: &mut ChildSpawnerCommands,
-    choice: DevAreaChoice,
-    options: impl IntoIterator<Item = S>,
-    selected: usize,
-    searchable: bool,
-) {
-    let name = match choice {
-        DevAreaChoice::Size => "size",
-        DevAreaChoice::Layout => "generator",
-        DevAreaChoice::Mobs => "mobs",
-    };
-    let dropdown = Dropdown {
-        options: options.into_iter().map(Into::into).collect(),
-        selected,
-        searchable,
-        ..default()
-    };
-    let node = Node {
-        padding: UiRect {
-            right: px(ARROW_ROOM),
-            ..BUTTON_PADDING
-        },
-        ..default()
-    };
-    spawn_dropdown(line, dropdown, FONT, node).insert((choice, id(name)));
 }

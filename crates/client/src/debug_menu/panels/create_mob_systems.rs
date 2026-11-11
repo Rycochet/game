@@ -10,9 +10,8 @@ use super::{
 };
 use crate::common::{ClickMode, CreateMobOrder, CurrentDungeon, DebugTools, GameView};
 use crate::debug_menu::DebugAction;
-use crate::widgets::{
-    ButtonPressed, ButtonState, Checked, Dropdown, DropdownChosen, TextBox, TextEdited,
-};
+use crate::dom::Dom;
+use crate::widgets::{ButtonPressed, ButtonState, Checked, DropdownChosen, TextBox, TextEdited};
 use shared::role::DebugTool;
 
 /// How many seeds the new seed button has made, to keep them apart.
@@ -47,14 +46,16 @@ fn can_place(view: &GameView, dungeon: &CurrentDungeon, dev_tools: bool) -> bool
 
 /// A panel opening shows the order kept, with a new seed the first time if
 /// none was kept.
+#[allow(clippy::too_many_arguments)]
 fn start_create_mob_panel(
     mut seeds: Query<&mut TextBox, Added<MobSeed>>,
-    mut dropdowns: Query<(&MobChoice, &mut Dropdown), Added<MobChoice>>,
+    dropdowns: Query<&MobChoice, Added<MobChoice>>,
     mut still: Query<&mut Checked, Added<MobStill>>,
     mut order: ResMut<CreateMobOrder>,
     mut made: ResMut<SeedsMade>,
     preferences: Res<crate::common::Preferences>,
     time: Res<Time<Real>>,
+    mut dom: Dom,
 ) {
     for mut text_box in &mut seeds {
         // A new seed the first time, unless one was kept from last time.
@@ -64,8 +65,8 @@ fn start_create_mob_panel(
         }
         text_box.text = order.0.seed.to_string();
     }
-    for (choice, mut dropdown) in &mut dropdowns {
-        dropdown.selected = match choice {
+    for &choice in &dropdowns {
+        let selected = match choice {
             MobChoice::Kind => CreatureKind::ALL
                 .iter()
                 .position(|&kind| kind == order.0.kind)
@@ -76,6 +77,11 @@ fn start_create_mob_panel(
                 .unwrap_or(0),
             MobChoice::Gear => usize::from(!order.0.gear),
         };
+        // Each choice's value is its place in the list.
+        let id = format!("debug.create_mob/{}", choice.ui_name());
+        let options = choice.options().into_iter().enumerate();
+        dom.set_options(&id, options.map(|(at, name)| (at.to_string(), name)));
+        dom.set(&id, "value", &selected.to_string());
     }
     for mut checked in &mut still {
         checked.0 = order.0.still;
