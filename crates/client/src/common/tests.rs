@@ -17,7 +17,7 @@ fn an_impossibly_wide_area_finds_no_pois() {
         x: 10,
         y: 70,
     };
-    known.insert(chunk, Some(poi));
+    known.insert(chunk, Some(poi), None);
     let found = known.in_area((i64::MIN, i64::MIN), (i64::MAX, i64::MAX));
     assert!(found.is_empty());
 }
@@ -35,8 +35,8 @@ fn known_pois_are_found_in_any_frame() {
         x: 10,
         y: 70,
     };
-    known.insert(chunk, Some(poi));
-    known.insert(ChunkPos { x: 1, y: 1 }, None);
+    known.insert(chunk, Some(poi), None);
+    known.insert(ChunkPos { x: 1, y: 1 }, None, None);
     let found = |min, max| -> Vec<i64> { known.in_area(min, max).iter().map(|f| f.x).collect() };
     assert_eq!(found((0, 64), (100, 127)), [10]);
     // From west of the seam, and a whole planet east.
@@ -72,4 +72,24 @@ fn keep_drawing_keeps_the_focused_rate_unfocused() {
     };
     let kept = frame_settings(false, &chosen);
     assert_eq!(kept.unfocused_mode, kept.focused_mode);
+}
+
+#[test]
+fn learned_names_are_kept_by_chunk_until_sent_without() {
+    let mut known = KnownPois::new(1000);
+    let chunk = ChunkPos { x: 0, y: 1 };
+    let poi = SeenPoi {
+        kind: PoiKind::Village,
+        look: shared::site::PoiLook::Town { buildings: 9 },
+        chunk,
+        x: 10,
+        y: 70,
+    };
+    known.insert(chunk, Some(poi), None);
+    assert_eq!(known.name_of(chunk), None);
+    assert_eq!(poi_name(&poi, known.name_of(chunk)), "Village");
+    known.insert(chunk, Some(poi), Some("Thornbury Green".into()));
+    assert_eq!(poi_name(&poi, known.name_of(chunk)), "Thornbury Green");
+    known.insert(chunk, Some(poi), None);
+    assert_eq!(known.name_of(chunk), None);
 }

@@ -7,6 +7,7 @@ use shared::protocol::ServerMessage;
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::sites::{Place, town_name_of};
+use crate::world_map::learn_town_name;
 
 /// The poi whose cutout a wilderness cell is in, if any (its chunk worked out
 /// already, as the window round it has).
@@ -18,8 +19,20 @@ pub(super) fn poi_here(world: &ServerWorld, (x, y): (i64, i64)) -> Option<Poi> {
     Some(*cutout.poi())
 }
 
+/// Tells the client of the poi a player stands in, and if it is a town they
+/// learn its name for the world map. `false` if the client has gone.
+pub(super) fn tell_of(client: &mut Client, world: &ServerWorld, poi: Option<Poi>) -> bool {
+    if !client.link.send(&poi_message(world, poi)) {
+        return false;
+    }
+    match poi {
+        Some(poi) if poi.kind.is_town() => learn_town_name(client, world, poi.chunk),
+        _ => true,
+    }
+}
+
 /// What the client is told of the poi a player stands in: its kind and name.
-pub(super) fn poi_message(world: &ServerWorld, poi: Option<Poi>) -> ServerMessage {
+fn poi_message(world: &ServerWorld, poi: Option<Poi>) -> ServerMessage {
     ServerMessage::InPoi {
         kind: poi.map(|poi| poi.kind),
         name: poi.and_then(|poi| town_name_of(world, &poi)),
@@ -40,5 +53,5 @@ pub(super) fn tell_poi(client: &mut Client, world: &ServerWorld) -> bool {
         return true;
     }
     *in_poi = now;
-    client.link.send(&poi_message(world, now))
+    tell_of(client, world, now)
 }

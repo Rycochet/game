@@ -2,18 +2,21 @@
 //! remembering the pois they have seen.
 
 mod arrival;
+mod town_names;
 
 use std::collections::btree_map::Entry;
 
 use bevy::prelude::*;
 use shared::movement::{Gait, Step, step_on_world_map_by};
 use shared::poi::{ChunkPos, Poi};
-use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT, WorldChunk};
+use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
 
 use crate::connections::Client;
 use crate::storage::KnownPoi;
 use crate::{ServerWorld, sites};
 pub(crate) use arrival::{arrival, nearest_gate};
+use town_names::chunk_message;
+pub(crate) use town_names::learn_town_name;
 
 /// The player takes a step on the world map, unless it leads into water (but
 /// a good swimmer may swim the sea near the coast) (a
@@ -113,11 +116,7 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
         let known: Vec<_> = client.character.pois.keys().copied().collect();
         for chunk in known {
             client.world_chunks.insert(chunk);
-            let poi = known_poi(client, world, chunk).map(Into::into);
-            if !client
-                .link
-                .send(&ServerMessage::WorldChunk(WorldChunk { chunk, poi }))
-            {
+            if !client.link.send(&chunk_message(client, world, chunk)) {
                 return false;
             }
         }
@@ -140,11 +139,7 @@ pub(crate) fn look_around(client: &mut Client, world: &ServerWorld) -> bool {
     for chunk in world.pois.chunks_in_area(min, max) {
         if client.world_chunks.insert(chunk) {
             new = true;
-            let poi = known_poi(client, world, chunk).map(Into::into);
-            if !client
-                .link
-                .send(&ServerMessage::WorldChunk(WorldChunk { chunk, poi }))
-            {
+            if !client.link.send(&chunk_message(client, world, chunk)) {
                 return false;
             }
         }

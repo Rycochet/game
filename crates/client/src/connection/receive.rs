@@ -163,7 +163,9 @@ pub(super) fn receive(
             }
             Ok(Some(ServerMessage::WorldChunk(chunk))) => {
                 match joined.as_mut().or(world.as_deref_mut()) {
-                    Some(world) => world.pois.insert(chunk.chunk, chunk.poi),
+                    Some(world) => world
+                        .pois
+                        .insert(chunk.chunk, chunk.poi, chunk.name.clone()),
                     None => warn!("A world map chunk arrived before the world"),
                 }
             }

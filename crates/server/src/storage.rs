@@ -21,6 +21,7 @@ use crate::saves::{LoadError, Save, SaveKey};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod characters;
+mod known_poi;
 mod roads;
 mod saves;
 mod sites;

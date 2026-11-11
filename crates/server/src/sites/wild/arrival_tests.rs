@@ -92,3 +92,29 @@ fn exploring_from_a_cave_mouth_arrives_outside_its_hill() {
     let (min_x, min_y, width, height) = cutout.level().bounds();
     assert!((min_x..min_x + width).contains(&at.0) && (min_y..min_y + height).contains(&at.1));
 }
+
+#[test]
+fn going_into_a_town_teaches_its_name_for_the_world_map() {
+    let mut test = TestClient::new();
+    let cutout = cutout_near_start(&test, |cutout| cutout.poi().kind.is_town());
+    let poi = *cutout.poi();
+    let named = |answers: &[ServerMessage]| {
+        answers.iter().find_map(|answer| match answer {
+            ServerMessage::WorldChunk(sent) if sent.chunk == poi.chunk => Some(sent.name.clone()),
+            _ => None,
+        })
+    };
+    // Seen from the world map first: known of, but not by name.
+    let answers = test.send(&[ClientMessage::DevTeleport { x: poi.x, y: poi.y }]);
+    assert_eq!(named(&answers).flatten(), None);
+    let known = test.client.character.pois.get(&poi.chunk);
+    assert!(!known.is_some_and(|known| known.knows_name()));
+    let answers = test.send(&[ClientMessage::Down]);
+    let told = answers.iter().find_map(|answer| match answer {
+        ServerMessage::InPoi { name, .. } => Some(name.clone()),
+        _ => None,
+    });
+    let name = told.flatten().expect("the town named inside");
+    assert_eq!(named(&answers), Some(Some(name)));
+    assert!(test.client.character.pois[&poi.chunk].named);
+}

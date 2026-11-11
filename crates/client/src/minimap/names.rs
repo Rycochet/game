@@ -25,7 +25,8 @@ pub(super) fn hovered_name(
             _ => None,
         };
     }
-    hovered_poi(world, (x, y), icon_reach, units_per_pixel).map(|poi| poi_name(&poi))
+    let poi = hovered_poi(world, (x, y), icon_reach, units_per_pixel)?;
+    Some(poi_name(&poi, world?.pois.name_of(poi.chunk)))
 }
 
 /// The world map poi whose picture is at a grid position, the nearest if several.

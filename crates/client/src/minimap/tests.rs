@@ -151,7 +151,7 @@ fn poi_under_the_mouse(teleporting: bool) -> App {
         x: 100,
         y: 100,
     };
-    world.pois.insert(chunk, Some(poi));
+    world.pois.insert(chunk, Some(poi), None);
     app.insert_resource(world)
         .insert_resource(State::new(GameView::WorldMap))
         .add_message::<ToServer>();

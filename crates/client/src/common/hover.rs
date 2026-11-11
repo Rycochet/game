@@ -26,8 +26,12 @@ pub struct HoveredOnMap(pub Option<String>);
 #[derive(Resource, Default, Clone, Debug, PartialEq, Eq)]
 pub struct HoveredInSky(pub Option<String>);
 
-/// What a poi is called.
-pub fn poi_name(poi: &SeenPoi) -> String {
+/// What a poi is called: its own name if the player has learned it (a
+/// town's, `KnownPois::name_of`), otherwise its kind.
+pub fn poi_name(poi: &SeenPoi, name: Option<&str>) -> String {
+    if let Some(name) = name {
+        return name.to_owned();
+    }
     let ruined = if poi.look.is_ruined() { "Ruined" } else { "" };
     words(&format!("{ruined}{:?}", poi.kind))
 }
