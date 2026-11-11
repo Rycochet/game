@@ -6,42 +6,56 @@ use shared::item::{Holder, Inventory, Placed};
 
 use super::super::filter::{GridFilter, chosen, dims};
 use super::super::{Carried, Holding};
-use super::{ItemCell, ItemLayer, WeightText};
+use super::shown::shown_size;
+use super::{GridOwner, WeightText};
 use crate::common::CarryLimit;
-use crate::widgets::{Dropdown, ItemLook, spawn_item_cells, weight_words};
+use crate::dom::{GridShown, GridThing};
+use crate::widgets::{Dropdown, weight_words};
 
-/// Draws what is in each open grid again when it changes, or its filter does. What
-/// is held isn't drawn where it was, though it is still there until dropped.
-#[allow(clippy::too_many_arguments)]
+/// Says what is in each open grid again when it changes, or its filter does, and
+/// how big it is. What is held isn't shown where it was, though it is still there
+/// until dropped.
 pub(in crate::inventory) fn show_grids(
     carried: Res<Carried>,
     holding: Res<Holding>,
-    new_layers: Query<(), Added<ItemLayer>>,
-    layers: Query<(Entity, &ItemLayer)>,
+    new_grids: Query<(), Added<GridOwner>>,
+    mut grids: Query<(&GridOwner, &mut GridShown)>,
     filters: Query<(&GridFilter, Ref<Dropdown>)>,
-    mut commands: Commands,
     mut drawn_without: Local<Option<Id>>,
 ) {
     let held = holding.held.map(|held| held.item.id);
     let filtered = filters.iter().any(|(_, dropdown)| dropdown.is_changed());
-    if !carried.is_changed() && new_layers.is_empty() && *drawn_without == held && !filtered {
+    if !carried.is_changed() && new_grids.is_empty() && *drawn_without == held && !filtered {
         return;
     }
     *drawn_without = held;
-    for (entity, layer) in &layers {
-        commands.entity(entity).despawn_related::<Children>();
-        let Some(grid) = carried.0.grid(layer.holder) else {
-            continue;
-        };
+    for (owner, mut shown) in &mut grids {
+        let holder = owner.holder;
         let filter = filters
             .iter()
-            .find(|(filter, _)| filter.0 == Some(layer.holder))
+            .find(|(filter, _)| filter.0 == Some(holder))
             .and_then(|(_, dropdown)| chosen(&dropdown));
-        commands.entity(entity).with_children(|layer| {
-            for placed in grid.iter().filter(|placed| Some(placed.item.id) != held) {
-                spawn_placed(layer, placed, dims(filter, &placed.item));
-            }
-        });
+        let placed = carried
+            .0
+            .grid(holder)
+            .into_iter()
+            .flat_map(|grid| grid.iter());
+        let things = placed
+            .filter(|placed| Some(placed.item.id) != held)
+            .map(|placed| thing(placed, dims(filter, &placed.item)))
+            .collect();
+        let (columns, rows) = shown_size(&carried.0, holder).unwrap_or((shown.columns, shown.rows));
+        let now = GridShown {
+            columns,
+            rows,
+            things,
+            aim: shown.aim.clone(),
+            takes_gifts: None,
+        };
+        // (Only when it differs: the grid draws itself again when changed.)
+        if *shown != now {
+            *shown = now;
+        }
     }
 }
 
@@ -61,20 +75,15 @@ pub(in crate::inventory) fn show_weights(
     }
 }
 
-pub(super) fn spawn_placed(layer: &mut ChildSpawnerCommands, placed: &Placed, dimmed: bool) {
-    let (id, rotation) = (placed.item.id, placed.rotation);
-    spawn_item_cells(
-        layer,
-        ItemLook::of(&placed.item).turned(rotation).dimmed(dimmed),
-        placed.shape(),
-        (placed.x as f32, placed.y as f32),
-        true,
-        |x, y| ItemCell {
-            id,
-            rotation,
-            grip: (x, y),
-        },
-    );
+/// A placed item, as a grid shows it.
+fn thing(placed: &Placed, dimmed: bool) -> GridThing {
+    GridThing {
+        item: placed.item.clone(),
+        x: placed.x,
+        y: placed.y,
+        rotation: placed.rotation,
+        dimmed,
+    }
 }
 
 pub(super) fn grid_weight(carried: &Inventory, holder: Holder, limit: u32) -> String {

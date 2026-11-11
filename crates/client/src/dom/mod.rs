@@ -14,6 +14,7 @@ mod error;
 mod input;
 mod layout;
 mod markup;
+mod object_grid;
 mod objects;
 mod parts;
 mod pictures;
@@ -30,6 +31,7 @@ pub use controls::{UiEvent, UiValue};
 pub use input::Hit;
 #[cfg(test)]
 pub use input::find_now;
+pub use object_grid::{DrawObjectGrids, GridAim, GridBox, GridShown, GridThing, ThingCell};
 pub use parts::{AlwaysBars, Solid};
 pub use parts::{Document, DocumentOf, document, document_in};
 pub use template::Template;
@@ -78,6 +80,7 @@ impl Plugin for DomPlugin {
                         controls::follow_elements,
                         surfaces::follow_surfaces,
                         objects::show_objects,
+                        object_grid::draw_object_grids.in_set(DrawObjectGrids),
                     ),
                 )
                     .chain()

@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 use super::events::{Click, ContextMenu, Press, Release, Wheel};
 use super::hit::{Hit, PointerCapture};
-use crate::dom::parts::Element;
+use crate::dom::parts::{Canvas, Element};
 
 /// A second click this soon after the first, on the same thing, is a double
 /// click. In seconds, by the real clock.
@@ -44,7 +44,8 @@ pub(super) struct Clicks {
 }
 
 /// Sends this frame's events. A press on an element goes no further: the
-/// game behind never sees it.
+/// game behind never sees it, but for a right press on a place its owner
+/// draws in.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn send_events(
     mut commands: Commands,
@@ -52,13 +53,17 @@ pub(super) fn send_events(
     buttons: Res<Buttons>,
     scroll: Res<AccumulatedMouseScroll>,
     time: Res<Time<Real>>,
-    elements: Query<(), With<Element>>,
+    elements: Query<Has<Canvas>, With<Element>>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     mut capture: ResMut<PointerCapture>,
     mut clicks: Local<Clicks>,
 ) {
     let at = hit.at.unwrap_or_default();
-    let on_element = hit.target.is_some_and(|target| elements.contains(target));
+    let element = hit.target.and_then(|target| elements.get(target).ok());
+    let on_element = element.is_some();
+    // A canvas, or a grid or slot of things, is its owner's: a right press
+    // there is the owner's to take (turning what is held).
+    let owners = element == Some(true);
     if buttons.left_down {
         clicks.down.clone_from(&hit.chain);
         if let Some(entity) = hit.target {
@@ -90,7 +95,7 @@ pub(super) fn send_events(
         if let Some(entity) = hit.target {
             commands.trigger(ContextMenu { entity, at });
         }
-        if on_element {
+        if on_element && !owners {
             mouse.clear_just_pressed(MouseButton::Right);
         }
     }

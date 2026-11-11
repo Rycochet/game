@@ -5,9 +5,8 @@ use shared::item::Holder;
 
 use super::super::give::NearbyPanel;
 use super::super::{Carried, OpenCharacter};
-use super::grids::spawn_cells;
 use super::shown::shown_size;
-use super::{GridNode, InventoryButton, OpenGrids, Page};
+use super::{InventoryButton, OpenGrids, Page};
 use crate::common::{Action, GameView, Preferences};
 use crate::widgets::{ButtonPressed, ChooseTab, RaisePanel};
 
@@ -78,14 +77,13 @@ pub(in crate::inventory) fn toggle_inventory(
     open.open(Holder::Inventory, &carried.0, &mut commands, &mut raise);
 }
 
-/// Forgets panels closed by their own close buttons, closes those of bags no
-/// longer carried, and draws a grid again, where it is, when its size changes: the
-/// inventory's when the body changes, a growing bag's as it fills or empties.
+/// Forgets panels closed by their own close buttons, and closes those of bags no
+/// longer carried. (A grid's size changes where it is: the inventory's when the
+/// body changes, a growing bag's as it fills or empties.)
 pub(in crate::inventory) fn forget_closed(
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
     nodes: Query<(), With<Node>>,
-    grids: Query<(Entity, &GridNode, &ChildOf)>,
     mut commands: Commands,
 ) {
     let mut closed_character = false;
@@ -98,17 +96,8 @@ pub(in crate::inventory) fn forget_closed(
             commands.entity(*panel).despawn();
             return false;
         };
-        if now != *size {
-            *size = now;
-            let grid = grids.iter().find(|(_, grid, _)| grid.holder == *holder);
-            if let Some((grid, _, parent)) = grid {
-                commands.entity(grid).despawn();
-                let holder = *holder;
-                commands
-                    .entity(parent.parent())
-                    .with_children(|parent| spawn_cells(parent, holder, now));
-            }
-        }
+        // (`show_grids` gives the grid its new size, and it draws itself again.)
+        *size = now;
         true
     });
     if closed_character {

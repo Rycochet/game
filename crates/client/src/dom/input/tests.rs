@@ -149,3 +149,27 @@ fn a_press_on_an_element_goes_no_further() {
     assert!(mouse.just_pressed(MouseButton::Left));
     assert_eq!(app.world().resource::<Hit>().target, Some(beside));
 }
+
+/// A frame with the pointer at `at` and the right button just pressed.
+fn right_press(app: &mut App, at: Vec2) -> bool {
+    app.world_mut().resource_mut::<UiPointer>().0 = Some(at);
+    let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
+    mouse.release(MouseButton::Right);
+    mouse.clear();
+    mouse.press(MouseButton::Right);
+    app.update();
+    let mouse = app.world().resource::<ButtonInput<MouseButton>>();
+    mouse.just_pressed(MouseButton::Right)
+}
+
+#[test]
+fn a_right_press_is_left_for_the_owner_of_a_place_it_draws_in() {
+    use crate::dom::parts::Canvas;
+    let (mut app, _, inner, _) = app();
+    // On an ordinary element it goes no further.
+    assert!(!right_press(&mut app, ON_INNER));
+    // On a canvas (or a grid or slot of things) its owner still sees it: a
+    // held item turns over a shop's grid.
+    app.world_mut().entity_mut(inner).insert(Canvas);
+    assert!(right_press(&mut app, ON_INNER));
+}

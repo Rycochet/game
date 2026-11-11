@@ -5,7 +5,7 @@ use shared::item::Shape;
 
 use super::super::aura::{AuraMask, aura_glow};
 use super::super::set_edge::set_edge;
-use super::super::{GRID_COLOUR, GRID_LINE, ITEM_EDGE, Pressable};
+use super::super::{ITEM_EDGE, Pressable};
 use super::Floating;
 use super::count::spawn_count;
 use super::mixed::spawn_mixed_mark;
@@ -16,41 +16,6 @@ use super::{
 
 /// Over an item filtered out: `GRID_COLOUR`, letting a little of it through.
 const DIMMING: Color = Color::srgba(0.55, 0.46, 0.33, 0.65);
-
-/// An empty grid with `extra` on it, and `on_lines` on each cell's lines. `fill`
-/// adds what goes over its cells.
-pub fn spawn_item_grid<L: Bundle + Clone>(
-    parent: &mut ChildSpawnerCommands,
-    width: u8,
-    height: u8,
-    extra: impl Bundle,
-    on_lines: L,
-    fill: impl FnOnce(&mut ChildSpawnerCommands),
-) {
-    parent
-        .spawn((
-            extra,
-            Node {
-                width: px(width as f32 * CELL),
-                height: px(height as f32 * CELL),
-                flex_shrink: 0.0,
-                ..default()
-            },
-            BackgroundColor(GRID_COLOUR),
-        ))
-        .with_children(|grid| {
-            for y in 0..height {
-                for x in 0..width {
-                    grid.spawn((
-                        at_cell(x as f32, y as f32),
-                        BorderColor::from(GRID_LINE),
-                        on_lines.clone(),
-                    ));
-                }
-            }
-            fill(grid);
-        });
-}
 
 /// An item's cells, in a parent placing them, with the shape's corner at `corner`.
 /// `on_each` gives what goes on a cell, and on the label if it is the first, from

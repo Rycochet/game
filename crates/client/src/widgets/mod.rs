@@ -70,7 +70,6 @@ pub use item::{
     CELL, Floating, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemName, ItemTip, ItemTooltip,
     PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
     item_label, item_picture, logical_rect, picture_in_square, shown_at, spawn_item_cells,
-    spawn_item_grid,
 };
 pub use item_text::{ItemText, spawn_item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
@@ -86,7 +85,7 @@ pub use skill_ring::{SkillRing, skill_ring};
 pub use slider::{Slider, SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
 pub use spinner::Spinner;
-pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};
+pub use stock::{StockGrid, StockGridNode, StockOf, show_stock_aim};
 pub use switch::{Switch, SwitchFlipped, spawn_switch};
 pub use tabs::{ChooseTab, TabChosen, spawn_tabs, spawn_toggle_row};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
@@ -293,6 +292,7 @@ impl Plugin for WidgetsPlugin {
             )
             .add_systems(Last, ui_id::warn_of_duplicates);
         item_text::add(app);
+        stock::add(app);
         hold_button::add(app);
         #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
         debug_api::add(app);

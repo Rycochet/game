@@ -6,15 +6,15 @@ use bevy::ui::UiGlobalTransform;
 use shared::id::Id;
 use shared::item::{Inventory, Item, ItemCategory, Placed, Rotation, Shape};
 
-use super::ALLOWED;
-use super::item::{
-    CELL, Floating, ItemLook, ItemName, at_cell, covering, logical_rect, spawn_item_cells,
-    spawn_item_grid,
-};
-use crate::common::{HeldGift, StockCell, TakesGifts};
+use super::item::{CELL, logical_rect};
+use crate::common::HeldGift;
+use crate::dom::{GridAim, GridShown, GridThing};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod mark;
 mod place;
+
+pub(super) use mark::add;
 
 #[cfg(test)]
 use place::longest_side;
@@ -45,13 +45,13 @@ struct Gift {
     wanted: (i32, i32),
 }
 
-/// A grid as drawn.
+/// A grid as drawn: where its cells are.
 #[derive(Component, Clone, Copy)]
 pub struct StockGridNode(pub Id);
 
-/// What shows in a grid where something held would go.
+/// On what a grid is shown in: whose it is.
 #[derive(Component, Clone, Copy)]
-pub struct StockAim(pub Id);
+pub struct StockOf(pub Id);
 
 impl StockGrid {
     /// Each thing in the first place it fits, oldest first.
@@ -113,23 +113,31 @@ impl StockGrid {
         self.changed = true;
     }
 
-    /// Draws it in this, once anything drawn there has gone. What is held isn't drawn.
-    pub fn draw(&self, commands: &mut Commands, holder: Entity, without: Option<Id>) {
-        let with = self.with;
-        let gifts = TakesGifts(with);
-        commands.entity(holder).with_children(|holder| {
-            let grid = (StockGridNode(with), gifts);
-            let rows = rows_for(&self.stock);
-            spawn_item_grid(holder, self.columns, rows, grid, gifts, |grid| {
-                grid.spawn((covering(), Floating)).with_children(|layer| {
-                    let shown = self.stock.iter();
-                    for placed in shown.filter(|placed| Some(placed.item.id) != without) {
-                        spawn_stock_item(layer, placed, with, self.filter);
-                    }
-                });
-                grid.spawn((StockAim(with), covering(), Floating));
-            });
-        });
+    /// Shows it in this, a node, as a grid that draws itself (`dom::GridShown`).
+    /// What is held isn't shown.
+    pub fn show(&self, commands: &mut Commands, holder: Entity, without: Option<Id>) {
+        let shown = self.stock.iter();
+        let things = shown
+            .filter(|placed| Some(placed.item.id) != without)
+            .map(|placed| GridThing {
+                item: placed.item.clone(),
+                x: placed.x,
+                y: placed.y,
+                rotation: placed.rotation,
+                // A stack is told by its top, which is what shows.
+                dimmed: self
+                    .filter
+                    .is_some_and(|only| placed.item.top().kind.category() != only),
+            })
+            .collect();
+        let shown = GridShown {
+            columns: self.columns,
+            rows: rows_for(&self.stock),
+            things,
+            aim: None,
+            takes_gifts: Some(self.with),
+        };
+        commands.entity(holder).insert((StockOf(self.with), shown));
     }
 
     /// Where this, held over the grid, would land.
@@ -152,62 +160,25 @@ impl StockGrid {
     }
 }
 
-/// Green where something held would go if let go now, in the aims given.
-pub fn draw_stock_aim<'a>(
-    commands: &mut Commands,
-    aims: impl Iterator<Item = (Entity, &'a StockAim)>,
+/// Green where something held would go if let go now, in the grids given.
+pub fn show_stock_aim<'a>(
+    grids: impl Iterator<Item = (&'a StockOf, Mut<'a, GridShown>)>,
     aim: Option<StockAimAt>,
 ) {
-    for (entity, shown) in aims {
-        commands.entity(entity).despawn_related::<Children>();
-        let Some((_, (x, y), shape)) = aim.filter(|aim| aim.0 == shown.0) else {
-            continue;
-        };
-        commands.entity(entity).with_children(|layer| {
-            for (cell_x, cell_y) in shape.cells() {
-                let (cell_x, cell_y) = ((x + cell_x) as f32, (y + cell_y) as f32);
-                // Floating: the grid under them is still what the pointer is on.
-                layer.spawn((at_cell(cell_x, cell_y), BackgroundColor(ALLOWED), Floating));
+    for (of, mut shown) in grids {
+        let now = aim.filter(|aim| aim.0 == of.0).map(|(_, (x, y), shape)| {
+            let cells = shape.cells();
+            GridAim {
+                cells: cells
+                    .map(|(cell_x, cell_y)| ((x + cell_x) as i32, (y + cell_y) as i32))
+                    .collect(),
+                allowed: true,
             }
         });
+        if shown.aim != now {
+            shown.aim = now;
+        }
     }
-}
-
-fn spawn_stock_item(
-    layer: &mut ChildSpawnerCommands,
-    placed: &Placed,
-    with: Id,
-    filter: Option<ItemCategory>,
-) {
-    // A stack is named by its top, which is what shows.
-    let top = placed.item.top();
-    let name = ItemName {
-        words: top.name(),
-        quality: top.quality,
-        set: top.set,
-    };
-    let dimmed = filter.is_some_and(|only| top.kind.category() != only);
-    spawn_item_cells(
-        layer,
-        ItemLook::of(&placed.item)
-            .turned(placed.rotation)
-            .dimmed(dimmed),
-        placed.shape(),
-        (placed.x as f32, placed.y as f32),
-        true,
-        |x, y| {
-            (
-                name.clone(),
-                TakesGifts(with),
-                StockCell {
-                    with,
-                    item: placed.item.clone(),
-                    rotation: placed.rotation,
-                    grip: (x, y),
-                },
-            )
-        },
-    );
 }
 
 /// The cell of this grid an item's corner is nearest.

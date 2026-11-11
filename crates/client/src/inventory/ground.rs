@@ -11,10 +11,11 @@ use super::Carried;
 use super::filter::spawn_filter;
 use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPosition, TookItem};
 use crate::connection::FromServer;
+use crate::dom::GridShown;
 use crate::player::Player;
 use crate::widgets::{
-    ContainerLook, ContainerSize, StockAim, StockAimAt, StockGrid, StockGridNode, UiId,
-    draw_stock_aim, spawn_container,
+    ContainerLook, ContainerSize, StockGrid, StockGridNode, StockOf, UiId, show_stock_aim,
+    spawn_container,
 };
 
 /// How many cells across it is: the longest thing there can be.
@@ -146,35 +147,25 @@ pub(super) fn show_section(
     if ground.grid.changed || picked_up || !new_holders.is_empty() {
         ground.grid.changed = false;
         for holder in &holders {
-            commands.entity(holder).despawn_related::<Children>();
-            ground.grid.draw(&mut commands, holder, held.0);
+            ground.grid.show(&mut commands, holder, held.0);
         }
     }
 }
 
 /// Green where something held would land.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn show_aim(
     held: Res<HeldOverGifts>,
     carried: Res<Carried>,
     ground: Res<Ground>,
     grids: Query<(&StockGridNode, &ComputedNode, &UiGlobalTransform)>,
-    aims: Query<(Entity, &StockAim)>,
-    new_aims: Query<&StockAim, Added<StockAim>>,
-    mut commands: Commands,
-    mut drawn: Local<Option<StockAimAt>>,
+    mut shown: Query<(&StockOf, &mut GridShown)>,
 ) {
     let aim = held.0.filter(|gift| gift.to == GROUND).and_then(|gift| {
         let (_, node, transform) = grids.iter().find(|(grid, ..)| grid.0 == GROUND)?;
         ground.grid.aim(&gift, &carried.0, node, transform)
     });
-    let new = new_aims.iter().any(|aim| aim.0 == GROUND);
-    if *drawn == aim && !new {
-        return;
-    }
-    *drawn = aim;
-    let ours = aims.iter().filter(|(_, aim)| aim.0 == GROUND);
-    draw_stock_aim(&mut commands, ours, aim);
+    let ours = shown.iter_mut().filter(|(of, _)| of.0 == GROUND);
+    show_stock_aim(ours, aim);
 }
 
 #[cfg(test)]

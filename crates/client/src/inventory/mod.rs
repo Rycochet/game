@@ -108,6 +108,11 @@ impl Plugin for InventoryPlugin {
                 )
                     .chain(),
             );
+        // Once the grids have drawn themselves.
+        app.add_systems(
+            PostUpdate,
+            panels::mark_grids.after(crate::dom::DrawObjectGrids),
+        );
         app.add_systems(Update, early_pictures::ask_early);
         app.add_systems(Update, panels::switch_pages.after(panels::toggle_inventory));
         // Before the grids are drawn, so a sort shows at once.
