@@ -1,32 +1,62 @@
-//! The screen's parts: a full-screen layer with the grid of characters on the left
-//! and the chosen one on the right, spawned once and shown while choosing.
+//! The screen, as markup: a full-screen layer with the grid of characters on
+//! the left and the chosen one on the right, and above it the requester asking
+//! before one is deleted. Built once and shown while choosing.
 
 use bevy::prelude::*;
 
+use super::requester::Answer;
 use crate::common::CharacterSelect;
-use crate::widgets::{
-    ButtonState, ButtonStyle, INK, Pressable, TextSize, UiId, panel_title, spawn_button,
-    spawn_filling_scroll_area, spawn_fullscreen_layer,
-};
+use crate::dom::{Dom, Template, document};
+use crate::html;
+use crate::widgets::UiId;
 
 /// The form all its widgets' ids are in.
 pub(super) const FORM: &str = "character_select";
-/// The right-hand column, describing the chosen character.
-const INFO_WIDTH: f32 = 380.0;
 
-#[derive(Component)]
-pub(super) struct SelectLayer;
+/// The two columns are as tall as the layer (`valign="stretch"`). The cells
+/// of the grid are drawn by code (`cells`), in the canvas.
+pub(super) static CHARACTER_SELECT: Template = html!(
+    "character_select",
+    r#"
+<form id="character_select">
+  <dialog id="layer" modal depth="0" width="90%" height="90%" hidden>
+    <span class="apart" nowrap valign="stretch" fills>
+      <div class="rows" fills>
+        <h1>Characters</h1>
+        <scroll id="scroll" fills>
+          <canvas id="grid"/>
+        </scroll>
+        <span id="change_user_row" hidden>
+          <button id="change_user">Change User</button>
+        </span>
+      </div>
+      <div class="rows" width="380">
+        <h1 id="name"/>
+        <p id="words" class="medium"/>
+        <div fills/>
+        <p id="created" class="medium"/>
+        <span align="right" nowrap>
+          <button id="play" class="main">Play</button>
+          <button id="delete" class="danger">Delete</button>
+          <button id="cancel">Cancel</button>
+        </span>
+      </div>
+    </span>
+  </dialog>
+  <dialog id="asking" title="Delete character" depth="1" hidden>
+    <p id="question" class="medium" width="360"/>
+    <footer>
+      <button id="really_delete" class="danger">Delete</button>
+      <button id="keep">Cancel</button>
+    </footer>
+  </dialog>
+</form>
+"#
+);
+
 /// Where the cells go, wrapping like words.
 #[derive(Component)]
 pub(super) struct Grid;
-/// The chosen character's name, over what they are like.
-#[derive(Component)]
-pub(super) struct InfoName;
-#[derive(Component)]
-pub(super) struct InfoWords;
-/// When the chosen character was made, at the bottom.
-#[derive(Component)]
-pub(super) struct InfoCreated;
 
 /// What the buttons along the bottom right do, and Change User at the bottom
 /// left.
@@ -39,97 +69,50 @@ pub(super) enum Button {
 }
 
 pub(super) fn spawn_screen(mut commands: Commands) {
-    let content = Node {
-        flex_direction: FlexDirection::Row,
-        column_gap: px(24),
-        padding: UiRect::all(px(24)),
-        ..default()
-    };
-    let (layer, panel) = spawn_fullscreen_layer(&mut commands, 0, content);
-    commands.entity(layer).insert(SelectLayer);
-    commands.entity(panel).with_children(|panel| {
-        panel
-            .spawn(Node {
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                row_gap: px(12),
-                ..default()
-            })
-            .with_children(|left| {
-                left.spawn((panel_title("Characters"), Node::default()));
-                let area = spawn_filling_scroll_area(left);
-                left.commands().entity(area).with_child((
-                    Grid,
-                    Node {
-                        flex_wrap: FlexWrap::Wrap,
-                        column_gap: px(12),
-                        row_gap: px(12),
-                        ..default()
-                    },
-                ));
-                super::change_user::spawn_change_user(left);
-            });
-        panel
-            .spawn(Node {
-                flex_direction: FlexDirection::Column,
-                width: px(INFO_WIDTH),
-                flex_shrink: 0.0,
-                row_gap: px(12),
-                ..default()
-            })
-            .with_children(spawn_info);
-    });
+    commands.spawn(document(&CHARACTER_SELECT));
 }
 
-/// The right: the chosen one's name, what they are like, when they were made, and
-/// the buttons.
-fn spawn_info(column: &mut ChildSpawnerCommands) {
-    column.spawn((InfoName, panel_title(""), Node::default()));
-    let words = || (Text::new(""), TextSize::Medium.font(), TextColor(INK));
-    column.spawn((words(), InfoWords));
-    // What is left pushes the rest to the bottom.
-    column.spawn(Node {
-        flex_grow: 1.0,
-        ..default()
-    });
-    column.spawn((words(), InfoCreated));
-    column
-        .spawn(Node {
-            justify_content: JustifyContent::End,
-            column_gap: px(8),
-            ..default()
-        })
-        .with_children(|row| {
-            for (label, button, style, name) in [
-                ("Play", Button::Play, ButtonStyle::Main, "play"),
-                ("Delete", Button::Delete, ButtonStyle::Danger, "delete"),
-                ("Cancel", Button::Cancel, ButtonStyle::Plain, "cancel"),
-            ] {
-                let node = Node {
-                    padding: UiRect::axes(px(16), px(8)),
+/// Gives the built parts what the screen's systems know them by, found by
+/// their ids.
+pub(super) fn bind_screen(mut commands: Commands, new: Query<(Entity, &UiId), Added<UiId>>) {
+    for (entity, id) in &new {
+        let (FORM, name) = id.parts() else {
+            continue;
+        };
+        let mut bound = commands.entity(entity);
+        match name {
+            "grid" => bound.with_child((
+                Grid,
+                Node {
+                    flex_wrap: FlexWrap::Wrap,
+                    column_gap: px(12),
+                    row_gap: px(12),
                     ..default()
-                };
-                spawn_button(row, ButtonState::Normal, label, TextSize::Large, node).insert((
-                    button,
-                    style,
-                    Pressable,
-                    UiId::new(FORM, name),
-                ));
-            }
-        });
+                },
+            )),
+            "play" => bound.insert(Button::Play),
+            "delete" => bound.insert(Button::Delete),
+            "cancel" => bound.insert(Button::Cancel),
+            "change_user" => bound.insert(Button::ChangeUser),
+            // A press outside the requester is No too.
+            "asking" | "keep" => bound.insert(Answer::Keep),
+            "really_delete" => bound.insert(Answer::Delete),
+            _ => continue,
+        };
+    }
 }
 
 /// Shows the screen while choosing.
-pub(super) fn show_screen(
-    select: Res<CharacterSelect>,
-    mut layer: Single<&mut Visibility, With<SelectLayer>>,
-) {
-    if !select.is_changed() {
-        return;
+pub(super) fn show_screen(select: Res<CharacterSelect>, mut dom: Dom) {
+    if select.is_changed() {
+        dom.set_flag("character_select/layer", "hidden", !select.open);
     }
-    layer.set_if_neq(if select.open {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    });
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn the_screen_is_good_markup() {
+        super::CHARACTER_SELECT.assert_good();
+    }
 }

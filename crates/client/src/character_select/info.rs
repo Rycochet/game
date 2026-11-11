@@ -5,18 +5,16 @@
 use bevy::prelude::*;
 
 use super::chosen::Chosen;
-use super::screen::{Button, InfoCreated, InfoName, InfoWords};
+use super::screen::Button;
 use crate::character::describe_listed;
 use crate::common::{CharacterSelect, local_date_time};
+use crate::dom::Dom;
 use crate::widgets::ButtonState;
 
-#[allow(clippy::type_complexity)]
 pub(super) fn show_info(
     select: Res<CharacterSelect>,
     chosen: Res<Chosen>,
-    mut name: Single<&mut Text, (With<InfoName>, Without<InfoWords>, Without<InfoCreated>)>,
-    mut words: Single<&mut Text, (With<InfoWords>, Without<InfoName>, Without<InfoCreated>)>,
-    mut created: Single<&mut Text, (With<InfoCreated>, Without<InfoName>, Without<InfoWords>)>,
+    mut dom: Dom,
     mut buttons: Query<(&Button, &mut ButtonState)>,
 ) {
     if !select.is_changed() && !chosen.is_changed() {
@@ -25,7 +23,7 @@ pub(super) fn show_info(
     let listed = chosen
         .id
         .and_then(|id| select.list.iter().find(|c| c.summary.id == id));
-    let (now_name, now_words, now_created) = match listed {
+    let (name, words, created) = match listed {
         Some(listed) => (
             listed.summary.name.clone(),
             describe_listed(listed),
@@ -38,9 +36,9 @@ pub(super) fn show_info(
         ),
         None => Default::default(),
     };
-    name.0 = now_name;
-    words.0 = now_words;
-    created.0 = now_created;
+    dom.set_text("character_select/name", name);
+    dom.set_text("character_select/words", words);
+    dom.set_text("character_select/created", created);
     for (button, mut state) in &mut buttons {
         let usable = *button == Button::Cancel || listed.is_some();
         state.set_if_neq(if usable {

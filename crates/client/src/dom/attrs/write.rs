@@ -77,6 +77,7 @@ impl VAlign {
             Self::Top => "top",
             Self::Middle => "middle",
             Self::Bottom => "bottom",
+            Self::Stretch => "stretch",
         }
     }
 }

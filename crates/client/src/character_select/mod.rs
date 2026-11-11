@@ -23,11 +23,11 @@ impl Plugin for CharacterSelectPlugin {
     fn build(&self, app: &mut App) {
         let open = |select: Res<CharacterSelect>| select.open;
         app.init_resource::<chosen::Chosen>()
-            .add_systems(Startup, (screen::spawn_screen, requester::spawn_requester))
+            .add_systems(Startup, screen::spawn_screen)
             .add_systems(
                 Update,
                 (
-                    screen::show_screen,
+                    (screen::bind_screen, screen::show_screen),
                     change_user::show_change_user,
                     (
                         chosen::keep_chosen,

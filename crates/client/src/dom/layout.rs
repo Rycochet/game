@@ -153,7 +153,8 @@ fn stack(node: &mut Node, attrs: &Attrs, look: &Look) {
     node.justify_content = match attrs.valign {
         Some(VAlign::Middle) => JustifyContent::Center,
         Some(VAlign::Bottom) => JustifyContent::FlexEnd,
-        Some(VAlign::Top) | None => JustifyContent::FlexStart,
+        // (Stretching is for rows: a stack's things are as tall as they are.)
+        Some(VAlign::Top | VAlign::Stretch) | None => JustifyContent::FlexStart,
     };
 }
 
@@ -175,6 +176,7 @@ fn flow_along(node: &mut Node, attrs: &Attrs, look: &Look) {
     node.align_items = match attrs.valign {
         Some(VAlign::Top) => AlignItems::FlexStart,
         Some(VAlign::Bottom) => AlignItems::FlexEnd,
+        Some(VAlign::Stretch) => AlignItems::Stretch,
         Some(VAlign::Middle) | None => AlignItems::Center,
     };
 }

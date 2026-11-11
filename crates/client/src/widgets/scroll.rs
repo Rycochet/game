@@ -281,7 +281,8 @@ pub(super) fn show_scroll_bars(
         let whole = area.content_size.y.max(1.0);
         let (top, height) = (
             percent(at / area.inverse_scale_factor / whole * 100.0),
-            percent(area.size.y / whole * 100.0),
+            // The whole bar when everything fits (a bar that is always shown).
+            percent((area.size.y / whole * 100.0).min(100.0)),
         );
         if node.top != top || node.height != height {
             node.top = top;

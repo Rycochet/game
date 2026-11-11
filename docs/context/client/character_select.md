@@ -5,13 +5,13 @@ The Character Select screen: the account's characters in a grid on the left, eac
 ## Files
 
 - `crates/client/src/character_select/mod.rs`: `CharacterSelectPlugin` (registered with `login`'s in `main.rs`, as the plugin tuples are full); its systems run only while `CharacterSelect::open`.
-- `screen.rs`: `spawn_screen` (a full-screen layer, depth 0, hidden: "Characters" over a filling scroll area holding the `Grid`, wrapping; the right column 380 px wide: name, words, a gap, Created, then Play, Delete and Cancel), `show_screen`, `FORM`, `Button`.
+- `screen.rs`: the screen as markup (`dom`: `CHARACTER_SELECT`): a full-screen `modal` dialog, depth 0, hidden, with two columns as tall as it (`valign="stretch"`): "Characters" over a `scroll` that `fills`, holding the grid's `canvas` (which `bind_screen` gives the wrapping `Grid` the cells go in), with Change User's row under it; and the right column 380 wide: name, words, a gap that `fills`, Created, and Play / Delete / Cancel at the right. The Delete requester is a second dialog (`asking`, depth 1). `bind_screen` gives the buttons their `Button` and `Answer`; `show_screen` shows the layer while `CharacterSelect::open`.
 - `cells.rs`: `fill_cells` (again whenever the list changes: a button per character, `CharacterSelect::sorted`, with its `item_art::portrait_look` picture 128 × 192, name and `common::local_date_time` of last played; then the "+" cell if `can_create`), `show_chosen` (the chosen cell `Selected`, its words light), `Cell`.
 - `chosen.rs`: `Chosen` (resource: the character chosen, and whether Delete is being asked about), `keep_chosen` (on a new list: the same one if still there, or else the latest).
-- `info.rs`: `show_info` (name, `character::describe_listed`, "Created ..."; Play and Delete disabled with nothing chosen; "No characters yet" when there are none).
-- `change_user.rs`: `spawn_change_user` (under the grid, hidden), `show_change_user` (shown while `AccountEmail` is kept: never for a guest or single player), `ChangeUserRow`.
+- `info.rs`: `show_info` (name, `character::describe_listed`, "Created ...", set with `Dom::set_text`; Play and Delete disabled with nothing chosen; "No characters yet" when there are none).
+- `change_user.rs`: `show_change_user`: its row, under the grid, is `hidden` unless `AccountEmail` is kept (never for a guest or single player).
 - `presses.rs`: `press_buttons` (a cell chooses its character, "+" sends `CharacterChoice::New`, Play `Play(id)`, Delete opens the requester, Cancel `Cancel`, Change User `LoginChoice::ChangeUser`; while the requester is up, only its answers count).
-- `requester.rs`: "Delete <name>? This can't be undone.", a dialog at depth 1 with a red Delete (`CharacterChoice::Delete(id)`) and Cancel; a press outside it is Cancel.
+- `requester.rs`: `Answer`, and `show_requester`: "Delete <name>? This can't be undone.", the `asking` dialog with a red Delete (`CharacterChoice::Delete(id)`) and Cancel; a press outside it is Cancel.
 
 ## Public API
 
@@ -19,7 +19,7 @@ The Character Select screen: the account's characters in a grid on the left, eac
 
 ## Depends on
 
-- `common` (`CharacterSelect`, `CharacterChoice`, `LoginChoice`, `AccountEmail`, `local_date_time`), `item_art` (`ItemPicture`, `portrait_look`), `character` (`describe_listed`), `widgets` (full-screen layer, dialog, buttons with `ButtonStyle::Danger`, filling scroll area, `UiId`), `shared::protocol`.
+- `common` (`CharacterSelect`, `CharacterChoice`, `LoginChoice`, `AccountEmail`, `local_date_time`), `item_art` (`ItemPicture`, `portrait_look`), `character` (`describe_listed`), `widgets` (full-screen layer, dialog, buttons with `ButtonStyle::Danger`, filling scroll area, `UiId`), `shared::protocol`, `dom`.
 
 ## Used by
 
