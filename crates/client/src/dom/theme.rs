@@ -201,6 +201,9 @@ impl Theme {
             ..default()
         };
         theme.set(Tag::Footer, "", footer);
+        // The frame round a grid: its rows stacked, its controls close.
+        theme.set(Tag::Container, "", stacked);
+        theme.set(Tag::Header, "", inline);
         // Dialogs are the menus': their writing is the menus' size.
         let dialog = Look {
             text: Some(TextSize::Large),

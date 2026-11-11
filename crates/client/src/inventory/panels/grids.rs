@@ -3,18 +3,11 @@
 use bevy::prelude::*;
 use shared::item::{Holder, Inventory};
 
-use super::super::filter::spawn_filter;
-use super::super::ground::GroundHolder;
-use super::super::sort::spawn_sort;
+use super::frame::spawn_grid;
 use super::pages::spawn_pages;
 use super::shown::{grows, shown_size};
-use super::{
-    BinNode, BinSlot, DropNode, FIRST_AT, GridOwner, MOST_HEIGHT, NEXT_AT, OpenGrids, WeightText,
-};
-use crate::dom::{GridShown, SlotShown};
-use crate::widgets::{
-    ContainerLook, ContainerSize, RaisePanel, UiId, spawn_container, spawn_moveable_panel,
-};
+use super::{FIRST_AT, NEXT_AT, OpenGrids};
+use crate::widgets::{RaisePanel, spawn_moveable_panel};
 
 impl OpenGrids {
     /// Opens this grid's panel, or brings it to the front if it is open.
@@ -42,11 +35,10 @@ impl OpenGrids {
         let (panel, content) = spawn_moveable_panel(commands, title, at);
         let id = super::super::ui_ids::grid_id(Some(holder), "panel");
         commands.entity(panel).insert(id);
-        let mut ground_holder = None;
         let page = self.page;
         commands.entity(content).with_children(|content| {
             if holder != Holder::Inventory {
-                spawn_grid(content, holder, (width, height), grows);
+                spawn_grid(content, holder, grows);
                 return;
             }
             // Tabs for what they are like, what they wear and carry, and what they
@@ -57,14 +49,9 @@ impl OpenGrids {
                     ..default()
                 })
                 .with_children(|column| {
-                    let (pages, ground) = spawn_pages(column, page, (width, height));
-                    self.pages = Some(pages);
-                    ground_holder = Some(ground);
+                    self.pages = Some(spawn_pages(column, page));
                 });
         });
-        if let Some(ground_holder) = ground_holder {
-            commands.entity(ground_holder).insert(GroundHolder);
-        }
         self.open.push((holder, panel, (width, height)));
     }
 
@@ -94,67 +81,4 @@ impl OpenGrids {
             None => self.open(Holder::Inventory, carried, commands, raise),
         }
     }
-}
-
-/// A grid in its container: sort and filter above it, and under it the words on its
-/// weight and, for the inventory, the Drop and bin slots. One that `grows` scrolls.
-pub(super) fn spawn_grid(
-    parent: &mut ChildSpawnerCommands,
-    holder: Holder,
-    size: (u8, u8),
-    grows: bool,
-) {
-    let look = ContainerLook {
-        title: None,
-        controls: true,
-        size: if grows {
-            ContainerSize::Grows(MOST_HEIGHT)
-        } else {
-            ContainerSize::Fixed
-        },
-        weight: true,
-        slots: holder == Holder::Inventory,
-    };
-    let parts = spawn_container(parent, look);
-    let mut commands = parent.commands();
-    if grows && let Holder::Inside(bag) = holder {
-        commands
-            .entity(parts.grid)
-            .insert(UiId::of("bag", bag, "scroll"));
-    }
-    if let Some(controls) = parts.controls {
-        commands.entity(controls).with_children(|row| {
-            spawn_sort(row, holder);
-            spawn_filter(row, Some(holder));
-        });
-    }
-    commands
-        .entity(parts.grid)
-        .with_children(|parent| spawn_cells(parent, holder, size));
-    if let Some(weight) = parts.weight {
-        commands.entity(weight).insert(WeightText { holder });
-    }
-    if let Some(slots) = parts.slots {
-        commands.entity(slots).with_children(|slots| {
-            // Slots drawing themselves: `show_drop` and `show_bins` say what
-            // each shows.
-            slots.spawn((DropNode, SlotShown::default()));
-            slots.spawn((BinNode, BinSlot, SlotShown::default()));
-        });
-    }
-}
-
-/// A grid of this size, empty: `show_grids` and `show_aim` say what is in it,
-/// and it draws itself (`dom::GridShown`).
-pub(super) fn spawn_cells(
-    parent: &mut ChildSpawnerCommands,
-    holder: Holder,
-    (columns, rows): (u8, u8),
-) {
-    let shown = GridShown {
-        columns,
-        rows,
-        ..default()
-    };
-    parent.spawn((GridOwner { holder }, shown, Node::default()));
 }

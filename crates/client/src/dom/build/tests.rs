@@ -138,3 +138,40 @@ fn bad_markup_builds_nothing() {
     let mut app = built(&BROKEN);
     assert!(tags(&mut app).is_empty());
 }
+
+static FRAMED: Template = html!(
+    "framed",
+    r#"
+<form id="f">
+  <container id="frame" title="Things">
+    <footer><p id="weight">1kg</p></footer>
+    <div id="body"/>
+    <header id="controls"/>
+  </container>
+</form>
+"#
+);
+
+static LOST_HEADER: Template = html!(
+    "lost_header",
+    r#"<form id="f"><header id="controls"/></form>"#
+);
+
+#[test]
+fn a_container_puts_its_header_first_and_its_footer_last() {
+    FRAMED.assert_good();
+    // A header is only a container's.
+    assert!(LOST_HEADER.checked().is_err());
+    let mut app = built(&FRAMED);
+    let frame = find(&mut app, "f/frame");
+    let body = find(&mut app, "f/body");
+    let controls = find(&mut app, "f/controls");
+    let children: Vec<Entity> = app.world().get::<Children>(frame).unwrap().to_vec();
+    // The top row (its title and header), what it holds, then its footer.
+    assert_eq!(children.len(), 3);
+    assert_eq!(children[1], body);
+    let top = app.world().get::<ChildOf>(controls).unwrap().parent();
+    assert_eq!(children[0], top);
+    let footer = app.world().get::<Element>(children[2]).unwrap();
+    assert_eq!(footer.tag, Tag::Footer);
+}

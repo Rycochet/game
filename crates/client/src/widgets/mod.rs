@@ -8,7 +8,6 @@ mod aura;
 mod auto_scroll;
 mod clipboard;
 mod colour_picker;
-mod container;
 #[cfg(not(target_arch = "wasm32"))]
 mod copy_button;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
@@ -54,7 +53,6 @@ pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]
 pub use clipboard::copy_to_clipboard;
 pub use colour_picker::{ColourChosen, ColourPicker, SAMPLE_GRADIENT, Swatch, spawn_colour_picker};
-pub use container::{ContainerLook, ContainerSize, spawn_container};
 #[cfg(not(target_arch = "wasm32"))]
 pub use copy_button::spawn_copy_button;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};

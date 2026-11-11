@@ -1258,3 +1258,7 @@ Third step of the owner's grid and slot work. `dom/hold` owns the one thing held
 ## 2026-11-11: Abilities are drawn and held as items are
 
 Fourth and last step of the owner's grid and slot work. The Abilities page is a list that draws itself (`dom::AbilityGridShown`), the action bar's slots draw themselves (`AbilitySlotShown`: the key, the automatic edge, a toggle's edge, the queued stripes, the shade), and a dragged ability is held by the same `HeldObject` as an item (`HeldWhat::Ability`). `abilities` keeps its rules: a click uses a slot, a drag (not a click) picks up, what a drop means, automatic use. Abilities have their own shown components rather than sharing `GridShown` and `SlotShown`: they have no shape, cells or stacks, and a bar slot shows things no item slot does, so one component for both would be two in one; the markup will tell them apart by `type`, as planned. Putting items on the bar stays a later game rule change.
+
+## 2026-11-11: The frame round a grid is its own element
+
+Owner: "own element is better for consistency", against Claude's suggestion of plain markup. `container` (`title`, a `header` of controls, what it holds, a `footer`) is built once in `dom`, and the inventory's grid, bags and the ground's section use it; `widgets::spawn_container` is gone. The old widgets that go in it (sort, filter) are still spawned by `inventory` into the `header` once it is built, until they are markup too.

@@ -11,17 +11,13 @@ use super::Carried;
 use super::filter::spawn_filter;
 use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPosition, TookItem};
 use crate::connection::FromServer;
-use crate::dom::GridShown;
+use crate::dom::{GridShown, Template, document_in};
+use crate::html;
 use crate::player::Player;
-use crate::widgets::{
-    ContainerLook, ContainerSize, StockGrid, StockGridNode, StockOf, UiId, show_stock_aim,
-    spawn_container,
-};
+use crate::widgets::{StockGrid, StockGridNode, StockOf, UiId, show_stock_aim};
 
 /// How many cells across it is: the longest thing there can be.
 const COLUMNS: u8 = 8;
-/// The most of the window's height it takes, before it scrolls.
-const MOST_HEIGHT: Val = Val::Vh(50.0);
 
 /// What is on the ground where the server last said.
 #[derive(Resource)]
@@ -47,37 +43,47 @@ pub(super) struct GroundSection;
 #[derive(Component)]
 pub(super) struct GroundHolder;
 
+/// The section's contents: its title and filter, and its grid, which scrolls
+/// past half the window's height.
+static SECTION: Template = html!(
+    "inventory.ground",
+    r#"
+<form id="ground">
+  <container id="frame" title="On the ground">
+    <header id="controls"/>
+    <scroll id="scroll" max-height="50%">
+      <object-grid id="grid" type="item" places="packed" grows/>
+    </scroll>
+  </container>
+</form>
+"#
+);
+
 /// The section, for the Character panel, hidden until there is something to show.
-pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) -> Entity {
-    let mut holder = Entity::PLACEHOLDER;
-    parent
-        .spawn((
-            GroundSection,
-            Node {
-                display: Display::None,
-                ..default()
-            },
-        ))
-        .with_children(|section| {
-            let look = ContainerLook {
-                title: Some("On the ground"),
-                controls: true,
-                size: ContainerSize::Grows(MOST_HEIGHT),
-                weight: false,
-                slots: false,
-            };
-            let parts = spawn_container(section, look);
-            let key = UiId::new("ground", "scroll");
-            section.commands().entity(parts.grid).insert(key);
-            if let Some(controls) = parts.controls {
-                let mut commands = section.commands();
-                commands
-                    .entity(controls)
-                    .with_children(|row| spawn_filter(row, None));
+pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) {
+    let hidden = Node {
+        display: Display::None,
+        ..default()
+    };
+    let section = parent.spawn((GroundSection, hidden)).id();
+    parent.commands().spawn(document_in(&SECTION, section));
+}
+
+/// Fills the section's places once it is built: its filter, and the grid the
+/// ground's things are shown in.
+pub(super) fn bind_section(new: Query<(Entity, &UiId), Added<UiId>>, mut commands: Commands) {
+    for (entity, id) in &new {
+        match id.parts() {
+            ("ground", "controls") => {
+                let mut controls = commands.entity(entity);
+                controls.with_children(|row| spawn_filter(row, None));
             }
-            holder = parts.grid;
-        });
-    holder
+            ("ground", "grid") => {
+                commands.entity(entity).insert(GroundHolder);
+            }
+            _ => {}
+        }
+    }
 }
 
 /// What the server says is there, and what has been given to it or taken from it

@@ -9,7 +9,7 @@ use shared::item::Holder;
 use super::super::body::spawn_rows;
 use super::super::ground::spawn_section;
 use super::super::wear_note::wear_note;
-use super::grids::spawn_grid;
+use super::frame::spawn_grid;
 use super::{COLUMN_GAP, FONT};
 use crate::common::{AbilitiesPage, SheetText, SkillsPage};
 use crate::widgets::{INK, TabChosen, UiId, spawn_tabs};
@@ -62,13 +62,8 @@ impl Pages {
     }
 }
 
-/// The tabs and their pages, `shown` on show. Returns them, and the holder of the
-/// ground's section.
-pub(super) fn spawn_pages(
-    content: &mut ChildSpawnerCommands,
-    shown: Page,
-    size: (u8, u8),
-) -> (Pages, Entity) {
+/// The tabs and their pages, `shown` on show.
+pub(super) fn spawn_pages(content: &mut ChildSpawnerCommands, shown: Page) -> Pages {
     let row = spawn_tabs(content, &Page::NAMES, shown.index(), FONT);
     content
         .commands()
@@ -90,7 +85,6 @@ pub(super) fn spawn_pages(
             page.spawn((SheetText, Text::default(), FONT.font(), TextColor(INK)));
         })
         .id();
-    let mut ground = None;
     let inventory = content
         .spawn(page(Page::Inventory))
         .with_children(|columns| {
@@ -105,17 +99,16 @@ pub(super) fn spawn_pages(
                     spawn_rows(column);
                     column.spawn(wear_note());
                 });
-            spawn_grid(columns, Holder::Inventory, size, false);
-            ground = Some(spawn_section(columns));
+            spawn_grid(columns, Holder::Inventory, false);
+            spawn_section(columns);
         })
         .id();
     let abilities = content.spawn((page(Page::Abilities), AbilitiesPage)).id();
     let skills = content.spawn((page(Page::Skills), SkillsPage)).id();
-    let pages = Pages {
+    Pages {
         row,
         pages: [character, inventory, abilities, skills],
-    };
-    (pages, ground.expect("spawned"))
+    }
 }
 
 /// A tab pressed shows its page, and is remembered for next time.
