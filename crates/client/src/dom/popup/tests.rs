@@ -24,19 +24,49 @@ fn escape(app: &mut App) -> Vec<UiId> {
     closed.map(|event| event.id).collect()
 }
 
+/// A frame with the left button just pressed away from everything.
+fn press_elsewhere(app: &mut App) -> Vec<UiId> {
+    app.world_mut().resource_mut::<UiPointer>().0 = Some(Vec2::splat(900.0));
+    let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
+    mouse.release(MouseButton::Left);
+    mouse.clear();
+    mouse.press(MouseButton::Left);
+    app.world_mut().run_system_once(close_popups).unwrap();
+    let mut events = app.world_mut().resource_mut::<Messages<UiEvent>>();
+    let closed = events
+        .drain()
+        .filter(|event| event.value == UiValue::Closed);
+    closed.map(|event| event.id).collect()
+}
+
 #[test]
-fn a_popup_is_placed_and_closes_on_escape_unless_locked() {
+fn a_popup_is_placed_and_closes_by_itself_unless_locked() {
     let mut app = built(&POPUP);
     let popup = find(&mut app, "a/box");
     let node = app.world().get::<Node>(popup).unwrap();
     assert_eq!((node.left, node.top), (px(40), px(60)));
     assert_eq!(node.position_type, PositionType::Absolute);
+    let id = UiId::new("a", "box");
 
-    assert_eq!(escape(&mut app), vec![UiId::new("a", "box")]);
+    assert_eq!(press_elsewhere(&mut app), vec![id]);
+    assert_eq!(escape(&mut app), vec![id]);
 
-    // Locked: it stays.
+    // Locked: it stays through a press elsewhere, and Esc still closes it.
     app.world_mut().get_mut::<Popup>(popup).unwrap().locked = true;
-    assert!(escape(&mut app).is_empty());
+    assert!(press_elsewhere(&mut app).is_empty());
+    assert_eq!(escape(&mut app), vec![id]);
+}
+
+#[test]
+fn a_popup_is_taken_hold_of_by_its_top_only() {
+    let (corner, size) = (Vec2::new(100.0, 100.0), Vec2::new(200.0, 80.0));
+    assert!(drag::on_grip(Vec2::new(150.0, 110.0), corner, size));
+    assert!(!drag::on_grip(
+        Vec2::new(150.0, 100.0 + drag::GRIP + 1.0),
+        corner,
+        size
+    ));
+    assert!(!drag::on_grip(Vec2::new(90.0, 110.0), corner, size));
 }
 
 #[test]

@@ -1,8 +1,11 @@
 //! `popup`: a dark box in front of the panels, at a place, for a choice to
 //! make or for more about something. It closes by itself on a press anywhere
-//! else, or Esc, unless the padlock at its top right is locked: then it
-//! stays, as a box of details to keep open. Closing is told by its id
+//! else, unless the padlock at its top right is locked: then it stays, as a
+//! box of details to keep open, and can be dragged by its top (`drag`). Esc
+//! closes it either way. Closing is told by its id
 //! (`UiValue::Closed`); its owner then despawns its document.
+
+mod drag;
 
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
@@ -90,8 +93,8 @@ pub(super) fn press_locks(
     }
 }
 
-/// Closes each popup that isn't locked on Esc, or on a press anywhere but on
-/// it. A locked one stays until it is unlocked.
+/// Closes every popup on Esc, and each that isn't locked on a press anywhere
+/// but on it.
 pub(super) fn close_popups(
     popups: Query<(&Popup, &UiId, &Node, &ComputedNode, &UiGlobalTransform)>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
@@ -101,7 +104,7 @@ pub(super) fn close_popups(
 ) {
     let open = popups
         .iter()
-        .filter(|(popup, _, node, ..)| !popup.locked && node.display != Display::None);
+        .filter(|(_, _, node, ..)| node.display != Display::None);
     let open: Vec<_> = open.collect();
     if open.is_empty() {
         return;
@@ -109,12 +112,13 @@ pub(super) fn close_popups(
     // (Taken, so the menus don't open on it.)
     let escaped = keys.clear_just_pressed(KeyCode::Escape);
     let pressed = mouse.just_pressed(MouseButton::Left);
-    for (_, id, _, node, transform) in open {
+    for (popup, id, _, node, transform) in open {
         let (corner, size) = logical_rect(node, transform);
         let on_it = pointer
             .0
             .is_some_and(|at| Rect::from_corners(corner, corner + size).contains(at));
-        if escaped || (pressed && !on_it) {
+        // Locked, it stays through presses elsewhere: only Esc closes it.
+        if escaped || (pressed && !on_it && !popup.locked) {
             let value = UiValue::Closed;
             events.write(UiEvent { id: *id, value });
         }
@@ -128,7 +132,13 @@ pub(super) fn add(app: &mut App) {
             .after(PointerSystems)
             .before(WidgetSystems::Presses),
     )
-    .add_systems(PreUpdate, close_popups.in_set(ClosePopups))
+    // A press that takes hold of a popup isn't one elsewhere.
+    .add_systems(
+        PreUpdate,
+        (drag::drag_popups, close_popups)
+            .chain()
+            .in_set(ClosePopups),
+    )
     .add_systems(Update, press_locks);
 }
 
