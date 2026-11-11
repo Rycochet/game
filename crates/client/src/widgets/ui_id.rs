@@ -41,6 +41,19 @@ impl UiId {
         }
     }
 
+    /// The same name, in the one of several forms alike told apart by `of`.
+    pub const fn in_one(self, of: Id) -> Self {
+        Self {
+            of: Some(of),
+            ..self
+        }
+    }
+
+    /// Which of several forms alike it is in, if its form is one of those.
+    pub fn which(&self) -> Option<Id> {
+        self.of
+    }
+
     /// The one at this place in a list of them, written `name.<at>`.
     pub const fn at(self, at: usize) -> Self {
         Self {

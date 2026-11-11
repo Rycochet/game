@@ -25,3 +25,10 @@ fn no_system_asks_for_what_another_of_its_parameters_has() {
     starts(close_on_escape);
     starts(close_when_left);
 }
+
+#[test]
+fn the_panel_is_good_markup_with_the_grids_columns() {
+    stock::TRADE.assert_good();
+    let columns = format!("columns=\"{COLUMNS}\"");
+    assert!(stock::TRADE.source.contains(&columns));
+}

@@ -111,16 +111,18 @@ impl Checker {
         // An element's `type` is one of its own kinds.
         let (kinds, of_object) = (attrs.text("type"), ["item", "ability"]);
         let wrong = match tag {
-            Tag::Object => !kinds.is_some_and(|kind| of_object.contains(&kind)),
+            Tag::Object | Tag::ObjectGrid => !kinds.is_some_and(|kind| of_object.contains(&kind)),
             _ => kinds.is_some_and(|kind| of_object.contains(&kind)),
         };
         if wrong {
-            let what = "an `<object>`'s `type` is `item` or `ability`, and only its";
+            let what = "an `<object>`'s or `<object-grid>`'s `type` is `item` or `ability`, \
+                        and only theirs";
             return Err(error(what.into()));
         }
         let mut label_for = None;
         // (An object's `for` names what it shows, not something here.)
-        if attrs.has("for") && tag != Tag::Object {
+        let names_a_thing = matches!(tag, Tag::Object | Tag::ObjectGrid | Tag::ObjectSlot);
+        if attrs.has("for") && !names_a_thing {
             let within = form.ok_or_else(|| error("`for` needs a form to look in".into()))?;
             let wanted = attrs.static_text("for");
             let wanted = wanted.ok_or_else(|| error("`for` must be a plain name".into()))?;

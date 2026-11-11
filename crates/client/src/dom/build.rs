@@ -6,7 +6,9 @@ use bevy::prelude::*;
 
 use super::attrs::Align;
 use super::check::{Checked, CheckedNode};
-use super::parts::{Canvas, Document, Element, LabelFor, TemplateBody, TextStyle, Words};
+use super::parts::{
+    Canvas, Document, DocumentOf, Element, LabelFor, TemplateBody, TextStyle, Words,
+};
 use super::pictures::Pictures;
 use super::tag::Tag;
 use super::theme::Theme;
@@ -27,6 +29,17 @@ pub(super) struct Inside {
     pub document: Entity,
     /// It is in a dialog's `footer`: its row of buttons.
     pub footer: bool,
+    /// Which of several documents alike it is in: its ids get `#<id>`.
+    pub which: Option<shared::id::Id>,
+}
+
+impl Inside {
+    /// An id as it is here: in this one of several documents alike, and
+    /// numbered in a copy of a template.
+    pub fn named(&self, id: UiId) -> UiId {
+        let id = self.which.map_or(id, |which| id.in_one(which));
+        self.index.map_or(id, |index| id.at(index))
+    }
 }
 
 pub(super) struct Builder<'a, 'w, 's> {
@@ -71,7 +84,8 @@ impl Builder<'_, '_, '_> {
             }
             Tag::Table => self.table(entity, element, within),
             Tag::Progress => self.progress(entity, element, within.style),
-            Tag::Canvas => {
+            // A grid or slot of things is its owner's to draw in, as a canvas.
+            Tag::Canvas | Tag::ObjectGrid | Tag::ObjectSlot => {
                 self.commands.entity(entity).insert(Canvas);
             }
             Tag::Object => {
@@ -105,7 +119,7 @@ impl Builder<'_, '_, '_> {
         let mut entity = self
             .commands
             .spawn((part, Node::default(), style, ChildOf(parent)));
-        let numbered = |id: UiId| inside.index.map_or(id, |index| id.at(index));
+        let numbered = |id: UiId| inside.named(id);
         // A control's or surface's id goes on the widget that shows it.
         let on_widget = element.tag.is_control() || Self::is_surface(element);
         if let Some(id) = element.id.filter(|_| !on_widget) {
@@ -126,15 +140,24 @@ impl Builder<'_, '_, '_> {
 
 /// Builds each new document from its template. One with something wrong in it
 /// is left empty, with the error in the log.
+/// A document to build: its root, its template, what it is in (if it is
+/// inside another's element) and which of several alike it is.
+type NewDocument = (
+    Entity,
+    &'static Document,
+    Option<&'static ChildOf>,
+    Option<&'static DocumentOf>,
+);
+
 pub(super) fn build_documents(
     mut commands: Commands,
     theme: Res<Theme>,
     pictures: Res<Pictures>,
     assets: Res<AssetServer>,
-    new: Query<(Entity, &Document, Option<&ChildOf>), Added<Document>>,
+    new: Query<NewDocument, Added<Document>>,
     styles: Query<&TextStyle>,
 ) {
-    for (root, Document(template), parent) in &new {
+    for (root, Document(template), parent, which) in &new {
         match template.checked() {
             Ok(nodes) => {
                 // Inside another document's element, it writes as that does.
@@ -156,6 +179,7 @@ pub(super) fn build_documents(
                     index: None,
                     document: root,
                     footer: false,
+                    which: which.map(|DocumentOf(which)| *which),
                 };
                 builder.nodes(root, &nodes, inside);
             }

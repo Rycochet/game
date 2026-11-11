@@ -11,7 +11,7 @@ use super::rows::{are_rows, copy_rows};
 use super::{Change, DomChange};
 use crate::dom::build::{Builder, Inside};
 use crate::dom::parts::{
-    Bar, Control, ControlOf, Element, SurfaceOf, TemplateBody, TextStyle, Words,
+    Bar, Control, ControlOf, DocumentOf, Element, SurfaceOf, TemplateBody, TextStyle, Words,
 };
 use crate::dom::pictures::Pictures;
 use crate::dom::theme::Theme;
@@ -128,6 +128,7 @@ fn copy(world: &mut World, into: Entity, template: &str, index: usize) -> Result
         index: Some(index),
         document: document_of(world, into),
         footer: false,
+        which: which_of(world, document_of(world, into)),
     };
     if are_rows(&nodes) {
         return copy_rows(world, into, &nodes, inside);
@@ -149,6 +150,13 @@ fn document_of(world: &World, entity: Entity) -> Entity {
             None => return at,
         }
     }
+}
+
+/// Which of several documents alike this root is, if it is one.
+fn which_of(world: &World, document: Entity) -> Option<shared::id::Id> {
+    world
+        .get::<DocumentOf>(document)
+        .map(|DocumentOf(which)| *which)
 }
 
 /// Runs `with` on a builder, with the theme as it is now.
