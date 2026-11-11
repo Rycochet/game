@@ -29,6 +29,8 @@ pub struct Checked {
     pub id: Option<UiId>,
     /// For a `form`, the name it gives what is in it.
     pub form: Option<&'static str>,
+    /// For a label with `for`: the id of what it is for.
+    pub label_for: Option<UiId>,
     pub attrs: Attrs,
     pub children: Vec<CheckedNode>,
 }
@@ -79,10 +81,13 @@ impl Checker {
         let error = |what: String| MarkupError::new(at, what);
         let name = raw.name;
         let tag = Tag::named(name).ok_or_else(|| error(format!("`<{name}>` is not known")))?;
-        if let Some(home) = tag.belongs_in()
-            && inside.parent != Some(home)
-        {
-            return Err(error(format!("`<{name}>` goes in `<{}>`", home.name())));
+        let homes = tag.belongs_in();
+        if !homes.is_empty() && !inside.parent.is_some_and(|parent| homes.contains(&parent)) {
+            let homes: Vec<String> = homes
+                .iter()
+                .map(|home| format!("`<{}>`", home.name()))
+                .collect();
+            return Err(error(format!("`<{name}>` goes in {}", homes.join(" or "))));
         }
         fits(tag, &raw.children).map_err(|(at, what)| MarkupError::new(at, what))?;
 
@@ -99,9 +104,16 @@ impl Checker {
         if tag.needs_id() && own_id.is_none() {
             return Err(error(format!("`<{name}>` needs an `id`")));
         }
-        if let Some(wanted) = &attrs.for_id {
+        if tag == Tag::Input && !attrs.has("type") {
+            return Err(error("`<input>` needs a `type`".into()));
+        }
+        let mut label_for = None;
+        if attrs.has("for") {
             let within = form.ok_or_else(|| error("`for` needs a form to look in".into()))?;
+            let wanted = attrs.static_text("for");
+            let wanted = wanted.ok_or_else(|| error("`for` must be a plain name".into()))?;
             self.wanted.push((format!("{within}/{wanted}"), at));
+            label_for = Some(UiId::new(within, wanted));
         }
 
         let is_form = tag == Tag::Form;
@@ -134,6 +146,7 @@ impl Checker {
             tag,
             id,
             form: own_id.filter(|_| is_form),
+            label_for,
             attrs,
             children,
         })
@@ -172,7 +185,13 @@ fn fits(tag: Tag, children: &[RawNode]) -> Result<(), (Place, String)> {
             RawNode::Text(_, at) => (*at, "words".to_owned()),
         };
         let allowed = match (tag.holds(), child) {
-            (Holds::Anything, _) | (Holds::Words, RawNode::Text(..)) => true,
+            (Holds::Anything, _) | (Holds::Words | Holds::WordsOrPicture, RawNode::Text(..)) => {
+                true
+            }
+            // One picture, and nothing else beside it.
+            (Holds::WordsOrPicture, RawNode::Element(inner)) => {
+                inner.name == "img" && children.len() == 1
+            }
             (Holds::Only(tags), RawNode::Element(inner)) => {
                 Tag::named(inner.name).is_some_and(|inner| tags.contains(&inner))
             }

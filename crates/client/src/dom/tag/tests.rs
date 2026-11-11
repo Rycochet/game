@@ -11,8 +11,8 @@ fn every_tag_is_found_by_its_name() {
 
 #[test]
 fn table_parts_belong_in_tables() {
-    assert_eq!(Tag::Td.belongs_in(), Some(Tag::Tr));
-    assert_eq!(Tag::Tr.belongs_in(), Some(Tag::Table));
+    assert_eq!(Tag::Td.belongs_in(), [Tag::Tr]);
+    assert_eq!(Tag::Tr.belongs_in(), [Tag::Table]);
     assert_eq!(Tag::Table.holds(), Holds::Only(&[Tag::Tr]));
-    assert_eq!(Tag::Div.belongs_in(), None);
+    assert!(Tag::Div.belongs_in().is_empty());
 }

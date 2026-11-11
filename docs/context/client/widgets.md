@@ -99,7 +99,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 ## Used by
 
 - `minimap`, `debug_menu`, `system_menu`, `inventory`, `site`, `step_pad` (grip panel, hold buttons), and many more.
-- `dom` (`UiId`, `HoverTip`, `Progress`, `spawn_progress_bar`, `Spinner`, `TextSize` and colours): the interface as markup, which is to take over from these functions (`docs/context/html-interface.md`).
+- `dom` (`UiId`, `HoverTip`, `Progress`, `spawn_progress_bar`, `Spinner`, `TextSize` and colours; and, for its controls, the spawn functions, components (`Slider` among them) and messages of buttons, switches, text boxes, sliders, dropdowns, tabs, key boxes and colour pickers): the interface as markup, which is to take over from these functions (`docs/context/html-interface.md`).
 
 ## Notes
 

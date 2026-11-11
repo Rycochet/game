@@ -5,9 +5,11 @@
 use bevy::prelude::*;
 
 use super::check::{Checked, CheckedNode};
-use super::parts::{Canvas, Document, Element, TemplateBody, TextStyle, Words};
+use super::parts::{Canvas, Document, Element, LabelFor, TemplateBody, TextStyle, Words};
+use super::pictures::Pictures;
 use super::tag::Tag;
 use super::theme::Theme;
+use crate::widgets::UiId;
 
 mod progress;
 mod table;
@@ -23,6 +25,8 @@ pub(super) struct Inside {
 pub(super) struct Builder<'a, 'w, 's> {
     pub commands: &'a mut Commands<'w, 's>,
     pub theme: &'a Theme,
+    pub pictures: &'a Pictures,
+    pub assets: &'a AssetServer,
 }
 
 impl Builder<'_, '_, '_> {
@@ -55,6 +59,7 @@ impl Builder<'_, '_, '_> {
             Tag::Canvas => {
                 self.commands.entity(entity).insert(Canvas);
             }
+            tag if tag.is_control() => self.control(entity, element, within),
             _ => self.nodes(entity, &element.children, within),
         }
     }
@@ -74,8 +79,13 @@ impl Builder<'_, '_, '_> {
         let mut entity = self
             .commands
             .spawn((part, Node::default(), style, ChildOf(parent)));
-        if let Some(id) = element.id {
-            entity.insert(inside.index.map_or(id, |index| id.at(index)));
+        let numbered = |id: UiId| inside.index.map_or(id, |index| id.at(index));
+        // A control's id goes on the widget that shows it (`controls`).
+        if let Some(id) = element.id.filter(|_| !element.tag.is_control()) {
+            entity.insert(numbered(id));
+        }
+        if let Some(wanted) = element.label_for {
+            entity.insert(LabelFor(numbered(wanted)));
         }
         (entity.id(), Inside { style, ..inside })
     }
@@ -86,6 +96,8 @@ impl Builder<'_, '_, '_> {
 pub(super) fn build_documents(
     mut commands: Commands,
     theme: Res<Theme>,
+    pictures: Res<Pictures>,
+    assets: Res<AssetServer>,
     new: Query<(Entity, &Document), Added<Document>>,
 ) {
     for (root, Document(template)) in &new {
@@ -99,6 +111,8 @@ pub(super) fn build_documents(
                 let mut builder = Builder {
                     commands: &mut commands,
                     theme: &theme,
+                    pictures: &pictures,
+                    assets: &assets,
                 };
                 builder.nodes(root, &nodes, Inside { style, index: None });
             }

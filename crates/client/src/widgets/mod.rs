@@ -83,7 +83,7 @@ pub use scale::{INTERFACE_PERCENTS, TouchOnly};
 pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area};
 pub use set_edge::set_edge;
 pub use skill_ring::{SkillRing, skill_ring};
-pub use slider::{SliderMoved, spawn_slider};
+pub use slider::{Slider, SliderMoved, spawn_slider};
 pub use soft_keyboard::Key as SoftKey;
 pub use spinner::Spinner;
 pub use stock::{StockAim, StockAimAt, StockGrid, StockGridNode, draw_stock_aim};

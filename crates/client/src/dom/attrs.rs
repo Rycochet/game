@@ -7,6 +7,7 @@ use std::borrow::Cow;
 
 use super::tag::Tag;
 
+mod own;
 mod set;
 mod values;
 #[cfg(any(test, feature = "debug-api"))]
@@ -23,8 +24,6 @@ pub struct Attrs {
     pub class: Option<Cow<'static, str>>,
     /// Words shown on pointing at it.
     pub title: Option<Cow<'static, str>>,
-    /// A label's: the `id` of what it is for.
-    pub for_id: Option<Cow<'static, str>>,
     /// Not laid out or shown, though still there.
     pub hidden: bool,
     pub disabled: bool,
@@ -40,27 +39,61 @@ pub struct Attrs {
     pub height: Option<Length>,
     /// In place of the theme's, by side as in `SIDES`.
     pub margin: [Option<f32>; 4],
-    pub src: Option<Cow<'static, str>>,
-    pub alt: Option<Cow<'static, str>>,
-    pub value: Option<f32>,
-    pub max: Option<f32>,
-    pub colspan: Option<u16>,
-    pub cellspacing: Option<f32>,
-    pub cellpadding: Option<f32>,
+    /// The attributes only some elements take (`own::OWN`), as written and
+    /// already checked, in the order they were set. One standing alone is "".
+    own: Vec<(&'static str, Cow<'static, str>)>,
 }
 
 impl Attrs {
+    /// One of an element's own attributes, as written: `attrs.text("src")`.
+    pub fn text(&self, name: &str) -> Option<&str> {
+        let found = self.own.iter().find(|(known, _)| *known == name);
+        found.map(|(_, value)| value.as_ref())
+    }
+
+    /// One as written, if it is still a piece of its template's source (not
+    /// set since by code, and with no `&…;` in it).
+    pub(super) fn static_text(&self, name: &str) -> Option<&'static str> {
+        let found = self.own.iter().find(|(known, _)| *known == name);
+        found.and_then(|(_, value)| match value {
+            Cow::Borrowed(written) => Some(*written),
+            Cow::Owned(_) => None,
+        })
+    }
+
+    /// Puts one that stands alone there, or takes it off.
+    pub(super) fn set_flag(&mut self, name: &'static str, on: bool) {
+        self.own.retain(|(known, _)| *known != name);
+        if on {
+            self.own.push((name, Cow::Borrowed("")));
+        }
+    }
+
+    /// One that is a number: `attrs.number("max")`.
+    pub fn number(&self, name: &str) -> Option<f32> {
+        self.text(name).and_then(|value| value.parse().ok())
+    }
+
+    /// Whether one that stands alone is there: `attrs.has("checked")`.
+    pub fn has(&self, name: &str) -> bool {
+        self.text(name).is_some()
+    }
+
     /// Whether it is placed in its parent by its sides, out of the flow.
     pub fn is_placed(&self) -> bool {
         self.top.is_some() || self.left.is_some() || self.right.is_some() || self.bottom.is_some()
     }
 
-    /// What is wrong with these taken together, if anything.
-    pub(super) fn conflict(&self) -> Option<&'static str> {
+    /// What is wrong with these taken together on a `tag`, if anything.
+    pub(super) fn problem(&self, tag: Tag) -> Option<String> {
+        let numeric = |name: &str| self.text(name).is_none_or(|_| self.number(name).is_some());
+        let kind = self.text("type");
         if self.left.is_some() && self.right.is_some() && self.width.is_some() {
-            Some("`left` and `right` already give the width")
+            Some("`left` and `right` already give the width".into())
         } else if self.top.is_some() && self.bottom.is_some() && self.height.is_some() {
-            Some("`top` and `bottom` already give the height")
+            Some("`top` and `bottom` already give the height".into())
+        } else if (tag == Tag::Progress || kind == Some("range")) && !numeric("value") {
+            Some("`value` must be a number here".into())
         } else {
             None
         }

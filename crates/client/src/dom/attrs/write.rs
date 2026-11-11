@@ -8,21 +8,18 @@ impl Attrs {
     /// ` class="warning" hidden`.
     pub fn written(&self) -> String {
         let mut out = String::new();
-        let mut value = |name: &str, value: Option<String>| {
-            if let Some(value) = value {
+        let mut write = |name: &str, value: Option<String>| match value.as_deref() {
+            Some("") => out.push_str(&format!(" {name}")),
+            Some(value) => {
                 let value = value.replace('&', "&amp;").replace('"', "&quot;");
                 out.push_str(&format!(" {name}=\"{value}\""));
             }
+            None => {}
         };
-        let text = |words: &Option<std::borrow::Cow<'static, str>>| {
-            words.as_ref().map(|words| words.to_string())
-        };
-        let number = |number: Option<f32>| number.map(|number| number.to_string());
-        value("class", text(&self.class));
-        value("title", text(&self.title));
-        value("for", text(&self.for_id));
-        value("align", self.align.map(|align| align.name().to_owned()));
-        value("valign", self.valign.map(|valign| valign.name().to_owned()));
+        write("class", self.class.as_ref().map(|class| class.to_string()));
+        write("title", self.title.as_ref().map(|title| title.to_string()));
+        write("align", self.align.map(|align| align.name().to_owned()));
+        write("valign", self.valign.map(|valign| valign.name().to_owned()));
         let lengths = [
             ("top", self.top),
             ("left", self.left),
@@ -32,25 +29,22 @@ impl Attrs {
             ("height", self.height),
         ];
         for (name, length) in lengths {
-            value(name, length.map(Length::written));
+            write(name, length.map(Length::written));
         }
         for (side, margin) in SIDES.iter().zip(self.margin) {
-            value(&format!("margin-{side}"), number(margin));
+            let margin = margin.map(|margin| margin.to_string());
+            write(&format!("margin-{side}"), margin);
         }
-        value("src", text(&self.src));
-        value("alt", text(&self.alt));
-        value("value", number(self.value));
-        value("max", number(self.max));
-        value("colspan", self.colspan.map(|span| span.to_string()));
-        value("cellspacing", number(self.cellspacing));
-        value("cellpadding", number(self.cellpadding));
+        for (name, value) in &self.own {
+            write(name, Some(value.to_string()));
+        }
         let flags = [
             ("hidden", self.hidden),
             ("disabled", self.disabled),
             ("inert", self.inert),
         ];
         for (name, _) in flags.iter().filter(|(_, on)| *on) {
-            out.push_str(&format!(" {name}"));
+            write(name, Some(String::new()));
         }
         out
     }

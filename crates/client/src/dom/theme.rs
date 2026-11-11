@@ -87,6 +87,29 @@ impl Theme {
         };
         theme.set(Tag::Hr, "", rule);
         theme.set(Tag::Table, "striped", Look::default());
+        // Controls keep a little room under them, as paragraphs do. Their
+        // classes pick among the widgets' own looks (`controls`).
+        let control = Look {
+            margin: [0.0, 0.0, 4.0, 0.0],
+            ..default()
+        };
+        let controls = [
+            (
+                Tag::Button,
+                &["", "main", "quiet", "danger", "folder", "small"][..],
+            ),
+            (Tag::Input, &["", "error"]),
+            (Tag::KeyBox, &["", "warned"]),
+            (Tag::Select, &[""]),
+            (Tag::ToggleRow, &[""]),
+            (Tag::TabBar, &[""]),
+            (Tag::ColourPicker, &[""]),
+        ];
+        for (tag, classes) in controls {
+            for class in classes {
+                theme.set(tag, class, control);
+            }
+        }
         theme
     }
 

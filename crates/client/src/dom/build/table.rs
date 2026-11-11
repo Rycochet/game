@@ -13,7 +13,7 @@ impl Builder<'_, '_, '_> {
         let width = |row: &&Checked| elements(&row.children).map(span).sum::<u16>();
         let columns = rows.iter().map(width).max().unwrap_or(1).max(1);
         let striped = element.attrs.class.as_deref() == Some("striped");
-        let padding = element.attrs.cellpadding.unwrap_or(0.0);
+        let padding = element.attrs.number("cellpadding").unwrap_or(0.0);
         self.commands
             .entity(table)
             .insert(InTable::Table { columns });
@@ -53,5 +53,5 @@ fn elements(nodes: &[CheckedNode]) -> impl Iterator<Item = &Checked> {
 }
 
 fn span(cell: &Checked) -> u16 {
-    cell.attrs.colspan.unwrap_or(1)
+    cell.attrs.number("colspan").map_or(1, |span| span as u16)
 }

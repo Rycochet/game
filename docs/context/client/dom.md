@@ -1,6 +1,6 @@
 # client: dom
 
-The interface as markup: HTML's look with XML's closing rule, no CSS and no scripts. A template is checked strictly, built into Bevy UI nodes, and changed by id. The whole plan, the rules of the markup and what is still to come: `docs/context/html-interface.md`. So far it has layout, text, pictures, progress and canvases, and the input rules (what the pointer is on, and events sent up through what holds it), which the old `widgets` read too; there are no controls yet, so the old `widgets` still make everything players use.
+The interface as markup: HTML's look with XML's closing rule, no CSS and no scripts. A template is checked strictly, built into Bevy UI nodes, and changed by id. The whole plan, the rules of the markup and what is still to come: `docs/context/html-interface.md`. So far it has layout, text, pictures, progress and canvases, and the input rules (what the pointer is on, and events sent up through what holds it), which the old `widgets` read too; and controls (buttons, checkboxes and switches, text boxes, sliders, dropdowns, toggle rows, tabs, key boxes, colour pickers), each shown by one of the old `widgets` inside its element. No screen but Show Widgets' sample is markup yet.
 
 ## Files
 
@@ -9,7 +9,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - `crates/client/src/dom/error.rs`: `MarkupError` (`at`, `what`), `Place` (line and column, from 1).
 - `crates/client/src/dom/markup.rs`: markup as written (`RawNode`, `RawElement`, `RawAttr`). In `markup/`: `cursor.rs` (`Cursor`: a place moving along the source), `parse.rs` (`parse`), `text.rs` (`tidy`: spaces as HTML's; `decode`: `&amp;` and the like).
 - `crates/client/src/dom/tag.rs`: `Tag`, what each may hold (`Holds`), where it may go, which need an `id`, their own attributes.
-- `crates/client/src/dom/attrs.rs`: `Attrs`, `is_known`. In `attrs/`: `values.rs` (`Length`, `Align`, `VAlign`, reading numbers), `set.rs` (`Attrs::set`, `clear`: one attribute by name, the one path for markup and code).
+- `crates/client/src/dom/attrs.rs`: `Attrs` (what every element takes as fields; the rest kept as written, read with `text`, `number`, `has`), `is_known`. In `attrs/`: `values.rs` (`Length`, `Align`, `VAlign`, reading numbers), `own.rs` (`OWN`: the attributes only some elements take, and what each may be), `set.rs` (`Attrs::set`, `clear`: one attribute by name, the one path for markup and code).
 - `crates/client/src/dom/check.rs`: `check`: raw markup into `Checked` / `CheckedNode`, with ids, forms, `for` and where elements may go.
 - `crates/client/src/dom/theme.rs`: `Theme` (resource), `Look`.
 - `crates/client/src/dom/layout.rs`: `node_for`: an element's `Node` from its attributes, look and place in a table.
@@ -18,6 +18,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - `crates/client/src/dom/restyle.rs`: `restyle`: `Node`, background, tooltip, picture and bar of every new or changed `Element`.
 - `crates/client/src/dom/pictures.rs`: `Pictures` (resource), `picture_for`.
 - `crates/client/src/dom/change.rs`: `Dom`, `DomChange`. `change/apply.rs`: `apply_changes` (an exclusive system).
+- `crates/client/src/dom/controls.rs`: `Builder::control` (the widget for a control, inside its element), `add`. In `controls/`: `buttons.rs` (`button`, checkbox and switch), `fields.rs` (text box, slider, key box), `choices.rs` (`select`, `toggle-row`, `tab-bar`, `colour-picker`), `event.rs` (`UiEvent`, `UiValue`), `bridge.rs` (`report`: the widgets' messages into `UiEvent`s, `PostUpdate`), `sync.rs` (`follow_elements`: attributes into widgets), `label.rs` (a click on a label).
 - `crates/client/src/dom/input.rs`: `DomInput` (system sets), `add`. In `input/`: `hit.rs` (`Hit`, `PointerCapture`, `Finder`, `find_target`, `find_now` for tests), `hover.rs` (`follow_hover`), `events.rs` (the events), `dispatch.rs` (`send_events`, `Buttons`).
 - `crates/client/src/dom/attrs/write.rs` (tests and the debug API): `Attrs::written()`, attributes back as markup.
 - `crates/client/src/dom/debug_api.rs` (debug API only): `client.ui.at`, `client.ui.html`.
@@ -32,6 +33,8 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - `Pictures::name(name, handle)`: a picture made in code, for `<img src="picture:<name>"/>`.
 - `Element { tag }` (component, on every element), `Canvas` (on a `canvas`: its owner adds what it draws), `Inert` (on an `inert` element; nothing reads it until the hit test of PR 2).
 - `Tag`, `Attrs`, `Length`, `Align`, `VAlign`, `Checked`, `CheckedNode`, `MarkupError`, `Place`.
+- `UiEvent { id, value }` (message): a control was used. Read them in `Update` and match on the id (`event.id == UiId::new("connect", "go")`). `UiValue`: `Pressed` (button), `Flag(bool)` (checkbox, switch), `Text(String)` (text box), `Number(f32)` (slider, between its `min` and `max`), `Choice { index, value }` (dropdown, toggle row, tabs, colour picker), `Key(Option<Binding>)` (key box). The element's attributes are kept as the widget now is (`value`, `checked`), so `client.ui.html` shows them.
+- Changing a control from code: `dom.set(id, "value", …)`, `dom.set_flag(id, "disabled" | "checked" | "selected", on)`, `dom.set_text(id, …)` for a button's words. A choice's `value` is the chosen option's own `value`, or its words if it has none.
 - `Hit` (resource, `PreUpdate`, `DomInput::Find`): `target`, the thing in front at the pointer (an element, or a `Solid` node), `chain` (the target, then everything it is in, outwards) and `at`; `first(pick)` finds the nearest of the chain that `pick` takes. Everything asking what the pointer is on reads this, so only one thing is ever in front.
 - `Solid` (component): on a node that isn't an element, it can be the target and hides what is behind it. Elements always can. The old widgets' `Pressable`, `ButtonState` and panel parts require it.
 - `Hovered` (component): on each element of the chain, and on nothing else.
@@ -42,16 +45,17 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 
 ## Elements so far
 
-`div`, `span`, `table` / `tr` / `td` / `th`, `form`, `template`, `br`, `p`, `h1`, `h2`, `small`, `label`, `img`, `progress`, `hr`, `canvas`. Attributes on all: `id`, `form`, `class`, `title`, `hidden`, `disabled`, `inert`, `align`, `valign`, `top`, `left`, `right`, `bottom`, `width`, `height`, `margin` and `margin-<side>`. Their own: `src`, `alt` (`img`); `value`, `max` (`progress`); `colspan` (`td`, `th`); `cellspacing`, `cellpadding` (`table`); `for` (`label`). Classes the theme knows: `p class="warning"`, `table class="striped"`.
+`div`, `span`, `table` / `tr` / `td` / `th`, `form`, `template`, `br`, `p`, `h1`, `h2`, `small`, `label`, `img`, `progress`, `hr`, `canvas`; and the controls `button`, `input` (`type="text"`, `"checkbox"`, `"range"`), `select`, `toggle-row`, `tab-bar`, `colour-picker` (each holding `option`s) and `key-box`. Attributes on all: `id`, `form`, `class`, `title`, `hidden`, `disabled`, `inert`, `align`, `valign`, `top`, `left`, `right`, `bottom`, `width`, `height`, `margin` and `margin-<side>`. Their own: `src`, `alt` (`img`); `value`, `max` (`progress`); `colspan` (`td`, `th`); `cellspacing`, `cellpadding` (`table`); `for` (`label`); `selected`, `hold` (`button`); `type`, `value`, `checked`, `switch`, `min`, `max`, `step`, `inputmode="numeric"`, `prefix`, `suffix`, `accepts-items`, `src` (`input`); `value`, `searchable` (`select`); `value`, `selected`, `label`, `src` (`option`); `value` (`toggle-row`, `tab-bar`, `colour-picker`, `key-box`). Classes the theme knows: `p class="warning"`, `table class="striped"`, `button class="main"`, `"quiet"`, `"danger"`, `"folder"`, `"small"`, `input class="error"`, `key-box class="warned"`.
 
 ## Depends on
 
 - `common`: `UiPointer`, `in_interface`.
-- `widgets`: `UiId` (ids), `HoverTip` (`title`), `Progress` / `spawn_progress_bar` and `Spinner` (`progress`), `TextSize` and the colours. This turns round as widgets become elements; the last PR of the plan removes it.
+- `common`: `Binding` (key boxes).
+- `widgets`: the widgets that show controls and their messages (`spawn_button`, `spawn_switch`, `TextBox`, `Dropdown`, `ButtonPressed`, …), `UiId` (ids), `HoverTip` (`title`), `Progress` / `spawn_progress_bar` and `Spinner` (`progress`), `TextSize` and the colours. This turns round as widgets become elements; the last PR of the plan removes it.
 
 ## Used by
 
-- `debug_menu`: Show Widgets' markup sample (`panels/html_sample.rs`).
+- `debug_menu`: Show Widgets' markup sample (`panels/html_sample.rs`), which also reads `UiEvent`.
 - `widgets`: `Hit` (what is pointed at and pressed), `Solid`, `DomInput`.
 - `view3d`: `Hit` (the wheel zooms only with the pointer on the view).
 
@@ -66,6 +70,12 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - `progress` is built as a bar or a spinner by whether it has a `value` in the markup; setting or clearing `value` later doesn't switch between them.
 - Changing `class` later changes an element's own look, but not the size or colour of words already inside it.
 - `restyle` is the one place a `Node` is made, at spawning and on any change, so markup and `Dom` can't disagree.
+- A control is two entities: its element (layout, attributes) and, inside it, the widget that shows it (`Control` and `ControlOf` join them). The id is on the widget, as widgets' always were, so the debug API's `client.ui.*` and anything else finding widgets by `UiId` works on controls unchanged; `Dom` finds the element from it. Every control needs an `id`, and an `input` its `type`.
+- A button holds words, or one `img` (an icon button, 32 across unless sized; `class="small"` for the small kind). `hold`: pressed only while held.
+- A checkbox is just the box: put its words in a `label`. A click on a label presses what it is for (`for`, or the control inside it); for a text box it gives it the keyboard.
+- Toggle rows and tab bars hold `option`s, as a `select` does, rather than HTML's radio buttons in a `fieldset`: one shape for every choice among options.
+- In a template with a colour (`value="#be3c32"`), write the source as `r##"…"##`: `"#` ends a string written `r#"…"#`.
+- A text box's `prefix` is only taken from the template itself (not set later by code), as the widget wants a `&'static str`.
 - Not all of `Dom`, the events and the re-exports is used yet: the `#[allow]`s on them go as screens become markup.
 - The search drills down: a point that isn't on an element isn't on anything in it, so its insides are never looked at (markup never lays anything out beyond what holds it). Nodes that aren't elements may hold things anywhere (the old widgets do), so everything in them is tried and the one furthest in front wins; that part shrinks as screens become markup. `inert` and hidden things are passed over with all they hold.
 - Our own search, not `bevy_picking`'s: its UI backend tries every node in the stack rather than drilling down, takes its own pointers rather than `UiPointer` (the finger or the mouse, in interface pixels, which fake input moves too), and only tells markers apart for the whole interface.
