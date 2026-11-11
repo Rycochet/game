@@ -146,7 +146,7 @@ pub(super) fn set_here(visit: &mut Visit, (x, y): (i64, i64), door: VisitDoor) {
 
 /// A cell of the visit's level has changed: it is sent again, and sight worked
 /// out afresh (a door may hide or show anything).
-pub(super) fn changed_at(visit: &mut Visit, x: i64, y: i64) {
+pub(in crate::sites) fn changed_at(visit: &mut Visit, x: i64, y: i64) {
     visit.view_from = None;
     visit.looked_from = Sight::new(&visit.level.level);
     visit.loaded = Sight::new(&visit.level.level);

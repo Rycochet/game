@@ -25,6 +25,7 @@ mod locks;
 mod looks;
 mod share;
 
+pub(super) use act::changed_at;
 use act::{close_near, dev_all, dev_key, open_door};
 pub(crate) use kick::{door_to_kick, kick_door};
 pub(super) use locks::ensure_locks;
