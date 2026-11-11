@@ -27,10 +27,6 @@ pub(super) const PICTURE_LABEL: TextSize = TextSize::Small;
 /// How many rings Item Pictures shows: a sample of what the server would roll.
 pub(super) const RING_ROWS: u128 = 8;
 pub(super) const RING_COLUMNS: u128 = 8;
-/// The most of the window's height the grid takes, before it scrolls.
-pub(super) const PICTURES_HEIGHT: Val = Val::Vh(70.0);
-/// Room for the longest page's name in the dropdown, beside its arrow.
-pub(super) const PAGES_WIDTH: f32 = 160.0;
 /// Room for the name of a gem beside its row.
 pub(super) const PICTURE_ROW_LABEL: f32 = 84.0;
 

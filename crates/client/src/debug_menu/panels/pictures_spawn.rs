@@ -4,92 +4,57 @@ use bevy::prelude::*;
 use shared::blade::Family;
 use shared::body::{BEASTS, Layout};
 use shared::creature::CreatureKind;
-use shared::item::Quality;
 use shared::item_form::Cut;
 use shared::material::Material;
 
-use super::page::PicturePage;
 use super::{
-    FONT, GemPicture, LARGE_PICTURE, LargePicture, PAGES_WIDTH, PICTURE, PICTURE_LABEL,
-    PICTURE_ROW_LABEL, PICTURES_HEIGHT, PicturePages, PictureQualities, PicturesGrid, RING_COLUMNS,
-    Shown, gem_to_show,
+    GemPicture, LargePicture, PICTURE, PICTURE_LABEL, PICTURE_ROW_LABEL, PicturePages,
+    PictureQualities, PicturesGrid, RING_COLUMNS, Shown, gem_to_show,
 };
-use crate::widgets::{
-    BUTTON_PADDING, Dropdown, INK, Pressable, UiId, spawn_dropdown, spawn_scroll_area,
-    spawn_toggle_row,
-};
+use crate::dom::Template;
+use crate::html;
+use crate::widgets::{INK, Pressable, UiId};
 
-/// The page of pictures last chosen, filled in by `fill_pictures`, and whichever
-/// picture was last pressed, large.
-pub(super) fn spawn_item_pictures(content: &mut ChildSpawnerCommands) {
-    let qualities: Vec<String> = Quality::ALL.iter().map(|q| format!("{q:?}")).collect();
-    let qualities: Vec<&str> = qualities.iter().map(String::as_str).collect();
-    let common = Quality::ALL
-        .iter()
-        .position(|&quality| quality == Quality::default())
-        .unwrap_or(0);
-    content
-        .spawn(Node {
-            column_gap: px(8),
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|choices| {
-            let pages = Dropdown {
-                options: PicturePage::ALL.map(|page| page.name().to_owned()).to_vec(),
-                selected: 0,
-                searchable: false,
-                ..default()
-            };
-            let node = Node {
-                padding: BUTTON_PADDING,
-                min_width: px(PAGES_WIDTH),
-                ..default()
-            };
-            spawn_dropdown(choices, pages, FONT, node)
-                .insert((PicturePages, UiId::new("debug.item_pictures", "page")));
-            let row = spawn_toggle_row(choices, &qualities, common, FONT);
-            choices.commands().entity(row).insert((
-                PictureQualities,
-                UiId::new("debug.item_pictures", "quality"),
-            ));
-        });
-    content
-        .spawn(Node {
-            column_gap: px(8),
-            ..default()
-        })
-        .with_children(|sides| {
-            sides
-                .spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                })
-                .with_children(|column| {
-                    let area = spawn_scroll_area(column, PICTURES_HEIGHT);
-                    let key = UiId::new("debug.item_pictures", "scroll");
-                    column.commands().entity(area).insert(key);
-                    column.commands().entity(area).with_children(|area| {
-                        area.spawn((
-                            PicturesGrid::default(),
-                            Node {
-                                flex_direction: FlexDirection::Column,
-                                ..default()
-                            },
-                        ));
-                    });
-                });
-            sides.spawn((
-                LargePicture,
-                Node {
-                    width: px(LARGE_PICTURE),
-                    height: px(LARGE_PICTURE),
-                    flex_shrink: 0.0,
-                    ..default()
-                },
-                ImageNode::default(),
-            ));
-        });
+/// The panel's shell, as markup: the page's dropdown (its choices given by
+/// `fill_pictures`), the qualities, the scrolling grid and the large picture.
+/// The grid's rows of pictures and the large picture are drawn by code, in
+/// the two canvases.
+pub(super) static ITEM_PICTURES: Template = html!(
+    "debug_menu.item_pictures",
+    r#"
+<form id="debug.item_pictures">
+  <span nowrap valign="middle">
+    <select id="page" width="160"><option>Gems</option></select>
+    <toggle-row id="quality">
+      <option>Poor</option>
+      <option selected>Common</option>
+      <option>Uncommon</option>
+      <option>Rare</option>
+      <option>Epic</option>
+      <option>Legendary</option>
+      <option>Artifact</option>
+    </toggle-row>
+  </span>
+  <span nowrap valign="top">
+    <scroll id="scroll" max-height="70%">
+      <canvas id="grid"/>
+    </scroll>
+    <canvas id="large" width="256" height="256"/>
+  </span>
+</form>
+"#
+);
+
+/// What a built part of the panel is known by, from its id.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId) {
+    match id.parts().1 {
+        "page" => bound.insert(PicturePages),
+        "quality" => bound.insert(PictureQualities),
+        "grid" => bound.insert(PicturesGrid::default()),
+        // Whichever picture was last pressed, large, in the middle of its room.
+        "large" => bound.with_child((LargePicture, Node::default(), ImageNode::default())),
+        _ => bound,
+    };
 }
 
 pub(super) fn picture_label(words: &str, width: f32) -> impl Bundle {
