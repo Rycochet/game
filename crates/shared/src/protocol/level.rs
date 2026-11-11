@@ -78,8 +78,9 @@ pub struct LevelInfo {
     /// rather than taken its stairs: what a client kept of its other levels
     /// is out of date, and `RememberedLevel`s follow.
     pub entering_site: bool,
-    /// What the place is called, if it has a name of its own: a town's
-    /// (`town_name`), worked out by the server, which keeps the seed.
+    /// What the place is called, if it has a name of its own: a town's,
+    /// castle's or fort's (`place_name`), worked out by the server, which keeps
+    /// the seed. The same on every level, and kept by a ruin.
     pub place_name: Option<String>,
 }
 

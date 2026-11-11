@@ -1,5 +1,6 @@
-//! The words towns' names are made of. Changing any list changes the names of
-//! towns already visited: the golden test fails on purpose.
+//! The words towns' names are made of (castles and forts use them too).
+//! Changing any list renames places already visited: the golden tests fail on
+//! purpose.
 
 use super::Altitude::{self, High, Low, Middle};
 use crate::poi::PoiKind;

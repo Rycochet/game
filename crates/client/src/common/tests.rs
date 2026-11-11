@@ -93,3 +93,25 @@ fn learned_names_are_kept_by_chunk_until_sent_without() {
     known.insert(chunk, Some(poi), None);
     assert_eq!(known.name_of(chunk), None);
 }
+
+#[test]
+fn a_ruins_learned_name_says_it_is_ruined() {
+    let poi = SeenPoi {
+        kind: PoiKind::Castle,
+        look: shared::site::PoiLook::Building {
+            outline: shared::site::Outline::Rectangle,
+            width: 20,
+            height: 20,
+            floors: 3,
+            ruin: 2,
+        },
+        chunk: ChunkPos { x: 0, y: 0 },
+        x: 10,
+        y: 10,
+    };
+    assert_eq!(
+        poi_name(&poi, Some("Castle Ravenhold")),
+        "Ruined Castle Ravenhold"
+    );
+    assert_eq!(poi_name(&poi, None), "Ruined castle");
+}

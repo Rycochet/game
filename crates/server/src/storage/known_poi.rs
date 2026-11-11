@@ -10,15 +10,17 @@ pub struct KnownPoi {
     pub known: bool,
     /// Whether they have been inside.
     pub visited: bool,
-    /// Whether they have learned a town's name: by going into it, or (later)
-    /// from being told of it (`world_map::learn_town_name`). Missing from
-    /// older saves, where a town they have visited counts as named.
+    /// Whether they have learned a place's name (a town's, castle's or
+    /// fort's): by going into it, or (later) from being told of it
+    /// (`world_map::learn_place_name`). Missing from older saves, where a place
+    /// they have visited counts as named.
     #[serde(default)]
     pub named: bool,
 }
 
 impl KnownPoi {
-    /// Whether they know what the poi is called (a town's name).
+    /// Whether they know what the poi is called (a town's, castle's or fort's
+    /// name).
     pub fn knows_name(&self) -> bool {
         self.named || self.visited
     }

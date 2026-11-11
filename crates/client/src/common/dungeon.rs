@@ -37,7 +37,8 @@ pub struct CurrentDungeon {
     /// In the wilderness, the kind of poi set into it that the player stands
     /// in, as the server says (`ServerMessage::InPoi`).
     pub in_poi: Option<PoiKind>,
-    /// What that poi is called, if it has a name of its own (a town's).
+    /// What that poi is called, if it has a name of its own (a town's,
+    /// castle's or fort's).
     pub in_poi_name: Option<String>,
     /// In the wilderness, the cells round the cutouts of pois the player
     /// knows (`ServerMessage::Borders`): drawn hatched, and a click on one
@@ -210,7 +211,8 @@ impl CurrentDungeon {
 
     /// Where the player is, for the HUD, e.g. "Castle, floor 2 of 3", or
     /// "Wilderness: RockCave" in a poi set into the wilderness ("Wilderness:
-    /// Thornbury" in a town, by its name).
+    /// Thornbury" in a town, by its name; "Castle Ravenhold, floor 2 of 3").
+    /// A named place is written as it is, not in code style.
     pub fn describe(&self) -> String {
         let name = self.floor_name(FirstFloor(1));
         if let Some(kind) = self.in_poi.filter(|_| self.is_wilderness()) {
@@ -245,10 +247,15 @@ impl CurrentDungeon {
             return info.place_name.clone().unwrap_or(format!("{kind:?}"));
         }
         let what = if info.building { "floor" } else { "level" };
-        let ruined = if info.ruined { "Ruined" } else { "" };
+        let place = match &info.place_name {
+            Some(name) if info.ruined => format!("Ruined {name}"),
+            Some(name) => name.clone(),
+            None if info.ruined => format!("Ruined{kind:?}"),
+            None => format!("{kind:?}"),
+        };
         if info.storey(info.index) < 0 {
-            return format!("{ruined}{kind:?}, basement");
+            return format!("{place}, basement");
         }
-        format!("{ruined}{kind:?}, {what} {}", info.index + first.0)
+        format!("{place}, {what} {}", info.index + first.0)
     }
 }
