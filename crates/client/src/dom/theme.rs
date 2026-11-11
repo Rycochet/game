@@ -140,6 +140,15 @@ impl Theme {
         theme.set(Tag::H1, "", sized(TextSize::Title));
         theme.set(Tag::H2, "", sized(TextSize::Large));
         theme.set(Tag::Small, "", sized(TextSize::Small));
+        // Small buttons in a row, touching.
+        theme.set(
+            Tag::Small,
+            "joined",
+            Look {
+                text: Some(TextSize::Small),
+                ..default()
+            },
+        );
         let rule = Look {
             background: Some(INK.with_alpha(0.5)),
             ..default()

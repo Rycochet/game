@@ -7,21 +7,12 @@
 use bevy::prelude::*;
 use shared::world_gate::WORLD_GATES;
 
-use super::{CHECK_ROW, FONT, SEED_WIDTH, row, words};
-use crate::widgets::{
-    BUTTON_PADDING, ButtonState, ButtonStyle, Pressable, TextBox, TextSize, UiId, spawn_button,
-    spawn_new_seed_button, spawn_text_box,
-};
+use crate::dom::{Dom, Template};
+use crate::html;
+use crate::widgets::UiId;
 
 /// The panel's form, for the debug API.
 pub(super) const FORM: &str = "debug.teleport_to_world";
-
-const GATE_PADDING: UiRect = UiRect {
-    left: Val::Px(6.0),
-    right: Val::Px(6.0),
-    top: Val::Px(2.0),
-    bottom: Val::Px(2.0),
-};
 
 /// What the panel has chosen: the gate (none: Any), and a seed to put in its
 /// box once it is there (when View Planet opened it).
@@ -46,76 +37,59 @@ pub(in crate::debug_menu) enum TeleportButton {
     Go,
 }
 
-pub(super) fn spawn_teleport_to_world(content: &mut ChildSpawnerCommands) {
-    content.spawn(row()).with_children(|row| {
-        row.spawn(words("Seed"));
-        let text_box = TextBox {
-            digits_only: true,
-            takes_keys: true,
-            ..default()
-        };
-        let node = Node {
-            width: px(SEED_WIDTH),
-            height: px(CHECK_ROW),
-            ..default()
-        };
-        spawn_text_box(row, text_box, FONT, node).insert((WorldSeedBox, UiId::new(FORM, "seed")));
-        spawn_new_seed_button(row, CHECK_ROW)
-            .insert((TeleportButton::RandomSeed, UiId::new(FORM, "new_seed")));
-        row.spawn(words("Blank: this world"));
-    });
-    content.spawn(row()).with_children(|row| {
-        row.spawn(words("Gate"));
-        let node = Node {
-            height: px(CHECK_ROW),
-            padding: GATE_PADDING,
-            ..default()
-        };
-        spawn_button(
-            row,
-            ButtonState::Normal,
-            "Any",
-            TextSize::Small,
-            node.clone(),
-        )
-        .insert((
-            TeleportButton::Gate(None),
-            Pressable,
-            UiId::new(FORM, "any"),
-        ));
-        for gate in 0..WORLD_GATES as u8 {
-            let label = (gate + 1).to_string();
-            spawn_button(
-                row,
-                ButtonState::Normal,
-                label,
-                TextSize::Small,
-                node.clone(),
-            )
-            .insert((
-                TeleportButton::Gate(Some(gate)),
-                Pressable,
-                UiId::new(FORM, "gate").at(usize::from(gate)),
-            ));
-        }
-    });
-    content.spawn(row()).with_children(|row| {
-        let node = Node {
-            padding: BUTTON_PADDING,
-            ..default()
-        };
-        for (label, button, name) in [
-            ("View Planet...", TeleportButton::ViewPlanet, "view_planet"),
-            ("Hall of Worlds", TeleportButton::Hall, "hall"),
-            ("Go", TeleportButton::Go, "go"),
-        ] {
-            let mut spawned = spawn_button(row, ButtonState::Normal, label, FONT, node.clone());
-            spawned.insert((button, Pressable, UiId::new(FORM, name)));
-            if button == TeleportButton::Go {
-                spawned.insert(ButtonStyle::Main);
+/// The panel's contents, as markup. Each World Gate's button is a copy of
+/// the template, numbered from 0 (it says one more).
+pub(super) static TELEPORT_TO_WORLD: Template = html!(
+    "debug_menu.teleport_to_world",
+    r#"
+<form id="debug.teleport_to_world">
+  <span nowrap valign="middle">
+    <label for="seed">Seed</label>
+    <input id="seed" type="text" inputmode="numeric" width="240"/>
+    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+    Blank: this world
+  </span>
+  <span nowrap valign="middle">
+    Gate
+    <small id="gates" class="joined" nowrap>
+      <button id="any">Any</button>
+    </small>
+  </span>
+  <span nowrap>
+    <button id="view_planet">View Planet...</button>
+    <button id="hall">Hall of Worlds</button>
+    <button id="go" class="main">Go</button>
+  </span>
+  <template id="gate"><button id="gate"/></template>
+</form>
+"#
+);
+
+/// What a built part of the panel is known by, from its id; the gates'
+/// place is filled with a button for each.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId, dom: &mut Dom) {
+    match (id.parts().1, id.index()) {
+        ("seed", _) => bound.insert(WorldSeedBox),
+        ("new_seed", _) => bound.insert(TeleportButton::RandomSeed),
+        ("any", _) => bound.insert(TeleportButton::Gate(None)),
+        ("gate", Some(gate)) => bound.insert(TeleportButton::Gate(Some(gate as u8))),
+        ("view_planet", _) => bound.insert(TeleportButton::ViewPlanet),
+        ("hall", _) => bound.insert(TeleportButton::Hall),
+        ("go", _) => bound.insert(TeleportButton::Go),
+        ("gates", _) => {
+            for gate in 0..WORLD_GATES {
+                dom.copy_template(
+                    "debug.teleport_to_world/gate",
+                    "debug.teleport_to_world/gates",
+                    gate,
+                );
+                let words = (gate + 1).to_string();
+                dom.set_text(&format!("debug.teleport_to_world/gate.{gate}"), words);
             }
+            bound
         }
-    });
+        _ => bound,
+    };
 }
 
 /// The seed in the box: none when it is blank, and `Err` when it isn't a

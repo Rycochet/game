@@ -38,30 +38,39 @@ pub(in crate::widgets) fn show_text_boxes(
             text.0 = owner.prefix.to_owned();
         }
         if shown.is_none_or(|shown| shown.0 != owner.text) {
-            let mut label = commands.entity(label);
-            label.despawn_related::<Children>();
-            label.insert(Shown(owner.text.clone()));
-            label.with_children(|spans| {
-                for (place, unit) in units(&owner.text, owner.accepts_items).iter().enumerate() {
-                    match unit.item {
-                        Some(id) => spawn_inline_item(spans, id, height.0, TextBoxChar(place)),
-                        None => {
-                            spans.spawn((
-                                TextBoxChar(place),
-                                TextSpan(unit.c.to_string()),
-                                font.clone(),
-                                *colour,
-                            ));
+            let (words, suffix) = (owner.text.clone(), owner.suffix.clone());
+            let (accepts_items, of) = (owner.accepts_items, text_box.0);
+            let (font, colour, height) = (font.clone(), *colour, height.0);
+            // Its panel may be closed this very frame: a label that has gone
+            // by the time this is done is left alone (`queue_silenced`).
+            let again = move |mut label: EntityWorldMut| {
+                label.despawn_related::<Children>();
+                label.insert(Shown(words.clone()));
+                let id = label.id();
+                label.world_scope(|world| {
+                    let mut commands = world.commands();
+                    commands.entity(id).with_children(|spans| {
+                        for (place, unit) in units(&words, accepts_items).iter().enumerate() {
+                            match unit.item {
+                                Some(id) => {
+                                    spawn_inline_item(spans, id, height, TextBoxChar(place))
+                                }
+                                None => {
+                                    let span = TextSpan(unit.c.to_string());
+                                    spans.spawn((TextBoxChar(place), span, font.clone(), colour));
+                                }
+                            }
                         }
-                    }
-                }
-                spans.spawn((
-                    TextBoxSuffix(text_box.0),
-                    TextSpan(owner.suffix.clone()),
-                    font.clone(),
-                    TextColor(HINT_TEXT),
-                ));
-            });
+                        spans.spawn((
+                            TextBoxSuffix(of),
+                            TextSpan(suffix),
+                            font.clone(),
+                            TextColor(HINT_TEXT),
+                        ));
+                    });
+                });
+            };
+            commands.entity(label).queue_silenced(again);
         }
     }
     for (suffix, mut span) in &mut suffixes {
