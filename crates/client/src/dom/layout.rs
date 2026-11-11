@@ -98,6 +98,12 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
             node.justify_content = JustifyContent::FlexEnd;
             node.align_items = AlignItems::Center;
         }
+        // A container's controls: in a row, kept to its right.
+        Tag::Header => {
+            node.column_gap = px(around.look.gap);
+            node.align_items = AlignItems::Center;
+            node.margin.left = Val::Auto;
+        }
         _ if tag.is_inline() => flow_along(&mut node, attrs, around.look),
         _ => stack(&mut node, attrs, around.look),
     }

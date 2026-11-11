@@ -12,6 +12,7 @@ use crate::widgets::TextSize;
 mod aim;
 mod bins;
 mod fixed;
+mod frame;
 mod grids;
 mod held;
 mod icons;
@@ -24,6 +25,7 @@ mod shown;
 pub(super) use aim::show_aim;
 pub(super) use bins::{show_bins, show_drop};
 pub(super) use fixed::spawn_fixed_parts;
+pub(super) use frame::bind_frames;
 pub(super) use held::{show_button, show_tooltip};
 use icons::{bin_icon, drop_icon, person_icon};
 pub(super) use mark::mark_grids;
@@ -43,8 +45,6 @@ const HELD_NAME_ABOVE: f32 = 48.0;
 /// Where the first panel goes, and how far along each one after it.
 const FIRST_AT: Vec2 = Vec2::new(90.0, 140.0);
 const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
-/// The most of the window's height a growing bag's grid takes, before it scrolls.
-const MOST_HEIGHT: Val = Val::Vh(60.0);
 
 /// The panels open, in the order they were opened.
 #[derive(Resource, Default)]

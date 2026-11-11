@@ -48,8 +48,13 @@ pub enum Tag {
     /// A panel in front of everything, darkening the rest; `modal` for the
     /// full-screen kind.
     Dialog,
-    /// A dialog's row of buttons, at the right.
+    /// A dialog's row of buttons, at the right; a container's last row.
     Footer,
+    /// The frame round a grid of things: its `title`, a `header` of
+    /// controls, what it holds, and a `footer`.
+    Container,
+    /// A container's controls, at its top right.
+    Header,
     /// What is in it scrolls when it is too tall.
     Scroll,
     /// One thing shown, by its `type` and `for`: an item (`objects`).
@@ -73,7 +78,7 @@ pub(super) enum Holds {
     Anything,
 }
 
-const ALL: [(&str, Tag); 33] = [
+const ALL: [(&str, Tag); 35] = [
     ("div", Tag::Div),
     ("span", Tag::Span),
     ("table", Tag::Table),
@@ -103,6 +108,8 @@ const ALL: [(&str, Tag); 33] = [
     ("panel", Tag::Panel),
     ("dialog", Tag::Dialog),
     ("footer", Tag::Footer),
+    ("container", Tag::Container),
+    ("header", Tag::Header),
     ("scroll", Tag::Scroll),
     ("object", Tag::Object),
     ("object-grid", Tag::ObjectGrid),
@@ -151,7 +158,8 @@ impl Tag {
             Self::Tr => &[Self::Table, Self::Template],
             Self::Td | Self::Th => &[Self::Tr],
             Self::Option => &CHOOSERS,
-            Self::Footer => &[Self::Dialog],
+            Self::Footer => &[Self::Dialog, Self::Container],
+            Self::Header => &[Self::Container],
             _ => &[],
         }
     }

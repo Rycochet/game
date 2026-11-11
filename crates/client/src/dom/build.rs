@@ -14,6 +14,7 @@ use super::tag::Tag;
 use super::theme::Theme;
 use crate::widgets::UiId;
 
+mod container;
 mod progress;
 mod surfaces;
 pub(super) mod table;
@@ -93,6 +94,7 @@ impl Builder<'_, '_, '_> {
                 self.commands.entity(entity).insert(shown);
             }
             Tag::Panel => self.fixed_panel(entity, element, within),
+            Tag::Container => self.container(entity, element, within),
             tag if tag.is_control() => self.control(entity, element, within),
             _ => self.nodes(entity, &element.children, within),
         }
