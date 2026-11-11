@@ -75,7 +75,7 @@ impl Builder<'_, '_, '_> {
         let mut made = self.commands.entity(widget);
         made.insert(ControlOf(holder));
         if let Some(id) = element.id {
-            made.insert(inside.index.map_or(id, |index| id.at(index)));
+            made.insert(inside.named(id));
         }
         self.commands.entity(holder).insert(Control(widget));
     }

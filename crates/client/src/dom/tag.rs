@@ -54,6 +54,10 @@ pub enum Tag {
     Scroll,
     /// One thing shown, by its `type` and `for`: an item (`objects`).
     Object,
+    /// A grid of things, and a place holding one. Their owner draws what is
+    /// in them and says what picking up and letting go there do, for now.
+    ObjectGrid,
+    ObjectSlot,
 }
 
 /// What may be inside an element.
@@ -69,7 +73,7 @@ pub(super) enum Holds {
     Anything,
 }
 
-const ALL: [(&str, Tag); 31] = [
+const ALL: [(&str, Tag); 33] = [
     ("div", Tag::Div),
     ("span", Tag::Span),
     ("table", Tag::Table),
@@ -101,6 +105,8 @@ const ALL: [(&str, Tag); 31] = [
     ("footer", Tag::Footer),
     ("scroll", Tag::Scroll),
     ("object", Tag::Object),
+    ("object-grid", Tag::ObjectGrid),
+    ("object-slot", Tag::ObjectSlot),
 ];
 
 /// The elements that hold `option`s.
@@ -126,7 +132,9 @@ impl Tag {
             | Self::Canvas
             | Self::Input
             | Self::KeyBox
-            | Self::Object => Holds::Nothing,
+            | Self::Object
+            | Self::ObjectGrid
+            | Self::ObjectSlot => Holds::Nothing,
             Self::Progress | Self::Option => Holds::Words,
             Self::Button => Holds::WordsOrPicture,
             Self::Table => Holds::Only(&[Self::Tr]),
@@ -158,7 +166,12 @@ impl Tag {
     pub(super) fn needs_id(self) -> bool {
         matches!(
             self,
-            Self::Form | Self::Template | Self::Canvas | Self::Dialog
+            Self::Form
+                | Self::Template
+                | Self::Canvas
+                | Self::Dialog
+                | Self::ObjectGrid
+                | Self::ObjectSlot
         ) || self.is_control()
     }
 
@@ -209,6 +222,10 @@ impl Tag {
             Self::Dialog => &["modal", "depth", "closable"],
             Self::Scroll => &["max-height", "auto", "scrollbars"],
             Self::Object => &["type", "for"],
+            Self::ObjectGrid => &[
+                "type", "for", "columns", "rows", "grows", "places", "stacks", "compact",
+            ],
+            Self::ObjectSlot => &["accepts", "for", "key"],
             _ => &[],
         }
     }

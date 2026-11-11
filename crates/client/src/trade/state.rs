@@ -14,8 +14,8 @@ pub(super) struct OpenTrade {
     pub(super) panel: Entity,
     /// What the player must stay near.
     pub(super) place: (i64, i64),
-    /// What the grid goes in.
-    pub(super) holder: Entity,
+    /// What the grid goes in: the panel's `object-grid`, once it is built.
+    pub(super) holder: Option<Entity>,
     pub(super) grid: StockGrid,
 }
 

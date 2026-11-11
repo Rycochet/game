@@ -17,7 +17,7 @@ mod stock;
 use close::{close_on_escape, close_when_left};
 use open::{ask_again_with_truesight, change_of_mind, follow_clicked_door, open_on_arrival};
 use state::{Heading, Keepers, OpenTrade, OpenTrades, beside, front_of};
-use stock::{draw_grids, note_gifts, read_server, show_gift_aim};
+use stock::{bind_grids, draw_grids, note_gifts, read_server, show_gift_aim};
 
 /// To the left, leaving the player in view.
 const AT: Vec2 = Vec2::new(40.0, 120.0);
@@ -25,8 +25,6 @@ const AT: Vec2 = Vec2::new(40.0, 120.0);
 const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
 /// How many cells across a panel's grid is.
 const COLUMNS: u8 = 12;
-/// The most of the window's height a grid takes, before it scrolls.
-const MOST_HEIGHT: Val = Val::Vh(70.0);
 
 pub struct TradePlugin;
 
@@ -53,6 +51,7 @@ impl Plugin for TradePlugin {
                         ask_again_with_truesight,
                         note_gifts,
                         read_server,
+                        bind_grids,
                         draw_grids,
                         show_gift_aim,
                     )

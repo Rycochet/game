@@ -5,13 +5,42 @@ use bevy::ui::UiGlobalTransform;
 use shared::id::Id;
 use shared::protocol::ServerMessage;
 
-use super::{AT, COLUMNS, Heading, Keepers, MOST_HEIGHT, NEXT_AT, OpenTrade, OpenTrades};
+use super::{AT, COLUMNS, Heading, Keepers, NEXT_AT, OpenTrade, OpenTrades};
 use crate::common::{CurrentDungeon, GROUND, GaveItem, HeldOverGifts, HeldStock, TookItem};
 use crate::connection::FromServer;
+use crate::dom::{DocumentOf, Template, document_in};
+use crate::html;
 use crate::widgets::{
-    ContainerLook, ContainerSize, RaisePanel, StockAim, StockAimAt, StockGrid, StockGridNode, UiId,
-    draw_stock_aim, spawn_container, spawn_moveable_panel,
+    RaisePanel, StockAim, StockAimAt, StockGrid, StockGridNode, UiId, draw_stock_aim,
+    spawn_moveable_panel,
 };
+
+/// A panel's contents: the stock in a grid, scrolling when there is a lot. The
+/// panel's title says whose it is, and stock weighs nothing to anyone. The
+/// grid's columns are `COLUMNS` (a test checks).
+pub(super) static TRADE: Template = html!(
+    "trade",
+    r#"
+<form id="trade">
+  <scroll id="scroll" max-height="70%">
+    <object-grid id="stock" type="item" places="packed" stacks="false" columns="12"/>
+  </scroll>
+</form>
+"#
+);
+
+/// Gives each panel's grid, once built, to its trade, to be drawn in.
+pub(super) fn bind_grids(new: Query<(Entity, &UiId), Added<UiId>>, mut open: ResMut<OpenTrades>) {
+    for (entity, id) in &new {
+        let (("trade", "stock"), Some(with)) = (id.parts(), id.which()) else {
+            continue;
+        };
+        if let Some(trade) = open.0.iter_mut().find(|trade| trade.grid.with == with) {
+            trade.holder = Some(entity);
+            trade.grid.changed = true;
+        }
+    }
+}
 
 /// Notes where things given were let go, for when they come back as stock, moves
 /// what is theirs already, and takes away what was taken.
@@ -47,10 +76,14 @@ pub(super) fn draw_grids(
     let picked_up = *drawn_without != held.0;
     *drawn_without = held.0;
     for trade in &mut open.0 {
+        // (Not before its panel's markup is built.)
+        let Some(holder) = trade.holder else {
+            continue;
+        };
         if trade.grid.changed || picked_up {
             trade.grid.changed = false;
-            commands.entity(trade.holder).despawn_related::<Children>();
-            trade.grid.draw(&mut commands, trade.holder, held.0);
+            commands.entity(holder).despawn_related::<Children>();
+            trade.grid.draw(&mut commands, holder, held.0);
         }
     }
 }
@@ -101,25 +134,14 @@ pub(super) fn read_server(
                 commands
                     .entity(panel)
                     .insert(UiId::of("trade", *with, "panel"));
-                let mut holder = Entity::PLACEHOLDER;
-                commands.entity(content).with_children(|content| {
-                    // The panel's title says whose it is, and stock weighs nothing to anyone.
-                    let look = ContainerLook {
-                        title: None,
-                        controls: false,
-                        size: ContainerSize::Grows(MOST_HEIGHT),
-                        weight: false,
-                        slots: false,
-                    };
-                    holder = spawn_container(content, look).grid;
-                    let key = UiId::of("trade", *with, "stock");
-                    content.commands().entity(holder).insert(key);
-                });
+                // Its contents are one of several documents alike, by who
+                // it is with: `trade#<with>/stock`.
+                commands.spawn((document_in(&TRADE, content), DocumentOf(*with)));
                 raise.write(RaisePanel(panel));
                 open.0.push(OpenTrade {
                     panel,
                     place: look.door,
-                    holder,
+                    holder: None,
                     grid: StockGrid::new(*with, COLUMNS, items),
                 });
             }

@@ -20,7 +20,7 @@ pub(super) enum Kind {
     OneOf(&'static [&'static str]),
 }
 
-pub(super) const OWN: [(&str, Kind); 30] = [
+pub(super) const OWN: [(&str, Kind); 38] = [
     ("for", Kind::Text),
     ("src", Kind::Text),
     ("alt", Kind::Text),
@@ -55,6 +55,16 @@ pub(super) const OWN: [(&str, Kind); 30] = [
     ("depth", Kind::Number),
     ("max-height", Kind::Length),
     ("scrollbars", Kind::OneOf(&["auto", "always"])),
+    // A grid of things: how big, whose places they are, and what it takes.
+    ("columns", Kind::Count),
+    ("rows", Kind::Count),
+    ("grows", Kind::Flag),
+    ("places", Kind::OneOf(&["kept", "packed"])),
+    ("stacks", Kind::OneOf(&["true", "false"])),
+    ("compact", Kind::Flag),
+    // A slot: the types it takes (`item`, `ability` or both), and its key.
+    ("accepts", Kind::Text),
+    ("key", Kind::Text),
 ];
 
 /// The name as the table has it (so it can be kept without copying), and

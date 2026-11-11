@@ -107,7 +107,7 @@ impl Builder<'_, '_, '_> {
             made.insert(SurfaceOf(inside.document));
         }
         if let Some(id) = element.id {
-            made.insert(inside.index.map_or(id, |index| id.at(index)));
+            made.insert(inside.named(id));
         }
         for node in &element.children {
             match (node, buttons) {
