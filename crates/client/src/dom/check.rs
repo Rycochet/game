@@ -108,8 +108,19 @@ impl Checker {
         if tag == Tag::Input && !attrs.has("type") {
             return Err(error("`<input>` needs a `type`".into()));
         }
+        // An element's `type` is one of its own kinds.
+        let (kinds, of_object) = (attrs.text("type"), ["item", "ability"]);
+        let wrong = match tag {
+            Tag::Object => !kinds.is_some_and(|kind| of_object.contains(&kind)),
+            _ => kinds.is_some_and(|kind| of_object.contains(&kind)),
+        };
+        if wrong {
+            let what = "an `<object>`'s `type` is `item` or `ability`, and only its";
+            return Err(error(what.into()));
+        }
         let mut label_for = None;
-        if attrs.has("for") {
+        // (An object's `for` names what it shows, not something here.)
+        if attrs.has("for") && tag != Tag::Object {
             let within = form.ok_or_else(|| error("`for` needs a form to look in".into()))?;
             let wanted = attrs.static_text("for");
             let wanted = wanted.ok_or_else(|| error("`for` must be a plain name".into()))?;

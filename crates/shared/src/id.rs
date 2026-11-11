@@ -33,6 +33,17 @@ impl Id {
     pub fn for_test(n: u128) -> Self {
         Self(Uuid::from_u128(n))
     }
+
+    /// The id written as `Display` writes it (hyphenated), if `text` is one.
+    pub fn parse(text: &str) -> Option<Self> {
+        // `parse_str` also takes other forms (simple, braced, urn): only this one.
+        let hyphenated = text.len() == 36
+            && text.char_indices().all(|(at, c)| match at {
+                8 | 13 | 18 | 23 => c == '-',
+                _ => c.is_ascii_hexdigit(),
+            });
+        Uuid::parse_str(text).ok().filter(|_| hyphenated).map(Self)
+    }
 }
 
 /// The usual text form of a UUID, also what files are named by.

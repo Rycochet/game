@@ -14,6 +14,7 @@ mod error;
 mod input;
 mod layout;
 mod markup;
+mod objects;
 mod parts;
 mod pictures;
 mod restyle;
@@ -55,7 +56,10 @@ impl Plugin for DomPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<change::DomChange>()
             .insert_resource(Theme::parchment())
-            .init_resource::<Pictures>();
+            .init_resource::<Pictures>()
+            // (`common` makes it too: here for an `object`'s items wherever
+            // documents are built.)
+            .init_resource::<crate::common::KnownItems>();
         input::add(app);
         controls::add(app);
         #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
@@ -73,6 +77,7 @@ impl Plugin for DomPlugin {
                         restyle::restyle,
                         controls::follow_elements,
                         surfaces::follow_surfaces,
+                        objects::show_objects,
                     ),
                 )
                     .chain()

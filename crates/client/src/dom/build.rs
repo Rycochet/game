@@ -74,6 +74,10 @@ impl Builder<'_, '_, '_> {
             Tag::Canvas => {
                 self.commands.entity(entity).insert(Canvas);
             }
+            Tag::Object => {
+                let shown = crate::dom::objects::ObjectShown::default();
+                self.commands.entity(entity).insert(shown);
+            }
             Tag::Panel => self.fixed_panel(entity, element, within),
             tag if tag.is_control() => self.control(entity, element, within),
             _ => self.nodes(entity, &element.children, within),
