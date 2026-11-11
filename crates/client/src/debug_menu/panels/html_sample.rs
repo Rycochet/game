@@ -102,7 +102,7 @@ pub(super) static HTML_SAMPLE: Template = html!(
     <p>so it scrolls.</p>
   </scroll>
   <panel title="A panel">
-    <p margin-bottom="0">A panel that stays where it is written.</p>
+    <p>A panel that stays where it is written.</p>
   </panel>
   <dialog id="question" title="A question" hidden>
     <p>Is this dialog made from markup?</p>
@@ -111,7 +111,7 @@ pub(super) static HTML_SAMPLE: Template = html!(
       <button id="yes" class="main">Yes</button>
     </footer>
   </dialog>
-  <template id="row"><p margin-bottom="0">Copy <span id="number"/> of a template</p></template>
+  <template id="row"><p>Copy <span id="number"/> of a template</p></template>
   <div id="rows"/>
   <canvas id="canvas" width="64" height="32" title="A canvas, for code to draw in"/>
 </form>
