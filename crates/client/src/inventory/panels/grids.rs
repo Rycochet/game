@@ -9,12 +9,13 @@ use super::super::sort::spawn_sort;
 use super::pages::spawn_pages;
 use super::shown::{grows, shown_size};
 use super::{
-    AimLayer, BinNode, BinSlot, CELL_BORDER, DropNode, FIRST_AT, GridNode, ItemLayer, MOST_HEIGHT,
-    NEXT_AT, OpenGrids, WeightText,
+    BinNode, BinSlot, CELL_BORDER, DropNode, FIRST_AT, GridOwner, MOST_HEIGHT, NEXT_AT, OpenGrids,
+    WeightText,
 };
+use crate::dom::GridShown;
 use crate::widgets::{
-    CELL, ContainerLook, ContainerSize, Floating, GRID_LINE, RaisePanel, UiId, covering,
-    spawn_container, spawn_item_grid, spawn_moveable_panel,
+    CELL, ContainerLook, ContainerSize, GRID_LINE, RaisePanel, UiId, spawn_container,
+    spawn_moveable_panel,
 };
 
 impl OpenGrids {
@@ -149,15 +150,17 @@ pub(super) fn spawn_grid(
     }
 }
 
-/// A grid's cells, with the layers its items and aim are drawn in, which `show_grids`
-/// and `show_aim` fill.
+/// A grid of this size, empty: `show_grids` and `show_aim` say what is in it,
+/// and it draws itself (`dom::GridShown`).
 pub(super) fn spawn_cells(
     parent: &mut ChildSpawnerCommands,
     holder: Holder,
-    (width, height): (u8, u8),
+    (columns, rows): (u8, u8),
 ) {
-    spawn_item_grid(parent, width, height, GridNode { holder }, (), |grid| {
-        grid.spawn((ItemLayer { holder }, covering(), Floating));
-        grid.spawn((AimLayer { holder }, covering(), Floating));
-    });
+    let shown = GridShown {
+        columns,
+        rows,
+        ..default()
+    };
+    parent.spawn((GridOwner { holder }, shown, Node::default()));
 }

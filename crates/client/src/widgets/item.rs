@@ -15,7 +15,7 @@ mod name;
 mod nodes;
 mod picture;
 
-pub use cells::{spawn_item_cells, spawn_item_grid};
+pub use cells::spawn_item_cells;
 pub use look::{
     Floating, ItemLook, ItemName, ItemTip, ItemTooltip, item_colour, item_edge, item_edge_width,
     item_label,

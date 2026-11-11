@@ -15,6 +15,7 @@ mod fixed;
 mod grids;
 mod held;
 mod icons;
+mod mark;
 mod own;
 mod pages;
 mod show;
@@ -25,6 +26,7 @@ pub(super) use bins::{show_bins, show_drop};
 pub(super) use fixed::spawn_fixed_parts;
 pub(super) use held::{show_button, show_held, show_tooltip};
 use icons::{bin_icon, drop_icon, person_icon};
+pub(super) use mark::mark_grids;
 pub(super) use own::{forget_closed, toggle_inventory};
 pub(super) use pages::switch_pages;
 use pages::{Page, Pages};
@@ -57,23 +59,18 @@ pub(super) struct OpenGrids {
     page: Page,
 }
 
-/// The grid of a panel: where its cells are, for working out what is under the
-/// pointer.
+/// The grid of a panel as drawn: where its cells are, for working out what is
+/// under the pointer.
 #[derive(Component, Clone, Copy)]
 pub(super) struct GridNode {
     pub holder: Holder,
 }
 
-/// In a grid, what holds the items drawn in it.
+/// A grid as its panel spawns it: `dom`'s grid of things (`GridShown`), which
+/// draws itself, and whose cells `mark_grids` makes ours.
 #[derive(Component, Clone, Copy)]
-pub(super) struct ItemLayer {
-    holder: Holder,
-}
-
-/// In a grid, what holds the colours saying what a drop would do.
-#[derive(Component, Clone, Copy)]
-pub(super) struct AimLayer {
-    holder: Holder,
+pub(super) struct GridOwner {
+    pub holder: Holder,
 }
 
 /// The words under a grid saying how heavy things are.

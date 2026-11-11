@@ -8,11 +8,10 @@ use shared::protocol::ServerMessage;
 use super::{AT, COLUMNS, Heading, Keepers, NEXT_AT, OpenTrade, OpenTrades};
 use crate::common::{CurrentDungeon, GROUND, GaveItem, HeldOverGifts, HeldStock, TookItem};
 use crate::connection::FromServer;
-use crate::dom::{DocumentOf, Template, document_in};
+use crate::dom::{DocumentOf, GridShown, Template, document_in};
 use crate::html;
 use crate::widgets::{
-    RaisePanel, StockAim, StockAimAt, StockGrid, StockGridNode, UiId, draw_stock_aim,
-    spawn_moveable_panel,
+    RaisePanel, StockGrid, StockGridNode, StockOf, UiId, show_stock_aim, spawn_moveable_panel,
 };
 
 /// A panel's contents: the stock in a grid, scrolling when there is a lot. The
@@ -82,8 +81,7 @@ pub(super) fn draw_grids(
         };
         if trade.grid.changed || picked_up {
             trade.grid.changed = false;
-            commands.entity(holder).despawn_related::<Children>();
-            trade.grid.draw(&mut commands, holder, held.0);
+            trade.grid.show(&mut commands, holder, held.0);
         }
     }
 }
@@ -151,27 +149,19 @@ pub(super) fn read_server(
 }
 
 /// Green where something held would go if let go now.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn show_gift_aim(
     held: Res<HeldOverGifts>,
     carried: Res<crate::inventory::Carried>,
     open: Res<OpenTrades>,
     grids: Query<(&StockGridNode, &ComputedNode, &UiGlobalTransform)>,
-    aims: Query<(Entity, &StockAim)>,
-    new_aims: Query<(), Added<StockAim>>,
-    mut commands: Commands,
-    mut drawn: Local<Option<StockAimAt>>,
+    mut shown: Query<(&StockOf, &mut GridShown)>,
 ) {
     let aim = held.0.and_then(|gift| {
         let trade = open.0.iter().find(|trade| trade.grid.with == gift.to)?;
         let (_, node, transform) = grids.iter().find(|(grid, ..)| grid.0 == gift.to)?;
         trade.grid.aim(&gift, &carried.0, node, transform)
     });
-    if *drawn == aim && new_aims.is_empty() {
-        return;
-    }
-    *drawn = aim;
     // The ground's are `inventory`'s.
-    let ours = aims.iter().filter(|(_, aim)| aim.0 != GROUND);
-    draw_stock_aim(&mut commands, ours, aim);
+    let ours = shown.iter_mut().filter(|(of, _)| of.0 != GROUND);
+    show_stock_aim(ours, aim);
 }
