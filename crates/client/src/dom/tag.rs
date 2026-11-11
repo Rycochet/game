@@ -132,7 +132,8 @@ impl Tag {
     /// The only elements this one may be straight inside, if it is so bound.
     pub(super) fn belongs_in(self) -> &'static [Self] {
         match self {
-            Self::Tr => &[Self::Table],
+            // In a template, rows are copied into a table.
+            Self::Tr => &[Self::Table, Self::Template],
             Self::Td | Self::Th => &[Self::Tr],
             Self::Option => &CHOOSERS,
             Self::Footer => &[Self::Dialog],

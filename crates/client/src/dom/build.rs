@@ -14,7 +14,7 @@ use crate::widgets::UiId;
 
 mod progress;
 mod surfaces;
-mod table;
+pub(super) mod table;
 mod title_row;
 
 /// What an element being built is in.

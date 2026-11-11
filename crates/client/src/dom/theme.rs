@@ -92,6 +92,15 @@ impl Theme {
             ..stacked
         };
         theme.set(Tag::Div, "rows", rows);
+        // Groups of rows, each under its heading: well apart.
+        theme.set(
+            Tag::Div,
+            "groups",
+            Look {
+                gap: 40.0,
+                ..stacked
+            },
+        );
         theme.set(Tag::Form, "rows", rows);
         let inline = Look {
             gap: ROW,

@@ -149,3 +149,45 @@ fn a_selects_options_are_changed_and_its_value_chooses_among_them() {
     let dropdown = app.world().get::<crate::widgets::Dropdown>(pick).unwrap();
     assert_eq!(dropdown.options, ["Easy", "Hard"]);
 }
+
+static KEYS: Template = html!(
+    "keys",
+    r#"<form id="c">
+        <template id="row"><tr><td id="name" fills/><td>key</td></tr></template>
+        <table id="keys" class="striped"/>
+        <div id="other"/>
+    </form>"#
+);
+
+#[test]
+fn rows_from_a_template_are_added_to_a_table() {
+    use crate::dom::parts::InTable;
+    let mut app = built(&KEYS);
+    change(&mut app, |dom| {
+        dom.copy_template("c/row", "c/keys", 0);
+        dom.copy_template("c/row", "c/keys", 1);
+        dom.set_text("c/name.1", "Second");
+        // Rows go nowhere else.
+        dom.copy_template("c/row", "c/other", 2);
+    });
+    let keys = find(&mut app, "c/keys");
+    let table = InTable::Table {
+        columns: 2,
+        wide: Some(0),
+    };
+    assert_eq!(app.world().get::<InTable>(keys), Some(&table));
+    let world = app.world_mut();
+    let mut spots = world.query::<(&InTable, &Node, Has<BackgroundColor>)>();
+    let mut rows = Vec::new();
+    for (spot, node, tinted) in spots.iter(world) {
+        if let InTable::Row { row, .. } = spot {
+            assert_eq!(node.grid_column, GridPlacement::start_span(1, 2));
+            assert_eq!(tinted, *row == 1);
+            rows.push(*row);
+        }
+    }
+    rows.sort();
+    assert_eq!(rows, [0, 1]);
+    let other = find(&mut app, "c/other");
+    assert!(app.world().get::<Children>(other).is_none());
+}

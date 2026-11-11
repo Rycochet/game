@@ -66,6 +66,8 @@ pub(super) struct Words;
 pub(super) enum InTable {
     Table {
         columns: u16,
+        /// The column that takes the width the others leave, if one does.
+        wide: Option<u16>,
     },
     Row {
         row: u16,

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::state_of;
-use crate::common::Binding;
+use crate::common::{Binding, Mods};
 use crate::dom::attrs::{Attrs, Length};
 use crate::dom::build::Builder;
 use crate::dom::pictures::picture_for;
@@ -51,8 +51,13 @@ pub(super) fn text_box_of(attrs: &Attrs) -> TextBox {
 /// A key box as its element's attributes have it: `value` is the key's
 /// saved name (`Shift+KeyG`).
 pub(super) fn key_box_of(attrs: &Attrs) -> KeyBox {
+    // Esc can never be bound, so it has no saved name, but a box may show it.
+    let named = |name: &str| match name {
+        "Escape" => Some(Binding::new(KeyCode::Escape, Mods::NONE)),
+        _ => Binding::from_name(name),
+    };
     KeyBox {
-        binding: attrs.text("value").and_then(Binding::from_name),
+        binding: attrs.text("value").and_then(named),
         warned: attrs.class.as_deref() == Some("warned"),
     }
 }

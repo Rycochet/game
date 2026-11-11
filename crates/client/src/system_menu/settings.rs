@@ -12,7 +12,7 @@ mod rows;
 mod shell;
 mod shown_role;
 
-pub(super) use controls::{TakenKeys, fill_controls_page, forget_taken, use_controls_page};
+pub(super) use controls::{TakenKeys, forget_taken, show_controls_page, use_controls_page};
 pub(super) use difficulty::use_difficulty;
 pub(super) use gameplay::{show_gameplay_page, use_gameplay_page};
 pub(super) use graphics::{

@@ -12,8 +12,9 @@ use crate::dom::check::{Checked, CheckedNode};
 use crate::dom::parts::{AlwaysBars, Control, ControlOf, SurfaceOf};
 use crate::dom::tag::Tag;
 use crate::widgets::{
-    AutoScroll, PanelPlace, UiId, panel, panel_title, spawn_dialog, spawn_fullscreen_layer,
-    spawn_grip_panel, spawn_moveable_panel, spawn_sized_layer, spawn_wide_scroll_area,
+    AutoScroll, PanelPlace, UiId, panel, panel_title, spawn_dialog, spawn_filling_scroll_area,
+    spawn_fullscreen_layer, spawn_grip_panel, spawn_moveable_panel, spawn_sized_layer,
+    spawn_wide_scroll_area,
 };
 
 /// Where a moving panel starts, from its corner, with no place given.
@@ -151,10 +152,15 @@ impl Builder<'_, '_, '_> {
             Some(Length::Percent(share)) => Val::Vh(share),
             None => Val::Vh(SCROLL_SHARE),
         };
+        // With `fills` it takes the room left in what holds it instead.
+        let fills = attrs.fills;
         let mut area = Entity::PLACEHOLDER;
-        self.commands
-            .entity(parent)
-            .with_children(|inside| area = spawn_wide_scroll_area(inside, most));
+        self.commands.entity(parent).with_children(|inside| {
+            area = match fills {
+                true => spawn_filling_scroll_area(inside),
+                false => spawn_wide_scroll_area(inside, most),
+            }
+        });
         let mut made = self.commands.entity(area);
         if attrs.has("auto") {
             made.insert(AutoScroll::default());

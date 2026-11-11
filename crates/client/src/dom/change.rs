@@ -7,6 +7,7 @@ use bevy::prelude::*;
 
 mod apply;
 mod options;
+mod rows;
 
 pub(super) use apply::apply_changes;
 
