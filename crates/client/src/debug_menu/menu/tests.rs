@@ -135,3 +135,11 @@ fn columns_hold_what_fits() {
     assert_eq!(rows_in(10.0, 0), 1);
     assert!(rows_in(720.0, 1) < rows_in(720.0, 0));
 }
+
+#[test]
+fn the_layers_are_good_markup_and_the_submenu_is_named_for_its_entry() {
+    use super::super::actions::DebugAction;
+    super::spawn::MENU.assert_good();
+    let title = format!("title=\"{}\"", DebugAction::GeneratePoi.name());
+    assert!(super::spawn::MENU.source.contains(&title));
+}

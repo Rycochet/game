@@ -111,6 +111,8 @@ impl Theme {
         }
         // Things side by side with nothing between them.
         theme.set(Tag::Span, "joined", Look::default());
+        // Columns of a list, side by side.
+        theme.set(Tag::Span, "columns", Look { gap: 8.0, ..inline });
         let labelled = Look {
             gap: 16.0,
             ..inline
