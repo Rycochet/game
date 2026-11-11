@@ -1,6 +1,6 @@
 # client: dom
 
-The interface as markup: HTML's look with XML's closing rule, no CSS and no scripts. A template is checked strictly, built into Bevy UI nodes, and changed by id. The whole plan, the rules of the markup and what is still to come: `docs/context/html-interface.md`. So far it has layout, text, pictures, progress and canvases, and the input rules (what the pointer is on, and events sent up through what holds it), which the old `widgets` read too; and controls (buttons, checkboxes and switches, text boxes, sliders, dropdowns, toggle rows, tabs, key boxes, colour pickers), each shown by one of the old `widgets` inside its element. Panels, dialogs and scroll areas are elements too. No screen but Show Widgets' sample is markup yet.
+The interface as markup: HTML's look with XML's closing rule, no CSS and no scripts. A template is checked strictly, built into Bevy UI nodes, and changed by id. The whole plan, the rules of the markup and what is still to come: `docs/context/html-interface.md`. So far it has layout, text, pictures, progress and canvases, and the input rules (what the pointer is on, and events sent up through what holds it), which the old `widgets` read too; and controls (buttons, checkboxes and switches, text boxes, sliders, dropdowns, toggle rows, tabs, key boxes, colour pickers), each shown by one of the old `widgets` inside its element. Panels, dialogs and scroll areas are elements too. The system menu's requesters are the first real screens in markup; the rest follow.
 
 ## Files
 
@@ -58,6 +58,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 ## Used by
 
 - `debug_menu`: Show Widgets' markup sample (`panels/html_sample.rs`), which also reads `UiEvent`.
+- `system_menu`: its requesters (`requesters.rs`), the first real screens in markup.
 - `widgets`: `Hit` (what is pointed at and pressed), `Solid`, `DomInput`.
 - `view3d`: `Hit` (the wheel zooms only with the pointer on the view).
 
@@ -73,6 +74,9 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - Changing `class` later changes an element's own look, but not the size or colour of words already inside it.
 - `restyle` is the one place a `Node` is made, at spawning and on any change, so markup and `Dom` can't disagree.
 - A panel that moves and a dialog are not inside their document: the widgets spawn them at the top, in their own layers, with the element inside and their id on the widget, as controls'. They carry `SurfaceOf(document)` and are despawned when the document is. A scroll area is spawned where it is written, with its element inside it. A panel's and a dialog's `title` is their heading, not a tooltip.
+- Moving a screen to markup without changing what it does: write its structure as a template, then give each built widget the components the screen's code already knows it by, found by id in a small system on `Added<UiId>` (`UiId::parts()` gives the form and name): see `system_menu/requesters.rs`. Words that change are set with `Dom::set_text`. This keeps presses arriving in the frame they always did (`ButtonPressed`, in `PreUpdate`); `UiEvent`s arrive a frame later, which suits new code.
+- A dialog's or moving panel's element is always laid out, whatever its `hidden` says: only its widget is hidden, so code that shows the widget itself (the menu's `Layer`s) shows what is in it. A dialog's words are the menus' size (`TextSize::Large`).
+- A control given a `width` or `height` fills its element (a button `width="122" height="38"`).
 - A control is two entities: its element (layout, attributes) and, inside it, the widget that shows it (`Control` and `ControlOf` join them). The id is on the widget, as widgets' always were, so the debug API's `client.ui.*` and anything else finding widgets by `UiId` works on controls unchanged; `Dom` finds the element from it. Every control needs an `id`, and an `input` its `type`.
 - A button holds words, or one `img` (an icon button, 32 across unless sized; `class="small"` for the small kind). `hold`: pressed only while held.
 - A checkbox is just the box: put its words in a `label`. A click on a label presses what it is for (`for`, or the control inside it); for a text box it gives it the keyboard.

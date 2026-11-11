@@ -1232,3 +1232,7 @@ Third step of the interface as markup. A control (`button`, `input`, `select`, `
 ## 2026-11-11: Panels, dialogs and scroll areas in markup
 
 Fourth step of the interface as markup: `panel` (fixed where written, or `moveable`, or with a `grip`), `dialog` (with `footer` for its buttons; `modal` for the full-screen layer) and `scroll`, each drawn by the widget it was. Owner: a scroll area can always show its bar, by `scrollbars="always"` and by a player's setting, Always Show Scroll Bars (Settings, Interface; off by default), for accessibility and to see what can scroll. Claude's choices: panels that move and dialogs are spawned apart from their document, in the widgets' own layers, and go when it does; a panel closed by the player is told to its owner (`UiValue::Closed`), who despawns the document; a scroll area's height in `%` is of the window's height, as before.
+
+## 2026-11-11: Screens move to markup in slices, keeping their code
+
+Claude's choices, starting the move of real screens (the system menu's requesters first). A screen's template replaces the calls that spawned it, and a small system then gives each built widget the components the screen's own systems already find it by (`Layer`, `Action`), by its id, so what the screen does is untouched and each slice is small enough to check in the game. The plan's fifth PR became several for that reason: the system menu is about 5,000 lines. Words that change are set by id through `Dom`.

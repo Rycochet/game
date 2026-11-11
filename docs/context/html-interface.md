@@ -1,6 +1,6 @@
 # Plan: the interface as HTML
 
-Status: **PRs 1 to 4 of 11 built** (markup and layout; one hit test and the events; controls; surfaces: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
+Status: **PRs 1 to 4 built, and PR 5 begun** (markup and layout; one hit test and the events; controls; surfaces; the menu's requesters: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
 
 What PR 1 settled differently from the plan below:
 
@@ -31,6 +31,11 @@ What PR 4 settled:
 - **A scroll area's `max-height` in `%` is of the window's height**, as the old areas' were.
 - **Always Show Scroll Bars** is in Settings, Interface, and `scrollbars="always"` on a `scroll`.
 - **Moved to the Items PR (8):** drag and drop, and items in text, as both are about items. Tooltips from `title` came with PR 1.
+
+How screens are moved over (from PR 5):
+
+- **In slices.** The system menu alone is about 5,000 lines with 86 widgets, so PR 5 is several PRs: its requesters (5a, built), then Credits, the menu itself, each Settings page, Connect and Server Options. The other screen PRs will be cut the same way, so each can be checked in the game before the next.
+- **Structure first, behaviour unchanged.** A screen's template replaces its `spawn_*` calls, and a small system gives each built widget the components the screen's code already knows it by, found by id. Its systems then run as they did. Moving a screen's logic onto `UiEvent`s by id can follow where it helps.
 
 ## Why
 
@@ -256,7 +261,7 @@ Each passes `cargo xtask test`, keeps files under the size limit, and updates th
 2. **One hit test and the event rules.** *Built.* `dom::Hit` (the drill-down search), the hover chain, events passed up from the target, capture, click and double click, the wheel staying with what the pointer is on. The old widgets light up and press by the same search, so nothing covered reacts. `client.ui.at`, `client.ui.html`.
 3. **Controls.** *Built.* `button`, `label`, checkbox and switch, text, range, `select`, `toggle-row`, `tab-bar`, `key-box`, `colour-picker`, hold buttons; `UiEvent` by id; the debug API by id as before. Show Widgets' sample has one of each.
 4. **Surfaces.** *Built.* `dialog` (with `footer`), `panel` (fixed, `moveable`, `grip`), `scroll` (with Always Show Scroll Bars in Settings), tooltips from `title`. Drag and drop and items in text moved to PR 8.
-5. **Menus.** System menu, Settings, Connect, Server Options, Credits, the quit and other requesters.
+5. **Menus.** In slices. 5a, *built*: the requesters (Quit, Ironman, Keep these settings, Can't connect, Slow drawing). Still to come: Credits, the menu itself, Settings' pages, Connect and its popups, Online's requesters, Server Options.
 6. **Debug.** Debug menu and its panels.
 7. **Getting in.** Login, Character Select, Character Create (triangles as a canvas), loading screen.
 8. **Items.** `object`, `object-slot` and `object-grid` for both types, drag and drop, items in text, then the inventory, bags, trade, ground, split box, `container`, items in text.

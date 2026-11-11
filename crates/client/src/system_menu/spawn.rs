@@ -5,13 +5,13 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use super::{
-    ABOVE_MENU_LAYER, Action, BUTTON_ROW, CLOSE_MARGIN, CORNER_GAP, FONT, GAP, GEAR_BUTTON,
-    GearButton, Layer, MARGIN, MENU_WIDTH, SETTINGS_HEIGHT, SETTINGS_TITLE_ROW, SETTINGS_WIDTH,
-    SystemMenu,
+    ABOVE_MENU_LAYER, Action, BUTTON_ROW, CLOSE_MARGIN, CORNER_GAP, GEAR_BUTTON, GearButton, Layer,
+    MARGIN, SETTINGS_HEIGHT, SETTINGS_TITLE_ROW, SETTINGS_WIDTH, SystemMenu,
 };
+use crate::dom::Dom;
 use crate::widgets::{
-    ButtonState, ButtonStyle, ButtonTooltip, CLOSE_PIXELS, INK, Pressable, UiId, panel_title,
-    spawn_button, spawn_close_button, spawn_dialog, spawn_icon_button, spawn_sized_layer,
+    ButtonState, ButtonTooltip, CLOSE_PIXELS, Pressable, UiId, panel_title, spawn_close_button,
+    spawn_icon_button, spawn_sized_layer,
 };
 
 /// A gear, drawn here so there is no file to ship for it.
@@ -51,7 +51,7 @@ pub(super) fn gear_icon() -> Image {
     )
 }
 
-pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
+pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image>>, mut dom: Dom) {
     let icon = images.add(gear_icon());
     commands
         .spawn((
@@ -79,16 +79,12 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
             ));
         });
     super::panel::spawn_main_panel(&mut commands, icon.clone());
-    spawn_requester(&mut commands);
+    super::requesters::spawn_requesters(&mut commands, &mut dom, super::slow_drawing::WORDS);
     spawn_settings(&mut commands);
-    super::settings::spawn_keep_requester(&mut commands);
-    super::settings::spawn_ironman_requester(&mut commands);
     super::credits::spawn_credits(&mut commands);
     let icons = super::icons::ConnectIcons::new(&mut images);
     super::connect::spawn_connect(&mut commands, &icons);
     super::connect::spawn_popups(&mut commands);
-    super::refusal::spawn_refusal(&mut commands);
-    super::slow_drawing::spawn_slow_drawing(&mut commands);
     super::online::spawn_online_requesters(&mut commands);
     #[cfg(not(target_arch = "wasm32"))]
     super::server_options::spawn_server_options(&mut commands);
@@ -117,38 +113,6 @@ pub(super) fn spawn_layer(
     panel
 }
 
-pub(super) fn spawn_requester(commands: &mut Commands) {
-    let dialog = spawn_dialog(commands, ABOVE_MENU_LAYER, "Quit");
-    commands
-        .entity(dialog.layer)
-        .insert((Layer(&[SystemMenu::Confirming]), Action::Back));
-    commands.entity(dialog.content).with_child((
-        Text::new("Are you sure?"),
-        FONT.font(),
-        TextColor(INK),
-    ));
-    commands.entity(dialog.buttons).with_children(|row| {
-        for (label, action, style) in [
-            ("Yes, quit", Action::ReallyQuit, ButtonStyle::Main),
-            ("No", Action::Back, ButtonStyle::Plain),
-        ] {
-            let node = Node {
-                width: px(MENU_WIDTH / 2.0 - GAP),
-                height: px(BUTTON_ROW),
-                ..default()
-            };
-            spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
-                action,
-                style,
-                Pressable,
-                action.ui_id("quit"),
-            ));
-        }
-    });
-}
-
-/// A big layer's title, with a close button on the right.
-/// Its close button is `close` in `form`.
 pub(super) fn spawn_title_row(panel: &mut ChildSpawnerCommands, title: &str, form: &'static str) {
     panel
         .spawn(Node {

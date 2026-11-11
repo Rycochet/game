@@ -19,6 +19,7 @@ mod input;
 mod online;
 mod panel;
 mod refusal;
+mod requesters;
 #[cfg(not(target_arch = "wasm32"))]
 mod server_options;
 mod show;
@@ -75,6 +76,7 @@ impl Plugin for SystemMenuPlugin {
             .add_systems(
                 Update,
                 (
+                    requesters::bind_requesters,
                     show_menu,
                     show_buttons,
                     credits::start_credits,

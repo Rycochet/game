@@ -113,7 +113,10 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
         }
         _ => {}
     }
-    if attrs.hidden || around.row_hidden || tag == Tag::Template {
+    // A dialog or a panel that moves is hidden by its widget, which other
+    // code may also show: what is in it is always laid out.
+    let own_hidden = attrs.hidden && !moves && tag != Tag::Dialog;
+    if own_hidden || around.row_hidden || tag == Tag::Template {
         node.display = Display::None;
     }
     node
