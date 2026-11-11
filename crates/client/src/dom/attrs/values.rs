@@ -21,6 +21,8 @@ pub enum VAlign {
     Top,
     Middle,
     Bottom,
+    /// In a row: everything as tall as the row (columns side by side).
+    Stretch,
 }
 
 /// A number that isn't negative.
@@ -65,8 +67,9 @@ pub(super) fn valign(value: &str) -> Result<VAlign, String> {
         "top" => Ok(VAlign::Top),
         "middle" => Ok(VAlign::Middle),
         "bottom" => Ok(VAlign::Bottom),
+        "stretch" => Ok(VAlign::Stretch),
         _ => Err(format!(
-            "`valign` is `top`, `middle` or `bottom`, not `{value}`"
+            "`valign` is `top`, `middle`, `bottom` or `stretch`, not `{value}`"
         )),
     }
 }

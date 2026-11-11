@@ -5,55 +5,18 @@
 
 use bevy::prelude::*;
 
-use super::screen::{Button, FORM};
 use crate::common::AccountEmail;
-use crate::widgets::{ButtonState, ButtonStyle, Pressable, TextSize, UiId, spawn_button};
+use crate::dom::Dom;
 
-/// The row holding it, shown only while it is any use.
-#[derive(Component)]
-pub(super) struct ChangeUserRow;
-
-/// Under the grid of characters.
-pub(super) fn spawn_change_user(left: &mut ChildSpawnerCommands) {
-    left.spawn((
-        ChangeUserRow,
-        Node {
-            display: Display::None,
-            ..default()
-        },
-    ))
-    .with_children(|row| {
-        let node = Node {
-            padding: UiRect::axes(px(16), px(8)),
-            ..default()
-        };
-        spawn_button(
-            row,
-            ButtonState::Normal,
-            "Change User",
-            TextSize::Large,
-            node,
-        )
-        .insert((
-            Button::ChangeUser,
-            ButtonStyle::Plain,
-            Pressable,
-            UiId::new(FORM, "change_user"),
-        ));
-    });
-}
-
-/// Shows it while logged in to an account.
+/// Shows its row, under the grid of characters, while logged in to an account.
 pub(super) fn show_change_user(
     email: Res<AccountEmail>,
-    mut row: Single<&mut Node, With<ChangeUserRow>>,
+    mut dom: Dom,
+    mut shown: Local<Option<bool>>,
 ) {
-    let display = if email.0.is_some() {
-        Display::Flex
-    } else {
-        Display::None
-    };
-    if row.display != display {
-        row.display = display;
+    let logged_in = email.0.is_some();
+    if *shown != Some(logged_in) {
+        *shown = Some(logged_in);
+        dom.set_flag("character_select/change_user_row", "hidden", !logged_in);
     }
 }
