@@ -4,7 +4,10 @@ use bevy::text::FontSize;
 use crate::dom::parts::{InTable, Words};
 use crate::dom::{Canvas, DomPlugin, Element, Inert, Tag, Template, document};
 use crate::html;
-use crate::widgets::{HoverTip, UiId};
+use crate::widgets::{
+    ButtonPressed, ChooseTab, ColourChosen, DropdownChosen, HoverTip, KeyChosen, SliderMoved,
+    SwitchFlipped, TabChosen, TextEdited, TextFocus, UiId,
+};
 
 /// An app with just enough for documents to be built in.
 pub(in crate::dom) fn app() -> App {
@@ -14,7 +17,18 @@ pub(in crate::dom) fn app() -> App {
         // What the input systems read.
         .init_resource::<ButtonInput<MouseButton>>()
         .init_resource::<bevy::input::mouse::AccumulatedMouseScroll>()
-        .init_resource::<crate::common::UiPointer>();
+        .init_resource::<crate::common::UiPointer>()
+        // What the widgets showing controls say, and are told.
+        .add_message::<ButtonPressed>()
+        .add_message::<SwitchFlipped>()
+        .add_message::<SliderMoved>()
+        .add_message::<TextEdited>()
+        .add_message::<DropdownChosen>()
+        .add_message::<TabChosen>()
+        .add_message::<ChooseTab>()
+        .add_message::<ColourChosen>()
+        .add_message::<KeyChosen>()
+        .init_resource::<TextFocus>();
     app
 }
 

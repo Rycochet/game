@@ -2,7 +2,8 @@
 
 use std::borrow::Cow;
 
-use super::values::{align, count, length, number, spacing, valign};
+use super::own::{Kind, known};
+use super::values::{align, length, spacing, valign};
 use super::{Attrs, SIDES, is_known};
 use crate::dom::tag::Tag;
 
@@ -18,21 +19,19 @@ impl Attrs {
         if !is_known(tag, name) {
             return Err(format!("`<{}>` has no `{name}`", tag.name()));
         }
-        if let Some(flag) = self.flag(name) {
-            // `hidden`, `hidden=""` and `hidden="hidden"` all mean yes.
-            let given = value.as_deref().unwrap_or("");
-            if !given.is_empty() && given != name {
-                return Err(format!("`{name}` stands alone, without `{given}`"));
-            }
+        if let Some((name, kind)) = known(name) {
+            kind.check(name, value.as_deref())?;
+            let kept = value.filter(|_| kind != Kind::Flag);
+            self.put(name, kept.unwrap_or_default());
+        } else if let Some(flag) = self.flag(name) {
+            Kind::Flag.check(name, value.as_deref())?;
             *flag = true;
-            return Ok(());
+        } else {
+            let value = value.ok_or_else(|| format!("`{name}` needs a value"))?;
+            self.set_value(name, value)?;
         }
-        let Some(value) = value else {
-            return Err(format!("`{name}` needs a value"));
-        };
-        self.set_value(name, value)?;
-        match self.conflict() {
-            Some(conflict) => Err(conflict.into()),
+        match self.problem(tag) {
+            Some(problem) => Err(problem),
             None => Ok(()),
         }
     }
@@ -46,9 +45,6 @@ impl Attrs {
         match name {
             "class" => self.class = None,
             "title" => self.title = None,
-            "for" => self.for_id = None,
-            "src" => self.src = None,
-            "alt" => self.alt = None,
             "hidden" => self.hidden = false,
             "disabled" => self.disabled = false,
             "inert" => self.inert = false,
@@ -61,17 +57,22 @@ impl Attrs {
             "width" => self.width = None,
             "height" => self.height = None,
             "margin" => self.margin = [None; 4],
-            "value" => self.value = None,
-            "max" => self.max = None,
-            "colspan" => self.colspan = None,
-            "cellspacing" => self.cellspacing = None,
-            "cellpadding" => self.cellpadding = None,
+            _ if known(name).is_some() => self.own.retain(|(known, _)| *known != name),
             _ => self.margin[margin_side(name)?] = None,
         }
         Ok(())
     }
 
-    /// The yes-or-no attribute of this name, if it is one.
+    /// Keeps one of an element's own attributes, already checked, in place of
+    /// any it had of that name.
+    pub(in crate::dom) fn put(&mut self, name: &'static str, value: Cow<'static, str>) {
+        match self.own.iter_mut().find(|(known, _)| *known == name) {
+            Some((_, old)) => *old = value,
+            None => self.own.push((name, value)),
+        }
+    }
+
+    /// The yes-or-no attribute every element has of this name, if it is one.
     fn flag(&mut self, name: &str) -> Option<&mut bool> {
         match name {
             "hidden" => Some(&mut self.hidden),
@@ -85,9 +86,6 @@ impl Attrs {
         match name {
             "class" => self.class = Some(value),
             "title" => self.title = Some(value),
-            "for" => self.for_id = Some(value),
-            "src" => self.src = Some(value),
-            "alt" => self.alt = Some(value),
             "align" => self.align = Some(align(&value)?),
             "valign" => self.valign = Some(valign(&value)?),
             "top" => self.top = Some(length(name, &value)?),
@@ -97,11 +95,6 @@ impl Attrs {
             "width" => self.width = Some(length(name, &value)?),
             "height" => self.height = Some(length(name, &value)?),
             "margin" => self.margin = [Some(spacing(name, &value)?); 4],
-            "value" => self.value = Some(number(name, &value)?),
-            "max" => self.max = Some(number(name, &value)?),
-            "colspan" => self.colspan = Some(count(name, &value)?),
-            "cellspacing" => self.cellspacing = Some(spacing(name, &value)?),
-            "cellpadding" => self.cellpadding = Some(spacing(name, &value)?),
             _ => self.margin[margin_side(name)?] = Some(spacing(name, &value)?),
         }
         Ok(())

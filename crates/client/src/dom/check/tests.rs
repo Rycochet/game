@@ -67,6 +67,10 @@ fn labels_name_something_in_their_form() {
 #[test]
 fn elements_go_where_they_can() {
     assert_eq!(error("<td/>"), "`<td>` goes in `<tr>`");
+    assert_eq!(
+        error("<option/>"),
+        "`<option>` goes in `<select>` or `<toggle-row>` or `<tab-bar>` or `<colour-picker>`"
+    );
     assert_eq!(error("<table><p/></table>"), "`<table>` can't hold `<p>`");
     assert_eq!(error("<table>words</table>"), "`<table>` can't hold words");
     assert_eq!(

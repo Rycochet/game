@@ -84,7 +84,7 @@ pub(super) fn restyle(
             true => entity.try_insert(Inert),
             false => entity.try_remove::<Inert>(),
         };
-        let src = attrs.src.as_deref().filter(|_| tag == Tag::Img);
+        let src = attrs.text("src").filter(|_| tag == Tag::Img);
         if let Some((picture, as_writing)) =
             src.and_then(|src| picture_for(src, &pictures, &assets))
         {
@@ -98,7 +98,8 @@ pub(super) fn restyle(
         if let Some(Bar(bar)) = bar
             && let Ok(mut progress) = bars.get_mut(*bar)
         {
-            let full = attrs.value.unwrap_or(0.0) / attrs.max.unwrap_or(1.0).max(f32::EPSILON);
+            let most = attrs.number("max").unwrap_or(1.0).max(f32::EPSILON);
+            let full = attrs.number("value").unwrap_or(0.0) / most;
             progress.0 = full.clamp(0.0, 1.0);
         }
     }

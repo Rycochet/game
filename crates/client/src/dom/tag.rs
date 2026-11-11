@@ -28,6 +28,21 @@ pub enum Tag {
     Hr,
     /// A box its owner's code draws in.
     Canvas,
+    Button,
+    /// By its `type`: `text`, `checkbox` (a switch with `switch`) or `range`.
+    Input,
+    /// A dropdown of its `option`s.
+    Select,
+    /// A choice in a `select`, `toggle-row`, `tab-bar` or `colour-picker`.
+    Option,
+    /// Joined buttons, one chosen, all on show.
+    ToggleRow,
+    /// Folder tabs, to switch between views of one thing.
+    TabBar,
+    /// Waits for a key, and shows the one chosen.
+    KeyBox,
+    /// Swatches, one chosen.
+    ColourPicker,
 }
 
 /// What may be inside an element.
@@ -36,12 +51,14 @@ pub(super) enum Holds {
     Nothing,
     /// Only words.
     Words,
+    /// Only words, or only one picture: what a button shows.
+    WordsOrPicture,
     /// Only these elements, and no words.
     Only(&'static [Tag]),
     Anything,
 }
 
-const ALL: [(&str, Tag); 18] = [
+const ALL: [(&str, Tag); 26] = [
     ("div", Tag::Div),
     ("span", Tag::Span),
     ("table", Tag::Table),
@@ -60,7 +77,18 @@ const ALL: [(&str, Tag); 18] = [
     ("progress", Tag::Progress),
     ("hr", Tag::Hr),
     ("canvas", Tag::Canvas),
+    ("button", Tag::Button),
+    ("input", Tag::Input),
+    ("select", Tag::Select),
+    ("option", Tag::Option),
+    ("toggle-row", Tag::ToggleRow),
+    ("tab-bar", Tag::TabBar),
+    ("key-box", Tag::KeyBox),
+    ("colour-picker", Tag::ColourPicker),
 ];
+
+/// The elements that hold `option`s.
+const CHOOSERS: [Tag; 4] = [Tag::Select, Tag::ToggleRow, Tag::TabBar, Tag::ColourPicker];
 
 impl Tag {
     pub fn named(name: &str) -> Option<Self> {
@@ -76,26 +104,37 @@ impl Tag {
 
     pub(super) fn holds(self) -> Holds {
         match self {
-            Self::Br | Self::Hr | Self::Img | Self::Canvas => Holds::Nothing,
-            Self::Progress => Holds::Words,
+            Self::Br | Self::Hr | Self::Img | Self::Canvas | Self::Input | Self::KeyBox => {
+                Holds::Nothing
+            }
+            Self::Progress | Self::Option => Holds::Words,
+            Self::Button => Holds::WordsOrPicture,
             Self::Table => Holds::Only(&[Self::Tr]),
             Self::Tr => Holds::Only(&[Self::Td, Self::Th]),
+            _ if CHOOSERS.contains(&self) => Holds::Only(&[Self::Option]),
             _ => Holds::Anything,
         }
     }
 
-    /// The only element this one may be straight inside, if there is one.
-    pub(super) fn belongs_in(self) -> Option<Self> {
+    /// The only elements this one may be straight inside, if it is so bound.
+    pub(super) fn belongs_in(self) -> &'static [Self] {
         match self {
-            Self::Tr => Some(Self::Table),
-            Self::Td | Self::Th => Some(Self::Tr),
-            _ => None,
+            Self::Tr => &[Self::Table],
+            Self::Td | Self::Th => &[Self::Tr],
+            Self::Option => &CHOOSERS,
+            _ => &[],
         }
+    }
+
+    /// Something the player uses, built from one of the widgets: it has no
+    /// elements of its own inside, and what it does comes back by its `id`.
+    pub fn is_control(self) -> bool {
+        matches!(self, Self::Button | Self::Input | Self::KeyBox) || CHOOSERS.contains(&self)
     }
 
     /// Whether it is an error to leave its `id` out: code has to find it.
     pub(super) fn needs_id(self) -> bool {
-        matches!(self, Self::Form | Self::Template | Self::Canvas)
+        matches!(self, Self::Form | Self::Template | Self::Canvas) || self.is_control()
     }
 
     /// Whether what is in it flows from the left, as words do.
@@ -121,6 +160,24 @@ impl Tag {
             Self::Td | Self::Th => &["colspan"],
             Self::Table => &["cellspacing", "cellpadding"],
             Self::Label => &["for"],
+            Self::Button => &["selected", "hold"],
+            Self::Input => &[
+                "type",
+                "value",
+                "checked",
+                "switch",
+                "min",
+                "max",
+                "step",
+                "inputmode",
+                "prefix",
+                "suffix",
+                "accepts-items",
+                "src",
+            ],
+            Self::Select => &["value", "searchable"],
+            Self::Option => &["value", "selected", "label", "src"],
+            Self::ToggleRow | Self::TabBar | Self::ColourPicker | Self::KeyBox => &["value"],
             _ => &[],
         }
     }

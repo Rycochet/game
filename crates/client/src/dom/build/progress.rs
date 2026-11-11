@@ -10,7 +10,7 @@ use crate::widgets::{Spinner, spawn_progress_bar};
 
 impl Builder<'_, '_, '_> {
     pub(super) fn progress(&mut self, entity: Entity, element: &Checked, style: TextStyle) {
-        if element.attrs.value.is_none() {
+        if !element.attrs.has("value") {
             self.commands.entity(entity).insert(Spinner);
             return;
         }

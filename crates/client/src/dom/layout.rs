@@ -44,14 +44,14 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
             };
             node.display = Display::Grid;
             node.grid_template_columns = RepeatedGridTrack::auto(columns);
-            let spacing = px(attrs.cellspacing.unwrap_or(0.0));
+            let spacing = px(attrs.number("cellspacing").unwrap_or(0.0));
             (node.row_gap, node.column_gap) = (spacing, spacing);
         }
         // As wide as what they are in, so they take a whole line of a flow.
         Tag::Br => (node.width, node.height) = (percent(100), px(0)),
         Tag::Hr => (node.width, node.height) = (percent(100), px(1)),
         Tag::Img if attrs.height.is_none() => node.height = px(around.line),
-        Tag::Progress if attrs.value.is_some() => {
+        Tag::Progress if attrs.has("value") => {
             node.min_width = px(PROGRESS_LEAST);
             node.flex_grow = 1.0;
             node.height = attrs
@@ -63,6 +63,18 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
             node.height = attrs
                 .height
                 .map_or(px(PROGRESS), |height| val(Some(height)));
+        }
+        // A control is as big as the widget in it; one that fills its room
+        // takes what there is.
+        _ if tag.is_control() => {
+            let fills = match tag {
+                Tag::Input => attrs.text("type") == Some("text"),
+                _ => matches!(tag, Tag::Select | Tag::KeyBox | Tag::ColourPicker),
+            };
+            if fills && attrs.width.is_none() {
+                node.flex_grow = 1.0;
+                node.min_width = px(PROGRESS_LEAST);
+            }
         }
         _ if tag.is_inline() => flow_along(&mut node, attrs, around.look),
         _ => stack(&mut node, attrs),

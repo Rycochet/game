@@ -1,6 +1,6 @@
 # Plan: the interface as HTML
 
-Status: **PRs 1 and 2 of 11 built** (markup and layout; one hit test and the events: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
+Status: **PRs 1 to 3 of 11 built** (markup and layout; one hit test and the events; controls: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
 
 What PR 1 settled differently from the plan below:
 
@@ -16,6 +16,13 @@ What PR 2 settled:
 - **Events are Bevy's entity events**, passed up from the target through what holds it (`On<Click>`, stopped with `propagate(false)`), rather than a message type of our own. Events by id for screens' own code come with the controls (PR 3).
 - **The old widgets share the search** for what lights up and what is pressed; their sliders, text boxes, scroll areas and grids keep their own until they become elements.
 - **Left for the PRs that need them:** several pointers at once, the capture phase, focus and keys (with the text input), drag and drop (with panels and items), a long press as a right click, and canvases with shapes of their own.
+
+What PR 3 settled:
+
+- **Each control is shown by its old widget**, spawned inside the element, so looks and behaviour are exactly as they were and the debug API still finds them by id. What they do comes back as `UiEvent { id, value }`; attributes and widgets follow each other.
+- **Toggle rows and tab bars hold `option`s** (`<toggle-row id="size"><option>Small</option>…</toggle-row>`), not radio buttons in a `fieldset`, and a colour picker's swatches are `option`s too: one shape for every choice.
+- **A checkbox is only its box**; its words go in a `label`, which presses it when clicked. A label doesn't yet light its control up when pointed at.
+- **Still to come for controls:** `maxlength`, the icon dropdown, and focus moving between controls by keys.
 
 ## Why
 
@@ -76,11 +83,11 @@ Screens are written as HTML with XML's closing rule, inline in Rust (`r#"..."#`)
 | `input type="checkbox"` | A checkbox; with HTML's `switch` attribute (Safari already has it) a switch. `checked`. | `spawn_check_button`, `spawn_switch` |
 | `input type="text"` | A text box. `value`, `maxlength`, `inputmode="numeric"` for digits only (real HTML). Our own extras: `accepts-items`, `prefix`, `suffix`. | `spawn_text_box` |
 | `input type="range"` | A slider: `min`, `max`, `step`, `value`; `src` for a picture track. | `spawn_slider` |
-| `input type="radio"` in a `fieldset` | Radios sharing a `name` in a `fieldset`, drawn as joined buttons. | `spawn_toggle_row` |
+| `toggle-row` with `option`s | Joined buttons, one chosen, all on show. | `spawn_toggle_row` |
 | `select`, `option` | A dropdown. `searchable`; `option disabled` is greyed; `option` may hold an `img`. `class="icon"`: the icon dropdown. | `spawn_dropdown`, `spawn_icon_dropdown` |
 | `key-box` | Waits for a key; `value="Shift+KeyG"`. | `spawn_key_box` |
 | `colour-picker` with `option`s | Swatches; each `option` has `value` (a colour) or `src` (a picture) and `label`. | `spawn_colour_picker` |
-| `tab-bar` with `button`s | Folder tabs. | `spawn_tabs` |
+| `tab-bar` with `option`s | Folder tabs. | `spawn_tabs` |
 | `button hold` | Pressed only while held. | `HoldButton` |
 
 ### Surfaces
@@ -239,7 +246,7 @@ Each passes `cargo xtask test`, keeps files under the size limit, and updates th
 
 1. **Markup and layout.** *Built.* New client module `dom`: the parser (our own, see the top), the element set so far, validation, the `Theme` table, spawning to Bevy nodes, text, `img`, `progress`, `canvas`, `template`, and changes by id (`Dom`). No input yet. Show Widgets has a sample of markup under its widgets.
 2. **One hit test and the event rules.** *Built.* `dom::Hit` (the drill-down search), the hover chain, events passed up from the target, capture, click and double click, the wheel staying with what the pointer is on. The old widgets light up and press by the same search, so nothing covered reacts. `client.ui.at`, `client.ui.html`.
-3. **Controls.** `button`, `label`, checkbox and switch, text, range, radio rows, `select`, `key-box`, `colour-picker`, `tab-bar`, hold buttons, `UiEvent`, debug API by id. Show Widgets fully in HTML.
+3. **Controls.** *Built.* `button`, `label`, checkbox and switch, text, range, `select`, `toggle-row`, `tab-bar`, `key-box`, `colour-picker`, hold buttons; `UiEvent` by id; the debug API by id as before. Show Widgets' sample has one of each.
 4. **Surfaces.** `dialog`, `panel`, `scroll` (with Always Show Scroll Bars in Settings), tooltips from `title`, drag and drop, items in text.
 5. **Menus.** System menu, Settings, Connect, Server Options, Credits, the quit and other requesters.
 6. **Debug.** Debug menu and its panels.

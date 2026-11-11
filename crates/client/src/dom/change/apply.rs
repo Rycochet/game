@@ -8,7 +8,8 @@ use bevy::prelude::*;
 
 use super::{Change, DomChange};
 use crate::dom::build::{Builder, Inside};
-use crate::dom::parts::{Bar, Element, TemplateBody, TextStyle, Words};
+use crate::dom::parts::{Bar, Control, ControlOf, Element, TemplateBody, TextStyle, Words};
+use crate::dom::pictures::Pictures;
 use crate::dom::theme::Theme;
 use crate::widgets::UiId;
 
@@ -46,9 +47,13 @@ pub(in crate::dom) fn apply_changes(world: &mut World) {
 
 /// The element with this id, as written.
 fn find(world: &mut World, id: &str) -> Option<Entity> {
-    let mut ids = world.query_filtered::<(Entity, &UiId), With<Element>>();
-    let found = ids.iter(world).find(|(_, known)| known.to_string() == id);
-    found.map(|(entity, _)| entity)
+    type Named = Or<(With<Element>, With<ControlOf>)>;
+    let mut ids = world.query_filtered::<(Entity, &UiId, Option<&ControlOf>), Named>();
+    let found = ids
+        .iter(world)
+        .find(|(_, known, _)| known.to_string() == id);
+    // A control's id is on its widget: the element is what holds that.
+    found.map(|(entity, _, control)| control.map_or(entity, |control| control.0))
 }
 
 /// Changes an element's attributes, if the change is allowed.
@@ -79,6 +84,17 @@ fn words_of(world: &World, entity: Entity) -> Vec<Entity> {
 }
 
 fn set_text(world: &mut World, entity: Entity, words: String) -> Result<(), String> {
+    // A button's words are its widget's.
+    if let Some(Control(widget)) = world.get::<Control>(entity).copied() {
+        let held = world.get::<Children>(widget).map(|held| held.to_vec());
+        let mut held = held.unwrap_or_default().into_iter();
+        let label = held.find(|child| world.get::<Text>(*child).is_some());
+        let label = label.ok_or("it has no words to change")?;
+        if let Some(mut text) = world.get_mut::<Text>(label) {
+            text.0 = words;
+        }
+        return Ok(());
+    }
     let mut old = words_of(world, entity).into_iter();
     match old.next() {
         Some(first) => {
@@ -112,11 +128,16 @@ fn copy(world: &mut World, into: Entity, template: &str, index: usize) -> Result
 
 /// Runs `with` on a builder, with the theme as it is now.
 fn build(world: &mut World, with: impl FnOnce(&mut Builder)) {
+    let assets = world.resource::<AssetServer>().clone();
     world.resource_scope(|world, theme: Mut<Theme>| {
-        let mut commands = world.commands();
-        with(&mut Builder {
-            commands: &mut commands,
-            theme: &theme,
+        world.resource_scope(|world, pictures: Mut<Pictures>| {
+            let mut commands = world.commands();
+            with(&mut Builder {
+                commands: &mut commands,
+                theme: &theme,
+                pictures: &pictures,
+                assets: &assets,
+            });
         });
     });
 }

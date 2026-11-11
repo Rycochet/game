@@ -7,6 +7,7 @@ mod attrs;
 mod build;
 mod change;
 mod check;
+mod controls;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
 mod debug_api;
 mod error;
@@ -23,6 +24,7 @@ mod theme;
 use bevy::prelude::*;
 
 pub use change::Dom;
+pub use controls::UiEvent;
 pub use input::Hit;
 #[cfg(test)]
 pub use input::find_now;
@@ -34,6 +36,7 @@ pub use template::Template;
 pub use {
     attrs::{Align, Attrs, Length, VAlign},
     check::{Checked, CheckedNode},
+    controls::UiValue,
     error::{MarkupError, Place},
     input::{
         Click, ContextMenu, DomInput, Finder, PointerCapture, PointerEnter, PointerLeave, Press,
@@ -54,6 +57,7 @@ impl Plugin for DomPlugin {
             .insert_resource(Theme::parchment())
             .init_resource::<Pictures>();
         input::add(app);
+        controls::add(app);
         #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
         debug_api::add(app);
         app
@@ -64,7 +68,7 @@ impl Plugin for DomPlugin {
                 (
                     build::build_documents,
                     change::apply_changes,
-                    restyle::restyle,
+                    (restyle::restyle, controls::follow_elements),
                 )
                     .chain()
                     .before(bevy::ui::UiSystems::Layout),

@@ -6,7 +6,7 @@ use serde::Deserialize;
 use server::debug_api::{BrpResult, Value, json, params};
 
 use super::input::{Finder, Hit};
-use super::parts::{Document, Element, InTable, Solid, Words};
+use super::parts::{Control, Document, Element, InTable, Solid, Words};
 use crate::common::in_interface;
 use crate::widgets::UiId;
 
@@ -65,6 +65,7 @@ type Part = (
     Option<&'static Text>,
     Has<Words>,
     Option<&'static Children>,
+    Option<&'static Control>,
 );
 
 /// `client.ui.html`: every document as markup, as it is now.
@@ -85,7 +86,7 @@ fn html(
 /// Writes what `entity` holds. A table's rows are strips beside their cells
 /// (see `InTable`), so each row is written round the cells that follow it.
 fn write_children(parts: &Query<Part>, entity: Entity, depth: usize, out: &mut String) {
-    let Ok((.., children)) = parts.get(entity) else {
+    let Ok((.., children, _)) = parts.get(entity) else {
         return;
     };
     let indent = "  ".repeat(depth);
@@ -121,8 +122,11 @@ fn write_children(parts: &Query<Part>, entity: Entity, depth: usize, out: &mut S
 
 /// An element's name and what is written inside its opening tag.
 fn opening(parts: &Query<Part>, entity: Entity) -> Option<(&'static str, String)> {
-    let (element, id, ..) = parts.get(entity).ok()?;
+    let (element, id, .., control) = parts.get(entity).ok()?;
     let element = element?;
+    // A control's id is on the widget that shows it.
+    let on_widget = control.and_then(|control| parts.get(control.0).ok());
+    let id = id.or(on_widget.and_then(|widget| widget.1));
     let id = id.map(|id| format!(" id=\"{id}\"")).unwrap_or_default();
     Some((
         element.tag.name(),
@@ -149,7 +153,7 @@ fn write_node(parts: &Query<Part>, entity: Entity, depth: usize, out: &mut Strin
         }
         return;
     }
-    let Ok((_, _, _, text, words, _)) = parts.get(entity) else {
+    let Ok((_, _, _, text, words, ..)) = parts.get(entity) else {
         return;
     };
     match text.filter(|_| words) {

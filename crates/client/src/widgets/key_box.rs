@@ -23,7 +23,7 @@ const BORDER: f32 = 2.0;
 /// A box holding a binding. Its owner sets `binding` to show another, and
 /// `warned` to show its edge as wrong (a binding just taken from it). Disable it
 /// with `ButtonState::Disabled`.
-#[derive(Component, Clone, Copy, Debug, Default)]
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq)]
 pub struct KeyBox {
     pub binding: Option<Binding>,
     pub warned: bool,

@@ -86,7 +86,7 @@ pub(super) use give_systems::{
     choose_give_options, edit_give_boxes, press_give_button, start_give_panel,
 };
 pub(super) use give_target::{GiveTo, GiveToWords, follow_target};
-pub(super) use html_sample::fill_html_sample;
+pub(super) use html_sample::{fill_html_sample, show_html_events};
 pub(super) use kept_choices::add_kept_choices;
 use layout::{row, show_if, words};
 use learn_skills::spawn_learn_skills;

@@ -6,7 +6,7 @@ use super::attrs::Attrs;
 use super::check::CheckedNode;
 use super::tag::Tag;
 use super::template::Template;
-use crate::widgets::TextSize;
+use crate::widgets::{TextSize, UiId};
 
 /// The root of what a template was built into. Spawn it with `document`.
 #[derive(Component, Clone, Copy, Debug)]
@@ -81,6 +81,22 @@ pub(super) enum InTable {
         padding: f32,
     },
 }
+
+/// On a control's element: the widget that shows it.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct Control(pub Entity);
+
+/// On a control's widget, which carries the control's id: its element.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct ControlOf(pub Entity);
+
+/// On a control made of options: what choosing each makes its `value`.
+#[derive(Component, Clone, Debug)]
+pub(super) struct Choices(pub Vec<String>);
+
+/// On a label with `for`: the id of the control it is for.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct LabelFor(pub UiId);
 
 /// On a `progress` with a value: the bar inside it.
 #[derive(Component)]
