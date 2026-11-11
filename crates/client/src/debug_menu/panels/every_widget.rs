@@ -266,6 +266,8 @@ pub(super) fn spawn_widgets(content: &mut ChildSpawnerCommands) {
     content
         .spawn(Node::default())
         .with_children(|holder| spawn_tooltip(holder, SampleTooltip, "Tooltip"));
+    // The same kind of thing from markup (`dom`), to compare.
+    content.spawn(crate::dom::document(&super::html_sample::HTML_SAMPLE));
 }
 
 /// The sample tooltip's text.
