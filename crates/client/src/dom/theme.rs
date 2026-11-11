@@ -86,6 +86,13 @@ impl Theme {
                 ..stacked
             },
         );
+        // A page of settings: rows a little apart, each a label and what it sets.
+        let rows = Look {
+            gap: 12.0,
+            ..stacked
+        };
+        theme.set(Tag::Div, "rows", rows);
+        theme.set(Tag::Form, "rows", rows);
         let inline = Look {
             gap: ROW,
             ..default()
@@ -95,6 +102,11 @@ impl Theme {
         }
         // Things side by side with nothing between them.
         theme.set(Tag::Span, "joined", Look::default());
+        let labelled = Look {
+            gap: 16.0,
+            ..inline
+        };
+        theme.set(Tag::Span, "labelled", labelled);
         let coloured = |colour: Color| Look {
             colour: Some(colour),
             ..inline

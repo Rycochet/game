@@ -9,6 +9,7 @@ mod gameplay;
 mod graphics;
 mod keep;
 mod rows;
+mod shell;
 mod shown_role;
 
 pub(super) use controls::{TakenKeys, fill_controls_page, forget_taken, use_controls_page};
@@ -18,24 +19,19 @@ pub(super) use graphics::{
     GraphicsForm, GraphicsShown, fill_graphics_page, use_graphics_options, use_graphics_page,
 };
 pub(super) use keep::{GraphicsTrial, KeepButton, run_trial};
+pub(super) use shell::{bind_settings, show_interface_page, spawn_settings};
 pub(super) use shown_role::{ShownAs, keep_shown_role, use_shown_role};
 
 use bevy::prelude::*;
 
 use crate::common::{InterfaceSize, Preferences};
-use crate::widgets::{
-    ButtonState, Dropdown, DropdownChosen, INTERFACE_PERCENTS, SwitchFlipped, TabChosen, TextSize,
-    TouchOnly, UiId, spawn_tabs,
-};
+use crate::widgets::{DropdownChosen, INTERFACE_PERCENTS, SwitchFlipped, TabChosen, TextSize};
 
-const PAGES: [&str; 4] = ["Gameplay", "Controls", "Interface", "Graphics"];
 const FONT: TextSize = TextSize::Large;
 const ROW_GAP: f32 = 12.0;
 const LABEL_GAP: f32 = 16.0;
 const ROW_HEIGHT: f32 = 36.0;
-const DROPDOWN_WIDTH: f32 = 160.0;
 
-const SIZE: &str = "How big the interface is drawn. Auto follows the size of the window.";
 const TOUCH: &str = "Keeps the interface at least its own size, for fingers.";
 const TOUCH_ONLY: &str = "Always on, as this device only has a touch screen.";
 const SCROLL_BARS: &str = "Shows the bar of everything that can scroll, even when all of it fits.";
@@ -48,10 +44,6 @@ pub(super) struct PageTabs;
 #[derive(Component)]
 pub(super) struct Page(usize);
 
-/// The Interface page's contents, built again when what they show changes.
-#[derive(Component)]
-pub(super) struct InterfacePage;
-
 #[derive(Component)]
 pub(super) struct SizeDropdown;
 
@@ -61,49 +53,6 @@ pub(super) struct TouchSwitch;
 /// The "Always Show Scroll Bars" switch.
 #[derive(Component)]
 pub(super) struct ScrollBarsSwitch;
-
-/// The tabs and their pages, in Settings' panel.
-pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
-    let tabs = spawn_tabs(panel, &PAGES, 0, FONT);
-    panel
-        .commands()
-        .entity(tabs)
-        .insert((PageTabs, UiId::new("settings", "page")));
-    for (index, _) in PAGES.iter().enumerate() {
-        // Pages not chosen take no room, so the chosen one is always at the top.
-        let mut page = panel.spawn((
-            Page(index),
-            Node {
-                flex_direction: FlexDirection::Column,
-                row_gap: px(ROW_GAP),
-                // The rest of the panel, so a page can scroll within it.
-                flex_grow: 1.0,
-                min_height: px(0),
-                display: if index == 0 {
-                    Display::Flex
-                } else {
-                    Display::None
-                },
-                ..default()
-            },
-        ));
-        match PAGES[index] {
-            "Gameplay" => {
-                page.insert(gameplay::GameplayPage);
-            }
-            "Controls" => {
-                page.insert(controls::ControlsPage);
-            }
-            "Interface" => {
-                page.insert(InterfacePage);
-            }
-            "Graphics" => {
-                page.insert(graphics::GraphicsPage);
-            }
-            _ => {}
-        }
-    }
-}
 
 /// Which entry of the dropdown a size is.
 fn size_index(size: InterfaceSize) -> usize {
@@ -137,54 +86,6 @@ fn size_options() -> Vec<String> {
                 .map(|percent| format!("{percent}%")),
         )
         .collect()
-}
-
-/// Builds the Interface page again when the preferences change (and at the start).
-pub(super) fn fill_interface_page(
-    mut commands: Commands,
-    preferences: Res<Preferences>,
-    touch_only: Res<TouchOnly>,
-    page: Single<Entity, With<InterfacePage>>,
-    mut built: Local<bool>,
-) {
-    if *built && !preferences.is_changed() && !touch_only.is_changed() {
-        return;
-    }
-    *built = true;
-    let page = *page;
-    commands.entity(page).despawn_related::<Children>();
-    commands.entity(page).with_children(|page| {
-        let dropdown = Dropdown {
-            options: size_options(),
-            selected: size_index(preferences.interface_size),
-            searchable: false,
-            ..default()
-        };
-        let label = "Interface Size";
-        let size =
-            rows::spawn_dropdown_row(page, label, rows::tip(SIZE, None), dropdown, DROPDOWN_WIDTH);
-        page.commands()
-            .entity(size)
-            .insert((SizeDropdown, UiId::new("settings.interface", "size")));
-        // A device with only a touch screen has it on, and can't turn it off.
-        let (state, on, why_not) = if touch_only.0 {
-            (ButtonState::DisabledSelected, true, Some(TOUCH_ONLY))
-        } else {
-            (ButtonState::Normal, preferences.touch, None)
-        };
-        let tip = rows::tip(TOUCH, why_not);
-        let touch = rows::spawn_switch_row(page, "Enable Touch", tip, state, on);
-        page.commands()
-            .entity(touch)
-            .insert((TouchSwitch, UiId::new("settings.interface", "touch")));
-        let (state, on) = (ButtonState::Normal, preferences.always_show_scroll_bars);
-        let tip = rows::tip(SCROLL_BARS, None);
-        let bars = rows::spawn_switch_row(page, "Always Show Scroll Bars", tip, state, on);
-        page.commands().entity(bars).insert((
-            ScrollBarsSwitch,
-            UiId::new("settings.interface", "scroll_bars"),
-        ));
-    });
 }
 
 /// Shows the page whose tab was chosen, and puts choices into the preferences.

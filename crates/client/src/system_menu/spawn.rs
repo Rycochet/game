@@ -4,15 +4,9 @@ use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use super::{
-    ABOVE_MENU_LAYER, Action, CLOSE_MARGIN, CORNER_GAP, GEAR_BUTTON, GearButton, Layer, MARGIN,
-    SETTINGS_HEIGHT, SETTINGS_TITLE_ROW, SETTINGS_WIDTH, SystemMenu,
-};
+use super::{Action, CORNER_GAP, GEAR_BUTTON, GearButton};
 use crate::dom::{Dom, Pictures};
-use crate::widgets::{
-    ButtonState, ButtonTooltip, CLOSE_PIXELS, Pressable, UiId, panel_title, spawn_close_button,
-    spawn_icon_button, spawn_sized_layer,
-};
+use crate::widgets::{ButtonState, ButtonTooltip, Pressable, spawn_icon_button};
 
 /// A gear, drawn here so there is no file to ship for it.
 pub(super) fn gear_icon() -> Image {
@@ -87,7 +81,7 @@ pub(super) fn spawn_menu(
     pictures.name("gear", icon.clone());
     super::panel::spawn_main_panel(&mut commands);
     super::requesters::spawn_requesters(&mut commands, &mut dom, super::slow_drawing::WORDS);
-    spawn_settings(&mut commands);
+    super::settings::spawn_settings(&mut commands, &mut dom);
     super::credits::spawn_credits(&mut commands, &mut dom);
     let icons = super::icons::ConnectIcons::new(&mut images);
     super::connect::spawn_connect(&mut commands, &mut dom, &mut pictures, &icons);
@@ -95,71 +89,4 @@ pub(super) fn spawn_menu(
     #[cfg(not(target_arch = "wasm32"))]
     super::server_options::spawn_server_options(&mut commands);
     commands.insert_resource(icons);
-}
-
-/// A layer that presses outside its panel close.
-pub(super) fn spawn_layer(
-    commands: &mut Commands,
-    depth: i32,
-    shown: &'static [SystemMenu],
-    width: Val,
-    height: Val,
-    content: Node,
-) -> Entity {
-    let (layer, panel) = spawn_sized_layer(commands, depth, width, height, content);
-    commands.entity(layer).insert((Layer(shown), Action::Back));
-    panel
-}
-
-pub(super) fn spawn_title_row(panel: &mut ChildSpawnerCommands, title: &str, form: &'static str) {
-    panel
-        .spawn(Node {
-            height: px(SETTINGS_TITLE_ROW),
-            flex_shrink: 0.0,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|row| {
-            row.spawn(panel_title(title));
-            row.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    right: px(-CLOSE_MARGIN),
-                    top: px((SETTINGS_TITLE_ROW - CLOSE_PIXELS) / 2.0 - CLOSE_MARGIN),
-                    padding: UiRect::all(px(CLOSE_MARGIN)),
-                    ..default()
-                },
-                Action::Back,
-                Pressable,
-                UiId::new(form, "close"),
-            ))
-            .with_children(|holder| {
-                spawn_close_button(holder, default());
-            });
-        });
-}
-
-pub(super) fn spawn_settings(commands: &mut Commands) {
-    let panel = spawn_layer(
-        commands,
-        ABOVE_MENU_LAYER,
-        &[
-            SystemMenu::Settings,
-            SystemMenu::KeepGraphics,
-            SystemMenu::Ironman,
-        ],
-        percent(SETTINGS_WIDTH),
-        percent(SETTINGS_HEIGHT),
-        Node {
-            padding: UiRect::all(px(MARGIN)),
-            flex_direction: FlexDirection::Column,
-            row_gap: px(MARGIN),
-            ..default()
-        },
-    );
-    commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Settings", "settings");
-        super::settings::spawn_pages(panel);
-    });
 }

@@ -96,6 +96,11 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
         _ if tag.is_inline() => flow_along(&mut node, attrs, around.look),
         _ => stack(&mut node, attrs, around.look),
     }
+    // A dialog given a height has what is in it fill that height.
+    if attrs.fills || (tag == Tag::Dialog && attrs.height.is_some()) {
+        node.flex_grow = 1.0;
+        node.min_height = px(0);
+    }
     if fixed_panel {
         node.border = UiRect::all(px(PANEL_EDGE));
         node.padding = UiRect::all(px(PANEL_PADDING));
