@@ -10,12 +10,12 @@ use shared::protocol::{ClientMessage, DevMobTool, ServerMessage};
 use shared::sheet::Feeling;
 
 use super::super::actions::DebugAction;
-use super::{FONT, OpenPanels, row};
+use super::OpenPanels;
 use crate::common::{DebugTools, InspectedMob, Other, Target};
 use crate::connection::{FromServer, ToServer};
-use crate::widgets::{
-    BUTTON_PADDING, ButtonPressed, ButtonState, INK, Pressable, RaisePanel, UiId, spawn_button,
-};
+use crate::dom::{Dom, Template};
+use crate::html;
+use crate::widgets::{ButtonPressed, ButtonState, RaisePanel, UiId};
 use shared::role::DebugTool;
 
 /// How often an open panel asks again, in seconds.
@@ -50,30 +50,38 @@ pub(in crate::debug_menu) fn add_examine_mob_panel(app: &mut App) {
     );
 }
 
-pub(super) fn spawn_examine_panel(content: &mut ChildSpawnerCommands) {
-    let column = Node {
-        flex_direction: FlexDirection::Column,
-        min_width: px(320),
-        ..default()
-    };
-    content.spawn((column, ExamineLines));
-    content.spawn(row()).with_children(|row| {
-        for (label, button, name) in [
-            ("Kill", ExamineButton::Kill, "kill"),
-            ("Destroy", ExamineButton::Destroy, "destroy"),
-            ("Give Item...", ExamineButton::GiveItem, "give_item"),
-        ] {
-            let node = Node {
-                padding: BUTTON_PADDING,
-                ..default()
-            };
-            spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
-                button,
-                Pressable,
-                UiId::new("debug.examine_mob", name),
-            ));
-        }
-    });
+/// The panel's contents, as markup. Each line the server sends is a copy of
+/// the template.
+pub(super) static EXAMINE_MOB: Template = html!(
+    "debug_menu.examine_mob",
+    r#"
+<form id="debug.examine_mob">
+  <div id="lines" class="tight"/>
+  <span nowrap>
+    <button id="kill">Kill</button>
+    <button id="destroy">Destroy</button>
+    <button id="give_item">Give Item...</button>
+  </span>
+  <template id="line"><p id="line"/></template>
+</form>
+"#
+);
+
+/// The buttons, by their names in the markup.
+const BUTTONS: [(&str, ExamineButton, DebugTool); 3] = [
+    ("kill", ExamineButton::Kill, DebugTool::KillMob),
+    ("destroy", ExamineButton::Destroy, DebugTool::DestroyMob),
+    ("give_item", ExamineButton::GiveItem, DebugTool::GiveItem),
+];
+
+/// What a built part of the panel is known by, from its id.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId) {
+    let name = id.parts().1;
+    if name == "lines" {
+        bound.insert(ExamineLines);
+    } else if let Some((_, button, _)) = BUTTONS.iter().find(|(known, ..)| *known == name) {
+        bound.insert(*button);
+    }
 }
 
 /// The target, if it is a mob in sight (other players feel nothing).
@@ -122,21 +130,16 @@ fn ask_again(
 }
 
 /// The lines, written out again when they change or the panel opens.
-fn show_lines(
-    inspected: Res<InspectedMob>,
-    holders: Query<(Entity, Ref<ExamineLines>)>,
-    mut commands: Commands,
-) {
-    for (holder, added) in &holders {
+fn show_lines(inspected: Res<InspectedMob>, holders: Query<Ref<ExamineLines>>, mut dom: Dom) {
+    for added in &holders {
         if !inspected.is_changed() && !added.is_added() {
             continue;
         }
-        commands.entity(holder).despawn_related::<Children>();
-        commands.entity(holder).with_children(|column| {
-            for line in &inspected.lines {
-                column.spawn((Text::new(line.clone()), FONT.font(), TextColor(INK)));
-            }
-        });
+        dom.empty("debug.examine_mob/lines");
+        for (at, line) in inspected.lines.iter().enumerate() {
+            dom.copy_template("debug.examine_mob/line", "debug.examine_mob/lines", at);
+            dom.set_text(&format!("debug.examine_mob/line.{at}"), line.clone());
+        }
     }
 }
 
@@ -175,20 +178,28 @@ fn grey_buttons(
     target: Res<Target>,
     others: Query<&Other>,
     tools: Res<DebugTools>,
-    mut buttons: Query<(&ExamineButton, &mut ButtonState, &mut Node)>,
+    mut buttons: Query<&mut ButtonState, With<ExamineButton>>,
+    mut dom: Dom,
+    mut shown: Local<Option<[bool; 3]>>,
 ) {
     let state = if targeted_mob(&target, &others).is_some() {
         ButtonState::Normal
     } else {
         ButtonState::Disabled
     };
-    for (button, mut button_state, mut node) in &mut buttons {
-        let tool = match button {
-            ExamineButton::Kill => DebugTool::KillMob,
-            ExamineButton::Destroy => DebugTool::DestroyMob,
-            ExamineButton::GiveItem => DebugTool::GiveItem,
-        };
-        super::show_if(&mut node, tools.may(tool));
+    // Again for a panel just opened, which shows them all.
+    if buttons.is_empty() {
+        *shown = None;
+        return;
+    }
+    for mut button_state in &mut buttons {
         button_state.set_if_neq(state);
+    }
+    let may = BUTTONS.map(|(_, _, tool)| tools.may(tool));
+    if *shown != Some(may) {
+        *shown = Some(may);
+        for ((name, ..), may) in BUTTONS.into_iter().zip(may) {
+            dom.set_flag(&format!("debug.examine_mob/{name}"), "hidden", !may);
+        }
     }
 }

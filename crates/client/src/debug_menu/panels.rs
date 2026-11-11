@@ -67,7 +67,6 @@ pub(super) use dev_area_systems::add_dev_area_panel;
 use every_widget::spawn_every_widget;
 pub(super) use every_widget::{give_sample_icons, show_typed_items};
 pub(super) use examine_mob::add_examine_mob_panel;
-use examine_mob::spawn_examine_panel;
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
 pub(super) use generate_form::{
     GenerateButton, GenerateForm, GenerateKind, NewSeedButton, RuinButton, SeedBox,
