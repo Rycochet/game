@@ -110,7 +110,13 @@ impl Builder<'_, '_, '_> {
         if let Some(wanted) = element.label_for {
             entity.insert(LabelFor(numbered(wanted)));
         }
-        (entity.id(), Inside { style, ..inside })
+        let footer = inside.footer || element.tag == Tag::Footer;
+        let within = Inside {
+            style,
+            footer,
+            ..inside
+        };
+        (entity.id(), within)
     }
 }
 

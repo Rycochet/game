@@ -80,7 +80,7 @@ pub use outlined::spawn_outlined_text;
 pub use progress::{Progress, spawn_progress_bar};
 pub use queued_stripe::queued_stripe;
 pub use scale::{INTERFACE_PERCENTS, TouchOnly};
-pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area};
+pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area, spawn_wide_scroll_area};
 pub use set_edge::set_edge;
 pub use skill_ring::{SkillRing, skill_ring};
 pub use slider::{Slider, SliderMoved, spawn_slider};

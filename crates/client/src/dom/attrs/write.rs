@@ -42,6 +42,7 @@ impl Attrs {
             ("hidden", self.hidden),
             ("disabled", self.disabled),
             ("inert", self.inert),
+            ("nowrap", self.nowrap),
         ];
         for (name, _) in flags.iter().filter(|(_, on)| *on) {
             write(name, Some(String::new()));
