@@ -7,7 +7,7 @@ use shared::protocol::ClientMessage;
 use super::give::NearbyPanel;
 use super::hold::Held;
 use super::panels::OpenGrids;
-use super::{Carried, Hand, HeldBy, Holding, InventoryDebug};
+use super::{Carried, Hand, Holding, InventoryDebug};
 use crate::common::GameView;
 use crate::connection::ToServer;
 use crate::widgets::RaisePanel;
@@ -17,7 +17,7 @@ use crate::widgets::RaisePanel;
 pub(super) fn run_debug(
     mut asked: MessageReader<InventoryDebug>,
     carried: Res<Carried>,
-    mut holding: ResMut<Holding>,
+    (mut holding, mut object): (ResMut<Holding>, ResMut<crate::dom::HeldObject>),
     mut open: ResMut<OpenGrids>,
     mut nearby: ResMut<NearbyPanel>,
     nodes: Query<(), With<Node>>,
@@ -51,14 +51,13 @@ pub(super) fn run_debug(
             }
             InventoryDebug::PickUp(index) => {
                 if let Some(placed) = carried.0.items.get(index) {
-                    holding.held = Some(HeldBy {
-                        item: Held {
-                            id: placed.item.id,
-                            rotation: placed.rotation,
-                            grip: (0, 0),
-                        },
-                        by: Hand::Debug,
-                    });
+                    let held = Held {
+                        id: placed.item.id,
+                        rotation: placed.rotation,
+                        grip: (0, 0),
+                    };
+                    // Kept until put back: nothing lets go of it.
+                    holding.pick_up(&mut object, &placed.item, held, Hand::Kept, None);
                 }
             }
         }

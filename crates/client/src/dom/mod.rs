@@ -11,6 +11,7 @@ mod controls;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
 mod debug_api;
 mod error;
+mod hold;
 mod input;
 mod layout;
 mod markup;
@@ -29,6 +30,7 @@ use bevy::prelude::*;
 
 pub use change::Dom;
 pub use controls::{UiEvent, UiValue};
+pub use hold::{Dropped, Hand, HeldObject, HeldOver, HeldThing, HoldObjects};
 pub use input::Hit;
 #[cfg(test)]
 pub use input::find_now;
@@ -65,6 +67,7 @@ impl Plugin for DomPlugin {
             // documents are built.)
             .init_resource::<crate::common::KnownItems>();
         input::add(app);
+        hold::add(app);
         controls::add(app);
         #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
         debug_api::add(app);

@@ -6,8 +6,9 @@ use shared::wear::Remover;
 
 use super::hold::Held;
 use super::panels::ItemCell;
-use super::{Carried, Hand, HeldBy, Holding};
+use super::{Carried, Hand, Holding};
 use crate::common::{GodMode, StockCell, TouchGesture, in_interface};
+use crate::dom::HeldObject;
 use crate::widgets::{Floating, shown_at};
 
 /// The item cell in front of everything else at this point, if one is.
@@ -57,7 +58,7 @@ pub(super) fn pick_up_by_finger(
         ),
         (With<Node>, Without<Floating>),
     >,
-    mut holding: ResMut<Holding>,
+    (mut holding, mut object): (ResMut<Holding>, ResMut<HeldObject>),
     carried: Res<Carried>,
     god: Res<GodMode>,
     ui_scale: Res<UiScale>,
@@ -67,14 +68,14 @@ pub(super) fn pick_up_by_finger(
     if gesture.first_finger.is_none() {
         *decided = None;
     }
-    if holding.held.is_some_and(|held| held.by == Hand::Finger) {
+    if object.thing().is_some_and(|thing| thing.by == Hand::Finger) {
         // Moving what it holds, not scrolling what is under it.
         gesture.drag = Vec2::ZERO;
     }
     let Some(start) = gesture
         .still_at
         .map(|start| in_interface(start, &ui_scale))
-        .filter(|&start| holding.held.is_none() && *decided != Some(start))
+        .filter(|&start| object.thing().is_none() && *decided != Some(start))
     else {
         return;
     };
@@ -89,14 +90,14 @@ pub(super) fn pick_up_by_finger(
             split.0 = Some(super::split::Splitting::open(cell.id, stack.count(), start));
             return;
         }
-        holding.held = Some(HeldBy {
-            item: Held {
+        if let Some(item) = carried.0.find(cell.id) {
+            let held = Held {
                 id: cell.id,
                 rotation: cell.rotation,
                 grip: cell.grip,
-            },
-            by: Hand::Finger,
-        });
+            };
+            holding.pick_up(&mut object, item, held, Hand::Finger, None);
+        }
         return;
     }
     let front = stock
@@ -106,14 +107,12 @@ pub(super) fn pick_up_by_finger(
         })
         .max_by_key(|(stack, ..)| stack.0);
     if let Some((.., Some(cell), _)) = front {
-        holding.held = Some(HeldBy {
-            item: Held {
-                id: cell.item.id,
-                rotation: cell.rotation,
-                grip: cell.grip,
-            },
-            by: Hand::Finger,
-        });
+        let held = Held {
+            id: cell.item.id,
+            rotation: cell.rotation,
+            grip: cell.grip,
+        };
+        holding.pick_up(&mut object, &cell.item, held, Hand::Finger, None);
         holding.stock = Some((cell.with, cell.item.clone()));
     }
 }

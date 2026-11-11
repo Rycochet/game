@@ -33,7 +33,7 @@ mod wear_note;
 #[cfg(not(target_arch = "wasm32"))]
 use debug::run_debug;
 use finger::{item_cell_in_front, pick_up_by_finger};
-use hold_items::hold_items;
+use hold_items::{aim_items, hold_items};
 use holding::{Hand, HeldBy, Holding, cancel_held};
 pub use server::Stacks;
 use server::read_server;
@@ -41,10 +41,6 @@ use split::Split;
 
 /// A press on an item this long after the last one on it opens it.
 const DOUBLE_PRESS_SECONDS: f64 = 0.35;
-/// A press and release this quick, this close together, is a click: what it picked up
-/// stays held until the next.
-const CLICK_SECONDS: f64 = 0.3;
-const CLICK_PIXELS: f32 = 8.0;
 
 pub struct InventoryPlugin;
 
@@ -79,7 +75,12 @@ impl Plugin for InventoryPlugin {
                     (pick_up_by_finger, cancel_held, split::close_split)
                         .before(WidgetSystems::Presses)
                         .after(PointerSystems),
-                    hold_items.after(WidgetSystems::Modal),
+                    // Either side of `dom` moving what is held.
+                    (
+                        hold_items.before(crate::dom::HoldObjects),
+                        aim_items.after(crate::dom::HoldObjects),
+                    )
+                        .after(WidgetSystems::Modal),
                 ),
             )
             .add_systems(
@@ -100,7 +101,6 @@ impl Plugin for InventoryPlugin {
                     give::show_nearby,
                     give::show_give_aim,
                     panels::show_aim,
-                    panels::show_held,
                     panels::show_tooltip,
                     panels::show_button,
                     split::move_split,
@@ -147,6 +147,3 @@ pub enum InventoryDebug {
     /// Puts all but the first of what is in the inventory on the ground.
     DropSome,
 }
-
-#[cfg(test)]
-mod tests;

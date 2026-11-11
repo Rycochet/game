@@ -1,34 +1,31 @@
-//! Holding things: picking up with the mouse, turning, following the pointer and
-//! letting go, in three steps: `press`, `aim` and `let_go`.
+//! Holding things, as far as it is the inventory's: what a press picks up
+//! (`press`), what letting go where it is would do (`aim`) and doing that
+//! (`let_go`). Following the pointer, turning and when it is let go are `dom`'s
+//! (`HeldObject`), which runs between `hold_items` and `aim_items`.
 
 mod aim;
 mod let_go;
 mod press;
 
-use aim::aim_held;
+use aim::aim_at;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use let_go::let_go_of;
 use press::take_presses;
 use shared::wear::{Fit, WearRefused};
 
 use super::body::BodyNode;
 use super::give::GiveRow;
-use super::panels::{BinNode, DropNode, ItemCell, OpenGrids};
+use super::panels::{BinNode, DropNode, GridOwner, ItemCell, OpenGrids};
 use super::split::{PickRow, Split, SplitCell};
-use super::{CLICK_PIXELS, CLICK_SECONDS, Carried, Hand, Holding};
+use super::{Carried, HeldBy, Holding};
 use crate::common::{
-    DroppedOnText, GameView, GaveItem, HeldOverGifts, HeldOverText, HeldStock, Preferences,
-    SpentEnergy, StockCell, TakesGifts, TakesItemText, TookItem, TouchGesture, UiPointer,
+    DroppedOnText, GameView, GaveItem, HeldOverGifts, HeldOverText, HeldStock, SpentEnergy,
+    StockCell, TakesGifts, TakesItemText, TookItem, TouchGesture, UiPointer,
 };
 use crate::connection::ToServer;
-use crate::widgets::{ButtonPressed, Floating, RaisePanel};
-
-/// Whether a press and release were a click rather than a drag.
-pub(super) fn is_click(from: Vec2, to: Vec2, seconds: f64) -> bool {
-    seconds < CLICK_SECONDS && from.distance(to) < CLICK_PIXELS
-}
+use crate::dom::{Dropped, HeldObject};
+use crate::widgets::{ButtonPressed, RaisePanel};
 
 /// Whether it is worth asking to wear something: the server may know of magic this
 /// client doesn't, which would make it fit.
@@ -36,39 +33,23 @@ pub(super) fn worth_wearing(check: Result<Fit, WearRefused>) -> bool {
     check.err().is_none_or(WearRefused::worth_trying)
 }
 
-/// What the pointer may be over: grids, and the bin, the ground, the body and
-/// people to give to.
+/// What the thing in front may be: a grid, or the bin, the ground, the body, people
+/// to give to and text to write an item into.
 #[derive(SystemParam)]
 #[allow(clippy::type_complexity)]
 pub(super) struct Under<'w, 's> {
-    grids: Query<
+    grids: Query<'w, 's, &'static GridOwner>,
+    marks: Query<
         'w,
         's,
         (
-            &'static super::panels::GridNode,
-            &'static ComputedNode,
-            &'static UiGlobalTransform,
-            &'static InheritedVisibility,
-            &'static ComputedStackIndex,
-        ),
-    >,
-    nodes: Query<
-        'w,
-        's,
-        (
-            &'static ComputedStackIndex,
-            &'static ComputedNode,
-            &'static UiGlobalTransform,
-            &'static InheritedVisibility,
             Has<BinNode>,
             Has<DropNode>,
             Has<BodyNode>,
             Option<&'static GiveRow>,
             Option<&'static TakesGifts>,
             Option<&'static TakesItemText>,
-            Option<&'static CalculatedClip>,
         ),
-        Without<Floating>,
     >,
     /// How big stacks may get.
     stacks: Res<'w, super::Stacks>,
@@ -93,8 +74,9 @@ pub(super) struct Outbox<'w> {
     ),
 }
 
-/// Everything about holding: picking up with the mouse, turning, following the
-/// pointer and letting go. In `PreUpdate`, so what it takes reaches nothing else.
+/// Picking up with the mouse, and keeping what is held as it should be. In
+/// `PreUpdate`, so what it takes reaches nothing else, before `dom` moves what
+/// is held.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn hold_items(
     mut pressed: MessageReader<ButtonPressed>,
@@ -104,30 +86,22 @@ pub(super) fn hold_items(
         Query<&SplitCell>,
         Query<&PickRow>,
     ),
-    under: Under,
-    (pointer, ui_scale): (Res<UiPointer>, Res<UiScale>),
+    pointer: Res<UiPointer>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
-    mut gesture: ResMut<TouchGesture>,
-    mut holding: ResMut<Holding>,
+    gesture: Res<TouchGesture>,
+    (mut holding, mut object): (ResMut<Holding>, ResMut<HeldObject>),
     mut carried: ResMut<Carried>,
     mut open: ResMut<OpenGrids>,
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
-    mut out: Outbox,
-    (mut over_gifts, mut held_stock, view, mut keys, mut split, preferences): (
-        ResMut<HeldOverGifts>,
-        ResMut<HeldStock>,
-        Res<State<GameView>>,
-        ResMut<ButtonInput<KeyCode>>,
-        ResMut<Split>,
-        Res<Preferences>,
-    ),
+    keys: Res<ButtonInput<KeyCode>>,
+    mut split: ResMut<Split>,
     time: Res<Time<Real>>,
     (mut last_press, mut was_down): (Local<Option<(shared::id::Id, f64)>>, Local<bool>),
 ) {
     let now = time.elapsed_secs_f64();
     // Part of a stack lifted out (see `split`) goes back once nothing holds it.
-    if holding.held.is_none() {
+    if object.thing().is_none() {
         holding.group = None;
         if carried.bypass_change_detection().0.settle_parts() {
             carried.set_changed();
@@ -142,7 +116,7 @@ pub(super) fn hold_items(
         (&cells.0, &cells.1, &cells.2, &cells.3),
         &mut split,
         &mut mouse,
-        &mut holding,
+        (&mut holding, &mut object),
         &carried,
         &mut open,
         &mut commands,
@@ -153,11 +127,12 @@ pub(super) fn hold_items(
     if done {
         return;
     }
+    let Some(held) = HeldBy::of(&object) else {
+        return;
+    };
     // Holding part of a stack: it lies on its own while held, even after the server
     // has said what is carried again.
-    if let Some(held) = holding.held
-        && holding.stock.is_none()
-    {
+    if holding.stock.is_none() {
         match &holding.group {
             Some((stack, items)) => {
                 let lifted = carried.0.find(held.item.id).is_some_and(|item| {
@@ -174,53 +149,70 @@ pub(super) fn hold_items(
             None => {}
         }
     }
-    let Some((mut held, aim, at, finger)) = aim_held(
-        &mut holding,
-        &carried,
-        &under,
-        (&pointer, &ui_scale, &view),
-        &mut mouse,
-        &mut gesture,
-        (&mut keys, &preferences.controls),
-        (&mut over_gifts, &mut held_stock, &mut out.on_text.0),
-    ) else {
+    match holding.item(&carried.0) {
+        // What is drawn following the pointer is the thing as it is now.
+        Some(item) => object.keep_up(item),
+        // The server says it has gone.
+        None => holding.put_back(&mut object),
+    }
+}
+
+/// What letting go of what is held would do, and doing it when `dom` says it
+/// was let go. In `PreUpdate`, after `dom` has moved it.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn aim_items(
+    object: Res<HeldObject>,
+    mut dropped: MessageReader<Dropped>,
+    under: Under,
+    view: Res<State<GameView>>,
+    mut holding: ResMut<Holding>,
+    mut carried: ResMut<Carried>,
+    (mut over_gifts, mut held_stock): (ResMut<HeldOverGifts>, ResMut<HeldStock>),
+    mut out: Outbox,
+) {
+    over_gifts.0 = None;
+    out.on_text.0.set_if_neq(HeldOverText(None));
+    // Noted for what draws by them.
+    let held = HeldBy::of(&object);
+    holding.held = held;
+    holding.at = object.at;
+    let from_stock = holding.stock.is_some();
+    let stock = held.filter(|_| from_stock).map(|held| held.item.id);
+    held_stock.set_if_neq(HeldStock(stock));
+    let let_go = dropped.read().last();
+    let let_go = let_go.map(|drop| (HeldBy::from_thing(&drop.thing), drop.at, drop.over));
+    let now = held.map(|held| (held, object.at, object.over));
+    let Some((subject, at, over)) = now.or(let_go) else {
+        holding.aim = None;
+        holding.stock = None;
         return;
     };
-
-    let released = !mouse.pressed(MouseButton::Left);
-    if held.by == Hand::Mouse
-        && released
-        && let (Some((from, when)), Some(at)) = (holding.picked, at)
-        // In the window's pixels, so a click is the same whatever the size.
-        && is_click(from * ui_scale.0, at * ui_scale.0, now - when)
-    {
-        held.by = Hand::Clicked;
-    }
-    let let_go = match held.by {
-        Hand::Mouse => released,
-        Hand::Clicked => new_press,
-        Hand::Finger => finger.is_none(),
-        Hand::Debug => false,
-    };
-    if !let_go {
-        holding.held = Some(held);
+    let aim = aim_at(
+        subject.item,
+        (at, over),
+        &holding,
+        &carried,
+        &under,
+        &view,
+        (&mut over_gifts, &mut out.on_text.0),
+    );
+    if held.is_some() {
         holding.aim = Some(aim);
         return;
     }
-    holding.held = None;
     holding.aim = None;
     if let Some(on) = out.on_text.0.0.take() {
         // Written in where it is let go; it goes back where it was.
         out.on_text.1.write(DroppedOnText {
             on,
-            item: held.item.id,
+            item: subject.item.id,
         });
         holding.stock = None;
         held_stock.set_if_neq(HeldStock(None));
         return;
     }
     let_go_of(
-        held,
+        subject,
         aim,
         &mut holding,
         &mut carried,

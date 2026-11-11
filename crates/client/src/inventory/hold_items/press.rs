@@ -9,6 +9,7 @@ use super::super::panels::{ItemCell, OpenGrids};
 use super::super::split::{PickRow, Split, SplitCell, Splitting};
 use super::super::{Carried, DOUBLE_PRESS_SECONDS, Hand, HeldBy, Holding};
 use crate::common::StockCell;
+use crate::dom::HeldObject;
 use crate::widgets::{ButtonPressed, RaisePanel};
 
 /// Takes the presses. Whether that was all there is to do this frame.
@@ -23,7 +24,7 @@ pub(super) fn take_presses(
     ),
     split: &mut ResMut<Split>,
     mouse: &mut ResMut<ButtonInput<MouseButton>>,
-    holding: &mut ResMut<Holding>,
+    (holding, object): (&mut ResMut<Holding>, &mut ResMut<HeldObject>),
     carried: &Carried,
     open: &mut ResMut<OpenGrids>,
     commands: &mut Commands,
@@ -31,8 +32,7 @@ pub(super) fn take_presses(
     last_press: &mut Option<(shared::id::Id, f64)>,
     (now, new_press, tapped, at_press, shift): (f64, bool, bool, Option<Vec2>, bool),
 ) -> bool {
-    let clicked_held = holding
-        .held
+    let clicked_held = HeldBy::of(object)
         .filter(|held| held.by == Hand::Clicked)
         .map(|held| held.item.id);
     if clicked_held.is_some() && new_press {
@@ -49,12 +49,12 @@ pub(super) fn take_presses(
         && !carried.0.in_bin(id)
     {
         // A double click on a bag: the first lifted it, and it goes back.
-        holding.held = None;
-        holding.aim = None;
+        holding.put_back(object);
         open.open(Holder::Inside(id), &carried.0, commands, raise);
         pressed.clear();
         return true;
     }
+    let picked = at_press.map(|at| (at, now));
     for press in pressed.read() {
         if clicked_held.is_some() {
             continue;
@@ -66,15 +66,13 @@ pub(super) fn take_presses(
             {
                 let id = items.as_ref().map_or(splitting.stack, |items| items[0]);
                 holding.group = items.clone().map(|items| (splitting.stack, items));
-                holding.picked = at_press.map(|at| (at, now));
-                holding.held = Some(HeldBy {
-                    item: Held {
-                        id,
-                        rotation: placed.rotation,
-                        grip: placed.shape().cells().next().unwrap_or((0, 0)),
-                    },
-                    by: Hand::Mouse,
-                });
+                let held = Held {
+                    id,
+                    rotation: placed.rotation,
+                    grip: placed.shape().cells().next().unwrap_or((0, 0)),
+                };
+                // (As the stack until what is lifted from it is known.)
+                holding.pick_up(object, &placed.item, held, Hand::Mouse, picked);
             }
             continue;
         }
@@ -85,15 +83,13 @@ pub(super) fn take_presses(
                 && let Some(part) = carried.0.part_of(splitting.stack, splitting.count)
                 && let Some((_, placed)) = carried.0.placed(splitting.stack)
             {
-                holding.picked = at_press.map(|at| (at, now));
-                holding.held = Some(HeldBy {
-                    item: Held {
-                        id: part,
-                        rotation: placed.rotation,
-                        grip: cell.grip,
-                    },
-                    by: Hand::Mouse,
-                });
+                let held = Held {
+                    id: part,
+                    rotation: placed.rotation,
+                    grip: cell.grip,
+                };
+                // (As the stack until what is lifted from it is known.)
+                holding.pick_up(object, &placed.item, held, Hand::Mouse, picked);
             }
             continue;
         }
@@ -101,15 +97,12 @@ pub(super) fn take_presses(
             if tapped {
                 continue;
             }
-            holding.picked = at_press.map(|at| (at, now));
-            holding.held = Some(HeldBy {
-                item: Held {
-                    id: cell.item.id,
-                    rotation: cell.rotation,
-                    grip: cell.grip,
-                },
-                by: Hand::Mouse,
-            });
+            let held = Held {
+                id: cell.item.id,
+                rotation: cell.rotation,
+                grip: cell.grip,
+            };
+            holding.pick_up(object, &cell.item, held, Hand::Mouse, picked);
             holding.stock = Some((cell.with, cell.item.clone()));
             continue;
         }
@@ -140,15 +133,15 @@ pub(super) fn take_presses(
         if tapped {
             continue;
         }
-        holding.picked = at_press.map(|at| (at, now));
-        holding.held = Some(HeldBy {
-            item: Held {
-                id: cell.id,
-                rotation: cell.rotation,
-                grip: cell.grip,
-            },
-            by: Hand::Mouse,
-        });
+        let Some(item) = carried.0.find(cell.id) else {
+            continue;
+        };
+        let held = Held {
+            id: cell.id,
+            rotation: cell.rotation,
+            grip: cell.grip,
+        };
+        holding.pick_up(object, item, held, Hand::Mouse, picked);
     }
     false
 }

@@ -1,55 +1,14 @@
-//! Showing what is held, tooltips over items, and the inventory button.
+//! Tooltips over items and over what is held, and the inventory button.
 
 use bevy::prelude::*;
 use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
-use shared::id::Id;
-use shared::item::Rotation;
 
 use super::super::body::worn_notes;
 use super::super::hold::Target;
 use super::super::{Carried, Holding, item_cell_in_front};
-use super::{HELD_NAME_ABOVE, HeldItem, InventoryButton, ItemCell, OpenGrids, TOOLTIP_OFFSET};
+use super::{HELD_NAME_ABOVE, InventoryButton, ItemCell, OpenGrids, TOOLTIP_OFFSET};
 use crate::common::{GROUND, GameView, UiPointer};
-use crate::widgets::{CELL, Floating, ItemLook, ItemTip, ItemTooltip, spawn_item_cells};
-
-/// The held item, at its true size, with the cell it was picked up by under the
-/// pointer.
-#[allow(clippy::type_complexity)]
-pub(in crate::inventory) fn show_held(
-    carried: Res<Carried>,
-    holding: Res<Holding>,
-    held_item: Single<(Entity, &mut Node, &mut Visibility), With<HeldItem>>,
-    mut commands: Commands,
-    mut drawn: Local<Option<(Id, Rotation)>>,
-) {
-    let (entity, mut node, mut visibility) = held_item.into_inner();
-    let held = holding.held.map(|held| held.item);
-    let item = held.and_then(|_| holding.item(&carried.0));
-    let (Some(held), Some(item)) = (held, item) else {
-        visibility.set_if_neq(Visibility::Hidden);
-        if drawn.take().is_some() {
-            commands.entity(entity).despawn_related::<Children>();
-        }
-        return;
-    };
-    visibility.set_if_neq(Visibility::Inherited);
-    let now = Some((held.id, held.rotation));
-    if *drawn != now {
-        *drawn = now;
-        commands.entity(entity).despawn_related::<Children>();
-        let look = ItemLook::of(item).turned(held.rotation);
-        let shape = item.shape().turned(held.rotation);
-        commands.entity(entity).with_children(|parent| {
-            spawn_item_cells(parent, look, shape, (0.0, 0.0), false, |_, _| Floating);
-        });
-    }
-    let grip = Vec2::new(held.grip.0 as f32 + 0.5, held.grip.1 as f32 + 0.5) * CELL;
-    if let Some(at) = holding.at {
-        let corner = at - grip;
-        node.left = px(corner.x);
-        node.top = px(corner.y);
-    }
-}
+use crate::widgets::{CELL, Floating, ItemTip, ItemTooltip};
 
 /// The name of what is under the pointer, or of what is held.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
