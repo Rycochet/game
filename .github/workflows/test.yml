@@ -28,8 +28,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # Needed by the build scripts of Bevy's audio/input/window crates.
+      # If the runner's own mirror (Azure's) can't be reached, which has
+      # failed every run for hours at a time, try Ubuntu's main archive.
       - name: Install Linux dependencies
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+        run: |
+          install() {
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+          }
+          install || {
+            sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu/|' /etc/apt/sources.list.d/*.sources
+            install
+          }
       # Rust itself comes from rust-toolchain.toml on the first cargo command.
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --release --workspace
