@@ -24,3 +24,8 @@ fn credits_everything_the_website_does() {
         );
     }
 }
+
+#[test]
+fn the_layer_is_good_markup() {
+    CREDITS_LAYER.assert_good();
+}

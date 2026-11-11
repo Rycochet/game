@@ -64,6 +64,13 @@ impl Theme {
             ..paragraph
         };
         theme.set(Tag::P, "warning", warning);
+        // What something is, above what it says: smaller and fainter.
+        let faint = Look {
+            text: Some(TextSize::Medium),
+            colour: Some(INK.with_alpha(0.7)),
+            ..paragraph
+        };
+        theme.set(Tag::P, "faint", faint);
         let title = Look {
             text: Some(TextSize::Title),
             ..paragraph

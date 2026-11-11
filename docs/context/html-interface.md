@@ -1,6 +1,6 @@
 # Plan: the interface as HTML
 
-Status: **PRs 1 to 4 built, and PR 5 begun** (markup and layout; one hit test and the events; controls; surfaces; the menu's requesters: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
+Status: **PRs 1 to 4 built, and PR 5 under way** (markup and layout; one hit test and the events; controls; surfaces; the menu's requesters and Credits: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
 
 What PR 1 settled differently from the plan below:
 
@@ -261,7 +261,7 @@ Each passes `cargo xtask test`, keeps files under the size limit, and updates th
 2. **One hit test and the event rules.** *Built.* `dom::Hit` (the drill-down search), the hover chain, events passed up from the target, capture, click and double click, the wheel staying with what the pointer is on. The old widgets light up and press by the same search, so nothing covered reacts. `client.ui.at`, `client.ui.html`.
 3. **Controls.** *Built.* `button`, `label`, checkbox and switch, text, range, `select`, `toggle-row`, `tab-bar`, `key-box`, `colour-picker`, hold buttons; `UiEvent` by id; the debug API by id as before. Show Widgets' sample has one of each.
 4. **Surfaces.** *Built.* `dialog` (with `footer`), `panel` (fixed, `moveable`, `grip`), `scroll` (with Always Show Scroll Bars in Settings), tooltips from `title`. Drag and drop and items in text moved to PR 8.
-5. **Menus.** In slices. 5a, *built*: the requesters (Quit, Ironman, Keep these settings, Can't connect, Slow drawing). Still to come: Credits, the menu itself, Settings' pages, Connect and its popups, Online's requesters, Server Options.
+5. **Menus.** In slices. *Built:* the requesters (Quit, Ironman, Keep these settings, Can't connect, Slow drawing), and Credits. Still to come: the menu itself, Settings' pages, Connect and its popups, Online's requesters, Server Options.
 6. **Debug.** Debug menu and its panels.
 7. **Getting in.** Login, Character Select, Character Create (triangles as a canvas), loading screen.
 8. **Items.** `object`, `object-slot` and `object-grid` for both types, drag and drop, items in text, then the inventory, bags, trade, ground, split box, `container`, items in text.

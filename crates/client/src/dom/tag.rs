@@ -196,7 +196,7 @@ impl Tag {
             Self::Option => &["value", "selected", "label", "src"],
             Self::ToggleRow | Self::TabBar | Self::ColourPicker | Self::KeyBox => &["value"],
             Self::Panel => &["moveable", "grip"],
-            Self::Dialog => &["modal", "depth"],
+            Self::Dialog => &["modal", "depth", "closable"],
             Self::Scroll => &["max-height", "auto", "scrollbars"],
             _ => &[],
         }

@@ -12,12 +12,14 @@ use crate::dom::check::{Checked, CheckedNode};
 use crate::dom::parts::{AlwaysBars, Control, ControlOf, SurfaceOf};
 use crate::dom::tag::Tag;
 use crate::widgets::{
-    AutoScroll, PanelPlace, panel, panel_title, spawn_dialog, spawn_fullscreen_layer,
-    spawn_grip_panel, spawn_moveable_panel, spawn_scroll_area,
+    AutoScroll, PanelPlace, UiId, panel, panel_title, spawn_dialog, spawn_fullscreen_layer,
+    spawn_grip_panel, spawn_moveable_panel, spawn_scroll_area, spawn_sized_layer,
 };
 
 /// Where a moving panel starts, from its corner, with no place given.
 const START: f32 = 80.0;
+/// Round what is in a big dialog, and between its title and the rest.
+const DIALOG_MARGIN: f32 = 20.0;
 /// How tall a scroll area may grow, with no height given: a share of the
 /// window's height.
 const SCROLL_SHARE: f32 = 80.0;
@@ -56,6 +58,7 @@ impl Builder<'_, '_, '_> {
     pub(super) fn surface(&mut self, parent: Entity, element: &Checked, inside: Inside) {
         let attrs = &element.attrs;
         let title = attrs.title.as_deref().unwrap_or_default();
+        let mut close_button = None;
         // The widget carrying the id, what the element goes in, and where a
         // dialog's buttons go.
         let (widget, content, buttons) = match element.tag {
@@ -72,14 +75,12 @@ impl Builder<'_, '_, '_> {
                 (root, content, None)
             }
             Tag::Dialog if attrs.has("modal") => {
-                let depth = attrs.number("depth").unwrap_or(0.0) as i32;
-                let column = Node {
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                };
-                let (layer, panel) = spawn_fullscreen_layer(self.commands, depth, column);
-                if !title.is_empty() {
-                    self.commands.entity(panel).with_child(panel_title(title));
+                let (layer, panel) = self.big_dialog(attrs);
+                // Its close button is `<form>/close`.
+                let close = element.id.filter(|_| attrs.has("closable"));
+                let close = close.map(|id| UiId::new(id.parts().0, "close"));
+                if !title.is_empty() || close.is_some() {
+                    close_button = self.title_row(panel, title, close);
                 }
                 (layer, panel, None)
             }
@@ -95,6 +96,9 @@ impl Builder<'_, '_, '_> {
         };
         let (entity, within) = self.shell(content, element, inside);
         self.commands.entity(entity).insert(Control(widget));
+        if let Some(button) = close_button {
+            self.commands.entity(button).insert(ControlOf(entity));
+        }
         let mut made = self.commands.entity(widget);
         made.insert(ControlOf(entity));
         // A scroll area is inside its document, and goes with it by itself.
@@ -114,6 +118,29 @@ impl Builder<'_, '_, '_> {
                 _ => self.nodes(entity, std::slice::from_ref(node), within),
             }
         }
+    }
+
+    /// The layer and panel of a `modal` dialog: the size it gives itself
+    /// (`width`, `height`; what is left out fits what is in it), or its
+    /// layer's share of the window with neither.
+    fn big_dialog(&mut self, attrs: &Attrs) -> (Entity, Entity) {
+        let depth = attrs.number("depth").unwrap_or(0.0) as i32;
+        let column = Node {
+            padding: UiRect::all(px(DIALOG_MARGIN)),
+            flex_direction: FlexDirection::Column,
+            row_gap: px(DIALOG_MARGIN),
+            ..default()
+        };
+        let side = |length: Option<Length>| match length {
+            Some(Length::Pixels(pixels)) => px(pixels),
+            Some(Length::Percent(share)) => percent(share),
+            None => Val::Auto,
+        };
+        if attrs.width.is_none() && attrs.height.is_none() {
+            return spawn_fullscreen_layer(self.commands, depth, column);
+        }
+        let (width, height) = (side(attrs.width), side(attrs.height));
+        spawn_sized_layer(self.commands, depth, width, height, column)
     }
 
     /// A scroll area in `parent`, as tall as what is in it up to its

@@ -52,6 +52,8 @@ pub struct Canvas;
 pub(super) struct TextStyle {
     pub size: TextSize,
     pub colour: Color,
+    /// Which side each line of words is against: from the nearest `align`.
+    pub justify: Justify,
 }
 
 /// On the words of an element.

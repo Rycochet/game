@@ -4,6 +4,7 @@
 
 use bevy::prelude::*;
 
+use super::attrs::Align;
 use super::check::{Checked, CheckedNode};
 use super::parts::{Canvas, Document, Element, LabelFor, TemplateBody, TextStyle, Words};
 use super::pictures::Pictures;
@@ -14,6 +15,7 @@ use crate::widgets::UiId;
 mod progress;
 mod surfaces;
 mod table;
+mod title_row;
 
 /// What an element being built is in.
 #[derive(Clone, Copy)]
@@ -46,7 +48,12 @@ impl Builder<'_, '_, '_> {
     }
 
     pub fn words(&mut self, parent: Entity, words: &str, style: TextStyle) -> Entity {
-        let text = (Text::new(words), style.size.font(), TextColor(style.colour));
+        let text = (
+            Text::new(words),
+            style.size.font(),
+            TextColor(style.colour),
+            TextLayout::justify(style.justify),
+        );
         self.commands.spawn((text, Words, ChildOf(parent))).id()
     }
 
@@ -78,6 +85,12 @@ impl Builder<'_, '_, '_> {
         let style = TextStyle {
             size: look.text.unwrap_or(inside.style.size),
             colour: look.colour.unwrap_or(inside.style.colour),
+            justify: match element.attrs.align {
+                Some(Align::Left) => Justify::Left,
+                Some(Align::Center) => Justify::Center,
+                Some(Align::Right) => Justify::Right,
+                None => inside.style.justify,
+            },
         };
         let part = Element {
             tag: element.tag,
@@ -114,6 +127,7 @@ pub(super) fn build_documents(
                 let style = TextStyle {
                     size: theme.text,
                     colour: theme.colour,
+                    justify: Justify::Left,
                 };
                 commands.entity(root).insert(style);
                 let mut builder = Builder {
