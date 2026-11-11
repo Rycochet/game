@@ -5,9 +5,12 @@ use shared::sheet::Trait;
 
 use super::draft::Draft;
 use super::looks::{PatternPictures, spawn_looks};
-use super::screen::{BeginButton, CancelButton, CreateLayer, KindList, LooksBox, NameBox};
-use crate::common::{CharacterChoice, MakingCharacter, PlayDifficulty, Preferences};
+use super::screen::{BeginButton, CancelButton, KindList, LooksBox, NameBox};
+use crate::common::{
+    CharacterChoice, IRONMAN_QUESTION, MakingCharacter, PlayDifficulty, Preferences,
+};
 use crate::connection::ToServer;
+use crate::dom::Dom;
 use crate::widgets::{
     ButtonPressed, ButtonState, ColourChosen, DropdownChosen, TextBox, TextEdited, TextFocus,
 };
@@ -18,15 +21,14 @@ pub(super) struct LookList(pub Trait);
 
 /// Shows the screen while the server waits for a character, starting afresh each
 /// time, with the keyboard in the name box.
-#[allow(clippy::type_complexity)]
 pub(super) fn show_screen(
     making: Res<MakingCharacter>,
     play: Res<PlayDifficulty>,
     preferences: Res<Preferences>,
     mut draft: ResMut<Draft>,
     mut focus: ResMut<TextFocus>,
-    mut layer: Single<&mut Visibility, With<CreateLayer>>,
     mut name: Single<(Entity, &mut TextBox), With<NameBox>>,
+    mut dom: Dom,
 ) {
     if !making.is_changed() {
         return;
@@ -39,12 +41,17 @@ pub(super) fn show_screen(
         };
         name.1.text.clear();
         focus.0 = Some(name.0);
+        // The kinds that can be played, the first chosen.
+        let kinds = Draft::playable().into_iter();
+        let kinds = kinds.map(|kind| kind.def().name.to_owned());
+        dom.set_options(
+            "character_create/kind",
+            kinds.map(|name| (name.clone(), name)),
+        );
+        dom.set("character_create/kind", "value", draft.kind.def().name);
+        dom.set_text("character_create/ironman_question", IRONMAN_QUESTION);
     }
-    layer.set_if_neq(if making.0 {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    });
+    dom.set_flag("character_create/layer", "hidden", !making.0);
 }
 
 /// Takes what is typed and chosen into the draft.

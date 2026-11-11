@@ -27,11 +27,8 @@ impl Plugin for CharacterCreatePlugin {
             .init_resource::<input::Holding>()
             .init_resource::<name::NameRolls>()
             .init_resource::<looks::PatternPictures>()
-            .add_systems(
-                Startup,
-                (screen::spawn_screen, difficulty::spawn_ironman_requester),
-            )
-            .add_systems(Update, form::show_screen)
+            .add_systems(Startup, screen::spawn_screen)
+            .add_systems(Update, (screen::bind_screen, form::show_screen).chain())
             .add_systems(
                 Update,
                 (

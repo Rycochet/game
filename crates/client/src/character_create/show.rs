@@ -7,7 +7,8 @@ use shared::sheet::{POINTS_TOTAL, Row};
 use super::draft::Draft;
 use super::geometry::{centre, corners};
 use super::picture::{Drawn, paint};
-use super::screen::{CHOOSER_SIDE, Chooser, CornerLabel, ValuesText};
+use super::screen::{CHOOSER_SIDE, Chooser, CornerLabel};
+use crate::dom::Dom;
 
 /// How far above the top corner, or below a lower one, a corner's name sits, in
 /// the chooser's units. Straight up and down, as the triangles stay upright, so
@@ -65,7 +66,7 @@ pub(super) fn place_labels(draft: Res<Draft>, mut labels: Query<(&CornerLabel, &
 }
 
 /// The attributes as words: each row's, with its points.
-pub(super) fn show_values(draft: Res<Draft>, mut text: Single<&mut Text, With<ValuesText>>) {
+pub(super) fn show_values(draft: Res<Draft>, mut dom: Dom) {
     if !draft.is_changed() {
         return;
     }
@@ -83,5 +84,5 @@ pub(super) fn show_values(draft: Res<Draft>, mut text: Single<&mut Text, With<Va
             format!("{} ({share:.1}): {}", row.name(), values.join(", "))
         })
         .collect();
-    text.0 = lines.join("\n");
+    dom.set_text("character_create/values", lines.join("\n"));
 }
