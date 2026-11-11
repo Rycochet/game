@@ -182,6 +182,8 @@ impl Tag {
                 "type",
                 "value",
                 "checked",
+                "readonly",
+                "label",
                 "switch",
                 "min",
                 "max",

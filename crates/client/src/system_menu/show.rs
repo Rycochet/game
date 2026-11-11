@@ -7,7 +7,7 @@ use shared::protocol::ClientMessage;
 use super::{GearButton, Layer, MenuButton, PausedText, SystemMenu};
 use crate::common::{GameView, Preferences, ServerClock, Session};
 use crate::connection::ToServer;
-use crate::widgets::ButtonState;
+use crate::dom::Dom;
 
 /// Native: nothing, the window just goes. In a browser the page stays, so it
 /// shows its own screen in `index.html`, with a button to load the game again.
@@ -62,6 +62,7 @@ pub(super) fn show_menu(
 /// page's server); Online for this computer's own server (native) or, while
 /// playing on another, for staff who may lock it down; Connect... only usable
 /// at the startup menu.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn show_buttons(
     session: Res<Session>,
     clock: Res<ServerClock>,
@@ -69,45 +70,37 @@ pub(super) fn show_buttons(
     playable: Res<crate::common::PlayableHere>,
     home: Res<crate::common::HomeServer>,
     lockdown: Res<crate::common::Lockdown>,
-    mut buttons: Query<(&MenuButton, &mut Node, &mut ButtonState)>,
+    mut dom: Dom,
+    mut before: Local<[Option<(bool, bool)>; 5]>,
 ) {
     let playing = session.is_playing();
     let home = *home == crate::common::HomeServer::Found;
-    let enabled = |on: bool| {
-        if on {
-            ButtonState::Normal
-        } else {
-            ButtonState::Disabled
-        }
-    };
-    for (button, mut node, mut state) in &mut buttons {
-        let shown = match button {
-            MenuButton::Continue => {
-                // At the startup menu, only with a character to go back to.
-                state.set_if_neq(enabled(playing || playable.0));
-                playing || home
-            }
-            MenuButton::Characters => !playing && home,
+    for (button, before) in MenuButton::ALL.into_iter().zip(before.iter_mut()) {
+        // Whether it shows, and whether it can be pressed.
+        let now = match button {
+            // At the startup menu, only with a character to go back to.
+            MenuButton::Continue => (playing || home, playing || playable.0),
+            MenuButton::Characters => (!playing && home, true),
             MenuButton::LogOut => match playing {
-                true => !clock.local_server,
-                false => account.0.is_some(),
+                true => (!clock.local_server, true),
+                false => (account.0.is_some(), true),
             },
             // Its looks are `online::show_online`'s. A browser has no server
             // of its own; another computer's shows it only to its staff.
             MenuButton::Online => match (playing, clock.local_server) {
-                (false, _) => !cfg!(target_arch = "wasm32"),
-                (true, true) => true,
-                (true, false) => lockdown.0.is_some(),
+                (false, _) => (!cfg!(target_arch = "wasm32"), true),
+                (true, true) => (true, true),
+                (true, false) => (lockdown.0.is_some(), true),
             },
-            MenuButton::Connect => {
-                // Log out first to go to another server.
-                state.set_if_neq(enabled(!playing));
-                true
-            }
+            // Log out first to go to another server.
+            MenuButton::Connect => (true, !playing),
         };
-        let display = if shown { Display::Flex } else { Display::None };
-        if node.display != display {
-            node.display = display;
+        if *before != Some(now) {
+            *before = Some(now);
+            let (shown, enabled) = now;
+            let (row, pressed) = button.ids();
+            dom.set_flag(row, "hidden", !shown);
+            dom.set_flag(pressed, "disabled", !enabled);
         }
     }
 }

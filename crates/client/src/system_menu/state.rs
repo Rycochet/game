@@ -188,7 +188,7 @@ impl Action {
 }
 
 /// A menu button shown only some of the time (`show_buttons`).
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum MenuButton {
     /// Always, but at the startup menu only with this computer's own server
     /// there (`common::HomeServer`), and enabled only with a character there.
@@ -203,6 +203,29 @@ pub(super) enum MenuButton {
     /// Native at the startup menu and on this game's own server; on a
     /// networked server only for staff who may lock it down.
     Online,
+}
+
+impl MenuButton {
+    pub(super) const ALL: [Self; 5] = [
+        Self::Continue,
+        Self::Characters,
+        Self::LogOut,
+        Self::Connect,
+        Self::Online,
+    ];
+
+    /// The id of what is shown and hidden for it, and of the button that is
+    /// enabled and disabled.
+    pub(super) fn ids(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Continue => ("menu/continue", "menu/continue"),
+            Self::Characters => ("menu/characters", "menu/characters"),
+            Self::LogOut => ("menu/log_out", "menu/log_out"),
+            Self::Connect => ("menu/connect", "menu/connect"),
+            // With its gear, in one row.
+            Self::Online => ("menu/online_row", "menu/online"),
+        }
+    }
 }
 
 /// The gear button.

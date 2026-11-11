@@ -5,10 +5,10 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use super::{
-    ABOVE_MENU_LAYER, Action, BUTTON_ROW, CLOSE_MARGIN, CORNER_GAP, GEAR_BUTTON, GearButton, Layer,
-    MARGIN, SETTINGS_HEIGHT, SETTINGS_TITLE_ROW, SETTINGS_WIDTH, SystemMenu,
+    ABOVE_MENU_LAYER, Action, CLOSE_MARGIN, CORNER_GAP, GEAR_BUTTON, GearButton, Layer, MARGIN,
+    SETTINGS_HEIGHT, SETTINGS_TITLE_ROW, SETTINGS_WIDTH, SystemMenu,
 };
-use crate::dom::Dom;
+use crate::dom::{Dom, Pictures};
 use crate::widgets::{
     ButtonState, ButtonTooltip, CLOSE_PIXELS, Pressable, UiId, panel_title, spawn_close_button,
     spawn_icon_button, spawn_sized_layer,
@@ -51,7 +51,12 @@ pub(super) fn gear_icon() -> Image {
     )
 }
 
-pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image>>, mut dom: Dom) {
+pub(super) fn spawn_menu(
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
+    mut dom: Dom,
+    mut pictures: ResMut<Pictures>,
+) {
     let icon = images.add(gear_icon());
     commands
         .spawn((
@@ -78,7 +83,9 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
                 ButtonTooltip("Menu".into()),
             ));
         });
-    super::panel::spawn_main_panel(&mut commands, icon.clone());
+    // The gear again, on the menu's Server Options button.
+    pictures.name("gear", icon.clone());
+    super::panel::spawn_main_panel(&mut commands);
     super::requesters::spawn_requesters(&mut commands, &mut dom, super::slow_drawing::WORDS);
     spawn_settings(&mut commands);
     super::credits::spawn_credits(&mut commands, &mut dom);
@@ -89,14 +96,6 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
     #[cfg(not(target_arch = "wasm32"))]
     super::server_options::spawn_server_options(&mut commands);
     commands.insert_resource(icons);
-}
-
-pub(super) fn wide_button() -> Node {
-    Node {
-        width: percent(100),
-        height: px(BUTTON_ROW),
-        ..default()
-    }
 }
 
 /// A layer that presses outside its panel close.

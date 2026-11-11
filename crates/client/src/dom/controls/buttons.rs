@@ -83,11 +83,14 @@ impl Builder<'_, '_, '_> {
     pub(super) fn check(&mut self, holder: Entity, attrs: &Attrs, size: TextSize) -> Entity {
         let (state, on) = (state_of(attrs), attrs.has("checked"));
         let switch = attrs.has("switch");
+        // `label`: words in the button, beside its box.
+        let label = attrs.text("label").unwrap_or_default().to_owned();
+        let node = node_in(attrs, false);
         self.spawn_in(holder, |inside| {
             if switch {
                 return spawn_switch(inside, state, on, Node::default()).id();
             }
-            let mut check = spawn_check_button(inside, state, Some(on), "", size, Node::default());
+            let mut check = spawn_check_button(inside, state, Some(on), label, size, node);
             check.insert(Pressable).id()
         })
     }
