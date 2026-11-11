@@ -26,9 +26,11 @@ pub(super) struct Around<'a> {
 }
 
 pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
+    // A dialog's size is its widget's.
+    let sized = tag != Tag::Dialog;
     let mut node = Node {
-        width: val(attrs.width),
-        height: val(attrs.height),
+        width: val(attrs.width.filter(|_| sized)),
+        height: val(attrs.height.filter(|_| sized)),
         margin: margin(attrs, around.look),
         ..default()
     };
@@ -142,6 +144,8 @@ fn stack(node: &mut Node, attrs: &Attrs) {
 fn flow_along(node: &mut Node, attrs: &Attrs, look: &Look) {
     node.flex_direction = FlexDirection::Row;
     node.flex_wrap = FlexWrap::Wrap;
+    // Never wider than what holds it, so long words wrap and don't run out.
+    node.max_width = percent(100);
     node.column_gap = px(look.gap);
     node.justify_content = match attrs.align {
         Some(Align::Center) => JustifyContent::Center,

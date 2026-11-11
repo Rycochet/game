@@ -76,7 +76,7 @@ impl Plugin for SystemMenuPlugin {
             .add_systems(
                 Update,
                 (
-                    requesters::bind_requesters,
+                    (requesters::bind_requesters, credits::bind_credits),
                     show_menu,
                     show_buttons,
                     credits::start_credits,

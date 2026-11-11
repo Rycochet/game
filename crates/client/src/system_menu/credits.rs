@@ -4,18 +4,30 @@
 
 use bevy::prelude::*;
 
-use super::spawn::{spawn_layer, spawn_title_row};
-use super::{ABOVE_MENU_LAYER, GAP, MARGIN, SystemMenu};
-use crate::widgets::{AutoScroll, INK, TextSize, spawn_scroll_area};
+use super::{Action, Layer, SystemMenu};
+use crate::dom::{Dom, Template, document};
+use crate::html;
+use crate::widgets::{AutoScroll, UiId};
 
-const CREDITS_WIDTH: f32 = 560.0;
-/// The most of the window's height the list takes before it scrolls.
-const LIST_SHARE: f32 = 65.0;
-/// The entries' width: the panel's, less its margins and room for a scroll bar.
-const ENTRY_WIDTH: f32 = CREDITS_WIDTH - 2.0 * MARGIN - 24.0;
-const ENTRY_GAP: f32 = 20.0;
-/// How faint the line saying what someone did is.
-const WHAT_ALPHA: f32 = 0.7;
+/// The layer: a title with a close button, and the list, which scrolls by
+/// itself. Each entry is a copy of the template, filled from `CREDITS`.
+static CREDITS_LAYER: Template = html!(
+    "system_menu.credits",
+    r#"
+<form id="credits">
+  <dialog id="layer" title="Credits" modal closable depth="1" width="560" hidden>
+    <scroll id="list" max-height="65%" auto>
+      <template id="entry">
+        <div align="center" width="496" margin-bottom="20">
+          <p id="what" class="faint" margin-bottom="4"/>
+          <p id="who" margin-bottom="0"/>
+        </div>
+      </template>
+    </scroll>
+  </dialog>
+</form>
+"#
+);
 
 /// What was done, and by whom (or what it is, and whose).
 pub(super) const CREDITS: &[(&str, &str)] = &[
@@ -55,54 +67,32 @@ pub(super) const CREDITS: &[(&str, &str)] = &[
 #[derive(Component)]
 pub(super) struct CreditsList;
 
-pub(super) fn spawn_credits(commands: &mut Commands) {
-    let panel = spawn_layer(
-        commands,
-        ABOVE_MENU_LAYER,
-        &[SystemMenu::Credits],
-        px(CREDITS_WIDTH),
-        Val::Auto,
-        Node {
-            padding: UiRect::all(px(MARGIN)),
-            flex_direction: FlexDirection::Column,
-            row_gap: px(MARGIN),
-            ..default()
-        },
-    );
-    commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Credits", "credits");
-        let list = spawn_scroll_area(panel, Val::Vh(LIST_SHARE));
-        panel.commands().entity(list).insert(CreditsList);
-        panel.commands().entity(list).with_children(|list| {
-            for &(what, who) in CREDITS {
-                list.spawn(Node {
-                    width: px(ENTRY_WIDTH),
-                    flex_shrink: 0.0,
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    row_gap: px(GAP / 2.0),
-                    margin: UiRect::bottom(px(ENTRY_GAP)),
-                    ..default()
-                })
-                .with_children(|entry| {
-                    if !what.is_empty() {
-                        entry.spawn((
-                            Text::new(what),
-                            TextSize::Medium.font(),
-                            TextColor(INK.with_alpha(WHAT_ALPHA)),
-                            TextLayout::justify(Justify::Center),
-                        ));
-                    }
-                    entry.spawn((
-                        Text::new(who),
-                        TextSize::Large.font(),
-                        TextColor(INK),
-                        TextLayout::justify(Justify::Center),
-                    ));
-                });
-            }
-        });
-    });
+pub(super) fn spawn_credits(commands: &mut Commands, dom: &mut Dom) {
+    commands.spawn(document(&CREDITS_LAYER));
+    for (entry, &(what, who)) in CREDITS.iter().enumerate() {
+        dom.copy_template("credits/entry", "credits/list", entry);
+        dom.set_text(&format!("credits/who.{entry}"), who);
+        let what_id = format!("credits/what.{entry}");
+        if what.is_empty() {
+            dom.set_flag(&what_id, "hidden", true);
+        } else {
+            dom.set_text(&what_id, what);
+        }
+    }
+}
+
+/// Gives the built layer, its close button and its list what the menu
+/// knows them by, found by their ids.
+pub(super) fn bind_credits(mut commands: Commands, new: Query<(Entity, &UiId), Added<UiId>>) {
+    for (entity, id) in &new {
+        let mut bound = commands.entity(entity);
+        match id.parts() {
+            ("credits", "layer") => bound.insert((Layer(&[SystemMenu::Credits]), Action::Back)),
+            ("credits", "close") => bound.insert(Action::Back),
+            ("credits", "list") => bound.insert(CreditsList),
+            _ => continue,
+        };
+    }
 }
 
 /// Each time the credits open, they start from the top and scroll by themselves

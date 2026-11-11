@@ -81,7 +81,7 @@ pub(super) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image
     super::panel::spawn_main_panel(&mut commands, icon.clone());
     super::requesters::spawn_requesters(&mut commands, &mut dom, super::slow_drawing::WORDS);
     spawn_settings(&mut commands);
-    super::credits::spawn_credits(&mut commands);
+    super::credits::spawn_credits(&mut commands, &mut dom);
     let icons = super::icons::ConnectIcons::new(&mut images);
     super::connect::spawn_connect(&mut commands, &icons);
     super::connect::spawn_popups(&mut commands);
