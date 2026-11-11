@@ -3,12 +3,11 @@
 use bevy::prelude::*;
 use shared::protocol::ServerAddress;
 
-use super::super::icons::ConnectIcons;
 use super::super::refusal::TriedServer;
 use super::super::{Action, SystemMenu};
 use super::check::AddressCheck;
 use super::popups::CertificateBox;
-use super::{AddressBox, SUGGESTED_SERVER, ServerList, spawn_server_row};
+use super::{AddressBox, SUGGESTED_SERVER};
 use crate::common::{ChosenServer, LoginChoice, PlayFor, Preferences, SavedServer, Session};
 use crate::dom::Dom;
 use crate::widgets::{ButtonPressed, TextBox, TextFocus};
@@ -78,10 +77,8 @@ pub(in crate::system_menu) fn open_connect(
 /// The remembered servers, drawn again whenever they change.
 pub(in crate::system_menu) fn fill_server_list(
     preferences: Res<Preferences>,
-    icons: Res<ConnectIcons>,
-    list: Single<Entity, With<ServerList>>,
     mut shown: Local<Option<Vec<String>>>,
-    mut commands: Commands,
+    mut dom: Dom,
 ) {
     let addresses: Vec<String> = preferences
         .servers
@@ -91,13 +88,12 @@ pub(in crate::system_menu) fn fill_server_list(
     if shown.as_ref() == Some(&addresses) {
         return;
     }
-    let mut list = commands.entity(*list);
-    list.despawn_children();
-    list.with_children(|list| {
-        for (index, address) in addresses.iter().enumerate() {
-            spawn_server_row(list, index, address, icons.bin.clone());
-        }
-    });
+    // A row each, copied from the template and named by its place.
+    dom.empty("connect/servers");
+    for (place, address) in addresses.iter().enumerate() {
+        dom.copy_template("connect/row", "connect/servers", place);
+        dom.set_text(&format!("connect/server.{place}"), address.clone());
+    }
     *shown = Some(addresses);
 }
 

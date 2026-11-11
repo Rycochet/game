@@ -55,6 +55,11 @@ impl UiId {
         (self.form, self.name)
     }
 
+    /// Its place in a list of them, if it is one of a list.
+    pub fn index(&self) -> Option<usize> {
+        self.at
+    }
+
     /// Its form as written: `form`, or `form#<id>`.
     pub fn form(&self) -> String {
         match self.of {

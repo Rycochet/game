@@ -21,14 +21,9 @@ pub(in crate::system_menu) struct MarkSpinner;
 #[derive(Component)]
 pub(in crate::system_menu) struct MarkPicture;
 
-/// The mark, in the row of Connect's buttons, just left of Connect.
-pub(super) fn spawn_mark(row: &mut ChildSpawnerCommands) {
-    let node = Node {
-        width: px(MARK),
-        height: px(MARK),
-        flex_shrink: 0.0,
-        ..default()
-    };
+/// The spinner and the picture, in the mark (a `canvas` in Connect's
+/// markup, just left of its Connect button).
+pub(super) fn spawn_mark_parts(mark: &mut ChildSpawnerCommands) {
     let part = || Node {
         width: px(MARK),
         height: px(MARK),
@@ -36,11 +31,8 @@ pub(super) fn spawn_mark(row: &mut ChildSpawnerCommands) {
         display: Display::None,
         ..default()
     };
-    row.spawn((AddressMark, node, HoverTip(String::new())))
-        .with_children(|mark| {
-            mark.spawn((MarkSpinner, Spinner, part()));
-            mark.spawn((MarkPicture, ImageNode::default(), part()));
-        });
+    mark.spawn((MarkSpinner, Spinner, part()));
+    mark.spawn((MarkPicture, ImageNode::default(), part()));
 }
 
 /// Shows where the check has got.

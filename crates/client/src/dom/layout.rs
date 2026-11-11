@@ -82,13 +82,16 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
             if fills && attrs.width.is_none() {
                 node.flex_grow = 1.0;
                 node.min_width = px(PROGRESS_LEAST);
+            } else if attrs.width.is_none() {
+                // Its own size: never squeezed by a neighbour that fills.
+                node.flex_shrink = 0.0;
             }
         }
         // A dialog's buttons: in a row, at the right.
         Tag::Footer => {
             node.column_gap = px(around.look.gap);
             node.justify_content = JustifyContent::FlexEnd;
-            node.flex_grow = 1.0;
+            node.align_items = AlignItems::Center;
         }
         _ if tag.is_inline() => flow_along(&mut node, attrs, around.look),
         _ => stack(&mut node, attrs, around.look),
@@ -144,7 +147,10 @@ fn stack(node: &mut Node, attrs: &Attrs, look: &Look) {
 /// Inline: what is in it flows from the left, wrapping, as words do.
 fn flow_along(node: &mut Node, attrs: &Attrs, look: &Look) {
     node.flex_direction = FlexDirection::Row;
-    node.flex_wrap = FlexWrap::Wrap;
+    node.flex_wrap = match attrs.nowrap {
+        true => FlexWrap::NoWrap,
+        false => FlexWrap::Wrap,
+    };
     // Never wider than what holds it, so long words wrap and don't run out.
     node.max_width = percent(100);
     node.column_gap = px(look.gap);

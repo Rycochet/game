@@ -13,7 +13,7 @@ use crate::dom::parts::{AlwaysBars, Control, ControlOf, SurfaceOf};
 use crate::dom::tag::Tag;
 use crate::widgets::{
     AutoScroll, PanelPlace, UiId, panel, panel_title, spawn_dialog, spawn_fullscreen_layer,
-    spawn_grip_panel, spawn_moveable_panel, spawn_scroll_area, spawn_sized_layer,
+    spawn_grip_panel, spawn_moveable_panel, spawn_sized_layer, spawn_wide_scroll_area,
 };
 
 /// Where a moving panel starts, from its corner, with no place given.
@@ -113,10 +113,6 @@ impl Builder<'_, '_, '_> {
                 // A dialog's `footer` is its row of buttons.
                 (CheckedNode::Element(footer), Some(buttons)) if footer.tag == Tag::Footer => {
                     let (row, within) = self.shell(buttons, footer, within);
-                    let within = Inside {
-                        footer: true,
-                        ..within
-                    };
                     self.nodes(row, &footer.children, within);
                 }
                 _ => self.nodes(entity, std::slice::from_ref(node), within),
@@ -158,7 +154,7 @@ impl Builder<'_, '_, '_> {
         let mut area = Entity::PLACEHOLDER;
         self.commands
             .entity(parent)
-            .with_children(|inside| area = spawn_scroll_area(inside, most));
+            .with_children(|inside| area = spawn_wide_scroll_area(inside, most));
         let mut made = self.commands.entity(area);
         if attrs.has("auto") {
             made.insert(AutoScroll::default());

@@ -6,13 +6,10 @@
 
 use bevy::prelude::*;
 
-use super::icons::ConnectIcons;
-use super::spawn::{spawn_layer, spawn_title_row};
-use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, GAP, MARGIN, SystemMenu};
-use crate::widgets::{
-    ButtonState, ButtonStyle, ButtonTooltip, INK, Pressable, TextBox, TextSize, UiId, spawn_button,
-    spawn_icon_button, spawn_scroll_area, spawn_text_box,
-};
+use super::{Action, Layer, SystemMenu};
+use crate::dom::{Dom, Pictures, Template, document};
+use crate::html;
+use crate::widgets::{ButtonTooltip, HoverTip, UiId};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod check;
@@ -27,16 +24,41 @@ pub(super) use mark::show_mark;
 pub(super) use popups::{bind_popups, spawn_popups};
 pub(super) use show::show_connect;
 
-const CONNECT_WIDTH: f32 = 520.0;
-/// The most of the window's height the list takes before it scrolls.
-const LIST_SHARE: f32 = 40.0;
-const EXAMPLE: &str = "For example: play.example.com, or play.example.com:24691";
+/// The layer. The padlock and the bin are `picture:padlock` and
+/// `picture:bin` (`spawn_connect` names them); each remembered server is a
+/// copy of `row`; `mark` is where `mark.rs` shows how the check is going.
+static CONNECT: Template = html!(
+    "system_menu.connect",
+    r#"
+<form id="connect">
+  <dialog id="layer" title="Connect" modal closable depth="1" width="520" hidden>
+    <p class="medium">For example: play.example.com, or play.example.com:24691</p>
+    <small id="browser_note" hidden>
+      A browser only connects to servers whose certificate is from a certificate authority.
+    </small>
+    <span nowrap>
+      <input id="address" type="text"/>
+      <button id="certificate"><img src="picture:padlock"/></button>
+    </span>
+    <scroll id="servers" max-height="40%"/>
+    <footer>
+      <canvas id="mark" width="24" height="24"/>
+      <button id="connect" class="main">Connect</button>
+      <button id="back">Cancel</button>
+    </footer>
+    <template id="row">
+      <span nowrap>
+        <button id="server" width="100%"/>
+        <button id="forget"><img src="picture:bin"/></button>
+      </span>
+    </template>
+  </dialog>
+</form>
+"#
+);
+
 /// The game's own public server, in the box when no other server is known.
 const SUGGESTED_SERVER: &str = "hallofworlds.app";
-#[cfg(target_arch = "wasm32")]
-const BROWSER_NOTE: &str =
-    "A browser only connects to servers whose certificate is from a certificate authority.";
-
 /// The box the address is typed into.
 #[derive(Component)]
 pub(super) struct AddressBox;
@@ -49,144 +71,80 @@ pub(super) struct PadlockButton;
 #[derive(Component)]
 pub(super) struct ConnectNowButton;
 
-/// Where the remembered servers go.
-#[derive(Component)]
-pub(super) struct ServerList;
-
-pub(super) fn spawn_connect(commands: &mut Commands, icons: &ConnectIcons) {
-    let panel = spawn_layer(
-        commands,
-        ABOVE_MENU_LAYER,
-        &[
-            SystemMenu::Connect,
-            SystemMenu::Certificate,
-            SystemMenu::Forgetting,
-        ],
-        px(CONNECT_WIDTH),
-        Val::Auto,
-        Node {
-            padding: UiRect::all(px(MARGIN)),
-            flex_direction: FlexDirection::Column,
-            row_gap: px(GAP),
-            ..default()
-        },
-    );
-    let icons = icons.clone();
-    commands.entity(panel).with_children(|panel| {
-        spawn_title_row(panel, "Connect", "connect");
-        panel.spawn((Text::new(EXAMPLE), TextSize::Medium.font(), TextColor(INK)));
-        #[cfg(target_arch = "wasm32")]
-        panel.spawn((
-            Text::new(BROWSER_NOTE),
-            TextSize::Small.font(),
-            TextColor(INK),
-        ));
-        panel
-            .spawn(Node {
-                column_gap: px(GAP),
-                ..default()
-            })
-            .with_children(|row| {
-                let node = Node {
-                    flex_grow: 1.0,
-                    height: px(BUTTON_ROW),
-                    ..default()
-                };
-                let text_box = TextBox {
-                    takes_keys: true,
-                    ..default()
-                };
-                spawn_text_box(row, text_box, FONT, node)
-                    .insert((AddressBox, UiId::new("connect", "address")));
-                let node = Node {
-                    width: px(BUTTON_ROW),
-                    height: px(BUTTON_ROW),
-                    flex_shrink: 0.0,
-                    // In a browser the browser checks certificates.
-                    display: if cfg!(target_arch = "wasm32") {
-                        Display::None
-                    } else {
-                        Display::Flex
-                    },
-                    ..default()
-                };
-                spawn_icon_button(row, ButtonState::Normal, icons.open.clone(), node).insert((
-                    PadlockButton,
-                    Action::Certificate,
-                    Action::Certificate.ui_id("connect"),
-                    Pressable,
-                    ButtonTooltip("Certificate".into()),
-                ));
-            });
-        let list = spawn_scroll_area(panel, Val::Vh(LIST_SHARE));
-        let key = UiId::new("connect", "servers");
-        panel.commands().entity(list).insert((ServerList, key));
-        panel
-            .spawn(Node {
-                justify_content: JustifyContent::End,
-                align_items: AlignItems::Center,
-                column_gap: px(GAP),
-                ..default()
-            })
-            .with_children(|row| {
-                // Left of Connect (owner, 2026-11-10).
-                mark::spawn_mark(row);
-                for (label, action, style) in [
-                    ("Connect", Action::ConnectNow, ButtonStyle::Main),
-                    ("Cancel", Action::Back, ButtonStyle::Plain),
-                ] {
-                    let node = Node {
-                        width: px(CONNECT_WIDTH / 4.0),
-                        height: px(BUTTON_ROW),
-                        ..default()
-                    };
-                    let mut button = spawn_button(row, ButtonState::Normal, label, FONT, node);
-                    button.insert((action, style, Pressable, action.ui_id("connect")));
-                    if action == Action::ConnectNow {
-                        button.insert(ConnectNowButton);
-                    }
-                }
-            });
-    });
+pub(super) fn spawn_connect(
+    commands: &mut Commands,
+    dom: &mut Dom,
+    pictures: &mut Pictures,
+    icons: &super::icons::ConnectIcons,
+) {
+    pictures.name("padlock", icons.open.clone());
+    pictures.name("bin", icons.bin.clone());
+    commands.spawn(document(&CONNECT));
+    // In a browser the browser checks certificates, and says so.
+    if cfg!(target_arch = "wasm32") {
+        dom.set_flag("connect/certificate", "hidden", true);
+        dom.set_flag("connect/browser_note", "hidden", false);
+    }
 }
 
-/// One remembered server in the list: its address, which puts it in the box, and
-/// a bin to forget it.
-pub(super) fn spawn_server_row(
-    list: &mut ChildSpawnerCommands,
-    index: usize,
-    address: &str,
-    bin: Handle<Image>,
-) {
-    list.spawn(Node {
-        column_gap: px(GAP),
-        margin: UiRect::bottom(px(GAP / 2.0)),
-        flex_shrink: 0.0,
-        width: px(CONNECT_WIDTH - 2.0 * MARGIN - 24.0),
-        ..default()
-    })
-    .with_children(|row| {
-        let node = Node {
-            flex_grow: 1.0,
-            height: px(BUTTON_ROW),
-            ..default()
+/// Gives the built layer and its parts what Connect's systems know them
+/// by, found by their ids: each remembered server's row by its place.
+pub(super) fn bind_connect(mut commands: Commands, new: Query<(Entity, &UiId), Added<UiId>>) {
+    const SHOWN: &[SystemMenu] = &[
+        SystemMenu::Connect,
+        SystemMenu::Certificate,
+        SystemMenu::Forgetting,
+    ];
+    for (entity, id) in &new {
+        let ("connect", name) = id.parts() else {
+            continue;
         };
-        spawn_button(row, ButtonState::Normal, address, FONT, node).insert((
-            Action::PickServer(index),
-            Action::PickServer(index).ui_id("connect"),
-            Pressable,
-        ));
-        let node = Node {
-            width: px(BUTTON_ROW),
-            height: px(BUTTON_ROW),
-            flex_shrink: 0.0,
-            ..default()
+        let place = id.index().unwrap_or(0);
+        let mut bound = commands.entity(entity);
+        match name {
+            "layer" => bound.insert((Layer(SHOWN), Action::Back)),
+            "close" | "back" => bound.insert(Action::Back),
+            "address" => bound.insert(AddressBox),
+            "certificate" => bound.insert((
+                PadlockButton,
+                Action::Certificate,
+                ButtonTooltip("Certificate".into()),
+            )),
+            "connect" => bound.insert((ConnectNowButton, Action::ConnectNow)),
+            "server" => bound.insert(Action::PickServer(place)),
+            "forget" => bound.insert((
+                Action::ForgetServer(place),
+                ButtonTooltip("Forget this server".into()),
+            )),
+            "mark" => {
+                bound.insert((mark::AddressMark, HoverTip(String::new())));
+                bound.with_children(mark::spawn_mark_parts)
+            }
+            _ => continue,
         };
-        spawn_icon_button(row, ButtonState::Normal, bin, node).insert((
-            Action::ForgetServer(index),
-            Action::ForgetServer(index).ui_id("connect"),
-            Pressable,
-            ButtonTooltip("Forget this server".into()),
-        ));
-    });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_layer_is_good_markup() {
+        CONNECT.assert_good();
+    }
+
+    #[test]
+    fn buttons_keep_the_ids_their_actions_give_them() {
+        for (action, name, place) in [
+            (Action::Certificate, "certificate", None),
+            (Action::ConnectNow, "connect", None),
+            (Action::Back, "back", None),
+            (Action::PickServer(2), "server", Some(2)),
+            (Action::ForgetServer(2), "forget", Some(2)),
+        ] {
+            let id = action.ui_id("connect");
+            assert_eq!((id.parts(), id.index()), (("connect", name), place));
+        }
+    }
 }

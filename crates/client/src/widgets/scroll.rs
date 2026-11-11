@@ -47,6 +47,16 @@ pub fn spawn_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> 
     spawn_area(parent, row, max_height, false)
 }
 
+/// The same, as wide as what holds it rather than as what is in it, so rows
+/// in it can fill it (markup's `scroll`).
+pub fn spawn_wide_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> Entity {
+    let row = Node {
+        flex_shrink: 0.0,
+        ..default()
+    };
+    spawn_area(parent, row, max_height, true)
+}
+
 /// The same, taking whatever room is left in a column whose own height is set, such
 /// as a panel's, rather than a height given, and its whole width.
 pub fn spawn_filling_scroll_area(parent: &mut ChildSpawnerCommands) -> Entity {

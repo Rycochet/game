@@ -29,6 +29,8 @@ pub struct Attrs {
     pub disabled: bool,
     /// Never what the pointer is on, with all that is in it.
     pub inert: bool,
+    /// What flows in it stays on one line (as HTML's `nowrap` on a cell).
+    pub nowrap: bool,
     pub align: Option<Align>,
     pub valign: Option<VAlign>,
     pub top: Option<Length>,
@@ -108,12 +110,13 @@ impl Attrs {
 
 /// The attributes every element takes (`id` and `form` are read apart).
 pub(super) fn is_global(name: &str) -> bool {
-    const GLOBAL: [&str; 18] = [
+    const GLOBAL: [&str; 19] = [
         "class",
         "title",
         "hidden",
         "disabled",
         "inert",
+        "nowrap",
         "align",
         "valign",
         "top",

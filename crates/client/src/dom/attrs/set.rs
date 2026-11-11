@@ -48,6 +48,7 @@ impl Attrs {
             "hidden" => self.hidden = false,
             "disabled" => self.disabled = false,
             "inert" => self.inert = false,
+            "nowrap" => self.nowrap = false,
             "align" => self.align = None,
             "valign" => self.valign = None,
             "top" => self.top = None,
@@ -78,6 +79,7 @@ impl Attrs {
             "hidden" => Some(&mut self.hidden),
             "disabled" => Some(&mut self.disabled),
             "inert" => Some(&mut self.inert),
+            "nowrap" => Some(&mut self.nowrap),
             _ => None,
         }
     }

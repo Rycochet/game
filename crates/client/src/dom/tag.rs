@@ -48,7 +48,7 @@ pub enum Tag {
     /// A panel in front of everything, darkening the rest; `modal` for the
     /// full-screen kind.
     Dialog,
-    /// A dialog's row of buttons.
+    /// A dialog's row of buttons, at the right.
     Footer,
     /// What is in it scrolls when it is too tall.
     Scroll,

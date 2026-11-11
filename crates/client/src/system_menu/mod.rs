@@ -7,7 +7,7 @@ mod settings;
 
 use bevy::prelude::*;
 
-use crate::widgets::{TextSize, WidgetSystems};
+use crate::widgets::WidgetSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod connect;
@@ -37,9 +37,15 @@ const GEAR_BUTTON: f32 = 34.0;
 const CORNER_GAP: f32 = 8.0;
 
 const MARGIN: f32 = 20.0;
+// Server Options', which a browser doesn't have.
+#[cfg(not(target_arch = "wasm32"))]
 const BUTTON_ROW: f32 = 38.0;
+// Server Options', which a browser doesn't have.
+#[cfg(not(target_arch = "wasm32"))]
 const GAP: f32 = 8.0;
-const FONT: TextSize = TextSize::Large;
+// Server Options', which a browser doesn't have.
+#[cfg(not(target_arch = "wasm32"))]
+const FONT: crate::widgets::TextSize = crate::widgets::TextSize::Large;
 const SETTINGS_TITLE_ROW: f32 = 36.0;
 /// Round the close button, still on it, for fingers.
 const CLOSE_MARGIN: f32 = 4.0;
@@ -74,6 +80,7 @@ impl Plugin for SystemMenuPlugin {
                         credits::bind_credits,
                         panel::bind_main_panel,
                         connect::bind_popups,
+                        connect::bind_connect,
                     ),
                     show_menu,
                     show_buttons,
