@@ -33,6 +33,16 @@ pub struct Element {
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Inert;
 
+/// On anything the pointer can be on, and so hides what is behind it from the
+/// pointer. Every element is; of other nodes, only those given this (the old
+/// widgets' buttons and panels require it).
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct Solid;
+
+/// On an element while the pointer is on it or on something in it.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct Hovered;
+
 /// On a `canvas`: a box for its owner's code to draw in.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Canvas;

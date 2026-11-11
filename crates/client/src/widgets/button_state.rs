@@ -33,10 +33,12 @@ pub struct ButtonPressed(pub Entity);
 /// Put this on a button (from `spawn_button`), or any node, for clicks on it to
 /// be sent as `ButtonPressed` and go no further.
 #[derive(Component, Clone, Copy, Debug, Default)]
+#[require(crate::dom::Solid)]
 pub struct Pressable;
 
 /// How a button looks; change it to change the button.
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[require(crate::dom::Solid)]
 pub enum ButtonState {
     /// Standing up from what is behind it.
     #[default]

@@ -48,7 +48,7 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 ## Public API
 
 - `Spinner`: give a sized node it to show a turning spinner while it is on show.
-- `OverInterface(bool)` (resource, `PreUpdate`): the pointer is on a panel, a node that `stops_presses` or a button this frame; for what the pointer does to the map behind (`target`: a right click on nothing clears the target).
+- `OverInterface(bool)` (resource, `PreUpdate`): the pointer is on a panel, a node that `stops_presses`, a button or an element of markup this frame (`dom::Hit` has a target); for what the pointer does to the map behind (`target`: a right click on nothing clears the target).
 - `WidgetsPlugin`; `WidgetSystems` (system sets, `Presses`, `Front`, then `Modal`): anything covering the screen reads presses in `Modal`, or `Front` to be ahead of those (the system menu); anything else taking clicks in `PreUpdate` runs after both.
 - `INTERFACE_PERCENTS`: the sizes Settings offers after Auto. `TouchOnly(bool)` (resource): the device has only a touch screen (browsers say, with `any-pointer: fine`; natively never), so touch is on whatever the setting.
 - `INK`, `PARCHMENT`, `CLOSE_PIXELS`, `BUTTON_PADDING`, `PANEL_EDGE`.
@@ -112,5 +112,5 @@ The interface pieces, so everything looks alike. Use these rather than styling B
 - Close buttons on moveable panels have a margin that also counts as on them, for fingers; above and below, it overlaps the panel's padding rather than making the title bar taller. The panel's padding is smaller at the top (`TOP_PADDING`), so the room above the stripes matches the room beside them (owner).
 - The minimap's close and floor buttons look like widgets but keep their own hit tests from its layout constants (and the tests built on them), so they aren't `Pressable`.
 - Layers: maps 10, warning button 15, moveable panels from 30 up, full-screen layers from 1,000,000 (debug menu, full map, View Planet at depth 50), open dropdown lists at depth 100 (above all of them), loading screen above all. Outside a layer's panel, each layer's darkening adds up (owner's design), so nothing under one can be used, whatever is behind it.
-- Only the front-most thing under the pointer gets a press: a button under another panel gets nothing.
+- Only the front-most thing under the pointer gets a press: a button under another panel gets nothing. What is in front comes from `dom::Hit`, one search a frame that markup shares: `track_pointer` lights up, and `take_presses` presses, the nearest button or panel part to the target, going outwards through what holds it, so nothing covered by a panel or by markup reacts. `Pressable`, `ButtonState` and panel parts require `dom::Solid`. Tests of either run `dom::find_now` first, and build their panels as the game does, the parts as children of the panel.
 - Shader uniforms must be a multiple of 16 bytes, or WebGL 2 (the web build) refuses the pipeline and the game quits on its first frame; native is fine either way, so nothing else catches it. Pad a short struct with unused `f32`s, the same in the Rust struct and the shader (see `project.md`).

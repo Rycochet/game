@@ -7,7 +7,10 @@ mod attrs;
 mod build;
 mod change;
 mod check;
+#[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
+mod debug_api;
 mod error;
+mod input;
 mod layout;
 mod markup;
 mod parts;
@@ -20,6 +23,10 @@ mod theme;
 use bevy::prelude::*;
 
 pub use change::Dom;
+pub use input::Hit;
+#[cfg(test)]
+pub use input::find_now;
+pub use parts::Solid;
 pub use parts::{Document, document};
 pub use template::Template;
 // What screens will use as they become markup: not all of it is yet.
@@ -28,6 +35,11 @@ pub use {
     attrs::{Align, Attrs, Length, VAlign},
     check::{Checked, CheckedNode},
     error::{MarkupError, Place},
+    input::{
+        Click, ContextMenu, DomInput, Finder, PointerCapture, PointerEnter, PointerLeave, Press,
+        Release, Wheel,
+    },
+    parts::Hovered,
     parts::{Canvas, Element, Inert},
     pictures::Pictures,
     tag::Tag,
@@ -40,7 +52,11 @@ impl Plugin for DomPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<change::DomChange>()
             .insert_resource(Theme::parchment())
-            .init_resource::<Pictures>()
+            .init_resource::<Pictures>();
+        input::add(app);
+        #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
+        debug_api::add(app);
+        app
             // After `Update`, where documents are spawned and changed, and in
             // time to be laid out this frame.
             .add_systems(

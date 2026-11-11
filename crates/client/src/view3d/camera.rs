@@ -12,6 +12,7 @@ use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseSc
 use bevy::prelude::*;
 
 use crate::common::{Action, Preferences, TouchGesture};
+use crate::dom::Hit;
 
 /// Turn or tilt per pixel of mouse movement while right-dragging.
 const RADIANS_PER_PIXEL: f32 = 0.005;
@@ -196,10 +197,14 @@ pub fn control_with_mouse(
     preferences: Res<Preferences>,
     motion: Res<AccumulatedMouseMotion>,
     scroll: Res<AccumulatedMouseScroll>,
+    hit: Res<Hit>,
     mut cameras: Query<&mut OrbitCamera>,
 ) {
     let dragging = buttons.pressed(MouseButton::Right) && motion.delta != Vec2::ZERO;
+    // The wheel is the view's only while the pointer is on it: over a panel
+    // or anything else of the interface, it never zooms.
     let notches = match scroll.unit {
+        _ if hit.target.is_some() => 0.0,
         MouseScrollUnit::Line => scroll.delta.y,
         MouseScrollUnit::Pixel => scroll.delta.y / PIXELS_PER_NOTCH,
     };

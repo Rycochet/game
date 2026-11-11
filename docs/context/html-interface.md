@@ -1,6 +1,6 @@
 # Plan: the interface as HTML
 
-Status: **PR 1 of 11 built** (markup and layout: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
+Status: **PRs 1 and 2 of 11 built** (markup and layout; one hit test and the events: `docs/context/client/dom.md`); the rest is the plan. Written 2026-11-10 with the owner, whose answers are at the end and in `docs/context/decisions.md`.
 
 What PR 1 settled differently from the plan below:
 
@@ -9,6 +9,13 @@ What PR 1 settled differently from the plan below:
 - **Each module tests its own templates** (`Template::assert_good()`), rather than one registry of them all, so modules don't have to know each other's.
 - **An `id` needs a form** (a `<form id>` round it, or `form=`), so every id is `form/name` as `UiId`s already are.
 - **A `tr` is a strip behind its cells**, which are the table's own children (a grid only places its children).
+
+What PR 2 settled:
+
+- **The hit test is our own**, drilling down as the owner asked. `bevy_picking`'s UI backend was read first: it tries every node in the stack, uses its own pointers rather than the game's (`UiPointer`), and can only require markers for the whole interface.
+- **Events are Bevy's entity events**, passed up from the target through what holds it (`On<Click>`, stopped with `propagate(false)`), rather than a message type of our own. Events by id for screens' own code come with the controls (PR 3).
+- **The old widgets share the search** for what lights up and what is pressed; their sliders, text boxes, scroll areas and grids keep their own until they become elements.
+- **Left for the PRs that need them:** several pointers at once, the capture phase, focus and keys (with the text input), drag and drop (with panels and items), a long press as a right click, and canvases with shapes of their own.
 
 ## Why
 
@@ -231,7 +238,7 @@ What markup can't describe, by kind. Everything else is plain markup.
 Each passes `cargo xtask test`, keeps files under the size limit, and updates the context files it touches. Old `spawn_*` functions keep working until the last PR, so the game is never half broken.
 
 1. **Markup and layout.** *Built.* New client module `dom`: the parser (our own, see the top), the element set so far, validation, the `Theme` table, spawning to Bevy nodes, text, `img`, `progress`, `canvas`, `template`, and changes by id (`Dom`). No input yet. Show Widgets has a sample of markup under its widgets.
-2. **One hit test and the event rules.** Pointers, the hit test (spike first, see above), hover chains, dispatch, capture, click, wheel, focus and keys, modal inertness. The old widgets read the same hit test from this PR on, so hovering through panels is fixed everywhere at once. `client.ui.at`, `client.ui.html`.
+2. **One hit test and the event rules.** *Built.* `dom::Hit` (the drill-down search), the hover chain, events passed up from the target, capture, click and double click, the wheel staying with what the pointer is on. The old widgets light up and press by the same search, so nothing covered reacts. `client.ui.at`, `client.ui.html`.
 3. **Controls.** `button`, `label`, checkbox and switch, text, range, radio rows, `select`, `key-box`, `colour-picker`, `tab-bar`, hold buttons, `UiEvent`, debug API by id. Show Widgets fully in HTML.
 4. **Surfaces.** `dialog`, `panel`, `scroll` (with Always Show Scroll Bars in Settings), tooltips from `title`, drag and drop, items in text.
 5. **Menus.** System menu, Settings, Connect, Server Options, Credits, the quit and other requesters.

@@ -10,7 +10,11 @@ use crate::widgets::{HoverTip, UiId};
 pub(in crate::dom) fn app() -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, AssetPlugin::default(), DomPlugin))
-        .init_asset::<Image>();
+        .init_asset::<Image>()
+        // What the input systems read.
+        .init_resource::<ButtonInput<MouseButton>>()
+        .init_resource::<bevy::input::mouse::AccumulatedMouseScroll>()
+        .init_resource::<crate::common::UiPointer>();
     app
 }
 
