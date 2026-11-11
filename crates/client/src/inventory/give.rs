@@ -9,24 +9,38 @@ use shared::sheet::Feeling;
 use super::Holding;
 use super::hold::Target;
 use crate::common::{MapPosition, Other};
+use crate::dom::{Dom, Template, document_in};
+use crate::html;
 use crate::player::Player;
-use crate::widgets::{ALLOWED, GRID_COLOUR, INK, RaisePanel, TextSize, spawn_moveable_panel};
+use crate::widgets::{ALLOWED, GRID_COLOUR, RaisePanel, UiId, spawn_moveable_panel};
 
 const AT: Vec2 = Vec2::new(900.0, 300.0);
-const FONT: TextSize = TextSize::Medium;
-const ROW_WIDTH: f32 = 200.0;
-const ROW_HEIGHT: f32 = 28.0;
-const ROW_GAP: f32 = 4.0;
 
-/// The panel, if open.
+/// The panel's contents: a row for each of those near enough, made from the
+/// template, or the words saying there is nobody.
+pub(super) static NEARBY: Template = html!(
+    "nearby",
+    r#"
+<form id="nearby">
+  <p id="nobody" class="medium">Nobody near enough</p>
+  <div id="rows" class="tight"/>
+  <template id="row">
+    <span id="who" class="place" width="200" height="28" valign="middle">
+      <p id="name" class="medium"/>
+    </span>
+  </template>
+</form>
+"#
+);
+
+/// The panel, if open, and who its rows are for, in order.
 #[derive(Resource, Default)]
-pub(super) struct NearbyPanel(Option<Entity>);
+pub(super) struct NearbyPanel {
+    panel: Option<Entity>,
+    near: Vec<(Id, Feeling)>,
+}
 
-/// What holds the rows.
-#[derive(Component)]
-pub(super) struct NearbyRows;
-
-/// A row for someone: an item dropped here goes to them. Also on its words.
+/// A row for someone: an item dropped here, or on anything in it, goes to them.
 #[derive(Component, Clone, Copy)]
 pub(super) struct GiveRow(pub Id);
 
@@ -37,27 +51,18 @@ impl NearbyPanel {
         raise: &mut MessageWriter<RaisePanel>,
         nodes: &Query<(), With<Node>>,
     ) {
-        if let Some(panel) = self.0.filter(|&panel| nodes.contains(panel)) {
+        if let Some(panel) = self.panel.filter(|&panel| nodes.contains(panel)) {
             raise.write(RaisePanel(panel));
             return;
         }
         let (panel, content) = spawn_moveable_panel(commands, "Nearby", AT);
-        commands
-            .entity(panel)
-            .insert(crate::widgets::UiId::new("nearby", "panel"));
-        commands.entity(content).with_child((
-            NearbyRows,
-            Node {
-                flex_direction: FlexDirection::Column,
-                row_gap: px(ROW_GAP),
-                ..default()
-            },
-        ));
-        self.0 = Some(panel);
+        commands.entity(panel).insert(UiId::new("nearby", "panel"));
+        commands.spawn(document_in(&NEARBY, content));
+        self.panel = Some(panel);
     }
 
     pub(super) fn close(&mut self, commands: &mut Commands, nodes: &Query<(), With<Node>>) {
-        if let Some(panel) = self.0.take().filter(|&panel| nodes.contains(panel)) {
+        if let Some(panel) = self.panel.take().filter(|&panel| nodes.contains(panel)) {
             commands.entity(panel).despawn();
         }
     }
@@ -65,8 +70,8 @@ impl NearbyPanel {
 
 /// Forgets the panel once its close button has closed it.
 pub(super) fn forget_closed(mut panel: ResMut<NearbyPanel>, nodes: Query<(), With<Node>>) {
-    if panel.0.is_some_and(|open| !nodes.contains(open)) {
-        panel.0 = None;
+    if panel.panel.is_some_and(|open| !nodes.contains(open)) {
+        panel.panel = None;
     }
 }
 
@@ -86,15 +91,18 @@ fn in_reach(from: MapPosition, to: MapPosition) -> bool {
     (from.x - to.x).abs().max((from.y - to.y).abs()) <= GIVE_REACH
 }
 
-/// Lists who is near enough, when that changes.
+/// Lists who is near enough, when that changes or the panel opens.
 pub(super) fn show_nearby(
     player: Single<&MapPosition, With<Player>>,
     others: Query<(&Other, &MapPosition)>,
-    rows: Query<Entity, With<NearbyRows>>,
-    new_rows: Query<(), Added<NearbyRows>>,
-    mut commands: Commands,
-    mut drawn: Local<Vec<(Id, Feeling)>>,
+    mut panel: ResMut<NearbyPanel>,
+    mut dom: Dom,
+    mut shown_in: Local<Option<Entity>>,
 ) {
+    if panel.panel.is_none() {
+        *shown_in = None;
+        return;
+    }
     let mut near: Vec<(Id, Feeling, &'static str)> = others
         .iter()
         .filter(|(_, at)| in_reach(**player, **at))
@@ -102,35 +110,33 @@ pub(super) fn show_nearby(
         .collect();
     near.sort_by_key(|&(id, ..)| id);
     let now: Vec<_> = near.iter().map(|&(id, feeling, _)| (id, feeling)).collect();
-    if *drawn == now && new_rows.is_empty() {
+    if panel.near == now && *shown_in == panel.panel {
         return;
     }
-    *drawn = now;
-    for entity in &rows {
-        commands.entity(entity).despawn_related::<Children>();
-        commands.entity(entity).with_children(|rows| {
-            if near.is_empty() {
-                rows.spawn((Text::new("Nobody near enough"), FONT.font(), TextColor(INK)));
-            }
-            for &(id, feeling, name) in &near {
-                rows.spawn((
-                    GiveRow(id),
-                    Node {
-                        width: px(ROW_WIDTH),
-                        height: px(ROW_HEIGHT),
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor(GRID_COLOUR),
-                ))
-                .with_child((
-                    GiveRow(id),
-                    Text::new(format!("{name}{}", feeling_word(feeling))),
-                    FONT.font(),
-                    TextColor(INK),
-                ));
-            }
-        });
+    *shown_in = panel.panel;
+    panel.near = now;
+    dom.set_flag("nearby/nobody", "hidden", !near.is_empty());
+    dom.empty("nearby/rows");
+    for (at, &(_, feeling, name)) in near.iter().enumerate() {
+        dom.copy_template("nearby/row", "nearby/rows", at);
+        let words = format!("{name}{}", feeling_word(feeling));
+        dom.set_text(&format!("nearby/name.{at}"), words);
+    }
+}
+
+/// Says who each new row is for.
+pub(super) fn bind_rows(
+    new: Query<(Entity, &UiId), Added<UiId>>,
+    panel: Res<NearbyPanel>,
+    mut commands: Commands,
+) {
+    for (entity, id) in &new {
+        let (("nearby", "who"), Some(at)) = (id.parts(), id.index()) else {
+            continue;
+        };
+        if let Some(&(who, _)) = panel.near.get(at) {
+            commands.entity(entity).insert(GiveRow(who));
+        }
     }
 }
 

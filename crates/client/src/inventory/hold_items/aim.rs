@@ -25,6 +25,7 @@ pub(super) fn aim_at(
     let Under {
         grids,
         marks,
+        parents,
         stacks,
         god,
     } = under;
@@ -35,7 +36,16 @@ pub(super) fn aim_at(
         Some((owner.holder, x, y))
     });
     // Only what is in front counts: the bin destroys things.
-    let front = over.front.and_then(|front| marks.get(front).ok());
+    // The thing in front, or the nearest thing it is in, that is somewhere to
+    // let go: markup nests what it shows (a row's words are in the row).
+    let front = over.front.and_then(|front| {
+        let up = std::iter::once(front).chain(parents.iter_ancestors(front));
+        up.filter_map(|entity| marks.get(entity).ok()).find(
+            |(bin, drop, body, row, gifts, text)| {
+                *bin || *drop || *body || row.is_some() || gifts.is_some() || text.is_some()
+            },
+        )
+    });
     let (on_bin, on_drop, on_body, on_row, on_gifts, on_text) = front
         .map(|(is_bin, is_drop, is_body, row, gifts, text)| {
             (
