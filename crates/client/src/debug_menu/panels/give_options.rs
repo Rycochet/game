@@ -5,9 +5,10 @@ use bevy::prelude::*;
 use shared::item::{ItemKind, Quality};
 use shared::item_form::{Choices, RollRequest, choices, fields};
 
-use super::give_option::{any, asked, asking, values, words};
-use super::{GiveForm, GiveOption, GiveOptionsLine};
-use crate::widgets::{Dropdown, DropdownChosen};
+use super::give_option::{any, asked, asking, ui_name, values, words};
+use super::{GiveForm, GiveOption};
+use crate::dom::Dom;
+use crate::widgets::DropdownChosen;
 
 /// What `choices` last said, and for what: they take a while for armour sets.
 type Found = Option<((ItemKind, Quality, RollRequest), Choices)>;
@@ -17,26 +18,20 @@ type Found = Option<((ItemKind, Quality, RollRequest), Choices)>;
 pub(in crate::debug_menu) fn fill_give_options(
     mut form: ResMut<GiveForm>,
     mut found: Local<Found>,
-    mut lines: Query<&mut Node, (With<GiveOptionsLine>, Without<GiveOption>)>,
-    mut options: Query<(&mut GiveOption, &mut Dropdown, &mut Node), Without<GiveOptionsLine>>,
+    mut options: Query<&mut GiveOption>,
+    mut dom: Dom,
 ) {
-    // A panel just opened has its dropdowns to fill.
-    let opened = options.iter_mut().any(|(option, ..)| option.is_added());
+    // Only with a panel; one just opened has its dropdowns to fill.
+    if options.is_empty() {
+        return;
+    }
+    let opened = options.iter_mut().any(|option| option.is_added());
     if !form.is_changed() && !opened {
         return;
     }
     let kind = form.kind;
     let takes = fields(kind);
-    for mut node in &mut lines {
-        let display = if takes.is_empty() {
-            Display::None
-        } else {
-            Display::Flex
-        };
-        if node.display != display {
-            node.display = display;
-        }
-    }
+    dom.set_flag("debug.give_item/form_line", "hidden", takes.is_empty());
     // A kind can't keep what it doesn't take.
     let mut request = form.request;
     for field in request.asked() {
@@ -51,13 +46,11 @@ pub(in crate::debug_menu) fn fill_give_options(
     let Some((_, choices)) = found.as_ref() else {
         return;
     };
-    for (mut option, mut dropdown, mut node) in &mut options {
+    for mut option in &mut options {
         let field = option.field;
+        let id = format!("debug.give_item/{}", ui_name(field));
         let shown = takes.contains(&field);
-        let display = if shown { Display::Flex } else { Display::None };
-        if node.display != display {
-            node.display = display;
-        }
+        dom.set_flag(&id, "hidden", !shown);
         let now = if shown {
             values(field, choices)
         } else {
@@ -71,16 +64,16 @@ pub(in crate::debug_menu) fn fill_give_options(
         let selected = asked(&request, field)
             .and_then(|chosen| now.iter().position(|&value| value == chosen))
             .map_or(0, |at| at + 1);
-        if option.values != now {
+        if option.values != now || option.is_added() {
+            // Each choice's value is its place in the list, "Any ..." first.
             let names = now.iter().map(|&value| words(value));
-            dropdown.options = std::iter::once(any(field).to_owned())
+            let all = std::iter::once(any(field).to_owned())
                 .chain(names)
-                .collect();
+                .enumerate();
+            dom.set_options(&id, all.map(|(at, name)| (at.to_string(), name)));
             option.values = now;
         }
-        if dropdown.selected != selected {
-            dropdown.selected = selected;
-        }
+        dom.set(&id, "value", &selected.to_string());
     }
     if form.request != request {
         form.request = request;

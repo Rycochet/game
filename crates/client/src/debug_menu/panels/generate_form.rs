@@ -31,7 +31,6 @@ pub(in crate::debug_menu) struct GenerateButton;
 /// The most digits of a seed the new seed button makes: enough for many, and
 /// short enough to write down and type in again.
 pub(super) const NEW_SEEDS: u64 = 1_000_000_000;
-pub(super) const SEED_WIDTH: f32 = 240.0;
 
 /// A seed to try. `now` is any number that keeps changing, `made` how many so far.
 pub(super) fn new_seed(now: u64, made: i64) -> u64 {

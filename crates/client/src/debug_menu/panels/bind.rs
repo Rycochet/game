@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 use super::{
-    change_creature, create_mob, dev_area, examine_mob, generate, learn_skills, steps,
+    change_creature, create_mob, dev_area, examine_mob, generate, give, learn_skills, steps,
     teleport_to_world, vitals, world_time,
 };
 use crate::dom::Dom;
@@ -25,6 +25,7 @@ pub(in crate::debug_menu) fn bind_panels(
             "debug.examine_mob" => examine_mob::bind(&mut bound, id),
             "debug.create_mob" => create_mob::bind(&mut bound, id),
             "debug.dev_area" => dev_area::bind(&mut bound, id),
+            "debug.give_item" => give::bind(&mut bound, id),
             learn_skills::FORM => learn_skills::bind(&mut bound, id, &mut dom),
             "debug.generate_poi" => generate::bind(&mut bound, id, &mut dom),
             teleport_to_world::FORM => teleport_to_world::bind(&mut bound, id, &mut dom),

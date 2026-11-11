@@ -10,14 +10,25 @@ use super::{
     SetChoice, give_kinds, new_seed,
 };
 use crate::connection::ToServer;
+use crate::dom::Dom;
 use crate::widgets::{ButtonPressed, ButtonState, DropdownChosen, TextBox, TextEdited};
 
 /// A newly opened panel starts as `GiveForm::default`, with a random seed.
 pub(in crate::debug_menu) fn start_give_panel(
     mut seed_box: Query<&mut TextBox, Added<GiveSeed>>,
+    dropdowns: Query<&GiveChoice, Added<GiveChoice>>,
     mut form: ResMut<GiveForm>,
     time: Res<Time<Real>>,
+    mut dom: Dom,
 ) {
+    for &choice in &dropdowns {
+        // Each choice's value is its place in the list.
+        let id = format!("debug.give_item/{}", choice.ui_name());
+        let (options, chosen) = choice.options();
+        let options = options.into_iter().enumerate();
+        dom.set_options(&id, options.map(|(at, name)| (at.to_string(), name)));
+        dom.set(&id, "value", &chosen.to_string());
+    }
     for mut text_box in &mut seed_box {
         let seeds_made = form.seeds_made + 1;
         let seed = new_seed(time.elapsed().as_nanos() as u64, seeds_made);

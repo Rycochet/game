@@ -7,6 +7,7 @@ use shared::creature::CreatureKind;
 use shared::id::Id;
 
 use crate::common::{Other, Target};
+use crate::dom::Dom;
 
 /// The target being given to, and what it is; `None` for the character.
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -21,7 +22,9 @@ pub(in crate::debug_menu) fn follow_target(
     target: Res<Target>,
     others: Query<&Other>,
     mut to: ResMut<GiveTo>,
-    mut words: Query<&mut Text, With<GiveToWords>>,
+    words: Query<(), With<GiveToWords>>,
+    mut dom: Dom,
+    mut shown: Local<Option<String>>,
 ) {
     let seen = target
         .0
@@ -32,9 +35,11 @@ pub(in crate::debug_menu) fn follow_target(
         Some((_, kind)) => format!("to the {}", kind.def().name),
         None => "to you".to_owned(),
     };
-    for mut text in &mut words {
-        if text.0 != said {
-            text.0 = said.clone();
-        }
+    // Only with a panel, which opens saying "to you".
+    if words.is_empty() {
+        *shown = None;
+    } else if shown.as_ref() != Some(&said) {
+        dom.set_text("debug.give_item/to", said.clone());
+        *shown = Some(said);
     }
 }

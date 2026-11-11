@@ -1,184 +1,149 @@
-//! Give Item's panel, laid out to read like what it makes ("Give 3 Large Size
-//! Identical / Quality Rare Set Blessed Magical Longsword").
+//! Give Item's panel, as markup, laid out to read like what it makes ("Give 3
+//! Large Size Identical / Quality Rare Set Blessed Magical Longsword").
 
 use bevy::prelude::*;
 use shared::creature::Size;
 use shared::item::Quality;
 
 use super::{
-    CHECK_ROW, FIELDS, FONT, GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveNoSpace,
-    GiveOption, GiveOptionsLine, GivePreview, GiveRandomSeed, GiveSeed, GiveToWords, SEED_WIDTH,
-    SetChoice, any, give_kinds, row, ui_name, words,
+    FIELDS, GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveNoSpace, GiveOption, GivePreview,
+    GiveRandomSeed, GiveSeed, GiveToWords, SetChoice, give_kinds, ui_name,
 };
-use crate::widgets::{
-    BUTTON_PADDING, ButtonState, ButtonStyle, Dropdown, INK, Pressable, TextBox, UiId,
-    WARNING_TEXT, spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
-};
+use crate::dom::Template;
+use crate::html;
+use crate::widgets::UiId;
 
-const COUNT_WIDTH: f32 = 64.0;
-const ARROW_ROOM: f32 = 24.0;
-const BLANK_WIDTH: f32 = 56.0;
+/// The panel's contents. The dropdowns' choices are given by
+/// `start_give_panel` (`GiveChoice::options`) and, for the item's form, by
+/// `fill_give_options`, which also shows that line only for kinds that take
+/// any. The item to be given is drawn in the canvas.
+pub(super) static GIVE_ITEM: Template = html!(
+    "debug_menu.give_item",
+    r#"
+<form id="debug.give_item">
+  <span nowrap valign="middle">
+    Give
+    <button id="less">-</button>
+    <input id="count" type="text" inputmode="numeric" value="1" width="64"/>
+    <button id="more">+</button>
+    <select id="size" width="130"><option>Size</option></select>
+    Size
+    <select id="identical" width="120"><option>Identical</option></select>
+  </span>
+  <span nowrap valign="middle">
+    Quality
+    <select id="quality" width="130"><option>Common</option></select>
+    <select id="set" width="100"><option>Set</option></select>
+    <select id="favour" width="130"><option>Unaligned</option></select>
+    <select id="magic" width="120"><option>Mundane</option></select>
+    <select id="kind" searchable width="220"><option>Kind</option></select>
+  </span>
+  <span id="form_line" valign="middle" hidden>
+    Form
+    <select id="style" width="170" hidden><option>Any style</option></select>
+    <select id="construction" width="170" hidden><option>Any construction</option></select>
+    <select id="material" width="170" hidden><option>Any material</option></select>
+    <select id="finish" width="170" hidden><option>Any finish</option></select>
+    <select id="dye" width="170" hidden><option>Any colour</option></select>
+    <select id="settings" width="170" hidden><option>Any settings</option></select>
+    <select id="gem_material" width="170" hidden><option>Any gem</option></select>
+    <select id="gem_cut" width="170" hidden><option>Any cut</option></select>
+    <select id="limits" width="170" hidden><option>Any length</option></select>
+  </span>
+  <span nowrap valign="middle">
+    <label for="seed">Seed</label>
+    <input id="seed" type="text" inputmode="numeric" width="240"/>
+    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+  </span>
+  <canvas id="preview"/>
+  <span nowrap align="right" valign="middle">
+    <p id="no_space" class="warning" hidden>No space</p>
+    <span id="to">to you</span>
+    <button id="give" class="main">Give</button>
+  </span>
+</form>
+"#
+);
 
-/// Give Item's panel, as `GiveForm::default` has it; `start_give_panel` fills in a seed.
-pub(super) fn spawn_give_panel(content: &mut ChildSpawnerCommands) {
-    content.spawn(row()).with_children(|line| {
-        line.spawn(words("Give"));
-        spawn_count(line);
-        let sizes = std::iter::once("<target>").chain(Size::ALL.iter().map(|size| size.name()));
-        dropdown(line, (GiveChoice::Size, id("size")), sizes, 0, false);
-        line.spawn(words("Size"));
-        dropdown(
-            line,
-            (GiveChoice::Identical, id("identical")),
-            ["Different", "Identical"],
-            1,
-            false,
-        )
-        .insert(ButtonState::Disabled);
-    });
-    content.spawn(row()).with_children(|line| {
-        line.spawn(words("Quality"));
-        let common = Quality::ALL.iter().position(|&q| q == Quality::default());
-        let qualities = Quality::ALL.map(|quality| format!("{quality:?}"));
-        dropdown(
-            line,
-            (GiveChoice::Quality, id("quality")),
-            qualities,
-            common.unwrap_or(0),
-            false,
-        );
-        dropdown(
-            line,
-            (GiveChoice::Set, id("set")),
-            SetChoice::ALL.map(SetChoice::name),
-            0,
-            false,
-        );
-        let favours = ["Unaligned", "Blessed", "Cursed"];
-        dropdown(line, (GiveChoice::Favour, id("favour")), favours, 0, false);
-        dropdown(
-            line,
-            (GiveChoice::Magic, id("magic")),
-            ["Mundane", "Magical"],
-            0,
-            false,
-        );
-        let kinds = give_kinds().into_iter().map(|kind| kind.def().name);
-        dropdown(line, (GiveChoice::Kind, id("kind")), kinds, 0, true);
-    });
-    // Shown by `fill_give_options` for kinds whose form can be asked for.
-    let hidden = Node {
-        display: Display::None,
-        ..row()
-    };
-    content
-        .spawn((hidden, GiveOptionsLine))
-        .with_children(|line| {
-            line.spawn(words("Form"));
-            for field in FIELDS {
-                let option = GiveOption {
-                    field,
-                    values: Vec::new(),
-                };
-                dropdown(line, (option, id(ui_name(field))), [any(field)], 0, false);
+impl GiveChoice {
+    pub(super) const ALL: [Self; 7] = [
+        Self::Size,
+        Self::Identical,
+        Self::Quality,
+        Self::Set,
+        Self::Favour,
+        Self::Magic,
+        Self::Kind,
+    ];
+
+    /// Its dropdown's name in the markup.
+    pub(super) fn ui_name(self) -> &'static str {
+        match self {
+            Self::Size => "size",
+            Self::Identical => "identical",
+            Self::Quality => "quality",
+            Self::Set => "set",
+            Self::Favour => "favour",
+            Self::Magic => "magic",
+            Self::Kind => "kind",
+        }
+    }
+
+    /// What it offers, in order, and which a newly opened panel has chosen
+    /// (as `GiveForm::default`).
+    pub(super) fn options(self) -> (Vec<String>, usize) {
+        let named = |names: &[&str]| names.iter().map(|name| (*name).to_owned()).collect();
+        match self {
+            Self::Size => {
+                let sizes = Size::ALL.iter().map(|size| size.name().to_owned());
+                (
+                    std::iter::once("<target>".to_owned())
+                        .chain(sizes)
+                        .collect(),
+                    0,
+                )
             }
-        });
-    content.spawn(row()).with_children(|line| {
-        line.spawn(words("Seed"));
-        let node = Node {
-            width: px(SEED_WIDTH),
-            height: px(CHECK_ROW),
-            ..default()
-        };
-        spawn_text_box(line, digits(), FONT, node).insert((GiveSeed, id("seed")));
-        spawn_new_seed_button(line, CHECK_ROW).insert((GiveRandomSeed, id("new_seed")));
-    });
-    content.spawn((
-        GivePreview::default(),
-        Node {
-            margin: UiRect::vertical(px(4)),
-            ..default()
-        },
-    ));
-    let bottom = Node {
-        justify_content: JustifyContent::End,
-        ..row()
-    };
-    content.spawn(bottom).with_children(|line| {
-        let no_space = (Text::new("No space"), FONT.font(), TextColor(WARNING_TEXT));
-        line.spawn((no_space, Visibility::Hidden, GiveNoSpace));
-        line.spawn((
-            Text::new("to you"),
-            FONT.font(),
-            TextColor(INK),
-            GiveToWords,
-        ));
-        button(line, "Give").insert((ButtonStyle::Main, GiveButton, id("give")));
-    });
-}
-
-/// How many: a box between - and +.
-fn spawn_count(line: &mut ChildSpawnerCommands) {
-    button(line, "-").insert((GiveCountStep(-1), id("less")));
-    let count = TextBox {
-        text: "1".to_owned(),
-        ..digits()
-    };
-    let node = Node {
-        width: px(COUNT_WIDTH),
-        height: px(CHECK_ROW),
-        ..default()
-    };
-    spawn_text_box(line, count, FONT, node).insert((GiveCount, id("count")));
-    button(line, "+").insert((GiveCountStep(1), id("more")));
-}
-
-/// A widget of Give Item's form.
-fn id(name: &'static str) -> UiId {
-    UiId::new("debug.give_item", name)
-}
-
-fn digits() -> TextBox {
-    TextBox {
-        digits_only: true,
-        takes_keys: true,
-        ..default()
+            Self::Identical => (named(&["Different", "Identical"]), 1),
+            Self::Quality => {
+                let common = Quality::ALL.iter().position(|&q| q == Quality::default());
+                let all = Quality::ALL.iter().map(|quality| format!("{quality:?}"));
+                (all.collect(), common.unwrap_or(0))
+            }
+            Self::Set => (named(&SetChoice::ALL.map(SetChoice::name)), 0),
+            Self::Favour => (named(&["Unaligned", "Blessed", "Cursed"]), 0),
+            Self::Magic => (named(&["Mundane", "Magical"]), 0),
+            Self::Kind => {
+                let kinds = give_kinds()
+                    .into_iter()
+                    .map(|kind| kind.def().name.to_owned());
+                (kinds.collect(), 0)
+            }
+        }
     }
 }
 
-fn button<'a>(line: &'a mut ChildSpawnerCommands, label: &str) -> EntityCommands<'a> {
-    let node = Node {
-        padding: BUTTON_PADDING,
-        ..default()
+/// What a built part of the panel is known by, from its id.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId) {
+    let name = id.parts().1;
+    if let Some(choice) = GiveChoice::ALL.into_iter().find(|it| it.ui_name() == name) {
+        bound.insert(choice);
+        return;
+    }
+    if let Some(field) = FIELDS.into_iter().find(|&field| ui_name(field) == name) {
+        let values = Vec::new();
+        bound.insert(GiveOption { field, values });
+        return;
+    }
+    match name {
+        "less" => bound.insert(GiveCountStep(-1)),
+        "more" => bound.insert(GiveCountStep(1)),
+        "count" => bound.insert(GiveCount),
+        "seed" => bound.insert(GiveSeed),
+        "new_seed" => bound.insert(GiveRandomSeed),
+        "preview" => bound.insert(GivePreview::default()),
+        "no_space" => bound.insert(GiveNoSpace),
+        "to" => bound.insert(GiveToWords),
+        "give" => bound.insert(GiveButton),
+        _ => bound,
     };
-    let mut button = spawn_button(line, ButtonState::Normal, label, FONT, node);
-    button.insert(Pressable);
-    button
-}
-
-fn dropdown<'a, S: Into<String>>(
-    line: &'a mut ChildSpawnerCommands,
-    choice: impl Bundle,
-    options: impl IntoIterator<Item = S>,
-    selected: usize,
-    searchable: bool,
-) -> EntityCommands<'a> {
-    let dropdown = Dropdown {
-        options: options.into_iter().map(Into::into).collect(),
-        selected,
-        searchable,
-        ..default()
-    };
-    // Room on the right for the arrow, and some width for a blank choice.
-    let node = Node {
-        padding: UiRect {
-            right: px(ARROW_ROOM),
-            ..BUTTON_PADDING
-        },
-        min_width: px(BLANK_WIDTH),
-        ..default()
-    };
-    let mut spawned = spawn_dropdown(line, dropdown, FONT, node);
-    spawned.insert(choice);
-    spawned
 }

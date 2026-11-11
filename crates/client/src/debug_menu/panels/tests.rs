@@ -108,25 +108,9 @@ fn the_panels_written_as_markup_are_good() {
     create_mob::CREATE_MOB.assert_good();
     dev_area::DEV_AREA.assert_good();
     learn_skills::LEARN_SKILLS.assert_good();
+    give::GIVE_ITEM.assert_good();
     generate::GENERATE_POI.assert_good();
     teleport_to_world::TELEPORT_TO_WORLD.assert_good();
-}
-
-#[test]
-fn give_items_widgets_each_have_their_own_id() {
-    let mut world = World::new();
-    world
-        .commands()
-        .spawn(Node::default())
-        .with_children(spawn_give_panel);
-    world.flush();
-    let ids: Vec<crate::widgets::UiId> = world
-        .query::<&crate::widgets::UiId>()
-        .iter(&world)
-        .copied()
-        .collect();
-    assert!(ids.len() > 10);
-    assert!(crate::widgets::duplicate_ids(&ids).is_empty());
 }
 
 #[test]

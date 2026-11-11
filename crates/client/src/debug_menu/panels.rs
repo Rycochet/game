@@ -66,15 +66,14 @@ use every_widget::spawn_every_widget;
 pub(super) use every_widget::{give_sample_icons, show_typed_items};
 pub(super) use examine_mob::add_examine_mob_panel;
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
+use generate_form::new_seed;
 pub(super) use generate_form::{
     GenerateButton, GenerateForm, GenerateKind, NewSeedButton, RuinButton, SeedBox,
 };
-use generate_form::{SEED_WIDTH, new_seed};
-use give::spawn_give_panel;
 use give_form::give_kinds;
 pub(super) use give_form::{
     GiveButton, GiveChoice, GiveCount, GiveCountStep, GiveForm, GiveNoSpace, GiveOption,
-    GiveOptionsLine, GivePreview, GiveRandomSeed, GiveSeed, SetChoice,
+    GivePreview, GiveRandomSeed, GiveSeed, SetChoice,
 };
 pub(super) use give_option::OptionValue;
 use give_option::{FIELDS, any, ui_name};
@@ -86,7 +85,7 @@ pub(super) use give_systems::{
 pub(super) use give_target::{GiveTo, GiveToWords, follow_target};
 pub(super) use html_sample::{fill_html_sample, show_html_events};
 pub(super) use kept_choices::add_kept_choices;
-use layout::{row, show_if, words};
+use layout::show_if;
 pub(super) use learn_skills_systems::add_learn_skills_panel;
 pub(super) use open::{OpenPanels, forget_closed};
 use pictures_form::{

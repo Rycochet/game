@@ -6,9 +6,8 @@ use std::collections::HashMap;
 use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
-    FIRST_AT, NEXT_AT, change_creature, create_mob, dev_area, examine_mob, learn_skills,
-    spawn_every_widget, spawn_give_panel, spawn_item_pictures, steps, teleport_to_world, vitals,
-    world_time,
+    FIRST_AT, NEXT_AT, change_creature, create_mob, dev_area, examine_mob, give, learn_skills,
+    spawn_every_widget, spawn_item_pictures, steps, teleport_to_world, vitals, world_time,
 };
 use crate::dom::{Template, document_in};
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
@@ -62,7 +61,6 @@ impl OpenPanels {
             .with_children(|content| match action {
                 DebugAction::ShowWidgets => spawn_every_widget(content),
                 DebugAction::SunsAndMoons => {}
-                DebugAction::GiveItem => spawn_give_panel(content),
                 DebugAction::ItemPictures => spawn_item_pictures(content),
                 _ => {}
             });
@@ -90,6 +88,7 @@ fn template_of(action: DebugAction) -> Option<&'static Template> {
         DebugAction::CreateMob => Some(&create_mob::CREATE_MOB),
         DebugAction::DevArea => Some(&dev_area::DEV_AREA),
         DebugAction::LearnSkills => Some(&learn_skills::LEARN_SKILLS),
+        DebugAction::GiveItem => Some(&give::GIVE_ITEM),
         DebugAction::TeleportToWorld => Some(&teleport_to_world::TELEPORT_TO_WORLD),
         _ => None,
     }
