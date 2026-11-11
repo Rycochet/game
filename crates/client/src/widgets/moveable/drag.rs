@@ -3,10 +3,10 @@
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 
-use super::super::item::shown_at;
 use super::super::{ButtonPressed, ButtonState, Pressable, RaisePanel};
 use super::{FIRST_PANEL_Z, MoveablePanel, PanelPart};
 use crate::common::{TouchGesture, UiPointer, in_interface};
+use crate::dom::Hit;
 
 /// What is being moved, between frames.
 #[derive(Resource, Default)]
@@ -30,6 +30,7 @@ pub(in crate::widgets) fn take_presses(
     mut commands: Commands,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     pointer: Res<UiPointer>,
+    hit: Res<Hit>,
     mut gesture: ResMut<TouchGesture>,
     scale: Res<UiScale>,
     parts: Query<(
@@ -79,18 +80,16 @@ pub(in crate::widgets) fn take_presses(
     }
 
     if mouse.just_pressed(MouseButton::Left) {
-        let button = pointer.0.and_then(|at| {
-            buttons
-                .iter()
-                .filter(|(_, node, transform, visible, .., clip)| {
-                    visible.get() && shown_at(at, node, transform, *clip)
-                })
-                .max_by_key(|(stack, ..)| stack.0)
+        // From what is in front (`dom::Hit`) outwards: the first button or
+        // part of a panel is what the press is on, so a button behind a panel,
+        // or behind anything else in front, gets nothing.
+        let nearest = hit.first(|entity| {
+            let part = parts.get(entity).ok().map(|(.., part)| *part);
+            let button = buttons.get(entity).ok();
+            (part.is_some() || button.is_some()).then_some((part, button))
         });
-        let stacked = pointer.0.and_then(stacked_part_at);
-        // Only what is in front: a button hidden by another panel gets nothing.
-        let button = button.filter(|(stack, ..)| stacked.is_none_or(|(part, _)| stack.0 > part));
-        let part = stacked.map(|(_, part)| part);
+        let button = nearest.and_then(|(part, button)| button.filter(|_| part.is_none()));
+        let part = hit.first(|entity| parts.get(entity).ok().map(|(.., part)| *part));
         if let Some((.., entity, state, _)) = button {
             mouse.clear_just_pressed(MouseButton::Left);
             if !state.is_some_and(|state| state.is_disabled()) {

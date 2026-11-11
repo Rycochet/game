@@ -9,6 +9,8 @@ use super::tag::Tag;
 
 mod set;
 mod values;
+#[cfg(any(test, feature = "debug-api"))]
+mod write;
 
 pub use values::{Align, Length, VAlign};
 

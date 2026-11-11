@@ -60,6 +60,7 @@ impl MoveablePanel {
 
 /// What a click on this node does.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+#[require(crate::dom::Solid)]
 pub(in crate::widgets) enum PanelPart {
     /// Only stops the click going through the panel.
     Body(Entity),

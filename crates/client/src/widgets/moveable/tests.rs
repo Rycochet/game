@@ -86,16 +86,19 @@ fn test_at(scale: f32) -> Test {
     ));
     world.spawn((
         PanelPart::TitleBar(root),
+        ChildOf(root),
         laid_out(Vec2::new(100.0, 100.0), Vec2::new(160.0, 30.0), 1, scale),
     ));
     world.spawn((
         PanelPart::Close(root),
+        ChildOf(root),
         laid_out(Vec2::new(260.0, 100.0), Vec2::new(40.0, 30.0), 1, scale),
     ));
     let button = world
         .spawn((
             Pressable,
             ButtonState::Normal,
+            ChildOf(root),
             laid_out(Vec2::new(110.0, 150.0), Vec2::new(80.0, 30.0), 1, scale),
         ))
         .id();
@@ -104,6 +107,7 @@ fn test_at(scale: f32) -> Test {
 
 impl Test {
     fn step(&mut self) {
+        crate::dom::find_now(self.app.world_mut());
         self.app
             .world_mut()
             .run_system_once(take_presses)

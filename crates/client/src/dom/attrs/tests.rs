@@ -59,6 +59,19 @@ fn only_known_attributes_are_taken() {
 }
 
 #[test]
+fn attributes_are_written_back_as_markup() {
+    let mut attrs = Attrs::default();
+    set(&mut attrs, Tag::P, "class", "warning").unwrap();
+    set(&mut attrs, Tag::P, "title", "A \"tip\" & more").unwrap();
+    set(&mut attrs, Tag::P, "width", "50%").unwrap();
+    set(&mut attrs, Tag::P, "margin-left", "8").unwrap();
+    attrs.set(Tag::P, "hidden", None).unwrap();
+    let written = attrs.written();
+    let expected = r#" class="warning" title="A &quot;tip&quot; &amp; more" width="50%" margin-left="8" hidden"#;
+    assert_eq!(written, expected);
+}
+
+#[test]
 fn clearing_puts_one_attribute_back() {
     let mut attrs = Attrs::default();
     attrs.set(Tag::P, "hidden", None).unwrap();
