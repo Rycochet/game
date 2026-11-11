@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::{UiEvent, UiValue};
 use crate::dom::build::tests::{app, find};
 use crate::dom::input::Click;
-use crate::dom::parts::{Control, ControlOf, Element};
+use crate::dom::parts::{Control, ControlOf, Element, LabelFor};
 use crate::dom::{Dom, Template, document};
 use crate::html;
 use crate::widgets::{
@@ -156,9 +156,9 @@ fn a_click_on_a_label_presses_what_it_is_for() {
     let mut app = built();
     let (tick, _) = control(&mut app, "a/tick");
     let world = app.world_mut();
-    let mut labels = world.query::<(Entity, &Element)>();
-    let is_label = |(_, element): &(Entity, &Element)| element.tag == crate::dom::Tag::Label;
-    let label = labels.iter(world).find(is_label).unwrap().0;
+    // The label that names the checkbox with `for`.
+    let mut labels = world.query_filtered::<Entity, With<LabelFor>>();
+    let label = labels.single(world).unwrap();
     let click = Click {
         entity: label,
         at: Vec2::ZERO,

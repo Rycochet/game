@@ -20,6 +20,7 @@ pub(in crate::dom) fn app() -> App {
         .init_resource::<crate::common::UiPointer>()
         // What the widgets showing controls say, and are told.
         .add_message::<ButtonPressed>()
+        .add_message::<crate::widgets::RaisePanel>()
         .add_message::<SwitchFlipped>()
         .add_message::<SliderMoved>()
         .add_message::<TextEdited>()

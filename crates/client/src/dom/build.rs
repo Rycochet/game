@@ -12,6 +12,7 @@ use super::theme::Theme;
 use crate::widgets::UiId;
 
 mod progress;
+mod surfaces;
 mod table;
 
 /// What an element being built is in.
@@ -20,6 +21,8 @@ pub(super) struct Inside {
     pub style: TextStyle,
     /// Which copy of a template it is part of: its ids get `.<index>`.
     pub index: Option<usize>,
+    /// The root of the document it is in.
+    pub document: Entity,
 }
 
 pub(super) struct Builder<'a, 'w, 's> {
@@ -48,6 +51,9 @@ impl Builder<'_, '_, '_> {
     }
 
     fn element(&mut self, parent: Entity, element: &Checked, inside: Inside) {
+        if Self::is_surface(element) {
+            return self.surface(parent, element, inside);
+        }
         let (entity, within) = self.shell(parent, element, inside);
         match element.tag {
             Tag::Template => {
@@ -59,6 +65,7 @@ impl Builder<'_, '_, '_> {
             Tag::Canvas => {
                 self.commands.entity(entity).insert(Canvas);
             }
+            Tag::Panel => self.fixed_panel(entity, element, within),
             tag if tag.is_control() => self.control(entity, element, within),
             _ => self.nodes(entity, &element.children, within),
         }
@@ -80,8 +87,9 @@ impl Builder<'_, '_, '_> {
             .commands
             .spawn((part, Node::default(), style, ChildOf(parent)));
         let numbered = |id: UiId| inside.index.map_or(id, |index| id.at(index));
-        // A control's id goes on the widget that shows it (`controls`).
-        if let Some(id) = element.id.filter(|_| !element.tag.is_control()) {
+        // A control's or surface's id goes on the widget that shows it.
+        let on_widget = element.tag.is_control() || Self::is_surface(element);
+        if let Some(id) = element.id.filter(|_| !on_widget) {
             entity.insert(numbered(id));
         }
         if let Some(wanted) = element.label_for {
@@ -114,7 +122,12 @@ pub(super) fn build_documents(
                     pictures: &pictures,
                     assets: &assets,
                 };
-                builder.nodes(root, &nodes, Inside { style, index: None });
+                let inside = Inside {
+                    style,
+                    index: None,
+                    document: root,
+                };
+                builder.nodes(root, &nodes, inside);
             }
             Err(error) => error!("markup `{}`:{error}", template.name),
         }

@@ -83,6 +83,7 @@ pub(super) fn report(
         let attrs = &mut element.bypass_change_detection().attrs;
         let value = match did {
             Did::Pressed if tag == Tag::Button => UiValue::Pressed,
+            Did::Pressed if tag == Tag::Dialog => UiValue::Dismissed,
             // A checkbox is a button that ticks itself.
             Did::Pressed => {
                 let Ok(mut checked) = checks.get_mut(widget) else {

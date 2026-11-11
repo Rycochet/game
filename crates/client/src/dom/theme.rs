@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use super::tag::Tag;
-use crate::widgets::{ALLOWED, GRID_COLOUR, INK, ROW_TINT, TextSize, WARNING_TEXT};
+use crate::widgets::{ALLOWED, GRID_COLOUR, INK, PARCHMENT, ROW_TINT, TextSize, WARNING_TEXT};
 
 /// How one kind of element looks. What is `None` is as its parent's.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -87,6 +87,17 @@ impl Theme {
         };
         theme.set(Tag::Hr, "", rule);
         theme.set(Tag::Table, "striped", Look::default());
+        let [red, green, blue] = PARCHMENT;
+        let parchment = Look {
+            background: Some(Color::srgb_u8(red, green, blue)),
+            ..default()
+        };
+        theme.set(Tag::Panel, "", parchment);
+        let footer = Look {
+            gap: 8.0,
+            ..default()
+        };
+        theme.set(Tag::Footer, "", footer);
         // Controls keep a little room under them, as paragraphs do. Their
         // classes pick among the widgets' own looks (`controls`).
         let control = Look {

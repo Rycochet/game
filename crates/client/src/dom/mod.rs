@@ -17,6 +17,7 @@ mod markup;
 mod parts;
 mod pictures;
 mod restyle;
+mod surfaces;
 mod tag;
 mod template;
 mod theme;
@@ -24,11 +25,11 @@ mod theme;
 use bevy::prelude::*;
 
 pub use change::Dom;
-pub use controls::UiEvent;
+pub use controls::{UiEvent, UiValue};
 pub use input::Hit;
 #[cfg(test)]
 pub use input::find_now;
-pub use parts::Solid;
+pub use parts::{AlwaysBars, Solid};
 pub use parts::{Document, document};
 pub use template::Template;
 // What screens will use as they become markup: not all of it is yet.
@@ -36,7 +37,6 @@ pub use template::Template;
 pub use {
     attrs::{Align, Attrs, Length, VAlign},
     check::{Checked, CheckedNode},
-    controls::UiValue,
     error::{MarkupError, Place},
     input::{
         Click, ContextMenu, DomInput, Finder, PointerCapture, PointerEnter, PointerLeave, Press,
@@ -68,7 +68,12 @@ impl Plugin for DomPlugin {
                 (
                     build::build_documents,
                     change::apply_changes,
-                    (restyle::restyle, controls::follow_elements),
+                    surfaces::tidy_surfaces,
+                    (
+                        restyle::restyle,
+                        controls::follow_elements,
+                        surfaces::follow_surfaces,
+                    ),
                 )
                     .chain()
                     .before(bevy::ui::UiSystems::Layout),

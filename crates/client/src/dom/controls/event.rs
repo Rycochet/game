@@ -29,4 +29,8 @@ pub enum UiValue {
     Choice { index: usize, value: String },
     /// A key box: the key chosen, or none.
     Key(Option<Binding>),
+    /// A dialog: the player pressed outside it.
+    Dismissed,
+    /// A panel: the player closed it, and it has gone.
+    Closed,
 }

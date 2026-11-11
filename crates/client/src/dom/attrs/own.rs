@@ -1,7 +1,7 @@
 //! The attributes only some elements take, and what each may be. Which
 //! element takes which is `Tag::own_attrs`.
 
-use super::values::{count, number, spacing};
+use super::values::{count, length, number, spacing};
 
 /// What an attribute's value has to be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -9,6 +9,8 @@ pub(super) enum Kind {
     Text,
     /// A number that isn't negative.
     Number,
+    /// Pixels (`12`) or a share (`50%`).
+    Length,
     /// A multiple of 4.
     Spacing,
     /// A whole number from 1.
@@ -18,7 +20,7 @@ pub(super) enum Kind {
     OneOf(&'static [&'static str]),
 }
 
-pub(super) const OWN: [(&str, Kind); 21] = [
+pub(super) const OWN: [(&str, Kind); 28] = [
     ("for", Kind::Text),
     ("src", Kind::Text),
     ("alt", Kind::Text),
@@ -40,6 +42,13 @@ pub(super) const OWN: [(&str, Kind); 21] = [
     ("searchable", Kind::Flag),
     ("hold", Kind::Flag),
     ("accepts-items", Kind::Flag),
+    ("moveable", Kind::Flag),
+    ("grip", Kind::Flag),
+    ("modal", Kind::Flag),
+    ("auto", Kind::Flag),
+    ("depth", Kind::Number),
+    ("max-height", Kind::Length),
+    ("scrollbars", Kind::OneOf(&["auto", "always"])),
 ];
 
 /// The name as the table has it (so it can be kept without copying), and
@@ -60,6 +69,7 @@ impl Kind {
         match self {
             Self::Text => Ok(()),
             Self::Number => number(name, value).map(|_| ()),
+            Self::Length => length(name, value).map(|_| ()),
             Self::Spacing => spacing(name, value).map(|_| ()),
             Self::Count => count(name, value).map(|_| ()),
             // `checked`, `checked=""` and `checked="checked"` all mean yes.

@@ -98,6 +98,16 @@ pub(super) struct Choices(pub Vec<String>);
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct LabelFor(pub UiId);
 
+/// On the widget of a panel that moves or a dialog: the document it is of.
+/// These stand on their own, not inside their document, so they are
+/// despawned with it by `tidy_surfaces`.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct SurfaceOf(pub Entity);
+
+/// On a scroll area whose bar always shows (`scrollbars="always"`).
+#[derive(Component, Clone, Copy, Debug)]
+pub struct AlwaysBars;
+
 /// On a `progress` with a value: the bar inside it.
 #[derive(Component)]
 pub(super) struct Bar(pub Entity);

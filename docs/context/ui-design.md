@@ -43,7 +43,7 @@ Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later*
 | Text | have | `TextSize`. |
 | Tooltip | have | One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on items or what is under the pointer. A finger held down shows a row's. Never the only way to learn something: fingers have no hover. |
 | Icon | have | Pictures, or drawn in code. |
-| Scroll area | have | Wheel, finger or bar. |
+| Scroll area | have | Wheel, finger or bar. The bar shows only with more than fits, unless the area asks for it always, or the player turns on Always Show Scroll Bars (Settings, Interface: for accessibility, and for seeing what can scroll). |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
 | Triangle chooser | have | Only in making a character (`character_create`): three triangles turning round a middle on a ring in a button's colour, with curved two-headed arrows in the gaps, always the same way up, a dot in each, each with a radar chart behind it (the kind's bonus as a gold inner layer, round-ended). Drawn into a picture; dots dragged, the whole turned by dragging beside them; keys 1–3, arrows, Q/E. |
 | Tree diagram | have | Only on the Skills page (`skills_page`): round nodes on rings round a middle, joined by thin lines, names under them; dragged to move and zoomed about the pointer or fingers (spreading apart, words staying sharp), deeper names hiding when far out; pointing at or choosing a node outlines it in orange, with details in a line under it; each node has a ring round the inside of its edge for how good the skill is, coloured by item quality in fifths. |

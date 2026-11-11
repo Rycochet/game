@@ -1,6 +1,6 @@
 //! The pages of Settings, under its tabs: Gameplay (`gameplay`), Controls
 //! (`controls`), Interface
-//! (its size, and "Enable Touch") and Graphics (`graphics`). Interface choices go
+//! (its size, "Enable Touch" and "Always Show Scroll Bars") and Graphics (`graphics`). Interface choices go
 //! straight into `Preferences`.
 
 mod controls;
@@ -40,6 +40,7 @@ const DROPDOWN_WIDTH: f32 = 160.0;
 const SIZE: &str = "How big the interface is drawn. Auto follows the size of the window.";
 const TOUCH: &str = "Keeps the interface at least its own size, for fingers.";
 const TOUCH_ONLY: &str = "Always on, as this device only has a touch screen.";
+const SCROLL_BARS: &str = "Shows the bar of everything that can scroll, even when all of it fits.";
 
 /// The tabs' row.
 #[derive(Component)]
@@ -58,6 +59,10 @@ pub(super) struct SizeDropdown;
 
 #[derive(Component)]
 pub(super) struct TouchSwitch;
+
+/// The "Always Show Scroll Bars" switch.
+#[derive(Component)]
+pub(super) struct ScrollBarsSwitch;
 
 /// The tabs and their pages, in Settings' panel.
 pub(super) fn spawn_pages(panel: &mut ChildSpawnerCommands) {
@@ -174,6 +179,13 @@ pub(super) fn fill_interface_page(
         page.commands()
             .entity(touch)
             .insert((TouchSwitch, UiId::new("settings.interface", "touch")));
+        let (state, on) = (ButtonState::Normal, preferences.always_show_scroll_bars);
+        let tip = rows::tip(SCROLL_BARS, None);
+        let bars = rows::spawn_switch_row(page, "Always Show Scroll Bars", tip, state, on);
+        page.commands().entity(bars).insert((
+            ScrollBarsSwitch,
+            UiId::new("settings.interface", "scroll_bars"),
+        ));
     });
 }
 
@@ -187,6 +199,7 @@ pub(super) fn use_pages(
     mut pages: Query<(&Page, &mut Node)>,
     size_dropdowns: Query<(), With<SizeDropdown>>,
     touch_switches: Query<(), With<TouchSwitch>>,
+    bar_switches: Query<(), With<ScrollBarsSwitch>>,
     mut preferences: ResMut<Preferences>,
 ) {
     for &TabChosen(row, index) in tabs.read() {
@@ -214,6 +227,9 @@ pub(super) fn use_pages(
     for &SwitchFlipped(switch, on) in flipped.read() {
         if touch_switches.contains(switch) {
             preferences.touch = on;
+        }
+        if bar_switches.contains(switch) {
+            preferences.always_show_scroll_bars = on;
         }
     }
 }

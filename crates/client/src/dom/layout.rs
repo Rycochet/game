@@ -6,9 +6,12 @@ use super::attrs::{Align, Attrs, Length, VAlign};
 use super::parts::InTable;
 use super::tag::Tag;
 use super::theme::Look;
+use crate::widgets::PANEL_EDGE;
 
 /// A progress bar's height, and a spinner's across, with no size given.
 const PROGRESS: f32 = 24.0;
+/// Between a fixed panel's edge and what is in it.
+const PANEL_PADDING: f32 = 8.0;
 /// The least a progress bar is across.
 const PROGRESS_LEAST: f32 = 120.0;
 
@@ -29,7 +32,10 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
         margin: margin(attrs, around.look),
         ..default()
     };
-    if attrs.is_placed() {
+    // A panel that moves and a dialog are placed by their widgets.
+    let moves = tag == Tag::Panel && (attrs.has("moveable") || attrs.has("grip"));
+    let fixed_panel = tag == Tag::Panel && !moves;
+    if attrs.is_placed() && !moves && tag != Tag::Dialog {
         node.position_type = PositionType::Absolute;
         node.top = val(attrs.top);
         node.left = val(attrs.left);
@@ -76,8 +82,18 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
                 node.min_width = px(PROGRESS_LEAST);
             }
         }
+        // A dialog's buttons: in a row, at the right.
+        Tag::Footer => {
+            node.column_gap = px(around.look.gap);
+            node.justify_content = JustifyContent::FlexEnd;
+            node.flex_grow = 1.0;
+        }
         _ if tag.is_inline() => flow_along(&mut node, attrs, around.look),
         _ => stack(&mut node, attrs),
+    }
+    if fixed_panel {
+        node.border = UiRect::all(px(PANEL_EDGE));
+        node.padding = UiRect::all(px(PANEL_PADDING));
     }
     match around.spot {
         Some(InTable::Row { row, columns, .. }) => {

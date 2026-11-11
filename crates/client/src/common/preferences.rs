@@ -30,6 +30,9 @@ pub struct Preferences {
     /// "Enable Touch": the interface is never drawn smaller than its own size,
     /// for fingers. A device with only a touch screen behaves as if this is on.
     pub touch: bool,
+    /// "Always Show Scroll Bars": every scroll area's bar shows, with more
+    /// than fits or not, so what can scroll is plain to see.
+    pub always_show_scroll_bars: bool,
     /// The servers on other computers connected to, the latest first.
     pub servers: Vec<SavedServer>,
     /// "Online": the built-in server is opened to other players once playing on
