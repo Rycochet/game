@@ -5,6 +5,7 @@ use shared::dungeon::{Cell, Sight};
 use shared::movement::{Gait, Step, step_on_level_by};
 use shared::protocol::{ServerMessage, level_chunk};
 
+use super::doors::changed_at;
 use super::update_sight;
 use crate::ServerWorld;
 use crate::connections::Client;
@@ -20,6 +21,11 @@ pub(crate) fn stepped(client: &mut Client, step: Step) -> bool {
     let Some(position) = step_on_level_by(&visit.level.level, visit.position, step, gait) else {
         let (x, y) = step.from(visit.position);
         info!("Refused a step onto an unwalkable cell ({x}, {y})");
+        if visit.doors.contains_key(&(x, y)) {
+            // The client took it for open: it is told again how it hangs.
+            changed_at(visit, x, y);
+            return update_sight(client);
+        }
         return true;
     };
     visit.position = position;

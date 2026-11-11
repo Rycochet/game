@@ -108,6 +108,15 @@ impl CurrentDungeon {
                 if self.known.is_seen(x, y) {
                     level.set(x, y, self.level.cell(x, y));
                     level.set_room(x, y, self.level.room(x, y));
+                    // A door with no swing counts as open, so how each
+                    // hangs must come along too: the server won't send
+                    // cells the client already has again.
+                    if self.level.is_locked(x, y) {
+                        level.set_locked(x, y, true);
+                    }
+                    if let Some(swing) = self.level.swing(x, y) {
+                        level.set_swing(x, y, swing);
+                    }
                     known.insert(x, y);
                 }
                 if self.remembered.is_seen(x, y) {
@@ -259,3 +268,6 @@ impl CurrentDungeon {
         format!("{place}, {what} {}", info.index + first.0)
     }
 }
+
+#[cfg(test)]
+mod tests;

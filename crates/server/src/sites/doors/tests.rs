@@ -236,3 +236,22 @@ fn locks_are_placed_once_with_their_keys_on_the_levels_mobs() {
     }
     assert!(found > 0, "no castle had a lock");
 }
+
+#[test]
+fn a_step_into_a_closed_door_is_refused_and_the_door_told_again() {
+    let mut test = TestClient::new();
+    let (door, runs) = beside_a_door(&mut test);
+    ask(&mut test, DoorAsk::DevAll { open: false });
+    let start = test.client.visit.as_ref().unwrap().position;
+    // A client that took it for open steps straight in.
+    let step = if runs { (0, 1) } else { (1, 0) };
+    let answers = test.steps(&[step]);
+    assert_eq!(test.client.visit.as_ref().unwrap().position, start);
+    let told = answers.iter().any(|answer| match answer {
+        ServerMessage::LevelCells(chunk) => {
+            (chunk.doors.iter()).any(|look| (look.x, look.y) == door && look.swing == Swing::Closed)
+        }
+        _ => false,
+    });
+    assert!(told, "{answers:?}");
+}
