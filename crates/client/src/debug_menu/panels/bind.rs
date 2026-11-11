@@ -3,7 +3,10 @@
 
 use bevy::prelude::*;
 
-use super::{change_creature, examine_mob, generate, steps, teleport_to_world, vitals, world_time};
+use super::{
+    change_creature, create_mob, dev_area, examine_mob, generate, steps, teleport_to_world, vitals,
+    world_time,
+};
 use crate::dom::Dom;
 use crate::widgets::UiId;
 
@@ -20,6 +23,8 @@ pub(in crate::debug_menu) fn bind_panels(
             "debug.drawing_states" => steps::bind(&mut bound, id),
             "debug.world_time" => world_time::bind(&mut bound, id),
             "debug.examine_mob" => examine_mob::bind(&mut bound, id),
+            "debug.create_mob" => create_mob::bind(&mut bound, id),
+            "debug.dev_area" => dev_area::bind(&mut bound, id),
             "debug.generate_poi" => generate::bind(&mut bound, id, &mut dom),
             teleport_to_world::FORM => teleport_to_world::bind(&mut bound, id, &mut dom),
             _ => {}

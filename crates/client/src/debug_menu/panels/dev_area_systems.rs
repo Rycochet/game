@@ -9,7 +9,8 @@ use super::{
     DevAreaSeed, new_seed,
 };
 use crate::connection::ToServer;
-use crate::widgets::{ButtonPressed, ButtonState, Dropdown, DropdownChosen, TextBox, TextEdited};
+use crate::dom::Dom;
+use crate::widgets::{ButtonPressed, ButtonState, DropdownChosen, TextBox, TextEdited};
 
 /// Adds the panel's form and systems to the debug menu's plugin.
 pub(in crate::debug_menu) fn add_dev_area_panel(app: &mut App) {
@@ -30,9 +31,10 @@ pub(in crate::debug_menu) fn add_dev_area_panel(app: &mut App) {
 fn start_dev_area_panel(
     mut seed_box: Query<&mut TextBox, (Added<DevAreaSeed>, Without<DevAreaCount>)>,
     mut counts: Query<&mut TextBox, (Added<DevAreaCount>, Without<DevAreaSeed>)>,
-    mut dropdowns: Query<(&DevAreaChoice, &mut Dropdown), Added<DevAreaChoice>>,
+    dropdowns: Query<&DevAreaChoice, Added<DevAreaChoice>>,
     mut form: ResMut<DevAreaForm>,
     time: Res<Time<Real>>,
+    mut dom: Dom,
 ) {
     for mut text_box in &mut seed_box {
         if form.seed.trim().is_empty() {
@@ -44,13 +46,17 @@ fn start_dev_area_panel(
     for mut count in &mut counts {
         count.text = form.count.to_string();
     }
-    for (choice, mut dropdown) in &mut dropdowns {
+    for &choice in &dropdowns {
         let selected = match choice {
             DevAreaChoice::Size => DEV_AREA_SIZES.iter().position(|&s| s == form.size),
             DevAreaChoice::Layout => DevLayout::all().iter().position(|&l| l == form.layout),
             DevAreaChoice::Mobs => Some(form.mobs_index()),
         };
-        dropdown.selected = selected.unwrap_or(0);
+        // Each choice's value is its place in the list.
+        let id = format!("debug.dev_area/{}", choice.ui_name());
+        let options = choice.options().into_iter().enumerate();
+        dom.set_options(&id, options.map(|(at, name)| (at.to_string(), name)));
+        dom.set(&id, "value", &selected.unwrap_or(0).to_string());
     }
 }
 
