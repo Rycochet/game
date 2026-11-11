@@ -6,15 +6,11 @@ use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::site::StairsStyle;
 
-use super::{FONT, row, words};
 use crate::common::{CurrentDungeon, GameView, HerbGrowthShift};
+use crate::dom::Template;
 use crate::dungeon_map::{CROP_STAGES, HERB_STAGES};
-use crate::widgets::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, spawn_button};
-
-/// The form of the panel's buttons, for the debug API.
-const FORM: &str = "debug.drawing_states";
-/// The width of the rows' words, so their buttons line up.
-const LABEL_WIDTH: f32 = 70.0;
+use crate::html;
+use crate::widgets::{ButtonPressed, ButtonState};
 
 /// What a row of the panel steps through.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,25 +23,16 @@ pub(super) enum Drawn {
 impl Drawn {
     const ALL: [Self; 3] = [Self::Stairs, Self::Fields, Self::Herbs];
 
-    fn words(self) -> &'static str {
-        match self {
-            Self::Stairs => "Stairs",
-            Self::Fields => "Fields",
-            Self::Herbs => "Herbs",
-        }
-    }
-
     /// Its buttons' ids: `stairs_previous`, `stairs_next` and so on.
-    fn id(self, forward: bool) -> UiId {
-        let name = match (self, forward) {
+    fn id(self, forward: bool) -> &'static str {
+        match (self, forward) {
             (Self::Stairs, false) => "stairs_previous",
             (Self::Stairs, true) => "stairs_next",
             (Self::Fields, false) => "fields_previous",
             (Self::Fields, true) => "fields_next",
             (Self::Herbs, false) => "herbs_previous",
             (Self::Herbs, true) => "herbs_next",
-        };
-        UiId::new(FORM, name)
+        }
     }
 }
 
@@ -56,28 +43,40 @@ pub(in crate::debug_menu) struct StepButton {
     forward: bool,
 }
 
-pub(super) fn spawn_step_buttons(content: &mut ChildSpawnerCommands) {
+/// The panel's contents, as markup: a table, so the buttons line up.
+pub(super) static DRAWING_STATES: Template = html!(
+    "debug_menu.drawing_states",
+    r#"
+<form id="debug.drawing_states">
+  <table cellspacing="4">
+    <tr>
+      <td valign="middle">Stairs</td>
+      <td><button id="stairs_previous">Previous</button></td>
+      <td><button id="stairs_next">Next</button></td>
+    </tr>
+    <tr>
+      <td valign="middle">Fields</td>
+      <td><button id="fields_previous">Previous</button></td>
+      <td><button id="fields_next">Next</button></td>
+    </tr>
+    <tr>
+      <td valign="middle">Herbs</td>
+      <td><button id="herbs_previous">Previous</button></td>
+      <td><button id="herbs_next">Next</button></td>
+    </tr>
+  </table>
+</form>
+"#
+);
+
+/// Which row a built button steps, and which way, from its id.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId) {
     for drawn in Drawn::ALL {
-        content.spawn(row()).with_children(|row| {
-            row.spawn(Node {
-                width: px(LABEL_WIDTH),
-                ..default()
-            })
-            .with_children(|label| {
-                label.spawn(words(drawn.words()));
-            });
-            for (label, forward) in [("Previous", false), ("Next", true)] {
-                let node = Node {
-                    padding: BUTTON_PADDING,
-                    ..default()
-                };
-                spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
-                    StepButton { drawn, forward },
-                    Pressable,
-                    drawn.id(forward),
-                ));
+        for forward in [false, true] {
+            if drawn.id(forward) == id.parts().1 {
+                bound.insert(StepButton { drawn, forward });
             }
-        });
+        }
     }
 }
 

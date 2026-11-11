@@ -5,38 +5,45 @@
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, DevVitals};
 
-use super::{FONT, row};
 use crate::common::DebugTools;
 use crate::connection::ToServer;
-use crate::widgets::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, UiId, spawn_button};
+use crate::dom::Template;
+use crate::html;
+use crate::widgets::{ButtonPressed, ButtonState, UiId};
 use shared::role::DebugTool;
 
-/// How much Hurt takes and Spend Mana spends.
+/// How much Hurt takes and Spend Mana spends (the buttons' words say so too).
 const STEP: u32 = 5;
 
 /// A button sending this to the server.
 #[derive(Component, Clone, Copy)]
 pub(in crate::debug_menu) struct VitalsButton(DevVitals);
 
-pub(super) fn spawn_vitals_panel(content: &mut ChildSpawnerCommands) {
-    content.spawn(row()).with_children(|row| {
-        for (label, vitals, name) in [
-            ("Hurt 5", DevVitals::Hurt(STEP), "hurt"),
-            ("Spend 5 Mana", DevVitals::SpendMana(STEP), "spend_mana"),
-            ("Heal Fully", DevVitals::Fill, "heal_fully"),
-            ("Bonus", DevVitals::Bonus, "bonus"),
-        ] {
-            let node = Node {
-                padding: BUTTON_PADDING,
-                ..default()
-            };
-            spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
-                VitalsButton(vitals),
-                Pressable,
-                UiId::new("debug.vitals", name),
-            ));
-        }
-    });
+/// The panel's contents, as markup.
+pub(super) static VITALS: Template = html!(
+    "debug_menu.vitals",
+    r#"
+<form id="debug.vitals">
+  <span nowrap>
+    <button id="hurt">Hurt 5</button>
+    <button id="spend_mana">Spend 5 Mana</button>
+    <button id="heal_fully">Heal Fully</button>
+    <button id="bonus">Bonus</button>
+  </span>
+</form>
+"#
+);
+
+/// What a built button sends, from its id.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId) {
+    let vitals = match id.parts().1 {
+        "hurt" => DevVitals::Hurt(STEP),
+        "spend_mana" => DevVitals::SpendMana(STEP),
+        "heal_fully" => DevVitals::Fill,
+        "bonus" => DevVitals::Bonus,
+        _ => return,
+    };
+    bound.insert(VitalsButton(vitals));
 }
 
 /// Sends what the pressed button says.

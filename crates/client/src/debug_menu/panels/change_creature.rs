@@ -6,10 +6,11 @@ use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::protocol::{ClientMessage, KindChange, LevelKind};
 
-use super::{FONT, row, words};
 use crate::common::{CurrentDungeon, GameView};
 use crate::connection::ToServer;
-use crate::widgets::{BUTTON_PADDING, ButtonPressed, ButtonState, Pressable, UiId, spawn_button};
+use crate::dom::{Dom, Template};
+use crate::html;
+use crate::widgets::{ButtonPressed, ButtonState, UiId};
 
 /// How Change Creature changes the character: `Permanent` until another is chosen.
 #[derive(Resource, Default)]
@@ -23,29 +24,46 @@ pub(in crate::debug_menu) struct CreatureButton(CreatureKind);
 #[derive(Component, Clone, Copy)]
 pub(in crate::debug_menu) struct ChangeButton(Option<KindChange>);
 
-pub(super) fn spawn_creature_buttons(content: &mut ChildSpawnerCommands) {
-    let node = || Node {
-        padding: BUTTON_PADDING,
-        ..default()
-    };
-    content.spawn(row()).with_children(|line| {
-        for (label, how, name) in [
-            ("Permanent", Some(KindChange::Permanent), "permanent"),
-            ("Temporary", Some(KindChange::Temporary), "temporary"),
-            ("Illusion", None, "illusion"),
-        ] {
-            spawn_button(line, ButtonState::Normal, label, FONT, node()).insert((
-                ChangeButton(how),
-                Pressable,
-                UiId::new("debug.change_creature", name),
-            ));
+/// The panel's contents, as markup. Each kind of creature's button is a copy
+/// of the template, numbered by the kind's place in `CreatureKind::ALL`.
+pub(super) static CHANGE_CREATURE: Template = html!(
+    "debug_menu.change_creature",
+    r#"
+<form id="debug.change_creature">
+  <span nowrap>
+    <button id="permanent">Permanent</button>
+    <button id="temporary">Temporary</button>
+    <button id="illusion" disabled>Illusion</button>
+  </span>
+  <p>Not on the world map or in the Hall</p>
+  <div id="kinds" class="tight"/>
+  <template id="kind"><button id="kind"/></template>
+</form>
+"#
+);
+
+/// What a built part of the panel is known by, from its id; the place for
+/// the kinds is filled with a button for each.
+pub(super) fn bind(bound: &mut EntityCommands, id: &UiId, dom: &mut Dom) {
+    let kind = id.index().and_then(|at| CreatureKind::ALL.get(at));
+    match (id.parts().1, kind) {
+        ("permanent", _) => bound.insert(ChangeButton(Some(KindChange::Permanent))),
+        ("temporary", _) => bound.insert(ChangeButton(Some(KindChange::Temporary))),
+        ("illusion", _) => bound.insert(ChangeButton(None)),
+        ("kind", Some(&kind)) => bound.insert(CreatureButton(kind)),
+        ("kinds", _) => {
+            for (at, kind) in CreatureKind::ALL.into_iter().enumerate() {
+                dom.copy_template(
+                    "debug.change_creature/kind",
+                    "debug.change_creature/kinds",
+                    at,
+                );
+                dom.set_text(&format!("debug.change_creature/kind.{at}"), kind.def().name);
+            }
+            bound
         }
-    });
-    content.spawn(words("Not on the world map or in the Hall"));
-    for kind in CreatureKind::ALL {
-        spawn_button(content, ButtonState::Normal, kind.def().name, FONT, node())
-            .insert((CreatureButton(kind), Pressable));
-    }
+        _ => bound,
+    };
 }
 
 /// What Change Creature's buttons do.

@@ -18,6 +18,7 @@ mod under;
 mod waist;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod bind;
 mod change_creature;
 mod create_mob;
 mod create_mob_systems;
@@ -52,7 +53,7 @@ mod vitals;
 mod world_rate;
 mod world_time;
 
-use change_creature::spawn_creature_buttons;
+pub(super) use bind::bind_panels;
 pub(super) use change_creature::{ChosenChange, press_creature_buttons, update_creature_buttons};
 use create_mob::spawn_create_mob_panel;
 pub(super) use create_mob::{MobChoice, MobClickToPlace, MobCreate, MobNewSeed, MobSeed, MobStill};
@@ -105,14 +106,12 @@ use pictures_spawn::{
     spawn_picture_heading, spawn_picture_row, spawn_ring_row,
 };
 pub(super) use pictures_systems::{choose_pictures, fill_pictures, show_pictures};
-use steps::spawn_step_buttons;
 pub(super) use steps::{press_panel_buttons, update_panel_buttons};
 pub(super) use teleport_to_world::TeleportForm;
 use teleport_to_world::spawn_teleport_to_world;
 pub(super) use teleport_to_world_systems::{
     open_teleport_asked, press_teleport_buttons, update_teleport_buttons,
 };
-use vitals::spawn_vitals_panel;
 pub(super) use vitals::{press_vitals_buttons, update_vitals_buttons};
 pub(super) use world_rate::{press_rate_buttons, update_rate_buttons};
 use world_time::spawn_world_time;

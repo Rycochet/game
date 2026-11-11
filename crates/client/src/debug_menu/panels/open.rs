@@ -6,11 +6,11 @@ use std::collections::HashMap;
 use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
-    FIRST_AT, NEXT_AT, spawn_create_mob_panel, spawn_creature_buttons, spawn_dev_area_panel,
+    FIRST_AT, NEXT_AT, change_creature, spawn_create_mob_panel, spawn_dev_area_panel,
     spawn_every_widget, spawn_examine_panel, spawn_give_panel, spawn_item_pictures,
-    spawn_learn_skills, spawn_step_buttons, spawn_teleport_to_world, spawn_vitals_panel,
-    spawn_world_time,
+    spawn_learn_skills, spawn_teleport_to_world, spawn_world_time, steps, vitals,
 };
+use crate::dom::{Template, document_in};
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
 
 /// The panels open, by what opened them.
@@ -63,18 +63,18 @@ impl OpenPanels {
                 DebugAction::ShowWidgets => spawn_every_widget(content),
                 DebugAction::SunsAndMoons => {}
                 DebugAction::GiveItem => spawn_give_panel(content),
-                DebugAction::ChangeCreature => spawn_creature_buttons(content),
                 DebugAction::ItemPictures => spawn_item_pictures(content),
                 DebugAction::WorldTime => spawn_world_time(content),
                 DebugAction::TeleportToWorld => spawn_teleport_to_world(content),
-                DebugAction::Vitals => spawn_vitals_panel(content),
                 DebugAction::DevArea => spawn_dev_area_panel(content),
                 DebugAction::CreateMob => spawn_create_mob_panel(content),
                 DebugAction::ExamineMob => spawn_examine_panel(content),
                 DebugAction::LearnSkills => spawn_learn_skills(content),
-                DebugAction::DrawingStates => spawn_step_buttons(content),
                 _ => {}
             });
+        if let Some(template) = template_of(action) {
+            commands.spawn(document_in(template, content));
+        }
         commands
             .entity(panel)
             .insert(UiId::new(form_of(action), "panel"));
@@ -82,6 +82,16 @@ impl OpenPanels {
             commands.entity(content).insert(BodiesToShow);
         }
         self.panels.insert(action, panel);
+    }
+}
+
+/// A panel's contents as markup, for those that are.
+fn template_of(action: DebugAction) -> Option<&'static Template> {
+    match action {
+        DebugAction::ChangeCreature => Some(&change_creature::CHANGE_CREATURE),
+        DebugAction::Vitals => Some(&vitals::VITALS),
+        DebugAction::DrawingStates => Some(&steps::DRAWING_STATES),
+        _ => None,
     }
 }
 
