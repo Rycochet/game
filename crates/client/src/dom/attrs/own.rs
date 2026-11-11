@@ -34,7 +34,11 @@ pub(super) const OWN: [(&str, Kind); 30] = [
     ("colspan", Kind::Count),
     ("cellspacing", Kind::Spacing),
     ("cellpadding", Kind::Spacing),
-    ("type", Kind::OneOf(&["text", "checkbox", "range"])),
+    // An `input`'s, then an `object`'s (`check` keeps each to its own).
+    (
+        "type",
+        Kind::OneOf(&["text", "checkbox", "range", "item", "ability"]),
+    ),
     ("inputmode", Kind::OneOf(&["numeric"])),
     ("checked", Kind::Flag),
     ("readonly", Kind::Flag),

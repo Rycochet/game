@@ -30,6 +30,10 @@ pub(super) static HTML_SAMPLE: Template = html!(
     <tr><td colspan="2" align="center">A cell across both columns</td></tr>
   </table>
   <div align="right"><span>To the<br/>right</span></div>
+  <span valign="middle">
+    An object, the first thing carried:
+    <object id="thing" type="item"/>
+  </span>
   <h2>Controls</h2>
   <span>
     <button id="plain">Button</button>
@@ -137,8 +141,23 @@ const COPIES: usize = 3;
 /// Fills a new sample by its ids, as a screen's own code would.
 pub(in crate::debug_menu) fn fill_html_sample(
     new: Query<&Document, Added<Document>>,
+    all: Query<&Document>,
+    carried: Res<crate::inventory::Carried>,
     mut dom: Dom,
+    mut thing: Local<Option<shared::id::Id>>,
 ) {
+    // The object shows the first thing carried, whenever that changes.
+    let is_sample = |Document(template): &Document| std::ptr::eq(*template, &HTML_SAMPLE);
+    let first = carried.0.items.first().map(|placed| placed.item.id);
+    if !all.iter().any(is_sample) {
+        *thing = None;
+    } else if *thing != first {
+        *thing = first;
+        match first {
+            Some(id) => dom.set("debug.html_sample/thing", "for", &id.to_string()),
+            None => dom.clear("debug.html_sample/thing", "for"),
+        }
+    }
     for Document(template) in &new {
         if std::ptr::eq(*template, &HTML_SAMPLE) {
             for copy in 0..COPIES {

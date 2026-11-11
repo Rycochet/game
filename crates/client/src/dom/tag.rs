@@ -52,6 +52,8 @@ pub enum Tag {
     Footer,
     /// What is in it scrolls when it is too tall.
     Scroll,
+    /// One thing shown, by its `type` and `for`: an item (`objects`).
+    Object,
 }
 
 /// What may be inside an element.
@@ -67,7 +69,7 @@ pub(super) enum Holds {
     Anything,
 }
 
-const ALL: [(&str, Tag); 30] = [
+const ALL: [(&str, Tag); 31] = [
     ("div", Tag::Div),
     ("span", Tag::Span),
     ("table", Tag::Table),
@@ -98,6 +100,7 @@ const ALL: [(&str, Tag); 30] = [
     ("dialog", Tag::Dialog),
     ("footer", Tag::Footer),
     ("scroll", Tag::Scroll),
+    ("object", Tag::Object),
 ];
 
 /// The elements that hold `option`s.
@@ -117,9 +120,13 @@ impl Tag {
 
     pub(super) fn holds(self) -> Holds {
         match self {
-            Self::Br | Self::Hr | Self::Img | Self::Canvas | Self::Input | Self::KeyBox => {
-                Holds::Nothing
-            }
+            Self::Br
+            | Self::Hr
+            | Self::Img
+            | Self::Canvas
+            | Self::Input
+            | Self::KeyBox
+            | Self::Object => Holds::Nothing,
             Self::Progress | Self::Option => Holds::Words,
             Self::Button => Holds::WordsOrPicture,
             Self::Table => Holds::Only(&[Self::Tr]),
@@ -201,6 +208,7 @@ impl Tag {
             Self::Panel => &["moveable", "grip"],
             Self::Dialog => &["modal", "depth", "closable"],
             Self::Scroll => &["max-height", "auto", "scrollbars"],
+            Self::Object => &["type", "for"],
             _ => &[],
         }
     }

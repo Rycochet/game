@@ -189,7 +189,7 @@ fn controls_are_checked_strictly() {
     assert_eq!(error("<button>Go</button>"), "`<button>` needs an `id`");
     assert_eq!(
         error(r#"<form id="a"><input id="x" type="radio"/></form>"#),
-        "`type` is `text`, `checkbox`, `range`, not `radio`"
+        "`type` is `text`, `checkbox`, `range`, `item`, `ability`, not `radio`"
     );
     assert_eq!(
         error(r#"<form id="a"><button id="x">Go <img src="icon:x"/></button></form>"#),
