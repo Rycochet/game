@@ -20,7 +20,7 @@ static POPUPS: Template = html!(
         /certificate page, or its key's fingerprint from its log. Only a server
         with this certificate will be accepted. Without one, any certificate is.
       </p>
-      <input id="certificate" type="text" margin-bottom="8"/>
+      <input id="certificate" type="text"/>
       <small id="status"/>
     </div>
     <footer>
@@ -32,7 +32,7 @@ static POPUPS: Template = html!(
 </form>
 <form id="connect.forget">
   <dialog id="popup" title="Forget server" depth="2" hidden>
-    <p id="words" margin-bottom="0"/>
+    <p id="words"/>
     <footer>
       <button id="forget" class="main">Yes, forget it</button>
       <button id="back">No</button>

@@ -18,9 +18,9 @@ static CREDITS_LAYER: Template = html!(
   <dialog id="layer" title="Credits" modal closable depth="1" width="560" hidden>
     <scroll id="list" max-height="65%" auto>
       <template id="entry">
-        <div align="center" width="496" margin-bottom="20">
-          <p id="what" class="faint" margin-bottom="4"/>
-          <p id="who" margin-bottom="0"/>
+        <div class="tight" align="center" width="496" margin-bottom="12">
+          <p id="what" class="faint"/>
+          <p id="who"/>
         </div>
       </template>
     </scroll>

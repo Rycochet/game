@@ -91,7 +91,7 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
             node.flex_grow = 1.0;
         }
         _ if tag.is_inline() => flow_along(&mut node, attrs, around.look),
-        _ => stack(&mut node, attrs),
+        _ => stack(&mut node, attrs, around.look),
     }
     if fixed_panel {
         node.border = UiRect::all(px(PANEL_EDGE));
@@ -125,8 +125,9 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
 }
 
 /// A block: what is in it stacks from the top.
-fn stack(node: &mut Node, attrs: &Attrs) {
+fn stack(node: &mut Node, attrs: &Attrs, look: &Look) {
     node.flex_direction = FlexDirection::Column;
+    node.row_gap = px(look.gap);
     node.align_items = match attrs.align {
         Some(Align::Left) => AlignItems::FlexStart,
         Some(Align::Center) => AlignItems::Center,

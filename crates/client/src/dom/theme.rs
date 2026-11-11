@@ -9,6 +9,11 @@ use bevy::prelude::*;
 use super::tag::Tag;
 use crate::widgets::{ALLOWED, GRID_COLOUR, INK, PARCHMENT, ROW_TINT, TextSize, WARNING_TEXT};
 
+/// Between things stacked in a block.
+const STACK: f32 = 8.0;
+/// Between things flowing in a row.
+const ROW: f32 = 4.0;
+
 /// How one kind of element looks. What is `None` is as its parent's.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Look {
@@ -45,10 +50,6 @@ pub struct Theme {
 impl Theme {
     /// The game's own look: ink on parchment.
     pub fn parchment() -> Self {
-        let inline = Look {
-            gap: 4.0,
-            ..default()
-        };
         let mut theme = Self {
             looks: HashMap::new(),
             text: TextSize::Medium,
@@ -59,52 +60,62 @@ impl Theme {
             rows: vec![(TextSize::Large, 38.0)],
             footer_button: 120.0,
         };
-        for tag in [Tag::Span, Tag::Label, Tag::Td, Tag::Th] {
+        // Spacing belongs to what holds things, not to the things: whatever
+        // is stacked is `STACK` apart, and whatever flows in a row `ROW`.
+        let stacked = Look {
+            gap: STACK,
+            ..default()
+        };
+        for tag in [Tag::Div, Tag::Form, Tag::Scroll] {
+            theme.set(tag, "", stacked);
+        }
+        // Closer together, further apart (a menu's sections), and touching.
+        theme.set(
+            Tag::Div,
+            "tight",
+            Look {
+                gap: ROW,
+                ..stacked
+            },
+        );
+        theme.set(
+            Tag::Div,
+            "sections",
+            Look {
+                gap: 24.0,
+                ..stacked
+            },
+        );
+        let inline = Look {
+            gap: ROW,
+            ..default()
+        };
+        for tag in [Tag::Span, Tag::Label, Tag::Td, Tag::Th, Tag::P] {
             theme.set(tag, "", inline);
         }
         // Things side by side with nothing between them.
         theme.set(Tag::Span, "joined", Look::default());
-        let paragraph = Look {
-            margin: [0.0, 0.0, 8.0, 0.0],
+        let coloured = |colour: Color| Look {
+            colour: Some(colour),
             ..inline
         };
-        theme.set(Tag::P, "", paragraph);
-        let warning = Look {
-            colour: Some(WARNING_TEXT),
-            ..paragraph
+        theme.set(Tag::P, "warning", coloured(WARNING_TEXT));
+        let sized = |text: TextSize| Look {
+            text: Some(text),
+            ..inline
         };
-        theme.set(Tag::P, "warning", warning);
         // What something is, above what it says: smaller and fainter.
         let faint = Look {
-            text: Some(TextSize::Medium),
             colour: Some(INK.with_alpha(0.7)),
-            ..paragraph
+            ..sized(TextSize::Medium)
         };
         theme.set(Tag::P, "faint", faint);
         // Ordinary writing where what is round it is bigger (a dialog).
-        let medium = Look {
-            text: Some(TextSize::Medium),
-            ..paragraph
-        };
-        theme.set(Tag::P, "medium", medium);
-        let title = Look {
-            text: Some(TextSize::Title),
-            ..paragraph
-        };
-        theme.set(Tag::H1, "", title);
-        let heading = Look {
-            text: Some(TextSize::Large),
-            margin: [0.0, 0.0, 4.0, 0.0],
-            ..inline
-        };
-        theme.set(Tag::H2, "", heading);
-        let small = Look {
-            text: Some(TextSize::Small),
-            ..inline
-        };
-        theme.set(Tag::Small, "", small);
+        theme.set(Tag::P, "medium", sized(TextSize::Medium));
+        theme.set(Tag::H1, "", sized(TextSize::Title));
+        theme.set(Tag::H2, "", sized(TextSize::Large));
+        theme.set(Tag::Small, "", sized(TextSize::Small));
         let rule = Look {
-            margin: [4.0, 0.0, 4.0, 0.0],
             background: Some(INK.with_alpha(0.5)),
             ..default()
         };
@@ -113,26 +124,29 @@ impl Theme {
         let [red, green, blue] = PARCHMENT;
         let parchment = Look {
             background: Some(Color::srgb_u8(red, green, blue)),
-            ..default()
+            ..stacked
         };
         theme.set(Tag::Panel, "", parchment);
         let footer = Look {
-            gap: 8.0,
+            gap: STACK,
             ..default()
         };
         theme.set(Tag::Footer, "", footer);
         // Dialogs are the menus': their writing is the menus' size.
         let dialog = Look {
             text: Some(TextSize::Large),
-            ..default()
+            ..stacked
         };
         theme.set(Tag::Dialog, "", dialog);
-        // Controls keep a little room under them, as paragraphs do. Their
-        // classes pick among the widgets' own looks (`controls`).
-        let control = Look {
-            margin: [0.0, 0.0, 4.0, 0.0],
-            ..default()
-        };
+        theme.set(
+            Tag::Dialog,
+            "sections",
+            Look {
+                gap: 24.0,
+                ..dialog
+            },
+        );
+        // Controls' classes pick among the widgets' own looks (`controls`).
         let controls = [
             (
                 Tag::Button,
@@ -140,14 +154,10 @@ impl Theme {
             ),
             (Tag::Input, &["", "error"]),
             (Tag::KeyBox, &["", "warned"]),
-            (Tag::Select, &[""]),
-            (Tag::ToggleRow, &[""]),
-            (Tag::TabBar, &[""]),
-            (Tag::ColourPicker, &[""]),
         ];
         for (tag, classes) in controls {
             for class in classes {
-                theme.set(tag, class, control);
+                theme.set(tag, class, Look::default());
             }
         }
         theme

@@ -1240,3 +1240,5 @@ Claude's choices, starting the move of real screens (the system menu's requester
 ## 2026-11-11: Sizes in markup are automatic
 
 Owner, on seeing `width` and `height` on every button of the first templates: layout is meant to be automatic by content, and buttons should fill their width unless told otherwise. So a control fills what it is stacked in and is its own size in a row; its height is the theme's row for the writing round it (the menus' bigger writing has 38-pixel rows); an icon button is a square of that; and the buttons of a dialog's footer share a minimum width. The templates lost 64 of their 76 size attributes: what is left is particular to its screen (a wrap width, a dialog's own width). A few requesters' buttons changed width by some pixels, as each had its own hand-picked number.
+
+Gaps followed the same day (Claude, on the owner's principle): spacing belongs to what holds things, so whatever is stacked is 8 apart and whatever flows in a row 4, with classes for closer, further and touching; nothing in the theme has a margin of its own, and the templates lost all but one of theirs.

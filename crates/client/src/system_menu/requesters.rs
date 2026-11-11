@@ -18,7 +18,7 @@ static REQUESTERS: Template = html!(
     r#"
 <form id="quit">
   <dialog id="requester" title="Quit" depth="1" hidden>
-    <p margin-bottom="0">Are you sure?</p>
+    <p>Are you sure?</p>
     <footer>
       <button id="quit" class="main">Yes, quit</button>
       <button id="back">No</button>
@@ -27,7 +27,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="ironman">
   <dialog id="requester" title="Ironman" depth="2" hidden>
-    <p id="question" width="420" margin-bottom="0"/>
+    <p id="question" width="420"/>
     <footer>
       <button id="ironman" class="main">Yes, Ironman</button>
       <button id="no">No</button>
@@ -36,8 +36,8 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="settings.keep_graphics">
   <dialog id="requester" title="Graphics" depth="2" hidden>
-    <p margin-bottom="0">Keep these settings?</p>
-    <p id="countdown" margin-bottom="0"/>
+    <p>Keep these settings?</p>
+    <p id="countdown"/>
     <footer>
       <button id="keep" class="main">Keep</button>
       <button id="back">Go back</button>
@@ -46,7 +46,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="refused">
   <dialog id="requester" title="Can't connect" depth="1" hidden>
-    <p id="words" class="warning" width="460" margin-bottom="0"/>
+    <p id="words" class="warning" width="460"/>
     <footer>
       <button id="back" class="main">OK</button>
     </footer>
@@ -54,7 +54,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="slow_drawing">
   <dialog id="requester" title="Slow drawing" depth="1" hidden>
-    <p id="words" width="460" margin-bottom="0"/>
+    <p id="words" width="460"/>
     <footer>
       <button id="back" class="main">Play Anyway</button>
       <button id="dont_warn">Don't Warn Again</button>
@@ -63,7 +63,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="going_online">
   <dialog id="requester" title="Go online" depth="1" hidden>
-    <p width="420" margin-bottom="0">
+    <p width="420">
       This will let other players connect to this game. Are you sure?
     </p>
     <footer>
@@ -74,7 +74,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="going_offline">
   <dialog id="requester" title="Go offline" depth="1" hidden>
-    <p width="420" margin-bottom="0">
+    <p width="420">
       Anyone else playing will be told the server is going offline, and disconnected.
       Are you sure?
     </p>
@@ -86,7 +86,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="locking_down">
   <dialog id="requester" title="Lock down" depth="1" hidden>
-    <p width="420" margin-bottom="0">
+    <p width="420">
       Only staff who may change Server Options will be able to play here. Everyone
       else playing will be sent away. Are you sure?
     </p>
@@ -98,7 +98,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="reopening">
   <dialog id="requester" title="Open to everyone" depth="1" hidden>
-    <p width="420" margin-bottom="0">
+    <p width="420">
       This will let everyone play on this server again. Are you sure?
     </p>
     <footer>
@@ -109,7 +109,7 @@ static REQUESTERS: Template = html!(
 </form>
 <form id="online_failed">
   <dialog id="requester" title="Can't go online" depth="1" hidden>
-    <p id="words" width="420" margin-bottom="0"/>
+    <p id="words" width="420"/>
     <footer>
       <button id="back" class="main">OK</button>
     </footer>

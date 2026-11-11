@@ -13,10 +13,19 @@ fn a_class_picks_a_look_and_falls_back_to_the_plain_one() {
 }
 
 #[test]
-fn layout_elements_have_no_look_of_their_own() {
+fn layout_elements_only_space_what_is_in_them() {
     let theme = Theme::parchment();
-    assert_eq!(theme.look(Tag::Div, None), Look::default());
-    assert_eq!(theme.look(Tag::Form, None), Look::default());
+    let spaced = Look {
+        gap: STACK,
+        ..default()
+    };
+    assert_eq!(theme.look(Tag::Div, None), spaced);
+    assert_eq!(theme.look(Tag::Form, None), spaced);
+    assert_eq!(theme.look(Tag::Div, Some("sections")).gap, 24.0);
+    // Nothing has room of its own round it.
+    let no_margin =
+        |looks: &Vec<(&str, Look)>| looks.iter().all(|(_, look)| look.margin == [0.0; 4]);
+    assert!(theme.looks.values().all(no_margin));
 }
 
 #[test]

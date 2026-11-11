@@ -37,7 +37,7 @@ How screens are moved over (from PR 5):
 - **In slices.** The system menu alone is about 5,000 lines with 86 widgets, so PR 5 is several PRs: its requesters (5a, built), then Credits, the menu itself, each Settings page, Connect and Server Options. The other screen PRs will be cut the same way, so each can be checked in the game before the next.
 - **Structure first, behaviour unchanged.** A screen's template replaces its `spawn_*` calls, and a small system gives each built widget the components the screen's code already knows it by, found by id. Its systems then run as they did. Moving a screen's logic onto `UiEvent`s by id can follow where it helps.
 
-Sizes are automatic (owner, 2026-11-11, after seeing widths and heights on every button of the first templates): buttons fill what they are stacked in, controls take the theme's row height for the writing round them, and a dialog's footer buttons share a minimum width. Templates give a size only where it is particular to that screen.
+Sizes are automatic (owner, 2026-11-11, after seeing widths and heights on every button of the first templates): buttons fill what they are stacked in, controls take the theme's row height for the writing round them, and a dialog's footer buttons share a minimum width. Templates give a size only where it is particular to that screen. Gaps are the same: what is stacked is 8 apart and what flows in a row 4, by what holds them, so templates carry no margins either.
 
 ## Why
 

@@ -17,27 +17,27 @@ static MENU: Template = html!(
     "system_menu.menu",
     r#"
 <form id="menu">
-  <dialog id="layer" modal depth="0" width="260" hidden>
-    <h1 id="paused" align="center" height="30" margin-bottom="24" hidden>Paused</h1>
-    <div margin-bottom="24">
-      <button id="continue" margin-bottom="8">Continue</button>
-      <button id="characters" margin-bottom="8">Characters</button>
-      <span id="online_row" class="joined" margin-bottom="8">
+  <dialog id="layer" class="sections" modal depth="0" width="260" hidden>
+    <h1 id="paused" align="center" height="30" hidden>Paused</h1>
+    <div>
+      <button id="continue">Continue</button>
+      <button id="characters">Characters</button>
+      <span id="online_row" class="joined">
         <input id="online" type="checkbox" readonly label="Online"
-               width="176" margin-bottom="0"/>
-        <button id="server_options" margin-bottom="0">
+               width="176"/>
+        <button id="server_options">
           <img src="picture:gear"/>
         </button>
       </span>
-      <button id="connect" margin-bottom="0">Connect...</button>
-    </div>
-    <div margin-bottom="24">
-      <button id="settings" margin-bottom="8">Settings</button>
-      <button id="credits" margin-bottom="0">Credits</button>
+      <button id="connect">Connect...</button>
     </div>
     <div>
-      <button id="log_out" margin-bottom="8">Logout</button>
-      <button id="quit" margin-bottom="0">Quit</button>
+      <button id="settings">Settings</button>
+      <button id="credits">Credits</button>
+    </div>
+    <div>
+      <button id="log_out">Logout</button>
+      <button id="quit">Quit</button>
     </div>
   </dialog>
 </form>

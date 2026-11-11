@@ -43,9 +43,11 @@ fn sides_place_an_element_out_of_the_flow() {
 }
 
 #[test]
-fn margins_are_the_themes_unless_given() {
+fn spacing_is_what_holds_things_unless_one_gives_its_own() {
+    // Things are spaced by what they are in: a stack's gap, not margins.
     let plain = node(Tag::P, &[], None);
-    assert_eq!(plain.margin.bottom, px(8));
+    assert_eq!(plain.margin.bottom, px(0));
+    assert_eq!(node(Tag::Div, &[], None).row_gap, px(8));
     let tight = node(
         Tag::P,
         &[("margin-bottom", "0"), ("margin-left", "4")],
