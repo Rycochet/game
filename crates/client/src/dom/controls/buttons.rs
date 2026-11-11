@@ -16,7 +16,7 @@ use crate::widgets::{
 const ICON_BUTTON: f32 = 32.0;
 
 /// How much a button stands out, by its `class`.
-fn style_of(class: Option<&str>) -> Option<ButtonStyle> {
+pub(super) fn style_of(class: Option<&str>) -> Option<ButtonStyle> {
     match class {
         Some("main") => Some(ButtonStyle::Main),
         Some("quiet") => Some(ButtonStyle::Quiet),

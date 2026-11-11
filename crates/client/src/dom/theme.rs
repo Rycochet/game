@@ -7,7 +7,9 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use super::tag::Tag;
-use crate::widgets::{ALLOWED, GRID_COLOUR, INK, PARCHMENT, ROW_TINT, TextSize, WARNING_TEXT};
+use crate::widgets::{
+    ALLOWED, GRID_COLOUR, INK, PARCHMENT, REFUSED, ROW_TINT, TextSize, WARNING_TEXT,
+};
 
 /// Between things stacked in a block.
 const STACK: f32 = 8.0;
@@ -137,6 +139,12 @@ impl Theme {
         theme.set(Tag::P, "faint", faint);
         // Ordinary writing where what is round it is bigger (a dialog).
         theme.set(Tag::P, "medium", sized(TextSize::Medium));
+        // Why something asked for didn't happen, in a dialog.
+        let refused = Look {
+            colour: Some(REFUSED),
+            ..sized(TextSize::Medium)
+        };
+        theme.set(Tag::P, "refused", refused);
         theme.set(Tag::H1, "", sized(TextSize::Title));
         theme.set(Tag::H2, "", sized(TextSize::Large));
         theme.set(Tag::Small, "", sized(TextSize::Small));

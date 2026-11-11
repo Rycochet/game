@@ -10,6 +10,7 @@ use server::debug_api::AddDebugMethod;
 // Split into files (`cargo xtask lint` keeps files small).
 mod drawing;
 mod items;
+mod login;
 mod mobs;
 mod moving;
 mod panels;
@@ -64,5 +65,6 @@ pub(super) fn add(app: &mut App) {
         .add_debug_method("client.debug_action", debug_action)
         .add_debug_method("client.debug_menu", debug_menu)
         .add_debug_method("client.system_menu", system_menu)
+        .add_debug_method("client.login_screen", login::login_screen)
         .add_debug_method("client.inventory", inventory);
 }
