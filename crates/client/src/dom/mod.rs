@@ -15,6 +15,7 @@ mod hold;
 mod input;
 mod layout;
 mod markup;
+mod object_ability;
 mod object_grid;
 mod object_slot;
 mod objects;
@@ -30,10 +31,11 @@ use bevy::prelude::*;
 
 pub use change::Dom;
 pub use controls::{UiEvent, UiValue};
-pub use hold::{Dropped, Hand, HeldObject, HeldOver, HeldThing, HoldObjects};
+pub use hold::{Dropped, Hand, HeldItem, HeldObject, HeldOver, HeldThing, HeldWhat, HoldObjects};
 pub use input::Hit;
 #[cfg(test)]
 pub use input::find_now;
+pub use object_ability::{AbilityCell, AbilityGridShown, AbilitySlotShown, AbilityThing, SlotPart};
 pub use object_grid::{DrawObjects, GridAim, GridBox, GridShown, GridThing, ThingCell};
 pub use object_slot::{SlotLook, SlotShown, SlotThing};
 pub use parts::{AlwaysBars, Solid};
@@ -87,6 +89,8 @@ impl Plugin for DomPlugin {
                         objects::show_objects,
                         object_grid::draw_object_grids.in_set(DrawObjects),
                         object_slot::draw_object_slots.in_set(DrawObjects),
+                        object_ability::draw_ability_grids.in_set(DrawObjects),
+                        object_ability::draw_ability_slots.in_set(DrawObjects),
                     ),
                 )
                     .chain()

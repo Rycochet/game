@@ -53,6 +53,11 @@ impl Spots<'_, '_> {
             })
             .max_by_key(|(_, stack, ..)| stack.0)
             .map(|(entity, ..)| entity)?;
+        self.of(front)
+    }
+
+    /// The spot this node, in front somewhere, is or is in.
+    pub(super) fn of(&self, front: Entity) -> Option<Spot> {
         std::iter::once(front)
             .chain(self.parents.iter_ancestors(front))
             .find_map(|entity| {

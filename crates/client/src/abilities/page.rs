@@ -7,12 +7,16 @@ use shared::creature::CreatureKind;
 
 use super::icons::icon_path;
 use crate::common::AbilitiesPage;
+use crate::dom::{AbilityGridShown, AbilityThing};
 use crate::inventory::Carried;
-use crate::widgets::{ABILITY, AbilityLook, Shade, UiId, attribute_colour, spawn_ability};
+use crate::widgets::{AbilityLook, Shade, attribute_colour};
 
 /// How many abilities a row holds before the next row starts.
-const PER_ROW: f32 = 8.0;
-const GAP: f32 = 6.0;
+const PER_ROW: u8 = 8;
+
+/// The page's list of abilities.
+#[derive(Component)]
+pub(super) struct PageList;
 
 /// An ability on the page, which can be dragged to the action bar.
 #[derive(Component, Clone, Copy)]
@@ -40,23 +44,17 @@ pub(super) fn fill_pages(
     }
 }
 
+/// The list of what this body knows, which draws itself (`dom`).
 fn spawn_contents(page: &mut ChildSpawnerCommands, kind: CreatureKind, assets: &AssetServer) {
-    page.spawn(Node {
-        flex_wrap: FlexWrap::Wrap,
-        column_gap: px(GAP),
-        row_gap: px(GAP),
-        width: px(PER_ROW * ABILITY + (PER_ROW - 1.0) * GAP),
-        ..default()
-    })
-    .with_children(|list| {
-        for ability in known(kind) {
-            let frame = spawn_ability(list, look(ability, kind, assets));
-            let id = UiId::new("abilities", ability_id(ability));
-            list.commands()
-                .entity(frame)
-                .insert((id, PageAbility(ability)));
-        }
+    let things = known(kind).into_iter().map(|ability| AbilityThing {
+        ability,
+        look: look(ability, kind, assets),
     });
+    let shown = AbilityGridShown {
+        columns: PER_ROW,
+        things: things.collect(),
+    };
+    page.spawn((PageList, shown));
 }
 
 /// How an ability shows on the page.

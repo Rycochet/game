@@ -1,36 +1,12 @@
 //! The wait before the player can act again, drawn over the action bar's
-//! abilities: a shade that drains away from the top as the wait ends. Every
+//! abilities: each slot's shade (`dom::SlotPart::Shade`) drains away from the
+//! top as the wait ends. Every
 //! ability waits alike, as they share the player's energy.
 
 use bevy::prelude::*;
 
 use crate::common::OwnAbility;
-use crate::widgets::Floating;
-
-/// How dark the shade is.
-const SHADE: Color = Color::srgba(0.0, 0.0, 0.0, 0.6);
-
-/// The shade over one slot's ability.
-#[derive(Component)]
-pub(super) struct WaitShade;
-
-/// A shade for a slot holding an ability, empty until there is a wait.
-pub(super) fn spawn_shade(inside: &mut ChildSpawnerCommands) {
-    inside.spawn((
-        WaitShade,
-        Floating,
-        Node {
-            position_type: PositionType::Absolute,
-            left: px(0),
-            right: px(0),
-            bottom: px(0),
-            height: percent(0),
-            border_radius: BorderRadius::all(px(4.0)),
-            ..default()
-        },
-        BackgroundColor(SHADE),
-    ));
-}
+use crate::dom::SlotPart;
 
 /// How much of the wait is left, from 1 when it began to 0 when it is over.
 pub(super) fn wait_left(own: &OwnAbility, now: f64) -> f32 {
@@ -45,10 +21,13 @@ pub(super) fn wait_left(own: &OwnAbility, now: f64) -> f32 {
 pub(super) fn show_wait(
     own: Res<OwnAbility>,
     time: Res<Time>,
-    mut shades: Query<&mut Node, With<WaitShade>>,
+    mut shades: Query<(&mut Node, &SlotPart)>,
 ) {
     let left = wait_left(&own, time.elapsed_secs_f64());
-    for mut node in &mut shades {
+    for (mut node, part) in &mut shades {
+        if !matches!(part, SlotPart::Shade(_)) {
+            continue;
+        }
         let height = percent(left * 100.0);
         if node.height != height {
             node.height = height;

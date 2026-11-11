@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 
-use super::{Dropped, Hand, HeldObject, HeldOver};
+use super::{Dropped, Hand, HeldObject, HeldOver, HeldWhat};
 use crate::common::{Action, Preferences, TouchGesture, UiPointer, in_interface};
 use crate::dom::object_grid::GridBox;
 use crate::widgets::{CELL, Floating, logical_rect, shown_at};
@@ -54,8 +54,10 @@ pub(super) fn follow_held(
     // So the camera doesn't turn with the same press.
     mouse.reset(MouseButton::Right);
     let controls = &preferences.controls;
-    if turn || controls.clear_just_pressed(&mut keys, Action::TurnItem) {
-        thing.turn();
+    if (turn || controls.clear_just_pressed(&mut keys, Action::TurnItem))
+        && let HeldWhat::Item(item) = &mut thing.what
+    {
+        item.turn();
     }
     let finger = gesture.first_finger.map(|at| in_interface(at, &ui_scale));
     if thing.by == Hand::Finger {
