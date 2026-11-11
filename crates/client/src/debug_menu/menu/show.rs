@@ -6,11 +6,12 @@ use bevy::window::PrimaryWindow;
 use super::super::FactSources;
 use super::super::actions::kind_name;
 use super::{
-    COLUMN_WIDTH, DebugMenu, Entry, FONT, FilterBox, GAP, HEADING, MenuEntry, MenuGrid, MenuRoot,
-    PageButton, ROW, Slot, WarningButton, columns_in, entries_on_show, headings_of, lay_out,
-    rows_in,
+    COLUMN_WIDTH, DebugMenu, Entry, FONT, FORMS, FilterBox, GAP, HEADING, MenuEntry, MenuGrid,
+    MenuRoot, PageButton, ROW, Slot, WarningButton, columns_in, entries_on_show, headings_of,
+    lay_out, rows_in,
 };
 use crate::common::{GameView, interface_area};
+use crate::dom::Dom;
 use crate::widgets::{ButtonState, INK, Pressable, TextBox, spawn_check_button};
 
 /// What a grid was last built from.
@@ -37,11 +38,9 @@ pub(in crate::debug_menu) fn show_menu(
     >,
     grids: Query<(Entity, &MenuGrid)>,
     mut filter_boxes: Query<(&FilterBox, &mut TextBox)>,
-    mut pages: Query<
-        (&PageButton, &mut Visibility, &mut ButtonState),
-        (Without<MenuRoot>, Without<WarningButton>),
-    >,
-    mut drawn: Local<[Option<GridDrawn>; 2]>,
+    mut pages: Query<(&PageButton, &mut ButtonState)>,
+    mut dom: Dom,
+    (mut drawn, mut paged): (Local<[Option<GridDrawn>; 2]>, Local<[Option<bool>; 2]>),
 ) {
     // Without any entry there is no menu (owner, 2026-11-09).
     let hidden = *sources.view.get() == GameView::Connecting || !sources.any_entry();
@@ -99,15 +98,16 @@ pub(in crate::debug_menu) fn show_menu(
             .collect();
         let shown: Vec<Entry> = entries.iter().map(|&(entry, ..)| entry).collect();
         let columns = lay_out(&headings_of(&shown), rows).len();
-        for (page, mut visibility, mut state) in &mut pages {
+        // The buttons that move the columns are only there when needed.
+        if paged[layer] != Some(columns > fit) {
+            paged[layer] = Some(columns > fit);
+            let pages = format!("{}/pages", FORMS[layer]);
+            dom.set_flag(&pages, "hidden", columns <= fit);
+        }
+        for (page, mut state) in &mut pages {
             if page.layer != layer {
                 continue;
             }
-            visibility.set_if_neq(if columns > fit {
-                Visibility::Inherited
-            } else {
-                Visibility::Hidden
-            });
             let can_go = if page.forward {
                 level.first_column + fit < columns
             } else {

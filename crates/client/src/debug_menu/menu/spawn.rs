@@ -1,20 +1,17 @@
-//! Making the menu's layers, and the warning icon.
+//! The menu's layers, as markup, and the warning icon.
 
 use crate::widgets::UiId;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use super::super::actions::DebugAction;
 use super::{
-    ACTIONS, CLOSE_MARGIN, COLUMN_GAP, CORNER_GAP, FILTER_HEIGHT, FONT, FilterBox, GAP, MARGIN,
-    MenuClose, MenuGrid, MenuRoot, PAGE_BUTTON, PageButton, SUBMENU, TITLE_ROW, WARNING_BUTTON,
+    CORNER_GAP, FORMS, FilterBox, MenuClose, MenuGrid, MenuRoot, PageButton, WARNING_BUTTON,
     WarningButton,
 };
-use crate::widgets::{
-    ButtonState, ButtonTooltip, Pressable, TextBox, panel_title, spawn_button, spawn_close_button,
-    spawn_fullscreen_layer, spawn_icon_button, spawn_text_box,
-};
+use crate::dom::{Template, document};
+use crate::html;
+use crate::widgets::{ButtonState, ButtonTooltip, Pressable, TextBox, spawn_icon_button};
 
 /// A warning triangle with an exclamation mark, drawn here so there is no file
 /// to ship for it.
@@ -77,89 +74,69 @@ pub(in crate::debug_menu) fn spawn_menu(mut commands: Commands, mut images: ResM
                 ButtonTooltip("Debug Menu".into()),
             ));
         });
-    spawn_layer(&mut commands, ACTIONS, "Debug Menu");
-    spawn_layer(&mut commands, SUBMENU, DebugAction::GeneratePoi.name());
+    commands.spawn(document(&MENU));
 }
 
-/// One layer of the menu, hidden: its title, filter box and an empty grid.
-pub(super) fn spawn_layer(commands: &mut Commands, layer: usize, title: &str) {
-    let (root, list) = spawn_fullscreen_layer(
-        commands,
-        layer as i32,
-        Node {
-            padding: UiRect::all(px(MARGIN)),
-            flex_direction: FlexDirection::Column,
-            row_gap: px(GAP * 3.0),
-            ..default()
-        },
-    );
-    commands.entity(root).insert(MenuRoot(layer));
-    commands.entity(list).with_children(|root| {
-        root.spawn(Node {
-            height: px(TITLE_ROW),
-            min_height: px(TITLE_ROW),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|bar| {
-            bar.spawn(Node {
-                position_type: PositionType::Absolute,
-                left: px(0),
-                column_gap: px(GAP),
-                ..default()
-            })
-            .with_children(|pages| {
-                for (label, forward) in [("<", false), (">", true)] {
-                    let node = Node {
-                        width: px(PAGE_BUTTON),
-                        height: px(PAGE_BUTTON),
-                        ..default()
-                    };
-                    spawn_button(pages, ButtonState::Normal, label, FONT, node).insert((
-                        PageButton { layer, forward },
-                        Pressable,
-                        UiId::new("debug.menu", if forward { "next" } else { "previous" })
-                            .at(layer),
-                        Visibility::Hidden,
-                    ));
-                }
-            });
-            bar.spawn(panel_title(title));
-            bar.spawn((
-                MenuClose,
-                Pressable,
-                UiId::new("debug.menu", "close").at(layer),
-                Node {
-                    position_type: PositionType::Absolute,
-                    right: px(0),
-                    padding: UiRect::all(px(CLOSE_MARGIN)),
-                    ..default()
-                },
-            ))
-            .with_children(|holder| {
-                spawn_close_button(holder, default());
-            });
-        });
-        let text_box = TextBox {
-            prefix: "Filter: ",
-            ..default()
+/// The menu's two layers, hidden: each its title, its filter box with the
+/// buttons that move its columns on and back beside it (only there when
+/// they don't all fit), and an empty grid. The second is the
+/// submenu, above the first and smaller.
+pub(super) static MENU: Template = html!(
+    "debug_menu.menu",
+    r#"
+<form id="debug.menu">
+  <dialog id="layer" title="Debug Menu" modal closable depth="0" hidden>
+    <span nowrap>
+      <input id="filter" type="text" prefix="Filter: "/>
+      <span id="pages" nowrap hidden>
+        <button id="previous" class="small">&lt;</button>
+        <button id="next" class="small">&gt;</button>
+      </span>
+    </span>
+    <span id="grid" class="columns" nowrap valign="top"/>
+  </dialog>
+</form>
+<form id="debug.submenu">
+  <dialog id="layer" title="Generate POI" modal closable depth="1" hidden>
+    <span nowrap>
+      <input id="filter" type="text" prefix="Filter: "/>
+      <span id="pages" nowrap hidden>
+        <button id="previous" class="small">&lt;</button>
+        <button id="next" class="small">&gt;</button>
+      </span>
+    </span>
+    <span id="grid" class="columns" nowrap valign="top"/>
+  </dialog>
+</form>
+"#
+);
+
+/// Gives the built layers' parts what the menu's systems know them by, found
+/// by their ids.
+pub(in crate::debug_menu) fn bind_menu(
+    mut commands: Commands,
+    new: Query<(Entity, &UiId), Added<UiId>>,
+) {
+    for (entity, id) in &new {
+        let (form, name) = id.parts();
+        let Some(layer) = FORMS.iter().position(|known| *known == form) else {
+            continue;
         };
-        let node = Node {
-            height: px(FILTER_HEIGHT),
-            min_height: px(FILTER_HEIGHT),
-            ..default()
+        let mut bound = commands.entity(entity);
+        let page = |forward| PageButton { layer, forward };
+        match name {
+            "layer" => bound.insert(MenuRoot(layer)),
+            "close" => bound.insert(MenuClose),
+            "filter" => {
+                // Return, Esc and the arrows are the menu's, not the box's.
+                let mut text_box = bound.entry::<TextBox>();
+                text_box.and_modify(|mut text_box| text_box.takes_keys = false);
+                bound.insert(FilterBox(layer))
+            }
+            "grid" => bound.insert(MenuGrid(layer)),
+            "previous" => bound.insert(page(false)),
+            "next" => bound.insert(page(true)),
+            _ => continue,
         };
-        spawn_text_box(root, text_box, FONT, node).insert((
-            FilterBox(layer),
-            UiId::new("debug.menu", "filter").at(layer),
-        ));
-        root.spawn((
-            MenuGrid(layer),
-            Node {
-                column_gap: px(COLUMN_GAP),
-                ..default()
-            },
-        ));
-    });
+    }
 }
