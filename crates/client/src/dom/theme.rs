@@ -94,6 +94,15 @@ impl Theme {
             ..stacked
         };
         theme.set(Tag::Div, "rows", rows);
+        // Ordinary writing where what is round it is bigger (a dialog).
+        theme.set(
+            Tag::Div,
+            "plain",
+            Look {
+                text: Some(TextSize::Medium),
+                ..stacked
+            },
+        );
         // Groups of rows, each under its heading: well apart.
         theme.set(
             Tag::Div,

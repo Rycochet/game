@@ -8,15 +8,11 @@ use shared::difficulty::Difficulty;
 
 use super::draft::Draft;
 use super::screen::FORM;
-use crate::common::{IRONMAN_QUESTION, PlayDifficulty, difficulty_words};
+use crate::common::{PlayDifficulty, difficulty_words};
 use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonStyle, Dropdown, DropdownChosen, HoverTip, INK, Pressable,
-    TextSize, UiId, field_label, spawn_button, spawn_dialog, spawn_dropdown,
+    ButtonPressed, ButtonState, Dropdown, DropdownChosen, HoverTip, TextSize, UiId, spawn_dropdown,
 };
 
-/// Above the screen.
-const REQUESTER_LAYER: i32 = 1;
-const WORDS_WIDTH: f32 = 420.0;
 const FONT: TextSize = TextSize::Medium;
 
 /// Holds the dropdown, made again when what it offers changes.
@@ -27,53 +23,13 @@ pub(super) struct DifficultyBox;
 #[derive(Component)]
 pub(super) struct DifficultyList(Vec<Difficulty>);
 
-/// The requester asking whether to choose Ironman.
+/// The requester asking whether to choose Ironman (in the screen's markup).
 #[derive(Component)]
 pub(super) struct IronmanRequester;
 
 /// Its buttons: `true` for yes.
 #[derive(Component)]
-pub(super) struct IronmanAnswer(bool);
-
-/// The label and the empty box the dropdown goes in (`fill_difficulty`).
-pub(super) fn spawn_difficulty(column: &mut ChildSpawnerCommands) {
-    column.spawn(field_label("Difficulty"));
-    column.spawn((DifficultyBox, Node::default()));
-}
-
-pub(super) fn spawn_ironman_requester(mut commands: Commands) {
-    let dialog = spawn_dialog(&mut commands, REQUESTER_LAYER, "Ironman");
-    commands
-        .entity(dialog.layer)
-        .insert((IronmanRequester, Visibility::Hidden));
-    commands.entity(dialog.content).with_child((
-        Text::new(IRONMAN_QUESTION),
-        FONT.font(),
-        TextColor(INK),
-        Node {
-            max_width: px(WORDS_WIDTH),
-            ..default()
-        },
-    ));
-    commands.entity(dialog.buttons).with_children(|row| {
-        for (label, yes, style, name) in [
-            ("Yes, Ironman", true, ButtonStyle::Main, "ironman.yes"),
-            ("No", false, ButtonStyle::Plain, "ironman.no"),
-        ] {
-            let node = Node {
-                width: px(160.0),
-                height: px(36.0),
-                ..default()
-            };
-            spawn_button(row, ButtonState::Normal, label, FONT, node).insert((
-                IronmanAnswer(yes),
-                style,
-                Pressable,
-                UiId::new(FORM, name),
-            ));
-        }
-    });
-}
+pub(super) struct IronmanAnswer(pub bool);
 
 /// The dropdown's tip: what each difficulty means.
 fn words(only: bool) -> String {
