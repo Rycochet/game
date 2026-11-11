@@ -92,7 +92,6 @@ pub(super) fn spawn_menu(
     let icons = super::icons::ConnectIcons::new(&mut images);
     super::connect::spawn_connect(&mut commands, &icons);
     super::connect::spawn_popups(&mut commands);
-    super::online::spawn_online_requesters(&mut commands);
     #[cfg(not(target_arch = "wasm32"))]
     super::server_options::spawn_server_options(&mut commands);
     commands.insert_resource(icons);
