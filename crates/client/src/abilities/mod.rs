@@ -5,6 +5,7 @@
 use bevy::prelude::*;
 
 use crate::common::PointerSystems;
+use crate::dom::{DrawObjects, HoldObjects};
 use crate::player::PlayerSystems;
 use crate::widgets::WidgetSystems;
 
@@ -14,6 +15,7 @@ mod drag;
 mod held;
 mod icons;
 mod manual;
+mod mark;
 mod own_bar;
 mod page;
 mod sneak;
@@ -31,7 +33,7 @@ impl Plugin for AbilitiesPlugin {
             .init_resource::<drag::Aim>()
             .init_resource::<manual::Manual>()
             .add_message::<use_ability::UseSlot>()
-            .add_systems(Startup, (bar::spawn_bar, held::spawn_held))
+            .add_systems(Startup, bar::spawn_bar)
             // Before widgets take presses on panels, and the map clicks.
             // Before the system menu sees Esc.
             .add_systems(
@@ -40,10 +42,17 @@ impl Plugin for AbilitiesPlugin {
             )
             .add_systems(
                 PreUpdate,
-                drag::drag_abilities
-                    .after(PointerSystems)
-                    .before(WidgetSystems::Presses),
+                // Either side of `dom` moving what is dragged.
+                (
+                    drag::drag_abilities
+                        .after(PointerSystems)
+                        .before(WidgetSystems::Presses)
+                        .before(HoldObjects),
+                    drag::drop_abilities.after(HoldObjects),
+                ),
             )
+            // Once the page and the slots have drawn themselves.
+            .add_systems(PostUpdate, mark::mark_abilities.after(DrawObjects))
             .add_systems(
                 Update,
                 (
@@ -58,7 +67,7 @@ impl Plugin for AbilitiesPlugin {
                     manual::use_slots,
                     manual::ask_wanted,
                     use_ability::use_automatic,
-                    (bar::place_bar, bar::show_bar, held::show_held),
+                    (bar::place_bar, bar::show_bar),
                     wait::show_wait,
                 )
                     .chain()

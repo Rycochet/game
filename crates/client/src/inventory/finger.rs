@@ -68,7 +68,10 @@ pub(super) fn pick_up_by_finger(
     if gesture.first_finger.is_none() {
         *decided = None;
     }
-    if object.thing().is_some_and(|thing| thing.by == Hand::Finger) {
+    if object
+        .thing()
+        .is_some_and(|thing| thing.item().is_some() && thing.by == Hand::Finger)
+    {
         // Moving what it holds, not scrolling what is under it.
         gesture.drag = Vec2::ZERO;
     }

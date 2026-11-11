@@ -21,11 +21,14 @@ fn app() -> App {
 
 fn thing(by: Hand) -> HeldThing {
     let id = Id::for_test(1);
-    HeldThing {
+    let item = HeldItem {
         id,
         item: Item::new(id, ItemKind::Apple),
         rotation: Rotation::None,
         grip: (0, 0),
+    };
+    HeldThing {
+        what: HeldWhat::Item(item),
         by,
     }
 }
@@ -71,7 +74,8 @@ fn a_right_press_turns_it_and_what_is_kept_is_never_dropped() {
     mouse.press(MouseButton::Right);
     app.update();
     let object = app.world().resource::<HeldObject>();
-    assert_eq!(object.thing().unwrap().rotation, Rotation::None.next());
+    let item = object.thing().unwrap().item().unwrap();
+    assert_eq!(item.rotation, Rotation::None.next());
     assert_eq!(dropped(&mut app), 0);
 
     app.world_mut().resource_mut::<HeldObject>().put_back();
@@ -84,12 +88,11 @@ fn a_right_press_turns_it_and_what_is_kept_is_never_dropped() {
 fn turning_keeps_hold_of_the_same_cell() {
     // A sword lying across, held by its second cell along.
     let id = Id::for_test(1);
-    let across = HeldThing {
+    let across = HeldItem {
         id,
         item: Item::new(id, ItemKind::Sword),
         rotation: Rotation::Quarter,
         grip: (1, 0),
-        by: Hand::Mouse,
     };
     let mut turned = across.clone();
     turned.turn();

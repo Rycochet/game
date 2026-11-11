@@ -1,4 +1,5 @@
-//! Holding a thing picked up from an `object-grid` or `object-slot`: it
+//! Holding a thing (an item or an ability) picked up from an `object-grid` or
+//! `object-slot`: it
 //! follows the pointer or the finger, turns, and is let go, and what it is
 //! over is worked out. Whoever owns the thing says when it is picked up
 //! (`HeldObject::pick_up`) and what letting it go somewhere means (`Dropped`):
@@ -12,6 +13,7 @@ use shared::id::Id;
 use shared::item::{Item, Rotation};
 
 use crate::common::{Preferences, TouchGesture, UiPointer};
+use crate::dom::object_ability::AbilityThing;
 
 /// When what is held follows the pointer and may be let go (`PreUpdate`). An
 /// owner's system picking things up goes `.before` this, and one reading
@@ -36,7 +38,22 @@ pub enum Hand {
 /// until it is dropped: it is still where it was.
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeldThing {
-    /// Which thing it is, to its owner.
+    pub what: HeldWhat,
+    pub by: Hand,
+}
+
+/// What is held.
+#[derive(Clone, Debug, PartialEq)]
+pub enum HeldWhat {
+    Item(HeldItem),
+    /// An ability: its middle is at the pointer, and it doesn't turn.
+    Ability(AbilityThing),
+}
+
+/// An item held.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HeldItem {
+    /// Which item it is, to its owner.
     pub id: Id,
     /// What it is like: its look and shape. Its owner keeps it up
     /// (`HeldObject::keep_up`).
@@ -44,16 +61,33 @@ pub struct HeldThing {
     pub rotation: Rotation,
     /// Which cell of its shape, as turned, is under the pointer.
     pub grip: (u8, u8),
-    pub by: Hand,
 }
 
-impl HeldThing {
+impl HeldItem {
     /// A quarter turn further on, keeping hold of the same cell.
     pub fn turn(&mut self) {
         let shape = self.item.shape().turned(self.rotation);
         let (x, y) = self.grip;
         self.grip = Rotation::Quarter.turn_cell(x, y, shape.width, shape.height);
         self.rotation = self.rotation.next();
+    }
+}
+
+impl HeldThing {
+    /// The item, if that is what is held.
+    pub fn item(&self) -> Option<&HeldItem> {
+        match &self.what {
+            HeldWhat::Item(item) => Some(item),
+            HeldWhat::Ability(_) => None,
+        }
+    }
+
+    /// The ability, if that is what is held.
+    pub fn ability(&self) -> Option<&AbilityThing> {
+        match &self.what {
+            HeldWhat::Ability(ability) => Some(ability),
+            HeldWhat::Item(_) => None,
+        }
     }
 }
 
@@ -89,9 +123,7 @@ impl HeldObject {
     /// click, which keeps hold until the next, from a drag.
     pub fn pick_up(&mut self, thing: HeldThing, picked: Option<(Vec2, f64)>) {
         self.thing = Some(thing);
-        if picked.is_some() {
-            self.picked = picked;
-        }
+        self.picked = picked;
     }
 
     /// Lets go without dropping it anywhere: it is where it was.
@@ -99,12 +131,15 @@ impl HeldObject {
         self.thing = None;
     }
 
-    /// The thing as it is now, when its owner hears more of it.
+    /// The item held as it is now, when its owner hears more of it.
     pub fn keep_up(&mut self, item: &Item) {
-        if let Some(thing) = &mut self.thing
-            && thing.item != *item
+        if let Some(HeldThing {
+            what: HeldWhat::Item(held),
+            ..
+        }) = &mut self.thing
+            && held.item != *item
         {
-            thing.item = item.clone();
+            held.item = item.clone();
         }
     }
 }

@@ -8,7 +8,7 @@ use shared::item::{Inventory, Item};
 
 use super::hold::{Held, Target};
 pub(super) use crate::dom::Hand;
-use crate::dom::{HeldObject, HeldThing};
+use crate::dom::{HeldItem, HeldObject, HeldThing, HeldWhat};
 
 /// What is picked up, if anything, as the inventory's rules see it.
 #[derive(Resource, Default)]
@@ -43,14 +43,13 @@ impl Holding {
         by: Hand,
         picked: Option<(Vec2, f64)>,
     ) {
-        let thing = HeldThing {
+        let what = HeldWhat::Item(HeldItem {
             id: held.id,
             item: item.clone(),
             rotation: held.rotation,
             grip: held.grip,
-            by,
-        };
-        object.pick_up(thing, picked);
+        });
+        object.pick_up(HeldThing { what, by }, picked);
         self.held = Some(HeldBy { item: held, by });
     }
 
@@ -69,18 +68,20 @@ pub(super) struct HeldBy {
 }
 
 impl HeldBy {
-    /// What `dom` holds now.
+    /// The item `dom` holds now, if it holds one.
     pub(super) fn of(object: &HeldObject) -> Option<Self> {
-        object.thing().map(Self::from_thing)
+        object.thing().and_then(Self::from_thing)
     }
 
-    pub(super) fn from_thing(thing: &HeldThing) -> Self {
+    /// Nothing for an ability: those are `abilities`'.
+    pub(super) fn from_thing(thing: &HeldThing) -> Option<Self> {
+        let held = thing.item()?;
         let item = Held {
-            id: thing.id,
-            rotation: thing.rotation,
-            grip: thing.grip,
+            id: held.id,
+            rotation: held.rotation,
+            grip: held.grip,
         };
-        Self { item, by: thing.by }
+        Some(Self { item, by: thing.by })
     }
 }
 
@@ -90,6 +91,7 @@ pub(super) fn cancel_held(
     mut holding: ResMut<Holding>,
     mut object: ResMut<HeldObject>,
 ) {
+    // (An ability dragged too: it goes back where it was.)
     if object.thing().is_some() && keys.clear_just_pressed(KeyCode::Escape) {
         holding.put_back(&mut object);
         holding.stock = None;

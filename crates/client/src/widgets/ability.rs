@@ -19,7 +19,7 @@ const UNUSABLE_EDGE: Color = Color::srgb(0.45, 0.16, 0.12);
 const UNUSABLE_ICON: Color = Color::srgb(0.45, 0.45, 0.45);
 
 /// What an ability shows.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AbilityLook {
     /// Its icon, white on a transparent background.
     pub icon: Handle<Image>,

@@ -101,7 +101,7 @@ pub(super) fn hold_items(
 ) {
     let now = time.elapsed_secs_f64();
     // Part of a stack lifted out (see `split`) goes back once nothing holds it.
-    if object.thing().is_none() {
+    if HeldBy::of(&object).is_none() {
         holding.group = None;
         if carried.bypass_change_detection().0.settle_parts() {
             carried.set_changed();
@@ -179,8 +179,12 @@ pub(super) fn aim_items(
     let from_stock = holding.stock.is_some();
     let stock = held.filter(|_| from_stock).map(|held| held.item.id);
     held_stock.set_if_neq(HeldStock(stock));
-    let let_go = dropped.read().last();
-    let let_go = let_go.map(|drop| (HeldBy::from_thing(&drop.thing), drop.at, drop.over));
+    // (An ability let go is `abilities`'.)
+    let let_go = dropped.read().filter_map(|drop| {
+        let held = HeldBy::from_thing(&drop.thing)?;
+        Some((held, drop.at, drop.over))
+    });
+    let let_go = let_go.last();
     let now = held.map(|held| (held, object.at, object.over));
     let Some((subject, at, over)) = now.or(let_go) else {
         holding.aim = None;

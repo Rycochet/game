@@ -14,23 +14,14 @@ use super::own_bar::OwnBar;
 use super::page::look;
 use super::vitals_now::affords;
 use crate::common::{Action, OwnVitals, Preferences, Sneaking, VitalsCircle, interface_area};
+use crate::dom::{AbilitySlotShown, AbilityThing};
 use crate::inventory::Carried;
-use crate::widgets::{
-    ABILITY, ALLOWED, Floating, GRID_LINE, REFUSED, TextSize, UiId, queued_stripe, set_edge,
-    spawn_ability, spawn_outlined_text, stops_presses,
-};
+use crate::widgets::{ABILITY, UiId, stops_presses};
 
 /// Between slots, and between the bar and the circle.
 pub(super) const GAP: f32 = 6.0;
 /// How many slots stand on each side of the circle.
 const PER_SIDE: usize = BAR_SLOTS / 2;
-const EMPTY_EDGE: f32 = 2.0;
-const EMPTY_BACKGROUND: Color = Color::srgba(0.1, 0.08, 0.06, 0.6);
-/// How thick the edge of a slot used by itself is.
-const AUTO_EDGE: f32 = 3.0;
-/// How thick the stripes of a queued slot are, inside the edge of one used by
-/// itself.
-const QUEUED_STRIPE: f32 = 3.0;
 
 /// One side of the bar: 0 left of the circle, 1 right.
 #[derive(Component)]
@@ -58,15 +49,9 @@ pub(super) fn spawn_bar(mut commands: Commands) {
         commands.entity(row).with_children(|row| {
             for index in 0..PER_SIDE {
                 let slot = (side * PER_SIDE + index) as u8;
-                row.spawn((
-                    SlotNode(slot),
-                    UiId::new("bar", "slot").at(slot as usize),
-                    Node {
-                        width: px(ABILITY),
-                        height: px(ABILITY),
-                        ..default()
-                    },
-                ));
+                // A slot that draws itself (`dom`): `show_bar` says what it shows.
+                let id = UiId::new("bar", "slot").at(slot as usize);
+                row.spawn((SlotNode(slot), id, AbilitySlotShown::default()));
             }
         });
     }
@@ -112,7 +97,7 @@ pub(super) struct Shown {
     sneaking: bool,
 }
 
-/// Draws each slot again when what it shows changes.
+/// Says what each slot shows again when that changes.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn show_bar(
     bar: Res<OwnBar>,
@@ -121,9 +106,8 @@ pub(super) fn show_bar(
     (aim, manual, sneaking): (Res<Aim>, Res<Manual>, Res<Sneaking>),
     (vitals, time): (Res<OwnVitals>, Res<Time>),
     assets: Res<AssetServer>,
-    slots: Query<(Entity, &SlotNode)>,
+    mut slots: Query<(&SlotNode, &mut AbilitySlotShown)>,
     mut shown: Local<Option<Shown>>,
-    mut commands: Commands,
 ) {
     let keys = (0..BAR_SLOTS as u8)
         .map(|slot| {
@@ -143,104 +127,48 @@ pub(super) fn show_bar(
     if shown.as_ref() == Some(&now) {
         return;
     }
-    for (entity, &SlotNode(slot)) in &slots {
-        let mut node = commands.entity(entity);
-        node.despawn_children();
-        node.with_children(|inside| spawn_slot(inside, slot, &now, &assets));
+    for (&SlotNode(slot), mut slot_shown) in &mut slots {
+        let slot_now = slot_of(slot, &now, &assets);
+        // (Only when it differs: the slot draws itself again when changed.)
+        if *slot_shown != slot_now {
+            *slot_shown = slot_now;
+        }
     }
     *shown = Some(now);
 }
 
-/// What is in one slot: its ability or an empty frame, its key, and its edge.
-fn spawn_slot(inside: &mut ChildSpawnerCommands, slot: u8, now: &Shown, assets: &AssetServer) {
+/// What one slot shows: its ability, its key, and how it is used.
+fn slot_of(slot: u8, now: &Shown, assets: &AssetServer) -> AbilitySlotShown {
     let held = now.bar.slots[slot as usize];
     let (short, full) = &now.keys[slot as usize];
-    match held {
-        Some(held) => {
-            let mut look = look(held.ability, now.kind, assets);
-            let ability = held.ability;
-            if !full.is_empty() {
-                look.name = format!(
-                    "{} ({full})
+    let thing = held.map(|held| {
+        let ability = held.ability;
+        let mut look = look(ability, now.kind, assets);
+        if !full.is_empty() {
+            look.name = format!(
+                "{} ({full})
 {}",
-                    ability.name(),
-                    ability.description()
-                );
-            }
-            // Greyed while there isn't the Mana for it.
-            look.usable &= !now.low_mana || ability.mana_cost() == 0;
-            spawn_ability(inside, look);
-            if held.ability.is_active() {
-                super::wait::spawn_shade(inside);
-            }
+                ability.name(),
+                ability.description()
+            );
         }
-        None => {
-            inside.spawn((
-                Node {
-                    width: percent(100.0),
-                    height: percent(100.0),
-                    border: UiRect::all(px(EMPTY_EDGE)),
-                    border_radius: BorderRadius::all(px(4.0)),
-                    ..default()
-                },
-                BackgroundColor(EMPTY_BACKGROUND),
-                BorderColor::from(GRID_LINE),
-            ));
-        }
-    }
-    if held.is_some_and(|held| held.auto) {
-        inside.spawn(set_edge(None, UiRect::all(px(AUTO_EDGE)), 0.0));
-    }
-    // A toggle that is on: a steady edge.
-    if held.is_some_and(|held| held.ability.is_toggle()) && now.sneaking {
-        inside.spawn((
-            Floating,
-            Node {
-                position_type: PositionType::Absolute,
-                width: percent(100.0),
-                height: percent(100.0),
-                border: UiRect::all(px(AUTO_EDGE)),
-                border_radius: BorderRadius::all(px(4.0)),
-                ..default()
-            },
-            BorderColor::from(ALLOWED),
-            UiId::new("bar", "on").at(slot as usize),
-        ));
-    }
-    if held.is_some_and(|held| now.queued.contains(&held.ability)) {
-        inside.spawn((
-            queued_stripe(QUEUED_STRIPE, AUTO_EDGE),
-            UiId::new("bar", "queued").at(slot as usize),
-        ));
-    }
-    if let Some((_, allowed)) = now.aim.filter(|(aimed, _)| *aimed == slot) {
-        let colour = if allowed { ALLOWED } else { REFUSED };
-        inside.spawn((
-            Floating,
-            Node {
-                position_type: PositionType::Absolute,
-                width: percent(100.0),
-                height: percent(100.0),
-                border: UiRect::all(px(AUTO_EDGE)),
-                border_radius: BorderRadius::all(px(4.0)),
-                ..default()
-            },
-            BorderColor::from(colour),
-        ));
-    }
-    if !short.is_empty() {
-        inside
-            .spawn((
-                Floating,
-                Node {
-                    position_type: PositionType::Absolute,
-                    right: px(3.0),
-                    bottom: px(1.0),
-                    ..default()
-                },
-            ))
-            .with_children(|corner| {
-                spawn_outlined_text(corner, short, TextSize::Small);
-            });
+        // Greyed while there isn't the Mana for it.
+        look.usable &= !now.low_mana || ability.mana_cost() == 0;
+        AbilityThing { ability, look }
+    });
+    let ability = held.map(|held| held.ability);
+    AbilitySlotShown {
+        thing,
+        key: short.clone(),
+        auto: held.is_some_and(|held| held.auto),
+        // A toggle that is on.
+        on: ability.is_some_and(|ability| ability.is_toggle()) && now.sneaking,
+        queued: ability.is_some_and(|ability| now.queued.contains(&ability)),
+        // The wait to act again, over what is done when asked.
+        shade: ability.is_some_and(|ability| ability.is_active()),
+        aim: now
+            .aim
+            .filter(|(aimed, _)| *aimed == slot)
+            .map(|(_, allowed)| allowed),
     }
 }
