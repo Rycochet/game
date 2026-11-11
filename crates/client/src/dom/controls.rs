@@ -58,15 +58,16 @@ impl Builder<'_, '_, '_> {
     pub(super) fn control(&mut self, holder: Entity, element: &Checked, inside: Inside) {
         let attrs = &element.attrs;
         let size = inside.style.size;
+        let node = self.widget_node(element, inside);
         let widget = match (element.tag, attrs.text("type")) {
-            (Tag::Button, _) => self.button(holder, element, size),
-            (Tag::Input, Some("checkbox")) => self.check(holder, attrs, size),
+            (Tag::Button, _) => self.button(holder, element, size, node),
+            (Tag::Input, Some("checkbox")) => self.check(holder, attrs, size, node),
             (Tag::Input, Some("range")) => self.range(holder, attrs),
-            (Tag::Input, _) => self.text_box(holder, attrs, size),
-            (Tag::KeyBox, _) => self.key_box(holder, attrs, size),
-            (Tag::Select, _) => self.select(holder, element, size),
+            (Tag::Input, _) => self.text_box(holder, attrs, size, node),
+            (Tag::KeyBox, _) => self.key_box(holder, attrs, size, node),
+            (Tag::Select, _) => self.select(holder, element, size, node),
             (Tag::ToggleRow | Tag::TabBar, _) => self.row(holder, element, size),
-            (Tag::ColourPicker, _) => self.colour_picker(holder, element, size),
+            (Tag::ColourPicker, _) => self.colour_picker(holder, element, size, node),
             _ => return,
         };
         // The widget carries the id, as widgets always have, so everything
@@ -77,6 +78,31 @@ impl Builder<'_, '_, '_> {
             made.insert(inside.index.map_or(id, |index| id.at(index)));
         }
         self.commands.entity(holder).insert(Control(widget));
+    }
+
+    /// A widget's `Node`. It is as wide as its element, which is as wide as
+    /// what holds it when stacked and as itself when in a row, so nothing
+    /// needs a width to fill its room. It is as tall as the theme's row for
+    /// the writing round it (the menus' is taller), or as its element when
+    /// that is given a height. A button in a dialog's footer is at least the
+    /// theme's width, so a footer's buttons match.
+    fn widget_node(&self, element: &Checked, inside: Inside) -> Node {
+        let attrs = &element.attrs;
+        let row = self.theme.row(inside.style.size);
+        let in_footer = inside.footer && element.tag == Tag::Button;
+        Node {
+            width: percent(100),
+            height: attrs.height.map_or(Val::Auto, |_| percent(100)),
+            min_height: match attrs.height {
+                Some(_) => Val::Auto,
+                None => row.map_or(Val::Auto, px),
+            },
+            min_width: match in_footer {
+                true => px(self.theme.footer_button),
+                false => Val::Auto,
+            },
+            ..default()
+        }
     }
 
     /// Spawns something inside `holder`, and says what.
@@ -90,26 +116,6 @@ impl Builder<'_, '_, '_> {
             .entity(holder)
             .with_children(|inside| made = spawn(inside));
         made
-    }
-}
-
-/// A widget's `Node`: as wide as its element when that is given a width or
-/// is one that fills the room it has, and as tall when it is given a height;
-/// otherwise its own size.
-fn node_in(attrs: &Attrs, fills: bool) -> Node {
-    let width = if fills || attrs.width.is_some() {
-        percent(100)
-    } else {
-        Val::Auto
-    };
-    let height = match attrs.height {
-        Some(_) => percent(100),
-        None => Val::Auto,
-    };
-    Node {
-        width,
-        height,
-        ..default()
     }
 }
 

@@ -34,6 +34,12 @@ pub struct Theme {
     pub progress: (Color, Color),
     /// How tall a line of writing is, in font sizes.
     pub line: f32,
+    /// How tall a control is at least, by the size of the writing round it:
+    /// the menus' bigger writing has taller buttons and boxes.
+    pub rows: Vec<(TextSize, f32)>,
+    /// How wide a button in a dialog's `footer` is at least, so its buttons
+    /// match.
+    pub footer_button: f32,
 }
 
 impl Theme {
@@ -50,6 +56,8 @@ impl Theme {
             row_tint: ROW_TINT,
             progress: (GRID_COLOUR, ALLOWED),
             line: 1.2,
+            rows: vec![(TextSize::Large, 38.0)],
+            footer_button: 120.0,
         };
         for tag in [Tag::Span, Tag::Label, Tag::Td, Tag::Th] {
             theme.set(tag, "", inline);
@@ -143,6 +151,13 @@ impl Theme {
             }
         }
         theme
+    }
+
+    /// How tall a control is at least where the writing is this size, if
+    /// that is more than its own height.
+    pub fn row(&self, size: TextSize) -> Option<f32> {
+        let found = self.rows.iter().find(|(known, _)| *known == size);
+        found.map(|(_, height)| *height)
     }
 
     /// Gives `tag` elements of this `class` (`""` for none) a look.

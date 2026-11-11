@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::{node_in, state_of, words_in};
+use super::{state_of, words_in};
 use crate::dom::attrs::Attrs;
 use crate::dom::build::Builder;
 use crate::dom::check::{Checked, CheckedNode};
@@ -30,10 +30,22 @@ impl Builder<'_, '_, '_> {
     /// A button showing its words, or its one picture (`class="small"` for
     /// the small kind on the edge of something). `hold`: pressed only while
     /// held.
-    pub(super) fn button(&mut self, holder: Entity, element: &Checked, size: TextSize) -> Entity {
+    pub(super) fn button(
+        &mut self,
+        holder: Entity,
+        element: &Checked,
+        size: TextSize,
+        node: Node,
+    ) -> Entity {
         let attrs = &element.attrs;
         let class = attrs.class.as_deref();
-        let (state, node) = (state_of(attrs), node_in(attrs, false));
+        let state = state_of(attrs);
+        // An icon button is square: as tall as the row, unless it says.
+        let side = match node.min_height {
+            Val::Px(row) => row,
+            _ => ICON_BUTTON,
+        };
+        let sized = (attrs.width.is_some(), attrs.height.is_some());
         let src = element.children.iter().find_map(|node| match node {
             CheckedNode::Element(picture) => picture.attrs.text("src"),
             CheckedNode::Text(_) => None,
@@ -47,14 +59,11 @@ impl Builder<'_, '_, '_> {
                     spawn_small_icon_button(inside, state, icon, node)
                 }
                 Some((icon, _)) => {
-                    // A picture is as big as its file unless the button says.
-                    let side = |given: Val| match given {
-                        Val::Auto => px(ICON_BUTTON),
-                        given => given,
-                    };
                     let node = Node {
-                        width: side(node.width),
-                        height: side(node.height),
+                        width: if sized.0 { percent(100) } else { px(side) },
+                        height: if sized.1 { percent(100) } else { px(side) },
+                        min_height: Val::Auto,
+                        min_width: Val::Auto,
                         ..node
                     };
                     spawn_icon_button(inside, state, icon, node)
@@ -80,12 +89,22 @@ impl Builder<'_, '_, '_> {
     }
 
     /// A checkbox, or a switch.
-    pub(super) fn check(&mut self, holder: Entity, attrs: &Attrs, size: TextSize) -> Entity {
+    pub(super) fn check(
+        &mut self,
+        holder: Entity,
+        attrs: &Attrs,
+        size: TextSize,
+        node: Node,
+    ) -> Entity {
         let (state, on) = (state_of(attrs), attrs.has("checked"));
         let switch = attrs.has("switch");
         // `label`: words in the button, beside its box.
         let label = attrs.text("label").unwrap_or_default().to_owned();
-        let node = node_in(attrs, false);
+        // Only the box, with no words: its own size.
+        let node = match label.is_empty() {
+            true => Node::default(),
+            false => node,
+        };
         self.spawn_in(holder, |inside| {
             if switch {
                 return spawn_switch(inside, state, on, Node::default()).id();

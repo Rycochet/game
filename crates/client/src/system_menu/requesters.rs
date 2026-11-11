@@ -20,8 +20,8 @@ static REQUESTERS: Template = html!(
   <dialog id="requester" title="Quit" depth="1" hidden>
     <p margin-bottom="0">Are you sure?</p>
     <footer>
-      <button id="quit" class="main" width="122" height="38">Yes, quit</button>
-      <button id="back" width="122" height="38">No</button>
+      <button id="quit" class="main">Yes, quit</button>
+      <button id="back">No</button>
     </footer>
   </dialog>
 </form>
@@ -29,8 +29,8 @@ static REQUESTERS: Template = html!(
   <dialog id="requester" title="Ironman" depth="2" hidden>
     <p id="question" width="420" margin-bottom="0"/>
     <footer>
-      <button id="ironman" class="main" width="130" height="38">Yes, Ironman</button>
-      <button id="no" width="130" height="38">No</button>
+      <button id="ironman" class="main">Yes, Ironman</button>
+      <button id="no">No</button>
     </footer>
   </dialog>
 </form>
@@ -39,8 +39,8 @@ static REQUESTERS: Template = html!(
     <p margin-bottom="0">Keep these settings?</p>
     <p id="countdown" margin-bottom="0"/>
     <footer>
-      <button id="keep" class="main" width="130" height="38">Keep</button>
-      <button id="back" width="130" height="38">Go back</button>
+      <button id="keep" class="main">Keep</button>
+      <button id="back">Go back</button>
     </footer>
   </dialog>
 </form>
@@ -48,7 +48,7 @@ static REQUESTERS: Template = html!(
   <dialog id="requester" title="Can't connect" depth="1" hidden>
     <p id="words" class="warning" width="460" margin-bottom="0"/>
     <footer>
-      <button id="back" class="main" width="116" height="38">OK</button>
+      <button id="back" class="main">OK</button>
     </footer>
   </dialog>
 </form>
@@ -56,8 +56,8 @@ static REQUESTERS: Template = html!(
   <dialog id="requester" title="Slow drawing" depth="1" hidden>
     <p id="words" width="460" margin-bottom="0"/>
     <footer>
-      <button id="back" class="main" width="184" height="38">Play Anyway</button>
-      <button id="dont_warn" width="184" height="38">Don't Warn Again</button>
+      <button id="back" class="main">Play Anyway</button>
+      <button id="dont_warn">Don't Warn Again</button>
     </footer>
   </dialog>
 </form>
@@ -67,8 +67,8 @@ static REQUESTERS: Template = html!(
       This will let other players connect to this game. Are you sure?
     </p>
     <footer>
-      <button id="yes" class="main" width="130" height="38">Yes</button>
-      <button id="back" width="130" height="38">No</button>
+      <button id="yes" class="main">Yes</button>
+      <button id="back">No</button>
     </footer>
   </dialog>
 </form>
@@ -79,8 +79,8 @@ static REQUESTERS: Template = html!(
       Are you sure?
     </p>
     <footer>
-      <button id="yes" class="main" width="130" height="38">Yes</button>
-      <button id="back" width="130" height="38">No</button>
+      <button id="yes" class="main">Yes</button>
+      <button id="back">No</button>
     </footer>
   </dialog>
 </form>
@@ -91,8 +91,8 @@ static REQUESTERS: Template = html!(
       else playing will be sent away. Are you sure?
     </p>
     <footer>
-      <button id="yes" class="main" width="130" height="38">Yes</button>
-      <button id="back" width="130" height="38">No</button>
+      <button id="yes" class="main">Yes</button>
+      <button id="back">No</button>
     </footer>
   </dialog>
 </form>
@@ -102,8 +102,8 @@ static REQUESTERS: Template = html!(
       This will let everyone play on this server again. Are you sure?
     </p>
     <footer>
-      <button id="yes" class="main" width="130" height="38">Yes</button>
-      <button id="back" width="130" height="38">No</button>
+      <button id="yes" class="main">Yes</button>
+      <button id="back">No</button>
     </footer>
   </dialog>
 </form>
@@ -111,7 +111,7 @@ static REQUESTERS: Template = html!(
   <dialog id="requester" title="Can't go online" depth="1" hidden>
     <p id="words" width="420" margin-bottom="0"/>
     <footer>
-      <button id="back" class="main" width="130" height="38">OK</button>
+      <button id="back" class="main">OK</button>
     </footer>
   </dialog>
 </form>

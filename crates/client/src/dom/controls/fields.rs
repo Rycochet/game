@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::{node_in, state_of};
+use super::state_of;
 use crate::common::Binding;
 use crate::dom::attrs::{Attrs, Length};
 use crate::dom::build::Builder;
@@ -58,8 +58,14 @@ pub(super) fn key_box_of(attrs: &Attrs) -> KeyBox {
 }
 
 impl Builder<'_, '_, '_> {
-    pub(super) fn text_box(&mut self, holder: Entity, attrs: &Attrs, size: TextSize) -> Entity {
-        let (text_box, node) = (text_box_of(attrs), node_in(attrs, true));
+    pub(super) fn text_box(
+        &mut self,
+        holder: Entity,
+        attrs: &Attrs,
+        size: TextSize,
+        node: Node,
+    ) -> Entity {
+        let text_box = text_box_of(attrs);
         self.spawn_in(holder, |inside| {
             spawn_text_box(inside, text_box, size, node).id()
         })
@@ -80,8 +86,14 @@ impl Builder<'_, '_, '_> {
         })
     }
 
-    pub(super) fn key_box(&mut self, holder: Entity, attrs: &Attrs, size: TextSize) -> Entity {
-        let (key_box, state, node) = (key_box_of(attrs), state_of(attrs), node_in(attrs, true));
+    pub(super) fn key_box(
+        &mut self,
+        holder: Entity,
+        attrs: &Attrs,
+        size: TextSize,
+        node: Node,
+    ) -> Entity {
+        let (key_box, state) = (key_box_of(attrs), state_of(attrs));
         self.spawn_in(holder, |inside| {
             spawn_key_box(inside, key_box, state, size, node).id()
         })

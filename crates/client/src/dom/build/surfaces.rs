@@ -113,6 +113,10 @@ impl Builder<'_, '_, '_> {
                 // A dialog's `footer` is its row of buttons.
                 (CheckedNode::Element(footer), Some(buttons)) if footer.tag == Tag::Footer => {
                     let (row, within) = self.shell(buttons, footer, within);
+                    let within = Inside {
+                        footer: true,
+                        ..within
+                    };
                     self.nodes(row, &footer.children, within);
                 }
                 _ => self.nodes(entity, std::slice::from_ref(node), within),
