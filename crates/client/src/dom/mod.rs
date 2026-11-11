@@ -21,6 +21,7 @@ mod object_slot;
 mod objects;
 mod parts;
 mod pictures;
+mod popup;
 mod restyle;
 mod surfaces;
 mod tag;
@@ -40,6 +41,7 @@ pub use object_grid::{DrawObjects, GridAim, GridBox, GridShown, GridThing, Thing
 pub use object_slot::{SlotLook, SlotShown, SlotThing};
 pub use parts::{AlwaysBars, Solid};
 pub use parts::{Document, DocumentOf, document, document_in};
+pub use popup::ClosePopups;
 pub use template::Template;
 // What screens will use as they become markup: not all of it is yet.
 #[allow(unused_imports)]
@@ -54,6 +56,7 @@ pub use {
     parts::Hovered,
     parts::{Canvas, Element, Inert},
     pictures::Pictures,
+    popup::Popup,
     tag::Tag,
     theme::{Look, Theme},
 };
@@ -70,6 +73,7 @@ impl Plugin for DomPlugin {
             .init_resource::<crate::common::KnownItems>();
         input::add(app);
         hold::add(app);
+        popup::add(app);
         controls::add(app);
         #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
         debug_api::add(app);

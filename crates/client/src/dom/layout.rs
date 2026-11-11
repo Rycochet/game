@@ -34,10 +34,10 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
         margin: margin(attrs, around.look),
         ..default()
     };
-    // A panel that moves and a dialog are placed by their widgets.
+    // A panel that moves, a dialog and a popup are placed by their widgets.
     let moves = tag == Tag::Panel && (attrs.has("moveable") || attrs.has("grip"));
     let fixed_panel = tag == Tag::Panel && !moves;
-    if attrs.is_placed() && !moves && tag != Tag::Dialog {
+    if attrs.is_placed() && !moves && !matches!(tag, Tag::Dialog | Tag::Popup) {
         node.position_type = PositionType::Absolute;
         node.top = val(attrs.top);
         node.left = val(attrs.left);

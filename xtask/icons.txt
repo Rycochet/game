@@ -137,3 +137,6 @@ lorc/snowflake-1
 delapouite/desert
 # The staff mark before marked players' names (hover/spawn.rs)
 lorc/laurel-crown
+# A popup's padlock (dom/popup.rs)
+delapouite/padlock-open
+delapouite/plain-padlock

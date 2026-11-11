@@ -72,9 +72,13 @@ impl Plugin for InventoryPlugin {
                 (
                     // Before widgets stop a finger's drag on a panel, and before the
                     // menus see Esc.
-                    (pick_up_by_finger, cancel_held, split::close_split)
+                    (pick_up_by_finger, cancel_held)
                         .before(WidgetSystems::Presses)
                         .after(PointerSystems),
+                    // Once the split box has said whether it closed itself.
+                    split::close_split
+                        .after(crate::dom::ClosePopups)
+                        .before(WidgetSystems::Presses),
                     // Either side of `dom` moving what is held.
                     (
                         hold_items.before(crate::dom::HoldObjects),
@@ -108,7 +112,7 @@ impl Plugin for InventoryPlugin {
                     panels::show_tooltip,
                     panels::show_button,
                     split::move_split,
-                    split::show_split,
+                    (split::show_split, split::bind_split).chain(),
                 )
                     .chain(),
             );

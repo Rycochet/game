@@ -1,5 +1,5 @@
-//! Surfaces: `panel` (moveable by its title, or by a `grip`), `dialog` and
-//! `scroll`. The widget that draws each is spawned first, and the element
+//! Surfaces: `panel` (moveable by its title, or by a `grip`), `dialog`,
+//! `popup` and `scroll`. The widget that draws each is spawned first, and the element
 //! goes inside it, holding what the markup puts in it. Panels that move and
 //! dialogs are not laid out where they are written: they stand on their own
 //! in front of the rest, in the layer the widgets give them.
@@ -51,7 +51,7 @@ impl Builder<'_, '_, '_> {
     pub(super) fn is_surface(element: &Checked) -> bool {
         match element.tag {
             Tag::Panel => element.attrs.has("moveable") || element.attrs.has("grip"),
-            Tag::Dialog | Tag::Scroll => true,
+            Tag::Dialog | Tag::Scroll | Tag::Popup => true,
             _ => false,
         }
     }
@@ -89,6 +89,10 @@ impl Builder<'_, '_, '_> {
                 let depth = attrs.number("depth").unwrap_or(0.0) as i32;
                 let dialog = spawn_dialog(self.commands, depth, title);
                 (dialog.layer, dialog.content, Some(dialog.buttons))
+            }
+            Tag::Popup => {
+                let popup = crate::dom::popup::spawn_popup(self.commands, self.assets);
+                (popup, popup, None)
             }
             _ => {
                 let area = self.scroll_area(parent, attrs);

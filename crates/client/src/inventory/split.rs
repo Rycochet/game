@@ -5,20 +5,16 @@
 //! press, with a row for each kind in it instead (`picker`).
 
 use bevy::prelude::*;
-use bevy::ui::UiGlobalTransform;
 use shared::id::Id;
 
 use super::Carried;
-use crate::common::{NO_QUALITY_NAME, UiPointer, quality_colour};
-use crate::widgets::{
-    CELL, HELD_ITEM_Z, ItemLook, SliderMoved, TextSize, logical_rect, spawn_item_cells,
-    spawn_slider, stops_presses, tooltip_box,
-};
+use crate::common::{NO_QUALITY_NAME, quality_colour};
+use crate::dom::{Dom, Template, UiEvent, UiValue, document};
+use crate::html;
+use crate::widgets::{CELL, ItemLook, TextSize, UiId, spawn_item_cells};
 
 /// How far from where it was opened the box goes.
 const OFFSET: Vec2 = Vec2::new(16.0, 16.0);
-const SLIDER_WIDTH: f32 = 128.0;
-const GAP: f32 = 4.0;
 
 /// The stack being split, if the box is open.
 #[derive(Resource, Default)]
@@ -44,44 +40,41 @@ impl Splitting {
     }
 }
 
+/// The box: the stack's name, a slider from one to all of it with the stack at
+/// that many under it, or for a mixed stack a row for each kind in it.
+static SPLIT: Template = html!(
+    "inventory.split",
+    r#"
+<form id="split">
+  <popup id="box" align="center">
+    <canvas id="name"/>
+    <input id="count" type="range" min="1" max="2" step="1" value="1" width="128"/>
+    <canvas id="stack"/>
+    <canvas id="rows"/>
+  </popup>
+</form>
+"#
+);
+
 /// On the drawn stack's cells: which cell of it, as it lies.
 #[derive(Component, Clone, Copy)]
 pub(super) struct SplitCell {
     pub(super) grip: (u8, u8),
 }
 
-#[derive(Component)]
-pub(super) struct SplitBox;
-
-#[derive(Component)]
-pub(super) struct SplitSlider;
-
 /// What the stack is drawn in, to draw it again at another count.
 #[derive(Component)]
 pub(super) struct SplitPicture;
 
-/// How many of `all` a slider at `value` (`0..=1`) takes: from one to all.
-pub(super) fn count_at(value: f32, all: u32) -> u32 {
-    let steps = all.saturating_sub(1) as f32;
-    (1 + (value.clamp(0.0, 1.0) * steps).round() as u32).min(all.max(1))
-}
-
-/// Where a slider stands for taking `count` of `all`.
-pub(super) fn value_of(count: u32, all: u32) -> f32 {
-    match all {
-        0 | 1 => 1.0,
-        _ => (count.saturating_sub(1)) as f32 / (all - 1) as f32,
-    }
-}
-
-/// Opens, closes and redraws the box as `Split` changes.
+/// Opens and closes the box as `Split` changes, and says where it is and how
+/// its slider stands.
 pub(super) fn show_split(
     split: Res<Split>,
     carried: Res<Carried>,
-    boxes: Query<Entity, With<SplitBox>>,
     pictures: Query<Entity, With<SplitPicture>>,
+    mut dom: Dom,
     mut commands: Commands,
-    mut drawn: Local<Option<Splitting>>,
+    (mut drawn, mut open): (Local<Option<Splitting>>, Local<Option<Entity>>),
 ) {
     if *drawn == split.0 {
         return;
@@ -95,6 +88,7 @@ pub(super) fn show_split(
         Some((splitting, placed.clone()))
     });
     if same_stack && let Some((splitting, placed)) = &found {
+        // Only how many: the stack drawn again.
         for picture in &pictures {
             commands.entity(picture).despawn_related::<Children>();
             commands
@@ -103,50 +97,71 @@ pub(super) fn show_split(
         }
         return;
     }
-    for entity in &boxes {
-        commands.entity(entity).despawn();
+    if let Some(document) = open.take() {
+        commands.entity(document).try_despawn();
     }
     let Some((splitting, placed)) = found else {
         return;
     };
-    let top = placed.item.top();
-    let colour = top.quality.map_or(NO_QUALITY_NAME, quality_colour);
-    let all = placed.item.count();
+    *open = Some(commands.spawn(document(&SPLIT)).id());
     let at = splitting.at + OFFSET;
-    let node = Node {
-        position_type: PositionType::Absolute,
-        left: px(at.x),
-        top: px(at.y),
-        flex_direction: FlexDirection::Column,
-        align_items: AlignItems::Center,
-        row_gap: px(GAP),
-        ..default()
-    };
-    let mut panel = commands.spawn((SplitBox, tooltip_box(node), GlobalZIndex(HELD_ITEM_Z - 1)));
-    let id = panel.id();
-    panel.insert(stops_presses(id)).with_children(|inside| {
-        inside.spawn((
-            Text::new(top.name()),
-            TextSize::Medium.font(),
-            TextColor(colour),
-        ));
-        if !placed.item.is_even() {
-            // Mixed: a row for each kind in it, rather than a count.
-            picker::spawn_rows(inside, &placed);
-            return;
-        }
-        spawn_slider(inside, value_of(splitting.count, all), None, SLIDER_WIDTH)
-            .insert((SplitSlider, crate::widgets::UiId::new("split", "count")));
-        let shape = placed.shape();
-        let size = Node {
-            width: px(shape.width as f32 * CELL),
-            height: px(shape.height as f32 * CELL),
-            ..default()
+    dom.set("split/box", "left", &at.x.round().to_string());
+    dom.set("split/box", "top", &at.y.round().to_string());
+    // Mixed: a row for each kind in it, rather than a count.
+    let even = placed.item.is_even();
+    dom.set_flag("split/count", "hidden", !even);
+    dom.set_flag("split/stack", "hidden", !even);
+    dom.set_flag("split/rows", "hidden", even);
+    dom.set("split/count", "max", &placed.item.count().to_string());
+    dom.set("split/count", "value", &splitting.count.to_string());
+}
+
+/// Fills the box's places once it is built: the stack's name in its quality's
+/// colour, the stack itself, and a mixed stack's rows.
+pub(super) fn bind_split(
+    new: Query<(Entity, &UiId), Added<UiId>>,
+    split: Res<Split>,
+    carried: Res<Carried>,
+    mut commands: Commands,
+) {
+    for (entity, id) in &new {
+        let ("split", name) = id.parts() else {
+            continue;
         };
-        inside
-            .spawn((SplitPicture, size))
-            .with_children(|picture| draw_stack(picture, &placed, splitting.count));
-    });
+        let found = split.0.and_then(|splitting| {
+            let (_, placed) = carried.0.placed(splitting.stack)?;
+            Some((splitting, placed))
+        });
+        let Some((splitting, placed)) = found else {
+            continue;
+        };
+        let mut place = commands.entity(entity);
+        match name {
+            "name" => {
+                let top = placed.item.top();
+                let colour = top.quality.map_or(NO_QUALITY_NAME, quality_colour);
+                let words = (Text::new(top.name()), TextSize::Medium.font());
+                place.with_child((words, TextColor(colour)));
+            }
+            "stack" if placed.item.is_even() => {
+                let shape = placed.shape();
+                let size = Node {
+                    width: px(shape.width as f32 * CELL),
+                    height: px(shape.height as f32 * CELL),
+                    ..default()
+                };
+                place.with_children(|inside| {
+                    inside
+                        .spawn((SplitPicture, size))
+                        .with_children(|picture| draw_stack(picture, placed, splitting.count));
+                });
+            }
+            "rows" if !placed.item.is_even() => {
+                place.with_children(|inside| picker::spawn_rows(inside, placed));
+            }
+            _ => {}
+        }
+    }
 }
 
 fn draw_stack(parent: &mut ChildSpawnerCommands, placed: &shared::item::Placed, count: u32) {
@@ -166,17 +181,17 @@ fn draw_stack(parent: &mut ChildSpawnerCommands, placed: &shared::item::Placed, 
 
 /// The slider sets how many.
 pub(super) fn move_split(
-    mut moved: MessageReader<SliderMoved>,
-    sliders: Query<(), With<SplitSlider>>,
+    mut events: MessageReader<UiEvent>,
     carried: Res<Carried>,
     mut split: ResMut<Split>,
 ) {
-    for SliderMoved(slider, value) in moved.read() {
-        if sliders.contains(*slider)
+    for event in events.read() {
+        if event.id == UiId::new("split", "count")
+            && let UiValue::Number(value) = event.value
             && let Some(splitting) = &mut split.0
             && let Some(stack) = carried.0.find(splitting.stack)
         {
-            let count = count_at(*value, stack.count());
+            let count = (value.round() as u32).clamp(1, stack.count().max(1));
             if splitting.count != count {
                 splitting.count = count;
             }
@@ -184,16 +199,17 @@ pub(super) fn move_split(
     }
 }
 
-/// Esc, a press anywhere else, or the stack going (or no longer being one) closes it.
-/// Before the menus see Esc.
+/// The box closing itself (Esc, or a press anywhere else, unless it is locked
+/// open), or the stack going (or no longer being one), ends the splitting.
+/// Before presses are taken, so one on another stack opens it afresh.
 pub(super) fn close_split(
+    mut events: MessageReader<UiEvent>,
     mut split: ResMut<Split>,
     carried: Res<Carried>,
-    mut keys: ResMut<ButtonInput<KeyCode>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-    pointer: Res<UiPointer>,
-    boxes: Query<(&ComputedNode, &UiGlobalTransform), With<SplitBox>>,
 ) {
+    let closed = events
+        .read()
+        .any(|event| event.id == UiId::new("split", "box") && event.value == UiValue::Closed);
     let Some(splitting) = split.0 else {
         return;
     };
@@ -201,15 +217,7 @@ pub(super) fn close_split(
         .0
         .placed(splitting.stack)
         .is_none_or(|(_, placed)| placed.item.count() < 2);
-    let escaped = keys.clear_just_pressed(KeyCode::Escape);
-    let inside = |at: Vec2| {
-        boxes.iter().any(|(node, transform)| {
-            let (corner, size) = logical_rect(node, transform);
-            Rect::from_corners(corner, corner + size).contains(at)
-        })
-    };
-    let elsewhere = mouse.just_pressed(MouseButton::Left) && !pointer.0.is_some_and(inside);
-    if gone || escaped || elsewhere {
+    if gone || closed {
         split.0 = None;
     }
 }
