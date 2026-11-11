@@ -9,8 +9,9 @@ use super::{
     PICTURE, PICTURE_PIXELS, PicturePages, PictureQualities, PicturesForm, PicturesGrid, Shown,
 };
 use crate::common::Preferences;
+use crate::dom::Dom;
 use crate::item_art::ItemPictures;
-use crate::widgets::{ButtonPressed, Dropdown, DropdownChosen, TabChosen};
+use crate::widgets::{ButtonPressed, DropdownChosen, TabChosen};
 
 /// What Item Pictures' page dropdown, quality tabs and pictures do.
 #[allow(clippy::too_many_arguments)]
@@ -45,13 +46,16 @@ pub(in crate::debug_menu) fn choose_pictures(
     }
 }
 
-/// Fills Item Pictures' grid with the page chosen, and shows its name in the dropdown.
-/// Only that page's pictures are drawn.
+/// Fills Item Pictures' grid with the page chosen, and shows its name in the
+/// dropdown, which is given its pages when the panel opens. Only that page's
+/// pictures are drawn.
 pub(in crate::debug_menu) fn fill_pictures(
     mut commands: Commands,
     preferences: Res<Preferences>,
     mut grids: Query<(Entity, &mut PicturesGrid)>,
-    mut dropdowns: Query<&mut Dropdown, With<PicturePages>>,
+    dropdowns: Query<Ref<PicturePages>>,
+    mut dom: Dom,
+    mut shown: Local<Option<PicturePage>>,
 ) {
     let page = PicturePage::chosen(&preferences);
     for (entity, mut grid) in &mut grids {
@@ -63,14 +67,19 @@ pub(in crate::debug_menu) fn fill_pictures(
                 .with_children(|grid| page.spawn(grid));
         }
     }
-    let index = PicturePage::ALL
-        .iter()
-        .position(|&p| p == page)
-        .unwrap_or(0);
-    for mut dropdown in &mut dropdowns {
-        if dropdown.selected != index {
-            dropdown.selected = index;
-        }
+    let Ok(dropdown) = dropdowns.single() else {
+        *shown = None;
+        return;
+    };
+    const ID: &str = "debug.item_pictures/page";
+    if dropdown.is_added() {
+        let pages = PicturePage::ALL.map(|page| page.name().to_owned());
+        dom.set_options(ID, pages.map(|name| (name.clone(), name)));
+        *shown = None;
+    }
+    if *shown != Some(page) {
+        *shown = Some(page);
+        dom.set(ID, "value", page.name());
     }
 }
 

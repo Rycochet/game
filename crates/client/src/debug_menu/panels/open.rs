@@ -7,7 +7,7 @@ use super::super::actions::DebugAction;
 use super::super::bodies::BodiesToShow;
 use super::{
     FIRST_AT, NEXT_AT, change_creature, create_mob, dev_area, examine_mob, give, learn_skills,
-    spawn_every_widget, spawn_item_pictures, steps, teleport_to_world, vitals, world_time,
+    pictures_spawn, spawn_every_widget, steps, teleport_to_world, vitals, world_time,
 };
 use crate::dom::{Template, document_in};
 use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel};
@@ -61,7 +61,6 @@ impl OpenPanels {
             .with_children(|content| match action {
                 DebugAction::ShowWidgets => spawn_every_widget(content),
                 DebugAction::SunsAndMoons => {}
-                DebugAction::ItemPictures => spawn_item_pictures(content),
                 _ => {}
             });
         if let Some(template) = template_of(action) {
@@ -89,6 +88,7 @@ fn template_of(action: DebugAction) -> Option<&'static Template> {
         DebugAction::DevArea => Some(&dev_area::DEV_AREA),
         DebugAction::LearnSkills => Some(&learn_skills::LEARN_SKILLS),
         DebugAction::GiveItem => Some(&give::GIVE_ITEM),
+        DebugAction::ItemPictures => Some(&pictures_spawn::ITEM_PICTURES),
         DebugAction::TeleportToWorld => Some(&teleport_to_world::TELEPORT_TO_WORLD),
         _ => None,
     }

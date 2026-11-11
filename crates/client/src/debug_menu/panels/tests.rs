@@ -84,12 +84,22 @@ fn ids_in(spawn: impl FnOnce(&mut ChildSpawnerCommands)) -> Vec<crate::widgets::
         .collect()
 }
 
+/// The qualities are written out in Item Pictures' markup, in order.
+#[test]
+fn item_pictures_offers_every_quality() {
+    let source = pictures_spawn::ITEM_PICTURES.source;
+    let mut from = 0;
+    for quality in shared::item::Quality::ALL {
+        let option = format!(">{quality:?}</option>");
+        let at = source[from..].find(&option);
+        from += at.unwrap_or_else(|| panic!("{quality:?} is missing, or out of order"));
+    }
+    assert_eq!(source.matches("</option>").count(), 8, "and the page's own");
+}
+
 #[test]
 fn every_panels_widgets_each_have_their_own_id() {
-    let panels: [(&str, SpawnPanel); 2] = [
-        ("Show Widgets", spawn_every_widget),
-        ("Item Pictures", spawn_item_pictures),
-    ];
+    let panels: [(&str, SpawnPanel); 1] = [("Show Widgets", spawn_every_widget)];
     for (name, spawn) in panels {
         let ids = ids_in(spawn);
         let twice = crate::widgets::duplicate_ids(&ids);
@@ -109,6 +119,7 @@ fn the_panels_written_as_markup_are_good() {
     dev_area::DEV_AREA.assert_good();
     learn_skills::LEARN_SKILLS.assert_good();
     give::GIVE_ITEM.assert_good();
+    pictures_spawn::ITEM_PICTURES.assert_good();
     generate::GENERATE_POI.assert_good();
     teleport_to_world::TELEPORT_TO_WORLD.assert_good();
 }

@@ -89,16 +89,15 @@ use layout::show_if;
 pub(super) use learn_skills_systems::add_learn_skills_panel;
 pub(super) use open::{OpenPanels, forget_closed};
 use pictures_form::{
-    BLADE_PICTURE, HANDS_PICTURE, LARGE_PICTURE, LARGE_PICTURE_PIXELS, PAGES_WIDTH, PICTURE,
-    PICTURE_LABEL, PICTURE_PIXELS, PICTURE_ROW_LABEL, PICTURES_HEIGHT, RING_COLUMNS, RING_ROWS,
-    Shown, gem_to_show,
+    BLADE_PICTURE, HANDS_PICTURE, LARGE_PICTURE, LARGE_PICTURE_PIXELS, PICTURE, PICTURE_LABEL,
+    PICTURE_PIXELS, PICTURE_ROW_LABEL, RING_COLUMNS, RING_ROWS, Shown, gem_to_show,
 };
 pub(super) use pictures_form::{
     GemPicture, LargePicture, PicturePages, PictureQualities, PicturesForm, PicturesGrid,
 };
 use pictures_spawn::{
-    picture_label, spawn_blade_row, spawn_body_row, spawn_item_pictures, spawn_picture,
-    spawn_picture_heading, spawn_picture_row, spawn_ring_row,
+    picture_label, spawn_blade_row, spawn_body_row, spawn_picture, spawn_picture_heading,
+    spawn_picture_row, spawn_ring_row,
 };
 pub(super) use pictures_systems::{choose_pictures, fill_pictures, show_pictures};
 pub(super) use steps::{press_panel_buttons, update_panel_buttons};
