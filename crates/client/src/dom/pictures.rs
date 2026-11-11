@@ -12,8 +12,6 @@ pub struct Pictures(HashMap<String, Handle<Image>>);
 
 impl Pictures {
     /// Names a picture, for `<img src="picture:<name>"/>`.
-    // Not used until a screen with such a picture is markup.
-    #[allow(dead_code)]
     pub fn name(&mut self, name: impl Into<String>, picture: Handle<Image>) {
         self.0.insert(name.into(), picture);
     }

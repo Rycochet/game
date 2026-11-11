@@ -11,14 +11,13 @@
 use bevy::prelude::*;
 use shared::protocol::OnlineState;
 
-use super::{
-    ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, Layer, MENU_WIDTH, MenuButton, SystemMenu,
-};
+use super::{ABOVE_MENU_LAYER, Action, BUTTON_ROW, FONT, Layer, MENU_WIDTH, SystemMenu};
 use crate::common::{Hosting, Lockdown, Preferences, ServerClock, Session};
 use crate::connection::ToServer;
+use crate::dom::Dom;
 use crate::widgets::{
     ButtonPressed, ButtonState, ButtonStyle, ButtonTooltip, Checked, INK, Pressable, spawn_button,
-    spawn_check_button, spawn_dialog, spawn_icon_button,
+    spawn_dialog,
 };
 
 const WORDS_WIDTH: f32 = 420.0;
@@ -31,54 +30,10 @@ pub(super) struct OnlineToggle;
 #[derive(Component)]
 pub(super) struct FailedWords;
 
-/// Server Options' gear beside it, only for this game's own server.
-#[derive(Component)]
-pub(super) struct OnlineGear;
-
 /// What the toggle's tooltip says for this game's own server, and for a
 /// networked one.
-const OWN_TIP: &str = "Let other players join this game";
+pub(super) const OWN_TIP: &str = "Let other players join this game";
 const LOCKDOWN_TIP: &str = "Let everyone play here: off locks the server down, for its staff only";
-
-/// The toggle and the gear, as wide together as the menu's other buttons.
-pub(super) fn spawn_online_row(section: &mut ChildSpawnerCommands, gear: Handle<Image>) {
-    section
-        .spawn(Node {
-            width: percent(100),
-            height: px(BUTTON_ROW),
-            ..default()
-        })
-        .with_children(|row| {
-            let node = Node {
-                flex_grow: 1.0,
-                height: px(BUTTON_ROW),
-                ..default()
-            };
-            spawn_check_button(row, ButtonState::Normal, Some(false), "Online", FONT, node).insert(
-                (
-                    OnlineToggle,
-                    MenuButton::Online,
-                    Action::ToggleOnline,
-                    Action::ToggleOnline.ui_id("menu"),
-                    Pressable,
-                    ButtonTooltip(OWN_TIP.into()),
-                ),
-            );
-            let node = Node {
-                width: px(BUTTON_ROW),
-                height: px(BUTTON_ROW),
-                flex_shrink: 0.0,
-                ..default()
-            };
-            spawn_icon_button(row, ButtonState::Normal, gear, node).insert((
-                OnlineGear,
-                Action::ServerOptions,
-                Action::ServerOptions.ui_id("menu"),
-                Pressable,
-                ButtonTooltip("Server Options".into()),
-            ));
-        });
-}
 
 pub(super) fn spawn_online_requesters(commands: &mut Commands) {
     let asks = [
@@ -245,7 +200,8 @@ pub(super) fn show_online(
     clock: Res<ServerClock>,
     lockdown: Res<Lockdown>,
     mut toggles: Query<(&mut Checked, &mut ButtonTooltip), With<OnlineToggle>>,
-    mut gears: Query<&mut Node, With<OnlineGear>>,
+    mut dom: Dom,
+    mut gear_shown: Local<Option<bool>>,
 ) {
     let remote = session.is_playing() && !clock.local_server;
     let (on, tip) = match remote {
@@ -260,11 +216,9 @@ pub(super) fn show_online(
     }
     // In a browser there are no Server Options.
     let gear = !remote && !cfg!(target_arch = "wasm32");
-    let display = if gear { Display::Flex } else { Display::None };
-    for mut node in &mut gears {
-        if node.display != display {
-            node.display = display;
-        }
+    if *gear_shown != Some(gear) {
+        *gear_shown = Some(gear);
+        dom.set_flag("menu/server_options", "hidden", !gear);
     }
 }
 

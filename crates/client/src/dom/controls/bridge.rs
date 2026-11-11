@@ -84,6 +84,8 @@ pub(super) fn report(
         let value = match did {
             Did::Pressed if tag == Tag::Button => UiValue::Pressed,
             Did::Pressed if tag == Tag::Dialog => UiValue::Dismissed,
+            // `readonly`: its owner ticks it, and is only told of the press.
+            Did::Pressed if attrs.has("readonly") => UiValue::Pressed,
             // A checkbox is a button that ticks itself.
             Did::Pressed => {
                 let Ok(mut checked) = checks.get_mut(widget) else {

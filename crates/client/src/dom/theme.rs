@@ -54,6 +54,8 @@ impl Theme {
         for tag in [Tag::Span, Tag::Label, Tag::Td, Tag::Th] {
             theme.set(tag, "", inline);
         }
+        // Things side by side with nothing between them.
+        theme.set(Tag::Span, "joined", Look::default());
         let paragraph = Look {
             margin: [0.0, 0.0, 8.0, 0.0],
             ..inline

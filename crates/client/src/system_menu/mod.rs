@@ -38,13 +38,8 @@ const CORNER_GAP: f32 = 8.0;
 
 const MENU_WIDTH: f32 = 260.0;
 const MARGIN: f32 = 20.0;
-/// Above the first button while the game is paused; no room is kept for it
-/// otherwise.
-const PAUSED_ROW: f32 = 30.0;
 const BUTTON_ROW: f32 = 38.0;
 const GAP: f32 = 8.0;
-/// Between the menu's sections.
-const SECTION_GAP: f32 = 24.0;
 const FONT: TextSize = TextSize::Large;
 const SETTINGS_TITLE_ROW: f32 = 36.0;
 /// Round the close button, still on it, for fingers.
@@ -53,7 +48,6 @@ const CLOSE_MARGIN: f32 = 4.0;
 const SETTINGS_WIDTH: f32 = 50.0;
 const SETTINGS_HEIGHT: f32 = 75.0;
 
-const MENU_LAYER: i32 = 0;
 const ABOVE_MENU_LAYER: i32 = 1;
 
 pub struct SystemMenuPlugin;
@@ -76,7 +70,11 @@ impl Plugin for SystemMenuPlugin {
             .add_systems(
                 Update,
                 (
-                    (requesters::bind_requesters, credits::bind_credits),
+                    (
+                        requesters::bind_requesters,
+                        credits::bind_credits,
+                        panel::bind_main_panel,
+                    ),
                     show_menu,
                     show_buttons,
                     credits::start_credits,
