@@ -51,6 +51,7 @@ pub(super) struct Under<'w, 's> {
             Option<&'static TakesItemText>,
         ),
     >,
+    parents: Query<'w, 's, &'static ChildOf>,
     /// How big stacks may get.
     stacks: Res<'w, super::Stacks>,
     god: Res<'w, crate::common::GodMode>,

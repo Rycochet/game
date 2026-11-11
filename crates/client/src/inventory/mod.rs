@@ -99,6 +99,7 @@ impl Plugin for InventoryPlugin {
                     body::show_clothes,
                     (body::show_body_aim, wear_note::show_wear_note),
                     give::show_nearby,
+                    give::bind_rows,
                     give::show_give_aim,
                     panels::show_aim,
                     panels::show_tooltip,

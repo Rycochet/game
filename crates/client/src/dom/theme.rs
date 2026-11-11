@@ -133,6 +133,15 @@ impl Theme {
         );
         // Columns of a list, side by side.
         theme.set(Tag::Span, "columns", Look { gap: 8.0, ..inline });
+        // Somewhere a held thing can be let go: the colour of a grid.
+        theme.set(
+            Tag::Span,
+            "place",
+            Look {
+                background: Some(GRID_COLOUR),
+                ..inline
+            },
+        );
         let labelled = Look {
             gap: 16.0,
             ..inline
