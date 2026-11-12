@@ -103,8 +103,8 @@ mod button_state;
 mod buttons;
 
 pub use boxes::{
-    panel, panel_frame, panel_title, raised_box, spawn_tooltip, spawn_tooltip_with_picture,
-    tooltip_box,
+    TOOLTIP_BOX_EDGE, panel, panel_frame, panel_title, raised_box, spawn_tooltip, tooltip_box,
+    tooltip_colours, tooltip_trim,
 };
 use boxes::{raised_border, sunken_border};
 pub use button_state::{ButtonPressed, ButtonState, Pressable, RaisePanel, WidgetSystems};

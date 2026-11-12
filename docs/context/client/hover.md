@@ -5,8 +5,8 @@ The box near the bottom middle of the window naming what the pointer is over: an
 ## Files
 
 - `crates/client/src/hover/mod.rs`: `HoverPlugin`; `spawn::spawn_box` (Startup), `name::show_name` (PostUpdate, not while connecting).
-- `crates/client/src/hover/spawn.rs`: `HoverBox`, `HoverText`, `HoverMark` (the staff mark: `icons/lorc/laurel-crown.png` in gold), `spawn_box` (a `widgets` tooltip with a picture, `spawn_tooltip_with_picture`, in an absolute row across the window), `LIFT` (12 px above `common::BottomHud`), `LOWEST` (32 px).
-- `crates/client/src/hover/name.rs`: `Found` (what each module found), `name_of` (which wins), `mark_of` (the hovered player's `StaffMark`, when their name is what shows), `show_name` (places, fills and shows or hides the box; a marked player's name reads "Brin (Admin)" with the mark before it).
+- `crates/client/src/hover/spawn.rs`: `HOVER` (the box as markup: `hover/row`, an `inert` row across the window placed from its bottom, holding `hover/box`, a `span class="tip"` with `hover/mark` (the staff mark, a gold laurel crown: `img class="gold"`) and `hover/words`; the form `fills` the window, or the row would be placed from the top), `spawn_box` (the document, on a node of its own over the whole window, above the maps), `LIFT` (12 px above `common::BottomHud`), `LOWEST` (32 px).
+- `crates/client/src/hover/name.rs`: `Found` (what each module found), `name_of` (which wins), `mark_of` (the hovered player's `StaffMark`, when their name is what shows), `show_name` (through `Dom`, changing only what differs from what the box last showed: places, fills and shows or hides it; a marked player's name reads "Brin (Admin)" with the mark before it).
 
 ## Public API
 

@@ -6,7 +6,7 @@ use super::attrs::{Align, Attrs, Length, VAlign};
 use super::parts::InTable;
 use super::tag::Tag;
 use super::theme::Look;
-use crate::widgets::PANEL_EDGE;
+use crate::widgets::{BUTTON_PADDING, PANEL_EDGE, TOOLTIP_BOX_EDGE};
 
 /// A progress bar's height, and a spinner's across, with no size given.
 const PROGRESS: f32 = 24.0;
@@ -118,6 +118,11 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
     if fixed_panel {
         node.border = UiRect::all(px(PANEL_EDGE));
         node.padding = UiRect::all(px(PANEL_PADDING));
+    }
+    // A tooltip's box: its edge, and the room a button has inside it.
+    if around.look.tip {
+        node.border = UiRect::all(px(TOOLTIP_BOX_EDGE));
+        node.padding = BUTTON_PADDING;
     }
     match around.spot {
         Some(InTable::Row { row, columns, .. }) => {

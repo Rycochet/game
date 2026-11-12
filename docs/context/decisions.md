@@ -1272,3 +1272,9 @@ Owner, asked whether the split box should stay code or get a new surface: "New p
 Owner, on three things left open: the loading screen becomes markup after all (it was left as code in #405); the fallback apt mirror in the Check workflow stays, as GitHub is sometimes flaky; the ground section's "On the ground" hover tip, which a `container`'s `title` gives it, stays.
 
 Owner, on the order of the rest: PRs 8 to 10 don't depend on each other (but that the Character panel, PR 9, holds PR 8's elements), and only PR 11 needs them all. So anything that needs the owner's decision is parked on a branch of its own while the rest carries on, and every parked item is put to the owner before PR 11 starts.
+
+## 2026-11-12: Looks for the hover box and the status text
+
+Owner, asked whether these two should get theme looks now or stay code until PR 11: "New theme looks". So `Look` gained `tip` (a tooltip's dark box: edge, padding, shadow) and `icons` (the icon font behind the writing), with the classes `span.tip`, `p.status`, `p.status-warning` and `img.gold`. The status text is `TextSize::Large` (18), the nearest the theme has to the size it was.
+
+The same day the queue's rules changed: a queued chat is now a parent that starts a fresh child chat for each PR. This chat's first try at starting a child was refused by the app's permission check, so by the rule it coded this PR itself (noted in the rules file).

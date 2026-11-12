@@ -43,6 +43,18 @@ impl Inside {
     }
 }
 
+/// The font writing in this style is in.
+pub(super) fn font_of(style: TextStyle) -> TextFont {
+    let font = style.size.font();
+    match style.icons {
+        true => TextFont {
+            font: crate::fonts::with_icons(),
+            ..font
+        },
+        false => font,
+    }
+}
+
 /// Whether this writing has an item written into it.
 pub(super) fn has_items(words: &str) -> bool {
     !shared::item_text::items_in(words).is_empty()
@@ -75,7 +87,7 @@ impl Builder<'_, '_, '_> {
         let text = (
             // (With items, the words are spans the item text makes.)
             Text::new(if items { "" } else { words }),
-            style.size.font(),
+            font_of(style),
             TextColor(style.colour),
             TextLayout::justify(style.justify),
         );
@@ -126,6 +138,7 @@ impl Builder<'_, '_, '_> {
                 Some(Align::Right) => Justify::Right,
                 None => inside.style.justify,
             },
+            icons: look.icons || inside.style.icons,
         };
         let part = Element {
             tag: element.tag,
@@ -181,6 +194,7 @@ pub(super) fn build_documents(
                     size: theme.text,
                     colour: theme.colour,
                     justify: Justify::Left,
+                    icons: false,
                 });
                 commands.entity(root).insert(style);
                 let mut builder = Builder {

@@ -2,11 +2,12 @@
 
 use bevy::prelude::*;
 
-use super::spawn::{HoverBox, HoverMark, HoverText, LIFT, LOWEST};
+use super::spawn::{LIFT, LOWEST};
 use crate::common::{
     BottomHud, CurrentWorld, HoverName, HoveredBag, HoveredInSky, HoveredOnMap, KnownPois, Portal,
     StaffMark, poi_name,
 };
+use crate::dom::Dom;
 use crate::minimap::FullMap;
 use crate::view3d::HoveredToken;
 
@@ -51,6 +52,15 @@ pub(super) fn mark_of<'a>(found: Found, mark: Option<&'a StaffMark>) -> Option<&
     mark.filter(|_| named).map(|mark| mark.0.as_str())
 }
 
+/// What the box last showed: its words, whether its mark shows, and how far
+/// up it sits.
+#[derive(Default, PartialEq)]
+pub(super) struct Shown {
+    name: Option<String>,
+    marked: bool,
+    lift: f32,
+}
+
 /// Shows the box with the name of what the pointer is over, or hides it. The
 /// full map names things itself, so the box hides while it is open.
 #[allow(clippy::too_many_arguments)]
@@ -59,7 +69,6 @@ pub(super) fn show_name(
     hovered: Res<HoveredToken>,
     tokens: Query<(Option<&Portal>, Option<&HoverName>)>,
     marks: Query<&StaffMark>,
-    mut picture: Single<&mut Node, (With<HoverMark>, Without<HoverBox>)>,
     (sky, bag, place, world): (
         Res<HoveredInSky>,
         Res<HoveredBag>,
@@ -67,14 +76,9 @@ pub(super) fn show_name(
         Option<Res<CurrentWorld>>,
     ),
     bottom_hud: Res<BottomHud>,
-    mut holder: Single<(&mut Visibility, &mut Node), With<HoverBox>>,
-    mut text: Single<&mut Text, With<HoverText>>,
+    mut dom: Dom,
+    mut shown: Local<Option<Shown>>,
 ) {
-    let (shown_now, node) = &mut *holder;
-    let lift = LOWEST.max(bottom_hud.0 + LIFT);
-    if node.bottom != px(lift) {
-        node.bottom = px(lift);
-    }
     let found = Found {
         sky: sky.0.as_deref(),
         token: hovered.0.and_then(|token| tokens.get(token).ok()),
@@ -88,22 +92,26 @@ pub(super) fn show_name(
         (Some(name), Some(role)) => Some(format!("{name} ({role})")),
         (name, _) => name,
     };
-    let display = if mark.is_some() {
-        Display::Flex
-    } else {
-        Display::None
+    let now = Shown {
+        name,
+        marked: mark.is_some(),
+        lift: LOWEST.max(bottom_hud.0 + LIFT),
     };
-    if picture.display != display {
-        picture.display = display;
+    // Only what differs from what it shows is changed.
+    let was = shown.as_ref();
+    if was.is_none_or(|was| was.lift != now.lift) {
+        dom.set("hover/row", "bottom", &now.lift.to_string());
     }
-    shown_now.set_if_neq(if name.is_some() {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    });
-    if let Some(name) = name
-        && text.0 != name
+    if was.is_none_or(|was| was.marked != now.marked) {
+        dom.set_flag("hover/mark", "hidden", !now.marked);
+    }
+    if was.is_none_or(|was| was.name.is_some() != now.name.is_some()) {
+        dom.set_flag("hover/row", "hidden", now.name.is_none());
+    }
+    if let Some(name) = &now.name
+        && was.is_none_or(|was| was.name.as_ref() != Some(name))
     {
-        text.0 = name;
+        dom.set_text("hover/words", name.clone());
     }
+    *shown = Some(now);
 }

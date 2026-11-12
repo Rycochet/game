@@ -60,3 +60,10 @@ fn a_mark_shows_only_with_a_players_name() {
     };
     assert_eq!(mark_of(behind_the_sky, Some(&mark)), None);
 }
+
+#[test]
+fn the_box_is_good_markup_starting_at_its_lowest() {
+    super::spawn::HOVER.assert_good();
+    let bottom = format!(r#"bottom="{}""#, super::spawn::LOWEST);
+    assert!(super::spawn::HOVER.source.contains(&bottom));
+}

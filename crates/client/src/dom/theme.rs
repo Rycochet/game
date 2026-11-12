@@ -2,6 +2,8 @@
 //! writing, colours and spacing. Markup never says how anything looks, so
 //! changing this changes every screen.
 
+mod over_view;
+
 use std::collections::HashMap;
 
 use bevy::prelude::*;
@@ -28,6 +30,10 @@ pub struct Look {
     pub background: Option<Color>,
     /// A progress bar's colours, empty and full, if not the theme's.
     pub bar: Option<(Color, Color)>,
+    /// A tooltip's box: its edge, the room inside it and its shadow.
+    pub tip: bool,
+    /// Its writing falls back to the icon font for symbols.
+    pub icons: bool,
 }
 
 /// Every element's look, by its `class` (`""` for none).
@@ -204,27 +210,7 @@ impl Theme {
             ..default()
         };
         theme.set(Tag::Footer, "", footer);
-        // The loading screen's bar: gold on the dark behind the title, with
-        // pale writing (its colours are copied in `index.html`).
-        let loading = Look {
-            text: Some(TextSize::Large),
-            colour: Some(Color::srgb(0.95, 0.92, 0.85)),
-            bar: Some((
-                Color::srgb(0.13, 0.11, 0.16),
-                Color::srgb(0.93, 0.75, 0.38).with_alpha(0.45),
-            )),
-            ..default()
-        };
-        theme.set(Tag::Progress, "loading", loading);
-        // A popup's dark box: light writing, its things close.
-        let popup = Look {
-            gap: ROW,
-            // (As a tooltip's.)
-            colour: Some(crate::common::NO_QUALITY_NAME),
-            text: Some(TextSize::Medium),
-            ..default()
-        };
-        theme.set(Tag::Popup, "", popup);
+        over_view::add(&mut theme);
         // The frame round a grid: its rows stacked, its controls close.
         theme.set(Tag::Container, "", stacked);
         theme.set(Tag::Header, "", inline);

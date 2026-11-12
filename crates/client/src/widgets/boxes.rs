@@ -97,6 +97,19 @@ pub fn tooltip_box(node: Node) -> impl Bundle {
     )
 }
 
+/// A tooltip box's background and writing colours.
+pub fn tooltip_colours() -> (Color, Color) {
+    (TOOLTIP_BACKGROUND, TOOLTIP_TEXT)
+}
+
+/// How wide a tooltip box's edge is.
+pub const TOOLTIP_BOX_EDGE: f32 = TOOLTIP_EDGE;
+
+/// A tooltip box's edge colour and shadow, for a node laid out some other way.
+pub fn tooltip_trim() -> impl Bundle {
+    (BorderColor::from(SHADED_EDGE), soft_shadow())
+}
+
 /// A dark box naming something, such as what is under the pointer; `marker` goes on its text,
 /// to find it and change what it says. Hide the holder to hide it.
 pub fn spawn_tooltip(
@@ -110,38 +123,4 @@ pub fn spawn_tooltip(
         TOOLTIP_FONT.font(),
         TextColor(TOOLTIP_TEXT),
     ));
-}
-
-/// `spawn_tooltip` with a picture (`image`, tinted `colour`) before the words,
-/// hidden until shown (`Display::Flex` on `picture`'s entity).
-pub fn spawn_tooltip_with_picture(
-    holder: &mut ChildSpawnerCommands,
-    marker: impl Bundle,
-    picture: impl Bundle,
-    image: Handle<Image>,
-    colour: Color,
-) {
-    let row = Node {
-        align_items: AlignItems::Center,
-        column_gap: px(6),
-        ..default()
-    };
-    holder.spawn(tooltip_box(row)).with_children(|row| {
-        row.spawn((
-            picture,
-            ImageNode::new(image).with_color(colour),
-            Node {
-                width: px(20),
-                height: px(20),
-                display: Display::None,
-                ..default()
-            },
-        ));
-        row.spawn((
-            marker,
-            Text::new(""),
-            TOOLTIP_FONT.font(),
-            TextColor(TOOLTIP_TEXT),
-        ));
-    });
 }
