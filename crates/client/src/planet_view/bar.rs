@@ -51,7 +51,7 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
         ..default()
     });
     let entity = bar.id();
-    bar.insert(crate::dom::Solid);
+    bar.insert(crate::dom::Opaque);
     let mut parts = None;
     bar.with_children(|row| {
         let control = |width: Option<f32>| Node {

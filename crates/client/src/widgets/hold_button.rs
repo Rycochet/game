@@ -47,7 +47,17 @@ pub(super) fn add(app: &mut App) {
 
 /// What a press or touch may be on: every widget, so one in front hides a
 /// hold button behind it.
-type Widgets<'w, 's> = Query<'w, 's, (), Or<(With<Pressable>, With<PanelPart>, With<ButtonState>)>>;
+type Widgets<'w, 's> = Query<
+    'w,
+    's,
+    (),
+    Or<(
+        With<Pressable>,
+        With<PanelPart>,
+        With<ButtonState>,
+        With<crate::dom::Opaque>,
+    )>,
+>;
 
 /// Notes which hold buttons are held this frame. Before the press is taken
 /// (a press on one stops at its panel, as any press on a panel does).

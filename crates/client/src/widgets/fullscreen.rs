@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use super::moveable::PanelPart;
 use super::theme::DARKENING;
 use super::{PANEL_EDGE, Pressable, panel, panel_title};
-use crate::dom::Solid;
+use crate::dom::Opaque;
 
 /// Above every moveable panel, however many times they have been brought to the
 /// front. A layer's own parts may go a little above its number.
@@ -93,7 +93,7 @@ pub fn spawn_sized_layer(
     });
     let panel_entity = commands.spawn(panel()).id();
     commands.entity(panel_entity).insert((
-        Solid,
+        Opaque,
         Node {
             position_type: PositionType::Relative,
             width,

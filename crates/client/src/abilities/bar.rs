@@ -45,7 +45,7 @@ pub(super) fn spawn_bar(mut commands: Commands) {
                 Visibility::Hidden,
             ))
             .id();
-        commands.entity(row).insert(crate::dom::Solid);
+        commands.entity(row).insert(crate::dom::Opaque);
         commands.entity(row).with_children(|row| {
             for index in 0..PER_SIDE {
                 let slot = (side * PER_SIDE + index) as u8;

@@ -29,7 +29,12 @@ pub(in crate::widgets) fn track_pointer(
             Option<&ButtonState>,
             Has<Switch>,
         ),
-        Or<(With<Pressable>, With<PanelPart>, With<ButtonState>)>,
+        Or<(
+            With<Pressable>,
+            With<PanelPart>,
+            With<ButtonState>,
+            With<crate::dom::Opaque>,
+        )>,
     >,
     mut pointed: ResMut<Pointed>,
 ) {

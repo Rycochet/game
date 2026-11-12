@@ -11,7 +11,7 @@ The Skills page: the Character panel's Skills tab (owner, 2026-11-07: it was a f
 - `skills_page/build.rs`: `build_tree` (draws the nodes and lines again, while shown, only when which skills are known changes or the page is new: `Drawn`, unit tested), `SkillNode`, `SkillLine`, `RingOf` (a ring's skill), `ring_value`, `tenths`.
 - `skills_page/values.rs`: `show_values`: keeps each `RingOf` ring's `SkillRing` up to date while open, changing only those that differ, so practice from every blow doesn't draw the tree again (that made the rings flicker and, with the ring widget, crashed).
 - `skills_page/place.rs`: `place_tree`: places and sizes from the view each frame while open (circles grow with the zoom); lines are thin nodes turned by `UiTransform`; the hovered skill, or else the chosen one, gets an orange `Outline`, leaving the border for the coming ring.
-- `skills_page/input.rs`: `take_input` (`PreUpdate`, after `WidgetSystems::Modal`): notes whether the tab is shown (its canvas has a size), and fits the tree each time it comes on show.
+- `skills_page/input.rs`: `take_input` (`PreUpdate`, after `dom::DomInput::Modal`): notes whether the tab is shown (its canvas has a size), and fits the tree each time it comes on show.
 - `skills_page/details.rs`: `show_details`, `describe` (unit tested).
 - `skills_page/icons.rs`: `icon_path(id)`: each skill's game-icons.net icon from a table by path (`ICONS`), or the nearest above it that has one, so single weapons and kinds show their type's unless they have their own; every icon is listed in `xtask/icons.txt` (a test checks every skill has a drawn one). The owner may change any.
 

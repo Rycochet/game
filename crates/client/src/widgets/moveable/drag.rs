@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::super::{ButtonPressed, ButtonState, Pressable, RaisePanel};
 use super::{FIRST_PANEL_Z, MoveablePanel, PanelPart};
 use crate::common::{TouchGesture, UiPointer, in_interface};
-use crate::dom::{Finder, Hit};
+use crate::dom::{Finder, Hit, Opaque};
 
 /// What is being moved, between frames.
 #[derive(Resource, Default)]
@@ -34,7 +34,7 @@ pub(in crate::widgets) fn take_presses(
     (hit, finder): (Res<Hit>, Finder),
     mut gesture: ResMut<TouchGesture>,
     scale: Res<UiScale>,
-    parts: Query<&PanelPart>,
+    (parts, surfaces): (Query<&PanelPart>, Query<(), With<Opaque>>),
     buttons: Query<(Entity, Option<&ButtonState>), With<Pressable>>,
     mut raised: MessageReader<RaisePanel>,
     mut panels: Query<(&mut MoveablePanel, &mut GlobalZIndex)>,
@@ -42,6 +42,12 @@ pub(in crate::widgets) fn take_presses(
     mut dragging: ResMut<Dragging>,
 ) {
     let dragging = &mut *dragging;
+    // What a press on this does, if it is a part of a panel; a surface
+    // (`dom::Opaque`) stops presses as a panel's body does.
+    let part_of = |entity: Entity| {
+        let part = parts.get(entity).ok().copied();
+        part.or_else(|| surfaces.contains(entity).then_some(PanelPart::Body(entity)))
+    };
     let mut raise = |panel: Entity, panels: &mut Query<(&mut MoveablePanel, &mut GlobalZIndex)>| {
         if let Ok((_, mut z)) = panels.get_mut(panel) {
             dragging.top_z = dragging.top_z.max(FIRST_PANEL_Z) + 1;
@@ -57,12 +63,12 @@ pub(in crate::widgets) fn take_presses(
         // part of a panel is what the press is on, so a button behind a panel,
         // or behind anything else in front, gets nothing.
         let nearest = hit.first(|entity| {
-            let part = parts.get(entity).ok().copied();
+            let part = part_of(entity);
             let button = buttons.get(entity).ok();
             (part.is_some() || button.is_some()).then_some((part, button))
         });
         let button = nearest.and_then(|(part, button)| button.filter(|_| part.is_none()));
-        let part = hit.first(|entity| parts.get(entity).ok().copied());
+        let part = hit.first(part_of);
         if let Some((entity, state)) = button {
             mouse.clear_just_pressed(MouseButton::Left);
             if !state.is_some_and(|state| state.is_disabled()) {
@@ -109,10 +115,7 @@ pub(in crate::widgets) fn take_presses(
                 .target_at(start)
                 .map(|target| finder.chain_of(target));
             let on_interface = chain.is_some();
-            let part = chain
-                .unwrap_or_default()
-                .into_iter()
-                .find_map(|entity| parts.get(entity).ok().copied());
+            let part = chain.unwrap_or_default().into_iter().find_map(part_of);
             let taken = match part {
                 Some(PanelPart::TitleBar(panel)) => Some(panel),
                 Some(PanelPart::LeftForOwner(_)) => None,

@@ -9,7 +9,7 @@ use super::{
     Dropdown, FONT, GAP, LEAST_WIDTH, LIST_LAYER, List, ListBacking, ListRows, ROW, ROWS,
     SEARCH_HEIGHT, list_corner,
 };
-use crate::dom::Solid;
+use crate::dom::Opaque;
 
 pub(super) fn spawn_list(
     commands: &mut Commands,
@@ -42,7 +42,7 @@ pub(super) fn spawn_list(
         .id();
     let holder = commands.spawn(panel()).id();
     commands.entity(holder).insert((
-        Solid,
+        Opaque,
         Node {
             position_type: PositionType::Absolute,
             left: px(corner.x),

@@ -50,7 +50,7 @@ pub(super) fn spawn_popup(commands: &mut Commands, assets: &AssetServer) -> Enti
     let popup = commands
         .spawn((Popup::default(), tooltip_box(node), front))
         .id();
-    commands.entity(popup).insert(super::Solid);
+    commands.entity(popup).insert(super::Opaque);
     let corner = Node {
         position_type: PositionType::Absolute,
         top: px(LOCK_INSET),
