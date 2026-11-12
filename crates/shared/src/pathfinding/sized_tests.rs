@@ -5,6 +5,7 @@ use crate::clearance::{RoomMap, check_segment};
 use crate::creature::Size;
 use crate::door::{Side, Swing};
 use crate::dungeon::{Cell, Level};
+use crate::movement::{Gait, LevelWay};
 use crate::spot::Spot;
 
 fn room(r: i64) -> Level {
@@ -21,10 +22,18 @@ fn m(x: i64, y: i64) -> Spot {
     Spot::middle_of((x, y))
 }
 
+fn flat(level: &Level) -> LevelWay<'_> {
+    LevelWay {
+        level,
+        relief: None,
+        terrain: None,
+        gait: Gait::UNSKILLED,
+    }
+}
+
 fn route(level: &Level, size: Size, from: Spot, to: Spot) -> SizedPath {
-    let path = find_sized_path(level, &RoomMap::new(level, size), from, to, None, |_, _| {
-        true
-    });
+    let rooms = RoomMap::new(level, size);
+    let path = find_sized_path(&flat(level), &rooms, from, to, None, |_, _| true);
     for pair in path.spots.windows(2) {
         assert!(
             check_segment(level, size, pair[0], pair[1]).is_some(),

@@ -15,9 +15,9 @@ use super::{
     enemy_cells,
 };
 use crate::common::{
-    CancelledEnergy, CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition,
-    NearRivers, PlayerGait, PlayerSize, PlayerSpeed, Sneaking, SpentEnergy, SpotPosition,
-    WildCellHeights,
+    CancelledEnergy, CurrentDungeon, CurrentWorld, DrawnGround, GameClock, GameView, GodMode,
+    MapPosition, NearRivers, PlayerGait, PlayerSize, PlayerSpeed, Sneaking, SpentEnergy,
+    SpotPosition, WildCellHeights,
 };
 use shared::clearance::crowd_per_mille;
 use shared::spot::Spot;
@@ -40,7 +40,7 @@ pub(super) fn take_steps(
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
     (gait, sneaking): (Res<PlayerGait>, Res<Sneaking>),
-    (heights, rivers): (Res<WildCellHeights>, Res<NearRivers>),
+    (heights, rivers, drawn): (Res<WildCellHeights>, Res<NearRivers>, Res<DrawnGround>),
     mut energy: ResMut<PlayerEnergy>,
     (mut stepped, mut moved, mut asks): (
         MessageWriter<Stepped>,
@@ -85,6 +85,7 @@ pub(super) fn take_steps(
             let costs = LevelCosts {
                 level: &dungeon.level,
                 heights: &heights,
+                relief: drawn.relief.as_ref(),
                 gait: gait.0,
                 sneaking: sneaking.0,
                 speed: speed.0,

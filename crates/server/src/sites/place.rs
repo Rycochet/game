@@ -45,6 +45,7 @@ pub(crate) struct SetIn {
 
 impl Place {
     /// The ground kept level in the wilderness: its cutouts' (none elsewhere).
+    #[cfg(test)]
     pub(crate) fn flats(&self) -> Vec<FlatGround> {
         match self {
             Place::Wilderness { cutouts, .. } => cutouts

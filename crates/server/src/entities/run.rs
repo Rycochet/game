@@ -5,6 +5,7 @@ use shared::dungeon::line_is_clear;
 use super::doors::{Opened, open_on_the_way, way_level};
 use super::facing::noises;
 use super::fight::{MobBlow, mob_turn};
+use super::on_ground::on_ground;
 use super::territory::mind_territory;
 use super::tracking::track;
 use super::{Doing, Maps, Population, Spot, Taken, act, cross, everyone_playing, notice};
@@ -136,6 +137,11 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                     &taken,
                     place,
                 )
+            };
+            // Slower up and down hills and through shallows.
+            let cost = match crossing {
+                None => on_ground(level, relief.as_ref(), (was_spot, mob.spot), cost),
+                Some(_) => cost,
             };
             // One with hands that came to a closed door opens it instead.
             if let Some(doors) = doors

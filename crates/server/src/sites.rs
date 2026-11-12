@@ -105,19 +105,9 @@ impl Visit {
     }
 
     /// The ground kept level here: the wilderness's cutouts in its window.
+    #[cfg(test)]
     pub(crate) fn flats(&self) -> Vec<shared::movement::FlatGround> {
         self.place.flats()
-    }
-
-    /// The wilderness's heights over `bounds` (a step's), with its cutouts'
-    /// covered cells kept level by the cells here.
-    pub(crate) fn wild_heights(
-        &self,
-        ground: &shared::movement::WorldGround,
-        bounds: (i64, i64, i64, i64),
-    ) -> shared::movement::WildHeights {
-        shared::movement::WildHeights::new(ground, bounds)
-            .with_flats(&self.flats(), &self.level.level)
     }
 
     /// How a move from here to `to` goes, if someone with this `gait` may take

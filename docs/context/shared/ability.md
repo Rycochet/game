@@ -9,7 +9,7 @@ Abilities, the named things a creature can do: active ones done when asked (and 
 
 ## Public API
 
-- `Ability`: `Attack`, `Heal` and `Sneak` (every creature; Heal as there is no way to learn spells yet; Sneak a toggle, holding steps on levels to a sneaking pace, `energy::sneak_step_energy`), and the kinds' own `Flutter`, `Kick`, `NightVision` (passive), `Trample`. Also `sheet::Ability`. Messages carry it by its place, so new ones go at the end of the enum; `ALL` is the order players see (Attack first).
+- `Ability`: `Attack`, `Heal` and `Sneak` (every creature; Heal as there is no way to learn spells yet; Sneak a toggle, holding moves on levels to a sneaking pace, `energy::sneak_move_energy`), and the kinds' own `Flutter`, `Kick`, `NightVision` (passive), `Trample`. Also `sheet::Ability`. Messages carry it by its place, so new ones go at the end of the enum; `ALL` is the order players see (Attack first).
 - `known(kind)`: Attack, Heal, Sneak, Kick for any kind with legs (`body::has_legs`, owner 2026-11-09), and the kind's own (`CreatureDef::abilities`), for the body it is in now, so shapeshifting changes them.
 - `Ability::can_be_automatic()`: whether a slot may be made automatic, done whenever it can be (owner, 2026-11-07): Attack and Heal so far; `BarChange::ToggleAuto` refuses the rest (`BarRefusal::NotAutomatic`), though turning one off always works.
 - `Ability::can_use(kind)`: active and known. The client greys out what fails it, and what costs more Mana (`mana_cost`) than there is.

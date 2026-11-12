@@ -47,34 +47,30 @@ pub fn site_step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
 /// length alone: the same as `site_step_cost` for a step between two cells'
 /// middles, and in proportion for any other.
 pub fn site_move_cost(from: crate::spot::Spot, to: crate::spot::Spot) -> u32 {
+    level_move_energy(from.distance(to))
+}
+
+/// The energy a move on a level takes that costs `units` of walking on flat
+/// open ground (`movement::LevelWay::cost`): a cell's width is a straight
+/// step's `site_step_cost`.
+pub fn level_move_energy(units: u64) -> u32 {
     let span = crate::spot::CELL_SPAN as u64;
-    let cost = (from.distance(to) * crate::movement::STRAIGHT_COST as u64 + span / 2) / span;
+    let cost = (units * crate::movement::STRAIGHT_COST as u64 + span / 2) / span;
     cost as u32 * SITE_STEP_SCALE
 }
 
-/// How much a step on a level costs: its distance, any slope in the
-/// wilderness and wading (`movement::level_step_cost`).
-pub fn level_step_energy(
-    from: (i64, i64),
-    to: (i64, i64),
-    heights: Option<(i32, i32)>,
-    footing: crate::movement::Footing,
-    gait: crate::movement::Gait,
-) -> u32 {
-    crate::movement::level_step_cost(from, to, heights, footing, gait) * SITE_STEP_SCALE
+/// The energy a move `length` units long takes while sneaking, costing `cost`
+/// otherwise: no quicker than `SNEAK_TICKS_PER_CELL` a cell's width.
+pub fn sneak_move_energy(cost: u32, length: u64, speed: u32) -> u32 {
+    let span = crate::spot::CELL_SPAN as u64;
+    let least = u64::from(speed) * u64::from(SNEAK_TICKS_PER_CELL) * length / span;
+    cost.max(least as u32)
 }
 
 /// Ticks a cell takes at least while sneaking (`ability::Ability::Sneak`): one
 /// every 2 seconds, the pace Sneaking is learned at (owner, 2026-11-08: to tweak
 /// once the movement skills are done).
 pub const SNEAK_TICKS_PER_CELL: u32 = 2 * ACTION_TICKS_PER_SECOND as u32;
-
-/// What a step on a level costs while sneaking, for someone gaining `speed` a
-/// tick: at least `SNEAK_TICKS_PER_CELL` of their energy for each cell it
-/// covers, so they go no quicker than that.
-pub fn sneak_step_energy(cost: u32, cells: u32, speed: u32) -> u32 {
-    cost.max(speed * SNEAK_TICKS_PER_CELL * cells.max(1))
-}
 
 /// A second's worth of energy at `NORMAL_SPEED`.
 const SECOND: u32 = NORMAL_SPEED * ACTION_TICKS_PER_SECOND as u32;

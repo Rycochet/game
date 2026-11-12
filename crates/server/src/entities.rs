@@ -41,6 +41,7 @@ mod inspect;
 mod made;
 mod moves;
 mod notice;
+mod on_ground;
 mod population;
 mod run;
 mod scent;
