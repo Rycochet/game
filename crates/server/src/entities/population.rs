@@ -6,6 +6,7 @@ use shared::dungeon::line_is_clear;
 use shared::mob::{Memory, spawns};
 use shared::poi::Poi;
 use shared::protocol::CharacterId;
+use shared::relief::LevelGround;
 use shared::sheet::Feeling;
 use shared::site::SiteLevel;
 use shared::spot::Spot;
@@ -20,11 +21,19 @@ use crate::storage::{SavedMob, SiteId};
 impl ServerWorld {
     /// Makes sure a level about to be used has its mobs. Each keeps the id it was
     /// first given, saved with the site.
-    pub(crate) fn populate(&mut self, id: SiteId, poi: Poi, index: u32, level: &SiteLevel) {
+    /// `ground` is the kind it has, for its shape (`Population::relief`).
+    pub(crate) fn populate(
+        &mut self,
+        (id, poi): (SiteId, Poi),
+        index: u32,
+        level: &SiteLevel,
+        ground: &LevelGround,
+    ) {
         if self.populations.0.contains_key(&(id, index)) {
             return;
         }
         let stairs: Vec<_> = level.stairs.iter().map(|s| (s.x, s.y)).collect();
+        let relief = ground.relief(&self.ground, &level.level, &stairs);
         // A first level set into the wilderness: those about there stay there.
         let about = match id {
             SiteId::Poi(_) if index == 0 => super::wild::take_site_mobs_back(self, id),
@@ -77,6 +86,7 @@ impl ServerWorld {
         let population = Population {
             mobs,
             level: level.level.clone(),
+            relief,
             doors: Some(super::MobDoors {
                 poi,
                 open: level.level.with_doors_open(),

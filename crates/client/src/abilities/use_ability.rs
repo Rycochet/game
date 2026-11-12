@@ -4,7 +4,7 @@
 
 use bevy::prelude::*;
 use shared::ability::{Ability, BAR_SLOTS};
-use shared::combat::{CANCEL_PENALTY, Wielded, in_reach};
+use shared::combat::{Body, CANCEL_PENALTY, Wielded, in_reach};
 use shared::energy::ACTION_TICKS_PER_SECOND;
 use shared::protocol::{ClientMessage, Landed, ServerMessage};
 use shared::sheet::Feeling;
@@ -13,8 +13,8 @@ use super::manual::Manual;
 use super::own_bar::OwnBar;
 use super::vitals_now::{affords, wants_healing};
 use crate::common::{
-    CurrentDungeon, GameView, MapPosition, Other, OwnAbility, OwnVitals, PlayerSpeed, SpentEnergy,
-    Target,
+    CurrentDungeon, DrawnGround, GameView, Other, OwnAbility, OwnVitals, PlayerSize, PlayerSpeed,
+    SpentEnergy, SpotPosition, Target,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
@@ -97,10 +97,10 @@ pub(super) fn use_automatic(
     bar: Res<OwnBar>,
     carried: Res<Carried>,
     target: Res<Target>,
-    dungeon: Res<CurrentDungeon>,
+    (dungeon, ground): (Res<CurrentDungeon>, Res<DrawnGround>),
     (time, vitals): (Res<Time>, Res<OwnVitals>),
-    player: Single<&MapPosition, With<Player>>,
-    others: Query<(&Other, &MapPosition)>,
+    (player, size): (Single<&SpotPosition, With<Player>>, Res<PlayerSize>),
+    others: Query<(&Other, &SpotPosition)>,
     (moving, manual): (Res<PlayerMoving>, Res<Manual>),
     mut own: ResMut<OwnAbility>,
     mut to_server: MessageWriter<ToServer>,
@@ -124,14 +124,17 @@ pub(super) fn use_automatic(
         let at = match ability {
             Ability::Attack => {
                 let reach = Wielded::of(&carried.0).main.reach();
+                let relief = ground.relief.as_ref();
+                let me = Body::on(relief, player.0, size.0);
                 let enemy = target.0.and_then(|id| {
                     others
                         .iter()
                         .find(|(other, _)| other.id == id && other.feeling == Feeling::Unfriendly)
                 });
                 enemy
-                    .filter(|(_, at)| {
-                        in_reach(&dungeon.level, (player.x, player.y), (at.x, at.y), reach)
+                    .filter(|(other, at)| {
+                        let them = Body::on(relief, at.0, other.kind.def().size);
+                        in_reach(&dungeon.level, &me, reach, &them)
                     })
                     .map(|(other, _)| Some(other.id))
             }

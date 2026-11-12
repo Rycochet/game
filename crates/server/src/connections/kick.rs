@@ -25,7 +25,7 @@ pub(super) fn start_kick(
     let swing = client.fighter().kick();
     let creature = target.and_then(|id| {
         let at = client.mob_in_sight(world, id)?;
-        client.reaches(at, &swing).then_some(id)
+        client.reaches(world, &at, &swing).then_some(id)
     });
     let (act, aimed) = match (creature, door_to_kick(client)) {
         (Some(id), _) => (Act::Kick(swing), Some(id)),
@@ -67,7 +67,7 @@ pub(super) fn land_kick(
 ) -> bool {
     let tick = world.action_clock.ticks();
     let at = client.mob_in_sight(world, target);
-    let reached = at.filter(|&at| client.reaches(at, &swing));
+    let reached = at.filter(|at| client.reaches(world, at, &swing));
     let (Some(at), Some(visit)) = (reached, client.visit.as_ref()) else {
         return client.link.send(&ServerMessage::AbilityLanded {
             who: None,
@@ -81,7 +81,7 @@ pub(super) fn land_kick(
     let shoved = shoved_to(world, place.0, target, visit.spot()).filter(|to| {
         let (x, y) = to.cell();
         let kept = (visit.id(), visit.index(), (visit.kept_at(x), y));
-        to.cell() == at || !world.standing.iter().any(|&(cell, _)| cell == kept)
+        to.cell() == at.at.cell() || !world.standing.iter().any(|&(cell, _)| cell == kept)
     });
     let free = shoved.is_some();
     let striker = Striker {

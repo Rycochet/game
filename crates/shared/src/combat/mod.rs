@@ -22,7 +22,9 @@ pub use damage::{
 pub use fighter::{Fighter, PRACTICE_PER_BLOW, Swing};
 pub use kick::{KICK_COST_PER_MILLE, KICK_FORCE_PER_MILLE, KICK_HARM_PER_MILLE, kick_skill};
 pub use power::{SKILL_FLOOR, power};
-pub use reach::in_reach;
+pub use reach::{
+    ARM_PER_QUARTER, Body, MM_PER_UNIT, arm_reach, distance, in_reach, reach_between, within,
+};
 pub use weapon::Weapon;
 pub use wielded::Wielded;
 

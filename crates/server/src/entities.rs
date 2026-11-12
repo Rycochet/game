@@ -24,6 +24,7 @@ use crate::combat::Fight;
 use crate::storage::SiteId;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod close_in;
 mod crossing;
 mod dev_gift;
 mod dev_mob;
@@ -233,6 +234,9 @@ pub(crate) struct Population {
     pub(crate) mobs: Vec<Mob>,
     /// Its shape, to find ways about.
     level: Level,
+    /// The shape of its ground (`None` where flat), for how far apart creatures
+    /// are in 3D (`combat::Body::on`).
+    relief: Option<shared::relief::Relief>,
     /// For opening doors on the way, a site level's (not the wilderness's).
     doors: Option<MobDoors>,
     /// Who is due to act: the tick, and which mob. A mob at rest isn't here, so

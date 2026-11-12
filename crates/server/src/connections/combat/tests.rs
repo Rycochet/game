@@ -132,9 +132,8 @@ fn an_attack_waiting_for_energy_can_be_withdrawn() {
 #[test]
 fn a_mob_out_of_reach_is_not_attacked() {
     let (mut test, mob) = beside(CreatureKind::Dwarf);
-    test.world.populations.0.values_mut().next().unwrap().mobs[0]
-        .position
-        .0 += 3;
+    let one = &mut test.world.populations.0.values_mut().next().unwrap().mobs[0];
+    one.put((one.position.0 + 3, one.position.1));
     let answers = test.send(&[attack(mob)]);
     assert!(
         !answers

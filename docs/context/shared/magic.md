@@ -11,13 +11,13 @@ Spells: abilities that spend Mana. Heal so far: Mana turned into Health, on your
 
 - `HEAL_SKILL` (`magic/divine/healing`), `heal_skill()`.
 - `HEAL_MANA` (6, always spent, even on someone whole: what is beyond the most is lost; owner, 2026-11-07), `heal_ratio(skills)` (Health per point of Mana, per mille: `RATIO_AT_FIRST` 2000 to `RATIO_AT_BEST` 20000 in a straight line with Healing's `combat::skill_percent`; owner), `heal_amount(skills)`.
-- `HEAL_COST` (4200: a second at normal speed), `HEAL_WIND_UP` (half), `HEAL_RANGE` (6 cells), `heal_reaches(level, from, to)` (themselves, or `combat::in_reach` within the range).
+- `HEAL_COST` (4200: a second at normal speed), `HEAL_WIND_UP` (half), `HEAL_RANGE` (1440 units: 6 cells, between middles in 3D), `heal_reaches(level, from, to)` (`combat::Body`s: themselves, at the same spot, or `combat::within` the range with a clear line).
 - `AUTO_HEAL_BELOW` (250 per mille: a quarter), `needs_healing(health, most)`: when an automatic Heal is cast.
 - `PRACTICE_PER_CAST` (8, as a blow's).
 
 ## Depends on
 
-- `combat` (`in_reach`, `skill_percent`), `skill` (`SkillId`, `Skills`), `dungeon` (`Level`), `vitals` (`Points`, `PER_POINT`).
+- `combat` (`Body`, `within`, `skill_percent`), `skill` (`SkillId`, `Skills`), `dungeon` (`Level`), `vitals` (`Points`, `PER_POINT`).
 
 ## Used by
 

@@ -104,6 +104,8 @@ pub(super) struct Spot {
     pub(super) character: Option<CharacterId>,
     pub(super) kind: CreatureKind,
     pub(super) position: (i64, i64),
+    /// Exactly where, in units (`Someone::spot`).
+    pub(super) at: shared::spot::Spot,
     /// How strong a trail they leave, as a percentage.
     pub(super) scent: u32,
 }

@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use shared::ability::Ability;
+use shared::combat::Body;
 use shared::id::Id;
 use shared::magic::{
     HEAL_COST, HEAL_MANA, HEAL_WIND_UP, PRACTICE_PER_CAST, heal_amount, heal_reaches, heal_skill,
@@ -42,11 +43,12 @@ impl Client {
         true
     }
 
-    /// Whether a Heal from where the player stands reaches this cell.
-    fn heal_reaches(&self, at: (i64, i64)) -> bool {
-        self.visit
-            .as_ref()
-            .is_some_and(|visit| heal_reaches(visit.cells(), visit.position(), at))
+    /// Whether a Heal from where the player stands reaches `target`.
+    fn heal_reaches(&self, world: &ServerWorld, target: &Body) -> bool {
+        let (Some(visit), Some(me)) = (self.visit.as_ref(), self.body(world)) else {
+            return false;
+        };
+        heal_reaches(visit.cells(), &me, target)
     }
 
     /// Takes this much healing: how much Health there is now, per mille.
@@ -98,7 +100,7 @@ pub(super) fn start_heal(
     }
     if let Some(other) = target {
         let reaches = match client.mob_in_sight(world, other) {
-            Some(at) => client.heal_reaches(at),
+            Some(at) => client.heal_reaches(world, &at),
             None => client.visit.is_some(),
         };
         if !reaches {
@@ -143,7 +145,7 @@ pub(super) fn land_heal(client: &mut Client, world: &mut ServerWorld, target: Id
     let Some(place) = client.visit.as_ref().map(|visit| visit.population()) else {
         return client.heal_fizzled(Some(target));
     };
-    if !client.heal_reaches(at) || !client.pay_for_heal(tick) {
+    if !client.heal_reaches(world, &at) || !client.pay_for_heal(tick) {
         return client.heal_fizzled(Some(target));
     }
     match heal_mob(world, place, target, amount, tick) {
@@ -167,7 +169,7 @@ pub(super) fn heal_players(clients: &mut [Client], worlds: &mut ServerWorlds) {
         match found.filter(|&j| j != i) {
             Some(j) => {
                 let (caster, other) = pair(clients, i, j);
-                heal_player(caster, other, tick);
+                heal_player(caster, other, worlds.of(world), tick);
             }
             None => {
                 clients[i].heal_fizzled(Some(target));
@@ -188,20 +190,21 @@ pub(super) fn pair(clients: &mut [Client], i: usize, j: usize) -> (&mut Client, 
 }
 
 /// A Heal from `caster` landing on `other`, or fizzling.
-fn heal_player(caster: &mut Client, other: &mut Client, tick: u64) {
+fn heal_player(caster: &mut Client, other: &mut Client, world: &ServerWorld, tick: u64) {
     let target = other.entity_id();
-    let at = other
+    let same_level = other
         .visit
         .as_ref()
         .zip(caster.visit.as_ref())
-        .filter(|(theirs, mine)| theirs.population() == mine.population())
-        .map(|(theirs, _)| theirs.position());
-    let seen = at.filter(|&(x, y)| {
+        .is_some_and(|(theirs, mine)| theirs.population() == mine.population());
+    let at = other.body(world).filter(|_| same_level);
+    let seen = at.filter(|body| {
+        let (x, y) = body.at.cell();
         caster
             .visit
             .as_mut()
             .is_some_and(|visit| visit.can_see(x, y))
-            && caster.heal_reaches((x, y))
+            && caster.heal_reaches(world, body)
     });
     let amount = heal_amount(Some(&caster.sheet.skills));
     if seen.is_none() || !caster.pay_for_heal(tick) {

@@ -2,7 +2,7 @@
 //! caster's Healing skill (owner, 2026-11-07). Numbers are first guesses, to
 //! balance by playing.
 
-use crate::combat::{in_reach, skill_percent};
+use crate::combat::{Body, skill_percent, within};
 use crate::dungeon::Level;
 use crate::skill::{SkillId, Skills};
 use crate::vitals::{PER_POINT, Points};
@@ -20,8 +20,9 @@ pub const RATIO_AT_BEST: u64 = 20_000;
 pub const HEAL_COST: u32 = 4200;
 /// How much of that is waited before it lands: half.
 pub const HEAL_WIND_UP: u32 = HEAL_COST / 2;
-/// How far away, in cells, another creature can be healed, with a clear line.
-pub const HEAL_RANGE: u32 = 6;
+/// How far away another creature can be healed, between middles in 3D, with
+/// a clear line: 6 cells, in units (240 a cell).
+pub const HEAL_RANGE: u64 = 6 * crate::spot::CELL_SPAN as u64;
 /// An automatic Heal is cast at or below this much Health, per mille: a quarter.
 pub const AUTO_HEAL_BELOW: u64 = 250;
 /// Practice each cast gives Healing (halved each level up, as for blows).
@@ -45,10 +46,10 @@ pub fn heal_amount(skills: Option<&Skills>) -> Points {
     Points((mana * heal_ratio(skills) / 1000) as u32)
 }
 
-/// Whether a caster at `from` can heal whoever is at `to`: themselves, or
+/// Whether a caster `from` can heal `to`: themselves (the same place), or
 /// within `HEAL_RANGE` with a clear line.
-pub fn heal_reaches(level: &Level, from: (i64, i64), to: (i64, i64)) -> bool {
-    from == to || in_reach(level, from, to, HEAL_RANGE)
+pub fn heal_reaches(level: &Level, from: &Body, to: &Body) -> bool {
+    from.at == to.at || within(level, from, to, HEAL_RANGE)
 }
 
 /// Whether this much Health out of `most` (whole points) is low enough for an

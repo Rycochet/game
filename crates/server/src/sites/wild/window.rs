@@ -2,9 +2,10 @@
 //! and those round it, with players' changes and the pois' cutouts in them.
 
 use shared::dungeon::Level;
-use shared::movement::FlatGround;
+use shared::movement::{FlatGround, WildHeights};
 use shared::poi::ChunkPos;
 use shared::protocol::SeenStairs;
+use shared::relief::Relief;
 use shared::site::{BuildingLook, FieldLook, Rect, SiteLevel, Stairs};
 use shared::wilderness::{BLOCK_SIZE, BlockPos, SCALE};
 use std::collections::BTreeSet;
@@ -35,9 +36,20 @@ pub(super) fn window(world: &mut ServerWorld, at: (i64, i64)) -> Window {
 }
 
 /// The cells of the block a player at `(x, y)` is in and `blocks` round it,
-/// in their frame: a live area's level, for its mobs to find their way on.
-pub(crate) fn area_level(world: &mut ServerWorld, at: (i64, i64), blocks: i64) -> Level {
-    window_of(world, at, blocks).level.level
+/// in their frame: a live area's level, for its mobs to find their way on,
+/// and its ground's shape (as the client draws it: `relief::Relief::of_land`
+/// with the cutouts' flats and stairs).
+pub(crate) fn area_level(world: &mut ServerWorld, at: (i64, i64), blocks: i64) -> (Level, Relief) {
+    let window = window_of(world, at, blocks);
+    let flats: Vec<FlatGround> = (window.cutouts.iter())
+        .flat_map(|set_in| set_in.flats.iter().copied())
+        .collect();
+    let stairs: Vec<_> = window.stairs.iter().map(|s| (s.x, s.y)).collect();
+    let level = window.level.level;
+    let bounds = level.bounds();
+    let heights = WildHeights::new(&world.ground, bounds).with_flats(&flats, &level);
+    let relief = Relief::of_land(&heights, bounds, (0, 0), &stairs);
+    (level, relief)
 }
 
 /// The window round a player at `(x, y)`, `blocks` each side of theirs.

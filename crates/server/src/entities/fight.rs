@@ -1,17 +1,19 @@
 //! Mobs fighting: attacking an enemy in reach, and being hit by a player.
 
-use shared::combat::{Fighter, Swing, Wielded, in_reach};
+use shared::combat::{Body, Fighter, Swing, Wielded, in_reach};
 use shared::creature::CreatureKind;
 use shared::dungeon::Level;
 use shared::id::Id;
 use shared::protocol::CharacterId;
+use shared::relief::Relief;
 use shared::sheet::Attributes;
 use shared::sheet::Feeling;
 use shared::vitals::{Points, Vital};
 
+use super::close_in::close_in;
 use super::gear::{bury, record_of};
 use super::timid::{is_timid, strikes_at};
-use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob, SETTLING_STEPS, Spot};
+use super::{ATTACK_GAP, Doing, FRIENDLY_GAP, Mob, SETTLING_STEPS, Spot, Taken};
 use crate::ServerWorld;
 use crate::combat::{Act, Harm, Pending, health_left, luck, ticks_for};
 use crate::storage::SiteId;
@@ -66,18 +68,23 @@ impl Mob {
 
 /// A mob's turn in a fight, if it is in one: its blow landing, or a new one
 /// begun at an enemy in reach. What it cost; `None` to go about its business.
+/// One not yet in reach of an enemy in the next cell closes in on them
+/// (`close_in`). `taken` is where everyone stands, by cell.
 pub(super) fn mob_turn(
     mob: &mut Mob,
-    level: &Level,
+    (level, relief): (&Level, Option<&Relief>),
     spots: &[Spot],
-    tick: u64,
+    (tick, taken): (u64, &Taken),
     blows: &mut Vec<MobBlow>,
 ) -> Option<u32> {
+    let bodies = |mob: &Mob, target: Id| {
+        let spot = spots.iter().find(|spot| spot.id == target)?;
+        let them = Body::on(relief, spot.at, spot.kind.def().size);
+        Some((Body::on(relief, mob.spot, mob.size()), them))
+    };
     let reaches = |mob: &Mob, target: Id, swing: &Swing| {
-        spots
-            .iter()
-            .find(|spot| spot.id == target)
-            .is_some_and(|spot| in_reach(level, mob.position, spot.position, swing.weapon.reach()))
+        bodies(mob, target)
+            .is_some_and(|(me, them)| in_reach(level, &me, swing.weapon.reach(), &them))
     };
     if let Some(pending) = mob.fight.pending.take() {
         let Act::Strike(swing) = pending.act else {
@@ -111,7 +118,8 @@ pub(super) fn mob_turn(
     };
     let swing = mob.fighter().swing(mob.fight.attacks);
     if !reaches(mob, after, &swing) {
-        return None;
+        let (me, them) = bodies(mob, after)?;
+        return close_in(mob, level, (&me, &them), swing.weapon.reach(), taken);
     }
     let lands_in = ticks_for(swing.wind_up, mob.speed);
     mob.fight.pending = Some(Pending {

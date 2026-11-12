@@ -17,7 +17,7 @@ use crate::storage::SiteId;
 /// lets go of the rest, with the mobs standing in them.
 pub(super) fn centre(world: &mut ServerWorld, area: u32, centre: BlockPos, at: (i64, i64)) {
     world.wilderness.areas.areas.insert(area, centre);
-    let level = crate::sites::area_level(world, at, AREA_BLOCKS);
+    let (level, relief) = crate::sites::area_level(world, at, AREA_BLOCKS);
     let columns = world.wilderness.wild.block_columns();
     let areas = &world.wilderness.areas;
     let wanted: BTreeSet<BlockPos> = (-AREA_BLOCKS..=AREA_BLOCKS)
@@ -40,6 +40,7 @@ pub(super) fn centre(world: &mut ServerWorld, area: u32, centre: BlockPos, at: (
         .entry(place(area))
         .or_insert_with(|| empty(level.clone()));
     population.level = level;
+    population.relief = Some(relief);
     // Those standing outside what it holds now are kept with their block.
     let wild = &world.wilderness.wild;
     let (staying, leaving): (Vec<Mob>, Vec<Mob>) = std::mem::take(&mut population.mobs)
@@ -192,6 +193,7 @@ fn empty(level: shared::dungeon::Level) -> Population {
     Population {
         mobs: Vec::new(),
         level,
+        relief: None,
         doors: None,
         due: Default::default(),
         away: 0,
