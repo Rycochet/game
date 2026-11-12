@@ -1,39 +1,22 @@
 //! The buttons for a site's known floors, in a column on the left of the full
-//! map. Shown only when more than one floor is known.
+//! map (in its markup: `full_map/floors`, a `full_map/go.<n>` for each).
+//! Shown only when more than one floor is known.
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use super::{CORNER_GAP, FullMap, Room, full_map_area, full_map_picture_corner};
 use crate::common::{CurrentDungeon, FirstFloor, GameView, OtherLevels};
-use crate::widgets::{ButtonState, TextSize, layer_z, spawn_button};
+use crate::dom::Dom;
+use crate::widgets::{ButtonState, UiId};
 
 /// A button's height and width (all the same, with room for "-10"), and the
 /// gap between two.
 pub(super) const BUTTON: f32 = 26.0;
-const BUTTON_WIDTH: f32 = 36.0;
+pub(super) const BUTTON_WIDTH: f32 = 36.0;
 pub(super) const BUTTON_GAP: f32 = 4.0;
 /// How far either side of a button still counts as on it.
 const SIDE_REACH: f32 = 10.0;
-
-const FONT: TextSize = TextSize::Medium;
-
-#[derive(Component)]
-pub(super) struct FloorColumn;
-
-pub(super) fn spawn_column(mut commands: Commands) {
-    commands.spawn((
-        FloorColumn,
-        Node {
-            position_type: PositionType::Absolute,
-            flex_direction: FlexDirection::Column,
-            row_gap: px(BUTTON_GAP),
-            ..default()
-        },
-        // Over the full map.
-        GlobalZIndex(layer_z(super::FULL_MAP_LAYER) + 2),
-    ));
-}
 
 /// The floors to show buttons for, as they read from the top: a building's
 /// go up, a cave's go down. None unless the full map is open in a site, and
@@ -97,15 +80,14 @@ pub(super) fn back_to_own_floor(full: Res<FullMap>, mut levels: ResMut<OtherLeve
     }
 }
 
-/// What the buttons say: the floors, the one shown if not the player's, the
-/// player's, and the first floor's number.
-type ButtonsDrawn = (Vec<u32>, Option<u32>, Option<u32>, u32);
+/// What the column was last told: its buttons' floors, the first floor's
+/// number, and where it is.
+type ColumnShown = (Vec<u32>, u32, Vec2);
 
-/// Puts the column on the full map, and builds its buttons again when
-/// what they say changes.
+/// Puts the column on the full map, and makes its buttons again when the
+/// floors they are for change.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn show_buttons(
-    mut commands: Commands,
     window: Single<&Window, With<PrimaryWindow>>,
     ui_scale: Res<UiScale>,
     view: Res<State<GameView>>,
@@ -113,50 +95,45 @@ pub(super) fn show_buttons(
     levels: Res<OtherLevels>,
     first: Res<FirstFloor>,
     full: Res<FullMap>,
-    column_node: Single<(Entity, &mut Node), With<FloorColumn>>,
-    mut drawn: Local<ButtonsDrawn>,
+    mut dom: Dom,
+    mut buttons_built: Query<(&UiId, &mut ButtonState)>,
+    mut shown: Local<Option<ColumnShown>>,
 ) {
     let window = Room::of(&window, &ui_scale);
     let floors = buttons(*view.get(), full.open, &dungeon, &levels);
-    let (entity, mut node) = column_node.into_inner();
     let (corner, _) = column(&window, floors.len());
-    node.left = px(corner.x);
-    node.top = px(corner.y);
-
-    let shown = levels.showing();
-    let current = dungeon.info.as_ref().map(|info| info.index);
-    let storey = |floor: u32| {
-        dungeon
-            .info
-            .as_ref()
-            .map_or(floor as i32, |i| i.storey(floor))
-    };
-    let now = (floors, shown, current, first.0);
-    if *drawn == now {
-        return;
+    let info = dungeon.info.as_ref();
+    let current = info.map(|info| info.index);
+    let chosen = levels.showing().or(current);
+    // The floor shown is dark; the player's own is flat, shown or not.
+    for (id, mut state) in &mut buttons_built {
+        let (("full_map", "go"), Some(at)) = (id.parts(), id.index()) else {
+            continue;
+        };
+        let floor = floors.get(at).copied();
+        let look = match floor {
+            Some(_) if floor == chosen => ButtonState::Selected,
+            Some(_) if floor == current => ButtonState::Active,
+            _ => ButtonState::Normal,
+        };
+        state.set_if_neq(look);
     }
-    commands.entity(entity).despawn_children();
-    commands.entity(entity).with_children(|column| {
-        for &floor in &now.0 {
-            let number = match storey(floor) {
+    let was = shown.as_ref();
+    if was.is_none_or(|(.., at)| *at != corner) {
+        dom.set("full_map/floors", "left", &corner.x.to_string());
+        dom.set("full_map/floors", "top", &corner.y.to_string());
+    }
+    if was.is_none_or(|(known, number, _)| *known != floors || *number != first.0) {
+        dom.set_flag("full_map/floors", "hidden", floors.is_empty());
+        dom.empty("full_map/floors");
+        for (at, &floor) in floors.iter().enumerate() {
+            let number = match info.map_or(floor as i32, |info| info.storey(floor)) {
                 ..0 => "B".to_string(),
                 up => (up + first.0 as i32).to_string(),
             };
-            let state = if Some(floor) == shown.or(current) {
-                ButtonState::Selected
-            } else if Some(floor) == current {
-                // The player's floor is flat, shown or not.
-                ButtonState::Active
-            } else {
-                ButtonState::Normal
-            };
-            let size = Node {
-                width: px(BUTTON_WIDTH),
-                height: px(BUTTON),
-                ..default()
-            };
-            spawn_button(column, state, number, FONT, size);
+            dom.copy_template("full_map/floor", "full_map/floors", at);
+            dom.set_text(&format!("full_map/go.{at}"), number);
         }
-    });
-    *drawn = now;
+    }
+    *shown = Some((floors, first.0, corner));
 }

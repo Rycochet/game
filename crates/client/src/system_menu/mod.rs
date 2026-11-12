@@ -33,9 +33,6 @@ use spawn::spawn_menu;
 pub use state::SystemMenu;
 use state::{Action, GearButton, Layer, MenuButton, PausedText};
 
-const GEAR_BUTTON: f32 = 34.0;
-const CORNER_GAP: f32 = 8.0;
-
 // Server Options', which a browser doesn't have.
 #[cfg(not(target_arch = "wasm32"))]
 const MARGIN: f32 = 20.0;

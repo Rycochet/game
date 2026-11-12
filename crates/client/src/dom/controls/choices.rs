@@ -12,7 +12,7 @@ use crate::dom::pictures::picture_for;
 use crate::dom::tag::Tag;
 use crate::widgets::{
     BUTTON_PADDING, ColourPicker, Dropdown, Swatch, TextSize, spawn_colour_picker, spawn_dropdown,
-    spawn_tabs, spawn_toggle_row,
+    spawn_icon_dropdown, spawn_tabs, spawn_toggle_row,
 };
 
 /// A control's options, in order.
@@ -63,6 +63,13 @@ impl Builder<'_, '_, '_> {
                 .collect(),
             ..default()
         };
+        // The small kind is a small icon button showing the chosen option's
+        // picture: its owner gives the widget its `icons`, one an option.
+        if element.attrs.class.as_deref() == Some("small") {
+            return self.spawn_in(holder, |inside| {
+                spawn_icon_dropdown(inside, dropdown, Node::default()).id()
+            });
+        }
         let node = Node {
             padding: BUTTON_PADDING,
             ..node

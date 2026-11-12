@@ -88,7 +88,11 @@ impl Builder<'_, '_, '_> {
     /// theme's width, so a footer's buttons match.
     fn widget_node(&self, element: &Checked, inside: Inside) -> Node {
         let attrs = &element.attrs;
-        let row = self.theme.row(inside.style.size);
+        let is_box = element.tag == Tag::Input && attrs.text("type") == Some("text");
+        let row = match is_box {
+            true => self.theme.box_row(inside.style.size),
+            false => self.theme.row(inside.style.size),
+        };
         let in_footer = inside.footer && element.tag == Tag::Button;
         Node {
             width: percent(100),

@@ -82,7 +82,9 @@ pub(super) fn node_for(tag: Tag, attrs: &Attrs, around: &Around) -> Node {
         _ if tag.is_control() => {
             let fills = match tag {
                 Tag::Input => attrs.text("type") == Some("text"),
-                _ => matches!(tag, Tag::Select | Tag::KeyBox | Tag::ColourPicker),
+                // (A small `select` is an icon button: its own size.)
+                Tag::Select => attrs.class.as_deref() != Some("small"),
+                _ => matches!(tag, Tag::KeyBox | Tag::ColourPicker),
             };
             if fills && attrs.width.is_none() {
                 node.flex_grow = 1.0;

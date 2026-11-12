@@ -49,3 +49,12 @@ fn setting_a_look_again_replaces_it() {
     theme.set(Tag::P, "", look);
     assert_eq!(theme.look(Tag::P, None), look);
 }
+
+#[test]
+fn a_text_box_is_as_tall_as_a_dropdown_beside_it() {
+    let theme = Theme::parchment();
+    // The menus' row is everything's; elsewhere a box has its own height.
+    assert_eq!(theme.box_row(TextSize::Large), theme.row(TextSize::Large));
+    assert_eq!(theme.row(TextSize::Medium), None);
+    assert_eq!(theme.box_row(TextSize::Medium), Some(34.0));
+}

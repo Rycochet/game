@@ -7,12 +7,13 @@ use bevy::prelude::*;
 use shared::id::Id;
 use shared::item::Holder;
 
-use super::super::filter::spawn_filter;
-use super::super::sort::spawn_sort;
+use super::super::filter::{GridFilter, filter_options};
+use super::super::sort::SortButton;
 use super::{BinNode, BinSlot, DropNode, FONT, GridOwner, WeightText};
+use crate::dom::Dom;
 use crate::dom::{DocumentOf, GridShown, SlotShown, Template, document, top_strip};
 use crate::html;
-use crate::widgets::{INK, UiId};
+use crate::widgets::{ButtonTooltip, INK, UiId};
 
 /// A bag, in a panel that moves: one of several documents alike, by the bag
 /// (`bag#<id>/...`). Whoever opens it gives the panel its title and place.
@@ -22,7 +23,10 @@ static BAG: Template = html!(
 <form id="bag">
   <panel id="panel" moveable>
     <container id="frame">
-      <header id="controls"/>
+      <header>
+        <button id="sort" class="small"><img src="picture:sort"/></button>
+        <select id="filter" class="small"><option>All</option></select>
+      </header>
       <object-grid id="grid" type="item" places="kept"/>
       <footer><canvas id="weight" fills/></footer>
     </container>
@@ -38,7 +42,10 @@ static GROWING_BAG: Template = html!(
 <form id="bag">
   <panel id="panel" moveable>
     <container id="frame">
-      <header id="controls"/>
+      <header>
+        <button id="sort" class="small"><img src="picture:sort"/></button>
+        <select id="filter" class="small"><option>All</option></select>
+      </header>
       <scroll id="scroll" max-height="60%">
         <object-grid id="grid" type="item" places="kept" grows/>
       </scroll>
@@ -59,12 +66,13 @@ pub(super) fn spawn_bag(commands: &mut Commands, bag: Id, grows: bool) -> Entity
     document.insert(top_strip()).id()
 }
 
-/// Fills the places of each frame once it is built: its controls, its grid
+/// Fills the places of each frame once it is built: its sort and filter, its grid
 /// (which draws itself: `show_grids` says what is in it), its weight and its
 /// slots.
 pub(in crate::inventory) fn bind_frames(
     new: Query<(Entity, &UiId), Added<UiId>>,
     mut commands: Commands,
+    mut dom: Dom,
 ) {
     for (entity, id) in &new {
         let (form, name) = id.parts();
@@ -75,11 +83,14 @@ pub(in crate::inventory) fn bind_frames(
         };
         let mut place = commands.entity(entity);
         match name {
-            "controls" => {
-                place.with_children(|row| {
-                    spawn_sort(row, holder);
-                    spawn_filter(row, Some(holder));
-                });
+            "sort" => {
+                place.insert((SortButton(holder), ButtonTooltip("Sort".into())));
+            }
+            // Its options are every category (`keep_filters` gives it their
+            // pictures).
+            "filter" => {
+                place.insert((GridFilter(Some(holder)), ButtonTooltip("Filter".into())));
+                dom.set_options(&id.to_string(), filter_options());
             }
             "grid" => {
                 place.insert((GridOwner { holder }, GridShown::default()));

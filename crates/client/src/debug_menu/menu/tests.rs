@@ -140,6 +140,7 @@ fn columns_hold_what_fits() {
 fn the_layers_are_good_markup_and_the_submenu_is_named_for_its_entry() {
     use super::super::actions::DebugAction;
     super::spawn::MENU.assert_good();
+    super::spawn::WARNING.assert_good();
     let title = format!("title=\"{}\"", DebugAction::GeneratePoi.name());
     assert!(super::spawn::MENU.source.contains(&title));
 }

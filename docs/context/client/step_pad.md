@@ -4,9 +4,9 @@ The movement pad (owner's design, 2026-11-08): a grip panel at the bottom right,
 
 ## Files
 
-- `crates/client/src/step_pad/mod.rs`: `StepPadPlugin`; sizes (`TOGGLE` 30, `BUTTON` 44 for fingers, `GAP`, `CORNER_GAP`), form `step_pad`.
-- `crates/client/src/step_pad/spawn.rs`: `spawn_pad` (Startup): the toggle (`hud/step_pad`, tip "Movement Pad", hidden until on a map) and the pad (`widgets::spawn_grip_panel`, at `PanelPlace::Share` of the place saved, or else `BottomRight` just above the toggle; `step_pad/panel`), `PAD` (the pad's contents as markup, in the code-spawned grip panel: three rows of buttons, each holding an `img` of its picture, `picture:pad_<name>`, with gaps a button in size), `BUTTONS` (its buttons `step_pad/up`, `step_up`, `down`, `step_left`, `step_down`, `step_right`), `bind_pad` (each, once built, gets its `common::PadButton`, a `widgets::HoldButton` and its `HoverTip`). Unit test.
-- `crates/client/src/step_pad/show.rs`: `toggle_pad` (flips `Preferences::step_pad.closed`), `remember_place` (on `widgets::PanelMoved` for the pad, its share of the window into `Preferences::step_pad.at`: only when a drag lets go, so the file isn't saved every frame), `show_pad` (both only in `GameView::WorldMap` / `Dungeon`; the pad hidden by `Display::None` so it keeps its place; the toggle `Active` while open), `tint_icons` (white pictures in `INK`, faint when disabled), `read_pad` (`PreUpdate`, after `WidgetSystems::Presses`: held arrows into `common::PadSteps`).
+- `crates/client/src/step_pad/mod.rs`: `StepPadPlugin`; sizes for the tests (`TOGGLE` 30, `BUTTON` 44 for fingers, `GAP`, `CORNER_GAP`: the markup says them), form `step_pad`.
+- `crates/client/src/step_pad/spawn.rs`: `spawn_pad` (Startup): names the pictures and spawns two documents. `TOGGLE_BUTTON` is the toggle (`hud/step_pad`, a `button` with its own `form`, placed from the bottom right on a `bottom_strip()` above the maps, hidden until on a map). `PAD` is the pad: a `panel grip` (`step_pad/panel`), by its `right` and `bottom` just above the toggle, or at the place saved, which `spawn_pad` sets as `left` and `top` in `%` (a share of the window); in it three rows of buttons, each holding an `img` of its picture, `picture:pad_<name>`, with gaps a button in size. `BUTTONS` (its buttons `step_pad/up`, `step_up`, `down`, `step_left`, `step_down`, `step_right`), `bind_pad` (each, once built, gets its `common::PadButton`, a `widgets::HoldButton` and its `HoverTip`; the panel gets `StepPad`, the toggle `PadToggle` and its tip). Unit tests.
+- `crates/client/src/step_pad/show.rs`: `toggle_pad` (flips `Preferences::step_pad.closed`), `remember_place` (on `widgets::PanelMoved` for the pad, its share of the window into `Preferences::step_pad.at`: only when a drag lets go, so the file isn't saved every frame), `show_pad` (both only in `GameView::WorldMap` / `Dungeon`, by their elements' `hidden` through `Dom`, told only when it changes; hidden, the pad keeps its place; the toggle `Active` while open), `tint_icons` (white pictures in `INK`, faint when disabled), `read_pad` (`PreUpdate`, after `WidgetSystems::Presses`: held arrows into `common::PadSteps`).
 - `crates/client/src/step_pad/icons.rs`: the pictures, drawn in code: `dpad` (a cross with rounded ends and a triangle cut into each arm), `arrow(Pointing)`, `ladder(climbing)` (rails closing in towards the far end, rungs evenly spaced in distance so they crowd together there: narrow at the top for Up, at the bottom for Down). `picture.rs`: `picture` (white, edges smoothed by 4 × 4 samples), `on_line`, `outside_box`.
 
 ## Public API
@@ -15,7 +15,7 @@ The movement pad (owner's design, 2026-11-08): a grip panel at the bottom right,
 
 ## Depends on
 
-- `common` (`GameView`, `PadButton`, `PadSteps`, `Preferences::step_pad`), `dom` (`Template`, `document_in`, `Pictures`), `widgets` (`spawn_grip_panel`, `PanelPlace`, `PanelMoved`, `HoldButton`, `spawn_icon_button`, `HoverTip`, `ButtonPressed`).
+- `common` (`GameView`, `PadButton`, `PadSteps`, `Preferences::step_pad`), `dom` (`Template`, `document`, `Dom`, `Pictures`, the strips), `widgets` (`PanelMoved`, `HoldButton`, `HoverTip`, `ButtonTooltip`, `ButtonPressed`, `ButtonState`).
 
 ## Used by
 

@@ -150,14 +150,7 @@ impl Plugin for MinimapPlugin {
             .init_resource::<MapRivers>()
             .init_resource::<Sprites>()
             .init_resource::<overlay::MarksLayer>()
-            .add_systems(
-                Startup,
-                (
-                    markup::spawn_maps,
-                    spawn::spawn_darkening,
-                    floors::spawn_column,
-                ),
-            )
+            .add_systems(Startup, (markup::spawn_maps, spawn::spawn_darkening))
             .add_systems(
                 Update,
                 forget::forget_world

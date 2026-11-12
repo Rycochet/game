@@ -1290,3 +1290,18 @@ A document of pieces over the view (notices, the status text, the hover box, the
 ## 2026-11-12: A panel that moves is its own document, told its title and place through `Dom`
 
 The Character panel, each bag, Nearby and each shop's panel were old moveable panels with a document built inside them, and their owners kept the panel's entity to raise it, close it and notice it closed. They are now `panel moveable` in their own templates. Claude's choices: a moving panel's widget follows its element's `title` always and its `left` and `top` until it has first been placed, so one of several alike is spawned and then given its title and its place in the cascade by `Dom::set` and `Dom::start_at` in the same system, rather than a template per title or attributes passed to `document()`; `Dom::raise(id)` brings one to the front, so owners keep no widget entities, only their document's; a panel closed by its own button says so by its id (`UiValue::Closed`) and its owner despawns the document, as the Accounts panel does. A `left` and `top` in `%` are a share of the window, for the movement pad's saved place (next slice).
+
+## 2026-11-12: The last panels as markup: Claude's choices, and what is left
+
+Owner, mid-way: "keep all the rest in a single other PR", so the movement pad, the corner buttons, sort and filter, the login corner, the text boxes' height and the full map's floor buttons went in together.
+
+Claude's choices in it:
+
+- **Corner buttons** (menu, debug menu, Character, movement pad) are each a `button` with its own `form="hud"` on a strip above the maps, bound by id to what their modules already knew them by.
+- **The movement pad's place** is its `panel grip`'s `left` and `top` in `%`, as it was saved: a share of the window.
+- **`select class="small"`** is the icon dropdown (the filter), as `button class="small"` is the small icon button: an existing widget picked by class, not a new look.
+- **A text box is as tall as a dropdown beside it** by the theme (`Theme::boxes`: 34 where the writing is `Medium`), not by `height="34"` in a template. Every markup text box in a panel is that tall now.
+- **The login corner's words are never given to `dom`.** Only its place is markup. What `dom` holds is written back by the debug API's `client.ui.html`, and the corner shows the account's email address, which must never be in a debug API answer.
+- **The floor buttons' looks** are set on the built buttons (`ButtonState::Active` for the player's own floor), as the movement pad's toggle is, so no new look was needed.
+
+Left as code, for the owner to decide: the full map's darkening (markup has no see-through dark over the window: a new look), and the maps' own search for what the pointer is on, which works from the window's size and gives fingers extra reach, so moving it to `dom::Hit` changes how the maps feel and wants playing.

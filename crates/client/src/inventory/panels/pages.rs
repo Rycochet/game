@@ -35,7 +35,10 @@ pub(super) static CHARACTER: Template = html!(
         <canvas id="wear_note"/>
       </div>
       <container id="frame">
-        <header id="controls"/>
+        <header>
+        <button id="sort" class="small"><img src="picture:sort"/></button>
+        <select id="filter" class="small"><option>All</option></select>
+      </header>
         <object-grid id="grid" type="item" places="kept"/>
         <footer>
           <canvas id="weight" fills/>

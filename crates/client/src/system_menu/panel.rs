@@ -90,7 +90,7 @@ pub(super) fn bind_main_panel(mut commands: Commands, new: Query<(Entity, &UiId)
     for (entity, id) in &new {
         let mut bound = commands.entity(entity);
         // The gear button in the corner opens the menu.
-        if id.parts() == ("hud", "menu") {
+        if *id == Action::Open.ui_id("hud") {
             bound.insert((GearButton, Action::Open, ButtonTooltip("Menu".into())));
         }
         let ("menu", name) = id.parts() else {
@@ -116,6 +116,7 @@ mod tests {
     #[test]
     fn the_panel_is_good_markup() {
         MENU.assert_good();
+        super::super::spawn::GEAR.assert_good();
     }
 
     #[test]
