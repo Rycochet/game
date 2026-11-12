@@ -192,6 +192,7 @@ fn named(name: &str) -> ClientMessage {
     ClientMessage::CreateCharacter(shared::protocol::NewCharacter {
         name: name.into(),
         kind: shared::creature::CreatureKind::Human,
+        gender: shared::gender::Gender::Neutral,
         appearance: Default::default(),
         build: Default::default(),
         difficulty: shared::difficulty::Difficulty::Normal,

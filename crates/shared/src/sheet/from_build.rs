@@ -2,6 +2,7 @@
 
 use super::{Attributes, Build, Row, WEIGHT_TOTAL};
 use crate::creature::CreatureKind;
+use crate::gender::Gender;
 
 /// How far a dot can move an attribute from its kind's median, as a percentage
 /// of the median per third of the triangle: a corner gives that attribute
@@ -13,12 +14,13 @@ pub const SPREAD: i64 = 30;
 pub const POINT_WEIGHT: i64 = 25;
 
 impl Attributes {
-    /// What a creature of this kind starts with, from where its dots sit and how
-    /// its triangles are turned, with its kind's bonus on top. `build` must be
-    /// valid (`Build::is_valid`).
-    pub fn for_kind(kind: CreatureKind, build: &Build) -> Self {
+    /// What a creature of this kind and gender starts with, from where its dots sit
+    /// and how its triangles are turned, with its kind's and its gender's bonuses on
+    /// top. `build` must be valid (`Build::is_valid`).
+    pub fn for_kind(kind: CreatureKind, gender: Gender, build: &Build) -> Self {
         let def = kind.def();
         let bonus = def.bonus();
+        let gendered = gender.bonus();
         let points = build.points();
         let mut attributes = Self::default();
         for row in Row::ALL {
@@ -32,7 +34,9 @@ impl Attributes {
                 // Rounded once at the end, so a dot in the middle gives the median.
                 const PARTS: i64 = 100_000 * 1000;
                 let shaped = median * (100_000 + lean * SPREAD) * raised;
-                let value = (shaped + PARTS / 2) / PARTS + bonus.get(which) as i64;
+                let value = (shaped + PARTS / 2) / PARTS
+                    + bonus.get(which) as i64
+                    + gendered.get(which) as i64;
                 attributes.set(which, value.clamp(1, u16::MAX as i64) as u16);
             }
         }

@@ -1,8 +1,9 @@
 //! Mobs of a kind chosen by a developer (a Dev Area), put anywhere open.
 
-use super::{ATTRIBUTE_ROLL, FROM_STAIRS, PURPOSE, Spawn, TRIES, looks, roll_gear};
+use super::{ATTRIBUTE_ROLL, FROM_STAIRS, GENDER_ROLL, PURPOSE, Spawn, TRIES, looks, roll_gear};
 use crate::creature::CreatureKind;
 use crate::dungeon::Level;
+use crate::gender::Gender;
 use crate::rng::Seed;
 use crate::sheet::{Attributes, Build};
 
@@ -42,13 +43,16 @@ pub fn chosen_spawns(
         let Some(position) = spot else {
             continue;
         };
+        let gender = Gender::rolled(roll(GENDER_ROLL));
         mobs.push(Spawn {
             number,
             kind,
             position,
             appearance: looks(&roll, kind),
+            gender,
             attributes: Attributes::for_kind(
                 kind,
+                gender,
                 &Build::rolled(&mut Seed::new(roll(ATTRIBUTE_ROLL)).rng()),
             ),
             gear: roll_gear(&roll, kind),

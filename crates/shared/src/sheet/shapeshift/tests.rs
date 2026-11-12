@@ -1,5 +1,6 @@
 use super::super::{Attribute, Build};
 use super::*;
+use crate::gender::{GENDER_BONUS, Gender};
 
 /// A human built leaning one way, so nothing is just the median.
 fn person() -> Sheet {
@@ -8,7 +9,7 @@ fn person() -> Sheet {
     if !build.is_valid() {
         build = Build::CENTRED;
     }
-    Sheet::built(CreatureKind::Human, build)
+    Sheet::built(CreatureKind::Human, Gender::Male, build)
 }
 
 #[test]
@@ -16,7 +17,7 @@ fn a_form_takes_only_the_body_row() {
     let mut sheet = person();
     let before = sheet.clone();
     sheet.shapeshift(CreatureKind::Human, CreatureKind::Horse);
-    let horse = Attributes::for_kind(CreatureKind::Horse, &sheet.build);
+    let horse = Attributes::for_kind(CreatureKind::Horse, Gender::Male, &sheet.build);
     for which in Row::Body.attributes() {
         assert_eq!(sheet.attributes.get(which), horse.get(which), "{which:?}");
     }
@@ -43,4 +44,18 @@ fn changing_back_gives_exactly_what_it_had() {
     sheet.shapeshift(CreatureKind::Horse, CreatureKind::Human);
     assert_eq!(sheet, before);
     assert_eq!(sheet.own_kind(CreatureKind::Human), CreatureKind::Human);
+}
+
+#[test]
+fn a_man_shapeshifted_into_a_horse_keeps_his_body_bonus() {
+    let mut sheet = person();
+    sheet.shapeshift(CreatureKind::Human, CreatureKind::Horse);
+    let neutral = Attributes::for_kind(CreatureKind::Horse, Gender::Neutral, &sheet.build);
+    for which in Row::Body.attributes() {
+        assert_eq!(
+            sheet.attributes.get(which),
+            neutral.get(which) + GENDER_BONUS,
+            "{which:?}"
+        );
+    }
 }

@@ -10,7 +10,7 @@ fn at(pixels: &[u8], point: Vec2) -> [u8; 4] {
 
 fn drawn_for(kind: CreatureKind) -> Vec<u8> {
     let build = Build::CENTRED;
-    let attributes = Attributes::for_kind(kind, &build);
+    let attributes = Attributes::for_kind(kind, shared::gender::Gender::Neutral, &build);
     let bonus = kind.def().bonus();
     paint(&Drawn {
         build: &build,

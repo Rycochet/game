@@ -3,13 +3,13 @@ use shared::creature::CreatureKind;
 use super::*;
 
 #[test]
-fn it_says_what_the_kind_is_and_how_much_it_can_carry() {
+fn it_says_the_gender_and_kind_and_how_much_it_can_carry() {
     let carried = Inventory {
         creature: CreatureKind::Kobold,
         ..Inventory::default()
     };
     let words = describe(&Sheet::new(CreatureKind::Kobold), &carried, None);
-    assert!(words.starts_with("Kobold, Small"), "{words}");
+    assert!(words.starts_with("Neutral Kobold, Small"), "{words}");
     let strength = Sheet::new(CreatureKind::Kobold).attributes.strength;
     assert!(
         words.contains(&format!("Body: Strength {strength}, Agility ")),

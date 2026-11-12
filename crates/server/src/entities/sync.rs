@@ -90,6 +90,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                 let look = EntityLook {
                     id: someone.id,
                     kind: someone.look.0,
+                    gender: someone.gender,
                     name: Some(someone.name.clone()).filter(|name| !name.is_empty()),
                     appearance: someone.look.1.clone(),
                     feeling: Feeling::None,
@@ -111,6 +112,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                     let look = EntityLook {
                         id: mob.id,
                         kind: mob.kind,
+                        gender: mob.gender,
                         name: None,
                         appearance: mob.appearance.clone(),
                         feeling: mob.feeling(my_kind, client.character_id.as_ref()),

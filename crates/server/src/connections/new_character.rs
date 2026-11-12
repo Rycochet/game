@@ -79,7 +79,7 @@ pub(super) fn create(
         (None, None) => return Err("not logged in".into()),
     };
     client.character_id = Some(id);
-    client.starting_as = Some((asked.kind, asked.appearance, asked.build));
+    client.starting_as = Some((asked.kind, asked.gender, asked.appearance, asked.build));
     client.difficulty = Some(allowed.closest(asked.difficulty));
     client.phase = Phase::Joining;
     Ok(())

@@ -1089,6 +1089,7 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
             shared::protocol::NewCharacter {
                 name: "Some One".into(),
                 kind,
+                gender: shared::gender::Gender::Neutral,
                 appearance,
                 build,
                 difficulty: shared::difficulty::Difficulty::Normal,
@@ -1128,7 +1129,7 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
         sheet,
         Some(Sheet {
             appearance: red,
-            ..Sheet::built(CreatureKind::Dwarf, strong)
+            ..Sheet::built(CreatureKind::Dwarf, shared::gender::Gender::Neutral, strong)
         })
     );
     let carried = inventory(&told);
@@ -1155,6 +1156,7 @@ fn accounts_choose_or_make_a_character_and_only_their_own() {
     end.send(&ClientMessage::CreateCharacter(
         shared::protocol::NewCharacter {
             kind: CreatureKind::Human,
+            gender: shared::gender::Gender::Neutral,
             appearance: Appearance::default(),
             build: shared::sheet::Build::CENTRED,
             name: "Some One".into(),
@@ -1206,6 +1208,7 @@ fn choosing_is_only_for_accounts_about_to_choose() {
     end.send(&ClientMessage::CreateCharacter(
         shared::protocol::NewCharacter {
             kind: CreatureKind::Human,
+            gender: shared::gender::Gender::Neutral,
             appearance: Appearance::default(),
             build: shared::sheet::Build::CENTRED,
             name: "Another".into(),

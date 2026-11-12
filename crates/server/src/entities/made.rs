@@ -21,11 +21,13 @@ impl Mob {
     pub(super) fn new(id: Id, spawn: &Spawn, carrying: &Inventory, home_level: u32) -> Self {
         let sheet = Sheet {
             attributes: spawn.attributes,
+            gender: spawn.gender,
             ..Sheet::new(spawn.kind)
         };
         Mob {
             id,
             kind: spawn.kind,
+            gender: spawn.gender,
             appearance: spawn.appearance.clone(),
             position: spawn.position,
             spot: Spot::middle_of(spawn.position),

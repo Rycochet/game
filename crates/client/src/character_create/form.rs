@@ -49,6 +49,7 @@ pub(super) fn show_screen(
             kinds.map(|name| (name.clone(), name)),
         );
         dom.set("character_create/kind", "value", draft.kind.def().name);
+        dom.set("character_create/gender", "value", draft.gender.name());
         dom.set_text("character_create/ironman_question", IRONMAN_QUESTION);
     }
     dom.set_flag("character_create/layer", "hidden", !making.0);

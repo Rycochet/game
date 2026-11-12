@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::creature::CreatureKind;
 use crate::dungeon::{Cell, Level};
+use crate::gender::Gender;
 use crate::id::Id;
 use crate::item::{Drop, ItemKind, Quality, roll_drop};
 use crate::poi::PoiKind;
@@ -39,6 +40,8 @@ const FROM_STAIRS: i64 = 6;
 const TRIES: i64 = 16;
 /// The roll a mob's attributes come from, apart from its place, look and gear.
 const ATTRIBUTE_ROLL: i64 = 2000;
+/// Which roll of a mob's own is its gender's (`Gender::rolled`).
+const GENDER_ROLL: i64 = 2001;
 
 /// One of a level's mobs, as generated.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -48,7 +51,9 @@ pub struct Spawn {
     pub kind: CreatureKind,
     pub position: (i64, i64),
     pub appearance: Appearance,
-    /// Rolled near its kind's medians, with its kind's bonus.
+    /// Rolled from its own hash: 45% Male, 45% Female, 10% Neutral.
+    pub gender: Gender,
+    /// Rolled near its kind's medians, with its kind's and gender's bonuses.
     pub attributes: Attributes,
     /// What it starts with, innermost clothes first: it wears what it can.
     pub gear: Vec<(ItemKind, Option<Quality>)>,
@@ -202,13 +207,16 @@ pub fn spawns(
                 here
             })
             .map_or(lives_here[0].0, |&(kind, _)| kind);
+        let gender = Gender::rolled(roll(GENDER_ROLL));
         mobs.push(Spawn {
             number,
             kind,
             position,
             appearance: looks(&roll, kind),
+            gender,
             attributes: Attributes::for_kind(
                 kind,
+                gender,
                 &Build::rolled(&mut Seed::new(roll(ATTRIBUTE_ROLL)).rng()),
             ),
             gear: roll_gear(&roll, kind),
@@ -231,6 +239,8 @@ fn looks(roll: &impl Fn(i64) -> u64, kind: CreatureKind) -> Appearance {
 pub struct EntityLook {
     pub id: Id,
     pub kind: CreatureKind,
+    /// Its gender, for words about it (pronouns, later).
+    pub gender: Gender,
     /// Another player's character's name; `None` for a mob, which goes by
     /// its kind.
     pub name: Option<String>,

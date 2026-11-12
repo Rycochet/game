@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::creature::CreatureKind;
 use crate::difficulty::Difficulty;
+use crate::gender::Gender;
 use crate::id::Id;
 use crate::sheet::{Appearance, Build};
 
@@ -122,6 +123,8 @@ pub struct NewCharacter {
     pub name: String,
     /// What they are: refused unless it is `CreatureDef::playable`.
     pub kind: CreatureKind,
+    /// Their gender, whose bonus the server adds to the attributes it works out.
+    pub gender: Gender,
     /// How they look: refused unless it suits the kind.
     pub appearance: Appearance,
     /// Their triangles: refused unless valid. The server works out the

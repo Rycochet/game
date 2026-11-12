@@ -91,7 +91,10 @@ fn publish_limit(
 /// What the panel says.
 fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow)>) -> String {
     let def = carried.creature.def();
-    let mut lines = vec![format!("{}, {:?}", def.name, def.size), String::new()];
+    let mut lines = vec![
+        format!("{} {}, {:?}", sheet.gender.name(), def.name, def.size),
+        String::new(),
+    ];
     // The nine attributes, a row to a line.
     for row in Row::ALL {
         let values: Vec<_> = row

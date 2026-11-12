@@ -10,6 +10,7 @@ use crate::common::MakingCharacter;
 mod difficulty;
 mod draft;
 mod form;
+mod gender;
 mod geometry;
 mod input;
 mod looks;
@@ -33,6 +34,7 @@ impl Plugin for CharacterCreatePlugin {
                 Update,
                 (
                     form::read_choices,
+                    gender::choose_gender,
                     form::fill_looks,
                     difficulty::choose_difficulty,
                     difficulty::fill_difficulty,
