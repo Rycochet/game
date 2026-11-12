@@ -130,16 +130,16 @@ fn saves_are_read_back() {
         site_versions: BTreeMap::from([(site, 3)]),
         left_at: BTreeMap::from([(site, (1, (5, -6)))]),
         world_position: (-40, 7),
-        hall: Some((12, 3)),
+        hall: Some(shared::spot::Spot::middle_of((12, 3))),
         dev_return: Some(crate::storage::DevReturn {
             world_position: (8, 9),
             visit: None,
-            hall: Some((4, 1)),
+            hall: Some(shared::spot::Spot::new(4, 1)),
         }),
         visit: Some(VisitSave {
             site,
             level: 1,
-            position: (3, -4),
+            position: shared::spot::Spot::new(3, -4),
             from_wilderness: true,
         }),
         pois: BTreeMap::from([(
@@ -298,4 +298,31 @@ fn a_save_from_before_gates_playtime_and_the_action_bar_still_loads() {
     let old = format!("{})", &text[..text.find(",gates:").unwrap()]);
     assert_ne!(old, text);
     assert_eq!(ron::from_str::<CharacterSave>(&old).unwrap(), save);
+}
+
+#[test]
+fn cells_saved_before_units_load_as_their_middles() {
+    let visit = VisitSave {
+        site: SiteId::Wilderness,
+        level: 0,
+        position: shared::spot::Spot::new(500, -730),
+        from_wilderness: false,
+    };
+    let text = ron::to_string(&visit).unwrap();
+    assert_eq!(ron::from_str::<VisitSave>(&text).unwrap(), visit);
+    let old = text.replace("(x:500,y:-730)", "(2,-3)");
+    assert_ne!(old, text);
+    let read = ron::from_str::<VisitSave>(&old).unwrap();
+    assert_eq!(read.position, shared::spot::Spot::new(480, -720));
+
+    let mut world = CharacterWorldSave {
+        hall: Some(shared::spot::Spot::new(7, 9)),
+        ..CharacterWorldSave::default()
+    };
+    let text = ron::to_string(&world).unwrap();
+    assert_eq!(ron::from_str::<CharacterWorldSave>(&text).unwrap(), world);
+    let old = text.replace("Some((x:7,y:9))", "Some((1,2))");
+    assert_ne!(old, text);
+    world.hall = Some(shared::spot::Spot::new(240, 480));
+    assert_eq!(ron::from_str::<CharacterWorldSave>(&old).unwrap(), world);
 }

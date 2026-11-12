@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use shared::dungeon::Cell;
 use shared::protocol::{ClientMessage, DevMob, DevMobTool};
+use shared::spot::Spot;
 
 use super::Shown;
 use super::ground_hit::Ground;
@@ -89,6 +90,8 @@ pub(super) fn pick_on_click(
         // Dev tools: Teleport Mode jumps there instead (through walls), if the
         // server allows it.
         if *mode == ClickMode::Teleport {
+            // On a level, to the cell's middle, in units.
+            let Spot { x, y } = Spot::middle_of((x, y));
             to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
         } else {
             travel.write(TravelTo { x, y });

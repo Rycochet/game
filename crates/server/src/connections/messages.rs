@@ -1,8 +1,7 @@
 //! Reading each client's messages, acting on queued steps, and joining a world.
 
 use bevy::prelude::*;
-use shared::energy::{CHANGE_MAP_COST, site_step_cost};
-use shared::movement::Step;
+use shared::energy::CHANGE_MAP_COST;
 use shared::protocol::ServerMessage;
 use shared::role::Permission;
 use shared::world::WorldId;
@@ -14,12 +13,14 @@ use super::{Action, Client, Connections, Phase, answer, welcome};
 use crate::accounts::Accounts;
 use crate::ground::{self};
 use crate::oidc::Logins;
-use crate::sites::{self, Visit};
-use crate::{ServerOptions, ServerWorld, ServerWorlds, gates, hall, world_map};
+use crate::sites;
+use crate::{ServerOptions, ServerWorld, ServerWorlds, gates};
 
+mod moves;
 mod sneaking;
 mod training;
 
+use moves::{move_taken, step_taken};
 pub(crate) use sneaking::Sneak;
 
 /// Answers every message that has arrived, and forgets clients that have
@@ -109,6 +110,10 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
                 client.last_step = Some(number);
                 step_taken(client, world, step)
             }
+            Action::Move { number, to } => {
+                client.last_step = Some(number);
+                move_taken(client, world, to)
+            }
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
             Action::EnterGate { entrance } => (gates::enter_gate(client, world, entrance), 0),
             Action::UseExit | Action::Down | Action::Up if client.sheet.vitals.fighting(tick) => {
@@ -136,68 +141,6 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
         client.energy.spend(tick, client.speed, cost);
     }
     true
-}
-
-/// Takes a step, if it is allowed: whether the client is still there, and what it
-/// cost, which is nothing if it was refused.
-pub(super) fn step_taken(client: &mut Client, world: &mut ServerWorld, step: Step) -> (bool, u32) {
-    if let Some(from) = client.character.hall {
-        let stayed = hall::stepped(client, step);
-        let to = client.character.hall.unwrap_or(from);
-        return (
-            stayed,
-            if to == from {
-                0
-            } else {
-                site_step_cost(from, to)
-            },
-        );
-    }
-    match &client.visit {
-        Some(visit) => {
-            let from = visit.position();
-            let place = visit.population();
-            let wild = visit.is_wilderness();
-            let gait = shared::movement::Gait::of(&client.sheet.skills);
-            let landing = visit.landing(step, gait);
-            let landed_on = landing.map(|at| visit.cells().cell(at.0, at.1));
-            // Someone who won't move aside is in the way; anyone else swaps places.
-            if let Some(to) = landing {
-                let kind = client.inventory.creature;
-                let character = client.character_id.as_ref();
-                if !client.god_mode && world.enemy_at(place, to, kind, character) {
-                    info!("Refused a step onto an enemy, at {to:?}");
-                    return (true, 0);
-                }
-            }
-            let stayed = sites::stepped(client, step) && sites::follow(client, world);
-            let to = client.visit.as_ref().map_or(from, Visit::position);
-            if to == from {
-                return (stayed, 0);
-            }
-            world.swap_mob(place, to, from);
-            // Where it led before any wrapping round the planet.
-            let landed = landing.unwrap_or(to);
-            let (moved, cost) = client.level_step(world, (from, landed), wild, landed_on);
-            (stayed && moved, cost)
-        }
-        None => {
-            let from = client.world_position();
-            let stayed = world_map::stepped(client, world, step);
-            if client.world_position() == from {
-                return (stayed, 0);
-            }
-            // Where it led before any wrapping round the planet.
-            let to = step.from(from);
-            let conditions = world.conditions();
-            let ends = (
-                world.ground.elevation(from.0, from.1, conditions),
-                world.ground.elevation(to.0, to.1, conditions),
-            );
-            let (moved, cost) = client.world_step(world, (from, to), ends);
-            (stayed && moved, cost)
-        }
-    }
 }
 
 /// Puts anyone but client `i` (who did the forgetting, and has been dealt with)

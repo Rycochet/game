@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use shared::poi::Poi;
 use shared::protocol::ServerMessage;
 use shared::site::{Exit, Site, can_leave, leads_out};
+use shared::spot::Spot;
 
 use super::wild::{back_to_wilderness, enter_wilderness, into_site};
 use super::{Arrival, NewVisit, Place, Visit, enter_level, enter_site};
@@ -74,11 +75,11 @@ pub(crate) fn use_exit(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = &client.visit else {
         return true;
     };
-    let (x, y) = visit.position;
-    let stairs = visit.level.stairs.iter().find(|s| (s.x, s.y) == (x, y));
+    let (x, y) = visit.position();
+    let stairs = visit.stairs_underfoot();
     if visit.is_wilderness() {
         return match stairs {
-            Some(stairs) => into_site(client, world, (x, y), stairs.to),
+            Some(stairs) => into_site(client, world, (stairs.x, stairs.y), stairs.to),
             None => true,
         };
     }
@@ -97,7 +98,7 @@ pub(crate) fn leave_site(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = &client.visit else {
         return true;
     };
-    let (x, y) = visit.position;
+    let (x, y) = visit.position();
     let Some(kind) = visit.site().map(Site::kind) else {
         return true;
     };
@@ -116,7 +117,7 @@ fn take_exit(client: &mut Client, world: &mut ServerWorld, exit: Exit) -> bool {
     let Some(visit) = &client.visit else {
         return true;
     };
-    let (x, y) = visit.position;
+    let (x, y) = visit.position();
     if let SiteId::DevArea(_) = visit.id {
         return super::dev_area::back_from_area(client, world);
     }
@@ -125,7 +126,7 @@ fn take_exit(client: &mut Client, world: &mut ServerWorld, exit: Exit) -> bool {
     {
         leave(client, world);
         client.visit = None;
-        return enter_wilderness(client, world, at);
+        return enter_wilderness(client, world, Spot::middle_of(at));
     }
     leave(client, world);
     let visit = client.visit.take().expect("checked above");
@@ -140,7 +141,7 @@ fn take_exit(client: &mut Client, world: &mut ServerWorld, exit: Exit) -> bool {
             // A building's stairs are on the same cell of both floors, and it
             // may have several: arrive at the ones taken.
             let from = if site.is_building() {
-                Arrival::At((x, y))
+                Arrival::At(Spot::middle_of((x, y)))
             } else {
                 Arrival::From(Exit::Level(from_level))
             };

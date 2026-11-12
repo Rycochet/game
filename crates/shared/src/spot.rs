@@ -16,6 +16,10 @@ pub const CELL_SPAN: i64 = UNITS_PER_CELL as i64;
 /// Units from a cell's middle to its edge.
 pub const HALF_SPAN: i64 = CELL_SPAN / 2;
 
+/// How near a cell's middle someone's middle must be to stand on what is
+/// there (stairs, say): half a cell.
+pub const UNDERFOOT: u64 = HALF_SPAN as u64;
+
 /// A point on a level, in units: `x` east, `y` south.
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
@@ -42,6 +46,12 @@ impl Spot {
             (self.x + HALF_SPAN).div_euclid(CELL_SPAN),
             (self.y + HALF_SPAN).div_euclid(CELL_SPAN),
         )
+    }
+
+    /// Whether someone whose middle is here stands on cell `cell`'s middle
+    /// part: within `UNDERFOOT` of its middle (stairs, exits).
+    pub fn stands_on(self, cell: (i64, i64)) -> bool {
+        self.distance_squared(Self::middle_of(cell)) <= (UNDERFOOT as u128).pow(2)
     }
 
     /// This spot moved by `(dx, dy)` units.

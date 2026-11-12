@@ -11,7 +11,7 @@ use super::delete_character::delete_character;
 use super::login::log_in;
 use super::new_character::{create, join_or_make};
 use super::other_protocol::other_protocol;
-use super::{Action, Client, MOST_WAITING, Phase};
+use super::{Action, Client, Phase};
 use crate::accounts::Accounts;
 use crate::oidc::Logins;
 use crate::{ServerOptions, ServerWorld};
@@ -114,16 +114,13 @@ pub(crate) fn answer(
             clock: world.server_clock.seconds(),
         }),
         // Meant for a map the player has since left.
-        ClientMessage::Step { map, .. } if map != client.map => true,
-        ClientMessage::Step { number, step, .. } => {
-            if client.waiting.len() < MOST_WAITING {
-                client.waiting.push_back(Action::Step { number, step });
-            } else {
-                // Its `Position` puts the client right.
-                client.last_step = Some(number);
-            }
+        ClientMessage::Step { map, .. } | ClientMessage::Move { map, .. } if map != client.map => {
             true
         }
+        ClientMessage::Step { number, step, .. } => {
+            client.queue_move(Action::Step { number, step })
+        }
+        ClientMessage::Move { number, to, .. } => client.queue_move(Action::Move { number, to }),
         ClientMessage::EnterSite { chunk } => {
             client.waiting.push_back(Action::EnterSite { chunk });
             true

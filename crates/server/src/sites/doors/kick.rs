@@ -14,7 +14,7 @@ use crate::sites::update_sight;
 /// can tell is a door), the nearest straight before diagonal, then by place.
 pub(crate) fn door_to_kick(client: &Client) -> Option<(i64, i64)> {
     let visit = client.visit.as_ref()?;
-    let (px, py) = visit.position;
+    let (px, py) = visit.position();
     let known = client.character.doors.get(&visit.id);
     let known = known.and_then(|levels| levels.get(&visit.index));
     (visit.doors.iter())
@@ -39,7 +39,7 @@ pub(crate) fn kick_door(
     force: u32,
 ) -> Option<u16> {
     let visit = client.visit.as_mut()?;
-    let (px, py) = visit.position;
+    let (px, py) = visit.position();
     let beside = (at.0 - px).abs().max((at.1 - py).abs()) == 1;
     let mut door = visit.doors.get(&at).copied().filter(|_| beside)?;
     if !door.door.swing.is_shut() {

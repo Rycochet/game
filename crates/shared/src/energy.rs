@@ -43,6 +43,15 @@ pub fn site_step_cost(from: (i64, i64), to: (i64, i64)) -> u32 {
     step_cost(from, to) * SITE_STEP_SCALE
 }
 
+/// How much a move on a level from `from` to `to` (in units) costs by its
+/// length alone: the same as `site_step_cost` for a step between two cells'
+/// middles, and in proportion for any other.
+pub fn site_move_cost(from: crate::spot::Spot, to: crate::spot::Spot) -> u32 {
+    let span = crate::spot::CELL_SPAN as u64;
+    let cost = (from.distance(to) * crate::movement::STRAIGHT_COST as u64 + span / 2) / span;
+    cost as u32 * SITE_STEP_SCALE
+}
+
 /// How much a step on a level costs: its distance, any slope in the
 /// wilderness and wading (`movement::level_step_cost`).
 pub fn level_step_energy(

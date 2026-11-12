@@ -161,24 +161,23 @@ pub enum ServerMessage {
     /// A farm's fields, sent after `EnterLevel` on its ground floor: what is
     /// needed to choose what grows in them.
     Fields(Vec<crate::site::FieldLook>),
-    /// The player is now in the Hall of Worlds (`shared::hall`), here. The
+    /// The player is now in the Hall of Worlds (`shared::hall`), at `at`. The
     /// client works out its cells itself. Positions in the Hall (this, and
     /// `Position`, `Teleported`, entities, `DevTeleport`) are counted from
-    /// `origin`, where the Hall's `x` is billions, more than drawing can
-    /// place: the Hall's own `x` is `x + origin`. `origin` is a multiple of
-    /// `GATE_SPACING`, so the cells are the same either way.
-    EnterHall { x: i64, y: i64, origin: i64 },
+    /// cell `origin`, where the Hall's `x` is billions, more than drawing can
+    /// place: the Hall's own cell `x` is `at`'s cell's `x + origin`. `origin`
+    /// is a multiple of `GATE_SPACING`, so the cells are the same either way.
+    EnterHall { at: crate::spot::Spot, origin: i64 },
     /// The player is on the world map, here: back out of a site, or sent
     /// back to the start by dev tools.
     OnWorldMap { x: i64, y: i64 },
     /// Developer tools: the player has jumped to here, on the map they are
-    /// on (`DevTeleport`).
+    /// on, in its measure (`protocol::moves`).
     Teleported { x: i64, y: i64 },
     /// Where the server has the player on map `map` (see
-    /// `ClientMessage::Step`) once it has dealt with step `step`: the client
-    /// adds the steps it took since, and moves the player there if it shows
-    /// them elsewhere (a step the server refused). Sent once a tick, when
-    /// steps have arrived.
+    /// `ClientMessage::Step`), in its measure, once it has dealt with step or
+    /// move `step`: the client adds what it did since, and moves the player
+    /// there if it shows them elsewhere. Sent once a tick, when any arrived.
     Position { map: u32, step: u32, x: i64, y: i64 },
     /// Everything the character carries, as the server has it: after Welcome,
     /// and whenever it is asked to change, so a move it refused is put right.
@@ -202,8 +201,9 @@ pub enum ServerMessage {
     /// Something has come into sight: a mob or another player. The map changing
     /// (`EnterLevel`, `EnterHall`, `OnWorldMap`, `Teleported`) forgets everything seen before.
     EntitySeen(EntityLook),
-    /// Something in sight has moved.
-    EntityMoved { id: Id, x: i64, y: i64 },
+    /// Everyone in sight whose way of moving changed this tick: one message
+    /// a tick at most.
+    Moves(Vec<super::Stretch>),
     /// Something has gone out of sight, or away; `died` if it died, which only
     /// those who could see it are told.
     EntityGone { id: Id, died: bool },

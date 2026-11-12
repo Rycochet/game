@@ -10,6 +10,7 @@ use shared::protocol::{
 use shared::relief::LevelGround;
 use shared::shop::sells;
 use shared::site::{Exit, Site, SiteLevel, Stairs, StairsDirection};
+use shared::spot::Spot;
 
 use super::remembered::{mirror_of_first, send_remembered};
 use super::{
@@ -155,11 +156,11 @@ pub(super) fn enter_level(
     saved.or_default().last_visit = now();
     let site = &new.site;
     let position = match arrival {
-        Arrival::At((x, y)) if level.level.is_walkable(x, y) => (x, y),
-        Arrival::At(_) => level.arrive(Exit::WorldMap),
-        Arrival::From(from) => level.arrive(from),
+        Arrival::At(at) if level.level.is_walkable(at.cell().0, at.cell().1) => at,
+        Arrival::At(_) => Spot::middle_of(level.arrive(Exit::WorldMap)),
+        Arrival::From(from) => Spot::middle_of(level.arrive(from)),
     };
-    world.move_mob_aside((new.id, index), position);
+    world.move_mob_aside((new.id, index), position.cell());
     let ground = match new.id {
         SiteId::Poi(_) | SiteId::Dev { .. } => LevelGround::of_site(
             &world.wilderness.wild,

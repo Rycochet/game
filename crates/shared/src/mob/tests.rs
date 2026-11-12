@@ -117,14 +117,15 @@ fn towns_have_beggars_and_farms_have_animals() {
 
 #[test]
 fn a_move_is_small_enough_to_send_often() {
-    let moved = crate::protocol::ServerMessage::EntityMoved {
+    let moved = crate::protocol::ServerMessage::Moves(vec![crate::protocol::Stretch {
         id: Id::for_test(u128::MAX),
-        x: 100,
-        y: -100,
-    };
-    // Its kind, 17 for the id, and two short numbers.
+        from: (100 * 240, -100 * 240),
+        to: (101 * 240, -100 * 240),
+        ticks: 7,
+    }]);
+    // Its kind and length, 17 for the id, four numbers of 3 bytes and one.
     let bytes = postcard::to_allocvec(&moved).unwrap();
-    assert!(bytes.len() <= 24, "{}", bytes.len());
+    assert!(bytes.len() <= 32, "{}", bytes.len());
 }
 
 #[test]

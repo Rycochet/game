@@ -14,6 +14,12 @@ pub(super) enum Action {
         number: u32,
         step: Step,
     },
+    /// A move on a level or in the Hall, to here (units, as the client
+    /// counts them).
+    Move {
+        number: u32,
+        to: shared::spot::Spot,
+    },
     EnterSite {
         chunk: ChunkPos,
     },
@@ -33,4 +39,21 @@ pub(super) enum Action {
         target: Option<Id>,
     },
     Door(shared::protocol::DoorAsk),
+}
+
+impl super::Client {
+    /// Queues a step or move, unless too many wait already (its `Position`
+    /// then puts the client right). Always stays.
+    pub(super) fn queue_move(&mut self, action: Action) -> bool {
+        let number = match action {
+            Action::Step { number, .. } | Action::Move { number, .. } => number,
+            _ => return true,
+        };
+        if self.waiting.len() < super::MOST_WAITING {
+            self.waiting.push_back(action);
+        } else {
+            self.last_step = Some(number);
+        }
+        true
+    }
 }

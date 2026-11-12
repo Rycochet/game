@@ -9,10 +9,7 @@ use crate::connections::Client;
 
 /// Which way the stairs the player stands on go, if they stand on any.
 fn stairs_here(client: &Client) -> Option<StairsDirection> {
-    let visit = client.visit.as_ref()?;
-    let (x, y) = visit.position;
-    let stairs = visit.level.stairs.iter().find(|s| (s.x, s.y) == (x, y))?;
-    Some(stairs.direction)
+    Some(client.visit.as_ref()?.stairs_underfoot()?.direction)
 }
 
 /// The Down key: down the stairs underfoot, or into the wilderness from the

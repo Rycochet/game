@@ -8,14 +8,15 @@ use super::{FromServer, ServerConnection, ToServer};
 use crate::player::Stepped;
 
 /// Sends the steps the player took this frame, keeping them until the
-/// server confirms them.
+/// server confirms them: on the world map as steps, on a level or in the Hall
+/// as moves to the middle of the cell each ended in.
 pub(super) fn send_steps(
     mut stepped: MessageReader<Stepped>,
     mut prediction: ResMut<Prediction>,
     mut to_server: MessageWriter<ToServer>,
 ) {
-    for &Stepped { step, moved } in stepped.read() {
-        to_server.write(ToServer(prediction.step(step, moved)));
+    for &Stepped { step, moved, to } in stepped.read() {
+        to_server.write(ToServer(prediction.step(step, moved, to)));
     }
 }
 
@@ -26,14 +27,16 @@ pub(super) fn count_map_changes(
     mut prediction: ResMut<Prediction>,
 ) {
     for FromServer(message) in from_server.read() {
-        if matches!(
-            message,
-            ServerMessage::EnterLevel(_)
-                | ServerMessage::EnterHall { .. }
-                | ServerMessage::OnWorldMap { .. }
-                | ServerMessage::Teleported { .. }
-        ) {
-            prediction.changed_map();
+        match message {
+            ServerMessage::EnterLevel(_) | ServerMessage::EnterHall { .. } => {
+                prediction.changed_map(true);
+            }
+            ServerMessage::OnWorldMap { .. } => prediction.changed_map(false),
+            ServerMessage::Teleported { .. } => {
+                let on_level = prediction.on_level();
+                prediction.changed_map(on_level);
+            }
+            _ => {}
         }
     }
 }

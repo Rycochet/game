@@ -44,7 +44,7 @@ fn dungeon() -> CurrentDungeon {
         levels: 1,
         basement: false,
         bounds: (0, 0, 5, 5),
-        arrival: (2, 2),
+        arrival: shared::spot::Spot::middle_of((2, 2)),
         entering_site: true,
         place_name: None,
         ground: Default::default(),

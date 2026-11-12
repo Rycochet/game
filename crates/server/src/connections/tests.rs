@@ -12,6 +12,7 @@ use shared::protocol::{
     CharacterId, ClientMessage, KindChange, LoginMethod, PROTOCOL_VERSION, ServerMessage,
 };
 use shared::sheet::{Appearance, Sheet};
+use shared::spot::Spot;
 use shared::world::MINUTES_PER_HOUR;
 fn tester() -> CharacterId {
     CharacterId(Id::for_test(1000))
@@ -90,8 +91,26 @@ impl TestClient {
     }
 
     /// Sends messages (in one tick), and returns everything answered
-    /// since last time.
+    /// since last time. Tests give teleports on a level or in the Hall in
+    /// cells, sent as the cell's middle in units (`send_exact` doesn't).
     pub fn send(&mut self, messages: &[ClientMessage]) -> Vec<ServerMessage> {
+        let on_level = self.client.visit.is_some() || self.client.character.hall.is_some();
+        let messages: Vec<_> = messages
+            .iter()
+            .map(|message| match *message {
+                ClientMessage::DevTeleport { x, y } if on_level => {
+                    let Spot { x, y } = Spot::middle_of((x, y));
+                    ClientMessage::DevTeleport { x, y }
+                }
+                ref other => other.clone(),
+            })
+            .collect();
+        self.send_exact(&messages)
+    }
+
+    /// Sends messages as they are (in one tick), and returns everything
+    /// answered since last time.
+    pub fn send_exact(&mut self, messages: &[ClientMessage]) -> Vec<ServerMessage> {
         let options = ServerOptions {
             dev_tools: self.dev_tools,
             exit_when_alone: false,
@@ -141,20 +160,56 @@ impl TestClient {
     }
 
     /// Takes steps (`(dx, dy)`) on the current map, numbered on from
-    /// the last ones, and returns the answers.
+    /// the last ones, and returns the answers. On a level or in the Hall, each
+    /// is sent as the client does: a move to the middle of the cell it lands
+    /// on, as the cell rule would have it.
     pub fn steps(&mut self, steps: &[(i64, i64)]) -> Vec<ServerMessage> {
+        let mut at = self.cell_on_level();
         let messages: Vec<_> = steps
             .iter()
             .map(|&(dx, dy)| {
                 self.next_step += 1;
-                ClientMessage::Step {
-                    map: self.client.map,
-                    number: self.next_step,
-                    step: Step::new(dx, dy).expect("a step"),
+                let (map, number) = (self.client.map, self.next_step);
+                let step = Step::new(dx, dy).expect("a step");
+                match at {
+                    Some(from) => {
+                        let to = self.landing(from, step);
+                        at = Some(to);
+                        let to = Spot::middle_of(to);
+                        ClientMessage::Move { map, number, to }
+                    }
+                    None => ClientMessage::Step { map, number, step },
                 }
             })
             .collect();
         self.send(&messages)
+    }
+
+    /// The cell the player is in on a level, or in the Hall as the client
+    /// counts it; `None` on the world map.
+    fn cell_on_level(&self) -> Option<(i64, i64)> {
+        match (&self.client.visit, self.client.character.hall) {
+            (Some(visit), _) => Some(visit.position()),
+            (None, Some(at)) => Some(crate::hall::as_sent(&self.client, at).cell()),
+            (None, None) => None,
+        }
+    }
+
+    /// Where a step from `from` lands by the cell rule (a jump two cells
+    /// away), or one cell on where it can't be taken (to be refused).
+    fn landing(&self, from: (i64, i64), step: Step) -> (i64, i64) {
+        let gait = shared::movement::Gait::of(&self.client.sheet.skills);
+        let landed = match &self.client.visit {
+            Some(visit) => shared::movement::step_on_level_by(visit.cells(), from, step, gait),
+            None => {
+                let origin = self.client.hall_origin;
+                let hall = shared::hall::level(from.0 + origin - 2, 5);
+                let from = (from.0 + origin, from.1);
+                let landed = shared::movement::step_on_level(&hall, from, step);
+                landed.map(|(x, y)| (x - origin, y))
+            }
+        };
+        landed.unwrap_or_else(|| step.from(from))
     }
 
     /// How many maps the player has been put on (`Step::map`).

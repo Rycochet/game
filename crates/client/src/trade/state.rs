@@ -2,8 +2,9 @@
 
 use bevy::prelude::*;
 use shared::id::Id;
-use shared::shop::DOOR_REACH;
+use shared::shop::beside_door;
 use shared::site::BuildingLook;
+use shared::spot::Spot;
 use std::collections::BTreeMap;
 
 use crate::common::MapPosition;
@@ -41,7 +42,7 @@ pub(super) struct Heading(pub(super) Option<(Id, (i64, i64))>);
 
 /// Whether someone here is near enough to this door. The server checks this too.
 pub(super) fn beside(from: MapPosition, door: (i64, i64)) -> bool {
-    (from.x - door.0).abs().max((from.y - door.1).abs()) <= DOOR_REACH
+    beside_door(Spot::middle_of((from.x, from.y)), door)
 }
 
 pub(super) fn front_of(building: &BuildingLook) -> (i64, i64) {

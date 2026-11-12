@@ -155,10 +155,11 @@ fn taking_from_a_keeper_needs_reach_room_and_it_still_being_there() {
     // Clear the inventory, for room.
     test.client.inventory.items.clear();
     // Set directly, as a teleport only goes somewhere walkable.
-    test.client.visit.as_mut().unwrap().position = (front.0 + 40, front.1);
+    test.client.visit.as_mut().unwrap().position =
+        shared::spot::Spot::middle_of((front.0 + 40, front.1));
     test.send(&[take(0)]);
     assert!(test.client.inventory.find(item).is_none(), "out of reach");
-    test.client.visit.as_mut().unwrap().position = front;
+    test.client.visit.as_mut().unwrap().position = shared::spot::Spot::middle_of(front);
     // Off the end of the inventory.
     test.send(&[take(200)]);
     assert!(test.client.inventory.find(item).is_none(), "no room there");
@@ -313,7 +314,7 @@ pub(super) fn walk(test: &mut TestClient, to: (i64, i64)) -> Vec<ServerMessage> 
     let open = shared::protocol::DoorAsk::DevAll { open: true };
     crate::sites::door_act(&mut test.client, &mut test.world, open);
     let visit = test.client.visit.as_ref().unwrap();
-    let steps = path(&visit.level.level, visit.position, to);
+    let steps = path(&visit.level.level, visit.position(), to);
     test.steps(&steps)
 }
 
@@ -333,7 +334,7 @@ fn walkable_neighbour(test: &TestClient) -> (i64, i64) {
     .into_iter()
     .find(|&(dx, dy)| {
         let step = Step::new(dx, dy).unwrap();
-        step_on_level(&visit.level.level, visit.position, step).is_some()
+        step_on_level(&visit.level.level, visit.position(), step).is_some()
     })
     .expect("room to move")
 }
@@ -363,7 +364,7 @@ fn entering_sends_the_level_then_what_is_in_sight() {
     let sent = cells(&answers);
     assert!(!sent.is_empty());
     // The cell the player arrives on, and nothing remembered yet.
-    let (ax, ay) = info.arrival;
+    let (ax, ay) = info.arrival.cell();
     assert!(sent.iter().any(|&(x, y, _, _)| (x, y) == (ax, ay)));
     assert!(sent.iter().all(|&(_, _, _, remembered)| !remembered));
     // Never the whole level, and never a secret door.
@@ -421,12 +422,12 @@ fn cells_are_sent_once_and_remembered_next_time() {
 fn revealing_sends_the_whole_level_remembered_and_keeps_the_place() {
     let mut test = TestClient::new();
     enter(&mut test, 0);
-    let start = test.client.visit.as_ref().unwrap().position;
+    let start = test.client.visit.as_ref().unwrap().position();
     let answers = test.send(&[ClientMessage::DevRevealMap]);
     let ServerMessage::EnterLevel(info) = &answers[0] else {
         panic!("{:?}", answers[0]);
     };
-    assert_eq!(info.arrival, start);
+    assert_eq!(info.arrival.cell(), start);
     assert!(!info.entering_site);
     let (_, _, width, height) = info.bounds;
     let sent = cells(&answers);
@@ -456,7 +457,7 @@ fn dev_teleports_go_through_walls_but_not_into_them() {
     let mut test = TestClient::new();
     enter(&mut test, 0);
     let level = test.client.visit.as_ref().unwrap().level.level.clone();
-    let start = test.client.visit.as_ref().unwrap().position;
+    let start = test.client.visit.as_ref().unwrap().position();
     // Somewhere walkable, more than a step away.
     let (min_x, min_y, width, height) = level.bounds();
     let far = (min_y..min_y + height)
@@ -464,8 +465,10 @@ fn dev_teleports_go_through_walls_but_not_into_them() {
         .find(|&(x, y)| level.is_walkable(x, y) && (x - start.0).abs() > 3)
         .unwrap();
     let answers = test.send(&[ClientMessage::DevTeleport { x: far.0, y: far.1 }]);
-    assert_eq!(answers[0], ServerMessage::Teleported { x: far.0, y: far.1 });
-    assert_eq!(test.client.visit.as_ref().unwrap().position, far);
+    // Told in units: the cell's middle.
+    let (ux, uy) = (far.0 * 240, far.1 * 240);
+    assert_eq!(answers[0], ServerMessage::Teleported { x: ux, y: uy });
+    assert_eq!(test.client.visit.as_ref().unwrap().position(), far);
     // Not into a wall.
     let (wx, wy) = (min_x - 1, min_y - 1);
     assert!(
@@ -483,7 +486,7 @@ fn steps_into_walls_are_refused() {
     let mut test = TestClient::new();
     enter(&mut test, 0);
     let visit = test.client.visit.as_ref().unwrap();
-    let (x, y) = visit.position;
+    let (x, y) = visit.position();
     let level = visit.level.level.clone();
     let (dx, dy) = [
         (1, 0),
@@ -499,13 +502,13 @@ fn steps_into_walls_are_refused() {
     .find(|&(dx, dy)| !level.is_walkable(x + dx, y + dy))
     .expect("a wall nearby");
     let answers = test.steps(&[(dx, dy)]);
-    assert_eq!(test.client.visit.as_ref().unwrap().position, (x, y));
-    // The client is told where the player still is.
+    assert_eq!(test.client.visit.as_ref().unwrap().position(), (x, y));
+    // The client is told where the player still is, in units.
     assert!(answers.contains(&ServerMessage::Position {
         map: test.client_map(),
         step: 1,
-        x,
-        y
+        x: x * 240,
+        y: y * 240
     }));
 }
 
@@ -518,7 +521,7 @@ fn stairs_and_the_way_out_work() {
     let stairs = visit.level.stairs[0];
     walk(&mut test, (stairs.x, stairs.y));
     assert_eq!(
-        test.client.visit.as_ref().unwrap().position,
+        test.client.visit.as_ref().unwrap().position(),
         (stairs.x, stairs.y)
     );
     let answers = test.send(&[ClientMessage::UseExit]);
@@ -607,7 +610,7 @@ fn coming_back_resumes_the_visit_with_its_memory() {
     let folder = TestFolder::new();
     let mut test = TestClient::of(saved_world(&folder));
     let first = cells(&enter(&mut test, 1));
-    let position = test.client.visit.as_ref().unwrap().position;
+    let position = test.client.visit.as_ref().unwrap().position();
     test.leave();
 
     // Another connection, even another server, on the same data.
@@ -615,7 +618,7 @@ fn coming_back_resumes_the_visit_with_its_memory() {
     let answers = test.send(&[]);
     assert!(answers.is_empty(), "the welcome was read: {answers:?}");
     let visit = test.client.visit.as_ref().expect("back in the site");
-    assert_eq!((visit.index, visit.position), (1, position));
+    assert_eq!((visit.index, visit.position()), (1, position));
     // What was seen came back remembered.
     let memory = &test.client.character.memory;
     let id = SiteId::Dev {
@@ -654,7 +657,7 @@ fn welcome_sends_the_level_after_the_world() {
 fn changes_are_applied_over_the_generated_level() {
     let mut test = TestClient::new();
     enter(&mut test, 0);
-    let (x, y) = test.client.visit.as_ref().unwrap().position;
+    let (x, y) = test.client.visit.as_ref().unwrap().position();
     let id = SiteId::Dev {
         kind: PoiKind::Castle,
         seed: castle_seed(),
@@ -671,7 +674,7 @@ fn changes_are_applied_over_the_generated_level() {
 fn dev_tools_change_cells_and_keep_the_change() {
     let mut test = TestClient::new();
     enter(&mut test, 0);
-    let (x, y) = test.client.visit.as_ref().unwrap().position;
+    let (x, y) = test.client.visit.as_ref().unwrap().position();
     let (dx, dy) = walkable_neighbour(&test);
     let (nx, ny) = (x + dx, y + dy);
     let answers = test.send(&[ClientMessage::DevSetCell {
@@ -706,7 +709,7 @@ fn walls_arrive_with_what_shapes_them() {
     let visit = test.client.visit.as_ref().unwrap();
     let level = &visit.level.level;
     let mut sight = Sight::new(level);
-    sight.add_glimpses(level, visit.position.0, visit.position.1, None);
+    sight.add_glimpses(level, visit.position().0, visit.position().1, None);
     let seen_wall =
         |&&(x, y, cell, _): &&(i64, i64, Cell, bool)| cell.is_wall() && sight.is_seen(x, y);
     let walls: Vec<_> = sent.iter().filter(seen_wall).collect();
@@ -874,12 +877,12 @@ fn forgetting_on_the_server_deletes_the_save_and_keeps_the_player_there() {
     let mut test = TestClient::of(saved_world(&folder));
     enter(&mut test, 1);
     change_castle(&mut test, 1);
-    let position = test.client.visit.as_ref().unwrap().position;
+    let position = test.client.visit.as_ref().unwrap().position();
 
     let answers = test.send(&[ClientMessage::DevForgetMapOnServer]);
     assert!(matches!(answers[0], ServerMessage::EnterLevel(_)));
     let visit = test.client.visit.as_ref().unwrap();
-    assert_eq!((visit.index, visit.position), (1, position));
+    assert_eq!((visit.index, visit.position()), (1, position));
     let site = test.world.site(castle_id());
     assert!(site.levels[&1].changes.is_empty());
 }

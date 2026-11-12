@@ -77,7 +77,7 @@ pub(crate) fn give_to_keeper(
     let character = client.character_id.ok_or("nobody to remember")?;
     let shop = shop_of(client, world, with).ok_or("no such keeper here")?;
     let visit = client.visit.as_ref().ok_or("not in a site")?;
-    if !shop.in_reach(visit.position) {
+    if !shop.in_reach(visit.spot()) {
         return Err("too far away");
     }
     let item = client
@@ -117,7 +117,7 @@ pub(crate) fn take_from_keeper(
 ) -> Result<(), &'static str> {
     let shop = shop_of(client, world, with).ok_or("no such keeper here")?;
     let visit = client.visit.as_ref().ok_or("not in a site")?;
-    if !shop.in_reach(visit.position) {
+    if !shop.in_reach(visit.spot()) {
         return Err("too far away");
     }
     let level = world

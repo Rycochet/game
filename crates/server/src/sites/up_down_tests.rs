@@ -28,7 +28,7 @@ fn on_stairs(test: &mut TestClient, direction: StairsDirection) -> Exit {
         .iter()
         .find(|s| s.direction == direction)
         .expect("such stairs");
-    visit.position = (stairs.x, stairs.y);
+    visit.position = shared::spot::Spot::middle_of((stairs.x, stairs.y));
     stairs.to
 }
 

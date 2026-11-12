@@ -57,7 +57,11 @@ pub(crate) fn enter_gate(client: &mut Client, world: &mut ServerWorld, entrance:
         return true;
     }
     client.went_through(gate.place)
-        && hall::enter(client, world, GatePlace::from_number(gate.place).front())
+        && hall::enter(
+            client,
+            world,
+            shared::spot::Spot::middle_of(GatePlace::from_number(gate.place).front()),
+        )
 }
 
 /// Where the gate whose floor is at `at` in the Hall leads: the planet's seed

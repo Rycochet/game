@@ -85,9 +85,9 @@ pub(super) fn update_sight(client: &mut Client) -> bool {
         return sent;
     }
     let reach = visit.reach();
+    let (x, y) = visit.position();
     let (looked_from, loaded) = (&mut visit.looked_from, &mut visit.loaded);
     let level = &visit.level.level;
-    let (x, y) = visit.position;
     // What the client draws: glimpses, the more generous sight.
     let mut seen = Sight::new(level);
     seen.add_glimpses(level, x, y, reach);

@@ -100,7 +100,7 @@ fn a_saved_visit_to_a_first_level_set_in_comes_back_in_the_wilderness() {
     let saved = VisitSave {
         site: SiteId::Poi(poi.chunk),
         level: 0,
-        position: (ex - ox, ey - oy),
+        position: shared::spot::Spot::middle_of((ex - ox, ey - oy)),
         from_wilderness: false,
     };
     crate::sites::resume(&mut test.client, &mut test.world, saved);

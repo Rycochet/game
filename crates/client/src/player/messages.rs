@@ -41,12 +41,15 @@ pub struct Arrived {
 pub struct TakeStep(pub Step);
 
 /// The player has taken a step, by `TakeStep` or travelling: for the server.
-/// `moved` is how far it took them, which is two cells for a jump over liquid.
-/// Not sent when the position is set from elsewhere (the server's word).
+/// `moved` is how far it took them, which is two cells for a jump over liquid,
+/// and `to` where it ended (on a level, the cell whose middle it is sent as a
+/// move to). Not sent when the position is set from elsewhere (the server's
+/// word).
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Stepped {
     pub step: Step,
     pub moved: (i64, i64),
+    pub to: (i64, i64),
 }
 
 impl Stepped {
@@ -55,6 +58,7 @@ impl Stepped {
         Self {
             step,
             moved: (to.0 - from.0, to.1 - from.1),
+            to,
         }
     }
 }

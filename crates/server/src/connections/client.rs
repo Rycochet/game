@@ -157,9 +157,13 @@ impl Client {
         let Some(step) = self.last_step.take() else {
             return true;
         };
+        // In the map's measure: units on levels and in the Hall.
         let (x, y) = match (&self.visit, self.character.hall) {
-            (Some(visit), _) => visit.position(),
-            (None, Some((x, y))) => (x - self.hall_origin, y),
+            (Some(visit), _) => (visit.spot().x, visit.spot().y),
+            (None, Some(at)) => {
+                let at = crate::hall::as_sent(self, at);
+                (at.x, at.y)
+            }
             (None, None) => self.world_position(),
         };
         let map = self.map;

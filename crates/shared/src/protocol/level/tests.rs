@@ -10,7 +10,7 @@ fn a_basement_is_below_the_ground_whatever_its_index() {
         levels: 3,
         basement,
         bounds: (0, 0, 1, 1),
-        arrival: (0, 0),
+        arrival: crate::spot::Spot::default(),
         entering_site: true,
         place_name: None,
         ground: Default::default(),

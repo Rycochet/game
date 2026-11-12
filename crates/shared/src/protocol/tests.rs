@@ -79,6 +79,11 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             number: 9,
             step: Step::new(-1, 1).unwrap(),
         },
+        ClientMessage::Move {
+            map: 2,
+            number: 10,
+            to: crate::spot::Spot::new(-250, 481),
+        },
         ClientMessage::EnterSite {
             chunk: ChunkPos { x: 2, y: -1 },
         },
@@ -380,7 +385,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             levels: 3,
             basement: false,
             bounds: (-20, -10, 40, 30),
-            arrival: (4, 5),
+            arrival: crate::spot::Spot::new(4 * 240, 5 * 240 + 17),
             entering_site: true,
             place_name: None,
             ground: Default::default(),
@@ -453,8 +458,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             bounds: (-64, 128, 192, 192),
         },
         ServerMessage::EnterHall {
-            x: 8,
-            y: 0,
+            at: crate::spot::Spot::new(8 * 240, 30),
             origin: 1 << 32,
         },
         ServerMessage::Teleported { x: 6, y: -7 },
@@ -491,11 +495,12 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 title: None,
             }),
         }),
-        ServerMessage::EntityMoved {
+        ServerMessage::Moves(vec![crate::protocol::Stretch {
             id: Id(uuid::Uuid::from_u128(4)),
-            x: 4,
-            y: -4,
-        },
+            from: (4, -4),
+            to: (1200, -960),
+            ticks: 12,
+        }]),
         ServerMessage::EntityGone {
             id: Id(uuid::Uuid::from_u128(4)),
             died: true,

@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use shared::dungeon::{Cell, Level, Sight};
 use shared::protocol::{LevelInfo, LevelKind, ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
 use shared::site::{BuildingLook, FieldLook};
+use shared::spot::{CELL_SPAN, Spot};
 use shared::wilderness::gates_of;
 
 use super::arrival::arrival;
@@ -35,23 +36,32 @@ pub(crate) fn explore(client: &mut Client, world: &mut ServerWorld) -> bool {
         return true;
     }
     let at = arrival(client, world);
-    enter_wilderness(client, world, at)
+    enter_wilderness(client, world, Spot::middle_of(at))
 }
 
 /// Puts the player in the wilderness at `at`, or the walkable cell nearest it.
 pub(in crate::sites) fn enter_wilderness(
     client: &mut Client,
     world: &mut ServerWorld,
-    (x, y): (i64, i64),
+    at: Spot,
 ) -> bool {
     if let Err(error) = world.open_site(SiteId::Wilderness) {
         return client.refuse_for_saves(&error);
     }
-    let x = world.wilderness.wild.wrap(x);
+    let (x, y) = at.cell();
+    let wrapped = world.wilderness.wild.wrap(x);
+    let at = at.offset((wrapped - x) * CELL_SPAN, 0);
+    let x = wrapped;
     let mut made = window(world, (x, y));
     let looks = Looks::of(&mut made);
     let level = &made.level.level;
-    let position = nearest_walkable(level, (x, y));
+    let cell = nearest_walkable(level, (x, y));
+    // Where they were, unless that has no ground now.
+    let position = if cell == (x, y) {
+        at
+    } else {
+        Spot::middle_of(cell)
+    };
     let width = world.wilderness.wild.width();
     let mut visit = Visit {
         looked_from: Sight::new(level),
@@ -62,7 +72,7 @@ pub(in crate::sites) fn enter_wilderness(
             centre: made.centre,
             width,
             cutouts: made.cutouts,
-            in_poi: poi_here(world, position),
+            in_poi: poi_here(world, cell),
         },
         id: SiteId::Wilderness,
         index: 0,
@@ -88,7 +98,7 @@ pub(in crate::sites) fn enter_wilderness(
         ground: shared::relief::LevelGround::Wilderness,
     };
     client.changed_map();
-    let in_poi = poi_here(world, position);
+    let in_poi = poi_here(world, cell);
     if !client.link.send(&ServerMessage::EnterLevel(info))
         || !tell_of(client, world, in_poi)
         || !send_looks(client, world, looks, (&visit.mirrors, set_ins(&visit)))
@@ -96,8 +106,8 @@ pub(in crate::sites) fn enter_wilderness(
     {
         return false;
     }
-    ask_roads(world, position);
-    client.character.world_position = world.wilderness.wild.point_of(position.0, position.1);
+    ask_roads(world, cell);
+    client.character.world_position = world.wilderness.wild.point_of(cell.0, cell.1);
     client.character.hall = None;
     client.visit = Some(visit);
     client.unsaved = true;
@@ -114,9 +124,9 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Place::Wilderness { centre, width, .. } = visit.place else {
         return true;
     };
-    let (x, y) = visit.position;
+    let (x, y) = visit.position();
     if !(0..width).contains(&x) {
-        return enter_wilderness(client, world, (x, y));
+        return enter_wilderness(client, world, visit.spot());
     }
     let wild = &world.wilderness.wild;
     client.character.world_position = wild.point_of(x, y);

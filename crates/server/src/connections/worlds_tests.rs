@@ -108,7 +108,7 @@ fn sees_the_other(saved_in: [WorldSeed; 2], in_hall: bool) -> bool {
     let (_second, _) = join(&mut app, ids[1]);
     for client in &mut app.resource_mut::<Connections>().clients {
         client.character.world_position = (100, 100);
-        client.character.hall = in_hall.then_some((100, 1));
+        client.character.hall = in_hall.then_some(shared::spot::Spot::middle_of((100, 1)));
     }
     while first.receive().ok().flatten().is_some() {}
     app.run_system_once(sync_entities).unwrap();
@@ -247,7 +247,10 @@ fn a_world_gate_leads_into_the_hall_before_its_gate() {
         .unwrap()
         .place();
     let client = &app.resource::<Connections>().clients[0];
-    assert_eq!(client.character.hall, Some(place.front()));
+    assert_eq!(
+        client.character.hall,
+        Some(shared::spot::Spot::middle_of(place.front()))
+    );
     // Gone through, so remembered and drawn so.
     assert_eq!(client.gates, BTreeSet::from([place.number()]));
     let told = answers(&end);
@@ -280,16 +283,13 @@ fn a_hall_gate_leads_onto_its_planet_at_its_world_gate() {
     let place = shared::hall::GateAddress::for_world(OTHER, 5)
         .unwrap()
         .place();
-    let (x, y) = place.front();
+    let (x, _) = place.front();
     let client = &mut app.resource_mut::<Connections>().clients[0];
-    client.character.hall = Some((x, y));
+    client.character.hall = Some(shared::spot::Spot::middle_of(place.front()));
     let map = client.map;
-    let step = shared::movement::Step::new(0, place.y() - y).unwrap();
-    end.send(&ClientMessage::Step {
-        map,
-        number: 1,
-        step,
-    });
+    // Onto the gate's floor, counted from where the client counts.
+    let to = shared::spot::Spot::middle_of((x - client.hall_origin, place.y()));
+    end.send(&ClientMessage::Move { map, number: 1, to });
     app.run_system_once(handle_messages).unwrap();
     let client = &app.resource::<Connections>().clients[0];
     assert_eq!(client.world, Some(OTHER.id()));
@@ -319,16 +319,13 @@ fn a_hall_gate_to_the_world_they_came_from_leads_onto_its_map() {
     let place = shared::hall::GateAddress::for_world(HOME, 7)
         .unwrap()
         .place();
-    let (x, y) = place.front();
+    let (x, _) = place.front();
     let client = &mut app.resource_mut::<Connections>().clients[0];
-    client.character.hall = Some((x, y));
+    client.character.hall = Some(shared::spot::Spot::middle_of(place.front()));
     let map = client.map;
-    let step = shared::movement::Step::new(0, place.y() - y).unwrap();
-    end.send(&ClientMessage::Step {
-        map,
-        number: 1,
-        step,
-    });
+    // Onto the gate's floor, counted from where the client counts.
+    let to = shared::spot::Spot::middle_of((x - client.hall_origin, place.y()));
+    end.send(&ClientMessage::Move { map, number: 1, to });
     app.run_system_once(handle_messages).unwrap();
     let client = &app.resource::<Connections>().clients[0];
     let gate = app

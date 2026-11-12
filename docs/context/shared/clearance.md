@@ -1,6 +1,6 @@
 # shared: clearance (and spot)
 
-Positions on a level in whole units (`Spot`, 240 a cell) and room to move for creatures of each size: what blocks them, the one rule for a move from one spot to another (with squeezing and jumps), sliding along what is in the way, and where each size has room. Free positions, PR 2 of 9 (`docs/context/free-positions.md`): **nothing in play calls these yet**; levels still move in whole-cell `movement::Step`s. Routes by size are in `pathfinding` (`find_sized_path`).
+Positions on a level in whole units (`Spot`, 240 a cell) and room to move for creatures of each size: what blocks them, the one rule for a move from one spot to another (with squeezing and jumps), sliding along what is in the way, and where each size has room. Free positions, PR 2 of 9 (`docs/context/free-positions.md`). Since PR 3, positions on levels are `Spot`s end to end and a player's move that isn't a step between two cells' middles is checked by `check_segment` (`movement::move_on_level`); the client still moves cell to cell. Routes by size are in `pathfinding` (`find_sized_path`).
 
 ## Files
 
@@ -9,7 +9,7 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 
 ## Public API
 
-- `Spot { x, y }` (serde, i64 units, `x` east, `y` south): `middle_of(cell)` (cell `(x, y)`'s middle at `(x, y) × 240`, as `relief::Relief::at`), `cell()` (a spot on a cell's edge is in the cell east or south), `offset`, `distance_squared` (exact, `u128`), `distance` (rounded down), `towards(other, n, d)`. On the Hall's levels `x` is the Hall's own, unwrapped, as its cells are (`hall::wrap_x` brings a cell round). `root(n)`: whole-number square root.
+- `Spot { x, y }` (serde, i64 units, `x` east, `y` south): `stands_on(cell)` (within `UNDERFOOT`, half a cell, of its middle: stairs underfoot), `middle_of(cell)` (cell `(x, y)`'s middle at `(x, y) × 240`, as `relief::Relief::at`), `cell()` (a spot on a cell's edge is in the cell east or south), `offset`, `distance_squared` (exact, `u128`), `distance` (rounded down), `towards(other, n, d)`. On the Hall's levels `x` is the Hall's own, unwrapped, as its cells are (`hall::wrap_x` brings a cell round). `root(n)`: whole-number square root.
 - `Size::radius()` (in `creature`): Tiny 20, Small 60, Medium 80 (today's token base, 2/3 cell across), Large 120, Huge 180, Giant 240. Drawn base = blocking circle.
 - `Blocker { shape, fence }`, `Shape::{Box { low, high }, Post { at, radius }}`, `.clearance(a, b)`: how far a move passes it (0 touching). `cell_blockers(level, x, y, &mut out)`, `blockers_near(level, low, high, reach)`:
   - walls (and building doors, blind windows, closed secret doors), windows and closed doors fill the cell, less a `CORNER_CUT` (60) notch at each corner with no wall, window or doorway beside it on either side;
@@ -34,7 +34,7 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 
 ## Used by
 
-- `pathfinding` (`find_sized_path`, `straighten_spots`). Nothing in play yet: PR 3 (positions in units end to end), PR 4 (free movement on the client: `slide`), PR 5 (sizes in play: room maps, squeezing, mobs).
+- `pathfinding` (`find_sized_path`, `straighten_spots`), `movement::move_on_level` (players' moves), `protocol` (`Spot` in messages, `JUMP_REACH`), `shop::beside_door`, `energy::site_move_cost`, `server` (visits, the Hall, saves, dev teleports' room to stand). Still to come: PR 4 (free movement on the client: `slide`), PR 5 (sizes in play: room maps, squeezing, mobs).
 
 ## Notes
 

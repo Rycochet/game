@@ -160,7 +160,7 @@ fn change_map(
                 if *view.get() == GameView::WorldMap {
                     world_return.0 = **player;
                 }
-                let (x, y) = info.arrival;
+                let (x, y) = info.arrival.cell();
                 **player = MapPosition { x, y };
                 others.entering(&mut dungeon, info);
                 dungeon.enter(info.clone());
@@ -168,7 +168,8 @@ fn change_map(
             }
             // Counted from `origin`, a multiple of the gates' spacing, so the
             // cells are the same.
-            &ServerMessage::EnterHall { x, y, origin } => {
+            &ServerMessage::EnterHall { at, origin } => {
+                let (x, y) = at.cell();
                 if *view.get() == GameView::WorldMap {
                     world_return.0 = **player;
                 }
@@ -206,7 +207,11 @@ fn change_map(
             }
             &ServerMessage::Teleported { x, y } => {
                 // Dev tools, on the map the player is on: on the world map,
-                // on the copy of the planet they are on.
+                // on the copy of the planet they are on; on a level, in units.
+                let (x, y) = match view.get() {
+                    GameView::WorldMap => (x, y),
+                    _ => shared::protocol::cell_of_units((x, y)),
+                };
                 let shift = match (view.get(), world.as_ref()) {
                     (GameView::WorldMap, Some(world)) => {
                         let width = world.surface.width();

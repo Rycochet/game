@@ -145,3 +145,19 @@ fn sneaking_holds_steps_to_a_cell_every_two_seconds() {
         u32::MAX / 2
     );
 }
+
+#[test]
+fn moves_between_middles_cost_what_steps_do() {
+    use crate::spot::Spot;
+    let from = Spot::middle_of((3, -2));
+    for (dx, dy) in [(1, 0), (0, -1), (1, 1), (-1, 1), (2, 0), (2, -2), (0, 2)] {
+        let to = Spot::middle_of((3 + dx, -2 + dy));
+        let cells = site_step_cost((3, -2), (3 + dx, -2 + dy));
+        assert_eq!(site_move_cost(from, to), cells, "{dx}, {dy}");
+    }
+    // Half a cell costs half a step, rounded.
+    assert_eq!(
+        site_move_cost(from, from.offset(120, 0)),
+        35 * SITE_STEP_SCALE
+    );
+}

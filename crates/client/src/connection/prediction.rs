@@ -6,14 +6,19 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use shared::movement::Step;
 use shared::protocol::ClientMessage;
+use shared::spot::Spot;
 
 /// The steps sent and not yet confirmed, on the current map.
 #[derive(Resource, Default)]
 pub(super) struct Prediction {
-    /// How many maps the server has put the player on (`ClientMessage::Step`).
+    /// How many maps the server has put the player on (`ClientMessage::Step`
+    /// and `Move`).
     map: u32,
     /// The number of the last step sent.
     last: u32,
+    /// The map is a level or the Hall, where positions are in units and moves
+    /// are sent instead of steps.
+    on_level: bool,
     /// How far each step sent on this map that the server hasn't confirmed
     /// moved the player (a jump moves two cells), by number.
     pending: VecDeque<(u32, (i64, i64))>,
@@ -21,21 +26,30 @@ pub(super) struct Prediction {
 
 impl Prediction {
     /// The message for a step just taken, which moved the player by `moved`,
-    /// remembered until it is confirmed.
-    pub fn step(&mut self, step: Step, moved: (i64, i64)) -> ClientMessage {
+    /// remembered until it is confirmed: a move to `to` on a level or in the
+    /// Hall, otherwise a world map step.
+    pub fn step(&mut self, step: Step, moved: (i64, i64), to: (i64, i64)) -> ClientMessage {
         self.last += 1;
         self.pending.push_back((self.last, moved));
-        ClientMessage::Step {
-            map: self.map,
-            number: self.last,
-            step,
+        let (map, number) = (self.map, self.last);
+        if self.on_level {
+            let to = Spot::middle_of(to);
+            ClientMessage::Move { map, number, to }
+        } else {
+            ClientMessage::Step { map, number, step }
         }
+    }
+
+    /// Whether the map is a level or the Hall (positions in units).
+    pub fn on_level(&self) -> bool {
+        self.on_level
     }
 
     /// The server has put the player on another map: steps on the last one
     /// will never be confirmed.
-    pub fn changed_map(&mut self) {
+    pub fn changed_map(&mut self, on_level: bool) {
         self.map += 1;
+        self.on_level = on_level;
         self.pending.clear();
     }
 

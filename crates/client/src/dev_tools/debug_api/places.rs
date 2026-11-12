@@ -8,7 +8,7 @@ use shared::poi::PoiKind;
 use shared::protocol::ClientMessage;
 
 use super::done;
-use crate::common::{GameView, MapPosition};
+use crate::common::{GameView, MapPosition, in_map_measure};
 use crate::connection::ToServer;
 use crate::dev_tools::dev_area::dev_area_of;
 use crate::player::Player;
@@ -20,12 +20,15 @@ pub(super) struct Place {
 }
 
 /// `client.teleport { "x": 10, "y": -4 }`: on the world map, or onto a
-/// walkable cell of the site level (as Teleport Mode, `HOW_DEBUG_POS`).
+/// walkable cell of the site level (its middle; as Teleport Mode,
+/// `HOW_DEBUG_POS`).
 pub(super) fn teleport(
     In(request): In<Option<Value>>,
+    view: Res<State<GameView>>,
     mut to_server: MessageWriter<ToServer>,
 ) -> BrpResult {
     let Place { x, y } = params(request)?;
+    let (x, y) = in_map_measure(*view.get(), (x, y));
     to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
     done()
 }

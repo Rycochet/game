@@ -184,7 +184,7 @@ fn players_on_the_world_map_see_each_other_and_their_moves() {
     assert!(
         second
             .iter()
-            .any(|answer| matches!(answer, ServerMessage::EntityMoved { x: 3, y: 0, .. }))
+            .any(|answer| matches!(answer, ServerMessage::Moves(moves) if moves[0].to == (3, 0)))
     );
 }
 

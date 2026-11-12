@@ -12,7 +12,7 @@ fn info(index: u32, bounds: (i64, i64, i64, i64), entering_site: bool) -> LevelI
         levels: 3,
         basement: false,
         bounds,
-        arrival: (1, 1),
+        arrival: shared::spot::Spot::middle_of((1, 1)),
         entering_site,
         place_name: None,
         ground: Default::default(),

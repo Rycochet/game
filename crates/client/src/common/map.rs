@@ -52,6 +52,29 @@ pub struct SmoothPosition {
     pub y: f64,
 }
 
+impl SmoothPosition {
+    /// A position the server sends in units (`protocol::moves`: on a level or
+    /// in the Hall), in cells.
+    pub fn of_units((x, y): (i64, i64)) -> Self {
+        let span = shared::spot::CELL_SPAN as f64;
+        Self {
+            x: x as f64 / span,
+            y: y as f64 / span,
+        }
+    }
+}
+
+/// A cell (or world map point) as the server counts it in `view`: a cell's
+/// middle in units on a level or in the Hall (`protocol::moves`), the point
+/// itself on the world map. For dev tools' teleports (native only).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn in_map_measure(view: crate::common::GameView, cell: (i64, i64)) -> (i64, i64) {
+    match view {
+        crate::common::GameView::Dungeon => shared::protocol::units_of_cell(cell),
+        _ => cell,
+    }
+}
+
 impl From<MapPosition> for SmoothPosition {
     fn from(position: MapPosition) -> Self {
         Self {
