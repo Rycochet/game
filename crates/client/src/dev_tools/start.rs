@@ -19,7 +19,8 @@ pub(super) fn add(app: &mut App) {
     {
         app.add_systems(
             OnExit(GameView::Connecting),
-            (move |mut to_server: MessageWriter<ToServer>| {
+            (move |view: Res<State<GameView>>, mut to_server: MessageWriter<ToServer>| {
+                let (x, y) = crate::common::in_map_measure(*view.get(), (x, y));
                 to_server.write(ToServer(ClientMessage::DevTeleport { x, y }));
             })
             .in_set(Start::Place),

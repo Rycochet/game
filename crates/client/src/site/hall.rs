@@ -27,7 +27,7 @@ pub(super) fn show_around(dungeon: &mut CurrentDungeon, (x, y): (i64, i64), orig
         levels: 1,
         basement: false,
         bounds: (min_x, LEVEL_TOP, STRETCH, LEVEL_ROWS),
-        arrival: (x, y),
+        arrival: shared::spot::Spot::middle_of((x, y)),
         entering_site: true,
         place_name: None,
         ground: Default::default(),

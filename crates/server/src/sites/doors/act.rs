@@ -22,7 +22,7 @@ pub(crate) fn open_door(
     let Some(visit) = &client.visit else {
         return (true, 0);
     };
-    let (px, py) = visit.position;
+    let (px, py) = visit.position();
     let beside = (x - px).abs().max((y - py).abs()) == 1;
     let known = client.character.doors.get(&visit.id);
     let known = known.and_then(|levels| levels.get(&visit.index));
@@ -73,7 +73,7 @@ pub(crate) fn close_near(client: &mut Client, world: &mut ServerWorld) -> (bool,
     let Some(visit) = &client.visit else {
         return (true, 0);
     };
-    let (px, py) = visit.position;
+    let (px, py) = visit.position();
     let near: Vec<((i64, i64), VisitDoor)> = (visit.doors.iter())
         .filter(|((x, y), _)| (x - px).abs().max((y - py).abs()) == 1)
         .filter(|(_, door)| match door.door.swing {
@@ -114,7 +114,7 @@ pub(crate) fn dev_all(client: &mut Client, world: &mut ServerWorld, open: bool) 
     let Some(visit) = &client.visit else {
         return true;
     };
-    let position = visit.position;
+    let position = visit.position();
     let doors: Vec<((i64, i64), VisitDoor)> = (visit.doors.iter())
         .map(|(&at, &door)| (at, door))
         .collect();
@@ -163,7 +163,7 @@ pub(crate) fn dev_key(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = &client.visit else {
         return true;
     };
-    let (px, py) = visit.position;
+    let (px, py) = visit.position();
     let apart = |&(x, y): &(i64, i64)| (x - px).abs().max((y - py).abs());
     let locks: Vec<((i64, i64), shared::id::Id)> = (visit.doors.iter())
         .filter_map(|(&at, door)| door.door.lock.map(|lock| (at, lock.id)))

@@ -38,7 +38,7 @@ fn enter(test: &mut TestClient, poi: &Poi) -> Vec<ServerMessage> {
 fn position(test: &TestClient) -> (i64, i64) {
     let visit = test.client.visit.as_ref().expect("in the wilderness");
     assert!(visit.is_wilderness());
-    visit.position
+    visit.position()
 }
 
 /// The outside cell of the town, reachable from the player, the most steps
@@ -47,8 +47,8 @@ fn far_in_town(test: &TestClient) -> (i64, i64) {
     let visit = test.client.visit.as_ref().unwrap();
     let level = &visit.level.level;
     let mirror = visit.mirrors.first().expect("the town set in");
-    let mut seen = BTreeSet::from([visit.position]);
-    let mut queue = VecDeque::from([(visit.position, 0)]);
+    let mut seen = BTreeSet::from([visit.position()]);
+    let mut queue = VecDeque::from([(visit.position(), 0)]);
     let mut farthest = None;
     while let Some((at, steps)) = queue.pop_front() {
         if mirror.of(at.0, at.1).is_some() && level.cell(at.0, at.1).is_outside() {
@@ -98,7 +98,7 @@ fn going_back_in_arrives_where_they_walked_out() {
     let answers = enter(&mut test, &poi);
     assert_eq!(position(&test), out);
     let arrival = answers.iter().find_map(|message| match message {
-        ServerMessage::EnterLevel(info) => Some(info.arrival),
+        ServerMessage::EnterLevel(info) => Some(info.arrival.cell()),
         _ => None,
     });
     assert_eq!(arrival, Some(out), "the client is told so too");

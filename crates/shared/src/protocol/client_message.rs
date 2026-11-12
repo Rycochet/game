@@ -19,6 +19,7 @@ use crate::item_form::RollRequest;
 use crate::movement::Step;
 use crate::poi::{ChunkPos, PoiKind};
 use crate::site::DevArea;
+use crate::spot::Spot;
 use crate::world::ClockRate;
 
 /// From a client to the server.
@@ -57,12 +58,12 @@ pub enum ClientMessage {
     /// Asks the server's clock, now and then. `sent` is the client's own time,
     /// handed back in `Pong` so it can tell how long the round trip took.
     Ping { sent: f64 },
-    /// The player takes a step on the map they are on: the server checks
-    /// it, moves them and sends what comes into sight, then (once a tick)
-    /// `Position`. `map` counts the maps the client has been put on
-    /// (`EnterLevel`, `OnWorldMap`) since `Welcome`, so a step meant for the
-    /// last map is ignored on the next; `number` counts the client's steps.
+    /// A step on the world map: checked, taken, then (once a tick)
+    /// `Position`. `map` counts the maps since `Welcome` (a step meant for the
+    /// last is ignored); `number` counts the client's steps and moves.
     Step { map: u32, number: u32, step: Step },
+    /// A move on a level or in the Hall, straight to `to` (`protocol::moves`).
+    Move { map: u32, number: u32, to: Spot },
     /// Go into the poi in this world map chunk (the player must be near
     /// enough, `poi::can_enter_from`): into the wilderness where it is set
     /// in, at its entrance or where they last walked out of it.
@@ -206,9 +207,8 @@ pub enum ClientMessage {
     /// Developer tools: the character is deleted, save and all, answered with
     /// `Characters` to choose or make another.
     DevDeleteCharacter,
-    /// Developer tools: jump to a point on the map the player is on (in a
-    /// site, only onto a walkable cell), answered with `Teleported`. Only an
-    /// embedded (single-player) server accepts it; others ignore it.
+    /// Developer tools: jump to a point on this map, in its measure
+    /// (`protocol::moves`), answered with `Teleported`.
     DevTeleport { x: i64, y: i64 },
     /// Developer tools: back to where new characters start on the world map,
     /// from anywhere (out of a site too), answered with `OnWorldMap`. Only

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use shared::poi::{ChunkPos, Poi, PoiKind, can_enter_from};
 use shared::rng::Seed;
 use shared::site::{Exit, Generator, MAX_RUIN, Site};
+use shared::spot::CELL_SPAN;
 
 use super::{Arrival, NewVisit, enter_level, leave, leave_for_poi};
 use crate::ServerWorld;
@@ -28,7 +29,7 @@ pub(crate) fn enter_poi(client: &mut Client, world: &mut ServerWorld, chunk: Chu
     client.character.pois.entry(chunk).or_default().visited = true;
     client.unsaved = true;
     let at = super::wild::poi_arrival(client, world, &poi);
-    super::wild::enter_wilderness(client, world, at)
+    super::wild::enter_wilderness(client, world, shared::spot::Spot::middle_of(at))
 }
 
 /// Developer tools: enters a made-up site at any level, where the player
@@ -122,8 +123,8 @@ pub(crate) fn resume(client: &mut Client, world: &mut ServerWorld, saved: VisitS
         super::wild::ensure_chunk(world, chunk);
         let cutout = world.wilderness.chunk(chunk).and_then(|c| c.plan.cutout());
         if let Some((ox, oy)) = cutout.and_then(|cutout| cutout.offset()) {
-            let (x, y) = saved.position;
-            return super::wild::enter_wilderness(client, world, (x + ox, y + oy));
+            let at = saved.position.offset(ox * CELL_SPAN, oy * CELL_SPAN);
+            return super::wild::enter_wilderness(client, world, at);
         }
     }
     let from_wilderness = saved.from_wilderness || matches!(id, SiteId::Poi(_));

@@ -42,6 +42,7 @@ mod run;
 mod scent;
 mod sync;
 mod target;
+mod tell;
 mod territory;
 mod timid;
 mod tracking;
@@ -178,6 +179,11 @@ pub(crate) struct Mob {
 }
 
 impl Mob {
+    /// How fast it acts: energy a tick.
+    fn speed(&self) -> u32 {
+        self.speed
+    }
+
     /// How it feels about a creature of this kind, played by this character, with
     /// what it remembers of them.
     fn feeling(&self, kind: CreatureKind, character: Option<&CharacterId>) -> Feeling {

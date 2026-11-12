@@ -1,13 +1,14 @@
 //! Telling each client what it can see of mobs and other players.
 
 use shared::hall;
-use shared::id::Id;
 use shared::mob::EntityLook;
-use shared::protocol::{ServerMessage, WORLD_MAP_SIGHT};
+use shared::protocol::{ServerMessage, WORLD_MAP_SIGHT, units_of_cell};
 use shared::sheet::Feeling;
+use shared::spot::{CELL_SPAN, Spot};
 use std::collections::BTreeSet;
 use std::time::Instant;
 
+use super::tell::{Seen, tell};
 use super::{KEPT_FOR, Someone, everyone_playing, world_gap};
 use crate::ServerWorld;
 use crate::combat::Harm;
@@ -53,7 +54,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
         let my_hall = client.character.hall.filter(|_| client.visit.is_none());
         let my_kind = client.inventory.creature;
         let detect = client.detect_monsters;
-        let mut seen: Vec<EntityLook> = Vec::new();
+        let mut seen: Vec<Seen> = Vec::new();
         for someone in everyone.iter().chain(in_hall) {
             let in_sight = someone.id != client.entity_id()
                 && someone.level == here
@@ -64,22 +65,33 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                     (None, None) => world_gap(me, someone.position, width) <= WORLD_MAP_SIGHT,
                 };
             if in_sight {
-                seen.push(EntityLook {
+                // In the map's measure: units on levels and in the Hall.
+                let (x, y) = match my_hall {
+                    // Counted from where this client's `x` starts, the near
+                    // way round.
+                    Some(at) => {
+                        let mine = at.cell().0;
+                        let shown = mine + toward(mine, someone.position.0) - client.hall_origin;
+                        let at = someone
+                            .spot
+                            .offset((shown - someone.position.0) * CELL_SPAN, 0);
+                        (at.x, at.y)
+                    }
+                    None if here.is_some() => (someone.spot.x, someone.spot.y),
+                    None => someone.position,
+                };
+                let look = EntityLook {
                     id: someone.id,
                     kind: someone.look.0,
                     name: Some(someone.name.clone()).filter(|name| !name.is_empty()),
                     appearance: someone.look.1.clone(),
                     feeling: Feeling::None,
-                    x: match my_hall {
-                        // Counted from where this client's `x` starts, the near
-                        // way round.
-                        Some(at) => at.0 - client.hall_origin + toward(at.0, someone.position.0),
-                        None => someone.position.0,
-                    },
-                    y: someone.position.1,
+                    x,
+                    y,
                     worn: someone.worn.clone(),
                     mark: someone.mark.clone(),
-                });
+                };
+                seen.push((look, someone.speed));
             }
         }
         if let (Some(level), Some(visit)) = (here, &mut client.visit)
@@ -87,21 +99,24 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
         {
             for mob in &population.mobs {
                 if detect || visit.can_see(mob.position.0, mob.position.1) {
-                    seen.push(EntityLook {
+                    let (x, y) = units_of_cell(mob.position);
+                    let look = EntityLook {
                         id: mob.id,
                         kind: mob.kind,
                         name: None,
                         appearance: mob.appearance.clone(),
                         feeling: mob.feeling(my_kind, client.character_id.as_ref()),
-                        x: mob.position.0,
-                        y: mob.position.1,
+                        x,
+                        y,
                         worn: mob.shown.clone(),
                         mark: None,
-                    });
+                    };
+                    seen.push((look, mob.speed()));
                 }
             }
         }
-        tell(client, seen, &world.died);
+        let on_level = here.is_some() || my_hall.is_some();
+        tell(client, seen, &world.died, on_level);
         tell_harmed(client, &world.harmed);
     }
     // Everyone who saw them die, or harmed, has been told.
@@ -136,65 +151,10 @@ fn toward(from: i64, to: i64) -> i64 {
 }
 
 /// How far apart two places in the Hall are, the near way round.
-fn hall_gap(a: (i64, i64), b: (i64, i64)) -> i64 {
+fn hall_gap(a: Spot, b: (i64, i64)) -> i64 {
+    let a = a.cell();
     let across = hall::wrap_x(a.0 - b.0);
     across
         .min(hall::HALL_LENGTH - across)
         .max((a.1 - b.1).abs())
-}
-
-/// Tells a client how what it can see differs from what it knew. A client that
-/// has gone is noticed when its messages are next read.
-pub(super) fn tell(client: &mut Client, seen: Vec<EntityLook>, died: &BTreeSet<Id>) {
-    let now_seen: BTreeSet<Id> = seen.iter().map(|look| look.id).collect();
-    let feelings_changed: BTreeSet<Id> = seen
-        .iter()
-        .filter(|look| {
-            let feeling = client.seen_feelings.get(&look.id);
-            let worn = client.seen_worn.get(&look.id);
-            let mark = client.seen_marks.get(&look.id);
-            feeling.is_some_and(|known| *known != look.feeling)
-                || worn.is_some_and(|known| *known != look.worn)
-                || mark.is_some_and(|known| *known != look.mark)
-        })
-        .map(|look| look.id)
-        .collect();
-    client.seen_feelings = seen.iter().map(|look| (look.id, look.feeling)).collect();
-    client.seen_worn = seen
-        .iter()
-        .map(|look| (look.id, look.worn.clone()))
-        .collect();
-    client.seen_marks = seen
-        .iter()
-        .map(|look| (look.id, look.mark.clone()))
-        .collect();
-    client.seen_entities.retain(|id, _| {
-        let stays = now_seen.contains(id);
-        if !stays {
-            let died = died.contains(id);
-            client
-                .link
-                .send(&ServerMessage::EntityGone { id: *id, died });
-        }
-        stays
-    });
-    for look in seen {
-        let at = (look.x, look.y);
-        let known = client.seen_entities.insert(look.id, at);
-        // Told afresh, the token takes the new colour and the new picture.
-        let known = known.filter(|_| !feelings_changed.contains(&look.id));
-        match known {
-            None => {
-                client.link.send(&ServerMessage::EntitySeen(look));
-            }
-            Some(known) if known != at => {
-                client.link.send(&ServerMessage::EntityMoved {
-                    id: look.id,
-                    x: at.0,
-                    y: at.1,
-                });
-            }
-            Some(_) => {}
-        }
-    }
 }

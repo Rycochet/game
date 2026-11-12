@@ -166,7 +166,7 @@ pub(super) fn cell_changed(
     let mut door = first_door(&poi, false, key.index, level, (x, y), key.at);
     door.swing = if cell == Cell::Door {
         let runs = level.opening_runs_east_west(x, y);
-        Swing::Open(Side::of(runs, (x, y), visit.position).opposite())
+        Swing::Open(Side::of(runs, (x, y), visit.position()).opposite())
     } else {
         Swing::Closed
     };

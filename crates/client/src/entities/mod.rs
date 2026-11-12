@@ -7,6 +7,7 @@ mod flash;
 mod health_bars;
 mod hover_name;
 mod morph;
+mod moving;
 mod pictures;
 mod wind_up_bars;
 
@@ -20,19 +21,12 @@ use shared::id::Id;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::sheet::Feeling;
 
-use crate::common::{
-    Attitude, DetectMonsters, GameView, Icon, MapPosition, Other, SmoothPosition, Token,
-};
+use crate::common::{Attitude, DetectMonsters, Icon, MapPosition, Other, Token};
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
 use crate::player::{Player, PlayerSystems};
 
-/// How fast others are shown moving, in grid units a second: the same as an
-/// ordinary player, so they keep up with what the server says.
-const WORLD_MAP_SPEED: f64 = 60.0;
-const SITE_SPEED: f64 = shared::energy::SITE_CELLS_PER_SECOND;
-/// Further behind than this, in grid units, they go straight there.
-const TOO_FAR_BEHIND: f64 = 8.0;
+use moving::{Goal, show_moving};
 
 pub struct EntitiesPlugin;
 
@@ -91,7 +85,8 @@ struct Others(HashMap<Id, Entity>);
 fn read_server(
     mut from_server: MessageReader<FromServer>,
     mut others: ResMut<Others>,
-    mut positions: Query<&mut MapPosition, With<Other>>,
+    mut positions: Query<(&mut MapPosition, &mut Goal), With<Other>>,
+    mut on_level: Local<bool>,
     seen: Query<(&Other, &morph::SeenLooks)>,
     time: Res<Time>,
     detect: Res<DetectMonsters>,
@@ -102,10 +97,7 @@ fn read_server(
     for FromServer(message) in from_server.read() {
         match message {
             ServerMessage::EntitySeen(look) => {
-                let at = MapPosition {
-                    x: look.x,
-                    y: look.y,
-                };
+                let (at, smooth) = moving::placed(*on_level, (look.x, look.y));
                 let spawned = commands
                     .spawn((
                         Other {
@@ -114,7 +106,8 @@ fn read_server(
                             feeling: look.feeling,
                         },
                         at,
-                        SmoothPosition::from(at),
+                        smooth,
+                        Goal::still(smooth),
                         Token {
                             size: picture_size(look.kind),
                             attitude: attitude(look.feeling),
@@ -151,11 +144,13 @@ fn read_server(
                     commands.entity(old).despawn();
                 }
             }
-            ServerMessage::EntityMoved { id, x, y } => {
-                if let Some(&entity) = others.0.get(id)
-                    && let Ok(mut position) = positions.get_mut(entity)
-                {
-                    *position = MapPosition { x: *x, y: *y };
+            ServerMessage::Moves(stretches) => {
+                for stretch in stretches {
+                    if let Some(&entity) = others.0.get(&stretch.id)
+                        && let Ok((mut position, mut goal)) = positions.get_mut(entity)
+                    {
+                        (*position, *goal) = moving::stretch(*on_level, stretch);
+                    }
                 }
             }
             ServerMessage::EntityGone { id, .. } => {
@@ -165,6 +160,7 @@ fn read_server(
             }
             // A new connection knows nothing of this.
             ServerMessage::Welcome { .. } if detect.0 => {
+                *on_level = false;
                 to_server.write(ToServer(ClientMessage::DevDetectMonsters(true)));
                 for (_, entity) in others.0.drain() {
                     commands.entity(entity).despawn();
@@ -176,44 +172,16 @@ fn read_server(
             | ServerMessage::EnterHall { .. }
             | ServerMessage::OnWorldMap { .. }
             | ServerMessage::Teleported { .. } => {
+                *on_level = match message {
+                    ServerMessage::EnterLevel(_) | ServerMessage::EnterHall { .. } => true,
+                    ServerMessage::Teleported { .. } => *on_level,
+                    _ => false,
+                };
                 for (_, entity) in others.0.drain() {
                     commands.entity(entity).despawn();
                 }
             }
             _ => {}
-        }
-    }
-}
-
-/// `distance` towards `to`, stopping exactly on it.
-fn glide(from: Vec2d, to: Vec2d, distance: f64) -> Vec2d {
-    let (dx, dy) = (to.0 - from.0, to.1 - from.1);
-    let gap = dx.hypot(dy);
-    if gap <= distance || gap > TOO_FAR_BEHIND {
-        to
-    } else {
-        (from.0 + dx / gap * distance, from.1 + dy / gap * distance)
-    }
-}
-
-type Vec2d = (f64, f64);
-
-/// Eases others towards where they are, between the server's word.
-fn show_moving(
-    time: Res<Time>,
-    view: Res<State<GameView>>,
-    mut others: Query<(&MapPosition, &mut SmoothPosition), With<Other>>,
-) {
-    let speed = match view.get() {
-        GameView::Dungeon => SITE_SPEED,
-        _ => WORLD_MAP_SPEED,
-    };
-    let distance = speed * time.delta_secs_f64();
-    for (at, mut smooth) in &mut others {
-        let to = (at.x as f64, at.y as f64);
-        let (x, y) = glide((smooth.x, smooth.y), to, distance);
-        if (x, y) != (smooth.x, smooth.y) {
-            *smooth = SmoothPosition { x, y };
         }
     }
 }

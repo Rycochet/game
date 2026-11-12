@@ -257,7 +257,7 @@ pub struct Client {
     vitals_told: Option<shared::vitals::Limits>,
     /// How much it can do now, and how fast that comes back.
     energy: Energy,
-    speed: u32,
+    pub(crate) speed: u32,
     /// What it has asked to do and hasn't had the energy for yet, in order.
     waiting: VecDeque<Action>,
     /// The ability it is winding up, and its attacks so far.

@@ -1,5 +1,6 @@
 use shared::hall::{GatePlace, HALL_LENGTH, Side, WALKWAY_ROWS};
-use shared::protocol::{ClientMessage, ServerMessage};
+use shared::protocol::{ClientMessage, ServerMessage, cell_of_units};
+use shared::spot::Spot;
 use shared::world::WorldSeed;
 
 use crate::connections::tests::TestClient;
@@ -15,7 +16,7 @@ fn in_the_hall() -> (TestClient, (i64, i64), i64) {
     let at = answers
         .iter()
         .find_map(|message| match message {
-            ServerMessage::EnterHall { x, y, origin } => Some(((*x, *y), *origin)),
+            ServerMessage::EnterHall { at, origin } => Some((at.cell(), *origin)),
             _ => None,
         })
         .expect("in the Hall");
@@ -24,7 +25,7 @@ fn in_the_hall() -> (TestClient, (i64, i64), i64) {
 
 fn position(answers: &[ServerMessage]) -> Option<(i64, i64)> {
     answers.iter().rev().find_map(|message| match message {
-        ServerMessage::Position { x, y, .. } => Some((*x, *y)),
+        ServerMessage::Position { x, y, .. } => Some(cell_of_units((*x, *y))),
         _ => None,
     })
 }
@@ -39,7 +40,7 @@ fn dev_tools_can_choose_another_worlds_gate() {
     let (x, y, origin) = answers
         .iter()
         .find_map(|message| match message {
-            ServerMessage::EnterHall { x, y, origin } => Some((*x, *y, *origin)),
+            ServerMessage::EnterHall { at, origin } => Some((at.cell().0, at.cell().1, *origin)),
             _ => None,
         })
         .expect("in the Hall");
@@ -79,13 +80,17 @@ fn walking_round_the_seam_carries_on() {
         seed: None,
         gate: None,
     }]);
-    test.client.character.hall = Some((HALL_LENGTH - 1, 1));
+    test.client.character.hall = Some(Spot::middle_of((HALL_LENGTH - 1, 1)));
     test.steps(&[(1, 0)]);
-    assert_eq!(test.client.character.hall, Some((HALL_LENGTH, 1)));
+    assert_eq!(
+        test.client.character.hall,
+        Some(Spot::middle_of((HALL_LENGTH, 1)))
+    );
     // Coming back, it is the first tile again.
-    let at = super::enter(&mut test.client, &mut test.world, (HALL_LENGTH + 2, 1));
+    let far = Spot::middle_of((HALL_LENGTH + 2, 1));
+    let at = super::enter(&mut test.client, &mut test.world, far);
     assert!(at);
-    assert_eq!(test.client.character.hall, Some((2, 1)));
+    assert_eq!(test.client.character.hall, Some(Spot::middle_of((2, 1))));
 }
 
 #[test]
@@ -98,7 +103,19 @@ fn teleports_land_only_on_the_floor() {
             .any(|m| matches!(m, ServerMessage::Teleported { .. }))
     );
     let answers = test.send(&[ClientMessage::DevTeleport { x: 8, y: -1 }]);
-    assert!(answers.contains(&ServerMessage::Teleported { x: 8, y: -1 }));
+    assert!(answers.contains(&ServerMessage::Teleported {
+        x: 8 * 240,
+        y: -240
+    }));
+    // Anywhere on the floor, not only a tile's middle.
+    let answers = test.send_exact(&[ClientMessage::DevTeleport {
+        x: 8 * 240 + 50,
+        y: -200,
+    }]);
+    assert!(answers.contains(&ServerMessage::Teleported {
+        x: 8 * 240 + 50,
+        y: -200
+    }));
     assert_eq!(
         GatePlace::at(8, -1).map(|gate| gate.side),
         Some(Side::North)

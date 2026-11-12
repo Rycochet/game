@@ -31,7 +31,13 @@ pub(crate) struct Someone {
     pub(super) level: Option<(SiteId, u32)>,
     /// They are in the Hall of Worlds (and `level` is `None`).
     pub(super) in_hall: bool,
+    /// The cell (or world map point) they are in: what sight and mobs go by.
     pub(super) position: (i64, i64),
+    /// Exactly where, in units, on a level or in the Hall (the Hall's own).
+    pub(super) spot: shared::spot::Spot,
+    /// How fast they act (`Client::speed`), for how quickly they are shown
+    /// moving.
+    pub(super) speed: u32,
     /// Mobs take no notice of them.
     pub(super) god_mode: bool,
     /// How strong a trail they leave, as a percentage.
@@ -43,10 +49,17 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
         .iter_mut()
         .filter(|client| client.phase == Phase::Playing && !client.is_gone())
         .map(|client| {
-            let (level, position) = match (&client.visit, client.character.hall) {
-                (Some(visit), _) => (Some(visit.population()), visit.position()),
+            let (level, spot) = match (&client.visit, client.character.hall) {
+                (Some(visit), _) => (Some(visit.population()), visit.spot()),
                 (None, Some(at)) => (None, at),
-                (None, None) => (None, client.character.world_position),
+                (None, None) => (
+                    None,
+                    shared::spot::Spot::middle_of(client.character.world_position),
+                ),
+            };
+            let position = match (&client.visit, client.character.hall) {
+                (None, None) => client.character.world_position,
+                _ => spot.cell(),
             };
             Someone {
                 id: client.entity_id(),
@@ -58,6 +71,8 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 level,
                 in_hall: client.visit.is_none() && client.character.hall.is_some(),
                 position,
+                spot,
+                speed: client.speed,
                 god_mode: client.god_mode,
                 scent: scent_strength(&client.inventory),
             }

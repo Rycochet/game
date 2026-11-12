@@ -11,6 +11,7 @@ use crate::world::WorldParams;
 
 mod flat_ground;
 mod gait;
+mod level_move;
 mod swimming;
 mod terrain;
 mod training;
@@ -23,6 +24,7 @@ pub use gait::{
     CLIMB_SAVING_PER_MILLE, DEEP_WATER_FROM, DEEPEST_SEA, FULL, Gait, JUMP_BEST_PER_MILLE,
     MOVEMENT_SKILLS, MovementSkills, RUN_TENTHS, SWIM_FAST_PER_MILLE, SWIM_SLOW_PER_MILLE,
 };
+pub use level_move::{LevelMove, move_on_level};
 pub use swimming::{step_on_level_by, step_on_world_map_by};
 pub use terrain::{Footing, PIONEER_SAVING_PER_MILLE, TERRAIN_STEP, Terrain};
 pub use training::{

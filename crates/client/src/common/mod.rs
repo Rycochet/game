@@ -89,6 +89,8 @@ pub use items::{
 pub use lightning::{BoltStruck, Lightning, LightningStrike};
 pub use local_time::local_date_time;
 pub use login::{AccountEmail, LoggingIn, LoginChoice, LoginProvider};
+#[cfg(not(target_arch = "wasm32"))]
+pub use map::in_map_measure;
 pub use map::{
     Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, WorldReturn,
 };

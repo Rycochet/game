@@ -37,7 +37,7 @@ fn in_area(test: &TestClient) -> (DevArea, (i64, i64)) {
     let SiteId::DevArea(area) = visit.id else {
         panic!("not a Dev Area: {:?}", visit.id);
     };
-    (area, visit.position)
+    (area, visit.position())
 }
 
 #[test]

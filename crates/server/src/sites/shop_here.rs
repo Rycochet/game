@@ -3,7 +3,7 @@
 
 use shared::id::Id;
 use shared::poi::Poi;
-use shared::shop::DOOR_REACH;
+use shared::shop::beside_door;
 use shared::site::TownBuilding;
 
 use crate::ServerWorld;
@@ -26,10 +26,10 @@ pub(super) struct ShopHere {
 }
 
 impl ShopHere {
-    /// Whether the player stands within `DOOR_REACH` of its door.
-    pub(super) fn in_reach(&self, (x, y): (i64, i64)) -> bool {
-        let (door_x, door_y) = self.door;
-        (x - door_x).abs().max((y - door_y).abs()) <= DOOR_REACH
+    /// Whether the player, at `at`, stands near enough to its door
+    /// (`shop::beside_door`).
+    pub(super) fn in_reach(&self, at: shared::spot::Spot) -> bool {
+        beside_door(at, self.door)
     }
 }
 

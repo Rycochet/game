@@ -74,7 +74,7 @@ fn standing(clients: &[Client]) -> Standing {
             continue;
         };
         let id = client.entity_id();
-        let (x, y) = visit.position;
+        let (x, y) = visit.position();
         found.insert(((visit.id, visit.index, (visit.kept_at(x), y)), id));
         for mirror in &visit.mirrors {
             if let Some(at) = mirror.of(x, y) {
@@ -113,6 +113,6 @@ impl ServerWorld {
                     .is_some_and(|items| !items.is_empty())
             })
         });
-        visit.position == at || player || mob || bag
+        visit.position() == at || player || mob || bag
     }
 }

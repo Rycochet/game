@@ -25,6 +25,7 @@ mod known_poi;
 mod roads;
 mod saves;
 mod sites;
+mod spot_compat;
 mod unsaved;
 
 pub use characters::Everywhere;

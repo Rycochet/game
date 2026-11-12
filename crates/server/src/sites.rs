@@ -5,11 +5,13 @@
 //! last visited and players' changes (`storage::SiteSave`).
 
 use bevy::prelude::*;
+use shared::creature::Size;
 use shared::dungeon::Sight;
-use shared::movement::{Gait, Step, step_on_level_by};
+use shared::movement::{Gait, LevelMove, move_on_level};
 use shared::poi::Poi;
 use shared::protocol::SeenStairs;
 use shared::site::{Exit, Site, SiteLevel};
+use shared::spot::Spot;
 
 use crate::storage::{CellMasks, SiteId, VisitSave};
 
@@ -46,7 +48,7 @@ pub(super) use keepers::{give_to_keeper, keeper_building, keeper_stock, take_fro
 use leave::leave_for_poi;
 pub(super) use leave::{forget_site, killed, leave, put_out, use_exit};
 use levels::{NewVisit, arrive_again, enter_level};
-pub(super) use moves::{set_cell, stepped, teleport};
+pub(super) use moves::{moved, refused, set_cell, teleport};
 use place::{Mirror, Place, SetIn};
 pub(crate) use place_name::place_name_of;
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
@@ -69,8 +71,8 @@ pub(crate) struct Visit {
     stairs: Vec<SeenStairs>,
     /// Its doors, as they are now (also set on `level`).
     doors: VisitDoors,
-    /// Where the player is.
-    position: (i64, i64),
+    /// Where the player is, in units.
+    position: Spot,
     /// The cells the client has been sent on this visit.
     sent: CellMasks,
     /// The cells already looked out from for what to send, and what was seen
@@ -89,8 +91,13 @@ pub(crate) struct Visit {
 }
 
 impl Visit {
-    /// Where the player is on the level.
+    /// The cell the player is in on the level: what cell rules go by.
     pub(crate) fn position(&self) -> (i64, i64) {
+        self.position.cell()
+    }
+
+    /// Where exactly the player is on the level, in units.
+    pub(crate) fn spot(&self) -> Spot {
         self.position
     }
 
@@ -110,43 +117,20 @@ impl Visit {
             .with_flats(&self.flats(), &self.level.level)
     }
 
-    /// Puts the player somewhere else, for tests.
-    #[cfg(test)]
-    pub(crate) fn move_for_test(&mut self, at: (i64, i64)) {
-        self.position = at;
+    /// How a move from here to `to` goes, if someone with this `gait` may take
+    /// it (`movement::move_on_level`: a good swimmer swims water instead of
+    /// jumping it).
+    pub(crate) fn landing(&self, to: Spot, gait: Gait) -> Option<LevelMove> {
+        // Every player counts as Medium until sizes are in play (PR 5).
+        move_on_level(&self.level.level, Size::Medium, gait, self.position, to)
     }
 
-    /// The level's first stairs, for tests.
-    #[cfg(test)]
-    pub(crate) fn first_stairs(&self) -> (i64, i64) {
-        let stairs = self.level.stairs[0];
-        (stairs.x, stairs.y)
-    }
-
-    /// A walkable cell the player can't see, for tests.
-    #[cfg(test)]
-    pub(crate) fn walkable_out_of_sight(&mut self) -> (i64, i64) {
-        const SEARCH: i64 = 200;
-        (-SEARCH..SEARCH)
-            .flat_map(|y| (-SEARCH..SEARCH).map(move |x| (x, y)))
-            .find(|&(x, y)| self.level.level.is_walkable(x, y) && !self.can_see(x, y))
-            .expect("a site has more than one room")
-    }
-
-    /// A cell with room for this many steps east of it, for tests.
-    #[cfg(test)]
-    pub(crate) fn room_to_walk_east(&self, steps: i64) -> (i64, i64) {
-        const SEARCH: i64 = 200;
-        (-SEARCH..SEARCH)
-            .flat_map(|y| (-SEARCH..SEARCH).map(move |x| (x, y)))
-            .find(|&(x, y)| (0..=steps).all(|dx| self.level.level.is_walkable(x + dx, y)))
-            .expect("a site has a room")
-    }
-
-    /// Where a step from here lands, if it can be taken by someone with this
-    /// `gait` (a good swimmer swims water instead of jumping it).
-    pub(crate) fn landing(&self, step: Step, gait: Gait) -> Option<(i64, i64)> {
-        step_on_level_by(&self.level.level, self.position, step, gait)
+    /// The stairs the player stands on (`Spot::stands_on`), if any.
+    pub(crate) fn stairs_underfoot(&self) -> Option<&shared::site::Stairs> {
+        let stairs = self.level.stairs.iter();
+        stairs
+            .into_iter()
+            .find(|s| self.position.stands_on((s.x, s.y)))
     }
 
     /// Which level of the site it is.
@@ -186,12 +170,12 @@ impl Visit {
 
     /// Whether something at this cell can be seen from where the player is.
     pub(crate) fn can_see(&mut self, x: i64, y: i64) -> bool {
-        if self.view_from != Some(self.position) {
-            let (from_x, from_y) = self.position;
+        if self.view_from != Some(self.position()) {
+            let (from_x, from_y) = self.position();
             let level = &self.level.level;
             self.view = Sight::new(level);
             self.view.add_view(level, from_x, from_y, self.reach());
-            self.view_from = Some(self.position);
+            self.view_from = Some(self.position());
         }
         self.view.is_seen(x, y)
     }
@@ -289,8 +273,8 @@ impl Visit {
 enum Arrival {
     /// Coming from the world map or another level.
     From(Exit),
-    /// Back where they were (a saved visit), if it is still walkable.
-    At((i64, i64)),
+    /// Back where they were (a saved visit), if there is still footing.
+    At(Spot),
 }
 
 #[cfg(test)]
@@ -300,8 +284,12 @@ mod leave_key_tests;
 #[cfg(test)]
 mod left_at_tests;
 #[cfg(test)]
+mod moves_tests;
+#[cfg(test)]
 mod place_name_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod up_down_tests;
+#[cfg(test)]
+mod visit_for_tests;

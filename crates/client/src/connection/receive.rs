@@ -2,7 +2,7 @@
 
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use shared::protocol::{OnlineState, ServerMessage};
+use shared::protocol::{OnlineState, ServerMessage, cell_of_units};
 use shared::world::MINUTES_PER_HOUR;
 use shared::world::WORLD_MAP_VERSION;
 
@@ -174,7 +174,14 @@ pub(super) fn receive(
                 None => warn!("A road arrived before the world"),
             },
             Ok(Some(ServerMessage::Position { map, step, x, y })) => {
-                let Some(predicted) = prediction.confirmed(map, step, (x, y)) else {
+                // On a level or in the Hall, in units: the client keeps the
+                // player on cells for now (free positions PR 4).
+                let at = if prediction.on_level() {
+                    cell_of_units((x, y))
+                } else {
+                    (x, y)
+                };
+                let Some(predicted) = prediction.confirmed(map, step, at) else {
                     continue;
                 };
                 // The world map wraps; site levels don't.
@@ -227,7 +234,7 @@ pub(super) fn receive(
                 | ServerMessage::DevMobInfo { .. }
                 | ServerMessage::DevSkillsOf { .. }
                 | ServerMessage::EntitySeen(_)
-                | ServerMessage::EntityMoved { .. }
+                | ServerMessage::Moves(_)
                 | ServerMessage::EntityGone { .. }),
             )) => {
                 from_server.write(FromServer(message));

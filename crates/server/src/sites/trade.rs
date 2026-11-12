@@ -21,7 +21,7 @@ pub(crate) fn open_trade(client: &mut Client, world: &mut ServerWorld, with: Id)
         warn!("Refused opening a trade from outside any site");
         return true;
     };
-    let position = visit.position;
+    let position = visit.spot();
     let Some(here) = shop_of(client, world, with) else {
         warn!("Refused opening a trade with someone who isn't here: {with:?}");
         return true;

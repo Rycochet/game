@@ -1,52 +1,64 @@
-//! Steps and teleports within a site, and setting a cell.
+//! Moves and teleports within a site, and setting a cell.
 
 use bevy::prelude::*;
+use shared::clearance::check_segment;
+use shared::creature::Size;
 use shared::dungeon::{Cell, Sight};
-use shared::movement::{Gait, Step, step_on_level_by};
 use shared::protocol::{ServerMessage, level_chunk};
+use shared::spot::Spot;
 
 use super::doors::changed_at;
 use super::update_sight;
 use crate::ServerWorld;
 use crate::connections::Client;
 
-/// The player takes a step on their level: taken if it leads onto a
-/// walkable cell (otherwise `Position` puts the client right), then sends
-/// what they now see or are about to.
-pub(crate) fn stepped(client: &mut Client, step: Step) -> bool {
-    let gait = Gait::of(&client.sheet.skills);
+/// The player moves to `to` on their level, already checked
+/// (`Visit::landing`), then is sent what they now see or are about to.
+pub(crate) fn moved(client: &mut Client, to: Spot) -> bool {
     let Some(visit) = &mut client.visit else {
         return true;
     };
-    let Some(position) = step_on_level_by(&visit.level.level, visit.position, step, gait) else {
-        let (x, y) = step.from(visit.position);
-        info!("Refused a step onto an unwalkable cell ({x}, {y})");
-        if visit.doors.contains_key(&(x, y)) {
-            // The client took it for open: it is told again how it hangs.
-            changed_at(visit, x, y);
-            return update_sight(client);
-        }
-        return true;
-    };
-    visit.position = position;
+    visit.position = to;
     client.unsaved = true;
     update_sight(client)
 }
 
-/// Developer tools: puts the player on `(x, y)` on their level, if it is
-/// walkable (through walls, unlike a step).
-pub(crate) fn teleport(client: &mut Client, x: i64, y: i64) -> bool {
+/// A move to `to` was refused (`Position` puts the client right). A door the
+/// client took for open is told again as it hangs.
+pub(crate) fn refused(client: &mut Client, to: Spot) -> bool {
     let Some(visit) = &mut client.visit else {
         return true;
     };
-    if !visit.level.level.is_walkable(x, y) {
-        info!("Refused a teleport onto an unwalkable cell ({x}, {y})");
+    let (x, y) = to.cell();
+    info!("Refused a move to {to:?}, in cell ({x}, {y})");
+    if visit.doors.contains_key(&(x, y)) {
+        changed_at(visit, x, y);
+        return update_sight(client);
+    }
+    true
+}
+
+/// Developer tools: puts the player at `to` (units) on their level, anywhere
+/// with footing and room (through walls, unlike a move).
+pub(crate) fn teleport(client: &mut Client, to: Spot) -> bool {
+    let Some(visit) = &mut client.visit else {
+        return true;
+    };
+    let level = &visit.level.level;
+    // Room to stand: a move along a hair's breadth from it would be allowed.
+    let room = check_segment(level, Size::Medium, to, to.offset(1, 0)).is_some()
+        || check_segment(level, Size::Medium, to, to.offset(-1, 0)).is_some();
+    if !room {
+        info!("Refused a teleport to {to:?}, with no room to stand");
         return true;
     }
-    visit.position = (x, y);
+    visit.position = to;
     client.unsaved = true;
     client.changed_map();
-    client.link.send(&ServerMessage::Teleported { x, y }) && update_sight(client)
+    client
+        .link
+        .send(&ServerMessage::Teleported { x: to.x, y: to.y })
+        && update_sight(client)
 }
 
 /// Developer tools: changes a cell of the player's level (kept as a player's
@@ -61,7 +73,7 @@ pub(crate) fn set_cell(
     let Some(visit) = &mut client.visit else {
         return true;
     };
-    if !visit.level.level.contains(x, y) || visit.position == (x, y) {
+    if !visit.level.level.contains(x, y) || visit.position() == (x, y) {
         return true;
     }
     visit.level.level.set(x, y, cell);

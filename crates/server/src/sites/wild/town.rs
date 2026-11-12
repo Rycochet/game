@@ -40,6 +40,6 @@ fn town_here(visit: &Visit) -> Option<(i64, i64, i64, i64)> {
     if !poi.kind.is_town() {
         return None;
     }
-    let here = cutouts.iter().find(|set_in| set_in.takes(visit.position));
+    let here = cutouts.iter().find(|set_in| set_in.takes(visit.position()));
     here.map(|set_in| set_in.bounds)
 }

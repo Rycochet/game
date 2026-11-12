@@ -4,7 +4,8 @@ Others on the map: mobs and other players, as tokens, for as long as the server 
 
 ## Files
 
-- `crates/client/src/entities/mod.rs`: `EntitiesPlugin`, `Others` (id to token), `read_server`, `show_moving`, `show_own_kind`, `picture`, `picture_size`. Unit tests.
+- `crates/client/src/entities/mod.rs`: `EntitiesPlugin`, `Others` (id to token), `read_server` (keeps whether the server's positions are in units, by the map messages in the order they come), `show_own_kind`, `picture`, `picture_size`. Unit tests.
+- `crates/client/src/entities/moving.rs`: `Goal` (where another is going and how fast), `placed` (a position in the map's measure as a cell and an exact `SmoothPosition`), `stretch` (a `protocol::Stretch` as a `Goal` at its own speed), `show_moving`, `glide`.
 - `crates/client/src/entities/morph.rs`: `Morphing` (a token changing from one body into another: the steps' pictures, then its new one), `Drawing::morph`, `play_morphs`, `SeenLooks` (how another creature was last seen to look).
 - `crates/client/src/entities/mod.rs` also puts a `common::StaffMark` on another player seen with `EntityLook::mark`.
 - `crates/client/src/entities/hover_name.rs`: `hover_name` (the `common::HoverName` each other gets: another player's character name from `EntityLook::name`, else the kind's).
@@ -30,7 +31,7 @@ Others on the map: mobs and other players, as tokens, for as long as the server 
 ## Notes
 
 - `EnterLevel`, `OnWorldMap`, `Teleported` and `Welcome` forget everyone, as the server's `Client::changed_map` does, and it says again who is there.
-- Others glide towards where the server says at an ordinary walking pace, and jump if `TOO_FAR_BEHIND`. They have the same tokens as anything else, so `view3d` and the views draw them and hide them where nobody can see.
+- Others glide along the stretches the server sends (`ServerMessage::Moves`, in units on levels, timed in ticks) at each stretch's own speed (an ordinary walking pace when first seen), and jump if `TOO_FAR_BEHIND`. `MapPosition` is the cell they are in; `SmoothPosition` exactly where. They have the same tokens as anything else, so `view3d` and the views draw them and hide them where nobody can see.
 - Every kind (all have a body layout) shows a picture of its body in its own colours in place of its tile (`IconPicture`), bare or dressed in whatever is drawn (armour, footwear): mobs and other players from `EntityLook::worn`, the player from their own inventory (owner's choice: the body is ungendered, so it looks right bare). Animals (horse, cattle, wolf, chicken) are drawn bare, and taurs (centaur, drider, scorpion man) dressed, and side on, in a square picture. A changed outfit is told as a new `EntitySeen`.
 - Tiles (the Gervais set) are only seen until a kind's picture is drawn (a picture is blank until then, as `item_art` gives it); a centaur uses the human tile. A token's colour is how it feels about this player (`EntityLook::feeling`), told when it comes into sight and again when it changes. `common::Other` is on each token, for `inventory`'s Nearby panel.
 - Others can't be clicked (dev tools act on the target instead: the debug menu's Examine Mob), but they can be hovered: `hover` names them. Other players never can be: their `feeling` is `None`.

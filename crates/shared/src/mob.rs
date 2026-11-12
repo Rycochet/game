@@ -237,6 +237,7 @@ pub struct EntityLook {
     pub appearance: Appearance,
     /// How it feels about the player being told.
     pub feeling: Feeling,
+    /// Where it is, in the map's measure (`protocol::moves`).
     pub x: i64,
     pub y: i64,
     /// What can be seen of what it wears, innermost first, for its picture.

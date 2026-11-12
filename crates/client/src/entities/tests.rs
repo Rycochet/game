@@ -1,3 +1,4 @@
+use super::moving::glide;
 use super::*;
 
 #[test]

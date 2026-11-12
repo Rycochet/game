@@ -36,7 +36,7 @@ pub(in crate::sites) fn found_by_standing(client: &mut Client) -> bool {
         ..
     } = &visit.place
     {
-        let here = cutouts.iter().find(|set_in| set_in.takes(visit.position));
+        let here = cutouts.iter().find(|set_in| set_in.takes(visit.position()));
         sent = learn(client, cutouts, &Vec::from_iter(here));
     }
     client.visit = Some(visit);

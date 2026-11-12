@@ -27,7 +27,7 @@ pub(crate) fn leave_by_key(client: &mut Client, world: &mut ServerWorld) -> bool
     if !visit.is_wilderness() {
         return crate::sites::leave::leave_site(client, world);
     }
-    let (x, y) = visit.position;
+    let (x, y) = visit.position();
     if !visit.level.level.cell(x, y).is_outside() {
         info!("Refused leaving the wilderness from under cover at ({x}, {y})");
         return true;
@@ -82,7 +82,9 @@ pub(in crate::sites) fn into_site(
         // A building's floors have their stairs on the same cell; other
         // sites' levels have stairs back to the first.
         Some((ox, oy)) => match make_site(world, &poi, id) {
-            Some(site) if site.is_building() => Arrival::At((wx - ox, y - oy)),
+            Some(site) if site.is_building() => {
+                Arrival::At(shared::spot::Spot::middle_of((wx - ox, y - oy)))
+            }
             _ => Arrival::From(Exit::Level(0)),
         },
         None => Arrival::From(Exit::WorldMap),

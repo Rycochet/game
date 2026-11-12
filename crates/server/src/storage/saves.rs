@@ -11,6 +11,7 @@ use shared::mob::Memory;
 use shared::poi::{ChunkPos, PoiKind};
 use shared::sheet::Sheet;
 use shared::site::DevArea;
+use shared::spot::Spot;
 use shared::world::{ClockRate, WorldId, WorldSeed};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -211,10 +212,10 @@ pub struct CharacterWorldSave {
     pub world_position: (i64, i64),
     /// The site level they are on, if any.
     pub visit: Option<VisitSave>,
-    /// Where they are in the Hall of Worlds, if they are there, having come
-    /// from this world.
-    #[serde(default)]
-    pub hall: Option<(i64, i64)>,
+    /// Where they are in the Hall of Worlds, in units, if they are there,
+    /// having come from this world (older saves' cells read as middles).
+    #[serde(default, deserialize_with = "super::spot_compat::optional_spot")]
+    pub hall: Option<Spot>,
     /// The world map chunks whose poi they have seen, and what they
     /// know of it.
     pub pois: BTreeMap<ChunkPos, KnownPoi>,
@@ -246,7 +247,8 @@ pub struct DevReturn {
     /// The site level, or the wilderness, they were on, if any.
     pub visit: Option<VisitSave>,
     /// Where in the Hall they were, if there.
-    pub hall: Option<(i64, i64)>,
+    #[serde(default, deserialize_with = "super::spot_compat::optional_spot")]
+    pub hall: Option<Spot>,
 }
 
 impl CharacterWorldSave {
@@ -281,7 +283,9 @@ pub type RememberedDoors = BTreeMap<(i64, i64), shared::door::Swing>;
 pub struct VisitSave {
     pub site: SiteId,
     pub level: u32,
-    pub position: (i64, i64),
+    /// Where on it, in units (older saves' cells read as their middles).
+    #[serde(deserialize_with = "super::spot_compat::spot")]
+    pub position: Spot,
     /// They walked into the site from the wilderness, where leaving it takes
     /// them back.
     #[serde(default)]

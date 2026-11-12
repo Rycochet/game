@@ -42,8 +42,15 @@ const MINIMUM_SHARE: u64 = 80;
 const SPEED_AT_WORST: u64 = 150;
 const SPEED_AT_BEST: u64 = 50;
 
-/// How near its door someone must be to deal with a shop, in cells.
-pub const DOOR_REACH: i64 = 1;
+/// How near its door's middle someone must be to deal with a shop, in units
+/// (`spot`): a cell and a half, so from any cell beside it, diagonals too.
+pub const DOOR_REACH: u64 = 360;
+
+/// Whether someone at `at` (units) is near enough to the door in cell `door`
+/// to deal with its shop. Both sides go by it.
+pub fn beside_door(at: crate::spot::Spot, door: (i64, i64)) -> bool {
+    at.distance(crate::spot::Spot::middle_of(door)) <= DOOR_REACH
+}
 
 #[cfg(test)]
 mod tests;

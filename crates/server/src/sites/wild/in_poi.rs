@@ -47,7 +47,7 @@ pub(super) fn tell_poi(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = &mut client.visit else {
         return true;
     };
-    let now = poi_here(world, visit.position);
+    let now = poi_here(world, visit.position());
     let Place::Wilderness { in_poi, .. } = &mut visit.place else {
         return true;
     };
