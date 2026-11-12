@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::movement::Step;
+use shared::spot::Spot;
 
 /// Ordering for anything that moves the player. Put systems that send
 /// `TakeStep` or `TravelTo` in `Input`; systems that draw the player's
@@ -40,10 +41,9 @@ pub struct Arrived {
 #[derive(Message, Clone, Copy, Debug)]
 pub struct TakeStep(pub Step);
 
-/// The player has taken a step, by `TakeStep` or travelling: for the server.
-/// `moved` is how far it took them, which is two cells for a jump over liquid,
-/// and `to` where it ended (on a level, the cell whose middle it is sent as a
-/// move to). Not sent when the position is set from elsewhere (the server's
+/// The player has taken a step on the world map, by `TakeStep` or
+/// travelling: for the server. `moved` is how far it took them, and `to`
+/// where it ended. (On levels and in the Hall, `Moved`.) Not sent when the position is set from elsewhere (the server's
 /// word).
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Stepped {
@@ -61,4 +61,22 @@ impl Stepped {
             to,
         }
     }
+}
+
+/// The player walks freely this way this frame, on a level or in the Hall
+/// (keys or the movement pad held): a grid direction (`x` east, `y` south),
+/// one long. Replaces any journey.
+#[derive(Message, Clone, Copy, Debug, PartialEq)]
+pub struct Walking {
+    pub x: f64,
+    pub y: f64,
+}
+
+/// The player has moved straight from one spot to another on a level or in
+/// the Hall (units): for the server, which checks it by the same rule. Not
+/// sent when the position is set from elsewhere (the server's word).
+#[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Moved {
+    pub from: Spot,
+    pub to: Spot,
 }

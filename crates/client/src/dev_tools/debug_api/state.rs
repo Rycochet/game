@@ -8,7 +8,9 @@ use server::debug_api::{BrpError, BrpResult, Value, json, params};
 use std::path::PathBuf;
 use std::{fs, path, process};
 
-use crate::common::{CurrentDungeon, GameView, MapPosition, OtherLevels, ServerClock, Target};
+use crate::common::{
+    CurrentDungeon, GameView, MapPosition, OtherLevels, ServerClock, SpotPosition, Target,
+};
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
 use crate::player::Player;
@@ -27,7 +29,7 @@ pub(super) fn done() -> BrpResult {
 pub(super) fn state(
     _: In<Option<Value>>,
     view: Res<State<GameView>>,
-    player: Query<&MapPosition, With<Player>>,
+    player: Query<(&MapPosition, &SpotPosition), With<Player>>,
     dungeon: Res<CurrentDungeon>,
     levels: Res<OtherLevels>,
     clock: Res<ServerClock>,
@@ -42,7 +44,9 @@ pub(super) fn state(
         "pid": process::id(),
         "data": server::default_data_folder(),
         "view": format!("{view:?}"),
-        "position": player.single().ok().map(|at| json!({ "x": at.x, "y": at.y })),
+        "position": player.single().ok().map(|(at, _)| json!({ "x": at.x, "y": at.y })),
+        // On a level or in the Hall, exactly, in units (240 a cell).
+        "spot": player.single().ok().map(|(_, at)| json!({ "x": at.0.x, "y": at.0.y })),
         "level": if view == GameView::Dungeon { dungeon.info.as_ref() } else { None },
         "showing_floor": levels.showing(),
         "target": target.0,

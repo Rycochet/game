@@ -14,19 +14,25 @@ mod doors;
 mod drawn_ground;
 mod keys;
 mod level_costs;
+mod level_moves;
+mod level_route;
+mod level_step;
+mod level_travel;
 mod messages;
 mod moving;
 mod rivers;
 mod route_help;
 mod state;
 mod steps;
+mod stride;
 mod travel;
 mod wild_heights;
 
 use doors::{AskDoor, close_doors, door_answers, send_door_asks};
 use drawn_ground::keep_drawn_ground;
 use keys::move_player;
-pub use messages::{Arrived, Player, PlayerSystems, Stepped, TakeStep, TravelTo};
+use level_travel::travel_on_level;
+pub use messages::{Arrived, Moved, Player, PlayerSystems, Stepped, TakeStep, TravelTo, Walking};
 pub use moving::PlayerMoving;
 use moving::note_moving;
 use rivers::keep_river_points;
@@ -39,8 +45,8 @@ use wild_heights::keep_wild_heights;
 /// How far the player's light reaches in dungeons, in cells.
 const LIGHT_RADIUS: u32 = 6;
 
-/// Travel speed towards a clicked point at `NORMAL_SPEED`, in grid units per
-/// second: world map points, or dungeon cells (which are much bigger on screen).
+/// Travel speed at `NORMAL_SPEED`, in grid units per second: world map points
+/// (towards a clicked point), or cells on levels (walking or travelling).
 /// What `shared::energy`'s costs come to, so the server has time for every step.
 const TRAVEL_SPEED: f64 = 60.0;
 const DUNGEON_TRAVEL_SPEED: f64 = shared::energy::SITE_CELLS_PER_SECOND;
@@ -59,6 +65,8 @@ impl Plugin for PlayerPlugin {
             .add_message::<TakeStep>()
             .add_message::<AskDoor>()
             .add_message::<Stepped>()
+            .add_message::<Moved>()
+            .add_message::<Walking>()
             .add_message::<SpentEnergy>()
             .add_message::<CancelledEnergy>()
             .configure_sets(
@@ -82,6 +90,7 @@ impl Plugin for PlayerPlugin {
                         ),
                         take_steps,
                         travel,
+                        travel_on_level,
                         send_door_asks,
                         note_moving,
                     )

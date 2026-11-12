@@ -37,6 +37,27 @@ pub struct MapPosition {
     pub y: i64,
 }
 
+/// The player's exact place on a level or in the Hall, in units (240 a
+/// cell, `shared::spot`), as the server counts it: what free movement moves
+/// and the server checks. `MapPosition` is then the cell it is in, and
+/// `SmoothPosition` it in cells. Whoever puts the player somewhere on a level
+/// (arriving, the server's corrections, teleports) sets all three
+/// (`SpotPosition::place`). Unused on the world map.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SpotPosition(pub shared::spot::Spot);
+
+impl SpotPosition {
+    /// The three positions for standing at `spot` on a level.
+    pub fn place(spot: shared::spot::Spot) -> (Self, MapPosition, SmoothPosition) {
+        let (x, y) = spot.cell();
+        (
+            Self(spot),
+            MapPosition { x, y },
+            SmoothPosition::of_units((spot.x, spot.y)),
+        )
+    }
+}
+
 /// Where the player stood on the world map before entering a site: the way
 /// back out, and the place whose biome and weather the site's outside shares.
 #[derive(Resource, Default)]

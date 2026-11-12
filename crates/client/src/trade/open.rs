@@ -8,16 +8,16 @@ use crate::common::{CurrentDungeon, MapPosition, Truesight};
 use crate::connection::ToServer;
 use crate::dom::Dom;
 use crate::dungeon_map::DoorClicked;
-use crate::player::{Arrived, Player, TakeStep, TravelTo};
+use crate::player::{Arrived, Player, TakeStep, TravelTo, Walking};
 use crate::widgets::UiId;
 
 /// Walking anywhere else, or a step of their own: they aren't going to the shop.
 pub(super) fn change_of_mind(
-    mut steps: MessageReader<TakeStep>,
+    (mut steps, mut walking): (MessageReader<TakeStep>, MessageReader<Walking>),
     mut journeys: MessageReader<TravelTo>,
     mut heading: ResMut<Heading>,
 ) {
-    let stepped = steps.read().count() > 0;
+    let stepped = steps.read().count() + walking.read().count() > 0;
     let front = heading.0.map(|(_, front)| front);
     let elsewhere = journeys
         .read()

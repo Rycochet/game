@@ -92,7 +92,8 @@ pub use login::{AccountEmail, LoggingIn, LoginChoice, LoginProvider};
 #[cfg(not(target_arch = "wasm32"))]
 pub use map::in_map_measure;
 pub use map::{
-    Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, WorldReturn,
+    Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, SpotPosition,
+    WorldReturn,
 };
 pub use own_ability::OwnAbility;
 pub use pointer::{
@@ -107,7 +108,7 @@ pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use step_pad::{PadButton, PadSteps};
 pub use target::Target;
 pub use token::{Attitude, Icon, IconPicture, Token, TokenShape, TokenSize};
-pub use view::{ViewFacing, ViewStats};
+pub use view::{ViewFacing, ViewStats, ViewTurn};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
 pub use wild_heights::{DRAWN_PER_16TH, WildCellHeights};
 pub use window::{KeepDrawing, frame_settings};
@@ -162,6 +163,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<Lightning>()
             .init_resource::<ViewStats>()
             .init_resource::<ViewFacing>()
+            .init_resource::<ViewTurn>()
             .init_resource::<ClickMode>()
             .init_resource::<PlayerSpeed>()
             .init_resource::<PlayerGait>()
