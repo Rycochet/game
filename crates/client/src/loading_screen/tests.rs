@@ -49,3 +49,8 @@ fn a_refusal_is_said_on_the_bar() {
     let (words, _) = bar_shows(LoadingStep::Connecting, &refused);
     assert_eq!(words, "too old");
 }
+
+#[test]
+fn the_screen_is_good_markup() {
+    screen::LOADING.assert_good();
+}
