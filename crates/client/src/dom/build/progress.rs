@@ -29,7 +29,9 @@ impl Builder<'_, '_, '_> {
             height: percent(100),
             ..default()
         };
-        let colours = self.theme.progress;
+        let class = element.attrs.class.as_deref();
+        let look = self.theme.look(element.tag, class);
+        let colours = look.bar.unwrap_or(self.theme.progress);
         let mut bar = None;
         self.commands.entity(entity).with_children(|inside| {
             bar = Some(spawn_progress_bar(inside, 0.0, colours, fills, words).id());

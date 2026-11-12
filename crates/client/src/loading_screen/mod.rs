@@ -14,9 +14,12 @@ use crate::common::{
 };
 
 mod frames;
+mod screen;
 mod takes_input;
-use crate::widgets::{Progress, TextSize, WidgetSystems, layer_z, spawn_progress_bar};
+use crate::dom::{Dom, DrawObjects};
+use crate::widgets::WidgetSystems;
 use frames::keep_frame_rate;
+use screen::{bind_screen, spawn_screen, title_node};
 
 /// Built into the program, rather than loaded, to be there on the first frame.
 /// Cinzel Decorative Bold cut down to the letters of [`TITLE`] (see `ATTRIBUTION.md`).
@@ -37,13 +40,8 @@ const TITLE_EMS_HIGH: f32 = 2.4;
 const BACKGROUND: Color = Color::srgb(0.04, 0.03, 0.07);
 const GOLD: Color = Color::srgb(0.93, 0.75, 0.38);
 const TITLE_SHADOW: Color = Color::srgb(0.35, 0.12, 0.05);
-const BAR_BACKGROUND: Color = Color::srgb(0.13, 0.11, 0.16);
 const WRITING: Color = Color::srgb(0.95, 0.92, 0.85);
 const REFUSED: Color = Color::srgb(1.0, 0.35, 0.3);
-
-const BAR_HEIGHT: f32 = 32.0;
-const BAR_MARGIN: f32 = 32.0;
-const BAR_FONT: TextSize = TextSize::Large;
 
 /// Frames before the screen has certainly been drawn once, so "Starting..." is
 /// seen before the work starts.
@@ -58,6 +56,14 @@ impl Plugin for LoadingScreenPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<HoldLoadingScreen>()
             .add_systems(Startup, spawn_screen)
+            // Straight after the screen is built, so the title is there on
+            // the first frame.
+            .add_systems(
+                PostUpdate,
+                bind_screen
+                    .after(DrawObjects)
+                    .before(bevy::ui::UiSystems::Layout),
+            )
             .add_systems(
                 PreUpdate,
                 // At the startup menu, the menu over the screen takes what it
@@ -87,9 +93,6 @@ struct LoadingScreen;
 
 #[derive(Component)]
 struct Title;
-
-#[derive(Component)]
-struct Bar;
 
 #[derive(Component)]
 struct BarText;
@@ -128,58 +131,6 @@ fn bar_shows(step: LoadingStep, status: &ServerStatus) -> (String, f32) {
     }
 }
 
-fn spawn_screen(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
-    let font = fonts.add(Font::from_bytes(TITLE_FONT_BYTES.to_vec()));
-    commands
-        .spawn((
-            LoadingScreen,
-            Node {
-                position_type: PositionType::Absolute,
-                width: percent(100),
-                height: percent(100),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            BackgroundColor(BACKGROUND),
-            // Above everything but the full-screen layers, so the system menu
-            // can be the startup menu over it.
-            GlobalZIndex(layer_z(0) - 1),
-        ))
-        .with_children(|screen| {
-            screen.spawn((
-                Title,
-                Text::new(TITLE),
-                TextFont {
-                    font: font.into(),
-                    ..default()
-                },
-                TextLayout::justify(Justify::Center),
-                TextColor(GOLD),
-                TextShadow {
-                    offset: Vec2::splat(3.0),
-                    color: TITLE_SHADOW,
-                },
-            ));
-            spawn_progress_bar(
-                screen,
-                0.0,
-                (BAR_BACKGROUND, GOLD.with_alpha(0.45)),
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: px(BAR_MARGIN),
-                    right: px(BAR_MARGIN),
-                    bottom: px(BAR_MARGIN),
-                    height: px(BAR_HEIGHT),
-                    ..default()
-                },
-                (BarText, Text::new(""), BAR_FONT.font(), TextColor(WRITING)),
-            )
-            .insert(Bar);
-        });
-}
-
 /// Nothing behind the screen gets any input: no keys, clicks, wheel or fingers.
 fn take_all_input(
     mut keys: ResMut<ButtonInput<KeyCode>>,
@@ -206,7 +157,7 @@ fn update_step(
     step.set_if_neq(next_step(*step, frames.0, *settled));
 }
 
-#[allow(clippy::type_complexity, clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 fn show_screen(
     step: Res<LoadingStep>,
     status: Res<ServerStatus>,
@@ -214,63 +165,60 @@ fn show_screen(
     making: Res<MakingCharacter>,
     select: Res<CharacterSelect>,
     logging_in: Res<LoggingIn>,
-    mut screen: Single<&mut Visibility, (With<LoadingScreen>, Without<Bar>)>,
-    mut bar: Single<&mut Visibility, (With<Bar>, Without<LoadingScreen>)>,
-    mut progress: Single<&mut Progress, With<Bar>>,
-    mut text: Single<(&mut Text, &mut TextColor), With<BarText>>,
+    mut screen: Single<&mut Visibility, With<LoadingScreen>>,
+    mut text: Query<&mut TextColor, With<BarText>>,
+    new_text: Query<(), Added<BarText>>,
+    mut dom: Dom,
 ) {
     let changed = step.is_changed() || status.is_changed() || session.is_changed();
     let choosing = making.is_changed() || select.is_changed();
+    let refused = matches!(*status, ServerStatus::Refused(_));
+    if !new_text.is_empty() || changed {
+        for mut colour in &mut text {
+            colour.0 = if refused { REFUSED } else { WRITING };
+        }
+    }
     if !changed && !choosing && !logging_in.is_changed() {
         return;
     }
-    let shown_if = |shown: bool| {
-        if shown {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        }
+    let shown = match *step != LoadingStep::Ready {
+        true => Visibility::Inherited,
+        false => Visibility::Hidden,
     };
-    screen.set_if_neq(shown_if(*step != LoadingStep::Ready));
+    screen.set_if_neq(shown);
     // Only the title behind the startup menu, or the screens choosing and making
     // a character and logging in.
-    bar.set_if_neq(shown_if(
-        session.is_playing() && !making.0 && !select.open && !logging_in.shows(),
-    ));
+    let bar = session.is_playing() && !making.0 && !select.open && !logging_in.shows();
+    dom.set_flag("loading/bar", "hidden", !bar);
     let (words, full) = bar_shows(*step, &status);
-    progress.0 = full;
-    text.0.0 = words;
-    text.1.0 = if matches!(*status, ServerStatus::Refused(_)) {
-        REFUSED
-    } else {
-        WRITING
-    };
+    dom.set("loading/bar", "value", &full.to_string());
+    dom.set_text("loading/bar", words);
 }
 
 fn fit_title(
     window: Single<&Window, With<PrimaryWindow>>,
     ui_scale: Res<UiScale>,
     session: Res<Session>,
-    mut title: Single<&mut TextFont, With<Title>>,
-    mut screen: Single<&mut Node, With<LoadingScreen>>,
+    mut title: Query<(&mut TextFont, &mut Node), With<Title>>,
+    mut dom: Dom,
     mut last: Local<Option<(Vec2, bool)>>,
 ) {
     // The title keeps its share of the window, whatever size the interface is.
     let size = interface_area(&window, &ui_scale);
     let at_start = !session.is_playing();
     // Minimised: nothing to fit, and no size of writing would.
-    if *last != Some((size, at_start)) && size.min_element() >= 1.0 {
-        *last = Some((size, at_start));
-        title.font_size = title_font_size(size, at_start).into();
-        (screen.justify_content, screen.padding) = if at_start {
-            (
-                JustifyContent::FlexStart,
-                UiRect::top(Val::Vh(START_TITLE_TOP)),
-            )
-        } else {
-            (JustifyContent::Center, UiRect::ZERO)
-        };
+    if *last == Some((size, at_start)) || size.min_element() < 1.0 {
+        return;
     }
+    // (Not before it is built: it is made the right size then.)
+    let Ok((mut font, mut node)) = title.single_mut() else {
+        return;
+    };
+    *last = Some((size, at_start));
+    font.font_size = title_font_size(size, at_start).into();
+    *node = title_node(at_start);
+    let valign = if at_start { "top" } else { "middle" };
+    dom.set("loading/screen", "valign", valign);
 }
 
 /// Removes the screen in `index.html`, shown during the download, once this one
