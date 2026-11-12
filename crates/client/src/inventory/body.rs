@@ -3,25 +3,59 @@
 //! and off to take them off, with the same holding as everything else.
 
 use bevy::prelude::*;
-use shared::creature::{Layer, Location};
+use shared::creature::{BodyPart, CreatureKind, Layer, Location};
 use shared::id::Id;
 use shared::item::{Inventory, Item};
 use shared::wear::{Fit, Remover};
 
-use super::hands::spawn_held_column;
+use super::hands::{held_now, in_hands};
 use super::hold::Target;
 use super::{Carried, Holding};
 use crate::common::GodMode;
-use crate::dom::{SlotShown, SlotThing};
-use crate::widgets::{ALLOWED, CELL, INK, REFUSED, TextSize};
+use crate::dom::{Dom, SlotShown, SlotThing, Template, document_in};
+use crate::html;
+use crate::widgets::{ALLOWED, REFUSED, UiId};
 
-const NAME_WIDTH: f32 = 80.0;
-const FONT: TextSize = TextSize::Small;
-const BORDER: f32 = 1.0;
-/// Between the clothes and the Held column.
-const COLUMN_GAP: f32 = 8.0;
+/// The clothes: the body's kind, a heading for each layer, a row for each place
+/// on the body (copied from the template) and the Held column. Each slot is a
+/// place for one that draws itself (`dom::SlotShown`), where the body has one.
+static CLOTHES: Template = html!(
+    "inventory.clothes",
+    r#"
+<form id="clothes">
+  <span id="body" class="columns" valign="top">
+    <div class="joined">
+      <small id="kind"/>
+      <span class="joined">
+        <small width="80"/>
+        <small width="32">In</small>
+        <small width="32">Mid</small>
+        <small width="32">Out</small>
+        <small width="32">Over</small>
+      </span>
+      <div id="parts" class="joined"/>
+    </div>
+    <div id="hands" class="joined">
+      <small width="32">&#160;</small>
+      <small width="32">Held</small>
+      <object-slot id="hand0" accepts="item" width="32" height="32"/>
+      <object-slot id="hand1" accepts="item" width="32" height="32"/>
+    </div>
+  </span>
+  <template id="part">
+    <span id="row" class="joined">
+      <small id="name" width="80"/>
+      <object-slot id="skin" accepts="item" width="32" height="32"/>
+      <object-slot id="middle" accepts="item" width="32" height="32"/>
+      <object-slot id="outer" accepts="item" width="32" height="32"/>
+      <object-slot id="over" accepts="item" width="32" height="32"/>
+    </span>
+  </template>
+</form>
+"#
+);
 
-/// On the panel's slots and everything in them: dropping here means wearing.
+/// On the clothes and everything in them: dropping here means wearing.
 #[derive(Component, Clone, Copy)]
 pub(super) struct BodyNode;
 
@@ -29,152 +63,145 @@ pub(super) struct BodyNode;
 #[derive(Component)]
 pub(super) struct BodyRows;
 
-/// The clothes' part of the Character panel.
-pub(super) fn spawn_rows(parent: &mut ChildSpawnerCommands) {
-    parent.spawn((
-        BodyRows,
-        BodyNode,
-        Node {
-            column_gap: px(COLUMN_GAP),
-            ..default()
-        },
-        BackgroundColor(Color::NONE),
-    ));
+/// A slot of the clothes: a layer of a place on the body, or a hand.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum ClothesSlot {
+    Part(Location, Layer),
+    Hand(usize),
 }
 
-pub(super) fn words(text: impl Into<String>, width: f32) -> impl Bundle {
-    (
-        BodyNode,
-        Text::new(text),
-        FONT.font(),
-        TextColor(INK),
-        Node {
-            width: px(width),
-            ..default()
-        },
-    )
+/// The clothes' part of the Character panel, in `place`, built by the end of
+/// the frame.
+pub(super) fn spawn_rows(commands: &mut Commands, place: Entity) {
+    commands.spawn(document_in(&CLOTHES, place));
 }
 
-pub(super) fn slot_node() -> Node {
-    Node {
-        width: px(CELL),
-        height: px(CELL),
-        border: UiRect::all(px(BORDER)),
-        ..default()
+/// The places on this body that have a row: all but Held, which has its column.
+fn parts(kind: CreatureKind) -> impl Iterator<Item = &'static BodyPart> {
+    let body = kind.def().body.iter();
+    body.filter(|part| part.location != Location::Held)
+}
+
+/// A slot's layer, by its name in the template.
+fn layer_named(name: &str) -> Option<Layer> {
+    match name {
+        "skin" => Some(Layer::Skin),
+        "middle" => Some(Layer::Middle),
+        "outer" => Some(Layer::Outer),
+        "over" => Some(Layer::Over),
+        _ => None,
     }
 }
 
-/// A slot with the worn things here, the last on top: it draws itself
-/// (`dom::SlotShown`).
-pub(super) fn spawn_slot(
-    row: &mut ChildSpawnerCommands,
-    carried: &Inventory,
-    here: &[&Item],
-    god: bool,
+/// Gives each new slot of the clothes its slot to draw, where the body has one,
+/// and marks the whole of them as somewhere to wear things.
+pub(super) fn bind_clothes(
+    new: Query<(Entity, &UiId), Added<UiId>>,
+    carried: Res<Carried>,
+    mut commands: Commands,
 ) {
-    let thing = here.last().map(|item| SlotThing {
+    for (entity, id) in &new {
+        let ("clothes", name) = id.parts() else {
+            continue;
+        };
+        let slot = match (name, id.index()) {
+            ("body", _) => {
+                let marks = (BodyRows, BodyNode, BackgroundColor(Color::NONE));
+                commands.entity(entity).insert(marks);
+                continue;
+            }
+            ("hand0", _) => Some(ClothesSlot::Hand(0)),
+            ("hand1", _) => Some(ClothesSlot::Hand(1)),
+            (layer, Some(row)) => layer_named(layer).and_then(|layer| {
+                let part = parts(carried.0.creature).nth(row)?;
+                // Only rings are on fingers alone: what else covers them shows
+                // on Hands (owner, 2026-11-07).
+                let fingers_only = part.location == Location::Fingers && layer != Layer::Skin;
+                let has = part.layers.contains(&layer) && !fingers_only;
+                has.then_some(ClothesSlot::Part(part.location, layer))
+            }),
+            _ => None,
+        };
+        if let Some(slot) = slot {
+            let shown = SlotShown::default();
+            commands.entity(entity).with_child((BodyNode, slot, shown));
+        }
+    }
+}
+
+/// What a slot holds: the worn things there, the last on top.
+fn thing_in(here: &[&Item], carried: &Inventory, god: bool) -> Option<SlotThing> {
+    let item = here.last()?;
+    Some(SlotThing {
         item: (*item).clone(),
         count: here.len(),
         // Something under another can be picked up, only more slowly.
         faded: carried.covered_by(item.id).is_some(),
         // A curse once it is known can't be.
         pressable: god || carried.may_remove(item.id, Remover::Wearer),
-    });
-    let shown = SlotShown { thing, ..default() };
-    row.spawn((BodyNode, shown));
+    })
 }
 
-/// Draws the rows again when what is worn, or the body, or what is held changes.
+/// Writes the rows again when the body changes, and says what each slot holds
+/// when what is worn, or what is held, changes.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn show_clothes(
     carried: Res<Carried>,
     holding: Res<Holding>,
     god: Res<GodMode>,
-    new_rows: Query<(), Added<BodyRows>>,
-    rows: Query<Entity, With<BodyRows>>,
-    mut commands: Commands,
-    mut drawn_without: Local<Option<Id>>,
+    built: Query<(), With<BodyRows>>,
+    mut slots: Query<(&ClothesSlot, &mut SlotShown)>,
+    new_slots: Query<(), Added<ClothesSlot>>,
+    mut dom: Dom,
+    (mut rows_for, mut drawn_without): (Local<Option<CreatureKind>>, Local<Option<Id>>),
 ) {
+    if built.is_empty() {
+        *rows_for = None;
+        return;
+    }
+    let inventory = &carried.0;
+    let kind = inventory.creature;
+    if *rows_for != Some(kind) {
+        *rows_for = Some(kind);
+        let def = kind.def();
+        dom.set_text("clothes/kind", format!("{}, {:?}", def.name, def.size));
+        dom.empty("clothes/parts");
+        for (row, part) in parts(kind).enumerate() {
+            dom.copy_template("clothes/part", "clothes/parts", row);
+            let name = format!("{:?}", part.location);
+            dom.set_text(&format!("clothes/name.{row}"), name);
+        }
+        // Only a body with somewhere to hold things has the column.
+        let holds = def.body.iter().any(|part| part.location == Location::Held);
+        dom.set_flag("clothes/hands", "hidden", !holds);
+    }
     let held = holding.held.map(|held| held.item.id);
-    if !carried.is_changed() && !god.is_changed() && new_rows.is_empty() && *drawn_without == held {
+    let changed = carried.is_changed() || god.is_changed() || *drawn_without != held;
+    if !changed && new_slots.is_empty() {
         return;
     }
     *drawn_without = held;
-    for entity in &rows {
-        commands.entity(entity).despawn_related::<Children>();
-        let inventory = &carried.0;
-        commands.entity(entity).with_children(|both| {
-            both.spawn((
-                BodyNode,
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
-            ))
-            .with_children(|rows| spawn_table(rows, inventory, held, god.0));
-            spawn_held_column(both, inventory, held, god.0);
-        });
-    }
-}
-
-/// The table of clothes: a row per place on the body but Held, a column per layer.
-fn spawn_table(
-    rows: &mut ChildSpawnerCommands,
-    inventory: &Inventory,
-    held: Option<Id>,
-    god: bool,
-) {
-    let def = inventory.creature.def();
-    rows.spawn((
-        BodyNode,
-        Text::new(format!("{}, {:?}", def.name, def.size)),
-        FONT.font(),
-        TextColor(INK),
-    ));
-    rows.spawn((BodyNode, Node::default()))
-        .with_children(|row| {
-            row.spawn(words("", NAME_WIDTH));
-            for layer in Layer::ALL {
-                row.spawn(words(layer_letter(layer), CELL));
+    let in_hand = held_now(inventory, held);
+    let hands = in_hands(&in_hand);
+    for (slot, mut shown) in &mut slots {
+        let thing = match *slot {
+            ClothesSlot::Hand(hand) => thing_in(hands[hand], inventory, god.0),
+            ClothesSlot::Part(location, layer) => {
+                let worn = inventory.worn.iter();
+                let here: Vec<&Item> = worn
+                    .filter(|item| Some(item.id) != held)
+                    .filter(|item| {
+                        item.kind.def().wear.is_some_and(|wear| wear.layer == layer)
+                            && item.worn_locations().contains(&location)
+                    })
+                    .collect();
+                thing_in(&here, inventory, god.0)
             }
-        });
-    for part in def
-        .body
-        .iter()
-        .filter(|part| part.location != Location::Held)
-    {
-        rows.spawn((BodyNode, Node::default()))
-            .with_children(|row| {
-                row.spawn(words(format!("{:?}", part.location), NAME_WIDTH));
-                for layer in Layer::ALL {
-                    // Only rings are on fingers alone: what else covers them shows
-                    // on Hands (owner, 2026-11-07).
-                    let fingers_only = part.location == Location::Fingers && layer != Layer::Skin;
-                    if fingers_only || !part.layers.contains(&layer) {
-                        row.spawn((BodyNode, slot_node()));
-                        continue;
-                    }
-                    let here: Vec<&Item> = inventory
-                        .worn
-                        .iter()
-                        .filter(|item| Some(item.id) != held)
-                        .filter(|item| {
-                            item.kind.def().wear.is_some_and(|wear| wear.layer == layer)
-                                && item.worn_locations().contains(&part.location)
-                        })
-                        .collect();
-                    spawn_slot(row, inventory, &here, god);
-                }
-            });
-    }
-}
-
-/// The heading of a layer's column.
-fn layer_letter(layer: Layer) -> &'static str {
-    match layer {
-        Layer::Skin => "In",
-        Layer::Middle => "Mid",
-        Layer::Outer => "Out",
-        Layer::Over => "Over",
+        };
+        // (Only when it differs: the slot draws itself again when changed.)
+        if shown.thing != thing {
+            shown.thing = thing;
+        }
     }
 }
 
@@ -205,3 +232,6 @@ pub(super) fn worn_notes(carried: &Inventory, id: Id) -> String {
     }
     notes
 }
+
+#[cfg(test)]
+mod tests;

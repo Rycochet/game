@@ -90,6 +90,7 @@ impl Theme {
                 ..stacked
             },
         );
+        theme.set(Tag::Div, "joined", Look::default());
         // A page of settings: rows a little apart, each a label and what it sets.
         let rows = Look {
             gap: 12.0,
