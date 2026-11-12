@@ -1,6 +1,7 @@
 //! A grid in its frame, as markup: sort and filter above it, and under it the
-//! words on its weight and, for the inventory, the Drop and bin slots. The
-//! places in it are filled here once it is built (`bind_frames`).
+//! words on its weight and, for the inventory (whose frame is in the Character
+//! panel's markup, `pages`), the Drop and bin slots. The places in it are
+//! filled here once it is built (`bind_frames`).
 
 use bevy::prelude::*;
 use shared::item::Holder;
@@ -11,26 +12,6 @@ use super::{BinNode, BinSlot, DropNode, FONT, GridOwner, WeightText};
 use crate::dom::{DocumentOf, GridShown, SlotShown, Template, document_in};
 use crate::html;
 use crate::widgets::{INK, UiId};
-
-/// What is carried, with the slots for dropping and throwing away.
-static INVENTORY: Template = html!(
-    "inventory.grid",
-    r#"
-<form id="inventory">
-  <container id="frame">
-    <header id="controls"/>
-    <object-grid id="grid" type="item" places="kept"/>
-    <footer>
-      <canvas id="weight" fills/>
-      <span>
-        <object-slot id="drop" accepts="item"/>
-        <object-slot id="bin" accepts="item"/>
-      </span>
-    </footer>
-  </container>
-</form>
-"#
-);
 
 /// A bag: one of several documents alike, by the bag (`bag#<id>/...`).
 static BAG: Template = html!(
@@ -62,19 +43,15 @@ static GROWING_BAG: Template = html!(
 "#
 );
 
-/// A grid in its frame, built by the end of the frame. One that `grows`
+/// A bag's grid in its frame, built by the end of the frame. One that `grows`
 /// scrolls.
 pub(super) fn spawn_grid(parent: &mut ChildSpawnerCommands, holder: Holder, grows: bool) {
     let place = parent.spawn(Node::default()).id();
     let mut commands = parent.commands();
-    match holder {
-        Holder::Inventory => {
-            commands.spawn(document_in(&INVENTORY, place));
-        }
-        Holder::Inside(bag) => {
-            let template = if grows { &GROWING_BAG } else { &BAG };
-            commands.spawn((document_in(template, place), DocumentOf(bag)));
-        }
+    // (The inventory's own grid is in the Character panel's markup.)
+    if let Holder::Inside(bag) = holder {
+        let template = if grows { &GROWING_BAG } else { &BAG };
+        commands.spawn((document_in(template, place), DocumentOf(bag)));
     }
 }
 

@@ -100,7 +100,7 @@ impl Plugin for InventoryPlugin {
                     (ground::bind_section, ground::show_section).chain(),
                     ground::show_aim,
                     (
-                        panels::bind_frames,
+                        (panels::bind_frames, panels::bind_pages),
                         (panels::show_grids, panels::show_weights),
                     )
                         .chain(),
