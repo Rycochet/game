@@ -8,7 +8,8 @@ mod spawn;
 
 pub(super) use drag::{Dragging, take_presses};
 pub(super) use place::place_panels;
-pub(super) use spawn::{MoveablePanel, PanelPart};
+pub(super) use spawn::PanelPart;
+pub use spawn::{MoveablePanel, PanelTitleOf};
 pub use spawn::{PanelMoved, PanelPlace, spawn_grip_panel, spawn_moveable_panel, stops_presses};
 
 /// Above the maps, below full-screen layers; a panel clicked on goes above the

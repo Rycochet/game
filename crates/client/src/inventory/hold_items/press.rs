@@ -9,8 +9,9 @@ use super::super::panels::{ItemCell, OpenGrids};
 use super::super::split::{PickRow, Split, SplitCell, Splitting};
 use super::super::{Carried, DOUBLE_PRESS_SECONDS, Hand, HeldBy, Holding};
 use crate::common::StockCell;
+use crate::dom::Dom;
 use crate::dom::HeldObject;
-use crate::widgets::{ButtonPressed, RaisePanel};
+use crate::widgets::ButtonPressed;
 
 /// Takes the presses. Whether that was all there is to do this frame.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
@@ -28,7 +29,7 @@ pub(super) fn take_presses(
     carried: &Carried,
     open: &mut ResMut<OpenGrids>,
     commands: &mut Commands,
-    raise: &mut MessageWriter<RaisePanel>,
+    dom: &mut Dom,
     last_press: &mut Option<(shared::id::Id, f64)>,
     (now, new_press, tapped, at_press, shift): (f64, bool, bool, Option<Vec2>, bool),
 ) -> bool {
@@ -50,7 +51,7 @@ pub(super) fn take_presses(
     {
         // A double click on a bag: the first lifted it, and it goes back.
         holding.put_back(object);
-        open.open(Holder::Inside(id), &carried.0, commands, raise);
+        open.open(Holder::Inside(id), &carried.0, commands, dom);
         pressed.clear();
         return true;
     }
@@ -118,7 +119,7 @@ pub(super) fn take_presses(
             .is_some_and(|item| item.kind.def().container.is_some())
             && !carried.0.in_bin(cell.id);
         if again && is_bag {
-            open.open(Holder::Inside(cell.id), &carried.0, commands, raise);
+            open.open(Holder::Inside(cell.id), &carried.0, commands, dom);
             continue;
         }
         let all = carried.0.find(cell.id).map_or(1, |item| item.count());

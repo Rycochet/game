@@ -11,7 +11,7 @@ use super::{
 /// A panel that can be moved. `at` is where its top-left corner is wanted, in
 /// logical pixels; it is kept on the screen.
 #[derive(Component, Clone, Copy, Debug)]
-pub(in crate::widgets) struct MoveablePanel {
+pub struct MoveablePanel {
     pub(super) at: Vec2,
     /// The window's size when last placed, to keep it in the same part of the
     /// window when that changes.
@@ -56,7 +56,27 @@ impl MoveablePanel {
             dropped: false,
         }
     }
+
+    /// Changes where it first goes, until it has been placed: after that it
+    /// is where the player left it, and this does nothing.
+    pub fn start_at(&mut self, place: PanelPlace) {
+        if self.first.is_some_and(|first| first != place) {
+            self.first = Some(place);
+        }
+    }
 }
+
+#[cfg(test)]
+impl MoveablePanel {
+    /// Where it will first go, until it has been placed.
+    pub fn starts_at(&self) -> Option<PanelPlace> {
+        self.first
+    }
+}
+
+/// On a moveable panel's title: the panel it names.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct PanelTitleOf(pub Entity);
 
 /// What a click on this node does.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
@@ -94,7 +114,7 @@ pub fn spawn_moveable_panel(commands: &mut Commands, title: &str, at: Vec2) -> (
         ))
         .with_children(|bar| {
             spawn_stripes(bar);
-            bar.spawn(panel_title(title));
+            bar.spawn((panel_title(title), PanelTitleOf(root)));
             spawn_stripes(bar);
             bar.spawn((
                 PanelPart::Close(root),

@@ -9,21 +9,21 @@ use shared::sheet::Feeling;
 use super::Holding;
 use super::hold::Target;
 use crate::common::{MapPosition, Other};
-use crate::dom::{Dom, Template, document_in};
+use crate::dom::{Dom, Template, UiEvent, UiValue, document, top_strip};
 use crate::html;
 use crate::player::Player;
-use crate::widgets::{ALLOWED, GRID_COLOUR, RaisePanel, UiId, spawn_moveable_panel};
+use crate::widgets::{ALLOWED, GRID_COLOUR, UiId};
 
-const AT: Vec2 = Vec2::new(900.0, 300.0);
-
-/// The panel's contents: a row for each of those near enough, made from the
-/// template, or the words saying there is nobody.
+/// The panel, which moves: a row for each of those near enough, made from
+/// the template, or the words saying there is nobody.
 pub(super) static NEARBY: Template = html!(
     "nearby",
     r#"
 <form id="nearby">
-  <p id="nobody" class="medium">Nobody near enough</p>
-  <div id="rows" class="tight"/>
+  <panel id="panel" title="Nearby" moveable left="900" top="300">
+    <p id="nobody" class="medium">Nobody near enough</p>
+    <div id="rows" class="tight"/>
+  </panel>
   <template id="row">
     <span id="who" class="place" width="200" height="28" valign="middle">
       <p id="name" class="medium"/>
@@ -33,7 +33,7 @@ pub(super) static NEARBY: Template = html!(
 "#
 );
 
-/// The panel, if open, and who its rows are for, in order.
+/// The panel's document, if open, and who its rows are for, in order.
 #[derive(Resource, Default)]
 pub(super) struct NearbyPanel {
     panel: Option<Entity>,
@@ -48,17 +48,16 @@ impl NearbyPanel {
     pub(super) fn open(
         &mut self,
         commands: &mut Commands,
-        raise: &mut MessageWriter<RaisePanel>,
+        dom: &mut Dom,
         nodes: &Query<(), With<Node>>,
     ) {
-        if let Some(panel) = self.panel.filter(|&panel| nodes.contains(panel)) {
-            raise.write(RaisePanel(panel));
+        if self.panel.is_some_and(|panel| nodes.contains(panel)) {
+            dom.raise("nearby/panel");
             return;
         }
-        let (panel, content) = spawn_moveable_panel(commands, "Nearby", AT);
-        commands.entity(panel).insert(UiId::new("nearby", "panel"));
-        commands.spawn(document_in(&NEARBY, content));
-        self.panel = Some(panel);
+        // (On a strip: its own node takes no room over the view.)
+        let mut nearby = commands.spawn(document(&NEARBY));
+        self.panel = Some(nearby.insert(top_strip()).id());
     }
 
     pub(super) fn close(&mut self, commands: &mut Commands, nodes: &Query<(), With<Node>>) {
@@ -68,10 +67,19 @@ impl NearbyPanel {
     }
 }
 
-/// Forgets the panel once its close button has closed it.
-pub(super) fn forget_closed(mut panel: ResMut<NearbyPanel>, nodes: Query<(), With<Node>>) {
-    if panel.panel.is_some_and(|open| !nodes.contains(open)) {
-        panel.panel = None;
+/// Forgets the panel once its close button has closed it, which it says by
+/// its id: its document goes then.
+pub(super) fn forget_closed(
+    mut events: MessageReader<UiEvent>,
+    mut panel: ResMut<NearbyPanel>,
+    nodes: Query<(), With<Node>>,
+    mut commands: Commands,
+) {
+    let closed = |event: &UiEvent| {
+        event.id == UiId::new("nearby", "panel") && event.value == UiValue::Closed
+    };
+    if events.read().filter(|event| closed(event)).count() > 0 {
+        panel.close(&mut commands, &nodes);
     }
 }
 

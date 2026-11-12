@@ -6,17 +6,21 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use super::attrs::Length;
+use super::build::place_of;
 use super::controls::{UiEvent, UiValue};
 use super::parts::{Control, Document, Element, SurfaceOf};
 use super::tag::Tag;
-use crate::widgets::UiId;
+use crate::widgets::{MoveablePanel, PanelTitleOf, UiId};
 
 /// Shows or hides the widget round a panel or dialog as its element's
-/// `hidden` says. A hidden panel keeps its place.
+/// `hidden` says. A hidden panel keeps its place. A panel that moves also
+/// takes its `title`, and until it has first been placed, where it starts.
 pub(super) fn follow_surfaces(
     changed: Query<(&Element, &Control), Changed<Element>>,
     mut layers: Query<&mut Visibility>,
     mut roots: Query<&mut Node, Without<Element>>,
+    mut panels: Query<&mut MoveablePanel>,
+    mut titles: Query<(&PanelTitleOf, &mut Text)>,
 ) {
     for (element, Control(widget)) in &changed {
         let hidden = element.attrs.hidden;
@@ -41,6 +45,15 @@ pub(super) fn follow_surfaces(
                     && node.display != wanted
                 {
                     node.display = wanted;
+                }
+                if let Ok(mut panel) = panels.get_mut(*widget) {
+                    panel.start_at(place_of(&element.attrs));
+                }
+                let title = element.attrs.title.as_deref().unwrap_or_default();
+                for (PanelTitleOf(of), mut words) in &mut titles {
+                    if of == widget && words.0 != title {
+                        words.0 = title.to_owned();
+                    }
                 }
             }
             // Where its `left` and `top` say, in the interface's pixels.

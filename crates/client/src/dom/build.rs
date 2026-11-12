@@ -17,6 +17,7 @@ use crate::widgets::{UiId, item_text};
 mod container;
 mod progress;
 mod surfaces;
+pub(super) use surfaces::place_of;
 pub(super) mod table;
 mod title_row;
 

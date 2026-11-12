@@ -8,22 +8,24 @@ use shared::protocol::ServerMessage;
 use super::{AT, COLUMNS, Heading, Keepers, NEXT_AT, OpenTrade, OpenTrades};
 use crate::common::{CurrentDungeon, GROUND, GaveItem, HeldOverGifts, HeldStock, TookItem};
 use crate::connection::FromServer;
-use crate::dom::{DocumentOf, GridShown, Template, document_in};
+use crate::dom::{DocumentOf, Dom, GridShown, Template, document, top_strip};
 use crate::html;
-use crate::widgets::{
-    RaisePanel, StockGrid, StockGridNode, StockOf, UiId, show_stock_aim, spawn_moveable_panel,
-};
+use crate::widgets::{StockGrid, StockGridNode, StockOf, UiId, show_stock_aim};
 
-/// A panel's contents: the stock in a grid, scrolling when there is a lot. The
-/// panel's title says whose it is, and stock weighs nothing to anyone. The
-/// grid's columns are `COLUMNS` (a test checks).
+/// A panel, which moves: the stock in a grid, scrolling when there is a lot.
+/// One of several documents alike, by who it is with (`trade#<with>/...`).
+/// The panel's title says whose it is (given when it opens, with its place),
+/// and stock weighs nothing to anyone. The grid's columns are `COLUMNS` (a
+/// test checks).
 pub(super) static TRADE: Template = html!(
     "trade",
     r#"
 <form id="trade">
-  <scroll id="scroll" max-height="70%">
-    <object-grid id="stock" type="item" places="packed" stacks="false" columns="12"/>
-  </scroll>
+  <panel id="panel" moveable>
+    <scroll id="scroll" max-height="70%">
+      <object-grid id="stock" type="item" places="packed" stacks="false" columns="12"/>
+    </scroll>
+  </panel>
 </form>
 "#
 );
@@ -96,7 +98,7 @@ pub(super) fn read_server(
     mut keepers: ResMut<Keepers>,
     mut open: ResMut<OpenTrades>,
     mut heading: ResMut<Heading>,
-    mut raise: MessageWriter<RaisePanel>,
+    mut dom: Dom,
     mut commands: Commands,
 ) {
     for FromServer(message) in from_server.read() {
@@ -128,14 +130,13 @@ pub(super) fn read_server(
                     continue;
                 };
                 let at = AT + NEXT_AT * open.0.len() as f32;
-                let (panel, content) = spawn_moveable_panel(&mut commands, look.kind.name(), at);
-                commands
-                    .entity(panel)
-                    .insert(UiId::of("trade", *with, "panel"));
-                // Its contents are one of several documents alike, by who
-                // it is with: `trade#<with>/stock`.
-                commands.spawn((document_in(&TRADE, content), DocumentOf(*with)));
-                raise.write(RaisePanel(panel));
+                // One of several documents alike, by who it is with:
+                // `trade#<with>/stock`.
+                let mut trade = commands.spawn((document(&TRADE), DocumentOf(*with)));
+                let panel = trade.insert(top_strip()).id();
+                let id = UiId::of("trade", *with, "panel").to_string();
+                dom.set(&id, "title", look.kind.name());
+                dom.start_at(&id, at);
                 open.0.push(OpenTrade {
                     panel,
                     place: look.door,

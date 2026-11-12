@@ -1,8 +1,8 @@
 //! The Character panel's tabs: Character (what they are like), Inventory (what they
 //! wear and carry, and the ground), Abilities (filled by `abilities`) and Skills
 //! (filled by `skills_page`). Only the chosen tab's page is laid out; the others
-//! are kept, hidden. The panel's contents are markup (`CHARACTER`), its places
-//! filled here once it is built (`bind_pages`).
+//! are kept, hidden. The panel is markup (`CHARACTER`), its places filled here
+//! once it is built (`bind_pages`).
 
 use bevy::prelude::*;
 
@@ -10,44 +10,46 @@ use super::super::body::spawn_rows;
 use super::super::ground::spawn_section;
 use super::super::wear_note::wear_note;
 use crate::common::{AbilitiesPage, SkillsPage};
-use crate::dom::{Dom, Template, UiEvent, UiValue, document_in};
+use crate::dom::{Dom, Template, UiEvent, UiValue};
 use crate::html;
 use crate::widgets::UiId;
 
-/// The panel's contents: the tabs, then a page for each. The Inventory page is
+/// The panel, which moves: the tabs, then a page for each. The Inventory page is
 /// the clothes (with why something didn't go on under them), what is carried in
 /// its frame, and the ground's section.
 pub(super) static CHARACTER: Template = html!(
     "inventory.character",
     r#"
 <form id="inventory">
-  <tab-bar id="tabs">
-    <option>Character</option>
-    <option>Inventory</option>
-    <option>Abilities</option>
-    <option>Skills</option>
-  </tab-bar>
-  <p id="sheet" class="medium"/>
-  <span id="carried" class="labelled" valign="top">
-    <div>
-      <canvas id="clothes"/>
-      <canvas id="wear_note"/>
-    </div>
-    <container id="frame">
-      <header id="controls"/>
-      <object-grid id="grid" type="item" places="kept"/>
-      <footer>
-        <canvas id="weight" fills/>
-        <span>
-          <object-slot id="drop" accepts="item"/>
-          <object-slot id="bin" accepts="item"/>
-        </span>
-      </footer>
-    </container>
-    <canvas id="ground"/>
-  </span>
-  <canvas id="abilities"/>
-  <canvas id="skills"/>
+  <panel id="panel" title="Character" moveable>
+    <tab-bar id="tabs">
+      <option>Character</option>
+      <option>Inventory</option>
+      <option>Abilities</option>
+      <option>Skills</option>
+    </tab-bar>
+    <p id="sheet" class="medium"/>
+    <span id="carried" class="labelled" valign="top">
+      <div>
+        <canvas id="clothes"/>
+        <canvas id="wear_note"/>
+      </div>
+      <container id="frame">
+        <header id="controls"/>
+        <object-grid id="grid" type="item" places="kept"/>
+        <footer>
+          <canvas id="weight" fills/>
+          <span>
+            <object-slot id="drop" accepts="item"/>
+            <object-slot id="bin" accepts="item"/>
+          </span>
+        </footer>
+      </container>
+      <canvas id="ground"/>
+    </span>
+    <canvas id="abilities"/>
+    <canvas id="skills"/>
+  </panel>
 </form>
 "#
 );
@@ -90,12 +92,6 @@ impl Page {
         }
         dom.set("inventory/tabs", "value", Self::NAMES[self.index()]);
     }
-}
-
-/// The tabs and their pages in `content`, `shown` on show, built by the end
-/// of the frame.
-pub(super) fn spawn_pages(commands: &mut Commands, content: Entity) {
-    commands.spawn(document_in(&CHARACTER, content));
 }
 
 /// Fills the pages' places once they are built: the clothes, the ground's

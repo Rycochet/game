@@ -4,12 +4,13 @@ use bevy::prelude::*;
 use shared::item::Holder;
 
 use super::super::give::NearbyPanel;
+use super::super::ui_ids::grid_id;
 use super::super::{Carried, OpenCharacter};
 use super::shown::shown_size;
 use super::{InventoryButton, OpenGrids, Page};
 use crate::common::{Action, GameView, Preferences};
-use crate::dom::Dom;
-use crate::widgets::{ButtonPressed, RaisePanel};
+use crate::dom::{Dom, UiEvent, UiValue};
+use crate::widgets::{ButtonPressed, UiId};
 
 /// The keys for the Character panel's tabs (C, I, B, K).
 const TAB_KEYS: [(Action, Page); 4] = [
@@ -35,7 +36,6 @@ pub(in crate::inventory) fn toggle_inventory(
     mut nearby: ResMut<NearbyPanel>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
-    mut raise: MessageWriter<RaisePanel>,
     mut dom: Dom,
 ) {
     let by_button = pressed.read().any(|press| button.contains(press.0));
@@ -62,16 +62,16 @@ pub(in crate::inventory) fn toggle_inventory(
     if close {
         // Things are given by dragging them from there.
         nearby.close(&mut commands, &nodes);
-        open.toggle_inventory(&carried.0, &mut commands, &mut raise);
+        open.toggle_inventory(&carried.0, &mut commands, &mut dom);
         return;
     }
     if let Some(page) = want {
         open.page = page;
     }
     if !is_open {
-        nearby.open(&mut commands, &mut raise, &nodes);
+        nearby.open(&mut commands, &mut dom, &nodes);
     }
-    open.open(Holder::Inventory, &carried.0, &mut commands, &mut raise);
+    open.open(Holder::Inventory, &carried.0, &mut commands, &mut dom);
     // (Also when it has only just been opened: it is built by then.)
     open.page.show(&mut dom);
 }
@@ -80,17 +80,23 @@ pub(in crate::inventory) fn toggle_inventory(
 /// longer carried. (A grid's size changes where it is: the inventory's when the
 /// body changes, a growing bag's as it fills or empties.)
 pub(in crate::inventory) fn forget_closed(
+    mut events: MessageReader<UiEvent>,
     carried: Res<Carried>,
     mut open: ResMut<OpenGrids>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
 ) {
-    open.open.retain_mut(|(holder, panel, size)| {
-        if !nodes.contains(*panel) {
+    // A panel closed by its button says so by its id; its document is still
+    // there, and goes now.
+    let closed = events.read().filter(|event| event.value == UiValue::Closed);
+    let closed: Vec<UiId> = closed.map(|event| event.id).collect();
+    open.open.retain_mut(|(holder, document, size)| {
+        if !nodes.contains(*document) {
             return false;
         }
-        let Some(now) = shown_size(&carried.0, *holder) else {
-            commands.entity(*panel).despawn();
+        let stays = !closed.contains(&grid_id(Some(*holder), "panel"));
+        let Some(now) = shown_size(&carried.0, *holder).filter(|_| stays) else {
+            commands.entity(*document).despawn();
             return false;
         };
         // (`show_grids` gives the grid its new size, and it draws itself again.)

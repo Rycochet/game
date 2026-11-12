@@ -15,7 +15,7 @@ use crate::dom::parts::{
 };
 use crate::dom::pictures::Pictures;
 use crate::dom::theme::Theme;
-use crate::widgets::{ItemText, UiId, item_text};
+use crate::widgets::{ItemText, RaisePanel, UiId, item_text};
 
 pub(in crate::dom) fn apply_changes(world: &mut World) {
     let asked: Vec<DomChange> = world
@@ -38,6 +38,7 @@ pub(in crate::dom) fn apply_changes(world: &mut World) {
             }),
             Change::Copy { template, index } => copy(world, entity, &template, index),
             Change::Options(options) => set_options(world, entity, options),
+            Change::Raise => raise(world, entity),
             Change::Empty => {
                 world.entity_mut(entity).despawn_related::<Children>();
                 Ok(())
@@ -74,6 +75,13 @@ fn edit(
     if let Some(mut element) = world.get_mut::<Element>(entity) {
         *element = changed;
     }
+    Ok(())
+}
+
+/// Brings the panel round this element to the front.
+fn raise(world: &mut World, entity: Entity) -> Result<(), String> {
+    let Control(widget) = world.get::<Control>(entity).ok_or("it is not a panel")?;
+    world.write_message(RaisePanel(*widget));
     Ok(())
 }
 

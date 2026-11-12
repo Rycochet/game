@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use super::{OpenTrades, beside};
 use crate::common::{GameView, MapPosition};
+use crate::dom::{UiEvent, UiValue};
 use crate::player::Player;
 
 /// Esc closes the panel opened last rather than opening the system menu.
@@ -22,9 +23,11 @@ pub(super) fn close_on_escape(
     }
 }
 
-/// Walking out of reach or leaving the map closes a panel, and its close button
-/// forgets it.
+/// Walking out of reach or leaving the map closes a panel, and so does its
+/// close button, which says so by its id (`trade#<with>/panel`): its document
+/// goes then.
 pub(super) fn close_when_left(
+    mut events: MessageReader<UiEvent>,
     view: Res<State<GameView>>,
     player: Single<&MapPosition, With<Player>>,
     nodes: Query<(), With<Node>>,
@@ -32,11 +35,15 @@ pub(super) fn close_when_left(
     mut commands: Commands,
 ) {
     let on_map = *view.get() == GameView::Dungeon;
+    let closed =
+        |event: &&UiEvent| event.id.parts() == ("trade", "panel") && event.value == UiValue::Closed;
+    let closed: Vec<_> = events.read().filter(closed).collect();
+    let closed: Vec<_> = closed.iter().filter_map(|event| event.id.which()).collect();
     open.0.retain(|trade| {
         if !nodes.contains(trade.panel) {
             return false;
         }
-        let stays = on_map && beside(**player, trade.place);
+        let stays = on_map && beside(**player, trade.place) && !closed.contains(&trade.grid.with);
         if !stays {
             commands.entity(trade.panel).despawn();
         }

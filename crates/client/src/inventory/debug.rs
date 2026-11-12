@@ -10,7 +10,7 @@ use super::panels::OpenGrids;
 use super::{Carried, Hand, Holding, InventoryDebug};
 use crate::common::GameView;
 use crate::connection::ToServer;
-use crate::widgets::RaisePanel;
+use crate::dom::Dom;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_arguments)]
@@ -22,7 +22,7 @@ pub(super) fn run_debug(
     mut nearby: ResMut<NearbyPanel>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
-    mut raise: MessageWriter<RaisePanel>,
+    mut dom: Dom,
     view: Res<State<GameView>>,
     mut to_server: MessageWriter<ToServer>,
 ) {
@@ -32,14 +32,14 @@ pub(super) fn run_debug(
     for asked in asked.read() {
         match *asked {
             InventoryDebug::OpenInventory => {
-                open.open(Holder::Inventory, &carried.0, &mut commands, &mut raise);
-                nearby.open(&mut commands, &mut raise, &nodes);
+                open.open(Holder::Inventory, &carried.0, &mut commands, &mut dom);
+                nearby.open(&mut commands, &mut dom, &nodes);
             }
             InventoryDebug::OpenBags => {
                 for placed in &carried.0.items {
                     if placed.item.kind.def().container.is_some() {
                         let bag = Holder::Inside(placed.item.id);
-                        open.open(bag, &carried.0, &mut commands, &mut raise);
+                        open.open(bag, &carried.0, &mut commands, &mut dom);
                     }
                 }
             }

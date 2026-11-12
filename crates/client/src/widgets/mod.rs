@@ -71,7 +71,8 @@ pub use item::{
 };
 pub use item_text::{ItemText, item_text, spawn_item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
-pub use moveable::{PanelMoved, PanelPlace, spawn_grip_panel, spawn_moveable_panel, stops_presses};
+pub use moveable::{MoveablePanel, PanelMoved, PanelPlace, PanelTitleOf};
+pub use moveable::{spawn_grip_panel, spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use outlined::spawn_outlined_text;
 pub use progress::{Progress, spawn_progress_bar};
