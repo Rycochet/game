@@ -10,7 +10,9 @@ mod dockerfiles;
 mod fight;
 mod icons;
 mod latest;
+mod package;
 mod scenario;
+mod shapes;
 mod sizes;
 mod target_dir;
 mod web_deltas;
@@ -133,7 +135,7 @@ fn main() -> ExitCode {
         Some("icons") => icons::make(&workspace_root()),
         Some("app-icon") => app_icon::make(&workspace_root()),
         Some("hooks") => hooks(),
-        Some("package") => package(),
+        Some("package") => package::run(),
         Some("latest") => latest::run(),
         Some("compress-web") => compress_web::run(&env::args().skip(2).collect::<Vec<_>>()),
         Some("web-deltas") => web_deltas::run(&env::args().skip(2).collect::<Vec<_>>()),
@@ -142,13 +144,16 @@ fn main() -> ExitCode {
             scenario::run(&workspace_root(), &env::args().skip(2).collect::<Vec<_>>())
         }
         Some("fight") => fight::run(&env::args().skip(2).collect::<Vec<_>>()),
+        Some("shapes") => shapes::run(&workspace_root(), &env::args().skip(2).collect::<Vec<_>>()),
         _ => {
             eprintln!(
                 "{USAGE}
 {}
+{}
 {}",
                 api::USAGE,
-                scenario::USAGE
+                scenario::USAGE,
+                shapes::USAGE
             );
             ExitCode::FAILURE
         }
@@ -215,56 +220,6 @@ fn run_checks<'a>(checks: impl IntoIterator<Item = &'a Check>) -> ExitCode {
         eprintln!("==> FAILED: {}", failed.join(", "));
         ExitCode::FAILURE
     }
-}
-
-/// Builds the release executables and copies them, with the client's
-/// `assets` folder, into `package/` in cargo's target folder (usually
-/// `target/package/`): the layout players get, since release builds load
-/// assets from next to the executable.
-fn package() -> ExitCode {
-    let build = [
-        "build",
-        "--release",
-        "--locked",
-        "--package",
-        "client",
-        "--package",
-        "server",
-    ];
-    println!("==> Build: cargo {}", build.join(" "));
-    if !cargo(&build) {
-        eprintln!("==> FAILED: Build");
-        return ExitCode::FAILURE;
-    }
-
-    let root = workspace_root();
-    let target = target_dir::target_dir(&root);
-    let package = target.join("package");
-    println!("==> Package: {}", package.display());
-    match assemble(&root, &target.join("release"), &package) {
-        Ok(()) => {
-            println!("==> Packaged");
-            ExitCode::SUCCESS
-        }
-        Err(error) => {
-            eprintln!("==> FAILED: Package: {error}");
-            ExitCode::FAILURE
-        }
-    }
-}
-
-/// Empties `package`, then copies in the executables from `release` and the
-/// assets.
-fn assemble(root: &Path, release: &Path, package: &Path) -> io::Result<()> {
-    if package.exists() {
-        fs::remove_dir_all(package)?;
-    }
-    fs::create_dir_all(package)?;
-    for name in ["hall-of-worlds", "hall-of-worlds-server"] {
-        let file = format!("{name}{}", env::consts::EXE_SUFFIX);
-        fs::copy(release.join(&file), package.join(&file))?;
-    }
-    copy_dir(&root.join("crates/client/assets"), &package.join("assets"))
 }
 
 /// Copies a folder and everything in it.

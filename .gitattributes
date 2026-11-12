@@ -2,3 +2,5 @@
 *.sh text eol=lf
 # Git hooks are shell scripts too, without the extension.
 .githooks/* text eol=lf
+# MakeHuman meshes are kept exactly as downloaded (some have CRLF line endings).
+spare_assets/makehuman/** -text
