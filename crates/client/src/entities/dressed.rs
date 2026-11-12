@@ -1,5 +1,5 @@
-//! Tokens of kinds standing on two legs show a picture of their body, dressed in
-//! whatever is drawn, in place of their icon; other kinds keep the icon.
+//! Tokens of kinds with a body show a 3D model of it, dressed in whatever is drawn,
+//! standing on the token in place of their icon; other kinds keep the icon.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -8,38 +8,38 @@ use shared::sheet::Appearance;
 use shared::wear::WornLook;
 
 use crate::character::CharacterSheet;
-use crate::common::IconPicture;
+use crate::common::TokenModel;
 use crate::inventory::Carried;
-use crate::item_art::{ItemPictures, character_look};
+use crate::item_art::{CreatureModels, character_look};
 use crate::player::Player;
 
 use super::morph::Morphing;
 
-/// How many pixels a dressed token's picture has on a side.
-pub(super) const PIXELS: u32 = 128;
-
-/// What drawing a dressed picture needs.
+/// What building a dressed model needs.
 #[derive(SystemParam)]
 pub(super) struct Drawing<'w> {
-    pub(super) pictures: ResMut<'w, ItemPictures>,
-    pub(super) images: ResMut<'w, Assets<Image>>,
+    pub(super) models: ResMut<'w, CreatureModels>,
+    pub(super) meshes: ResMut<'w, Assets<Mesh>>,
+    pub(super) materials: ResMut<'w, Assets<crate::common::ModelMaterial>>,
 }
 
 impl Drawing<'_> {
-    /// The picture of a creature of this kind, looking like this, wearing these, if
-    /// its kind has a body to draw.
+    /// The model of a creature of this kind, looking like this, wearing these, if its
+    /// kind has a body to draw. Built once for each look.
     pub(super) fn dressed(
         &mut self,
         kind: CreatureKind,
         appearance: &Appearance,
         worn: &[WornLook],
-    ) -> Option<IconPicture> {
+    ) -> Option<TokenModel> {
         let look = character_look(kind, appearance, worn)?;
-        Some(IconPicture(self.pictures.picture(
-            look,
-            PIXELS,
-            &mut self.images,
-        )))
+        self.model(&look)
+    }
+
+    /// The model of a look, built once.
+    pub(super) fn model(&mut self, look: &crate::item_art::Look) -> Option<TokenModel> {
+        self.models
+            .model(look, &mut self.meshes, &mut self.materials)
     }
 }
 
@@ -88,10 +88,10 @@ pub(super) fn show_own_dress(
     *drawn = Some(now);
 }
 
-/// Shows this picture on a token, or its tile with none.
-pub(super) fn show(commands: &mut Commands, entity: Entity, picture: Option<IconPicture>) {
-    match picture {
-        Some(picture) => commands.entity(entity).insert(picture),
-        None => commands.entity(entity).remove::<IconPicture>(),
+/// Shows this model on a token, or its tile with none.
+pub(super) fn show(commands: &mut Commands, entity: Entity, model: Option<TokenModel>) {
+    match model {
+        Some(model) => commands.entity(entity).insert(model),
+        None => commands.entity(entity).remove::<TokenModel>(),
     };
 }

@@ -26,9 +26,9 @@ pub(super) use features::wings;
 use fit::fitted;
 pub(super) use fit::turn_of;
 pub(super) use hair::{Cover, hair};
-pub(super) use morph::morph_parts;
 #[cfg(test)]
 pub(super) use morph::placed as morph_placed;
+pub(super) use morph::{morph_parts, pieces as bare_pieces};
 pub(super) use trunk::{trunk_depth, trunk_half};
 
 /// What an upright body's picture takes up, wide and long: only the proportions

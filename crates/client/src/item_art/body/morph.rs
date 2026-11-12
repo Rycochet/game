@@ -76,7 +76,7 @@ fn view(turn: f32) -> Quat {
 /// The skin, a taur's coat, feathers, hair and an animal's long hair. Hair goes on the
 /// larger head: a taur's upper body's, unless it is still growing out of a body whose
 /// own head is shrinking away.
-fn pieces(layout: &Layout, styled: Hair) -> [Vec<Triangle>; 5] {
+pub(in crate::item_art) fn pieces(layout: &Layout, styled: Hair) -> [Vec<Triangle>; 5] {
     let ((skin, coat), feathers) = (build_coated(layout), wings(layout));
     let upper = layout.upper_body();
     let head = match upper {

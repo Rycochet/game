@@ -23,7 +23,7 @@ pub use token::{
     ClickedToken, DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, HoveredToken,
     TokenFlash, TokenView, XRAY_WHITE, XrayMaterial,
 };
-use token::{IconAnchor, TokenAssets};
+use token::{IconAnchor, ModelAnchor, TokenAssets};
 
 /// Vertical field of view. Narrow (a "long lens" from far away) flattens the
 /// perspective, so the map's sides stay closer to vertical.
@@ -45,6 +45,9 @@ pub struct View3dPlugin;
 impl Plugin for View3dPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<XrayMaterial>::default())
+            .add_plugins(MaterialPlugin::<token::HullMaterial>::default())
+            .add_plugins(MaterialPlugin::<crate::common::ModelMaterial>::default())
+            .init_resource::<token::HullMaterials>()
             .init_resource::<ViewGrid>()
             .init_resource::<ClickedToken>()
             .init_resource::<HoveredToken>()
@@ -68,8 +71,10 @@ impl Plugin for View3dPlugin {
                 Update,
                 (
                     token::resize_tokens,
+                    token::grow_hulls,
                     token::sync_tokens,
                     token::sync_icons,
+                    token::sync_models,
                     token::flash_tokens,
                     place_camera_and_tokens,
                     bands::drift_bands,
@@ -185,10 +190,23 @@ fn place_camera_and_tokens(
     time: Res<Time>,
     camera: Single<
         (&mut OrbitCamera, &mut Transform),
-        (With<ViewCamera>, Without<TokenView>, Without<IconAnchor>),
+        (
+            With<ViewCamera>,
+            Without<TokenView>,
+            Without<IconAnchor>,
+            Without<ModelAnchor>,
+        ),
     >,
-    mut views: Query<(&TokenView, &mut Transform), Without<IconAnchor>>,
-    mut anchors: Query<(&IconAnchor, &mut Transform), (Without<ViewCamera>, Without<TokenView>)>,
+    mut views: Query<(&TokenView, &mut Transform), (Without<IconAnchor>, Without<ModelAnchor>)>,
+    mut anchors: Query<
+        (&IconAnchor, &mut Transform),
+        (
+            Without<ViewCamera>,
+            Without<TokenView>,
+            Without<ModelAnchor>,
+        ),
+    >,
+    mut models: Query<(&ModelAnchor, &mut Transform), (Without<ViewCamera>, Without<TokenView>)>,
 ) {
     let (mut orbit, mut camera) = camera.into_inner();
     let size = grid.cell_size;
@@ -240,5 +258,13 @@ fn place_camera_and_tokens(
         transform.rotation = rotation;
         transform.scale = Vec3::splat(scale);
         transform.translation = TokenAssets::icon_offset(scale);
+    }
+    // Models stand on the top of their bases, turned the same way (facing comes
+    // later), and a little more to show their sides.
+    for (anchor, mut transform) in &mut models {
+        let turn = anchor.model().map_or(0.0, |model| model.0.turn);
+        transform.rotation = rotation * Quat::from_rotation_y(turn);
+        transform.translation = Vec3::Y * token::HALF_THICKNESS;
+        transform.scale = Vec3::splat(token::MODEL_SCALE);
     }
 }

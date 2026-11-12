@@ -12,6 +12,8 @@
 // Split into files (`cargo xtask lint` keeps files small).
 mod assets;
 mod flash;
+mod hull;
+mod model;
 mod parts;
 mod pick;
 mod sync;
@@ -20,6 +22,9 @@ mod xray;
 pub use assets::TokenAssets;
 use assets::{base_radius, outline_width, prism, raised_prism};
 pub use flash::{TokenFlash, flash_tokens};
+pub use hull::{HullMaterial, HullMaterials, grow_hulls};
+use model::ModelPart;
+pub use model::{MODEL_SCALE, ModelAnchor, sync_models};
 pub use parts::{IconAnchor, TokenView};
 pub use pick::{ClickedToken, HoveredToken, find_token_under_cursor};
 pub use sync::{resize_tokens, sync_icons, sync_tokens};

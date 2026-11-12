@@ -11,6 +11,7 @@ mod debug_api;
 mod footwear;
 mod gem;
 mod looks;
+mod model;
 mod morph;
 mod ring;
 mod under;
@@ -25,6 +26,7 @@ pub use looks::{
     ArmsLook, BladeLook, FeetLook, HandsLook, HeadLook, LegsLook, NeckLook, SetLook, ShouldersLook,
     TorsoLook, WaistLook,
 };
+pub use model::CreatureModels;
 pub use morph::{MORPH_STEPS, MorphLook, morph_look};
 pub use under::UnderLook;
 
@@ -89,6 +91,7 @@ impl Plugin for ItemArtPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<EdgeMaterial>::default())
             .init_resource::<ItemPictures>()
+            .init_resource::<CreatureModels>()
             .init_resource::<StillCompiling>()
             .init_resource::<PageCopies>()
             .add_systems(Startup, samples::warm_up)

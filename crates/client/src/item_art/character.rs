@@ -126,14 +126,32 @@ pub(super) fn character_parts(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) -> Vec<Part> {
-    let Some(layout) = Layout::of(kind) else {
+    let Some((pieces, layout)) = dressed(kind, worn, colours, hair) else {
         return Vec::new();
     };
+    let cells = if standing.is_some() {
+        PORTRAIT_CELLS
+    } else {
+        CELLS
+    };
+    let turned = body::turn_of(&layout);
+    set::fit_standing(pieces, cells, turned, standing, meshes, materials)
+}
+
+/// A body of this kind wearing these, in millimetres on its frame (a person's height,
+/// whatever the kind), in its own colours, with what can be seen of its hair; and its
+/// layout. The skin and a taur's coat come first, either perhaps empty. `None` for a
+/// kind with no frame to wear things on.
+pub(super) fn dressed(
+    kind: CreatureKind,
+    worn: &[Look],
+    colours: Colours,
+    hair: Hair,
+) -> Option<(set::Coloured, Layout)> {
+    let layout = Layout::of(kind)?;
     // What is worn is built on the frame and moved into place: on a taur, up onto its
     // lower body.
-    let Some((frame, offset)) = layout.worn_frame() else {
-        return Vec::new();
-    };
+    let (frame, offset) = layout.worn_frame()?;
     let offset = Vec3::new(offset[0] as f32, offset[1] as f32, offset[2] as f32);
     let (skin, coat) = body::build_coated(&layout);
     let mut pieces: set::Coloured = vec![
@@ -160,14 +178,7 @@ pub(super) fn character_parts(
             pieces.push((moved, stuff));
         }
     }
-    pieces.retain(|(triangles, _)| !triangles.is_empty());
-    let cells = if standing.is_some() {
-        PORTRAIT_CELLS
-    } else {
-        CELLS
-    };
-    let turned = body::turn_of(&layout);
-    set::fit_standing(pieces, cells, turned, standing, meshes, materials)
+    Some((pieces, layout))
 }
 
 #[cfg(test)]

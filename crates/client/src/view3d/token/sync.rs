@@ -7,10 +7,10 @@ use bevy::window::PrimaryWindow;
 
 use super::super::camera::OrbitCamera;
 use super::{
-    ICON_ART_PIXELS, ICON_FILE_PIXELS, ICON_GAP_PIXELS, ICON_PIXEL, ICON_SHADOW_PIXELS, IconAnchor,
-    TokenAssets, TokenView, XrayMaterial, base_radius, outline_width, prism, raised_prism,
+    ICON_GAP_PIXELS, ICON_PIXEL, ICON_SHADOW_PIXELS, IconAnchor, ModelAnchor, TokenAssets,
+    TokenView, XrayMaterial, base_radius, outline_width, prism, raised_prism,
 };
-use crate::common::{Icon, IconPicture, Token, TokenShape};
+use crate::common::{Icon, Token, TokenModel, TokenShape};
 
 /// Creates, restyles and removes token views to match the entities that have
 /// a `Token`.
@@ -129,6 +129,13 @@ pub(super) fn spawn_view(
             Visibility::default(),
         ))
         .id();
+    let model = commands
+        .spawn((
+            ModelAnchor::default(),
+            Transform::default(),
+            Visibility::default(),
+        ))
+        .id();
     // Starts at the origin; `place_camera_and_tokens` moves it to the owner.
     commands
         .spawn((
@@ -139,16 +146,17 @@ pub(super) fn spawn_view(
                 xray_body,
                 xray_outline,
                 anchor,
+                model,
                 radius: base_radius(token.base),
             },
             Transform::default(),
             Visibility::default(),
         ))
-        .add_children(&[body, outline, xray_body, xray_outline, anchor]);
+        .add_children(&[body, outline, xray_body, xray_outline, anchor, model]);
 }
 
-/// Shows each token owner's `Icon` on its anchor, or its `IconPicture` in its place,
-/// replacing or removing the picture when either changes.
+/// Shows each token owner's `Icon` on its anchor, unless a 3D model stands there
+/// (`TokenModel`), replacing or removing the picture when either changes.
 #[allow(clippy::too_many_arguments)]
 pub fn sync_icons(
     mut commands: Commands,
@@ -157,7 +165,7 @@ pub fn sync_icons(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut xray: ResMut<Assets<XrayMaterial>>,
     tokens: Query<&Token>,
-    icons: Query<(Option<&Icon>, Option<&IconPicture>)>,
+    icons: Query<(Option<&Icon>, Has<TokenModel>)>,
     views: Query<&TokenView>,
     mut anchors: Query<(Entity, &mut IconAnchor, &ChildOf)>,
 ) {
@@ -165,12 +173,12 @@ pub fn sync_icons(
         let Ok(view) = views.get(child_of.parent()) else {
             continue;
         };
-        let (icon, picture) = icons.get(view.owner).unwrap_or_default();
-        // Pictures are kept by a key of their own, beside icon files' paths.
-        let wanted = match (picture, icon) {
-            (Some(picture), _) => Some(format!("#picture {:?}", picture.0.id())),
-            (None, Some(icon)) => Some(icon.0.clone()),
-            (None, None) => None,
+        let (icon, model) = icons.get(view.owner).unwrap_or_default();
+        // A 3D model stands in place of the icon (`sync_models`).
+        let wanted = match icon {
+            _ if model => None,
+            Some(icon) => Some(icon.0.clone()),
+            None => None,
         };
         if shown.shown == wanted {
             continue;
@@ -184,16 +192,13 @@ pub fn sync_icons(
             .icon_materials
             .entry(key.clone())
             .or_insert_with_key(|key| {
-                let image = match picture {
-                    Some(picture) => picture.0.clone(),
-                    // Nearest-pixel sampling keeps the pixel art crisp.
-                    None => asset_server
-                        .load_builder()
-                        .with_settings(|settings: &mut ImageLoaderSettings| {
-                            settings.sampler = ImageSampler::nearest();
-                        })
-                        .load(key.clone()),
-                };
+                // Nearest-pixel sampling keeps the pixel art crisp.
+                let image = asset_server
+                    .load_builder()
+                    .with_settings(|settings: &mut ImageLoaderSettings| {
+                        settings.sampler = ImageSampler::nearest();
+                    })
+                    .load(key.clone());
                 materials.add(StandardMaterial {
                     base_color_texture: Some(image),
                     // Unlit: the picture looks as drawn whatever the sun does.
@@ -209,11 +214,7 @@ pub fn sync_icons(
             })
             .clone();
         let quad = assets.icon_quad.clone();
-        // A picture fills itself, where icon art fills only the middle of its file.
-        let scale = match picture {
-            Some(_) => ICON_ART_PIXELS / ICON_FILE_PIXELS,
-            None => 1.0,
-        };
+        let scale = 1.0;
         let attitude = tokens
             .get(view.owner)
             .map_or(0, |token| token.attitude as usize);
