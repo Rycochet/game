@@ -63,6 +63,11 @@ pub use {
     theme::{Look, Theme},
 };
 
+/// For other modules' tests of their markup: an app that builds documents,
+/// and the element with an id.
+#[cfg(test)]
+pub(crate) use build::tests::{app as test_app, find as test_find};
+
 pub struct DomPlugin;
 
 impl Plugin for DomPlugin {
