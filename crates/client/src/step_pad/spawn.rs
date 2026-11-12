@@ -4,8 +4,10 @@
 use bevy::prelude::*;
 
 use super::icons::{Pointing, arrow, dpad, ladder};
-use super::{BUTTON, CORNER_GAP, FORM, GAP, TOGGLE};
+use super::{CORNER_GAP, FORM, GAP, TOGGLE};
 use crate::common::{PadButton, Preferences};
+use crate::dom::{Pictures, Template, document_in};
+use crate::html;
 use crate::widgets::{
     ButtonState, ButtonTooltip, HoldButton, HoverTip, PanelPlace, Pressable, UiId,
     spawn_grip_panel, spawn_icon_button,
@@ -19,28 +21,43 @@ pub(super) struct StepPad;
 #[derive(Component)]
 pub(super) struct PadToggle;
 
-/// One place on the pad: a button, its widget name and its first tip (`site`
-/// keeps Up's and Down's), or a gap.
-type Place = Option<(PadButton, &'static str, &'static str)>;
+/// The pad's buttons, in three rows round the middle like a d-pad, with Down
+/// and Up either side of Step Up (owner, 2026-11-08). Gaps are a button in
+/// size (`BUTTON`: a test checks).
+pub(super) static PAD: Template = html!(
+    "step_pad",
+    r#"
+<form id="step_pad">
+  <div class="tight">
+    <span>
+      <button id="down" width="44" height="44"><img src="picture:pad_down"/></button>
+      <button id="step_up" width="44" height="44"><img src="picture:pad_step_up"/></button>
+      <button id="up" width="44" height="44"><img src="picture:pad_up"/></button>
+    </span>
+    <span>
+      <button id="step_left" width="44" height="44"><img src="picture:pad_step_left"/></button>
+      <div width="44" height="44"/>
+      <button id="step_right" width="44" height="44"><img src="picture:pad_step_right"/></button>
+    </span>
+    <span>
+      <div width="44" height="44"/>
+      <button id="step_down" width="44" height="44"><img src="picture:pad_step_down"/></button>
+      <div width="44" height="44"/>
+    </span>
+  </div>
+</form>
+"#
+);
 
-/// The pad's three rows, left to right, round the middle like a d-pad, with
-/// Down and Up either side of Step Up (owner, 2026-11-08).
-const ROWS: [[Place; 3]; 3] = [
-    [
-        Some((PadButton::Down, "down", "Down")),
-        Some((PadButton::StepUp, "step_up", "Step Up")),
-        Some((PadButton::Up, "up", "Up")),
-    ],
-    [
-        Some((PadButton::StepLeft, "step_left", "Step Left")),
-        None,
-        Some((PadButton::StepRight, "step_right", "Step Right")),
-    ],
-    [
-        None,
-        Some((PadButton::StepDown, "step_down", "Step Down")),
-        None,
-    ],
+/// Each button: what it is, its name in the markup (and in its picture's name,
+/// `pad_<name>`), and its first tip (`site` keeps Up's and Down's).
+pub(super) const BUTTONS: [(PadButton, &str, &str); 6] = [
+    (PadButton::Down, "down", "Down"),
+    (PadButton::StepUp, "step_up", "Step Up"),
+    (PadButton::Up, "up", "Up"),
+    (PadButton::StepLeft, "step_left", "Step Left"),
+    (PadButton::StepRight, "step_right", "Step Right"),
+    (PadButton::StepDown, "step_down", "Step Down"),
 ];
 
 /// The picture on one of the pad's buttons.
@@ -58,6 +75,7 @@ fn picture_of(button: PadButton) -> Image {
 pub(super) fn spawn_pad(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
+    mut pictures: ResMut<Pictures>,
     preferences: Res<Preferences>,
 ) {
     let icon = images.add(dpad());
@@ -96,34 +114,26 @@ pub(super) fn spawn_pad(
     commands
         .entity(panel)
         .insert((StepPad, UiId::new(FORM, "panel")));
-    for row in ROWS {
-        let pictures = row.map(|place| place.map(|(button, ..)| images.add(picture_of(button))));
-        let row = commands
-            .spawn(Node {
-                column_gap: px(GAP),
-                ..default()
-            })
-            .with_children(|row_of| {
-                for (place, picture) in row.into_iter().zip(pictures) {
-                    let node = Node {
-                        width: px(BUTTON),
-                        height: px(BUTTON),
-                        ..default()
-                    };
-                    let (Some((button, name, tip)), Some(picture)) = (place, picture) else {
-                        // A gap as big as a button.
-                        row_of.spawn(node);
-                        continue;
-                    };
-                    spawn_icon_button(row_of, ButtonState::Normal, picture, node).insert((
-                        button,
-                        HoldButton::default(),
-                        HoverTip(tip.to_string()),
-                        UiId::new(FORM, name),
-                    ));
-                }
-            })
-            .id();
-        commands.entity(content).add_child(row);
+    // The buttons' pictures, by the names the markup shows them by.
+    for (button, name, _) in BUTTONS {
+        let picture = images.add(picture_of(button));
+        pictures.name(format!("pad_{name}"), picture);
+    }
+    commands.spawn(document_in(&PAD, content));
+}
+
+/// Makes each of the pad's buttons, once built, what the rest of the game
+/// knows it by: held to act, with its tip.
+pub(super) fn bind_pad(new: Query<(Entity, &UiId), Added<UiId>>, mut commands: Commands) {
+    for (entity, id) in &new {
+        let (form, name) = id.parts();
+        let found = BUTTONS.iter().find(|(_, known, _)| *known == name);
+        if let Some(&(button, _, tip)) = found.filter(|_| form == FORM) {
+            let marks = (button, HoldButton::default(), HoverTip(tip.to_string()));
+            commands.entity(entity).insert(marks);
+        }
     }
 }
+
+#[cfg(test)]
+mod tests;
