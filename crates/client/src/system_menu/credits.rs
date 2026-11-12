@@ -52,6 +52,10 @@ pub(super) const CREDITS: &[(&str, &str)] = &[
         "Wizards of the Coast LLC",
     ),
     (
+        "The shapes of animals' bodies: measured from MakeHuman animal models, CC BY",
+        "JALdMIC",
+    ),
+    (
         "Built with",
         "Bevy, and the many open source libraries it and the game use",
     ),
