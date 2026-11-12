@@ -1,33 +1,15 @@
-//! Opening the panel (the system menu's Accounts), finding its parts once
-//! built, and forgetting it once closed or no longer playing.
+//! Opening the panel (the debug menu's Accounts), and forgetting it once
+//! closed or no longer playing.
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, RoleAsk};
 
+use super::markup::ACCOUNTS;
 use super::state::{Panel, Tab, tabs_for};
 use crate::common::{AccountRole, OpenAccounts, Session};
 use crate::connection::ToServer;
-use crate::dom::{Dom, Template, UiEvent, UiValue, document};
-use crate::html;
+use crate::dom::{Dom, UiEvent, UiValue, document};
 use crate::widgets::{RaisePanel, UiId};
-
-/// The panel: its tabs (those the role may see are put in when it opens) and
-/// the chosen tab's page.
-pub(super) static ACCOUNTS: Template = html!(
-    "accounts_panel.accounts",
-    r#"
-<form id="accounts">
-  <panel id="panel" title="Accounts" moveable left="120" top="100">
-    <tab-bar id="tabs">
-      <option>Find</option>
-      <option>Roles</option>
-      <option>Audit Log</option>
-    </tab-bar>
-    <div id="page" width="520"/>
-  </panel>
-</form>
-"#
-);
 
 pub(super) fn open_panel(
     mut open: MessageReader<OpenAccounts>,
@@ -75,13 +57,11 @@ pub(super) fn open_panel(
     };
 }
 
-/// Notes the built panel (to bring it to the front) and its page (to fill).
+/// Notes the built panel, to bring it to the front.
 pub(super) fn bind_panel(new: Query<(Entity, &UiId), Added<UiId>>, mut panel: ResMut<Panel>) {
     for (entity, id) in &new {
-        match id.parts() {
-            ("accounts", "panel") => panel.root = Some(entity),
-            ("accounts", "page") => panel.body = Some(entity),
-            _ => {}
+        if id.parts() == ("accounts", "panel") {
+            panel.root = Some(entity);
         }
     }
 }

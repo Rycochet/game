@@ -43,6 +43,7 @@ pub(super) fn read_answers(
                 let now = found.may_give.iter().position(|b| b.id == found.role.id);
                 panel.give_role = now.unwrap_or(0);
                 panel.found = Some(found.clone());
+                panel.new_found = true;
             }
             RoleAnswer::Audit { lines, more } => {
                 panel.audit.clone_from(lines);
@@ -50,6 +51,7 @@ pub(super) fn read_answers(
             }
             RoleAnswer::Roles(roles) => {
                 panel.roles.clone_from(roles);
+                panel.new_roles = true;
                 panel.role = panel.role.min(roles.len().saturating_sub(1));
                 panel.take_role_words();
             }

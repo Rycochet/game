@@ -7,19 +7,15 @@
 
 use bevy::prelude::*;
 
-use crate::widgets::TextSize;
-
 mod answers;
 mod audit;
-mod fill;
 mod find;
 mod input;
+mod markup;
 mod open;
 mod roles;
+mod show;
 mod state;
-
-/// The size of all its writing.
-const FONT: TextSize = TextSize::Medium;
 
 pub struct AccountsPanelPlugin;
 
@@ -32,11 +28,8 @@ impl Plugin for AccountsPanelPlugin {
                 open::notice_closed,
                 open::open_panel,
                 open::bind_panel,
-                input::choose_tab,
-                input::keep_typing,
-                input::keep_choices,
-                input::press_buttons,
-                fill::fill_page,
+                input::read_events,
+                show::show_panel,
             )
                 .chain(),
         );

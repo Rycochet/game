@@ -65,7 +65,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 
 - `debug_menu`: Show Widgets' markup sample (`panels/html_sample.rs`), which also reads `UiEvent`.
 - `system_menu`: its requesters (`requesters.rs`), Credits (`credits.rs`), the menu's panel (`panel.rs`) and Connect (`connect.rs`) and its popups (`connect/popups.rs`), and Settings' layer and Interface page (`settings/shell.rs`).
-- `accounts_panel`: its panel and tabs (`open.rs`).
+- `accounts_panel`: the whole panel (`markup.rs`), changed in place (`show.rs`).
 - `widgets`: `Hit` (what is pointed at and pressed), `Solid`, `DomInput`.
 - `view3d`: `Hit` (the wheel zooms only with the pointer on the view).
 
