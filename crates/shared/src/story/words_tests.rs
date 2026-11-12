@@ -25,6 +25,26 @@ fn every_value_has_words_in_every_language() {
         assert_worded(&lang, PetKind::ALL);
         assert_worded(&lang, PlaceKind::ALL);
         assert_worded(&lang, [Condition::Whole, Condition::Ruined]);
+        assert_worded(&lang, Relation::ALL.iter().copied());
+        assert_worded(&lang, Trait::ALL.iter().copied());
+        assert_worded(&lang, State::ALL.iter().copied());
+        assert_worded(&lang, Passerby::ALL.iter().copied());
+        assert_worded(&lang, Errand::ALL.iter().copied());
+        assert_worded(&lang, TimeAgo::ALL.iter().copied());
+        assert_worded(&lang, Occasion::ALL.iter().copied());
+        assert_worded(&lang, Stake::ALL.iter().copied());
+        assert_worded(&lang, ItemCategory::ALL.iter().copied());
+        assert_worded(&lang, CountBand::ALL.iter().copied());
+        assert_worded(&lang, Season::ALL.iter().copied());
+        assert_worded(&lang, Weather::ALL.iter().copied());
+        assert_worded(&lang, Goal::ALL.iter().copied());
+        assert_worded(&lang, Reason::ALL.iter().copied());
+        for kind in CreatureKind::ALL {
+            for count in CountBand::ALL {
+                let words = words::creatures(&lang, &kind, *count);
+                assert!(words.is_ok_and(|w| !w.is_empty()), "{kind:?}");
+            }
+        }
     }
 }
 
