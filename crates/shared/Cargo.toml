@@ -14,11 +14,16 @@ doctest = false
 
 [dependencies]
 fastnoise-lite.workspace = true
+# Language files for text in the player's language (`lang`): Fluent bundles, the
+# syntax tree they are read from and language ids (all Apache-2.0/MIT).
+fluent-bundle = "0.16"
+fluent-syntax = "0.12"
 libm = "0.2"
 postcard.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 uuid = { workspace = true, features = ["serde", "v5"] }
+unic-langid = "0.9"
 # Taking accents off letters in typed names (MIT/Apache-2.0).
 unicode-normalization = "0.1"
 
