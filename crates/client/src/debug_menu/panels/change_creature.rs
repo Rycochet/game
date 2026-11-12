@@ -30,14 +30,16 @@ pub(super) static CHANGE_CREATURE: Template = html!(
     "debug_menu.change_creature",
     r#"
 <form id="debug.change_creature">
-  <span nowrap>
-    <button id="permanent">Permanent</button>
-    <button id="temporary">Temporary</button>
-    <button id="illusion" disabled>Illusion</button>
-  </span>
-  <p>Not on the world map or in the Hall</p>
-  <div id="kinds" class="tight"/>
-  <template id="kind"><button id="kind"/></template>
+  <panel id="panel" moveable>
+    <span nowrap>
+      <button id="permanent">Permanent</button>
+      <button id="temporary">Temporary</button>
+      <button id="illusion" disabled>Illusion</button>
+    </span>
+    <p>Not on the world map or in the Hall</p>
+    <div id="kinds" class="tight"/>
+    <template id="kind"><button id="kind"/></template>
+  </panel>
 </form>
 "#
 );

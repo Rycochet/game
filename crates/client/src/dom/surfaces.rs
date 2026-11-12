@@ -80,6 +80,21 @@ pub(super) fn follow_surfaces(
     }
 }
 
+/// Panels and dialogs whose documents went this frame go too, before any
+/// new documents are built: one built in a closed one's place has the same
+/// ids, and changes asked for by them must find the new one.
+pub(super) fn clear_surfaces(
+    mut commands: Commands,
+    surfaces: Query<(Entity, &SurfaceOf)>,
+    documents: Query<(), With<Document>>,
+) {
+    for (surface, SurfaceOf(document)) in &surfaces {
+        if !documents.contains(*document) {
+            commands.entity(surface).try_despawn();
+        }
+    }
+}
+
 /// A panel or dialog goes when its document does. One that goes while its
 /// document is still there was closed by the player (a panel's close
 /// button), which is told by its id: its owner then despawns the document.
@@ -88,7 +103,7 @@ pub(super) fn tidy_surfaces(
     surfaces: Query<(Entity, &SurfaceOf, Option<&UiId>)>,
     documents: Query<(), With<Document>>,
     mut gone: RemovedComponents<SurfaceOf>,
-    mut known: Local<HashMap<Entity, UiId>>,
+    mut known: Local<HashMap<Entity, (UiId, Entity)>>,
     mut events: MessageWriter<UiEvent>,
 ) {
     for (surface, SurfaceOf(document), id) in &surfaces {
@@ -96,11 +111,14 @@ pub(super) fn tidy_surfaces(
             known.remove(&surface);
             commands.entity(surface).try_despawn();
         } else if let Some(id) = id {
-            known.insert(surface, *id);
+            known.insert(surface, (*id, *document));
         }
     }
     for surface in gone.read() {
-        if let Some(id) = known.remove(&surface) {
+        // (Not one that went with its document: nobody closed that.)
+        if let Some((id, document)) = known.remove(&surface)
+            && documents.contains(document)
+        {
             let value = UiValue::Closed;
             events.write(UiEvent { id, value });
         }

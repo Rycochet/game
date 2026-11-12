@@ -7,13 +7,13 @@ use shared::site::{Generator, MAX_RUIN};
 
 use super::super::actions::{DebugAction, kind_name};
 use super::{
-    FIRST_AT, GenerateButton, GenerateForm, GenerateKind, NEXT_AT, NewSeedButton, OpenPanels,
-    RuinButton, SeedBox, new_seed,
+    GenerateButton, GenerateForm, GenerateKind, NewSeedButton, OpenPanels, RuinButton, SeedBox,
+    new_seed,
 };
 use crate::connection::ToServer;
-use crate::dom::{Dom, Template, document_in};
+use crate::dom::{Dom, Template};
 use crate::html;
-use crate::widgets::{ButtonPressed, ButtonState, TextBox, spawn_moveable_panel};
+use crate::widgets::{ButtonPressed, ButtonState, TextBox};
 
 /// Opens the Generate POI panel for the kind chosen, in place of any open.
 #[allow(clippy::too_many_arguments)]
@@ -29,24 +29,18 @@ pub(in crate::debug_menu) fn open_generate_panel(
     let Some(&GenerateKind(kind)) = kinds.read().last() else {
         return;
     };
+    // Opened again from the start, at the next place.
     let action = DebugAction::GeneratePoi;
-    if let Some(panel) = open.panels.remove(&action)
-        && nodes.contains(panel)
+    if let Some(document) = open.panels.remove(&action)
+        && nodes.contains(document)
     {
-        commands.entity(panel).despawn();
+        commands.entity(document).despawn();
     }
-    let at = FIRST_AT + NEXT_AT * (open.opened % 8) as f32;
-    open.opened += 1;
-    let (panel, content) = spawn_moveable_panel(&mut commands, action.name(), at);
-    commands
-        .entity(panel)
-        .insert(UiId::new("debug.generate_poi", "panel"));
-    open.panels.insert(action, panel);
+    open.open(action, &mut commands, &mut dom, &nodes);
     form.kind = Some(kind);
     form.ruin = 0;
     form.seeds_made += 1;
     let seed = new_seed(time.elapsed().as_nanos() as u64, form.seeds_made);
-    commands.spawn(document_in(&GENERATE_POI, content));
     // Filled as it is built, at the end of this frame.
     dom.set_text("debug.generate_poi/kind", kind_name(kind));
     dom.set("debug.generate_poi/seed", "value", &seed.to_string());
@@ -58,18 +52,20 @@ pub(super) static GENERATE_POI: Template = html!(
     "debug_menu.generate_poi",
     r#"
 <form id="debug.generate_poi">
-  <p id="kind"/>
-  <span nowrap valign="middle">
-    Ruin
-    <span id="ruins" nowrap/>
-  </span>
-  <span nowrap valign="middle">
-    <label for="seed">Seed</label>
-    <input id="seed" type="text" inputmode="numeric" width="240"/>
-    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
-  </span>
-  <button id="generate" class="main">Generate</button>
-  <template id="ruin"><button id="ruin"/></template>
+  <panel id="panel" moveable>
+    <p id="kind"/>
+    <span nowrap valign="middle">
+      Ruin
+      <span id="ruins" nowrap/>
+    </span>
+    <span nowrap valign="middle">
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" inputmode="numeric" width="240"/>
+      <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+    </span>
+    <button id="generate" class="main">Generate</button>
+    <template id="ruin"><button id="ruin"/></template>
+  </panel>
 </form>
 "#
 );

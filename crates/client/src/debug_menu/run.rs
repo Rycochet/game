@@ -57,7 +57,7 @@ pub(super) fn run_actions(
     mut info: ResMut<DebugInfo>,
     mut open: ResMut<OpenPanels>,
     mut menu: ResMut<DebugMenu>,
-    mut raise: MessageWriter<crate::widgets::RaisePanel>,
+    mut dom: crate::dom::Dom,
     nodes: Query<(), With<Node>>,
     (mut to_server, mut view_planet, mut lightning, mut accounts): (
         MessageWriter<ToServer>,
@@ -122,7 +122,7 @@ pub(super) fn run_actions(
                 to_server.write(ToServer(ClientMessage::DevLightning));
             }
             DebugAction::WorldTime | DebugAction::SunsAndMoons => {
-                open.toggle(action, &mut commands, &mut raise, &nodes);
+                open.toggle(action, &mut commands, &mut dom, &nodes);
             }
             DebugAction::ChangeCreature
             | DebugAction::CreateMob
@@ -134,7 +134,7 @@ pub(super) fn run_actions(
             | DebugAction::ItemPictures
             | DebugAction::ShowWidgets
             | DebugAction::TeleportToWorld
-            | DebugAction::Vitals => open.open(action, &mut commands, &mut raise, &nodes),
+            | DebugAction::Vitals => open.open(action, &mut commands, &mut dom, &nodes),
         }
     }
 }

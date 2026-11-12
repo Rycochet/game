@@ -24,12 +24,14 @@ pub(super) static VITALS: Template = html!(
     "debug_menu.vitals",
     r#"
 <form id="debug.vitals">
-  <span nowrap>
-    <button id="hurt">Hurt 5</button>
-    <button id="spend_mana">Spend 5 Mana</button>
-    <button id="heal_fully">Heal Fully</button>
-    <button id="bonus">Bonus</button>
-  </span>
+  <panel id="panel" moveable>
+    <span nowrap>
+      <button id="hurt">Hurt 5</button>
+      <button id="spend_mana">Spend 5 Mana</button>
+      <button id="heal_fully">Heal Fully</button>
+      <button id="bonus">Bonus</button>
+    </span>
+  </panel>
 </form>
 "#
 );

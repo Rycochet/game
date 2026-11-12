@@ -122,27 +122,29 @@ pub(super) static DEV_AREA: Template = html!(
     "debug_menu.dev_area",
     r#"
 <form id="debug.dev_area">
-  <span nowrap valign="middle">
-    <label for="size">Size</label>
-    <select id="size" width="130"><option>32 × 32</option></select>
-    <label for="generator">Generator</label>
-    <select id="generator" searchable width="200"><option>Empty</option></select>
-  </span>
-  <span nowrap valign="middle">
-    <label for="mobs">Mobs</label>
-    <select id="mobs" searchable width="200"><option>Default</option></select>
-    <button id="less">-</button>
-    <input id="count" type="text" inputmode="numeric" width="64"/>
-    <button id="more">+</button>
-  </span>
-  <span nowrap valign="middle">
-    <label for="seed">Seed</label>
-    <input id="seed" type="text" width="240"/>
-    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
-  </span>
-  <span nowrap align="right">
-    <button id="generate" class="main">Generate</button>
-  </span>
+  <panel id="panel" moveable>
+    <span nowrap valign="middle">
+      <label for="size">Size</label>
+      <select id="size" width="130"><option>32 × 32</option></select>
+      <label for="generator">Generator</label>
+      <select id="generator" searchable width="200"><option>Empty</option></select>
+    </span>
+    <span nowrap valign="middle">
+      <label for="mobs">Mobs</label>
+      <select id="mobs" searchable width="200"><option>Default</option></select>
+      <button id="less">-</button>
+      <input id="count" type="text" inputmode="numeric" width="64"/>
+      <button id="more">+</button>
+    </span>
+    <span nowrap valign="middle">
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" width="240"/>
+      <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+    </span>
+    <span nowrap align="right">
+      <button id="generate" class="main">Generate</button>
+    </span>
+  </panel>
 </form>
 "#
 );

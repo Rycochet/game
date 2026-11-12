@@ -57,27 +57,29 @@ pub(super) static LEARN_SKILLS: Template = html!(
     "debug_menu.learn_skills",
     r#"
 <form id="debug.learn_skills">
-  <span nowrap valign="middle">
-    For
-    <button id="you">You</button>
-    <button id="target">Target</button>
-  </span>
-  <span nowrap valign="middle">
-    <button id="random">Random</button>
-    <button id="clear">Clear Skills</button>
-    <input id="all" type="text" inputmode="numeric" width="56"/>
-    %
-    <button id="set_all">Set All</button>
-  </span>
-  <scroll id="scroll" max-height="60%">
-    <div id="skills" class="tight"/>
-  </scroll>
-  <template id="skill">
-    <span id="row" nowrap valign="middle">
-      <input id="value" type="text" inputmode="numeric" width="56"/>
-      <small><input id="skill" type="checkbox" label="Skill" readonly disabled width="240"/></small>
+  <panel id="panel" moveable>
+    <span nowrap valign="middle">
+      For
+      <button id="you">You</button>
+      <button id="target">Target</button>
     </span>
-  </template>
+    <span nowrap valign="middle">
+      <button id="random">Random</button>
+      <button id="clear">Clear Skills</button>
+      <input id="all" type="text" inputmode="numeric" width="56"/>
+      %
+      <button id="set_all">Set All</button>
+    </span>
+    <scroll id="scroll" max-height="60%">
+      <div id="skills" class="tight"/>
+    </scroll>
+    <template id="skill">
+      <span id="row" nowrap valign="middle">
+        <input id="value" type="text" inputmode="numeric" width="56"/>
+        <small><input id="skill" type="checkbox" label="Skill" readonly disabled width="240"/></small>
+      </span>
+    </template>
+  </panel>
 </form>
 "#
 );

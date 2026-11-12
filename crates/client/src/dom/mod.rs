@@ -93,6 +93,10 @@ impl Plugin for DomPlugin {
             .add_systems(
                 PostUpdate,
                 (
+                    // (First: a panel whose document went this frame is gone
+                    // before one built in its place, with the same ids, is
+                    // changed by them.)
+                    surfaces::clear_surfaces,
                     build::build_documents,
                     change::apply_changes,
                     surfaces::tidy_surfaces,
