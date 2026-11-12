@@ -1,15 +1,12 @@
-//! What the Accounts panel shows and has been typed into it, kept while its
-//! body is built again after each answer.
+//! What the Accounts panel shows and has been typed into it, and what of it
+//! is new since it was last shown.
 
 use bevy::prelude::*;
 use shared::protocol::FoundAccount;
 use shared::role::{Permission, Powers, RoleBadge};
 
-/// The form of the widgets still made by code (`widgets::UiId`), the same as
-/// the panel's markup.
-pub(super) const FORM: &str = "accounts";
-
-/// How long a role is given for: the dropdown's words and minutes (none: for good).
+/// How long a role is given for: the dropdown's words (as `markup` has them;
+/// a test checks) and minutes (none: for good).
 pub(super) const FOR: [(&str, Option<u32>); 5] = [
     ("Always", None),
     ("An hour", Some(60)),
@@ -29,6 +26,17 @@ pub(super) enum Tab {
 }
 
 impl Tab {
+    pub const ALL: [Self; 3] = [Self::Find, Self::Roles, Self::Audit];
+
+    /// Its page's element.
+    pub fn page(self) -> &'static str {
+        match self {
+            Self::Find => "accounts/find_page",
+            Self::Roles => "accounts/roles_page",
+            Self::Audit => "accounts/audit_page",
+        }
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Self::Find => "Find",
@@ -56,13 +64,18 @@ pub(super) fn tabs_for(powers: &Powers) -> Vec<Tab> {
 pub(super) struct Panel {
     /// Its document, from when it is opened.
     pub document: Option<Entity>,
-    /// The panel itself and its page, once built.
+    /// The panel itself, once built.
     pub root: Option<Entity>,
-    pub body: Option<Entity>,
     pub tabs: Vec<Tab>,
     pub tab: usize,
-    /// Build the body again.
+    /// Show what is known again (`show`).
     pub dirty: bool,
+    /// Another account was found: its roles go in the dropdown.
+    pub new_found: bool,
+    /// The roles were told again: they go in the dropdown.
+    pub new_roles: bool,
+    /// A role's name and title were taken: they go in the boxes.
+    pub new_words: bool,
     /// Why the last thing asked was refused.
     pub refused: Option<String>,
     // Find.
@@ -92,6 +105,7 @@ impl Panel {
         if let Some(role) = self.roles.get(self.role) {
             self.role_name.clone_from(&role.name);
             self.role_title = role.title.clone().unwrap_or_default();
+            self.new_words = true;
         }
     }
 }
