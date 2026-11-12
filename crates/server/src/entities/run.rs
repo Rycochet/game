@@ -39,12 +39,14 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                 character: someone.character,
                 kind: someone.look.0,
                 position: someone.position,
+                at: someone.spot,
                 scent: someone.scent,
             })
             .collect();
         let Population {
             mobs,
             level,
+            relief,
             doors,
             due,
             scents,
@@ -101,7 +103,8 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             };
             let was_at = mob.position;
             let was_spot = mob.spot;
-            let fighting = mob_turn(mob, level, &spots, tick, &mut blows);
+            let ground = (&*level, relief.as_ref());
+            let fighting = mob_turn(mob, ground, &spots, (tick, &taken), &mut blows);
             let cost = if let Some(cost) = fighting {
                 cost
             } else if matches!(mob.doing, Doing::Tracking { .. }) {

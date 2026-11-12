@@ -6,6 +6,8 @@ use crate::item::{Item, Quality};
 use crate::item_form::ItemForm;
 use crate::skill::{SkillId, key_of};
 
+use super::reach::MM_PER_UNIT;
+
 /// What an attack is made with, as far as the rules care: bare hands (or claws,
 /// hooves, beaks: whatever a kind fights with) or a blade.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,13 +68,11 @@ impl Weapon {
         (u64::from(self.grams) * u64::from(per_mille) / 1000) as u32
     }
 
-    /// How many cells away it reaches: long hafted weapons two, everything else
-    /// the cells next to the wielder (owner, 2026-11-07).
-    pub fn reach(&self) -> u32 {
-        match self.family {
-            Some(Family::Polearm | Family::Spear) => 2,
-            _ => 1,
-        }
+    /// How much further it reaches than the arm holding it, in units (240 a
+    /// cell): its length (`MM_PER_UNIT`), so spears and polearms reach
+    /// furthest and a dagger has to get close; nothing for bare hands.
+    pub fn reach(&self) -> u64 {
+        u64::from(self.length_mm / MM_PER_UNIT)
     }
 
     /// Whether it cuts or stabs, doing more than a fist.

@@ -1,6 +1,7 @@
 //! Whether a straight line between two points is clear of walls.
 
 use super::{CELL_UNITS, HALF_CELL, Level, WallShape, bars_of, line_hits_box};
+use crate::spot::{CELL_SPAN, Spot};
 
 /// Whether the straight line between the middles of two cells misses every wall:
 /// the rule sight goes by, for something else that travels the same way.
@@ -9,6 +10,18 @@ pub fn line_is_clear(level: &Level, from: (i64, i64), to: (i64, i64)) -> bool {
         level,
         (from.0 * CELL_UNITS, from.1 * CELL_UNITS),
         (to.0 * CELL_UNITS, to.1 * CELL_UNITS),
+    )
+}
+
+/// Whether the straight line between two places on a level (`spot::Spot`,
+/// 240 units a cell) misses every wall: the same rule, between creatures
+/// standing anywhere (a blow, a spell).
+pub fn spots_are_clear(level: &Level, from: Spot, to: Spot) -> bool {
+    let units = |u: i64| (u * CELL_UNITS).div_euclid(CELL_SPAN);
+    clear_line(
+        level,
+        (units(from.x), units(from.y)),
+        (units(to.x), units(to.y)),
     )
 }
 

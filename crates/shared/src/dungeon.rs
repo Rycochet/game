@@ -23,7 +23,7 @@ pub(crate) use bars::line_hits_box;
 pub use cell::Cell;
 pub use level::{Level, RoomId};
 use line::clear_line;
-pub use line::line_is_clear;
+pub use line::{line_is_clear, spots_are_clear};
 pub use sight::Sight;
 pub use wall_shape::WallShape;
 

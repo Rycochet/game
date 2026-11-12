@@ -182,10 +182,10 @@ pub(super) fn enter_level(
         arrival: position,
         entering_site,
         place_name: place_name_of(world, &new.poi),
-        ground,
+        ground: ground.clone(),
     };
     let view = Sight::new(&level.level);
-    world.populate(new.id, new.poi, index, &level);
+    world.populate((new.id, new.poi), index, &level, &ground);
     let looked_from = Sight::new(&level.level);
     let loaded = Sight::new(&level.level);
     client.changed_map();

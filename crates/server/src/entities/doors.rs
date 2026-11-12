@@ -35,6 +35,11 @@ impl Population {
         &self.level
     }
 
+    /// The shape of its ground, `None` where flat.
+    pub(crate) fn relief(&self) -> Option<&shared::relief::Relief> {
+        self.relief.as_ref()
+    }
+
     /// A door on its level has changed. Its mobs know which are locked: they
     /// live there.
     pub(crate) fn set_door(&mut self, (x, y): (i64, i64), door: shared::door::Door) {

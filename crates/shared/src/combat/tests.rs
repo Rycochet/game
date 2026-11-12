@@ -1,9 +1,11 @@
 use super::*;
 use crate::blade::Family;
+use crate::creature::Size;
 use crate::dungeon::Level;
 use crate::item::Quality;
 use crate::rng::Seed;
 use crate::sheet::{Attribute, Attributes};
+use crate::spot::Spot;
 
 fn blade(family: Family, grams: u32, length_mm: u32) -> Weapon {
     Weapon {
@@ -125,18 +127,55 @@ fn power_doubles_with_either_attribute_or_skill() {
     assert!(power(&median, &leans, 0) > 0);
 }
 
+fn body(x: i64, y: i64, size: Size) -> Body {
+    Body {
+        at: Spot::new(x, y),
+        height: 0,
+        size,
+    }
+}
+
 #[test]
-fn long_weapons_reach_two_cells_but_not_through_walls() {
+fn weapons_reach_by_their_length_but_not_through_walls() {
     let level = Level::test_room();
-    assert_eq!(sword().reach(), 1);
-    assert_eq!(blade(Family::Polearm, 2600, 2200).reach(), 2);
-    assert_eq!(blade(Family::Spear, 1500, 2000).reach(), 2);
-    assert!(in_reach(&level, (0, 0), (1, 1), 1));
-    assert!(!in_reach(&level, (0, 0), (2, 0), 1));
-    assert!(in_reach(&level, (0, 0), (2, 2), 2));
-    assert!(!in_reach(&level, (0, 0), (0, 0), 2));
+    let me = body(0, 0, Size::Medium);
+    let dagger = blade(Family::Dagger, 300, 400).reach();
+    let spear = blade(Family::Spear, 1500, 2000).reach();
+    assert_eq!(
+        (Weapon::UNARMED.reach(), dagger, sword().reach()),
+        (0, 50, 125)
+    );
+    assert_eq!(reach_between(Size::Medium, 0, Size::Medium), 340);
+    // Bare hands reach a Medium neighbour in the next cell, even diagonally...
+    assert!(in_reach(&level, &me, 0, &body(240, 240, Size::Medium)));
+    // ...a dagger hardly further, and a spear two cells away.
+    assert!(!in_reach(&level, &me, dagger, &body(400, 0, Size::Medium)));
+    assert!(in_reach(&level, &me, spear, &body(480, 0, Size::Medium)));
+    assert!(!in_reach(&level, &me, spear, &body(480, 480, Size::Medium)));
+    // Smaller creatures are reached less far, bigger ones further.
+    assert!(!in_reach(&level, &me, 0, &body(300, 0, Size::Tiny)));
+    assert!(in_reach(&level, &me, 0, &body(300, 0, Size::Large)));
     // The wall at x = -2 stands between.
-    assert!(!in_reach(&level, (-1, 0), (-3, 0), 2));
+    assert!(!in_reach(
+        &level,
+        &body(-240, 0, Size::Medium),
+        spear,
+        &body(-720, 0, Size::Medium)
+    ));
+}
+
+#[test]
+fn reach_is_measured_up_and_down_slopes_too() {
+    let level = Level::test_room();
+    let me = body(0, 0, Size::Medium);
+    let level_with_me = body(320, 0, Size::Medium);
+    assert!(in_reach(&level, &me, 0, &level_with_me));
+    let above = Body {
+        height: 240,
+        ..level_with_me
+    };
+    assert_eq!(distance(&me, &above), 400);
+    assert!(!in_reach(&level, &me, 0, &above));
 }
 
 #[test]

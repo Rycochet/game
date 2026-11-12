@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use shared::ability::Ability;
-use shared::combat::{CANCEL_PENALTY, Fighter, PRACTICE_PER_BLOW, Swing, Wielded, in_reach};
+use shared::combat::{Body, CANCEL_PENALTY, Fighter, PRACTICE_PER_BLOW, Swing, Wielded, in_reach};
 use shared::creature::CreatureKind;
 use shared::id::Id;
 use shared::protocol::{Landed, ServerMessage};
@@ -24,25 +24,32 @@ impl Client {
         }
     }
 
-    /// Where a mob on the player's level is, if it is there and in sight.
-    pub(super) fn mob_in_sight(&mut self, world: &ServerWorld, mob: Id) -> Option<(i64, i64)> {
+    /// A mob on the player's level where it stands, if it is there and in sight.
+    pub(super) fn mob_in_sight(&mut self, world: &ServerWorld, mob: Id) -> Option<Body> {
         let visit = self.visit.as_mut()?;
-        let at = world
-            .populations
-            .0
-            .get(&visit.population())?
-            .mobs
-            .iter()
-            .find(|one| one.id == mob)?
-            .position;
-        visit.can_see(at.0, at.1).then_some(at)
+        let population = world.populations.0.get(&visit.population())?;
+        let one = population.mobs.iter().find(|one| one.id == mob)?;
+        let (x, y) = one.position;
+        let body = Body::on(population.relief(), one.spot, one.size());
+        visit.can_see(x, y).then_some(body)
     }
 
-    /// Whether a swing from where the player stands reaches this cell.
-    pub(super) fn reaches(&self, at: (i64, i64), swing: &Swing) -> bool {
-        self.visit.as_ref().is_some_and(|visit| {
-            in_reach(visit.cells(), visit.position(), at, swing.weapon.reach())
-        })
+    /// The player where they stand on their level, as far as reaching goes:
+    /// `None` off levels.
+    pub(super) fn body(&self, world: &ServerWorld) -> Option<Body> {
+        let visit = self.visit.as_ref()?;
+        let population = world.populations.0.get(&visit.population());
+        let relief = population.and_then(|population| population.relief());
+        Some(Body::on(relief, visit.spot(), self.size()))
+    }
+
+    /// Whether a swing from where the player stands reaches `target`
+    /// (`combat::in_reach`).
+    pub(super) fn reaches(&self, world: &ServerWorld, target: &Body, swing: &Swing) -> bool {
+        let (Some(visit), Some(me)) = (self.visit.as_ref(), self.body(world)) else {
+            return false;
+        };
+        in_reach(visit.cells(), &me, swing.weapon.reach(), target)
     }
 
     /// Practises these skills fighting a creature of this kind at action tick
@@ -104,7 +111,7 @@ pub(super) fn start_ability(
         return (true, 0);
     };
     let swing = client.fighter().swing(client.fight.attacks);
-    if !client.reaches(at, &swing) {
+    if !client.reaches(world, &at, &swing) {
         debug!("Not starting {ability:?}: {target:?} is out of reach");
         return (true, 0);
     }
@@ -147,7 +154,7 @@ pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool
     client.fight.attacks += 1;
     let target = pending.target;
     let at = client.mob_in_sight(world, target);
-    let reached = at.filter(|&at| client.reaches(at, &swing));
+    let reached = at.filter(|at| client.reaches(world, at, &swing));
     let (Some(_), Some(visit)) = (reached, client.visit.as_ref()) else {
         return client.link.send(&ServerMessage::AbilityLanded {
             who: None,
