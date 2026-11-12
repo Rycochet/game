@@ -17,7 +17,8 @@ mod spawn;
 const FORM: &str = "step_pad";
 /// The button that opens and closes it, across.
 const TOGGLE: f32 = 30.0;
-/// Each of the pad's buttons, across: room for a finger.
+/// Each of the pad's buttons, across: room for a finger (as its markup says).
+#[cfg(test)]
 const BUTTON: f32 = 44.0;
 /// Between the pad's buttons, and between the pad and its toggle button.
 const GAP: f32 = 4.0;
@@ -33,6 +34,7 @@ impl Plugin for StepPadPlugin {
             .add_systems(
                 Update,
                 (
+                    spawn::bind_pad,
                     show::toggle_pad,
                     show::remember_place,
                     show::show_pad,
