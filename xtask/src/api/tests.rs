@@ -98,3 +98,12 @@ fn pretty_keeps_strings_whole() {
         "{\n  \"a\": [\n    1,\n    2\n  ],\n  \"b\": \"x, {y}\",\n  \"c\": []\n}"
     );
 }
+
+#[test]
+fn fractions_are_read_from_answers() {
+    let answer = r#"{"result":{"path":"a.png","logical_per_pixel":0.6666667}}"#;
+    let scale = float_field(answer, "logical_per_pixel").expect("a number");
+    assert!((scale - 0.6666667).abs() < 1e-9);
+    assert_eq!(float_field(r#"{"x": 2}"#, "x"), Some(2.0));
+    assert_eq!(float_field(answer, "missing"), None);
+}

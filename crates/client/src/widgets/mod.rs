@@ -56,6 +56,8 @@ pub use clipboard::copy_to_clipboard;
 pub use colour_picker::{ColourChosen, ColourPicker, Swatch, spawn_colour_picker};
 #[cfg(not(target_arch = "wasm32"))]
 pub use copy_button::spawn_copy_button;
+#[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
+pub use debug_api::WidgetPlaces;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
 pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter};
