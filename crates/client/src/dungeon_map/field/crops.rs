@@ -17,7 +17,7 @@ pub fn build_crops(
     sight: &Sight,
     remembered: &Sight,
     ruined: bool,
-    ground: &dyn Fn(i64, i64) -> f32,
+    ground: &dyn Fn(Vec3) -> f32,
 ) -> Builder {
     let mut crops = Builder::default();
     if ruined {
@@ -33,7 +33,7 @@ pub fn build_crops(
                 if sight.is_seen(x, y) && remembered.is_seen(x, y) {
                     let from = crops.positions.len();
                     cell_crops(&mut crops, town::cell_centre(x, y), tile, pixels);
-                    crops.lift(from, ground(x, y));
+                    crops.drape(from, ground);
                 }
             }
         }

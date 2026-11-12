@@ -47,6 +47,7 @@ fn dungeon() -> CurrentDungeon {
         arrival: (2, 2),
         entering_site: true,
         place_name: None,
+        ground: Default::default(),
     });
     for y in 0..5 {
         for x in 0..5 {

@@ -11,9 +11,9 @@ mod cutaway;
 mod flow;
 mod light;
 mod light_grid;
+mod marks;
 mod memory;
 mod meshes;
-mod raise;
 mod surface;
 
 #[cfg(test)]
@@ -25,9 +25,9 @@ use cells::build_cell_at;
 pub(super) use light::corner_light;
 pub use light::{faces_camera, with_ambient};
 pub use light_grid::LightGrid;
+pub(in crate::dungeon_map) use marks::Marks;
 use memory::{copy_as_memory, sizes};
 pub use meshes::{DungeonMeshes, View, WallFace};
-pub(in crate::dungeon_map) use raise::Marks;
 pub use surface::Surface;
 
 /// How bright remembered (out of sight) surfaces are drawn, on their grey

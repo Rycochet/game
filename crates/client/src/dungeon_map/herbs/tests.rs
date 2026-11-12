@@ -72,7 +72,7 @@ fn only_tiles_in_sight_are_drawn() {
     }
     let none = Sight::new(&level);
     assert!(
-        build_plants(&level, (&none, &none), (0, 0), 3, &|_, _| 0.0)
+        build_plants(&level, (&none, &none), (0, 0), 3, &|_| 0.0)
             .indices
             .is_empty()
     );
@@ -81,7 +81,7 @@ fn only_tiles_in_sight_are_drawn() {
         seen.insert(x, 0);
     }
     assert!(
-        !build_plants(&level, (&seen, &seen), (0, 0), 3, &|_, _| 0.0)
+        !build_plants(&level, (&seen, &seen), (0, 0), 3, &|_| 0.0)
             .indices
             .is_empty()
     );

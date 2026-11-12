@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::CELL_SIZE;
 use super::parts::{DungeonScene, Shown};
-use crate::common::{BoltStruck, CurrentDungeon, WildCellHeights};
+use crate::common::{BoltStruck, CurrentDungeon, DrawnGround};
 use crate::lightning::spawn_bolt;
 
 /// How tall a bolt is, and how wide its main stroke, against a cell.
@@ -19,7 +19,7 @@ pub(super) fn strike(
     mut commands: Commands,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {

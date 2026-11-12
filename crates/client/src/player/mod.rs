@@ -11,6 +11,7 @@ use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod doors;
+mod drawn_ground;
 mod keys;
 mod level_costs;
 mod messages;
@@ -23,6 +24,7 @@ mod travel;
 mod wild_heights;
 
 use doors::{AskDoor, close_doors, door_answers, send_door_asks};
+use drawn_ground::keep_drawn_ground;
 use keys::move_player;
 pub use messages::{Arrived, Player, PlayerSystems, Stepped, TakeStep, TravelTo};
 pub use moving::PlayerMoving;
@@ -72,7 +74,12 @@ impl Plugin for PlayerPlugin {
                     close_doors.in_set(PlayerSystems::Input),
                     // After everything in `Input` asked for its steps.
                     (
-                        (keep_wild_heights, keep_river_points, door_answers),
+                        (
+                            keep_wild_heights.before(keep_drawn_ground),
+                            keep_drawn_ground,
+                            keep_river_points,
+                            door_answers,
+                        ),
                         take_steps,
                         travel,
                         send_door_asks,

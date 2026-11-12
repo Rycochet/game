@@ -30,6 +30,7 @@ pub(super) fn show_around(dungeon: &mut CurrentDungeon, (x, y): (i64, i64), orig
         arrival: (x, y),
         entering_site: true,
         place_name: None,
+        ground: Default::default(),
     });
     dungeon.level = hall::level(min_x, STRETCH);
     for y in LEVEL_TOP..LEVEL_TOP + LEVEL_ROWS {

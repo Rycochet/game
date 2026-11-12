@@ -4,7 +4,7 @@ Bags on the ground of a site, where the server says or the character remembers: 
 
 ## Files
 
-- `crates/client/src/ground/mod.rs`: `GroundPlugin`, `Bags`, `Heading`, `BagAssets`, `make_assets`, `read_server`, `find_hovered`, `change_of_mind`, `follow_click`, `open_on_arrival`, `show_bags`, `GroundDebug` (native). Beside it: `parts.rs`, `assets.rs`, `spawn.rs`, `server.rs`, `clicks.rs` (the hover box from each bag's raised ground), `show.rs`, `raise.rs` (`raise_bags`: each bag on its cell's ground, `common::WildCellHeights`, when bags or heights change), `debug.rs` (`GroundDebug`, native only).
+- `crates/client/src/ground/mod.rs`: `GroundPlugin`, `Bags`, `Heading`, `BagAssets`, `make_assets`, `read_server`, `find_hovered`, `change_of_mind`, `follow_click`, `open_on_arrival`, `show_bags`, `GroundDebug` (native). Beside it: `parts.rs`, `assets.rs`, `spawn.rs`, `server.rs`, `clicks.rs` (the hover box from each bag's raised ground), `show.rs`, `raise.rs` (`raise_bags`: each bag on its cell's ground, `common::DrawnGround`, when bags or heights change), `debug.rs` (`GroundDebug`, native only).
 - `crates/client/src/ground/bag.rs`: without Bevy: `Model`, `bag`, `outline`, `star`, `size_of`, the shapes. Tests. In `bag/`: `model.rs`, `size.rs`, `shape.rs`, `outlines.rs`.
 
 ## Public API

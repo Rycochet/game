@@ -30,6 +30,7 @@ mod creatures;
 mod debug;
 mod difficulty;
 mod display;
+mod drawn_ground;
 mod dungeon;
 mod graphics;
 mod item_text;
@@ -73,6 +74,7 @@ pub use difficulty::{IRONMAN_QUESTION, PlayDifficulty, difficulty_words};
 pub use display::{
     DisplayChoice, DisplayInUse, DisplayMode, RememberWindow, Resolution, WindowPrefs, resolutions,
 };
+pub use drawn_ground::DrawnGround;
 pub use dungeon::CurrentDungeon;
 pub use graphics::{
     AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, GraphicsPrefs, IN_BROWSER, MaxResolution,
@@ -162,6 +164,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<PlayerSpeed>()
             .init_resource::<PlayerGait>()
             .init_resource::<WildCellHeights>()
+            .init_resource::<DrawnGround>()
             .init_resource::<NearRivers>()
             .init_resource::<Sneaking>()
             .init_resource::<CarryLimit>()

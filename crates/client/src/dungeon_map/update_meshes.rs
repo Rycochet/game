@@ -15,8 +15,8 @@ use super::theme::Theme;
 use super::wild_ground::GroundTint;
 use super::{MemoryPart, SeeThroughPart, Shown, SolidPart, StairsThroughPart};
 use crate::common::{
-    CurrentDungeon, LightSource, Lightning, MapPosition, Preferences, Remembered, SharesSight,
-    ViewStats, WildCellHeights,
+    CurrentDungeon, DrawnGround, LightSource, Lightning, MapPosition, Preferences, Remembered,
+    SharesSight, ViewStats,
 };
 use crate::player::Player;
 use crate::view3d::ViewCamera;
@@ -76,7 +76,7 @@ pub(super) fn update_meshes(
         Local<u64>,
         Res<GroundTint>,
         Res<Lightning>,
-        Res<WildCellHeights>,
+        Res<DrawnGround>,
     ),
 ) {
     let camera = camera.translation;

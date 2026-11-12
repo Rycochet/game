@@ -1,18 +1,22 @@
 use super::*;
 use shared::movement::{WildHeights, WorldGround};
+use shared::relief::Relief;
 use shared::world::{WorldParams, WorldSeed};
 
 /// A steep mountainside of the default world (8 elevations a world map
 /// point), as the client keeps its heights.
-fn mountain() -> (WildCellHeights, (i64, i64)) {
+fn mountain() -> (DrawnGround, (i64, i64)) {
     let world = WorldParams::from_seed(WorldSeed::new(12345).terrain());
     let ground = WorldGround::new(&world);
     let middle = (-212 * 16, 1036 * 16);
     let bounds = (middle.0 - 32, middle.1 - 32, 64, 64);
-    let heights = WildCellHeights {
-        bounds,
-        heights: Some(WildHeights::new(&ground, bounds)),
-        ..default()
+    let land = WildHeights::new(&ground, bounds);
+    let relief = Relief::of_land(&land, bounds, (0, 0), &[]);
+    let reference = relief.centre(middle.0, middle.1);
+    let heights = DrawnGround {
+        relief: Some(relief),
+        reference,
+        land: None,
     };
     (heights, middle)
 }
@@ -49,30 +53,26 @@ fn rays_land_on_the_cell_aimed_at() {
 }
 
 #[test]
-fn a_ray_into_a_step_lands_on_the_higher_cell() {
+fn rays_land_where_they_meet_the_slope() {
     let (heights, (mx, my)) = mountain();
     let ground = Ground(Some(&heights));
-    let mut tried = 0;
-    for y in my - 10..my + 10 {
-        for x in mx - 10..mx + 10 {
-            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                let foot = ground.at(x + dx, y + dy);
-                if ground.at(x, y) - foot < CELL_SIZE * 0.2 {
-                    continue;
-                }
-                // Low down, from the lower cell's side, at the face between.
-                let out = Vec3::new(dx as f32, 0.0, dy as f32);
-                let face = Vec3::new(x as f32, 0.0, y as f32) * CELL_SIZE
-                    + out * (CELL_SIZE / 2.0)
-                    + Vec3::Y * (foot + 1.0);
-                let from = face + (out + Vec3::Y * 0.02).normalize() * 20.0;
-                let ray = Ray3d::new(from, Dir3::new(face - from).unwrap());
-                assert_eq!(ground.hit(ray).map(|(_, _, cell)| cell), Some((x, y)));
-                tried += 1;
+    for (i, (ox, oy)) in [(0.3, -0.2), (-0.45, 0.1), (0.05, 0.4), (-0.2, -0.35)]
+        .iter()
+        .enumerate()
+    {
+        for y in my - 6..my + 6 {
+            for x in mx - 6..mx + 6 {
+                let (fx, fy) = (x as f32 + ox, y as f32 + oy);
+                let target = Vec3::new(fx, heights.drawn_between(fx, fy), fy) * CELL_SIZE;
+                let side = if i % 2 == 0 { 1.0 } else { -1.0 };
+                let from = target + Vec3::new(side, 3.0, 0.5).normalize() * 2000.0;
+                let ray = Ray3d::new(from, Dir3::new(target - from).unwrap());
+                let (_, point, _) = ground.hit(ray).expect("reaches the ground");
+                let off = point.distance(target) / CELL_SIZE;
+                assert!(off < 0.02, "{off} cells off at ({fx}, {fy})");
             }
         }
     }
-    assert!(tried > 10, "only {tried} steps");
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn flat_ground_is_the_floor() {
 #[test]
 fn no_heights_is_the_floor_too() {
     // What clicks pass everywhere but the wilderness: the resource, empty.
-    let none = WildCellHeights::default();
+    let none = DrawnGround::default();
     let ground = Ground(Some(&none));
     let from = Vec3::new(3.0 * CELL_SIZE, 400.0, 2.0 * CELL_SIZE);
     let (distance, _, cell) = ground.hit(Ray3d::new(from, Dir3::NEG_Y)).unwrap();

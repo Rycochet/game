@@ -13,6 +13,7 @@ fn a_basement_is_below_the_ground_whatever_its_index() {
         arrival: (0, 0),
         entering_site: true,
         place_name: None,
+        ground: Default::default(),
     };
     assert_eq!([0, 1, 2].map(|n| info(true).storey(n)), [0, 1, -1]);
     assert_eq!([0, 1, 2].map(|n| info(false).storey(n)), [0, 1, 2]);

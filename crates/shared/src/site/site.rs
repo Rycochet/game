@@ -118,6 +118,12 @@ impl Site {
         )
     }
 
+    /// Whether it is a cave (or a dug dungeon): its levels' floors swell
+    /// (`relief::LevelGround::Cave`).
+    pub fn is_cave(&self) -> bool {
+        matches!(self.plan, Plan::Cave(_))
+    }
+
     /// Whether its last level is a basement: below the ground floor, whatever
     /// its index says.
     pub fn has_basement(&self) -> bool {

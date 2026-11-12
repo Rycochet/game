@@ -111,7 +111,7 @@ pub fn build_plants(
     (sight, remembered): (&Sight, &Sight),
     place: (i64, i64),
     hour: u32,
-    ground: &dyn Fn(i64, i64) -> f32,
+    ground: &dyn Fn(Vec3) -> f32,
 ) -> Builder {
     let mut plants = Builder::default();
     let (min_x, min_y, width, height) = level.bounds();
@@ -124,7 +124,7 @@ pub fn build_plants(
                 let (plant, stage) = tile_growth(place, (x, y), hour);
                 let from = plants.positions.len();
                 tile(&mut plants, cell_centre(x, y), PLANT_LIST[plant], stage);
-                plants.lift(from, ground(x, y));
+                plants.drape(from, ground);
             }
         }
     }

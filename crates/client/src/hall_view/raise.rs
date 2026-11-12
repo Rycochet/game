@@ -1,15 +1,15 @@
 //! World Gates in the wilderness stand on their cell's ground, raised by its
-//! height (`common::WildCellHeights`; none in the Hall).
+//! height (`common::DrawnGround`; none in the Hall).
 
 use bevy::prelude::*;
 
 use super::place::Gates;
-use crate::common::WildCellHeights;
+use crate::common::DrawnGround;
 use crate::dungeon_map::CELL_SIZE;
 
 /// Puts each gate on its cell's ground whenever gates or heights change.
 pub(super) fn raise_gates(
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     gates: Res<Gates>,
     mut places: Query<&mut Transform>,
 ) {

@@ -87,6 +87,8 @@ impl OtherLevels {
         level.enter(LevelInfo {
             index: remembered.index,
             bounds: remembered.bounds,
+            // Only drawn on the map, flat.
+            ground: Default::default(),
             ..info.clone()
         });
         for chunk in &remembered.chunks {

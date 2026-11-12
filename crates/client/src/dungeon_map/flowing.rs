@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use super::mesh::Surface;
 use super::parts::SurfaceMaterials;
 use super::sight_lines::SurfaceMaterial;
-use crate::common::{Preferences, WildCellHeights};
+use crate::common::{DrawnGround, Preferences};
 
 /// How often the flow clock wraps, in seconds: every band's speed is a whole
 /// number of pictures in it (`SLOWEST_FLOW` in `sight_mask.wesl`), so the
@@ -18,11 +18,11 @@ const PERIOD: f32 = 8.0;
 pub(super) fn run_flow(
     time: Res<Time>,
     preferences: Res<Preferences>,
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     surfaces: Res<SurfaceMaterials>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
-    let flowing = heights.heights.is_some() && !preferences.graphics.reduce_motion;
+    let flowing = heights.slopes() && !preferences.graphics.reduce_motion;
     let seconds = match flowing {
         // Never quite 0, which means still.
         true => (time.elapsed_secs() % PERIOD).max(1.0e-3),

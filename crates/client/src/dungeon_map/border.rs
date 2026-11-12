@@ -10,7 +10,7 @@ use bevy::prelude::*;
 
 use super::CELL_SIZE;
 use super::parts::DungeonScene;
-use crate::common::{CurrentDungeon, WildCellHeights};
+use crate::common::{CurrentDungeon, DrawnGround};
 
 /// How far apart the stripes are, and how wide, in cells: lines where the
 /// sum of a point's coordinates is a multiple of `GAP`, so they run on from
@@ -32,7 +32,7 @@ pub(super) struct BorderPart;
 /// Draws the border again whenever its cells change: made the first time it
 /// is needed, under the scene, so it shows and hides with it.
 pub(super) fn draw_borders(
-    (dungeon, heights): (Res<CurrentDungeon>, Res<WildCellHeights>),
+    (dungeon, heights): (Res<CurrentDungeon>, Res<DrawnGround>),
     scene: Query<Entity, With<DungeonScene>>,
     mut part: Query<&mut Mesh3d, With<BorderPart>>,
     mut drawn: Local<Option<Vec<(i64, i64)>>>,
@@ -73,21 +73,18 @@ pub(super) fn draw_borders(
 
 /// The stripes over `cells`: in each, the pieces of the lines `u + v = k`
 /// (`u`, `v` from 0 to 1 across the cell) for `k` a multiple of `GAP`.
-/// Each on its cell's ground.
-fn stripes(cells: &[(i64, i64)], heights: &WildCellHeights) -> Mesh {
+/// Each on the ground under it.
+fn stripes(cells: &[(i64, i64)], heights: &DrawnGround) -> Mesh {
     let (mut positions, mut indices) = (Vec::new(), Vec::new());
     let lines = (1..(2.0 / GAP) as i32).map(|step| step as f32 * GAP);
     let lines: Vec<f32> = lines.collect();
     // Half the stripe's width, across it (it runs at 45°).
     let half = WIDTH / 2.0 * std::f32::consts::FRAC_1_SQRT_2;
     for &(x, y) in cells {
-        let ground = heights.drawn(x, y);
         let place = |u: f32, v: f32| {
-            [
-                (x as f32 - 0.5 + u) * CELL_SIZE,
-                (ground + LIFT) * CELL_SIZE,
-                (y as f32 - 0.5 + v) * CELL_SIZE,
-            ]
+            let (gx, gy) = (x as f32 - 0.5 + u, y as f32 - 0.5 + v);
+            let ground = heights.drawn_between(gx, gy);
+            [gx * CELL_SIZE, (ground + LIFT) * CELL_SIZE, gy * CELL_SIZE]
         };
         for &k in &lines {
             let (from, to) = if k <= 1.0 {

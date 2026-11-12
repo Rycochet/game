@@ -29,6 +29,7 @@ fn ruined_places_are_named_as_ruins() {
         arrival: (2, 2),
         entering_site: true,
         place_name: None,
+        ground: Default::default(),
     });
     assert_eq!(
         words(&dungeon.describe()),
@@ -54,6 +55,7 @@ fn towns_are_named_by_their_own_names() {
         arrival: (2, 2),
         entering_site: true,
         place_name: Some("Village of Thornbury".into()),
+        ground: Default::default(),
     });
     assert_eq!(dungeon.describe(), "Village of Thornbury");
     let player = SmoothPosition::default();
@@ -75,6 +77,7 @@ fn ruined_castles_keep_their_names() {
         arrival: (2, 2),
         entering_site: true,
         place_name: Some("Castle Ravenhold".into()),
+        ground: Default::default(),
     });
     assert_eq!(dungeon.describe(), "Ruined Castle Ravenhold, floor 2 of 3");
     let player = SmoothPosition::default();
@@ -472,6 +475,7 @@ fn add_floor(app: &mut App) {
         arrival: (100, 100),
         entering_site: true,
         place_name: None,
+        ground: Default::default(),
     };
     let mut other = CurrentDungeon::default();
     other.enter(shared::protocol::LevelInfo {

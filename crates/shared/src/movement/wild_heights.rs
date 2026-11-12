@@ -12,6 +12,7 @@ use super::{
     step_cost,
 };
 use crate::dungeon::Level;
+use crate::relief::UNITS_PER_16TH;
 
 /// Cells to a world map point (`wilderness::SCALE`, which depends on this
 /// module, so it is repeated here; a test checks they agree).
@@ -83,12 +84,18 @@ impl WildHeights {
     /// so levelled, which is harmless: it isn't drawn). Only cells it covers.
     /// Whether any cell's height changed.
     pub fn relevel(&mut self, flats: &[FlatGround], level: &Level) -> bool {
+        self.relevel_by(flats, |x, y| !level.cell(x, y).is_outside())
+    }
+
+    /// `relevel`, with whether a cell is covered (not out in the open) told by
+    /// `covered`: a site's first level, read where it is set in.
+    pub fn relevel_by(&mut self, flats: &[FlatGround], covered: impl Fn(i64, i64) -> bool) -> bool {
         let before = std::mem::take(&mut self.levelled);
         for flat in flats {
             let (min_x, min_y, width, height) = flat.bounds;
             for y in min_y..min_y + height {
                 for x in min_x..min_x + width {
-                    if self.covers(x, y) && !level.cell(x, y).is_outside() {
+                    if self.covers(x, y) && covered(x, y) {
                         self.levelled.insert((x, y), flat.height);
                     }
                 }
@@ -142,6 +149,47 @@ impl WildHeights {
         let blended =
             (north_row * (across - south) + south_row * south).div_euclid(across * across);
         (blended as i32).max(self.floor)
+    }
+}
+
+impl WildHeights {
+    /// The height of a grid corner (the north-west corner of cell `(x, y)`),
+    /// in `relief::UNITS_PER_CELL` units: a flat's, if a levelled cell is round
+    /// it (the highest, if several), else blended from the points round it,
+    /// never below the sea. A corner's points are exact where a cell's middle
+    /// is blended, so the average of a cell's corners is its height (`at`).
+    pub fn corner(&self, x: i64, y: i64) -> i32 {
+        let flat = [(x - 1, y - 1), (x, y - 1), (x - 1, y), (x, y)]
+            .iter()
+            .filter_map(|cell| self.levelled.get(cell))
+            .max();
+        if let Some(&height) = flat {
+            return height * UNITS_PER_16TH;
+        }
+        let (px, py) = (x.div_euclid(CELLS_PER_POINT), y.div_euclid(CELLS_PER_POINT));
+        let (east, south) = (x.rem_euclid(CELLS_PER_POINT), y.rem_euclid(CELLS_PER_POINT));
+        let last_x = px + i64::from(east > 0);
+        let last_y = py + i64::from(south > 0);
+        let in_range = px >= self.min_px
+            && py >= self.min_py
+            && last_x < self.min_px + self.columns
+            && last_y < self.min_py + self.rows;
+        if !in_range {
+            return 0;
+        }
+        let across = CELLS_PER_POINT;
+        // Only points with a share are read, so a corner on the last row or
+        // column of points needs none beyond it.
+        let mut sum = 0;
+        for (dx, wx) in [(0, across - east), (1, east)] {
+            for (dy, wy) in [(0, across - south), (1, south)] {
+                if wx * wy > 0 {
+                    sum += self.point(px + dx, py + dy) * wx * wy;
+                }
+            }
+        }
+        let units = (sum * i64::from(UNITS_PER_16TH)).div_euclid(across * across);
+        (units as i32).max(self.floor * UNITS_PER_16TH)
     }
 }
 

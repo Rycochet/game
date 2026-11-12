@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::bag::size_of;
 use super::{Bags, Heading, STAR_LONG, sparkle_scale, sparkle_up};
-use crate::common::{ClickMode, HoveredBag, MapPosition, PointerPosition, WildCellHeights};
+use crate::common::{ClickMode, DrawnGround, HoveredBag, MapPosition, PointerPosition};
 use crate::dungeon_map::{CELL_SIZE, Shown};
 use crate::inventory::OpenCharacter;
 use crate::player::{Arrived, Player, TakeStep, TravelTo};
@@ -17,7 +17,7 @@ pub(super) fn find_hovered(
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     bags: Res<Bags>,
     shown: Res<Shown>,
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     mut hovered: ResMut<HoveredBag>,
 ) {
     let (camera, transform) = *camera;
