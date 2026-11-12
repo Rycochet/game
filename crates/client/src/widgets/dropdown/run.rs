@@ -15,7 +15,7 @@ use super::{
 use crate::common::{TouchGesture, in_interface, interface_area};
 
 /// Opens a pressed dropdown, and while one is open, takes all the input. Before
-/// `WidgetSystems::Modal`, so nothing else sees it.
+/// `DomInput::Modal`, so nothing else sees it.
 #[allow(clippy::too_many_arguments)]
 pub(in crate::widgets) fn run_dropdowns(
     mut commands: Commands,

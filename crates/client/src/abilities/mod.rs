@@ -5,9 +5,9 @@
 use bevy::prelude::*;
 
 use crate::common::PointerSystems;
+use crate::dom::DomInput;
 use crate::dom::{DrawObjects, HoldObjects};
 use crate::player::PlayerSystems;
-use crate::widgets::WidgetSystems;
 
 mod bar;
 mod cancel;
@@ -36,17 +36,14 @@ impl Plugin for AbilitiesPlugin {
             .add_systems(Startup, bar::spawn_bar)
             // Before widgets take presses on panels, and the map clicks.
             // Before the system menu sees Esc.
-            .add_systems(
-                PreUpdate,
-                cancel::cancel_by_escape.before(WidgetSystems::Front),
-            )
+            .add_systems(PreUpdate, cancel::cancel_by_escape.before(DomInput::Front))
             .add_systems(
                 PreUpdate,
                 // Either side of `dom` moving what is dragged.
                 (
                     drag::drag_abilities
                         .after(PointerSystems)
-                        .before(WidgetSystems::Presses)
+                        .before(DomInput::Presses)
                         .before(HoldObjects),
                     drag::drop_abilities.after(HoldObjects),
                 ),

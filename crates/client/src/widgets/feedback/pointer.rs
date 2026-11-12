@@ -10,13 +10,6 @@ use super::super::{BUTTON_BORDER, ButtonState, Pressable, Switch};
 use super::{Pointed, RIPPLE_SECONDS, Ripple, ripple_shape};
 use crate::dom::Hit;
 
-/// Whether the pointer is on the interface: a panel or a button, enabled or
-/// not, this frame (`PreUpdate`, first in `WidgetSystems::Presses`). For what
-/// the pointer does to the map behind, such as a right click clearing the
-/// target.
-#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct OverInterface(pub bool);
-
 /// Notes what the pointer is on, and starts a ripple on a press. Runs before
 /// anything takes the press.
 #[allow(clippy::type_complexity)]
@@ -39,12 +32,10 @@ pub(in crate::widgets) fn track_pointer(
         Or<(With<Pressable>, With<PanelPart>, With<ButtonState>)>,
     >,
     mut pointed: ResMut<Pointed>,
-    mut over: ResMut<OverInterface>,
 ) {
     // The nearest widget to what is in front (`dom::Hit`): the thing itself, or
     // what holds it, so nothing behind something else is ever pointed at.
     let front = hit.first(|entity| widgets.get(entity).ok());
-    over.set_if_neq(OverInterface(hit.target.is_some()));
     let usable = front.filter(|(.., state, _)| !state.is_some_and(|state| state.is_disabled()));
     let under = usable.map(|(entity, ..)| entity);
     let pressing = mouse.just_pressed(MouseButton::Left);

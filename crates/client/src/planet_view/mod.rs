@@ -30,7 +30,7 @@ mod texture;
 
 use bevy::prelude::*;
 
-use crate::widgets::WidgetSystems;
+use crate::dom::DomInput;
 
 /// Render layer of the globe, its moons, lights and camera: drawn only into
 /// the view's own picture.
@@ -57,8 +57,8 @@ impl Plugin for PlanetViewPlugin {
                 PreUpdate,
                 (steer::steer, input::take_input)
                     .chain()
-                    .after(WidgetSystems::Presses)
-                    .before(WidgetSystems::Front),
+                    .after(DomInput::Presses)
+                    .before(DomInput::Front),
             )
             .add_systems(
                 Update,

@@ -40,7 +40,7 @@ pub(super) fn add(app: &mut App) {
     app.init_resource::<Holding>().add_systems(
         PreUpdate,
         hold_buttons
-            .in_set(super::WidgetSystems::Presses)
+            .in_set(crate::dom::DomInput::Presses)
             .after(super::feedback::track_pointer)
             .before(super::moveable::take_presses),
     );

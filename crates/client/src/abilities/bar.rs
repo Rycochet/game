@@ -16,7 +16,7 @@ use super::vitals_now::affords;
 use crate::common::{Action, OwnVitals, Preferences, Sneaking, VitalsCircle, interface_area};
 use crate::dom::{AbilitySlotShown, AbilityThing};
 use crate::inventory::Carried;
-use crate::widgets::{ABILITY, UiId, stops_presses};
+use crate::widgets::{ABILITY, UiId};
 
 /// Between slots, and between the bar and the circle.
 pub(super) const GAP: f32 = 6.0;
@@ -45,7 +45,7 @@ pub(super) fn spawn_bar(mut commands: Commands) {
                 Visibility::Hidden,
             ))
             .id();
-        commands.entity(row).insert(stops_presses(row));
+        commands.entity(row).insert(crate::dom::Solid);
         commands.entity(row).with_children(|row| {
             for index in 0..PER_SIDE {
                 let slot = (side * PER_SIDE + index) as u8;

@@ -45,6 +45,7 @@ use bevy::input::InputSystems;
 use bevy::prelude::*;
 
 use crate::common::PointerSystems;
+use crate::dom::DomInput;
 
 pub use ability::{ABILITY, AbilityLook, spawn_ability, spawn_outlined_icon};
 pub use attribute_colour::{Shade, attribute_colour, row_rgb};
@@ -56,7 +57,7 @@ pub use colour_picker::{ColourChosen, ColourPicker, Swatch, spawn_colour_picker}
 #[cfg(not(target_arch = "wasm32"))]
 pub use copy_button::spawn_copy_button;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
-pub use feedback::{ButtonStyle, ButtonTooltip, OverInterface};
+pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter};
 pub use fullscreen::{
     darkening, layer_share, layer_z, leaves_presses, spawn_dialog, spawn_fullscreen_layer,
@@ -72,7 +73,7 @@ pub use item::{
 pub use item_text::{ItemText, item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
 pub use moveable::{MoveablePanel, PanelMoved, PanelPlace, PanelTitleOf};
-pub use moveable::{spawn_grip_panel, spawn_moveable_panel, stops_presses};
+pub use moveable::{spawn_grip_panel, spawn_moveable_panel};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use outlined::spawn_outlined_text;
 pub use progress::{Progress, spawn_progress_bar};
@@ -105,7 +106,7 @@ mod buttons;
 
 pub use boxes::{TOOLTIP_BOX_EDGE, panel, panel_title, tooltip_box, tooltip_colours, tooltip_trim};
 use boxes::{raised_border, spawn_tooltip, sunken_border};
-pub use button_state::{ButtonPressed, ButtonState, Pressable, RaisePanel, WidgetSystems};
+pub use button_state::{ButtonPressed, ButtonState, Pressable, RaisePanel};
 use buttons::{Stroke, spawn_strokes};
 pub use buttons::{
     spawn_button, spawn_check_button, spawn_close_button, spawn_icon_button,
@@ -154,7 +155,6 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<switch::Slides>()
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
-            .init_resource::<OverInterface>()
             .init_resource::<crate::common::BandShift>()
             .init_resource::<aura::Auras>()
             .add_plugins(UiMaterialPlugin::<aura::AuraMaterial>::default())
@@ -203,15 +203,6 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<text_box::PressedThisFrame>()
             .init_resource::<text_box::Held>()
             .init_resource::<dropdown::OpenList>()
-            .configure_sets(
-                PreUpdate,
-                (
-                    WidgetSystems::Presses,
-                    WidgetSystems::Front,
-                    WidgetSystems::Modal,
-                )
-                    .chain(),
-            )
             .insert_resource(scale::TouchOnly::detect())
             .add_systems(
                 PreUpdate,
@@ -235,7 +226,7 @@ impl Plugin for WidgetsPlugin {
                     dropdown::run_dropdowns,
                 )
                     .chain()
-                    .in_set(WidgetSystems::Presses)
+                    .in_set(DomInput::Presses)
                     .after(InputSystems)
                     .after(PointerSystems),
             )

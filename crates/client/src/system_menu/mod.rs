@@ -7,7 +7,7 @@ mod settings;
 
 use bevy::prelude::*;
 
-use crate::widgets::WidgetSystems;
+use crate::dom::DomInput;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod connect;
@@ -61,7 +61,7 @@ impl Plugin for SystemMenuPlugin {
             .add_systems(Startup, spawn_menu)
             .add_systems(
                 PreUpdate,
-                take_input.in_set(WidgetSystems::Front).run_if(takes_input),
+                take_input.in_set(DomInput::Front).run_if(takes_input),
             )
             .add_systems(
                 Update,
@@ -128,7 +128,7 @@ impl Plugin for SystemMenuPlugin {
             PreUpdate,
             full_screen_key::toggle_full_screen
                 .after(bevy::input::InputSystems)
-                .before(WidgetSystems::Presses),
+                .before(DomInput::Presses),
         )
         .add_systems(
             Update,

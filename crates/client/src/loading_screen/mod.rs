@@ -16,8 +16,8 @@ use crate::common::{
 mod frames;
 mod screen;
 mod takes_input;
+use crate::dom::DomInput;
 use crate::dom::{Dom, DrawObjects};
-use crate::widgets::WidgetSystems;
 use frames::keep_frame_rate;
 use screen::{bind_screen, spawn_screen, title_node};
 
@@ -72,7 +72,7 @@ impl Plugin for LoadingScreenPlugin {
                     .run_if(takes_input::takes_input)
                     .after(InputSystems)
                     .after(PointerSystems)
-                    .before(WidgetSystems::Presses),
+                    .before(DomInput::Presses),
             )
             .add_systems(
                 Update,

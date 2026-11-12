@@ -11,7 +11,7 @@ use crate::common::{OwnVitals, ToldVitals};
 use crate::connection::FromServer;
 use crate::dom::{Template, bottom_strip, document};
 use crate::html;
-use crate::widgets::{UiId, stops_presses};
+use crate::widgets::UiId;
 
 mod killed;
 mod paint;
@@ -78,8 +78,8 @@ fn spawn_circle(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.spawn(document(&VITALS)).insert(bottom_strip());
 }
 
-/// Gives the circle, once built, its picture. Presses on it go no further:
-/// not walking, nor (a right press) clearing the target.
+/// Gives the circle, once built, its picture. It is an element, so presses
+/// on it go no further: not walking, nor (a right press) clearing the target.
 fn bind_circle(
     new: Query<(Entity, &UiId), Added<UiId>>,
     picture: Res<CirclePicture>,
@@ -88,9 +88,7 @@ fn bind_circle(
     for (entity, id) in &new {
         if id.parts() == ("vitals", "ball") {
             let image = ImageNode::new(picture.image.clone());
-            commands
-                .entity(entity)
-                .insert((image, stops_presses(entity)));
+            commands.entity(entity).insert(image);
         }
     }
 }

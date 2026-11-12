@@ -4,11 +4,12 @@ use bevy::prelude::*;
 
 use super::super::fullscreen::layer_z;
 use super::super::text_box::{TextBox, spawn_text_box};
-use super::super::{PANEL_EDGE, Pressable, panel, stops_presses};
+use super::super::{PANEL_EDGE, Pressable, panel};
 use super::{
     Dropdown, FONT, GAP, LEAST_WIDTH, LIST_LAYER, List, ListBacking, ListRows, ROW, ROWS,
     SEARCH_HEIGHT, list_corner,
 };
+use crate::dom::Solid;
 
 pub(super) fn spawn_list(
     commands: &mut Commands,
@@ -41,7 +42,7 @@ pub(super) fn spawn_list(
         .id();
     let holder = commands.spawn(panel()).id();
     commands.entity(holder).insert((
-        stops_presses(holder),
+        Solid,
         Node {
             position_type: PositionType::Absolute,
             left: px(corner.x),
