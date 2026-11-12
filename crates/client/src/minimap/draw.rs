@@ -14,9 +14,8 @@ use super::sprites::Sprites;
 use super::world::WorldTiles;
 use super::{
     DrawnFrom, FULL_MAP_BUDGET_MS, ICON_PIXELS, MINIMAP_BUDGET_MS, MapPictures, REDRAW_SECONDS,
-    Room, Screen, Sources, full_map_area, full_map_compass, full_map_side, location_title,
-    minimap_across, minimap_border, minimap_marks, minimap_picture_size, prepare_stamps,
-    under_the_sky, units_per_pixel,
+    Room, Sources, full_map_area, full_map_compass, minimap_across, minimap_border, minimap_marks,
+    minimap_picture_size, prepare_stamps, under_the_sky, units_per_pixel,
 };
 use crate::common::GameView;
 use crate::widgets::PARCHMENT;
@@ -24,7 +23,6 @@ use crate::widgets::PARCHMENT;
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw_maps(
     sources: Sources,
-    mut screen: Screen,
     pictures: Res<MapPictures>,
     time: Res<Time>,
     mut images: ResMut<Assets<Image>>,
@@ -46,19 +44,13 @@ pub(super) fn draw_maps(
         world,
         dungeon,
         levels,
-        first_floor,
+        first_floor: _,
         style,
         sky: sky_now,
         pois,
         asset_server,
         full,
     } = sources;
-    let Screen {
-        minimap,
-        panel,
-        picture,
-        title,
-    } = &mut screen;
     let view = *view.get();
     let window = Room::of(&window, &ui_scale);
     // The pictures' pixels to an interface pixel, for their sizes; what is drawn in
@@ -77,16 +69,6 @@ pub(super) fn draw_maps(
         });
     let players_level = &*dungeon;
     let dungeon = levels.shown(players_level);
-    *minimap.1 = if full.open {
-        Visibility::Hidden
-    } else {
-        Visibility::Inherited
-    };
-    *panel.1 = if full.open {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    };
 
     // The turn: the full map always has north at the top, like a sheet of
     // paper, while the minimap turns with the camera.
@@ -100,25 +82,11 @@ pub(super) fn draw_maps(
         )
     };
 
+    // (Their elements are sized by `place_maps`.)
     let across = if full.open {
-        let side = full_map_side(&window);
-        panel.0.width = px(side);
-        panel.0.height = px(side);
-        panel.0.left = px((window.width() - side) / 2.0);
-        panel.0.top = px((window.height() - side) / 2.0);
-        let area = full_map_area(&window);
-        picture.width = px(area.x);
-        picture.height = px(area.y);
-        let name = location_title(view, world.as_deref(), dungeon, *first_floor, &player);
-        if title.0 != name {
-            title.0 = name;
-        }
-        area
+        full_map_area(&window)
     } else {
-        let size = minimap_picture_size(&window);
-        minimap.0.width = px(size);
-        minimap.0.height = px(size);
-        Vec2::splat(size)
+        Vec2::splat(minimap_picture_size(&window))
     };
     let size = (
         ((across.x * scale).round() as u32).max(1),

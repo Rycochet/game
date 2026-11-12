@@ -33,10 +33,12 @@ mod hover;
 mod input;
 mod layout;
 mod marks;
+mod markup;
 mod names;
 mod others;
 mod overlay;
 mod parts;
+mod place;
 mod redraw;
 mod room;
 mod scale;
@@ -57,14 +59,10 @@ use layout::{
 };
 use marks::{full_map_compass, minimap_border, minimap_marks};
 use names::{hovered_name, hovered_poi, location_title};
-use parts::{
-    FullMapDarkening, FullMapPanel, FullMapPicture, FullMapTitle, HoverBox, HoverRunes,
-    HoverRunesPicture, HoverText, MapPictures, Minimap,
-};
+use parts::{FullMapDarkening, HoverRunesPicture, MapPictures};
 pub(super) use room::Room;
 use scale::{shows_known, under_the_sky, units_per_pixel};
-use sources::{DrawnFrom, Screen, Sources};
-use spawn::spawn_maps;
+use sources::{DrawnFrom, Sources};
 use stamps::prepare_stamps;
 use teleport::go_into_clicked_poi;
 
@@ -152,7 +150,14 @@ impl Plugin for MinimapPlugin {
             .init_resource::<MapRivers>()
             .init_resource::<Sprites>()
             .init_resource::<overlay::MarksLayer>()
-            .add_systems(Startup, (spawn_maps, floors::spawn_column))
+            .add_systems(
+                Startup,
+                (
+                    markup::spawn_maps,
+                    spawn::spawn_darkening,
+                    floors::spawn_column,
+                ),
+            )
             .add_systems(
                 Update,
                 forget::forget_world
@@ -174,7 +179,12 @@ impl Plugin for MinimapPlugin {
             )
             .add_systems(
                 Update,
-                (draw_maps, overlay::draw_marks)
+                (
+                    markup::bind_maps,
+                    place::place_maps,
+                    draw_maps,
+                    overlay::draw_marks,
+                )
                     .chain()
                     .after(PlayerSystems::Travel)
                     .after(View3dSystems::Place)

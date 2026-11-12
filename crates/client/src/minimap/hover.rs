@@ -8,14 +8,15 @@ use shared::hall::GateCode;
 use super::gate_runes;
 use super::projection::Projection;
 use super::{
-    CORNER_GAP, FULL_MAP_MARGIN, FullMap, HoverBox, HoverRunes, HoverRunesPicture, HoverText,
-    ICON_PIXELS, Room, TITLE_HEIGHT, full_map_area, full_map_corner, hovered_name, minimap_across,
-    minimap_picture_size, minimap_trim, under_the_sky, units_per_pixel,
+    CORNER_GAP, FULL_MAP_MARGIN, FullMap, HoverRunesPicture, ICON_PIXELS, Room, TITLE_HEIGHT,
+    full_map_area, full_map_corner, hovered_name, minimap_across, minimap_picture_size,
+    minimap_trim, under_the_sky, units_per_pixel,
 };
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameView, HoveredInSky, OtherLevels, SkyNow, SmoothPosition,
     UiPointer,
 };
+use crate::dom::Dom;
 use crate::player::Player;
 use crate::view3d::OrbitCamera;
 
@@ -32,10 +33,10 @@ pub(super) fn name_what_is_hovered(
     dungeon: Res<CurrentDungeon>,
     levels: Res<OtherLevels>,
     full: Res<FullMap>,
-    mut holder: Single<&mut Visibility, With<HoverBox>>,
-    mut text: Single<&mut Text, With<HoverText>>,
     pointer: Res<UiPointer>,
+    mut dom: Dom,
     mut runes: RunesBox,
+    mut was: Local<Named>,
 ) {
     let window = Room::of(&window, &ui_scale);
     let view = *view.get();
@@ -59,54 +60,47 @@ pub(super) fn name_what_is_hovered(
             units_per_pixel,
         )
     });
-    let shown = if name.is_some() || gate.is_some() {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    };
-    holder.set_if_neq(shown);
-    if let Some(name) = &name
-        && text.0 != *name
-    {
-        text.0.clone_from(name);
+    let now = Named { name, gate };
+    if *was == now {
+        return;
     }
-    show_runes(&mut runes, gate, name.is_some());
+    // Each part is changed only when it differs from what the box showed.
+    let differs = |pick: fn(&Named) -> bool| pick(&was) != pick(&now);
+    if differs(|named| named.name.is_none() && named.gate.is_none()) {
+        let nothing = now.name.is_none() && now.gate.is_none();
+        dom.set_flag("full_map/hover", "hidden", nothing);
+    }
+    // The name's own box shows only with a name.
+    if differs(|named| named.name.is_none()) {
+        dom.set_flag("full_map/name", "hidden", now.name.is_none());
+    }
+    if let Some(name) = now.name.as_ref().filter(|_| was.name != now.name) {
+        dom.set_text("full_map/words", name.clone());
+    }
+    if differs(|named| named.gate.is_none()) {
+        dom.set_flag("full_map/runes", "hidden", now.gate.is_none());
+    }
+    show_runes(&mut runes, now.gate);
+    *was = now;
 }
 
-/// The hover box's runes: their box, its picture, the pictures, and the code
-/// drawn last.
+/// What the full map's hover box last showed: a name, or a World Gate's code.
+#[derive(Default, PartialEq)]
+pub(super) struct Named {
+    name: Option<String>,
+    gate: Option<GateCode>,
+}
+
+/// The hover box's runes: their picture, the pictures, and the code drawn
+/// last.
 type RunesBox<'w, 's> = (
-    Single<'w, 's, &'static mut Visibility, (With<HoverRunes>, Without<HoverBox>)>,
     Single<'w, 's, &'static mut ImageNode, With<HoverRunesPicture>>,
     ResMut<'w, Assets<Image>>,
     Local<'s, Option<GateCode>>,
-    // The name's own box, shown only with a name.
-    Single<'w, 's, &'static ChildOf, With<HoverText>>,
-    Local<'s, Option<bool>>,
-    Commands<'w, 's>,
 );
 
-/// Shows a gate's code in the hover box, drawing it when it changes, and the
-/// name's box only when there is a name.
-fn show_runes(
-    (visibility, picture, images, drawn, name_box, named, commands): &mut RunesBox,
-    gate: Option<GateCode>,
-    has_name: bool,
-) {
-    if **named != Some(has_name) {
-        **named = Some(has_name);
-        let shown = if has_name {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
-        commands.entity(name_box.parent()).insert(shown);
-    }
-    visibility.set_if_neq(if gate.is_some() {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    });
+/// Draws a gate's code for the hover box, when it is another.
+fn show_runes((picture, images, drawn): &mut RunesBox, gate: Option<GateCode>) {
     if let Some(code) = gate
         && **drawn != Some(code)
     {

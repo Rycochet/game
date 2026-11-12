@@ -42,8 +42,7 @@ pub fn raised_box() -> impl Bundle {
 }
 
 /// A parchment panel, placed by absolute position, with a soft shadow. Its parts
-/// go in as children. Give its `Node` a border of `PANEL_EDGE`, or a `panel_frame`
-/// if its children are placed by numbers that shouldn't allow for one.
+/// go in as children. Give its `Node` a border of `PANEL_EDGE`.
 pub fn panel() -> impl Bundle {
     let [red, green, blue] = PARCHMENT;
     (
@@ -54,20 +53,6 @@ pub fn panel() -> impl Bundle {
         BackgroundColor(Color::srgb_u8(red, green, blue)),
         raised_border(),
         soft_shadow(),
-    )
-}
-
-/// A panel's edge, as a child covering it: spawn it first, to be behind the rest.
-pub fn panel_frame() -> impl Bundle {
-    (
-        Node {
-            position_type: PositionType::Absolute,
-            width: percent(100),
-            height: percent(100),
-            border: UiRect::all(px(PANEL_EDGE)),
-            ..default()
-        },
-        raised_border(),
     )
 }
 
