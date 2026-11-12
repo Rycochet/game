@@ -8,7 +8,7 @@ use super::parts::{Bar, Element, InTable, Inert, TextStyle};
 use super::pictures::{Pictures, picture_for};
 use super::tag::Tag;
 use super::theme::Theme;
-use crate::widgets::{HoverTip, Progress};
+use crate::widgets::{HoverTip, Progress, tooltip_trim};
 
 type Parts = (
     &'static Element,
@@ -76,6 +76,9 @@ pub(super) fn restyle(
             Some(colour) => entity.try_insert(BackgroundColor(colour)),
             None => entity.try_remove::<BackgroundColor>(),
         };
+        if look.tip {
+            entity.try_insert(tooltip_trim());
+        }
         // A panel's or dialog's `title` is its heading, not a tip.
         let tip = attrs
             .title

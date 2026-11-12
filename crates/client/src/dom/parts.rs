@@ -71,6 +71,8 @@ pub(super) struct TextStyle {
     pub colour: Color,
     /// Which side each line of words is against: from the nearest `align`.
     pub justify: Justify,
+    /// Symbols the font lacks come from the icon font.
+    pub icons: bool,
 }
 
 /// On the words of an element.

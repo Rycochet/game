@@ -10,7 +10,8 @@ use crate::common::{
     ClickMode, DebugInfo, DebugTools, FreezeMobs, GameClock, GameView, GodMode, MapPosition,
     ServerClock, Truesight, ViewStats,
 };
-use crate::fonts;
+use crate::dom::{Dom, Template, document};
+use crate::html;
 use crate::player::Player;
 
 pub struct UiPlugin;
@@ -23,18 +24,26 @@ impl Plugin for UiPlugin {
     }
 }
 
-#[derive(Component)]
-struct StatusText;
+/// The status text: its first line, with what it warns of after it in red,
+/// and under them the view's numbers. White over the game's view, never taking
+/// the pointer (`inert`).
+static STATUS: Template = html!(
+    "hud.status",
+    r#"
+<form id="status">
+  <div id="text" class="joined" top="16" left="56" inert>
+    <span class="joined">
+      <p id="words" class="status"/>
+      <p id="warning" class="status-warning"/>
+    </span>
+    <p id="stats" class="status"/>
+  </div>
+</form>
+"#
+);
 
-/// After the status text's first line, in red: the mode clicks are in, if any.
-#[derive(Component)]
-struct ModeText;
-
-/// The status text's second line.
-#[derive(Component)]
-struct StatsText;
-
-/// Where the status text goes, to clear the warning button.
+/// Where the status text goes, to clear the warning button (as the markup
+/// starts it).
 const STATUS_LEFT: f32 = 56.0;
 /// Where it goes with no warning button: no debug tools, so no debug menu.
 const STATUS_LEFT_ALONE: f32 = 16.0;
@@ -48,36 +57,25 @@ const FRAME_RATE_ICON: char = '\u{1F3AC}';
 const GOD_MODE_ICON: &str = "\u{1F47B}";
 const TRUESIGHT_ICON: &str = "\u{1F440}";
 
-const MODE_COLOUR: Color = Color::srgb(1.0, 0.2, 0.2);
-
 fn spawn_status_text(mut commands: Commands) {
-    commands.spawn((
-        StatusText,
-        Text::new(""),
-        TextFont {
-            font: fonts::with_icons(),
-            ..default()
-        },
-        Node {
-            position_type: PositionType::Absolute,
-            top: px(16),
-            left: px(STATUS_LEFT),
-            ..default()
-        },
-        children![
-            (
-                ModeText,
-                TextSpan::default(),
-                TextColor(MODE_COLOUR),
-                // Each span has its own font, and this one shows the ghost and skull.
-                TextFont {
-                    font: fonts::with_icons(),
-                    ..default()
-                },
-            ),
-            (StatsText, TextSpan::default()),
-        ],
-    ));
+    // Over the whole window, stacked, for the text to be placed in.
+    let fills = Node {
+        position_type: PositionType::Absolute,
+        width: percent(100),
+        height: percent(100),
+        flex_direction: FlexDirection::Column,
+        ..default()
+    };
+    commands.spawn(document(&STATUS)).insert(fills);
+}
+
+/// What the status text last said, and where it was.
+#[derive(Default, PartialEq)]
+struct Said {
+    words: String,
+    warning: String,
+    stats: String,
+    left: f32,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -91,9 +89,8 @@ fn update_status_text(
     mode: Res<ClickMode>,
     god: Res<GodMode>,
     (truesight, freeze): (Res<Truesight>, Res<FreezeMobs>),
-    mut text: Single<(&mut Text, &mut Node), With<StatusText>>,
-    mut mode_text: Single<&mut TextSpan, (With<ModeText>, Without<StatsText>)>,
-    mut stats_text: Single<&mut TextSpan, (With<StatsText>, Without<ModeText>)>,
+    mut dom: Dom,
+    mut said: Local<Option<Said>>,
 ) {
     // Says when clicks don't do what they usually do, as it is easy to forget:
     // even before the first welcome.
@@ -114,49 +111,66 @@ fn update_status_text(
         .filter_map(|(on, words)| on.then_some(words))
         .collect();
     let mode = says.join(" ");
-    let (text, node) = &mut *text;
     let left = if tools.any() {
         STATUS_LEFT
     } else {
         STATUS_LEFT_ALONE
     };
-    if node.left != px(left) {
-        node.left = px(left);
-    }
     // Nothing else to say before the first welcome.
-    if *view.get() == GameView::Connecting {
-        text.0 = String::new();
-        stats_text.0 = String::new();
-        mode_text.0 = mode;
-        return;
-    }
-    mode_text.0 = if mode.is_empty() {
-        String::new()
+    let connecting = *view.get() == GameView::Connecting;
+    let warning = match (connecting, mode.is_empty()) {
+        (true, _) | (_, true) => mode,
+        (false, false) => format!("  {mode}"),
+    };
+    let (words, stats) = if connecting {
+        (String::new(), String::new())
     } else {
-        format!("  {mode}")
+        // Single player has no network to time.
+        let ping = match server_clock.round_trip_ms {
+            Some(ms) if !server_clock.local_server => format!("{ms:.0}ms"),
+            _ => "-".to_string(),
+        };
+        let rate = frames
+            .rate()
+            .map_or("-".to_string(), |rate| format!("{rate:.0}"));
+        let mut status = format!(
+            "{POSITION_ICON} {},{}  {FRAME_RATE_ICON} {rate}  {PING_ICON} {ping}",
+            player.x, player.y,
+        );
+        // Show Debug Info adds the hour and the view's numbers, for those who
+        // may use it.
+        let info = info.0 && tools.may(DebugTool::ShowDebugInfo);
+        if info {
+            status += &format!("  {HOUR_ICON} {}d{:02}h", clock.hour / 24, clock.hour % 24);
+        }
+        let stats = match info {
+            true => stats.summary.clone(),
+            false => String::new(),
+        };
+        (status, stats)
     };
-    // Single player has no network to time.
-    let ping = match server_clock.round_trip_ms {
-        Some(ms) if !server_clock.local_server => format!("{ms:.0}ms"),
-        _ => "-".to_string(),
+    let now = Said {
+        words,
+        warning,
+        stats,
+        left,
     };
-    let rate = frames
-        .rate()
-        .map_or("-".to_string(), |rate| format!("{rate:.0}"));
-    let mut status = format!(
-        "{POSITION_ICON} {},{}  {FRAME_RATE_ICON} {rate}  {PING_ICON} {ping}",
-        player.x, player.y,
-    );
-    // Show Debug Info adds the hour and the view's numbers, for those who may
-    // use it.
-    let info = info.0 && tools.may(DebugTool::ShowDebugInfo);
-    if info {
-        status += &format!("  {HOUR_ICON} {}d{:02}h", clock.hour / 24, clock.hour % 24);
+    // Only what differs from what it says is changed: most frames, nothing.
+    let was = said.as_ref();
+    if was.is_none_or(|was| was.left != now.left) {
+        dom.set("status/text", "left", &now.left.to_string());
     }
-    text.0 = status;
-    stats_text.0 = if info {
-        format!("\n{}", stats.summary)
-    } else {
-        String::new()
-    };
+    if was.is_none_or(|was| was.words != now.words) {
+        dom.set_text("status/words", now.words.clone());
+    }
+    if was.is_none_or(|was| was.warning != now.warning) {
+        dom.set_text("status/warning", now.warning.clone());
+    }
+    if was.is_none_or(|was| was.stats != now.stats) {
+        dom.set_text("status/stats", now.stats.clone());
+    }
+    *said = Some(now);
 }
+
+#[cfg(test)]
+mod tests;
