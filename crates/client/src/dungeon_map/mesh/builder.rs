@@ -15,8 +15,7 @@ pub struct Builder {
     uvs: Vec<[f32; 2]>,
     pub colours: Vec<[f32; 4]>,
     pub indices: Vec<u32>,
-    /// The height of the ground each vertex stands on (raised wilderness
-    /// cells), which tops are measured from (`RAISED`).
+    /// The height of the ground each vertex stands on (sloping ground), which tops are measured from (`RAISED`).
     bases: Vec<f32>,
     /// How water at each vertex flows (`flow::packed`; 0 still).
     flows: Vec<f32>,
@@ -187,33 +186,23 @@ impl Builder {
         }
     }
 
-    /// Raises everything added since vertex `from` by `by`, onto ground that
-    /// high.
-    pub(in crate::dungeon_map) fn lift(&mut self, from: usize, by: f32) {
+    /// Raises each vertex added since `from` by the ground's height under it,
+    /// `ground(position)`, which tops are then measured from (`RAISED`).
+    pub(in crate::dungeon_map) fn drape(&mut self, from: usize, ground: impl Fn(Vec3) -> f32) {
         for (position, base) in self.positions[from..]
             .iter_mut()
             .zip(&mut self.bases[from..])
         {
+            let by = ground(Vec3::from_array(*position));
             position[1] += by;
             *base += by;
         }
     }
 
-    /// Moves each vertex added since `from` that lies below its ground (a
-    /// liquid's surface, bed and the foot of its sides) by `by` its place, and
-    /// gives them all `flow`.
-    pub(in crate::dungeon_map) fn slope(
-        &mut self,
-        from: usize,
-        by: impl Fn(Vec3) -> f32,
-        flow: f32,
-    ) {
-        for i in from..self.positions.len() {
-            let position = Vec3::from_array(self.positions[i]);
-            if position.y < self.bases[i] - 0.001 {
-                self.positions[i][1] += by(position);
-            }
-            self.flows[i] = flow;
+    /// Gives every vertex added since `from` how water there flows.
+    pub(in crate::dungeon_map) fn set_flow(&mut self, from: usize, flow: f32) {
+        for value in &mut self.flows[from..] {
+            *value = flow;
         }
     }
 

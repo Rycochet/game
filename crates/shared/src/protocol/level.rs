@@ -82,6 +82,9 @@ pub struct LevelInfo {
     /// castle's or fort's (`place_name`), worked out by the server, which keeps
     /// the seed. The same on every level, and kept by a ruin.
     pub place_name: Option<String>,
+    /// The kind of ground it has (`relief`): what its heights are made from.
+    #[serde(default)]
+    pub ground: crate::relief::LevelGround,
 }
 
 impl LevelInfo {

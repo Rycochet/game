@@ -1,15 +1,15 @@
 //! Bags stand on their cell's ground, raised in the wilderness
-//! (`common::WildCellHeights`).
+//! (`common::DrawnGround`).
 
 use bevy::prelude::*;
 
 use super::Bags;
-use crate::common::WildCellHeights;
+use crate::common::DrawnGround;
 use crate::dungeon_map::CELL_SIZE;
 
 /// Puts each bag on its cell's ground whenever bags or heights change.
 pub(super) fn raise_bags(
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     bags: Res<Bags>,
     mut places: Query<&mut Transform>,
 ) {

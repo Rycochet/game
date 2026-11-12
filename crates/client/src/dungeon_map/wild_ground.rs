@@ -11,7 +11,7 @@ use shared::surface::SurfaceSample;
 use shared::wilderness::SCALE;
 
 use crate::common::{
-    CurrentDungeon, CurrentWorld, GameClock, MapPosition, WildCellHeights, WorldReturn,
+    CurrentDungeon, CurrentWorld, DrawnGround, GameClock, MapPosition, WorldReturn,
 };
 use crate::surface_style::SurfaceStyle;
 
@@ -43,18 +43,21 @@ impl GroundTint {
         self.0.as_ref()
     }
 
-    /// What drawing the wilderness's land needs, or nothing anywhere else.
-    pub fn wild<'a>(&'a self, heights: &'a WildCellHeights) -> Option<Wild<'a>> {
-        let tints = self.tints()?;
-        Some(Wild { tints, heights })
+    /// What drawing the land needs: the wilderness's colours (none
+    /// anywhere else) and the ground's shape.
+    pub fn wild<'a>(&'a self, heights: &'a DrawnGround) -> Option<Wild<'a>> {
+        Some(Wild {
+            tints: self.tints(),
+            heights,
+        })
     }
 }
 
-/// The wilderness's land, for drawing: its colours and its cells' heights.
+/// The land, for drawing: the wilderness's colours and the ground's shape.
 #[derive(Clone, Copy)]
 pub struct Wild<'a> {
-    pub tints: &'a Tints,
-    pub heights: &'a WildCellHeights,
+    pub tints: Option<&'a Tints>,
+    pub heights: &'a DrawnGround,
 }
 
 impl Tints {

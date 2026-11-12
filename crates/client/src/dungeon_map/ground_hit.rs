@@ -1,40 +1,49 @@
 //! Where the camera's ray reaches the ground, for clicks: the floor at height
-//! 0, or in the wilderness the first raised cell it comes down on, or the face
-//! down from one it runs into (which counts as that cell).
+//! 0, or on sloping ground (`common::DrawnGround`) the first place it comes
+//! down onto the surface, found in short steps along it and then narrowed.
 
 use bevy::prelude::*;
 
 use super::CELL_SIZE;
-use crate::common::WildCellHeights;
+use crate::common::DrawnGround;
 
-/// The most cells a ray is followed across before giving up.
-const MOST_CELLS: usize = 4000;
+/// How far apart, across the ground, the ray is tried, in cells: under a
+/// quarter of a cell, no slope the ground has can hide between two tries.
+const TRY_EVERY: f32 = 0.2;
 
-/// The ground clicks land on: flat, or the wilderness's raised cells.
+/// How many times the place between the last try above the ground and the
+/// first below it is halved.
+const NARROWING: usize = 14;
+
+/// The most tries before giving up.
+const MOST_TRIES: usize = 40_000;
+
+/// The ground clicks land on: flat, or the level's sloping ground.
 #[derive(Clone, Copy)]
-pub struct Ground<'a>(pub Option<&'a WildCellHeights>);
+pub struct Ground<'a>(pub Option<&'a DrawnGround>);
 
 impl Ground<'_> {
-    /// Flat ground at height 0: every level but the wilderness (tests).
+    /// Flat ground at height 0 (tests).
     #[cfg(test)]
     pub const FLAT: Ground<'static> = Ground(None);
 
-    /// How high a cell's ground is drawn, in world units.
+    /// How high a cell's middle is drawn, in world units.
     pub fn at(&self, x: i64, y: i64) -> f32 {
-        self.0
-            .map_or(0.0, |heights| heights.drawn(x, y) * CELL_SIZE)
+        self.0.map_or(0.0, |ground| ground.drawn(x, y) * CELL_SIZE)
     }
 
-    /// How high a known cell's ground is drawn, or `None` where its height
-    /// isn't known (beyond the window), which the ray passes over.
-    fn known(&self, x: i64, y: i64) -> Option<f32> {
-        match self.0 {
-            None => Some(0.0),
-            Some(heights) => {
-                let known = heights.heights.as_ref()?.covers(x, y);
-                known.then(|| self.at(x, y))
-            }
-        }
+    /// How high the ground is at a point, in world units, or `None` over a
+    /// cell whose height isn't known (beyond the window), which the ray
+    /// passes over.
+    fn under(&self, point: Vec3) -> Option<f32> {
+        let Some(ground) = self.0 else {
+            return Some(0.0);
+        };
+        let (x, y) = (point.x / CELL_SIZE, point.z / CELL_SIZE);
+        let cell = (x.round() as i64, y.round() as i64);
+        ground
+            .covers(cell.0, cell.1)
+            .then(|| ground.drawn_between(x, y) * CELL_SIZE)
     }
 
     /// How far along the ray it reaches the ground, where, and in which cell.
@@ -49,45 +58,37 @@ impl Ground<'_> {
                 (point.z / CELL_SIZE).round() as i64,
             )
         };
-        // Flat off the wilderness, where `WildCellHeights` is there but holds
-        // no heights (every level the view draws but the wilderness).
-        if self.0.is_none_or(|heights| heights.heights.is_none()) {
+        if self.0.is_none_or(|ground| !ground.slopes()) {
             let distance = -origin.y / direction.y;
             let point = origin + direction * distance;
             return Some((distance, point, cell_of(point)));
         }
-        // Cell by cell along the ray's way across the ground.
-        let mut cell = cell_of(origin);
-        let mut entered = 0.0;
-        let step = (direction.x.signum() as i64, direction.z.signum() as i64);
-        let to_edge = |at: f32, cell: i64, sign: i64, along: f32| {
-            if sign == 0 {
-                return f32::INFINITY;
-            }
-            let edge = (cell as f32 + 0.5 * sign as f32) * CELL_SIZE;
-            (edge - at) / along
+        let point_at = |distance: f32| origin + direction * distance;
+        let below = |distance: f32| {
+            let point = point_at(distance);
+            self.under(point).is_some_and(|ground| point.y <= ground)
         };
-        for _ in 0..MOST_CELLS {
-            let leaves_x = to_edge(origin.x, cell.0, step.0, direction.x);
-            let leaves_z = to_edge(origin.z, cell.1, step.1, direction.z);
-            let left = leaves_x.min(leaves_z);
-            if let Some(ground) = self.known(cell.0, cell.1) {
-                let height_at = |distance: f32| origin.y + direction.y * distance;
-                if height_at(entered) <= ground {
-                    // Into the face down from this cell.
-                    return Some((entered, origin + direction * entered, cell));
+        // Steps short across the ground, and at most a cell downwards when
+        // looking almost straight down.
+        let across = Vec2::new(direction.x, direction.z).length();
+        let step = (TRY_EVERY * CELL_SIZE / across).min(CELL_SIZE / -direction.y);
+        let mut above = 0.0;
+        for _ in 0..MOST_TRIES {
+            let next = above + step;
+            if below(next) {
+                let mut low = next;
+                for _ in 0..NARROWING {
+                    let middle = (above + low) / 2.0;
+                    if below(middle) {
+                        low = middle;
+                    } else {
+                        above = middle;
+                    }
                 }
-                if height_at(left) <= ground {
-                    let distance = (ground - origin.y) / direction.y;
-                    return Some((distance, origin + direction * distance, cell));
-                }
+                let point = point_at(low);
+                return Some((low, point, cell_of(point)));
             }
-            entered = left;
-            if leaves_x < leaves_z {
-                cell.0 += step.0;
-            } else {
-                cell.1 += step.1;
-            }
+            above = next;
         }
         None
     }

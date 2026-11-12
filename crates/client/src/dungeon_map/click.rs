@@ -7,7 +7,7 @@ use shared::protocol::{ClientMessage, DevMob, DevMobTool};
 use super::Shown;
 use super::ground_hit::Ground;
 use crate::common::{
-    ClickMode, CreateMobOrder, CurrentDungeon, HoveredBag, PointerPosition, WildCellHeights,
+    ClickMode, CreateMobOrder, CurrentDungeon, DrawnGround, HoveredBag, PointerPosition,
 };
 use crate::connection::ToServer;
 use crate::player::TravelTo;
@@ -32,7 +32,7 @@ pub(super) fn pick_on_click(
     shown: Res<Shown>,
     bag: Res<HoveredBag>,
     order: Res<CreateMobOrder>,
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     mut travel: MessageWriter<TravelTo>,
     mut door_clicked: MessageWriter<DoorClicked>,
     mut to_server: MessageWriter<ToServer>,

@@ -16,7 +16,7 @@ use bevy::prelude::*;
 use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{MapPosition, Preferences, SmoothPosition, ViewFacing, WildCellHeights};
+use crate::common::{DrawnGround, MapPosition, Preferences, SmoothPosition, ViewFacing};
 use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{
@@ -100,7 +100,7 @@ pub struct ViewCamera;
 /// becomes current. Grid position `(x, y)` is drawn at
 /// `(x × cell_size, floor, y × cell_size)`; the camera looks at the floor and
 /// tokens stand on it. `raised`: the wilderness's cells are raised by their
-/// heights (`common::WildCellHeights`, none on other levels), and so are the
+/// ground's shape (`common::DrawnGround`, flat in buildings), and so are the
 /// camera and tokens.
 #[derive(Resource, Clone, Copy, Debug, PartialEq)]
 pub struct ViewGrid {
@@ -111,7 +111,7 @@ pub struct ViewGrid {
 
 impl ViewGrid {
     /// The floor's height at grid position `(x, y)`, in world units.
-    pub fn floor_at(&self, heights: &WildCellHeights, x: f32, y: f32) -> f32 {
+    pub fn floor_at(&self, heights: &DrawnGround, x: f32, y: f32) -> f32 {
         match self.raised {
             true => self.floor + heights.drawn_between(x, y) * self.cell_size,
             false => self.floor,
@@ -179,7 +179,7 @@ fn place_camera_and_tokens(
     player: Single<(Option<&MapPosition>, &SmoothPosition), With<Player>>,
     preferences: Res<Preferences>,
     grid: Res<ViewGrid>,
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     positions: Query<(Option<&MapPosition>, &SmoothPosition)>,
     mut facing: ResMut<ViewFacing>,
     time: Res<Time>,
@@ -204,11 +204,11 @@ fn place_camera_and_tokens(
     // screen, and the land moves under them.
     let target = Vec3::new(x * size, grid.floor_at(&heights, x, y), y * size);
     // Tilted up as far as a clear line to them over that land needs.
-    let wanted = match (grid.raised, &heights.heights) {
-        (true, Some(known)) => {
+    let wanted = match grid.raised && heights.slopes() {
+        true => {
             let ground = |cx: i64, cy: i64| {
                 let floor = grid.floor + heights.drawn(cx, cy) * size;
-                known.covers(cx, cy).then_some(floor)
+                heights.covers(cx, cy).then_some(floor)
             };
             clearance::clearing_raise(&orbit, target, size, ground)
         }

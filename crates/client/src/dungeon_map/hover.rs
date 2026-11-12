@@ -8,7 +8,7 @@ use shared::site::StairsDirection;
 use super::Shown;
 use super::ground_hit::Ground;
 use super::picking::{door_clicked, pick};
-use crate::common::{CurrentDungeon, GameView, HoveredOnMap, PointerPosition, WildCellHeights};
+use crate::common::{CurrentDungeon, DrawnGround, GameView, HoveredOnMap, PointerPosition};
 use crate::view3d::ViewCamera;
 
 /// What the hatched border round a poi in the wilderness is called.
@@ -22,7 +22,7 @@ pub(super) fn name_hovered_place(
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     mut hovered: ResMut<HoveredOnMap>,
 ) {
     let (camera, camera_transform) = *camera;

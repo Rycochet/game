@@ -4,14 +4,14 @@ use bevy::prelude::*;
 
 use super::CELL_SIZE;
 use super::{CropPart, HerbPart, Shown};
-use crate::common::{CurrentDungeon, GameClock, HerbGrowthShift, WildCellHeights, WorldReturn};
+use crate::common::{CurrentDungeon, DrawnGround, GameClock, HerbGrowthShift, WorldReturn};
 
 /// Builds the crops again when what is seen changes: never for the camera, as
 /// fields can hold many more faces than everything else put together.
 pub(super) fn update_crops(
     dungeon: Res<CurrentDungeon>,
     shown: Res<Shown>,
-    heights: Res<WildCellHeights>,
+    heights: Res<DrawnGround>,
     part: Single<(&Mesh3d, &mut Visibility), With<CropPart>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut built: Local<u64>,
@@ -21,7 +21,7 @@ pub(super) fn update_crops(
     };
     *built = shown.looks;
     let ruined = dungeon.info.as_ref().is_some_and(|info| info.ruined);
-    let ground = |x, y| heights.drawn(x, y) * CELL_SIZE;
+    let ground = |at: Vec3| heights.drawn_between(at.x / CELL_SIZE, at.z / CELL_SIZE) * CELL_SIZE;
     let remembered = &dungeon.remembered;
     let crops = super::field::build_crops(&dungeon.fields, sight, remembered, ruined, &ground);
     let (handle, mut visibility) = part.into_inner();
@@ -44,7 +44,7 @@ pub(super) fn update_herbs(
     shown: Res<Shown>,
     clock: Res<GameClock>,
     shift: Res<HerbGrowthShift>,
-    (place, heights): (Res<WorldReturn>, Res<WildCellHeights>),
+    (place, heights): (Res<WorldReturn>, Res<DrawnGround>),
     part: Single<(&Mesh3d, &mut Visibility), With<HerbPart>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut built: Local<(u64, u32)>,
@@ -56,7 +56,7 @@ pub(super) fn update_herbs(
     };
     *built = now;
     let at = (place.0.x, place.0.y);
-    let ground = |x, y| heights.drawn(x, y) * CELL_SIZE;
+    let ground = |at: Vec3| heights.drawn_between(at.x / CELL_SIZE, at.z / CELL_SIZE) * CELL_SIZE;
     let seen = (sight, &dungeon.remembered);
     let plants = super::herbs::build_plants(&dungeon.level, seen, at, grown, &ground);
     let (handle, mut visibility) = part.into_inner();

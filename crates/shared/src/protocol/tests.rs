@@ -383,6 +383,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             arrival: (4, 5),
             entering_site: true,
             place_name: None,
+            ground: Default::default(),
         }),
         ServerMessage::RememberedLevel(RememberedLevel {
             index: 2,

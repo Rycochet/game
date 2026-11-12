@@ -18,7 +18,7 @@ use shared::rng::Seed;
 use super::daylight::OutsideLight;
 use super::{CELL_SIZE, Shown};
 use crate::common::{
-    CurrentDungeon, CurrentWorld, Lightning, Preferences, ServerClock, WildCellHeights, WorldReturn,
+    CurrentDungeon, CurrentWorld, DrawnGround, Lightning, Preferences, ServerClock, WorldReturn,
 };
 
 /// Quads of precipitation per cell, shown in proportion to how hard it is
@@ -110,7 +110,7 @@ pub fn spawn(
 /// on the ground, with a random number as its height for the shader, added to
 /// the ground's height rounded to a whole unit. Drops come from their cell's
 /// position, so they stay put as others come into sight.
-fn drops_mesh(cells: &[(i64, i64)], heights: &WildCellHeights) -> Mesh {
+fn drops_mesh(cells: &[(i64, i64)], heights: &DrawnGround) -> Mesh {
     let seed = Seed::new(1);
     let mut positions = Vec::new();
     let mut corners = Vec::new();
@@ -157,7 +157,7 @@ pub fn update(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<RainMaterial>>,
     mut outside: Local<Vec<(i64, i64)>>,
-    (preferences, heights): (Res<Preferences>, Res<WildCellHeights>),
+    (preferences, heights): (Res<Preferences>, Res<DrawnGround>),
 ) {
     let Some(world) = world else {
         return;

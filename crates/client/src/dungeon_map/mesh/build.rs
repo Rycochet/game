@@ -13,8 +13,8 @@ use super::super::town;
 use super::super::walls::{Layers, LeafPose, Scene};
 use super::super::wild_ground::Wild;
 use super::cutaway::{cut_height, settle_in_the_way};
-use super::flow::slope_liquid;
-use super::raise::{Marks, build_edges};
+use super::flow::flow_liquid;
+use super::marks::Marks;
 use super::{
     Builder, DungeonMeshes, LightGrid, Surface, View, build_cell_at, copy_as_memory, sizes,
 };
@@ -100,7 +100,7 @@ pub fn build_posed(
         lit_buildings,
         fields,
         ruined,
-        tint: wild.map(|wild| wild.tints),
+        tint: wild.and_then(|wild| wild.tints),
         heights: wild.map(|wild| wild.heights),
         leaves,
     };
@@ -121,16 +121,15 @@ pub fn build_posed(
             );
             build_cell_at(&mut layers, &scene, stairs, (x, y));
             if level.is_wall(x, y) || level.is_opening(x, y) {
-                // Measured from its ground, on raised land.
+                // Measured from its ground, on sloping land.
                 let camera = scene.camera - Vec3::Y * scene.ground(x, y);
                 let cut = player.and_then(|player| cut_height(player, (x, y)));
                 settle_in_the_way(&mut layers, &marks, through, camera, cut);
             }
-            marks.lift(&mut layers, scene.ground(x, y));
+            marks.drape(&mut layers, |at| scene.surface(at));
             if level.cell(x, y).looks_liquid() {
-                slope_liquid(&mut layers, &marks, &scene, (x, y));
+                flow_liquid(&mut layers, &marks, &scene, (x, y));
             }
-            build_edges(&mut layers, &scene, (x, y));
             if cut.is_seen(x, y) {
                 copy_as_memory(&mut layers, &before);
             }

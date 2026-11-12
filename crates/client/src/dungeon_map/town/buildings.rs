@@ -26,9 +26,7 @@ pub fn build_buildings(layers: &mut Layers, scene: &Scene) {
             }
         }
         // On a cutout's flat ground, all at one height.
-        if let Some(rect) = building.rects.first() {
-            marks.lift(layers, scene.ground(rect.x, rect.y));
-        }
+        marks.drape(layers, |at| scene.surface(at));
     }
 }
 

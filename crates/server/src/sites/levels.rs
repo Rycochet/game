@@ -7,6 +7,7 @@ use shared::poi::Poi;
 use shared::protocol::{
     LevelInfo, LevelKind, RememberedLevel, SeenStairs, ServerMessage, level_chunk,
 };
+use shared::relief::LevelGround;
 use shared::shop::sells;
 use shared::site::{Exit, Site, SiteLevel, Stairs, StairsDirection};
 
@@ -159,6 +160,16 @@ pub(super) fn enter_level(
         Arrival::From(from) => level.arrive(from),
     };
     world.move_mob_aside((new.id, index), position);
+    let ground = match new.id {
+        SiteId::Poi(_) | SiteId::Dev { .. } => LevelGround::of_site(
+            &world.wilderness.wild,
+            &world.ground,
+            (new.poi, site),
+            index,
+            &level,
+        ),
+        _ => LevelGround::Flat,
+    };
     let info = LevelInfo {
         kind: LevelKind::Poi(site.kind()),
         ruined: site.is_ruined(),
@@ -170,6 +181,7 @@ pub(super) fn enter_level(
         arrival: position,
         entering_site,
         place_name: place_name_of(world, &new.poi),
+        ground,
     };
     let view = Sight::new(&level.level);
     world.populate(new.id, new.poi, index, &level);

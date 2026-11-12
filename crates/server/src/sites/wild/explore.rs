@@ -85,6 +85,7 @@ pub(in crate::sites) fn enter_wilderness(
         arrival: position,
         entering_site: true,
         place_name: None,
+        ground: shared::relief::LevelGround::Wilderness,
     };
     client.changed_map();
     let in_poi = poi_here(world, position);
