@@ -36,6 +36,13 @@ pub(super) struct Tab {
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TabChosen(pub Entity, pub usize);
 
+/// How a row's buttons are made, kept for making them again (`set_tabs`).
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct TabsLook {
+    style: ButtonStyle,
+    size: TextSize,
+}
+
 /// Joined buttons with these words, to pick one option, all on show, with `selected`
 /// chosen. Returns the row, for telling which `TabChosen` is about.
 pub fn spawn_toggle_row(
@@ -44,21 +51,10 @@ pub fn spawn_toggle_row(
     selected: usize,
     size: TextSize,
 ) -> Entity {
-    let node = Node {
-        padding: BUTTON_PADDING,
-        ..default()
-    };
-    let row = parent.spawn((Tabs { selected }, Node::default())).id();
-    spawn_row(
-        parent,
-        row,
-        labels,
-        selected,
-        size,
-        node,
-        ButtonStyle::Plain,
-    );
-    row
+    let style = ButtonStyle::Plain;
+    let look = TabsLook { style, size };
+    let row = parent.spawn((Tabs { selected }, look, Node::default()));
+    fill_row(row, labels, selected, look)
 }
 
 /// Folder tabs with these words, to switch between views of one thing, with
@@ -69,45 +65,45 @@ pub fn spawn_tabs(
     selected: usize,
     size: TextSize,
 ) -> Entity {
+    let style = ButtonStyle::Folder;
+    let look = TabsLook { style, size };
     let node = Node {
-        padding: BUTTON_PADDING,
-        margin: UiRect::bottom(px(-TAB_LINE)),
+        column_gap: px(TAB_GAP),
+        border: UiRect::bottom(px(TAB_LINE)),
         ..default()
     };
-    let row = parent
-        .spawn((
-            Tabs { selected },
-            Node {
-                column_gap: px(TAB_GAP),
-                border: UiRect::bottom(px(TAB_LINE)),
-                ..default()
-            },
-            BorderColor::from(SHADED_EDGE),
-        ))
-        .id();
-    spawn_row(
-        parent,
-        row,
-        labels,
-        selected,
-        size,
-        node,
-        ButtonStyle::Folder,
-    );
-    row
+    let edge = BorderColor::from(SHADED_EDGE);
+    let row = parent.spawn((Tabs { selected }, look, node, edge));
+    fill_row(row, labels, selected, look)
 }
 
-/// Puts the buttons in a row.
-fn spawn_row(
-    parent: &mut ChildSpawnerCommands,
-    row: Entity,
-    labels: &[&str],
-    selected: usize,
-    size: TextSize,
-    node: Node,
-    style: ButtonStyle,
-) {
-    parent.commands().entity(row).with_children(|row_inside| {
+/// Gives a row these words instead of its own, with the first chosen. False
+/// if `row` isn't one.
+pub fn set_tabs(world: &mut World, row: Entity, labels: &[String]) -> bool {
+    let Some(look) = world.get::<TabsLook>(row).copied() else {
+        return false;
+    };
+    if let Some(mut tabs) = world.get_mut::<Tabs>(row) {
+        tabs.selected = 0;
+    }
+    world.entity_mut(row).despawn_related::<Children>();
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    fill_row(world.commands().entity(row), &labels, 0, look);
+    true
+}
+
+/// Puts the buttons in a row, and gives the row back.
+fn fill_row(mut row: EntityCommands, labels: &[&str], selected: usize, look: TabsLook) -> Entity {
+    let TabsLook { style, size } = look;
+    let folder = style == ButtonStyle::Folder;
+    let node = Node {
+        padding: BUTTON_PADDING,
+        // A folder tab stands on the line under the row.
+        margin: UiRect::bottom(px(if folder { -TAB_LINE } else { 0.0 })),
+        ..default()
+    };
+    let id = row.id();
+    row.with_children(|row_inside| {
         for (index, label) in labels.iter().enumerate() {
             spawn_button(
                 row_inside,
@@ -116,15 +112,16 @@ fn spawn_row(
                 size,
                 node.clone(),
             )
-            .insert((Tab { row, index }, style, Pressable))
+            .insert((Tab { row: id, index }, style, Pressable))
             .with_children(|tab| {
-                if style == ButtonStyle::Folder {
+                if folder {
                     let tab_entity = tab.target_entity();
                     tab.spawn(foot(tab_entity, index == selected));
                 }
             });
         }
     });
+    id
 }
 
 /// Covers the tab's bottom border, reaching under its sides' borders too.

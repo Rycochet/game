@@ -29,12 +29,13 @@ impl Plugin for AccountsPanelPlugin {
             Update,
             (
                 answers::read_answers,
+                open::notice_closed,
                 open::open_panel,
+                open::bind_panel,
                 input::choose_tab,
                 input::keep_typing,
                 input::keep_choices,
                 input::press_buttons,
-                open::notice_closed,
                 fill::fill_page,
             )
                 .chain(),

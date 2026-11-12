@@ -150,6 +150,31 @@ fn a_selects_options_are_changed_and_its_value_chooses_among_them() {
     assert_eq!(dropdown.options, ["Easy", "Hard"]);
 }
 
+static TABBED: Template = html!(
+    "tabbed",
+    r#"<form id="t"><tab-bar id="tabs"><option>One</option><option>Two</option></tab-bar></form>"#
+);
+
+#[test]
+fn a_tab_bars_options_are_changed_and_its_value_chooses_among_them() {
+    use crate::widgets::ChooseTab;
+    let mut app = built(&TABBED);
+    change(&mut app, |dom| {
+        let options = ["Find", "Roles", "Audit Log"];
+        dom.set_options(
+            "t/tabs",
+            options.map(|tab| (tab.to_owned(), tab.to_owned())),
+        );
+        dom.set("t/tabs", "value", "Roles");
+    });
+    let tabs = find(&mut app, "t/tabs");
+    assert_eq!(app.world().get::<Children>(tabs).unwrap().len(), 3);
+    // The row is asked to choose the tab its value names (`widgets` does).
+    let asked = app.world().resource::<Messages<ChooseTab>>();
+    let asked: Vec<ChooseTab> = asked.iter_current_update_messages().copied().collect();
+    assert_eq!(asked.last(), Some(&ChooseTab(tabs, 1)));
+}
+
 static KEYS: Template = html!(
     "keys",
     r#"<form id="c">

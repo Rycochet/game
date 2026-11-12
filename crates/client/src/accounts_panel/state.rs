@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use shared::protocol::FoundAccount;
 use shared::role::{Permission, Powers, RoleBadge};
 
-/// The widgets' form (`widgets::UiId`).
+/// The form of the widgets still made by code (`widgets::UiId`), the same as
+/// the panel's markup.
 pub(super) const FORM: &str = "accounts";
 
 /// How long a role is given for: the dropdown's words and minutes (none: for good).
@@ -53,8 +54,10 @@ pub(super) fn tabs_for(powers: &Powers) -> Vec<Tab> {
 /// The open panel, if any, and everything it shows.
 #[derive(Resource, Default)]
 pub(super) struct Panel {
+    /// Its document, from when it is opened.
+    pub document: Option<Entity>,
+    /// The panel itself and its page, once built.
     pub root: Option<Entity>,
-    pub tabs_row: Option<Entity>,
     pub body: Option<Entity>,
     pub tabs: Vec<Tab>,
     pub tab: usize,

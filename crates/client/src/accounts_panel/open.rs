@@ -1,20 +1,33 @@
-//! Opening the panel (the system menu's Accounts), and forgetting it once
-//! closed or no longer playing.
+//! Opening the panel (the system menu's Accounts), finding its parts once
+//! built, and forgetting it once closed or no longer playing.
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, RoleAsk};
 
-use super::FONT;
-use super::state::{FORM, Panel, Tab, tabs_for};
+use super::state::{Panel, Tab, tabs_for};
 use crate::common::{AccountRole, OpenAccounts, Session};
 use crate::connection::ToServer;
-use crate::widgets::{RaisePanel, UiId, spawn_moveable_panel, spawn_tabs};
+use crate::dom::{Dom, Template, UiEvent, UiValue, document};
+use crate::html;
+use crate::widgets::{RaisePanel, UiId};
 
-/// Where it opens, in interface pixels from the top left.
-const AT: Vec2 = Vec2::new(120.0, 100.0);
-
-/// How wide its pages are.
-pub(super) const WIDTH: f32 = 520.0;
+/// The panel: its tabs (those the role may see are put in when it opens) and
+/// the chosen tab's page.
+pub(super) static ACCOUNTS: Template = html!(
+    "accounts_panel.accounts",
+    r#"
+<form id="accounts">
+  <panel id="panel" title="Accounts" moveable left="120" top="100">
+    <tab-bar id="tabs">
+      <option>Find</option>
+      <option>Roles</option>
+      <option>Audit Log</option>
+    </tab-bar>
+    <div id="page" width="520"/>
+  </panel>
+</form>
+"#
+);
 
 pub(super) fn open_panel(
     mut open: MessageReader<OpenAccounts>,
@@ -23,37 +36,29 @@ pub(super) fn open_panel(
     role: Res<AccountRole>,
     mut raise: MessageWriter<RaisePanel>,
     mut to_server: MessageWriter<ToServer>,
+    mut dom: Dom,
 ) {
     if open.read().count() == 0 {
         return;
     }
-    if let Some(root) = panel.root {
-        raise.write(RaisePanel(root));
+    if panel.document.is_some() {
+        if let Some(root) = panel.root {
+            raise.write(RaisePanel(root));
+        }
         return;
     }
     let tabs = tabs_for(&role.powers);
-    let labels: Vec<&str> = tabs.iter().map(|tab| tab.label()).collect();
-    let (root, content) = spawn_moveable_panel(&mut commands, "Accounts", AT);
-    commands.entity(root).insert(UiId::new(FORM, "panel"));
-    let mut row = None;
-    let mut body = None;
-    commands.entity(content).with_children(|content| {
-        if labels.len() > 1 {
-            let tabs_row = spawn_tabs(content, &labels, 0, FONT);
-            content
-                .commands()
-                .entity(tabs_row)
-                .insert(UiId::new(FORM, "page"));
-            row = Some(tabs_row);
-        }
-        let page = Node {
-            flex_direction: FlexDirection::Column,
-            row_gap: px(8),
-            width: px(WIDTH),
-            ..default()
-        };
-        body = Some(content.spawn(page).id());
-    });
+    let document = commands.spawn(document(&ACCOUNTS)).id();
+    // Only the tabs the role has something on, and none for a single page.
+    if tabs.len() > 1 {
+        let label = |tab: &Tab| tab.label().to_owned();
+        dom.set_options(
+            "accounts/tabs",
+            tabs.iter().map(|tab| (label(tab), label(tab))),
+        );
+    } else {
+        dom.set_flag("accounts/tabs", "hidden", true);
+    }
     for tab in &tabs {
         let ask = match tab {
             Tab::Roles => RoleAsk::Roles,
@@ -63,30 +68,42 @@ pub(super) fn open_panel(
         to_server.write(ToServer(ClientMessage::Role(ask)));
     }
     *panel = Panel {
-        root: Some(root),
-        tabs_row: row,
-        body,
+        document: Some(document),
         tabs,
         dirty: true,
         ..default()
     };
 }
 
-/// Forgets the panel once its close button has gone, and closes it on leaving
-/// the game.
+/// Notes the built panel (to bring it to the front) and its page (to fill).
+pub(super) fn bind_panel(new: Query<(Entity, &UiId), Added<UiId>>, mut panel: ResMut<Panel>) {
+    for (entity, id) in &new {
+        match id.parts() {
+            ("accounts", "panel") => panel.root = Some(entity),
+            ("accounts", "page") => panel.body = Some(entity),
+            _ => {}
+        }
+    }
+}
+
+/// Forgets the panel once its close button has closed it, and closes it on
+/// leaving the game.
 pub(super) fn notice_closed(
+    mut events: MessageReader<UiEvent>,
     mut commands: Commands,
     mut panel: ResMut<Panel>,
     session: Res<Session>,
-    exists: Query<()>,
 ) {
-    let Some(root) = panel.root else {
+    let closed = |event: &UiEvent| {
+        event.id == UiId::new("accounts", "panel") && event.value == UiValue::Closed
+    };
+    let closed = events.read().filter(|event| closed(event)).count() > 0;
+    let Some(document) = panel.document else {
         return;
     };
-    if !exists.contains(root) {
-        *panel = Panel::default();
-    } else if !session.is_playing() {
-        commands.entity(root).despawn();
+    if closed || !session.is_playing() {
+        // The rest of the document goes with its panel.
+        commands.entity(document).despawn();
         *panel = Panel::default();
     }
 }
