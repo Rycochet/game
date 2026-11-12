@@ -9,13 +9,13 @@ use bevy::prelude::*;
 use super::options::set_options;
 use super::rows::{are_rows, copy_rows};
 use super::{Change, DomChange};
-use crate::dom::build::{Builder, Inside};
+use crate::dom::build::{Builder, Inside, has_items};
 use crate::dom::parts::{
     Bar, Control, ControlOf, DocumentOf, Element, SurfaceOf, TemplateBody, TextStyle, Words,
 };
 use crate::dom::pictures::Pictures;
 use crate::dom::theme::Theme;
-use crate::widgets::UiId;
+use crate::widgets::{ItemText, UiId, item_text};
 
 pub(in crate::dom) fn apply_changes(world: &mut World) {
     let asked: Vec<DomChange> = world
@@ -88,7 +88,7 @@ fn words_of(world: &World, entity: Entity) -> Vec<Entity> {
     children.into_iter().filter(is_words).collect()
 }
 
-fn set_text(world: &mut World, entity: Entity, words: String) -> Result<(), String> {
+fn set_text(world: &mut World, entity: Entity, mut words: String) -> Result<(), String> {
     // A button's words are its widget's.
     if let Some(Control(widget)) = world.get::<Control>(entity).copied() {
         let held = world.get::<Children>(widget).map(|held| held.to_vec());
@@ -103,6 +103,20 @@ fn set_text(world: &mut World, entity: Entity, words: String) -> Result<(), Stri
     let mut old = words_of(world, entity).into_iter();
     match old.next() {
         Some(first) => {
+            // With items written in, they show as the items; without, any
+            // shown before go.
+            let size = world.get::<TextStyle>(entity).map(|style| style.size);
+            let mut shown = world.entity_mut(first);
+            shown.despawn_related::<Children>();
+            match size.filter(|_| has_items(&words)) {
+                Some(size) => {
+                    shown.insert(item_text(words, size));
+                    words = String::new();
+                }
+                None => {
+                    shown.remove::<ItemText>();
+                }
+            }
             if let Some(mut text) = world.get_mut::<Text>(first) {
                 text.0 = words;
             }

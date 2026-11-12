@@ -1,17 +1,21 @@
-//! `object`: one thing shown, named by its `for`. So far `type="item"`: the
-//! item with that id, drawn as in a grid (its picture or cells, its quality's
-//! edge, glow, set edge and count) and named when the pointer is on it. What
-//! the client doesn't know yet is asked of the server, and shows as an empty
-//! cell until it answers.
+//! `object`: one thing shown, named by its `for`. `type="item"`: the item with
+//! that id, drawn as in a grid (its picture or cells, its quality's edge,
+//! glow, set edge and count) and named when the pointer is on it. What the
+//! client doesn't know yet is asked of the server, and shows as an empty cell
+//! until it answers. `type="ability"`: the ability of that name
+//! (`KnownAbilities`), as on the Abilities page.
 
 use bevy::prelude::*;
 use shared::id::Id;
 use shared::item::Item;
 
+use super::object_ability::{AbilityCell, AbilityThing, KnownAbilities};
 use super::parts::Element;
 use super::tag::Tag;
 use crate::common::{KnownItem, KnownItems};
-use crate::widgets::{CELL, GRID_COLOUR, GRID_LINE, ItemLook, ItemName, spawn_item_cells};
+use crate::widgets::{
+    CELL, GRID_COLOUR, GRID_LINE, ItemLook, ItemName, spawn_ability, spawn_item_cells,
+};
 
 /// On an `object`'s element: what it last drew.
 #[derive(Component, Default)]
@@ -27,13 +31,22 @@ enum Drawn {
     /// The server knows nothing of it.
     Unknown,
     Item(Box<Item>),
+    Ability(Box<AbilityThing>),
 }
 
 /// What to show for an `object` with these attributes, asking after its item
 /// if it names one.
-fn drawn(element: &Element, known: &mut KnownItems, now: f64) -> Drawn {
-    if element.attrs.text("type") != Some("item") {
-        return Drawn::Nothing;
+fn drawn(element: &Element, known: &mut KnownItems, abilities: &KnownAbilities, now: f64) -> Drawn {
+    let named = element.attrs.text("for");
+    match element.attrs.text("type") {
+        Some("item") => {}
+        Some("ability") => {
+            let ability = named.and_then(|name| abilities.get(name));
+            return ability.map_or(Drawn::Nothing, |thing| {
+                Drawn::Ability(Box::new(thing.clone()))
+            });
+        }
+        _ => return Drawn::Nothing,
     }
     let Some(id) = element.attrs.text("for").and_then(Id::parse) else {
         return Drawn::Nothing;
@@ -50,6 +63,7 @@ fn drawn(element: &Element, known: &mut KnownItems, now: f64) -> Drawn {
 pub(super) fn show_objects(
     mut commands: Commands,
     mut known: ResMut<KnownItems>,
+    abilities: Res<KnownAbilities>,
     time: Res<Time<Real>>,
     mut objects: Query<(Entity, &Element, &mut ObjectShown)>,
 ) {
@@ -59,7 +73,7 @@ pub(super) fn show_objects(
             continue;
         }
         // (Without marking the items as changed when nothing is asked.)
-        let now_drawn = drawn(element, known.bypass_change_detection(), now);
+        let now_drawn = drawn(element, known.bypass_change_detection(), &abilities, now);
         if shown.0.as_ref() == Some(&now_drawn) {
             continue;
         }
@@ -76,6 +90,17 @@ pub(super) fn show_objects(
                     object
                         .spawn((placeholder(), BackgroundColor(GRID_COLOUR)))
                         .with_child(Text::new(words));
+                });
+            }
+            Drawn::Ability(thing) => {
+                let cell = AbilityCell {
+                    of: entity,
+                    ability: thing.ability,
+                };
+                let look = thing.look.clone();
+                object.with_children(|object| {
+                    let frame = spawn_ability(object, look);
+                    object.commands().entity(frame).insert(cell);
                 });
             }
             Drawn::Item(item) => {

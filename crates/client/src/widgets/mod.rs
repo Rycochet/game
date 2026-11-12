@@ -69,7 +69,7 @@ pub use item::{
     PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
     item_label, item_picture, logical_rect, picture_in_square, shown_at, spawn_item_cells,
 };
-pub use item_text::{ItemText, spawn_item_text};
+pub use item_text::{ItemText, item_text, spawn_item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
 pub use moveable::{PanelMoved, PanelPlace, spawn_grip_panel, spawn_moveable_panel, stops_presses};
 pub use new_seed_icon::spawn_new_seed_button;
