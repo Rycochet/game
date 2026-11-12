@@ -12,6 +12,7 @@ use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 // Split into files (`cargo xtask lint` keeps files small).
 mod doors;
 mod drawn_ground;
+mod facing;
 mod keys;
 mod level_costs;
 mod level_moves;
@@ -59,6 +60,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerEnergy>()
+            .init_resource::<facing::UntoldTurn>()
             .init_resource::<PlayerMoving>()
             .add_message::<TravelTo>()
             .add_message::<Arrived>()
@@ -75,6 +77,21 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(Startup, spawn_player)
             .add_systems(Update, size_token)
+            // Turning: after moving, which turns them too.
+            .add_systems(
+                Update,
+                (
+                    facing::turn_by_hand,
+                    facing::face_points,
+                    facing::face_ability_targets,
+                    facing::face_where_moving,
+                    facing::tell_turns,
+                    facing::keep_cone,
+                )
+                    .chain()
+                    .after(PlayerSystems::Travel)
+                    .run_if(|status: Res<ServerStatus>| status.is_connected()),
+            )
             // Nowhere to move until the server has said which world this is.
             .add_systems(
                 Update,

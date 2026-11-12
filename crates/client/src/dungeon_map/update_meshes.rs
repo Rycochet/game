@@ -3,6 +3,7 @@
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use shared::dungeon::Sight;
+use shared::facing::{Field, Heading};
 use shared::poi::PoiKind;
 use shared::protocol::LevelKind;
 
@@ -12,11 +13,12 @@ use super::mesh::{LightGrid, View, build_posed};
 use super::put_meshes::put_meshes;
 use super::sight_lines::SightLines;
 use super::theme::Theme;
+use super::viewers;
 use super::wild_ground::GroundTint;
 use super::{MemoryPart, SeeThroughPart, Shown, SolidPart, StairsThroughPart};
 use crate::common::{
-    CurrentDungeon, DrawnGround, LightSource, Lightning, MapPosition, Preferences, Remembered,
-    SharesSight, ViewStats,
+    CurrentDungeon, DrawnGround, LightSource, Lightning, MapPosition, PlayerCone, Preferences,
+    Remembered, SharesSight, ViewStats,
 };
 use crate::player::Player;
 use crate::view3d::ViewCamera;
@@ -69,7 +71,18 @@ pub(super) fn update_meshes(
         Local<Option<(u8, bool)>>,
         Res<DoorSwings>,
     ),
-    (town_lights, mut window_glow, lines, mut lines_seen, tint, lightning, heights): (
+    // With the player's field of view, and the way it faced when last worked out.
+    (
+        town_lights,
+        mut window_glow,
+        lines,
+        mut lines_seen,
+        tint,
+        lightning,
+        heights,
+        cone,
+        mut cone_seen,
+    ): (
         Res<TownLights>,
         Local<Spill>,
         Res<SightLines>,
@@ -77,12 +90,18 @@ pub(super) fn update_meshes(
         Res<GroundTint>,
         Res<Lightning>,
         Res<DrawnGround>,
+        Res<PlayerCone>,
+        Local<Option<(Heading, Field)>>,
     ),
 ) {
     let camera = camera.translation;
     let graphics = &preferences.graphics;
     let settings = (graphics.brightness, graphics.remembered != Remembered::Hide);
+    let facing = cone.0.map(|cone| (cone.heading, cone.field));
+    let turned = *cone_seen != facing;
+    *cone_seen = facing;
     let looked_again = dungeon.is_changed()
+        || turned
         || player.is_changed()
         || sharers.iter().any(|position| position.is_changed());
     let changed = *built_for != Some(camera)
@@ -108,21 +127,9 @@ pub(super) fn update_meshes(
     let start = Instant::now();
     let level = &dungeon.level;
     if looked_again || seen.is_none() {
-        let views: Vec<View> = std::iter::once(&**player)
-            .chain(sharers.iter().map(|position| position.into_inner()))
-            .map(|position| {
-                let mut sight = Sight::new(level);
-                sight.add_glimpses(level, position.x, position.y, None);
-                View {
-                    cell: (position.x, position.y),
-                    sight,
-                }
-            })
-            .collect();
-        let mut sight = Sight::new(level);
-        for view in &views {
-            sight.add_glimpses(level, view.cell.0, view.cell.1, None);
-        }
+        let player_at = (player.x, player.y);
+        let sharing = sharers.iter().map(|position| (position.x, position.y));
+        let (views, sight) = viewers::views(level, player_at, facing, sharing);
         *seen = Some((views, sight));
         shown.looks += 1;
     }

@@ -41,6 +41,7 @@ impl Plugin for StepPadPlugin {
                     show::toggle_pad,
                     show::remember_place,
                     show::show_pad,
+                    show::grey_turns,
                     show::tint_icons,
                 )
                     .chain(),

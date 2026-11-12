@@ -3,6 +3,7 @@
 
 mod dressed;
 mod dressing_wait;
+mod facing;
 mod flash;
 mod health_bars;
 mod hover_name;
@@ -62,6 +63,7 @@ impl Plugin for EntitiesPlugin {
                         .chain()
                         .after(PlayerSystems::Travel),
                     flash::flash_harmed.after(read_server),
+                    facing::read_turns.after(read_server),
                 ),
             );
     }
@@ -108,6 +110,7 @@ fn read_server(
                         at,
                         // Where the server has it (units on a level).
                         SpotPosition(shared::spot::Spot::new(look.x, look.y)),
+                        crate::common::Facing(look.heading),
                         smooth,
                         Goal::still(smooth),
                         Token {

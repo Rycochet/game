@@ -15,6 +15,8 @@ pub struct SightLines {
     pub(super) walls: WallMap,
     /// Where each viewer was when last worked out.
     pub(super) from: Vec<Vec2d>,
+    /// The way the player faced then, and how wide they see (`PlayerCone`).
+    pub(super) facing: Option<(shared::facing::Heading, shared::facing::Field)>,
     /// Open cells any outline reaches into, and the walls touching them.
     pub touched: Option<Sight>,
     /// The same for each viewer: the player first, then those sharing sight.
@@ -93,6 +95,7 @@ pub fn spawn_mask(
     commands.insert_resource(SightLines {
         walls: WallMap::default(),
         from: Vec::new(),
+        facing: None,
         touched: None,
         touched_by: Vec::new(),
         crossed: None,

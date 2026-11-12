@@ -58,6 +58,32 @@ pub(super) fn arrow(pointing: Pointing) -> Image {
     })
 }
 
+/// A curved arrow turning over the top: anticlockwise for Turn Left, its head
+/// on the left pointing down, and clockwise for Turn Right.
+pub(super) fn turn(left: bool) -> Image {
+    const MIDDLE: Vec2 = Vec2::new(32.0, 38.0);
+    const RADIUS: f32 = 19.0;
+    const HALF_THICK: f32 = 3.5;
+    let far = SIZE as f32;
+    picture(|at| {
+        // Drawn as Turn Left, mirrored for Turn Right.
+        let at = if left {
+            at
+        } else {
+            Vec2::new(far - at.x, at.y)
+        };
+        let off = at - MIDDLE;
+        // The arc over the top, from the right round to near the left end.
+        let angle = off.y.atan2(off.x).to_degrees();
+        let arc = (off.length() - RADIUS).abs() <= HALF_THICK && (-160.0..=-10.0).contains(&angle);
+        // The head at the left end, pointing down.
+        let tip = Vec2::new(MIDDLE.x - RADIUS, MIDDLE.y + 12.0);
+        let down = tip.y - at.y;
+        let head = (0.0..=14.0).contains(&down) && (at.x - tip.x).abs() <= down * 0.75;
+        arc || head
+    })
+}
+
 /// A ladder in perspective: its rails closing in towards the far end, and its
 /// rungs closer together there. `climbing` puts the far end at the top (Up),
 /// otherwise at the bottom (Down).

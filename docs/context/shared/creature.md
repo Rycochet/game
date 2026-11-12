@@ -15,6 +15,7 @@ Kinds of creature, the same for players and later mobs, and wearing things by th
 - Attributes (plan: `docs/context/abilities-skills.md`): `Row::{Body, Mind, Spirit}` (`ALL`, `name`, `attributes`: power, finesse, resistance), `Attribute` (the nine, `ALL`, `name`, `row`), `Attributes` (`all`, `get`, `set`, `for_kind(kind, &build)`). `Build { dots: [Dot; 3], turn }` (`CENTRED`, `is_valid`, `dot(row)`, `points`, `rolled(rng)`), `Dot([u16; 3])` (`CENTRE`, `is_valid`), `WEIGHT_TOTAL` 1000, `TURN_STEPS` 360, `POINTS_TOTAL` 4000, `SPREAD` 30, `POINT_WEIGHT` 25.
 - `BodyPart { location, layers, places }`: which layers a location takes, and how many things taking one place fit there.
 - `Layer::{Skin, Middle, Outer, Over}`, `Location`, `Size::{Tiny..Giant}` (`name`, `quarters`, `radius`, `stepped`, `apart`); `radius`: a footprint's in `spot` units (`quarters` × 20: Medium 80, 2/3 of a cell across; see `clearance.md`). Quarters are each band's middle beside a person (owner, 2026-11-04): Tiny 1 (under 0.75 m), Small 3 (to 1.5 m), Medium 4 (to 2.1 m), Large 6 (to 3.2 m), Huge 9 (to 4.5 m), Giant 12 (to 7 m); items' sides scale by them and worn things' and blades' weights by their cube.
+- `CreatureKind::field_of_view()`: the cone's width in degrees (`facing::Field`): 120 for people, 180 to 350 for kinds the research gives a wide field of view and for animals (horses 350, cattle 330, chickens 300). First guesses (owner, 2026-11-12).
 
 ## Depends on
 

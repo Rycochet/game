@@ -165,3 +165,29 @@ fn outline_from_between_cells_stays_in_the_room() {
         assert!(end.x.abs() <= 8.0 && end.y.abs() <= 4.0, "{end:?}");
     }
 }
+
+#[test]
+fn facing_a_way_the_outline_reaches_ahead_and_only_the_near_circle_behind() {
+    use shared::creature::CreatureKind;
+    use shared::facing::{Cone, Field, Heading};
+    let level = Level::test_room();
+    let map = WallMap::of(&level);
+    let from = point(0, 2);
+    let cone = Cone::new(
+        shared::spot::Spot::middle_of((0, 2)),
+        Heading::EAST,
+        Field::of(CreatureKind::Human, 0),
+    );
+    let outline = map.outline_in(from, Some(&cone));
+    let furthest = |east: bool| {
+        outline
+            .iter()
+            .filter(|end| (end.x > from.x) == east)
+            .map(|end| (end.x - from.x).hypot(end.y - from.y))
+            .fold(0.0, f64::max)
+    };
+    assert!(furthest(true) > 5.0, "ahead reaches the far wall");
+    assert!(furthest(false) <= 1.0 + 1e-6, "behind only the near circle");
+    // All round, it is the plain outline.
+    assert_eq!(map.outline_in(from, None).len(), map.outline(from).len());
+}

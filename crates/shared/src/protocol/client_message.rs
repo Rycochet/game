@@ -160,9 +160,8 @@ pub enum ClientMessage {
     WearFromGround { item: Id },
     /// Throws away something from a bag in the player's reach, as `BinItem`.
     BinFromGround { item: Id },
-    /// Developer tools: new items of this kind in the character's inventory, or
-    /// for `to`, made for this size (or the one getting them's own) and their
-    /// fingers, answered with `Inventory`.
+    /// Developer tools: new items of this kind for the character or `to`, made for this size
+    /// (or the one getting them's own) and their fingers, answered with `Inventory`.
     DevGiveItem {
         kind: ItemKind,
         size: Option<Size>,
@@ -201,9 +200,8 @@ pub enum ClientMessage {
     /// Developer tools: this mob dies, if it is in sight. What it had falls where it
     /// stood, and it doesn't come back.
     DevKillMob { mob: Id },
-    /// Developer tools: the character becomes this kind of creature, for good or
-    /// only its body (`how`). What its new body can't wear drops. Answered with
-    /// `Sheet` and `Inventory`.
+    /// Developer tools: the character becomes this kind of creature, for good or only its
+    /// body (`how`). What its new body can't wear drops. Answered with `Sheet` and `Inventory`.
     DevSetCreature { kind: CreatureKind, how: KindChange },
     /// Developer tools: the character is deleted, save and all, answered with
     /// `Characters` to choose or make another.
@@ -297,8 +295,6 @@ pub enum ClientMessage {
     WithdrawAbility,
     /// Open or close doors (`DoorAsk`), in turn with the player's steps.
     Door(DoorAsk),
-    /// The player has turned to face this way without moving (Turn Left or
-    /// Right, or facing a point): free and at once. Moving and using an
-    /// ability on someone turn them without it. Not answered.
+    /// The player turned in place to face this way (free and at once); not answered.
     Face(crate::facing::Heading),
 }

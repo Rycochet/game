@@ -28,7 +28,14 @@ impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CharacterSheet>().add_systems(
             Update,
-            (read_server, publish_speed, publish_limit, show_words).chain(),
+            (
+                read_server,
+                publish_speed,
+                publish_field,
+                publish_limit,
+                show_words,
+            )
+                .chain(),
         );
     }
 }
@@ -43,6 +50,18 @@ fn read_server(mut from_server: MessageReader<FromServer>, mut sheet: ResMut<Cha
             sheet.0 = new.clone();
         }
     }
+}
+
+/// What the player sees round them, by kind and Observation (`PlayerField`).
+fn publish_field(
+    sheet: Res<CharacterSheet>,
+    carried: Res<Carried>,
+    mut field: ResMut<crate::common::PlayerField>,
+) {
+    use shared::facing::{Field, observation_skill};
+    let observation = sheet.0.skills.value(observation_skill());
+    let now = Field::of(carried.0.creature, observation);
+    field.set_if_neq(crate::common::PlayerField(now));
 }
 
 /// What the player's speed and gait come to, for moving them.

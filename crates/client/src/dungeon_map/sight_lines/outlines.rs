@@ -9,7 +9,7 @@ use super::{
     Area, MASK_SPARE, MASK_TOO_BIG, MaskCamera, SightLines, SurfaceMaterial, Vec2d, WallMap,
     add_cells, add_fan, cross_cells, fan_mesh, touch_cells, view_area,
 };
-use crate::common::{CurrentDungeon, SharesSight, SmoothPosition};
+use crate::common::{CurrentDungeon, PlayerCone, SharesSight, SmoothPosition};
 use crate::player::Player;
 use crate::view3d::{OrbitCamera, ViewCamera};
 
@@ -27,6 +27,7 @@ pub fn update_outlines(
     mut lines: ResMut<SightLines>,
     mut meshes: ResMut<Assets<Mesh>>,
     outline: Single<&mut Visibility, With<OutlineMesh>>,
+    cone: Res<PlayerCone>,
 ) {
     let from: Vec<Vec2d> = std::iter::once(*player)
         .chain(sharers.iter())
@@ -35,7 +36,8 @@ pub fn update_outlines(
             y: position.y,
         })
         .collect();
-    if !dungeon.is_changed() && lines.from == from {
+    let facing = cone.0.map(|cone| (cone.heading, cone.field));
+    if !dungeon.is_changed() && lines.from == from && lines.facing == facing {
         return;
     }
     let start = Instant::now();
@@ -46,8 +48,11 @@ pub fn update_outlines(
     let mut touched_by = Vec::new();
     let mut crossed = Sight::new(level);
     let mut triangles = Vec::new();
-    for &viewer in &from {
-        let outline = lines.walls.outline(viewer);
+    // The player sees in their cone; those sharing sight all round.
+    for (i, &viewer) in from.iter().enumerate() {
+        let outline = lines
+            .walls
+            .outline_in(viewer, cone.0.as_ref().filter(|_| i == 0));
         let mut touched = Sight::new(level);
         touch_cells(level, viewer, &outline, &mut touched);
         touched_by.push(touched);
@@ -70,6 +75,7 @@ pub fn update_outlines(
         *stored = fan_mesh(triangles);
     }
     lines.from = from;
+    lines.facing = facing;
     lines.crossed = Some(crossed);
     lines.cost_ms = start.elapsed().as_secs_f32() * 1000.0;
     if lines.touched_by != touched_by {

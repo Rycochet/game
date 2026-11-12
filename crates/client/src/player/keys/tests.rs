@@ -57,7 +57,11 @@ fn a_held_key_never_lines_up_more_than_one_step() {
 #[test]
 fn a_held_pad_arrow_steps_as_a_key_does() {
     let mut app = app();
-    app.insert_resource(PadSteps { dx: -1, dy: 0 });
+    app.insert_resource(PadSteps {
+        dx: -1,
+        dy: 0,
+        turn: 0,
+    });
     app.update();
     assert_eq!(steps_asked(&mut app), 1);
     assert!(app.world().resource::<PlayerMoving>().keys);
@@ -85,7 +89,11 @@ fn line_up(app: &mut App) {
 #[test]
 fn a_click_lasting_a_few_frames_is_one_step() {
     let mut app = app();
-    app.insert_resource(PadSteps { dx: 1, dy: 0 });
+    app.insert_resource(PadSteps {
+        dx: 1,
+        dy: 0,
+        turn: 0,
+    });
     app.update();
     // Taken at once.
     assert_eq!(steps_asked(&mut app), 1);
@@ -102,7 +110,11 @@ fn a_click_lasting_a_few_frames_is_one_step() {
 #[test]
 fn a_tap_whose_step_waits_for_energy_still_steps() {
     let mut app = app();
-    app.insert_resource(PadSteps { dx: 0, dy: 1 });
+    app.insert_resource(PadSteps {
+        dx: 0,
+        dy: 1,
+        turn: 0,
+    });
     app.update();
     line_up(&mut app);
     app.update();
@@ -118,7 +130,11 @@ fn on_a_level_keys_walk_the_way_the_screen_shows() {
     // The camera turned an eighth of a turn clockwise: up the screen is
     // north-east.
     app.insert_resource(ViewTurn(std::f32::consts::FRAC_PI_4));
-    app.insert_resource(PadSteps { dx: 0, dy: -1 });
+    app.insert_resource(PadSteps {
+        dx: 0,
+        dy: -1,
+        turn: 0,
+    });
     app.update();
     let walked: Vec<Walking> = app
         .world_mut()

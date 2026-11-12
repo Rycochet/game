@@ -47,6 +47,7 @@ use crate::view3d::{TOKEN_DIAMETER, View3dSystems};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod click;
+mod face_point;
 mod flowing;
 mod growth;
 mod hover;
@@ -58,6 +59,7 @@ mod put_meshes;
 mod showing;
 mod spawn_scene;
 mod update_meshes;
+mod viewers;
 mod wild_ground;
 
 pub use click::DoorClicked;
@@ -163,7 +165,7 @@ impl Plugin for DungeonMapPlugin {
             )
             .add_systems(
                 Update,
-                hover::name_hovered_place
+                (hover::name_hovered_place, face_point::face_pointed_at)
                     .after(PlayerSystems::Travel)
                     .after(View3dSystems::Place),
             );

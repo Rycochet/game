@@ -7,7 +7,8 @@ use shared::id::Id;
 
 use super::choose::{Pointing, pointing};
 use crate::common::{
-    HoveredBag, HoveredInSky, HoveredOnMap, Other, PointerPosition, Target, TouchGesture,
+    HoveredBag, HoveredInSky, HoveredOnMap, Other, PointedAtMap, PointerPosition, Target,
+    TouchGesture,
 };
 use crate::dom::Hit;
 use crate::view3d::HoveredToken;
@@ -74,13 +75,15 @@ fn point(under: &UnderPointer, target: &mut ResMut<Target>) -> bool {
 }
 
 /// A right click on a creature targets it, and on nothing clears the target.
-/// Pressing and dragging turns the camera instead.
+/// Anywhere on the map it turns the player there (`PointedAtMap`: where a
+/// menu of choices will open). Pressing and dragging turns the camera instead.
 pub(super) fn pick_by_right_click(
     mouse: Res<ButtonInput<MouseButton>>,
     pointer: Res<PointerPosition>,
     under: UnderPointer,
     mut pressed_at: Local<Option<Vec2>>,
     mut target: ResMut<Target>,
+    mut pointed: MessageWriter<PointedAtMap>,
 ) {
     if mouse.just_pressed(MouseButton::Right) {
         // A press on the interface isn't a press on the map behind it.
@@ -95,6 +98,9 @@ pub(super) fn pick_by_right_click(
     };
     if still {
         point(&under, &mut target);
+        if let Some(at) = pointer.0.filter(|_| under.interface.target.is_none()) {
+            pointed.write(PointedAtMap(at));
+        }
     }
 }
 
@@ -117,6 +123,7 @@ pub(super) fn pick_by_long_press(
     under: UnderPointer,
     mut press: ResMut<LongPress>,
     mut target: ResMut<Target>,
+    mut pointed: MessageWriter<PointedAtMap>,
 ) {
     let press = &mut press.0;
     if gesture.still_at.is_none() {
@@ -129,6 +136,13 @@ pub(super) fn pick_by_long_press(
         return;
     }
     if point(&under, &mut target) {
+        press.targeted = true;
+    }
+    if let Some(at) = gesture
+        .still_at
+        .filter(|_| under.interface.target.is_none())
+    {
+        pointed.write(PointedAtMap(at));
         press.targeted = true;
     }
 }
