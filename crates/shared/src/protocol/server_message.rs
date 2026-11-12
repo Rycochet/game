@@ -49,15 +49,21 @@ pub enum ServerMessage {
     /// (nothing in it or stacked on it), and never where it is; `unknown` are the
     /// ids the server has nowhere it looks (destroyed, or in nothing loaded).
     ItemsLookedUp { found: Vec<Item>, unknown: Vec<Id> },
-    /// What is on the ground under the player, when they arrive on it or it changes,
-    /// and only for someone standing there. Empty once there is nothing.
-    GroundItems { x: i64, y: i64, items: Vec<Item> },
-    /// There is a bag on the ground here, looking this full: seen just now, or what is
-    /// remembered of it, after arriving on a level. Bags out of sight aren't kept up to
-    /// date, so they can be wrong until they are next seen.
-    GroundSeen { x: i64, y: i64, load: Load },
+    /// What is in the bags on the ground within the player's reach
+    /// (`ground::in_reach`), nearest bag first, when that changes, and only
+    /// for them: where those bags are (in units) and all that is in them.
+    /// Empty once nothing is in reach.
+    GroundItems {
+        bags: Vec<crate::spot::Spot>,
+        items: Vec<Item>,
+    },
+    /// There is a bag on the ground here (in units), looking this full: seen
+    /// just now, or what is remembered of it, after arriving on a level. Bags
+    /// out of sight aren't kept up to date, so they can be wrong until they are
+    /// next seen.
+    GroundSeen { at: crate::spot::Spot, load: Load },
     /// There is no bag here after all, as just seen.
-    GroundGone { x: i64, y: i64 },
+    GroundGone { at: crate::spot::Spot },
     /// Who keeps each shop of a town (`Buildings` comes first), by `BuildingLook::id`.
     /// Never on the map: they stand behind the door.
     Keepers(Vec<(u16, Id)>),

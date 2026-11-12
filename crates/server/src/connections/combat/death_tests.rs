@@ -16,7 +16,7 @@ fn killed_on(difficulty: Difficulty) -> (TestClient, Vec<Item>, Vec<ServerMessag
     let (mut test, _) = beside(CreatureKind::Kobold);
     test.client.difficulty = Some(difficulty);
     let visit = test.client.visit.as_ref().unwrap();
-    let (site, level, at) = (visit.id(), visit.index(), visit.position());
+    let (site, level, at) = (visit.id(), visit.index(), visit.spot());
     let tick = test.world.action_clock.ticks();
     let limits = test.client.limits(tick);
     let left = test.client.sheet.vitals.at(Vital::Health, limits, tick);

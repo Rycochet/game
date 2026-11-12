@@ -709,6 +709,7 @@ fn next_to_a_laden_mob(test: &mut TestClient) -> (Id, (i64, i64)) {
 fn a_killed_mob_leaves_all_it_had_and_goes_for_good() {
     let mut test = TestClient::new();
     let (mob, at) = next_to_a_laden_mob(&mut test);
+    let at = shared::spot::Spot::middle_of(at);
     let answers = test.send(&[ClientMessage::DevKillMob { mob }]);
     assert!(
         answers.contains(&ServerMessage::EntityGone {
@@ -719,7 +720,7 @@ fn a_killed_mob_leaves_all_it_had_and_goes_for_good() {
     );
     assert!(answers.iter().any(|answer| matches!(
         answer,
-        ServerMessage::GroundSeen { x, y, .. } if (*x, *y) == at
+        ServerMessage::GroundSeen { at: seen, .. } if *seen == at
     )));
 
     let level = &test.world.site(dev_castle()).levels[&0];
@@ -745,6 +746,7 @@ fn a_mob_stays_dead_after_a_restart() {
     let open = || ServerWorld::open(seed, Storage::in_folder(&folder.0, seed.id())).unwrap();
     let mut test = TestClient::of(open());
     let (mob, at) = next_to_a_laden_mob(&mut test);
+    let at = shared::spot::Spot::middle_of(at);
     test.send(&[ClientMessage::DevKillMob { mob }]);
     let world = test.leave();
     world.storage.finish_writing();

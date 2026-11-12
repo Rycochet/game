@@ -53,3 +53,34 @@ fn moves_are_never_too_long_or_nowhere() {
     let here = Spot::middle_of((0, 0));
     assert_eq!(moved(&level, Size::Medium, (0, 0), here), None);
 }
+
+#[test]
+fn good_swimmers_swim_water_at_any_angle() {
+    let mut skills = crate::skill::Skills::default();
+    skills.practise(super::super::MOVEMENT_SKILLS.swimming, 60u32.pow(3));
+    let swimmer = Gait::of(&skills);
+    assert!(swimmer.swims_deep());
+    let mut level = Level::test_room();
+    for y in -1..=1 {
+        level.set(1, y, Cell::Water);
+    }
+    // Into the water off the middles: refused walking, swum by a swimmer.
+    let from = Spot::middle_of((0, 0)).offset(30, 20);
+    let into = Spot::middle_of((1, 0)).offset(-20, 50);
+    assert_eq!(
+        move_on_level(&level, Size::Medium, WALKER, from, into),
+        None
+    );
+    let swum = move_on_level(&level, Size::Medium, swimmer, from, into);
+    assert!(swum.is_some_and(|swum| !swum.jumped()));
+    // And on through it, never jumping.
+    let out = Spot::middle_of((2, 0)).offset(-60, -30);
+    let on = move_on_level(&level, Size::Medium, swimmer, into, out);
+    assert!(on.is_some_and(|on| !on.jumped()));
+    // Lava is never swum.
+    level.set(1, 0, Cell::Lava);
+    assert_eq!(
+        move_on_level(&level, Size::Medium, swimmer, from, into),
+        None
+    );
+}

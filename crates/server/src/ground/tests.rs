@@ -3,6 +3,9 @@ use shared::item::{Favour, Inventory, ItemKind, Quality};
 use shared::poi::PoiKind;
 use shared::protocol::{ClientMessage, ServerMessage};
 
+use shared::ground::Load;
+use shared::spot::Spot;
+
 use super::*;
 use crate::connections::tests::TestClient;
 
@@ -105,7 +108,7 @@ fn stepping_off_it_stops_it_being_reachable() {
     }]);
     test.send(&[ClientMessage::DropItem { item: coin }]);
     let answers = test.steps(&[(1, 0)]);
-    assert!(ground(&answers).is_empty(), "nothing on this cell");
+    assert!(ground(&answers).is_empty(), "out of reach a cell away");
 
     let answers = test.send(&[ClientMessage::BinFromGround { item: coin }]);
     assert!(carrying(&answers).bin.is_none());
@@ -208,27 +211,38 @@ fn bags_told(answers: &[ServerMessage]) -> Vec<&ServerMessage> {
 }
 
 /// Puts something on the ground here, as someone else would.
-fn lay_down(test: &mut TestClient, at: (i64, i64), grams: ItemKind) {
+fn lay_down(test: &mut TestClient, at: Spot, grams: ItemKind) {
     let visit = test.client.visit.as_ref().unwrap();
     let (id, index) = (visit.id(), visit.index());
-    let level = test.world.site_mut(id).levels.entry(index);
-    let pile = level.or_default().ground.entry(at).or_default();
-    pile.push(Item::new(Id::for_test(pile.len() as u128 + 100), grams));
+    let ground = &mut test
+        .world
+        .site_mut(id)
+        .levels
+        .entry(index)
+        .or_default()
+        .ground;
+    let laid = ground.values().map(Vec::len).sum::<usize>() as u128;
+    let pile = ground.entry(at).or_default();
+    pile.push(Item::new(Id::for_test(laid + 100), grams));
 }
 
 #[test]
 fn bags_are_only_told_of_when_seen_and_remembered_until_seen_again() {
     let mut test = in_a_site();
-    let far = test.client.visit.as_mut().unwrap().walkable_out_of_sight();
+    // (The test client teleports to cells' middles.)
+    let far_cell = test.client.visit.as_mut().unwrap().walkable_out_of_sight();
+    let far = Spot::middle_of(far_cell);
     let here = test.client.visit.as_ref().unwrap().position();
     lay_down(&mut test, far, ItemKind::Coin);
     assert!(bags_told(&test.send(&[])).is_empty(), "out of sight");
 
-    let go_there = ClientMessage::DevTeleport { x: far.0, y: far.1 };
+    let go_there = ClientMessage::DevTeleport {
+        x: far_cell.0,
+        y: far_cell.1,
+    };
     let answers = test.send(std::slice::from_ref(&go_there));
     let seen = ServerMessage::GroundSeen {
-        x: far.0,
-        y: far.1,
+        at: far,
         load: Load::Flat,
     };
     assert_eq!(bags_told(&answers), [&seen]);
@@ -247,14 +261,14 @@ fn bags_are_only_told_of_when_seen_and_remembered_until_seen_again() {
 
     // And find out on seeing the place again.
     let answers = test.send(&[go_there]);
-    let gone = ServerMessage::GroundGone { x: far.0, y: far.1 };
+    let gone = ServerMessage::GroundGone { at: far };
     assert_eq!(bags_told(&answers), [&seen, &gone]);
 }
 
 #[test]
 fn a_bag_seen_to_fill_up_looks_it() {
     let mut test = in_a_site();
-    let here = test.client.visit.as_ref().unwrap().position();
+    let here = test.client.visit.as_ref().unwrap().spot();
     lay_down(&mut test, here, ItemKind::Coin);
     test.send(&[]);
     lay_down(&mut test, here, ItemKind::Sword);
@@ -311,4 +325,63 @@ fn wearing_a_stack_from_the_ground_leaves_the_rest_there() {
     assert!(carrying(&answers).is_worn(top));
     let left = ground(&answers);
     assert_eq!((left[0].id, left[0].count()), (bottom, 1));
+}
+
+/// Where the player stands, in units.
+fn standing(test: &TestClient) -> Spot {
+    test.client.visit.as_ref().unwrap().spot()
+}
+
+/// The bags on the player's level.
+fn bags_here(test: &mut TestClient) -> Vec<(Spot, usize)> {
+    let visit = test.client.visit.as_ref().unwrap();
+    let (id, index) = (visit.id(), visit.index());
+    let level = test.world.site(id).levels.get(&index);
+    let bags = level.into_iter().flat_map(|level| level.ground.iter());
+    bags.map(|(&at, items)| (at, items.len())).collect()
+}
+
+#[test]
+fn a_drop_joins_a_bag_within_reach_or_starts_one_at_the_feet() {
+    let (mut test, coin) = holding(ItemKind::Coin);
+    let here = standing(&test);
+    let near = here.offset(150, 0);
+    lay_down(&mut test, near, ItemKind::Sword);
+    test.send(&[ClientMessage::DropItem { item: coin }]);
+    assert_eq!(bags_here(&mut test), [(near, 2)], "into the bag in reach");
+
+    // Out of reach of it, a new bag where they stand.
+    let mut test = in_a_site();
+    let coin = carrying(&test.send(&[give(ItemKind::Coin)])).items[0]
+        .item
+        .id;
+    let here = standing(&test);
+    let far = here.offset(1000, 0);
+    lay_down(&mut test, far, ItemKind::Sword);
+    test.send(&[ClientMessage::DropItem { item: coin }]);
+    let mut bags = bags_here(&mut test);
+    bags.sort();
+    let mut expected = vec![(here, 1), (far, 1)];
+    expected.sort();
+    assert_eq!(bags, expected);
+}
+
+#[test]
+fn anything_in_reach_can_be_picked_up_and_is_told_of() {
+    let mut test = in_a_site();
+    let here = standing(&test);
+    let (a, b) = (here.offset(-120, 0), here.offset(0, 150));
+    lay_down(&mut test, a, ItemKind::Coin);
+    lay_down(&mut test, b, ItemKind::Sword);
+    let answers = test.send(&[]);
+    let told = answers.iter().rev().find_map(|answer| match answer {
+        ServerMessage::GroundItems { bags, items } => Some((bags.clone(), items.len())),
+        _ => None,
+    });
+    assert_eq!(told, Some((vec![a, b], 2)), "nearest bag first");
+
+    let sword = ground(&answers)[1].id;
+    let answers = test.send(&[ClientMessage::BinFromGround { item: sword }]);
+    assert!(carrying(&answers).bin.is_some());
+    assert_eq!(bags_here(&mut test), [(a, 1)], "the emptied bag went");
 }

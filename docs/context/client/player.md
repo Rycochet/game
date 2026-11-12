@@ -20,7 +20,7 @@ The player's position: on the world map a grid point, stepped and travelled cell
 
 ## Depends on
 
-- `shared::movement`, `shared::pathfinding` (`find_world_path`, `find_sized_path`), `shared::clearance` (`check_segment`, `slide`, `RoomMap`), `shared::spot`; `common` (`SpotPosition`, `ViewTurn`, `Token`, `Icon`, `LightSource`, `ViewFacing`, `PadSteps`, `GameView`, `CurrentDungeon`, `CurrentWorld`, `MapPosition`, `SmoothPosition`: the player's position components, in `common` because other entities (world map pois) have them too).
+- `shared::movement`, `shared::pathfinding` (`find_world_path`, `find_sized_path`), `shared::clearance` (`check_segment`, `check_segment_by`, `slide_by`, `RoomMap`), `shared::spot`; `common` (`SpotPosition`, `ViewTurn`, `Token`, `Icon`, `LightSource`, `ViewFacing`, `PadSteps`, `GameView`, `CurrentDungeon`, `CurrentWorld`, `MapPosition`, `SmoothPosition`: the player's position components, in `common` because other entities (world map pois) have them too).
 
 ## Used by
 

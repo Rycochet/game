@@ -1,13 +1,13 @@
-//! Bags stand on their cell's ground, raised in the wilderness
+//! Bags stand on the ground where they are, raised where it slopes
 //! (`common::DrawnGround`).
 
 use bevy::prelude::*;
 
-use super::Bags;
+use super::{Bags, in_cells};
 use crate::common::DrawnGround;
 use crate::dungeon_map::CELL_SIZE;
 
-/// Puts each bag on its cell's ground whenever bags or heights change.
+/// Puts each bag on the ground under it whenever bags or heights change.
 pub(super) fn raise_bags(
     heights: Res<DrawnGround>,
     bags: Res<Bags>,
@@ -16,9 +16,10 @@ pub(super) fn raise_bags(
     if !heights.is_changed() && !bags.is_changed() {
         return;
     }
-    for (&(x, y), bag) in &bags.0 {
+    for (&at, bag) in &bags.0 {
         if let Ok(mut place) = places.get_mut(bag.root) {
-            let ground = heights.drawn(x, y) * CELL_SIZE;
+            let (x, y) = in_cells(at);
+            let ground = heights.drawn_between(x, y) * CELL_SIZE;
             if place.translation.y != ground {
                 place.translation.y = ground;
             }

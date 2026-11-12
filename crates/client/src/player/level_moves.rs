@@ -3,7 +3,7 @@
 
 use bevy::math::DVec2;
 use bevy::prelude::*;
-use shared::clearance::{JUMP_REACH, check_segment, crowd_per_mille};
+use shared::clearance::{JUMP_REACH, crowd_per_mille};
 use shared::dungeon::Level;
 use shared::spot::{CELL_SPAN, Spot};
 
@@ -37,10 +37,7 @@ pub(super) fn jump_ahead(walker: &Walker, at: Spot, way: DVec2) -> Option<Spot> 
         .map(|length| ahead_of(at, way, length))
         .filter(|to| at.distance(*to) <= JUMP_REACH)
         .filter(|&to| crowd_per_mille(walker.size, at, to, walker.others).is_some())
-        .find(|&to| {
-            check_segment(walker.level, walker.size, at, to)
-                .is_some_and(|passage| passage.jumped.is_some())
-        })
+        .find(|&to| (walker.passage(at, to)).is_some_and(|passage| passage.jumped.is_some()))
 }
 
 /// Goes `distance` units (on flat ground; `slowness` says how much longer
@@ -71,8 +68,7 @@ pub(super) fn follow_route(
             break;
         }
         // A jump on the route: taken whole, and shown.
-        let jumps = check_segment(walker.level, walker.size, at, next)
-            .is_some_and(|passage| passage.jumped.is_some());
+        let jumps = (walker.passage(at, next)).is_some_and(|passage| passage.jumped.is_some());
         if jumps {
             moves.extend(travel.stride.finish());
             moves.push((at, next));

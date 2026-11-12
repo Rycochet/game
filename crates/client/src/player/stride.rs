@@ -4,7 +4,7 @@
 //! way.
 
 use bevy::math::DVec2;
-use shared::clearance::{Other, check_segment, crowd_per_mille, slide};
+use shared::clearance::{Other, Passage, check_segment_by, crowd_per_mille, slide_by};
 use shared::creature::Size;
 use shared::dungeon::Level;
 use shared::spot::{CELL_SPAN, Spot};
@@ -24,6 +24,8 @@ const SAME_WAY: f64 = 0.9999;
 pub(super) struct Walker<'a> {
     pub level: &'a Level,
     pub size: Size,
+    /// A good swimmer (`Gait::swims_deep`): water is swum, not jumped.
+    pub swims: bool,
     pub others: &'a [Other],
     /// Walking freely, nobody squeezes any more than where they started (as
     /// `slide`), so pushing against a wall doesn't press into it; a
@@ -32,14 +34,18 @@ pub(super) struct Walker<'a> {
 }
 
 impl Walker<'_> {
+    /// The one rule for them (`check_segment_by`).
+    pub(super) fn passage(&self, a: Spot, b: Spot) -> Option<Passage> {
+        check_segment_by(self.level, self.size, self.swims, a, b)
+    }
+
     /// Whether the straight walk from `a` to `b` is allowed: by the one rule,
     /// without jumping, and not into an enemy.
     pub(super) fn walks(&self, a: Spot, b: Spot) -> bool {
-        let Some(passage) = check_segment(self.level, self.size, a, b) else {
+        let Some(passage) = self.passage(a, b) else {
             return false;
         };
-        let squeeze =
-            |spot| check_segment(self.level, self.size, spot, spot).map(|p| p.squeeze_per_mille);
+        let squeeze = |spot| self.passage(spot, spot).map(|p| p.squeeze_per_mille);
         let squeezed = !self.squeezes
             && passage.squeeze_per_mille > 1000
             && squeeze(a).is_none_or(|at_a| passage.squeeze_per_mille > at_a);
@@ -184,7 +190,7 @@ impl Stride {
 /// east-west or north-south goes further (as much as the walk goes that
 /// way), as nothing may squeeze more than where it starts.
 fn slid(walker: &Walker, at: Spot, by: DVec2) -> Option<Spot> {
-    let slid = slide(walker.level, walker.size, at, offset(at, by));
+    let slid = slide_by(walker.level, walker.size, walker.swims, at, offset(at, by));
     let (along_x, along_y) = (DVec2::new(by.x, 0.0), DVec2::new(0.0, by.y));
     let axes = match along_x.length() >= along_y.length() {
         true => [along_x, along_y],

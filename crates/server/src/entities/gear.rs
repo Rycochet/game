@@ -156,8 +156,8 @@ pub(super) fn bury(
     let Some(index) = population.mobs.iter().position(|one| one.id == mob) else {
         return;
     };
-    let at = population.mobs[index].position;
     let dead = population.mobs.remove(index);
+    let (at, size) = (dead.spot, dead.size());
     world.died.insert(mob);
     if leaves {
         world.kills.push(super::Kill {
@@ -200,6 +200,7 @@ pub(super) fn bury(
             .levels
             .entry(here_index)
             .or_default();
-        here.ground.entry(at).or_default().extend(left);
+        // Where it fell, in a bag already within its reach or a new one.
+        crate::ground::drop_at(&mut here.ground, size, at, left);
     }
 }

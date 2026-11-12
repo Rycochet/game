@@ -7,6 +7,7 @@ use shared::poi::ChunkPos;
 use shared::protocol::CharacterId;
 use shared::sheet::Sheet;
 use shared::site::FORGET_BEFORE;
+use shared::spot::Spot;
 use shared::world::WorldSeed;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -121,7 +122,7 @@ fn saves_are_read_back() {
         forgotten_to: FORGET_BEFORE,
         bags: BTreeMap::from([(
             site,
-            BTreeMap::from([(1, BTreeMap::from([((2, 3), Load::Full)]))]),
+            BTreeMap::from([(1, [(Spot::new(2, 3), Load::Full)].into_iter().collect())]),
         )]),
         doors: BTreeMap::from([(
             site,
@@ -174,10 +175,12 @@ fn saves_are_read_back() {
                 dead: BTreeSet::from([3]),
                 scents: Default::default(),
                 wild_blocks: BTreeMap::from([((2, 5), 77)]),
-                ground: BTreeMap::from([(
-                    (3, 4),
+                ground: [(
+                    Spot::new(3, 4),
                     vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],
-                )]),
+                )]
+                .into_iter()
+                .collect(),
                 changes: BTreeMap::from([((1, 2), Cell::Floor)]),
                 locks_placed: true,
                 doors: BTreeMap::from([(
@@ -325,4 +328,28 @@ fn cells_saved_before_units_load_as_their_middles() {
     assert_ne!(old, text);
     world.hall = Some(shared::spot::Spot::new(240, 480));
     assert_eq!(ron::from_str::<CharacterWorldSave>(&old).unwrap(), world);
+}
+
+#[test]
+fn bags_saved_by_cell_load_at_their_middles() {
+    let site = SiteId::Wilderness;
+    let mut world = CharacterWorldSave::default();
+    let bags: saves::RememberedBags = [(Spot::new(500, -730), Load::Half)].into_iter().collect();
+    world.bags.insert(site, BTreeMap::from([(0, bags)]));
+    let text = ron::to_string(&world).unwrap();
+    assert_eq!(ron::from_str::<CharacterWorldSave>(&text).unwrap(), world);
+    let old = text.replace("(x:500,y:-730)", "(2,-3)");
+    assert_ne!(old, text);
+    let read = ron::from_str::<CharacterWorldSave>(&old).unwrap();
+    let at: Vec<Spot> = read.bags[&site][&0].keys().copied().collect();
+    assert_eq!(at, [Spot::new(480, -720)]);
+
+    let mut level = LevelSave::default();
+    let coin = Item::new(Id::for_test(1), shared::item::ItemKind::Coin);
+    level.ground.insert(Spot::new(500, -730), vec![coin]);
+    let text = ron::to_string(&level).unwrap();
+    let old = text.replace("(x:500,y:-730)", "(2,-3)");
+    assert_ne!(old, text);
+    let read = ron::from_str::<LevelSave>(&old).unwrap();
+    assert!(read.ground.contains_key(&Spot::new(480, -720)));
 }

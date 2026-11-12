@@ -5,6 +5,7 @@
 mod bag;
 
 use bevy::prelude::*;
+use shared::spot::{CELL_SPAN, Spot};
 
 use crate::common::HoveredBag;
 use crate::player::PlayerSystems;
@@ -57,6 +58,13 @@ const SPARKLE: Color = Color::srgb(1.0, 0.92, 0.55);
 const STAR_EDGE: Color = Color::BLACK;
 /// How many pixels a side the weave's picture has.
 const WEAVE_PIXELS: usize = 16;
+
+/// Where a bag is, in cells (cell `(x, y)`'s middle at `(x, y)`), as the maps
+/// are drawn.
+fn in_cells(at: Spot) -> (f32, f32) {
+    let span = CELL_SPAN as f32;
+    (at.x as f32 / span, at.y as f32 / span)
+}
 
 pub struct GroundPlugin;
 

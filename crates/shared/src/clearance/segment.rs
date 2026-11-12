@@ -1,7 +1,7 @@
 //! The one rule for a move on a level: a creature's circle going straight from
 //! one spot to another.
 
-use super::{Blocker, blockers_near, has_footing, squeeze_per_mille};
+use super::{Blocker, blockers_near, has_footing_by, squeeze_per_mille};
 use crate::creature::Size;
 use crate::dungeon::{Level, line_hits_box};
 use crate::spot::{HALF_SPAN, Spot};
@@ -27,14 +27,27 @@ pub struct Passage {
 /// blocker but the fence it jumps (squeezing where it has less than its
 /// radius).
 pub fn check_segment(level: &Level, size: Size, from: Spot, to: Spot) -> Option<Passage> {
+    check_segment_by(level, size, false, from, to)
+}
+
+/// `check_segment` for someone who may or may not swim deep water: for a
+/// swimmer, water is footing (`has_footing_by`), swum rather than jumped.
+pub fn check_segment_by(
+    level: &Level,
+    size: Size,
+    swims: bool,
+    from: Spot,
+    to: Spot,
+) -> Option<Passage> {
+    let footing = |x, y| has_footing_by(level, swims, x, y);
     let (fx, fy) = from.cell();
     let (tx, ty) = to.cell();
-    if !has_footing(level, fx, fy) || !has_footing(level, tx, ty) {
+    if !footing(fx, fy) || !footing(tx, ty) {
         return None;
     }
     let low = Spot::new(from.x.min(to.x), from.y.min(to.y));
     let high = Spot::new(from.x.max(to.x), from.y.max(to.y));
-    let mut jumped = crossed_without_footing(level, from, to, low, high)?;
+    let mut jumped = crossed_without_footing(level, &footing, from, to, low, high)?;
 
     let radius = size.radius();
     let mut clearance = radius;
@@ -82,6 +95,7 @@ pub fn segment_cost(level: &Level, size: Size, from: Spot, to: Spot) -> Option<u
 /// any that can't be jumped.
 fn crossed_without_footing(
     level: &Level,
+    footing: &impl Fn(i64, i64) -> bool,
     from: Spot,
     to: Spot,
     low: Spot,
@@ -92,7 +106,7 @@ fn crossed_without_footing(
     let mut jumped = None;
     for y in min_y..=max_y {
         for x in min_x..=max_x {
-            if has_footing(level, x, y) {
+            if footing(x, y) {
                 continue;
             }
             // The inside only: a line along an edge or through a corner

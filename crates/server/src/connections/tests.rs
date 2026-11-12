@@ -449,7 +449,7 @@ fn what_a_new_body_cant_wear_drops_under_it_and_they_are_told() {
     }]);
     // A human's shoes are too big for a kobold: they lie at its feet, and the
     // rest still fits, loosely.
-    let at = test.client.visit.as_ref().unwrap().position();
+    let at = test.client.visit.as_ref().unwrap().spot();
     let site = test.client.visit.as_ref().unwrap().id();
     let index = test.client.visit.as_ref().unwrap().index();
     let ground = &test.world.site(site).levels[&index].ground[&at];
@@ -462,10 +462,10 @@ fn what_a_new_body_cant_wear_drops_under_it_and_they_are_told() {
     assert_eq!(lying, shoes.collect::<Vec<_>>());
     assert_eq!(ground[0].kind, ItemKind::Shoes);
     let told = answers.iter().rev().find_map(|answer| match answer {
-        ServerMessage::GroundItems { x, y, items } => Some(((*x, *y), items.len())),
+        ServerMessage::GroundItems { bags, items } => Some((bags.clone(), items.len())),
         _ => None,
     });
-    assert_eq!(told, Some((at, 1)));
+    assert_eq!(told, Some((vec![at], 1)));
 }
 
 #[test]

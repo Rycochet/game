@@ -2,33 +2,37 @@
 
 use bevy::prelude::*;
 use shared::ground::Load;
+use shared::spot::Spot;
 
 use super::bag::size_of;
 use super::{
-    Bag, BagAssets, BagPart, Bags, GLINT_SCALE, OfBag, Sparkle, Star, sparkle_scale, sparkle_up,
+    Bag, BagAssets, BagPart, Bags, GLINT_SCALE, OfBag, Sparkle, Star, in_cells, sparkle_scale,
+    sparkle_up,
 };
 use crate::dungeon_map::CELL_SIZE;
 
-/// A number from a cell, the same each time, for what differs from bag to bag.
-pub(super) fn cell_hash(cell: (i64, i64)) -> u32 {
-    let mixed = (cell.0 as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
-        ^ (cell.1 as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F);
+/// A number from where a bag is, the same each time, for what differs from bag
+/// to bag.
+pub(super) fn spot_hash(at: Spot) -> u32 {
+    let mixed = (at.x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        ^ (at.y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F);
     (mixed >> 32) as u32
 }
 
 pub(super) fn spawn_bag(
     commands: &mut Commands,
     assets: &BagAssets,
-    cell: (i64, i64),
+    at: Spot,
     load: Load,
 ) -> Entity {
-    let hash = cell_hash(cell);
+    let hash = spot_hash(at);
     let variety = (hash % super::bag::VARIETIES as u32) as u8;
     let meshes = &assets.bags[&(load, variety)];
     let size = size_of(load);
     let turned = Quat::from_rotation_y((hash >> 8) as f32 % 8.0 * std::f32::consts::FRAC_PI_4);
-    let of_bag = OfBag(cell);
-    let place = Transform::from_xyz(cell.0 as f32 * CELL_SIZE, 0.0, cell.1 as f32 * CELL_SIZE);
+    let of_bag = OfBag(at);
+    let (x, y) = in_cells(at);
+    let place = Transform::from_xyz(x * CELL_SIZE, 0.0, y * CELL_SIZE);
     let body = Transform::from_rotation(turned);
     let phase = (hash >> 16) as f32 % 100.0;
     let root = commands.spawn((place, Visibility::Inherited)).id();
@@ -90,7 +94,7 @@ pub(super) fn spawn_bag(
     let sparkle = commands
         .spawn((
             Sparkle {
-                cell,
+                at,
                 up: sparkle_up(load),
                 behind: size.radius,
                 scale: sparkle_scale(load),
@@ -148,15 +152,15 @@ pub(super) fn set_bag(
     bags: &mut Bags,
     commands: &mut Commands,
     assets: &BagAssets,
-    cell: (i64, i64),
+    at: Spot,
     load: Load,
 ) {
-    if let Some(old) = bags.0.get(&cell) {
+    if let Some(old) = bags.0.get(&at) {
         if old.load == load {
             return;
         }
         commands.entity(old.root).despawn();
     }
-    let root = spawn_bag(commands, assets, cell, load);
-    bags.0.insert(cell, Bag { load, root });
+    let root = spawn_bag(commands, assets, at, load);
+    bags.0.insert(at, Bag { load, root });
 }

@@ -26,6 +26,7 @@ mod roads;
 mod saves;
 mod sites;
 mod spot_compat;
+mod spot_map;
 mod unsaved;
 
 pub use characters::Everywhere;
@@ -34,6 +35,7 @@ pub use saves::{
     CellMasks, CharacterSave, CharacterWorldSave, DevReturn, KnownPoi, LevelSave, MobRecord,
     RememberedDoors, SavedMob, ServerSave, SiteId, SiteSave, VisitSave, WorldSave,
 };
+pub use spot_map::SpotMap;
 pub use unsaved::{Unsaved, now};
 
 /// Overrides where the server keeps its data (a folder path).

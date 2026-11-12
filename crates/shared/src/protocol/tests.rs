@@ -345,16 +345,16 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             items: Vec::new(),
         },
         ServerMessage::GroundItems {
-            x: 1,
-            y: -2,
+            bags: vec![crate::spot::Spot::new(1, -2)],
             items: Vec::new(),
         },
         ServerMessage::GroundSeen {
-            x: 1,
-            y: -2,
+            at: crate::spot::Spot::new(1, -2),
             load: Load::Half,
         },
-        ServerMessage::GroundGone { x: 1, y: -2 },
+        ServerMessage::GroundGone {
+            at: crate::spot::Spot::new(1, -2),
+        },
         ServerMessage::Keepers(vec![(3, Id::for_test(4))]),
         ServerMessage::WorldChunk(WorldChunk {
             chunk: ChunkPos { x: 1, y: -2 },

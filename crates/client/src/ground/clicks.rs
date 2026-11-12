@@ -2,9 +2,14 @@
 
 use bevy::prelude::*;
 
+use shared::ground::in_reach;
+use shared::spot::Spot;
+
 use super::bag::size_of;
-use super::{Bags, Heading, STAR_LONG, sparkle_scale, sparkle_up};
-use crate::common::{ClickMode, DrawnGround, HoveredBag, MapPosition, PointerPosition};
+use super::{Bags, Heading, STAR_LONG, in_cells, sparkle_scale, sparkle_up};
+use crate::common::{
+    ClickMode, DrawnGround, HoveredBag, PlayerSize, PointerPosition, SpotPosition,
+};
 use crate::dungeon_map::{CELL_SIZE, Shown};
 use crate::inventory::OpenCharacter;
 use crate::player::{Arrived, Player, TakeStep, TravelTo, Walking};
@@ -22,11 +27,13 @@ pub(super) fn find_hovered(
 ) {
     let (camera, transform) = *camera;
     let found = pointer.0.and_then(|cursor| {
-        let mut best: Option<(f32, (i64, i64))> = None;
-        for (&cell, bag) in &bags.0 {
+        let mut best: Option<(f32, Spot)> = None;
+        for (&at, bag) in &bags.0 {
             let size = size_of(bag.load);
-            let ground = heights.drawn(cell.0, cell.1) * CELL_SIZE;
-            let foot = Vec3::new(cell.0 as f32 * CELL_SIZE, ground, cell.1 as f32 * CELL_SIZE);
+            let (x, y) = in_cells(at);
+            let ground = heights.drawn_between(x, y) * CELL_SIZE;
+            let foot = Vec3::new(x * CELL_SIZE, ground, y * CELL_SIZE);
+            let cell = at.cell();
             let in_sight = shown
                 .sight
                 .as_ref()
@@ -52,10 +59,10 @@ pub(super) fn find_hovered(
                 && cursor.y <= foot_at.y + reach / 2.0;
             let distance = transform.translation().distance(foot);
             if on_it && best.is_none_or(|(nearest, _)| distance < nearest) {
-                best = Some((distance, cell));
+                best = Some((distance, at));
             }
         }
-        best.map(|(_, cell)| cell)
+        best.map(|(_, at)| at)
     });
     hovered.set_if_neq(HoveredBag(found));
 }
@@ -69,40 +76,39 @@ pub(super) fn change_of_mind(
     let stepped = steps.read().count() + walking.read().count() > 0;
     let elsewhere = journeys
         .read()
-        .any(|journey| Some((journey.x, journey.y)) != heading.0);
+        .any(|journey| Some((journey.x, journey.y)) != heading.0.map(Spot::cell));
     if stepped || elsewhere {
         heading.0 = None;
     }
 }
 
-/// A click on a bag opens the Character panel if the player is on it, or else walks
-/// them there to open it on arriving. A tap arrives as a click.
+/// A click on a bag opens the Character panel if the player can reach it, or else
+/// walks them to its cell to open it on arriving. A tap arrives as a click.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn follow_click(
     mouse: Res<ButtonInput<MouseButton>>,
     mode: Res<ClickMode>,
     clicked: Res<ClickedToken>,
     hovered: Res<HoveredBag>,
-    player: Single<&MapPosition, With<Player>>,
+    player: Single<&SpotPosition, With<Player>>,
+    size: Res<PlayerSize>,
     mut heading: ResMut<Heading>,
     mut travel: MessageWriter<TravelTo>,
     mut open: MessageWriter<OpenCharacter>,
 ) {
-    let Some(cell) = hovered.0 else {
+    let Some(at) = hovered.0 else {
         return;
     };
     if !mouse.just_pressed(MouseButton::Left) || clicked.0.is_some() || *mode != ClickMode::Normal {
         return;
     }
-    if (player.x, player.y) == cell {
+    if in_reach(size.0, player.0, at) {
         heading.0 = None;
         open.write(OpenCharacter);
     } else {
-        heading.0 = Some(cell);
-        travel.write(TravelTo {
-            x: cell.0,
-            y: cell.1,
-        });
+        heading.0 = Some(at);
+        let (x, y) = at.cell();
+        travel.write(TravelTo { x, y });
     }
 }
 
@@ -115,7 +121,11 @@ pub(super) fn open_on_arrival(
     let Some(&Arrived { x, y }) = arrivals.read().last() else {
         return;
     };
-    if heading.0.take() == Some((x, y)) && bags.0.contains_key(&(x, y)) {
+    // At its cell's middle, which reaches anywhere in the cell.
+    let heading_to = heading.0.take();
+    if let Some(at) = heading_to.filter(|at| at.cell() == (x, y))
+        && bags.0.contains_key(&at)
+    {
         open.write(OpenCharacter);
     }
 }
