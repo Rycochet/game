@@ -33,9 +33,15 @@ const PICTURE_ALPHA: f32 = 0.45;
 /// Sort order within one model (`Material::depth_bias`: nearer the camera
 /// draws later). The picture stands above its token's middle, so it sorts
 /// nearer than its token's body: it is moved back past it.
-const PICTURE_ORDER: f32 = -40.0;
-const FILL_ORDER: f32 = 0.0;
-const OUTLINE_ORDER: f32 = 0.01;
+const PICTURE_ORDER: f32 = XRAY_FIRST - 40.0;
+const FILL_ORDER: f32 = XRAY_FIRST;
+const OUTLINE_ORDER: f32 = XRAY_FIRST + 0.01;
+
+/// Every x-ray is drawn first of all that is see-through: before creatures' models
+/// (`model`), which then cover the x-ray of what stands behind them, and before
+/// see-through walls, memory and water. Only for sorting: this pipeline's own depth
+/// bias is set apart, in `specialize`.
+pub(super) const XRAY_FIRST: f32 = -20_000.0;
 
 /// The colour x-ray outlines are for anything that isn't a token.
 pub const XRAY_WHITE: Color = Color::WHITE;

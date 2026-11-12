@@ -37,6 +37,7 @@ mod item_text;
 mod items;
 mod lightning;
 mod map;
+mod model_material;
 mod own_ability;
 mod pointer;
 mod rivers;
@@ -47,6 +48,7 @@ mod states;
 mod step_pad;
 mod target;
 mod token;
+mod token_model;
 mod view;
 mod vitals;
 mod wild_heights;
@@ -95,6 +97,7 @@ pub use map::{
     Clickable, LightSource, MapPosition, Portal, SharesSight, SmoothPosition, SpotPosition,
     WorldReturn,
 };
+pub use model_material::{ModelMaterial, model_material};
 pub use own_ability::OwnAbility;
 pub use pointer::{
     PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface, interface_area,
@@ -107,7 +110,8 @@ pub use sneaking::Sneaking;
 pub use states::{ClickMode, GameView, LoadingStep, ServerStatus, Session};
 pub use step_pad::{PadButton, PadSteps};
 pub use target::Target;
-pub use token::{Attitude, Icon, IconPicture, Token, TokenShape, TokenSize};
+pub use token::{Attitude, Icon, Token, TokenShape, TokenSize};
+pub use token_model::{ModelMeshes, TokenModel};
 pub use view::{ViewFacing, ViewStats, ViewTurn};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
 pub use wild_heights::{DRAWN_PER_16TH, WildCellHeights};

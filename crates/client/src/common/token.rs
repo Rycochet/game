@@ -70,11 +70,6 @@ impl TokenSize {
 #[derive(Component, Clone, Debug, PartialEq, Eq)]
 pub struct Icon(pub String);
 
-/// A drawn picture shown in place of an entity's `Icon`: a character as it is
-/// dressed. Unlike an icon file, it fills its whole square.
-#[derive(Component, Clone, Debug, PartialEq, Eq)]
-pub struct IconPicture(pub Handle<Image>);
-
 /// The base shape of a token, seen from above.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TokenShape {

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::super::ViewCamera;
-use super::{ICON_ART_SIZE, IconAnchor, TokenView};
+use super::{ICON_ART_SIZE, IconAnchor, MODEL_SCALE, ModelAnchor, TokenView};
 use crate::common::{Clickable, HoverName, PointerPosition};
 
 /// The `Clickable` token the left mouse button was just pressed on, if any
@@ -26,8 +26,9 @@ pub fn find_token_under_cursor(
     mouse: Res<ButtonInput<MouseButton>>,
     pointer: Res<PointerPosition>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
-    views: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
-    anchors: Query<(&IconAnchor, &GlobalTransform)>,
+    views: Views,
+    anchors: Anchors,
+    models: Models,
     clickable: Query<(), With<Clickable>>,
     named: Query<(), With<HoverName>>,
     mut hovered: ResMut<HoveredToken>,
@@ -35,9 +36,14 @@ pub fn find_token_under_cursor(
 ) {
     let (camera, camera_transform) = *camera;
     let find = |wanted: &dyn Fn(Entity) -> bool| {
-        pointer
-            .0
-            .and_then(|cursor| token_at(cursor, camera, camera_transform, &views, &anchors, wanted))
+        pointer.0.and_then(|cursor| {
+            let shown = Shown {
+                views: &views,
+                anchors: &anchors,
+                models: &models,
+            };
+            token_at(cursor, camera, camera_transform, &shown, wanted)
+        })
     };
     let found = find(&|owner| clickable.contains(owner) || named.contains(owner));
     hovered.set_if_neq(HoveredToken(found));
@@ -52,13 +58,32 @@ pub fn find_token_under_cursor(
     clicked.set_if_neq(ClickedToken(click));
 }
 
-/// The nearest token at a point on the screen whose owner is `wanted`.
+type Views<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static TokenView,
+        &'static GlobalTransform,
+        &'static InheritedVisibility,
+    ),
+>;
+type Anchors<'w, 's> = Query<'w, 's, (&'static IconAnchor, &'static GlobalTransform)>;
+type Models<'w, 's> = Query<'w, 's, (&'static ModelAnchor, &'static GlobalTransform)>;
+
+/// What is drawn of tokens, to find one under the pointer.
+pub(super) struct Shown<'a, 'w, 's> {
+    pub(super) views: &'a Views<'w, 's>,
+    pub(super) anchors: &'a Anchors<'w, 's>,
+    pub(super) models: &'a Models<'w, 's>,
+}
+
+/// The nearest token at a point on the screen whose owner is `wanted`: on its base,
+/// its icon, or its model's upright box.
 pub(super) fn token_at(
     cursor: Vec2,
     camera: &Camera,
     camera_transform: &GlobalTransform,
-    views: &Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
-    anchors: &Query<(&IconAnchor, &GlobalTransform)>,
+    shown: &Shown,
     wanted: &dyn Fn(Entity) -> bool,
 ) -> Option<Entity> {
     let right = camera_transform.right();
@@ -80,6 +105,19 @@ pub(super) fn token_at(
             offset.length() <= reach
         }
     };
+    // Whether the cursor is on a box standing on `feet`, `half` across and `tall`.
+    let on_box = |feet: Vec3, half: f32, tall: f32| {
+        let corners = [feet + right * half, feet - right * half + Vec3::Y * tall];
+        let (Ok(a), Ok(b)) = (
+            camera.world_to_viewport(camera_transform, corners[0]),
+            camera.world_to_viewport(camera_transform, corners[1]),
+        ) else {
+            return false;
+        };
+        let (low, high) = (a.min(b), a.max(b));
+        cursor.cmpge(low).all() && cursor.cmple(high).all()
+    };
+    let (views, anchors) = (shown.views, shown.anchors);
 
     let mut best: Option<(f32, Entity)> = None;
     for (view, transform, visibility) in views {
@@ -95,6 +133,12 @@ pub(super) fn token_at(
                     ICON_ART_SIZE * anchor.scale / 2.0,
                     true,
                 );
+        }
+        if let Ok((anchor, model_transform)) = shown.models.get(view.model)
+            && let Some(model) = anchor.model()
+        {
+            let (half, tall) = (model.0.reach * MODEL_SCALE, model.0.height * MODEL_SCALE);
+            hit |= on_box(model_transform.translation(), half, tall);
         }
         let distance = eye.distance(base);
         if hit && best.is_none_or(|(d, _)| distance < d) {

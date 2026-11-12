@@ -3,7 +3,8 @@
 
 use bevy::prelude::*;
 
-use super::{IconAnchor, TokenAssets, TokenView};
+use super::{HullMaterials, IconAnchor, ModelPart, TokenAssets, TokenView};
+use crate::common::ModelMaterial;
 use crate::common::Token;
 
 /// How long a flash lasts: a few frames at 60 a second, by the clock so it
@@ -51,6 +52,9 @@ pub fn flash_tokens(
     mut owners: Query<(&Token, Option<&mut TokenFlash>)>,
     views: Query<&TokenView>,
     anchors: Query<(&IconAnchor, Option<&Children>)>,
+    (models, model_parts): (Query<&Children>, Query<&ModelPart>),
+    mut model_materials: Query<&mut MeshMaterial3d<ModelMaterial>>,
+    hulls: Res<HullMaterials>,
     mut parts: Query<&mut MeshMaterial3d<StandardMaterial>>,
 ) {
     let seconds = time.delta_secs();
@@ -73,6 +77,20 @@ pub fn flash_tokens(
             false => assets.colours[token.completed as usize][token.attitude as usize].clone(),
         };
         set(&mut parts, view.body, body);
+        // A model's every piece, as the body.
+        for piece in models.get(view.model).into_iter().flatten() {
+            if let Ok(usual) = model_parts.get(*piece) {
+                let material = match red {
+                    true => hulls.flash.clone(),
+                    false => usual.0.clone(),
+                };
+                if let Ok(mut now) = model_materials.get_mut(*piece)
+                    && now.0 != material
+                {
+                    now.0 = material;
+                }
+            }
+        }
         let Ok((anchor, Some(children))) = anchors.get(view.anchor) else {
             continue;
         };
