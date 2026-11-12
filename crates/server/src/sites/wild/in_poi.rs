@@ -10,11 +10,11 @@ use crate::sites::{Place, place_name_of};
 use crate::world_map::learn_place_name;
 
 /// The poi whose cutout a wilderness cell is in, if any (its chunk worked out
-/// already, as the window round it has).
-pub(super) fn poi_here(world: &ServerWorld, (x, y): (i64, i64)) -> Option<Poi> {
+/// again if a road has let go of it since the window was made).
+pub(super) fn poi_here(world: &mut ServerWorld, (x, y): (i64, i64)) -> Option<Poi> {
     let wild = &world.wilderness.wild;
-    let x = wild.wrap(x);
-    let chunk = world.wilderness.chunk(wild.chunk_of(x, y))?;
+    let (x, chunk) = (wild.wrap(x), wild.chunk_of(wild.wrap(x), y));
+    let chunk = super::wild_chunk(world, chunk)?;
     let cutout = chunk.plan.cutout().filter(|cutout| cutout.contains(x, y))?;
     Some(*cutout.poi())
 }
@@ -43,7 +43,7 @@ fn poi_message(world: &ServerWorld, poi: Option<Poi>) -> ServerMessage {
 
 /// After a step in the wilderness: tells the client if the poi they stand in
 /// has changed (walking into one, or back out).
-pub(super) fn tell_poi(client: &mut Client, world: &ServerWorld) -> bool {
+pub(super) fn tell_poi(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = &mut client.visit else {
         return true;
     };

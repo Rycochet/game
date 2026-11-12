@@ -19,7 +19,7 @@ pub(super) fn site_mobs(world: &mut ServerWorld, block: BlockPos, shift: i64) ->
     let wild = &world.wilderness.wild;
     let (bx, by, columns, rows) = wild.block_bounds(block);
     let chunk = wild.chunk_of(bx, by);
-    let Some(wild_chunk) = world.wilderness.chunk(chunk) else {
+    let Some(wild_chunk) = crate::sites::wild_chunk(world, chunk) else {
         return Vec::new();
     };
     let inside =

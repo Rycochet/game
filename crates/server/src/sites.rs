@@ -53,6 +53,7 @@ pub(super) use sight::{forget_level, reveal_level, truesight_changed};
 use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
 pub(super) use up_down::{go_down, go_up};
+pub(crate) use wild::wild_chunk;
 pub(super) use wild::{area_level, explore, follow, leave_by_key};
 
 /// How far in a town others can be made out, in cells.

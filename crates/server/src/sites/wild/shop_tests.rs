@@ -66,6 +66,11 @@ fn a_town_set_into_the_wilderness_trades_with_its_own_keepers() {
     assert_eq!(position(&test), front);
     let stock = stock_in(&test.send(std::slice::from_ref(&open))).expect("it opens");
     assert!(stock > 0);
+    // A road worked out since lets go of the chunks near it, to be made again
+    // with it (`Wilderness::add_road`): the shop still opens.
+    test.world.wilderness.forget(Some(poi.chunk));
+    let again = stock_in(&test.send(std::slice::from_ref(&open)));
+    assert_eq!(again, Some(stock), "it still opens after a road has come");
     // The keeper and stock are the town's own, kept in its save.
     let saved = test.world.site(SiteId::Poi(poi.chunk)).levels.get(&0);
     let saved = saved.expect("the town's first level");

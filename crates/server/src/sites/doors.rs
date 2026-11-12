@@ -155,9 +155,7 @@ pub(super) fn cell_changed(
         let SiteId::Poi(chunk) = key.site else {
             return None;
         };
-        world
-            .wilderness
-            .chunk(chunk)?
+        super::wild_chunk(world, chunk)?
             .plan
             .cutout()
             .map(|cutout| *cutout.poi())

@@ -94,3 +94,61 @@ fn a_site_visit_takes_back_its_mobs_resting_in_the_wilderness() {
     assert!(about.is_empty(), "nobody is about");
     assert_eq!(kept(&test), 0, "home to the farm's own visit");
 }
+
+/// A client at the nearest town to the start, on the world map at its poi.
+fn near_a_town() -> (TestClient, Poi) {
+    let world = crate::ServerWorld::new(shared::world::WorldSeed::new(12345));
+    let mut test = TestClient::of(world);
+    let (x, y) = test.client.world_position();
+    let start = test.world.pois.chunk_at(x, y);
+    let town = (1..24)
+        .flat_map(|ring| (-ring..=ring).flat_map(move |dy| (-ring..=ring).map(move |dx| (dx, dy))))
+        .filter_map(|(dx, dy)| {
+            let chunk = ChunkPos {
+                x: start.x + dx,
+                y: start.y + dy,
+            };
+            test.world.pois.in_chunk(chunk)
+        })
+        .find(|poi| poi.kind.is_town())
+        .expect("a town near the start");
+    test.client.character.world_position = (town.x, town.y);
+    (test, town)
+}
+
+#[test]
+fn arriving_inside_a_town_finds_its_people_about() {
+    let (mut test, town) = near_a_town();
+    let id = SiteId::Poi(town.chunk);
+    // In by the entrance, then back out from inside, by Up where they stand
+    // (as joining there, or leaving and exploring again on the spot does).
+    test.send(&[ClientMessage::Down]);
+    keep_wild_areas(std::slice::from_mut(&mut test.client), &mut test.world);
+    assert!(!farm_mobs(&test, &town).is_empty(), "a town has people");
+    let wild = &test.world.wilderness;
+    let chunk = wild.chunk(town.chunk).expect("worked out");
+    let (ox, oy) = chunk
+        .plan
+        .cutout()
+        .and_then(|c| c.offset())
+        .expect("set in");
+    let inside = chunk.spawns[0].position;
+    test.send(&[ClientMessage::Up]);
+    keep_wild_areas(std::slice::from_mut(&mut test.client), &mut test.world);
+    test.client
+        .character
+        .left_at
+        .insert(id, (0, (inside.0 - ox, inside.1 - oy)));
+    test.client.character.world_position = (town.x, town.y);
+    test.send(&[ClientMessage::Down]);
+    let at = test.client.visit.as_ref().unwrap().position();
+    assert_ne!(at, chunk_entrance(&test, &town), "arrived inside");
+    keep_wild_areas(std::slice::from_mut(&mut test.client), &mut test.world);
+    assert!(!farm_mobs(&test, &town).is_empty(), "its people are about");
+}
+
+/// Where going into a poi arrives when nobody has been in it.
+fn chunk_entrance(test: &TestClient, poi: &Poi) -> (i64, i64) {
+    let chunk = test.world.wilderness.chunk(poi.chunk).expect("worked out");
+    chunk.entrance.expect("an entrance")
+}

@@ -43,7 +43,7 @@ pub(super) fn keepers_in_window(world: &mut ServerWorld, mirrors: &[Mirror]) -> 
         let SiteId::Poi(chunk) = mirror.id else {
             continue;
         };
-        let Some(wild) = world.wilderness.chunk(chunk) else {
+        let Some(wild) = super::wild_chunk(world, chunk) else {
             continue;
         };
         let shops = wild.town.iter().filter(|b| !sells(b.look.kind).is_empty());
