@@ -21,46 +21,48 @@ pub(super) static GIVE_ITEM: Template = html!(
     "debug_menu.give_item",
     r#"
 <form id="debug.give_item">
-  <span nowrap valign="middle">
-    Give
-    <button id="less">-</button>
-    <input id="count" type="text" inputmode="numeric" value="1" width="64"/>
-    <button id="more">+</button>
-    <select id="size" width="130"><option>Size</option></select>
-    Size
-    <select id="identical" width="120"><option>Identical</option></select>
-  </span>
-  <span nowrap valign="middle">
-    Quality
-    <select id="quality" width="130"><option>Common</option></select>
-    <select id="set" width="100"><option>Set</option></select>
-    <select id="favour" width="130"><option>Unaligned</option></select>
-    <select id="magic" width="120"><option>Mundane</option></select>
-    <select id="kind" searchable width="220"><option>Kind</option></select>
-  </span>
-  <span id="form_line" valign="middle" hidden>
-    Form
-    <select id="style" width="170" hidden><option>Any style</option></select>
-    <select id="construction" width="170" hidden><option>Any construction</option></select>
-    <select id="material" width="170" hidden><option>Any material</option></select>
-    <select id="finish" width="170" hidden><option>Any finish</option></select>
-    <select id="dye" width="170" hidden><option>Any colour</option></select>
-    <select id="settings" width="170" hidden><option>Any settings</option></select>
-    <select id="gem_material" width="170" hidden><option>Any gem</option></select>
-    <select id="gem_cut" width="170" hidden><option>Any cut</option></select>
-    <select id="limits" width="170" hidden><option>Any length</option></select>
-  </span>
-  <span nowrap valign="middle">
-    <label for="seed">Seed</label>
-    <input id="seed" type="text" inputmode="numeric" width="240"/>
-    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
-  </span>
-  <canvas id="preview"/>
-  <span nowrap align="right" valign="middle">
-    <p id="no_space" class="warning" hidden>No space</p>
-    <span id="to">to you</span>
-    <button id="give" class="main">Give</button>
-  </span>
+  <panel id="panel" moveable>
+    <span nowrap valign="middle">
+      Give
+      <button id="less">-</button>
+      <input id="count" type="text" inputmode="numeric" value="1" width="64"/>
+      <button id="more">+</button>
+      <select id="size" width="130"><option>Size</option></select>
+      Size
+      <select id="identical" width="120"><option>Identical</option></select>
+    </span>
+    <span nowrap valign="middle">
+      Quality
+      <select id="quality" width="130"><option>Common</option></select>
+      <select id="set" width="100"><option>Set</option></select>
+      <select id="favour" width="130"><option>Unaligned</option></select>
+      <select id="magic" width="120"><option>Mundane</option></select>
+      <select id="kind" searchable width="220"><option>Kind</option></select>
+    </span>
+    <span id="form_line" valign="middle" hidden>
+      Form
+      <select id="style" width="170" hidden><option>Any style</option></select>
+      <select id="construction" width="170" hidden><option>Any construction</option></select>
+      <select id="material" width="170" hidden><option>Any material</option></select>
+      <select id="finish" width="170" hidden><option>Any finish</option></select>
+      <select id="dye" width="170" hidden><option>Any colour</option></select>
+      <select id="settings" width="170" hidden><option>Any settings</option></select>
+      <select id="gem_material" width="170" hidden><option>Any gem</option></select>
+      <select id="gem_cut" width="170" hidden><option>Any cut</option></select>
+      <select id="limits" width="170" hidden><option>Any length</option></select>
+    </span>
+    <span nowrap valign="middle">
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" inputmode="numeric" width="240"/>
+      <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+    </span>
+    <canvas id="preview"/>
+    <span nowrap align="right" valign="middle">
+      <p id="no_space" class="warning" hidden>No space</p>
+      <span id="to">to you</span>
+      <button id="give" class="main">Give</button>
+    </span>
+  </panel>
 </form>
 "#
 );

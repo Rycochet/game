@@ -3,9 +3,10 @@
 
 use bevy::prelude::*;
 
+use super::super::bodies::BodiesToShow;
 use super::{
     change_creature, create_mob, dev_area, examine_mob, generate, give, learn_skills,
-    pictures_spawn, steps, teleport_to_world, vitals, world_time,
+    pictures_spawn, spawn_every_widget, steps, teleport_to_world, vitals, world_time,
 };
 use crate::dom::Dom;
 use crate::widgets::UiId;
@@ -17,6 +18,16 @@ pub(in crate::debug_menu) fn bind_panels(
 ) {
     for (entity, id) in &new {
         let mut bound = commands.entity(entity);
+        // The two panels still filled by code, into their holders.
+        match id.parts() {
+            ("debug.every_widget", "holder") => {
+                bound.with_children(spawn_every_widget);
+            }
+            ("debug.suns_and_moons", "holder") => {
+                bound.insert(BodiesToShow);
+            }
+            _ => {}
+        }
         match id.parts().0 {
             "debug.vitals" => vitals::bind(&mut bound, id),
             "debug.change_creature" => change_creature::bind(&mut bound, id, &mut dom),

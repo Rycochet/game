@@ -43,24 +43,26 @@ pub(super) static TELEPORT_TO_WORLD: Template = html!(
     "debug_menu.teleport_to_world",
     r#"
 <form id="debug.teleport_to_world">
-  <span nowrap valign="middle">
-    <label for="seed">Seed</label>
-    <input id="seed" type="text" inputmode="numeric" width="240"/>
-    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
-    Blank: this world
-  </span>
-  <span nowrap valign="middle">
-    Gate
-    <small id="gates" class="joined" nowrap>
-      <button id="any">Any</button>
-    </small>
-  </span>
-  <span nowrap>
-    <button id="view_planet">View Planet...</button>
-    <button id="hall">Hall of Worlds</button>
-    <button id="go" class="main">Go</button>
-  </span>
-  <template id="gate"><button id="gate"/></template>
+  <panel id="panel" moveable>
+    <span nowrap valign="middle">
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" inputmode="numeric" width="240"/>
+      <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+      Blank: this world
+    </span>
+    <span nowrap valign="middle">
+      Gate
+      <small id="gates" class="joined" nowrap>
+        <button id="any">Any</button>
+      </small>
+    </span>
+    <span nowrap>
+      <button id="view_planet">View Planet...</button>
+      <button id="hall">Hall of Worlds</button>
+      <button id="go" class="main">Go</button>
+    </span>
+    <template id="gate"><button id="gate"/></template>
+  </panel>
 </form>
 "#
 );

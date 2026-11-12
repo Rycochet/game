@@ -15,7 +15,7 @@ use crate::common::{DebugTools, InspectedMob, Other, Target};
 use crate::connection::{FromServer, ToServer};
 use crate::dom::{Dom, Template};
 use crate::html;
-use crate::widgets::{ButtonPressed, ButtonState, RaisePanel, UiId};
+use crate::widgets::{ButtonPressed, ButtonState, UiId};
 use shared::role::DebugTool;
 
 /// How often an open panel asks again, in seconds.
@@ -56,13 +56,15 @@ pub(super) static EXAMINE_MOB: Template = html!(
     "debug_menu.examine_mob",
     r#"
 <form id="debug.examine_mob">
-  <div id="lines" class="tight"/>
-  <span nowrap>
-    <button id="kill">Kill</button>
-    <button id="destroy">Destroy</button>
-    <button id="give_item">Give Item...</button>
-  </span>
-  <template id="line"><p id="line"/></template>
+  <panel id="panel" moveable>
+    <div id="lines" class="tight"/>
+    <span nowrap>
+      <button id="kill">Kill</button>
+      <button id="destroy">Destroy</button>
+      <button id="give_item">Give Item...</button>
+    </span>
+    <template id="line"><p id="line"/></template>
+  </panel>
 </form>
 "#
 );
@@ -152,7 +154,7 @@ fn press_buttons(
     others: Query<&Other>,
     mut open: ResMut<OpenPanels>,
     mut commands: Commands,
-    mut raise: MessageWriter<RaisePanel>,
+    mut dom: crate::dom::Dom,
     nodes: Query<(), With<Node>>,
     mut to_server: MessageWriter<ToServer>,
 ) {
@@ -164,7 +166,7 @@ fn press_buttons(
             ExamineButton::Kill => ClientMessage::DevKillMob { mob },
             ExamineButton::Destroy => ClientMessage::DevMobs(DevMobTool::Delete(mob)),
             ExamineButton::GiveItem => {
-                open.open(DebugAction::GiveItem, &mut commands, &mut raise, &nodes);
+                open.open(DebugAction::GiveItem, &mut commands, &mut dom, &nodes);
                 continue;
             }
         };

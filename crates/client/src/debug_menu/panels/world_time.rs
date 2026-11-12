@@ -41,36 +41,38 @@ pub(super) static WORLD_TIME: Template = html!(
     "debug_menu.world_time",
     r#"
 <form id="debug.world_time">
-  <div class="tight">
-  <span class="joined" nowrap valign="middle">
+  <panel id="panel" moveable>
+    <div class="tight">
+    <span class="joined" nowrap valign="middle">
+      <small class="joined" nowrap>
+        <button id="back_1d">-1d</button>
+        <button id="back_12h">-12h</button>
+        <button id="back_1h">-1h</button>
+        <button id="back_30m">-30m</button>
+        <button id="back_10m">-10m</button>
+        <button id="back_1m">-1m</button>
+      </small>
+      <input id="time" type="text" width="150"/>
+      <small class="joined" nowrap>
+        <button id="on_1m">+1m</button>
+        <button id="on_10m">+10m</button>
+        <button id="on_30m">+30m</button>
+        <button id="on_1h">+1h</button>
+        <button id="on_12h">+12h</button>
+        <button id="on_1d">+1d</button>
+      </small>
+    </span>
     <small class="joined" nowrap>
-      <button id="back_1d">-1d</button>
-      <button id="back_12h">-12h</button>
-      <button id="back_1h">-1h</button>
-      <button id="back_30m">-30m</button>
-      <button id="back_10m">-10m</button>
-      <button id="back_1m">-1m</button>
+      <button id="rate_quarter">x1/4</button>
+      <button id="rate_half">x1/2</button>
+      <button id="rate_1">x1</button>
+      <button id="rate_2">x2</button>
+      <button id="rate_10">x10</button>
+      <button id="rate_60">x60</button>
+      <button id="rate_600">x600</button>
     </small>
-    <input id="time" type="text" width="150"/>
-    <small class="joined" nowrap>
-      <button id="on_1m">+1m</button>
-      <button id="on_10m">+10m</button>
-      <button id="on_30m">+30m</button>
-      <button id="on_1h">+1h</button>
-      <button id="on_12h">+12h</button>
-      <button id="on_1d">+1d</button>
-    </small>
-  </span>
-  <small class="joined" nowrap>
-    <button id="rate_quarter">x1/4</button>
-    <button id="rate_half">x1/2</button>
-    <button id="rate_1">x1</button>
-    <button id="rate_2">x2</button>
-    <button id="rate_10">x10</button>
-    <button id="rate_60">x60</button>
-    <button id="rate_600">x600</button>
-  </small>
-  </div>
+    </div>
+  </panel>
 </form>
 "#
 );

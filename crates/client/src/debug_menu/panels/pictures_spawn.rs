@@ -23,24 +23,26 @@ pub(super) static ITEM_PICTURES: Template = html!(
     "debug_menu.item_pictures",
     r#"
 <form id="debug.item_pictures">
-  <span nowrap valign="middle">
-    <select id="page" width="160"><option>Gems</option></select>
-    <toggle-row id="quality">
-      <option>Poor</option>
-      <option selected>Common</option>
-      <option>Uncommon</option>
-      <option>Rare</option>
-      <option>Epic</option>
-      <option>Legendary</option>
-      <option>Artifact</option>
-    </toggle-row>
-  </span>
-  <span nowrap valign="top">
-    <scroll id="scroll" max-height="70%">
-      <canvas id="grid"/>
-    </scroll>
-    <canvas id="large" width="256" height="256"/>
-  </span>
+  <panel id="panel" moveable>
+    <span nowrap valign="middle">
+      <select id="page" width="160"><option>Gems</option></select>
+      <toggle-row id="quality">
+        <option>Poor</option>
+        <option selected>Common</option>
+        <option>Uncommon</option>
+        <option>Rare</option>
+        <option>Epic</option>
+        <option>Legendary</option>
+        <option>Artifact</option>
+      </toggle-row>
+    </span>
+    <span nowrap valign="top">
+      <scroll id="scroll" max-height="70%">
+        <canvas id="grid"/>
+      </scroll>
+      <canvas id="large" width="256" height="256"/>
+    </span>
+  </panel>
 </form>
 "#
 );

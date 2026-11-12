@@ -48,24 +48,26 @@ pub(super) static CREATE_MOB: Template = html!(
     "debug_menu.create_mob",
     r#"
 <form id="debug.create_mob">
-  <span nowrap valign="middle">
-    <label for="kind">Kind</label>
-    <select id="kind" searchable width="150"><option>Human</option></select>
-    <label for="attitude">Attitude</label>
-    <select id="attitude" width="130"><option>Default</option></select>
-    <label for="gear">Gear</label>
-    <select id="gear" width="100"><option>Rolled</option></select>
-    <input id="still" type="checkbox" label="Still" readonly/>
-  </span>
-  <span nowrap valign="middle">
-    <label for="seed">Seed</label>
-    <input id="seed" type="text" inputmode="numeric" width="240"/>
-    <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
-  </span>
-  <span nowrap align="right" valign="middle">
-    <p id="click_to_place" class="warning">Click to place</p>
-    <button id="create">Create</button>
-  </span>
+  <panel id="panel" moveable>
+    <span nowrap valign="middle">
+      <label for="kind">Kind</label>
+      <select id="kind" searchable width="150"><option>Human</option></select>
+      <label for="attitude">Attitude</label>
+      <select id="attitude" width="130"><option>Default</option></select>
+      <label for="gear">Gear</label>
+      <select id="gear" width="100"><option>Rolled</option></select>
+      <input id="still" type="checkbox" label="Still" readonly/>
+    </span>
+    <span nowrap valign="middle">
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" inputmode="numeric" width="240"/>
+      <button id="new_seed" title="Random seed"><img src="picture:new_seed"/></button>
+    </span>
+    <span nowrap align="right" valign="middle">
+      <p id="click_to_place" class="warning">Click to place</p>
+      <button id="create">Create</button>
+    </span>
+  </panel>
 </form>
 "#
 );

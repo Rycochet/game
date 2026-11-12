@@ -10,7 +10,7 @@ use super::{GenerateForm, OpenPanels, new_seed};
 use crate::common::{DebugTools, TeleportToWorldAsked};
 use crate::connection::ToServer;
 use crate::planet_view::ViewPlanet;
-use crate::widgets::{ButtonPressed, ButtonState, RaisePanel, TextBox};
+use crate::widgets::{ButtonPressed, ButtonState, TextBox};
 use shared::role::DebugTool;
 
 /// View Planet's Teleport to World...: the panel, with that world's seed in
@@ -20,7 +20,7 @@ pub(in crate::debug_menu) fn open_teleport_asked(
     mut form: ResMut<TeleportForm>,
     mut open: ResMut<OpenPanels>,
     mut commands: Commands,
-    mut raise: MessageWriter<RaisePanel>,
+    mut dom: crate::dom::Dom,
     nodes: Query<(), With<Node>>,
 ) {
     let Some(&TeleportToWorldAsked { seed }) = asked.read().last() else {
@@ -29,7 +29,7 @@ pub(in crate::debug_menu) fn open_teleport_asked(
     open.open(
         DebugAction::TeleportToWorld,
         &mut commands,
-        &mut raise,
+        &mut dom,
         &nodes,
     );
     form.gate = None;

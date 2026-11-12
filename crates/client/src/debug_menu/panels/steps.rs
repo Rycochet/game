@@ -48,23 +48,25 @@ pub(super) static DRAWING_STATES: Template = html!(
     "debug_menu.drawing_states",
     r#"
 <form id="debug.drawing_states">
-  <table cellspacing="4">
-    <tr>
-      <td valign="middle">Stairs</td>
-      <td><button id="stairs_previous">Previous</button></td>
-      <td><button id="stairs_next">Next</button></td>
-    </tr>
-    <tr>
-      <td valign="middle">Fields</td>
-      <td><button id="fields_previous">Previous</button></td>
-      <td><button id="fields_next">Next</button></td>
-    </tr>
-    <tr>
-      <td valign="middle">Herbs</td>
-      <td><button id="herbs_previous">Previous</button></td>
-      <td><button id="herbs_next">Next</button></td>
-    </tr>
-  </table>
+  <panel id="panel" moveable>
+    <table cellspacing="4">
+      <tr>
+        <td valign="middle">Stairs</td>
+        <td><button id="stairs_previous">Previous</button></td>
+        <td><button id="stairs_next">Next</button></td>
+      </tr>
+      <tr>
+        <td valign="middle">Fields</td>
+        <td><button id="fields_previous">Previous</button></td>
+        <td><button id="fields_next">Next</button></td>
+      </tr>
+      <tr>
+        <td valign="middle">Herbs</td>
+        <td><button id="herbs_previous">Previous</button></td>
+        <td><button id="herbs_next">Next</button></td>
+      </tr>
+    </table>
+  </panel>
 </form>
 "#
 );
