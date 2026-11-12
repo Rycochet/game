@@ -104,7 +104,7 @@ impl Plugin for InventoryPlugin {
                         (panels::show_grids, panels::show_weights),
                     )
                         .chain(),
-                    body::show_clothes,
+                    (body::bind_clothes, body::show_clothes).chain(),
                     (body::show_body_aim, wear_note::show_wear_note),
                     (give::show_nearby, give::bind_rows).chain(),
                     give::show_give_aim,

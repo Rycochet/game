@@ -117,7 +117,8 @@ pub(in crate::inventory) fn bind_pages(
                 place.with_child((SheetText, words));
             }
             "clothes" => {
-                place.with_children(spawn_rows);
+                spawn_rows(&mut commands, entity);
+                continue;
             }
             "wear_note" => {
                 place.with_child(wear_note());
