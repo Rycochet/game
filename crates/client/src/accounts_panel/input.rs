@@ -9,16 +9,20 @@ use super::find::{ApplyButton, FindButton, GiveForList, GiveRoleList, NameBox, R
 use super::roles::{RoleList, RoleNameBox, RoleTitleBox, SaveButton};
 use super::state::{FOR, Panel, Tab};
 use crate::connection::ToServer;
-use crate::widgets::{ButtonPressed, DropdownChosen, TabChosen, TextBox, TextEdited};
+use crate::dom::{UiEvent, UiValue};
+use crate::widgets::{ButtonPressed, DropdownChosen, TextBox, TextEdited, UiId};
 
 /// Another tab: its page is built.
 pub(super) fn choose_tab(
-    mut chosen: MessageReader<TabChosen>,
+    mut chosen: MessageReader<UiEvent>,
     mut panel: ResMut<Panel>,
     mut to_server: MessageWriter<ToServer>,
 ) {
-    for &TabChosen(row, index) in chosen.read() {
-        if Some(row) == panel.tabs_row && panel.tab != index {
+    for event in chosen.read() {
+        let UiValue::Choice { index, .. } = event.value else {
+            continue;
+        };
+        if event.id == UiId::new("accounts", "tabs") && panel.tab != index {
             panel.tab = index;
             panel.refused = None;
             panel.dirty = true;

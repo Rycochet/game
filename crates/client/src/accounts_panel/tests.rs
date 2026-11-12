@@ -3,6 +3,15 @@ use shared::role::{Permission, Powers};
 use super::state::{Tab, tabs_for};
 
 #[test]
+fn the_panel_is_good_markup_with_every_tab() {
+    super::open::ACCOUNTS.assert_good();
+    for tab in [Tab::Find, Tab::Roles, Tab::Audit] {
+        let option = format!("<option>{}</option>", tab.label());
+        assert!(super::open::ACCOUNTS.source.contains(&option));
+    }
+}
+
+#[test]
 fn each_role_sees_the_tabs_it_may_use() {
     let with = |permissions: &[Permission]| Powers {
         permissions: permissions.iter().copied().collect(),

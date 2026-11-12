@@ -85,7 +85,7 @@ pub use soft_keyboard::Key as SoftKey;
 pub use spinner::Spinner;
 pub use stock::{StockGrid, StockGridNode, StockOf, show_stock_aim};
 pub use switch::{Switch, SwitchFlipped, spawn_switch};
-pub use tabs::{ChooseTab, TabChosen, spawn_tabs, spawn_toggle_row};
+pub use tabs::{ChooseTab, TabChosen, set_tabs, spawn_tabs, spawn_toggle_row};
 pub use text_box::{SoftKeyPressed, TextBox, TextEdited, TextFocus, field_label, spawn_text_box};
 pub use theme::{
     ALLOWED, GRID_COLOUR, GRID_LINE, INK, ITEM_EDGE, PARCHMENT, REFUSED, ROW_TINT, TextSize,

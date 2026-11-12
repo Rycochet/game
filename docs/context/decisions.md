@@ -1278,3 +1278,7 @@ Owner, on the order of the rest: PRs 8 to 10 don't depend on each other (but tha
 Owner, asked whether these two should get theme looks now or stay code until PR 11: "New theme looks". So `Look` gained `tip` (a tooltip's dark box: edge, padding, shadow) and `icons` (the icon font behind the writing), with the classes `span.tip`, `p.status`, `p.status-warning` and `img.gold`. The status text is `TextSize::Large` (18), the nearest the theme has to the size it was.
 
 The same day the queue's rules changed: a queued chat is now a parent that starts a fresh child chat for each PR. This chat's first try at starting a child was refused by the app's permission check, so by the rule it coded this PR itself (noted in the rules file).
+
+## 2026-11-12: Tabs only known while playing are set as a select's options are
+
+The Accounts panel shows only the tabs its role may use. Rather than a template for each set of tabs, or hiding buttons inside the widget, `Dom::set_options` now takes a `tab-bar` or `toggle-row` as well as a `select` (`widgets::set_tabs` makes the row again): one way for every choice among options, as their markup already is. The panel is in two slices: its shell (a moveable `panel`, closed by `UiValue::Closed`), then its pages changed in place.
