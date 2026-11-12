@@ -53,6 +53,15 @@ impl Size {
         }
     }
 
+    /// The radius of its footprint on a level, in units (`spot::CELL_SPAN`, 240 a
+    /// cell): the circle it is drawn standing on and blocks with. Medium's is
+    /// today's token base, 2/3 of a cell across; the rest follow `quarters`:
+    /// Tiny 20, Small 60, Medium 80, Large 120, Huge 180, Giant 240 (owner,
+    /// 2026-11-10).
+    pub fn radius(self) -> i64 {
+        self.quarters() as i64 * 20
+    }
+
     /// `by` sizes up or, negative, down, stopping at the ends.
     pub fn stepped(self, by: i8) -> Self {
         let last = Self::ALL.len() as i8 - 1;

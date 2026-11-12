@@ -18,7 +18,8 @@ mod sight;
 mod wall_shape;
 
 pub use bars::WallBar;
-use bars::{bars_of, line_hits_box};
+use bars::bars_of;
+pub(crate) use bars::line_hits_box;
 pub use cell::Cell;
 pub use level::{Level, RoomId};
 use line::clear_line;
