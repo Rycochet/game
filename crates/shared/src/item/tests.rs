@@ -82,11 +82,11 @@ fn an_item_goes_by_its_own_name_if_it_has_one() {
 fn a_kind_without_quality_drops_without_one() {
     let table = [Drop {
         quality: Quality::Common,
-        kind: ItemKind::Coin,
+        kind: ItemKind::CopperCoin,
         weight: 1,
     }];
     let dropped = roll_drop(&mut Seed::new(3).rng(), &table);
-    assert_eq!(dropped, Some((ItemKind::Coin, None)));
+    assert_eq!(dropped, Some((ItemKind::CopperCoin, None)));
     assert!(ItemKind::Sword.def().has_quality);
 }
 
@@ -310,7 +310,7 @@ fn things_cant_lie_on_each_other_or_stick_out() {
 
 #[test]
 fn a_shape_with_a_gap_leaves_it_free() {
-    let inventory = carrying(&[ItemKind::Boomerang, ItemKind::Coin]);
+    let inventory = carrying(&[ItemKind::Boomerang, ItemKind::CopperCoin]);
     // In the boomerang's missing corner.
     assert_eq!(inventory.placed(id(2)).unwrap().1.x, 1);
 }
@@ -544,7 +544,7 @@ fn dropped_on_a_closed_bag_it_takes_the_first_place_turning_if_it_must() {
         for x in 0..3u8 {
             let coin = id(100 + (y as u128) * 10 + x as u128);
             pouch
-                .give(Item::new(coin, ItemKind::Coin), StackLimits::NONE)
+                .give(Item::new(coin, ItemKind::CopperCoin), StackLimits::NONE)
                 .unwrap();
             pouch
                 .move_item(coin, Holder::Inside(id(1)), x, y, NONE)
@@ -568,7 +568,7 @@ fn dropped_on_a_closed_bag_it_takes_the_first_place_turning_if_it_must() {
 fn the_bin_keeps_the_last_thing_thrown_away_until_the_next() {
     let mut inventory = nested();
     inventory
-        .give(Item::new(id(4), ItemKind::Coin), StackLimits::NONE)
+        .give(Item::new(id(4), ItemKind::CopperCoin), StackLimits::NONE)
         .unwrap();
     assert!(inventory.to_bin(id(2)));
     // Gone from the backpack, but it and what is in it can still be had.
@@ -576,7 +576,7 @@ fn the_bin_keeps_the_last_thing_thrown_away_until_the_next() {
     assert!(inventory.find(id(2)).is_some());
     assert!(inventory.placed(id(2)).is_none());
     // It weighs nothing there.
-    assert_eq!(inventory.total_weight(), 1200 + 10);
+    assert_eq!(inventory.total_weight(), 1200 + 1);
     // Thrown away twice, nothing changes.
     assert!(!inventory.to_bin(id(2)));
     // Taken back, it goes in a grid again.
@@ -598,10 +598,10 @@ fn a_new_item_goes_in_the_first_place_or_comes_back() {
     let mut inventory = Inventory::default();
     for n in 0..24 {
         inventory
-            .give(Item::new(id(n), ItemKind::Coin), StackLimits::NONE)
+            .give(Item::new(id(n), ItemKind::CopperCoin), StackLimits::NONE)
             .unwrap();
     }
-    let refused = inventory.give(Item::new(id(99), ItemKind::Coin), StackLimits::NONE);
+    let refused = inventory.give(Item::new(id(99), ItemKind::CopperCoin), StackLimits::NONE);
     assert_eq!(refused.unwrap_err().id, id(99));
 }
 

@@ -2,7 +2,7 @@
 //! from the secret seed and the block's position alone, so a block let go and
 //! made again has them back as they were.
 
-use super::{Spawn, looks, roll_gear};
+use super::{Spawn, looks, roll_coins, roll_gear};
 use crate::climate::Biome;
 use crate::creature::CreatureKind;
 use crate::dungeon::{Cell, Level};
@@ -110,6 +110,7 @@ pub fn wild_spawns(seed: Seed, block: BlockPos, level: &Level, biome: Biome) -> 
                 &Build::rolled(&mut Seed::new(own(60)).rng()),
             ),
             gear: roll_gear(&own, kind),
+            coins: roll_coins(&own, kind),
         });
     }
     mobs

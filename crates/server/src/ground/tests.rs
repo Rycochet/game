@@ -77,7 +77,7 @@ fn holding(kind: ItemKind) -> (TestClient, Id) {
 
 #[test]
 fn dropped_things_lie_under_the_player_and_come_back() {
-    let (mut test, coin) = holding(ItemKind::Coin);
+    let (mut test, coin) = holding(ItemKind::CopperCoin);
     let answers = test.send(&[ClientMessage::DropItem { item: coin }]);
     assert!(carrying(&answers).find(coin).is_none());
     assert_eq!(ground(&answers)[0].id, coin);
@@ -100,7 +100,7 @@ fn dropped_things_lie_under_the_player_and_come_back() {
 
 #[test]
 fn stepping_off_it_stops_it_being_reachable() {
-    let (mut test, coin) = holding(ItemKind::Coin);
+    let (mut test, coin) = holding(ItemKind::CopperCoin);
     let start = test.client.visit.as_ref().unwrap().room_to_walk_east(2);
     test.send(&[ClientMessage::DevTeleport {
         x: start.0,
@@ -120,7 +120,7 @@ fn stepping_off_it_stops_it_being_reachable() {
 #[test]
 fn the_world_map_has_no_ground() {
     let mut test = TestClient::new();
-    let answers = test.send(&[give(ItemKind::Coin)]);
+    let answers = test.send(&[give(ItemKind::CopperCoin)]);
     let coin = carrying(&answers).items[0].item.id;
     let answers = test.send(&[ClientMessage::DropItem { item: coin }]);
     assert!(carrying(&answers).find(coin).is_some());
@@ -192,7 +192,7 @@ fn what_is_on_the_ground_keeps_its_secrets() {
 
 #[test]
 fn throwing_away_from_the_ground_goes_in_the_bin() {
-    let (mut test, coin) = holding(ItemKind::Coin);
+    let (mut test, coin) = holding(ItemKind::CopperCoin);
     test.send(&[ClientMessage::DropItem { item: coin }]);
     let answers = test.send(&[ClientMessage::BinFromGround { item: coin }]);
     assert!(carrying(&answers).in_bin(coin));
@@ -233,7 +233,7 @@ fn bags_are_only_told_of_when_seen_and_remembered_until_seen_again() {
     let far_cell = test.client.visit.as_mut().unwrap().walkable_out_of_sight();
     let far = Spot::middle_of(far_cell);
     let here = test.client.visit.as_ref().unwrap().position();
-    lay_down(&mut test, far, ItemKind::Coin);
+    lay_down(&mut test, far, ItemKind::CopperCoin);
     assert!(bags_told(&test.send(&[])).is_empty(), "out of sight");
 
     let go_there = ClientMessage::DevTeleport {
@@ -269,7 +269,7 @@ fn bags_are_only_told_of_when_seen_and_remembered_until_seen_again() {
 fn a_bag_seen_to_fill_up_looks_it() {
     let mut test = in_a_site();
     let here = test.client.visit.as_ref().unwrap().spot();
-    lay_down(&mut test, here, ItemKind::Coin);
+    lay_down(&mut test, here, ItemKind::CopperCoin);
     test.send(&[]);
     lay_down(&mut test, here, ItemKind::Sword);
     let answers = test.send(&[]);
@@ -292,13 +292,13 @@ fn ten_kilos_takes_a_twelfth_of_a_second_to_pick_up() {
 fn a_stack_on_the_ground_joins_a_carried_one_as_far_as_it_fits() {
     let mut test = in_a_site();
     let three = [
-        give(ItemKind::Coin),
-        give(ItemKind::Coin),
-        give(ItemKind::Coin),
+        give(ItemKind::CopperCoin),
+        give(ItemKind::CopperCoin),
+        give(ItemKind::CopperCoin),
     ];
     let dropped = carrying(&test.send(&three)).items[0].item.id;
     test.send(&[ClientMessage::DropItem { item: dropped }]);
-    let kept = carrying(&test.send(&[give(ItemKind::Coin)])).items[0]
+    let kept = carrying(&test.send(&[give(ItemKind::CopperCoin)])).items[0]
         .item
         .id;
     test.world.stacks = shared::item::StackLimits {
@@ -343,7 +343,7 @@ fn bags_here(test: &mut TestClient) -> Vec<(Spot, usize)> {
 
 #[test]
 fn a_drop_joins_a_bag_within_reach_or_starts_one_at_the_feet() {
-    let (mut test, coin) = holding(ItemKind::Coin);
+    let (mut test, coin) = holding(ItemKind::CopperCoin);
     let here = standing(&test);
     let near = here.offset(150, 0);
     lay_down(&mut test, near, ItemKind::Sword);
@@ -352,7 +352,7 @@ fn a_drop_joins_a_bag_within_reach_or_starts_one_at_the_feet() {
 
     // Out of reach of it, a new bag where they stand.
     let mut test = in_a_site();
-    let coin = carrying(&test.send(&[give(ItemKind::Coin)])).items[0]
+    let coin = carrying(&test.send(&[give(ItemKind::CopperCoin)])).items[0]
         .item
         .id;
     let here = standing(&test);
@@ -371,7 +371,7 @@ fn anything_in_reach_can_be_picked_up_and_is_told_of() {
     let mut test = in_a_site();
     let here = standing(&test);
     let (a, b) = (here.offset(-120, 0), here.offset(0, 150));
-    lay_down(&mut test, a, ItemKind::Coin);
+    lay_down(&mut test, a, ItemKind::CopperCoin);
     lay_down(&mut test, b, ItemKind::Sword);
     let answers = test.send(&[]);
     let told = answers.iter().rev().find_map(|answer| match answer {

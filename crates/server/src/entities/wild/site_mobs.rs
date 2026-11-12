@@ -43,7 +43,7 @@ pub(super) fn site_mobs(world: &mut ServerWorld, block: BlockPos, shift: i64) ->
             let record = saved.records.entry(mob).or_default();
             let carrying = record
                 .gear
-                .get_or_insert_with(|| dressed(spawn.kind, &spawn.gear, made_at))
+                .get_or_insert_with(|| dressed(spawn.kind, &spawn.gear, spawn.coins, made_at))
                 .clone();
             let memory = record.memory.clone();
             let position = (spawn.position.0 + shift, spawn.position.1);

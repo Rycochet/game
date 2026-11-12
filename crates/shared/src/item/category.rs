@@ -117,7 +117,7 @@ impl ItemKind {
             Self::Necklace | Self::Ring => Jewellery,
             Self::Backpack | Self::BagOfHolding | Self::Pouch | Self::SmallBox => Containers,
             Self::Apple => Food,
-            Self::Coin | Self::Gem => Valuables,
+            Self::CopperCoin | Self::SilverCoin | Self::GoldCoin | Self::Gem => Valuables,
             Self::Stone => Materials,
             Self::Lantern | Self::Key => Other,
         }

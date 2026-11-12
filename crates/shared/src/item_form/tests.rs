@@ -104,7 +104,7 @@ fn blades_take_their_weight_and_shape_from_their_form() {
 
 #[test]
 fn a_commission_is_named_with_its_size() {
-    let mut item = Item::new(Id::for_test(1), ItemKind::Coin);
+    let mut item = Item::new(Id::for_test(1), ItemKind::CopperCoin);
     assert!(give_commission(
         &mut item,
         "Katana",

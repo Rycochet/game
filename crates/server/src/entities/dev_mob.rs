@@ -107,12 +107,13 @@ fn create_mob(
         .ok_or("no mob could be rolled")?;
     if !order.gear {
         spawn.gear.clear();
+        spawn.coins = 0;
     }
     let most = population.mobs.iter().map(|mob| mob.number).max();
     spawn.number = most
         .filter(|&n| n >= DEV_MOB_NUMBERS)
         .map_or(DEV_MOB_NUMBERS, |n| n + 1);
-    let carrying = dressed(spawn.kind, &spawn.gear, made_at);
+    let carrying = dressed(spawn.kind, &spawn.gear, spawn.coins, made_at);
     let mut mob = Mob::new(new_id(), &spawn, &carrying, index);
     mob.still = order.still;
     // It faces whoever made it.

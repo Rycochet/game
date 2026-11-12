@@ -7,6 +7,7 @@
 //! grids of their own.
 
 mod category;
+mod coin;
 mod def;
 mod drop;
 mod inventory;
@@ -29,6 +30,7 @@ mod stack;
 mod under_def;
 
 pub use category::ItemCategory;
+pub use coin::{COINS, COINS_PER_NEXT, coin_items, coin_stacks};
 pub use drop::{Drop, ODDS_OUT_OF, roll_drop};
 pub use inventory::Inventory;
 pub use item::{Item, MadeAt};
@@ -54,6 +56,9 @@ pub const INVENTORY_SIZE: (u8, u8) = (6, 4);
 
 #[cfg(test)]
 mod add_tests;
+
+#[cfg(test)]
+mod coin_tests;
 
 #[cfg(test)]
 mod look_up_tests;

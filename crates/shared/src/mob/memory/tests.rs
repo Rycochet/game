@@ -73,8 +73,8 @@ fn gifts_raise_the_opinion_but_not_the_standing() {
 fn gifts_from_older_saves_count_into_the_opinion() {
     let a = who(1);
     let old = Memory(vec![
-        (a, Event::Gave(ItemKind::Coin)),
-        (a, Event::Gave(ItemKind::Coin)),
+        (a, Event::Gave(ItemKind::CopperCoin)),
+        (a, Event::Gave(ItemKind::CopperCoin)),
     ]);
     let text = ron::to_string(&old).unwrap();
     let mut memory: Memory = ron::from_str(&text).unwrap();

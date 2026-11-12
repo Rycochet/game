@@ -119,7 +119,10 @@ impl ItemKind {
                     (1, 0),
                     false,
                 )),
-                Self::Coin => plain("Coin", 10, square).without_quality(),
+                // 100 of one make one of the next (`coin.rs`).
+                Self::CopperCoin => plain("Copper Coin", 1, square).without_quality(),
+                Self::SilverCoin => plain("Silver Coin", 3, square).without_quality(),
+                Self::GoldCoin => plain("Gold Coin", 5, square).without_quality(),
                 Self::Key => plain("Key", 30, square).without_quality(),
                 // Laminated to the knee, wrapping the thighs: Waist and Legs (the owner's
                 // decision). Its form says its cells and weight.
@@ -255,7 +258,8 @@ impl ItemKind {
             };
         // First guesses at how much work each is beside the usual.
         def.taking(match self {
-            Self::Apple | Self::Coin | Self::Stone => 10,
+            Self::Apple | Self::Stone => 10,
+            _ if self.coin_value().is_some() => 10,
             Self::Trousers | Self::Hat | Self::Tabard => 50,
             _ if self.is_under() => 50,
             Self::Ring | Self::Pouch | Self::Belt | Self::Boomerang => 75,
