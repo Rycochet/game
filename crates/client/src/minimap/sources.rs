@@ -1,10 +1,10 @@
-//! What the maps are drawn from, and their nodes on screen.
+//! What the maps are drawn from.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use super::{FullMap, FullMapPanel, FullMapPicture, FullMapTitle, Minimap};
+use super::FullMap;
 use crate::common::{
     CurrentDungeon, CurrentWorld, FirstFloor, GameView, OtherLevels, Portal, SkyNow,
     SmoothPosition, Token,
@@ -42,23 +42,4 @@ pub(super) struct Sources<'w, 's> {
     pub(super) pois: Query<'w, 's, (&'static Portal, &'static Token)>,
     pub(super) asset_server: Res<'w, AssetServer>,
     pub(super) full: Res<'w, FullMap>,
-}
-
-/// A map's node, to size and show or hide.
-pub(super) type Shown = (&'static mut Node, &'static mut Visibility);
-pub(super) type OnlyMinimap = (With<Minimap>, Without<FullMapPanel>);
-pub(super) type OnlyPanel = (With<FullMapPanel>, Without<Minimap>);
-pub(super) type OnlyPicture = (
-    With<FullMapPicture>,
-    Without<Minimap>,
-    Without<FullMapPanel>,
-);
-
-/// The maps' parts on screen.
-#[derive(SystemParam)]
-pub(super) struct Screen<'w, 's> {
-    pub(super) minimap: Single<'w, 's, Shown, OnlyMinimap>,
-    pub(super) panel: Single<'w, 's, Shown, OnlyPanel>,
-    pub(super) picture: Single<'w, 's, &'static mut Node, OnlyPicture>,
-    pub(super) title: Single<'w, 's, &'static mut Text, With<FullMapTitle>>,
 }
