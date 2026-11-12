@@ -18,7 +18,7 @@ mod sync;
 mod xray;
 
 pub use assets::TokenAssets;
-use assets::{outline_width, prism, raised_prism};
+use assets::{base_radius, outline_width, prism, raised_prism};
 pub use flash::{TokenFlash, flash_tokens};
 pub use parts::{IconAnchor, TokenView};
 pub use pick::{ClickedToken, HoveredToken, find_token_under_cursor};

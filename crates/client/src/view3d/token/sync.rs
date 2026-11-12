@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 use super::super::camera::OrbitCamera;
 use super::{
     ICON_ART_PIXELS, ICON_FILE_PIXELS, ICON_GAP_PIXELS, ICON_PIXEL, ICON_SHADOW_PIXELS, IconAnchor,
-    TokenAssets, TokenView, XrayMaterial, outline_width, prism, raised_prism,
+    TokenAssets, TokenView, XrayMaterial, base_radius, outline_width, prism, raised_prism,
 };
 use crate::common::{Icon, IconPicture, Token, TokenShape};
 
@@ -20,7 +20,7 @@ pub fn sync_tokens(
     assets: Res<TokenAssets>,
     added: Query<(Entity, &Token), Added<Token>>,
     tokens: Query<Ref<Token>>,
-    views: Query<(Entity, &TokenView)>,
+    mut views: Query<(Entity, &mut TokenView)>,
     mut parts: Query<(&mut Mesh3d, &mut MeshMaterial3d<StandardMaterial>)>,
     mut xray_parts: Query<
         (&mut Mesh3d, &mut MeshMaterial3d<XrayMaterial>),
@@ -28,27 +28,29 @@ pub fn sync_tokens(
     >,
     mut anchors: Query<&mut IconAnchor>,
 ) {
-    for (view, token_view) in &views {
+    for (view, mut token_view) in &mut views {
         match tokens.get(token_view.owner) {
             // The owner was despawned or lost its token.
             Err(_) => commands.entity(view).despawn(),
             Ok(token) if token.is_changed() => {
                 let (shape, completed) = (token.shape as usize, token.completed as usize);
+                let base = token.base as usize;
+                token_view.radius = base_radius(token.base);
                 if let Ok((mut mesh, mut material)) = parts.get_mut(token_view.body) {
-                    mesh.0 = assets.bodies[shape].clone();
+                    mesh.0 = assets.bodies[base][shape].clone();
                     material.0 = assets.colours[completed][token.attitude as usize].clone();
                 }
                 if let Ok((mut mesh, mut material)) = parts.get_mut(token_view.outline) {
-                    mesh.0 = assets.outlines[shape].clone();
+                    mesh.0 = assets.outlines[base][shape].clone();
                     material.0 = assets.outline[completed].clone();
                 }
                 let attitude = token.attitude as usize;
                 if let Ok((mut mesh, mut material)) = xray_parts.get_mut(token_view.xray_body) {
-                    mesh.0 = assets.bodies[shape].clone();
+                    mesh.0 = assets.bodies[base][shape].clone();
                     material.0 = assets.xray_fill[attitude].clone();
                 }
                 if let Ok((mut mesh, mut material)) = xray_parts.get_mut(token_view.xray_outline) {
-                    mesh.0 = assets.xray_outlines[shape].clone();
+                    mesh.0 = assets.xray_outlines[base][shape].clone();
                     material.0 = assets.xray_outline[attitude].clone();
                 }
                 if let Ok(mut anchor) = anchors.get_mut(token_view.anchor) {
@@ -77,6 +79,7 @@ pub(super) fn spawn_view(
     token: &Token,
 ) {
     let (shape, completed) = (token.shape as usize, token.completed as usize);
+    let size = token.base as usize;
     let base = if token.no_base {
         Visibility::Hidden
     } else {
@@ -84,14 +87,14 @@ pub(super) fn spawn_view(
     };
     let body = commands
         .spawn((
-            Mesh3d(assets.bodies[shape].clone()),
+            Mesh3d(assets.bodies[size][shape].clone()),
             MeshMaterial3d(assets.colours[completed][token.attitude as usize].clone()),
             base,
         ))
         .id();
     let outline = commands
         .spawn((
-            Mesh3d(assets.outlines[shape].clone()),
+            Mesh3d(assets.outlines[size][shape].clone()),
             MeshMaterial3d(assets.outline[completed].clone()),
             NotShadowCaster,
             base,
@@ -101,7 +104,7 @@ pub(super) fn spawn_view(
     // token is in plain sight.
     let xray_body = commands
         .spawn((
-            Mesh3d(assets.bodies[shape].clone()),
+            Mesh3d(assets.bodies[size][shape].clone()),
             MeshMaterial3d(assets.xray_fill[token.attitude as usize].clone()),
             NotShadowCaster,
             base,
@@ -109,7 +112,7 @@ pub(super) fn spawn_view(
         .id();
     let xray_outline = commands
         .spawn((
-            Mesh3d(assets.xray_outlines[shape].clone()),
+            Mesh3d(assets.xray_outlines[size][shape].clone()),
             MeshMaterial3d(assets.xray_outline[token.attitude as usize].clone()),
             NotShadowCaster,
             base,
@@ -136,6 +139,7 @@ pub(super) fn spawn_view(
                 xray_body,
                 xray_outline,
                 anchor,
+                radius: base_radius(token.base),
             },
             Transform::default(),
             Visibility::default(),
@@ -262,12 +266,15 @@ pub fn resize_tokens(
         return;
     }
     let outline = outline_width(height, distance);
-    for shape in TokenShape::ALL {
-        if let Some(mut mesh) = meshes.get_mut(&assets.outlines[shape as usize]) {
-            *mesh = prism(shape, outline);
-        }
-        if let Some(mut mesh) = meshes.get_mut(&assets.xray_outlines[shape as usize]) {
-            *mesh = raised_prism(shape, outline);
+    for size in shared::creature::Size::ALL {
+        for shape in TokenShape::ALL {
+            let (s, t) = (size as usize, shape as usize);
+            if let Some(mut mesh) = meshes.get_mut(&assets.outlines[s][t]) {
+                *mesh = prism(shape, size, outline);
+            }
+            if let Some(mut mesh) = meshes.get_mut(&assets.xray_outlines[s][t]) {
+                *mesh = raised_prism(shape, size, outline);
+            }
         }
     }
     assets.window_height = height;

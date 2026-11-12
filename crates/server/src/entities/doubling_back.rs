@@ -64,7 +64,7 @@ pub(super) fn walk_towards(
     mob.pacing.aim_at(goal);
     let pacing = mob.pacing;
     let free = |cell: (i64, i64)| !taken.contains(&cell);
-    let map = maps.to(level, goal);
+    let map = maps.to(level, mob.size(), goal);
     let step = map.towards(level, mob.position, |cell| {
         free(cell) && pacing.allows(cell)
     });

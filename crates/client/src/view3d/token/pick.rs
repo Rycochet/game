@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::super::ViewCamera;
-use super::{DIAMETER, ICON_ART_SIZE, IconAnchor, TokenView};
+use super::{ICON_ART_SIZE, IconAnchor, TokenView};
 use crate::common::{Clickable, HoverName, PointerPosition};
 
 /// The `Clickable` token the left mouse button was just pressed on, if any
@@ -87,7 +87,7 @@ pub(super) fn token_at(
             continue;
         }
         let base = transform.translation();
-        let mut hit = near(base, DIAMETER / 2.0, false);
+        let mut hit = near(base, view.radius, false);
         if let Ok((anchor, anchor_transform)) = anchors.get(view.anchor) {
             hit |= anchor.shown.is_some()
                 && near(

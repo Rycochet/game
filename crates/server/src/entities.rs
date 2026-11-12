@@ -40,6 +40,7 @@ mod notice;
 mod population;
 mod run;
 mod scent;
+mod shove;
 mod sync;
 mod target;
 mod tell;
@@ -67,6 +68,7 @@ use notice::{Maps, Someone, Spot, cells_apart, everyone_playing, notice};
 pub(super) use run::run_mobs;
 use run::world_gap;
 pub(crate) use scent::Scents;
+pub(crate) use shove::{shove, shoved_to};
 pub(super) use sync::{in_hall, sync};
 pub(crate) use watching::watched_warily;
 pub(crate) use wild::{WildAreas, keep_wild_areas};
@@ -139,7 +141,10 @@ pub(crate) struct Mob {
     pub id: Id,
     pub kind: CreatureKind,
     pub appearance: Appearance,
+    /// The cell it thinks in: always the one under `spot` (`place`).
     pub position: (i64, i64),
+    /// Where its body is, in units (240 a cell): the middle of its circle.
+    pub spot: shared::spot::Spot,
     /// Where it started, and goes back to.
     pub home: (i64, i64),
     pub doing: Doing,

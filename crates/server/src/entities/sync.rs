@@ -2,7 +2,7 @@
 
 use shared::hall;
 use shared::mob::EntityLook;
-use shared::protocol::{ServerMessage, WORLD_MAP_SIGHT, units_of_cell};
+use shared::protocol::{ServerMessage, WORLD_MAP_SIGHT};
 use shared::sheet::Feeling;
 use shared::spot::{CELL_SPAN, Spot};
 use std::collections::BTreeSet;
@@ -99,7 +99,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
         {
             for mob in &population.mobs {
                 if detect || visit.can_see(mob.position.0, mob.position.1) {
-                    let (x, y) = units_of_cell(mob.position);
+                    let (x, y) = (mob.spot.x, mob.spot.y);
                     let look = EntityLook {
                         id: mob.id,
                         kind: mob.kind,

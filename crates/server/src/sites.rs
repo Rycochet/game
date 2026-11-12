@@ -120,9 +120,8 @@ impl Visit {
     /// How a move from here to `to` goes, if someone with this `gait` may take
     /// it (`movement::move_on_level`: a good swimmer swims water instead of
     /// jumping it).
-    pub(crate) fn landing(&self, to: Spot, gait: Gait) -> Option<LevelMove> {
-        // Every player counts as Medium until sizes are in play (PR 5).
-        move_on_level(&self.level.level, Size::Medium, gait, self.position, to)
+    pub(crate) fn landing(&self, to: Spot, gait: Gait, size: Size) -> Option<LevelMove> {
+        move_on_level(&self.level.level, size, gait, self.position, to)
     }
 
     /// The stairs the player stands on (`Spot::stands_on`), if any.

@@ -1,10 +1,12 @@
 //! Making a mob from how it was rolled, and telling ones made by developer
 //! tools from a level's own.
 
+use shared::creature::Size;
 use shared::id::Id;
 use shared::item::Inventory;
 use shared::mob::{Memory, Spawn, scent_strength};
 use shared::sheet::Sheet;
+use shared::spot::Spot;
 
 use super::{Doing, Mob};
 use crate::storage::SiteId;
@@ -26,6 +28,7 @@ impl Mob {
             kind: spawn.kind,
             appearance: spawn.appearance.clone(),
             position: spawn.position,
+            spot: Spot::middle_of(spawn.position),
             home: spawn.position,
             doing: Doing::Idle,
             target: None,
@@ -52,6 +55,22 @@ impl Mob {
     /// site's, if it is a site's mob about in the wilderness.
     pub(super) fn kept_with(&self, here: SiteId) -> SiteId {
         self.kept_in.unwrap_or(here)
+    }
+
+    /// Puts its body at `spot`, and its thinking on the cell under it.
+    pub(crate) fn place(&mut self, spot: Spot) {
+        self.spot = spot;
+        self.position = spot.cell();
+    }
+
+    /// Puts it at a cell's middle.
+    pub(crate) fn put(&mut self, cell: (i64, i64)) {
+        self.place(Spot::middle_of(cell));
+    }
+
+    /// How big it is, by its kind: its circle on levels.
+    pub(crate) fn size(&self) -> Size {
+        self.kind.def().size
     }
 
     /// Whether developer tools made it: it is never kept.

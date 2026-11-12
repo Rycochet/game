@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use shared::clearance::check_segment;
-use shared::creature::Size;
 use shared::dungeon::{Cell, Sight};
 use shared::protocol::{ServerMessage, level_chunk};
 use shared::spot::Spot;
@@ -45,9 +44,10 @@ pub(crate) fn teleport(client: &mut Client, to: Spot) -> bool {
         return true;
     };
     let level = &visit.level.level;
+    let size = client.inventory.creature.def().size;
     // Room to stand: a move along a hair's breadth from it would be allowed.
-    let room = check_segment(level, Size::Medium, to, to.offset(1, 0)).is_some()
-        || check_segment(level, Size::Medium, to, to.offset(-1, 0)).is_some();
+    let room = check_segment(level, size, to, to.offset(1, 0)).is_some()
+        || check_segment(level, size, to, to.offset(-1, 0)).is_some();
     if !room {
         info!("Refused a teleport to {to:?}, with no room to stand");
         return true;

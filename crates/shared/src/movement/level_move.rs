@@ -32,7 +32,9 @@ pub fn move_on_level(
     if from == to || from.distance(to) > MOST_MOVE {
         return None;
     }
-    if is_middle(from) && is_middle(to) {
+    // The cell rule was made for creatures fitting a cell: bigger ones go by
+    // their circles alone.
+    if size <= Size::Medium && is_middle(from) && is_middle(to) {
         let (start, end) = (from.cell(), to.cell());
         let (dx, dy) = (end.0 - start.0, end.1 - start.1);
         if let Some(step) = Step::new(dx.signum(), dy.signum())
@@ -53,6 +55,15 @@ impl LevelMove {
         match self {
             Self::Step { from, to } => super::is_jump(from, to),
             Self::Segment(passage) => passage.jumped.is_some(),
+        }
+    }
+
+    /// How much slower than walking freely, in thousandths: a squeeze through
+    /// a gap (`clearance::squeeze_per_mille`); a step by the cell rule never is.
+    pub fn squeeze_per_mille(self) -> u32 {
+        match self {
+            Self::Step { .. } => 1000,
+            Self::Segment(passage) => passage.squeeze_per_mille,
         }
     }
 }

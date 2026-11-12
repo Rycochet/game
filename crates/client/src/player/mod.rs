@@ -37,7 +37,7 @@ pub use moving::PlayerMoving;
 use moving::note_moving;
 use rivers::keep_river_points;
 use route_help::enemy_cells;
-use state::{PlayerEnergy, Travel, action_tick, spawn_player};
+use state::{PlayerEnergy, Travel, action_tick, size_token, spawn_player};
 use steps::take_steps;
 use travel::travel;
 use wild_heights::keep_wild_heights;
@@ -74,6 +74,7 @@ impl Plugin for PlayerPlugin {
                 (PlayerSystems::Input, PlayerSystems::Travel).chain(),
             )
             .add_systems(Startup, spawn_player)
+            .add_systems(Update, size_token)
             // Nowhere to move until the server has said which world this is.
             .add_systems(
                 Update,

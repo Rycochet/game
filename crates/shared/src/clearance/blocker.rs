@@ -59,7 +59,7 @@ fn point_to_box(p: Spot, low: Spot, high: Spot) -> u128 {
 
 /// The square of the distance from `p` to the nearest point of the segment
 /// from `a` to `b`, rounded down.
-fn point_to_segment(p: Spot, a: Spot, b: Spot) -> u128 {
+pub(super) fn point_to_segment(p: Spot, a: Spot, b: Spot) -> u128 {
     let (dx, dy) = ((b.x - a.x) as i128, (b.y - a.y) as i128);
     let (px, py) = ((p.x - a.x) as i128, (p.y - a.y) as i128);
     let length = dx * dx + dy * dy;

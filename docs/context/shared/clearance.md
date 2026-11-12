@@ -1,11 +1,11 @@
 # shared: clearance (and spot)
 
-Positions on a level in whole units (`Spot`, 240 a cell) and room to move for creatures of each size: what blocks them, the one rule for a move from one spot to another (with squeezing and jumps), sliding along what is in the way, and where each size has room. Free positions, PR 2 of 9 (`docs/context/free-positions.md`). Since PR 3, positions on levels are `Spot`s end to end and a player's move that isn't a step between two cells' middles is checked by `check_segment` (`movement::move_on_level`); since PR 4 the client walks freely by the same rule (`slide`, `check_segment`). Routes by size are in `pathfinding` (`find_sized_path`).
+Positions on a level in whole units (`Spot`, 240 a cell) and room to move for creatures of each size: what blocks them, the one rule for a move from one spot to another (with squeezing and jumps), sliding along what is in the way, and where each size has room. Free positions, PR 2 of 9 (`docs/context/free-positions.md`). Since PR 3, positions on levels are `Spot`s end to end and a player's move that isn't a step between two cells' middles is checked by `check_segment` (`movement::move_on_level`); since PR 4 the client walks freely by the same rule (`slide`, `check_segment`); since PR 5 sizes are in play (players by their kind, mobs' steps and distance maps by theirs) and creatures are in each other's way (`crowd`). Routes by size are in `pathfinding` (`find_sized_path`).
 
 ## Files
 
 - `crates/shared/src/spot.rs`: `Spot`, `CELL_SPAN`, `HALF_SPAN`, `root`.
-- `crates/shared/src/clearance.rs` and `clearance/`: `blocker.rs` (`Blocker`, `Shape`, how close a move passes one), `cell_blockers.rs` (what each cell puts in the way; `blockers_near`), `footing.rs` (`has_footing`), `segment.rs` (`check_segment`, `Passage`, `segment_is_legal`, `segment_cost`, `JUMP_REACH`), `slide.rs`, `squeeze.rs`, `room_map.rs` (`RoomMap`). Golden tests: radii, a one-cell corridor and a doorway by size, walls touching at a corner, trunks, jumps, fences, sliding, room maps.
+- `crates/shared/src/clearance.rs` and `clearance/`: `blocker.rs` (`Blocker`, `Shape`, how close a move passes one), `cell_blockers.rs` (what each cell puts in the way; `blockers_near`), `footing.rs` (`has_footing`), `segment.rs` (`check_segment`, `Passage`, `segment_is_legal`, `segment_cost`, `JUMP_REACH`), `slide.rs`, `squeeze.rs`, `room_map.rs` (`RoomMap`), `crowd.rs` (`Crowding`, `Other`, `crowd_per_mille`, `check_among`, `crowded_at`; tests in `crowd_tests.rs`). Golden tests: radii, a one-cell corridor and a doorway by size, walls touching at a corner, trunks, jumps, fences, sliding, room maps.
 
 ## Public API
 
@@ -20,6 +20,7 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 - `check_segment(level, size, from, to) -> Option<Passage { squeeze_per_mille, jumped }>`: the rule. Both ends need footing; the middle's line may cross the inside of no cell without footing, unless it is a jump: over exactly one jumpable cell (liquid, hole, or a fence whose bar it crosses), at most `JUMP_REACH` (679, two cells diagonally). The swept circle keeps at least half its radius from every blocker but the jumped fence. `segment_is_legal` (yes or no), `segment_cost` (length × squeeze / 1000).
 - `squeeze_per_mille(radius, clearance)` (owner, 2026-11-10): clearance ≥ radius is free (1000); down to half the radius (a gap half its width), slower by (radius / clearance)², at most `MOST_SQUEEZE_PER_MILLE` (4000); less is `None`.
 - `slide(level, size, from, to) -> Spot`: for the client's movement. `to` if the move is a legal walk (squeezed or not); otherwise as far along as it goes, then on along east-west or north-south, whichever gets further, never more squeezed than at `from` (so pushing into a wall doesn't press into it). Never jumps. `from` if it has no room there.
+- Creatures in the way (owner, 2026-11-10): `Other { at, size, crowding }`, `Crowding::{Pass, Squeeze, Block}` (players pass through players; anyone else but an enemy is squeezed past, "excuse me"; enemies block). `crowd_per_mille(size, from, to, others)`: circles overlapping along the move; squeezing past goes by the room left round the mover's middle as for a gap but never refuses (at worst `MOST_SQUEEZE_PER_MILLE`); an enemy's circle can't be entered, and one already overlapping (stairs, a shove, god mode turned off) may only be moved away from (the move's nearest point to it is where it starts). `check_among`: `check_segment` and that together, the slower squeeze. `crowded_at(size, at, others)`: overlapping anyone not passed through, for choosing where to stand.
 - `RoomMap::new(level, size)`: whether that size can stand at each cell's middle and how squeezed (`squeeze_at`, `has_room`, `size`). Rebuild when doors change.
 
 ## What sizes get through (measured by the tests)
@@ -34,11 +35,11 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 
 ## Used by
 
-- `pathfinding` (`find_sized_path`, `straighten_spots`), `movement::move_on_level` (players' moves), `protocol` (`Spot` in messages, `JUMP_REACH`), `shop::beside_door`, `energy::site_move_cost`, `server` (visits, the Hall, saves, dev teleports' room to stand). Client `player` (free walking: `check_segment`, `slide`; routes: `RoomMap`). Still to come: PR 5 (sizes in play: room maps, squeezing, mobs).
+- `pathfinding` (`find_sized_path`, `straighten_spots`, sized `DistanceMap`s), `movement::move_on_level` (players' moves) and `mob_step_sized` (mobs' steps), `protocol` (`Spot` in messages, `JUMP_REACH`), `shop::beside_door`, `energy::site_move_cost`, `server` (visits, the Hall, saves, dev teleports' room to stand). Client `player` (free walking: `check_segment`, `slide`; routes: `RoomMap`). Server `connections::messages::moves` (`crowd_per_mille` against the mobs about, squeezes charged) and `entities::shove`; client `player` (`crowd_per_mille` in walking, steps and move costs).
 
 ## Notes
 
 - Integers only; distances by `u128::isqrt`, rounded down, so both sides agree exactly.
 - Squeezing goes by clearance round the middle (half a gap's width when centred in it), so walking close beside one wall squeezes too: routes avoid it by cost, `slide` by never squeezing further.
-- Not yet here: mobs' rule against World Gates' cells, deep water for good swimmers (`movement::step_on_level_by`), slopes in costs (`relief::Relief::at`), creatures blocking each other (PR 5).
+- Not yet here: deep water for good swimmers on free segments (`movement::step_on_level_by` covers moves between middles), slopes in costs (`relief::Relief::at`; costs still go by cells' heights). Mobs keep to the cell rule's World Gate check (`mob_step_sized`, `mob_can_stand`).
 - Natural windows' columns are drawn 0.04 cell apart, too narrow for anyone, so windows stay whole cells.

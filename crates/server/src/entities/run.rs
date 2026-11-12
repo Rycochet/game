@@ -100,6 +100,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                     .any(|&spot| line_is_clear(level, spot, cell))
             };
             let was_at = mob.position;
+            let was_spot = mob.spot;
             let fighting = mob_turn(mob, level, &spots, tick, &mut blows);
             let cost = if let Some(cost) = fighting {
                 cost
@@ -127,7 +128,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             };
             // One with hands that came to a closed door opens it instead.
             if let Some(doors) = doors
-                && let Some((at, swing)) = open_on_the_way(mob, level, was_at)
+                && let Some((at, swing)) = open_on_the_way(mob, level, was_spot)
             {
                 doors.open = level.with_doors_open();
                 let poi = doors.poi;

@@ -22,12 +22,12 @@ pub(crate) const HALL_SIGHT: i64 = 40;
 
 /// How a move in the Hall from `from` to `to` (the Hall's own units) goes, if
 /// it can be taken: by the rule for any level, on the stretch round them.
-pub(crate) fn landing(from: Spot, to: Spot, gait: Gait) -> Option<LevelMove> {
+pub(crate) fn landing(from: Spot, to: Spot, gait: Gait, size: Size) -> Option<LevelMove> {
     // Room for any move, a jump included.
     let west = from.cell().0.min(to.cell().0) - 2;
     let across = (from.cell().0 - to.cell().0).abs() + 5;
     let around = hall::level(west, across);
-    move_on_level(&around, Size::Medium, gait, from, to)
+    move_on_level(&around, size, gait, from, to)
 }
 
 /// The player moves in the Hall to `to` (the Hall's own units), if they can (a
@@ -37,7 +37,7 @@ pub(crate) fn moved(client: &mut Client, to: Spot) -> bool {
         return false;
     };
     let gait = Gait::of(&client.sheet.skills);
-    if landing(from, to, gait).is_none() {
+    if landing(from, to, gait, client.size()).is_none() {
         info!("Refused a move in the Hall from {from:?} to {to:?}");
         return false;
     }

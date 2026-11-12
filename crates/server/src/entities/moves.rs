@@ -1,9 +1,11 @@
 //! A mob's steps: taking them, wandering, acting, and finding a free cell.
 
+use shared::clearance::check_segment;
 use shared::dungeon::{Level, line_is_clear};
-use shared::energy::site_step_cost;
-use shared::movement::{Step, mob_can_stand, mob_step_on_level};
+use shared::energy::{site_move_cost, site_step_cost};
+use shared::movement::{Step, mob_can_stand, mob_step_sized};
 use shared::rng::Seed;
+use shared::spot::Spot as Units;
 use std::collections::BTreeSet;
 
 use super::doubling_back::walk_towards;
@@ -18,20 +20,34 @@ use crate::storage::SiteId;
 /// The cells someone is standing on: no mob can go on them.
 pub(super) type Taken = BTreeSet<(i64, i64)>;
 
-/// Moves a mob by a step, if it can go. What it cost.
+/// Moves a mob by a step, if it can go: its body to the next cell's middle,
+/// if its size gets there (`movement::mob_step_sized`). What it cost, slower
+/// for squeezing. One shoved off its cell's middle goes back there first if
+/// it can't go straight on.
 pub(super) fn take_step(
     mob: &mut Mob,
     level: &Level,
     step: Option<Step>,
     taken: &Taken,
 ) -> Option<u32> {
-    let to = mob_step_on_level(level, mob.position, step?)?;
+    let size = mob.size();
+    let (to, squeeze) = mob_step_sized(level, size, mob.position, step?)?;
     if taken.contains(&to) {
         return None;
     }
-    let cost = site_step_cost(mob.position, to);
-    mob.position = to;
-    Some(cost)
+    let here = Units::middle_of(mob.position);
+    if mob.spot == here {
+        let cost = u64::from(site_step_cost(mob.position, to)) * u64::from(squeeze) / 1000;
+        mob.put(to);
+        return Some(cost as u32);
+    }
+    let target = match check_segment(level, size, mob.spot, Units::middle_of(to)) {
+        Some(_) => Units::middle_of(to),
+        None => here,
+    };
+    let cost = u64::from(site_move_cost(mob.spot, target)) * u64::from(squeeze) / 1000;
+    mob.place(target);
+    Some(cost as u32)
 }
 
 /// A direction for wandering, different for each mob and moment.
@@ -142,7 +158,7 @@ pub(super) fn act(
                 struck: false,
             };
             let step = maps
-                .to(level, threat.position)
+                .to(level, mob.size(), threat.position)
                 .away(level, mob.position, free);
             take_step(mob, level, step, taken).unwrap_or(THINKING_COST)
         }
@@ -184,7 +200,7 @@ pub(super) fn act(
             let walked = walk_towards(mob, level, maps, goal, taken);
             // Stuck or lost, it gets there when nobody can see.
             if (late || walked.is_none()) && !seen(mob.position) && !seen(goal) && free(goal) {
-                mob.position = goal;
+                mob.put(goal);
             }
             if mob.position == goal {
                 match hop {
