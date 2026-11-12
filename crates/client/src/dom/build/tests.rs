@@ -10,7 +10,7 @@ use crate::widgets::{
 };
 
 /// An app with just enough for documents to be built in.
-pub(in crate::dom) fn app() -> App {
+pub(crate) fn app() -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, AssetPlugin::default(), DomPlugin))
         .init_asset::<Image>()
@@ -42,7 +42,7 @@ pub(in crate::dom) fn built(template: &'static Template) -> App {
 }
 
 /// The element with this id, as written.
-pub(in crate::dom) fn find(app: &mut App, id: &str) -> Entity {
+pub(crate) fn find(app: &mut App, id: &str) -> Entity {
     let world = app.world_mut();
     let mut ids = world.query::<(Entity, &UiId)>();
     let found = ids.iter(world).find(|(_, known)| known.to_string() == id);
