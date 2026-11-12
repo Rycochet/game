@@ -83,3 +83,23 @@ fn the_dpad_is_a_cross_with_a_hole_in_each_arm() {
         assert!(alpha(&pad, x, y) > 128, "solid at ({x}, {y})");
     }
 }
+
+#[test]
+fn turn_arrows_are_mirrored_with_their_heads_on_the_side_they_turn_to() {
+    let left = turn(true);
+    let right = turn(false);
+    // The head points down on the left for Turn Left, on the right for Turn Right.
+    let drawn_low = |image: &Image, columns: std::ops::Range<usize>| {
+        (40..54)
+            .flat_map(|y| columns.clone().map(move |x| (x, y)))
+            .filter(|&(x, y)| alpha(image, x, y) > 128)
+            .count()
+    };
+    assert!(drawn_low(&left, 0..32) > drawn_low(&left, 32..64));
+    assert!(drawn_low(&right, 32..64) > drawn_low(&right, 0..32));
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            assert_eq!(alpha(&left, x, y), alpha(&right, SIZE - 1 - x, y));
+        }
+    }
+}

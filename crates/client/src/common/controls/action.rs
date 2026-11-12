@@ -18,6 +18,10 @@ pub enum Action {
     Down,
     /// Close the open doors beside the player (until the FAB menu has a way).
     CloseDoors,
+    /// Turn the character (not the camera) left, an eighth a tap or while
+    /// held. No key by default (owner, 2026-11-12).
+    FaceLeft,
+    FaceRight,
     /// The camera swings round the player to the left, by a step or while held.
     TurnLeft,
     TurnRight,
@@ -76,7 +80,7 @@ impl Group {
 }
 
 impl Action {
-    pub const ALL: [Self; 32] = [
+    pub const ALL: [Self; 34] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
@@ -84,6 +88,8 @@ impl Action {
         Self::Up,
         Self::Down,
         Self::CloseDoors,
+        Self::FaceLeft,
+        Self::FaceRight,
         Self::TurnLeft,
         Self::TurnRight,
         Self::ZoomIn,
@@ -121,6 +127,8 @@ impl Action {
             Self::Up => "Up / Leave",
             Self::Down => "Down / Explore",
             Self::CloseDoors => "Close Doors",
+            Self::FaceLeft => "Turn Left",
+            Self::FaceRight => "Turn Right",
             Self::TurnLeft => "Turn Camera Left",
             Self::TurnRight => "Turn Camera Right",
             Self::ZoomIn => "Zoom In",
@@ -150,6 +158,8 @@ impl Action {
             Self::Up => "up",
             Self::Down => "down",
             Self::CloseDoors => "close_doors",
+            Self::FaceLeft => "turn_left",
+            Self::FaceRight => "turn_right",
             Self::TurnLeft => "turn_camera_left",
             Self::TurnRight => "turn_camera_right",
             Self::ZoomIn => "zoom_in",
@@ -185,6 +195,7 @@ impl Action {
         match self {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
             Self::Up | Self::Down | Self::CloseDoors => Group::Movement,
+            Self::FaceLeft | Self::FaceRight => Group::Movement,
             Self::TurnLeft | Self::TurnRight | Self::ZoomIn | Self::ZoomOut => Group::Camera,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
@@ -210,6 +221,7 @@ impl Action {
             Self::Up => [shift(KeyCode::Comma), key(KeyCode::NumpadDecimal)],
             Self::Down => [shift(KeyCode::Period), key(KeyCode::Numpad0)],
             Self::CloseDoors => [key(KeyCode::KeyL), None],
+            Self::FaceLeft | Self::FaceRight => [None, None],
             Self::TurnLeft => [None, key(KeyCode::Numpad7)],
             Self::TurnRight => [None, key(KeyCode::Numpad9)],
             // As the Skills page zooms.

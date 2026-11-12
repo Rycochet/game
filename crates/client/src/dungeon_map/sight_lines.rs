@@ -9,6 +9,7 @@
 // Split into files (`cargo xtask lint` keeps files small).
 mod area;
 mod cells;
+mod cone;
 mod fan;
 mod mask;
 mod material;

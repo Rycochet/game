@@ -130,6 +130,15 @@ impl WallMap {
 
     /// What can be seen from a point: the ends of its rays, going round.
     pub fn outline(&self, from: Vec2d) -> Vec<Vec2d> {
+        self.angles(from)
+            .into_iter()
+            .map(|angle| self.ray_end(from, angle))
+            .collect()
+    }
+
+    /// The ways rays go from a point, in order round: evenly, and either side
+    /// of every corner.
+    pub(super) fn angles(&self, from: Vec2d) -> Vec<f64> {
         let mut angles = Vec::with_capacity(self.corners.len() * 2 + EVEN_RAYS);
         for i in 0..EVEN_RAYS {
             angles.push(i as f64 / EVEN_RAYS as f64 * TAU - TAU / 2.0);
@@ -141,9 +150,6 @@ impl WallMap {
         }
         angles.sort_by(f64::total_cmp);
         angles
-            .into_iter()
-            .map(|angle| self.ray_end(from, angle))
-            .collect()
     }
 
     /// Where a ray stops: the first wall, or just past the level's edge. Goes

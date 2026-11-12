@@ -121,6 +121,7 @@ pub(crate) fn answer(
             client.queue_move(Action::Step { number, step })
         }
         ClientMessage::Move { number, to, .. } => client.queue_move(Action::Move { number, to }),
+        ClientMessage::Face(heading) => client.face(heading),
         ClientMessage::EnterSite { chunk } => {
             client.waiting.push_back(Action::EnterSite { chunk });
             true

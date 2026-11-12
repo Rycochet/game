@@ -11,12 +11,14 @@ use crate::common::{ModelMaterial, Token, TokenModel};
 /// about as tall as the pictures did, on a base drawn to the same scale.
 pub const MODEL_SCALE: f32 = 0.0124;
 
-/// The point on top of a token's base a model stands on, turned towards the camera
-/// about the vertical (facing comes later), scaled from millimetres. `shown` is the
-/// model and attitude colour it has.
+/// The point on top of a token's base a model stands on, turned about the
+/// vertical the way its owner faces (`turn_models`), scaled from millimetres.
+/// `shown` is the model and attitude colour it has; `angle` how far it is
+/// turned now, in radians.
 #[derive(Component, Default)]
 pub struct ModelAnchor {
     pub(super) shown: Option<(TokenModel, usize)>,
+    pub(super) angle: Option<f32>,
 }
 
 impl ModelAnchor {

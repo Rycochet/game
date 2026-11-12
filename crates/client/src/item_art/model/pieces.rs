@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::body::{Hair, Layout};
 
-use super::super::body::{Triangle, bare_pieces, turn_of};
+use super::super::body::{Triangle, bare_pieces};
 use super::super::colours::{Colours, material};
 use super::super::morph::blend_colours;
 use super::super::{Look, character};
@@ -17,8 +17,6 @@ pub(super) struct Pieces {
     pub(super) skin: Vec<Triangle>,
     /// The body as built, at its real size, for telling which part each point is on.
     pub(super) layout: Layout,
-    /// How far it is turned to its right towards the viewer (`turn_of`).
-    pub(super) turn: f32,
 }
 
 /// The pieces of a creature's look, `None` for a look that isn't a body.
@@ -45,7 +43,6 @@ pub(super) fn pieces(look: &Look) -> Option<Pieces> {
                 pieces,
                 skin,
                 layout: Layout::at_size(*kind)?,
-                turn: turn_of(&layout),
             })
         }
         Look::Body {
@@ -61,16 +58,14 @@ pub(super) fn pieces(look: &Look) -> Option<Pieces> {
                 None => 1.0,
             };
             let layout = layout.scaled((share * WHOLE as f32) as i32);
-            Some(bare(&layout, *colours, *hair, turn_of(&layout)))
+            Some(bare(&layout, *colours, *hair))
         }
         Look::Morph(morph) => {
             let t = morph.along();
             let layout = Layout::blend(&morph.from, &morph.to, t);
             let colours = blend_colours(&morph.colours[0], &morph.colours[1], t);
             let hair = morph.hair[usize::from(t >= shared::body::BLEND_WHOLE / 2)];
-            let (from, to) = (turn_of(&morph.from), turn_of(&morph.to));
-            let share = t as f32 / shared::body::BLEND_WHOLE as f32;
-            Some(bare(&layout, colours, hair, from + (to - from) * share))
+            Some(bare(&layout, colours, hair))
         }
         Look::Portrait(inner) => pieces(inner),
         _ => None,
@@ -81,7 +76,7 @@ pub(super) fn pieces(look: &Look) -> Option<Pieces> {
 const WHOLE: i32 = 1000;
 
 /// A bare body: skin, a taur's coat, feathers, hair and an animal's long hair.
-fn bare(layout: &Layout, colours: Colours, hair: Hair, turn: f32) -> Pieces {
+fn bare(layout: &Layout, colours: Colours, hair: Hair) -> Pieces {
     let [skin, coat, feathers, hair, mane] = bare_pieces(layout, hair);
     let surface = skin.iter().chain(&coat).copied().collect();
     let pieces = [
@@ -99,7 +94,6 @@ fn bare(layout: &Layout, colours: Colours, hair: Hair, turn: f32) -> Pieces {
         pieces,
         skin: surface,
         layout: *layout,
-        turn,
     }
 }
 

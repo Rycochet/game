@@ -96,6 +96,12 @@ pub(super) fn start_ability(
         debug!("Not starting {ability:?}: can't, or already winding up");
         return (true, 0);
     }
+    // Using an ability on someone turns the player to them.
+    if let Some(at) = target.and_then(|target| client.mob_in_sight(world, target))
+        && !client.face_spot(at.at)
+    {
+        return (false, 0);
+    }
     if ability == Ability::Heal {
         return super::heal::start_heal(client, world, target);
     }

@@ -1,6 +1,6 @@
 # client: step_pad
 
-The movement pad (owner's design, 2026-11-08): a grip panel at the bottom right, open by default, with hold buttons in three rows round the middle like a d-pad, Down · Step Up · Up, Step Left · gap · Step Right, gap · Step Down · gap, and the small d-pad button in the corner that opens and closes it. Whether it is open and where it was dragged to are kept in `Preferences::step_pad`. It only spawns, shows and reads the pad: what Up and Down do, and when they are enabled, is `site`'s, and steps are `player`'s.
+The movement pad (owner's design, 2026-11-08): a grip panel at the bottom right, open by default, with hold buttons in three rows round the middle like a d-pad, Turn Left · Step Up · Turn Right, Step Left · gap · Step Right, Down · Step Down · Up (owner, 2026-11-12), and the small d-pad button in the corner that opens and closes it. Whether it is open and where it was dragged to are kept in `Preferences::step_pad`. It only spawns, shows and reads the pad: what Up and Down do, and when they are enabled, is `site`'s, and steps are `player`'s.
 
 ## Files
 
@@ -11,7 +11,7 @@ The movement pad (owner's design, 2026-11-08): a grip panel at the bottom right,
 
 ## Public API
 
-- `StepPadPlugin`. What others read is in `common`: `PadButton` (on each pad button), `PadSteps` (resource: held arrows as screen `dx`, `dy`).
+- `StepPadPlugin`. What others read is in `common`: `PadButton` (on each pad button), `PadSteps` (resource: held arrows as screen `dx`, `dy`, and the turn buttons held as `turn`).
 
 ## Depends on
 
@@ -25,3 +25,4 @@ The movement pad (owner's design, 2026-11-08): a grip panel at the bottom right,
 
 - The arrows are screen directions, as the step keys, turned by the camera in `player`: on a level or in the Hall they walk freely that way (at whatever angle the camera is turned), on the world map they step. Only one finger holds at a time, so no diagonals by touch; the mouse and a finger could hold two.
 - Up and Down fire once when they become held; staying held does nothing more.
+- Turn Left and Turn Right (owner, 2026-11-12) are hold buttons with curved arrows drawn in code (`icons::turn`, mirrored), ids `step_pad/turn_left` and `turn_right`; `read_pad` puts them in `PadSteps::turn`, and `player` turns the character (never the camera): a tap an eighth, held half a turn a second. `show::grey_turns` disables them on the world map. Fake mouse clicks on hold buttons (debug API `client.click`) didn't register in testing; `client.ui.set id=step_pad/turn_left value=true` holds one.

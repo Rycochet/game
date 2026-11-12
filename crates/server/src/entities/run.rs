@@ -3,6 +3,7 @@
 use shared::dungeon::line_is_clear;
 
 use super::doors::{Opened, open_on_the_way, way_level};
+use super::facing::noises;
 use super::fight::{MobBlow, mob_turn};
 use super::territory::mind_territory;
 use super::tracking::track;
@@ -65,8 +66,15 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             scents.sweep(tick);
         }
 
+        // Those at rest turn to fighting they hear.
+        let fighting: Vec<_> = here()
+            .filter(|someone| someone.fighting)
+            .map(|someone| someone.spot)
+            .collect();
+        let noises = noises(&fighting, mobs);
         // Anyone at rest, settling or guarding may notice someone.
         for mob in mobs.iter_mut().filter(|mob| !mob.still) {
+            mob.listen(&noises);
             mind_territory(mob, level, &spots, tick);
             if let Some(doing) = notice(mob, level, &spots) {
                 let at_rest = mob.doing == Doing::Idle;
@@ -142,6 +150,7 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
                     swing,
                 });
             }
+            mob.turn_after(was_spot, &spots);
             // Mobs leave scent too.
             scents.walked(mob.id, was_at, mob.position, mob.scent, tick);
             mob.pacing.turn_ended(was_at, mob.position);

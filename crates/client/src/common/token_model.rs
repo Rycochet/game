@@ -30,9 +30,6 @@ pub struct ModelMeshes {
     /// The body's own skin alone, the same way, for the x-ray: its outline round the
     /// body, not round every piece worn.
     pub skin: Handle<Mesh>,
-    /// How far it is turned to its right as it stands facing the viewer, so its sides
-    /// show (side on for animals).
-    pub turn: f32,
     /// How tall it stands and how far it reaches from its middle, in millimetres.
     pub height: f32,
     pub reach: f32,

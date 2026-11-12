@@ -42,6 +42,10 @@ pub(crate) struct Someone {
     pub(super) god_mode: bool,
     /// How strong a trail they leave, as a percentage.
     pub(super) scent: u32,
+    /// The way they face.
+    pub(super) heading: shared::facing::Heading,
+    /// Winding up a blow: a noise mobs near enough hear.
+    pub(super) fighting: bool,
 }
 
 pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
@@ -75,6 +79,8 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 speed: client.speed,
                 god_mode: client.god_mode,
                 scent: scent_strength(&client.inventory),
+                heading: client.heading,
+                fighting: client.winding_up(),
             }
         })
         .collect()
@@ -119,10 +125,13 @@ pub(super) fn notice(mob: &Mob, level: &Level, spots: &[Spot]) -> Option<Doing> 
         return None;
     }
     let sees_within = mob.kind.senses().sight_range();
+    // Only what is in its cone: sneaking up behind works.
+    let cone = mob.cone();
     spots
         .iter()
         .filter(|spot| {
             cells_apart(spot.position, mob.position) <= sees_within
+                && cone.sees(spot.at)
                 && line_is_clear(level, mob.position, spot.position)
         })
         .find_map(|spot| {

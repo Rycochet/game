@@ -17,6 +17,7 @@ mod model;
 mod parts;
 mod pick;
 mod sync;
+mod turn;
 mod xray;
 
 pub use assets::TokenAssets;
@@ -28,6 +29,7 @@ pub use model::{MODEL_SCALE, ModelAnchor, sync_models};
 pub use parts::{IconAnchor, TokenView};
 pub use pick::{ClickedToken, HoveredToken, find_token_under_cursor};
 pub use sync::{resize_tokens, sync_icons, sync_tokens};
+pub use turn::turn_models;
 pub use xray::{XRAY_WHITE, XrayMaterial};
 
 /// Token width in grid units: the diameter of the circle every shape fits in.

@@ -32,6 +32,7 @@ mod difficulty;
 mod display;
 mod drawn_ground;
 mod dungeon;
+mod facing;
 mod graphics;
 mod item_text;
 mod items;
@@ -78,6 +79,7 @@ pub use display::{
 };
 pub use drawn_ground::DrawnGround;
 pub use dungeon::CurrentDungeon;
+pub use facing::{FaceTowards, Facing, PlayerCone, PlayerField, PointedAtMap};
 pub use graphics::{
     AntiAliasing, BRIGHTNESS_MOST, Background, FrameRate, GraphicsPrefs, IN_BROWSER, MaxResolution,
     Precipitation, Preset, RENDER_SCALES, Remembered, Shadows, ViewDistance,
@@ -142,6 +144,10 @@ impl Plugin for CommonPlugin {
             .init_resource::<AccountRole>()
             .add_message::<OpenAccounts>()
             .init_resource::<PadSteps>()
+            .init_resource::<PlayerField>()
+            .init_resource::<PlayerCone>()
+            .add_message::<FaceTowards>()
+            .add_message::<PointedAtMap>()
             .init_resource::<OwnAbility>()
             .init_resource::<LoadingStep>()
             .init_resource::<CurrentDungeon>()

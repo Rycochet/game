@@ -19,8 +19,10 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad, or the movement pad's Up ladder | The movement pad's Up ladder |
 | Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map (going into a place you know of whose circle your own overlaps by about a fifth) | Shift + . (`>`), or 0 on the number pad, or the movement pad's Down ladder | The movement pad's Down ladder |
 | Close the open doors beside you, and lock the closed ones you have the key for | L | Not yet |
+| Turn to face a place | Right-click it | Hold a finger on it |
+| Turn left or right (a tap turns an eighth, holding keeps turning) | Choose keys for Turn Left and Turn Right in Settings, Controls (none to begin with), or the movement pad's curved arrows | The movement pad's curved arrows |
 
-The movement pad is the small panel at the bottom right, open when the game starts; the d-pad button in the corner opens and closes it, and its top edge drags it somewhere else. The game remembers whether it is open and where you left it. Its arrows sit round the middle like a d-pad, with Down (a ladder narrowing towards the bottom) and Up (a ladder narrowing towards the top) either side of the up arrow. The arrows go the way the keys do, by the screen, however the camera is turned, and keep walking as long as they are held, stopping when you let go or slide off them. The ladders are greyed out when they would do nothing; hold the pointer or a finger on one to see what it does here.
+The movement pad is the small panel at the bottom right, open when the game starts; the d-pad button in the corner opens and closes it, and its top edge drags it somewhere else. The game remembers whether it is open and where you left it. Its arrows sit round the middle like a d-pad, with Turn Left and Turn Right (curved arrows) either side of the up arrow, and Down (a ladder narrowing towards the bottom) and Up (a ladder narrowing towards the top) either side of the down arrow. The curved arrows turn you, never the camera, and are greyed out on the world map. The arrows go the way the keys do, by the screen, however the camera is turned, and keep walking as long as they are held, stopping when you let go or slide off them. The ladders are greyed out when they would do nothing; hold the pointer or a finger on one to see what it does here.
 
 In the wilderness you walk the land between places on foot, 16 steps to each step on the world map, and find places by walking up to them. Going into a place from the world map, by clicking it or by Down beside it, puts you in the wilderness at its way in, or where you last walked out of it, with the place's ground level set into the land round it: a town is known whole as soon as you step inside it. You find a place, and it goes on your map, when you see its way in or step inside it. Stairs down lead into the rest of a place, and back up into the wilderness. You can't explore from water, or leave the wilderness from inside a building or cave or into water.
 
@@ -29,6 +31,10 @@ You can't change floors in a fight: for 10 seconds after you last attack or are 
 How fast you go depends on your kind of creature, what you carry, and the ground: the heavier the load, the slower everything is.
 
 In places, the wilderness and the Hall of Worlds you walk freely, any way at all: the keys walk the way they point on the screen, however the camera is turned, and walking into a wall at an angle slides along it. Walking straight at water or a hole jumps it. Clicking somewhere walks there by the shortest way, cutting across open ground at any angle. On the world map you still go a step at a time.
+
+## Facing and sight
+
+You face the way you walk, the way you turn, or towards whoever you use an ability on. In places, the wilderness and the Hall of Worlds you see in a cone ahead of you (about a third of a turn for people; animals that are hunted see almost all round), and only a step around you behind: what is outside it is shown as you remember it. Creatures see the same way, so you can creep up behind one without it noticing, but they turn towards a fight they hear and towards whoever strikes them. Observation (under Survival) widens your cone and lets you see a little further, and grows as you spot creatures. On the world map you see all round.
 
 You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 
@@ -54,7 +60,7 @@ A black ring turns under your target. Tab and Shift + Tab go through enemies fro
 | Action | Keyboard and mouse | Touch |
 | ------ | ------------------ | ----- |
 | Turn and tilt | Drag with the right button | Twist two fingers to turn, move both up or down to tilt |
-| Turn left or right | 7 or 9 on the number pad | |
+| Turn the camera left or right | 7 or 9 on the number pad | |
 | Zoom | Mouse wheel, = and -, or + and - on the number pad | Pinch |
 | Back to the starting view | Home, or 5 on the number pad | Hold the minimap (with the mouse or a finger) |
 

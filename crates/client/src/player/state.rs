@@ -72,6 +72,8 @@ pub(super) fn spawn_player(mut commands: Commands) {
         SpotPosition::default(),
         SmoothPosition::default(),
         Travel::default(),
+        // As the server has a character to begin with.
+        crate::common::Facing(shared::facing::Heading::SOUTH),
         // A white circle (no attitude): drawn as a cylinder on the map.
         Token::default(),
         Icon("monsters/humanarcher.png".into()),

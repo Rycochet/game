@@ -285,4 +285,8 @@ pub enum ServerMessage {
     /// if they tried it and found it locked without its key: click travel
     /// stops there.
     DoorRefused { x: i64, y: i64, locked: bool },
+    /// Everyone in sight who turned this tick without moving, and the way
+    /// they face now (a stretch in `Moves` turns them by itself): one message
+    /// a tick at most.
+    Turned(Vec<(Id, crate::facing::Heading)>),
 }

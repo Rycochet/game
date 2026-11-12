@@ -84,6 +84,7 @@ fn create_mob(
         return Err("not in the wilderness");
     }
     let (place, index, player) = (visit.population(), visit.index(), visit.position());
+    let maker = visit.spot();
     let cell = (order.x, order.y);
     let made_at = world.made_now();
     let population = world
@@ -114,6 +115,8 @@ fn create_mob(
     let carrying = dressed(spawn.kind, &spawn.gear, made_at);
     let mut mob = Mob::new(new_id(), &spawn, &carrying, index);
     mob.still = order.still;
+    // It faces whoever made it.
+    mob.face(maker);
     if let (Some(standing), Some(character)) = (order.attitude, client.character_id) {
         mob.memory.set_standing(character, standing);
     }

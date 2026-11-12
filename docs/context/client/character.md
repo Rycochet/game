@@ -27,3 +27,4 @@ What the character is like: the Character panel's Character tab, which `inventor
 - It writes `common::PlayerSpeed` for `player`, from the sheet and what is carried, and `common::PlayerGait` (`movement::Gait` from the skills), and `common::CarryLimit` (the most that can be carried, `Sheet::capacity`) for `inventory`, which shows it under the inventory's grid, so `inventory` needn't depend on `character`.
 - The panel shows only the most the character can carry (`Sheet::capacity`); what is carried now is shown under the inventory (owner's choice). Speed is worked out here from `Carried`, so it follows a move before the server answers.
 - Appearance is shown here as words; the token's picture (in `entities`) is the kind's body in colours from it.
+- `publish_field` keeps `common::PlayerField` (`Field::of` the kind carried and Observation's value), for the player's cone.

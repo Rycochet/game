@@ -53,7 +53,6 @@ impl CreatureModels {
             parts,
             hull: meshes.add(mesh::hull_mesh(&all, bounds)),
             skin: meshes.add(mesh::hull_mesh(&built.skin, bounds)),
-            turn: built.turn,
             height,
             reach,
         }));

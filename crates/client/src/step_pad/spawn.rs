@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 use super::FORM;
-use super::icons::{Pointing, arrow, dpad, ladder};
+use super::icons::{Pointing, arrow, dpad, ladder, turn};
 use crate::common::{PadButton, Preferences};
 use crate::dom::{Dom, Pictures, Template, bottom_strip, document, top_strip};
 use crate::html;
@@ -21,8 +21,9 @@ pub(super) struct PadToggle;
 /// The pad: a panel moved by its grip, just above the toggle button until it
 /// is dragged (`right`, `bottom`: the corner's gap, and the toggle and the
 /// gap over it; a test checks). Its buttons are in three rows round the
-/// middle like a d-pad, with Down and Up either side of Step Up (owner,
-/// 2026-11-08). Gaps are a button in size (`BUTTON`: a test checks).
+/// middle like a d-pad: Turn Left and Turn Right either side of Step Up, and
+/// Down and Up either side of Step Down (owner, 2026-11-12). Gaps are a
+/// button in size (`BUTTON`: a test checks).
 pub(super) static PAD: Template = html!(
     "step_pad",
     r#"
@@ -30,9 +31,9 @@ pub(super) static PAD: Template = html!(
   <panel id="panel" grip right="8" bottom="42" hidden>
     <div class="tight">
       <span>
-        <button id="down" width="44" height="44"><img src="picture:pad_down"/></button>
+        <button id="turn_left" width="44" height="44"><img src="picture:pad_turn_left"/></button>
         <button id="step_up" width="44" height="44"><img src="picture:pad_step_up"/></button>
-        <button id="up" width="44" height="44"><img src="picture:pad_up"/></button>
+        <button id="turn_right" width="44" height="44"><img src="picture:pad_turn_right"/></button>
       </span>
       <span>
         <button id="step_left" width="44" height="44"><img src="picture:pad_step_left"/></button>
@@ -40,9 +41,9 @@ pub(super) static PAD: Template = html!(
         <button id="step_right" width="44" height="44"><img src="picture:pad_step_right"/></button>
       </span>
       <span>
-        <div width="44" height="44"/>
+        <button id="down" width="44" height="44"><img src="picture:pad_down"/></button>
         <button id="step_down" width="44" height="44"><img src="picture:pad_step_down"/></button>
-        <div width="44" height="44"/>
+        <button id="up" width="44" height="44"><img src="picture:pad_up"/></button>
       </span>
     </div>
   </panel>
@@ -64,9 +65,11 @@ pub(super) static TOGGLE_BUTTON: Template = html!(
 
 /// Each button: what it is, its name in the markup (and in its picture's name,
 /// `pad_<name>`), and its first tip (`site` keeps Up's and Down's).
-pub(super) const BUTTONS: [(PadButton, &str, &str); 6] = [
-    (PadButton::Down, "down", "Down"),
+pub(super) const BUTTONS: [(PadButton, &str, &str); 8] = [
+    (PadButton::TurnLeft, "turn_left", "Turn Left"),
     (PadButton::StepUp, "step_up", "Step Up"),
+    (PadButton::TurnRight, "turn_right", "Turn Right"),
+    (PadButton::Down, "down", "Down"),
     (PadButton::Up, "up", "Up"),
     (PadButton::StepLeft, "step_left", "Step Left"),
     (PadButton::StepRight, "step_right", "Step Right"),
@@ -82,6 +85,8 @@ fn picture_of(button: PadButton) -> Image {
         PadButton::StepDown => arrow(Pointing::Down),
         PadButton::StepLeft => arrow(Pointing::Left),
         PadButton::StepRight => arrow(Pointing::Right),
+        PadButton::TurnLeft => turn(true),
+        PadButton::TurnRight => turn(false),
     }
 }
 

@@ -13,6 +13,9 @@ pub enum PadButton {
     StepLeft,
     StepDown,
     StepRight,
+    /// Turn the character (never the camera), held to keep turning.
+    TurnLeft,
+    TurnRight,
 }
 
 /// Which way the pad's arrows held now ask the player to step, in screen
@@ -21,4 +24,6 @@ pub enum PadButton {
 pub struct PadSteps {
     pub dx: i64,
     pub dy: i64,
+    /// The turn buttons held: -1 left, 1 right, 0 neither or both.
+    pub turn: i64,
 }

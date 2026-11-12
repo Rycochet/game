@@ -240,6 +240,7 @@ pub(super) fn receive(
                 | ServerMessage::DevSkillsOf { .. }
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::Moves(_)
+                | ServerMessage::Turned(_)
                 | ServerMessage::EntityGone { .. }),
             )) => {
                 from_server.write(FromServer(message));

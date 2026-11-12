@@ -9,9 +9,9 @@ fn the_pad_is_good_markup_with_every_button_a_finger_wide() {
         let button = format!(r#"<button id="{name}" {sized}><img src="picture:pad_{name}"/>"#);
         assert!(PAD.source.contains(&button), "{name}");
     }
-    // Three gaps, each a button in size.
+    // One gap in the middle, a button in size.
     let gap = format!("<div {sized}/>");
-    assert_eq!(PAD.source.matches(&gap).count(), 3);
+    assert_eq!(PAD.source.matches(&gap).count(), 1);
 }
 
 #[test]

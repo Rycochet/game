@@ -91,6 +91,25 @@ pub(super) fn tint_icons(buttons: PadButtons, mut pictures: Query<&mut ImageNode
     }
 }
 
+/// The turn buttons are greyed out on the world map, where nobody faces a way
+/// that matters (sight there is all round).
+pub(super) fn grey_turns(
+    view: Res<State<GameView>>,
+    mut buttons: Query<(&PadButton, &mut ButtonState)>,
+) {
+    let on_world_map = *view.get() == GameView::WorldMap;
+    for (button, mut state) in &mut buttons {
+        if !matches!(button, PadButton::TurnLeft | PadButton::TurnRight) {
+            continue;
+        }
+        if on_world_map {
+            state.set_if_neq(ButtonState::Disabled);
+        } else if state.is_disabled() {
+            *state = ButtonState::Normal;
+        }
+    }
+}
+
 /// Which way the held arrows ask the player to step (`PadSteps`).
 pub(super) fn read_pad(buttons: Query<(&PadButton, &HoldButton)>, mut steps: ResMut<PadSteps>) {
     let mut wanted = PadSteps::default();
@@ -103,6 +122,8 @@ pub(super) fn read_pad(buttons: Query<(&PadButton, &HoldButton)>, mut steps: Res
             PadButton::StepDown => wanted.dy += 1,
             PadButton::StepLeft => wanted.dx -= 1,
             PadButton::StepRight => wanted.dx += 1,
+            PadButton::TurnLeft => wanted.turn -= 1,
+            PadButton::TurnRight => wanted.turn += 1,
             PadButton::Up | PadButton::Down => {}
         }
     }

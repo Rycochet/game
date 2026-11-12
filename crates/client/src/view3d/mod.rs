@@ -77,6 +77,7 @@ impl Plugin for View3dPlugin {
                     token::sync_models,
                     token::flash_tokens,
                     place_camera_and_tokens,
+                    token::turn_models,
                     bands::drift_bands,
                 )
                     .chain()
@@ -259,11 +260,8 @@ fn place_camera_and_tokens(
         transform.scale = Vec3::splat(scale);
         transform.translation = TokenAssets::icon_offset(scale);
     }
-    // Models stand on the top of their bases, turned the same way (facing comes
-    // later), and a little more to show their sides.
-    for (anchor, mut transform) in &mut models {
-        let turn = anchor.model().map_or(0.0, |model| model.0.turn);
-        transform.rotation = rotation * Quat::from_rotation_y(turn);
+    // Models stand on the top of their bases (turned by `turn_models`).
+    for (_, mut transform) in &mut models {
         transform.translation = Vec3::Y * token::HALF_THICKNESS;
         transform.scale = Vec3::splat(token::MODEL_SCALE);
     }

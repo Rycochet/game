@@ -185,6 +185,8 @@ pub(crate) fn hit_mob(
     let left = health_left(&one.vitals, limits, tick);
     let kind = one.kind;
     one.harmed_by.harmed(by.id, tick);
+    // It turns to whoever struck it.
+    one.face(shared::spot::Spot::middle_of(by.position));
     if harm != Points::ZERO {
         world.harmed.push(Harm {
             id: mob,

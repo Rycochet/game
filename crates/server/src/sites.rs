@@ -51,8 +51,9 @@ use levels::{NewVisit, arrive_again, enter_level};
 pub(super) use moves::{moved, refused, set_cell, teleport};
 use place::{Mirror, Place, SetIn};
 pub(crate) use place_name::place_name_of;
+use sight::memory;
+pub(crate) use sight::update_sight;
 pub(super) use sight::{forget_level, reveal_level, truesight_changed};
-use sight::{memory, update_sight};
 pub(super) use trade::open_trade;
 pub(super) use up_down::{go_down, go_up};
 pub(crate) use wild::wild_chunk;
@@ -88,6 +89,8 @@ pub(crate) struct Visit {
     /// In the wilderness, which live area's mobs are about the player
     /// (`entities::WildAreas`); 0 until one is given.
     wild_area: u32,
+    /// Cells Observation adds to sight's reach (`facing::Field::further`).
+    further: u32,
 }
 
 impl Visit {
@@ -251,10 +254,11 @@ impl Visit {
     /// How far can be seen, in cells: open towns and the wilderness have a
     /// limit, or sight would be worked out across all of them.
     fn reach(&self) -> Option<u32> {
-        match &self.place {
+        let reach = match &self.place {
             Place::Wilderness { .. } => Some(crate::wilderness::SIGHT),
             Place::Site { .. } => self.is_town().then_some(TOWN_SIGHT),
-        }
+        };
+        reach.map(|reach| reach + self.further)
     }
 
     /// What is saved with the character.
